@@ -75,22 +75,22 @@ npm run typecheck
 │   │   ├── recents.ts     Recent-projects list in localStorage (max 5)
 │   │   └── index.ts       getPlatform() singleton
 │   ├── state/
-│   │   ├── store.ts      Zustand + immer store (project, papers, save, annotations, theme, fontScale, recents, help)
+│   │   ├── store.ts      Zustand + immer store (project, papers, save, annotations, theme, fontScale, pdfZoom, recents, help)
 │   │   └── settings.ts   Theme + font-scale persistence (localStorage), applyTheme/applyFontScale
 │   ├── components/        React UI
 │   │   ├── Toolbar.tsx    Open ▾ / Save ▾ dropdowns, font controls, theme toggle, help button
 │   │   ├── Dropdown.tsx   Reusable click-to-open dropdown menu
-│   │   ├── PaperList.tsx  Left pane — paper list with annotation status dots
-│   │   ├── PdfViewer.tsx  Middle pane — react-pdf, text selection capture
+│   │   ├── PaperList.tsx  Left pane — paper list with search box and annotation status dots
+│   │   ├── PdfViewer.tsx  Middle pane — react-pdf, zoom controls, text selection capture
 │   │   ├── AnnotationPanel.tsx  Right pane — renders schema recursively
 │   │   ├── AnnotationNode.tsx   Recursive node (fields, groups, repeatable instances)
-│   │   ├── Field.tsx      Input control + "grab from PDF" button
+│   │   ├── Field.tsx      Input control (auto-expanding textarea for strings) + "grab from PDF" button
 │   │   ├── HelpDialog.tsx Modal with app intro + keyboard shortcuts
 │   │   └── ErrorPanel.tsx Error overlay for load/save failures
 │   ├── hooks/
-│   │   ├── useKeybindings.ts  Open, save, save-as, paper nav, font size, help shortcuts
+│   │   ├── useKeybindings.ts  Open, save, save-as, paper nav, PDF zoom / font size, help shortcuts
 │   │   └── useDirtyGuard.ts   beforeunload guard when dirty
-│   ├── App.tsx            Component composition, ?project= auto-load, HelpDialog
+│   ├── App.tsx            Component composition, ?project= auto-load, welcome screen with recents, HelpDialog
 │   ├── main.tsx           React root (applies theme + font scale before render)
 │   └── styles/index.css   Full app styling (light/dark via data-theme attribute, font-scale CSS var)
 ├── samples/
