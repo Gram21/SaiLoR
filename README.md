@@ -107,9 +107,8 @@ untouched. Unknown top-level and per-paper fields are preserved verbatim.
 | `Ctrl/Cmd + Shift + S`  | Save as…                       |
 | `Ctrl/Cmd + Z`          | Undo annotation change         |
 | `Ctrl/Cmd + Shift + Z` / `Ctrl + Y` | Redo annotation change |
-| `Ctrl/Cmd + +`          | Increase app font size         |
-| `Ctrl/Cmd + -`          | Decrease app font size         |
-| `Ctrl/Cmd + 0`          | Reset app font size            |
+| `Ctrl/Cmd + +` / `-` / `0` | Zoom the PDF in / out / reset |
+| `Ctrl/Cmd + Shift + +` / `-` / `0` | App font size larger / smaller / reset |
 | `Alt + ↓` or `]`        | Next paper                     |
 | `Alt + ↑` or `[`        | Previous paper                 |
 | `F1`                    | Open help                      |

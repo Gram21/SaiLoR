@@ -9,7 +9,8 @@ import { isElectron } from '../platform/adapter'
  *  - Ctrl/Cmd+O         → Open
  *  - Ctrl/Cmd+Z         → Undo   (Electron routes this via its Edit menu)
  *  - Ctrl/Cmd+Shift+Z / Ctrl+Y → Redo
- *  - Ctrl/Cmd +/-/0     → Font size
+ *  - Ctrl/Cmd +/-/0        → PDF zoom in / out / reset
+ *  - Ctrl/Cmd+Shift +/-/0  → App font size in / out / reset
  *  - Alt+ArrowDown / ]  → next paper
  *  - Alt+ArrowUp   / [  → previous paper
  *
@@ -55,25 +56,29 @@ export function useKeybindings() {
         return
       }
 
-      // Font scaling. Match both e.key and physical e.code (numpad, layouts where
-      // '+' needs Shift). Override the browser/Electron native zoom.
+      // Zoom: Ctrl/Cmd +/-/0 zooms the PDF; add Shift to scale the app font.
+      // Detect the +/-/0 keys by character (which varies with Shift and layout,
+      // e.g. '+' vs '=' vs '*', '-' vs '_') and by numpad code; detect reset by
+      // the digit-0 code (Shift-independent, avoids the German Shift+0 → '=' clash).
       if (mod) {
-        const inc = e.key === '+' || e.key === '=' || e.code === 'Equal' || e.code === 'NumpadAdd'
-        const dec = e.key === '-' || e.key === '_' || e.code === 'Minus' || e.code === 'NumpadSubtract'
-        const reset = e.key === '0' || e.code === 'Digit0' || e.code === 'Numpad0'
-        if (inc) {
+        const reset = e.code === 'Digit0' || e.code === 'Numpad0'
+        const inc =
+          !reset && (e.key === '+' || e.key === '=' || e.key === '*' || e.code === 'NumpadAdd')
+        const dec = !reset && (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract')
+        if (inc || dec || reset) {
           e.preventDefault()
-          useStore.getState().increaseFont()
-          return
-        }
-        if (dec) {
-          e.preventDefault()
-          useStore.getState().decreaseFont()
-          return
-        }
-        if (reset) {
-          e.preventDefault()
-          useStore.getState().resetFont()
+          const st = useStore.getState()
+          if (e.shiftKey) {
+            // App font size: Ctrl/Cmd+Shift +/-/0
+            if (inc) st.increaseFont()
+            else if (dec) st.decreaseFont()
+            else st.resetFont()
+          } else {
+            // PDF zoom: Ctrl/Cmd +/-/0
+            if (inc) st.zoomInPdf()
+            else if (dec) st.zoomOutPdf()
+            else st.resetPdfZoom()
+          }
           return
         }
       }

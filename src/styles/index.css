@@ -265,6 +265,10 @@ body.resizing * {
 }
 .pdf-head {
   flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--border);
   background: var(--panel-bg);
@@ -273,6 +277,18 @@ body.resizing * {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+}
+.pdf-zoom {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.pdf-zoom-level {
+  min-width: 52px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 .pdf-title {
   font-weight: 600;
@@ -291,7 +307,10 @@ body.resizing * {
   padding: 12px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  /* "safe center": center the page when it fits, but fall back to start-align
+     when it's wider than the pane so the overflow stays reachable by horizontal
+     scrolling (plain "center" would clip the left edge and block scrolling). */
+  align-items: safe center;
   gap: 12px;
   background: var(--bg);
 }
