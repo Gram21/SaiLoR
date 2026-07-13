@@ -99,11 +99,11 @@ App (src/App.tsx)
 │   ├── PaperList (src/components/PaperList.tsx)
 │   │     List of papers with search box; green dot if hasAnnotations(); click to select
 │   ├── PdfViewer (src/components/PdfViewer.tsx)
-│   │     react-pdf Document+Page; ResizeObserver for width; zoom controls; text selection capture
+│   │     react-pdf Document+Page; ResizeObserver for width; zoom controls; multi-page navigation; text selection capture
 │   └── AnnotationPanel (src/components/AnnotationPanel.tsx)
 │         └── AnnotationNode (src/components/AnnotationNode.tsx) [recursive]
 │               └── Field (src/components/Field.tsx)
-│                     Input control + ⧉ grab-from-PDF button
+│                     Input control (text/number/checkbox/enum ComboBox) + ⧉ grab-from-PDF button
 ├── [if no project: welcome screen with "Open project…" button + recent projects list]
 ├── HelpDialog (src/components/HelpDialog.tsx)
 │     Modal overlay with app intro + keyboard shortcuts table
@@ -129,9 +129,10 @@ The `path` (`PathSeg[]`) is extended at each nesting level: `[...path, { name: d
 `Field` renders the appropriate input based on `def.type`:
 - `boolean` → checkbox
 - `number` → `<input type=number>`
-- `string` → auto-expanding `<textarea>` (single line when idle, grows on focus up to 240px, max 500 chars)
+- `string` with `options` (enum) → `ComboBox` (`src/components/ComboBox.tsx`) — a filterable dropdown of allowed values; no free-text grab button
+- `string` without `options` → auto-expanding `<textarea>` (single line when idle, grows on focus up to 240px, max 500 chars)
 
-The **grab-from-PDF** button (⧉) reads `useStore.getState().pdfSelection` and inserts it. For number fields, it extracts the first numeric token via `parseNumber()` (handles comma decimals).
+The **grab-from-PDF** button (⧉) reads `useStore.getState().pdfSelection` and inserts it. It is shown for `string` (non-enum) and `number` fields. For number fields, it extracts the first numeric token via `parseNumber()` (handles comma decimals).
 
 ### Annotation names and descriptions
 
@@ -139,7 +140,7 @@ The **grab-from-PDF** button (⧉) reads `useStore.getState().pdfSelection` and 
 
 ### PdfViewer
 
-Uses `react-pdf`'s `Document` + `Page` components. The pdf.js worker is loaded from the bundled dependency URL. A `ResizeObserver` tracks container width so pages scale to fit; the final render width is the fit-to-width size multiplied by the store-level `pdfZoom` factor. The PDF header shows the paper title, authors, and DOI, plus zoom controls (−, percentage, +) wired to `zoomOutPdf` / `resetPdfZoom` / `zoomInPdf`. Pages are `align-items: safe center` so horizontal scrolling remains reachable when zoomed wider than the pane. Text selection is captured via `onMouseUp`/`onKeyUp` → `window.getSelection()` → `setPdfSelection()`.
+Uses `react-pdf`'s `Document` + `Page` components. The pdf.js worker is loaded from the bundled dependency URL. A `ResizeObserver` tracks container width so pages scale to fit; the final render width is the fit-to-width size multiplied by the store-level `pdfZoom` factor. The PDF header shows the paper title, authors, and DOI, plus zoom controls (−, percentage, +) wired to `zoomOutPdf` / `resetPdfZoom` / `zoomInPdf`. For multi-page PDFs, the header also shows page navigation (prev/next buttons, a page-number input, and a total page count). The current page is tracked from scroll position via `onScroll` — the last page whose top has scrolled past 30% of the viewport height — and typing a page number jumps to that page. The PDF text and annotation layers are both rendered. Pages are `align-items: safe center` so horizontal scrolling remains reachable when zoomed wider than the pane. Text selection is captured via `onMouseUp`/`onKeyUp` → `window.getSelection()` → `setPdfSelection()`.
 
 PDF source resolution is async: `getPlatform().getPdfSource(paper.pdf, saveHandle)` returns a `{ url, revoke? }`. The effect cleans up (revokes blob URLs) on paper/handle change or unmount.
 
