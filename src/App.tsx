@@ -28,6 +28,8 @@ export function App() {
   const sidebarCollapsed = useStore((s) => s.sidebarCollapsed)
   const openProject = useStore((s) => s.openProject)
   const loadFromUrl = useStore((s) => s.loadFromUrl)
+  const recents = useStore((s) => s.recents)
+  const openRecent = useStore((s) => s.openRecent)
 
   const workspaceRef = useRef<HTMLDivElement>(null)
   const [panes, setPanes] = useState(loadPaneWidths)
@@ -84,6 +86,21 @@ export function App() {
             <button type="button" className="primary" onClick={() => void openProject()}>
               Open project…
             </button>
+            {recents.length > 0 && (
+              <div className="welcome-recents">
+                <div className="welcome-recents-label">Recent projects</div>
+                {recents.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="welcome-recent"
+                    onClick={() => void openRecent(item.id)}
+                  >
+                    {item.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
