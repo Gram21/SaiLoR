@@ -19,6 +19,7 @@ export function PdfViewer() {
   const paperId = useStore((s) => selectCurrentPaper(s)?.id ?? null)
   const pdfPath = useStore((s) => selectCurrentPaper(s)?.pdf ?? null)
   const title = useStore((s) => selectCurrentPaper(s)?.title ?? '')
+  const authors = useStore((s) => (selectCurrentPaper(s)?.authors ?? []).join(', '))
   const doi = useStore((s) => selectCurrentPaper(s)?.doi)
   const saveHandle = useStore((s) => s.saveHandle)
   const setPdfSelection = useStore((s) => s.setPdfSelection)
@@ -82,6 +83,7 @@ export function PdfViewer() {
       <div className="pdf-head">
         <div className="pdf-meta">
           <span className="pdf-title">{title}</span>
+          {authors && <span className="pdf-authors">{authors}</span>}
           {doi && (
             <span className="pdf-doi">
               DOI: <code>{doi}</code>

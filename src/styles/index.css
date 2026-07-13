@@ -172,14 +172,43 @@ body.resizing * {
 .paper-list-head {
   position: sticky;
   top: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   background: var(--panel-bg);
   padding: 8px 12px;
-  font-weight: 600;
   border-bottom: 1px solid var(--border);
+}
+.paper-list-title {
+  font-weight: 600;
 }
 .paper-list-head .count {
   color: var(--muted);
   font-weight: 400;
+}
+.paper-search {
+  display: flex;
+}
+.paper-search-input {
+  width: 100%;
+  min-width: 0;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 400;
+}
+.paper-search-input:focus {
+  outline: 2px solid var(--accent-weak);
+  border-color: var(--accent);
+}
+.paper-list-empty {
+  padding: 16px 12px;
+  color: var(--muted);
+  font-style: italic;
 }
 .paper-list ul {
   list-style: none;
@@ -247,6 +276,10 @@ body.resizing * {
 }
 .pdf-title {
   font-weight: 600;
+}
+.pdf-authors {
+  color: var(--muted);
+  font-size: 0.857rem;
 }
 .pdf-doi {
   color: var(--muted);
@@ -415,6 +448,20 @@ body.resizing * {
   outline: 2px solid var(--accent-weak);
   border-color: var(--accent);
 }
+/* Auto-expanding string field: one line collapsed, grows on focus. */
+.field-textarea {
+  font: inherit;
+  line-height: 1.4;
+  resize: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+  transition: height 0.12s ease;
+}
+.field-textarea.expanded {
+  overflow: auto;
+}
 .field-checkbox {
   width: 18px;
   height: 18px;
@@ -442,6 +489,36 @@ body.resizing * {
 .welcome-box p {
   color: var(--muted);
   margin: 0 0 20px;
+}
+.welcome-recents {
+  margin: 28px auto 0;
+  max-width: 360px;
+  text-align: left;
+}
+.welcome-recents-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+.welcome-recent {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.welcome-recent:hover {
+  border-color: var(--accent);
+  background: var(--accent-weak);
 }
 
 /* ---- Error overlay ---- */

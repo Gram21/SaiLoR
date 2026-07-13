@@ -1,6 +1,9 @@
+import { useEffect, useRef, useState } from 'react'
 import { useStore, type PathSeg } from '../state/store'
 import type { ResolvedDef } from '../model/schema'
 import type { FieldValue } from '../model/annotations'
+
+const MAX_TEXTAREA_HEIGHT = 240
 
 interface FieldProps {
   def: ResolvedDef
@@ -48,11 +51,9 @@ export function Field({ def, path, index, value }: FieldProps) {
           onChange={(e) => set(e.target.value === '' ? null : Number(e.target.value))}
         />
       ) : (
-        <input
-          type="text"
-          className="field-input"
+        <StringField
           value={value === null || value === undefined ? '' : String(value)}
-          onChange={(e) => set(e.target.value === '' ? null : e.target.value)}
+          onChange={(v) => set(v === '' ? null : v)}
         />
       )}
       {canGrab && (
@@ -66,6 +67,49 @@ export function Field({ def, path, index, value }: FieldProps) {
         </button>
       )}
     </div>
+  )
+}
+
+interface StringFieldProps {
+  value: string
+  onChange: (v: string) => void
+}
+
+/** Auto-expanding text field: single-line when idle, grows downward (capped) while focused. */
+function StringField({ value, onChange }: StringFieldProps) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  const [expanded, setExpanded] = useState(false)
+
+  // Grow to fit content (capped) while focused; stay collapsed otherwise.
+  const resize = () => {
+    const el = ref.current
+    if (!el) return
+    if (!expanded) {
+      el.style.height = ''
+      return
+    }
+    // Reset first so scrollHeight reflects the content, not the current box.
+    el.style.height = ''
+    el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`
+  }
+
+  // Recompute when focus state or the external value changes.
+  useEffect(resize, [expanded, value])
+
+  return (
+    <textarea
+      ref={ref}
+      rows={1}
+      maxLength={500}
+      className={expanded ? 'field-input field-textarea expanded' : 'field-input field-textarea'}
+      value={value}
+      onFocus={() => setExpanded(true)}
+      onBlur={() => {
+        setExpanded(false)
+        if (ref.current) ref.current.style.height = ''
+      }}
+      onChange={(e) => onChange(e.target.value)}
+    />
   )
 }
 
