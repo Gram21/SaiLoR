@@ -1,0 +1,38 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 544 >>
+stream
+BT /F1 16 Tf 72 720 Td (Deep Learning for Code Search: A Study) Tj ET
+BT /F1 11 Tf 72 690 Td (Authors: A. Author, B. Writer) Tj ET
+BT /F1 11 Tf 72 672 Td (Year: 2021   Study Type: RCT) Tj ET
+BT /F1 11 Tf 72 654 Td (Abstract: We evaluate deep learning approaches for code search.) Tj ET
+BT /F1 11 Tf 72 636 Td (Finding 1: Model X improves MRR by 12% \(p<0.05\).) Tj ET
+BT /F1 11 Tf 72 618 Td (Finding 2: Latency increases by 30ms on average.) Tj ET
+BT /F1 11 Tf 72 600 Td (Select any of this text and use the copy button next to a field.) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000835 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+905
+%%EOF
