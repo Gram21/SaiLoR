@@ -131,6 +131,11 @@ Distribute the `release/` installers produced by `electron-builder`. The desktop
 | `F1` | Open help dialog |
 | `Ctrl/Cmd + C/V/X/Z` | Native copy/paste/cut/undo (browser or Electron Edit menu) |
 
+Undo and redo operate on annotation changes. The store keeps session-only history snapshots in `src/state/store.ts`, and consecutive edits to the same field collapse into a single undo step instead of one step per keystroke. Add/remove instance actions also create their own history entries.
+
+In Electron, the Edit menu routes Undo/Redo back into the renderer through IPC; in the browser, `src/hooks/useKeybindings.ts` handles `Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z`, and `Ctrl+Y` directly. If you change annotation editing behavior, update the store and the Electron/menu wiring together so the shortcuts stay consistent across runtimes.
+
+
 Paper navigation with `[`/`]` is disabled when typing in an input field; Alt-arrow navigation works even inside fields. See `src/hooks/useKeybindings.ts`.
 
 ## Saving Behavior by Platform
