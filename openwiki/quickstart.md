@@ -9,9 +9,10 @@ SLR Helper is a tool for reviewers conducting **Systematic Literature Reviews (S
 
 The app renders the PDF in the middle pane, shows the annotation form on the right, and lets you **grab text directly from the PDF** to populate fields. Annotations are saved back into the same JSON file.
 
-The codebase runs two ways from a single source:
+The codebase runs three ways from a single source:
 - **Desktop app** (Electron) — local files, native Open/Save dialogs, custom `slr-file://` protocol for PDF loading.
 - **Web app** — a static SPA build that can be hosted anywhere; uses the File System Access API (Chromium) or download fallback.
+- **Docker** — multi-stage build (Node → nginx) with a read-only `projects/` volume; `docker compose up -d --build` serves on port 8080.
 
 ## Tech Stack
 
@@ -44,6 +45,9 @@ npm run build
 # Build desktop installers into release/:
 npm run build:electron
 
+# Docker (self-hosting — serves on http://localhost:8080):
+docker compose up -d --build
+
 # Unit tests (model: schema, normalize, prune, round-trip):
 npm test
 
@@ -55,8 +59,8 @@ npm run typecheck
 
 ```
 ├── electron/              Electron main process + preload
-│   ├── main.ts            IPC handlers, slr-file:// protocol, window/menu setup
-│   └── preload.ts         contextBridge → window.slr API
+│   ├── main.ts            IPC handlers (open, openPath, save, saveAs, setDir), slr-file:// protocol, window/menu setup
+│   └── preload.ts         contextBridge → window.slr API (openProject, openPath, save, saveAs, …)
 ├── src/
 │   ├── model/              Domain model (pure, unit-tested)
 │   │   ├── schema.ts      AnnotationDef/ResolvedDef types, zod schemas, resolveSchema
@@ -64,29 +68,41 @@ npm run typecheck
 │   │   ├── project.ts     loadProject / serializeProject, Paper/Project types
 │   │   └── model.test.ts  Vitest unit tests for the model
 │   ├── platform/          Platform abstraction for file I/O and PDF loading
-│   │   ├── adapter.ts     PlatformAdapter interface + isElectron()
-│   │   ├── electron.ts    ElectronAdapter (IPC + slr-file://)
-│   │   ├── browser.ts     BrowserAdapter (FSAPI / download / fetch)
+│   │   ├── adapter.ts     PlatformAdapter interface (6 ops) + isElectron()
+│   │   ├── electron.ts    ElectronAdapter (IPC + slr-file://, recents)
+│   │   ├── browser.ts     BrowserAdapter (FSAPI / download / fetch, recents, IndexedDB handles)
+│   │   ├── idb.ts         Tiny IndexedDB wrapper for persisting FileSystemFileHandle objects
+│   │   ├── recents.ts     Recent-projects list in localStorage (max 5)
 │   │   └── index.ts       getPlatform() singleton
 │   ├── state/
-│   │   └── store.ts      Zustand + immer store (project, papers, save, annotations)
+│   │   ├── store.ts      Zustand + immer store (project, papers, save, annotations, theme, fontScale, recents, help)
+│   │   └── settings.ts   Theme + font-scale persistence (localStorage), applyTheme/applyFontScale
 │   ├── components/        React UI
-│   │   ├── Toolbar.tsx    Open/Save/Save-as, sidebar toggle, dirty indicator
+│   │   ├── Toolbar.tsx    Open ▾ / Save ▾ dropdowns, font controls, theme toggle, help button
+│   │   ├── Dropdown.tsx   Reusable click-to-open dropdown menu
 │   │   ├── PaperList.tsx  Left pane — paper list with annotation status dots
 │   │   ├── PdfViewer.tsx  Middle pane — react-pdf, text selection capture
 │   │   ├── AnnotationPanel.tsx  Right pane — renders schema recursively
 │   │   ├── AnnotationNode.tsx   Recursive node (fields, groups, repeatable instances)
 │   │   ├── Field.tsx      Input control + "grab from PDF" button
+│   │   ├── HelpDialog.tsx Modal with app intro + keyboard shortcuts
 │   │   └── ErrorPanel.tsx Error overlay for load/save failures
 │   ├── hooks/
-│   │   ├── useKeybindings.ts  Save, save-as, paper navigation shortcuts
+│   │   ├── useKeybindings.ts  Open, save, save-as, paper nav, font size, help shortcuts
 │   │   └── useDirtyGuard.ts   beforeunload guard when dirty
-│   ├── App.tsx            Component composition, ?project= auto-load
-│   ├── main.tsx           React root
-│   └── styles/index.css   Full app styling (light/dark via prefers-color-scheme)
+│   ├── App.tsx            Component composition, ?project= auto-load, HelpDialog
+│   ├── main.tsx           React root (applies theme + font scale before render)
+│   └── styles/index.css   Full app styling (light/dark via data-theme attribute, font-scale CSS var)
 ├── samples/
 │   ├── project.example.json  Example project with 2 papers + schema
 │   └── pdfs/                 Sample PDFs
+├── projects/              Runtime volume for Docker deployment (JSON + PDFs mounted read-only)
+│   ├── README.md
+│   ├── project.example.json
+│   └── pdfs/
+├── Dockerfile             Multi-stage: Node build → nginx runtime
+├── docker-compose.yml     Builds and serves on port 8080 with ./projects mounted
+├── nginx.conf             MIME fix for .mjs, /assets/ caching, /projects/ serving, SPA fallback
 ├── vite.config.ts         Vite + vitest + electron plugin config
 ├── tsconfig*.json         TypeScript project references (app / node)
 └── package.json           Scripts, deps, electron-builder config

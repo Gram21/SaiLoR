@@ -15,17 +15,21 @@ src/platform/electron.ts →  ElectronAdapter
 src/platform/browser.ts   →  BrowserAdapter
 ```
 
-**`PlatformAdapter`** (`src/platform/adapter.ts`) defines four operations:
+**`PlatformAdapter`** (`src/platform/adapter.ts`) defines six operations:
+- `getRecents()` — return the list of recently opened projects (`RecentEntry[]` with `id` + `name`)
+- `openRecent(id)` — re-open a project by its recent-entry id (path on Electron, IndexedDB handle key on browser)
 - `openProject()` — show an open dialog/picker, return JSON text + a `SaveHandle`
 - `saveProject(text, handle)` — write back to the handle's location
 - `saveProjectAs(text, suggestedName)` — prompt for new location and write
 - `getPdfSource(pdfPath, projectHandle)` — resolve a paper's relative PDF path into a URL react-pdf can load
 
+Recent projects are managed by `src/platform/recents.ts` — a platform-opaque module that stores up to 5 entries in `localStorage` (separate keys for Electron and browser). On Electron, the entry `id` is the absolute file path; on browser it is a key into the IndexedDB handle store.
+
 `getPlatform()` (`src/platform/index.ts`) returns a singleton: `ElectronAdapter` if `window.slr` exists (preload bridge), otherwise `BrowserAdapter`. Detection uses `isElectron()` which checks for the preload-bridged `window.slr` object.
 
 ### ElectronAdapter (`src/platform/electron.ts`)
 
-Delegates to `window.slr` (the preload bridge). File operations use IPC to the main process. PDFs are served via the custom `slr-file://project/<encoded-path>` protocol — the main process resolves paths relative to the project directory. `setProjectDir` is called on open/save-as so the protocol knows the base directory.
+Delegates to `window.slr` (the preload bridge). File operations use IPC to the main process. PDFs are served via the custom `slr-file://project/<encoded-path>` protocol — the main process resolves paths relative to the project directory. `setProjectDir` is called on open/save-as so the protocol knows the base directory. On open and save-as, the adapter pushes an entry to the recents list (`slr.recents.electron` localStorage key). `openRecent(id)` calls `bridge().openPath(id)` to read a file by absolute path; if the file no longer exists the entry is pruned from recents.
 
 ### BrowserAdapter (`src/platform/browser.ts`)
 
@@ -39,6 +43,8 @@ Has three tiers of capability:
 | PDF loading | One-time directory grant via `showDirectoryPicker`, blob URL | `fetch` relative to page | `fetch` relative to project URL |
 
 `setServerBase(url)` records the URL a project was fetched from so sibling PDFs resolve correctly in server mode. The adapter stores `FileSystemFileHandle` references in an internal map keyed by generated IDs.
+
+When the File System Access API is available, the `BrowserAdapter` also persists handles in IndexedDB (`src/platform/idb.ts`) so they survive page reloads. `openProject()` and `saveProject()` (via the FSAPI Save As flow) call `rememberHandle()` which stores the handle under a `recent:<name>` key and pushes an entry to `slr.recents.browser`. `openRecent(id)` retrieves the handle from IndexedDB, re-requests read permission (via `ensureReadPermission`), and re-reads the file. If the handle is missing or permission is denied, the entry is pruned from recents. Opening a local file resets `serverBase` to `null` so PDF loading uses the handle instead of server fetch.
 
 ## State Management
 
@@ -59,16 +65,24 @@ The entire app state lives in a single Zustand store with immer middleware:
 | `busy` | `boolean` | Disables toolbar buttons during async operations |
 | `sidebarCollapsed` | `boolean` | Paper list visibility |
 | `pdfSelection` | `string` | Latest text selected in the PDF viewer (for "grab from PDF") |
+| `theme` | `Theme` (`'light' \| 'dark'`) | Current app theme (persisted in localStorage via `src/state/settings.ts`) |
+| `fontScale` | `number` | Current font scale factor (0.7–2.0, persisted in localStorage) |
+| `recents` | `RecentEntry[]` | Recently opened projects (max 5, from `platform.getRecents()`) |
+| `helpOpen` | `boolean` | Help dialog visibility |
 
 ### Key Actions
 
-- **`openProject()`** — delegates to `platform.openProject()`, then `loadFromText()`
+- **`openProject()`** — delegates to `platform.openProject()`, then `loadFromText()`, refreshes `recents`
+- **`openRecent(id)`** — delegates to `platform.openRecent(id)`; on success → `loadFromText` + refreshes `recents`; on null → prunes recents and sets `loadError`
 - **`loadFromUrl(url)`** — `fetch` the project JSON, set `serverBase` on browser adapter, then `loadFromText()`
 - **`loadFromText(text, handle, name)`** — calls `loadProject(text)` from the model layer, sets state, selects first paper
-- **`save()` / `saveAs()`** — `serializeProject(project)` → delegate to platform, clears `dirty`
+- **`save()` / `saveAs()`** — `serializeProject(project)` → delegate to platform, clears `dirty`, refreshes `recents`
 - **`selectPaper(id)`** — switches paper, clears `pdfSelection`
 - **`setFieldValue(path, name, index, value)`** — navigates the annotation tree via `containerAt()`, sets `inst.value`, marks dirty
 - **`addInstance(path, def)` / `removeInstance(path, name, index)`** — manages repeatable annotation instances, respects `max`/`min`
+- **`toggleTheme()` / `setTheme(theme)`** — flips or sets the app theme, applies via `applyTheme()` (sets `data-theme` attribute on `<html>`)
+- **`increaseFont()` / `decreaseFont()` / `resetFont()`** — adjusts `fontScale` by ±0.1 (clamped to 0.7–2.0), applies via `applyFontScale()` (sets `--app-font-scale` CSS variable)
+- **`setHelpOpen(open)`** — shows/hides the help dialog
 
 The `containerAt(root, path)` helper walks the annotation tree following `PathSeg[]` (name + index pairs) to reach the container for a given path.
 
@@ -77,7 +91,8 @@ The `containerAt(root, path)` helper walks the annotation tree following `PathSe
 ```
 App (src/App.tsx)
 ├── Toolbar (src/components/Toolbar.tsx)
-│     Open / Save / Save-as buttons, sidebar toggle, project name + dirty dot
+│     Open ▾ dropdown (Open file… + recent projects) + Save ▾ dropdown (Save / Save as…)
+│     Font controls (A− A A+), theme toggle (☾/☀), help (?)
 ├── [if project loaded: workspace]
 │   ├── PaperList (src/components/PaperList.tsx)
 │   │     List of papers; green dot if hasAnnotations(); click to select
@@ -88,9 +103,15 @@ App (src/App.tsx)
 │               └── Field (src/components/Field.tsx)
 │                     Input control + ⧉ grab-from-PDF button
 ├── [if no project: welcome screen with "Open project…" button]
+├── HelpDialog (src/components/HelpDialog.tsx)
+│     Modal overlay with app intro + keyboard shortcuts table
 └── ErrorPanel (src/components/ErrorPanel.tsx)
       Modal overlay for load/save errors
 ```
+
+### Dropdown component
+
+`Dropdown` (`src/components/Dropdown.tsx`) is a reusable click-to-open menu. Items are a union of `item` (label, optional shortcut, disabled, onSelect), `separator`, or `header`. It closes on outside-mousedown, Escape, or item selection. The Toolbar uses two `Dropdown` instances: Open ▾ (with recent projects list) and Save ▾ (with shortcut labels).
 
 ### AnnotationNode (recursive renderer)
 
@@ -125,18 +146,28 @@ PDF source resolution is async: `getPlatform().getPdfSource(paper.pdf, saveHandl
 - **`slr-file://` protocol**: registered as privileged (secure, stream, fetch API). Handler resolves paths relative to `projectDir` with traversal guard (`path.resolve` + prefix check). Returns 403 for traversal attempts, 404 for missing files.
 - **IPC handlers**:
   - `project:open` — `dialog.showOpenDialog` → `readFile`
+  - `project:openPath` — reads a file by absolute path (for re-opening recent projects); returns `null` if the file is missing or unreadable
   - `project:save` — `writeFile` to given path
   - `project:saveAs` — `dialog.showSaveDialog` → `writeFile`
   - `project:setDir` — sets `projectDir` from the project file's directory
-- **Menu**: minimal template with File, Edit, View, Window menus (keeps standard copy/paste/undo shortcuts).
+- **Menu**: custom template with File, Edit, View, Window menus. The View menu is hand-built (not the default `{ role: 'viewMenu' }`) and deliberately omits zoom roles so that `Ctrl +/-/0` reach the renderer for app-level font scaling instead of triggering native browser/Electron zoom (which would also scale the PDF paper).
 
-**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose four IPC-backed methods. This `window.slr` object is the detection signal for `isElectron()`.
+**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods including `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, and `getPdfSource`. This `window.slr` object is the detection signal for `isElectron()`.
 
 ## Hooks
 
-- **`useKeybindings`** (`src/hooks/useKeybindings.ts`): Global keyboard shortcuts registered on `window.keydown`. Handles save (Ctrl/Cmd+S), save-as (Ctrl/Cmd+Shift+S), paper navigation (Alt+↓/↑, `[`/`]`). Paper navigation skips when typing in a field (unless Alt is held). Copy/cut/paste/undo are left to the browser/Electron Edit menu.
+- **`useKeybindings`** (`src/hooks/useKeybindings.ts`): Global keyboard shortcuts registered on `window.keydown`. Handles open (Ctrl/Cmd+O), save (Ctrl/Cmd+S), save-as (Ctrl/Cmd+Shift+S), paper navigation (Alt+↓/↑, `[`/`]`), font size (Ctrl/Cmd + `+/=/-`/`0`), and help (F1). Paper navigation skips when typing in a field (unless Alt is held). Font shortcuts match both `e.key` and `e.code` to handle numpad and international layouts, and always `preventDefault()` to override native zoom. Copy/cut/paste/undo are left to the browser/Electron Edit menu.
 
 - **`useDirtyGuard`** (`src/hooks/useDirtyGuard.ts`): Registers a `beforeunload` listener that calls `e.preventDefault()` when `dirty` is true, triggering the browser's "unsaved changes" confirmation.
+
+## Settings & Theming (`src/state/settings.ts`)
+
+App appearance is controlled by a settings module that persists to `localStorage`:
+
+- **Theme**: `'light' | 'dark'` — defaults to OS preference (`prefers-color-scheme`) on first load. `applyTheme()` sets `document.documentElement.dataset.theme`. CSS uses `:root[data-theme='dark']` selectors so the theme is user-controlled, not OS-only.
+- **Font scale**: float from 0.7 to 2.0 (step 0.1). `applyFontScale()` sets the `--app-font-scale` CSS variable on `<html>`. The base font size is `calc(14px * var(--app-font-scale))` and most text sizes use `rem` units so they scale proportionally. The PDF paper itself is always rendered on a white background regardless of theme.
+
+`src/main.tsx` calls `applyTheme(loadTheme())` and `applyFontScale(loadFontScale())` before rendering React to avoid a flash of unstyled or wrong-theme content on startup.
 
 ## App Initialization (`src/App.tsx`)
 
@@ -155,3 +186,4 @@ PDF source resolution is async: `getPlatform().getPdfSource(paper.pdf, saveHandl
 - **Adding a new annotation field type**: Update `FieldType` in `schema.ts`, `emptyValue()` in `annotations.ts`, and `Field.tsx` rendering. Consider validation in the zod schema.
 - **Adding a new keyboard shortcut**: Add to `useKeybindings.ts`. Check `isEditable()` if it should be ignored inside input fields.
 - **Changing the Electron IPC surface**: Update `preload.ts` (the `SlrBridge` interface), `electron/main.ts` (IPC handler), and `src/platform/electron.ts` (adapter method). All three must stay in sync.
+- **Adding a new settings/appearance option**: Add to `src/state/settings.ts` (load/apply functions), add state + actions to the store, add UI controls to `Toolbar.tsx`, and add keybindings if needed.
