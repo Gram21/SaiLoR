@@ -66,6 +66,32 @@ describe('schema resolution', () => {
     expect(() => resolveSchema(dup)).toThrow(/Duplicate sibling/)
   })
 
+  it('resolves and round-trips enum options', () => {
+    const opts = ['A', 'B', 'C']
+    const resolved = resolveSchema([{ name: 'Kind', type: 'string', options: opts }])
+    expect(resolved[0].options).toEqual(opts)
+
+    const project = loadProject(
+      JSON.stringify({
+        config: { schema: [{ name: 'Kind', type: 'string', options: opts }] },
+        papers: [{ id: 'p1', title: 'T', authors: [], pdf: 'a.pdf', annotations: {} }],
+      }),
+    )
+    const reDumped = JSON.parse(serializeProject(project))
+    expect(reDumped.config.schema[0].options).toEqual(opts)
+  })
+
+  it('rejects options on a non-string field', () => {
+    expect(() =>
+      loadProject(
+        JSON.stringify({
+          config: { schema: [{ name: 'N', type: 'number', options: ['1', '2'] }] },
+          papers: [],
+        }),
+      ),
+    ).toThrow(ProjectLoadError)
+  })
+
   it('rejects max < min', () => {
     expect(() =>
       loadProject(

@@ -37,7 +37,9 @@ Open the bundled example from the browser dev server via:
   "config": {
     "schema": [
       { "name": "Relevant", "type": "boolean" },        // leaf field
-      { "name": "Study Type", "type": "string", "min": 1, "max": 1 },
+      { "name": "Study Type", "type": "string",
+        "options": ["Case study", "Experiment", "Survey"] },  // enum dropdown
+
       { "name": "Year", "type": "number" },
       {
         "name": "Findings", "min": 1, "max": null,       // group, repeatable (unbounded)
@@ -71,6 +73,7 @@ Open the bundled example from the browser dev server via:
 | `children`    | Sub-taxonomy. A node may have `type`, `children`, or both.              |
 | `min`         | Minimum occurrences (default `1`).                                      |
 | `max`         | Maximum occurrences: a number, or `null` for unbounded (default `1`).   |
+| `options`     | Array of strings on a `string` field → a filterable enum dropdown.      |
 | `description` | Optional tooltip.                                                       |
 
 **Annotation data** mirrors the schema: at each level a map keyed by node name, where every key
