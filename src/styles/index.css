@@ -1,13 +1,15 @@
 :root {
-  /* Light palette (default). Dark overrides live under [data-theme='dark']. */
+  /* Light palette (default). Dark overrides live under [data-theme='dark'].
+     Accent is ARDoCo's theme teal (#2698ba); danger is ARDoCo's highlight red
+     (#b71c1c). See https://ardoco.de/ */
   --bg: #f6f7f9;
   --panel-bg: #ffffff;
   --border: #dcdfe4;
   --text: #1f2328;
   --muted: #6b7280;
-  --accent: #2563eb;
-  --accent-weak: #e8efff;
-  --danger: #dc2626;
+  --accent: #2698ba;
+  --accent-weak: #e2f0f5;
+  --danger: #b71c1c;
   --ok: #16a34a;
   --toolbar-h: 44px;
 
@@ -18,14 +20,15 @@
 }
 
 :root[data-theme='dark'] {
-  --bg: #14161a;
-  --panel-bg: #1c1f24;
-  --border: #2c313a;
-  --text: #e6e8eb;
-  --muted: #9aa1ab;
-  --accent: #4f8cff;
-  --accent-weak: #1e2a44;
-  --danger: #f87171;
+  /* ARDoCo dark surface (#1c1c1d) + light text (#e8e8e8), brightened teal. */
+  --bg: #1c1c1d;
+  --panel-bg: #26262b;
+  --border: #3a3a41;
+  --text: #e8e8e8;
+  --muted: #9a9aa3;
+  --accent: #3aabca;
+  --accent-weak: #163740;
+  --danger: #e06666;
   --ok: #4ade80;
   color-scheme: dark;
 }
@@ -308,6 +311,36 @@ body.resizing * {
   align-items: center;
   gap: 10px;
   padding: 5px 0;
+}
+
+/* Name with a schema description: subtle cue + hover tooltip. */
+.anno-name.has-desc {
+  cursor: help;
+  text-decoration: underline dotted var(--muted);
+  text-underline-offset: 3px;
+  outline: none;
+}
+.info-dot {
+  margin-left: 4px;
+  color: var(--muted);
+  font-size: 0.8em;
+  vertical-align: baseline;
+}
+.anno-name.has-desc:focus-visible {
+  text-decoration-color: var(--accent);
+}
+.tip {
+  position: fixed;
+  z-index: 300;
+  max-width: 280px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--text);
+  color: var(--panel-bg);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
 }
 .anno-leaf .anno-name {
   flex: 0 0 40%;

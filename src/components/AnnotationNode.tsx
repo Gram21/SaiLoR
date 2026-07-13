@@ -2,6 +2,7 @@ import { useStore, type PathSeg } from '../state/store'
 import { isField, isRepeatable, type ResolvedDef } from '../model/schema'
 import { canAdd, canRemove, type AnnotationValueTree } from '../model/annotations'
 import { Field } from './Field'
+import { NodeName } from './NodeName'
 
 interface AnnotationNodeProps {
   def: ResolvedDef
@@ -23,9 +24,7 @@ export function AnnotationNode({ def, path, container }: AnnotationNodeProps) {
     const inst = instances[0]
     return (
       <div className="anno-leaf">
-        <label className="anno-name" title={def.description}>
-          {def.name}
-        </label>
+        <NodeName def={def} />
         <Field def={def} path={path} index={0} value={inst?.value ?? null} />
       </div>
     )
@@ -34,9 +33,7 @@ export function AnnotationNode({ def, path, container }: AnnotationNodeProps) {
   return (
     <div className="anno-node">
       <div className="anno-node-header">
-        <span className="anno-name" title={def.description}>
-          {def.name}
-        </span>
+        <NodeName def={def} />
         {repeatable && (
           <button
             type="button"

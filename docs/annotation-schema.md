@@ -86,7 +86,7 @@ thing you want to record. A node is written as a JSON object (its technical name
 | `children`    | array of nodes                         | no       | —       | A nested sub‑taxonomy. A node may have `type`, `children`, or **both**.                    |
 | `min`         | number                                 | no       | `1`     | Minimum number of times this node may occur.                                              |
 | `max`         | number or `null`                       | no       | `1`     | Maximum occurrences. A positive whole number, or `null` for **unbounded**.                |
-| `description` | string                                 | no       | —       | A tooltip shown in the UI. Also the place to list allowed values (see the enum pattern).  |
+| `description` | string                                 | no       | —       | A help note. The name shows an ⓘ marker and reveals this text on hover. Also the place to list allowed values (see the enum pattern). |
 
 Two structural rules the app enforces:
 
