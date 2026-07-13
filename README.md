@@ -195,6 +195,32 @@ docker run -d -p 8080:80 -v "$PWD/projects:/usr/share/nginx/html/projects:ro" sl
 `AppImage` on Linux). Build on (or cross-build for) each target OS as needed. The desktop app reads
 local PDF files directly, so no server is involved.
 
+## Developing with Docker
+
+If you'd rather not install Node locally, a separate dev stack in
+[`docker-compose.dev.yml`](docker-compose.dev.yml) can run the browser dev server or build the
+Electron app in a container. It is **fully separate** from the production `docker-compose.yml`
+above — nothing here runs on a plain `docker compose up`, so deployment is never affected. Pick a
+target with a Compose **profile**:
+
+```bash
+# Browser development — Vite dev server with hot reload on http://localhost:5173
+docker compose -f docker-compose.dev.yml --profile browser up --build
+# then open http://localhost:5173/?project=/samples/project.example.json
+
+# Build the Electron desktop app — installers are written to ./release/
+docker compose -f docker-compose.dev.yml --profile electron run --rm electron
+```
+
+- **Browser dev** ([`Dockerfile.dev`](Dockerfile.dev)) bind-mounts the source for hot reload. If
+  file edits aren't detected (common on macOS/Windows mounts), prefix the command with
+  `VITE_USE_POLLING=1`.
+- **Electron build** ([`Dockerfile.electron`](Dockerfile.electron)) is a Debian image that runs
+  `electron-builder`. It builds **Linux** installers (AppImage) into `./release/`; macOS/Windows
+  installers must be built on their native OS (Windows can be cross-built by basing the image on
+  `electronuserland/builder:wine`). Running the Electron GUI inside the container additionally needs
+  X11 forwarding — for day-to-day desktop development, run `npm run dev:electron` on the host.
+
 ## Architecture
 
 - `src/model/` — schema types + zod validation, project load/normalize/serialize, annotation

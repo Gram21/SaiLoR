@@ -1,0 +1,32 @@
+# syntax=docker/dockerfile:1
+# ---------------------------------------------------------------------------
+# BUILD image for the ELECTRON desktop app.
+#
+# electron-builder needs glibc and a few system libraries, so this uses a
+# Debian base (not Alpine). It builds LINUX installers (AppImage) into
+# /app/release. Windows/macOS installers must be built on their native OS —
+# Windows can also be cross-built by swapping the base for
+# `electronuserland/builder:wine`.
+#
+# The source is bind-mounted at runtime (see docker-compose.dev.yml), so this
+# image only carries the toolchain + dependencies. Separate from the
+# production `Dockerfile`; it does not affect deployment.
+# ---------------------------------------------------------------------------
+FROM node:22-bookworm
+WORKDIR /app
+
+# Tools electron-builder uses while packaging Linux targets.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates fakeroot \
+ && rm -rf /var/lib/apt/lists/*
+
+# Install dependencies from the lockfile (cached until it changes).
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Package the app: builds the renderer + electron main/preload, then runs
+# electron-builder. Installers are written to /app/release (bind-mounted to
+# ./release on the host). Override the command to run other tasks, e.g.
+#   ... run --rm electron npm run build         # renderer-only build
+#   ... run --rm electron npm test              # unit tests
+CMD ["npm", "run", "build:electron"]

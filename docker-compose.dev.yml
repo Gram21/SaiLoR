@@ -1,0 +1,45 @@
+# ---------------------------------------------------------------------------
+# DEVELOPMENT stack — kept in a separate file from docker-compose.yml so the
+# production deployment setup is never affected. Pick a target with a Compose
+# profile:
+#
+#   Browser dev server (Vite + hot reload) on http://localhost:5173
+#     docker compose -f docker-compose.dev.yml --profile browser up --build
+#     # then open http://localhost:5173/?project=/samples/project.example.json
+#
+#   Build the Electron desktop app (installers land in ./release/)
+#     docker compose -f docker-compose.dev.yml --profile electron run --rm electron
+#
+# Nothing here runs by default (both services are behind profiles), so this file
+# never conflicts with `docker compose up` for deployment.
+# ---------------------------------------------------------------------------
+services:
+  # Browser development: live Vite dev server with HMR.
+  dev-browser:
+    profiles: ["browser"]
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: slr-helper-dev:latest
+    ports:
+      - "5173:5173"
+    volumes:
+      # Live-mount the source so edits hot-reload…
+      - .:/app
+      # …but keep the image's Linux node_modules instead of the host's.
+      - /app/node_modules
+    environment:
+      # Set to 1 if file edits aren't detected (common on macOS/Windows mounts):
+      #   VITE_USE_POLLING=1 docker compose -f docker-compose.dev.yml --profile browser up
+      - VITE_USE_POLLING=${VITE_USE_POLLING:-0}
+
+  # Electron build: packages the desktop app into ./release/.
+  electron:
+    profiles: ["electron"]
+    build:
+      context: .
+      dockerfile: Dockerfile.electron
+    image: slr-helper-electron:latest
+    volumes:
+      - .:/app
+      - /app/node_modules

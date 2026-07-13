@@ -36,6 +36,14 @@ export default defineConfig({
         ]
       : []),
   ],
+  server: {
+    // Inside Docker (bind-mounted source) file-change events are sometimes not
+    // delivered on macOS/Windows hosts; set VITE_USE_POLLING=1 to fall back to
+    // polling. No effect on a normal local dev server.
+    watch: {
+      usePolling: process.env.VITE_USE_POLLING === '1',
+    },
+  },
   build: {
     outDir: 'dist',
     sourcemap: true,
