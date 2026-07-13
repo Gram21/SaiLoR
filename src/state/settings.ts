@@ -13,6 +13,41 @@ export const FONT_MIN = 0.7
 export const FONT_MAX = 2.0
 export const FONT_STEP = 0.1
 
+// Resizable pane widths (px).
+const LEFT_KEY = 'slr.pane.left'
+const RIGHT_KEY = 'slr.pane.right'
+export const PANE_LEFT_DEFAULT = 260
+export const PANE_RIGHT_DEFAULT = 380
+export const PANE_LEFT_MIN = 160
+export const PANE_LEFT_MAX = 520
+export const PANE_RIGHT_MIN = 260
+export const PANE_RIGHT_MAX = 680
+
+export interface PaneWidths {
+  left: number
+  right: number
+}
+
+export function loadPaneWidths(): PaneWidths {
+  return {
+    left: readNum(LEFT_KEY, PANE_LEFT_DEFAULT, PANE_LEFT_MIN, PANE_LEFT_MAX),
+    right: readNum(RIGHT_KEY, PANE_RIGHT_DEFAULT, PANE_RIGHT_MIN, PANE_RIGHT_MAX),
+  }
+}
+
+export function savePaneWidths(w: PaneWidths): void {
+  safeSet(LEFT_KEY, String(Math.round(w.left)))
+  safeSet(RIGHT_KEY, String(Math.round(w.right)))
+}
+
+function readNum(key: string, dflt: number, min: number, max: number): number {
+  const raw = safeGet(key)
+  if (raw === null || raw.trim() === '') return dflt
+  const n = Number(raw)
+  if (!Number.isFinite(n)) return dflt
+  return Math.min(max, Math.max(min, n))
+}
+
 /** Resolve the initial theme: stored choice, else the OS preference, else light. */
 export function loadTheme(): Theme {
   const stored = safeGet(THEME_KEY)
@@ -23,10 +58,14 @@ export function loadTheme(): Theme {
   return 'light'
 }
 
-/** Resolve the initial font scale (clamped), defaulting to 1. */
+/** Resolve the initial font scale (clamped), defaulting to 1 (= 14px base). */
 export function loadFontScale(): number {
-  const stored = Number(safeGet(FONT_KEY))
-  if (Number.isFinite(stored)) return clampFont(stored)
+  const raw = safeGet(FONT_KEY)
+  // Note: Number(null) === 0, so an absent value must be handled explicitly,
+  // otherwise it would clamp to FONT_MIN instead of the intended default of 1.
+  if (raw === null || raw.trim() === '') return 1
+  const stored = Number(raw)
+  if (Number.isFinite(stored) && stored > 0) return clampFont(stored)
   return 1
 }
 
