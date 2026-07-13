@@ -15,6 +15,10 @@ export interface SlrBridge {
   ): Promise<{ path: string } | null>
   /** Register the project's base directory so slr-file:// can resolve PDFs. */
   setProjectDir(path: string): Promise<void>
+  /** Unsaved-changes coordination for a clean quit. */
+  setDirty(dirty: boolean): void
+  onRequestSave(cb: () => void): void
+  saveComplete(ok: boolean): void
 }
 
 function bridge(): SlrBridge {

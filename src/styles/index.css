@@ -127,11 +127,26 @@ button.primary {
 .workspace {
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: 260px minmax(0, 1.4fr) minmax(320px, 1fr);
+  /* grid-template-columns is set inline from the resizable pane widths. */
   min-height: 0;
 }
-.workspace.sidebar-collapsed {
-  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr);
+
+/* Drag handle between panes. */
+.splitter {
+  cursor: col-resize;
+  background: var(--border);
+  transition: background 0.15s;
+  touch-action: none;
+}
+.splitter:hover {
+  background: var(--accent);
+}
+body.resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+body.resizing * {
+  cursor: col-resize !important;
 }
 
 .panel {

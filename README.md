@@ -83,6 +83,8 @@ untouched. Unknown top-level and per-paper fields are preserved verbatim.
 - **? (Help)** — opens a dialog describing the workflow and listing all keyboard shortcuts.
 - **Left pane** — collapsible list of papers (toggle with the ☰ button). A green dot marks papers
   that already have annotations. Click a paper to open it.
+- **Resizable panes** — drag the borders between the three panes to resize them; the widths are
+  remembered.
 - **Middle pane** — the paper's PDF, rendered with a selectable text layer.
 - **Right pane** — the annotation form, laid out by the taxonomy. Repeatable nodes show **+ Add**
   (up to `max`) and a remove (**×**) control (down to `min`).

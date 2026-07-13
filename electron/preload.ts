@@ -12,4 +12,12 @@ contextBridge.exposeInMainWorld('slr', {
   saveProjectAs: (text: string, suggestedName: string) =>
     ipcRenderer.invoke('project:saveAs', text, suggestedName),
   setProjectDir: (filePath: string) => ipcRenderer.invoke('project:setDir', filePath),
+
+  // Unsaved-changes coordination for a clean quit.
+  setDirty: (dirty: boolean) => ipcRenderer.send('app:setDirty', dirty),
+  onRequestSave: (cb: () => void) => {
+    ipcRenderer.removeAllListeners('app:requestSave')
+    ipcRenderer.on('app:requestSave', () => cb())
+  },
+  saveComplete: (ok: boolean) => ipcRenderer.send('app:saveComplete', ok),
 })

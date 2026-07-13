@@ -13,7 +13,13 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 
 /** Middle pane: renders the current paper's PDF and captures text selection. */
 export function PdfViewer() {
-  const paper = useStore(selectCurrentPaper)
+  // Subscribe to primitive fields only. Subscribing to the whole paper object
+  // would re-run the load effect on every annotation edit (immer returns a new
+  // paper object), which would reload — and briefly blank — the PDF.
+  const paperId = useStore((s) => selectCurrentPaper(s)?.id ?? null)
+  const pdfPath = useStore((s) => selectCurrentPaper(s)?.pdf ?? null)
+  const title = useStore((s) => selectCurrentPaper(s)?.title ?? '')
+  const doi = useStore((s) => selectCurrentPaper(s)?.doi)
   const saveHandle = useStore((s) => s.saveHandle)
   const setPdfSelection = useStore((s) => s.setPdfSelection)
 
@@ -23,16 +29,16 @@ export function PdfViewer() {
   const [width, setWidth] = useState(600)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Resolve the PDF source whenever the paper (or its pdf path) changes.
+  // Resolve the PDF source only when the paper identity or its pdf path changes.
   useEffect(() => {
     let revoked: (() => void) | undefined
     let cancelled = false
     setError(null)
     setNumPages(0)
     setUrl(null)
-    if (!paper) return
+    if (!pdfPath) return
     getPlatform()
-      .getPdfSource(paper.pdf, saveHandle ?? { kind: 'download' })
+      .getPdfSource(pdfPath, saveHandle ?? { kind: 'download' })
       .then((src) => {
         if (cancelled) {
           src.revoke?.()
@@ -46,7 +52,7 @@ export function PdfViewer() {
       cancelled = true
       revoked?.()
     }
-  }, [paper, paper?.pdf, saveHandle])
+  }, [paperId, pdfPath, saveHandle])
 
   // Track container width so pages scale to fit.
   useLayoutEffect(() => {
@@ -67,7 +73,7 @@ export function PdfViewer() {
     if (text.trim()) setPdfSelection(text)
   }
 
-  if (!paper) {
+  if (!paperId) {
     return <div className="panel pdf empty">No paper selected.</div>
   }
 
@@ -75,10 +81,10 @@ export function PdfViewer() {
     <div className="panel pdf">
       <div className="pdf-head">
         <div className="pdf-meta">
-          <span className="pdf-title">{paper.title}</span>
-          {paper.doi && (
+          <span className="pdf-title">{title}</span>
+          {doi && (
             <span className="pdf-doi">
-              DOI: <code>{paper.doi}</code>
+              DOI: <code>{doi}</code>
             </span>
           )}
         </div>
