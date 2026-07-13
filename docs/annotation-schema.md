@@ -86,7 +86,8 @@ thing you want to record. A node is written as a JSON object (its technical name
 | `children`    | array of nodes                         | no       | —       | A nested sub‑taxonomy. A node may have `type`, `children`, or **both**.                    |
 | `min`         | number                                 | no       | `1`     | Minimum number of times this node may occur.                                              |
 | `max`         | number or `null`                       | no       | `1`     | Maximum occurrences. A positive whole number, or `null` for **unbounded**.                |
-| `description` | string                                 | no       | —       | A help note. The name shows an ⓘ marker and reveals this text on hover. Also the place to list allowed values (see the enum pattern). |
+| `options`     | array of strings                       | no       | —       | Turns a `string` field into an **enum dropdown** of allowed values (see §3.2).            |
+| `description` | string                                 | no       | —       | A help note. The name shows an ⓘ marker and reveals this text on hover.                    |
 
 Two structural rules the app enforces:
 
@@ -142,22 +143,32 @@ Put together in a schema, these three might look like:
 }
 ```
 
-### 3.2 Constraining a string to a set of options (the "enum via description" pattern)
+### 3.2 Enum fields: constraining a string to a set of options
 
-**There is no enum / dropdown type.** When you want a field limited to a fixed set of choices,
-use `type: "string"` and spell out the allowed values in the `description`. The description is
-shown as a tooltip, so the reviewer sees the menu of options while typing:
+When you want a field limited to a fixed set of choices, add an **`options`** array to a
+`type: "string"` node. This turns the field into an **enum**: the app renders it as a
+searchable **dropdown** (a combobox). Clicking the field opens the list of allowed options;
+typing filters that list; the value you pick is stored as a plain string, exactly like any
+other string field. Leaving it unselected stores `null`.
 
 ```json
 {
-  "name": "Study Type",
+  "name": "Evaluation Type",
   "type": "string",
-  "description": "One of: case study, experiment, survey, literature review"
+  "options": ["Controlled experiment", "Case study", "Benchmark", "User study", "Survey", "Simulation", "Ablation study"],
+  "description": "How the evidence was obtained"
 }
 ```
 
-The app does not enforce the list — it is guidance for the annotator — but it keeps everyone
-using the same vocabulary without needing any special field type.
+Rules for `options`:
+
+- It only applies to a `type: "string"` node. Using `options` **without** `type: "string"`
+  (for example on a group, a number, or a boolean) is a schema error.
+- It must be an **array of strings**.
+
+You can still add a `description` alongside `options` for extra guidance in the tooltip, but the
+dropdown itself is now the mechanism that keeps everyone using the same vocabulary — you no
+longer need to spell the choices out in prose.
 
 ### 3.3 Groups and nested taxonomies
 
@@ -358,20 +369,34 @@ Using the schema from [section 6](#6-a-complete-example) below, the same paper m
   "pdf": "pdfs/paper-a.pdf",
   "annotations": {
     "Relevant": [{ "value": true }],
-    "Study Type": [{ "value": "experiment" }],
+    "Study Type": [{ "value": "Experiment" }],
     "Year": [{ "value": 2021 }],
     "Findings": [
       {
         "children": {
           "Claim": [{ "value": "Neural retrieval beats BM25 on their benchmark." }],
-          "Evidence": [{ "value": "Table 3, +8% MRR." }],
+          "Evidence": [
+            {
+              "children": {
+                "Metric": [{ "value": "MRR" }],
+                "Evaluation Type": [{ "value": "Benchmark" }]
+              }
+            }
+          ],
           "Confidence": [{ "value": 4 }]
         }
       },
       {
         "children": {
           "Claim": [{ "value": "Gains shrink on cross-language queries." }],
-          "Evidence": [{ "value": "Section 5.2." }],
+          "Evidence": [
+            {
+              "children": {
+                "Metric": [{ "value": "MRR" }],
+                "Evaluation Type": [{ "value": "Controlled experiment" }]
+              }
+            }
+          ],
           "Confidence": [{ "value": 3 }]
         }
       }
@@ -399,9 +424,9 @@ you read a saved file and spot problems.
 ## 6. A complete example
 
 Here is one realistic, fully‑valid SLR project: a schema mixing a boolean, strings (including
-the enum‑via‑description pattern), a number, a repeatable **Findings** group, and a bounded
-**Threats to Validity** group — plus two papers. This block is copy‑paste runnable: save it as
-`project.json`, put the two PDFs under `pdfs/`, and open it.
+an `options` enum dropdown), a number, a repeatable **Findings** group with a nested
+**Evidence** group, and a bounded **Threats to Validity** group — plus two papers. This block is
+copy‑paste runnable: save it as `project.json`, put the two PDFs under `pdfs/`, and open it.
 
 ```json
 {
@@ -416,7 +441,8 @@ the enum‑via‑description pattern), a number, a repeatable **Findings** group
       {
         "name": "Study Type",
         "type": "string",
-        "description": "One of: case study, experiment, survey, literature review"
+        "options": ["Case study", "Experiment", "Survey", "Literature review"],
+        "description": "The empirical form of the study"
       },
       {
         "name": "Year",
@@ -429,7 +455,18 @@ the enum‑via‑description pattern), a number, a repeatable **Findings** group
         "description": "One or more key findings extracted from the paper.",
         "children": [
           { "name": "Claim", "type": "string" },
-          { "name": "Evidence", "type": "string" },
+          {
+            "name": "Evidence",
+            "children": [
+              { "name": "Metric", "type": "string", "description": "e.g. MRR, F1, accuracy" },
+              {
+                "name": "Evaluation Type",
+                "type": "string",
+                "options": ["Controlled experiment", "Case study", "Benchmark", "User study", "Survey", "Simulation", "Ablation study"],
+                "description": "How the evidence was obtained"
+              }
+            ]
+          },
           { "name": "Confidence", "type": "number", "description": "1 (low) to 5 (high)" }
         ]
       },
@@ -504,6 +541,8 @@ If a project won't open, it's almost always one of these:
   numbers, or use `null` for `max` if you meant "unbounded".
 - **A node with neither `type` nor `children`.** Every node needs a `type` (to be a field), a
   non‑empty `children` (to be a group), or both. A bare `{ "name": "X" }` is invalid.
+- **`options` on a non‑string node.** The `options` enum list only applies to `type: "string"`
+  nodes, and must be an array of strings. Using it anywhere else is rejected.
 - **Comments or trailing commas.** JSON allows neither. Remove any `//` lines and any comma that
   sits before a closing `]` or `}`.
 - **Wrong or missing `pdf` path.** Every paper needs a `pdf`, and the path is relative to the

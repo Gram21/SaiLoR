@@ -12,7 +12,28 @@
         "description": "One or more key findings extracted from the paper.",
         "children": [
           { "name": "Claim", "type": "string" },
-          { "name": "Evidence", "type": "string" },
+          {
+            "name": "Evidence",
+            "children": [
+              { "name": "Metric", "type": "string", "description": "e.g. MRR, F1, accuracy" },
+              {
+                "name": "Evaluation Type",
+                "type": "string",
+                "min": 1,
+                "max": null,
+                "options": [
+                  "Controlled experiment",
+                  "Case study",
+                  "Benchmark",
+                  "User study",
+                  "Survey",
+                  "Simulation",
+                  "Ablation study"
+                ],
+                "description": "How the evidence was obtained"
+              }
+            ]
+          },
           { "name": "Confidence", "type": "number", "description": "1 (low) to 5 (high)" }
         ]
       },
@@ -48,6 +69,7 @@
       "id": "paper-c",
       "title": "Multi-page Test Document",
       "authors": ["E. Editor"],
+      "doi": "10.1000/mno987",
       "pdf": "pdfs/multipage.pdf",
       "annotations": {}
     }

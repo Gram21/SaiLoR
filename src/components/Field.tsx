@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore, type PathSeg } from '../state/store'
 import type { ResolvedDef } from '../model/schema'
 import type { FieldValue } from '../model/annotations'
+import { ComboBox } from './ComboBox'
 
 const MAX_TEXTAREA_HEIGHT = 240
 
@@ -39,7 +40,9 @@ export function Field({ def, path, index, value }: FieldProps) {
     )
   }
 
-  const canGrab = def.type === 'string' || def.type === 'number'
+  // A string field with `options` is an enum → dropdown (no free-text grab).
+  const isEnum = def.type === 'string' && !!def.options && def.options.length > 0
+  const canGrab = def.type === 'number' || (def.type === 'string' && !isEnum)
 
   return (
     <div className="field-row">
@@ -49,6 +52,12 @@ export function Field({ def, path, index, value }: FieldProps) {
           className="field-input"
           value={value === null || value === undefined ? '' : String(value)}
           onChange={(e) => set(e.target.value === '' ? null : Number(e.target.value))}
+        />
+      ) : isEnum ? (
+        <ComboBox
+          value={typeof value === 'string' ? value : null}
+          options={def.options!}
+          onChange={(v) => set(v)}
         />
       ) : (
         <StringField
