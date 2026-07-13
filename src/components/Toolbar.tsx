@@ -72,7 +72,7 @@ export function Toolbar() {
           <button
             type="button"
             className="icon-btn"
-            title={`Decrease font size (${modKey}+-)`}
+            title={`Decrease app font size (${modKey}+Shift+-)`}
             onClick={decreaseFont}
           >
             A−
@@ -80,7 +80,7 @@ export function Toolbar() {
           <button
             type="button"
             className="icon-btn"
-            title={`Reset font size (${modKey}+0)`}
+            title={`Reset app font size (${modKey}+Shift+0)`}
             onClick={resetFont}
           >
             A
@@ -88,7 +88,7 @@ export function Toolbar() {
           <button
             type="button"
             className="icon-btn"
-            title={`Increase font size (${modKey}++)`}
+            title={`Increase app font size (${modKey}+Shift++)`}
             onClick={increaseFont}
           >
             A+

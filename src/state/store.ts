@@ -48,6 +48,12 @@ interface HistoryEntry {
 
 const HISTORY_LIMIT = 100
 
+// PDF zoom bounds (multiplier applied to the fit-to-width base size).
+export const PDF_ZOOM_MIN = 0.4
+export const PDF_ZOOM_MAX = 3
+const PDF_ZOOM_STEP = 0.2
+const roundZoom = (z: number) => Math.round(z * 100) / 100
+
 /**
  * Tracks the last edited field so consecutive edits to the *same* field (e.g.
  * typing character by character) collapse into a single undo step instead of
@@ -68,6 +74,8 @@ interface AppState {
   pdfSelection: string
   theme: Theme
   fontScale: number
+  /** Zoom multiplier for the PDF page (session-only). */
+  pdfZoom: number
   recents: RecentEntry[]
   helpOpen: boolean
   /** Undo/redo history of annotation changes (session-only). */
@@ -89,6 +97,9 @@ interface AppState {
   increaseFont: () => void
   decreaseFont: () => void
   resetFont: () => void
+  zoomInPdf: () => void
+  zoomOutPdf: () => void
+  resetPdfZoom: () => void
   setHelpOpen: (open: boolean) => void
 
   setFieldValue: (path: PathSeg[], name: string, index: number, value: FieldValue) => void
@@ -124,6 +135,7 @@ export const useStore = create<AppState>()(
     pdfSelection: '',
     theme: loadTheme(),
     fontScale: loadFontScale(),
+    pdfZoom: 1,
     recents: getPlatform().getRecents(),
     helpOpen: false,
     past: [],
@@ -352,6 +364,21 @@ export const useStore = create<AppState>()(
         s.fontScale = 1
       })
     },
+
+    zoomInPdf: () =>
+      set((s) => {
+        s.pdfZoom = Math.min(PDF_ZOOM_MAX, roundZoom(s.pdfZoom + PDF_ZOOM_STEP))
+      }),
+
+    zoomOutPdf: () =>
+      set((s) => {
+        s.pdfZoom = Math.max(PDF_ZOOM_MIN, roundZoom(s.pdfZoom - PDF_ZOOM_STEP))
+      }),
+
+    resetPdfZoom: () =>
+      set((s) => {
+        s.pdfZoom = 1
+      }),
 
     setHelpOpen: (open) =>
       set((s) => {

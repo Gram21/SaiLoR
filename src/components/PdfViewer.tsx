@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
-import { useStore, selectCurrentPaper } from '../state/store'
+import { useStore, selectCurrentPaper, PDF_ZOOM_MIN, PDF_ZOOM_MAX } from '../state/store'
 import { getPlatform } from '../platform'
 
 // Load the pdf.js worker from the bundled dependency (works offline / in Electron).
@@ -29,6 +29,14 @@ export function PdfViewer() {
   const [numPages, setNumPages] = useState(0)
   const [width, setWidth] = useState(600)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // PDF zoom lives in the store so keyboard shortcuts (Ctrl +/-) can drive it too.
+  const zoom = useStore((s) => s.pdfZoom)
+  const zoomIn = useStore((s) => s.zoomInPdf)
+  const zoomOut = useStore((s) => s.zoomOutPdf)
+  const resetZoom = useStore((s) => s.resetPdfZoom)
+  // The page renders at the fit-to-width base size scaled by the zoom factor.
+  const renderWidth = Math.round(width * zoom)
 
   // Resolve the PDF source only when the paper identity or its pdf path changes.
   useEffect(() => {
@@ -90,6 +98,37 @@ export function PdfViewer() {
             </span>
           )}
         </div>
+        <div className="pdf-zoom" role="group" aria-label="Zoom">
+          <button
+            type="button"
+            className="icon-btn"
+            title="Zoom out (Ctrl+-)"
+            aria-label="Zoom out"
+            onClick={zoomOut}
+            disabled={zoom <= PDF_ZOOM_MIN}
+          >
+            −
+          </button>
+          <button
+            type="button"
+            className="icon-btn pdf-zoom-level"
+            title="Reset zoom"
+            aria-label="Reset zoom"
+            onClick={resetZoom}
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            title="Zoom in (Ctrl++)"
+            aria-label="Zoom in"
+            onClick={zoomIn}
+            disabled={zoom >= PDF_ZOOM_MAX}
+          >
+            +
+          </button>
+        </div>
       </div>
       <div
         className="pdf-scroll"
@@ -110,7 +149,7 @@ export function PdfViewer() {
               <Page
                 key={i}
                 pageNumber={i + 1}
-                width={width}
+                width={renderWidth}
                 renderTextLayer
                 renderAnnotationLayer={false}
               />
