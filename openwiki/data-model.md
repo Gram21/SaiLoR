@@ -28,12 +28,14 @@ Each schema node defines a field or group in the taxonomy:
 | `children` | no | `[]` | Sub-taxonomy. A node may have `type`, `children`, or both |
 | `min` | no | `1` | Minimum occurrences |
 | `max` | no | `1` | Max occurrences: a positive integer, or `null` for unbounded |
+| `options` | no | — | Array of strings on a `string` field → renders as a filterable enum dropdown (ComboBox). Only valid when `type` is `"string"` |
 | `description` | no | — | Optional tooltip text |
 
 **Validation rules** (enforced by zod in `annotationDefSchema`):
 - `name` must be a non-empty string
 - `max` must be ≥ `min` (when `max` is not `null`)
 - A node must have a `type` or non-empty `children` (a name-only node with neither is rejected)
+- `options` is only allowed on a `type: "string"` node; using it on any other type (or a group) is a schema error
 - Sibling names must be unique (enforced during resolution, not zod)
 
 ### Paper
@@ -60,6 +62,7 @@ When a project is loaded, raw `AnnotationDef[]` are resolved into `ResolvedDef[]
 - Applies defaults: `min` → `1`, `max` → `1` (if undefined)
 - Assigns a stable `id` derived from the node's path (slash-joined names, e.g. `"Findings/Claim"`)
 - Enforces sibling-name uniqueness (throws `SchemaError`)
+- Passes through `options` (if present) for enum string fields
 - Recursively resolves `children`
 
 ### Project and Paper (`src/model/project.ts`)

@@ -81,10 +81,11 @@ npm run typecheck
 │   │   ├── Toolbar.tsx    Open ▾ / Save ▾ dropdowns, font controls, theme toggle, help button
 │   │   ├── Dropdown.tsx   Reusable click-to-open dropdown menu
 │   │   ├── PaperList.tsx  Left pane — paper list with search box and annotation status dots
-│   │   ├── PdfViewer.tsx  Middle pane — react-pdf, zoom controls, text selection capture
+│   │   ├── PdfViewer.tsx  Middle pane — react-pdf, zoom controls, multi-page navigation, text selection capture
 │   │   ├── AnnotationPanel.tsx  Right pane — renders schema recursively
 │   │   ├── AnnotationNode.tsx   Recursive node (fields, groups, repeatable instances)
-│   │   ├── Field.tsx      Input control (auto-expanding textarea for strings) + "grab from PDF" button
+│   │   ├── Field.tsx      Input control (text/number/checkbox/enum dropdown) + "grab from PDF" button
+│   │   ├── ComboBox.tsx   Filterable dropdown for enum (options) string fields
 │   │   ├── HelpDialog.tsx Modal with app intro + keyboard shortcuts
 │   │   └── ErrorPanel.tsx Error overlay for load/save failures
 │   ├── hooks/
