@@ -1,8 +1,13 @@
 import type { OpenedProject, PdfSource, PlatformAdapter, SaveHandle } from './adapter'
+import { readRecents, pushRecent, removeRecent, type RecentEntry } from './recents'
+
+const RECENTS_KEY = 'slr.recents.electron'
 
 /** Shape of the API exposed by electron/preload.ts on `window.slr`. */
 export interface SlrBridge {
   openProject(): Promise<{ path: string; text: string } | null>
+  /** Read a specific file by absolute path (for recent files). Null if missing. */
+  openPath(path: string): Promise<{ path: string; text: string } | null>
   saveProject(path: string, text: string): Promise<void>
   saveProjectAs(
     text: string,
@@ -20,10 +25,31 @@ function bridge(): SlrBridge {
 export class ElectronAdapter implements PlatformAdapter {
   readonly kind = 'electron' as const
 
+  getRecents(): RecentEntry[] {
+    return readRecents(RECENTS_KEY)
+  }
+
   async openProject(): Promise<OpenedProject | null> {
     const res = await bridge().openProject()
     if (!res) return null
     await bridge().setProjectDir(res.path)
+    pushRecent(RECENTS_KEY, { id: res.path, name: baseName(res.path) })
+    return {
+      text: res.text,
+      handle: { kind: 'electron', path: res.path },
+      name: baseName(res.path),
+    }
+  }
+
+  async openRecent(id: string): Promise<OpenedProject | null> {
+    const res = await bridge().openPath(id)
+    if (!res) {
+      // File moved or deleted — drop it from the list.
+      removeRecent(RECENTS_KEY, id)
+      return null
+    }
+    await bridge().setProjectDir(res.path)
+    pushRecent(RECENTS_KEY, { id: res.path, name: baseName(res.path) })
     return {
       text: res.text,
       handle: { kind: 'electron', path: res.path },
@@ -44,6 +70,7 @@ export class ElectronAdapter implements PlatformAdapter {
     const res = await bridge().saveProjectAs(text, suggestedName)
     if (!res) return null
     await bridge().setProjectDir(res.path)
+    pushRecent(RECENTS_KEY, { id: res.path, name: baseName(res.path) })
     return { handle: { kind: 'electron', path: res.path }, name: baseName(res.path) }
   }
 

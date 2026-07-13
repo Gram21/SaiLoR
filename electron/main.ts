@@ -69,7 +69,19 @@ function buildMenu() {
       submenu: [isMac ? { role: 'close' as const } : { role: 'quit' as const }],
     },
     { role: 'editMenu' },
-    { role: 'viewMenu' },
+    {
+      // Custom View menu: deliberately omit the zoom roles so their Ctrl +/-/0
+      // accelerators reach the renderer, which uses them for app font scaling
+      // (native page zoom would also scale the PDF "paper", which we don't want).
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+      ],
+    },
     { role: 'windowMenu' },
   ]
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
@@ -87,6 +99,15 @@ ipcMain.handle('project:open', async () => {
   const filePath = res.filePaths[0]
   const text = await readFile(filePath, 'utf-8')
   return { path: filePath, text }
+})
+
+ipcMain.handle('project:openPath', async (_e, filePath: string) => {
+  try {
+    const text = await readFile(filePath, 'utf-8')
+    return { path: filePath, text }
+  } catch {
+    return null // file moved/deleted/unreadable
+  }
 })
 
 ipcMain.handle('project:save', async (_e, filePath: string, text: string) => {

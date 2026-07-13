@@ -1,4 +1,5 @@
 :root {
+  /* Light palette (default). Dark overrides live under [data-theme='dark']. */
   --bg: #f6f7f9;
   --panel-bg: #ffffff;
   --border: #dcdfe4;
@@ -9,21 +10,24 @@
   --danger: #dc2626;
   --ok: #16a34a;
   --toolbar-h: 44px;
-  color-scheme: light dark;
+
+  /* App-wide font scaling (Ctrl +/-). Base is 14px at scale 1. */
+  --app-font-scale: 1;
+  font-size: calc(14px * var(--app-font-scale));
+  color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #14161a;
-    --panel-bg: #1c1f24;
-    --border: #2c313a;
-    --text: #e6e8eb;
-    --muted: #9aa1ab;
-    --accent: #4f8cff;
-    --accent-weak: #1e2a44;
-    --danger: #f87171;
-    --ok: #4ade80;
-  }
+:root[data-theme='dark'] {
+  --bg: #14161a;
+  --panel-bg: #1c1f24;
+  --border: #2c313a;
+  --text: #e6e8eb;
+  --muted: #9aa1ab;
+  --accent: #4f8cff;
+  --accent-weak: #1e2a44;
+  --danger: #f87171;
+  --ok: #4ade80;
+  color-scheme: dark;
 }
 
 * {
@@ -39,7 +43,7 @@ body,
 
 body {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  font-size: 14px;
+  font-size: 1rem;
   color: var(--text);
   background: var(--bg);
 }
@@ -91,8 +95,21 @@ button.primary {
   display: flex;
   gap: 6px;
 }
-.toolbar-status {
+.toolbar-view {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.font-controls {
+  display: flex;
+  gap: 2px;
+}
+.font-controls .icon-btn {
+  min-width: 30px;
+  text-align: center;
+}
+.toolbar-status {
   color: var(--muted);
 }
 .project-name {
@@ -176,7 +193,7 @@ button.primary {
 }
 .paper-authors {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.857rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -215,7 +232,7 @@ button.primary {
 }
 .pdf-doi {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.857rem;
 }
 .pdf-scroll {
   flex: 1 1 auto;
@@ -228,8 +245,13 @@ button.primary {
   background: var(--bg);
 }
 .pdf-scroll .react-pdf__Page {
+  /* The paper is always rendered "normal" (white), regardless of app theme. */
+  background: #ffffff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   margin-bottom: 4px;
+}
+.pdf-scroll .react-pdf__Page__canvas {
+  background: #ffffff;
 }
 .pdf-loading,
 .pdf-error {
@@ -256,11 +278,11 @@ button.primary {
 }
 .annotations-head h2 {
   margin: 0;
-  font-size: 14px;
+  font-size: 1rem;
 }
 .annotations-paper-title {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.857rem;
 }
 .annotations-body {
   padding: 10px 12px;
@@ -293,7 +315,7 @@ button.primary {
   font-weight: 600;
 }
 .add-btn {
-  font-size: 12px;
+  font-size: 0.857rem;
   padding: 2px 8px;
   color: var(--accent);
 }
@@ -307,7 +329,7 @@ button.primary {
   align-items: center;
   justify-content: space-between;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.857rem;
 }
 .remove-btn {
   padding: 0 8px;
@@ -400,7 +422,152 @@ button.primary {
   padding-left: 18px;
   color: var(--danger);
   font-family: ui-monospace, monospace;
-  font-size: 12px;
+  font-size: 0.857rem;
   max-height: 40vh;
   overflow: auto;
+}
+
+/* ---- Dropdown menus ---- */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+.dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.dropdown-trigger .caret {
+  font-size: 0.7em;
+  color: var(--muted);
+}
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  min-width: 200px;
+  max-width: 320px;
+  padding: 4px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+}
+.menu-right {
+  left: auto;
+  right: 0;
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+}
+.menu-item:hover:not(:disabled) {
+  background: var(--accent-weak);
+}
+.menu-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.menu-item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.menu-item-shortcut {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+.menu-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border);
+}
+.menu-header {
+  padding: 4px 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ---- Modal (Help) ---- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+.modal {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: min(680px, 92vw);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.35);
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-body {
+  padding: 12px 16px 20px;
+  overflow: auto;
+}
+.modal-body h3 {
+  margin: 16px 0 6px;
+  font-size: 0.95rem;
+}
+.modal-body h3:first-child {
+  margin-top: 4px;
+}
+.modal-body p,
+.modal-body li {
+  color: var(--text);
+  line-height: 1.5;
+}
+.modal-body ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.help-keys {
+  border-collapse: collapse;
+  width: 100%;
+}
+.help-keys td {
+  padding: 4px 8px;
+  vertical-align: top;
+}
+.help-keys td:first-child {
+  white-space: nowrap;
+  width: 1%;
+}
+kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--bg);
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  white-space: nowrap;
 }

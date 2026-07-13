@@ -77,6 +77,10 @@ untouched. Unknown top-level and per-paper fields are preserved verbatim.
 
 ## Using the app
 
+- **Open ▾ menu** — open a project file, or reopen one of the last 5 recent projects. (Recent
+  projects require the desktop app or a Chromium browser; other browsers show only "Open file…".)
+- **Save ▾ menu** — Save or Save as…, with their shortcuts shown next to each item.
+- **? (Help)** — opens a dialog describing the workflow and listing all keyboard shortcuts.
 - **Left pane** — collapsible list of papers (toggle with the ☰ button). A green dot marks papers
   that already have annotations. Click a paper to open it.
 - **Middle pane** — the paper's PDF, rendered with a selectable text layer.
@@ -84,16 +88,25 @@ untouched. Unknown top-level and per-paper fields are preserved verbatim.
   (up to `max`) and a remove (**×**) control (down to `min`).
 - **Grab from PDF** — select text in the PDF, then click the **⧉** button next to a string/number
   field to insert it (numeric fields extract the first number).
+- **Theme** — toggle light/dark for the app with the ☾/☀ button (top right). The choice is
+  remembered. The PDF paper is always rendered on a normal white background, regardless of theme.
+- **Font size** — the `A− A A+` buttons (or the shortcuts below) scale the app's text. This affects
+  the app chrome only, not the rendered PDF. The chosen size is remembered.
 
 ### Keyboard shortcuts
 
-| Shortcut                | Action              |
-| ----------------------- | ------------------- |
-| `Ctrl/Cmd + S`          | Save                |
-| `Ctrl/Cmd + Shift + S`  | Save as…            |
-| `Alt + ↓` or `]`        | Next paper          |
-| `Alt + ↑` or `[`        | Previous paper      |
-| `Ctrl/Cmd + C/V/X/Z`    | Native copy/paste/… |
+| Shortcut                | Action                         |
+| ----------------------- | ------------------------------ |
+| `Ctrl/Cmd + O`          | Open a project file            |
+| `Ctrl/Cmd + S`          | Save                           |
+| `Ctrl/Cmd + Shift + S`  | Save as…                       |
+| `Ctrl/Cmd + +`          | Increase app font size         |
+| `Ctrl/Cmd + -`          | Decrease app font size         |
+| `Ctrl/Cmd + 0`          | Reset app font size            |
+| `Alt + ↓` or `]`        | Next paper                     |
+| `Alt + ↑` or `[`        | Previous paper                 |
+| `F1`                    | Open help                      |
+| `Ctrl/Cmd + C/V/X/Z`    | Native copy/paste/…            |
 
 ## Saving
 

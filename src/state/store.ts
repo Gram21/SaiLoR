@@ -14,6 +14,16 @@ import {
 import type { ResolvedDef } from '../model/schema'
 import { getPlatform, type SaveHandle } from '../platform'
 import { BrowserAdapter } from '../platform/browser'
+import type { RecentEntry } from '../platform/recents'
+import {
+  type Theme,
+  loadTheme,
+  loadFontScale,
+  applyTheme,
+  applyFontScale,
+  clampFont,
+  FONT_STEP,
+} from './settings'
 
 /** A step into the annotation tree: pick instance `index` of node `name`. */
 export interface PathSeg {
@@ -37,8 +47,13 @@ interface AppState {
   sidebarCollapsed: boolean
   /** Latest text selected inside the PDF viewer (for "grab from PDF"). */
   pdfSelection: string
+  theme: Theme
+  fontScale: number
+  recents: RecentEntry[]
+  helpOpen: boolean
 
   openProject: () => Promise<void>
+  openRecent: (id: string) => Promise<void>
   loadFromUrl: (url: string) => Promise<void>
   loadFromText: (text: string, handle: SaveHandle | null, name: string) => void
   save: () => Promise<boolean>
@@ -47,6 +62,12 @@ interface AppState {
   toggleSidebar: () => void
   setPdfSelection: (text: string) => void
   clearError: () => void
+  toggleTheme: () => void
+  setTheme: (theme: Theme) => void
+  increaseFont: () => void
+  decreaseFont: () => void
+  resetFont: () => void
+  setHelpOpen: (open: boolean) => void
 
   setFieldValue: (path: PathSeg[], name: string, index: number, value: FieldValue) => void
   addInstance: (path: PathSeg[], def: ResolvedDef) => void
@@ -77,6 +98,10 @@ export const useStore = create<AppState>()(
     busy: false,
     sidebarCollapsed: false,
     pdfSelection: '',
+    theme: loadTheme(),
+    fontScale: loadFontScale(),
+    recents: getPlatform().getRecents(),
+    helpOpen: false,
 
     openProject: async () => {
       const platform = getPlatform()
@@ -92,10 +117,44 @@ export const useStore = create<AppState>()(
           return
         }
         get().loadFromText(opened.text, opened.handle, opened.name)
+        set((s) => {
+          s.recents = platform.getRecents()
+        })
       } catch (err) {
         set((s) => {
           s.busy = false
           s.loadError = { message: 'Failed to open the project.', details: [String(err)] }
+        })
+      }
+    },
+
+    openRecent: async (id) => {
+      const platform = getPlatform()
+      set((s) => {
+        s.busy = true
+      })
+      try {
+        const opened = await platform.openRecent(id)
+        if (!opened) {
+          // Entry was stale and has been pruned from the list.
+          set((s) => {
+            s.busy = false
+            s.recents = platform.getRecents()
+            s.loadError = {
+              message: 'That recent file could not be opened.',
+              details: ['It may have been moved, renamed, or deleted.'],
+            }
+          })
+          return
+        }
+        get().loadFromText(opened.text, opened.handle, opened.name)
+        set((s) => {
+          s.recents = platform.getRecents()
+        })
+      } catch (err) {
+        set((s) => {
+          s.busy = false
+          s.loadError = { message: 'Failed to open the recent file.', details: [String(err)] }
         })
       }
     },
@@ -195,6 +254,7 @@ export const useStore = create<AppState>()(
           s.projectName = res.name
           s.dirty = false
           s.busy = false
+          s.recents = platform.getRecents()
         })
         return true
       } catch (err) {
@@ -225,6 +285,46 @@ export const useStore = create<AppState>()(
     clearError: () =>
       set((s) => {
         s.loadError = null
+      }),
+
+    setTheme: (theme) => {
+      applyTheme(theme)
+      set((s) => {
+        s.theme = theme
+      })
+    },
+
+    toggleTheme: () => {
+      const next: Theme = get().theme === 'dark' ? 'light' : 'dark'
+      get().setTheme(next)
+    },
+
+    increaseFont: () => {
+      const next = clampFont(get().fontScale + FONT_STEP)
+      applyFontScale(next)
+      set((s) => {
+        s.fontScale = next
+      })
+    },
+
+    decreaseFont: () => {
+      const next = clampFont(get().fontScale - FONT_STEP)
+      applyFontScale(next)
+      set((s) => {
+        s.fontScale = next
+      })
+    },
+
+    resetFont: () => {
+      applyFontScale(1)
+      set((s) => {
+        s.fontScale = 1
+      })
+    },
+
+    setHelpOpen: (open) =>
+      set((s) => {
+        s.helpOpen = open
       }),
 
     setFieldValue: (path, name, index, value) =>

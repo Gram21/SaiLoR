@@ -5,6 +5,7 @@ import { PaperList } from './components/PaperList'
 import { PdfViewer } from './components/PdfViewer'
 import { AnnotationPanel } from './components/AnnotationPanel'
 import { ErrorPanel } from './components/ErrorPanel'
+import { HelpDialog } from './components/HelpDialog'
 import { useKeybindings } from './hooks/useKeybindings'
 import { useDirtyGuard } from './hooks/useDirtyGuard'
 
@@ -44,6 +45,7 @@ export function App() {
         </div>
       )}
       <ErrorPanel />
+      <HelpDialog />
     </div>
   )
 }

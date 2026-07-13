@@ -6,6 +6,7 @@ import { contextBridge, ipcRenderer } from 'electron'
  */
 contextBridge.exposeInMainWorld('slr', {
   openProject: () => ipcRenderer.invoke('project:open'),
+  openPath: (filePath: string) => ipcRenderer.invoke('project:openPath', filePath),
   saveProject: (filePath: string, text: string) =>
     ipcRenderer.invoke('project:save', filePath, text),
   saveProjectAs: (text: string, suggestedName: string) =>
