@@ -20,4 +20,14 @@ contextBridge.exposeInMainWorld('slr', {
     ipcRenderer.on('app:requestSave', () => cb())
   },
   saveComplete: (ok: boolean) => ipcRenderer.send('app:saveComplete', ok),
+
+  // Edit-menu Undo/Redo, routed to the app's annotation history.
+  onUndo: (cb: () => void) => {
+    ipcRenderer.removeAllListeners('app:undo')
+    ipcRenderer.on('app:undo', () => cb())
+  },
+  onRedo: (cb: () => void) => {
+    ipcRenderer.removeAllListeners('app:redo')
+    ipcRenderer.on('app:redo', () => cb())
+  },
 })

@@ -9,6 +9,8 @@ const SHORTCUTS: Array<[string, string]> = [
   [`${MOD}+O`, 'Open a project file'],
   [`${MOD}+S`, 'Save'],
   [`${MOD}+Shift+S`, 'Save as…'],
+  [`${MOD}+Z`, 'Undo annotation change'],
+  [`${MOD}+Shift+Z`, 'Redo annotation change'],
   [`${MOD} +`, 'Increase app font size'],
   [`${MOD} -`, 'Decrease app font size'],
   [`${MOD}+0`, 'Reset app font size'],

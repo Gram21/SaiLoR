@@ -36,6 +36,25 @@ export interface LoadError {
   details: string[]
 }
 
+/**
+ * One undo/redo snapshot. Because the store uses immer, each `project` is an
+ * immutable value with structural sharing, so keeping references to previous
+ * projects is cheap (only the changed annotation path differs between them).
+ */
+interface HistoryEntry {
+  project: Project
+  paperId: string | null
+}
+
+const HISTORY_LIMIT = 100
+
+/**
+ * Tracks the last edited field so consecutive edits to the *same* field (e.g.
+ * typing character by character) collapse into a single undo step instead of
+ * one per keystroke. Reset by any other action.
+ */
+let lastFieldKey: string | null = null
+
 interface AppState {
   project: Project | null
   currentPaperId: string | null
@@ -51,6 +70,9 @@ interface AppState {
   fontScale: number
   recents: RecentEntry[]
   helpOpen: boolean
+  /** Undo/redo history of annotation changes (session-only). */
+  past: HistoryEntry[]
+  future: HistoryEntry[]
 
   openProject: () => Promise<void>
   openRecent: (id: string) => Promise<void>
@@ -72,6 +94,8 @@ interface AppState {
   setFieldValue: (path: PathSeg[], name: string, index: number, value: FieldValue) => void
   addInstance: (path: PathSeg[], def: ResolvedDef) => void
   removeInstance: (path: PathSeg[], name: string, index: number) => void
+  undo: () => void
+  redo: () => void
 }
 
 /** Walk from a paper's annotation root to the container tree addressed by `path`. */
@@ -102,6 +126,8 @@ export const useStore = create<AppState>()(
     fontScale: loadFontScale(),
     recents: getPlatform().getRecents(),
     helpOpen: false,
+    past: [],
+    future: [],
 
     openProject: async () => {
       const platform = getPlatform()
@@ -193,7 +219,10 @@ export const useStore = create<AppState>()(
           s.loadError = null
           s.busy = false
           s.pdfSelection = ''
+          s.past = []
+          s.future = []
         })
+        lastFieldKey = null
       } catch (err) {
         const le: LoadError =
           err instanceof ProjectLoadError
@@ -266,11 +295,13 @@ export const useStore = create<AppState>()(
       }
     },
 
-    selectPaper: (id) =>
+    selectPaper: (id) => {
+      lastFieldKey = null
       set((s) => {
         s.currentPaperId = id
         s.pdfSelection = ''
-      }),
+      })
+    },
 
     toggleSidebar: () =>
       set((s) => {
@@ -327,43 +358,102 @@ export const useStore = create<AppState>()(
         s.helpOpen = open
       }),
 
-    setFieldValue: (path, name, index, value) =>
+    setFieldValue: (path, name, index, value) => {
+      const prev = get()
+      if (!prev.project) return
+      // Collapse consecutive edits of the same field into one undo step.
+      const key = `${JSON.stringify(path)}|${name}|${index}`
+      const coalesce = key === lastFieldKey
+      lastFieldKey = key
+      const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
       set((s) => {
         const paper = currentPaper(s)
         if (!paper) return
         const container = containerAt(paper.annotations, path)
         const inst = container[name]?.[index]
-        if (inst) {
-          inst.value = value
-          s.dirty = true
-        }
-      }),
+        if (!inst) return
+        if (!coalesce) pushPast(s, snap)
+        inst.value = value
+        s.dirty = true
+      })
+    },
 
-    addInstance: (path, def) =>
+    addInstance: (path, def) => {
+      const prev = get()
+      if (!prev.project) return
+      lastFieldKey = null
+      const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
       set((s) => {
         const paper = currentPaper(s)
         if (!paper) return
         const container = containerAt(paper.annotations, path)
         const list = container[def.name]
         if (list && (def.max === null || list.length < def.max)) {
+          pushPast(s, snap)
           list.push(makeInstance(def))
           s.dirty = true
         }
-      }),
+      })
+    },
 
-    removeInstance: (path, name, index) =>
+    removeInstance: (path, name, index) => {
+      const prev = get()
+      if (!prev.project) return
+      lastFieldKey = null
+      const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
       set((s) => {
         const paper = currentPaper(s)
         if (!paper) return
         const container = containerAt(paper.annotations, path)
         const list = container[name]
         if (list && index >= 0 && index < list.length) {
+          pushPast(s, snap)
           list.splice(index, 1)
           s.dirty = true
         }
-      }),
+      })
+    },
+
+    undo: () => {
+      const st = get()
+      if (st.past.length === 0 || !st.project) return
+      lastFieldKey = null
+      const entry = st.past[st.past.length - 1]
+      const current: HistoryEntry = { project: st.project, paperId: st.currentPaperId }
+      set((s) => {
+        s.past.pop()
+        s.future.unshift(current)
+        if (s.future.length > HISTORY_LIMIT) s.future.pop()
+        s.project = entry.project
+        s.currentPaperId = entry.paperId ?? s.currentPaperId
+        s.dirty = true
+      })
+    },
+
+    redo: () => {
+      const st = get()
+      if (st.future.length === 0 || !st.project) return
+      lastFieldKey = null
+      const entry = st.future[0]
+      const current: HistoryEntry = { project: st.project, paperId: st.currentPaperId }
+      set((s) => {
+        s.future.shift()
+        s.past.push(current)
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.project = entry.project
+        s.currentPaperId = entry.paperId ?? s.currentPaperId
+        s.dirty = true
+      })
+    },
   })),
 )
+
+/** Push a pre-mutation snapshot onto the undo stack and clear the redo stack. */
+function pushPast(s: AppState, snap: HistoryEntry): void {
+  s.past.push(snap)
+  if (s.past.length > HISTORY_LIMIT) s.past.shift()
+  s.future = []
+}
 
 function currentPaper(s: AppState) {
   if (!s.project || !s.currentPaperId) return null

@@ -102,6 +102,8 @@ untouched. Unknown top-level and per-paper fields are preserved verbatim.
 | `Ctrl/Cmd + O`          | Open a project file            |
 | `Ctrl/Cmd + S`          | Save                           |
 | `Ctrl/Cmd + Shift + S`  | Save as…                       |
+| `Ctrl/Cmd + Z`          | Undo annotation change         |
+| `Ctrl/Cmd + Shift + Z` / `Ctrl + Y` | Redo annotation change |
 | `Ctrl/Cmd + +`          | Increase app font size         |
 | `Ctrl/Cmd + -`          | Decrease app font size         |
 | `Ctrl/Cmd + 0`          | Reset app font size            |
