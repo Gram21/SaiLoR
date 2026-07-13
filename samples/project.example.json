@@ -43,6 +43,13 @@
       "doi": "10.1000/abc987",
       "pdf": "pdfs/paper-b.pdf",
       "annotations": {}
+    },
+    {
+      "id": "paper-c",
+      "title": "Multi-page Test Document",
+      "authors": ["E. Editor"],
+      "pdf": "pdfs/multipage.pdf",
+      "annotations": {}
     }
   ]
 }
