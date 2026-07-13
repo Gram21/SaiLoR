@@ -2,29 +2,35 @@ import { useEffect } from 'react'
 import { useStore } from '../state/store'
 import { isElectron } from '../platform/adapter'
 
-/** The close-related slice of the preload bridge (Electron only). */
-interface CloseBridge {
+/** The Electron-only slice of the preload bridge used for menu/close integration. */
+interface IntegrationBridge {
   setDirty(dirty: boolean): void
   onRequestSave(cb: () => void): void
   saveComplete(ok: boolean): void
+  onUndo(cb: () => void): void
+  onRedo(cb: () => void): void
 }
 
 /**
- * Coordinates a clean Electron quit:
- *  - keeps the main process informed of the unsaved-changes state, and
- *  - when the main process asks (after the user picks "Save" in the native
- *    close dialog), runs the save and reports success back.
+ * Wires Electron menu/lifecycle integration:
+ *  - keeps the main process informed of the unsaved-changes state,
+ *  - runs a save when main asks (after "Save" in the native close dialog), and
+ *  - routes the Edit-menu Undo/Redo to the annotation history.
  */
 export function useElectronCloseGuard() {
   useEffect(() => {
     if (!isElectron()) return
-    const slr = (window as unknown as { slr: CloseBridge }).slr
+    const slr = (window as unknown as { slr: IntegrationBridge }).slr
 
     // When main asks us to save before quitting, do it and report the outcome.
     slr.onRequestSave(async () => {
       const ok = await useStore.getState().save()
       slr.saveComplete(ok)
     })
+
+    // Edit-menu Undo/Redo.
+    slr.onUndo(() => useStore.getState().undo())
+    slr.onRedo(() => useStore.getState().redo())
 
     // Push the current + subsequent dirty state to the main process.
     slr.setDirty(useStore.getState().dirty)

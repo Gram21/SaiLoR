@@ -1,15 +1,20 @@
 import { useEffect } from 'react'
 import { useStore } from '../state/store'
+import { isElectron } from '../platform/adapter'
 
 /**
  * Global keyboard shortcuts:
  *  - Ctrl/Cmd+S         → Save
  *  - Ctrl/Cmd+Shift+S   → Save as
+ *  - Ctrl/Cmd+O         → Open
+ *  - Ctrl/Cmd+Z         → Undo   (Electron routes this via its Edit menu)
+ *  - Ctrl/Cmd+Shift+Z / Ctrl+Y → Redo
+ *  - Ctrl/Cmd +/-/0     → Font size
  *  - Alt+ArrowDown / ]  → next paper
  *  - Alt+ArrowUp   / [  → previous paper
  *
- * Copy/cut/paste/undo are left to the browser (and, in Electron, the Edit menu),
- * so they work natively inside inputs and the PDF text layer.
+ * Copy/cut/paste are left to the browser (and, in Electron, the Edit menu), so
+ * they work natively inside inputs and the PDF text layer.
  */
 export function useKeybindings() {
   useEffect(() => {
@@ -26,6 +31,21 @@ export function useKeybindings() {
       if (mod && (e.key === 'o' || e.key === 'O')) {
         e.preventDefault()
         void useStore.getState().openProject()
+        return
+      }
+
+      // Undo/redo of annotation changes. In Electron the Edit-menu accelerators
+      // handle this (routed to the store via IPC), so skip it there to avoid
+      // double-triggering.
+      if (mod && !isElectron() && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault()
+        if (e.shiftKey) useStore.getState().redo()
+        else useStore.getState().undo()
+        return
+      }
+      if (mod && !isElectron() && !e.shiftKey && (e.key === 'y' || e.key === 'Y')) {
+        e.preventDefault()
+        useStore.getState().redo()
         return
       }
 

@@ -118,7 +118,29 @@ function buildMenu() {
       label: 'File',
       submenu: [isMac ? { role: 'close' as const } : { role: 'quit' as const }],
     },
-    { role: 'editMenu' },
+    {
+      // Custom Edit menu: Undo/Redo drive the app's annotation history (routed
+      // to the renderer via IPC) rather than native text undo, so undo works
+      // consistently across the whole app. Cut/copy/paste/selectAll stay native.
+      label: 'Edit',
+      submenu: [
+        {
+          label: 'Undo',
+          accelerator: 'CmdOrCtrl+Z',
+          click: () => mainWindow?.webContents.send('app:undo'),
+        },
+        {
+          label: 'Redo',
+          accelerator: 'CmdOrCtrl+Shift+Z',
+          click: () => mainWindow?.webContents.send('app:redo'),
+        },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' },
+      ],
+    },
     {
       // Custom View menu: deliberately omit the zoom roles so their Ctrl +/-/0
       // accelerators reach the renderer, which uses them for app font scaling

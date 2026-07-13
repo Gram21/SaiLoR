@@ -19,6 +19,9 @@ export interface SlrBridge {
   setDirty(dirty: boolean): void
   onRequestSave(cb: () => void): void
   saveComplete(ok: boolean): void
+  /** Edit-menu Undo/Redo routed to the app's annotation history. */
+  onUndo(cb: () => void): void
+  onRedo(cb: () => void): void
 }
 
 function bridge(): SlrBridge {
