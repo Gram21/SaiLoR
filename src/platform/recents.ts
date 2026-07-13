@@ -1,0 +1,48 @@
+/**
+ * Recent-projects list, persisted in localStorage. Entries are platform-opaque:
+ * on Electron `id` is the absolute file path; in the browser it is a key into
+ * the IndexedDB handle store (see idb.ts). Newest first, capped at MAX_RECENTS.
+ */
+
+export interface RecentEntry {
+  id: string
+  name: string
+}
+
+export const MAX_RECENTS = 5
+
+export function readRecents(key: string): RecentEntry[] {
+  try {
+    const raw = localStorage?.getItem(key)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter((e) => e && typeof e.id === 'string' && typeof e.name === 'string')
+      .slice(0, MAX_RECENTS)
+  } catch {
+    return []
+  }
+}
+
+function write(key: string, list: RecentEntry[]): void {
+  try {
+    localStorage?.setItem(key, JSON.stringify(list.slice(0, MAX_RECENTS)))
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Move/insert `entry` to the front (dedup by id), cap the list, persist, return it. */
+export function pushRecent(key: string, entry: RecentEntry): RecentEntry[] {
+  const list = [entry, ...readRecents(key).filter((e) => e.id !== entry.id)].slice(0, MAX_RECENTS)
+  write(key, list)
+  return list
+}
+
+/** Remove an entry by id (e.g. when the file can no longer be opened), persist, return the rest. */
+export function removeRecent(key: string, id: string): RecentEntry[] {
+  const list = readRecents(key).filter((e) => e.id !== id)
+  write(key, list)
+  return list
+}

@@ -23,6 +23,41 @@ export function useKeybindings() {
         return
       }
 
+      if (mod && (e.key === 'o' || e.key === 'O')) {
+        e.preventDefault()
+        void useStore.getState().openProject()
+        return
+      }
+
+      if (e.key === 'F1') {
+        e.preventDefault()
+        useStore.getState().setHelpOpen(true)
+        return
+      }
+
+      // Font scaling. Match both e.key and physical e.code (numpad, layouts where
+      // '+' needs Shift). Override the browser/Electron native zoom.
+      if (mod) {
+        const inc = e.key === '+' || e.key === '=' || e.code === 'Equal' || e.code === 'NumpadAdd'
+        const dec = e.key === '-' || e.key === '_' || e.code === 'Minus' || e.code === 'NumpadSubtract'
+        const reset = e.key === '0' || e.code === 'Digit0' || e.code === 'Numpad0'
+        if (inc) {
+          e.preventDefault()
+          useStore.getState().increaseFont()
+          return
+        }
+        if (dec) {
+          e.preventDefault()
+          useStore.getState().decreaseFont()
+          return
+        }
+        if (reset) {
+          e.preventDefault()
+          useStore.getState().resetFont()
+          return
+        }
+      }
+
       // Paper navigation. Skip when typing in a field unless Alt is held.
       const inField = isEditable(e.target)
       const nav = (dir: 1 | -1) => {

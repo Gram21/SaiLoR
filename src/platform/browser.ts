@@ -1,4 +1,21 @@
 import type { OpenedProject, PdfSource, PlatformAdapter, SaveHandle } from './adapter'
+import { readRecents, pushRecent, removeRecent, type RecentEntry } from './recents'
+import { idbSet, idbGet } from './idb'
+
+const RECENTS_KEY = 'slr.recents.browser'
+
+/** FileSystemHandle permission methods (not in the base TS DOM lib). */
+interface PermissionCapableHandle {
+  queryPermission?(desc: { mode: 'read' | 'readwrite' }): Promise<PermissionState>
+  requestPermission?(desc: { mode: 'read' | 'readwrite' }): Promise<PermissionState>
+}
+
+async function ensureReadPermission(handle: FileSystemFileHandle): Promise<boolean> {
+  const h = handle as unknown as PermissionCapableHandle
+  const opts = { mode: 'read' as const }
+  if ((await h.queryPermission?.(opts)) === 'granted') return true
+  return (await h.requestPermission?.(opts)) === 'granted'
+}
 
 /**
  * Browser adapter. Two tiers:
@@ -42,6 +59,11 @@ export class BrowserAdapter implements PlatformAdapter {
     this.serverBase = new URL(url, document.baseURI).toString()
   }
 
+  getRecents(): RecentEntry[] {
+    // Recents rely on persistent handles, which only the File System Access API provides.
+    return hasFsApi() ? readRecents(RECENTS_KEY) : []
+  }
+
   async openProject(): Promise<OpenedProject | null> {
     if (hasFsApi()) {
       let handle: FileSystemFileHandle
@@ -54,6 +76,8 @@ export class BrowserAdapter implements PlatformAdapter {
       const file = await handle.getFile()
       const text = await file.text()
       const id = this.register(handle)
+      this.serverBase = null
+      await this.rememberHandle(file.name, handle)
       return { text, handle: { kind: 'fsapi', path: id }, name: file.name }
     }
 
@@ -62,6 +86,34 @@ export class BrowserAdapter implements PlatformAdapter {
     if (!file) return null
     const text = await file.text()
     return { text, handle: { kind: 'download' }, name: file.name }
+  }
+
+  async openRecent(id: string): Promise<OpenedProject | null> {
+    const handle = await idbGet<FileSystemFileHandle>(recentHandleKey(id))
+    if (!handle) {
+      removeRecent(RECENTS_KEY, id)
+      return null
+    }
+    if (!(await ensureReadPermission(handle))) {
+      // Permission denied; keep it in the list so the user can retry.
+      throw new Error(`Permission to read "${id}" was denied.`)
+    }
+    const file = await handle.getFile()
+    const text = await file.text()
+    const regId = this.register(handle)
+    this.serverBase = null
+    pushRecent(RECENTS_KEY, { id, name: id })
+    return { text, handle: { kind: 'fsapi', path: regId }, name: file.name }
+  }
+
+  /** Persist a handle + record it as a recent (keyed by file name). */
+  private async rememberHandle(name: string, handle: FileSystemFileHandle): Promise<void> {
+    try {
+      await idbSet(recentHandleKey(name), handle)
+      pushRecent(RECENTS_KEY, { id: name, name })
+    } catch {
+      /* IndexedDB unavailable — recents simply won't persist. */
+    }
   }
 
   async saveProject(text: string, handle: SaveHandle): Promise<SaveHandle> {
@@ -90,6 +142,7 @@ export class BrowserAdapter implements PlatformAdapter {
       }
       await writeFsApi(fh, text)
       const id = this.register(fh)
+      await this.rememberHandle(fh.name, fh)
       return { handle: { kind: 'fsapi', path: id }, name: fh.name }
     }
     downloadText(text, suggestedName)
@@ -142,6 +195,10 @@ export class BrowserAdapter implements PlatformAdapter {
     this.fileHandles.set(id, handle)
     return id
   }
+}
+
+function recentHandleKey(id: string): string {
+  return `recent:${id}`
 }
 
 function isAbort(err: unknown): boolean {
