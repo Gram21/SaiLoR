@@ -28,6 +28,9 @@ Open the bundled example from the browser dev server via:
 
 ## Project file format
 
+> 📖 For a full authoring guide with many examples, see
+> [docs/annotation-schema.md](docs/annotation-schema.md). The summary below is the quick reference.
+
 ```jsonc
 {
   "version": 1,
