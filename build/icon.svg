@@ -1,33 +1,33 @@
 <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="iconBg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#2f6bff"/>
-      <stop offset="1" stop-color="#1d4ed8"/>
+      <stop offset="0" stop-color="#33a9c6"/>
+      <stop offset="1" stop-color="#1c7f9a"/>
     </linearGradient>
   </defs>
 
-  <!-- Rounded-square app background -->
+  <!-- Rounded-square app background (ARDoCo teal) -->
   <rect x="0" y="0" width="1024" height="1024" rx="180" ry="180" fill="url(#iconBg)"/>
 
   <!-- Document / page -->
   <rect x="272" y="196" width="420" height="560" rx="40" ry="40" fill="#ffffff"/>
 
   <!-- Text lines -->
-  <rect x="336" y="288" width="292" height="34" rx="17" fill="#c7d7fb"/>
-  <!-- Highlighted line (accent) -->
-  <rect x="336" y="366" width="292" height="34" rx="17" fill="#2f6bff"/>
-  <rect x="336" y="444" width="230" height="34" rx="17" fill="#c7d7fb"/>
-  <rect x="336" y="522" width="292" height="34" rx="17" fill="#c7d7fb"/>
-  <rect x="336" y="600" width="180" height="34" rx="17" fill="#c7d7fb"/>
+  <rect x="336" y="288" width="292" height="34" rx="17" fill="#cfe6ee"/>
+  <!-- Highlighted line (ARDoCo highlight red) -->
+  <rect x="336" y="366" width="292" height="34" rx="17" fill="#b71c1c"/>
+  <rect x="336" y="444" width="230" height="34" rx="17" fill="#cfe6ee"/>
+  <rect x="336" y="522" width="292" height="34" rx="17" fill="#cfe6ee"/>
+  <rect x="336" y="600" width="180" height="34" rx="17" fill="#cfe6ee"/>
 
   <!-- Magnifying glass overlapping lower-right, with checkmark inside lens -->
   <g>
     <!-- handle -->
-    <line x1="726" y1="726" x2="836" y2="836" stroke="#1d4ed8" stroke-width="70" stroke-linecap="round"/>
+    <line x1="726" y1="726" x2="836" y2="836" stroke="#17708a" stroke-width="70" stroke-linecap="round"/>
     <line x1="726" y1="726" x2="836" y2="836" stroke="#ffffff" stroke-width="44" stroke-linecap="round"/>
     <!-- lens -->
-    <circle cx="632" cy="632" r="150" fill="#ffffff" stroke="#1d4ed8" stroke-width="30"/>
+    <circle cx="632" cy="632" r="150" fill="#ffffff" stroke="#17708a" stroke-width="30"/>
     <!-- checkmark -->
-    <path d="M 566 634 L 614 682 L 706 578" fill="none" stroke="#2f6bff" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 566 634 L 614 682 L 706 578" fill="none" stroke="#2698ba" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>

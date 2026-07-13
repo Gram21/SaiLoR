@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, protocol, net, Menu } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, protocol, net, Menu, nativeImage } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
@@ -8,6 +8,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // Where Vite emits the renderer build, and the dev server URL (set by the plugin in dev).
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL
 const RENDERER_DIST = path.join(__dirname, '../dist')
+
+// App icon for the taskbar/dock. electron-builder's `build.icon` only sets the
+// packaged bundle icon; setting it here also covers `npm run dev:electron` and
+// the macOS dock (which needs app.dock.setIcon at runtime). build/icon.png is
+// included in the packaged app via the electron-builder `files` list.
+const appIcon = nativeImage.createFromPath(path.join(__dirname, '../build/icon.png'))
 
 // The base directory of the currently-open project; PDFs resolve against it.
 let projectDir: string | null = null
@@ -30,6 +36,8 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
+    // Window/taskbar icon (Windows/Linux; ignored on macOS, which uses the dock).
+    ...(appIcon.isEmpty() ? {} : { icon: appIcon }),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -217,6 +225,11 @@ ipcMain.on('app:saveComplete', (_e, ok: boolean) => {
 })
 
 app.whenReady().then(() => {
+  // macOS shows the dock icon from the running app; set it explicitly so it
+  // appears in development too (not just in the packaged .app bundle).
+  if (process.platform === 'darwin' && app.dock && !appIcon.isEmpty()) {
+    app.dock.setIcon(appIcon)
+  }
   registerPdfProtocol()
   buildMenu()
   createWindow()
