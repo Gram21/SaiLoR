@@ -78,9 +78,9 @@ Runs `tsc -b --noEmit` using TypeScript project references (`tsconfig.json` → 
 
 ## Deployment
 
-### Server deployment
+### A. Static hosting
 
-Copy `dist/` behind any static host. Place the project JSON and its `pdfs/` directory alongside (or at the URL referenced by `?project=`). Link to a hosted project:
+Copy `dist/` behind any static host (nginx, Apache, S3, GitHub Pages). Place the project JSON and its `pdfs/` directory alongside (or at the URL referenced by `?project=`). The `base: './'` Vite config ensures the build works from any subpath. Link to a hosted project:
 
 ```
 https://your.host/?project=/reviews/2026/project.json
@@ -88,7 +88,31 @@ https://your.host/?project=/reviews/2026/project.json
 
 PDF paths in the project file are resolved relative to the project URL (via `BrowserAdapter.setServerBase()`). The `getPdfSource` method fetches each PDF and creates a blob URL for react-pdf.
 
-### Desktop deployment
+### B. Docker (self-hosting)
+
+The repo includes a multi-stage `Dockerfile` (Node build → nginx runtime) and `docker-compose.yml`:
+
+```bash
+docker compose up -d --build    # build and start
+docker compose down             # stop
+```
+
+This serves the app on `http://localhost:8080`. Project JSON files and PDFs go in the `./projects/` directory, which is mounted read-only into the container at `/usr/share/nginx/html/projects`. Open a project:
+
+```
+http://localhost:8080/?project=/projects/project.example.json
+```
+
+The `nginx.conf` adds the correct MIME type for `.mjs` files (needed by the pdf.js worker), sets immutable caching for hashed `/assets/`, serves `/projects/` with permissive CORS headers, and falls back to `index.html` for SPA routing.
+
+Equivalent raw Docker commands:
+
+```bash
+docker build -t slr-helper .
+docker run -d -p 8080:80 -v "$PWD/projects:/usr/share/nginx/html/projects:ro" slr-helper
+```
+
+### C. Desktop
 
 Distribute the `release/` installers produced by `electron-builder`. The desktop app opens local JSON files via native dialog and serves PDFs through the `slr-file://` protocol with no server needed.
 
@@ -96,10 +120,15 @@ Distribute the `release/` installers produced by `electron-builder`. The desktop
 
 | Shortcut | Action |
 |---|---|
+| `Ctrl/Cmd + O` | Open project file |
 | `Ctrl/Cmd + S` | Save |
 | `Ctrl/Cmd + Shift + S` | Save as… |
 | `Alt + ↓` or `]` | Next paper |
 | `Alt + ↑` or `[` | Previous paper |
+| `Ctrl/Cmd + +` / `=` | Increase font size |
+| `Ctrl/Cmd + -` | Decrease font size |
+| `Ctrl/Cmd + 0` | Reset font size |
+| `F1` | Open help dialog |
 | `Ctrl/Cmd + C/V/X/Z` | Native copy/paste/cut/undo (browser or Electron Edit menu) |
 
 Paper navigation with `[`/`]` is disabled when typing in an input field; Alt-arrow navigation works even inside fields. See `src/hooks/useKeybindings.ts`.
