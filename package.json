@@ -1,0 +1,56 @@
+{
+  "name": "slr-helper",
+  "version": "0.1.0",
+  "description": "A tool to assist reviewers during Systematic Literature Reviews (SLR).",
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "dev:electron": "cross-env ELECTRON=1 vite",
+    "build": "tsc -b && vite build",
+    "build:electron": "cross-env ELECTRON=1 npm run build && electron-builder",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b --noEmit"
+  },
+  "dependencies": {
+    "immer": "^10.1.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-pdf": "^9.2.1",
+    "zod": "^3.24.1",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7",
+    "vite-plugin-electron": "^0.29.0",
+    "vitest": "^3.2.4"
+  },
+  "build": {
+    "appId": "org.slr.helper",
+    "productName": "SLR Helper",
+    "asar": true,
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "mac": { "target": "dmg" },
+    "win": { "target": "nsis" },
+    "linux": { "target": "AppImage" }
+  }
+}

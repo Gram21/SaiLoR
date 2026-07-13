@@ -1,0 +1,155 @@
+import { z } from 'zod'
+import {
+  projectSchema,
+  resolveSchema,
+  SchemaError,
+  type ResolvedDef,
+} from './schema'
+import {
+  normalizeTree,
+  pruneTree,
+  type AnnotationValueTree,
+} from './annotations'
+
+export interface Paper {
+  id: string
+  title: string
+  authors: string[]
+  doi?: string
+  pdf: string
+  annotations: AnnotationValueTree
+  /** Any additional fields present in the source file are preserved on save. */
+  extra: Record<string, unknown>
+}
+
+export interface Project {
+  version: number
+  schema: ResolvedDef[]
+  papers: Paper[]
+  /** Additional top-level fields preserved verbatim on save. */
+  extra: Record<string, unknown>
+}
+
+export class ProjectLoadError extends Error {
+  details: string[]
+  constructor(message: string, details: string[] = []) {
+    super(message)
+    this.details = details
+  }
+}
+
+const KNOWN_PAPER_KEYS = new Set(['id', 'title', 'authors', 'doi', 'pdf', 'annotations'])
+const KNOWN_ROOT_KEYS = new Set(['version', 'config', 'papers'])
+
+/**
+ * Parse raw JSON text (or an already-parsed object) into a validated,
+ * normalized Project. Throws {@link ProjectLoadError} with friendly details.
+ */
+export function loadProject(input: string | unknown): Project {
+  let data: unknown
+  if (typeof input === 'string') {
+    try {
+      data = JSON.parse(input)
+    } catch (err) {
+      throw new ProjectLoadError('The file is not valid JSON.', [String(err)])
+    }
+  } else {
+    data = input
+  }
+
+  let raw
+  try {
+    raw = projectSchema.parse(data)
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      throw new ProjectLoadError(
+        'The project file does not match the expected structure.',
+        err.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`),
+      )
+    }
+    throw err
+  }
+
+  let schema: ResolvedDef[]
+  try {
+    schema = resolveSchema(raw.config.schema)
+  } catch (err) {
+    if (err instanceof SchemaError) {
+      throw new ProjectLoadError('The annotation schema is invalid.', [err.message])
+    }
+    throw err
+  }
+
+  // Duplicate paper ids would break selection/navigation.
+  const ids = new Set<string>()
+  for (const p of raw.papers) {
+    if (ids.has(p.id)) {
+      throw new ProjectLoadError('Duplicate paper id.', [`Paper id "${p.id}" appears more than once.`])
+    }
+    ids.add(p.id)
+  }
+
+  const papers: Paper[] = raw.papers.map((p) => ({
+    id: p.id,
+    title: p.title,
+    authors: p.authors ?? [],
+    doi: p.doi,
+    pdf: p.pdf,
+    annotations: normalizeTree(schema, p.annotations as AnnotationValueTree | undefined),
+    extra: extractExtra(p, KNOWN_PAPER_KEYS),
+  }))
+
+  return {
+    version: raw.version ?? 1,
+    schema,
+    papers,
+    extra: extractExtra(raw, KNOWN_ROOT_KEYS),
+  }
+}
+
+/**
+ * Serialize a Project back to the on-disk JSON shape. `config` is written from
+ * the resolved schema, annotations are pruned of trailing empties, and any
+ * preserved `extra` fields are re-emitted.
+ */
+export function serializeProject(project: Project): string {
+  const out: Record<string, unknown> = {
+    ...project.extra,
+    version: project.version,
+    config: { schema: dehydrateSchema(project.schema) },
+    papers: project.papers.map((p) => {
+      const paper: Record<string, unknown> = {
+        ...p.extra,
+        id: p.id,
+        title: p.title,
+        authors: p.authors,
+      }
+      if (p.doi !== undefined) paper.doi = p.doi
+      paper.pdf = p.pdf
+      paper.annotations = pruneTree(project.schema, p.annotations)
+      return paper
+    }),
+  }
+  return JSON.stringify(out, null, 2)
+}
+
+function extractExtra(obj: Record<string, unknown>, known: Set<string>): Record<string, unknown> {
+  const extra: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(obj)) {
+    if (!known.has(k)) extra[k] = v
+  }
+  return extra
+}
+
+/** Convert ResolvedDef back to the compact on-disk AnnotationDef shape. */
+function dehydrateSchema(defs: ResolvedDef[]): unknown[] {
+  return defs.map((d) => {
+    const out: Record<string, unknown> = { name: d.name }
+    if (d.type !== undefined) out.type = d.type
+    if (d.min !== 1) out.min = d.min
+    if (d.max !== 1) out.max = d.max
+    if (d.description !== undefined) out.description = d.description
+    if (d.children.length > 0) out.children = dehydrateSchema(d.children)
+    return out
+  })
+}
