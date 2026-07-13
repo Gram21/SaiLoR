@@ -67,6 +67,7 @@ The entire app state lives in a single Zustand store with immer middleware:
 | `pdfSelection` | `string` | Latest text selected in the PDF viewer (for "grab from PDF") |
 | `theme` | `Theme` (`'light' \| 'dark'`) | Current app theme (persisted in localStorage via `src/state/settings.ts`) |
 | `fontScale` | `number` | Current font scale factor (0.7–2.0, persisted in localStorage) |
+| `pdfZoom` | `number` | PDF zoom multiplier (0.4–3.0, session-only, default 1) |
 | `recents` | `RecentEntry[]` | Recently opened projects (max 5, from `platform.getRecents()`) |
 | `helpOpen` | `boolean` | Help dialog visibility |
 
@@ -82,6 +83,7 @@ The entire app state lives in a single Zustand store with immer middleware:
 - **`addInstance(path, def)` / `removeInstance(path, name, index)`** — manages repeatable annotation instances, respects `max`/`min`
 - **`toggleTheme()` / `setTheme(theme)`** — flips or sets the app theme, applies via `applyTheme()` (sets `data-theme` attribute on `<html>`)
 - **`increaseFont()` / `decreaseFont()` / `resetFont()`** — adjusts `fontScale` by ±0.1 (clamped to 0.7–2.0), applies via `applyFontScale()` (sets `--app-font-scale` CSS variable)
+- **`zoomInPdf()` / `zoomOutPdf()` / `resetPdfZoom()`** — adjusts `pdfZoom` by ±0.2 (clamped to 0.4–3.0, rounded to 2 decimals) or resets to 1; session-only, not persisted
 - **`setHelpOpen(open)`** — shows/hides the help dialog
 
 The `containerAt(root, path)` helper walks the annotation tree following `PathSeg[]` (name + index pairs) to reach the container for a given path.
@@ -95,14 +97,14 @@ App (src/App.tsx)
 │     Font controls (A− A A+), theme toggle (☾/☀), help (?)
 ├── [if project loaded: workspace]
 │   ├── PaperList (src/components/PaperList.tsx)
-│   │     List of papers; green dot if hasAnnotations(); click to select
+│   │     List of papers with search box; green dot if hasAnnotations(); click to select
 │   ├── PdfViewer (src/components/PdfViewer.tsx)
-│   │     react-pdf Document+Page; ResizeObserver for width; captures text selection
+│   │     react-pdf Document+Page; ResizeObserver for width; zoom controls; text selection capture
 │   └── AnnotationPanel (src/components/AnnotationPanel.tsx)
 │         └── AnnotationNode (src/components/AnnotationNode.tsx) [recursive]
 │               └── Field (src/components/Field.tsx)
 │                     Input control + ⧉ grab-from-PDF button
-├── [if no project: welcome screen with "Open project…" button]
+├── [if no project: welcome screen with "Open project…" button + recent projects list]
 ├── HelpDialog (src/components/HelpDialog.tsx)
 │     Modal overlay with app intro + keyboard shortcuts table
 └── ErrorPanel (src/components/ErrorPanel.tsx)
@@ -127,7 +129,7 @@ The `path` (`PathSeg[]`) is extended at each nesting level: `[...path, { name: d
 `Field` renders the appropriate input based on `def.type`:
 - `boolean` → checkbox
 - `number` → `<input type=number>`
-- `string` → `<input type=text>`
+- `string` → auto-expanding `<textarea>` (single line when idle, grows on focus up to 240px, max 500 chars)
 
 The **grab-from-PDF** button (⧉) reads `useStore.getState().pdfSelection` and inserts it. For number fields, it extracts the first numeric token via `parseNumber()` (handles comma decimals).
 
@@ -137,7 +139,7 @@ The **grab-from-PDF** button (⧉) reads `useStore.getState().pdfSelection` and 
 
 ### PdfViewer
 
-Uses `react-pdf`'s `Document` + `Page` components. The pdf.js worker is loaded from the bundled dependency URL. A `ResizeObserver` tracks container width so pages scale to fit. Text selection is captured via `onMouseUp`/`onKeyUp` → `window.getSelection()` → `setPdfSelection()`.
+Uses `react-pdf`'s `Document` + `Page` components. The pdf.js worker is loaded from the bundled dependency URL. A `ResizeObserver` tracks container width so pages scale to fit; the final render width is the fit-to-width size multiplied by the store-level `pdfZoom` factor. The PDF header shows the paper title, authors, and DOI, plus zoom controls (−, percentage, +) wired to `zoomOutPdf` / `resetPdfZoom` / `zoomInPdf`. Pages are `align-items: safe center` so horizontal scrolling remains reachable when zoomed wider than the pane. Text selection is captured via `onMouseUp`/`onKeyUp` → `window.getSelection()` → `setPdfSelection()`.
 
 PDF source resolution is async: `getPlatform().getPdfSource(paper.pdf, saveHandle)` returns a `{ url, revoke? }`. The effect cleans up (revokes blob URLs) on paper/handle change or unmount.
 
@@ -154,13 +156,13 @@ PDF source resolution is async: `getPlatform().getPdfSource(paper.pdf, saveHandl
   - `project:save` — `writeFile` to given path
   - `project:saveAs` — `dialog.showSaveDialog` → `writeFile`
   - `project:setDir` — sets `projectDir` from the project file's directory
-- **Menu**: custom template with File, Edit, View, Window menus. The View menu is hand-built (not the default `{ role: 'viewMenu' }`) and deliberately omits zoom roles so that `Ctrl +/-/0` reach the renderer for app-level font scaling instead of triggering native browser/Electron zoom (which would also scale the PDF paper).
+- **Menu**: custom template with File, Edit, View, Window menus. The View menu is hand-built (not the default `{ role: 'viewMenu' }`) and deliberately omits zoom roles so that `Ctrl +/-/0` reach the renderer for PDF zoom (and `Ctrl+Shift +/-/0` for app font scaling) instead of triggering native browser/Electron zoom.
 
 **`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods including `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, and `getPdfSource`. This `window.slr` object is the detection signal for `isElectron()`.
 
 ## Hooks
 
-- **`useKeybindings`** (`src/hooks/useKeybindings.ts`): Global keyboard shortcuts registered on `window.keydown`. Handles open (Ctrl/Cmd+O), save (Ctrl/Cmd+S), save-as (Ctrl/Cmd+Shift+S), paper navigation (Alt+↓/↑, `[`/`]`), font size (Ctrl/Cmd + `+/=/-`/`0`), and help (F1). Paper navigation skips when typing in a field (unless Alt is held). Font shortcuts match both `e.key` and `e.code` to handle numpad and international layouts, and always `preventDefault()` to override native zoom. Copy/cut/paste/undo are left to the browser/Electron Edit menu.
+- **`useKeybindings`** (`src/hooks/useKeybindings.ts`): Global keyboard shortcuts registered on `window.keydown`. Handles open (Ctrl/Cmd+O), save (Ctrl/Cmd+S), save-as (Ctrl/Cmd+Shift+S), paper navigation (Alt+↓/↑, `[`/`]`), zoom/font (Ctrl/Cmd + `+/=/-`/`0` → PDF zoom; add Shift → app font size), and help (F1). Paper navigation skips when typing in a field (unless Alt is held). Zoom/font detection matches `e.key` and `e.code` to handle numpad and international layouts; reset is detected by the digit-0 `e.code` (Shift-independent) to avoid the German Shift+0 → `=` clash. Copy/cut/paste/undo are left to the browser/Electron Edit menu.
 
 - **`useDirtyGuard`** (`src/hooks/useDirtyGuard.ts`): Registers a `beforeunload` listener that calls `e.preventDefault()` when `dirty` is true, triggering the browser's "unsaved changes" confirmation.
 
@@ -177,7 +179,7 @@ App appearance is controlled by a settings module that persists to `localStorage
 
 1. `useKeybindings()` and `useDirtyGuard()` are called at the top level.
 2. On mount, checks `?project=<url>` query parameter — if present, calls `loadFromUrl(url)` for server-deployment auto-loading.
-3. Renders `Toolbar` always. If a project is loaded, renders the three-pane workspace; otherwise shows a welcome screen with an "Open project…" button.
+3. Renders `Toolbar` always. If a project is loaded, renders the three-pane workspace; otherwise shows a welcome screen with an "Open project…" button and, if there are recent projects, a clickable list of them wired to `openRecent(id)`.
 4. `ErrorPanel` is always rendered (renders null when no error).
 
 ## Build Configuration
