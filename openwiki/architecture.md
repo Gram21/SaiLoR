@@ -131,6 +131,10 @@ The `path` (`PathSeg[]`) is extended at each nesting level: `[...path, { name: d
 
 The **grab-from-PDF** button (⧉) reads `useStore.getState().pdfSelection` and inserts it. For number fields, it extracts the first numeric token via `parseNumber()` (handles comma decimals).
 
+### Annotation names and descriptions
+
+`src/components/NodeName.tsx` renders schema node names. When a definition has a `description`, the UI adds an `ⓘ` marker, shows the description as a hover/focus tooltip, and renders that tooltip in a portal so it is not clipped by the annotation panel scroll container. The wrapper also includes an `aria-label` that combines the name and description for assistive technology.
+
 ### PdfViewer
 
 Uses `react-pdf`'s `Document` + `Page` components. The pdf.js worker is loaded from the bundled dependency URL. A `ResizeObserver` tracks container width so pages scale to fit. Text selection is captured via `onMouseUp`/`onKeyUp` → `window.getSelection()` → `setPdfSelection()`.
