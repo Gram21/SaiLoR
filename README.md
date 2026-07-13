@@ -101,7 +101,7 @@ untouched. Unknown top-level and per-paper fields are preserved verbatim.
 - **Browser (Chromium)**: uses the File System Access API to save in place / to a new file.
 - **Browser (other)**: downloads the updated JSON.
 
-## Building
+## Building & testing
 
 ```bash
 npm run build            # static SPA into dist/ (host anywhere)
@@ -110,11 +110,70 @@ npm test                 # unit tests (model: schema, normalize, round-trip)
 npm run typecheck
 ```
 
-### Server deployment
+## Deployment
 
-Copy `dist/` behind any static host, and place the project JSON + its `pdfs/` alongside. Link to a
-hosted project with `?project=<url>` (PDFs resolve relative to that URL), e.g.
-`https://your.host/?project=/reviews/2026/project.json`.
+### A. Browser variant — static hosting
+
+`npm run build` emits a self-contained static site in `dist/`. Serve that folder from any static
+host (nginx, Apache, S3/CloudFront, GitHub Pages, …). The build uses a relative base, so it also
+works from a subpath.
+
+Place each project JSON next to its `pdfs/` folder on the same host and link to it with
+`?project=<url>` — the app fetches the JSON and resolves its PDFs relative to that URL:
+
+```
+https://your.host/?project=/reviews/2026/project.json
+```
+
+Users can also just click **Open…** in the app to load a local JSON from their own machine.
+
+### B. Browser variant — Docker (recommended for self-hosting)
+
+A multi-stage [`Dockerfile`](Dockerfile) builds the SPA and serves it with nginx; the
+[`docker-compose.yml`](docker-compose.yml) wires up the port and a projects volume.
+
+```bash
+# Build and start (serves on http://localhost:8080)
+docker compose up -d --build
+
+# Stop
+docker compose down
+```
+
+Drop your project JSON files and their PDFs into the `./projects/` folder on the host (mounted
+read-only into the container at `/projects`). An example project ships there already, so once the
+container is up you can open:
+
+```
+http://localhost:8080/?project=/projects/project.example.json
+```
+
+Layout of the projects volume:
+
+```
+projects/
+  my-review.json          # references pdfs/paperX.pdf (paths relative to the JSON)
+  pdfs/
+    paperX.pdf
+```
+
+Change the published port by editing the `ports:` mapping in `docker-compose.yml` (default
+`8080:80`). To build/run the image without Compose:
+
+```bash
+docker build -t slr-helper .
+docker run -d -p 8080:80 -v "$PWD/projects:/usr/share/nginx/html/projects:ro" slr-helper
+```
+
+> The browser variant is read-only on the server: saving happens client-side (File System Access
+> API or a download), never written back to the container — hence the read-only mount.
+
+### C. Desktop variant — Electron installers
+
+`npm run build:electron` runs `electron-builder` and produces native installers in `release/`
+(the `build` block in [`package.json`](package.json) targets `dmg` on macOS, `nsis` on Windows,
+`AppImage` on Linux). Build on (or cross-build for) each target OS as needed. The desktop app reads
+local PDF files directly, so no server is involved.
 
 ## Architecture
 

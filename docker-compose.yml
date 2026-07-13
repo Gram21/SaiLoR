@@ -1,0 +1,16 @@
+services:
+  slr-helper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: slr-helper:latest
+    container_name: slr-helper
+    ports:
+      # host:container — browse to http://localhost:8080
+      - "8080:80"
+    volumes:
+      # Drop your project JSON files and their pdfs/ folders in ./projects.
+      # Then open http://localhost:8080/?project=/projects/<your-project>.json
+      # Mounted read-only: the browser saves via download, never back to the server.
+      - ./projects:/usr/share/nginx/html/projects:ro
+    restart: unless-stopped
