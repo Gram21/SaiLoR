@@ -570,6 +570,12 @@ export function PdfViewer() {
             onLoadSuccess={(doc) => setNumPages(doc.numPages)}
             onLoadError={(err) => setError(String(err?.message ?? err))}
             loading={<div className="pdf-loading">Loading PDF…</div>}
+            // External links open in a new browser tab instead of navigating the
+            // app away. In Electron, the main process turns this into a system
+            // browser open (setWindowOpenHandler). Internal links are unaffected —
+            // pdf.js's LinkService scrolls to the destination without navigating.
+            externalLinkTarget="_blank"
+            externalLinkRel="noopener noreferrer"
           >
             {pages}
           </Document>
