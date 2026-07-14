@@ -24,6 +24,12 @@ npm run dev:electron
 
 Sets `ELECTRON=1` via `cross-env`, which activates the `vite-plugin-electron` plugin in `vite.config.ts`. This builds `electron/main.ts` and `electron/preload.ts` alongside the renderer, then launches the Electron shell loading the Vite dev server URL.
 
+The first `dev:electron` after a fresh `npm ci` prints `Downloading Electron binary…` and pauses for a minute: since Electron 40 the package ships no install script and fetches its ~200 MB runtime lazily, on first use. This is also why the toolchain requires **Electron ≥ 40**: earlier versions extracted that runtime with `extract-zip@2.0.1`, which hangs silently on Node ≥ 26 and leaves behind a stub `node_modules/electron/dist` — the app then dies with *"Electron failed to install correctly"*. Downgrading Node is the other way out; upgrading Electron is the one this project took.
+
+### npm install-script approval
+
+npm ≥ 11.17 blocks dependency install scripts until they are approved, and records the approvals in `package.json` under `allowScripts`. Only **esbuild** is approved (it downloads its native binary; Vite needs it). `canvas` — the native dependency `pdfjs-dist` pulls in but the app never loads, and which is excluded from the packaged build — is deliberately left blocked. If a fresh clone fails with a missing esbuild binary, run `npm approve-scripts --allow-scripts-pending` to see what is pending. Older npm ignores the field and runs everything, so CI (Node 22) is unaffected.
+
 ### Dev in Docker (optional)
 
 A separate `docker-compose.dev.yml` (with `Dockerfile.dev` and `Dockerfile.electron`) lets you develop without a local Node install. It is independent of the production `docker-compose.yml` — nothing runs on a plain `docker compose up` — and selects a target with a Compose **profile**:

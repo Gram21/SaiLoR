@@ -22,7 +22,7 @@ The codebase runs three ways from a single source:
 | State management | Zustand + immer middleware |
 | Validation | Zod |
 | PDF rendering | react-pdf (pdf.js) |
-| Desktop shell | Electron 33 |
+| Desktop shell | Electron 43 |
 | Build tool | Vite 6 (with vite-plugin-electron) |
 | Testing | Vitest 3 + jsdom |
 
