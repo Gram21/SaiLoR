@@ -1,0 +1,8 @@
+# Code owners for SLR Helper.
+# These owners are requested for review on any pull request that touches
+# matching files. See https://docs.github.com/articles/about-code-owners
+#
+# Order matters: the last matching pattern takes precedence.
+
+# Default owner for everything in the repository.
+*       @Gram21

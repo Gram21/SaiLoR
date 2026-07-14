@@ -92,6 +92,17 @@ npm run typecheck
 
 Runs `tsc -b --noEmit` using TypeScript project references (`tsconfig.json` → `tsconfig.app.json` + `tsconfig.node.json`).
 
+## Continuous Integration
+
+```bash
+./scripts/ci.sh          # run the full CI pipeline locally
+SKIP_INSTALL=1 ./scripts/ci.sh   # skip `npm ci` when deps are already installed
+```
+
+`scripts/ci.sh` is the single source of truth for "does the app build and pass its checks". It runs, in order: dependency install (`npm ci`, or `npm install` if no lockfile), `npm run typecheck`, `npm test`, and `npm run build`. It is `set -euo pipefail` and `cd`s to the repo root, so it works from any directory and fails fast.
+
+The GitHub Actions workflow `.github/workflows/ci.yml` runs on every push and pull request to `main` (and via manual `workflow_dispatch`). It is deliberately thin — checkout, `actions/setup-node` (Node 22, npm cache), then `./scripts/ci.sh`. Keeping the real work in the shell script means the same checks run locally and the pipeline can be ported to another provider (e.g. GitLab CI) by calling the script from that provider's config instead. Note the CI builds the **static SPA** (`npm run build`); it does not run `electron-builder` (which needs per-OS runners) — `npm run typecheck` still compiles the Electron main/preload TypeScript via the `tsconfig.node.json` project reference.
+
 ## Deployment
 
 ### A. Static hosting
@@ -173,3 +184,4 @@ Paper navigation with `[`/`]` is disabled when typing in an input field; Alt-arr
 - **Adding electron-builder targets**: Update the `build` section in `package.json`. Current targets are dmg (mac), nsis (win), AppImage (linux).
 - **Adding new test files**: Place as `*.test.ts` or `*.test.tsx` anywhere under `src/`. The vitest `include` pattern is `src/**/*.test.{ts,tsx}`.
 - **TypeScript config**: Uses project references — `tsconfig.json` references `tsconfig.app.json` (renderer/src code) and `tsconfig.node.json` (electron + vite config). `tsc -b` builds both.
+- **Changing what CI runs**: Edit `scripts/ci.sh` (the source of truth), not the GitHub workflow. `.github/workflows/ci.yml` only provides the Node toolchain and calls the script, so any change stays in sync with local runs and portable to other CI providers.

@@ -1,0 +1,29 @@
+name: CI
+
+# Test that the application type-checks, passes its tests, and builds.
+# The actual work lives in scripts/ci.sh so it can be run locally or on any
+# other CI provider (e.g. GitLab) with minimal, provider-specific glue here.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Allow running the workflow manually from the Actions tab.
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Run CI script
+        run: ./scripts/ci.sh
