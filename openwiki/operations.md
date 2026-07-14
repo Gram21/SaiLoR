@@ -62,7 +62,9 @@ Sets `ELECTRON=1`, builds the SPA + Electron processes, then runs `electron-buil
 | Windows | nsis |
 | Linux | AppImage |
 
-Output directory: `release/`. The `appId` is `org.slr.helper`, product name "SLR Helper". ASAR packaging is enabled. Files included: `dist/**/*` and `dist-electron/**/*`.
+Output directory: `release/`. The `appId` is `org.slr.helper`, product name "SLR Helper". ASAR packaging is enabled.
+
+**Package-size optimizations** (in the `build` config): the renderer and main process are fully bundled by Vite, so nothing needs `node_modules` at runtime — the `files` list is `dist/**/*` + `dist-electron/**/*` + `build/icon.png`, with `!node_modules/**/*` (drops ~100 MB, mostly the unused native `canvas` dep pulled in by `pdfjs-dist`) and `!**/*.map` (source maps stay in the web `dist/` but are excluded from the app). `electronLanguages: ["en-US"]` keeps only one Chromium locale (~40 MB → ~0.5 MB), and `compression: "maximum"` shrinks the installer. These take the Linux AppImage from ~137 MB to ~80 MB. The remaining size is the Electron/Chromium runtime itself, which is fixed. Node integration is already disabled in the renderer (`contextIsolation: true`, `nodeIntegration: false`).
 
 ## Testing
 

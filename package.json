@@ -42,10 +42,14 @@
     "appId": "org.slr.helper",
     "productName": "SLR Helper",
     "asar": true,
+    "compression": "maximum",
+    "electronLanguages": ["en-US"],
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
-      "build/icon.png"
+      "build/icon.png",
+      "!**/*.map",
+      "!node_modules/**/*"
     ],
     "directories": {
       "output": "release",
