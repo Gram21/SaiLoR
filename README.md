@@ -28,21 +28,66 @@ Open the bundled example from the browser dev server via:
 
 ## Installing a release
 
-Download the installer for your platform from the [releases page](https://github.com/Gram21/slr-helper/releases). On macOS, pick the **arm64** dmg for Apple Silicon and the **x64** one for Intel.
+Grab the file for your system from the [releases page](https://github.com/Gram21/slr-helper/releases):
 
-### macOS: the app is not signed by Apple
+| System | File |
+|---|---|
+| macOS, Apple Silicon (M1–M4) | `SLR Helper-<version>-arm64.dmg` |
+| macOS, Intel | `SLR Helper-<version>-x64.dmg` |
+| Windows | `SLR Helper Setup <version>.exe` |
+| Linux | `SLR Helper-<version>.AppImage` |
 
-The releases are not signed with an Apple Developer ID or notarized, so macOS will
-warn about the app the first time you open it. Right-click the app → **Open** →
-**Open**, or allow it under *System Settings → Privacy & Security*.
+> **The releases are not signed** with an Apple or Microsoft code-signing certificate —
+> paying for one is not worth it for a research tool. Both systems will therefore warn you
+> the first time you open the app. The steps below are how you tell them to go ahead; you
+> only need to do it once.
 
-If macOS instead says **"SLR Helper" is damaged and can't be opened**, that is the
-quarantine flag on a downloaded, unsigned app — the app is not actually corrupt.
-Clear the flag once:
+### macOS
+
+1. Open the `.dmg` and drag **SLR Helper** into your **Applications** folder.
+2. Open the app. macOS blocks it, saying it *"cannot be opened because Apple cannot check
+   it for malicious software"*. Click **Done**.
+3. Open **System Settings** → **Privacy & Security**, and scroll down to the **Security**
+   section. You'll see a note that *"SLR Helper" was blocked to protect your Mac*.
+4. Click **Open Anyway**, then confirm with **Open Anyway** and enter your login password.
+
+The app opens normally from then on. (The **Open Anyway** button only appears for about an
+hour after you tried to open the app — if it's gone, just try opening the app again.)
+
+Note that on current macOS versions the old right-click → **Open** shortcut no longer works
+for apps like this — the *Privacy & Security* route above is the way.
+
+<details>
+<summary>If macOS says the app is <em>"damaged and can't be opened"</em></summary>
+
+That message means the download's quarantine flag is set on an app macOS can't verify —
+**the app is not actually corrupt**. It affects builds from before v0.1.0's signing fix.
+Either grab a newer release, or clear the flag once:
 
 ```bash
 xattr -cr "/Applications/SLR Helper.app"
 ```
+</details>
+
+### Windows
+
+1. Run `SLR Helper Setup <version>.exe`.
+2. Windows SmartScreen shows *"Windows protected your PC"*. Click **More info**, then
+   **Run anyway**.
+3. Follow the installer.
+
+### Linux
+
+The AppImage is a single self-contained file — no installation needed. Make it executable
+and run it:
+
+```bash
+chmod +x "SLR Helper-<version>.AppImage"
+./"SLR Helper-<version>.AppImage"
+```
+
+If it fails to start, your distribution may be missing FUSE (`sudo apt install libfuse2`
+on Debian/Ubuntu), or you can extract and run it with `--appimage-extract-and-run`.
 
 ## Project file format
 
