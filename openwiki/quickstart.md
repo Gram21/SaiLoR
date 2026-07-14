@@ -105,7 +105,11 @@ npm run typecheck
 │   ├── project.example.json
 │   └── pdfs/
 ├── scripts/ci.sh          Provider-agnostic CI pipeline (install → typecheck → test → build)
-├── .github/workflows/ci.yml  GitHub Actions — thin wrapper that runs scripts/ci.sh on push/PR to main
+├── scripts/build-electron.sh  Provider-agnostic desktop build (electron-builder for the host OS)
+├── .github/workflows/ci.yml       GitHub Actions — runs scripts/ci.sh on push/PR to main
+├── .github/workflows/release.yml  GitHub Actions — builds desktop installers on release, attaches them
+├── .github/workflows/openwiki.yml Scheduled weekly OpenWiki doc refresh (only when code changed)
+├── .github/CODEOWNERS     Default reviewers for pull requests
 ├── docs/                  In-depth authoring guide (annotation-schema.md)
 ├── build/icon.png         App icon (also the macOS dock / packaged-bundle icon)
 ├── public/favicon.svg     Browser favicon
