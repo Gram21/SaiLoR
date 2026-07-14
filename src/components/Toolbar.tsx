@@ -12,6 +12,7 @@ export function Toolbar() {
   const saveAs = useStore((s) => s.saveAs)
   const sidebarCollapsed = useStore((s) => s.sidebarCollapsed)
   const runValidation = useStore((s) => s.runValidation)
+  const requestCloseProject = useStore((s) => s.requestCloseProject)
   const editorOpen = useEditorStore((s) => s.open)
   const project = useStore((s) => s.project)
   const projectName = useStore((s) => s.projectName)
@@ -35,16 +36,23 @@ export function Toolbar() {
     { type: 'separator' },
     { type: 'header', label: 'Recent projects' },
     ...(recents.length > 0
-      ? recents.map<MenuItem>((r) => ({
-          type: 'item',
-          // The title when the project sets one, else the bare file name.
-          label: r.title || r.name,
-          // The path on hover is what tells two same-named projects apart.
-          hint: r.path ?? r.name,
-          onSelect: () => void openRecent(r.id),
-          onRemove: () => forgetRecent(r.id),
-          removeTitle: 'Remove from recent projects',
-        }))
+      ? recents.map<MenuItem>((r) => {
+          const label = r.title || r.name
+          const where = r.path ?? r.name
+          // Only an explicit false disables it; undefined = not checked yet.
+          const missing = r.available === false
+          return {
+            type: 'item',
+            // The title when the project sets one, else the bare file name.
+            label: missing ? `${label} (not found)` : label,
+            // The path on hover is what tells two same-named projects apart.
+            hint: missing ? `Not found — ${where}` : `${label}\n${where}`,
+            disabled: missing,
+            onSelect: () => void openRecent(r.id),
+            onRemove: () => forgetRecent(r.id),
+            removeTitle: 'Remove from recent projects',
+          }
+        })
       : [{ type: 'item', label: 'No recent files', disabled: true, onSelect: () => {} } as MenuItem]),
   ]
 
@@ -86,6 +94,14 @@ export function Toolbar() {
           disabled={!project || busy || editorOpen}
         >
           Validate
+        </button>
+        <button
+          type="button"
+          title="Close this project and return to the start screen"
+          onClick={requestCloseProject}
+          disabled={!project || busy || editorOpen}
+        >
+          Close
         </button>
       </div>
 

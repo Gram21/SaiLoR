@@ -124,6 +124,8 @@ interface AppState {
   /** Result of the last validation run; null until the user asks for one. */
   validation: ValidationIssue[] | null
   validationOpen: boolean
+  /** Shown when closing a project with unsaved changes. */
+  closePromptOpen: boolean
   /** The running version, injected from package.json at build time. */
   appVersion: string
   /** Set only when a *newer* release exists; null while up to date or unknowable. */
@@ -136,6 +138,14 @@ interface AppState {
   openRecent: (id: string) => Promise<void>
   /** Drop a project from the recents list. */
   forgetRecent: (id: string) => void
+  /** Re-check which recents still exist, marking the rest unavailable. */
+  refreshRecents: () => Promise<void>
+  /** Close the open project (prompting to save first when dirty). */
+  requestCloseProject: () => void
+  /** Answer the close prompt. */
+  resolveClosePrompt: (choice: 'save' | 'discard' | 'cancel') => Promise<void>
+  /** Discard the open project and return to the start screen. */
+  closeProject: () => void
   loadFromUrl: (url: string) => Promise<void>
   loadFromText: (text: string, handle: SaveHandle | null, name: string) => void
   save: () => Promise<boolean>
@@ -198,6 +208,7 @@ export const useStore = create<AppState>()(
     helpOpen: false,
     validation: null,
     validationOpen: false,
+    closePromptOpen: false,
     appVersion: APP_VERSION,
     update: null,
     past: [],
@@ -235,6 +246,65 @@ export const useStore = create<AppState>()(
       })
     },
 
+    refreshRecents: async () => {
+      const platform = getPlatform()
+      const checked = await platform.checkRecents(platform.getRecents())
+      set((s) => {
+        s.recents = checked
+      })
+    },
+
+    requestCloseProject: () => {
+      if (!get().project) return
+      // An unsaved project asks first — exactly like quitting the app does.
+      if (get().dirty) {
+        set((s) => {
+          s.closePromptOpen = true
+        })
+        return
+      }
+      get().closeProject()
+    },
+
+    resolveClosePrompt: async (choice) => {
+      if (choice === 'cancel') {
+        set((s) => {
+          s.closePromptOpen = false
+        })
+        return
+      }
+      if (choice === 'save' && !(await get().save())) {
+        // The save failed or was cancelled — keep the project open.
+        set((s) => {
+          s.closePromptOpen = false
+        })
+        return
+      }
+      set((s) => {
+        s.closePromptOpen = false
+      })
+      get().closeProject()
+    },
+
+    closeProject: () => {
+      lastFieldKey = null
+      set((s) => {
+        s.project = null
+        s.currentPaperId = null
+        s.saveHandle = null
+        s.projectName = ''
+        s.projectTitle = ''
+        s.dirty = false
+        s.pdfSelection = ''
+        s.past = []
+        s.future = []
+        s.validation = null
+        s.validationOpen = false
+        s.closePromptOpen = false
+      })
+      void get().refreshRecents()
+    },
+
     openRecent: async (id) => {
       const platform = getPlatform()
       set((s) => {
@@ -243,12 +313,13 @@ export const useStore = create<AppState>()(
       try {
         const opened = await platform.openRecent(id)
         if (!opened) {
-          // Entry was stale and has been pruned from the list.
+          // The file is gone. Keep the entry — the drive may come back — but
+          // mark it unavailable so it greys out instead of vanishing.
           set((s) => {
             s.busy = false
-            s.recents = platform.getRecents()
+            s.recents = s.recents.map((r) => (r.id === id ? { ...r, available: false } : r))
             s.loadError = {
-              message: 'That recent file could not be opened.',
+              message: 'That project could not be opened.',
               details: ['It may have been moved, renamed, or deleted.'],
             }
           })

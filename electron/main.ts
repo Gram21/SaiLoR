@@ -11,8 +11,8 @@ import {
   shell,
 } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { readFile, writeFile } from 'node:fs/promises'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFile, writeFile, access } from 'node:fs/promises'
+import { constants, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -354,6 +354,21 @@ ipcMain.handle('pdf:pick', async () => {
   })
   if (res.canceled) return []
   return res.filePaths
+})
+
+// Which of these project files still exist? A recent whose file has gone (moved,
+// deleted, unplugged drive) is kept in the list but shown as unavailable.
+ipcMain.handle('fs:exists', async (_e, paths: string[]) => {
+  return Promise.all(
+    paths.map(async (p) => {
+      try {
+        await access(p, constants.R_OK)
+        return true
+      } catch {
+        return false
+      }
+    }),
+  )
 })
 
 // Raw bytes of a PDF, so the editor can read its title/authors. Unlike the

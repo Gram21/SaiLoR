@@ -9,6 +9,7 @@ import { AnnotationPanel } from './components/AnnotationPanel'
 import { ErrorPanel } from './components/ErrorPanel'
 import { HelpDialog } from './components/HelpDialog'
 import { ValidationDialog } from './components/ValidationDialog'
+import { ClosePrompt } from './components/ClosePrompt'
 import { Splitter } from './components/Splitter'
 import { useKeybindings } from './hooks/useKeybindings'
 import { useDirtyGuard } from './hooks/useDirtyGuard'
@@ -34,6 +35,7 @@ export function App() {
   const recents = useStore((s) => s.recents)
   const openRecent = useStore((s) => s.openRecent)
   const forgetRecent = useStore((s) => s.forgetRecent)
+  const refreshRecents = useStore((s) => s.refreshRecents)
   const editorOpen = useEditorStore((s) => s.open)
   const startNew = useEditorStore((s) => s.startNew)
   const startEdit = useEditorStore((s) => s.startEdit)
@@ -54,6 +56,11 @@ export function App() {
   useEffect(() => {
     void checkForUpdate()
   }, [checkForUpdate])
+
+  // Find out which recent projects still exist, so the gone ones grey out.
+  useEffect(() => {
+    void refreshRecents()
+  }, [refreshRecents])
 
   // Persist pane widths whenever they change (avoids stale-closure saves).
   useEffect(() => {
@@ -114,30 +121,42 @@ export function App() {
             {recents.length > 0 && (
               <div className="welcome-recents">
                 <div className="welcome-recents-label">Recent projects</div>
-                {recents.map((item) => (
-                  <div key={item.id} className="welcome-recent-row">
-                    <button
-                      type="button"
-                      className="welcome-recent"
-                      title={item.path ?? item.name}
-                      onClick={() => void openRecent(item.id)}
-                    >
-                      {/* The project's own title, falling back to the file name. */}
-                      <span className="recent-title">{item.title || item.name}</span>
-                      {/* The path is what distinguishes two projects sharing a name. */}
-                      <span className="recent-path">{item.path ?? item.name}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="icon-btn recent-remove"
-                      title="Remove from recent projects"
-                      aria-label={`Remove ${item.title || item.name} from recent projects`}
-                      onClick={() => forgetRecent(item.id)}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
+                {recents.map((item) => {
+                  const label = item.title || item.name
+                  const where = item.path ?? item.name
+                  // `undefined` means "not checked yet" — only an explicit false
+                  // greys the entry out, so nothing flickers on first paint.
+                  const missing = item.available === false
+                  return (
+                    <div key={item.id} className="welcome-recent-row">
+                      <button
+                        type="button"
+                        className={`welcome-recent${missing ? ' unavailable' : ''}`}
+                        // The full text on hover, since both lines truncate.
+                        title={missing ? `Not found — ${where}` : `${label}\n${where}`}
+                        disabled={missing}
+                        onClick={() => void openRecent(item.id)}
+                      >
+                        {/* The project's own title, falling back to the file name. */}
+                        <span className="recent-title">
+                          {label}
+                          {missing && <span className="recent-missing">not found</span>}
+                        </span>
+                        {/* The path distinguishes two projects sharing a name. */}
+                        <span className="recent-path">{where}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-btn recent-remove"
+                        title="Remove from recent projects"
+                        aria-label={`Remove ${label} from recent projects`}
+                        onClick={() => forgetRecent(item.id)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )
+                })}
               </div>
             )}
 
@@ -175,6 +194,7 @@ export function App() {
       <ErrorPanel />
       <HelpDialog />
       <ValidationDialog />
+      <ClosePrompt />
     </div>
   )
 }

@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('slr', {
   pickSavePath: (suggestedName: string) => ipcRenderer.invoke('project:pickSavePath', suggestedName),
   pickPdfs: () => ipcRenderer.invoke('pdf:pick'),
   readPdf: (filePath: string) => ipcRenderer.invoke('pdf:read', filePath),
+  filesExist: (paths: string[]) => ipcRenderer.invoke('fs:exists', paths),
   relativePaths: (fromFile: string, toFiles: string[]) =>
     ipcRenderer.invoke('paths:relative', fromFile, toFiles),
   rebasePaths: (fromFile: string, toFile: string, rels: string[]) =>

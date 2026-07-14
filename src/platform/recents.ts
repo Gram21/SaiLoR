@@ -12,6 +12,12 @@ export interface RecentEntry {
   path?: string
   /** The project's own title, when its JSON sets one. Preferred over `name`. */
   title?: string
+  /**
+   * Whether the file is currently reachable. Computed at runtime (never
+   * persisted): a missing file keeps its entry — the user may plug the drive
+   * back in — it is just shown greyed out and can't be opened.
+   */
+  available?: boolean
 }
 
 export const MAX_RECENTS = 5
@@ -32,7 +38,9 @@ export function readRecents(key: string): RecentEntry[] {
 
 function write(key: string, list: RecentEntry[]): void {
   try {
-    localStorage?.setItem(key, JSON.stringify(list.slice(0, MAX_RECENTS)))
+    // `available` is a runtime observation, not part of the remembered entry.
+    const persisted = list.slice(0, MAX_RECENTS).map(({ available: _drop, ...rest }) => rest)
+    localStorage?.setItem(key, JSON.stringify(persisted))
   } catch {
     /* ignore */
   }

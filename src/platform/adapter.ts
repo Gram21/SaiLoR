@@ -75,6 +75,13 @@ export interface PlatformAdapter {
   /** Drop an entry from the recents list (the user dismissed it). */
   forgetRecent(id: string): RecentEntry[]
 
+  /**
+   * Re-check which recents are still reachable, returning them with `available`
+   * set. A missing file is kept (the drive may come back) but is shown greyed
+   * out and can't be opened.
+   */
+  checkRecents(entries: RecentEntry[]): Promise<RecentEntry[]>
+
   /** Reopen a recent project by its opaque id. Returns null if it can't be opened. */
   openRecent(id: string): Promise<OpenedProject | null>
 
