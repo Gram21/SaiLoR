@@ -10,7 +10,7 @@
     "dev": "vite",
     "dev:electron": "cross-env ELECTRON=1 vite",
     "build": "tsc -b && vite build",
-    "build:electron": "cross-env ELECTRON=1 npm run build && electron-builder",
+    "build:electron": "cross-env ELECTRON=1 npm run build && electron-builder --publish never",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
