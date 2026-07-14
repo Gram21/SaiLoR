@@ -99,7 +99,6 @@ button.primary {
   gap: 6px;
 }
 .toolbar-view {
-  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -112,13 +111,21 @@ button.primary {
   min-width: 30px;
   text-align: center;
 }
+/* Pushes itself and the view controls that follow it to the right edge. */
 .toolbar-status {
+  margin-left: auto;
+  min-width: 0;
   color: var(--muted);
 }
 .project-name {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  /* A long name truncates rather than shoving the view controls off the edge. */
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .dirty-dot {
   color: var(--accent);
@@ -181,6 +188,10 @@ body.resizing * {
   border-bottom: 1px solid var(--border);
 }
 .paper-list-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   font-weight: 600;
 }
 .paper-list-head .count {
@@ -639,6 +650,29 @@ body.resizing * {
   color: var(--muted);
   margin: 0 0 20px;
 }
+/* The toolbar always reserves the toggle's slot, so showing/hiding the paper
+   list doesn't shift the app title sideways. `visibility` keeps the box in the
+   layout while taking the button out of the tab order. */
+.toolbar-toggle-slot {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+.toolbar-toggle-slot.is-hidden {
+  visibility: hidden;
+}
+
+/* Paper-list show/hide button (in the list's header, or the toolbar once hidden). */
+.sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+.sidebar-toggle:hover:not(:disabled) {
+  color: var(--text);
+}
+
 /* Mode badge in the help dialog's title ("Annotating" / "Editing the …"). */
 .help-mode {
   margin-left: 8px;

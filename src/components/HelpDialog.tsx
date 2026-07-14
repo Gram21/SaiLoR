@@ -126,8 +126,9 @@ function AnnotateHelp() {
           <em>Edit annotation JSON…</em> on the start screen.
         </li>
         <li>
-          <strong>Pick a paper</strong> from the left list (toggle the list with the ☰ button). A
-          green dot marks papers that already have annotations.
+          <strong>Pick a paper</strong> from the left list. A green dot marks papers that already
+          have annotations. The button in the list's header hides it to make room for the paper;
+          once hidden, the same button in the top bar brings it back.
         </li>
         <li>
           <strong>Read the PDF</strong> in the middle pane; its text is selectable. Use{' '}

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../state/store'
 import { hasAnnotations } from '../model/annotations'
+import { SidebarToggle } from './SidebarToggle'
 import type { Paper } from '../model/project'
 
 /** A paper paired with a precomputed, lowercased searchable string. */
@@ -61,7 +62,10 @@ export function PaperList() {
     <div className="panel paper-list">
       <div className="paper-list-head">
         <div className="paper-list-title">
-          Papers <span className="count">({countText})</span>
+          <span>
+            Papers <span className="count">({countText})</span>
+          </span>
+          <SidebarToggle />
         </div>
         <div className="paper-search">
           <input
