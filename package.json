@@ -80,5 +80,9 @@
       "icon": "build/icon.png",
       "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
     }
+  },
+  "allowScripts": {
+    "electron@33.4.11": true,
+    "esbuild@0.25.12": true
   }
 }
