@@ -13,6 +13,12 @@ import {
 } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
 import { validateProject, type ValidationIssue } from '../model/validate'
+import {
+  fetchLatestRelease,
+  updateFrom,
+  CHECK_INTERVAL_MS,
+  type UpdateInfo,
+} from '../model/version'
 import { getPlatform, type SaveHandle } from '../platform'
 import { BrowserAdapter } from '../platform/browser'
 import type { RecentEntry } from '../platform/recents'
@@ -25,6 +31,40 @@ import {
   clampFont,
   FONT_STEP,
 } from './settings'
+
+/** Injected from package.json by vite.config.ts; falls back for non-Vite runners (tests). */
+const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '0.0.0'
+
+const UPDATE_CACHE_KEY = 'slr.updateCheck'
+
+interface UpdateCache {
+  checkedAt: number
+  release: UpdateInfo | null
+}
+
+/** The cached release lookup, or null when it is missing or stale. */
+function readUpdateCache(): UpdateCache | null {
+  try {
+    const raw = localStorage.getItem(UPDATE_CACHE_KEY)
+    if (!raw) return null
+    const cache = JSON.parse(raw) as UpdateCache
+    if (typeof cache.checkedAt !== 'number') return null
+    if (Date.now() - cache.checkedAt > CHECK_INTERVAL_MS) return null
+    return cache
+  } catch {
+    return null
+  }
+}
+
+/** Remember the lookup — including a `null` result, so a private repo or an
+ *  offline launch doesn't retry on every startup. */
+function writeUpdateCache(release: UpdateInfo | null): void {
+  try {
+    localStorage.setItem(UPDATE_CACHE_KEY, JSON.stringify({ checkedAt: Date.now(), release }))
+  } catch {
+    /* localStorage unavailable — the check simply runs again next time. */
+  }
+}
 
 /** A step into the annotation tree: pick instance `index` of node `name`. */
 export interface PathSeg {
@@ -82,6 +122,10 @@ interface AppState {
   /** Result of the last validation run; null until the user asks for one. */
   validation: ValidationIssue[] | null
   validationOpen: boolean
+  /** The running version, injected from package.json at build time. */
+  appVersion: string
+  /** Set only when a *newer* release exists; null while up to date or unknowable. */
+  update: UpdateInfo | null
   /** Undo/redo history of annotation changes (session-only). */
   past: HistoryEntry[]
   future: HistoryEntry[]
@@ -108,6 +152,8 @@ interface AppState {
   /** Check every paper's annotations against the schema and show the result. */
   runValidation: () => void
   setValidationOpen: (open: boolean) => void
+  /** Look for a newer release (cached; silent when it can't be determined). */
+  checkForUpdate: () => Promise<void>
 
   setFieldValue: (path: PathSeg[], name: string, index: number, value: FieldValue) => void
   addInstance: (path: PathSeg[], def: ResolvedDef) => void
@@ -147,6 +193,8 @@ export const useStore = create<AppState>()(
     helpOpen: false,
     validation: null,
     validationOpen: false,
+    appVersion: APP_VERSION,
+    update: null,
     past: [],
     future: [],
 
@@ -429,6 +477,23 @@ export const useStore = create<AppState>()(
       set((s) => {
         s.validationOpen = open
       }),
+
+    checkForUpdate: async () => {
+      const cached = readUpdateCache()
+      // GitHub allows 60 unauthenticated calls an hour per IP, so a daily check
+      // is plenty — a fresh cache answers without touching the network.
+      if (cached) {
+        set((s) => {
+          s.update = updateFrom(APP_VERSION, cached.release)
+        })
+        return
+      }
+      const release = await fetchLatestRelease(getPlatform().getOsInfo())
+      writeUpdateCache(release)
+      set((s) => {
+        s.update = updateFrom(APP_VERSION, release)
+      })
+    },
 
     setFieldValue: (path, name, index, value) => {
       const prev = get()

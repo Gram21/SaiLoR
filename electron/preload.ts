@@ -5,6 +5,10 @@ import { contextBridge, ipcRenderer } from 'electron'
  * interface in src/platform/electron.ts.
  */
 contextBridge.exposeInMainWorld('slr', {
+  // So the update notice can offer the installer that actually matches this
+  // machine (e.g. the arm64 dmg rather than the Intel one).
+  os: { platform: process.platform, arch: process.arch },
+
   openProject: () => ipcRenderer.invoke('project:open'),
   openPath: (filePath: string) => ipcRenderer.invoke('project:openPath', filePath),
   saveProject: (filePath: string, text: string) =>

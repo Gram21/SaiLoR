@@ -36,6 +36,9 @@ export function App() {
   const editorOpen = useEditorStore((s) => s.open)
   const startNew = useEditorStore((s) => s.startNew)
   const startEdit = useEditorStore((s) => s.startEdit)
+  const appVersion = useStore((s) => s.appVersion)
+  const update = useStore((s) => s.update)
+  const checkForUpdate = useStore((s) => s.checkForUpdate)
 
   const workspaceRef = useRef<HTMLDivElement>(null)
   const [panes, setPanes] = useState(loadPaneWidths)
@@ -45,6 +48,11 @@ export function App() {
     const url = new URLSearchParams(window.location.search).get('project')
     if (url) void loadFromUrl(url)
   }, [loadFromUrl])
+
+  // Look for a newer release once per launch (the result is cached for a day).
+  useEffect(() => {
+    void checkForUpdate()
+  }, [checkForUpdate])
 
   // Persist pane widths whenever they change (avoids stale-closure saves).
   useEffect(() => {
@@ -117,6 +125,35 @@ export function App() {
                 ))}
               </div>
             )}
+
+            <div className="welcome-version">
+              {update && (
+                <div className="update-notice">
+                  <span>
+                    <strong>Version {update.latest} is available</strong> — you have {appVersion}.
+                  </span>
+                  <span className="update-links">
+                    {/* When we know the machine, link straight at its installer;
+                        otherwise the release page is the best we can offer. */}
+                    {update.download && (
+                      <a
+                        className="update-download"
+                        href={update.download.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={update.download.name}
+                      >
+                        Download for {update.download.label}
+                      </a>
+                    )}
+                    <a href={update.url} target="_blank" rel="noopener noreferrer">
+                      Release notes
+                    </a>
+                  </span>
+                </div>
+              )}
+              <span className="version-label">SLR Helper v{appVersion}</span>
+            </div>
           </div>
         </div>
       )}

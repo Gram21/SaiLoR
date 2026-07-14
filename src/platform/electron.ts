@@ -1,5 +1,6 @@
 import type {
   OpenedProject,
+  OsInfo,
   PdfSource,
   PickedPdf,
   PlatformAdapter,
@@ -12,6 +13,8 @@ const RECENTS_KEY = 'slr.recents.electron'
 
 /** Shape of the API exposed by electron/preload.ts on `window.slr`. */
 export interface SlrBridge {
+  /** The machine this build is running on (from process.platform / process.arch). */
+  os: { platform: string; arch: string }
   openProject(): Promise<{ path: string; text: string } | null>
   /** Read a specific file by absolute path (for recent files). Null if missing. */
   openPath(path: string): Promise<{ path: string; text: string } | null>
@@ -44,6 +47,10 @@ function bridge(): SlrBridge {
 /** Electron adapter: native dialogs + fs via IPC, PDFs via the slr-file:// protocol. */
 export class ElectronAdapter implements PlatformAdapter {
   readonly kind = 'electron' as const
+
+  getOsInfo(): OsInfo | null {
+    return bridge().os ?? null
+  }
 
   getRecents(): RecentEntry[] {
     return readRecents(RECENTS_KEY)
