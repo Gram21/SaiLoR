@@ -38,6 +38,9 @@ fi
 step "Type checking (tsc -b)"
 npm run typecheck
 
+step "Checking wiki links (openwiki/)"
+npm run check:wiki
+
 step "Running tests (vitest)"
 npm test
 
