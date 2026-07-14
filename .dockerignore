@@ -9,3 +9,5 @@ projects
 samples/pdfs
 .vite
 .DS_Store
+.claude
+.github
