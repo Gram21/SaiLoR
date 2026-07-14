@@ -41,7 +41,7 @@ const MAX_PREVIEW_CHARS = 40
  * For numbers, `0` is a real answer; only `null`/`undefined` is empty. For
  * strings, whitespace-only counts as empty because it is invisible in the UI.
  */
-function isEmptyValue(type: FieldType | undefined, value: unknown): boolean {
+export function isEmptyValue(type: FieldType | undefined, value: unknown): boolean {
   if (type === 'boolean') return false
   if (value === null || value === undefined) return true
   if (typeof value === 'string') return value.trim() === ''

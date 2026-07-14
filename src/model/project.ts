@@ -146,7 +146,7 @@ function extractExtra(obj: Record<string, unknown>, known: Set<string>): Record<
 }
 
 /** Convert ResolvedDef back to the compact on-disk AnnotationDef shape. */
-function dehydrateSchema(defs: ResolvedDef[]): unknown[] {
+export function dehydrateSchema(defs: ResolvedDef[]): unknown[] {
   return defs.map((d) => {
     const out: Record<string, unknown> = { name: d.name }
     if (d.type !== undefined) out.type = d.type

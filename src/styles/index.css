@@ -439,6 +439,31 @@ body.resizing * {
   margin: 0;
   font-size: 1rem;
 }
+/* Title on the left, the AI button on the right. */
+.annotations-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ai-btn {
+  padding: 3px 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ai-btn:hover:not(:disabled) {
+  background: var(--accent-weak);
+}
+.ai-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 .annotations-paper-title {
   color: var(--muted);
   font-size: 0.857rem;

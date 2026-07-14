@@ -97,6 +97,12 @@ Two structural rules the app enforces:
   the name is the key under which the saved data is stored. Duplicates cause a load error.
   (Names in *different* branches may repeat — the rule is only about direct siblings.)
 
+> **Note for maintainers.** This description of the format is mirrored in the LLM system prompt
+> (`SCHEMA_FORMAT_DOC` in `src/llm/prompt.ts`), so that the *AI-assisted annotation* feature can
+> hand a model a schema it has never seen and have it read the schema rather than pattern-match a
+> familiar one. The two are kept in step **by hand**: if the format changes here, change it there
+> too.
+
 ### 3.1 Simple fields (string, number, boolean)
 
 The simplest node is a single field. Add a `type` and you get an editable value:

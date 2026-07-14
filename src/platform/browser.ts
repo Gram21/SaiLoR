@@ -8,6 +8,7 @@ import type {
 } from './adapter'
 import { readRecents, pushRecent, removeRecent, replaceRecents, type RecentEntry } from './recents'
 import { idbSet, idbGet, idbDelete } from './idb'
+import { API_KEY_SENTINEL, type LlmConfig, type LlmHttpRequest, type LlmHttpResponse } from '../llm/types'
 
 const RECENTS_KEY = 'slr.recents.browser'
 
@@ -264,10 +265,106 @@ export class BrowserAdapter implements PlatformAdapter {
     return pdfs.map((p) => p.name)
   }
 
+  // ---- AI-assisted annotation ----
+  //
+  // The browser build cannot make the promises the desktop build makes, and says
+  // so in the settings dialog rather than pretending otherwise:
+  //
+  //  * The API key is stored in localStorage, unencrypted. There is no keychain
+  //    here, and no main process to hold the key out of the page's reach.
+  //  * The call goes out from the page, so it is a cross-origin request and the
+  //    provider must be willing to answer it. Anthropic needs an explicit opt-in
+  //    header; a self-hosted OpenAI-compatible endpoint usually sends no CORS
+  //    headers at all and will simply fail.
+
+  async listLlmConfigs(): Promise<LlmConfig[]> {
+    return readLlmStore().map(({ apiKey, ...rest }) => ({ ...rest, hasKey: Boolean(apiKey) }))
+  }
+
+  async saveLlmConfig(config: LlmConfig, apiKey?: string): Promise<LlmConfig[]> {
+    const stored = readLlmStore()
+    const existing = stored.find((c) => c.id === config.id)
+    const { hasKey: _hasKey, ...rest } = config
+    // A blank key field on an edit keeps the stored key — it cannot be read back.
+    const next = { ...rest, apiKey: apiKey || existing?.apiKey }
+    writeLlmStore(
+      existing ? stored.map((c) => (c.id === config.id ? next : c)) : [...stored, next],
+    )
+    return this.listLlmConfigs()
+  }
+
+  async deleteLlmConfig(id: string): Promise<LlmConfig[]> {
+    writeLlmStore(readLlmStore().filter((c) => c.id !== id))
+    return this.listLlmConfigs()
+  }
+
+  async callLlm(request: LlmHttpRequest, signal?: AbortSignal): Promise<LlmHttpResponse> {
+    const config = readLlmStore().find((c) => c.id === request.configId)
+    if (!config?.apiKey) throw new Error('No API key is stored for this target.')
+
+    const headers: Record<string, string> = Object.fromEntries(
+      Object.entries(request.headers).map(([k, v]) => [
+        k,
+        v.split(API_KEY_SENTINEL).join(config.apiKey!),
+      ]),
+    )
+    // Anthropic blocks browser-origin calls unless the caller opts in explicitly.
+    if (config.provider === 'anthropic') {
+      headers['anthropic-dangerous-direct-browser-access'] = 'true'
+    }
+
+    try {
+      const res = await fetch(request.url, {
+        method: 'POST',
+        headers,
+        body: request.body,
+        signal,
+      })
+      return { ok: res.ok, status: res.status, body: await res.text() }
+    } catch (err) {
+      if (signal?.aborted) throw err
+      // A cross-origin block surfaces as an opaque TypeError with no detail, which
+      // would otherwise read as "the provider is down". Name the likely cause.
+      throw new Error(
+        `The request to ${new URL(request.url).origin} failed. A browser cannot call every ` +
+          `provider directly: the endpoint must allow cross-origin requests. The desktop app ` +
+          `has no such restriction. (${err instanceof Error ? err.message : String(err)})`,
+      )
+    }
+  }
+
   private register(handle: FileSystemFileHandle): string {
     const id = `fh${this.nextId++}`
     this.fileHandles.set(id, handle)
     return id
+  }
+}
+
+// ---------------------------------------------------------------------------
+// LLM targets, persisted in localStorage (browser build only)
+// ---------------------------------------------------------------------------
+
+const LLM_KEY = 'slr.llm.configs'
+
+/** As stored here: the public config plus the key, in the clear. */
+type StoredLlmConfig = Omit<LlmConfig, 'hasKey'> & { apiKey?: string }
+
+function readLlmStore(): StoredLlmConfig[] {
+  try {
+    const raw = localStorage?.getItem(LLM_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as unknown
+    return Array.isArray(parsed) ? (parsed as StoredLlmConfig[]) : []
+  } catch {
+    return []
+  }
+}
+
+function writeLlmStore(configs: StoredLlmConfig[]): void {
+  try {
+    localStorage?.setItem(LLM_KEY, JSON.stringify(configs))
+  } catch {
+    /* ignore (private mode / disabled storage) */
   }
 }
 

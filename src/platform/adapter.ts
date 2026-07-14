@@ -6,6 +6,7 @@
 
 import type { RecentEntry } from './recents'
 import type { OsInfo } from '../model/version'
+import type { LlmConfig, LlmHttpRequest, LlmHttpResponse } from '../llm/types'
 
 export type { RecentEntry }
 export type { OsInfo }
@@ -127,6 +128,37 @@ export interface PlatformAdapter {
    * the bare file names.
    */
   relativePdfPaths(pdfs: PickedPdf[], location: ProjectLocation | null): Promise<string[]>
+
+  // ---- AI-assisted annotation ----
+
+  /**
+   * The configured LLM targets. **Never carries the API key** — see `LlmConfig`.
+   * In Electron the keys live in the main process; the renderer only learns
+   * whether a key is set (`hasKey`).
+   */
+  listLlmConfigs(): Promise<LlmConfig[]>
+
+  /**
+   * Create or update a target. `apiKey` is written only when provided (so an
+   * edit that leaves the key field untouched keeps the stored key), and is never
+   * read back.
+   */
+  saveLlmConfig(config: LlmConfig, apiKey?: string): Promise<LlmConfig[]>
+
+  deleteLlmConfig(id: string): Promise<LlmConfig[]>
+
+  /**
+   * Send a request built by `src/llm/providers.ts`. Its headers carry
+   * `API_KEY_SENTINEL`, not the key: the platform substitutes the real key at the
+   * last moment.
+   *
+   * In Electron this crosses to the main process and is sent with `net.fetch`,
+   * which has no document origin and so is not subject to CORS. A renderer fetch
+   * would be preflighted and blocked (the packaged renderer's origin is
+   * `file://`). The browser build has no such escape hatch and calls `fetch`
+   * directly, which some providers will refuse.
+   */
+  callLlm(request: LlmHttpRequest, signal?: AbortSignal): Promise<LlmHttpResponse>
 }
 
 /** True when running inside the Electron shell (preload exposed `window.slr`). */
