@@ -24,6 +24,14 @@ const ANNOTATE_KEYS: Array<[string, string]> = [
   ['F1', 'Open this help'],
 ]
 
+/** Shortcuts on the start screen, before anything is open. */
+const START_KEYS: Array<[string, string]> = [
+  [`${MOD}+O`, 'Open a project file'],
+  [`${MOD}+Shift + / -`, 'App font size larger / smaller'],
+  [`${MOD}+Shift+0`, 'Reset app font size'],
+  ['F1', 'Open this help'],
+]
+
 /** Shortcuts while building or editing the annotation JSON. */
 const EDITOR_KEYS: Array<[string, string]> = [
   [`${MOD}+S`, 'Save the JSON (stay in the editor)'],
@@ -50,6 +58,53 @@ function ShortcutTable({ keys }: { keys: Array<[string, string]> }) {
         ))}
       </tbody>
     </table>
+  )
+}
+
+/** Help for the start screen — nothing is open yet, so describe the tool itself. */
+function StartHelp() {
+  return (
+    <>
+      <h3>What this tool does</h3>
+      <p>
+        SLR Helper supports <strong>Systematic Literature Reviews</strong>. Everything for a review
+        lives in a single <strong>project JSON file</strong>, which holds two things: an{' '}
+        <strong>annotation schema</strong> — the fields you want to extract from every paper — and
+        the <strong>list of papers</strong>, each pointing at its PDF.
+      </p>
+      <p>
+        While reviewing, the app shows the paper's PDF next to a form built from your schema. You
+        fill the fields in (grabbing text straight from the PDF if you like), and the answers are
+        saved back into the same JSON file — ready to hand to a co-reviewer or analyse later.
+      </p>
+
+      <h3>Your options from here</h3>
+      <ul>
+        <li>
+          <strong>Open project…</strong> — open an existing project JSON and start annotating. If
+          you've opened projects before, they're listed underneath for one click.
+        </li>
+        <li>
+          <strong>New annotation JSON…</strong> — start a review from scratch. You choose where the
+          JSON should live, define the annotation schema (the fields, their types, whether they
+          repeat or nest), and attach the PDFs to review.
+        </li>
+        <li>
+          <strong>Edit annotation JSON…</strong> — open an existing project and change its schema or
+          its list of papers. Annotations already filled in are preserved.
+        </li>
+      </ul>
+
+      <h3>Which one do I want?</h3>
+      <p>
+        If somebody handed you a project file, use <em>Open project…</em>. If you're setting up a new
+        review, use <em>New annotation JSON…</em> — you can always come back and adjust the schema
+        later with <em>Edit annotation JSON…</em>.
+      </p>
+
+      <h3>Keyboard shortcuts</h3>
+      <ShortcutTable keys={START_KEYS} />
+    </>
   )
 }
 
@@ -165,8 +220,11 @@ function EditorHelp() {
 export function HelpDialog() {
   const open = useStore((s) => s.helpOpen)
   const setHelpOpen = useStore((s) => s.setHelpOpen)
-  // The help must describe the screen the user is actually looking at.
+  // The help must describe the screen the user is actually looking at: the
+  // editor, an open project, or the start screen with neither.
   const editing = useEditorStore((s) => s.open)
+  const hasProject = useStore((s) => s.project !== null)
+  const mode = editing ? 'editor' : hasProject ? 'annotate' : 'start'
 
   useEffect(() => {
     if (!open) return
@@ -191,7 +249,11 @@ export function HelpDialog() {
           <strong>
             SLR Helper — Help{' '}
             <span className="help-mode">
-              {editing ? 'Editing the annotation JSON' : 'Annotating'}
+              {mode === 'editor'
+                ? 'Editing the annotation JSON'
+                : mode === 'annotate'
+                  ? 'Annotating'
+                  : 'Getting started'}
             </span>
           </strong>
           <button
@@ -205,7 +267,7 @@ export function HelpDialog() {
         </div>
 
         <div className="modal-body">
-          {editing ? <EditorHelp /> : <AnnotateHelp />}
+          {mode === 'editor' ? <EditorHelp /> : mode === 'annotate' ? <AnnotateHelp /> : <StartHelp />}
 
           <h3>Appearance</h3>
           <p>
