@@ -7,11 +7,11 @@ PDF beside a form generated from that schema, and writes the annotations back in
 
 One codebase ships two ways: an **Electron desktop app** and a **static web SPA**. That split is the
 thing to understand first — most of the architecture exists to keep the React tree identical across
-both, with a `PlatformAdapter` seam absorbing everything that differs (file dialogs, PDF loading,
-where an API key can safely live).
+both, with a `PlatformAdapter` seam absorbing everything that differs — file dialogs, PDF loading,
+saving.
 
 This wiki is the **developer** documentation. If you are here to *use* SaiLoR — installing a release,
-authoring a project file, annotating with AI — start with the
+authoring a project file, annotating a paper — start with the
 [README](https://github.com/Gram21/SaiLoR#readme) instead.
 
 ## Contents
@@ -19,7 +19,7 @@ authoring a project file, annotating with AI — start with the
 | Page | What it covers |
 |---|---|
 | **[Quickstart](quickstart)** | What SaiLoR is, the tech stack, the commands you actually need, and the repository layout. **Start here.** |
-| **[Architecture](architecture)** | The `PlatformAdapter` seam, the Zustand stores and undo/redo, the component tree, the Electron main process, and the `src/llm` layer behind AI-assisted annotation. |
+| **[Architecture](architecture)** | The `PlatformAdapter` seam, the Zustand stores and undo/redo, the component tree, the Electron main process, and how the build is wired. |
 | **[Data Model](data-model)** | The project file format, the in-memory types, and the load → normalize → edit → prune → serialize lifecycle that keeps a hand-edited JSON safe. |
 | **[Operations](operations)** | Developing, building, testing, CI, releasing the desktop installers, deployment (static / Docker / Electron), and how these wiki pages are kept in sync. |
 
