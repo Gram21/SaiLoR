@@ -215,6 +215,57 @@ Paper navigation with `[`/`]` is disabled when typing in an input field; Alt-arr
 | Other browsers | Downloads JSON | Downloads JSON |
 | Server mode (no handle) | Falls back to Save as… | Downloads JSON |
 
+## AI-assisted annotation: setting up an LLM target
+
+The **✦ AI** button in the annotation column asks a model to propose values for the fields of the current paper that are still empty. It does nothing until a **target** is configured — a provider, a model name, and the API key to reach it.
+
+### Setting one up
+
+1. Open a project, select a paper, and press **✦ AI** → **Set up an LLM…** (or the ⚙ button in the dialog).
+2. **+ Add target**, then fill in:
+   - **Name** — what you pick from later, e.g. *Claude (work key)*.
+   - **Provider** — Anthropic, OpenAI, OpenRouter, or **OpenAI-compatible** (anything speaking `/v1/chat/completions`: LM Studio, llama.cpp, vLLM, a gateway…).
+   - **Base URL** — fixed and read-only for the three named providers; editable **only** for OpenAI-compatible, where you enter your server's root (`http://localhost:1234`). Any of the root, `…/v1`, or the full `…/v1/chat/completions` works — `join()` in `src/llm/providers.ts` will not duplicate what you typed.
+   - **Model** — spelled exactly as the provider names it. An unknown model is rejected by the *provider*, not by the app.
+   - **API key** — pasted once; see below for where it ends up.
+   - **Send the paper as** — *Extracted text* (default: smaller, cheaper, works everywhere) or *The PDF itself* (Anthropic / OpenAI / OpenRouter only; keeps tables and figures intact, costs far more, and is the only way to read a scanned paper).
+3. **Verify setup** sends a one-word test request and shows the model's reply — or the provider's own error. **It saves the target first**, because the key has to be stored before anything can use it. Use it: a wrong key, model name or URL is much cheaper to discover here than after waiting on a full paper.
+
+Several targets may coexist; the last one used is remembered in `localStorage` under `slr.llm.selected`.
+
+### Where the API key is stored
+
+| Runtime | Location | Protection |
+|---|---|---|
+| **Electron (desktop)** | `llm-config.json` in `app.getPath('userData')`, file mode `0600` | Encrypted with Electron's **`safeStorage`**, i.e. the OS keychain (Keychain on macOS, DPAPI on Windows, a Secret Service keyring on Linux). The key is held by the **main process** and never handed to the renderer; the page only ever learns `hasKey: true`. |
+| **Browser (web build)** | `localStorage`, key `slr.llm.configs` | **None. The key is stored in the clear.** Any script on the page, and anyone with access to that browser profile, can read it. The settings dialog says so in red. |
+
+Notes:
+
+- If `safeStorage.isEncryptionAvailable()` is false, the desktop app **refuses to save the key** rather than writing it in the clear — the user is told, and the rest of the app keeps working.
+- **On Linux, `safeStorage` can report "available" while using a weak fallback backend** (`basic_text`) when no keyring/Secret Service is running — the encryption is then little more than obfuscation. The app cannot tell the difference. If the key matters, run the desktop app on a session with a working keyring (gnome-keyring / kwallet), or use a scoped, revocable key.
+- Deleting a target deletes its stored key with it. A stored key is never shown again, so an edit that leaves the key box blank keeps the existing one.
+
+### Limitations of the web build
+
+The desktop app is the supported path for AI annotation. In the browser two things are genuinely worse, and neither is a bug we can fix from this side:
+
+1. **The key is unencrypted** (above). There is no keychain in a page, and no main process to hold the key out of its reach.
+2. **CORS.** The call goes out *from the page*, so it is a cross-origin `POST` and the provider must be willing to answer it:
+   - **Anthropic** refuses browser-origin calls unless the caller opts in; the adapter sends `anthropic-dangerous-direct-browser-access: true` for you.
+   - **A self-hosted OpenAI-compatible endpoint usually sends no CORS headers at all** and will simply fail — LM Studio, llama.cpp and friends do not expect a browser client. Putting a reverse proxy in front of it that adds the CORS headers is the only fix from outside the app.
+   - A cross-origin block surfaces as an opaque `TypeError`, so `BrowserAdapter.callLlm` catches it and re-throws an error naming the likely cause instead of letting it read as "the provider is down".
+
+   The desktop build has none of this: the request is sent by the Electron **main process** (`net.fetch`), which has no origin and no CORS check. See *AI-assisted annotation* in `architecture.md`.
+
+If you use the web build anyway, use a throwaway or tightly scoped key.
+
+### Operational notes
+
+- **What leaves the machine**: the paper's extracted text (or the PDF itself, if the target is configured that way) plus the annotation schema, sent to whichever provider the target names. Nothing else. The dialog states this before anything is sent, and the button proposes values only — nothing is written into the project until the reviewer presses **Apply**.
+- **A scanned PDF yields no text.** The run stops with an error rather than sending a title and inviting the model to invent a paper from it; the fix is to switch that target to *The PDF itself*, if the provider supports it.
+- **Cost** scales with the paper: a long paper as extracted text is a large prompt, and the PDF path is far more expensive again.
+
 ## Change Guidance
 
 - **Adding a new npm script**: Add to `scripts` in `package.json`. The existing scripts use `cross-env` for environment variables (needed because `ELECTRON=1` must be set cross-platform).

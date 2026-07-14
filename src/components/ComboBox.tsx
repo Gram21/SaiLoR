@@ -1,19 +1,33 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+/** An option whose displayed text differs from the value it commits. */
+export interface ComboOption {
+  id: string
+  label: string
+}
+
 interface ComboBoxProps {
   value: string | null
-  options: string[]
+  /**
+   * Plain strings when the value *is* the label (enum fields), or `{id, label}`
+   * when they differ (picking an LLM target by id while showing its name).
+   */
+  options: (string | ComboOption)[]
   onChange: (v: string | null) => void
 }
 
 /**
- * Enum field: a text input that opens a dropdown of allowed values on focus and
- * filters them as you type. The committed value is always one of the options
- * (or null). The menu is portaled with fixed positioning so the annotation
- * panel's scroll container never clips it.
+ * A text input that opens a dropdown of allowed values on focus and filters them
+ * as you type. The committed value is always one of the options (or null). The
+ * menu is portaled with fixed positioning so the annotation panel's scroll
+ * container never clips it.
  */
-export function ComboBox({ value, options, onChange }: ComboBoxProps) {
+export function ComboBox({ value, options: rawOptions, onChange }: ComboBoxProps) {
+  const options: ComboOption[] = rawOptions.map((o) =>
+    typeof o === 'string' ? { id: o, label: o } : o,
+  )
+  const labelOf = (id: string | null) => options.find((o) => o.id === id)?.label ?? ''
   const inputRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
   const [filter, setFilter] = useState('')
@@ -21,16 +35,18 @@ export function ComboBox({ value, options, onChange }: ComboBoxProps) {
   const [rect, setRect] = useState<{ left: number; top: number; width: number } | null>(null)
 
   const needle = filter.trim().toLowerCase()
-  const filtered = needle ? options.filter((o) => o.toLowerCase().includes(needle)) : options
+  const filtered = needle
+    ? options.filter((o) => o.label.toLowerCase().includes(needle))
+    : options
 
   const openMenu = () => {
     setFilter('')
-    setHighlight(Math.max(0, options.indexOf(value ?? '')))
+    setHighlight(Math.max(0, options.findIndex((o) => o.id === value)))
     setOpen(true)
   }
 
-  const select = (opt: string) => {
-    onChange(opt)
+  const select = (opt: ComboOption) => {
+    onChange(opt.id)
     setOpen(false)
     setFilter('')
   }
@@ -92,8 +108,8 @@ export function ComboBox({ value, options, onChange }: ComboBoxProps) {
         role="combobox"
         aria-expanded={open}
         aria-autocomplete="list"
-        value={open ? filter : value ?? ''}
-        placeholder={value ?? 'Select…'}
+        value={open ? filter : labelOf(value)}
+        placeholder={labelOf(value) || 'Select…'}
         onFocus={openMenu}
         onClick={() => {
           if (!open) openMenu()
@@ -122,13 +138,13 @@ export function ComboBox({ value, options, onChange }: ComboBoxProps) {
             ) : (
               filtered.map((opt, i) => (
                 <div
-                  key={opt}
+                  key={opt.id}
                   role="option"
-                  aria-selected={opt === value}
+                  aria-selected={opt.id === value}
                   className={
                     'combo-option' +
                     (i === highlight ? ' active' : '') +
-                    (opt === value ? ' selected' : '')
+                    (opt.id === value ? ' selected' : '')
                   }
                   // preventDefault keeps input focus so onBlur doesn't fire first.
                   onMouseDown={(e) => {
@@ -137,7 +153,7 @@ export function ComboBox({ value, options, onChange }: ComboBoxProps) {
                   }}
                   onMouseEnter={() => setHighlight(i)}
                 >
-                  {opt}
+                  {opt.label}
                 </div>
               ))
             )}

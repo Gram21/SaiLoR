@@ -1,0 +1,484 @@
+/*
+ * AI-assisted annotation: the dialog, and the app's only spinner.
+ *
+ * Only the theme variables from index.css are used here (--bg, --panel-bg,
+ * --border, --text, --muted, --accent, --accent-weak, --danger, --ok), so both
+ * themes are covered without a single hard-coded colour.
+ */
+
+/* Wider than the default modal: the review table needs the room. */
+.ai-dialog {
+  width: min(920px, 94vw);
+}
+
+.ai-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- setup ---------------------------------------------------------------- */
+
+.ai-label {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.ai-target-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-empty-configs {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.ai-empty-configs p {
+  margin: 0;
+}
+
+/*
+ * The consent line. It states what leaves the machine, so it is muted but plainly
+ * legible — a bordered block, not a footnote.
+ */
+.ai-consent {
+  margin: 14px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent-weak);
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.ai-targets {
+  margin: 12px 0;
+}
+
+.ai-note {
+  margin: 8px 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.ai-dash {
+  color: var(--muted);
+}
+
+.ai-prompt,
+.ai-notes {
+  margin: 12px 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.ai-prompt > summary,
+.ai-notes > summary {
+  cursor: pointer;
+  color: var(--text);
+}
+.ai-notes-rejected > summary {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.ai-field-list,
+.ai-note-list {
+  margin: 8px 0 4px;
+  padding: 0;
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.ai-field-list li,
+.ai-note-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 0;
+  border-top: 1px solid var(--border);
+}
+.ai-field-list li:first-child,
+.ai-note-list li:first-child {
+  border-top: 0;
+}
+
+.ai-field-path {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.ai-field-type {
+  padding: 1px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.ai-field-options,
+.ai-note-reason {
+  color: var(--muted);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+/* --- running -------------------------------------------------------------- */
+
+.ai-running {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 4px 4px;
+}
+.ai-phase {
+  font-size: 1.05rem;
+}
+.ai-elapsed {
+  margin-left: auto;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- review --------------------------------------------------------------- */
+
+.ai-review-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 10px;
+}
+.ai-select-all {
+  display: flex;
+  gap: 6px;
+}
+.ai-count {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* The table gets its own scroller so a long value can never widen the dialog. */
+.ai-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.ai-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.ai-table th,
+.ai-table td {
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+.ai-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--panel-bg);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.ai-table tbody tr:last-child th,
+.ai-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.ai-table tbody tr:hover {
+  background: var(--bg);
+}
+
+.ai-col-check {
+  width: 1%;
+  white-space: nowrap;
+}
+.ai-col-conf {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-table th.ai-field {
+  min-width: 9rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.ai-value {
+  min-width: 7rem;
+  max-width: 18rem;
+  overflow-wrap: anywhere;
+}
+
+/* The quote is what makes a row checkable, so it gets real room and wraps. */
+.ai-evidence {
+  min-width: 16rem;
+  max-width: 32rem;
+  color: var(--muted);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.ai-evidence q {
+  font-style: italic;
+}
+
+.ai-bool {
+  font-weight: 700;
+}
+.ai-bool.yes {
+  color: var(--ok);
+}
+.ai-bool.no {
+  color: var(--danger);
+}
+
+/* --- error ---------------------------------------------------------------- */
+
+.ai-error {
+  margin: 4px 0 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--text);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+/* --- footer --------------------------------------------------------------- */
+
+.ai-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.ai-foot-gap {
+  margin-right: auto;
+}
+
+/* --- LLM settings dialog -------------------------------------------------- */
+
+/*
+ * This dialog opens on top of the AI dialog, which already sits on the shared
+ * `.modal-overlay` (z-index 200). Written as a compound selector so the win does
+ * not hinge on which stylesheet the bundler happens to emit last.
+ */
+.modal-overlay.llm-settings-overlay {
+  z-index: 210;
+}
+
+/*
+ * Everything below is scoped to `.llm-settings`: `.modal-body p` in index.css
+ * sets a colour and a line-height on every paragraph inside a modal, and a bare
+ * class would lose to it.
+ */
+
+/* The bordered blocks: the key notice, its browser variant, and the verify box. */
+.llm-settings .llm-notice,
+.llm-settings .llm-warning,
+.llm-settings .llm-verify {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  line-height: 1.45;
+}
+
+/* In the browser the key really is unprotected, so this one is meant to alarm. */
+.llm-settings .llm-warning {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+.llm-settings .llm-warning p {
+  margin: 4px 0 0;
+}
+
+/* --- target list ---------------------------------------------------------- */
+
+.llm-settings .llm-empty {
+  color: var(--muted);
+}
+
+.llm-settings .llm-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.llm-settings .llm-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* Shrinkable, so a long name wraps instead of pushing the buttons off the row. */
+.llm-settings .llm-item-main {
+  flex: 1;
+  min-width: 0;
+}
+.llm-settings .llm-item-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.llm-settings .llm-item-meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+.llm-settings .llm-nokey {
+  color: var(--danger);
+  font-size: 0.85rem;
+}
+
+/*
+ * An armed Delete stays red under the cursor — the shared `button:hover` rule
+ * would otherwise repaint the border with the accent colour and hide that the
+ * next click deletes.
+ */
+.llm-settings .llm-danger,
+.llm-settings .llm-danger:hover:not(:disabled) {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.llm-settings .llm-add {
+  margin-top: 14px;
+}
+
+/* --- target form ---------------------------------------------------------- */
+
+.llm-settings .llm-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 160px) 1fr;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+.llm-settings .llm-label {
+  color: var(--muted);
+}
+
+/* Pulled up against the field it explains, so the two read as one unit. */
+.llm-settings .llm-hint {
+  grid-column: 2;
+  margin: -6px 0 10px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+/* A base URL the provider fixes for you: readable, but plainly not yours to type in. */
+.llm-settings .llm-form input[readonly] {
+  background: var(--bg);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.llm-settings .llm-problem {
+  margin: 4px 0 10px;
+  color: var(--danger);
+}
+
+/* --- verify --------------------------------------------------------------- */
+
+/* Set apart from the fields above it; the rest of the block is shared with the notices. */
+.llm-settings .llm-verify {
+  margin-top: 14px;
+}
+.llm-settings .llm-verify-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.llm-settings .llm-verify-hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.llm-settings .llm-status {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+.llm-settings .llm-status-ok {
+  margin: 8px 0 0;
+  color: var(--ok);
+}
+/* A provider error is a raw string with no spaces to break on — it must not widen the dialog. */
+.llm-settings .llm-status-error {
+  margin: 8px 0 0;
+  color: var(--danger);
+  overflow-wrap: anywhere;
+}
+
+.llm-settings .llm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+/* --- spinner -------------------------------------------------------------- */
+
+.spinner {
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  flex: 0 0 auto;
+  border: 0.16em solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spinner-spin 0.7s linear infinite;
+}
+
+@keyframes spinner-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    border-color: var(--accent);
+    animation: spinner-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes spinner-pulse {
+    0%,
+    100% {
+      opacity: 0.25;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+}

@@ -10,9 +10,13 @@ import {
   makeInstance,
   type AnnotationValueTree,
   type FieldValue,
+  type InstanceNode,
 } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
 import { validateProject, type ValidationIssue } from '../model/validate'
+import { resolvePath } from '../llm/paths'
+import { isUnanswered } from '../llm/fields'
+import type { Suggestion } from '../llm/types'
 import {
   fetchLatestRelease,
   updateFrom,
@@ -174,6 +178,15 @@ interface AppState {
   removeInstance: (path: PathSeg[], name: string, index: number) => void
   undo: () => void
   redo: () => void
+  /** Write the reviewer-approved AI suggestions into the current paper (one undo step). */
+  applyAiSuggestions: (suggestions: Suggestion[]) => AiApplyResult
+}
+
+/** What `applyAiSuggestions` actually did, for the summary shown to the reviewer. */
+export interface AiApplyResult {
+  filled: number
+  /** Suggestions not written: the field is no longer empty, or the path no longer resolves. */
+  skipped: number
 }
 
 /** Walk from a paper's annotation root to the container tree addressed by `path`. */
@@ -645,6 +658,62 @@ export const useStore = create<AppState>()(
       })
     },
 
+    applyAiSuggestions: (suggestions) => {
+      const prev = get()
+      if (!prev.project) return { filled: 0, skipped: suggestions.length }
+      const schema = prev.project.schema
+      const paperNow = currentPaper(prev)
+      if (!paperNow) return { filled: 0, skipped: suggestions.length }
+
+      // Decide what to write *before* touching anything, so a run that turns out to
+      // change nothing leaves no empty entry on the undo stack. A suggestion is
+      // dropped if its path no longer resolves, or if the field has since been
+      // answered — the reviewer's own work is never overwritten.
+      const accepted = suggestions.flatMap((sug) => {
+        const at = resolvePath(schema, sug.path)
+        if (!at) return []
+        const current = peekValue(paperNow.annotations, at.path, at.name, at.index)
+        if (!isUnanswered(at.def, current)) return []
+        return [{ at, value: sug.value }]
+      })
+      if (accepted.length === 0) return { filled: 0, skipped: suggestions.length }
+
+      // The whole fill is one undo step: snapshot once, then mutate. Reset the
+      // coalescing key, or the reviewer's next keystroke would be folded into it.
+      lastFieldKey = null
+      const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
+      let filled = 0
+      set((s) => {
+        const paper = currentPaper(s)
+        if (!paper) return
+        pushPast(s, snap)
+        for (const { at, value } of accepted) {
+          // The model may address an entry of a repeatable node that does not exist
+          // yet — that is how it records a further Finding. Create the instances it
+          // named, along the whole path.
+          let level: ResolvedDef[] = s.project!.schema
+          let tree: AnnotationValueTree | null = paper.annotations
+          for (const seg of at.path) {
+            const step = ensureInstance(level, tree, seg.name, seg.index)
+            if (!step) {
+              tree = null
+              break
+            }
+            if (!step.inst.children) step.inst.children = {}
+            tree = step.inst.children
+            level = step.def.children
+          }
+          if (!tree) continue
+          const leaf = ensureInstance(level, tree, at.name, at.index)
+          if (!leaf) continue
+          leaf.inst.value = value
+          filled++
+        }
+        s.dirty = true
+      })
+      return { filled, skipped: suggestions.length - filled }
+    },
+
     undo: () => {
       const st = get()
       if (st.past.length === 0 || !st.project) return
@@ -678,6 +747,52 @@ export const useStore = create<AppState>()(
     },
   })),
 )
+
+/**
+ * Read a field's current value without creating anything. A missing instance
+ * reads as `undefined` — which is "unanswered", and correctly so: it is a slot
+ * the model asked to add.
+ */
+function peekValue(
+  root: AnnotationValueTree,
+  path: PathSeg[],
+  name: string,
+  index: number,
+): FieldValue | undefined {
+  let tree: AnnotationValueTree | undefined = root
+  for (const seg of path) {
+    tree = tree?.[seg.name]?.[seg.index]?.children
+    if (!tree) return undefined
+  }
+  return tree[name]?.[index]?.value
+}
+
+/**
+ * Find (or create) instance `index` of `name` in `tree`, padding the list with
+ * empty instances as needed. Returns null when the name is unknown at this level
+ * or the index would exceed the node's `max`.
+ */
+function ensureInstance(
+  defs: ResolvedDef[],
+  tree: AnnotationValueTree,
+  name: string,
+  index: number,
+): { inst: InstanceNode; def: ResolvedDef } | null {
+  const def = defs.find((d) => d.name === name)
+  if (!def) return null
+  if (def.max !== null && index >= def.max) return null
+
+  // The JSON is hand-editable, so this key may hold something that is not a list
+  // of instances at all. Replace it rather than crash — the AI is filling an empty
+  // field, and a malformed node has no answer to preserve.
+  let list = tree[name]
+  if (!Array.isArray(list)) {
+    list = []
+    tree[name] = list
+  }
+  while (list.length <= index) list.push(makeInstance(def))
+  return { inst: list[index], def }
+}
 
 /** Push a pre-mutation snapshot onto the undo stack and clear the redo stack. */
 function pushPast(s: AppState, snap: HistoryEntry): void {

@@ -8,6 +8,7 @@ import type {
   SaveHandle,
 } from './adapter'
 import { readRecents, pushRecent, removeRecent, replaceRecents, type RecentEntry } from './recents'
+import type { LlmConfig, LlmHttpRequest, LlmHttpResponse } from '../llm/types'
 
 const RECENTS_KEY = 'slr.recents.electron'
 
@@ -33,6 +34,12 @@ export interface SlrBridge {
   relativePaths(fromFile: string, toFiles: string[]): Promise<string[]>
   /** `rels` (relative to `fromFile`'s dir) re-expressed relative to `toFile`'s dir. */
   rebasePaths(fromFile: string, toFile: string, rels: string[]): Promise<string[]>
+  /** AI targets. There is deliberately no way to read a stored API key back. */
+  llmConfigs(): Promise<LlmConfig[]>
+  saveLlmConfig(config: Omit<LlmConfig, 'hasKey'>, apiKey?: string): Promise<LlmConfig[]>
+  deleteLlmConfig(id: string): Promise<LlmConfig[]>
+  callLlm(requestId: string, request: LlmHttpRequest): Promise<LlmHttpResponse>
+  abortLlm(requestId: string): void
   /** Unsaved-changes coordination for a clean quit. */
   setDirty(dirty: boolean): void
   onRequestSave(cb: () => void): void
@@ -186,6 +193,36 @@ export class ElectronAdapter implements PlatformAdapter {
       out[pdfIndex] = relatives[n] ?? pdfs[pdfIndex].name
     })
     return out
+  }
+
+  // ---- AI-assisted annotation ----
+  // Everything here is a pass-through to the main process, which owns the API
+  // keys and makes the actual call. See electron/main.ts for why.
+
+  listLlmConfigs(): Promise<LlmConfig[]> {
+    return bridge().llmConfigs()
+  }
+
+  saveLlmConfig(config: LlmConfig, apiKey?: string): Promise<LlmConfig[]> {
+    const { hasKey: _hasKey, ...rest } = config
+    return bridge().saveLlmConfig(rest, apiKey)
+  }
+
+  deleteLlmConfig(id: string): Promise<LlmConfig[]> {
+    return bridge().deleteLlmConfig(id)
+  }
+
+  async callLlm(request: LlmHttpRequest, signal?: AbortSignal): Promise<LlmHttpResponse> {
+    // An AbortSignal cannot cross IPC, so the call is given an id and Cancel
+    // sends a separate abort message that main matches against it.
+    const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    const onAbort = () => bridge().abortLlm(requestId)
+    signal?.addEventListener('abort', onAbort, { once: true })
+    try {
+      return await bridge().callLlm(requestId, request)
+    } finally {
+      signal?.removeEventListener('abort', onAbort)
+    }
   }
 }
 

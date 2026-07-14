@@ -7,6 +7,7 @@ import {
   net,
   Menu,
   nativeImage,
+  safeStorage,
   screen,
   shell,
 } from 'electron'
@@ -497,6 +498,138 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
+
+// ---- AI-assisted annotation: LLM targets and the outbound call ----
+//
+// Two jobs live here, and both are here for the same reason: **the API key must
+// never enter the renderer.**
+//
+// 1. Storage. Targets live in userData/llm-config.json with the key encrypted via
+//    safeStorage (the OS keychain). The renderer is told only whether a key
+//    exists, never what it is.
+// 2. Transport. The renderer builds the whole request, but can only put the
+//    literal sentinel where the key goes; we substitute the real key here and
+//    send with net.fetch. That also sidesteps CORS: a renderer fetch to an LLM
+//    API is a preflighted cross-origin POST from a `file://` origin and would be
+//    blocked (the same wall the slr-file:// protocol hit — see `corsEnabled` above).
+
+const API_KEY_SENTINEL = '{{apiKey}}'
+
+interface StoredLlmConfig {
+  id: string
+  name: string
+  provider: string
+  baseUrl: string
+  model: string
+  attach: string
+  /** safeStorage-encrypted key, base64. Absent when the user has not set one. */
+  key?: string
+}
+
+const llmConfigFile = () => path.join(app.getPath('userData'), 'llm-config.json')
+
+function readLlmConfigs(): StoredLlmConfig[] {
+  try {
+    const raw = JSON.parse(readFileSync(llmConfigFile(), 'utf-8')) as unknown
+    return Array.isArray(raw) ? (raw as StoredLlmConfig[]) : []
+  } catch {
+    // No file yet, or it is unreadable — start from an empty list rather than fail.
+    return []
+  }
+}
+
+function writeLlmConfigs(configs: StoredLlmConfig[]): void {
+  writeFileSync(llmConfigFile(), JSON.stringify(configs, null, 2), { mode: 0o600 })
+}
+
+/** The renderer's view: everything except the key. */
+function publicConfigs(configs: StoredLlmConfig[]) {
+  return configs.map(({ key, ...rest }) => ({ ...rest, hasKey: Boolean(key) }))
+}
+
+function encryptKey(plain: string): string {
+  if (!safeStorage.isEncryptionAvailable()) {
+    // Refuse rather than silently write the key in the clear. On Linux this can
+    // happen when no keyring is available; the user is told, and can still use
+    // the app without AI.
+    throw new Error('This system provides no secure storage, so the API key cannot be saved.')
+  }
+  return safeStorage.encryptString(plain).toString('base64')
+}
+
+function decryptKey(encrypted: string): string {
+  return safeStorage.decryptString(Buffer.from(encrypted, 'base64'))
+}
+
+ipcMain.handle('llm:configs', () => publicConfigs(readLlmConfigs()))
+
+ipcMain.handle('llm:saveConfig', (_e, config: StoredLlmConfig, apiKey?: string) => {
+  const configs = readLlmConfigs()
+  const existing = configs.find((c) => c.id === config.id)
+  // An edit that leaves the key field blank keeps the stored key: the user cannot
+  // read it back to retype it.
+  const key = apiKey ? encryptKey(apiKey) : existing?.key
+  const next: StoredLlmConfig = { ...config, ...(key ? { key } : {}) }
+  const merged = existing
+    ? configs.map((c) => (c.id === config.id ? next : c))
+    : [...configs, next]
+  writeLlmConfigs(merged)
+  return publicConfigs(merged)
+})
+
+ipcMain.handle('llm:deleteConfig', (_e, id: string) => {
+  const merged = readLlmConfigs().filter((c) => c.id !== id)
+  writeLlmConfigs(merged)
+  return publicConfigs(merged)
+})
+
+// In-flight calls, so the renderer's Cancel button can abort one.
+const inFlight = new Map<string, AbortController>()
+
+ipcMain.on('llm:abort', (_e, requestId: string) => {
+  inFlight.get(requestId)?.abort()
+})
+
+ipcMain.handle(
+  'llm:call',
+  async (
+    _e,
+    requestId: string,
+    request: { configId: string; url: string; headers: Record<string, string>; body: string },
+  ) => {
+    const config = readLlmConfigs().find((c) => c.id === request.configId)
+    if (!config) throw new Error('That LLM target no longer exists.')
+    if (!config.key) throw new Error('No API key is stored for this target.')
+
+    // The renderer names the URL, so check it before handing over the key: a
+    // compromised renderer must not be able to post the key to a host of its
+    // choosing. It has to be the origin the user configured.
+    const target = new URL(request.url)
+    const allowed = new URL(config.baseUrl)
+    if (target.origin !== allowed.origin) {
+      throw new Error(`Refusing to send the API key to ${target.origin}.`)
+    }
+
+    const apiKey = decryptKey(config.key)
+    const headers = Object.fromEntries(
+      Object.entries(request.headers).map(([k, v]) => [k, v.split(API_KEY_SENTINEL).join(apiKey)]),
+    )
+
+    const controller = new AbortController()
+    inFlight.set(requestId, controller)
+    try {
+      const res = await net.fetch(request.url, {
+        method: 'POST',
+        headers,
+        body: request.body,
+        signal: controller.signal,
+      })
+      return { ok: res.ok, status: res.status, body: await res.text() }
+    } finally {
+      inFlight.delete(requestId)
+    }
+  },
+)
 
 // Remember that a quit is in progress so the close guard can, after the user
 // confirms, resume quitting (rather than merely closing the window on macOS).

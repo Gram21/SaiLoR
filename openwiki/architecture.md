@@ -100,6 +100,7 @@ The entire app state lives in a single Zustand store with immer middleware:
 - **`toggleTheme()` / `setTheme(theme)`** — flips or sets the app theme, applies via `applyTheme()` (sets `data-theme` attribute on `<html>`)
 - **`increaseFont()` / `decreaseFont()` / `resetFont()`** — adjusts `fontScale` by ±0.1 (clamped to 0.7–2.0), applies via `applyFontScale()` (sets `--app-font-scale` CSS variable)
 - **`zoomInPdf()` / `zoomOutPdf()` / `resetPdfZoom()`** — adjusts `pdfZoom` by ±0.2 (clamped to 0.4–3.0, rounded to 2 decimals) or resets to 1; session-only, not persisted
+- **`applyAiSuggestions(suggestions)`** — writes the reviewer-approved AI proposals into the current paper as **one undo step** (see "AI-assisted annotation" below)
 - **`undo()` / `redo()`** — swap the current project snapshot with one from the `past`/`future` stack (and switch to the affected paper). The mutating actions push a snapshot before applying; consecutive edits to the *same* field coalesce into one undo step (a module-level `lastFieldKey` tracks this), while add/remove/paper-switch reset it. History is cleared on project load.
 - **`setHelpOpen(open)`** — shows/hides the help dialog
 
@@ -119,10 +120,14 @@ App (src/App.tsx)
 │   ├── PdfViewer (src/components/PdfViewer.tsx)
 │   │     react-pdf Document+Page; ResizeObserver for width; zoom controls; multi-page navigation; jump history (back/forward); in-PDF search (Ctrl+F); text selection capture
 │   └── AnnotationPanel (src/components/AnnotationPanel.tsx)
+│         ✦ AI button in the column header (opens AiDialog; disabled while busy or when the paper has no PDF)
 │         └── AnnotationNode (src/components/AnnotationNode.tsx) [recursive]
 │               └── Field (src/components/Field.tsx)
 │                     Input control (text/number/checkbox/enum ComboBox) + ⧉ grab-from-PDF button
 ├── [if no project: welcome screen with "Open project…" button + recent projects list]
+├── AiDialog (src/components/AiDialog.tsx)
+│     Modal driven by useAiStore's phase: pick a target → Start → review table → Apply
+│     └── LlmSettingsDialog (src/components/LlmSettingsDialog.tsx) — manage LLM targets (stacks on top)
 ├── HelpDialog (src/components/HelpDialog.tsx)
 │     Modal overlay with app intro + keyboard shortcuts table
 └── ErrorPanel (src/components/ErrorPanel.tsx)
@@ -213,6 +218,59 @@ Uses `react-pdf`'s `Document` + `Page` components. The pdf.js worker is loaded f
 
 PDF source resolution is async: `getPlatform().getPdfSource(paper.pdf, saveHandle)` returns a `{ url, revoke? }`. The effect cleans up (revokes blob URLs) on paper/handle change or unmount.
 
+## AI-assisted annotation (`src/llm`)
+
+A **✦ AI** button in the annotation column's header asks an LLM to read the current paper and propose values for the fields that are **still empty**. The reviewer gets a table — field, proposed value, the supporting quote from the paper, the model's confidence, and a checkbox per row — and **nothing is written until they press Apply**.
+
+### The modules
+
+| Module | Job |
+|---|---|
+| `src/llm/types.ts` | The shared shapes: `LlmConfig` (one configured target), `LlmHttpRequest`/`LlmHttpResponse`, `Suggestion`, `SkippedField`, `RejectedSuggestion`, and the `API_KEY_SENTINEL` (`{{apiKey}}`). |
+| `src/llm/fields.ts` | `unansweredFields(schema, tree)` — every field the AI will be asked about, in schema order. Its `isUnanswered()` is `validate.ts`'s notion of empty for strings/numbers; a **boolean** is offered unless it is already ticked, since the data model cannot represent an *unanswered* boolean and the archetypal AI field ("Relevant") is one. |
+| `src/llm/prompt.ts` | The system prompt: the schema *format* description (`SCHEMA_FORMAT_DOC`), the path syntax, the schema itself (`dehydrateSchema`, i.e. exactly as it appears on disk), one line per field to fill, the rules, and the output shape. Plus `buildUserText` / `buildUserPdfCaption` for the user turn. |
+| `src/llm/paths.ts` | The path language of the LLM contract — `"Findings[1]/Evidence[0]/Metric"`. `parsePath` / `formatPath` / `displayPath`, and `resolvePath(schema, raw)`, which checks a path against the **schema** (not the current data), so the model may name the *next free index* of a repeatable node to record a further entry. |
+| `src/llm/providers.ts` | Everything that differs per vendor: `PROVIDERS` (base URL, whether the URL is editable, whether the provider can take a PDF), `buildRequest` (Anthropic `/v1/messages` vs. OpenAI-style `/v1/chat/completions`), `extractText` and `extractError`. `join()` tolerates a user-typed base URL that already ends in `/v1` or the full chat path. |
+| `src/llm/parse.ts` | `parseAnswer(schema, raw)` — the trust boundary. Digs the JSON object out of whatever the model sent (fences, prose, stray braces), then validates **every** proposal against its `ResolvedDef`. |
+| `src/model/pdfText.ts` | `extractPdfText(bytes)` — the paper as plain text, one `[page N]` block per page, using the same reading-order heuristic as `pdfMeta.ts`. Reports `empty: true` when a document yields almost no characters (a scan). |
+
+`src/state/aiStore.ts` (a separate Zustand+immer store, kept out of the main store for the same reason the project editor is) owns the flow; `src/components/AiDialog.tsx` and `LlmSettingsDialog.tsx` are views over it.
+
+### The flow
+
+1. **`openDialog()`** computes `targets = unansweredFields(schema, paper.annotations)` and loads the configured targets from the platform. The dialog names how many empty fields will be proposed and — before anything is sent — states *what leaves the machine, and to whom*.
+2. **`run()`** fetches the paper's bytes from the same URL the viewer renders (`getPdfSource`, so `slr-file://` in Electron and `blob:`/`http` in the browser), then:
+   - **`attach: 'text'`** (the default, and the only option for an `openai-compatible` target) → `extractPdfText`. If the extraction is `empty` the run **stops with an error** rather than sending a title and inviting the model to invent a paper from it.
+   - **`attach: 'pdf'`** → the PDF is base64'd and sent as an attachment (Anthropic / OpenAI / OpenRouter only). A target set to `pdf` against a provider that cannot take one **silently falls back to text**, and the dialog's consent line mirrors that fallback rather than promising the PDF.
+3. `buildSystemPrompt(schema, targets, delivery)` + `buildRequest(config, …)` → an `LlmHttpRequest`. The `delivery` matters: with extracted text the model is told the extraction is lossy, or it will confidently reconstruct a mangled table into numbers.
+4. **`platform.callLlm(request, signal)`** sends it (see below) and returns the raw body.
+5. `parseAnswer` validates it; the surviving `Suggestion[]` become review rows, **all pre-ticked** — the reviewer's job is to *remove* what is wrong.
+6. **`apply()`** hands the ticked suggestions to `useStore.applyAiSuggestions`.
+
+The store keeps an `AbortController` outside the state (it is not serializable), so **Cancel** aborts a call in flight; an elapsed-seconds ticker drives the progress line.
+
+### Why the call goes through the Electron main process
+
+A request to an LLM API is a `POST` with `Content-Type: application/json` and an auth header — which makes it a **preflighted cross-origin request**, sent from the renderer's origin (`file://` in a packaged app). It is the same CORS wall that forced `corsEnabled` on the `slr-file://` protocol (documented under *Electron Main Process* below): Chromium rejects the request before it ever reaches the network, and the failure surfaces as an opaque `TypeError` with no detail. So on the desktop the renderer **never sends the request itself** — `ElectronAdapter.callLlm` hands it to `llm:call`, and the main process sends it with `net.fetch`, where no origin and no CORS check apply.
+
+The second reason is the one the whole layer is built around: **the API key never enters the renderer.**
+
+- `LlmConfig` has **no `apiKey` field** — only `hasKey: boolean`. A stored key can never be read back, not even by the settings dialog that wrote it (so leaving the key box blank on an edit *keeps* the stored key; that is the only way to edit a target without retyping it).
+- The renderer builds the *entire* request, but can only put `API_KEY_SENTINEL` (`{{apiKey}}`) where the key goes. `electron/main.ts` substitutes the real key into the headers immediately before sending.
+- Before it does, it **checks the origin**: `new URL(request.url).origin` must equal `new URL(config.baseUrl).origin`, or it refuses. The renderer names the URL, so a compromised renderer must not be able to post the key to a host of its choosing.
+- Keys are stored in `userData/llm-config.json`, encrypted with `safeStorage` (mode `0600`). If `safeStorage.isEncryptionAvailable()` is false the app **refuses to save** rather than silently writing the key in the clear.
+
+`llm:call` also takes a `requestId` and keeps the `AbortController` in an `inFlight` map, because an `AbortSignal` cannot cross IPC — Cancel sends a separate `llm:abort` message that main matches against the id.
+
+**The browser build cannot make those promises**, and says so instead of pretending otherwise (`src/platform/browser.ts`): the key lives **unencrypted** in `localStorage` (`slr.llm.configs`), the request goes out **from the page**, so the provider must be willing to answer a cross-origin call (Anthropic needs the explicit `anthropic-dangerous-direct-browser-access` header, which the adapter adds; a self-hosted OpenAI-compatible endpoint usually sends no CORS headers at all and simply fails), and a cross-origin block is caught and re-thrown with an error that names the likely cause rather than reading as "the provider is down". The settings dialog shows a red notice in that runtime and points at the desktop app.
+
+### Why a misbehaving model cannot corrupt a project
+
+Two gates, and both are unconditional:
+
+- **`parse.ts` validates every proposal against the schema.** `resolvePath` rejects unknown names, group paths (a group holds no value), non-final segments that have no children, and any index at or beyond a node's `max`; then the value must *typecheck* against its `ResolvedDef`. It bends only where models misbehave in a way with exactly one honest reading (`"2021"` → `2021`, `"True"` → `true`, a case-off enum value snapped onto its option). Everything else — `"about 20"`, a value outside the enum, a duplicate answer for the same field — is **rejected, never guessed at**, and rejections are *shown* to the reviewer, because a silently dropped answer looks like the model never said anything. `parseAnswer` never throws: it sits on a network response, where garbage is a normal outcome.
+- **`applyAiSuggestions` (`src/state/store.ts`) is one undo step.** It decides what to write *before* touching anything — a suggestion is dropped if its path no longer resolves, or if the field has been answered since the model was asked, so **the reviewer's own work is never overwritten** — and if nothing survives, it leaves no empty entry on the undo stack. It then snapshots once and mutates, creating any instances of repeatable nodes the model addressed but that did not exist yet. `lastFieldKey` is reset so the reviewer's next keystroke is not coalesced into the AI's step. `Ctrl/Cmd+Z` therefore undoes the **whole fill** in one go. It returns an `AiApplyResult` (`filled` / `skipped`) for the summary the dialog shows.
+
 ## Electron Main Process
 
 **`electron/main.ts`** is a thin main process:
@@ -234,6 +292,8 @@ PDF source resolution is async: `getPlatform().getPdfSource(paper.pdf, saveHandl
   - `paths:relative` — `path.relative(dirname(fromFile), to)` for each target, POSIX-separated. This is what makes a paper's `pdf` relative to the JSON, and what re-derives the paths when the JSON moves.
   - `app:setDirty` — the renderer reports its unsaved-changes state (drives the quit dialog)
   - `app:saveComplete` — the renderer reports the result of a save it was asked to run before quitting
+  - `llm:configs` / `llm:saveConfig` / `llm:deleteConfig` — the LLM targets in `userData/llm-config.json`. The renderer is handed `publicConfigs()`: everything **except** the key, plus `hasKey`.
+  - `llm:call` / `llm:abort` — send a renderer-built request with `net.fetch` after substituting the real key and checking the target origin against the config's `baseUrl` (see *AI-assisted annotation* above). `llm:abort` aborts an in-flight call by its `requestId`, since an `AbortSignal` cannot cross IPC.
 - **Menu**: custom template with File, Edit, View, Window menus.
   - The **Edit** menu is hand-built: **Undo/Redo** send `app:undo` / `app:redo` to the renderer (routing to the store's history) rather than the native text-undo role, so undo works app-wide; cut/copy/paste/selectAll keep their native roles.
   - The **View** menu is hand-built (not the default `{ role: 'viewMenu' }`) and deliberately omits zoom roles so that `Ctrl +/-/0` reach the renderer for PDF zoom (and `Ctrl+Shift +/-/0` for app font scaling) instead of triggering native browser/Electron zoom.
@@ -273,7 +333,9 @@ App appearance is controlled by a settings module that persists to `localStorage
 ## Change Guidance
 
 - **Adding a new platform operation**: Add it to `PlatformAdapter`, implement in both `ElectronAdapter` and `BrowserAdapter`, then call from the store or components.
-- **Adding a new annotation field type**: Update `FieldType` in `schema.ts`, `emptyValue()` in `annotations.ts`, and `Field.tsx` rendering. Consider validation in the zod schema.
+- **Adding a new annotation field type**: Update `FieldType` in `schema.ts`, `emptyValue()` in `annotations.ts`, and `Field.tsx` rendering. Consider validation in the zod schema. Also teach the AI layer about it: `isUnanswered()` in `src/llm/fields.ts`, `coerce()` in `src/llm/parse.ts`, and the type rules in `src/llm/prompt.ts`.
+- **Adding a new LLM provider**: Add it to `Provider` in `src/llm/types.ts` and to `PROVIDERS` in `src/llm/providers.ts` (base URL, whether it is editable, whether it can take a PDF), then handle its request shape in `buildRequest` and its response shape in `extractText` / `extractError`. Nothing else needs to change — the platform layer is provider-agnostic.
+- **Changing the schema format**: it is described to the model in `SCHEMA_FORMAT_DOC` (`src/llm/prompt.ts`), which mirrors `docs/annotation-schema.md` §3 by hand. Both must move together, or the model reads an unfamiliar schema against a stale description.
 - **Adding a new keyboard shortcut**: Add to `useKeybindings.ts`. Check `isEditable()` if it should be ignored inside input fields.
 - **Changing the Electron IPC surface**: Update `preload.ts` (the `SlrBridge` interface), `electron/main.ts` (IPC handler), and `src/platform/electron.ts` (adapter method). All three must stay in sync.
 - **Adding a new settings/appearance option**: Add to `src/state/settings.ts` (load/apply functions), add state + actions to the store, add UI controls to `Toolbar.tsx`, and add keybindings if needed.
