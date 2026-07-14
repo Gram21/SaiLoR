@@ -26,6 +26,8 @@ export interface SlrBridge {
   pickSavePath(suggestedName: string): Promise<{ path: string } | null>
   /** Pick PDFs to reference. Returns their absolute paths, [] if cancelled. */
   pickPdfs(): Promise<string[]>
+  /** Raw bytes of a PDF by absolute path (for reading its title/authors). */
+  readPdf(path: string): Promise<Uint8Array>
   /** Paths of `toFiles` relative to `fromFile`'s directory, POSIX-separated. */
   relativePaths(fromFile: string, toFiles: string[]): Promise<string[]>
   /** Unsaved-changes coordination for a clean quit. */
@@ -123,7 +125,16 @@ export class ElectronAdapter implements PlatformAdapter {
 
   async pickPdfs(): Promise<PickedPdf[]> {
     const paths = await bridge().pickPdfs()
-    return paths.map((p) => ({ name: baseName(p), path: p }))
+    return paths.map((p) => ({
+      name: baseName(p),
+      path: p,
+      read: async () => {
+        const bytes = await bridge().readPdf(p)
+        // Copy into a standalone ArrayBuffer: the IPC result may be a view into
+        // a larger buffer, which pdf.js would misread.
+        return bytes.slice().buffer as ArrayBuffer
+      },
+    }))
   }
 
   async relativePdfPaths(pdfs: PickedPdf[], location: ProjectLocation | null): Promise<string[]> {

@@ -45,6 +45,8 @@ export interface PickedPdf {
   name: string
   /** Absolute path — Electron only. */
   path?: string
+  /** Read the file's bytes, so the editor can pull out the title/authors. */
+  read?: () => Promise<ArrayBuffer>
 }
 
 export interface PlatformAdapter {

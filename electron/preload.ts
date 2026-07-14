@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('slr', {
   // Project editor: pick a location / PDFs, and relativize the PDF references.
   pickSavePath: (suggestedName: string) => ipcRenderer.invoke('project:pickSavePath', suggestedName),
   pickPdfs: () => ipcRenderer.invoke('pdf:pick'),
+  readPdf: (filePath: string) => ipcRenderer.invoke('pdf:read', filePath),
   relativePaths: (fromFile: string, toFiles: string[]) =>
     ipcRenderer.invoke('paths:relative', fromFile, toFiles),
 

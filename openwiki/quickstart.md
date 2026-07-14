@@ -66,11 +66,13 @@ npm run typecheck
 │   │   ├── schema.ts      AnnotationDef/ResolvedDef types, zod schemas, resolveSchema
 │   │   ├── annotations.ts AnnotationValueTree, normalize/prune/init/add/remove helpers
 │   │   ├── project.ts     loadProject / serializeProject, Paper/Project types
+│   │   ├── pdfMeta.ts     Best-effort title/author extraction from a PDF (metadata, then layout heuristic)
 │   │   └── model.test.ts  Vitest unit tests for the model
 │   ├── platform/          Platform abstraction for file I/O and PDF loading
 │   │   ├── adapter.ts     PlatformAdapter interface (9 ops) + isElectron()
 │   │   ├── electron.ts    ElectronAdapter (IPC + slr-file://, recents)
 │   │   ├── browser.ts     BrowserAdapter (FSAPI / download / fetch, recents, IndexedDB handles)
+│   │   ├── pdfjs.ts       Single place configuring the pdf.js worker (viewer + extractor)
 │   │   ├── idb.ts         Tiny IndexedDB wrapper for persisting FileSystemFileHandle objects
 │   │   ├── recents.ts     Recent-projects list in localStorage (max 5)
 │   │   └── index.ts       getPlatform() singleton
