@@ -33,6 +33,7 @@ export function App() {
   const loadFromUrl = useStore((s) => s.loadFromUrl)
   const recents = useStore((s) => s.recents)
   const openRecent = useStore((s) => s.openRecent)
+  const forgetRecent = useStore((s) => s.forgetRecent)
   const editorOpen = useEditorStore((s) => s.open)
   const startNew = useEditorStore((s) => s.startNew)
   const startEdit = useEditorStore((s) => s.startEdit)
@@ -114,14 +115,28 @@ export function App() {
               <div className="welcome-recents">
                 <div className="welcome-recents-label">Recent projects</div>
                 {recents.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className="welcome-recent"
-                    onClick={() => void openRecent(item.id)}
-                  >
-                    {item.name}
-                  </button>
+                  <div key={item.id} className="welcome-recent-row">
+                    <button
+                      type="button"
+                      className="welcome-recent"
+                      title={item.path ?? item.name}
+                      onClick={() => void openRecent(item.id)}
+                    >
+                      {/* The project's own title, falling back to the file name. */}
+                      <span className="recent-title">{item.title || item.name}</span>
+                      {/* The path is what distinguishes two projects sharing a name. */}
+                      <span className="recent-path">{item.path ?? item.name}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-btn recent-remove"
+                      title="Remove from recent projects"
+                      aria-label={`Remove ${item.title || item.name} from recent projects`}
+                      onClick={() => forgetRecent(item.id)}
+                    >
+                      ×
+                    </button>
+                  </div>
                 ))}
               </div>
             )}

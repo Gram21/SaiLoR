@@ -7,7 +7,7 @@ import type {
   SaveHandle,
 } from './adapter'
 import { readRecents, pushRecent, removeRecent, type RecentEntry } from './recents'
-import { idbSet, idbGet } from './idb'
+import { idbSet, idbGet, idbDelete } from './idb'
 
 const RECENTS_KEY = 'slr.recents.browser'
 
@@ -75,6 +75,19 @@ export class BrowserAdapter implements PlatformAdapter {
   getRecents(): RecentEntry[] {
     // Recents rely on persistent handles, which only the File System Access API provides.
     return hasFsApi() ? readRecents(RECENTS_KEY) : []
+  }
+
+  rememberProject(_handle: SaveHandle, name: string, title?: string): void {
+    // The entry id is the file name (the key rememberHandle stored the handle
+    // under). There is no path to show: the File System Access API exposes none.
+    if (!hasFsApi()) return
+    pushRecent(RECENTS_KEY, { id: name, name, title })
+  }
+
+  forgetRecent(id: string): RecentEntry[] {
+    // Drop the retained handle too, so nothing is left behind in IndexedDB.
+    void idbDelete(recentHandleKey(id))
+    return removeRecent(RECENTS_KEY, id)
   }
 
   async openProject(): Promise<OpenedProject | null> {

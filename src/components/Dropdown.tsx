@@ -1,7 +1,18 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 export type MenuItem =
-  | { type: 'item'; label: ReactNode; shortcut?: string; disabled?: boolean; onSelect: () => void }
+  | {
+      type: 'item'
+      label: ReactNode
+      shortcut?: string
+      /** Tooltip — e.g. a recent project's full path, so same-named files differ. */
+      hint?: string
+      disabled?: boolean
+      onSelect: () => void
+      /** When set, the item gets an × that removes it without closing the menu. */
+      onRemove?: () => void
+      removeTitle?: string
+    }
   | { type: 'separator' }
   | { type: 'header'; label: ReactNode }
 
@@ -58,20 +69,37 @@ export function Dropdown({ label, items, title, disabled, align = 'left' }: Drop
                 </div>
               )
             return (
-              <button
-                key={i}
-                type="button"
-                className="menu-item"
-                role="menuitem"
-                disabled={item.disabled}
-                onClick={() => {
-                  setOpen(false)
-                  item.onSelect()
-                }}
-              >
-                <span className="menu-item-label">{item.label}</span>
-                {item.shortcut && <span className="menu-item-shortcut">{item.shortcut}</span>}
-              </button>
+              <div key={i} className="menu-row">
+                <button
+                  type="button"
+                  className="menu-item"
+                  role="menuitem"
+                  title={item.hint}
+                  disabled={item.disabled}
+                  onClick={() => {
+                    setOpen(false)
+                    item.onSelect()
+                  }}
+                >
+                  <span className="menu-item-label">{item.label}</span>
+                  {item.shortcut && <span className="menu-item-shortcut">{item.shortcut}</span>}
+                </button>
+                {item.onRemove && (
+                  <button
+                    type="button"
+                    className="menu-remove"
+                    title={item.removeTitle}
+                    aria-label={item.removeTitle}
+                    // Stay open: the user may want to clear several entries.
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      item.onRemove?.()
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
             )
           })}
         </div>

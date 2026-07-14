@@ -56,11 +56,26 @@ export class ElectronAdapter implements PlatformAdapter {
     return readRecents(RECENTS_KEY)
   }
 
+  rememberProject(handle: SaveHandle, _name: string, title?: string): void {
+    if (!handle.path) return
+    // The absolute path is the id, so re-pushing just enriches the same entry.
+    pushRecent(RECENTS_KEY, {
+      id: handle.path,
+      name: baseName(handle.path),
+      path: handle.path,
+      title,
+    })
+  }
+
+  forgetRecent(id: string): RecentEntry[] {
+    return removeRecent(RECENTS_KEY, id)
+  }
+
   async openProject(): Promise<OpenedProject | null> {
     const res = await bridge().openProject()
     if (!res) return null
     await bridge().setProjectDir(res.path)
-    pushRecent(RECENTS_KEY, { id: res.path, name: baseName(res.path) })
+    pushRecent(RECENTS_KEY, { id: res.path, name: baseName(res.path), path: res.path })
     return {
       text: res.text,
       handle: { kind: 'electron', path: res.path },
@@ -76,7 +91,7 @@ export class ElectronAdapter implements PlatformAdapter {
       return null
     }
     await bridge().setProjectDir(res.path)
-    pushRecent(RECENTS_KEY, { id: res.path, name: baseName(res.path) })
+    pushRecent(RECENTS_KEY, { id: res.path, name: baseName(res.path), path: res.path })
     return {
       text: res.text,
       handle: { kind: 'electron', path: res.path },

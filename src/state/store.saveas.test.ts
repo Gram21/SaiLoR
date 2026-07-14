@@ -14,6 +14,10 @@ let destination: ProjectLocation | null = null
 const mockPlatform = {
   kind: 'electron' as const,
   getRecents: () => [],
+  // loadFromText records the open project as a recent once it knows its title.
+  rememberProject: () => {},
+  forgetRecent: () => [],
+  getOsInfo: () => null,
   pickProjectLocation: async () => destination,
   saveProject: async (text: string, handle: SaveHandle) => {
     written = { text, handle }

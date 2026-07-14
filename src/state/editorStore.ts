@@ -69,6 +69,7 @@ interface EditorSnapshot {
   papers: EditorPaper[]
   location: ProjectLocation | null
   version: number
+  title: string
   extra: Record<string, unknown>
 }
 
@@ -263,13 +264,17 @@ export function makePaperFromPdf(
 /** Assemble the raw JSON object the editor writes. */
 export function buildProjectJson(state: {
   version: number
+  title?: string
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
 }): Record<string, unknown> {
+  const title = state.title?.trim()
   return {
     ...state.extra,
     version: state.version,
+    // Omitted when blank, so the app falls back to the file name.
+    ...(title ? { title } : {}),
     config: { schema: toAnnotationDefs(state.nodes) },
     papers: state.papers.map((p) => {
       const out: Record<string, unknown> = { ...(p.extra ?? {}) }
@@ -293,6 +298,7 @@ export function buildProjectJson(state: {
  */
 export function validateDraft(state: {
   version: number
+  title?: string
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
@@ -350,6 +356,8 @@ interface EditorState {
   mode: 'new' | 'edit'
   location: ProjectLocation | null
   version: number
+  /** The project's display title; empty means "use the file name". */
+  title: string
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
@@ -370,6 +378,7 @@ interface EditorState {
   startEdit: () => Promise<void>
   close: () => void
   changeLocation: () => Promise<void>
+  setTitle: (title: string) => void
 
   addNode: (parentUid: string | null) => void
   updateNode: (uid: string, patch: Partial<EditorNode>) => void
@@ -402,6 +411,7 @@ function snapshotOf(s: EditorState): EditorSnapshot {
     papers: s.papers,
     location: s.location,
     version: s.version,
+    title: s.title,
     extra: s.extra,
   }
 }
@@ -411,6 +421,7 @@ function applySnapshot(s: EditorState, snap: EditorSnapshot): void {
   s.papers = snap.papers
   s.location = snap.location
   s.version = snap.version
+  s.title = snap.title
   s.extra = snap.extra
 }
 
@@ -427,6 +438,7 @@ export const useEditorStore = create<EditorState>()(
     mode: 'new',
     location: null,
     version: 1,
+    title: '',
     extra: {},
     nodes: [],
     papers: [],
@@ -449,6 +461,7 @@ export const useEditorStore = create<EditorState>()(
         s.mode = 'new'
         s.location = location
         s.version = 1
+        s.title = ''
         s.extra = {}
         s.nodes = [makeNode()]
         s.papers = []
@@ -498,13 +511,14 @@ export const useEditorStore = create<EditorState>()(
         })
         const rootExtra: Record<string, unknown> = {}
         for (const [k, v] of Object.entries(data)) {
-          if (!['version', 'config', 'papers'].includes(k)) rootExtra[k] = v
+          if (!['version', 'title', 'config', 'papers'].includes(k)) rootExtra[k] = v
         }
         set((s) => {
           s.open = true
           s.mode = 'edit'
           s.location = { handle: opened.handle, name: opened.name, path: opened.handle.path }
           s.version = parsed.version ?? 1
+          s.title = parsed.title ?? ''
           s.extra = rootExtra
           s.nodes = fromAnnotationDefs(parsed.config.schema)
           s.papers = papers
@@ -572,6 +586,18 @@ export const useEditorStore = create<EditorState>()(
         for (const p of s.papers) {
           if (p.sourcePath) p.pdf = rederived[i++] ?? p.pdf
         }
+        s.dirty = true
+      })
+    },
+
+    setTitle: (title) => {
+      const key = 'project:title'
+      const coalesce = key === lastEditKey
+      lastEditKey = key
+      const snap = snapshotOf(get())
+      set((s) => {
+        if (!coalesce) pushPast(s, snap)
+        s.title = title
         s.dirty = true
       })
     },

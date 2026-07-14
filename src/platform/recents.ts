@@ -6,7 +6,12 @@
 
 export interface RecentEntry {
   id: string
+  /** File name, e.g. "review.json". */
   name: string
+  /** Full path — Electron only. Shown so same-named projects can be told apart. */
+  path?: string
+  /** The project's own title, when its JSON sets one. Preferred over `name`. */
+  title?: string
 }
 
 export const MAX_RECENTS = 5
