@@ -1,4 +1,15 @@
-import { app, BrowserWindow, dialog, ipcMain, protocol, net, Menu, nativeImage, screen } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  protocol,
+  net,
+  Menu,
+  nativeImage,
+  screen,
+  shell,
+} from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { readFile, writeFile } from 'node:fs/promises'
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -102,6 +113,27 @@ function saveWindowState(win: BrowserWindow) {
   }
 }
 
+// ---- External links ----
+
+/** Open a URL in the user's default browser. Restricted to safe web schemes —
+ *  handing arbitrary schemes (file:, etc.) to the OS could launch programs. */
+function openExternalUrl(url: string) {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return
+  }
+  if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:') {
+    void shell.openExternal(url)
+  }
+}
+
+/** The app's own document: the dev server URL in dev, the bundled file:// in prod. */
+function isAppUrl(url: string): boolean {
+  return DEV_SERVER_URL ? url.startsWith(DEV_SERVER_URL) : url.startsWith('file://')
+}
+
 function createWindow() {
   const state = loadWindowState()
   const useSavedPosition = positionIsOnScreen(state)
@@ -120,6 +152,20 @@ function createWindow() {
   })
   if (state.isMaximized) win.maximize()
   mainWindow = win
+
+  // External links in the PDF are rendered with target="_blank". Don't open an
+  // Electron window for them — hand them to the user's default browser.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    openExternalUrl(url)
+    return { action: 'deny' }
+  })
+
+  // Safety net: never let a link navigate the app window away from the app.
+  win.webContents.on('will-navigate', (e, url) => {
+    if (isAppUrl(url)) return
+    e.preventDefault()
+    openExternalUrl(url)
+  })
 
   // Persist size/position when the user changes it. Resize/move are debounced to
   // avoid a write per pixel; close saves the final state synchronously.
