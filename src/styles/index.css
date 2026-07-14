@@ -310,6 +310,49 @@ body.resizing * {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+.icon-btn.active {
+  background: var(--accent-weak);
+  border-color: var(--accent);
+}
+.pdf-search {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+}
+.pdf-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.pdf-search-input:focus {
+  outline: 2px solid var(--accent-weak);
+  border-color: var(--accent);
+}
+.pdf-search-count {
+  flex: 0 0 auto;
+  min-width: 48px;
+  text-align: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* In-PDF search highlights (CSS Custom Highlight API). The pdf.js text layer is
+   transparent over the canvas, so these backgrounds tint the rendered glyphs. */
+::highlight(slr-pdf-search) {
+  background: rgba(255, 214, 0, 0.4);
+}
+::highlight(slr-pdf-search-active) {
+  background: rgba(255, 145, 0, 0.75);
+}
 .pdf-zoom {
   display: flex;
   align-items: center;

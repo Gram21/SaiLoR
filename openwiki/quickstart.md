@@ -82,7 +82,7 @@ npm run typecheck
 │   │   ├── Dropdown.tsx   Reusable click-to-open dropdown menu
 │   │   ├── PaperList.tsx  Left pane — paper list with search box and annotation status dots
 │   │   ├── Splitter.tsx   Drag handles between the three panes (widths persisted)
-│   │   ├── PdfViewer.tsx  Middle pane — react-pdf, zoom controls, multi-page navigation, text selection capture
+│   │   ├── PdfViewer.tsx  Middle pane — react-pdf, zoom controls, multi-page navigation, in-PDF search (Ctrl+F), text selection capture
 │   │   ├── AnnotationPanel.tsx  Right pane — renders schema recursively
 │   │   ├── AnnotationNode.tsx   Recursive node (fields, groups, repeatable instances)
 │   │   ├── NodeName.tsx   Node label with ⓘ description tooltip (portaled)
