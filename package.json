@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "A tool to assist reviewers during Systematic Literature Reviews (SLR).",
   "author": "",
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
