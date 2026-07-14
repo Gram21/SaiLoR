@@ -16,6 +16,8 @@ export function ProjectEditor() {
   const open = useEditorStore((s) => s.open)
   const mode = useEditorStore((s) => s.mode)
   const location = useEditorStore((s) => s.location)
+  const title = useEditorStore((s) => s.title)
+  const setTitle = useEditorStore((s) => s.setTitle)
   const dirty = useEditorStore((s) => s.dirty)
   const busy = useEditorStore((s) => s.busy)
   const error = useEditorStore((s) => s.error)
@@ -72,6 +74,18 @@ export function ProjectEditor() {
         <button type="button" onClick={() => void changeLocation()} disabled={busy}>
           Change…
         </button>
+      </div>
+
+      <div className="editor-location">
+        <span className="editor-location-label">Project title</span>
+        <input
+          className="editor-title-input"
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder={`Optional — shown instead of "${location?.name ?? 'the file name'}"`}
+          disabled={busy}
+        />
       </div>
 
       {error && (

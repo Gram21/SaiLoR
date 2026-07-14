@@ -7,6 +7,10 @@ let written: { text: string; handle: SaveHandle } | null = null
 const mockPlatform = {
   kind: 'electron' as const,
   getRecents: () => [],
+  // loadFromText records the open project as a recent once it knows its title.
+  rememberProject: () => {},
+  forgetRecent: () => [],
+  getOsInfo: () => null,
   saveProject: async (text: string, handle: SaveHandle) => {
     written = { text, handle }
     return handle

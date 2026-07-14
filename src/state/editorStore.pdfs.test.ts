@@ -12,6 +12,10 @@ let picked: PickedPdf[] = []
 const mockPlatform = {
   kind: 'electron' as const,
   getRecents: () => [],
+  // loadFromText records the open project as a recent once it knows its title.
+  rememberProject: () => {},
+  forgetRecent: () => [],
+  getOsInfo: () => null,
   pickPdfs: async () => picked,
   // Mirrors the Electron adapter: paths relative to the JSON's directory.
   relativePdfPaths: async (pdfs: PickedPdf[], location: ProjectLocation | null) => {

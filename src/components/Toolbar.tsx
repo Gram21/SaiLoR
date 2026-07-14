@@ -23,6 +23,9 @@ export function Toolbar() {
   const decreaseFont = useStore((s) => s.decreaseFont)
   const resetFont = useStore((s) => s.resetFont)
   const recents = useStore((s) => s.recents)
+  const forgetRecent = useStore((s) => s.forgetRecent)
+  const projectTitle = useStore((s) => s.projectTitle)
+  const saveHandle = useStore((s) => s.saveHandle)
   const setHelpOpen = useStore((s) => s.setHelpOpen)
 
   const modKey = getPlatform().kind === 'electron' && isMac() ? '⌘' : 'Ctrl'
@@ -34,8 +37,13 @@ export function Toolbar() {
     ...(recents.length > 0
       ? recents.map<MenuItem>((r) => ({
           type: 'item',
-          label: r.name,
+          // The title when the project sets one, else the bare file name.
+          label: r.title || r.name,
+          // The path on hover is what tells two same-named projects apart.
+          hint: r.path ?? r.name,
           onSelect: () => void openRecent(r.id),
+          onRemove: () => forgetRecent(r.id),
+          removeTitle: 'Remove from recent projects',
         }))
       : [{ type: 'item', label: 'No recent files', disabled: true, onSelect: () => {} } as MenuItem]),
   ]
@@ -85,8 +93,9 @@ export function Toolbar() {
           margin that pushes both to the right edge. */}
       <div className="toolbar-status">
         {project && (
-          <span className="project-name">
-            {projectName || 'untitled'}
+          // The project's own title when it has one; the path on hover locates it.
+          <span className="project-name" title={saveHandle?.path ?? projectName}>
+            {projectTitle || projectName || 'untitled'}
             {dirty && <span className="dirty-dot" title="Unsaved changes">●</span>}
           </span>
         )}

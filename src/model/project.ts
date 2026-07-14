@@ -24,6 +24,8 @@ export interface Paper {
 
 export interface Project {
   version: number
+  /** Display name for the review; empty when the file doesn't set one. */
+  title?: string
   schema: ResolvedDef[]
   papers: Paper[]
   /** Additional top-level fields preserved verbatim on save. */
@@ -39,7 +41,7 @@ export class ProjectLoadError extends Error {
 }
 
 const KNOWN_PAPER_KEYS = new Set(['id', 'title', 'authors', 'doi', 'pdf', 'annotations'])
-const KNOWN_ROOT_KEYS = new Set(['version', 'config', 'papers'])
+const KNOWN_ROOT_KEYS = new Set(['version', 'title', 'config', 'papers'])
 
 /**
  * Parse raw JSON text (or an already-parsed object) into a validated,
@@ -101,6 +103,7 @@ export function loadProject(input: string | unknown): Project {
 
   return {
     version: raw.version ?? 1,
+    title: raw.title,
     schema,
     papers,
     extra: extractExtra(raw, KNOWN_ROOT_KEYS),
@@ -116,6 +119,7 @@ export function serializeProject(project: Project): string {
   const out: Record<string, unknown> = {
     ...project.extra,
     version: project.version,
+    ...(project.title ? { title: project.title } : {}),
     config: { schema: dehydrateSchema(project.schema) },
     papers: project.papers.map((p) => {
       const paper: Record<string, unknown> = {

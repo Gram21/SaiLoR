@@ -822,23 +822,93 @@ body.resizing * {
   letter-spacing: 0.04em;
   margin-bottom: 8px;
 }
+.welcome-recent-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  margin-bottom: 6px;
+}
 .welcome-recent {
-  display: block;
-  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
   text-align: left;
   padding: 8px 12px;
-  margin-bottom: 6px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--panel-bg);
   color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .welcome-recent:hover {
   border-color: var(--accent);
   background: var(--accent-weak);
+}
+.recent-title,
+.recent-path {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The path is the tiebreaker between projects with the same name, so it is
+   always shown — quietly, and truncated from the *left*, since the tail
+   (the folder + file) is the part that differs.
+   `direction: rtl` puts the ellipsis on the left; `unicode-bidi: plaintext`
+   keeps the path itself laid out left-to-right, so the leading "/" isn't
+   reordered to the end. */
+.recent-path {
+  color: var(--muted);
+  font-size: 0.75rem;
+  direction: rtl;
+  unicode-bidi: plaintext;
+  text-align: left;
+}
+.recent-remove {
+  flex: 0 0 auto;
+  align-self: center;
+  color: var(--muted);
+}
+.recent-remove:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* Recent entries in the Open menu get the same × treatment. */
+.menu-row {
+  display: flex;
+  align-items: stretch;
+}
+.menu-row .menu-item {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.menu-remove {
+  flex: 0 0 auto;
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.menu-remove:hover {
+  color: var(--danger);
+}
+
+.editor-title-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.editor-title-input:focus {
+  outline: 2px solid var(--accent-weak);
+  border-color: var(--accent);
 }
 
 /* ---- Error overlay ---- */

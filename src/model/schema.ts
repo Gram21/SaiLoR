@@ -109,6 +109,8 @@ export const paperSchema = z
 export const projectSchema = z
   .object({
     version: z.number().optional(),
+    /** Human-readable name for the review; falls back to the file name when absent. */
+    title: z.string().optional(),
     config: z.object({
       schema: z.array(annotationDefSchema).min(1, 'config.schema must have at least one node'),
     }),

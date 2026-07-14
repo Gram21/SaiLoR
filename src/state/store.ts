@@ -107,6 +107,8 @@ interface AppState {
   currentPaperId: string | null
   saveHandle: SaveHandle | null
   projectName: string
+  /** The project's own title from its JSON; empty when it doesn't set one. */
+  projectTitle: string
   dirty: boolean
   loadError: LoadError | null
   busy: boolean
@@ -132,6 +134,8 @@ interface AppState {
 
   openProject: () => Promise<void>
   openRecent: (id: string) => Promise<void>
+  /** Drop a project from the recents list. */
+  forgetRecent: (id: string) => void
   loadFromUrl: (url: string) => Promise<void>
   loadFromText: (text: string, handle: SaveHandle | null, name: string) => void
   save: () => Promise<boolean>
@@ -181,6 +185,7 @@ export const useStore = create<AppState>()(
     currentPaperId: null,
     saveHandle: null,
     projectName: '',
+    projectTitle: '',
     dirty: false,
     loadError: null,
     busy: false,
@@ -221,6 +226,13 @@ export const useStore = create<AppState>()(
           s.loadError = { message: 'Failed to open the project.', details: [String(err)] }
         })
       }
+    },
+
+    forgetRecent: (id) => {
+      const recents = getPlatform().forgetRecent(id)
+      set((s) => {
+        s.recents = recents
+      })
     },
 
     openRecent: async (id) => {
@@ -279,10 +291,15 @@ export const useStore = create<AppState>()(
     loadFromText: (text, handle, name) => {
       try {
         const project = loadProject(text)
+        // The title only becomes known once the JSON is parsed, so the recents
+        // entry is enriched here rather than in the adapter's open path.
+        if (handle) getPlatform().rememberProject(handle, name, project.title)
         set((s) => {
           s.project = project
           s.saveHandle = handle
           s.projectName = name
+          s.projectTitle = project.title ?? ''
+          s.recents = getPlatform().getRecents()
           s.currentPaperId = project.papers[0]?.id ?? null
           s.dirty = false
           s.loadError = null

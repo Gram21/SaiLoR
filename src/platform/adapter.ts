@@ -66,6 +66,15 @@ export interface PlatformAdapter {
   /** Recently opened projects (newest first), for the Open menu. */
   getRecents(): RecentEntry[]
 
+  /**
+   * Record the project now open as a recent, together with its path and its own
+   * title. Called once the JSON is parsed, since only then is the title known.
+   */
+  rememberProject(handle: SaveHandle, name: string, title?: string): void
+
+  /** Drop an entry from the recents list (the user dismissed it). */
+  forgetRecent(id: string): RecentEntry[]
+
   /** Reopen a recent project by its opaque id. Returns null if it can't be opened. */
   openRecent(id: string): Promise<OpenedProject | null>
 
