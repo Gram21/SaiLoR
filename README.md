@@ -1,9 +1,10 @@
-# SLR Helper
+# SaiLoR
 
-A tool to assist reviewers during **Systematic Literature Reviews (SLR)**. Open a single JSON
-"project" file that holds both an annotation schema (a nested, cardinality-controlled taxonomy)
-and the papers to annotate. Read each paper's PDF, fill in typed annotation fields — optionally
-grabbing values straight from selected PDF text — and save the annotations back into the JSON.
+A tool to assist reviewers during **Systematic Literature Reviews (SLR)** — the letters are in the
+name: **S**ai**L**o**R**. Open a single JSON "project" file that holds both an annotation schema
+(a nested, cardinality-controlled taxonomy) and the papers to annotate. Read each paper's PDF, fill in typed
+annotation fields — optionally grabbing values straight from selected PDF text — and save the
+annotations back into the JSON.
 
 The same codebase runs two ways:
 
@@ -28,27 +29,31 @@ Open the bundled example from the browser dev server via:
 
 ## Installing a release
 
-Grab the file for your system from the [releases page](https://github.com/Gram21/slr-helper/releases):
+Grab the file for your system from the [releases page](https://github.com/Gram21/SaiLoR/releases):
 
 | System | File |
 |---|---|
-| macOS, Apple Silicon (M1–M4) | `SLR Helper-<version>-macos-arm64.dmg` |
-| macOS, Intel | `SLR Helper-<version>-macos-x64.dmg` |
-| Windows | `SLR Helper-<version>-windows-x64.exe` |
-| Linux | `SLR Helper-<version>-linux-x64.AppImage` |
+| macOS, Apple Silicon (M1–M4) | `SaiLoR-<version>-macos-arm64.dmg` |
+| macOS, Intel | `SaiLoR-<version>-macos-x64.dmg` |
+| Windows | `SaiLoR-<version>-windows-x64.exe` |
+| Linux | `SaiLoR-<version>-linux-x64.AppImage` |
 
 > **The releases are not signed** with an Apple or Microsoft code-signing certificate —
 > paying for one is not worth it for a research tool. Both systems will therefore warn you
 > the first time you open the app. The steps below are how you tell them to go ahead; you
 > only need to do it once.
 
+> **Upgrading from SLR Helper?** The desktop app's settings — recent projects and window size —
+> now live in a `SaiLoR` folder (on macOS, `~/Library/Application Support/SaiLoR`). On first run
+> the app migrates the old "SLR Helper" folder automatically, so nothing is lost.
+
 ### macOS
 
-1. Open the `.dmg` and drag **SLR Helper** into your **Applications** folder.
+1. Open the `.dmg` and drag **SaiLoR** into your **Applications** folder.
 2. Open the app. macOS blocks it, saying it *"cannot be opened because Apple cannot check
    it for malicious software"*. Click **Done**.
 3. Open **System Settings** → **Privacy & Security**, and scroll down to the **Security**
-   section. You'll see a note that *"SLR Helper" was blocked to protect your Mac*.
+   section. You'll see a note that *"SaiLoR" was blocked to protect your Mac*.
 4. Click **Open Anyway**, then confirm with **Open Anyway** and enter your login password.
 
 The app opens normally from then on. (The **Open Anyway** button only appears for about an
@@ -65,13 +70,13 @@ That message means the download's quarantine flag is set on an app macOS can't v
 Either grab a newer release, or clear the flag once:
 
 ```bash
-xattr -cr "/Applications/SLR Helper.app"
+xattr -cr "/Applications/SaiLoR.app"
 ```
 </details>
 
 ### Windows
 
-1. Run `SLR Helper-<version>-windows-x64.exe`.
+1. Run `SaiLoR-<version>-windows-x64.exe`.
 2. Windows SmartScreen shows *"Windows protected your PC"*. Click **More info**, then
    **Run anyway**.
 3. Follow the installer.
@@ -82,8 +87,8 @@ The AppImage is a single self-contained file — no installation needed. Make it
 and run it:
 
 ```bash
-chmod +x "SLR Helper-<version>-linux-x64.AppImage"
-./"SLR Helper-<version>-linux-x64.AppImage"
+chmod +x "SaiLoR-<version>-linux-x64.AppImage"
+./"SaiLoR-<version>-linux-x64.AppImage"
 ```
 
 If it fails to start, your distribution may be missing FUSE (`sudo apt install libfuse2`
@@ -254,8 +259,8 @@ Change the published port by editing the `ports:` mapping in `docker-compose.yml
 `8080:80`). To build/run the image without Compose:
 
 ```bash
-docker build -t slr-helper .
-docker run -d -p 8080:80 -v "$PWD/samples:/usr/share/nginx/html/projects:ro" slr-helper
+docker build -t sailor .
+docker run -d -p 8080:80 -v "$PWD/samples:/usr/share/nginx/html/projects:ro" sailor
 ```
 
 > The browser variant is read-only on the server: saving happens client-side (File System Access

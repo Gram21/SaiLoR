@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Continuous-integration script for SLR Helper.
+# Continuous-integration script for SaiLoR.
 #
 # This is the single source of truth for "does the app build and pass its
 # checks". CI providers (GitHub Actions, GitLab CI, …) should do nothing more

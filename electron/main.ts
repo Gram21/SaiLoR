@@ -12,7 +12,7 @@ import {
 } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { readFile, writeFile, access } from 'node:fs/promises'
-import { constants, readFileSync, writeFileSync } from 'node:fs'
+import { constants, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -43,6 +43,51 @@ protocol.registerSchemesAsPrivileged([
     privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
   },
 ])
+
+// ---- Settings migration from the pre-rename app ----
+
+// The app used to be called "SLR Helper". Electron derives userData from the app
+// name, so the rename alone would strand the user's window size (window-state.json)
+// and their recent-projects list (localStorage, i.e. Chromium's Local Storage
+// store) in a directory nothing reads any more. Copy them across once. Both old
+// spellings are tried, because the name Electron used differed between the
+// packaged app (productName) and `npm run dev:electron` (package.json name).
+const LEGACY_APP_DIRS = ['SLR Helper', 'slr-helper']
+
+/**
+ * Copy the previous app's settings into this one, but only into a profile that
+ * has never been used — an existing profile always wins over an old one.
+ * Best-effort: a failure here just means starting fresh, so it must not be fatal.
+ */
+function migrateLegacyUserData(): void {
+  const userData = app.getPath('userData')
+  const used = existsSync(path.join(userData, 'window-state.json')) ||
+    existsSync(path.join(userData, 'Local Storage'))
+  if (used) return
+
+  const appData = app.getPath('appData')
+  const legacy = LEGACY_APP_DIRS.map((dir) => path.join(appData, dir)).find(
+    (dir) =>
+      dir !== userData &&
+      (existsSync(path.join(dir, 'window-state.json')) ||
+        existsSync(path.join(dir, 'Local Storage'))),
+  )
+  if (!legacy) return
+
+  try {
+    mkdirSync(userData, { recursive: true })
+    for (const item of ['window-state.json', 'Local Storage']) {
+      const from = path.join(legacy, item)
+      if (existsSync(from)) cpSync(from, path.join(userData, item), { recursive: true })
+    }
+    console.log(`Migrated settings from "${legacy}".`)
+  } catch (err) {
+    console.warn('Could not migrate settings from the previous app name:', err)
+  }
+}
+
+// Must run before Chromium opens the profile, so: before app.whenReady().
+migrateLegacyUserData()
 
 // ---- Window state persistence (size/position across restarts) ----
 

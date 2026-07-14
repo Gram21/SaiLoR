@@ -83,10 +83,10 @@ describe('fetchLatestRelease', () => {
 describe('pickInstaller', () => {
   // The names the release workflow actually produces.
   const assets = [
-    { name: 'SLR Helper-0.2.0-macos-arm64.dmg', browser_download_url: 'u/mac-arm' },
-    { name: 'SLR Helper-0.2.0-macos-x64.dmg', browser_download_url: 'u/mac-intel' },
-    { name: 'SLR Helper-0.2.0-windows-x64.exe', browser_download_url: 'u/win' },
-    { name: 'SLR Helper-0.2.0-linux-x64.AppImage', browser_download_url: 'u/linux' },
+    { name: 'SaiLoR-0.2.0-macos-arm64.dmg', browser_download_url: 'u/mac-arm' },
+    { name: 'SaiLoR-0.2.0-macos-x64.dmg', browser_download_url: 'u/mac-intel' },
+    { name: 'SaiLoR-0.2.0-windows-x64.exe', browser_download_url: 'u/win' },
+    { name: 'SaiLoR-0.2.0-linux-x64.AppImage', browser_download_url: 'u/linux' },
   ]
 
   it('picks the dmg matching the Mac architecture', () => {
@@ -125,7 +125,7 @@ describe('pickInstaller', () => {
     )
     expect(res?.download).toEqual({
       url: 'u/linux',
-      name: 'SLR Helper-0.2.0-linux-x64.AppImage',
+      name: 'SaiLoR-0.2.0-linux-x64.AppImage',
       label: 'Linux',
     })
   })
