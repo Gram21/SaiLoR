@@ -98,6 +98,7 @@ npm run typecheck
 │   │   ├── SchemaTreeEditor.tsx Drag-and-drop annotation-schema builder (reorder + nest)
 │   │   ├── PapersEditor.tsx     Add/edit/reorder the PDFs the project references
 │   │   ├── ValidationDialog.tsx  "Validate" results, grouped by paper
+│   │   ├── ClosePrompt.tsx      Save / Don't Save / Cancel when closing a dirty project
 │   │   ├── HelpDialog.tsx Modal with app intro + keyboard shortcuts
 │   │   └── ErrorPanel.tsx Error overlay for load/save failures
 │   ├── hooks/

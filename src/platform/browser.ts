@@ -90,6 +90,18 @@ export class BrowserAdapter implements PlatformAdapter {
     return removeRecent(RECENTS_KEY, id)
   }
 
+  async checkRecents(entries: RecentEntry[]): Promise<RecentEntry[]> {
+    // Availability here means "we still hold a handle for it". Whether the file
+    // behind the handle is readable can't be tested without prompting the user,
+    // so that is left to the actual open.
+    return Promise.all(
+      entries.map(async (e) => ({
+        ...e,
+        available: Boolean(await idbGet<FileSystemFileHandle>(recentHandleKey(e.id))),
+      })),
+    )
+  }
+
   async openProject(): Promise<OpenedProject | null> {
     if (hasFsApi()) {
       let handle: FileSystemFileHandle
@@ -116,10 +128,8 @@ export class BrowserAdapter implements PlatformAdapter {
 
   async openRecent(id: string): Promise<OpenedProject | null> {
     const handle = await idbGet<FileSystemFileHandle>(recentHandleKey(id))
-    if (!handle) {
-      removeRecent(RECENTS_KEY, id)
-      return null
-    }
+    // Keep the entry; the caller marks it unavailable rather than forgetting it.
+    if (!handle) return null
     if (!(await ensureReadPermission(handle))) {
       // Permission denied; keep it in the list so the user can retry.
       throw new Error(`Permission to read "${id}" was denied.`)

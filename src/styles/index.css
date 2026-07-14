@@ -822,6 +822,21 @@ body.resizing * {
   letter-spacing: 0.04em;
   margin-bottom: 8px;
 }
+/* The start screen is a landing page — its buttons carry more weight than the
+   dense toolbar ones, so they get a size of their own. */
+.welcome-box button {
+  padding: 10px 18px;
+  font-size: 1.05rem;
+}
+.welcome-box button.primary {
+  padding: 12px 24px;
+}
+/* …except the small × on a recent, which must stay compact. */
+.welcome-box .recent-remove {
+  padding: 4px 10px;
+  font-size: 1rem;
+}
+
 .welcome-recent-row {
   display: flex;
   align-items: stretch;
@@ -869,6 +884,39 @@ body.resizing * {
   flex: 0 0 auto;
   align-self: center;
   color: var(--muted);
+}
+/* A project whose file has gone: kept in the list (the drive may come back)
+   but faded and unselectable. */
+.welcome-recent.unavailable {
+  opacity: 0.45;
+  cursor: default;
+}
+.welcome-recent.unavailable:hover {
+  border-color: var(--border);
+  background: var(--panel-bg);
+}
+.recent-missing {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--danger) 25%, transparent);
+  font-size: 0.7rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Close-project prompt (mirrors Electron's native quit dialog). */
+.close-prompt {
+  max-width: 460px;
+}
+.close-prompt h3 {
+  margin-top: 0;
+}
+.close-prompt-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 16px 16px;
 }
 .recent-remove:hover {
   color: var(--danger);

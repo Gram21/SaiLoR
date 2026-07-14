@@ -27,6 +27,8 @@ export interface SlrBridge {
   pickPdfs(): Promise<string[]>
   /** Raw bytes of a PDF by absolute path (for reading its title/authors). */
   readPdf(path: string): Promise<Uint8Array>
+  /** Which of these paths are readable right now. */
+  filesExist(paths: string[]): Promise<boolean[]>
   /** Paths of `toFiles` relative to `fromFile`'s directory, POSIX-separated. */
   relativePaths(fromFile: string, toFiles: string[]): Promise<string[]>
   /** `rels` (relative to `fromFile`'s dir) re-expressed relative to `toFile`'s dir. */
@@ -71,6 +73,13 @@ export class ElectronAdapter implements PlatformAdapter {
     return removeRecent(RECENTS_KEY, id)
   }
 
+  async checkRecents(entries: RecentEntry[]): Promise<RecentEntry[]> {
+    if (entries.length === 0) return entries
+    // The id IS the absolute path on Electron.
+    const exists = await bridge().filesExist(entries.map((e) => e.id))
+    return entries.map((e, i) => ({ ...e, available: exists[i] ?? false }))
+  }
+
   async openProject(): Promise<OpenedProject | null> {
     const res = await bridge().openProject()
     if (!res) return null
@@ -85,11 +94,9 @@ export class ElectronAdapter implements PlatformAdapter {
 
   async openRecent(id: string): Promise<OpenedProject | null> {
     const res = await bridge().openPath(id)
-    if (!res) {
-      // File moved or deleted — drop it from the list.
-      removeRecent(RECENTS_KEY, id)
-      return null
-    }
+    // The file is gone. Keep the entry — the drive may come back — the caller
+    // marks it unavailable instead of forgetting it.
+    if (!res) return null
     await bridge().setProjectDir(res.path)
     pushRecent(RECENTS_KEY, { id: res.path, name: baseName(res.path), path: res.path })
     return {
