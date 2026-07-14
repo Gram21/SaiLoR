@@ -151,6 +151,7 @@ These pages are mirrored to the repository's [GitHub wiki](https://github.com/Gr
 
 - **`Home.md`** — the wiki's landing page: a short overview and a table of contents. GitHub shows it when you open the Wiki tab.
 - **`_Sidebar.md`** — rendered by GitHub as a sidebar on *every* wiki page, so the table of contents is always in reach. It links to each page and to its main sections; if you add or rename a page (or an `##` heading that it links to), update it.
+- **`_Footer.md`** — rendered at the foot of *every* wiki page. It carries the things that belong on each page rather than on one: that these pages are a mirror of `openwiki/`, where the repository, issues and releases are, and the licence.
 
 Both round-trip through the sync like any other page. Should `Home.md` ever be deleted, `wiki-publish.yml` falls back to synthesizing an index page (linking each page, titled from its first heading, skipping `Home` and the `_`-prefixed special pages) and stamps it with an HTML comment marker, `wiki-sync:auto-home`. `wiki-import.yml` recognises that marker and drops the file instead of copying it back, so a generated index never leaks into the repository.
 

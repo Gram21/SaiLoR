@@ -26,8 +26,3 @@ Developer documentation
 - [Continuous Integration](operations#continuous-integration)
 - [Wiki sync](operations#wiki-sync)
 - [Deployment](operations#deployment)
-
----
-
-Edited from [`openwiki/`](https://github.com/Gram21/SaiLoR/tree/main/openwiki) ·
-[README](https://github.com/Gram21/SaiLoR#readme)
