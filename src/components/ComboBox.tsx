@@ -15,6 +15,10 @@ interface ComboBoxProps {
    */
   options: (string | ComboOption)[]
   onChange: (v: string | null) => void
+  /** Extra classes for the input (e.g. the AI mark). */
+  className?: string
+  /** The user reached the control (focus or click) — used to clear the AI mark. */
+  onInteract?: () => void
 }
 
 /**
@@ -23,7 +27,13 @@ interface ComboBoxProps {
  * menu is portaled with fixed positioning so the annotation panel's scroll
  * container never clips it.
  */
-export function ComboBox({ value, options: rawOptions, onChange }: ComboBoxProps) {
+export function ComboBox({
+  value,
+  options: rawOptions,
+  onChange,
+  className = '',
+  onInteract,
+}: ComboBoxProps) {
   const options: ComboOption[] = rawOptions.map((o) =>
     typeof o === 'string' ? { id: o, label: o } : o,
   )
@@ -103,15 +113,19 @@ export function ComboBox({ value, options: rawOptions, onChange }: ComboBoxProps
     <div className="combo">
       <input
         ref={inputRef}
-        className="field-input combo-input"
+        className={`field-input combo-input${className ? ` ${className}` : ''}`}
         type="text"
         role="combobox"
         aria-expanded={open}
         aria-autocomplete="list"
         value={open ? filter : labelOf(value)}
         placeholder={labelOf(value) || 'Select…'}
-        onFocus={openMenu}
+        onFocus={() => {
+          onInteract?.()
+          openMenu()
+        }}
         onClick={() => {
+          onInteract?.()
           if (!open) openMenu()
         }}
         onChange={(e) => {

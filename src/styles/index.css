@@ -11,6 +11,9 @@
   --accent-weak: #e2f0f5;
   --danger: #b71c1c;
   --ok: #16a34a;
+  /* Fields the AI filled, until the reviewer looks at them. Deeper than the dark
+     theme's tint so it still reads as blue against a white input. */
+  --ai-mark: #3d9ad9;
   --toolbar-h: 44px;
 
   /* App-wide font scaling (Ctrl +/-). Base is 14px at scale 1. */
@@ -30,6 +33,7 @@
   --accent-weak: #163740;
   --danger: #e06666;
   --ok: #4ade80;
+  --ai-mark: #7cc4e8;
   color-scheme: dark;
 }
 
@@ -650,6 +654,22 @@ body.resizing * {
 .field-checkbox {
   width: 18px;
   height: 18px;
+}
+
+/* The AI wrote this value and the reviewer has not confirmed it yet. Border
+   colour plus an inset shadow rather than a thicker border or a background
+   fill: the mark stays legible over the text without moving the control by a
+   pixel. Cleared the moment the field (or its label) is clicked. */
+.field-input.ai-marked {
+  border-color: var(--ai-mark);
+  box-shadow: inset 0 0 0 1px var(--ai-mark);
+}
+.field-checkbox.ai-marked {
+  /* A native checkbox ignores `border`, so the mark rides outside it — an
+     outline reserves no space either. */
+  outline: 2px solid var(--ai-mark);
+  outline-offset: 1px;
+  border-radius: 3px;
 }
 .grab-btn {
   flex: 0 0 auto;
