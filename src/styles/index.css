@@ -639,6 +639,12 @@ body.resizing * {
   color: var(--muted);
   margin: 0 0 20px;
 }
+.welcome-create {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
 .welcome-recents {
   margin: 28px auto 0;
   max-width: 360px;

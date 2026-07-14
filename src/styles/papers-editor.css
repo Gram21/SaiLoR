@@ -1,0 +1,162 @@
+/* Papers section of the project editor. Everything is scoped under
+   .papers-editor so it can't collide with the annotation view's paper list. */
+
+.papers-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.papers-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.papers-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.papers-count {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.papers-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.857rem;
+}
+
+/* ---- Empty state ---- */
+.papers-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 28px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  text-align: center;
+}
+.papers-empty p {
+  margin: 0;
+}
+.papers-empty-note {
+  max-width: 48ch;
+  color: var(--muted);
+  font-size: 0.857rem;
+}
+
+/* ---- List ---- */
+.papers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.papers-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  /* Keep the drop indicator from shifting the row's height. */
+  border-top: 2px solid transparent;
+  border-bottom: 2px solid transparent;
+  box-shadow: inset 0 0 0 1px transparent;
+}
+.papers-row.dragging {
+  opacity: 0.5;
+}
+.papers-row.drag-over-before {
+  border-top-color: var(--accent);
+}
+.papers-row.drag-over-after {
+  border-bottom-color: var(--accent);
+}
+
+.papers-handle {
+  padding: 4px 2px;
+  color: var(--muted);
+  cursor: grab;
+  user-select: none;
+}
+.papers-handle:active {
+  cursor: grabbing;
+}
+
+.papers-index {
+  min-width: 1.6em;
+  padding-top: 4px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ---- Fields ---- */
+.papers-fields {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.papers-field-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.papers-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.papers-field.grow {
+  flex: 1 1 auto;
+}
+
+.papers-label {
+  color: var(--muted);
+  font-size: 0.786rem;
+}
+.papers-note {
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.papers-input {
+  width: 100%;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.papers-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-weak);
+}
+.papers-input.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.857rem;
+}
+.papers-input.small {
+  width: 18ch;
+}
+
+.papers-remove {
+  flex: 0 0 auto;
+  align-self: stretch;
+}

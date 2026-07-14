@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from './state/store'
+import { useEditorStore } from './state/editorStore'
+import { ProjectEditor } from './components/ProjectEditor'
 import { Toolbar } from './components/Toolbar'
 import { PaperList } from './components/PaperList'
 import { PdfViewer } from './components/PdfViewer'
@@ -30,6 +32,9 @@ export function App() {
   const loadFromUrl = useStore((s) => s.loadFromUrl)
   const recents = useStore((s) => s.recents)
   const openRecent = useStore((s) => s.openRecent)
+  const editorOpen = useEditorStore((s) => s.open)
+  const startNew = useEditorStore((s) => s.startNew)
+  const startEdit = useEditorStore((s) => s.startEdit)
 
   const workspaceRef = useRef<HTMLDivElement>(null)
   const [panes, setPanes] = useState(loadPaneWidths)
@@ -66,7 +71,9 @@ export function App() {
   return (
     <div className="app">
       <Toolbar />
-      {project ? (
+      {editorOpen ? (
+        <ProjectEditor />
+      ) : project ? (
         <div className="workspace" ref={workspaceRef} style={{ gridTemplateColumns }}>
           {!sidebarCollapsed && (
             <>
@@ -82,10 +89,18 @@ export function App() {
         <div className="welcome">
           <div className="welcome-box">
             <h1>SLR Helper</h1>
-            <p>Open a project JSON file to begin annotating.</p>
+            <p>Open a project JSON file to begin annotating, or set one up.</p>
             <button type="button" className="primary" onClick={() => void openProject()}>
               Open project…
             </button>
+            <div className="welcome-create">
+              <button type="button" onClick={() => void startNew()}>
+                New annotation JSON…
+              </button>
+              <button type="button" onClick={() => void startEdit()}>
+                Edit annotation JSON…
+              </button>
+            </div>
             {recents.length > 0 && (
               <div className="welcome-recents">
                 <div className="welcome-recents-label">Recent projects</div>

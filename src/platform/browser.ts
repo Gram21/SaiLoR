@@ -1,4 +1,11 @@
-import type { OpenedProject, PdfSource, PlatformAdapter, SaveHandle } from './adapter'
+import type {
+  OpenedProject,
+  PdfSource,
+  PickedPdf,
+  PlatformAdapter,
+  ProjectLocation,
+  SaveHandle,
+} from './adapter'
 import { readRecents, pushRecent, removeRecent, type RecentEntry } from './recents'
 import { idbSet, idbGet } from './idb'
 
@@ -190,6 +197,54 @@ export class BrowserAdapter implements PlatformAdapter {
     }
   }
 
+  // ---- Project editor ----
+
+  async pickProjectLocation(suggestedName: string): Promise<ProjectLocation | null> {
+    if (hasFsApi() && typeof fsApi().showSaveFilePicker === 'function') {
+      let fh: FileSystemFileHandle
+      try {
+        fh = await fsApi().showSaveFilePicker!({ suggestedName, ...JSON_PICKER })
+      } catch (err) {
+        if (isAbort(err)) return null
+        throw err
+      }
+      // Only reserve the location — the editor writes through saveProject() later.
+      const id = this.register(fh)
+      await this.rememberHandle(fh.name, fh)
+      return { handle: { kind: 'fsapi', path: id }, name: fh.name }
+    }
+    // No picker available: saving downloads the file, so there is no location to
+    // choose — only a name to suggest to the download.
+    return { handle: { kind: 'download' }, name: suggestedName }
+  }
+
+  async pickPdfs(): Promise<PickedPdf[]> {
+    if (hasFsApi()) {
+      let handles: FileSystemFileHandle[]
+      try {
+        handles = await fsApi().showOpenFilePicker!({
+          multiple: true,
+          types: [{ description: 'PDF', accept: { 'application/pdf': ['.pdf'] } }],
+        })
+      } catch (err) {
+        if (isAbort(err)) return []
+        throw err
+      }
+      return handles.map((h) => ({ name: h.name }))
+    }
+
+    const files = await pickFilesViaInput()
+    return files.map((f) => ({ name: f.name }))
+  }
+
+  async relativePdfPaths(pdfs: PickedPdf[], _location: ProjectLocation | null): Promise<string[]> {
+    // Neither the File System Access API nor <input type=file> exposes filesystem
+    // paths, so a path relative to the project JSON cannot be computed here. Store
+    // the bare file names: the user either keeps the PDFs next to the JSON, or
+    // adjusts the path by hand in the editor.
+    return pdfs.map((p) => p.name)
+  }
+
   private register(handle: FileSystemFileHandle): string {
     const id = `fh${this.nextId++}`
     this.fileHandles.set(id, handle)
@@ -223,6 +278,25 @@ function downloadText(text: string, filename: string): void {
   a.click()
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+function pickFilesViaInput(): Promise<File[]> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.multiple = true
+    input.accept = '.pdf,application/pdf'
+    input.style.display = 'none'
+    const done = () => {
+      resolve(Array.from(input.files ?? []))
+      input.remove()
+    }
+    input.addEventListener('change', done)
+    // If the user cancels, there's no reliable event; resolve on focus return.
+    window.addEventListener('focus', () => setTimeout(done, 300), { once: true })
+    document.body.appendChild(input)
+    input.click()
+  })
 }
 
 function pickFileViaInput(): Promise<File | null> {

@@ -345,6 +345,35 @@ ipcMain.handle('project:setDir', (_e, filePath: string) => {
   projectDir = path.dirname(filePath)
 })
 
+// Only picks a location — the project editor writes through project:save later,
+// so an empty file never appears if the user abandons the editor.
+ipcMain.handle('project:pickSavePath', async (_e, suggestedName: string) => {
+  const res = await dialog.showSaveDialog({
+    title: 'Choose where to store the project JSON',
+    defaultPath: suggestedName,
+    filters: [{ name: 'SLR project', extensions: ['json'] }],
+  })
+  if (res.canceled || !res.filePath) return null
+  return { path: res.filePath }
+})
+
+ipcMain.handle('pdf:pick', async () => {
+  const res = await dialog.showOpenDialog({
+    title: 'Add PDFs',
+    filters: [{ name: 'PDF', extensions: ['pdf'] }],
+    properties: ['openFile', 'multiSelections'],
+  })
+  if (res.canceled) return []
+  return res.filePaths
+})
+
+// PDF references are stored relative to the project JSON so the project stays
+// portable. Forward slashes keep the JSON identical across platforms.
+ipcMain.handle('paths:relative', (_e, fromFile: string, toFiles: string[]) => {
+  const fromDir = path.dirname(fromFile)
+  return toFiles.map((to) => path.relative(fromDir, to).split(path.sep).join('/'))
+})
+
 ipcMain.on('app:setDirty', (_e, dirty: boolean) => {
   isDirty = Boolean(dirty)
 })
