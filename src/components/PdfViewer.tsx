@@ -100,6 +100,17 @@ export function PdfViewer() {
   const matchesRef = useRef<Range[]>([])
   const searchInputRef = useRef<HTMLInputElement>(null)
 
+  // Jump history (back/forward for in-PDF link jumps). Scroll positions before a
+  // link jump go on the back stack; back/forward move between them like a browser.
+  const backStackRef = useRef<number[]>([])
+  const forwardStackRef = useRef<number[]>([])
+  const [canJumpBack, setCanJumpBack] = useState(false)
+  const [canJumpForward, setCanJumpForward] = useState(false)
+  const syncJumpNav = () => {
+    setCanJumpBack(backStackRef.current.length > 0)
+    setCanJumpForward(forwardStackRef.current.length > 0)
+  }
+
   // PDF zoom lives in the store so keyboard shortcuts (Ctrl +/-) can drive it too.
   const zoom = useStore((s) => s.pdfZoom)
   const zoomIn = useStore((s) => s.zoomInPdf)
@@ -117,6 +128,10 @@ export function PdfViewer() {
     setCurrentPage(1)
     setPageInput('1')
     pageRefs.current = []
+    backStackRef.current = []
+    forwardStackRef.current = []
+    setCanJumpBack(false)
+    setCanJumpForward(false)
     setUrl(null)
     if (!pdfPath) return
     getPlatform()
@@ -194,6 +209,53 @@ export function PdfViewer() {
     const sel = window.getSelection()
     const text = sel?.toString() ?? ''
     if (text.trim()) setPdfSelection(text)
+  }
+
+  // When an in-PDF link is clicked, the pdf.js LinkService scrolls to the
+  // destination. We record the position we jumped *from* so the user can get
+  // back. The scroll happens asynchronously after the click, so poll briefly and
+  // only record if the view actually moved (ignores external links, which don't).
+  const JUMP_THRESHOLD = 24
+  const recordJumpIfMoved = (from: number) => {
+    let tries = 0
+    const check = () => {
+      const root = containerRef.current
+      if (!root) return
+      if (Math.abs(root.scrollTop - from) > JUMP_THRESHOLD) {
+        backStackRef.current.push(from)
+        forwardStackRef.current = []
+        syncJumpNav()
+      } else if (tries++ < 8) {
+        window.setTimeout(check, 40)
+      }
+    }
+    window.setTimeout(check, 40)
+  }
+
+  const onPdfClickCapture = (e: React.MouseEvent) => {
+    const el = e.target as HTMLElement | null
+    if (!el?.closest('a')) return
+    const root = containerRef.current
+    if (root) recordJumpIfMoved(root.scrollTop)
+  }
+
+  const jumpBack = () => {
+    const root = containerRef.current
+    if (!root || backStackRef.current.length === 0) return
+    const target = backStackRef.current.pop() as number
+    forwardStackRef.current.push(root.scrollTop)
+    // Instant scroll (matches the link jump, and works with reduced-motion).
+    root.scrollTo({ top: target })
+    syncJumpNav()
+  }
+
+  const jumpForward = () => {
+    const root = containerRef.current
+    if (!root || forwardStackRef.current.length === 0) return
+    const target = forwardStackRef.current.pop() as number
+    backStackRef.current.push(root.scrollTop)
+    root.scrollTo({ top: target })
+    syncJumpNav()
   }
 
   const focusSearchInput = () => {
@@ -326,6 +388,30 @@ export function PdfViewer() {
           )}
         </div>
         <div className="pdf-tools">
+          {(canJumpBack || canJumpForward) && (
+            <div className="pdf-history" role="group" aria-label="Jump history">
+              <button
+                type="button"
+                className="icon-btn"
+                title="Jump back to where you were before following a link"
+                aria-label="Jump back"
+                onClick={jumpBack}
+                disabled={!canJumpBack}
+              >
+                ↩
+              </button>
+              <button
+                type="button"
+                className="icon-btn"
+                title="Jump forward"
+                aria-label="Jump forward"
+                onClick={jumpForward}
+                disabled={!canJumpForward}
+              >
+                ↪
+              </button>
+            </div>
+          )}
           {numPages > 1 && (
             <div className="pdf-pages" role="group" aria-label="Page navigation">
               <button
@@ -474,6 +560,7 @@ export function PdfViewer() {
         onMouseUp={captureSelection}
         onKeyUp={captureSelection}
         onScroll={updateCurrentPage}
+        onClickCapture={onPdfClickCapture}
       >
         {error ? (
           <div className="pdf-error">Could not load PDF: {error}</div>

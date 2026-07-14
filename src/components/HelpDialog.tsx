@@ -66,7 +66,9 @@ export function HelpDialog() {
               green dot marks papers that already have annotations.
             </li>
             <li>
-              <strong>Read the PDF</strong> in the middle pane; its text is selectable.
+              <strong>Read the PDF</strong> in the middle pane; its text is selectable. Use{' '}
+              <strong>{MOD}+F</strong> to search within it. After following an internal link (e.g. a
+              reference), the <em>↩ / ↪</em> buttons jump back to where you were and forward again.
             </li>
             <li>
               <strong>Annotate</strong> on the right. Repeatable entries show <em>+ Add</em> and a

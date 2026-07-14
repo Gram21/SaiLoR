@@ -285,6 +285,11 @@ body.resizing * {
   align-items: center;
   gap: 12px;
 }
+.pdf-history {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
 .pdf-pages {
   display: flex;
   align-items: center;
