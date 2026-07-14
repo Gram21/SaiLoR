@@ -103,6 +103,19 @@ SKIP_INSTALL=1 ./scripts/ci.sh   # skip `npm ci` when deps are already installed
 
 The GitHub Actions workflow `.github/workflows/ci.yml` runs on every push and pull request to `main` (and via manual `workflow_dispatch`). It is deliberately thin — checkout, `actions/setup-node` (Node 22, npm cache), then `./scripts/ci.sh`. Keeping the real work in the shell script means the same checks run locally and the pipeline can be ported to another provider (e.g. GitLab CI) by calling the script from that provider's config instead. Note the CI builds the **static SPA** (`npm run build`); it does not run `electron-builder` (which needs per-OS runners) — `npm run typecheck` still compiles the Electron main/preload TypeScript via the `tsconfig.node.json` project reference.
 
+### Release builds (desktop installers)
+
+```bash
+./scripts/build-electron.sh          # build the installer for the current OS into ./release/
+SKIP_INSTALL=1 ./scripts/build-electron.sh   # skip `npm ci`
+```
+
+`scripts/build-electron.sh` wraps `npm run build:electron`; electron-builder auto-detects the host OS and emits the matching target (dmg / nsis `.exe` / AppImage).
+
+The workflow `.github/workflows/release.yml` runs when a GitHub **release is published**. It fans out over a matrix of `macos-latest`, `windows-latest`, and `ubuntu-latest`, runs `./scripts/build-electron.sh` on each, and then attaches the OS-specific installer (`release/*.dmg`, `release/*.exe`, `release/*.AppImage`) to the release via `softprops/action-gh-release`. Each job also uploads its artifact to the workflow run (`actions/upload-artifact`), so a manual `workflow_dispatch` run — which has no release to attach to — still produces downloadable installers. The builds are unsigned (no code-signing certificates are configured). As with CI, the build logic lives in the shell script so it stays runnable locally and portable across providers.
+
+**OpenWiki auto-update.** A separate scheduled workflow `.github/workflows/openwiki.yml` runs weekly (Mondays 06:00 UTC) and on demand. It first checks whether `main` had any non-`openwiki/**` commits in the last 7 days; only if so does it install and run the `openwiki` CLI (needs the `OPENROUTER_API_KEY` repo secret) and open a `docs: update OpenWiki` pull request. This regenerates these docs from the code, so prefer keeping manual doc edits and the code they describe in sync — see also the manual refresh guidance around `.last-update.json`.
+
 ## Deployment
 
 ### A. Static hosting
