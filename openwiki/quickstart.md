@@ -59,7 +59,7 @@ npm run typecheck
 
 ```
 ├── electron/              Electron main process + preload
-│   ├── main.ts            IPC handlers (open, openPath, save, saveAs, setDir), slr-file:// protocol, window/menu setup
+│   ├── main.ts            IPC handlers (open, openPath, save, saveAs, setDir), slr-file:// protocol, window/menu setup, window-state persistence
 │   └── preload.ts         contextBridge → window.slr API (openProject, openPath, save, saveAs, …)
 ├── src/
 │   ├── model/              Domain model (pure, unit-tested)
