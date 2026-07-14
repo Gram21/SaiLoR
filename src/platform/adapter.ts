@@ -5,8 +5,10 @@
  */
 
 import type { RecentEntry } from './recents'
+import type { OsInfo } from '../model/version'
 
 export type { RecentEntry }
+export type { OsInfo }
 
 export interface OpenedProject {
   /** Raw JSON text of the project file. */
@@ -53,6 +55,13 @@ export interface PickedPdf {
 
 export interface PlatformAdapter {
   readonly kind: 'electron' | 'browser'
+
+  /**
+   * The OS/arch we're running on, so the update notice can offer the installer
+   * that matches this machine. Null in the browser, which has no installer to
+   * offer (a web deployment updates by redeploying).
+   */
+  getOsInfo(): OsInfo | null
 
   /** Recently opened projects (newest first), for the Open menu. */
   getRecents(): RecentEntry[]

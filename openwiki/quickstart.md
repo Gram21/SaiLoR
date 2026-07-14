@@ -68,6 +68,7 @@ npm run typecheck
 │   │   ├── project.ts     loadProject / serializeProject, Paper/Project types
 │   │   ├── pdfMeta.ts     Best-effort title/author extraction from a PDF (metadata, then layout heuristic)
 │   │   ├── validate.ts    Checks a reviewer's annotations (required / type / enum / cardinality)
+│   │   ├── version.ts     Update check against the GitHub releases API (silent while the repo is private)
 │   │   └── model.test.ts  Vitest unit tests for the model
 │   ├── platform/          Platform abstraction for file I/O and PDF loading
 │   │   ├── adapter.ts     PlatformAdapter interface (9 ops) + isElectron()

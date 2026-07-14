@@ -54,6 +54,12 @@ const JSON_PICKER = {
 export class BrowserAdapter implements PlatformAdapter {
   readonly kind = 'browser' as const
 
+  getOsInfo(): null {
+    // A web deployment has no installer to download — it updates when the server
+    // redeploys — so the notice just links to the release page.
+    return null
+  }
+
   private fileHandles = new Map<string, FileSystemFileHandle>()
   private pdfDir: FileSystemDirectoryHandle | null = null
   private nextId = 0

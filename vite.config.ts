@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import electron from 'vite-plugin-electron/simple'
@@ -7,9 +8,16 @@ import electron from 'vite-plugin-electron/simple'
 // can be served from any web server (browser deployment).
 const isElectron = process.env.ELECTRON === '1'
 
+// The app shows its own version and compares it against the latest release, so
+// package.json stays the single source of truth for it.
+const { version } = JSON.parse(readFileSync('./package.json', 'utf-8')) as { version: string }
+
 export default defineConfig({
   // Relative base so the built app works from a server subpath AND from file://
   base: './',
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+  },
   plugins: [
     react(),
     ...(isElectron
