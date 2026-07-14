@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useStore } from '../state/store'
+import { useEditorStore } from '../state/editorStore'
 import { isElectron } from '../platform/adapter'
 
 /** The Electron-only slice of the preload bridge used for menu/close integration. */
@@ -15,28 +16,46 @@ interface IntegrationBridge {
  * Wires Electron menu/lifecycle integration:
  *  - keeps the main process informed of the unsaved-changes state,
  *  - runs a save when main asks (after "Save" in the native close dialog), and
- *  - routes the Edit-menu Undo/Redo to the annotation history.
+ *  - routes the Edit-menu Undo/Redo to the history that is actually on screen.
+ *
+ * The project editor has its own draft + history, so while it is open every one
+ * of these targets the editor rather than the annotation project.
  */
 export function useElectronCloseGuard() {
   useEffect(() => {
     if (!isElectron()) return
     const slr = (window as unknown as { slr: IntegrationBridge }).slr
 
-    // When main asks us to save before quitting, do it and report the outcome.
+    const editing = () => useEditorStore.getState().open
+
+    // When main asks us to save before quitting, save whatever is on screen.
     slr.onRequestSave(async () => {
-      const ok = await useStore.getState().save()
+      const ok = editing()
+        ? await useEditorStore.getState().save()
+        : await useStore.getState().save()
       slr.saveComplete(ok)
     })
 
     // Edit-menu Undo/Redo.
-    slr.onUndo(() => useStore.getState().undo())
-    slr.onRedo(() => useStore.getState().redo())
+    slr.onUndo(() => (editing() ? useEditorStore.getState().undo() : useStore.getState().undo()))
+    slr.onRedo(() => (editing() ? useEditorStore.getState().redo() : useStore.getState().redo()))
 
-    // Push the current + subsequent dirty state to the main process.
-    slr.setDirty(useStore.getState().dirty)
-    const unsub = useStore.subscribe((state, prev) => {
-      if (state.dirty !== prev.dirty) slr.setDirty(state.dirty)
-    })
-    return unsub
+    // Either an unsaved draft or unsaved annotations should block a clean quit.
+    const isDirty = () => useStore.getState().dirty || useEditorStore.getState().dirty
+    let lastDirty = isDirty()
+    slr.setDirty(lastDirty)
+    const push = () => {
+      const dirty = isDirty()
+      if (dirty !== lastDirty) {
+        lastDirty = dirty
+        slr.setDirty(dirty)
+      }
+    }
+    const unsubStore = useStore.subscribe(push)
+    const unsubEditor = useEditorStore.subscribe(push)
+    return () => {
+      unsubStore()
+      unsubEditor()
+    }
   }, [])
 }

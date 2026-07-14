@@ -2,25 +2,41 @@
   "version": 1,
   "config": {
     "schema": [
-      { "name": "Relevant", "type": "boolean", "description": "Is this paper relevant to the review?" },
-      { "name": "Study Type", "type": "string", "min": 1, "max": 1 },
-      { "name": "Year", "type": "number" },
+      {
+        "name": "Relevant",
+        "type": "boolean",
+        "description": "Is this paper relevant to the review?"
+      },
+      {
+        "name": "Study Type",
+        "type": "string"
+      },
+      {
+        "name": "Year",
+        "type": "number"
+      },
       {
         "name": "Findings",
-        "min": 1,
         "max": null,
         "description": "One or more key findings extracted from the paper.",
         "children": [
-          { "name": "Claim", "type": "string" },
+          {
+            "name": "Claim",
+            "type": "string"
+          },
           {
             "name": "Evidence",
             "children": [
-              { "name": "Metric", "type": "string", "description": "e.g. MRR, F1, accuracy" },
+              {
+                "name": "Metric",
+                "type": "string",
+                "description": "e.g. MRR, F1, accuracy"
+              },
               {
                 "name": "Evaluation Type",
                 "type": "string",
-                "min": 1,
                 "max": null,
+                "description": "How the evidence was obtained",
                 "options": [
                   "Controlled experiment",
                   "Case study",
@@ -28,22 +44,31 @@
                   "User study",
                   "Survey",
                   "Simulation",
-                  "Ablation study"
-                ],
-                "description": "How the evidence was obtained"
+                  "Ablation study",
+                  "None"
+                ]
               }
             ]
           },
-          { "name": "Confidence", "type": "number", "description": "1 (low) to 5 (high)" }
+          {
+            "name": "Confidence",
+            "type": "number",
+            "description": "1 (low) to 5 (high)"
+          }
         ]
       },
       {
         "name": "Threats to Validity",
-        "min": 1,
         "max": 3,
         "children": [
-          { "name": "Kind", "type": "string" },
-          { "name": "Addressed", "type": "boolean" }
+          {
+            "name": "Kind",
+            "type": "string"
+          },
+          {
+            "name": "Addressed",
+            "type": "boolean"
+          }
         ]
       }
     ]
@@ -52,7 +77,10 @@
     {
       "id": "paper-a",
       "title": "Deep Learning for Code Search: A Study",
-      "authors": ["A. Author", "B. Writer"],
+      "authors": [
+        "A. Author",
+        "B. Writer"
+      ],
       "doi": "10.1000/xyz123",
       "pdf": "pdfs/paper-a.pdf",
       "annotations": {}
@@ -60,7 +88,10 @@
     {
       "id": "paper-b",
       "title": "A Survey of Program Repair Techniques",
-      "authors": ["C. Coder", "D. Dev"],
+      "authors": [
+        "C. Coder",
+        "D. Dev"
+      ],
       "doi": "10.1000/abc987",
       "pdf": "pdfs/paper-b.pdf",
       "annotations": {}
@@ -68,7 +99,9 @@
     {
       "id": "paper-c",
       "title": "Multi-page Test Document",
-      "authors": ["E. Editor"],
+      "authors": [
+        "E. Editor"
+      ],
       "doi": "10.1000/mno987",
       "pdf": "pdfs/multipage.pdf",
       "annotations": {}
@@ -76,7 +109,10 @@
     {
       "id": "KeimKaplan2026_ICSEBoF",
       "title": "From Scattered to Structured: A Vision for Automating Architectural Knowledge Management",
-      "authors": ["J. Keim, A. Kaplan"],
+      "authors": [
+        "J. Keim",
+        "A. Kaplan"
+      ],
       "doi": "10.48550/arXiv.2601.19548",
       "pdf": "pdfs/KeimKaplan_FromScatteredToStructured.pdf",
       "annotations": {}
