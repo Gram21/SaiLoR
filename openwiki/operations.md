@@ -73,7 +73,7 @@ npm test          # vitest run (single pass)
 npm run test:watch  # vitest in watch mode
 ```
 
-Tests live in `src/**/*.test.{ts,tsx}`. `src/model/model.test.ts` covers the model layer, and `src/state/store.test.ts` covers the store's undo/redo history (field-edit coalescing, add/remove undo, redo-stack clearing). Vitest is configured with jsdom environment and global test APIs (describe/it/expect available without import, though the test files import them explicitly).
+Tests live in `src/**/*.test.{ts,tsx}`. `src/model/model.test.ts` covers the model layer, `src/state/store.test.ts` covers the store's undo/redo history (field-edit coalescing, add/remove undo, redo-stack clearing), and `src/state/editorStore.test.ts` covers the project editor (schema ⇄ on-disk conversion and round-trip, drag-and-drop tree moves incl. the self/descendant guard, draft validation, and that `buildProjectJson` produces a file the real `loadProject` accepts with annotations preserved). Vitest is configured with jsdom environment and global test APIs (describe/it/expect available without import, though the test files import them explicitly).
 
 Test coverage:
 - Schema resolution: defaults, ids, duplicate names, max < min, repeatable detection

@@ -68,7 +68,7 @@ npm run typecheck
 │   │   ├── project.ts     loadProject / serializeProject, Paper/Project types
 │   │   └── model.test.ts  Vitest unit tests for the model
 │   ├── platform/          Platform abstraction for file I/O and PDF loading
-│   │   ├── adapter.ts     PlatformAdapter interface (6 ops) + isElectron()
+│   │   ├── adapter.ts     PlatformAdapter interface (9 ops) + isElectron()
 │   │   ├── electron.ts    ElectronAdapter (IPC + slr-file://, recents)
 │   │   ├── browser.ts     BrowserAdapter (FSAPI / download / fetch, recents, IndexedDB handles)
 │   │   ├── idb.ts         Tiny IndexedDB wrapper for persisting FileSystemFileHandle objects
@@ -76,6 +76,7 @@ npm run typecheck
 │   │   └── index.ts       getPlatform() singleton
 │   ├── state/
 │   │   ├── store.ts      Zustand + immer store (project, papers, save, annotations, undo/redo, theme, fontScale, pdfZoom, recents, help)
+│   │   ├── editorStore.ts  Draft state for the project editor (schema tree + papers, relative PDF paths, validate/save)
 │   │   └── settings.ts   Theme + font-scale persistence (localStorage), applyTheme/applyFontScale
 │   ├── components/        React UI
 │   │   ├── Toolbar.tsx    Open ▾ / Save ▾ dropdowns, font controls, theme toggle, help button
@@ -88,6 +89,9 @@ npm run typecheck
 │   │   ├── NodeName.tsx   Node label with ⓘ description tooltip (portaled)
 │   │   ├── Field.tsx      Input control (text/number/checkbox/enum dropdown) + "grab from PDF" button
 │   │   ├── ComboBox.tsx   Filterable dropdown for enum (options) string fields
+│   │   ├── ProjectEditor.tsx    Create/edit a project JSON (location bar + schema + papers)
+│   │   ├── SchemaTreeEditor.tsx Drag-and-drop annotation-schema builder (reorder + nest)
+│   │   ├── PapersEditor.tsx     Add/edit/reorder the PDFs the project references
 │   │   ├── HelpDialog.tsx Modal with app intro + keyboard shortcuts
 │   │   └── ErrorPanel.tsx Error overlay for load/save failures
 │   ├── hooks/

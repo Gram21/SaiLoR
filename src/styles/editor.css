@@ -1,0 +1,106 @@
+/* Project editor shell (schema + papers). Colors come from the theme variables
+   in index.css so this works in both light and dark. */
+
+.editor {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.editor-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+}
+.editor-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.editor-dirty {
+  color: var(--accent);
+  font-size: 0.8em;
+}
+.editor-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.editor-location {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+}
+.editor-location-label {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.editor-location-path {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 0.9em;
+}
+
+.editor-error,
+.editor-issues {
+  flex: 0 0 auto;
+  margin: 12px 16px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+.editor-error-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.editor-error ul,
+.editor-issues ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+.editor-issues li,
+.editor-error li {
+  color: var(--text);
+}
+
+.editor-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.editor-section > h2 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+}
+.editor-hint {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 0.9em;
+}

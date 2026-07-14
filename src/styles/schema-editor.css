@@ -1,0 +1,195 @@
+/* ---- Schema tree editor ----
+   Dense form: one row per schema field, children indented under their parent.
+   Colors come from the theme variables in index.css so both themes work. */
+
+.schema-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.schema-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.schema-node {
+  display: flex;
+  flex-direction: column;
+}
+
+.schema-row {
+  /* The drop indicators are absolutely positioned edges of this box. */
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--panel-bg);
+}
+.schema-row:hover {
+  background: var(--bg);
+}
+.schema-row.dragging {
+  opacity: 0.4;
+}
+
+/* Drop feedback: a line at the edge the node would land on, or an outlined box
+   when it would become a child. */
+.schema-row.drag-over-before::before,
+.schema-row.drag-over-after::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+.schema-row.drag-over-before::before {
+  top: -2px;
+}
+.schema-row.drag-over-after::after {
+  bottom: -2px;
+}
+.schema-row.drag-over-inside {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+}
+
+.schema-handle {
+  flex: 0 0 auto;
+  padding: 0 2px;
+  color: var(--muted);
+  cursor: grab;
+  user-select: none;
+  line-height: 1;
+}
+.schema-handle:active {
+  cursor: grabbing;
+}
+
+.schema-caret {
+  flex: 0 0 auto;
+  width: 22px;
+  padding: 2px 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.8em;
+  text-align: center;
+}
+.schema-caret-spacer {
+  flex: 0 0 auto;
+  width: 22px;
+}
+
+.schema-input {
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  color: var(--text);
+  font: inherit;
+}
+.schema-input:focus {
+  outline: 2px solid var(--accent-weak);
+  border-color: var(--accent);
+}
+.schema-input:disabled {
+  opacity: 0.45;
+}
+
+.schema-name {
+  flex: 1 1 30%;
+}
+.schema-desc {
+  flex: 1 1 40%;
+}
+.schema-kind {
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+.schema-num {
+  width: 56px;
+  font-variant-numeric: tabular-nums;
+}
+
+.schema-bound {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.schema-bound-label {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.schema-unbounded {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.schema-add-child {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.schema-add-root {
+  align-self: flex-start;
+}
+
+/* Enum values of a text field. */
+.schema-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 2px 0 6px 40px;
+  padding-left: 10px;
+  border-left: 2px dashed var(--border);
+}
+.schema-option {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.schema-option .schema-input {
+  flex: 0 1 260px;
+}
+.schema-options-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.schema-hint {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.schema-children {
+  margin-left: 14px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+}
+
+.schema-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  color: var(--muted);
+  text-align: center;
+}
+.schema-empty p {
+  margin: 0;
+}

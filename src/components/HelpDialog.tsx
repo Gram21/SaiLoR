@@ -62,6 +62,11 @@ export function HelpDialog() {
               project.
             </li>
             <li>
+              <strong>Don't have one yet?</strong> On the start screen use{' '}
+              <em>New annotation JSON…</em> to define the annotation schema and attach the PDFs, or{' '}
+              <em>Edit annotation JSON…</em> to change an existing one.
+            </li>
+            <li>
               <strong>Pick a paper</strong> from the left list (toggle the list with the ☰ button). A
               green dot marks papers that already have annotations.
             </li>

@@ -30,6 +30,23 @@ export interface PdfSource {
   revoke?: () => void
 }
 
+/** Where a project JSON lives (or will be written). Used by the project editor. */
+export interface ProjectLocation {
+  handle: SaveHandle
+  /** File name, e.g. "review.json". */
+  name: string
+  /** Absolute path — Electron only. The browser's File System Access API exposes no paths. */
+  path?: string
+}
+
+/** A PDF the user picked to reference from a project. */
+export interface PickedPdf {
+  /** File name, e.g. "paper.pdf". */
+  name: string
+  /** Absolute path — Electron only. */
+  path?: string
+}
+
 export interface PlatformAdapter {
   readonly kind: 'electron' | 'browser'
 
@@ -53,6 +70,26 @@ export interface PlatformAdapter {
    * react-pdf can load.
    */
   getPdfSource(pdfPath: string, projectHandle: SaveHandle): Promise<PdfSource>
+
+  // ---- Project editor (create / edit a project JSON) ----
+
+  /**
+   * Ask the user where the project JSON should live. Writes nothing — the
+   * editor saves through `saveProject(text, location.handle)` later.
+   * Returns null if the user cancels.
+   */
+  pickProjectLocation(suggestedName: string): Promise<ProjectLocation | null>
+
+  /** Pick one or more PDFs to reference. Returns [] if cancelled. */
+  pickPdfs(): Promise<PickedPdf[]>
+
+  /**
+   * The `pdf` values to store for these PDFs, relative to the project JSON's
+   * directory. Electron computes real relative paths (POSIX separators), so
+   * moving the JSON re-derives them. The browser has no paths, so it returns
+   * the bare file names.
+   */
+  relativePdfPaths(pdfs: PickedPdf[], location: ProjectLocation | null): Promise<string[]>
 }
 
 /** True when running inside the Electron shell (preload exposed `window.slr`). */

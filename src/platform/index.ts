@@ -13,4 +13,11 @@ export function getPlatform(): PlatformAdapter {
   return cached
 }
 
-export type { PlatformAdapter, SaveHandle, PdfSource, OpenedProject } from './adapter'
+export type {
+  PlatformAdapter,
+  SaveHandle,
+  PdfSource,
+  OpenedProject,
+  ProjectLocation,
+  PickedPdf,
+} from './adapter'

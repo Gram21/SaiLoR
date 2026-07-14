@@ -13,6 +13,12 @@ contextBridge.exposeInMainWorld('slr', {
     ipcRenderer.invoke('project:saveAs', text, suggestedName),
   setProjectDir: (filePath: string) => ipcRenderer.invoke('project:setDir', filePath),
 
+  // Project editor: pick a location / PDFs, and relativize the PDF references.
+  pickSavePath: (suggestedName: string) => ipcRenderer.invoke('project:pickSavePath', suggestedName),
+  pickPdfs: () => ipcRenderer.invoke('pdf:pick'),
+  relativePaths: (fromFile: string, toFiles: string[]) =>
+    ipcRenderer.invoke('paths:relative', fromFile, toFiles),
+
   // Unsaved-changes coordination for a clean quit.
   setDirty: (dirty: boolean) => ipcRenderer.send('app:setDirty', dirty),
   onRequestSave: (cb: () => void) => {
