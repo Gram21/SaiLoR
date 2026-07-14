@@ -22,6 +22,21 @@ export interface RecentEntry {
 
 export const MAX_RECENTS = 5
 
+/**
+ * A path short enough to sit in a recents button, keeping the *end* — the
+ * folder and file name are what distinguish two projects called `review.json`,
+ * so the head is what gets dropped.
+ *
+ * Done here rather than with CSS: left-truncating with `direction: rtl` also
+ * reorders the leading "/" and fights the bidi algorithm, and CSS can only
+ * ellipsize the tail. The full path is still shown on hover.
+ */
+export function shortenPath(path: string, keepSegments = 3): string {
+  const parts = path.split(/[\\/]/).filter(Boolean)
+  if (parts.length <= keepSegments) return path
+  return `…/${parts.slice(-keepSegments).join('/')}`
+}
+
 export function readRecents(key: string): RecentEntry[] {
   try {
     const raw = localStorage?.getItem(key)

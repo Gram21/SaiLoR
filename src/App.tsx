@@ -10,6 +10,7 @@ import { ErrorPanel } from './components/ErrorPanel'
 import { HelpDialog } from './components/HelpDialog'
 import { ValidationDialog } from './components/ValidationDialog'
 import { ClosePrompt } from './components/ClosePrompt'
+import { shortenPath } from './platform/recents'
 import { Splitter } from './components/Splitter'
 import { useKeybindings } from './hooks/useKeybindings'
 import { useDirtyGuard } from './hooks/useDirtyGuard'
@@ -124,6 +125,9 @@ export function App() {
                 {recents.map((item) => {
                   const label = item.title || item.name
                   const where = item.path ?? item.name
+                  // Keep the tail: the folder + file name are what tell two
+                  // same-named projects apart. Full path is on hover.
+                  const shortWhere = shortenPath(where)
                   // `undefined` means "not checked yet" — only an explicit false
                   // greys the entry out, so nothing flickers on first paint.
                   const missing = item.available === false
@@ -143,7 +147,7 @@ export function App() {
                           {missing && <span className="recent-missing">not found</span>}
                         </span>
                         {/* The path distinguishes two projects sharing a name. */}
-                        <span className="recent-path">{where}</span>
+                        <span className="recent-path">{shortWhere}</span>
                       </button>
                       <button
                         type="button"
