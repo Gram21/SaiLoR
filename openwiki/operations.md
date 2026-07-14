@@ -136,6 +136,34 @@ The workflow `.github/workflows/release.yml` runs when a GitHub **release is pub
 
 **OpenWiki auto-update.** A separate scheduled workflow `.github/workflows/openwiki.yml` runs weekly (Mondays 06:00 UTC) and on demand. It first checks whether `main` had any non-`openwiki/**` commits in the last 7 days; only if so does it install and run the `openwiki` CLI (needs the `OPENROUTER_API_KEY` repo secret) and open a `docs: update OpenWiki` pull request. This regenerates these docs from the code, so prefer keeping manual doc edits and the code they describe in sync — see also the manual refresh guidance around `.last-update.json`.
 
+## Wiki sync
+
+These pages are mirrored to the repository's [GitHub wiki](https://github.com/Gram21/SaiLoR/wiki), in both directions, by two workflows:
+
+| Workflow | Fires on | Does |
+|---|---|---|
+| `.github/workflows/wiki-publish.yml` | push to `main` touching `openwiki/**` | Replaces the wiki with the contents of `openwiki/` |
+| `.github/workflows/wiki-import.yml` | `gollum` (a wiki page is created/edited, in the browser or by pushing to `SaiLoR.wiki.git`) | Copies the wiki's pages back into `openwiki/` and commits to `main` |
+
+`openwiki/` is the **source of truth**: publishing is a *replace*, not a merge, so a page deleted from the folder disappears from the wiki. Only `*.md` files are pages — `.last-update.json` is state for the OpenWiki generator and is never published, and never clobbered by an import.
+
+**Landing page and navigation.** Two files are wiki chrome rather than ordinary documentation, and both live in `openwiki/` like any other page:
+
+- **`Home.md`** — the wiki's landing page: a short overview and a table of contents. GitHub shows it when you open the Wiki tab.
+- **`_Sidebar.md`** — rendered by GitHub as a sidebar on *every* wiki page, so the table of contents is always in reach. It links to each page and to its main sections; if you add or rename a page (or an `##` heading that it links to), update it.
+
+Both round-trip through the sync like any other page. Should `Home.md` ever be deleted, `wiki-publish.yml` falls back to synthesizing an index page (linking each page, titled from its first heading, skipping `Home` and the `_`-prefixed special pages) and stamps it with an HTML comment marker, `wiki-sync:auto-home`. `wiki-import.yml` recognises that marker and drops the file instead of copying it back, so a generated index never leaks into the repository.
+
+**Loop prevention.** The two workflows write to each other's trigger, so they could in principle ping-pong forever. Three independent guards stop that:
+
+1. **The token.** Both push using `GITHUB_TOKEN`, and GitHub does not raise workflow-triggering events for it: *"With the exception of `workflow_dispatch` and `repository_dispatch`, other `GITHUB_TOKEN`-triggered events do not create workflow runs at all."* So a publish's wiki push raises no `gollum`, and an import's commit to `main` raises no `push`. On its own this is already sufficient — but it silently stops being true if anyone swaps in a PAT (a tempting fix when a protected branch rejects the import's push), which is why the other two exist.
+2. **Content.** Neither workflow commits when the mirror is already identical (`git diff --cached --quiet` → exit). This makes the sync *converge* rather than merely be suppressed: a wiki edit imports, the next publish may push once more (the auto-generated index legitimately gains the new page), and the import after that finds nothing to do. Worst case is one extra hop, then silence — with **no** reliance on guard 1.
+3. **Provenance.** Sync commits carry a `[wiki-sync]` marker, which `wiki-publish.yml` skips; `wiki-import.yml` ignores wiki writes whose sender is `github-actions[bot]`.
+
+Both workflows share a `concurrency: wiki-sync` group (with `cancel-in-progress: false`), so the two directions can never run at once and race on the same wiki.
+
+**Two things to know before the first run.** A repository's wiki does not exist as a git repo until its first page is saved — open the Wiki tab and save any page once, or `wiki-publish.yml` fails with a clone error telling you so. And `wiki-import.yml` **pushes straight to `main`**: if `main` is ever protected, that push is rejected and the workflow will need a PAT (see guard 1) or converting to a pull request.
+
 ## Deployment
 
 ### A. Static hosting

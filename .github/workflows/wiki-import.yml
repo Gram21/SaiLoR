@@ -1,0 +1,70 @@
+name: Import Wiki → openwiki
+
+# The reverse of wiki-publish.yml: when someone edits the wiki — in the browser, or by
+# pushing to SaiLoR.wiki.git — copy those pages back into openwiki/ and commit them to
+# main, so the folder stays the source of truth rather than drifting behind the wiki.
+#
+# `gollum` fires when a wiki page is created or updated. Note the GitHub constraint:
+# it only runs a workflow when the workflow file is on the DEFAULT branch, so this file
+# has no effect until it is merged to main.
+
+on:
+  gollum:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Shared with wiki-publish.yml so the two directions can never run concurrently.
+concurrency:
+  group: wiki-sync
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    # Loop prevention, layer 2: ignore wiki writes made by the publish workflow itself.
+    # A human editing in the web UI is the sender we care about.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.sender.login != 'github-actions[bot]' }}
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Clone the wiki
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" wiki
+
+      - name: Copy the wiki's pages into openwiki/
+        run: |
+          set -euo pipefail
+          # Drop the Home page we generate ourselves in wiki-publish.yml — copying it back
+          # would add a file to openwiki/ that nobody wrote. A Home page a *human* wrote
+          # has no marker, and is imported like any other page.
+          if [ -f wiki/Home.md ] && head -1 wiki/Home.md | grep -q 'wiki-sync:auto-home'; then
+            rm wiki/Home.md
+          fi
+
+          # Mirror pages only, and only over the pages: openwiki/.last-update.json is
+          # generator state and must survive.
+          rsync -a --delete \
+            --include '*.md' --exclude '*' \
+            wiki/ openwiki/
+
+      - name: Commit to main (only when something actually changed)
+        run: |
+          set -euo pipefail
+          git add openwiki
+          if git diff --cached --quiet; then
+            echo "openwiki/ already matches the wiki — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs: import wiki edits into openwiki/ [wiki-sync]"
+          git push origin main
+          echo "openwiki/ updated from the wiki."
