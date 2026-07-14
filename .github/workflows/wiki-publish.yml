@@ -1,0 +1,100 @@
+name: Publish openwiki → Wiki
+
+# Mirrors openwiki/ into the GitHub wiki (https://github.com/Gram21/SaiLoR.wiki.git).
+# The wiki is *replaced* by the folder: pages that no longer exist in openwiki/ are
+# deleted from the wiki, so the folder is the single source of truth.
+#
+# The reverse direction lives in wiki-import.yml. On the loop the two could form,
+# see "Loop prevention" below.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'openwiki/**'
+      - '.github/workflows/wiki-publish.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Serialize with wiki-import.yml: the two must never run at the same time, or they
+# would race on the same wiki. `cancel-in-progress: false` — a half-finished mirror
+# is worse than a slow one.
+concurrency:
+  group: wiki-sync
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # Loop prevention, layer 2 (see below): never re-publish a commit that the
+    # import workflow itself created.
+    if: ${{ !contains(github.event.head_commit.message, '[wiki-sync]') }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Clone the wiki
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if ! git clone "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" wiki; then
+            echo "::error::Could not clone the wiki. A repository's wiki does not exist as a git" \
+                 "repo until its first page is created — open the Wiki tab and save any page once," \
+                 "then re-run this workflow."
+            exit 1
+          fi
+
+      - name: Build the wiki content from openwiki/
+        run: |
+          set -euo pipefail
+          mkdir -p stage
+          # Pages only. `.last-update.json` is state for the openwiki generator, not a page.
+          cp openwiki/*.md stage/
+
+          # A wiki with no Home page shows an empty landing tab, so synthesize one when
+          # openwiki/ does not provide it. The marker lets wiki-import.yml recognise this
+          # file as ours and not copy it back into the repo.
+          if [ ! -f stage/Home.md ]; then
+            {
+              echo "<!-- wiki-sync:auto-home -->"
+              echo "# SaiLoR — Developer Documentation"
+              echo
+              echo "These pages are generated from [\`openwiki/\`](https://github.com/${GITHUB_REPOSITORY}/tree/main/openwiki)"
+              echo "in the main repository. Edits made here are synced back into that folder."
+              echo
+              for f in stage/*.md; do
+                page="$(basename "$f" .md)"
+                # Skip the landing page itself and the wiki's special pages
+                # (_Sidebar, _Footer) — those are chrome, not content.
+                case "$page" in Home|_*) continue ;; esac
+                # First heading of the page, falling back to the file name.
+                title="$(grep -m1 '^# ' "$f" | sed 's/^# //')"
+                echo "- [${title:-$page}]($page)"
+              done
+            } > stage/Home.md
+          fi
+
+      - name: Mirror into the wiki
+        run: |
+          set -euo pipefail
+          # --delete makes this a replace, not a merge: a page removed from openwiki/
+          # disappears from the wiki.
+          rsync -a --delete --exclude '.git/' stage/ wiki/
+
+      - name: Commit and push (only when something actually changed)
+        working-directory: wiki
+        run: |
+          set -euo pipefail
+          git add -A
+          if git diff --cached --quiet; then
+            echo "The wiki already matches openwiki/ — nothing to push."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs: sync wiki from openwiki/ (${GITHUB_SHA:0:7}) [wiki-sync]"
+          git push
+          echo "Wiki updated from openwiki/."
