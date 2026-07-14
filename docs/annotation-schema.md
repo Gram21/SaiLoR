@@ -523,9 +523,10 @@ There are three ways to open a project; pick whichever fits how you're running S
   https://your.host/?project=/reviews/2026/project.json
   ```
 
-- **Docker deployment — the `projects/` folder.** Drop your JSON files and their `pdfs/`
-  folders into the `./projects/` folder on the host; they are served read‑only and you open them
-  with, e.g., `http://localhost:8080/?project=/projects/my-review.json`.
+- **Docker deployment — the mounted volume.** Point the volume in `docker-compose.yml` at your
+  folder of JSON files and their `pdfs/` folders (it defaults to the bundled `./samples`). Whatever
+  folder you mount is served read‑only under `/projects/`, so you open a review with, e.g.,
+  `http://localhost:8080/?project=/projects/my-review.json`.
 
 For full deployment and hosting details, see the [README](../README.md#deployment).
 

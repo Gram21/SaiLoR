@@ -68,6 +68,15 @@ export function pushRecent(key: string, entry: RecentEntry): RecentEntry[] {
   return list
 }
 
+/**
+ * Persist a refreshed list as-is (order preserved). Used after re-reading each
+ * project's current title from disk, so the fresh titles survive a restart.
+ */
+export function replaceRecents(key: string, list: RecentEntry[]): RecentEntry[] {
+  write(key, list)
+  return list
+}
+
 /** Remove an entry by id (e.g. when the file can no longer be opened), persist, return the rest. */
 export function removeRecent(key: string, id: string): RecentEntry[] {
   const list = readRecents(key).filter((e) => e.id !== id)

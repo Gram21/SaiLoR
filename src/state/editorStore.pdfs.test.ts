@@ -15,6 +15,7 @@ const mockPlatform = {
   // loadFromText records the open project as a recent once it knows its title.
   rememberProject: () => {},
   forgetRecent: () => [],
+  checkRecents: async (e: unknown[]) => e,
   getOsInfo: () => null,
   pickPdfs: async () => picked,
   // Mirrors the Electron adapter: paths relative to the JSON's directory.

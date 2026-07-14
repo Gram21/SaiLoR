@@ -836,6 +836,9 @@ export const useEditorStore = create<EditorState>()(
           // Saving only writes the file — the user stays in the editor.
           s.notice = `Saved to ${st.location?.name ?? 'the project file'}`
         })
+        // The project's title may have just changed, and the recents list shows
+        // it — re-read so closing the editor doesn't reveal the old one.
+        void useStore.getState().refreshRecents()
         return true
       } catch (err) {
         set((s) => {

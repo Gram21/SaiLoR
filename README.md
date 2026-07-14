@@ -215,7 +215,7 @@ Users can also just click **Open…** in the app to load a local JSON from their
 ### B. Browser variant — Docker (recommended for self-hosting)
 
 A multi-stage [`Dockerfile`](Dockerfile) builds the SPA and serves it with nginx; the
-[`docker-compose.yml`](docker-compose.yml) wires up the port and a projects volume.
+[`docker-compose.yml`](docker-compose.yml) wires up the port and the volume of project files.
 
 ```bash
 # Build and start (serves on http://localhost:8080)
@@ -225,29 +225,37 @@ docker compose up -d --build
 docker compose down
 ```
 
-Drop your project JSON files and their PDFs into the `./projects/` folder on the host (mounted
-read-only into the container at `/projects`). An example project ships there already, so once the
-container is up you can open:
+By default the bundled example folder [`./samples`](samples) is mounted read-only into the
+container and served under the `/projects/` URL namespace, so once the container is up you can
+open:
 
 ```
 http://localhost:8080/?project=/projects/project.example.json
 ```
 
-Layout of the projects volume:
+To use your own reviews, point the volume in `docker-compose.yml` at your own folder of project
+JSONs and their PDFs — whatever folder you mount is served at `/projects/`:
+
+```yaml
+volumes:
+  - ./my-reviews:/usr/share/nginx/html/projects:ro
+```
 
 ```
-projects/
+my-reviews/
   my-review.json          # references pdfs/paperX.pdf (paths relative to the JSON)
   pdfs/
     paperX.pdf
 ```
+
+Open it with `http://localhost:8080/?project=/projects/my-review.json`.
 
 Change the published port by editing the `ports:` mapping in `docker-compose.yml` (default
 `8080:80`). To build/run the image without Compose:
 
 ```bash
 docker build -t slr-helper .
-docker run -d -p 8080:80 -v "$PWD/projects:/usr/share/nginx/html/projects:ro" slr-helper
+docker run -d -p 8080:80 -v "$PWD/samples:/usr/share/nginx/html/projects:ro" slr-helper
 ```
 
 > The browser variant is read-only on the server: saving happens client-side (File System Access

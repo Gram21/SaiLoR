@@ -248,10 +248,16 @@ export const useStore = create<AppState>()(
 
     refreshRecents: async () => {
       const platform = getPlatform()
-      const checked = await platform.checkRecents(platform.getRecents())
-      set((s) => {
-        s.recents = checked
-      })
+      try {
+        const checked = await platform.checkRecents(platform.getRecents())
+        set((s) => {
+          s.recents = checked
+        })
+      } catch {
+        // Called fire-and-forget (startup, after an editor save). A failure to
+        // re-read titles must never surface as an unhandled rejection — the
+        // list simply keeps what it had.
+      }
     },
 
     requestCloseProject: () => {
