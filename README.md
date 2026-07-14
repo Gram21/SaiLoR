@@ -32,10 +32,10 @@ Grab the file for your system from the [releases page](https://github.com/Gram21
 
 | System | File |
 |---|---|
-| macOS, Apple Silicon (M1–M4) | `SLR Helper-<version>-arm64.dmg` |
-| macOS, Intel | `SLR Helper-<version>-x64.dmg` |
-| Windows | `SLR Helper Setup <version>.exe` |
-| Linux | `SLR Helper-<version>.AppImage` |
+| macOS, Apple Silicon (M1–M4) | `SLR Helper-<version>-macos-arm64.dmg` |
+| macOS, Intel | `SLR Helper-<version>-macos-x64.dmg` |
+| Windows | `SLR Helper-<version>-windows-x64.exe` |
+| Linux | `SLR Helper-<version>-linux-x64.AppImage` |
 
 > **The releases are not signed** with an Apple or Microsoft code-signing certificate —
 > paying for one is not worth it for a research tool. Both systems will therefore warn you
@@ -71,7 +71,7 @@ xattr -cr "/Applications/SLR Helper.app"
 
 ### Windows
 
-1. Run `SLR Helper Setup <version>.exe`.
+1. Run `SLR Helper-<version>-windows-x64.exe`.
 2. Windows SmartScreen shows *"Windows protected your PC"*. Click **More info**, then
    **Run anyway**.
 3. Follow the installer.
@@ -82,8 +82,8 @@ The AppImage is a single self-contained file — no installation needed. Make it
 and run it:
 
 ```bash
-chmod +x "SLR Helper-<version>.AppImage"
-./"SLR Helper-<version>.AppImage"
+chmod +x "SLR Helper-<version>-linux-x64.AppImage"
+./"SLR Helper-<version>-linux-x64.AppImage"
 ```
 
 If it fails to start, your distribution may be missing FUSE (`sudo apt install libfuse2`
