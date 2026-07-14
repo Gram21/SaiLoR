@@ -150,7 +150,12 @@ The **grab-from-PDF** button (⧉) reads `useStore.getState().pdfSelection` and 
 
 A second screen (`src/components/ProjectEditor.tsx`, shown instead of the workspace while `useEditorStore().open`) lets users **create or edit a project JSON** — its annotation schema and the PDFs it references — without hand-writing JSON. It is entered from the welcome screen's *New annotation JSON…* / *Edit annotation JSON…* buttons.
 
-The **help dialog is mode-aware**: `HelpDialog` reads `useEditorStore().open` and renders either the annotating guide or the editor guide (schema building, drag-to-nest, adding PDFs, the two save buttons), each with only the shortcuts that actually do something in that mode — plus a badge in the title saying which mode you're in. Shared sections (appearance, license) render in both.
+The **help dialog is mode-aware**. `HelpDialog` derives a mode from `useEditorStore().open` and whether a project is loaded, then renders one of three guides, each with only the shortcuts that actually do something there, plus a badge in the title naming the mode:
+- **Getting started** (start screen, nothing open) — what an SLR project JSON *is*, and what the three buttons do (open / new / edit).
+- **Annotating** (a project is open) — pick a paper, read the PDF, fill the fields, save.
+- **Editing the annotation JSON** (the editor is open) — schema building, drag-to-nest, adding PDFs, the two save buttons.
+
+Shared sections (appearance, license) render in all three.
 
 Two ways out of the editor: **Save JSON** writes the file and stays put (so you can keep building), while **Save JSON & Begin Annotating** writes it and hands it to the annotation view (`loadFromText`) — that split is `save()` vs `saveAndAnnotate()`. Both validate first, so an invalid draft neither writes nor closes. The editor has its own **undo/redo** history (`past`/`future` snapshots, same shape as the annotation store, with consecutive keystrokes in one input coalesced into a single step), and `useKeybindings` / `useElectronCloseGuard` route `Ctrl+S` / `Ctrl+Z` / `Ctrl+Shift+Z` / `Ctrl+Y` to it whenever it is open.
 
