@@ -138,6 +138,17 @@
   cursor: pointer;
 }
 
+.schema-required {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
 .schema-add-child {
   flex: 0 0 auto;
   white-space: nowrap;

@@ -131,29 +131,15 @@ export class BrowserAdapter implements PlatformAdapter {
       return handle
     }
     // download fallback: there is no in-place location, so behave like Save as.
-    downloadText(text, 'project.json')
+    downloadText(text, handle.name ?? 'project.json')
     return handle
   }
 
-  async saveProjectAs(
-    text: string,
-    suggestedName: string,
-  ): Promise<{ handle: SaveHandle; name: string } | null> {
-    if (hasFsApi() && typeof fsApi().showSaveFilePicker === 'function') {
-      let fh: FileSystemFileHandle
-      try {
-        fh = await fsApi().showSaveFilePicker!({ suggestedName, ...JSON_PICKER })
-      } catch (err) {
-        if (isAbort(err)) return null
-        throw err
-      }
-      await writeFsApi(fh, text)
-      const id = this.register(fh)
-      await this.rememberHandle(fh.name, fh)
-      return { handle: { kind: 'fsapi', path: id }, name: fh.name }
-    }
-    downloadText(text, suggestedName)
-    return { handle: { kind: 'download' }, name: suggestedName }
+  async rebasePdfPaths(pdfPaths: string[], _from: SaveHandle, _to: SaveHandle): Promise<string[]> {
+    // The File System Access API exposes no filesystem paths, so there is no way
+    // to work out how the old and new locations relate. The stored paths are
+    // left alone; the user keeps the PDFs alongside the JSON they saved.
+    return pdfPaths
   }
 
   async getPdfSource(pdfPath: string, handle: SaveHandle): Promise<PdfSource> {
@@ -211,11 +197,11 @@ export class BrowserAdapter implements PlatformAdapter {
       // Only reserve the location — the editor writes through saveProject() later.
       const id = this.register(fh)
       await this.rememberHandle(fh.name, fh)
-      return { handle: { kind: 'fsapi', path: id }, name: fh.name }
+      return { handle: { kind: 'fsapi', path: id, name: fh.name }, name: fh.name }
     }
     // No picker available: saving downloads the file, so there is no location to
-    // choose — only a name to suggest to the download.
-    return { handle: { kind: 'download' }, name: suggestedName }
+    // choose — only a name, which rides on the handle so saveProject can use it.
+    return { handle: { kind: 'download', name: suggestedName }, name: suggestedName }
   }
 
   async pickPdfs(): Promise<PickedPdf[]> {

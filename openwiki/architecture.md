@@ -20,7 +20,7 @@ src/platform/browser.ts   →  BrowserAdapter
 - `openRecent(id)` — re-open a project by its recent-entry id (path on Electron, IndexedDB handle key on browser)
 - `openProject()` — show an open dialog/picker, return JSON text + a `SaveHandle`
 - `saveProject(text, handle)` — write back to the handle's location
-- `saveProjectAs(text, suggestedName)` — prompt for new location and write
+- `rebasePdfPaths(pdfPaths, from, to)` — re-express PDF paths that were relative to `from`'s directory as relative to `to`'s. **"Save as" depends on this**: a paper's `pdf` is stored relative to the project file, so writing the old paths to a new location left every PDF pointing at nothing. `store.saveAs()` therefore picks the destination *first* (`pickProjectLocation`), rebases, and only then serializes and writes. Electron does the real path math via a `paths:rebase` IPC (`relative(dirname(to), resolve(dirname(from), rel))`); the browser has no paths and returns the input unchanged.
 - `getPdfSource(pdfPath, projectHandle)` — resolve a paper's relative PDF path into a URL react-pdf can load. On Electron it re-asserts the main process's project directory from `projectHandle` first, so PDFs always resolve against the project actually being rendered (the project editor repoints that directory when picking a location).
 
 Three more exist for the **project editor** (see below):
@@ -145,6 +145,16 @@ The **grab-from-PDF** button (⧉) reads `useStore.getState().pdfSelection` and 
 ### Annotation names and descriptions
 
 `src/components/NodeName.tsx` renders schema node names. When a definition has a `description`, the UI adds an `ⓘ` marker, shows the description as a hover/focus tooltip, and renders that tooltip in a portal so it is not clipped by the annotation panel scroll container. The wrapper also includes an `aria-label` that combines the name and description for assistive technology.
+
+### Validation
+
+`src/model/validate.ts` checks a reviewer's annotations against the schema; the **Validate** button in the toolbar runs `validateProject(project)` and `ValidationDialog` shows the result grouped by paper (click a paper to jump to it). Four issue kinds: `required` (a field marked required is empty), `type` (the stored value doesn't match the field's type — the JSON is hand-editable), `enum` (a value outside the field's `options`), and `cardinality` (an instance count outside `[min, max]`).
+
+**Emptiness is the load-bearing definition**, and booleans are the special case: a `boolean` field is **never** empty. An unticked box is a real answer (`false`), and a missing/`null` boolean reads as `false` — so a required boolean can never raise a `required` issue. `0` is likewise a real number, and `''`/whitespace is empty only for strings. A type mismatch suppresses the `required`/`enum` checks for that field, so one broken value yields one issue rather than a cascade. Everything is defensive: a malformed tree produces issues rather than throwing.
+
+Fields are marked required by `required: true` in the schema (`ResolvedDef.required`, defaulting to `false`; rejected on a group, which holds no value). The schema editor exposes it as a **Required** checkbox on non-group rows, and the annotation form marks such fields with a red `*`.
+
+Note that `loadProject` normalizes the tree to each node's `min`/`max`, so in practice `cardinality` issues only arise from a project that bypasses the loader.
 
 ### Project editor
 

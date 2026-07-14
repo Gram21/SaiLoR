@@ -673,6 +673,79 @@ body.resizing * {
   color: var(--text);
 }
 
+/* ---- Validation ---- */
+
+/* The * marking a required field in the annotation form. */
+.anno-required {
+  margin-left: 2px;
+  color: var(--danger);
+  text-decoration: none;
+  cursor: help;
+}
+
+.help-mode.ok {
+  background: color-mix(in srgb, var(--ok) 22%, transparent);
+}
+.help-mode.bad {
+  background: color-mix(in srgb, var(--danger) 22%, transparent);
+}
+
+.validation-intro {
+  color: var(--muted);
+}
+.validation-group {
+  margin-bottom: 16px;
+}
+.validation-paper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  font-weight: 600;
+}
+.validation-paper .count {
+  color: var(--muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+.validation-issues {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.validation-issues li {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.validation-issues li:last-child {
+  border-bottom: none;
+}
+.validation-kind {
+  grid-row: span 2;
+  align-self: start;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
+}
+.validation-kind.kind-required {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.validation-path {
+  font-weight: 600;
+  font-size: 0.9em;
+}
+.validation-msg {
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
 /* Mode badge in the help dialog's title ("Annotating" / "Editing the …"). */
 .help-mode {
   margin-left: 8px;

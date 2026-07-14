@@ -9,8 +9,6 @@ contextBridge.exposeInMainWorld('slr', {
   openPath: (filePath: string) => ipcRenderer.invoke('project:openPath', filePath),
   saveProject: (filePath: string, text: string) =>
     ipcRenderer.invoke('project:save', filePath, text),
-  saveProjectAs: (text: string, suggestedName: string) =>
-    ipcRenderer.invoke('project:saveAs', text, suggestedName),
   setProjectDir: (filePath: string) => ipcRenderer.invoke('project:setDir', filePath),
 
   // Project editor: pick a location / PDFs, and relativize the PDF references.
@@ -19,6 +17,8 @@ contextBridge.exposeInMainWorld('slr', {
   readPdf: (filePath: string) => ipcRenderer.invoke('pdf:read', filePath),
   relativePaths: (fromFile: string, toFiles: string[]) =>
     ipcRenderer.invoke('paths:relative', fromFile, toFiles),
+  rebasePaths: (fromFile: string, toFile: string, rels: string[]) =>
+    ipcRenderer.invoke('paths:rebase', fromFile, toFile, rels),
 
   // Unsaved-changes coordination for a clean quit.
   setDirty: (dirty: boolean) => ipcRenderer.send('app:setDirty', dirty),

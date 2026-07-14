@@ -141,8 +141,14 @@ function AnnotateHelp() {
           currently selected in the PDF.
         </li>
         <li>
+          <strong>Validate</strong> checks every paper against the schema: required fields that are
+          still empty, values of the wrong type, and values outside a dropdown's choices. Required
+          fields are marked with a red <em>*</em>. A <em>Yes/no</em> field always counts as
+          answered — an unticked box means <em>no</em>.
+        </li>
+        <li>
           <strong>Save</strong> via the <em>Save ▾</em> menu (or {MOD}+S). "Save as…" writes to a new
-          file.
+          file, and the PDF references are re-derived so they still resolve from there.
         </li>
       </ul>
 

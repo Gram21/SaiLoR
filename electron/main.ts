@@ -330,17 +330,6 @@ ipcMain.handle('project:save', async (_e, filePath: string, text: string) => {
   await writeFile(filePath, text, 'utf-8')
 })
 
-ipcMain.handle('project:saveAs', async (_e, text: string, suggestedName: string) => {
-  const res = await dialog.showSaveDialog({
-    title: 'Save SLR project as',
-    defaultPath: suggestedName,
-    filters: [{ name: 'SLR project', extensions: ['json'] }],
-  })
-  if (res.canceled || !res.filePath) return null
-  await writeFile(res.filePath, text, 'utf-8')
-  return { path: res.filePath }
-})
-
 ipcMain.handle('project:setDir', (_e, filePath: string) => {
   projectDir = path.dirname(filePath)
 })
@@ -381,6 +370,17 @@ ipcMain.handle('pdf:read', async (_e, filePath: string) => {
 ipcMain.handle('paths:relative', (_e, fromFile: string, toFiles: string[]) => {
   const fromDir = path.dirname(fromFile)
   return toFiles.map((to) => path.relative(fromDir, to).split(path.sep).join('/'))
+})
+
+// "Save as" moves the project file, so paths relative to the old file have to be
+// re-expressed relative to the new one — otherwise every PDF stops resolving.
+ipcMain.handle('paths:rebase', (_e, fromFile: string, toFile: string, rels: string[]) => {
+  const fromDir = path.dirname(fromFile)
+  const toDir = path.dirname(toFile)
+  return rels.map((rel) => {
+    const abs = path.resolve(fromDir, rel)
+    return path.relative(toDir, abs).split(path.sep).join('/')
+  })
 })
 
 ipcMain.on('app:setDirty', (_e, dirty: boolean) => {

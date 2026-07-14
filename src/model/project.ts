@@ -150,6 +150,7 @@ function dehydrateSchema(defs: ResolvedDef[]): unknown[] {
     if (d.max !== 1) out.max = d.max
     if (d.description !== undefined) out.description = d.description
     if (d.options !== undefined) out.options = d.options
+    if (d.required) out.required = true
     if (d.children.length > 0) out.children = dehydrateSchema(d.children)
     return out
   })

@@ -67,6 +67,7 @@ npm run typecheck
 │   │   ├── annotations.ts AnnotationValueTree, normalize/prune/init/add/remove helpers
 │   │   ├── project.ts     loadProject / serializeProject, Paper/Project types
 │   │   ├── pdfMeta.ts     Best-effort title/author extraction from a PDF (metadata, then layout heuristic)
+│   │   ├── validate.ts    Checks a reviewer's annotations (required / type / enum / cardinality)
 │   │   └── model.test.ts  Vitest unit tests for the model
 │   ├── platform/          Platform abstraction for file I/O and PDF loading
 │   │   ├── adapter.ts     PlatformAdapter interface (9 ops) + isElectron()
@@ -95,6 +96,7 @@ npm run typecheck
 │   │   ├── ProjectEditor.tsx    Create/edit a project JSON (location bar + schema + papers)
 │   │   ├── SchemaTreeEditor.tsx Drag-and-drop annotation-schema builder (reorder + nest)
 │   │   ├── PapersEditor.tsx     Add/edit/reorder the PDFs the project references
+│   │   ├── ValidationDialog.tsx  "Validate" results, grouped by paper
 │   │   ├── HelpDialog.tsx Modal with app intro + keyboard shortcuts
 │   │   └── ErrorPanel.tsx Error overlay for load/save failures
 │   ├── hooks/

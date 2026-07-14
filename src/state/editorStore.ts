@@ -30,6 +30,8 @@ export interface EditorNode {
   description: string
   /** Enum values; only meaningful when kind === 'string'. */
   options: string[]
+  /** The reviewer must fill this field in; meaningless on a group. */
+  required: boolean
   children: EditorNode[]
   collapsed: boolean
 }
@@ -91,6 +93,7 @@ export function makeNode(): EditorNode {
     max: 1,
     description: '',
     options: [],
+    required: false,
     children: [],
     collapsed: false,
   }
@@ -111,6 +114,7 @@ export function toAnnotationDefs(nodes: EditorNode[]): AnnotationDef[] {
     if (desc) def.description = desc
     const opts = n.options.map((o) => o.trim()).filter(Boolean)
     if (n.kind === 'string' && opts.length > 0) def.options = opts
+    if (n.kind !== 'group' && n.required) def.required = true
     if (n.children.length > 0) def.children = toAnnotationDefs(n.children)
     return def
   })
@@ -126,6 +130,7 @@ export function fromAnnotationDefs(defs: AnnotationDef[]): EditorNode[] {
     max: d.max === undefined ? 1 : d.max,
     description: d.description ?? '',
     options: d.options ? [...d.options] : [],
+    required: d.required ?? false,
     children: d.children ? fromAnnotationDefs(d.children) : [],
     collapsed: false,
   }))
@@ -603,6 +608,8 @@ export const useEditorStore = create<EditorState>()(
         Object.assign(node, patch)
         // Enum options only exist on string fields.
         if (node.kind !== 'string') node.options = []
+        // A group holds no value, so it cannot be required.
+        if (node.kind === 'group') node.required = false
         s.dirty = true
       })
     },
