@@ -26,6 +26,24 @@ npm run dev:electron
 Open the bundled example from the browser dev server via:
 `http://localhost:5173/?project=/samples/project.example.json`
 
+## Installing a release
+
+Download the installer for your platform from the [releases page](https://github.com/Gram21/slr-helper/releases). On macOS, pick the **arm64** dmg for Apple Silicon and the **x64** one for Intel.
+
+### macOS: the app is not signed by Apple
+
+The releases are not signed with an Apple Developer ID or notarized, so macOS will
+warn about the app the first time you open it. Right-click the app → **Open** →
+**Open**, or allow it under *System Settings → Privacy & Security*.
+
+If macOS instead says **"SLR Helper" is damaged and can't be opened**, that is the
+quarantine flag on a downloaded, unsigned app — the app is not actually corrupt.
+Clear the flag once:
+
+```bash
+xattr -cr "/Applications/SLR Helper.app"
+```
+
 ## Project file format
 
 > 📖 For a full authoring guide with many examples, see
