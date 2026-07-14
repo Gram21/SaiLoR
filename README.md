@@ -1,4 +1,8 @@
-# SaiLoR
+<p align="center">
+  <img src="build/icon.png" alt="SaiLoR" width="128" height="128">
+</p>
+
+<h1 align="center">SaiLoR</h1>
 
 A tool to assist reviewers during **Systematic Literature Reviews (SLR)** — the letters are in the
 name: **S**ai**L**o**R**. Open a single JSON "project" file that holds both an annotation schema
@@ -10,6 +14,10 @@ The same codebase runs two ways:
 
 - **Desktop app** (Electron) — fully local, opens local PDF files, native Open/Save dialogs.
 - **Web app** — a static build you can host on any server (or open locally in a Chromium browser).
+
+<p align="center">
+  <img src="docs/screenshots/annotate.png" alt="The three-pane annotation view: papers, the PDF, and the annotation form" width="900">
+</p>
 
 ## Quick start
 
@@ -207,6 +215,18 @@ have open and **propose** values for its annotation fields. It is a first draft,
 - The model is instructed to quote the paper for every value and to **leave a field empty rather
   than guess**. It is still a language model: check the quotes.
 
+<p align="center">
+  <img src="docs/screenshots/ai-review.png" alt="The review table: each proposed value with the quote from the paper that supports it, a confidence, and a checkbox" width="820">
+</p>
+
+Once applied, every field the model filled keeps a **light-blue border** until you click it (or its
+name). That click is you confirming the value — the marks are yours alone: they are never saved into
+the project file and are gone when you reopen it.
+
+<p align="center">
+  <img src="docs/screenshots/ai-marks.png" alt="Annotation fields filled by the AI, each outlined in light blue until confirmed" width="380">
+</p>
+
 **Where it sends your paper**
 
 > ⚠️ **The paper's extracted text is sent to whichever LLM provider you configure.** (Or the PDF
@@ -227,6 +247,13 @@ the model name and your API key, and press **Verify setup** to send a one-word t
 desktop the key is stored **encrypted with your operating system's keychain** and is never handed to
 the page. In the **browser build** it is stored **unencrypted** in local storage and some providers
 refuse calls made directly from a web page — the desktop app is the supported path for this feature.
+
+<p align="center">
+  <img src="docs/screenshots/ai-settings.png" alt="Setting up an LLM target: name, provider, base URL, model, API key, and a Verify setup button" width="700">
+</p>
+
+<p align="center"><em>Setting up a target — shown in the browser build, which is why it leads with the
+key-storage warning. The desktop app stores the key in your OS keychain instead.</em></p>
 
 **Extraction quality is the ceiling.** The paper is sent as text pulled out of the PDF, and that
 extraction is only as good as the PDF: two-column papers, tables, figures and formulas come out
