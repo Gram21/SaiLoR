@@ -12,8 +12,20 @@ export function NodeName({ def, className = 'anno-name' }: { def: ResolvedDef; c
   const ref = useRef<HTMLSpanElement>(null)
   const [coords, setCoords] = useState<{ x: number; y: number } | null>(null)
 
+  // A required field is marked so the reviewer sees it before validating.
+  const label = (
+    <>
+      {def.name}
+      {def.required && (
+        <abbr className="anno-required" title="Required — this field must be filled in">
+          *
+        </abbr>
+      )}
+    </>
+  )
+
   if (!def.description) {
-    return <span className={className}>{def.name}</span>
+    return <span className={className}>{label}</span>
   }
 
   const show = () => {

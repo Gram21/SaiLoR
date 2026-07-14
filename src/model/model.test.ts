@@ -103,6 +103,42 @@ describe('schema resolution', () => {
     ).toThrow(ProjectLoadError)
   })
 
+  it('defaults required to false and round-trips it only when set', () => {
+    const project = loadProject(
+      JSON.stringify({
+        config: {
+          schema: [
+            { name: 'Relevant', type: 'boolean', required: true },
+            { name: 'Notes', type: 'string' },
+          ],
+        },
+        papers: [{ id: 'p1', title: 'T', authors: [], pdf: 'a.pdf', annotations: {} }],
+      }),
+    )
+    expect(project.schema[0].required).toBe(true)
+    expect(project.schema[1].required).toBe(false)
+
+    const reDumped = JSON.parse(serializeProject(project))
+    expect(reDumped.config.schema[0].required).toBe(true)
+    // false is the default, so the key stays out of the file.
+    expect('required' in reDumped.config.schema[1]).toBe(false)
+  })
+
+  it('rejects required on a group (a group holds no value)', () => {
+    expect(() =>
+      loadProject(
+        JSON.stringify({
+          config: {
+            schema: [
+              { name: 'G', required: true, children: [{ name: 'Claim', type: 'string' }] },
+            ],
+          },
+          papers: [],
+        }),
+      ),
+    ).toThrow(ProjectLoadError)
+  })
+
   it('detects repeatable nodes', () => {
     const resolved = resolveSchema(sampleSchema)
     expect(isRepeatable(resolved[3])).toBe(true)

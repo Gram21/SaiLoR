@@ -1,4 +1,5 @@
 import { useStore } from '../state/store'
+import { useEditorStore } from '../state/editorStore'
 import { getPlatform } from '../platform'
 import { Dropdown, type MenuItem } from './Dropdown'
 import { SidebarToggle } from './SidebarToggle'
@@ -10,6 +11,8 @@ export function Toolbar() {
   const save = useStore((s) => s.save)
   const saveAs = useStore((s) => s.saveAs)
   const sidebarCollapsed = useStore((s) => s.sidebarCollapsed)
+  const runValidation = useStore((s) => s.runValidation)
+  const editorOpen = useEditorStore((s) => s.open)
   const project = useStore((s) => s.project)
   const projectName = useStore((s) => s.projectName)
   const dirty = useStore((s) => s.dirty)
@@ -66,6 +69,16 @@ export function Toolbar() {
       <div className="toolbar-actions">
         <Dropdown label="Open" title="Open a project" disabled={busy} items={openItems} />
         <Dropdown label="Save" title="Save the project" disabled={busy} items={saveItems} />
+        <button
+          type="button"
+          title="Check every paper's annotations against the schema"
+          onClick={runValidation}
+          // Validation is about the annotations, so it means nothing while the
+          // project editor is open.
+          disabled={!project || busy || editorOpen}
+        >
+          Validate
+        </button>
       </div>
 
       {/* The file name sits just left of the view controls; it carries the auto

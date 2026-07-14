@@ -12,6 +12,7 @@ import {
   type FieldValue,
 } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
+import { validateProject, type ValidationIssue } from '../model/validate'
 import { getPlatform, type SaveHandle } from '../platform'
 import { BrowserAdapter } from '../platform/browser'
 import type { RecentEntry } from '../platform/recents'
@@ -78,6 +79,9 @@ interface AppState {
   pdfZoom: number
   recents: RecentEntry[]
   helpOpen: boolean
+  /** Result of the last validation run; null until the user asks for one. */
+  validation: ValidationIssue[] | null
+  validationOpen: boolean
   /** Undo/redo history of annotation changes (session-only). */
   past: HistoryEntry[]
   future: HistoryEntry[]
@@ -101,6 +105,9 @@ interface AppState {
   zoomOutPdf: () => void
   resetPdfZoom: () => void
   setHelpOpen: (open: boolean) => void
+  /** Check every paper's annotations against the schema and show the result. */
+  runValidation: () => void
+  setValidationOpen: (open: boolean) => void
 
   setFieldValue: (path: PathSeg[], name: string, index: number, value: FieldValue) => void
   addInstance: (path: PathSeg[], def: ResolvedDef) => void
@@ -138,6 +145,8 @@ export const useStore = create<AppState>()(
     pdfZoom: 1,
     recents: getPlatform().getRecents(),
     helpOpen: false,
+    validation: null,
+    validationOpen: false,
     past: [],
     future: [],
 
@@ -233,6 +242,8 @@ export const useStore = create<AppState>()(
           s.pdfSelection = ''
           s.past = []
           s.future = []
+          s.validation = null
+          s.validationOpen = false
         })
         lastFieldKey = null
       } catch (err) {
@@ -274,25 +285,44 @@ export const useStore = create<AppState>()(
     },
 
     saveAs: async () => {
-      const { project, projectName } = get()
+      const { project, projectName, saveHandle } = get()
       if (!project) return false
       const platform = getPlatform()
       set((s) => {
         s.busy = true
       })
       try {
-        const text = serializeProject(project)
+        // Pick the destination *before* serializing: a paper's `pdf` is stored
+        // relative to the project file, so writing the old paths to a new
+        // location would leave every PDF pointing at nothing.
         const suggested = projectName || 'project.json'
-        const res = await platform.saveProjectAs(text, suggested)
-        if (!res) {
+        const location = await platform.pickProjectLocation(suggested)
+        if (!location) {
           set((s) => {
             s.busy = false
           })
           return false
         }
+
+        let toWrite = project
+        if (saveHandle) {
+          const rebased = await platform.rebasePdfPaths(
+            project.papers.map((p) => p.pdf),
+            saveHandle,
+            location.handle,
+          )
+          toWrite = {
+            ...project,
+            papers: project.papers.map((p, i) => ({ ...p, pdf: rebased[i] ?? p.pdf })),
+          }
+        }
+
+        const text = serializeProject(toWrite)
+        const handle = await platform.saveProject(text, location.handle)
         set((s) => {
-          s.saveHandle = res.handle
-          s.projectName = res.name
+          s.project = toWrite
+          s.saveHandle = handle
+          s.projectName = location.name
           s.dirty = false
           s.busy = false
           s.recents = platform.getRecents()
@@ -383,6 +413,21 @@ export const useStore = create<AppState>()(
     setHelpOpen: (open) =>
       set((s) => {
         s.helpOpen = open
+      }),
+
+    runValidation: () => {
+      const project = get().project
+      if (!project) return
+      const issues = validateProject(project)
+      set((s) => {
+        s.validation = issues
+        s.validationOpen = true
+      })
+    },
+
+    setValidationOpen: (open) =>
+      set((s) => {
+        s.validationOpen = open
       }),
 
     setFieldValue: (path, name, index, value) => {

@@ -5,15 +5,18 @@
       {
         "name": "Relevant",
         "type": "boolean",
-        "description": "Is this paper relevant to the review?"
+        "description": "Is this paper relevant to the review?",
+        "required": true
       },
       {
         "name": "Study Type",
-        "type": "string"
+        "type": "string",
+        "required": true
       },
       {
         "name": "Year",
-        "type": "number"
+        "type": "number",
+        "required": true
       },
       {
         "name": "Findings",
@@ -22,7 +25,8 @@
         "children": [
           {
             "name": "Claim",
-            "type": "string"
+            "type": "string",
+            "required": true
           },
           {
             "name": "Evidence",
@@ -46,7 +50,8 @@
                   "Simulation",
                   "Ablation study",
                   "None"
-                ]
+                ],
+                "required": true
               }
             ]
           },

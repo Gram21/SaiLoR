@@ -259,6 +259,17 @@ function SchemaNodeRow({
           <span>∞</span>
         </label>
 
+        {node.kind !== 'group' && (
+          <label className="schema-required" title="The reviewer must fill this field in">
+            <input
+              type="checkbox"
+              checked={node.required}
+              onChange={(e) => updateNode(node.uid, { required: e.target.checked })}
+            />
+            <span>Required</span>
+          </label>
+        )}
+
         <input
           className="schema-input schema-desc"
           placeholder="Description (shown on hover)"

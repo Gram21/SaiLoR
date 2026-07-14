@@ -23,6 +23,8 @@ export interface AnnotationDef {
   description?: string
   /** For a `string` field: a fixed set of allowed values (enum), shown as a dropdown. */
   options?: string[]
+  /** The reviewer must fill this field in. Defaults to false. */
+  required?: boolean
   children?: AnnotationDef[]
 }
 
@@ -38,6 +40,7 @@ export interface ResolvedDef {
   description?: string
   /** Enum values for a `string` field (renders as a filterable dropdown). */
   options?: string[]
+  required: boolean
   children: ResolvedDef[]
 }
 
@@ -57,6 +60,7 @@ export const annotationDefSchema: z.ZodType<AnnotationDef> = z.lazy(() =>
       max: z.union([z.number().int().min(1), z.null()]).optional(),
       description: z.string().optional(),
       options: z.array(z.string()).optional(),
+      required: z.boolean().optional(),
       children: z.array(annotationDefSchema).optional(),
     })
     .strict()
@@ -79,6 +83,12 @@ export const annotationDefSchema: z.ZodType<AnnotationDef> = z.lazy(() =>
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `"${def.name}": "options" (enum) is only allowed on a string field (set "type": "string")`,
+        })
+      }
+      if (def.required && !def.type) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `"${def.name}": "required" is only allowed on a field (set a "type")`,
         })
       }
     }),
@@ -138,6 +148,7 @@ function resolveDefs(defs: AnnotationDef[], parentPath: string): ResolvedDef[] {
       max,
       description: def.description,
       options: def.options,
+      required: def.required ?? false,
       children: def.children ? resolveDefs(def.children, id) : [],
     }
   })

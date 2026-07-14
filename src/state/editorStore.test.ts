@@ -8,6 +8,7 @@ import {
   buildProjectJson,
   makePaperFromPdf,
   makeNode,
+  useEditorStore,
   type EditorNode,
   type EditorPaper,
 } from './editorStore'
@@ -64,6 +65,31 @@ describe('schema conversion', () => {
     ]
     const back = fromAnnotationDefs(toAnnotationDefs(original))
     expect(toAnnotationDefs(back)).toEqual(toAnnotationDefs(original))
+  })
+
+  it('round-trips required, and never writes it for a group', () => {
+    const defs = toAnnotationDefs([
+      node('Relevant', { kind: 'boolean', required: true }),
+      node('Notes', { kind: 'string' }),
+      node('Findings', { kind: 'group', required: true, children: [node('Claim', { kind: 'string' })] }),
+    ])
+    expect(defs[0].required).toBe(true)
+    expect(defs[1].required).toBeUndefined()
+    expect(defs[2].required).toBeUndefined()
+
+    const back = fromAnnotationDefs(defs)
+    expect(back[0].required).toBe(true)
+    expect(back[1].required).toBe(false)
+    expect(toAnnotationDefs(back)).toEqual(defs)
+  })
+})
+
+describe('updateNode', () => {
+  it('clears required when a field becomes a group', () => {
+    const field = node('Relevant', { kind: 'boolean', required: true })
+    useEditorStore.setState({ nodes: [field] })
+    useEditorStore.getState().updateNode(field.uid, { kind: 'group' })
+    expect(useEditorStore.getState().nodes[0].required).toBe(false)
   })
 })
 

@@ -19,8 +19,10 @@ export interface OpenedProject {
 
 export interface SaveHandle {
   kind: 'electron' | 'fsapi' | 'download'
-  /** Electron: absolute path. FSAPI: undefined (uses the retained file handle). */
+  /** Electron: absolute path. FSAPI: the id of the retained file handle. */
   path?: string
+  /** File name, so the download fallback can name what it writes. */
+  name?: string
 }
 
 export interface PdfSource {
@@ -64,8 +66,16 @@ export interface PlatformAdapter {
   /** Write text back to the handle's location. Returns the (possibly updated) handle. */
   saveProject(text: string, handle: SaveHandle): Promise<SaveHandle>
 
-  /** Prompt for a new location and write there. Returns the new handle + name. */
-  saveProjectAs(text: string, suggestedName: string): Promise<{ handle: SaveHandle; name: string } | null>
+  /**
+   * Re-express `pdfPaths` — which are relative to `from`'s directory — as paths
+   * relative to `to`'s directory. "Save as" moves the project file, and a
+   * paper's `pdf` is stored relative to it, so without this every PDF would
+   * fail to resolve at the new location.
+   *
+   * Electron resolves this against the real filesystem. The browser has no
+   * paths, so it returns the input unchanged.
+   */
+  rebasePdfPaths(pdfPaths: string[], from: SaveHandle, to: SaveHandle): Promise<string[]>
 
   /**
    * Resolve a paper's `pdf` path (relative to the project file) into a URL that

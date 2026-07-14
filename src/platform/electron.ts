@@ -16,10 +16,6 @@ export interface SlrBridge {
   /** Read a specific file by absolute path (for recent files). Null if missing. */
   openPath(path: string): Promise<{ path: string; text: string } | null>
   saveProject(path: string, text: string): Promise<void>
-  saveProjectAs(
-    text: string,
-    suggestedName: string,
-  ): Promise<{ path: string } | null>
   /** Register the project's base directory so slr-file:// can resolve PDFs. */
   setProjectDir(path: string): Promise<void>
   /** Pick a location for a project JSON without writing it. Null if cancelled. */
@@ -30,6 +26,8 @@ export interface SlrBridge {
   readPdf(path: string): Promise<Uint8Array>
   /** Paths of `toFiles` relative to `fromFile`'s directory, POSIX-separated. */
   relativePaths(fromFile: string, toFiles: string[]): Promise<string[]>
+  /** `rels` (relative to `fromFile`'s dir) re-expressed relative to `toFile`'s dir. */
+  rebasePaths(fromFile: string, toFile: string, rels: string[]): Promise<string[]>
   /** Unsaved-changes coordination for a clean quit. */
   setDirty(dirty: boolean): void
   onRequestSave(cb: () => void): void
@@ -85,15 +83,9 @@ export class ElectronAdapter implements PlatformAdapter {
     return handle
   }
 
-  async saveProjectAs(
-    text: string,
-    suggestedName: string,
-  ): Promise<{ handle: SaveHandle; name: string } | null> {
-    const res = await bridge().saveProjectAs(text, suggestedName)
-    if (!res) return null
-    await bridge().setProjectDir(res.path)
-    pushRecent(RECENTS_KEY, { id: res.path, name: baseName(res.path) })
-    return { handle: { kind: 'electron', path: res.path }, name: baseName(res.path) }
+  async rebasePdfPaths(pdfPaths: string[], from: SaveHandle, to: SaveHandle): Promise<string[]> {
+    if (!from.path || !to.path || pdfPaths.length === 0) return pdfPaths
+    return bridge().rebasePaths(from.path, to.path, pdfPaths)
   }
 
   async getPdfSource(pdfPath: string, projectHandle: SaveHandle): Promise<PdfSource> {
