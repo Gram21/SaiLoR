@@ -82,6 +82,7 @@ npm run typecheck
 │   │   └── settings.ts   Theme + font-scale persistence (localStorage), applyTheme/applyFontScale
 │   ├── components/        React UI
 │   │   ├── Toolbar.tsx    Open ▾ / Save ▾ dropdowns, font controls, theme toggle, help button
+│   │   ├── SidebarToggle.tsx  Show/hide the paper list (in its header; moves to the toolbar when hidden)
 │   │   ├── Dropdown.tsx   Reusable click-to-open dropdown menu
 │   │   ├── PaperList.tsx  Left pane — paper list with search box and annotation status dots
 │   │   ├── Splitter.tsx   Drag handles between the three panes (widths persisted)

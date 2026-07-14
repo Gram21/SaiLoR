@@ -1,6 +1,7 @@
 import { useStore } from '../state/store'
 import { getPlatform } from '../platform'
 import { Dropdown, type MenuItem } from './Dropdown'
+import { SidebarToggle } from './SidebarToggle'
 
 /** Top bar: Open / Save menus, appearance controls, help, and the dirty indicator. */
 export function Toolbar() {
@@ -8,7 +9,6 @@ export function Toolbar() {
   const openRecent = useStore((s) => s.openRecent)
   const save = useStore((s) => s.save)
   const saveAs = useStore((s) => s.saveAs)
-  const toggleSidebar = useStore((s) => s.toggleSidebar)
   const sidebarCollapsed = useStore((s) => s.sidebarCollapsed)
   const project = useStore((s) => s.project)
   const projectName = useStore((s) => s.projectName)
@@ -50,21 +50,33 @@ export function Toolbar() {
 
   return (
     <header className="toolbar">
-      <button
-        type="button"
-        className="icon-btn"
-        title={sidebarCollapsed ? 'Show paper list' : 'Hide paper list'}
-        onClick={toggleSidebar}
-        disabled={!project}
+      {/* While the list is open its own header owns the toggle; once collapsed
+          the button has to live out here, or there'd be no way to bring it back.
+          The slot is always in the layout — hiding it rather than removing it
+          keeps the title from shifting sideways as the sidebar is toggled. */}
+      <span
+        className={`toolbar-toggle-slot${sidebarCollapsed ? '' : ' is-hidden'}`}
+        aria-hidden={!sidebarCollapsed}
       >
-        ☰
-      </button>
+        <SidebarToggle />
+      </span>
 
       <span className="app-title">SLR Helper</span>
 
       <div className="toolbar-actions">
         <Dropdown label="Open" title="Open a project" disabled={busy} items={openItems} />
         <Dropdown label="Save" title="Save the project" disabled={busy} items={saveItems} />
+      </div>
+
+      {/* The file name sits just left of the view controls; it carries the auto
+          margin that pushes both to the right edge. */}
+      <div className="toolbar-status">
+        {project && (
+          <span className="project-name">
+            {projectName || 'untitled'}
+            {dirty && <span className="dirty-dot" title="Unsaved changes">●</span>}
+          </span>
+        )}
       </div>
 
       <div className="toolbar-view">
@@ -112,15 +124,6 @@ export function Toolbar() {
         >
           ?
         </button>
-      </div>
-
-      <div className="toolbar-status">
-        {project && (
-          <span className="project-name">
-            {projectName || 'untitled'}
-            {dirty && <span className="dirty-dot" title="Unsaved changes">●</span>}
-          </span>
-        )}
       </div>
     </header>
   )

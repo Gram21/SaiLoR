@@ -68,7 +68,7 @@ The entire app state lives in a single Zustand store with immer middleware:
 | `dirty` | `boolean` | Unsaved changes flag; gates `beforeunload` guard |
 | `loadError` | `LoadError \| null` | Error overlay data |
 | `busy` | `boolean` | Disables toolbar buttons during async operations |
-| `sidebarCollapsed` | `boolean` | Paper list visibility |
+| `sidebarCollapsed` | `boolean` | Paper list visibility. Driven by `SidebarToggle`, which renders inside the paper list's own header while it is open and in the toolbar once collapsed — otherwise the button would disappear with the pane it reopens. |
 | `pdfSelection` | `string` | Latest text selected in the PDF viewer (for "grab from PDF") |
 | `theme` | `Theme` (`'light' \| 'dark'`) | Current app theme (persisted in localStorage via `src/state/settings.ts`) |
 | `fontScale` | `number` | Current font scale factor (0.7–2.0, persisted in localStorage) |
