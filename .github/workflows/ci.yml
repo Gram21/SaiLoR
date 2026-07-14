@@ -7,10 +7,18 @@ name: CI
 on:
   push:
     branches: [main]
+  # Every pull request, whatever it targets — a PR onto a release branch needs
+  # the same checks as one onto main. Deliberately *not* combined with a
+  # push-on-every-branch trigger: a branch with an open PR would then build
+  # twice for each push, once per trigger, for no extra signal.
   pull_request:
-    branches: [main]
   # Allow running the workflow manually from the Actions tab.
   workflow_dispatch:
+
+# Only the newest commit on a ref is worth checking; cancel the runs it superseded.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
