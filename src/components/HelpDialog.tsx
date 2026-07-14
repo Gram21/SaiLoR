@@ -17,6 +17,7 @@ const SHORTCUTS: Array<[string, string]> = [
   [`${MOD}+Shift+0`, 'Reset app font size'],
   ['Alt+↓  /  ]', 'Next paper'],
   ['Alt+↑  /  [', 'Previous paper'],
+  [`${MOD}+F`, 'Search within the PDF'],
   [`${MOD}+C / V / X / Z`, 'Copy / paste / cut / undo (native)'],
   ['F1', 'Open this help'],
 ]
@@ -97,6 +98,18 @@ export function HelpDialog() {
               ))}
             </tbody>
           </table>
+
+          <h3>License</h3>
+          <p>
+            SLR Helper is free software, released under the{' '}
+            <strong>GNU General Public License v3.0</strong> (GPL-3.0). You may use, study, share,
+            and modify it under the terms of that license; it comes with no warranty. The full
+            license text is in the <code>LICENSE</code> file distributed with the app, and online at{' '}
+            <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noreferrer">
+              gnu.org/licenses/gpl-3.0
+            </a>
+            .
+          </p>
         </div>
       </div>
     </div>

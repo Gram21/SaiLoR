@@ -165,6 +165,7 @@ Distribute the `release/` installers produced by `electron-builder`. The desktop
 | `Ctrl/Cmd + Shift + S` | Save as… |
 | `Ctrl/Cmd + Z` | Undo annotation change |
 | `Ctrl/Cmd + Shift + Z` / `Ctrl + Y` | Redo annotation change |
+| `Ctrl/Cmd + F` | Open the in-PDF search bar (focuses the field) |
 | `Ctrl/Cmd + +` / `-` / `0` | Zoom the PDF in / out / reset |
 | `Ctrl/Cmd + Shift + +` / `-` / `0` | App font size larger / smaller / reset |
 | `Alt + ↓` or `]` | Next paper |

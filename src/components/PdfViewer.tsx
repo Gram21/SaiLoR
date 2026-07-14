@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
@@ -10,6 +10,63 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
   import.meta.url,
 ).toString()
+
+// In-PDF search uses the CSS Custom Highlight API to tint matches without
+// mutating react-pdf's text-layer DOM. Highlight/CSS.highlights aren't in the
+// TS lib yet, so reach for them dynamically and degrade gracefully.
+const HL_NAME = 'slr-pdf-search'
+const HL_NAME_ACTIVE = 'slr-pdf-search-active'
+const highlightRegistry: Map<string, unknown> | undefined =
+  typeof CSS !== 'undefined' ? (CSS as unknown as { highlights?: Map<string, unknown> }).highlights : undefined
+const HighlightCtor: (new (...ranges: Range[]) => unknown) | undefined = (
+  globalThis as unknown as { Highlight?: new (...ranges: Range[]) => unknown }
+).Highlight
+const canHighlight = !!highlightRegistry && !!HighlightCtor
+
+function clearHighlights() {
+  highlightRegistry?.delete(HL_NAME)
+  highlightRegistry?.delete(HL_NAME_ACTIVE)
+}
+
+/** Find all ranges matching `query` within each text layer under `root`. */
+function findMatches(root: HTMLElement, query: string): Range[] {
+  const ranges: Range[] = []
+  const needle = query.toLowerCase()
+  if (!needle) return ranges
+  const layers = root.querySelectorAll<HTMLElement>('.react-pdf__Page__textContent')
+  layers.forEach((layer) => {
+    // Concatenate the layer's text nodes so matches can span multiple spans.
+    const walker = document.createTreeWalker(layer, NodeFilter.SHOW_TEXT)
+    const nodes: Text[] = []
+    const starts: number[] = []
+    let hay = ''
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      starts.push(hay.length)
+      nodes.push(n as Text)
+      hay += (n as Text).data
+    }
+    const lower = hay.toLowerCase()
+    const locate = (offset: number): { node: Text; offset: number } | null => {
+      for (let i = nodes.length - 1; i >= 0; i--) {
+        if (starts[i] <= offset) return { node: nodes[i], offset: offset - starts[i] }
+      }
+      return null
+    }
+    let idx = lower.indexOf(needle)
+    while (idx !== -1) {
+      const start = locate(idx)
+      const end = locate(idx + needle.length)
+      if (start && end) {
+        const range = document.createRange()
+        range.setStart(start.node, start.offset)
+        range.setEnd(end.node, end.offset)
+        ranges.push(range)
+      }
+      idx = lower.indexOf(needle, idx + needle.length)
+    }
+  })
+  return ranges
+}
 
 /** Middle pane: renders the current paper's PDF and captures text selection. */
 export function PdfViewer() {
@@ -33,6 +90,15 @@ export function PdfViewer() {
   const containerRef = useRef<HTMLDivElement>(null)
   const pageRefs = useRef<(HTMLDivElement | null)[]>([])
   const pageInputRef = useRef<HTMLInputElement>(null)
+
+  // In-PDF search.
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [matchCount, setMatchCount] = useState(0)
+  const [activeMatch, setActiveMatch] = useState(0)
+  const [textRenderTick, setTextRenderTick] = useState(0)
+  const matchesRef = useRef<Range[]>([])
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // PDF zoom lives in the store so keyboard shortcuts (Ctrl +/-) can drive it too.
   const zoom = useStore((s) => s.pdfZoom)
@@ -130,6 +196,119 @@ export function PdfViewer() {
     if (text.trim()) setPdfSelection(text)
   }
 
+  const focusSearchInput = () => {
+    const el = searchInputRef.current
+    if (!el) return
+    el.focus()
+    el.select()
+  }
+
+  const openSearch = () => {
+    // If already open, focus now; the effect below covers the just-opened case
+    // (the input isn't mounted yet on the open transition).
+    setSearchOpen(true)
+    focusSearchInput()
+  }
+
+  // Focus the search field once it mounts on open, so the user can type at once.
+  useEffect(() => {
+    if (searchOpen) focusSearchInput()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchOpen])
+
+  const closeSearch = () => {
+    setSearchOpen(false)
+    clearHighlights()
+  }
+
+  const goToMatch = (dir: 1 | -1) => {
+    const n = matchesRef.current.length
+    if (n === 0) return
+    setActiveMatch((prev) => (prev + dir + n) % n)
+  }
+
+  // Ctrl/Cmd+F opens the search bar and focuses it (overriding the browser find).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+        e.preventDefault()
+        openSearch()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // Clear highlights when the viewer unmounts.
+  useEffect(() => clearHighlights, [])
+
+  // (Re)compute matches when the query, page set, or a text layer finishes
+  // rendering changes. Recomputes against text layers already in the DOM.
+  useEffect(() => {
+    if (!searchOpen || !query) {
+      matchesRef.current = []
+      setMatchCount(0)
+      setActiveMatch(0)
+      clearHighlights()
+      return
+    }
+    const root = containerRef.current
+    const ranges = root ? findMatches(root, query) : []
+    matchesRef.current = ranges
+    setMatchCount(ranges.length)
+    setActiveMatch((prev) => (ranges.length ? Math.min(prev, ranges.length - 1) : 0))
+  }, [query, searchOpen, numPages, textRenderTick])
+
+  // Stable callback so the memoized pages below don't change identity (which
+  // would tear down and re-render the text layers on every search keystroke).
+  const onTextLayerRendered = useCallback(() => setTextRenderTick((t) => t + 1), [])
+
+  // Memoize the page elements so unrelated re-renders (typing in the search
+  // box, highlight updates) reuse the same element references. React then bails
+  // out of re-rendering the pages, keeping their text layers stable.
+  const pages = useMemo(
+    () =>
+      Array.from({ length: numPages }, (_, i) => (
+        <Page
+          key={i}
+          pageNumber={i + 1}
+          width={renderWidth}
+          inputRef={(el) => {
+            pageRefs.current[i] = el
+          }}
+          renderTextLayer
+          renderAnnotationLayer
+          onRenderTextLayerSuccess={onTextLayerRendered}
+        />
+      )),
+    [numPages, renderWidth, onTextLayerRendered],
+  )
+
+  // Paint the highlights and scroll the active match into view.
+  useEffect(() => {
+    const ranges = matchesRef.current
+    if (!searchOpen || ranges.length === 0) {
+      clearHighlights()
+      return
+    }
+    if (canHighlight && HighlightCtor && highlightRegistry) {
+      const others = ranges.filter((_, i) => i !== activeMatch)
+      highlightRegistry.set(HL_NAME, new HighlightCtor(...others))
+      const active = ranges[activeMatch]
+      highlightRegistry.set(HL_NAME_ACTIVE, active ? new HighlightCtor(active) : new HighlightCtor())
+    }
+    // Center the active match within the scroll container.
+    const active = ranges[activeMatch]
+    const root = containerRef.current
+    if (active && root) {
+      const rect = active.getBoundingClientRect()
+      const rootRect = root.getBoundingClientRect()
+      if (rect.height > 0) {
+        root.scrollTop += rect.top - rootRect.top - root.clientHeight / 2
+      }
+    }
+  }, [matchCount, activeMatch, searchOpen])
+
   if (!paperId) {
     return <div className="panel pdf empty">No paper selected.</div>
   }
@@ -189,6 +368,16 @@ export function PdfViewer() {
               </button>
             </div>
           )}
+          <button
+            type="button"
+            className={`icon-btn${searchOpen ? ' active' : ''}`}
+            title="Search in PDF (Ctrl+F)"
+            aria-label="Search in PDF"
+            aria-pressed={searchOpen}
+            onClick={() => (searchOpen ? closeSearch() : openSearch())}
+          >
+            🔍
+          </button>
           <div className="pdf-zoom" role="group" aria-label="Zoom">
             <button
               type="button"
@@ -222,6 +411,63 @@ export function PdfViewer() {
           </div>
         </div>
       </div>
+      {searchOpen && (
+        <div className="pdf-search" role="search">
+          <input
+            ref={searchInputRef}
+            className="pdf-search-input"
+            type="text"
+            placeholder="Search in PDF…"
+            aria-label="Search in PDF"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              setActiveMatch(0)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                goToMatch(e.shiftKey ? -1 : 1)
+              } else if (e.key === 'Escape') {
+                e.preventDefault()
+                closeSearch()
+              }
+            }}
+          />
+          <span className="pdf-search-count">
+            {query ? (matchCount ? `${activeMatch + 1} / ${matchCount}` : '0 / 0') : ''}
+          </span>
+          <button
+            type="button"
+            className="icon-btn"
+            title="Previous match (Shift+Enter)"
+            aria-label="Previous match"
+            onClick={() => goToMatch(-1)}
+            disabled={matchCount === 0}
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            title="Next match (Enter)"
+            aria-label="Next match"
+            onClick={() => goToMatch(1)}
+            disabled={matchCount === 0}
+          >
+            ›
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            title="Close search (Esc)"
+            aria-label="Close search"
+            onClick={closeSearch}
+          >
+            ×
+          </button>
+        </div>
+      )}
       <div
         className="pdf-scroll"
         ref={containerRef}
@@ -238,18 +484,7 @@ export function PdfViewer() {
             onLoadError={(err) => setError(String(err?.message ?? err))}
             loading={<div className="pdf-loading">Loading PDF…</div>}
           >
-            {Array.from({ length: numPages }, (_, i) => (
-              <Page
-                key={i}
-                pageNumber={i + 1}
-                width={renderWidth}
-                inputRef={(el) => {
-                  pageRefs.current[i] = el
-                }}
-                renderTextLayer
-                renderAnnotationLayer
-              />
-            ))}
+            {pages}
           </Document>
         ) : (
           <div className="pdf-loading">Loading PDF…</div>
