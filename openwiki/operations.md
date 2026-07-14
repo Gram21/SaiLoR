@@ -24,6 +24,20 @@ npm run dev:electron
 
 Sets `ELECTRON=1` via `cross-env`, which activates the `vite-plugin-electron` plugin in `vite.config.ts`. This builds `electron/main.ts` and `electron/preload.ts` alongside the renderer, then launches the Electron shell loading the Vite dev server URL.
 
+### Dev in Docker (optional)
+
+A separate `docker-compose.dev.yml` (with `Dockerfile.dev` and `Dockerfile.electron`) lets you develop without a local Node install. It is independent of the production `docker-compose.yml` — nothing runs on a plain `docker compose up` — and selects a target with a Compose **profile**:
+
+```bash
+# Browser dev server (Vite + HMR) on http://localhost:5173
+docker compose -f docker-compose.dev.yml --profile browser up --build
+
+# Build the Electron app (Linux AppImage) into ./release/
+docker compose -f docker-compose.dev.yml --profile electron run --rm electron
+```
+
+The browser-dev service bind-mounts the source for hot reload (set `VITE_USE_POLLING=1` if file changes aren't detected on macOS/Windows mounts). The electron service is a Debian image that runs `electron-builder`; Windows/macOS installers still need their native OS.
+
 ## Build
 
 ### Static SPA
@@ -57,7 +71,7 @@ npm test          # vitest run (single pass)
 npm run test:watch  # vitest in watch mode
 ```
 
-Tests live in `src/**/*.test.{ts,tsx}`. Currently `src/model/model.test.ts` covers the entire model layer. Vitest is configured with jsdom environment and global test APIs (describe/it/expect available without import, though the test file imports them explicitly).
+Tests live in `src/**/*.test.{ts,tsx}`. `src/model/model.test.ts` covers the model layer, and `src/state/store.test.ts` covers the store's undo/redo history (field-edit coalescing, add/remove undo, redo-stack clearing). Vitest is configured with jsdom environment and global test APIs (describe/it/expect available without import, though the test files import them explicitly).
 
 Test coverage:
 - Schema resolution: defaults, ids, duplicate names, max < min, repeatable detection
@@ -123,13 +137,16 @@ Distribute the `release/` installers produced by `electron-builder`. The desktop
 | `Ctrl/Cmd + O` | Open project file |
 | `Ctrl/Cmd + S` | Save |
 | `Ctrl/Cmd + Shift + S` | Save as… |
+| `Ctrl/Cmd + Z` | Undo annotation change |
+| `Ctrl/Cmd + Shift + Z` / `Ctrl + Y` | Redo annotation change |
+| `Ctrl/Cmd + +` / `-` / `0` | Zoom the PDF in / out / reset |
+| `Ctrl/Cmd + Shift + +` / `-` / `0` | App font size larger / smaller / reset |
 | `Alt + ↓` or `]` | Next paper |
 | `Alt + ↑` or `[` | Previous paper |
-| `Ctrl/Cmd + +` / `=` | Increase font size |
-| `Ctrl/Cmd + -` | Decrease font size |
-| `Ctrl/Cmd + 0` | Reset font size |
 | `F1` | Open help dialog |
-| `Ctrl/Cmd + C/V/X/Z` | Native copy/paste/cut/undo (browser or Electron Edit menu) |
+| `Ctrl/Cmd + C/V/X` | Native copy/paste/cut (browser or Electron Edit menu) |
+
+Note: plain `Ctrl/Cmd +/-/0` zooms the **PDF paper**; adding **Shift** scales the **app font**. (On a US keyboard "+" is `Shift+=`, so PDF zoom-in is `Ctrl+=`; on layouts with a dedicated `+` key it maps to `Ctrl++` directly.)
 
 Undo and redo operate on annotation changes. The store keeps session-only history snapshots in `src/state/store.ts`, and consecutive edits to the same field collapse into a single undo step instead of one step per keystroke. Add/remove instance actions also create their own history entries.
 

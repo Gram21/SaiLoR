@@ -75,35 +75,44 @@ npm run typecheck
 │   │   ├── recents.ts     Recent-projects list in localStorage (max 5)
 │   │   └── index.ts       getPlatform() singleton
 │   ├── state/
-│   │   ├── store.ts      Zustand + immer store (project, papers, save, annotations, theme, fontScale, pdfZoom, recents, help)
+│   │   ├── store.ts      Zustand + immer store (project, papers, save, annotations, undo/redo, theme, fontScale, pdfZoom, recents, help)
 │   │   └── settings.ts   Theme + font-scale persistence (localStorage), applyTheme/applyFontScale
 │   ├── components/        React UI
 │   │   ├── Toolbar.tsx    Open ▾ / Save ▾ dropdowns, font controls, theme toggle, help button
 │   │   ├── Dropdown.tsx   Reusable click-to-open dropdown menu
 │   │   ├── PaperList.tsx  Left pane — paper list with search box and annotation status dots
+│   │   ├── Splitter.tsx   Drag handles between the three panes (widths persisted)
 │   │   ├── PdfViewer.tsx  Middle pane — react-pdf, zoom controls, multi-page navigation, text selection capture
 │   │   ├── AnnotationPanel.tsx  Right pane — renders schema recursively
 │   │   ├── AnnotationNode.tsx   Recursive node (fields, groups, repeatable instances)
+│   │   ├── NodeName.tsx   Node label with ⓘ description tooltip (portaled)
 │   │   ├── Field.tsx      Input control (text/number/checkbox/enum dropdown) + "grab from PDF" button
 │   │   ├── ComboBox.tsx   Filterable dropdown for enum (options) string fields
 │   │   ├── HelpDialog.tsx Modal with app intro + keyboard shortcuts
 │   │   └── ErrorPanel.tsx Error overlay for load/save failures
 │   ├── hooks/
-│   │   ├── useKeybindings.ts  Open, save, save-as, paper nav, PDF zoom / font size, help shortcuts
-│   │   └── useDirtyGuard.ts   beforeunload guard when dirty
+│   │   ├── useKeybindings.ts       Open, save, save-as, undo/redo, paper nav, PDF zoom / font size, help
+│   │   ├── useDirtyGuard.ts        beforeunload guard when dirty (browser only)
+│   │   └── useElectronCloseGuard.ts  Electron quit dialog + Edit-menu undo/redo IPC wiring
 │   ├── App.tsx            Component composition, ?project= auto-load, welcome screen with recents, HelpDialog
 │   ├── main.tsx           React root (applies theme + font scale before render)
 │   └── styles/index.css   Full app styling (light/dark via data-theme attribute, font-scale CSS var)
 ├── samples/
-│   ├── project.example.json  Example project with 2 papers + schema
-│   └── pdfs/                 Sample PDFs
+│   ├── project.example.json  Example project (3 papers, incl. a multi-page PDF) + schema with an enum field
+│   └── pdfs/                 Sample PDFs (incl. multipage.pdf with an internal link)
 ├── projects/              Runtime volume for Docker deployment (JSON + PDFs mounted read-only)
 │   ├── README.md
 │   ├── project.example.json
 │   └── pdfs/
-├── Dockerfile             Multi-stage: Node build → nginx runtime
-├── docker-compose.yml     Builds and serves on port 8080 with ./projects mounted
+├── docs/                  In-depth authoring guide (annotation-schema.md)
+├── build/icon.png         App icon (also the macOS dock / packaged-bundle icon)
+├── public/favicon.svg     Browser favicon
+├── Dockerfile             Production: multi-stage Node build → nginx runtime
+├── docker-compose.yml     Production: builds and serves on port 8080 with ./projects mounted
 ├── nginx.conf             MIME fix for .mjs, /assets/ caching, /projects/ serving, SPA fallback
+├── Dockerfile.dev         Dev image: Vite dev server (browser)
+├── Dockerfile.electron    Dev image: electron-builder (Linux AppImage)
+├── docker-compose.dev.yml Dev stack — `browser` / `electron` Compose profiles
 ├── vite.config.ts         Vite + vitest + electron plugin config
 ├── tsconfig*.json         TypeScript project references (app / node)
 └── package.json           Scripts, deps, electron-builder config

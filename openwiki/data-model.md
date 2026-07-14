@@ -147,7 +147,7 @@ Reconciles an existing (possibly partial or loaded) value tree against the schem
 
 ### 3. Edit (in the Zustand store)
 
-The store actions `setFieldValue`, `addInstance`, and `removeInstance` mutate the annotation tree via immer. They navigate to the correct container using `containerAt(root, path)` which follows a `PathSeg[]` path (name + index pairs). Each mutation sets `dirty = true`.
+The store actions `setFieldValue`, `addInstance`, and `removeInstance` mutate the annotation tree via immer. They navigate to the correct container using `containerAt(root, path)` which follows a `PathSeg[]` path (name + index pairs). Each mutation sets `dirty = true` and pushes an undo snapshot onto the store's `past` stack (consecutive edits to the same field coalesce into one step) — see `undo()` / `redo()` in the architecture page.
 
 Cardinality guards:
 - `canAdd(def, current)` — true if `def.max === null` or `current < def.max`
@@ -180,7 +180,7 @@ The store catches these and sets `loadError` state, which `ErrorPanel` displays 
 
 ## Testing
 
-`src/model/model.test.ts` uses Vitest to test the entire model layer:
+`src/model/model.test.ts` uses Vitest to test the model layer (and `src/state/store.test.ts` covers the store's undo/redo history):
 - Schema resolution (defaults, ids, duplicate detection, max < min, repeatable detection)
 - Annotation tree init (min instances, default values, nested structure)
 - Add/remove guards (canAdd/canRemove with unbounded, finite, and min floor)

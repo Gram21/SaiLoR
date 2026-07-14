@@ -70,6 +70,7 @@ The entire app state lives in a single Zustand store with immer middleware:
 | `pdfZoom` | `number` | PDF zoom multiplier (0.4–3.0, session-only, default 1) |
 | `recents` | `RecentEntry[]` | Recently opened projects (max 5, from `platform.getRecents()`) |
 | `helpOpen` | `boolean` | Help dialog visibility |
+| `past` / `future` | `HistoryEntry[]` | Undo/redo stacks for annotation edits (session-only, capped at 100). Each entry is `{ project, paperId }`; thanks to immer's structural sharing, snapshots are cheap references |
 
 ### Key Actions
 
@@ -84,6 +85,7 @@ The entire app state lives in a single Zustand store with immer middleware:
 - **`toggleTheme()` / `setTheme(theme)`** — flips or sets the app theme, applies via `applyTheme()` (sets `data-theme` attribute on `<html>`)
 - **`increaseFont()` / `decreaseFont()` / `resetFont()`** — adjusts `fontScale` by ±0.1 (clamped to 0.7–2.0), applies via `applyFontScale()` (sets `--app-font-scale` CSS variable)
 - **`zoomInPdf()` / `zoomOutPdf()` / `resetPdfZoom()`** — adjusts `pdfZoom` by ±0.2 (clamped to 0.4–3.0, rounded to 2 decimals) or resets to 1; session-only, not persisted
+- **`undo()` / `redo()`** — swap the current project snapshot with one from the `past`/`future` stack (and switch to the affected paper). The mutating actions push a snapshot before applying; consecutive edits to the *same* field coalesce into one undo step (a module-level `lastFieldKey` tracks this), while add/remove/paper-switch reset it. History is cleared on project load.
 - **`setHelpOpen(open)`** — shows/hides the help dialog
 
 The `containerAt(root, path)` helper walks the annotation tree following `PathSeg[]` (name + index pairs) to reach the container for a given path.
@@ -95,9 +97,10 @@ App (src/App.tsx)
 ├── Toolbar (src/components/Toolbar.tsx)
 │     Open ▾ dropdown (Open file… + recent projects) + Save ▾ dropdown (Save / Save as…)
 │     Font controls (A− A A+), theme toggle (☾/☀), help (?)
-├── [if project loaded: workspace]
+├── [if project loaded: workspace — a CSS grid whose column widths come from resizable panes]
 │   ├── PaperList (src/components/PaperList.tsx)
 │   │     List of papers with search box; green dot if hasAnnotations(); click to select
+│   ├── Splitter (src/components/Splitter.tsx) ×2  — drag handles between the panes
 │   ├── PdfViewer (src/components/PdfViewer.tsx)
 │   │     react-pdf Document+Page; ResizeObserver for width; zoom controls; multi-page navigation; text selection capture
 │   └── AnnotationPanel (src/components/AnnotationPanel.tsx)
@@ -148,7 +151,7 @@ PDF source resolution is async: `getPlatform().getPdfSource(paper.pdf, saveHandl
 
 **`electron/main.ts`** is a thin main process:
 
-- **Window**: 1400×900 `BrowserWindow`, context isolation enabled, node integration disabled, preload script loaded.
+- **Window**: 1400×900 `BrowserWindow`, context isolation enabled, node integration disabled, preload script loaded. The taskbar/dock icon is set from `build/icon.png` via `nativeImage` (and `app.dock.setIcon` on macOS so it shows in dev, not just the packaged bundle).
 - **Dev vs prod**: loads `VITE_DEV_SERVER_URL` in dev, `dist/index.html` in production.
 - **`slr-file://` protocol**: registered as privileged (secure, stream, fetch API). Handler resolves paths relative to `projectDir` with traversal guard (`path.resolve` + prefix check). Returns 403 for traversal attempts, 404 for missing files.
 - **IPC handlers**:
@@ -157,15 +160,22 @@ PDF source resolution is async: `getPlatform().getPdfSource(paper.pdf, saveHandl
   - `project:save` — `writeFile` to given path
   - `project:saveAs` — `dialog.showSaveDialog` → `writeFile`
   - `project:setDir` — sets `projectDir` from the project file's directory
-- **Menu**: custom template with File, Edit, View, Window menus. The View menu is hand-built (not the default `{ role: 'viewMenu' }`) and deliberately omits zoom roles so that `Ctrl +/-/0` reach the renderer for PDF zoom (and `Ctrl+Shift +/-/0` for app font scaling) instead of triggering native browser/Electron zoom.
+  - `app:setDirty` — the renderer reports its unsaved-changes state (drives the quit dialog)
+  - `app:saveComplete` — the renderer reports the result of a save it was asked to run before quitting
+- **Menu**: custom template with File, Edit, View, Window menus.
+  - The **Edit** menu is hand-built: **Undo/Redo** send `app:undo` / `app:redo` to the renderer (routing to the store's history) rather than the native text-undo role, so undo works app-wide; cut/copy/paste/selectAll keep their native roles.
+  - The **View** menu is hand-built (not the default `{ role: 'viewMenu' }`) and deliberately omits zoom roles so that `Ctrl +/-/0` reach the renderer for PDF zoom (and `Ctrl+Shift +/-/0` for app font scaling) instead of triggering native browser/Electron zoom.
+- **Unsaved-changes quit flow**: a window `close` handler (`promptUnsavedChanges`) intercepts the close/quit when `isDirty` is set, and shows a native **Save / Don't Save / Cancel** dialog. "Save" asks the renderer to save (`app:requestSave`) and closes once it reports back; "Don't Save" closes discarding changes. A `before-quit` flag lets the guard resume `app.quit()` after confirmation (so Cmd+Q fully quits on macOS, where destroying the window alone would not).
 
-**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods including `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, and `getPdfSource`. This `window.slr` object is the detection signal for `isElectron()`.
+**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods: `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, plus the quit/menu coordination — `setDirty`, `onRequestSave`, `saveComplete`, `onUndo`, `onRedo`. This `window.slr` object is the detection signal for `isElectron()`.
 
 ## Hooks
 
 - **`useKeybindings`** (`src/hooks/useKeybindings.ts`): Global keyboard shortcuts registered on `window.keydown`. Handles open (Ctrl/Cmd+O), save (Ctrl/Cmd+S), save-as (Ctrl/Cmd+Shift+S), paper navigation (Alt+↓/↑, `[`/`]`), zoom/font (Ctrl/Cmd + `+/=/-`/`0` → PDF zoom; add Shift → app font size), and help (F1). Paper navigation skips when typing in a field (unless Alt is held). Zoom/font detection matches `e.key` and `e.code` to handle numpad and international layouts; reset is detected by the digit-0 `e.code` (Shift-independent) to avoid the German Shift+0 → `=` clash. Copy/cut/paste/undo are left to the browser/Electron Edit menu.
 
-- **`useDirtyGuard`** (`src/hooks/useDirtyGuard.ts`): Registers a `beforeunload` listener that calls `e.preventDefault()` when `dirty` is true, triggering the browser's "unsaved changes" confirmation.
+- **`useDirtyGuard`** (`src/hooks/useDirtyGuard.ts`): **Browser only.** Registers a `beforeunload` listener that calls `e.preventDefault()` when `dirty` is true, triggering the browser's "unsaved changes" confirmation. It is skipped under Electron (`isElectron()`), because a `beforeunload` that returns a value there silently cancels the quit with no dialog — Electron handles unsaved changes via a native dialog in the main process instead (see `useElectronCloseGuard` and the quit flow below).
+
+- **`useElectronCloseGuard`** (`src/hooks/useElectronCloseGuard.ts`): **Electron only.** Wires the renderer to the main process for a clean quit and for the Edit menu: it pushes the current `dirty` state to main (`slr.setDirty`), runs a save when main asks after the user picks "Save" in the native close dialog (`slr.onRequestSave` → `save()` → `slr.saveComplete(ok)`), and routes the Edit-menu Undo/Redo (`slr.onUndo` / `slr.onRedo`) to the store's `undo()` / `redo()`.
 
 ## Settings & Theming (`src/state/settings.ts`)
 
@@ -173,6 +183,7 @@ App appearance is controlled by a settings module that persists to `localStorage
 
 - **Theme**: `'light' | 'dark'` — defaults to OS preference (`prefers-color-scheme`) on first load. `applyTheme()` sets `document.documentElement.dataset.theme`. CSS uses `:root[data-theme='dark']` selectors so the theme is user-controlled, not OS-only.
 - **Font scale**: float from 0.7 to 2.0 (step 0.1). `applyFontScale()` sets the `--app-font-scale` CSS variable on `<html>`. The base font size is `calc(14px * var(--app-font-scale))` and most text sizes use `rem` units so they scale proportionally. The PDF paper itself is always rendered on a white background regardless of theme.
+- **Pane widths**: the left (paper list) and right (annotations) pane widths are persisted via `loadPaneWidths()` / `savePaneWidths()` (localStorage, clamped). `App.tsx` holds them in state, applies them as the workspace grid template, and updates them as the `Splitter` drag handles are dragged.
 
 `src/main.tsx` calls `applyTheme(loadTheme())` and `applyFontScale(loadFontScale())` before rendering React to avoid a flash of unstyled or wrong-theme content on startup.
 
