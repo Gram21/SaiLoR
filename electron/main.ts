@@ -1,6 +1,7 @@
-import { app, BrowserWindow, dialog, ipcMain, protocol, net, Menu, nativeImage } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, protocol, net, Menu, nativeImage, screen } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { readFile, writeFile } from 'node:fs/promises'
+import { readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -32,10 +33,82 @@ protocol.registerSchemesAsPrivileged([
   },
 ])
 
+// ---- Window state persistence (size/position across restarts) ----
+
+const DEFAULT_WIDTH = 1920
+const DEFAULT_HEIGHT = 1080
+
+interface WindowState {
+  width: number
+  height: number
+  x?: number
+  y?: number
+  isMaximized?: boolean
+}
+
+const windowStateFile = () => path.join(app.getPath('userData'), 'window-state.json')
+
+/** Read the persisted window state, falling back to the default size. */
+function loadWindowState(): WindowState {
+  try {
+    const s = JSON.parse(readFileSync(windowStateFile(), 'utf-8')) as Partial<WindowState>
+    if (typeof s.width === 'number' && typeof s.height === 'number') {
+      return {
+        width: s.width,
+        height: s.height,
+        x: typeof s.x === 'number' ? s.x : undefined,
+        y: typeof s.y === 'number' ? s.y : undefined,
+        isMaximized: Boolean(s.isMaximized),
+      }
+    }
+  } catch {
+    // No saved state (first run) or unreadable file — use defaults.
+  }
+  return { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT }
+}
+
+/** Only reuse a saved position if it still overlaps a connected display, so a
+ *  disconnected monitor can't strand the window off-screen. */
+function positionIsOnScreen(state: WindowState): boolean {
+  if (state.x === undefined || state.y === undefined) return false
+  return screen.getAllDisplays().some((d) => {
+    const wa = d.workArea
+    return (
+      state.x! < wa.x + wa.width &&
+      state.x! + state.width > wa.x &&
+      state.y! < wa.y + wa.height &&
+      state.y! + state.height > wa.y
+    )
+  })
+}
+
+/** Persist the window's current size/position (using the pre-maximize "normal"
+ *  bounds so restore returns to the size the user actually chose). */
+function saveWindowState(win: BrowserWindow) {
+  if (win.isDestroyed()) return
+  const maximized = win.isMaximized() || win.isFullScreen()
+  const bounds = maximized ? win.getNormalBounds() : win.getBounds()
+  const state: WindowState = {
+    width: bounds.width,
+    height: bounds.height,
+    x: bounds.x,
+    y: bounds.y,
+    isMaximized: maximized,
+  }
+  try {
+    writeFileSync(windowStateFile(), JSON.stringify(state))
+  } catch {
+    // Non-critical (e.g. read-only userData) — ignore.
+  }
+}
+
 function createWindow() {
+  const state = loadWindowState()
+  const useSavedPosition = positionIsOnScreen(state)
   const win = new BrowserWindow({
-    width: 1400,
-    height: 900,
+    width: state.width,
+    height: state.height,
+    ...(useSavedPosition ? { x: state.x, y: state.y } : {}),
     // Window/taskbar icon (Windows/Linux; ignored on macOS, which uses the dock).
     ...(appIcon.isEmpty() ? {} : { icon: appIcon }),
     webPreferences: {
@@ -45,7 +118,24 @@ function createWindow() {
       sandbox: false,
     },
   })
+  if (state.isMaximized) win.maximize()
   mainWindow = win
+
+  // Persist size/position when the user changes it. Resize/move are debounced to
+  // avoid a write per pixel; close saves the final state synchronously.
+  let saveTimer: ReturnType<typeof setTimeout> | null = null
+  const scheduleSave = () => {
+    if (saveTimer) clearTimeout(saveTimer)
+    saveTimer = setTimeout(() => saveWindowState(win), 400)
+  }
+  win.on('resize', scheduleSave)
+  win.on('move', scheduleSave)
+  win.on('maximize', scheduleSave)
+  win.on('unmaximize', scheduleSave)
+  win.on('close', () => {
+    if (saveTimer) clearTimeout(saveTimer)
+    saveWindowState(win)
+  })
 
   win.on('closed', () => {
     if (mainWindow === win) mainWindow = null
