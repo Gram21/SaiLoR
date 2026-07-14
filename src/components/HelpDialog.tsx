@@ -67,7 +67,7 @@ function StartHelp() {
     <>
       <h3>What this tool does</h3>
       <p>
-        SLR Helper supports <strong>Systematic Literature Reviews</strong>. Everything for a review
+        SaiLoR supports <strong>Systematic Literature Reviews</strong>. Everything for a review
         lives in a single <strong>project JSON file</strong>, which holds two things: an{' '}
         <strong>annotation schema</strong> — the fields you want to extract from every paper — and
         the <strong>list of papers</strong>, each pointing at its PDF.
@@ -254,7 +254,7 @@ export function HelpDialog() {
       >
         <div className="modal-head">
           <strong>
-            SLR Helper — Help{' '}
+            SaiLoR — Help{' '}
             <span className="help-mode">
               {mode === 'editor'
                 ? 'Editing the annotation JSON'
@@ -284,7 +284,7 @@ export function HelpDialog() {
 
           <h3>License</h3>
           <p>
-            SLR Helper is free software, released under the{' '}
+            SaiLoR is free software, released under the{' '}
             <strong>GNU General Public License v3.0</strong> (GPL-3.0). You may use, study, share,
             and modify it under the terms of that license; it comes with no warranty. The full
             license text is in the <code>LICENSE</code> file distributed with the app, and online at{' '}

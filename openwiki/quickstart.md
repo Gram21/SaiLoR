@@ -1,8 +1,8 @@
-# SLR Helper — Quickstart
+# SaiLoR — Quickstart
 
-## What is SLR Helper?
+## What is SaiLoR?
 
-SLR Helper is a tool for reviewers conducting **Systematic Literature Reviews (SLRs)**. You open a single JSON "project" file that bundles two things:
+SaiLoR is a tool for reviewers conducting **Systematic Literature Reviews (SLRs)** — the letters are in the name: **S**ai**L**o**R**. You open a single JSON "project" file that bundles two things:
 
 1. **An annotation schema** — a nested, cardinality-controlled taxonomy defining what fields to extract from each paper.
 2. **A list of papers** — each with a PDF path and an annotation tree that gets filled in as you review.

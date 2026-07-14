@@ -1,35 +1,50 @@
 <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="iconDoc" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="sail" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e4f1f6"/>
+    </linearGradient>
+    <linearGradient id="jib" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#33a9c6"/>
       <stop offset="1" stop-color="#1c7f9a"/>
     </linearGradient>
+    <linearGradient id="hull" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c7f9a"/>
+      <stop offset="1" stop-color="#12667e"/>
+    </linearGradient>
   </defs>
 
-  <!-- Transparent background: a free-form glyph (document + magnifier), centered
-       with padding. The teal document is the main mass, so white/outlined
-       details stay legible on any background. -->
-  <g transform="translate(512 512) scale(1.2) translate(-571.5 -533.5)">
-    <!-- Document / page (ARDoCo teal) -->
-    <rect x="272" y="196" width="420" height="560" rx="40" ry="40" fill="url(#iconDoc)"/>
+  <!-- Transparent background, free-form glyph: a boat whose mainsail is a page of
+       text with one line highlighted (the annotation) and whose jib carries a
+       checkmark (the review). The silhouette carries the icon at small sizes; the
+       sail details are a bonus at large ones. Teal + highlight red, as in the app. -->
+  <g transform="translate(-8 -40)">
+    <!-- Mast -->
+    <rect x="501" y="130" width="22" height="615" rx="11" fill="#17708a"/>
 
-    <!-- Text lines -->
-    <rect x="336" y="288" width="292" height="34" rx="17" fill="#ffffff"/>
-    <!-- Highlighted line (ARDoCo highlight red) -->
-    <rect x="336" y="366" width="292" height="34" rx="17" fill="#b71c1c"/>
-    <rect x="336" y="444" width="230" height="34" rx="17" fill="#ffffff"/>
-    <rect x="336" y="522" width="292" height="34" rx="17" fill="#ffffff"/>
-    <rect x="336" y="600" width="180" height="34" rx="17" fill="#ffffff"/>
+    <!-- Jib (front sail), carrying the checkmark -->
+    <path d="M 501 230 L 501 738 L 215 738 C 260 560 340 380 501 230 Z" fill="url(#jib)"/>
+    <path d="M 322 596 L 360 636 L 436 540" fill="none" stroke="#ffffff" stroke-width="34"
+          stroke-linecap="round" stroke-linejoin="round"/>
 
-    <!-- Magnifying glass overlapping lower-right, with checkmark inside lens -->
-    <g>
-      <!-- handle -->
-      <line x1="726" y1="726" x2="836" y2="836" stroke="#17708a" stroke-width="70" stroke-linecap="round"/>
-      <line x1="726" y1="726" x2="836" y2="836" stroke="#ffffff" stroke-width="44" stroke-linecap="round"/>
-      <!-- lens -->
-      <circle cx="632" cy="632" r="150" fill="#ffffff" stroke="#17708a" stroke-width="30"/>
-      <!-- checkmark -->
-      <path d="M 566 634 L 614 682 L 706 578" fill="none" stroke="#2698ba" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
-    </g>
+    <!-- Mainsail: a page. Outlined, or it would vanish against a light desktop -
+         it is the largest shape in the glyph and very nearly white. -->
+    <path d="M 523 165 L 523 738 L 880 738 C 830 550 700 320 523 165 Z"
+          fill="url(#sail)" stroke="#17708a" stroke-width="18" stroke-linejoin="round"/>
+
+    <!-- Lines of text, growing with the sail. The third one is highlighted. -->
+    <rect x="556" y="290" width="36"  height="34" rx="17" fill="#8fb9c6"/>
+    <rect x="556" y="372" width="87"  height="34" rx="17" fill="#8fb9c6"/>
+    <rect x="556" y="454" width="138" height="34" rx="17" fill="#b71c1c"/>
+    <rect x="556" y="536" width="189" height="34" rx="17" fill="#8fb9c6"/>
+    <rect x="556" y="618" width="240" height="34" rx="17" fill="#8fb9c6"/>
+
+    <!-- Hull -->
+    <path d="M 168 748 H 902 L 802 902 Q 782 928 744 928 H 326 Q 288 928 268 902 Z"
+          fill="url(#hull)"/>
+
+    <!-- Water -->
+    <path d="M 130 958 q 46 -34 92 0 t 92 0 t 92 0 t 92 0 t 92 0 t 92 0 t 92 0 t 92 0"
+          fill="none" stroke="#33a9c6" stroke-width="26" stroke-linecap="round" opacity="0.85"/>
   </g>
 </svg>

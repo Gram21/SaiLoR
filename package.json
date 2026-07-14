@@ -1,7 +1,7 @@
 {
-  "name": "slr-helper",
+  "name": "sailor",
   "version": "0.3.0",
-  "description": "A tool to assist reviewers during Systematic Literature Reviews (SLR).",
+  "description": "SaiLoR - a tool to assist reviewers during Systematic Literature Reviews (SLR).",
   "author": "",
   "license": "GPL-3.0-only",
   "type": "module",
@@ -14,7 +14,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "icon": "electron scripts/make-icon.cjs"
   },
   "dependencies": {
     "immer": "^10.1.1",
@@ -39,8 +40,8 @@
     "vitest": "^3.2.4"
   },
   "build": {
-    "appId": "org.slr.helper",
-    "productName": "SLR Helper",
+    "appId": "io.github.gram21.sailor",
+    "productName": "SaiLoR",
     "asar": true,
     "compression": "maximum",
     "electronLanguages": [

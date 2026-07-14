@@ -106,7 +106,7 @@ export function App() {
       ) : (
         <div className="welcome">
           <div className="welcome-box">
-            <h1>SLR Helper</h1>
+            <h1>SaiLoR</h1>
             <p>Open a project JSON file to begin annotating, or set one up.</p>
             <button type="button" className="primary" onClick={() => void openProject()}>
               Open project…
@@ -190,7 +190,7 @@ export function App() {
                   </span>
                 </div>
               )}
-              <span className="version-label">SLR Helper v{appVersion}</span>
+              <span className="version-label">SaiLoR v{appVersion}</span>
             </div>
           </div>
         </div>

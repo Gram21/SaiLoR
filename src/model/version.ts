@@ -13,8 +13,8 @@
  * cached (see CHECK_INTERVAL_MS) rather than fetched on every launch.
  */
 
-export const RELEASES_URL = 'https://github.com/Gram21/slr-helper/releases'
-const LATEST_RELEASE_API = 'https://api.github.com/repos/Gram21/slr-helper/releases/latest'
+export const RELEASES_URL = 'https://github.com/Gram21/SaiLoR/releases'
+const LATEST_RELEASE_API = 'https://api.github.com/repos/Gram21/SaiLoR/releases/latest'
 
 /** How long a check result stays fresh. */
 export const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000
@@ -44,7 +44,7 @@ export interface OsInfo {
  * The installer matching this machine, from a release's assets.
  *
  * Matching is by the OS/arch we put in the artifact names
- * (`SLR Helper-0.2.0-macos-arm64.dmg`), so it stays correct as long as
+ * (`SaiLoR-0.3.0-macos-arm64.dmg`), so it stays correct as long as
  * package.json's `artifactName` patterns do. Returns null when nothing matches
  * — the caller then falls back to the release page rather than offering the
  * wrong binary.

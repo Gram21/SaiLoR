@@ -1,10 +1,10 @@
 services:
-  slr-helper:
+  sailor:
     build:
       context: .
       dockerfile: Dockerfile
-    image: slr-helper:latest
-    container_name: slr-helper
+    image: sailor:latest
+    container_name: sailor
     ports:
       # host:container — browse to http://localhost:8080
       - "8080:80"

@@ -2,7 +2,7 @@
 
 ## Overview
 
-SLR Helper is a single-codebase React app that runs as both an Electron desktop application and a static web SPA. The key architectural seam is the **PlatformAdapter** interface, which abstracts all file I/O and PDF loading so the React UI is identical in both runtimes.
+SaiLoR is a single-codebase React app that runs as both an Electron desktop application and a static web SPA. The key architectural seam is the **PlatformAdapter** interface, which abstracts all file I/O and PDF loading so the React UI is identical in both runtimes.
 
 ## Platform Adapter Pattern
 
@@ -158,11 +158,11 @@ The **grab-from-PDF** button (⧉) reads `useStore.getState().pdfSelection` and 
 
 ### Update check
 
-The start screen shows the running version at the bottom (`SLR Helper v0.1.0`) and, when a newer release exists, a notice linking to it. `src/model/version.ts` fetches `api.github.com/repos/Gram21/slr-helper/releases/latest` and compares the tag with `__APP_VERSION__` — injected from `package.json` by `vite.config.ts`, so package.json stays the single source of truth for the version.
+The start screen shows the running version at the bottom (`SaiLoR v0.1.0`) and, when a newer release exists, a notice linking to it. `src/model/version.ts` fetches `api.github.com/repos/Gram21/SaiLoR/releases/latest` and compares the tag with `__APP_VERSION__` — injected from `package.json` by `vite.config.ts`, so package.json stays the single source of truth for the version.
 
 **This only works while the repository is public.** GitHub answers **404** to an unauthenticated request for a private repo's releases, and the app is *distributed* — embedding a token to get around that would ship a credential to every user, so we don't. The check is therefore written to fail silently: a 404 (private), 403 (rate-limited), network error, draft release, or unparseable version all yield `null`, and the app simply shows no notice. It starts working the moment the repo is made public, with no code change.
 
-When a newer release exists, the notice offers a **direct download of the installer for this machine** rather than dumping the user on the releases page: `pickInstaller` matches the release's assets against the OS/arch reported by `getOsInfo()` (Electron exposes `process.platform`/`process.arch` through the preload bridge; the browser returns `null`, since a web deployment has no installer and updates by redeploying). Matching keys off the OS/arch we bake into the artifact names (`SLR Helper-0.2.0-macos-arm64.dmg`), so it stays correct as long as package.json's `artifactName` patterns do. When nothing matches it offers **nothing** rather than the wrong binary, and the release-notes link is always there as a fallback.
+When a newer release exists, the notice offers a **direct download of the installer for this machine** rather than dumping the user on the releases page: `pickInstaller` matches the release's assets against the OS/arch reported by `getOsInfo()` (Electron exposes `process.platform`/`process.arch` through the preload bridge; the browser returns `null`, since a web deployment has no installer and updates by redeploying). Matching keys off the OS/arch we bake into the artifact names (`SaiLoR-0.2.0-macos-arm64.dmg`), so it stays correct as long as package.json's `artifactName` patterns do. When nothing matches it offers **nothing** rather than the wrong binary, and the release-notes link is always there as a fallback.
 
 `isNewerVersion` compares numeric components, not strings (`0.10.0` > `0.9.0`, which a string compare gets wrong), strips a leading `v`, and sorts a pre-release below its release (`1.0.0-beta` < `1.0.0`). It never claims an update from a version it cannot parse.
 

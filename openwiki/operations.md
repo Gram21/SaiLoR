@@ -62,7 +62,9 @@ Sets `ELECTRON=1`, builds the SPA + Electron processes, then runs `electron-buil
 | Windows | nsis |
 | Linux | AppImage |
 
-Output directory: `release/`. The `appId` is `org.slr.helper`, product name "SLR Helper". ASAR packaging is enabled.
+Output directory: `release/`. The `appId` is `io.github.gram21.sailor`, product name "SaiLoR". ASAR packaging is enabled.
+
+**App icon.** `build/icon.svg` is the source of truth; `build/icon.png` (1024×1024, transparent) is generated from it with `npm run icon` and committed, because electron-builder and the dock/taskbar need a raster icon. The script (`scripts/make-icon.cjs`) rasterizes the SVG using the Chromium that Electron already ships, so there is no extra image toolchain to install. Re-run it whenever the SVG changes. `public/favicon.svg` is the web favicon and is maintained by hand alongside it.
 
 **Package-size optimizations** (in the `build` config): the renderer and main process are fully bundled by Vite, so nothing needs `node_modules` at runtime — the `files` list is `dist/**/*` + `dist-electron/**/*` + `build/icon.png`, with `!node_modules/**/*` (drops ~100 MB, mostly the unused native `canvas` dep pulled in by `pdfjs-dist`) and `!**/*.map` (source maps stay in the web `dist/` but are excluded from the app). `electronLanguages: ["en-US"]` keeps only one Chromium locale (~40 MB → ~0.5 MB), and `compression: "maximum"` shrinks the installer. These take the Linux AppImage from ~137 MB to ~80 MB. The remaining size is the Electron/Chromium runtime itself, which is fixed. Node integration is already disabled in the renderer (`contextIsolation: true`, `nodeIntegration: false`).
 
@@ -114,13 +116,13 @@ SKIP_INSTALL=1 ./scripts/build-electron.sh   # skip `npm ci`
 
 **`electron-builder --publish never` is load-bearing.** Its default is `onTagOrDraft`, so on CI (which it auto-detects) against a tag ref it tries to publish to GitHub *itself* and dies with `GitHub Personal Access Token is not set … "GH_TOKEN"`. We don't want it publishing: the release workflow attaches the artifacts with `softprops/action-gh-release`. `never` makes the build a pure build — no token needed, and the script behaves identically on a laptop and on CI. Don't drop the flag (or add a `GH_TOKEN`) unless you intend to move publishing into electron-builder.
 
-**macOS code signing.** The builds are **not** signed with an Apple Developer ID and are **not** notarized. Left alone, electron-builder ships the app with only the linker-signed stub the toolchain emits — not a valid bundle signature (`codesign --verify` fails; the identifier reads `Electron`, not our appId). Once downloaded, the app also carries the quarantine flag, and macOS reports that combination as **"SLR Helper is damaged and can't be opened"** — a dead end, since the usual right-click → *Open* escape hatch does not apply to "damaged".
+**macOS code signing.** The builds are **not** signed with an Apple Developer ID and are **not** notarized. Left alone, electron-builder ships the app with only the linker-signed stub the toolchain emits — not a valid bundle signature (`codesign --verify` fails; the identifier reads `Electron`, not our appId). Once downloaded, the app also carries the quarantine flag, and macOS reports that combination as **"SaiLoR is damaged and can't be opened"** — a dead end, since the usual right-click → *Open* escape hatch does not apply to "damaged".
 
 `scripts/afterPack.cjs` therefore **ad-hoc signs** the bundle (`codesign --force --deep --sign -`). That costs nothing — no Apple account — and produces a signature that actually verifies, which downgrades the error to the ordinary *"unidentified developer"* prompt the user can bypass (right-click → *Open*, or *System Settings → Privacy & Security → Open Anyway*). The hook no-ops when `CSC_LINK`/`CSC_NAME` is set, so it never clobbers a real signature.
 
 To remove the prompt entirely you need the **Apple Developer Program** ($99/yr): add a *Developer ID Application* certificate and set `CSC_LINK` (base64 `.p12`) + `CSC_KEY_PASSWORD`, plus `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID` for notarization, as repo secrets exposed to the release job. electron-builder then signs and notarizes automatically.
 
-Users who already have a "damaged" copy can fix it in place by clearing the quarantine flag: `xattr -cr "/Applications/SLR Helper.app"`.
+Users who already have a "damaged" copy can fix it in place by clearing the quarantine flag: `xattr -cr "/Applications/SaiLoR.app"`.
 
 **macOS architectures.** The mac target builds **both** `arm64` (Apple Silicon) and `x64` (Intel) dmgs — the first release shipped arm64 only, leaving Intel users with nothing that ran. `artifactName` puts the arch in the file name so the two are tellable apart.
 
@@ -160,13 +162,15 @@ The `nginx.conf` adds the correct MIME type for `.mjs` files (needed by the pdf.
 Equivalent raw Docker commands:
 
 ```bash
-docker build -t slr-helper .
-docker run -d -p 8080:80 -v "$PWD/samples:/usr/share/nginx/html/projects:ro" slr-helper
+docker build -t sailor .
+docker run -d -p 8080:80 -v "$PWD/samples:/usr/share/nginx/html/projects:ro" sailor
 ```
 
 ### C. Desktop
 
 Distribute the `release/` installers produced by `electron-builder`. The desktop app opens local JSON files via native dialog and serves PDFs through the `slr-file://` protocol with no server needed.
+
+**User data after the rename.** The Electron user-data directory follows the product name, so desktop settings and recents now live in `~/Library/Application Support/SaiLoR` on macOS (and the platform equivalents elsewhere) instead of the old `SLR Helper` folder. On first run the app migrates the old folder, so upgrading users keep their recent projects and window size.
 
 ## Keyboard Shortcuts
 

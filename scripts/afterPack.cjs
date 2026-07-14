@@ -10,7 +10,7 @@ const path = require('node:path')
  * "Electron" rather than our appId). Once such an app is downloaded it also
  * carries the quarantine flag, and macOS reports the combination as
  *
- *     "SLR Helper" is damaged and can't be opened.
+ *     "SaiLoR" is damaged and can't be opened.
  *
  * which is a dead end for the user — the usual right-click → Open escape hatch
  * does not apply to "damaged".

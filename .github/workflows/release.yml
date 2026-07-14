@@ -48,7 +48,7 @@ jobs:
       - name: Upload build artifacts to the workflow run
         uses: actions/upload-artifact@v4
         with:
-          name: slr-helper-${{ matrix.os }}
+          name: sailor-${{ matrix.os }}
           path: ${{ matrix.artifacts }}
           if-no-files-found: error
 

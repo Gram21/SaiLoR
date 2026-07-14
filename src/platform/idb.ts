@@ -4,6 +4,8 @@
  * they survive a reload — reopening one only needs a permission re-grant.
  */
 
+// Kept at the pre-rename name on purpose: renaming the database would strand
+// every existing user's saved handles, i.e. silently empty their recents list.
 const DB_NAME = 'slr-helper'
 const STORE = 'handles'
 const VERSION = 1

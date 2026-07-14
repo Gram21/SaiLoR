@@ -1,6 +1,6 @@
-# Authoring an SLR Helper project file
+# Authoring a SaiLoR project file
 
-This guide explains how to write the JSON "project" file that SLR Helper opens: how to
+This guide explains how to write the JSON "project" file that SaiLoR opens: how to
 design the **annotation schema** (the taxonomy of fields you fill in for each paper) and how
 to list the **papers** you want to annotate. It is written for researchers who are comfortable
 editing JSON but are not necessarily programmers, and it is packed with copy‑paste‑ready
@@ -41,7 +41,7 @@ The file is **plain JSON**. That means a few rules you must follow, or the file 
   `'single quotes'`.
 
 A good habit: after editing, paste the file into any JSON validator (or run it through your
-editor's JSON linter) before opening it in SLR Helper.
+editor's JSON linter) before opening it in SaiLoR.
 
 ---
 
@@ -510,7 +510,7 @@ copy‑paste runnable: save it as `project.json`, put the two PDFs under `pdfs/`
 
 ## 7. Opening a project
 
-There are three ways to open a project; pick whichever fits how you're running SLR Helper.
+There are three ways to open a project; pick whichever fits how you're running SaiLoR.
 
 - **In the app — Open ▾ menu.** Click **Open…** to load a local JSON file, or reopen one of the
   recent projects. (Recent projects and in‑place saving need the desktop app or a Chromium

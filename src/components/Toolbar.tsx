@@ -80,7 +80,7 @@ export function Toolbar() {
         <SidebarToggle />
       </span>
 
-      <span className="app-title">SLR Helper</span>
+      <span className="app-title">SaiLoR</span>
 
       <div className="toolbar-actions">
         <Dropdown label="Open" title="Open a project" disabled={busy} items={openItems} />

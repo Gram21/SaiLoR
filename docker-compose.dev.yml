@@ -20,7 +20,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    image: slr-helper-dev:latest
+    image: sailor-dev:latest
     ports:
       - "5173:5173"
     volumes:
@@ -39,7 +39,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.electron
-    image: slr-helper-electron:latest
+    image: sailor-electron:latest
     volumes:
       - .:/app
       - /app/node_modules
