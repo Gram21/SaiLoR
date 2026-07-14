@@ -113,7 +113,7 @@ npm run typecheck
 │   └── pdfs/                 Sample PDFs (incl. multipage.pdf with an internal link)
 ├── scripts/ci.sh          Provider-agnostic CI pipeline (install → typecheck → test → build)
 ├── scripts/build-electron.sh  Provider-agnostic desktop build (electron-builder for the host OS)
-├── .github/workflows/ci.yml       GitHub Actions — runs scripts/ci.sh on push/PR to main
+├── .github/workflows/ci.yml       GitHub Actions — runs scripts/ci.sh on push to main and on every pull request
 ├── .github/workflows/release.yml  GitHub Actions — builds desktop installers on release, attaches them
 ├── .github/workflows/openwiki.yml Scheduled weekly OpenWiki doc refresh (only when code changed)
 ├── .github/CODEOWNERS     Default reviewers for pull requests
