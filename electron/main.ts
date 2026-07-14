@@ -37,10 +37,21 @@ let allowClose = false
 let isQuitting = false
 
 // slr-file:// must be registered as privileged before the app is ready.
+//
+// `corsEnabled` is load-bearing: the renderer's origin (the dev server, or file://
+// in the packaged app) is not slr-file://, so fetching a PDF is a cross-origin
+// request. Without this, Chromium rejects it *before* protocol.handle runs — the
+// handler never sees the request and pdf.js reports "Unexpected server response (0)".
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'slr-file',
-    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true,
+      corsEnabled: true,
+    },
   },
 ])
 
