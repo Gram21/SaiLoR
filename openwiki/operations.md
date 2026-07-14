@@ -149,7 +149,7 @@ docker compose up -d --build    # build and start
 docker compose down             # stop
 ```
 
-This serves the app on `http://localhost:8080`. Project JSON files and PDFs go in the `./projects/` directory, which is mounted read-only into the container at `/usr/share/nginx/html/projects`. Open a project:
+This serves the app on `http://localhost:8080`. The volume in `docker-compose.yml` mounts a host folder of project JSONs and their PDFs read-only into the container at `/usr/share/nginx/html/projects`, i.e. served under the `/projects/` URL namespace. It defaults to the bundled `./samples` folder, so the example works out of the box; point it at your own folder to use your own reviews. Open a project:
 
 ```
 http://localhost:8080/?project=/projects/project.example.json
@@ -161,7 +161,7 @@ Equivalent raw Docker commands:
 
 ```bash
 docker build -t slr-helper .
-docker run -d -p 8080:80 -v "$PWD/projects:/usr/share/nginx/html/projects:ro" slr-helper
+docker run -d -p 8080:80 -v "$PWD/samples:/usr/share/nginx/html/projects:ro" slr-helper
 ```
 
 ### C. Desktop

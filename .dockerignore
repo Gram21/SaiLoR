@@ -5,8 +5,7 @@ release
 .git
 .gitignore
 *.log
-projects
-samples/pdfs
+samples
 .vite
 .DS_Store
 .claude

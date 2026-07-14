@@ -17,6 +17,7 @@ const mockPlatform = {
   // loadFromText records the open project as a recent once it knows its title.
   rememberProject: () => {},
   forgetRecent: () => [],
+  checkRecents: async (e: unknown[]) => e,
   getOsInfo: () => null,
   pickProjectLocation: async () => destination,
   saveProject: async (text: string, handle: SaveHandle) => {

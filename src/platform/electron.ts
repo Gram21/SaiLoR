@@ -7,7 +7,7 @@ import type {
   ProjectLocation,
   SaveHandle,
 } from './adapter'
-import { readRecents, pushRecent, removeRecent, type RecentEntry } from './recents'
+import { readRecents, pushRecent, removeRecent, replaceRecents, type RecentEntry } from './recents'
 
 const RECENTS_KEY = 'slr.recents.electron'
 
@@ -27,8 +27,8 @@ export interface SlrBridge {
   pickPdfs(): Promise<string[]>
   /** Raw bytes of a PDF by absolute path (for reading its title/authors). */
   readPdf(path: string): Promise<Uint8Array>
-  /** Which of these paths are readable right now. */
-  filesExist(paths: string[]): Promise<boolean[]>
+  /** For each project path: does it still exist, and what title does it now carry? */
+  peekProjects(paths: string[]): Promise<{ exists: boolean; title?: string }[]>
   /** Paths of `toFiles` relative to `fromFile`'s directory, POSIX-separated. */
   relativePaths(fromFile: string, toFiles: string[]): Promise<string[]>
   /** `rels` (relative to `fromFile`'s dir) re-expressed relative to `toFile`'s dir. */
@@ -76,8 +76,20 @@ export class ElectronAdapter implements PlatformAdapter {
   async checkRecents(entries: RecentEntry[]): Promise<RecentEntry[]> {
     if (entries.length === 0) return entries
     // The id IS the absolute path on Electron.
-    const exists = await bridge().filesExist(entries.map((e) => e.id))
-    return entries.map((e, i) => ({ ...e, available: exists[i] ?? false }))
+    const peeked = await bridge().peekProjects(entries.map((e) => e.id))
+    const fresh = entries.map((e, i) => {
+      const p = peeked[i]
+      return {
+        ...e,
+        available: p?.exists ?? false,
+        // Re-read from the file: the stored title goes stale the moment the
+        // project is renamed elsewhere (e.g. in the project editor).
+        // `undefined` means the file sets no title, so the name is used again.
+        title: p?.exists ? p.title : e.title,
+      }
+    })
+    replaceRecents(RECENTS_KEY, fresh)
+    return fresh
   }
 
   async openProject(): Promise<OpenedProject | null> {

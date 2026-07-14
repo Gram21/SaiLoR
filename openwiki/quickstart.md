@@ -12,7 +12,7 @@ The app renders the PDF in the middle pane, shows the annotation form on the rig
 The codebase runs three ways from a single source:
 - **Desktop app** (Electron) — local files, native Open/Save dialogs, custom `slr-file://` protocol for PDF loading.
 - **Web app** — a static SPA build that can be hosted anywhere; uses the File System Access API (Chromium) or download fallback.
-- **Docker** — multi-stage build (Node → nginx) with a read-only `projects/` volume; `docker compose up -d --build` serves on port 8080.
+- **Docker** — multi-stage build (Node → nginx) with a read-only volume of project files (the bundled `samples/` by default) served under `/projects/`; `docker compose up -d --build` serves on port 8080.
 
 ## Tech Stack
 
@@ -108,13 +108,9 @@ npm run typecheck
 │   ├── App.tsx            Component composition, ?project= auto-load, welcome screen with recents, HelpDialog
 │   ├── main.tsx           React root (applies theme + font scale before render)
 │   └── styles/index.css   Full app styling (light/dark via data-theme attribute, font-scale CSS var)
-├── samples/
-│   ├── project.example.json  Example project (3 papers, incl. a multi-page PDF) + schema with an enum field
+├── samples/               Also the default Docker volume (mounted read-only, served at /projects/)
+│   ├── project.example.json  Example project (title, 4 papers incl. a multi-page PDF) + schema with required and enum fields
 │   └── pdfs/                 Sample PDFs (incl. multipage.pdf with an internal link)
-├── projects/              Runtime volume for Docker deployment (JSON + PDFs mounted read-only)
-│   ├── README.md
-│   ├── project.example.json
-│   └── pdfs/
 ├── scripts/ci.sh          Provider-agnostic CI pipeline (install → typecheck → test → build)
 ├── scripts/build-electron.sh  Provider-agnostic desktop build (electron-builder for the host OS)
 ├── .github/workflows/ci.yml       GitHub Actions — runs scripts/ci.sh on push/PR to main
@@ -125,7 +121,7 @@ npm run typecheck
 ├── build/icon.png         App icon (also the macOS dock / packaged-bundle icon)
 ├── public/favicon.svg     Browser favicon
 ├── Dockerfile             Production: multi-stage Node build → nginx runtime
-├── docker-compose.yml     Production: builds and serves on port 8080 with ./projects mounted
+├── docker-compose.yml     Production: builds and serves on port 8080 with ./samples mounted
 ├── nginx.conf             MIME fix for .mjs, /assets/ caching, /projects/ serving, SPA fallback
 ├── Dockerfile.dev         Dev image: Vite dev server (browser)
 ├── Dockerfile.electron    Dev image: electron-builder (Linux AppImage)

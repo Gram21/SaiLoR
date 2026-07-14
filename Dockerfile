@@ -21,7 +21,8 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # The built SPA.
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Projects (JSON + pdfs/) are mounted here at runtime; see docker-compose.yml.
+# A host folder of projects (JSON + pdfs/) is mounted here at runtime — the bundled
+# ./samples by default; see docker-compose.yml.
 # Create the directory so the mount target always exists.
 RUN mkdir -p /usr/share/nginx/html/projects
 

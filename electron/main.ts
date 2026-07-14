@@ -356,16 +356,31 @@ ipcMain.handle('pdf:pick', async () => {
   return res.filePaths
 })
 
-// Which of these project files still exist? A recent whose file has gone (moved,
-// deleted, unplugged drive) is kept in the list but shown as unavailable.
-ipcMain.handle('fs:exists', async (_e, paths: string[]) => {
+/**
+ * Peek at each recent project: does the file still exist, and what title does it
+ * currently carry? The title is re-read rather than trusted from the stored
+ * recents entry, which goes stale as soon as the file is edited elsewhere (e.g.
+ * renamed in the project editor).
+ *
+ * Parsing is cheap enough for the five recents, and each file is handled
+ * independently so one broken JSON can't take the others down.
+ */
+ipcMain.handle('project:peek', async (_e, paths: string[]) => {
   return Promise.all(
     paths.map(async (p) => {
       try {
         await access(p, constants.R_OK)
-        return true
       } catch {
-        return false
+        return { exists: false }
+      }
+      try {
+        const raw = JSON.parse(await readFile(p, 'utf-8')) as { title?: unknown }
+        const title = typeof raw.title === 'string' && raw.title.trim() ? raw.title : undefined
+        return { exists: true, title }
+      } catch {
+        // The file is there but unreadable/not JSON — still openable-ish, and
+        // the caller keeps whatever title it already had.
+        return { exists: true }
       }
     }),
   )

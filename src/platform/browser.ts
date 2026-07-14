@@ -6,7 +6,7 @@ import type {
   ProjectLocation,
   SaveHandle,
 } from './adapter'
-import { readRecents, pushRecent, removeRecent, type RecentEntry } from './recents'
+import { readRecents, pushRecent, removeRecent, replaceRecents, type RecentEntry } from './recents'
 import { idbSet, idbGet, idbDelete } from './idb'
 
 const RECENTS_KEY = 'slr.recents.browser'
@@ -91,15 +91,16 @@ export class BrowserAdapter implements PlatformAdapter {
   }
 
   async checkRecents(entries: RecentEntry[]): Promise<RecentEntry[]> {
-    // Availability here means "we still hold a handle for it". Whether the file
-    // behind the handle is readable can't be tested without prompting the user,
-    // so that is left to the actual open.
-    return Promise.all(
-      entries.map(async (e) => ({
-        ...e,
-        available: Boolean(await idbGet<FileSystemFileHandle>(recentHandleKey(e.id))),
-      })),
+    const fresh = await Promise.all(
+      entries.map(async (e) => {
+        const handle = await idbGet<FileSystemFileHandle>(recentHandleKey(e.id))
+        // Availability here means "we still hold a handle for it".
+        if (!handle) return { ...e, available: false }
+        return { ...e, available: true, title: await peekTitle(handle, e.title) }
+      }),
     )
+    replaceRecents(RECENTS_KEY, fresh)
+    return fresh
   }
 
   async openProject(): Promise<OpenedProject | null> {
@@ -267,6 +268,28 @@ export class BrowserAdapter implements PlatformAdapter {
     const id = `fh${this.nextId++}`
     this.fileHandles.set(id, handle)
     return id
+  }
+}
+
+/**
+ * The project's current title, read straight from the file so a title changed
+ * elsewhere (e.g. in the project editor) shows up.
+ *
+ * Only reads when permission is *already* granted — startup must never throw a
+ * permission prompt at the user just to refresh a label. Without permission the
+ * previously stored title is kept.
+ */
+async function peekTitle(
+  handle: FileSystemFileHandle,
+  fallback: string | undefined,
+): Promise<string | undefined> {
+  try {
+    const perm = handle as unknown as PermissionCapableHandle
+    if ((await perm.queryPermission?.({ mode: 'read' })) !== 'granted') return fallback
+    const raw = JSON.parse(await (await handle.getFile()).text()) as { title?: unknown }
+    return typeof raw.title === 'string' && raw.title.trim() ? raw.title : undefined
+  } catch {
+    return fallback
   }
 }
 

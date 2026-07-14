@@ -9,8 +9,10 @@ services:
       # host:container — browse to http://localhost:8080
       - "8080:80"
     volumes:
-      # Drop your project JSON files and their pdfs/ folders in ./projects.
-      # Then open http://localhost:8080/?project=/projects/<your-project>.json
+      # Point this at your own folder of project JSONs + their pdfs/ folders; the
+      # bundled example (./samples) is what's mounted by default. Whatever folder you
+      # mount is served under /projects/, so open it with
+      # http://localhost:8080/?project=/projects/<your-project>.json
       # Mounted read-only: the browser saves via download, never back to the server.
-      - ./projects:/usr/share/nginx/html/projects:ro
+      - ./samples:/usr/share/nginx/html/projects:ro
     restart: unless-stopped
