@@ -8,7 +8,16 @@ import type { ResolvedDef } from '../model/schema'
  * in a portal with fixed positioning so it is never clipped by the annotation
  * panel's scroll container.
  */
-export function NodeName({ def, className = 'anno-name' }: { def: ResolvedDef; className?: string }) {
+export function NodeName({
+  def,
+  className = 'anno-name',
+  onClick,
+}: {
+  def: ResolvedDef
+  className?: string
+  /** Clicking the label counts as reading the field — used to clear its AI mark. */
+  onClick?: () => void
+}) {
   const ref = useRef<HTMLSpanElement>(null)
   const [coords, setCoords] = useState<{ x: number; y: number } | null>(null)
 
@@ -25,7 +34,11 @@ export function NodeName({ def, className = 'anno-name' }: { def: ResolvedDef; c
   )
 
   if (!def.description) {
-    return <span className={className}>{label}</span>
+    return (
+      <span className={className} onClick={onClick}>
+        {label}
+      </span>
+    )
   }
 
   const show = () => {
@@ -39,6 +52,7 @@ export function NodeName({ def, className = 'anno-name' }: { def: ResolvedDef; c
       ref={ref}
       className={`${className} has-desc`}
       tabIndex={0}
+      onClick={onClick}
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}

@@ -14,7 +14,7 @@ import {
 } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
 import { validateProject, type ValidationIssue } from '../model/validate'
-import { resolvePath } from '../llm/paths'
+import { formatPath, resolvePath } from '../llm/paths'
 import { isUnanswered } from '../llm/fields'
 import type { Suggestion } from '../llm/types'
 import {
@@ -74,6 +74,21 @@ function writeUpdateCache(release: UpdateInfo | null): void {
 export interface PathSeg {
   name: string
   index: number
+}
+
+/**
+ * Key of one field instance's "the AI wrote this" mark. Scoped by paper, because
+ * the same canonical path exists on every paper. The path part is `formatPath`'s
+ * canonical form, so a mark set from an LLM suggestion and one looked up by the
+ * UI meet on the same string.
+ */
+export function aiMarkKey(paperId: string, canonicalPath: string): string {
+  return `${paperId}::${canonicalPath}`
+}
+
+/** Canonical path of a field instance as the UI addresses it (container path + leaf). */
+export function fieldPath(path: PathSeg[], name: string, index: number): string {
+  return formatPath([...path, { name, index }])
 }
 
 export interface LoadError {
@@ -137,6 +152,13 @@ interface AppState {
   /** Undo/redo history of annotation changes (session-only). */
   past: HistoryEntry[]
   future: HistoryEntry[]
+  /**
+   * Fields the AI filled and the reviewer has not yet looked at, keyed by
+   * `aiMarkKey`. Session-only *by construction*: it lives beside the project
+   * rather than inside it, so `serializeProject` cannot see it and a mark can
+   * never reach the file on disk. A plain record (not a Set) keeps immer happy.
+   */
+  aiMarks: Record<string, true>
 
   openProject: () => Promise<void>
   openRecent: (id: string) => Promise<void>
@@ -180,6 +202,8 @@ interface AppState {
   redo: () => void
   /** Write the reviewer-approved AI suggestions into the current paper (one undo step). */
   applyAiSuggestions: (suggestions: Suggestion[]) => AiApplyResult
+  /** The reviewer looked at an AI-filled field — drop its mark. */
+  confirmAiMark: (paperId: string, canonicalPath: string) => void
 }
 
 /** What `applyAiSuggestions` actually did, for the summary shown to the reviewer. */
@@ -226,6 +250,7 @@ export const useStore = create<AppState>()(
     update: null,
     past: [],
     future: [],
+    aiMarks: {},
 
     openProject: async () => {
       const platform = getPlatform()
@@ -317,6 +342,7 @@ export const useStore = create<AppState>()(
         s.pdfSelection = ''
         s.past = []
         s.future = []
+        s.aiMarks = {}
         s.validation = null
         s.validationOpen = false
         s.closePromptOpen = false
@@ -397,6 +423,8 @@ export const useStore = create<AppState>()(
           s.pdfSelection = ''
           s.past = []
           s.future = []
+          // Marks belong to the papers of the project that is going away.
+          s.aiMarks = {}
           s.validation = null
           s.validationOpen = false
         })
@@ -682,6 +710,7 @@ export const useStore = create<AppState>()(
       // coalescing key, or the reviewer's next keystroke would be folded into it.
       lastFieldKey = null
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
+      const paperId = paperNow.id
       let filled = 0
       set((s) => {
         const paper = currentPaper(s)
@@ -707,11 +736,24 @@ export const useStore = create<AppState>()(
           const leaf = ensureInstance(level, tree, at.name, at.index)
           if (!leaf) continue
           leaf.inst.value = value
+          // Mark only what was actually written: a skipped suggestion left the
+          // field as the reviewer had it, and must not be flagged as the AI's.
+          s.aiMarks[aiMarkKey(paperId, at.canonical)] = true
           filled++
         }
         s.dirty = true
       })
       return { filled, skipped: suggestions.length - filled }
+    },
+
+    confirmAiMark: (paperId, canonicalPath) => {
+      const key = aiMarkKey(paperId, canonicalPath)
+      // Focusing a field the AI never touched is the common case — don't churn
+      // the store (and re-render every field) for a mark that isn't there.
+      if (!get().aiMarks[key]) return
+      set((s) => {
+        delete s.aiMarks[key]
+      })
     },
 
     undo: () => {
@@ -727,6 +769,12 @@ export const useStore = create<AppState>()(
         s.project = entry.project
         s.currentPaperId = entry.paperId ?? s.currentPaperId
         s.dirty = true
+        // The values a mark points at may have just been taken away (undoing an
+        // AI run empties exactly those fields), and a blue border on an empty
+        // field is a lie. Marks are not part of the history, so the only honest
+        // and simple answer is to drop them all — the reviewer keeps the values,
+        // just not the "look here" hints.
+        s.aiMarks = {}
       })
     },
 
@@ -743,6 +791,9 @@ export const useStore = create<AppState>()(
         s.project = entry.project
         s.currentPaperId = entry.paperId ?? s.currentPaperId
         s.dirty = true
+        // Symmetric with undo: the history restores values, not marks, and a redo
+        // cannot know which of the restored values came from the model.
+        s.aiMarks = {}
       })
     },
   })),
@@ -809,4 +860,21 @@ function currentPaper(s: AppState) {
 /** Selector: the currently open paper (or null). */
 export function selectCurrentPaper(s: AppState) {
   return currentPaper(s)
+}
+
+/**
+ * Whether the AI filled this field instance, plus the callback that confirms it.
+ * The pair is what every marked control needs, and keeping the key derivation in
+ * one place stops the UI and `applyAiSuggestions` from drifting apart.
+ */
+export function useAiMark(path: PathSeg[], name: string, index: number): [boolean, () => void] {
+  const canonical = fieldPath(path, name, index)
+  const marked = useStore(
+    (s) => s.currentPaperId !== null && s.aiMarks[aiMarkKey(s.currentPaperId, canonical)] === true,
+  )
+  const confirm = () => {
+    const paperId = useStore.getState().currentPaperId
+    if (paperId) useStore.getState().confirmAiMark(paperId, canonical)
+  }
+  return [marked, confirm]
 }

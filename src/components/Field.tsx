@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useStore, type PathSeg } from '../state/store'
+import { useStore, useAiMark, type PathSeg } from '../state/store'
 import type { ResolvedDef } from '../model/schema'
 import type { FieldValue } from '../model/annotations'
 import { ComboBox } from './ComboBox'
@@ -18,6 +18,11 @@ export function Field({ def, path, index, value }: FieldProps) {
   const setFieldValue = useStore((s) => s.setFieldValue)
   const set = (v: FieldValue) => setFieldValue(path, def.name, index, v)
 
+  // Reaching the control at all — clicking it, or tabbing into it — is the
+  // reviewer confirming they have seen what the AI put there, so the mark goes.
+  const [marked, confirm] = useAiMark(path, def.name, index)
+  const markClass = marked ? ' ai-marked' : ''
+
   const grabFromPdf = () => {
     const sel = useStore.getState().pdfSelection.trim()
     if (!sel) return
@@ -33,8 +38,10 @@ export function Field({ def, path, index, value }: FieldProps) {
     return (
       <input
         type="checkbox"
-        className="field-checkbox"
+        className={`field-checkbox${markClass}`}
         checked={value === true}
+        onFocus={confirm}
+        onClick={confirm}
         onChange={(e) => set(e.target.checked)}
       />
     )
@@ -49,8 +56,10 @@ export function Field({ def, path, index, value }: FieldProps) {
       {def.type === 'number' ? (
         <input
           type="number"
-          className="field-input"
+          className={`field-input${markClass}`}
           value={value === null || value === undefined ? '' : String(value)}
+          onFocus={confirm}
+          onClick={confirm}
           onChange={(e) => set(e.target.value === '' ? null : Number(e.target.value))}
         />
       ) : isEnum ? (
@@ -58,11 +67,15 @@ export function Field({ def, path, index, value }: FieldProps) {
           value={typeof value === 'string' ? value : null}
           options={def.options!}
           onChange={(v) => set(v)}
+          className={markClass.trim()}
+          onInteract={confirm}
         />
       ) : (
         <StringField
           value={value === null || value === undefined ? '' : String(value)}
           onChange={(v) => set(v === '' ? null : v)}
+          className={markClass}
+          onInteract={confirm}
         />
       )}
       {canGrab && (
@@ -82,10 +95,12 @@ export function Field({ def, path, index, value }: FieldProps) {
 interface StringFieldProps {
   value: string
   onChange: (v: string) => void
+  className?: string
+  onInteract?: () => void
 }
 
 /** Auto-expanding text field: single-line when idle, grows downward (capped) while focused. */
-function StringField({ value, onChange }: StringFieldProps) {
+function StringField({ value, onChange, className = '', onInteract }: StringFieldProps) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const [expanded, setExpanded] = useState(false)
 
@@ -110,9 +125,15 @@ function StringField({ value, onChange }: StringFieldProps) {
       ref={ref}
       rows={1}
       maxLength={500}
-      className={expanded ? 'field-input field-textarea expanded' : 'field-input field-textarea'}
+      className={
+        (expanded ? 'field-input field-textarea expanded' : 'field-input field-textarea') + className
+      }
       value={value}
-      onFocus={() => setExpanded(true)}
+      onClick={onInteract}
+      onFocus={() => {
+        onInteract?.()
+        setExpanded(true)
+      }}
       onBlur={() => {
         setExpanded(false)
         if (ref.current) ref.current.style.height = ''
