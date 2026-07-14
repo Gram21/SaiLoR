@@ -72,6 +72,14 @@
       "doi": "10.1000/mno987",
       "pdf": "pdfs/multipage.pdf",
       "annotations": {}
+    },
+    {
+      "id": "KeimKaplan2026_ICSEBoF",
+      "title": "From Scattered to Structured: A Vision for Automating Architectural Knowledge Management",
+      "authors": ["J. Keim, A. Kaplan"],
+      "doi": "10.48550/arXiv.2601.19548",
+      "pdf": "pdfs/KeimKaplan_FromScatteredToStructured.pdf",
+      "annotations": {}
     }
   ]
 }
