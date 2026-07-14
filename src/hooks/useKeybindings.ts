@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useStore } from '../state/store'
+import { useEditorStore } from '../state/editorStore'
 import { isElectron } from '../platform/adapter'
 
 /**
@@ -14,6 +15,10 @@ import { isElectron } from '../platform/adapter'
  *  - Alt+ArrowDown / ]  → next paper
  *  - Alt+ArrowUp   / [  → previous paper
  *
+ * While the project editor is open, save and undo/redo drive the *draft* rather
+ * than the annotation project, and the project-specific bindings (open, paper
+ * navigation, PDF zoom) are inert — there is no project on screen to act on.
+ *
  * Copy/cut/paste are left to the browser (and, in Electron, the Edit menu), so
  * they work natively inside inputs and the PDF text layer.
  */
@@ -21,32 +26,39 @@ export function useKeybindings() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey
+      const editing = useEditorStore.getState().open
 
       if (mod && (e.key === 's' || e.key === 'S')) {
         e.preventDefault()
-        if (e.shiftKey) void useStore.getState().saveAs()
+        const editor = useEditorStore.getState()
+        if (editing) {
+          if (e.shiftKey) void editor.saveAs()
+          else void editor.save()
+        } else if (e.shiftKey) void useStore.getState().saveAs()
         else void useStore.getState().save()
         return
       }
 
+      // Opening a project mid-edit would strand the draft, so ignore it there.
       if (mod && (e.key === 'o' || e.key === 'O')) {
         e.preventDefault()
-        void useStore.getState().openProject()
+        if (!editing) void useStore.getState().openProject()
         return
       }
 
-      // Undo/redo of annotation changes. In Electron the Edit-menu accelerators
-      // handle this (routed to the store via IPC), so skip it there to avoid
-      // double-triggering.
+      // Undo/redo. In Electron the Edit-menu accelerators handle this (routed to
+      // the right store via IPC), so skip it there to avoid double-triggering.
       if (mod && !isElectron() && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault()
-        if (e.shiftKey) useStore.getState().redo()
-        else useStore.getState().undo()
+        const target = editing ? useEditorStore.getState() : useStore.getState()
+        if (e.shiftKey) target.redo()
+        else target.undo()
         return
       }
       if (mod && !isElectron() && !e.shiftKey && (e.key === 'y' || e.key === 'Y')) {
         e.preventDefault()
-        useStore.getState().redo()
+        if (editing) useEditorStore.getState().redo()
+        else useStore.getState().redo()
         return
       }
 
@@ -73,8 +85,8 @@ export function useKeybindings() {
             if (inc) st.increaseFont()
             else if (dec) st.decreaseFont()
             else st.resetFont()
-          } else {
-            // PDF zoom: Ctrl/Cmd +/-/0
+          } else if (!editing) {
+            // PDF zoom: Ctrl/Cmd +/-/0 (no PDF on screen while editing).
             if (inc) st.zoomInPdf()
             else if (dec) st.zoomOutPdf()
             else st.resetPdfZoom()
@@ -84,6 +96,7 @@ export function useKeybindings() {
       }
 
       // Paper navigation. Skip when typing in a field unless Alt is held.
+      if (editing) return
       const inField = isEditable(e.target)
       const nav = (dir: 1 | -1) => {
         e.preventDefault()

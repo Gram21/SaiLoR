@@ -179,6 +179,8 @@ Undo and redo operate on annotation changes. The store keeps session-only histor
 
 In Electron, the Edit menu routes Undo/Redo back into the renderer through IPC; in the browser, `src/hooks/useKeybindings.ts` handles `Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z`, and `Ctrl+Y` directly. If you change annotation editing behavior, update the store and the Electron/menu wiring together so the shortcuts stay consistent across runtimes.
 
+**In the project editor** the same shortcuts drive the *draft* instead: `Ctrl/Cmd+S` saves the JSON (staying in the editor), `Ctrl/Cmd+Shift+S` picks a new location and saves there, and `Ctrl/Cmd+Z` / `Ctrl/Cmd+Shift+Z` / `Ctrl+Y` undo/redo schema and paper edits (consecutive keystrokes in one input collapse into a single undo step). Both `useKeybindings` and `useElectronCloseGuard` check `useEditorStore.getState().open` and route to the editor store when it is; the project-only bindings (open, paper navigation, PDF zoom) go inert there, since no project is on screen. Copy/cut/paste are never intercepted — they stay native in both runtimes. The Electron quit dialog also treats an unsaved *draft* as unsaved changes.
+
 
 Paper navigation with `[`/`]` is disabled when typing in an input field; Alt-arrow navigation works even inside fields. See `src/hooks/useKeybindings.ts`.
 

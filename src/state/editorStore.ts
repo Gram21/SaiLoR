@@ -58,6 +58,27 @@ export interface EditorError {
 /** Where a node is dropped relative to the target. */
 export type DropPosition = 'before' | 'after' | 'inside'
 
+/**
+ * One undo/redo snapshot of the draft. immer gives every field structural
+ * sharing, so holding previous versions is cheap — only the edited path differs.
+ */
+interface EditorSnapshot {
+  nodes: EditorNode[]
+  papers: EditorPaper[]
+  location: ProjectLocation | null
+  version: number
+  extra: Record<string, unknown>
+}
+
+const HISTORY_LIMIT = 100
+
+/**
+ * The last edited field, so consecutive edits to the *same* input (typing a
+ * name character by character) collapse into one undo step instead of one per
+ * keystroke. Any other action resets it. Mirrors the annotation store.
+ */
+let lastEditKey: string | null = null
+
 let uidCounter = 0
 const nextUid = () => `n${uidCounter++}`
 
@@ -336,6 +357,9 @@ interface EditorState {
   notice: string | null
   /** How many just-added PDFs are still being read for their title/authors. */
   extracting: number
+  /** Undo/redo history of draft edits (session-only). */
+  past: EditorSnapshot[]
+  future: EditorSnapshot[]
 
   startNew: () => Promise<void>
   startEdit: () => Promise<void>
@@ -353,9 +377,43 @@ interface EditorState {
   removePaper: (uid: string) => void
   movePaper: (dragUid: string, targetUid: string, position: 'before' | 'after') => void
 
+  undo: () => void
+  redo: () => void
+
+  /** Write the JSON and stay in the editor. */
   save: () => Promise<boolean>
+  /** Pick a new location, then write there. */
+  saveAs: () => Promise<boolean>
+  /** Write the JSON, then open it in the annotation view. */
+  saveAndAnnotate: () => Promise<boolean>
   clearError: () => void
   clearNotice: () => void
+}
+
+/** The parts of the draft that undo/redo restores. */
+function snapshotOf(s: EditorState): EditorSnapshot {
+  return {
+    nodes: s.nodes,
+    papers: s.papers,
+    location: s.location,
+    version: s.version,
+    extra: s.extra,
+  }
+}
+
+function applySnapshot(s: EditorState, snap: EditorSnapshot): void {
+  s.nodes = snap.nodes
+  s.papers = snap.papers
+  s.location = snap.location
+  s.version = snap.version
+  s.extra = snap.extra
+}
+
+/** Push a pre-mutation snapshot onto the undo stack and drop the redo stack. */
+function pushPast(s: EditorState, snap: EditorSnapshot): void {
+  s.past.push(snap)
+  if (s.past.length > HISTORY_LIMIT) s.past.shift()
+  s.future = []
 }
 
 export const useEditorStore = create<EditorState>()(
@@ -373,6 +431,8 @@ export const useEditorStore = create<EditorState>()(
     issues: [],
     notice: null,
     extracting: 0,
+    past: [],
+    future: [],
 
     startNew: async () => {
       const platform = getPlatform()
@@ -393,6 +453,8 @@ export const useEditorStore = create<EditorState>()(
         s.issues = []
         s.notice = null
         s.extracting = 0
+        s.past = []
+        s.future = []
       })
     },
 
@@ -447,6 +509,8 @@ export const useEditorStore = create<EditorState>()(
           s.issues = []
           s.notice = null
           s.extracting = 0
+          s.past = []
+          s.future = []
         })
       } catch (err) {
         const details =
@@ -494,7 +558,10 @@ export const useEditorStore = create<EditorState>()(
           location,
         )
       }
+      const snap = snapshotOf(get())
+      lastEditKey = null
       set((s) => {
+        pushPast(s, snap)
         s.location = location
         let i = 0
         for (const p of s.papers) {
@@ -504,40 +571,62 @@ export const useEditorStore = create<EditorState>()(
       })
     },
 
-    addNode: (parentUid) =>
+    addNode: (parentUid) => {
+      const snap = snapshotOf(get())
+      lastEditKey = null
       set((s) => {
         const node = makeNode()
         if (!parentUid) {
+          pushPast(s, snap)
           s.nodes.push(node)
         } else {
           const parent = findNode(s.nodes, parentUid)
           if (!parent) return
+          pushPast(s, snap)
           parent.children.push(node)
           parent.collapsed = false
         }
         s.dirty = true
-      }),
+      })
+    },
 
-    updateNode: (uid, patch) =>
+    updateNode: (uid, patch) => {
+      // Typing into one input is a single undo step, not one per keystroke.
+      const key = `node:${uid}:${Object.keys(patch).sort().join(',')}`
+      const coalesce = key === lastEditKey
+      lastEditKey = key
+      const snap = snapshotOf(get())
       set((s) => {
         const node = findNode(s.nodes, uid)
         if (!node) return
+        if (!coalesce) pushPast(s, snap)
         Object.assign(node, patch)
         // Enum options only exist on string fields.
         if (node.kind !== 'string') node.options = []
         s.dirty = true
-      }),
+      })
+    },
 
-    removeNode: (uid) =>
+    removeNode: (uid) => {
+      const snap = snapshotOf(get())
+      lastEditKey = null
       set((s) => {
+        pushPast(s, snap)
         findAndRemove(s.nodes, uid)
         s.dirty = true
-      }),
+      })
+    },
 
-    moveNode: (dragUid, targetUid, position) =>
+    moveNode: (dragUid, targetUid, position) => {
+      const snap = snapshotOf(get())
+      lastEditKey = null
       set((s) => {
-        if (moveNodeIn(s.nodes, dragUid, targetUid, position)) s.dirty = true
-      }),
+        // Only an actual move is worth an undo step.
+        if (!moveNodeIn(s.nodes, dragUid, targetUid, position)) return
+        pushPast(s, snap)
+        s.dirty = true
+      })
+    },
 
     toggleCollapsed: (uid) =>
       set((s) => {
@@ -558,8 +647,11 @@ export const useEditorStore = create<EditorState>()(
       const seen = new Set(get().papers.flatMap(pdfKeys))
       const fresh: { uid: string; placeholder: string; read?: () => Promise<ArrayBuffer> }[] = []
       const skipped: string[] = []
+      const snap = snapshotOf(get())
+      lastEditKey = null
 
       set((s) => {
+        pushPast(s, snap)
         const ids = new Set(s.papers.map((p) => p.id))
         picked.forEach((pdf, i) => {
           const relPath = rel[i] ?? pdf.name
@@ -608,25 +700,38 @@ export const useEditorStore = create<EditorState>()(
       )
     },
 
-    updatePaper: (uid, patch) =>
+    updatePaper: (uid, patch) => {
+      const key = `paper:${uid}:${Object.keys(patch).sort().join(',')}`
+      const coalesce = key === lastEditKey
+      lastEditKey = key
+      const snap = snapshotOf(get())
       set((s) => {
         const paper = s.papers.find((p) => p.uid === uid)
         if (!paper) return
+        if (!coalesce) pushPast(s, snap)
         Object.assign(paper, patch)
         s.dirty = true
-      }),
+      })
+    },
 
-    removePaper: (uid) =>
+    removePaper: (uid) => {
+      const snap = snapshotOf(get())
+      lastEditKey = null
       set((s) => {
+        pushPast(s, snap)
         s.papers = s.papers.filter((p) => p.uid !== uid)
         s.dirty = true
-      }),
+      })
+    },
 
-    movePaper: (dragUid, targetUid, position) =>
+    movePaper: (dragUid, targetUid, position) => {
+      const snap = snapshotOf(get())
+      lastEditKey = null
       set((s) => {
         if (dragUid === targetUid) return
         const from = s.papers.findIndex((p) => p.uid === dragUid)
         if (from === -1) return
+        pushPast(s, snap)
         const [paper] = s.papers.splice(from, 1)
         const at = s.papers.findIndex((p) => p.uid === targetUid)
         if (at === -1) {
@@ -635,7 +740,38 @@ export const useEditorStore = create<EditorState>()(
           s.papers.splice(position === 'before' ? at : at + 1, 0, paper)
         }
         s.dirty = true
-      }),
+      })
+    },
+
+    undo: () => {
+      const st = get()
+      if (st.past.length === 0) return
+      lastEditKey = null
+      const entry = st.past[st.past.length - 1]
+      const current = snapshotOf(st)
+      set((s) => {
+        s.past.pop()
+        s.future.unshift(current)
+        if (s.future.length > HISTORY_LIMIT) s.future.pop()
+        applySnapshot(s, entry)
+        s.dirty = true
+      })
+    },
+
+    redo: () => {
+      const st = get()
+      if (st.future.length === 0) return
+      lastEditKey = null
+      const entry = st.future[0]
+      const current = snapshotOf(st)
+      set((s) => {
+        s.future.shift()
+        s.past.push(current)
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        applySnapshot(s, entry)
+        s.dirty = true
+      })
+    },
 
     save: async () => {
       const st = get()
@@ -655,6 +791,7 @@ export const useEditorStore = create<EditorState>()(
       set((s) => {
         s.busy = true
         s.issues = []
+        s.notice = null
       })
       try {
         const text = JSON.stringify(buildProjectJson(st), null, 2)
@@ -663,12 +800,8 @@ export const useEditorStore = create<EditorState>()(
           s.busy = false
           s.dirty = false
           if (s.location) s.location.handle = handle
-        })
-        // Hand the saved project to the annotation view so the user can start
-        // working with it right away.
-        useStore.getState().loadFromText(text, handle, st.location.name)
-        set((s) => {
-          s.open = false
+          // Saving only writes the file — the user stays in the editor.
+          s.notice = `Saved to ${st.location?.name ?? 'the project file'}`
         })
         return true
       } catch (err) {
@@ -678,6 +811,27 @@ export const useEditorStore = create<EditorState>()(
         })
         return false
       }
+    },
+
+    saveAs: async () => {
+      await get().changeLocation()
+      // changeLocation is a no-op if the user cancels, so this just re-saves to
+      // the existing location in that case.
+      return get().save()
+    },
+
+    saveAndAnnotate: async () => {
+      if (!(await get().save())) return false
+      const st = get()
+      if (!st.location) return false
+      // Hand the saved project straight to the annotation view.
+      const text = JSON.stringify(buildProjectJson(st), null, 2)
+      useStore.getState().loadFromText(text, st.location.handle, st.location.name)
+      set((s) => {
+        s.open = false
+        s.notice = null
+      })
+      return true
     },
   })),
 )

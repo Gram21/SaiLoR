@@ -64,7 +64,10 @@ export function HelpDialog() {
             <li>
               <strong>Don't have one yet?</strong> On the start screen use{' '}
               <em>New annotation JSON…</em> to define the annotation schema and attach the PDFs, or{' '}
-              <em>Edit annotation JSON…</em> to change an existing one.
+              <em>Edit annotation JSON…</em> to change an existing one. In the editor,{' '}
+              <em>Save JSON</em> just writes the file, while <em>Save JSON &amp; Begin Annotating</em>{' '}
+              writes it and opens it for review. The shortcuts below for save and undo/redo work
+              there too.
             </li>
             <li>
               <strong>Pick a paper</strong> from the left list (toggle the list with the ☰ button). A

@@ -1,7 +1,11 @@
 import { useEditorStore } from '../state/editorStore'
+import { getPlatform } from '../platform'
 import { SchemaTreeEditor } from './SchemaTreeEditor'
 import { PapersEditor } from './PapersEditor'
 import '../styles/editor.css'
+
+const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform)
+const MOD = getPlatform().kind === 'electron' && isMac ? '⌘' : 'Ctrl'
 
 /**
  * Full-screen editor for a project JSON: pick where it lives, build the
@@ -20,6 +24,7 @@ export function ProjectEditor() {
   const extracting = useEditorStore((s) => s.extracting)
   const changeLocation = useEditorStore((s) => s.changeLocation)
   const save = useEditorStore((s) => s.save)
+  const saveAndAnnotate = useEditorStore((s) => s.saveAndAnnotate)
   const close = useEditorStore((s) => s.close)
   const clearError = useEditorStore((s) => s.clearError)
   const clearNotice = useEditorStore((s) => s.clearNotice)
@@ -45,8 +50,16 @@ export function ProjectEditor() {
           <button type="button" onClick={onClose} disabled={busy}>
             Cancel
           </button>
-          <button type="button" className="primary" onClick={() => void save()} disabled={busy}>
+          <button type="button" onClick={() => void save()} disabled={busy} title={`Save (${MOD}+S)`}>
             {busy ? 'Saving…' : 'Save JSON'}
+          </button>
+          <button
+            type="button"
+            className="primary"
+            onClick={() => void saveAndAnnotate()}
+            disabled={busy}
+          >
+            Save JSON &amp; Begin Annotating
           </button>
         </div>
       </div>
