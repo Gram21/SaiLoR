@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import { z } from 'zod'
 import { projectSchema, resolveSchema, SchemaError, type AnnotationDef } from '../model/schema'
+import { extractPdfMeta } from '../model/pdfMeta'
 import { getPlatform, type ProjectLocation } from '../platform'
 import { useStore } from './store'
 
@@ -195,9 +196,21 @@ function paperIdFromName(name: string): string {
   )
 }
 
-/** A human title guessed from a PDF file name. */
-function titleFromName(name: string): string {
+/** A human title guessed from a PDF file name (a placeholder until the PDF is read). */
+export function titleFromName(name: string): string {
   return name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim()
+}
+
+/**
+ * Identity of a referenced PDF, for duplicate detection. The absolute path is
+ * the truth when we have one (Electron); otherwise the stored relative path is
+ * the best we can do (the browser exposes no paths).
+ */
+export function pdfKeys(paper: Pick<EditorPaper, 'pdf' | 'sourcePath'>): string[] {
+  const keys: string[] = []
+  if (paper.sourcePath) keys.push(paper.sourcePath)
+  if (paper.pdf) keys.push(paper.pdf)
+  return keys
 }
 
 export function makePaperFromPdf(
@@ -319,6 +332,10 @@ interface EditorState {
   error: EditorError | null
   /** Validation problems from the last save attempt. */
   issues: string[]
+  /** Transient info, e.g. which duplicate PDFs were skipped. */
+  notice: string | null
+  /** How many just-added PDFs are still being read for their title/authors. */
+  extracting: number
 
   startNew: () => Promise<void>
   startEdit: () => Promise<void>
@@ -338,6 +355,7 @@ interface EditorState {
 
   save: () => Promise<boolean>
   clearError: () => void
+  clearNotice: () => void
 }
 
 export const useEditorStore = create<EditorState>()(
@@ -353,6 +371,8 @@ export const useEditorStore = create<EditorState>()(
     busy: false,
     error: null,
     issues: [],
+    notice: null,
+    extracting: 0,
 
     startNew: async () => {
       const platform = getPlatform()
@@ -371,6 +391,8 @@ export const useEditorStore = create<EditorState>()(
         s.busy = false
         s.error = null
         s.issues = []
+        s.notice = null
+        s.extracting = 0
       })
     },
 
@@ -423,6 +445,8 @@ export const useEditorStore = create<EditorState>()(
           s.busy = false
           s.error = null
           s.issues = []
+          s.notice = null
+          s.extracting = 0
         })
       } catch (err) {
         const details =
@@ -441,11 +465,17 @@ export const useEditorStore = create<EditorState>()(
         s.open = false
         s.error = null
         s.issues = []
+        s.notice = null
       }),
 
     clearError: () =>
       set((s) => {
         s.error = null
+      }),
+
+    clearNotice: () =>
+      set((s) => {
+        s.notice = null
       }),
 
     changeLocation: async () => {
@@ -520,15 +550,62 @@ export const useEditorStore = create<EditorState>()(
       const picked = await platform.pickPdfs()
       if (picked.length === 0) return
       const rel = await platform.relativePdfPaths(picked, get().location)
+
+      // Skip PDFs the project already references. Match on the absolute path
+      // when we have one, and on the stored relative path otherwise — so
+      // re-picking the same file, or one already listed in an edited project,
+      // doesn't create a second entry.
+      const seen = new Set(get().papers.flatMap(pdfKeys))
+      const fresh: { uid: string; placeholder: string; read?: () => Promise<ArrayBuffer> }[] = []
+      const skipped: string[] = []
+
       set((s) => {
         const ids = new Set(s.papers.map((p) => p.id))
         picked.forEach((pdf, i) => {
-          const paper = makePaperFromPdf(pdf.name, rel[i] ?? pdf.name, pdf.path, ids)
+          const relPath = rel[i] ?? pdf.name
+          if ((pdf.path && seen.has(pdf.path)) || seen.has(relPath)) {
+            skipped.push(pdf.name)
+            return
+          }
+          if (pdf.path) seen.add(pdf.path)
+          seen.add(relPath)
+          const paper = makePaperFromPdf(pdf.name, relPath, pdf.path, ids)
           ids.add(paper.id)
           s.papers.push(paper)
+          fresh.push({ uid: paper.uid, placeholder: paper.title, read: pdf.read })
         })
-        s.dirty = true
+        if (fresh.length > 0) s.dirty = true
+        s.notice =
+          skipped.length > 0
+            ? `Already in the project, skipped: ${skipped.join(', ')}`
+            : null
+        s.extracting += fresh.length
       })
+
+      // Read each PDF's title/authors in the background: the rows are already on
+      // screen with a name-derived placeholder, so this only improves them.
+      await Promise.all(
+        fresh.map(async (entry) => {
+          try {
+            const meta = entry.read ? await extractPdfMeta(await entry.read()) : {}
+            set((s) => {
+              const paper = s.papers.find((p) => p.uid === entry.uid)
+              if (!paper) return
+              // Don't clobber anything the user typed while we were reading.
+              if (meta.title && paper.title === entry.placeholder) paper.title = meta.title
+              if (meta.authors?.length && !paper.authors.trim()) {
+                paper.authors = meta.authors.join(', ')
+              }
+            })
+          } catch {
+            // Unreadable PDF — keep the name-derived placeholder.
+          } finally {
+            set((s) => {
+              s.extracting = Math.max(0, s.extracting - 1)
+            })
+          }
+        }),
+      )
     },
 
     updatePaper: (uid, patch) =>

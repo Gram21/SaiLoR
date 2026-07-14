@@ -85,6 +85,20 @@
   color: var(--text);
 }
 
+.editor-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  font-size: 0.9em;
+}
+
 .editor-body {
   flex: 1 1 auto;
   min-height: 0;

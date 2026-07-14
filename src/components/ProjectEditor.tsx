@@ -16,10 +16,13 @@ export function ProjectEditor() {
   const busy = useEditorStore((s) => s.busy)
   const error = useEditorStore((s) => s.error)
   const issues = useEditorStore((s) => s.issues)
+  const notice = useEditorStore((s) => s.notice)
+  const extracting = useEditorStore((s) => s.extracting)
   const changeLocation = useEditorStore((s) => s.changeLocation)
   const save = useEditorStore((s) => s.save)
   const close = useEditorStore((s) => s.close)
   const clearError = useEditorStore((s) => s.clearError)
+  const clearNotice = useEditorStore((s) => s.clearNotice)
 
   if (!open) return null
 
@@ -101,8 +104,22 @@ export function ProjectEditor() {
           <h2>Papers</h2>
           <p className="editor-hint">
             PDFs are referenced relative to the JSON file, so moving the JSON re-derives their
-            paths.
+            paths. A PDF already in the project is not added twice, and the title and authors are
+            read from the PDF where possible.
           </p>
+          {notice && (
+            <div className="editor-notice">
+              <span>{notice}</span>
+              <button type="button" className="icon-btn" onClick={clearNotice} aria-label="Dismiss">
+                ×
+              </button>
+            </div>
+          )}
+          {extracting > 0 && (
+            <p className="editor-hint" role="status">
+              Reading {extracting} PDF{extracting === 1 ? '' : 's'} for title and authors…
+            </p>
+          )}
           <PapersEditor />
         </section>
       </div>

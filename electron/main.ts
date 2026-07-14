@@ -367,6 +367,15 @@ ipcMain.handle('pdf:pick', async () => {
   return res.filePaths
 })
 
+// Raw bytes of a PDF, so the editor can read its title/authors. Unlike the
+// slr-file:// protocol this is not confined to the project directory — the user
+// may pick PDFs from anywhere, and they chose the file via a native dialog.
+ipcMain.handle('pdf:read', async (_e, filePath: string) => {
+  const buf = await readFile(filePath)
+  // Return a plain Uint8Array; Buffer doesn't survive the IPC boundary intact.
+  return new Uint8Array(buf)
+})
+
 // PDF references are stored relative to the project JSON so the project stays
 // portable. Forward slashes keep the JSON identical across platforms.
 ipcMain.handle('paths:relative', (_e, fromFile: string, toFiles: string[]) => {

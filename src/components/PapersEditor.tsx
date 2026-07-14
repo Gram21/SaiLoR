@@ -176,16 +176,6 @@ function PaperFields({ paper, onRemove }: PaperFieldsProps) {
             onChange={(e) => patch({ id: e.target.value })}
           />
         </label>
-        <label className="papers-field grow">
-          <span className="papers-label">Authors</span>
-          <input
-            type="text"
-            className="papers-input"
-            placeholder="Author One, Author Two"
-            value={paper.authors}
-            onChange={(e) => patch({ authors: e.target.value })}
-          />
-        </label>
         <label className="papers-field">
           <span className="papers-label">
             DOI <span className="papers-note">optional</span>
@@ -195,6 +185,16 @@ function PaperFields({ paper, onRemove }: PaperFieldsProps) {
             className="papers-input"
             value={paper.doi}
             onChange={(e) => patch({ doi: e.target.value })}
+          />
+        </label>
+        <label className="papers-field grow">
+          <span className="papers-label">Authors</span>
+          <input
+            type="text"
+            className="papers-input"
+            placeholder="Author One, Author Two"
+            value={paper.authors}
+            onChange={(e) => patch({ authors: e.target.value })}
           />
         </label>
       </div>

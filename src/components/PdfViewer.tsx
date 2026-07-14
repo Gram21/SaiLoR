@@ -1,15 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Document, Page, pdfjs } from 'react-pdf'
+import { Document, Page } from 'react-pdf'
 import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import { useStore, selectCurrentPaper, PDF_ZOOM_MIN, PDF_ZOOM_MAX } from '../state/store'
 import { getPlatform } from '../platform'
-
-// Load the pdf.js worker from the bundled dependency (works offline / in Electron).
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url,
-).toString()
+// Side-effect import: configures the pdf.js worker.
+import '../platform/pdfjs'
 
 // In-PDF search uses the CSS Custom Highlight API to tint matches without
 // mutating react-pdf's text-layer DOM. Highlight/CSS.highlights aren't in the

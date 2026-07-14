@@ -230,11 +230,14 @@ export class BrowserAdapter implements PlatformAdapter {
         if (isAbort(err)) return []
         throw err
       }
-      return handles.map((h) => ({ name: h.name }))
+      return handles.map((h) => ({
+        name: h.name,
+        read: async () => (await h.getFile()).arrayBuffer(),
+      }))
     }
 
     const files = await pickFilesViaInput()
-    return files.map((f) => ({ name: f.name }))
+    return files.map((f) => ({ name: f.name, read: () => f.arrayBuffer() }))
   }
 
   async relativePdfPaths(pdfs: PickedPdf[], _location: ProjectLocation | null): Promise<string[]> {
