@@ -1,6 +1,6 @@
 {
   "name": "slr-helper",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A tool to assist reviewers during Systematic Literature Reviews (SLR).",
   "author": "",
   "license": "GPL-3.0-only",
@@ -43,7 +43,9 @@
     "productName": "SLR Helper",
     "asar": true,
     "compression": "maximum",
-    "electronLanguages": ["en-US"],
+    "electronLanguages": [
+      "en-US"
+    ],
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
@@ -57,7 +59,13 @@
     },
     "afterPack": "scripts/afterPack.cjs",
     "mac": {
-      "target": { "target": "dmg", "arch": ["arm64", "x64"] },
+      "target": {
+        "target": "dmg",
+        "arch": [
+          "arm64",
+          "x64"
+        ]
+      },
       "icon": "build/icon.png",
       "artifactName": "${productName}-${version}-macos-${arch}.${ext}"
     },
