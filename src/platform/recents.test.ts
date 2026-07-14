@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { readRecents, pushRecent, removeRecent, MAX_RECENTS } from './recents'
+import { readRecents, pushRecent, removeRecent, shortenPath, MAX_RECENTS } from './recents'
 
 // The test environment provides no localStorage (recents.ts guards for exactly
 // that), so stand one up before importing anything that touches it.
@@ -17,6 +17,34 @@ if (typeof globalThis.localStorage === 'undefined') {
 }
 
 const KEY = 'test.recents'
+
+describe('shortenPath', () => {
+  it('keeps the tail — the folder and file are what identify the project', () => {
+    expect(shortenPath('/Users/keim/Documents/Research/2026/code-search/review.json')).toBe(
+      '…/2026/code-search/review.json',
+    )
+  })
+
+  it('leaves a path that already fits alone', () => {
+    expect(shortenPath('/tmp/short.json')).toBe('/tmp/short.json')
+    expect(shortenPath('review.json')).toBe('review.json')
+  })
+
+  it('keeps two same-named projects distinguishable', () => {
+    // The whole point: identical file names, different folders.
+    const a = shortenPath('/deep/deep/deep/reviews/2026/code-search/review.json')
+    const b = shortenPath('/deep/deep/deep/reviews/2025/program-repair/review.json')
+    expect(a).not.toBe(b)
+    expect(a).toContain('code-search')
+    expect(b).toContain('program-repair')
+  })
+
+  it('handles Windows separators', () => {
+    expect(shortenPath('C:\\Users\\keim\\Documents\\reviews\\2026\\review.json')).toBe(
+      '…/reviews/2026/review.json',
+    )
+  })
+})
 
 describe('recents', () => {
   beforeEach(() => localStorage.clear())

@@ -812,7 +812,9 @@ body.resizing * {
 }
 .welcome-recents {
   margin: 28px auto 0;
-  max-width: 360px;
+  /* Wide enough for a useful slice of the path now the buttons are larger. */
+  width: 100%;
+  max-width: 460px;
   text-align: left;
 }
 .welcome-recents-label {
@@ -842,13 +844,19 @@ body.resizing * {
   align-items: stretch;
   gap: 6px;
   margin-bottom: 6px;
+  /* Without this a flex item refuses to shrink below its content. */
+  min-width: 0;
 }
 .welcome-recent {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex: 1 1 auto;
+  /* `1 1 0` (not `auto`) so the button is sized by the row, never by its text. */
+  flex: 1 1 0;
   min-width: 0;
+  max-width: 100%;
+  /* Belt and braces: nothing may paint outside the button. */
+  overflow: hidden;
   text-align: left;
   padding: 8px 12px;
   border: 1px solid var(--border);
@@ -863,22 +871,19 @@ body.resizing * {
 .recent-title,
 .recent-path {
   display: block;
+  /* A flex child's automatic minimum size would otherwise be its text width. */
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* The path is the tiebreaker between projects with the same name, so it is
-   always shown — quietly, and truncated from the *left*, since the tail
-   (the folder + file) is the part that differs.
-   `direction: rtl` puts the ellipsis on the left; `unicode-bidi: plaintext`
-   keeps the path itself laid out left-to-right, so the leading "/" isn't
-   reordered to the end. */
+/* The path is the tiebreaker between projects sharing a name. It is shortened
+   from the head in JS (see shortenPath) so the folder + file survive; the CSS
+   ellipsis is only the safety net for what is still too long. */
 .recent-path {
   color: var(--muted);
   font-size: 0.75rem;
-  direction: rtl;
-  unicode-bidi: plaintext;
-  text-align: left;
 }
 .recent-remove {
   flex: 0 0 auto;
