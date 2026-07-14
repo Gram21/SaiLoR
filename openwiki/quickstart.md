@@ -104,6 +104,8 @@ npm run typecheck
 │   ├── README.md
 │   ├── project.example.json
 │   └── pdfs/
+├── scripts/ci.sh          Provider-agnostic CI pipeline (install → typecheck → test → build)
+├── .github/workflows/ci.yml  GitHub Actions — thin wrapper that runs scripts/ci.sh on push/PR to main
 ├── docs/                  In-depth authoring guide (annotation-schema.md)
 ├── build/icon.png         App icon (also the macOS dock / packaged-bundle icon)
 ├── public/favicon.svg     Browser favicon
