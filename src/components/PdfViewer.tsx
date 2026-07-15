@@ -79,6 +79,8 @@ export function PdfViewer() {
 
   const [url, setUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [needsFolderGrant, setNeedsFolderGrant] = useState(false)
+  const [grantingFolder, setGrantingFolder] = useState(false)
   const [numPages, setNumPages] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInput, setPageInput] = useState('1')
@@ -86,6 +88,7 @@ export function PdfViewer() {
   const containerRef = useRef<HTMLDivElement>(null)
   const pageRefs = useRef<(HTMLDivElement | null)[]>([])
   const pageInputRef = useRef<HTMLInputElement>(null)
+  const revokeRef = useRef<(() => void) | undefined>(undefined)
 
   // In-PDF search.
   const [searchOpen, setSearchOpen] = useState(false)
@@ -117,9 +120,9 @@ export function PdfViewer() {
 
   // Resolve the PDF source only when the paper identity or its pdf path changes.
   useEffect(() => {
-    let revoked: (() => void) | undefined
     let cancelled = false
     setError(null)
+    setNeedsFolderGrant(false)
     setNumPages(0)
     setCurrentPage(1)
     setPageInput('1')
@@ -129,7 +132,21 @@ export function PdfViewer() {
     setCanJumpBack(false)
     setCanJumpForward(false)
     setUrl(null)
+    revokeRef.current?.()
+    revokeRef.current = undefined
     if (!pdfPath) return
+
+    // A locally opened browser project needs a one-time folder grant before
+    // any of its PDFs can be read. Ask for it explicitly — a button below,
+    // driven by a real click — rather than let getPdfSource pop the native
+    // picker unannounced the moment a paper is first opened, which reads as
+    // the app doing something on its own for no visible reason (and, on
+    // Firefox, opens with the browser's own "upload files?" framing, which
+    // is alarming to see with no context).
+    if (getPlatform().needsPdfFolderGrant()) {
+      setNeedsFolderGrant(true)
+      return
+    }
     getPlatform()
       .getPdfSource(pdfPath, saveHandle ?? { kind: 'download' })
       .then((src) => {
@@ -137,15 +154,39 @@ export function PdfViewer() {
           src.revoke?.()
           return
         }
-        revoked = src.revoke
+        revokeRef.current = src.revoke
         setUrl(src.url)
       })
       .catch((err) => !cancelled && setError(String(err?.message ?? err)))
     return () => {
       cancelled = true
-      revoked?.()
     }
   }, [paperId, pdfPath, saveHandle])
+
+  // Revoke the last object URL when the viewer itself unmounts (the effect
+  // above already revokes on every paper/handle change, via revokeRef).
+  useEffect(() => () => revokeRef.current?.(), [])
+
+  // The explicit "Choose folder…" action: a real click, so the native picker
+  // is guaranteed to open (some browsers refuse it otherwise) and the
+  // reviewer sees why they're being asked before the OS dialog appears.
+  const grantFolderAccess = () => {
+    if (!pdfPath) return
+    setGrantingFolder(true)
+    setError(null)
+    getPlatform()
+      .grantPdfFolderAccess()
+      .then(() => {
+        setNeedsFolderGrant(false)
+        return getPlatform().getPdfSource(pdfPath, saveHandle ?? { kind: 'download' })
+      })
+      .then((src) => {
+        revokeRef.current = src.revoke
+        setUrl(src.url)
+      })
+      .catch((err) => setError(String(err?.message ?? err)))
+      .finally(() => setGrantingFolder(false))
+  }
 
   // Track container width so pages scale to fit.
   useLayoutEffect(() => {
@@ -560,6 +601,21 @@ export function PdfViewer() {
       >
         {error ? (
           <div className="pdf-error">Could not load PDF: {error}</div>
+        ) : needsFolderGrant ? (
+          <div className="pdf-grant">
+            <p>
+              SaiLoR needs to know where this project's PDFs are. Choose the folder that contains
+              the project file — nothing is uploaded anywhere; it stays on this device.
+            </p>
+            <button
+              type="button"
+              className="primary"
+              onClick={grantFolderAccess}
+              disabled={grantingFolder}
+            >
+              {grantingFolder ? 'Waiting for folder…' : 'Choose folder…'}
+            </button>
+          </div>
         ) : url ? (
           <Document
             file={url}

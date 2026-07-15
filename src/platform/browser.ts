@@ -63,6 +63,8 @@ export class BrowserAdapter implements PlatformAdapter {
 
   private fileHandles = new Map<string, FileSystemFileHandle>()
   private pdfDir: FileSystemDirectoryHandle | null = null
+  /** Fallback when there is no FSAPI directory picker: relative path → File, from a folder <input>. */
+  private pdfFileMap: Map<string, File> | null = null
   private nextId = 0
   /** Set when a project was loaded from a URL (server mode); PDFs resolve against it. */
   private serverBase: string | null = null
@@ -71,6 +73,18 @@ export class BrowserAdapter implements PlatformAdapter {
   setServerBase(url: string): void {
     // Store an absolute URL so it can serve as a base for resolving pdf paths.
     this.serverBase = new URL(url, document.baseURI).toString()
+    this.clearLocalPdfGrants()
+  }
+
+  /**
+   * Drop whatever a *previous* project's local PDFs were resolved through —
+   * the granted FSAPI directory and the folder-input map — so a newly opened
+   * project always resolves its own PDFs, never a leftover grant that
+   * happens to still be sitting around from the last one.
+   */
+  private clearLocalPdfGrants(): void {
+    this.pdfDir = null
+    this.pdfFileMap = null
   }
 
   getRecents(): RecentEntry[] {
@@ -117,6 +131,7 @@ export class BrowserAdapter implements PlatformAdapter {
       const text = await file.text()
       const id = this.register(handle)
       this.serverBase = null
+      this.clearLocalPdfGrants()
       await this.rememberHandle(file.name, handle)
       return { text, handle: { kind: 'fsapi', path: id }, name: file.name }
     }
@@ -125,6 +140,13 @@ export class BrowserAdapter implements PlatformAdapter {
     const file = await pickFileViaInput()
     if (!file) return null
     const text = await file.text()
+    // A stale base from a previously opened server-mode project (or an
+    // earlier ?project=<url> load) must not leak into this one — <input>
+    // exposes no location for this project's own PDFs to resolve against, so
+    // there is nothing to set it to; leaving the old value would silently
+    // resolve this project's PDFs against a different project's folder.
+    this.serverBase = null
+    this.clearLocalPdfGrants()
     return { text, handle: { kind: 'download' }, name: file.name }
   }
 
@@ -140,6 +162,7 @@ export class BrowserAdapter implements PlatformAdapter {
     const text = await file.text()
     const regId = this.register(handle)
     this.serverBase = null
+    this.clearLocalPdfGrants()
     pushRecent(RECENTS_KEY, { id, name: id })
     return { text, handle: { kind: 'fsapi', path: regId }, name: file.name }
   }
@@ -173,15 +196,24 @@ export class BrowserAdapter implements PlatformAdapter {
     return pdfPaths
   }
 
-  async getPdfSource(pdfPath: string, handle: SaveHandle): Promise<PdfSource> {
-    // Local project opened via FSAPI: resolve siblings through a granted dir.
-    if (handle.kind === 'fsapi' && hasFsApi() && typeof fsApi().showDirectoryPicker === 'function') {
-      const file = await this.resolveViaDir(pdfPath)
+  async getPdfSource(pdfPath: string, _handle: SaveHandle): Promise<PdfSource> {
+    // A locally opened project (anything that isn't `?project=<url>` server
+    // mode) has no URL for its PDFs to live at, so there is nothing to fetch
+    // — resolve siblings through a folder the reviewer grants access to once
+    // per session instead: the File System Access API's directory picker
+    // where available, or a folder-picking <input> otherwise. This covers
+    // every "Open project…" path uniformly (an FSAPI in-place handle, or the
+    // plain <input> fallback in Firefox/Safari, or Chromium without the
+    // grant) — it used to only run for the FSAPI handle, which meant every
+    // other local-open path fell through to a fetch against the *app's own*
+    // URL and failed there instead.
+    if (!this.serverBase) {
+      const file = await this.resolveLocalPdf(pdfPath)
       const url = URL.createObjectURL(file)
       return { url, revoke: () => URL.revokeObjectURL(url) }
     }
-    // Server mode: resolve against the project URL; otherwise relative to the page.
-    const base = this.serverBase ?? document.baseURI
+    // Server mode: resolve against the project URL.
+    const base = this.serverBase
     const abs = new URL(pdfPath, base).toString()
     const res = await fetch(abs)
     if (!res.ok) {
@@ -189,18 +221,86 @@ export class BrowserAdapter implements PlatformAdapter {
         `Could not load PDF "${pdfPath}" (HTTP ${res.status}). In the browser, PDFs must be served alongside the project.`,
       )
     }
-    const blob = await res.blob()
+    const buf = await res.arrayBuffer()
+    // A missing file very often does NOT surface as a non-2xx status here: a
+    // dev server's SPA fallback, a static host's catch-all rewrite, or a
+    // reverse proxy's login page can all answer 200 with HTML for a path that
+    // doesn't actually exist. `res.ok` alone can't tell that apart from a real
+    // PDF, and handing pdf.js the wrong bytes surfaces as an opaque "Invalid
+    // PDF structure" that points nowhere near the actual problem — so check
+    // the bytes themselves before trusting them.
+    if (!hasPdfMagic(buf)) {
+      throw new Error(
+        `Could not load PDF "${pdfPath}": the server answered, but not with a PDF. This usually means the file isn't actually there — check that it is served at "${abs}".`,
+      )
+    }
+    const blob = new Blob([buf], { type: 'application/pdf' })
     const url = URL.createObjectURL(blob)
     return { url, revoke: () => URL.revokeObjectURL(url) }
   }
 
-  private async resolveViaDir(pdfPath: string): Promise<File> {
-    if (!this.pdfDir) {
-      // One-time grant of the folder that contains the PDFs.
-      this.pdfDir = await fsApi().showDirectoryPicker!({ id: 'slr-pdfs', mode: 'read' })
+  needsPdfFolderGrant(): boolean {
+    return !this.serverBase && !this.pdfDir && !this.pdfFileMap
+  }
+
+  async grantPdfFolderAccess(): Promise<void> {
+    if (!this.needsPdfFolderGrant()) return
+    await this.ensureLocalPdfGrant()
+  }
+
+  /** Local PDF resolution: the FSAPI directory picker where available, else a folder-picking `<input>`. */
+  private async resolveLocalPdf(pdfPath: string): Promise<File> {
+    await this.ensureLocalPdfGrant()
+    if (this.pdfDir) return this.resolveViaDir(this.pdfDir, pdfPath)
+    return this.resolveViaFileMap(pdfPath)
+  }
+
+  /**
+   * Makes sure `pdfDir` or `pdfFileMap` is set, prompting for one if neither
+   * is — the File System Access API's directory picker where available, or a
+   * folder-picking `<input>` otherwise. A no-op once either is already set,
+   * so this only ever prompts once per session (per grant type). Shared by
+   * `grantPdfFolderAccess` (an explicit, caller-driven prompt) and
+   * `resolveLocalPdf` (a just-in-time prompt for callers — like the
+   * AI-annotation flow's own `getPdfSource` call — that don't go through the
+   * explicit-grant UI first).
+   */
+  private async ensureLocalPdfGrant(): Promise<void> {
+    if (this.pdfDir || this.pdfFileMap) return
+    if (hasFsApi() && typeof fsApi().showDirectoryPicker === 'function') {
+      try {
+        this.pdfDir = await fsApi().showDirectoryPicker!({ id: 'slr-pdfs', mode: 'read' })
+      } catch (err) {
+        if (isAbort(err)) {
+          throw new Error("Pick the folder that contains this project's PDFs to view them.")
+        }
+        throw err
+      }
+      return
     }
-    const parts = pdfPath.split('/').filter((p) => p && p !== '.')
-    let dir = this.pdfDir
+    // Browsers with no File System Access API (Firefox, Safari, or Chromium
+    // without the grant) still support picking a whole folder through the
+    // classic `<input>` via the (despite the name, universally implemented)
+    // `webkitdirectory` attribute — the browser reads every file in the tree
+    // in one go, each carrying its path relative to the picked folder
+    // (`webkitRelativePath`).
+    const files = await pickPdfFolderViaInput()
+    if (files.length === 0) {
+      throw new Error("No folder was selected. Pick the folder that contains this project's PDFs to view them.")
+    }
+    const map = new Map<string, File>()
+    for (const f of files) {
+      // "<pickedFolderName>/pdfs/paper.pdf" → "pdfs/paper.pdf": the picked
+      // folder's own name isn't part of the project-relative paths stored
+      // in the JSON, only its contents are.
+      const rel = f.webkitRelativePath.split('/').slice(1).join('/')
+      if (rel) map.set(rel, f)
+    }
+    this.pdfFileMap = map
+  }
+
+  private async resolveViaDir(dir: FileSystemDirectoryHandle, pdfPath: string): Promise<File> {
+    const parts = relParts(pdfPath)
     try {
       for (let i = 0; i < parts.length - 1; i++) {
         dir = await dir.getDirectoryHandle(parts[i])
@@ -212,6 +312,16 @@ export class BrowserAdapter implements PlatformAdapter {
         `PDF "${pdfPath}" was not found in the selected folder. Pick the folder that contains the project's PDFs.`,
       )
     }
+  }
+
+  private resolveViaFileMap(pdfPath: string): File {
+    const file = this.pdfFileMap?.get(relParts(pdfPath).join('/'))
+    if (!file) {
+      throw new Error(
+        `PDF "${pdfPath}" was not found in the selected folder. Pick the folder that contains the project's PDFs.`,
+      )
+    }
+    return file
   }
 
   // ---- Project editor ----
@@ -398,6 +508,24 @@ function isAbort(err: unknown): boolean {
   return err instanceof DOMException && err.name === 'AbortError'
 }
 
+/** A stored `pdf` path, split into clean segments (drops empty parts and `.`). */
+function relParts(pdfPath: string): string[] {
+  return pdfPath.split('/').filter((p) => p && p !== '.')
+}
+
+/**
+ * True when `buf` starts with PDF's own magic number (`%PDF-`) — the only
+ * reliable way to tell "this really is a PDF" from "the server answered 200
+ * with something else for this URL". `Content-Type` is not trustworthy
+ * enough on its own to skip this: plenty of static hosts serve everything as
+ * `application/octet-stream`, and that would make a real PDF fail the check
+ * the wrong way.
+ */
+function hasPdfMagic(buf: ArrayBuffer): boolean {
+  const head = new Uint8Array(buf, 0, Math.min(5, buf.byteLength))
+  return String.fromCharCode(...head) === '%PDF-'
+}
+
 async function writeFsApi(handle: FileSystemFileHandle, text: string): Promise<void> {
   const writable = await (
     handle as FileSystemFileHandle & { createWritable: () => Promise<FileSystemWritableFileStream> }
@@ -432,6 +560,40 @@ function pickFilesViaInput(): Promise<File[]> {
     input.addEventListener('change', done)
     // If the user cancels, there's no reliable event; resolve on focus return.
     window.addEventListener('focus', () => setTimeout(done, 300), { once: true })
+    document.body.appendChild(input)
+    input.click()
+  })
+}
+
+/** Picks a whole folder (recursively) via the classic `<input>`'s `webkitdirectory` attribute. */
+function pickPdfFolderViaInput(): Promise<File[]> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    ;(input as HTMLInputElement & { webkitdirectory: boolean }).webkitdirectory = true
+    input.multiple = true
+    input.style.display = 'none'
+    let settled = false
+    const finish = () => {
+      if (settled) return
+      settled = true
+      resolve(Array.from(input.files ?? []))
+      input.remove()
+    }
+    input.addEventListener('change', finish)
+    // The dedicated `cancel` event (Chrome 113+, Firefox 106+, Safari 16.4+)
+    // fires only when the picker was genuinely dismissed with nothing chosen.
+    // A focus-return guess is NOT safe here the way it is for a plain file
+    // picker: Firefox inserts its own "Upload N files from this folder?"
+    // confirmation *after* the OS folder dialog closes — and that OS dialog
+    // closing already returns window focus, well before the user has
+    // answered Firefox's prompt. A short focus-based timeout reads that
+    // in-between moment as a cancel and resolves empty while the real answer
+    // is still pending, which is exactly the bug this event replaces.
+    input.addEventListener('cancel', finish)
+    // Belt-and-suspenders only, for an engine with neither event: a long
+    // delay so a still-pending confirmation step (above) has time to clear.
+    window.addEventListener('focus', () => setTimeout(finish, 2000), { once: true })
     document.body.appendChild(input)
     input.click()
   })

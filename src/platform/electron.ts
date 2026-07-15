@@ -150,6 +150,14 @@ export class ElectronAdapter implements PlatformAdapter {
     return { url: `slr-file://project/${encoded}` }
   }
 
+  // Electron reads PDFs straight off disk via slr-file:// — there is no
+  // folder-grant prompt to ask for.
+  needsPdfFolderGrant(): boolean {
+    return false
+  }
+
+  async grantPdfFolderAccess(): Promise<void> {}
+
   async pickProjectLocation(suggestedName: string): Promise<ProjectLocation | null> {
     const res = await bridge().pickSavePath(suggestedName)
     if (!res) return null

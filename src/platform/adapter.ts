@@ -109,6 +109,27 @@ export interface PlatformAdapter {
    */
   getPdfSource(pdfPath: string, projectHandle: SaveHandle): Promise<PdfSource>
 
+  /**
+   * True when `getPdfSource` would need to prompt for a local folder before
+   * it can resolve anything, and hasn't been granted one yet this session —
+   * i.e. a locally opened browser project whose PDFs have never been
+   * located. Always `false` on Electron (no such prompt exists) and for a
+   * server-mode browser project (PDFs are fetched, nothing to grant).
+   *
+   * Exists so a caller can ask for that grant explicitly — from a visible
+   * button the reviewer clicks — rather than have `getPdfSource` pop a
+   * native folder picker unannounced the first time a PDF is opened, which
+   * reads as the app doing something on its own for no visible reason.
+   */
+  needsPdfFolderGrant(): boolean
+
+  /**
+   * Prompts for that folder now. Must be called from a real user gesture (a
+   * native picker will not open otherwise — some browsers enforce this
+   * strictly). A no-op wherever `needsPdfFolderGrant()` is `false`.
+   */
+  grantPdfFolderAccess(): Promise<void>
+
   // ---- Project editor (create / edit a project JSON) ----
 
   /**
