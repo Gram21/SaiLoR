@@ -6,6 +6,7 @@ import {
   isSelfOrDescendant,
   validateDraft,
   buildProjectJson,
+  editorStateFromOpened,
   makePaperFromPdf,
   makeNode,
   useEditorStore,
@@ -13,6 +14,7 @@ import {
   type EditorPaper,
 } from './editorStore'
 import { loadProject } from '../model/project'
+import type { OpenedProject } from '../platform'
 
 function node(name: string, patch: Partial<EditorNode> = {}): EditorNode {
   return { ...makeNode(), name, ...patch }
@@ -217,5 +219,49 @@ describe('buildProjectJson', () => {
     const json = buildProjectJson(draft([node('X', { kind: 'string' })], [paper]))
     const out = (json.papers as Record<string, unknown>[])[0]
     expect('doi' in out).toBe(false)
+  })
+})
+
+describe('editorStateFromOpened (shared by "Edit annotation JSON…" and the recents pen)', () => {
+  const opened = (text: string): OpenedProject => ({
+    text,
+    name: 'review.json',
+    handle: { kind: 'fsapi', path: '/x/review.json' } as OpenedProject['handle'],
+  })
+
+  const projectJson = JSON.stringify({
+    version: 2,
+    title: 'My Review',
+    reviewers: ['A'], // an unknown top-level key, must be preserved as extra
+    config: {
+      schema: [
+        { name: 'Relevant', type: 'boolean' },
+        { name: 'Findings', max: null, children: [{ name: 'Claim', type: 'string' }] },
+      ],
+    },
+    papers: [
+      { id: 'p1', title: 'Paper One', authors: ['A. Author'], pdf: 'pdfs/p1.pdf', annotations: {} },
+    ],
+  })
+
+  it('turns a project file into editor nodes, papers, title and preserved extras', () => {
+    const st = editorStateFromOpened(opened(projectJson))
+    expect(st.version).toBe(2)
+    expect(st.title).toBe('My Review')
+    expect(st.extra).toEqual({ reviewers: ['A'] })
+    expect(st.location).toMatchObject({ name: 'review.json', path: '/x/review.json' })
+    expect(st.nodes.map((n) => n.name)).toEqual(['Relevant', 'Findings'])
+    expect(st.nodes[1].children.map((c) => c.name)).toEqual(['Claim'])
+    expect(st.papers).toHaveLength(1)
+    expect(st.papers[0].authors).toBe('A. Author')
+
+    // The parsed draft rebuilds a file the real loader still accepts.
+    const roundTrip = loadProject(JSON.stringify(buildProjectJson(st)))
+    expect(roundTrip.schema.map((d) => d.name)).toEqual(['Relevant', 'Findings'])
+  })
+
+  it('throws on a structurally invalid project so the caller can show an error', () => {
+    expect(() => editorStateFromOpened(opened('{ not json'))).toThrow()
+    expect(() => editorStateFromOpened(opened(JSON.stringify({ papers: [] })))).toThrow()
   })
 })

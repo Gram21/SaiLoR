@@ -834,7 +834,8 @@ body.resizing * {
   padding: 12px 24px;
 }
 /* …except the small × on a recent, which must stay compact. */
-.welcome-box .recent-remove {
+.welcome-box .recent-remove,
+.welcome-box .recent-edit {
   padding: 4px 10px;
   font-size: 1rem;
 }
@@ -885,10 +886,25 @@ body.resizing * {
   color: var(--muted);
   font-size: 0.75rem;
 }
-.recent-remove {
+.recent-remove,
+.recent-edit {
   flex: 0 0 auto;
   align-self: center;
   color: var(--muted);
+}
+.recent-edit:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+/* The ✎ glyph has its tip at the bottom-right; mirror it so the tip points
+   bottom-left. `inline-block` so the transform applies to the glyph. */
+.recent-edit {
+  display: inline-block;
+  transform: scaleX(-1);
+}
+.recent-edit:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 /* A project whose file has gone: kept in the list (the drive may come back)
    but faded and unselectable. */

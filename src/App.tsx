@@ -40,6 +40,7 @@ export function App() {
   const editorOpen = useEditorStore((s) => s.open)
   const startNew = useEditorStore((s) => s.startNew)
   const startEdit = useEditorStore((s) => s.startEdit)
+  const startEditRecent = useEditorStore((s) => s.startEditRecent)
   const appVersion = useStore((s) => s.appVersion)
   const update = useStore((s) => s.update)
   const checkForUpdate = useStore((s) => s.checkForUpdate)
@@ -148,6 +149,16 @@ export function App() {
                         </span>
                         {/* The path distinguishes two projects sharing a name. */}
                         <span className="recent-path">{shortWhere}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-btn recent-edit"
+                        title="Edit this project's annotation schema"
+                        aria-label={`Edit the annotation schema of ${label}`}
+                        disabled={missing}
+                        onClick={() => void startEditRecent(item.id)}
+                      >
+                        ✎
                       </button>
                       <button
                         type="button"
