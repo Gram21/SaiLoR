@@ -53,7 +53,8 @@ The top‑level object has three keys:
 {
   "version": 1,
   "config": {
-    "schema": []
+    "schema": [],
+    "ai": true
   },
   "papers": []
 }
@@ -62,10 +63,22 @@ The top‑level object has three keys:
 | Key       | Required? | What it is                                                                 |
 | --------- | --------- | -------------------------------------------------------------------------- |
 | `version` | optional  | A number. If you omit it, the app treats it as `1`.                        |
-| `config`  | required  | An object with one key, `schema` — the annotation taxonomy.               |
+| `config`  | required  | The annotation schema (`schema`) and options such as `ai`.                 |
 | `papers`  | required  | The list of papers to annotate.                                            |
 
 `config.schema` must be an **array with at least one node**. An empty schema is rejected.
+
+**`config.ai` — forbid AI-assisted annotation.** Optional, defaults to `true`. Set it to `false` and
+the **✦ AI** button is disabled for anyone who opens the file. Use this when the papers must not be
+sent to a third-party model — an embargoed corpus, or a review whose protocol forbids it. It only
+affects this project file; it is written out only when `false`, so a normal file never carries the
+key. The project editor exposes it as a checkbox (see §2 of the app's *New / Edit annotation JSON*
+screen).
+
+Note that `config.ai` can only ever *restrict* the feature, not guarantee it: `true` (or omitting
+the key) does not by itself mean the button is available to whoever opens the file — the app may
+have its own reasons for keeping AI-assisted annotation off that this setting does not override.
+`false` always wins, in every build.
 
 **Extra keys are preserved.** Any additional top‑level key you add (say, `"reviewers"` or
 `"notes"`) is kept verbatim when the app saves the file. The same applies to extra keys inside
@@ -96,6 +109,12 @@ Two structural rules the app enforces:
 - **Sibling names must be unique.** Two nodes at the same level cannot share a `name`, because
   the name is the key under which the saved data is stored. Duplicates cause a load error.
   (Names in *different* branches may repeat — the rule is only about direct siblings.)
+
+> **Note for maintainers.** This description of the format is mirrored in the LLM system prompt
+> (`SCHEMA_FORMAT_DOC` in `src/llm/prompt.ts`), so that the *AI-assisted annotation* feature can
+> hand a model a schema it has never seen and have it read the schema rather than pattern-match a
+> familiar one. The two are kept in step **by hand**: if the format changes here, change it there
+> too.
 
 ### 3.1 Simple fields (string, number, boolean)
 
@@ -418,6 +437,24 @@ A few things worth knowing about how the app fills and tidies this tree:
 
 You normally don't hand‑write this tree — the app produces it. But understanding its shape helps
 you read a saved file and spot problems.
+
+### AI usage disclosure
+
+If AI-assisted annotation is ever used on a paper, the app adds a top-level `aiUsage` array to
+that paper — a permanent record of which provider and model produced values, and when:
+
+```json
+"aiUsage": [
+  { "provider": "anthropic", "model": "claude-opus-4-8", "appliedAt": "2026-07-15T10:00:00.000Z" }
+]
+```
+
+One entry is appended each time a reviewer accepts an AI-proposed run of values for this paper, in
+the order they happened — array order (backed by `appliedAt`) is how "which use came first" is
+read. A paper AI was never used on has no `aiUsage` key at all, so a normal, hand-annotated project
+stays exactly as clean as before this feature existed. Unlike the annotation values themselves,
+this record survives independently of any single field — it is not removed if the fields it
+accompanied are later edited by hand, only if that entire AI-fill action is undone.
 
 ---
 

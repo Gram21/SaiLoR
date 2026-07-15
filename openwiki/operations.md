@@ -109,7 +109,7 @@ SKIP_INSTALL=1 ./scripts/ci.sh   # skip `npm ci` when deps are already installed
 
 `scripts/ci.sh` is the single source of truth for "does the app build and pass its checks". It runs, in order: dependency install (`npm ci`, or `npm install` if no lockfile), `npm run typecheck`, `npm test`, and `npm run build`. It is `set -euo pipefail` and `cd`s to the repo root, so it works from any directory and fails fast.
 
-The GitHub Actions workflow `.github/workflows/ci.yml` runs on every push and pull request to `main` (and via manual `workflow_dispatch`). It is deliberately thin — checkout, `actions/setup-node` (Node 22, npm cache), then `./scripts/ci.sh`. Keeping the real work in the shell script means the same checks run locally and the pipeline can be ported to another provider (e.g. GitLab CI) by calling the script from that provider's config instead. Note the CI builds the **static SPA** (`npm run build`); it does not run `electron-builder` (which needs per-OS runners) — `npm run typecheck` still compiles the Electron main/preload TypeScript via the `tsconfig.node.json` project reference.
+The GitHub Actions workflow `.github/workflows/ci.yml` runs on every push to `main` and on **every pull request, whatever it targets** (and via manual `workflow_dispatch`). The pull-request trigger is deliberately not scoped to `main`: a PR onto a release branch needs the same checks as one onto main, and not combining it with a push-on-every-branch trigger avoids building twice for each push on a branch that already has an open PR. A `concurrency` group keyed by workflow + ref cancels the runs a newer commit supersedes. The job itself is deliberately thin — checkout, `actions/setup-node` (Node 22, npm cache), then `./scripts/ci.sh`. Keeping the real work in the shell script means the same checks run locally and the pipeline can be ported to another provider (e.g. GitLab CI) by calling the script from that provider's config instead. Note the CI builds the **static SPA** (`npm run build`); it does not run `electron-builder` (which needs per-OS runners) — `npm run typecheck` still compiles the Electron main/preload TypeScript via the `tsconfig.node.json` project reference.
 
 ### Release builds (desktop installers)
 
@@ -177,6 +177,8 @@ https://your.host/?project=/reviews/2026/project.json
 
 PDF paths in the project file are resolved relative to the project URL (via `BrowserAdapter.setServerBase()`). The `getPdfSource` method fetches each PDF and creates a blob URL for react-pdf.
 
+**A missing PDF on a static host frequently does not 404.** Most SPA-style hosts (a dev server, S3+CloudFront with an SPA rewrite rule, an nginx `try_files … /index.html` config) answer any unmatched path with `200` and the app's own `index.html`, rather than a real 404 — so if a PDF's path is wrong, or the `pdfs/` directory wasn't actually deployed alongside the project JSON, the fetch still "succeeds" and hands pdf.js an HTML page instead of a PDF. `getPdfSource` checks the response actually starts with PDF's magic number (`%PDF-`) before trusting it, so this now surfaces as *"the server answered, but not with a PDF"* naming the exact URL it tried — check that URL directly (e.g. `curl -I <url>`) if you see it; it almost always means the PDF isn't actually being served at the path the project JSON references.
+
 ### B. Docker (self-hosting)
 
 The repo includes a multi-stage `Dockerfile` (Node build → nginx runtime) and `docker-compose.yml`:
@@ -243,6 +245,104 @@ Paper navigation with `[`/`]` is disabled when typing in an input field; Alt-arr
 | Chromium (FSAPI) | Writes in-place via retained handle | `showSaveFilePicker` |
 | Other browsers | Downloads JSON | Downloads JSON |
 | Server mode (no handle) | Falls back to Save as… | Downloads JSON |
+
+## PDF Loading in the Browser Build
+
+Opening a **local** project file (any "Open…" that isn't a `?project=<url>` server-mode load) shows a one-time in-app prompt the first time you view a paper — *"SaiLoR needs to know where this project's PDFs are"* — with a **Choose folder…** button. Clicking it opens your browser's own folder picker; pick the folder that contains the project JSON (the one with `pdfs/` inside it, not the `pdfs/` folder itself). That grant is then reused for every PDF in the project for the rest of the session; you're not asked again unless you open a different project.
+
+The in-app prompt exists so the native folder dialog never appears out of nowhere the moment you open a paper — particularly on Firefox, whose own dialog frames this as an "upload," which reads as alarming with no context. If you ever see that native dialog without having clicked **Choose folder…** first, something outside the app triggered it (e.g. the AI-annotation flow reading a paper's PDF for a paper you haven't viewed yet) — it's the same one-time-per-session grant either way, just requested by a different caller.
+
+| Runtime | Mechanism |
+|---|---|
+| Chromium (FSAPI) | `showDirectoryPicker` — a real directory handle, PDFs read lazily by path as you open them |
+| Other browsers (Firefox, Safari) | A folder-picking `<input>` (`webkitdirectory`) — reads the whole folder tree at once on the first prompt |
+| Server mode (`?project=<url>`) | Fetched from the project's URL; no prompt |
+
+A **local** project's PDFs are never fetched from a URL — there isn't one for them to be at. If you instead see an error naming a URL (*"the server answered, but not with a PDF"*), you're in **server mode**, not the local-folder path above — see the static-hosting note below for what that means and how to fix it.
+
+## AI-assisted annotation: setting up an LLM target
+
+The **✦ AI** button in the annotation column asks a model to propose values for the fields of the current paper that are still empty. It does nothing until a **target** is configured — a provider, a model name, and the API key to reach it.
+
+**The button is off by default in this build, for every project, regardless of `config.ai`.** See "Availability is gated twice" in `architecture.md` for the mechanism and why — if you're trying to exercise this feature locally (dev, testing, a demo) and the button stays greyed out even with a target configured, that gate — not a missing target — is almost always why. `config.ai: false` still forbids it unconditionally either way.
+
+### Setting one up
+
+1. Open a project, select a paper, and press **✦ AI** → **Set up an LLM…** (or the ⚙ button in the dialog).
+2. **+ Add target**, then fill in:
+   - **Name** — what you pick from later, e.g. *Claude (work key)*.
+   - **Provider** — Anthropic, OpenAI, Google (Gemini), OpenRouter, Groq, Mistral, DeepSeek, xAI
+     (Grok), or **OpenAI-compatible** (anything speaking `/v1/chat/completions`: LM Studio,
+     llama.cpp, vLLM, a gateway…). Google is the one native (non-OpenAI-shaped) API besides
+     Anthropic — see `src/llm/providers.ts`.
+   - **Base URL** — fixed and read-only for every named provider; editable **only** for
+     OpenAI-compatible, where you enter your server's root (`http://localhost:1234`). Any of the
+     root, `…/v1`, or the full `…/v1/chat/completions` works — `join()` in `src/llm/providers.ts`
+     will not duplicate what you typed.
+   - **API key** — pasted once; see below for where it ends up.
+   - **Model** — a searchable dropdown once the app has fetched the provider's own model list
+     (**Load models**, or automatic when editing a target that already has a key stored — fetching
+     needs a key, same as Verify setup). You can still type a name that isn't in the list: the field
+     is free text, and only turns red — with a tooltip — once you leave it with something the loaded
+     list doesn't recognize. An unknown model is rejected by the *provider*, not by the app, so
+     the red flag is a hint to double-check, not a hard block.
+   - **Reasoning effort** — shown only for a model the app knows supports it (from the provider's
+     own model-list response, or a documented allowlist for providers whose list doesn't say —
+     see `architecture.md`). Defaults to *medium* the moment such a model is picked. Higher effort
+     is generally slower and more expensive.
+   - **Send the paper as** — *Extracted text* (default: smaller, cheaper, works everywhere) or
+     *The PDF itself* (Anthropic / OpenAI / Google / OpenRouter only — the rest have no way to take
+     a PDF in a single request; keeps tables and figures intact, costs far more, and is the only way
+     to read a scanned paper).
+3. **Verify setup** sends a one-word test request and shows the model's reply — or the provider's own error. **It saves the target first**, because the key has to be stored before anything can use it. Use it: a wrong key, model name or URL is much cheaper to discover here than after waiting on a full paper.
+
+Several targets may coexist; the last one used is remembered in `localStorage` under `slr.llm.selected`.
+
+A fetched model list is cached for an hour per target (**Refresh** bypasses that). It is *not*
+what makes an unlisted model name work or not work — that's always the provider's call — it only
+drives the dropdown and the red-field hint.
+
+### Disclosure: every AI use is recorded in the saved file
+
+Once a proposed value from a run is applied to a paper, the file gains a permanent `aiUsage` entry
+on that paper — provider, model, and a timestamp — even after the values themselves are later
+edited by hand. This is a disclosure record, not a UI hint like the blue "unconfirmed" borders
+(which are session-only and never saved): it exists so a co-reviewer, or you yourself later, can
+see that a paper had AI involvement at all, and with what. A paper AI was never used on carries no
+such entry — see `docs/annotation-schema.md` §5 for the exact shape.
+
+### Where the API key is stored
+
+| Runtime | Location | Protection |
+|---|---|---|
+| **Electron (desktop)** | `llm-config.json` in `app.getPath('userData')`, file mode `0600` | Encrypted with Electron's **`safeStorage`**, i.e. the OS keychain (Keychain on macOS, DPAPI on Windows, a Secret Service keyring on Linux). The key is held by the **main process** and never handed to the renderer; the page only ever learns `hasKey: true`. |
+| **Browser (web build)** | `localStorage`, key `slr.llm.configs` | **None. The key is stored in the clear.** Any script on the page, and anyone with access to that browser profile, can read it. The settings dialog says so in red. |
+
+Notes:
+
+- If `safeStorage.isEncryptionAvailable()` is false, the desktop app **refuses to save the key** rather than writing it in the clear — the user is told, and the rest of the app keeps working.
+- **On Linux, `safeStorage` can report "available" while using a weak fallback backend** (`basic_text`) when no keyring/Secret Service is running — the encryption is then little more than obfuscation. The app cannot tell the difference. If the key matters, run the desktop app on a session with a working keyring (gnome-keyring / kwallet), or use a scoped, revocable key.
+- Deleting a target deletes its stored key with it. A stored key is never shown again, so an edit that leaves the key box blank keeps the existing one.
+
+### Limitations of the web build
+
+The desktop app is the supported path for AI annotation. In the browser two things are genuinely worse, and neither is a bug we can fix from this side:
+
+1. **The key is unencrypted** (above). There is no keychain in a page, and no main process to hold the key out of its reach.
+2. **CORS.** The call goes out *from the page*, so it is a cross-origin `POST` and the provider must be willing to answer it:
+   - **Anthropic** refuses browser-origin calls unless the caller opts in; the adapter sends `anthropic-dangerous-direct-browser-access: true` for you.
+   - **A self-hosted OpenAI-compatible endpoint usually sends no CORS headers at all** and will simply fail — LM Studio, llama.cpp and friends do not expect a browser client. Putting a reverse proxy in front of it that adds the CORS headers is the only fix from outside the app.
+   - A cross-origin block surfaces as an opaque `TypeError`, so `BrowserAdapter.callLlm` catches it and re-throws an error naming the likely cause instead of letting it read as "the provider is down".
+
+   The desktop build has none of this: the request is sent by the Electron **main process** (`net.fetch`), which has no origin and no CORS check. See *AI-assisted annotation* in `architecture.md`.
+
+If you use the web build anyway, use a throwaway or tightly scoped key.
+
+### Operational notes
+
+- **What leaves the machine**: the paper's extracted text (or the PDF itself, if the target is configured that way) plus the annotation schema, sent to whichever provider the target names. Nothing else. The dialog states this before anything is sent, and the button proposes values only — nothing is written into the project until the reviewer presses **Apply**.
+- **A scanned PDF yields no text.** The run stops with an error rather than sending a title and inviting the model to invent a paper from it; the fix is to switch that target to *The PDF itself*, if the provider supports it.
+- **Cost** scales with the paper: a long paper as extracted text is a large prompt, and the PDF path is far more expensive again.
 
 ## Change Guidance
 

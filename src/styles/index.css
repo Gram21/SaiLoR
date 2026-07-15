@@ -11,6 +11,9 @@
   --accent-weak: #e2f0f5;
   --danger: #b71c1c;
   --ok: #16a34a;
+  /* Fields the AI filled, until the reviewer looks at them. Deeper than the dark
+     theme's tint so it still reads as blue against a white input. */
+  --ai-mark: #3d9ad9;
   --toolbar-h: 44px;
 
   /* App-wide font scaling (Ctrl +/-). Base is 14px at scale 1. */
@@ -30,6 +33,7 @@
   --accent-weak: #163740;
   --danger: #e06666;
   --ok: #4ade80;
+  --ai-mark: #7cc4e8;
   color-scheme: dark;
 }
 
@@ -421,6 +425,19 @@ body.resizing * {
 .pdf-error {
   color: var(--danger);
 }
+.pdf-grant {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 24px;
+  text-align: center;
+}
+.pdf-grant p {
+  margin: 0;
+  max-width: 32em;
+  color: var(--muted);
+}
 
 /* ---- Annotations ---- */
 .annotations {
@@ -434,10 +451,46 @@ body.resizing * {
   background: var(--panel-bg);
   position: sticky;
   top: 0;
+  /* Without this, a scrolled-under `.combo` (enum field: `position: relative`
+     for its caret) paints on top instead of disappearing behind the header —
+     both are `position` elements with `z-index: auto`, so with none set here
+     the tie is broken by DOM order, and the later (scrolling) element wins.
+     Matches `.paper-list-head`'s z-index, the same fix for the same reason. */
+  z-index: 1;
 }
 .annotations-head h2 {
   margin: 0;
   font-size: 1rem;
+}
+/* Title on the left, the AI button on the right. */
+.annotations-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ai-btn {
+  padding: 3px 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ai-btn:hover:not(:disabled) {
+  background: var(--accent-weak);
+}
+.ai-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+/* Not unlocked this session: no visible affordance at all, not just a dimmed
+   control — see the comment on `aiHidden` in AnnotationPanel.tsx. */
+.ai-btn:disabled.ai-btn-hidden {
+  opacity: 0;
 }
 .annotations-paper-title {
   color: var(--muted);
@@ -626,6 +679,22 @@ body.resizing * {
   width: 18px;
   height: 18px;
 }
+
+/* The AI wrote this value and the reviewer has not confirmed it yet. Border
+   colour plus an inset shadow rather than a thicker border or a background
+   fill: the mark stays legible over the text without moving the control by a
+   pixel. Cleared the moment the field (or its label) is clicked. */
+.field-input.ai-marked {
+  border-color: var(--ai-mark);
+  box-shadow: inset 0 0 0 1px var(--ai-mark);
+}
+.field-checkbox.ai-marked {
+  /* A native checkbox ignores `border`, so the mark rides outside it — an
+     outline reserves no space either. */
+  outline: 2px solid var(--ai-mark);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
 .grab-btn {
   flex: 0 0 auto;
   padding: 3px 8px;
@@ -744,6 +813,37 @@ body.resizing * {
 .validation-msg {
   color: var(--muted);
   font-size: 0.9em;
+}
+
+/* "Not annotated yet" — a plain checklist, not issues, so it gets no kind
+   badge or message column: just the paper, to jump to it. */
+.validation-unannotated .validation-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+.validation-unannotated .validation-section-title .count {
+  color: var(--muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+.validation-unannotated-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.validation-unannotated-list li {
+  border-bottom: 1px solid var(--border);
+}
+.validation-unannotated-list li:last-child {
+  border-bottom: none;
+}
+.validation-unannotated-list .validation-paper {
+  padding: 6px 0;
+  font-weight: 400;
 }
 
 /* Mode badge in the help dialog's title ("Annotating" / "Editing the …"). */

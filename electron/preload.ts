@@ -25,6 +25,16 @@ contextBridge.exposeInMainWorld('slr', {
   rebasePaths: (fromFile: string, toFile: string, rels: string[]) =>
     ipcRenderer.invoke('paths:rebase', fromFile, toFile, rels),
 
+  // AI-assisted annotation. Note what is NOT here: any way to read an API key
+  // back out. The renderer can store one and use one, but never see one.
+  llmConfigs: () => ipcRenderer.invoke('llm:configs'),
+  saveLlmConfig: (config: unknown, apiKey?: string) =>
+    ipcRenderer.invoke('llm:saveConfig', config, apiKey),
+  deleteLlmConfig: (id: string) => ipcRenderer.invoke('llm:deleteConfig', id),
+  callLlm: (requestId: string, request: unknown) =>
+    ipcRenderer.invoke('llm:call', requestId, request),
+  abortLlm: (requestId: string) => ipcRenderer.send('llm:abort', requestId),
+
   // Unsaved-changes coordination for a clean quit.
   setDirty: (dirty: boolean) => ipcRenderer.send('app:setDirty', dirty),
   onRequestSave: (cb: () => void) => {

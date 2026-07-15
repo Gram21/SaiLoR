@@ -1,4 +1,8 @@
-# SaiLoR
+<p align="center">
+  <img src="build/icon.png" alt="SaiLoR" width="128" height="128">
+</p>
+
+<h1 align="center">SaiLoR</h1>
 
 A tool to assist reviewers during **Systematic Literature Reviews (SLR)** — the letters are in the
 name: **S**ai**L**o**R**. Open a single JSON "project" file that holds both an annotation schema
@@ -10,6 +14,10 @@ The same codebase runs two ways:
 
 - **Desktop app** (Electron) — fully local, opens local PDF files, native Open/Save dialogs.
 - **Web app** — a static build you can host on any server (or open locally in a Chromium browser).
+
+<p align="center">
+  <img src="docs/screenshots/annotate.png" alt="The three-pane annotation view: papers, the PDF, and the annotation form" width="900">
+</p>
 
 ## Quick start
 
@@ -164,6 +172,9 @@ untouched. Unknown top-level and per-paper fields are preserved verbatim.
   (up to `max`) and a remove (**×**) control (down to `min`).
 - **Grab from PDF** — select text in the PDF, then click the **⧉** button next to a string/number
   field to insert it (numeric fields extract the first number).
+- **✦ AI** — in the annotation column's header: asks an LLM to propose values for the fields that
+  are still empty. You review every proposal before anything is written. See
+  [Annotating with AI](#annotating-with-ai).
 - **Theme** — toggle light/dark for the app with the ☾/☀ button (top right). The choice is
   remembered. The PDF paper is always rendered on a normal white background, regardless of theme.
 - **Font size** — the `A− A A+` buttons (or the shortcuts below) scale the app's text. This affects
@@ -184,6 +195,74 @@ untouched. Unknown top-level and per-paper fields are preserved verbatim.
 | `Alt + ↑` or `[`        | Previous paper                 |
 | `F1`                    | Open help                      |
 | `Ctrl/Cmd + C/V/X/Z`    | Native copy/paste/…            |
+
+## Annotating with AI
+
+The **✦ AI** button at the top of the annotation column asks a language model to read the paper you
+have open and **propose** values for its annotation fields. It is a first draft, not an answer.
+
+**What it does**
+
+- It only looks at the fields that are **still empty**. Anything you have already filled in is not
+  sent as a question and is **never overwritten** — including if you fill a field in while the model
+  is still thinking.
+- You get a table: the field, the value the model proposes, the **verbatim quote from the paper**
+  that supports it, the model's confidence, and a checkbox. Untick anything you don't want.
+  **Nothing is written into your project until you press Apply.**
+- The whole fill lands as a *single* change: one `Ctrl/Cmd + Z` undoes all of it.
+- Proposals that don't fit your schema — a field that doesn't exist, a number that isn't a number, a
+  value outside a dropdown's choices — are refused by the app and listed separately, never applied.
+- The model is instructed to quote the paper for every value and to **leave a field empty rather
+  than guess**. It is still a language model: check the quotes.
+
+<p align="center">
+  <img src="docs/screenshots/ai-review.png" alt="The review table: each proposed value with the quote from the paper that supports it, a confidence, and a checkbox" width="820">
+</p>
+
+Once applied, every field the model filled keeps a **light-blue border** until you click it (or its
+name). That click is you confirming the value — the marks are yours alone: they are never saved into
+the project file and are gone when you reopen it.
+
+<p align="center">
+  <img src="docs/screenshots/ai-marks.png" alt="Annotation fields filled by the AI, each outlined in light blue until confirmed" width="380">
+</p>
+
+**Where it sends your paper**
+
+> ⚠️ **The paper's extracted text is sent to whichever LLM provider you configure.** (Or the PDF
+> file itself, if you set the target up that way.) It leaves your machine and goes to that provider
+> under that provider's terms. **Don't use it on material you are not allowed to share** — papers
+> under a publisher's licence, embargoed manuscripts, anything confidential. The dialog tells you
+> what will be sent and to whom before anything leaves.
+
+There is no built-in provider and no key ships with the app: nothing is sent anywhere until you set
+up a target yourself.
+
+**Supported providers** — **Anthropic**, **OpenAI**, **Google (Gemini)**, **OpenRouter**, **Groq**,
+**Mistral**, **DeepSeek**, **xAI (Grok)**, or **any OpenAI-compatible endpoint**, including one
+running locally (LM Studio, llama.cpp, vLLM, …). A local endpoint is the one setup where the paper
+does not leave your machine. Only Anthropic, OpenAI, Google and OpenRouter can take the PDF itself —
+the rest always receive the extracted text.
+
+Set one up via **✦ AI → ⚙** (or *Set up an LLM…*): give the target a name, pick the provider, enter
+the model name and your API key, and press **Verify setup** to send a one-word test request. On the
+desktop the key is stored **encrypted with your operating system's keychain** and is never handed to
+the page. In the **browser build** it is stored **unencrypted** in local storage and some providers
+refuse calls made directly from a web page — the desktop app is the supported path for this feature.
+
+<p align="center">
+  <img src="docs/screenshots/ai-settings.png" alt="Setting up an LLM target: name, provider, base URL, model, API key, and a Verify setup button" width="700">
+</p>
+
+<p align="center"><em>Setting up a target — shown in the browser build, which is why it leads with the
+key-storage warning. The desktop app stores the key in your OS keychain instead.</em></p>
+
+**Extraction quality is the ceiling.** The paper is sent as text pulled out of the PDF, and that
+extraction is only as good as the PDF: two-column papers, tables, figures and formulas come out
+imperfectly, and a **scanned** paper yields no text at all (the app stops and tells you, rather than
+letting the model invent a paper from its title). The model is told the text may be garbled and to
+omit a field rather than reconstruct it — but it is one more reason to read the quote before you
+accept a value.
 
 ## Saving
 
@@ -305,7 +384,9 @@ docker compose -f docker-compose.dev.yml --profile electron run --rm electron
   instance-tree helpers (unit-tested).
 - `src/platform/` — a `PlatformAdapter` seam so the UI is identical in Electron and the browser
   (`electron.ts` = IPC + `slr-file://` protocol; `browser.ts` = File System Access API / fetch).
-- `src/state/store.ts` — Zustand + immer store.
-- `src/components/` — Toolbar, PaperList, PdfViewer, AnnotationPanel/Node/Field.
+- `src/llm/` — the AI-annotation layer: prompt, provider request/response shapes, field paths, and
+  the parser that validates every proposal against the schema before a reviewer ever sees it.
+- `src/state/store.ts` — Zustand + immer store (`src/state/aiStore.ts` for the AI flow).
+- `src/components/` — Toolbar, PaperList, PdfViewer, AnnotationPanel/Node/Field, AiDialog.
 - `electron/` — thin main process (BrowserWindow, Edit-role menu, dialog/fs IPC, PDF protocol) and
   a context-isolated preload.

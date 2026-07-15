@@ -152,6 +152,25 @@ function AnnotateHelp() {
         </li>
       </ul>
 
+      <h3>Annotating with AI</h3>
+      <p>
+        The <strong>✦ AI</strong> button above the annotation fields asks a language model to read
+        the open paper and <strong>propose</strong> values for it. Only the fields that are{' '}
+        <strong>still empty</strong> are proposed — what you have already filled in is never
+        overwritten.
+      </p>
+      <p>
+        You see every proposal first: the field, the value, the quote from the paper that supports
+        it, and a checkbox. Untick what you don't want; <strong>nothing is written until you press
+        Apply</strong>. The whole fill counts as one change, so <strong>{MOD}+Z</strong> undoes it in
+        a single step.
+      </p>
+      <p>
+        To send the paper, the text is extracted from its PDF and sent to the AI provider you set up
+        under <em>✦ AI → ⚙</em> — so don't use it on papers you may not share. The dialog names the
+        provider before anything is sent, and treat the proposals as a draft: check the quotes.
+      </p>
+
       <h3>Keyboard shortcuts</h3>
       <ShortcutTable keys={ANNOTATE_KEYS} />
     </>
