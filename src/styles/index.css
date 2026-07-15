@@ -438,6 +438,12 @@ body.resizing * {
   background: var(--panel-bg);
   position: sticky;
   top: 0;
+  /* Without this, a scrolled-under `.combo` (enum field: `position: relative`
+     for its caret) paints on top instead of disappearing behind the header —
+     both are `position` elements with `z-index: auto`, so with none set here
+     the tie is broken by DOM order, and the later (scrolling) element wins.
+     Matches `.paper-list-head`'s z-index, the same fix for the same reason. */
+  z-index: 1;
 }
 .annotations-head h2 {
   margin: 0;
