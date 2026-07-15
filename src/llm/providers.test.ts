@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { buildRequest, extractError, extractText, join, PROVIDERS, PROVIDER_LIST } from './providers'
+import {
+  buildRequest,
+  extractError,
+  extractText,
+  wasTruncated,
+  join,
+  PROVIDERS,
+  PROVIDER_LIST,
+} from './providers'
 import type { PaperPart } from './providers'
 import { API_KEY_SENTINEL } from './types'
 import type { LlmConfig, Provider } from './types'
@@ -63,7 +71,12 @@ describe('PROVIDERS', () => {
     expect(PROVIDER_LIST.map((p) => p.id)).toEqual([
       'anthropic',
       'openai',
+      'google',
       'openrouter',
+      'groq',
+      'mistral',
+      'deepseek',
+      'xai',
       'openai-compatible',
     ])
     for (const info of PROVIDER_LIST) {
@@ -72,6 +85,38 @@ describe('PROVIDERS', () => {
     expect(PROVIDERS['openai-compatible'].editableBaseUrl).toBe(true)
     expect(PROVIDERS['openai-compatible'].supportsPdf).toBe(false)
     expect(PROVIDERS.anthropic.supportsPdf).toBe(true)
+  })
+
+  it('only claims inline-PDF support where a single request can actually carry one', () => {
+    // Anthropic, OpenAI, Google and OpenRouter accept base64 PDF bytes in the
+    // same request as the prompt. The rest either have no file input at all
+    // (Groq, DeepSeek), only take a fetchable URL rather than inline bytes
+    // (Mistral), or require an upload-then-reference flow this app does not
+    // implement (xAI) — see the comments in providers.ts for the source per
+    // provider. Getting this wrong would let the UI offer a PDF option that
+    // silently fails against the real API.
+    expect(PROVIDERS.anthropic.supportsPdf).toBe(true)
+    expect(PROVIDERS.openai.supportsPdf).toBe(true)
+    expect(PROVIDERS.google.supportsPdf).toBe(true)
+    expect(PROVIDERS.openrouter.supportsPdf).toBe(true)
+    expect(PROVIDERS.groq.supportsPdf).toBe(false)
+    expect(PROVIDERS.mistral.supportsPdf).toBe(false)
+    expect(PROVIDERS.deepseek.supportsPdf).toBe(false)
+    expect(PROVIDERS.xai.supportsPdf).toBe(false)
+  })
+
+  it('picks the output-length parameter each provider currently documents', () => {
+    // This is the bug report this file exists to prevent from recurring: OpenAI
+    // (and xAI, and Groq, all of which have reasoning-model variants) now
+    // reject the old `max_tokens` name outright. OpenRouter, Mistral, DeepSeek
+    // and generic OpenAI-compatible servers still expect it.
+    expect(PROVIDERS.openai.tokenParam).toBe('max_completion_tokens')
+    expect(PROVIDERS.xai.tokenParam).toBe('max_completion_tokens')
+    expect(PROVIDERS.groq.tokenParam).toBe('max_completion_tokens')
+    expect(PROVIDERS.openrouter.tokenParam).toBe('max_tokens')
+    expect(PROVIDERS.mistral.tokenParam).toBe('max_tokens')
+    expect(PROVIDERS.deepseek.tokenParam).toBe('max_tokens')
+    expect(PROVIDERS['openai-compatible'].tokenParam).toBe('max_tokens')
   })
 })
 
@@ -84,9 +129,27 @@ describe('buildRequest: url and auth', () => {
     expect(buildRequest(cfg('openrouter'), 's', TEXT).url).toBe(
       'https://openrouter.ai/api/v1/chat/completions',
     )
+    expect(buildRequest(cfg('groq'), 's', TEXT).url).toBe(
+      'https://api.groq.com/openai/v1/chat/completions',
+    )
+    expect(buildRequest(cfg('mistral'), 's', TEXT).url).toBe(
+      'https://api.mistral.ai/v1/chat/completions',
+    )
+    expect(buildRequest(cfg('deepseek'), 's', TEXT).url).toBe(
+      'https://api.deepseek.com/v1/chat/completions',
+    )
+    expect(buildRequest(cfg('xai'), 's', TEXT).url).toBe('https://api.x.ai/v1/chat/completions')
     expect(buildRequest(cfg('openai-compatible', { baseUrl: 'http://localhost:1234/v1' }), 's', TEXT).url).toBe(
       'http://localhost:1234/v1/chat/completions',
     )
+  })
+
+  it('puts the model in the URL path for Google, not the body', () => {
+    const req = buildRequest(cfg('google', { model: 'gemini-2.5-pro' }), 's', TEXT)
+    expect(req.url).toBe(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent',
+    )
+    expect(bodyOf(req).model).toBeUndefined()
   })
 
   it('authenticates the way each provider expects', () => {
@@ -95,7 +158,19 @@ describe('buildRequest: url and auth', () => {
       'x-api-key': API_KEY_SENTINEL,
       'anthropic-version': '2023-06-01',
     })
-    for (const p of ['openai', 'openrouter', 'openai-compatible'] as const) {
+    expect(buildRequest(cfg('google'), 's', TEXT).headers).toEqual({
+      'content-type': 'application/json',
+      'x-goog-api-key': API_KEY_SENTINEL,
+    })
+    for (const p of [
+      'openai',
+      'openrouter',
+      'groq',
+      'mistral',
+      'deepseek',
+      'xai',
+      'openai-compatible',
+    ] as const) {
       const headers = buildRequest(cfg(p, { baseUrl: 'http://x' }), 's', TEXT).headers
       expect(headers.Authorization).toBe(`Bearer ${API_KEY_SENTINEL}`)
       expect(headers['content-type']).toBe('application/json')
@@ -124,22 +199,46 @@ describe('buildRequest: body', () => {
     const anthropic = bodyOf(buildRequest(cfg('anthropic'), 'sys', TEXT))
     expect(anthropic).toMatchObject({
       model: 'the-model',
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: 'sys',
       messages: [{ role: 'user', content: [{ type: 'text', text: 'the paper' }] }],
     })
 
+    // OpenAI's own error, verbatim, is what makes this the regression test for
+    // the reported bug: "Unsupported parameter: 'max_tokens' is not supported
+    // with this model. Use 'max_completion_tokens' instead."
     const openai = bodyOf(buildRequest(cfg('openai'), 'sys', TEXT))
     expect(openai).toMatchObject({
       model: 'the-model',
-      max_tokens: 4096,
+      max_completion_tokens: 8192,
       messages: [
         { role: 'system', content: 'sys' },
         { role: 'user', content: 'the paper' },
       ],
     })
+    expect(openai.max_tokens).toBeUndefined()
     // The system prompt is a message, not a top-level field, on this family.
     expect(openai.system).toBeUndefined()
+
+    const google = bodyOf(buildRequest(cfg('google'), 'sys', TEXT))
+    expect(google).toEqual({
+      contents: [{ role: 'user', parts: [{ text: 'the paper' }] }],
+      systemInstruction: { parts: [{ text: 'sys' }] },
+      generationConfig: { maxOutputTokens: 8192 },
+    })
+  })
+
+  it('sends the output-length parameter each provider currently accepts', () => {
+    // openai, xai, groq: the newer name; everyone else: the older one. Mixing
+    // these up is exactly the class of bug this whole file exists to catch.
+    expect(bodyOf(buildRequest(cfg('openai'), 's', TEXT)).max_completion_tokens).toBe(8192)
+    expect(bodyOf(buildRequest(cfg('xai'), 's', TEXT)).max_completion_tokens).toBe(8192)
+    expect(bodyOf(buildRequest(cfg('groq'), 's', TEXT)).max_completion_tokens).toBe(8192)
+    for (const p of ['openrouter', 'mistral', 'deepseek', 'openai-compatible'] as const) {
+      const body = bodyOf(buildRequest(cfg(p, { baseUrl: 'http://x' }), 's', TEXT))
+      expect(body.max_tokens).toBe(8192)
+      expect(body.max_completion_tokens).toBeUndefined()
+    }
   })
 
   it('attaches a PDF in the provider-native shape', () => {
@@ -157,11 +256,35 @@ describe('buildRequest: body', () => {
       type: 'file',
       file: { filename: 'paper.pdf', file_data: 'data:application/pdf;base64,QkFTRTY0' },
     })
+
+    const google = bodyOf(buildRequest(cfg('google'), 'sys', PDF))
+    const gparts = google.contents[0].parts
+    expect(gparts[0]).toEqual({
+      inline_data: { mime_type: 'application/pdf', data: 'QkFTRTY0' },
+    })
+    expect(gparts[1].text).toBeTruthy()
   })
 
   it('honours a maxTokens override', () => {
     expect(bodyOf(buildRequest(cfg('anthropic'), 's', TEXT, { maxTokens: 100 })).max_tokens).toBe(100)
     expect(bodyOf(buildRequest(cfg('openrouter'), 's', TEXT, { maxTokens: 100 })).max_tokens).toBe(100)
+    expect(bodyOf(buildRequest(cfg('openai'), 's', TEXT, { maxTokens: 100 })).max_completion_tokens).toBe(
+      100,
+    )
+    expect(
+      bodyOf(buildRequest(cfg('google'), 's', TEXT, { maxTokens: 100 })).generationConfig.maxOutputTokens,
+    ).toBe(100)
+  })
+
+  it('defaults to a budget with real headroom for a reasoning model, not a bare-minimum one', () => {
+    // Regression guard for the bug this budget exists to prevent: a reasoning
+    // model can spend the entire cap on hidden reasoning tokens before writing
+    // any visible answer, so a too-tight default silently starves every call
+    // made against one. This does not pin an exact number — only that nobody
+    // "optimizes" it back down near the range that is known to fail in practice
+    // (single/low-hundreds of tokens; see aiStore's VERIFY_MAX_TOKENS comment).
+    const defaultBudget = bodyOf(buildRequest(cfg('openai'), 's', TEXT)).max_completion_tokens
+    expect(defaultBudget).toBeGreaterThanOrEqual(4096)
   })
 })
 
@@ -185,6 +308,27 @@ describe('extractText', () => {
       }),
     ).toBe('hello')
     expect(extractText('openai-compatible', { choices: [{ message: { content: 'hi' } }] })).toBe('hi')
+    expect(extractText('groq', { choices: [{ message: { content: 'hi' } }] })).toBe('hi')
+    expect(extractText('mistral', { choices: [{ message: { content: 'hi' } }] })).toBe('hi')
+    expect(extractText('deepseek', { choices: [{ message: { content: 'hi' } }] })).toBe('hi')
+    expect(extractText('xai', { choices: [{ message: { content: 'hi' } }] })).toBe('hi')
+  })
+
+  it('reads a Gemini response and skips parts with no text (thinking models)', () => {
+    const json = {
+      candidates: [
+        {
+          content: {
+            parts: [
+              { thoughtSignature: 'abc' },
+              { text: '{"fields":' },
+              { text: '[]}' },
+            ],
+          },
+        },
+      ],
+    }
+    expect(extractText('google', json)).toBe('{"fields":[]}')
   })
 
   it('returns "" for anything unexpected instead of throwing', () => {
@@ -194,6 +338,36 @@ describe('extractText', () => {
       expect(extractText(p, {})).toBe('')
       expect(extractText(p, { choices: [], content: [] })).toBe('')
       expect(extractText(p, { choices: [{}], content: [{ type: 'text' }] })).toBe('')
+    }
+  })
+})
+
+describe('wasTruncated', () => {
+  // This is the regression test for the reported bug: a reasoning model (e.g.
+  // OpenAI's gpt-5.5) can spend its whole token budget on hidden reasoning and
+  // come back with a 2xx response, an empty visible answer, and one of these
+  // flags — not an HTTP error. Each shape here is the provider's own documented
+  // field for "cut off by the token limit", not a guess.
+  it('reads each provider\'s own "cut off by the token budget" flag', () => {
+    expect(wasTruncated('anthropic', { stop_reason: 'max_tokens' })).toBe(true)
+    expect(wasTruncated('anthropic', { stop_reason: 'end_turn' })).toBe(false)
+
+    expect(wasTruncated('google', { candidates: [{ finishReason: 'MAX_TOKENS' }] })).toBe(true)
+    expect(wasTruncated('google', { candidates: [{ finishReason: 'STOP' }] })).toBe(false)
+
+    for (const p of ['openai', 'openrouter', 'groq', 'mistral', 'deepseek', 'xai', 'openai-compatible'] as const) {
+      expect(wasTruncated(p, { choices: [{ finish_reason: 'length' }] })).toBe(true)
+      expect(wasTruncated(p, { choices: [{ finish_reason: 'stop' }] })).toBe(false)
+    }
+  })
+
+  it('is false, not thrown, for anything unexpected', () => {
+    for (const p of PROVIDER_LIST.map((i) => i.id)) {
+      expect(wasTruncated(p, null)).toBe(false)
+      expect(wasTruncated(p, 'not json')).toBe(false)
+      expect(wasTruncated(p, {})).toBe(false)
+      expect(wasTruncated(p, { choices: [] })).toBe(false)
+      expect(wasTruncated(p, { candidates: [] })).toBe(false)
     }
   })
 })
@@ -211,6 +385,14 @@ describe('extractError', () => {
       'model not loaded',
     )
     expect(extractError('openrouter', 429, '{"message":"rate limited"}')).toContain('rate limited')
+    // Google's error envelope: { error: { code, message, status } }.
+    expect(
+      extractError(
+        'google',
+        400,
+        '{"error":{"code":400,"message":"API key not valid","status":"INVALID_ARGUMENT"}}',
+      ),
+    ).toContain('API key not valid')
   })
 
   it('falls back to the status and a truncated body when the body is not a usable error', () => {

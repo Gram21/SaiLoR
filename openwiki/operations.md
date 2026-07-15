@@ -224,11 +224,20 @@ The **✦ AI** button in the annotation column asks a model to propose values fo
 1. Open a project, select a paper, and press **✦ AI** → **Set up an LLM…** (or the ⚙ button in the dialog).
 2. **+ Add target**, then fill in:
    - **Name** — what you pick from later, e.g. *Claude (work key)*.
-   - **Provider** — Anthropic, OpenAI, OpenRouter, or **OpenAI-compatible** (anything speaking `/v1/chat/completions`: LM Studio, llama.cpp, vLLM, a gateway…).
-   - **Base URL** — fixed and read-only for the three named providers; editable **only** for OpenAI-compatible, where you enter your server's root (`http://localhost:1234`). Any of the root, `…/v1`, or the full `…/v1/chat/completions` works — `join()` in `src/llm/providers.ts` will not duplicate what you typed.
+   - **Provider** — Anthropic, OpenAI, Google (Gemini), OpenRouter, Groq, Mistral, DeepSeek, xAI
+     (Grok), or **OpenAI-compatible** (anything speaking `/v1/chat/completions`: LM Studio,
+     llama.cpp, vLLM, a gateway…). Google is the one native (non-OpenAI-shaped) API besides
+     Anthropic — see `src/llm/providers.ts`.
+   - **Base URL** — fixed and read-only for every named provider; editable **only** for
+     OpenAI-compatible, where you enter your server's root (`http://localhost:1234`). Any of the
+     root, `…/v1`, or the full `…/v1/chat/completions` works — `join()` in `src/llm/providers.ts`
+     will not duplicate what you typed.
    - **Model** — spelled exactly as the provider names it. An unknown model is rejected by the *provider*, not by the app.
    - **API key** — pasted once; see below for where it ends up.
-   - **Send the paper as** — *Extracted text* (default: smaller, cheaper, works everywhere) or *The PDF itself* (Anthropic / OpenAI / OpenRouter only; keeps tables and figures intact, costs far more, and is the only way to read a scanned paper).
+   - **Send the paper as** — *Extracted text* (default: smaller, cheaper, works everywhere) or
+     *The PDF itself* (Anthropic / OpenAI / Google / OpenRouter only — the rest have no way to take
+     a PDF in a single request; keeps tables and figures intact, costs far more, and is the only way
+     to read a scanned paper).
 3. **Verify setup** sends a one-word test request and shows the model's reply — or the provider's own error. **It saves the target first**, because the key has to be stored before anything can use it. Use it: a wrong key, model name or URL is much cheaper to discover here than after waiting on a full paper.
 
 Several targets may coexist; the last one used is remembered in `localStorage` under `slr.llm.selected`.
