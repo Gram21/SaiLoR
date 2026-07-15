@@ -797,6 +797,37 @@ body.resizing * {
   font-size: 0.9em;
 }
 
+/* "Not annotated yet" — a plain checklist, not issues, so it gets no kind
+   badge or message column: just the paper, to jump to it. */
+.validation-unannotated .validation-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+.validation-unannotated .validation-section-title .count {
+  color: var(--muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+.validation-unannotated-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.validation-unannotated-list li {
+  border-bottom: 1px solid var(--border);
+}
+.validation-unannotated-list li:last-child {
+  border-bottom: none;
+}
+.validation-unannotated-list .validation-paper {
+  padding: 6px 0;
+  font-weight: 400;
+}
+
 /* Mode badge in the help dialog's title ("Annotating" / "Editing the …"). */
 .help-mode {
   margin-left: 8px;

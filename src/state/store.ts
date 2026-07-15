@@ -13,7 +13,7 @@ import {
   type InstanceNode,
 } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
-import { validateProject, type ValidationIssue } from '../model/validate'
+import { validateProject, type UnannotatedPaper, type ValidationIssue } from '../model/validate'
 import { formatPath, resolvePath } from '../llm/paths'
 import { isUnanswered } from '../llm/fields'
 import type { Suggestion } from '../llm/types'
@@ -142,6 +142,8 @@ interface AppState {
   helpOpen: boolean
   /** Result of the last validation run; null until the user asks for one. */
   validation: ValidationIssue[] | null
+  /** Papers the last run skipped for having no annotations at all — see `validateProject`. */
+  validationUnannotated: UnannotatedPaper[] | null
   validationOpen: boolean
   /** Shown when closing a project with unsaved changes. */
   closePromptOpen: boolean
@@ -255,6 +257,7 @@ export const useStore = create<AppState>()(
     recents: getPlatform().getRecents(),
     helpOpen: false,
     validation: null,
+    validationUnannotated: null,
     validationOpen: false,
     closePromptOpen: false,
     appVersion: APP_VERSION,
@@ -356,6 +359,7 @@ export const useStore = create<AppState>()(
         s.future = []
         s.aiMarks = {}
         s.validation = null
+        s.validationUnannotated = null
         s.validationOpen = false
         s.closePromptOpen = false
       })
@@ -438,6 +442,7 @@ export const useStore = create<AppState>()(
           // Marks belong to the papers of the project that is going away.
           s.aiMarks = {}
           s.validation = null
+          s.validationUnannotated = null
           s.validationOpen = false
         })
         lastFieldKey = null
@@ -613,9 +618,10 @@ export const useStore = create<AppState>()(
     runValidation: () => {
       const project = get().project
       if (!project) return
-      const issues = validateProject(project)
+      const { issues, unannotated } = validateProject(project)
       set((s) => {
         s.validation = issues
+        s.validationUnannotated = unannotated
         s.validationOpen = true
       })
     },

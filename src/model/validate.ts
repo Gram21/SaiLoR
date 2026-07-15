@@ -1,6 +1,6 @@
 import type { FieldType, ResolvedDef } from './schema'
 import { isField } from './schema'
-import type { AnnotationValueTree, InstanceNode } from './annotations'
+import { hasAnnotations, type AnnotationValueTree, type InstanceNode } from './annotations'
 import type { Paper, Project } from './project'
 
 /**
@@ -19,6 +19,19 @@ export interface ValidationIssue {
   path: string
   kind: IssueKind
   message: string
+}
+
+/** A paper `validateProject` skipped because it has no annotations at all. */
+export interface UnannotatedPaper {
+  paperId: string
+  paperTitle: string
+}
+
+export interface ProjectValidation {
+  /** Problems found in papers that have at least one annotation. */
+  issues: ValidationIssue[]
+  /** Papers with zero annotations, skipped rather than validated — see `validateProject`. */
+  unannotated: UnannotatedPaper[]
 }
 
 const PATH_SEP = ' › '
@@ -218,14 +231,31 @@ export function validatePaper(schema: ResolvedDef[], paper: Paper): ValidationIs
   return issues
 }
 
-/** Problems across every paper, in paper order. Empty when the project is valid. */
-export function validateProject(project: Project): ValidationIssue[] {
+/**
+ * Problems across every *annotated* paper, in paper order, plus the papers
+ * skipped for having no annotations at all.
+ *
+ * A paper nobody has touched yet fails every required field for the same
+ * reason it fails all of them — it hasn't been started — so validating it
+ * produces a wall of "missing" issues that says nothing a reviewer doesn't
+ * already know from the paper list's own "not annotated yet" dot. Skipping it
+ * here keeps the results about papers someone is partway through, and
+ * `unannotated` still says which papers those are, so "not started" is never
+ * silently indistinguishable from "actually valid".
+ */
+export function validateProject(project: Project): ProjectValidation {
   const papers = Array.isArray(project?.papers) ? project.papers : []
   const schema = Array.isArray(project?.schema) ? project.schema : []
 
   const issues: ValidationIssue[] = []
+  const unannotated: UnannotatedPaper[] = []
   for (const paper of papers) {
     try {
+      const tree = isPlainObject(paper?.annotations) ? (paper.annotations as AnnotationValueTree) : {}
+      if (!hasAnnotations(schema, tree)) {
+        unannotated.push({ paperId: paper?.id ?? '', paperTitle: paper?.title ?? '' })
+        continue
+      }
       issues.push(...validatePaper(schema, paper))
     } catch (err) {
       // The walker is written to be total, but a validation run must never take
@@ -239,5 +269,5 @@ export function validateProject(project: Project): ValidationIssue[] {
       })
     }
   }
-  return issues
+  return { issues, unannotated }
 }

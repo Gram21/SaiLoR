@@ -262,7 +262,7 @@ describe('applyAiSuggestions: repeatable nodes', () => {
     // normalizing the tree changes nothing, and validation reports no structural
     // problem (a missing child list or a short instance list would show up here).
     expect(normalizeTree(schema, ann())).toEqual(ann())
-    const structural = validateProject(st().project!).filter(
+    const structural = validateProject(st().project!).issues.filter(
       (i) => i.kind === 'type' || i.kind === 'cardinality',
     )
     expect(structural).toEqual([])

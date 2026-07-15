@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import type { ResolvedDef } from './schema'
 import type { AnnotationValueTree } from './annotations'
 import type { Paper, Project } from './project'
-import { validatePaper, validateProject, type ValidationIssue } from './validate'
+import { validatePaper, validateProject, type UnannotatedPaper, type ValidationIssue } from './validate'
 
 // ---------------------------------------------------------------------------
 // Builders. ResolvedDef is constructed directly (rather than via resolveSchema)
@@ -304,13 +304,17 @@ describe('validateProject', () => {
     return { version: 1, schema: sampleSchema, aiEnabled: true, papers, extra: {} }
   }
 
+  function unannotatedIds(list: UnannotatedPaper[]): string[] {
+    return list.map((p) => p.paperId)
+  }
+
   it('aggregates across papers in order and tags each issue with the paper', () => {
     const bad = validSample()
     bad.Year = [{ value: null }]
     const worse = validSample()
     worse.Findings = [{ children: { Claim: [{ value: '' }], Evidence: [{ children: { Metric: [{ value: 'm' }] } }] } }]
 
-    const issues = validateProject(
+    const { issues, unannotated } = validateProject(
       project([
         paper(validSample(), { id: 'ok', title: 'Fine Paper' }),
         paper(bad, { id: 'p2', title: 'Missing Year' }),
@@ -326,15 +330,121 @@ describe('validateProject', () => {
       kind: 'required',
       path: 'Findings › Claim',
     })
+    // All three papers have at least one field filled in, so none are skipped.
+    expect(unannotated).toEqual([])
   })
 
   it('returns nothing for a valid project', () => {
-    expect(validateProject(project([paper(validSample())]))).toEqual([])
+    expect(validateProject(project([paper(validSample())]))).toEqual({ issues: [], unannotated: [] })
   })
 
   it('never throws on a garbage project', () => {
     expect(() => validateProject({} as never)).not.toThrow()
-    expect(validateProject({} as never)).toEqual([])
+    expect(validateProject({} as never)).toEqual({ issues: [], unannotated: [] })
     expect(() => validateProject({ schema: null, papers: 'nope' } as never)).not.toThrow()
+  })
+
+  /**
+   * The shape the real app loads an untouched paper as: every node scaffolded
+   * to its `min` instance count, every value at its type's blank default
+   * (`null` for string/number, `false` for boolean) — never an absent key.
+   * `hasAnnotations` (annotations.ts) is what decides "empty" here, and it
+   * disagrees with `isEmptyValue` on booleans on purpose (see its own
+   * comment): an untouched `false` does not count as an answer, only an
+   * explicit `true` does — matching the paper-list sidebar's "annotated" dot,
+   * which this skip is meant to agree with, not reinvent.
+   */
+  function scaffold(): AnnotationValueTree {
+    return {
+      Relevant: [{ value: false }],
+      'Study Type': [{ value: null }],
+      Year: [{ value: null }],
+      Findings: [
+        {
+          children: {
+            Claim: [{ value: null }],
+            Evidence: [{ children: { Metric: [{ value: null }] } }],
+          },
+        },
+      ],
+    }
+  }
+
+  // The whole point of the skip: a paper nobody has touched yet fails every
+  // required field for the same reason it fails all of them — it isn't
+  // started — so validating it says nothing a reviewer doesn't already know.
+  describe('papers with no annotations at all are skipped, not validated', () => {
+    it('skips a paper whose annotations are entirely empty', () => {
+      const { issues, unannotated } = validateProject(
+        project([paper({}, { id: 'untouched', title: 'Untouched Paper' })]),
+      )
+      expect(issues).toEqual([])
+      expect(unannotated).toEqual([{ paperId: 'untouched', paperTitle: 'Untouched Paper' }])
+    })
+
+    it('skips a paper scaffolded to its blank defaults, same as an empty one', () => {
+      const { unannotated } = validateProject(project([paper(scaffold(), { id: 'p1' })]))
+      expect(unannotated).toEqual([{ paperId: 'p1', paperTitle: 'Paper One' }])
+    })
+
+    it('validates a paper the moment even one field is filled — including the required ones it still misses', () => {
+      // Only Year is answered; Claim and Metric are still required and empty.
+      // That is exactly the case that must NOT be skipped: this paper is
+      // genuinely in progress, and the whole point is to still catch what is
+      // left to do on it.
+      const started = scaffold()
+      started.Year = [{ value: 2021 }]
+
+      const { issues, unannotated } = validateProject(
+        project([paper(started, { id: 'started', title: 'Started Paper' })]),
+      )
+      expect(unannotated).toEqual([])
+      expect(kinds(issues)).toEqual(['required', 'required'])
+      expect(issues.map((i) => i.path)).toEqual(['Findings › Claim', 'Findings › Evidence › Metric'])
+    })
+
+    it('splits a mixed project into the right issues and the right skip list', () => {
+      const started = scaffold()
+      started.Year = [{ value: 2021 }]
+
+      const { issues, unannotated } = validateProject(
+        project([
+          paper(validSample(), { id: 'valid', title: 'Valid Paper' }),
+          paper({}, { id: 'empty1', title: 'Empty One' }),
+          paper(started, { id: 'started', title: 'Started Paper' }),
+          paper({}, { id: 'empty2', title: 'Empty Two' }),
+        ]),
+      )
+      // Only the in-progress paper produces issues; the fully valid one does not,
+      // and neither empty paper is validated at all.
+      expect(issues.every((i) => i.paperId === 'started')).toBe(true)
+      expect(issues.length).toBeGreaterThan(0)
+      expect(unannotatedIds(unannotated)).toEqual(['empty1', 'empty2'])
+    })
+
+    it('does NOT count a boolean left at its untouched false as an annotation', () => {
+      const { unannotated } = validateProject(
+        project([paper({ Relevant: [{ value: false }] }, { id: 'p1' })]),
+      )
+      expect(unannotated).toEqual([{ paperId: 'p1', paperTitle: 'Paper One' }])
+    })
+
+    it('counts a boolean explicitly ticked true as an annotation', () => {
+      const { unannotated } = validateProject(
+        project([paper({ Relevant: [{ value: true }] }, { id: 'p1' })]),
+      )
+      expect(unannotated).toEqual([])
+    })
+
+    it('does not crash and treats malformed annotations as unannotated', () => {
+      expect(() =>
+        validateProject(project([paper(null as never, { id: 'p1', title: 'Broken' })])),
+      ).not.toThrow()
+      const { issues, unannotated } = validateProject(
+        project([paper(null as never, { id: 'p1', title: 'Broken' })]),
+      )
+      expect(issues).toEqual([])
+      expect(unannotated).toEqual([{ paperId: 'p1', paperTitle: 'Broken' }])
+    })
   })
 })
