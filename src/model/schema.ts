@@ -103,6 +103,9 @@ export const paperSchema = z
     pdf: z.string().min(1, 'Each paper needs a "pdf" path'),
     // Loosely typed here; validated/normalized structurally in project.ts.
     annotations: z.record(z.unknown()).optional(),
+    // Ditto — a malformed entry (or the whole field being the wrong shape)
+    // should be dropped, not fail the whole file to load.
+    aiUsage: z.unknown().optional(),
   })
   .passthrough()
 

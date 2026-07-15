@@ -76,7 +76,8 @@ const PROJECT = JSON.stringify({
 })
 
 const st = () => useStore.getState()
-const apply = (suggestions: Suggestion[]) => st().applyAiSuggestions(suggestions)
+const TEST_USAGE = { provider: 'openai', model: 'gpt-5.5' }
+const apply = (suggestions: Suggestion[]) => st().applyAiSuggestions(suggestions, TEST_USAGE)
 
 /** A suggestion as the parser hands it over: path + value, with evidence attached. */
 const sug = (path: string, value: Suggestion['value']): Suggestion => ({
@@ -348,5 +349,69 @@ describe('applyAiSuggestions: coalescing', () => {
     st().undo()
     expect(val('Summary')).toBe('typed')
     expect(val('Year')).toBe(2021) // undoing the edit does not undo the AI's fill
+  })
+})
+
+describe('applyAiSuggestions: usage disclosure', () => {
+  const usage = () => paperById(st().currentPaperId!).aiUsage
+
+  it('records the provider and model of a run that writes something', () => {
+    expect(usage()).toEqual([])
+
+    apply([sug('Summary', 'Uses X to do Y.')])
+
+    expect(usage()).toHaveLength(1)
+    expect(usage()[0]).toMatchObject({ provider: 'openai', model: 'gpt-5.5' })
+    expect(usage()[0].appliedAt).toEqual(expect.any(String))
+    expect(new Date(usage()[0].appliedAt).toString()).not.toBe('Invalid Date')
+  })
+
+  it('adds no record when the run writes nothing', () => {
+    st().setFieldValue([], 'Summary', 0, 'mine')
+
+    expect(apply([sug('Summary', 'the model’s')])).toEqual({ filled: 0, skipped: 1 })
+    expect(usage()).toEqual([])
+
+    expect(apply([])).toEqual({ filled: 0, skipped: 0 })
+    expect(usage()).toEqual([])
+  })
+
+  it('appends one record per apply, oldest first — the order of use is the array order', () => {
+    apply([sug('Summary', 'first pass')])
+
+    const applyAs = (provider: string, model: string, path: string, value: Suggestion['value']) =>
+      st().applyAiSuggestions([sug(path, value)], { provider, model })
+
+    applyAs('anthropic', 'claude-5', 'Year', 2021)
+    applyAs('openai', 'gpt-6', 'Relevant', true)
+
+    expect(usage().map((u) => `${u.provider}/${u.model}`)).toEqual([
+      'openai/gpt-5.5',
+      'anthropic/claude-5',
+      'openai/gpt-6',
+    ])
+    // Strictly non-decreasing: later passes cannot claim to have happened earlier.
+    for (let i = 1; i < usage().length; i++) {
+      expect(usage()[i].appliedAt >= usage()[i - 1].appliedAt).toBe(true)
+    }
+  })
+
+  it('keys usage per paper, like the marks', () => {
+    apply([sug('Summary', 'about paper one')])
+    st().selectPaper('p2')
+
+    expect(usage()).toEqual([])
+    expect(paperById('p1').aiUsage).toHaveLength(1)
+  })
+
+  it('undo removes the record with the rest of the run — it is part of the same snapshot', () => {
+    apply([sug('Summary', 'Uses X to do Y.')])
+    expect(usage()).toHaveLength(1)
+
+    st().undo()
+    expect(usage()).toEqual([])
+
+    st().redo()
+    expect(usage()).toHaveLength(1)
   })
 })

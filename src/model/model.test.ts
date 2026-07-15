@@ -285,3 +285,71 @@ describe('config.ai (AI-annotation opt-out)', () => {
     expect(loadProject(once).aiEnabled).toBe(false)
   })
 })
+
+describe('Paper.aiUsage (AI-use disclosure)', () => {
+  const withUsage = (aiUsage: unknown) =>
+    JSON.stringify({
+      version: 1,
+      config: { schema: sampleSchema },
+      papers: [
+        {
+          id: 'p1',
+          title: 'Some Paper',
+          authors: [],
+          pdf: 'pdfs/some.pdf',
+          annotations: {},
+          ...(aiUsage === undefined ? {} : { aiUsage }),
+        },
+      ],
+    })
+
+  it('is empty when AI was never used on the paper', () => {
+    expect(loadProject(withUsage(undefined)).papers[0].aiUsage).toEqual([])
+  })
+
+  it('loads a well-formed record', () => {
+    const record = { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-07-15T10:00:00.000Z' }
+    expect(loadProject(withUsage([record])).papers[0].aiUsage).toEqual([record])
+  })
+
+  it('keeps array order — that order is how "which use came first" is read', () => {
+    const a = { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-07-15T10:00:00.000Z' }
+    const b = { provider: 'anthropic', model: 'claude-opus-4-8', appliedAt: '2026-07-15T10:05:00.000Z' }
+    expect(loadProject(withUsage([a, b])).papers[0].aiUsage).toEqual([a, b])
+  })
+
+  it('drops malformed entries rather than failing the whole file to load — the JSON is hand-editable', () => {
+    const good = { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-07-15T10:00:00.000Z' }
+    const cases = [
+      null,
+      'not an object',
+      42,
+      {}, // missing every field
+      { provider: 'openai' }, // missing model/appliedAt
+      { provider: 'openai', model: 123, appliedAt: '2026-07-15T10:00:00.000Z' }, // wrong type
+    ]
+    for (const bad of cases) {
+      expect(loadProject(withUsage([good, bad])).papers[0].aiUsage).toEqual([good])
+    }
+    // A paper whose key isn't even an array (hand-edited into an object, say).
+    expect(loadProject(withUsage({ oops: true })).papers[0].aiUsage).toEqual([])
+  })
+
+  it('is written only when non-empty, so a paper AI never touched stays clean', () => {
+    const untouched = JSON.parse(serializeProject(loadProject(withUsage(undefined))))
+    expect('aiUsage' in untouched.papers[0]).toBe(false)
+
+    const used = JSON.parse(
+      serializeProject(
+        loadProject(withUsage([{ provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-07-15T10:00:00.000Z' }])),
+      ),
+    )
+    expect(used.papers[0].aiUsage).toHaveLength(1)
+  })
+
+  it('round-trips through load → serialize → reload', () => {
+    const record = { provider: 'google', model: 'gemini-3.5-flash', appliedAt: '2026-07-15T10:00:00.000Z' }
+    const once = serializeProject(loadProject(withUsage([record])))
+    expect(loadProject(once).papers[0].aiUsage).toEqual([record])
+  })
+})

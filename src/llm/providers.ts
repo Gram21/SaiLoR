@@ -23,6 +23,19 @@ export interface ProviderInfo {
   /** Whether this provider can accept a PDF natively (the fallback path). */
   supportsPdf: boolean
   /**
+   * Whether `fetchModels` may query this provider's list-models endpoint at
+   * all. False only for `openai-compatible`: unlike the named providers,
+   * there is no single endpoint/auth/response shape it is safe to assume for
+   * an arbitrary self-hosted server (llama.cpp, vLLM, LM Studio, a gateway…)
+   * — a request built against one server's dialect can 404, hang, or return
+   * something `parseModelsResponse` misreads as a working answer. Rather than
+   * guess, this app never tries: the reviewer types the model name their
+   * server expects, and the field is never validated or marked invalid for
+   * this provider (`ModelPicker` only ever flags a mismatch against a list it
+   * actually fetched).
+   */
+  supportsModelListing: boolean
+  /**
    * The output-length parameter an OpenAI-shaped body should carry. Ignored for
    * `anthropic` and `google`, which have their own dedicated request shapes with
    * their own field for this (`max_tokens`, `generationConfig.maxOutputTokens`).
@@ -46,6 +59,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     defaultBaseUrl: 'https://api.anthropic.com',
     editableBaseUrl: false,
     supportsPdf: true,
+    supportsModelListing: true,
     tokenParam: 'max_tokens', // unused: Anthropic has its own body shape below
   },
   openai: {
@@ -54,6 +68,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     defaultBaseUrl: 'https://api.openai.com',
     editableBaseUrl: false,
     supportsPdf: true,
+    supportsModelListing: true,
     // OpenAI's own error, verbatim: "'max_tokens' is not supported with this
     // model. Use 'max_completion_tokens' instead." — required for the o-series
     // and current GPT models; still accepted-but-deprecated on older ones, so
@@ -66,6 +81,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     defaultBaseUrl: 'https://generativelanguage.googleapis.com',
     editableBaseUrl: false,
     supportsPdf: true,
+    supportsModelListing: true,
     tokenParam: 'max_tokens', // unused: Gemini has its own body shape below
   },
   openrouter: {
@@ -74,6 +90,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     defaultBaseUrl: 'https://openrouter.ai/api',
     editableBaseUrl: false,
     supportsPdf: true,
+    supportsModelListing: true,
     // OpenRouter fronts many backends (including OpenAI's) behind one contract;
     // its own reference documents `max_tokens`, not `max_completion_tokens` — it
     // is the one doing the per-backend translation, not the caller.
@@ -86,6 +103,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     editableBaseUrl: false,
     // No inline document/file input on chat completions — text only.
     supportsPdf: false,
+    supportsModelListing: true,
     tokenParam: 'max_completion_tokens',
   },
   mistral: {
@@ -97,6 +115,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     // URL); there is no inline-base64 variant, and a paper on the reviewer's
     // disk has no URL to give it.
     supportsPdf: false,
+    supportsModelListing: true,
     tokenParam: 'max_tokens',
   },
   deepseek: {
@@ -105,6 +124,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     defaultBaseUrl: 'https://api.deepseek.com',
     editableBaseUrl: false,
     supportsPdf: false, // text-only; no file/vision input on any current model
+    supportsModelListing: true,
     tokenParam: 'max_tokens',
   },
   xai: {
@@ -116,6 +136,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     // (or a URL) in a second call — a different flow than the single-request
     // inline attachment this app sends, so it stays on the text path.
     supportsPdf: false,
+    supportsModelListing: true,
     tokenParam: 'max_completion_tokens',
   },
   'openai-compatible': {
@@ -126,6 +147,9 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     // A self-hosted server (llama.cpp, LM Studio, vLLM…) almost never takes a PDF,
     // so the UI must keep such a target on the extracted-text path.
     supportsPdf: false,
+    // See the field comment on `supportsModelListing` above: no endpoint/shape
+    // is safe to assume for an arbitrary server, so this app never tries.
+    supportsModelListing: false,
     // The de facto standard these servers implement; `max_completion_tokens` is
     // an OpenAI-specific rename with no confirmed support here.
     tokenParam: 'max_tokens',
@@ -198,7 +222,7 @@ export function join(base: string, path: string): string {
 }
 
 /** The endpoint root actually in use: the configured one, or the provider's fixed default. */
-function baseOf(cfg: LlmConfig): string {
+export function baseOf(cfg: LlmConfig): string {
   const configured = cfg.baseUrl?.trim() ?? ''
   return configured || PROVIDERS[cfg.provider].defaultBaseUrl
 }
@@ -239,14 +263,31 @@ function googleParts(user: PaperPart): unknown[] {
   ]
 }
 
+/**
+ * Whether a Gemini model takes `thinkingLevel` (named, Gemini 3.x) or
+ * `thinkingBudget` (a token count, Gemini 2.5.x) — the two are mutually
+ * exclusive on a single request, and sending both is an error.
+ */
+export function googleThinkingMechanism(id: string): 'level' | 'budget' {
+  return /^gemini-3/.test(id) ? 'level' : 'budget'
+}
+
+/**
+ * Token budgets standing in for "low/medium/high" on the Gemini 2.5-era
+ * models, which take a number rather than a named level. Comfortably inside
+ * the documented range for every 2.5-series model (128–32768 on 2.5 Pro).
+ */
+export const GOOGLE_BUDGET_BY_LEVEL: Record<string, number> = { low: 2000, medium: 8000, high: 24000 }
+
 export function buildRequest(
   cfg: LlmConfig,
   system: string,
   user: PaperPart,
   opts?: { maxTokens?: number },
-): LlmHttpRequest {
+): LlmHttpRequest & { body: string } {
   const maxTokens = opts?.maxTokens ?? DEFAULT_MAX_TOKENS
   const base = baseOf(cfg)
+  const effort = cfg.reasoningEffort
 
   if (cfg.provider === 'anthropic') {
     return {
@@ -262,6 +303,11 @@ export function buildRequest(
         max_tokens: maxTokens,
         system,
         messages: [{ role: 'user', content: anthropicContent(user) }],
+        // `output_config.effort` is the current, model-agnostic dial; it needs
+        // adaptive thinking turned on to have anything to apply effort to.
+        ...(effort
+          ? { thinking: { type: 'adaptive' }, output_config: { effort } }
+          : {}),
       }),
     }
   }
@@ -273,6 +319,11 @@ export function buildRequest(
     // query param specifically so the key never has to sit in a URL (matches
     // this app's header-only sentinel-substitution; a query-param key would
     // also need the main-process origin check to parse query strings).
+    const thinkingConfig = effort
+      ? googleThinkingMechanism(cfg.model) === 'level'
+        ? { thinkingLevel: effort }
+        : { thinkingBudget: GOOGLE_BUDGET_BY_LEVEL[effort] ?? GOOGLE_BUDGET_BY_LEVEL.medium }
+      : null
     return {
       configId: cfg.id,
       url: join(base, `/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`),
@@ -283,7 +334,10 @@ export function buildRequest(
       body: JSON.stringify({
         contents: [{ role: 'user', parts: googleParts(user) }],
         systemInstruction: { parts: [{ text: system }] },
-        generationConfig: { maxOutputTokens: maxTokens },
+        generationConfig: {
+          maxOutputTokens: maxTokens,
+          ...(thinkingConfig ? { thinkingConfig } : {}),
+        },
       }),
     }
   }
@@ -303,6 +357,13 @@ export function buildRequest(
         { role: 'system', content: system },
         { role: 'user', content: openaiContent(user) },
       ],
+      // OpenRouter's dial is its own nested object; every other OpenAI-shaped
+      // provider here (OpenAI, Groq, Mistral, xAI) takes the same flat field.
+      ...(effort
+        ? cfg.provider === 'openrouter'
+          ? { reasoning: { effort } }
+          : { reasoning_effort: effort }
+        : {}),
     }),
   }
 }

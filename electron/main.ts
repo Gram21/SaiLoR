@@ -522,6 +522,7 @@ interface StoredLlmConfig {
   baseUrl: string
   model: string
   attach: string
+  reasoningEffort?: string
   /** safeStorage-encrypted key, base64. Absent when the user has not set one. */
   key?: string
 }
@@ -595,7 +596,13 @@ ipcMain.handle(
   async (
     _e,
     requestId: string,
-    request: { configId: string; url: string; headers: Record<string, string>; body: string },
+    request: {
+      configId: string
+      url: string
+      headers: Record<string, string>
+      method?: 'GET' | 'POST'
+      body?: string
+    },
   ) => {
     const config = readLlmConfigs().find((c) => c.id === request.configId)
     if (!config) throw new Error('That LLM target no longer exists.')
@@ -619,9 +626,9 @@ ipcMain.handle(
     inFlight.set(requestId, controller)
     try {
       const res = await net.fetch(request.url, {
-        method: 'POST',
+        method: request.method ?? 'POST',
         headers,
-        body: request.body,
+        body: request.method === 'GET' ? undefined : request.body,
         signal: controller.signal,
       })
       return { ok: res.ok, status: res.status, body: await res.text() }

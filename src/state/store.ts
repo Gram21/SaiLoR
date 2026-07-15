@@ -210,7 +210,7 @@ interface AppState {
   undo: () => void
   redo: () => void
   /** Write the reviewer-approved AI suggestions into the current paper (one undo step). */
-  applyAiSuggestions: (suggestions: Suggestion[]) => AiApplyResult
+  applyAiSuggestions: (suggestions: Suggestion[], usage: { provider: string; model: string }) => AiApplyResult
   /** The reviewer looked at an AI-filled field — drop its mark. */
   confirmAiMark: (paperId: string, canonicalPath: string) => void
   /** The hidden gesture landed — allow AI use for the rest of this session. */
@@ -698,7 +698,7 @@ export const useStore = create<AppState>()(
       })
     },
 
-    applyAiSuggestions: (suggestions) => {
+    applyAiSuggestions: (suggestions, usage) => {
       const prev = get()
       if (!prev.project) return { filled: 0, skipped: suggestions.length }
       const schema = prev.project.schema
@@ -752,6 +752,16 @@ export const useStore = create<AppState>()(
           // field as the reviewer had it, and must not be flagged as the AI's.
           s.aiMarks[aiMarkKey(paperId, at.canonical)] = true
           filled++
+        }
+        // A disclosure record, not a UI hint: only added when this pass actually
+        // changed something, and — unlike the mark above — it is meant to reach
+        // the saved file and outlive this session. See `AiUsageRecord`.
+        if (filled > 0) {
+          paper.aiUsage.push({
+            provider: usage.provider,
+            model: usage.model,
+            appliedAt: new Date().toISOString(),
+          })
         }
         s.dirty = true
       })

@@ -11,6 +11,23 @@ import {
   type AnnotationValueTree,
 } from './annotations'
 
+/**
+ * One AI-assisted-annotation pass applied to a paper: which provider and model
+ * produced it, and when. A permanent disclosure record, not a UI hint — unlike
+ * the session-only "unconfirmed" marks (`aiMarks` in the store), this is meant
+ * to survive into the saved file so a co-reviewer, or the reviewer themself
+ * later, can see that (and how) AI was used on this paper. Append-only: each
+ * `applyAiSuggestions` call that actually writes something adds one entry.
+ */
+export interface AiUsageRecord {
+  /** The provider id at the time of use, e.g. "openai" — not the display label. */
+  provider: string
+  /** The model name exactly as configured, e.g. "gpt-5.5". */
+  model: string
+  /** ISO 8601 timestamp of the Apply click. */
+  appliedAt: string
+}
+
 export interface Paper {
   id: string
   title: string
@@ -18,6 +35,13 @@ export interface Paper {
   doi?: string
   pdf: string
   annotations: AnnotationValueTree
+  /**
+   * AI-assisted annotation passes applied to this paper, oldest first — array
+   * order alone establishes "the order of use", `appliedAt` makes it explicit
+   * even if the array is ever hand-edited or reordered. Empty when AI has never
+   * been used on this paper.
+   */
+  aiUsage: AiUsageRecord[]
   /** Any additional fields present in the source file are preserved on save. */
   extra: Record<string, unknown>
 }
@@ -45,8 +69,30 @@ export class ProjectLoadError extends Error {
   }
 }
 
-const KNOWN_PAPER_KEYS = new Set(['id', 'title', 'authors', 'doi', 'pdf', 'annotations'])
+const KNOWN_PAPER_KEYS = new Set(['id', 'title', 'authors', 'doi', 'pdf', 'annotations', 'aiUsage'])
 const KNOWN_ROOT_KEYS = new Set(['version', 'title', 'config', 'papers'])
+
+/**
+ * Parse `aiUsage` defensively: the file is hand-editable, so a malformed entry
+ * must be dropped, never thrown over — the same rule `annotations` follows.
+ */
+function parseAiUsage(raw: unknown): AiUsageRecord[] {
+  if (!Array.isArray(raw)) return []
+  const out: AiUsageRecord[] = []
+  for (const entry of raw) {
+    if (
+      typeof entry === 'object' &&
+      entry !== null &&
+      typeof (entry as Record<string, unknown>).provider === 'string' &&
+      typeof (entry as Record<string, unknown>).model === 'string' &&
+      typeof (entry as Record<string, unknown>).appliedAt === 'string'
+    ) {
+      const e = entry as Record<string, string>
+      out.push({ provider: e.provider, model: e.model, appliedAt: e.appliedAt })
+    }
+  }
+  return out
+}
 
 /**
  * Parse raw JSON text (or an already-parsed object) into a validated,
@@ -103,6 +149,7 @@ export function loadProject(input: string | unknown): Project {
     doi: p.doi,
     pdf: p.pdf,
     annotations: normalizeTree(schema, p.annotations as AnnotationValueTree | undefined),
+    aiUsage: parseAiUsage(p.aiUsage),
     extra: extractExtra(p, KNOWN_PAPER_KEYS),
   }))
 
@@ -142,6 +189,8 @@ export function serializeProject(project: Project): string {
       if (p.doi !== undefined) paper.doi = p.doi
       paper.pdf = p.pdf
       paper.annotations = pruneTree(project.schema, p.annotations)
+      // Only written when non-empty, so a paper AI has never touched stays clean.
+      if (p.aiUsage.length > 0) paper.aiUsage = p.aiUsage
       return paper
     }),
   }

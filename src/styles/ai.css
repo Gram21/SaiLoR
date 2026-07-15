@@ -405,6 +405,37 @@
   cursor: not-allowed;
 }
 
+/* --- model picker ----------------------------------------------------------- */
+
+.llm-settings .llm-model-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.model-picker {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.model-picker-input {
+  width: 100%;
+}
+/* Not a listed model, once the field has been left in that state — a hint to
+   double-check, not a hard block: the reviewer can still save and use it. */
+.model-picker-invalid {
+  border-color: var(--danger) !important;
+  color: var(--danger);
+}
+.model-picker-status {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+
 .llm-settings .llm-problem {
   margin: 4px 0 10px;
   color: var(--danger);

@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react'
 import { useAiStore } from '../state/aiStore'
 import { getPlatform } from '../platform'
 import { PROVIDER_LIST, PROVIDERS } from '../llm/providers'
-import type { Attach, LlmConfig, Provider } from '../llm/types'
+import type { Attach, LlmConfig, ModelInfo, Provider } from '../llm/types'
+import { ModelPicker } from './ModelPicker'
 import '../styles/ai.css'
+
+const NO_MODELS: ModelInfo[] = []
 
 /**
  * Manage the LLM targets the AI-annotation feature can call.
@@ -53,6 +56,11 @@ export function LlmSettingsDialog() {
   const saveConfig = useAiStore((s) => s.saveConfig)
   const deleteConfig = useAiStore((s) => s.deleteConfig)
   const verifyConfig = useAiStore((s) => s.verifyConfig)
+  const fetchModels = useAiStore((s) => s.fetchModels)
+  const clearModels = useAiStore((s) => s.clearModels)
+  const modelsById = useAiStore((s) => s.models)
+  const modelsLoadingById = useAiStore((s) => s.modelsLoading)
+  const modelsErrorById = useAiStore((s) => s.modelsError)
 
   /** The target being edited/added; null means we are showing the list. */
   const [draft, setDraft] = useState<LlmConfig | null>(null)
@@ -97,12 +105,51 @@ export function LlmSettingsDialog() {
     return () => clearTimeout(t)
   }, [confirmId])
 
+  const patch = (change: Partial<LlmConfig>) =>
+    setDraft((d) => (d ? { ...d, ...change } : d))
+
+  // Editing a target that already has a key: fetch its models once, with no
+  // extra click — the key needed to do that is already stored. A brand-new
+  // target has no key yet, so it waits for "Load models" (or Verify/Save,
+  // both of which store one) instead of failing silently on open.
+  useEffect(() => {
+    if (!draft?.hasKey) return
+    if (!PROVIDERS[draft.provider].supportsModelListing) return
+    if (modelsById[draft.id] || modelsLoadingById[draft.id]) return
+    void fetchModels(draft)
+    // Only the identity of the target being edited should re-trigger this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft?.id, draft?.hasKey, draft?.provider])
+
+  // Keep the reasoning-effort value in step with the selected model: default
+  // it in the moment a reasoning-capable model is picked, and drop it the
+  // moment a non-reasoning one is — a stale effort level must never outlive
+  // the model it was chosen for.
+  useEffect(() => {
+    if (!draft) return
+    const models = modelsById[draft.id] ?? NO_MODELS
+    const model = models.find((m) => m.id === draft.model)
+    if (model?.reasoning) {
+      if (!draft.reasoningEffort || !model.reasoning.levels.includes(draft.reasoningEffort)) {
+        patch({ reasoningEffort: model.reasoning.defaultLevel })
+      }
+    } else if (draft.reasoningEffort !== undefined) {
+      patch({ reasoningEffort: undefined })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft?.id, draft?.model, modelsById])
+
   if (!settingsOpen) return null
 
   const close = () => setSettingsOpen(false)
 
   const info = draft ? PROVIDERS[draft.provider] : null
   const urlEditable = info?.editableBaseUrl ?? false
+  const modelListingSupported = info?.supportsModelListing ?? false
+  const providerModels = draft ? (modelsById[draft.id] ?? NO_MODELS) : NO_MODELS
+  const modelsLoading = draft ? Boolean(modelsLoadingById[draft.id]) : false
+  const modelsError = draft ? (modelsErrorById[draft.id] ?? null) : null
+  const selectedModel = draft ? providerModels.find((m) => m.id === draft.model) ?? null : null
 
   const startAdd = () => {
     setDraft(newDraft())
@@ -128,9 +175,6 @@ export function LlmSettingsDialog() {
     setVerifyError(null)
   }
 
-  const patch = (change: Partial<LlmConfig>) =>
-    setDraft((d) => (d ? { ...d, ...change } : d))
-
   const changeProvider = (id: Provider) => {
     const next = PROVIDERS[id]
     setDraft((d) =>
@@ -142,9 +186,16 @@ export function LlmSettingsDialog() {
             // so switching provider must not leave the old vendor's URL behind.
             baseUrl: next.editableBaseUrl ? (next.defaultBaseUrl || '') : next.defaultBaseUrl,
             attach: next.supportsPdf ? d.attach : 'text',
+            // A model name (and any reasoning effort chosen for it) belongs to
+            // the old provider's catalog, not the new one.
+            model: '',
+            reasoningEffort: undefined,
           }
         : d,
     )
+    // Ditto for the fetched list itself: it answered "what does the old
+    // provider have", which is not a question about the new one.
+    if (draft) clearModels(draft.id)
     setReply(null)
     setVerifyError(null)
   }
@@ -389,20 +440,69 @@ export function LlmSettingsDialog() {
                 <label htmlFor="llm-model" className="llm-label">
                   Model
                 </label>
-                <input
-                  id="llm-model"
-                  type="text"
-                  value={draft.model}
-                  onChange={(e) => patch({ model: e.target.value })}
-                  placeholder="e.g. claude-opus-4-8, gpt-4o"
-                  title="Must be a model name this provider recognises, spelled exactly as in its documentation — the app cannot guess it for you."
-                  required
-                />
+                <div className="llm-model-field">
+                  <ModelPicker
+                    id="llm-model"
+                    value={draft.model}
+                    onChange={(v) => patch({ model: v })}
+                    models={modelListingSupported ? providerModels : NO_MODELS}
+                    loading={modelListingSupported && modelsLoading}
+                    providerLabel={info?.label ?? 'This provider'}
+                    placeholder="e.g. claude-opus-4-8, gpt-4o"
+                  />
+                  {modelListingSupported && (
+                    <button
+                      type="button"
+                      onClick={() => void fetchModels(draft, apiKey.trim() || undefined, { force: true })}
+                      disabled={modelsLoading || (!draft.hasKey && !apiKey.trim())}
+                      title={
+                        !draft.hasKey && !apiKey.trim()
+                          ? 'Enter an API key first — the list has to be fetched with it.'
+                          : `Fetch the current model list from ${info?.label ?? 'the provider'}.`
+                      }
+                    >
+                      {modelsLoading ? 'Loading…' : providerModels.length > 0 ? 'Refresh' : 'Load models'}
+                    </button>
+                  )}
+                </div>
               </div>
               <p className="llm-hint">
-                Must be spelled exactly as the provider names it; an unknown model is rejected by the
-                provider, not by this app. Use <em>Verify setup</em> to find out now.
+                {!modelListingSupported
+                  ? "OpenAI-compatible servers vary too much for the app to reliably list or validate models — type the model name your server expects. Nothing here is checked; that's on you to get right."
+                  : providerModels.length > 0
+                    ? `${providerModels.length} model${providerModels.length === 1 ? '' : 's'} loaded from ${info?.label ?? 'the provider'} — search the list, or type a name it doesn't have.`
+                    : "Type the model name exactly as the provider documents it, or load the current list once a key is set (a red field means the typed name isn't in a loaded list)."}
               </p>
+              {modelListingSupported && modelsError && (
+                <p role="alert" className="llm-problem">
+                  Couldn't load the model list: {modelsError}
+                </p>
+              )}
+
+              {selectedModel?.reasoning && (
+                <div className="llm-row">
+                  <label htmlFor="llm-effort" className="llm-label">
+                    Reasoning effort
+                  </label>
+                  <select
+                    id="llm-effort"
+                    value={draft.reasoningEffort ?? selectedModel.reasoning.defaultLevel}
+                    onChange={(e) => patch({ reasoningEffort: e.target.value })}
+                  >
+                    {selectedModel.reasoning.levels.map((lvl) => (
+                      <option key={lvl} value={lvl}>
+                        {lvl}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {selectedModel?.reasoning && (
+                <p className="llm-hint">
+                  How hard this model thinks before answering. Higher effort tends to be slower and
+                  more expensive; "medium" is a reasonable default.
+                </p>
+              )}
 
               <div className="llm-row">
                 <label htmlFor="llm-key" className="llm-label">

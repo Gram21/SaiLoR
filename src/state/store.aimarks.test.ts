@@ -77,7 +77,8 @@ const PROJECT = JSON.stringify({
 })
 
 const st = () => useStore.getState()
-const apply = (suggestions: Suggestion[]) => st().applyAiSuggestions(suggestions)
+const TEST_USAGE = { provider: 'openai', model: 'gpt-5.5' }
+const apply = (suggestions: Suggestion[]) => st().applyAiSuggestions(suggestions, TEST_USAGE)
 
 const sug = (path: string, value: Suggestion['value']): Suggestion => ({
   path,
@@ -251,12 +252,17 @@ describe('marks are never persisted', () => {
     expect(withMarks).not.toContain('aiMark')
   })
 
-  it('produces the same file as the same values typed by hand', () => {
-    // The marks live beside the project, not inside it, so a fill the AI marked
-    // and the identical fill the reviewer typed must save to the same bytes.
+  it('produces the same annotation data as the same values typed by hand — plus a usage record the hand-typed file does not have', () => {
+    // The marks live beside the project, not inside it, so they cannot be the
+    // difference. But an AI fill also writes an `aiUsage` disclosure entry
+    // (see store.ai.test.ts's "usage disclosure" block) that a hand-typed fill
+    // never does — that is the *intended* difference now, not a regression, so
+    // this test asserts the annotation data matches while acknowledging that
+    // one field doesn't.
     apply(RUN)
-    const fromAi = serializeProject(st().project!)
+    const fromAi = JSON.parse(serializeProject(st().project!))
     expect(Object.keys(st().aiMarks)).not.toHaveLength(0)
+    expect(fromAi.papers[0].aiUsage).toHaveLength(1)
 
     st().loadFromText(PROJECT, null, 'test.json')
     st().selectPaper('p1')
@@ -267,7 +273,12 @@ describe('marks are never persisted', () => {
     st().setFieldValue([{ name: 'Findings', index: 0 }], 'Claim', 0, 'X improves Y')
 
     expect(st().aiMarks).toEqual({}) // typing marks nothing
-    expect(serializeProject(st().project!)).toBe(fromAi)
+    const fromHand = JSON.parse(serializeProject(st().project!))
+    expect(fromHand.papers[0].aiUsage).toBeUndefined() // no usage record when nobody used AI
+
+    // Same annotation content either way — only the disclosure record differs.
+    delete fromAi.papers[0].aiUsage
+    expect(fromAi).toEqual(fromHand)
   })
 
   it('the text handed to the platform on save carries no marks', async () => {
