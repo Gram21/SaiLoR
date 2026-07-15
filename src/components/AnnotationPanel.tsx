@@ -18,6 +18,13 @@ export function AnnotationPanel() {
   }
 
   const aiDisabled = busy || !paper.pdf || !aiEnabled || !aiUnlocked
+  // Not unlocked this session at all (the hidden click gesture never
+  // happened): the button doesn't just disable, it has no visible presence —
+  // nothing should hint an AI feature exists to find. Once unlocked, a
+  // project that explicitly turns AI off (config.ai: false) still shows the
+  // button, visibly disabled — useful information once you already know the
+  // feature is there, unlike the pre-unlock state.
+  const aiHidden = !aiUnlocked
   // Deliberately uninformative: the button looks like any other disabled
   // control rather than one hinting that it can be unlocked.
   const aiTitle = aiDisabled ? 'Coming soon' : 'Ask an LLM to propose values for the fields that are still empty'
@@ -29,9 +36,10 @@ export function AnnotationPanel() {
           <h2>Annotations</h2>
           <button
             type="button"
-            className="ai-btn"
-            title={aiTitle}
+            className={`ai-btn${aiHidden ? ' ai-btn-hidden' : ''}`}
+            title={aiHidden ? undefined : aiTitle}
             disabled={aiDisabled}
+            aria-hidden={aiHidden || undefined}
             onClick={() => void openAi()}
           >
             ✦ AI
