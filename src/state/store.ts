@@ -159,6 +159,15 @@ interface AppState {
    * never reach the file on disk. A plain record (not a Set) keeps immer happy.
    */
   aiMarks: Record<string, true>
+  /**
+   * AI-assisted annotation ships in the app but is off by default for every
+   * project, regardless of what its `config.ai` says — a project can still
+   * *forbid* it (`config.ai: false` always wins), but it can no longer turn it
+   * on by itself. It is unlocked only by the hidden gesture wired up in
+   * `Toolbar.tsx`, and only for the running session: this is never persisted
+   * and never set from anywhere else, so it is back to locked on every reload.
+   */
+  aiUnlocked: boolean
 
   openProject: () => Promise<void>
   openRecent: (id: string) => Promise<void>
@@ -204,6 +213,8 @@ interface AppState {
   applyAiSuggestions: (suggestions: Suggestion[]) => AiApplyResult
   /** The reviewer looked at an AI-filled field — drop its mark. */
   confirmAiMark: (paperId: string, canonicalPath: string) => void
+  /** The hidden gesture landed — allow AI use for the rest of this session. */
+  unlockAi: () => void
 }
 
 /** What `applyAiSuggestions` actually did, for the summary shown to the reviewer. */
@@ -251,6 +262,7 @@ export const useStore = create<AppState>()(
     past: [],
     future: [],
     aiMarks: {},
+    aiUnlocked: false,
 
     openProject: async () => {
       const platform = getPlatform()
@@ -753,6 +765,13 @@ export const useStore = create<AppState>()(
       if (!get().aiMarks[key]) return
       set((s) => {
         delete s.aiMarks[key]
+      })
+    },
+
+    unlockAi: () => {
+      if (get().aiUnlocked) return // already unlocked — no re-render needed
+      set((s) => {
+        s.aiUnlocked = true
       })
     },
 

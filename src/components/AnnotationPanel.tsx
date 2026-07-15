@@ -7,18 +7,20 @@ export function AnnotationPanel() {
   const paper = useStore(selectCurrentPaper)
   const schema = useStore((s) => s.project?.schema ?? [])
   const busy = useStore((s) => s.busy)
+  // config.ai can still forbid AI use, but can no longer turn it on by itself —
+  // it also needs the hidden per-session unlock. See `aiUnlocked` in store.ts.
   const aiEnabled = useStore((s) => s.project?.aiEnabled ?? true)
+  const aiUnlocked = useStore((s) => s.aiUnlocked)
   const openAi = useAiStore((s) => s.openDialog)
 
   if (!paper) {
     return <div className="panel annotations empty">Select a paper to annotate.</div>
   }
 
-  // The provider of the project file can turn AI off (config.ai: false). When they
-  // have, say so on hover rather than leaving a silently dead button.
-  const aiTitle = !aiEnabled
-    ? 'AI annotation was turned off by the provider of this project file (config.ai: false).'
-    : 'Ask an LLM to propose values for the fields that are still empty'
+  const aiDisabled = busy || !paper.pdf || !aiEnabled || !aiUnlocked
+  // Deliberately uninformative: the button looks like any other disabled
+  // control rather than one hinting that it can be unlocked.
+  const aiTitle = aiDisabled ? 'Disabled Feature' : 'Ask an LLM to propose values for the fields that are still empty'
 
   return (
     <div className="panel annotations">
@@ -29,7 +31,7 @@ export function AnnotationPanel() {
             type="button"
             className="ai-btn"
             title={aiTitle}
-            disabled={busy || !paper.pdf || !aiEnabled}
+            disabled={aiDisabled}
             onClick={() => void openAi()}
           >
             ✦ AI

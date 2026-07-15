@@ -219,6 +219,8 @@ Paper navigation with `[`/`]` is disabled when typing in an input field; Alt-arr
 
 The **✦ AI** button in the annotation column asks a model to propose values for the fields of the current paper that are still empty. It does nothing until a **target** is configured — a provider, a model name, and the API key to reach it.
 
+**The button is off by default in this build, for every project, regardless of `config.ai`.** See "Availability is gated twice" in `architecture.md` for the mechanism and why — if you're trying to exercise this feature locally (dev, testing, a demo) and the button stays greyed out even with a target configured, that gate — not a missing target — is almost always why. `config.ai: false` still forbids it unconditionally either way.
+
 ### Setting one up
 
 1. Open a project, select a paper, and press **✦ AI** → **Set up an LLM…** (or the ⚙ button in the dialog).
