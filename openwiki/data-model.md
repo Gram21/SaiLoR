@@ -10,12 +10,18 @@ A project is a single JSON file with this shape:
 {
   "version": 1,
   "config": {
-    "schema": [ /* AnnotationDef[] — the taxonomy */ ]
+    "schema": [ /* AnnotationDef[] — the taxonomy */ ],
+    "ai": false  // optional; false disables AI-assisted annotation for this project
   },
   "papers": [ /* Paper[] */ ],
   // any other top-level keys are preserved verbatim on save
 }
 ```
+
+`config.ai` defaults to `true`. When `false`, the ✦ AI button is disabled (with a hover note that
+the provider turned it off); the loader reads it into `Project.aiEnabled`, and `serializeProject`
+writes it back only when disabled, so a normal file stays clean. The project editor edits it as a
+checkbox.
 
 ### AnnotationDef (`src/model/schema.ts`)
 
@@ -70,7 +76,9 @@ When a project is loaded, raw `AnnotationDef[]` are resolved into `ResolvedDef[]
 ```typescript
 interface Project {
   version: number
+  title?: string
   schema: ResolvedDef[]
+  aiEnabled: boolean              // config.ai; true unless the file opts out
   papers: Paper[]
   extra: Record<string, unknown>  // unknown top-level fields preserved
 }

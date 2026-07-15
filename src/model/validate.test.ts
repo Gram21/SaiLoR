@@ -300,7 +300,7 @@ describe('malformed trees', () => {
 
 describe('validateProject', () => {
   function project(papers: Paper[]): Project {
-    return { version: 1, schema: sampleSchema, papers, extra: {} }
+    return { version: 1, schema: sampleSchema, aiEnabled: true, papers, extra: {} }
   }
 
   it('aggregates across papers in order and tags each issue with the paper', () => {

@@ -18,6 +18,8 @@ export function ProjectEditor() {
   const location = useEditorStore((s) => s.location)
   const title = useEditorStore((s) => s.title)
   const setTitle = useEditorStore((s) => s.setTitle)
+  const aiEnabled = useEditorStore((s) => s.aiEnabled)
+  const setAiEnabled = useEditorStore((s) => s.setAiEnabled)
   const dirty = useEditorStore((s) => s.dirty)
   const busy = useEditorStore((s) => s.busy)
   const error = useEditorStore((s) => s.error)
@@ -86,6 +88,19 @@ export function ProjectEditor() {
           placeholder={`Optional — shown instead of "${location?.name ?? 'the file name'}"`}
           disabled={busy}
         />
+      </div>
+
+      <div className="editor-location">
+        <span className="editor-location-label">AI annotation</span>
+        <label className="editor-ai-toggle" title="Uncheck to disable AI-assisted annotation for anyone who opens this project. Writes config.ai: false into the JSON.">
+          <input
+            type="checkbox"
+            checked={aiEnabled}
+            onChange={(e) => setAiEnabled(e.target.checked)}
+            disabled={busy}
+          />
+          <span>Allow reviewers to use AI-assisted annotation</span>
+        </label>
       </div>
 
       {error && (

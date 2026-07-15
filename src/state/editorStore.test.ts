@@ -18,8 +18,8 @@ function node(name: string, patch: Partial<EditorNode> = {}): EditorNode {
   return { ...makeNode(), name, ...patch }
 }
 
-function draft(nodes: EditorNode[], papers: EditorPaper[] = []) {
-  return { version: 1, extra: {}, nodes, papers }
+function draft(nodes: EditorNode[], papers: EditorPaper[] = [], aiEnabled = true) {
+  return { version: 1, aiEnabled, extra: {}, nodes, papers }
 }
 
 describe('schema conversion', () => {
@@ -217,5 +217,17 @@ describe('buildProjectJson', () => {
     const json = buildProjectJson(draft([node('X', { kind: 'string' })], [paper]))
     const out = (json.papers as Record<string, unknown>[])[0]
     expect('doi' in out).toBe(false)
+  })
+
+  it('writes config.ai only when the editor disabled it', () => {
+    const nodes = [node('X', { kind: 'string' })]
+    const on = buildProjectJson(draft(nodes, [], true)).config as Record<string, unknown>
+    expect('ai' in on).toBe(false)
+
+    const off = buildProjectJson(draft(nodes, [], false)).config as Record<string, unknown>
+    expect(off.ai).toBe(false)
+
+    // The loader reads back what the editor wrote.
+    expect(loadProject(JSON.stringify(buildProjectJson(draft(nodes, [], false)))).aiEnabled).toBe(false)
   })
 })

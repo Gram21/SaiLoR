@@ -7,11 +7,18 @@ export function AnnotationPanel() {
   const paper = useStore(selectCurrentPaper)
   const schema = useStore((s) => s.project?.schema ?? [])
   const busy = useStore((s) => s.busy)
+  const aiEnabled = useStore((s) => s.project?.aiEnabled ?? true)
   const openAi = useAiStore((s) => s.openDialog)
 
   if (!paper) {
     return <div className="panel annotations empty">Select a paper to annotate.</div>
   }
+
+  // The provider of the project file can turn AI off (config.ai: false). When they
+  // have, say so on hover rather than leaving a silently dead button.
+  const aiTitle = !aiEnabled
+    ? 'AI annotation was turned off by the provider of this project file (config.ai: false).'
+    : 'Ask an LLM to propose values for the fields that are still empty'
 
   return (
     <div className="panel annotations">
@@ -21,8 +28,8 @@ export function AnnotationPanel() {
           <button
             type="button"
             className="ai-btn"
-            title="Ask an LLM to propose values for the fields that are still empty"
-            disabled={busy || !paper.pdf}
+            title={aiTitle}
+            disabled={busy || !paper.pdf || !aiEnabled}
             onClick={() => void openAi()}
           >
             ✦ AI

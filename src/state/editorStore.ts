@@ -70,6 +70,7 @@ interface EditorSnapshot {
   location: ProjectLocation | null
   version: number
   title: string
+  aiEnabled: boolean
   extra: Record<string, unknown>
 }
 
@@ -265,6 +266,7 @@ export function makePaperFromPdf(
 export function buildProjectJson(state: {
   version: number
   title?: string
+  aiEnabled: boolean
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
@@ -275,7 +277,11 @@ export function buildProjectJson(state: {
     version: state.version,
     // Omitted when blank, so the app falls back to the file name.
     ...(title ? { title } : {}),
-    config: { schema: toAnnotationDefs(state.nodes) },
+    // `ai` is only written when disabled, matching serializeProject.
+    config: {
+      schema: toAnnotationDefs(state.nodes),
+      ...(state.aiEnabled ? {} : { ai: false }),
+    },
     papers: state.papers.map((p) => {
       const out: Record<string, unknown> = { ...(p.extra ?? {}) }
       out.id = p.id.trim()
@@ -299,6 +305,7 @@ export function buildProjectJson(state: {
 export function validateDraft(state: {
   version: number
   title?: string
+  aiEnabled: boolean
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
@@ -358,6 +365,8 @@ interface EditorState {
   version: number
   /** The project's display title; empty means "use the file name". */
   title: string
+  /** Whether reviewers may use AI-assisted annotation on this project. */
+  aiEnabled: boolean
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
@@ -379,6 +388,7 @@ interface EditorState {
   close: () => void
   changeLocation: () => Promise<void>
   setTitle: (title: string) => void
+  setAiEnabled: (enabled: boolean) => void
 
   addNode: (parentUid: string | null) => void
   updateNode: (uid: string, patch: Partial<EditorNode>) => void
@@ -412,6 +422,7 @@ function snapshotOf(s: EditorState): EditorSnapshot {
     location: s.location,
     version: s.version,
     title: s.title,
+    aiEnabled: s.aiEnabled,
     extra: s.extra,
   }
 }
@@ -422,6 +433,7 @@ function applySnapshot(s: EditorState, snap: EditorSnapshot): void {
   s.location = snap.location
   s.version = snap.version
   s.title = snap.title
+  s.aiEnabled = snap.aiEnabled
   s.extra = snap.extra
 }
 
@@ -439,6 +451,7 @@ export const useEditorStore = create<EditorState>()(
     location: null,
     version: 1,
     title: '',
+    aiEnabled: true,
     extra: {},
     nodes: [],
     papers: [],
@@ -462,6 +475,7 @@ export const useEditorStore = create<EditorState>()(
         s.location = location
         s.version = 1
         s.title = ''
+        s.aiEnabled = true
         s.extra = {}
         s.nodes = [makeNode()]
         s.papers = []
@@ -519,6 +533,8 @@ export const useEditorStore = create<EditorState>()(
           s.location = { handle: opened.handle, name: opened.name, path: opened.handle.path }
           s.version = parsed.version ?? 1
           s.title = parsed.title ?? ''
+          // Absent means enabled; only an explicit `false` opts out.
+          s.aiEnabled = parsed.config.ai !== false
           s.extra = rootExtra
           s.nodes = fromAnnotationDefs(parsed.config.schema)
           s.papers = papers
@@ -598,6 +614,17 @@ export const useEditorStore = create<EditorState>()(
       set((s) => {
         if (!coalesce) pushPast(s, snap)
         s.title = title
+        s.dirty = true
+      })
+    },
+
+    setAiEnabled: (enabled) => {
+      // A single toggle, so it is its own undo step (no coalescing).
+      lastEditKey = null
+      const snap = snapshotOf(get())
+      set((s) => {
+        pushPast(s, snap)
+        s.aiEnabled = enabled
         s.dirty = true
       })
     },
