@@ -53,7 +53,8 @@ The top‑level object has three keys:
 {
   "version": 1,
   "config": {
-    "schema": []
+    "schema": [],
+    "ai": true
   },
   "papers": []
 }
@@ -62,10 +63,17 @@ The top‑level object has three keys:
 | Key       | Required? | What it is                                                                 |
 | --------- | --------- | -------------------------------------------------------------------------- |
 | `version` | optional  | A number. If you omit it, the app treats it as `1`.                        |
-| `config`  | required  | An object with one key, `schema` — the annotation taxonomy.               |
+| `config`  | required  | The annotation schema (`schema`) and options such as `ai`.                 |
 | `papers`  | required  | The list of papers to annotate.                                            |
 
 `config.schema` must be an **array with at least one node**. An empty schema is rejected.
+
+**`config.ai` — allow or forbid AI-assisted annotation.** Optional, defaults to `true`. Set it to
+`false` and the **✦ AI** button is disabled for anyone who opens the file, with a note on hover that
+the provider of the project turned it off. Use this when the papers must not be sent to a
+third-party model — an embargoed corpus, or a review whose protocol forbids it. It only affects
+this project file; it is written out only when `false`, so a normal file never carries the key. The
+project editor exposes it as a checkbox (see §2 of the app's *New / Edit annotation JSON* screen).
 
 **Extra keys are preserved.** Any additional top‑level key you add (say, `"reviewers"` or
 `"notes"`) is kept verbatim when the app saves the file. The same applies to extra keys inside

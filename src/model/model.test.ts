@@ -254,3 +254,34 @@ describe('prune', () => {
     expect(pruned['Findings']).toHaveLength(1)
   })
 })
+
+describe('config.ai (AI-annotation opt-out)', () => {
+  const withAi = (ai: unknown) =>
+    JSON.stringify({
+      version: 1,
+      config: { schema: sampleSchema, ...(ai === undefined ? {} : { ai }) },
+      papers: [],
+    })
+
+  it('defaults to enabled when config.ai is absent', () => {
+    expect(loadProject(withAi(undefined)).aiEnabled).toBe(true)
+  })
+
+  it('is disabled only by an explicit false', () => {
+    expect(loadProject(withAi(false)).aiEnabled).toBe(false)
+    expect(loadProject(withAi(true)).aiEnabled).toBe(true)
+  })
+
+  it('writes config.ai: false only when disabled, and keeps a normal file clean', () => {
+    const enabled = JSON.parse(serializeProject(loadProject(withAi(undefined))))
+    expect('ai' in enabled.config).toBe(false)
+
+    const disabled = JSON.parse(serializeProject(loadProject(withAi(false))))
+    expect(disabled.config.ai).toBe(false)
+  })
+
+  it('round-trips the opt-out through load → serialize → reload', () => {
+    const once = serializeProject(loadProject(withAi(false)))
+    expect(loadProject(once).aiEnabled).toBe(false)
+  })
+})

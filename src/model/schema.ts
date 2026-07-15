@@ -113,6 +113,8 @@ export const projectSchema = z
     title: z.string().optional(),
     config: z.object({
       schema: z.array(annotationDefSchema).min(1, 'config.schema must have at least one node'),
+      /** When false, the provider of this file has disabled AI-assisted annotation. */
+      ai: z.boolean().optional(),
     }),
     papers: z.array(paperSchema),
   })

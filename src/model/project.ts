@@ -27,6 +27,11 @@ export interface Project {
   /** Display name for the review; empty when the file doesn't set one. */
   title?: string
   schema: ResolvedDef[]
+  /**
+   * Whether AI-assisted annotation is available for this project. Defaults to
+   * true; the provider of the file opts out with `config.ai: false`.
+   */
+  aiEnabled: boolean
   papers: Paper[]
   /** Additional top-level fields preserved verbatim on save. */
   extra: Record<string, unknown>
@@ -105,6 +110,8 @@ export function loadProject(input: string | unknown): Project {
     version: raw.version ?? 1,
     title: raw.title,
     schema,
+    // Absent means enabled; only an explicit `false` opts out.
+    aiEnabled: raw.config.ai !== false,
     papers,
     extra: extractExtra(raw, KNOWN_ROOT_KEYS),
   }
@@ -120,7 +127,11 @@ export function serializeProject(project: Project): string {
     ...project.extra,
     version: project.version,
     ...(project.title ? { title: project.title } : {}),
-    config: { schema: dehydrateSchema(project.schema) },
+    // `ai` is only written when disabled, so a normal file stays clean.
+    config: {
+      schema: dehydrateSchema(project.schema),
+      ...(project.aiEnabled ? {} : { ai: false }),
+    },
     papers: project.papers.map((p) => {
       const paper: Record<string, unknown> = {
         ...p.extra,
