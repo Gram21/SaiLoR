@@ -148,6 +148,8 @@ https://your.host/?project=/reviews/2026/project.json
 
 PDF paths in the project file are resolved relative to the project URL (via `BrowserAdapter.setServerBase()`). The `getPdfSource` method fetches each PDF and creates a blob URL for react-pdf.
 
+**A missing PDF on a static host frequently does not 404.** Most SPA-style hosts (a dev server, S3+CloudFront with an SPA rewrite rule, an nginx `try_files … /index.html` config) answer any unmatched path with `200` and the app's own `index.html`, rather than a real 404 — so if a PDF's path is wrong, or the `pdfs/` directory wasn't actually deployed alongside the project JSON, the fetch still "succeeds" and hands pdf.js an HTML page instead of a PDF. `getPdfSource` checks the response actually starts with PDF's magic number (`%PDF-`) before trusting it, so this now surfaces as *"the server answered, but not with a PDF"* naming the exact URL it tried — check that URL directly (e.g. `curl -I <url>`) if you see it; it almost always means the PDF isn't actually being served at the path the project JSON references.
+
 ### B. Docker (self-hosting)
 
 The repo includes a multi-stage `Dockerfile` (Node build → nginx runtime) and `docker-compose.yml`:
@@ -214,6 +216,20 @@ Paper navigation with `[`/`]` is disabled when typing in an input field; Alt-arr
 | Chromium (FSAPI) | Writes in-place via retained handle | `showSaveFilePicker` |
 | Other browsers | Downloads JSON | Downloads JSON |
 | Server mode (no handle) | Falls back to Save as… | Downloads JSON |
+
+## PDF Loading in the Browser Build
+
+Opening a **local** project file (any "Open…" that isn't a `?project=<url>` server-mode load) shows a one-time in-app prompt the first time you view a paper — *"SaiLoR needs to know where this project's PDFs are"* — with a **Choose folder…** button. Clicking it opens your browser's own folder picker; pick the folder that contains the project JSON (the one with `pdfs/` inside it, not the `pdfs/` folder itself). That grant is then reused for every PDF in the project for the rest of the session; you're not asked again unless you open a different project.
+
+The in-app prompt exists so the native folder dialog never appears out of nowhere the moment you open a paper — particularly on Firefox, whose own dialog frames this as an "upload," which reads as alarming with no context. If you ever see that native dialog without having clicked **Choose folder…** first, something outside the app triggered it (e.g. the AI-annotation flow reading a paper's PDF for a paper you haven't viewed yet) — it's the same one-time-per-session grant either way, just requested by a different caller.
+
+| Runtime | Mechanism |
+|---|---|
+| Chromium (FSAPI) | `showDirectoryPicker` — a real directory handle, PDFs read lazily by path as you open them |
+| Other browsers (Firefox, Safari) | A folder-picking `<input>` (`webkitdirectory`) — reads the whole folder tree at once on the first prompt |
+| Server mode (`?project=<url>`) | Fetched from the project's URL; no prompt |
+
+A **local** project's PDFs are never fetched from a URL — there isn't one for them to be at. If you instead see an error naming a URL (*"the server answered, but not with a PDF"*), you're in **server mode**, not the local-folder path above — see the static-hosting note below for what that means and how to fix it.
 
 ## AI-assisted annotation: setting up an LLM target
 
