@@ -10,6 +10,8 @@ import { ErrorPanel } from './components/ErrorPanel'
 import { HelpDialog } from './components/HelpDialog'
 import { ValidationDialog } from './components/ValidationDialog'
 import { ClosePrompt } from './components/ClosePrompt'
+import { AiDialog } from './components/AiDialog'
+import { LlmSettingsDialog } from './components/LlmSettingsDialog'
 import { shortenPath } from './platform/recents'
 import { Splitter } from './components/Splitter'
 import { useKeybindings } from './hooks/useKeybindings'
@@ -210,6 +212,8 @@ export function App() {
       <HelpDialog />
       <ValidationDialog />
       <ClosePrompt />
+      <AiDialog />
+      <LlmSettingsDialog />
     </div>
   )
 }

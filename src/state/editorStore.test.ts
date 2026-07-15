@@ -20,8 +20,8 @@ function node(name: string, patch: Partial<EditorNode> = {}): EditorNode {
   return { ...makeNode(), name, ...patch }
 }
 
-function draft(nodes: EditorNode[], papers: EditorPaper[] = []) {
-  return { version: 1, extra: {}, nodes, papers }
+function draft(nodes: EditorNode[], papers: EditorPaper[] = [], aiEnabled = true) {
+  return { version: 1, aiEnabled, extra: {}, nodes, papers }
 }
 
 describe('schema conversion', () => {
@@ -220,6 +220,18 @@ describe('buildProjectJson', () => {
     const out = (json.papers as Record<string, unknown>[])[0]
     expect('doi' in out).toBe(false)
   })
+
+  it('writes config.ai only when the editor disabled it', () => {
+    const nodes = [node('X', { kind: 'string' })]
+    const on = buildProjectJson(draft(nodes, [], true)).config as Record<string, unknown>
+    expect('ai' in on).toBe(false)
+
+    const off = buildProjectJson(draft(nodes, [], false)).config as Record<string, unknown>
+    expect(off.ai).toBe(false)
+
+    // The loader reads back what the editor wrote.
+    expect(loadProject(JSON.stringify(buildProjectJson(draft(nodes, [], false)))).aiEnabled).toBe(false)
+  })
 })
 
 describe('editorStateFromOpened (shared by "Edit annotation JSON…" and the recents pen)', () => {
@@ -248,6 +260,8 @@ describe('editorStateFromOpened (shared by "Edit annotation JSON…" and the rec
     const st = editorStateFromOpened(opened(projectJson))
     expect(st.version).toBe(2)
     expect(st.title).toBe('My Review')
+    // No config.ai in the file: AI stays enabled by default.
+    expect(st.aiEnabled).toBe(true)
     expect(st.extra).toEqual({ reviewers: ['A'] })
     expect(st.location).toMatchObject({ name: 'review.json', path: '/x/review.json' })
     expect(st.nodes.map((n) => n.name)).toEqual(['Relevant', 'Findings'])
@@ -258,6 +272,23 @@ describe('editorStateFromOpened (shared by "Edit annotation JSON…" and the rec
     // The parsed draft rebuilds a file the real loader still accepts.
     const roundTrip = loadProject(JSON.stringify(buildProjectJson(st)))
     expect(roundTrip.schema.map((d) => d.name)).toEqual(['Relevant', 'Findings'])
+  })
+
+  // Regression test: this path (opening an *existing* project into the editor,
+  // via the file picker or the recents pen) once bypassed config.ai entirely,
+  // silently leaving whatever aiEnabled the editor session previously had
+  // rather than reading the file's own opt-out.
+  it('reads config.ai: false from an opened project, not just a freshly built one', () => {
+    const disabled = JSON.stringify({
+      version: 1,
+      config: { ai: false, schema: [{ name: 'Relevant', type: 'boolean' }] },
+      papers: [],
+    })
+    const st = editorStateFromOpened(opened(disabled))
+    expect(st.aiEnabled).toBe(false)
+
+    const roundTrip = loadProject(JSON.stringify(buildProjectJson(st)))
+    expect(roundTrip.aiEnabled).toBe(false)
   })
 
   it('throws on a structurally invalid project so the caller can show an error', () => {

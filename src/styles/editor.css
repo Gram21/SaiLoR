@@ -47,6 +47,15 @@
   color: var(--muted);
   white-space: nowrap;
 }
+.editor-ai-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.editor-ai-toggle input {
+  cursor: pointer;
+}
 .editor-location-path {
   flex: 1 1 auto;
   min-width: 0;

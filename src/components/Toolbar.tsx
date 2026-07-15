@@ -1,8 +1,39 @@
+import { useRef } from 'react'
 import { useStore } from '../state/store'
 import { useEditorStore } from '../state/editorStore'
 import { getPlatform } from '../platform'
 import { Dropdown, type MenuItem } from './Dropdown'
 import { SidebarToggle } from './SidebarToggle'
+
+/** Clicks this close together count as the same run; a pause starts over. */
+export const UNLOCK_CLICK_WINDOW_MS = 2500
+/** How many clicks on the app title unlock AI use for the session. */
+export const UNLOCK_CLICK_COUNT = 12
+
+/** A run of clicks, tracked as a plain object so the logic below stays pure. */
+export interface TitleClickState {
+  count: number
+  last: number
+}
+
+/**
+ * The pure core of the hidden AI-unlock gesture: click `UNLOCK_CLICK_COUNT`
+ * times on the app title within `UNLOCK_CLICK_WINDOW_MS` of each other. Kept
+ * free of React/`Date.now()` so the "N clicks within a window" rule is testable
+ * on its own — the component only supplies `now` and holds the running state.
+ */
+export function nextTitleClickState(
+  prev: TitleClickState,
+  now: number,
+  windowMs: number = UNLOCK_CLICK_WINDOW_MS,
+  threshold: number = UNLOCK_CLICK_COUNT,
+): { state: TitleClickState; unlocked: boolean } {
+  const count = now - prev.last <= windowMs ? prev.count + 1 : 1
+  if (count >= threshold) {
+    return { state: { count: 0, last: now }, unlocked: true }
+  }
+  return { state: { count, last: now }, unlocked: false }
+}
 
 /** Top bar: Open / Save menus, appearance controls, help, and the dirty indicator. */
 export function Toolbar() {
@@ -28,6 +59,18 @@ export function Toolbar() {
   const projectTitle = useStore((s) => s.projectTitle)
   const saveHandle = useStore((s) => s.saveHandle)
   const setHelpOpen = useStore((s) => s.setHelpOpen)
+  const unlockAi = useStore((s) => s.unlockAi)
+
+  // A ref, not state: counting must not trigger a render, or the title (and
+  // anything watching it) would visibly react to being clicked before the
+  // gesture is even complete. See the title span below — it stays exactly
+  // as plain as it looks for click 1 through `UNLOCK_CLICK_COUNT`.
+  const titleClicks = useRef<TitleClickState>({ count: 0, last: 0 })
+  const onTitleClick = () => {
+    const { state, unlocked } = nextTitleClickState(titleClicks.current, Date.now())
+    titleClicks.current = state
+    if (unlocked) unlockAi()
+  }
 
   const modKey = getPlatform().kind === 'electron' && isMac() ? '⌘' : 'Ctrl'
 
@@ -80,7 +123,9 @@ export function Toolbar() {
         <SidebarToggle />
       </span>
 
-      <span className="app-title">SaiLoR</span>
+      <span className="app-title" onClick={onTitleClick}>
+        SaiLoR
+      </span>
 
       <div className="toolbar-actions">
         <Dropdown label="Open" title="Open a project" disabled={busy} items={openItems} />

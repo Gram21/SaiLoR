@@ -103,6 +103,9 @@ export const paperSchema = z
     pdf: z.string().min(1, 'Each paper needs a "pdf" path'),
     // Loosely typed here; validated/normalized structurally in project.ts.
     annotations: z.record(z.unknown()).optional(),
+    // Ditto — a malformed entry (or the whole field being the wrong shape)
+    // should be dropped, not fail the whole file to load.
+    aiUsage: z.unknown().optional(),
   })
   .passthrough()
 
@@ -113,6 +116,8 @@ export const projectSchema = z
     title: z.string().optional(),
     config: z.object({
       schema: z.array(annotationDefSchema).min(1, 'config.schema must have at least one node'),
+      /** When false, the provider of this file has disabled AI-assisted annotation. */
+      ai: z.boolean().optional(),
     }),
     papers: z.array(paperSchema),
   })

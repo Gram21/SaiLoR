@@ -67,7 +67,7 @@ npm run typecheck
 │   │   ├── annotations.ts AnnotationValueTree, normalize/prune/init/add/remove helpers
 │   │   ├── project.ts     loadProject / serializeProject, Paper/Project types
 │   │   ├── pdfMeta.ts     Best-effort title/author extraction from a PDF (metadata, then layout heuristic)
-│   │   ├── validate.ts    Checks a reviewer's annotations (required / type / enum / cardinality)
+│   │   ├── validate.ts    Checks annotated papers (required / type / enum / cardinality); unannotated papers are skipped, not flagged
 │   │   ├── version.ts     Update check against the GitHub releases API (silent while the repo is private)
 │   │   └── model.test.ts  Vitest unit tests for the model
 │   ├── platform/          Platform abstraction for file I/O and PDF loading
@@ -97,7 +97,7 @@ npm run typecheck
 │   │   ├── ProjectEditor.tsx    Create/edit a project JSON (location bar + schema + papers)
 │   │   ├── SchemaTreeEditor.tsx Drag-and-drop annotation-schema builder (reorder + nest)
 │   │   ├── PapersEditor.tsx     Add/edit/reorder the PDFs the project references
-│   │   ├── ValidationDialog.tsx  "Validate" results, grouped by paper
+│   │   ├── ValidationDialog.tsx  "Validate" results, grouped by paper, plus a separate "not annotated yet" list
 │   │   ├── ClosePrompt.tsx      Save / Don't Save / Cancel when closing a dirty project
 │   │   ├── HelpDialog.tsx Modal with app intro + keyboard shortcuts
 │   │   └── ErrorPanel.tsx Error overlay for load/save failures
@@ -113,7 +113,7 @@ npm run typecheck
 │   └── pdfs/                 Sample PDFs (incl. multipage.pdf with an internal link)
 ├── scripts/ci.sh          Provider-agnostic CI pipeline (install → typecheck → test → build)
 ├── scripts/build-electron.sh  Provider-agnostic desktop build (electron-builder for the host OS)
-├── .github/workflows/ci.yml       GitHub Actions — runs scripts/ci.sh on push/PR to main
+├── .github/workflows/ci.yml       GitHub Actions — runs scripts/ci.sh on push to main and on every pull request
 ├── .github/workflows/release.yml  GitHub Actions — builds desktop installers on release, attaches them
 ├── .github/workflows/openwiki.yml Scheduled weekly OpenWiki doc refresh (only when code changed)
 ├── .github/CODEOWNERS     Default reviewers for pull requests
