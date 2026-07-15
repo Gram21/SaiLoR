@@ -4,7 +4,7 @@ import { getPlatform } from '../platform'
 import { useStore, type AiApplyResult } from './store'
 import { unansweredFields, type FieldTarget } from '../llm/fields'
 import { buildSystemPrompt, buildUserText, buildUserPdfCaption } from '../llm/prompt'
-import { buildRequest, extractText, extractError, PROVIDERS } from '../llm/providers'
+import { buildRequest, extractText, extractError, wasTruncated, PROVIDERS } from '../llm/providers'
 import { parseAnswer } from '../llm/parse'
 import type { LlmAnswer, LlmConfig, Suggestion } from '../llm/types'
 import { extractPdfText } from '../model/pdfText'
@@ -20,6 +20,15 @@ import { extractPdfText } from '../model/pdfText'
  */
 
 const SELECTED_KEY = 'slr.llm.selected'
+
+/**
+ * The output-length budget for "Verify setup"'s one-word test request. Well
+ * above what a trivial prompt should need even with reasoning overhead (a
+ * reported real-world failure spent ~100 tokens reasoning before running out),
+ * comfortably below `DEFAULT_MAX_TOKENS` (the real run's budget) since this is
+ * only a connectivity smoke test. See the comment on `verifyConfig` below.
+ */
+const VERIFY_MAX_TOKENS = 2048
 
 export type AiPhase =
   | 'setup' // choosing a target, nothing sent yet
@@ -159,9 +168,17 @@ export const useAiStore = create<AiState>()(
     },
 
     /**
-     * Send the smallest possible request, so the user finds out that the key,
-     * model name or URL is wrong *here* rather than after waiting on a full
-     * paper. Returns the model's reply; throws with the provider's own message.
+     * Send the smallest request that still reliably gets an answer, so the user
+     * finds out the key, model name or URL is wrong *here* rather than after
+     * waiting on a full paper. Returns the model's reply; throws with the
+     * provider's own message.
+     *
+     * "Smallest" is not `max_tokens: 1` or similar: on a reasoning-capable model
+     * the budget covers hidden reasoning tokens too, and a very tight cap can be
+     * spent entirely on reasoning before the model ever writes "OK" — the model
+     * comes back with no usable text and a truncation flag, not an error. See
+     * `DEFAULT_MAX_TOKENS` in providers.ts. `VERIFY_MAX_TOKENS` only needs to
+     * clear that bar, not match the real run's budget, so it stays well below it.
      */
     verifyConfig: async (config, apiKey) => {
       // The key must be stored before it can be used: the renderer never holds it.
@@ -170,12 +187,23 @@ export const useAiStore = create<AiState>()(
         config,
         'You are a connection test. Reply with the single word OK.',
         { kind: 'text', text: 'Reply with OK.' },
-        { maxTokens: 16 },
+        { maxTokens: VERIFY_MAX_TOKENS },
       )
       const res = await getPlatform().callLlm(req)
       if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
-      const text = extractText(config.provider, safeJson(res.body)).trim()
-      if (!text) throw new Error('The provider answered, but the reply was empty.')
+      const json = safeJson(res.body)
+      const text = extractText(config.provider, json).trim()
+      if (!text) {
+        if (wasTruncated(config.provider, json)) {
+          throw new Error(
+            `${PROVIDERS[config.provider].label} used its whole reply budget on internal ` +
+              'reasoning and never got to an answer. This model reasons more than most before ' +
+              'replying — if it keeps happening, try a lower reasoning-effort setting for this ' +
+              'model, if the provider offers one.',
+          )
+        }
+        throw new Error('The provider answered, but the reply was empty.')
+      }
       return text
     },
 
@@ -259,7 +287,19 @@ export const useAiStore = create<AiState>()(
         if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
 
         set((s) => { s.phase = 'parsing' })
-        const text = extractText(config.provider, safeJson(res.body))
+        const json = safeJson(res.body)
+        const text = extractText(config.provider, json)
+        // A truncated, empty answer would otherwise read as "the model proposed
+        // nothing" (a legitimate outcome parseAnswer also produces) rather than
+        // "the model ran out of budget before answering" — a very different
+        // problem with a very different fix. See DEFAULT_MAX_TOKENS in providers.ts.
+        if (!text.trim() && wasTruncated(config.provider, json)) {
+          throw new Error(
+            `${PROVIDERS[config.provider].label} used its whole reply budget on internal ` +
+              'reasoning and never got to an answer for this paper. If this keeps happening, try ' +
+              'a lower reasoning-effort setting for this model, if the provider offers one.',
+          )
+        }
         const answer = parseAnswer(app.project.schema, text)
 
         stopTicker()

@@ -238,9 +238,11 @@ the project file and are gone when you reopen it.
 There is no built-in provider and no key ships with the app: nothing is sent anywhere until you set
 up a target yourself.
 
-**Supported providers** — **Anthropic**, **OpenAI**, **OpenRouter**, or **any OpenAI-compatible
-endpoint**, including one running locally (LM Studio, llama.cpp, vLLM, …). A local endpoint is the
-one setup where the paper does not leave your machine.
+**Supported providers** — **Anthropic**, **OpenAI**, **Google (Gemini)**, **OpenRouter**, **Groq**,
+**Mistral**, **DeepSeek**, **xAI (Grok)**, or **any OpenAI-compatible endpoint**, including one
+running locally (LM Studio, llama.cpp, vLLM, …). A local endpoint is the one setup where the paper
+does not leave your machine. Only Anthropic, OpenAI, Google and OpenRouter can take the PDF itself —
+the rest always receive the extracted text.
 
 Set one up via **✦ AI → ⚙** (or *Set up an LLM…*): give the target a name, pick the provider, enter
 the model name and your API key, and press **Verify setup** to send a one-word test request. On the

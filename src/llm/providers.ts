@@ -22,6 +22,21 @@ export interface ProviderInfo {
   editableBaseUrl: boolean
   /** Whether this provider can accept a PDF natively (the fallback path). */
   supportsPdf: boolean
+  /**
+   * The output-length parameter an OpenAI-shaped body should carry. Ignored for
+   * `anthropic` and `google`, which have their own dedicated request shapes with
+   * their own field for this (`max_tokens`, `generationConfig.maxOutputTokens`).
+   *
+   * This is *not* one-size-fits-all across "OpenAI-compatible" APIs, which is
+   * exactly the bug this field exists to prevent: OpenAI itself now rejects
+   * `max_tokens` on its newer models ("Unsupported parameter: 'max_tokens' is
+   * not supported with this model. Use 'max_completion_tokens' instead."), and
+   * xAI/Groq have followed the same rename — but OpenRouter, Mistral, DeepSeek,
+   * and self-hosted OpenAI-compatible servers (llama.cpp, LM Studio, vLLM) all
+   * document `max_tokens` as current and do not confirm support for the newer
+   * name. Verified against each provider's own docs; see providers.test.ts.
+   */
+  tokenParam: 'max_tokens' | 'max_completion_tokens'
 }
 
 export const PROVIDERS: Record<Provider, ProviderInfo> = {
@@ -31,6 +46,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     defaultBaseUrl: 'https://api.anthropic.com',
     editableBaseUrl: false,
     supportsPdf: true,
+    tokenParam: 'max_tokens', // unused: Anthropic has its own body shape below
   },
   openai: {
     id: 'openai',
@@ -38,6 +54,19 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     defaultBaseUrl: 'https://api.openai.com',
     editableBaseUrl: false,
     supportsPdf: true,
+    // OpenAI's own error, verbatim: "'max_tokens' is not supported with this
+    // model. Use 'max_completion_tokens' instead." — required for the o-series
+    // and current GPT models; still accepted-but-deprecated on older ones, so
+    // the newer name is the only one safe to send unconditionally.
+    tokenParam: 'max_completion_tokens',
+  },
+  google: {
+    id: 'google',
+    label: 'Google (Gemini)',
+    defaultBaseUrl: 'https://generativelanguage.googleapis.com',
+    editableBaseUrl: false,
+    supportsPdf: true,
+    tokenParam: 'max_tokens', // unused: Gemini has its own body shape below
   },
   openrouter: {
     id: 'openrouter',
@@ -45,6 +74,49 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     defaultBaseUrl: 'https://openrouter.ai/api',
     editableBaseUrl: false,
     supportsPdf: true,
+    // OpenRouter fronts many backends (including OpenAI's) behind one contract;
+    // its own reference documents `max_tokens`, not `max_completion_tokens` — it
+    // is the one doing the per-backend translation, not the caller.
+    tokenParam: 'max_tokens',
+  },
+  groq: {
+    id: 'groq',
+    label: 'Groq',
+    defaultBaseUrl: 'https://api.groq.com/openai',
+    editableBaseUrl: false,
+    // No inline document/file input on chat completions — text only.
+    supportsPdf: false,
+    tokenParam: 'max_completion_tokens',
+  },
+  mistral: {
+    id: 'mistral',
+    label: 'Mistral',
+    defaultBaseUrl: 'https://api.mistral.ai',
+    editableBaseUrl: false,
+    // Mistral's chat completions take a PDF only via `document_url` (a fetchable
+    // URL); there is no inline-base64 variant, and a paper on the reviewer's
+    // disk has no URL to give it.
+    supportsPdf: false,
+    tokenParam: 'max_tokens',
+  },
+  deepseek: {
+    id: 'deepseek',
+    label: 'DeepSeek',
+    defaultBaseUrl: 'https://api.deepseek.com',
+    editableBaseUrl: false,
+    supportsPdf: false, // text-only; no file/vision input on any current model
+    tokenParam: 'max_tokens',
+  },
+  xai: {
+    id: 'xai',
+    label: 'xAI (Grok)',
+    defaultBaseUrl: 'https://api.x.ai',
+    editableBaseUrl: false,
+    // Grok takes files only by uploading first and referencing the resulting id
+    // (or a URL) in a second call — a different flow than the single-request
+    // inline attachment this app sends, so it stays on the text path.
+    supportsPdf: false,
+    tokenParam: 'max_completion_tokens',
   },
   'openai-compatible': {
     id: 'openai-compatible',
@@ -54,13 +126,21 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     // A self-hosted server (llama.cpp, LM Studio, vLLM…) almost never takes a PDF,
     // so the UI must keep such a target on the extracted-text path.
     supportsPdf: false,
+    // The de facto standard these servers implement; `max_completion_tokens` is
+    // an OpenAI-specific rename with no confirmed support here.
+    tokenParam: 'max_tokens',
   },
 }
 
 export const PROVIDER_LIST: ProviderInfo[] = [
   PROVIDERS.anthropic,
   PROVIDERS.openai,
+  PROVIDERS.google,
   PROVIDERS.openrouter,
+  PROVIDERS.groq,
+  PROVIDERS.mistral,
+  PROVIDERS.deepseek,
+  PROVIDERS.xai,
   PROVIDERS['openai-compatible'],
 ]
 
@@ -69,7 +149,20 @@ export type PaperPart =
   | { kind: 'text'; text: string }
   | { kind: 'pdf'; base64: string; filename: string }
 
-const DEFAULT_MAX_TOKENS = 4096
+/**
+ * On a reasoning-capable model (OpenAI's o-series and GPT-5.x, Grok, some Groq
+ * and DeepSeek models…), the output-length budget is shared between hidden
+ * reasoning tokens and the visible answer — reasoning that runs long can
+ * exhaust the whole budget before a single visible token is written, which
+ * surfaces as a "finish_reason: length" / "stop_reason: max_tokens" response
+ * with **no** usable text, not as an error the caller can react to in advance.
+ * There is no reliable, cross-provider way to switch reasoning off (OpenAI's
+ * own `reasoning_effort` has been unreliable together with a token cap on
+ * Chat Completions), so the only robust mitigation is headroom: the model
+ * still stops as soon as it is done, so a generous ceiling costs nothing extra
+ * on ordinary models and only matters for the ones that actually need it.
+ */
+const DEFAULT_MAX_TOKENS = 8192
 
 /**
  * The user turn that accompanies an attached PDF. The instructions live in the
@@ -137,6 +230,15 @@ function openaiContent(user: PaperPart): unknown {
   ]
 }
 
+/** Gemini's `Part[]` shape: a plain string user turn becomes one text part. */
+function googleParts(user: PaperPart): unknown[] {
+  if (user.kind === 'text') return [{ text: user.text }]
+  return [
+    { inline_data: { mime_type: 'application/pdf', data: user.base64 } },
+    { text: PDF_USER_TEXT },
+  ]
+}
+
 export function buildRequest(
   cfg: LlmConfig,
   system: string,
@@ -164,6 +266,29 @@ export function buildRequest(
     }
   }
 
+  if (cfg.provider === 'google') {
+    // The model lives in the URL path, not the body — a genuinely different
+    // shape from the OpenAI family, not a variant of it. Auth is a header
+    // (`x-goog-api-key`), which Google documents as the alternative to a `?key=`
+    // query param specifically so the key never has to sit in a URL (matches
+    // this app's header-only sentinel-substitution; a query-param key would
+    // also need the main-process origin check to parse query strings).
+    return {
+      configId: cfg.id,
+      url: join(base, `/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`),
+      headers: {
+        'content-type': 'application/json',
+        'x-goog-api-key': API_KEY_SENTINEL,
+      },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: googleParts(user) }],
+        systemInstruction: { parts: [{ text: system }] },
+        generationConfig: { maxOutputTokens: maxTokens },
+      }),
+    }
+  }
+
+  const { tokenParam } = PROVIDERS[cfg.provider]
   return {
     configId: cfg.id,
     url: join(base, CHAT_PATH),
@@ -173,7 +298,7 @@ export function buildRequest(
     },
     body: JSON.stringify({
       model: cfg.model,
-      max_tokens: maxTokens,
+      [tokenParam]: maxTokens,
       messages: [
         { role: 'system', content: system },
         { role: 'user', content: openaiContent(user) },
@@ -207,6 +332,18 @@ export function extractText(provider: Provider, json: unknown): string {
       .join('')
   }
 
+  if (provider === 'google') {
+    const candidates = json.candidates
+    if (!Array.isArray(candidates) || candidates.length === 0) return ''
+    const content = candidates[0]
+    if (!isRecord(content) || !isRecord(content.content)) return ''
+    const parts = content.content.parts
+    // A part can carry only a thoughtSignature and no text (thinking models),
+    // so filter rather than assume every part has one.
+    if (!Array.isArray(parts)) return ''
+    return textOfParts(parts)
+  }
+
   const choices = json.choices
   if (!Array.isArray(choices) || choices.length === 0) return ''
   const first = choices[0]
@@ -218,6 +355,33 @@ export function extractText(provider: Provider, json: unknown): string {
   if (typeof content === 'string') return content
   if (Array.isArray(content)) return textOfParts(content)
   return ''
+}
+
+/**
+ * True when a (2xx) response was cut off by the token budget rather than the
+ * model finishing on its own — the shape a reasoning model produces when
+ * `DEFAULT_MAX_TOKENS`'s headroom still was not enough. `extractText` alone
+ * cannot tell "the model had nothing to say" apart from "the model was cut off
+ * before it could say anything"; this is what lets a caller tell them apart
+ * and say something more useful than "the provider answered, but the reply
+ * was empty."
+ */
+export function wasTruncated(provider: Provider, json: unknown): boolean {
+  if (!isRecord(json)) return false
+
+  if (provider === 'anthropic') return json.stop_reason === 'max_tokens'
+
+  if (provider === 'google') {
+    const candidates = json.candidates
+    if (!Array.isArray(candidates) || candidates.length === 0) return false
+    const first = candidates[0]
+    return isRecord(first) && first.finishReason === 'MAX_TOKENS'
+  }
+
+  const choices = json.choices
+  if (!Array.isArray(choices) || choices.length === 0) return false
+  const first = choices[0]
+  return isRecord(first) && first.finish_reason === 'length'
 }
 
 /** Keep an error readable in the UI: an HTML error page or a huge body helps nobody. */

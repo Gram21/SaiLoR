@@ -20,6 +20,17 @@ import '../styles/ai.css'
  * z-index of 200; `.llm-settings-overlay` in ai.css lifts it above that.
  */
 
+/**
+ * A human-readable list of the providers that can take a PDF, derived from
+ * `PROVIDER_LIST` rather than hand-written — a hardcoded sentence here already
+ * went stale once (Google shipped, the text didn't), so it now can't again.
+ */
+const pdfCapableProviders = (() => {
+  const names = PROVIDER_LIST.filter((p) => p.supportsPdf).map((p) => p.label)
+  if (names.length <= 1) return names.join('')
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+})()
+
 /** A blank target, ready to be filled in. */
 function newDraft(): LlmConfig {
   const provider = PROVIDER_LIST[0]
@@ -440,7 +451,7 @@ export function LlmSettingsDialog() {
               <p className="llm-hint">
                 {info?.supportsPdf
                   ? 'Extracted text is smaller, cheaper and works everywhere; the PDF keeps tables and figures intact but costs far more. Scanned papers yield no text, so only the PDF path can read them.'
-                  : 'A self-hosted OpenAI-compatible server normally has no way to read a PDF, so this target must send extracted text. Anthropic, OpenAI and OpenRouter can take the PDF.'}
+                  : `This provider has no way to take a PDF in a single request — either it has no file input at all, or it needs the file uploaded and referenced separately, which this app does not do. So this target must send extracted text. ${pdfCapableProviders} can take the PDF.`}
               </p>
 
               {problem && (

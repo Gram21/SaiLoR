@@ -9,7 +9,16 @@ import type { FieldValue } from '../model/annotations'
  * the outgoing request there; the renderer only ever sees `hasKey`.
  */
 
-export type Provider = 'anthropic' | 'openai' | 'openrouter' | 'openai-compatible'
+export type Provider =
+  | 'anthropic'
+  | 'openai'
+  | 'google'
+  | 'openrouter'
+  | 'groq'
+  | 'mistral'
+  | 'deepseek'
+  | 'xai'
+  | 'openai-compatible'
 
 /** How the paper is handed to the model. Text is the default — see `src/model/pdfText.ts`. */
 export type Attach = 'text' | 'pdf'
