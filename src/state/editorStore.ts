@@ -3,7 +3,7 @@ import { immer } from 'zustand/middleware/immer'
 import { z } from 'zod'
 import { projectSchema, resolveSchema, SchemaError, type AnnotationDef } from '../model/schema'
 import { extractPdfMeta } from '../model/pdfMeta'
-import { getPlatform, type ProjectLocation } from '../platform'
+import { getPlatform, type OpenedProject, type ProjectLocation } from '../platform'
 import { useStore } from './store'
 
 /**
@@ -376,6 +376,8 @@ interface EditorState {
 
   startNew: () => Promise<void>
   startEdit: () => Promise<void>
+  /** Open a recent project (by its recents id) straight into the schema editor. */
+  startEditRecent: (id: string) => Promise<void>
   close: () => void
   changeLocation: () => Promise<void>
   setTitle: (title: string) => void
@@ -430,6 +432,85 @@ function pushPast(s: EditorState, snap: EditorSnapshot): void {
   s.past.push(snap)
   if (s.past.length > HISTORY_LIMIT) s.past.shift()
   s.future = []
+}
+
+/** The editor fields an opened project populates, before it is committed to state. */
+interface OpenedEditorState {
+  location: ProjectLocation
+  version: number
+  title: string
+  extra: Record<string, unknown>
+  nodes: EditorNode[]
+  papers: EditorPaper[]
+}
+
+/**
+ * Parse an opened project into the editor's draft shape. Throws on invalid JSON
+ * or a structure the loader rejects, so callers can show a friendly error. This
+ * is shared by "Edit annotation JSON…" (file picker) and the per-recent pen.
+ */
+export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState {
+  const data = JSON.parse(opened.text) as Record<string, unknown>
+  const parsed = projectSchema.parse(data)
+  const papers: EditorPaper[] = parsed.papers.map((p) => {
+    const known = new Set(['id', 'title', 'authors', 'doi', 'pdf', 'annotations'])
+    const extra: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(p)) if (!known.has(k)) extra[k] = v
+    return {
+      uid: nextUid(),
+      id: p.id,
+      title: p.title,
+      authors: (p.authors ?? []).join(', '),
+      doi: p.doi ?? '',
+      pdf: p.pdf,
+      // No absolute source: the file already stores a relative path, and we only
+      // re-derive paths for PDFs the user adds in this session.
+      sourcePath: undefined,
+      annotations: p.annotations ?? {},
+      extra,
+    }
+  })
+  const rootExtra: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(data)) {
+    if (!['version', 'title', 'config', 'papers'].includes(k)) rootExtra[k] = v
+  }
+  return {
+    location: { handle: opened.handle, name: opened.name, path: opened.handle.path },
+    version: parsed.version ?? 1,
+    title: parsed.title ?? '',
+    extra: rootExtra,
+    nodes: fromAnnotationDefs(parsed.config.schema),
+    papers,
+  }
+}
+
+/** Commit a parsed project into the editor as a fresh "edit" session. */
+function openEditorSession(s: EditorState, st: OpenedEditorState): void {
+  s.open = true
+  s.mode = 'edit'
+  s.location = st.location
+  s.version = st.version
+  s.title = st.title
+  s.extra = st.extra
+  s.nodes = st.nodes
+  s.papers = st.papers
+  s.dirty = false
+  s.busy = false
+  s.error = null
+  s.issues = []
+  s.notice = null
+  s.extracting = 0
+  s.past = []
+  s.future = []
+}
+
+/** Map a load failure to the editor's error shape. */
+function openError(err: unknown): EditorError {
+  const details =
+    err instanceof z.ZodError
+      ? err.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`)
+      : [String(err)]
+  return { message: 'That file could not be opened for editing.', details }
 }
 
 export const useEditorStore = create<EditorState>()(
@@ -489,56 +570,55 @@ export const useEditorStore = create<EditorState>()(
           })
           return
         }
-        const data = JSON.parse(opened.text) as Record<string, unknown>
-        const parsed = projectSchema.parse(data)
-        const papers: EditorPaper[] = parsed.papers.map((p) => {
-          const known = new Set(['id', 'title', 'authors', 'doi', 'pdf', 'annotations'])
-          const extra: Record<string, unknown> = {}
-          for (const [k, v] of Object.entries(p)) if (!known.has(k)) extra[k] = v
-          return {
-            uid: nextUid(),
-            id: p.id,
-            title: p.title,
-            authors: (p.authors ?? []).join(', '),
-            doi: p.doi ?? '',
-            pdf: p.pdf,
-            // No absolute source: the file already stores a relative path, and
-            // we only re-derive paths for PDFs the user adds in this session.
-            sourcePath: undefined,
-            annotations: p.annotations ?? {},
-            extra,
-          }
-        })
-        const rootExtra: Record<string, unknown> = {}
-        for (const [k, v] of Object.entries(data)) {
-          if (!['version', 'title', 'config', 'papers'].includes(k)) rootExtra[k] = v
-        }
-        set((s) => {
-          s.open = true
-          s.mode = 'edit'
-          s.location = { handle: opened.handle, name: opened.name, path: opened.handle.path }
-          s.version = parsed.version ?? 1
-          s.title = parsed.title ?? ''
-          s.extra = rootExtra
-          s.nodes = fromAnnotationDefs(parsed.config.schema)
-          s.papers = papers
-          s.dirty = false
-          s.busy = false
-          s.error = null
-          s.issues = []
-          s.notice = null
-          s.extracting = 0
-          s.past = []
-          s.future = []
-        })
+        const st = editorStateFromOpened(opened)
+        set((s) => openEditorSession(s, st))
       } catch (err) {
-        const details =
-          err instanceof z.ZodError
-            ? err.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`)
-            : [String(err)]
         set((s) => {
           s.busy = false
-          s.error = { message: 'That file could not be opened for editing.', details }
+          s.error = openError(err)
+        })
+      }
+    },
+
+    startEditRecent: async (id) => {
+      const platform = getPlatform()
+      set((s) => {
+        s.busy = true
+      })
+      let opened: OpenedProject | null
+      try {
+        opened = await platform.openRecent(id)
+      } catch (err) {
+        set((s) => {
+          s.busy = false
+          s.error = openError(err)
+        })
+        return
+      }
+      if (!opened) {
+        // The file is gone. The editor never opens; instead grey the entry (the
+        // drive may come back) and surface the error on the welcome screen, exactly
+        // as store.openRecent does for the annotate path.
+        set((s) => {
+          s.busy = false
+        })
+        const cur = useStore.getState()
+        useStore.setState({
+          recents: cur.recents.map((r) => (r.id === id ? { ...r, available: false } : r)),
+          loadError: {
+            message: 'That project could not be opened.',
+            details: ['It may have been moved, renamed, or deleted.'],
+          },
+        })
+        return
+      }
+      try {
+        const st = editorStateFromOpened(opened)
+        set((s) => openEditorSession(s, st))
+      } catch (err) {
+        set((s) => {
+          s.busy = false
+          s.error = openError(err)
         })
       }
     },
