@@ -122,7 +122,7 @@ App (src/App.tsx)
 │   ├── PdfViewer (src/components/PdfViewer.tsx)
 │   │     react-pdf Document+Page; ResizeObserver for width; zoom controls; multi-page navigation; jump history (back/forward); in-PDF search (Ctrl+F); text selection capture
 │   └── AnnotationPanel (src/components/AnnotationPanel.tsx)
-│         ✦ AI button in the column header (opens AiDialog; disabled while busy or when the paper has no PDF)
+│         ✦ AI button in the column header (opens AiDialog; disabled while busy, when the paper has no PDF, when the project forbids it, or — by default — always, until the hidden unlock; see "AI-assisted annotation" below)
 │         └── AnnotationNode (src/components/AnnotationNode.tsx) [recursive]
 │               └── Field (src/components/Field.tsx)
 │                     Input control (text/number/checkbox/enum ComboBox) + ⧉ grab-from-PDF button
@@ -223,6 +223,17 @@ PDF source resolution is async: `getPlatform().getPdfSource(paper.pdf, saveHandl
 ## AI-assisted annotation (`src/llm`)
 
 A **✦ AI** button in the annotation column's header asks an LLM to read the current paper and propose values for the fields that are **still empty**. The reviewer gets a table — field, proposed value, the supporting quote from the paper, the model's confidence, and a checkbox per row — and **nothing is written until they press Apply**.
+
+### Availability is gated twice, and defaults to off
+
+The button being clickable requires **both** of two independent things to be true — `Project.aiEnabled && useStore().aiUnlocked` — and either one being false disables it identically:
+
+1. **`Project.aiEnabled`** (`config.ai` in the file, default `true`) — the *project's* say. A provider of a project file can set `config.ai: false` to forbid AI use on that file outright; see `docs/annotation-schema.md`.
+2. **`useStore().aiUnlocked`** (default `false`, in-memory only, never persisted) — the *app's* say, for now: AI-assisted annotation ships in the app but is **off by default regardless of what `config.ai` says**. `config.ai: true` (or omitting it) is necessary but no longer sufficient. The only way to flip this for the running session is the hidden gesture in `Toolbar.tsx`: **7 clicks on the "SaiLoR" title within `UNLOCK_CLICK_WINDOW_MS` (1500ms) of each other**, counted by the pure `nextTitleClickState()` (deliberately kept out of the component and unit-tested in `Toolbar.test.ts`, since the "N clicks within a window, else the run resets" rule is exactly the kind of off-by-one/timing logic worth pinning down). The title itself carries no `title` attribute, no pointer cursor, and no other affordance hinting that it does anything — nothing changes even mid-run, since the click count lives in a `useRef` specifically so counting does not trigger a re-render. `aiStore.openDialog()` re-checks both flags as a second line of defense in case the dialog is ever reached another way; the disabled button is the primary gate.
+
+Whenever the button is disabled — for **any** reason (busy, no PDF, `aiEnabled` false, or not `aiUnlocked`) — its tooltip is the uninformative `"Disabled Feature"` rather than a reason, so the button reads as an ordinary disabled control rather than one hinting it can be unlocked. Reaching for a specific one of these reasons in a new codepath is a sign the tooltip logic needs revisiting, not extending — see `AnnotationPanel.tsx`.
+
+If a later product decision makes AI available by default again, `aiUnlocked` and the whole gesture can simply be deleted and `Project.aiEnabled` alone regains control — the two checks are additive (both must hold), not layered logic that needs untangling.
 
 ### The modules
 

@@ -109,6 +109,10 @@ export const useAiStore = create<AiState>()(
       const app = useStore.getState()
       const paper = app.project?.papers.find((p) => p.id === app.currentPaperId)
       if (!app.project || !paper) return
+      // The AI button is already disabled unless this holds; re-checking here
+      // is a second line of defense, not the primary gate — see `aiUnlocked` in
+      // store.ts and the hidden gesture in Toolbar.tsx.
+      if (!app.aiUnlocked || !app.project.aiEnabled) return
 
       set((s) => {
         s.open = true

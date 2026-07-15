@@ -89,3 +89,22 @@ describe('undo/redo', () => {
     expect(studyType()).toBeNull()
   })
 })
+
+describe('unlockAi (the hidden AI-unlock gesture landing)', () => {
+  it('starts locked', () => {
+    expect(st().aiUnlocked).toBe(false)
+  })
+
+  it('unlocks, and stays unlocked for further calls', () => {
+    st().unlockAi()
+    expect(st().aiUnlocked).toBe(true)
+    st().unlockAi()
+    expect(st().aiUnlocked).toBe(true)
+  })
+
+  it('survives opening a different project — it is a session flag, not tied to one file', () => {
+    st().unlockAi()
+    st().loadFromText(PROJECT, null, 'another.json')
+    expect(st().aiUnlocked).toBe(true)
+  })
+})

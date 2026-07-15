@@ -68,12 +68,17 @@ The top‑level object has three keys:
 
 `config.schema` must be an **array with at least one node**. An empty schema is rejected.
 
-**`config.ai` — allow or forbid AI-assisted annotation.** Optional, defaults to `true`. Set it to
-`false` and the **✦ AI** button is disabled for anyone who opens the file, with a note on hover that
-the provider of the project turned it off. Use this when the papers must not be sent to a
-third-party model — an embargoed corpus, or a review whose protocol forbids it. It only affects
-this project file; it is written out only when `false`, so a normal file never carries the key. The
-project editor exposes it as a checkbox (see §2 of the app's *New / Edit annotation JSON* screen).
+**`config.ai` — forbid AI-assisted annotation.** Optional, defaults to `true`. Set it to `false` and
+the **✦ AI** button is disabled for anyone who opens the file. Use this when the papers must not be
+sent to a third-party model — an embargoed corpus, or a review whose protocol forbids it. It only
+affects this project file; it is written out only when `false`, so a normal file never carries the
+key. The project editor exposes it as a checkbox (see §2 of the app's *New / Edit annotation JSON*
+screen).
+
+Note that `config.ai` can only ever *restrict* the feature, not guarantee it: `true` (or omitting
+the key) does not by itself mean the button is available to whoever opens the file — the app may
+have its own reasons for keeping AI-assisted annotation off that this setting does not override.
+`false` always wins, in every build.
 
 **Extra keys are preserved.** Any additional top‑level key you add (say, `"reviewers"` or
 `"notes"`) is kept verbatim when the app saves the file. The same applies to extra keys inside
