@@ -9,10 +9,18 @@ const KIND_LABEL: Record<IssueKind, string> = {
   cardinality: 'Wrong number of entries',
 }
 
-/** Results of "Validate": what still has to be fixed, grouped by paper. */
+/**
+ * Results of "Validate": what still has to be fixed, grouped by paper.
+ *
+ * A paper with no annotations at all is never validated — it would fail every
+ * required field for the single reason that it hasn't been started, which
+ * says nothing a reviewer doesn't already know. Those papers are listed
+ * separately below the issues, as a plain "not started yet" checklist.
+ */
 export function ValidationDialog() {
   const open = useStore((s) => s.validationOpen)
   const issues = useStore((s) => s.validation)
+  const unannotated = useStore((s) => s.validationUnannotated)
   const setOpen = useStore((s) => s.setValidationOpen)
   const selectPaper = useStore((s) => s.selectPaper)
 
@@ -36,7 +44,7 @@ export function ValidationDialog() {
     return () => document.removeEventListener('keydown', onKey)
   }, [open, setOpen])
 
-  if (!open || !issues) return null
+  if (!open || !issues || !unannotated) return null
 
   const goToPaper = (paperId: string) => {
     selectPaper(paperId)
@@ -73,8 +81,9 @@ export function ValidationDialog() {
         <div className="modal-body">
           {issues.length === 0 ? (
             <p>
-              Every paper's annotations match the schema: required fields are filled in, values have
-              the right type, and repeated entries are within their limits.
+              {unannotated.length === 0
+                ? "Every paper's annotations match the schema: required fields are filled in, values have the right type, and repeated entries are within their limits."
+                : "Every paper with at least one annotation matches the schema. The papers below have none yet, so there is nothing to check."}
             </p>
           ) : (
             <>
@@ -109,6 +118,31 @@ export function ValidationDialog() {
                 </section>
               ))}
             </>
+          )}
+
+          {unannotated.length > 0 && (
+            <section className="validation-group validation-unannotated">
+              <h3 className="validation-section-title">
+                Not annotated yet
+                <span className="count">
+                  {unannotated.length} paper{unannotated.length === 1 ? '' : 's'} — skipped, not checked
+                </span>
+              </h3>
+              <ul className="validation-unannotated-list">
+                {unannotated.map((p) => (
+                  <li key={p.paperId}>
+                    <button
+                      type="button"
+                      className="validation-paper"
+                      onClick={() => goToPaper(p.paperId)}
+                      title="Open this paper"
+                    >
+                      {p.paperTitle}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
         </div>
       </div>
