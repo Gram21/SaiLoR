@@ -5,8 +5,9 @@ import { useStore, type AiApplyResult } from './store'
 import { unansweredFields, type FieldTarget } from '../llm/fields'
 import { buildSystemPrompt, buildUserText, buildUserPdfCaption } from '../llm/prompt'
 import { buildRequest, extractText, extractError, wasTruncated, PROVIDERS } from '../llm/providers'
+import { buildModelsRequest, parseModelsResponse } from '../llm/models'
 import { parseAnswer } from '../llm/parse'
-import type { LlmAnswer, LlmConfig, Suggestion } from '../llm/types'
+import type { LlmAnswer, LlmConfig, ModelInfo, Suggestion } from '../llm/types'
 import { extractPdfText } from '../model/pdfText'
 
 /**
@@ -30,6 +31,20 @@ const SELECTED_KEY = 'slr.llm.selected'
  */
 const VERIFY_MAX_TOKENS = 2048
 
+/**
+ * How long a fetched model list is trusted before `fetchModels` goes back to
+ * the provider on its own. A provider's catalog changes on the order of
+ * weeks, not minutes, so this exists only to make reopening the settings
+ * dialog instant, not to track new releases promptly — an explicit refresh
+ * (`opts.force`) always bypasses it.
+ */
+const MODELS_TTL_MS = 60 * 60 * 1000
+
+/** How many list-models pages `fetchModels` will walk before giving up. Every
+ * provider's real catalog fits well within this; it exists only as a backstop
+ * against a provider that never sets `nextCursor` to undefined. */
+const MAX_MODEL_PAGES = 10
+
 export type AiPhase =
   | 'setup' // choosing a target, nothing sent yet
   | 'reading' // extracting the PDF's text
@@ -50,6 +65,13 @@ interface AiState {
   settingsOpen: boolean
   configs: LlmConfig[]
   selectedId: string | null
+
+  /** Fetched model lists, keyed by LlmConfig id. Absent until `fetchModels` succeeds once. */
+  models: Record<string, ModelInfo[]>
+  modelsLoading: Record<string, boolean>
+  modelsError: Record<string, string | null>
+  /** `Date.now()` of the last successful fetch for a config id — drives the TTL. */
+  modelsFetchedAt: Record<string, number>
 
   phase: AiPhase
   error: string | null
@@ -73,6 +95,19 @@ interface AiState {
   saveConfig: (config: LlmConfig, apiKey?: string) => Promise<void>
   deleteConfig: (id: string) => Promise<void>
   verifyConfig: (config: LlmConfig, apiKey?: string) => Promise<string>
+  /**
+   * "Ask the API yourself which models are available": saves `config` (like
+   * `verifyConfig`, a key has to be stored before anything can use it), then
+   * walks every page of the provider's list-models endpoint. Cached per
+   * config id for `MODELS_TTL_MS`; pass `force: true` to bypass that.
+   */
+  fetchModels: (config: LlmConfig, apiKey?: string, opts?: { force?: boolean }) => Promise<void>
+  /**
+   * Drop a target's cached model list. A target's id is stable across edits
+   * to its provider or base URL, but the list a previous fetch found is not —
+   * it belongs to whichever endpoint was configured *then*.
+   */
+  clearModels: (id: string) => void
 
   run: () => Promise<void>
   cancel: () => void
@@ -96,6 +131,10 @@ export const useAiStore = create<AiState>()(
     settingsOpen: false,
     configs: [],
     selectedId: readSelected(),
+    models: {},
+    modelsLoading: {},
+    modelsError: {},
+    modelsFetchedAt: {},
     phase: 'setup',
     error: null,
     elapsed: 0,
@@ -210,6 +249,56 @@ export const useAiStore = create<AiState>()(
       }
       return text
     },
+
+    fetchModels: async (config, apiKey, opts) => {
+      const id = config.id
+      // openai-compatible: never attempted — see `supportsModelListing` in providers.ts.
+      if (!PROVIDERS[config.provider].supportsModelListing) return
+      const fetchedAt = get().modelsFetchedAt[id]
+      if (!opts?.force && fetchedAt && Date.now() - fetchedAt < MODELS_TTL_MS) return
+
+      set((s) => {
+        s.modelsLoading[id] = true
+        s.modelsError[id] = null
+      })
+      try {
+        // Same requirement as verifyConfig: the key has to be stored before
+        // the platform will use it for anything.
+        await get().saveConfig(config, apiKey)
+        const saved = get().configs.find((c) => c.id === id) ?? config
+
+        const models: ModelInfo[] = []
+        let cursor: string | undefined
+        for (let page = 0; page < MAX_MODEL_PAGES; page++) {
+          const req = buildModelsRequest(saved, cursor)
+          const res = await getPlatform().callLlm(req)
+          if (!res.ok) throw new Error(extractError(saved.provider, res.status, res.body))
+          const parsed = parseModelsResponse(saved.provider, safeJson(res.body))
+          models.push(...parsed.models)
+          if (!parsed.nextCursor) break
+          cursor = parsed.nextCursor
+        }
+
+        set((s) => {
+          s.models[id] = models
+          s.modelsLoading[id] = false
+          s.modelsFetchedAt[id] = Date.now()
+        })
+      } catch (err) {
+        set((s) => {
+          s.modelsLoading[id] = false
+          s.modelsError[id] = err instanceof Error ? err.message : String(err)
+        })
+      }
+    },
+
+    clearModels: (id) =>
+      set((s) => {
+        delete s.models[id]
+        delete s.modelsLoading[id]
+        delete s.modelsError[id]
+        delete s.modelsFetchedAt[id]
+      }),
 
     run: async () => {
       const app = useStore.getState()
@@ -350,7 +439,11 @@ export const useAiStore = create<AiState>()(
 
     apply: () => {
       const chosen = get().rows.filter((r) => r.checked).map((r) => r.suggestion)
-      const result = useStore.getState().applyAiSuggestions(chosen)
+      const config = get().configs.find((c) => c.id === get().selectedId)
+      // The dialog cannot reach the review screen without a config that was
+      // valid at `run()` time; this is a defensive fallback, not an expected path.
+      const usage = { provider: config?.provider ?? 'unknown', model: config?.model ?? 'unknown' }
+      const result = useStore.getState().applyAiSuggestions(chosen, usage)
       set((s) => {
         s.applied = result
         s.phase = 'applied'

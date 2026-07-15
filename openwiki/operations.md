@@ -234,8 +234,17 @@ The **✦ AI** button in the annotation column asks a model to propose values fo
      OpenAI-compatible, where you enter your server's root (`http://localhost:1234`). Any of the
      root, `…/v1`, or the full `…/v1/chat/completions` works — `join()` in `src/llm/providers.ts`
      will not duplicate what you typed.
-   - **Model** — spelled exactly as the provider names it. An unknown model is rejected by the *provider*, not by the app.
    - **API key** — pasted once; see below for where it ends up.
+   - **Model** — a searchable dropdown once the app has fetched the provider's own model list
+     (**Load models**, or automatic when editing a target that already has a key stored — fetching
+     needs a key, same as Verify setup). You can still type a name that isn't in the list: the field
+     is free text, and only turns red — with a tooltip — once you leave it with something the loaded
+     list doesn't recognize. An unknown model is rejected by the *provider*, not by the app, so
+     the red flag is a hint to double-check, not a hard block.
+   - **Reasoning effort** — shown only for a model the app knows supports it (from the provider's
+     own model-list response, or a documented allowlist for providers whose list doesn't say —
+     see `architecture.md`). Defaults to *medium* the moment such a model is picked. Higher effort
+     is generally slower and more expensive.
    - **Send the paper as** — *Extracted text* (default: smaller, cheaper, works everywhere) or
      *The PDF itself* (Anthropic / OpenAI / Google / OpenRouter only — the rest have no way to take
      a PDF in a single request; keeps tables and figures intact, costs far more, and is the only way
@@ -243,6 +252,19 @@ The **✦ AI** button in the annotation column asks a model to propose values fo
 3. **Verify setup** sends a one-word test request and shows the model's reply — or the provider's own error. **It saves the target first**, because the key has to be stored before anything can use it. Use it: a wrong key, model name or URL is much cheaper to discover here than after waiting on a full paper.
 
 Several targets may coexist; the last one used is remembered in `localStorage` under `slr.llm.selected`.
+
+A fetched model list is cached for an hour per target (**Refresh** bypasses that). It is *not*
+what makes an unlisted model name work or not work — that's always the provider's call — it only
+drives the dropdown and the red-field hint.
+
+### Disclosure: every AI use is recorded in the saved file
+
+Once a proposed value from a run is applied to a paper, the file gains a permanent `aiUsage` entry
+on that paper — provider, model, and a timestamp — even after the values themselves are later
+edited by hand. This is a disclosure record, not a UI hint like the blue "unconfirmed" borders
+(which are session-only and never saved): it exists so a co-reviewer, or you yourself later, can
+see that a paper had AI involvement at all, and with what. A paper AI was never used on carries no
+such entry — see `docs/annotation-schema.md` §5 for the exact shape.
 
 ### Where the API key is stored
 

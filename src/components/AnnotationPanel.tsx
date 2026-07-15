@@ -20,7 +20,7 @@ export function AnnotationPanel() {
   const aiDisabled = busy || !paper.pdf || !aiEnabled || !aiUnlocked
   // Deliberately uninformative: the button looks like any other disabled
   // control rather than one hinting that it can be unlocked.
-  const aiTitle = aiDisabled ? 'Disabled Feature' : 'Ask an LLM to propose values for the fields that are still empty'
+  const aiTitle = aiDisabled ? 'Coming soon' : 'Ask an LLM to propose values for the fields that are still empty'
 
   return (
     <div className="panel annotations">

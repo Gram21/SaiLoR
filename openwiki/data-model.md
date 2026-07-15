@@ -90,7 +90,14 @@ interface Paper {
   doi?: string
   pdf: string
   annotations: AnnotationValueTree
+  aiUsage: AiUsageRecord[]        // AI-assisted-annotation disclosure log, oldest first; [] if never used
   extra: Record<string, unknown>  // unknown per-paper fields preserved
+}
+
+interface AiUsageRecord {
+  provider: string    // e.g. "anthropic" — the provider id, not its display label
+  model: string        // exactly as configured, e.g. "claude-opus-4-8"
+  appliedAt: string    // ISO 8601 timestamp of the Apply click
 }
 ```
 

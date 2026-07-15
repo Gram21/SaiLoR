@@ -315,9 +315,9 @@ export class BrowserAdapter implements PlatformAdapter {
 
     try {
       const res = await fetch(request.url, {
-        method: 'POST',
+        method: request.method ?? 'POST',
         headers,
-        body: request.body,
+        body: request.method === 'GET' ? undefined : request.body,
         signal,
       })
       return { ok: res.ok, status: res.status, body: await res.text() }

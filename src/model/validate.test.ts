@@ -27,6 +27,7 @@ function paper(annotations: AnnotationValueTree, over: Partial<Paper> = {}): Pap
     authors: [],
     pdf: 'pdfs/one.pdf',
     annotations,
+    aiUsage: [],
     extra: {},
     ...over,
   }

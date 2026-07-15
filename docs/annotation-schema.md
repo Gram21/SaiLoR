@@ -438,6 +438,24 @@ A few things worth knowing about how the app fills and tidies this tree:
 You normally don't hand‑write this tree — the app produces it. But understanding its shape helps
 you read a saved file and spot problems.
 
+### AI usage disclosure
+
+If AI-assisted annotation is ever used on a paper, the app adds a top-level `aiUsage` array to
+that paper — a permanent record of which provider and model produced values, and when:
+
+```json
+"aiUsage": [
+  { "provider": "anthropic", "model": "claude-opus-4-8", "appliedAt": "2026-07-15T10:00:00.000Z" }
+]
+```
+
+One entry is appended each time a reviewer accepts an AI-proposed run of values for this paper, in
+the order they happened — array order (backed by `appliedAt`) is how "which use came first" is
+read. A paper AI was never used on has no `aiUsage` key at all, so a normal, hand-annotated project
+stays exactly as clean as before this feature existed. Unlike the annotation values themselves,
+this record survives independently of any single field — it is not removed if the fields it
+accompanied are later edited by hand, only if that entire AI-fill action is undone.
+
 ---
 
 ## 6. A complete example

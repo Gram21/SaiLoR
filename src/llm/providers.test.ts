@@ -5,6 +5,8 @@ import {
   extractText,
   wasTruncated,
   join,
+  googleThinkingMechanism,
+  GOOGLE_BUDGET_BY_LEVEL,
   PROVIDERS,
   PROVIDER_LIST,
 } from './providers'
@@ -103,6 +105,15 @@ describe('PROVIDERS', () => {
     expect(PROVIDERS.mistral.supportsPdf).toBe(false)
     expect(PROVIDERS.deepseek.supportsPdf).toBe(false)
     expect(PROVIDERS.xai.supportsPdf).toBe(false)
+  })
+
+  it('never claims model-listing support for an arbitrary self-hosted server', () => {
+    // Every named provider has one endpoint/auth/response shape this app knows;
+    // `openai-compatible` fronts an unbounded variety of servers, so it is the
+    // one deliberate exception — see the field comment in providers.ts.
+    for (const p of PROVIDER_LIST) {
+      expect(p.supportsModelListing).toBe(p.id !== 'openai-compatible')
+    }
   })
 
   it('picks the output-length parameter each provider currently documents', () => {
@@ -285,6 +296,73 @@ describe('buildRequest: body', () => {
     // (single/low-hundreds of tokens; see aiStore's VERIFY_MAX_TOKENS comment).
     const defaultBudget = bodyOf(buildRequest(cfg('openai'), 's', TEXT)).max_completion_tokens
     expect(defaultBudget).toBeGreaterThanOrEqual(4096)
+  })
+})
+
+describe('buildRequest: reasoning effort', () => {
+  it('adds nothing when the config carries no reasoningEffort', () => {
+    for (const p of PROVIDER_LIST) {
+      const body = bodyOf(buildRequest(cfg(p.id, { baseUrl: 'http://x' }), 's', TEXT))
+      expect(body.reasoning_effort).toBeUndefined()
+      expect(body.reasoning).toBeUndefined()
+      expect(body.thinking).toBeUndefined()
+      expect(body.output_config).toBeUndefined()
+      expect(body.generationConfig?.thinkingConfig).toBeUndefined()
+    }
+  })
+
+  it('sends Anthropic\'s current effort shape: adaptive thinking plus output_config.effort', () => {
+    const body = bodyOf(buildRequest(cfg('anthropic', { reasoningEffort: 'high' }), 's', TEXT))
+    expect(body.thinking).toEqual({ type: 'adaptive' })
+    expect(body.output_config).toEqual({ effort: 'high' })
+  })
+
+  it('picks thinkingLevel for Gemini 3.x and thinkingBudget for Gemini 2.5.x', () => {
+    expect(googleThinkingMechanism('gemini-3-pro')).toBe('level')
+    expect(googleThinkingMechanism('gemini-3.5-flash')).toBe('level')
+    expect(googleThinkingMechanism('gemini-2.5-pro')).toBe('budget')
+    expect(googleThinkingMechanism('gemini-2.5-flash-lite')).toBe('budget')
+
+    const level = bodyOf(
+      buildRequest(cfg('google', { model: 'gemini-3-pro', reasoningEffort: 'high' }), 's', TEXT),
+    )
+    expect(level.generationConfig.thinkingConfig).toEqual({ thinkingLevel: 'high' })
+
+    const budget = bodyOf(
+      buildRequest(cfg('google', { model: 'gemini-2.5-pro', reasoningEffort: 'high' }), 's', TEXT),
+    )
+    expect(budget.generationConfig.thinkingConfig).toEqual({
+      thinkingBudget: GOOGLE_BUDGET_BY_LEVEL.high,
+    })
+    // The two shapes are mutually exclusive on a single Gemini request — sending
+    // both is an error, so neither body may carry the other's field.
+    expect(level.generationConfig.thinkingConfig.thinkingBudget).toBeUndefined()
+    expect(budget.generationConfig.thinkingConfig.thinkingLevel).toBeUndefined()
+  })
+
+  it('falls back to the medium budget for a level Gemini does not recognise', () => {
+    const body = bodyOf(
+      buildRequest(cfg('google', { model: 'gemini-2.5-pro', reasoningEffort: 'nonsense' }), 's', TEXT),
+    )
+    expect(body.generationConfig.thinkingConfig).toEqual({ thinkingBudget: GOOGLE_BUDGET_BY_LEVEL.medium })
+  })
+
+  it('nests OpenRouter\'s dial in its own reasoning object, unlike its OpenAI-shaped siblings', () => {
+    const openrouter = bodyOf(
+      buildRequest(cfg('openrouter', { reasoningEffort: 'low' }), 's', TEXT),
+    )
+    expect(openrouter.reasoning).toEqual({ effort: 'low' })
+    expect(openrouter.reasoning_effort).toBeUndefined()
+  })
+
+  it('sends a flat reasoning_effort field for the rest of the OpenAI-shaped providers', () => {
+    for (const p of ['openai', 'groq', 'mistral', 'deepseek', 'xai', 'openai-compatible'] as const) {
+      const body = bodyOf(
+        buildRequest(cfg(p, { baseUrl: 'http://x', reasoningEffort: 'medium' }), 's', TEXT),
+      )
+      expect(body.reasoning_effort).toBe('medium')
+      expect(body.reasoning).toBeUndefined()
+    }
   })
 })
 

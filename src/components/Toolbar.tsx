@@ -6,9 +6,9 @@ import { Dropdown, type MenuItem } from './Dropdown'
 import { SidebarToggle } from './SidebarToggle'
 
 /** Clicks this close together count as the same run; a pause starts over. */
-export const UNLOCK_CLICK_WINDOW_MS = 1500
+export const UNLOCK_CLICK_WINDOW_MS = 2500
 /** How many clicks on the app title unlock AI use for the session. */
-export const UNLOCK_CLICK_COUNT = 7
+export const UNLOCK_CLICK_COUNT = 12
 
 /** A run of clicks, tracked as a plain object so the logic below stays pure. */
 export interface TitleClickState {
