@@ -1064,10 +1064,13 @@ of build order.
 **The clone dialog's URL field needed its own width for an unrelated reason.** `.field-input`'s
 width comes from `flex: 1 1 auto`, which does nothing outside a flex row — every other place it is
 used *is* one, but the URL field is the sole control in the clone dialog's body, so it still rendered
-at the browser's default input width no matter how wide the dialog around it was. `.git-clone-url-input`
-gives it `width: 100%` directly; the dialog itself is `92vw` (not a fixed `min(…, vw)` cap like the
-other two) so the field stays close to full window width on any size window, which is the point of
-it — reading or pasting a long URL without the field scrolling it.
+at the browser's default input width no matter how wide the dialog around it was.
+`.git-clone-url-input` gives it `width: 100%` directly, which is what actually makes it "big" — the
+dialog itself is a bounded `min(600px, 94vw)`, the same shape as the other two dialogs, not scaled to
+window width. An earlier version made the *dialog* `92vw` to get a wide field, which worked but took
+everything else in the dialog (the destination path, the buttons) along with it, past a comfortable
+reading width on a large monitor for no reason those needed to grow at all. Fixing the input's own
+width instead of the dialog's gets the same big field at whatever size the dialog actually is.
 
 **The diff is coloured per line, not as one block.** `GitDialog.tsx` renders each line `diffLines`
 (`src/git/output.ts`) returns as its own `<span className="git-diff-line git-diff-{kind}">`, since a

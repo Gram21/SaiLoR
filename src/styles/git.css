@@ -20,10 +20,14 @@
  * accident of build order.
  */
 .modal.git-clone-dialog {
-  /* Near-full window width, not a fixed cap that stops growing — the whole
-     point is a URL field big enough to read a long one without scrolling
-     it, on whatever size window it's opened in. */
-  width: 92vw;
+  /* A bounded default like the other two dialogs below, not the unbounded
+     92vw an earlier version used — that grew the whole dialog (destination
+     path, buttons, everything) past a comfortable reading width on a large
+     monitor just to make room for the URL field. The field itself doesn't
+     need the dialog to be that wide: it's already `width: 100%`
+     (`.git-clone-url-input`), so it fills whatever width the dialog has —
+     the same proportion of it as before, just of a smaller, steadier number. */
+  width: min(600px, 94vw);
 }
 
 .modal.git-dialog {
