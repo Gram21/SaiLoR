@@ -142,6 +142,12 @@ export interface PlatformAdapter {
   /** Pick one or more PDFs to reference. Returns [] if cancelled. */
   pickPdfs(): Promise<PickedPdf[]>
 
+  /** Pick a folder; returns every PDF inside it (recursively). [] if cancelled. */
+  pickPdfFolder(): Promise<PickedPdf[]>
+
+  /** Pick a .bib/.ris/.json reference file. Null if cancelled. */
+  pickReferenceFile(): Promise<{ text: string; name: string } | null>
+
   /**
    * The `pdf` values to store for these PDFs, relative to the project JSON's
    * directory. Electron computes real relative paths (POSIX separators), so

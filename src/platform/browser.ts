@@ -137,7 +137,7 @@ export class BrowserAdapter implements PlatformAdapter {
     }
 
     // Fallback: hidden file input
-    const file = await pickFileViaInput()
+    const file = await pickFileViaInput('.json,application/json')
     if (!file) return null
     const text = await file.text()
     // A stale base from a previously opened server-mode project (or an
@@ -365,6 +365,23 @@ export class BrowserAdapter implements PlatformAdapter {
 
     const files = await pickFilesViaInput()
     return files.map((f) => ({ name: f.name, read: () => f.arrayBuffer() }))
+  }
+
+  async pickPdfFolder(): Promise<PickedPdf[]> {
+    // Same folder-picking mechanism `ensureLocalPdfGrant` uses for the PDF-viewer
+    // grant — a directory-wide <input>, cancel-detected the same careful way (see
+    // that function's comment). Here every PDF found becomes a row to import,
+    // rather than an entry in a lookup map.
+    const files = await pickPdfFolderViaInput()
+    return files
+      .filter((f) => /\.pdf$/i.test(f.name))
+      .map((f) => ({ name: f.name, read: () => f.arrayBuffer() }))
+  }
+
+  async pickReferenceFile(): Promise<{ text: string; name: string } | null> {
+    const file = await pickFileViaInput('.bib,.ris,.json')
+    if (!file) return null
+    return { text: await file.text(), name: file.name }
   }
 
   async relativePdfPaths(pdfs: PickedPdf[], _location: ProjectLocation | null): Promise<string[]> {
@@ -599,11 +616,11 @@ function pickPdfFolderViaInput(): Promise<File[]> {
   })
 }
 
-function pickFileViaInput(): Promise<File | null> {
+function pickFileViaInput(accept: string): Promise<File | null> {
   return new Promise((resolve) => {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.json,application/json'
+    input.accept = accept
     input.style.display = 'none'
     input.addEventListener('change', () => {
       resolve(input.files?.[0] ?? null)

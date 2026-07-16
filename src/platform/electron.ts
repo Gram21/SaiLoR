@@ -26,6 +26,10 @@ export interface SlrBridge {
   pickSavePath(suggestedName: string): Promise<{ path: string } | null>
   /** Pick PDFs to reference. Returns their absolute paths, [] if cancelled. */
   pickPdfs(): Promise<string[]>
+  /** Pick a folder; returns the absolute paths of every PDF inside it (recursively). [] if cancelled. */
+  pickPdfFolder(): Promise<string[]>
+  /** Pick a .bib/.ris/.json reference file. Null if cancelled. */
+  pickReferenceFile(): Promise<{ text: string; name: string } | null>
   /** Raw bytes of a PDF by absolute path (for reading its title/authors). */
   readPdf(path: string): Promise<Uint8Array>
   /** For each project path: does it still exist, and what title does it now carry? */
@@ -173,16 +177,29 @@ export class ElectronAdapter implements PlatformAdapter {
 
   async pickPdfs(): Promise<PickedPdf[]> {
     const paths = await bridge().pickPdfs()
-    return paths.map((p) => ({
-      name: baseName(p),
-      path: p,
+    return paths.map((p) => this.pickedPdf(p))
+  }
+
+  async pickPdfFolder(): Promise<PickedPdf[]> {
+    const paths = await bridge().pickPdfFolder()
+    return paths.map((p) => this.pickedPdf(p))
+  }
+
+  private pickedPdf(path: string): PickedPdf {
+    return {
+      name: baseName(path),
+      path,
       read: async () => {
-        const bytes = await bridge().readPdf(p)
+        const bytes = await bridge().readPdf(path)
         // Copy into a standalone ArrayBuffer: the IPC result may be a view into
         // a larger buffer, which pdf.js would misread.
         return bytes.slice().buffer as ArrayBuffer
       },
-    }))
+    }
+  }
+
+  pickReferenceFile(): Promise<{ text: string; name: string } | null> {
+    return bridge().pickReferenceFile()
   }
 
   async relativePdfPaths(pdfs: PickedPdf[], location: ProjectLocation | null): Promise<string[]> {
