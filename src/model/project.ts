@@ -52,6 +52,18 @@ export interface Paper {
    * been used on this paper.
    */
   aiUsage: AiUsageRecord[]
+  /**
+   * Canonical field paths (`formatPath` form) where the consolidator has
+   * declared the reviewers' differing answers to mean the same thing — e.g.
+   * "RCT" and "randomized controlled trial". Empty until Consolidation marks
+   * anything.
+   *
+   * One boolean per field, not per reviewer pair. Exact for two reviewers —
+   * the common case, and the only shape a single mark can honestly describe —
+   * but with three or more it cannot express "these two agree but that one
+   * doesn't"; see `disagreements.ts`, which has to live with that limit.
+   */
+  equal: string[]
   /** Any additional fields present in the source file are preserved on save. */
   extra: Record<string, unknown>
 }
@@ -96,6 +108,7 @@ const KNOWN_PAPER_KEYS = new Set([
   'annotations',
   'reviews',
   'aiUsage',
+  'equal',
 ])
 const KNOWN_ROOT_KEYS = new Set(['version', 'title', 'config', 'papers'])
 
@@ -136,6 +149,25 @@ function parseAiUsage(raw: unknown): AiUsageRecord[] {
       const e = entry as Record<string, string>
       out.push({ provider: e.provider, model: e.model, appliedAt: e.appliedAt })
     }
+  }
+  return out
+}
+
+/**
+ * Parse `equal` defensively, the same rule `reviews`/`aiUsage` follow: the
+ * file is hand-editable, so anything that isn't a string is dropped, never
+ * thrown over. Deduped, since the mark is really a set — JSON just has no set
+ * type to spell that with — and a hand-edited duplicate should not toggle
+ * differently from a clean one.
+ */
+function parseEqual(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const entry of raw) {
+    if (typeof entry !== 'string' || seen.has(entry)) continue
+    seen.add(entry)
+    out.push(entry)
   }
   return out
 }
@@ -197,6 +229,7 @@ export function loadProject(input: string | unknown): Project {
     annotations: normalizeTree(schema, p.annotations as AnnotationValueTree | undefined),
     reviews: parseReviews((p as { reviews?: unknown }).reviews, schema),
     aiUsage: parseAiUsage(p.aiUsage),
+    equal: parseEqual(p.equal),
     extra: extractExtra(p, KNOWN_PAPER_KEYS),
   }))
 
@@ -251,6 +284,8 @@ export function serializeProject(project: Project): string {
       }
       // Only written when non-empty, so a paper AI has never touched stays clean.
       if (p.aiUsage.length > 0) paper.aiUsage = p.aiUsage
+      // Only written when non-empty, so a paper with no equality marks stays clean.
+      if (p.equal.length > 0) paper.equal = p.equal
       return paper
     }),
   }

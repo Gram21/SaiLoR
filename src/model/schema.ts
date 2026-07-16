@@ -109,6 +109,9 @@ export const paperSchema = z
     // Ditto — each reviewer's tree is validated/normalized structurally in
     // project.ts, same as `annotations`.
     reviews: z.unknown().optional(),
+    // Ditto — a list of canonical field paths, deduped and validated
+    // structurally in project.ts, same as `reviews`.
+    equal: z.unknown().optional(),
   })
   .passthrough()
 

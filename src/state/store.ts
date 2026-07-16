@@ -324,6 +324,8 @@ interface AppState {
    * has lined their entries up.
    */
   adoptUnanimousValues: (paperId: string, coalesce: boolean) => number
+  /** Toggle "the reviewers' answers at this field mean the same thing". */
+  toggleFieldEquality: (paperId: string, canonical: string) => void
 }
 
 /** What `applyAiSuggestions` actually did, for the summary shown to the reviewer. */
@@ -1104,6 +1106,26 @@ export const useStore = create<AppState>()(
       })
       lastFieldKey = null
       return fills.length
+    },
+
+    toggleFieldEquality: (paperId, canonical) => {
+      const prev = get()
+      if (!prev.project) return
+      if (!prev.project.papers.some((p) => p.id === paperId)) return
+
+      // A real data change — one undo step, same as any other write — not a
+      // view toggle: it changes what the saved file says about the papers.
+      lastFieldKey = null
+      const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
+      set((s) => {
+        const draft = s.project!.papers.find((p) => p.id === paperId)
+        if (!draft) return
+        pushPast(s, snap)
+        const i = draft.equal.indexOf(canonical)
+        if (i >= 0) draft.equal.splice(i, 1)
+        else draft.equal.push(canonical)
+        s.dirty = true
+      })
     },
 
     undo: () => {

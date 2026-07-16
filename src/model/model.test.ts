@@ -532,3 +532,56 @@ describe('multiple reviewers (config.reviewers, Paper.reviews)', () => {
     expect(reloaded.papers[0].annotations).toEqual(original.papers[0].annotations)
   })
 })
+
+describe('Paper.equal (consolidator-declared field equality)', () => {
+  const withEqual = (equal: unknown) =>
+    JSON.stringify({
+      version: 1,
+      config: { schema: sampleSchema, reviewers: 2 },
+      papers: [
+        {
+          id: 'p1',
+          title: 'Some Paper',
+          authors: [],
+          pdf: 'pdfs/some.pdf',
+          annotations: {},
+          ...(equal === undefined ? {} : { equal }),
+        },
+      ],
+    })
+
+  it('is empty when nothing has been marked equal', () => {
+    expect(loadProject(withEqual(undefined)).papers[0].equal).toEqual([])
+  })
+
+  it('loads a well-formed list of canonical paths', () => {
+    const paths = ['Study Type', 'Findings[1]/Claim']
+    expect(loadProject(withEqual(paths)).papers[0].equal).toEqual(paths)
+  })
+
+  it('dedupes a hand-edited duplicate rather than let it toggle differently from a clean one', () => {
+    expect(loadProject(withEqual(['Study Type', 'Study Type'])).papers[0].equal).toEqual(['Study Type'])
+  })
+
+  it('drops malformed entries rather than failing the whole file to load', () => {
+    expect(loadProject(withEqual(['Study Type', 42, null, {}, ['x'], true])).papers[0].equal).toEqual([
+      'Study Type',
+    ])
+    // The whole field being the wrong shape entirely (hand-edited into an object, say).
+    expect(loadProject(withEqual({ oops: true })).papers[0].equal).toEqual([])
+  })
+
+  it('is written only when non-empty, so a paper with no marks stays clean', () => {
+    const untouched = JSON.parse(serializeProject(loadProject(withEqual(undefined))))
+    expect('equal' in untouched.papers[0]).toBe(false)
+
+    const marked = JSON.parse(serializeProject(loadProject(withEqual(['Study Type']))))
+    expect(marked.papers[0].equal).toEqual(['Study Type'])
+  })
+
+  it('round-trips through load → serialize → reload', () => {
+    const paths = ['Study Type', 'Findings[1]/Claim']
+    const once = serializeProject(loadProject(withEqual(paths)))
+    expect(loadProject(once).papers[0].equal).toEqual(paths)
+  })
+})
