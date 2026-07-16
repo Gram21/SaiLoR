@@ -68,8 +68,19 @@
           "x64"
         ]
       },
-      "icon": "build/icon.png",
+      "icon": "build/icon.icns",
       "artifactName": "${productName}-${version}-macos-${arch}.${ext}"
+    },
+    "dmg": {
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "iconSize": 128,
+      "contents": [
+        { "x": 140, "y": 200, "type": "file" },
+        { "x": 400, "y": 200, "type": "link", "path": "/Applications" }
+      ]
     },
     "win": {
       "target": "nsis",
