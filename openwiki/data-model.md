@@ -1,3 +1,10 @@
+---
+type: reference
+title: SaiLoR Data Model
+description: The SaiLoR project file format (JSON schema for annotation taxonomies and papers), the in-memory TypeScript types (ResolvedDef, Project, Paper, AnnotationValueTree), and the full load → normalize → edit → prune → serialize lifecycle that keeps hand-edited JSON safe.
+tags: [data-model, json, schema, types, lifecycle]
+---
+
 # Data Model
 
 This page describes the project file format, the in-memory data structures, and the full lifecycle from loading to saving.
@@ -74,7 +81,7 @@ Each schema node defines a field or group in the taxonomy:
 }
 ```
 
-The `samples/project.example.json` file shows a complete working example with a schema containing boolean, string, number, repeatable group, and bounded group nodes.
+The `samples/project.example.json` file shows a complete working example with a schema containing boolean, string, number, repeatable group, and bounded group nodes. `samples/screening.example.json` is its screening counterpart: the same papers plus abstract-only ones covering every decision state, built through `loadProject`/`serializeProject` so it is in the exact normalized form the app itself would write.
 
 ## In-Memory Types
 

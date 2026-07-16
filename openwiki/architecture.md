@@ -1,3 +1,10 @@
+---
+type: architecture
+title: SaiLoR Architecture
+description: Deep dive into SaiLoR's architecture — the PlatformAdapter seam that unifies Electron desktop and web SPA runtimes, the Zustand store with undo/redo, the component tree, git integration, the Electron main process, and build wiring.
+tags: [architecture, platform-adapter, state-management, electron, git]
+---
+
 # Architecture
 
 ## Overview
