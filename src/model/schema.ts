@@ -100,7 +100,13 @@ export const paperSchema = z
     title: z.string().min(1),
     authors: z.array(z.string()).default([]),
     doi: z.string().optional(),
-    pdf: z.string().min(1, 'Each paper needs a "pdf" path'),
+    /** The paper's abstract, when the source had one. Screening reads this when
+     *  there is no PDF — see `Project.screening`. */
+    abstract: z.string().optional(),
+    // The "pdf required" rule moves to `projectSchema`'s `superRefine`, which
+    // can see whether this is a screening project (where PDFs are usually
+    // absent entirely — see `src/screening/schema.ts`).
+    pdf: z.string().default(''),
     // Loosely typed here; validated/normalized structurally in project.ts.
     annotations: z.record(z.unknown()).optional(),
     // Ditto — a malformed entry (or the whole field being the wrong shape)
@@ -115,21 +121,72 @@ export const paperSchema = z
   })
   .passthrough()
 
+/**
+ * A screening project's one authorable setting: the exclusion reasons, fixed up
+ * front the way a pre-registered SLR protocol fixes them. `config.screening`'s
+ * presence is what makes a project a screening project; its `reasons` are the
+ * only thing about the schema an author chooses, since the rest of it is derived
+ * (see `src/screening/schema.ts`).
+ */
+export interface ScreeningConfig {
+  /** Non-empty, trimmed, deduped by `project.ts`. Order is the order reported. */
+  reasons: string[]
+}
+
+const screeningConfigSchema: z.ZodType<ScreeningConfig> = z
+  .object({
+    reasons: z
+      .array(z.string())
+      .min(1, 'config.screening.reasons must list at least one exclusion reason'),
+  })
+  .strict()
+
 export const projectSchema = z
   .object({
     version: z.number().optional(),
     /** Human-readable name for the review; falls back to the file name when absent. */
     title: z.string().optional(),
     config: z.object({
-      schema: z.array(annotationDefSchema).min(1, 'config.schema must have at least one node'),
+      // Optional-and-unbounded here: a screening project's schema is derived,
+      // not authored (see `screeningConfigSchema` above), so it may be absent
+      // from the file entirely. Every other project still needs a real one —
+      // enforced below, in `superRefine`, where the presence of `screening`
+      // can be taken into account.
+      schema: z.array(annotationDefSchema).optional(),
       /** When false, the provider of this file has disabled AI-assisted annotation. */
       ai: z.boolean().optional(),
       /** Number of independent reviewers. Absent or 1 = single-reviewer (the default). */
       reviewers: z.number().int().min(1).max(10).optional(),
+      screening: screeningConfigSchema.optional(),
     }),
     papers: z.array(paperSchema),
   })
   .passthrough()
+  .superRefine((raw, ctx) => {
+    // A screening project's schema is derived, not authored — see
+    // `src/screening/schema.ts`. Everyone else still must supply one.
+    if (!raw.config.screening && (!raw.config.schema || raw.config.schema.length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['config', 'schema'],
+        message: 'config.schema must have at least one node',
+      })
+    }
+    // Screening is normally done on title + abstract, from a reference-manager
+    // export that has no PDFs at all. Requiring one there would rule out the
+    // whole workflow; requiring one everywhere else is unchanged.
+    if (!raw.config.screening) {
+      raw.papers.forEach((p, i) => {
+        if (!p.pdf) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['papers', i, 'pdf'],
+            message: 'Each paper needs a "pdf" path',
+          })
+        }
+      })
+    }
+  })
 
 export type RawProject = z.infer<typeof projectSchema>
 export type RawPaper = z.infer<typeof paperSchema>

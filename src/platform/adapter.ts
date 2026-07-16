@@ -156,6 +156,35 @@ export interface PlatformAdapter {
    */
   relativePdfPaths(pdfs: PickedPdf[], location: ProjectLocation | null): Promise<string[]>
 
+  /**
+   * Absolute paths for `pdfPaths`, which are relative to `from`'s directory.
+   * The inverse of `relativePdfPaths`, and it exists for the same reason: a
+   * paper imported from a screening project carries a `pdf` relative to *that*
+   * file, so without an absolute source the editor cannot re-derive it if the
+   * new JSON is moved — every PDF would silently point at nothing (the bug
+   * `rebasePdfPaths` already exists to prevent for "Save as").
+   *
+   * Electron resolves against the real filesystem. The browser has no paths
+   * and returns `undefined` per entry, which leaves those rows exactly where
+   * an edited project's rows already are: `changeLocation` skips them.
+   */
+  absolutePdfPaths(pdfPaths: string[], from: SaveHandle): Promise<(string | undefined)[]>
+
+  /**
+   * Where a new project JSON should go if it sits next to `source`: the same
+   * directory, named `fileName`. Writes nothing, prompts nothing.
+   *
+   * This is what makes "the new annotation JSON is saved next to the
+   * screening JSON" the *default* rather than a suggestion in a dialog — and
+   * it is not cosmetic: a sibling shares the screening file's directory, so
+   * every paper's relative `pdf` still resolves without being rewritten at
+   * all.
+   *
+   * Null in the browser, which has no paths to build one from; callers fall
+   * back to `pickProjectLocation`.
+   */
+  siblingProjectLocation(source: SaveHandle, fileName: string): Promise<ProjectLocation | null>
+
   // ---- AI-assisted annotation ----
 
   /**

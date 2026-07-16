@@ -168,6 +168,10 @@
 .papers-input.small {
   width: 18ch;
 }
+.papers-abstract {
+  resize: vertical;
+  font: inherit;
+}
 
 .papers-remove {
   flex: 0 0 auto;

@@ -615,3 +615,115 @@ describe('Paper.equal (consolidator-declared field equality)', () => {
     expect(loadProject(once).papers[0].equal).toEqual(paths)
   })
 })
+
+describe('screening', () => {
+  const screeningProject = (opts: {
+    schema?: unknown
+    screening?: unknown
+    pdf?: string
+  } = {}) =>
+    JSON.stringify({
+      version: 1,
+      config: {
+        ...(opts.schema !== undefined ? { schema: opts.schema } : {}),
+        screening: opts.screening ?? { reasons: ['Wrong topic', 'Duplicate'] },
+      },
+      papers: [
+        {
+          id: 'p1',
+          title: 'Some Paper',
+          authors: [],
+          pdf: opts.pdf ?? '',
+          annotations: {},
+        },
+      ],
+    })
+
+  it('round-trips config.screening', () => {
+    const project = loadProject(screeningProject())
+    expect(project.screening).toEqual({ reasons: ['Wrong topic', 'Duplicate'] })
+  })
+
+  it('derives config.schema and overwrites whatever the file said', () => {
+    const project = loadProject(
+      screeningProject({ schema: [{ name: 'Something else entirely', type: 'string' }] }),
+    )
+    expect(project.schema.map((d) => d.name)).toEqual(['Decision', 'Reason'])
+
+    const reserialized = JSON.parse(serializeProject(project))
+    expect(reserialized.config.schema.map((d: { name: string }) => d.name)).toEqual(['Decision', 'Reason'])
+  })
+
+  it('loads with no config.schema in the file at all', () => {
+    const project = loadProject(screeningProject())
+    expect(project.schema.map((d) => d.name)).toEqual(['Decision', 'Reason'])
+  })
+
+  it('a non-screening file with no/empty config.schema still fails to load', () => {
+    expect(() =>
+      loadProject(JSON.stringify({ config: { schema: [] }, papers: [] })),
+    ).toThrow(ProjectLoadError)
+    expect(() => loadProject(JSON.stringify({ config: {}, papers: [] }))).toThrow(ProjectLoadError)
+  })
+
+  it('a screening paper may have pdf: "" — a non-screening paper still may not', () => {
+    expect(() => loadProject(screeningProject({ pdf: '' }))).not.toThrow()
+    const nonScreening = JSON.stringify({
+      version: 1,
+      config: { schema: sampleSchema },
+      papers: [{ id: 'p1', title: 'T', authors: [], pdf: '', annotations: {} }],
+    })
+    try {
+      loadProject(nonScreening)
+      expect.unreachable('expected loadProject to throw')
+    } catch (err) {
+      expect(err).toBeInstanceOf(ProjectLoadError)
+      expect((err as ProjectLoadError).details.join(' ')).toMatch(/needs a "pdf" path/i)
+    }
+  })
+
+  it('trims and dedupes config.screening.reasons', () => {
+    const project = loadProject(
+      screeningProject({ screening: { reasons: [' Wrong topic ', 'Wrong topic', 'Duplicate', ''] } }),
+    )
+    expect(project.screening).toEqual({ reasons: ['Wrong topic', 'Duplicate'] })
+  })
+
+  it('an all-blank reasons list is a ProjectLoadError', () => {
+    expect(() => loadProject(screeningProject({ screening: { reasons: ['  ', ''] } }))).toThrow(
+      ProjectLoadError,
+    )
+  })
+
+  it('paper.abstract round-trips and is omitted when empty', () => {
+    const withAbstract = JSON.stringify({
+      version: 1,
+      config: { schema: sampleSchema },
+      papers: [
+        { id: 'p1', title: 'T', authors: [], pdf: 'a.pdf', abstract: 'An abstract.', annotations: {} },
+      ],
+    })
+    const project = loadProject(withAbstract)
+    expect(project.papers[0].abstract).toBe('An abstract.')
+    const reserialized = JSON.parse(serializeProject(project))
+    expect(reserialized.papers[0].abstract).toBe('An abstract.')
+
+    const withoutAbstract = makeProjectJson()
+    expect(loadProject(withoutAbstract).papers[0].abstract).toBeUndefined()
+    const reNoAbstract = JSON.parse(serializeProject(loadProject(withoutAbstract)))
+    expect('abstract' in reNoAbstract.papers[0]).toBe(false)
+  })
+
+  it('a single-reviewer non-screening project carries no screening/abstract artifacts and round-trips byte-identically', () => {
+    const project = loadProject(makeProjectJson({ 'Study Type': [{ value: 'RCT' }] }))
+    const out = JSON.parse(serializeProject(project)) as { config: Record<string, unknown>; papers: Record<string, unknown>[] }
+    expect('screening' in out.config).toBe(false)
+    expect('abstract' in out.papers[0]).toBe(false)
+    // The critical backwards-compatibility guarantee: this feature's presence
+    // in the codebase must not perturb a single-reviewer, non-screening
+    // file's serialization in any way — re-loading and re-serializing is a
+    // no-op, exactly as it was before this feature existed.
+    const once = serializeProject(project)
+    expect(serializeProject(loadProject(once))).toBe(once)
+  })
+})

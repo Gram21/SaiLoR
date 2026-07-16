@@ -19,6 +19,9 @@ interface ComboBoxProps {
   className?: string
   /** The user reached the control (focus or click) — used to clear the AI mark. */
   onInteract?: () => void
+  /** E.g. the screening Reason field before a paper is excluded — there is
+   *  nothing to pick yet, and picking must not be possible either. */
+  disabled?: boolean
 }
 
 /**
@@ -33,6 +36,7 @@ export function ComboBox({
   onChange,
   className = '',
   onInteract,
+  disabled = false,
 }: ComboBoxProps) {
   const options: ComboOption[] = rawOptions.map((o) =>
     typeof o === 'string' ? { id: o, label: o } : o,
@@ -118,6 +122,7 @@ export function ComboBox({
         role="combobox"
         aria-expanded={open}
         aria-autocomplete="list"
+        disabled={disabled}
         value={open ? filter : labelOf(value)}
         placeholder={labelOf(value) || 'Select…'}
         onFocus={() => {

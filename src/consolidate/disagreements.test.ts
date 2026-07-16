@@ -232,6 +232,7 @@ describe('projectVerdicts', () => {
       aiEnabled: true,
       reviewers: 2,
       extra: {},
+      screening: null,
       papers: [
         makePaper({
           id: 'p1',

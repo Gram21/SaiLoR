@@ -38,6 +38,10 @@ export interface SlrBridge {
   relativePaths(fromFile: string, toFiles: string[]): Promise<string[]>
   /** `rels` (relative to `fromFile`'s dir) re-expressed relative to `toFile`'s dir. */
   rebasePaths(fromFile: string, toFile: string, rels: string[]): Promise<string[]>
+  /** Absolute paths for `rels`, which are relative to `fromFile`'s directory. */
+  absolutePaths(fromFile: string, rels: string[]): Promise<string[]>
+  /** The path `fileName` would have if it sat next to `sourceFile`. */
+  siblingPath(sourceFile: string, fileName: string): Promise<string>
   /** AI targets. There is deliberately no way to read a stored API key back. */
   llmConfigs(): Promise<LlmConfig[]>
   saveLlmConfig(config: Omit<LlmConfig, 'hasKey'>, apiKey?: string): Promise<LlmConfig[]>
@@ -218,6 +222,17 @@ export class ElectronAdapter implements PlatformAdapter {
       out[pdfIndex] = relatives[n] ?? pdfs[pdfIndex].name
     })
     return out
+  }
+
+  async absolutePdfPaths(pdfPaths: string[], from: SaveHandle): Promise<(string | undefined)[]> {
+    if (!from.path || pdfPaths.length === 0) return pdfPaths.map(() => undefined)
+    return bridge().absolutePaths(from.path, pdfPaths)
+  }
+
+  async siblingProjectLocation(source: SaveHandle, fileName: string): Promise<ProjectLocation | null> {
+    if (!source.path) return null
+    const path = await bridge().siblingPath(source.path, fileName)
+    return { handle: { kind: 'electron', path }, name: baseName(path), path }
   }
 
   // ---- AI-assisted annotation ----
