@@ -86,7 +86,8 @@ have its own reasons for keeping AI-assisted annotation off that this setting do
 (single-reviewer — the behavior described through the rest of this guide). Set it to a number from
 2 to 10 to have that many reviewers annotate every paper **independently**, then reconcile their
 answers into one final result via a built-in **Consolidation** role. See
-[§9](#9-multiple-reviewers--consolidation) for the full picture. It is written out only when
+[§9](#9-multiple-reviewers--consolidation) for the full picture, including what happens if you
+*lower* it after reviewers have already written something. It is written out only when
 greater than 1, so a normal single-reviewer file never carries the key. The project editor exposes
 it as a checkbox + a reviewer-count field next to the AI opt-out.
 
@@ -650,6 +651,25 @@ The project editor's *New / Edit annotation JSON…* screen has a **Multiple rev
 next to the AI opt-out; enabling it exposes a reviewer-count field (2–10) and writes
 `config.reviewers` into the file. Hand-editing the JSON works the same way — add `"reviewers": 3`
 under `config`.
+
+### Lowering the reviewer count
+
+Changing `config.reviewers` back down — say from 3 to 2, because the third reviewer left the
+project — does **not** delete Reviewer 3's answers. Their `reviews["3"]` tree stays in the file
+exactly as they left it; nothing on load or save touches a `reviews` key just because it no longer
+falls in `1..config.reviewers`.
+
+What changes is that it becomes **invisible and excluded** for as long as the count stays lowered:
+
+- The reviewer switch only offers seats `1..N`, so nobody can select "Reviewer 3" to view, edit, or
+  Validate their answers.
+- Consolidation's compare/align tooling and the automatic "everyone already agreed" fill only
+  consider reviewers `1..N` — Reviewer 3's answers take no part in either, even where they agree
+  with the others.
+
+Raise `config.reviewers` back to 3 (or higher) and Reviewer 3's tree — and their seat in the
+switch — reappears exactly as it was left. Treat lowering the count as *hiding* a reviewer's work,
+not discarding it; if you actually want it gone, that has to be done by hand.
 
 ### Validating
 
