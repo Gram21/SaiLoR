@@ -51,6 +51,13 @@ jobs:
 
           # Mirror pages only, and only over the pages: openwiki/.last-update.json is
           # generator state and must survive.
+          #
+          # Edge case, not worth guarding against: wiki-publish.yml deliberately never
+          # publishes index.md (see its comment) or frontmatter (stripped on publish), so
+          # neither round-trips back in here under normal operation. If a human manually
+          # creates a wiki page literally named "index", it lands at openwiki/index.md
+          # once — then wiki-publish.yml's exclusion means it is never mirrored back out,
+          # so the next publish silently stops reflecting further edits to it.
           rsync -a --delete \
             --include '*.md' --exclude '*' \
             wiki/ openwiki/

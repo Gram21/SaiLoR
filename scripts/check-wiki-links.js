@@ -11,7 +11,8 @@
  *   2. Every "#section" link points at a heading that exists, using GitHub's own
  *      anchor-slug rules (including the -1, -2 suffixes it adds to duplicate headings).
  *   3. Every page is reachable from _Sidebar.md — the navigation is hand-maintained,
- *      so a new page is otherwise trivially easy to leave orphaned.
+ *      so a new page is otherwise trivially easy to leave orphaned. `index.md` — OKF's
+ *      own directory listing, deliberately not mirrored to the wiki — is exempt.
  *
  *     npm run check:wiki
  */
@@ -22,6 +23,13 @@ const DIR = 'openwiki'
 // GitHub renders these as wiki chrome rather than as pages of their own, so they are
 // not expected to appear in the sidebar's list of pages.
 const CHROME = new Set(['Home', '_Sidebar', '_Footer'])
+// `index.md` is OKF's own directory listing (see the frontmatter-stripping comment
+// below) — it is deliberately never mirrored to the GitHub wiki (wiki-publish.yml),
+// because Home.md + _Sidebar.md already are the hand-curated equivalent for that
+// audience. It is not "chrome" in the CHROME sense above (GitHub gives it no special
+// treatment; the exclusion is entirely our own choice), so it gets its own exemption
+// from the sidebar-reachability check rather than being folded into that set.
+const OKF_UNPUBLISHED = new Set(['index'])
 
 /**
  * GitHub's heading → anchor rule: lowercase, drop anything that is not a word
@@ -38,12 +46,28 @@ function slug(heading) {
     .replace(/\s/g, '-')
 }
 
+/**
+ * OpenWiki (the generator behind openwiki/, see .github/workflows/openwiki.yml) writes
+ * its pages in Google's Open Knowledge Format, which prepends a `---`-delimited YAML
+ * frontmatter block (type/title/description/tags/timestamp) to each file. GitHub's wiki
+ * renderer (gollum) has no concept of frontmatter, so an unstripped block would render
+ * as literal text at the top of the page — this is why wiki-publish.yml strips it before
+ * copying, and why it must be stripped here too, before either scan below, so a
+ * frontmatter line is never mistaken for a heading or a link. Not every page is
+ * guaranteed to have one (a hand-edited page round-tripped through the wiki loses it —
+ * see operations.md's "Wiki sync" section), so this is a no-op when absent.
+ */
+function stripFrontmatter(text) {
+  const m = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(text)
+  return m ? text.slice(m[0].length) : text
+}
+
 const files = readdirSync(DIR).filter((f) => f.endsWith('.md'))
 const pages = new Map() // page name → { anchors: Set, text }
 
 for (const file of files) {
   const name = basename(file, '.md')
-  const text = readFileSync(join(DIR, file), 'utf-8')
+  const text = stripFrontmatter(readFileSync(join(DIR, file), 'utf-8'))
   const anchors = new Set()
   const seen = new Map()
 
@@ -91,7 +115,7 @@ if (!sidebar) {
   problems.push('_Sidebar.md is missing — the wiki would have no navigation')
 } else {
   for (const name of pages.keys()) {
-    if (CHROME.has(name)) continue
+    if (CHROME.has(name) || OKF_UNPUBLISHED.has(name)) continue
     const linked = new RegExp(`]\\(${name}(\\.md)?([#)])`).test(sidebar.text)
     if (!linked) {
       problems.push(`_Sidebar.md does not link to "${name}" — the page would be orphaned`)
@@ -99,7 +123,9 @@ if (!sidebar) {
   }
 }
 
-const pageCount = [...pages.keys()].filter((p) => !CHROME.has(p)).length
+const pageCount = [...pages.keys()].filter(
+  (p) => !CHROME.has(p) && !OKF_UNPUBLISHED.has(p),
+).length
 if (problems.length > 0) {
   console.error(`\nBroken wiki links (${problems.length}):\n`)
   for (const p of problems) console.error(`  ✗ ${p}`)
