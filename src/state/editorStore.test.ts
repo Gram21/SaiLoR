@@ -20,8 +20,8 @@ function node(name: string, patch: Partial<EditorNode> = {}): EditorNode {
   return { ...makeNode(), name, ...patch }
 }
 
-function draft(nodes: EditorNode[], papers: EditorPaper[] = [], aiEnabled = true) {
-  return { version: 1, aiEnabled, extra: {}, nodes, papers }
+function draft(nodes: EditorNode[], papers: EditorPaper[] = [], aiEnabled = true, reviewers = 1) {
+  return { version: 1, aiEnabled, reviewers, extra: {}, nodes, papers }
 }
 
 describe('schema conversion', () => {
@@ -242,6 +242,18 @@ describe('buildProjectJson', () => {
     // The loader reads back what the editor wrote.
     expect(loadProject(JSON.stringify(buildProjectJson(draft(nodes, [], false)))).aiEnabled).toBe(false)
   })
+
+  it('writes config.reviewers only when the editor set more than one', () => {
+    const nodes = [node('X', { kind: 'string' })]
+    const single = buildProjectJson(draft(nodes, [], true, 1)).config as Record<string, unknown>
+    expect('reviewers' in single).toBe(false)
+
+    const multi = buildProjectJson(draft(nodes, [], true, 3)).config as Record<string, unknown>
+    expect(multi.reviewers).toBe(3)
+
+    // The loader reads back what the editor wrote.
+    expect(loadProject(JSON.stringify(buildProjectJson(draft(nodes, [], true, 3)))).reviewers).toBe(3)
+  })
 })
 
 describe('editorStateFromOpened (shared by "Edit annotation JSON…" and the recents pen)', () => {
@@ -304,5 +316,23 @@ describe('editorStateFromOpened (shared by "Edit annotation JSON…" and the rec
   it('throws on a structurally invalid project so the caller can show an error', () => {
     expect(() => editorStateFromOpened(opened('{ not json'))).toThrow()
     expect(() => editorStateFromOpened(opened(JSON.stringify({ papers: [] })))).toThrow()
+  })
+
+  it('reads config.reviewers: 3 from an opened project and round-trips it back out', () => {
+    const multiReviewer = JSON.stringify({
+      version: 1,
+      config: { reviewers: 3, schema: [{ name: 'Relevant', type: 'boolean' }] },
+      papers: [],
+    })
+    const st = editorStateFromOpened(opened(multiReviewer))
+    expect(st.reviewers).toBe(3)
+
+    const roundTrip = loadProject(JSON.stringify(buildProjectJson(st)))
+    expect(roundTrip.reviewers).toBe(3)
+  })
+
+  it('defaults reviewers to 1 (single-reviewer) when config.reviewers is absent', () => {
+    const st = editorStateFromOpened(opened(projectJson))
+    expect(st.reviewers).toBe(1)
   })
 })

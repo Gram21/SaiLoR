@@ -406,3 +406,129 @@ describe('Paper.aiUsage (AI-use disclosure)', () => {
     expect(loadProject(once).papers[0].aiUsage).toEqual([record])
   })
 })
+
+describe('multiple reviewers (config.reviewers, Paper.reviews)', () => {
+  const withReviewers = (reviewers: unknown, paperExtra: Record<string, unknown> = {}) =>
+    JSON.stringify({
+      version: 1,
+      config: {
+        schema: sampleSchema,
+        ...(reviewers === undefined ? {} : { reviewers }),
+      },
+      papers: [
+        {
+          id: 'p1',
+          title: 'Some Paper',
+          authors: [],
+          pdf: 'pdfs/some.pdf',
+          annotations: {},
+          ...paperExtra,
+        },
+      ],
+    })
+
+  it('defaults to 1 (single-reviewer) when config.reviewers is absent', () => {
+    expect(loadProject(withReviewers(undefined)).reviewers).toBe(1)
+  })
+
+  it('reads a present reviewer count', () => {
+    expect(loadProject(withReviewers(3)).reviewers).toBe(3)
+  })
+
+  it('rejects a reviewer count outside [1, 10] — the same bound the editor UI offers', () => {
+    expect(() => loadProject(withReviewers(0))).toThrow(ProjectLoadError)
+    expect(() => loadProject(withReviewers(11))).toThrow(ProjectLoadError)
+  })
+
+  it('writes config.reviewers only when it says more than the default, keeping a single-reviewer file clean', () => {
+    const single = JSON.parse(serializeProject(loadProject(withReviewers(undefined))))
+    expect('reviewers' in single.config).toBe(false)
+
+    const explicit1 = JSON.parse(serializeProject(loadProject(withReviewers(1))))
+    expect('reviewers' in explicit1.config).toBe(false)
+
+    const multi = JSON.parse(serializeProject(loadProject(withReviewers(3))))
+    expect(multi.config.reviewers).toBe(3)
+  })
+
+  it('a single-reviewer project round-trips byte-identical to before this feature existed', () => {
+    // No `reviews` on any paper, no `config.reviewers` — nothing new in the file
+    // at all for the common case, exactly like the config.ai opt-out's own test.
+    const project = loadProject(withReviewers(undefined))
+    const text = serializeProject(project)
+    expect(text).not.toContain('"reviews"')
+    expect(text).not.toContain('"reviewers"')
+    // And reloading it produces the exact same text again.
+    expect(serializeProject(loadProject(text))).toBe(text)
+  })
+
+  it('parses each reviewer\'s tree, normalized against the schema like annotations is', () => {
+    const project = loadProject(
+      withReviewers(2, {
+        reviews: {
+          '1': { Relevant: [{ value: true }] },
+          '2': { Year: [{ value: 2021 }] },
+        },
+      }),
+    )
+    const reviews = project.papers[0].reviews
+    expect(reviews['1'].Relevant[0].value).toBe(true)
+    // Padded to the schema's min, same as normalizeTree does for `annotations`.
+    expect(reviews['1'].Year).toHaveLength(1)
+    expect(reviews['2'].Year[0].value).toBe(2021)
+  })
+
+  it('drops malformed or non-reviewer-shaped review keys rather than failing the whole file to load', () => {
+    const project = loadProject(
+      withReviewers(2, {
+        reviews: {
+          '1': { Relevant: [{ value: true }] },
+          abc: { Relevant: [{ value: true }] }, // not a reviewer number
+          '0': { Relevant: [{ value: true }] }, // reviewer numbers start at 1
+        },
+      }),
+    )
+    expect(Object.keys(project.papers[0].reviews)).toEqual(['1'])
+  })
+
+  it('tolerates reviews being the wrong shape entirely (hand-edited into an array, say)', () => {
+    const project = loadProject(withReviewers(2, { reviews: ['not', 'an', 'object'] }))
+    expect(project.papers[0].reviews).toEqual({})
+  })
+
+  it('a paper no reviewer has touched carries no reviews key, keeping the file tidy', () => {
+    const untouched = JSON.parse(serializeProject(loadProject(withReviewers(2))))
+    expect('reviews' in untouched.papers[0]).toBe(false)
+  })
+
+  it('writes and prunes each reviewer tree the same way annotations is pruned', () => {
+    const project = loadProject(
+      withReviewers(2, {
+        reviews: { '1': { Relevant: [{ value: true }] } },
+      }),
+    )
+    const out = JSON.parse(serializeProject(project))
+    expect(out.papers[0].reviews['1'].Relevant).toEqual([{ value: true }])
+    // A reviewer's tree the same tests never touched is absent, not `{}`.
+    expect('2' in out.papers[0].reviews).toBe(false)
+  })
+
+  it('round-trips a multi-reviewer project — config.reviewers, and every reviewer tree — through load → serialize → reload', () => {
+    const original = loadProject(
+      withReviewers(3, {
+        reviews: {
+          '1': { Relevant: [{ value: true }], Year: [{ value: 2020 }] },
+          '2': { Relevant: [{ value: false }] },
+        },
+      }),
+    )
+    const reloaded = loadProject(serializeProject(original))
+    expect(reloaded.reviewers).toBe(3)
+    expect(reloaded.papers[0].reviews['1'].Year[0].value).toBe(2020)
+    expect(reloaded.papers[0].reviews['2'].Relevant[0].value).toBe(false)
+    // Reviewer 3 never wrote anything — absent, not a padded empty entry.
+    expect('3' in reloaded.papers[0].reviews).toBe(false)
+    // `annotations` (the consolidated tree) is untouched by any of this.
+    expect(reloaded.papers[0].annotations).toEqual(original.papers[0].annotations)
+  })
+})

@@ -127,3 +127,18 @@
   color: var(--muted);
   font-size: 0.9em;
 }
+
+.editor-reviewers-input {
+  width: 56px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+/* Sits between the "Multiple reviewers" row and the schema section, so it
+   needs its own top margin rather than inheriting `.editor-hint`'s bottom-only. */
+.editor-reviewers-hint {
+  margin: 0 16px 12px;
+}

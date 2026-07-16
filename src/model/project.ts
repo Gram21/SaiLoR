@@ -34,7 +34,17 @@ export interface Paper {
   authors: string[]
   doi?: string
   pdf: string
+  /** The single/consolidated result. Unchanged in meaning by multi-reviewer
+   *  support: this is still what `validateProject`, `hasAnnotations`, and any
+   *  future export read, and what a single-reviewer project uses exclusively. */
   annotations: AnnotationValueTree
+  /**
+   * Each independent reviewer's own annotations, keyed "1".."N" (a string
+   * reviewer number, matching `Project.reviewers`). Absent/empty in a
+   * single-reviewer project — `annotations` alone carries the data then, same
+   * as before this feature existed.
+   */
+  reviews: Record<string, AnnotationValueTree>
   /**
    * AI-assisted annotation passes applied to this paper, oldest first — array
    * order alone establishes "the order of use", `appliedAt` makes it explicit
@@ -56,6 +66,14 @@ export interface Project {
    * true; the provider of the file opts out with `config.ai: false`.
    */
   aiEnabled: boolean
+  /**
+   * Number of independent reviewers. 1 (the default; `config.reviewers`
+   * absent or 1) means single-reviewer: every paper carries one
+   * `annotations` tree and nobody picks a reviewer. More than 1 means each
+   * reviewer 1..N annotates independently into `Paper.reviews[N]`, plus a
+   * built-in Consolidation role that reconciles them into `Paper.annotations`.
+   */
+  reviewers: number
   papers: Paper[]
   /** Additional top-level fields preserved verbatim on save. */
   extra: Record<string, unknown>
@@ -69,8 +87,36 @@ export class ProjectLoadError extends Error {
   }
 }
 
-const KNOWN_PAPER_KEYS = new Set(['id', 'title', 'authors', 'doi', 'pdf', 'annotations', 'aiUsage'])
+const KNOWN_PAPER_KEYS = new Set([
+  'id',
+  'title',
+  'authors',
+  'doi',
+  'pdf',
+  'annotations',
+  'reviews',
+  'aiUsage',
+])
 const KNOWN_ROOT_KEYS = new Set(['version', 'title', 'config', 'papers'])
+
+/**
+ * Parse `reviews` defensively, the same rule `annotations`/`aiUsage` follow:
+ * the file is hand-editable, so a malformed entry is dropped, never thrown
+ * over. A key is only kept when it looks like a reviewer number ("1", "2",
+ * …) — anything else could never be reached by `currentTree`'s routing and
+ * would just be dead weight riding along in the file. Each surviving tree is
+ * normalized against the schema exactly like `annotations` is, so a reviewer
+ * switching schemas mid-review still gets a well-formed tree to write into.
+ */
+function parseReviews(raw: unknown, schema: ResolvedDef[]): Record<string, AnnotationValueTree> {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return {}
+  const out: Record<string, AnnotationValueTree> = {}
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!/^[1-9]\d*$/.test(key)) continue
+    out[key] = normalizeTree(schema, value as AnnotationValueTree | undefined)
+  }
+  return out
+}
 
 /**
  * Parse `aiUsage` defensively: the file is hand-editable, so a malformed entry
@@ -149,6 +195,7 @@ export function loadProject(input: string | unknown): Project {
     doi: p.doi,
     pdf: p.pdf,
     annotations: normalizeTree(schema, p.annotations as AnnotationValueTree | undefined),
+    reviews: parseReviews((p as { reviews?: unknown }).reviews, schema),
     aiUsage: parseAiUsage(p.aiUsage),
     extra: extractExtra(p, KNOWN_PAPER_KEYS),
   }))
@@ -159,6 +206,8 @@ export function loadProject(input: string | unknown): Project {
     schema,
     // Absent means enabled; only an explicit `false` opts out.
     aiEnabled: raw.config.ai !== false,
+    // Absent or 1 means single-reviewer; zod already bounds a present value to [1, 10].
+    reviewers: raw.config.reviewers ?? 1,
     papers,
     extra: extractExtra(raw, KNOWN_ROOT_KEYS),
   }
@@ -174,10 +223,13 @@ export function serializeProject(project: Project): string {
     ...project.extra,
     version: project.version,
     ...(project.title ? { title: project.title } : {}),
-    // `ai` is only written when disabled, so a normal file stays clean.
+    // `ai` is only written when disabled, and `reviewers` only when it says
+    // anything beyond the single-reviewer default — so a normal file, and a
+    // single-reviewer file, both stay exactly as clean as before this feature.
     config: {
       schema: dehydrateSchema(project.schema),
       ...(project.aiEnabled ? {} : { ai: false }),
+      ...(project.reviewers > 1 ? { reviewers: project.reviewers } : {}),
     },
     papers: project.papers.map((p) => {
       const paper: Record<string, unknown> = {
@@ -189,6 +241,14 @@ export function serializeProject(project: Project): string {
       if (p.doi !== undefined) paper.doi = p.doi
       paper.pdf = p.pdf
       paper.annotations = pruneTree(project.schema, p.annotations)
+      // Only written when non-empty, so a single-reviewer paper (or one no
+      // reviewer has touched yet) carries no `reviews` key at all.
+      const reviewKeys = Object.keys(p.reviews)
+      if (reviewKeys.length > 0) {
+        paper.reviews = Object.fromEntries(
+          reviewKeys.map((k) => [k, pruneTree(project.schema, p.reviews[k])]),
+        )
+      }
       // Only written when non-empty, so a paper AI has never touched stays clean.
       if (p.aiUsage.length > 0) paper.aiUsage = p.aiUsage
       return paper

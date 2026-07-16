@@ -5,9 +5,11 @@ import {
   serializeProject,
   ProjectLoadError,
   type Project,
+  type Paper,
 } from '../model/project'
 import {
   makeInstance,
+  normalizeTree,
   type AnnotationValueTree,
   type FieldValue,
   type InstanceNode,
@@ -34,6 +36,9 @@ import {
   applyFontScale,
   clampFont,
   FONT_STEP,
+  safeGet,
+  safeSet,
+  safeRemove,
 } from './settings'
 
 /** Injected from package.json by vite.config.ts; falls back for non-Vite runners (tests). */
@@ -78,17 +83,67 @@ export interface PathSeg {
 
 /**
  * Key of one field instance's "the AI wrote this" mark. Scoped by paper, because
- * the same canonical path exists on every paper. The path part is `formatPath`'s
- * canonical form, so a mark set from an LLM suggestion and one looked up by the
- * UI meet on the same string.
+ * the same canonical path exists on every paper — and, for a multi-reviewer
+ * project, also scoped by reviewer, because the same path exists once per
+ * reviewer's own tree too. `reviewer` is the literal `currentReviewer` value
+ * (a numbered reviewer, `"consolidation"`, or `null`); passing `null` (the
+ * default, and always correct for a single-reviewer project) reproduces the
+ * original two-part key exactly, so nothing about a single-reviewer project's
+ * marks changes. The path part is `formatPath`'s canonical form, so a mark set
+ * from an LLM suggestion and one looked up by the UI meet on the same string.
  */
-export function aiMarkKey(paperId: string, canonicalPath: string): string {
-  return `${paperId}::${canonicalPath}`
+export function aiMarkKey(
+  paperId: string,
+  canonicalPath: string,
+  reviewer: string | null = null,
+): string {
+  return reviewer === null ? `${paperId}::${canonicalPath}` : `${paperId}::${reviewer}::${canonicalPath}`
 }
 
 /** Canonical path of a field instance as the UI addresses it (container path + leaf). */
 export function fieldPath(path: PathSeg[], name: string, index: number): string {
   return formatPath([...path, { name, index }])
+}
+
+/** The reviewer scope a mark key should use right now: `null` for a
+ *  single-reviewer project (so its keys stay byte-for-byte the old format),
+ *  otherwise the current selection. */
+function markReviewerScope(project: Project | null, currentReviewer: string | null): string | null {
+  return project && project.reviewers > 1 ? currentReviewer : null
+}
+
+const REVIEWER_KEY_PREFIX = 'slr.currentReviewer.'
+
+/**
+ * Stable per-project key for persisting the reviewer selection: the save
+ * handle's path doubles as one (an absolute Electron path, or the id of a
+ * retained FSAPI handle — see `SaveHandle`). A project with neither a path
+ * nor a handle at all (server mode, or a browser download-only save) has no
+ * way to be told apart from a same-named one on the next launch, so the
+ * selection simply isn't persisted for it rather than risk showing up under
+ * the wrong project.
+ */
+function reviewerStorageKey(handle: SaveHandle | null): string | null {
+  return handle?.path ? `${REVIEWER_KEY_PREFIX}${handle.path}` : null
+}
+
+/** The persisted reviewer selection for this project, or null when there is
+ *  none, the project has no stable key, or the stored value no longer fits
+ *  (e.g. the reviewer count shrank since it was saved). */
+function loadCurrentReviewer(handle: SaveHandle | null, reviewerCount: number): string | null {
+  const key = reviewerStorageKey(handle)
+  if (!key) return null
+  const stored = safeGet(key)
+  if (stored === 'consolidation') return stored
+  const n = stored === null ? NaN : Number(stored)
+  return Number.isInteger(n) && n >= 1 && n <= reviewerCount ? stored : null
+}
+
+function saveCurrentReviewer(handle: SaveHandle | null, reviewer: string | null): void {
+  const key = reviewerStorageKey(handle)
+  if (!key) return
+  if (reviewer === null) safeRemove(key)
+  else safeSet(key, reviewer)
 }
 
 export interface LoadError {
@@ -170,6 +225,21 @@ interface AppState {
    * and never set from anywhere else, so it is back to locked on every reload.
    */
   aiUnlocked: boolean
+  /**
+   * Which reviewer's work is currently shown/edited: `"1"`.."N" for a numbered
+   * reviewer, `"consolidation"` for the built-in role that reconciles them, or
+   * `null`. A single-reviewer project (`project.reviewers <= 1`) never leaves
+   * `null` — see `currentTree`. A *multi*-reviewer project also starts `null`
+   * on load (nobody has picked yet): defaulting to Reviewer 1 would let an
+   * edit land unattributed, which is worse than making the reviewer pick
+   * first. Selecting is a view switch, not an edit: it is not an undo step and
+   * does not set `dirty`, and it is persisted per project (see
+   * `saveCurrentReviewer`) so reopening the same file returns to the same seat.
+   */
+  currentReviewer: string | null
+  /** The field a Consolidation-mode "compare" click is showing, or null when
+   *  the compare popup is closed. Session-only, like `validationOpen`. */
+  consolidationTarget: { path: PathSeg[]; name: string; index: number } | null
 
   openProject: () => Promise<void>
   openRecent: (id: string) => Promise<void>
@@ -217,6 +287,13 @@ interface AppState {
   confirmAiMark: (paperId: string, canonicalPath: string) => void
   /** The hidden gesture landed — allow AI use for the rest of this session. */
   unlockAi: () => void
+
+  /** Switch which reviewer's tree is shown/edited. A view switch, not an edit
+   *  — no undo step, no `dirty`. Persisted per project. */
+  selectReviewer: (reviewer: string | null) => void
+  /** Consolidation clicked "compare" on one field — open the popup for it. */
+  openConsolidation: (path: PathSeg[], name: string, index: number) => void
+  closeConsolidation: () => void
 }
 
 /** What `applyAiSuggestions` actually did, for the summary shown to the reviewer. */
@@ -224,6 +301,49 @@ export interface AiApplyResult {
   filled: number
   /** Suggestions not written: the field is no longer empty, or the path no longer resolves. */
   skipped: number
+}
+
+/**
+ * Route to the tree the app should read/write right now for `paper`, given
+ * the project's reviewer count and the current selection:
+ *
+ *  - single-reviewer (`project.reviewers <= 1`) → `paper.annotations`,
+ *    unchanged from single-reviewer behavior before this feature existed.
+ *  - Consolidation → `paper.annotations`: the final, shipped result.
+ *  - a numbered reviewer → `paper.reviews[N]`.
+ *  - multi-reviewer, nobody selected yet → `null`. An unattributed edit must
+ *    never land in the shipped consolidated tree, so callers must treat a
+ *    `null` result as "nothing to read or write", never silently fall back
+ *    to the consolidated tree.
+ *
+ * `create` controls what happens for a numbered reviewer whose tree doesn't
+ * exist on `paper` yet: with `create: true` (only safe inside an immer
+ * `set()` producer, since it mutates `paper`) it is lazily initialised and
+ * normalized against the schema, and the *live* reference is returned so
+ * writes persist. With `create: false` (the default — safe to call from a
+ * plain selector or a read-only computation) nothing is mutated and a fresh
+ * schema-shaped empty tree is returned instead, purely for display/validation
+ * — a reviewer who hasn't written anything yet still sees a well-formed set
+ * of empty fields, exactly as `paper.annotations` would on a brand-new paper.
+ *
+ * Rationale for routing everything through this: if you are Reviewer 2, the
+ * app shows and validates *your* work; the Consolidation reviewer sees and
+ * validates the final result that actually ships.
+ */
+export function currentTree(
+  project: Project,
+  currentReviewer: string | null,
+  paper: Paper,
+  create = false,
+): AnnotationValueTree | null {
+  if (project.reviewers <= 1) return paper.annotations
+  if (currentReviewer === 'consolidation') return paper.annotations
+  if (currentReviewer === null) return null
+  const existing = paper.reviews[currentReviewer]
+  if (existing) return existing
+  if (!create) return normalizeTree(project.schema, undefined)
+  paper.reviews[currentReviewer] = normalizeTree(project.schema, undefined)
+  return paper.reviews[currentReviewer]
 }
 
 /** Walk from a paper's annotation root to the container tree addressed by `path`. */
@@ -266,6 +386,8 @@ export const useStore = create<AppState>()(
     future: [],
     aiMarks: {},
     aiUnlocked: false,
+    currentReviewer: null,
+    consolidationTarget: null,
 
     openProject: async () => {
       const platform = getPlatform()
@@ -362,6 +484,8 @@ export const useStore = create<AppState>()(
         s.validationUnannotated = null
         s.validationOpen = false
         s.closePromptOpen = false
+        s.currentReviewer = null
+        s.consolidationTarget = null
       })
       void get().refreshRecents()
     },
@@ -444,6 +568,13 @@ export const useStore = create<AppState>()(
           s.validation = null
           s.validationUnannotated = null
           s.validationOpen = false
+          s.consolidationTarget = null
+          // Re-derive rather than carry over: a single-reviewer project never
+          // has one, and a multi-reviewer project restores whatever was
+          // persisted for *this* file (or null — unselected — if there is
+          // none, so the reviewer picks explicitly rather than inheriting
+          // whoever the previously open project happened to be showing).
+          s.currentReviewer = project.reviewers > 1 ? loadCurrentReviewer(handle, project.reviewers) : null
         })
         lastFieldKey = null
       } catch (err) {
@@ -519,6 +650,9 @@ export const useStore = create<AppState>()(
 
         const text = serializeProject(toWrite)
         const handle = await platform.saveProject(text, location.handle)
+        // Carry the reviewer selection over to the new location's own key, or
+        // it would silently look unselected the next time this file is opened.
+        saveCurrentReviewer(handle, get().currentReviewer)
         set((s) => {
           s.project = toWrite
           s.saveHandle = handle
@@ -616,9 +750,19 @@ export const useStore = create<AppState>()(
       }),
 
     runValidation: () => {
-      const project = get().project
+      const { project, currentReviewer } = get()
       if (!project) return
-      const { issues, unannotated } = validateProject(project)
+      // Nothing to validate as "the reviewer" until one is picked — the
+      // Validate button is disabled in this state too (see Toolbar.tsx).
+      if (project.reviewers > 1 && currentReviewer === null) return
+      // Validate the tree the current reviewer is actually responsible for:
+      // their own work if they are a numbered reviewer, or the final
+      // consolidated result if they are Consolidation — see `currentTree`.
+      const papers = project.papers.map((p) => ({
+        ...p,
+        annotations: currentTree(project, currentReviewer, p) ?? p.annotations,
+      }))
+      const { issues, unannotated } = validateProject({ ...project, papers })
       set((s) => {
         s.validation = issues
         s.validationUnannotated = unannotated
@@ -651,6 +795,8 @@ export const useStore = create<AppState>()(
     setFieldValue: (path, name, index, value) => {
       const prev = get()
       if (!prev.project) return
+      // Multi-reviewer, nobody picked yet: nothing to attribute this edit to.
+      if (prev.project.reviewers > 1 && prev.currentReviewer === null) return
       // Collapse consecutive edits of the same field into one undo step.
       const key = `${JSON.stringify(path)}|${name}|${index}`
       const coalesce = key === lastFieldKey
@@ -659,7 +805,9 @@ export const useStore = create<AppState>()(
       set((s) => {
         const paper = currentPaper(s)
         if (!paper) return
-        const container = containerAt(paper.annotations, path)
+        const tree = currentTree(s.project!, s.currentReviewer, paper, true)
+        if (!tree) return
+        const container = containerAt(tree, path)
         const inst = container[name]?.[index]
         if (!inst) return
         if (!coalesce) pushPast(s, snap)
@@ -671,12 +819,15 @@ export const useStore = create<AppState>()(
     addInstance: (path, def) => {
       const prev = get()
       if (!prev.project) return
+      if (prev.project.reviewers > 1 && prev.currentReviewer === null) return
       lastFieldKey = null
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
       set((s) => {
         const paper = currentPaper(s)
         if (!paper) return
-        const container = containerAt(paper.annotations, path)
+        const tree = currentTree(s.project!, s.currentReviewer, paper, true)
+        if (!tree) return
+        const container = containerAt(tree, path)
         const list = container[def.name]
         if (list && (def.max === null || list.length < def.max)) {
           pushPast(s, snap)
@@ -689,12 +840,15 @@ export const useStore = create<AppState>()(
     removeInstance: (path, name, index) => {
       const prev = get()
       if (!prev.project) return
+      if (prev.project.reviewers > 1 && prev.currentReviewer === null) return
       lastFieldKey = null
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
       set((s) => {
         const paper = currentPaper(s)
         if (!paper) return
-        const container = containerAt(paper.annotations, path)
+        const tree = currentTree(s.project!, s.currentReviewer, paper, true)
+        if (!tree) return
+        const container = containerAt(tree, path)
         const list = container[name]
         if (list && index >= 0 && index < list.length) {
           pushPast(s, snap)
@@ -707,9 +861,16 @@ export const useStore = create<AppState>()(
     applyAiSuggestions: (suggestions, usage) => {
       const prev = get()
       if (!prev.project) return { filled: 0, skipped: suggestions.length }
+      if (prev.project.reviewers > 1 && prev.currentReviewer === null) {
+        return { filled: 0, skipped: suggestions.length }
+      }
       const schema = prev.project.schema
       const paperNow = currentPaper(prev)
       if (!paperNow) return { filled: 0, skipped: suggestions.length }
+      // Read-only: whichever reviewer is active right now is who "answered
+      // already" is checked against — see `currentTree`.
+      const readTree = currentTree(prev.project, prev.currentReviewer, paperNow)
+      if (!readTree) return { filled: 0, skipped: suggestions.length }
 
       // Decide what to write *before* touching anything, so a run that turns out to
       // change nothing leaves no empty entry on the undo stack. A suggestion is
@@ -718,7 +879,7 @@ export const useStore = create<AppState>()(
       const accepted = suggestions.flatMap((sug) => {
         const at = resolvePath(schema, sug.path)
         if (!at) return []
-        const current = peekValue(paperNow.annotations, at.path, at.name, at.index)
+        const current = peekValue(readTree, at.path, at.name, at.index)
         if (!isUnanswered(at.def, current)) return []
         return [{ at, value: sug.value }]
       })
@@ -729,34 +890,37 @@ export const useStore = create<AppState>()(
       lastFieldKey = null
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
       const paperId = paperNow.id
+      const reviewerScope = markReviewerScope(prev.project, prev.currentReviewer)
       let filled = 0
       set((s) => {
         const paper = currentPaper(s)
         if (!paper) return
+        const target = currentTree(s.project!, s.currentReviewer, paper, true)
+        if (!target) return
         pushPast(s, snap)
         for (const { at, value } of accepted) {
           // The model may address an entry of a repeatable node that does not exist
           // yet — that is how it records a further Finding. Create the instances it
           // named, along the whole path.
           let level: ResolvedDef[] = s.project!.schema
-          let tree: AnnotationValueTree | null = paper.annotations
+          let cursor: AnnotationValueTree | null = target
           for (const seg of at.path) {
-            const step = ensureInstance(level, tree, seg.name, seg.index)
+            const step = ensureInstance(level, cursor, seg.name, seg.index)
             if (!step) {
-              tree = null
+              cursor = null
               break
             }
             if (!step.inst.children) step.inst.children = {}
-            tree = step.inst.children
+            cursor = step.inst.children
             level = step.def.children
           }
-          if (!tree) continue
-          const leaf = ensureInstance(level, tree, at.name, at.index)
+          if (!cursor) continue
+          const leaf = ensureInstance(level, cursor, at.name, at.index)
           if (!leaf) continue
           leaf.inst.value = value
           // Mark only what was actually written: a skipped suggestion left the
           // field as the reviewer had it, and must not be flagged as the AI's.
-          s.aiMarks[aiMarkKey(paperId, at.canonical)] = true
+          s.aiMarks[aiMarkKey(paperId, at.canonical, reviewerScope)] = true
           filled++
         }
         // A disclosure record, not a UI hint: only added when this pass actually
@@ -775,7 +939,8 @@ export const useStore = create<AppState>()(
     },
 
     confirmAiMark: (paperId, canonicalPath) => {
-      const key = aiMarkKey(paperId, canonicalPath)
+      const { project, currentReviewer } = get()
+      const key = aiMarkKey(paperId, canonicalPath, markReviewerScope(project, currentReviewer))
       // Focusing a field the AI never touched is the common case — don't churn
       // the store (and re-render every field) for a mark that isn't there.
       if (!get().aiMarks[key]) return
@@ -790,6 +955,25 @@ export const useStore = create<AppState>()(
         s.aiUnlocked = true
       })
     },
+
+    selectReviewer: (reviewer) => {
+      // A view switch, not an edit: no undo step, no dirty flag — only the
+      // persisted selection and the visible state change.
+      saveCurrentReviewer(get().saveHandle, reviewer)
+      set((s) => {
+        s.currentReviewer = reviewer
+      })
+    },
+
+    openConsolidation: (path, name, index) =>
+      set((s) => {
+        s.consolidationTarget = { path, name, index }
+      }),
+
+    closeConsolidation: () =>
+      set((s) => {
+        s.consolidationTarget = null
+      }),
 
     undo: () => {
       const st = get()
@@ -837,9 +1021,10 @@ export const useStore = create<AppState>()(
 /**
  * Read a field's current value without creating anything. A missing instance
  * reads as `undefined` — which is "unanswered", and correctly so: it is a slot
- * the model asked to add.
+ * the model asked to add. Exported so the consolidation compare popup can read
+ * the same value out of any reviewer's tree without a second implementation.
  */
-function peekValue(
+export function peekValue(
   root: AnnotationValueTree,
   path: PathSeg[],
   name: string,
@@ -904,9 +1089,11 @@ export function selectCurrentPaper(s: AppState) {
  */
 export function useAiMark(path: PathSeg[], name: string, index: number): [boolean, () => void] {
   const canonical = fieldPath(path, name, index)
-  const marked = useStore(
-    (s) => s.currentPaperId !== null && s.aiMarks[aiMarkKey(s.currentPaperId, canonical)] === true,
-  )
+  const marked = useStore((s) => {
+    if (s.currentPaperId === null) return false
+    const key = aiMarkKey(s.currentPaperId, canonical, markReviewerScope(s.project, s.currentReviewer))
+    return s.aiMarks[key] === true
+  })
   const confirm = () => {
     const paperId = useStore.getState().currentPaperId
     if (paperId) useStore.getState().confirmAiMark(paperId, canonical)

@@ -295,3 +295,72 @@ describe('marks are never persisted', () => {
     expect(marks()).toHaveLength(5)
   })
 })
+
+describe('marks are scoped per reviewer on a multi-reviewer project', () => {
+  const MULTI = JSON.parse(PROJECT) as Record<string, unknown>
+  ;(MULTI.config as Record<string, unknown>).reviewers = 2
+  const MULTI_PROJECT = JSON.stringify(MULTI)
+
+  beforeEach(() => {
+    st().loadFromText(MULTI_PROJECT, null, 'test.json')
+    st().selectPaper('p1')
+  })
+
+  it('a single-reviewer key format is not reused once reviewers are involved', () => {
+    st().selectReviewer('1')
+    apply([sug('Summary', 'from reviewer 1')])
+    // Reviewer 1's key carries the reviewer, unlike the single-reviewer form
+    // pinned by the tests above — the two must never collide.
+    expect(marks()).toEqual(['p1::1::Summary'])
+    expect(isMarked('p1', 'Summary')).toBe(false) // the un-scoped lookup finds nothing
+  })
+
+  it("Reviewer 2's mark on the same field does not appear on Reviewer 1's", () => {
+    st().selectReviewer('1')
+    apply([sug('Summary', 'r1')])
+    st().selectReviewer('2')
+    apply([sug('Summary', 'r2')])
+
+    expect(marks()).toEqual(['p1::1::Summary', 'p1::2::Summary'].sort())
+    expect(st().aiMarks[aiMarkKey('p1', 'Summary', '1')]).toBe(true)
+    expect(st().aiMarks[aiMarkKey('p1', 'Summary', '2')]).toBe(true)
+  })
+
+  it('Consolidation gets its own mark scope too, distinct from the single-reviewer key form', () => {
+    st().selectReviewer('consolidation')
+    apply([sug('Summary', 'final')])
+    // Even though Consolidation writes into `paper.annotations` (the same tree
+    // a single-reviewer project uses), its marks are still reviewer-scoped:
+    // `markReviewerScope` only collapses to the bare `paperId::path` form for
+    // an actual single-reviewer project (`project.reviewers <= 1`), never for
+    // a multi-reviewer one just because this particular seat happens to write
+    // to the consolidated tree.
+    expect(marks()).toEqual(['p1::consolidation::Summary'])
+    expect(isMarked('p1', 'Summary')).toBe(false)
+  })
+
+  it('confirmAiMark clears only the active reviewer\'s mark for that field', () => {
+    st().selectReviewer('1')
+    apply([sug('Summary', 'r1')])
+    st().selectReviewer('2')
+    apply([sug('Summary', 'r2')])
+
+    st().confirmAiMark('p1', 'Summary') // resolved against the *active* reviewer (2)
+    expect(st().aiMarks[aiMarkKey('p1', 'Summary', '1')]).toBe(true)
+    expect(st().aiMarks[aiMarkKey('p1', 'Summary', '2')]).toBeUndefined()
+  })
+
+  it('switching reviewers never clears the other reviewer\'s marks', () => {
+    st().selectReviewer('1')
+    apply([sug('Summary', 'r1')])
+    st().selectReviewer('2')
+    expect(st().aiMarks[aiMarkKey('p1', 'Summary', '1')]).toBe(true)
+  })
+
+  it('still never reaches the saved file, for any reviewer', () => {
+    st().selectReviewer('2')
+    apply([sug('Summary', 'r2')])
+    const text = serializeProject(st().project!)
+    expect(text).not.toContain('aiMark')
+  })
+})

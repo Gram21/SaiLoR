@@ -19,6 +19,7 @@ This document is the in‑depth companion to it.
 6. [A complete example](#6-a-complete-example)
 7. [Opening a project](#7-opening-a-project)
 8. [Validation & common mistakes](#8-validation--common-mistakes)
+9. [Multiple reviewers & Consolidation](#9-multiple-reviewers--consolidation)
 
 ---
 
@@ -54,7 +55,8 @@ The top‑level object has three keys:
   "version": 1,
   "config": {
     "schema": [],
-    "ai": true
+    "ai": true,
+    "reviewers": 1
   },
   "papers": []
 }
@@ -79,6 +81,14 @@ Note that `config.ai` can only ever *restrict* the feature, not guarantee it: `t
 the key) does not by itself mean the button is available to whoever opens the file — the app may
 have its own reasons for keeping AI-assisted annotation off that this setting does not override.
 `false` always wins, in every build.
+
+**`config.reviewers` — multiple independent reviewers.** Optional, defaults to `1`
+(single-reviewer — the behavior described through the rest of this guide). Set it to a number from
+2 to 10 to have that many reviewers annotate every paper **independently**, then reconcile their
+answers into one final result via a built-in **Consolidation** role. See
+[§9](#9-multiple-reviewers--consolidation) for the full picture. It is written out only when
+greater than 1, so a normal single-reviewer file never carries the key. The project editor exposes
+it as a checkbox + a reviewer-count field next to the AI opt-out.
 
 **Extra keys are preserved.** Any additional top‑level key you add (say, `"reviewers"` or
 `"notes"`) is kept verbatim when the app saves the file. The same applies to extra keys inside
@@ -314,7 +324,8 @@ You can bound a repeatable group as well. Between one and three threats:
 | `authors`     | array of strings| yes*     | Author names. May be an empty list `[]`.                                    |
 | `doi`         | string          | no       | The DOI, if you have one.                                                   |
 | `pdf`         | string          | **yes**  | Path to the PDF file, **relative to the JSON file's location**.             |
-| `annotations` | object          | yes*     | Your recorded data. Use `{}` for a paper you haven't annotated yet.         |
+| `annotations` | object          | yes*     | The single/consolidated result. Use `{}` for a paper you haven't annotated yet. |
+| `reviews`     | object          | no       | Multi-reviewer only — each reviewer's own tree, keyed `"1"` .. `"N"`. See [§9](#9-multiple-reviewers--consolidation). Omit entirely in a single-reviewer file. |
 
 <sub>* `authors` and `annotations` are effectively required in a hand‑written file — set them to
 `[]` and `{}` respectively when there's nothing yet.</sub>
@@ -592,3 +603,56 @@ If a project won't open, it's almost always one of these:
 
 When a file fails to load, the app reports which check failed (and often the exact node or path),
 so start from the message and work back to the offending line.
+
+---
+
+## 9. Multiple reviewers & Consolidation
+
+Everything above describes the default, **single-reviewer** case: one `annotations` tree per
+paper, one person filling it in. Set `config.reviewers` to a number from 2 to 10 to have that many
+reviewers annotate **independently**, then reconcile disagreements into one final answer.
+
+### What changes
+
+- Each reviewer 1..N gets their **own** copy of every paper's fields — nobody sees anyone else's
+  answers while annotating. In the app, a reviewer switch appears in the toolbar (hidden entirely
+  for a single-reviewer project) so it is always obvious *whose* answers are on screen.
+- In addition to the N reviewers, there is always one extra, built-in **Consolidation** role. It is
+  not counted in `config.reviewers` and nobody explicitly assigns it — it is simply the seat for
+  whoever reconciles the reviewers' answers. Consolidation sees every reviewer's value for each
+  field side by side (a **compare** button next to the field) and picks the one that becomes final.
+- `annotations` keeps doing exactly what it always did: it is the single, final result — what
+  Consolidation writes, and what validation, and any future export, reads. In a single-reviewer
+  project it is simply the only tree there is, unaffected by any of this.
+- Each reviewer's own work is saved under a new per-paper `reviews` object, keyed by reviewer
+  number as a string:
+
+  ```json
+  {
+    "id": "paper-a",
+    "title": "…",
+    "pdf": "pdfs/paper-a.pdf",
+    "annotations": { "Relevant": [{ "value": true }] },
+    "reviews": {
+      "1": { "Relevant": [{ "value": true }] },
+      "2": { "Relevant": [{ "value": false }] }
+    }
+  }
+  ```
+
+  `reviews` is written only for a multi-reviewer project, and only once a reviewer has actually
+  written something — a reviewer who hasn't started a given paper contributes no key at all. A
+  single-reviewer file never has a `reviews` key on any paper, so it stays exactly as it always was.
+
+### Setting it up
+
+The project editor's *New / Edit annotation JSON…* screen has a **Multiple reviewers** checkbox
+next to the AI opt-out; enabling it exposes a reviewer-count field (2–10) and writes
+`config.reviewers` into the file. Hand-editing the JSON works the same way — add `"reviewers": 3`
+under `config`.
+
+### Validating
+
+**Validate** checks the tree the active reviewer is responsible for: a numbered reviewer's own
+answers, or — for Consolidation — the final consolidated result that will actually ship. It is
+unavailable until a reviewer is picked, since there is no "the reviewer" to check otherwise.
