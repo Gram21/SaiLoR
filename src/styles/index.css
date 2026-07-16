@@ -1850,6 +1850,15 @@ kbd {
   display: flex;
   gap: 6px;
 }
+/* Screening's own row (see ScreeningPanel.tsx): Consolidation there has three
+   buttons, one more than AnnotationPanel's Consolidation ever does, which is
+   what no longer fits sharing a row with the title at a normal panel width.
+   `flex-wrap` is a second line of defense, not the fix — an even narrower
+   panel, or a longer future label, wraps instead of overflowing. */
+.screening-tools-row {
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
 .consolidation-tool-btn {
   padding: 3px 10px;
   font-size: 0.85rem;

@@ -63,36 +63,6 @@ export function ScreeningPanel() {
       <div className="annotations-head">
         <div className="annotations-head-row">
           <h2>Screening</h2>
-          <div className="consolidation-tools">
-            <button
-              type="button"
-              className="consolidation-tool-btn"
-              title="Progress and PRISMA-style include/exclude/reason counts"
-              onClick={() => setScreeningSummaryOpen(true)}
-            >
-              ◧ Summary
-            </button>
-            {isConsolidation && (
-              <>
-                <button
-                  type="button"
-                  className="consolidation-tool-btn"
-                  title="Compute inter-rater agreement on the include/exclude decision"
-                  onClick={() => setAgreementOpen(true)}
-                >
-                  ⚖ Agreement
-                </button>
-                <button
-                  type="button"
-                  className="consolidation-tool-btn"
-                  title="List every paper where reviewers disagree"
-                  onClick={() => setDisagreementsOpen(true)}
-                >
-                  ⚠ Disagreements
-                </button>
-              </>
-            )}
-          </div>
         </div>
         <div className="annotations-paper-title">
           {paper.title}
@@ -100,6 +70,40 @@ export function ScreeningPanel() {
             <span className="reviewer-badge">
               {isConsolidation ? 'Consolidation' : `Reviewer ${currentReviewer}`}
             </span>
+          )}
+        </div>
+        {/* Its own row, not squeezed next to the title: Consolidation adds two
+            more buttons here than AnnotationPanel's equivalent ever has, and
+            sharing `.annotations-head-row` with the title (as that panel does)
+            has no room left for them at a normal panel width. */}
+        <div className="consolidation-tools screening-tools-row">
+          <button
+            type="button"
+            className="consolidation-tool-btn"
+            title="Progress and PRISMA-style include/exclude/reason counts"
+            onClick={() => setScreeningSummaryOpen(true)}
+          >
+            ◧ Summary
+          </button>
+          {isConsolidation && (
+            <>
+              <button
+                type="button"
+                className="consolidation-tool-btn"
+                title="Compute inter-rater agreement on the include/exclude decision"
+                onClick={() => setAgreementOpen(true)}
+              >
+                ⚖ Agreement
+              </button>
+              <button
+                type="button"
+                className="consolidation-tool-btn"
+                title="List every paper where reviewers disagree"
+                onClick={() => setDisagreementsOpen(true)}
+              >
+                ⚠ Disagreements
+              </button>
+            </>
           )}
         </div>
       </div>
