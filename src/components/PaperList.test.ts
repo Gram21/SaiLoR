@@ -51,6 +51,7 @@ function makePaper(opts: {
     annotations: opts.annotations ?? emptyTree(),
     reviews: opts.reviews ?? {},
     aiUsage: [],
+    equal: [],
     extra: {},
   }
 }

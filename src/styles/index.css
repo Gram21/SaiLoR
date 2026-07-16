@@ -1590,3 +1590,130 @@ kbd {
   width: 16px;
   height: 16px;
 }
+
+/* Consolidation's two extra tools, filling the slot the AI button occupies in
+   every other seat (see AnnotationPanel.tsx) — same footprint, same button
+   look as `.ai-btn`, just two of them side by side. */
+.consolidation-tools {
+  display: flex;
+  gap: 6px;
+}
+.consolidation-tool-btn {
+  padding: 3px 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.consolidation-tool-btn:hover {
+  background: var(--accent-weak);
+}
+
+/* ---- Agreement dialog ---- */
+.agreement-basis {
+  margin-top: 0;
+  color: var(--muted);
+}
+.agreement-metrics {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.agreement-metric {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.agreement-metric:last-child {
+  border-bottom: none;
+}
+/* Not usable for this project's data (see `Applicability`): kept visible but
+   backed off, its checkbox disabled, the reason on hover — a reviewer should
+   be able to see all three coefficients exist even when one doesn't apply. */
+.agreement-metric.unusable {
+  opacity: 0.5;
+}
+.agreement-metric-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.agreement-metric.unusable .agreement-metric-label {
+  cursor: help;
+}
+.agreement-result {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  text-align: right;
+}
+.agreement-value {
+  font-variant-numeric: tabular-nums;
+}
+.agreement-note {
+  color: var(--muted);
+  font-size: 0.85em;
+}
+
+/* ---- Disagreement overview ---- */
+.disagreement-overview {
+  width: min(720px, 92vw);
+}
+.disagreement-intro {
+  margin-top: 0;
+  color: var(--muted);
+}
+.disagreement-group {
+  margin-bottom: 16px;
+}
+.disagreement-paper-title {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+}
+.disagreement-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.disagreement-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.disagreement-rows li:last-child .disagreement-row {
+  border-bottom: none;
+}
+.disagreement-path {
+  font-weight: 600;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+.disagreement-values {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 12px;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+.disagreement-value {
+  white-space: nowrap;
+}
+.disagreement-reviewer {
+  margin-right: 4px;
+  color: var(--text);
+  font-weight: 600;
+}

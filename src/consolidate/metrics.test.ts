@@ -6,7 +6,6 @@ import {
   fleissKappaApplicable,
   krippendorffAlpha,
   krippendorffAlphaApplicable,
-  type MetricInput,
   type Ratings,
 } from './metrics'
 
