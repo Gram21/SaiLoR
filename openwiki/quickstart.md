@@ -71,7 +71,7 @@ npm run typecheck
 │   │   ├── schema.ts      AnnotationDef/ResolvedDef types, zod schemas, resolveSchema
 │   │   ├── annotations.ts AnnotationValueTree, normalize/prune/init/add/remove helpers
 │   │   ├── project.ts     loadProject / serializeProject, Paper/Project types
-│   │   ├── pdfMeta.ts     Best-effort title/author extraction from a PDF (metadata, then layout heuristic)
+│   │   ├── pdfMeta.ts     Best-effort title/author/abstract extraction from a PDF (metadata, then layout heuristic)
 │   │   ├── validate.ts    Checks annotated papers (required / type / enum / cardinality); unannotated papers are skipped, not flagged
 │   │   ├── version.ts     Update check against the GitHub releases API (silent while the repo is private)
 │   │   └── model.test.ts  Vitest unit tests for the model

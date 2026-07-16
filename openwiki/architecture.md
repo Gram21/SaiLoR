@@ -258,7 +258,7 @@ Two ways out of the editor: **Save JSON** writes the file and stays put (so you 
 
 **Adding PDFs** (`addPdfs`) does two things beyond appending rows:
 - **Duplicate rejection.** A PDF already referenced is skipped rather than added twice, and the skipped names are reported in a dismissible notice. Identity is `pdfKeys()`: the absolute path when known (Electron) *and* the stored relative path — so re-picking the same file, picking it twice in one dialog, or picking one already listed in an opened project all collapse to one entry. Same-named PDFs in different folders stay distinct.
-- **Title/author auto-fill.** `src/model/pdfMeta.ts` reads each added PDF (`PickedPdf.read()` — an IPC in Electron, `File.arrayBuffer()` in the browser) and pre-fills the fields. It tries the PDF's embedded `Title`/`Author` metadata first, validating it (`isPlausibleTitle` rejects artefacts like "Microsoft Word - paper_final_v3.doc"), then falls back to a layout heuristic on page 1: the largest text near the top is the title (joined across wrapped lines), and the lines under it are the authors. A line is not a flat string but a list of **segments**, split wherever two runs on the same baseline sit more than `COLUMN_GAP_RATIO` font-sizes apart — a word space is a fraction of the font size even in justified text, a column gutter is several times it. This matters because the common two-column author block puts each author on the *same baseline* with nothing between them but the gutter: joined first, `Jan Keim` and `Angelika Kaplan` read as the single name "Jan KeimAngelika Kaplan", and no amount of later parsing can recover the boundary, since there is no punctuation at it. So authors are parsed per segment. A run whose `width` pdf.js does not report never starts a segment: without it there is no way to know where a run ends, and guessing could cut mid-phrase. `parseAuthorList` strips affiliation superscripts, footnote daggers, emails and an "Authors:" label; in `strict` mode (used only for the heuristic, which is a *guess*) it also requires each entry to look like a person's name, so a body sentence can't become an author list. Everything is best-effort and only ever pre-fills — rows appear immediately with a name-derived placeholder, extraction patches them in the background, and it never overwrites a value the user has already typed. The pdf.js worker is configured once in `src/platform/pdfjs.ts`, shared by the viewer and the extractor.
+- **Title/author auto-fill.** `src/model/pdfMeta.ts` reads each added PDF (`PickedPdf.read()` — an IPC in Electron, `File.arrayBuffer()` in the browser) and pre-fills the fields. It tries the PDF's embedded `Title`/`Author` metadata first, validating it (`isPlausibleTitle` rejects artefacts like "Microsoft Word - paper_final_v3.doc"), then falls back to a layout heuristic on page 1: the largest text near the top is the title (joined across wrapped lines), and the lines under it are the authors. A line is not a flat string but a list of **segments**, split wherever two runs on the same baseline sit more than `COLUMN_GAP_RATIO` font-sizes apart — a word space is a fraction of the font size even in justified text, a column gutter is several times it. This matters because the common two-column author block puts each author on the *same baseline* with nothing between them but the gutter: joined first, `Jan Keim` and `Angelika Kaplan` read as the single name "Jan KeimAngelika Kaplan", and no amount of later parsing can recover the boundary, since there is no punctuation at it. So authors are parsed per segment. A run whose `width` pdf.js does not report never starts a segment: without it there is no way to know where a run ends, and guessing could cut mid-phrase. `parseAuthorList` strips affiliation superscripts, footnote daggers, emails and an "Authors:" label; in `strict` mode (used only for the heuristic, which is a *guess*) it also requires each entry to look like a person's name, so a body sentence can't become an author list. Everything is best-effort and only ever pre-fills — rows appear immediately with a name-derived placeholder, extraction patches them in the background, and it never overwrites a value the user has already typed. The pdf.js worker is configured once in `src/platform/pdfjs.ts`, shared by the viewer and the extractor. The same background pass also tries an abstract (`abstractFromLines`) when the row has none — see the Screening section's "A missing abstract is extracted from the PDF, and flagged durably" for why that one gets a persisted `abstractFromPdf` disclosure the title/author guesses above do not need.
 
 **Adding a whole folder of PDFs** (`addPdfFolder`) is `addPdfs` with a different picker: both funnel into a shared `addPickedPdfs(picked)` closure in `editorStore.ts` that does the duplicate rejection, row creation, and background title/author extraction described above. Only `pickPdfs()` vs `pickPdfFolder()` differs. `pickPdfFolder()` returns every `.pdf` found recursively under the chosen folder — Electron via a plain recursive `readdir` walk over the real filesystem, the browser via the same `webkitdirectory` `<input>` mechanism `ensureLocalPdfGrant()` uses for the PDF-viewer's one-time folder grant (see `pickPdfFolderViaInput` above) — filtered to file names ending in `.pdf`. Reusing that input, rather than writing a second one, keeps the one careful piece of cross-browser logic (the `cancel`-event-not-focus-guess cancellation detection, needed because Firefox's own "Upload N files?" confirmation appears *after* the OS dialog already returns focus) in one place.
 
@@ -648,6 +648,76 @@ Screening relaxes `pdf` to `z.string().default('')`, scoped by a `superRefine` t
 non-empty `pdf` for every *non-screening* paper (`src/model/schema.ts`), so the relaxation cannot
 leak into ordinary projects. `PdfViewer` now also guards `!pdfPath` with an explicit "This paper has
 no PDF attached" panel, right next to the pre-existing `!paperId` guard.
+
+### A missing abstract is extracted from the PDF, and flagged durably
+
+Screening is normally decided from `abstract` alone, but a paper added straight from a PDF (rather
+than through a reference-manager export, which usually carries one already — see
+`references.ts`'s `RefEntry.abstract`) may have none. `pdfMeta.ts`'s `abstractFromLines` fills that
+gap with the same kind of best-effort layout heuristic the module already used for title/authors:
+find a line starting with the word "Abstract", read forward until the next section heading, a
+two-column baseline split, or a length cap — whichever comes first. Two call sites, one function:
+
+- **`editorStore.ts`'s `addPickedPdfs`** — the existing background title/author fill for a directly
+  added PDF now also tries the abstract, pre-filling the draft row the same way (never clobbering
+  something the reviewer already typed while the read was in flight).
+- **`store.ts`'s `extractScreeningAbstract`**, fired by `toggleScreeningPdf` whenever it *opens* the
+  PDF (never on close) for a paper with a PDF and no abstract yet. This is the case the user's
+  request named directly: "the Annotation Schema JSON and the PDF is opened for screening" reads
+  most naturally as *the moment the reviewer opens that PDF*, not paper selection or a separate
+  button — it also means a paper screened purely from title+abstract, the documented common case,
+  never pays for a PDF fetch it doesn't need.
+
+**Why this writes `abstract` immediately, with no per-paper confirmation step, unlike AI
+suggestions.** The AI-annotation flow (`applyAiSuggestions`, below) always gates a machine-produced
+value behind an explicit reviewer "Apply" click on a reviewed table. Screening's whole design
+optimizes for the opposite: hundreds of papers, seconds each, one keystroke per decision
+(`I`/`E`/`1`-`9`, see "Auto-advance" above) — a confirmation dialog per PDF-opened paper would
+defeat exactly the throughput this feature exists for. The chosen substitute for that review gate
+is a **permanent, unmissable warning** rather than a one-time confirmation: `Paper.abstractFromPdf`
+is written to the file (`project.ts`, alongside `abstract`), not held in a session-only structure
+like `aiMarks` — a co-reviewer opening the same file later, or the same reviewer in a future
+session, must see the same "this is a guess, verify against the PDF" caution the extracting session
+did, which a per-session mark cannot promise. `ScreeningRecord.tsx` renders that warning inline,
+above the abstract text, whenever the flag is set — text, not just a colored border, since a claim
+this consequential to a systematic review's corpus needs to survive a glance. This mirrors the
+precedent `Paper.aiUsage` already set: a *durable disclosure*, not a UI hint, for exactly this
+reason (see "AI-assisted annotation" below).
+
+**The flag is meaningless without a value to describe it, so it never survives without one.**
+`loadProject` drops `abstractFromPdf` whenever `abstract` itself is empty (`p.abstract &&
+p.abstractFromPdf === true`, `project.ts`) — a hand-edited file that deletes the abstract but
+leaves the flag behind gets the defensive treatment every other structurally-validated field in
+this loader gets, not trust.
+
+**A heuristic abstract is explicitly lower-confidence than one actually recorded somewhere.**
+Every other field `fillFromRef` (`editorStore.ts`) considers is "fill only if currently blank,
+never overwrite" — the reviewer's own input always wins. `abstract` is the one exception: a later
+reference-manager import is allowed to replace an `abstractFromPdf`-flagged value with the entry's
+real one, clearing the flag in the same write. This is a real answer to a real ordering problem —
+a PDF added first, a reference file imported second — not an oversight in the general rule.
+
+**`extractScreeningAbstract` re-checks staleness after its `await`, the same `get().project ===
+project` reference-equality guard `loadFromText`'s background auto-save uses for the same reason
+(`store.ts`; see `needsShapeMigration` in `data-model.md`'s Lifecycle section).**
+Between the `fetch`/`arrayBuffer`/heuristic round trip and the eventual write, the reviewer may have
+switched papers, typed a real abstract by hand, or the project may have been closed outright. The
+write only happens if the project reference is still the same one the read started against, the
+selected paper is still the same paper, and that paper's `abstract` is still empty — otherwise the
+result is silently discarded rather than landing on the wrong paper or clobbering a human's answer
+that arrived first. Unlike that background auto-save, though, this write **does** push one ordinary
+undo step (`pushPast`, gated the same way `setScreeningDecision` gates its own snapshot) — an
+automatic fill a reviewer doesn't want is exactly the kind of thing `Ctrl+Z` exists for, matching
+the precedent `adoptUnanimousValues`/`adoptAllUnanimousScreening` already set for an automatic,
+marked, but undoable write.
+
+**Rejected: treating the extracted abstract as session-only until confirmed, never writing it to
+the file.** This was the first design considered, closer to `aiMarks`' "shown but not yet real"
+treatment. It fails the actual requirement: a co-reviewer must see the same paper's abstract (and
+the same caution about it) the extracting reviewer saw, which a value that lives only in one
+person's browser session cannot deliver on a shared, git-tracked project file — and re-extracting
+on every single open, for every reviewer, of every paper, is wasted work `abstractFromPdf` avoids
+for free once the first extraction lands.
 
 ### The paper-list dot's meaning changes in Consolidation, and the mitigation
 

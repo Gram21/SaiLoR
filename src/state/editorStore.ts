@@ -62,6 +62,10 @@ export interface EditorPaper {
   sourcePath?: string
   /** Preserved verbatim when editing an existing file. */
   annotations?: unknown
+  /** True when `abstract` came from the PDF-text heuristic (`addPickedPdfs`
+   *  below) rather than a reference file or typing — see `Paper.abstractFromPdf`.
+   *  Cleared the moment a reference import provides a real one (`fillFromRef`). */
+  abstractFromPdf?: boolean
   extra?: Record<string, unknown>
 }
 
@@ -343,8 +347,13 @@ function fillFromRef(match: EditorPaper, entry: RefEntry): boolean {
     match.doi = entry.doi
     changed = true
   }
-  if (!match.abstract.trim() && entry.abstract) {
+  // A heuristic-extracted abstract (`abstractFromPdf`) is lower-confidence than
+  // one a reference manager actually recorded, so a real one is allowed to
+  // replace it — unlike every other field here, which never overwrites
+  // something already present.
+  if ((!match.abstract.trim() || match.abstractFromPdf) && entry.abstract) {
     match.abstract = entry.abstract
+    match.abstractFromPdf = undefined
     changed = true
   }
   return changed
@@ -398,6 +407,7 @@ export function buildProjectJson(state: {
         .filter(Boolean)
       if (p.doi.trim()) out.doi = p.doi.trim()
       if (p.abstract && p.abstract.trim()) out.abstract = p.abstract.trim()
+      if (p.abstractFromPdf && p.abstract && p.abstract.trim()) out.abstractFromPdf = true
       out.pdf = p.pdf.trim()
       out.annotations = p.annotations ?? {}
       return out
@@ -491,6 +501,9 @@ export interface ScreeningImportRow {
   authors: string[]
   doi?: string
   abstract?: string
+  /** Carried from `Paper.abstractFromPdf` — the caution stays attached to the
+   *  abstract, not to which project file it currently lives in. */
+  abstractFromPdf?: boolean
   pdf: string
 }
 
@@ -544,6 +557,7 @@ function partitionScreeningPapers(project: Project): {
       authors: p.authors,
       doi: p.doi,
       abstract: p.abstract,
+      abstractFromPdf: p.abstractFromPdf,
       pdf: p.pdf,
     }
     if (status === 'included') included.push(row)
@@ -751,7 +765,16 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
     ? { reasons: dedupeTrim(parsed.config.screening.reasons) }
     : null
   const papers: EditorPaper[] = parsed.papers.map((p) => {
-    const known = new Set(['id', 'title', 'authors', 'doi', 'abstract', 'pdf', 'annotations'])
+    const known = new Set([
+      'id',
+      'title',
+      'authors',
+      'doi',
+      'abstract',
+      'abstractFromPdf',
+      'pdf',
+      'annotations',
+    ])
     const extra: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(p)) if (!known.has(k)) extra[k] = v
     return {
@@ -761,6 +784,7 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
       authors: (p.authors ?? []).join(', '),
       doi: p.doi ?? '',
       abstract: p.abstract ?? '',
+      abstractFromPdf: p.abstract && p.abstractFromPdf === true ? true : undefined,
       pdf: p.pdf,
       // No absolute source: the file already stores a relative path, and we only
       // re-derive paths for PDFs the user adds in this session.
@@ -901,6 +925,10 @@ export const useEditorStore = create<EditorState>()(
               if (meta.title && paper.title === entry.placeholder) paper.title = meta.title
               if (meta.authors?.length && !paper.authors.trim()) {
                 paper.authors = meta.authors.join(', ')
+              }
+              if (meta.abstract && !paper.abstract.trim()) {
+                paper.abstract = meta.abstract
+                paper.abstractFromPdf = true
               }
             })
           } catch {
@@ -1424,6 +1452,7 @@ export const useEditorStore = create<EditorState>()(
           authors: p.authors.join(', '),
           doi: p.doi ?? '',
           abstract: p.abstract ?? '',
+          abstractFromPdf: p.abstract && p.abstractFromPdf ? true : undefined,
           pdf: p.pdf,
           sourcePath: p.pdf ? absolutes[i] : undefined,
           annotations: {},

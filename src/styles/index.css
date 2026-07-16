@@ -652,6 +652,18 @@ button.paper-search-mode:hover {
   color: var(--muted);
   font-style: italic;
 }
+/* Same accent as an unconfirmed AI mark — this is the same kind of claim,
+ * "the app produced this, you have not verified it", just from a heuristic
+ * rather than a model. */
+.screening-abstract-extracted-notice {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--ai-mark);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ai-mark) 12%, transparent);
+  font-size: 0.9em;
+  color: var(--text);
+}
 
 /* ---- Screening panel (right pane) ---- */
 .screening-body {
