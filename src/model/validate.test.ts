@@ -29,6 +29,7 @@ function paper(annotations: AnnotationValueTree, over: Partial<Paper> = {}): Pap
     annotations,
     reviews: {},
     aiUsage: [],
+    equal: [],
     extra: {},
     ...over,
   }

@@ -204,6 +204,10 @@ interface AppState {
   /** Papers the last run skipped for having no annotations at all — see `validateProject`. */
   validationUnannotated: UnannotatedPaper[] | null
   validationOpen: boolean
+  /** Whether the agreement-statistics dialog is open. Session-only, like `validationOpen`. */
+  agreementOpen: boolean
+  /** Whether the "every field reviewers disagree on" overview is open. Session-only, like `validationOpen`. */
+  disagreementsOpen: boolean
   /** Shown when closing a project with unsaved changes. */
   closePromptOpen: boolean
   /** The running version, injected from package.json at build time. */
@@ -282,6 +286,10 @@ interface AppState {
   /** Check every paper's annotations against the schema and show the result. */
   runValidation: () => void
   setValidationOpen: (open: boolean) => void
+  /** Open/close the agreement-statistics dialog. View state only — see `agreementOpen`. */
+  setAgreementOpen: (open: boolean) => void
+  /** Open/close the disagreement overview. View state only — see `disagreementsOpen`. */
+  setDisagreementsOpen: (open: boolean) => void
   /** Look for a newer release (cached; silent when it can't be determined). */
   checkForUpdate: () => Promise<void>
 
@@ -411,6 +419,8 @@ export const useStore = create<AppState>()(
     validation: null,
     validationUnannotated: null,
     validationOpen: false,
+    agreementOpen: false,
+    disagreementsOpen: false,
     closePromptOpen: false,
     appVersion: APP_VERSION,
     update: null,
@@ -515,6 +525,8 @@ export const useStore = create<AppState>()(
         s.validation = null
         s.validationUnannotated = null
         s.validationOpen = false
+        s.agreementOpen = false
+        s.disagreementsOpen = false
         s.closePromptOpen = false
         s.currentReviewer = null
         s.consolidationTarget = null
@@ -600,6 +612,8 @@ export const useStore = create<AppState>()(
           s.validation = null
           s.validationUnannotated = null
           s.validationOpen = false
+          s.agreementOpen = false
+          s.disagreementsOpen = false
           s.consolidationTarget = null
           // Re-derive rather than carry over: a single-reviewer project never
           // has one, and a multi-reviewer project restores whatever was
@@ -805,6 +819,16 @@ export const useStore = create<AppState>()(
     setValidationOpen: (open) =>
       set((s) => {
         s.validationOpen = open
+      }),
+
+    setAgreementOpen: (open) =>
+      set((s) => {
+        s.agreementOpen = open
+      }),
+
+    setDisagreementsOpen: (open) =>
+      set((s) => {
+        s.disagreementsOpen = open
       }),
 
     checkForUpdate: async () => {

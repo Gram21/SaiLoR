@@ -324,6 +324,25 @@ function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
               once you have answered a group, it is left alone rather than re-ordered underneath you.
             </p>
             <p>
+              Two buttons above the annotation fields belong to Consolidation.{' '}
+              <strong>⚠ Disagreements</strong> lists every field the reviewers answered differently
+              across the whole project — click one to jump straight to it, rather than hunting paper
+              by paper. <strong>⚖ Agreement</strong> reports the usual inter-rater coefficients —{' '}
+              <strong>Cohen's κ</strong>, <strong>Fleiss' κ</strong> and{' '}
+              <strong>Krippendorff's α</strong> — and you can tick any combination. One that cannot
+              honestly be computed for your project is greyed out and tells you why when you hover it,
+              rather than quietly reporting a number that would not mean what it appears to.
+            </p>
+            <p>
+              Two reviewers can write <em>RCT</em> and <em>randomized controlled trial</em> and mean
+              one thing, which no amount of text comparison can know. When you see such a pair in the
+              compare popup, tick{' '}
+              <strong>"These answers mean the same thing"</strong>: from then on the app counts it as
+              agreement — in the badge, in the disagreement list, and in the statistics. It is worth
+              doing before you quote a κ anywhere, because until you do, the number understates how
+              much your reviewers actually agreed.
+            </p>
+            <p>
               Until you pick who you are, the form stays hidden: an answer that isn't attributable to
               a reviewer is worse than no answer.
             </p>

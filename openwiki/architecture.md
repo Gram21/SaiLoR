@@ -304,7 +304,10 @@ entry* and lines them up.
 | `assign.ts` | Hungarian max-weight assignment. Greedy is not merely worse but wrong here: one locally good pair can force two later entries into a much worse one, and greedy cannot trade the first against the second |
 | `align.ts` | The recursion. `alignNode` returns slots per repeatable node; `alignableNodes` lists what is worth doing |
 | `apply.ts` | Writes an alignment into the data |
-| `unanimous.ts` | Finds the fields every reviewer answered identically, for `adoptUnanimousValues` to fill |
+| `unanimous.ts` | Finds the fields every reviewer answered identically, for `adoptUnanimousValues` to fill. Owns `comparable()` — the one rule for "did they say the same answer", shared with `disagreements.ts` and the compare popup so the three cannot drift into different verdicts |
+| `disagreements.ts` | The per-field cross-reviewer verdict (`FieldVerdict`): who answered, which category their answer falls in, whether that is agreement. What both the overview and the statistics read |
+| `metrics.ts` | Cohen's κ, Fleiss' κ, Krippendorff's α over abstract units × raters, each with an applicability check that explains refusal in a sentence. Knows nothing about papers or schemas, so it can be checked against published worked examples |
+| `agreement.ts` | Turns `projectVerdicts` into a `MetricInput` |
 
 **Matching cannot cross**, which is a requirement of the feature: a group's sub-entries are only
 ever matched *inside* an already-matched pair of parents, because the recursion never offers a
@@ -351,6 +354,44 @@ anything once their entries line up. The rules:
   count as a unanimous "no" and mark every checkbox in the project.
 - **A field the consolidator already answered is left alone**, per field (unlike the matching guard,
   which is per node).
+
+### Agreement and the disagreement overview
+
+Two buttons sit in `.annotations-head-row` in the Consolidation seat only — the slot the ✦ AI button
+occupies elsewhere.
+
+**⚖ Agreement** (`AgreementDialog`) computes the coefficients the reviewer ticks. A **unit** is one
+annotation field on one paper; `agreement.ts` includes only the fields **at least two reviewers
+answered**, since a field with one answer carries no agreement information (`disagreements.ts` says
+so, and warns that callers must gate on `answeredBy.length >= 2` rather than trust `agree`, which is
+vacuously true for a single answer). The dialog states the unit count and how many were skipped, so
+the reader can see what was measured rather than guess.
+
+A metric that cannot honestly be computed is disabled, at half opacity, with its `Applicability.reason`
+verbatim on hover — those strings are written as complete user-facing sentences for exactly that
+("Cohen's κ compares exactly two reviewers; this project has 3"). Cohen's needs exactly 2 raters;
+Fleiss' needs every reviewer to have rated every unit; Krippendorff's α survives both, which is why
+it is worth having all three.
+
+**⚠ Disagreements** (`DisagreementOverview`) lists every field where the answering reviewers gave
+different categories, grouped by paper; a row jumps to it (`selectPaper` → `openConsolidation`), which
+is the point — finding a disagreement is useless if you then have to hunt for it.
+
+### Semantic equality (`Paper.equal`)
+
+Reviewers write the same thing differently ("RCT" / "randomized controlled trial"). Nothing captured
+that, so every statistic understated agreement. The compare popup carries a tick — "these answers mean
+the same thing" — persisted as `Paper.equal`, a list of canonical field paths. `disagreements.ts` then
+gives those reviewers one shared category, so the field reads as agreement everywhere: the badge, the
+overview, and the coefficients. Measured on a two-reviewer demo, marking one such pair moved Cohen's κ
+from 0.533 to 0.682.
+
+The box only appears where there is something to declare — when the answers already match after
+`comparable()`, there is nothing to add.
+
+**Known limit**, documented at the field: it is one boolean for the whole field, i.e. "all the
+answering reviewers here are equivalent". Exact for two reviewers; with three or more it cannot say
+"these two agree but that one does not".
 
 ### AI is not available in Consolidation
 

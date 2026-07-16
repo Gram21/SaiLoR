@@ -217,6 +217,16 @@ it) and the project works that way.
 - **What everyone already agreed on is filled in for you**, with a light-blue border until you click
   it. Only case and stray whitespace are forgiven — a near-miss in wording, or a field one reviewer
   left blank, stays your call. It leaves your attention for the fields that actually differ.
+- **⚠ Disagreements** lists every field the reviewers answered differently, across the whole project.
+  Click one to jump straight to it.
+- **⚖ Agreement** reports **Cohen's κ**, **Fleiss' κ** and **Krippendorff's α** — tick any
+  combination. A coefficient that cannot honestly be computed for your project is greyed out and says
+  why on hover (Cohen's compares exactly two reviewers; Fleiss' needs everyone to have rated
+  everything; α copes with both).
+- **"These answers mean the same thing"** — reviewers write *RCT* and *randomized controlled trial*
+  and mean one thing. Tick it in the compare popup and the app treats it as agreement from then on:
+  in the badge, in the disagreement list, and in the statistics. Without it, agreement is understated,
+  so it is worth doing before you quote a κ.
 - **Repeatable groups are lined up for you.** Opening a paper as Consolidation adds as many entries
   as the busiest reviewer recorded, and works out *which of each reviewer's entries are the same
   entry* — two people rarely list the same three findings in the same order. Your Finding #2 is then
