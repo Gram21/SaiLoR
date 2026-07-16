@@ -237,6 +237,58 @@
       }
     },
     {
+      "id": "Fuchss2026_LiSSA",
+      "title": "Linking Software System Artifacts: Toward Generic Traceability Link Recovery through Retrieval-Augmented Generation",
+      "authors": [
+        "Dominik Fuchß",
+        "Tobias Hey",
+        "Jan Keim",
+        "Haoyu Liu",
+        "Niklas Ewald",
+        "Tobias Thirolf",
+        "Anne Koziolek"
+      ],
+      "pdf": "pdfs/A1-37.pdf",
+      "annotations": {
+        "Decision": [
+          {
+            "value": null
+          }
+        ],
+        "Reason": [
+          {
+            "value": null
+          }
+        ]
+      },
+      "reviews": {
+        "1": {
+          "Decision": [
+            {
+              "value": null
+            }
+          ],
+          "Reason": [
+            {
+              "value": null
+            }
+          ]
+        },
+        "2": {
+          "Decision": [
+            {
+              "value": null
+            }
+          ],
+          "Reason": [
+            {
+              "value": null
+            }
+          ]
+        }
+      }
+    },
+    {
       "id": "paper-d",
       "title": "A Survey of Deep Learning Frameworks for Image Classification",
       "authors": [
