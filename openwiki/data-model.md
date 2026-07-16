@@ -170,6 +170,16 @@ answer. `config.reviewers` (≥2) turns this on:
 - Consolidation is not one of the N reviewers (it is not counted in `config.reviewers`) — it is a
   distinct role that compares every reviewer's answer for a field and picks the one that ships.
 
+**Lowering `config.reviewers` doesn't delete data — it makes it unreachable.** `parseReviews`
+(`src/model/project.ts`) keeps any `reviews` key matching a reviewer number regardless of the
+current `config.reviewers`, and `serializeProject` writes back every key present in `Paper.reviews`,
+not just `1..N`. So a reviewer's tree above the current count round-trips through load/save
+untouched. What changes is reachability: the Toolbar reviewer switch only offers seats
+`1..config.reviewers`, so `currentTree` is never invoked for a higher one — it can't be selected,
+edited, or (via `runValidation`) validated — and `alignConsolidationNode`/`adoptUnanimousValues`
+(both in `store.ts`) loop `1..project.reviewers`, excluding it from matching and unanimous-value
+adoption too. Raising `config.reviewers` again makes the same tree reachable, unchanged.
+
 **Routing.** `currentTree(project, currentReviewer, paper)` in `src/state/store.ts` is the single
 place this is decided: single-reviewer → `paper.annotations`; Consolidation → `paper.annotations`;
 a numbered reviewer → `paper.reviews[N]`; multi-reviewer with nobody picked yet → `null` (nothing

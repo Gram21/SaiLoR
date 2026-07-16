@@ -224,6 +224,8 @@ it) and the project works that way.
   reporting a disagreement that was only a difference of ordering. Matching is on what the entries
   say, so wording need not be identical. It changes the file (a single `Ctrl/Cmd + Z` undoes it), and
   a group you have already answered is left alone rather than reordered underneath you.
+- **Lowering the reviewer count later doesn't erase anyone's work** — it just becomes unreachable
+  (no seat, excluded from Consolidation) until you raise the count again. See §9 of the schema guide.
 
 It is still **one file, with no locking**: two people saving the same JSON at once will overwrite
 each other. Pass it along, or take turns.
