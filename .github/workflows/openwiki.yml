@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: true
           fetch-depth: 0
@@ -44,9 +44,9 @@ jobs:
 
       - name: Set up Node.js
         if: steps.recent_commits.outputs.changed == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Install OpenWiki
         if: steps.recent_commits.outputs.changed == 'true'
