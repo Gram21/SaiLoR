@@ -10,6 +10,7 @@ import { ErrorPanel } from './components/ErrorPanel'
 import { HelpDialog } from './components/HelpDialog'
 import { ValidationDialog } from './components/ValidationDialog'
 import { ConsolidationDialog } from './components/ConsolidationDialog'
+import { ReviewerPrompt } from './components/ReviewerPrompt'
 import { AgreementDialog } from './components/AgreementDialog'
 import { DisagreementOverview } from './components/DisagreementOverview'
 import { ClosePrompt } from './components/ClosePrompt'
@@ -217,6 +218,7 @@ export function App() {
       <HelpDialog />
       <ValidationDialog />
       <ConsolidationDialog />
+      <ReviewerPrompt />
       <AgreementDialog />
       <DisagreementOverview />
       <ClosePrompt />

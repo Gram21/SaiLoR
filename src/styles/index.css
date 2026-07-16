@@ -1754,3 +1754,54 @@ kbd {
   color: var(--text);
   font-weight: 600;
 }
+
+/* ---- First-open reviewer prompt ---- */
+.reviewer-prompt {
+  max-width: 560px;
+}
+.reviewer-prompt .modal-body p {
+  margin: 0 0 10px;
+  line-height: 1.5;
+  font-size: 0.92em;
+}
+.reviewer-prompt-ask {
+  margin-top: 16px !important;
+  font-weight: 600;
+  color: var(--text);
+}
+.reviewer-prompt-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.reviewer-prompt-choice {
+  flex: 1 1 auto;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.reviewer-prompt-choice:hover {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+}
+/* Set apart because it is a different kind of job, not a fourth reviewer —
+   the one thing the prompt's text exists to explain. */
+.reviewer-prompt-choice.is-consolidation {
+  flex-basis: 100%;
+  border-style: dashed;
+}
+.reviewer-prompt-ready {
+  font-size: 0.8em;
+  color: var(--muted);
+}
+.reviewer-prompt-note {
+  margin-top: 14px !important;
+  color: var(--muted);
+  font-size: 0.82em !important;
+}

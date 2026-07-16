@@ -355,6 +355,40 @@ anything once their entries line up. The rules:
 - **A field the consolidator already answered is left alone**, per field (unlike the matching guard,
   which is per node).
 
+### Picking a seat (`ReviewerPrompt`)
+
+A multi-reviewer project opens with `currentReviewer === null` — never Reviewer 1, since an
+unattributed edit is worse than a prompt. `ReviewerPrompt` renders over the app in exactly that
+state: it explains what multi-review means (independent annotation, one reconciling pass) and makes
+the reviewer choose. There is no dismiss — the form is withheld without a seat anyway, so a dismiss
+button would only offer a state in which nothing can be done — but it yields to Help (`helpOpen`),
+which is otherwise unreachable behind it.
+
+Because the selection is persisted per project, "prompt shows" means "first open of this file". The
+exception is a project with no stable path — a `?project=` URL, or a browser download-only save —
+where `reviewerStorageKey` deliberately persists nothing rather than risk restoring a seat under the
+wrong project. Those ask on **every** load. That is honest (the app genuinely cannot tell who you
+are) but it is the one case where the prompt is not a once-per-project event.
+
+### Readiness: what Consolidation can act on (`readiness.ts`)
+
+`readyToConsolidate(schema, paper, reviewerCount)` — every numbered reviewer has recorded something
+on this paper, by `hasAnnotations` (so a ticked box counts as work; an unticked one never does, since
+every boolean reads `false` whether or not anyone looked).
+
+The **Consolidation seat itself is not gated** — a consolidator may legitimately start on the papers
+that are ready while the rest are still being reviewed. The gate is per paper instead, and one rule
+drives both places it shows, so they cannot disagree:
+
+- the paper list's dot (`paperIsMarkedDone`) reads "ready to consolidate" in that seat;
+- a field's ⇄ compare button is **disabled** on a paper not every reviewer has annotated. That
+  reviewer's column would otherwise render empty, which reads as "they found nothing here" when the
+  truth is "they have not looked yet" — inviting a decision on evidence that does not exist.
+
+Alignment and unanimous adoption already decline such papers on their own (`alignConsolidationNode`
+needs two reviewer trees; `adoptUnanimousValues` needs every reviewer to have answered), so no extra
+guard is needed there.
+
 ### Agreement and the disagreement overview
 
 Two buttons sit in `.annotations-head-row` in the Consolidation seat only — the slot the ✦ AI button
