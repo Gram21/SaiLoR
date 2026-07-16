@@ -85,15 +85,53 @@ button.primary {
   height: 100%;
 }
 
+/* Three equal-ish tracks: outer two are `1fr` each (always the same width as
+   each other, whatever their content), the center is `auto`-sized around the
+   reviewer switch. That's what centers the switch on the *toolbar*, not just
+   between its neighbors — a plain `margin: auto` centers between neighbors of
+   whatever width they happen to be, which drifts as the project title
+   (`.toolbar-status`) changes length.
+
+   Bare `1fr` tracks (not `minmax(0, 1fr)`) floor each side at its own
+   min-content width, so the grid can never squeeze `.toolbar-left`'s buttons
+   (or anything else with no truncation of its own) into overlapping the
+   center — it can only give them equal *extra* space when there's slack, or
+   let the row exceed the viewport when there truly isn't enough room.
+   `.toolbar-right` is the one side that DOES shrink below its content: its
+   `min-width: 0` lets that floor drop to just its (non-shrinking) view
+   buttons, because `.project-name` beneath it is the part designed to give —
+   `overflow: hidden` on that element is what makes its own min-content
+   contribution 0, so the ellipsis truncation kicks in before anything is
+   forced to overlap. Tried `minmax(0, 1fr)` on both sides first; at ~900px
+   with a long title it let `.toolbar-left` shrink past its buttons' natural
+   width and the reviewer switch/dropdown visibly sat on top of "Close". */
 .toolbar {
   height: var(--toolbar-h);
   flex: 0 0 auto;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 12px;
   padding: 0 12px;
   background: var(--panel-bg);
   border-bottom: 1px solid var(--border);
+}
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.toolbar-right {
+  /* Stays pinned to the right edge of its track, same spot `margin-left:
+     auto` put it at before the switch to grid. Only this side is allowed to
+     shrink below its natural content width — see the `.toolbar` comment. */
+  justify-content: flex-end;
+  min-width: 0;
+}
+.toolbar-center {
+  display: flex;
+  justify-content: center;
 }
 .app-title {
   font-weight: 600;
@@ -115,9 +153,7 @@ button.primary {
   min-width: 30px;
   text-align: center;
 }
-/* Pushes itself and the view controls that follow it to the right edge. */
 .toolbar-status {
-  margin-left: auto;
   min-width: 0;
   color: var(--muted);
 }
@@ -220,6 +256,41 @@ body.resizing * {
   background: var(--ok);
   border-color: var(--ok);
   color: #fff;
+}
+
+/* Same switch, dropdown form — used above `REVIEWER_DROPDOWN_THRESHOLD`
+   reviewers, where a row of pills would crowd the toolbar. Same bordered
+   "seat" box and warning treatment as `.reviewer-switch`, just around a
+   `Dropdown` trigger instead of a row of buttons. */
+.reviewer-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.reviewer-dropdown.unselected {
+  border-color: var(--danger);
+}
+.reviewer-dropdown.unselected .reviewer-dropdown-trigger .dropdown-trigger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+/* Consolidation stays a distinct *kind* of seat here too — the trigger
+   itself picks up the same accent `.reviewer-btn-consolidation` uses once
+   Consolidation is the active seat, not just its entry inside the menu. */
+.reviewer-dropdown-trigger.is-consolidation .dropdown-trigger {
+  border-color: var(--ok);
+  color: var(--ok);
+  font-weight: 600;
+}
+.reviewer-menu-label.is-current {
+  font-weight: 600;
+}
+.reviewer-menu-consolidation {
+  color: var(--ok);
+  font-weight: 600;
 }
 
 /* ---- Paper list ---- */

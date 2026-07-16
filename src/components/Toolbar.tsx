@@ -9,6 +9,10 @@ import { SidebarToggle } from './SidebarToggle'
 export const UNLOCK_CLICK_WINDOW_MS = 2500
 /** How many clicks on the app title unlock AI use for the session. */
 export const UNLOCK_CLICK_COUNT = 12
+/** Above this many reviewers the pill row would crowd the toolbar, so the
+ * switch becomes a dropdown instead. At or below it, pills stay — a row of
+ * up to 5 numbers plus Consolidation is still scannable at a glance. */
+export const REVIEWER_DROPDOWN_THRESHOLD = 5
 
 /** A run of clicks, tracked as a plain object so the logic below stays pure. */
 export interface TitleClickState {
@@ -79,6 +83,48 @@ export function Toolbar() {
   const reviewerCount = project?.reviewers ?? 1
   const showReviewerSwitch = !!project && reviewerCount > 1
   const reviewerUnset = showReviewerSwitch && currentReviewer === null
+  const reviewerIds = Array.from({ length: reviewerCount }, (_, i) => String(i + 1))
+  const useReviewerDropdown = reviewerCount > REVIEWER_DROPDOWN_THRESHOLD
+
+  // The closed dropdown must still read "you are Reviewer 3" — a caret alone
+  // would defeat the point of showing the active seat at all.
+  const reviewerDropdownLabel = reviewerUnset
+    ? 'Pick a reviewer'
+    : currentReviewer === 'consolidation'
+      ? 'Consolidation'
+      : `Reviewer ${currentReviewer}`
+
+  const reviewerMenuItems: MenuItem[] = [
+    ...reviewerIds.map<MenuItem>((rid) => ({
+      type: 'item',
+      label: (
+        <span className={`reviewer-menu-label${currentReviewer === rid ? ' is-current' : ''}`}>
+          {currentReviewer === rid ? '✓ ' : ''}Reviewer {rid}
+        </span>
+      ),
+      hint: `Reviewer ${rid} — annotate independently; only you see this until Consolidation`,
+      disabled: busy,
+      onSelect: () => selectReviewer(rid),
+    })),
+    { type: 'separator' },
+    {
+      type: 'item',
+      // A different *kind* of seat, not "reviewer N+1" — kept visually
+      // distinct here too via its own label class, same as the pill form.
+      label: (
+        <span
+          className={`reviewer-menu-label reviewer-menu-consolidation${
+            currentReviewer === 'consolidation' ? ' is-current' : ''
+          }`}
+        >
+          {currentReviewer === 'consolidation' ? '✓ ' : ''}Consolidation
+        </span>
+      ),
+      hint: "Consolidation — compare every reviewer's answers and record the final, agreed result. This is what the project's saved output actually contains.",
+      disabled: busy,
+      onSelect: () => selectReviewer('consolidation'),
+    },
+  ]
 
   const openItems: MenuItem[] = [
     { type: 'item', label: 'Open file…', shortcut: `${modKey}+O`, onSelect: () => void openProject() },
@@ -118,141 +164,174 @@ export function Toolbar() {
 
   return (
     <header className="toolbar">
-      {/* While the list is open its own header owns the toggle; once collapsed
-          the button has to live out here, or there'd be no way to bring it back.
-          The slot is always in the layout — hiding it rather than removing it
-          keeps the title from shifting sideways as the sidebar is toggled. */}
-      <span
-        className={`toolbar-toggle-slot${sidebarCollapsed ? '' : ' is-hidden'}`}
-        aria-hidden={!sidebarCollapsed}
-      >
-        <SidebarToggle />
-      </span>
-
-      <span className="app-title" onClick={onTitleClick}>
-        SaiLoR
-      </span>
-
-      <div className="toolbar-actions">
-        <Dropdown label="Open" title="Open a project" disabled={busy} items={openItems} />
-        <Dropdown label="Save" title="Save the project" disabled={busy} items={saveItems} />
-        <button
-          type="button"
-          title={
-            reviewerUnset
-              ? 'Pick a reviewer first — there is nothing to validate as "the reviewer" yet'
-              : "Check every paper's annotations against the schema"
-          }
-          onClick={runValidation}
-          // Validation is about the annotations, so it means nothing while the
-          // project editor is open, or before a reviewer has been picked.
-          disabled={!project || busy || editorOpen || reviewerUnset}
+      {/* Three tracks (left / center / right) so the reviewer switch can sit
+          truly centered on the toolbar itself rather than merely between its
+          neighbors — see `.toolbar` in index.css. Both flanking tracks are
+          always rendered, even with nothing to put in the center, so the
+          grid's column assignment never shifts. */}
+      <div className="toolbar-left">
+        {/* While the list is open its own header owns the toggle; once collapsed
+            the button has to live out here, or there'd be no way to bring it back.
+            The slot is always in the layout — hiding it rather than removing it
+            keeps the title from shifting sideways as the sidebar is toggled. */}
+        <span
+          className={`toolbar-toggle-slot${sidebarCollapsed ? '' : ' is-hidden'}`}
+          aria-hidden={!sidebarCollapsed}
         >
-          Validate
-        </button>
-        <button
-          type="button"
-          title="Close this project and return to the start screen"
-          onClick={requestCloseProject}
-          disabled={!project || busy || editorOpen}
-        >
-          Close
-        </button>
+          <SidebarToggle />
+        </span>
+
+        <span className="app-title" onClick={onTitleClick}>
+          SaiLoR
+        </span>
+
+        <div className="toolbar-actions">
+          <Dropdown label="Open" title="Open a project" disabled={busy} items={openItems} />
+          <Dropdown label="Save" title="Save the project" disabled={busy} items={saveItems} />
+          <button
+            type="button"
+            title={
+              reviewerUnset
+                ? 'Pick a reviewer first — there is nothing to validate as "the reviewer" yet'
+                : "Check every paper's annotations against the schema"
+            }
+            onClick={runValidation}
+            // Validation is about the annotations, so it means nothing while the
+            // project editor is open, or before a reviewer has been picked.
+            disabled={!project || busy || editorOpen || reviewerUnset}
+          >
+            Validate
+          </button>
+          <button
+            type="button"
+            title="Close this project and return to the start screen"
+            onClick={requestCloseProject}
+            disabled={!project || busy || editorOpen}
+          >
+            Close
+          </button>
+        </div>
       </div>
 
-      {/* Only a multi-reviewer project shows this — a single-reviewer one has
-          nobody to switch between. Which "seat" is active must be unmistakable,
-          since it decides which tree every edit lands in. */}
-      {showReviewerSwitch && !editorOpen && (
-        <div
-          className={`reviewer-switch${reviewerUnset ? ' unselected' : ''}`}
-          role="group"
-          aria-label="Reviewer"
-        >
-          {reviewerUnset && <span className="reviewer-switch-prompt">Pick a reviewer:</span>}
-          {Array.from({ length: reviewerCount }, (_, i) => String(i + 1)).map((rid) => (
-            <button
-              key={rid}
-              type="button"
-              className={`reviewer-btn${currentReviewer === rid ? ' active' : ''}`}
-              title={`Reviewer ${rid} — annotate independently; only you see this until Consolidation`}
-              disabled={busy}
-              onClick={() => selectReviewer(rid)}
+      <div className="toolbar-center">
+        {/* Only a multi-reviewer project shows this — a single-reviewer one has
+            nobody to switch between. Which "seat" is active must be unmistakable,
+            since it decides which tree every edit lands in. Past
+            `REVIEWER_DROPDOWN_THRESHOLD` reviewers the pill row would crowd the
+            toolbar, so it becomes a dropdown — but the closed trigger still names
+            the active seat, or the whole point of an at-a-glance seat is lost. */}
+        {showReviewerSwitch &&
+          !editorOpen &&
+          (useReviewerDropdown ? (
+            <div
+              className={`reviewer-dropdown${reviewerUnset ? ' unselected' : ''}`}
+              role="group"
+              aria-label="Reviewer"
             >
-              {rid}
-            </button>
+              {reviewerUnset && <span className="reviewer-switch-prompt">Pick a reviewer:</span>}
+              <Dropdown
+                className={`reviewer-dropdown-trigger${
+                  currentReviewer === 'consolidation' ? ' is-consolidation' : ''
+                }`}
+                label={reviewerDropdownLabel}
+                title={reviewerUnset ? undefined : 'Switch reviewer'}
+                disabled={busy}
+                items={reviewerMenuItems}
+              />
+            </div>
+          ) : (
+            <div
+              className={`reviewer-switch${reviewerUnset ? ' unselected' : ''}`}
+              role="group"
+              aria-label="Reviewer"
+            >
+              {reviewerUnset && <span className="reviewer-switch-prompt">Pick a reviewer:</span>}
+              {reviewerIds.map((rid) => (
+                <button
+                  key={rid}
+                  type="button"
+                  className={`reviewer-btn${currentReviewer === rid ? ' active' : ''}`}
+                  title={`Reviewer ${rid} — annotate independently; only you see this until Consolidation`}
+                  disabled={busy}
+                  onClick={() => selectReviewer(rid)}
+                >
+                  {rid}
+                </button>
+              ))}
+              <button
+                type="button"
+                className={`reviewer-btn reviewer-btn-consolidation${
+                  currentReviewer === 'consolidation' ? ' active' : ''
+                }`}
+                title="Consolidation — compare every reviewer's answers and record the final, agreed result. This is what the project's saved output actually contains."
+                disabled={busy}
+                onClick={() => selectReviewer('consolidation')}
+              >
+                Consolidation
+              </button>
+            </div>
           ))}
-          <button
-            type="button"
-            className={`reviewer-btn reviewer-btn-consolidation${
-              currentReviewer === 'consolidation' ? ' active' : ''
-            }`}
-            title="Consolidation — compare every reviewer's answers and record the final, agreed result. This is what the project's saved output actually contains."
-            disabled={busy}
-            onClick={() => selectReviewer('consolidation')}
-          >
-            Consolidation
-          </button>
-        </div>
-      )}
-
-      {/* The file name sits just left of the view controls; it carries the auto
-          margin that pushes both to the right edge. */}
-      <div className="toolbar-status">
-        {project && (
-          // The project's own title when it has one; the path on hover locates it.
-          <span className="project-name" title={saveHandle?.path ?? projectName}>
-            {projectTitle || projectName || 'untitled'}
-            {dirty && <span className="dirty-dot" title="Unsaved changes">●</span>}
-          </span>
-        )}
       </div>
 
-      <div className="toolbar-view">
-        <div className="font-controls" role="group" aria-label="Font size">
+      <div className="toolbar-right">
+        {/* The file name sits just left of the view controls; both are pushed
+            to the right edge by `.toolbar-right`'s own flex layout. */}
+        <div className="toolbar-status">
+          {project && (
+            // The project's own title when it has one; the path on hover locates it.
+            <span className="project-name" title={saveHandle?.path ?? projectName}>
+              {projectTitle || projectName || 'untitled'}
+              {dirty && <span className="dirty-dot" title="Unsaved changes">●</span>}
+            </span>
+          )}
+        </div>
+
+        <div className="toolbar-view">
+          <div className="font-controls" role="group" aria-label="Font size">
+            <button
+              type="button"
+              className="icon-btn"
+              title={`Decrease app font size (${modKey}+Shift+-)`}
+              onClick={decreaseFont}
+            >
+              A−
+            </button>
+            <button
+              type="button"
+              className="icon-btn"
+              title={`Reset app font size (${modKey}+Shift+0)`}
+              onClick={resetFont}
+            >
+              A
+            </button>
+            <button
+              type="button"
+              className="icon-btn"
+              title={`Increase app font size (${modKey}+Shift++)`}
+              onClick={increaseFont}
+            >
+              A+
+            </button>
+          </div>
           <button
             type="button"
             className="icon-btn"
-            title={`Decrease app font size (${modKey}+Shift+-)`}
-            onClick={decreaseFont}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label="Toggle theme"
+            onClick={toggleTheme}
           >
-            A−
+            {theme === 'dark' ? '☀' : '☾'}
           </button>
           <button
             type="button"
             className="icon-btn"
-            title={`Reset app font size (${modKey}+Shift+0)`}
-            onClick={resetFont}
+            title="Help (F1)"
+            aria-label="Help"
+            onClick={() => setHelpOpen(true)}
           >
-            A
-          </button>
-          <button
-            type="button"
-            className="icon-btn"
-            title={`Increase app font size (${modKey}+Shift++)`}
-            onClick={increaseFont}
-          >
-            A+
+            ?
           </button>
         </div>
-        <button
-          type="button"
-          className="icon-btn"
-          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-          aria-label="Toggle theme"
-          onClick={toggleTheme}
-        >
-          {theme === 'dark' ? '☀' : '☾'}
-        </button>
-        <button
-          type="button"
-          className="icon-btn"
-          title="Help (F1)"
-          aria-label="Help"
-          onClick={() => setHelpOpen(true)}
-        >
-          ?
-        </button>
       </div>
     </header>
   )

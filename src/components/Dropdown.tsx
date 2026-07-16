@@ -22,10 +22,14 @@ interface DropdownProps {
   title?: string
   disabled?: boolean
   align?: 'left' | 'right'
+  /** Extra class(es) on the root `.dropdown` element — a styling hook for
+      callers that need a modifier (e.g. a warning border) without a second
+      dropdown implementation. */
+  className?: string
 }
 
 /** A small click-to-open menu that closes on outside-click, Escape, or selection. */
-export function Dropdown({ label, items, title, disabled, align = 'left' }: DropdownProps) {
+export function Dropdown({ label, items, title, disabled, align = 'left', className }: DropdownProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
 
@@ -46,7 +50,7 @@ export function Dropdown({ label, items, title, disabled, align = 'left' }: Drop
   }, [open])
 
   return (
-    <div className="dropdown" ref={rootRef}>
+    <div className={`dropdown${className ? ` ${className}` : ''}`} ref={rootRef}>
       <button
         type="button"
         className="dropdown-trigger"
