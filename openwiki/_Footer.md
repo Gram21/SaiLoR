@@ -1,4 +1,8 @@
 ---
+type: navigation
+title: SaiLoR Wiki Footer
+description: Footer for the SaiLoR developer wiki. Notes that these pages are mirrored from the repository's openwiki/ folder and provides links to the repository, README, issues, releases, annotation schema guide, and license.
+---
 
 **These pages are a mirror.** They are maintained in
 [`openwiki/`](https://github.com/Gram21/SaiLoR/tree/main/openwiki) in the repository and published

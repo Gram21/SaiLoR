@@ -1,3 +1,10 @@
+---
+type: landing
+title: SaiLoR Developer Documentation
+description: Home page for SaiLoR developer documentation. SaiLoR is a tool for conducting Systematic Literature Reviews (SLRs) with a single JSON project file holding both the annotation schema and the papers to annotate. Links to quickstart, architecture, data model, and operations pages.
+tags: [home, overview, documentation]
+---
+
 # SaiLoR — Developer Documentation
 
 **SaiLoR** is a tool for reviewers conducting **Systematic Literature Reviews (SLR)** — the letters

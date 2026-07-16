@@ -1,3 +1,10 @@
+---
+type: guide
+title: SaiLoR Quickstart
+description: Introduction to SaiLoR, a tool for conducting Systematic Literature Reviews (SLRs). Covers what SaiLoR is, the full tech stack (React 19, Electron, Vite, Zustand, Zod), quick-start commands for web/desktop/Docker, and the repository layout.
+tags: [quickstart, setup, tech-stack, commands]
+---
+
 # SaiLoR — Quickstart
 
 ## What is SaiLoR?
@@ -134,7 +141,8 @@ npm run typecheck
 │   └── styles/            index.css (full app styling), ai.css, editor.css, papers-editor.css, schema-editor.css, git.css
 ├── samples/               Also the default Docker volume (mounted read-only, served at /projects/)
 │   ├── project.example.json  Example project (title, 4 papers incl. a multi-page PDF) + schema with required and enum fields
-│   └── pdfs/                 Sample PDFs (incl. multipage.pdf with an internal link)
+│   ├── screening.example.json  Example screening project (same 4 papers + 3 abstract-only, all decision states)
+│   └── pdfs/                 Sample PDFs (incl. multipage.pdf with an internal link, A1-37.pdf for two-column author parsing)
 ├── scripts/ci.sh          Provider-agnostic CI pipeline (install → typecheck → test → build)
 ├── scripts/build-electron.sh  Provider-agnostic desktop build (electron-builder for the host OS)
 ├── .github/workflows/ci.yml       GitHub Actions — runs scripts/ci.sh on push to main and on every pull request

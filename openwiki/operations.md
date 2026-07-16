@@ -1,3 +1,10 @@
+---
+type: operations
+title: SaiLoR Operations
+description: Operational guide for SaiLoR — development setup (web, Electron, Docker), build commands for the static SPA and desktop installers, testing with Vitest, CI configuration, release packaging, deployment options, and wiki sync mechanics.
+tags: [operations, build, testing, ci, deployment, docker]
+---
+
 # Operations
 
 ## Development
