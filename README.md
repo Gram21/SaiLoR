@@ -290,12 +290,13 @@ reasons.
 - **The middle pane defaults to the title and abstract** rather than the PDF — that is what a
   screening decision is normally made from, and a screening paper may have no PDF attached at all
   (`"pdf": ""`). One click swaps to the actual PDF when you need it.
-- **A missing abstract is extracted from the PDF automatically** the moment you open it, using a
-  basic text heuristic (look for an "Abstract" heading, read until the next section starts) — the
-  same one that already pre-fills title/authors when a PDF is added while building the project. It is
-  a guess, not a fact: an extracted abstract carries a clearly labelled, permanent warning wherever
-  it's shown, telling you to check the PDF directly if in doubt. It never runs when a real abstract is
-  already there, and never overwrites one.
+- **A missing abstract is extracted from the PDF automatically**, as soon as you select the paper —
+  it appears in the abstract view without you opening the PDF at all, which is the point: the abstract
+  is what you screen from. It uses a basic text heuristic (find the "Abstract" heading, follow that
+  column to the next section), the same one that pre-fills title/authors when a PDF is added while
+  building the project. It is a guess, not a fact: an extracted abstract carries a clearly labelled,
+  permanent warning wherever it's shown, telling you to check the PDF directly if in doubt. It never
+  runs when a real abstract is already there, and never overwrites one.
 - **It reuses the multi-reviewer/Consolidation machinery wholesale**: two reviewers screen
   independently, Consolidation reconciles them, and **⚖ Agreement** reports κ over the include/exclude
   decision specifically — the statistic a screening phase actually reports. Where every reviewer

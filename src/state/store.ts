@@ -189,6 +189,21 @@ const roundZoom = (z: number) => Math.round(z * 100) / 100
  */
 let lastFieldKey: string | null = null
 
+/**
+ * Bumped whenever the open project is *replaced or closed* — never for an
+ * ordinary edit. A background read that outlives its project (see
+ * `extractScreeningAbstract`) compares this to decide whether its result still
+ * belongs anywhere.
+ *
+ * Reference equality on `project` cannot answer that question, even though
+ * `loadFromText`'s auto-save uses it for its own narrower one: immer hands back
+ * a **new** `project` object on every edit, so `get().project !== captured`
+ * is true the moment the reviewer decides a single paper — which during
+ * screening is constantly, and exactly while a PDF is being read. Guarding on
+ * that would throw away a perfectly good abstract because someone pressed `I`.
+ */
+let projectGeneration = 0
+
 interface AppState {
   project: Project | null
   currentPaperId: string | null
@@ -269,11 +284,20 @@ interface AppState {
   /** Whether the screening progress/PRISMA summary modal is open. Session-only. */
   screeningSummaryOpen: boolean
   /**
-   * The paper id `extractScreeningAbstract` is currently reading a PDF for, or
-   * null. Session-only, like `screeningShowPdf` — purely a "give the reviewer
-   * something other than a silent gap" indicator, not state anything depends on.
+   * Per paper id, what `extractScreeningAbstract` has done about its PDF this
+   * session: `'reading'` while the read is in flight (the record view shows a
+   * notice), `'none'` once a read finished having found nothing — which is what
+   * stops a PDF with no recognisable abstract from being re-fetched and
+   * re-parsed on every single re-selection of that paper.
+   *
+   * A *successful* read deliberately leaves no entry: the abstract it wrote is
+   * its own record, and `paper.abstract` is the guard that keeps it from
+   * running again. That matters because an undo can restore a snapshot taken
+   * before the abstract landed — leaving a marker here would then make the loss
+   * permanent for the session, where instead re-selecting the paper simply
+   * extracts again. Session-only, like `screeningShowPdf`.
    */
-  screeningAbstractExtracting: string | null
+  screeningAbstractReads: Record<string, 'reading' | 'none'>
 
   openProject: () => Promise<void>
   openRecent: (id: string) => Promise<void>
@@ -378,15 +402,18 @@ interface AppState {
   toggleScreeningPdf: () => void
   setScreeningSummaryOpen: (open: boolean) => void
   /**
-   * Best-effort: read the current paper's PDF and fill `abstract` from
-   * `pdfMeta.ts`'s heuristic when there is none yet. Fired by `toggleScreeningPdf`
-   * when it opens the PDF, never awaited by its caller — the toggle itself is
-   * instant, and a slow or failed read only means the abstract stays empty, the
-   * same as before this feature existed. Marks the result `abstractFromPdf` so
-   * `ScreeningRecord` can warn it is unverified, and pushes one undo step so an
-   * unwanted extraction can be undone like any other write.
+   * Best-effort: read `paperId`'s PDF and fill its `abstract` from
+   * `pdfMeta.ts`'s heuristic when it has a PDF but no abstract yet. Fired by
+   * `selectPaper` and by `loadFromText` for the paper it opens on — screening
+   * is decided from the abstract, so the record view must simply *have* one,
+   * without the reviewer opening the PDF to trigger it.
+   *
+   * Never awaited by its callers: selecting a paper is instant, and a slow or
+   * failed read only means the abstract stays empty, exactly as before this
+   * existed. Marks what it writes `abstractFromPdf`, so it is shown as the
+   * guess it is.
    */
-  extractScreeningAbstract: () => Promise<void>
+  extractScreeningAbstract: (paperId: string) => Promise<void>
   /**
    * Adopt every paper's unanimous screening decision into the consolidated
    * tree, in one undo step. Returns how many papers were filled.
@@ -499,7 +526,7 @@ export const useStore = create<AppState>()(
     screeningFilter: 'all',
     screeningShowPdf: false,
     screeningSummaryOpen: false,
-    screeningAbstractExtracting: null,
+    screeningAbstractReads: {},
 
     openProject: async () => {
       const platform = getPlatform()
@@ -581,6 +608,7 @@ export const useStore = create<AppState>()(
 
     closeProject: () => {
       lastFieldKey = null
+      projectGeneration++
       set((s) => {
         s.project = null
         s.currentPaperId = null
@@ -603,6 +631,7 @@ export const useStore = create<AppState>()(
         s.screeningFilter = 'all'
         s.screeningShowPdf = false
         s.screeningSummaryOpen = false
+        s.screeningAbstractReads = {}
       })
       void get().refreshRecents()
     },
@@ -676,6 +705,7 @@ export const useStore = create<AppState>()(
         // The title only becomes known once the JSON is parsed, so the recents
         // entry is enriched here rather than in the adapter's open path.
         if (handle) getPlatform().rememberProject(handle, name, project.title)
+        projectGeneration++
         set((s) => {
           s.project = project
           s.saveHandle = handle
@@ -706,8 +736,14 @@ export const useStore = create<AppState>()(
           // none, so the reviewer picks explicitly rather than inheriting
           // whoever the previously open project happened to be showing).
           s.currentReviewer = project.reviewers > 1 ? loadCurrentReviewer(handle, project.reviewers) : null
+          s.screeningAbstractReads = {}
         })
         lastFieldKey = null
+        // The paper the project opens on gets the same treatment `selectPaper`
+        // gives every one after it — the reviewer never selected this one by
+        // hand, so nothing else would ever fire for it.
+        const firstPaperId = project.papers[0]?.id
+        if (firstPaperId) void get().extractScreeningAbstract(firstPaperId)
         // Write the migrated shape back in place — never a download, and never
         // a "where should this go" prompt, just because a file's shape needed
         // updating. A project with nowhere stable to write (a `?project=` URL,
@@ -839,6 +875,11 @@ export const useStore = create<AppState>()(
         s.currentPaperId = id
         s.pdfSelection = ''
       })
+      // Screening reads the abstract, so a screening paper that has none needs
+      // one *here* — by the time the reviewer is looking at the record view,
+      // not only if they go on to open the PDF. Fire-and-forget: the selection
+      // above is already done, and every guard lives in the action itself.
+      void get().extractScreeningAbstract(id)
     },
 
     toggleSidebar: () =>
@@ -1358,32 +1399,27 @@ export const useStore = create<AppState>()(
         s.screeningFilter = filter
       }),
 
-    toggleScreeningPdf: () => {
-      const wasShowing = get().screeningShowPdf
+    toggleScreeningPdf: () =>
       set((s) => {
         s.screeningShowPdf = !s.screeningShowPdf
-      })
-      // Opening the PDF, not closing it, and only when there is something to
-      // gain from reading it — see `extractScreeningAbstract`'s own guards for
-      // the rest. Fire-and-forget: the toggle above already happened.
-      if (!wasShowing) void get().extractScreeningAbstract()
-    },
+      }),
 
     setScreeningSummaryOpen: (open) =>
       set((s) => {
         s.screeningSummaryOpen = open
       }),
 
-    extractScreeningAbstract: async () => {
+    extractScreeningAbstract: async (paperId) => {
       const project = get().project
-      const paper = currentPaper(get())
-      if (!project || project.screening === null || !paper) return
-      if (!paper.pdf || paper.abstract) return
-      if (get().screeningAbstractExtracting !== null) return // already reading one
+      if (!project || project.screening === null) return
+      const paper = project.papers.find((p) => p.id === paperId)
+      if (!paper || !paper.pdf || paper.abstract) return
+      // Already reading it, or already read it and found nothing this session.
+      if (get().screeningAbstractReads[paperId]) return
 
-      const paperId = paper.id
+      const generation = projectGeneration
       set((s) => {
-        s.screeningAbstractExtracting = paperId
+        s.screeningAbstractReads[paperId] = 'reading'
       })
       try {
         // Same source the viewer itself renders — works unchanged in both
@@ -1400,22 +1436,32 @@ export const useStore = create<AppState>()(
         const meta = await extractPdfMeta(bytes)
         if (!meta.abstract) return
 
-        // Stale-response guard: the reviewer may have switched papers, closed
-        // the project, or the PDF may already have gotten an abstract some
-        // other way while this fetch was in flight.
-        const stillCurrent = get()
-        if (stillCurrent.project !== project) return
-        const stillPaper = currentPaper(stillCurrent)
-        if (!stillPaper || stillPaper.id !== paperId || stillPaper.abstract) return
-
-        lastFieldKey = null
-        const snap: HistoryEntry = { project, paperId: stillCurrent.currentPaperId }
+        // Staleness is only about the project being *gone*, not about the
+        // selection or any edit since: this abstract belongs to `paperId`
+        // whether or not the reviewer has moved on or decided something
+        // meanwhile, so a late result is still written rather than wasted.
+        // See `projectGeneration` for why this is not a reference check.
+        if (projectGeneration !== generation) return
         set((s) => {
-          const draft = currentPaper(s)
-          if (!draft || draft.abstract) return
-          pushPast(s, snap)
-          draft.abstract = meta.abstract
-          draft.abstractFromPdf = true
+          // The read *did* find an abstract, so this PDF must never end up
+          // marked `'none'` — that means "there is nothing in this PDF to
+          // find", and would wrongly block a later retry. Cleared before the
+          // write below, which may still decline.
+          delete s.screeningAbstractReads[paperId]
+          const target = s.project?.papers.find((p) => p.id === paperId)
+          // Re-checked inside the producer: something else may have supplied an
+          // abstract — a hand edit — while this read was in flight.
+          if (!target || target.abstract) return
+          target.abstract = meta.abstract
+          target.abstractFromPdf = true
+          // No undo entry, deliberately. This is a passive background fill the
+          // reviewer never asked for, triggered merely by looking at a paper —
+          // pushing it onto the undo stack would mean `Ctrl+Z` after a decision
+          // silently removes an abstract instead of undoing that decision. It
+          // follows the editor's own background title/author fill
+          // (`addPickedPdfs`), which likewise patches rows without an undo step
+          // of its own. `dirty` still gets set, so the ordinary unsaved-changes
+          // path persists it.
           s.dirty = true
         })
       } catch {
@@ -1423,7 +1469,10 @@ export const useStore = create<AppState>()(
         // abstract empty — the same outcome as never having tried.
       } finally {
         set((s) => {
-          if (s.screeningAbstractExtracting === paperId) s.screeningAbstractExtracting = null
+          // Only if the success path above did not already clear it.
+          if (s.screeningAbstractReads[paperId] === 'reading') {
+            s.screeningAbstractReads[paperId] = 'none'
+          }
         })
       }
     },

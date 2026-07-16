@@ -12,7 +12,7 @@ import { useStore, selectCurrentPaper } from '../state/store'
 export function ScreeningRecord() {
   const paper = useStore(selectCurrentPaper)
   const toggleScreeningPdf = useStore((s) => s.toggleScreeningPdf)
-  const extracting = useStore((s) => s.screeningAbstractExtracting === paper?.id)
+  const extracting = useStore((s) => (paper ? s.screeningAbstractReads[paper.id] === 'reading' : false))
 
   if (!paper) {
     return <div className="panel pdf empty">No paper selected.</div>

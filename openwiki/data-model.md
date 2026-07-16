@@ -323,8 +323,8 @@ section for why that gap exists).
 
 **`abstractFromPdf` is a durable disclosure, the same idea `aiUsage` embodies for AI-assisted
 annotation, applied to a basic text heuristic instead of a model.** `Paper.abstract` can be filled
-by a heuristic that reads a PDF's own text (`pdfMeta.ts`'s `abstractFromLines` — find an "Abstract"
-heading, capture forward to the next section) rather than by a human or a reference-manager export,
+by a heuristic that reads a PDF's own text (`pdfMeta.ts`'s `abstractFromLines` — find the "Abstract"
+heading and follow its column to the next section) rather than by a human or a reference-manager export,
 and when it is, `abstractFromPdf: true` is written into the file right alongside it — never a
 session-only flag, so a co-reviewer opening the file later sees the same "unverified, check the PDF
 if in doubt" warning the extracting session did. `loadProject` drops the flag whenever `abstract`

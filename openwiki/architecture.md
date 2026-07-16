@@ -655,18 +655,21 @@ Screening is normally decided from `abstract` alone, but a paper added straight 
 than through a reference-manager export, which usually carries one already — see
 `references.ts`'s `RefEntry.abstract`) may have none. `pdfMeta.ts`'s `abstractFromLines` fills that
 gap with the same kind of best-effort layout heuristic the module already used for title/authors:
-find a line starting with the word "Abstract", read forward until the next section heading, a
-two-column baseline split, or a length cap — whichever comes first. Two call sites, one function:
+find the "Abstract" heading and follow **the column it sits in** to that column's next section
+heading (see the function's own comment for why column-following, not line-reading, is the whole
+problem). Two call sites, one function:
 
 - **`editorStore.ts`'s `addPickedPdfs`** — the existing background title/author fill for a directly
   added PDF now also tries the abstract, pre-filling the draft row the same way (never clobbering
   something the reviewer already typed while the read was in flight).
-- **`store.ts`'s `extractScreeningAbstract`**, fired by `toggleScreeningPdf` whenever it *opens* the
-  PDF (never on close) for a paper with a PDF and no abstract yet. This is the case the user's
-  request named directly: "the Annotation Schema JSON and the PDF is opened for screening" reads
-  most naturally as *the moment the reviewer opens that PDF*, not paper selection or a separate
-  button — it also means a paper screened purely from title+abstract, the documented common case,
-  never pays for a PDF fetch it doesn't need.
+- **`store.ts`'s `extractScreeningAbstract(paperId)`**, fired by **`selectPaper`** — and by
+  `loadFromText` for the paper a project opens on, which nothing else would ever fire for. Selection
+  is the trigger because the abstract *is* the screening surface: `ScreeningRecord` must simply
+  have one to show, without the reviewer opening the PDF to make it appear. An earlier version hung
+  this off `toggleScreeningPdf` instead, which inverted the feature — it only produced an abstract
+  once you had already opened the PDF you were trying to avoid opening. Auto-advance
+  (`setScreeningDecision`) routes through `selectPaper`, so the read-decide-read rhythm gets this for
+  free with no second call site.
 
 **Why this writes `abstract` immediately, with no per-paper confirmation step, unlike AI
 suggestions.** The AI-annotation flow (`applyAiSuggestions`, below) always gates a machine-produced
@@ -697,19 +700,43 @@ reference-manager import is allowed to replace an `abstractFromPdf`-flagged valu
 real one, clearing the flag in the same write. This is a real answer to a real ordering problem —
 a PDF added first, a reference file imported second — not an oversight in the general rule.
 
-**`extractScreeningAbstract` re-checks staleness after its `await`, the same `get().project ===
-project` reference-equality guard `loadFromText`'s background auto-save uses for the same reason
-(`store.ts`; see `needsShapeMigration` in `data-model.md`'s Lifecycle section).**
-Between the `fetch`/`arrayBuffer`/heuristic round trip and the eventual write, the reviewer may have
-switched papers, typed a real abstract by hand, or the project may have been closed outright. The
-write only happens if the project reference is still the same one the read started against, the
-selected paper is still the same paper, and that paper's `abstract` is still empty — otherwise the
-result is silently discarded rather than landing on the wrong paper or clobbering a human's answer
-that arrived first. Unlike that background auto-save, though, this write **does** push one ordinary
-undo step (`pushPast`, gated the same way `setScreeningDecision` gates its own snapshot) — an
-automatic fill a reviewer doesn't want is exactly the kind of thing `Ctrl+Z` exists for, matching
-the precedent `adoptUnanimousValues`/`adoptAllUnanimousScreening` already set for an automatic,
-marked, but undoable write.
+**Staleness here is about the project being *gone*, not about anything having changed — and
+`loadFromText`'s `get().project === project` reference check is the wrong tool for that, despite
+being right for its own narrower job.** immer hands back a **new** `project` object on every edit, so
+a reference comparison reads *one screening decision* as "the project was replaced". During
+screening that is not an edge case, it is the loop: decide a paper every second or two, while a PDF
+read is in flight. Guarding on identity threw away a perfectly good abstract because someone pressed
+`I` — and then marked the PDF as having none, so it never retried. `projectGeneration` (a
+module-level counter, bumped only by `loadFromText` and `closeProject`) answers the question actually
+being asked. The write additionally re-checks, inside the producer, that the paper still has no
+abstract, so a hand-typed one that landed first is never clobbered. What it deliberately does *not*
+check is the selection: the abstract belongs to `paperId`, so a late result is still written for the
+paper it was read from rather than discarded because the reviewer scrolled on.
+
+**It pushes no undo step**, unlike `adoptUnanimousValues` — and the difference is who asked. Adopting
+unanimous values is an action a consolidator *invokes*; this is a passive background fill triggered
+merely by looking at a paper. On the undo stack it would mean `Ctrl+Z` after a decision silently
+removes an abstract instead of undoing that decision, and with auto-advance firing an extraction per
+paper the stack would fill with them. It follows the editor's own background title/author fill
+(`addPickedPdfs`), which likewise patches rows with no undo entry of its own. `dirty` is still set,
+so the ordinary unsaved-changes path persists it. A corollary the `screeningAbstractReads` bookkeeping
+has to respect: an undo *can* still restore a snapshot taken before an abstract landed, so a
+successful read deliberately leaves no marker behind — re-selecting that paper simply extracts again,
+rather than the loss being permanent for the session.
+
+**The two-column layout is the whole difficulty, and hand-built test fixtures could not see it.**
+pdf.js reports a two-column paper's left-column "Abstract" heading and its right-column
+"1 Introduction" on the *same baseline*, so `toLines` yields one `Line` reading
+`"Abstract 1Introduction"`, and every body line below is likewise one `Line` holding a strip of each
+column. The first implementation read `line.text` and stopped at the first multi-segment line —
+which on a real paper is the line immediately after the heading — so it extracted **nothing at all**
+from exactly the documents the feature exists for, while every synthetic unit test passed, because
+those fixtures were built from the same wrong mental model as the code. Following the column
+requires each segment's `x`, which `toLines` already computed and then discarded; `Segment` now
+carries it. The lesson is pinned in place by `pdfMeta.test.ts`'s real-PDF integration tests (against
+`samples/pdfs/`, including a genuine two-column ICSE paper) and by
+`editorStore.realPdf.test.ts` for the composition — a class of bug no amount of hand-built `Line[]`
+could have caught.
 
 **Rejected: treating the extracted abstract as session-only until confirmed, never writing it to
 the file.** This was the first design considered, closer to `aiMarks`' "shown but not yet real"
