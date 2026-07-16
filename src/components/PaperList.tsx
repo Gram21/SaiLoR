@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useStore, currentTree } from '../state/store'
 import { hasAnnotations, annotationText } from '../model/annotations'
 import { SidebarToggle } from './SidebarToggle'
-import type { Paper } from '../model/project'
+import type { Paper, Project } from '../model/project'
 
 /** Which text a query word is matched against. */
 type SearchMode = 'metadata' | 'annotations'
@@ -12,6 +12,36 @@ interface IndexedPaper {
   paper: Paper
   metadataHaystack: string
   annotationHaystack: string
+}
+
+/**
+ * Whether a paper's status dot should read as "done", per seat:
+ *
+ *  - single-reviewer, a numbered reviewer, or multi-reviewer-nobody-picked:
+ *    unchanged from before this function existed — it is exactly
+ *    `hasAnnotations` over the active seat's own tree (`currentTree`), so the
+ *    dot answers "did *this* seat record anything".
+ *  - Consolidation: `currentTree` for this seat is `paper.annotations`, but
+ *    `adoptUnanimousValues` fills that tree just from opening the paper — its
+ *    fullness stops meaning the consolidator did anything. What the dot means
+ *    here instead is "ready to consolidate": every numbered reviewer 1..N has
+ *    annotated. That is well-defined independent of auto-adoption, and tells
+ *    the consolidator which papers are actually workable.
+ */
+export function paperIsMarkedDone(
+  project: Project,
+  paper: Paper,
+  currentReviewer: string | null,
+): boolean {
+  if (project.reviewers > 1 && currentReviewer === 'consolidation') {
+    for (let i = 1; i <= project.reviewers; i++) {
+      const tree = paper.reviews[String(i)]
+      if (!tree || !hasAnnotations(project.schema, tree)) return false
+    }
+    return true
+  }
+  const tree = currentTree(project, currentReviewer, paper)
+  return !!tree && hasAnnotations(project.schema, tree)
 }
 
 /** Left pane: the collapsible list of papers to annotate. */
@@ -135,19 +165,25 @@ export function PaperList() {
         ) : (
           filtered.map((p) => {
             // Progress is per-reviewer: as Reviewer 2 the dot must track *your*
-            // work, not whatever the consolidated tree happens to hold.
-            const tree = project ? currentTree(project, currentReviewer, p) : p.annotations
-            const annotated = !!tree && hasAnnotations(schema, tree)
+            // work, not whatever the consolidated tree happens to hold. In the
+            // Consolidation seat it means something else again — see
+            // `paperIsMarkedDone`.
+            const annotated = paperIsMarkedDone(project, p, currentReviewer)
+            const isConsolidation = currentReviewer === 'consolidation' && project.reviewers > 1
+            const title = isConsolidation
+              ? annotated
+                ? 'Ready to consolidate — every reviewer has annotated this paper'
+                : 'Not ready — some reviewers have not annotated this paper yet'
+              : annotated
+                ? 'Has annotations'
+                : 'Not annotated yet'
             return (
               <li
                 key={p.id}
                 className={p.id === currentPaperId ? 'paper active' : 'paper'}
                 onClick={() => selectPaper(p.id)}
               >
-                <span
-                  className={annotated ? 'status-dot done' : 'status-dot'}
-                  title={annotated ? 'Has annotations' : 'Not annotated yet'}
-                />
+                <span className={annotated ? 'status-dot done' : 'status-dot'} title={title} />
                 <span className="paper-info">
                   <span className="paper-title">{p.title}</span>
                   <span className="paper-authors">{p.authors.join(', ')}</span>
