@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore, selectCurrentPaper, fieldPath, peekValue } from '../state/store'
 import { resolvePath, displayPath } from '../llm/paths'
 import { emptyValue, type FieldValue } from '../model/annotations'
@@ -7,14 +7,39 @@ import { comparable } from '../consolidate/unanimous'
 import type { ResolvedDef } from '../model/schema'
 
 /**
+ * Whether leaving now would strand the field: declared equivalent, but with no
+ * value recorded.
+ *
+ * That combination is the worst of both worlds and has to be caught. The mark
+ * settles *that* the reviewers agreed, which is enough to drop the field out of
+ * the disagreement list and count it as agreement in the statistics — but it
+ * says nothing about *what* they agreed on, so the consolidated result stays
+ * blank. The field then reads as resolved everywhere while holding no answer,
+ * and nothing will ever surface it again.
+ *
+ * Emptiness is `isEmptyValue`, the same rule this dialog uses everywhere else,
+ * which means a boolean never counts as stranded — an unticked box is a real
+ * `false` in the data, not a gap, and there is no third state to record.
+ */
+export function closingWouldStrand(
+  def: ResolvedDef,
+  markedEqual: boolean,
+  consolidatedValue: FieldValue | undefined,
+): boolean {
+  return markedEqual && isEmptyValue(def.type, consolidatedValue ?? emptyValue(def.type))
+}
+
+/**
  * Only reachable from Consolidation mode's "compare" button on a field (see
  * `Field.tsx`). Shows every reviewer's answer for that one field, side by
  * side, so the final call is informed rather than a guess. Picking a row
  * writes through the ordinary `setFieldValue` — Consolidation *is* the active
  * reviewer while this is open, so that write already lands in the
  * consolidated tree via `currentTree`'s routing; nothing dialog-specific is
- * needed on the store side beyond opening/closing. Closing without picking
- * changes nothing.
+ * needed on the store side beyond opening/closing.
+ *
+ * Closing without picking changes nothing — *unless* the answers have been
+ * declared equivalent, in which case see `closingWouldStrand`.
  *
  * Follows the app's modal pattern (`.modal-overlay` → `.modal` → `.modal-head`
  * + `.modal-body`, Escape-to-close, backdrop click) — see `ValidationDialog.tsx`.
@@ -27,23 +52,45 @@ export function ConsolidationDialog() {
   const setFieldValue = useStore((s) => s.setFieldValue)
   const toggleFieldEquality = useStore((s) => s.toggleFieldEquality)
 
+  // Raised when leaving would strand the field, rather than letting it go and
+  // hoping the reviewer noticed. Local, not store state: it belongs to this
+  // dialog's lifetime and means nothing once it closes.
+  const [confirmingClose, setConfirmingClose] = useState(false)
+
+  // Re-resolve against the live schema (not just trust what opened the popup) —
+  // the schema could in principle have changed underneath it. Derived up here,
+  // null-tolerantly, because the Escape handler below needs the same verdict and
+  // hooks cannot live past the early return.
+  const canonical = target ? fieldPath(target.path, target.name, target.index) : null
+  const resolved = project && canonical ? resolvePath(project.schema, canonical) : null
+  const def = resolved?.def ?? null
+  const markedEqual = !!(paper && canonical && paper.equal.includes(canonical))
+  const consolidatedValue =
+    paper && target ? peekValue(paper.annotations, target.path, target.name, target.index) : undefined
+  const stranded = def ? closingWouldStrand(def, markedEqual, consolidatedValue) : false
+
+  // A fresh field starts with no question hanging over it.
+  useEffect(() => {
+    setConfirmingClose(false)
+  }, [target])
+
   useEffect(() => {
     if (!target) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeConsolidation()
+      if (e.key !== 'Escape') return
+      // Escape backs out of the warning rather than through it: discarding the
+      // mark is destructive, so it should take a deliberate click, not the key
+      // people hit to dismiss things.
+      if (confirmingClose) setConfirmingClose(false)
+      else if (stranded) setConfirmingClose(true)
+      else closeConsolidation()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [target, closeConsolidation])
+  }, [target, confirmingClose, stranded, closeConsolidation])
 
-  if (!target || !project || !paper) return null
+  if (!target || !project || !paper || !def || !canonical) return null
 
-  // Re-resolve against the live schema (not just trust what opened the
-  // popup) — the schema could in principle have changed underneath it.
-  const canonical = fieldPath(target.path, target.name, target.index)
-  const resolved = resolvePath(project.schema, canonical)
-  if (!resolved) return null
-  const def = resolved.def
   const label = displayPath([...target.path, { name: target.name, index: target.index }])
 
   const reviewerIds = Array.from({ length: project.reviewers }, (_, i) => String(i + 1))
@@ -51,13 +98,11 @@ export function ConsolidationDialog() {
     reviewer,
     value: peekValue(paper.reviews[reviewer] ?? {}, target.path, target.name, target.index),
   }))
-  const consolidatedValue = peekValue(paper.annotations, target.path, target.name, target.index)
 
   const answered = rows
     .map((r) => r.value)
     .filter((v) => !isEmptyValue(def.type, v ?? emptyValue(def.type)))
   const distinct = new Set(answered.map((v) => JSON.stringify(v)))
-  const markedEqual = paper.equal.includes(canonical)
   // A field the consolidator has declared equivalent reads as agreement no
   // matter what the raw text says — that declaration *is* the reconciliation.
   const agreement: 'agree' | 'disagree' | null =
@@ -72,13 +117,30 @@ export function ConsolidationDialog() {
   const comparableAnswers = new Set(answered.map((v) => comparable(v)))
   const canDeclareEqual = answered.length >= 2 && comparableAnswers.size > 1
 
+  const requestClose = () => {
+    if (stranded) setConfirmingClose(true)
+    else closeConsolidation()
+  }
+
   const take = (value: FieldValue | undefined) => {
-    setFieldValue(target.path, target.name, target.index, value === undefined ? emptyValue(def.type) : value)
+    const taken = value === undefined ? emptyValue(def.type) : value
+    setFieldValue(target.path, target.name, target.index, taken)
+    // Taking a reviewer's *blank* answer records nothing, so it leaves exactly
+    // the hole closing outright would. The guard is about what the field ends up
+    // holding, not which control was pressed.
+    if (markedEqual && isEmptyValue(def.type, taken)) setConfirmingClose(true)
+    else closeConsolidation()
+  }
+
+  /** Leave, and undo the claim the reviewer declined to back with a value. */
+  const discardAndClose = () => {
+    if (markedEqual) toggleFieldEquality(paper.id, canonical)
+    setConfirmingClose(false)
     closeConsolidation()
   }
 
   return (
-    <div className="modal-overlay" onClick={closeConsolidation}>
+    <div className="modal-overlay" onClick={requestClose}>
       <div
         className="modal consolidation-dialog"
         onClick={(e) => e.stopPropagation()}
@@ -94,7 +156,7 @@ export function ConsolidationDialog() {
               </span>
             )}
           </strong>
-          <button type="button" className="icon-btn" onClick={closeConsolidation} aria-label="Close">
+          <button type="button" className="icon-btn" onClick={requestClose} aria-label="Close">
             ×
           </button>
         </div>
@@ -125,14 +187,44 @@ export function ConsolidationDialog() {
             })}
           </ul>
           {canDeclareEqual && (
-            <label className="consolidation-equal">
-              <input
-                type="checkbox"
-                checked={markedEqual}
-                onChange={() => toggleFieldEquality(paper.id, canonical)}
-              />
-              These answers mean the same thing
-            </label>
+            <>
+              <label className="consolidation-equal">
+                <input
+                  type="checkbox"
+                  checked={markedEqual}
+                  onChange={() => toggleFieldEquality(paper.id, canonical)}
+                />
+                These answers mean the same thing
+              </label>
+              {/* The distinction the whole feature turns on, and the one people
+                  get wrong: the tick settles *that* the reviewers agreed, not
+                  *what* they agreed on. Said plainly and up front, because the
+                  alternative is finding out via the warning below. */}
+              <p className={`consolidation-hint${stranded ? ' needed' : ''}`}>
+                {stranded
+                  ? 'Now pick the answer above that the consolidated result should record. Marking them equivalent settles that the reviewers agreed; it does not record what they agreed on.'
+                  : 'Marking answers equivalent settles that the reviewers agreed. Pick one of them above as well, so the consolidated result records what they agreed on.'}
+              </p>
+            </>
+          )}
+
+          {confirmingClose && (
+            <div className="consolidation-warning" role="alert">
+              <p>
+                <strong>This field would be left with no answer.</strong> You marked the reviewers'
+                answers as meaning the same thing, so it no longer counts as a disagreement — but
+                nothing has been recorded as the consolidated value, so it will not show up in the
+                disagreement list again either.
+              </p>
+              <div className="consolidation-warning-actions">
+                <button type="button" className="primary" onClick={() => setConfirmingClose(false)}>
+                  Pick a value
+                </button>
+                <button type="button" onClick={discardAndClose}>
+                  Close and un-mark them
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
