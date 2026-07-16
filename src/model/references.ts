@@ -11,6 +11,10 @@ export interface RefEntry {
   authors: string[]
   doi?: string
   year?: number
+  /** The abstract, when the source carried one. Screening is usually decided
+   *  on title + abstract before a PDF is ever attached, so this is worth
+   *  bringing in even though nothing before this feature read it. */
+  abstract?: string
   /** A PDF path/filename the reference file mentioned (BibTeX `file`, RIS `L1`/`UR`), if any. */
   pdfHint?: string
 }
@@ -436,6 +440,10 @@ function parseBibEntry(raw: string): RefEntry | null {
     const hint = extractBibFileHint(fields.get('file')!)
     if (hint) entry.pdfHint = hint
   }
+  if (fields.has('abstract')) {
+    const abstract = cleanBibValue(fields.get('abstract')!)
+    if (abstract) entry.abstract = abstract
+  }
   return entry
 }
 
@@ -461,6 +469,11 @@ interface RisDraft {
   authors: string[]
   doi?: string
   year?: number
+  /** From `N2` — kept separately from `abstractAB` so a later `AB` can still
+   *  win regardless of tag order (see `finalizeRis`). */
+  abstract?: string
+  /** From `AB`, the primary abstract tag. */
+  abstractAB?: string
   pdfHint?: string
 }
 
@@ -472,6 +485,11 @@ function finalizeRis(cur: RisDraft): RefEntry | null {
     authors: cur.authors,
     doi: cur.doi,
     year: cur.year,
+    // AB is RIS's primary abstract tag; N2 is a widely-used alternate some
+    // exporters use instead (or, less often, alongside it). Prefer AB over
+    // N2 rather than concatenating — they are read as alternates in the
+    // wild, and concatenating would risk a duplicated abstract.
+    abstract: cur.abstractAB ?? cur.abstract,
     pdfHint: cur.pdfHint,
   }
 }
@@ -524,6 +542,12 @@ function parseRis(text: string): RefEntry[] {
         }
         break
       }
+      case 'AB':
+        if (value) cur.abstractAB = collapseSpace(unescapeLatex(value))
+        break
+      case 'N2':
+        if (!cur.abstract && value) cur.abstract = collapseSpace(unescapeLatex(value))
+        break
       case 'L1':
         if (!cur.pdfHint && value) cur.pdfHint = value
         break
@@ -572,6 +596,7 @@ function parseCslItem(raw: unknown): RefEntry | null {
   }
 
   const doi = typeof raw.DOI === 'string' && raw.DOI.trim() ? raw.DOI.trim() : undefined
+  const abstract = typeof raw.abstract === 'string' && raw.abstract.trim() ? collapseSpace(raw.abstract) : undefined
 
   let year: number | undefined
   const issued = raw.issued
@@ -580,7 +605,7 @@ function parseCslItem(raw: unknown): RefEntry | null {
     if (Array.isArray(first) && typeof first[0] === 'number') year = first[0]
   }
 
-  return { title, authors, doi, year }
+  return { title, authors, doi, year, abstract }
 }
 
 function parseCslJson(text: string): RefEntry[] {

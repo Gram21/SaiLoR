@@ -1,6 +1,7 @@
 import type { Project } from '../model/project'
 import type { MetricInput, Ratings } from './metrics'
 import { projectVerdicts } from './disagreements'
+import { SCREENING_DECISION } from '../screening/schema'
 
 /**
  * Reduces a project down to the opaque `raters`/`units` shape `metrics.ts`
@@ -41,7 +42,16 @@ export function agreementInput(project: Project): AgreementInput {
   const units: Ratings[] = []
   let skipped = 0
 
+  // A screening phase reports agreement on the include/exclude decision. The
+  // exclusion reason is a different question — and one only defined on the
+  // papers both reviewers excluded — so folding it into the same coefficient
+  // would produce a number that is neither. Filtered out entirely rather than
+  // counted as "skipped", which means "too few reviewers answered" and would
+  // be a lie here.
+  const decisionOnly = project.screening !== null
+
   for (const verdict of projectVerdicts(project)) {
+    if (decisionOnly && !(verdict.path.length === 0 && verdict.name === SCREENING_DECISION)) continue
     if (verdict.answeredBy.length < 2) {
       skipped++
       continue

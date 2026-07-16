@@ -3,6 +3,7 @@ import { resolveSchema, type AnnotationDef } from '../model/schema'
 import { normalizeTree, type AnnotationValueTree } from '../model/annotations'
 import type { Paper, Project } from '../model/project'
 import { agreementInput } from './agreement'
+import { screeningSchemaDefs } from '../screening/schema'
 
 const SCHEMA_DEFS: AnnotationDef[] = [
   { name: 'Study Type', type: 'string' },
@@ -42,6 +43,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     reviewers: 2,
     extra: {},
     papers: [],
+    screening: null,
     ...overrides,
   }
 }
@@ -142,5 +144,81 @@ describe('agreementInput', () => {
     })
     const { input } = agreementInput(project)
     expect(input.raters).toEqual(['1', '2', '3'])
+  })
+})
+
+describe('agreementInput on a screening project', () => {
+  const SCREENING_SCHEMA = resolveSchema(screeningSchemaDefs({ reasons: ['Wrong topic', 'Duplicate'] }))
+
+  function screeningTree(decision?: string, reason?: string): AnnotationValueTree {
+    return normalizeTree(SCREENING_SCHEMA, {
+      Decision: decision === undefined ? [] : [{ value: decision }],
+      Reason: reason === undefined ? [] : [{ value: reason }],
+    })
+  }
+
+  function screeningProject(overrides: Partial<Project> = {}): Project {
+    return {
+      version: 1,
+      schema: SCREENING_SCHEMA,
+      aiEnabled: true,
+      reviewers: 2,
+      extra: {},
+      papers: [],
+      screening: { reasons: ['Wrong topic', 'Duplicate'] },
+      ...overrides,
+    }
+  }
+
+  it('units cover only the Decision field, never Reason', () => {
+    const project = screeningProject({
+      papers: [
+        makePaper({
+          reviews: {
+            '1': screeningTree('Exclude', 'Duplicate'),
+            '2': screeningTree('Exclude', 'Wrong topic'),
+          },
+        }),
+      ],
+    })
+    const { input, unitCount } = agreementInput(project)
+    expect(unitCount).toBe(1)
+    expect(input.units).toHaveLength(1)
+    // Both reviewers said "Exclude" — the one unit reflects that, not the
+    // differing Reason wording.
+    expect(input.units[0]['1']).toBe(input.units[0]['2'])
+  })
+
+  it('skipped counts only Decisions fewer than two reviewers answered, never Reason', () => {
+    const project = screeningProject({
+      papers: [
+        makePaper({
+          reviews: {
+            '1': screeningTree('Exclude', 'Duplicate'),
+            '2': screeningTree(), // never screened
+          },
+        }),
+      ],
+    })
+    const { input, unitCount, skipped } = agreementInput(project)
+    expect(unitCount).toBe(0)
+    expect(input.units).toHaveLength(0)
+    // If Reason were counted too this would be 2 (Decision + Reason).
+    expect(skipped).toBe(1)
+  })
+
+  it('a non-screening project is unaffected — both Study Type and Findings/Claim are units', () => {
+    const project = makeProject({
+      papers: [
+        makePaper({
+          reviews: {
+            '1': tree({ 'Study Type': [{ value: 'RCT' }] }),
+            '2': tree({ 'Study Type': [{ value: 'RCT' }] }),
+          },
+        }),
+      ],
+    })
+    const { unitCount } = agreementInput(project)
+    expect(unitCount).toBe(1) // Findings/Claim: neither reviewer answered, so skipped, not a unit
   })
 })
