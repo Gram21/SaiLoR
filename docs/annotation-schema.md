@@ -652,6 +652,14 @@ reviewers annotate **independently**, then reconcile disagreements into one fina
   `git merge` of two reviewers' independently-annotated copies of the same file survivable instead
   of a near-guaranteed conflict on top of whatever they actually disagree about.
 
+  That still matters even though SaiLoR's own **Git → Pull** does not actually depend on it: a pull
+  reads the three revisions of the project file and reconciles them field by field over the parsed
+  data, not by asking git to merge the JSON's *lines* — so its correctness never rested on the
+  file's shape to begin with. The skeleton keeps doing its other two jobs regardless: a legible
+  `git diff`, and a plain `git merge` — run from the command line, or by any tool that isn't
+  SaiLoR — staying tractable instead of a conflict on the shape of the JSON, on top of whatever the
+  reviewers actually disagree about.
+
   `reviews` is written only for a multi-reviewer project — a single-reviewer file never has a
   `reviews` key on any paper, so it stays exactly as it always was. But for a multi-reviewer
   project, every reviewer `1..N` gets a key **from the moment the project is opened**, whether or

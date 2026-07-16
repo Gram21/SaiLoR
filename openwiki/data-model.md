@@ -224,6 +224,17 @@ key. That is what makes a `git diff` of one reviewer's work legible on its own, 
 a near-guaranteed conflict on the shape of the JSON itself, on top of whatever the reviewers
 actually disagree about.
 
+**It now has a second consumer, and the relationship deserves stating correctly rather than
+flatteringly.** SaiLoR's own git support (see "Merging two copies of a project" below and
+`architecture.md`'s "Git" section) does **not** rely on git's line-based merge to succeed — its
+**Pull** reads the three revisions of the project file and reconciles them field by field over the
+*parsed* project, so its correctness never depended on the file's line structure to begin with. The
+skeleton was not made redundant by that; it is still doing its original two jobs, and both still
+matter: it is what makes a plain `git diff` of one reviewer's work legible on its own, and it is
+what makes a plain `git merge` — run from the command line, or by any tool that is not SaiLoR —
+tractable rather than a conflict on the shape of the JSON, on top of whatever the reviewers actually
+disagree about.
+
 Two pieces make this hold in practice:
 
 - **`pruneTree` (`src/model/annotations.ts`) only drops *trailing* empties**, never an interior
@@ -257,6 +268,70 @@ so a text comparison would flag `equal-but-differently-formatted` (or merely dif
 files as needing migration too — precisely the kind of file every hand-written test fixture in this
 codebase is, which is how this got caught. The comparison is scoped to exactly `annotations` and
 `reviews`; nothing else about a file's formatting or unrelated content is examined.
+
+## Merging two copies of a project
+
+`src/git/merge.ts`'s `mergeProjects(base, ours, theirs)` is a three-way merge over three parsed
+`Project`s — not over the file's text — driven by git's **Pull**. This is the data-model view of what
+it does; `architecture.md`'s "Git" section covers the plumbing that gets it there.
+
+**The identity a field is merged under is `(paper id, tree, canonical field path)`.** `canonical` is
+`formatPath`'s form (`src/llm/paths.ts`), e.g. `"Findings[1]/Claim"` — but the path alone is **not**
+sufficient: the identical path exists once in `annotations` and once in *every* `reviews[N]`, so
+which tree it lives in (`{kind:'annotations'}`, `{kind:'review', reviewer:'2'}`, `{kind:'paper'}` for
+title/pdf/doi/authors, or `{kind:'project'}` for the project's own title) is part of the key. Two
+conflicts on the same canonical path in different trees are different conflicts.
+
+**The one rule**: a side that did not change a value away from the merge base does not get a vote on
+it. A field only one side changed takes that side's value automatically; a field both sides changed
+to the *same* thing is not a conflict either; only a field both sides changed to *different* things
+becomes one — the one case nothing but a person can settle. This is exactly the guarantee the
+feature exists to make: pulling can never silently discard a reviewer's own change to a field the
+remote never touched.
+
+**Absent reads as empty.** A field with no instance at that index reads the same as an instance whose
+value is the schema's empty value (`null`/`false`) — required because `pruneTree` already treats
+those two as the same thing on disk (see above), so a merge that told them apart would treat a field
+one side simply hasn't reached yet as a conflict against a value the other side actually wrote. This
+is also what makes instance **removal** need no special handling at all: an entry one side deleted
+reads as all-empty on that side, the field-level rule takes the empties (since the other side didn't
+change it either), and the ordinary trailing-empty prune drops the now-trailing instance on the next
+save — deletion falls out of the same rule that handles an ordinary edit.
+
+**Papers merge by id**, in ours' own order followed by the papers only theirs has (in theirs' order).
+A paper one side deleted and the other side *changed* is **kept**, with a note — a field-level UI has
+no way to ask "keep or delete this whole paper", and the two failure directions are not symmetric (an
+unwanted kept paper is one click from gone; deleted annotated work is simply gone). Only when the
+side that kept the paper made no actual change to it does the deletion go through.
+
+**`reviews` is never deleted by a merge** — only by both sides having already dropped a reviewer's
+key, the same rule `normalizeReviews` already applies when `config.reviewers` is lowered (see above).
+A reviewer's tree is someone's labour, which is why this is treated differently from a paper: a
+project's papers are the project author's call; a reviewer's answers are not anyone else's to delete
+by implication.
+
+**`Paper.aiUsage` is a union, not a three-way merge**, and does not consult the base: it is an
+append-only disclosure log with no delete operation the app exposes, so a record either side still
+holds must survive regardless of what the merge base looked like — three-way logic could otherwise
+drop a genuine disclosure and misreport how AI was used on a paper.
+
+**`Paper.equal` is a set**, merged per-path the same way an ordinary field is (`merge3<boolean>` on
+"does this path's mark include this reviewer's declaration"). A boolean has only two values, so "both
+sides changed it, differently" cannot happen — a mark can never conflict.
+
+**What refuses, rather than guessing.** A change to `version`, `config.schema`, `config.ai`,
+`config.reviewers`, or a root/paper `extra` key, made differently on both sides, refuses the whole
+merge and names what could not be reconciled, instead of picking a field-level answer for something
+that reshapes the file — most obviously the schema, which decides the shape of every tree the merge
+would otherwise be walking. `Project.title` is not on this list: it is an ordinary string, a conflict
+row expresses it perfectly, and refusing a whole merge over two people renaming the review would be
+absurd.
+
+**Testing**: `src/git/merge.test.ts` builds every base/ours/theirs through the real `loadProject`
+(never a hand-assembled `Project`), so fixtures are exactly as schema-normalized and
+empty-skeleton-shaped as `mergeProjects`' real caller hands it — and pins the field-level guarantee,
+the interior-gap and instance-removal invariants, the multi-reviewer case, every refusal, and a full
+`serializeProject`/`loadProject` round-trip of a resolved merge.
 
 ## Lifecycle: Load → Normalize → Edit → Prune → Serialize
 
