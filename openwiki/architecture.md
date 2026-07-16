@@ -133,7 +133,7 @@ App (src/App.tsx)
 ├── Toolbar (src/components/Toolbar.tsx)
 │     Open ▾ dropdown (Open file… + recent projects) + Save ▾ dropdown (Save / Save as…)
 │     Font controls (A− A A+), theme toggle (☾/☀), help (?)
-│     Reviewer switch (multi-reviewer projects only) — Reviewer 1..N + Consolidation, hidden entirely for a single-reviewer project; see "Multiple reviewers & Consolidation" below
+│     Reviewer switch (multi-reviewer projects only), centered on the toolbar — Reviewer 1..N + Consolidation, hidden entirely for a single-reviewer project; pills at ≤5 reviewers, a dropdown above that; see "Multiple reviewers & Consolidation" below
 ├── [if project loaded: workspace — a CSS grid whose column widths come from resizable panes]
 │   ├── PaperList (src/components/PaperList.tsx)
 │   │     List of papers with search box (META / TAGS modes, see below); green dot if the active reviewer has annotations; click to select
@@ -295,6 +295,26 @@ hidden entirely otherwise. The active seat is highlighted; an unselected state g
 border and a "Pick a reviewer:" prompt. **Validate** is additionally disabled until a reviewer is
 picked (see "Validation" above). Note this shares the toolbar with the hidden AI-unlock click
 gesture on the app title — the two are unrelated and don't interact.
+
+The switch sits in a dedicated center track of the toolbar (`.toolbar-left` / `.toolbar-center` /
+`.toolbar-right` in `index.css`, a 3-column grid with `1fr auto 1fr`) so it's centered on the
+toolbar itself rather than merely between its flanking groups — a plain `margin: auto` would drift
+as the project title (`.toolbar-status`, on the right) changes length. The two outer tracks are
+bare `1fr` (not `minmax(0, 1fr)`), so each floors at its own min-content width and can never be
+squeezed into overlapping the center; only `.toolbar-right` is allowed to shrink further, because
+`.project-name` beneath it already truncates with an ellipsis. Under real space pressure the row
+simply asks for more width than the window has (or the title truncates harder), never overlapping
+text.
+
+Above `REVIEWER_DROPDOWN_THRESHOLD` (5) reviewers, the pill row would crowd the toolbar, so the
+same choice renders as a `Dropdown` (reusing `src/components/Dropdown.tsx`, extended with an
+optional `className` for the warning/Consolidation styling hooks) instead of one button per
+reviewer. The closed trigger always names the active seat ("Reviewer 3", "Consolidation", or
+"Pick a reviewer" while unselected) rather than a bare caret — the whole point of the switch is
+that the active seat reads at a glance without opening anything. The open menu marks the current
+selection with a checkmark and keeps Consolidation visually distinct (its own label styling,
+matching the pill form's colors) rather than listing it as "reviewer N+1". At 5 or fewer reviewers
+the pill row is unchanged.
 
 **AnnotationPanel** withholds the annotation form (showing a prompt instead) whenever a
 multi-reviewer project has no reviewer selected, and otherwise renders the tree `currentTree()`
