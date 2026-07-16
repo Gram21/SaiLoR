@@ -1084,6 +1084,25 @@ button.paper-search-mode:hover {
   text-decoration: underline;
 }
 
+/* Back to the contents, at the end of every section. Right-aligned and quiet:
+   it repeats once per section, so it must not compete with the prose. */
+.help-top-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.help-top-link {
+  padding: 2px 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.help-top-link:hover {
+  text-decoration: underline;
+}
+
 /* One FAQ entry: collapsed by default so the list of questions is skimmable. */
 .help-faq {
   border-bottom: 1px solid var(--border);

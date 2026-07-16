@@ -588,6 +588,12 @@ export function HelpDialog() {
   const jumpTo = (id: string) => {
     bodyRef.current?.querySelector(`#help-${id}`)?.scrollIntoView({ block: 'start' })
   }
+  // Back to the contents at the top, which is the only thing worth returning
+  // to — set scrollTop rather than scrolling the lead into view, so this can
+  // never be a no-op when the body happens to already be near the top.
+  const jumpToTop = () => {
+    if (bodyRef.current) bodyRef.current.scrollTop = 0
+  }
 
   return (
     <div className="modal-overlay" onClick={() => setHelpOpen(false)}>
@@ -638,6 +644,13 @@ export function HelpDialog() {
             <section key={s.id}>
               <h3 id={`help-${s.id}`}>{s.title}</h3>
               {s.body}
+              {/* Every section is a plausible place to have finished reading,
+                  and the contents are only at the top. */}
+              <div className="help-top-row">
+                <button type="button" className="help-top-link" onClick={jumpToTop}>
+                  ↑ Back to top
+                </button>
+              </div>
             </section>
           ))}
         </div>

@@ -74,7 +74,16 @@ describe('cleanTitle', () => {
 describe('titleAndAuthorsFromLines', () => {
   // A page is 792pt tall; y counts up from the bottom, so the title sits high.
   const page = 792
-  const line = (y: number, size: number, text: string) => ({ y, size, text })
+  /** A single-column line: one segment, the whole text. `segments` is what a
+   *  column gap would have split — see the two-column case below. */
+  const line = (y: number, size: number, text: string) => ({ y, size, text, segments: [text] })
+  /** A line whose runs sat in separate columns, as a two-column author block does. */
+  const columns = (y: number, size: number, segments: string[]) => ({
+    y,
+    size,
+    text: segments.join(' '),
+    segments,
+  })
 
   it('takes the largest text at the top as the title and the line below as authors', () => {
     const meta = titleAndAuthorsFromLines(
@@ -88,6 +97,30 @@ describe('titleAndAuthorsFromLines', () => {
       page,
     )
     expect(meta.title).toBe('Deep Learning for Code Search')
+    expect(meta.authors).toEqual(['Jane Doe', 'John Smith'])
+  })
+
+  // The regression this splitting exists for: a two-column author block puts
+  // both names on one baseline with nothing but a gutter between them, so the
+  // line reads "Jan KeimAngelika Kaplan" if the columns are joined before
+  // parsing. There is no punctuation to recover them by afterwards.
+  it('reads a two-column author block as separate people, not one glued name', () => {
+    const meta = titleAndAuthorsFromLines(
+      [
+        line(700, 18, 'From Scattered to Structured'),
+        columns(670, 11, ['Jan Keim', 'Angelika Kaplan']),
+        columns(650, 10, ['jan.keim@kit.edu', 'angelika.kaplan@kit.edu']),
+      ],
+      page,
+    )
+    expect(meta.authors).toEqual(['Jan Keim', 'Angelika Kaplan'])
+  })
+
+  it('still reads a comma-separated single-column author line', () => {
+    const meta = titleAndAuthorsFromLines(
+      [line(700, 18, 'A Title That Is Long Enough'), line(670, 11, 'Jane Doe, John Smith')],
+      page,
+    )
     expect(meta.authors).toEqual(['Jane Doe', 'John Smith'])
   })
 

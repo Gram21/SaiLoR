@@ -96,11 +96,27 @@ interface Line {
   y: number
   size: number
   text: string
+  /**
+   * The line's text split at column gaps. A two-column author block puts each
+   * author on the *same baseline*, so they arrive as one `Line` — but they are
+   * separate items, not one run of prose, and only the gap says so.
+   */
+  segments: string[]
 }
 
+/**
+ * A horizontal gap this many times the font size starts a new segment. A word
+ * space is a fraction of the font size even in justified text, while a column
+ * gutter is several times it, so anything in between is a safe place to cut.
+ */
+const COLUMN_GAP_RATIO = 1.5
+
 /** Group a page's text items into lines, keeping each line's dominant font size. */
-function toLines(items: { str: string; transform: number[] }[]): Line[] {
-  const byY = new Map<number, { size: number; parts: { x: number; str: string }[] }>()
+function toLines(items: { str: string; transform: number[]; width?: number }[]): Line[] {
+  const byY = new Map<
+    number,
+    { size: number; parts: { x: number; width: number; str: string }[] }
+  >()
   for (const item of items) {
     if (!item.str.trim()) continue
     const size = Math.abs(item.transform[3])
@@ -115,20 +131,45 @@ function toLines(items: { str: string; transform: number[] }[]): Line[] {
     }
     const line = byY.get(key) ?? { size: 0, parts: [] }
     line.size = Math.max(line.size, size)
-    line.parts.push({ x: item.transform[4], str: item.str })
+    // `width` is pdf.js's own measurement of the run. Without it there is no
+    // way to know where a run ends, so a missing/zero width simply never
+    // starts a new segment (NaN fails the comparison below) — the old
+    // glued-together behaviour, rather than a guess that could cut mid-phrase.
+    line.parts.push({
+      x: item.transform[4],
+      width: typeof item.width === 'number' && item.width > 0 ? item.width : NaN,
+      str: item.str,
+    })
     byY.set(key, line)
   }
   return [...byY.entries()]
-    .map(([y, l]) => ({
-      y,
-      size: l.size,
-      text: l.parts
-        .sort((a, b) => a.x - b.x)
-        .map((p) => p.str)
-        .join('')
-        .replace(/\s+/g, ' ')
-        .trim(),
-    }))
+    .map(([y, l]) => {
+      const parts = [...l.parts].sort((a, b) => a.x - b.x)
+      const segments: string[] = []
+      let current = ''
+      let prevEnd = NaN
+      for (const p of parts) {
+        // Adjacent runs are joined bare: pdf.js splits a single phrase into
+        // several runs on a font or kerning change, and any separator here
+        // would land mid-word.
+        if (current !== '' && p.x - prevEnd > l.size * COLUMN_GAP_RATIO) {
+          segments.push(current)
+          current = ''
+        }
+        current += p.str
+        prevEnd = p.x + p.width
+      }
+      if (current !== '') segments.push(current)
+      const clean = (s: string) => s.replace(/\s+/g, ' ').trim()
+      return {
+        y,
+        size: l.size,
+        // Joined with a space, not bare: whatever separated two columns, it was
+        // not nothing.
+        text: clean(segments.join(' ')),
+        segments: segments.map(clean).filter(Boolean),
+      }
+    })
     .filter((l) => l.text)
     .sort((a, b) => b.y - a.y) // PDF origin is bottom-left, so top of page first
 }
@@ -163,9 +204,12 @@ export function titleAndAuthorsFromLines(lines: Line[], pageHeight: number): Pdf
   for (let j = i; j < top.length && j < i + 4; j++) {
     const line = top[j]
     if (BODY_START.test(line.text)) break
+    // Per column, not per line: a two-column author block has no punctuation
+    // between the names — only the gutter — so parsing the joined line would
+    // read "Jan Keim" and "Angelika Kaplan" as one person.
     // Strict: this is a guess at which line holds the authors, so a body
     // sentence must not be mistaken for a list of names.
-    const names = parseAuthorList(line.text, true)
+    const names = line.segments.flatMap((seg) => parseAuthorList(seg, true))
     if (names.length === 0) continue
     authors.push(...names)
     // One line of names is the common case; stop once we have some.
@@ -200,7 +244,9 @@ export async function extractPdfMeta(data: ArrayBuffer): Promise<PdfMeta> {
     if (!result.title || !result.authors) {
       const page = await doc.getPage(1)
       const content = await page.getTextContent()
-      const lines = toLines(content.items as { str: string; transform: number[] }[])
+      const lines = toLines(
+        content.items as { str: string; transform: number[]; width?: number }[],
+      )
       const guess = titleAndAuthorsFromLines(lines, page.view[3])
       if (!result.title && guess.title) result.title = guess.title
       if (!result.authors && guess.authors) result.authors = guess.authors

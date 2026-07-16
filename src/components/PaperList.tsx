@@ -91,6 +91,16 @@ export function PaperList() {
             type="text"
             placeholder={mode === 'annotations' ? 'Search annotations…' : 'Search papers…'}
             aria-label={mode === 'annotations' ? 'Search annotations' : 'Search papers'}
+            // The field's own explanation, so what it is filtering is
+            // discoverable without first noticing the small trigger inside it.
+            // The trigger is named by where it is rather than by its label:
+            // that label reports the *current* mode, so "click TAGS to search
+            // annotations" would read as backwards while it says META.
+            title={
+              mode === 'annotations'
+                ? 'Filters the list to papers whose recorded annotation values match — every word must match somewhere. Use the trigger inside this field to search titles, authors and DOIs instead.'
+                : 'Filters the list to papers whose title, authors or DOI match — every word must match somewhere. Use the trigger inside this field to search your recorded annotations instead.'
+            }
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
