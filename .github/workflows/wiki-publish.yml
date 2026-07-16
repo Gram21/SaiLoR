@@ -51,8 +51,34 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p stage
-          # Pages only. `.last-update.json` is state for the openwiki generator, not a page.
-          cp openwiki/*.md stage/
+          # Pages only, excluding two files that are OpenWiki's own bookkeeping rather
+          # than content for this audience:
+          #   - `.last-update.json` is state for the openwiki generator.
+          #   - `index.md` is Open Knowledge Format's own directory listing (see
+          #     https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
+          #     — a machine-oriented "scan the bundle" page for agents reading the repo's
+          #     openwiki/ folder directly. Home.md + _Sidebar.md already are the
+          #     hand-curated equivalent for a human wiki visitor, so mirroring index.md
+          #     too would only add a second, redundant, unlinked page. It stays in the
+          #     repo (its actual audience reads it there) but never reaches the wiki.
+          #     `log.md` — OKF's changelog of documentation updates — has no such
+          #     overlap and IS published like any other page.
+          for f in openwiki/*.md; do
+            [ "$(basename "$f")" = "index.md" ] && continue
+            cp "$f" "stage/$(basename "$f")"
+          done
+
+          # OpenWiki pages may carry Open Knowledge Format's YAML frontmatter (a leading
+          # `---`-delimited block: type/title/description/tags/timestamp). GitHub's wiki
+          # renderer (gollum) has no concept of frontmatter, so left in place it would
+          # render as literal text at the top of the page — strip it before it ever
+          # reaches the wiki. `index.md`'s exclusion above means it never needs this (OKF
+          # forbids frontmatter on it anyway); every other staged page might have one, so
+          # this runs unconditionally and is a no-op on a page that doesn't.
+          for f in stage/*.md; do
+            awk 'NR==1 && $0=="---"{infm=1; next} infm && $0=="---"{infm=0; next} !infm' \
+              "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+          done
 
           # A wiki with no Home page shows an empty landing tab, so synthesize one when
           # openwiki/ does not provide it. The marker lets wiki-import.yml recognise this
