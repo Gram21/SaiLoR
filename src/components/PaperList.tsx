@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useStore } from '../state/store'
+import { useStore, currentTree } from '../state/store'
 import { hasAnnotations, annotationText } from '../model/annotations'
 import { SidebarToggle } from './SidebarToggle'
 import type { Paper } from '../model/project'
@@ -18,6 +18,7 @@ interface IndexedPaper {
 export function PaperList() {
   const project = useStore((s) => s.project)
   const currentPaperId = useStore((s) => s.currentPaperId)
+  const currentReviewer = useStore((s) => s.currentReviewer)
   const selectPaper = useStore((s) => s.selectPaper)
   const schema = project?.schema ?? []
 
@@ -31,17 +32,19 @@ export function PaperList() {
   // on every such edit, so keying on `papers` already invalidates this memo
   // whenever annotation content actually changes. `schema` is included too:
   // it is what `annotationText` walks, even though it does not change here.
+  // `currentReviewer` likewise: switching seats changes which tree is read.
   const papers = project?.papers
   const index = useMemo<IndexedPaper[]>(() => {
-    if (!papers) return []
+    if (!papers || !project) return []
     return papers.map((paper) => ({
       paper,
       metadataHaystack: `${paper.title} ${paper.authors.join(' ')} ${paper.doi ?? ''}`.toLowerCase(),
-      // Searches `paper.annotations` — the single-reviewer tree. If a
-      // per-reviewer tree structure lands later, this is the spot to revisit.
-      annotationHaystack: annotationText(schema, paper.annotations),
+      // The active reviewer's own tree, so the sidebar answers "which papers
+      // did *I* record this in" — the same tree the form and validation show.
+      // Null (multi-reviewer, nobody picked yet) has no annotations to search.
+      annotationHaystack: annotationText(schema, currentTree(project, currentReviewer, paper) ?? {}),
     }))
-  }, [papers, schema])
+  }, [papers, project, schema, currentReviewer])
 
   // Filter + rank by how many distinct query words match (then matched chars).
   const words = query.toLowerCase().split(/\s+/).filter((w) => w.length > 0)
@@ -118,7 +121,10 @@ export function PaperList() {
           </li>
         ) : (
           filtered.map((p) => {
-            const annotated = hasAnnotations(schema, p.annotations)
+            // Progress is per-reviewer: as Reviewer 2 the dot must track *your*
+            // work, not whatever the consolidated tree happens to hold.
+            const tree = project ? currentTree(project, currentReviewer, p) : p.annotations
+            const annotated = !!tree && hasAnnotations(schema, tree)
             return (
               <li
                 key={p.id}

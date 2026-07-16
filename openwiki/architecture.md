@@ -320,11 +320,12 @@ backdrop click).
 `unansweredFields`'s call site in `aiStore.ts`'s `openDialog()`, which now proposes values for the
 *active reviewer's* empty fields via `currentTree()`, not unconditionally `paper.annotations`.
 
-**Known gap:** `PaperList`'s "annotated" dot (`hasAnnotations(schema, p.annotations)`) still reads
-the consolidated tree unconditionally — it does not currently switch to the active reviewer's own
-tree on a multi-reviewer project. `PaperList.tsx` was out of scope for the change that introduced
-multiple reviewers (owned by another concurrent change); routing that dot through `currentTree()`
-the same way everything else in this section is routed is the natural follow-up.
+`PaperList` follows the same rule on both of its reads: the "annotated" dot and the annotation
+search mode each go through `currentTree()`, so as Reviewer 2 the sidebar tracks *your* progress and
+answers "which papers did *I* record this in" — the same tree the form and validation show. When the
+project is multi-reviewer and nobody has picked a seat yet, `currentTree()` returns null and both
+degrade to "nothing annotated / nothing to match" rather than falling back to the consolidated tree,
+which would attribute someone else's work to the unselected reviewer.
 
 ## AI-assisted annotation (`src/llm`)
 
@@ -521,4 +522,4 @@ App appearance is controlled by a settings module that persists to `localStorage
 - **Adding a new keyboard shortcut**: Add to `useKeybindings.ts`. Check `isEditable()` if it should be ignored inside input fields.
 - **Changing the Electron IPC surface**: Update `preload.ts` (the `SlrBridge` interface), `electron/main.ts` (IPC handler), and `src/platform/electron.ts` (adapter method). All three must stay in sync.
 - **Adding a new settings/appearance option**: Add to `src/state/settings.ts` (load/apply functions), add state + actions to the store, add UI controls to `Toolbar.tsx`, and add keybindings if needed.
-- **Touching anything that reads or writes the current paper's annotation data**: route it through `currentTree()` (`src/state/store.ts`) rather than `paper.annotations` directly, or it will silently ignore reviewer selection on a multi-reviewer project. Grep for `.annotations` across `src/` and check each hit against "should this see the active reviewer's tree or always the consolidated one" — `PaperList.tsx`'s dot is the one known place that still doesn't (see "Known gap" above).
+- **Touching anything that reads or writes the current paper's annotation data**: route it through `currentTree()` (`src/state/store.ts`) rather than `paper.annotations` directly, or it will silently ignore reviewer selection on a multi-reviewer project. Grep for `.annotations` across `src/` and check each hit against "should this see the active reviewer's tree or always the consolidated one". The direct reads that remain outside `src/model/` are deliberate: `currentTree()`'s own body; `ConsolidationDialog`, which reads the consolidated tree *on purpose* (it is showing you what the final answer currently is); `editorStore`, which edits the file's papers and has no reviewer concept; and null-project fallbacks.
