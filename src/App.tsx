@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from './state/store'
 import { useEditorStore } from './state/editorStore'
+import { useGitStore } from './state/gitStore'
+import { getPlatform } from './platform'
 import { ProjectEditor } from './components/ProjectEditor'
 import { Toolbar } from './components/Toolbar'
 import { PaperList } from './components/PaperList'
@@ -16,6 +18,9 @@ import { DisagreementOverview } from './components/DisagreementOverview'
 import { ClosePrompt } from './components/ClosePrompt'
 import { AiDialog } from './components/AiDialog'
 import { LlmSettingsDialog } from './components/LlmSettingsDialog'
+import { GitCloneDialog } from './components/GitCloneDialog'
+import { GitDialog } from './components/GitDialog'
+import { GitMergeDialog } from './components/GitMergeDialog'
 import { shortenPath } from './platform/recents'
 import { Splitter } from './components/Splitter'
 import { useKeybindings } from './hooks/useKeybindings'
@@ -53,6 +58,12 @@ export function App() {
   const update = useStore((s) => s.update)
   const checkForUpdate = useStore((s) => s.checkForUpdate)
 
+  const saveHandle = useStore((s) => s.saveHandle)
+  const gitProbe = useGitStore((s) => s.probe)
+  const probeGit = useGitStore((s) => s.probeGit)
+  const refreshRepo = useGitStore((s) => s.refreshRepo)
+  const openClone = useGitStore((s) => s.openClone)
+
   const workspaceRef = useRef<HTMLDivElement>(null)
   const [panes, setPanes] = useState(loadPaneWidths)
 
@@ -71,6 +82,20 @@ export function App() {
   useEffect(() => {
     void refreshRecents()
   }, [refreshRecents])
+
+  // Whether this machine has git at all — asked once per launch, distinct
+  // from whether the *runtime* can reach one (`getPlatform().getGit()`).
+  useEffect(() => {
+    void probeGit()
+  }, [probeGit])
+
+  // The open project's JSON may or may not sit in a repository, and "save as"
+  // can move it into or out of one — an effect, not a call from store.ts,
+  // because gitStore reads the main store and the main store must not read
+  // back (see gitStore.ts's own doc comment).
+  useEffect(() => {
+    void refreshRepo(saveHandle)
+  }, [saveHandle, refreshRepo])
 
   // Persist pane widths whenever they change (avoids stale-closure saves).
   useEffect(() => {
@@ -127,6 +152,19 @@ export function App() {
               <button type="button" onClick={() => void startEdit()}>
                 Edit annotation JSON…
               </button>
+              {/* Absent in the browser build entirely — see GitCloneDialog's
+                  doc comment and PlatformAdapter.getGit() for why there is no
+                  "local git" for a browser page to fall back to. */}
+              {getPlatform().getGit() && (
+                <button
+                  type="button"
+                  onClick={() => openClone()}
+                  disabled={gitProbe !== null && !gitProbe.available}
+                  title={gitProbe && !gitProbe.available ? gitProbe.error : undefined}
+                >
+                  Import from git…
+                </button>
+              )}
             </div>
             {recents.length > 0 && (
               <div className="welcome-recents">
@@ -224,6 +262,9 @@ export function App() {
       <ClosePrompt />
       <AiDialog />
       <LlmSettingsDialog />
+      <GitCloneDialog />
+      <GitDialog />
+      <GitMergeDialog />
     </div>
   )
 }
