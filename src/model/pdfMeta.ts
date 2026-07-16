@@ -1,8 +1,10 @@
 import { pdfjs } from '../platform/pdfjs'
 
 /**
- * Best-effort extraction of a paper's title and authors from its PDF, used to
- * pre-fill the project editor. Two sources, in order:
+ * Best-effort extraction of a paper's title, authors, and abstract from its
+ * PDF, used to pre-fill the project editor and (for the abstract alone) a
+ * screening paper opened with none recorded yet — see `extractScreeningAbstract`
+ * in `state/store.ts`. Title/authors come from two sources, in order:
  *
  *  1. The PDF's embedded metadata (`Title` / `Author`). Cheap and exact when
  *     present — but plenty of publisher toolchains leave it blank or fill it
@@ -10,13 +12,22 @@ import { pdfjs } from '../platform/pdfjs'
  *  2. A layout heuristic over page 1: the largest text near the top is the
  *     title, and the lines just under it are the authors.
  *
- * Everything here is a guess, so it only ever *pre-fills* fields the user can
- * correct. When unsure it returns nothing rather than something wrong.
+ * The abstract has no metadata source (PDFs carry no standard "Abstract"
+ * field), so it is always the layout heuristic: find a line starting with the
+ * word "Abstract" below the title/author block, and capture what follows
+ * until the next section starts — see `abstractFromLines`.
+ *
+ * Everything here is a guess, so it only ever *pre-fills* a field the user can
+ * correct, and every extracted abstract is flagged (`Paper.abstractFromPdf`)
+ * for a durable "unverified" warning wherever it is shown — see
+ * `ScreeningRecord.tsx`. When unsure, this returns nothing rather than
+ * something wrong.
  */
 
 export interface PdfMeta {
   title?: string
   authors?: string[]
+  abstract?: string
 }
 
 /** Metadata titles that are really tool artefacts, not paper titles. */
@@ -219,6 +230,68 @@ export function titleAndAuthorsFromLines(lines: Line[], pageHeight: number): Pdf
   return out
 }
 
+/** A line starting the abstract, allowing a same-line lead-in ("Abstract—", "Abstract:", "ABSTRACT."). */
+const ABSTRACT_START = /^abstract\b\s*[:.—-]?\s*/i
+
+/** Where the abstract ends: the next section a paper's front matter conventionally has. */
+const ABSTRACT_END =
+  /^(introduction|keywords?|index terms|ccs concepts|categories and subject descriptors|acm reference format|general terms|1\.?\s+introduction|i\.\s+introduction)\b/i
+
+/** Below this many characters, a "match" is more likely noise than a real abstract. */
+const MIN_ABSTRACT_LENGTH = 150
+/** Above this, something has gone wrong (no end marker found) — stop trusting it. */
+const MAX_ABSTRACT_LENGTH = 4000
+/** Safety valve alongside the length cap, in case `ABSTRACT_END` never matches. */
+const MAX_ABSTRACT_LINES = 40
+
+/**
+ * An abstract from a page's lines: the text following a line starting with
+ * "Abstract", up to the next section heading.
+ *
+ * Two guards keep this from mistaking a title for a heading or a two-column
+ * body for a paragraph:
+ *  - A candidate start line must not be the single largest text on the page.
+ *    A title is virtually always set in the page's biggest font — the word
+ *    "Abstract" as a heading never is, whether body-sized or a size step up
+ *    from it — so this rejects a title that genuinely starts with the word
+ *    ("Abstract Interpretation of...", a real if uncommon pattern) without
+ *    assuming anything about *where* on the page the real heading sits. An
+ *    earlier version of this guard used a vertical cutoff instead
+ *    (`titleAndAuthorsFromLines`'s `pageHeight * 0.45`) — wrong, because a
+ *    real abstract routinely starts well above a page's midpoint whenever
+ *    the title/author block is short, which a position-only guard has no way
+ *    to distinguish from the title itself.
+ *  - Once inside a candidate abstract, a line whose baseline split into more
+ *    than one segment means a two-column body has begun — `toLines` only
+ *    reports multiple `segments` when it found a gap wide enough to be a
+ *    column gutter, not a word space. A line-based reader has no reliable way
+ *    to join two columns back into reading order, so this stops rather than
+ *    guesses (the same principle `titleAndAuthorsFromLines` applies to a
+ *    two-column author line, just here as a stopping condition instead of a
+ *    per-column split).
+ */
+export function abstractFromLines(lines: Line[]): string | undefined {
+  if (lines.length === 0) return undefined
+  const maxSize = Math.max(...lines.map((l) => l.size))
+  const startIdx = lines.findIndex((l) => l.size < maxSize && ABSTRACT_START.test(l.text))
+  if (startIdx === -1) return undefined
+
+  const parts: string[] = []
+  const leadIn = lines[startIdx].text.replace(ABSTRACT_START, '').trim()
+  if (leadIn) parts.push(leadIn)
+
+  for (let i = startIdx + 1; i < lines.length && i <= startIdx + MAX_ABSTRACT_LINES; i++) {
+    const line = lines[i]
+    if (ABSTRACT_END.test(line.text)) break
+    if (line.segments.length > 1) break
+    parts.push(line.text)
+  }
+
+  const abstract = parts.join(' ').replace(/\s+/g, ' ').trim()
+  if (abstract.length < MIN_ABSTRACT_LENGTH || abstract.length > MAX_ABSTRACT_LENGTH) return undefined
+  return abstract
+}
+
 /** Read a PDF's title/authors. Never throws — returns {} when it can't tell. */
 export async function extractPdfMeta(data: ArrayBuffer): Promise<PdfMeta> {
   try {
@@ -240,17 +313,21 @@ export async function extractPdfMeta(data: ArrayBuffer): Promise<PdfMeta> {
       // No/broken metadata — fall through to the layout heuristic.
     }
 
-    // 2. Layout heuristic for whatever the metadata didn't give us.
+    // 2. Layout heuristic over page 1 — always run: the abstract has no
+    //    metadata source to check first, unlike title/authors above.
+    const page = await doc.getPage(1)
+    const content = await page.getTextContent()
+    const lines = toLines(content.items as { str: string; transform: number[]; width?: number }[])
+    const pageHeight = page.view[3]
+
     if (!result.title || !result.authors) {
-      const page = await doc.getPage(1)
-      const content = await page.getTextContent()
-      const lines = toLines(
-        content.items as { str: string; transform: number[]; width?: number }[],
-      )
-      const guess = titleAndAuthorsFromLines(lines, page.view[3])
+      const guess = titleAndAuthorsFromLines(lines, pageHeight)
       if (!result.title && guess.title) result.title = guess.title
       if (!result.authors && guess.authors) result.authors = guess.authors
     }
+
+    const abstract = abstractFromLines(lines)
+    if (abstract) result.abstract = abstract
 
     await doc.destroy()
     return result

@@ -329,6 +329,7 @@ You can bound a repeatable group as well. Between one and three threats:
 | `authors`     | array of strings| yes*     | Author names. May be an empty list `[]`.                                    |
 | `doi`         | string          | no       | The DOI, if you have one.                                                   |
 | `abstract`    | string          | no       | The abstract. Screening reads this when there is no PDF (see [§10](#10-screening-projects)); ordinary paper metadata otherwise. |
+| `abstractFromPdf` | boolean     | no       | `true` when `abstract` was extracted from the PDF by a basic heuristic rather than authored — see [§10](#10-screening-projects). Meaningless (and dropped on load) without a non-empty `abstract`. |
 | `pdf`         | string          | **yes**\*\* | Path to the PDF file, **relative to the JSON file's location**.          |
 | `annotations` | object          | yes*     | The single/consolidated result. Use `{}` for a paper you haven't annotated yet. |
 | `reviews`     | object          | no       | Multi-reviewer only — each reviewer's own tree, keyed `"1"` .. `"N"`. See [§9](#9-multiple-reviewers--consolidation). Omit entirely in a single-reviewer file. |
@@ -797,6 +798,33 @@ pruned the same way every other project's is. The only things specific to screen
 derived schema above, `pdf: ""` being allowed (§4), and `abstract` usually being the paper's only
 readable content until it reaches full-text review.
 
+### A missing abstract can be extracted from the PDF
+
+Screening is normally decided from `abstract` alone, but a paper picked up with only a PDF (rather
+than through a reference-manager export) may have none. The app fills this gap two ways, both using
+the same basic layout heuristic in `pdfMeta.ts` — find a line starting with the word "Abstract",
+read forward to the next section heading or a column-layout change:
+
+1. **While building the project.** Adding a PDF directly (not via a reference file) in the project
+   editor tries the heuristic in the background, the same way it already pre-fills title/authors.
+2. **While screening.** Opening the PDF of an already-saved paper that has no abstract yet
+   (`paper.pdf` set, `paper.abstract` unset) tries the same heuristic. A hit is written into
+   `abstract` immediately — there is no separate confirmation step, since screening hundreds of
+   papers one PDF-open at a time is exactly the case a confirmation dialog per paper would defeat.
+
+Either way, a hit is marked with `abstractFromPdf: true` (§4) — a **permanent** disclosure, not a
+session-only hint, so every reviewer who later opens the file sees the same "this is a guess, not a
+fact" warning the extracting session did, not just whoever happened to trigger it. The app shows
+that warning wherever the abstract is displayed and tells the reviewer to check the PDF directly if
+in doubt. The flag (and the abstract it describes) is dropped on load if `abstract` is empty — a
+flag with nothing to describe is meaningless, most likely a hand-edited or stale file.
+
+A heuristic-extracted abstract is treated as **lower confidence than one actually recorded
+somewhere** — unlike every other paper field, which is never overwritten once set, a later
+reference-manager import (a `.bib`/`.ris`/CSL-JSON export, an editor feature — see the wiki's
+architecture page) is allowed to replace an `abstractFromPdf`-flagged abstract with a real one,
+clearing the flag in the same step.
+
 ### Interaction with multiple reviewers (§9)
 
 A screening project can set `config.reviewers` exactly like any other — two reviewers screen
@@ -829,10 +857,11 @@ project's results and carry papers into a new or existing annotation project.
   only happens per-paper, as the consolidator reviews each one), that paper has no consolidated
   decision yet and is carried as not-screened-yet; the dialog says so and points at **Adopt all**
   (the consolidator's one-click way to adopt every such paper at once) as the fix.
-- **What carries over.** `title`, `authors`, `doi`, `abstract`, and `pdf` (re-derived to remain
-  correct if the new project's location differs from the screening project's). `reviews`, `equal`,
-  and `aiUsage` do **not** carry over — they are the screening phase's own record and have no
-  meaning against the new project's different schema.
+- **What carries over.** `title`, `authors`, `doi`, `abstract` (with its `abstractFromPdf` flag, if
+  set — the caution stays attached to the abstract, not to which project file it currently lives
+  in), and `pdf` (re-derived to remain correct if the new project's location differs from the
+  screening project's). `reviews`, `equal`, and `aiUsage` do **not** carry over — they are the
+  screening phase's own record and have no meaning against the new project's different schema.
 - **Where the new project is saved.** By default, **next to the screening project's JSON file** —
   a sibling location, so every carried paper's relative `pdf` keeps resolving without being
   rewritten at all. This is the default location, not a locked one; *Change…* still works

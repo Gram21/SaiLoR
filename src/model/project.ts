@@ -41,6 +41,17 @@ export interface Paper {
    * no PDF; it is ordinary paper metadata otherwise.
    */
   abstract?: string
+  /**
+   * True when `abstract` was produced by the PDF-text heuristic
+   * (`extractPdfMeta` in `pdfMeta.ts`) rather than typed, imported from a
+   * reference file, or otherwise authored. A durable disclosure, like
+   * `aiUsage` — it must survive into the saved file so every reviewer who
+   * opens this paper sees the same "unverified, proceed with caution" the
+   * extracting session did, not just whoever happened to trigger it. Cleared
+   * (never true) once a human or a reference-file import provides a real
+   * abstract — see `fillFromRef` in `editorStore.ts`.
+   */
+  abstractFromPdf?: boolean
   pdf: string
   /** The single/consolidated result. Unchanged in meaning by multi-reviewer
    *  support: this is still what `validateProject`, `hasAnnotations`, and any
@@ -121,6 +132,7 @@ const KNOWN_PAPER_KEYS = new Set([
   'authors',
   'doi',
   'abstract',
+  'abstractFromPdf',
   'pdf',
   'annotations',
   'reviews',
@@ -377,6 +389,10 @@ export function loadProject(input: string | unknown): Project {
     authors: p.authors ?? [],
     doi: p.doi,
     abstract: p.abstract,
+    // Defensive against a hand-edited or stale file: the flag means nothing
+    // without an abstract for it to describe, so it is dropped rather than
+    // trusted whenever `abstract` itself is empty.
+    abstractFromPdf: p.abstract && p.abstractFromPdf === true ? true : undefined,
     pdf: p.pdf,
     annotations: normalizeTree(schema, p.annotations as AnnotationValueTree | undefined),
     reviews: normalizeReviews((p as { reviews?: unknown }).reviews, schema, raw.config.reviewers ?? 1),
@@ -431,6 +447,10 @@ export function serializeProject(project: Project): string {
       }
       if (p.doi !== undefined) paper.doi = p.doi
       if (p.abstract !== undefined && p.abstract !== '') paper.abstract = p.abstract
+      // Only written alongside a real abstract, and only when true — so a
+      // typed or reference-imported abstract stays exactly as clean as
+      // before this field existed.
+      if (p.abstractFromPdf && p.abstract) paper.abstractFromPdf = true
       paper.pdf = p.pdf
       paper.annotations = pruneTree(project.schema, p.annotations)
       // A single-reviewer paper has no reviewer trees at all — `annotations`

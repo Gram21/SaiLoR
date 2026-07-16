@@ -12,6 +12,7 @@ import { useStore, selectCurrentPaper } from '../state/store'
 export function ScreeningRecord() {
   const paper = useStore(selectCurrentPaper)
   const toggleScreeningPdf = useStore((s) => s.toggleScreeningPdf)
+  const extracting = useStore((s) => s.screeningAbstractExtracting === paper?.id)
 
   if (!paper) {
     return <div className="panel pdf empty">No paper selected.</div>
@@ -36,8 +37,17 @@ export function ScreeningRecord() {
         )}
       </div>
       <div className="screening-record-body">
+        {paper.abstractFromPdf && (
+          <p className="screening-abstract-extracted-notice">
+            This abstract was extracted automatically from the PDF text, not recorded by the paper's
+            source — it may be incomplete or wrong. Proceed with caution, and check the PDF directly
+            if in doubt.
+          </p>
+        )}
         {paper.abstract ? (
           <p className="screening-abstract">{paper.abstract}</p>
+        ) : extracting ? (
+          <p className="screening-abstract-empty">Reading the PDF for an abstract…</p>
         ) : (
           <p className="screening-abstract-empty">No abstract recorded for this paper.</p>
         )}

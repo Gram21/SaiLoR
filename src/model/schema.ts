@@ -103,6 +103,12 @@ export const paperSchema = z
     /** The paper's abstract, when the source had one. Screening reads this when
      *  there is no PDF — see `Project.screening`. */
     abstract: z.string().optional(),
+    /** True when `abstract` was produced by the PDF-text heuristic in
+     *  `pdfMeta.ts` rather than authored, imported from a reference file, or
+     *  typed — see `Paper.abstractFromPdf`. Meaningless (and dropped) without
+     *  a non-empty `abstract`, so left loosely typed here; normalized structurally
+     *  in `project.ts`, same rule as `annotations`/`reviews`. */
+    abstractFromPdf: z.boolean().optional(),
     // The "pdf required" rule moves to `projectSchema`'s `superRefine`, which
     // can see whether this is a screening project (where PDFs are usually
     // absent entirely — see `src/screening/schema.ts`).

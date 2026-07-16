@@ -107,6 +107,7 @@ interface Paper {
   authors: string[]
   doi?: string
   abstract?: string                // what screening reads when there is no PDF; ordinary metadata otherwise
+  abstractFromPdf?: boolean        // true when `abstract` was PDF-extracted, not authored; see "Screening" below
   pdf: string
   annotations: AnnotationValueTree          // the single/consolidated result — unchanged in meaning
   reviews: Record<string, AnnotationValueTree>  // each reviewer's own tree, keyed "1".."N"; {} if single-reviewer
@@ -319,6 +320,20 @@ per-reason breakdown behind `ScreeningSummary`; it reads through the same seat r
 `consolidate/disagreements.ts` already set). `pendingUnanimous()` counts papers every reviewer
 decided identically that Consolidation has not adopted yet (see the architecture page's "Screening"
 section for why that gap exists).
+
+**`abstractFromPdf` is a durable disclosure, the same idea `aiUsage` embodies for AI-assisted
+annotation, applied to a basic text heuristic instead of a model.** `Paper.abstract` can be filled
+by a heuristic that reads a PDF's own text (`pdfMeta.ts`'s `abstractFromLines` — find an "Abstract"
+heading, capture forward to the next section) rather than by a human or a reference-manager export,
+and when it is, `abstractFromPdf: true` is written into the file right alongside it — never a
+session-only flag, so a co-reviewer opening the file later sees the same "unverified, check the PDF
+if in doubt" warning the extracting session did. `loadProject` drops the flag whenever `abstract`
+itself is empty (a flag with nothing to describe is meaningless, most likely a stale or hand-edited
+file), and a later reference-manager import is the one thing allowed to overwrite an
+`abstractFromPdf`-flagged value — every other paper field a reviewer might have typed is left
+alone. See the architecture page's "A missing abstract is extracted from the PDF, and flagged
+durably" for the full design (both call sites, and why this writes immediately rather than behind a
+confirmation step the way AI suggestions do).
 
 ## Lifecycle: Load → Normalize → Edit → Prune → Serialize
 

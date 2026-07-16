@@ -193,6 +193,27 @@ describe('importReferences', () => {
     expect(useEditorStore.getState().papers[0].authors).toBe('Someone Else')
   })
 
+  it('overwrites a PDF-heuristic abstract with a real one from the reference file', async () => {
+    // Unlike every other field above: a heuristic extraction is lower
+    // confidence than one a reference manager actually recorded, so it is
+    // allowed to be replaced rather than treated as "the reviewer's".
+    const existing = makePaperFromPdf('doe.pdf', 'pdfs/doe.pdf', undefined, new Set())
+    existing.title = 'A Study of Something'
+    existing.abstract = 'Guessed from the PDF text.'
+    existing.abstractFromPdf = true
+    useEditorStore.setState({ papers: [existing] })
+
+    referencePicked = {
+      name: 'refs.json',
+      text: JSON.stringify([{ title: 'A Study of Something', abstract: 'The real abstract.' }]),
+    }
+    await useEditorStore.getState().importReferences()
+
+    const [paper] = useEditorStore.getState().papers
+    expect(paper.abstract).toBe('The real abstract.')
+    expect(paper.abstractFromPdf).toBeUndefined()
+  })
+
   it('reports a match with nothing left to fill as "already complete"', async () => {
     const existing = makePaperFromPdf('doe.pdf', 'pdfs/doe.pdf', undefined, new Set())
     existing.title = 'A Study of Something'

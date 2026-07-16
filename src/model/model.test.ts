@@ -714,6 +714,58 @@ describe('screening', () => {
     expect('abstract' in reNoAbstract.papers[0]).toBe(false)
   })
 
+  it('paper.abstractFromPdf round-trips alongside a real abstract', () => {
+    const withFlag = JSON.stringify({
+      version: 1,
+      config: { schema: sampleSchema },
+      papers: [
+        {
+          id: 'p1',
+          title: 'T',
+          authors: [],
+          pdf: 'a.pdf',
+          abstract: 'Extracted text.',
+          abstractFromPdf: true,
+          annotations: {},
+        },
+      ],
+    })
+    const project = loadProject(withFlag)
+    expect(project.papers[0].abstractFromPdf).toBe(true)
+    const reserialized = JSON.parse(serializeProject(project))
+    expect(reserialized.papers[0].abstractFromPdf).toBe(true)
+  })
+
+  it('drops abstractFromPdf as meaningless without an abstract to describe', () => {
+    // A hand-edited or stale file: the abstract was deleted but the flag was
+    // left behind. Defensive, matching every other structurally-validated
+    // field in this loader — a malformed combination is dropped, not trusted.
+    const orphanedFlag = JSON.stringify({
+      version: 1,
+      config: { schema: sampleSchema },
+      papers: [{ id: 'p1', title: 'T', authors: [], pdf: 'a.pdf', abstractFromPdf: true, annotations: {} }],
+    })
+    const project = loadProject(orphanedFlag)
+    expect(project.papers[0].abstract).toBeUndefined()
+    expect(project.papers[0].abstractFromPdf).toBeUndefined()
+    const reserialized = JSON.parse(serializeProject(project))
+    expect('abstractFromPdf' in reserialized.papers[0]).toBe(false)
+  })
+
+  it('never writes abstractFromPdf for an ordinary typed or imported abstract', () => {
+    const project = loadProject(
+      JSON.stringify({
+        version: 1,
+        config: { schema: sampleSchema },
+        papers: [
+          { id: 'p1', title: 'T', authors: [], pdf: 'a.pdf', abstract: 'Typed by a human.', annotations: {} },
+        ],
+      }),
+    )
+    const out = JSON.parse(serializeProject(project))
+    expect('abstractFromPdf' in out.papers[0]).toBe(false)
+  })
+
   it('a single-reviewer non-screening project carries no screening/abstract artifacts and round-trips byte-identically', () => {
     const project = loadProject(makeProjectJson({ 'Study Type': [{ value: 'RCT' }] }))
     const out = JSON.parse(serializeProject(project)) as { config: Record<string, unknown>; papers: Record<string, unknown>[] }

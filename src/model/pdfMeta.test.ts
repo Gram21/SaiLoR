@@ -4,6 +4,7 @@ import {
   isPlausibleTitle,
   cleanTitle,
   titleAndAuthorsFromLines,
+  abstractFromLines,
 } from './pdfMeta'
 
 describe('parseAuthorList', () => {
@@ -176,5 +177,123 @@ describe('titleAndAuthorsFromLines', () => {
   it('returns nothing rather than a bad guess when the title is implausible', () => {
     const meta = titleAndAuthorsFromLines([line(700, 18, 'Fig'), line(670, 11, 'Jane Doe')], page)
     expect(meta.title).toBeUndefined()
+  })
+})
+
+describe('abstractFromLines', () => {
+  const line = (y: number, size: number, text: string) => ({ y, size, text, segments: [text] })
+  const columns = (y: number, size: number, segments: string[]) => ({
+    y,
+    size,
+    text: segments.join(' '),
+    segments,
+  })
+
+  // Font size 18 is the title's — the single largest text on the page, which
+  // is exactly what the "Abstract" heading (size 10, well below it) must not
+  // be mistaken for. Placed high on the page, same as a real front matter
+  // block, since the guard is about size, not position (see the function's
+  // own doc comment for why a position-only guard was wrong).
+  const FRONT_MATTER = [
+    line(700, 18, 'Deep Learning for Code Search'),
+    line(670, 11, 'Jane Doe, John Smith'),
+  ]
+  const SENTENCE_1 =
+    'We evaluate deep learning approaches for code search on a large benchmark of query-code pairs.'
+  const SENTENCE_2 =
+    'Our model improves mean reciprocal rank by 12% over prior retrieval baselines on this benchmark.'
+
+  it('captures the text between an Abstract heading and Introduction', () => {
+    const abstract = abstractFromLines([
+      ...FRONT_MATTER,
+      line(600, 10, 'Abstract'),
+      line(585, 10, SENTENCE_1),
+      line(570, 10, SENTENCE_2),
+      line(555, 10, '1 Introduction'),
+      line(540, 10, 'Code search is a longstanding problem in software engineering.'),
+    ])
+    expect(abstract).toBe(`${SENTENCE_1} ${SENTENCE_2}`)
+    expect(abstract).not.toContain('Introduction')
+    expect(abstract).not.toContain('longstanding')
+  })
+
+  it('reads an IEEE-style same-line lead-in ("Abstract—...")', () => {
+    const abstract = abstractFromLines([
+      ...FRONT_MATTER,
+      line(600, 10, `Abstract—${SENTENCE_1}`),
+      line(585, 10, SENTENCE_2),
+      line(570, 10, 'Index Terms'),
+    ])
+    expect(abstract).toBe(`${SENTENCE_1} ${SENTENCE_2}`)
+  })
+
+  it('is case-insensitive and tolerates a colon lead-in', () => {
+    const abstract = abstractFromLines([
+      ...FRONT_MATTER,
+      line(600, 10, `ABSTRACT: ${SENTENCE_1}`),
+      line(585, 10, SENTENCE_2),
+      line(570, 10, 'Keywords'),
+    ])
+    expect(abstract).toBe(`${SENTENCE_1} ${SENTENCE_2}`)
+  })
+
+  it('stops at Keywords as readily as at Introduction', () => {
+    const abstract = abstractFromLines([
+      ...FRONT_MATTER,
+      line(600, 10, 'Abstract'),
+      line(585, 10, SENTENCE_1),
+      line(570, 10, SENTENCE_2),
+      line(555, 10, 'Keywords: code search, deep learning'),
+    ])
+    expect(abstract).toBe(`${SENTENCE_1} ${SENTENCE_2}`)
+  })
+
+  it('returns nothing when no Abstract heading is found', () => {
+    expect(abstractFromLines(FRONT_MATTER)).toBeUndefined()
+  })
+
+  it('does not mistake a title that starts with the word "Abstract" for the heading', () => {
+    // "Abstract Interpretation..." is a real, if uncommon, title pattern. It
+    // is set in the page's largest font (size 18, same as any other title),
+    // which is what the size guard uses to tell it apart from a genuine
+    // "Abstract" heading — those are never the single biggest text on a page.
+    const abstract = abstractFromLines([
+      line(700, 18, 'Abstract Interpretation of Concurrent Programs'),
+      line(670, 11, 'Jane Doe'),
+    ])
+    expect(abstract).toBeUndefined()
+  })
+
+  it('finds the heading even when it sits in the upper half of the page', () => {
+    // A short title/author block leaves the abstract starting well above the
+    // page's vertical midpoint — the exact case a now-removed position-based
+    // guard used to reject. Page is 792pt tall; y=600 is above the midpoint.
+    const abstract = abstractFromLines([
+      line(760, 18, 'A Short Title'),
+      line(735, 11, 'Jane Doe'),
+      line(710, 10, 'Abstract'),
+      line(695, 10, SENTENCE_1),
+      line(680, 10, SENTENCE_2),
+      line(665, 10, 'Introduction'),
+    ])
+    expect(abstract).toBe(`${SENTENCE_1} ${SENTENCE_2}`)
+  })
+
+  it('stops at a two-column body it cannot safely read in order', () => {
+    const abstract = abstractFromLines([
+      ...FRONT_MATTER,
+      line(600, 10, 'Abstract'),
+      line(585, 10, SENTENCE_1),
+      line(570, 10, SENTENCE_2),
+      // A baseline split into two columns — the two-column body has begun.
+      columns(400, 10, ['Left column text.', 'Right column text.']),
+      line(385, 10, 'More right-column text that must never be reached.'),
+    ])
+    expect(abstract).toBe(`${SENTENCE_1} ${SENTENCE_2}`)
+    expect(abstract).not.toContain('must never be reached')
+  })
+
+  it('rejects a match that is implausibly short', () => {
+    expect(abstractFromLines([...FRONT_MATTER, line(600, 10, 'Abstract'), line(585, 10, 'Too short.')])).toBeUndefined()
   })
 })

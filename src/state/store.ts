@@ -31,6 +31,7 @@ import {
 } from '../screening/schema'
 import { screeningStatus, type ScreeningStatus } from '../screening/status'
 import { screeningIssues } from '../screening/validate'
+import { extractPdfMeta } from '../model/pdfMeta'
 import {
   fetchLatestRelease,
   updateFrom,
@@ -267,6 +268,12 @@ interface AppState {
   screeningShowPdf: boolean
   /** Whether the screening progress/PRISMA summary modal is open. Session-only. */
   screeningSummaryOpen: boolean
+  /**
+   * The paper id `extractScreeningAbstract` is currently reading a PDF for, or
+   * null. Session-only, like `screeningShowPdf` — purely a "give the reviewer
+   * something other than a silent gap" indicator, not state anything depends on.
+   */
+  screeningAbstractExtracting: string | null
 
   openProject: () => Promise<void>
   openRecent: (id: string) => Promise<void>
@@ -370,6 +377,16 @@ interface AppState {
   setScreeningFilter: (filter: ScreeningStatus | 'all') => void
   toggleScreeningPdf: () => void
   setScreeningSummaryOpen: (open: boolean) => void
+  /**
+   * Best-effort: read the current paper's PDF and fill `abstract` from
+   * `pdfMeta.ts`'s heuristic when there is none yet. Fired by `toggleScreeningPdf`
+   * when it opens the PDF, never awaited by its caller — the toggle itself is
+   * instant, and a slow or failed read only means the abstract stays empty, the
+   * same as before this feature existed. Marks the result `abstractFromPdf` so
+   * `ScreeningRecord` can warn it is unverified, and pushes one undo step so an
+   * unwanted extraction can be undone like any other write.
+   */
+  extractScreeningAbstract: () => Promise<void>
   /**
    * Adopt every paper's unanimous screening decision into the consolidated
    * tree, in one undo step. Returns how many papers were filled.
@@ -482,6 +499,7 @@ export const useStore = create<AppState>()(
     screeningFilter: 'all',
     screeningShowPdf: false,
     screeningSummaryOpen: false,
+    screeningAbstractExtracting: null,
 
     openProject: async () => {
       const platform = getPlatform()
@@ -1340,15 +1358,75 @@ export const useStore = create<AppState>()(
         s.screeningFilter = filter
       }),
 
-    toggleScreeningPdf: () =>
+    toggleScreeningPdf: () => {
+      const wasShowing = get().screeningShowPdf
       set((s) => {
         s.screeningShowPdf = !s.screeningShowPdf
-      }),
+      })
+      // Opening the PDF, not closing it, and only when there is something to
+      // gain from reading it — see `extractScreeningAbstract`'s own guards for
+      // the rest. Fire-and-forget: the toggle above already happened.
+      if (!wasShowing) void get().extractScreeningAbstract()
+    },
 
     setScreeningSummaryOpen: (open) =>
       set((s) => {
         s.screeningSummaryOpen = open
       }),
+
+    extractScreeningAbstract: async () => {
+      const project = get().project
+      const paper = currentPaper(get())
+      if (!project || project.screening === null || !paper) return
+      if (!paper.pdf || paper.abstract) return
+      if (get().screeningAbstractExtracting !== null) return // already reading one
+
+      const paperId = paper.id
+      set((s) => {
+        s.screeningAbstractExtracting = paperId
+      })
+      try {
+        // Same source the viewer itself renders — works unchanged in both
+        // runtimes (slr-file:// in Electron, blob:/http in the browser). See
+        // aiStore.ts's `run()` for the identical pattern reading PDF bytes
+        // outside of PdfViewer's own rendering.
+        const src = await getPlatform().getPdfSource(paper.pdf, get().saveHandle ?? { kind: 'download' })
+        let bytes: ArrayBuffer
+        try {
+          bytes = await (await fetch(src.url)).arrayBuffer()
+        } finally {
+          src.revoke?.()
+        }
+        const meta = await extractPdfMeta(bytes)
+        if (!meta.abstract) return
+
+        // Stale-response guard: the reviewer may have switched papers, closed
+        // the project, or the PDF may already have gotten an abstract some
+        // other way while this fetch was in flight.
+        const stillCurrent = get()
+        if (stillCurrent.project !== project) return
+        const stillPaper = currentPaper(stillCurrent)
+        if (!stillPaper || stillPaper.id !== paperId || stillPaper.abstract) return
+
+        lastFieldKey = null
+        const snap: HistoryEntry = { project, paperId: stillCurrent.currentPaperId }
+        set((s) => {
+          const draft = currentPaper(s)
+          if (!draft || draft.abstract) return
+          pushPast(s, snap)
+          draft.abstract = meta.abstract
+          draft.abstractFromPdf = true
+          s.dirty = true
+        })
+      } catch {
+        // An unreadable PDF, or the fetch itself failing, just leaves the
+        // abstract empty — the same outcome as never having tried.
+      } finally {
+        set((s) => {
+          if (s.screeningAbstractExtracting === paperId) s.screeningAbstractExtracting = null
+        })
+      }
+    },
 
     adoptAllUnanimousScreening: () => {
       const project = get().project

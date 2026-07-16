@@ -3,11 +3,20 @@ import type { PickedPdf, ProjectLocation } from '../platform/adapter'
 
 /**
  * Adding PDFs goes through the platform (native/browser pickers), so the
- * adapter is stubbed here to drive `addPdfs` directly. The PDFs carry no
- * `read`, so no metadata extraction runs — that logic is covered by
- * `src/model/pdfMeta.test.ts`.
+ * adapter is stubbed here to drive `addPdfs` directly. Most PDFs below carry
+ * no `read`, so no metadata extraction runs for them — the heuristic itself
+ * is covered by `src/model/pdfMeta.test.ts`. The "abstract extraction"
+ * describe block near the bottom is the exception: it mocks `extractPdfMeta`
+ * directly (rather than driving a real PDF through pdf.js) to test the
+ * store's own wiring — does it write `abstract`/`abstractFromPdf`, and does
+ * it leave an existing abstract alone.
  */
 let picked: PickedPdf[] = []
+let extractPdfMetaMock = vi.fn(async () => ({}) as { title?: string; authors?: string[]; abstract?: string })
+
+vi.mock('../model/pdfMeta', () => ({
+  extractPdfMeta: () => extractPdfMetaMock(),
+}))
 
 const mockPlatform = {
   kind: 'electron' as const,
@@ -50,6 +59,7 @@ function reset() {
     notice: null,
     extracting: 0,
   })
+  extractPdfMetaMock = vi.fn(async () => ({}))
 }
 
 describe('pdfKeys', () => {
@@ -123,5 +133,56 @@ describe('addPdfs deduplication', () => {
     expect(papers.map((p) => p.pdf)).toEqual(['pdfs/2023/a.pdf', 'pdfs/2024/a.pdf'])
     // Their ids must not collide either.
     expect(papers[0].id).not.toBe(papers[1].id)
+  })
+})
+
+describe('addPdfs abstract extraction', () => {
+  beforeEach(reset)
+
+  const readable = (name: string, path: string): PickedPdf => ({
+    name,
+    path,
+    read: async () => new ArrayBuffer(0),
+  })
+
+  it('pre-fills the abstract and flags it as PDF-extracted', async () => {
+    extractPdfMetaMock = vi.fn(async () => ({ abstract: 'An abstract read from the PDF.' }))
+    picked = [readable('a.pdf', '/reviews/pdfs/a.pdf')]
+    await useEditorStore.getState().addPdfs()
+    const [paper] = useEditorStore.getState().papers
+    expect(paper.abstract).toBe('An abstract read from the PDF.')
+    expect(paper.abstractFromPdf).toBe(true)
+  })
+
+  it('does not flag a row when the heuristic finds nothing', async () => {
+    extractPdfMetaMock = vi.fn(async () => ({}))
+    picked = [readable('a.pdf', '/reviews/pdfs/a.pdf')]
+    await useEditorStore.getState().addPdfs()
+    const [paper] = useEditorStore.getState().papers
+    expect(paper.abstract).toBe('')
+    expect(paper.abstractFromPdf).toBeUndefined()
+  })
+
+  it('never overwrites an abstract the reviewer already typed while the read was in flight', async () => {
+    let resolveMeta!: (v: { abstract?: string }) => void
+    extractPdfMetaMock = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveMeta = resolve
+        }),
+    )
+    picked = [readable('a.pdf', '/reviews/pdfs/a.pdf')]
+    const pending = useEditorStore.getState().addPdfs()
+    await vi.waitFor(() => expect(useEditorStore.getState().papers).toHaveLength(1))
+
+    useEditorStore.setState((s) => {
+      s.papers[0].abstract = 'Typed by the reviewer.'
+    })
+    resolveMeta({ abstract: 'From the PDF, arriving late.' })
+    await pending
+
+    const [paper] = useEditorStore.getState().papers
+    expect(paper.abstract).toBe('Typed by the reviewer.')
+    expect(paper.abstractFromPdf).toBeUndefined()
   })
 })
