@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useGitStore } from '../state/gitStore'
 import { useStore } from '../state/store'
+import { diffLines } from '../git/output'
 import '../styles/git.css'
 
 /**
@@ -104,7 +105,17 @@ export function GitDialog() {
           )}
 
           {panel.status?.diff && (
-            <pre className="git-diff">{panel.status.diff}</pre>
+            <pre className="git-diff">
+              {diffLines(panel.status.diff).map((line, i) => (
+                // Index is safe here: this list is a pure function of the diff
+                // text and re-renders wholesale whenever it changes, never
+                // reordered or edited in place.
+                <span key={i} className={`git-diff-line git-diff-${line.kind}`}>
+                  {line.text}
+                  {'\n'}
+                </span>
+              ))}
+            </pre>
           )}
           {panel.status?.diffTruncated && <p className="git-muted">Diff truncated.</p>}
           {hasUntracked && <p className="git-muted">Untracked files have no diff yet.</p>}
