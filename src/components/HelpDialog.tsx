@@ -111,6 +111,21 @@ function commonFaqs(): ReactNode {
           at the folder that holds them.
         </p>
       </Faq>
+      <Faq q="Why did my Findings get reordered — and why is my project suddenly unsaved?">
+        <p>
+          Opening a paper as <strong>Consolidation</strong> lines the reviewers up: it works out which
+          of each reviewer's repeated entries are the same entry and puts them in the same order, so
+          that everyone's <em>Finding #2</em> means one finding. Without that, comparing #2 against #2
+          would pit unrelated findings against each other and report a disagreement that was really
+          just a difference of ordering.
+        </p>
+        <p>
+          Because that changes the file, it counts as an unsaved change — and it is a single{' '}
+          <strong>Undo</strong> away if you would rather keep the original order. Your own values are
+          never altered, only their order, and a gap can appear where you recorded nothing for an
+          entry the others did. Once you have answered a group in Consolidation, it is left alone.
+        </p>
+      </Faq>
       <Faq q="Is my work saved automatically?">
         <p>
           No. A dot next to the project name means unsaved changes — press <strong>{MOD}+S</strong>.
@@ -285,6 +300,18 @@ function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
               <strong>every reviewer's answer side by side</strong>, flags whether they agree, and
               lets you click one to adopt it. What Consolidation records is the project's{' '}
               <strong>final result</strong> — the answers an analysis or export would use.
+            </p>
+            <p>
+              For fields and groups that can be added several times — Findings, say — Consolidation
+              does two things for you as you open a paper. It adds{' '}
+              <strong>as many entries as the busiest reviewer recorded</strong>, so you are not
+              counting anyone's work by hand. And it works out{' '}
+              <strong>which of each reviewer's entries are the same entry</strong>, since two people
+              listing the same three findings rarely list them in the same order. Your Finding #2 is
+              then everyone's Finding #2, and the compare button lines up answers that are genuinely
+              about the same thing instead of reporting a disagreement that was only a difference of
+              ordering. Entries are matched on what they say, so wording need not match exactly;
+              once you have answered a group, it is left alone rather than re-ordered underneath you.
             </p>
             <p>
               Until you pick who you are, the form stays hidden: an answer that isn't attributable to

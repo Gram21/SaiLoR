@@ -123,6 +123,7 @@ The entire app state lives in a single Zustand store with immer middleware:
 - **`setHelpOpen(open)`** — shows/hides the help dialog
 - **`selectReviewer(reviewer)`** — switches `currentReviewer` and persists the choice per project. A view switch: no undo step, no `dirty`
 - **`openConsolidation(path, name, index)` / `closeConsolidation()`** — open/close the compare popup for one field
+- **`alignConsolidationNode(paperId, nodeName, coalesce)`** — match the reviewers' repeated entries under one node and write the result in (reorder + grow); see "Matching the reviewers' repeated entries" below
 
 The `containerAt(root, path)` helper walks the annotation tree following `PathSeg[]` (name + index pairs) to reach the container for a given path. `currentTree(project, currentReviewer, paper, create?)` decides *which* tree that walk starts from — see "Multiple reviewers & Consolidation" below; `setFieldValue`, `addInstance`, `removeInstance`, and `applyAiSuggestions` all call it before touching anything.
 
@@ -287,6 +288,52 @@ returned for display/validation without touching the project (selectors and read
 computations pass nothing). `setFieldValue`, `addInstance`, `removeInstance`, and
 `applyAiSuggestions` all resolve their target tree this way before doing anything else, and bail
 out — no write, no undo entry — if a multi-reviewer project has no reviewer selected yet.
+
+### Matching the reviewers' repeated entries (`src/consolidate/`)
+
+Two reviewers who both record three Findings need not record them in the same order: Reviewer 1's
+Finding #1 may be Reviewer 2's Finding #3. Comparing them position by position would then report
+disagreement that isn't there. Whenever Consolidation is the active seat,
+`useConsolidationAlignment` (`src/hooks/`) works out which of each reviewer's entries are *the same
+entry* and lines them up.
+
+| Module | Does |
+| --- | --- |
+| `similarity.ts` | How alike two answers are, as `{score, weight}`. `weight` is what makes "agrees on five fields" outrank "agrees on one" — averaging scores alone cannot tell those apart, as both average to 1.0. Weight 0 means the pair said nothing (a field only one reviewer filled abstains rather than voting against). Text is `max(levenshtein ratio, token Dice)`; enums compare as labels, never as characters ("High"/"Low" overlap and mean the opposite); a `false` boolean carries no evidence, since every untouched boolean reads `false` |
+| `assign.ts` | Hungarian max-weight assignment. Greedy is not merely worse but wrong here: one locally good pair can force two later entries into a much worse one, and greedy cannot trade the first against the second |
+| `align.ts` | The recursion. `alignNode` returns slots per repeatable node; `alignableNodes` lists what is worth doing |
+| `apply.ts` | Writes an alignment into the data |
+
+**Matching cannot cross**, which is a requirement of the feature: a group's sub-entries are only
+ever matched *inside* an already-matched pair of parents, because the recursion never offers a
+candidate from another group. It is structural, not a rule applied afterwards.
+
+**The mapping is stored as the ordering itself** — there is no mapping field in the file. Every
+reviewer's entries are reordered so position N means the same entry for everyone, and the
+consolidated tree is grown to one entry per slot (the feature's "add the maximum number
+automatically" rule). This is why `pruneTree` keeps *interior* gaps and drops only trailing
+empties: a reviewer with no entry for slot 2 holds an empty one there, and closing that gap would
+slide every later entry down a slot and silently re-point the alignment on the next load.
+
+**It runs a node at a time, off the paint path.** Matching is not cheap — a large paper measures in
+the hundreds of milliseconds — so the hook yields to the browser between nodes rather than freezing
+the window as it opens. Whatever the reviewer opens the ⇄ compare popup on jumps the queue.
+`alignConsolidationNode(paperId, nodeName, coalesce)` is the store action; `coalesce` folds later
+nodes into the undo entry the run's first node pushed, so lining a paper up is one undo press.
+
+**A node the consolidator has already answered is never re-matched.** Their entry N means a
+particular thing to them; re-matching could move a different entry into slot N, leaving their
+recorded answer describing something it was never about. The cost is that entries added *after*
+consolidation began are not auto-matched for that node — the safe side of the trade, since a stale
+match is visible and a silently re-pointed answer is not.
+
+Matching is lexical only. Bundling a local embedding model (nomic-embed-text and similar) was
+evaluated and rejected: ~185 MB installed at best and plausibly several hundred MB of RAM, against
+peer-reviewed evidence (VLDB 2023 entity-resolution, DeepMatcher, fuzzylink) that on *short,
+structured* strings — which annotation values are — good lexical methods match or beat embeddings,
+which win on long dirty text, paraphrase and multilingual instead. `onnxruntime-node` has also
+dropped Intel-Mac support. If semantic matching is ever wanted, the shape is an opt-in call to a
+local Ollama (`/api/embed`) layered *on top of* lexical scoring, not replacing it.
 
 **`currentReviewer`** is a *view* selection, not project data: switching it is not an undo step
 and does not set `dirty`. It defaults to `null` (unselected) whenever a multi-reviewer project is

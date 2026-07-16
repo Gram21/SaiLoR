@@ -227,7 +227,12 @@ Cardinality guards:
 
 Called during serialization. For each node:
 - Keep the first `max(min, 1)` instances unconditionally
-- For instances beyond the minimum, drop trailing empty ones (so saved files stay tidy)
+- Drop the empty instances **trailing** the end of the list (so saved files stay tidy)
+- Keep an empty instance that has a filled one after it — position carries meaning. Consolidation
+  records which of each reviewer's entries are the same entry by lining their lists up
+  (`src/consolidate/apply.ts`), and a reviewer with no entry for the second slot holds an empty one
+  there. Closing that gap would slide every later entry down a slot and silently re-point the
+  alignment on the next load
 - An instance is "empty" (`isEmptyInstance`) if its field value is falsy (boolean: `false`; others: `null`/`undefined`/`""`) AND all recursive children are empty
 
 ### 5. Serialize (`serializeProject` in `src/model/project.ts`)

@@ -317,3 +317,35 @@ export function alignPaper(
 ): TreeAlignment {
   return alignLevel(schema, reviews, new Map())
 }
+
+/**
+ * Align one top-level node, returning an alignment shaped like a whole-paper
+ * one but holding only that node — `applyAlignment` skips what it does not find,
+ * so a partial result applies as-is.
+ *
+ * The unit the scheduler works in. A node is independent of its siblings, so
+ * doing them one at a time is what lets the work be spread across frames and
+ * the node the reviewer is actually looking at be pulled to the front.
+ */
+export function alignNode(
+  schema: ResolvedDef[],
+  reviews: Record<string, AnnotationValueTree>,
+  nodeName: string,
+): TreeAlignment {
+  const def = schema.find((d) => d.name === nodeName)
+  if (!def) return {}
+  return alignLevel([def], reviews, new Map())
+}
+
+/**
+ * The nodes worth aligning: those holding several entries, or with a repeatable
+ * node somewhere beneath them. Everything else has one entry per reviewer and
+ * nothing to match.
+ */
+export function alignableNodes(schema: ResolvedDef[]): string[] {
+  return schema.filter(hasAnythingToMatch).map((d) => d.name)
+}
+
+function hasAnythingToMatch(def: ResolvedDef): boolean {
+  return isRepeatable(def) || def.children.some(hasAnythingToMatch)
+}

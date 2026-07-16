@@ -8,6 +8,7 @@ import {
   type Paper,
 } from '../model/project'
 import {
+  hasAnnotations,
   makeInstance,
   normalizeTree,
   type AnnotationValueTree,
@@ -15,6 +16,8 @@ import {
   type InstanceNode,
 } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
+import { alignNode } from '../consolidate/align'
+import { applyAlignment } from '../consolidate/apply'
 import { validateProject, type UnannotatedPaper, type ValidationIssue } from '../model/validate'
 import { formatPath, resolvePath } from '../llm/paths'
 import { isUnanswered } from '../llm/fields'
@@ -294,6 +297,17 @@ interface AppState {
   /** Consolidation clicked "compare" on one field — open the popup for it. */
   openConsolidation: (path: PathSeg[], name: string, index: number) => void
   closeConsolidation: () => void
+  /**
+   * Match the reviewers' repeated entries under one top-level node, and write
+   * the result into the paper: every reviewer's entries reordered so position
+   * means the same entry for all of them, and the consolidated tree grown to
+   * one entry per match. Returns whether anything actually moved.
+   *
+   * Driven by `useConsolidationAlignment`, a node at a time. `coalesce` folds
+   * this node into the undo entry an earlier node of the same run pushed, so
+   * lining a paper up is one undo press rather than one per node.
+   */
+  alignConsolidationNode: (paperId: string, nodeName: string, coalesce: boolean) => boolean
 }
 
 /** What `applyAiSuggestions` actually did, for the summary shown to the reviewer. */
@@ -974,6 +988,62 @@ export const useStore = create<AppState>()(
       set((s) => {
         s.consolidationTarget = null
       }),
+
+    alignConsolidationNode: (paperId, nodeName, coalesce) => {
+      const prev = get()
+      const project = prev.project
+      if (!project || project.reviewers <= 1) return false
+      const paper = project.papers.find((p) => p.id === paperId)
+      if (!paper) return false
+      const def = project.schema.find((d) => d.name === nodeName)
+      if (!def) return false
+
+      // Once the consolidator has committed an answer under this node, its
+      // entry N means a particular thing to them, and re-matching could quietly
+      // move a different entry into slot N — their recorded answer would then
+      // describe something it was never about. Matching is a service offered
+      // before the work starts, not a thing done underneath it.
+      //
+      // The cost is that entries a reviewer adds *after* consolidation began are
+      // not auto-matched for this node; comparing them by hand still works. That
+      // is the safe side of the trade: a stale match is visible, a silently
+      // re-pointed answer is not.
+      if (hasAnnotations([def], { [nodeName]: paper.annotations[nodeName] ?? [] })) return false
+
+      // Only the numbered reviewers get a vote. The consolidated tree is what
+      // is being built out of them, so letting it match against itself would be
+      // circular.
+      const reviews: Record<string, AnnotationValueTree> = {}
+      for (let i = 1; i <= project.reviewers; i++) {
+        const tree = paper.reviews[String(i)]
+        if (tree) reviews[String(i)] = tree
+      }
+      if (Object.keys(reviews).length < 2) return false
+
+      // Computed against the current (frozen) state before opening a draft: this
+      // is the expensive part, and immer drafts are not worth proxying it through.
+      const alignment = alignNode(project.schema, reviews, nodeName)
+      const snap: HistoryEntry = { project, paperId: prev.currentPaperId }
+
+      let changed = false
+      set((s) => {
+        const draft = s.project!.papers.find((p) => p.id === paperId)
+        if (!draft) return
+        const draftReviews: Record<string, AnnotationValueTree> = {}
+        for (const r of Object.keys(reviews)) draftReviews[r] = draft.reviews[r]
+        changed = applyAlignment(s.project!.schema, alignment, draftReviews, draft.annotations)
+        if (!changed) return
+        // One undo step for the whole paper, not one per node: the reviewer sees
+        // a single "the entries were lined up" event and undoes it in one press.
+        // `coalesce` is the scheduler saying this is a later node of a run whose
+        // first node already took the snapshot.
+        if (!coalesce) pushPast(s, snap)
+        s.dirty = true
+      })
+      // A value typed after this must not merge into the alignment's undo entry.
+      if (changed) lastFieldKey = null
+      return changed
+    },
 
     undo: () => {
       const st = get()

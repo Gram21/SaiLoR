@@ -18,6 +18,7 @@ import { Splitter } from './components/Splitter'
 import { useKeybindings } from './hooks/useKeybindings'
 import { useDirtyGuard } from './hooks/useDirtyGuard'
 import { useElectronCloseGuard } from './hooks/useElectronCloseGuard'
+import { useConsolidationAlignment } from './hooks/useConsolidationAlignment'
 import {
   loadPaneWidths,
   savePaneWidths,
@@ -31,6 +32,7 @@ export function App() {
   useKeybindings()
   useDirtyGuard()
   useElectronCloseGuard()
+  useConsolidationAlignment()
 
   const project = useStore((s) => s.project)
   const sidebarCollapsed = useStore((s) => s.sidebarCollapsed)
