@@ -279,3 +279,17 @@ describe('needsPdfFolderGrant / grantPdfFolderAccess', () => {
     spy.mockRestore()
   })
 })
+
+describe('absolutePdfPaths / siblingProjectLocation: no filesystem paths in the browser', () => {
+  it('absolutePdfPaths returns undefined for every entry', async () => {
+    const adapter = new BrowserAdapter()
+    const result = await adapter.absolutePdfPaths(['a.pdf', 'sub/b.pdf'], DOWNLOAD_HANDLE)
+    expect(result).toEqual([undefined, undefined])
+  })
+
+  it('siblingProjectLocation returns null so callers fall back to pickProjectLocation', async () => {
+    const adapter = new BrowserAdapter()
+    const result = await adapter.siblingProjectLocation(DOWNLOAD_HANDLE, 'project.json')
+    expect(result).toBeNull()
+  })
+})
