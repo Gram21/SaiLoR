@@ -12,7 +12,9 @@
  *      anchor-slug rules (including the -1, -2 suffixes it adds to duplicate headings).
  *   3. Every page is reachable from _Sidebar.md — the navigation is hand-maintained,
  *      so a new page is otherwise trivially easy to leave orphaned. `index.md` — OKF's
- *      own directory listing, deliberately not mirrored to the wiki — is exempt.
+ *      own directory listing, deliberately not mirrored to the wiki — and
+ *      `INSTRUCTIONS.md` — config handed to the OpenWiki generator, not a page it
+ *      writes — are exempt.
  *
  *     npm run check:wiki
  */
@@ -30,6 +32,12 @@ const CHROME = new Set(['Home', '_Sidebar', '_Footer'])
 // treatment; the exclusion is entirely our own choice), so it gets its own exemption
 // from the sidebar-reachability check rather than being folded into that set.
 const OKF_UNPUBLISHED = new Set(['index'])
+// `INSTRUCTIONS.md` is the shared, user-authored brief handed to the OpenWiki
+// generator itself (see .github/workflows/openwiki.yml) — config the generator reads,
+// not a page it (or anyone else) writes for a reader. Unrelated to OKF; it just happens
+// to share `index.md`'s need for a sidebar exemption, so it gets its own named set
+// rather than being folded into OKF_UNPUBLISHED, which would misdescribe it.
+const GENERATOR_INPUT = new Set(['INSTRUCTIONS'])
 
 /**
  * GitHub's heading → anchor rule: lowercase, drop anything that is not a word
@@ -115,7 +123,7 @@ if (!sidebar) {
   problems.push('_Sidebar.md is missing — the wiki would have no navigation')
 } else {
   for (const name of pages.keys()) {
-    if (CHROME.has(name) || OKF_UNPUBLISHED.has(name)) continue
+    if (CHROME.has(name) || OKF_UNPUBLISHED.has(name) || GENERATOR_INPUT.has(name)) continue
     const linked = new RegExp(`]\\(${name}(\\.md)?([#)])`).test(sidebar.text)
     if (!linked) {
       problems.push(`_Sidebar.md does not link to "${name}" — the page would be orphaned`)
@@ -124,7 +132,7 @@ if (!sidebar) {
 }
 
 const pageCount = [...pages.keys()].filter(
-  (p) => !CHROME.has(p) && !OKF_UNPUBLISHED.has(p),
+  (p) => !CHROME.has(p) && !OKF_UNPUBLISHED.has(p) && !GENERATOR_INPUT.has(p),
 ).length
 if (problems.length > 0) {
   console.error(`\nBroken wiki links (${problems.length}):\n`)
