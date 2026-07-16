@@ -7,6 +7,7 @@
 import type { RecentEntry } from './recents'
 import type { OsInfo } from '../model/version'
 import type { LlmConfig, LlmHttpRequest, LlmHttpResponse } from '../llm/types'
+import type { GitPlatform } from '../git/types'
 
 export type { RecentEntry }
 export type { OsInfo }
@@ -186,6 +187,24 @@ export interface PlatformAdapter {
    * directly, which some providers will refuse.
    */
   callLlm(request: LlmHttpRequest, signal?: AbortSignal): Promise<LlmHttpResponse>
+
+  /**
+   * Git operations against **the user's own git installation**, or `null`
+   * where the runtime cannot reach one.
+   *
+   * Only the Electron build can: the main process spawns the real `git`
+   * binary, so the user's ~/.gitconfig, credential helpers and SSH agent all
+   * apply. A browser page cannot spawn a process, cannot read a config file,
+   * and cannot reach an agent — and there is no honest fallback, because "the
+   * local git configuration" is exactly what a sandboxed page has no access
+   * to. A pure-JS reimplementation (e.g. isomorphic-git) would be a different
+   * thing wearing the same name, so the browser returns `null` and the UI
+   * hides git rather than pretending.
+   *
+   * Null is about the *runtime*. Whether this *machine* has git installed is
+   * a separate question, asked by `GitPlatform.probe()`.
+   */
+  getGit(): GitPlatform | null
 }
 
 /** True when running inside the Electron shell (preload exposed `window.slr`). */

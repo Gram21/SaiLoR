@@ -14,7 +14,14 @@ import {
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { readFile, writeFile, access, readdir } from 'node:fs/promises'
 import { constants, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { execFile } from 'node:child_process'
 import path from 'node:path'
+// The only imports of src/ into electron/: the URL/path security gate and the
+// error-text formatter for git operations must not exist twice — see "Git"
+// below for why.
+import { validateGitUrl, validateClonePath } from '../src/git/url'
+import { gitErrorText } from '../src/git/output'
+import type { GitRun } from '../src/git/types'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -679,6 +686,310 @@ ipcMain.handle(
     }
   },
 )
+
+// ---- Git: run the user's own git binary ----
+//
+// The whole feature lives here rather than in a library because the user asked
+// for "the local git installation": their git, their ~/.gitconfig, their
+// credential helper, their SSH agent. A bundled reimplementation would be none
+// of those — see openwiki/architecture.md's "Git" section for the full reasoning
+// (this is Electron-only; the browser build has no local git to reach at all).
+//
+// Two rules hold for every call below and are not negotiable:
+//
+//  * execFile with an argument array, never a shell string, and `--` before any
+//    user-supplied path or URL. A repository URL is user input reaching a
+//    spawned process; without both, a URL of "--upload-pack=…" would be read as
+//    an option rather than an argument.
+//  * The renderer never names an argv. It picks one of the operations below and
+//    supplies data; this file decides what git is actually asked to do. Handing
+//    the renderer a general `git <args>` channel would be handing it arbitrary
+//    code execution (git has `--exec-path`, aliases, and the `ext::` transport).
+
+/** Plumbing: rev-parse, status, diff, add, commit. */
+const GIT_TIMEOUT_MS = 30_000
+/** Network: clone, fetch, push. A repository of PDFs is genuinely slow. */
+const GIT_NETWORK_TIMEOUT_MS = 900_000
+/** A diff of a large project JSON blows execFile's 1 MB default. */
+const GIT_MAX_BUFFER = 32 * 1024 * 1024
+
+/**
+ * The child's environment.
+ *
+ * `GIT_TERMINAL_PROMPT=0` and `GIT_EDITOR=true` are **not** weakening
+ * anything: this process has no terminal, so a git that decides to ask for a
+ * username or open an editor would block forever on a tty that does not
+ * exist, and the app would look frozen with no way out. Both make git fail
+ * immediately with its own message instead. Credential helpers, askpass
+ * programs and SSH agents are untouched, because none of them is a terminal
+ * prompt — which is exactly the point: the user's configured way of
+ * authenticating still works, and only the "type it at the console" path
+ * (which cannot work here) is turned off.
+ *
+ * The GIT_* variables are stripped because SaiLoR may have been launched from
+ * a shell sitting inside some other repository, and an inherited GIT_DIR
+ * would silently point every command below at it.
+ */
+function gitEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env }
+  for (const k of [
+    'GIT_DIR',
+    'GIT_WORK_TREE',
+    'GIT_INDEX_FILE',
+    'GIT_OBJECT_DIRECTORY',
+    'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+    'GIT_CONFIG',
+    'GIT_CONFIG_GLOBAL',
+  ]) {
+    delete env[k]
+  }
+  env.GIT_TERMINAL_PROMPT = '0'
+  env.GIT_EDITOR = 'true'
+  env.GIT_SEQUENCE_EDITOR = 'true'
+  return env
+}
+
+/**
+ * Run git. A non-zero exit is **data, not an exception**: the exact text git
+ * printed is what the user has to see, and half of git's useful output
+ * arrives on a failing exit code (a merge that conflicts exits 1, and that is
+ * the normal path here). Only a failure to launch git at all is signalled
+ * with `code: null`.
+ */
+function runGit(args: string[], cwd?: string, timeout = GIT_TIMEOUT_MS): Promise<GitRun> {
+  return new Promise((resolve) => {
+    execFile(
+      'git',
+      args,
+      { cwd, env: gitEnv(), timeout, maxBuffer: GIT_MAX_BUFFER, windowsHide: true },
+      (err, stdout, stderr) => {
+        const e = err as (Error & { code?: number | string; killed?: boolean }) | null
+        if (!e) {
+          resolve({ ok: true, code: 0, stdout, stderr })
+          return
+        }
+        if (e.killed) {
+          resolve({
+            ok: false,
+            code: null,
+            stdout,
+            stderr: `git timed out after ${Math.round(timeout / 1000)}s.`,
+          })
+          return
+        }
+        if (typeof e.code === 'number') {
+          resolve({ ok: false, code: e.code, stdout, stderr })
+          return
+        }
+        // ENOENT and friends: git never started.
+        resolve({ ok: false, code: null, stdout, stderr: e.message })
+      },
+    )
+  })
+}
+
+const gitOut = (r: GitRun) => r.stdout.trim()
+
+/** A repo-relative path from git's own output (`--show-prefix`, or a value the
+ *  renderer hands back to us for a git:pull* call); never absolute, never an
+ *  escape. Re-checked here because the renderer names the relative path. */
+function assertRelPath(p: string): void {
+  if (!p || path.isAbsolute(p) || p.split('/').includes('..') || /[\0\r\n]/.test(p)) {
+    throw new Error(`Refusing to act on the path "${p}".`)
+  }
+}
+
+ipcMain.handle('git:probe', async () => {
+  const r = await runGit(['--version'])
+  return r.ok
+    ? { available: true, version: gitOut(r), error: '' }
+    : { available: false, version: '', error: r.stderr.trim() || "git was not found on this system's PATH." }
+})
+
+ipcMain.handle('git:pickCloneDir', async () => {
+  const res = await dialog.showOpenDialog({
+    title: 'Choose where to clone the repository',
+    properties: ['openDirectory', 'createDirectory'],
+  })
+  if (res.canceled || res.filePaths.length === 0) return null
+  return res.filePaths[0]
+})
+
+ipcMain.handle('git:clone', async (_e, url: string, dest: string) => {
+  const badUrl = validateGitUrl(url)
+  if (badUrl) return { ok: false, error: badUrl }
+  const badDest = validateClonePath(dest)
+  if (badDest) return { ok: false, error: badDest }
+  const r = await runGit(['clone', '--', url, dest], undefined, GIT_NETWORK_TIMEOUT_MS)
+  return r.ok ? { ok: true, dest } : { ok: false, error: gitErrorText(r) }
+})
+
+// The mechanism the user asked for: `defaultPath` opens the picker inside the
+// freshly cloned repository. Returns only the chosen path — the caller reuses
+// the ordinary project-open path (`project:openPath` via `openRecent`), so
+// opening a project does not exist twice.
+ipcMain.handle('git:pickProjectIn', async (_e, dir: string) => {
+  const res = await dialog.showOpenDialog({
+    title: 'Open SLR project',
+    defaultPath: dir,
+    filters: [{ name: 'SLR project', extensions: ['json'] }],
+    properties: ['openFile'],
+  })
+  if (res.canceled || res.filePaths.length === 0) return null
+  return res.filePaths[0]
+})
+
+ipcMain.handle('git:info', async (_e, projectPath: string) => {
+  const dir = path.dirname(projectPath)
+  const inside = await runGit(['rev-parse', '--is-inside-work-tree'], dir)
+  if (!inside.ok || gitOut(inside) !== 'true') return null
+
+  // `--show-toplevel` resolves symlinks (on macOS a /tmp path realpaths under
+  // /private/tmp), so `path.relative(root, projectPath)` would compute a `..`
+  // escape that points nowhere. `--show-prefix` is git's own answer to "where
+  // in the work tree is my cwd", which is exactly what's needed here.
+  const root = gitOut(await runGit(['rev-parse', '--show-toplevel'], dir))
+  const prefix = gitOut(await runGit(['rev-parse', '--show-prefix'], dir))
+  const relPath = prefix + path.basename(projectPath)
+  const hasHead = (await runGit(['rev-parse', '--verify', '-q', 'HEAD'], dir)).ok
+  const branchRun = await runGit(['symbolic-ref', '--short', '-q', 'HEAD'], dir)
+  const branch = branchRun.ok ? gitOut(branchRun) || null : null // null = detached HEAD
+  const upRun = await runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], dir)
+  const upstream = upRun.ok ? gitOut(upRun) || null : null
+  return { root, relPath, branch, upstream, hasHead }
+})
+
+ipcMain.handle('git:status', async (_e, root: string) => {
+  const porcelain = (await runGit(['status', '--porcelain=v1', '-z'], root)).stdout
+  const hasHead = (await runGit(['rev-parse', '--verify', '-q', 'HEAD'], root)).ok
+  // --no-color: a user with color.diff=always would otherwise leak ANSI escape
+  // sequences into the <pre> as literal text. --no-pager costs one token and
+  // removes a whole class of hang.
+  const diff = hasHead
+    ? (await runGit(['--no-pager', 'diff', '--no-color', 'HEAD', '--'], root)).stdout
+    : ''
+  return { porcelain, diff }
+})
+
+ipcMain.handle('git:commit', async (_e, root: string, paths: string[], message: string) => {
+  paths.forEach(assertRelPath)
+  if (paths.length === 0) {
+    return { ok: false, code: null, stdout: '', stderr: 'Nothing selected to commit.' }
+  }
+  // `add` then a pathspec-limited commit: `add` handles an untracked or
+  // deleted path uniformly, and the pathspec means the user's own separately
+  // staged work elsewhere in the repo is neither committed nor disturbed.
+  const add = await runGit(['add', '--', ...paths], root)
+  if (!add.ok) return add
+  // `--` protects the paths but deliberately not `message`: `-m` consumes the
+  // next argument whatever it starts with, and rejecting a message beginning
+  // with "-" would reject a legitimate one.
+  return runGit(['commit', '-m', message, '--', ...paths], root)
+})
+
+ipcMain.handle('git:push', async (_e, root: string) => {
+  // Plain `git push`; the branch's own remote/merge config decides where. When
+  // there is no upstream, git's own message names the exact command to run —
+  // surfaced verbatim rather than inventing --set-upstream on the user's behalf.
+  return runGit(['push'], root, GIT_NETWORK_TIMEOUT_MS)
+})
+
+/**
+ * The pull classification. Contract: this always returns with the repository
+ * in exactly one of two states — not mid-merge, for every outcome except
+ * `'merge'`, or mid-merge with nothing unmerged except `relPath`, for
+ * `'merge'`. It never returns leaving a half-merge the renderer did not ask for.
+ */
+ipcMain.handle('git:pullBegin', async (_e, root: string, relPath: string) => {
+  assertRelPath(relPath)
+
+  const st = await runGit(['status', '--porcelain=v1', '-z'], root)
+  // Untracked files ('??') never block a merge, so they are not "dirty" here.
+  const dirty = st.stdout
+    .split('\0')
+    .filter((r) => r.length > 3 && !r.startsWith('??'))
+    .map((r) => r.slice(3))
+  if (dirty.length > 0) return { kind: 'dirty', paths: dirty }
+
+  const up = await runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], root)
+  if (!up.ok) {
+    const branchRun = await runGit(['symbolic-ref', '--short', '-q', 'HEAD'], root)
+    return { kind: 'no-upstream', branch: branchRun.ok ? gitOut(branchRun) || null : null }
+  }
+  const ref = gitOut(up)
+
+  const fetch = await runGit(['fetch'], root, GIT_NETWORK_TIMEOUT_MS)
+  if (!fetch.ok) return { kind: 'error', message: gitErrorText(fetch) }
+
+  if ((await runGit(['merge-base', '--is-ancestor', '@{u}', 'HEAD'], root)).ok) {
+    return { kind: 'up-to-date' }
+  }
+
+  if ((await runGit(['merge-base', '--is-ancestor', 'HEAD', '@{u}'], root)).ok) {
+    const ff = await runGit(['merge', '--ff-only', '@{u}'], root)
+    return ff.ok ? { kind: 'fast-forwarded' } : { kind: 'error', message: gitErrorText(ff) }
+  }
+
+  // Divergent. Read the three revisions of the project file BEFORE touching
+  // the work tree, so nothing that follows can change what gets merged.
+  const baseRun = await runGit(['merge-base', 'HEAD', '@{u}'], root)
+  const baseSha = baseRun.ok ? gitOut(baseRun) : null
+  const baseShow = baseSha ? await runGit(['show', `${baseSha}:${relPath}`], root) : null
+  const base = baseShow?.ok ? baseShow.stdout : null // null is fine — added on both sides.
+  const oursShow = await runGit(['show', `HEAD:${relPath}`], root)
+  const theirsShow = await runGit(['show', `${ref}:${relPath}`], root)
+  if (!oursShow.ok || !theirsShow.ok) {
+    return {
+      kind: 'error',
+      message: `The project file does not exist at ${!oursShow.ok ? 'HEAD' : ref}. Merge this by hand with git.`,
+    }
+  }
+
+  const merge = await runGit(['merge', '--no-commit', '--no-ff', ref], root)
+  // A merge that fails to *start* (unrelated histories, a hook refusing) leaves
+  // no MERGE_HEAD; `merge --abort` would then itself fail with "There is no
+  // merge to abort". Checking MERGE_HEAD is what keeps the contract above true.
+  if (!(await runGit(['rev-parse', '--verify', '-q', 'MERGE_HEAD'], root)).ok) {
+    return { kind: 'error', message: gitErrorText(merge) }
+  }
+
+  const st2 = await runGit(['status', '--porcelain=v1', '-z'], root)
+  const unmerged = st2.stdout
+    .split('\0')
+    .filter((r) => {
+      if (r.length < 4) return false
+      const x = r[0]
+      const y = r[1]
+      return x === 'U' || y === 'U' || (x === 'A' && y === 'A') || (x === 'D' && y === 'D')
+    })
+    .map((r) => r.slice(3))
+  const others = unmerged.filter((p) => p !== relPath)
+  if (others.length > 0) {
+    // SaiLoR knows how to merge an annotation JSON. It does not know how to
+    // merge a PDF or a .gitignore — abort cleanly and hand it back rather
+    // than half-doing it.
+    await runGit(['merge', '--abort'], root)
+    return { kind: 'conflict-elsewhere', paths: others }
+  }
+
+  return { kind: 'merge', ref, base, ours: oursShow.stdout, theirs: theirsShow.stdout }
+})
+
+ipcMain.handle('git:pullFinish', async (_e, root: string, relPath: string, text: string) => {
+  assertRelPath(relPath)
+  await writeFile(path.join(root, relPath), text, 'utf-8')
+  const add = await runGit(['add', '--', relPath], root)
+  if (!add.ok) return add
+  // `git commit` after a merge with MERGE_HEAD set records both parents and
+  // allows an empty tree change, which is why the merge commit is made this
+  // way rather than with `commit-tree` or `merge -m`. `--no-edit` takes git's
+  // own prepared MERGE_MSG; GIT_EDITOR=true above is the backstop.
+  return runGit(['commit', '--no-edit'], root)
+})
+
+ipcMain.handle('git:pullAbort', async (_e, root: string) => {
+  return runGit(['merge', '--abort'], root)
+})
 
 // Remember that a quit is in progress so the close guard can, after the user
 // confirms, resume quitting (rather than merely closing the window on macOS).
