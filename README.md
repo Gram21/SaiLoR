@@ -250,7 +250,8 @@ it) and the project works that way.
   (no seat, excluded from Consolidation) until you raise the count again. See §9 of the schema guide.
 
 It is still **one file, with no locking**: two people saving the same JSON at once will overwrite
-each other. Pass it along, or take turns.
+each other. Pass it along, or take turns — or see [Git](#git) below, which is built for exactly
+this: independent copies, reconciled field by field instead of overwritten.
 
 > 📖 Full details, including the exact file shape, are in
 > [§9 of the schema guide](docs/annotation-schema.md#9-multiple-reviewers--consolidation).
@@ -334,6 +335,59 @@ accept a value.
 - **Desktop**: writes to the opened file's path; **Save as** opens a native dialog.
 - **Browser (Chromium)**: uses the File System Access API to save in place / to a new file.
 - **Browser (other)**: downloads the updated JSON.
+
+## Git
+
+> **Desktop only, and not by accident.** Git support runs your own `git` binary, so it can use your
+> real `~/.gitconfig`, your credential helper, and your SSH agent. A web page cannot spawn a process
+> or read a config file — there is no permission that changes that — so there is nothing honest to
+> fall back to in the browser build, and it simply doesn't show these controls. If `git` is not on
+> your PATH, *Import from git…* and the toolbar's git entry points appear greyed out with git's own
+> error explaining why.
+
+**Import from git…** — on the start screen and in the toolbar's *Open* ▾ menu. Paste a repository URL,
+pick a folder, and confirm; the app then clones it. A clone of a repository full of PDFs can take a
+while, so you get a spinner and an elapsed-seconds line rather than a frozen-looking window. If it
+fails, you get git's **exact** error message and land back on the same form with what you typed still
+in it. On success you pick which project JSON to open, and the file picker already starts inside the
+folder that was just cloned.
+
+**The Git button** appears in the toolbar whenever the open project's JSON file sits inside a git
+repository. It opens a panel with:
+
+- your changes and a diff, so you can see what you are about to commit,
+- a commit message box and a **Commit** button,
+- **Pull** and **Push**.
+
+**Pull merges annotations field by field, not line by line.** A field only *you* changed keeps your
+value. A field only the *remote* changed takes theirs. Only a field you **both** changed — to
+different things — is a real conflict, and those are the only ones you are ever asked about: a list
+with your value on the left, the remote's on the right, and an editable final value in the middle
+(with a button on each side to just take that side). Nothing is committed until every conflict in the
+list has been answered. This is why an empty, all-`null`/`false` field is written into every paper and
+every reviewer's tree from the start (see [§9 of the schema guide](docs/annotation-schema.md#9-multiple-reviewers--consolidation))
+— it is what makes a plain `git diff` of one reviewer's work legible on its own, and it is also why
+SaiLoR's own merge doesn't need git's line-based merge to succeed: it reads the three revisions of the
+file and reconciles them as data, not as text.
+
+**Credentials.** SaiLoR never asks for your password and never stores one — it runs your own git, so
+your credential helper and SSH agent do the authenticating, exactly as they would from a terminal. If
+git would need to prompt at a terminal for something (a username typed interactively, for example) —
+there isn't one here — the operation fails with git's own message telling you what to fix, rather than
+hanging.
+
+**What it will not do:**
+
+- Merge a conflict outside the project JSON (a PDF, a `.gitignore`, …) — SaiLoR only knows how to
+  merge the annotation file; anything else is left for you to resolve with git, and the merge is
+  aborted cleanly rather than half-done.
+- Merge two copies of the project whose **annotation schema** was changed on both sides, differently —
+  the schema decides the shape of every tree in the file, so there is no field-level answer; the pull
+  refuses and tells you why.
+- Delete a paper the remote deleted if you have annotated it since — it is kept, and you are told.
+
+Live clone progress with a cancel button, and branch switching or history browsing, are not part of
+this either.
 
 ## Building & testing
 

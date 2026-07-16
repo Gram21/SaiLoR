@@ -59,21 +59,26 @@ npm run typecheck
 
 ```
 ├── electron/              Electron main process + preload
-│   ├── main.ts            IPC handlers (open, openPath, save, saveAs, setDir), slr-file:// protocol, window/menu setup, window-state persistence
-│   └── preload.ts         contextBridge → window.slr API (openProject, openPath, save, saveAs, …)
+│   ├── main.ts            IPC handlers (open, openPath, save, saveAs, setDir, llm:*, git:*), slr-file:// protocol, window/menu setup, window-state persistence
+│   └── preload.ts         contextBridge → window.slr API (openProject, openPath, save, saveAs, git*, …)
 ├── src/
 │   ├── model/              Domain model (pure, unit-tested)
 │   │   ├── schema.ts      AnnotationDef/ResolvedDef types, zod schemas, resolveSchema
 │   │   ├── annotations.ts AnnotationValueTree, normalize/prune/init/add/remove helpers
-│   │   ├── project.ts     loadProject / serializeProject, Paper/Project types
+│   │   ├── project.ts     loadProject / serializeProject, Paper/Project types, deepEqualJson
 │   │   ├── pdfMeta.ts     Best-effort title/author extraction from a PDF (metadata, then layout heuristic)
 │   │   ├── validate.ts    Checks annotated papers (required / type / enum / cardinality); unannotated papers are skipped, not flagged
 │   │   ├── version.ts     Update check against the GitHub releases API (silent while the repo is private)
 │   │   └── model.test.ts  Vitest unit tests for the model
-│   ├── platform/          Platform abstraction for file I/O and PDF loading
-│   │   ├── adapter.ts     PlatformAdapter interface (9 ops) + isElectron()
-│   │   ├── electron.ts    ElectronAdapter (IPC + slr-file://, recents)
-│   │   ├── browser.ts     BrowserAdapter (FSAPI / download / fetch, recents, IndexedDB handles)
+│   ├── git/                Git support — pure logic; the plumbing (electron/main.ts) and UI stay thin
+│   │   ├── types.ts       Shared shapes crossing the platform seam: GitRun, GitStatus, PullStart, GitPlatform, …
+│   │   ├── url.ts         validateGitUrl / validateClonePath / repoNameFromUrl — the security gate, imported by electron/main.ts
+│   │   ├── output.ts      parsePorcelain / capDiff / gitErrorText — turning what git printed into data
+│   │   └── merge.ts       mergeProjects / applyResolutions — the field-level three-way merge (see architecture.md's "Git" section)
+│   ├── platform/          Platform abstraction for file I/O, PDF loading, and git
+│   │   ├── adapter.ts     PlatformAdapter interface + isElectron()
+│   │   ├── electron.ts    ElectronAdapter (IPC + slr-file://, recents, git)
+│   │   ├── browser.ts     BrowserAdapter (FSAPI / download / fetch, recents, IndexedDB handles; getGit() is null)
 │   │   ├── pdfjs.ts       Single place configuring the pdf.js worker (viewer + extractor)
 │   │   ├── idb.ts         Tiny IndexedDB wrapper for persisting FileSystemFileHandle objects
 │   │   ├── recents.ts     Recent-projects list in localStorage (max 5)
@@ -81,9 +86,10 @@ npm run typecheck
 │   ├── state/
 │   │   ├── store.ts      Zustand + immer store (project, papers, save, annotations, undo/redo, theme, fontScale, pdfZoom, recents, help)
 │   │   ├── editorStore.ts  Draft state for the project editor (schema tree + papers, relative PDF paths, validate/save)
+│   │   ├── gitStore.ts    Zustand + immer store for the clone flow and the commit/pull/push panel (reads store.ts one-way; store.ts never imports it)
 │   │   └── settings.ts   Theme + font-scale persistence (localStorage), applyTheme/applyFontScale
 │   ├── components/        React UI
-│   │   ├── Toolbar.tsx    Open ▾ / Save ▾ dropdowns, font controls, theme toggle, help button
+│   │   ├── Toolbar.tsx    Open ▾ / Save ▾ dropdowns, font controls, theme toggle, help button, Git button
 │   │   ├── SidebarToggle.tsx  Show/hide the paper list (in its header; moves to the toolbar when hidden)
 │   │   ├── Dropdown.tsx   Reusable click-to-open dropdown menu
 │   │   ├── PaperList.tsx  Left pane — paper list with search box and annotation status dots
@@ -99,6 +105,9 @@ npm run typecheck
 │   │   ├── PapersEditor.tsx     Add/edit/reorder the PDFs the project references
 │   │   ├── ValidationDialog.tsx  "Validate" results, grouped by paper, plus a separate "not annotated yet" list
 │   │   ├── ClosePrompt.tsx      Save / Don't Save / Cancel when closing a dirty project
+│   │   ├── GitCloneDialog.tsx   Import-from-git modal: URL + destination → clone → pick the project JSON
+│   │   ├── GitDialog.tsx        Changes + diff, commit message, Pull, Push
+│   │   ├── GitMergeDialog.tsx   Pull's conflict-resolution list
 │   │   ├── HelpDialog.tsx Modal with app intro + keyboard shortcuts
 │   │   └── ErrorPanel.tsx Error overlay for load/save failures
 │   ├── hooks/
@@ -107,7 +116,7 @@ npm run typecheck
 │   │   └── useElectronCloseGuard.ts  Electron quit dialog + Edit-menu undo/redo IPC wiring
 │   ├── App.tsx            Component composition, ?project= auto-load, welcome screen with recents, HelpDialog
 │   ├── main.tsx           React root (applies theme + font scale before render)
-│   └── styles/index.css   Full app styling (light/dark via data-theme attribute, font-scale CSS var)
+│   └── styles/            index.css (full app styling), ai.css, editor.css, papers-editor.css, schema-editor.css, git.css
 ├── samples/               Also the default Docker volume (mounted read-only, served at /projects/)
 │   ├── project.example.json  Example project (title, 4 papers incl. a multi-page PDF) + schema with required and enum fields
 │   └── pdfs/                 Sample PDFs (incl. multipage.pdf with an internal link)

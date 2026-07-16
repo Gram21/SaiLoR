@@ -248,6 +248,51 @@ Paper navigation with `[`/`]` is disabled when typing in an input field; Alt-arr
 | Other browsers | Downloads JSON | Downloads JSON |
 | Server mode (no handle) | Falls back to Save as… | Downloads JSON |
 
+## Git
+
+**Prerequisite: `git` on this machine's `PATH`.** SaiLoR runs your own `git` binary; it does not
+bundle one. *Import from git…* and the toolbar's **Git** button are shown disabled, with git's own
+error, when `git --version` fails at launch (`GitPlatform.probe()`).
+
+**On macOS specifically, a packaged app's `PATH` does not include Homebrew's `/opt/homebrew/bin`**
+(or `/usr/local/bin` on Intel). `/usr/bin/git` — Apple's own Command Line Tools git, or a stub that
+offers to install them — is normally found regardless, but a Homebrew-only `git` with nothing at
+`/usr/bin/git` will not be. This is a known limitation, documented rather than worked around: there
+is no reliable, portable way to guess at a user's shell-configured `PATH` from a GUI app launched
+outside a shell, and hard-coding a list of common install locations would be exactly the kind of
+brittle guess this codebase avoids elsewhere. If *Import from git…* is dimmed on macOS and you know
+git is installed, check `which git` in a terminal against what a GUI-launched app actually sees.
+
+| Platform | Git support |
+|---|---|
+| Electron (desktop) | Full — clone, status, commit, pull (with field-level merge), push, using the real `git` binary and its config |
+| Browser (any) | None — the controls are not shown at all; see `architecture.md`'s "Git" section for why there is nothing to fall back to |
+
+**Credentials are never handled by SaiLoR.** Every git operation runs through the user's own
+credential helper, SSH agent, and host-key configuration, exactly as a terminal `git` command would.
+The one thing that is turned off is a *terminal* prompt (`GIT_TERMINAL_PROMPT=0`) — there is no
+terminal for git to prompt at, so leaving that on would hang the app instead of failing honestly.
+
+**What `git → Pull` does**: fetches, and either fast-forwards, reports up to date, or — on a genuine
+divergence — reads the three revisions of the project JSON and merges them field by field (see
+`data-model.md`'s "Merging two copies of a project"). Any field both sides changed, differently, is
+shown in a resolution list; nothing is committed until every row has been decided.
+
+**Known limits, by design, not oversight:**
+
+- **No upstream configured** — surfaces as git's own message, naming the command to fix it; SaiLoR
+  does not run `--set-upstream` on your behalf.
+- **A conflict outside the project JSON** (a PDF, a `.gitignore`, anything else git could not merge
+  on its own) — the git merge is aborted cleanly and handed back; resolve it with git directly, then
+  pull again.
+- **A schema (or `config.reviewers`, or `version`, or an unrelated `extra` field) changed on both
+  sides, differently** — the whole merge is refused, naming what could not be reconciled, rather than
+  guessing a field-level answer for something that reshapes the file.
+- **No live clone progress bar, and no cancel button** — a spinner and an elapsed-seconds counter
+  say "this has not frozen"; a genuinely stuck clone times out after 15 minutes. See
+  `architecture.md`'s "Rejected: streamed clone progress and a cancel button" for the reasoning.
+- **No branch switching, remote management, or history browsing** — out of scope for this feature.
+
 ## PDF Loading in the Browser Build
 
 Opening a **local** project file (any "Open…" that isn't a `?project=<url>` server-mode load) shows a one-time in-app prompt the first time you view a paper — *"SaiLoR needs to know where this project's PDFs are"* — with a **Choose folder…** button. Clicking it opens your browser's own folder picker; pick the folder that contains the project JSON (the one with `pdfs/` inside it, not the `pdfs/` folder itself). That grant is then reused for every PDF in the project for the rest of the session; you're not asked again unless you open a different project.

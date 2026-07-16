@@ -15,7 +15,8 @@ src/platform/electron.ts →  ElectronAdapter
 src/platform/browser.ts   →  BrowserAdapter
 ```
 
-**`PlatformAdapter`** (`src/platform/adapter.ts`) defines nine operations:
+**`PlatformAdapter`** (`src/platform/adapter.ts`) defines these operations (the list below is a
+guided tour, not an exhaustive count, which would just go stale as the interface grows):
 - `getRecents()` — return the list of recently opened projects (`RecentEntry[]` with `id` + `name`)
 - `openRecent(id)` — re-open a project by its recent-entry id (path on Electron, IndexedDB handle key on browser)
 - `openProject()` — show an open dialog/picker, return JSON text + a `SaveHandle`
@@ -29,6 +30,10 @@ Three more exist for the **project editor** (see below):
 - `pickPdfFolder()` — pick a folder and return every PDF inside it, recursively, as `PickedPdf[]`. Electron walks the filesystem via IPC (`pdf:pickFolder`); the browser reuses the same `webkitdirectory` `<input>` the PDF-viewer's one-time folder grant uses (see `pickPdfFolderViaInput` below), filtered to `.pdf` names.
 - `pickReferenceFile()` — pick a single `.bib`/`.ris`/`.json` reference-manager export; returns `{ text, name }` or null if cancelled. Parsed by `src/model/references.ts`.
 - `relativePdfPaths(pdfs, location)` — the `pdf` values to store, **relative to the JSON's directory**. Electron computes real relative paths via IPC; the browser returns bare file names (the File System Access API exposes no paths).
+
+One more is its own capability object rather than a flat method: `getGit(): GitPlatform | null` —
+git operations against the user's own git installation, or `null` where the runtime cannot reach one
+(the browser). See "Git" below.
 
 **Project title.** A project JSON may set a top-level `title`; the app shows it wherever it would otherwise show the file name (toolbar, recents list, Open menu), falling back to the file name when absent. It is a first-class key on `Project` (not swallowed into `extra`, which would duplicate it on save) and is only written when non-empty. The project editor exposes it as a *Project title* field next to the JSON location.
 
@@ -158,6 +163,12 @@ App (src/App.tsx)
 │     Modal overlay showing the results of "Validate", scoped to the active reviewer's own tree (or the consolidated one, for Consolidation) — see below
 ├── ConsolidationDialog (src/components/ConsolidationDialog.tsx)
 │     Modal overlay reachable only from Consolidation mode's ⇄ button: every reviewer's answer for one field, side by side; picking one writes it into the consolidated tree
+├── GitCloneDialog (src/components/GitCloneDialog.tsx)
+│     Import-from-git modal, driven by useGitStore's clone.phase: setup (URL + destination) → cloning (spinner + elapsed seconds) → error (git's exact text, back to setup) → done (pick the project JSON, opened inside the clone) — Electron only, see "Git" above
+├── GitDialog (src/components/GitDialog.tsx)
+│     Modal for the open project's own repository: changes + diff, a commit message, Commit, Pull, Push — shown only when the toolbar's Git button is present
+├── GitMergeDialog (src/components/GitMergeDialog.tsx)
+│     The pull's conflict-resolution list: your value left, the remote's right, an editable final value in the middle. No Escape, no backdrop-click, no × — see "Git" above for why
 └── ErrorPanel (src/components/ErrorPanel.tsx)
       Modal overlay for load/save errors
 ```
@@ -647,6 +658,260 @@ themself, later) can see that, and how, AI was used on a paper.
   pushed oldest-first, and `appliedAt` (an ISO 8601 timestamp) makes that order explicit even if the
   array is ever hand-edited or reordered.
 
+## Git
+
+### Why Electron-only
+
+**Electron: yes.** The main process is Node, so `child_process.execFile('git', […])` spawns the
+user's own `git` binary, which reads their real `~/.gitconfig`, their credential helper
+(`osxkeychain`, `manager-core`, …), their `~/.ssh/config`, and their SSH agent. No npm dependency is
+needed and none was added — the runtime dependency list stays at 6 (`immer`, `react`, `react-dom`,
+`react-pdf`, `zod`, `zustand`).
+
+**Browser: no, and there is nothing to fall back to.** `src/platform/browser.ts` has no `process`,
+no `fs`, and no `path` (`rebasePdfPaths` returns its input unchanged with the comment "the browser
+has no paths"; `getOsInfo()` returns `null`; PDFs need an explicit user folder grant). A web page
+cannot spawn a process, cannot read `~/.gitconfig`, and cannot reach an SSH agent — this is the
+sandbox, not a missing feature, and no flag or permission changes it. The feature request's own
+fallback clause — "if this is not possible, it should still try to use the local git
+configurations" — has no referent in the browser: there is no local git installation reachable, so
+there is no local git configuration to try.
+
+**Rejected: a pure-JS reimplementation (isomorphic-git or similar).** It would answer a different
+question than the one asked. It is not "the local git installation" — it has its own credential
+handling, does not read the user's `~/.gitconfig`, and does not use their SSH agent or credential
+helper. Shipping it and calling it "git support" would be dishonest about what actually ran.
+
+**The conclusion: git support is Electron-only, and the browser build hides it.** This mirrors how
+the codebase already handles other capability gaps — `getOsInfo(): OsInfo | null`,
+`needsPdfFolderGrant()` returning `false` on Electron (there is no such prompt there), the pathless
+`rebasePdfPaths` — and it is expressed in the type system, not left as a runtime convention:
+`PlatformAdapter.getGit(): GitPlatform | null` returns `null` in the browser, so a caller cannot
+invoke a git operation without first proving the runtime has one. A flat `GitPlatform` capability
+object rather than eleven individual methods on `PlatformAdapter` is deliberate too: eleven flat
+methods would mean eleven browser stubs, each of which either throws at runtime or silently no-ops
+— "unavailable" would be something a caller discovers by calling it, not something the type checker
+catches for them. `getOsInfo(): OsInfo | null` already established the pattern this follows.
+
+**A third, distinct case: git is not installed.** `GitPlatform.probe()` runs `git --version`. On
+failure the app says so honestly, with git's own error text, and the git entry points are shown
+**disabled with that reason** rather than hidden entirely — a control this *machine* could offer if
+git were installed is worth showing dimmed; a control the *runtime* can never offer (the browser) is
+noise and is hidden outright. This is the same asymmetry `AnnotationPanel.tsx` already applies to
+the ✦ AI button: invisible when the runtime/session gate (`aiUnlocked`) is off, dimmed-but-visible
+when the *project* turned it off (`config.ai: false`).
+
+### The renderer never names an argv
+
+Every git operation the renderer can ask for is one of eleven enumerated IPC handlers in
+`electron/main.ts` (`git:probe`, `git:pickCloneDir`, `git:clone`, `git:pickProjectIn`, `git:info`,
+`git:status`, `git:commit`, `git:push`, `git:pullBegin`, `git:pullFinish`, `git:pullAbort`) — never
+a general `git <args>` channel. Git has `--exec-path`, aliases, and the `ext::` remote-helper
+transport; a channel that let the renderer choose the argv would be handing it arbitrary code
+execution wearing a "just run git" label. Main decides what git is actually asked to do; the
+renderer only supplies data (a URL, a path, a commit message, a resolved text).
+
+Every call uses `execFile` with an **argument array**, never a shell string, and a `--` terminator
+before any user-supplied path or URL — a repository URL or a destination path is user input reaching
+a spawned process, and without both, a URL like `--upload-pack=/bin/sh` would be read as an option
+rather than an argument. `src/git/url.ts` (`validateGitUrl`/`validateClonePath`) is the actual gate,
+and **`electron/main.ts` imports it** — the first, and (with `src/git/output.ts`'s `gitErrorText`)
+one of only two, imports of `src/` into `electron/`. That is deliberate and load-bearing: a security
+gate must not exist twice, the same reason `comparable()` in `src/consolidate/unanimous.ts` is one
+shared function rather than three copies that could drift. Both modules import nothing themselves,
+so they typecheck identically under `tsconfig.node.json` (`types: ["node"]`) and `tsconfig.app.json`
+— a file appearing in two TypeScript programs is fine as long as neither is `composite` and both are
+`noEmit`, which is already true here.
+
+`validateGitUrl` is an **allowlist of transports** (`https://`, `http://`, `ssh://`, `git://`,
+`git+ssh://`, `file://`, the `user@host:path` scp shorthand, or an absolute local path), not a
+blocklist of characters — because the dangerous case is not a stray shell metacharacter (`execFile`
++ the argument array already close that door) but git's own `ext::` remote-helper syntax, which
+makes git run a program *named by the URL*. The `::` check requires two consecutive colons, so an
+ordinary `https://` (which has none between the scheme and its slashes) can never trip it —
+`src/git/url.test.ts` pins this explicitly, because it is exactly the kind of regex a later
+"simplification" could quietly break.
+
+### Not weakening git, only removing what cannot work here
+
+`gitEnv()` (`electron/main.ts`) sets `GIT_TERMINAL_PROMPT=0`, `GIT_EDITOR=true`, and
+`GIT_SEQUENCE_EDITOR=true`, and strips any inherited `GIT_DIR`/`GIT_WORK_TREE`/`GIT_CONFIG`-family
+variable. None of this weakens anything a user configured:
+
+- The spawned process has no terminal. A git that decided to prompt for a username, or open an
+  editor for a commit message, would otherwise block forever on a tty that does not exist, and the
+  app would look frozen with no way out. Turning both off makes git fail immediately with its own
+  message instead of hanging — the opposite of weakening, since a hang is a worse failure mode than
+  an honest error.
+- Credential helpers, askpass programs, SSH agents and host-key checking are **never touched**. None
+  of them is a terminal prompt, which is exactly the point: the user's configured way of
+  authenticating still works unchanged, and only the "type it at the console" path — which cannot
+  work in a spawned child with no tty — is turned off.
+- The `GIT_DIR`-family variables are stripped because SaiLoR may have been launched from a shell
+  that happens to be sitting inside some *other* git repository; an inherited `GIT_DIR` would
+  silently point every git call below at that repository instead of the project's own.
+
+### The module layout
+
+| Module | Purpose |
+| --- | --- |
+| `src/git/types.ts` | Shared shapes crossing the platform seam: `GitRun`, `GitProbe`, `GitFileChange`, `GitStatus`, `GitRepoInfo`, `CloneOutcome`, `PullStart`, and the `GitPlatform` interface itself. |
+| `src/git/url.ts` | Pure. `validateGitUrl`, `validateClonePath`, `repoNameFromUrl` — the security gate, imported by `electron/main.ts` (see above). |
+| `src/git/output.ts` | Pure. `parsePorcelain` (turns `git status --porcelain=v1 -z` into `GitFileChange[]`), `capDiff` (caps a diff for the DOM), `gitErrorText` (what to show when a git command failed) — also imported by `electron/main.ts`, so the "what does a failed run's message say" logic exists once. |
+| `src/git/merge.ts` | Pure. The field-level three-way merge — see below. Knows nothing about git or the DOM, the same shape `src/consolidate/` follows. |
+| `src/state/gitStore.ts` | The clone flow and the commit/pull/push panel; owns the pull orchestration. |
+| `src/components/GitCloneDialog.tsx`, `GitDialog.tsx`, `GitMergeDialog.tsx` | Views over `gitStore`. |
+
+### State management: `gitStore`
+
+`useGitStore` (`src/state/gitStore.ts`) is a separate Zustand+immer store, kept out of the main store
+for the same reason `aiStore` and the project editor are: a self-contained flow with its own
+lifecycle that the ordinary annotation path never needs to know exists. The dependency direction is
+one-way — `gitStore` reads and drives the main store via `useStore.getState()`, but `store.ts` never
+imports `gitStore` (it does not import `aiStore` either, for the same reason). Refreshing `repo`
+(where the open project sits git-wise) whenever the open project's `saveHandle` changes is therefore
+an effect in `App.tsx`, not a call made from inside `store.ts` — the same shape the AI store's own
+wiring already has.
+
+### The pull command sequence
+
+`git:pullBegin` (`electron/main.ts`) is the classification a pull starts with, run in this order:
+
+1. `git status --porcelain=v1 -z` — any tracked change (an untracked file, code `??`, never blocks a
+   merge) means `{ kind: 'dirty', paths }`.
+2. No `@{u}` (no upstream configured) means `{ kind: 'no-upstream', branch }`.
+3. `git fetch`. A failure means `{ kind: 'error', message }`.
+4. `HEAD` already an ancestor of `@{u}` means `{ kind: 'up-to-date' }`.
+5. `@{u}` already an ancestor of `HEAD` means a fast-forward: `git merge --ff-only @{u}`, then
+   `{ kind: 'fast-forwarded' }` or `{ kind: 'error', message }`.
+6. Otherwise the histories have diverged. The merge base and the project file's text at all three
+   revisions (`git merge-base`, then `git show <rev>:<path>`) are read **before** anything touches
+   the work tree, so nothing that follows can change what actually gets merged.
+7. `git merge --no-commit --no-ff <ref>`. If it never even started (`MERGE_HEAD` absent — unrelated
+   histories, a hook refusing) that is `{ kind: 'error', message }`, without ever calling `merge
+   --abort` (which would itself fail with "There is no merge to abort" — checking `MERGE_HEAD` first
+   is what keeps the next point true).
+8. If anything **other than the project file** is left unmerged, SaiLoR does not know how to help —
+   it knows how to merge an annotation JSON, not a PDF or a `.gitignore`. The git merge is aborted
+   (`git merge --abort`) and `{ kind: 'conflict-elsewhere', paths }` is returned; nothing is
+   half-done.
+9. Otherwise: `{ kind: 'merge', ref, base, ours, theirs }` — the three texts, handed to
+   `mergeProjects` (below).
+
+**Contract**: `git:pullBegin` always returns with the repository in exactly one of two states — not
+mid-merge, for every outcome except `'merge'`, or mid-merge with nothing unmerged except the project
+file, for `'merge'`. It never returns leaving a half-merge the renderer did not ask for.
+
+`git:pullFinish(root, relPath, text)` always writes `text` — the *merged* project's own
+`serializeProject` output — over whatever git's own line-based attempt produced, then `git add` +
+`git commit --no-edit`. `git commit` after a merge with `MERGE_HEAD` set is what records both
+parents and tolerates an empty tree change, which is why the merge commit is finished this way
+rather than with `commit-tree` or `merge -m`; `--no-edit` takes git's own prepared `MERGE_MSG`, and
+`GIT_EDITOR=true` (above) is the backstop if it ever tried to open one anyway.
+
+### Two gates before a pull touches anything: on-disk clean, and in-memory clean
+
+`git:pullBegin`'s `'dirty'` check answers one question: is the **file on disk** clean by git's own
+`status`. It says nothing about the reviewer's **unsaved, in-memory** annotations — those exist only
+in the React state and are invisible to git entirely. `gitStore.ts`'s `runPull()` therefore refuses
+outright, before ever calling `beginPull`, when `useStore.getState().dirty` is true: a fast-forward
+or a finished merge reloads the project file from disk (`reloadOpenProject`, which is exactly
+`openRecent(path)` — the file changed underneath the open project, so the in-memory copy is stale
+either way), and without this guard that reload would silently discard whatever the reviewer had not
+yet saved. This is the single most important line in the whole feature: get it wrong and a pull can
+lose a reviewer's unsaved work with no warning at all. `GitDialog.tsx` shows a dirty-banner with a
+**Save project** button and disables Pull (and Commit — committing the file on disk while the
+in-memory copy disagrees with it is its own kind of confusing) while it's up.
+
+### The merge (`src/git/merge.ts`)
+
+The full reasoning lives in `data-model.md`'s "Merging two copies of a project"; this is the shape of
+it from the code side.
+
+- **The one rule (`merge3`)**: a side that did not change a value away from the base does not get a
+  vote on it. Applied identically from the project's own title down to a single annotation field —
+  not a special case, the actual algorithm. Returns a conflict only when both sides changed a value,
+  to different things.
+- **Exact equality, not `comparable()`.** `unanimous.ts`'s `comparable()` folds case and whitespace
+  because it is answering "did the reviewers say the same thing"; a merge is answering "did *I*
+  change this value since the base", and folding away a capitalization fix would silently revert the
+  reviewer's own edit in favor of the remote's. `merge.ts` uses plain `===` on `FieldValue`, and
+  `merge.test.ts` pins the distinction directly (a base→ours case-only fix survives unopposed; the
+  same fix made *differently* on both sides is a real conflict).
+- **Absent reads as empty (`valueAt`).** `pruneTree` drops only the *trailing* empty instances on
+  save, so an instance that is empty-but-present and one that is simply missing are the same thing on
+  disk — and must merge the same way, or a field one side filled in from nothing would wrongly
+  conflict against an "absent" base, and an entry the remote deleted would come back. This is also
+  what makes instance *removal* fall out of the ordinary field-level rule with no instance-level logic
+  at all: a removed entry reads as all-empty on that side, the rule takes the empties, and
+  `pruneTree` drops the now-trailing instance on the next save.
+- **Repeatable arrays are unioned by index and never compacted.** `count` is the union of all three
+  sides' lengths (clamped to `def.max`); position is never closed up, because position carries
+  meaning — consolidation lines up each reviewer's entries by index (`src/consolidate/apply.ts`), and
+  closing a gap here would silently re-point that alignment.
+- **A conflicted field holds *our* value in `merged` until it is resolved.** If the resolution dialog
+  is ever bypassed, the file still holds the local reviewer's own work — the safe side. It is not a
+  decision on the merge's part: `GitMergeDialog` marks every conflicted row undecided regardless, and
+  will not finish the merge until each one has actually been answered.
+- **What refuses, and why.** A change to `version`, `config.schema`, `config.ai`, `config.reviewers`,
+  or a root/paper `extra` key, made differently on both sides, refuses the *whole* merge rather than
+  guessing a field-level answer — each of these re-shapes the file (most obviously the schema, which
+  decides the shape of every annotation tree), and a left/middle/right conflict row cannot ask "which
+  taxonomy is right". `Project.title` is deliberately **not** on this list: it is one string, a
+  conflict row expresses it perfectly, and refusing an entire merge over two people renaming the
+  review would be absurd.
+- **The paper-deletion asymmetry.** A paper one side deleted and the other side *changed* is kept,
+  with a note, never silently deleted — a field-level UI cannot ask "keep or delete this paper", and
+  the two failure directions are not symmetric (a paper nobody wanted is one click from gone; deleted
+  annotated work is just gone). Contrast with `reviews`: a reviewer's tree is **never** deleted by a
+  merge, only by both sides having already dropped it — the same rule `normalizeReviews` already
+  applies on load (see "Lowering the reviewer count" in the schema guide), because a reviewer's tree
+  is someone's labour, not a project-author decision the way a paper is.
+- **`aiUsage` is a union, not a three-way merge**, and deliberately does not consult `base` — it is an
+  append-only disclosure log with no delete operation, so a record either side still holds must
+  survive regardless of what the base looked like.
+- **A boolean can never conflict.** `Paper.equal`, a set spelled as an array, merges per-path via
+  `merge3<boolean>` — a boolean has only two values, so "both sides changed it, differently" cannot
+  happen; `merge3`'s first branch (`eq(ours, theirs)`) always takes it.
+
+`applyResolutions` writes the reviewer's per-conflict choices into the merged project with immer's
+`produce` — not `structuredClone` (not something to bet on under every runtime this ships to) and not
+`JSON.parse(JSON.stringify(...))` (which drops `undefined`-valued keys that both `deepEqualJson` and
+the round-trip test care about). `deepEqualJson` itself is **exported from `src/model/project.ts`**
+rather than redefined in `merge.ts` — the same "one shared implementation" rule as `comparable()`.
+
+### Testing
+
+`src/git/merge.test.ts` builds every fixture through the real `loadProject`, never a hand-assembled
+`Project`, so base/ours/theirs are exactly as schema-normalized and empty-skeleton-shaped as
+`mergeProjects`' actual caller hands it. It covers the field-level guarantee in both directions,
+repeatable-node growth (colliding and non-colliding), the interior-gap and instance-removal
+invariants, the multi-reviewer headline case (disjoint edits by two reviewers, zero conflicts), the
+paper add/remove asymmetry, every refusal, the `aiUsage` union, the `Paper.equal` boolean-set merge,
+`applyResolutions`, and a full round-trip through `serializeProject`/`loadProject`.
+`src/state/gitStore.test.ts` covers `runPull`'s orchestration against a fake `GitPlatform`: each pull
+classification, a refused merge (aborts and reports why), an unparseable revision (aborts, writes
+nothing), and the dirty guard refusing to even call `beginPull`.
+
+### Rejected: streamed clone progress and a cancel button
+
+`execFile` buffers the whole child process output; a live progress bar (git's own `--progress`
+percentage lines) would need a second IPC channel, a subscription lifecycle, and parsing a
+carriage-return-animated stderr stream — real work for a cosmetic improvement. Cancelling a clone
+mid-flight would also leave a partial `.git` directory that would need cleaning up. A spinner plus an
+elapsed-seconds counter already say "this has not frozen", which is the actual requirement, and the
+network timeout (`GIT_NETWORK_TIMEOUT_MS`, 15 minutes) is the backstop against a clone that really
+has hung.
+
+### Why the merge dialog has no Escape
+
+`GitMergeDialog` is the one modal in the app with no Escape, no backdrop-click, and no × in the
+header — a deliberate deviation from the app's own modal pattern. The repository is genuinely
+mid-merge for as long as it is open; dismissing it the ordinary way would leave the reviewer's
+checkout in a state they cannot get out of without the command line, which is the one outcome a merge
+UI must never produce. Only **Cancel merge** (`git merge --abort`) and **Finish merge** (disabled
+until every row is decided) leave.
+
 ## Electron Main Process
 
 **`electron/main.ts`** is a thin main process:
@@ -672,12 +937,21 @@ themself, later) can see that, and how, AI was used on a paper.
   - `app:saveComplete` — the renderer reports the result of a save it was asked to run before quitting
   - `llm:configs` / `llm:saveConfig` / `llm:deleteConfig` — the LLM targets in `userData/llm-config.json`. The renderer is handed `publicConfigs()`: everything **except** the key, plus `hasKey`.
   - `llm:call` / `llm:abort` — send a renderer-built request with `net.fetch` after substituting the real key and checking the target origin against the config's `baseUrl` (see *AI-assisted annotation* above). `llm:abort` aborts an in-flight call by its `requestId`, since an `AbortSignal` cannot cross IPC.
+  - `git:probe` — `git --version`; `{ available, version, error }`
+  - `git:pickCloneDir` — `dialog.showOpenDialog` for the clone destination folder
+  - `git:clone` — validates the URL/destination (`src/git/url.ts`), then `git clone -- <url> <dest>`
+  - `git:pickProjectIn` — `dialog.showOpenDialog` with `defaultPath: dir`, the mechanism that opens the picker already inside a freshly cloned repository
+  - `git:info` — `rev-parse --is-inside-work-tree` / `--show-toplevel` / `--show-prefix`, branch, upstream, whether `HEAD` exists
+  - `git:status` — raw `status --porcelain=v1 -z` + `diff --no-color HEAD --`, parsed on the renderer side (`src/git/output.ts`)
+  - `git:commit` — pathspec-limited `add` then `commit -m`
+  - `git:push` — plain `git push`; a missing upstream surfaces git's own message rather than inventing `--set-upstream`
+  - `git:pullBegin` / `git:pullFinish` / `git:pullAbort` — the pull classification and its two ways to conclude; see "Git" above for the full command sequence
 - **Menu**: custom template with File, Edit, View, Window menus.
   - The **Edit** menu is hand-built: **Undo/Redo** send `app:undo` / `app:redo` to the renderer (routing to the store's history) rather than the native text-undo role, so undo works app-wide; cut/copy/paste/selectAll keep their native roles.
   - The **View** menu is hand-built (not the default `{ role: 'viewMenu' }`) and deliberately omits zoom roles so that `Ctrl +/-/0` reach the renderer for PDF zoom (and `Ctrl+Shift +/-/0` for app font scaling) instead of triggering native browser/Electron zoom.
 - **Unsaved-changes quit flow**: a window `close` handler (`promptUnsavedChanges`) intercepts the close/quit when `isDirty` is set, and shows a native **Save / Don't Save / Cancel** dialog. "Save" asks the renderer to save (`app:requestSave`) and closes once it reports back; "Don't Save" closes discarding changes. A `before-quit` flag lets the guard resume `app.quit()` after confirmation (so Cmd+Q fully quits on macOS, where destroying the window alone would not).
 
-**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods: `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, plus the quit/menu coordination — `setDirty`, `onRequestSave`, `saveComplete`, `onUndo`, `onRedo`. This `window.slr` object is the detection signal for `isElectron()`.
+**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods: `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, plus the quit/menu coordination — `setDirty`, `onRequestSave`, `saveComplete`, `onUndo`, `onRedo` — and the eleven `git*` methods (`gitProbe`, `gitPickCloneDir`, `gitClone`, `gitPickProjectIn`, `gitInfo`, `gitStatus`, `gitCommit`, `gitPush`, `gitPullBegin`, `gitPullFinish`, `gitPullAbort`) mirroring the `git:*` IPC handlers one for one. This `window.slr` object is the detection signal for `isElectron()`.
 
 ## Hooks
 
@@ -718,5 +992,13 @@ App appearance is controlled by a settings module that persists to `localStorage
 - **Changing the schema format**: it is described to the model in `SCHEMA_FORMAT_DOC` (`src/llm/prompt.ts`), which mirrors `docs/annotation-schema.md` §3 by hand. Both must move together, or the model reads an unfamiliar schema against a stale description.
 - **Adding a new keyboard shortcut**: Add to `useKeybindings.ts`. Check `isEditable()` if it should be ignored inside input fields.
 - **Changing the Electron IPC surface**: Update `preload.ts` (the `SlrBridge` interface), `electron/main.ts` (IPC handler), and `src/platform/electron.ts` (adapter method). All three must stay in sync.
+- **Adding a git operation**: add the new operation as an *enumerated* handler in `electron/main.ts`
+  (never widen the renderer's power to name an argv — see "The renderer never names an argv" above),
+  the matching bridge method in `preload.ts`, the method on `GitPlatform` in `src/git/types.ts`, and
+  the pass-through in `ElectronAdapter`'s `git` object (`src/platform/electron.ts`) — a `private
+  readonly` field, not a fresh object literal per `getGit()` call, since `getPlatform()` is a
+  singleton and a new object every call would make every `useGitStore` selector see a "different"
+  platform and churn. Keep the *decision* (what the operation does, what it validates) in `src/git/`
+  where it is unit-testable; keep the *argv* in `electron/main.ts` where it is enforced.
 - **Adding a new settings/appearance option**: Add to `src/state/settings.ts` (load/apply functions), add state + actions to the store, add UI controls to `Toolbar.tsx`, and add keybindings if needed.
 - **Touching anything that reads or writes the current paper's annotation data**: route it through `currentTree()` (`src/state/store.ts`) rather than `paper.annotations` directly, or it will silently ignore reviewer selection on a multi-reviewer project. Grep for `.annotations` across `src/` and check each hit against "should this see the active reviewer's tree or always the consolidated one". The direct reads that remain outside `src/model/` are deliberate: `currentTree()`'s own body; `ConsolidationDialog`, which reads the consolidated tree *on purpose* (it is showing you what the final answer currently is); `editorStore`, which edits the file's papers and has no reviewer concept; and null-project fallbacks.

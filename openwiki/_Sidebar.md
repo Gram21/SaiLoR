@@ -12,6 +12,7 @@ Developer documentation
 - [Platform Adapter](architecture#platform-adapter-pattern)
 - [State Management](architecture#state-management)
 - [Component Tree](architecture#component-tree)
+- [Git](architecture#git)
 - [Electron Main Process](architecture#electron-main-process)
 
 **[Data Model](data-model)**

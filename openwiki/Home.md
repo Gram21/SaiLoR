@@ -19,7 +19,7 @@ authoring a project file, annotating a paper — start with the
 | Page | What it covers |
 |---|---|
 | **[Quickstart](quickstart)** | What SaiLoR is, the tech stack, the commands you actually need, and the repository layout. **Start here.** |
-| **[Architecture](architecture)** | The `PlatformAdapter` seam, the Zustand stores and undo/redo, the component tree, the Electron main process, and how the build is wired. |
+| **[Architecture](architecture)** | The `PlatformAdapter` seam, the Zustand stores and undo/redo, the component tree, the git integration, the Electron main process, and how the build is wired. |
 | **[Data Model](data-model)** | The project file format, the in-memory types, and the load → normalize → edit → prune → serialize lifecycle that keeps a hand-edited JSON safe. |
 | **[Operations](operations)** | Developing, building, testing, CI, releasing the desktop installers, deployment (static / Docker / Electron), and how these wiki pages are kept in sync. |
 
