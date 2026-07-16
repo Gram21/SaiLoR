@@ -149,7 +149,7 @@ These pages are mirrored to the repository's [GitHub wiki](https://github.com/Gr
 | `.github/workflows/wiki-publish.yml` | push to `main` touching `openwiki/**` | Replaces the wiki with the contents of `openwiki/` |
 | `.github/workflows/wiki-import.yml` | `gollum` (a wiki page is created/edited, in the browser or by pushing to `SaiLoR.wiki.git`) | Copies the wiki's pages back into `openwiki/` and commits to `main` |
 
-`openwiki/` is the **source of truth**: publishing is a *replace*, not a merge, so a page deleted from the folder disappears from the wiki. Only `*.md` files are pages — `.last-update.json` is state for the OpenWiki generator and is never published, and never clobbered by an import.
+`openwiki/` is the **source of truth**: publishing is a *replace*, not a merge, so a page deleted from the folder disappears from the wiki. Only `*.md` files are pages — `.last-update.json` is state for the OpenWiki generator and is never published, and never clobbered by an import. `INSTRUCTIONS.md` is likewise never published: it's the brief handed *to* the generator (`.github/workflows/openwiki.yml`), not a page it writes, so a wiki visitor has no use for it and `check-wiki-links.js` doesn't require it to be reachable from `_Sidebar.md` either.
 
 **Open Knowledge Format.** OpenWiki writes these pages in Google's [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md), which adds two things on top of the plain markdown these pages otherwise are:
 

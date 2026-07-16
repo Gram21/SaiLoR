@@ -51,7 +51,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p stage
-          # Pages only, excluding two files that are OpenWiki's own bookkeeping rather
+          # Pages only, excluding files that are OpenWiki's own bookkeeping rather
           # than content for this audience:
           #   - `.last-update.json` is state for the openwiki generator.
           #   - `index.md` is Open Knowledge Format's own directory listing (see
@@ -63,8 +63,15 @@ jobs:
           #     repo (its actual audience reads it there) but never reaches the wiki.
           #     `log.md` — OKF's changelog of documentation updates — has no such
           #     overlap and IS published like any other page.
+          #   - `INSTRUCTIONS.md` is the shared, user-authored brief handed *to* the
+          #     generator (see .github/workflows/openwiki.yml) — config it reads, not a
+          #     page it writes for a reader. Same reasoning as index.md: nothing in the
+          #     wiki would ever link to it, so it stays in the repo instead of becoming
+          #     an orphaned wiki page.
           for f in openwiki/*.md; do
-            [ "$(basename "$f")" = "index.md" ] && continue
+            case "$(basename "$f")" in
+              index.md|INSTRUCTIONS.md) continue ;;
+            esac
             cp "$f" "stage/$(basename "$f")"
           done
 
