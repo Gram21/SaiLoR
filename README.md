@@ -125,7 +125,8 @@ on Debian/Ubuntu), or you can extract and run it with `--appimage-extract-and-ru
           { "name": "Confidence", "type": "number" }
         ]
       }
-    ]
+    ],
+    "reviewers": 2                  // optional, 1–10 (default 1) — see below
   },
   "papers": [
     {
@@ -134,7 +135,8 @@ on Debian/Ubuntu), or you can extract and run it with `--appimage-extract-and-ru
       "authors": ["…"],
       "doi": "10.1000/xyz",         // optional
       "pdf": "pdfs/paper-a.pdf",    // path relative to this JSON file
-      "annotations": {}             // filled in as you annotate
+      "annotations": {},            // the final result — filled in as you annotate
+      "reviews": {}                 // multi-reviewer only: each reviewer's own tree, keyed "1".."N"
     }
   ]
 }
@@ -172,6 +174,8 @@ untouched. Unknown top-level and per-paper fields are preserved verbatim.
   (up to `max`) and a remove (**×**) control (down to `min`).
 - **Grab from PDF** — select text in the PDF, then click the **⧉** button next to a string/number
   field to insert it (numeric fields extract the first number).
+- **Reviewer switch** — on multi-reviewer projects only, centred in the toolbar: pick whether you are
+  Reviewer 1…N or Consolidation. See [Working with several reviewers](#working-with-several-reviewers).
 - **✦ AI** — *not available yet.* An LLM proposes values for the fields that are still empty, for
   you to review before anything is written. The groundwork is in the app but the feature is off in
   this release; it is planned for a future one. See [Annotating with AI](#annotating-with-ai).
@@ -195,6 +199,36 @@ untouched. Unknown top-level and per-paper fields are preserved verbatim.
 | `Alt + ↑` or `[`        | Previous paper                 |
 | `F1`                    | Open help                      |
 | `Ctrl/Cmd + C/V/X/Z`    | Native copy/paste/…            |
+
+## Working with several reviewers
+
+An SLR is normally annotated by two or more people **independently**, then reconciled. Set
+`config.reviewers` to a number from 2 to 10 (the *New / Edit annotation JSON* screen has a field for
+it) and the project works that way.
+
+- **Everyone annotates on their own.** Each reviewer's answers live in their own tree
+  (`paper.reviews["1"]`, `"2"`, …). You see and edit only your own — nobody is anchored by what
+  someone else already wrote. **Validate** and the paper list's progress dots follow whoever you are.
+- **Pick who you are first.** The reviewer switch sits in the middle of the toolbar (a dropdown above
+  five reviewers). Until you pick, the annotation form stays hidden: an answer nobody can be
+  attributed to is worse than no answer. Your choice is remembered per project.
+- **Consolidation is the reconciling pass**, not one more opinion. Take that seat and every field
+  gets a **⇄** compare button showing every reviewer's answer side by side, flagging whether they
+  agree, and letting you click one to adopt it. What Consolidation records is `paper.annotations` —
+  the project's **final result**, and what an export or analysis would read.
+- **Repeatable groups are lined up for you.** Opening a paper as Consolidation adds as many entries
+  as the busiest reviewer recorded, and works out *which of each reviewer's entries are the same
+  entry* — two people rarely list the same three findings in the same order. Your Finding #2 is then
+  everyone's Finding #2, so ⇄ compares answers that are genuinely about the same thing rather than
+  reporting a disagreement that was only a difference of ordering. Matching is on what the entries
+  say, so wording need not be identical. It changes the file (a single `Ctrl/Cmd + Z` undoes it), and
+  a group you have already answered is left alone rather than reordered underneath you.
+
+It is still **one file, with no locking**: two people saving the same JSON at once will overwrite
+each other. Pass it along, or take turns.
+
+> 📖 Full details, including the exact file shape, are in
+> [§9 of the schema guide](docs/annotation-schema.md#9-multiple-reviewers--consolidation).
 
 ## Annotating with AI
 
