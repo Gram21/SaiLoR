@@ -16,9 +16,11 @@ export function PapersEditor() {
   const location = useEditorStore((s) => s.location)
   const busy = useEditorStore((s) => s.busy)
   const justAdded = useEditorStore((s) => s.justAdded)
+  const screening = useEditorStore((s) => s.screening)
   const addPdfs = useEditorStore((s) => s.addPdfs)
   const addPdfFolder = useEditorStore((s) => s.addPdfFolder)
   const importReferences = useEditorStore((s) => s.importReferences)
+  const importFromScreening = useEditorStore((s) => s.importFromScreening)
   const confirmAdded = useEditorStore((s) => s.confirmAdded)
   const removePaper = useEditorStore((s) => s.removePaper)
   const movePaper = useEditorStore((s) => s.movePaper)
@@ -74,6 +76,13 @@ export function PapersEditor() {
       <button type="button" disabled={busy} onClick={() => void importReferences()}>
         Import references…
       </button>
+      {/* Importing screening papers into a screening project is nonsense — it
+          has no annotation fields of its own to carry them into. */}
+      {!screening && (
+        <button type="button" disabled={busy} onClick={() => void importFromScreening()}>
+          Import from screening…
+        </button>
+      )}
     </div>
   )
 
@@ -95,11 +104,11 @@ export function PapersEditor() {
 
       {papers.length === 0 ? (
         <div className="papers-empty">
-          <p>No PDFs yet.</p>
+          <p>No papers yet.</p>
           <p className="papers-empty-note">
-            PDFs are referenced by a path relative to {jsonName}, so the project stays portable as
-            long as the PDFs travel with it. A reference manager export can fill in the details —
-            attach matching PDFs afterward.
+            {screening
+              ? 'Screening is usually decided on title and abstract, so a PDF is optional here — a reference manager export brings in the metadata, and a PDF can be attached later for the papers that reach the next phase.'
+              : `PDFs are referenced by a path relative to ${jsonName}, so the project stays portable as long as the PDFs travel with it. A reference manager export can fill in the details — attach matching PDFs afterward.`}
           </p>
           {actionButtons}
         </div>
@@ -227,6 +236,19 @@ function PaperFields({ paper, onRemove, onInteract }: PaperFieldsProps) {
           />
         </label>
       </div>
+
+      <label className="papers-field">
+        <span className="papers-label">
+          Abstract <span className="papers-note">what screening reads when there is no PDF</span>
+        </span>
+        <textarea
+          className="papers-input papers-abstract"
+          rows={2}
+          value={paper.abstract}
+          onFocus={onInteract}
+          onChange={(e) => patch({ abstract: e.target.value })}
+        />
+      </label>
 
       <label className="papers-field">
         <span className="papers-label">PDF (relative to the JSON)</span>

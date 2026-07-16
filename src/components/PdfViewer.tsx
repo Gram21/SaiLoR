@@ -76,6 +76,8 @@ export function PdfViewer() {
   const doi = useStore((s) => selectCurrentPaper(s)?.doi)
   const saveHandle = useStore((s) => s.saveHandle)
   const setPdfSelection = useStore((s) => s.setPdfSelection)
+  const screening = useStore((s) => s.project?.screening != null)
+  const toggleScreeningPdf = useStore((s) => s.toggleScreeningPdf)
 
   const [url, setUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -412,6 +414,27 @@ export function PdfViewer() {
     return <div className="panel pdf empty">No paper selected.</div>
   }
 
+  // Reachable now that a screening project may relax `pdf` to `""` — a
+  // non-screening project's `pdf` is still required (`model/schema.ts`), so
+  // this was unreachable before that relaxation existed.
+  if (!pdfPath) {
+    return (
+      <div className="panel pdf empty">
+        <div>
+          This paper has no PDF attached.
+          {screening && (
+            <>
+              {' '}
+              <button type="button" onClick={toggleScreeningPdf}>
+                Back to the record
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="panel pdf">
       <div className="pdf-head">
@@ -425,6 +448,11 @@ export function PdfViewer() {
           )}
         </div>
         <div className="pdf-tools">
+          {screening && (
+            <button type="button" onClick={toggleScreeningPdf}>
+              Back to the record
+            </button>
+          )}
           {(canJumpBack || canJumpForward) && (
             <div className="pdf-history" role="group" aria-label="Jump history">
               <button

@@ -4,6 +4,7 @@ import { resolvePath, displayPath } from '../llm/paths'
 import { emptyValue, type FieldValue } from '../model/annotations'
 import { isEmptyValue } from '../model/validate'
 import { comparable } from '../consolidate/unanimous'
+import { SCREENING_DECISION } from '../screening/schema'
 import type { ResolvedDef } from '../model/schema'
 
 /**
@@ -115,7 +116,14 @@ export function ConsolidationDialog() {
   // either there's no second opinion, or the values already read as one
   // answer — so the box is hidden rather than offered as a no-op.
   const comparableAnswers = new Set(answered.map((v) => comparable(v)))
-  const canDeclareEqual = answered.length >= 2 && comparableAnswers.size > 1
+  // "Include and Exclude mean the same thing" is not a claim anyone can make.
+  // Without this guard a consolidator could mark two opposite screening
+  // decisions equivalent, dropping a real disagreement out of the overview
+  // while inflating agreement. The box stays available on the Reason field,
+  // where two overlapping reasons genuinely can be equivalent.
+  const isScreeningDecision =
+    project.screening !== null && target.path.length === 0 && target.name === SCREENING_DECISION
+  const canDeclareEqual = answered.length >= 2 && comparableAnswers.size > 1 && !isScreeningDecision
 
   const requestClose = () => {
     if (stranded) setConfirmingClose(true)

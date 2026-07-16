@@ -6,6 +6,10 @@ import { Toolbar } from './components/Toolbar'
 import { PaperList } from './components/PaperList'
 import { PdfViewer } from './components/PdfViewer'
 import { AnnotationPanel } from './components/AnnotationPanel'
+import { ScreeningPanel } from './components/ScreeningPanel'
+import { ScreeningRecord } from './components/ScreeningRecord'
+import { ScreeningSummary } from './components/ScreeningSummary'
+import { ScreeningImportDialog } from './components/ScreeningImportDialog'
 import { ErrorPanel } from './components/ErrorPanel'
 import { HelpDialog } from './components/HelpDialog'
 import { ValidationDialog } from './components/ValidationDialog'
@@ -45,10 +49,13 @@ export function App() {
   const openRecent = useStore((s) => s.openRecent)
   const forgetRecent = useStore((s) => s.forgetRecent)
   const refreshRecents = useStore((s) => s.refreshRecents)
+  const screening = useStore((s) => s.project?.screening != null)
+  const screeningShowPdf = useStore((s) => s.screeningShowPdf)
   const editorOpen = useEditorStore((s) => s.open)
   const startNew = useEditorStore((s) => s.startNew)
   const startEdit = useEditorStore((s) => s.startEdit)
   const startEditRecent = useEditorStore((s) => s.startEditRecent)
+  const startFromScreening = useEditorStore((s) => s.startFromScreening)
   const appVersion = useStore((s) => s.appVersion)
   const update = useStore((s) => s.update)
   const checkForUpdate = useStore((s) => s.checkForUpdate)
@@ -108,9 +115,9 @@ export function App() {
               <Splitter onResize={resizeLeft} />
             </>
           )}
-          <PdfViewer />
+          {screening && !screeningShowPdf ? <ScreeningRecord /> : <PdfViewer />}
           <Splitter onResize={resizeRight} />
-          <AnnotationPanel />
+          {screening ? <ScreeningPanel /> : <AnnotationPanel />}
         </div>
       ) : (
         <div className="welcome">
@@ -126,6 +133,9 @@ export function App() {
               </button>
               <button type="button" onClick={() => void startEdit()}>
                 Edit annotation JSON…
+              </button>
+              <button type="button" onClick={() => void startFromScreening()}>
+                New from screening…
               </button>
             </div>
             {recents.length > 0 && (
@@ -224,6 +234,8 @@ export function App() {
       <ClosePrompt />
       <AiDialog />
       <LlmSettingsDialog />
+      <ScreeningSummary />
+      <ScreeningImportDialog />
     </div>
   )
 }
