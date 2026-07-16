@@ -39,7 +39,7 @@ export function GitDialog() {
   const working = panel.phase === 'working'
   const changes = panel.status?.changes ?? []
   const selectedCount = Object.keys(panel.selected).length
-  const anyUntrackedSelectedOrShown = changes.some((c) => c.code === '??')
+  const hasUntracked = changes.some((c) => c.code === '??')
 
   const requestClose = () => closePanel()
 
@@ -107,7 +107,7 @@ export function GitDialog() {
             <pre className="git-diff">{panel.status.diff}</pre>
           )}
           {panel.status?.diffTruncated && <p className="git-muted">Diff truncated.</p>}
-          {anyUntrackedSelectedOrShown && <p className="git-muted">Untracked files have no diff yet.</p>}
+          {hasUntracked && <p className="git-muted">Untracked files have no diff yet.</p>}
 
           <label className="git-field-label" htmlFor="git-commit-message">
             Commit message
