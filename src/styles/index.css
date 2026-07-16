@@ -1572,3 +1572,21 @@ kbd {
   border-color: var(--accent);
   background: var(--accent-weak);
 }
+/* "These answers mean the same thing" — only shown when there's a real
+   textual disagreement to declare equivalent (see ConsolidationDialog), so it
+   reads as a distinct decision rather than another row in the list above. */
+.consolidation-equal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.9em;
+  cursor: pointer;
+}
+.consolidation-equal input {
+  width: 16px;
+  height: 16px;
+}

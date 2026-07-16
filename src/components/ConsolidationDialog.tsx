@@ -3,6 +3,7 @@ import { useStore, selectCurrentPaper, fieldPath, peekValue } from '../state/sto
 import { resolvePath, displayPath } from '../llm/paths'
 import { emptyValue, type FieldValue } from '../model/annotations'
 import { isEmptyValue } from '../model/validate'
+import { comparable } from '../consolidate/unanimous'
 import type { ResolvedDef } from '../model/schema'
 
 /**
@@ -24,6 +25,7 @@ export function ConsolidationDialog() {
   const project = useStore((s) => s.project)
   const paper = useStore(selectCurrentPaper)
   const setFieldValue = useStore((s) => s.setFieldValue)
+  const toggleFieldEquality = useStore((s) => s.toggleFieldEquality)
 
   useEffect(() => {
     if (!target) return
@@ -55,8 +57,20 @@ export function ConsolidationDialog() {
     .map((r) => r.value)
     .filter((v) => !isEmptyValue(def.type, v ?? emptyValue(def.type)))
   const distinct = new Set(answered.map((v) => JSON.stringify(v)))
+  const markedEqual = paper.equal.includes(canonical)
+  // A field the consolidator has declared equivalent reads as agreement no
+  // matter what the raw text says — that declaration *is* the reconciliation.
   const agreement: 'agree' | 'disagree' | null =
-    answered.length === 0 ? null : distinct.size === 1 ? 'agree' : 'disagree'
+    answered.length === 0 ? null : distinct.size === 1 || markedEqual ? 'agree' : 'disagree'
+
+  // The checkbox only makes sense when there is something to declare: at
+  // least two reviewers answered, and their answers still differ once case
+  // and whitespace are normalised away (the same rule unanimous adoption
+  // uses). Below that bar there is nothing for "mean the same thing" to add —
+  // either there's no second opinion, or the values already read as one
+  // answer — so the box is hidden rather than offered as a no-op.
+  const comparableAnswers = new Set(answered.map((v) => comparable(v)))
+  const canDeclareEqual = answered.length >= 2 && comparableAnswers.size > 1
 
   const take = (value: FieldValue | undefined) => {
     setFieldValue(target.path, target.name, target.index, value === undefined ? emptyValue(def.type) : value)
@@ -110,6 +124,16 @@ export function ConsolidationDialog() {
               )
             })}
           </ul>
+          {canDeclareEqual && (
+            <label className="consolidation-equal">
+              <input
+                type="checkbox"
+                checked={markedEqual}
+                onChange={() => toggleFieldEquality(paper.id, canonical)}
+              />
+              These answers mean the same thing
+            </label>
+          )}
         </div>
       </div>
     </div>

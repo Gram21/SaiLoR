@@ -29,15 +29,29 @@ export interface UnanimousFill {
 }
 
 /**
- * The form two answers are compared in.
+ * The form two answers are compared in when deciding whether the reviewers said
+ * the same thing.
  *
- * Case and whitespace are how the same answer gets typed twice, not a
- * disagreement: "Controlled experiment" and "controlled  experiment " are one
- * answer. Nothing beyond that is folded away — punctuation is left alone, since
- * this decides whether to write a value into the final result unasked, and the
- * bar for that should be "they said the same thing", not "close enough".
+ * Case and whitespace are how one answer gets typed twice, not a disagreement:
+ * "Controlled experiment" and "controlled  experiment " are one answer. Nothing
+ * beyond that is folded away — punctuation is left alone, because this decides
+ * whether to write a value into the final result unasked, and whether an
+ * agreement statistic counts two reviewers as agreeing. The bar for both is
+ * "they said the same thing", not "close enough".
+ *
+ * Deliberately *not* `similarity.ts`'s `normalizeText`, which also strips
+ * punctuation and exists to rank fuzzy matches. Reach for that one to decide
+ * which entries are the same entry; reach for this one to decide whether two
+ * answers are the same answer. Confusing them would make "RCT" and "RCT?" a
+ * silent agreement.
+ *
+ * Exported because agreement has three consumers that must reach the same
+ * verdict — this module, `disagreements.ts`, and the compare popup. They each
+ * had their own copy and a comment asking the next person to keep three
+ * implementations in sync by hand; one of them drifting would mean the popup
+ * saying "reviewers agree" while the statistic counted a disagreement.
  */
-function comparable(value: FieldValue): string {
+export function comparable(value: FieldValue | undefined): string {
   return typeof value === 'string'
     ? value.trim().toLowerCase().replace(/\s+/g, ' ')
     : JSON.stringify(value)
