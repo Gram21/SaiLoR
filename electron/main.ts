@@ -16,11 +16,12 @@ import { readFile, writeFile, access, readdir } from 'node:fs/promises'
 import { constants, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import path from 'node:path'
-// The only imports of src/ into electron/: the URL/path security gate and the
-// error-text formatter for git operations must not exist twice — see "Git"
-// below for why.
+// The only imports of src/ into electron/: the git URL/path security gate and
+// the porcelain/error-text parsers must not exist twice — see "Git" below for
+// why. Both modules import nothing themselves, so they typecheck identically
+// under this file's tsconfig (node types) and the renderer's (DOM types).
 import { validateGitUrl, validateClonePath } from '../src/git/url'
-import { gitErrorText } from '../src/git/output'
+import { gitErrorText, parsePorcelain } from '../src/git/output'
 import type { GitRun } from '../src/git/types'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -905,10 +906,9 @@ ipcMain.handle('git:pullBegin', async (_e, root: string, relPath: string) => {
 
   const st = await runGit(['status', '--porcelain=v1', '-z'], root)
   // Untracked files ('??') never block a merge, so they are not "dirty" here.
-  const dirty = st.stdout
-    .split('\0')
-    .filter((r) => r.length > 3 && !r.startsWith('??'))
-    .map((r) => r.slice(3))
+  const dirty = parsePorcelain(st.stdout)
+    .filter((c) => c.code !== '??')
+    .map((c) => c.path)
   if (dirty.length > 0) return { kind: 'dirty', paths: dirty }
 
   const up = await runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], root)
@@ -954,15 +954,9 @@ ipcMain.handle('git:pullBegin', async (_e, root: string, relPath: string) => {
   }
 
   const st2 = await runGit(['status', '--porcelain=v1', '-z'], root)
-  const unmerged = st2.stdout
-    .split('\0')
-    .filter((r) => {
-      if (r.length < 4) return false
-      const x = r[0]
-      const y = r[1]
-      return x === 'U' || y === 'U' || (x === 'A' && y === 'A') || (x === 'D' && y === 'D')
-    })
-    .map((r) => r.slice(3))
+  const unmerged = parsePorcelain(st2.stdout)
+    .filter((c) => c.unmerged)
+    .map((c) => c.path)
   const others = unmerged.filter((p) => p !== relPath)
   if (others.length > 0) {
     // SaiLoR knows how to merge an annotation JSON. It does not know how to
