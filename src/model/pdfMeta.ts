@@ -102,8 +102,20 @@ export function parseAuthorList(raw: string, strict = false): string[] {
     })
 }
 
+/** One run of text on a line, and where it starts. */
+export interface Segment {
+  /**
+   * Left edge in PDF user space. This is what makes a *column* identifiable
+   * across lines: every line of a given column shares (near enough) one `x`,
+   * which is the only way to follow one column down a two-column page — see
+   * `abstractFromLines`.
+   */
+  x: number
+  text: string
+}
+
 /** One rendered line of text, with the largest font size used in it. */
-interface Line {
+export interface Line {
   y: number
   size: number
   text: string
@@ -112,7 +124,7 @@ interface Line {
    * author on the *same baseline*, so they arrive as one `Line` — but they are
    * separate items, not one run of prose, and only the gap says so.
    */
-  segments: string[]
+  segments: Segment[]
 }
 
 /**
@@ -123,7 +135,7 @@ interface Line {
 const COLUMN_GAP_RATIO = 1.5
 
 /** Group a page's text items into lines, keeping each line's dominant font size. */
-function toLines(items: { str: string; transform: number[]; width?: number }[]): Line[] {
+export function toLines(items: { str: string; transform: number[]; width?: number }[]): Line[] {
   const byY = new Map<
     number,
     { size: number; parts: { x: number; width: number; str: string }[] }
@@ -156,29 +168,33 @@ function toLines(items: { str: string; transform: number[]; width?: number }[]):
   return [...byY.entries()]
     .map(([y, l]) => {
       const parts = [...l.parts].sort((a, b) => a.x - b.x)
-      const segments: string[] = []
+      const segments: Segment[] = []
       let current = ''
+      let currentX = NaN
       let prevEnd = NaN
       for (const p of parts) {
         // Adjacent runs are joined bare: pdf.js splits a single phrase into
         // several runs on a font or kerning change, and any separator here
         // would land mid-word.
         if (current !== '' && p.x - prevEnd > l.size * COLUMN_GAP_RATIO) {
-          segments.push(current)
+          segments.push({ x: currentX, text: current })
           current = ''
         }
+        if (current === '') currentX = p.x
         current += p.str
         prevEnd = p.x + p.width
       }
-      if (current !== '') segments.push(current)
+      if (current !== '') segments.push({ x: currentX, text: current })
       const clean = (s: string) => s.replace(/\s+/g, ' ').trim()
       return {
         y,
         size: l.size,
         // Joined with a space, not bare: whatever separated two columns, it was
         // not nothing.
-        text: clean(segments.join(' ')),
-        segments: segments.map(clean).filter(Boolean),
+        text: clean(segments.map((s) => s.text).join(' ')),
+        segments: segments
+          .map((s) => ({ x: s.x, text: clean(s.text) }))
+          .filter((s) => s.text),
       }
     })
     .filter((l) => l.text)
@@ -220,7 +236,7 @@ export function titleAndAuthorsFromLines(lines: Line[], pageHeight: number): Pdf
     // read "Jan Keim" and "Angelika Kaplan" as one person.
     // Strict: this is a guess at which line holds the authors, so a body
     // sentence must not be mistaken for a list of names.
-    const names = line.segments.flatMap((seg) => parseAuthorList(seg, true))
+    const names = line.segments.flatMap((seg) => parseAuthorList(seg.text, true))
     if (names.length === 0) continue
     authors.push(...names)
     // One line of names is the common case; stop once we have some.
@@ -245,51 +261,103 @@ const MAX_ABSTRACT_LENGTH = 4000
 const MAX_ABSTRACT_LINES = 40
 
 /**
- * An abstract from a page's lines: the text following a line starting with
- * "Abstract", up to the next section heading.
+ * Two segments belong to the same column when their left edges are within this
+ * many points. Generous enough for the sub-point x jitter a justified column
+ * shows line to line, far tighter than any real gutter (a two-column letter
+ * page puts its columns ~260pt apart).
+ */
+const COLUMN_X_TOLERANCE = 12
+
+/**
+ * The abstract from a page's lines: the text under the "Abstract" heading, in
+ * the **column that heading sits in**, up to that column's next section heading.
  *
- * Two guards keep this from mistaking a title for a heading or a two-column
- * body for a paragraph:
- *  - A candidate start line must not be the single largest text on the page.
- *    A title is virtually always set in the page's biggest font — the word
- *    "Abstract" as a heading never is, whether body-sized or a size step up
- *    from it — so this rejects a title that genuinely starts with the word
- *    ("Abstract Interpretation of...", a real if uncommon pattern) without
- *    assuming anything about *where* on the page the real heading sits. An
- *    earlier version of this guard used a vertical cutoff instead
- *    (`titleAndAuthorsFromLines`'s `pageHeight * 0.45`) — wrong, because a
- *    real abstract routinely starts well above a page's midpoint whenever
- *    the title/author block is short, which a position-only guard has no way
- *    to distinguish from the title itself.
- *  - Once inside a candidate abstract, a line whose baseline split into more
- *    than one segment means a two-column body has begun — `toLines` only
- *    reports multiple `segments` when it found a gap wide enough to be a
- *    column gutter, not a word space. A line-based reader has no reliable way
- *    to join two columns back into reading order, so this stops rather than
- *    guesses (the same principle `titleAndAuthorsFromLines` applies to a
- *    two-column author line, just here as a stopping condition instead of a
- *    per-column split).
+ * **Following the column is the whole problem, and it is why `Segment` carries an
+ * `x`.** On a two-column paper — the overwhelmingly common case — pdf.js reports
+ * the left column's "Abstract" heading and the right column's "1 Introduction"
+ * on the *same baseline*, so they arrive as one `Line` reading
+ * `"Abstract 1Introduction"`, and every body line below is likewise one `Line`
+ * holding a strip of each column. Reading `line.text` there interleaves two
+ * unrelated columns of prose; an earlier version instead *stopped* at the first
+ * multi-segment line, which on a real paper is the line immediately after the
+ * heading — so it extracted nothing at all from exactly the documents this
+ * exists for (verified against a real ICSE paper, which is what caught it).
+ *
+ * So: find the *segment* matching "Abstract", take its `x` as the column, and
+ * walk down taking only each line's segment at that same `x`. A line with
+ * nothing in that column (the left column ends while the right runs on) is
+ * skipped, not a stop — the next section heading in *this* column is the stop.
+ * A single-column paper is the degenerate case of the same rule: one segment
+ * per line, all at the same `x`.
+ *
+ * The start line must also not be the page's largest text: a title is virtually
+ * always set in the biggest font and an "Abstract" heading never is, so this
+ * rejects a title that genuinely begins with the word ("Abstract Interpretation
+ * of…", a real if uncommon pattern). An earlier version used a vertical cutoff
+ * for that instead — wrong, because a real abstract routinely starts well above
+ * a page's midpoint when the title block is short.
  */
 export function abstractFromLines(lines: Line[]): string | undefined {
   if (lines.length === 0) return undefined
   const maxSize = Math.max(...lines.map((l) => l.size))
-  const startIdx = lines.findIndex((l) => l.size < maxSize && ABSTRACT_START.test(l.text))
+
+  let startIdx = -1
+  let columnX = NaN
+  let leadIn = ''
+  for (let i = 0; i < lines.length; i++) {
+    // `- 0.5` mirrors `titleAndAuthorsFromLines`'s own "is this the title's
+    // size" epsilon, so the two agree on what counts as title-sized.
+    if (lines[i].size >= maxSize - 0.5) continue
+    const seg = lines[i].segments.find((s) => ABSTRACT_START.test(s.text))
+    if (!seg) continue
+    startIdx = i
+    columnX = seg.x
+    leadIn = seg.text.replace(ABSTRACT_START, '').trim()
+    break
+  }
   if (startIdx === -1) return undefined
 
   const parts: string[] = []
-  const leadIn = lines[startIdx].text.replace(ABSTRACT_START, '').trim()
   if (leadIn) parts.push(leadIn)
 
   for (let i = startIdx + 1; i < lines.length && i <= startIdx + MAX_ABSTRACT_LINES; i++) {
-    const line = lines[i]
-    if (ABSTRACT_END.test(line.text)) break
-    if (line.segments.length > 1) break
-    parts.push(line.text)
+    const seg = lines[i].segments.find((s) => Math.abs(s.x - columnX) <= COLUMN_X_TOLERANCE)
+    if (!seg) continue // nothing in this column on this line — not an ending
+    if (ABSTRACT_END.test(seg.text)) break
+    parts.push(seg.text)
   }
 
-  const abstract = parts.join(' ').replace(/\s+/g, ' ').trim()
+  const abstract = joinWrappedLines(parts)
   if (abstract.length < MIN_ABSTRACT_LENGTH || abstract.length > MAX_ABSTRACT_LENGTH) return undefined
   return abstract
+}
+
+/**
+ * Join lines of a wrapped paragraph, healing the hyphens justified text breaks
+ * words across lines with ("archi-" + "tectural" → "architectural"). Without
+ * this the extracted abstract reads visibly broken, which matters here because
+ * unlike the title/author guesses this text is displayed to be *read* — it is
+ * what a screening decision gets made on.
+ *
+ * A line-final hyphen is joined only when the next line starts lower-case,
+ * which is what a mid-word syllable break looks like. The cost is a genuine
+ * line-final compound hyphen ("state-" / "of-the-art") losing its hyphen; that
+ * is rare, cosmetic, and lands in a field already labelled as machine-extracted
+ * and unverified — whereas leaving every syllable break in place is neither
+ * rare nor cosmetic.
+ */
+function joinWrappedLines(parts: string[]): string {
+  let out = ''
+  for (const part of parts) {
+    if (out === '') {
+      out = part
+      continue
+    }
+    // ASCII hyphen, plus the U+2010–U+2015 dashes a typesetter may emit instead.
+    if (/[-‐-―]$/.test(out) && /^[a-z]/.test(part)) out = out.slice(0, -1) + part
+    else out += ` ${part}`
+  }
+  return out.replace(/\s+/g, ' ').trim()
 }
 
 /** Read a PDF's title/authors. Never throws — returns {} when it can't tell. */

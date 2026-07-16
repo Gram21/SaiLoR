@@ -1,11 +1,16 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { pathToFileURL } from 'node:url'
 import {
   parseAuthorList,
   isPlausibleTitle,
   cleanTitle,
   titleAndAuthorsFromLines,
   abstractFromLines,
+  extractPdfMeta,
 } from './pdfMeta'
+import { pdfjs } from '../platform/pdfjs'
 
 describe('parseAuthorList', () => {
   it('splits the usual separators', () => {
@@ -72,19 +77,31 @@ describe('cleanTitle', () => {
   })
 })
 
+// Realistic left/right column x positions for a two-column letter page — the
+// gutter between them (~264pt) dwarfs `abstractFromLines`'s own 12pt
+// same-column tolerance, exactly as a real layout does.
+const LEFT_X = 53
+const RIGHT_X = 317
+
+/** A single-column line: one segment, the whole text, at the left margin. */
+const line = (y: number, size: number, text: string) => ({
+  y,
+  size,
+  text,
+  segments: [{ x: LEFT_X, text }],
+})
+
+/** A line whose runs sat in separate columns, as a two-column body line does. */
+const columns = (y: number, size: number, texts: string[]) => ({
+  y,
+  size,
+  text: texts.join(' '),
+  segments: texts.map((text, i) => ({ x: i === 0 ? LEFT_X : RIGHT_X, text })),
+})
+
 describe('titleAndAuthorsFromLines', () => {
   // A page is 792pt tall; y counts up from the bottom, so the title sits high.
   const page = 792
-  /** A single-column line: one segment, the whole text. `segments` is what a
-   *  column gap would have split — see the two-column case below. */
-  const line = (y: number, size: number, text: string) => ({ y, size, text, segments: [text] })
-  /** A line whose runs sat in separate columns, as a two-column author block does. */
-  const columns = (y: number, size: number, segments: string[]) => ({
-    y,
-    size,
-    text: segments.join(' '),
-    segments,
-  })
 
   it('takes the largest text at the top as the title and the line below as authors', () => {
     const meta = titleAndAuthorsFromLines(
@@ -181,14 +198,6 @@ describe('titleAndAuthorsFromLines', () => {
 })
 
 describe('abstractFromLines', () => {
-  const line = (y: number, size: number, text: string) => ({ y, size, text, segments: [text] })
-  const columns = (y: number, size: number, segments: string[]) => ({
-    y,
-    size,
-    text: segments.join(' '),
-    segments,
-  })
-
   // Font size 18 is the title's — the single largest text on the page, which
   // is exactly what the "Abstract" heading (size 10, well below it) must not
   // be mistaken for. Placed high on the page, same as a real front matter
@@ -279,21 +288,110 @@ describe('abstractFromLines', () => {
     expect(abstract).toBe(`${SENTENCE_1} ${SENTENCE_2}`)
   })
 
-  it('stops at a two-column body it cannot safely read in order', () => {
+  // THE regression this heuristic's column-awareness exists for. On a real
+  // two-column paper the "Abstract" heading shares a baseline with the right
+  // column's "1 Introduction", and every body line below holds a strip of each
+  // column. An earlier version read `line.text` and stopped at the first
+  // multi-segment line — which is the line right after the heading — and so
+  // extracted nothing at all from exactly the papers this is for. Shaped
+  // directly after samples/pdfs/KeimKaplan_FromScatteredToStructured.pdf, whose
+  // real output is pinned in the integration test at the bottom of this file.
+  it('follows the abstract down its own column of a two-column page', () => {
+    const abstract = abstractFromLines([
+      line(700, 18, 'From Scattered to Structured'),
+      columns(653, 12, ['Jan Keim', 'Angelika Kaplan']),
+      columns(597, 10.9, ['Abstract', '1Introduction']),
+      columns(583, 9, [SENTENCE_1, 'Software architecture constitutes a fundamen']),
+      columns(572, 9, [SENTENCE_2, 'engineering [32], embodying the high-level str']),
+      // The left column's abstract has ended; only the right column runs on.
+      // A line with nothing in our column is skipped, never a stop.
+      { y: 375, size: 9, text: 'right only', segments: [{ x: RIGHT_X, text: 'developers and architects, who must' }] },
+      // The left column's next section heading — this is the real stop.
+      columns(362, 10.9, ['CCS Concepts', 'sources on comprehension [44], particularly']),
+      columns(348, 9, ['•Software and its engineering', 'where documentation may span thousands']),
+    ])
+    expect(abstract).toBe(`${SENTENCE_1} ${SENTENCE_2}`)
+    // Nothing from the right column may leak in, at any point.
+    expect(abstract).not.toContain('Introduction')
+    expect(abstract).not.toContain('embodying')
+    expect(abstract).not.toContain('developers and architects')
+    // And it must stop at its own column's next heading.
+    expect(abstract).not.toContain('CCS Concepts')
+    expect(abstract).not.toContain('Software and its engineering')
+  })
+
+  it('heals a word hyphenated across a line break, keeping real compound hyphens', () => {
     const abstract = abstractFromLines([
       ...FRONT_MATTER,
       line(600, 10, 'Abstract'),
-      line(585, 10, SENTENCE_1),
-      line(570, 10, SENTENCE_2),
-      // A baseline split into two columns — the two-column body has begun.
-      columns(400, 10, ['Left column text.', 'Right column text.']),
-      line(385, 10, 'More right-column text that must never be reached.'),
+      line(585, 10, 'Software architecture is inherently knowledge-centric. The archi-'),
+      line(570, 10, 'tectural knowledge is distributed across many artifacts, and we use'),
+      line(555, 10, 'retrieval-augmented generation to make all of it properly accessible.'),
+      line(540, 10, 'Introduction'),
     ])
-    expect(abstract).toBe(`${SENTENCE_1} ${SENTENCE_2}`)
-    expect(abstract).not.toContain('must never be reached')
+    expect(abstract).toContain('architectural knowledge') // archi- + tectural, healed
+    expect(abstract).not.toContain('archi- tectural')
+    // A hyphen that is part of the word, not a line break, is left alone.
+    expect(abstract).toContain('knowledge-centric')
+    expect(abstract).toContain('retrieval-augmented')
   })
 
   it('rejects a match that is implausibly short', () => {
     expect(abstractFromLines([...FRONT_MATTER, line(600, 10, 'Abstract'), line(585, 10, 'Too short.')])).toBeUndefined()
+  })
+})
+
+/**
+ * Against real PDFs, not hand-built lines. This exists because the synthetic
+ * tests above are only as good as their author's mental model of what pdf.js
+ * emits — and that model was wrong: every test above passed while
+ * `extractPdfMeta` returned no abstract at all for the real two-column paper
+ * below, because the hand-built fixtures never reproduced a heading sharing a
+ * baseline with the *next column's* heading. A real file is the only thing that
+ * catches that class of mistake, so one runs here.
+ *
+ * The worker setup mirrors `pdfText.test.ts`'s, for the same reason documented
+ * there (jsdom resolves the module URL to http:, which pdf.js's Node fallback
+ * cannot import).
+ */
+describe('extractPdfMeta against real PDFs', () => {
+  const require = createRequire(import.meta.url)
+  pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(
+    require.resolve('pdfjs-dist/build/pdf.worker.min.mjs'),
+  ).href
+
+  const loadPdf = (path: string): ArrayBuffer => new Uint8Array(readFileSync(path)).buffer
+
+  it('reads title, authors and abstract from a real two-column paper', async () => {
+    const meta = await extractPdfMeta(
+      loadPdf('samples/pdfs/KeimKaplan_FromScatteredToStructured.pdf'),
+    )
+    expect(meta.title).toBe(
+      'From Scattered to Structured: A Vision for Automating Architectural Knowledge Management',
+    )
+    expect(meta.authors).toEqual(['Jan Keim', 'Angelika Kaplan'])
+
+    // Starts at the abstract's first word — the "Abstract" heading itself is
+    // consumed, and the right column's "1 Introduction" never appears.
+    expect(meta.abstract).toMatch(/^Software architecture is inherently knowledge-centric\./)
+    // Ends at the abstract's last word: the next thing in this column is the
+    // "CCS Concepts" heading, which must stop it.
+    expect(meta.abstract).toMatch(/conversational knowledge access\.$/)
+    expect(meta.abstract).not.toMatch(/CCS Concepts|Introduction|Software and its engineering/)
+    // Line-break hyphens healed; real compound hyphens intact.
+    expect(meta.abstract).toContain('The architectural knowledge is distributed')
+    expect(meta.abstract).toContain('knowledge-centric')
+    expect(meta.abstract).toContain('retrieval-augmented')
+    expect(meta.abstract).not.toMatch(/- /)
+  })
+
+  it('reads the abstract from a single-column PDF', async () => {
+    const meta = await extractPdfMeta(loadPdf('samples/pdfs/paper-a.pdf'))
+    expect(meta.abstract).toMatch(/^We evaluate deep learning approaches for code search\./)
+  })
+
+  it('returns no abstract for a PDF that has none, rather than guessing', async () => {
+    const meta = await extractPdfMeta(loadPdf('samples/pdfs/multipage.pdf'))
+    expect(meta.abstract).toBeUndefined()
   })
 })

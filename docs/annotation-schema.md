@@ -802,15 +802,17 @@ readable content until it reaches full-text review.
 
 Screening is normally decided from `abstract` alone, but a paper picked up with only a PDF (rather
 than through a reference-manager export) may have none. The app fills this gap two ways, both using
-the same basic layout heuristic in `pdfMeta.ts` — find a line starting with the word "Abstract",
-read forward to the next section heading or a column-layout change:
+the same basic layout heuristic in `pdfMeta.ts` — find the "Abstract" heading and follow the column
+it sits in down to that column's next section heading:
 
 1. **While building the project.** Adding a PDF directly (not via a reference file) in the project
    editor tries the heuristic in the background, the same way it already pre-fills title/authors.
-2. **While screening.** Opening the PDF of an already-saved paper that has no abstract yet
-   (`paper.pdf` set, `paper.abstract` unset) tries the same heuristic. A hit is written into
-   `abstract` immediately — there is no separate confirmation step, since screening hundreds of
-   papers one PDF-open at a time is exactly the case a confirmation dialog per paper would defeat.
+2. **While screening.** Selecting a paper that has a PDF but no abstract (`paper.pdf` set,
+   `paper.abstract` unset) tries the same heuristic against that PDF, and the result appears in the
+   abstract view — the reviewer never has to open the PDF to trigger it, which is the whole point,
+   since the abstract is what the screening decision is made from. A hit is written into `abstract`
+   immediately, with no confirmation step: screening is hundreds of papers at seconds each, and a
+   per-paper dialog would defeat exactly the throughput the phase exists for.
 
 Either way, a hit is marked with `abstractFromPdf: true` (§4) — a **permanent** disclosure, not a
 session-only hint, so every reviewer who later opens the file sees the same "this is a guess, not a
