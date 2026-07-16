@@ -512,6 +512,20 @@ ipcMain.handle('paths:rebase', (_e, fromFile: string, toFile: string, rels: stri
   })
 })
 
+// The inverse of paths:relative — a paper imported from a screening project
+// carries a `pdf` relative to *that* file, so the editor needs a real absolute
+// source to re-derive it if the new JSON moves (see `absolutePdfPaths`).
+ipcMain.handle('paths:absolute', (_e, fromFile: string, rels: string[]) => {
+  const fromDir = path.dirname(fromFile)
+  return rels.map((rel) => path.resolve(fromDir, rel))
+})
+
+// Where a new project JSON would live if it sat next to `sourceFile` — the
+// default location for "New from screening…" (see `siblingProjectLocation`).
+ipcMain.handle('paths:sibling', (_e, sourceFile: string, fileName: string) => {
+  return path.join(path.dirname(sourceFile), fileName)
+})
+
 ipcMain.on('app:setDirty', (_e, dirty: boolean) => {
   isDirty = Boolean(dirty)
 })

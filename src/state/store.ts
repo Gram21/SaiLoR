@@ -25,6 +25,13 @@ import { formatPath, resolvePath } from '../llm/paths'
 import { isUnanswered } from '../llm/fields'
 import type { Suggestion } from '../llm/types'
 import {
+  DECISION_EXCLUDE,
+  SCREENING_DECISION,
+  SCREENING_REASON,
+} from '../screening/schema'
+import { screeningStatus, type ScreeningStatus } from '../screening/status'
+import { screeningIssues } from '../screening/validate'
+import {
   fetchLatestRelease,
   updateFrom,
   CHECK_INTERVAL_MS,
@@ -254,6 +261,12 @@ interface AppState {
   /** The field a Consolidation-mode "compare" click is showing, or null when
    *  the compare popup is closed. Session-only, like `validationOpen`. */
   consolidationTarget: { path: PathSeg[]; name: string; index: number } | null
+  /** Which decisions the screening paper list shows. Session-only, like the search box's mode. */
+  screeningFilter: ScreeningStatus | 'all'
+  /** Screening reads title + abstract by default; the PDF is the escalation path. Session-only. */
+  screeningShowPdf: boolean
+  /** Whether the screening progress/PRISMA summary modal is open. Session-only. */
+  screeningSummaryOpen: boolean
 
   openProject: () => Promise<void>
   openRecent: (id: string) => Promise<void>
@@ -335,6 +348,41 @@ interface AppState {
   adoptUnanimousValues: (paperId: string, coalesce: boolean) => number
   /** Toggle "the reviewers' answers at this field mean the same thing". */
   toggleFieldEquality: (paperId: string, canonical: string) => void
+
+  /**
+   * Record (or clear) the current paper's screening decision for the active
+   * seat, optionally writing the exclusion reason in the *same* undo step
+   * (used by the `1`-`9` keyboard shortcuts, which exclude-with-reason in one
+   * press — see `useKeybindings.ts`).
+   *
+   * Changing away from `Exclude` clears the reason as part of the same
+   * mutation: a reason without an exclusion is a state the reviewer never
+   * chose, and undoing it in two presses would misrepresent what they did.
+   *
+   * Advances to the next undecided paper only when this seat's decision went
+   * from undecided to decided — re-deciding a paper you came back to fix must
+   * not jump away from it. That rule lives here, not in the keyboard/button
+   * handlers, so they cannot drift apart on it.
+   */
+  setScreeningDecision: (decision: string | null, reason?: string | null) => void
+  /** Record the exclusion reason. No-op unless the seat's current decision is Exclude. */
+  setScreeningReason: (reason: string | null) => void
+  setScreeningFilter: (filter: ScreeningStatus | 'all') => void
+  toggleScreeningPdf: () => void
+  setScreeningSummaryOpen: (open: boolean) => void
+  /**
+   * Adopt every paper's unanimous screening decision into the consolidated
+   * tree, in one undo step. Returns how many papers were filled.
+   *
+   * Screening-only, and that is a correctness constraint, not just scope:
+   * `adoptUnanimousValues` reads every reviewer at a fixed index, which only
+   * means anything once `applyAlignment` has lined their entries up. A
+   * screening schema has no repeatable node (`alignableNodes` returns `[]`),
+   * so there is nothing to line up and the read is meaningful for every paper
+   * at once — for an ordinary schema it would not be, which is why the
+   * per-paper scheduler (`useConsolidationAlignment`) exists at all.
+   */
+  adoptAllUnanimousScreening: () => number
 }
 
 /** What `applyAiSuggestions` actually did, for the summary shown to the reviewer. */
@@ -431,6 +479,9 @@ export const useStore = create<AppState>()(
     aiUnlocked: false,
     currentReviewer: null,
     consolidationTarget: null,
+    screeningFilter: 'all',
+    screeningShowPdf: false,
+    screeningSummaryOpen: false,
 
     openProject: async () => {
       const platform = getPlatform()
@@ -531,6 +582,9 @@ export const useStore = create<AppState>()(
         s.closePromptOpen = false
         s.currentReviewer = null
         s.consolidationTarget = null
+        s.screeningFilter = 'all'
+        s.screeningShowPdf = false
+        s.screeningSummaryOpen = false
       })
       void get().refreshRecents()
     },
@@ -625,6 +679,9 @@ export const useStore = create<AppState>()(
           s.agreementOpen = false
           s.disagreementsOpen = false
           s.consolidationTarget = null
+          s.screeningFilter = 'all'
+          s.screeningShowPdf = false
+          s.screeningSummaryOpen = false
           // Re-derive rather than carry over: a single-reviewer project never
           // has one, and a multi-reviewer project restores whatever was
           // persisted for *this* file (or null — unselected — if there is
@@ -850,8 +907,14 @@ export const useStore = create<AppState>()(
         annotations: currentTree(project, currentReviewer, p) ?? p.annotations,
       }))
       const { issues, unannotated } = validateProject({ ...project, papers })
+      // `screeningIssues` does its own seat routing over the *original*
+      // project (not the remapped `papers` above), since it reads both the
+      // decision and the reason at once rather than a single active tree.
+      const allIssues = project.screening
+        ? [...issues, ...screeningIssues(project, currentReviewer)]
+        : issues
       set((s) => {
-        s.validation = issues
+        s.validation = allIssues
         s.validationUnannotated = unannotated
         s.validationOpen = true
       })
@@ -967,6 +1030,15 @@ export const useStore = create<AppState>()(
       // open the dialog as a reviewer and then switch seats — refuse that too,
       // rather than trust the UI to be the whole guard.
       if (prev.currentReviewer === 'consolidation') {
+        return { filled: 0, skipped: suggestions.length }
+      }
+      // Screening decides the review's corpus. A model's include/exclude pass
+      // is the difference between a systematic review and a generated one —
+      // and the screening panel renders no AI button at all, so the only way
+      // here is to open the dialog on another project and switch. Refuse that
+      // too, rather than trust the UI to be the whole guard (same reasoning
+      // as the Consolidation refusal above).
+      if (prev.project.screening !== null) {
         return { filled: 0, skipped: suggestions.length }
       }
       const schema = prev.project.schema
@@ -1195,6 +1267,102 @@ export const useStore = create<AppState>()(
         else draft.equal.push(canonical)
         s.dirty = true
       })
+    },
+
+    setScreeningDecision: (decision, reason) => {
+      const prev = get()
+      if (!prev.project) return
+      if (prev.project.reviewers > 1 && prev.currentReviewer === null) return
+      const paper = currentPaper(prev)
+      if (!paper) return
+      // Read *before* mutating: whether this seat had no decision yet is what
+      // decides whether to auto-advance below, and it must reflect the state
+      // the reviewer actually saw, not the one this call is about to write.
+      const readTree = currentTree(prev.project, prev.currentReviewer, paper)
+      const wasUndecided = screeningStatus(readTree) === 'undecided'
+
+      lastFieldKey = null
+      const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
+      const paperId = paper.id
+      set((s) => {
+        const draft = currentPaper(s)
+        if (!draft) return
+        const tree = currentTree(s.project!, s.currentReviewer, draft, true)
+        if (!tree) return
+        const decisionInst = tree[SCREENING_DECISION]?.[0]
+        if (!decisionInst) return
+        pushPast(s, snap)
+        decisionInst.value = decision
+        // A reason without an exclusion is a state the reviewer never chose —
+        // clear it in the same mutation, so undoing the decision also undoes
+        // the reason it stops making sense to keep. When excluding with a
+        // reason supplied (the `1`-`9` shortcuts), write both here rather than
+        // as a second call: a second call would land on whatever paper
+        // auto-advance just moved to, not this one.
+        const reasonInst = tree[SCREENING_REASON]?.[0]
+        if (reasonInst) {
+          if (decision !== DECISION_EXCLUDE) reasonInst.value = null
+          else if (reason !== undefined) reasonInst.value = reason
+        }
+        s.dirty = true
+      })
+
+      if (wasUndecided && decision !== null) {
+        const project = get().project
+        const reviewer = get().currentReviewer
+        if (!project) return
+        const idx = project.papers.findIndex((p) => p.id === paperId)
+        for (let i = idx + 1; i < project.papers.length; i++) {
+          const candidate = project.papers[i]
+          if (screeningStatus(currentTree(project, reviewer, candidate)) === 'undecided') {
+            get().selectPaper(candidate.id)
+            break
+          }
+        }
+      }
+    },
+
+    setScreeningReason: (reason) => {
+      const prev = get()
+      if (!prev.project) return
+      const paper = currentPaper(prev)
+      if (!paper) return
+      // Only meaningful once the seat's own decision is Exclude — an ordinary
+      // field write otherwise, so delegate to `setFieldValue` for the routing,
+      // coalescing, undo and dirty-flagging it already does.
+      const tree = currentTree(prev.project, prev.currentReviewer, paper)
+      if (screeningStatus(tree) !== 'excluded') return
+      get().setFieldValue([], SCREENING_REASON, 0, reason)
+    },
+
+    setScreeningFilter: (filter) =>
+      set((s) => {
+        s.screeningFilter = filter
+      }),
+
+    toggleScreeningPdf: () =>
+      set((s) => {
+        s.screeningShowPdf = !s.screeningShowPdf
+      }),
+
+    setScreeningSummaryOpen: (open) =>
+      set((s) => {
+        s.screeningSummaryOpen = open
+      }),
+
+    adoptAllUnanimousScreening: () => {
+      const project = get().project
+      if (!project || project.screening === null) return 0
+      let filledPapers = 0
+      let coalesce = false
+      for (const paper of project.papers) {
+        const fieldsFilled = get().adoptUnanimousValues(paper.id, coalesce)
+        if (fieldsFilled > 0) {
+          filledPapers++
+          coalesce = true
+        }
+      }
+      return filledPapers
     },
 
     undo: () => {

@@ -20,6 +20,12 @@ describe('parseReferences: BibTeX', () => {
     })
   })
 
+  it('reads the abstract field, cleaned through cleanBibValue (LaTeX escapes resolved)', () => {
+    const bib = `@article{k1, title = {T}, abstract = {An abstract with a caf\\'e in it.}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.abstract).toBe('An abstract with a café in it.')
+  })
+
   it('unescapes a Windows drive-letter colon in the file field (only the delimiter colons split it)', () => {
     const bib = `@article{k1, title = {T}, file = {:C\\:\\Users\\name\\file.pdf:application/pdf}}`
     const [entry] = parseReferences(bib, 'refs.bib')
@@ -395,6 +401,44 @@ describe('parseReferences: RIS', () => {
   })
 })
 
+describe('parseReferences: RIS abstract (AB / N2)', () => {
+  it('reads AB as the abstract', () => {
+    const ris = ['TY  - JOUR', 'TI  - T', 'AB  - This is the abstract.', 'ER  - '].join('\n')
+    const [entry] = parseReferences(ris, 'refs.ris')
+    expect(entry.abstract).toBe('This is the abstract.')
+  })
+
+  it('falls back to N2 when AB is absent', () => {
+    const ris = ['TY  - JOUR', 'TI  - T', 'N2  - Alternate abstract tag.', 'ER  - '].join('\n')
+    const [entry] = parseReferences(ris, 'refs.ris')
+    expect(entry.abstract).toBe('Alternate abstract tag.')
+  })
+
+  it('prefers AB over N2 when both are present', () => {
+    const ris = [
+      'TY  - JOUR',
+      'TI  - T',
+      'N2  - From N2.',
+      'AB  - From AB.',
+      'ER  - ',
+    ].join('\n')
+    const [entry] = parseReferences(ris, 'refs.ris')
+    expect(entry.abstract).toBe('From AB.')
+  })
+
+  it('AB wins regardless of tag order', () => {
+    const ris = [
+      'TY  - JOUR',
+      'TI  - T',
+      'AB  - From AB.',
+      'N2  - From N2.',
+      'ER  - ',
+    ].join('\n')
+    const [entry] = parseReferences(ris, 'refs.ris')
+    expect(entry.abstract).toBe('From AB.')
+  })
+})
+
 describe('parseReferences: CSL-JSON', () => {
   it('parses a Zotero-style export array', () => {
     const json = JSON.stringify([
@@ -443,6 +487,18 @@ describe('parseReferences: CSL-JSON', () => {
   it('returns [] for garbage JSON rather than throwing', () => {
     expect(() => parseReferences('{not valid json', 'refs.json')).not.toThrow()
     expect(parseReferences('{not valid json', 'refs.json')).toEqual([])
+  })
+
+  it('reads the abstract string property', () => {
+    const json = JSON.stringify([{ title: 'T', abstract: 'A CSL abstract.' }])
+    const [entry] = parseReferences(json, 'refs.json')
+    expect(entry.abstract).toBe('A CSL abstract.')
+  })
+
+  it('ignores a non-string abstract rather than throwing', () => {
+    const json = JSON.stringify([{ title: 'T', abstract: { rich: 'text' } }])
+    const [entry] = parseReferences(json, 'refs.json')
+    expect(entry.abstract).toBeUndefined()
   })
 })
 

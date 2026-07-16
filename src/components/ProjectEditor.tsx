@@ -1,6 +1,7 @@
 import { useEditorStore } from '../state/editorStore'
 import { getPlatform } from '../platform'
 import { SchemaTreeEditor } from './SchemaTreeEditor'
+import { ScreeningReasonsEditor } from './ScreeningReasonsEditor'
 import { PapersEditor } from './PapersEditor'
 import '../styles/editor.css'
 
@@ -22,6 +23,8 @@ export function ProjectEditor() {
   const setAiEnabled = useEditorStore((s) => s.setAiEnabled)
   const reviewers = useEditorStore((s) => s.reviewers)
   const setReviewers = useEditorStore((s) => s.setReviewers)
+  const screening = useEditorStore((s) => s.screening)
+  const setScreening = useEditorStore((s) => s.setScreening)
   const dirty = useEditorStore((s) => s.dirty)
   const busy = useEditorStore((s) => s.busy)
   const error = useEditorStore((s) => s.error)
@@ -107,6 +110,30 @@ export function ProjectEditor() {
       </div>
 
       <div className="editor-location">
+        <span className="editor-location-label">Screening</span>
+        <label
+          className="editor-ai-toggle"
+          title="A screening project records one include/exclude decision per paper instead of an annotation schema. Writes config.screening into the JSON."
+        >
+          <input
+            type="checkbox"
+            checked={screening !== null}
+            onChange={(e) => setScreening(e.target.checked)}
+            disabled={busy}
+          />
+          <span>This is a screening project</span>
+        </label>
+      </div>
+      {screening && (
+        <p className="editor-hint editor-screening-hint">
+          Screening records one <strong>Include / Exclude</strong> decision per paper — a two-option
+          choice, not a checkbox, because the app also has to be able to say "not screened yet". The
+          exclusion reasons below are fixed up front, the way a review protocol pre-registers them, so
+          the counts can be reported per reason.
+        </p>
+      )}
+
+      <div className="editor-location">
         <span className="editor-location-label">Reviewers</span>
         <label
           className="editor-ai-toggle"
@@ -171,14 +198,25 @@ export function ProjectEditor() {
       )}
 
       <div className="editor-body">
-        <section className="editor-section">
-          <h2>Annotation schema</h2>
-          <p className="editor-hint">
-            The fields reviewers fill in for each paper. A <em>Group</em> holds nested fields; set
-            an unbounded maximum to let a field repeat. Drag rows to reorder or to nest them.
-          </p>
-          <SchemaTreeEditor />
-        </section>
+        {screening ? (
+          <section className="editor-section">
+            <h2>Exclusion reasons</h2>
+            <p className="editor-hint">
+              Why a paper is excluded. Reviewers pick one of these when they exclude a paper — there is
+              no free-text option, so the counts this project reports per reason stay meaningful.
+            </p>
+            <ScreeningReasonsEditor />
+          </section>
+        ) : (
+          <section className="editor-section">
+            <h2>Annotation schema</h2>
+            <p className="editor-hint">
+              The fields reviewers fill in for each paper. A <em>Group</em> holds nested fields; set
+              an unbounded maximum to let a field repeat. Drag rows to reorder or to nest them.
+            </p>
+            <SchemaTreeEditor />
+          </section>
+        )}
 
         <section className="editor-section">
           <h2>Papers</h2>

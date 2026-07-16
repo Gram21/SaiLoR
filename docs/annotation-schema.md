@@ -20,6 +20,7 @@ This document is the in‑depth companion to it.
 7. [Opening a project](#7-opening-a-project)
 8. [Validation & common mistakes](#8-validation--common-mistakes)
 9. [Multiple reviewers & Consolidation](#9-multiple-reviewers--consolidation)
+10. [Screening projects](#10-screening-projects)
 
 ---
 
@@ -65,10 +66,13 @@ The top‑level object has three keys:
 | Key       | Required? | What it is                                                                 |
 | --------- | --------- | -------------------------------------------------------------------------- |
 | `version` | optional  | A number. If you omit it, the app treats it as `1`.                        |
-| `config`  | required  | The annotation schema (`schema`) and options such as `ai`.                 |
+| `config`  | required  | The annotation schema (`schema`) and options such as `ai`, `screening`.    |
 | `papers`  | required  | The list of papers to annotate.                                            |
 
-`config.schema` must be an **array with at least one node**. An empty schema is rejected.
+`config.schema` must be an **array with at least one node** — *unless* `config.screening` is
+present, in which case `schema` is ignored entirely (see [§10](#10-screening-projects)) and may be
+omitted from the file. Every other project still needs a non-empty `schema`; an empty (or missing)
+one is rejected.
 
 **`config.ai` — forbid AI-assisted annotation.** Optional, defaults to `true`. Set it to `false` and
 the **✦ AI** button is disabled for anyone who opens the file. Use this when the papers must not be
@@ -324,12 +328,16 @@ You can bound a repeatable group as well. Between one and three threats:
 | `title`       | string          | **yes**  | The paper's title, shown in the list and header.                            |
 | `authors`     | array of strings| yes*     | Author names. May be an empty list `[]`.                                    |
 | `doi`         | string          | no       | The DOI, if you have one.                                                   |
-| `pdf`         | string          | **yes**  | Path to the PDF file, **relative to the JSON file's location**.             |
+| `abstract`    | string          | no       | The abstract. Screening reads this when there is no PDF (see [§10](#10-screening-projects)); ordinary paper metadata otherwise. |
+| `pdf`         | string          | **yes**\*\* | Path to the PDF file, **relative to the JSON file's location**.          |
 | `annotations` | object          | yes*     | The single/consolidated result. Use `{}` for a paper you haven't annotated yet. |
 | `reviews`     | object          | no       | Multi-reviewer only — each reviewer's own tree, keyed `"1"` .. `"N"`. See [§9](#9-multiple-reviewers--consolidation). Omit entirely in a single-reviewer file. |
 
 <sub>* `authors` and `annotations` are effectively required in a hand‑written file — set them to
 `[]` and `{}` respectively when there's nothing yet.</sub>
+<sub>\*\* `pdf` may be `""` **only** in a screening project ([§10](#10-screening-projects)) — screening
+is normally done from `abstract` alone, often before any PDF has been attached. Every other project
+still requires a non-empty `pdf`.</sub>
 
 A minimal, not‑yet‑annotated paper:
 
@@ -595,12 +603,14 @@ If a project won't open, it's almost always one of these:
   nodes, and must be an array of strings. Using it anywhere else is rejected.
 - **Comments or trailing commas.** JSON allows neither. Remove any `//` lines and any comma that
   sits before a closing `]` or `}`.
-- **Wrong or missing `pdf` path.** Every paper needs a `pdf`, and the path is relative to the
-  JSON file. If the PDF won't load, check the path and the recommended
+- **Wrong or missing `pdf` path.** Every paper needs a non-empty `pdf`, and the path is relative
+  to the JSON file — *unless* this is a screening project ([§10](#10-screening-projects)), where
+  `pdf: ""` is allowed. If the PDF won't load, check the path and the recommended
   `project.json` + `pdfs/` layout.
 - **Duplicate paper `id`.** Each paper's `id` must be unique across the whole `papers` list;
   repeated ids break navigation and are rejected.
-- **Empty schema.** `config.schema` must contain at least one node.
+- **Empty schema.** `config.schema` must contain at least one node — unless `config.screening` is
+  present, in which case `schema` is derived automatically and this check does not apply.
 
 When a file fails to load, the app reports which check failed (and often the exact node or path),
 so start from the message and work back to the offending line.
@@ -698,3 +708,132 @@ not discarding it; if you actually want it gone, that has to be done by hand.
 **Validate** checks the tree the active reviewer is responsible for: a numbered reviewer's own
 answers, or — for Consolidation — the final consolidated result that will actually ship. It is
 unavailable until a reviewer is picked, since there is no "the reviewer" to check otherwise.
+
+---
+
+## 10. Screening projects
+
+A **screening project** is a project whose schema is *derived*, not authored. It records exactly
+one thing per paper — an include/exclude decision, and (when excluded) why — instead of a
+hand-designed taxonomy. This is the fast, high-volume pass an SLR usually runs before annotation:
+deciding which of a few hundred candidate papers are worth reading in full.
+
+### `config.screening`
+
+```json
+{
+  "config": {
+    "screening": {
+      "reasons": ["Not peer-reviewed", "Wrong topic", "Duplicate"]
+    }
+  }
+}
+```
+
+| Field     | Type            | Required | Meaning                                                              |
+| --------- | --------------- | -------- | ---------------------------------------------------------------------|
+| `reasons` | array of strings| **yes**  | The exclusion reasons a reviewer can pick from. Must list at least one; trimmed and deduped on load. Order is the order the summary reports counts in. |
+
+**`config.screening`'s presence is what makes a project a screening project.** Nothing else in the
+file needs to change: `config.schema` is simply not read for a screening project and may be
+omitted from the file entirely.
+
+### `config.schema` is derived, not authored
+
+For a screening project, `config.schema` is **always ignored on load** and **always rewritten on
+save** as a projection of `config.screening.reasons` — the exact two-node schema below. Hand-editing
+`config.schema` in a screening project's file therefore does nothing; the way to change what
+reviewers see is to edit `config.screening.reasons`.
+
+```json
+[
+  {
+    "name": "Decision",
+    "type": "string",
+    "options": ["Include", "Exclude"],
+    "description": "Include this paper in the review, or exclude it. Left unset until you decide."
+  },
+  {
+    "name": "Reason",
+    "type": "string",
+    "options": ["Not peer-reviewed", "Wrong topic", "Duplicate"],
+    "description": "Why this paper is excluded. Only applies when the decision is Exclude."
+  }
+]
+```
+
+**Why an `Include`/`Exclude` dropdown and not a plain boolean.** The obvious design for "should this
+paper be excluded" is a single checkbox. This app cannot represent that: an unticked box is read as
+a deliberate, answered "no" everywhere else in the file format — booleans have no way to mean "not
+answered yet" (see `isEmptyValue` in the codebase, or §3.1's "boolean — a checkbox. Empty means
+`false`."). Screening is the one phase where that third state — **not screened yet** — is the whole
+point: the progress count, the per-reason PRISMA totals, and which papers an import carries forward
+all depend on being able to tell "decided" apart from "untouched". A two-option enum gets that state
+for free (`null` until chosen), so `Decision` is spelled as an enum rather than a boolean.
+
+`Reason` is only meaningful once `Decision` is `"Exclude"` — the app's screening UI disables it
+otherwise and clears it if the decision changes away from `Exclude` — but a hand-edited file can
+still hold either mismatch (an excluded paper with no reason, or a reason recorded on a paper that
+isn't excluded). Both are reported as validation issues, not silently accepted.
+
+### A screened paper on disk
+
+```json
+{
+  "id": "paper-a",
+  "title": "Deep Learning for Code Search: A Study",
+  "authors": ["A. Author", "B. Writer"],
+  "abstract": "We study neural retrieval for code search…",
+  "pdf": "",
+  "annotations": {
+    "Decision": [{ "value": "Exclude" }],
+    "Reason": [{ "value": "Wrong topic" }]
+  }
+}
+```
+
+Ordinary shape, ordinary rules: `annotations` is still the field that is written in full and
+pruned the same way every other project's is. The only things specific to screening are the
+derived schema above, `pdf: ""` being allowed (§4), and `abstract` usually being the paper's only
+readable content until it reaches full-text review.
+
+### Interaction with multiple reviewers (§9)
+
+A screening project can set `config.reviewers` exactly like any other — two reviewers screen
+independently and Consolidation reconciles them, which is the standard SLR screening protocol
+(screen in duplicate, resolve disagreements). Everything in §9 applies unchanged, with one
+narrower exception: **inter-rater agreement is computed over `Decision` only.** `Reason` is a
+different question, and one only defined on the subset of papers both reviewers excluded, so
+folding it into the same κ would produce a number that answers neither question honestly.
+
+The entry-matching machinery §9 describes for repeatable groups (matching "Reviewer 1's Finding
+#2" to "Reviewer 2's Finding #3") has nothing to do here: `Decision` and `Reason` are both
+single-instance fields, so there is nothing to match — every reviewer's answer already lines up at
+the same, only, index.
+
+### Starting the next phase: importing from a screening project
+
+The project editor's **New from screening…** (start screen) and **Import from screening…** (Papers
+section, when the current draft is *not* itself a screening project) both read a screening
+project's results and carry papers into a new or existing annotation project.
+
+- **What counts as "included".** A paper is carried over unless it is **explicitly**
+  `Decision: "Exclude"`. That means both `"Include"` and *anything else* — no decision recorded, or
+  an unrecognised value from a hand-edited file — are carried by default; only an explicit exclusion
+  drops a paper. The import dialog states the three counts (included / excluded / not-screened-yet)
+  before anything is written, and offers to leave the not-screened-yet papers out instead, but
+  never drops them silently.
+- **Which tree is read.** For a multi-reviewer screening project, "included" is read from the
+  **consolidated** `annotations` tree — the one that ships — never an individual reviewer's own
+  `reviews` entry. If reviewers agreed on a paper but Consolidation hasn't opened it yet (adoption
+  only happens per-paper, as the consolidator reviews each one), that paper has no consolidated
+  decision yet and is carried as not-screened-yet; the dialog says so and points at **Adopt all**
+  (the consolidator's one-click way to adopt every such paper at once) as the fix.
+- **What carries over.** `title`, `authors`, `doi`, `abstract`, and `pdf` (re-derived to remain
+  correct if the new project's location differs from the screening project's). `reviews`, `equal`,
+  and `aiUsage` do **not** carry over — they are the screening phase's own record and have no
+  meaning against the new project's different schema.
+- **Where the new project is saved.** By default, **next to the screening project's JSON file** —
+  a sibling location, so every carried paper's relative `pdf` keeps resolving without being
+  rewritten at all. This is the default location, not a locked one; *Change…* still works
+  afterward.

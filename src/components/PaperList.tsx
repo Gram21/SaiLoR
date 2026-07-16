@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useStore, currentTree } from '../state/store'
 import { hasAnnotations, annotationText } from '../model/annotations'
 import { readyToConsolidate } from '../consolidate/readiness'
+import { screeningStatus, type ScreeningStatus } from '../screening/status'
 import { SidebarToggle } from './SidebarToggle'
 import type { Paper, Project } from '../model/project'
 
@@ -43,13 +44,37 @@ export function paperIsMarkedDone(
   return !!tree && hasAnnotations(project.schema, tree)
 }
 
+/**
+ * The screening marker's state for a paper, per seat: `currentTree`'s
+ * routing, so a numbered reviewer tracks their own decisions and
+ * Consolidation tracks the result that ships.
+ *
+ * This deliberately replaces `paperIsMarkedDone`'s Consolidation meaning
+ * (`readyToConsolidate`) for a screening project: with one decision per
+ * paper, "the final decision so far" is the more useful thing for the marker
+ * to say, and readiness has not been lost — it is in the marker's `title`
+ * tooltip (see below), and the ⇄ compare button's readiness gate
+ * (`Field.tsx`) is unchanged, which is the rule that actually protects the
+ * consolidator from deciding on an absent reviewer.
+ */
+export function paperScreeningStatus(
+  project: Project,
+  paper: Paper,
+  currentReviewer: string | null,
+): ScreeningStatus {
+  return screeningStatus(currentTree(project, currentReviewer, paper))
+}
+
 /** Left pane: the collapsible list of papers to annotate. */
 export function PaperList() {
   const project = useStore((s) => s.project)
   const currentPaperId = useStore((s) => s.currentPaperId)
   const currentReviewer = useStore((s) => s.currentReviewer)
   const selectPaper = useStore((s) => s.selectPaper)
+  const screeningFilter = useStore((s) => s.screeningFilter)
+  const setScreeningFilter = useStore((s) => s.setScreeningFilter)
   const schema = project?.schema ?? []
+  const isScreening = project?.screening != null
 
   const [query, setQuery] = useState('')
   const [mode, setMode] = useState<SearchMode>('metadata')
@@ -67,7 +92,10 @@ export function PaperList() {
     if (!papers || !project) return []
     return papers.map((paper) => ({
       paper,
-      metadataHaystack: `${paper.title} ${paper.authors.join(' ')} ${paper.doi ?? ''}`.toLowerCase(),
+      // The abstract is added here — searching it during screening is the
+      // obvious want, and it costs a PDF-less project nothing.
+      metadataHaystack:
+        `${paper.title} ${paper.authors.join(' ')} ${paper.doi ?? ''} ${paper.abstract ?? ''}`.toLowerCase(),
       // The active reviewer's own tree, so the sidebar answers "which papers
       // did *I* record this in" — the same tree the form and validation show.
       // Null (multi-reviewer, nobody picked yet) has no annotations to search.
@@ -78,8 +106,12 @@ export function PaperList() {
   // Filter + rank by how many distinct query words match (then matched chars).
   const words = query.toLowerCase().split(/\s+/).filter((w) => w.length > 0)
   const filtered = useMemo<Paper[]>(() => {
-    if (words.length === 0) return index.map((e) => e.paper)
-    const scored = index
+    const base = index.filter((e) => {
+      if (!isScreening || screeningFilter === 'all' || !project) return true
+      return paperScreeningStatus(project, e.paper, currentReviewer) === screeningFilter
+    })
+    if (words.length === 0) return base.map((e) => e.paper)
+    const scored = base
       .map((e, i) => {
         const haystack = mode === 'annotations' ? e.annotationHaystack : e.metadataHaystack
         let matched = 0
@@ -97,12 +129,12 @@ export function PaperList() {
     return scored.map((e) => e.paper)
     // `words` is derived from `query`; keying on both is intentional.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, query, mode])
+  }, [index, query, mode, isScreening, screeningFilter, project, currentReviewer])
 
   if (!project) return null
 
   const total = project.papers.length
-  const isFiltered = words.length > 0
+  const isFiltered = words.length > 0 || (isScreening && screeningFilter !== 'all')
   const countText = isFiltered ? `${filtered.length} of ${total}` : `${total}`
 
   return (
@@ -151,6 +183,21 @@ export function PaperList() {
             {mode === 'annotations' ? 'TAGS' : 'META'}
           </button>
         </div>
+        {isScreening && (
+          <div className="screening-filter" role="group" aria-label="Filter by screening status">
+            {(['all', 'undecided', 'included', 'excluded'] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                className={`screening-filter-btn${screeningFilter === f ? ' active' : ''}`}
+                aria-pressed={screeningFilter === f}
+                onClick={() => setScreeningFilter(f)}
+              >
+                {f === 'all' ? 'All' : f[0].toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       <ul>
         {filtered.length === 0 ? (
@@ -163,12 +210,44 @@ export function PaperList() {
           </li>
         ) : (
           filtered.map((p) => {
+            const isConsolidation = currentReviewer === 'consolidation' && project.reviewers > 1
+
+            if (isScreening) {
+              const status = paperScreeningStatus(project, p, currentReviewer)
+              // Readiness has not been dropped for the consolidator here — it
+              // moves into the tooltip, since the marker itself now reports
+              // "the final decision so far" instead (see `paperScreeningStatus`).
+              const readiness = isConsolidation
+                ? readyToConsolidate(project.schema, p, project.reviewers)
+                  ? ' — ready to consolidate'
+                  : ' — not every reviewer has screened this yet'
+                : ''
+              const title =
+                (status === 'included'
+                  ? 'Included'
+                  : status === 'excluded'
+                    ? 'Excluded'
+                    : 'Not screened yet') + readiness
+              return (
+                <li
+                  key={p.id}
+                  className={p.id === currentPaperId ? 'paper active' : 'paper'}
+                  onClick={() => selectPaper(p.id)}
+                >
+                  <span className={`status-dot screening-${status}`} title={title} />
+                  <span className="paper-info">
+                    <span className="paper-title">{p.title}</span>
+                    <span className="paper-authors">{p.authors.join(', ')}</span>
+                  </span>
+                </li>
+              )
+            }
+
             // Progress is per-reviewer: as Reviewer 2 the dot must track *your*
             // work, not whatever the consolidated tree happens to hold. In the
             // Consolidation seat it means something else again — see
             // `paperIsMarkedDone`.
             const annotated = paperIsMarkedDone(project, p, currentReviewer)
-            const isConsolidation = currentReviewer === 'consolidation' && project.reviewers > 1
             const title = isConsolidation
               ? annotated
                 ? 'Ready to consolidate — every reviewer has annotated this paper'

@@ -392,6 +392,16 @@ export class BrowserAdapter implements PlatformAdapter {
     return pdfs.map((p) => p.name)
   }
 
+  async absolutePdfPaths(pdfPaths: string[], _from: SaveHandle): Promise<(string | undefined)[]> {
+    // No filesystem paths in the browser — see `relativePdfPaths`.
+    return pdfPaths.map(() => undefined)
+  }
+
+  async siblingProjectLocation(_source: SaveHandle, _fileName: string): Promise<ProjectLocation | null> {
+    // No paths to build one from; callers fall back to `pickProjectLocation`.
+    return null
+  }
+
   // ---- AI-assisted annotation ----
   //
   // The browser build cannot make the promises the desktop build makes, and says
