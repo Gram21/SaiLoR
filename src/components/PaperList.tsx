@@ -96,7 +96,7 @@ export function PaperList() {
           />
           <button
             type="button"
-            className={`icon-btn paper-search-mode${mode === 'annotations' ? ' active' : ''}`}
+            className={`paper-search-mode${mode === 'annotations' ? ' active' : ''}`}
             title={
               mode === 'annotations'
                 ? 'Searching annotation content (the values filled in for each paper). Click to search title, authors, and DOI instead.'
@@ -106,7 +106,10 @@ export function PaperList() {
             aria-pressed={mode === 'annotations'}
             onClick={() => setMode((m) => (m === 'metadata' ? 'annotations' : 'metadata'))}
           >
-            {mode === 'annotations' ? '🏷' : '🔎'}
+            {/* Same length in both states (and a fixed CSS width besides) so the
+                trigger never reflows the input's padding — unlike the previous
+                🔎/🏷 emoji pair, whose differing glyph widths visibly resized it. */}
+            {mode === 'annotations' ? 'TAGS' : 'META'}
           </button>
         </div>
       </div>
