@@ -218,8 +218,14 @@ function parseEqual(raw: unknown): string[] {
  * that whitespace, indentation and stray key order — which even this file's
  * own `serializeProject` freely rewrites on every ordinary save — never look
  * like a reason to migrate a file that is already semantically fine.
+ *
+ * Exported for `src/git/merge.ts`, which needs the identical notion of
+ * "structurally the same JSON value" to decide whether a field changed on a
+ * side of a three-way merge — a second implementation of this would be a bug
+ * waiting, the same reason `comparable()` in `src/consolidate/unanimous.ts`
+ * exists as a single shared function rather than three copies.
  */
-function deepEqualJson(a: unknown, b: unknown): boolean {
+export function deepEqualJson(a: unknown, b: unknown): boolean {
   if (a === b) return true
   if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false
   if (Array.isArray(a) !== Array.isArray(b)) return false
