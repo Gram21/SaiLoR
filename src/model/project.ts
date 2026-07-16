@@ -4,12 +4,14 @@ import {
   resolveSchema,
   SchemaError,
   type ResolvedDef,
+  type ScreeningConfig,
 } from './schema'
 import {
   normalizeTree,
   pruneTree,
   type AnnotationValueTree,
 } from './annotations'
+import { screeningSchemaDefs } from '../screening/schema'
 
 /**
  * One AI-assisted-annotation pass applied to a paper: which provider and model
@@ -33,6 +35,12 @@ export interface Paper {
   title: string
   authors: string[]
   doi?: string
+  /**
+   * The paper's abstract when the source had one. Screening is normally
+   * decided on title + abstract, so this is the reading surface when there is
+   * no PDF; it is ordinary paper metadata otherwise.
+   */
+  abstract?: string
   pdf: string
   /** The single/consolidated result. Unchanged in meaning by multi-reviewer
    *  support: this is still what `validateProject`, `hasAnnotations`, and any
@@ -87,6 +95,14 @@ export interface Project {
    */
   reviewers: number
   papers: Paper[]
+  /**
+   * The screening configuration when this is a screening project, else null.
+   * A screening project's `schema` is *derived* from this (see
+   * `src/screening/schema.ts`) and whatever `config.schema` said in the file is
+   * ignored — this is the single source of truth, and the schema written back
+   * out is a projection of it, so the two can never drift.
+   */
+  screening: ScreeningConfig | null
   /** Additional top-level fields preserved verbatim on save. */
   extra: Record<string, unknown>
 }
@@ -104,6 +120,7 @@ const KNOWN_PAPER_KEYS = new Set([
   'title',
   'authors',
   'doi',
+  'abstract',
   'pdf',
   'annotations',
   'reviews',
@@ -209,6 +226,36 @@ function parseEqual(raw: unknown): string[] {
 }
 
 /**
+ * Parse `config.screening` defensively-but-strictly. Unlike `reviews`/`equal`,
+ * a broken value here cannot be degraded past: the reasons *are* the schema's
+ * enum, so a screening project with none of them has no way to record why
+ * anything was excluded. Trimmed and deduped — the list is really a set, and
+ * a duplicated option would render as a broken dropdown — but an empty result
+ * is a load error, not an empty list.
+ */
+function parseScreening(raw: unknown): ScreeningConfig | null {
+  if (raw === undefined) return null
+  const reasonsRaw = Array.isArray((raw as { reasons?: unknown })?.reasons)
+    ? ((raw as { reasons: unknown[] }).reasons)
+    : []
+  const seen = new Set<string>()
+  const reasons: string[] = []
+  for (const entry of reasonsRaw) {
+    if (typeof entry !== 'string') continue
+    const trimmed = entry.trim()
+    if (!trimmed || seen.has(trimmed)) continue
+    seen.add(trimmed)
+    reasons.push(trimmed)
+  }
+  if (reasons.length === 0) {
+    throw new ProjectLoadError('The screening configuration is invalid.', [
+      'config.screening.reasons must list at least one exclusion reason',
+    ])
+  }
+  return { reasons }
+}
+
+/**
  * Structural equality for plain JSON values: order-independent for object
  * keys (a hand-edited file listing fields in a different order than the
  * schema is not "different"), order-*sensitive* for arrays (an array is an
@@ -297,9 +344,17 @@ export function loadProject(input: string | unknown): Project {
     throw err
   }
 
+  // A screening project's schema is not read from the file: it is derived from
+  // `config.screening.reasons` every time, so a hand-edited reason list can
+  // never disagree with the dropdown the reviewer actually sees. `serializeProject`
+  // writes the derived schema back, which is what keeps the file self-describing
+  // for anything reading it without SaiLoR. `raw.config.schema!` below is safe:
+  // the zod `superRefine` guarantees it is present and non-empty whenever
+  // `screening` is null.
+  const screening = parseScreening((raw.config as { screening?: unknown }).screening)
   let schema: ResolvedDef[]
   try {
-    schema = resolveSchema(raw.config.schema)
+    schema = resolveSchema(screening ? screeningSchemaDefs(screening) : raw.config.schema!)
   } catch (err) {
     if (err instanceof SchemaError) {
       throw new ProjectLoadError('The annotation schema is invalid.', [err.message])
@@ -321,6 +376,7 @@ export function loadProject(input: string | unknown): Project {
     title: p.title,
     authors: p.authors ?? [],
     doi: p.doi,
+    abstract: p.abstract,
     pdf: p.pdf,
     annotations: normalizeTree(schema, p.annotations as AnnotationValueTree | undefined),
     reviews: normalizeReviews((p as { reviews?: unknown }).reviews, schema, raw.config.reviewers ?? 1),
@@ -338,6 +394,7 @@ export function loadProject(input: string | unknown): Project {
     // Absent or 1 means single-reviewer; zod already bounds a present value to [1, 10].
     reviewers: raw.config.reviewers ?? 1,
     papers,
+    screening,
     extra: extractExtra(raw, KNOWN_ROOT_KEYS),
   }
 }
@@ -356,9 +413,14 @@ export function serializeProject(project: Project): string {
     // anything beyond the single-reviewer default — so a normal file, and a
     // single-reviewer file, both stay exactly as clean as before this feature.
     config: {
+      // For a screening project this is the derived projection of
+      // `config.screening.reasons`, not anything hand-authored — see
+      // `Project.screening`. Written anyway so the file stays self-describing
+      // for anything reading it without SaiLoR.
       schema: dehydrateSchema(project.schema),
       ...(project.aiEnabled ? {} : { ai: false }),
       ...(project.reviewers > 1 ? { reviewers: project.reviewers } : {}),
+      ...(project.screening ? { screening: { reasons: project.screening.reasons } } : {}),
     },
     papers: project.papers.map((p) => {
       const paper: Record<string, unknown> = {
@@ -368,6 +430,7 @@ export function serializeProject(project: Project): string {
         authors: p.authors,
       }
       if (p.doi !== undefined) paper.doi = p.doi
+      if (p.abstract !== undefined && p.abstract !== '') paper.abstract = p.abstract
       paper.pdf = p.pdf
       paper.annotations = pruneTree(project.schema, p.annotations)
       // A single-reviewer paper has no reviewer trees at all — `annotations`

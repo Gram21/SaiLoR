@@ -10,7 +10,11 @@ import type { Paper, Project } from './project'
  * must surface as an issue, never as a thrown exception.
  */
 
-export type IssueKind = 'required' | 'type' | 'enum' | 'cardinality'
+// 'screening' is never emitted by this module's own walk — it is emitted by
+// `src/screening/validate.ts` for the two cross-field rules a plain schema
+// walk cannot express. It lives in this union because `ValidationIssue` (and
+// everything that renders one, like `ValidationDialog.tsx`) is shared.
+export type IssueKind = 'required' | 'type' | 'enum' | 'cardinality' | 'screening'
 
 export interface ValidationIssue {
   paperId: string

@@ -35,6 +35,7 @@ function makeProject(reviewers: number): Project {
     aiEnabled: true,
     reviewers,
     papers: [],
+    screening: null,
     extra: {},
   }
 }

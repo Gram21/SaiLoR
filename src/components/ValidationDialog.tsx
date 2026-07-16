@@ -7,6 +7,7 @@ const KIND_LABEL: Record<IssueKind, string> = {
   type: 'Wrong type',
   enum: 'Not an allowed value',
   cardinality: 'Wrong number of entries',
+  screening: 'Screening',
 }
 
 /**
