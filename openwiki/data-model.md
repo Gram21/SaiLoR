@@ -10,9 +10,10 @@ A project is a single JSON file with this shape:
 {
   "version": 1,
   "config": {
-    "schema": [ /* AnnotationDef[] — the taxonomy */ ],
+    "schema": [ /* AnnotationDef[] — the taxonomy. Ignored + derived when "screening" is set */ ],
     "ai": false,       // optional; false disables AI-assisted annotation for this project
-    "reviewers": 3     // optional; >1 turns on independent multi-reviewer annotation
+    "reviewers": 3,    // optional; >1 turns on independent multi-reviewer annotation
+    "screening": { "reasons": ["Wrong topic", "Duplicate"] }  // optional; see "Screening" below
   },
   "papers": [ /* Paper[] */ ],
   // any other top-level keys are preserved verbatim on save
@@ -62,7 +63,8 @@ Each schema node defines a field or group in the taxonomy:
   "title": "…",
   "authors": ["…"],           // defaults to []
   "doi": "10.1000/xyz",       // optional
-  "pdf": "pdfs/paper-a.pdf",  // path relative to the project JSON file
+  "abstract": "…",            // optional; what screening reads when there is no PDF (see "Screening" below)
+  "pdf": "pdfs/paper-a.pdf",  // path relative to the project JSON file; "" only valid in a screening project
   "annotations": {},          // the consolidated result — filled in as you annotate
   "reviews": {                // optional; each independent reviewer's own tree, multi-reviewer only
     "1": { /* AnnotationValueTree */ },
@@ -95,6 +97,7 @@ interface Project {
   aiEnabled: boolean              // config.ai; true unless the file opts out
   reviewers: number                // config.reviewers; 1 (default) = single-reviewer
   papers: Paper[]
+  screening: ScreeningConfig | null  // config.screening; see "Screening" below
   extra: Record<string, unknown>  // unknown top-level fields preserved
 }
 
@@ -103,6 +106,7 @@ interface Paper {
   title: string
   authors: string[]
   doi?: string
+  abstract?: string                // what screening reads when there is no PDF; ordinary metadata otherwise
   pdf: string
   annotations: AnnotationValueTree          // the single/consolidated result — unchanged in meaning
   reviews: Record<string, AnnotationValueTree>  // each reviewer's own tree, keyed "1".."N"; {} if single-reviewer
@@ -258,13 +262,73 @@ files as needing migration too — precisely the kind of file every hand-written
 codebase is, which is how this got caught. The comparison is scoped to exactly `annotations` and
 `reviews`; nothing else about a file's formatting or unrelated content is examined.
 
+## Screening
+
+```typescript
+interface ScreeningConfig {
+  reasons: string[]   // non-empty, trimmed, deduped by project.ts; order is the order reported
+}
+```
+
+`config.screening`'s presence — reflected in `Project.screening: ScreeningConfig | null` — is what
+makes a project a screening project. `config.schema` is not the source of truth for one: it is a
+**derived projection** of `screening.reasons`, produced by `screeningSchemaDefs()`
+(`src/screening/schema.ts`):
+
+```jsonc
+[
+  { "name": "Decision", "type": "string", "options": ["Include", "Exclude"] },
+  { "name": "Reason", "type": "string", "options": ["Wrong topic", "Duplicate", "…"] }
+]
+```
+
+**Lifecycle step, not a one-off transform.** `loadProject` derives this schema fresh from
+`raw.config.screening` on **every load** and never reads `raw.config.schema` for a screening
+project (`raw.config.schema!` is used only in the non-screening branch, where the zod `superRefine`
+guarantees it is present). `serializeProject` writes the same derived projection back out on
+**every save**. There is no code path in which a screening project's `config.schema` in the file
+and `screeningSchemaDefs(project.screening)` can disagree once the file has been re-saved by this
+app — a hand-edited `config.schema` in a screening project's file is simply overwritten on the next
+save, never read.
+
+**`pdf` may be `""`, but only here.** `paperSchema.pdf` is `z.string().default('')`; the
+"non-empty" requirement moved out of the field-level zod schema and into `projectSchema`'s
+`superRefine`, which — able to see whether `config.screening` is set — only enforces it for a
+*non-screening* paper. A screening project built from a reference-manager export routinely has no
+PDFs at all yet, so relaxing this only there (never for an ordinary project) is what makes that
+workflow possible without weakening the check everywhere else.
+
+**`screeningStatus(tree)`** (`src/screening/status.ts`) reads the tri-state a screening decision
+actually has:
+
+| `Decision` value | Status |
+|---|---|
+| `"Include"` | `included` |
+| `"Exclude"` | `excluded` |
+| anything else — `null`, missing, a non-array node, an unrecognised string | `undecided` |
+
+The last row is deliberate and conservative: the file is hand-editable, and an unrecognised
+decision is not a decision — it must never be misread as `excluded` (which would silently drop the
+paper from an import) or as `included` (which would silently claim a paper was screened when it
+was not). `undecided` is the only safe default for anything this function cannot make sense of.
+
+`screeningCounts()` (`src/screening/counts.ts`) is the total/included/excluded/undecided +
+per-reason breakdown behind `ScreeningSummary`; it reads through the same seat routing
+`currentTree` uses (reimplemented locally as `seatTree`, to keep `src/screening/` free of a
+`state/store.ts` import — the same precedent `consolidate/readiness.ts` and
+`consolidate/disagreements.ts` already set). `pendingUnanimous()` counts papers every reviewer
+decided identically that Consolidation has not adopted yet (see the architecture page's "Screening"
+section for why that gap exists).
+
 ## Lifecycle: Load → Normalize → Edit → Prune → Serialize
 
 ### 1. Load (`loadProject` in `src/model/project.ts`)
 
 1. Parse JSON text (or accept pre-parsed object)
 2. Validate against `projectSchema` (zod) — rejects malformed structure with `ProjectLoadError` containing friendly details
-3. `resolveSchema(raw.config.schema)` — applies defaults, assigns ids, enforces uniqueness
+3. `resolveSchema(screening ? screeningSchemaDefs(screening) : raw.config.schema)` — applies
+   defaults, assigns ids, enforces uniqueness. For a screening project the schema is derived from
+   `config.screening.reasons`, never read from `config.schema` — see "Screening" above
 4. Check for duplicate paper IDs
 5. For each paper: `normalizeTree(schema, p.annotations)` — reconcile annotation data against the schema
 6. For each paper of a multi-reviewer project: `normalizeReviews(p.reviews, schema, reviewerCount)` —
@@ -335,6 +399,21 @@ The store catches these and sets `loadError` state, which `ErrorPanel` displays 
 
 `src/state/store.reviewers.test.ts` covers the routing rule (`currentTree`) itself: which tree each store action reads/writes for single-reviewer, a numbered reviewer, Consolidation, and the unselected state; that selecting a reviewer is not an undo step and doesn't set `dirty`; and that the selection persists per project. `src/state/store.aimarks.test.ts` covers the reviewer-scoped AI mark keys specifically.
 
+**Screening** has its own set of test files, mirroring the `src/consolidate/*.test.ts` convention
+(pure functions, no React, no store imports): `src/screening/schema.test.ts` (the derived schema's
+exact shape, reasons flowing into `Reason.options` in order), `src/screening/status.test.ts` (the
+tri-state read, including a hand-edited unknown decision reading as `undecided`), `counts.test.ts`
+(the totals, the per-reason breakdown including zero-count reasons, `pendingUnanimous`), and
+`validate.test.ts` (the two cross-field rules). `src/state/store.screening.test.ts` covers
+`setScreeningDecision`'s seat routing, undo-step shape, the reason-clearing-on-decision-change and
+auto-advance rules, and `adoptAllUnanimousScreening`. `src/state/editorStore.screening.test.ts`
+covers `buildProjectJson`/`validateDraft` for a screening draft and the
+`startFromScreening`/`resolveScreeningImport` partition-and-carry logic, including the
+never-drop-on-uncertainty rule for a hand-edited unknown decision. `src/model/model.test.ts`'s
+`describe('screening')` block covers the file-format round-trip, including the single most
+important assertion in it: **a single-reviewer, non-screening project serializes byte-for-byte
+identically to before this feature existed.**
+
 ## Change Guidance
 
 - **Adding a field type**: Update `FieldType` in `schema.ts` → `fieldTypeSchema` zod enum → `emptyValue()` in `annotations.ts` → `isEmptyInstance()` logic → `Field.tsx` rendering. Add a test in `model.test.ts`.
@@ -342,3 +421,4 @@ The store catches these and sets `loadError` state, which `ErrorPanel` displays 
 - **Changing serialization format**: Update `serializeProject()` and `dehydrateSchema()`. Ensure `loadProject()` remains backward-compatible or bump `version`. Always run the round-trip test.
 - **Adding new known paper/project fields**: Add to the known keys sets (`KNOWN_PAPER_KEYS`, `KNOWN_ROOT_KEYS`) in `project.ts` and to the `Paper`/`Project` interfaces. Update `serializeProject` output.
 - **Touching anything that reads or writes `paper.annotations` directly**: check whether it should instead go through `currentTree()` in `store.ts` — almost everything that acts on "the current paper's data" should, so a multi-reviewer project's numbered reviewers and Consolidation all see the right tree. Grep for `.annotations` across `src/` when in doubt.
+- **Touching the screening schema or its counts**: the pure logic lives entirely in `src/screening/` (`schema.ts` derives the two-node schema, `status.ts` reads the tri-state, `counts.ts` aggregates, `validate.ts` has the two cross-field rules) — extend it there, with a test in the matching `*.test.ts`, rather than special-casing screening inside `model/`, `consolidate/`, or `state/store.ts`. Those three are meant to stay screening-agnostic; screening reuses them by presenting a two-field schema, not by teaching them what screening is.

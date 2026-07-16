@@ -9,6 +9,11 @@ SaiLoR is a tool for reviewers conducting **Systematic Literature Reviews (SLRs)
 
 The app renders the PDF in the middle pane, shows the annotation form on the right, and lets you **grab text directly from the PDF** to populate fields. Annotations are saved back into the same JSON file.
 
+A project can also be set to **screening** mode instead of authoring a schema: one fast
+Include/Exclude decision per paper (plus a reason when excluded), usually made from the title and
+abstract before annotation even begins. See the "Screening" sections of
+[Architecture](architecture.md) and [Data Model](data-model.md).
+
 The codebase runs three ways from a single source:
 - **Desktop app** (Electron) — local files, native Open/Save dialogs, custom `slr-file://` protocol for PDF loading.
 - **Web app** — a static SPA build that can be hosted anywhere; uses the File System Access API (Chromium) or download fallback.
@@ -70,8 +75,13 @@ npm run typecheck
 │   │   ├── validate.ts    Checks annotated papers (required / type / enum / cardinality); unannotated papers are skipped, not flagged
 │   │   ├── version.ts     Update check against the GitHub releases API (silent while the repo is private)
 │   │   └── model.test.ts  Vitest unit tests for the model
+│   ├── screening/          Screening mode: derived schema, pure logic (unit-tested)
+│   │   ├── schema.ts      The derived two-node (Decision/Reason) schema; isScreening()
+│   │   ├── status.ts      screeningStatus/screeningReason — the tri-state read of a decision tree
+│   │   ├── counts.ts      screeningCounts (PRISMA-style totals + per-reason breakdown), pendingUnanimous
+│   │   └── validate.ts    screeningIssues — the two cross-field validation rules screening needs
 │   ├── platform/          Platform abstraction for file I/O and PDF loading
-│   │   ├── adapter.ts     PlatformAdapter interface (9 ops) + isElectron()
+│   │   ├── adapter.ts     PlatformAdapter interface + isElectron()
 │   │   ├── electron.ts    ElectronAdapter (IPC + slr-file://, recents)
 │   │   ├── browser.ts     BrowserAdapter (FSAPI / download / fetch, recents, IndexedDB handles)
 │   │   ├── pdfjs.ts       Single place configuring the pdf.js worker (viewer + extractor)
@@ -94,12 +104,17 @@ npm run typecheck
 │   │   ├── NodeName.tsx   Node label with ⓘ description tooltip (portaled)
 │   │   ├── Field.tsx      Input control (text/number/checkbox/enum dropdown) + "grab from PDF" button
 │   │   ├── ComboBox.tsx   Filterable dropdown for enum (options) string fields
-│   │   ├── ProjectEditor.tsx    Create/edit a project JSON (location bar + schema + papers)
+│   │   ├── ScreeningRecord.tsx  Middle pane for a screening project — title/authors/DOI + abstract, swaps to PdfViewer
+│   │   ├── ScreeningPanel.tsx   Right pane for a screening project — Include/Exclude + Reason, progress
+│   │   ├── ScreeningSummary.tsx Modal — PRISMA-style include/exclude/reason counts
+│   │   ├── ScreeningImportDialog.tsx  Modal — pre-commit summary for importing from a screening project
+│   │   ├── ProjectEditor.tsx    Create/edit a project JSON (location bar + schema/screening + papers)
 │   │   ├── SchemaTreeEditor.tsx Drag-and-drop annotation-schema builder (reorder + nest)
-│   │   ├── PapersEditor.tsx     Add/edit/reorder the PDFs the project references
+│   │   ├── ScreeningReasonsEditor.tsx  Replaces SchemaTreeEditor when the draft is a screening project
+│   │   ├── PapersEditor.tsx     Add/edit/reorder the PDFs (and abstracts) the project references
 │   │   ├── ValidationDialog.tsx  "Validate" results, grouped by paper, plus a separate "not annotated yet" list
 │   │   ├── ClosePrompt.tsx      Save / Don't Save / Cancel when closing a dirty project
-│   │   ├── HelpDialog.tsx Modal with app intro + keyboard shortcuts
+│   │   ├── HelpDialog.tsx Modal with app intro + keyboard shortcuts (mode-aware, incl. screening)
 │   │   └── ErrorPanel.tsx Error overlay for load/save failures
 │   ├── hooks/
 │   │   ├── useKeybindings.ts       Open, save, save-as, undo/redo, paper nav, PDF zoom / font size, help

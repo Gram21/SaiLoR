@@ -15,7 +15,7 @@ src/platform/electron.ts →  ElectronAdapter
 src/platform/browser.ts   →  BrowserAdapter
 ```
 
-**`PlatformAdapter`** (`src/platform/adapter.ts`) defines nine operations:
+**`PlatformAdapter`** (`src/platform/adapter.ts`) defines these core operations:
 - `getRecents()` — return the list of recently opened projects (`RecentEntry[]` with `id` + `name`)
 - `openRecent(id)` — re-open a project by its recent-entry id (path on Electron, IndexedDB handle key on browser)
 - `openProject()` — show an open dialog/picker, return JSON text + a `SaveHandle`
@@ -29,6 +29,8 @@ Three more exist for the **project editor** (see below):
 - `pickPdfFolder()` — pick a folder and return every PDF inside it, recursively, as `PickedPdf[]`. Electron walks the filesystem via IPC (`pdf:pickFolder`); the browser reuses the same `webkitdirectory` `<input>` the PDF-viewer's one-time folder grant uses (see `pickPdfFolderViaInput` below), filtered to `.pdf` names.
 - `pickReferenceFile()` — pick a single `.bib`/`.ris`/`.json` reference-manager export; returns `{ text, name }` or null if cancelled. Parsed by `src/model/references.ts`.
 - `relativePdfPaths(pdfs, location)` — the `pdf` values to store, **relative to the JSON's directory**. Electron computes real relative paths via IPC; the browser returns bare file names (the File System Access API exposes no paths).
+- `absolutePdfPaths(pdfPaths, from)` — the inverse: absolute paths for values relative to `from`'s directory. Added for `startFromScreening`/`importFromScreening` (see "Screening" below) — a paper carried in from a screening project needs a real `sourcePath`, not just the relative path the source file stored, or `changeLocation` cannot re-derive it later. The browser returns `undefined` per entry (no paths to compute from), leaving those rows exactly where an edited project's rows already sit.
+- `siblingProjectLocation(source, fileName)` — the location `fileName` would have if it sat next to `source`'s directory; writes and prompts nothing. What makes "save the new annotation project next to the screening JSON" the *default* rather than a dialog suggestion. Returns `null` in the browser (no paths), and callers fall back to `pickProjectLocation`.
 
 **Project title.** A project JSON may set a top-level `title`; the app shows it wherever it would otherwise show the file name (toolbar, recents list, Open menu), falling back to the file name when absent. It is a first-class key on `Project` (not swallowed into `extra`, which would duplicate it on save) and is only written when non-empty. The project editor exposes it as a *Project title* field next to the JSON location.
 
@@ -103,6 +105,9 @@ The entire app state lives in a single Zustand store with immer middleware:
 | `aiMarks` | `Record<string, true>` | Fields the AI filled and the reviewer has not looked at yet, keyed `` `${paperId}::${canonicalPath}` `` for a single-reviewer project, or `` `${paperId}::${reviewer}::${canonicalPath}` `` for a multi-reviewer one (see "AI marks" below). Session-only: it lives *beside* the project, so `serializeProject` cannot see it |
 | `currentReviewer` | `string \| null` | Which reviewer's tree is shown/edited — `"1".."N"`, `"consolidation"`, or `null`. Always `null` for a single-reviewer project; also starts `null` for a multi-reviewer one until picked (see "Multiple reviewers & Consolidation" below). Persisted per project in `localStorage`; not an undo step, does not set `dirty` |
 | `consolidationTarget` | `{ path, name, index } \| null` | The field the Consolidation "compare" popup (`ConsolidationDialog`) is showing, or `null` when closed. Session-only |
+| `screeningFilter` | `'all' \| 'included' \| 'excluded' \| 'undecided'` | Which decisions the screening paper list shows. Screening projects only; session-only, resets on `closeProject`/`loadFromText` |
+| `screeningShowPdf` | `boolean` | Whether the middle pane shows the PDF instead of `ScreeningRecord`'s title+abstract. Session-only, see "Screening" above |
+| `screeningSummaryOpen` | `boolean` | Whether `ScreeningSummary` (the PRISMA-style counts modal) is open. Session-only |
 
 ### Key Actions
 
@@ -125,6 +130,8 @@ The entire app state lives in a single Zustand store with immer middleware:
 - **`openConsolidation(path, name, index)` / `closeConsolidation()`** — open/close the compare popup for one field
 - **`alignConsolidationNode(paperId, nodeName, coalesce)`** — match the reviewers' repeated entries under one node and write the result in (reorder + grow); see "Matching the reviewers' repeated entries" below
 - **`adoptUnanimousValues(paperId, coalesce)`** — fill the consolidated fields every reviewer answered the same way, marking each via `aiMarks`; runs after the matching for a paper
+- **`setScreeningDecision(decision, reason?)` / `setScreeningReason(reason)`** — screening-only field writes, routed through `currentTree` like every other write; see "Screening" below for the auto-advance and reason-clearing rules
+- **`adoptAllUnanimousScreening()`** — `adoptUnanimousValues` for every paper in one undo step; safe unscheduled (unlike the per-paper alignment scheduler) because a screening schema has nothing for `align.ts` to line up — see "Screening" below
 
 The `containerAt(root, path)` helper walks the annotation tree following `PathSeg[]` (name + index pairs) to reach the container for a given path. `currentTree(project, currentReviewer, paper, create?)` decides *which* tree that walk starts from — see "Multiple reviewers & Consolidation" below; `setFieldValue`, `addInstance`, `removeInstance`, and `applyAiSuggestions` all call it before touching anything.
 
@@ -140,15 +147,19 @@ App (src/App.tsx)
 │   ├── PaperList (src/components/PaperList.tsx)
 │   │     List of papers with search box (META / TAGS modes, see below); green dot if the active reviewer has annotations; click to select
 │   ├── Splitter (src/components/Splitter.tsx) ×2  — drag handles between the panes
-│   ├── PdfViewer (src/components/PdfViewer.tsx)
-│   │     react-pdf Document+Page; ResizeObserver for width; zoom controls; multi-page navigation; jump history (back/forward); in-PDF search (Ctrl+F); text selection capture
-│   └── AnnotationPanel (src/components/AnnotationPanel.tsx)
+│   ├── [screening project + PDF pane not toggled on: ScreeningRecord (src/components/ScreeningRecord.tsx)]
+│   │     Title/authors/DOI header + the abstract (or "No abstract recorded"); a "Read the PDF" button swaps to PdfViewer when paper.pdf !== ''
+│   ├── [otherwise, including the screening PDF toggle: PdfViewer (src/components/PdfViewer.tsx)]
+│   │     react-pdf Document+Page; ResizeObserver for width; zoom controls; multi-page navigation; jump history (back/forward); in-PDF search (Ctrl+F); text selection capture; empty state for paper.pdf === '' (screening only)
+│   ├── [screening project: ScreeningPanel (src/components/ScreeningPanel.tsx)]
+│   │     Include/Exclude decision buttons + a Reason ComboBox (disabled unless Exclude) + progress line; ◧ Summary always, ⚖ Agreement / ⚠ Disagreements in the Consolidation seat — see "Screening" below
+│   └── [otherwise: AnnotationPanel (src/components/AnnotationPanel.tsx)]
 │         ✦ AI button in the column header (opens AiDialog; disabled while busy, when the paper has no PDF, when the project forbids it, when no reviewer is picked yet, or — by default — always, until the hidden unlock; see "AI-assisted annotation" below)
 │         renders the tree `currentTree()` routes to for the active reviewer; prompts to pick a reviewer instead of the form when a multi-reviewer project has none selected yet
 │         └── AnnotationNode (src/components/AnnotationNode.tsx) [recursive]
 │               └── Field (src/components/Field.tsx)
 │                     Input control (text/number/checkbox/enum ComboBox) + ⧉ grab-from-PDF button + (Consolidation mode only) ⇄ compare button → opens ConsolidationDialog for that field
-├── [if no project: welcome screen with "Open project…" button + recent projects list]
+├── [if no project: welcome screen with "Open project…" button, "New from screening…", and (if any) recent projects list]
 ├── AiDialog (src/components/AiDialog.tsx)
 │     Modal driven by useAiStore's phase: pick a target → Start → review table → Apply
 │     └── LlmSettingsDialog (src/components/LlmSettingsDialog.tsx) — manage LLM targets (stacks on top)
@@ -158,6 +169,10 @@ App (src/App.tsx)
 │     Modal overlay showing the results of "Validate", scoped to the active reviewer's own tree (or the consolidated one, for Consolidation) — see below
 ├── ConsolidationDialog (src/components/ConsolidationDialog.tsx)
 │     Modal overlay reachable only from Consolidation mode's ⇄ button: every reviewer's answer for one field, side by side; picking one writes it into the consolidated tree
+├── ScreeningSummary (src/components/ScreeningSummary.tsx)
+│     Modal: progress + PRISMA-style include/exclude/reason counts for a screening project
+├── ScreeningImportDialog (src/components/ScreeningImportDialog.tsx)
+│     Modal: the pre-commit summary for "New from screening…" / "Import from screening…" — see "Screening" below
 └── ErrorPanel (src/components/ErrorPanel.tsx)
       Modal overlay for load/save errors
 ```
@@ -238,7 +253,8 @@ Two ways out of the editor: **Save JSON** writes the file and stays put (so you 
 
 - **`src/state/editorStore.ts`** — a separate Zustand+immer store holding the draft. It deliberately works on the **raw JSON shape**, not the loaded `Project`: each paper's `annotations` object is carried through **verbatim** while the schema is edited, so editing the schema never prunes existing annotation data (it is normalized against the new schema the next time the project is opened for annotating). Key pieces: `EditorNode` (a schema node with a client-side `uid`, where `kind: 'group'` means "no `type`" — a name-only sub-tree), `EditorPaper` (which also keeps the PDF's absolute `sourcePath`), `toAnnotationDefs`/`fromAnnotationDefs` (conversion to/from the compact on-disk `AnnotationDef`), `moveNodeIn` (tree move that refuses to drop a node into itself or its own subtree), `buildProjectJson`, and `validateDraft` — which runs the *real* `projectSchema` + `resolveSchema` validators, so the editor cannot produce a file the loader would reject. On save it writes the JSON and hands it straight to the main store via `loadFromText`.
 - **`SchemaTreeEditor.tsx`** — recursive tree exposing the schema's full expressiveness: name, kind (Group / Text / Number / Yes-no), `min`, `max` (with an ∞ checkbox for `max: null` = unbounded repeats), description, enum `options` (string fields only), nesting, add/remove. Native HTML5 drag-and-drop reorders rows and builds nesting: the drop position comes from the pointer's Y within the target row — top 25% → `before`, bottom 25% → `after`, middle → `inside` (nest as a child).
-- **`PapersEditor.tsx`** — add PDFs one at a time, a whole folder at once, or import a reference-manager export (three buttons next to each other in the header/empty state), edit each paper's id/title/authors/DOI and its `pdf` path, reorder by drag, remove.
+- **`PapersEditor.tsx`** — add PDFs one at a time, a whole folder at once, import a reference-manager export, or (outside a screening project) import from a screening project's results (four buttons next to each other in the header/empty state), edit each paper's id/title/authors/DOI/abstract and its `pdf` path, reorder by drag, remove.
+- **`ScreeningReasonsEditor.tsx`** — replaces `SchemaTreeEditor` in the editor body whenever `useEditorStore().screening` is set: an ordered, editable list of exclusion reasons (add / remove / reorder with plain ↑/↓ buttons rather than drag — the list is short enough that drag-and-drop's extra affordance isn't worth it), writing through `setScreeningReasons`. See "Screening" below.
 
 **Adding PDFs** (`addPdfs`) does two things beyond appending rows:
 - **Duplicate rejection.** A PDF already referenced is skipped rather than added twice, and the skipped names are reported in a dismissible notice. Identity is `pdfKeys()`: the absolute path when known (Electron) *and* the stored relative path — so re-picking the same file, picking it twice in one dialog, or picking one already listed in an opened project all collapse to one entry. Same-named PDFs in different folders stay distinct.
@@ -524,6 +540,178 @@ project is multi-reviewer and nobody has picked a seat yet, `currentTree()` retu
 degrade to "nothing annotated / nothing to match" rather than falling back to the consolidated tree,
 which would attribute someone else's work to the unselected reviewer.
 
+## Screening
+
+A **screening project** is an ordinary project whose schema is *derived* rather than authored.
+`config.screening: { reasons: [...] }`'s presence is the opt-in marker and the single source of
+truth for the one authorable thing (the exclusion-reason list); `config.schema` is a **projection**
+of it — `src/screening/schema.ts`'s `screeningSchemaDefs` — re-derived on every `loadProject` and
+rewritten on every `serializeProject`, never read back for a screening project. That one decision
+is what makes almost everything else in the codebase need zero changes: to `resolveSchema`,
+`normalizeTree`, `pruneTree`, `validate.ts`, `align.ts`, `unanimous.ts`, `disagreements.ts`,
+`metrics.ts`, `readiness.ts`, `currentTree`, and undo/redo, a screening project is simply a project
+with a two-node schema.
+
+**Rejected: `config.schema` authoritative, with a sync check against `config.screening.reasons`.**
+Two sources of truth for one thing, and hand-editing `reasons` would silently desync the dropdown
+from the actual protocol — a sync check only catches the drift after the fact, it doesn't prevent
+it. **Rejected: omitting `schema` from the in-memory `Project` for a screening project.** Every
+downstream module reads `project.schema`; a screening project having a *real* one is exactly what
+lets them all work unmodified. Drift between file and in-memory state is structurally impossible
+here because the derived value always wins on load and is what gets written on save.
+
+### Why `Decision` is a two-option enum, not a boolean
+
+The obvious reading of "a boolean field if the paper should be excluded" is an `Exclude` checkbox.
+This codebase cannot represent an unanswered boolean, and says so in three separate places:
+`isEmptyValue` in `src/model/validate.ts` ("booleans are NEVER empty" — an unticked box is a real,
+answered `false`); `isUnanswered` in `src/llm/fields.ts` (same rule, for the AI layer); and
+`hasAnnotations` in `src/model/annotations.ts`, which only counts a boolean once it is `true`. An
+`Exclude` checkbox therefore cannot tell "I decided to include this" apart from "I have not looked
+at this yet" — both are `false`. Screening is the one phase where that distinction *is* the
+output: the progress count, the PRISMA include/exclude/pending numbers, and — above all — which
+papers survive an import (`startFromScreening`) all depend on it.
+
+A checkbox would also have broken every piece of machinery this feature exists to *reuse*, each in
+a different way: `hasAnnotations` would call an included paper unannotated (so its progress dot
+would never light); `readyToConsolidate` would say a paper both reviewers *included* is not ready
+to consolidate; `unanimousFills` would refuse to adopt a unanimous "include" (`isUnanswered`
+treating `false` as unanswered-or-not is exactly the ambiguity that breaks); and κ would only ever
+see the excluded papers, since an included paper's category would be indistinguishable from an
+untouched one. Each of those would need a screening-specific special case — precisely the parallel
+machinery this design set out to avoid. Spelling the field as `Decision: "Include" | "Exclude"`
+(schema in `src/screening/schema.ts`) gets the tri-state (`null` until chosen) for free, and every
+one of those modules is then correct with zero code changes — see `src/screening/status.ts`'s
+`screeningStatus`, the one place that reads the field.
+
+The polarity the user's brief asked for is kept where it matters: `Reason` belongs to the exclusion
+side, and **only an explicit `Decision === "Exclude"` ever drops a paper** on import — see below.
+
+### `align.ts` is a structural no-op here, and needs no guard
+
+`alignableNodes(schema)` (`src/consolidate/align.ts`) returns `[]` for the screening schema: its
+`hasAnythingToMatch` predicate is `isRepeatable(def) || def.children.some(...)`, and both `Decision`
+and `Reason` are plain `max: 1` leaf fields with no children. `useConsolidationAlignment`'s queue is
+therefore always empty for a screening project, and it goes straight to `adoptUnanimousValues` — no
+special-casing added, none needed. This falls out of the schema shape, not of any screening-aware
+code; if a future version ever made `Reason` repeatable this reasoning would need re-checking, but
+nothing here defends against that on purpose.
+
+### Reused verbatim, and the one thing that had to be scoped
+
+`readiness.ts`, `align.ts`, `unanimous.ts`, `disagreements.ts`, `metrics.ts`, `apply.ts`,
+`assign.ts`, `similarity.ts` — **zero changes.** Two reviewers screening independently with a
+reconciliation pass *is* the standard SLR screening protocol, and κ over the include/exclude
+decision is exactly the statistic a screening phase reports; building anything parallel to the
+existing multi-reviewer machinery for that would have been indefensible.
+
+The one scoped change is `agreement.ts`'s `agreementInput`: for a screening project it filters
+`projectVerdicts` down to `Decision` only, before the `answeredBy.length < 2` skip accounting.
+Without it, `Reason` — a field only even defined on the subset of papers both reviewers
+excluded — would be folded into the same coefficient as a different question, producing a number
+that answers neither honestly. `Reason` verdicts are filtered out entirely rather than counted as
+"skipped" (which means "too few reviewers answered" — not true here).
+
+`ConsolidationDialog` gets one guard too: the "these answers mean the same thing" checkbox is
+suppressed on the screening `Decision` field (`isScreeningDecision`, checked against
+`SCREENING_DECISION` and an empty container path). "Include and Exclude mean the same thing" is
+not a claim anyone can make; without the guard a consolidator could tick it and make a real
+disagreement vanish from the overview while inflating agreement. The box stays available on
+`Reason`, where two overlapping reasons genuinely can be equivalent — the same reasoning
+`closingWouldStrand` already applies to ordinary fields.
+
+### AI is not offered for screening, on the same precedent as Consolidation
+
+`ScreeningPanel` renders no AI button at all (mirroring `AnnotationPanel`'s Consolidation-seat
+treatment — absent, not disabled), and `applyAiSuggestions` (`store.ts`) refuses whenever
+`project.screening !== null`, so opening the dialog on a different project and switching cannot get
+round it either. Screening decides the review's corpus; a model's include/exclude pass would be the
+difference between a systematic review and a generated one. It is also mechanically moot most of
+the time: the ordinary AI path needs a PDF (`aiDisabled = … || !paper.pdf`), and screening papers
+usually have none (`pdf: ""` — see below).
+
+### The middle pane swaps, it does not nest
+
+`App.tsx` renders `ScreeningRecord` (title + abstract) in place of `PdfViewer` by default for a
+screening project, toggled to the actual PDF via a session-only `screeningShowPdf` flag
+(`toggleScreeningPdf`). **Rejected: nesting `PdfViewer` inside a record component.** `PdfViewer`
+owns its own panel, header, `ResizeObserver`, and in-PDF search state — fiddly to embed for no
+gain when a flat swap does the same job. **Rejected: two conditional layouts keyed off
+`paper.pdf === ''`.** A swap reuses `PdfViewer` whole (including its own now-necessary empty state
+for `pdf === ''` — trap below) and degrades cleanly whether or not a PDF is attached, without a
+second code path to keep in sync.
+
+**`PdfViewer`'s missing empty state was a latent gap this feature makes reachable.** Before
+screening, `paperSchema.pdf` was `z.string().min(1)`, so `pdf: ''` could never survive
+`loadProject` and `PdfViewer` never needed to render anything for it — it only guarded `!paperId`.
+Screening relaxes `pdf` to `z.string().default('')`, scoped by a `superRefine` that still requires a
+non-empty `pdf` for every *non-screening* paper (`src/model/schema.ts`), so the relaxation cannot
+leak into ordinary projects. `PdfViewer` now also guards `!pdfPath` with an explicit "This paper has
+no PDF attached" panel, right next to the pre-existing `!paperId` guard.
+
+### The paper-list dot's meaning changes in Consolidation, and the mitigation
+
+A screening project's paper list gets a **tri-state** marker (undecided / included / excluded, via
+`paperScreeningStatus` in `PaperList.tsx`) instead of the plain done/not-done dot — a single boolean
+dot is nearly meaningless once every paper's whole state is one field. The rule is uniform across
+every seat: it reads whatever `currentTree` routes to, same as `paperIsMarkedDone` always has. In
+the **Consolidation seat**, `currentTree` is `paper.annotations`, so the dot reads as "the final
+decision so far" — which is the right thing for that seat to show.
+
+**The cost, stated plainly: in Consolidation this dot stops meaning `readyToConsolidate`** — the
+signal `paperIsMarkedDone` computes there for an ordinary project (every numbered reviewer has
+recorded something). Losing that signal outright would be a regression, since it is what tells the
+consolidator which papers are actually workable. The mitigation is that it has not actually been
+lost, only moved: `readyToConsolidate` still runs and is reported in the marker's `title` tooltip,
+and — this is the part that matters — the **⇄ compare button's own readiness gate in `Field.tsx` is
+completely untouched**. That gate is the thing that actually protects a consolidator from deciding
+based on an absent reviewer's empty column; the paper-list dot was always a secondary, at-a-glance
+cue on top of it, never the enforcement mechanism itself.
+
+### Auto-advance: one rule, forward-only
+
+Deciding a paper (`setScreeningDecision` in `store.ts`) advances the active seat to the next
+undecided paper **only when this seat's own decision went from undecided to decided** — computed by
+reading `screeningStatus` *before* the mutation, not after. Re-deciding an already-decided paper, or
+un-deciding one (`setScreeningDecision(null)`), never advances. This is deliberately the *only*
+rule, applying identically to the keyboard shortcuts and the panel's own Include/Exclude buttons
+(both call the same store action), so the two cannot drift apart on it: a reviewer moving forward
+through a stack gets a read-decide-read rhythm, and a reviewer who jumps back to fix an earlier call
+is never yanked away from the paper they just navigated to.
+
+### Importing from a screening project
+
+`startFromScreening` / `importFromScreening` (`editorStore.ts`) read a screening project through
+the real `loadProject` — not a raw JSON parse — specifically so that `paper.annotations` (the
+consolidated tree in the multi-reviewer case) is what "included" is read against, never an
+individual reviewer's own opinion in `paper.reviews`. `partitionScreeningPapers` buckets every
+paper by `screeningStatus(paper.annotations)`; only `'excluded'` is ever dropped. `'undecided'`
+covers both "genuinely never touched" and "a hand-edited file holds an unrecognised decision
+string" — `screeningStatus` treats both identically, on purpose (see `src/screening/status.ts`):
+carrying a paper you meant to drop is recoverable (it shows up, flagged, in the new project);
+dropping a paper you meant to keep is invisible and silently corrupts the review. The import
+dialog (`ScreeningImportDialog`) states the three counts and lets the reviewer choose to leave the
+undecided ones out instead, but never drops them without that explicit choice.
+
+`resolveScreeningImport` also has to solve a real path-integrity problem, not just a metadata
+carry-over: a paper's `pdf` in the screening file is relative to *that* file's directory, so a
+carried row needs a real absolute `sourcePath`, or the moment the reviewer later uses **Change…**
+on the new project, `changeLocation` (which only re-derives `pdf` for rows that have a
+`sourcePath` — see the project-editor section above) would silently leave every PDF pointing at
+nothing. `PlatformAdapter.absolutePdfPaths` exists for exactly this (the inverse of
+`relativePdfPaths`); `siblingProjectLocation` is the platform op that makes "save the new project
+next to the screening JSON" the default rather than a suggestion in a dialog — a sibling location
+is what keeps every relative `pdf` path resolving with zero rewriting at all.
+
+**`pendingUnanimous`** (`src/screening/counts.ts`) exists because `adoptUnanimousValues` only ever
+runs for the paper currently open in the Consolidation seat (`useConsolidationAlignment` is driven
+by `currentPaperId`) — so a multi-reviewer screening project whose consolidator never happened to
+open paper X has no consolidated `Decision` for X even though every reviewer agreed on it. The
+import deliberately does **not** auto-consolidate to paper over that gap — writing decisions nobody
+actually recorded, from an import dialog, would be worse than surfacing the gap. Instead the import
+dialog reports the count and points at `adoptAllUnanimousScreening` (one click, one undo step,
+Consolidation seat only) as the fix.
+
 ## AI-assisted annotation (`src/llm`)
 
 A **✦ AI** button in the annotation column's header asks an LLM to read the current paper and propose values for the fields that are **still empty**. The reviewer gets a table — field, proposed value, the supporting quote from the paper, the model's confidence, and a checkbox per row — and **nothing is written until they press Apply**.
@@ -668,6 +856,8 @@ themself, later) can see that, and how, AI was used on a paper.
   - `reference:pick` — `dialog.showOpenDialog` filtered to `.bib`/`.ris`/`.json`; returns `{ text, name }` for `src/model/references.ts` to parse, or null if cancelled
   - `pdf:read` — raw bytes of a PDF by absolute path, so the editor can read its title/authors. Deliberately *not* confined to the project directory (unlike `slr-file://`): the user may add PDFs from anywhere and picked them through a native dialog.
   - `paths:relative` — `path.relative(dirname(fromFile), to)` for each target, POSIX-separated. This is what makes a paper's `pdf` relative to the JSON, and what re-derives the paths when the JSON moves.
+  - `paths:absolute` — the inverse of `paths:relative`: `path.resolve(dirname(fromFile), rel)` for each target. Backs `absolutePdfPaths`, used when importing papers from a screening project.
+  - `paths:sibling` — `path.join(dirname(sourceFile), fileName)`. Backs `siblingProjectLocation`, the default save location for a new project started from screening results.
   - `app:setDirty` — the renderer reports its unsaved-changes state (drives the quit dialog)
   - `app:saveComplete` — the renderer reports the result of a save it was asked to run before quitting
   - `llm:configs` / `llm:saveConfig` / `llm:deleteConfig` — the LLM targets in `userData/llm-config.json`. The renderer is handed `publicConfigs()`: everything **except** the key, plus `hasKey`.
@@ -720,3 +910,4 @@ App appearance is controlled by a settings module that persists to `localStorage
 - **Changing the Electron IPC surface**: Update `preload.ts` (the `SlrBridge` interface), `electron/main.ts` (IPC handler), and `src/platform/electron.ts` (adapter method). All three must stay in sync.
 - **Adding a new settings/appearance option**: Add to `src/state/settings.ts` (load/apply functions), add state + actions to the store, add UI controls to `Toolbar.tsx`, and add keybindings if needed.
 - **Touching anything that reads or writes the current paper's annotation data**: route it through `currentTree()` (`src/state/store.ts`) rather than `paper.annotations` directly, or it will silently ignore reviewer selection on a multi-reviewer project. Grep for `.annotations` across `src/` and check each hit against "should this see the active reviewer's tree or always the consolidated one". The direct reads that remain outside `src/model/` are deliberate: `currentTree()`'s own body; `ConsolidationDialog`, which reads the consolidated tree *on purpose* (it is showing you what the final answer currently is); `editorStore`, which edits the file's papers and has no reviewer concept; and null-project fallbacks.
+- **Reading a screening project's schema**: always go through `loadProject`/`Project.schema`, never the raw file. `config.screening.reasons` is the single source of truth; `config.schema` in the on-disk JSON is a *projection* of it that `loadProject` ignores and `serializeProject` rewrites on every save (see *Screening* above). A tool that reads the raw JSON's `config.schema` directly (rather than through this app) will see the derived snapshot from whenever the file was last saved, not something it can trust to reflect a hand-edited `reasons` list until the file is re-saved.
