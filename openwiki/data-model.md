@@ -161,8 +161,11 @@ An SLR is normally annotated by ≥2 reviewers **independently**, then reconcile
 answer. `config.reviewers` (≥2) turns this on:
 
 - Each numbered reviewer 1..N reads and writes their **own** tree, `Paper.reviews["N"]` —
-  `AnnotationValueTree`, same shape as `annotations`, created lazily (and normalized against the
-  schema) the first time that reviewer writes anything on a paper.
+  `AnnotationValueTree`, same shape as `annotations`. Present as a full, normalized-empty skeleton
+  from the moment the project is **loaded** (`normalizeReviews` in `project.ts`), for every
+  reviewer 1..N whether or not they have written anything — not created lazily on first write.
+  `currentTree`'s `create` path still exists and still lazily normalizes a genuinely-missing tree,
+  as a defensive fallback; it just no longer does the routine work, since load already has.
 - `Paper.annotations` keeps its existing meaning **unchanged**: the single/consolidated result.
   In a single-reviewer project it is the only tree there is; in a multi-reviewer project it is
   what the built-in **Consolidation** role writes — the final, agreed answer, and the only tree
@@ -174,11 +177,14 @@ answer. `config.reviewers` (≥2) turns this on:
 (`src/model/project.ts`) keeps any `reviews` key matching a reviewer number regardless of the
 current `config.reviewers`, and `serializeProject` writes back every key present in `Paper.reviews`,
 not just `1..N`. So a reviewer's tree above the current count round-trips through load/save
-untouched. What changes is reachability: the Toolbar reviewer switch only offers seats
+untouched — `normalizeReviews` (below) only ever *adds* missing keys `1..N`, it never removes one
+outside that range. What changes is reachability: the Toolbar reviewer switch only offers seats
 `1..config.reviewers`, so `currentTree` is never invoked for a higher one — it can't be selected,
 edited, or (via `runValidation`) validated — and `alignConsolidationNode`/`adoptUnanimousValues`
 (both in `store.ts`) loop `1..project.reviewers`, excluding it from matching and unanimous-value
-adoption too. Raising `config.reviewers` again makes the same tree reachable, unchanged.
+adoption too — both also now check `hasAnnotations`, not mere tree presence, since every in-range
+reviewer has a tree from load regardless of whether they have written anything. Raising
+`config.reviewers` again makes the same tree reachable, unchanged.
 
 **Routing.** `currentTree(project, currentReviewer, paper)` in `src/state/store.ts` is the single
 place this is decided: single-reviewer → `paper.annotations`; Consolidation → `paper.annotations`;
@@ -199,10 +205,58 @@ active reviewer into the key for a multi-reviewer project (a single-reviewer pro
 unaffected — passing `null` reproduces the original two-part form), so Reviewer 1's "the AI wrote
 this" borders never bleed onto Reviewer 2's copy of the same field.
 
-**Serialization stays clean.** `config.reviewers` is written only when `> 1`; `Paper.reviews` is
-written only when non-empty, and each reviewer's tree is pruned the same way `annotations` is. A
-single-reviewer project's file is therefore byte-identical to one saved before this feature
-existed.
+**Serialization stays clean for a single-reviewer project.** `config.reviewers` is written only
+when `> 1`, and `Paper.reviews` stays `{}` — omitted entirely — since `annotations` alone carries
+the data there, exactly as before this feature existed. For a **multi-reviewer** project,
+`Paper.reviews` is now *always* written (see "The empty skeleton is real data" below) — every
+reviewer's tree is pruned the same way `annotations` is, but the key itself is never omitted just
+because a reviewer hasn't written anything.
+
+### The empty skeleton is real data, not incidental emptiness
+
+A freshly-created paper's `annotations` — and, in a multi-reviewer project, every reviewer's
+`reviews["N"]` — is written to disk as the **full normalized skeleton**: every field present, at
+its schema minimum, holding `null`/`false`, not `{}` and not an absent key. This is deliberate,
+and it is *for* something specific: a reviewer's first real annotation then changes a *value on a
+line that was already there* for every other paper and reviewer, rather than adding a brand-new
+key. That is what makes a `git diff` of one reviewer's work legible on its own, and what makes a
+`git merge` of two reviewers' independently-annotated copies of the same file tractable instead of
+a near-guaranteed conflict on the shape of the JSON itself, on top of whatever the reviewers
+actually disagree about.
+
+Two pieces make this hold in practice:
+
+- **`pruneTree` (`src/model/annotations.ts`) only drops *trailing* empties**, never an interior
+  gap, and never below a node's `min`. Given an already-normalized (all-empty) tree, it is a no-op
+  — see its own doc comment; this is also why consolidation's entry-matching survives a save/reload
+  round-trip (`src/consolidate/apply.ts`), which depends on the same interior-gap guarantee.
+- **`normalizeReviews` (`src/model/project.ts`)** backfills a normalized-empty tree for every
+  reviewer `1..config.reviewers` who doesn't already have one, on **load** — not on save, and not
+  lazily on first write (see "Multiple reviewers" above). `loadProject`'s existing
+  `normalizeTree(schema, p.annotations)` call already did the equivalent for `annotations`; this
+  closes the same gap for `reviews`.
+
+**A file that doesn't have this shape yet is migrated automatically, and re-saved.**
+`needsShapeMigration(project, rawText)` (`project.ts`) re-parses the raw text and structurally
+compares (`deepEqualJson` — order-independent for object keys, order-sensitive for arrays, i.e.
+JSON's own equality, never a text/string comparison) each paper's `annotations`/`reviews` against
+what saving right now would produce. `loadFromText` (`store.ts`) checks this immediately after
+`loadProject` and, if true, writes the migrated shape back through `getPlatform().saveProject` —
+but only when there is somewhere safe and unsurprising to write it: a real in-place handle
+(`'electron'` or `'fsapi'`), never `'download'` (which would trigger a browser file download the
+instant a project is opened) and never a bare `null` handle (a `?project=` URL, or a browser pick
+with no persistent handle — the project is simply held in its migrated, better shape in memory,
+which converges again harmlessly next time it's opened). The write is fire-and-forget; on success
+`saveHandle` is refreshed the same way an ordinary save updates it, on failure the project is
+marked `dirty` so the ordinary unsaved-changes guard — not an alarming banner for a fix nobody
+asked for — eventually gets it saved.
+
+`needsShapeMigration` deliberately compares **parsed values**, not the canonical re-serialization's
+*text* against the raw file's text: `serializeProject` always pretty-prints with its own key order,
+so a text comparison would flag `equal-but-differently-formatted` (or merely differently-indented)
+files as needing migration too — precisely the kind of file every hand-written test fixture in this
+codebase is, which is how this got caught. The comparison is scoped to exactly `annotations` and
+`reviews`; nothing else about a file's formatting or unrelated content is examined.
 
 ## Lifecycle: Load → Normalize → Edit → Prune → Serialize
 
@@ -213,7 +267,10 @@ existed.
 3. `resolveSchema(raw.config.schema)` — applies defaults, assigns ids, enforces uniqueness
 4. Check for duplicate paper IDs
 5. For each paper: `normalizeTree(schema, p.annotations)` — reconcile annotation data against the schema
-6. Extract `extra` fields (unknown keys at root and per-paper level) for preservation
+6. For each paper of a multi-reviewer project: `normalizeReviews(p.reviews, schema, reviewerCount)` —
+   the same reconciliation per reviewer's tree, plus a fresh empty one for every reviewer `1..N` who
+   doesn't have one yet (see "The empty skeleton is real data" above)
+7. Extract `extra` fields (unknown keys at root and per-paper level) for preservation
 
 ### 2. Normalize (`normalizeTree` in `src/model/annotations.ts`)
 
@@ -272,8 +329,9 @@ The store catches these and sets `loadError` state, which `ErrorPanel` displays 
 - Normalize (padding, clamping, dropping unknown keys)
 - Full round-trip (load → edit → serialize → reload, preserving data)
 - Extra/unknown field preservation
-- Prune (trailing empty removal, min retention)
-- Multiple reviewers: `config.reviewers` defaults/bounds/round-trip, `Paper.reviews` parsing (defensive, normalized, malformed/non-numeric keys dropped), serialization staying clean for a single-reviewer project (see the `"multiple reviewers"` describe block)
+- Prune (trailing empty removal, min retention, interior gaps kept)
+- Multiple reviewers: `config.reviewers` defaults/bounds/round-trip, `Paper.reviews` parsing (defensive, normalized, malformed/non-numeric keys dropped) and backfilling (every reviewer `1..N` present as an empty skeleton, an out-of-range key never dropped), serialization staying clean for a single-reviewer project (see the `"multiple reviewers"` describe block in `model.test.ts`)
+- `needsShapeMigration`/the auto-migrate-on-open path: an old-shape file gets fixed and re-saved through a real handle, never through a `'download'` or `null` one, and is stable (no re-migration, byte-identical re-serialization) once fixed — verified end-to-end against real files on disk, not just mocked platform calls
 
 `src/state/store.reviewers.test.ts` covers the routing rule (`currentTree`) itself: which tree each store action reads/writes for single-reviewer, a numbered reviewer, Consolidation, and the unselected state; that selecting a reviewer is not an undo step and doesn't set `dirty`; and that the selection persists per project. `src/state/store.aimarks.test.ts` covers the reviewer-scoped AI mark keys specifically.
 

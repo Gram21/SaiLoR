@@ -132,8 +132,8 @@ on Debian/Ubuntu), or you can extract and run it with `--appimage-extract-and-ru
       "authors": ["…"],
       "doi": "10.1000/xyz",         // optional
       "pdf": "pdfs/paper-a.pdf",    // path relative to this JSON file
-      "annotations": {},            // the final result — filled in as you annotate
-      "reviews": {}                 // multi-reviewer only: each reviewer's own tree, keyed "1".."N"
+      "annotations": {},            // the final result — written in full (every field, empty) once opened
+      "reviews": {}                 // multi-reviewer only: one full empty tree per reviewer "1".."N", same reason
     }
   ]
 }
@@ -206,6 +206,11 @@ it) and the project works that way.
 - **Everyone annotates on their own.** Each reviewer's answers live in their own tree
   (`paper.reviews["1"]`, `"2"`, …). You see and edit only your own — nobody is anchored by what
   someone else already wrote. **Validate** and the paper list's progress dots follow whoever you are.
+- **Every reviewer's tree is there from the start** — one full empty entry per field, not a missing
+  key — so a reviewer's first real answer changes a value on a line that was already there, rather
+  than adding one. That is what makes `git diff`/`git merge` actually usable if reviewers keep their
+  own copies and merge them later. A file saved before this existed, or edited by hand, is fixed up
+  the next time it's opened (and saved back, if there's somewhere to save it).
 - **Pick who you are first.** Opening the project asks: it explains how multi-review works and has
   you choose a seat, because an answer nobody can be attributed to is worse than no answer. The
   choice is remembered per project (so it asks once) and you can switch from the toolbar — it sits in

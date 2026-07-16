@@ -478,7 +478,7 @@ describe('multiple reviewers (config.reviewers, Paper.reviews)', () => {
     expect(reviews['2'].Year[0].value).toBe(2021)
   })
 
-  it('drops malformed or non-reviewer-shaped review keys rather than failing the whole file to load', () => {
+  it('drops malformed or non-reviewer-shaped review keys, but still backfills every real reviewer', () => {
     const project = loadProject(
       withReviewers(2, {
         reviews: {
@@ -488,17 +488,31 @@ describe('multiple reviewers (config.reviewers, Paper.reviews)', () => {
         },
       }),
     )
-    expect(Object.keys(project.papers[0].reviews)).toEqual(['1'])
+    // "abc" and "0" are dropped; "2" is not in the file at all but is still
+    // backfilled, since `config.reviewers` says there are two reviewers.
+    expect(Object.keys(project.papers[0].reviews)).toEqual(['1', '2'])
   })
 
   it('tolerates reviews being the wrong shape entirely (hand-edited into an array, say)', () => {
     const project = loadProject(withReviewers(2, { reviews: ['not', 'an', 'object'] }))
-    expect(project.papers[0].reviews).toEqual({})
+    // Nothing survives from the malformed value, but both reviewers still get
+    // an empty skeleton — the same as if `reviews` had been absent outright.
+    const resolved = resolveSchema(sampleSchema)
+    const empty = normalizeTree(resolved, undefined)
+    expect(project.papers[0].reviews).toEqual({ '1': empty, '2': empty })
   })
 
-  it('a paper no reviewer has touched carries no reviews key, keeping the file tidy', () => {
+  it('a paper no reviewer has touched still gets a full reviews skeleton, one entry per reviewer', () => {
+    // The point of this feature: a reviewer's first real annotation should
+    // change a value on a line that was already there, not add a brand-new
+    // key — that is what makes a later `git merge` of two reviewers' copies
+    // tractable instead of a guaranteed conflict on the `reviews` object itself.
     const untouched = JSON.parse(serializeProject(loadProject(withReviewers(2))))
-    expect('reviews' in untouched.papers[0]).toBe(false)
+    expect(Object.keys(untouched.papers[0].reviews)).toEqual(['1', '2'])
+    const resolved = resolveSchema(sampleSchema)
+    const empty = pruneTree(resolved, normalizeTree(resolved, undefined))
+    expect(untouched.papers[0].reviews['1']).toEqual(empty)
+    expect(untouched.papers[0].reviews['2']).toEqual(empty)
   })
 
   it('writes and prunes each reviewer tree the same way annotations is pruned', () => {
@@ -509,8 +523,10 @@ describe('multiple reviewers (config.reviewers, Paper.reviews)', () => {
     )
     const out = JSON.parse(serializeProject(project))
     expect(out.papers[0].reviews['1'].Relevant).toEqual([{ value: true }])
-    // A reviewer's tree the same tests never touched is absent, not `{}`.
-    expect('2' in out.papers[0].reviews).toBe(false)
+    // Reviewer 2 never wrote anything, but their key is still there — an empty
+    // skeleton, not a missing key — for the same git-diff reason as above.
+    const resolved = resolveSchema(sampleSchema)
+    expect(out.papers[0].reviews['2']).toEqual(pruneTree(resolved, normalizeTree(resolved, undefined)))
   })
 
   it('round-trips a multi-reviewer project — config.reviewers, and every reviewer tree — through load → serialize → reload', () => {
@@ -526,10 +542,24 @@ describe('multiple reviewers (config.reviewers, Paper.reviews)', () => {
     expect(reloaded.reviewers).toBe(3)
     expect(reloaded.papers[0].reviews['1'].Year[0].value).toBe(2020)
     expect(reloaded.papers[0].reviews['2'].Relevant[0].value).toBe(false)
-    // Reviewer 3 never wrote anything — absent, not a padded empty entry.
-    expect('3' in reloaded.papers[0].reviews).toBe(false)
+    // Reviewer 3 never wrote anything — still present, as an empty skeleton.
+    expect('3' in reloaded.papers[0].reviews).toBe(true)
+    expect(reloaded.papers[0].reviews['3']).toEqual(
+      normalizeTree(resolveSchema(sampleSchema), undefined),
+    )
     // `annotations` (the consolidated tree) is untouched by any of this.
     expect(reloaded.papers[0].annotations).toEqual(original.papers[0].annotations)
+  })
+
+  it('re-serializing an already-canonical multi-reviewer file is idempotent', () => {
+    // The auto-migrate-on-open feature (store.ts's loadFromText) decides
+    // whether a file needs fixing by comparing it to its own re-serialized
+    // form — that only works, and only avoids re-writing every file on every
+    // open, if a file this function already produced serializes back to
+    // itself unchanged.
+    const once = serializeProject(loadProject(withReviewers(3)))
+    const twice = serializeProject(loadProject(once))
+    expect(twice).toBe(once)
   })
 })
 
