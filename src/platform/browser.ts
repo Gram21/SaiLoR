@@ -6,6 +6,7 @@ import type {
   ProjectLocation,
   SaveHandle,
 } from './adapter'
+import type { GitPlatform } from '../git/types'
 import { readRecents, pushRecent, removeRecent, replaceRecents, type RecentEntry } from './recents'
 import { idbSet, idbGet, idbDelete } from './idb'
 import { API_KEY_SENTINEL, type LlmConfig, type LlmHttpRequest, type LlmHttpResponse } from '../llm/types'
@@ -458,6 +459,12 @@ export class BrowserAdapter implements PlatformAdapter {
           `has no such restriction. (${err instanceof Error ? err.message : String(err)})`,
       )
     }
+  }
+
+  // Git needs the user's own git binary and their own git config. A page has
+  // neither, and no permission or API changes that — see `PlatformAdapter.getGit`.
+  getGit(): GitPlatform | null {
+    return null
   }
 
   private register(handle: FileSystemFileHandle): string {

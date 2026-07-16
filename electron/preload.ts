@@ -54,4 +54,20 @@ contextBridge.exposeInMainWorld('slr', {
     ipcRenderer.removeAllListeners('app:redo')
     ipcRenderer.on('app:redo', () => cb())
   },
+
+  // Git: the user's own git binary. Desktop only — a browser page cannot spawn
+  // one; see `PlatformAdapter.getGit()`.
+  gitProbe: () => ipcRenderer.invoke('git:probe'),
+  gitPickCloneDir: () => ipcRenderer.invoke('git:pickCloneDir'),
+  gitClone: (url: string, dest: string) => ipcRenderer.invoke('git:clone', url, dest),
+  gitPickProjectIn: (dir: string) => ipcRenderer.invoke('git:pickProjectIn', dir),
+  gitInfo: (projectPath: string) => ipcRenderer.invoke('git:info', projectPath),
+  gitStatus: (root: string) => ipcRenderer.invoke('git:status', root),
+  gitCommit: (root: string, paths: string[], message: string) =>
+    ipcRenderer.invoke('git:commit', root, paths, message),
+  gitPush: (root: string) => ipcRenderer.invoke('git:push', root),
+  gitPullBegin: (root: string, relPath: string) => ipcRenderer.invoke('git:pullBegin', root, relPath),
+  gitPullFinish: (root: string, relPath: string, text: string) =>
+    ipcRenderer.invoke('git:pullFinish', root, relPath, text),
+  gitPullAbort: (root: string) => ipcRenderer.invoke('git:pullAbort', root),
 })
