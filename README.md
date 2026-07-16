@@ -123,7 +123,9 @@ on Debian/Ubuntu), or you can extract and run it with `--appimage-extract-and-ru
         ]
       }
     ],
-    "reviewers": 2                  // optional, 1–10 (default 1) — see below
+    "reviewers": 2,                 // optional, 1–10 (default 1) — see below
+    "screening": { "reasons": ["Wrong topic", "Duplicate"] }  // optional — see "Screening" below;
+                                     // when present, "schema" above is ignored and derived from this
   },
   "papers": [
     {
@@ -131,7 +133,8 @@ on Debian/Ubuntu), or you can extract and run it with `--appimage-extract-and-ru
       "title": "…",
       "authors": ["…"],
       "doi": "10.1000/xyz",         // optional
-      "pdf": "pdfs/paper-a.pdf",    // path relative to this JSON file
+      "abstract": "…",              // optional — what screening reads when there is no PDF yet
+      "pdf": "pdfs/paper-a.pdf",    // path relative to this JSON file; "" is only valid in a screening project
       "annotations": {},            // the final result — written in full (every field, empty) once opened
       "reviews": {}                 // multi-reviewer only: one full empty tree per reviewer "1".."N", same reason
     }
@@ -163,12 +166,16 @@ untouched. Unknown top-level and per-paper fields are preserved verbatim.
 - **Save ▾ menu** — Save or Save as…, with their shortcuts shown next to each item.
 - **? (Help)** — opens a dialog describing the workflow and listing all keyboard shortcuts.
 - **Left pane** — collapsible list of papers (toggle with the ☰ button). A green dot marks papers
-  that already have annotations. Click a paper to open it.
+  that already have annotations — in a **screening project** this becomes a tri-state marker
+  (included / excluded / undecided) with a filter above the list instead; see
+  [Screening](#screening).
 - **Resizable panes** — drag the borders between the three panes to resize them; the widths are
   remembered.
-- **Middle pane** — the paper's PDF, rendered with a selectable text layer.
+- **Middle pane** — the paper's PDF, rendered with a selectable text layer. In a screening project
+  this defaults to the title/abstract record instead, with a one-click swap to the PDF.
 - **Right pane** — the annotation form, laid out by the taxonomy. Repeatable nodes show **+ Add**
-  (up to `max`) and a remove (**×**) control (down to `min`).
+  (up to `max`) and a remove (**×**) control (down to `min`). In a screening project this is the
+  Include/Exclude decision instead — see [Screening](#screening).
 - **Grab from PDF** — select text in the PDF, then click the **⧉** button next to a string/number
   field to insert it (numeric fields extract the first number).
 - **Reviewer switch** — on multi-reviewer projects only, centred in the toolbar: pick whether you are
@@ -196,6 +203,8 @@ untouched. Unknown top-level and per-paper fields are preserved verbatim.
 | `Alt + ↑` or `[`        | Previous paper                 |
 | `F1`                    | Open help                      |
 | `Ctrl/Cmd + C/V/X/Z`    | Native copy/paste/…            |
+| `I` / `E` / `U`         | Screening only: include / exclude / un-decide |
+| `1`–`9`                 | Screening only: exclude with the Nth configured reason |
 
 ## Working with several reviewers
 
@@ -254,6 +263,52 @@ each other. Pass it along, or take turns.
 
 > 📖 Full details, including the exact file shape, are in
 > [§9 of the schema guide](docs/annotation-schema.md#9-multiple-reviewers--consolidation).
+
+## Screening
+
+Before an SLR annotates anything, it usually **screens** a large batch of candidate papers down to
+the ones worth reading in full — a fast, low-effort pass typically done on title and abstract alone.
+A project can be set to this mode instead of authoring a schema: tick **Screening** in *New / Edit
+annotation JSON*, and the whole "build a schema" section is replaced by a short list of exclusion
+reasons.
+
+- **One decision per paper: Include or Exclude.** This is deliberately a **two-option choice, not a
+  checkbox** — the app has no way to represent an unanswered boolean (an unticked box always reads as
+  a real "no" everywhere else in this app), and screening needs "not screened yet" to be a state of
+  its own. That third state is what the progress count, the PRISMA-style totals below, and *New from
+  screening…* (see below) all depend on.
+- **The exclusion reasons are fixed up front**, the way a review protocol pre-registers its exclusion
+  criteria, rather than free text — that is what makes the per-reason counts in the summary add up to
+  something a PRISMA flow diagram can report. Reviewers pick one from the list when they exclude a
+  paper; it has no meaning otherwise.
+- **A fast keyboard flow.** Press `I` to include or `E` to exclude the paper on screen, `U` to
+  un-decide; a digit `1`–`9` excludes with the corresponding configured reason in one keystroke.
+  Deciding a paper for the first time moves on to the next undecided one automatically, so screening
+  reads as read-decide-read; going back to fix an earlier call never jumps you away from it again.
+- **◧ Summary** reports progress and the include/exclude/undecided totals, plus how many papers were
+  excluded for each reason.
+- **The middle pane defaults to the title and abstract** rather than the PDF — that is what a
+  screening decision is normally made from, and a screening paper may have no PDF attached at all
+  (`"pdf": ""`). One click swaps to the actual PDF when you need it.
+- **It reuses the multi-reviewer/Consolidation machinery wholesale**: two reviewers screen
+  independently, Consolidation reconciles them, and **⚖ Agreement** reports κ over the include/exclude
+  decision specifically — the statistic a screening phase actually reports. Where every reviewer
+  agreed, Consolidation's **Adopt all** takes every one of those decisions at once. AI-assisted
+  screening is not offered: screening decides the review's corpus, which is not a call to hand to a
+  model.
+
+**Starting the next phase from a screening project.** Once screening is done, **New from
+screening…** (on the start screen) builds the annotation project that follows it: pick the screening
+JSON, and every paper **not explicitly excluded** is carried over — included papers always, and
+undecided ones by default (dropping a paper nobody actually excluded would silently shrink the
+review; you can choose to leave them out in the confirmation dialog instead). Title, authors, DOI,
+abstract and the PDF reference all carry over. The new project's JSON is saved **next to the
+screening JSON** by default, so every paper's relative PDF path keeps resolving without being
+rewritten. For a multi-reviewer screening project, "included" reads the **consolidated** decision —
+the one that ships — never an individual reviewer's own opinion.
+
+> 📖 Full details, including the derived schema's exact shape, are in
+> [§10 of the schema guide](docs/annotation-schema.md#10-screening-projects).
 
 ## Annotating with AI
 
@@ -447,6 +502,8 @@ docker compose -f docker-compose.dev.yml --profile electron run --rm electron
 
 - `src/model/` — schema types + zod validation, project load/normalize/serialize, annotation
   instance-tree helpers (unit-tested).
+- `src/screening/` — the derived screening schema, tri-state decision/reason reading, PRISMA-style
+  counts, and the two cross-field validation rules screening needs (unit-tested).
 - `src/platform/` — a `PlatformAdapter` seam so the UI is identical in Electron and the browser
   (`electron.ts` = IPC + `slr-file://` protocol; `browser.ts` = File System Access API / fetch).
 - `src/llm/` — the AI-annotation layer: prompt, provider request/response shapes, field paths, and

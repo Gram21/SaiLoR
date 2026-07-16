@@ -227,6 +227,8 @@ Distribute the `release/` installers produced by `electron-builder`. The desktop
 | `Alt + ↑` or `[` | Previous paper |
 | `F1` | Open help dialog |
 | `Ctrl/Cmd + C/V/X` | Native copy/paste/cut (browser or Electron Edit menu) |
+| `I` / `E` / `U` | Screening only: include / exclude / un-decide the current paper |
+| `1`–`9` | Screening only: exclude with the Nth configured reason |
 
 Note: plain `Ctrl/Cmd +/-/0` zooms the **PDF paper**; adding **Shift** scales the **app font**. (On a US keyboard "+" is `Shift+=`, so PDF zoom-in is `Ctrl+=`; on layouts with a dedicated `+` key it maps to `Ctrl++` directly.)
 
