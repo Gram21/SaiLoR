@@ -390,6 +390,44 @@ describe('extractPdfMeta against real PDFs', () => {
     expect(meta.abstract).toMatch(/^We evaluate deep learning approaches for code search\./)
   })
 
+  // A real single-column paper, and the counterpart to the two-column one
+  // above: between them they cover both layouts a submission actually uses.
+  // This one also has no space after its heading's colon ("Abstract:Our paper"),
+  // which is what `ABSTRACT_START`'s optional trailing `\s*` is for, and ends at
+  // a "Keywords:" line rather than an "Introduction" one.
+  it('reads a real single-column paper whose heading runs straight into the text', async () => {
+    const meta = await extractPdfMeta(loadPdf('samples/pdfs/A1-37.pdf'))
+    expect(meta.title).toBe(
+      'Linking Software System Artifacts: Toward Generic Traceability Link Recovery through Retrieval-Augmented Generation',
+    )
+    // The heading is consumed even with nothing between it and the first word.
+    expect(meta.abstract).toMatch(/^Our paper \[Fu25a\], published at the 47th IEEE/)
+    expect(meta.abstract).toMatch(/Retrieval-Augmented Generation \(RAG\)\.$/)
+    // Stopped at the paper's own "Keywords:" line, and never reached the body.
+    expect(meta.abstract).not.toMatch(/Keywords|Introduction|development and maintenance/)
+  })
+
+  // A known shortfall, pinned here so it stays visible rather than becoming
+  // folklore. This paper's author list wraps onto a second line ("… Niklas
+  // Ewald, Tobias" / "Thirolf, and Anne Koziolek") and
+  // `titleAndAuthorsFromLines` stops at the first line that yields any names —
+  // so it finds five of the seven, and drops the "Tobias" stranded at the break
+  // (strict mode rejects a lone token as a name, which is exactly what stops a
+  // body sentence from becoming an author list). This is a *pre-fill* the
+  // reviewer corrects in the editor, and it is unrelated to the abstract, which
+  // this same file extracts in full. If someone teaches the heuristic to
+  // continue across a wrapped list, this test is where that shows up.
+  it('finds only the first line of a wrapped author list (known shortfall)', async () => {
+    const meta = await extractPdfMeta(loadPdf('samples/pdfs/A1-37.pdf'))
+    expect(meta.authors).toEqual([
+      'Dominik Fuchß',
+      'Tobias Hey',
+      'Jan Keim',
+      'Haoyu Liu',
+      'Niklas Ewald',
+    ])
+  })
+
   it('returns no abstract for a PDF that has none, rather than guessing', async () => {
     const meta = await extractPdfMeta(loadPdf('samples/pdfs/multipage.pdf'))
     expect(meta.abstract).toBeUndefined()

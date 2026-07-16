@@ -907,6 +907,217 @@
           ]
         }
       }
+    },
+    {
+      "id": "Fuchss2026_LiSSA",
+      "title": "Linking Software System Artifacts: Toward Generic Traceability Link Recovery through Retrieval-Augmented Generation",
+      "authors": [
+        "Dominik Fuchß",
+        "Tobias Hey",
+        "Jan Keim",
+        "Haoyu Liu",
+        "Niklas Ewald",
+        "Tobias Thirolf",
+        "Anne Koziolek"
+      ],
+      "pdf": "pdfs/A1-37.pdf",
+      "annotations": {
+        "Relevant": [
+          {
+            "value": false
+          }
+        ],
+        "Study Type": [
+          {
+            "value": null
+          }
+        ],
+        "Year": [
+          {
+            "value": null
+          }
+        ],
+        "Findings": [
+          {
+            "children": {
+              "Claim": [
+                {
+                  "value": null
+                }
+              ],
+              "Evidence": [
+                {
+                  "children": {
+                    "Metric": [
+                      {
+                        "value": null
+                      }
+                    ],
+                    "Evaluation Type": [
+                      {
+                        "value": null
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Confidence": [
+                {
+                  "value": null
+                }
+              ]
+            }
+          }
+        ],
+        "Threats to Validity": [
+          {
+            "children": {
+              "Kind": [
+                {
+                  "value": null
+                }
+              ],
+              "Addressed": [
+                {
+                  "value": false
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "reviews": {
+        "1": {
+          "Relevant": [
+            {
+              "value": false
+            }
+          ],
+          "Study Type": [
+            {
+              "value": null
+            }
+          ],
+          "Year": [
+            {
+              "value": null
+            }
+          ],
+          "Findings": [
+            {
+              "children": {
+                "Claim": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Evidence": [
+                  {
+                    "children": {
+                      "Metric": [
+                        {
+                          "value": null
+                        }
+                      ],
+                      "Evaluation Type": [
+                        {
+                          "value": null
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "Confidence": [
+                  {
+                    "value": null
+                  }
+                ]
+              }
+            }
+          ],
+          "Threats to Validity": [
+            {
+              "children": {
+                "Kind": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Addressed": [
+                  {
+                    "value": false
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "2": {
+          "Relevant": [
+            {
+              "value": false
+            }
+          ],
+          "Study Type": [
+            {
+              "value": null
+            }
+          ],
+          "Year": [
+            {
+              "value": null
+            }
+          ],
+          "Findings": [
+            {
+              "children": {
+                "Claim": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Evidence": [
+                  {
+                    "children": {
+                      "Metric": [
+                        {
+                          "value": null
+                        }
+                      ],
+                      "Evaluation Type": [
+                        {
+                          "value": null
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "Confidence": [
+                  {
+                    "value": null
+                  }
+                ]
+              }
+            }
+          ],
+          "Threats to Validity": [
+            {
+              "children": {
+                "Kind": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Addressed": [
+                  {
+                    "value": false
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }
