@@ -18,6 +18,7 @@ import {
 import type { ResolvedDef } from '../model/schema'
 import { alignNode } from '../consolidate/align'
 import { applyAlignment } from '../consolidate/apply'
+import { unanimousFills } from '../consolidate/unanimous'
 import { validateProject, type UnannotatedPaper, type ValidationIssue } from '../model/validate'
 import { formatPath, resolvePath } from '../llm/paths'
 import { isUnanswered } from '../llm/fields'
@@ -213,10 +214,15 @@ interface AppState {
   past: HistoryEntry[]
   future: HistoryEntry[]
   /**
-   * Fields the AI filled and the reviewer has not yet looked at, keyed by
-   * `aiMarkKey`. Session-only *by construction*: it lives beside the project
-   * rather than inside it, so `serializeProject` cannot see it and a mark can
-   * never reach the file on disk. A plain record (not a Set) keeps immer happy.
+   * Fields *the app* filled and the reviewer has not yet looked at, keyed by
+   * `aiMarkKey`. Two things produce them, and the border means the same in both
+   * cases — "you did not type this; check it": an applied AI suggestion, and
+   * Consolidation adopting a value every reviewer gave (`adoptUnanimousValues`).
+   * The name predates the second.
+   *
+   * Session-only *by construction*: it lives beside the project rather than
+   * inside it, so `serializeProject` cannot see it and a mark can never reach
+   * the file on disk. A plain record (not a Set) keeps immer happy.
    */
   aiMarks: Record<string, true>
   /**
@@ -308,6 +314,16 @@ interface AppState {
    * lining a paper up is one undo press rather than one per node.
    */
   alignConsolidationNode: (paperId: string, nodeName: string, coalesce: boolean) => boolean
+  /**
+   * Fill the consolidated tree's still-unanswered fields with the values every
+   * reviewer gave, marking each one the way an AI fill is marked. Returns how
+   * many were filled.
+   *
+   * Runs after `alignConsolidationNode` for the whole paper, and must: it reads
+   * every reviewer at the same index, which only means anything once matching
+   * has lined their entries up.
+   */
+  adoptUnanimousValues: (paperId: string, coalesce: boolean) => number
 }
 
 /** What `applyAiSuggestions` actually did, for the summary shown to the reviewer. */
@@ -878,6 +894,14 @@ export const useStore = create<AppState>()(
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) {
         return { filled: 0, skipped: suggestions.length }
       }
+      // Consolidation reconciles what the reviewers said; a model's answer is
+      // not one of the things being reconciled, and this tree is the one that
+      // ships. `AnnotationPanel` hides the button here, so the only way in is to
+      // open the dialog as a reviewer and then switch seats — refuse that too,
+      // rather than trust the UI to be the whole guard.
+      if (prev.currentReviewer === 'consolidation') {
+        return { filled: 0, skipped: suggestions.length }
+      }
       const schema = prev.project.schema
       const paperNow = currentPaper(prev)
       if (!paperNow) return { filled: 0, skipped: suggestions.length }
@@ -1043,6 +1067,43 @@ export const useStore = create<AppState>()(
       // A value typed after this must not merge into the alignment's undo entry.
       if (changed) lastFieldKey = null
       return changed
+    },
+
+    adoptUnanimousValues: (paperId, coalesce) => {
+      const prev = get()
+      const project = prev.project
+      if (!project || project.reviewers <= 1) return 0
+      const paper = project.papers.find((p) => p.id === paperId)
+      if (!paper) return 0
+
+      // Every numbered reviewer, present or not: a reviewer with no tree has not
+      // answered, and `unanimousFills` needs to see that rather than count the
+      // agreement of whoever happens to be here.
+      const reviews: Record<string, AnnotationValueTree | undefined> = {}
+      for (let i = 1; i <= project.reviewers; i++) reviews[String(i)] = paper.reviews[String(i)]
+
+      const fills = unanimousFills(project.schema, reviews, paper.annotations)
+      if (fills.length === 0) return 0
+
+      const snap: HistoryEntry = { project, paperId: prev.currentPaperId }
+      set((s) => {
+        const draft = s.project!.papers.find((p) => p.id === paperId)
+        if (!draft) return
+        if (!coalesce) pushPast(s, snap)
+        for (const fill of fills) {
+          const container = containerAt(draft.annotations, fill.path)
+          const inst = container[fill.name]?.[fill.index]
+          if (!inst) continue
+          inst.value = fill.value
+          // The same mark the AI's fills get: the value is the app's doing until
+          // the consolidator has looked at it, and it says so on screen. Scoped
+          // to Consolidation, which is the only seat that can produce these.
+          s.aiMarks[aiMarkKey(paperId, fill.canonical, 'consolidation')] = true
+        }
+        s.dirty = true
+      })
+      lastFieldKey = null
+      return fills.length
     },
 
     undo: () => {

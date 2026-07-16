@@ -22,6 +22,7 @@ export function useConsolidationAlignment(): void {
   const currentReviewer = useStore((s) => s.currentReviewer)
   const target = useStore((s) => s.consolidationTarget)
   const alignConsolidationNode = useStore((s) => s.alignConsolidationNode)
+  const adoptUnanimousValues = useStore((s) => s.adoptUnanimousValues)
 
   // The queue is a ref, not state: `prioritize` reorders it from a second
   // effect, and a re-render for each node would be pure churn.
@@ -38,10 +39,9 @@ export function useConsolidationAlignment(): void {
     }
 
     queue.current = alignableNodes(schema)
-    if (queue.current.length === 0) return
 
     let cancelled = false
-    // Each paper is one undo entry: the first node that changes anything takes
+    // Each paper is one undo entry: the first step that changes anything takes
     // the snapshot, and the rest fold into it.
     let pushedUndo = false
     running.current = true
@@ -50,6 +50,10 @@ export function useConsolidationAlignment(): void {
       if (cancelled) return
       const nodeName = queue.current.shift()
       if (nodeName === undefined) {
+        // Everything is lined up, so "reviewer 2's entry N" now means the same
+        // entry as reviewer 1's — which is the point at which reading across at
+        // a fixed index is meaningful, and therefore the earliest this can run.
+        adoptUnanimousValues(currentPaperId, pushedUndo)
         running.current = false
         return
       }
@@ -66,7 +70,7 @@ export function useConsolidationAlignment(): void {
       running.current = false
       clearTimeout(handle)
     }
-  }, [active, currentPaperId, schema, alignConsolidationNode])
+  }, [active, currentPaperId, schema, alignConsolidationNode, adoptUnanimousValues])
 
   // Pull the node the reviewer just asked about to the front of what is left.
   useEffect(() => {

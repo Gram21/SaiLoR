@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { RecentEntry, SaveHandle } from '../platform/adapter'
 import { serializeProject } from '../model/project'
+import { normalizeTree } from '../model/annotations'
 import type { Suggestion } from '../llm/types'
 
 /**
@@ -327,8 +328,18 @@ describe('marks are scoped per reviewer on a multi-reviewer project', () => {
   })
 
   it('Consolidation gets its own mark scope too, distinct from the single-reviewer key form', () => {
+    // Consolidation's marks no longer come from the AI — that seat refuses it
+    // (see store.align.test.ts) — but from adopting a value every reviewer gave.
+    // The scoping rule under test is the same either way.
+    useStore.setState((s) => {
+      s.project!.papers[0].reviews = {
+        '1': normalizeTree(s.project!.schema, { Summary: [{ value: 'agreed summary' }] }),
+        '2': normalizeTree(s.project!.schema, { Summary: [{ value: 'Agreed Summary' }] }),
+      }
+    })
     st().selectReviewer('consolidation')
-    apply([sug('Summary', 'final')])
+    expect(st().adoptUnanimousValues('p1', false)).toBeGreaterThan(0)
+
     // Even though Consolidation writes into `paper.annotations` (the same tree
     // a single-reviewer project uses), its marks are still reviewer-scoped:
     // `markReviewerScope` only collapses to the bare `paperId::path` form for

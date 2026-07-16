@@ -124,6 +124,7 @@ The entire app state lives in a single Zustand store with immer middleware:
 - **`selectReviewer(reviewer)`** — switches `currentReviewer` and persists the choice per project. A view switch: no undo step, no `dirty`
 - **`openConsolidation(path, name, index)` / `closeConsolidation()`** — open/close the compare popup for one field
 - **`alignConsolidationNode(paperId, nodeName, coalesce)`** — match the reviewers' repeated entries under one node and write the result in (reorder + grow); see "Matching the reviewers' repeated entries" below
+- **`adoptUnanimousValues(paperId, coalesce)`** — fill the consolidated fields every reviewer answered the same way, marking each via `aiMarks`; runs after the matching for a paper
 
 The `containerAt(root, path)` helper walks the annotation tree following `PathSeg[]` (name + index pairs) to reach the container for a given path. `currentTree(project, currentReviewer, paper, create?)` decides *which* tree that walk starts from — see "Multiple reviewers & Consolidation" below; `setFieldValue`, `addInstance`, `removeInstance`, and `applyAiSuggestions` all call it before touching anything.
 
@@ -303,6 +304,7 @@ entry* and lines them up.
 | `assign.ts` | Hungarian max-weight assignment. Greedy is not merely worse but wrong here: one locally good pair can force two later entries into a much worse one, and greedy cannot trade the first against the second |
 | `align.ts` | The recursion. `alignNode` returns slots per repeatable node; `alignableNodes` lists what is worth doing |
 | `apply.ts` | Writes an alignment into the data |
+| `unanimous.ts` | Finds the fields every reviewer answered identically, for `adoptUnanimousValues` to fill |
 
 **Matching cannot cross**, which is a requirement of the feature: a group's sub-entries are only
 ever matched *inside* an already-matched pair of parents, because the recursion never offers a
@@ -326,6 +328,38 @@ particular thing to them; re-matching could move a different entry into slot N, 
 recorded answer describing something it was never about. The cost is that entries added *after*
 consolidation began are not auto-matched for that node — the safe side of the trade, since a stale
 match is visible and a silently re-pointed answer is not.
+
+### Unanimous answers are adopted (`adoptUnanimousValues`)
+
+Once the matching for a paper is done, the scheduler runs `adoptUnanimousValues`, which fills every
+still-unanswered consolidated field on which **all** reviewers gave the same answer, and marks each
+one via `aiMarks` — the same light-blue border an AI fill gets, meaning "the app did this, you have
+not looked at it yet". There is nothing to reconcile where everyone already agrees, and copying
+those across by hand is the kind of task done on autopilot, which is when the real disagreement two
+rows down gets missed.
+
+It runs **after** matching, necessarily: it reads every reviewer at a fixed index, which only means
+anything once their entries line up. The rules:
+
+- **Comparison folds case and whitespace only** (`"Controlled experiment"` == `"controlled
+  experiment "`). Not punctuation, and no fuzzy matching — the matcher's job is to *pair* entries,
+  where near-enough is right; writing a value into the shipping tree unasked is a higher bar. The
+  lowest-numbered reviewer's wording is kept, trimmed, so the choice is deterministic.
+- **Every reviewer must have answered.** Two agreeing and a third blank is not unanimous — silence is
+  not assent. This is also what keeps booleans honest: `isUnanswered` (`src/llm/fields.ts`) counts a
+  boolean as answered only once ticked, so untouched checkboxes — which all read `false` — do not
+  count as a unanimous "no" and mark every checkbox in the project.
+- **A field the consolidator already answered is left alone**, per field (unlike the matching guard,
+  which is per node).
+
+### AI is not available in Consolidation
+
+`AnnotationPanel` does not render the ✦ AI button in this seat at all (not disabled, not the
+transparent treatment the locked state uses — absent), and `applyAiSuggestions` refuses when
+`currentReviewer === 'consolidation'`, so opening the dialog as a reviewer and then switching seats
+cannot get round it. Consolidation decides between what the reviewers actually said; a model's answer
+would be a fresh opinion invented after the fact, written into the tree that ships and dressed as a
+reconciliation of the others.
 
 Matching is lexical only. Bundling a local embedding model (nomic-embed-text and similar) was
 evaluated and rejected: ~185 MB installed at best and plausibly several hundred MB of RAM, against

@@ -48,6 +48,7 @@ const { useStore } = await import('./store')
 
 const schema = [
   { name: 'Study Type', type: 'string' as const },
+  { name: 'Relevant', type: 'boolean' as const },
   {
     name: 'Findings',
     min: 1,
@@ -74,6 +75,8 @@ const swapped = {
   '1': { Findings: [finding('Alpha'), finding('Beta'), finding('Gamma')] },
   '2': { Findings: [finding('Gamma'), finding('Alpha'), finding('Beta')] },
 }
+
+const TEST_USAGE = { provider: 'anthropic', model: 'claude-5' }
 
 const st = () => useStore.getState()
 const claimsOf = (reviewer: string) =>
@@ -216,5 +219,141 @@ describe('alignConsolidationNode', () => {
     st().setFieldValue([], 'Study Type', 0, 'RCT')
     expect(st().alignConsolidationNode('p1', 'Findings', false)).toBe(true)
     expect(claimsOf('2')).toEqual(['Alpha', 'Beta', 'Gamma'])
+  })
+})
+
+describe('adoptUnanimousValues', () => {
+  const agreed = {
+    '1': {
+      'Study Type': [{ value: 'Controlled experiment' }],
+      Findings: [finding('Alpha'), finding('Beta')],
+    },
+    '2': {
+      // Same answers, typed differently — case and stray space are not a
+      // disagreement.
+      'Study Type': [{ value: '  controlled  Experiment ' }],
+      Findings: [finding('Beta'), finding('Alpha')],
+    },
+  }
+
+  const markOf = (canonical: string) =>
+    st().aiMarks[`p1::consolidation::${canonical}`] === true
+
+  beforeEach(() => {
+    st().loadFromText(projectText(2, agreed), null, 'test.json')
+    st().selectPaper('p1')
+    st().selectReviewer('consolidation')
+  })
+
+  it('adopts what both reviewers said, keeping the first one\'s wording', () => {
+    expect(st().adoptUnanimousValues('p1', false)).toBeGreaterThan(0)
+    expect(st().project!.papers[0].annotations['Study Type'][0].value).toBe('Controlled experiment')
+  })
+
+  it('marks each adopted field the way an AI fill is marked', () => {
+    st().adoptUnanimousValues('p1', false)
+    expect(markOf('Study Type')).toBe(true)
+  })
+
+  it('marks under the Consolidation seat, so the border shows there', () => {
+    // `useAiMark` scopes by the *current* reviewer on a multi-reviewer project;
+    // a mark written under any other scope would simply never render.
+    st().adoptUnanimousValues('p1', false)
+    expect(Object.keys(st().aiMarks).every((k) => k.startsWith('p1::consolidation::'))).toBe(true)
+  })
+
+  it('adopts across matched entries once they are lined up', () => {
+    // Reviewer 2 listed the findings in the opposite order, so before matching
+    // there is no agreement at index 0 at all. Afterwards there is.
+    expect(st().adoptUnanimousValues('p1', false)).toBe(1) // Study Type only
+    st().alignConsolidationNode('p1', 'Findings', false)
+    st().adoptUnanimousValues('p1', false)
+    const consolidated = st().project!.papers[0].annotations['Findings']
+    expect(consolidated[0].children?.['Claim']?.[0]?.value).toBe('Alpha')
+    expect(consolidated[1].children?.['Claim']?.[0]?.value).toBe('Beta')
+  })
+
+  it('does not touch a field the reviewers disagree on', () => {
+    st().loadFromText(
+      projectText(2, {
+        '1': { 'Study Type': [{ value: 'Case study' }] },
+        '2': { 'Study Type': [{ value: 'Survey' }] },
+      }),
+      null,
+      'test.json',
+    )
+    st().selectPaper('p1')
+    st().selectReviewer('consolidation')
+    expect(st().adoptUnanimousValues('p1', false)).toBe(0)
+    expect(st().project!.papers[0].annotations['Study Type'][0].value).toBeNull()
+    expect(st().dirty).toBe(false)
+  })
+
+  it('does not overwrite the consolidator\'s own answer', () => {
+    st().setFieldValue([], 'Study Type', 0, 'My own call')
+    st().adoptUnanimousValues('p1', false)
+    expect(st().project!.papers[0].annotations['Study Type'][0].value).toBe('My own call')
+  })
+
+  it('is one undo press, and reverts the values', () => {
+    st().adoptUnanimousValues('p1', false)
+    expect(st().past).toHaveLength(1)
+    st().undo()
+    expect(st().project!.papers[0].annotations['Study Type'][0].value).toBeNull()
+  })
+
+  it('takes no undo step and does nothing when there is no agreement', () => {
+    st().adoptUnanimousValues('p1', false)
+    const depth = st().past.length
+    // Everything unanimous is already adopted, so a second run finds nothing.
+    expect(st().adoptUnanimousValues('p1', false)).toBe(0)
+    expect(st().past.length).toBe(depth)
+  })
+
+  it('does nothing on a single-reviewer project', () => {
+    st().loadFromText(
+      JSON.stringify({
+        version: 1,
+        config: { schema },
+        papers: [{ id: 'p1', title: 'T', authors: [], pdf: 'a.pdf', annotations: {} }],
+      }),
+      null,
+      'test.json',
+    )
+    st().selectPaper('p1')
+    expect(st().adoptUnanimousValues('p1', false)).toBe(0)
+    expect(st().dirty).toBe(false)
+  })
+})
+
+describe('AI is not usable from the Consolidation seat', () => {
+  beforeEach(() => {
+    st().loadFromText(projectText(2, {}), null, 'test.json')
+    st().selectPaper('p1')
+  })
+
+  it('refuses to apply suggestions into the consolidated tree', () => {
+    // The panel hides the button, so the only way here is to open the dialog as
+    // a reviewer and switch seats. The store must refuse regardless of the UI:
+    // this tree is the final result, and a model is not one of the opinions
+    // being reconciled.
+    st().selectReviewer('consolidation')
+    const result = st().applyAiSuggestions(
+      [{ path: 'Study Type', value: 'RCT', evidence: 'q', confidence: 1 }],
+      TEST_USAGE,
+    )
+    expect(result).toEqual({ filled: 0, skipped: 1 })
+    expect(st().project!.papers[0].annotations['Study Type'][0].value).toBeNull()
+    expect(st().dirty).toBe(false)
+  })
+
+  it('still applies them for a numbered reviewer', () => {
+    st().selectReviewer('1')
+    expect(
+      st().applyAiSuggestions(
+        [{ path: 'Study Type', value: 'RCT', evidence: 'q', confidence: 1 }],
+        TEST_USAGE,
+      ).filled,
+    ).toBe(1)
   })
 })
