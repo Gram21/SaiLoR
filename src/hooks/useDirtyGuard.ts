@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useStore } from '../state/store'
+import { useEditorStore } from '../state/editorStore'
 import { isElectron } from '../platform/adapter'
 
 /**
@@ -10,7 +11,12 @@ import { isElectron } from '../platform/adapter'
  * useElectronCloseGuard + electron/main.ts).
  */
 export function useDirtyGuard() {
-  const dirty = useStore((s) => s.dirty)
+  // An unsaved schema draft counts, exactly as it does for the Electron quit
+  // guard's `isDirty()` — it is no less lost on a tab close than an unsaved
+  // annotation is, and the editor is the only thing on screen while it is open.
+  const projectDirty = useStore((s) => s.dirty)
+  const draftDirty = useEditorStore((s) => s.dirty)
+  const dirty = projectDirty || draftDirty
   useEffect(() => {
     if (!dirty || isElectron()) return
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
