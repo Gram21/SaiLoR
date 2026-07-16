@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useStore } from '../state/store'
 import { useEditorStore } from '../state/editorStore'
 import { isElectron } from '../platform/adapter'
+import { DECISION_EXCLUDE, DECISION_INCLUDE } from '../screening/schema'
 
 /**
  * Global keyboard shortcuts:
@@ -14,6 +15,9 @@ import { isElectron } from '../platform/adapter'
  *  - Ctrl/Cmd+Shift +/-/0  → App font size in / out / reset
  *  - Alt+ArrowDown / ]  → next paper
  *  - Alt+ArrowUp   / [  → previous paper
+ *  - I / E / U          → screening: include / exclude / un-decide (screening
+ *                          projects only, not while typing)
+ *  - 1..9                → screening: exclude with the Nth configured reason
  *
  * While the project editor is open, save and undo/redo drive the *draft* rather
  * than the annotation project, and the project-specific bindings (open, paper
@@ -98,6 +102,44 @@ export function useKeybindings() {
       // Paper navigation. Skip when typing in a field unless Alt is held.
       if (editing) return
       const inField = isEditable(e.target)
+
+      // Screening is hundreds of papers at seconds each, so the decision is a
+      // keystroke. Bare letters only (a modifier means something else here)
+      // and never while typing — the same rule `[`/`]` already follow below.
+      // The store owns the auto-advance, so these and the panel's own buttons
+      // cannot drift apart on it.
+      const st = useStore.getState()
+      if (st.project?.screening && !inField && !mod && !e.altKey) {
+        if (e.key === 'i' || e.key === 'I') {
+          e.preventDefault()
+          st.setScreeningDecision(DECISION_INCLUDE)
+          return
+        }
+        if (e.key === 'e' || e.key === 'E') {
+          e.preventDefault()
+          st.setScreeningDecision(DECISION_EXCLUDE)
+          return
+        }
+        if (e.key === 'u' || e.key === 'U') {
+          e.preventDefault()
+          st.setScreeningDecision(null)
+          return
+        }
+        // 1..9 pick the Nth configured exclusion reason and exclude in one
+        // press — the exclusion and its reason are one decision, so they are
+        // one keystroke and (via `setScreeningDecision`'s second argument)
+        // one undo step.
+        const n = Number(e.key)
+        if (Number.isInteger(n) && n >= 1 && n <= 9) {
+          const reason = st.project.screening.reasons[n - 1]
+          if (reason) {
+            e.preventDefault()
+            st.setScreeningDecision(DECISION_EXCLUDE, reason)
+          }
+          return
+        }
+      }
+
       const nav = (dir: 1 | -1) => {
         e.preventDefault()
         stepPaper(dir)

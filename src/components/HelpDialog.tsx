@@ -32,6 +32,20 @@ const START_KEYS: Array<[string, string]> = [
   ['F1', 'Open this help'],
 ]
 
+/** Shortcuts while screening a project (replaces the annotation shortcuts). */
+const SCREENING_KEYS: Array<[string, string]> = [
+  [`${MOD}+O`, 'Open a project file'],
+  [`${MOD}+S`, 'Save'],
+  [`${MOD}+Z`, 'Undo a decision'],
+  ['I', 'Include the current paper'],
+  ['E', 'Exclude the current paper'],
+  ['U', 'Un-decide (back to not screened)'],
+  ['1 – 9', 'Exclude with the Nth configured reason'],
+  ['Alt+↓  /  ]', 'Next paper'],
+  ['Alt+↑  /  [', 'Previous paper'],
+  ['F1', 'Open this help'],
+]
+
 /** Shortcuts while building or editing the annotation JSON. */
 const EDITOR_KEYS: Array<[string, string]> = [
   [`${MOD}+S`, 'Save the JSON (stay in the editor)'],
@@ -440,6 +454,118 @@ function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
   }
 }
 
+/** Help for the screening view — a fundamentally different activity from
+ *  annotation, so it gets its own mode rather than a section bolted onto
+ *  `annotateHelp`. */
+function screeningHelp(): { lead: ReactNode; sections: HelpSection[] } {
+  return {
+    lead: (
+      <p>
+        This project screens papers rather than annotating them: one <strong>Include / Exclude</strong>{' '}
+        decision per paper, made fast, usually from the title and abstract alone.
+      </p>
+    ),
+    sections: [
+      {
+        id: 'what',
+        title: 'What screening is',
+        body: (
+          <p>
+            A screening project has no authored schema — every screening project records exactly the
+            same thing: a decision and, when excluded, a reason. It is the first pass of a systematic
+            review: hundreds of records, seconds each, deciding which survive into the annotation phase
+            that follows.
+          </p>
+        ),
+      },
+      {
+        id: 'decision',
+        title: 'Why a dropdown, not a checkbox',
+        body: (
+          <p>
+            The decision is <em>Include</em> / <em>Exclude</em>, not a single "Exclude" checkbox,
+            because the app has to be able to say <strong>"not screened yet"</strong> — a state a
+            checkbox cannot hold. Every boolean field in this app reads an unticked box as a real,
+            deliberate "no", so a checkbox could never tell "I decided to include this" apart from
+            "I haven't looked yet". Progress, the PRISMA counts, and which papers an import carries
+            forward all depend on that distinction.
+          </p>
+        ),
+      },
+      {
+        id: 'reasons',
+        title: 'Why the reason list is fixed',
+        body: (
+          <p>
+            The exclusion reasons are set once, before screening starts, by whoever built the project —
+            the same way a review protocol pre-registers its exclusion criteria. That is what makes the{' '}
+            <strong>◧ Summary</strong>'s per-reason counts meaningful: free text would let every
+            reviewer phrase the same reason differently, and the counts (and the PRISMA flow diagram
+            they feed) would not add up to anything.
+          </p>
+        ),
+      },
+      {
+        id: 'keys',
+        title: 'The fast keyboard flow',
+        body: (
+          <p>
+            Press <kbd>I</kbd> to include or <kbd>E</kbd> to exclude the paper on screen; <kbd>U</kbd>{' '}
+            undoes a decision back to "not screened". Deciding a paper for the first time automatically
+            moves to the next undecided one, so screening a stack is a rhythm of read-decide-read rather
+            than read-decide-click-next; going back to fix an earlier call never jumps you away again. A
+            digit <kbd>1</kbd>–<kbd>9</kbd> excludes with the corresponding configured reason (in the
+            order the project lists them) in one press.
+          </p>
+        ),
+      },
+      {
+        id: 'reviewers',
+        title: 'Several reviewers, and Consolidation',
+        body: (
+          <p>
+            Screening reuses the same reviewer/Consolidation machinery every other part of this app
+            does: two reviewers screen independently, and Consolidation reconciles them into the final
+            decision — the standard SLR screening protocol. Where every reviewer decided the same way,
+            Consolidation can adopt all of those decisions at once with{' '}
+            <strong>Adopt all</strong>, and <strong>⚖ Agreement</strong> reports Cohen's/Fleiss' κ over
+            the include/exclude decision specifically — the statistic a screening phase actually
+            reports, and the reason this reuses the consolidation machinery rather than building
+            something parallel to it.
+          </p>
+        ),
+      },
+      {
+        id: 'summary',
+        title: 'The summary and PRISMA',
+        body: (
+          <p>
+            <strong>◧ Summary</strong> shows progress and the include / exclude / undecided totals, plus
+            how many papers were excluded for each configured reason — the numbers a PRISMA flow diagram
+            reports. It states which seat it is counting (your own decisions, or the consolidated
+            result), since the two can differ.
+          </p>
+        ),
+      },
+      {
+        id: 'importing',
+        title: 'Starting an annotation project from this one',
+        body: (
+          <p>
+            Once screening is done, use <strong>New from screening…</strong> (on the start screen) to
+            build the next-phase annotation project: every paper not explicitly excluded is carried
+            over — included papers always, and undecided ones by default, since dropping a paper nobody
+            actually excluded would silently shrink the review. The new project is saved next to this
+            screening JSON by default, so relative PDF paths keep resolving unchanged.
+          </p>
+        ),
+      },
+      { id: 'faq', title: 'FAQ', body: commonFaqs() },
+      { id: 'shortcuts', title: 'Keyboard shortcuts', body: <ShortcutTable keys={SCREENING_KEYS} /> },
+    ],
+  }
+}
+
 /** Help for the project editor (schema + papers). */
 function editorHelp(): { lead: ReactNode; sections: HelpSection[] } {
   return {
@@ -635,7 +761,8 @@ export function HelpDialog() {
   // editor, an open project, or the start screen with neither.
   const editing = useEditorStore((s) => s.open)
   const hasProject = useStore((s) => s.project !== null)
-  const mode = editing ? 'editor' : hasProject ? 'annotate' : 'start'
+  const screening = useStore((s) => s.project?.screening != null)
+  const mode = editing ? 'editor' : hasProject ? (screening ? 'screening' : 'annotate') : 'start'
   const bodyRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -650,7 +777,13 @@ export function HelpDialog() {
   if (!open) return null
 
   const { lead, sections: modeSections } =
-    mode === 'editor' ? editorHelp() : mode === 'annotate' ? annotateHelp() : startHelp()
+    mode === 'editor'
+      ? editorHelp()
+      : mode === 'screening'
+        ? screeningHelp()
+        : mode === 'annotate'
+          ? annotateHelp()
+          : startHelp()
   const sections = [...modeSections, ...sharedSections()]
 
   // Scroll the modal's own body rather than the page: an `href="#id"` would
@@ -681,9 +814,11 @@ export function HelpDialog() {
             <span className="help-mode">
               {mode === 'editor'
                 ? 'Editing the annotation JSON'
-                : mode === 'annotate'
-                  ? 'Annotating'
-                  : 'Getting started'}
+                : mode === 'screening'
+                  ? 'Screening'
+                  : mode === 'annotate'
+                    ? 'Annotating'
+                    : 'Getting started'}
             </span>
           </strong>
           <button

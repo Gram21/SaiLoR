@@ -427,6 +427,46 @@ button.paper-search-mode:hover {
   background: var(--ok);
   border-color: var(--ok);
 }
+/* Screening's tri-state marker, replacing the plain done/not-done dot for a
+   screening project (see `paperScreeningStatus` in PaperList.tsx). Included
+   reuses the same green as `.status-dot.done` — "included" is this project's
+   version of "settled, and the good outcome". Excluded gets its own muted
+   treatment so it reads as "settled, but not carried forward" rather than
+   simply "not done yet", which the plain undecided dot already means. */
+.status-dot.screening-included {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+.status-dot.screening-excluded {
+  background: var(--muted);
+  border-color: var(--muted);
+}
+.status-dot.screening-undecided {
+  background: transparent;
+  border-color: var(--muted);
+}
+
+/* Segmented include/exclude/undecided filter above the paper list, screening
+   projects only. Same visual language as `.paper-search-mode`'s active state. */
+.screening-filter {
+  display: flex;
+  gap: 4px;
+}
+.screening-filter-btn {
+  flex: 1 1 auto;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.screening-filter-btn.active {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-weight: 600;
+}
 
 /* ---- PDF ---- */
 .pdf {
@@ -592,6 +632,166 @@ button.paper-search-mode:hover {
   margin: 0;
   max-width: 32em;
   color: var(--muted);
+}
+
+/* ---- Screening record (middle pane, replaces the PDF while collapsed) ---- */
+.screening-record-body {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 16px;
+  background: var(--bg);
+}
+.screening-abstract {
+  margin: 0;
+  max-width: 70ch;
+  line-height: 1.6;
+  color: var(--text);
+}
+.screening-abstract-empty {
+  margin: 0;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* ---- Screening panel (right pane) ---- */
+.screening-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+.screening-pending-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent-weak);
+  font-size: 0.9em;
+}
+.screening-decision-row {
+  display: flex;
+  gap: 10px;
+}
+.screening-decision-btn {
+  flex: 1 1 0;
+  padding: 14px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.screening-include.active {
+  border-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 16%, transparent);
+  color: var(--ok);
+}
+.screening-exclude.active {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+.screening-decision-btn.ai-marked {
+  box-shadow: 0 0 0 2px var(--ai-mark);
+}
+.screening-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85em;
+}
+.screening-reason-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.screening-progress {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Screening summary modal ---- */
+.screening-summary-seat {
+  color: var(--muted);
+  font-size: 0.9em;
+}
+.screening-summary-headline {
+  display: flex;
+  gap: 16px;
+  margin: 12px 0 20px;
+}
+.screening-summary-headline > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.screening-summary-headline strong {
+  font-size: 1.4rem;
+  font-variant-numeric: tabular-nums;
+}
+.screening-summary-headline span {
+  color: var(--muted);
+  font-size: 0.8em;
+}
+.screening-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.screening-summary-table th,
+.screening-summary-table td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.screening-summary-table th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.screening-summary-table td:last-child,
+.screening-summary-table th:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.screening-summary-unknown td {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* ---- Screening import dialog ---- */
+.screening-import-counts {
+  margin: 0 0 12px;
+  padding-left: 18px;
+}
+.screening-import-reasons {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+.screening-import-notice {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  font-size: 0.9em;
+  color: var(--muted);
+}
+.screening-import-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
 }
 
 /* ---- Annotations ---- */
@@ -980,6 +1180,9 @@ button.paper-search-mode:hover {
 }
 .validation-kind.kind-required {
   background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.validation-kind.kind-screening {
+  background: color-mix(in srgb, var(--ok) 22%, transparent);
 }
 .validation-path {
   font-weight: 600;

@@ -142,3 +142,44 @@
 .editor-reviewers-hint {
   margin: 0 16px 12px;
 }
+/* Same placement rule, for the row right below the Screening checkbox. */
+.editor-screening-hint {
+  margin: 0 16px 12px;
+}
+
+/* ---- Screening reasons editor ---- */
+.screening-reasons-list {
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.screening-reasons-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.screening-reasons-index {
+  flex: 0 0 auto;
+  width: 16px;
+  text-align: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85em;
+}
+.screening-reasons-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.screening-reasons-input:focus {
+  outline: 2px solid var(--accent-weak);
+  border-color: var(--accent);
+}
