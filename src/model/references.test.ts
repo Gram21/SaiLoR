@@ -100,6 +100,233 @@ describe('parseReferences: BibTeX', () => {
   })
 })
 
+describe('parseReferences: BibTeX LaTeX escapes', () => {
+  it('unescapes a bare accent command (\\"o)', () => {
+    const bib = `@article{k1, title = {T}, author = {Bj\\"orn Test}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.authors).toEqual(['Björn Test'])
+  })
+
+  it('unescapes a brace-argument accent command (\\"{o})', () => {
+    const bib = `@article{k1, title = {T}, author = {Bj\\"{o}rn Test}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.authors).toEqual(['Björn Test'])
+  })
+
+  it('unescapes an accent command wrapped in an extra protective brace ({\\"o})', () => {
+    const bib = `@article{k1, title = {T}, author = {Bj{\\"o}rn Test}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.authors).toEqual(['Björn Test'])
+  })
+
+  it('unescapes an uppercase-base accent (\\"O)', () => {
+    const bib = `@article{k1, title = {\\"Odd Title}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.title).toBe('Ödd Title')
+  })
+
+  it('covers every required accent: acute, grave, circumflex, tilde, macron, dot-above', () => {
+    const bib = `@article{k1, title = {T}, author = {Ren\\'e and Vibeke H\\\`agen and No\\^el and Re\\~nata and K\\=oji and \\.Zaneta}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.authors).toEqual(['René', 'Vibeke Hàgen', 'Noêl', 'Reñata', 'Kōji', 'Żaneta'])
+  })
+
+  it('covers the braced-argument-only accents: cedilla, caron, breve, double acute, ring, ogonek', () => {
+    const bib = `@article{k1, title = {T}, author = {Fran\\c{c}ois and Vla\\v{s}ta and Sv\\u{a}toplk and Erd\\H{o}s and B\\r{a}rd and Kasi\\k{a}}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.authors).toEqual(['François', 'Vlašta', 'Svătoplk', 'Erdős', 'Bård', 'Kasią'])
+  })
+
+  it('unescapes standalone letters that are not accents on a base letter, brace-terminated', () => {
+    // Real exports write the `{}` terminator (not a bare trailing space) when
+    // more of the word follows directly, precisely to avoid the ambiguity a
+    // bare space would have with a genuine word/author boundary.
+    const bib = `@article{k1, title = {T}, author = {Wei\\ss{} and S\\o{}ren and \\L{}ukasz and Ma\\ae{}ve and Kh\\oe{} and B\\aa{}rd and Naz\\i{}m}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.authors).toEqual(['Weiß', 'Søren', 'Łukasz', 'Maæve', 'Khœ', 'Bård', 'Nazım'])
+  })
+
+  it('unescapes standalone letters with their own uppercase form (SS is not \\ss — but O/L/AE/OE/AA are)', () => {
+    const bib = `@article{k1, title = {T}, author = {\\O{}rn and \\AA{}se and \\AE{}gir and \\OE{}rsted}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.authors).toEqual(['Ørn', 'Åse', 'Ægir', 'Œrsted'])
+  })
+
+  // `S\o ren` is the ordinary way to spell "Søren" in a .bib: TeX ends a
+  // control word at the following space and consumes it, so the space is not
+  // part of the name. Getting this wrong mangles most Nordic names.
+  it("consumes the single space that terminates a bare control word (S\\o ren is Søren)", () => {
+    const bib = `@article{k1, title = {T}, author = {S\\o ren Kristensen and Lars \\AA berg}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.authors).toEqual(['Søren Kristensen', 'Lars Åberg'])
+  })
+
+  // The counterpart, and the reason the author list is split on " and " before
+  // any of this runs: a name-final control word sits directly against the
+  // separator's space, so unescaping first would eat it and glue the two names
+  // into "Weißand Sven".
+  it('does not let a name-final control word swallow the " and " separator', () => {
+    const bib = `@article{k1, title = {T}, author = {Hans Wei\\ss and Sven G\\o tz}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.authors).toEqual(['Hans Weiß', 'Sven Gøtz'])
+  })
+
+  it('degrades an unknown escape gracefully: readable, no crash, no stray backslash', () => {
+    const bib = `@article{k1, title = {A \\unknowncmd Title}}`
+    expect(() => parseReferences(bib, 'refs.bib')).not.toThrow()
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.title).not.toContain('\\')
+    expect(entry.title).toBe('A unknowncmd Title')
+  })
+
+  it('still strips plain capitalization braces that do not wrap an escape ({DNA})', () => {
+    const bib = `@article{k1, title = {The {DNA} Structure}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.title).toBe('The DNA Structure')
+  })
+
+  it('still unescapes plain punctuation and tilde/space escapes (\\&, ~)', () => {
+    const bib = `@article{k1, title = {Fish \\& Chips}, author = {Jane Doe}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.title).toBe('Fish & Chips')
+  })
+
+  it('turns a non-breaking-space tilde into a plain space', () => {
+    const bib = `@article{k1, title = {T}, author = {Jan~Keim}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.authors).toEqual(['Jan Keim'])
+  })
+
+  it('does not mangle a Windows file path with the new LaTeX-unescape fallback', () => {
+    const bib = `@article{k1, title = {T}, file = {:C\\:\\Users\\name\\file.pdf:application/pdf}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.pdfHint).toBe('C:\\Users\\name\\file.pdf')
+  })
+})
+
+describe('parseReferences: BibTeX merged-author-name repair', () => {
+  it('splits a fully merged pair on the capitalization seam', () => {
+    const bib = `@article{k1, title = {T}, author = {Jan KeimAngelika Kaplan}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.authors).toEqual(['Jan Keim', 'Angelika Kaplan'])
+  })
+
+  it('repairs "and" that lost only its leading space', () => {
+    const bib = `@article{k1, title = {T}, author = {Jan Keimand Angelika Kaplan}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.authors).toEqual(['Jan Keim', 'Angelika Kaplan'])
+  })
+
+  it('repairs "and" that lost only its trailing space', () => {
+    const bib = `@article{k1, title = {T}, author = {Jan Keim andAngelika Kaplan}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.authors).toEqual(['Jan Keim', 'Angelika Kaplan'])
+  })
+
+  it('repairs a fully merged pair inside an otherwise well-formed "and" list', () => {
+    const bib = `@article{k1, title = {T}, author = {John SmithMary Jones and Bob Lee}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.authors).toEqual(['John Smith', 'Mary Jones', 'Bob Lee'])
+  })
+
+  it('leaves a normal well-formed "and" list untouched', () => {
+    const bib = `@article{k1, title = {T}, author = {Jane Doe and John Smith}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.authors).toEqual(['Jane Doe', 'John Smith'])
+  })
+
+  // "A wrong split is worse than a missed one" — every case below is a real
+  // name shape that must survive completely untouched, even though several
+  // of them share surface features with the merge patterns above (an
+  // internal capital, or a token ending in "and").
+  describe('does not split legitimate names', () => {
+    it('McDonald / MacLeod / MacArthur (Mc/Mac prefix)', () => {
+      const bib = `@article{k1, title = {T}, author = {Alice McDonald and Bob MacLeod and Carol MacArthur}}`
+      const [entry] = parseReferences(bib, 'refs.bib')
+      expect(entry.authors).toEqual(['Alice McDonald', 'Bob MacLeod', 'Carol MacArthur'])
+    })
+
+    it("O'Brien / D'Angelo (apostrophe before the capital)", () => {
+      const bib = `@article{k1, title = {T}, author = {Sean O'Brien and Maria D'Angelo}}`
+      const [entry] = parseReferences(bib, 'refs.bib')
+      expect(entry.authors).toEqual(["Sean O'Brien", "Maria D'Angelo"])
+    })
+
+    it('DeSilva / DiCaprio / LaSalle / VanDyke / DuBois (internal-capital prefixes)', () => {
+      const bib = `@article{k1, title = {T}, author = {A DeSilva and B DiCaprio and C LaSalle and D VanDyke and E DuBois}}`
+      const [entry] = parseReferences(bib, 'refs.bib')
+      expect(entry.authors).toEqual(['A DeSilva', 'B DiCaprio', 'C LaSalle', 'D VanDyke', 'E DuBois'])
+    })
+
+    it('van der Berg / von Neumann / de la Cruz (lowercase particles)', () => {
+      const bib = `@article{k1, title = {T}, author = {Jan van der Berg and John von Neumann and Maria de la Cruz}}`
+      const [entry] = parseReferences(bib, 'refs.bib')
+      expect(entry.authors).toEqual(['Jan van der Berg', 'John von Neumann', 'Maria de la Cruz'])
+    })
+
+    it('initials (J.K. Rowling / A.B. Author)', () => {
+      const bib = `@article{k1, title = {T}, author = {J.K. Rowling and A.B. Author}}`
+      const [entry] = parseReferences(bib, 'refs.bib')
+      expect(entry.authors).toEqual(['J.K. Rowling', 'A.B. Author'])
+    })
+
+    it('all-caps / acronym-ish surnames', () => {
+      const bib = `@article{k1, title = {T}, author = {John NASA and Jane IBM}}`
+      const [entry] = parseReferences(bib, 'refs.bib')
+      expect(entry.authors).toEqual(['John NASA', 'Jane IBM'])
+    })
+
+    it('hyphenated names', () => {
+      const bib = `@article{k1, title = {T}, author = {Mary Smith-Jones and Paul Taylor-Wood}}`
+      const [entry] = parseReferences(bib, 'refs.bib')
+      expect(entry.authors).toEqual(['Mary Smith-Jones', 'Paul Taylor-Wood'])
+    })
+
+    it('a real name ending in "and" (Roland) is not treated as a merged "and" separator', () => {
+      const bib = `@article{k1, title = {T}, author = {Jan Roland Meyer}}`
+      const [entry] = parseReferences(bib, 'refs.bib')
+      expect(entry.authors).toEqual(['Jan Roland Meyer'])
+    })
+
+    it('another real name ending in "and" (Armand), single author with no trailing name', () => {
+      const bib = `@article{k1, title = {T}, author = {Jan Armand Dubois}}`
+      const [entry] = parseReferences(bib, 'refs.bib')
+      expect(entry.authors).toEqual(['Jan Armand Dubois'])
+    })
+  })
+})
+
+describe('parseReferences: RIS with LaTeX escapes', () => {
+  it('unescapes LaTeX in RIS title and author fields (a .bib exported/converted to .ris)', () => {
+    const ris = ['TY  - JOUR', 'TI  - Bj\\"orn\\\'s Th\\`eorie', 'AU  - Bj\\"orn Fischer', 'ER  - '].join(
+      '\n',
+    )
+    const [entry] = parseReferences(ris, 'refs.ris')
+    expect(entry.authors).toEqual(['Björn Fischer'])
+    expect(entry.title).toBe("Björn's Thèorie")
+  })
+
+  it('does not run the merged-author-name repair on RIS (AU is already one author per line)', () => {
+    const ris = ['TY  - JOUR', 'TI  - T', 'AU  - KeimAngelika Kaplan', 'ER  - '].join('\n')
+    const [entry] = parseReferences(ris, 'refs.ris')
+    // Left exactly as given — RIS authors are structurally separated already,
+    // so treating this as a merge would be guessing at something that (per
+    // the format) shouldn't be ambiguous in the first place.
+    expect(entry.authors).toEqual(['KeimAngelika Kaplan'])
+  })
+
+  it('does not run LaTeX-unescape on RIS DOI/URL fields (identifiers/paths, not prose)', () => {
+    const ris = [
+      'TY  - JOUR',
+      'TI  - T',
+      'L1  - C:\\Users\\name\\file.pdf',
+      'ER  - ',
+    ].join('\n')
+    const [entry] = parseReferences(ris, 'refs.ris')
+    expect(entry.pdfHint).toBe('C:\\Users\\name\\file.pdf')
+  })
+})
+
 describe('parseReferences: RIS', () => {
   it('parses a well-formed record', () => {
     const ris = [
