@@ -166,6 +166,16 @@ describe('validateDraft', () => {
     const issues = validateDraft(draft([node('X', { kind: 'string' })], papers))
     expect(issues.join(' ')).toMatch(/duplicate paper id/i)
   })
+
+  it('reports a paper with no PDF attached as a clear per-paper issue, not a schema error', () => {
+    // A reference-import row before the user has attached a PDF: everything
+    // else is filled in, only `pdf` is empty — the draft must tolerate that
+    // (it is not written to disk this way; save() blocks on this issue).
+    const paper = makePaperFromPdf('a.pdf', 'a.pdf', undefined, new Set())
+    paper.pdf = ''
+    const issues = validateDraft(draft([node('X', { kind: 'string' })], [paper]))
+    expect(issues).toEqual(['Paper 1 has no PDF attached.'])
+  })
 })
 
 describe('makePaperFromPdf', () => {

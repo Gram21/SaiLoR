@@ -3,7 +3,8 @@ import { immer } from 'zustand/middleware/immer'
 import { z } from 'zod'
 import { projectSchema, resolveSchema, SchemaError, type AnnotationDef } from '../model/schema'
 import { extractPdfMeta } from '../model/pdfMeta'
-import { getPlatform, type OpenedProject, type ProjectLocation } from '../platform'
+import { parseReferences, pdfHintFileName, type RefEntry } from '../model/references'
+import { getPlatform, type OpenedProject, type PickedPdf, type ProjectLocation } from '../platform'
 import { useStore } from './store'
 
 /**
@@ -262,6 +263,81 @@ export function makePaperFromPdf(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Importing references (BibTeX / RIS / CSL-JSON)
+// ---------------------------------------------------------------------------
+
+/** Lowercased, whitespace-collapsed, punctuation-stripped — for matching titles
+ *  across sources that differ only in casing/spacing/punctuation. */
+function normalizeTitleForMatch(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * The existing paper a parsed reference refers to, if any. DOI is the strong
+ * signal (exact, case-insensitive); a normalized-title match is the fallback
+ * for entries with no DOI, or when the two sources disagree on one.
+ */
+export function findMatchingPaper(papers: EditorPaper[], entry: RefEntry): EditorPaper | undefined {
+  if (entry.doi) {
+    const doi = entry.doi.trim().toLowerCase()
+    const byDoi = papers.find((p) => p.doi.trim().toLowerCase() === doi)
+    if (byDoi) return byDoi
+  }
+  const title = normalizeTitleForMatch(entry.title)
+  if (!title) return undefined
+  return papers.find((p) => normalizeTitleForMatch(p.title) === title)
+}
+
+/** A new row for a reference with no matching paper. No PDF is attached yet —
+ *  `pdfHint`'s file name is a placeholder the user (or a later "Add PDFs…") fills in. */
+export function makePaperFromRef(entry: RefEntry, existingIds: Set<string>): EditorPaper {
+  const base = entry.title || 'paper'
+  let id = paperIdFromName(base)
+  let n = 2
+  while (existingIds.has(id)) id = `${paperIdFromName(base)}-${n++}`
+  return {
+    uid: nextUid(),
+    id,
+    title: entry.title,
+    authors: entry.authors.join(', '),
+    doi: entry.doi ?? '',
+    pdf: entry.pdfHint ? pdfHintFileName(entry.pdfHint) : '',
+    annotations: {},
+  }
+}
+
+/** Fill in `match`'s empty fields from `entry`; never overwrites something the
+ *  reviewer (or an earlier import) already put there. Returns whether anything changed. */
+function fillFromRef(match: EditorPaper, entry: RefEntry): boolean {
+  let changed = false
+  if (!match.title.trim() && entry.title) {
+    match.title = entry.title
+    changed = true
+  }
+  if (!match.authors.trim() && entry.authors.length > 0) {
+    match.authors = entry.authors.join(', ')
+    changed = true
+  }
+  if (!match.doi.trim() && entry.doi) {
+    match.doi = entry.doi
+    changed = true
+  }
+  return changed
+}
+
+function summarizeImport(total: number, updated: number, unchanged: number): string {
+  const parts: string[] = []
+  if (updated > 0) parts.push(`${updated} updated existing paper${updated === 1 ? '' : 's'}`)
+  if (unchanged > 0) parts.push(`${unchanged} already complete`)
+  const detail = parts.length > 0 ? ` (${parts.join(', ')})` : ''
+  return `Imported ${total} reference${total === 1 ? '' : 's'}${detail}.`
+}
+
 /** Assemble the raw JSON object the editor writes. */
 export function buildProjectJson(state: {
   version: number
@@ -321,7 +397,7 @@ export function validateDraft(state: {
   state.papers.forEach((p, i) => {
     if (!p.id.trim()) errors.push(`Paper ${i + 1}: missing id.`)
     if (!p.title.trim()) errors.push(`Paper ${i + 1}: missing title.`)
-    if (!p.pdf.trim()) errors.push(`Paper ${i + 1}: missing PDF path.`)
+    if (!p.pdf.trim()) errors.push(`Paper ${i + 1} has no PDF attached.`)
   })
   const ids = state.papers.map((p) => p.id.trim()).filter(Boolean)
   const dupes = ids.filter((id, i) => ids.indexOf(id) !== i)
@@ -379,6 +455,13 @@ interface EditorState {
   notice: string | null
   /** How many just-added PDFs are still being read for their title/authors. */
   extracting: number
+  /**
+   * Papers added in this session that the reviewer hasn't looked at yet, keyed
+   * by `uid`. Mirrors the annotation store's `aiMarks`: session-only, not part
+   * of `EditorSnapshot`/undo (an add already has its own undo step; unmarking
+   * one is not a meaningful edit to revert to), and never written to the file.
+   */
+  justAdded: Record<string, true>
   /** Undo/redo history of draft edits (session-only). */
   past: EditorSnapshot[]
   future: EditorSnapshot[]
@@ -399,6 +482,10 @@ interface EditorState {
   toggleCollapsed: (uid: string) => void
 
   addPdfs: () => Promise<void>
+  addPdfFolder: () => Promise<void>
+  importReferences: () => Promise<void>
+  /** The reviewer has looked at this row; drop its "just added" highlight. */
+  confirmAdded: (uid: string) => void
   updatePaper: (uid: string, patch: Partial<EditorPaper>) => void
   removePaper: (uid: string) => void
   movePaper: (dragUid: string, targetUid: string, position: 'before' | 'after') => void
@@ -516,6 +603,7 @@ function openEditorSession(s: EditorState, st: OpenedEditorState): void {
   s.issues = []
   s.notice = null
   s.extracting = 0
+  s.justAdded = {}
   s.past = []
   s.future = []
 }
@@ -530,7 +618,81 @@ function openError(err: unknown): EditorError {
 }
 
 export const useEditorStore = create<EditorState>()(
-  immer((set, get) => ({
+  immer((set, get) => {
+    /**
+     * Shared by `addPdfs` and `addPdfFolder` — they differ only in how the
+     * PDFs are picked. Skips PDFs the project already references, creates a
+     * row per new one with a name-derived placeholder, marks each "just
+     * added", then reads title/authors from each in the background without
+     * clobbering anything the user typed while that read was in flight.
+     */
+    const addPickedPdfs = async (picked: PickedPdf[]) => {
+      if (picked.length === 0) return
+      const platform = getPlatform()
+      const rel = await platform.relativePdfPaths(picked, get().location)
+
+      // Skip PDFs the project already references. Match on the absolute path
+      // when we have one, and on the stored relative path otherwise — so
+      // re-picking the same file, or one already listed in an edited project,
+      // doesn't create a second entry.
+      const seen = new Set(get().papers.flatMap(pdfKeys))
+      const fresh: { uid: string; placeholder: string; read?: () => Promise<ArrayBuffer> }[] = []
+      const skipped: string[] = []
+      const snap = snapshotOf(get())
+      lastEditKey = null
+
+      set((s) => {
+        pushPast(s, snap)
+        const ids = new Set(s.papers.map((p) => p.id))
+        picked.forEach((pdf, i) => {
+          const relPath = rel[i] ?? pdf.name
+          if ((pdf.path && seen.has(pdf.path)) || seen.has(relPath)) {
+            skipped.push(pdf.name)
+            return
+          }
+          if (pdf.path) seen.add(pdf.path)
+          seen.add(relPath)
+          const paper = makePaperFromPdf(pdf.name, relPath, pdf.path, ids)
+          ids.add(paper.id)
+          s.papers.push(paper)
+          s.justAdded[paper.uid] = true
+          fresh.push({ uid: paper.uid, placeholder: paper.title, read: pdf.read })
+        })
+        if (fresh.length > 0) s.dirty = true
+        s.notice =
+          skipped.length > 0
+            ? `Already in the project, skipped: ${skipped.join(', ')}`
+            : null
+        s.extracting += fresh.length
+      })
+
+      // Read each PDF's title/authors in the background: the rows are already on
+      // screen with a name-derived placeholder, so this only improves them.
+      await Promise.all(
+        fresh.map(async (entry) => {
+          try {
+            const meta = entry.read ? await extractPdfMeta(await entry.read()) : {}
+            set((s) => {
+              const paper = s.papers.find((p) => p.uid === entry.uid)
+              if (!paper) return
+              // Don't clobber anything the user typed while we were reading.
+              if (meta.title && paper.title === entry.placeholder) paper.title = meta.title
+              if (meta.authors?.length && !paper.authors.trim()) {
+                paper.authors = meta.authors.join(', ')
+              }
+            })
+          } catch {
+            // Unreadable PDF — keep the name-derived placeholder.
+          } finally {
+            set((s) => {
+              s.extracting = Math.max(0, s.extracting - 1)
+            })
+          }
+        }),
+      )
+    }
+
+    return {
     open: false,
     mode: 'new',
     location: null,
@@ -546,6 +708,7 @@ export const useEditorStore = create<EditorState>()(
     issues: [],
     notice: null,
     extracting: 0,
+    justAdded: {},
     past: [],
     future: [],
 
@@ -570,6 +733,7 @@ export const useEditorStore = create<EditorState>()(
         s.issues = []
         s.notice = null
         s.extracting = 0
+        s.justAdded = {}
         s.past = []
         s.future = []
       })
@@ -647,6 +811,7 @@ export const useEditorStore = create<EditorState>()(
         s.error = null
         s.issues = []
         s.notice = null
+        s.justAdded = {}
       }),
 
     clearError: () =>
@@ -777,69 +942,57 @@ export const useEditorStore = create<EditorState>()(
       }),
 
     addPdfs: async () => {
-      const platform = getPlatform()
-      const picked = await platform.pickPdfs()
-      if (picked.length === 0) return
-      const rel = await platform.relativePdfPaths(picked, get().location)
+      await addPickedPdfs(await getPlatform().pickPdfs())
+    },
 
-      // Skip PDFs the project already references. Match on the absolute path
-      // when we have one, and on the stored relative path otherwise — so
-      // re-picking the same file, or one already listed in an edited project,
-      // doesn't create a second entry.
-      const seen = new Set(get().papers.flatMap(pdfKeys))
-      const fresh: { uid: string; placeholder: string; read?: () => Promise<ArrayBuffer> }[] = []
-      const skipped: string[] = []
+    addPdfFolder: async () => {
+      await addPickedPdfs(await getPlatform().pickPdfFolder())
+    },
+
+    importReferences: async () => {
+      const picked = await getPlatform().pickReferenceFile()
+      if (!picked) return
+      const entries = parseReferences(picked.text, picked.name)
+      if (entries.length === 0) {
+        set((s) => {
+          s.notice = `No references could be read from ${picked.name}.`
+        })
+        return
+      }
+
       const snap = snapshotOf(get())
       lastEditKey = null
+      let updated = 0
+      let unchanged = 0
 
       set((s) => {
         pushPast(s, snap)
         const ids = new Set(s.papers.map((p) => p.id))
-        picked.forEach((pdf, i) => {
-          const relPath = rel[i] ?? pdf.name
-          if ((pdf.path && seen.has(pdf.path)) || seen.has(relPath)) {
-            skipped.push(pdf.name)
-            return
+        for (const entry of entries) {
+          const match = findMatchingPaper(s.papers, entry)
+          if (match) {
+            if (fillFromRef(match, entry)) updated++
+            else unchanged++
+            continue
           }
-          if (pdf.path) seen.add(pdf.path)
-          seen.add(relPath)
-          const paper = makePaperFromPdf(pdf.name, relPath, pdf.path, ids)
+          const paper = makePaperFromRef(entry, ids)
           ids.add(paper.id)
           s.papers.push(paper)
-          fresh.push({ uid: paper.uid, placeholder: paper.title, read: pdf.read })
-        })
-        if (fresh.length > 0) s.dirty = true
-        s.notice =
-          skipped.length > 0
-            ? `Already in the project, skipped: ${skipped.join(', ')}`
-            : null
-        s.extracting += fresh.length
+          s.justAdded[paper.uid] = true
+        }
+        if (updated > 0 || entries.length > updated + unchanged) s.dirty = true
+        s.notice = summarizeImport(entries.length, updated, unchanged)
       })
+    },
 
-      // Read each PDF's title/authors in the background: the rows are already on
-      // screen with a name-derived placeholder, so this only improves them.
-      await Promise.all(
-        fresh.map(async (entry) => {
-          try {
-            const meta = entry.read ? await extractPdfMeta(await entry.read()) : {}
-            set((s) => {
-              const paper = s.papers.find((p) => p.uid === entry.uid)
-              if (!paper) return
-              // Don't clobber anything the user typed while we were reading.
-              if (meta.title && paper.title === entry.placeholder) paper.title = meta.title
-              if (meta.authors?.length && !paper.authors.trim()) {
-                paper.authors = meta.authors.join(', ')
-              }
-            })
-          } catch {
-            // Unreadable PDF — keep the name-derived placeholder.
-          } finally {
-            set((s) => {
-              s.extracting = Math.max(0, s.extracting - 1)
-            })
-          }
-        }),
-      )
+    confirmAdded: (uid) => {
+      // Focusing a row that was never marked is the common case (every field
+      // focus in an untouched paper list calls this) — don't churn the store
+      // for a mark that isn't there.
+      if (!get().justAdded[uid]) return
+      set((s) => {
+        delete s.justAdded[uid]
+      })
     },
 
     updatePaper: (uid, patch) => {
@@ -944,6 +1097,7 @@ export const useEditorStore = create<EditorState>()(
           if (s.location) s.location.handle = handle
           // Saving only writes the file — the user stays in the editor.
           s.notice = `Saved to ${st.location?.name ?? 'the project file'}`
+          s.justAdded = {}
         })
         // The project's title may have just changed, and the recents list shows
         // it — re-read so closing the editor doesn't reveal the old one.
@@ -978,5 +1132,6 @@ export const useEditorStore = create<EditorState>()(
       })
       return true
     },
-  })),
+    }
+  }),
 )

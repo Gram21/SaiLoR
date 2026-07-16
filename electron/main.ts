@@ -12,7 +12,7 @@ import {
   shell,
 } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { readFile, writeFile, access } from 'node:fs/promises'
+import { readFile, writeFile, access, readdir } from 'node:fs/promises'
 import { constants, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 
@@ -411,6 +411,48 @@ ipcMain.handle('pdf:pick', async () => {
   })
   if (res.canceled) return []
   return res.filePaths
+})
+
+/** Every `.pdf` under `dir`, recursively. A directory that can't be read (permissions,
+ *  a symlink loop) is skipped rather than failing the whole walk. */
+async function collectPdfsRecursive(dir: string): Promise<string[]> {
+  const out: string[] = []
+  async function walk(d: string) {
+    let entries
+    try {
+      entries = await readdir(d, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const entry of entries) {
+      const full = path.join(d, entry.name)
+      if (entry.isDirectory()) await walk(full)
+      else if (entry.isFile() && /\.pdf$/i.test(entry.name)) out.push(full)
+    }
+  }
+  await walk(dir)
+  return out
+}
+
+ipcMain.handle('pdf:pickFolder', async () => {
+  const res = await dialog.showOpenDialog({
+    title: 'Add a folder of PDFs',
+    properties: ['openDirectory'],
+  })
+  if (res.canceled || res.filePaths.length === 0) return []
+  return collectPdfsRecursive(res.filePaths[0])
+})
+
+ipcMain.handle('reference:pick', async () => {
+  const res = await dialog.showOpenDialog({
+    title: 'Import references',
+    filters: [{ name: 'Reference files', extensions: ['bib', 'ris', 'json'] }],
+    properties: ['openFile'],
+  })
+  if (res.canceled || res.filePaths.length === 0) return null
+  const filePath = res.filePaths[0]
+  const text = await readFile(filePath, 'utf-8')
+  return { text, name: path.basename(filePath) }
 })
 
 /**

@@ -15,7 +15,11 @@ export function PapersEditor() {
   const papers = useEditorStore((s) => s.papers)
   const location = useEditorStore((s) => s.location)
   const busy = useEditorStore((s) => s.busy)
+  const justAdded = useEditorStore((s) => s.justAdded)
   const addPdfs = useEditorStore((s) => s.addPdfs)
+  const addPdfFolder = useEditorStore((s) => s.addPdfFolder)
+  const importReferences = useEditorStore((s) => s.importReferences)
+  const confirmAdded = useEditorStore((s) => s.confirmAdded)
   const removePaper = useEditorStore((s) => s.removePaper)
   const movePaper = useEditorStore((s) => s.movePaper)
 
@@ -59,10 +63,18 @@ export function PapersEditor() {
     clearDrag()
   }
 
-  const addButton = (
-    <button type="button" className="primary" disabled={busy} onClick={() => void addPdfs()}>
-      + Add PDFs…
-    </button>
+  const actionButtons = (
+    <div className="papers-actions">
+      <button type="button" className="primary" disabled={busy} onClick={() => void addPdfs()}>
+        + Add PDFs…
+      </button>
+      <button type="button" disabled={busy} onClick={() => void addPdfFolder()}>
+        + Add folder…
+      </button>
+      <button type="button" disabled={busy} onClick={() => void importReferences()}>
+        Import references…
+      </button>
+    </div>
   )
 
   return (
@@ -71,7 +83,7 @@ export function PapersEditor() {
         <h3 className="papers-title">
           Papers <span className="papers-count">({papers.length})</span>
         </h3>
-        {papers.length > 0 && addButton}
+        {papers.length > 0 && actionButtons}
       </header>
 
       {isBrowser && (
@@ -86,16 +98,17 @@ export function PapersEditor() {
           <p>No PDFs yet.</p>
           <p className="papers-empty-note">
             PDFs are referenced by a path relative to {jsonName}, so the project stays portable as
-            long as the PDFs travel with it.
+            long as the PDFs travel with it. A reference manager export can fill in the details —
+            attach matching PDFs afterward.
           </p>
-          {addButton}
+          {actionButtons}
         </div>
       ) : (
         <ul className="papers-list">
           {papers.map((paper, i) => (
             <li
               key={paper.uid}
-              className={rowClass(paper.uid, dragUid, dropTarget)}
+              className={rowClass(paper.uid, dragUid, dropTarget, Boolean(justAdded[paper.uid]))}
               draggable={armedUid === paper.uid}
               onDragStart={(e) => onDragStart(e, paper.uid)}
               onDragOver={(e) => onDragOver(e, paper.uid)}
@@ -113,7 +126,11 @@ export function PapersEditor() {
                 ⠿
               </span>
               <span className="papers-index">{i + 1}.</span>
-              <PaperFields paper={paper} onRemove={() => removePaper(paper.uid)} />
+              <PaperFields
+                paper={paper}
+                onRemove={() => removePaper(paper.uid)}
+                onInteract={() => confirmAdded(paper.uid)}
+              />
             </li>
           ))}
         </ul>
@@ -122,8 +139,14 @@ export function PapersEditor() {
   )
 }
 
-function rowClass(uid: string, dragUid: string | null, dropTarget: DropTarget | null): string {
+function rowClass(
+  uid: string,
+  dragUid: string | null,
+  dropTarget: DropTarget | null,
+  justAdded: boolean,
+): string {
   const classes = ['papers-row']
+  if (justAdded) classes.push('just-added')
   if (uid === dragUid) classes.push('dragging')
   if (dropTarget?.uid === uid && uid !== dragUid) {
     classes.push(dropTarget.position === 'before' ? 'drag-over-before' : 'drag-over-after')
@@ -134,10 +157,12 @@ function rowClass(uid: string, dragUid: string | null, dropTarget: DropTarget | 
 interface PaperFieldsProps {
   paper: EditorPaper
   onRemove: () => void
+  /** The reviewer reached this row — drop its "just added" highlight. */
+  onInteract: () => void
 }
 
 /** The editable fields of one paper. */
-function PaperFields({ paper, onRemove }: PaperFieldsProps) {
+function PaperFields({ paper, onRemove, onInteract }: PaperFieldsProps) {
   const updatePaper = useEditorStore((s) => s.updatePaper)
   const patch = (p: Partial<EditorPaper>) => updatePaper(paper.uid, p)
 
@@ -150,6 +175,7 @@ function PaperFields({ paper, onRemove }: PaperFieldsProps) {
             type="text"
             className="papers-input"
             value={paper.title}
+            onFocus={onInteract}
             onChange={(e) => patch({ title: e.target.value })}
           />
         </label>
@@ -173,6 +199,7 @@ function PaperFields({ paper, onRemove }: PaperFieldsProps) {
             type="text"
             className="papers-input mono small"
             value={paper.id}
+            onFocus={onInteract}
             onChange={(e) => patch({ id: e.target.value })}
           />
         </label>
@@ -184,6 +211,7 @@ function PaperFields({ paper, onRemove }: PaperFieldsProps) {
             type="text"
             className="papers-input"
             value={paper.doi}
+            onFocus={onInteract}
             onChange={(e) => patch({ doi: e.target.value })}
           />
         </label>
@@ -194,6 +222,7 @@ function PaperFields({ paper, onRemove }: PaperFieldsProps) {
             className="papers-input"
             placeholder="Author One, Author Two"
             value={paper.authors}
+            onFocus={onInteract}
             onChange={(e) => patch({ authors: e.target.value })}
           />
         </label>
@@ -205,6 +234,7 @@ function PaperFields({ paper, onRemove }: PaperFieldsProps) {
           type="text"
           className="papers-input mono"
           value={paper.pdf}
+          onFocus={onInteract}
           onChange={(e) => patch({ pdf: e.target.value })}
         />
       </label>
