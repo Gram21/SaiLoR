@@ -26,6 +26,10 @@ contextBridge.exposeInMainWorld('slr', {
     ipcRenderer.invoke('paths:relative', fromFile, toFiles),
   rebasePaths: (fromFile: string, toFile: string, rels: string[]) =>
     ipcRenderer.invoke('paths:rebase', fromFile, toFile, rels),
+  absolutePaths: (fromFile: string, rels: string[]) =>
+    ipcRenderer.invoke('paths:absolute', fromFile, rels),
+  siblingPath: (sourceFile: string, fileName: string) =>
+    ipcRenderer.invoke('paths:sibling', sourceFile, fileName),
 
   // AI-assisted annotation. Note what is NOT here: any way to read an API key
   // back out. The renderer can store one and use one, but never see one.
