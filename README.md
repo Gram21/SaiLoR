@@ -32,9 +32,6 @@ npm run dev
 npm run dev:electron
 ```
 
-Open the bundled example from the browser dev server via:
-`http://localhost:5173/?project=/samples/project.example.json`
-
 ## Installing a release
 
 Grab the file for your system from the [releases page](https://github.com/Gram21/SaiLoR/releases):
