@@ -131,6 +131,12 @@ function AnnotateHelp() {
           once hidden, the same button in the top bar brings it back.
         </li>
         <li>
+          <strong>Search the list</strong> with the box above it. The <em>🔎 / 🏷</em> button next
+          to it switches what the search box matches: <em>🔎</em> searches title, authors, and
+          DOI (the default); <em>🏷</em> instead searches the <strong>annotation content</strong>
+          you have already recorded — handy for "which papers did I mark as X".
+        </li>
+        <li>
           <strong>Read the PDF</strong> in the middle pane; its text is selectable. Use{' '}
           <strong>{MOD}+F</strong> to search within it. After following an internal link (e.g. a
           reference), the <em>↩ / ↪</em> buttons jump back to where you were and forward again.

@@ -204,8 +204,10 @@ body.resizing * {
 }
 .paper-search {
   display: flex;
+  gap: 6px;
 }
 .paper-search-input {
+  flex: 1 1 auto;
   width: 100%;
   min-width: 0;
   padding: 5px 9px;
@@ -219,6 +221,12 @@ body.resizing * {
 .paper-search-input:focus {
   outline: 2px solid var(--accent-weak);
   border-color: var(--accent);
+}
+/* Toggles which text a query matches against (title/authors/DOI vs.
+   annotation values). Reuses .icon-btn.active for the "on" state so it
+   matches the rest of the app's toggle buttons (e.g. the PDF search icon). */
+.paper-search-mode {
+  flex: 0 0 auto;
 }
 .paper-list-empty {
   padding: 16px 12px;
