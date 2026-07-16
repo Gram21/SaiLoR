@@ -28,7 +28,7 @@ The first `dev:electron` after a fresh `npm ci` prints `Downloading Electron bin
 
 ### npm install-script approval
 
-npm ≥ 11.17 blocks dependency install scripts until they are approved, and records the approvals in `package.json` under `allowScripts`. Only **esbuild** is approved (it downloads its native binary; Vite needs it). `canvas` — the native dependency `pdfjs-dist` pulls in but the app never loads, and which is excluded from the packaged build — is deliberately left blocked. If a fresh clone fails with a missing esbuild binary, run `npm approve-scripts --allow-scripts-pending` to see what is pending. Older npm ignores the field and runs everything, so CI (Node 22) is unaffected.
+npm ≥ 11.17 blocks dependency install scripts until they are approved, and records the approvals in `package.json` under `allowScripts`. Only **esbuild** is approved (it downloads its native binary; Vite needs it). `canvas` — the native dependency `pdfjs-dist` pulls in but the app never loads, and which is excluded from the packaged build — is deliberately left blocked. If a fresh clone fails with a missing esbuild binary, run `npm approve-scripts --allow-scripts-pending` to see what is pending. Older npm ignores the field and runs everything, so CI (Node 24) is unaffected.
 
 ### Dev in Docker (optional)
 

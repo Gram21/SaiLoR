@@ -33,7 +33,7 @@ jobs:
     if: ${{ !contains(github.event.head_commit.message, '[wiki-sync]') }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Clone the wiki
         env:

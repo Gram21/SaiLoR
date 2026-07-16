@@ -28,7 +28,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.sender.login != 'github-actions[bot]' }}
     steps:
       - name: Check out main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
 

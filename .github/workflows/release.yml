@@ -31,12 +31,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Build packaged Electron app
@@ -46,7 +46,7 @@ jobs:
       # Keep a copy on the workflow run so a manual (workflow_dispatch) build is
       # still downloadable even though there is no release to attach it to.
       - name: Upload build artifacts to the workflow run
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sailor-${{ matrix.os }}
           path: ${{ matrix.artifacts }}
