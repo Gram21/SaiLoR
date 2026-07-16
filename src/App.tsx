@@ -9,6 +9,7 @@ import { AnnotationPanel } from './components/AnnotationPanel'
 import { ErrorPanel } from './components/ErrorPanel'
 import { HelpDialog } from './components/HelpDialog'
 import { ValidationDialog } from './components/ValidationDialog'
+import { ConsolidationDialog } from './components/ConsolidationDialog'
 import { ClosePrompt } from './components/ClosePrompt'
 import { AiDialog } from './components/AiDialog'
 import { LlmSettingsDialog } from './components/LlmSettingsDialog'
@@ -211,6 +212,7 @@ export function App() {
       <ErrorPanel />
       <HelpDialog />
       <ValidationDialog />
+      <ConsolidationDialog />
       <ClosePrompt />
       <AiDialog />
       <LlmSettingsDialog />

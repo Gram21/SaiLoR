@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import { getPlatform } from '../platform'
-import { useStore, type AiApplyResult } from './store'
+import { useStore, currentTree, type AiApplyResult } from './store'
 import { unansweredFields, type FieldTarget } from '../llm/fields'
 import { buildSystemPrompt, buildUserText, buildUserPdfCaption } from '../llm/prompt'
 import { buildRequest, extractText, extractError, wasTruncated, PROVIDERS } from '../llm/providers'
@@ -152,6 +152,14 @@ export const useAiStore = create<AiState>()(
       // is a second line of defense, not the primary gate — see `aiUnlocked` in
       // store.ts and the hidden gesture in Toolbar.tsx.
       if (!app.aiUnlocked || !app.project.aiEnabled) return
+      // Multi-reviewer, nobody picked yet: there is no active tree to propose
+      // values into (the button is disabled in this state too, see AnnotationPanel).
+      if (app.project.reviewers > 1 && app.currentReviewer === null) return
+      // Whichever reviewer is active is who the AI proposes values *for* —
+      // their own empty fields, not the consolidated result's, unless they
+      // are Consolidation (see `currentTree`).
+      const tree = currentTree(app.project, app.currentReviewer, paper)
+      if (!tree) return
 
       set((s) => {
         s.open = true
@@ -162,7 +170,7 @@ export const useAiStore = create<AiState>()(
         s.applied = null
         s.scanned = false
         s.elapsed = 0
-        s.targets = unansweredFields(app.project!.schema, paper.annotations)
+        s.targets = unansweredFields(app.project!.schema, tree)
       })
       await get().refreshConfigs()
     },

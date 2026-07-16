@@ -60,6 +60,8 @@ export function Toolbar() {
   const saveHandle = useStore((s) => s.saveHandle)
   const setHelpOpen = useStore((s) => s.setHelpOpen)
   const unlockAi = useStore((s) => s.unlockAi)
+  const currentReviewer = useStore((s) => s.currentReviewer)
+  const selectReviewer = useStore((s) => s.selectReviewer)
 
   // A ref, not state: counting must not trigger a render, or the title (and
   // anything watching it) would visibly react to being clicked before the
@@ -73,6 +75,10 @@ export function Toolbar() {
   }
 
   const modKey = getPlatform().kind === 'electron' && isMac() ? '⌘' : 'Ctrl'
+
+  const reviewerCount = project?.reviewers ?? 1
+  const showReviewerSwitch = !!project && reviewerCount > 1
+  const reviewerUnset = showReviewerSwitch && currentReviewer === null
 
   const openItems: MenuItem[] = [
     { type: 'item', label: 'Open file…', shortcut: `${modKey}+O`, onSelect: () => void openProject() },
@@ -132,11 +138,15 @@ export function Toolbar() {
         <Dropdown label="Save" title="Save the project" disabled={busy} items={saveItems} />
         <button
           type="button"
-          title="Check every paper's annotations against the schema"
+          title={
+            reviewerUnset
+              ? 'Pick a reviewer first — there is nothing to validate as "the reviewer" yet'
+              : "Check every paper's annotations against the schema"
+          }
           onClick={runValidation}
           // Validation is about the annotations, so it means nothing while the
-          // project editor is open.
-          disabled={!project || busy || editorOpen}
+          // project editor is open, or before a reviewer has been picked.
+          disabled={!project || busy || editorOpen || reviewerUnset}
         >
           Validate
         </button>
@@ -149,6 +159,42 @@ export function Toolbar() {
           Close
         </button>
       </div>
+
+      {/* Only a multi-reviewer project shows this — a single-reviewer one has
+          nobody to switch between. Which "seat" is active must be unmistakable,
+          since it decides which tree every edit lands in. */}
+      {showReviewerSwitch && !editorOpen && (
+        <div
+          className={`reviewer-switch${reviewerUnset ? ' unselected' : ''}`}
+          role="group"
+          aria-label="Reviewer"
+        >
+          {reviewerUnset && <span className="reviewer-switch-prompt">Pick a reviewer:</span>}
+          {Array.from({ length: reviewerCount }, (_, i) => String(i + 1)).map((rid) => (
+            <button
+              key={rid}
+              type="button"
+              className={`reviewer-btn${currentReviewer === rid ? ' active' : ''}`}
+              title={`Reviewer ${rid} — annotate independently; only you see this until Consolidation`}
+              disabled={busy}
+              onClick={() => selectReviewer(rid)}
+            >
+              {rid}
+            </button>
+          ))}
+          <button
+            type="button"
+            className={`reviewer-btn reviewer-btn-consolidation${
+              currentReviewer === 'consolidation' ? ' active' : ''
+            }`}
+            title="Consolidation — compare every reviewer's answers and record the final, agreed result. This is what the project's saved output actually contains."
+            disabled={busy}
+            onClick={() => selectReviewer('consolidation')}
+          >
+            Consolidation
+          </button>
+        </div>
+      )}
 
       {/* The file name sits just left of the view controls; it carries the auto
           margin that pushes both to the right edge. */}

@@ -27,6 +27,7 @@ function paper(annotations: AnnotationValueTree, over: Partial<Paper> = {}): Pap
     authors: [],
     pdf: 'pdfs/one.pdf',
     annotations,
+    reviews: {},
     aiUsage: [],
     extra: {},
     ...over,
@@ -301,7 +302,7 @@ describe('malformed trees', () => {
 
 describe('validateProject', () => {
   function project(papers: Paper[]): Project {
-    return { version: 1, schema: sampleSchema, aiEnabled: true, papers, extra: {} }
+    return { version: 1, schema: sampleSchema, aiEnabled: true, reviewers: 1, papers, extra: {} }
   }
 
   function unannotatedIds(list: UnannotatedPaper[]): string[] {

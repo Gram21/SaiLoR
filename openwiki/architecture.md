@@ -100,7 +100,9 @@ The entire app state lives in a single Zustand store with immer middleware:
 | `recents` | `RecentEntry[]` | Recently opened projects (max 5, from `platform.getRecents()`) |
 | `helpOpen` | `boolean` | Help dialog visibility |
 | `past` / `future` | `HistoryEntry[]` | Undo/redo stacks for annotation edits (session-only, capped at 100). Each entry is `{ project, paperId }`; thanks to immer's structural sharing, snapshots are cheap references |
-| `aiMarks` | `Record<string, true>` | Fields the AI filled and the reviewer has not looked at yet, keyed `` `${paperId}::${canonicalPath}` `` (see "AI marks" below). Session-only: it lives *beside* the project, so `serializeProject` cannot see it |
+| `aiMarks` | `Record<string, true>` | Fields the AI filled and the reviewer has not looked at yet, keyed `` `${paperId}::${canonicalPath}` `` for a single-reviewer project, or `` `${paperId}::${reviewer}::${canonicalPath}` `` for a multi-reviewer one (see "AI marks" below). Session-only: it lives *beside* the project, so `serializeProject` cannot see it |
+| `currentReviewer` | `string \| null` | Which reviewer's tree is shown/edited — `"1".."N"`, `"consolidation"`, or `null`. Always `null` for a single-reviewer project; also starts `null` for a multi-reviewer one until picked (see "Multiple reviewers & Consolidation" below). Persisted per project in `localStorage`; not an undo step, does not set `dirty` |
+| `consolidationTarget` | `{ path, name, index } \| null` | The field the Consolidation "compare" popup (`ConsolidationDialog`) is showing, or `null` when closed. Session-only |
 
 ### Key Actions
 
@@ -119,8 +121,10 @@ The entire app state lives in a single Zustand store with immer middleware:
 - **`confirmAiMark(paperId, canonicalPath)`** — drops one AI mark; the reviewer clicked into that field (or its label)
 - **`undo()` / `redo()`** — swap the current project snapshot with one from the `past`/`future` stack (and switch to the affected paper). The mutating actions push a snapshot before applying; consecutive edits to the *same* field coalesce into one undo step (a module-level `lastFieldKey` tracks this), while add/remove/paper-switch reset it. History is cleared on project load.
 - **`setHelpOpen(open)`** — shows/hides the help dialog
+- **`selectReviewer(reviewer)`** — switches `currentReviewer` and persists the choice per project. A view switch: no undo step, no `dirty`
+- **`openConsolidation(path, name, index)` / `closeConsolidation()`** — open/close the compare popup for one field
 
-The `containerAt(root, path)` helper walks the annotation tree following `PathSeg[]` (name + index pairs) to reach the container for a given path.
+The `containerAt(root, path)` helper walks the annotation tree following `PathSeg[]` (name + index pairs) to reach the container for a given path. `currentTree(project, currentReviewer, paper, create?)` decides *which* tree that walk starts from — see "Multiple reviewers & Consolidation" below; `setFieldValue`, `addInstance`, `removeInstance`, and `applyAiSuggestions` all call it before touching anything.
 
 ## Component Tree
 
@@ -129,6 +133,7 @@ App (src/App.tsx)
 ├── Toolbar (src/components/Toolbar.tsx)
 │     Open ▾ dropdown (Open file… + recent projects) + Save ▾ dropdown (Save / Save as…)
 │     Font controls (A− A A+), theme toggle (☾/☀), help (?)
+│     Reviewer switch (multi-reviewer projects only) — Reviewer 1..N + Consolidation, hidden entirely for a single-reviewer project; see "Multiple reviewers & Consolidation" below
 ├── [if project loaded: workspace — a CSS grid whose column widths come from resizable panes]
 │   ├── PaperList (src/components/PaperList.tsx)
 │   │     List of papers with search box (🔎 metadata / 🏷 annotation-content modes, see below); green dot if hasAnnotations(); click to select
@@ -136,16 +141,21 @@ App (src/App.tsx)
 │   ├── PdfViewer (src/components/PdfViewer.tsx)
 │   │     react-pdf Document+Page; ResizeObserver for width; zoom controls; multi-page navigation; jump history (back/forward); in-PDF search (Ctrl+F); text selection capture
 │   └── AnnotationPanel (src/components/AnnotationPanel.tsx)
-│         ✦ AI button in the column header (opens AiDialog; disabled while busy, when the paper has no PDF, when the project forbids it, or — by default — always, until the hidden unlock; see "AI-assisted annotation" below)
+│         ✦ AI button in the column header (opens AiDialog; disabled while busy, when the paper has no PDF, when the project forbids it, when no reviewer is picked yet, or — by default — always, until the hidden unlock; see "AI-assisted annotation" below)
+│         renders the tree `currentTree()` routes to for the active reviewer; prompts to pick a reviewer instead of the form when a multi-reviewer project has none selected yet
 │         └── AnnotationNode (src/components/AnnotationNode.tsx) [recursive]
 │               └── Field (src/components/Field.tsx)
-│                     Input control (text/number/checkbox/enum ComboBox) + ⧉ grab-from-PDF button
+│                     Input control (text/number/checkbox/enum ComboBox) + ⧉ grab-from-PDF button + (Consolidation mode only) ⇄ compare button → opens ConsolidationDialog for that field
 ├── [if no project: welcome screen with "Open project…" button + recent projects list]
 ├── AiDialog (src/components/AiDialog.tsx)
 │     Modal driven by useAiStore's phase: pick a target → Start → review table → Apply
 │     └── LlmSettingsDialog (src/components/LlmSettingsDialog.tsx) — manage LLM targets (stacks on top)
 ├── HelpDialog (src/components/HelpDialog.tsx)
 │     Modal overlay with app intro + keyboard shortcuts table
+├── ValidationDialog (src/components/ValidationDialog.tsx)
+│     Modal overlay showing the results of "Validate", scoped to the active reviewer's own tree (or the consolidated one, for Consolidation) — see below
+├── ConsolidationDialog (src/components/ConsolidationDialog.tsx)
+│     Modal overlay reachable only from Consolidation mode's ⇄ button: every reviewer's answer for one field, side by side; picking one writes it into the consolidated tree
 └── ErrorPanel (src/components/ErrorPanel.tsx)
       Modal overlay for load/save errors
 ```
@@ -209,6 +219,8 @@ Fields are marked required by `required: true` in the schema (`ResolvedDef.requi
 
 Note that `loadProject` normalizes the tree to each node's `min`/`max`, so in practice `cardinality` issues only arise from a project that bypasses the loader.
 
+**On a multi-reviewer project, Validate checks the active reviewer's own tree**, not the consolidated one — unless the active reviewer *is* Consolidation, in which case it checks the tree that actually ships. `runValidation` (`store.ts`) builds this by mapping each paper's `annotations` through `currentTree()` before calling `validateProject`, so `validate.ts` itself needs no reviewer awareness. The **Validate** button is disabled until a reviewer is picked, for the same reason the annotation form is withheld then: there is no "the reviewer" to validate yet.
+
 ### Project editor
 
 A second screen (`src/components/ProjectEditor.tsx`, shown instead of the workspace while `useEditorStore().open`) lets users **create or edit a project JSON** — its annotation schema and the PDFs it references — without hand-writing JSON. It is entered from the welcome screen's *New annotation JSON…* / *Edit annotation JSON…* buttons, or from the **✎** pen on a recent project (`startEditRecent`, which loads that recent by id rather than prompting a file picker; `startEdit` and `startEditRecent` share `editorStateFromOpened`).
@@ -249,6 +261,70 @@ Uses `react-pdf`'s `Document` + `Page` components. The pdf.js worker is loaded f
 **In-PDF search.** A 🔍 button in the header (and `Ctrl/Cmd+F`) toggles a find bar below the header; opening it focuses the input so the user can type immediately (via a `searchOpen` effect, since the input isn't mounted on the open transition). `findMatches` walks the text nodes of each rendered text layer (`.react-pdf__Page__textContent`), concatenating them per layer so a query can span multiple spans, and returns DOM `Range`s. Matches are painted with the **CSS Custom Highlight API** (`CSS.highlights` + `::highlight(slr-pdf-search)` / `::highlight(slr-pdf-search-active)`) — this tints the transparent text-layer glyphs without mutating react-pdf's DOM, and degrades gracefully where the API is unavailable. The active match is centered in the scroll container; Enter / Shift+Enter (and the ‹ › buttons) cycle matches. Crucially, the `<Page>` elements are **memoized** (`useMemo` on `[numPages, renderWidth, onTextLayerRendered]`) with a stable `onRenderTextLayerSuccess` callback, so typing in the search box reuses the same element references and React skips re-rendering the pages — otherwise every keystroke would tear down and re-render the text layers (a "TextLayer task cancelled" flood) and matches would never resolve.
 
 PDF source resolution is async: `getPlatform().getPdfSource(paper.pdf, saveHandle)` returns a `{ url, revoke? }`. The effect cleans up (revokes blob URLs) on paper/handle change or unmount.
+
+## Multiple reviewers & Consolidation
+
+An SLR is normally annotated by ≥2 reviewers **independently**, then reconciled into one final
+answer. `config.reviewers` (2–10) turns this on for a project; see `data-model.md` for the file
+format and `Paper.reviews` shape. This section covers the store/UI wiring.
+
+**`currentTree(project, currentReviewer, paper, create?)`** (`src/state/store.ts`) is the single
+routing decision every mutating action and every reader goes through: single-reviewer →
+`paper.annotations` (unchanged from before this feature); Consolidation → `paper.annotations`
+(the tree that ships); a numbered reviewer → `paper.reviews[N]`; nobody picked yet on a
+multi-reviewer project → `null`. `create` (default `false`) controls whether a numbered
+reviewer's missing tree is lazily initialised and normalized in place (only safe inside an immer
+`set()` producer — the mutating store actions pass `true`) or a fresh throwaway default is
+returned for display/validation without touching the project (selectors and read-only
+computations pass nothing). `setFieldValue`, `addInstance`, `removeInstance`, and
+`applyAiSuggestions` all resolve their target tree this way before doing anything else, and bail
+out — no write, no undo entry — if a multi-reviewer project has no reviewer selected yet.
+
+**`currentReviewer`** is a *view* selection, not project data: switching it is not an undo step
+and does not set `dirty`. It defaults to `null` (unselected) whenever a multi-reviewer project is
+opened — never silently to Reviewer 1, since an unattributed edit is worse than a prompt — unless
+a previous selection for *this* project was persisted. Persistence is per project, keyed by the
+save handle's path (`slr.currentReviewer.<path>` via `safeGet`/`safeSet`/`safeRemove` in
+`src/state/settings.ts`); a project with no stable path (server mode, or a browser download-only
+save) simply doesn't persist a selection. It resets to `null` on `closeProject`/`loadFromText`,
+same as `validation`/`aiMarks`.
+
+**Toolbar** (`src/components/Toolbar.tsx`) renders a reviewer switch — buttons for Reviewer
+1..N plus a visually distinct Consolidation pill — only when the open project is multi-reviewer;
+hidden entirely otherwise. The active seat is highlighted; an unselected state gets a warning
+border and a "Pick a reviewer:" prompt. **Validate** is additionally disabled until a reviewer is
+picked (see "Validation" above). Note this shares the toolbar with the hidden AI-unlock click
+gesture on the app title — the two are unrelated and don't interact.
+
+**AnnotationPanel** withholds the annotation form (showing a prompt instead) whenever a
+multi-reviewer project has no reviewer selected, and otherwise renders the tree `currentTree()`
+routes to for the active reviewer — falling back to a schema-shaped empty tree (not creating
+anything) when that reviewer hasn't written on this paper yet. A small badge next to the paper
+title echoes which seat is active, redundant with the toolbar switch on purpose: this is the one
+piece of state that must never be ambiguous, since it decides which tree every edit lands in.
+
+**Consolidation compare popup.** When `currentReviewer === 'consolidation'`, `Field.tsx` shows an
+extra ⇄ button next to the existing ⧉ grab-from-PDF button (and, for a boolean field, next to the
+checkbox) that opens `ConsolidationDialog` for that exact field path. The dialog lists every
+reviewer's raw value for the path (via the same `peekValue`/`fieldPath` machinery `store.ts`
+already uses, and `resolvePath` from `src/llm/paths.ts` to resolve the `ResolvedDef` for display),
+including reviewers who left it empty, and flags whether the answered reviewers agree. Clicking a
+row calls the ordinary `setFieldValue` — Consolidation *is* the active reviewer while the dialog
+is open, so that write already lands in `paper.annotations` via `currentTree()`'s routing; nothing
+dialog-specific exists on the store side beyond `consolidationTarget`/`openConsolidation`/
+`closeConsolidation`. Closing without picking changes nothing. Follows the same modal pattern as
+`ValidationDialog` (`.modal-overlay` → `.modal` → `.modal-head` + `.modal-body`, Escape-to-close,
+backdrop click).
+
+**AI marks and AI-assisted annotation** are reviewer-scoped too — see "AI marks" below and
+`unansweredFields`'s call site in `aiStore.ts`'s `openDialog()`, which now proposes values for the
+*active reviewer's* empty fields via `currentTree()`, not unconditionally `paper.annotations`.
+
+**Known gap:** `PaperList`'s "annotated" dot (`hasAnnotations(schema, p.annotations)`) still reads
+the consolidated tree unconditionally — it does not currently switch to the active reviewer's own
+tree on a multi-reviewer project. `PaperList.tsx` was out of scope for the change that introduced
+multiple reviewers (owned by another concurrent change); routing that dot through `currentTree()`
+the same way everything else in this section is routed is the natural follow-up.
 
 ## AI-assisted annotation (`src/llm`)
 
@@ -345,6 +421,8 @@ Two properties make the marks safe:
 - **They only ever point at real AI values.** `applyAiSuggestions` marks the suggestions it *wrote*, never the ones it skipped. `undo`/`redo` clear **all** marks: undoing an AI run empties exactly the fields the marks point at, and a blue border on a now-empty field would be a lie. History restores values, not marks.
 
 The key is `` `${paperId}::${formatPath([...path, { name, index }])}` `` — paper-scoped because every paper shares the same paths, and canonical (`src/llm/paths.ts`) so a mark set from a model suggestion and one looked up by the UI meet on the same string. Index 0 stays implicit, which is what keeps `Findings[1]/Claim` a different field from `Findings/Claim`.
+
+On a multi-reviewer project, the key also folds in the active reviewer (`` `${paperId}::${reviewer}::${canonicalPath}` ``, via `aiMarkKey`'s third argument) — otherwise Reviewer 1 running the AI would leave marks that appear to belong to Reviewer 2's identical field paths. A single-reviewer project's keys are exactly the two-part form above (the reviewer argument defaults to `null`, which reproduces it), so nothing about single-reviewer behavior changes.
 
 ### AI usage disclosure (`Paper.aiUsage`)
 
@@ -443,3 +521,4 @@ App appearance is controlled by a settings module that persists to `localStorage
 - **Adding a new keyboard shortcut**: Add to `useKeybindings.ts`. Check `isEditable()` if it should be ignored inside input fields.
 - **Changing the Electron IPC surface**: Update `preload.ts` (the `SlrBridge` interface), `electron/main.ts` (IPC handler), and `src/platform/electron.ts` (adapter method). All three must stay in sync.
 - **Adding a new settings/appearance option**: Add to `src/state/settings.ts` (load/apply functions), add state + actions to the store, add UI controls to `Toolbar.tsx`, and add keybindings if needed.
+- **Touching anything that reads or writes the current paper's annotation data**: route it through `currentTree()` (`src/state/store.ts`) rather than `paper.annotations` directly, or it will silently ignore reviewer selection on a multi-reviewer project. Grep for `.annotations` across `src/` and check each hit against "should this see the active reviewer's tree or always the consolidated one" — `PaperList.tsx`'s dot is the one known place that still doesn't (see "Known gap" above).

@@ -20,6 +20,8 @@ export function ProjectEditor() {
   const setTitle = useEditorStore((s) => s.setTitle)
   const aiEnabled = useEditorStore((s) => s.aiEnabled)
   const setAiEnabled = useEditorStore((s) => s.setAiEnabled)
+  const reviewers = useEditorStore((s) => s.reviewers)
+  const setReviewers = useEditorStore((s) => s.setReviewers)
   const dirty = useEditorStore((s) => s.dirty)
   const busy = useEditorStore((s) => s.busy)
   const error = useEditorStore((s) => s.error)
@@ -42,6 +44,7 @@ export function ProjectEditor() {
 
   // The full path is the useful bit in Electron; in the browser only a name exists.
   const locationLabel = location ? (location.path ?? location.name) : 'Not set'
+  const multiReviewer = reviewers > 1
 
   return (
     <div className="editor">
@@ -102,6 +105,41 @@ export function ProjectEditor() {
           <span>Allow reviewers to use AI-assisted annotation</span>
         </label>
       </div>
+
+      <div className="editor-location">
+        <span className="editor-location-label">Reviewers</span>
+        <label
+          className="editor-ai-toggle"
+          title="Enable to have multiple people annotate every paper independently, then reconcile disagreements into one final answer."
+        >
+          <input
+            type="checkbox"
+            checked={multiReviewer}
+            onChange={(e) => setReviewers(e.target.checked ? 2 : 1)}
+            disabled={busy}
+          />
+          <span>Multiple independent reviewers</span>
+        </label>
+        {multiReviewer && (
+          <input
+            className="editor-reviewers-input"
+            type="number"
+            min={2}
+            max={10}
+            value={reviewers}
+            onChange={(e) => setReviewers(Number(e.target.value) || 2)}
+            disabled={busy}
+          />
+        )}
+      </div>
+      {multiReviewer && (
+        <p className="editor-hint editor-reviewers-hint">
+          Each of the {reviewers} reviewers annotates independently and only sees their own
+          work. In addition to them, there is always one extra <strong>Consolidation</strong>{' '}
+          reviewer, who compares everyone's answers and records the final, agreed result — that
+          consolidated result is what the project's saved output actually contains.
+        </p>
+      )}
 
       {error && (
         <div className="editor-error" role="alert">

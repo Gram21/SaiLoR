@@ -179,6 +179,49 @@ body.resizing * {
   color: var(--muted);
 }
 
+/* Reviewer switch (multi-reviewer projects only) — which "seat" is active
+   decides which tree every edit lands in, so it has to read as unmistakable
+   at a glance, not just another toolbar control. */
+.reviewer-switch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.reviewer-switch.unselected {
+  border-color: var(--danger);
+}
+.reviewer-switch-prompt {
+  padding: 0 4px;
+  color: var(--danger);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.reviewer-btn {
+  min-width: 26px;
+  padding: 3px 8px;
+  border-color: transparent;
+  background: transparent;
+}
+.reviewer-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+/* Consolidation is a different *kind* of seat, not "reviewer N+1" — it gets
+   its own shape (a pill, not a square) so it never reads as one more number. */
+.reviewer-btn-consolidation {
+  border-radius: 999px;
+  font-weight: 600;
+}
+.reviewer-btn-consolidation.active {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+}
+
 /* ---- Paper list ---- */
 .paper-list-head {
   position: sticky;
@@ -704,6 +747,26 @@ body.resizing * {
   border-radius: 3px;
 }
 .grab-btn {
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  color: var(--accent);
+}
+
+/* Which reviewer's tree is being annotated, echoed right next to the paper
+   title — a second, redundant cue besides the toolbar switch, worth the
+   repetition since it is what makes a multi-reviewer file trustworthy. */
+.reviewer-badge {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent-weak);
+  color: var(--text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+/* Consolidation-only "compare every reviewer's answer" button, next to grab-btn. */
+.compare-btn {
   flex: 0 0 auto;
   padding: 3px 8px;
   color: var(--accent);
@@ -1265,4 +1328,50 @@ kbd {
   font-family: ui-monospace, monospace;
   font-size: 0.8rem;
   white-space: nowrap;
+}
+
+/* Consolidation's "compare every reviewer's answer" popup (ConsolidationDialog). */
+.consolidation-dialog {
+  width: min(480px, 92vw);
+}
+.consolidation-field-path {
+  margin-left: 8px;
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.85em;
+}
+.consolidation-current {
+  margin-top: 0;
+  color: var(--muted);
+}
+.consolidation-current strong {
+  color: var(--text);
+}
+.consolidation-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.consolidation-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 6px;
+  text-align: left;
+}
+.consolidation-reviewer {
+  font-weight: 600;
+}
+.consolidation-value {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+/* The row whose value matches what's currently consolidated — orientation,
+   not an endorsement of that reviewer being "right". */
+.consolidation-row.is-current {
+  border-color: var(--accent);
+  background: var(--accent-weak);
 }

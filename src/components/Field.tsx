@@ -23,6 +23,21 @@ export function Field({ def, path, index, value }: FieldProps) {
   const [marked, confirm] = useAiMark(path, def.name, index)
   const markClass = marked ? ' ai-marked' : ''
 
+  // Only Consolidation gets the compare popup — everyone else has one tree to
+  // work with and nothing to reconcile.
+  const isConsolidation = useStore((s) => s.currentReviewer === 'consolidation')
+  const openConsolidation = useStore((s) => s.openConsolidation)
+  const compareBtn = isConsolidation && (
+    <button
+      type="button"
+      className="compare-btn"
+      title="Compare every reviewer's answer for this field"
+      onClick={() => openConsolidation(path, def.name, index)}
+    >
+      ⇄
+    </button>
+  )
+
   const grabFromPdf = () => {
     const sel = useStore.getState().pdfSelection.trim()
     if (!sel) return
@@ -36,14 +51,17 @@ export function Field({ def, path, index, value }: FieldProps) {
 
   if (def.type === 'boolean') {
     return (
-      <input
-        type="checkbox"
-        className={`field-checkbox${markClass}`}
-        checked={value === true}
-        onFocus={confirm}
-        onClick={confirm}
-        onChange={(e) => set(e.target.checked)}
-      />
+      <div className="field-row">
+        <input
+          type="checkbox"
+          className={`field-checkbox${markClass}`}
+          checked={value === true}
+          onFocus={confirm}
+          onClick={confirm}
+          onChange={(e) => set(e.target.checked)}
+        />
+        {compareBtn}
+      </div>
     )
   }
 
@@ -88,6 +106,7 @@ export function Field({ def, path, index, value }: FieldProps) {
           ⧉
         </button>
       )}
+      {compareBtn}
     </div>
   )
 }

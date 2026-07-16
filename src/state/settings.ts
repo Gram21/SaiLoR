@@ -90,7 +90,10 @@ export function clampFont(scale: number): number {
   return Math.round(clamped * 10) / 10
 }
 
-function safeGet(key: string): string | null {
+/** Exported so other stores that persist small bits of session state (e.g.
+ *  the reviewer selection in `store.ts`) don't each reimplement the same
+ *  try/catch — private browsing / disabled storage must never throw. */
+export function safeGet(key: string): string | null {
   try {
     return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null
   } catch {
@@ -98,9 +101,17 @@ function safeGet(key: string): string | null {
   }
 }
 
-function safeSet(key: string, value: string): void {
+export function safeSet(key: string, value: string): void {
   try {
     localStorage?.setItem(key, value)
+  } catch {
+    /* ignore (private mode / disabled storage) */
+  }
+}
+
+export function safeRemove(key: string): void {
+  try {
+    localStorage?.removeItem(key)
   } catch {
     /* ignore (private mode / disabled storage) */
   }

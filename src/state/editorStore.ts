@@ -72,6 +72,7 @@ interface EditorSnapshot {
   version: number
   title: string
   aiEnabled: boolean
+  reviewers: number
   extra: Record<string, unknown>
 }
 
@@ -343,6 +344,7 @@ export function buildProjectJson(state: {
   version: number
   title?: string
   aiEnabled: boolean
+  reviewers: number
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
@@ -353,10 +355,12 @@ export function buildProjectJson(state: {
     version: state.version,
     // Omitted when blank, so the app falls back to the file name.
     ...(title ? { title } : {}),
-    // `ai` is only written when disabled, matching serializeProject.
+    // `ai` is only written when disabled, and `reviewers` only when it says
+    // more than the single-reviewer default — matching serializeProject.
     config: {
       schema: toAnnotationDefs(state.nodes),
       ...(state.aiEnabled ? {} : { ai: false }),
+      ...(state.reviewers > 1 ? { reviewers: state.reviewers } : {}),
     },
     papers: state.papers.map((p) => {
       const out: Record<string, unknown> = { ...(p.extra ?? {}) }
@@ -382,6 +386,7 @@ export function validateDraft(state: {
   version: number
   title?: string
   aiEnabled: boolean
+  reviewers: number
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
@@ -443,6 +448,8 @@ interface EditorState {
   title: string
   /** Whether reviewers may use AI-assisted annotation on this project. */
   aiEnabled: boolean
+  /** Independent reviewers before Consolidation reconciles them; 1 = single-reviewer. */
+  reviewers: number
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
@@ -474,6 +481,7 @@ interface EditorState {
   changeLocation: () => Promise<void>
   setTitle: (title: string) => void
   setAiEnabled: (enabled: boolean) => void
+  setReviewers: (n: number) => void
 
   addNode: (parentUid: string | null) => void
   updateNode: (uid: string, patch: Partial<EditorNode>) => void
@@ -512,6 +520,7 @@ function snapshotOf(s: EditorState): EditorSnapshot {
     version: s.version,
     title: s.title,
     aiEnabled: s.aiEnabled,
+    reviewers: s.reviewers,
     extra: s.extra,
   }
 }
@@ -523,6 +532,7 @@ function applySnapshot(s: EditorState, snap: EditorSnapshot): void {
   s.version = snap.version
   s.title = snap.title
   s.aiEnabled = snap.aiEnabled
+  s.reviewers = snap.reviewers
   s.extra = snap.extra
 }
 
@@ -539,6 +549,7 @@ interface OpenedEditorState {
   version: number
   title: string
   aiEnabled: boolean
+  reviewers: number
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
@@ -580,6 +591,8 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
     title: parsed.title ?? '',
     // Absent means enabled; only an explicit `false` opts out.
     aiEnabled: parsed.config.ai !== false,
+    // Absent or 1 means single-reviewer, same default as project.ts's loader.
+    reviewers: parsed.config.reviewers ?? 1,
     extra: rootExtra,
     nodes: fromAnnotationDefs(parsed.config.schema),
     papers,
@@ -594,6 +607,7 @@ function openEditorSession(s: EditorState, st: OpenedEditorState): void {
   s.version = st.version
   s.title = st.title
   s.aiEnabled = st.aiEnabled
+  s.reviewers = st.reviewers
   s.extra = st.extra
   s.nodes = st.nodes
   s.papers = st.papers
@@ -699,6 +713,7 @@ export const useEditorStore = create<EditorState>()(
     version: 1,
     title: '',
     aiEnabled: true,
+    reviewers: 1,
     extra: {},
     nodes: [],
     papers: [],
@@ -724,6 +739,7 @@ export const useEditorStore = create<EditorState>()(
         s.version = 1
         s.title = ''
         s.aiEnabled = true
+        s.reviewers = 1
         s.extra = {}
         s.nodes = [makeNode()]
         s.papers = []
@@ -872,6 +888,17 @@ export const useEditorStore = create<EditorState>()(
       set((s) => {
         pushPast(s, snap)
         s.aiEnabled = enabled
+        s.dirty = true
+      })
+    },
+
+    setReviewers: (n) => {
+      const clamped = Math.max(1, Math.min(10, Math.round(n)))
+      lastEditKey = null
+      const snap = snapshotOf(get())
+      set((s) => {
+        pushPast(s, snap)
+        s.reviewers = clamped
         s.dirty = true
       })
     },

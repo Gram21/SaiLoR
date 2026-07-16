@@ -106,6 +106,9 @@ export const paperSchema = z
     // Ditto — a malformed entry (or the whole field being the wrong shape)
     // should be dropped, not fail the whole file to load.
     aiUsage: z.unknown().optional(),
+    // Ditto — each reviewer's tree is validated/normalized structurally in
+    // project.ts, same as `annotations`.
+    reviews: z.unknown().optional(),
   })
   .passthrough()
 
@@ -118,6 +121,8 @@ export const projectSchema = z
       schema: z.array(annotationDefSchema).min(1, 'config.schema must have at least one node'),
       /** When false, the provider of this file has disabled AI-assisted annotation. */
       ai: z.boolean().optional(),
+      /** Number of independent reviewers. Absent or 1 = single-reviewer (the default). */
+      reviewers: z.number().int().min(1).max(10).optional(),
     }),
     papers: z.array(paperSchema),
   })
