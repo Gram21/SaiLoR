@@ -3,6 +3,7 @@ import { immer } from 'zustand/middleware/immer'
 import {
   loadProject,
   serializeProject,
+  needsShapeMigration,
   ProjectLoadError,
   type Project,
   type Paper,
@@ -591,6 +592,15 @@ export const useStore = create<AppState>()(
     loadFromText: (text, handle, name) => {
       try {
         const project = loadProject(text)
+        // `loadProject` already normalizes every paper's `annotations` and
+        // (for a multi-reviewer project) backfills a skeleton for every
+        // reviewer who has not written anything — see `normalizeReviews`.
+        // `needsShapeMigration` asks, structurally, whether the file on disk
+        // already had that shape — deliberately *not* a text comparison
+        // against the canonical re-serialization, which would also trip on
+        // nothing more than whitespace or key order and resave files that
+        // were already perfectly fine.
+        const needsMigration = needsShapeMigration(project, text)
         // The title only becomes known once the JSON is parsed, so the recents
         // entry is enriched here rather than in the adapter's open path.
         if (handle) getPlatform().rememberProject(handle, name, project.title)
@@ -623,6 +633,37 @@ export const useStore = create<AppState>()(
           s.currentReviewer = project.reviewers > 1 ? loadCurrentReviewer(handle, project.reviewers) : null
         })
         lastFieldKey = null
+        // Write the migrated shape back in place — never a download, and never
+        // a "where should this go" prompt, just because a file's shape needed
+        // updating. A project with nowhere stable to write (a `?project=` URL,
+        // or a browser pick with no in-place handle) simply keeps the better
+        // shape in memory; it converges again, harmlessly, next time it opens.
+        if (needsMigration && handle && handle.kind !== 'download') {
+          getPlatform()
+            .saveProject(serializeProject(project), handle)
+            .then((newHandle) => {
+              // A second load may have already replaced this project (the user
+              // opened something else before this write landed) — in which
+              // case the result belongs to a project nobody is looking at
+              // anymore, and applying it would resurrect a stale handle.
+              if (get().project === project) {
+                set((s) => {
+                  s.saveHandle = newHandle
+                })
+              }
+            })
+            .catch(() => {
+              // No alarming banner for a fix the reviewer never asked for and
+              // has no different action to take — the ordinary unsaved-changes
+              // guard already exists for exactly "memory doesn't match disk",
+              // and will ask about it the same way any other edit would.
+              if (get().project === project) {
+                set((s) => {
+                  s.dirty = true
+                })
+              }
+            })
+        }
       } catch (err) {
         const le: LoadError =
           err instanceof ProjectLoadError
@@ -1060,13 +1101,16 @@ export const useStore = create<AppState>()(
       // re-pointed answer is not.
       if (hasAnnotations([def], { [nodeName]: paper.annotations[nodeName] ?? [] })) return false
 
-      // Only the numbered reviewers get a vote. The consolidated tree is what
-      // is being built out of them, so letting it match against itself would be
-      // circular.
+      // Only the numbered reviewers get a vote, and only the ones who have
+      // actually written something. The consolidated tree is what is being
+      // built out of them, so letting it match against itself would be
+      // circular — and every reviewer now has a tree from the moment the
+      // project is loaded (see `normalizeReviews`), empty or not, so presence
+      // alone no longer distinguishes "has an opinion" from "has not started".
       const reviews: Record<string, AnnotationValueTree> = {}
       for (let i = 1; i <= project.reviewers; i++) {
         const tree = paper.reviews[String(i)]
-        if (tree) reviews[String(i)] = tree
+        if (tree && hasAnnotations(project.schema, tree)) reviews[String(i)] = tree
       }
       if (Object.keys(reviews).length < 2) return false
 
@@ -1102,9 +1146,10 @@ export const useStore = create<AppState>()(
       const paper = project.papers.find((p) => p.id === paperId)
       if (!paper) return 0
 
-      // Every numbered reviewer, present or not: a reviewer with no tree has not
-      // answered, and `unanimousFills` needs to see that rather than count the
-      // agreement of whoever happens to be here.
+      // Every numbered reviewer, by number — `unanimousFills` decides "answered"
+      // per field via `isUnanswered`, not by whether a tree exists at all, so an
+      // all-empty (never-touched) tree and a genuinely absent one read the same
+      // to it either way.
       const reviews: Record<string, AnnotationValueTree | undefined> = {}
       for (let i = 1; i <= project.reviewers; i++) reviews[String(i)] = paper.reviews[String(i)]
 

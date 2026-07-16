@@ -39,12 +39,17 @@ vi.mock('../platform', () => ({ getPlatform: () => mockPlatform }))
 
 const { useStore } = await import('./store')
 
+// Annotations are already in the shape `loadProject` would normalize them to
+// (a plain `{}` genuinely lacks the git-friendly empty skeleton — not just a
+// formatting difference — so it would trigger `loadFromText`'s background
+// "write the fixed-up shape back" step, racing the tests below over the same
+// `written` slot).
 const PROJECT = JSON.stringify({
   version: 1,
   config: { schema: [{ name: 'Relevant', type: 'boolean' }] },
   papers: [
-    { id: 'a', title: 'Paper A', authors: [], pdf: 'pdfs/a.pdf', annotations: {} },
-    { id: 'b', title: 'Paper B', authors: [], pdf: 'pdfs/sub/b.pdf', annotations: {} },
+    { id: 'a', title: 'Paper A', authors: [], pdf: 'pdfs/a.pdf', annotations: { Relevant: [{ value: false }] } },
+    { id: 'b', title: 'Paper B', authors: [], pdf: 'pdfs/sub/b.pdf', annotations: { Relevant: [{ value: false }] } },
   ],
 })
 

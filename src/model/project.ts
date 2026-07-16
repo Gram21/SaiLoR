@@ -132,6 +132,42 @@ function parseReviews(raw: unknown, schema: ResolvedDef[]): Record<string, Annot
 }
 
 /**
+ * `parseReviews`, plus a skeleton for every reviewer `1..reviewerCount` who has
+ * no tree of their own yet.
+ *
+ * A reviewer who has not started otherwise has no key in `reviews` at all —
+ * fine for the app, which treats a missing tree as "hasn't answered" either
+ * way, but bad for a JSON diff: their *first* annotation would then look like
+ * a whole new field appearing out of nowhere, when every other reviewer's
+ * equivalent field was there the whole time. A key that already exists with
+ * `null`s in it turns that into an ordinary value-on-an-existing-line change —
+ * the shape a git merge actually copes with.
+ *
+ * Never removes a key `parseReviews` already kept, including one for a
+ * reviewer number *above* `reviewerCount` — lowering the count hides that
+ * reviewer's tree, and this must not be the thing that deletes it (see the
+ * schema guide's "Lowering the reviewer count" section).
+ *
+ * Single-reviewer projects are untouched: `reviews` stays `{}`, exactly as
+ * before this existed — `annotations` alone carries the data there, and
+ * giving it a phantom "reviewer 1" would only be confusing.
+ */
+function normalizeReviews(
+  raw: unknown,
+  schema: ResolvedDef[],
+  reviewerCount: number,
+): Record<string, AnnotationValueTree> {
+  const existing = parseReviews(raw, schema)
+  if (reviewerCount <= 1) return existing
+  const out: Record<string, AnnotationValueTree> = { ...existing }
+  for (let i = 1; i <= reviewerCount; i++) {
+    const key = String(i)
+    if (!(key in out)) out[key] = normalizeTree(schema, undefined)
+  }
+  return out
+}
+
+/**
  * Parse `aiUsage` defensively: the file is hand-editable, so a malformed entry
  * must be dropped, never thrown over — the same rule `annotations` follows.
  */
@@ -170,6 +206,66 @@ function parseEqual(raw: unknown): string[] {
     out.push(entry)
   }
   return out
+}
+
+/**
+ * Structural equality for plain JSON values: order-independent for object
+ * keys (a hand-edited file listing fields in a different order than the
+ * schema is not "different"), order-*sensitive* for arrays (an array is an
+ * ordered list — reordering `Findings` genuinely changes which entry is
+ * which), exactly JSON's own notion of equality otherwise. Deliberately not a
+ * text/string comparison: `needsShapeMigration` uses this specifically so
+ * that whitespace, indentation and stray key order — which even this file's
+ * own `serializeProject` freely rewrites on every ordinary save — never look
+ * like a reason to migrate a file that is already semantically fine.
+ */
+function deepEqualJson(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false
+  if (Array.isArray(a) !== Array.isArray(b)) return false
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((v, i) => deepEqualJson(v, b[i]))
+  }
+  const ak = Object.keys(a as Record<string, unknown>)
+  const bk = Object.keys(b as Record<string, unknown>)
+  if (ak.length !== bk.length) return false
+  return ak.every(
+    (k) => k in (b as Record<string, unknown>) && deepEqualJson((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]),
+  )
+}
+
+/**
+ * Whether a project's `annotations`/`reviews` need the git-friendly empty
+ * skeleton written in — a brand-new paper saved before this existed, an
+ * untouched reviewer with no key at all, a hand-edited file, or one written by
+ * an older version of the app.
+ *
+ * `rawText` is re-parsed and compared structurally (via `deepEqualJson`)
+ * against what saving `project` right now *would* write, scoped to exactly
+ * `annotations` and `reviews` — nothing else about the file's formatting or
+ * unrelated content is examined, so this answers "does the skeleton need
+ * fixing", never "is this file byte-identical to our own pretty-printer".
+ * That distinction is what keeps this from flagging every hand-authored or
+ * differently-formatted file that already has the right shape.
+ *
+ * `rawText` is assumed to be exactly what `loadProject` just parsed
+ * successfully to produce `project` — this only re-parses it, it does not
+ * revalidate it, so call it right after `loadProject`, not independently.
+ */
+export function needsShapeMigration(project: Project, rawText: string): boolean {
+  const data = JSON.parse(rawText) as { papers?: unknown[] }
+  const rawPapers = Array.isArray(data.papers) ? data.papers : []
+  return project.papers.some((paper, i) => {
+    const rawPaper = (rawPapers[i] ?? {}) as Record<string, unknown>
+    const rawAnnotations = rawPaper.annotations ?? {}
+    if (!deepEqualJson(pruneTree(project.schema, paper.annotations), rawAnnotations)) return true
+    if (project.reviewers <= 1) return false
+    const canonicalReviews = Object.fromEntries(
+      Object.entries(paper.reviews).map(([k, v]) => [k, pruneTree(project.schema, v)]),
+    )
+    const rawReviews = rawPaper.reviews ?? {}
+    return !deepEqualJson(canonicalReviews, rawReviews)
+  })
 }
 
 /**
@@ -227,7 +323,7 @@ export function loadProject(input: string | unknown): Project {
     doi: p.doi,
     pdf: p.pdf,
     annotations: normalizeTree(schema, p.annotations as AnnotationValueTree | undefined),
-    reviews: parseReviews((p as { reviews?: unknown }).reviews, schema),
+    reviews: normalizeReviews((p as { reviews?: unknown }).reviews, schema, raw.config.reviewers ?? 1),
     aiUsage: parseAiUsage(p.aiUsage),
     equal: parseEqual(p.equal),
     extra: extractExtra(p, KNOWN_PAPER_KEYS),
@@ -274,8 +370,12 @@ export function serializeProject(project: Project): string {
       if (p.doi !== undefined) paper.doi = p.doi
       paper.pdf = p.pdf
       paper.annotations = pruneTree(project.schema, p.annotations)
-      // Only written when non-empty, so a single-reviewer paper (or one no
-      // reviewer has touched yet) carries no `reviews` key at all.
+      // A single-reviewer paper has no reviewer trees at all — `annotations`
+      // alone carries the data — so this stays empty and `reviews` is omitted
+      // below, exactly as before this feature existed. A multi-reviewer paper's
+      // `p.reviews` is never empty: `normalizeReviews` gives every reviewer
+      // `1..N` a skeleton whether or not they have written anything, precisely
+      // so the key is already there — on an existing line — the day they do.
       const reviewKeys = Object.keys(p.reviews)
       if (reviewKeys.length > 0) {
         paper.reviews = Object.fromEntries(

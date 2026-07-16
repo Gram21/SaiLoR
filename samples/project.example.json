@@ -90,7 +90,203 @@
       ],
       "doi": "10.1000/xyz123",
       "pdf": "pdfs/paper-a.pdf",
-      "annotations": {}
+      "annotations": {
+        "Relevant": [
+          {
+            "value": false
+          }
+        ],
+        "Study Type": [
+          {
+            "value": null
+          }
+        ],
+        "Year": [
+          {
+            "value": null
+          }
+        ],
+        "Findings": [
+          {
+            "children": {
+              "Claim": [
+                {
+                  "value": null
+                }
+              ],
+              "Evidence": [
+                {
+                  "children": {
+                    "Metric": [
+                      {
+                        "value": null
+                      }
+                    ],
+                    "Evaluation Type": [
+                      {
+                        "value": null
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Confidence": [
+                {
+                  "value": null
+                }
+              ]
+            }
+          }
+        ],
+        "Threats to Validity": [
+          {
+            "children": {
+              "Kind": [
+                {
+                  "value": null
+                }
+              ],
+              "Addressed": [
+                {
+                  "value": false
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "reviews": {
+        "1": {
+          "Relevant": [
+            {
+              "value": false
+            }
+          ],
+          "Study Type": [
+            {
+              "value": null
+            }
+          ],
+          "Year": [
+            {
+              "value": null
+            }
+          ],
+          "Findings": [
+            {
+              "children": {
+                "Claim": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Evidence": [
+                  {
+                    "children": {
+                      "Metric": [
+                        {
+                          "value": null
+                        }
+                      ],
+                      "Evaluation Type": [
+                        {
+                          "value": null
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "Confidence": [
+                  {
+                    "value": null
+                  }
+                ]
+              }
+            }
+          ],
+          "Threats to Validity": [
+            {
+              "children": {
+                "Kind": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Addressed": [
+                  {
+                    "value": false
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "2": {
+          "Relevant": [
+            {
+              "value": false
+            }
+          ],
+          "Study Type": [
+            {
+              "value": null
+            }
+          ],
+          "Year": [
+            {
+              "value": null
+            }
+          ],
+          "Findings": [
+            {
+              "children": {
+                "Claim": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Evidence": [
+                  {
+                    "children": {
+                      "Metric": [
+                        {
+                          "value": null
+                        }
+                      ],
+                      "Evaluation Type": [
+                        {
+                          "value": null
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "Confidence": [
+                  {
+                    "value": null
+                  }
+                ]
+              }
+            }
+          ],
+          "Threats to Validity": [
+            {
+              "children": {
+                "Kind": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Addressed": [
+                  {
+                    "value": false
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
     },
     {
       "id": "paper-b",
@@ -101,7 +297,203 @@
       ],
       "doi": "10.1000/abc987",
       "pdf": "pdfs/paper-b.pdf",
-      "annotations": {}
+      "annotations": {
+        "Relevant": [
+          {
+            "value": false
+          }
+        ],
+        "Study Type": [
+          {
+            "value": null
+          }
+        ],
+        "Year": [
+          {
+            "value": null
+          }
+        ],
+        "Findings": [
+          {
+            "children": {
+              "Claim": [
+                {
+                  "value": null
+                }
+              ],
+              "Evidence": [
+                {
+                  "children": {
+                    "Metric": [
+                      {
+                        "value": null
+                      }
+                    ],
+                    "Evaluation Type": [
+                      {
+                        "value": null
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Confidence": [
+                {
+                  "value": null
+                }
+              ]
+            }
+          }
+        ],
+        "Threats to Validity": [
+          {
+            "children": {
+              "Kind": [
+                {
+                  "value": null
+                }
+              ],
+              "Addressed": [
+                {
+                  "value": false
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "reviews": {
+        "1": {
+          "Relevant": [
+            {
+              "value": false
+            }
+          ],
+          "Study Type": [
+            {
+              "value": null
+            }
+          ],
+          "Year": [
+            {
+              "value": null
+            }
+          ],
+          "Findings": [
+            {
+              "children": {
+                "Claim": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Evidence": [
+                  {
+                    "children": {
+                      "Metric": [
+                        {
+                          "value": null
+                        }
+                      ],
+                      "Evaluation Type": [
+                        {
+                          "value": null
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "Confidence": [
+                  {
+                    "value": null
+                  }
+                ]
+              }
+            }
+          ],
+          "Threats to Validity": [
+            {
+              "children": {
+                "Kind": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Addressed": [
+                  {
+                    "value": false
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "2": {
+          "Relevant": [
+            {
+              "value": false
+            }
+          ],
+          "Study Type": [
+            {
+              "value": null
+            }
+          ],
+          "Year": [
+            {
+              "value": null
+            }
+          ],
+          "Findings": [
+            {
+              "children": {
+                "Claim": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Evidence": [
+                  {
+                    "children": {
+                      "Metric": [
+                        {
+                          "value": null
+                        }
+                      ],
+                      "Evaluation Type": [
+                        {
+                          "value": null
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "Confidence": [
+                  {
+                    "value": null
+                  }
+                ]
+              }
+            }
+          ],
+          "Threats to Validity": [
+            {
+              "children": {
+                "Kind": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Addressed": [
+                  {
+                    "value": false
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
     },
     {
       "id": "paper-c",
@@ -111,7 +503,203 @@
       ],
       "doi": "10.1000/mno987",
       "pdf": "pdfs/multipage.pdf",
-      "annotations": {}
+      "annotations": {
+        "Relevant": [
+          {
+            "value": false
+          }
+        ],
+        "Study Type": [
+          {
+            "value": null
+          }
+        ],
+        "Year": [
+          {
+            "value": null
+          }
+        ],
+        "Findings": [
+          {
+            "children": {
+              "Claim": [
+                {
+                  "value": null
+                }
+              ],
+              "Evidence": [
+                {
+                  "children": {
+                    "Metric": [
+                      {
+                        "value": null
+                      }
+                    ],
+                    "Evaluation Type": [
+                      {
+                        "value": null
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Confidence": [
+                {
+                  "value": null
+                }
+              ]
+            }
+          }
+        ],
+        "Threats to Validity": [
+          {
+            "children": {
+              "Kind": [
+                {
+                  "value": null
+                }
+              ],
+              "Addressed": [
+                {
+                  "value": false
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "reviews": {
+        "1": {
+          "Relevant": [
+            {
+              "value": false
+            }
+          ],
+          "Study Type": [
+            {
+              "value": null
+            }
+          ],
+          "Year": [
+            {
+              "value": null
+            }
+          ],
+          "Findings": [
+            {
+              "children": {
+                "Claim": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Evidence": [
+                  {
+                    "children": {
+                      "Metric": [
+                        {
+                          "value": null
+                        }
+                      ],
+                      "Evaluation Type": [
+                        {
+                          "value": null
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "Confidence": [
+                  {
+                    "value": null
+                  }
+                ]
+              }
+            }
+          ],
+          "Threats to Validity": [
+            {
+              "children": {
+                "Kind": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Addressed": [
+                  {
+                    "value": false
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "2": {
+          "Relevant": [
+            {
+              "value": false
+            }
+          ],
+          "Study Type": [
+            {
+              "value": null
+            }
+          ],
+          "Year": [
+            {
+              "value": null
+            }
+          ],
+          "Findings": [
+            {
+              "children": {
+                "Claim": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Evidence": [
+                  {
+                    "children": {
+                      "Metric": [
+                        {
+                          "value": null
+                        }
+                      ],
+                      "Evaluation Type": [
+                        {
+                          "value": null
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "Confidence": [
+                  {
+                    "value": null
+                  }
+                ]
+              }
+            }
+          ],
+          "Threats to Validity": [
+            {
+              "children": {
+                "Kind": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Addressed": [
+                  {
+                    "value": false
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
     },
     {
       "id": "KeimKaplan2026_ICSEBoF",
@@ -122,7 +710,203 @@
       ],
       "doi": "10.48550/arXiv.2601.19548",
       "pdf": "pdfs/KeimKaplan_FromScatteredToStructured.pdf",
-      "annotations": {}
+      "annotations": {
+        "Relevant": [
+          {
+            "value": false
+          }
+        ],
+        "Study Type": [
+          {
+            "value": null
+          }
+        ],
+        "Year": [
+          {
+            "value": null
+          }
+        ],
+        "Findings": [
+          {
+            "children": {
+              "Claim": [
+                {
+                  "value": null
+                }
+              ],
+              "Evidence": [
+                {
+                  "children": {
+                    "Metric": [
+                      {
+                        "value": null
+                      }
+                    ],
+                    "Evaluation Type": [
+                      {
+                        "value": null
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Confidence": [
+                {
+                  "value": null
+                }
+              ]
+            }
+          }
+        ],
+        "Threats to Validity": [
+          {
+            "children": {
+              "Kind": [
+                {
+                  "value": null
+                }
+              ],
+              "Addressed": [
+                {
+                  "value": false
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "reviews": {
+        "1": {
+          "Relevant": [
+            {
+              "value": false
+            }
+          ],
+          "Study Type": [
+            {
+              "value": null
+            }
+          ],
+          "Year": [
+            {
+              "value": null
+            }
+          ],
+          "Findings": [
+            {
+              "children": {
+                "Claim": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Evidence": [
+                  {
+                    "children": {
+                      "Metric": [
+                        {
+                          "value": null
+                        }
+                      ],
+                      "Evaluation Type": [
+                        {
+                          "value": null
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "Confidence": [
+                  {
+                    "value": null
+                  }
+                ]
+              }
+            }
+          ],
+          "Threats to Validity": [
+            {
+              "children": {
+                "Kind": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Addressed": [
+                  {
+                    "value": false
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "2": {
+          "Relevant": [
+            {
+              "value": false
+            }
+          ],
+          "Study Type": [
+            {
+              "value": null
+            }
+          ],
+          "Year": [
+            {
+              "value": null
+            }
+          ],
+          "Findings": [
+            {
+              "children": {
+                "Claim": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Evidence": [
+                  {
+                    "children": {
+                      "Metric": [
+                        {
+                          "value": null
+                        }
+                      ],
+                      "Evaluation Type": [
+                        {
+                          "value": null
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "Confidence": [
+                  {
+                    "value": null
+                  }
+                ]
+              }
+            }
+          ],
+          "Threats to Validity": [
+            {
+              "children": {
+                "Kind": [
+                  {
+                    "value": null
+                  }
+                ],
+                "Addressed": [
+                  {
+                    "value": false
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

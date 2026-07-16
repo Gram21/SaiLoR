@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { RecentEntry, SaveHandle } from '../platform/adapter'
+import { resolveSchema } from '../model/schema'
+import { normalizeTree } from '../model/annotations'
 
 // The test environment provides no localStorage (settings.ts's safeGet/safeSet
 // guard for exactly that), but the reviewer-selection persistence tests below
@@ -24,7 +26,12 @@ if (typeof globalThis.localStorage === 'undefined') {
  *
  *   - single-reviewer → `paper.annotations`, unchanged from before this
  *     feature existed (the backward-compatibility bar the brief sets).
- *   - a numbered reviewer → their own `paper.reviews[N]`, created lazily.
+ *   - a numbered reviewer → their own `paper.reviews[N]`, present as an empty
+ *     skeleton from the moment the project loads (`normalizeReviews` in
+ *     project.ts backfills every reviewer 1..N so a git diff of a reviewer's
+ *     first real edit is a value change, not a new key appearing) — not
+ *     created lazily on first write, though `currentTree`'s `create` path
+ *     still exists as a defensive fallback if one is somehow still missing.
  *   - Consolidation → `paper.annotations`, the tree that actually ships.
  *   - multi-reviewer, nobody picked yet → nothing is read or written; the
  *     reviewer must pick first, never silently default to Reviewer 1.
@@ -70,6 +77,9 @@ const singleReviewerProject = JSON.stringify({
   papers: [{ id: 'p1', title: 'T', authors: [], pdf: 'a.pdf', annotations: {} }],
 })
 
+/** The empty skeleton every reviewer's tree starts as, once loaded. */
+const emptyTree = () => normalizeTree(resolveSchema(schema), undefined)
+
 const multiReviewerProject = JSON.stringify({
   version: 1,
   config: { schema, reviewers: 3 },
@@ -111,9 +121,14 @@ describe('multi-reviewer: nobody picked yet', () => {
   })
 
   it('refuses to write anywhere until a reviewer is picked', () => {
+    // Every reviewer's tree already exists (see `emptyTree`) — the refused
+    // write must leave every one of them exactly as it was, none created,
+    // none touched.
+    const before = st().project!.papers[0].reviews
     st().setFieldValue([], 'Study Type', 0, 'RCT')
     expect(st().project!.papers[0].annotations['Study Type'][0].value).toBeNull()
-    expect(st().project!.papers[0].reviews).toEqual({})
+    expect(st().project!.papers[0].reviews).toEqual({ '1': emptyTree(), '2': emptyTree(), '3': emptyTree() })
+    expect(st().project!.papers[0].reviews).toBe(before) // not even a new object
     expect(st().dirty).toBe(false)
   })
 
@@ -136,25 +151,36 @@ describe('multi-reviewer: a numbered reviewer', () => {
     const paper = st().project!.papers[0]
     expect(paper.reviews['2']['Study Type'][0].value).toBe('Reviewer 2 says RCT')
     expect(paper.annotations['Study Type'][0].value).toBeNull()
-    expect(paper.reviews['1']).toBeUndefined()
+    // Reviewer 1 already has a tree (loaded, not lazily created) — just an
+    // untouched one, not an absent one.
+    expect(paper.reviews['1']).toEqual(emptyTree())
   })
 
-  it('creates the reviewer tree lazily, normalized against the schema', () => {
-    expect(st().project!.papers[0].reviews['2']).toBeUndefined()
+  it('writes into a tree that already existed from load, not one it just created', () => {
+    // The skeleton is there from the moment the project loads — writing to it
+    // updates a value on an existing tree, it does not bring the tree itself
+    // into being. `currentTree`'s lazy-create path still exists (see its own
+    // doc comment) as a fallback, but the ordinary path no longer needs it.
+    const before = st().project!.papers[0].reviews['2']
+    expect(before).toEqual(emptyTree())
     st().setFieldValue([], 'Relevant', 0, true)
-    const tree = st().project!.papers[0].reviews['2']
+    const after = st().project!.papers[0].reviews['2']
+    expect(after['Relevant'][0].value).toBe(true)
     // Padded to schema min like any freshly-normalized tree, not just the one
-    // field that was actually written.
-    expect(tree['Study Type']).toHaveLength(1)
-    expect(tree['Findings']).toHaveLength(1)
+    // field that was actually written — unsurprising, since it was already
+    // padded before this write touched it.
+    expect(after['Study Type']).toHaveLength(1)
+    expect(after['Findings']).toHaveLength(1)
   })
 
-  it('reading before writing shows a well-formed empty tree without creating anything', () => {
+  it('reading before writing shows the same well-formed empty tree that was there all along', () => {
     const paper = st().project!.papers[0]
     const read = currentTree(st().project!, '3', paper)
     expect(read!['Relevant'][0].value).toBe(false)
-    // Still nothing actually stored for reviewer 3 — this was a display-only default.
-    expect(paper.reviews['3']).toBeUndefined()
+    // Reading did not need to create anything — reviewer 3's tree is already
+    // there, unchanged, before and after.
+    expect(paper.reviews['3']).toEqual(emptyTree())
+    expect(read).toBe(paper.reviews['3']) // the live tree itself, not a copy
   })
 
   it('add/removeInstance route the same way', () => {
@@ -182,10 +208,13 @@ describe('multi-reviewer: Consolidation', () => {
   })
 
   it('reads and writes paper.annotations — the tree that ships', () => {
+    const reviewsBefore = st().project!.papers[0].reviews
     st().setFieldValue([], 'Study Type', 0, 'Final answer')
     const paper = st().project!.papers[0]
     expect(paper.annotations['Study Type'][0].value).toBe('Final answer')
-    expect(paper.reviews).toEqual({})
+    // The reviewers' own trees (present from load, all empty) are untouched
+    // by a Consolidation write — same reference, not just an equal value.
+    expect(paper.reviews).toBe(reviewsBefore)
   })
 })
 

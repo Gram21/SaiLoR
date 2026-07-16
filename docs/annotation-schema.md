@@ -626,14 +626,16 @@ reviewers annotate **independently**, then reconcile disagreements into one fina
   Consolidation writes, and what validation, and any future export, reads. In a single-reviewer
   project it is simply the only tree there is, unaffected by any of this.
 - Each reviewer's own work is saved under a new per-paper `reviews` object, keyed by reviewer
-  number as a string:
+  number as a string. Both `annotations` and every reviewer's tree are written **in full** — every
+  field present, at its minimum count, holding `null`/`false` where nobody has answered yet — not
+  as an empty `{}` and not as a missing key:
 
   ```json
   {
     "id": "paper-a",
     "title": "…",
     "pdf": "pdfs/paper-a.pdf",
-    "annotations": { "Relevant": [{ "value": true }] },
+    "annotations": { "Relevant": [{ "value": false }] },
     "reviews": {
       "1": { "Relevant": [{ "value": true }] },
       "2": { "Relevant": [{ "value": false }] }
@@ -641,9 +643,24 @@ reviewers annotate **independently**, then reconcile disagreements into one fina
   }
   ```
 
-  `reviews` is written only for a multi-reviewer project, and only once a reviewer has actually
-  written something — a reviewer who hasn't started a given paper contributes no key at all. A
-  single-reviewer file never has a `reviews` key on any paper, so it stays exactly as it always was.
+  Reviewer 2 above hasn't necessarily answered — `{ "value": false }` is what an *untouched*
+  boolean looks like too, the same as it does in an untouched `annotations` tree (§3.1: "boolean —
+  a checkbox. Empty means `false`."). The point is that the key, and the field, are already there
+  either way. This is deliberate, and it's for **git**: a reviewer's first real edit then changes a value on a line
+  that already existed for every other paper and reviewer, instead of adding a brand-new key —
+  which is what actually makes a `git diff` of one person's work readable on its own, and a
+  `git merge` of two reviewers' independently-annotated copies of the same file survivable instead
+  of a near-guaranteed conflict on top of whatever they actually disagree about.
+
+  `reviews` is written only for a multi-reviewer project — a single-reviewer file never has a
+  `reviews` key on any paper, so it stays exactly as it always was. But for a multi-reviewer
+  project, every reviewer `1..N` gets a key **from the moment the project is opened**, whether or
+  not they have written anything; it is not created lazily on that reviewer's first write.
+
+  **A file that predates this — `annotations: {}`, or a `reviews` object missing some
+  reviewers — is fixed automatically the next time it is opened**, and saved back if there is
+  somewhere to save it (not a browser download, and not a read-only server-hosted file). You don't
+  need to do anything by hand; opening the project once is enough.
 
 ### Setting it up
 
@@ -651,6 +668,11 @@ The project editor's *New / Edit annotation JSON…* screen has a **Multiple rev
 next to the AI opt-out; enabling it exposes a reviewer-count field (2–10) and writes
 `config.reviewers` into the file. Hand-editing the JSON works the same way — add `"reviewers": 3`
 under `config`.
+
+The editor itself doesn't write the full per-reviewer skeleton described above — it preserves
+whatever a paper's `annotations` already were, verbatim, while the schema is being edited. That's
+fine: the first time the saved file is *opened* (including "Save and annotate", which opens it
+immediately), it gets normalized into the full shape automatically — see above.
 
 ### Lowering the reviewer count
 
