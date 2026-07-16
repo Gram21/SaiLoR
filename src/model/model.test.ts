@@ -7,6 +7,8 @@ import {
   canAdd,
   canRemove,
   makeInstance,
+  annotationText,
+  type AnnotationValueTree,
 } from './annotations'
 import { loadProject, serializeProject, ProjectLoadError } from './project'
 
@@ -252,6 +254,57 @@ describe('prune', () => {
     tree['Findings'].push(makeInstance(resolved[3]))
     const pruned = pruneTree(resolved, tree)
     expect(pruned['Findings']).toHaveLength(1)
+  })
+})
+
+describe('annotationText (annotation-mode search haystack)', () => {
+  it('collects filled string and number values, lowercased and space-joined', () => {
+    const resolved = resolveSchema(sampleSchema)
+    const tree = initTree(resolved)
+    tree['Study Type'][0].value = 'RCT'
+    tree['Year'][0].value = 2021
+    tree['Findings'][0].children!['Claim'][0].value = 'X Improves Y'
+    expect(annotationText(resolved, tree)).toBe('rct 2021 x improves y')
+  })
+
+  it('skips booleans — every paper has one, so it would match every search', () => {
+    const resolved = resolveSchema(sampleSchema)
+    const tree = initTree(resolved)
+    tree['Relevant'][0].value = true
+    expect(annotationText(resolved, tree)).toBe('')
+  })
+
+  it('skips empty/null values but keeps the real 0', () => {
+    const resolved = resolveSchema(sampleSchema)
+    const tree = initTree(resolved)
+    tree['Year'][0].value = 0
+    expect(annotationText(resolved, tree)).toBe('0')
+  })
+
+  it('walks nested children, not just top-level fields', () => {
+    const resolved = resolveSchema(sampleSchema)
+    const tree = initTree(resolved)
+    tree['Findings'][0].children!['Claim'][0].value = 'Alpha'
+    tree['Findings'][0].children!['Evidence'][0].value = 'Beta'
+    tree['Findings'].push(makeInstance(resolved[3]))
+    tree['Findings'][1].children!['Claim'][0].value = 'Gamma'
+    expect(annotationText(resolved, tree)).toBe('alpha beta gamma')
+  })
+
+  it('never throws on a hand-edited tree that does not match the schema shape', () => {
+    const resolved = resolveSchema(sampleSchema)
+    const malformed = {
+      Relevant: 'not-an-array',
+      'Study Type': [null, 42, { value: 'ok' }, { children: 'nope' }],
+      Findings: [{ children: { Claim: [{ value: 'nested ok' }] } }],
+    } as unknown as AnnotationValueTree
+    expect(() => annotationText(resolved, malformed)).not.toThrow()
+    expect(annotationText(resolved, malformed)).toBe('ok nested ok')
+  })
+
+  it('returns an empty string for a paper with no annotations at all', () => {
+    const resolved = resolveSchema(sampleSchema)
+    expect(annotationText(resolved, {})).toBe('')
   })
 })
 

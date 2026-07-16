@@ -145,6 +145,43 @@ export function hasAnnotations(defs: ResolvedDef[], tree: AnnotationValueTree): 
   return false
 }
 
+/**
+ * Flatten every filled-in field value under the tree into one lowercased,
+ * space-joined string, for "search by annotation content" mode. Mirrors
+ * `hasAnnotations`'s walk shape rather than a fresh traversal.
+ *
+ * Booleans are skipped: every paper has one for each boolean field (they
+ * default to `false`, never absent), so including "true"/"false" would make
+ * a query like "no" match nearly every paper regardless of what was actually
+ * recorded — the opposite of a useful search.
+ *
+ * Defensive like the rest of this module's tree walks: the project JSON is
+ * hand-editable, so a value tree may not match the schema's shape at runtime.
+ */
+export function annotationText(defs: ResolvedDef[], tree: AnnotationValueTree): string {
+  const parts: string[] = []
+  collectAnnotationText(defs, tree, parts)
+  return parts.join(' ').toLowerCase()
+}
+
+function collectAnnotationText(defs: ResolvedDef[], tree: AnnotationValueTree, out: string[]): void {
+  for (const def of defs) {
+    const raw = tree?.[def.name]
+    const instances = Array.isArray(raw) ? raw : []
+    for (const inst of instances) {
+      if (!inst || typeof inst !== 'object') continue
+      if (isField(def)) {
+        const v = inst.value
+        if (typeof v === 'string' && v !== '') out.push(v)
+        else if (typeof v === 'number' && !Number.isNaN(v)) out.push(String(v))
+      }
+      if (def.children.length > 0 && inst.children) {
+        collectAnnotationText(def.children, inst.children, out)
+      }
+    }
+  }
+}
+
 function isEmptyInstance(def: ResolvedDef, inst: InstanceNode): boolean {
   if (isField(def)) {
     const v = inst.value

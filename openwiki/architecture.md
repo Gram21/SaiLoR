@@ -129,7 +129,7 @@ App (src/App.tsx)
 │     Font controls (A− A A+), theme toggle (☾/☀), help (?)
 ├── [if project loaded: workspace — a CSS grid whose column widths come from resizable panes]
 │   ├── PaperList (src/components/PaperList.tsx)
-│   │     List of papers with search box; green dot if hasAnnotations(); click to select
+│   │     List of papers with search box (🔎 metadata / 🏷 annotation-content modes, see below); green dot if hasAnnotations(); click to select
 │   ├── Splitter (src/components/Splitter.tsx) ×2  — drag handles between the panes
 │   ├── PdfViewer (src/components/PdfViewer.tsx)
 │   │     react-pdf Document+Page; ResizeObserver for width; zoom controls; multi-page navigation; jump history (back/forward); in-PDF search (Ctrl+F); text selection capture
@@ -186,6 +186,14 @@ When a newer release exists, the notice offers a **direct download of the instal
 `isNewerVersion` compares numeric components, not strings (`0.10.0` > `0.9.0`, which a string compare gets wrong), strips a leading `v`, and sorts a pre-release below its release (`1.0.0-beta` < `1.0.0`). It never claims an update from a version it cannot parse.
 
 The result — *including a `null`* — is cached in `localStorage` (`slr.updateCheck`) for 24 h, so a private repo or an offline launch doesn't re-request on every startup, and the 60-requests-per-hour unauthenticated rate limit is never a concern.
+
+### PaperList search modes
+
+The paper-list search box (`src/components/PaperList.tsx`) has two modes, toggled by the 🔎/🏷 button next to the input: **metadata** (title + authors + DOI, the default) and **annotations** (the values recorded in `paper.annotations`). Both modes share one ranking: filter to papers where every query word matches, then sort by distinct words matched, then total matched characters, then original order — only the haystack differs per mode.
+
+Both haystacks are precomputed once per paper in a `useMemo` keyed on `[papers, schema]`, not re-walked on every keystroke. `papers` is a safe key for annotation content too: the store's immer `set` produces a new paper object — and therefore a new `papers` array — on every field edit, so the memo is invalidated exactly when annotation content actually changes, never stale.
+
+The annotation haystack comes from `annotationText(schema, tree)` (`src/model/annotations.ts`), which mirrors `hasAnnotations`'s recursive walk: it collects every field `value` that is a non-empty string or a number, joined and lowercased. Booleans are skipped — every paper has one per boolean field (defaulting to `false`, never absent), so including "true"/"false" would make almost every paper match. Like the rest of that module, it never throws on a tree that doesn't match the schema's shape.
 
 ### Validation
 
