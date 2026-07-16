@@ -172,9 +172,9 @@ untouched. Unknown top-level and per-paper fields are preserved verbatim.
   (up to `max`) and a remove (**×**) control (down to `min`).
 - **Grab from PDF** — select text in the PDF, then click the **⧉** button next to a string/number
   field to insert it (numeric fields extract the first number).
-- **✦ AI** — in the annotation column's header: asks an LLM to propose values for the fields that
-  are still empty. You review every proposal before anything is written. See
-  [Annotating with AI](#annotating-with-ai).
+- **✦ AI** — *not available yet.* An LLM proposes values for the fields that are still empty, for
+  you to review before anything is written. The groundwork is in the app but the feature is off in
+  this release; it is planned for a future one. See [Annotating with AI](#annotating-with-ai).
 - **Theme** — toggle light/dark for the app with the ☾/☀ button (top right). The choice is
   remembered. The PDF paper is always rendered on a normal white background, regardless of theme.
 - **Font size** — the `A− A A+` buttons (or the shortcuts below) scale the app's text. This affects
@@ -197,6 +197,12 @@ untouched. Unknown top-level and per-paper fields are preserved verbatim.
 | `Ctrl/Cmd + C/V/X/Z`    | Native copy/paste/…            |
 
 ## Annotating with AI
+
+> 🚧 **Not available yet — planned for a future release.**
+> The groundwork described in this section is built into the app, but the feature is **switched off**
+> in this release: the **✦ AI** button is not shown, and there is no way to set a provider up or
+> start a run. Read this section as a preview of what is coming, and of how it will treat your data
+> when it does, rather than as instructions you can follow today.
 
 The **✦ AI** button at the top of the annotation column asks a language model to read the paper you
 have open and **propose** values for its annotation fields. It is a first draft, not an answer.
@@ -229,11 +235,11 @@ the project file and are gone when you reopen it.
 
 **Where it sends your paper**
 
-> ⚠️ **The paper's extracted text is sent to whichever LLM provider you configure.** (Or the PDF
-> file itself, if you set the target up that way.) It leaves your machine and goes to that provider
-> under that provider's terms. **Don't use it on material you are not allowed to share** — papers
-> under a publisher's licence, embargoed manuscripts, anything confidential. The dialog tells you
-> what will be sent and to whom before anything leaves.
+> ⚠️ **Once enabled, the paper's extracted text will be sent to whichever LLM provider you
+> configure.** (Or the PDF file itself, if you set the target up that way.) It will leave your
+> machine and go to that provider under that provider's terms. **Don't use it on material you are
+> not allowed to share** — papers under a publisher's licence, embargoed manuscripts, anything
+> confidential. The dialog names what will be sent and to whom before anything leaves.
 
 There is no built-in provider and no key ships with the app: nothing is sent anywhere until you set
 up a target yourself.
