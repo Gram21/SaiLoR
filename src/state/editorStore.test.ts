@@ -13,6 +13,7 @@ import {
   type EditorNode,
   type EditorPaper,
 } from './editorStore'
+import { useStore } from './store'
 import { loadProject } from '../model/project'
 import type { OpenedProject } from '../platform'
 
@@ -334,5 +335,31 @@ describe('editorStateFromOpened (shared by "Edit annotation JSON…" and the rec
   it('defaults reviewers to 1 (single-reviewer) when config.reviewers is absent', () => {
     const st = editorStateFromOpened(opened(projectJson))
     expect(st.reviewers).toBe(1)
+  })
+})
+
+describe('closing the editor without saving', () => {
+  // The bug this pins: `close()` used to leave `dirty` set, and Electron's quit
+  // guard asks main to prompt when *either* store is dirty
+  // (`useElectronCloseGuard`). So discarding a draft and then quitting still
+  // claimed there were unsaved changes — for a draft the user had already
+  // explicitly thrown away, and that no longer existed anywhere.
+  it('clears the dirty flag: the discarded draft is not unsaved work', () => {
+    useEditorStore.setState({ open: true, dirty: true })
+    useEditorStore.getState().close()
+
+    expect(useEditorStore.getState().open).toBe(false)
+    expect(useEditorStore.getState().dirty).toBe(false)
+  })
+
+  it('does not touch the annotation project\'s own unsaved changes', () => {
+    // Only the editor's draft is being discarded. A dirty *project* underneath
+    // must still block a clean quit.
+    useStore.setState({ dirty: true })
+    useEditorStore.setState({ open: true, dirty: true })
+    useEditorStore.getState().close()
+
+    expect(useStore.getState().dirty).toBe(true)
+    useStore.setState({ dirty: false })
   })
 })

@@ -828,6 +828,15 @@ export const useEditorStore = create<EditorState>()(
         s.issues = []
         s.notice = null
         s.justAdded = {}
+        // The draft is gone, so there is nothing left to save. Leaving this set
+        // made Electron's quit guard — which prompts when *either* store is
+        // dirty (`useElectronCloseGuard`) — go on claiming unsaved changes for
+        // a draft the user had already chosen to discard. The next `startNew`/
+        // `startEdit` rebuilds the draft from scratch anyway, so nothing here
+        // is worth carrying across a close.
+        s.dirty = false
+        s.past = []
+        s.future = []
       }),
 
     clearError: () =>
