@@ -206,9 +206,14 @@ it) and the project works that way.
 - **Everyone annotates on their own.** Each reviewer's answers live in their own tree
   (`paper.reviews["1"]`, `"2"`, …). You see and edit only your own — nobody is anchored by what
   someone else already wrote. **Validate** and the paper list's progress dots follow whoever you are.
-- **Pick who you are first.** The reviewer switch sits in the middle of the toolbar (a dropdown above
-  five reviewers). Until you pick, the annotation form stays hidden: an answer nobody can be
-  attributed to is worse than no answer. Your choice is remembered per project.
+- **Pick who you are first.** Opening the project asks: it explains how multi-review works and has
+  you choose a seat, because an answer nobody can be attributed to is worse than no answer. The
+  choice is remembered per project (so it asks once) and you can switch from the toolbar — it sits in
+  the middle, becoming a dropdown above five reviewers.
+- **Consolidation can start before everyone finishes.** The seat is always available; it is the
+  individual papers that wait. A paper not yet annotated by every reviewer shows as not ready in the
+  list and keeps its **⇄** buttons disabled — an absent reviewer's empty column would read as "they
+  found nothing" rather than "they haven't looked yet".
 - **Consolidation is the reconciling pass**, not one more opinion. Take that seat and every field
   gets a **⇄** compare button showing every reviewer's answer side by side, flagging whether they
   agree, and letting you click one to adopt it. What Consolidation records is `paper.annotations` —

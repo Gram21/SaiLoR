@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useStore, currentTree } from '../state/store'
 import { hasAnnotations, annotationText } from '../model/annotations'
+import { readyToConsolidate } from '../consolidate/readiness'
 import { SidebarToggle } from './SidebarToggle'
 import type { Paper, Project } from '../model/project'
 
@@ -24,9 +25,11 @@ interface IndexedPaper {
  *  - Consolidation: `currentTree` for this seat is `paper.annotations`, but
  *    `adoptUnanimousValues` fills that tree just from opening the paper — its
  *    fullness stops meaning the consolidator did anything. What the dot means
- *    here instead is "ready to consolidate": every numbered reviewer 1..N has
- *    annotated. That is well-defined independent of auto-adoption, and tells
- *    the consolidator which papers are actually workable.
+ *    here instead is `readyToConsolidate`: every numbered reviewer has recorded
+ *    something. That is well-defined independent of auto-adoption, and tells the
+ *    consolidator which papers are actually workable — the same rule that
+ *    decides whether a field's compare popup will open (see `Field.tsx`), so the
+ *    list and the popups cannot disagree about which papers are ready.
  */
 export function paperIsMarkedDone(
   project: Project,
@@ -34,11 +37,7 @@ export function paperIsMarkedDone(
   currentReviewer: string | null,
 ): boolean {
   if (project.reviewers > 1 && currentReviewer === 'consolidation') {
-    for (let i = 1; i <= project.reviewers; i++) {
-      const tree = paper.reviews[String(i)]
-      if (!tree || !hasAnnotations(project.schema, tree)) return false
-    }
-    return true
+    return readyToConsolidate(project.schema, paper, project.reviewers)
   }
   const tree = currentTree(project, currentReviewer, paper)
   return !!tree && hasAnnotations(project.schema, tree)

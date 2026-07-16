@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore, useAiMark, type PathSeg } from '../state/store'
 import type { ResolvedDef } from '../model/schema'
 import type { FieldValue } from '../model/annotations'
+import { readyToConsolidate } from '../consolidate/readiness'
 import { ComboBox } from './ComboBox'
 
 const MAX_TEXTAREA_HEIGHT = 240
@@ -27,11 +28,30 @@ export function Field({ def, path, index, value }: FieldProps) {
   // work with and nothing to reconcile.
   const isConsolidation = useStore((s) => s.currentReviewer === 'consolidation')
   const openConsolidation = useStore((s) => s.openConsolidation)
+  // ...and only once every reviewer has actually had their say on this paper.
+  // A reviewer who has not reached it yet would show as an empty column, which
+  // reads as "they found nothing" rather than "they have not looked" — the
+  // compare popup would be inviting a decision on evidence that does not exist.
+  // Same rule as the paper list's dot, so the two cannot disagree about which
+  // papers are ready.
+  const ready = useStore((s) =>
+    s.project && s.currentReviewer === 'consolidation'
+      ? (() => {
+          const paper = s.project.papers.find((p) => p.id === s.currentPaperId)
+          return !!paper && readyToConsolidate(s.project.schema, paper, s.project.reviewers)
+        })()
+      : false,
+  )
   const compareBtn = isConsolidation && (
     <button
       type="button"
       className="compare-btn"
-      title="Compare every reviewer's answer for this field"
+      disabled={!ready}
+      title={
+        ready
+          ? "Compare every reviewer's answer for this field"
+          : 'Not every reviewer has annotated this paper yet — there is nothing to compare against until they have'
+      }
       onClick={() => openConsolidation(path, def.name, index)}
     >
       ⇄

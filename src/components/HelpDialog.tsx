@@ -351,8 +351,16 @@ function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
               from it.
             </p>
             <p>
-              Until you pick who you are, the form stays hidden: an answer that isn't attributable to
-              a reviewer is worse than no answer.
+              Opening such a project asks who you are before showing you anything — an answer that
+              isn't attributable to a reviewer is worse than no answer. It asks once and remembers;
+              the toolbar switch changes it whenever you like.
+            </p>
+            <p>
+              You don't have to wait for everyone to finish before consolidating: the seat is always
+              open, and it is the individual <em>papers</em> that wait. One that not every reviewer
+              has annotated yet shows as not ready in the list and keeps its <strong>⇄</strong>{' '}
+              buttons disabled — the missing reviewer's column would otherwise look like they found
+              nothing, when the truth is they haven't looked yet.
             </p>
           </>
         ),
