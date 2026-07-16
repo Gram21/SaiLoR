@@ -302,6 +302,16 @@ function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
               <strong>final result</strong> — the answers an analysis or export would use.
             </p>
             <p>
+              Where <strong>every reviewer gave the same answer</strong>, Consolidation fills it in
+              for you and marks it with a{' '}
+              <strong>light-blue border</strong> until you click it — there is nothing to reconcile
+              when everyone already agrees, and copying those across by hand is exactly the task
+              during which a real disagreement further down gets missed. Only case and stray spaces
+              are forgiven, never near-misses: if the wording genuinely differs, the call stays
+              yours. A field one reviewer left blank is not agreement either, however the others
+              answered.
+            </p>
+            <p>
               For fields and groups that can be added several times — Findings, say — Consolidation
               does two things for you as you open a paper. It adds{' '}
               <strong>as many entries as the busiest reviewer recorded</strong>, so you are not

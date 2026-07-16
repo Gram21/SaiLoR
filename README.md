@@ -212,7 +212,11 @@ it) and the project works that way.
 - **Consolidation is the reconciling pass**, not one more opinion. Take that seat and every field
   gets a **⇄** compare button showing every reviewer's answer side by side, flagging whether they
   agree, and letting you click one to adopt it. What Consolidation records is `paper.annotations` —
-  the project's **final result**, and what an export or analysis would read.
+  the project's **final result**, and what an export or analysis would read. (The AI button is not
+  offered here: reconciling is a human call on what the reviewers actually said.)
+- **What everyone already agreed on is filled in for you**, with a light-blue border until you click
+  it. Only case and stray whitespace are forgiven — a near-miss in wording, or a field one reviewer
+  left blank, stays your call. It leaves your attention for the fields that actually differ.
 - **Repeatable groups are lined up for you.** Opening a paper as Consolidation adds as many entries
   as the busiest reviewer recorded, and works out *which of each reviewer's entries are the same
   entry* — two people rarely list the same three findings in the same order. Your Finding #2 is then

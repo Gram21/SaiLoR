@@ -42,6 +42,14 @@ export function AnnotationPanel() {
     ? (currentTree(project, currentReviewer, paper) ?? normalizeTree(schema, undefined))
     : paper.annotations
 
+  // Consolidation is the pass where a human decides between what the reviewers
+  // actually said. A model has no standing there: its answer would be a fresh
+  // opinion invented after the fact, written straight into the tree that ships
+  // and dressed as a reconciliation of the others. The button is not rendered at
+  // all in this seat — not merely disabled or transparent, which is what the
+  // locked state below does — and `applyAiSuggestions` refuses from here too, in
+  // case the dialog was opened as a reviewer and the seat then switched.
+  const isConsolidation = currentReviewer === 'consolidation'
   const aiDisabled = busy || !paper.pdf || !aiEnabled || !aiUnlocked
   // Not unlocked this session at all (the hidden click gesture never
   // happened): the button doesn't just disable, it has no visible presence —
@@ -59,16 +67,18 @@ export function AnnotationPanel() {
       <div className="annotations-head">
         <div className="annotations-head-row">
           <h2>Annotations</h2>
-          <button
-            type="button"
-            className={`ai-btn${aiHidden ? ' ai-btn-hidden' : ''}`}
-            title={aiHidden ? undefined : aiTitle}
-            disabled={aiDisabled}
-            aria-hidden={aiHidden || undefined}
-            onClick={() => void openAi()}
-          >
-            ✦ AI
-          </button>
+          {!isConsolidation && (
+            <button
+              type="button"
+              className={`ai-btn${aiHidden ? ' ai-btn-hidden' : ''}`}
+              title={aiHidden ? undefined : aiTitle}
+              disabled={aiDisabled}
+              aria-hidden={aiHidden || undefined}
+              onClick={() => void openAi()}
+            >
+              ✦ AI
+            </button>
+          )}
         </div>
         <div className="annotations-paper-title">
           {paper.title}
