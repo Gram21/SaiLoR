@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { useStore } from '../state/store'
 import { useEditorStore } from '../state/editorStore'
+import { useGitStore } from '../state/gitStore'
 import { getPlatform } from '../platform'
 import { Dropdown, type MenuItem } from './Dropdown'
 import { SidebarToggle } from './SidebarToggle'
@@ -67,6 +68,16 @@ export function Toolbar() {
   const currentReviewer = useStore((s) => s.currentReviewer)
   const selectReviewer = useStore((s) => s.selectReviewer)
 
+  // Git support is Electron-only: `getGit()` is null in the browser (no local
+  // git to reach at all), so the entry points below are absent there rather
+  // than shown-and-broken. `probe` distinguishes that from "this machine has
+  // no git installed", which dims the control instead of hiding it.
+  const git = getPlatform().getGit()
+  const gitProbe = useGitStore((s) => s.probe)
+  const gitRepo = useGitStore((s) => s.repo)
+  const openClone = useGitStore((s) => s.openClone)
+  const openGitPanel = useGitStore((s) => s.openPanel)
+
   // A ref, not state: counting must not trigger a render, or the title (and
   // anything watching it) would visibly react to being clicked before the
   // gesture is even complete. See the title span below — it stays exactly
@@ -128,6 +139,20 @@ export function Toolbar() {
 
   const openItems: MenuItem[] = [
     { type: 'item', label: 'Open file…', shortcut: `${modKey}+O`, onSelect: () => void openProject() },
+    ...(git
+      ? [
+          {
+            type: 'item' as const,
+            label: 'Import from git…',
+            hint:
+              gitProbe && !gitProbe.available
+                ? gitProbe.error
+                : 'Clone a repository and open a project from it',
+            disabled: busy || (gitProbe !== null && !gitProbe.available),
+            onSelect: () => openClone(),
+          },
+        ]
+      : []),
     { type: 'separator' },
     { type: 'header', label: 'Recent projects' },
     ...(recents.length > 0
@@ -210,6 +235,19 @@ export function Toolbar() {
           >
             Close
           </button>
+          {/* Only rendered when the open project's JSON actually sits inside a
+              work tree — `gitRepo` is null otherwise, including when git is
+              missing from this machine's PATH. */}
+          {gitRepo && (
+            <button
+              type="button"
+              title={`Commit, pull and push this project — ${gitRepo.branch ?? 'detached HEAD'}`}
+              onClick={() => void openGitPanel()}
+              disabled={!project || busy || editorOpen}
+            >
+              Git
+            </button>
+          )}
         </div>
       </div>
 

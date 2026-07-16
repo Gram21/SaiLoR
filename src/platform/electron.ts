@@ -9,6 +9,16 @@ import type {
 } from './adapter'
 import { readRecents, pushRecent, removeRecent, replaceRecents, type RecentEntry } from './recents'
 import type { LlmConfig, LlmHttpRequest, LlmHttpResponse } from '../llm/types'
+import type {
+  GitPlatform,
+  GitProbe,
+  CloneOutcome,
+  GitRepoInfo,
+  GitStatus,
+  GitRun,
+  PullStart,
+} from '../git/types'
+import { parsePorcelain, capDiff } from '../git/output'
 
 const RECENTS_KEY = 'slr.recents.electron'
 
@@ -55,6 +65,21 @@ export interface SlrBridge {
   /** Edit-menu Undo/Redo routed to the app's annotation history. */
   onUndo(cb: () => void): void
   onRedo(cb: () => void): void
+
+  // Git: the user's own git binary. See `PlatformAdapter.getGit`.
+  gitProbe(): Promise<GitProbe>
+  gitPickCloneDir(): Promise<string | null>
+  gitClone(url: string, dest: string): Promise<CloneOutcome>
+  gitPickProjectIn(dir: string): Promise<string | null>
+  gitInfo(projectPath: string): Promise<GitRepoInfo | null>
+  /** Raw porcelain/diff text — parsed on this side of the IPC boundary
+   *  (`src/git/output.ts`), where the parser is unit-tested. */
+  gitStatus(root: string): Promise<{ porcelain: string; diff: string }>
+  gitCommit(root: string, paths: string[], message: string): Promise<GitRun>
+  gitPush(root: string): Promise<GitRun>
+  gitPullBegin(root: string, relPath: string): Promise<PullStart>
+  gitPullFinish(root: string, relPath: string, text: string): Promise<GitRun>
+  gitPullAbort(root: string): Promise<GitRun>
 }
 
 function bridge(): SlrBridge {
@@ -263,6 +288,35 @@ export class ElectronAdapter implements PlatformAdapter {
     } finally {
       signal?.removeEventListener('abort', onAbort)
     }
+  }
+
+  // Git: thin pass-throughs to the bridge, except `status`, where the raw
+  // porcelain/diff text crosses IPC on purpose so the tested parsers
+  // (`src/git/output.ts`) turn it into data on this side.
+  //
+  // A `private readonly` field, not a fresh object literal per call: getPlatform()
+  // is a singleton, and a new object every time `getGit()` is called would make
+  // every `useGitStore` selector see a "different" platform and churn.
+  private readonly git: GitPlatform = {
+    probe: () => bridge().gitProbe(),
+    pickCloneDir: () => bridge().gitPickCloneDir(),
+    clone: (url, dest) => bridge().gitClone(url, dest),
+    pickProjectIn: (dir) => bridge().gitPickProjectIn(dir),
+    info: (projectPath) => bridge().gitInfo(projectPath),
+    status: async (root): Promise<GitStatus> => {
+      const { porcelain, diff } = await bridge().gitStatus(root)
+      const capped = capDiff(diff)
+      return { changes: parsePorcelain(porcelain), diff: capped.text, diffTruncated: capped.truncated }
+    },
+    commit: (root, paths, message) => bridge().gitCommit(root, paths, message),
+    push: (root) => bridge().gitPush(root),
+    beginPull: (root, relPath) => bridge().gitPullBegin(root, relPath),
+    finishPull: (root, relPath, text) => bridge().gitPullFinish(root, relPath, text),
+    abortPull: (root) => bridge().gitPullAbort(root),
+  }
+
+  getGit(): GitPlatform {
+    return this.git
   }
 }
 
