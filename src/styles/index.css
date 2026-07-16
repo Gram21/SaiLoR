@@ -246,14 +246,15 @@ body.resizing * {
   font-weight: 400;
 }
 .paper-search {
+  position: relative;
   display: flex;
-  gap: 6px;
 }
 .paper-search-input {
-  flex: 1 1 auto;
   width: 100%;
   min-width: 0;
   padding: 5px 9px;
+  /* Reserve room for the mode trigger so typed text can never run under it. */
+  padding-right: 52px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg);
@@ -266,10 +267,42 @@ body.resizing * {
   border-color: var(--accent);
 }
 /* Toggles which text a query matches against (title/authors/DOI vs.
-   annotation values). Reuses .icon-btn.active for the "on" state so it
-   matches the rest of the app's toggle buttons (e.g. the PDF search icon). */
+   annotation values). A fixed width (not just equal-length labels) is the
+   actual guarantee that toggling never resizes the button: bold text and
+   regular text of the same character count still measure a few px apart in
+   most fonts, which is exactly the glyph-width bug this replaces. The border
+   stays 1px in both states, transparent when off, so its width doesn't
+   change the box either. */
 .paper-search-mode {
-  flex: 0 0 auto;
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-align: center;
+  cursor: pointer;
+}
+/* `button.` (not just `.paper-search-mode`) to outrank the global
+   `button:hover:not(:disabled)` rule's specificity — otherwise that rule's
+   accent border-color would silently win over the quiet hover here. */
+button.paper-search-mode:hover {
+  color: var(--text);
+  border-color: var(--border);
+}
+.paper-search-mode.active {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-weight: 700;
 }
 .paper-list-empty {
   padding: 16px 12px;
@@ -928,6 +961,80 @@ body.resizing * {
   font-size: 0.75rem;
   font-weight: 500;
   vertical-align: middle;
+}
+
+/* Wider and taller than the shared `.modal` default: this is the one dialog
+   that is read rather than acted on, and it now carries a contents list, an
+   FAQ and a shortcut table per mode. */
+.help-dialog {
+  width: min(940px, 94vw);
+  max-height: 92vh;
+}
+
+.help-lead p:first-child {
+  margin-top: 0;
+}
+
+/* Contents, generated from the sections themselves (see HelpDialog.tsx). */
+.help-toc {
+  margin: 14px 0 4px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.help-toc-title {
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.help-toc ul {
+  /* Flows into as many columns as the (now wide) dialog affords, so a long
+     contents list stays a glance rather than a scroll of its own. */
+  columns: 3 160px;
+  gap: 12px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.help-toc li {
+  break-inside: avoid;
+}
+.help-toc-link {
+  padding: 2px 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  text-align: left;
+  cursor: pointer;
+}
+.help-toc-link:hover {
+  text-decoration: underline;
+}
+
+/* One FAQ entry: collapsed by default so the list of questions is skimmable. */
+.help-faq {
+  border-bottom: 1px solid var(--border);
+}
+.help-faq:last-child {
+  border-bottom: none;
+}
+.help-faq summary {
+  padding: 7px 0;
+  cursor: pointer;
+  font-weight: 500;
+}
+.help-faq summary:hover {
+  color: var(--accent);
+}
+.help-faq-body {
+  padding: 0 0 4px 16px;
+  color: var(--muted);
+}
+.help-faq-body p {
+  margin: 0 0 8px;
+  color: inherit;
 }
 
 /* Version + update notice at the bottom of the start screen. */

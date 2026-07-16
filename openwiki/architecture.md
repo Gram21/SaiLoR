@@ -136,7 +136,7 @@ App (src/App.tsx)
 │     Reviewer switch (multi-reviewer projects only) — Reviewer 1..N + Consolidation, hidden entirely for a single-reviewer project; see "Multiple reviewers & Consolidation" below
 ├── [if project loaded: workspace — a CSS grid whose column widths come from resizable panes]
 │   ├── PaperList (src/components/PaperList.tsx)
-│   │     List of papers with search box (🔎 metadata / 🏷 annotation-content modes, see below); green dot if hasAnnotations(); click to select
+│   │     List of papers with search box (META / TAGS modes, see below); green dot if the active reviewer has annotations; click to select
 │   ├── Splitter (src/components/Splitter.tsx) ×2  — drag handles between the panes
 │   ├── PdfViewer (src/components/PdfViewer.tsx)
 │   │     react-pdf Document+Page; ResizeObserver for width; zoom controls; multi-page navigation; jump history (back/forward); in-PDF search (Ctrl+F); text selection capture
@@ -201,7 +201,7 @@ The result — *including a `null`* — is cached in `localStorage` (`slr.update
 
 ### PaperList search modes
 
-The paper-list search box (`src/components/PaperList.tsx`) has two modes, toggled by the 🔎/🏷 button next to the input: **metadata** (title + authors + DOI, the default) and **annotations** (the values recorded in `paper.annotations`). Both modes share one ranking: filter to papers where every query word matches, then sort by distinct words matched, then total matched characters, then original order — only the haystack differs per mode.
+The paper-list search box (`src/components/PaperList.tsx`) has two modes, toggled by a trigger sitting *inside* the input's right-hand edge, labelled **META** (title + authors + DOI, the default) and **TAGS** (the annotation values recorded in the active reviewer's tree; see `currentTree` above). The trigger is given a fixed width rather than relying on its two labels being the same length: the active state is bold, and bold vs. regular text of equal character count still measures a few px apart, which would reintroduce exactly the reflow the fixed width exists to prevent. It replaced a 🔎/🏷 emoji pair whose differing glyph widths visibly resized the control on every toggle. Both modes share one ranking: filter to papers where every query word matches, then sort by distinct words matched, then total matched characters, then original order — only the haystack differs per mode.
 
 Both haystacks are precomputed once per paper in a `useMemo` keyed on `[papers, schema]`, not re-walked on every keystroke. `papers` is a safe key for annotation content too: the store's immer `set` produces a new paper object — and therefore a new `papers` array — on every field edit, so the memo is invalidated exactly when annotation content actually changes, never stale.
 
