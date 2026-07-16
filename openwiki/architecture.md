@@ -1046,10 +1046,40 @@ variable. None of this weakens anything a user configured:
 | --- | --- |
 | `src/git/types.ts` | Shared shapes crossing the platform seam: `GitRun`, `GitProbe`, `GitFileChange`, `GitStatus`, `GitRepoInfo`, `CloneOutcome`, `PullStart`, and the `GitPlatform` interface itself. |
 | `src/git/url.ts` | Pure. `validateGitUrl`, `validateClonePath`, `repoNameFromUrl` — the security gate, imported by `electron/main.ts` (see above). |
-| `src/git/output.ts` | Pure. `parsePorcelain` (turns `git status --porcelain=v1 -z` into `GitFileChange[]`), `capDiff` (caps a diff for the DOM), `gitErrorText` (what to show when a git command failed) — also imported by `electron/main.ts`, so the "what does a failed run's message say" logic exists once. |
+| `src/git/output.ts` | Pure. `parsePorcelain` (turns `git status --porcelain=v1 -z` into `GitFileChange[]`), `capDiff` (caps a diff for the DOM), `diffLines` (splits a unified diff into per-line `add`/`remove`/`context` for the coloured view — see below), `gitErrorText` (what to show when a git command failed) — also imported by `electron/main.ts`, so the "what does a failed run's message say" logic exists once. |
 | `src/git/merge.ts` | Pure. The field-level three-way merge — see below. Knows nothing about git or the DOM, the same shape `src/consolidate/` follows. |
 | `src/state/gitStore.ts` | The clone flow and the commit/pull/push panel; owns the pull orchestration. |
 | `src/components/GitCloneDialog.tsx`, `GitDialog.tsx`, `GitMergeDialog.tsx` | Views over `gitStore`. |
+
+**Each dialog's width class is `.modal.git-*-dialog`, not bare `.git-*-dialog`** — a single-class
+selector has the same specificity as index.css's own `.modal` (which also sets `width`), so which
+one wins is decided by stylesheet order rather than anything about the rules, and that order is not
+even the same between dev mode (Vite injects each imported stylesheet as its own `<style>`, in
+module-evaluation order) and the production bundle (Rollup concatenates them, and did so the other
+way round). Concretely: with the bare selector, every git dialog's own width was silently losing to
+`.modal`'s generic one in the shipped build — all three stuck at the same 680px regardless of what
+`git.css` said. Qualifying with `.modal` too makes the outcome deterministic instead of an accident
+of build order.
+
+**The clone dialog's URL field needed its own width for an unrelated reason.** `.field-input`'s
+width comes from `flex: 1 1 auto`, which does nothing outside a flex row — every other place it is
+used *is* one, but the URL field is the sole control in the clone dialog's body, so it still rendered
+at the browser's default input width no matter how wide the dialog around it was. `.git-clone-url-input`
+gives it `width: 100%` directly; the dialog itself is `92vw` (not a fixed `min(…, vw)` cap like the
+other two) so the field stays close to full window width on any size window, which is the point of
+it — reading or pasting a long URL without the field scrolling it.
+
+**The diff is coloured per line, not as one block.** `GitDialog.tsx` renders each line `diffLines`
+(`src/git/output.ts`) returns as its own `<span className="git-diff-line git-diff-{kind}">`, since a
+unified diff interleaves added, removed, and unchanged context lines — anything coarser would colour
+context text too. Classifying a line as `add`/`remove` by a bare `+`/`-` prefix check would misread
+two things at once: a genuinely added line whose own content starts with `+`/`-` (`++counter;`), and
+— worse — the `+++ b/path`/`--- a/path` file-header pair the moment a file's first real change
+happens to start with those same three characters. `diffLines` instead tracks whether a hunk has
+started for the *current* file (reset on every `diff --git`, set on that file's first `@@`): the
+header pair, which by git's own format only ever appears once per file and always immediately before
+that file's first hunk, is `context` regardless of what it looks like, and every `+`/`-` line once
+inside a hunk is real content regardless of what *it* looks like.
 
 ### State management: `gitStore`
 

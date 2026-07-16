@@ -7,15 +7,30 @@
  * themes are covered without a single hard-coded colour.
  */
 
-.git-clone-dialog {
-  width: min(560px, 94vw);
+/*
+ * Two classes each, not one — `.modal` alone already sets `width`
+ * (index.css), and a single-class selector here has the same specificity as
+ * that rule, so which one wins comes down to CSS source order rather than
+ * anything about the rules themselves. That order isn't even stable: dev
+ * mode and the production bundle concatenate the two stylesheets
+ * differently, and in the production bundle `.modal`'s width was the one
+ * winning — every dialog below was silently stuck at the generic 680px,
+ * never at its own intended width. Qualifying with `.modal` too raises
+ * specificity enough to make the outcome deterministic instead of an
+ * accident of build order.
+ */
+.modal.git-clone-dialog {
+  /* Near-full window width, not a fixed cap that stops growing — the whole
+     point is a URL field big enough to read a long one without scrolling
+     it, on whatever size window it's opened in. */
+  width: 92vw;
 }
 
-.git-dialog {
+.modal.git-dialog {
   width: min(860px, 94vw);
 }
 
-.git-merge-dialog {
+.modal.git-merge-dialog {
   width: min(1180px, 96vw);
 }
 
@@ -24,6 +39,18 @@
   margin: 10px 0 4px;
   color: var(--muted);
   font-size: 0.85rem;
+}
+
+/* `.field-input`'s own width comes from `flex: 1 1 auto`, which does nothing
+   outside a flex row — this one isn't in one, it's the sole field in the
+   clone dialog's body, so it needs its own width to actually fill the now
+   much wider dialog rather than sit at the browser's tiny default input
+   width regardless of how wide the dialog around it is. */
+.git-clone-url-input {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 1.05rem;
 }
 
 .git-muted {
@@ -78,6 +105,19 @@
 }
 .git-error {
   color: var(--danger);
+}
+
+/* Each line is its own <span> (see GitDialog.tsx's diffLines() render), not
+   colour applied to the whole <pre> — a unified diff interleaves added,
+   removed, and unchanged context lines, so anything coarser than per-line
+   would colour context text too. */
+.git-diff-add {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 10%, transparent);
+}
+.git-diff-remove {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
 }
 
 /* --- changes/commit/pull/push panel ------------------------------------ */

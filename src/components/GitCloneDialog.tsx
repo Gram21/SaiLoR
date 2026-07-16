@@ -79,7 +79,7 @@ export function GitCloneDialog() {
               </label>
               <input
                 id="git-clone-url"
-                className="field-input"
+                className="field-input git-clone-url-input"
                 type="text"
                 autoFocus
                 placeholder="https://github.com/org/repo.git"

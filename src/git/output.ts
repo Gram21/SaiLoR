@@ -16,6 +16,46 @@ export function capDiff(text: string): { text: string; truncated: boolean } {
   return { text: text.slice(0, MAX_DIFF_CHARS), truncated: true }
 }
 
+export interface DiffLine {
+  text: string
+  kind: 'add' | 'remove' | 'context'
+}
+
+/**
+ * Classify each line of a unified diff (`git diff --no-color`) for coloured
+ * rendering. Not a bare `line.startsWith('+')` — that misreads an *added*
+ * line whose own content starts with a literal `+` or `-` (`++counter;`,
+ * `--verbose`) as removed/added the wrong way, and worse, misreads the
+ * `+++ b/path`/`--- a/path` file-header pair as a content line the moment a
+ * file's first change happens to start with the same three characters.
+ *
+ * The header pair only ever appears once per file, immediately before that
+ * file's first `@@` hunk — so this tracks whether a hunk has started for the
+ * *current* file (reset on every `diff --git`) and only reads `+`/`-` as
+ * add/remove once inside one. Everything before the first hunk of a file
+ * (`diff --git`, `index …`, the header pair) is `context`, and so is a
+ * hunk's own ` `-prefixed lines and a trailing `\ No newline at end of file`.
+ */
+export function diffLines(text: string): DiffLine[] {
+  const out: DiffLine[] = []
+  let inHunk = false
+  for (const line of text.split('\n')) {
+    if (line.startsWith('diff --git ')) {
+      inHunk = false
+    } else if (line.startsWith('@@')) {
+      inHunk = true
+    } else if (inHunk && line.startsWith('+')) {
+      out.push({ text: line, kind: 'add' })
+      continue
+    } else if (inHunk && line.startsWith('-')) {
+      out.push({ text: line, kind: 'remove' })
+      continue
+    }
+    out.push({ text: line, kind: 'context' })
+  }
+  return out
+}
+
 /** `X`/`Y` pair that `git status --porcelain` calls an unresolved merge conflict:
  *  either side is 'U', or both sides added/deleted the same path independently. */
 function isUnmergedCode(x: string, y: string): boolean {
