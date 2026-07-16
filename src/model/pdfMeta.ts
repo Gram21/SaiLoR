@@ -134,6 +134,15 @@ export interface Line {
  */
 const COLUMN_GAP_RATIO = 1.5
 
+/**
+ * Two segments belong to the same column when their left edges are within this
+ * many points. Generous enough for the sub-point x jitter a justified column
+ * shows line to line, far tighter than any real gutter (a two-column letter
+ * page puts its columns ~260pt apart). Used to follow one column down the page
+ * — by `abstractFromLines`, and by the author-list continuation below.
+ */
+const COLUMN_X_TOLERANCE = 12
+
 /** Group a page's text items into lines, keeping each line's dominant font size. */
 export function toLines(items: { str: string; transform: number[]; width?: number }[]): Line[] {
   const byY = new Map<
@@ -204,6 +213,47 @@ export function toLines(items: { str: string; transform: number[]; width?: numbe
 /** Where the body text starts — nothing at or below this is title/author material. */
 const BODY_START = /^(abstract|introduction|keywords|index terms|ccs concepts|a\.?b\.?s\.?t\.?r\.?a\.?c\.?t)\b/i
 
+/**
+ * A line this much smaller than the author line is superscript affiliation
+ * keys, not more authors. They sit on their own raised baseline, so `toLines`
+ * reports them as a line of their own ("1 1") *between* the two halves of a
+ * wrapped author list — skipping rather than stopping at them is what lets the
+ * halves find each other.
+ */
+const SUPERSCRIPT_SIZE_RATIO = 0.85
+
+/** How far past the author line to look for the rest of a wrapped list. */
+const AUTHOR_CONTINUATION_LINES = 3
+
+/**
+ * The names in a block of lines that together hold one author list, parsed per
+ * column: each of the first line's segments is joined with the segment at the
+ * same `x` on every later line, and only then split into names.
+ *
+ * Joining before parsing is the whole point. A name broken across a line break
+ * ("… Niklas Ewald, Tobias" / "Thirolf, and Anne Koziolek") cannot be repaired
+ * afterwards — parse the lines separately and "Tobias" is a lone token that
+ * strict mode correctly rejects, so the author is simply gone, and "Thirolf"
+ * has lost its first name. Joined, it is an ordinary comma-separated list.
+ *
+ * Per column, for the same reason `titleAndAuthorsFromLines` already parsed a
+ * single line per segment: a two-column author block puts each author on the
+ * same baseline with only the gutter between them.
+ */
+function namesFromAuthorBlock(block: Line[]): string[] {
+  const [first, ...rest] = block
+  return first.segments.flatMap((seg) => {
+    let text = seg.text
+    for (const line of rest) {
+      const cont = line.segments.find((s) => Math.abs(s.x - seg.x) <= COLUMN_X_TOLERANCE)
+      if (cont) text += ` ${cont.text}`
+    }
+    // Strict: this is a guess at which lines hold the authors, so a body
+    // sentence must not be mistaken for a list of names.
+    return parseAuthorList(text, true)
+  })
+}
+
 /** Title + authors from a page's lines: biggest text at the top, then what follows. */
 export function titleAndAuthorsFromLines(lines: Line[], pageHeight: number): PdfMeta {
   // Only the top of the page can hold the title block.
@@ -227,20 +277,37 @@ export function titleAndAuthorsFromLines(lines: Line[], pageHeight: number): Pdf
   if (isPlausibleTitle(title)) out.title = title
 
   // Authors: the next few smaller lines, stopping at the abstract/affiliations.
-  const authors: string[] = []
+  let authors: string[] = []
   for (let j = i; j < top.length && j < i + 4; j++) {
-    const line = top[j]
-    if (BODY_START.test(line.text)) break
-    // Per column, not per line: a two-column author block has no punctuation
-    // between the names — only the gutter — so parsing the joined line would
-    // read "Jan Keim" and "Angelika Kaplan" as one person.
-    // Strict: this is a guess at which line holds the authors, so a body
-    // sentence must not be mistaken for a list of names.
-    const names = line.segments.flatMap((seg) => parseAuthorList(seg.text, true))
-    if (names.length === 0) continue
-    authors.push(...names)
-    // One line of names is the common case; stop once we have some.
-    if (authors.length > 0) break
+    if (BODY_START.test(top[j].text)) break
+    let block = [top[j]]
+    let best = namesFromAuthorBlock(block)
+    if (best.length === 0) continue // not the author line — a superscript row, or prose
+
+    // The list may wrap. Grow the block a line at a time, keeping a line only
+    // when it produces *more* names than the block without it.
+    //
+    // That comparison is the safety rail, and it is what makes growing safe at
+    // all: the line under the authors is far more often an affiliation or an
+    // email row than the rest of the list. Absorbing one of those does not add
+    // names — it destroys them, because the last author and the affiliation
+    // fuse into a single entry ("John Smith Karlsruhe Institute of Technology")
+    // that `parseAuthorList` then drops as an affiliation. So a join that helps
+    // is kept and a join that hurts is rejected on its own evidence, with no
+    // need to recognise an affiliation up front.
+    for (let k = j + 1; k < top.length && k <= j + AUTHOR_CONTINUATION_LINES; k++) {
+      const next = top[k]
+      if (BODY_START.test(next.text)) break
+      // Skip, don't stop: superscript affiliation keys land on their own line
+      // in the middle of a wrapped list.
+      if (next.size < top[j].size * SUPERSCRIPT_SIZE_RATIO) continue
+      const grown = namesFromAuthorBlock([...block, next])
+      if (grown.length <= best.length) break
+      block = [...block, next]
+      best = grown
+    }
+    authors = best
+    break
   }
   if (authors.length > 0) out.authors = authors
   return out
@@ -259,14 +326,6 @@ const MIN_ABSTRACT_LENGTH = 150
 const MAX_ABSTRACT_LENGTH = 4000
 /** Safety valve alongside the length cap, in case `ABSTRACT_END` never matches. */
 const MAX_ABSTRACT_LINES = 40
-
-/**
- * Two segments belong to the same column when their left edges are within this
- * many points. Generous enough for the sub-point x jitter a justified column
- * shows line to line, far tighter than any real gutter (a two-column letter
- * page puts its columns ~260pt apart).
- */
-const COLUMN_X_TOLERANCE = 12
 
 /**
  * The abstract from a page's lines: the text under the "Abstract" heading, in

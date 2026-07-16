@@ -195,6 +195,88 @@ describe('titleAndAuthorsFromLines', () => {
     const meta = titleAndAuthorsFromLines([line(700, 18, 'Fig'), line(670, 11, 'Jane Doe')], page)
     expect(meta.title).toBeUndefined()
   })
+
+  it('continues a wrapped author list onto the next line', () => {
+    const meta = titleAndAuthorsFromLines(
+      [
+        line(700, 18, 'A Title That Is Long Enough'),
+        line(670, 11, 'Jane Doe, John Smith, Ada'),
+        line(658, 11, 'Lovelace, and Alan Turing'),
+      ],
+      page,
+    )
+    // "Ada" / "Lovelace" is the point: split across the break, it survives only
+    // because the lines are joined before being parsed into names.
+    expect(meta.authors).toEqual(['Jane Doe', 'John Smith', 'Ada Lovelace', 'Alan Turing'])
+  })
+
+  it('steps over a row of superscript affiliation keys inside a wrapped list', () => {
+    const meta = titleAndAuthorsFromLines(
+      [
+        line(700, 18, 'A Title That Is Long Enough'),
+        line(670, 11, 'Jane Doe, John Smith, Ada'),
+        line(662, 7, '1 2'), // superscripts on their own raised baseline
+        line(658, 11, 'Lovelace, and Alan Turing'),
+      ],
+      page,
+    )
+    expect(meta.authors).toEqual(['Jane Doe', 'John Smith', 'Ada Lovelace', 'Alan Turing'])
+  })
+
+  // The reason growing the block is guarded rather than unconditional: the line
+  // under the authors is usually an affiliation, and absorbing one does not add
+  // names, it destroys them — the last author fuses with it into an entry
+  // parseAuthorList then drops wholesale.
+  it('does not absorb the affiliation line below the authors', () => {
+    const meta = titleAndAuthorsFromLines(
+      [
+        line(700, 18, 'A Title That Is Long Enough'),
+        line(670, 11, 'Jane Doe, John Smith'),
+        line(658, 11, 'Karlsruhe Institute of Technology'), // same size as the authors
+      ],
+      page,
+    )
+    expect(meta.authors).toEqual(['Jane Doe', 'John Smith'])
+  })
+
+  it('does not absorb an email row below the authors', () => {
+    const meta = titleAndAuthorsFromLines(
+      [
+        line(700, 18, 'A Title That Is Long Enough'),
+        line(670, 11, 'Jane Doe, John Smith'),
+        line(658, 11, 'jane@example.edu, john@example.edu'),
+      ],
+      page,
+    )
+    expect(meta.authors).toEqual(['Jane Doe', 'John Smith'])
+  })
+
+  it('continues each column of a two-column author block on its own', () => {
+    const meta = titleAndAuthorsFromLines(
+      [
+        line(700, 18, 'A Title That Is Long Enough'),
+        columns(670, 11, ['Jan Keim, Ada', 'Angelika Kaplan, Alan']),
+        columns(658, 11, ['Lovelace', 'Turing']),
+      ],
+      page,
+    )
+    // Each column's wrap is joined to its own column, matched by x — never
+    // across the gutter, which would invent "Ada Turing".
+    expect(meta.authors).toEqual(['Jan Keim', 'Ada Lovelace', 'Angelika Kaplan', 'Alan Turing'])
+  })
+
+  it('still stops at the abstract when it directly follows the authors', () => {
+    const meta = titleAndAuthorsFromLines(
+      [
+        line(700, 18, 'A Title That Is Long Enough'),
+        line(670, 11, 'Jane Doe, John Smith'),
+        line(658, 11, 'Abstract'),
+        line(640, 11, 'We evaluate approaches for code search and find them wanting.'),
+      ],
+      page,
+    )
+    expect(meta.authors).toEqual(['Jane Doe', 'John Smith'])
+  })
 })
 
 describe('abstractFromLines', () => {
@@ -407,17 +489,15 @@ describe('extractPdfMeta against real PDFs', () => {
     expect(meta.abstract).not.toMatch(/Keywords|Introduction|development and maintenance/)
   })
 
-  // A known shortfall, pinned here so it stays visible rather than becoming
-  // folklore. This paper's author list wraps onto a second line ("… Niklas
-  // Ewald, Tobias" / "Thirolf, and Anne Koziolek") and
-  // `titleAndAuthorsFromLines` stops at the first line that yields any names —
-  // so it finds five of the seven, and drops the "Tobias" stranded at the break
-  // (strict mode rejects a lone token as a name, which is exactly what stops a
-  // body sentence from becoming an author list). This is a *pre-fill* the
-  // reviewer corrects in the editor, and it is unrelated to the abstract, which
-  // this same file extracts in full. If someone teaches the heuristic to
-  // continue across a wrapped list, this test is where that shows up.
-  it('finds only the first line of a wrapped author list (known shortfall)', async () => {
+  // The wrapped-author-list case, on a real file. This paper's seven authors
+  // run onto a second line, and the break falls *inside a name*: the first line
+  // ends "… Niklas Ewald, Tobias" and the second opens "Thirolf, and Anne
+  // Koziolek". Parsing the lines separately loses two authors outright —
+  // "Tobias" is a lone token strict mode rejects, and "Thirolf" never gets its
+  // first name back. There is also a row of superscript affiliation keys ("1 1")
+  // sitting on its own baseline *between* the two halves, which the block has
+  // to step over to find the rest of the list.
+  it('reads a wrapped author list, including a name broken across the line break', async () => {
     const meta = await extractPdfMeta(loadPdf('samples/pdfs/A1-37.pdf'))
     expect(meta.authors).toEqual([
       'Dominik Fuchß',
@@ -425,6 +505,8 @@ describe('extractPdfMeta against real PDFs', () => {
       'Jan Keim',
       'Haoyu Liu',
       'Niklas Ewald',
+      'Tobias Thirolf', // the name the line break ran through
+      'Anne Koziolek',
     ])
   })
 
