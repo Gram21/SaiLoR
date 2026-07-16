@@ -343,6 +343,14 @@ function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
               much your reviewers actually agreed.
             </p>
             <p>
+              Ticking it settles <em>that</em> they agreed, not <em>what</em> they agreed on, so{' '}
+              <strong>also click one of the answers</strong> to record the value. If you try to leave
+              without doing that, the app stops and asks: the field would otherwise count as settled
+              while holding nothing, and you would never see it again. Leave anyway and the tick is
+              undone, so the field goes back on the disagreement list rather than quietly vanishing
+              from it.
+            </p>
+            <p>
               Until you pick who you are, the form stays hidden: an answer that isn't attributable to
               a reviewer is worse than no answer.
             </p>

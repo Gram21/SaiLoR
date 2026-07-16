@@ -226,7 +226,9 @@ it) and the project works that way.
 - **"These answers mean the same thing"** — reviewers write *RCT* and *randomized controlled trial*
   and mean one thing. Tick it in the compare popup and the app treats it as agreement from then on:
   in the badge, in the disagreement list, and in the statistics. Without it, agreement is understated,
-  so it is worth doing before you quote a κ.
+  so it is worth doing before you quote a κ. Ticking it settles *that* they agreed — click one of the
+  answers as well, to record *what*. Try to leave without doing so and the app asks first, then undoes
+  the tick rather than let the field count as settled while holding nothing.
 - **Repeatable groups are lined up for you.** Opening a paper as Consolidation adds as many entries
   as the busiest reviewer recorded, and works out *which of each reviewer's entries are the same
   entry* — two people rarely list the same three findings in the same order. Your Finding #2 is then

@@ -389,6 +389,19 @@ from 0.533 to 0.682.
 The box only appears where there is something to declare — when the answers already match after
 `comparable()`, there is nothing to add.
 
+**The mark alone is not a resolution, and the popup will not let it pass for one.** It settles *that*
+the reviewers agreed, which is enough to drop the field out of the disagreement list and count it as
+agreement — but it says nothing about *what* they agreed on, so the consolidated value stays blank.
+Marked-but-blank is the worst state available: resolved everywhere, holding no answer, and never
+surfaced again. `closingWouldStrand` catches it on every exit (×, Escape, backdrop, and taking a
+reviewer's *blank* answer, which records nothing and leaves the same hole). Leaving anyway un-marks
+the field, so it returns to the disagreement list rather than disappearing quietly. Escape backs out
+of that warning rather than through it — discarding the mark should take a deliberate click.
+
+A boolean can never strand: `isEmptyValue` says a boolean is never empty, and rightly — an unticked
+box is a real `false`, not a gap, so there is no value left to pick and the warning would be one the
+reviewer could not clear.
+
 **Known limit**, documented at the field: it is one boolean for the whole field, i.e. "all the
 answering reviewers here are equivalent". Exact for two reviewers; with three or more it cannot say
 "these two agree but that one does not".

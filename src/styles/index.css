@@ -1591,6 +1591,43 @@ kbd {
   height: 16px;
 }
 
+/* The "you marked them equal, now say which value" nudge. Sits quiet until the
+   field is actually stranded, when it becomes the one thing left to do. */
+.consolidation-hint {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+.consolidation-hint.needed {
+  color: var(--text);
+}
+.consolidation-hint.needed::before {
+  content: '↑ ';
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Raised only when leaving would strand the field. Uses --danger for the edge
+   rather than a fill: it is a question, not a failure. */
+.consolidation-warning {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  background: var(--panel-bg);
+}
+.consolidation-warning p {
+  margin: 0 0 10px;
+  font-size: 0.9em;
+  line-height: 1.45;
+}
+.consolidation-warning-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 /* Consolidation's two extra tools, filling the slot the AI button occupies in
    every other seat (see AnnotationPanel.tsx) — same footprint, same button
    look as `.ai-btn`, just two of them side by side. */
