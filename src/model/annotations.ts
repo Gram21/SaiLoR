@@ -104,9 +104,17 @@ export function canRemove(def: ResolvedDef, current: number): boolean {
 }
 
 /**
- * Prune a value tree for serialization: remove instances that are entirely
- * empty *beyond* the required minimum, so saved files stay tidy. Required
- * instances (up to `min`, at least 1) are always kept.
+ * Prune a value tree for serialization: drop the empty instances trailing the
+ * end of each list, so saved files stay tidy. Required instances (up to `min`,
+ * at least 1) are always kept.
+ *
+ * Only *trailing* empties go. An empty instance with a filled one after it is a
+ * gap on purpose and is kept, because position carries meaning: consolidation
+ * records which of each reviewer's entries are the same entry by lining their
+ * lists up (see `consolidate/apply.ts`), and a reviewer with no entry for the
+ * second slot holds an empty one there. Closing that gap would slide every
+ * later entry down a slot and silently re-point the alignment at the wrong
+ * entries on the next load.
  */
 export function pruneTree(
   defs: ResolvedDef[],
@@ -116,15 +124,9 @@ export function pruneTree(
   for (const def of defs) {
     const instances = tree[def.name] ?? []
     const pruned = instances.map((inst) => pruneInstance(def, inst))
-    const keepMin = Math.max(def.min, 1)
-    // Keep the first `keepMin`; for the rest, drop trailing empties.
-    const result: InstanceNode[] = []
-    for (let i = 0; i < pruned.length; i++) {
-      if (i < keepMin || !isEmptyInstance(def, pruned[i])) {
-        result.push(pruned[i])
-      }
-    }
-    out[def.name] = result
+    let last = pruned.length - 1
+    while (last >= 0 && isEmptyInstance(def, pruned[last])) last--
+    out[def.name] = pruned.slice(0, Math.max(Math.max(def.min, 1), last + 1))
   }
   return out
 }

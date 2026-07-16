@@ -1,0 +1,319 @@
+import type { AnnotationValueTree, InstanceNode } from '../model/annotations'
+import type { ResolvedDef } from '../model/schema'
+import { isField } from '../model/schema'
+import { maxWeightAssignment } from './assign'
+import {
+  agreementMass,
+  combine,
+  valueSimilarity,
+  type Sim,
+  type TextSimCache,
+  NO_EVIDENCE,
+} from './similarity'
+
+/**
+ * Work out which of each reviewer's repeated entries are *the same entry*.
+ *
+ * Two reviewers annotating one paper both record, say, three Findings — but
+ * nothing makes them record them in the same order. Reviewer 1's Finding #1 may
+ * be Reviewer 2's Finding #3. Comparing them slot by slot would then report
+ * disagreement everywhere and be worse than useless. This module recovers the
+ * correspondence first, so the comparison is between entries that are actually
+ * about the same thing.
+ *
+ * Two properties matter, and both fall out of the shape of the algorithm rather
+ * than being enforced afterwards:
+ *
+ * **Matching is optimal, not greedy.** Each node's entries are paired by
+ * `maxWeightAssignment`, which maximises total agreement over the whole set
+ * (see `assign.ts` for why greedy is not merely worse but wrong).
+ *
+ * **Matching is hierarchical, so it cannot cross.** A group's sub-entries are
+ * only ever matched *inside* an already-matched pair of parents. There is no
+ * point at which Finding A could pair with Finding B while A's Evidence pairs
+ * with C's — the recursion never offers C as a candidate. The consistency the
+ * feature requires is structural, not a rule applied after the fact.
+ */
+
+/** One consolidated entry, and which reviewer entry each side contributed. */
+export interface AlignedSlot {
+  /** Reviewer id → the index of their entry in their *own* array. */
+  members: Record<string, number>
+  /** Alignments for this slot's repeated children — matched within this pair. */
+  children: TreeAlignment
+  /** 0..1, how much the members agree. Drives the UI, not the matching. */
+  agreement: number
+  /** How much evidence `agreement` rests on: 0 means the entries are silent. */
+  evidence: number
+}
+
+export interface NodeAlignment {
+  /**
+   * As many slots as the most prolific reviewer has entries — the count the
+   * consolidated tree is grown to.
+   */
+  slots: AlignedSlot[]
+  /** How many entries each reviewer recorded, so the UI can flag a mismatch. */
+  counts: Record<string, number>
+}
+
+/** Node name → its alignment, for one level of the tree. */
+export type TreeAlignment = Record<string, NodeAlignment>
+
+/**
+ * Nudges an otherwise tied pairing towards the order the reviewers already used.
+ * Two entries that share no comparable content give the matcher nothing to go
+ * on, and it would be free to shuffle them arbitrarily; small enough that any
+ * real agreement outranks it.
+ */
+const ORDER_TIE_BREAK = 1e-6
+
+/** A node holds several entries, so its entries need matching at all. */
+export function isRepeatable(def: ResolvedDef): boolean {
+  return def.max === null || def.max > 1
+}
+
+/**
+ * How alike two entries of the same node are.
+ *
+ * Recursive, because a group is only as alike as its contents: a Finding is
+ * compared through its Claim and its Evidence, and its Evidence — itself
+ * repeatable — is compared by solving the smaller matching problem first. The
+ * cost therefore builds bottom-up, which is also why nested groups match
+ * sensibly rather than by their top-level fields alone.
+ *
+ * Not worth memoising on the entry pair, which is the obvious thing to try and
+ * measurably does nothing: the matcher asks about each pair of entries roughly
+ * once, so there is no repetition at this level to collect. The repetition is
+ * all in the text underneath — see `TextSimCache`, which is what `cache` is.
+ */
+function instanceSim(
+  def: ResolvedDef,
+  a: InstanceNode | undefined,
+  b: InstanceNode | undefined,
+  cache: TextSimCache,
+): Sim {
+  if (!a || !b) return NO_EVIDENCE
+
+  const parts: Sim[] = []
+  if (isField(def)) parts.push(valueSimilarity(def, a.value, b.value, cache))
+
+  for (const child of def.children) {
+    const listA = a.children?.[child.name] ?? []
+    const listB = b.children?.[child.name] ?? []
+    parts.push(
+      isRepeatable(child)
+        ? listSim(child, listA, listB, cache)
+        : instanceSim(child, listA[0], listB[0], cache),
+    )
+  }
+  return combine(parts)
+}
+
+/**
+ * How alike two *lists* of entries are: match them optimally, then judge the
+ * pairs that matching produced.
+ *
+ * Entries left over (one reviewer recorded four, the other three) are not
+ * counted against the pair. That is the same rule an unanswered field follows —
+ * see `Sim` — and for the same reason: a reviewer recording less says nothing
+ * about whether what they *did* record is the same thing.
+ */
+function listSim(
+  def: ResolvedDef,
+  listA: InstanceNode[],
+  listB: InstanceNode[],
+  cache: TextSimCache,
+): Sim {
+  if (listA.length === 0 || listB.length === 0) return NO_EVIDENCE
+
+  const sims = listA.map((a) => listB.map((b) => instanceSim(def, a, b, cache)))
+  const weights = sims.map((row) => row.map(agreementMass))
+  const rowToCol = maxWeightAssignment(weights)
+
+  const matched: Sim[] = []
+  rowToCol.forEach((col, row) => {
+    if (col >= 0) matched.push(sims[row][col])
+  })
+  return combine(matched)
+}
+
+/** Average agreement between one entry and the entries already in a slot. */
+function simAgainstSlot(
+  def: ResolvedDef,
+  entry: InstanceNode | undefined,
+  slot: AlignedSlot,
+  lists: Record<string, InstanceNode[]>,
+  cache: TextSimCache,
+): Sim {
+  const parts: Sim[] = []
+  for (const [reviewer, index] of Object.entries(slot.members)) {
+    parts.push(instanceSim(def, entry, lists[reviewer]?.[index], cache))
+  }
+  return combine(parts)
+}
+
+/**
+ * Build the slots for one repeatable node across every reviewer.
+ *
+ * Matching N reviewers at once is the multi-dimensional assignment problem,
+ * which is NP-hard and would be absurd for the sizes involved. Instead the
+ * reviewer with the most entries anchors the slots — they are the one who
+ * defines how many there are, and the feature's rule is that the consolidated
+ * tree gets that many — and everyone else is matched onto those slots in turn.
+ * Later reviewers are matched against *all* members already in a slot, not just
+ * the anchor, so a slot's identity firms up as reviewers agree on it.
+ *
+ * The order reviewers are folded in is fixed (most entries first, then by id) so
+ * the same input always produces the same alignment. An alignment that shifted
+ * between runs would reorder saved data for no reason.
+ */
+function alignList(
+  def: ResolvedDef,
+  lists: Record<string, InstanceNode[]>,
+  cache: TextSimCache,
+): NodeAlignment {
+  const reviewers = Object.keys(lists).sort(
+    (x, y) => lists[y].length - lists[x].length || compareReviewerIds(x, y),
+  )
+  const counts: Record<string, number> = {}
+  for (const r of reviewers) counts[r] = lists[r].length
+
+  const slotCount = Math.max(0, ...reviewers.map((r) => lists[r].length))
+  const slots: AlignedSlot[] = Array.from({ length: slotCount }, () => ({
+    members: {},
+    children: {},
+    agreement: 0,
+    evidence: 0,
+  }))
+  if (slotCount === 0) return { slots, counts }
+
+  const [anchor, ...rest] = reviewers
+  lists[anchor].forEach((_, i) => {
+    slots[i].members[anchor] = i
+  })
+
+  for (const reviewer of rest) {
+    const entries = lists[reviewer]
+    if (entries.length === 0) continue
+    const weights = entries.map((entry, i) =>
+      slots.map((slot, s) => {
+        const mass = agreementMass(simAgainstSlot(def, entry, slot, lists, cache))
+        return mass + (i === s ? ORDER_TIE_BREAK : 0)
+      }),
+    )
+    maxWeightAssignment(weights).forEach((slotIndex, entryIndex) => {
+      if (slotIndex >= 0) slots[slotIndex].members[reviewer] = entryIndex
+    })
+  }
+
+  for (const slot of slots) {
+    scoreSlot(def, slot, lists, cache)
+    slot.children = alignLevel(
+      def.children,
+      mapMembers(slot, lists, (inst) => inst?.children),
+      cache,
+    )
+  }
+  return { slots, counts }
+}
+
+/** Every distinct pair in a slot, averaged — how much its members agree. */
+function scoreSlot(
+  def: ResolvedDef,
+  slot: AlignedSlot,
+  lists: Record<string, InstanceNode[]>,
+  cache: TextSimCache,
+): void {
+  const members = Object.entries(slot.members)
+  const parts: Sim[] = []
+  for (let i = 0; i < members.length; i++) {
+    for (let j = i + 1; j < members.length; j++) {
+      const [rx, ix] = members[i]
+      const [ry, iy] = members[j]
+      parts.push(instanceSim(def, lists[rx]?.[ix], lists[ry]?.[iy], cache))
+    }
+  }
+  const sim = combine(parts)
+  slot.agreement = sim.score
+  slot.evidence = sim.weight
+}
+
+/** Pull one value per member out of the reviewer entries a slot points at. */
+function mapMembers<T>(
+  slot: AlignedSlot,
+  lists: Record<string, InstanceNode[]>,
+  pick: (inst: InstanceNode | undefined) => T,
+): Record<string, T> {
+  const out: Record<string, T> = {}
+  for (const [reviewer, index] of Object.entries(slot.members)) {
+    out[reviewer] = pick(lists[reviewer]?.[index])
+  }
+  return out
+}
+
+/**
+ * Align every node at one level of the schema.
+ *
+ * Non-repeatable nodes still appear when they have children: they hold no
+ * choice of their own, but a repeatable node may be nested below one, and it
+ * has to be reachable.
+ */
+function alignLevel(
+  defs: ResolvedDef[],
+  trees: Record<string, AnnotationValueTree | undefined>,
+  cache: TextSimCache,
+): TreeAlignment {
+  const out: TreeAlignment = {}
+  for (const def of defs) {
+    const lists: Record<string, InstanceNode[]> = {}
+    for (const [reviewer, tree] of Object.entries(trees)) {
+      const raw = tree?.[def.name]
+      lists[reviewer] = Array.isArray(raw) ? raw : []
+    }
+
+    if (isRepeatable(def)) {
+      out[def.name] = alignList(def, lists, cache)
+      continue
+    }
+    if (def.children.length === 0) continue // a plain field: nothing to match
+
+    // Fixed single entry: the correspondence is a given, but its children still
+    // need aligning.
+    const slot: AlignedSlot = { members: {}, children: {}, agreement: 0, evidence: 0 }
+    const counts: Record<string, number> = {}
+    for (const [reviewer, list] of Object.entries(lists)) {
+      counts[reviewer] = list.length
+      if (list.length > 0) slot.members[reviewer] = 0
+    }
+    scoreSlot(def, slot, lists, cache)
+    slot.children = alignLevel(
+      def.children,
+      mapMembers(slot, lists, (inst) => inst?.children),
+      cache,
+    )
+    out[def.name] = { slots: [slot], counts }
+  }
+  return out
+}
+
+/** Reviewer ids are numeric strings ("1".."N"); sort them as numbers. */
+function compareReviewerIds(x: string, y: string): number {
+  const nx = Number(x)
+  const ny = Number(y)
+  if (Number.isFinite(nx) && Number.isFinite(ny)) return nx - ny
+  return x < y ? -1 : x > y ? 1 : 0
+}
+
+/**
+ * Align every reviewer's tree for one paper.
+ *
+ * `reviews` is keyed by reviewer id and must *exclude* the consolidated tree:
+ * consolidation is the thing being built from this, not a voice in it.
+ */
+export function alignPaper(
+  schema: ResolvedDef[],
+  reviews: Record<string, AnnotationValueTree>,
+): TreeAlignment {
+  return alignLevel(schema, reviews, new Map())
+}
