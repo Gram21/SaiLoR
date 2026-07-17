@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState, type CSSProperties } from 'react'
 import { useStore, currentTree } from '../state/store'
 import { hasAnnotations, annotationText } from '../model/annotations'
+import { completeness, completenessPercent, hasRequiredFields, type Completeness } from '../model/completeness'
 import { readyToConsolidate } from '../consolidate/readiness'
 import { screeningStatus, type ScreeningStatus } from '../screening/status'
 import { SidebarToggle } from './SidebarToggle'
@@ -14,6 +15,42 @@ interface IndexedPaper {
   paper: Paper
   metadataHaystack: string
   annotationHaystack: string
+  /** `null` when the fill does not apply to this seat — see `completenessApplies`. */
+  completeness: Completeness | null
+}
+
+/**
+ * Whether the completeness dot's partial fill applies to this seat at all.
+ *
+ * A screening project already has its own tri-state included/excluded/
+ * undecided marker (`paperScreeningStatus`); the derived screening schema
+ * marks nothing required, so a fill would fall back to counting both of its
+ * fields (Decision, Reason) — meaning an "Include" decision, which needs no
+ * Reason, would render as a half-full dot for a paper that is actually done.
+ * The Consolidation seat's dot means *readiness* (`paperIsMarkedDone`), a
+ * different question ("has every reviewer answered") that a per-field fill
+ * cannot express without conflating it with how much Consolidation itself
+ * has typed — so it keeps its own binary dot instead.
+ */
+function completenessApplies(project: Project, currentReviewer: string | null): boolean {
+  if (project.screening != null) return false
+  if (project.reviewers > 1 && currentReviewer === 'consolidation') return false
+  return true
+}
+
+/**
+ * The completeness numbers behind a paper's dot fill, or `null` where it does
+ * not apply — see `completenessApplies`. Exported standalone (mirroring
+ * `paperIsMarkedDone`) so the gating logic has one home and is directly
+ * unit-testable without rendering the list.
+ */
+export function paperCompleteness(
+  project: Project,
+  paper: Paper,
+  currentReviewer: string | null,
+): Completeness | null {
+  if (!completenessApplies(project, currentReviewer)) return null
+  return completeness(project.schema, currentTree(project, currentReviewer, paper))
 }
 
 /**
@@ -65,6 +102,48 @@ export function paperScreeningStatus(
   return screeningStatus(currentTree(project, currentReviewer, paper))
 }
 
+/**
+ * One row of the list. `React.memo`'d because immer's structural sharing
+ * means a field edit (`setFieldValue` in `state/store.ts`) replaces only the
+ * one paper object it touches — every other paper keeps its old identity — so
+ * a memoized row re-renders only for the paper actually being edited, instead
+ * of all of them on every keystroke. That only holds if every prop here is a
+ * primitive or an identity-stable reference: an inline object or arrow
+ * function passed in from the caller would look "new" every render and
+ * silently defeat the memo without any test failing, so the dot's fill is
+ * passed as a plain number, not the `Completeness` object, and `onSelect` is
+ * the store's own stable action, not a per-row closure.
+ */
+const PaperRow = memo(function PaperRow({
+  paper,
+  active,
+  onSelect,
+  dotClassName,
+  dotLabel,
+  dotFill,
+}: {
+  paper: Paper
+  active: boolean
+  onSelect: (id: string) => void
+  dotClassName: string
+  dotLabel: string
+  dotFill: number | null
+}) {
+  const dotStyle = dotFill === null ? undefined : ({ '--fill': `${dotFill}%` } as CSSProperties)
+  return (
+    <li className={active ? 'paper active' : 'paper'} onClick={() => onSelect(paper.id)}>
+      {/* `role="img"` because a bare `title` on a `<span>` is not reliably
+          announced; `aria-label` carries the same real numbers as the visual
+          fill, so the meaning is not only in a hover-only tooltip. */}
+      <span className={dotClassName} style={dotStyle} role="img" aria-label={dotLabel} title={dotLabel} />
+      <span className="paper-info">
+        <span className="paper-title">{paper.title}</span>
+        <span className="paper-authors">{paper.authors.join(', ')}</span>
+      </span>
+    </li>
+  )
+})
+
 /** Left pane: the collapsible list of papers to annotate. */
 export function PaperList() {
   const project = useStore((s) => s.project)
@@ -75,6 +154,11 @@ export function PaperList() {
   const setScreeningFilter = useStore((s) => s.setScreeningFilter)
   const schema = project?.schema ?? []
   const isScreening = project?.screening != null
+  // Whether the dot's fill (where it applies at all) is a fraction of
+  // *required* fields or of every field — see `completeness.ts`. Derived from
+  // the schema alone, so it is the same for every row; computed once here
+  // rather than per row.
+  const requiredMode = useMemo(() => hasRequiredFields(schema), [schema])
 
   const [query, setQuery] = useState('')
   const [mode, setMode] = useState<SearchMode>('metadata')
@@ -90,27 +174,36 @@ export function PaperList() {
   const papers = project?.papers
   const index = useMemo<IndexedPaper[]>(() => {
     if (!papers || !project) return []
-    return papers.map((paper) => ({
-      paper,
-      // The abstract is added here — searching it during screening is the
-      // obvious want, and it costs a PDF-less project nothing.
-      metadataHaystack:
-        `${paper.title} ${paper.authors.join(' ')} ${paper.doi ?? ''} ${paper.abstract ?? ''}`.toLowerCase(),
+    const applies = completenessApplies(project, currentReviewer)
+    return papers.map((paper) => {
       // The active reviewer's own tree, so the sidebar answers "which papers
       // did *I* record this in" — the same tree the form and validation show.
-      // Null (multi-reviewer, nobody picked yet) has no annotations to search.
-      annotationHaystack: annotationText(schema, currentTree(project, currentReviewer, paper) ?? {}),
-    }))
+      // Null (multi-reviewer, nobody picked yet) has no annotations to search
+      // or count. Computed once and shared with `completeness` below rather
+      // than looked up twice — `currentTree` builds a fresh normalized tree
+      // when a numbered reviewer has never opened this paper, which is not
+      // free to repeat over a large paper list.
+      const tree = currentTree(project, currentReviewer, paper)
+      return {
+        paper,
+        // The abstract is added here — searching it during screening is the
+        // obvious want, and it costs a PDF-less project nothing.
+        metadataHaystack:
+          `${paper.title} ${paper.authors.join(' ')} ${paper.doi ?? ''} ${paper.abstract ?? ''}`.toLowerCase(),
+        annotationHaystack: annotationText(schema, tree ?? {}),
+        completeness: applies ? completeness(schema, tree) : null,
+      }
+    })
   }, [papers, project, schema, currentReviewer])
 
   // Filter + rank by how many distinct query words match (then matched chars).
   const words = query.toLowerCase().split(/\s+/).filter((w) => w.length > 0)
-  const filtered = useMemo<Paper[]>(() => {
+  const filtered = useMemo<IndexedPaper[]>(() => {
     const base = index.filter((e) => {
       if (!isScreening || screeningFilter === 'all' || !project) return true
       return paperScreeningStatus(project, e.paper, currentReviewer) === screeningFilter
     })
-    if (words.length === 0) return base.map((e) => e.paper)
+    if (words.length === 0) return base
     const scored = base
       .map((e, i) => {
         const haystack = mode === 'annotations' ? e.annotationHaystack : e.metadataHaystack
@@ -122,11 +215,11 @@ export function PaperList() {
             chars += w.length
           }
         }
-        return { paper: e.paper, matched, chars, i }
+        return { entry: e, matched, chars, i }
       })
       .filter((e) => e.matched > 0)
     scored.sort((a, b) => b.matched - a.matched || b.chars - a.chars || a.i - b.i)
-    return scored.map((e) => e.paper)
+    return scored.map((e) => e.entry)
     // `words` is derived from `query`; keying on both is intentional.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, query, mode, isScreening, screeningFilter, project, currentReviewer])
@@ -209,7 +302,9 @@ export function PaperList() {
               : 'No papers'}
           </li>
         ) : (
-          filtered.map((p) => {
+          filtered.map((entry) => {
+            const p = entry.paper
+            const active = p.id === currentPaperId
             const isConsolidation = currentReviewer === 'consolidation' && project.reviewers > 1
 
             if (isScreening) {
@@ -229,17 +324,15 @@ export function PaperList() {
                     ? 'Excluded'
                     : 'Not screened yet') + readiness
               return (
-                <li
+                <PaperRow
                   key={p.id}
-                  className={p.id === currentPaperId ? 'paper active' : 'paper'}
-                  onClick={() => selectPaper(p.id)}
-                >
-                  <span className={`status-dot screening-${status}`} title={title} />
-                  <span className="paper-info">
-                    <span className="paper-title">{p.title}</span>
-                    <span className="paper-authors">{p.authors.join(', ')}</span>
-                  </span>
-                </li>
+                  paper={p}
+                  active={active}
+                  onSelect={selectPaper}
+                  dotClassName={`status-dot screening-${status}`}
+                  dotLabel={title}
+                  dotFill={null}
+                />
               )
             }
 
@@ -248,25 +341,67 @@ export function PaperList() {
             // Consolidation seat it means something else again — see
             // `paperIsMarkedDone`.
             const annotated = paperIsMarkedDone(project, p, currentReviewer)
-            const title = isConsolidation
-              ? annotated
+
+            if (isConsolidation) {
+              const title = annotated
                 ? 'Ready to consolidate — every reviewer has annotated this paper'
                 : 'Not ready — some reviewers have not annotated this paper yet'
-              : annotated
-                ? 'Has annotations'
-                : 'Not annotated yet'
+              return (
+                <PaperRow
+                  key={p.id}
+                  paper={p}
+                  active={active}
+                  onSelect={selectPaper}
+                  dotClassName={annotated ? 'status-dot done' : 'status-dot'}
+                  dotLabel={title}
+                  dotFill={null}
+                />
+              )
+            }
+
+            // The partial-fill dot. `entry.completeness` is never null here
+            // in practice — reaching this line already means neither branch
+            // above returned, and those two are exactly `completenessApplies`'s
+            // negation — but the type is `Completeness | null` regardless
+            // (the index computes it independently of this render's control
+            // flow), so an empty fallback keeps this branch type-safe rather
+            // than relying on an assertion. `pct === null` below covers the
+            // remaining degenerate cases — a boolean-only schema, or no tree
+            // at all (multi-reviewer, nobody picked) — by falling back to the
+            // old binary dot rather than showing a meaningless 0%.
+            const c = entry.completeness ?? { filled: 0, total: 0 }
+            const pct = completenessPercent(c)
+            if (pct === null) {
+              const title = annotated ? 'Has annotations' : 'Not annotated yet'
+              return (
+                <PaperRow
+                  key={p.id}
+                  paper={p}
+                  active={active}
+                  onSelect={selectPaper}
+                  dotClassName={annotated ? 'status-dot done' : 'status-dot'}
+                  dotLabel={title}
+                  dotFill={null}
+                />
+              )
+            }
+            // 0% and 100% reuse the exact pre-existing classes, so the two
+            // endpoints render pixel-identical to the dot's previous
+            // touched/untouched meaning; only genuinely partial states get
+            // the new conic-gradient fill.
+            const dotClassName =
+              pct === 0 ? 'status-dot' : pct === 100 ? 'status-dot done' : 'status-dot partial'
+            const dotLabel = `${c.filled} of ${c.total} ${requiredMode ? 'required ' : ''}fields filled`
             return (
-              <li
+              <PaperRow
                 key={p.id}
-                className={p.id === currentPaperId ? 'paper active' : 'paper'}
-                onClick={() => selectPaper(p.id)}
-              >
-                <span className={annotated ? 'status-dot done' : 'status-dot'} title={title} />
-                <span className="paper-info">
-                  <span className="paper-title">{p.title}</span>
-                  <span className="paper-authors">{p.authors.join(', ')}</span>
-                </span>
-              </li>
+                paper={p}
+                active={active}
+                onSelect={selectPaper}
+                dotClassName={dotClassName}
+                dotLabel={dotLabel}
+                dotFill={pct === 0 || pct === 100 ? null : pct}
+              />
             )
           })
         )}

@@ -37,6 +37,7 @@ The schema is an array of nodes. Each node describes one thing to record:
   min          Minimum number of entries of this node. Default 1.
   max          Maximum number of entries. A whole number, or null for unbounded. Default 1.
   options      For a "string" field: the closed set of allowed values (an enum).
+  required     true if the reviewer must fill this field in. Only valid on a node with a type.
   description  What to record in this field. Read it carefully - it is the instruction.
 
 A node whose max is null or greater than 1 is repeatable and may hold several entries.
