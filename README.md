@@ -19,6 +19,9 @@ The same codebase runs two ways:
   <img src="docs/screenshots/annotate.png" alt="The three-pane annotation view: papers, the PDF, and the annotation form" width="900">
 </p>
 
+> 📖 For a feature-by-feature walkthrough with screenshots — including warnings worth reading before
+> you rely on this for real review data — see the [user guide](user-guide/README.md).
+
 ## Quick start
 
 ```bash
@@ -113,7 +116,7 @@ on Debian/Ubuntu), or you can extract and run it with `--appimage-extract-and-ru
       { "name": "Study Type", "type": "string",
         "options": ["Case study", "Experiment", "Survey"] },  // enum dropdown
 
-      { "name": "Year", "type": "number" },
+      { "name": "Publication Year", "type": "year" },   // number, bounded to a plausible pub. year
       {
         "name": "Findings", "min": 1, "max": null,       // group, repeatable (unbounded)
         "children": [
@@ -133,6 +136,8 @@ on Debian/Ubuntu), or you can extract and run it with `--appimage-extract-and-ru
       "title": "…",
       "authors": ["…"],
       "doi": "10.1000/xyz",         // optional
+      "year": 2024,                 // optional
+      "venue": "…",                 // optional — journal/conference name
       "abstract": "…",              // optional — what screening reads when there is no PDF yet
       "pdf": "pdfs/paper-a.pdf",    // path relative to this JSON file; "" is only valid in a screening project
       "annotations": {},            // the final result — written in full (every field, empty) once opened
@@ -147,7 +152,7 @@ on Debian/Ubuntu), or you can extract and run it with `--appimage-extract-and-ru
 | Field         | Meaning                                                                 |
 | ------------- | ----------------------------------------------------------------------- |
 | `name`        | Display label (required). Sibling names must be unique.                 |
-| `type`        | `string` \| `number` \| `boolean`. Omit for a group (name-only) node.   |
+| `type`        | `string` \| `number` \| `boolean` \| `year`. Omit for a group (name-only) node. `year` is a number bounded to a plausible publication year (~1000–2100). |
 | `children`    | Sub-taxonomy. A node may have `type`, `children`, or both.              |
 | `min`         | Minimum occurrences (default `1`).                                      |
 | `max`         | Maximum occurrences: a number, or `null` for unbounded (default `1`).   |
@@ -159,16 +164,35 @@ holds an array of instances (bounded by `min`/`max`). Each instance carries a `v
 and/or nested `children`. Saving prunes trailing empty optional instances and leaves `config`
 untouched. Unknown top-level and per-paper fields are preserved verbatim.
 
+> ⚠️ **`config` itself is rebuilt from scratch on every save** — any key you hand-add under it
+> (`config.schema`, `config.reviewers`, …) is silently dropped the next time anyone saves. If you
+> need to record something the app doesn't have a field for, use a **top-level** key instead
+> (`{"version": 1, "myNotes": "…", "config": {...}, "papers": [...]}` keeps `myNotes` forever) — or,
+> for a review's own protocol, the dedicated `protocol` key described next. See
+> [Things to know](user-guide/things-to-know.md) for this and a few other easy-to-miss traps.
+
+Two optional top-level keys exist specifically to be safe from that `config` rebuild:
+
+- **`protocol`** — the review's own protocol (research questions, search strings, databases searched,
+  search date, notes), authored from the project editor's *Review protocol* section.
+- **`provenance`** — a read-only record of where a project came from, written automatically when it
+  was built via *New from screening…*: the source project, when, and how many papers were carried
+  over versus left behind.
+
 ## Using the app
 
 - **Open ▾ menu** — open a project file, or reopen one of the last 5 recent projects. (Recent
   projects require the desktop app or a Chromium browser; other browsers show only "Open file…".)
 - **Save ▾ menu** — Save or Save as…, with their shortcuts shown next to each item.
 - **? (Help)** — opens a dialog describing the workflow and listing all keyboard shortcuts.
-- **Left pane** — collapsible list of papers (toggle with the ☰ button). A green dot marks papers
-  that already have annotations — in a **screening project** this becomes a tri-state marker
-  (included / excluded / undecided) with a filter above the list instead; see
+- **Left pane** — collapsible list of papers (toggle with the ☰ button). A completeness dot next to
+  each paper fills in proportionally as fields are completed (a fraction of required fields if any
+  are marked required, otherwise of all fields) — in a **screening project** this becomes a tri-state
+  marker (included / excluded / undecided) with a filter above the list instead; see
   [Screening](#screening).
+- **Search** — the box above the paper list matches title, authors, DOI, abstract, the PDF's file
+  name, and the paper's own id by default. Click the **META**/**TAGS** trigger on its right edge to
+  switch to searching your own recorded annotation content instead.
 - **Resizable panes** — drag the borders between the three panes to resize them; the widths are
   remembered.
 - **Middle pane** — the paper's PDF, rendered with a selectable text layer. In a screening project
@@ -178,6 +202,11 @@ untouched. Unknown top-level and per-paper fields are preserved verbatim.
   Include/Exclude decision instead — see [Screening](#screening).
 - **Grab from PDF** — select text in the PDF, then click the **⧉** button next to a string/number
   field to insert it (numeric fields extract the first number).
+- **Adding papers** — in the project editor: pick individual PDFs, a whole folder of them, or import a
+  BibTeX/RIS/CSL-JSON reference export. Importing flags probable duplicates (fuzzy title match, or a
+  matching normalized title with similar authors) against papers already in the project and against
+  other entries in the same batch; each flagged pair needs an explicit **Duplicate**/**Different**
+  decision before the import proceeds — nothing is silently merged or silently added twice.
 - **Reviewer switch** — on multi-reviewer projects only, centred in the toolbar: pick whether you are
   Reviewer 1…N or Consolidation. See [Working with several reviewers](#working-with-several-reviewers).
 - **✦ AI** — *not available yet.* An LLM proposes values for the fields that are still empty, for
@@ -257,6 +286,10 @@ it) and the project works that way.
   a group you have already answered is left alone rather than reordered underneath you.
 - **Lowering the reviewer count later doesn't erase anyone's work** — it just becomes unreachable
   (no seat, excluded from Consolidation) until you raise the count again. See §9 of the schema guide.
+- **Two different people must not pick the same seat.** When [Git](#git) is available, SaiLoR records
+  your git identity (name/email) the first time you claim a seat, and warns before letting a different
+  identity take an already-claimed one. That protection only exists once git is in use and a seat has
+  actually been claimed with it on — agree out of band who is Reviewer 1, Reviewer 2, … regardless.
 
 It is still **one file, with no locking**: two people saving the same JSON at once will overwrite
 each other. Pass it along, or take turns — or see [Git](#git) below, which is built for exactly
@@ -306,14 +339,22 @@ reasons.
   model.
 
 **Starting the next phase from a screening project.** Once screening is done, **New from
-screening…** (on the start screen) builds the annotation project that follows it: pick the screening
-JSON, and every paper **not explicitly excluded** is carried over — included papers always, and
-undecided ones by default (dropping a paper nobody actually excluded would silently shrink the
-review; you can choose to leave them out in the confirmation dialog instead). Title, authors, DOI,
-abstract and the PDF reference all carry over. The new project's JSON is saved **next to the
-screening JSON** by default, so every paper's relative PDF path keeps resolving without being
-rewritten. For a multi-reviewer screening project, "included" reads the **consolidated** decision —
-the one that ships — never an individual reviewer's own opinion.
+screening…** (on the start screen) builds what comes next from the screening JSON, offering a choice
+of target:
+
+- **An annotation project** — the usual next step. Every paper **not explicitly excluded** is carried
+  over — included papers always, and undecided ones by default (dropping a paper nobody actually
+  excluded would silently shrink the review; you can choose to leave them out in the confirmation
+  dialog instead). Title, authors, DOI, abstract, year, venue, and the PDF reference all carry over.
+- **A second screening project** — for a full-text pass after the title/abstract pass, reusing the
+  *same* exclusion-reason vocabulary as the first pass (editable before saving, if the second pass
+  needs different reasons), so the two passes report comparable per-reason counts.
+
+The new project's JSON is saved **next to the screening JSON** by default, so every paper's relative
+PDF path keeps resolving without being rewritten, and its project editor shows a read-only
+**provenance** note recording which screening project it came from, when, and how many papers were
+carried over versus left behind. For a multi-reviewer screening project, "included" reads the
+**consolidated** decision — the one that ships — never an individual reviewer's own opinion.
 
 > 📖 Full details, including the derived schema's exact shape, are in
 > [§10 of the schema guide](docs/annotation-schema.md#10-screening-projects).
@@ -418,16 +459,26 @@ folder that was just cloned.
 **The Git button** appears in the toolbar whenever the open project's JSON file sits inside a git
 repository. It opens a panel with:
 
-- your changes and a diff, so you can see what you are about to commit,
-- a commit message box and a **Commit** button,
+- **Field-level review of the project JSON's own changes** — instead of one whole-file checkbox,
+  every changed field gets its own row ("Field: was *this*, now *that*") with three choices: **Use**
+  (commit the new value), **Ignore** (leave it as an uncommitted local change, offered again next
+  time), or **Discard** (revert it to the committed value — nothing actually happens until you press
+  **Commit** or **Discard all**, never the moment you mark it). **Use all / Ignore all / Discard all**
+  apply one disposition to everything at once.
+  Any change to a file *other* than the project JSON (a PDF you added, say) still shows as a plain
+  whole-file checkbox.
+- a commit message box and a **Commit** button (which relabels to **Discard all** and turns red if
+  nothing is left marked *Use*),
 - **Pull** and **Push**.
 
 **Pull merges annotations field by field, not line by line.** A field only *you* changed keeps your
 value. A field only the *remote* changed takes theirs. Only a field you **both** changed — to
-different things — is a real conflict, and those are the only ones you are ever asked about: a list
-with your value on the left, the remote's on the right, and an editable final value in the middle
-(with a button on each side to just take that side). Nothing is committed until every conflict in the
-list has been answered. This is why an empty, all-`null`/`false` field is written into every paper and
+different things — is a real conflict, and those are the only ones you are ever asked about: conflicts
+are grouped by paper, one collapsible section per paper that collapses automatically once every
+conflict inside it is decided, with your value on the left, the remote's on the right, and an editable
+final value in the middle (with a button on each side to just take that side). **Use all mine / Use
+all remote** resolve every remaining conflict at once toward one side. Nothing is committed until
+every conflict has been answered. This is why an empty, all-`null`/`false` field is written into every paper and
 every reviewer's tree from the start (see [§9 of the schema guide](docs/annotation-schema.md#9-multiple-reviewers--consolidation))
 — it is what makes a plain `git diff` of one reviewer's work legible on its own, and it is also why
 SaiLoR's own merge doesn't need git's line-based merge to succeed: it reads the three revisions of the
@@ -568,6 +619,9 @@ docker compose -f docker-compose.dev.yml --profile electron run --rm electron
   counts, and the two cross-field validation rules screening needs (unit-tested).
 - `src/platform/` — a `PlatformAdapter` seam so the UI is identical in Electron and the browser
   (`electron.ts` = IPC + `slr-file://` protocol; `browser.ts` = File System Access API / fetch).
+- `src/git/` — field-level change detection and three-way merge of the project JSON (`changes.ts`,
+  `merge.ts`), plus git URL parsing and raw command output handling; the IPC side lives in
+  `electron/main.ts` since only the desktop app can spawn `git`.
 - `src/llm/` — the AI-annotation layer: prompt, provider request/response shapes, field paths, and
   the parser that validates every proposal against the schema before a reviewer ever sees it.
 - `src/state/store.ts` — Zustand + immer store (`src/state/aiStore.ts` for the AI flow).
