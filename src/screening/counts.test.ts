@@ -35,6 +35,7 @@ function paper(overrides: Partial<Paper> = {}): Paper {
 function project(overrides: Partial<Project> = {}): Project {
   return {
     version: 1,
+    provenance: null,
     schema: SCHEMA,
     aiEnabled: true,
     reviewers: 1,

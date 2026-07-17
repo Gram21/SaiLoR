@@ -1,9 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { OpenedProject, ProjectLocation, SaveHandle } from '../platform/adapter'
+import { screeningStatus } from '../screening/status'
 
 let openResult: OpenedProject | null = null
 let siblingResult: ProjectLocation | null = null
 let pickResult: ProjectLocation | null = null
+/** What `resolveScreeningImport` actually suggested — the only way to see the
+ *  filename it picked, since `siblingResult` above is a fixed stub return. */
+let siblingSuggested: string | null = null
 
 const mockPlatform = {
   kind: 'electron' as const,
@@ -14,14 +18,19 @@ const mockPlatform = {
   getOsInfo: () => null,
   openProject: async () => openResult,
   pickProjectLocation: async () => pickResult,
-  siblingProjectLocation: async () => siblingResult,
+  siblingProjectLocation: async (_handle: SaveHandle, suggested: string) => {
+    siblingSuggested = suggested
+    return siblingResult
+  },
   absolutePdfPaths: async (paths: string[]) => paths.map((p) => (p ? `/abs/${p}` : undefined)),
   relativePdfPaths: async () => [],
 }
 
 vi.mock('../platform', () => ({ getPlatform: () => mockPlatform }))
 
-const { useEditorStore, buildProjectJson, validateDraft, makeNode } = await import('./editorStore')
+const { useEditorStore, buildProjectJson, validateDraft, makeNode, editorStateFromOpened } = await import(
+  './editorStore'
+)
 const { loadProject } = await import('../model/project')
 
 function draft(overrides: Partial<Parameters<typeof buildProjectJson>[0]> = {}) {
@@ -45,6 +54,7 @@ function reset() {
     nodes: [makeNode()],
     papers: [],
     screening: null,
+    provenance: null,
     dirty: false,
     notice: null,
     error: null,
@@ -57,6 +67,7 @@ function reset() {
   openResult = null
   siblingResult = null
   pickResult = null
+  siblingSuggested = null
 }
 
 beforeEach(reset)
@@ -143,6 +154,9 @@ describe('startFromScreening / resolveScreeningImport', () => {
     // "weird" carries an unrecognised decision, and rides along with "und" —
     // never silently dropped as if it had been excluded.
     expect(draftImport.undecided.map((p) => p.id).sort()).toEqual(['und', 'weird'])
+    // Defaults to annotation: a silent change of what the existing button
+    // produces would undermine the reason this dialog exists at all.
+    expect(draftImport.startKind).toBe('annotation')
   })
 
   it('include-undecided: carries included + undecided, keeps metadata, drops reviews/equal/aiUsage', async () => {
@@ -191,5 +205,204 @@ describe('startFromScreening / resolveScreeningImport', () => {
     await useEditorStore.getState().startFromScreening()
     expect(useEditorStore.getState().error?.message).toMatch(/not a screening project/i)
     expect(useEditorStore.getState().screeningImport).toBeNull()
+  })
+
+  it('setScreeningImportKind("screening") makes resolve build a screening project seeded from the source reasons', async () => {
+    await useEditorStore.getState().startFromScreening()
+    useEditorStore.getState().setScreeningImportKind('screening')
+    expect(useEditorStore.getState().screeningImport?.startKind).toBe('screening')
+    await useEditorStore.getState().resolveScreeningImport('include-undecided')
+
+    const st = useEditorStore.getState()
+    expect(st.screening).toEqual({ reasons: ['Wrong topic', 'Duplicate'] })
+    // Seeded from the source's own reasons, not the generic defaults — the
+    // source's list is the pre-registered protocol's own vocabulary.
+    expect(st.screening?.reasons).not.toEqual(expect.arrayContaining(['Not peer-reviewed']))
+    expect(st.nodes).toEqual([])
+    expect(st.mode).toBe('new')
+  })
+
+  it('setScreeningImportKind is a no-op with no pending import', () => {
+    useEditorStore.getState().setScreeningImportKind('screening')
+    expect(useEditorStore.getState().screeningImport).toBeNull()
+  })
+
+  it('suggests an "-annotation" filename for the annotation target and "-fulltext" for the screening target', async () => {
+    await useEditorStore.getState().startFromScreening()
+    await useEditorStore.getState().resolveScreeningImport('include-undecided')
+    expect(siblingSuggested).toBe('screening-annotation.json')
+
+    reset()
+    openResult = {
+      text: screeningJson([
+        { id: 'inc', title: 'Included', authors: [], pdf: '', annotations: { Decision: [{ value: 'Include' }] } },
+      ]),
+      handle: SOURCE_HANDLE,
+      name: 'screening.json',
+    }
+    siblingResult = {
+      handle: { kind: 'electron', path: '/reviews/screening-fulltext.json' },
+      name: 'screening-fulltext.json',
+      path: '/reviews/screening-fulltext.json',
+    }
+    await useEditorStore.getState().startFromScreening()
+    useEditorStore.getState().setScreeningImportKind('screening')
+    await useEditorStore.getState().resolveScreeningImport('include-undecided')
+    expect(siblingSuggested).toBe('screening-fulltext.json')
+  })
+
+  it('inherits the source reviewer count for a screening target, but not for the annotation target', async () => {
+    openResult = {
+      text: JSON.stringify({
+        version: 1,
+        config: { screening: { reasons: ['Wrong topic', 'Duplicate'] }, reviewers: 3 },
+        papers: [
+          { id: 'inc', title: 'Included', authors: [], pdf: '', annotations: { Decision: [{ value: 'Include' }] } },
+        ],
+      }),
+      handle: SOURCE_HANDLE,
+      name: 'screening.json',
+    }
+    await useEditorStore.getState().startFromScreening()
+    useEditorStore.getState().setScreeningImportKind('screening')
+    await useEditorStore.getState().resolveScreeningImport('include-undecided')
+    expect(useEditorStore.getState().reviewers).toBe(3)
+
+    reset()
+    openResult = {
+      text: JSON.stringify({
+        version: 1,
+        config: { screening: { reasons: ['Wrong topic', 'Duplicate'] }, reviewers: 3 },
+        papers: [
+          { id: 'inc', title: 'Included', authors: [], pdf: '', annotations: { Decision: [{ value: 'Include' }] } },
+        ],
+      }),
+      handle: SOURCE_HANDLE,
+      name: 'screening.json',
+    }
+    siblingResult = {
+      handle: { kind: 'electron', path: '/reviews/screening-annotation.json' },
+      name: 'screening-annotation.json',
+      path: '/reviews/screening-annotation.json',
+    }
+    await useEditorStore.getState().startFromScreening()
+    // startKind stays 'annotation' (the default) — the seat count is not inherited.
+    await useEditorStore.getState().resolveScreeningImport('include-undecided')
+    expect(useEditorStore.getState().reviewers).toBe(1)
+  })
+
+  it('drops first-pass decisions for the screening target too — a full-text decision is not anchored by the title/abstract one', async () => {
+    await useEditorStore.getState().startFromScreening()
+    useEditorStore.getState().setScreeningImportKind('screening')
+    await useEditorStore.getState().resolveScreeningImport('include-undecided')
+    const inc = useEditorStore.getState().papers.find((p) => p.id === 'inc')!
+    expect(inc.annotations).toEqual({})
+  })
+
+  it('skip-undecided records the full census, not just what was carried', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-17T12:00:00.000Z'))
+    try {
+      await useEditorStore.getState().startFromScreening()
+      await useEditorStore.getState().resolveScreeningImport('skip-undecided')
+      expect(useEditorStore.getState().provenance).toEqual({
+        kind: 'screening-import',
+        source: { file: 'screening.json' },
+        importedAt: '2026-07-17T12:00:00.000Z',
+        counts: { included: 1, undecided: 2, excluded: 1, carried: 1 },
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('records provenance: source, timestamp, and the full carried/dropped census', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-17T12:00:00.000Z'))
+    try {
+      await useEditorStore.getState().startFromScreening()
+      await useEditorStore.getState().resolveScreeningImport('include-undecided')
+      expect(useEditorStore.getState().provenance).toEqual({
+        kind: 'screening-import',
+        source: { file: 'screening.json' },
+        importedAt: '2026-07-17T12:00:00.000Z',
+        counts: { included: 1, undecided: 2, excluded: 1, carried: 3 },
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('the "weird" (unrecognised decision) paper counts toward undecided/carried, never silently dropped', async () => {
+    await useEditorStore.getState().startFromScreening()
+    await useEditorStore.getState().resolveScreeningImport('include-undecided')
+    expect(useEditorStore.getState().provenance?.counts).toEqual({
+      included: 1,
+      undecided: 2,
+      excluded: 1,
+      carried: 3,
+    })
+    expect(useEditorStore.getState().papers.map((p) => p.id).sort()).toEqual(['inc', 'und', 'weird'])
+  })
+
+  it('round-trips end to end: resolve -> buildProjectJson -> loadProject', async () => {
+    await useEditorStore.getState().startFromScreening()
+    useEditorStore.getState().setScreeningImportKind('screening')
+    await useEditorStore.getState().resolveScreeningImport('include-undecided')
+
+    const json = buildProjectJson(useEditorStore.getState())
+    const project = loadProject(JSON.stringify(json))
+    expect(project.screening).toEqual({ reasons: ['Wrong topic', 'Duplicate'] })
+    expect(project.schema.map((d) => d.name)).toEqual(['Decision', 'Reason'])
+    expect(project.papers.map((p) => p.id).sort()).toEqual(['inc', 'und', 'weird'])
+    // First-pass decisions are dropped — every carried paper starts undecided
+    // under the new (full-text) reason list.
+    expect(project.papers.every((p) => screeningStatus(p.annotations) === 'undecided')).toBe(true)
+    expect(project.provenance).toEqual({
+      kind: 'screening-import',
+      source: { file: 'screening.json' },
+      importedAt: expect.any(String),
+      counts: { included: 1, undecided: 2, excluded: 1, carried: 3 },
+    })
+  })
+
+  it('editor round-trip: opening the saved file parses provenance and keeps it out of extra', async () => {
+    await useEditorStore.getState().startFromScreening()
+    // The screening target, not annotation: the carried rows have no PDFs
+    // (a real title/abstract export), which only a screening project's
+    // relaxed pdf rule accepts — see `validateDraft`/`projectSchema`.
+    useEditorStore.getState().setScreeningImportKind('screening')
+    await useEditorStore.getState().resolveScreeningImport('include-undecided')
+    const json = buildProjectJson(useEditorStore.getState())
+    const text = JSON.stringify(json)
+
+    const opened = editorStateFromOpened({ text, handle: SOURCE_HANDLE, name: 'screening-fulltext.json' })
+    expect(opened.provenance).toEqual(useEditorStore.getState().provenance)
+    expect('provenance' in opened.extra).toBe(false)
+
+    useEditorStore.setState((s) => ({ ...s, ...opened, open: true, mode: 'edit' as const }))
+    const reJson = buildProjectJson(useEditorStore.getState())
+    const reText = JSON.stringify(reJson)
+    expect((JSON.parse(reText).provenance as unknown)).toEqual(opened.provenance)
+  })
+
+  it('undo after an import leaves provenance intact', async () => {
+    await useEditorStore.getState().startFromScreening()
+    await useEditorStore.getState().resolveScreeningImport('include-undecided')
+    const provenance = useEditorStore.getState().provenance
+    expect(provenance).not.toBeNull()
+
+    useEditorStore.getState().setTitle('Full-text pass')
+    expect(useEditorStore.getState().title).toBe('Full-text pass')
+    useEditorStore.getState().undo()
+    expect(useEditorStore.getState().title).toBe('')
+    expect(useEditorStore.getState().provenance).toEqual(provenance)
+  })
+
+  it('importFromScreening still refuses on an already-open screening project', async () => {
+    useEditorStore.setState({ screening: { reasons: ['X'] } })
+    await useEditorStore.getState().importFromScreening()
+    expect(useEditorStore.getState().screeningImport).toBeNull()
+    expect(useEditorStore.getState().busy).toBe(false)
   })
 })

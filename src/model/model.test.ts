@@ -779,3 +779,117 @@ describe('screening', () => {
     expect(serializeProject(loadProject(once))).toBe(once)
   })
 })
+
+describe('Project.provenance (where an imported project came from)', () => {
+  const VALID_PROVENANCE = {
+    kind: 'screening-import',
+    source: { file: 'screening.json', title: 'My Review' },
+    importedAt: '2026-07-15T10:00:00.000Z',
+    counts: { included: 3, undecided: 1, excluded: 2, carried: 4 },
+  }
+
+  const withProvenance = (provenance: unknown) =>
+    JSON.stringify({
+      version: 1,
+      config: { schema: sampleSchema },
+      ...(provenance === undefined ? {} : { provenance }),
+      papers: [{ id: 'p1', title: 'Some Paper', authors: [], pdf: 'pdfs/some.pdf', annotations: {} }],
+    })
+
+  it('is null when the project was never imported', () => {
+    expect(loadProject(withProvenance(undefined)).provenance).toBeNull()
+  })
+
+  it('loads a well-formed record', () => {
+    expect(loadProject(withProvenance(VALID_PROVENANCE)).provenance).toEqual(VALID_PROVENANCE)
+  })
+
+  it('a source with no title loads fine — title is optional, unlike file', () => {
+    const noTitle = { ...VALID_PROVENANCE, source: { file: 'screening.json' } }
+    expect(loadProject(withProvenance(noTitle)).provenance).toEqual(noTitle)
+  })
+
+  it('round-trips through load -> serialize -> reload', () => {
+    const once = serializeProject(loadProject(withProvenance(VALID_PROVENANCE)))
+    expect(loadProject(once).provenance).toEqual(VALID_PROVENANCE)
+  })
+
+  it('is written only when present, so an ordinary (non-imported) project stays byte-clean', () => {
+    const untouched = JSON.parse(serializeProject(loadProject(withProvenance(undefined))))
+    expect('provenance' in untouched).toBe(false)
+
+    const imported = JSON.parse(serializeProject(loadProject(withProvenance(VALID_PROVENANCE))))
+    expect(imported.provenance).toEqual(VALID_PROVENANCE)
+  })
+
+  it('a pre-existing file with no provenance re-serializes with no provenance key — back-compat', () => {
+    const out = JSON.parse(serializeProject(loadProject(withProvenance(undefined))))
+    expect('provenance' in out).toBe(false)
+  })
+
+  it('drops a malformed record rather than failing the whole file to load, and never reappears under extra', () => {
+    // The file is hand-editable, so a broken record must degrade to "no
+    // provenance", the same rule aiUsage/reviews/equal follow — never thrown
+    // over, and never silently repaired into something it didn't earn.
+    const cases: unknown[] = [
+      'nonsense',
+      42,
+      [],
+      {
+        kind: 'bogus',
+        source: { file: 'x.json' },
+        importedAt: 't',
+        counts: { included: 0, undecided: 0, excluded: 0, carried: 0 },
+      },
+      { kind: 'screening-import', source: { file: 'x.json' }, importedAt: 't' }, // counts missing
+      {
+        kind: 'screening-import',
+        source: {}, // file missing
+        importedAt: 't',
+        counts: { included: 0, undecided: 0, excluded: 0, carried: 0 },
+      },
+      {
+        kind: 'screening-import',
+        source: { file: 'x.json' },
+        importedAt: 't',
+        counts: { included: 0, undecided: 0, excluded: 0, carried: '3' }, // wrong type
+      },
+      {
+        kind: 'screening-import',
+        source: { file: 'x.json' },
+        importedAt: 42, // wrong type
+        counts: { included: 0, undecided: 0, excluded: 0, carried: 0 },
+      },
+    ]
+    for (const bad of cases) {
+      const project = loadProject(withProvenance(bad))
+      expect(project.provenance).toBeNull()
+      expect('provenance' in project.extra).toBe(false)
+      const out = JSON.parse(serializeProject(project))
+      expect('provenance' in out).toBe(false)
+    }
+  })
+
+  it('does not leak into extra, and the saved file has exactly one provenance key', () => {
+    const project = loadProject(withProvenance(VALID_PROVENANCE))
+    expect('provenance' in project.extra).toBe(false)
+    const out = JSON.parse(serializeProject(project))
+    expect(Object.keys(out).filter((k) => k === 'provenance')).toHaveLength(1)
+  })
+
+  it('config.provenance is not a thing — nesting it under config silently loses it on save', () => {
+    // config is z.object({...}) without .passthrough(), and serializeProject
+    // rebuilds config from four known fields — anything else placed there is
+    // dropped on the very first save. Pinned here so nobody "fixes" this by
+    // relocating the field.
+    const text = JSON.stringify({
+      version: 1,
+      config: { schema: sampleSchema, provenance: VALID_PROVENANCE },
+      papers: [{ id: 'p1', title: 'Some Paper', authors: [], pdf: 'pdfs/some.pdf', annotations: {} }],
+    })
+    const project = loadProject(text)
+    expect(project.provenance).toBeNull()
+    const out = JSON.parse(serializeProject(project)) as { config: Record<string, unknown> }
+    expect('provenance' in out.config).toBe(false)
+  })
+})

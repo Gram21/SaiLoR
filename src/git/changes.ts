@@ -220,11 +220,13 @@ function diffPaperMeta(head: Paper, working: Paper, out: FieldChange[]): void {
  * What changed locally, field by field — the data source for the commit
  * panel's review UI. Returns `null` when `head` and `working` disagree on
  * anything that reshapes the file (`config.schema`, `config.reviewers`,
- * `config.ai`, `config.screening`, `version`, or a root `extra` key): once
- * the schema itself is different, "which fields changed" is not a question
- * with a field-level answer any more than it is for `merge.ts`'s three-way
- * merge, which refuses the same differences for the same reason. The caller
- * falls back to the plain file-level commit for a project file in that state.
+ * `config.ai`, `config.screening`, `version`, `provenance`, or a root `extra`
+ * key): once the schema itself is different, "which fields changed" is not a
+ * question with a field-level answer any more than it is for `merge.ts`'s
+ * three-way merge, which refuses the same differences for the same reason —
+ * `provenance` specifically because it is a nested record no `FieldConflict`
+ * shape can express, not because it reshapes anything. The caller falls back
+ * to the plain file-level commit for a project file in that state.
  */
 export function detectFieldChanges(head: Project, working: Project): DetectedChanges | null {
   const structural =
@@ -233,7 +235,8 @@ export function detectFieldChanges(head: Project, working: Project): DetectedCha
     head.aiEnabled !== working.aiEnabled ||
     !deepEqualJson(head.screening, working.screening) ||
     head.version !== working.version ||
-    !deepEqualJson(head.extra, working.extra)
+    !deepEqualJson(head.extra, working.extra) ||
+    !deepEqualJson(head.provenance, working.provenance)
   if (structural) return null
 
   const fields: FieldChange[] = []

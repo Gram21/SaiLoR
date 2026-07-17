@@ -10,7 +10,13 @@ import {
 } from '../model/schema'
 import { extractPdfMeta } from '../model/pdfMeta'
 import { parseReferences, pdfHintFileName, type RefEntry } from '../model/references'
-import { loadProject, type Project } from '../model/project'
+import {
+  loadProject,
+  parseProvenance,
+  KNOWN_ROOT_KEYS,
+  type Project,
+  type ProjectProvenance,
+} from '../model/project'
 import { classifyImport, type DupRecord, type DupVerdict } from '../model/duplicates'
 import { getPlatform, type OpenedProject, type PickedPdf, type ProjectLocation, type SaveHandle } from '../platform'
 import { DEFAULT_SCREENING_REASONS, screeningSchemaDefs } from '../screening/schema'
@@ -92,6 +98,7 @@ interface EditorSnapshot {
   reviewers: number
   screening: ScreeningConfig | null
   extra: Record<string, unknown>
+  provenance: ProjectProvenance | null
 }
 
 const HISTORY_LIMIT = 100
@@ -467,6 +474,9 @@ export function buildProjectJson(state: {
   /** Optional so existing test fixtures (and any other caller predating this
    *  feature) keep compiling unchanged — absent means "not a screening draft". */
   screening?: ScreeningConfig | null
+  /** Optional for the same reason `screening?` is above. Absent/null means
+   *  "not imported from another project" — the overwhelmingly common case. */
+  provenance?: ProjectProvenance | null
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
@@ -478,6 +488,7 @@ export function buildProjectJson(state: {
     version: state.version,
     // Omitted when blank, so the app falls back to the file name.
     ...(title ? { title } : {}),
+    ...(state.provenance ? { provenance: state.provenance } : {}),
     // `ai` is only written when disabled, and `reviewers` only when it says
     // more than the single-reviewer default — matching serializeProject.
     config: {
@@ -604,8 +615,16 @@ export interface ScreeningImportDraft {
   /** `start`: a fresh editor session next to the screening JSON. `import`:
    *  add rows into the editor session already open. */
   target: 'start' | 'import'
+  /** Which kind of project `target: 'start'` creates. Meaningless when
+   *  `target === 'import'` — the open project's kind is already fixed by the
+   *  session that is already open. */
+  startKind: 'annotation' | 'screening'
   sourceHandle: SaveHandle
   sourceName: string
+  /** The source project's own `title`, when it set one — not its file name. */
+  sourceTitle?: string
+  /** The source's own reasons. Seeds a `startKind: 'screening'` target's own
+   *  (separately editable) reason list — see `resolveScreeningImport`. */
   screening: ScreeningConfig
   /** Not excluded — `Decision === 'Include'`. Always carried. */
   included: ScreeningImportRow[]
@@ -617,9 +636,12 @@ export interface ScreeningImportDraft {
   excludedByReason: Record<string, number>
   /** Papers every reviewer decided identically that Consolidation had not
    *  adopted at the time this was read — see `screening/counts.ts`'s
-   *  `pendingUnanimous`. Only ever nonzero when `multiReviewer`. */
+   *  `pendingUnanimous`. Only ever nonzero when `reviewers > 1`. */
   pendingUnanimousCount: number
-  multiReviewer: boolean
+  /** The source's seat count. Not a `multiReviewer` boolean: a `startKind:
+   *  'screening'` target inherits this number outright (see
+   *  `resolveScreeningImport`), and one fact must not be stored two ways. */
+  reviewers: number
 }
 
 /** `annotations` is the consolidated tree — the one that ships, in both the
@@ -710,6 +732,10 @@ interface EditorState {
    */
   screening: ScreeningConfig | null
   extra: Record<string, unknown>
+  /** Set when this project's papers were imported from another project (see
+   *  `resolveScreeningImport`); null for one started from scratch. Never
+   *  edited directly in the UI — a durable record, not a setting. */
+  provenance: ProjectProvenance | null
   nodes: EditorNode[]
   papers: EditorPaper[]
   dirty: boolean
@@ -775,13 +801,18 @@ interface EditorState {
   movePaper: (dragUid: string, targetUid: string, position: 'before' | 'after') => void
 
   /**
-   * Create a new annotation project from a screening project's included
-   * papers: pick the screening JSON, then open the pre-commit summary
-   * (`screeningImport`) before anything is written.
+   * Create a new project — annotation or screening, the reviewer's choice —
+   * from a screening project's included papers: pick the screening JSON,
+   * then open the pre-commit summary (`screeningImport`) before anything is
+   * written.
    */
   startFromScreening: () => Promise<void>
   /** The papers-only half of the above, for an editor session already open. */
   importFromScreening: () => Promise<void>
+  /** Choose what `target: 'start'` builds. A no-op when there is no pending
+   *  import, or it targets an already-open session. Not undoable — the draft
+   *  is session-only, same as the rest of `screeningImport`. */
+  setScreeningImportKind: (kind: 'annotation' | 'screening') => void
   /** Answer the pre-commit import summary opened by either action above. */
   resolveScreeningImport: (choice: 'include-undecided' | 'skip-undecided' | 'cancel') => Promise<void>
 
@@ -821,6 +852,7 @@ function snapshotOf(s: EditorState): EditorSnapshot {
     reviewers: s.reviewers,
     screening: s.screening,
     extra: s.extra,
+    provenance: s.provenance,
   }
 }
 
@@ -834,6 +866,7 @@ function applySnapshot(s: EditorState, snap: EditorSnapshot): void {
   s.reviewers = snap.reviewers
   s.screening = snap.screening
   s.extra = snap.extra
+  s.provenance = snap.provenance
 }
 
 /** Push a pre-mutation snapshot onto the undo stack and drop the redo stack. */
@@ -852,6 +885,7 @@ interface OpenedEditorState {
   reviewers: number
   screening: ScreeningConfig | null
   extra: Record<string, unknown>
+  provenance: ProjectProvenance | null
   nodes: EditorNode[]
   papers: EditorPaper[]
 }
@@ -899,9 +933,13 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
       extra,
     }
   })
+  // `KNOWN_ROOT_KEYS` — not a second hand-maintained list — so a key this
+  // editor now knows about (like `provenance`) can never end up both parsed
+  // explicitly below *and* riding along in `extra`, which would make it look
+  // "changed" on every git diff even when nothing about it did.
   const rootExtra: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(data)) {
-    if (!['version', 'title', 'config', 'papers'].includes(k)) rootExtra[k] = v
+    if (!KNOWN_ROOT_KEYS.has(k)) rootExtra[k] = v
   }
   return {
     location: { handle: opened.handle, name: opened.name, path: opened.handle.path },
@@ -913,6 +951,7 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
     reviewers: parsed.config.reviewers ?? 1,
     screening,
     extra: rootExtra,
+    provenance: parseProvenance(data.provenance),
     // A screening project's schema is derived, not authored, so there is
     // nothing for the schema-builder tree to hold — see `ProjectEditor.tsx`,
     // which renders `ScreeningReasonsEditor` instead whenever `screening` is set.
@@ -946,6 +985,7 @@ function openEditorSession(s: EditorState, st: OpenedEditorState): void {
   s.reviewers = st.reviewers
   s.screening = st.screening
   s.extra = st.extra
+  s.provenance = st.provenance
   s.nodes = st.nodes
   s.papers = st.papers
   s.dirty = false
@@ -1059,6 +1099,7 @@ export const useEditorStore = create<EditorState>()(
     reviewers: 1,
     screening: null,
     extra: {},
+    provenance: null,
     nodes: [],
     papers: [],
     dirty: false,
@@ -1088,6 +1129,7 @@ export const useEditorStore = create<EditorState>()(
         s.reviewers = 1
         s.screening = null
         s.extra = {}
+        s.provenance = null
         s.nodes = [makeNode()]
         s.papers = []
         s.dirty = false
@@ -1468,20 +1510,32 @@ export const useEditorStore = create<EditorState>()(
         s.busy = false
         s.screeningImport = {
           target: 'start',
+          // The existing button's long-standing output — deciding this
+          // silently would undermine the one thing this dialog exists for:
+          // making the choice explicit rather than automatic. The reviewer
+          // opts into a second screening pass with the radio in the dialog.
+          startKind: 'annotation',
           sourceHandle: opened.handle,
           sourceName: opened.name,
+          sourceTitle: project.title,
           screening: project.screening!,
           ...partition,
           pendingUnanimousCount: pendingUnanimous(project),
-          multiReviewer: project.reviewers > 1,
+          reviewers: project.reviewers,
         }
       })
     },
 
     importFromScreening: async () => {
-      // Importing screening papers into a screening project is nonsense: a
-      // screening project has no annotation fields of its own to carry them
-      // into. The papers editor hides the button too — see PapersEditor.tsx.
+      // In-place import *into* a screening project is not the "nonsense" it
+      // once looked like: a carried row arrives with `annotations: {}`, i.e.
+      // undecided under the open project's own reasons — perfectly
+      // well-defined. It stays blocked anyway, for three reasons: unblocking
+      // it means editing PapersEditor.tsx's own gate, which is not part of
+      // this feature; the two-pass workflow this exists for is fully served
+      // by `startFromScreening` (a *second*, independently reasoned
+      // screening project); and "pool two independent screens into one" is a
+      // distinct workflow with no demonstrated need yet.
       if (get().screening !== null) return
       set((s) => {
         s.busy = true
@@ -1499,15 +1553,24 @@ export const useEditorStore = create<EditorState>()(
         s.busy = false
         s.screeningImport = {
           target: 'import',
+          // Meaningless here — the open session's kind is already fixed —
+          // but the field is not optional, so it needs a value.
+          startKind: 'annotation',
           sourceHandle: opened.handle,
           sourceName: opened.name,
+          sourceTitle: project.title,
           screening: project.screening!,
           ...partition,
           pendingUnanimousCount: pendingUnanimous(project),
-          multiReviewer: project.reviewers > 1,
+          reviewers: project.reviewers,
         }
       })
     },
+
+    setScreeningImportKind: (kind) =>
+      set((s) => {
+        if (s.screeningImport) s.screeningImport.startKind = kind
+      }),
 
     resolveScreeningImport: async (choice) => {
       const draft = get().screeningImport
@@ -1536,7 +1599,13 @@ export const useEditorStore = create<EditorState>()(
       let location: ProjectLocation | null = null
       if (draft.target === 'start') {
         const baseName = (draft.sourceHandle.path ?? draft.sourceName).split(/[\\/]/).pop() ?? draft.sourceName
-        const suggested = `${baseName.replace(/\.json$/i, '')}-annotation.json`
+        // "-fulltext", not "-screening": the second screening pass in an SLR
+        // *is* the full-text screen, and naming it for the workflow it serves
+        // beats naming it for its data shape (which would read
+        // "screening-screening.json" for the overwhelmingly common source
+        // name). Only a suggestion — the save dialog lets the reviewer rename.
+        const suffix = draft.startKind === 'screening' ? 'fulltext' : 'annotation'
+        const suggested = `${baseName.replace(/\.json$/i, '')}-${suffix}.json`
         location = await platform.siblingProjectLocation(draft.sourceHandle, suggested)
         if (!location) location = await platform.pickProjectLocation(suggested)
         if (!location) {
@@ -1555,6 +1624,9 @@ export const useEditorStore = create<EditorState>()(
       const absolutes = await platform.absolutePdfPaths(carried.map((p) => p.pdf), draft.sourceHandle)
       lastEditKey = null
       const importSnap = snapshotOf(get())
+      // Read once, outside the immer producer below, so the producer stays a
+      // pure function of its inputs instead of reading the ambient clock itself.
+      const importedAt = new Date().toISOString()
 
       set((s) => {
         s.busy = false
@@ -1573,16 +1645,37 @@ export const useEditorStore = create<EditorState>()(
 
         if (draft.target === 'start') {
           if (!location) return
+          const screeningTarget = draft.startKind === 'screening'
           s.open = true
           s.mode = 'new'
           s.location = location
           s.version = 1
           s.title = ''
           s.aiEnabled = true
-          s.reviewers = 1
-          s.screening = null
+          // A second screening pass repeats the same protocol step with the
+          // same screening team, so its seat count is a property of the
+          // protocol being continued — dual screening is a PRISMA-reportable
+          // design property, and silently resetting it to one reviewer could
+          // convert a dual-screened review into a single-screened one without
+          // anyone noticing. Data extraction (the annotation target) is a
+          // different phase with its own independent staffing decision, so it
+          // keeps the existing single-reviewer default — deliberate, not an
+          // oversight, and outside this feature's mandate to revisit.
+          s.reviewers = screeningTarget ? draft.reviewers : 1
+          // The source's own reasons seed the new list, not
+          // DEFAULT_SCREENING_REASONS: they are the pre-registered protocol's
+          // own vocabulary (already chosen once, by this same team), and
+          // PRISMA reports exclusions per reason across both passes — a
+          // disjoint generic list would make the two passes' numbers
+          // un-poolable. Editable immediately in ScreeningReasonsEditor, same
+          // as any other screening project's reasons.
+          s.screening = screeningTarget ? { reasons: [...draft.screening.reasons] } : null
           s.extra = {}
-          s.nodes = [makeNode()]
+          // A screening draft's schema is derived from `screening.reasons`,
+          // not authored (see `Project.screening`), so there is nothing for
+          // the schema-builder tree to hold — `editorStateFromOpened` uses
+          // the same empty array for the same reason.
+          s.nodes = screeningTarget ? [] : [makeNode()]
           s.papers = rows
           s.dirty = true
           s.error = null
@@ -1592,6 +1685,20 @@ export const useEditorStore = create<EditorState>()(
           s.justAdded = Object.fromEntries(rows.map((r) => [r.uid, true as const]))
           s.past = []
           s.future = []
+          s.provenance = {
+            kind: 'screening-import',
+            source: {
+              file: draft.sourceName,
+              ...(draft.sourceTitle ? { title: draft.sourceTitle } : {}),
+            },
+            importedAt,
+            counts: {
+              included: draft.included.length,
+              undecided: draft.undecided.length,
+              excluded: draft.excludedCount,
+              carried: rows.length,
+            },
+          }
         } else {
           // Adding into an editor session already open: one undo step for the
           // whole import (only when it actually adds something), and a paper
