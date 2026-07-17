@@ -290,6 +290,96 @@ describe('reviewer selection is persisted per project', () => {
   })
 })
 
+describe('selectReviewer with a git identity — claiming a seat (config.reviewerIdentities)', () => {
+  const ALICE = { email: 'alice@kit.edu' }
+  const BOB = { email: 'bob@kit.edu' }
+
+  beforeEach(() => {
+    st().loadFromText(multiReviewerProject, null, 'test.json')
+    st().selectPaper('p1')
+  })
+
+  it('claims a free seat: recorded, dirty, but no undo entry', () => {
+    st().selectReviewer('1', ALICE)
+    expect(st().project!.reviewerIdentities['1']).toEqual(ALICE)
+    expect(st().dirty).toBe(true)
+    expect(st().past).toHaveLength(0)
+  })
+
+  it('no identity supplied — a plain view switch, exactly like today: no claim, not dirty', () => {
+    st().selectReviewer('1')
+    expect(st().project!.reviewerIdentities).toEqual({})
+    expect(st().dirty).toBe(false)
+  })
+
+  it('identity explicitly null (browser, no repo, unset user.email) — same as omitted', () => {
+    st().selectReviewer('1', null)
+    expect(st().project!.reviewerIdentities).toEqual({})
+    expect(st().dirty).toBe(false)
+  })
+
+  it('seat already held by someone else — switches view, never overwrites, not dirty', () => {
+    st().selectReviewer('1', ALICE)
+    st().selectReviewer('consolidation') // clear dirty/undo state is irrelevant here; just switch away
+    useStore.setState({ dirty: false })
+    st().selectReviewer('1', BOB)
+    expect(st().currentReviewer).toBe('1')
+    expect(st().project!.reviewerIdentities['1']).toEqual(ALICE)
+    expect(st().dirty).toBe(false)
+  })
+
+  it('seat already held by me — no write, not dirty, even though it is the same value', () => {
+    st().selectReviewer('1', ALICE)
+    useStore.setState({ dirty: false })
+    const before = st().project!.reviewerIdentities
+    st().selectReviewer('consolidation')
+    st().selectReviewer('1', ALICE)
+    expect(st().project!.reviewerIdentities).toBe(before) // not even a new object
+    expect(st().dirty).toBe(false)
+  })
+
+  it('the consolidation seat claims and behaves exactly like a numbered one', () => {
+    st().selectReviewer('consolidation', ALICE)
+    expect(st().project!.reviewerIdentities['consolidation']).toEqual(ALICE)
+    expect(st().dirty).toBe(true)
+  })
+
+  it('a single-reviewer project never claims anything, identity or not', () => {
+    st().closeProject()
+    st().loadFromText(singleReviewerProject, null, 'single.json')
+    st().selectPaper('p1')
+    st().selectReviewer('1', ALICE)
+    // Single-reviewer projects have no seats to claim — there is one tree,
+    // `annotations`, shared by construction, so `reviewerIdentities` stays
+    // empty exactly as if identity had never been supplied at all.
+    expect(st().project!.reviewerIdentities).toEqual({})
+    expect(st().dirty).toBe(false)
+  })
+})
+
+describe('takeSeat — the explicit override', () => {
+  const ALICE = { email: 'alice@kit.edu' }
+  const BOB = { email: 'bob@kit.edu' }
+
+  beforeEach(() => {
+    st().loadFromText(multiReviewerProject, null, 'test.json')
+    st().selectPaper('p1')
+    st().selectReviewer('1', ALICE)
+    useStore.setState({ dirty: false })
+  })
+
+  it('overwrites whoever currently holds the seat', () => {
+    st().takeSeat('1', BOB)
+    expect(st().project!.reviewerIdentities['1']).toEqual(BOB)
+    expect(st().dirty).toBe(true)
+  })
+
+  it('pushes no undo entry', () => {
+    st().takeSeat('1', BOB)
+    expect(st().past).toHaveLength(0)
+  })
+})
+
 describe('closeProject resets the reviewer view', () => {
   it('clears currentReviewer and any open compare popup', () => {
     st().loadFromText(multiReviewerProject, null, 'test.json')

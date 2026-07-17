@@ -14,6 +14,7 @@ import type {
   GitProbe,
   CloneOutcome,
   GitRepoInfo,
+  GitIdentity,
   GitStatus,
   GitRun,
   PullStart,
@@ -72,6 +73,7 @@ export interface SlrBridge {
   gitClone(url: string, dest: string): Promise<CloneOutcome>
   gitPickProjectIn(dir: string): Promise<string | null>
   gitInfo(projectPath: string): Promise<GitRepoInfo | null>
+  gitIdentity(root: string): Promise<GitIdentity>
   /** Raw porcelain/diff text — parsed on this side of the IPC boundary
    *  (`src/git/output.ts`), where the parser is unit-tested. */
   gitStatus(root: string): Promise<{ porcelain: string; diff: string }>
@@ -313,6 +315,7 @@ export class ElectronAdapter implements PlatformAdapter {
     clone: (url, dest) => bridge().gitClone(url, dest),
     pickProjectIn: (dir) => bridge().gitPickProjectIn(dir),
     info: (projectPath) => bridge().gitInfo(projectPath),
+    identity: (root) => bridge().gitIdentity(root),
     status: async (root): Promise<GitStatus> => {
       const { porcelain, diff } = await bridge().gitStatus(root)
       const capped = capDiff(diff)
