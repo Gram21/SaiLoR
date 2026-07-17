@@ -3,6 +3,7 @@ import { useStore } from '../state/store'
 import { useEditorStore } from '../state/editorStore'
 import { useGitStore } from '../state/gitStore'
 import { getPlatform } from '../platform'
+import { checkSeat, describeIdentity, toReviewerIdentity } from '../model/identity'
 import { Dropdown, type MenuItem } from './Dropdown'
 import { SidebarToggle } from './SidebarToggle'
 
@@ -88,6 +89,7 @@ export function Toolbar() {
   const gitRepo = useGitStore((s) => s.repo)
   const openClone = useGitStore((s) => s.openClone)
   const openGitPanel = useGitStore((s) => s.openPanel)
+  const gitIdentity = useGitStore((s) => s.identity)
 
   // A ref, not state: counting must not trigger a render, or the title (and
   // anything watching it) would visibly react to being clicked before the
@@ -116,17 +118,39 @@ export function Toolbar() {
       ? 'Consolidation'
       : `Reviewer ${currentReviewer}`
 
+  // Who this machine thinks it is, for the seat hints below — `ReviewerPrompt`
+  // owns the actual warning; this only ever informs, never blocks, since a
+  // reviewer already mid-session switching seats has already been through it.
+  const me = toReviewerIdentity(gitIdentity?.email, gitIdentity?.name)
+  /** Appends "(claimed by …)" to a seat's ordinary hint when the file records
+   *  a holder — and flags it when that holder isn't this machine, so hovering
+   *  a seat someone else claimed explains itself without opening the prompt. */
+  const seatHint = (seat: string, base: string): string => {
+    const holder = project?.reviewerIdentities[seat]
+    if (!holder) return base
+    const verdict = checkSeat(project!.reviewerIdentities, seat, me?.email ?? null)
+    return verdict.kind === 'mismatch'
+      ? `${base}\nClaimed by ${describeIdentity(holder)} — not you.`
+      : `${base}\nClaimed by ${describeIdentity(holder)}.`
+  }
+  const seatIsMismatch = (seat: string): boolean =>
+    !!project && checkSeat(project.reviewerIdentities, seat, me?.email ?? null).kind === 'mismatch'
+
   const reviewerMenuItems: MenuItem[] = [
     ...reviewerIds.map<MenuItem>((rid) => ({
       type: 'item',
       label: (
-        <span className={`reviewer-menu-label${currentReviewer === rid ? ' is-current' : ''}`}>
+        <span
+          className={`reviewer-menu-label${currentReviewer === rid ? ' is-current' : ''}${
+            seatIsMismatch(rid) ? ' is-mismatch' : ''
+          }`}
+        >
           {currentReviewer === rid ? '✓ ' : ''}Reviewer {rid}
         </span>
       ),
-      hint: `Reviewer ${rid} — annotate independently; only you see this until Consolidation`,
+      hint: seatHint(rid, `Reviewer ${rid} — annotate independently; only you see this until Consolidation`),
       disabled: busy,
-      onSelect: () => selectReviewer(rid),
+      onSelect: () => selectReviewer(rid, me),
     })),
     { type: 'separator' },
     {
@@ -137,14 +161,17 @@ export function Toolbar() {
         <span
           className={`reviewer-menu-label reviewer-menu-consolidation${
             currentReviewer === 'consolidation' ? ' is-current' : ''
-          }`}
+          }${seatIsMismatch('consolidation') ? ' is-mismatch' : ''}`}
         >
           {currentReviewer === 'consolidation' ? '✓ ' : ''}Consolidation
         </span>
       ),
-      hint: "Consolidation — compare every reviewer's answers and record the final, agreed result. This is what the project's saved output actually contains.",
+      hint: seatHint(
+        'consolidation',
+        "Consolidation — compare every reviewer's answers and record the final, agreed result. This is what the project's saved output actually contains.",
+      ),
       disabled: busy,
-      onSelect: () => selectReviewer('consolidation'),
+      onSelect: () => selectReviewer('consolidation', me),
     },
   ]
 
@@ -307,10 +334,12 @@ export function Toolbar() {
                 <button
                   key={rid}
                   type="button"
-                  className={`reviewer-btn${currentReviewer === rid ? ' active' : ''}`}
-                  title={`Reviewer ${rid} — annotate independently; only you see this until Consolidation`}
+                  className={`reviewer-btn${currentReviewer === rid ? ' active' : ''}${
+                    seatIsMismatch(rid) ? ' is-mismatch' : ''
+                  }`}
+                  title={seatHint(rid, `Reviewer ${rid} — annotate independently; only you see this until Consolidation`)}
                   disabled={busy}
-                  onClick={() => selectReviewer(rid)}
+                  onClick={() => selectReviewer(rid, me)}
                 >
                   {rid}
                 </button>
@@ -319,10 +348,13 @@ export function Toolbar() {
                 type="button"
                 className={`reviewer-btn reviewer-btn-consolidation${
                   currentReviewer === 'consolidation' ? ' active' : ''
-                }`}
-                title="Consolidation — compare every reviewer's answers and record the final, agreed result. This is what the project's saved output actually contains."
+                }${seatIsMismatch('consolidation') ? ' is-mismatch' : ''}`}
+                title={seatHint(
+                  'consolidation',
+                  "Consolidation — compare every reviewer's answers and record the final, agreed result. This is what the project's saved output actually contains.",
+                )}
                 disabled={busy}
-                onClick={() => selectReviewer('consolidation')}
+                onClick={() => selectReviewer('consolidation', me)}
               >
                 Consolidation
               </button>

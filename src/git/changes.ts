@@ -220,11 +220,21 @@ function diffPaperMeta(head: Paper, working: Paper, out: FieldChange[]): void {
  * What changed locally, field by field — the data source for the commit
  * panel's review UI. Returns `null` when `head` and `working` disagree on
  * anything that reshapes the file (`config.schema`, `config.reviewers`,
- * `config.ai`, `config.screening`, `version`, or a root `extra` key): once
- * the schema itself is different, "which fields changed" is not a question
- * with a field-level answer any more than it is for `merge.ts`'s three-way
- * merge, which refuses the same differences for the same reason. The caller
- * falls back to the plain file-level commit for a project file in that state.
+ * `config.ai`, `config.screening`, `config.reviewerIdentities`, `version`, or
+ * a root `extra` key): once the schema itself is different, "which fields
+ * changed" is not a question with a field-level answer any more than it is
+ * for `merge.ts`'s three-way merge, which refuses the same differences for
+ * the same reason. The caller falls back to the plain file-level commit for a
+ * project file in that state.
+ *
+ * `reviewerIdentities` belongs here, not in the field walk below: claiming a
+ * seat is not an annotation with a "which value do I want" answer — it is the
+ * same kind of config change `config.reviewers` already is, and the panel
+ * never offers a reviewer a per-field choice for either. The cost is bounded
+ * and self-healing: only the one commit where a seat is first claimed falls
+ * back to the whole-file checkbox (which does commit it — see `runCommit` in
+ * `gitStore.ts`); every commit after that, `head.reviewerIdentities` already
+ * matches, and field-level review resumes.
  */
 export function detectFieldChanges(head: Project, working: Project): DetectedChanges | null {
   const structural =
@@ -232,6 +242,7 @@ export function detectFieldChanges(head: Project, working: Project): DetectedCha
     head.reviewers !== working.reviewers ||
     head.aiEnabled !== working.aiEnabled ||
     !deepEqualJson(head.screening, working.screening) ||
+    !deepEqualJson(head.reviewerIdentities, working.reviewerIdentities) ||
     head.version !== working.version ||
     !deepEqualJson(head.extra, working.extra)
   if (structural) return null

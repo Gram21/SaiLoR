@@ -71,6 +71,7 @@ interface ProjectOpts {
   extra?: Record<string, unknown>
   /** Presence alone makes this a screening project — see `screeningSchemaDefs`. */
   screening?: { reasons: string[] }
+  reviewerIdentities?: Record<string, unknown>
 }
 
 function project(opts: ProjectOpts = {}): Project {
@@ -79,6 +80,7 @@ function project(opts: ProjectOpts = {}): Project {
     : { schema: opts.schema ?? SIMPLE }
   if (opts.reviewers !== undefined) config.reviewers = opts.reviewers
   if (opts.ai !== undefined) config.ai = opts.ai
+  if (opts.reviewerIdentities !== undefined) config.reviewerIdentities = opts.reviewerIdentities
   return loadProject({
     version: opts.version ?? 1,
     ...(opts.title !== undefined ? { title: opts.title } : {}),
@@ -316,6 +318,133 @@ describe('mergeProjects — multiple reviewers', () => {
     expectMerged(outcome)
     expect(outcome.merged.papers[0].reviews['1']['Study Type'][0].value).toBe('RCT')
     expect(outcome.merged.papers[0].reviews['2']['Study Type'][0].value).toBe('Survey')
+  })
+})
+
+describe('mergeProjects — reviewer seat identity (config.reviewerIdentities)', () => {
+  const empty = { 'Study Type': [{ value: null }], Year: [{ value: null }], Relevant: [{ value: false }] }
+  const ALICE = { email: 'alice@kit.edu' }
+  const BOB = { email: 'bob@kit.edu' }
+
+  /** Same seat-1-collision fixture the plan's premise verification used:
+   *  Alice and Bob both pick seat "1" on their own clones and each answer a
+   *  different field. */
+  function collisionProject(
+    reviews: Record<string, unknown>,
+    identities?: Record<string, unknown>,
+  ): Project {
+    return project({
+      reviewers: 2,
+      reviewerIdentities: identities,
+      papers: [paper('a', { reviews })],
+    })
+  }
+
+  it('the headline regression: with no identities recorded, the two answers still silently absorb into one chimeric tree — this is the hazard, unfixable at this layer', () => {
+    const base = collisionProject({ '1': empty, '2': empty })
+    const ours = collisionProject({ '1': { ...empty, 'Study Type': [{ value: 'RCT' }] }, '2': empty })
+    const theirs = collisionProject({ '1': { ...empty, Year: [{ value: 2021 }] }, '2': empty })
+
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.conflicts).toEqual([])
+    const merged1 = outcome.merged.papers[0].reviews['1']
+    expect(merged1['Study Type'][0].value).toBe('RCT')
+    expect(merged1['Year'][0].value).toBe(2021)
+  })
+
+  it('the fix: with both claims recorded, the same merge is refused instead — never silently absorbed', () => {
+    // Neither claimed the seat at the merge base — a race, not a handover:
+    // both Alice and Bob sat down in the free seat 1 independently, before
+    // either pulled the other's claim.
+    const base = collisionProject({ '1': empty, '2': empty }, {})
+    const ours = collisionProject(
+      { '1': { ...empty, 'Study Type': [{ value: 'RCT' }] }, '2': empty },
+      { '1': ALICE },
+    )
+    const theirs = collisionProject(
+      { '1': { ...empty, Year: [{ value: 2021 }] }, '2': empty },
+      { '1': BOB },
+    )
+
+    const outcome = mergeProjects(base, ours, theirs)
+    expectRefused(outcome)
+    const detail = outcome.details.join(' ')
+    expect(detail).toContain('Reviewer 1')
+    expect(detail).toContain('alice@kit.edu')
+    expect(detail).toContain('bob@kit.edu')
+  })
+
+  /** Identity-merge-only fixtures, where the reviewer trees themselves are
+   *  irrelevant — always empty, on two reviewers so `reviewerIdentities` has
+   *  somewhere non-trivial to live. */
+  function identityProject(identities: Record<string, unknown>): Project {
+    return collisionProject({ '1': empty, '2': empty }, identities)
+  }
+
+  it('disjoint seats claimed on each side both survive, no refusal', () => {
+    const base = identityProject({})
+    const ours = identityProject({ '1': ALICE })
+    const theirs = identityProject({ '2': BOB })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.reviewerIdentities).toEqual({ '1': ALICE, '2': BOB })
+  })
+
+  it('the same seat claimed identically on both sides merges cleanly', () => {
+    const base = identityProject({})
+    const ours = identityProject({ '1': ALICE })
+    const theirs = identityProject({ '1': ALICE })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.reviewerIdentities).toEqual({ '1': ALICE })
+  })
+
+  it('same email, different display name on each side merges without refusing (the false-alarm trap)', () => {
+    const base = identityProject({ '1': ALICE })
+    const ours = identityProject({ '1': { email: 'alice@kit.edu', name: 'Alice' } })
+    const theirs = identityProject({ '1': { email: 'Alice@KIT.edu', name: 'Dr. Alice Ng' } })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.reviewerIdentities['1'].email).toBe('alice@kit.edu')
+  })
+
+  it('handover — base=alice, ours=alice, theirs=bob — bob wins, no refusal', () => {
+    const base = identityProject({ '1': ALICE })
+    const ours = identityProject({ '1': ALICE })
+    const theirs = identityProject({ '1': BOB })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.reviewerIdentities).toEqual({ '1': BOB })
+  })
+
+  it('a claim added on only one side survives', () => {
+    const base = identityProject({})
+    const ours = identityProject({ '1': ALICE })
+    const theirs = identityProject({})
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.reviewerIdentities).toEqual({ '1': ALICE })
+  })
+
+  it('a claim removed on one side, unopposed, is removed — merge3\'s ordinary rule', () => {
+    const base = identityProject({ '1': ALICE })
+    const ours = identityProject({})
+    const theirs = identityProject({ '1': ALICE })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.reviewerIdentities).toEqual({})
+  })
+
+  it('covers the consolidation seat identically to a numbered one', () => {
+    const CAROL = { email: 'carol@kit.edu' }
+    const DAN = { email: 'dan@kit.edu' }
+    const base = identityProject({})
+    const ours = identityProject({ consolidation: CAROL })
+    const theirs = identityProject({ consolidation: DAN })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectRefused(outcome)
+    expect(outcome.details.join(' ')).toContain('Consolidation')
   })
 })
 
