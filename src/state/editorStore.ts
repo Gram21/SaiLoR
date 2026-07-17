@@ -1196,7 +1196,13 @@ export const useEditorStore = create<EditorState>()(
     location: null,
     version: 1,
     title: '',
-    aiEnabled: true,
+    // Off by default while AI-assisted annotation itself has no reachable
+    // entry point in the app (see `aiUnlocked` in store.ts) — there is no UI
+    // here to turn it back on either (see ProjectEditor.tsx's own comment on
+    // why the toggle is gone), so a new project written today should not
+    // silently claim a feature nobody can use. `config.ai: false` is written
+    // out just like an explicit opt-out would be — see serializeProject.
+    aiEnabled: false,
     reviewers: 1,
     screening: null,
     reviewerIdentities: {},
@@ -1228,7 +1234,9 @@ export const useEditorStore = create<EditorState>()(
         s.location = location
         s.version = 1
         s.title = ''
-        s.aiEnabled = true
+        // See the initial-state comment above: no reachable feature, no UI to
+        // turn it back on, so a new project starts opted out.
+        s.aiEnabled = false
         s.reviewers = 1
         s.screening = null
         s.extra = {}
@@ -1755,6 +1763,25 @@ export const useEditorStore = create<EditorState>()(
       // re-derives `pdf` for rows with a `sourcePath`) would silently leave
       // every PDF pointing at nothing.
       const absolutes = await platform.absolutePdfPaths(carried.map((p) => p.pdf), draft.sourceHandle)
+
+      // Merging into an already-open session (`target !== 'start'`) drops the
+      // carried papers into whatever directory that project already lives in
+      // — almost certainly not the screening project's own directory, unlike
+      // `target: 'start'` above, which defaults to a sibling of the source for
+      // exactly this reason. Re-derive `pdf` against the open project's own
+      // location first, the identical `relativePdfPaths` pattern
+      // `changeLocation` uses for "Save as" — left verbatim, every one of
+      // these paths would point at nothing the moment the reviewer looked.
+      let rebased: string[] = []
+      if (draft.target !== 'start') {
+        const withSource = carried
+          .map((p, i) => ({ name: p.pdf, path: absolutes[i] }))
+          .filter((x): x is { name: string; path: string } => !!x.path)
+        if (withSource.length > 0) {
+          rebased = await platform.relativePdfPaths(withSource, get().location)
+        }
+      }
+
       lastEditKey = null
       const importSnap = snapshotOf(get())
       // Read once, outside the immer producer below, so the producer stays a
@@ -1763,20 +1790,29 @@ export const useEditorStore = create<EditorState>()(
 
       set((s) => {
         s.busy = false
-        const rows: EditorPaper[] = carried.map((p, i) => ({
-          uid: nextUid(),
-          id: p.id,
-          title: p.title,
-          authors: p.authors.join(', '),
-          doi: p.doi ?? '',
-          year: p.year !== undefined ? String(p.year) : '',
-          venue: p.venue ?? '',
-          abstract: p.abstract ?? '',
-          abstractFromPdf: p.abstract && p.abstractFromPdf ? true : undefined,
-          pdf: p.pdf,
-          sourcePath: p.pdf ? absolutes[i] : undefined,
-          annotations: {},
-        }))
+        let rebasedIdx = 0
+        const rows: EditorPaper[] = carried.map((p, i) => {
+          const hasSource = !!absolutes[i]
+          // `target: 'start'` never rebases (correct by construction — see
+          // above); `target: 'import'` uses the re-derived path whenever one
+          // was computed, falling back to the verbatim value otherwise (no
+          // source path at all, or the browser, which has no paths to rebase).
+          const pdf = draft.target !== 'start' && hasSource ? (rebased[rebasedIdx++] ?? p.pdf) : p.pdf
+          return {
+            uid: nextUid(),
+            id: p.id,
+            title: p.title,
+            authors: p.authors.join(', '),
+            doi: p.doi ?? '',
+            year: p.year !== undefined ? String(p.year) : '',
+            venue: p.venue ?? '',
+            abstract: p.abstract ?? '',
+            abstractFromPdf: p.abstract && p.abstractFromPdf ? true : undefined,
+            pdf,
+            sourcePath: p.pdf ? absolutes[i] : undefined,
+            annotations: {},
+          }
+        })
 
         if (draft.target === 'start') {
           if (!location) return
@@ -1786,7 +1822,11 @@ export const useEditorStore = create<EditorState>()(
           s.location = location
           s.version = 1
           s.title = ''
-          s.aiEnabled = true
+          // See the initial-state comment near the top of this store: no
+          // reachable AI feature, no UI to turn it back on, so a fresh
+          // project — including one built from a screening import — starts
+          // opted out.
+          s.aiEnabled = false
           // A second screening pass repeats the same protocol step with the
           // same screening team, so its seat count is a property of the
           // protocol being continued — dual screening is a PRISMA-reportable

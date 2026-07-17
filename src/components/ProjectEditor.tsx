@@ -14,6 +14,14 @@ const MOD = getPlatform().kind === 'electron' && isMac ? '⌘' : 'Ctrl'
  * Full-screen editor for a project JSON: pick where it lives, build the
  * annotation schema, and attach the PDFs to annotate. Shown instead of the
  * annotation workspace while `open` is true.
+ *
+ * No AI-annotation toggle here on purpose: with no reachable entry point for
+ * the feature itself (see `aiUnlocked` in store.ts), offering a control that
+ * configures it would promise something the app doesn't currently deliver.
+ * `EditorState.aiEnabled` still exists and defaults to `false` for a new
+ * project (see the initial state / `startNew` in editorStore.ts), and an
+ * existing file's own `config.ai` is still read and preserved on save —
+ * there just isn't a way to change it from here right now.
  */
 export function ProjectEditor() {
   const open = useEditorStore((s) => s.open)
@@ -21,8 +29,6 @@ export function ProjectEditor() {
   const location = useEditorStore((s) => s.location)
   const title = useEditorStore((s) => s.title)
   const setTitle = useEditorStore((s) => s.setTitle)
-  const aiEnabled = useEditorStore((s) => s.aiEnabled)
-  const setAiEnabled = useEditorStore((s) => s.setAiEnabled)
   const reviewers = useEditorStore((s) => s.reviewers)
   const setReviewers = useEditorStore((s) => s.setReviewers)
   const screening = useEditorStore((s) => s.screening)
@@ -100,19 +106,6 @@ export function ProjectEditor() {
           placeholder={`Optional — shown instead of "${location?.name ?? 'the file name'}"`}
           disabled={busy}
         />
-      </div>
-
-      <div className="editor-location">
-        <span className="editor-location-label">AI annotation</span>
-        <label className="editor-ai-toggle" title="Uncheck to disable AI-assisted annotation for anyone who opens this project. Writes config.ai: false into the JSON.">
-          <input
-            type="checkbox"
-            checked={aiEnabled}
-            onChange={(e) => setAiEnabled(e.target.checked)}
-            disabled={busy}
-          />
-          <span>Allow reviewers to use AI-assisted annotation</span>
-        </label>
       </div>
 
       <div className="editor-location">

@@ -8,6 +8,12 @@ let pickResult: ProjectLocation | null = null
 /** What `resolveScreeningImport` actually suggested — the only way to see the
  *  filename it picked, since `siblingResult` above is a fixed stub return. */
 let siblingSuggested: string | null = null
+/** What `relativePdfPaths` should hand back — set per test to a value
+ *  distinguishable from both the verbatim source `pdf` and the absolute
+ *  source path, so a test can tell whether the rebase actually happened and
+ *  its result actually landed on the row. */
+let relativeResult: string[] = []
+let relativeCalls: { pdfs: { name: string; path?: string }[]; location: ProjectLocation | null }[] = []
 
 const mockPlatform = {
   kind: 'electron' as const,
@@ -23,7 +29,10 @@ const mockPlatform = {
     return siblingResult
   },
   absolutePdfPaths: async (paths: string[]) => paths.map((p) => (p ? `/abs/${p}` : undefined)),
-  relativePdfPaths: async () => [],
+  relativePdfPaths: async (pdfs: { name: string; path?: string }[], location: ProjectLocation | null) => {
+    relativeCalls.push({ pdfs, location })
+    return relativeResult
+  },
 }
 
 vi.mock('../platform', () => ({ getPlatform: () => mockPlatform }))
@@ -69,6 +78,8 @@ function reset() {
   siblingResult = null
   pickResult = null
   siblingSuggested = null
+  relativeResult = []
+  relativeCalls = []
 }
 
 beforeEach(reset)
@@ -427,5 +438,133 @@ describe('startFromScreening / resolveScreeningImport', () => {
     await useEditorStore.getState().importFromScreening()
     expect(useEditorStore.getState().screeningImport).toBeNull()
     expect(useEditorStore.getState().busy).toBe(false)
+  })
+
+  // Regression: merging carried papers into an editor session that is
+  // ALREADY OPEN (importFromScreening's target: 'import') used to carry `pdf`
+  // verbatim from the source screening project — correct only when the two
+  // files happen to share a directory, which `target: 'start'` guarantees via
+  // its sibling-location default but this path never did, since the open
+  // project's own location can be anywhere.
+  describe('importFromScreening rebases pdf against the already-open project\'s own location', () => {
+    const OPEN_LOCATION: ProjectLocation = {
+      handle: { kind: 'electron', path: '/annotation-reviews/project.json' },
+      name: 'project.json',
+      path: '/annotation-reviews/project.json',
+    }
+
+    beforeEach(() => {
+      useEditorStore.setState({ open: true, mode: 'edit', screening: null, location: OPEN_LOCATION, papers: [] })
+      openResult = {
+        text: JSON.stringify({
+          version: 1,
+          config: { screening: { reasons: ['Wrong topic'] } },
+          papers: [
+            { id: 'inc', title: 'Included', authors: [], pdf: 'pdfs/inc.pdf', annotations: { Decision: [{ value: 'Include' }] } },
+          ],
+        }),
+        handle: { kind: 'electron', path: '/reviews/screening.json' },
+        name: 'screening.json',
+      }
+    })
+
+    it('rebases pdf against the open project\'s location, not left verbatim from the source', async () => {
+      relativeResult = ['../reviews/pdfs/inc.pdf']
+      await useEditorStore.getState().importFromScreening()
+      await useEditorStore.getState().resolveScreeningImport('include-undecided')
+
+      const paper = useEditorStore.getState().papers.find((p) => p.id === 'inc')!
+      // Not the verbatim source value — that would point at nothing once
+      // written under the open project's own directory.
+      expect(paper.pdf).not.toBe('pdfs/inc.pdf')
+      expect(paper.pdf).toBe('../reviews/pdfs/inc.pdf')
+
+      // Rebased against the OPEN project's own location, not the source's.
+      expect(relativeCalls).toHaveLength(1)
+      expect(relativeCalls[0].location).toEqual(OPEN_LOCATION)
+      expect(relativeCalls[0].pdfs).toEqual([{ name: 'pdfs/inc.pdf', path: '/abs/pdfs/inc.pdf' }])
+    })
+
+    it('falls back to the verbatim pdf when the platform cannot rebase it (e.g. no absolute source)', async () => {
+      // A paper with no pdf at all has nothing to rebase — absolutePdfPaths
+      // (mocked above) returns undefined for a falsy path.
+      openResult!.text = JSON.stringify({
+        version: 1,
+        config: { screening: { reasons: ['Wrong topic'] } },
+        papers: [{ id: 'inc', title: 'Included', authors: [], pdf: '', annotations: { Decision: [{ value: 'Include' }] } }],
+      })
+      await useEditorStore.getState().importFromScreening()
+      await useEditorStore.getState().resolveScreeningImport('include-undecided')
+
+      const paper = useEditorStore.getState().papers.find((p) => p.id === 'inc')!
+      expect(paper.pdf).toBe('')
+      expect(relativeCalls).toHaveLength(0)
+    })
+
+    it('does not rebase for target: start — the sibling-location default already makes the verbatim path correct', async () => {
+      useEditorStore.setState({ open: false })
+      siblingResult = {
+        handle: { kind: 'electron', path: '/reviews/screening-annotation.json' },
+        name: 'screening-annotation.json',
+        path: '/reviews/screening-annotation.json',
+      }
+      relativeResult = ['should-never-be-used.pdf']
+      await useEditorStore.getState().startFromScreening()
+      await useEditorStore.getState().resolveScreeningImport('include-undecided')
+
+      const paper = useEditorStore.getState().papers.find((p) => p.id === 'inc')!
+      expect(paper.pdf).toBe('pdfs/inc.pdf')
+      expect(relativeCalls).toHaveLength(0)
+    })
+  })
+})
+
+// A new project should not silently claim a feature nobody can currently
+// reach — see the doc comments on the initial state / startNew / the
+// screening-import target:'start' branch in editorStore.ts, and
+// ProjectEditor.tsx's own comment on why there is no UI to change this.
+describe('a new project defaults to aiEnabled: false', () => {
+  it('startNew()', async () => {
+    pickResult = {
+      handle: { kind: 'electron', path: '/reviews/project.json' },
+      name: 'project.json',
+      path: '/reviews/project.json',
+    }
+    await useEditorStore.getState().startNew()
+    expect(useEditorStore.getState().aiEnabled).toBe(false)
+    expect(JSON.parse(JSON.stringify(buildProjectJson(useEditorStore.getState()))).config.ai).toBe(false)
+  })
+
+  it('startFromScreening() → resolveScreeningImport (target: start)', async () => {
+    openResult = {
+      text: JSON.stringify({
+        version: 1,
+        config: { screening: { reasons: ['Wrong topic'] } },
+        papers: [{ id: 'inc', title: 'Included', authors: [], pdf: '', annotations: { Decision: [{ value: 'Include' }] } }],
+      }),
+      handle: { kind: 'electron', path: '/reviews/screening.json' },
+      name: 'screening.json',
+    }
+    siblingResult = {
+      handle: { kind: 'electron', path: '/reviews/screening-annotation.json' },
+      name: 'screening-annotation.json',
+      path: '/reviews/screening-annotation.json',
+    }
+    await useEditorStore.getState().startFromScreening()
+    await useEditorStore.getState().resolveScreeningImport('include-undecided')
+    expect(useEditorStore.getState().aiEnabled).toBe(false)
+  })
+
+  it('does not touch an existing file\'s own aiEnabled — only new-project defaults changed', () => {
+    const opened = editorStateFromOpened({
+      text: JSON.stringify({
+        version: 1,
+        config: { schema: [{ name: 'X', type: 'string' }] }, // no "ai" key — enabled by default
+        papers: [],
+      }),
+      handle: { kind: 'electron', path: '/reviews/existing.json' },
+      name: 'existing.json',
+    })
+    expect(opened.aiEnabled).toBe(true)
   })
 })
