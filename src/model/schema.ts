@@ -152,6 +152,9 @@ export const projectSchema = z
     version: z.number().optional(),
     /** Human-readable name for the review; falls back to the file name when absent. */
     title: z.string().optional(),
+    // Loosely typed here; validated/normalized structurally in project.ts —
+    // the same rule `aiUsage`/`reviews`/`equal` follow on `paperSchema`.
+    provenance: z.unknown().optional(),
     config: z.object({
       // Optional-and-unbounded here: a screening project's schema is derived,
       // not authored (see `screeningConfigSchema` above), so it may be absent

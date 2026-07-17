@@ -228,6 +228,7 @@ describe('projectVerdicts', () => {
   it('covers every paper in the project', () => {
     const project: Project = {
       version: 1,
+      provenance: null,
       schema: SCHEMA,
       aiEnabled: true,
       reviewers: 2,

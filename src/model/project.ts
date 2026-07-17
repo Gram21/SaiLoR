@@ -87,10 +87,47 @@ export interface Paper {
   extra: Record<string, unknown>
 }
 
+/**
+ * Where a project file's papers came from, when it was built by importing
+ * from another project rather than started from scratch — recorded so a
+ * shared, git-committed file can answer "where did this come from" (a PRISMA
+ * flow diagram needs exactly this) without SaiLoR itself, and without either
+ * source file still being reachable.
+ */
+export interface ProjectProvenance {
+  /** Only one origin produces a project today; a discriminant keeps a second
+   *  one (a reference-file import, say) additive rather than breaking. */
+  kind: 'screening-import'
+  source: {
+    /** The source project's `title`, when it had one. */
+    title?: string
+    /** The source's file name at import time — never its path: these files
+     *  are committed to git and shared, and an absolute path leaks the
+     *  author's filesystem layout into every clone. */
+    file: string
+  }
+  /** ISO 8601, the moment of import. */
+  importedAt: string
+  /**
+   * The source's census at import time, and what actually landed here. A
+   * snapshot, not a cache: screening continues in the source after the
+   * import, and papers are added to and removed from this project, so
+   * nothing here is derivable from either file later — which is exactly why
+   * it is stored. `carried` is the number PRISMA's flow diagram wants.
+   */
+  counts: { included: number; undecided: number; excluded: number; carried: number }
+}
+
 export interface Project {
   version: number
   /** Display name for the review; empty when the file doesn't set one. */
   title?: string
+  /** Set when this project's papers were imported from another project;
+   *  null for a project started from scratch. Required (not optional) so
+   *  that constructing a `Project` without deciding what to do with it is a
+   *  type error, not a silent drop — see `mergeProjects`, which is exactly
+   *  the place a silent `undefined` would lose it. */
+  provenance: ProjectProvenance | null
   schema: ResolvedDef[]
   /**
    * Whether AI-assisted annotation is available for this project. Defaults to
@@ -139,7 +176,11 @@ const KNOWN_PAPER_KEYS = new Set([
   'aiUsage',
   'equal',
 ])
-const KNOWN_ROOT_KEYS = new Set(['version', 'title', 'config', 'papers'])
+/** Exported so `editorStore.ts`'s own root-extra split (`editorStateFromOpened`)
+ *  uses this exact list rather than a second hand-maintained copy — see
+ *  `deepEqualJson`'s doc comment for why a second implementation of "the same
+ *  fact" is the bug this codebase specifically avoids. */
+export const KNOWN_ROOT_KEYS = new Set(['version', 'title', 'provenance', 'config', 'papers'])
 
 /**
  * Parse `reviews` defensively, the same rule `annotations`/`aiUsage` follow:
@@ -265,6 +306,49 @@ function parseScreening(raw: unknown): ScreeningConfig | null {
     ])
   }
   return { reasons }
+}
+
+/**
+ * Parse `provenance` defensively — the file is hand-editable, so a malformed
+ * record is dropped, never thrown over. Unlike `parseScreening`, which throws
+ * on a broken value: screening's reasons *are* the schema, so a broken list
+ * cannot be degraded past, but provenance is inert documentation nothing in
+ * the app reads back, so a broken one degrades to "no provenance" exactly
+ * like `aiUsage`. The whole record is rejected if any piece fails — a
+ * half-parsed provenance (a `counts` with one field missing, say) would be a
+ * misleading one, not a merely incomplete one.
+ *
+ * Exported so `editorStore.ts`'s `editorStateFromOpened` shares this exact
+ * parse rather than a second copy — the file it reads is the same shape, and
+ * a screening-import draft's provenance must be judged by the identical rule
+ * a plain `loadProject` would apply to the same bytes.
+ */
+export function parseProvenance(raw: unknown): ProjectProvenance | null {
+  if (typeof raw !== 'object' || raw === null) return null
+  const r = raw as Record<string, unknown>
+  if (r.kind !== 'screening-import') return null
+  if (typeof r.importedAt !== 'string') return null
+  const source = r.source
+  if (typeof source !== 'object' || source === null) return null
+  const src = source as Record<string, unknown>
+  if (typeof src.file !== 'string') return null
+  if (src.title !== undefined && typeof src.title !== 'string') return null
+  const counts = r.counts
+  if (typeof counts !== 'object' || counts === null) return null
+  const c = counts as Record<string, unknown>
+  const countKeys = ['included', 'undecided', 'excluded', 'carried'] as const
+  if (!countKeys.every((k) => typeof c[k] === 'number' && Number.isFinite(c[k]))) return null
+  return {
+    kind: 'screening-import',
+    source: { file: src.file, ...(src.title !== undefined ? { title: src.title as string } : {}) },
+    importedAt: r.importedAt,
+    counts: {
+      included: c.included as number,
+      undecided: c.undecided as number,
+      excluded: c.excluded as number,
+      carried: c.carried as number,
+    },
+  }
 }
 
 /**
@@ -410,6 +494,7 @@ export function loadProject(input: string | unknown): Project {
   return {
     version: raw.version ?? 1,
     title: raw.title,
+    provenance: parseProvenance(raw.provenance),
     schema,
     // Absent means enabled; only an explicit `false` opts out.
     aiEnabled: raw.config.ai !== false,
@@ -431,6 +516,9 @@ export function serializeProject(project: Project): string {
     ...project.extra,
     version: project.version,
     ...(project.title ? { title: project.title } : {}),
+    // Only written when this project was actually imported from another —
+    // an ordinary project stays exactly as clean as before this field existed.
+    ...(project.provenance ? { provenance: project.provenance } : {}),
     // `ai` is only written when disabled, and `reviewers` only when it says
     // anything beyond the single-reviewer default — so a normal file, and a
     // single-reviewer file, both stay exactly as clean as before this feature.

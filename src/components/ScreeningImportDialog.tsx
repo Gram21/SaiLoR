@@ -13,6 +13,7 @@ import { useEditorStore } from '../state/editorStore'
 export function ScreeningImportDialog() {
   const draft = useEditorStore((s) => s.screeningImport)
   const resolveScreeningImport = useEditorStore((s) => s.resolveScreeningImport)
+  const setScreeningImportKind = useEditorStore((s) => s.setScreeningImportKind)
   const busy = useEditorStore((s) => s.busy)
 
   if (!draft) return null
@@ -62,13 +63,44 @@ export function ScreeningImportDialog() {
               can leave them out below.
             </li>
           </ul>
-          {draft.multiReviewer && draft.pendingUnanimousCount > 0 && (
+          {draft.reviewers > 1 && draft.pendingUnanimousCount > 0 && (
             <p className="screening-import-notice">
               {draft.pendingUnanimousCount} of the not-yet-screened papers were decided the same way by
               every reviewer, but Consolidation has not adopted those decisions yet — so this project has
               no final decision for them. Open the screening project as Consolidation and use{' '}
               <strong>Adopt all</strong> first if you want them counted as included.
             </p>
+          )}
+          {draft.target === 'start' && (
+            <fieldset className="screening-import-kind">
+              <legend>Create as</legend>
+              <label>
+                <input
+                  type="radio"
+                  name="screening-import-kind"
+                  checked={draft.startKind === 'annotation'}
+                  onChange={() => setScreeningImportKind('annotation')}
+                  disabled={busy}
+                />
+                <span>Annotation project — extract data from these papers</span>
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="screening-import-kind"
+                  checked={draft.startKind === 'screening'}
+                  onChange={() => setScreeningImportKind('screening')}
+                  disabled={busy}
+                />
+                <span>Screening project — screen them again, e.g. on full text</span>
+              </label>
+              {draft.startKind === 'screening' && (
+                <p className="screening-import-kind-hint">
+                  Gets its own exclusion-reason list, seeded from {draft.sourceName}'s reasons and
+                  editable before you save.
+                </p>
+              )}
+            </fieldset>
           )}
           <div className="screening-import-actions">
             <button type="button" disabled={busy} onClick={() => resolveScreeningImport('cancel')}>

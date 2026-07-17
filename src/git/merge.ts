@@ -7,7 +7,7 @@ import {
   type FieldValue,
   type InstanceNode,
 } from '../model/annotations'
-import { deepEqualJson, type AiUsageRecord, type Paper, type Project } from '../model/project'
+import { deepEqualJson, type AiUsageRecord, type Paper, type Project, type ProjectProvenance } from '../model/project'
 import type { ScreeningConfig } from '../model/schema'
 import { formatPath, displayPath, resolvePath, type RawSeg } from '../llm/paths'
 
@@ -599,6 +599,8 @@ function refusalDetail(key: string): string {
         'all, or its exclusion reasons, decides the shape of every annotation tree the same way ' +
         'the schema does. Reconcile it first, then merge.'
       )
+    case 'provenance':
+      return 'Where this project was imported from was recorded differently on both sides.'
     default:
       return `"${key}" was changed on both sides and is not an annotation field, so it cannot be merged automatically.`
   }
@@ -647,6 +649,22 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
     deepEqualJson,
   )
   if (!screeningM) rootRefusals.push('config.screening')
+
+  // Not a reshaping field like the others above — it decides nothing about
+  // the shape of any tree — but it is a nested record, not a string/number/
+  // boolean, so `FieldConflict.type` cannot express a conflict row for it
+  // (see the doc comment on `title` below for the field that *can*). Refusal
+  // is the only honest option when both sides actually disagree; the common
+  // case (only one side ever sets it) resolves cleanly through `merge3` with
+  // no refusal and no note — see the `screening-remote`-style notes below for
+  // why this deliberately doesn't add one: nothing here reshapes anything.
+  const provenanceM = merge3<ProjectProvenance | null | undefined>(
+    base?.provenance,
+    ours.provenance,
+    theirs.provenance,
+    deepEqualJson,
+  )
+  if (!provenanceM) rootRefusals.push('provenance')
 
   const rootExtraKeys = new Set([
     ...Object.keys(base?.extra ?? {}),
@@ -725,6 +743,7 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
       aiEnabled: aiM!.value!,
       reviewers: reviewersM!.value!,
       screening: screeningM!.value ?? null,
+      provenance: provenanceM!.value ?? null,
       papers,
       extra: mergedRootExtra,
     },

@@ -799,6 +799,32 @@ button.paper-search-mode:hover {
   font-size: 0.9em;
   color: var(--muted);
 }
+.screening-import-kind {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.screening-import-kind legend {
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 0.8em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.screening-import-kind label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+.screening-import-kind-hint {
+  margin: 4px 0 0;
+  padding-left: 24px;
+  color: var(--muted);
+  font-size: 0.9em;
+}
 .screening-import-actions {
   display: flex;
   justify-content: flex-end;

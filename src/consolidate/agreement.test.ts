@@ -38,6 +38,7 @@ function makePaper(overrides: Partial<Paper> = {}): Paper {
 function makeProject(overrides: Partial<Project> = {}): Project {
   return {
     version: 1,
+    provenance: null,
     schema: SCHEMA,
     aiEnabled: true,
     reviewers: 2,
@@ -160,6 +161,7 @@ describe('agreementInput on a screening project', () => {
   function screeningProject(overrides: Partial<Project> = {}): Project {
     return {
       version: 1,
+      provenance: null,
       schema: SCREENING_SCHEMA,
       aiEnabled: true,
       reviewers: 2,
