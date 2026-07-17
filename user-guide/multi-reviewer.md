@@ -62,7 +62,7 @@ silently recording an empty "agreement".
 Two buttons above the annotation fields, visible only in the Consolidation seat:
 
 <p align="center">
-  <img src="screenshots/disagreements-dialog.png" alt="The Disagreements dialog" width="700">
+  <img src="screenshots/disagreements-dialog.png" alt="The Disagreements dialog listing one field where the two reviewers gave different answers, with both answers shown side by side" width="700">
 </p>
 
 **⚠ Disagreements** lists every field the reviewers answered differently, across the whole project —
@@ -70,7 +70,7 @@ click one to jump straight to it instead of hunting paper by paper. **⚖ Agreem
 inter-rater coefficients — Cohen's κ, Fleiss' κ, and Krippendorff's α — tick any combination you want.
 
 <p align="center">
-  <img src="screenshots/agreement-dialog.png" alt="The Agreement dialog" width="700">
+  <img src="screenshots/agreement-dialog.png" alt="The Agreement dialog showing Cohen's kappa, Fleiss' kappa, and Krippendorff's alpha all computed from real overlapping annotations" width="700">
 </p>
 
 A coefficient that can't honestly be computed for your project yet (nothing overlapping between
