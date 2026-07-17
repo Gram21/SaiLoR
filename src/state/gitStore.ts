@@ -14,7 +14,7 @@ import {
 import { detectFieldChanges, composeContents, type DetectedChanges, type Disposition } from '../git/changes'
 import { repoNameFromUrl } from '../git/url'
 import { gitErrorText } from '../git/output'
-import type { GitProbe, GitRepoInfo, GitRun, GitStatus } from '../git/types'
+import type { GitIdentity, GitProbe, GitRepoInfo, GitRun, GitStatus } from '../git/types'
 import { useStore } from './store'
 
 /**
@@ -91,6 +91,14 @@ interface GitState {
   /** Where the open project sits git-wise; null when it is not in a repository,
    *  there is no project, or git is unavailable. */
   repo: GitRepoInfo | null
+  /** This machine's `git config user.email`/`user.name` for `repo` — read
+   *  with the repo as cwd (not once per launch), so a reviewer with a
+   *  repo-local `user.email` is answered correctly, not by whatever their
+   *  global config says. `null` until `refreshRepo` has one: no repo, no
+   *  project, git unavailable, or the fetch simply hasn't landed yet.
+   *  `ReviewerPrompt`/`Toolbar` read this — never `store.ts`, which must not
+   *  import this module (see this file's own dependency-direction note). */
+  identity: GitIdentity | null
   clone: CloneState | null
   panel: PanelState | null
 
@@ -260,6 +268,7 @@ export const useGitStore = create<GitState>()(
     return {
       probe: null,
       repo: null,
+      identity: null,
       clone: null,
       panel: null,
 
@@ -277,6 +286,7 @@ export const useGitStore = create<GitState>()(
         // stale "Git" button doesn't linger while the real answer loads.
         set((s) => {
           s.repo = null
+          s.identity = null
         })
         const git = getPlatform().getGit()
         if (!git || !handle?.path) return
@@ -285,6 +295,15 @@ export const useGitStore = create<GitState>()(
         if (useStore.getState().saveHandle?.path !== handle.path) return
         set((s) => {
           s.repo = info
+        })
+        if (!info) return
+        // A second `await`, a second chance for the project to have moved on
+        // — the same guard as above, re-checked rather than assumed to still
+        // hold, since this is genuinely a second race window, not the same one.
+        const identity = await git.identity(info.root)
+        if (useStore.getState().saveHandle?.path !== handle.path) return
+        set((s) => {
+          s.identity = identity
         })
       },
 

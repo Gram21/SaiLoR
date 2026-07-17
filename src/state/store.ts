@@ -17,6 +17,7 @@ import {
   type InstanceNode,
 } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
+import type { ReviewerIdentity } from '../model/identity'
 import { alignNode, alignableNodes } from '../consolidate/align'
 import { applyAlignment } from '../consolidate/apply'
 import { unanimousFills } from '../consolidate/unanimous'
@@ -136,6 +137,15 @@ const REVIEWER_KEY_PREFIX = 'slr.currentReviewer.'
  * way to be told apart from a same-named one on the next launch, so the
  * selection simply isn't persisted for it rather than risk showing up under
  * the wrong project.
+ *
+ * This is deliberately still per-machine, `localStorage`, keyed by clone
+ * path — do not "fix" it into `Project.reviewerIdentities`. The two answer
+ * different questions: this remembers *which seat you personally sat in
+ * last*, purely a local convenience so reopening the file doesn't ask again;
+ * `reviewerIdentities` records *who is allowed to sit there*, shared via the
+ * file so a second clone can see it. Collapsing them would mean every
+ * machine's "last seat I happened to view" starts overwriting the shared
+ * claim on every open — the opposite of what `reviewerIdentities` exists for.
  */
 function reviewerStorageKey(handle: SaveHandle | null): string | null {
   return handle?.path ? `${REVIEWER_KEY_PREFIX}${handle.path}` : null
@@ -357,9 +367,27 @@ interface AppState {
   /** The hidden gesture landed — allow AI use for the rest of this session. */
   unlockAi: () => void
 
-  /** Switch which reviewer's tree is shown/edited. A view switch, not an edit
-   *  — no undo step, no `dirty`. Persisted per project. */
-  selectReviewer: (reviewer: string | null) => void
+  /**
+   * Switch which reviewer's tree is shown/edited. A view switch, not an edit
+   * — no undo step, no `dirty` — with one deliberate exception: if `identity`
+   * is supplied (this machine's known git identity) and the seat is free,
+   * claiming it *does* set `dirty` (never an undo step) — the claim is
+   * genuinely new, shared state the file doesn't have yet, and it must
+   * survive to the next save the same way any other edit does. Never
+   * overwrites a seat someone else already holds — see `takeSeat` for the
+   * explicit, informed way to do that. `identity === null` (browser, no
+   * repo, unset `user.email`) reproduces exactly today's behaviour: a plain
+   * switch, nothing written. Persisted per project either way (`localStorage`,
+   * see `reviewerStorageKey`) — that part is unaffected by any of this.
+   */
+  selectReviewer: (reviewer: string | null, identity?: ReviewerIdentity | null) => void
+  /** The explicit escape hatch `ReviewerPrompt`'s mismatch warning offers:
+   *  overwrite whoever currently holds `reviewer` with `identity`. Sets
+   *  `dirty`, no undo step — same reasoning as claiming a free seat in
+   *  `selectReviewer`, just without the "only if free" guard, because the
+   *  reviewer has now been shown who they'd be overwriting and chose to
+   *  anyway. */
+  takeSeat: (reviewer: string, identity: ReviewerIdentity) => void
   /** Consolidation clicked "compare" on one field — open the popup for it. */
   openConsolidation: (path: PathSeg[], name: string, index: number) => void
   closeConsolidation: () => void
@@ -1231,12 +1259,34 @@ export const useStore = create<AppState>()(
       })
     },
 
-    selectReviewer: (reviewer) => {
+    selectReviewer: (reviewer, identity = null) => {
       // A view switch, not an edit: no undo step, no dirty flag — only the
-      // persisted selection and the visible state change.
+      // persisted selection and the visible state change. The one exception:
+      // claiming a *free* seat, when this machine has a known git identity —
+      // see the Actions interface doc comment above for why that still sets
+      // `dirty` and still pushes no undo entry.
       saveCurrentReviewer(get().saveHandle, reviewer)
       set((s) => {
         s.currentReviewer = reviewer
+        // A single-reviewer project has no seats to claim — one tree,
+        // `annotations`, shared by construction, nothing to collide over (see
+        // `identity.ts`'s module doc for the hazard this whole feature exists
+        // to catch, which simply does not arise here).
+        if (reviewer !== null && identity && s.project && s.project.reviewers > 1) {
+          const holder = s.project.reviewerIdentities[reviewer]
+          if (!holder) {
+            s.project.reviewerIdentities[reviewer] = identity
+            s.dirty = true
+          }
+        }
+      })
+    },
+
+    takeSeat: (reviewer, identity) => {
+      set((s) => {
+        if (!s.project) return
+        s.project.reviewerIdentities[reviewer] = identity
+        s.dirty = true
       })
     },
 

@@ -874,6 +874,19 @@ ipcMain.handle('git:info', async (_e, projectPath: string) => {
   return { root, relPath, branch, upstream, hasHead }
 })
 
+/** The reviewer's own git identity in this repository — `user.email` is the
+ *  key the seat map is recorded under, `user.name` is only what a human
+ *  reads. Read with the repo as cwd, never once per launch: `user.email` is
+ *  routinely set per-repository, and a reviewer who took that care is exactly
+ *  who must not be told they are someone else. An unset key exits non-zero
+ *  with no output; that is "this machine has no identity here", not an error,
+ *  so it comes back as the empty string and the caller declines to guess. */
+ipcMain.handle('git:identity', async (_e, root: string) => {
+  const email = await runGit(['config', '--get', 'user.email'], root)
+  const name = await runGit(['config', '--get', 'user.name'], root)
+  return { email: email.ok ? gitOut(email) : '', name: name.ok ? gitOut(name) : '' }
+})
+
 ipcMain.handle('git:status', async (_e, root: string) => {
   const porcelain = (await runGit(['status', '--porcelain=v1', '-z'], root)).stdout
   const hasHead = (await runGit(['rev-parse', '--verify', '-q', 'HEAD'], root)).ok

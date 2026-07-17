@@ -12,6 +12,11 @@ import {
   type AnnotationValueTree,
 } from './annotations'
 import { screeningSchemaDefs } from '../screening/schema'
+import {
+  parseReviewerIdentities,
+  serializeReviewerIdentities,
+  type ReviewerIdentity,
+} from './identity'
 
 /**
  * One AI-assisted-annotation pass applied to a paper: which provider and model
@@ -142,6 +147,15 @@ export interface Project {
    * built-in Consolidation role that reconciles them into `Paper.annotations`.
    */
   reviewers: number
+  /** Who holds each seat, keyed the way `reviews` is ("1".."N") plus
+   *  "consolidation". Empty for every file written before this existed, and for
+   *  every project nobody has claimed a seat in — which must keep behaving
+   *  exactly as it did then. Absent, never a skeleton: unlike `reviews` (see
+   *  `normalizeReviews`), an unclaimed seat has no diff-friendliness to buy —
+   *  a claim is a rare, deliberate act, and a key appearing in the diff is
+   *  precisely what it looks like. See `src/model/identity.ts` for the hazard
+   *  this exists to catch and why the comparison key is email, not name. */
+  reviewerIdentities: Record<string, ReviewerIdentity>
   papers: Paper[]
   /**
    * The screening configuration when this is a screening project, else null.
@@ -500,6 +514,9 @@ export function loadProject(input: string | unknown): Project {
     aiEnabled: raw.config.ai !== false,
     // Absent or 1 means single-reviewer; zod already bounds a present value to [1, 10].
     reviewers: raw.config.reviewers ?? 1,
+    reviewerIdentities: parseReviewerIdentities(
+      (raw.config as { reviewerIdentities?: unknown }).reviewerIdentities,
+    ),
     papers,
     screening,
     extra: extractExtra(raw, KNOWN_ROOT_KEYS),
@@ -530,6 +547,13 @@ export function serializeProject(project: Project): string {
       schema: dehydrateSchema(project.schema),
       ...(project.aiEnabled ? {} : { ai: false }),
       ...(project.reviewers > 1 ? { reviewers: project.reviewers } : {}),
+      // Grouped with `reviewers`, which it annotates. Only emitted when
+      // non-empty, so every project nobody has claimed a seat in — which is
+      // every file written before this existed — stays byte-identical.
+      ...(() => {
+        const ids = serializeReviewerIdentities(project.reviewerIdentities)
+        return ids ? { reviewerIdentities: ids } : {}
+      })(),
       ...(project.screening ? { screening: { reasons: project.screening.reasons } } : {}),
     },
     papers: project.papers.map((p) => {

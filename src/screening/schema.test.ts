@@ -55,6 +55,7 @@ describe('isScreening', () => {
     schema: [],
     aiEnabled: true,
     reviewers: 1,
+    reviewerIdentities: {},
     papers: [],
     extra: {},
   }
