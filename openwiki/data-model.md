@@ -20,8 +20,13 @@ A project is a single JSON file with this shape:
     "schema": [ /* AnnotationDef[] — the taxonomy. Ignored + derived when "screening" is set */ ],
     "ai": false,       // optional; false disables AI-assisted annotation for this project
     "reviewers": 3,    // optional; >1 turns on independent multi-reviewer annotation
-    "screening": { "reasons": ["Wrong topic", "Duplicate"] }  // optional; see "Screening" below
+    "screening": { "reasons": ["Wrong topic", "Duplicate"] },  // optional; see "Screening" below
+    "reviewerIdentities": {                                    // optional; see below
+      "1": { "email": "a@example.org" },
+      "consolidation": { "email": "b@example.org", "name": "B. Reviewer" }
+    }
   },
+  "provenance": null,  // optional; ProjectProvenance | null — see "Screening" below
   "papers": [ /* Paper[] */ ],
   // any other top-level keys are preserved verbatim on save
 }
@@ -41,6 +46,17 @@ remains the single, final result — see "Multiple reviewers & Consolidation" be
 single-reviewer file is unaffected byte-for-byte. The project editor edits it as a checkbox +
 number field next to the AI opt-out.
 
+`config.reviewerIdentities: Record<string, ReviewerIdentity>` (`ReviewerIdentity = { email: string;
+name?: string }`) records, per seat (`"1".."N"` or the literal `"consolidation"`), the git identity
+that holds it — written the first time a reviewer with a known git email claims a seat, omitted
+entirely when empty (so a solo project or one whose reviewers never had a git identity to record is
+unaffected byte-for-byte). It exists to close a real hazard: the seat choice itself is otherwise only
+ever recorded per-machine, in `localStorage`, so two different people who each pick "Reviewer 1" on
+their own clone are invisible to each other and their answers merge into one chimeric tree with no
+conflict raised. See `architecture.md`'s "Reviewer seat identity" for the full mechanism (why the
+comparison is email-only, how a mismatch is surfaced, and why it never blocks) and "Merging two
+copies of a project" below for what it does to a merge.
+
 ### AnnotationDef (`src/model/schema.ts`)
 
 Each schema node defines a field or group in the taxonomy:
@@ -48,11 +64,12 @@ Each schema node defines a field or group in the taxonomy:
 | Property | Required | Default | Meaning |
 |---|---|---|---|
 | `name` | yes | — | Display label; must be unique among siblings |
-| `type` | no | (group) | `"string"` \| `"number"` \| `"boolean"`. Omit for a name-only group node |
+| `type` | no | (group) | `"string"` \| `"number"` \| `"boolean"` \| `"year"`. Omit for a name-only group node |
 | `children` | no | `[]` | Sub-taxonomy. A node may have `type`, `children`, or both |
 | `min` | no | `1` | Minimum occurrences |
 | `max` | no | `1` | Max occurrences: a positive integer, or `null` for unbounded |
 | `options` | no | — | Array of strings on a `string` field → renders as a filterable enum dropdown (ComboBox). Only valid when `type` is `"string"` |
+| `required` | no | `false` | Marks a **field** (a node with a `type`) as one the reviewer must fill; shown with a red `*`, checked by `validate.ts`'s `required` issue. Rejected on a group, which holds no value |
 | `description` | no | — | Optional tooltip text |
 
 **Validation rules** (enforced by zod in `annotationDefSchema`):
@@ -62,6 +79,17 @@ Each schema node defines a field or group in the taxonomy:
 - `options` is only allowed on a `type: "string"` node; using it on any other type (or a group) is a schema error
 - Sibling names must be unique (enforced during resolution, not zod)
 
+**`"year"`** is a `number` on disk — same `FieldValue`, same `emptyValue()` — with a real range check
+`validate.ts` applies that a plain `number` field never gets: an integer in `[YEAR_MIN, YEAR_MAX]`
+(`1000`–`2100`, `src/model/year.ts`), so a hand-edited typo like `20221` or `55` fails validation
+instead of loading as a "valid" year. `src/model/year.ts`'s `parseYear`/`isPlausibleYear` are the one
+shared implementation every layer that touches a year — the loader, `validate.ts`, `references.ts`'s
+three import formats, `git/merge.ts`, `git/changes.ts`, `Field.tsx`'s PDF-grab, and the editor's
+string↔number boundary — reads through, rather than each hand-rolling its own four-digit regex. A
+full `date` type (month/day) was considered and rejected as more precision than an SLR's publication
+year needs (`schema.ts`'s own doc comment on `FieldType`); opening a `year` field in an older SaiLoR
+build fails to load, the same as any new type would, since `type` validates against a fixed enum.
+
 ### Paper
 
 ```jsonc
@@ -69,6 +97,8 @@ Each schema node defines a field or group in the taxonomy:
   "id": "paper-a",            // unique across all papers
   "title": "…",
   "authors": ["…"],           // defaults to []
+  "year": 2021,                // optional; a plausible year (1000–2100), see src/model/year.ts
+  "venue": "…",                // optional; journal/conference/publisher — one free-text field, see below
   "doi": "10.1000/xyz",       // optional
   "abstract": "…",            // optional; what screening reads when there is no PDF (see "Screening" below)
   "pdf": "pdfs/paper-a.pdf",  // path relative to the project JSON file; "" only valid in a screening project
@@ -103,15 +133,32 @@ interface Project {
   schema: ResolvedDef[]
   aiEnabled: boolean              // config.ai; true unless the file opts out
   reviewers: number                // config.reviewers; 1 (default) = single-reviewer
+  reviewerIdentities: Record<string, ReviewerIdentity>  // config.reviewerIdentities; {} if none recorded
   papers: Paper[]
   screening: ScreeningConfig | null  // config.screening; see "Screening" below
+  provenance: ProjectProvenance | null  // set by "New from screening…"; see "Screening" below
   extra: Record<string, unknown>  // unknown top-level fields preserved
+}
+
+interface ReviewerIdentity {
+  email: string   // the only field ever compared (sameIdentity) — see architecture.md's "Reviewer seat identity"
+  name?: string    // display only
+}
+
+interface ProjectProvenance {
+  kind: 'screening-import'
+  source: { title?: string; file: string }
+  importedAt: string   // ISO 8601
+  counts: { included: number; undecided: number; excluded: number; carried: number }
 }
 
 interface Paper {
   id: string
   title: string
   authors: string[]
+  year?: number                    // a plausible year (1000–2100); see src/model/year.ts
+  venue?: string                   // journal/conference/publisher — one free-text field, no source format
+                                    // reliably distinguishes them
   doi?: string
   abstract?: string                // what screening reads when there is no PDF; ordinary metadata otherwise
   abstractFromPdf?: boolean        // true when `abstract` was PDF-extracted, not authored; see "Screening" below
@@ -353,6 +400,29 @@ alone. See the architecture page's "A missing abstract is extracted from the PDF
 durably" for the full design (both call sites, and why this writes immediately rather than behind a
 confirmation step the way AI suggestions do).
 
+**A screening import's target project can itself be a screening project — a second pass, not just
+an annotation project.** `resolveScreeningImport` (`editorStore.ts`) reads a `startKind:
+'annotation' | 'screening'` off the import draft (chosen via a radio in `ScreeningImportDialog`,
+defaulting to `'annotation'`). Building a second screening project was previously refused outright —
+this is what PRISMA's title/abstract pass feeding a full-text pass actually needs. Its
+`config.screening.reasons` is seeded from the **source** project's own reasons, never
+`DEFAULT_SCREENING_REASONS`, so both passes report against the same reason vocabulary; it inherits
+the source's `config.reviewers`; and it suggests a `-fulltext.json` filename where an annotation
+target keeps `reviewers: 1` and suggests `-annotation.json`. Either way, every carried paper's
+`annotations` (and `reviews`, for a screening target) starts empty — see "The empty skeleton is real
+data" above for why an empty tree, not an absent key, is what a fresh paper always gets — because a
+first-pass title/abstract decision is not itself a full-text (or second-round) decision.
+
+The import also records its own provenance: `Project.provenance: ProjectProvenance | null` (shape
+above) is written whenever "New from screening…" builds a project, naming the source file/title, an
+ISO 8601 timestamp, and the included/undecided/excluded/carried counts the import dialog showed. It
+is a first-class field — not nested under `config` (whose zod object silently drops an unrecognized
+key, since it has no `.passthrough()`) and not under `extra` (which a screening import resets to
+`{}`) — parsed defensively by `parseProvenance` (malformed input becomes `null`, never a thrown
+error) and written by both `serializeProject` and the editor's `buildProjectJson`. See "Merging two
+copies of a project" below for what a divergent `provenance` does to a pull, and `architecture.md`'s
+"Importing from a screening project" for the UI/store mechanics.
+
 ## Merging two copies of a project
 
 `src/git/merge.ts`'s `mergeProjects(base, ours, theirs)` is a three-way merge over three parsed
@@ -363,8 +433,10 @@ it does; `architecture.md`'s "Git" section covers the plumbing that gets it ther
 `formatPath`'s form (`src/llm/paths.ts`), e.g. `"Findings[1]/Claim"` — but the path alone is **not**
 sufficient: the identical path exists once in `annotations` and once in *every* `reviews[N]`, so
 which tree it lives in (`{kind:'annotations'}`, `{kind:'review', reviewer:'2'}`, `{kind:'paper'}` for
-title/pdf/doi/authors/abstract/abstractFromPdf, or `{kind:'project'}` for the project's own title) is
-part of the key. Two conflicts on the same canonical path in different trees are different conflicts.
+title/pdf/doi/authors/year/venue/abstract/abstractFromPdf, or `{kind:'project'}` for the project's
+own title) is part of the key. Two conflicts on the same canonical path in different trees are
+different conflicts. `year` and `venue` merge exactly like `abstract`/`abstractFromPdf` — an ordinary
+`merge3` call each, a `FieldConflict` on genuine disagreement, no special-casing.
 `abstract` and `abstractFromPdf` merge as two independent ordinary fields — a known, accepted gap is
 that resolving an `abstract` conflict does not retroactively touch `abstractFromPdf`, which may
 already have resolved on its own via the "only one side changed it" rule below; see
@@ -417,12 +489,25 @@ different schema would). `Project.title` is not on this list: it is an ordinary 
 row expresses it perfectly, and refusing a whole merge over two people renaming the review would be
 absurd.
 
+Two more refuse, for reasons that are not "this reshapes the file": `provenance` (a nested record —
+`{kind, source, importedAt, counts}` — that no `FieldConflict` shape can express; the common case of
+only one side ever setting it still resolves with no refusal and no note) and
+`config.reviewerIdentities.<seat>`, which refuses **per seat**, and only when the two sides record
+**different emails** for that seat (compared via `sameIdentity`, which is email-only — a name-only
+edit on the same email merges silently, never refuses). This is deliberately a refusal rather than a
+conflict row: a conflict row can be clicked through without a second thought, and a click-through is
+exactly how the chimeric reviews tree this mechanism exists to prevent would get built. See
+`architecture.md`'s "Reviewer seat identity" for the hazard this closes.
+
 **Testing**: `src/git/merge.test.ts` builds every base/ours/theirs through the real `loadProject`
 (never a hand-assembled `Project`), so fixtures are exactly as schema-normalized and
 empty-skeleton-shaped as `mergeProjects`' real caller hands it — and pins the field-level guarantee,
 the interior-gap and instance-removal invariants, the multi-reviewer case, every refusal, the
 `abstract`/`abstractFromPdf` merge and its resolve-order gap, and a full
-`serializeProject`/`loadProject` round-trip of a resolved merge.
+`serializeProject`/`loadProject` round-trip of a resolved merge. A dedicated `describe` block covers
+`config.reviewerIdentities`: two different emails on one seat refuses, a name-only difference on the
+same email merges silently, and claiming a previously-free seat is an ordinary one-side-changed-it
+merge.
 
 **A separate, related question — what changed locally, for the commit panel** — is `src/git/changes.ts`'s
 `detectFieldChanges`/`composeContents`, covered in `architecture.md`'s "Field-level commit review".
@@ -507,7 +592,9 @@ The store catches these and sets `loadError` state, which `ErrorPanel` displays 
 - Multiple reviewers: `config.reviewers` defaults/bounds/round-trip, `Paper.reviews` parsing (defensive, normalized, malformed/non-numeric keys dropped) and backfilling (every reviewer `1..N` present as an empty skeleton, an out-of-range key never dropped), serialization staying clean for a single-reviewer project (see the `"multiple reviewers"` describe block in `model.test.ts`)
 - `needsShapeMigration`/the auto-migrate-on-open path: an old-shape file gets fixed and re-saved through a real handle, never through a `'download'` or `null` one, and is stable (no re-migration, byte-identical re-serialization) once fixed — verified end-to-end against real files on disk, not just mocked platform calls
 
-`src/state/store.reviewers.test.ts` covers the routing rule (`currentTree`) itself: which tree each store action reads/writes for single-reviewer, a numbered reviewer, Consolidation, and the unselected state; that selecting a reviewer is not an undo step and doesn't set `dirty`; and that the selection persists per project. `src/state/store.aimarks.test.ts` covers the reviewer-scoped AI mark keys specifically.
+`src/state/store.reviewers.test.ts` covers the routing rule (`currentTree`) itself: which tree each store action reads/writes for single-reviewer, a numbered reviewer, Consolidation, and the unselected state; that selecting a reviewer is not an undo step and doesn't set `dirty`; and that the selection persists per project (a `describe` block also covers claiming a seat via a git identity, and `takeSeat`'s explicit-override path — see `architecture.md`'s "Reviewer seat identity"). `src/state/store.aimarks.test.ts` covers the reviewer-scoped AI mark keys specifically.
+
+Several newer pure modules have their own dedicated test files: `src/model/year.test.ts` (`parseYear`/`isPlausibleYear` boundaries and string-scanning behavior), `src/model/duplicates.test.ts` (`classifyImport`'s four-tier priority, the year-gap veto, author-surname Dice edge cases, and a differential test that the cheap cost-guard agrees pair-for-pair with an unguarded reference), `src/model/identity.test.ts` (`sameIdentity`'s email-only truth table, `checkSeat`), and `src/model/completeness.test.ts` (the required-only-when-declared denominator rule, boolean exclusion, per-instance counting for repeatables). One honest gap as of this writing: `Paper.year`/`Paper.venue` themselves are pinned down at the parsing/validation layer (`year.test.ts`, `references.test.ts`), but the git-layer behavior described above — `merge.ts`'s conflict handling, `changes.ts`'s field-level review row, and `similarity.ts`'s identity-not-magnitude scoring — has no dedicated test coverage yet.
 
 **Screening** has its own set of test files, mirroring the `src/consolidate/*.test.ts` convention
 (pure functions, no React, no store imports): `src/screening/schema.test.ts` (the derived schema's
@@ -526,7 +613,7 @@ identically to before this feature existed.**
 
 ## Change Guidance
 
-- **Adding a field type**: Update `FieldType` in `schema.ts` → `fieldTypeSchema` zod enum → `emptyValue()` in `annotations.ts` → `isEmptyInstance()` logic → `Field.tsx` rendering. Add a test in `model.test.ts`.
+- **Adding a field type**: Update `FieldType` in `schema.ts` → `fieldTypeSchema` zod enum → `emptyValue()` in `annotations.ts` → `isEmptyInstance()` logic → `Field.tsx` rendering. Add a test in `model.test.ts`. `year` (`src/model/year.ts`) is a worked example of the cheapest version of this: it needed no `emptyValue()`/`isEmptyInstance()` change at all, since it rides the same JSON-number `FieldValue` shape a plain `number` already has — only `validate.ts` (a real range check instead of "is this a number"), `Field.tsx` (rendering + PDF-grab), and `SchemaTreeEditor.tsx` (the kind picker) needed to know about it.
 - **Changing schema validation**: Modify the zod schema in `schema.ts` or the `superRefine` logic. Resolution-time checks (sibling uniqueness) are in `resolveDefs()`.
 - **Changing serialization format**: Update `serializeProject()` and `dehydrateSchema()`. Ensure `loadProject()` remains backward-compatible or bump `version`. Always run the round-trip test.
 - **Adding new known paper/project fields**: Add to the known keys sets (`KNOWN_PAPER_KEYS`, `KNOWN_ROOT_KEYS`) in `project.ts` and to the `Paper`/`Project` interfaces. Update `serializeProject` output.
