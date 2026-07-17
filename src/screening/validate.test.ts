@@ -32,6 +32,7 @@ function paper(annotations: AnnotationValueTree): Paper {
 function project(papers: Paper[]): Project {
   return {
     version: 1,
+    provenance: null,
     schema: SCHEMA,
     aiEnabled: true,
     reviewers: 1,
