@@ -14,9 +14,11 @@ import { parseReferences, pdfHintFileName, type RefEntry } from '../model/refere
 import {
   loadProject,
   parseProvenance,
+  parseProtocol,
   KNOWN_ROOT_KEYS,
   type Project,
   type ProjectProvenance,
+  type ProjectProtocol,
 } from '../model/project'
 import { classifyImport, type DupRecord, type DupVerdict } from '../model/duplicates'
 import {
@@ -29,6 +31,7 @@ import { getPlatform, type OpenedProject, type PickedPdf, type ProjectLocation, 
 import { DEFAULT_SCREENING_REASONS, screeningSchemaDefs } from '../screening/schema'
 import { screeningReason, screeningStatus } from '../screening/status'
 import { pendingUnanimous } from '../screening/counts'
+import { renameReasonInPapers } from '../screening/reasonUsage'
 import { useStore } from './store'
 
 /**
@@ -117,6 +120,7 @@ interface EditorSnapshot {
   screening: ScreeningConfig | null
   extra: Record<string, unknown>
   provenance: ProjectProvenance | null
+  protocol: ProjectProtocol | null
 }
 
 const HISTORY_LIMIT = 100
@@ -161,7 +165,10 @@ export function toAnnotationDefs(nodes: EditorNode[]): AnnotationDef[] {
     if (desc) def.description = desc
     const opts = n.options.map((o) => o.trim()).filter(Boolean)
     if (n.kind === 'string' && opts.length > 0) def.options = opts
-    if (n.kind !== 'group' && n.required) def.required = true
+    // Never written for a boolean: it is a no-op there (a checkbox is never
+    // empty), so the editor neither offers it nor emits it — matching
+    // `resolveSchema`, which drops it on load for the same reason.
+    if (n.kind !== 'group' && n.kind !== 'boolean' && n.required) def.required = true
     if (n.children.length > 0) def.children = toAnnotationDefs(n.children)
     return def
   })
@@ -515,6 +522,8 @@ export function buildProjectJson(state: {
   /** Optional for the same reason `screening?` is above. Absent/null means
    *  "not imported from another project" — the overwhelmingly common case. */
   provenance?: ProjectProvenance | null
+  /** Optional for the same reason. Absent/null means no authored protocol. */
+  protocol?: ProjectProtocol | null
   /**
    * Optional for the same reason `screening` is — see there. The editor never
    * *edits* who holds a seat (there is no UI for it here), it only carries the
@@ -536,6 +545,7 @@ export function buildProjectJson(state: {
     // Omitted when blank, so the app falls back to the file name.
     ...(title ? { title } : {}),
     ...(state.provenance ? { provenance: state.provenance } : {}),
+    ...(state.protocol ? { protocol: state.protocol } : {}),
     // `ai` is only written when disabled, and `reviewers` only when it says
     // more than the single-reviewer default — matching serializeProject.
     config: {
@@ -797,6 +807,9 @@ interface EditorState {
    *  `resolveScreeningImport`); null for one started from scratch. Never
    *  edited directly in the UI — a durable record, not a setting. */
   provenance: ProjectProvenance | null
+  /** The review's authored protocol, or null. Unlike `provenance`, this one
+   *  *is* edited in the UI (`ProjectEditor`'s protocol section). */
+  protocol: ProjectProtocol | null
   nodes: EditorNode[]
   papers: EditorPaper[]
   dirty: boolean
@@ -845,6 +858,14 @@ interface EditorState {
   /** Turn screening on (seeding `DEFAULT_SCREENING_REASONS`) or off. Its own undo step. */
   setScreening: (on: boolean) => void
   setScreeningReasons: (reasons: string[]) => void
+  /** Rewrite an exclusion reason across every paper that recorded it (see
+   *  `renameReasonInPapers`) — offered by `ScreeningReasonsEditor` when a
+   *  rename would otherwise orphan existing decisions. Its own undo step. */
+  migrateScreeningReason: (from: string, to: string) => void
+  /** Replace the whole authored protocol (the editor assembles it from its
+   *  fields). Pass `null` to clear it. Coalesced like `setTitle` so a burst of
+   *  typing is one undo step. */
+  setProtocol: (protocol: ProjectProtocol | null) => void
 
   addNode: (parentUid: string | null) => void
   updateNode: (uid: string, patch: Partial<EditorNode>) => void
@@ -914,6 +935,7 @@ function snapshotOf(s: EditorState): EditorSnapshot {
     screening: s.screening,
     extra: s.extra,
     provenance: s.provenance,
+    protocol: s.protocol,
   }
 }
 
@@ -928,6 +950,7 @@ function applySnapshot(s: EditorState, snap: EditorSnapshot): void {
   s.screening = snap.screening
   s.extra = snap.extra
   s.provenance = snap.provenance
+  s.protocol = snap.protocol
 }
 
 /** Push a pre-mutation snapshot onto the undo stack and drop the redo stack. */
@@ -948,6 +971,7 @@ interface OpenedEditorState {
   reviewerIdentities: Record<string, ReviewerIdentity>
   extra: Record<string, unknown>
   provenance: ProjectProvenance | null
+  protocol: ProjectProtocol | null
   nodes: EditorNode[]
   papers: EditorPaper[]
 }
@@ -1026,6 +1050,7 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
     ),
     extra: rootExtra,
     provenance: parseProvenance(data.provenance),
+    protocol: parseProtocol(data.protocol),
     // A screening project's schema is derived, not authored, so there is
     // nothing for the schema-builder tree to hold — see `ProjectEditor.tsx`,
     // which renders `ScreeningReasonsEditor` instead whenever `screening` is set.
@@ -1061,6 +1086,7 @@ function openEditorSession(s: EditorState, st: OpenedEditorState): void {
   s.reviewerIdentities = st.reviewerIdentities
   s.extra = st.extra
   s.provenance = st.provenance
+  s.protocol = st.protocol
   s.nodes = st.nodes
   s.papers = st.papers
   s.dirty = false
@@ -1176,6 +1202,7 @@ export const useEditorStore = create<EditorState>()(
     reviewerIdentities: {},
     extra: {},
     provenance: null,
+    protocol: null,
     nodes: [],
     papers: [],
     dirty: false,
@@ -1206,6 +1233,7 @@ export const useEditorStore = create<EditorState>()(
         s.screening = null
         s.extra = {}
         s.provenance = null
+        s.protocol = null
         s.nodes = [makeNode()]
         s.papers = []
         s.dirty = false
@@ -1370,6 +1398,18 @@ export const useEditorStore = create<EditorState>()(
       })
     },
 
+    setProtocol: (protocol) => {
+      const key = 'project:protocol'
+      const coalesce = key === lastEditKey
+      lastEditKey = key
+      const snap = snapshotOf(get())
+      set((s) => {
+        if (!coalesce) pushPast(s, snap)
+        s.protocol = protocol
+        s.dirty = true
+      })
+    },
+
     setReviewers: (n) => {
       const clamped = Math.max(1, Math.min(10, Math.round(n)))
       lastEditKey = null
@@ -1400,6 +1440,20 @@ export const useEditorStore = create<EditorState>()(
         if (!s.screening) return
         pushPast(s, snap)
         s.screening.reasons = reasons
+        s.dirty = true
+      })
+    },
+
+    migrateScreeningReason: (from, to) => {
+      lastEditKey = null
+      const snap = snapshotOf(get())
+      set((s) => {
+        const next = renameReasonInPapers(s.papers, from, to)
+        // Nothing referenced the old reason after all — leave the draft (and
+        // its undo stack) untouched rather than push a no-op step.
+        if (next === s.papers || next.every((p, i) => p === s.papers[i])) return
+        pushPast(s, snap)
+        s.papers = next
         s.dirty = true
       })
     },
@@ -1436,8 +1490,11 @@ export const useEditorStore = create<EditorState>()(
         Object.assign(node, patch)
         // Enum options only exist on string fields.
         if (node.kind !== 'string') node.options = []
-        // A group holds no value, so it cannot be required.
-        if (node.kind === 'group') node.required = false
+        // A group holds no value, so it cannot be required; a boolean is never
+        // empty, so `required` on one is a no-op (see `resolveSchema`). Both
+        // are cleared here so switching a field to either type drops a stale
+        // flag rather than carrying a meaningless one.
+        if (node.kind === 'group' || node.kind === 'boolean') node.required = false
         s.dirty = true
       })
     },
@@ -1763,6 +1820,13 @@ export const useEditorStore = create<EditorState>()(
           s.justAdded = Object.fromEntries(rows.map((r) => [r.uid, true as const]))
           s.past = []
           s.future = []
+          // Left for the reviewer to author in the new project rather than
+          // carried from the source: the protocol *is* the same review across
+          // both phases, so carrying it would be defensible, but the import
+          // draft does not currently capture the source's protocol, and
+          // threading it through is a separate change. A fresh project starts
+          // with none, exactly as one started from scratch does.
+          s.protocol = null
           s.provenance = {
             kind: 'screening-import',
             source: {

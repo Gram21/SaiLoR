@@ -13,6 +13,7 @@ import {
   type Paper,
   type Project,
   type ProjectProvenance,
+  type ProjectProtocol,
 } from '../model/project'
 import { sameIdentity, seatLabel, type ReviewerIdentity } from '../model/identity'
 import type { ScreeningConfig } from '../model/schema'
@@ -667,6 +668,8 @@ function refusalDetail(key: string, ours?: Project, theirs?: Project): string {
       )
     case 'provenance':
       return 'Where this project was imported from was recorded differently on both sides.'
+    case 'protocol':
+      return 'The review protocol (research questions, search, criteria) was edited on both sides.'
     default:
       return `"${key}" was changed on both sides and is not an annotation field, so it cannot be merged automatically.`
   }
@@ -731,6 +734,18 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
     deepEqualJson,
   )
   if (!provenanceM) rootRefusals.push('provenance')
+
+  // Same shape and same reasoning as `provenance` just above: a nested record
+  // `FieldConflict` cannot express, so two-sided disagreement refuses (a
+  // reviewer's authored protocol must never be silently half-dropped), while
+  // the ordinary case — one side edits it, or nobody does — merges cleanly.
+  const protocolM = merge3<ProjectProtocol | null | undefined>(
+    base?.protocol,
+    ours.protocol,
+    theirs.protocol,
+    deepEqualJson,
+  )
+  if (!protocolM) rootRefusals.push('protocol')
 
   const rootExtraKeys = new Set([
     ...Object.keys(base?.extra ?? {}),
@@ -840,6 +855,7 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
       reviewerIdentities: mergedIdentities,
       screening: screeningM!.value ?? null,
       provenance: provenanceM!.value ?? null,
+      protocol: protocolM!.value ?? null,
       papers,
       extra: mergedRootExtra,
     },

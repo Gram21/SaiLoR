@@ -117,6 +117,39 @@ export interface Paper {
 }
 
 /**
+ * The review's own protocol — its research questions, the search it ran, and
+ * the criteria behind it — recorded *inside* the project file so a
+ * pre-registered SLR's defining decisions travel with the data they produced,
+ * rather than living in a separate document that drifts from it. Every field
+ * is optional and authored by hand (unlike `ProjectProvenance`, which the app
+ * writes on a screening import): a project that records none of this behaves
+ * exactly as it did before this existed.
+ *
+ * A first-class field, not a `config` key, for a load-bearing reason: `config`
+ * is a strict zod object rebuilt from scratch on every save (see
+ * `serializeProject`), so anything hand-added under it — `config.protocol`,
+ * `config.researchQuestions` — is *silently dropped* the first time the file
+ * is saved. Root-level `extra` would survive, but a reviewer has no way to
+ * know which of the two a stray key lands in. Making this an explicit,
+ * parsed, round-tripped field is the only way the protocol is actually safe.
+ */
+export interface ProjectProtocol {
+  /** The review's research questions, one per entry. */
+  researchQuestions?: string[]
+  /** The queries run against the databases below — often one per database, or
+   *  per facet of the query. */
+  searchStrings?: string[]
+  /** The sources searched, e.g. "Scopus", "IEEE Xplore", "ACM DL". */
+  databases?: string[]
+  /** When the search was run. Free text, not an ISO instant: a search is
+   *  usually a range or a month ("2024-03", "March–April 2024"), and pinning
+   *  it to one timestamp would misrepresent that. */
+  searchDate?: string
+  /** Inclusion/exclusion criteria, and any other protocol notes, as free text. */
+  notes?: string
+}
+
+/**
  * Where a project file's papers came from, when it was built by importing
  * from another project rather than started from scratch — recorded so a
  * shared, git-committed file can answer "where did this come from" (a PRISMA
@@ -157,6 +190,11 @@ export interface Project {
    *  type error, not a silent drop — see `mergeProjects`, which is exactly
    *  the place a silent `undefined` would lose it. */
   provenance: ProjectProvenance | null
+  /** The review's authored protocol (research questions, search, criteria), or
+   *  null when the file records none. Required (not optional) for the same
+   *  reason `provenance` is: constructing a `Project` without deciding what to
+   *  do with it should be a type error, not a silent drop in `mergeProjects`. */
+  protocol: ProjectProtocol | null
   schema: ResolvedDef[]
   /**
    * Whether AI-assisted annotation is available for this project. Defaults to
@@ -220,7 +258,7 @@ const KNOWN_PAPER_KEYS = new Set([
  *  uses this exact list rather than a second hand-maintained copy — see
  *  `deepEqualJson`'s doc comment for why a second implementation of "the same
  *  fact" is the bug this codebase specifically avoids. */
-export const KNOWN_ROOT_KEYS = new Set(['version', 'title', 'provenance', 'config', 'papers'])
+export const KNOWN_ROOT_KEYS = new Set(['version', 'title', 'provenance', 'protocol', 'config', 'papers'])
 
 /**
  * Parse `reviews` defensively, the same rule `annotations`/`aiUsage` follow:
@@ -363,6 +401,41 @@ function parseScreening(raw: unknown): ScreeningConfig | null {
  * a screening-import draft's provenance must be judged by the identical rule
  * a plain `loadProject` would apply to the same bytes.
  */
+/**
+ * Parse `protocol` defensively — hand-editable, so a malformed record is
+ * degraded, never thrown over (the same rule `parseProvenance` follows and for
+ * the same reason: the app renders it but nothing downstream depends on its
+ * shape). Unlike provenance, this is degraded *field by field* rather than
+ * all-or-nothing: a reviewer's protocol is authored text, so a single
+ * malformed key (a `databases` that is a string, say) should not throw away
+ * the research questions next to it. A record that ends up entirely empty
+ * after dropping bad fields parses to `null`, so an empty `{}` never survives
+ * a round-trip as a stray key.
+ *
+ * Exported so `editorStore.ts` shares this exact parse rather than a second
+ * copy — the same "one shared implementation" rule as `parseProvenance`.
+ */
+function parseStringList(raw: unknown): string[] | undefined {
+  if (!Array.isArray(raw)) return undefined
+  const list = raw.filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+  return list.length > 0 ? list : undefined
+}
+
+export function parseProtocol(raw: unknown): ProjectProtocol | null {
+  if (typeof raw !== 'object' || raw === null) return null
+  const r = raw as Record<string, unknown>
+  const protocol: ProjectProtocol = {}
+  const rqs = parseStringList(r.researchQuestions)
+  if (rqs) protocol.researchQuestions = rqs
+  const searches = parseStringList(r.searchStrings)
+  if (searches) protocol.searchStrings = searches
+  const dbs = parseStringList(r.databases)
+  if (dbs) protocol.databases = dbs
+  if (typeof r.searchDate === 'string' && r.searchDate.trim() !== '') protocol.searchDate = r.searchDate
+  if (typeof r.notes === 'string' && r.notes.trim() !== '') protocol.notes = r.notes
+  return Object.keys(protocol).length > 0 ? protocol : null
+}
+
 export function parseProvenance(raw: unknown): ProjectProvenance | null {
   if (typeof raw !== 'object' || raw === null) return null
   const r = raw as Record<string, unknown>
@@ -537,6 +610,7 @@ export function loadProject(input: string | unknown): Project {
     version: raw.version ?? 1,
     title: raw.title,
     provenance: parseProvenance(raw.provenance),
+    protocol: parseProtocol(raw.protocol),
     schema,
     // Absent means enabled; only an explicit `false` opts out.
     aiEnabled: raw.config.ai !== false,
@@ -564,6 +638,8 @@ export function serializeProject(project: Project): string {
     // Only written when this project was actually imported from another —
     // an ordinary project stays exactly as clean as before this field existed.
     ...(project.provenance ? { provenance: project.provenance } : {}),
+    // Likewise only written when a protocol was actually authored.
+    ...(project.protocol ? { protocol: project.protocol } : {}),
     // `ai` is only written when disabled, and `reviewers` only when it says
     // anything beyond the single-reviewer default — so a normal file, and a
     // single-reviewer file, both stay exactly as clean as before this feature.

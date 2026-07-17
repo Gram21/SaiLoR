@@ -260,7 +260,10 @@ function SchemaNodeRow({
           <span>∞</span>
         </label>
 
-        {node.kind !== 'group' && (
+        {/* Not offered for a boolean: an unticked box is already a real answer
+            (`false`), so a boolean is never "empty" and "required" on one can
+            never fire — see `resolveSchema`, which drops the flag on load too. */}
+        {node.kind !== 'group' && node.kind !== 'boolean' && (
           <label className="schema-required" title="The reviewer must fill this field in">
             <input
               type="checkbox"

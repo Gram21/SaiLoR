@@ -55,6 +55,7 @@ function reset() {
     papers: [],
     screening: null,
     provenance: null,
+    protocol: null,
     dirty: false,
     notice: null,
     error: null,

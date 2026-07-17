@@ -2,7 +2,9 @@ import { useEditorStore } from '../state/editorStore'
 import { getPlatform } from '../platform'
 import { SchemaTreeEditor } from './SchemaTreeEditor'
 import { ScreeningReasonsEditor } from './ScreeningReasonsEditor'
+import { ProtocolEditor } from './ProtocolEditor'
 import { PapersEditor } from './PapersEditor'
+import type { ProjectProvenance } from '../model/project'
 import '../styles/editor.css'
 
 const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform)
@@ -25,6 +27,8 @@ export function ProjectEditor() {
   const setReviewers = useEditorStore((s) => s.setReviewers)
   const screening = useEditorStore((s) => s.screening)
   const setScreening = useEditorStore((s) => s.setScreening)
+  const provenance = useEditorStore((s) => s.provenance)
+  const protocol = useEditorStore((s) => s.protocol)
   const dirty = useEditorStore((s) => s.dirty)
   const busy = useEditorStore((s) => s.busy)
   const error = useEditorStore((s) => s.error)
@@ -83,6 +87,8 @@ export function ProjectEditor() {
           Change…
         </button>
       </div>
+
+      {provenance && <ProvenanceNote provenance={provenance} />}
 
       <div className="editor-location">
         <span className="editor-location-label">Project title</span>
@@ -219,6 +225,28 @@ export function ProjectEditor() {
         )}
 
         <section className="editor-section">
+          {/* Collapsed by default: optional, and most projects that use it set
+              it once at the start and rarely reopen it — but open on its own
+              when the project already has a protocol, so an existing one is
+              never hidden behind a closed disclosure the reviewer must know to
+              expand. */}
+          <details className="editor-protocol-details" open={protocol !== null}>
+            <summary>
+              <h2>Review protocol</h2>
+              <span className="editor-protocol-summary-hint">
+                {protocol ? 'recorded' : 'optional'}
+              </span>
+            </summary>
+            <p className="editor-hint">
+              The review's research questions, the search behind it, and its inclusion/exclusion
+              criteria — recorded inside the project so a pre-registered protocol travels with the
+              data it produced. Every field is optional.
+            </p>
+            <ProtocolEditor />
+          </details>
+        </section>
+
+        <section className="editor-section">
           <h2>Papers</h2>
           <p className="editor-hint">
             PDFs are referenced relative to the JSON file, so moving the JSON re-derives their
@@ -243,4 +271,38 @@ export function ProjectEditor() {
       </div>
     </div>
   )
+}
+
+/** Read-only line describing where an imported project's papers came from —
+ *  the recorded `provenance`, previously written to the file but shown
+ *  nowhere. Not editable: it is a durable record of a past event, not a
+ *  setting, so the reviewer sees it but cannot rewrite history from here. */
+function ProvenanceNote({ provenance }: { provenance: ProjectProvenance }) {
+  const when = formatImportedAt(provenance.importedAt)
+  const from = provenance.source.title
+    ? `${provenance.source.title} (${provenance.source.file})`
+    : provenance.source.file
+  const { included, undecided, excluded, carried } = provenance.counts
+  return (
+    <div className="editor-provenance" role="note">
+      <span className="editor-provenance-label">Imported from</span>
+      <div className="editor-provenance-body">
+        <div>
+          <strong>{from}</strong>
+          {when && <span className="editor-provenance-when"> · {when}</span>}
+        </div>
+        <div className="editor-provenance-counts">
+          {carried} paper{carried === 1 ? '' : 's'} carried over ({included} included, {undecided}{' '}
+          undecided) · {excluded} excluded in screening, left behind
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** The ISO instant as a plain local date, or '' if it cannot be parsed — a
+ *  hand-edited file could hold anything, and a bad date must not throw. */
+function formatImportedAt(iso: string): string {
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString()
 }

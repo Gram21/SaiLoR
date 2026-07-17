@@ -306,6 +306,7 @@ describe('validateProject', () => {
     return {
       version: 1,
       provenance: null,
+      protocol: null,
       schema: sampleSchema,
       aiEnabled: true,
       reviewers: 1,

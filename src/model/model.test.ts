@@ -110,7 +110,7 @@ describe('schema resolution', () => {
       JSON.stringify({
         config: {
           schema: [
-            { name: 'Relevant', type: 'boolean', required: true },
+            { name: 'Claim', type: 'string', required: true },
             { name: 'Notes', type: 'string' },
           ],
         },
@@ -124,6 +124,20 @@ describe('schema resolution', () => {
     expect(reDumped.config.schema[0].required).toBe(true)
     // false is the default, so the key stays out of the file.
     expect('required' in reDumped.config.schema[1]).toBe(false)
+  })
+
+  it('drops required on a boolean field — a checkbox is never empty, so it can never fire', () => {
+    // Not a load error (a file with this currently opens), just silently
+    // dropped at resolve time and never re-serialized — see resolveSchema.
+    const project = loadProject(
+      JSON.stringify({
+        config: { schema: [{ name: 'Relevant', type: 'boolean', required: true }] },
+        papers: [{ id: 'p1', title: 'T', authors: [], pdf: 'a.pdf', annotations: {} }],
+      }),
+    )
+    expect(project.schema[0].required).toBe(false)
+    const reDumped = JSON.parse(serializeProject(project))
+    expect('required' in reDumped.config.schema[0]).toBe(false)
   })
 
   it('rejects required on a group (a group holds no value)', () => {
@@ -981,5 +995,88 @@ describe('Project.provenance (where an imported project came from)', () => {
     expect(project.provenance).toBeNull()
     const out = JSON.parse(serializeProject(project)) as { config: Record<string, unknown> }
     expect('provenance' in out.config).toBe(false)
+  })
+})
+
+describe('Project.protocol (the review protocol)', () => {
+  const VALID_PROTOCOL = {
+    researchQuestions: ['RQ1: What techniques?', 'RQ2: How evaluated?'],
+    searchStrings: ['("code search" AND "deep learning")'],
+    databases: ['Scopus', 'IEEE Xplore'],
+    searchDate: '2024-03',
+    notes: 'English, peer-reviewed, since 2015.',
+  }
+
+  const withProtocol = (protocol: unknown) =>
+    JSON.stringify({
+      version: 1,
+      config: { schema: sampleSchema },
+      ...(protocol === undefined ? {} : { protocol }),
+      papers: [{ id: 'p1', title: 'Some Paper', authors: [], pdf: 'pdfs/some.pdf', annotations: {} }],
+    })
+
+  it('is null when the project records none', () => {
+    expect(loadProject(withProtocol(undefined)).protocol).toBeNull()
+  })
+
+  it('loads a well-formed record', () => {
+    expect(loadProject(withProtocol(VALID_PROTOCOL)).protocol).toEqual(VALID_PROTOCOL)
+  })
+
+  it('round-trips through load -> serialize -> reload', () => {
+    const once = serializeProject(loadProject(withProtocol(VALID_PROTOCOL)))
+    expect(loadProject(once).protocol).toEqual(VALID_PROTOCOL)
+  })
+
+  it('is written only when present, so a project without a protocol stays byte-clean', () => {
+    const untouched = JSON.parse(serializeProject(loadProject(withProtocol(undefined))))
+    expect('protocol' in untouched).toBe(false)
+  })
+
+  it('degrades field by field, not all-or-nothing — a bad list keeps the good fields beside it', () => {
+    // Unlike provenance (rejected whole on any bad piece), an authored protocol
+    // drops only the malformed field: losing the databases list should never
+    // throw away the research questions typed next to it.
+    const partlyBad = {
+      researchQuestions: ['RQ1'],
+      databases: 'Scopus', // should be an array — dropped
+      searchDate: 42, // wrong type — dropped
+      notes: 'kept',
+    }
+    expect(loadProject(withProtocol(partlyBad)).protocol).toEqual({
+      researchQuestions: ['RQ1'],
+      notes: 'kept',
+    })
+  })
+
+  it('drops blank entries and whitespace, and an all-empty protocol becomes null', () => {
+    const blanks = { researchQuestions: ['  ', ''], searchStrings: [], notes: '   ' }
+    expect(loadProject(withProtocol(blanks)).protocol).toBeNull()
+    const out = JSON.parse(serializeProject(loadProject(withProtocol(blanks))))
+    expect('protocol' in out).toBe(false)
+  })
+
+  it('drops a wholly malformed record and never lets it reappear under extra', () => {
+    for (const bad of ['nonsense', 42, [], null] as unknown[]) {
+      const project = loadProject(withProtocol(bad))
+      expect(project.protocol).toBeNull()
+      expect('protocol' in project.extra).toBe(false)
+      expect('protocol' in JSON.parse(serializeProject(project))).toBe(false)
+    }
+  })
+
+  it('config.protocol is a trap — nesting it under config silently loses it on save', () => {
+    // The whole reason this field is root-level: config is a strict z.object
+    // rebuilt from scratch on save, so a hand-added config.protocol vanishes.
+    // Pinned so nobody "tidies" it back under config.
+    const text = JSON.stringify({
+      version: 1,
+      config: { schema: sampleSchema, protocol: VALID_PROTOCOL },
+      papers: [{ id: 'p1', title: 'Some Paper', authors: [], pdf: 'pdfs/some.pdf', annotations: {} }],
+    })
+    const project = loadProject(text)
+    expect(project.protocol).toBeNull()
+    const out = JSON.parse(serializeProject(project)) as { config: Record<string, unknown> }
+    expect('protocol' in out.config).toBe(false)
   })
 })
