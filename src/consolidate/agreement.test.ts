@@ -39,6 +39,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
   return {
     version: 1,
     provenance: null,
+    protocol: null,
     schema: SCHEMA,
     aiEnabled: true,
     reviewers: 2,
@@ -163,6 +164,7 @@ describe('agreementInput on a screening project', () => {
     return {
       version: 1,
       provenance: null,
+      protocol: null,
       schema: SCREENING_SCHEMA,
       aiEnabled: true,
       reviewers: 2,

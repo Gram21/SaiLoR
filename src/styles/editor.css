@@ -183,3 +183,102 @@
   outline: 2px solid var(--accent-weak);
   border-color: var(--accent);
 }
+
+/* ---- Provenance note (read-only "imported from") ---- */
+.editor-provenance {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 6%, var(--panel-bg));
+  font-size: 0.9em;
+}
+.editor-provenance-label {
+  flex: 0 0 auto;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.editor-provenance-body {
+  min-width: 0;
+}
+.editor-provenance-when {
+  color: var(--muted);
+}
+.editor-provenance-counts {
+  color: var(--muted);
+  font-size: 0.92em;
+  margin-top: 2px;
+}
+
+/* ---- Review protocol section ---- */
+.editor-protocol-details > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  cursor: pointer;
+  /* The default triangle marker plus our own inline heading read as two
+     bullets; drop it and let the heading itself be the affordance. */
+  list-style: none;
+}
+.editor-protocol-details > summary::-webkit-details-marker {
+  display: none;
+}
+.editor-protocol-details > summary > h2 {
+  display: inline;
+  margin: 0;
+  font-size: 1.05rem;
+}
+.editor-protocol-summary-hint {
+  color: var(--muted);
+  font-size: 0.85em;
+}
+/* A caret that turns with the disclosure, so a collapsed section still reads
+   as openable rather than as a plain heading. */
+.editor-protocol-details > summary::before {
+  content: '▸';
+  color: var(--muted);
+  transition: transform 0.12s ease;
+}
+.editor-protocol-details[open] > summary::before {
+  transform: rotate(90deg);
+}
+.editor-protocol-details > .editor-hint {
+  margin-top: 8px;
+}
+
+.protocol-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 720px;
+}
+.protocol-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.protocol-field-label {
+  color: var(--muted);
+  font-size: 0.9em;
+}
+.protocol-input,
+.protocol-textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.protocol-textarea {
+  resize: vertical;
+  line-height: 1.4;
+}
+.protocol-input:focus,
+.protocol-textarea:focus {
+  outline: 2px solid var(--accent-weak);
+  border-color: var(--accent);
+}

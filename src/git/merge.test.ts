@@ -77,6 +77,7 @@ interface ProjectOpts {
   screening?: { reasons: string[] }
   /** Root-level, not under `extra` — a real field, same rule `screening` follows. */
   provenance?: unknown
+  protocol?: unknown
   reviewerIdentities?: Record<string, unknown>
 }
 
@@ -91,6 +92,7 @@ function project(opts: ProjectOpts = {}): Project {
     version: opts.version ?? 1,
     ...(opts.title !== undefined ? { title: opts.title } : {}),
     ...(opts.provenance !== undefined ? { provenance: opts.provenance } : {}),
+    ...(opts.protocol !== undefined ? { protocol: opts.protocol } : {}),
     config,
     papers: opts.papers ?? [],
     ...(opts.extra ?? {}),
@@ -668,6 +670,53 @@ describe('mergeProjects — provenance', () => {
     const outcome = mergeProjects(base, ours, theirs)
     expectMerged(outcome)
     expect(outcome.merged.provenance).toEqual(PROV_A)
+  })
+})
+
+describe('mergeProjects — protocol', () => {
+  const PROTO_A = { researchQuestions: ['RQ1'], databases: ['Scopus'] }
+  const PROTO_B = { researchQuestions: ['A different RQ'], databases: ['IEEE'] }
+
+  it('carries a project with no protocol through as null', () => {
+    const outcome = mergeProjects(project({ papers: [] }), project({ papers: [] }), project({ papers: [] }))
+    expectMerged(outcome)
+    expect(outcome.merged.protocol).toBeNull()
+  })
+
+  it('takes the one side that authored a protocol', () => {
+    const base = project({ papers: [] })
+    const ours = project({ protocol: PROTO_A, papers: [] })
+    const theirs = project({ papers: [] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.protocol).toEqual(PROTO_A)
+  })
+
+  it('keeps an unchanged protocol when the other side changed something unrelated', () => {
+    const base = project({ protocol: PROTO_A, papers: [paper('a')] })
+    const ours = project({ protocol: PROTO_A, title: 'Renamed', papers: [paper('a')] })
+    const theirs = project({ protocol: PROTO_A, papers: [paper('a')] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.protocol).toEqual(PROTO_A)
+  })
+
+  it('refuses when both sides edited the protocol differently — never half-drops an authored one', () => {
+    const base = project({ protocol: PROTO_A, papers: [] })
+    const ours = project({ protocol: PROTO_B, papers: [] })
+    const theirs = project({ protocol: { researchQuestions: ['A third RQ'] }, papers: [] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectRefused(outcome)
+    expect(outcome.details.some((d) => /protocol/i.test(d))).toBe(true)
+  })
+
+  it('merges cleanly when both sides independently authored the identical protocol', () => {
+    const base = project({ papers: [] })
+    const ours = project({ protocol: PROTO_A, papers: [] })
+    const theirs = project({ protocol: PROTO_A, papers: [] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.protocol).toEqual(PROTO_A)
   })
 })
 

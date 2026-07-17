@@ -229,6 +229,7 @@ describe('projectVerdicts', () => {
     const project: Project = {
       version: 1,
       provenance: null,
+      protocol: null,
       schema: SCHEMA,
       aiEnabled: true,
       reviewers: 2,

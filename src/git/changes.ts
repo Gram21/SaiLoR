@@ -224,13 +224,14 @@ function diffPaperMeta(head: Paper, working: Paper, out: FieldChange[]): void {
  * panel's review UI. Returns `null` when `head` and `working` disagree on
  * anything that reshapes the file (`config.schema`, `config.reviewers`,
  * `config.ai`, `config.screening`, `config.reviewerIdentities`, `version`,
- * `provenance`, or a root `extra` key): once the schema itself is different,
- * "which fields changed" is not a question with a field-level answer any more
- * than it is for `merge.ts`'s three-way merge, which refuses the same
- * differences for the same reason. `provenance` is here for a different
- * reason than the rest — it is a nested record no `FieldConflict` shape can
- * express, not something that reshapes the file. The caller falls back to the
- * plain file-level commit for a project file in that state.
+ * `provenance`, `protocol`, or a root `extra` key): once the schema itself is
+ * different, "which fields changed" is not a question with a field-level
+ * answer any more than it is for `merge.ts`'s three-way merge, which refuses
+ * the same differences for the same reason. `provenance` and `protocol` are
+ * here for a different reason than the rest — each is a nested record no
+ * `FieldConflict` shape can express, not something that reshapes the file. The
+ * caller falls back to the plain file-level commit for a project file in that
+ * state.
  *
  * `reviewerIdentities` belongs here, not in the field walk below: claiming a
  * seat is not an annotation with a "which value do I want" answer — it is the
@@ -250,7 +251,8 @@ export function detectFieldChanges(head: Project, working: Project): DetectedCha
     !deepEqualJson(head.reviewerIdentities, working.reviewerIdentities) ||
     head.version !== working.version ||
     !deepEqualJson(head.extra, working.extra) ||
-    !deepEqualJson(head.provenance, working.provenance)
+    !deepEqualJson(head.provenance, working.provenance) ||
+    !deepEqualJson(head.protocol, working.protocol)
   if (structural) return null
 
   const fields: FieldChange[] = []

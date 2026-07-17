@@ -1,4 +1,6 @@
+import { useRef } from 'react'
 import { useEditorStore } from '../state/editorStore'
+import { countPapersUsingReason } from '../screening/reasonUsage'
 
 /**
  * The one authorable part of a screening project's schema: the exclusion
@@ -8,7 +10,14 @@ import { useEditorStore } from '../state/editorStore'
  */
 export function ScreeningReasonsEditor() {
   const screening = useEditorStore((s) => s.screening)
+  const papers = useEditorStore((s) => s.papers)
   const setScreeningReasons = useEditorStore((s) => s.setScreeningReasons)
+  const migrateScreeningReason = useEditorStore((s) => s.migrateScreeningReason)
+
+  // The reason's text when a field gained focus, per index — so a *committed*
+  // rename (on blur) can be compared against what papers actually reference,
+  // rather than firing a confirm on every keystroke of the edit.
+  const editingFrom = useRef<Record<number, string>>({})
 
   if (!screening) return null
   const reasons = screening.reasons
@@ -17,6 +26,38 @@ export function ScreeningReasonsEditor() {
     const next = [...reasons]
     next[i] = value
     setScreeningReasons(next)
+  }
+
+  /**
+   * On blur: if this row was renamed away from a reason papers still record,
+   * offer to carry those decisions over to the new label. Declining leaves
+   * them pointing at a reason no longer in the list — orphaned, but the
+   * reviewer was told, instead of it happening silently (caught only later by
+   * Validate). An empty new label has nothing to migrate *to*, so it only
+   * warns; nothing is rewritten.
+   */
+  const commitRename = (i: number) => {
+    const from = editingFrom.current[i]
+    delete editingFrom.current[i]
+    const to = reasons[i]
+    if (from === undefined || from === to) return
+    const count = countPapersUsingReason(papers, from)
+    if (count === 0) return
+    const many = count === 1 ? '1 paper' : `${count} papers`
+    if (to.trim() === '') {
+      window.alert(
+        `${many} still record "${from}" as their exclusion reason, which you have now removed from ` +
+          `the list — those decisions no longer point at a listed reason. Give the reason a name, or ` +
+          `re-screen those papers.`,
+      )
+      return
+    }
+    const migrate = window.confirm(
+      `${many} record "${from}" as their exclusion reason. Rename it to "${to}" for those papers too?\n\n` +
+        `OK: update ${count === 1 ? 'that decision' : 'those decisions'} to "${to}".\n` +
+        `Cancel: leave them pointing at "${from}", which is no longer in the list.`,
+    )
+    if (migrate) migrateScreeningReason(from, to)
   }
   const remove = (i: number) => {
     setScreeningReasons(reasons.filter((_, j) => j !== i))
@@ -47,7 +88,11 @@ export function ScreeningReasonsEditor() {
               className="screening-reasons-input"
               value={reason}
               placeholder="Reason"
+              onFocus={() => {
+                editingFrom.current[i] = reason
+              }}
               onChange={(e) => patch(i, e.target.value)}
+              onBlur={() => commitRename(i)}
             />
             <button
               type="button"

@@ -52,6 +52,7 @@ interface ProjectOpts {
   reviewers?: number
   papers?: Record<string, unknown>[]
   provenance?: unknown
+  protocol?: unknown
   reviewerIdentities?: Record<string, unknown>
 }
 
@@ -62,6 +63,7 @@ function project(opts: ProjectOpts = {}): Project {
   return loadProject({
     version: 1,
     ...(opts.provenance !== undefined ? { provenance: opts.provenance } : {}),
+    ...(opts.protocol !== undefined ? { protocol: opts.protocol } : {}),
     config,
     papers: opts.papers ?? [],
   })
@@ -101,6 +103,12 @@ describe('detectFieldChanges — structural changes refuse field-level review', 
         counts: { included: 1, undecided: 0, excluded: 0, carried: 1 },
       },
     })
+    expect(detectFieldChanges(head, working)).toBeNull()
+  })
+
+  it('returns null when protocol differs — a nested record no field row can express', () => {
+    const head = project({ papers: [paper('a')] })
+    const working = project({ papers: [paper('a')], protocol: { researchQuestions: ['RQ1'] } })
     expect(detectFieldChanges(head, working)).toBeNull()
   })
 

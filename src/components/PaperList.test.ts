@@ -33,6 +33,7 @@ function makeProject(reviewers: number): Project {
   return {
     version: 1,
     provenance: null,
+    protocol: null,
     schema,
     aiEnabled: true,
     reviewers,

@@ -33,6 +33,7 @@ function project(papers: Paper[]): Project {
   return {
     version: 1,
     provenance: null,
+    protocol: null,
     schema: SCHEMA,
     aiEnabled: true,
     reviewers: 1,

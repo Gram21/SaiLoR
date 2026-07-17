@@ -52,6 +52,7 @@ describe('isScreening', () => {
   const base = {
     version: 1,
     provenance: null,
+    protocol: null,
     schema: [],
     aiEnabled: true,
     reviewers: 1,

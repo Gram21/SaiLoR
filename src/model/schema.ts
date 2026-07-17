@@ -180,6 +180,9 @@ export const projectSchema = z
     // Loosely typed here; validated/normalized structurally in project.ts —
     // the same rule `aiUsage`/`reviews`/`equal` follow on `paperSchema`.
     provenance: z.unknown().optional(),
+    // Root-level, not under `config`, precisely so it survives a save — see
+    // `ProjectProtocol`'s doc comment. Loosely typed, parsed in `parseProtocol`.
+    protocol: z.unknown().optional(),
     config: z.object({
       // Optional-and-unbounded here: a screening project's schema is derived,
       // not authored (see `screeningConfigSchema` above), so it may be absent
@@ -260,7 +263,12 @@ function resolveDefs(defs: AnnotationDef[], parentPath: string): ResolvedDef[] {
       max,
       description: def.description,
       options: def.options,
-      required: def.required ?? false,
+      // Dropped for a boolean, silently: a checkbox is never "empty" (an
+      // unticked box is a real `false`, see `isEmptyValue` in validate.ts), so
+      // `required` on one can never fire — it is a no-op the editor no longer
+      // offers, and an existing file's stray flag is cleared here rather than
+      // rejected, so a file that currently loads keeps loading.
+      required: def.type === 'boolean' ? false : (def.required ?? false),
       children: def.children ? resolveDefs(def.children, id) : [],
     }
   })

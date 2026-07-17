@@ -36,6 +36,7 @@ function project(overrides: Partial<Project> = {}): Project {
   return {
     version: 1,
     provenance: null,
+    protocol: null,
     schema: SCHEMA,
     aiEnabled: true,
     reviewers: 1,

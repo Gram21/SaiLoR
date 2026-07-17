@@ -14,7 +14,7 @@ import {
   type EditorPaper,
 } from './editorStore'
 import { useStore } from './store'
-import { loadProject } from '../model/project'
+import { loadProject, serializeProject } from '../model/project'
 import type { OpenedProject } from '../platform'
 
 function node(name: string, patch: Partial<EditorNode> = {}): EditorNode {
@@ -70,15 +70,19 @@ describe('schema conversion', () => {
     expect(toAnnotationDefs(back)).toEqual(toAnnotationDefs(original))
   })
 
-  it('round-trips required, and never writes it for a group', () => {
+  it('round-trips required, and never writes it for a group or a boolean', () => {
     const defs = toAnnotationDefs([
-      node('Relevant', { kind: 'boolean', required: true }),
+      node('Claim', { kind: 'string', required: true }),
       node('Notes', { kind: 'string' }),
+      // A boolean is never empty, so required on one is a no-op — the editor
+      // neither offers nor emits it (see resolveSchema / the schema editor).
+      node('Relevant', { kind: 'boolean', required: true }),
       node('Findings', { kind: 'group', required: true, children: [node('Claim', { kind: 'string' })] }),
     ])
     expect(defs[0].required).toBe(true)
     expect(defs[1].required).toBeUndefined()
-    expect(defs[2].required).toBeUndefined()
+    expect(defs[2].required).toBeUndefined() // boolean — dropped
+    expect(defs[3].required).toBeUndefined() // group — dropped
 
     const back = fromAnnotationDefs(defs)
     expect(back[0].required).toBe(true)
@@ -343,6 +347,46 @@ describe('editorStateFromOpened (shared by "Edit annotation JSON…" and the rec
 
     const roundTrip = loadProject(JSON.stringify(buildProjectJson(st)))
     expect(roundTrip.reviewers).toBe(3)
+  })
+
+  // The guard against the two-serializers hazard: `buildProjectJson` (the
+  // editor's) and `serializeProject` (the core's) both write the project file,
+  // and every root-level field has to be carried by BOTH or it is silently
+  // dropped depending on which path last saved. This pins that they agree on
+  // every root field for a project that sets all of them — a new field added
+  // to one serializer but not the other fails here instead of in the wild.
+  it('the editor serializer preserves every root field the core serializer does', () => {
+    const rich = JSON.stringify({
+      version: 1,
+      title: 'Rich Review',
+      provenance: {
+        kind: 'screening-import',
+        source: { file: 'screening.json', title: 'Screening' },
+        importedAt: '2026-07-15T10:00:00.000Z',
+        counts: { included: 2, undecided: 1, excluded: 3, carried: 3 },
+      },
+      protocol: {
+        researchQuestions: ['RQ1: what?', 'RQ2: how?'],
+        databases: ['Scopus', 'IEEE Xplore'],
+        searchDate: '2024-03',
+        notes: 'peer-reviewed only',
+      },
+      config: {
+        reviewers: 3,
+        reviewerIdentities: { '1': { email: 'a@x.org' }, consolidation: { email: 'b@x.org', name: 'B' } },
+        ai: false,
+        schema: [{ name: 'Relevant', type: 'boolean' }],
+      },
+      papers: [{ id: 'p1', title: 'Paper One', authors: ['A. Author'], pdf: 'pdfs/p1.pdf', annotations: {} }],
+    })
+
+    // Core path (annotation view's save) vs. editor path (the JSON editor's save).
+    const viaCore = loadProject(serializeProject(loadProject(rich)))
+    const viaEditor = loadProject(JSON.stringify(buildProjectJson(editorStateFromOpened(opened(rich)))))
+
+    for (const field of ['title', 'provenance', 'protocol', 'reviewers', 'reviewerIdentities', 'aiEnabled'] as const) {
+      expect(viaEditor[field]).toEqual(viaCore[field])
+    }
   })
 
   it('defaults reviewers to 1 (single-reviewer) when config.reviewers is absent', () => {
