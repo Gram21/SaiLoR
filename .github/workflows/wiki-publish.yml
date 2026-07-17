@@ -7,19 +7,27 @@ name: Publish openwiki → Wiki
 # folders are the single source of truth.
 #
 # Layout published to the wiki:
-#   Home.md          — always synthesized here (see "Build the wiki content" below):
-#                       a short landing page linking to Development and user-guide/README.
+#   Home.md          — always .github/wiki-assets/Home.md, verbatim: a short landing
+#                       page linking to Development and user-guide/README.
 #   Development.md    — openwiki/Home.md, renamed so the wiki's own Home slot is free
 #                       for the landing page above.
 #   <page>.md          — the rest of openwiki/*.md, unchanged, flat at the wiki root.
-#   _Sidebar.md, _Footer.md — openwiki/_Sidebar.md and _Footer.md, with a "User Guide"
-#                       section appended so the wiki's one (global) sidebar covers both
-#                       parts. See the sidebar step below for why this is appended here
-#                       rather than hand-edited into the openwiki source.
+#   _Sidebar.md, _Footer.md — openwiki/_Sidebar.md and _Footer.md, each with the
+#                       matching .github/wiki-assets/*-user-guide.md fragment appended
+#                       inside a `<!-- wiki-sync:NAME:start/end -->` comment pair, so the
+#                       wiki's one (global) sidebar/footer covers both parts. See the
+#                       sidebar step below for why this is appended here rather than
+#                       hand-edited into the openwiki source, and wiki-import.yml for
+#                       what the markers are for.
 #   user-guide/**      — user-guide/*.md and user-guide/screenshots/*.png, unchanged,
 #                       under a matching subfolder (their existing relative links —
 #                       between pages and to screenshots/ — already work unmodified
 #                       once the folder is copied as a whole).
+#
+# .github/wiki-assets/ holds the three pieces of content above as plain markdown files
+# — easier to review and edit than the equivalent shell heredocs — plus the marker
+# comments that let wiki-import.yml identify each one inside the published page it sits
+# in (Home.md as a whole; the fragments within _Sidebar.md/_Footer.md).
 #
 # The reverse direction lives in wiki-import.yml. On the loop the two could form,
 # see "Loop prevention" below.
@@ -30,6 +38,7 @@ on:
     paths:
       - 'openwiki/**'
       - 'user-guide/**'
+      - '.github/wiki-assets/**'
       - '.github/workflows/wiki-publish.yml'
   workflow_dispatch:
 
@@ -142,8 +151,9 @@ jobs:
 
           # A wiki with no developer-docs landing page shows a dead "Development" link,
           # so synthesize one when openwiki/ did not provide a Home.md to rename above.
-          # The marker lets wiki-import.yml recognise this file as ours and not copy it
-          # back into the repo as a real openwiki page.
+          # The marker (the same one .github/wiki-assets/Home.md carries) lets
+          # wiki-import.yml recognise this file as ours and not copy it back into the
+          # repo as a real openwiki page.
           if [ ! -f stage/Development.md ]; then
             {
               echo "<!-- wiki-sync:auto-home -->"
@@ -174,62 +184,37 @@ jobs:
           # .github/workflows/openwiki.yml) from its own view of the *developer* docs,
           # so anything about the user guide written directly into that source would
           # just be dropped on its next scheduled run. Appending at publish time instead
-          # means it survives regeneration for free, at the cost of one known asymmetry:
-          # an edit made to *this* appended section via the wiki's web UI does not round
-          # -trip back (wiki-import.yml still imports the edited file as a whole into
-          # openwiki/_Sidebar.md, so the next publish immediately overwrites the User
-          # Guide part again with this same generated text) — the same trade-off this
-          # workflow already accepts for frontmatter, just applied to a second case.
+          # means it survives regeneration for free.
+          #
+          # The fragment itself lives in .github/wiki-assets/Sidebar-user-guide.md (and
+          # Footer-user-guide.md below) rather than inline here, wrapped in a
+          # `<!-- wiki-sync:NAME:start/end -->` comment pair GitHub hides when rendering
+          # — wiki-import.yml looks for that same pair to lift a wiki-UI edit straight
+          # back into the asset file, and to strip the fragment back out of what
+          # continues on to become openwiki/_Sidebar.md, so an edit made there doesn't
+          # end up duplicated inside the openwiki source.
           if [ -f stage/_Sidebar.md ]; then
             {
               echo
-              echo "---"
-              echo
-              echo "### [🏠 Wiki home](Home)"
-              echo
-              echo "### [User Guide](user-guide/README)"
-              echo
-              # Fixed order, matching user-guide/README.md's own "Guide contents" table
-              # (a curated reading order, not alphabetical) — update both places
-              # together if a page there is added, renamed, or reordered.
-              for name in things-to-know getting-started screening multi-reviewer project-editor git; do
-                f="stage/user-guide/$name.md"
-                [ -f "$f" ] || continue
-                title="$(grep -m1 '^# ' "$f" | sed 's/^# //')"
-                echo "- [${title:-$name}](user-guide/$name)"
-              done
+              echo '<!-- wiki-sync:user-guide-sidebar:start -->'
+              cat .github/wiki-assets/Sidebar-user-guide.md
+              echo '<!-- wiki-sync:user-guide-sidebar:end -->'
             } >> stage/_Sidebar.md
           fi
           if [ -f stage/_Footer.md ]; then
-            printf ' · [User Guide](user-guide/README)\n' >> stage/_Footer.md
+            {
+              echo '<!-- wiki-sync:user-guide-footer:start -->'
+              cat .github/wiki-assets/Footer-user-guide.md
+              echo '<!-- wiki-sync:user-guide-footer:end -->'
+            } >> stage/_Footer.md
           fi
 
-          # The wiki's actual Home page is always this two-part landing page — never
-          # taken from openwiki/ or user-guide/ directly, since neither one alone can
-          # represent "pick a part". The marker lets wiki-import.yml recognise it as
-          # generated and skip importing it back as a real page (see wiki-import.yml).
-          {
-            echo "<!-- wiki-sync:auto-home -->"
-            echo "# SaiLoR Wiki"
-            echo
-            echo "**SaiLoR** helps reviewers run **Systematic Literature Reviews (SLR)**: a single JSON"
-            echo "project file holds the annotation schema and the papers to review; SaiLoR renders each"
-            echo "paper's PDF next to a form generated from that schema."
-            echo
-            echo "This wiki has two parts:"
-            echo
-            echo "### 📘 [Development documentation](Development)"
-            echo
-            echo "How SaiLoR is built — architecture, the platform-adapter seam, the data model, and"
-            echo "day-to-day engineering operations. Generated from"
-            echo "[\`openwiki/\`](https://github.com/${GITHUB_REPOSITORY}/tree/main/openwiki)."
-            echo
-            echo "### 📗 [User guide](user-guide/README)"
-            echo
-            echo "How to use SaiLoR — installing it, annotating papers, screening, working with several"
-            echo "reviewers, and git support, with screenshots. Generated from"
-            echo "[\`user-guide/\`](https://github.com/${GITHUB_REPOSITORY}/tree/main/user-guide)."
-          } > stage/Home.md
+          # The wiki's actual Home page is always .github/wiki-assets/Home.md, verbatim
+          # — never taken from openwiki/ or user-guide/ directly, since neither one
+          # alone can represent "pick a part". Its first line is the same
+          # `wiki-sync:auto-home` marker the Development.md fallback above carries; see
+          # wiki-import.yml for what reads it.
+          cp .github/wiki-assets/Home.md stage/Home.md
 
       - name: Mirror into the wiki
         run: |
