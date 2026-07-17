@@ -18,6 +18,12 @@
  *      orphaned. Each directory has a small set of files exempt from this (its own
  *      chrome, generator bookkeeping) — see the per-directory config below.
  *
+ * openwiki/_Sidebar.md and _Footer.md are `extraPages`: real files that live outside the
+ * directory (.github/wiki-assets/Sidebar.md and Footer.md — see wiki-publish.yml for
+ * why they live there instead) but are still part of openwiki's page set for rules 1-4
+ * above, since they link into it (`[Quickstart](quickstart)`) and openwiki/_Sidebar.md
+ * is what rule 4 checks every other page against.
+ *
  *     npm run check:wiki
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
@@ -57,15 +63,17 @@ function stripFrontmatter(text) {
 
 /**
  * Checks one wiki directory's pages against the four rules in the file header.
+ * `extraPages` are additional {name, path} pairs to fold into the same page set from
+ * outside `dir` (see the file header) — their own relative links resolve against their
+ * own directory, not `dir`, since that is where they actually live on disk.
  * Returns { problems, pageCount } for that directory alone.
  */
-function checkDir(dir, { tocPage, chrome, exempt }) {
+function checkDir(dir, { tocPage, chrome, exempt, extraPages = [] }) {
   const files = readdirSync(dir).filter((f) => f.endsWith('.md'))
-  const pages = new Map() // page name → { anchors: Set, text }
+  const pages = new Map() // page name → { anchors: Set, text, srcDir, srcPath }
 
-  for (const file of files) {
-    const name = basename(file, '.md')
-    const text = stripFrontmatter(readFileSync(join(dir, file), 'utf-8'))
+  const load = (name, filePath) => {
+    const text = stripFrontmatter(readFileSync(filePath, 'utf-8'))
     const anchors = new Set()
     const seen = new Map()
 
@@ -78,12 +86,15 @@ function checkDir(dir, { tocPage, chrome, exempt }) {
       seen.set(base, n + 1)
       anchors.add(n === 0 ? base : `${base}-${n}`)
     }
-    pages.set(name, { anchors, text })
+    pages.set(name, { anchors, text, srcDir: dirname(filePath), srcPath: filePath })
   }
+
+  for (const file of files) load(basename(file, '.md'), join(dir, file))
+  for (const { name, path: p } of extraPages) load(name, p)
 
   const problems = []
 
-  for (const [name, { text }] of pages) {
+  for (const [, { text, srcDir, srcPath }] of pages) {
     // Markdown links and images: ](target). Reference-style links are not used here.
     for (const [, target] of text.matchAll(/]\(([^)\s]+)[^)]*\)/g)) {
       if (/^(https?:|mailto:)/.test(target)) continue // external — not ours to verify
@@ -94,10 +105,11 @@ function checkDir(dir, { tocPage, chrome, exempt }) {
       // isn't a page here (an image) or because it steps outside this directory
       // (`../LICENSE`, `../README.md`) — is a plain file-existence check, not a page
       // lookup: neither case has an entry in `pages`, and an image has no headings to
-      // anchor into anyway.
+      // anchor into anyway. Resolved against the *linking* page's own directory
+      // (`srcDir`), not `dir` — for an `extraPages` entry these differ.
       if (rawPage !== '' && rawPage.includes('/')) {
-        if (!existsSync(join(dir, rawPage))) {
-          problems.push(`${dirname(join(dir, name))}/${name}.md → [${target}] — no such file`)
+        if (!existsSync(join(srcDir, rawPage))) {
+          problems.push(`${srcPath} → [${target}] — no such file`)
         }
         continue
       }
@@ -106,16 +118,16 @@ function checkDir(dir, { tocPage, chrome, exempt }) {
       // "operations" (the wiki form) or "operations.md" (which also renders in the
       // repo, and is how every user-guide cross-link is written); both name the same
       // file.
-      const targetPage = rawPage === '' ? name : rawPage.replace(/\.md$/, '')
+      const targetPage = rawPage === '' ? basename(srcPath, '.md') : rawPage.replace(/\.md$/, '')
 
       const page = pages.get(targetPage)
       if (!page) {
-        problems.push(`${dir}/${name}.md → [${target}] — no such page in ${dir}/`)
+        problems.push(`${srcPath} → [${target}] — no such page in ${dir}/`)
         continue
       }
       if (anchor && !page.anchors.has(anchor)) {
         problems.push(
-          `${dir}/${name}.md → [${target}] — "${targetPage}" has no heading with anchor "#${anchor}"`,
+          `${srcPath} → [${target}] — "${targetPage}" has no heading with anchor "#${anchor}"`,
         )
       }
     }
@@ -125,8 +137,8 @@ function checkDir(dir, { tocPage, chrome, exempt }) {
     // needs its own scan; the markdown-link regex above never sees it.
     for (const [, src] of text.matchAll(/<img\s[^>]*\bsrc="([^"]+)"/g)) {
       if (/^(https?:)/.test(src)) continue // external — not ours to verify
-      if (!existsSync(join(dir, src))) {
-        problems.push(`${dir}/${name}.md → <img src="${src}"> — no such file`)
+      if (!existsSync(join(srcDir, src))) {
+        problems.push(`${srcPath} → <img src="${src}"> — no such file`)
       }
     }
   }
@@ -140,7 +152,7 @@ function checkDir(dir, { tocPage, chrome, exempt }) {
       if (chrome.has(name) || exempt.has(name) || name === tocPage) continue
       const linked = new RegExp(`]\\(${name}(\\.md)?([#)])`).test(toc.text)
       if (!linked) {
-        problems.push(`${dir}/${tocPage}.md does not link to "${name}" — the page would be orphaned`)
+        problems.push(`${toc.srcPath} does not link to "${name}" — the page would be orphaned`)
       }
     }
   }
@@ -165,6 +177,13 @@ const results = [
     // our own choice), so both get their own exemption from the sidebar-reachability
     // check instead of being folded into `chrome`, which would misdescribe them.
     exempt: new Set(['index', 'INSTRUCTIONS']),
+    // _Sidebar.md and _Footer.md deliberately live outside openwiki/ (see
+    // wiki-publish.yml's header) but are still openwiki's own sidebar/footer, linking
+    // into its page set — see the file header for why they're checked from here.
+    extraPages: [
+      { name: '_Sidebar', path: '.github/wiki-assets/Sidebar.md' },
+      { name: '_Footer', path: '.github/wiki-assets/Footer.md' },
+    ],
   }),
   checkDir('user-guide', {
     tocPage: 'README',

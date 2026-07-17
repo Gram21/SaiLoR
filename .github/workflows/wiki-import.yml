@@ -1,12 +1,13 @@
 name: Import Wiki → openwiki
 
 # The reverse of wiki-publish.yml: when someone edits the wiki — in the browser, or by
-# pushing to SaiLoR.wiki.git — copy those pages back into openwiki/ (developer docs),
-# user-guide/ (the user guide), and .github/wiki-assets/ (the Home page and the sidebar/
-# footer "User Guide" fragments) and commit them to main, so all three stay the source of
-# truth rather than drifting behind the wiki. See wiki-publish.yml's header for the
-# wiki's full layout (Home.md / Development.md / user-guide/**, and why); this workflow
-# undoes exactly that mapping.
+# pushing to SaiLoR.wiki.git — copy those pages back into openwiki/ (developer-docs
+# content pages), user-guide/ (the user guide), and .github/wiki-assets/ (the Home page,
+# the developer-docs Sidebar.md/Footer.md, and the two "User Guide" fragments appended
+# to them) and commit them to main, so all three stay the source of truth rather than
+# drifting behind the wiki. See wiki-publish.yml's header for the wiki's full layout
+# (Home.md / Development.md / user-guide/**, and why); this workflow undoes exactly that
+# mapping.
 #
 # `gollum` fires when a wiki page is created or updated. Note the GitHub constraint:
 # it only runs a workflow when the workflow file is on the DEFAULT branch, so this file
@@ -73,12 +74,12 @@ jobs:
 
           # _Sidebar.md and _Footer.md each carry a "User Guide" fragment wiki-publish.yml
           # appends inside a `<!-- wiki-sync:NAME:start/end -->` comment pair (see its
-          # comment on why it's appended rather than authored into the openwiki source).
-          # Lift whatever is currently between those markers — wiki-publish.yml's own
-          # text if nobody touched it, a human's edit otherwise, this doesn't need to
-          # know which — into the asset file it was published from, and cut it back out
-          # of the page so the remainder can go on to become openwiki/_Sidebar.md or
-          # _Footer.md untouched by content that was never part of the openwiki source.
+          # comment on why it's appended rather than authored into openwiki/ or
+          # .github/wiki-assets/Sidebar.md and Footer.md directly). Lift whatever is
+          # currently between those markers — wiki-publish.yml's own text if nobody
+          # touched it, a human's edit otherwise, this doesn't need to know which — into
+          # the asset file it was published from, and cut it back out of the page so the
+          # remainder is the plain developer-docs Sidebar.md/Footer.md again.
           extract_marked_block() {
             page="$1" marker="$2" asset="$3"
             start="<!-- wiki-sync:${marker}:start -->"
@@ -91,6 +92,21 @@ jobs:
           }
           extract_marked_block wiki/_Sidebar.md user-guide-sidebar .github/wiki-assets/Sidebar-user-guide.md
           extract_marked_block wiki/_Footer.md user-guide-footer .github/wiki-assets/Footer-user-guide.md
+
+          # wiki-publish.yml rewrites .github/wiki-assets/Sidebar.md's own "SaiLoR" link
+          # from Home to Development (Home.md is staged under that name — see its
+          # comment). Reverse it here too, unconditionally, for the same reason as the
+          # user-guide/README.md links above: the asset file's own copy needs to say
+          # `Home` — the real openwiki page name — so scripts/check-wiki-links.js can
+          # keep validating it against the actual openwiki page set.
+          [ -f wiki/_Sidebar.md ] && sed -i 's/\](Development)/\](Home)/' wiki/_Sidebar.md
+
+          # Unlike the developer-docs pages the general openwiki rsync handles below,
+          # _Sidebar.md/_Footer.md do not live in openwiki/ (see wiki-publish.yml's
+          # header for why) — map what is left of each, after the fragment above was
+          # lifted out, straight to the asset file it was published from instead.
+          [ -f wiki/_Sidebar.md ] && mv wiki/_Sidebar.md .github/wiki-assets/Sidebar.md
+          [ -f wiki/_Footer.md ] && mv wiki/_Footer.md .github/wiki-assets/Footer.md
 
           # wiki-publish.yml rewrites user-guide/README.md's two repo-relative links
           # (../README.md, ../LICENSE — correct in the main repo, meaningless in the
@@ -120,9 +136,9 @@ jobs:
           fi
 
           # Mirror pages only, and only over the pages: openwiki/.last-update.json is
-          # generator state and must survive. wiki/user-guide/ was already moved out
-          # above, and the two marked fragments already lifted out of _Sidebar.md/
-          # _Footer.md, so neither is mirrored a second time here.
+          # generator state and must survive. wiki/user-guide/, wiki/_Sidebar.md and
+          # wiki/_Footer.md were all already moved out above, so none of them land in
+          # openwiki/ here.
           #
           # Edge case, not worth guarding against: wiki-publish.yml deliberately never
           # publishes index.md or INSTRUCTIONS.md (see its comment) or frontmatter
