@@ -978,16 +978,28 @@ question than the one asked. It is not "the local git installation" — it has i
 handling, does not read the user's `~/.gitconfig`, and does not use their SSH agent or credential
 helper. Shipping it and calling it "git support" would be dishonest about what actually ran.
 
-**The conclusion: git support is Electron-only, and the browser build hides it.** This mirrors how
-the codebase already handles other capability gaps — `getOsInfo(): OsInfo | null`,
-`needsPdfFolderGrant()` returning `false` on Electron (there is no such prompt there), the pathless
-`rebasePdfPaths` — and it is expressed in the type system, not left as a runtime convention:
-`PlatformAdapter.getGit(): GitPlatform | null` returns `null` in the browser, so a caller cannot
-invoke a git operation without first proving the runtime has one. A flat `GitPlatform` capability
-object rather than eleven individual methods on `PlatformAdapter` is deliberate too: eleven flat
-methods would mean eleven browser stubs, each of which either throws at runtime or silently no-ops
-— "unavailable" would be something a caller discovers by calling it, not something the type checker
-catches for them. `getOsInfo(): OsInfo | null` already established the pattern this follows.
+**The conclusion: git support is Electron-only.** This mirrors how the codebase already handles
+other capability gaps — `getOsInfo(): OsInfo | null`, `needsPdfFolderGrant()` returning `false` on
+Electron (there is no such prompt there), the pathless `rebasePdfPaths` — and it is expressed in the
+type system, not left as a runtime convention: `PlatformAdapter.getGit(): GitPlatform | null`
+returns `null` in the browser, so a caller cannot invoke a git operation without first proving the
+runtime has one. A flat `GitPlatform` capability object rather than eleven individual methods on
+`PlatformAdapter` is deliberate too: eleven flat methods would mean eleven browser stubs, each of
+which either throws at runtime or silently no-ops — "unavailable" would be something a caller
+discovers by calling it, not something the type checker catches for them. `getOsInfo(): OsInfo |
+null` already established the pattern this follows.
+
+**The browser build shows every git entry point disabled, not absent.** `Toolbar.tsx` checks
+`getGit()` the same way any other caller does, but where the annotation UI usually treats "no
+capability" as "no control" (there is no PDF-grant button on Electron, because `needsPdfFolderGrant()`
+is `false` there and the concept doesn't apply), the toolbar's **Git** button and the Open menu's
+**Import from git…** item stay in the layout in the browser build too — dimmed, with
+`GIT_BROWSER_DISABLED_HINT` (`Toolbar.tsx`) as the tooltip, telling a reviewer *why* it doesn't work
+and that the desktop app is where it does, rather than a control that quietly isn't there for them to
+notice missing. This is a genuinely different choice from `needsPdfFolderGrant()`'s: that gap has no
+button anywhere to hide, while this one is choosing to surface a capability boundary explicitly
+instead of omitting the entry point the way the type-level `GitPlatform | null` design would most
+simply suggest.
 
 **A third, distinct case: git is not installed.** `GitPlatform.probe()` runs `git --version`. On
 failure the app says so honestly, with git's own error text, and the git entry points are shown

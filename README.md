@@ -403,9 +403,10 @@ accept a value.
 > **Desktop only, and not by accident.** Git support runs your own `git` binary, so it can use your
 > real `~/.gitconfig`, your credential helper, and your SSH agent. A web page cannot spawn a process
 > or read a config file — there is no permission that changes that — so there is nothing honest to
-> fall back to in the browser build, and it simply doesn't show these controls. If `git` is not on
-> your PATH, *Import from git…* and the toolbar's git entry points appear greyed out with git's own
-> error explaining why.
+> fall back to in the browser build. *Import from git…* and the toolbar's **Git** button still
+> appear there, greyed out, rather than vanishing — hover for a note pointing you at the desktop app.
+> If `git` is not on your PATH in the desktop app instead, the same controls appear greyed out with
+> git's own error explaining why.
 
 **Import from git…** — on the start screen and in the toolbar's *Open* ▾ menu. Paste a repository URL,
 pick a folder, and confirm; the app then clones it. A clone of a repository full of PDFs can take a
