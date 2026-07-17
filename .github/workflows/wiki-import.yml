@@ -1,8 +1,11 @@
 name: Import Wiki → openwiki
 
 # The reverse of wiki-publish.yml: when someone edits the wiki — in the browser, or by
-# pushing to SaiLoR.wiki.git — copy those pages back into openwiki/ and commit them to
-# main, so the folder stays the source of truth rather than drifting behind the wiki.
+# pushing to SaiLoR.wiki.git — copy those pages back into openwiki/ (developer docs) and
+# user-guide/ (the user guide) and commit them to main, so the two folders stay the
+# source of truth rather than drifting behind the wiki. See wiki-publish.yml's header
+# for the wiki's full layout (Home.md / Development.md / user-guide/**, and why); this
+# workflow undoes exactly that mapping.
 #
 # `gollum` fires when a wiki page is created or updated. Note the GitHub constraint:
 # it only runs a workflow when the workflow file is on the DEFAULT branch, so this file
@@ -39,18 +42,42 @@ jobs:
           set -euo pipefail
           git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" wiki
 
-      - name: Copy the wiki's pages into openwiki/
+      - name: Copy the wiki's pages into openwiki/ and user-guide/
         run: |
           set -euo pipefail
-          # Drop the Home page we generate ourselves in wiki-publish.yml — copying it back
-          # would add a file to openwiki/ that nobody wrote. A Home page a *human* wrote
-          # has no marker, and is imported like any other page.
-          if [ -f wiki/Home.md ] && head -1 wiki/Home.md | grep -q 'wiki-sync:auto-home'; then
-            rm wiki/Home.md
+          # Home.md is *always* synthesized by wiki-publish.yml as the two-part landing
+          # page between the developer docs and the user guide (see its header) — never
+          # hand-authored, and always overwritten again on the next publish regardless.
+          # Drop it unconditionally rather than only when its marker is present: a human
+          # replacing its content wholesale in the wiki UI still shouldn't turn it into a
+          # real openwiki page, since that page is Development.md now (see below).
+          rm -f wiki/Home.md
+
+          # Development.md is openwiki/Home.md under its published name (renamed by
+          # wiki-publish.yml so the wiki's own Home slot is free for the landing page
+          # above) — map it back to where it actually came from before the general
+          # openwiki mirror below, the same as any other page a human might have edited.
+          if [ -f wiki/Development.md ]; then
+            mv wiki/Development.md wiki/Home.md
+          fi
+
+          # The user guide's pages live in the wiki under user-guide/, matching the main
+          # repo's own user-guide/ folder — move them out from under wiki/ before the
+          # openwiki rsync below, so they land back at the repo root instead of inside
+          # openwiki/. Guarded on the directory actually existing in the wiki clone: if
+          # this workflow ever runs before wiki-publish.yml has published a user-guide/
+          # folder at all (e.g. a very first run against an older wiki), doing nothing
+          # here is the only safe option — the alternative, deleting the repo's real
+          # user-guide/ because the wiki side is temporarily empty, would destroy work
+          # that has nothing to do with this sync.
+          if [ -d wiki/user-guide ]; then
+            rsync -a --delete wiki/user-guide/ user-guide/
+            rm -rf wiki/user-guide
           fi
 
           # Mirror pages only, and only over the pages: openwiki/.last-update.json is
-          # generator state and must survive.
+          # generator state and must survive. wiki/user-guide/ was already moved out
+          # above, so it is not mirrored a second time here.
           #
           # Edge case, not worth guarding against: wiki-publish.yml deliberately never
           # publishes index.md or INSTRUCTIONS.md (see its comment) or frontmatter
@@ -58,7 +85,9 @@ jobs:
           # operation. If a human manually creates a wiki page literally named "index" or
           # "INSTRUCTIONS", it lands at the matching path in openwiki/ once — then
           # wiki-publish.yml's exclusion means it is never mirrored back out, so the next
-          # publish silently stops reflecting further edits to it.
+          # publish silently stops reflecting further edits to it. The "User Guide"
+          # section wiki-publish.yml appends to _Sidebar.md/_Footer.md has the same
+          # asymmetry, documented where it is generated.
           rsync -a --delete \
             --include '*.md' --exclude '*' \
             wiki/ openwiki/
@@ -66,13 +95,13 @@ jobs:
       - name: Commit to main (only when something actually changed)
         run: |
           set -euo pipefail
-          git add openwiki
+          git add openwiki user-guide
           if git diff --cached --quiet; then
-            echo "openwiki/ already matches the wiki — nothing to commit."
+            echo "openwiki/ and user-guide/ already match the wiki — nothing to commit."
             exit 0
           fi
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "docs: import wiki edits into openwiki/ [wiki-sync]"
+          git commit -m "docs: import wiki edits into openwiki/ and user-guide/ [wiki-sync]"
           git push origin main
-          echo "openwiki/ updated from the wiki."
+          echo "openwiki/ and user-guide/ updated from the wiki."
