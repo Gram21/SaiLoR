@@ -1,7 +1,3 @@
----
-
-### [🏠 Wiki home](Home)
-
 ### [User Guide](user-guide/README)
 
 - [Things to know](user-guide/things-to-know)
@@ -10,3 +6,7 @@
 - [Working with several reviewers](user-guide/multi-reviewer)
 - [Setting up a project](user-guide/project-editor)
 - [Git support](user-guide/git)
+
+---
+
+### [🏠 Wiki home](Home)
