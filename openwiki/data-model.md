@@ -27,8 +27,12 @@ A project is a single JSON file with this shape:
     }
   },
   "provenance": null,  // optional; ProjectProvenance | null — see "Screening" below
+  "protocol": null,    // optional; ProjectProtocol | null — see below
   "papers": [ /* Paper[] */ ],
-  // any other top-level keys are preserved verbatim on save
+  // any other top-level keys are preserved verbatim on save; keys inside
+  // `config`, however, are NOT — config is rebuilt from its known fields on
+  // every save, so a hand-added config.<anything> is dropped (this is exactly
+  // why `protocol` is a root-level field, not a config key)
 }
 ```
 
@@ -69,7 +73,7 @@ Each schema node defines a field or group in the taxonomy:
 | `min` | no | `1` | Minimum occurrences |
 | `max` | no | `1` | Max occurrences: a positive integer, or `null` for unbounded |
 | `options` | no | — | Array of strings on a `string` field → renders as a filterable enum dropdown (ComboBox). Only valid when `type` is `"string"` |
-| `required` | no | `false` | Marks a **field** (a node with a `type`) as one the reviewer must fill; shown with a red `*`, checked by `validate.ts`'s `required` issue. Rejected on a group, which holds no value |
+| `required` | no | `false` | Marks a **field** (a node with a `type`) as one the reviewer must fill; shown with a red `*`, checked by `validate.ts`'s `required` issue. Rejected on a group (holds no value); **silently dropped on a `boolean`** — a checkbox is never "empty" (`isEmptyValue` returns `false` for booleans), so `required` there can never fire. `resolveSchema` drops the flag on load (not a load error), and the schema editor doesn't offer it for a boolean field |
 | `description` | no | — | Optional tooltip text |
 
 **Validation rules** (enforced by zod in `annotationDefSchema`):
@@ -137,6 +141,7 @@ interface Project {
   papers: Paper[]
   screening: ScreeningConfig | null  // config.screening; see "Screening" below
   provenance: ProjectProvenance | null  // set by "New from screening…"; see "Screening" below
+  protocol: ProjectProtocol | null   // the review's authored protocol; see below
   extra: Record<string, unknown>  // unknown top-level fields preserved
 }
 
@@ -150,6 +155,14 @@ interface ProjectProvenance {
   source: { title?: string; file: string }
   importedAt: string   // ISO 8601
   counts: { included: number; undecided: number; excluded: number; carried: number }
+}
+
+interface ProjectProtocol {   // every field optional; an all-empty protocol is null, not {}
+  researchQuestions?: string[]
+  searchStrings?: string[]
+  databases?: string[]
+  searchDate?: string   // free text — a search is usually a range, not one instant
+  notes?: string        // inclusion/exclusion criteria and other protocol notes
 }
 
 interface Paper {
@@ -423,6 +436,24 @@ error) and written by both `serializeProject` and the editor's `buildProjectJson
 copies of a project" below for what a divergent `provenance` does to a pull, and `architecture.md`'s
 "Importing from a screening project" for the UI/store mechanics.
 
+## The review protocol (`Project.protocol`)
+
+`Project.protocol: ProjectProtocol | null` (shape above) records the review's research questions,
+search strings, databases, search date, and inclusion/exclusion notes — authored by hand in the
+project editor's collapsed *Review protocol* section. It is a first-class root field for a
+load-bearing reason: `config` is a strict zod object rebuilt from its known fields on every save, so
+a hand-added `config.protocol` (or `config.researchQuestions`) is *silently dropped* on the first
+save — the exact trap `provenance` avoids the same way. `parseProtocol` degrades it **field by
+field** (a malformed `databases` drops only that list, keeping the research questions beside it,
+unlike `parseProvenance`'s all-or-nothing), an all-empty protocol parses to `null` (never a stray
+`{}`), and both serializers write it. A two-sided divergent edit refuses the merge rather than
+half-dropping an authored protocol (see below).
+
+A guard covers the two-serializer hazard the whole thing depends on: `buildProjectJson` (the editor's
+serializer) and `serializeProject` (the core's) must both carry every root field or one silently
+drops it depending on which path last saved — `editorStore.test.ts` round-trips a project with every
+root field set through both and fails if they disagree.
+
 ## Merging two copies of a project
 
 `src/git/merge.ts`'s `mergeProjects(base, ours, theirs)` is a three-way merge over three parsed
@@ -489,9 +520,11 @@ different schema would). `Project.title` is not on this list: it is an ordinary 
 row expresses it perfectly, and refusing a whole merge over two people renaming the review would be
 absurd.
 
-Two more refuse, for reasons that are not "this reshapes the file": `provenance` (a nested record —
-`{kind, source, importedAt, counts}` — that no `FieldConflict` shape can express; the common case of
-only one side ever setting it still resolves with no refusal and no note) and
+A few more refuse, for reasons that are not "this reshapes the file": `provenance` and `protocol`
+(each a nested record no `FieldConflict` shape can express — for `protocol`, refusing a two-sided
+edit is also the safe choice, since half-dropping a reviewer's authored protocol is worse than
+asking them to reconcile it; the common case of only one side ever setting either still resolves with
+no refusal and no note) and
 `config.reviewerIdentities.<seat>`, which refuses **per seat**, and only when the two sides record
 **different emails** for that seat (compared via `sameIdentity`, which is email-only — a name-only
 edit on the same email merges silently, never refuses). This is deliberately a refusal rather than a

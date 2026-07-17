@@ -63,11 +63,14 @@ The top‑level object has three keys:
 }
 ```
 
-| Key       | Required? | What it is                                                                 |
-| --------- | --------- | -------------------------------------------------------------------------- |
-| `version` | optional  | A number. If you omit it, the app treats it as `1`.                        |
-| `config`  | required  | The annotation schema (`schema`) and options such as `ai`, `screening`.    |
-| `papers`  | required  | The list of papers to annotate.                                            |
+| Key         | Required? | What it is                                                                 |
+| ----------- | --------- | -------------------------------------------------------------------------- |
+| `version`   | optional  | A number. If you omit it, the app treats it as `1`.                        |
+| `title`     | optional  | A display name for the review; falls back to the file name when absent.    |
+| `config`    | required  | The annotation schema (`schema`) and options such as `ai`, `screening`.    |
+| `protocol`  | optional  | The review's protocol — research questions, search, criteria. See below.   |
+| `provenance`| optional  | Set by *New from screening…* to record where the papers came from (§10).   |
+| `papers`    | required  | The list of papers to annotate.                                            |
 
 `config.schema` must be an **array with at least one node** — *unless* `config.screening` is
 present, in which case `schema` is ignored entirely (see [§10](#10-screening-projects)) and may be
@@ -95,9 +98,29 @@ answers into one final result via a built-in **Consolidation** role. See
 greater than 1, so a normal single-reviewer file never carries the key. The project editor exposes
 it as a checkbox + a reviewer-count field next to the AI opt-out.
 
-**Extra keys are preserved.** Any additional top‑level key you add (say, `"reviewers"` or
-`"notes"`) is kept verbatim when the app saves the file. The same applies to extra keys inside
-a paper object. The app only manages the keys it knows about and leaves the rest untouched.
+**`protocol` — the review's own protocol.** Optional. A record of the research questions, the
+search that ran, and the criteria behind the review — kept *inside* the project file so a
+pre-registered protocol travels with the data it produced. Every part is optional:
+
+```jsonc
+"protocol": {
+  "researchQuestions": ["RQ1: …", "RQ2: …"],
+  "searchStrings":     ["(\"code search\" AND \"deep learning\")"],
+  "databases":         ["Scopus", "IEEE Xplore"],
+  "searchDate":        "2024-03",            // free text — a range is fine
+  "notes":             "Inclusion/exclusion criteria and any other notes."
+}
+```
+
+It is a **top-level** key, deliberately not under `config` — see the warning just below. Author it
+in the project editor's collapsed *Review protocol* section; it is written out only when non-empty,
+so a project without one stays byte-clean.
+
+**Extra keys are preserved — but only at the top level.** Any additional *top‑level* key you add
+(say, `"notes"`) is kept verbatim when the app saves the file, as are extra keys inside a paper
+object. **Keys you add inside `config` are not**: `config` is rebuilt from its known fields on every
+save, so a hand-added `config.protocol` or `config.researchQuestions` is *silently dropped* the
+first time the file is saved. Put anything you want kept at the top level, not inside `config`.
 
 ---
 
@@ -115,7 +138,7 @@ thing you want to record. A node is written as a JSON object (its technical name
 | `min`         | number                                 | no       | `1`     | Minimum number of times this node may occur.                                              |
 | `max`         | number or `null`                       | no       | `1`     | Maximum occurrences. A positive whole number, or `null` for **unbounded**.                |
 | `options`     | array of strings                       | no       | —       | Turns a `string` field into an **enum dropdown** of allowed values (see §3.2).            |
-| `required`    | boolean                                | no       | `false` | Marks a **field** the reviewer must fill in. Shows a `*` next to the name; an empty one is reported by validation. Only valid on a node with a `type`. |
+| `required`    | boolean                                | no       | `false` | Marks a **field** the reviewer must fill in. Shows a `*` next to the name; an empty one is reported by validation. Only valid on a node with a `type` — **and never on a `boolean`**: an unticked checkbox is already a real answer (`false`), so a boolean is never "empty" and `required` on one can never fire. The editor doesn't offer it there, and a stray one in a hand-edited file is dropped on load (not an error). |
 | `description` | string                                 | no       | —       | A help note. The name shows an ⓘ marker and reveals this text on hover.                    |
 
 Two structural rules the app enforces:
