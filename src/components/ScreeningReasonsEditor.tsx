@@ -59,7 +59,25 @@ export function ScreeningReasonsEditor() {
     )
     if (migrate) migrateScreeningReason(from, to)
   }
+  /**
+   * Removing a reason papers still record orphans those decisions just as an
+   * empty rename does — so it warns the same way rather than dropping them
+   * silently (the asymmetry that let a `×` click do what `commitRename` was
+   * built to prevent). There is no new label to migrate *to* on a delete, so
+   * the only choice offered is remove-anyway vs keep.
+   */
   const remove = (i: number) => {
+    const label = reasons[i]
+    const count = label.trim() === '' ? 0 : countPapersUsingReason(papers, label)
+    if (count > 0) {
+      const many = count === 1 ? '1 paper' : `${count} papers`
+      const ok = window.confirm(
+        `${many} record "${label}" as their exclusion reason. Remove it anyway?\n\n` +
+          `Those ${count === 1 ? 'decision' : 'decisions'} will no longer point at a listed reason ` +
+          `(Validate will flag them); the papers keep their excluded state but lose the reason.`,
+      )
+      if (!ok) return
+    }
     setScreeningReasons(reasons.filter((_, j) => j !== i))
   }
   const add = () => {
