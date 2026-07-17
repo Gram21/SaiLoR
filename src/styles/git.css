@@ -257,7 +257,16 @@
   color: var(--text);
 }
 
+/* Use/Ignore on the left, Discard pinned to the right — exactly two flex
+   children (the `.git-disposition-group` and the lone Discard button), so
+   `space-between` is all it takes to split them to opposite ends. */
 .git-field-row-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+.git-disposition-group {
   display: flex;
   gap: 6px;
 }
@@ -279,25 +288,6 @@
   border-color: var(--danger);
   background: color-mix(in srgb, var(--danger) 14%, transparent);
   color: var(--danger);
-}
-
-/* The "throw these away now" action: --danger, the same accent
-   `.git-field-row.is-discard` and `.git-disposition-discard.active` already use
-   for "this reverts", but as a full button since it acts immediately. */
-.git-field-discard-action {
-  display: flex;
-  justify-content: flex-end;
-  margin: 0 0 14px;
-}
-.git-field-discard-btn {
-  padding: 4px 12px;
-  border: 1px solid var(--danger);
-  border-radius: 6px;
-  color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 8%, transparent);
-}
-.git-field-discard-btn:disabled {
-  opacity: 0.5;
 }
 
 .git-diff-details {

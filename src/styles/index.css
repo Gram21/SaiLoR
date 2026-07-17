@@ -77,6 +77,14 @@ button.primary {
   border-color: var(--accent);
   padding: 8px 16px;
 }
+/* A primary action that reverts rather than commits — the git dialog's
+   Commit button becomes this once nothing left to review is marked Use, so
+   pressing it is destructive (a discard, not a save) and needs to read that
+   way at a glance, not just via its label. */
+button.primary.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+}
 
 /* ---- Layout ---- */
 .app {
