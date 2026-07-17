@@ -17,6 +17,7 @@ const KIND_LABELS: Array<[EditorNodeKind, string]> = [
   ['group', 'Group (no value)'],
   ['string', 'Text'],
   ['number', 'Number'],
+  ['year', 'Year'],
   ['boolean', 'Yes/no'],
 ]
 

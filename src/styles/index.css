@@ -601,6 +601,10 @@ button.paper-search-mode:hover {
   color: var(--muted);
   font-size: 0.857rem;
 }
+.pdf-venue {
+  color: var(--muted);
+  font-size: 0.857rem;
+}
 .pdf-scroll {
   flex: 1 1 auto;
   overflow: auto;

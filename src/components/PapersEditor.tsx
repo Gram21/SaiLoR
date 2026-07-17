@@ -241,6 +241,34 @@ function PaperFields({ paper, onRemove, onInteract }: PaperFieldsProps) {
         </label>
       </div>
 
+      <div className="papers-field-row">
+        <label className="papers-field">
+          <span className="papers-label">
+            Year <span className="papers-note">optional</span>
+          </span>
+          <input
+            type="text"
+            inputMode="numeric"
+            className="papers-input small"
+            value={paper.year}
+            onFocus={onInteract}
+            onChange={(e) => patch({ year: e.target.value })}
+          />
+        </label>
+        <label className="papers-field grow">
+          <span className="papers-label">
+            Venue <span className="papers-note">journal, conference, or publisher — optional</span>
+          </span>
+          <input
+            type="text"
+            className="papers-input"
+            value={paper.venue}
+            onFocus={onInteract}
+            onChange={(e) => patch({ venue: e.target.value })}
+          />
+        </label>
+      </div>
+
       <label className="papers-field">
         <span className="papers-label">
           Abstract <span className="papers-note">what screening reads when there is no PDF</span>
