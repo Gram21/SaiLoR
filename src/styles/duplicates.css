@@ -1,0 +1,119 @@
+/*
+ * The duplicate-review dialog shown by `importReferences` when the fuzzy
+ * matcher (`model/duplicates.ts`) finds a *probable* duplicate. Reuses the
+ * `.modal`/`.git-field-row`/`.git-merge-row` idiom from `git.css` rather than
+ * inventing a new one — only the classes that idiom doesn't already cover
+ * live here. Like `git.css`, only the theme variables from index.css are
+ * used, so both themes are covered without a hard-coded colour.
+ */
+
+.modal.dup-review-dialog {
+  /* Same reasoning as git.css's `.modal.git-dialog`/`.modal.git-merge-dialog`:
+     `.modal` alone already sets `width`, and matching its specificity here
+     keeps the outcome independent of CSS source order. */
+  width: min(920px, 94vw);
+}
+
+.dup-review-progress {
+  color: var(--muted);
+  font-weight: normal;
+  font-size: 0.85rem;
+  margin-left: 8px;
+}
+
+.dup-review-bulk {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.dup-review-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dup-row {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+/* Same warning-accent "not in its default state" convention as
+   `.git-merge-row.is-undecided` (see git.css:225's note on where else this is
+   used) — a row here is exactly as undecided-and-blocking-Import as a merge
+   conflict is undecided-and-blocking-Finish. */
+.dup-row.is-undecided {
+  border-left: 3px solid var(--ai-mark);
+}
+
+.dup-row-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+}
+.dup-row-reason {
+  font-weight: 600;
+}
+.dup-row-where {
+  color: var(--muted);
+}
+.dup-row-undecided-badge {
+  margin-left: auto;
+  color: var(--ai-mark);
+}
+
+.dup-row-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+  margin-bottom: 8px;
+}
+.dup-row-side {
+  min-width: 0;
+}
+.dup-row-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dup-row-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.dup-row-actions {
+  display: flex;
+  gap: 6px;
+}
+/* Same look as `git.css`'s `.git-disposition-btn` — a two-way version of the
+   same "pick one of a small set of dispositions" control, not a new one. */
+.dup-decision-btn {
+  padding: 3px 10px;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+}
+.dup-decision-btn.active {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.dup-review-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
