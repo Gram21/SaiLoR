@@ -17,6 +17,7 @@ import {
   serializeReviewerIdentities,
   type ReviewerIdentity,
 } from './identity'
+import { parseYear } from './year'
 
 /**
  * One AI-assisted-annotation pass applied to a paper: which provider and model
@@ -40,6 +41,29 @@ export interface Paper {
   title: string
   authors: string[]
   doi?: string
+  /**
+   * Publication year. `undefined`, not a sentinel, means "unknown" —
+   * deliberately including the "in press" / "to appear" case: those describe
+   * a publication *status*, not a year, and encoding a status into a numeric
+   * field would make every consumer handle a value that is sometimes a
+   * magnitude and sometimes a label. A venue-less preprint the author wants
+   * to flag as forthcoming spells that in `venue` (free text) instead, e.g.
+   * `"To appear in ICSE 2026"`.
+   *
+   * A number, not a string: every parser in `references.ts` already commits
+   * to one (a regex match run through `Number`, or CSL's `date-parts[0][0]`),
+   * so a string would force a redundant number→string conversion on import
+   * and lose numeric sort/filter for no benefit.
+   */
+  year?: number
+  /**
+   * Where the paper appeared — journal, conference/proceedings, or publisher,
+   * whichever the source called it. One free-text field, not separate
+   * journal/proceedings fields: no source format (BibTeX journal/booktitle/
+   * publisher, RIS JF/JO/T2, CSL container-title) reliably distinguishes
+   * them, and a screener just needs to read "TSE" or "ICSE 2024".
+   */
+  venue?: string
   /**
    * The paper's abstract when the source had one. Screening is normally
    * decided on title + abstract, so this is the reading surface when there is
@@ -182,6 +206,8 @@ const KNOWN_PAPER_KEYS = new Set([
   'title',
   'authors',
   'doi',
+  'year',
+  'venue',
   'abstract',
   'abstractFromPdf',
   'pdf',
@@ -492,6 +518,8 @@ export function loadProject(input: string | unknown): Project {
     title: p.title,
     authors: p.authors ?? [],
     doi: p.doi,
+    year: parseYear(p.year),
+    venue: p.venue?.trim() || undefined,
     abstract: p.abstract,
     // Defensive against a hand-edited or stale file: the flag means nothing
     // without an abstract for it to describe, so it is dropped rather than
@@ -563,6 +591,10 @@ export function serializeProject(project: Project): string {
         title: p.title,
         authors: p.authors,
       }
+      // Placed after authors, before doi, so a hand-read file reads like a
+      // citation: who, when, where, then the identifiers.
+      if (p.year !== undefined) paper.year = p.year
+      if (p.venue) paper.venue = p.venue
       if (p.doi !== undefined) paper.doi = p.doi
       if (p.abstract !== undefined && p.abstract !== '') paper.abstract = p.abstract
       // Only written alongside a real abstract, and only when true — so a

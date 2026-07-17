@@ -31,8 +31,10 @@ const SCHEMA_FORMAT_DOC = `## How an annotation schema is written
 The schema is an array of nodes. Each node describes one thing to record:
 
   name         (required) The label of the field. Sibling names are unique.
-  type         "string" | "number" | "boolean". A node WITH a type holds a value.
+  type         "string" | "number" | "boolean" | "year". A node WITH a type holds a value.
                A node WITHOUT a type is a group: a name-only branch of the taxonomy.
+               A "year" field holds a four-digit publication year as a plain number (e.g.
+               2021), not a string.
   children     Nested nodes. A node may have a type, children, or both.
   min          Minimum number of entries of this node. Default 1.
   max          Maximum number of entries. A whole number, or null for unbounded. Default 1.
@@ -135,6 +137,7 @@ ${fieldLines(targets)}
    - "string"  - plain text, no markdown
    - "number"  - a JSON number: no units, no ranges, no approximations
    - "boolean" - true or false
+   - "year"    - a JSON number: a four-digit publication year, e.g. 2021
 5. If a field declares "options", the value must be exactly one of those strings, copied verbatim.
    If none of them fits, omit the field.
 ${extractionRule}

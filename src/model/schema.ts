@@ -3,7 +3,7 @@ import { z } from 'zod'
 /**
  * The annotation schema is a nested taxonomy. Each node ("AnnotationDef") has a
  * display name and may be:
- *  - a leaf field (has a `type`: string | number | boolean),
+ *  - a leaf field (has a `type`: string | number | boolean | year),
  *  - a group (has `children` but no `type`, i.e. a name-only sub-tree),
  *  - or both (a field that also owns a sub-tree).
  *
@@ -12,7 +12,16 @@ import { z } from 'zod'
  * parallel sub-trees.
  */
 
-export type FieldType = 'string' | 'number' | 'boolean'
+/**
+ * `year` rides the same on-disk shape as `number` (a JSON number) — it is not
+ * a new value shape, only a bounded, purpose-named one, so it needs no new
+ * member on `FieldValue` and no changes to `annotations.ts`'s tree machinery.
+ * What it buys over a plain `number` is real validation (`YEAR_MIN`..`YEAR_MAX`
+ * in `model/year.ts`) and a control that reads as "a year" rather than an
+ * unconstrained number — see `docs/annotation-schema.md` §3.1 for why a full
+ * `date` type was rejected as the wrong size for what an SLR actually needs.
+ */
+export type FieldType = 'string' | 'number' | 'boolean' | 'year'
 
 export interface AnnotationDef {
   name: string
@@ -48,7 +57,7 @@ export interface ResolvedDef {
 // Zod schemas
 // ---------------------------------------------------------------------------
 
-const fieldTypeSchema = z.enum(['string', 'number', 'boolean'])
+const fieldTypeSchema = z.enum(['string', 'number', 'boolean', 'year'])
 
 // zod has no native recursion helper for input inference, so we type it lazily.
 export const annotationDefSchema: z.ZodType<AnnotationDef> = z.lazy(() =>
@@ -100,6 +109,22 @@ export const paperSchema = z
     title: z.string().min(1),
     authors: z.array(z.string()).default([]),
     doi: z.string().optional(),
+    /**
+     * Publication year. `"year": "2021"` is a very plausible hand-edit, and a
+     * file containing it loads today (via `.passthrough()` into `extra`), so
+     * tightening this to `z.number().optional()` would break a file that
+     * currently opens fine. Loosely typed here for the same reason
+     * `annotations`/`reviews` are: repaired-or-dropped structurally in
+     * `project.ts` (`parseYear`), not enforced at the zod layer.
+     */
+    year: z.unknown().optional(),
+    /** Journal, conference/proceedings, or publisher — whichever the source
+     *  called "where this appeared". One free-text field rather than
+     *  separate journal/proceedings fields: no import format (BibTeX
+     *  journal/booktitle/publisher, RIS JF/JO/T2, CSL container-title)
+     *  reliably distinguishes them, and a screener just needs to read
+     *  "TSE" or "ICSE 2024". */
+    venue: z.string().optional(),
     /** The paper's abstract, when the source had one. Screening reads this when
      *  there is no PDF — see `Project.screening`. */
     abstract: z.string().optional(),
