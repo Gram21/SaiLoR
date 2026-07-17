@@ -2029,3 +2029,33 @@ kbd {
   color: var(--muted);
   font-size: 0.82em !important;
 }
+/* Who the file says holds this seat — only rendered at all once at least one
+   seat has been claimed (see `hasClaims` in ReviewerPrompt.tsx), so a project
+   with no claims yet renders exactly as before this feature existed. */
+.reviewer-prompt-holder {
+  font-size: 0.75em;
+  color: var(--muted);
+}
+
+/* ---- Reviewer seat mismatch warning ---- */
+/* Reuses the "question, not a failure" treatment `.consolidation-warning`
+   established: an edge in --danger, not a filled banner, because both ways
+   forward below are legitimate answers, not just a dismissal. */
+.reviewer-mismatch .modal-body {
+  border-left: 3px solid var(--danger);
+  padding-left: 12px;
+}
+.reviewer-mismatch-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+/* Same seat-mismatch signal in the toolbar's own controls — the pill row,
+   the dropdown trigger, and the dropdown menu's rows — so a reviewer who
+   already dismissed the ReviewerPrompt once still sees which seat is not
+   theirs without reopening it. */
+.reviewer-btn.is-mismatch,
+.reviewer-menu-label.is-mismatch {
+  color: var(--danger);
+}

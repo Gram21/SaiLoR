@@ -47,11 +47,13 @@ interface ProjectOpts {
   schema?: AnnotationDef[]
   reviewers?: number
   papers?: Record<string, unknown>[]
+  reviewerIdentities?: Record<string, unknown>
 }
 
 function project(opts: ProjectOpts = {}): Project {
   const config: Record<string, unknown> = { schema: opts.schema ?? SIMPLE }
   if (opts.reviewers !== undefined) config.reviewers = opts.reviewers
+  if (opts.reviewerIdentities !== undefined) config.reviewerIdentities = opts.reviewerIdentities
   return loadProject({ version: 1, config, papers: opts.papers ?? [] })
 }
 
@@ -76,6 +78,29 @@ describe('detectFieldChanges — structural changes refuse field-level review', 
     const head = project({ papers: [paper('a')] })
     const working = project({ papers: [paper('a')] })
     expect(detectFieldChanges(head, working)).not.toBeNull()
+  })
+
+  it('returns null when config.reviewerIdentities differs — a seat claim is not a per-field decision', () => {
+    const head = project({ reviewers: 2, papers: [paper('a')] })
+    const working = project({
+      reviewers: 2,
+      reviewerIdentities: { '1': { email: 'alice@kit.edu' } },
+      papers: [paper('a')],
+    })
+    expect(detectFieldChanges(head, working)).toBeNull()
+  })
+
+  it('self-heals: once head and working share the same claim, field-level review resumes', () => {
+    const identities = { '1': { email: 'alice@kit.edu' } }
+    const head = project({ reviewers: 2, reviewerIdentities: identities, papers: [paper('a', { title: 'Old' })] })
+    const working = project({
+      reviewers: 2,
+      reviewerIdentities: identities,
+      papers: [paper('a', { title: 'New' })],
+    })
+    const result = detectFieldChanges(head, working)
+    expect(result).not.toBeNull()
+    expect(result!.fields.some((f) => f.canonical === 'title')).toBe(true)
   })
 })
 

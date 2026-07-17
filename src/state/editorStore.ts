@@ -11,6 +11,11 @@ import {
 import { extractPdfMeta } from '../model/pdfMeta'
 import { parseReferences, pdfHintFileName, type RefEntry } from '../model/references'
 import { loadProject, type Project } from '../model/project'
+import {
+  parseReviewerIdentities,
+  serializeReviewerIdentities,
+  type ReviewerIdentity,
+} from '../model/identity'
 import { getPlatform, type OpenedProject, type PickedPdf, type ProjectLocation, type SaveHandle } from '../platform'
 import { DEFAULT_SCREENING_REASONS, screeningSchemaDefs } from '../screening/schema'
 import { screeningReason, screeningStatus } from '../screening/status'
@@ -376,12 +381,21 @@ export function buildProjectJson(state: {
   /** Optional so existing test fixtures (and any other caller predating this
    *  feature) keep compiling unchanged — absent means "not a screening draft". */
   screening?: ScreeningConfig | null
+  /**
+   * Optional for the same reason `screening` is — see there. The editor never
+   * *edits* who holds a seat (there is no UI for it here), it only carries the
+   * claim through unopened: without this, opening an existing multi-reviewer
+   * project in the editor and saving would silently erase every seat claim,
+   * re-arming the exact hazard `reviewerIdentities` exists to close.
+   */
+  reviewerIdentities?: Record<string, ReviewerIdentity>
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
 }): Record<string, unknown> {
   const title = state.title?.trim()
   const screening = state.screening ?? null
+  const reviewerIdentities = serializeReviewerIdentities(state.reviewerIdentities ?? {})
   return {
     ...state.extra,
     version: state.version,
@@ -395,6 +409,7 @@ export function buildProjectJson(state: {
       schema: screening ? screeningSchemaDefs(screening) : toAnnotationDefs(state.nodes),
       ...(state.aiEnabled ? {} : { ai: false }),
       ...(state.reviewers > 1 ? { reviewers: state.reviewers } : {}),
+      ...(reviewerIdentities ? { reviewerIdentities } : {}),
       ...(screening ? { screening: { reasons: screening.reasons } } : {}),
     },
     papers: state.papers.map((p) => {
@@ -621,6 +636,9 @@ interface EditorState {
    * `SchemaTreeEditor` whenever this is non-null.
    */
   screening: ScreeningConfig | null
+  /** Carried through unopened — see `buildProjectJson`'s doc comment on its
+   *  own `reviewerIdentities` parameter for why this exists at all. */
+  reviewerIdentities: Record<string, ReviewerIdentity>
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
@@ -745,6 +763,7 @@ interface OpenedEditorState {
   aiEnabled: boolean
   reviewers: number
   screening: ScreeningConfig | null
+  reviewerIdentities: Record<string, ReviewerIdentity>
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
@@ -806,6 +825,9 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
     // Absent or 1 means single-reviewer, same default as project.ts's loader.
     reviewers: parsed.config.reviewers ?? 1,
     screening,
+    reviewerIdentities: parseReviewerIdentities(
+      (parsed.config as { reviewerIdentities?: unknown }).reviewerIdentities,
+    ),
     extra: rootExtra,
     // A screening project's schema is derived, not authored, so there is
     // nothing for the schema-builder tree to hold — see `ProjectEditor.tsx`,
@@ -839,6 +861,7 @@ function openEditorSession(s: EditorState, st: OpenedEditorState): void {
   s.aiEnabled = st.aiEnabled
   s.reviewers = st.reviewers
   s.screening = st.screening
+  s.reviewerIdentities = st.reviewerIdentities
   s.extra = st.extra
   s.nodes = st.nodes
   s.papers = st.papers
@@ -951,6 +974,7 @@ export const useEditorStore = create<EditorState>()(
     aiEnabled: true,
     reviewers: 1,
     screening: null,
+    reviewerIdentities: {},
     extra: {},
     nodes: [],
     papers: [],
