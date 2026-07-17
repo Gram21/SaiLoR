@@ -109,4 +109,20 @@ describe('saveAs re-derives the PDF paths for the new location', () => {
     expect(await useStore.getState().saveAs()).toBe(false)
     expect(written).toBeNull()
   })
+
+  it('clears undo history so Undo cannot resurrect pre-rebase PDF paths', async () => {
+    // Regression: undo snapshots held `paper.pdf` relative to the *old*
+    // location; undoing after Save As restored those broken paths and (since
+    // undo sets dirty) would re-save them at the new location.
+    const st = useStore.getState()
+    st.selectPaper('a')
+    st.setFieldValue([], 'Relevant', 0, true) // pushes a snapshot with old paths
+    destination = at('/other/y.json')
+    expect(await useStore.getState().saveAs()).toBe(true)
+    const rebased = useStore.getState().project!.papers[0].pdf
+    expect(rebased).toBe('../reviews/pdfs/a.pdf')
+
+    useStore.getState().undo() // must be a no-op — history was cleared
+    expect(useStore.getState().project!.papers[0].pdf).toBe(rebased)
+  })
 })

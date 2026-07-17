@@ -918,12 +918,20 @@ export const useStore = create<AppState>()(
         // Carry the reviewer selection over to the new location's own key, or
         // it would silently look unselected the next time this file is opened.
         saveCurrentReviewer(handle, get().currentReviewer)
+        // Drop undo history. Its snapshots hold `paper.pdf` values relative to
+        // the *old* location; undoing after Save As would restore those broken
+        // paths (and, since undo sets `dirty`, re-save them to the new
+        // location). loadFromText clears history for the same reason a location
+        // change invalidates it — so does Save As.
+        lastFieldKey = null
         set((s) => {
           s.project = toWrite
           s.saveHandle = handle
           s.projectName = location.name
           s.dirty = false
           s.busy = false
+          s.past = []
+          s.future = []
           s.recents = platform.getRecents()
         })
         return true
@@ -1265,6 +1273,14 @@ export const useStore = create<AppState>()(
       // claiming a *free* seat, when this machine has a known git identity —
       // see the Actions interface doc comment above for why that still sets
       // `dirty` and still pushes no undo entry.
+      //
+      // Break undo-coalescing across the seat change, exactly as `selectPaper`
+      // and every mutator do. The coalescing key is field-path only (no seat),
+      // so without this an edit to the same field as the new reviewer would
+      // glue onto the previous reviewer's undo step — one Undo would then wipe
+      // both reviewers' answers, and a subsequent edit clears `future`, losing
+      // the first reviewer's value for good.
+      lastFieldKey = null
       saveCurrentReviewer(get().saveHandle, reviewer)
       set((s) => {
         s.currentReviewer = reviewer
