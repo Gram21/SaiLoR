@@ -51,6 +51,7 @@ describe('screeningSchemaDefs', () => {
 describe('isScreening', () => {
   const base = {
     version: 1,
+    provenance: null,
     schema: [],
     aiEnabled: true,
     reviewers: 1,

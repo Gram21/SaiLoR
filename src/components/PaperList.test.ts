@@ -31,6 +31,7 @@ function filledTree(): AnnotationValueTree {
 function makeProject(reviewers: number): Project {
   return {
     version: 1,
+    provenance: null,
     schema,
     aiEnabled: true,
     reviewers,

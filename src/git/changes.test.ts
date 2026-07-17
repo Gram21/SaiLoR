@@ -47,12 +47,18 @@ interface ProjectOpts {
   schema?: AnnotationDef[]
   reviewers?: number
   papers?: Record<string, unknown>[]
+  provenance?: unknown
 }
 
 function project(opts: ProjectOpts = {}): Project {
   const config: Record<string, unknown> = { schema: opts.schema ?? SIMPLE }
   if (opts.reviewers !== undefined) config.reviewers = opts.reviewers
-  return loadProject({ version: 1, config, papers: opts.papers ?? [] })
+  return loadProject({
+    version: 1,
+    ...(opts.provenance !== undefined ? { provenance: opts.provenance } : {}),
+    config,
+    papers: opts.papers ?? [],
+  })
 }
 
 function decisionsOf(id: string, disposition: Disposition): Record<string, Disposition> {
@@ -75,6 +81,35 @@ describe('detectFieldChanges — structural changes refuse field-level review', 
   it('returns a real result when nothing structural differs', () => {
     const head = project({ papers: [paper('a')] })
     const working = project({ papers: [paper('a')] })
+    expect(detectFieldChanges(head, working)).not.toBeNull()
+  })
+
+  it('returns null when provenance differs', () => {
+    const head = project({ papers: [paper('a')] })
+    const working = project({
+      papers: [paper('a')],
+      provenance: {
+        kind: 'screening-import',
+        source: { file: 'screening.json' },
+        importedAt: '2026-07-15T10:00:00.000Z',
+        counts: { included: 1, undecided: 0, excluded: 0, carried: 1 },
+      },
+    })
+    expect(detectFieldChanges(head, working)).toBeNull()
+  })
+
+  it('is not obstructed by an identical provenance on both sides', () => {
+    const provenance = {
+      kind: 'screening-import',
+      source: { file: 'screening.json' },
+      importedAt: '2026-07-15T10:00:00.000Z',
+      counts: { included: 1, undecided: 0, excluded: 0, carried: 1 },
+    }
+    const head = project({ papers: [paper('a')], provenance })
+    const working = project({
+      papers: [paper('a', { annotations: { Relevant: [{ value: true }] } })],
+      provenance,
+    })
     expect(detectFieldChanges(head, working)).not.toBeNull()
   })
 })

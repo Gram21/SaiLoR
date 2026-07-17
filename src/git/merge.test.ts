@@ -71,6 +71,8 @@ interface ProjectOpts {
   extra?: Record<string, unknown>
   /** Presence alone makes this a screening project — see `screeningSchemaDefs`. */
   screening?: { reasons: string[] }
+  /** Root-level, not under `extra` — a real field, same rule `screening` follows. */
+  provenance?: unknown
 }
 
 function project(opts: ProjectOpts = {}): Project {
@@ -82,6 +84,7 @@ function project(opts: ProjectOpts = {}): Project {
   return loadProject({
     version: opts.version ?? 1,
     ...(opts.title !== undefined ? { title: opts.title } : {}),
+    ...(opts.provenance !== undefined ? { provenance: opts.provenance } : {}),
     config,
     papers: opts.papers ?? [],
     ...(opts.extra ?? {}),
@@ -467,6 +470,71 @@ describe('mergeProjects — schema changes', () => {
     const outcome = mergeProjects(base, ours, theirs)
     expectRefused(outcome)
     expect(outcome.details.some((d) => d.includes('note'))).toBe(true)
+  })
+})
+
+describe('mergeProjects — provenance', () => {
+  const PROV_A = {
+    kind: 'screening-import',
+    source: { file: 'screening.json' },
+    importedAt: '2026-07-15T10:00:00.000Z',
+    counts: { included: 1, undecided: 0, excluded: 0, carried: 1 },
+  }
+  const PROV_B = {
+    kind: 'screening-import',
+    source: { file: 'other-screening.json' },
+    importedAt: '2026-07-16T10:00:00.000Z',
+    counts: { included: 2, undecided: 0, excluded: 0, carried: 2 },
+  }
+
+  it('carries a non-imported project\'s provenance through as null', () => {
+    // Required-nullable, same regression `screening` guards above: a plain
+    // merge must still produce a value, never `undefined`.
+    const base = project({ papers: [] })
+    const ours = project({ papers: [] })
+    const theirs = project({ papers: [] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.provenance).toBeNull()
+  })
+
+  it('takes the remote value when only the remote set it, with no note', () => {
+    const base = project({ papers: [] })
+    const ours = project({ papers: [] })
+    const theirs = project({ provenance: PROV_A, papers: [] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.provenance).toEqual(PROV_A)
+    // Nothing here reshapes anything, unlike schema/reviewers/screening, so
+    // there is nothing worth a "the remote changed X" note about.
+    expect(outcome.notes).toEqual([])
+  })
+
+  it('preserves an unchanged provenance when the other side changed something unrelated', () => {
+    const base = project({ provenance: PROV_A, papers: [paper('a')] })
+    const ours = project({ provenance: PROV_A, title: 'Renamed', papers: [paper('a')] })
+    const theirs = project({ provenance: PROV_A, papers: [paper('a')] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.provenance).toEqual(PROV_A)
+  })
+
+  it('refuses when both sides set a different provenance', () => {
+    const base = project({ papers: [] })
+    const ours = project({ provenance: PROV_A, papers: [] })
+    const theirs = project({ provenance: PROV_B, papers: [] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectRefused(outcome)
+    expect(outcome.details.some((d) => /imported from/i.test(d))).toBe(true)
+  })
+
+  it('merges cleanly when both sides independently set the identical provenance', () => {
+    const base = project({ papers: [] })
+    const ours = project({ provenance: PROV_A, papers: [] })
+    const theirs = project({ provenance: PROV_A, papers: [] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.provenance).toEqual(PROV_A)
   })
 })
 

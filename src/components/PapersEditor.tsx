@@ -76,8 +76,12 @@ export function PapersEditor() {
       <button type="button" disabled={busy} onClick={() => void importReferences()}>
         Import references…
       </button>
-      {/* Importing screening papers into a screening project is nonsense — it
-          has no annotation fields of its own to carry them into. */}
+      {/* In-place import into an open screening project stays blocked — not
+          because it is meaningless (a carried row is well-defined: undecided
+          under this project's own reasons), but because the two-pass workflow
+          this exists for is fully served by "New from screening…", which opens
+          a *separate*, independently reasoned screening project instead — see
+          `importFromScreening` in editorStore.ts. */}
       {!screening && (
         <button type="button" disabled={busy} onClick={() => void importFromScreening()}>
           Import from screening…
