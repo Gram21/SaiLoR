@@ -2,12 +2,13 @@ name: Import Wiki → openwiki
 
 # The reverse of wiki-publish.yml: when someone edits the wiki — in the browser, or by
 # pushing to SaiLoR.wiki.git — copy those pages back into openwiki/ (developer-docs
-# content pages), user-guide/ (the user guide), and .github/wiki-assets/ (the Home page,
-# the developer-docs Sidebar.md/Footer.md, and the two "User Guide" fragments appended
-# to them) and commit them to main, so all three stay the source of truth rather than
-# drifting behind the wiki. See wiki-publish.yml's header for the wiki's full layout
-# (Home.md / Development.md / user-guide/**, and why); this workflow undoes exactly that
-# mapping.
+# content pages), user-guide/ (the user guide — unflattened back to its own folder and
+# original page names), and .github/wiki-assets/ (the Home page, the developer-docs
+# Sidebar.md/Footer.md, and the two "User Guide" fragments appended to them) and commit
+# them to main, so all three stay the source of truth rather than drifting behind the
+# wiki. See wiki-publish.yml's header for the wiki's full layout (Home.md /
+# Development.md / User-Guide.md, Guide-*.md, and why); this workflow undoes exactly
+# that mapping.
 #
 # `gollum` fires when a wiki page is created or updated. Note the GitHub constraint:
 # it only runs a workflow when the workflow file is on the DEFAULT branch, so this file
@@ -108,37 +109,59 @@ jobs:
           [ -f wiki/_Sidebar.md ] && mv wiki/_Sidebar.md .github/wiki-assets/Sidebar.md
           [ -f wiki/_Footer.md ] && mv wiki/_Footer.md .github/wiki-assets/Footer.md
 
-          # wiki-publish.yml rewrites user-guide/README.md's two repo-relative links
-          # (../README.md, ../LICENSE — correct in the main repo, meaningless in the
-          # wiki's own separate git history) to absolute GitHub URLs before publishing.
-          # Reverse that here, unconditionally, before the rsync below — otherwise every
-          # import, whether or not a human touched this page, would quietly turn those
-          # two links back into the wiki-only absolute form inside the actual repo file.
-          if [ -f wiki/user-guide/README.md ]; then
+          # The user guide's pages are published flat at the wiki root, under new names
+          # (README -> User-Guide, screening -> Guide-Screening, …) — see
+          # wiki-publish.yml's header for why (GitHub's hosted wiki does not serve pages
+          # in a subdirectory). Reverse both rewrites wiki-publish.yml applied and move
+          # each page back to user-guide/$src.md, before the general openwiki rsync
+          # below, so the flat pages neither collide with an openwiki page of the
+          # same name nor get left behind under their published name.
+          GUIDE_PAGES="README:User-Guide things-to-know:Guide-Things-To-Know getting-started:Guide-Getting-Started screening:Guide-Screening multi-reviewer:Guide-Multi-Reviewer project-editor:Guide-Project-Editor git:Guide-Git"
+
+          # Cross-page links (`[Screening](Guide-Screening)`) back to their original,
+          # unflattened form (`[Screening](screening.md)`) — same "no trailing `)`/`#`
+          # in the pattern" reasoning as the forward rewrite, so an anchored link
+          # (`(Guide-Git#field-level-commit-review)`) comes back as
+          # `(git.md#field-level-commit-review)` correctly.
+          for pair in $GUIDE_PAGES; do
+            dest="${pair#*:}"
+            [ -f "wiki/$dest.md" ] || continue
+            sed -i "s#(${dest}#(${pair%%:*}.md#g" wiki/*.md
+          done
+
+          # User-Guide.md's own two absolute-GitHub-URL links, back to the repo-relative
+          # form user-guide/README.md actually uses — unconditional, for the same reason
+          # as the equivalent rewrite used to be here: whether or not a human touched
+          # this page, it must not drift from what user-guide/README.md is supposed to
+          # say.
+          if [ -f wiki/User-Guide.md ]; then
             sed -i \
               -e "s#(https://github.com/${GITHUB_REPOSITORY}/blob/main/README\.md)#(../README.md)#" \
               -e "s#(https://github.com/${GITHUB_REPOSITORY}/blob/main/LICENSE)#(../LICENSE)#" \
-              wiki/user-guide/README.md
+              wiki/User-Guide.md
           fi
 
-          # The user guide's pages live in the wiki under user-guide/, matching the main
-          # repo's own user-guide/ folder — move them out from under wiki/ before the
-          # openwiki rsync below, so they land back at the repo root instead of inside
-          # openwiki/. Guarded on the directory actually existing in the wiki clone: if
-          # this workflow ever runs before wiki-publish.yml has published a user-guide/
-          # folder at all (e.g. a very first run against an older wiki), doing nothing
-          # here is the only safe option — the alternative, deleting the repo's real
-          # user-guide/ because the wiki side is temporarily empty, would destroy work
-          # that has nothing to do with this sync.
-          if [ -d wiki/user-guide ]; then
-            rsync -a --delete wiki/user-guide/ user-guide/
-            rm -rf wiki/user-guide
+          # Move each page that exists back to its unflattened path and name.
+          for pair in $GUIDE_PAGES; do
+            dest="${pair#*:}"
+            [ -f "wiki/$dest.md" ] && mv "wiki/$dest.md" "user-guide/${pair%%:*}.md"
+          done
+
+          # screenshots/ is published flat at the wiki root too (see wiki-publish.yml)
+          # — move it back under user-guide/, same "only touch it if the wiki side
+          # actually has it" guard as the old user-guide/ directory move had, so a wiki
+          # clone that is temporarily missing it (a very first run against an older
+          # wiki, say) can never be mistaken for "the screenshots were all deleted" and
+          # wipe out the repo's real copies.
+          if [ -d wiki/screenshots ]; then
+            rsync -a --delete wiki/screenshots/ user-guide/screenshots/
+            rm -rf wiki/screenshots
           fi
 
           # Mirror pages only, and only over the pages: openwiki/.last-update.json is
-          # generator state and must survive. wiki/user-guide/, wiki/_Sidebar.md and
-          # wiki/_Footer.md were all already moved out above, so none of them land in
-          # openwiki/ here.
+          # generator state and must survive. The user guide's pages and screenshots/,
+          # and wiki/_Sidebar.md and wiki/_Footer.md, were all already moved out above,
+          # so none of them land in openwiki/ here.
           #
           # Edge case, not worth guarding against: wiki-publish.yml deliberately never
           # publishes index.md or INSTRUCTIONS.md (see its comment) or frontmatter
