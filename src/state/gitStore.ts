@@ -187,7 +187,19 @@ export const useGitStore = create<GitState>()(
       const r = await git.finishPull(repo.root, repo.relPath, serializeProject(resolved))
       if (!r.ok) {
         set((s) => {
-          if (s.panel) s.panel.error = gitErrorText(r)
+          if (s.panel) {
+            s.panel.error = gitErrorText(r)
+            // The repository is genuinely still mid-merge, so Cancel merge must
+            // stay reachable (GitMergeDialog renders only while `panel.merge`
+            // is set). The conflict path set it before getting here; the
+            // zero-conflict fast path in `runPull` did not — so back-fill it
+            // here rather than wedge a repo with a failed finish (e.g. the
+            // commit rejected for an unset git user.name/email) and no in-app
+            // way to abort.
+            if (!s.panel.merge) {
+              s.panel.merge = { ref, merged, conflicts, resolutions, decided: {}, notes }
+            }
+          }
         })
         return
       }
