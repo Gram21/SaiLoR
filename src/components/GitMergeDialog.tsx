@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../state/store'
 import { useGitStore } from '../state/gitStore'
 import { treeLabel, type FieldConflict } from '../git/merge'
@@ -27,6 +28,56 @@ export function GitMergeDialog() {
   const takeAll = useGitStore((s) => s.takeAll)
   const finishMerge = useGitStore((s) => s.finishMerge)
   const cancelMerge = useGitStore((s) => s.cancelMerge)
+
+  // One conflict list per paper (paperId '' is the project's own fields,
+  // which belong to no paper), in the order `mergeProjects` produced them —
+  // so a reviewer works through one paper at a time instead of a flat list
+  // that interleaves papers. Recomputed only when the conflict set itself
+  // changes (a new merge), never on every resolution: `merge.conflicts` keeps
+  // its identity across `set()` calls that only touch `resolutions`/`decided`.
+  const conflicts = merge?.conflicts ?? []
+  const groups = useMemo(() => {
+    const byPaper = new Map<string, { paperId: string; paperTitle: string; conflicts: FieldConflict[] }>()
+    for (const c of conflicts) {
+      let g = byPaper.get(c.paperId)
+      if (!g) {
+        g = { paperId: c.paperId, paperTitle: c.paperTitle, conflicts: [] }
+        byPaper.set(c.paperId, g)
+      }
+      g.conflicts.push(c)
+    }
+    return [...byPaper.values()]
+  }, [conflicts])
+
+  // Manual open/closed state, keyed by paperId — starts empty (every group
+  // expanded) and is otherwise entirely the reviewer's own doing, including
+  // reopening a group the effect below just auto-closed.
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const toggleGroup = (paperId: string) =>
+    setCollapsed((prev) => ({ ...prev, [paperId]: !prev[paperId] }))
+
+  // Auto-collapse a group the *moment* its last conflict gets decided — not
+  // on every render while it stays fully decided, or reopening it to fix a
+  // choice would just snap shut again. `wasFullyDecided` remembers which
+  // groups had already fired this once, so only the actual completion edge
+  // (not-decided → decided) ever forces `collapsed` closed; anything after
+  // that is the reviewer's own click.
+  const wasFullyDecided = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    if (!merge) return
+    const nowFullyDecided = new Set(
+      groups.filter((g) => g.conflicts.every((c) => merge.decided[c.id])).map((g) => g.paperId),
+    )
+    const justCompleted = [...nowFullyDecided].filter((id) => !wasFullyDecided.current.has(id))
+    wasFullyDecided.current = nowFullyDecided
+    if (justCompleted.length > 0) {
+      setCollapsed((prev) => {
+        const next = { ...prev }
+        for (const id of justCompleted) next[id] = true
+        return next
+      })
+    }
+  })
 
   if (!merge) return null
 
@@ -72,17 +123,44 @@ export function GitMergeDialog() {
           )}
 
           <ul className="git-merge-rows">
-            {merge.conflicts.map((c) => (
-              <ConflictRow
-                key={c.id}
-                conflict={c}
-                reviewers={reviewers}
-                decided={!!merge.decided[c.id]}
-                value={c.id in merge.resolutions ? merge.resolutions[c.id] : c.ours}
-                onTake={(side) => takeSide(c.id, side)}
-                onChange={(v) => resolveConflict(c.id, v)}
-              />
-            ))}
+            {groups.map((g) => {
+              const groupDecided = g.conflicts.filter((c) => merge.decided[c.id]).length
+              const groupDone = groupDecided >= g.conflicts.length
+              const isCollapsed = !!collapsed[g.paperId]
+              return (
+                <li key={g.paperId || '__project__'} className="git-merge-group">
+                  <button
+                    type="button"
+                    className="git-merge-group-head"
+                    aria-expanded={!isCollapsed}
+                    onClick={() => toggleGroup(g.paperId)}
+                  >
+                    <span className={`git-merge-group-chevron${isCollapsed ? ' is-collapsed' : ''}`} aria-hidden="true">
+                      ▾
+                    </span>
+                    <span className="git-merge-group-title">{g.paperTitle || 'Project'}</span>
+                    <span className={`git-merge-group-progress${groupDone ? ' is-done' : ''}`}>
+                      {groupDone ? '✓ Resolved' : `${groupDecided} of ${g.conflicts.length} decided`}
+                    </span>
+                  </button>
+                  {!isCollapsed && (
+                    <ul className="git-merge-group-rows">
+                      {g.conflicts.map((c) => (
+                        <ConflictRow
+                          key={c.id}
+                          conflict={c}
+                          reviewers={reviewers}
+                          decided={!!merge.decided[c.id]}
+                          value={c.id in merge.resolutions ? merge.resolutions[c.id] : c.ours}
+                          onTake={(side) => takeSide(c.id, side)}
+                          onChange={(v) => resolveConflict(c.id, v)}
+                        />
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              )
+            })}
           </ul>
         </div>
 
@@ -120,7 +198,10 @@ interface ConflictRowProps {
 }
 
 function ConflictRow({ conflict, reviewers, decided, value, onTake, onChange }: ConflictRowProps) {
-  const where = [treeLabel(conflict.tree, reviewers), conflict.paperTitle].filter(Boolean).join(' · ')
+  // The paper is the group header now (see the grouped list above) — this is
+  // just which tree within it: "Reviewer 2", "Consolidation", "Paper
+  // details", or nothing for a single-reviewer annotation conflict.
+  const where = treeLabel(conflict.tree, reviewers)
 
   return (
     <li className={`git-merge-row${decided ? '' : ' is-undecided'}`}>
@@ -206,11 +287,35 @@ function MiddleControl({
       />
     )
   }
+  return <AutoGrowText value={typeof value === 'string' ? value : ''} onChange={onChange} />
+}
+
+/** The same auto-growing textarea `.field-textarea` is elsewhere (`Field.tsx`'s
+ *  `StringField`, `GitDialog.tsx`'s commit message) — but permanently
+ *  expanded, not focus-gated. Those collapse when idle because they sit among
+ *  a lot of other compact controls; this one sits between two read-only
+ *  values that are *also* always fully shown (`.git-merge-side` — no more
+ *  clipped-to-one-line text), so collapsing the one column a reviewer can
+ *  actually edit back to a single line the moment they click away would
+ *  contradict the two columns either side of it. */
+const MAX_FINAL_HEIGHT = 240
+
+function AutoGrowText({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = ''
+    el.style.height = `${Math.min(el.scrollHeight, MAX_FINAL_HEIGHT)}px`
+  }, [value])
+
   return (
-    <input
-      className="field-input"
-      type="text"
-      value={typeof value === 'string' ? value : ''}
+    <textarea
+      ref={ref}
+      className="field-input field-textarea expanded"
+      rows={1}
+      value={value}
       onChange={(e) => onChange(e.target.value)}
     />
   )
