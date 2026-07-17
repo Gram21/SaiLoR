@@ -20,7 +20,7 @@ The same codebase runs two ways:
 </p>
 
 > 📖 For a feature-by-feature walkthrough with screenshots — including warnings worth reading before
-> you rely on this for real review data — see the [user guide](user-guide/README.md).
+> you rely on this for real review data — see the [user guide](https://github.com/Gram21/SaiLoR/wiki/User-Guide).
 
 ## Quick start
 
@@ -169,7 +169,7 @@ untouched. Unknown top-level and per-paper fields are preserved verbatim.
 > need to record something the app doesn't have a field for, use a **top-level** key instead
 > (`{"version": 1, "myNotes": "…", "config": {...}, "papers": [...]}` keeps `myNotes` forever) — or,
 > for a review's own protocol, the dedicated `protocol` key described next. See
-> [Things to know](user-guide/things-to-know.md) for this and a few other easy-to-miss traps.
+> [Things to know](https://github.com/Gram21/SaiLoR/wiki/Guide-Things-To-Know) for this and a few other easy-to-miss traps.
 
 Two optional top-level keys exist specifically to be safe from that `config` rebuild:
 
