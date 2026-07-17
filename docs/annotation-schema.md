@@ -115,6 +115,7 @@ thing you want to record. A node is written as a JSON object (its technical name
 | `min`         | number                                 | no       | `1`     | Minimum number of times this node may occur.                                              |
 | `max`         | number or `null`                       | no       | `1`     | Maximum occurrences. A positive whole number, or `null` for **unbounded**.                |
 | `options`     | array of strings                       | no       | —       | Turns a `string` field into an **enum dropdown** of allowed values (see §3.2).            |
+| `required`    | boolean                                | no       | `false` | Marks a **field** the reviewer must fill in. Shows a `*` next to the name; an empty one is reported by validation. Only valid on a node with a `type`. |
 | `description` | string                                 | no       | —       | A help note. The name shows an ⓘ marker and reveals this text on hover.                    |
 
 Two structural rules the app enforces:

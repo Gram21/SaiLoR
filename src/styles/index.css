@@ -427,6 +427,18 @@ button.paper-search-mode:hover {
   background: var(--ok);
   border-color: var(--ok);
 }
+/* The completeness dot's partial fill (see `completenessPercent` in
+   `model/completeness.ts`): a pie slice via conic-gradient, `--fill` set
+   inline per row as a percentage. Only ever used strictly between 0 and
+   100 — those two endpoints render with the plain `.status-dot` and
+   `.status-dot.done` classes above instead, so this rule never has to
+   reproduce their exact look at the boundary. `border-color` stays the
+   plain `--muted` outline (not `--ok`) so a half-filled dot still reads as
+   "in progress", the same role the border already plays on the empty dot. */
+.status-dot.partial {
+  background: conic-gradient(var(--ok) var(--fill), transparent 0);
+  border-color: var(--muted);
+}
 /* Screening's tri-state marker, replacing the plain done/not-done dot for a
    screening project (see `paperScreeningStatus` in PaperList.tsx). Included
    reuses the same green as `.status-dot.done` — "included" is this project's
