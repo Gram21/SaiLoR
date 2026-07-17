@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { nextTitleClickState, UNLOCK_CLICK_COUNT, UNLOCK_CLICK_WINDOW_MS } from './Toolbar'
+import { nextTitleClickState, gitButtonState, UNLOCK_CLICK_COUNT, UNLOCK_CLICK_WINDOW_MS } from './Toolbar'
 import type { TitleClickState } from './Toolbar'
+import type { GitProbe, GitRepoInfo } from '../git/types'
 
 const START: TitleClickState = { count: 0, last: 0 }
 
@@ -59,5 +60,57 @@ describe('nextTitleClickState (the hidden AI-unlock gesture)', () => {
       }
     }
     expect(anyUnlock).toBe(false)
+  })
+})
+
+const REPO: GitRepoInfo = { root: '/r', relPath: 'p.slr.json', branch: 'main', upstream: 'origin/main', hasHead: true }
+const AVAILABLE: GitProbe = { available: true, version: 'git version 2.43.0', error: '' }
+const HINT = 'BROWSER_HINT'
+
+describe('gitButtonState (the toolbar Git button, always shown, disabled with a reason)', () => {
+  it('is disabled with the no-project hint on the start screen in Electron', () => {
+    const r = gitButtonState(true, AVAILABLE, false, null, false, false, HINT)
+    expect(r.disabled).toBe(true)
+    expect(r.title).toBe('Open a project in a git repository to use Git.')
+  })
+
+  it('is disabled with the browser hint when there is no git at all', () => {
+    const r = gitButtonState(false, null, false, null, false, false, HINT)
+    expect(r.disabled).toBe(true)
+    expect(r.title).toBe(HINT)
+  })
+
+  it('is disabled with the probe error when Electron has no git binary, ahead of the no-project hint', () => {
+    const r = gitButtonState(true, { available: false, version: '', error: 'git not found' }, false, null, false, false, HINT)
+    expect(r.disabled).toBe(true)
+    expect(r.title).toBe('git not found')
+  })
+
+  it('is disabled but shown when a project is open outside any work tree', () => {
+    const r = gitButtonState(true, AVAILABLE, true, null, false, false, HINT)
+    expect(r.disabled).toBe(true)
+    expect(r.title).toContain("isn't in a git repository")
+  })
+
+  it('is enabled when everything lines up', () => {
+    const r = gitButtonState(true, AVAILABLE, true, REPO, false, false, HINT)
+    expect(r.disabled).toBe(false)
+    expect(r.title).toBe('Commit, pull and push this project — main')
+  })
+
+  it('falls back to "detached HEAD" when the repo has no current branch', () => {
+    const r = gitButtonState(true, AVAILABLE, true, { ...REPO, branch: null }, false, false, HINT)
+    expect(r.disabled).toBe(false)
+    expect(r.title).toBe('Commit, pull and push this project — detached HEAD')
+  })
+
+  it('busy or an open editor disables without rewriting an otherwise-usable tooltip', () => {
+    const busy = gitButtonState(true, AVAILABLE, true, REPO, true, false, HINT)
+    expect(busy.disabled).toBe(true)
+    expect(busy.title).toBe('Commit, pull and push this project — main')
+
+    const editorOpen = gitButtonState(true, AVAILABLE, true, REPO, false, true, HINT)
+    expect(editorOpen.disabled).toBe(true)
+    expect(editorOpen.title).toBe('Commit, pull and push this project — main')
   })
 })

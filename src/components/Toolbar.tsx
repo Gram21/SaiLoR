@@ -5,6 +5,7 @@ import { useGitStore } from '../state/gitStore'
 import { getPlatform } from '../platform'
 import { Dropdown, type MenuItem } from './Dropdown'
 import { SidebarToggle } from './SidebarToggle'
+import type { GitProbe, GitRepoInfo } from '../git/types'
 
 /** Shown on every git entry point in the browser build, where `getGit()` is
  *  always `null` (see `PlatformAdapter.getGit()` and architecture.md's "Git"
@@ -14,6 +15,12 @@ import { SidebarToggle } from './SidebarToggle'
  *  control — a reviewer who reaches for it should learn why it doesn't work
  *  and what to do instead, not wonder whether they misremembered it existing. */
 const GIT_BROWSER_DISABLED_HINT = 'Git support is disabled in the browser version. Use the SaiLoR desktop app if you need it.'
+/** Electron, no project open (the start screen): git acts on the open
+ *  project's file, so there is nothing to act on yet. */
+const GIT_NO_PROJECT_HINT = 'Open a project in a git repository to use Git.'
+/** Electron, a project is open but its file is not inside a git work tree:
+ *  there is nothing to commit, pull or push. */
+const GIT_NO_REPO_HINT = "This project isn't in a git repository — there's nothing to commit, pull or push."
 
 /** Clicks this close together count as the same run; a pause starts over. */
 export const UNLOCK_CLICK_WINDOW_MS = 2500
@@ -47,6 +54,45 @@ export function nextTitleClickState(
     return { state: { count: 0, last: now }, unlocked: true }
   }
   return { state: { count, last: now }, unlocked: false }
+}
+
+export interface GitButtonState {
+  disabled: boolean
+  title: string
+}
+
+/**
+ * The Git toolbar button's disabled state and tooltip. Pulled out for the same
+ * reason `nextTitleClickState` is: the precedence of *why it's off* is a rule
+ * worth testing without a DOM. The button is always rendered (like Validate and
+ * Close beside it, and like every git entry point in the browser), so this only
+ * ever decides usable-or-not, mirroring the "Import from git…" item's own
+ * precedence — the sibling entry point — so the two can't drift.
+ */
+export function gitButtonState(
+  git: boolean, // getPlatform().getGit() !== null: Electron has git, the browser never does
+  probe: GitProbe | null, // Electron-only "is a git binary actually here" check
+  project: boolean, // a project is open
+  repo: GitRepoInfo | null, // the open project's file sits inside a work tree
+  busy: boolean,
+  editorOpen: boolean,
+  browserHint: string, // GIT_BROWSER_DISABLED_HINT, passed in to keep this free of module constants
+): GitButtonState {
+  const probeUnavailable = probe !== null && !probe.available
+  // Structural reasons pick the tooltip; the transient ones (busy/editorOpen)
+  // only disable — they must not rewrite the tooltip out from under a button
+  // that is otherwise perfectly usable, matching Validate/Close.
+  const title = !git
+    ? browserHint
+    : probeUnavailable
+      ? probe!.error
+      : !project
+        ? GIT_NO_PROJECT_HINT
+        : !repo
+          ? GIT_NO_REPO_HINT
+          : `Commit, pull and push this project — ${repo.branch ?? 'detached HEAD'}`
+  const disabled = !git || probeUnavailable || !project || !repo || busy || editorOpen
+  return { disabled, title }
 }
 
 /** Top bar: Open / Save menus, appearance controls, help, and the dirty indicator. */
@@ -88,6 +134,7 @@ export function Toolbar() {
   const gitRepo = useGitStore((s) => s.repo)
   const openClone = useGitStore((s) => s.openClone)
   const openGitPanel = useGitStore((s) => s.openPanel)
+  const gitBtn = gitButtonState(!!git, gitProbe, !!project, gitRepo, busy, editorOpen, GIT_BROWSER_DISABLED_HINT)
 
   // A ref, not state: counting must not trigger a render, or the title (and
   // anything watching it) would visibly react to being clicked before the
@@ -221,30 +268,25 @@ export function Toolbar() {
         <div className="toolbar-actions">
           <Dropdown label="Open" title="Open a project" disabled={busy} items={openItems} />
           <Dropdown label="Save" title="Save the project" disabled={busy} items={saveItems} />
-          {/* Right next to Open/Save, not down by Validate/Close — same reasoning
-              as those two: an entry point sitting next to the open/save actions
-              reads as "part of getting a project open", not an afterthought.
-              In Electron this is hidden, not disabled, when the open project's
-              JSON isn't inside a work tree at all (`gitRepo` null) — there is
-              nothing here to commit/pull/push, the same way Validate isn't
-              disabled-with-a-reason when there's no annotation schema to check
-              against; it just wouldn't exist. In the browser it is always shown,
-              disabled, with `GIT_BROWSER_DISABLED_HINT` — see the `git` comment
-              above for why hidden isn't the right call there. */}
-          {(git ? gitRepo : true) && (
-            <button
-              type="button"
-              title={
-                !git
-                  ? GIT_BROWSER_DISABLED_HINT
-                  : `Commit, pull and push this project — ${gitRepo?.branch ?? 'detached HEAD'}`
-              }
-              onClick={() => void openGitPanel()}
-              disabled={!git || !project || busy || editorOpen}
-            >
-              Git
-            </button>
-          )}
+          {/* Right next to Open/Save, not down by Validate/Close: an entry point beside
+              the open/save actions reads as "part of getting a project open", not an
+              afterthought. Always rendered, disabled-with-a-reason when it can't be used
+              — the same call Validate and Close make, and the same call the browser build
+              already makes for every git entry point (see `GIT_BROWSER_DISABLED_HINT`).
+              That means all four "off" states show a disabled button with an honest
+              tooltip rather than a hole in the toolbar: the browser (no local git at all),
+              Electron with no git binary installed, the start screen with no project yet,
+              and a project that simply isn't inside a work tree. Hiding any of these was
+              the old behaviour; it only ever left a reviewer wondering whether they
+              misremembered the button existing. `gitButtonState` owns the precedence. */}
+          <button
+            type="button"
+            title={gitBtn.title}
+            onClick={() => void openGitPanel()}
+            disabled={gitBtn.disabled}
+          >
+            Git
+          </button>
           <button
             type="button"
             title={
