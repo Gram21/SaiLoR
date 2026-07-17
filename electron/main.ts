@@ -957,6 +957,27 @@ ipcMain.handle(
   },
 )
 
+/**
+ * Writes `text` — the working-tree content the reviewer's field-level
+ * "discard" choices compose to (`composeContents`'s `workingOut`) — to the
+ * project file, WITHOUT staging or committing anything. This is the "throw
+ * away these local edits" counterpart to committing them: `commitPartial`
+ * always makes a commit, and a reviewer who only wants to revert should not
+ * have to invent one. A single write, deliberately not the write→add→commit
+ * →restore swap `commitPartial` needs: there is no staged content that
+ * differs from what the file should hold, so a failed write simply leaves the
+ * reviewer's edits in place — never a half-reverted file.
+ */
+ipcMain.handle('git:writeWorking', async (_e, root: string, relPath: string, text: string) => {
+  assertRelPath(relPath)
+  try {
+    await writeFile(path.join(root, relPath), text, 'utf-8')
+    return { ok: true, code: 0, stdout: '', stderr: '' }
+  } catch (err) {
+    return { ok: false, code: null, stdout: '', stderr: err instanceof Error ? err.message : String(err) }
+  }
+})
+
 ipcMain.handle('git:commit', async (_e, root: string, paths: string[], message: string) => {
   paths.forEach(assertRelPath)
   if (paths.length === 0) {

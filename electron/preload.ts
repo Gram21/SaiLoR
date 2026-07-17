@@ -84,4 +84,6 @@ contextBridge.exposeInMainWorld('slr', {
     otherPaths: string[],
     message: string,
   ) => ipcRenderer.invoke('git:commitPartial', root, relPath, committedText, workingText, otherPaths, message),
+  gitWriteWorking: (root: string, relPath: string, text: string) =>
+    ipcRenderer.invoke('git:writeWorking', root, relPath, text),
 })

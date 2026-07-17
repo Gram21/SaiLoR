@@ -44,6 +44,25 @@ function paperMetaText(title: string): string {
   })
 }
 
+/** Varies both a paper-meta field (title) and an annotation field (Study
+ *  Type) at once — the minimal shape for a partial-discard test, where one
+ *  row is marked discard and the other is left at the default 'use'. */
+function twoChangeText(title: string, studyType: string | null): string {
+  return JSON.stringify({
+    version: 1,
+    config: { schema: SCHEMA },
+    papers: [
+      {
+        id: 'a',
+        title,
+        authors: [],
+        pdf: 'a.pdf',
+        annotations: { 'Study Type': [{ value: studyType }] },
+      },
+    ],
+  })
+}
+
 const ok = (stdout = ''): GitRun => ({ ok: true, code: 0, stdout, stderr: '' })
 
 let openedPaths: string[] = []
@@ -58,6 +77,8 @@ let workingContentResult: string | null = null
 let commitPartialResult: GitRun = ok()
 let commitPartialCalls: { root: string; relPath: string; committedText: string; workingText: string; otherPaths: string[]; message: string }[] = []
 let commitCalls: { root: string; paths: string[]; message: string }[] = []
+let writeWorkingResult: GitRun = ok()
+let writeWorkingCalls: { root: string; relPath: string; text: string }[] = []
 
 const fakeGit: GitPlatform = {
   probe: async () => ({ available: true, version: 'git 2.43.0', error: '' }),
@@ -85,6 +106,10 @@ const fakeGit: GitPlatform = {
   commitPartial: async (root, relPath, committedText, workingText, otherPaths, message) => {
     commitPartialCalls.push({ root, relPath, committedText, workingText, otherPaths, message })
     return commitPartialResult
+  },
+  writeWorking: async (root, relPath, text) => {
+    writeWorkingCalls.push({ root, relPath, text })
+    return writeWorkingResult
   },
 }
 
@@ -135,6 +160,8 @@ beforeEach(async () => {
   commitPartialResult = ok()
   commitPartialCalls = []
   commitCalls = []
+  writeWorkingResult = ok()
+  writeWorkingCalls = []
   useStore.getState().loadFromText(projectText('mine'), { kind: 'electron', path: '/repo/review.json' }, 'review.json')
   useStore.setState({ dirty: false })
   useGitStore.setState({ probe: null, repo: { ...REPO }, clone: null, panel: null })
@@ -407,5 +434,78 @@ describe('runCommit — field review (commitPartial)', () => {
     // rewritten to match it too — the local edit is erased.
     expect(committed.papers[0].title).toBe('Old Title')
     expect(workingOut.papers[0].title).toBe('Old Title')
+  })
+})
+
+describe('runDiscard — field review (writeWorking)', () => {
+  beforeEach(async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    headContentResult = paperMetaText('Old Title')
+    workingContentResult = paperMetaText('New Title')
+    await useGitStore.getState().refreshStatus()
+  })
+
+  it('composes workingOut and writes it via writeWorking, without committing', async () => {
+    const id = conflictId('a', { kind: 'paper' }, 'title')
+    useGitStore.getState().setFieldDisposition(id, 'discard')
+    await useGitStore.getState().runDiscard()
+
+    expect(commitCalls).toHaveLength(0)
+    expect(commitPartialCalls).toHaveLength(0)
+    expect(writeWorkingCalls).toHaveLength(1)
+    const call = writeWorkingCalls[0]
+    expect(call.root).toBe('/repo')
+    expect(call.relPath).toBe('review.json')
+    const written = JSON.parse(call.text) as { papers: { title: string }[] }
+    // Discarded: the working file is rewritten back to HEAD's value.
+    expect(written.papers[0].title).toBe('Old Title')
+  })
+
+  it('reloads the open project on success', async () => {
+    const id = conflictId('a', { kind: 'paper' }, 'title')
+    useGitStore.getState().setFieldDisposition(id, 'discard')
+    await useGitStore.getState().runDiscard()
+
+    expect(openedPaths).toEqual(['/repo/review.json'])
+    expect(useGitStore.getState().panel?.notice).toBe('Reverted the discarded changes. Nothing was committed.')
+  })
+
+  it('a failed writeWorking surfaces the error and does not reload', async () => {
+    writeWorkingResult = { ok: false, code: null, stdout: '', stderr: 'disk full' }
+    const id = conflictId('a', { kind: 'paper' }, 'title')
+    useGitStore.getState().setFieldDisposition(id, 'discard')
+    await useGitStore.getState().runDiscard()
+
+    expect(openedPaths).toEqual([])
+    expect(useGitStore.getState().panel?.error).toMatch(/disk full/)
+    expect(useGitStore.getState().panel?.phase).toBe('idle')
+  })
+
+  it('a partial discard reverts only the marked rows, leaving the rest at the working value', async () => {
+    headContentResult = twoChangeText('Old Title', 'A')
+    workingContentResult = twoChangeText('New Title', 'B')
+    await useGitStore.getState().refreshStatus()
+
+    const review = useGitStore.getState().panel!.fieldReview!
+    const titleField = review.changes.fields.find((f) => f.canonical === 'title')!
+    // Only the title row is marked discard; the Study Type row is left at
+    // its default 'use'.
+    useGitStore.getState().setFieldDisposition(titleField.id, 'discard')
+    await useGitStore.getState().runDiscard()
+
+    const call = writeWorkingCalls[0]
+    const written = JSON.parse(call.text) as {
+      papers: { title: string; annotations: { 'Study Type': { value: string }[] } }[]
+    }
+    expect(written.papers[0].title).toBe('Old Title') // reverted
+    expect(written.papers[0].annotations['Study Type'][0].value).toBe('B') // kept
+  })
+
+  it('is a no-op when nothing is marked discard', async () => {
+    await useGitStore.getState().runDiscard()
+
+    expect(writeWorkingCalls).toHaveLength(0)
+    expect(openedPaths).toEqual([])
+    expect(useGitStore.getState().panel?.notice).toBeNull()
   })
 })
