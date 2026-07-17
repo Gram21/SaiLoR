@@ -144,6 +144,7 @@ The entire app state lives in a single Zustand store with immer middleware:
 - **`adoptUnanimousValues(paperId, coalesce)`** — fill the consolidated fields every reviewer answered the same way, marking each via `aiMarks`; runs after the matching for a paper
 - **`setScreeningDecision(decision, reason?)` / `setScreeningReason(reason)`** — screening-only field writes, routed through `currentTree` like every other write; see "Screening" below for the auto-advance and reason-clearing rules
 - **`adoptAllUnanimousScreening()`** — `adoptUnanimousValues` for every paper in one undo step; safe unscheduled (unlike the per-paper alignment scheduler) because a screening schema has nothing for `align.ts` to line up — see "Screening" below
+- **`adoptAllUnanimousAnnotations()`** — the ordinary-schema counterpart: aligns, then adopts, paper by paper, in one undo step, skipping any paper the consolidator has already partly answered; see "Batch-adopting across the whole project" above
 
 The `containerAt(root, path)` helper walks the annotation tree following `PathSeg[]` (name + index pairs) to reach the container for a given path. `currentTree(project, currentReviewer, paper, create?)` decides *which* tree that walk starts from — see "Multiple reviewers & Consolidation" below; `setFieldValue`, `addInstance`, `removeInstance`, and `applyAiSuggestions` all call it before touching anything.
 
@@ -157,7 +158,7 @@ App (src/App.tsx)
 │     Reviewer switch (multi-reviewer projects only), centered on the toolbar — Reviewer 1..N + Consolidation, hidden entirely for a single-reviewer project; pills at ≤5 reviewers, a dropdown above that; see "Multiple reviewers & Consolidation" below
 ├── [if project loaded: workspace — a CSS grid whose column widths come from resizable panes]
 │   ├── PaperList (src/components/PaperList.tsx)
-│   │     List of papers with search box (META / TAGS modes, see below); green dot if the active reviewer has annotations; click to select
+│   │     List of papers with search box (META / TAGS modes, see below); a dot showing the active reviewer's completeness — a conic-gradient partial fill, not just touched/untouched, see "Completeness dot" below (screening and Consolidation keep their own tri-state/binary markers); click to select
 │   ├── Splitter (src/components/Splitter.tsx) ×2  — drag handles between the panes
 │   ├── [screening project + PDF pane not toggled on: ScreeningRecord (src/components/ScreeningRecord.tsx)]
 │   │     Title/authors/DOI header + the abstract (or "No abstract recorded"); a "Read the PDF" button swaps to PdfViewer when paper.pdf !== ''
@@ -184,7 +185,9 @@ App (src/App.tsx)
 ├── ScreeningSummary (src/components/ScreeningSummary.tsx)
 │     Modal: progress + PRISMA-style include/exclude/reason counts for a screening project
 ├── ScreeningImportDialog (src/components/ScreeningImportDialog.tsx)
-│     Modal: the pre-commit summary for "New from screening…" / "Import from screening…" — see "Screening" below
+│     Modal: the pre-commit summary for "New from screening…" / "Import from screening…", including "New from screening…"'s annotation/screening target-kind radio — see "Screening" below
+├── DuplicateReviewDialog (src/components/DuplicateReviewDialog.tsx)
+│     Modal: reviewing the *probable* duplicates a reference import found — one row per pair, a merge/separate choice defaulting to undecided — see "Duplicate detection at import" below
 ├── GitCloneDialog (src/components/GitCloneDialog.tsx)
 │     Import-from-git modal, driven by useGitStore's clone.phase: setup (URL + destination) → cloning (spinner + elapsed seconds) → error (git's exact text, back to setup) → done (pick the project JSON, opened inside the clone) — Electron only, see "Git" above
 ├── GitDialog (src/components/GitDialog.tsx)
@@ -242,6 +245,18 @@ Both haystacks are precomputed once per paper in a `useMemo` keyed on `[papers, 
 
 The annotation haystack comes from `annotationText(schema, tree)` (`src/model/annotations.ts`), which mirrors `hasAnnotations`'s recursive walk: it collects every field `value` that is a non-empty string or a number, joined and lowercased. Booleans are skipped — every paper has one per boolean field (defaulting to `false`, never absent), so including "true"/"false" would make almost every paper match. Like the rest of that module, it never throws on a tree that doesn't match the schema's shape.
 
+### Completeness dot
+
+The paper-list dot used to be binary: touched or not, via `hasAnnotations`. `src/model/completeness.ts` replaces that with a real fraction, rendered as a **conic-gradient** partial fill (`.status-dot.partial { background: conic-gradient(var(--ok) var(--fill), transparent 0) }`, `--fill` set inline per row) instead of a flat colour.
+
+- **`completeness(defs, tree)`** walks the schema the same way `hasAnnotations` does and returns `{ filled, total }`. **`hasRequiredFields(defs)`** decides the denominator: if the schema declares *any* required field anywhere (including nested), only required fields are counted; otherwise every field counts. This is the fix `completeness.test.ts` calls out by name as "the headline bug this module fixes" — a schema with one required field out of thirty used to make finishing that one field look like 3% progress.
+- **Booleans are excluded from the count entirely**, for the same reason the Validation section below documents `isEmptyValue`/`hasAnnotations` disagreeing on them: an untouched checkbox reads `false`, indistinguishable from a deliberate "no", so there is no way to count it as "filled" or "unfilled" that isn't a guess. Completeness is a third function with its own opinion here — it doesn't count the field at all.
+- **Repeatable instances are counted per present instance**, not once per node, so adding a second Finding grows the denominator along with the numerator.
+- **`completenessPercent(c)`** returns `null` — the signal to fall back to the old binary dot — whenever `c.total === 0` (an empty schema). It otherwise clamps to `[5, 99]` for any non-zero, non-total count, so a paper at 1/200 fields doesn't visually read as empty and one at 199/200 doesn't read as done; the literal old `status-dot`/`status-dot done` classes are reused verbatim at exactly 0% and 100%, rather than rendering a conic gradient that would look the same as those two classes anyway.
+- **Screening projects and the Consolidation seat opt out**, keeping their existing tri-state/binary markers: `paperCompleteness()` (`PaperList.tsx`) returns `null` for them, the same "nothing to compute" signal `total === 0` produces, so both routes land on the same old-dot fallback with no separate branch.
+
+**`PaperRow` was pulled out of `PaperList`'s `.map()` and wrapped in `React.memo`.** Its props (`paper`, `active`, `onSelect`, `dotClassName`, `dotLabel`, `dotFill`) are deliberately primitives — `dotFill` is passed as a bare number rather than the `Completeness` object, specifically so memo's shallow comparison is cheap and correct. This pays off because of how the store's immer `set()` already works (see "State Management" above): editing one field produces a new object for exactly that one paper, leaving the other 1999 array entries referencing their old objects — confirmed directly by `PaperList.perf.test.ts`, which asserts exactly 1 of 2000 paper objects changes identity per edit. So a single edit re-renders exactly one row's `PaperRow`, not all 2000. Measured cost (from the feature's own commit message): recomputing `completeness` (and the search haystack) over 2000 papers costs on the order of 3–4ms, and the row re-render this memoization buys back drops to single-digit milliseconds — comfortably fast enough that no windowing/virtualization was added for this.
+
 ### Validation
 
 `src/model/validate.ts` checks a reviewer's annotations against the schema; the **Validate** button in the toolbar runs `validateProject(project)` and `ValidationDialog` shows the result grouped by paper (click a paper to jump to it). Four issue kinds: `required` (a field marked required is empty), `type` (the stored value doesn't match the field's type — the JSON is hand-editable), `enum` (a value outside the field's `options`), and `cardinality` (an instance count outside `[min, max]`).
@@ -284,7 +299,24 @@ Two ways out of the editor: **Save JSON** writes the file and stays put (so you 
 
 **Adding a whole folder of PDFs** (`addPdfFolder`) is `addPdfs` with a different picker: both funnel into a shared `addPickedPdfs(picked)` closure in `editorStore.ts` that does the duplicate rejection, row creation, and background title/author extraction described above. Only `pickPdfs()` vs `pickPdfFolder()` differs. `pickPdfFolder()` returns every `.pdf` found recursively under the chosen folder — Electron via a plain recursive `readdir` walk over the real filesystem, the browser via the same `webkitdirectory` `<input>` mechanism `ensureLocalPdfGrant()` uses for the PDF-viewer's one-time folder grant (see `pickPdfFolderViaInput` above) — filtered to file names ending in `.pdf`. Reusing that input, rather than writing a second one, keeps the one careful piece of cross-browser logic (the `cancel`-event-not-focus-guess cancellation detection, needed because Firefox's own "Upload N files?" confirmation appears *after* the OS dialog already returns focus) in one place.
 
-**Importing references** (`importReferences`) reads a BibTeX/RIS/CSL-JSON export from a reference manager (Zotero, Mendeley, JabRef, EndNote) and turns each entry into a paper row, without requiring a PDF to already be attached. `src/model/references.ts` (`parseReferences(text, filename)`) is a pure, defensive parser — the format is picked from the extension, content-sniffed as a fallback — that **never throws**: a malformed entry (unbalanced braces, a missing field, an entry with no title) is skipped rather than failing the whole file. For each parsed `RefEntry`, `editorStore.ts` **dedupes against existing rows**: a DOI match (case-insensitive, exact) wins first, else a normalized-title match (lowercased, whitespace-collapsed, punctuation-stripped) — a match fills in that row's *empty* fields only (never overwriting something the reviewer already typed) and counts as "updated" or "already complete" in the summary notice; a non-match adds a new row with `pdf: ''` (or the imported `pdfHint`'s file name as a placeholder, if the reference file named one) for the reviewer to attach a PDF to afterward. The whole import is one undo step. Because `pdf: ''` is something `addPdfs`/`addPdfFolder` never produce, `validateDraft` reports it as a named per-paper issue ("Paper N has no PDF attached") rather than letting it reach `buildProjectJson`/`save()`, which still requires the on-disk `pdf` to be non-empty (`paperSchema` in `src/model/schema.ts` is unchanged — this tolerance is draft-only).
+**Importing references** (`importReferences`) reads a BibTeX/RIS/CSL-JSON export from a reference manager (Zotero, Mendeley, JabRef, EndNote) and turns each entry into a paper row, without requiring a PDF to already be attached. `src/model/references.ts` (`parseReferences(text, filename)`) is a pure, defensive parser — the format is picked from the extension, content-sniffed as a fallback — that **never throws**: a malformed entry (unbalanced braces, a missing field, an entry with no title) is skipped rather than failing the whole file. For each parsed `RefEntry`, `editorStore.ts` **dedupes against existing rows** via `classifyImport` (see "Duplicate detection at import" below): a `certain` match fills in that row's *empty* fields only (never overwriting something the reviewer already typed) and counts as "updated" or "already complete" in the summary notice; a `probable` match is held back for the reviewer to decide (`DuplicateReviewDialog`); a `new` entry adds a fresh row with `pdf: ''` (or the imported `pdfHint`'s file name as a placeholder, if the reference file named one) for the reviewer to attach a PDF to afterward. The whole import (including any duplicate-review decisions) is one undo step. Because `pdf: ''` is something `addPdfs`/`addPdfFolder` never produce, `validateDraft` reports it as a named per-paper issue ("Paper N has no PDF attached") rather than letting it reach `buildProjectJson`/`save()`, which still requires the on-disk `pdf` to be non-empty (`paperSchema` in `src/model/schema.ts` is unchanged — this tolerance is draft-only).
+
+### Duplicate detection at import (`src/model/duplicates.ts`)
+
+Before this existed, `importReferences`' dedup was two flat tiers — an exact DOI match, else an exact normalized-title match — and anything short of that silently became a second row for a paper already in the project. `classifyImport(existing: DupRecord[], incoming: DupRecord[]): DupVerdict[]` replaces both tiers with a graded one: every incoming record is classified `new`, `certain`, or `probable`, checked **both** against the papers already in the project and against earlier records in the same incoming batch (so importing the same paper twice in one file is caught too), in this priority:
+
+1. **Exact DOI** (case-insensitive) — `certain`, and the only tier the year check below never touches.
+2. **Exact normalized title** (lowercased, whitespace-collapsed, punctuation-stripped) — `certain`.
+3. **Fuzzy full-title match** — `stringSimilarity` (`src/consolidate/similarity.ts`) ≥ 0.90 — `probable`.
+4. **Subtitle-stripped base title** (everything before the first `:`) at the same ≥ 0.90 threshold, gated on an author-surname Dice coefficient ≥ 0.50 — `probable`. This is what catches "same paper, different subtitle" without also catching two unrelated papers that happen to share a generic title fragment.
+
+A year gap of `YEAR_GAP_VETO` (2) or more demotes an otherwise-matching **title** pair straight to `new` — two papers four years apart are not the same paper no matter how alike their titles read. The veto is title-only: a DOI match is definitive on its own and is never second-guessed by a year gap.
+
+`classifyImport` **reuses** `stringSimilarity` rather than reimplementing fuzzy title matching — the same one-shared-implementation rule `comparable()` follows for consolidation. Before this feature `stringSimilarity` was internal to `similarity.ts` (called only by its own `valueSimilarity` wrapper, which `align.ts` uses for reviewer-entry matching); `duplicates.ts` is its first outside caller. A cheap pre-check (a token-Dice pass, then a length-bound, then a character-histogram bound) skips the real, more expensive `stringSimilarity` call for pairs that are obviously nothing alike.
+
+A `certain` verdict merges silently, exactly as the old exact-match tier did (fill empty fields only). A `probable` verdict is held back for `DuplicateReviewDialog` (`src/components/DuplicateReviewDialog.tsx`, styled by `src/styles/duplicates.css`): one row per pair, a **merge** / **separate** choice per row that starts **undecided** — Import stays disabled until every row has one, so a probable duplicate is never silently merged *or* silently doubled. `editorStore.ts` wires this as `duplicateReview` state plus `commitImport` (the shared writer both a duplicate-free import and a resolved review call into), `resolveDuplicateReview`, `setDuplicateDecision`, and `setAllDuplicateDecisions`.
+
+`findMatchingPaper` — the function the rest of the editor already called to ask "is this paper already in the project" — is now a thin adapter over `classifyImport`: it returns a match only for a `certain` verdict, so every other caller's behavior is unchanged by the grading in between.
 
 **Highlighting newly added papers.** Every row added by `addPdfs`, `addPdfFolder`, or `importReferences` gets a light-blue border so the reviewer notices the addition and checks the (possibly guessed) metadata — the same idea, and the same `--ai-mark` CSS variable, as the AI-annotation "unconfirmed" marks below. `editorStore.ts` tracks this the same way `aiMarks` does in the main store: a session-only `justAdded: Record<uid, true>`, not part of `EditorSnapshot`/undo (an add already has its own undo step) and never written to the file. It is cleared wholesale on save, on opening a project into the editor, and on closing the editor (`openEditorSession`, `close`, `save`). `PapersEditor.tsx` clears one row's mark (`confirmAdded`) the moment the reviewer focuses any of its fields, mirroring how `Field.tsx` clears an AI mark on focus/click.
 
@@ -338,7 +370,7 @@ entry* and lines them up.
 
 | Module | Does |
 | --- | --- |
-| `similarity.ts` | How alike two answers are, as `{score, weight}`. `weight` is what makes "agrees on five fields" outrank "agrees on one" — averaging scores alone cannot tell those apart, as both average to 1.0. Weight 0 means the pair said nothing (a field only one reviewer filled abstains rather than voting against). Text is `max(levenshtein ratio, token Dice)`; enums compare as labels, never as characters ("High"/"Low" overlap and mean the opposite); a `false` boolean carries no evidence, since every untouched boolean reads `false` |
+| `similarity.ts` | How alike two answers are, as `{score, weight}`. `weight` is what makes "agrees on five fields" outrank "agrees on one" — averaging scores alone cannot tell those apart, as both average to 1.0. Weight 0 means the pair said nothing (a field only one reviewer filled abstains rather than voting against). Text is `max(levenshtein ratio, token Dice)`; enums compare as labels, never as characters ("High"/"Low" overlap and mean the opposite); a `false` boolean carries no evidence, since every untouched boolean reads `false`; a `year` field is scored as an identity, not a magnitude — 1999 vs. 2999 scores 0 exactly like 1999 vs. 2000, because two different publication years are two different papers, not a near-match the way two head-counts might be (`valueSimilarity`'s dedicated `'year'` branch, checked before the `number` branch's relative-closeness scoring) |
 | `assign.ts` | Hungarian max-weight assignment. Greedy is not merely worse but wrong here: one locally good pair can force two later entries into a much worse one, and greedy cannot trade the first against the second |
 | `align.ts` | The recursion. `alignNode` returns slots per repeatable node; `alignableNodes` lists what is worth doing |
 | `apply.ts` | Writes an alignment into the data |
@@ -393,6 +425,55 @@ anything once their entries line up. The rules:
 - **A field the consolidator already answered is left alone**, per field (unlike the matching guard,
   which is per node).
 
+### Batch-adopting across the whole project (`adoptAllUnanimousAnnotations`)
+
+`adoptUnanimousValues`/`alignConsolidationNode` above are per-paper, driven by whichever paper is
+open. `adoptAllUnanimousAnnotations()` (`store.ts`) is the multi-paper version for an ordinary
+(non-screening) multi-reviewer project's Consolidation seat: one button, one pass over every paper.
+
+**For each paper it aligns every alignable node, then adopts unanimous values — in that order, and
+the order is load-bearing.** Adopting at a fixed index without aligning first would read reviewer
+1's Finding #2 against reviewer 2's Finding #3 whenever the two recorded their findings in a
+different order, and report that as agreement neither reviewer actually gave. This is exactly why
+the existing `adoptAllUnanimousScreening` (see "Screening" below) never needed an alignment step:
+screening's `Decision`/`Reason` are both plain, non-repeatable leaf fields, so `alignableNodes`
+already returns `[]` for it and reading at a fixed index was always safe there. An ordinary
+schema's repeatable groups are exactly the case that safety doesn't extend to, which is what this
+feature adds the missing align step for.
+
+- **A paper the consolidator has already answered under any alignable node is skipped whole** —
+  no alignment, no adoption, nothing touched — via the same `consolidatorHasAnswered` predicate
+  `alignConsolidationNode`'s own per-node guard uses, now factored out into
+  `src/consolidate/readiness.ts` alongside `readyToConsolidate` (previously inlined in `store.ts`'s
+  `alignConsolidationNode`). Re-matching a node the consolidator has already recorded an answer
+  under could move a *different* entry into the slot their answer describes; skipping the whole
+  paper is the safe side of that trade.
+- **One undo step for the whole batch**, not one per paper — the same coalescing shape
+  `alignConsolidationNode`'s own `coalesce` parameter already provides per paper, threaded across
+  the outer loop here too.
+- **It yields to the browser between papers** (`await` a `setTimeout(resolve, 0)`), the same
+  off-the-paint-path shape `useConsolidationAlignment` already uses between nodes — a paper is the
+  smallest unit that can safely yield here, since every one of its nodes must finish aligning before
+  any value can be read across it.
+- **Progress is reported as it runs**: `unanimousRun` (`{ done, total, filled, skipped, running }`)
+  drives the button's own label while busy and a dismissible result banner once it finishes. The
+  button lives in `AnnotationPanel.tsx`'s Consolidation tools, alongside ⚖ Agreement and
+  ⚠ Disagreements.
+
+**A known, currently unfixed limitation, stated plainly rather than glossed over: the interactive
+per-paper path (`useConsolidationAlignment`, driving an ordinary Consolidation-seat paper view) does
+not have this batch's paper-level guard.** It still calls `adoptUnanimousValues` unconditionally the
+moment its alignment queue drains, with no check for whether any node in that queue was itself
+guard-refused along the way (a node the consolidator had already answered, per the per-node guard
+above). So a paper the consolidator has *partially* answered — one node done, a *different* node
+still open, perhaps because a reviewer added a new entry after consolidation began — can still have
+`adoptUnanimousValues` read that still-unaligned node at a stale index and fabricate an agreement
+nobody gave, through the ordinary act of just opening the paper. The batch path above avoids this
+not by fixing the interactive path, but by being strictly more conservative: it refuses to touch a
+paper at all once *any* alignable node on it is already answered, which the interactive path has no
+equivalent of before its own final adoption call. This is not covered by a regression test; fixing
+it is future work, not something this feature did.
+
 ### Picking a seat (`ReviewerPrompt`)
 
 A multi-reviewer project opens with `currentReviewer === null` — never Reviewer 1, since an
@@ -408,11 +489,24 @@ where `reviewerStorageKey` deliberately persists nothing rather than risk restor
 wrong project. Those ask on **every** load. That is honest (the app genuinely cannot tell who you
 are) but it is the one case where the prompt is not a once-per-project event.
 
+`ReviewerPrompt` also renders a second, unrelated mode: a **mismatch** warning when the already-
+selected seat's recorded holder (`config.reviewerIdentities`) doesn't match this machine's own git
+identity — offering to take the seat or pick another, never blocking outright. See "Reviewer seat
+identity" in the Git section below for the full mechanism (why it's email-only, what it warns about,
+and why a project with no recorded identities is unaffected). The Toolbar's reviewer switch carries
+the same signal as a "Claimed by …" tooltip hint on each seat.
+
 ### Readiness: what Consolidation can act on (`readiness.ts`)
 
 `readyToConsolidate(schema, paper, reviewerCount)` — every numbered reviewer has recorded something
 on this paper, by `hasAnnotations` (so a ticked box counts as work; an unticked one never does, since
 every boolean reads `false` whether or not anyone looked).
+
+`consolidatorHasAnswered(def, tree)` lives here too — the predicate behind `alignConsolidationNode`'s
+per-node "never re-match a node the consolidator already answered" guard, and the same predicate the
+batch adoption above uses per paper. One shared function rather than two independent checks is what
+keeps the per-node and per-paper guards from silently drifting apart on what "already answered"
+means.
 
 The **Consolidation seat itself is not gated** — a consolidator may legitimately start on the papers
 that are ready while the rest are still being reviewed. The gate is per paper instead, and one rule
@@ -812,6 +906,46 @@ dropping a paper you meant to keep is invisible and silently corrupts the review
 dialog (`ScreeningImportDialog`) states the three counts and lets the reviewer choose to leave the
 undecided ones out instead, but never drops them without that explicit choice.
 
+**"New from screening…" can start a second screening pass, not just an annotation project.** A
+radio in `ScreeningImportDialog` (defaulting to *annotation*, the original behavior) sets
+`startKind: 'annotation' | 'screening'` on the import draft (`setScreeningImportKind`);
+`resolveScreeningImport` reads it back when the reviewer confirms. Choosing *screening* used to be
+refused outright — a screening-to-screening import had nowhere sensible to go, and a PDF-less
+screening paper carried into an *annotation* project simply couldn't be saved, since only a
+screening project's `paperSchema` tolerates `pdf: ''`. Building a second screening project fixes
+both: PRISMA's title/abstract pass and full-text pass are two rounds of the *same* protocol, so
+the destination is a screening project again, seeded with the **source project's own
+`screening.reasons`** — never `DEFAULT_SCREENING_REASONS` — because a full-text pass needs to
+report against the same reason vocabulary the first pass used, not a fresh generic one. It also
+inherits the source's `reviewers` count and suggests a `-fulltext.json` filename, where the
+annotation target keeps `reviewers: 1` and suggests `-annotation.json`. Either way, every carried
+paper's `annotations` (and, for the screening target, `reviews`) starts **empty** — a first-pass
+title/abstract decision must not silently anchor the second pass's full-text one, whether that
+second pass is an annotation schema or another screening round.
+
+**The import records where the new project came from.** `Project.provenance: ProjectProvenance |
+null` (`src/model/project.ts`) —
+```ts
+interface ProjectProvenance {
+  kind: 'screening-import'
+  source: { title?: string; file: string }
+  importedAt: string  // ISO 8601
+  counts: { included: number; undecided: number; excluded: number; carried: number }
+}
+```
+It is a first-class field on `Project`, not tucked under `config` or `extra`: `config`'s zod schema
+has no `.passthrough()`, so an unrecognized key nested under it is silently stripped before
+`project.ts` ever sees it, and `extra` is reset to `{}` by a "New from screening…" import in any
+case — neither is a place a value can be trusted to survive. `parseProvenance` reads it
+defensively (malformed input becomes `null`, never a thrown error), and both `serializeProject`
+and the editor's own `buildProjectJson` write it, so a draft never in-memory-only holds provenance
+the eventual save would drop. Because a nested record like this has no `FieldConflict` shape,
+`mergeProjects` **refuses** the whole merge if both sides changed it differently (see "Merging two
+copies of a project" in `data-model.md`), and `detectFieldChanges` treats any provenance difference
+as structural, falling back to the plain whole-file commit checkbox — the same treatment
+`config.schema` and friends already get, for the same reason: there is no field-level answer to
+"which import history is right."
+
 `resolveScreeningImport` also has to solve a real path-integrity problem, not just a metadata
 carry-over: a paper's `pdf` in the screening file is relative to *that* file's directory, so a
 carried row needs a real absolute `sourcePath`, or the moment the reviewer later uses **Change…**
@@ -983,8 +1117,8 @@ other capability gaps — `getOsInfo(): OsInfo | null`, `needsPdfFolderGrant()` 
 Electron (there is no such prompt there), the pathless `rebasePdfPaths` — and it is expressed in the
 type system, not left as a runtime convention: `PlatformAdapter.getGit(): GitPlatform | null`
 returns `null` in the browser, so a caller cannot invoke a git operation without first proving the
-runtime has one. A flat `GitPlatform` capability object rather than eleven individual methods on
-`PlatformAdapter` is deliberate too: eleven flat methods would mean eleven browser stubs, each of
+runtime has one. A flat `GitPlatform` capability object rather than fifteen individual methods on
+`PlatformAdapter` is deliberate too: fifteen flat methods would mean fifteen browser stubs, each of
 which either throws at runtime or silently no-ops — "unavailable" would be something a caller
 discovers by calling it, not something the type checker catches for them. `getOsInfo(): OsInfo |
 null` already established the pattern this follows.
@@ -1011,11 +1145,11 @@ when the *project* turned it off (`config.ai: false`).
 
 ### The renderer never names an argv
 
-Every git operation the renderer can ask for is one of fourteen enumerated IPC handlers in
+Every git operation the renderer can ask for is one of fifteen enumerated IPC handlers in
 `electron/main.ts` (`git:probe`, `git:pickCloneDir`, `git:clone`, `git:pickProjectIn`, `git:info`,
-`git:status`, `git:headContent`, `git:workingContent`, `git:commitPartial`, `git:commit`, `git:push`,
-`git:pullBegin`, `git:pullFinish`, `git:pullAbort`) — never a general `git <args>` channel. Git has
-`--exec-path`, aliases, and the `ext::` remote-helper
+`git:identity`, `git:status`, `git:headContent`, `git:workingContent`, `git:commitPartial`,
+`git:commit`, `git:push`, `git:pullBegin`, `git:pullFinish`, `git:pullAbort`) — never a general
+`git <args>` channel. Git has `--exec-path`, aliases, and the `ext::` remote-helper
 transport; a channel that let the renderer choose the argv would be handing it arbitrary code
 execution wearing a "just run git" label. Main decides what git is actually asked to do; the
 renderer only supplies data (a URL, a path, a commit message, a resolved text).
@@ -1059,6 +1193,51 @@ variable. None of this weakens anything a user configured:
 - The `GIT_DIR`-family variables are stripped because SaiLoR may have been launched from a shell
   that happens to be sitting inside some *other* git repository; an inherited `GIT_DIR` would
   silently point every git call below at that repository instead of the project's own.
+
+### Reviewer seat identity
+
+Which reviewer "you" are on a multi-reviewer project (`currentReviewer`, see "Multiple reviewers &
+Consolidation" above) used to be decided **per machine**: a seat choice in `localStorage`, keyed by
+clone path, with nothing in the project file recording who actually held which seat. Two different
+people who each clone the repository and both pick "Reviewer 1" are invisible to each other — their
+independently-annotated trees merge field by field with **zero conflicts raised**, producing one
+chimeric tree that silently blends two people's answers. `src/model/identity.ts` (a pure module) and
+`Project.reviewerIdentities: Record<string, ReviewerIdentity>` (written to the file as
+`config.reviewerIdentities`, keyed `"1".."N"` and the literal `"consolidation"`) exist to record the
+claim in the one place both reviewers actually share: the file itself.
+
+- **`ReviewerIdentity = { email: string; name?: string }`.** `sameIdentity(a, b)` compares **email
+  only** — `name` is never read — specifically so a reviewer who re-spells their display name
+  ("J. Keim" → "Jan Keim") never manufactures a false mismatch or a false merge conflict; email is
+  the thing git itself already treats as a stable identity (`user.email`).
+- **`checkSeat(identities, seat, myEmail)`** returns `{ kind: 'ok' }` or `{ kind: 'mismatch', holder
+  }`. It is silent (`'ok'`) whenever `myEmail` is `null` — no git identity to compare against, which
+  covers a solo user, the browser build (`getGit()` is `null`, so identity is never fetched), and a
+  seat nobody has claimed yet.
+- **`git config user.email`/`user.name`** are read via `git:identity` — a new enumerated IPC handler
+  in `electron/main.ts` (bringing the renderer-facing git surface to **15** handlers, up from 14; see
+  "The renderer never names an argv" below), exposed through `preload.ts` as `gitIdentity`, typed as
+  `GitPlatform.identity(root): Promise<GitIdentity>` in `src/git/types.ts`, and implemented in
+  `src/platform/electron.ts`. Read with the repository itself as the working directory, not once per
+  launch — `user.email` is routinely set per-repository, and a reviewer who took that care is exactly
+  who must not be told they are someone else. An unset key exits non-zero with no output, read back as
+  `''` rather than an error: "no identity here" is not a failure.
+- **`gitStore.ts`'s `refreshRepo`** fetches this identity alongside the ordinary repo status, guarding
+  against the same open-project-changed-underneath-it race the rest of `refreshRepo` already guards
+  against.
+- **On mismatch, the app warns — it never hard-blocks.** `ReviewerPrompt` gains a second render mode:
+  when the currently-selected seat's recorded holder's email doesn't match this machine's git email,
+  it offers **Take this seat** (writes this identity into `reviewerIdentities` for that seat) or
+  **Pick a different seat**, rather than silently proceeding or refusing to open the project.
+  `Toolbar.tsx`'s reviewer switch adds a "Claimed by …" hint to each seat's tooltip (and an
+  `is-mismatch` styling hook) so the seat-holder is visible before a reviewer even picks one. A file
+  with no `reviewerIdentities` at all, or a seat nobody has claimed yet, hits none of this — back
+  compat is exact: a plain `reviewers: 2` file with no identities loads and behaves exactly as before
+  this feature existed.
+- **`mergeProjects` refuses** when two *different* emails claim the same seat (see "What refuses, and
+  why" above) and **`detectFieldChanges` treats any `reviewerIdentities` difference as structural**
+  (see "Field-level commit review" above) — claiming a seat is a configuration fact, not an
+  annotation with a value a reviewer picks between.
 
 ### The module layout
 
@@ -1203,7 +1382,16 @@ it from the code side.
   same reason, since it decides `config.schema` via `screeningSchemaDefs` in the first place), and a
   left/middle/right conflict row cannot ask "which taxonomy is right". `Project.title` is
   deliberately **not** on this list: it is one string, a conflict row expresses it perfectly, and
-  refusing an entire merge over two people renaming the review would be absurd.
+  refusing an entire merge over two people renaming the review would be absurd. Two more refuse for
+  two different reasons: `provenance` is a nested record no `FieldConflict` shape can express, not
+  something that reshapes the file — the common case (only one side ever sets it) still resolves
+  cleanly with no refusal at all. `config.reviewerIdentities.<seat>` refuses **per seat**, and only
+  when the two sides name **different emails** for the same seat (compared via `sameIdentity` —
+  email only, so a name-only edit merges silently); a name-only difference is not this feature's
+  hazard and must not force a refusal on its own. This is deliberately a refusal, not a conflict row:
+  a conflict row can be clicked through without a second thought, and clicking through is exactly how
+  the chimeric reviews tree this feature exists to prevent gets built — see `identity.ts`'s module
+  doc and "Reviewer seat identity" above.
 - **The paper-deletion asymmetry.** A paper one side deleted and the other side *changed* is kept,
   with a note, never silently deleted — a field-level UI cannot ask "keep or delete this paper", and
   the two failure directions are not symmetric (a paper nobody wanted is one click from gone; deleted
@@ -1254,8 +1442,14 @@ difference is something the reviewer decides about, not something that might res
 
 **A structural difference refuses field-level review entirely, falling back to the plain file
 checkbox** — the same refusal list `mergeProjects` uses (`config.schema`, `config.reviewers`,
-`config.ai`, `config.screening`, `version`, root `extra`): once the schema itself might differ,
-"which fields changed" stops being a question with a field-level answer.
+`config.ai`, `config.screening`, `config.reviewerIdentities`, `version`, `provenance`, root
+`extra`): once the schema itself might differ, "which fields changed" stops being a question with
+a field-level answer. `provenance` is here for a different reason than the rest — it doesn't
+reshape anything, it's just a nested record no `FieldConflict` row can express. `reviewerIdentities`
+is here because claiming a seat isn't an annotation with a "which value do I want" answer; the cost
+is bounded and self-healing — only the one commit that first claims a seat falls back to the
+whole-file checkbox (which still commits it), every commit after that sees `head` and `working`
+already agree and field-level review resumes.
 
 **Coupled fields are bundled into one row.** `PAPER_META_BUNDLES` maps `abstract` to its hidden
 dependent, `abstractFromPdf` — the disclosure flag is not an independent fact a reviewer chooses
@@ -1361,7 +1555,10 @@ until every row is decided) leave.
   - `git:clone` — validates the URL/destination (`src/git/url.ts`), then `git clone -- <url> <dest>`
   - `git:pickProjectIn` — `dialog.showOpenDialog` with `defaultPath: dir`, the mechanism that opens the picker already inside a freshly cloned repository
   - `git:info` — `rev-parse --is-inside-work-tree` / `--show-toplevel` / `--show-prefix`, branch, upstream, whether `HEAD` exists
+  - `git:identity` — `git config --get user.email` / `user.name`, run with the repository as cwd; an unset key comes back as `''`, never an error — see "Reviewer seat identity" above
   - `git:status` — raw `status --porcelain=v1 -z` + `diff --no-color HEAD --`, parsed on the renderer side (`src/git/output.ts`)
+  - `git:headContent` / `git:workingContent` — the project file's text at `HEAD` (`git show HEAD:relPath`) and on disk (a plain, side-effect-free read); the two inputs `detectFieldChanges` compares for the commit panel's field-level review
+  - `git:commitPartial` — the write → `add` + `commit` → write-back sequence field-level commit review needs, since git has no native partial-file staging primitive; see "Field-level commit review" above
   - `git:commit` — pathspec-limited `add` then `commit -m`
   - `git:push` — plain `git push`; a missing upstream surfaces git's own message rather than inventing `--set-upstream`
   - `git:pullBegin` / `git:pullFinish` / `git:pullAbort` — the pull classification and its two ways to conclude; see "Git" above for the full command sequence
@@ -1370,7 +1567,7 @@ until every row is decided) leave.
   - The **View** menu is hand-built (not the default `{ role: 'viewMenu' }`) and deliberately omits zoom roles so that `Ctrl +/-/0` reach the renderer for PDF zoom (and `Ctrl+Shift +/-/0` for app font scaling) instead of triggering native browser/Electron zoom.
 - **Unsaved-changes quit flow**: a window `close` handler (`promptUnsavedChanges`) intercepts the close/quit when `isDirty` is set, and shows a native **Save / Don't Save / Cancel** dialog. "Save" asks the renderer to save (`app:requestSave`) and closes once it reports back; "Don't Save" closes discarding changes. A `before-quit` flag lets the guard resume `app.quit()` after confirmation (so Cmd+Q fully quits on macOS, where destroying the window alone would not).
 
-**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods: `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, plus the quit/menu coordination — `setDirty`, `onRequestSave`, `saveComplete`, `onUndo`, `onRedo` — and the eleven `git*` methods (`gitProbe`, `gitPickCloneDir`, `gitClone`, `gitPickProjectIn`, `gitInfo`, `gitStatus`, `gitCommit`, `gitPush`, `gitPullBegin`, `gitPullFinish`, `gitPullAbort`) mirroring the `git:*` IPC handlers one for one. This `window.slr` object is the detection signal for `isElectron()`.
+**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods: `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, plus the quit/menu coordination — `setDirty`, `onRequestSave`, `saveComplete`, `onUndo`, `onRedo` — and the fifteen `git*` methods (`gitProbe`, `gitPickCloneDir`, `gitClone`, `gitPickProjectIn`, `gitInfo`, `gitIdentity`, `gitStatus`, `gitHeadContent`, `gitWorkingContent`, `gitCommitPartial`, `gitCommit`, `gitPush`, `gitPullBegin`, `gitPullFinish`, `gitPullAbort`) mirroring the `git:*` IPC handlers one for one. This `window.slr` object is the detection signal for `isElectron()`.
 
 ## Hooks
 
