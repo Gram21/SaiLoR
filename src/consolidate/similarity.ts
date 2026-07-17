@@ -193,7 +193,7 @@ function blank(value: FieldValue | undefined): boolean {
 /**
  * How alike one field's two answers are.
  *
- * Type-aware on purpose — the three types fail in different ways:
+ * Type-aware on purpose — the types fail in different ways:
  *
  * - An **enum** (`options`) is a closed set, so its members are compared as
  *   labels, never as text. "High" and "Low" share three of four characters and
@@ -205,6 +205,12 @@ function blank(value: FieldValue | undefined): boolean {
  *   the same trap `annotationText` documents for annotation search.
  * - A **number** is scored by relative closeness, so 40 and 41 participants
  *   are near-agreement while 40 and 4000 are not.
+ * - A **year** is an identity, not a magnitude: 1999 and 2999 are not "close",
+ *   they are two different papers' publication years that happen to share
+ *   three of four digits. Relative-closeness scoring (the `number` branch)
+ *   would call that a near-match; falling through to `stringSimilarity`
+ *   instead would score it via edit distance, which is exactly as wrong for
+ *   the same reason. A year either matches or it doesn't.
  */
 export function valueSimilarity(
   def: ResolvedDef,
@@ -224,6 +230,10 @@ export function valueSimilarity(
 
   if (def.options && def.options.length > 0) {
     return { score: normalizeText(String(a)) === normalizeText(String(b)) ? 1 : 0, weight: 1 }
+  }
+
+  if (def.type === 'year') {
+    return { score: a === b ? 1 : 0, weight: 1 }
   }
 
   if (def.type === 'number') {

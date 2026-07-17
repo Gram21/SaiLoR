@@ -6,11 +6,13 @@ import {
   resolveSchema,
   SchemaError,
   type AnnotationDef,
+  type FieldType,
   type ScreeningConfig,
 } from '../model/schema'
 import { extractPdfMeta } from '../model/pdfMeta'
 import { parseReferences, pdfHintFileName, type RefEntry } from '../model/references'
 import { loadProject, type Project } from '../model/project'
+import { parseYear } from '../model/year'
 import { getPlatform, type OpenedProject, type PickedPdf, type ProjectLocation, type SaveHandle } from '../platform'
 import { DEFAULT_SCREENING_REASONS, screeningSchemaDefs } from '../screening/schema'
 import { screeningReason, screeningStatus } from '../screening/status'
@@ -27,8 +29,11 @@ import { useStore } from './store'
  * time the project is opened for annotating.
  */
 
-/** A schema node in the editor. `group` means "no `type`" — a name-only sub-tree. */
-export type EditorNodeKind = 'group' | 'string' | 'number' | 'boolean'
+/** A schema node in the editor. `group` means "no `type`" — a name-only
+ *  sub-tree. The rest is exactly `FieldType`, imported rather than
+ *  re-spelled, so this cannot silently drift from the set of types the model
+ *  layer actually understands. */
+export type EditorNodeKind = 'group' | FieldType
 
 export interface EditorNode {
   /** Client-side id, stable across renders. Used for React keys and drag/drop. */
@@ -54,6 +59,14 @@ export interface EditorPaper {
   /** Comma-separated in the UI; split on save. */
   authors: string
   doi: string
+  /** Free text in the editor, exactly like every other paper field here —
+   *  parsed to `Paper.year`'s number (or dropped) at `buildProjectJson`,
+   *  the same boundary `doi`'s trimming crosses. Never stored as a number in
+   *  the editor: a mid-typed "202" would otherwise have to round-trip through
+   *  a numeric input's own ideas about what a partial number looks like. */
+  year: string
+  /** See `Paper.venue`. */
+  venue: string
   /** What screening reads when there is no PDF attached. */
   abstract: string
   /** The relative path written to the JSON. */
@@ -275,6 +288,8 @@ export function makePaperFromPdf(
     title: titleFromName(fileName),
     authors: '',
     doi: '',
+    year: '',
+    venue: '',
     abstract: '',
     pdf: relativePath,
     sourcePath,
@@ -325,6 +340,8 @@ export function makePaperFromRef(entry: RefEntry, existingIds: Set<string>): Edi
     title: entry.title,
     authors: entry.authors.join(', '),
     doi: entry.doi ?? '',
+    year: entry.year !== undefined ? String(entry.year) : '',
+    venue: entry.venue ?? '',
     abstract: entry.abstract ?? '',
     pdf: entry.pdfHint ? pdfHintFileName(entry.pdfHint) : '',
     annotations: {},
@@ -345,6 +362,14 @@ function fillFromRef(match: EditorPaper, entry: RefEntry): boolean {
   }
   if (!match.doi.trim() && entry.doi) {
     match.doi = entry.doi
+    changed = true
+  }
+  if (!match.year.trim() && entry.year !== undefined) {
+    match.year = String(entry.year)
+    changed = true
+  }
+  if (!match.venue.trim() && entry.venue) {
+    match.venue = entry.venue
     changed = true
   }
   // A heuristic-extracted abstract (`abstractFromPdf`) is lower-confidence than
@@ -405,6 +430,12 @@ export function buildProjectJson(state: {
         .split(',')
         .map((a) => a.trim())
         .filter(Boolean)
+      // `buildProjectJson` is a second serializer (it does not go through
+      // `serializeProject`), so the string→number boundary for `year` lives
+      // here, symmetric with the number→string one in `editorStateFromOpened`.
+      const y = parseYear(p.year)
+      if (y !== undefined) out.year = y
+      if (p.venue.trim()) out.venue = p.venue.trim()
       if (p.doi.trim()) out.doi = p.doi.trim()
       if (p.abstract && p.abstract.trim()) out.abstract = p.abstract.trim()
       if (p.abstractFromPdf && p.abstract && p.abstract.trim()) out.abstractFromPdf = true
@@ -500,6 +531,8 @@ export interface ScreeningImportRow {
   title: string
   authors: string[]
   doi?: string
+  year?: number
+  venue?: string
   abstract?: string
   /** Carried from `Paper.abstractFromPdf` — the caution stays attached to the
    *  abstract, not to which project file it currently lives in. */
@@ -556,6 +589,8 @@ function partitionScreeningPapers(project: Project): {
       title: p.title,
       authors: p.authors,
       doi: p.doi,
+      year: p.year,
+      venue: p.venue,
       abstract: p.abstract,
       abstractFromPdf: p.abstractFromPdf,
       pdf: p.pdf,
@@ -770,6 +805,8 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
       'title',
       'authors',
       'doi',
+      'year',
+      'venue',
       'abstract',
       'abstractFromPdf',
       'pdf',
@@ -777,12 +814,19 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
     ])
     const extra: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(p)) if (!known.has(k)) extra[k] = v
+    // The same lenient repair `project.ts`'s loader applies to `year` — a
+    // hand-edited `"2021"` string opens here exactly as it would in the
+    // annotation view, rather than landing in `extra` because this map alone
+    // stayed stricter.
+    const year = parseYear(p.year)
     return {
       uid: nextUid(),
       id: p.id,
       title: p.title,
       authors: (p.authors ?? []).join(', '),
       doi: p.doi ?? '',
+      year: year !== undefined ? String(year) : '',
+      venue: p.venue ?? '',
       abstract: p.abstract ?? '',
       abstractFromPdf: p.abstract && p.abstractFromPdf === true ? true : undefined,
       pdf: p.pdf,
@@ -1451,6 +1495,8 @@ export const useEditorStore = create<EditorState>()(
           title: p.title,
           authors: p.authors.join(', '),
           doi: p.doi ?? '',
+          year: p.year !== undefined ? String(p.year) : '',
+          venue: p.venue ?? '',
           abstract: p.abstract ?? '',
           abstractFromPdf: p.abstract && p.abstractFromPdf ? true : undefined,
           pdf: p.pdf,

@@ -24,6 +24,11 @@ export function ScreeningRecord() {
         <div className="pdf-meta">
           <span className="pdf-title">{paper.title}</span>
           {paper.authors.length > 0 && <span className="pdf-authors">{paper.authors.join(', ')}</span>}
+          {/* Year/venue are exactly what a screener reads next after the
+              authors — one line, since neither is worth its own row here. */}
+          {(paper.venue || paper.year) && (
+            <span className="pdf-venue">{[paper.venue, paper.year].filter(Boolean).join(' · ')}</span>
+          )}
           {paper.doi && (
             <span className="pdf-doi">
               DOI: <code>{paper.doi}</code>

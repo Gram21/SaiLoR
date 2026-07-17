@@ -2,6 +2,7 @@ import type { FieldType, ResolvedDef } from './schema'
 import { isField } from './schema'
 import { hasAnnotations, type AnnotationValueTree, type InstanceNode } from './annotations'
 import type { Paper, Project } from './project'
+import { YEAR_MIN, YEAR_MAX, isPlausibleYear } from './year'
 
 /**
  * Validation walks the resolved schema against a paper's annotation tree and
@@ -119,6 +120,8 @@ function typeMismatch(type: FieldType, value: unknown): boolean {
       return typeof value !== 'number' || Number.isNaN(value)
     case 'boolean':
       return typeof value !== 'boolean'
+    case 'year':
+      return !isPlausibleYear(value)
   }
 }
 
@@ -128,7 +131,12 @@ function validateField(def: ResolvedDef, value: unknown, path: string, emit: Emi
   if (typeMismatch(type, value)) {
     const actual =
       typeof value === 'number' && Number.isNaN(value) ? 'NaN' : describeActual(value)
-    emit('type', path, `"${def.name}" should be a ${type} but holds ${actual}.`)
+    // A year out of range is still reported as `IssueKind: 'type'` — it is
+    // the same category of mistake as a string in a number field, not a
+    // reason for a whole new kind — but "should be a year" alone gives no
+    // hint of the actual bound, so the expected clause spells it out.
+    const expected = type === 'year' ? `a year between ${YEAR_MIN} and ${YEAR_MAX}` : `a ${type}`
+    emit('type', path, `"${def.name}" should be ${expected} but holds ${actual}.`)
     // A mistyped value tells us nothing about requiredness or enum membership.
     return
   }

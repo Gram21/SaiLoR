@@ -2,6 +2,7 @@ import { useStore } from '../state/store'
 import { useGitStore } from '../state/gitStore'
 import { treeLabel, type FieldConflict } from '../git/merge'
 import type { FieldValue } from '../model/annotations'
+import { YEAR_MIN, YEAR_MAX } from '../model/year'
 import { ComboBox } from './ComboBox'
 import '../styles/git.css'
 
@@ -177,12 +178,18 @@ function MiddleControl({
       />
     )
   }
-  if (conflict.type === 'number') {
+  if (conflict.type === 'number' || conflict.type === 'year') {
     return (
       <input
         className="field-input"
         type="number"
         value={typeof value === 'number' ? value : ''}
+        // A bounded control for `year`: without this a resolved conflict
+        // could write a free-text string into a year field (the `type ===
+        // 'number'` branch above was the only numeric one before this type
+        // existed, so a `'year'` conflict would otherwise fall through to
+        // the plain-text branch at the bottom of this function).
+        {...(conflict.type === 'year' ? { min: YEAR_MIN, max: YEAR_MAX, step: 1 } : {})}
         onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
       />
     )

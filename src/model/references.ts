@@ -6,11 +6,18 @@
  * itself never throws — a bad file just yields fewer (or zero) entries.
  */
 
+import { parseYear } from './year'
+
 export interface RefEntry {
   title: string
   authors: string[]
   doi?: string
   year?: number
+  /** Journal, conference/proceedings, or publisher — see `Paper.venue`. One
+   *  free-text field: BibTeX journal/booktitle/publisher, RIS JF/JO/T2, and
+   *  CSL container-title/publisher all collapse to "where it appeared", and
+   *  no source format reliably distinguishes journal from proceedings. */
+  venue?: string
   /** The abstract, when the source carried one. Screening is usually decided
    *  on title + abstract before a PDF is ever attached, so this is worth
    *  bringing in even though nothing before this feature read it. */
@@ -433,8 +440,20 @@ function parseBibEntry(raw: string): RefEntry | null {
     if (doi) entry.doi = doi
   }
   if (fields.has('year')) {
-    const y = cleanBibValue(fields.get('year')!).match(/\d{4}/)
-    if (y) entry.year = Number(y[0])
+    entry.year = parseYear(cleanBibValue(fields.get('year')!))
+  }
+  // journal (article) / journaltitle (biblatex's own name for the same thing)
+  // / booktitle (a chapter or a conference paper) / publisher (last resort,
+  // e.g. a standalone report) — first non-empty wins. Not a merge: a BibTeX
+  // entry realistically only ever has one of these, so there is no tag-order
+  // question here the way there is for RIS's JF/JO/T2 below.
+  for (const key of ['journal', 'journaltitle', 'booktitle', 'publisher']) {
+    if (!fields.has(key)) continue
+    const venue = cleanBibValue(fields.get(key)!)
+    if (venue) {
+      entry.venue = venue
+      break
+    }
   }
   if (fields.has('file')) {
     const hint = extractBibFileHint(fields.get('file')!)
@@ -474,6 +493,16 @@ interface RisDraft {
   abstract?: string
   /** From `AB`, the primary abstract tag. */
   abstractAB?: string
+  /** From `JF` (journal, full title) — RIS's primary venue tag. Draft fields
+   *  kept separately per tag, same as the abstract pair above, so the
+   *  precedence in `finalizeRis` is independent of which tag the exporter
+   *  happened to write first. */
+  venueJF?: string
+  /** From `JO` (journal, abbreviated). */
+  venueJO?: string
+  /** From `T2` (secondary title — journal for an article, or the
+   *  proceedings/book title for a conference paper or chapter). */
+  venueT2?: string
   pdfHint?: string
 }
 
@@ -490,6 +519,15 @@ function finalizeRis(cur: RisDraft): RefEntry | null {
     // N2 rather than concatenating — they are read as alternates in the
     // wild, and concatenating would risk a duplicated abstract.
     abstract: cur.abstractAB ?? cur.abstract,
+    // JF (full journal title) is the most specific and most common; JO is a
+    // same-meaning abbreviation some exporters use instead; T2 is the
+    // catch-all "secondary title" RIS reuses for a conference/book title when
+    // there is no journal at all. First non-empty of that priority wins,
+    // computed here rather than by an `if (!cur.x)` first-wins guard while
+    // scanning — a guard like that would let tag order decide the winner
+    // instead of the tag's own meaning, exactly the bug the abstract pair
+    // above is already written to avoid.
+    venue: cur.venueJF ?? cur.venueJO ?? cur.venueT2,
     pdfHint: cur.pdfHint,
   }
 }
@@ -537,8 +575,8 @@ function parseRis(text: string): RefEntry[] {
       case 'PY':
       case 'Y1': {
         if (cur.year === undefined) {
-          const y = value.match(/\d{4}/)
-          if (y) cur.year = Number(y[0])
+          const y = parseYear(value)
+          if (y !== undefined) cur.year = y
         }
         break
       }
@@ -547,6 +585,15 @@ function parseRis(text: string): RefEntry[] {
         break
       case 'N2':
         if (!cur.abstract && value) cur.abstract = collapseSpace(unescapeLatex(value))
+        break
+      case 'JF':
+        if (value) cur.venueJF = collapseSpace(unescapeLatex(value))
+        break
+      case 'JO':
+        if (value) cur.venueJO = collapseSpace(unescapeLatex(value))
+        break
+      case 'T2':
+        if (value) cur.venueT2 = collapseSpace(unescapeLatex(value))
         break
       case 'L1':
         if (!cur.pdfHint && value) cur.pdfHint = value
@@ -597,15 +644,22 @@ function parseCslItem(raw: unknown): RefEntry | null {
 
   const doi = typeof raw.DOI === 'string' && raw.DOI.trim() ? raw.DOI.trim() : undefined
   const abstract = typeof raw.abstract === 'string' && raw.abstract.trim() ? collapseSpace(raw.abstract) : undefined
+  // `container-title` is the journal/proceedings/book a CSL item appeared in;
+  // `publisher` is what is left for an item type (e.g. a standalone report)
+  // that has no container at all.
+  const venue =
+    (typeof raw['container-title'] === 'string' && collapseSpace(raw['container-title'])) ||
+    (typeof raw.publisher === 'string' && collapseSpace(raw.publisher)) ||
+    undefined
 
   let year: number | undefined
   const issued = raw.issued
   if (isRecord(issued) && Array.isArray(issued['date-parts'])) {
     const first = issued['date-parts'][0]
-    if (Array.isArray(first) && typeof first[0] === 'number') year = first[0]
+    if (Array.isArray(first)) year = parseYear(first[0])
   }
 
-  return { title, authors, doi, year, abstract }
+  return { title, authors, doi, year, venue, abstract }
 }
 
 function parseCslJson(text: string): RefEntry[] {

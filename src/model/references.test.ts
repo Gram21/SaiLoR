@@ -106,6 +106,62 @@ describe('parseReferences: BibTeX', () => {
   })
 })
 
+describe('parseReferences: BibTeX year regression (parseYear swap)', () => {
+  // parseBibEntry used to hand-roll its own /\d{4}/ match; these three cases
+  // pin that swapping it for the shared `parseYear` changed nothing observable.
+  it('year = {2020}', () => {
+    const [entry] = parseReferences('@article{k1, title = {T}, year = {2020}}', 'refs.bib')
+    expect(entry.year).toBe(2020)
+  })
+
+  it('year = "1999" (quoted)', () => {
+    const [entry] = parseReferences('@article{k1, title = {T}, year = "1999"}', 'refs.bib')
+    expect(entry.year).toBe(1999)
+  })
+
+  it('an unreadable year is dropped, not thrown over', () => {
+    const [entry] = parseReferences('@article{k1, title = {T}, year = {in press}}', 'refs.bib')
+    expect(entry.year).toBeUndefined()
+  })
+})
+
+describe('parseReferences: BibTeX venue (journal/journaltitle/booktitle/publisher)', () => {
+  it('reads journal for an article', () => {
+    const bib = `@article{k1, title = {T}, journal = {IEEE Transactions on Software Engineering}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.venue).toBe('IEEE Transactions on Software Engineering')
+  })
+
+  it('falls back to journaltitle (biblatex) when journal is absent', () => {
+    const bib = `@article{k1, title = {T}, journaltitle = {A Biblatex Journal}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.venue).toBe('A Biblatex Journal')
+  })
+
+  it('falls back to booktitle for a conference paper with no journal', () => {
+    const bib = `@inproceedings{k1, title = {T}, booktitle = {Proceedings of ICSE 2024}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.venue).toBe('Proceedings of ICSE 2024')
+  })
+
+  it('falls back to publisher as a last resort', () => {
+    const bib = `@techreport{k1, title = {T}, publisher = {Acme Research Labs}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.venue).toBe('Acme Research Labs')
+  })
+
+  it('prefers booktitle over publisher when both are present', () => {
+    const bib = `@inproceedings{k1, title = {T}, booktitle = {ICSE 2024}, publisher = {ACM}}`
+    const [entry] = parseReferences(bib, 'refs.bib')
+    expect(entry.venue).toBe('ICSE 2024')
+  })
+
+  it('leaves venue undefined, never an empty string, when nothing is present', () => {
+    const [entry] = parseReferences('@article{k1, title = {T}}', 'refs.bib')
+    expect(entry.venue).toBeUndefined()
+  })
+})
+
 describe('parseReferences: BibTeX LaTeX escapes', () => {
   it('unescapes a bare accent command (\\"o)', () => {
     const bib = `@article{k1, title = {T}, author = {Bj\\"orn Test}}`
