@@ -12,22 +12,23 @@ name: Publish openwiki → Wiki
 #   Development.md    — openwiki/Home.md, renamed so the wiki's own Home slot is free
 #                       for the landing page above.
 #   <page>.md          — the rest of openwiki/*.md, unchanged, flat at the wiki root.
-#   _Sidebar.md, _Footer.md — openwiki/_Sidebar.md and _Footer.md, each with the
+#   _Sidebar.md, _Footer.md — .github/wiki-assets/Sidebar.md and Footer.md (the
+#                       developer-docs sidebar/footer — deliberately kept out of
+#                       openwiki/ itself, see the copy step below), each with the
 #                       matching .github/wiki-assets/*-user-guide.md fragment appended
 #                       inside a `<!-- wiki-sync:NAME:start/end -->` comment pair, so the
-#                       wiki's one (global) sidebar/footer covers both parts. See the
-#                       sidebar step below for why this is appended here rather than
-#                       hand-edited into the openwiki source, and wiki-import.yml for
-#                       what the markers are for.
+#                       wiki's one (global) sidebar/footer covers both parts. See
+#                       wiki-import.yml for what the markers are for.
 #   user-guide/**      — user-guide/*.md and user-guide/screenshots/*.png, unchanged,
 #                       under a matching subfolder (their existing relative links —
 #                       between pages and to screenshots/ — already work unmodified
 #                       once the folder is copied as a whole).
 #
-# .github/wiki-assets/ holds the three pieces of content above as plain markdown files
-# — easier to review and edit than the equivalent shell heredocs — plus the marker
-# comments that let wiki-import.yml identify each one inside the published page it sits
-# in (Home.md as a whole; the fragments within _Sidebar.md/_Footer.md).
+# .github/wiki-assets/ holds everything above that is really about *publishing to the
+# wiki* rather than about the app or its developer docs — plain markdown, easier to
+# review and edit than the equivalent shell heredocs, plus the marker comments that let
+# wiki-import.yml identify each piece inside the published page it ends up in (Home.md
+# and Sidebar.md/Footer.md as a whole; the two fragments within the latter two).
 #
 # The reverse direction lives in wiki-import.yml. On the loop the two could form,
 # see "Loop prevention" below.
@@ -86,12 +87,12 @@ jobs:
           #   - `index.md` is Open Knowledge Format's own directory listing (see
           #     https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
           #     — a machine-oriented "scan the bundle" page for agents reading the repo's
-          #     openwiki/ folder directly. Home.md + _Sidebar.md already are the
-          #     hand-curated equivalent for a human wiki visitor, so mirroring index.md
-          #     too would only add a second, redundant, unlinked page. It stays in the
-          #     repo (its actual audience reads it there) but never reaches the wiki.
-          #     `log.md` — OKF's changelog of documentation updates — has no such
-          #     overlap and IS published like any other page.
+          #     openwiki/ folder directly. Home.md + .github/wiki-assets/Sidebar.md
+          #     already are the hand-curated equivalent for a human wiki visitor, so
+          #     mirroring index.md too would only add a second, redundant, unlinked
+          #     page. It stays in the repo (its actual audience reads it there) but
+          #     never reaches the wiki. `log.md` — OKF's changelog of documentation
+          #     updates — has no such overlap and IS published like any other page.
           #   - `INSTRUCTIONS.md` is the shared, user-authored brief handed *to* the
           #     generator (see .github/workflows/openwiki.yml) — config it reads, not a
           #     page it writes for a reader. Same reasoning as index.md: nothing in the
@@ -100,6 +101,8 @@ jobs:
           #   - `Home.md` is staged as `Development.md` instead — the wiki's own Home
           #     slot is reserved for the two-part landing page synthesized below, so
           #     openwiki's own landing page (developer docs) moves aside to make room.
+          # openwiki/ itself no longer has a `_Sidebar.md`/`_Footer.md` to skip here —
+          # see the next step for where those now come from and why.
           for f in openwiki/*.md; do
             case "$(basename "$f")" in
               index.md|INSTRUCTIONS.md) continue ;;
@@ -107,6 +110,16 @@ jobs:
               *) cp "$f" "stage/$(basename "$f")" ;;
             esac
           done
+
+          # --- Developer-docs chrome: .github/wiki-assets/Sidebar.md and Footer.md.
+          # These *are* gollum's `_Sidebar.md`/`_Footer.md` for the developer-docs pages
+          # above, but they deliberately do not live in openwiki/ itself — unlike the
+          # pages above, OpenWiki's scheduled regeneration (.github/workflows/openwiki.yml)
+          # never touches them, and keeping them out of that folder is what keeps
+          # openwiki/ to only the content the tool actually owns. Copied unconditionally
+          # (unlike the old openwiki-sourced versions, these two always exist).
+          cp .github/wiki-assets/Sidebar.md stage/_Sidebar.md
+          cp .github/wiki-assets/Footer.md stage/_Footer.md
 
           # --- User guide: user-guide/*.md + user-guide/screenshots/, under a matching
           # subfolder. Copied whole, not flattened, so the pages' existing relative
@@ -125,9 +138,9 @@ jobs:
           # renderer (gollum) has no concept of frontmatter, so left in place it would
           # render as literal text at the top of the page — strip it before it ever
           # reaches the wiki. `index.md`'s exclusion above means it never needs this (OKF
-          # forbids frontmatter on it anyway); user-guide pages never have one either, so
-          # this runs unconditionally over every staged page (both parts) and is a no-op
-          # wherever there isn't one.
+          # forbids frontmatter on it anyway); nothing else staged so far carries one
+          # either (.github/wiki-assets/ and user-guide/ pages never do), so this runs
+          # unconditionally over every staged page and is simply a no-op everywhere else.
           find stage -name '*.md' | while read -r f; do
             awk 'NR==1 && $0=="---"{infm=1; next} infm && $0=="---"{infm=0; next} !infm' \
               "$f" > "$f.tmp" && mv "$f.tmp" "$f"
@@ -139,15 +152,13 @@ jobs:
             -e "s#(\.\./LICENSE)#(https://github.com/${GITHUB_REPOSITORY}/blob/main/LICENSE)#" \
             stage/user-guide/README.md
 
-          # openwiki/_Sidebar.md links its own top "SaiLoR" entry to `Home` — true when
-          # Home.md *was* the developer docs' own landing page, broken now that it moved
-          # to Development.md above. This is the one place that rename needs to be
-          # reflected outside the file that moved, so it is fixed by rewriting the
-          # staged copy rather than by editing the openwiki source (see the sidebar
-          # step below for why edits like this stay off the openwiki source entirely).
-          if [ -f stage/_Sidebar.md ]; then
-            sed -i 's/\](Home)/\](Development)/' stage/_Sidebar.md
-          fi
+          # .github/wiki-assets/Sidebar.md links its own top "SaiLoR" entry to `Home` —
+          # correct as far as that file is concerned (openwiki/Home.md really is named
+          # Home, which is exactly what lets scripts/check-wiki-links.js validate the
+          # link against the real openwiki page set) but broken once published, since
+          # Home.md is staged as Development.md above. Fixed here, on the staged copy
+          # only, rather than by writing "Development" into the asset file itself.
+          sed -i 's/\](Home)/\](Development)/' stage/_Sidebar.md
 
           # A wiki with no developer-docs landing page shows a dead "Development" link,
           # so synthesize one when openwiki/ did not provide a Home.md to rename above.
@@ -176,38 +187,26 @@ jobs:
           fi
 
           # _Sidebar.md and _Footer.md are gollum's *global* chrome — one copy applies
-          # to every page in the wiki, developer and user-guide alike — so the sidebar
-          # generated from openwiki/ (developer nav only) needs a "User Guide" section
-          # appended to actually serve as the whole wiki's table of contents. This is
-          # appended here, to the staged copy, rather than hand-added to the openwiki
-          # source: openwiki/_Sidebar.md is regenerated by the OpenWiki tool (see
-          # .github/workflows/openwiki.yml) from its own view of the *developer* docs,
-          # so anything about the user guide written directly into that source would
-          # just be dropped on its next scheduled run. Appending at publish time instead
-          # means it survives regeneration for free.
-          #
-          # The fragment itself lives in .github/wiki-assets/Sidebar-user-guide.md (and
-          # Footer-user-guide.md below) rather than inline here, wrapped in a
-          # `<!-- wiki-sync:NAME:start/end -->` comment pair GitHub hides when rendering
-          # — wiki-import.yml looks for that same pair to lift a wiki-UI edit straight
-          # back into the asset file, and to strip the fragment back out of what
-          # continues on to become openwiki/_Sidebar.md, so an edit made there doesn't
-          # end up duplicated inside the openwiki source.
-          if [ -f stage/_Sidebar.md ]; then
-            {
-              echo
-              echo '<!-- wiki-sync:user-guide-sidebar:start -->'
-              cat .github/wiki-assets/Sidebar-user-guide.md
-              echo '<!-- wiki-sync:user-guide-sidebar:end -->'
-            } >> stage/_Sidebar.md
-          fi
-          if [ -f stage/_Footer.md ]; then
-            {
-              echo '<!-- wiki-sync:user-guide-footer:start -->'
-              cat .github/wiki-assets/Footer-user-guide.md
-              echo '<!-- wiki-sync:user-guide-footer:end -->'
-            } >> stage/_Footer.md
-          fi
+          # to every page in the wiki, developer and user-guide alike — so
+          # .github/wiki-assets/Sidebar.md/Footer.md (developer nav only) each need a
+          # "User Guide" section appended to actually serve as the whole wiki's table of
+          # contents. The fragment itself lives in a third asset file,
+          # .github/wiki-assets/Sidebar-user-guide.md (and Footer-user-guide.md below),
+          # wrapped in a `<!-- wiki-sync:NAME:start/end -->` comment pair GitHub hides
+          # when rendering — wiki-import.yml looks for that same pair to lift a wiki-UI
+          # edit straight back into the asset file, and to strip the fragment back out
+          # of what continues on to become the plain Sidebar.md/Footer.md asset again.
+          {
+            echo
+            echo '<!-- wiki-sync:user-guide-sidebar:start -->'
+            cat .github/wiki-assets/Sidebar-user-guide.md
+            echo '<!-- wiki-sync:user-guide-sidebar:end -->'
+          } >> stage/_Sidebar.md
+          {
+            echo '<!-- wiki-sync:user-guide-footer:start -->'
+            cat .github/wiki-assets/Footer-user-guide.md
+            echo '<!-- wiki-sync:user-guide-footer:end -->'
+          } >> stage/_Footer.md
 
           # The wiki's actual Home page is always .github/wiki-assets/Home.md, verbatim
           # — never taken from openwiki/ or user-guide/ directly, since neither one

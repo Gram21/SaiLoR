@@ -1,9 +1,3 @@
----
-type: navigation
-title: SaiLoR Wiki Sidebar
-description: Sidebar navigation for the SaiLoR developer wiki. Contains links to the Quickstart, Architecture, Data Model, and Operations pages with their section anchors.
----
-
 ### [SaiLoR](Home)
 
 Developer documentation
