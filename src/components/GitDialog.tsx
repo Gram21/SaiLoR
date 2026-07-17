@@ -57,7 +57,37 @@ export function GitDialog() {
   const hasUntracked = changes.some((c) => c.code === '??')
   const reviewRowCount = review ? review.changes.fields.length + review.changes.papers.length : 0
 
+  // What the review's rows actually resolve to (absent means 'use', the same
+  // default `composeContents` itself applies) — what decides whether the
+  // primary button below has anything to *commit* at all.
+  const reviewDispositions = review
+    ? [...review.changes.papers, ...review.changes.fields].map((r) => review.decisions[r.id] ?? 'use')
+    : []
+  const hasUseRow = reviewDispositions.includes('use')
+  const hasDiscardRow = reviewDispositions.includes('discard')
+  // No other file is selected, and nothing in the review would end up
+  // committed — every row is Ignore or Discard. Committing would write
+  // nothing new, so the button's only honest job left is discarding.
+  const discardOnlyMode = !!review && selectedCount === 0 && !hasUseRow && hasDiscardRow
+  // The same state, minus a row actually marked Discard — every reviewed row
+  // is Ignore, and nothing else is selected. There is genuinely nothing to
+  // do: not a commit (nothing changed), not a discard (nothing marked).
+  const nothingPending = !!review && selectedCount === 0 && !hasUseRow && !hasDiscardRow
+
   const requestClose = () => closePanel()
+
+  const runPrimaryAction = () => {
+    if (!discardOnlyMode) {
+      void runCommit()
+      return
+    }
+    const n = reviewDispositions.filter((d) => d === 'discard').length
+    const ok = window.confirm(
+      `Discard ${n} change${n === 1 ? '' : 's'} in ${repo.relPath}? This reverts ` +
+        `${n === 1 ? 'it' : 'them'} in the file on disk and cannot be undone. Nothing is committed.`,
+    )
+    if (ok) void runDiscard()
+  }
 
   return (
     <div className="modal-overlay" onClick={requestClose}>
@@ -98,8 +128,9 @@ export function GitDialog() {
               </div>
               <p className="git-muted">
                 Use commits a field's new value. Ignore leaves it as an uncommitted change, offered
-                again next time. Discard reverts it back to the committed value — on your next
-                commit, or right now with Discard changes below.
+                again next time. Discard reverts it back to the committed value once you press the
+                button below — Commit if anything is still marked Use, or Discard all if everything
+                left is Ignore or Discard.
               </p>
               <div className="git-field-review-bulk">
                 <button type="button" onClick={() => setAllFieldDispositions('use')}>
@@ -130,13 +161,6 @@ export function GitDialog() {
                   />
                 ))}
               </ul>
-              <FieldDiscardAction
-                decisions={review.decisions}
-                relPath={repo.relPath}
-                busy={working}
-                dirty={dirty}
-                runDiscard={runDiscard}
-              />
             </>
           )}
 
@@ -202,11 +226,18 @@ export function GitDialog() {
           <div className="git-panel-actions">
             <button
               type="button"
-              className="primary"
-              disabled={working || dirty || (selectedCount === 0 && !review) || !panel.message.trim()}
-              onClick={() => void runCommit()}
+              className={`primary${discardOnlyMode ? ' danger' : ''}`}
+              title={nothingPending ? 'Nothing to commit or discard — every reviewed field is set to Ignore.' : undefined}
+              disabled={
+                working ||
+                dirty ||
+                (selectedCount === 0 && !review) ||
+                nothingPending ||
+                (!discardOnlyMode && !panel.message.trim())
+              }
+              onClick={runPrimaryAction}
             >
-              Commit
+              {discardOnlyMode ? 'Discard all' : 'Commit'}
             </button>
             <div className="git-panel-actions-right">
               <button type="button" disabled={working || dirty || !repo.upstream} onClick={() => void runPull()}>
@@ -293,79 +324,41 @@ interface DispositionButtonsProps {
   onSet: (d: Disposition) => void
 }
 
+/**
+ * Use/Ignore grouped on the left, Discard alone on the right — a discard is a
+ * different kind of decision from the other two (it reverts a local edit
+ * rather than choosing what to do with it), and `.git-field-row-actions`'
+ * `justify-content: space-between` is what pushes it there: two flex
+ * children, the group and the lone button, pinned to opposite ends of the row.
+ */
 function DispositionButtons({ disposition, onSet }: DispositionButtonsProps) {
   return (
     <div className="git-field-row-actions" role="group">
-      <button
-        type="button"
-        className={`git-disposition-btn${disposition === 'use' ? ' active' : ''}`}
-        title="Commit this change"
-        onClick={() => onSet('use')}
-      >
-        Use
-      </button>
-      <button
-        type="button"
-        className={`git-disposition-btn${disposition === 'ignore' ? ' active' : ''}`}
-        title="Leave this as an uncommitted change, offered again next time"
-        onClick={() => onSet('ignore')}
-      >
-        Ignore
-      </button>
+      <div className="git-disposition-group">
+        <button
+          type="button"
+          className={`git-disposition-btn${disposition === 'use' ? ' active' : ''}`}
+          title="Commit this change"
+          onClick={() => onSet('use')}
+        >
+          Use
+        </button>
+        <button
+          type="button"
+          className={`git-disposition-btn${disposition === 'ignore' ? ' active' : ''}`}
+          title="Leave this as an uncommitted change, offered again next time"
+          onClick={() => onSet('ignore')}
+        >
+          Ignore
+        </button>
+      </div>
       <button
         type="button"
         className={`git-disposition-btn git-disposition-discard${disposition === 'discard' ? ' active' : ''}`}
-        title="Revert this change: on commit, or now with Discard changes"
+        title="Revert this change once you press Commit (or Discard all, below)"
         onClick={() => onSet('discard')}
       >
         Discard
-      </button>
-    </div>
-  )
-}
-
-/**
- * "Discard changes" reverts every row currently marked Discard right now,
- * without a commit — the escape hatch for a reviewer who only wants to throw
- * local edits away and has no interest in typing a commit message for that.
- * Enabled from a single discarded row, not only "everything discarded": the
- * write it performs (`composeContents`'s `workingOut`) already reverts
- * exactly the marked rows and nothing else, so gating on "all of them" would
- * be an artificial restriction over an operation identical either way.
- */
-function FieldDiscardAction({
-  decisions,
-  relPath,
-  busy,
-  dirty,
-  runDiscard,
-}: {
-  decisions: Record<string, Disposition>
-  relPath: string
-  busy: boolean
-  dirty: boolean
-  runDiscard: () => Promise<void>
-}) {
-  const discardCount = Object.values(decisions).filter((d) => d === 'discard').length
-
-  const confirmAndDiscard = () => {
-    const ok = window.confirm(
-      `Discard ${discardCount} change${discardCount === 1 ? '' : 's'} in ${relPath}? This reverts ` +
-        `${discardCount === 1 ? 'it' : 'them'} in the file on disk and cannot be undone. Nothing is committed.`,
-    )
-    if (ok) void runDiscard()
-  }
-
-  return (
-    <div className="git-field-discard-action">
-      <button
-        type="button"
-        className="git-field-discard-btn"
-        disabled={busy || dirty || discardCount === 0}
-        title="Revert the rows marked Discard in the file on disk, without committing"
-        onClick={confirmAndDiscard}
-      >
-        Discard changes
       </button>
     </div>
   )
