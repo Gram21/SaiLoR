@@ -126,6 +126,9 @@ interface GitState {
   setAllFieldDispositions: (disposition: Disposition) => void
   setCommitMessage: (message: string) => void
   runCommit: () => Promise<void>
+  /** Apply the field review's current 'discard' decisions to the working
+   *  tree — revert those rows to HEAD's value — WITHOUT making a commit. */
+  runDiscard: () => Promise<void>
   runPush: () => Promise<void>
   runPull: () => Promise<void>
   dismissPanelMessage: () => void
@@ -536,6 +539,54 @@ export const useGitStore = create<GitState>()(
             s.panel.phase = 'idle'
             s.panel.message = ''
             s.panel.notice = 'Committed.'
+          }
+        })
+        await get().refreshStatus()
+      },
+
+      runDiscard: async () => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        const panel = get().panel
+        if (!git || !repo || !panel) return
+        const review = panel.fieldReview
+        if (!review) return
+        // Nothing marked to discard is nothing to do — the button is disabled
+        // in that state, this is the belt-and-suspenders match.
+        const hasDiscard = Object.values(review.decisions).some((d) => d === 'discard')
+        if (!hasDiscard) return
+
+        set((s) => {
+          if (s.panel) {
+            s.panel.phase = 'working'
+            s.panel.error = null
+            s.panel.notice = null
+          }
+        })
+
+        // Exactly the `workingOut` a commit-with-these-decisions would have
+        // left behind — the same compose path, so the two can never drift.
+        const { workingOut } = composeContents(review.head, review.working, review.changes, review.decisions)
+        const r = await git.writeWorking(repo.root, repo.relPath, serializeProject(workingOut))
+        if (!r.ok) {
+          set((s) => {
+            if (s.panel) {
+              s.panel.phase = 'idle'
+              s.panel.error = gitErrorText(r)
+            }
+          })
+          return
+        }
+
+        // The working file was rewritten, so the in-memory project has to be
+        // re-read from disk — the same reason `runCommit`'s field path
+        // reloads. `dirty` is guaranteed false: the Discard button is
+        // disabled while it isn't, so this reload can never drop unsaved work.
+        await reloadOpenProject()
+        set((s) => {
+          if (s.panel) {
+            s.panel.phase = 'idle'
+            s.panel.notice = 'Reverted the discarded changes. Nothing was committed.'
           }
         })
         await get().refreshStatus()

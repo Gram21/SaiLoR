@@ -27,6 +27,7 @@ export function GitDialog() {
   const setAllFieldDispositions = useGitStore((s) => s.setAllFieldDispositions)
   const setCommitMessage = useGitStore((s) => s.setCommitMessage)
   const runCommit = useGitStore((s) => s.runCommit)
+  const runDiscard = useGitStore((s) => s.runDiscard)
   const runPush = useGitStore((s) => s.runPush)
   const runPull = useGitStore((s) => s.runPull)
   const dismissPanelMessage = useGitStore((s) => s.dismissPanelMessage)
@@ -97,8 +98,8 @@ export function GitDialog() {
               </div>
               <p className="git-muted">
                 Use commits a field's new value. Ignore leaves it as an uncommitted change, offered
-                again next time. Discard reverts it back — but only once you press Commit, never
-                before.
+                again next time. Discard reverts it back to the committed value — on your next
+                commit, or right now with Discard changes below.
               </p>
               <div className="git-field-review-bulk">
                 <button type="button" onClick={() => setAllFieldDispositions('use')}>
@@ -129,6 +130,13 @@ export function GitDialog() {
                   />
                 ))}
               </ul>
+              <FieldDiscardAction
+                decisions={review.decisions}
+                relPath={repo.relPath}
+                busy={working}
+                dirty={dirty}
+                runDiscard={runDiscard}
+              />
             </>
           )}
 
@@ -307,10 +315,57 @@ function DispositionButtons({ disposition, onSet }: DispositionButtonsProps) {
       <button
         type="button"
         className={`git-disposition-btn git-disposition-discard${disposition === 'discard' ? ' active' : ''}`}
-        title="Revert this change once you press Commit"
+        title="Revert this change: on commit, or now with Discard changes"
         onClick={() => onSet('discard')}
       >
         Discard
+      </button>
+    </div>
+  )
+}
+
+/**
+ * "Discard changes" reverts every row currently marked Discard right now,
+ * without a commit — the escape hatch for a reviewer who only wants to throw
+ * local edits away and has no interest in typing a commit message for that.
+ * Enabled from a single discarded row, not only "everything discarded": the
+ * write it performs (`composeContents`'s `workingOut`) already reverts
+ * exactly the marked rows and nothing else, so gating on "all of them" would
+ * be an artificial restriction over an operation identical either way.
+ */
+function FieldDiscardAction({
+  decisions,
+  relPath,
+  busy,
+  dirty,
+  runDiscard,
+}: {
+  decisions: Record<string, Disposition>
+  relPath: string
+  busy: boolean
+  dirty: boolean
+  runDiscard: () => Promise<void>
+}) {
+  const discardCount = Object.values(decisions).filter((d) => d === 'discard').length
+
+  const confirmAndDiscard = () => {
+    const ok = window.confirm(
+      `Discard ${discardCount} change${discardCount === 1 ? '' : 's'} in ${relPath}? This reverts ` +
+        `${discardCount === 1 ? 'it' : 'them'} in the file on disk and cannot be undone. Nothing is committed.`,
+    )
+    if (ok) void runDiscard()
+  }
+
+  return (
+    <div className="git-field-discard-action">
+      <button
+        type="button"
+        className="git-field-discard-btn"
+        disabled={busy || dirty || discardCount === 0}
+        title="Revert the rows marked Discard in the file on disk, without committing"
+        onClick={confirmAndDiscard}
+      >
+        Discard changes
       </button>
     </div>
   )

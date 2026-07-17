@@ -92,6 +92,7 @@ export interface SlrBridge {
     otherPaths: string[],
     message: string,
   ): Promise<GitRun>
+  gitWriteWorking(root: string, relPath: string, text: string): Promise<GitRun>
 }
 
 function bridge(): SlrBridge {
@@ -330,6 +331,7 @@ export class ElectronAdapter implements PlatformAdapter {
     workingContent: (root, relPath) => bridge().gitWorkingContent(root, relPath),
     commitPartial: (root, relPath, committedText, workingText, otherPaths, message) =>
       bridge().gitCommitPartial(root, relPath, committedText, workingText, otherPaths, message),
+    writeWorking: (root, relPath, text) => bridge().gitWriteWorking(root, relPath, text),
   }
 
   getGit(): GitPlatform {

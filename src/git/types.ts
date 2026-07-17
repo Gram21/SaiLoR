@@ -130,4 +130,9 @@ export interface GitPlatform {
     otherPaths: string[],
     message: string,
   ): Promise<GitRun>
+  /** Writes `text` to the working-tree file at `relPath` — the content the
+   *  reviewer's field-level "discard" choices compose to (`composeContents`'s
+   *  `workingOut`) — without staging or committing. The write-counterpart to
+   *  `workingContent`, for reverting local edits without a commit. */
+  writeWorking(root: string, relPath: string, text: string): Promise<GitRun>
 }
