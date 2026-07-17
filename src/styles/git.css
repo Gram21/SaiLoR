@@ -31,7 +31,10 @@
 }
 
 .modal.git-dialog {
-  width: min(860px, 94vw);
+  /* Wider than the 860px this had before field-level review existed — a row's
+     Was/Now pair plus its three disposition buttons need more breathing room
+     than a bare file-checkbox list ever did. */
+  width: min(980px, 94vw);
 }
 
 .modal.git-merge-dialog {
@@ -184,6 +187,103 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* --- field-level change review ------------------------------------------ */
+
+.git-field-review-bulk {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0 10px;
+}
+
+.git-field-rows {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.git-field-row {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+/* A row about to be reverted reads visibly different from one merely left
+   alone (ignore) or committed (use) — the same warning-accent
+   `.screening-abstract-extracted-notice`/`.git-merge-row.is-undecided` already
+   use elsewhere for "this row is not in its default state". */
+.git-field-row.is-discard {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+.git-field-row-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+}
+.git-field-row-paper {
+  color: var(--muted);
+}
+.git-field-row-label {
+  font-weight: 600;
+}
+
+.git-field-row-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+.git-field-row-was {
+  color: var(--muted);
+}
+.git-field-row-now {
+  color: var(--text);
+}
+
+.git-field-row-actions {
+  display: flex;
+  gap: 6px;
+}
+.git-disposition-btn {
+  padding: 3px 10px;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+}
+.git-disposition-btn.active {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-weight: 600;
+}
+.git-disposition-discard.active {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--danger);
+}
+
+.git-diff-details {
+  margin: 8px 0;
+}
+.git-diff-details summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+/* The <details> element already indents its content by the marker's width in
+   most browsers; the diff itself keeps its own look identical either way. */
+.git-diff-details .git-diff {
+  margin-top: 6px;
 }
 
 .git-panel-actions {

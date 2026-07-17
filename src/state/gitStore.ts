@@ -11,9 +11,10 @@ import {
   type MergeNote,
   type Resolutions,
 } from '../git/merge'
+import { detectFieldChanges, composeContents, type DetectedChanges, type Disposition } from '../git/changes'
 import { repoNameFromUrl } from '../git/url'
 import { gitErrorText } from '../git/output'
-import type { GitProbe, GitRepoInfo, GitStatus } from '../git/types'
+import type { GitProbe, GitRepoInfo, GitRun, GitStatus } from '../git/types'
 import { useStore } from './store'
 
 /**
@@ -52,12 +53,33 @@ interface MergeState {
   notes: MergeNote[]
 }
 
+/**
+ * Field-level review of the open project's own file, when it is a tracked
+ * modification that parses as a project on both HEAD and the working tree —
+ * see `refreshFieldReview`. `null` for every other case (untracked, deleted,
+ * unparseable, or a structural difference `detectFieldChanges` itself
+ * refuses), in which the project file falls back to the plain file-level
+ * checkbox `panel.selected` already handles for every other changed file.
+ */
+interface FieldReviewState {
+  head: Project
+  working: Project
+  changes: DetectedChanges
+  /** Absent means 'use' — the default `composeContents` itself applies, so a
+   *  reviewer who never touches a row still commits everything they changed,
+   *  the same "clicking Git commits my annotations" default the plain
+   *  file-level checkbox already has. */
+  decisions: Record<string, Disposition>
+}
+
 interface PanelState {
   phase: 'idle' | 'loading' | 'working'
   status: GitStatus | null
   message: string
-  /** Paths ticked for the next commit. */
+  /** Paths ticked for the next commit — every changed file *except* the open
+   *  project's own, whenever `fieldReview` is handling that one instead. */
   selected: Record<string, true>
+  fieldReview: FieldReviewState | null
   error: string | null
   notice: string | null
   merge: MergeState | null
@@ -89,6 +111,11 @@ interface GitState {
   closePanel: () => void
   refreshStatus: () => Promise<void>
   toggleSelected: (path: string) => void
+  setFieldDisposition: (id: string, disposition: Disposition) => void
+  /** Every field/paper row in the current field review, at once — the same
+   *  "one click covers the whole list" `GitMergeDialog`'s "Use all mine" /
+   *  "Use all remote" already offers, for the analogous question here. */
+  setAllFieldDispositions: (disposition: Disposition) => void
   setCommitMessage: (message: string) => void
   runCommit: () => Promise<void>
   runPush: () => Promise<void>
@@ -162,6 +189,72 @@ export const useGitStore = create<GitState>()(
         }
       })
       await get().refreshStatus()
+    }
+
+    /**
+     * Recomputes `panel.fieldReview` for the open project's own file, given
+     * the `status` `refreshStatus` just fetched. Every failure mode — the
+     * file isn't in `status.changes` at all, it's untracked (no HEAD
+     * revision), either revision fails to parse as a project, or
+     * `detectFieldChanges` itself refuses because something structural
+     * changed — lands on `null`, which is exactly what makes the project
+     * file fall back to the plain file-level checkbox: nothing here ever
+     * surfaces as an *error*, since "can't review this one field by field"
+     * is routine, not exceptional.
+     *
+     * Existing decisions survive a refresh that leaves the same fields
+     * changed (an incidental ↻ click must not silently reset a reviewer's
+     * careful per-row choices) and are dropped for any id no longer present.
+     */
+    async function refreshFieldReview(repo: GitRepoInfo, status: GitStatus): Promise<void> {
+      const git = getPlatform().getGit()
+      if (!git) return
+
+      const inStatus = status.changes.some((c) => c.path === repo.relPath && c.code !== '??')
+      if (!inStatus) {
+        set((s) => {
+          if (s.panel) s.panel.fieldReview = null
+        })
+        return
+      }
+
+      const clear = () =>
+        set((s) => {
+          if (s.panel) s.panel.fieldReview = null
+        })
+
+      try {
+        const [headText, workingText] = await Promise.all([
+          git.headContent(repo.root, repo.relPath),
+          git.workingContent(repo.root, repo.relPath),
+        ])
+        if (headText === null || workingText === null) {
+          clear()
+          return
+        }
+        const head = loadProject(headText)
+        const working = loadProject(workingText)
+        const changes = detectFieldChanges(head, working)
+        if (!changes || (changes.fields.length === 0 && changes.papers.length === 0)) {
+          clear()
+          return
+        }
+        set((s) => {
+          if (!s.panel) return
+          const validIds = new Set([...changes.fields.map((f) => f.id), ...changes.papers.map((p) => p.id)])
+          const decisions: Record<string, Disposition> = {}
+          for (const [id, d] of Object.entries(s.panel.fieldReview?.decisions ?? {})) {
+            if (validIds.has(id)) decisions[id] = d
+          }
+          s.panel.fieldReview = { head, working, changes, decisions }
+          // The open project's own file is now handled here — never let it
+          // also linger as a plain file-level tick from before this resolved.
+          delete s.panel.selected[repo.relPath]
+        })
+      } catch {
+        // Either revision failed to parse as a project — fall back silently.
+        clear()
+      }
     }
 
     return {
@@ -271,15 +364,25 @@ export const useGitStore = create<GitState>()(
 
       openPanel: async () => {
         set((s) => {
-          s.panel = { phase: 'idle', status: null, message: '', selected: {}, error: null, notice: null, merge: null }
+          s.panel = {
+            phase: 'idle',
+            status: null,
+            message: '',
+            selected: {},
+            fieldReview: null,
+            error: null,
+            notice: null,
+            merge: null,
+          }
         })
         await get().refreshStatus()
         // Default tick: only the open project's own file, when it is in the
-        // list. Clicking Git means "my annotations", not whatever else is
-        // lying around the repo — everything else is one visible tick away.
+        // list *and* not already being handled by field-level review below.
+        // Clicking Git means "my annotations", not whatever else is lying
+        // around the repo — everything else is one visible tick away.
         const repo = get().repo
-        const status = get().panel?.status
-        if (repo && status?.changes.some((c) => c.path === repo.relPath)) {
+        const panel = get().panel
+        if (repo && !panel?.fieldReview && panel?.status?.changes.some((c) => c.path === repo.relPath)) {
           set((s) => {
             if (s.panel) s.panel.selected = { [repo.relPath]: true }
           })
@@ -310,6 +413,7 @@ export const useGitStore = create<GitState>()(
               if (!paths.has(p)) delete s.panel.selected[p]
             }
           })
+          await refreshFieldReview(repo, status)
         } catch (err) {
           set((s) => {
             if (!s.panel) return
@@ -327,6 +431,22 @@ export const useGitStore = create<GitState>()(
         })
       },
 
+      setFieldDisposition: (id, disposition) => {
+        set((s) => {
+          if (!s.panel?.fieldReview) return
+          s.panel.fieldReview.decisions[id] = disposition
+        })
+      },
+
+      setAllFieldDispositions: (disposition) => {
+        set((s) => {
+          const review = s.panel?.fieldReview
+          if (!review) return
+          for (const f of review.changes.fields) review.decisions[f.id] = disposition
+          for (const p of review.changes.papers) review.decisions[p.id] = disposition
+        })
+      },
+
       setCommitMessage: (message) => {
         set((s) => {
           if (s.panel) s.panel.message = message
@@ -341,12 +461,13 @@ export const useGitStore = create<GitState>()(
         // A rename contributes both its new path and its "from" path, or the
         // deletion of the old path is left behind.
         const changes = panel.status?.changes ?? []
-        const paths: string[] = []
+        const otherPaths: string[] = []
         for (const p of Object.keys(panel.selected)) {
-          paths.push(p)
+          otherPaths.push(p)
           const change = changes.find((c) => c.path === p)
-          if (change?.from) paths.push(change.from)
+          if (change?.from) otherPaths.push(change.from)
         }
+
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'working'
@@ -354,7 +475,25 @@ export const useGitStore = create<GitState>()(
             s.panel.notice = null
           }
         })
-        const r = await git.commit(repo.root, paths, panel.message)
+
+        const review = panel.fieldReview
+        let r: GitRun
+        let usedFieldReview = false
+        if (review) {
+          const { committed, workingOut } = composeContents(review.head, review.working, review.changes, review.decisions)
+          r = await git.commitPartial(
+            repo.root,
+            repo.relPath,
+            serializeProject(committed),
+            serializeProject(workingOut),
+            otherPaths,
+            panel.message,
+          )
+          usedFieldReview = true
+        } else {
+          r = await git.commit(repo.root, otherPaths, panel.message)
+        }
+
         if (!r.ok) {
           set((s) => {
             if (s.panel) {
@@ -364,6 +503,15 @@ export const useGitStore = create<GitState>()(
           })
           return
         }
+
+        // A field-level commit may have rewritten the working file (any
+        // "discard" decision does), so the app's in-memory project — if this
+        // is the file currently open — has to be re-read from disk, the same
+        // reason a finished pull always does. `dirty` is guaranteed false
+        // here: the Commit button is disabled while it isn't, precisely so
+        // this reload can never discard unsaved work.
+        if (usedFieldReview) await reloadOpenProject()
+
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'idle'

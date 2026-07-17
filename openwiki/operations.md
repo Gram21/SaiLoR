@@ -281,13 +281,23 @@ git is installed, check `which git` in a terminal against what a GUI-launched ap
 
 | Platform | Git support |
 |---|---|
-| Electron (desktop) | Full — clone, status, commit, pull (with field-level merge), push, using the real `git` binary and its config |
+| Electron (desktop) | Full — clone, status, commit (with field-level review), pull (with field-level merge), push, using the real `git` binary and its config |
 | Browser (any) | None — the controls stay visible, dimmed, with a tooltip pointing at the desktop app; see `architecture.md`'s "Git" section for why there is nothing to fall back to |
 
 **Credentials are never handled by SaiLoR.** Every git operation runs through the user's own
 credential helper, SSH agent, and host-key configuration, exactly as a terminal `git` command would.
 The one thing that is turned off is a *terminal* prompt (`GIT_TERMINAL_PROMPT=0`) — there is no
 terminal for git to prompt at, so leaving that on would hang the app instead of failing honestly.
+
+**What `git → Commit` does for the project's own file**: when it is a tracked modification that
+parses as a project on both HEAD and the working tree, its changes are listed field by field —
+"Title: Was `X`, now `Y`" — instead of one whole-file tick. Each row is **Use** (commit the new
+value), **Ignore** (leave it uncommitted, offered again next time), or **Discard** (revert it, but
+only once Commit is actually pressed — picking Discard does not touch the file by itself). Coupled
+fields, like an abstract and whether it was PDF-extracted, are shown as one row. Every other changed
+file — and the project file itself, when a schema/reviewer-count/etc. change makes field-level review
+impossible — keeps the plain whole-file checkbox. See `architecture.md`'s "Field-level commit review"
+for the mechanics.
 
 **What `git → Pull` does**: fetches, and either fast-forwards, reports up to date, or — on a genuine
 divergence — reads the three revisions of the project JSON and merges them field by field (see

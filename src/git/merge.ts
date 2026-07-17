@@ -32,7 +32,7 @@ import { formatPath, displayPath, resolvePath, type RawSeg } from '../llm/paths'
 /** Which tree inside the project a conflicted value lives in. */
 export type MergeTree =
   | { kind: 'project' } // the project's own top-level fields
-  | { kind: 'paper' } // one paper's metadata (title, pdf, doi, authors)
+  | { kind: 'paper' } // one paper's metadata (title, pdf, doi, authors, abstract, abstractFromPdf)
   | { kind: 'annotations' } // the single / consolidated tree
   | { kind: 'review'; reviewer: string } // one numbered reviewer's own tree
 
@@ -355,6 +355,44 @@ function mergePaper(
     )
   }
 
+  const abstractM = merge3<string | undefined>(base?.abstract, ours.abstract, theirs.abstract, eqStrU)
+  const abstract = abstractM ? abstractM.value : ours.abstract
+  if (!abstractM) {
+    pushPaperConflict('abstract', 'Abstract', sOrNull(base?.abstract), sOrNull(ours.abstract), sOrNull(theirs.abstract))
+  }
+
+  // Independent of `abstract` itself — a real (if rare) gap this leaves: the
+  // reviewer could pick one side's abstract text and the other side's
+  // abstractFromPdf flag, producing a text/flag combination neither side
+  // actually had. `applyOne`'s screening review is a per-field UI with no
+  // concept of "these two rows must be resolved together"; bundling the two
+  // into one decision (the way `changes.ts` does for the *commit* flow) would
+  // need the same treatment here, and is left for that to potentially extend
+  // to rather than duplicating now. What matters more is not losing the
+  // abstract at all, which mergePaper did before this field existed here.
+  const eqBoolU = (a: boolean | undefined, b: boolean | undefined) => a === b
+  const abstractFromPdfM = merge3<boolean | undefined>(
+    base?.abstractFromPdf,
+    ours.abstractFromPdf,
+    theirs.abstractFromPdf,
+    eqBoolU,
+  )
+  const abstractFromPdf = abstractFromPdfM ? abstractFromPdfM.value : ours.abstractFromPdf
+  if (!abstractFromPdfM) {
+    conflicts.push({
+      id: conflictId(ours.id, { kind: 'paper' }, 'abstractFromPdf'),
+      paperId: ours.id,
+      paperTitle: ours.title,
+      tree: { kind: 'paper' },
+      canonical: 'abstractFromPdf',
+      label: 'Abstract extracted from PDF',
+      type: 'boolean',
+      base: base?.abstractFromPdf ?? false,
+      ours: ours.abstractFromPdf ?? false,
+      theirs: theirs.abstractFromPdf ?? false,
+    })
+  }
+
   const extraKeys = new Set([
     ...Object.keys(base?.extra ?? {}),
     ...Object.keys(ours.extra),
@@ -411,6 +449,8 @@ function mergePaper(
     title,
     authors,
     doi,
+    abstract,
+    abstractFromPdf,
     pdf,
     annotations,
     reviews,
@@ -432,6 +472,8 @@ function canonicalPaper(schema: ResolvedDef[], p: Paper) {
     title: p.title,
     authors: p.authors,
     doi: p.doi,
+    abstract: p.abstract,
+    abstractFromPdf: p.abstractFromPdf,
     pdf: p.pdf,
     annotations: pruneTree(schema, p.annotations),
     reviews: Object.fromEntries(Object.entries(p.reviews).map(([k, v]) => [k, pruneTree(schema, v)])),
@@ -746,6 +788,14 @@ function applyOne(draft: Project, conflict: FieldConflict, value: FieldValue): v
       }
       case 'authors':
         paper.authors = splitAuthors(valueToString(value))
+        break
+      case 'abstract': {
+        const s = valueToString(value).trim()
+        paper.abstract = s || undefined
+        break
+      }
+      case 'abstractFromPdf':
+        paper.abstractFromPdf = value === true ? true : undefined
         break
     }
     return

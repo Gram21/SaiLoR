@@ -93,4 +93,27 @@ export interface GitPlatform {
   beginPull(root: string, relPath: string): Promise<PullStart>
   finishPull(root: string, relPath: string, text: string): Promise<GitRun>
   abortPull(root: string): Promise<GitRun>
+  /** HEAD's copy of `relPath`, for the commit panel's field-level review
+   *  (`src/git/changes.ts`). `null` when there is no HEAD revision of it at
+   *  all (a newly added, still-untracked file). */
+  headContent(root: string, relPath: string): Promise<string | null>
+  /** The working-tree file's own content, read directly (not through the
+   *  app's in-memory, possibly-unsaved `project`) — the other half of what
+   *  `changes.ts` diffs. `null` when it is missing or unreadable. */
+  workingContent(root: string, relPath: string): Promise<string | null>
+  /**
+   * Commits `committedText` as `relPath`'s content, plus whatever is already
+   * on disk at `otherPaths`, then writes `workingText` to `relPath`
+   * afterward regardless of whether the commit succeeded — see
+   * `electron/main.ts`'s `git:commitPartial` handler for why the two texts
+   * can differ and why the write-back is unconditional.
+   */
+  commitPartial(
+    root: string,
+    relPath: string,
+    committedText: string,
+    workingText: string,
+    otherPaths: string[],
+    message: string,
+  ): Promise<GitRun>
 }

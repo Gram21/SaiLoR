@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { RecentEntry, SaveHandle } from '../platform/adapter'
-import type { GitPlatform, GitRun, PullStart } from '../git/types'
+import type { GitPlatform, GitRun, PullStart, GitFileChange } from '../git/types'
+import { conflictId } from '../git/merge'
 
 /**
  * `runPull`'s orchestration is the one place all the pieces of this feature
@@ -32,6 +33,17 @@ function projectTextWithSchema(schema: unknown[]): string {
   return JSON.stringify({ version: 1, config: { schema }, papers: [] })
 }
 
+/** A project with one paper whose title (a paper-meta field, not bundled)
+ *  is the only thing set — the minimal shape `detectFieldChanges` needs to
+ *  report a genuine field-level change. */
+function paperMetaText(title: string): string {
+  return JSON.stringify({
+    version: 1,
+    config: { schema: SCHEMA },
+    papers: [{ id: 'a', title, authors: [], pdf: 'a.pdf', annotations: {} }],
+  })
+}
+
 const ok = (stdout = ''): GitRun => ({ ok: true, code: 0, stdout, stderr: '' })
 
 let openedPaths: string[] = []
@@ -40,14 +52,24 @@ let finishCalls: { root: string; relPath: string; text: string }[] = []
 let beginPullResult: PullStart = { kind: 'up-to-date' }
 let finishPullResult: GitRun = ok()
 
+let statusChanges: GitFileChange[] = []
+let headContentResult: string | null = null
+let workingContentResult: string | null = null
+let commitPartialResult: GitRun = ok()
+let commitPartialCalls: { root: string; relPath: string; committedText: string; workingText: string; otherPaths: string[]; message: string }[] = []
+let commitCalls: { root: string; paths: string[]; message: string }[] = []
+
 const fakeGit: GitPlatform = {
   probe: async () => ({ available: true, version: 'git 2.43.0', error: '' }),
   pickCloneDir: async () => null,
   clone: async () => ({ ok: false, error: 'not used here' }),
   pickProjectIn: async () => null,
   info: async () => null,
-  status: async () => ({ changes: [], diff: '', diffTruncated: false }),
-  commit: async () => ok(),
+  status: async () => ({ changes: statusChanges, diff: '', diffTruncated: false }),
+  commit: async (root, paths, message) => {
+    commitCalls.push({ root, paths, message })
+    return ok()
+  },
   push: async () => ok(),
   beginPull: async () => beginPullResult,
   finishPull: async (root, relPath, text) => {
@@ -57,6 +79,12 @@ const fakeGit: GitPlatform = {
   abortPull: async () => {
     abortCalls++
     return ok()
+  },
+  headContent: async () => headContentResult,
+  workingContent: async () => workingContentResult,
+  commitPartial: async (root, relPath, committedText, workingText, otherPaths, message) => {
+    commitPartialCalls.push({ root, relPath, committedText, workingText, otherPaths, message })
+    return commitPartialResult
   },
 }
 
@@ -101,6 +129,12 @@ beforeEach(async () => {
   abortCalls = 0
   finishCalls = []
   finishPullResult = ok()
+  statusChanges = []
+  headContentResult = null
+  workingContentResult = null
+  commitPartialResult = ok()
+  commitPartialCalls = []
+  commitCalls = []
   useStore.getState().loadFromText(projectText('mine'), { kind: 'electron', path: '/repo/review.json' }, 'review.json')
   useStore.setState({ dirty: false })
   useGitStore.setState({ probe: null, repo: { ...REPO }, clone: null, panel: null })
@@ -209,5 +243,169 @@ describe('runPull', () => {
     fakeGit.beginPull = originalBeginPull
     expect(called).toBe(false)
     expect(useGitStore.getState().panel?.error).toMatch(/save the project/i)
+  })
+})
+
+/**
+ * `refreshFieldReview`'s branches — whether the open project's own file ends
+ * up reviewed field by field, or falls back to the plain file-level
+ * checkbox `panel.selected` already handles for every other changed file.
+ */
+describe('refreshFieldReview (via refreshStatus)', () => {
+  it('the project file is untracked (no HEAD revision) — fieldReview stays null', async () => {
+    statusChanges = [{ path: 'review.json', code: '??', unmerged: false }]
+    await useGitStore.getState().refreshStatus()
+    expect(useGitStore.getState().panel?.fieldReview).toBeNull()
+  })
+
+  it('a revision fails to read — fieldReview stays null, no error surfaced', async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    headContentResult = null
+    workingContentResult = paperMetaText('New Title')
+    await useGitStore.getState().refreshStatus()
+    expect(useGitStore.getState().panel?.fieldReview).toBeNull()
+    expect(useGitStore.getState().panel?.error).toBeNull()
+  })
+
+  it('an unparseable revision — fieldReview stays null, no error surfaced', async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    headContentResult = paperMetaText('Old Title')
+    workingContentResult = 'not valid json at all'
+    await useGitStore.getState().refreshStatus()
+    expect(useGitStore.getState().panel?.fieldReview).toBeNull()
+    expect(useGitStore.getState().panel?.error).toBeNull()
+  })
+
+  it('a structural difference — fieldReview stays null, falls back to the file checkbox', async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    headContentResult = projectTextWithSchema(SCHEMA)
+    workingContentResult = projectTextWithSchema([...SCHEMA, { name: 'Extra X', type: 'string' }])
+    await useGitStore.getState().refreshStatus()
+    expect(useGitStore.getState().panel?.fieldReview).toBeNull()
+  })
+
+  it('both revisions parse identically — fieldReview stays null', async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    headContentResult = paperMetaText('Same Title')
+    workingContentResult = paperMetaText('Same Title')
+    await useGitStore.getState().refreshStatus()
+    expect(useGitStore.getState().panel?.fieldReview).toBeNull()
+  })
+
+  it('a genuine field-level change is detected, defaults to "use", and clears the file checkbox', async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    headContentResult = paperMetaText('Old Title')
+    workingContentResult = paperMetaText('New Title')
+    await useGitStore.getState().refreshStatus()
+    const review = useGitStore.getState().panel?.fieldReview
+    expect(review).toBeTruthy()
+    expect(review?.changes.fields).toHaveLength(1)
+    const fc = review!.changes.fields[0]
+    expect(fc.canonical).toBe('title')
+    expect(fc.headValue).toBe('Old Title')
+    expect(fc.workingValue).toBe('New Title')
+    // Absent from `decisions` means 'use' — no entry is written until the
+    // reviewer actually touches the row.
+    expect(review?.decisions[fc.id]).toBeUndefined()
+    expect(useGitStore.getState().panel?.selected['review.json']).toBeUndefined()
+  })
+
+  it('a decision survives a refresh that leaves the same field changed', async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    headContentResult = paperMetaText('Old Title')
+    workingContentResult = paperMetaText('New Title')
+    await useGitStore.getState().refreshStatus()
+    const id = useGitStore.getState().panel!.fieldReview!.changes.fields[0].id
+    useGitStore.getState().setFieldDisposition(id, 'ignore')
+
+    await useGitStore.getState().refreshStatus()
+    expect(useGitStore.getState().panel?.fieldReview?.decisions[id]).toBe('ignore')
+  })
+
+  it('a decision for a field no longer changed is dropped on refresh', async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    headContentResult = paperMetaText('Old Title')
+    workingContentResult = paperMetaText('New Title')
+    await useGitStore.getState().refreshStatus()
+    const id = useGitStore.getState().panel!.fieldReview!.changes.fields[0].id
+    useGitStore.getState().setFieldDisposition(id, 'discard')
+
+    // The working copy now matches HEAD again — the field is no longer changed.
+    workingContentResult = paperMetaText('Old Title')
+    await useGitStore.getState().refreshStatus()
+    expect(useGitStore.getState().panel?.fieldReview).toBeNull()
+  })
+})
+
+describe('setFieldDisposition / setAllFieldDispositions', () => {
+  beforeEach(async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    headContentResult = paperMetaText('Old Title')
+    workingContentResult = paperMetaText('New Title')
+    await useGitStore.getState().refreshStatus()
+  })
+
+  it('setFieldDisposition sets one row without touching others', () => {
+    const id = conflictId('a', { kind: 'paper' }, 'title')
+    useGitStore.getState().setFieldDisposition(id, 'discard')
+    expect(useGitStore.getState().panel?.fieldReview?.decisions[id]).toBe('discard')
+  })
+
+  it('setAllFieldDispositions sets every field and paper row at once', () => {
+    useGitStore.getState().setAllFieldDispositions('ignore')
+    const review = useGitStore.getState().panel!.fieldReview!
+    for (const f of review.changes.fields) expect(review.decisions[f.id]).toBe('ignore')
+    for (const p of review.changes.papers) expect(review.decisions[p.id]).toBe('ignore')
+  })
+})
+
+describe('runCommit — field review (commitPartial)', () => {
+  beforeEach(async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    headContentResult = paperMetaText('Old Title')
+    workingContentResult = paperMetaText('New Title')
+    await useGitStore.getState().refreshStatus()
+    useGitStore.getState().setCommitMessage('Update title')
+  })
+
+  it('composes committed/working content and calls commitPartial, not the whole-file commit', async () => {
+    await useGitStore.getState().runCommit()
+    expect(commitCalls).toHaveLength(0)
+    expect(commitPartialCalls).toHaveLength(1)
+    const call = commitPartialCalls[0]
+    expect(call.root).toBe('/repo')
+    expect(call.relPath).toBe('review.json')
+    expect(call.message).toBe('Update title')
+    const committed = JSON.parse(call.committedText) as { papers: { title: string }[] }
+    // The default disposition is 'use', so the committed content picks up
+    // the working tree's new title.
+    expect(committed.papers[0].title).toBe('New Title')
+  })
+
+  it('reloads the open project on success, since a "discard" may have rewritten the working file', async () => {
+    await useGitStore.getState().runCommit()
+    expect(openedPaths).toEqual(['/repo/review.json'])
+    expect(useGitStore.getState().panel?.notice).toBe('Committed.')
+  })
+
+  it('a failed commitPartial surfaces the error and does not reload', async () => {
+    commitPartialResult = { ok: false, code: 1, stdout: '', stderr: 'commit failed' }
+    await useGitStore.getState().runCommit()
+    expect(openedPaths).toEqual([])
+    expect(useGitStore.getState().panel?.error).toMatch(/commit failed/)
+    expect(useGitStore.getState().panel?.phase).toBe('idle')
+  })
+
+  it('a "discard" decision writes HEAD\'s value back into the working-tree output', async () => {
+    const id = conflictId('a', { kind: 'paper' }, 'title')
+    useGitStore.getState().setFieldDisposition(id, 'discard')
+    await useGitStore.getState().runCommit()
+    const call = commitPartialCalls[0]
+    const committed = JSON.parse(call.committedText) as { papers: { title: string }[] }
+    const workingOut = JSON.parse(call.workingText) as { papers: { title: string }[] }
+    // Discarded: the commit still keeps HEAD's value, and the working file is
+    // rewritten to match it too — the local edit is erased.
+    expect(committed.papers[0].title).toBe('Old Title')
+    expect(workingOut.papers[0].title).toBe('Old Title')
   })
 })

@@ -886,6 +886,77 @@ ipcMain.handle('git:status', async (_e, root: string) => {
   return { porcelain, diff }
 })
 
+/** HEAD's copy of the project file, for the commit panel's field-level review
+ *  (`src/git/changes.ts` diffs this against the working copy already in
+ *  memory). `null` when the file has no HEAD revision at all — a newly
+ *  added, still-untracked project — in which case the caller falls back to
+ *  the plain whole-file commit, the same as it already does for any file
+ *  that fails to parse as a project on either side. */
+ipcMain.handle('git:headContent', async (_e, root: string, relPath: string) => {
+  assertRelPath(relPath)
+  const r = await runGit(['show', `HEAD:${relPath}`], root)
+  return r.ok ? r.stdout : null
+})
+
+/**
+ * The working-tree file's own content, read directly rather than through
+ * `store.ts`'s in-memory `project` — which may hold unsaved edits the
+ * reviewer never saved to disk, and `git status`/`git diff` (what the commit
+ * panel is reviewing) only ever sees what is actually on disk. No git
+ * involved, unlike `git:headContent`: this is deliberately the same plain
+ * read `project:openPath` already does, not `git show :relPath` (the index's
+ * copy, which is a different, and for this feature wrong, thing to diff).
+ */
+ipcMain.handle('git:workingContent', async (_e, root: string, relPath: string) => {
+  assertRelPath(relPath)
+  try {
+    return await readFile(path.join(root, relPath), 'utf-8')
+  } catch {
+    return null
+  }
+})
+
+/**
+ * Commits `committedText` as `relPath`'s content — which is not necessarily
+ * what the working-tree file holds, or ends up holding. This is what makes
+ * committing *some* of a file's field-level changes possible at all: git has
+ * no native concept of staging part of one file, but nothing requires the
+ * content `add` stages to be what is actually on disk.
+ *
+ * The sequence is write → add → commit → (always) write again: `committedText`
+ * goes onto disk just long enough to be staged, then `workingText` — the
+ * content the reviewer's working tree should hold afterward, computed by
+ * `composeContents` from their Use/Ignore/Discard choices — replaces it. The
+ * `finally` is load-bearing: if `add` or `commit` fails partway, the working
+ * file must still end up holding `workingText`, never stuck mid-swap holding
+ * content that was never actually staged as anything.
+ */
+ipcMain.handle(
+  'git:commitPartial',
+  async (
+    _e,
+    root: string,
+    relPath: string,
+    committedText: string,
+    workingText: string,
+    otherPaths: string[],
+    message: string,
+  ) => {
+    assertRelPath(relPath)
+    otherPaths.forEach(assertRelPath)
+    const fullPath = path.join(root, relPath)
+    const paths = [relPath, ...otherPaths]
+    try {
+      await writeFile(fullPath, committedText, 'utf-8')
+      const add = await runGit(['add', '--', ...paths], root)
+      if (!add.ok) return add
+      return await runGit(['commit', '-m', message, '--', ...paths], root)
+    } finally {
+      await writeFile(fullPath, workingText, 'utf-8')
+    }
+  },
+)
+
 ipcMain.handle('git:commit', async (_e, root: string, paths: string[], message: string) => {
   paths.forEach(assertRelPath)
   if (paths.length === 0) {
