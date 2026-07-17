@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { resolveSchema, type AnnotationDef } from '../model/schema'
 import { normalizeTree, type AnnotationValueTree } from '../model/annotations'
 import type { Paper } from '../model/project'
-import { readyToConsolidate, readyCount } from './readiness'
+import { readyToConsolidate, readyCount, consolidatorHasAnswered } from './readiness'
 
 const DEFS: AnnotationDef[] = [
   { name: 'Study Type', type: 'string' },
@@ -83,5 +83,34 @@ describe('readyToConsolidate', () => {
       paper({}, 'p3'),
     ]
     expect(readyCount(schema, papers, 2)).toBe(1)
+  })
+})
+
+describe('consolidatorHasAnswered', () => {
+  const def = schema.find((d) => d.name === 'Study Type')!
+  const boolDef = schema.find((d) => d.name === 'Relevant')!
+
+  it('is true once the consolidator has written a value under the node', () => {
+    const consolidated = normalizeTree(schema, { 'Study Type': [{ value: 'Survey' }] })
+    expect(consolidatorHasAnswered(def, consolidated)).toBe(true)
+  })
+
+  it('is false for an empty (never-touched) node', () => {
+    const consolidated = normalizeTree(schema, undefined)
+    expect(consolidatorHasAnswered(def, consolidated)).toBe(false)
+  })
+
+  it('treats an unticked boolean as unanswered, same as hasAnnotations', () => {
+    const consolidated = normalizeTree(schema, { Relevant: [{ value: false }] })
+    expect(consolidatorHasAnswered(boolDef, consolidated)).toBe(false)
+  })
+
+  it('treats a ticked boolean as answered', () => {
+    const consolidated = normalizeTree(schema, { Relevant: [{ value: true }] })
+    expect(consolidatorHasAnswered(boolDef, consolidated)).toBe(true)
+  })
+
+  it('tolerates a tree with no entry at all for the node', () => {
+    expect(consolidatorHasAnswered(def, {} as AnnotationValueTree)).toBe(false)
   })
 })

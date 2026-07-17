@@ -17,6 +17,9 @@ export function AnnotationPanel() {
   const openAi = useAiStore((s) => s.openDialog)
   const setAgreementOpen = useStore((s) => s.setAgreementOpen)
   const setDisagreementsOpen = useStore((s) => s.setDisagreementsOpen)
+  const unanimousRun = useStore((s) => s.unanimousRun)
+  const adoptAllUnanimousAnnotations = useStore((s) => s.adoptAllUnanimousAnnotations)
+  const dismissUnanimousRun = useStore((s) => s.dismissUnanimousRun)
 
   if (!paper) {
     return <div className="panel annotations empty">Select a paper to annotate.</div>
@@ -103,6 +106,17 @@ export function AnnotationPanel() {
               >
                 ⚠ Disagreements
               </button>
+              <button
+                type="button"
+                className="consolidation-tool-btn"
+                title="Line every paper's reviewers up, then adopt every value they all gave"
+                disabled={unanimousRun?.running}
+                onClick={() => void adoptAllUnanimousAnnotations()}
+              >
+                {unanimousRun?.running
+                  ? `Adopting… ${unanimousRun.done}/${unanimousRun.total}`
+                  : '⇊ Adopt all unanimous'}
+              </button>
             </div>
           )}
         </div>
@@ -119,6 +133,21 @@ export function AnnotationPanel() {
         </div>
       </div>
       <div className="annotations-body">
+        {/* The fills land across every paper, not the one on screen — without
+            this the run would finish silently and look like it did nothing. */}
+        {isConsolidation && unanimousRun && !unanimousRun.running && (
+          <div className="consolidation-run-notice">
+            <span>
+              Adopted unanimous values on {unanimousRun.filled} paper
+              {unanimousRun.filled === 1 ? '' : 's'}.
+              {unanimousRun.skipped > 0 &&
+                ` ${unanimousRun.skipped} left alone — you have already answered a matched group there.`}
+            </span>
+            <button type="button" onClick={dismissUnanimousRun}>
+              Dismiss
+            </button>
+          </div>
+        )}
         {schema.map((def) => (
           <AnnotationNode key={def.id} def={def} path={[]} container={container} />
         ))}
