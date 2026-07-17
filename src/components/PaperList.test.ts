@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { paperIsMarkedDone } from './PaperList'
+import { paperIsMarkedDone, paperMetadataHaystack } from './PaperList'
 import { resolveSchema } from '../model/schema'
 import { normalizeTree, type AnnotationValueTree } from '../model/annotations'
+import { loadProject } from '../model/project'
 import type { Paper, Project } from '../model/project'
 
 /**
@@ -124,5 +125,71 @@ describe('paperIsMarkedDone', () => {
       })
       expect(paperIsMarkedDone(project, paper, 'consolidation')).toBe(false)
     })
+  })
+})
+
+/**
+ * `paperMetadataHaystack` locks in that a paper's PDF path and id are
+ * searchable metadata, not just title/authors/DOI/abstract — a reviewer
+ * recalling a file name or an id should be able to find the paper. Built
+ * through the real `loadProject` (not hand-assembled `Paper` objects) so the
+ * fixture goes through the same normalization the app does.
+ */
+describe('paperMetadataHaystack', () => {
+  function loadOnePaper(paper: Record<string, unknown>): Paper {
+    const project = loadProject({
+      version: 1,
+      config: { schema: [{ name: 'Relevant', type: 'boolean' }] },
+      papers: [paper],
+    })
+    return project.papers[0]
+  }
+
+  it('matches a query word found only in the PDF file name', () => {
+    const paper = loadOnePaper({
+      id: 'p1',
+      title: 'A Paper',
+      authors: ['A. Author'],
+      pdf: 'pdfs/zzq-marker-2021.pdf',
+      annotations: {},
+    })
+    const haystack = paperMetadataHaystack(paper)
+    expect(haystack).toContain('zzq-marker-2021.pdf')
+    // Mirrors how the filter actually queries: split on whitespace, then a
+    // substring test — the token need not be the whole file name.
+    expect(haystack.includes('zzq-marker')).toBe(true)
+  })
+
+  it('matches a query word found only in the id', () => {
+    const paper = loadOnePaper({
+      id: 'qxq-unique-id-77',
+      title: 'A Paper',
+      authors: ['A. Author'],
+      pdf: 'a.pdf',
+      annotations: {},
+    })
+    expect(paperMetadataHaystack(paper)).toContain('qxq-unique-id-77')
+  })
+
+  it('lowercases the whole haystack, including the PDF path', () => {
+    const paper = loadOnePaper({
+      id: 'p1',
+      title: 'A Paper',
+      authors: ['A. Author'],
+      pdf: 'Papers/MixedCase.PDF',
+      annotations: {},
+    })
+    expect(paperMetadataHaystack(paper)).toContain('papers/mixedcase.pdf')
+  })
+
+  it('does not match a token absent from every field', () => {
+    const paper = loadOnePaper({
+      id: 'p1',
+      title: 'A Paper',
+      authors: ['A. Author'],
+      pdf: 'a.pdf',
+      annotations: {},
+    })
+    expect(paperMetadataHaystack(paper)).not.toContain('nonexistent-token-xyz')
   })
 })

@@ -103,6 +103,24 @@ export function paperScreeningStatus(
 }
 
 /**
+ * The lowercased text a metadata-mode query word is matched against.
+ * Exported standalone (mirroring `paperCompleteness` / `paperIsMarkedDone`)
+ * so it is directly unit-testable without rendering the list, and so the
+ * list and its tests share one definition of "what counts as searchable".
+ *
+ * `pdf` is the project-relative path (e.g. "pdfs/smith-2021.pdf"); the whole
+ * string is indexed. The basename is not indexed separately: matching is a
+ * substring test over whitespace-split words, so a "smith-2021.pdf" (or
+ * "pdfs/smith") query already hits the full path — a bare-basename entry
+ * would only duplicate characters already present. `id` and `pdf` are
+ * always present (non-optional on Paper), so unlike `doi`/`abstract` they
+ * need no empty-string fallback.
+ */
+export function paperMetadataHaystack(paper: Paper): string {
+  return `${paper.title} ${paper.authors.join(' ')} ${paper.doi ?? ''} ${paper.abstract ?? ''} ${paper.pdf} ${paper.id}`.toLowerCase()
+}
+
+/**
  * One row of the list. `React.memo`'d because immer's structural sharing
  * means a field edit (`setFieldValue` in `state/store.ts`) replaces only the
  * one paper object it touches — every other paper keeps its old identity — so
@@ -186,10 +204,11 @@ export function PaperList() {
       const tree = currentTree(project, currentReviewer, paper)
       return {
         paper,
-        // The abstract is added here — searching it during screening is the
-        // obvious want, and it costs a PDF-less project nothing.
-        metadataHaystack:
-          `${paper.title} ${paper.authors.join(' ')} ${paper.doi ?? ''} ${paper.abstract ?? ''}`.toLowerCase(),
+        // Searchable metadata: title, authors, DOI, abstract, PDF path and
+        // id. Abstract is here because screening is decided on title +
+        // abstract; the PDF path and id let a reviewer find a paper by the
+        // file they remember or by its identifier. See `paperMetadataHaystack`.
+        metadataHaystack: paperMetadataHaystack(paper),
         annotationHaystack: annotationText(schema, tree ?? {}),
         completeness: applies ? completeness(schema, tree) : null,
       }
@@ -253,7 +272,7 @@ export function PaperList() {
             title={
               mode === 'annotations'
                 ? 'Filters the list to papers whose recorded annotation values match — every word must match somewhere. Use the trigger inside this field to search titles, authors and DOIs instead.'
-                : 'Filters the list to papers whose title, authors or DOI match — every word must match somewhere. Use the trigger inside this field to search your recorded annotations instead.'
+                : 'Filters the list to papers whose title, authors, DOI, PDF file name or id match — every word must match somewhere. Use the trigger inside this field to search your recorded annotations instead.'
             }
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -264,7 +283,7 @@ export function PaperList() {
             title={
               mode === 'annotations'
                 ? 'Searching annotation content (the values filled in for each paper). Click to search title, authors, and DOI instead.'
-                : 'Searching title, authors, and DOI. Click to search annotation content (the values filled in for each paper) instead.'
+                : 'Searching title, authors, DOI, PDF file name, and id. Click to search annotation content (the values filled in for each paper) instead.'
             }
             aria-label="Toggle search mode between paper metadata and annotation content"
             aria-pressed={mode === 'annotations'}
