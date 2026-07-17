@@ -372,13 +372,83 @@
   gap: 10px;
 }
 
+/* --- per-paper grouping -------------------------------------------------- */
+
+.git-merge-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-align: left;
+}
+.git-merge-group-head:hover {
+  border-color: var(--accent);
+}
+.git-merge-group-chevron {
+  flex: none;
+  display: inline-block;
+  color: var(--muted);
+  transition: transform 0.12s ease;
+}
+/* Points down while a group's rows are showing, right once collapsed — the
+   same "which way would this triangle roll to reveal more" convention every
+   other disclosure widget uses. */
+.git-merge-group-chevron.is-collapsed {
+  transform: rotate(-90deg);
+}
+.git-merge-group-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.git-merge-group-progress {
+  flex: none;
+  font-size: 0.8rem;
+  font-weight: normal;
+  color: var(--muted);
+}
+/* Not `--ok` reused from `.git-message-notice` — `--ai-mark` is what marks
+   "this needs your attention" on an *undecided* row (`.git-merge-row.is-
+   undecided`) and the header's badge should read as the positive close of
+   that same signal, not an unrelated one. */
+.git-merge-group-progress.is-done {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.git-merge-group-rows {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* --- one conflict row ----------------------------------------------------- */
+
 .git-merge-row {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 10px;
 }
+/* A `box-shadow`, not a `border-left`: a real border occupies box space, so
+   toggling it on/off (as `is-undecided` does when a reviewer decides the row)
+   shifts every bit of content inside a few pixels to the right — the row
+   visibly "jumps". A shadow is painted outside the box entirely and never
+   affects layout, so the content underneath never moves, only the accent
+   itself appears/disappears. */
 .git-merge-row.is-undecided {
-  border-left: 3px solid var(--ai-mark);
+  box-shadow: -3px 0 0 0 var(--ai-mark);
 }
 
 .git-merge-row-head {
@@ -399,23 +469,36 @@
   color: var(--ai-mark);
 }
 
+/* `align-items: start`, not `center`: the two side values and the final
+   control now wrap and grow to their full height (see `.git-merge-side`
+   below) instead of being clipped to one line, so they are rarely the same
+   height as each other any more — top-aligning is what keeps the first line
+   of each readable at a glance instead of drifting to different baselines. */
 .git-merge-row-body {
   display: grid;
   grid-template-columns: 1fr auto minmax(0, 2fr) auto 1fr;
-  align-items: center;
+  align-items: start;
   gap: 8px;
 }
 
+/* Full text, wrapped and grown downward — not the single clipped line this
+   used to be (`overflow: hidden` + `text-overflow: ellipsis`), which hid
+   exactly the content a reviewer is here to compare. `var(--text)`, not
+   `--muted`: both sides are real candidate values the reviewer must actually
+   read, not secondary/reference text the way a tooltip or a timestamp is. */
 .git-merge-side {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--muted);
+  overflow-wrap: anywhere;
+  color: var(--text);
   font-size: 0.9rem;
+  line-height: 1.4;
 }
 
+/* Centered on the row's own full height (which the two text columns now
+   determine), not pinned to the top with them — the natural reading position
+   for a control that acts on the row as a whole. */
 .git-merge-take {
+  align-self: center;
   padding: 4px 8px;
 }
 
