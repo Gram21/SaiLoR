@@ -1843,19 +1843,20 @@ kbd {
   justify-content: flex-end;
 }
 
-/* Consolidation's two extra tools, filling the slot the AI button occupies in
-   every other seat (see AnnotationPanel.tsx) — same footprint, same button
-   look as `.ai-btn`, just two of them side by side. */
+/* Consolidation's extra tools: same footprint, same button look as `.ai-btn`,
+   just laid out side by side since there's more than one. */
 .consolidation-tools {
   display: flex;
   gap: 6px;
 }
-/* Screening's own row (see ScreeningPanel.tsx): Consolidation there has three
-   buttons, one more than AnnotationPanel's Consolidation ever does, which is
-   what no longer fits sharing a row with the title at a normal panel width.
-   `flex-wrap` is a second line of defense, not the fix — an even narrower
-   panel, or a longer future label, wraps instead of overflowing. */
-.screening-tools-row {
+/* Both Consolidation seats put their tools on their own row below the title
+   rather than crowding it beside the title — screening's three buttons hit
+   that overflow first (see ScreeningPanel.tsx), and AnnotationPanel.tsx gives
+   its two the same row for the same reason. `flex-wrap` is a second line of
+   defense, not the fix — an even narrower panel, or a longer future label,
+   wraps instead of overflowing. */
+.screening-tools-row,
+.annotations-tools-row {
   flex-wrap: wrap;
   margin-top: 6px;
 }

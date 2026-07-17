@@ -81,30 +81,6 @@ export function AnnotationPanel() {
               ✦ AI
             </button>
           )}
-          {/* Consolidation has no AI button (see above) — this is that slot,
-              repurposed for the two tools that only make sense once every
-              reviewer has weighed in: aggregate agreement, and the individual
-              fields it's computed from. */}
-          {isConsolidation && (
-            <div className="consolidation-tools">
-              <button
-                type="button"
-                className="consolidation-tool-btn"
-                title="Compute inter-rater agreement statistics across the reviewers"
-                onClick={() => setAgreementOpen(true)}
-              >
-                ⚖ Agreement
-              </button>
-              <button
-                type="button"
-                className="consolidation-tool-btn"
-                title="List every annotation field where reviewers disagree"
-                onClick={() => setDisagreementsOpen(true)}
-              >
-                ⚠ Disagreements
-              </button>
-            </div>
-          )}
         </div>
         <div className="annotations-paper-title">
           {paper.title}
@@ -117,6 +93,31 @@ export function AnnotationPanel() {
             </span>
           )}
         </div>
+        {/* Its own row below the title, not squeezed beside it: Consolidation
+            has no AI button (see above), but the two tools that take its place
+            — aggregate agreement, and the individual fields it's computed from
+            — crowd the title at a normal panel width the same way screening's
+            Consolidation tools did. Same fix, same shape as ScreeningPanel. */}
+        {isConsolidation && (
+          <div className="consolidation-tools annotations-tools-row">
+            <button
+              type="button"
+              className="consolidation-tool-btn"
+              title="Compute inter-rater agreement statistics across the reviewers"
+              onClick={() => setAgreementOpen(true)}
+            >
+              ⚖ Agreement
+            </button>
+            <button
+              type="button"
+              className="consolidation-tool-btn"
+              title="List every annotation field where reviewers disagree"
+              onClick={() => setDisagreementsOpen(true)}
+            >
+              ⚠ Disagreements
+            </button>
+          </div>
+        )}
       </div>
       <div className="annotations-body">
         {schema.map((def) => (
