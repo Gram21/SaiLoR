@@ -11,6 +11,7 @@ import {
 import { extractPdfMeta } from '../model/pdfMeta'
 import { parseReferences, pdfHintFileName, type RefEntry } from '../model/references'
 import { loadProject, type Project } from '../model/project'
+import { classifyImport, type DupRecord, type DupVerdict } from '../model/duplicates'
 import { getPlatform, type OpenedProject, type PickedPdf, type ProjectLocation, type SaveHandle } from '../platform'
 import { DEFAULT_SCREENING_REASONS, screeningSchemaDefs } from '../screening/schema'
 import { screeningReason, screeningStatus } from '../screening/status'
@@ -286,30 +287,40 @@ export function makePaperFromPdf(
 // Importing references (BibTeX / RIS / CSL-JSON)
 // ---------------------------------------------------------------------------
 
-/** Lowercased, whitespace-collapsed, punctuation-stripped — for matching titles
- *  across sources that differ only in casing/spacing/punctuation. */
-function normalizeTitleForMatch(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, '')
-    .replace(/\s+/g, ' ')
-    .trim()
+/** The same split `buildProjectJson` uses to turn the editable comma-joined
+ *  field back into a list — one implementation, so a duplicate-detection
+ *  adapter and the save path never quietly disagree on what an author list is. */
+function splitAuthors(authors: string): string[] {
+  return authors
+    .split(',')
+    .map((a) => a.trim())
+    .filter(Boolean)
+}
+
+function paperToDupRecord(p: EditorPaper): DupRecord {
+  return { title: p.title, authors: splitAuthors(p.authors), doi: p.doi || undefined }
+}
+
+/** `RefEntry.year` is real (`references.ts` parses it), but nothing here
+ *  carries it into `EditorPaper` yet — see `duplicates.ts`'s `DupRecord.year`
+ *  doc comment for what wiring it up later unlocks. */
+function refToDupRecord(entry: RefEntry): DupRecord {
+  return { title: entry.title, authors: entry.authors, doi: entry.doi, year: entry.year }
 }
 
 /**
- * The existing paper a parsed reference refers to, if any. DOI is the strong
- * signal (exact, case-insensitive); a normalized-title match is the fallback
- * for entries with no DOI, or when the two sources disagree on one.
+ * The existing paper a parsed reference *certainly* refers to, if any — DOI or
+ * an exact normalized title, the same two signals this always used. A merely
+ * *probable* match (see `classifyImport`) is deliberately not a match here:
+ * this function's callers either fill fields into what it returns or skip the
+ * row outright, and neither of those is safe to do on a guess. A thin adapter
+ * over `classifyImport` rather than its own comparison, so there is exactly
+ * one place that decides what "the same paper" means.
  */
 export function findMatchingPaper(papers: EditorPaper[], entry: RefEntry): EditorPaper | undefined {
-  if (entry.doi) {
-    const doi = entry.doi.trim().toLowerCase()
-    const byDoi = papers.find((p) => p.doi.trim().toLowerCase() === doi)
-    if (byDoi) return byDoi
-  }
-  const title = normalizeTitleForMatch(entry.title)
-  if (!title) return undefined
-  return papers.find((p) => normalizeTitleForMatch(p.title) === title)
+  const verdict = classifyImport(papers.map(paperToDupRecord), [refToDupRecord(entry)])[0]
+  if (verdict.kind !== 'certain' || verdict.target.where !== 'existing') return undefined
+  return papers[verdict.target.index]
 }
 
 /** A new row for a reference with no matching paper. No PDF is attached yet —
@@ -367,6 +378,86 @@ function summarizeImport(total: number, updated: number, unchanged: number): str
   return `Imported ${total} reference${total === 1 ? '' : 's'}${detail}.`
 }
 
+/** `'merge'` fills `entry` into whatever paper the verdict points at (never
+ *  overwriting, via `fillFromRef`); `'separate'` adds it as its own row even
+ *  though something looked like a match for it. */
+export type DuplicateDecision = 'merge' | 'separate'
+
+/**
+ * A batch of parsed references that `classifyImport` found at least one
+ * *probable* duplicate in, waiting on the reviewer's per-pair decision before
+ * anything is written — the same "nothing committed until a choice is made"
+ * shape `ScreeningImportDraft` uses. `certain`/`new` entries in `verdicts`
+ * need no decision; only a `'probable'` entry is ever read from `decisions`.
+ */
+export interface DuplicateReviewDraft {
+  sourceName: string
+  entries: RefEntry[]
+  /** Index-aligned with `entries`, straight from `classifyImport`. */
+  verdicts: DupVerdict[]
+  /** `existingUids[j]` is the `uid` `classifyImport`'s `{ where: 'existing',
+   *  index: j }` refers to — a snapshot taken at classification time, since a
+   *  verdict's index is only meaningful against the papers array as it stood
+   *  then. */
+  existingUids: string[]
+  /** Keyed by entry index; absent means "not decided yet". */
+  decisions: Record<number, DuplicateDecision>
+}
+
+/**
+ * Commit a parsed batch into `s.papers`, in index order, per verdict and (for
+ * a `'probable'` verdict) the reviewer's decision.
+ *
+ * Index order matters beyond readability: a `{ where: 'batch', index }`
+ * target always points at an *earlier* entry (see `classifyImport`'s doc
+ * comment), so by the time entry `i` is processed, `resolvedUid[target.index]`
+ * has already been set — whether that earlier entry became a new row or was
+ * itself merged into an existing one. A batch target therefore always
+ * resolves to wherever its own match actually landed, however many links long
+ * the chain is, without needing a union-find to get there.
+ */
+function commitImport(
+  s: EditorState,
+  entries: RefEntry[],
+  verdicts: DupVerdict[],
+  decisions: Record<number, DuplicateDecision>,
+  existingUids: string[],
+): { updated: number; unchanged: number; added: number } {
+  const ids = new Set(s.papers.map((p) => p.id))
+  const resolvedUid: string[] = []
+  let updated = 0
+  let unchanged = 0
+  let added = 0
+
+  entries.forEach((entry, i) => {
+    const verdict = verdicts[i]
+    const shouldMerge = verdict.kind === 'certain' || (verdict.kind === 'probable' && decisions[i] === 'merge')
+
+    if (shouldMerge && (verdict.kind === 'certain' || verdict.kind === 'probable')) {
+      const targetUid =
+        verdict.target.where === 'existing' ? existingUids[verdict.target.index] : resolvedUid[verdict.target.index]
+      const match = targetUid ? s.papers.find((p) => p.uid === targetUid) : undefined
+      if (match) {
+        if (fillFromRef(match, entry)) updated++
+        else unchanged++
+        resolvedUid[i] = match.uid
+        return
+      }
+      // The target vanished (shouldn't happen — nothing removes a paper mid-import)
+      // — fall through and add it as its own row rather than silently dropping it.
+    }
+
+    const paper = makePaperFromRef(entry, ids)
+    ids.add(paper.id)
+    s.papers.push(paper)
+    s.justAdded[paper.uid] = true
+    resolvedUid[i] = paper.uid
+    added++
+  })
+
+  return { updated, unchanged, added }
+}
+
 /** Assemble the raw JSON object the editor writes. */
 export function buildProjectJson(state: {
   version: number
@@ -401,10 +492,7 @@ export function buildProjectJson(state: {
       const out: Record<string, unknown> = { ...(p.extra ?? {}) }
       out.id = p.id.trim()
       out.title = p.title.trim()
-      out.authors = p.authors
-        .split(',')
-        .map((a) => a.trim())
-        .filter(Boolean)
+      out.authors = splitAuthors(p.authors)
       if (p.doi.trim()) out.doi = p.doi.trim()
       if (p.abstract && p.abstract.trim()) out.abstract = p.abstract.trim()
       if (p.abstractFromPdf && p.abstract && p.abstract.trim()) out.abstractFromPdf = true
@@ -650,6 +738,13 @@ interface EditorState {
    * never part of undo, since nothing has been committed to the draft yet.
    */
   screeningImport: ScreeningImportDraft | null
+  /**
+   * Set by `importReferences` whenever `classifyImport` found at least one
+   * *probable* duplicate in the batch — nothing from that import has been
+   * committed yet. Session-only, same reasoning as `screeningImport`: nothing
+   * in here has touched the draft, so there is nothing for undo to know about.
+   */
+  duplicateReview: DuplicateReviewDraft | null
 
   startNew: () => Promise<void>
   startEdit: () => Promise<void>
@@ -689,6 +784,17 @@ interface EditorState {
   importFromScreening: () => Promise<void>
   /** Answer the pre-commit import summary opened by either action above. */
   resolveScreeningImport: (choice: 'include-undecided' | 'skip-undecided' | 'cancel') => Promise<void>
+
+  /** Decide one probable-duplicate row in the open `duplicateReview`. A no-op
+   *  if there is no open review, or the row isn't `'probable'`. */
+  setDuplicateDecision: (entryIndex: number, decision: DuplicateDecision) => void
+  /** Decide every still-open `'probable'` row at once. */
+  setAllDuplicateDecisions: (decision: DuplicateDecision) => void
+  /** `'apply'` commits the batch (every `'probable'` row must be decided
+   *  first — see `DuplicateReviewDialog`); `'cancel'` discards the whole
+   *  import, undecided rows included. Synchronous: nothing here reads a file
+   *  or asks the platform for anything, `importReferences` already did that. */
+  resolveDuplicateReview: (choice: 'apply' | 'cancel') => void
 
   undo: () => void
   redo: () => void
@@ -852,6 +958,7 @@ function openEditorSession(s: EditorState, st: OpenedEditorState): void {
   s.past = []
   s.future = []
   s.screeningImport = null
+  s.duplicateReview = null
 }
 
 /** Map a load failure to the editor's error shape. */
@@ -964,6 +1071,7 @@ export const useEditorStore = create<EditorState>()(
     past: [],
     future: [],
     screeningImport: null,
+    duplicateReview: null,
 
     startNew: async () => {
       const platform = getPlatform()
@@ -992,6 +1100,7 @@ export const useEditorStore = create<EditorState>()(
         s.past = []
         s.future = []
         s.screeningImport = null
+        s.duplicateReview = null
       })
     },
 
@@ -1078,6 +1187,7 @@ export const useEditorStore = create<EditorState>()(
         s.past = []
         s.future = []
         s.screeningImport = null
+        s.duplicateReview = null
       }),
 
     clearError: () =>
@@ -1260,27 +1370,30 @@ export const useEditorStore = create<EditorState>()(
         return
       }
 
+      // Classified *before* the mutating `set` below, against a plain read of
+      // the current papers — `classifyImport` is pure and synchronous, so
+      // nothing can change between this read and the `set` call it feeds.
+      const papers = get().papers
+      const existingUids = papers.map((p) => p.uid)
+      const verdicts = classifyImport(papers.map(paperToDupRecord), entries.map(refToDupRecord))
+
+      // A probable match is never silently merged and never silently added
+      // twice — it has to go through the reviewer. `certain`/`new` entries need
+      // no such thing, and demoting *every* import to a review dialog would
+      // turn a routine re-import of an unchanged `.bib` into a wall of prompts.
+      if (verdicts.some((v) => v.kind === 'probable')) {
+        set((s) => {
+          s.duplicateReview = { sourceName: picked.name, entries, verdicts, existingUids, decisions: {} }
+        })
+        return
+      }
+
       const snap = snapshotOf(get())
       lastEditKey = null
-      let updated = 0
-      let unchanged = 0
-
       set((s) => {
         pushPast(s, snap)
-        const ids = new Set(s.papers.map((p) => p.id))
-        for (const entry of entries) {
-          const match = findMatchingPaper(s.papers, entry)
-          if (match) {
-            if (fillFromRef(match, entry)) updated++
-            else unchanged++
-            continue
-          }
-          const paper = makePaperFromRef(entry, ids)
-          ids.add(paper.id)
-          s.papers.push(paper)
-          s.justAdded[paper.uid] = true
-        }
-        if (updated > 0 || entries.length > updated + unchanged) s.dirty = true
+        const { updated, unchanged, added } = commitImport(s, entries, verdicts, {}, existingUids)
+        if (updated > 0 || added > 0) s.dirty = true
         s.notice = summarizeImport(entries.length, updated, unchanged)
       })
     },
@@ -1514,6 +1627,49 @@ export const useEditorStore = create<EditorState>()(
         }
 
         s.screeningImport = null
+      })
+    },
+
+    setDuplicateDecision: (entryIndex, decision) =>
+      set((s) => {
+        if (!s.duplicateReview) return
+        if (s.duplicateReview.verdicts[entryIndex]?.kind !== 'probable') return
+        s.duplicateReview.decisions[entryIndex] = decision
+      }),
+
+    setAllDuplicateDecisions: (decision) =>
+      set((s) => {
+        const draft = s.duplicateReview
+        if (!draft) return
+        draft.verdicts.forEach((v, i) => {
+          if (v.kind === 'probable') draft.decisions[i] = decision
+        })
+      }),
+
+    resolveDuplicateReview: (choice) => {
+      const draft = get().duplicateReview
+      if (!draft) return
+      if (choice === 'cancel') {
+        set((s) => {
+          s.duplicateReview = null
+        })
+        return
+      }
+
+      const snap = snapshotOf(get())
+      lastEditKey = null
+      set((s) => {
+        pushPast(s, snap)
+        const { updated, unchanged, added } = commitImport(
+          s,
+          draft.entries,
+          draft.verdicts,
+          draft.decisions,
+          draft.existingUids,
+        )
+        if (updated > 0 || added > 0) s.dirty = true
+        s.notice = summarizeImport(draft.entries.length, updated, unchanged)
+        s.duplicateReview = null
       })
     },
 
