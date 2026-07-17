@@ -36,10 +36,12 @@ A project is a single JSON file with this shape:
 }
 ```
 
-`config.ai` defaults to `true`. When `false`, the ✦ AI button is disabled (with a hover note that
+`config.ai` defaults to `false` for new projects created in the editor (which writes `config.ai:
+false` into the file). An existing file's own setting is always read and preserved. When `false`, the ✦ AI button is disabled (with a hover note that
 the provider turned it off); the loader reads it into `Project.aiEnabled`, and `serializeProject`
-writes it back only when disabled, so a normal file stays clean. The project editor edits it as a
-checkbox.
+writes it back only when disabled, so a normal file stays clean. The AI-annotation checkbox has been
+removed from the project editor — with no reachable entry point for the feature itself, a control
+that configures it would promise something the app doesn't currently deliver.
 
 `config.reviewers` defaults to `1` (single-reviewer — every paper carries one `annotations` tree
 and nobody picks a reviewer). A value from 2 to 10 turns on independent multi-reviewer annotation:
@@ -135,7 +137,7 @@ interface Project {
   version: number
   title?: string
   schema: ResolvedDef[]
-  aiEnabled: boolean              // config.ai; true unless the file opts out
+  aiEnabled: boolean              // config.ai; false for new projects, preserved from file otherwise
   reviewers: number                // config.reviewers; 1 (default) = single-reviewer
   reviewerIdentities: Record<string, ReviewerIdentity>  // config.reviewerIdentities; {} if none recorded
   papers: Paper[]
