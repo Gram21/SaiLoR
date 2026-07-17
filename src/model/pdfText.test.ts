@@ -92,4 +92,28 @@ trailer<</Size 4/Root 1 0 R>>
     expect(result.empty).toBe(true)
     expect(result.text).toBe('[page 1]')
   })
+
+  it('flags a MANY-page no-text-layer PDF as empty (markers must not count as content)', async () => {
+    // Regression: `empty` counted the whole assembled text, including one
+    // `[page N]` marker per page (~7 non-whitespace chars each). A ~30-page
+    // scanned/image-only PDF therefore crossed the "has text" threshold on its
+    // markers alone and read as non-empty — defeating the AI flow's guard
+    // against feeding an image-only PDF to the model. `empty` must reflect the
+    // extracted *body* text only.
+    const N = 30
+    const objs: string[] = []
+    objs.push('1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj')
+    const kids = Array.from({ length: N }, (_, i) => `${i + 3} 0 R`).join(' ')
+    objs.push(`2 0 obj<</Type/Pages/Kids[${kids}]/Count ${N}>>endobj`)
+    for (let i = 0; i < N; i++) {
+      objs.push(
+        `${i + 3} 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]/Resources<<>>>>endobj`,
+      )
+    }
+    const pdf = `%PDF-1.4\n${objs.join('\n')}\ntrailer<</Size ${N + 3}/Root 1 0 R>>\n%%EOF`
+    const data = new Uint8Array(new TextEncoder().encode(pdf)).buffer
+    const result = await extractPdfText(data)
+    expect(result.pages).toBe(N)
+    expect(result.empty).toBe(true)
+  })
 })

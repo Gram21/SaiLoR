@@ -66,7 +66,12 @@ const PARTICLE = /^(van|von|de|der|den|di|da|del|della|la|le|dos|bin|ibn|of)$/i
 function looksLikeName(s: string): boolean {
   const tokens = s.split(/\s+/)
   if (tokens.length < 2 || tokens.length > 5) return false
-  return tokens.every((t) => PARTICLE.test(t) || /^[A-Z]/.test(t))
+  // `\p{Lu}`/`\p{Lt}` (Unicode upper-/title-case), not ASCII `[A-Z]`: a name
+  // like "Łukasz Kaiser" or "Ángel Cuadra" starts with an upper-case letter
+  // that isn't in A–Z, and the ASCII test dropped it — and if every author on
+  // the line was non-ASCII, the whole line was mistaken for prose and the
+  // authors missed entirely.
+  return tokens.every((t) => PARTICLE.test(t) || /^[\p{Lu}\p{Lt}]/u.test(t))
 }
 
 /**
