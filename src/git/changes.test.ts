@@ -283,6 +283,57 @@ describe('detectFieldChanges — annotation tree fields', () => {
   })
 })
 
+describe('composeContents — a reviewer-added repeatable instance is preserved', () => {
+  // Regression: `committed` is built from HEAD, whose lists are sized to the
+  // schema minimum, so a "use" write into a slot only the working tree has
+  // (an added Findings entry) used to silently no-op — dropping the answer
+  // from the commit and leaving it permanently uncommittable.
+  const head = project({
+    schema: REPEAT,
+    papers: [paper('a', { annotations: { Findings: [{ children: { Claim: [{ value: 'first' }] } }] } })],
+  })
+  const working = project({
+    schema: REPEAT,
+    papers: [
+      paper('a', {
+        annotations: {
+          Findings: [
+            { children: { Claim: [{ value: 'first' }] } },
+            { children: { Claim: [{ value: 'added second' }] } },
+          ],
+        },
+      }),
+    ],
+  })
+
+  it('commits the added instance under the default Use disposition', () => {
+    const changes = detectFieldChanges(head, working)!
+    const { committed } = composeContents(head, working, changes, {})
+    const findings = committed.papers[0].annotations['Findings']
+    expect(findings).toHaveLength(2)
+    expect(findings[1].children!['Claim'][0].value).toBe('added second')
+  })
+
+  it('is no longer detected as a change once committed (not stuck uncommittable)', () => {
+    const changes = detectFieldChanges(head, working)!
+    const { committed } = composeContents(head, working, changes, {})
+    const newHead = loadProject(serializeProject(committed))
+    const rescan = detectFieldChanges(newHead, working)
+    expect(rescan === null || rescan.fields.length === 0).toBe(true)
+  })
+
+  it('ignoring the added instance leaves it out of the commit (prunes away)', () => {
+    const changes = detectFieldChanges(head, working)!
+    const added = changes.fields.find((f) => f.canonical === 'Findings[1]/Claim')!
+    const decisions: Record<string, Disposition> = { [added.id]: 'ignore' }
+    const { committed } = composeContents(head, working, changes, decisions)
+    const serialized = serializeProject(committed)
+    // The ignored add serializes away (trailing empty pruned) — HEAD's single
+    // finding is what gets committed.
+    expect(loadProject(serialized).papers[0].annotations['Findings']).toHaveLength(1)
+  })
+})
+
 describe('detectFieldChanges — papers added and removed', () => {
   it('reports a paper only in the working tree as added', () => {
     const head = project({ papers: [] })

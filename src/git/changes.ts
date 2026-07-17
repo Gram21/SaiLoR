@@ -1,6 +1,6 @@
 import { produce } from 'immer'
 import { isField, type FieldType, type ResolvedDef } from '../model/schema'
-import { emptyValue, type AnnotationValueTree, type FieldValue, type InstanceNode } from '../model/annotations'
+import { emptyValue, makeInstance, type AnnotationValueTree, type FieldValue, type InstanceNode } from '../model/annotations'
 import { deepEqualJson, type Paper, type Project } from '../model/project'
 import { formatPath, displayPath, resolvePath, type RawSeg } from '../llm/paths'
 import { conflictId, type MergeTree } from './merge'
@@ -329,6 +329,41 @@ function containerAt(root: AnnotationValueTree, path: RawSeg[]): AnnotationValue
   return tree ?? null
 }
 
+/**
+ * Grow `target` so every repeatable node has at least as many instances as the
+ * matching node in `source`, padding with empty `makeInstance` skeletons and
+ * recursing into children. `committed` starts from HEAD (`normalizeTree` sized
+ * each list to the schema minimum), so a reviewer-added instance — one the
+ * working tree has but HEAD does not — has no slot for its "use" value to land
+ * in; `writeAnnotationValue` would silently no-op and the added answer would
+ * be dropped from the commit *and* left permanently uncommittable (the next
+ * scan re-detects it, so "use" no-ops again forever). Growing to the working
+ * shape first gives every used value a home. Padded-but-unused slots stay
+ * empty and prune away on serialize (they are trailing, since an instance is
+ * only ever appended), so this never fabricates a committed value.
+ */
+function growTreeToSource(
+  defs: ResolvedDef[],
+  target: AnnotationValueTree,
+  source: AnnotationValueTree | undefined,
+): void {
+  for (const def of defs) {
+    if (!isField(def) && def.children.length === 0) continue
+    const srcList = source?.[def.name]
+    const tgtList = target[def.name]
+    if (!Array.isArray(tgtList)) continue
+    if (Array.isArray(srcList)) {
+      while (tgtList.length < srcList.length) tgtList.push(makeInstance(def))
+    }
+    if (def.children.length > 0) {
+      for (let i = 0; i < tgtList.length; i++) {
+        const child = tgtList[i]?.children
+        if (child) growTreeToSource(def.children, child, srcList?.[i]?.children)
+      }
+    }
+  }
+}
+
 function writeAnnotationValue(draft: Project, fc: FieldChange, value: FieldValue): void {
   const paper = draft.papers.find((p) => p.id === fc.paperId)
   if (!paper) return
@@ -444,6 +479,28 @@ export function composeContents(
       changes.papers.filter((pc) => pc.kind === 'removed' && disposition(pc.id) === 'use').map((pc) => pc.paperId),
     )
     if (removeIds.size > 0) draft.papers = draft.papers.filter((p) => !removeIds.has(p.id))
+
+    // Before writing any "use" value, grow each committed tree that will
+    // receive one to the working tree's shape, so a reviewer-added repeatable
+    // instance actually has a slot to be committed into (see
+    // `growTreeToSource`). Only annotation-tree writes need this — paper-meta
+    // fields (title, year, …) are scalar. Done once per (paper, tree) touched.
+    const grown = new Set<string>()
+    for (const fc of changes.fields) {
+      if (disposition(fc.id) !== 'use' || fc.tree.kind === 'paper') continue
+      const treeKey = fc.tree.kind === 'review' ? `review/${fc.tree.reviewer}` : 'annotations'
+      const grownKey = `${fc.paperId}|${treeKey}`
+      if (grown.has(grownKey)) continue
+      grown.add(grownKey)
+      const draftPaper = draft.papers.find((p) => p.id === fc.paperId)
+      const workingPaper = working.papers.find((p) => p.id === fc.paperId)
+      if (!draftPaper || !workingPaper) continue
+      const target =
+        fc.tree.kind === 'review' ? draftPaper.reviews[fc.tree.reviewer] : draftPaper.annotations
+      const source =
+        fc.tree.kind === 'review' ? workingPaper.reviews[fc.tree.reviewer] : workingPaper.annotations
+      if (target) growTreeToSource(draft.schema, target, source)
+    }
 
     for (const fc of changes.fields) {
       if (disposition(fc.id) !== 'use') continue
