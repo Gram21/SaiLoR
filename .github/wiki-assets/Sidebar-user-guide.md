@@ -1,12 +1,12 @@
-### [User Guide](user-guide/README)
-
-- [Things to know](user-guide/things-to-know)
-- [Getting started](user-guide/getting-started)
-- [Screening](user-guide/screening)
-- [Working with several reviewers](user-guide/multi-reviewer)
-- [Setting up a project](user-guide/project-editor)
-- [Git support](user-guide/git)
+### [🏠 Wiki home](Home)
 
 ---
 
-### [🏠 Wiki home](Home)
+### [User Guide](User-Guide)
+
+- [Things to know](Guide-Things-To-Know)
+- [Getting started](Guide-Getting-Started)
+- [Screening](Guide-Screening)
+- [Working with several reviewers](Guide-Multi-Reviewer)
+- [Setting up a project](Guide-Project-Editor)
+- [Git support](Guide-Git)

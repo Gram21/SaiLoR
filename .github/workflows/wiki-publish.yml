@@ -8,25 +8,39 @@ name: Publish openwiki → Wiki
 #
 # Layout published to the wiki:
 #   Home.md          — always .github/wiki-assets/Home.md, verbatim: a short landing
-#                       page linking to user-guide/README first, then Development.
+#                       page linking to User-Guide first, then Development.
 #   Development.md    — openwiki/Home.md, renamed so the wiki's own Home slot is free
 #                       for the landing page above.
 #   <page>.md          — the rest of openwiki/*.md, unchanged, flat at the wiki root.
-#   _Sidebar.md        — the "User Guide" fragment (.github/wiki-assets/Sidebar-user-
-#                       guide.md) first, then .github/wiki-assets/Sidebar.md (the
-#                       developer-docs sidebar — deliberately kept out of openwiki/
-#                       itself, see the copy step below) — user guide leads, developer
-#                       docs follow, matching Home.md.
+#   _Sidebar.md        — the "🏠 Wiki home" link and "User Guide" fragment
+#                       (.github/wiki-assets/Sidebar-user-guide.md) first, then
+#                       .github/wiki-assets/Sidebar.md (the developer-docs sidebar —
+#                       deliberately kept out of openwiki/ itself, see the copy step
+#                       below) — user guide leads, developer docs follow, matching
+#                       Home.md.
 #   _Footer.md          — .github/wiki-assets/Footer.md (developer-docs footer, also
 #                       kept out of openwiki/), then the "User Guide" fragment
 #                       (Footer-user-guide.md) appended last — order unchanged from the
 #                       sidebar's, since a footer reads along one line, not top-to-bottom.
 #                       Both fragments sit inside a `<!-- wiki-sync:NAME:start/end -->`
 #                       comment pair; see wiki-import.yml for what the markers are for.
-#   user-guide/**      — user-guide/*.md and user-guide/screenshots/*.png, unchanged,
-#                       under a matching subfolder (their existing relative links —
-#                       between pages and to screenshots/ — already work unmodified
-#                       once the folder is copied as a whole).
+#   User-Guide.md, Guide-*.md — user-guide/*.md, one page per file, flattened to the
+#                       wiki root and renamed (README → User-Guide, things-to-know →
+#                       Guide-Things-To-Know, etc. — see the GUIDE_PAGE table below).
+#                       GitHub's hosted wiki does not serve pages that live in a
+#                       subdirectory — the file exists in the wiki's git history but has
+#                       no page URL, a 404 the instant anything links to it — so, unlike
+#                       user-guide/'s own copy in the main repo (which keeps its natural
+#                       folder and short names, and is what a repo browser or the README
+#                       actually links to), the *published* copy cannot be a folder.
+#                       Their cross-links to each other, previously bare filenames
+#                       (`getting-started.md`), are rewritten to the flat names below.
+#   screenshots/**      — user-guide/screenshots/*.png, flattened to the wiki root
+#                       alongside the pages above — a plain asset folder, not a set of
+#                       pages needing their own URLs, so nesting it wasn't the problem,
+#                       but flattening it to sit next to the now-flat pages that
+#                       reference it (`<img src="screenshots/x.png">`) keeps every one
+#                       of those references correct without rewriting them too.
 #
 # .github/wiki-assets/ holds everything above that is really about *publishing to the
 # wiki* rather than about the app or its developer docs — plain markdown, easier to
@@ -115,17 +129,18 @@ jobs:
             esac
           done
 
-          # --- User guide: user-guide/*.md + user-guide/screenshots/, under a matching
-          # subfolder. Copied whole, not flattened, so the pages' existing relative
-          # links (to each other, and to screenshots/*.png) keep working unmodified —
-          # gollum (the wiki's renderer) resolves them the same way a plain filesystem
-          # would. Two links inside user-guide/README.md are the exception: they point
-          # at ../README.md and ../LICENSE, i.e. outside user-guide/ in the *main* repo —
-          # correct there, but there is no such path in the wiki (a separate git repo
-          # with no root README.md of its own), so they are rewritten to absolute GitHub
-          # URLs a few steps down, once the file is in place.
-          mkdir -p stage/user-guide
-          cp -r user-guide/. stage/user-guide/
+          # --- User guide: user-guide/*.md, flattened to the wiki root under new names
+          # (see the header above for why) — screenshots/ is the one thing that keeps
+          # its own subfolder, since it holds assets rather than pages. A plain
+          # space-separated list of "src:dest" pairs rather than an associative array:
+          # this script only needs to loop over it, never look up one specific entry, so
+          # the extra portability (no bash-4-only syntax) costs nothing.
+          GUIDE_PAGES="README:User-Guide things-to-know:Guide-Things-To-Know getting-started:Guide-Getting-Started screening:Guide-Screening multi-reviewer:Guide-Multi-Reviewer project-editor:Guide-Project-Editor git:Guide-Git"
+          for pair in $GUIDE_PAGES; do
+            cp "user-guide/${pair%%:*}.md" "stage/${pair#*:}.md"
+          done
+          mkdir -p stage/screenshots
+          cp -r user-guide/screenshots/. stage/screenshots/
 
           # OpenWiki pages may carry Open Knowledge Format's YAML frontmatter (a leading
           # `---`-delimited block: type/title/description/tags/timestamp). GitHub's wiki
@@ -140,11 +155,26 @@ jobs:
               "$f" > "$f.tmp" && mv "$f.tmp" "$f"
           done
 
-          # The two out-of-wiki links noted above.
+          # user-guide/README.md has two links that point outside user-guide/ into the
+          # *main* repo (../README.md, ../LICENSE) — correct there, but there is no such
+          # path in the wiki (a separate git repo with no root README.md of its own), so
+          # they are rewritten to absolute GitHub URLs on the now-flattened copy.
           sed -i \
             -e "s#(\.\./README\.md)#(https://github.com/${GITHUB_REPOSITORY}/blob/main/README.md)#" \
             -e "s#(\.\./LICENSE)#(https://github.com/${GITHUB_REPOSITORY}/blob/main/LICENSE)#" \
-            stage/user-guide/README.md
+            stage/User-Guide.md
+
+          # Every other link between guide pages is a bare filename with its original,
+          # unflattened name (`[Screening](screening.md)`, `[...](things-to-know.md#...)`)
+          # — correct in user-guide/'s own copy in the main repo, which is what these
+          # sed patterns leave alone; rewritten only on the flattened copies staged
+          # above, to the matching flat name from GUIDE_PAGES. `s#(name\.md#(NewName#`
+          # (no trailing `)` or `#` in the pattern) matches both a bare `(name.md)` link
+          # and one with an anchor (`(name.md#anchor)`), since it only replaces the
+          # "name.md" text and leaves whatever follows untouched.
+          for pair in $GUIDE_PAGES; do
+            sed -i "s#(${pair%%:*}\.md#(${pair#*:}#g" stage/User-Guide.md stage/Guide-*.md
+          done
 
           # _Sidebar.md and _Footer.md are gollum's *global* chrome — one copy applies
           # to every page in the wiki, developer and user-guide alike — so
@@ -209,9 +239,10 @@ jobs:
               for f in stage/*.md; do
                 [ -f "$f" ] || continue
                 page="$(basename "$f" .md)"
-                # Skip the landing pages and the wiki's special pages (_Sidebar,
-                # _Footer) — those are chrome, not content.
-                case "$page" in Home|Development|_*) continue ;; esac
+                # Skip the landing pages, the wiki's special pages (_Sidebar, _Footer —
+                # chrome, not content), and the flattened user-guide pages (a different
+                # section entirely, already linked from Home.md and the sidebar).
+                case "$page" in Home|Development|User-Guide|Guide-*|_*) continue ;; esac
                 # First heading of the page, falling back to the file name.
                 title="$(grep -m1 '^# ' "$f" | sed 's/^# //')"
                 echo "- [${title:-$page}]($page)"
