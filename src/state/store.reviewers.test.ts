@@ -393,3 +393,26 @@ describe('closeProject resets the reviewer view', () => {
     expect(st().consolidationTarget).toBeNull()
   })
 })
+
+describe('switching reviewer breaks undo-coalescing (no cross-reviewer data loss)', () => {
+  beforeEach(() => {
+    st().loadFromText(multiReviewerProject, null, 'test.json')
+    st().selectPaper('p1')
+  })
+
+  it('a single Undo after editing the same field as two reviewers keeps the first reviewer', () => {
+    // Regression: the coalescing key is field-path only (no seat), so without
+    // resetting it on `selectReviewer`, R2's edit to the same field glued onto
+    // R1's undo step — one Undo wiped both, and retyping cleared `future`,
+    // losing R1's answer for good.
+    st().selectReviewer('1')
+    st().setFieldValue([], 'Study Type', 0, 'A')
+    st().selectReviewer('2')
+    st().setFieldValue([], 'Study Type', 0, 'B')
+
+    st().undo() // undoes only R2's edit
+
+    expect(st().project!.papers[0].reviews['1']['Study Type'][0].value).toBe('A')
+    expect(st().project!.papers[0].reviews['2']['Study Type'][0].value).toBeNull()
+  })
+})
