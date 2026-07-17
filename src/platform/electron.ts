@@ -80,6 +80,16 @@ export interface SlrBridge {
   gitPullBegin(root: string, relPath: string): Promise<PullStart>
   gitPullFinish(root: string, relPath: string, text: string): Promise<GitRun>
   gitPullAbort(root: string): Promise<GitRun>
+  gitHeadContent(root: string, relPath: string): Promise<string | null>
+  gitWorkingContent(root: string, relPath: string): Promise<string | null>
+  gitCommitPartial(
+    root: string,
+    relPath: string,
+    committedText: string,
+    workingText: string,
+    otherPaths: string[],
+    message: string,
+  ): Promise<GitRun>
 }
 
 function bridge(): SlrBridge {
@@ -313,6 +323,10 @@ export class ElectronAdapter implements PlatformAdapter {
     beginPull: (root, relPath) => bridge().gitPullBegin(root, relPath),
     finishPull: (root, relPath, text) => bridge().gitPullFinish(root, relPath, text),
     abortPull: (root) => bridge().gitPullAbort(root),
+    headContent: (root, relPath) => bridge().gitHeadContent(root, relPath),
+    workingContent: (root, relPath) => bridge().gitWorkingContent(root, relPath),
+    commitPartial: (root, relPath, committedText, workingText, otherPaths, message) =>
+      bridge().gitCommitPartial(root, relPath, committedText, workingText, otherPaths, message),
   }
 
   getGit(): GitPlatform {

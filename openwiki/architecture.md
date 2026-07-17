@@ -188,7 +188,7 @@ App (src/App.tsx)
 ├── GitCloneDialog (src/components/GitCloneDialog.tsx)
 │     Import-from-git modal, driven by useGitStore's clone.phase: setup (URL + destination) → cloning (spinner + elapsed seconds) → error (git's exact text, back to setup) → done (pick the project JSON, opened inside the clone) — Electron only, see "Git" above
 ├── GitDialog (src/components/GitDialog.tsx)
-│     Modal for the open project's own repository: changes + diff, a commit message, Commit, Pull, Push — shown only when the toolbar's Git button is present
+│     Modal for the open project's own repository: changes + diff, a commit message, Commit, Pull, Push — shown only when the toolbar's Git button is present. When the open project's own file is a tracked, field-diffable modification, its changes are reviewed field by field (Use/Ignore/Discard per row) instead of as one whole-file checkbox — see "Field-level commit review" below
 ├── GitMergeDialog (src/components/GitMergeDialog.tsx)
 │     The pull's conflict-resolution list: your value left, the remote's right, an editable final value in the middle. No Escape, no backdrop-click, no × — see "Git" above for why
 └── ErrorPanel (src/components/ErrorPanel.tsx)
@@ -1011,10 +1011,11 @@ when the *project* turned it off (`config.ai: false`).
 
 ### The renderer never names an argv
 
-Every git operation the renderer can ask for is one of eleven enumerated IPC handlers in
+Every git operation the renderer can ask for is one of fourteen enumerated IPC handlers in
 `electron/main.ts` (`git:probe`, `git:pickCloneDir`, `git:clone`, `git:pickProjectIn`, `git:info`,
-`git:status`, `git:commit`, `git:push`, `git:pullBegin`, `git:pullFinish`, `git:pullAbort`) — never
-a general `git <args>` channel. Git has `--exec-path`, aliases, and the `ext::` remote-helper
+`git:status`, `git:headContent`, `git:workingContent`, `git:commitPartial`, `git:commit`, `git:push`,
+`git:pullBegin`, `git:pullFinish`, `git:pullAbort`) — never a general `git <args>` channel. Git has
+`--exec-path`, aliases, and the `ext::` remote-helper
 transport; a channel that let the renderer choose the argv would be handing it arbitrary code
 execution wearing a "just run git" label. Main decides what git is actually asked to do; the
 renderer only supplies data (a URL, a path, a commit message, a resolved text).
@@ -1067,7 +1068,8 @@ variable. None of this weakens anything a user configured:
 | `src/git/url.ts` | Pure. `validateGitUrl`, `validateClonePath`, `repoNameFromUrl` — the security gate, imported by `electron/main.ts` (see above). |
 | `src/git/output.ts` | Pure. `parsePorcelain` (turns `git status --porcelain=v1 -z` into `GitFileChange[]`), `capDiff` (caps a diff for the DOM), `diffLines` (splits a unified diff into per-line `add`/`remove`/`context` for the coloured view — see below), `gitErrorText` (what to show when a git command failed) — also imported by `electron/main.ts`, so the "what does a failed run's message say" logic exists once. |
 | `src/git/merge.ts` | Pure. The field-level three-way merge — see below. Knows nothing about git or the DOM, the same shape `src/consolidate/` follows. |
-| `src/state/gitStore.ts` | The clone flow and the commit/pull/push panel; owns the pull orchestration. |
+| `src/git/changes.ts` | Pure. Field-level *local* change detection and composition for the commit panel — see "Field-level commit review" below. Reuses `merge.ts`'s `conflictId`/`MergeTree` for row identity, but not its three-way `merge3` rule (only one side, the working tree, has changed here). |
+| `src/state/gitStore.ts` | The clone flow and the commit/pull/push panel; owns the pull orchestration and the field-review state. |
 | `src/components/GitCloneDialog.tsx`, `GitDialog.tsx`, `GitMergeDialog.tsx` | Views over `gitStore`. |
 
 **Each dialog's width class is `.modal.git-*-dialog`, not bare `.git-*-dialog`** — a single-class
@@ -1215,12 +1217,75 @@ it from the code side.
 - **A boolean can never conflict.** `Paper.equal`, a set spelled as an array, merges per-path via
   `merge3<boolean>` — a boolean has only two values, so "both sides changed it, differently" cannot
   happen; `merge3`'s first branch (`eq(ours, theirs)`) always takes it.
+- **`Paper.abstract` and `abstractFromPdf` are ordinary paper-level fields, merged independently.**
+  Each gets its own `merge3` call and its own possible conflict row, the same as `title`/`doi`/`pdf`.
+  A known, accepted gap: resolving an `abstract` conflict does not retroactively touch
+  `abstractFromPdf` — if only one side changed the flag, `merge3`'s "one side changed" branch takes
+  it before the reviewer ever sees the separate `abstract` conflict, so the resolved text and the
+  disclosure flag can end up describing two different edits. `merge.test.ts` demonstrates and pins
+  this exact case rather than hiding it. This was a genuine bug until fixed: both fields were
+  entirely absent from `mergePaper`'s field list, `canonicalPaper`, and `applyOne` — every pull
+  silently dropped every paper's abstract, and `canonicalPaper`'s omission meant an abstract-only
+  edit could make `paperUnchanged` wrongly true, risking the paper being dropped as part of the
+  paper-deletion asymmetry above.
 
 `applyResolutions` writes the reviewer's per-conflict choices into the merged project with immer's
 `produce` — not `structuredClone` (not something to bet on under every runtime this ships to) and not
 `JSON.parse(JSON.stringify(...))` (which drops `undefined`-valued keys that both `deepEqualJson` and
 the round-trip test care about). `deepEqualJson` itself is **exported from `src/model/project.ts`**
 rather than redefined in `merge.ts` — the same "one shared implementation" rule as `comparable()`.
+
+### Field-level commit review
+
+Before this existed, `git → Commit` only offered a whole-file checkbox: tick the project JSON or
+don't. `src/git/changes.ts` breaks the open project's own file down into the individual fields that
+actually changed, so a reviewer can decide field by field whether to commit it now (**Use**), leave
+it as a still-uncommitted local change to revisit later (**Ignore**), or revert it (**Discard**) —
+without touching everything else in the file.
+
+**The comparison is structural, not textual.** `detectFieldChanges(head, working)` compares two
+parsed `Project`s (HEAD's own copy of the file, read via `git:headContent` — `git show HEAD:relPath`
+— against the working tree's, read via the side-effect-free `git:workingContent`), walking annotation
+trees the same recursive way `merge.ts`'s three-way walk does and reusing its `conflictId`/`MergeTree`
+shapes for row identity. This is deliberately immune to JSON formatting/key-order noise — the same
+"compare parsed values, not text" choice the codebase already made for `needsShapeMigration`. Unlike
+`merge.ts`, there is no three-way question here: only the working tree has changed, so every
+difference is something the reviewer decides about, not something that might resolve itself.
+
+**A structural difference refuses field-level review entirely, falling back to the plain file
+checkbox** — the same refusal list `mergeProjects` uses (`config.schema`, `config.reviewers`,
+`config.ai`, `config.screening`, `version`, root `extra`): once the schema itself might differ,
+"which fields changed" stops being a question with a field-level answer.
+
+**Coupled fields are bundled into one row.** `PAPER_META_BUNDLES` maps `abstract` to its hidden
+dependent, `abstractFromPdf` — the disclosure flag is not an independent fact a reviewer chooses
+among, it just describes whichever `abstract` value ends up committed, so it never gets a row of its
+own; it silently follows the primary field's disposition (`applyFieldWithBundle`, which reads the raw
+boolean directly from the source `Project` rather than trying to derive it from the bundled field's
+own display string).
+
+**Discarding is deferred, and it is a real write.** Picking Discard on a row does *not* touch the
+file on disk — it only records the decision, in `gitStore`'s `panel.fieldReview.decisions`. Nothing
+is reverted until the reviewer actually presses **Commit**: `composeContents(head, working, changes,
+decisions)` then builds two divergent `Project`s from the same three inputs — `committed` (what gets
+staged: HEAD's own value for every `discard`/`ignore` row, the working tree's value for every `use`
+row) and `workingOut` (what the file on disk ends up holding afterward: HEAD's value written back in
+for every `discard` row, unchanged everywhere else). A paper added locally follows the same shape —
+**discard** deletes it from `workingOut`; a paper removed locally follows it too — **discard**
+restores it from `head` into `workingOut`.
+
+**Partial-file staging has no native git primitive, so it is a write → commit → write-back
+sequence.** `git:commitPartial` (`electron/main.ts`) writes `committedText` to the file, `git add` +
+`git commit`s it (along with whatever else is in `otherPaths`, the ordinary whole-file selections),
+then — in a `finally` block, unconditionally, whether or not the commit itself succeeded — writes
+`workingText` back over it. The `finally` is load-bearing: without it, a failed commit would leave the
+working file stuck holding content that was never actually staged as anything.
+
+**Decisions survive an incidental refresh.** Clicking the panel's own ↻ (or `runPull`/`runCommit`
+implicitly calling `refreshStatus`) recomputes `detectFieldChanges` from scratch; `refreshFieldReview`
+(`gitStore.ts`) carries forward any decision whose row id is still present in the new result and
+drops the rest — an accidental re-scan must never silently reset a reviewer's careful per-row choices,
+but a row that stopped being a change (its id vanished) has nothing left to carry the decision about.
 
 ### Testing
 
@@ -1230,10 +1295,20 @@ rather than redefined in `merge.ts` — the same "one shared implementation" rul
 repeatable-node growth (colliding and non-colliding), the interior-gap and instance-removal
 invariants, the multi-reviewer headline case (disjoint edits by two reviewers, zero conflicts), the
 paper add/remove asymmetry, every refusal, the `aiUsage` union, the `Paper.equal` boolean-set merge,
+the `abstract`/`abstractFromPdf` merge (including the documented resolve-order gap above),
 `applyResolutions`, and a full round-trip through `serializeProject`/`loadProject`.
-`src/state/gitStore.test.ts` covers `runPull`'s orchestration against a fake `GitPlatform`: each pull
-classification, a refused merge (aborts and reports why), an unparseable revision (aborts, writes
-nothing), and the dirty guard refusing to even call `beginPull`.
+`src/git/changes.test.ts` covers `detectFieldChanges` (structural refusal, no changes, paper-metadata
+diffing, the `abstract`/`abstractFromPdf` bundle including its no-primary-row fallback, annotation
+tree fields including nested repeatable groups and per-reviewer trees, paper add/remove) and
+`composeContents` (all three dispositions on a field, on an added paper, and on a removed paper —
+including "discard restores a removed paper" — the bundle applying as one unit, and round-trip
+stability). `src/state/gitStore.test.ts` covers `runPull`'s orchestration against a fake
+`GitPlatform`: each pull classification, a refused merge (aborts and reports why), an unparseable
+revision (aborts, writes nothing), and the dirty guard refusing to even call `beginPull` — plus
+`refreshFieldReview`'s branches (untracked, unreadable, unparseable, structural, a genuine detected
+change, decisions surviving and being dropped across a refresh), `setFieldDisposition`/
+`setAllFieldDispositions`, and `runCommit`'s `commitPartial` branch (composed content, success with
+its reload, and a failure surfacing the error without one).
 
 ### Rejected: streamed clone progress and a cancel button
 

@@ -34,6 +34,8 @@ interface PaperOpts {
   title?: string
   authors?: string[]
   doi?: string
+  abstract?: string
+  abstractFromPdf?: boolean
   pdf?: string
   annotations?: Record<string, unknown>
   reviews?: Record<string, unknown>
@@ -48,6 +50,8 @@ function paper(id: string, opts: PaperOpts = {}): Record<string, unknown> {
     title: opts.title ?? `Paper ${id}`,
     authors: opts.authors ?? [],
     ...(opts.doi ? { doi: opts.doi } : {}),
+    ...(opts.abstract ? { abstract: opts.abstract } : {}),
+    ...(opts.abstractFromPdf ? { abstractFromPdf: true } : {}),
     pdf: opts.pdf ?? `${id}.pdf`,
     annotations: opts.annotations ?? {},
     ...(opts.reviews ? { reviews: opts.reviews } : {}),
@@ -535,6 +539,90 @@ describe('mergeProjects — paper metadata conflicts', () => {
     const resolved = applyResolutions(outcome.merged, outcome.conflicts, resolutions)
     const resolvedPaper = resolved.papers.find((p) => p.id === 'a')!
     expect(resolvedPaper.authors).toEqual(['Amy', 'Bob', 'Dan'])
+  })
+})
+
+describe('mergeProjects — paper abstract and abstractFromPdf', () => {
+  // The regression this block exists for: mergePaper built its returned Paper
+  // with an explicit field list (title, authors, doi, pdf, ...) that predated
+  // abstract/abstractFromPdf, and simply never grew to include them — not a
+  // type error, since both are optional, so every paper's abstract vanished
+  // on every pull-merge with nothing to catch it.
+  it('carries an unconflicted abstract through the merge, not silently', () => {
+    const base = project({ papers: [paper('a')] })
+    const ours = project({ papers: [paper('a', { abstract: 'Extracted text.', abstractFromPdf: true })] })
+    const theirs = project({ papers: [paper('a')] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    const p = outcome.merged.papers.find((x) => x.id === 'a')!
+    expect(p.abstract).toBe('Extracted text.')
+    expect(p.abstractFromPdf).toBe(true)
+  })
+
+  it('conflicts on abstract text when both sides changed it differently', () => {
+    const base = project({ papers: [paper('a')] })
+    const ours = project({ papers: [paper('a', { abstract: 'Mine.' })] })
+    const theirs = project({ papers: [paper('a', { abstract: 'Theirs.' })] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    const c = conflictAt(outcome.conflicts, 'abstract')!
+    expect(c.tree).toEqual({ kind: 'paper' })
+    expect(c.ours).toBe('Mine.')
+    expect(c.theirs).toBe('Theirs.')
+
+    const resolved = applyResolutions(outcome.merged, outcome.conflicts, { [c.id]: 'Reconciled.' })
+    expect(resolved.papers.find((p) => p.id === 'a')!.abstract).toBe('Reconciled.')
+  })
+
+  it('resolving the abstract-text conflict does not update abstractFromPdf, which already resolved on its own — the documented gap', () => {
+    // `abstractFromPdf` only ever loads as `true` or `undefined` (project.ts
+    // coerces anything else away), so with just two possible values a genuine
+    // three-way *conflict* on the flag alone is not reachable — one side
+    // always ends up matching base, and merge3 takes the other side cleanly.
+    // That is exactly what makes this scenario possible: the flag resolves
+    // by itself, quietly, before the person ever weighs in on the text.
+    const base = project({ papers: [paper('a')] })
+    // ours: extracted from the PDF, text and flag set together, as the real
+    // feature always sets them.
+    const ours = project({ papers: [paper('a', { abstract: 'Extracted text.', abstractFromPdf: true })] })
+    // theirs: a human typed a real abstract by hand — changed the text, never
+    // touched the flag.
+    const theirs = project({ papers: [paper('a', { abstract: 'Typed by a human.' })] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+
+    // The flag already resolved to `true` with no conflict — theirs never
+    // changed it away from base, so merge3 took ours' value automatically.
+    expect(conflictAt(outcome.conflicts, 'abstractFromPdf')).toBeUndefined()
+    expect(outcome.merged.papers.find((p) => p.id === 'a')!.abstractFromPdf).toBe(true)
+
+    // The text itself is a real conflict — both sides changed it, differently.
+    const c = conflictAt(outcome.conflicts, 'abstract')!
+    const resolved = applyResolutions(outcome.merged, outcome.conflicts, { [c.id]: c.theirs })
+    const resolvedPaper = resolved.papers.find((p) => p.id === 'a')!
+
+    // The reviewer picked the human-typed text — but the flag still says
+    // "extracted from the PDF", because nothing re-examines it once the text
+    // conflict is resolved separately. This is the inconsistency the code
+    // comment above the abstractFromPdf merge3 call names as out of scope for
+    // this fix: not solved here, but pinned down as an observed, known gap
+    // rather than left to be rediscovered as a surprise.
+    expect(resolvedPaper.abstract).toBe('Typed by a human.')
+    expect(resolvedPaper.abstractFromPdf).toBe(true)
+  })
+
+  it('an abstract-only local edit is never mistaken for "no change" and dropped', () => {
+    // canonicalPaper (paperUnchanged's basis) is what this pins: before the
+    // fix, a paper whose only edit was its abstract compared equal to the
+    // base paper, so a remote deletion of it would have gone through
+    // silently instead of triggering the "kept, annotated" note.
+    const base = project({ papers: [paper('a', { title: 'Kept Paper' })] })
+    const ours = project({ papers: [paper('a', { title: 'Kept Paper', abstract: 'New text.' })] })
+    const theirs = project({ papers: [] }) // deleted remotely
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.papers.some((p) => p.id === 'a')).toBe(true)
+    expect(outcome.notes.some((n) => n.kind === 'paper-kept')).toBe(true)
   })
 })
 

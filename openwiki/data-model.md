@@ -363,8 +363,12 @@ it does; `architecture.md`'s "Git" section covers the plumbing that gets it ther
 `formatPath`'s form (`src/llm/paths.ts`), e.g. `"Findings[1]/Claim"` — but the path alone is **not**
 sufficient: the identical path exists once in `annotations` and once in *every* `reviews[N]`, so
 which tree it lives in (`{kind:'annotations'}`, `{kind:'review', reviewer:'2'}`, `{kind:'paper'}` for
-title/pdf/doi/authors, or `{kind:'project'}` for the project's own title) is part of the key. Two
-conflicts on the same canonical path in different trees are different conflicts.
+title/pdf/doi/authors/abstract/abstractFromPdf, or `{kind:'project'}` for the project's own title) is
+part of the key. Two conflicts on the same canonical path in different trees are different conflicts.
+`abstract` and `abstractFromPdf` merge as two independent ordinary fields — a known, accepted gap is
+that resolving an `abstract` conflict does not retroactively touch `abstractFromPdf`, which may
+already have resolved on its own via the "only one side changed it" rule below; see
+`architecture.md`'s "Git" section for the full reasoning and the bug this fixed.
 
 **The one rule**: a side that did not change a value away from the merge base does not get a vote on
 it. A field only one side changed takes that side's value automatically; a field both sides changed
@@ -416,8 +420,15 @@ absurd.
 **Testing**: `src/git/merge.test.ts` builds every base/ours/theirs through the real `loadProject`
 (never a hand-assembled `Project`), so fixtures are exactly as schema-normalized and
 empty-skeleton-shaped as `mergeProjects`' real caller hands it — and pins the field-level guarantee,
-the interior-gap and instance-removal invariants, the multi-reviewer case, every refusal, and a full
+the interior-gap and instance-removal invariants, the multi-reviewer case, every refusal, the
+`abstract`/`abstractFromPdf` merge and its resolve-order gap, and a full
 `serializeProject`/`loadProject` round-trip of a resolved merge.
+
+**A separate, related question — what changed locally, for the commit panel** — is `src/git/changes.ts`'s
+`detectFieldChanges`/`composeContents`, covered in `architecture.md`'s "Field-level commit review".
+It reuses this section's field-identity shape but answers a genuinely different question: not "which
+of two divergent copies wins", but "which of the working tree's own changes against HEAD does the
+reviewer want to keep".
 
 ## Lifecycle: Load → Normalize → Edit → Prune → Serialize
 
