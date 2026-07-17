@@ -60,6 +60,15 @@
   font-size: 1.05rem;
 }
 
+/* Same reasoning as `.git-clone-url-input` above: the commit message is the
+   sole field in its row, not inside a flex container, so `.field-input`'s own
+   `flex: 1 1 auto` does nothing here and it needs an explicit width to fill
+   the dialog rather than sit at the browser's tiny default textarea width. */
+.git-commit-message {
+  display: block;
+  width: 100%;
+}
+
 .git-muted {
   color: var(--muted);
 }

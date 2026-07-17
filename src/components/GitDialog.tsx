@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useGitStore } from '../state/gitStore'
 import { useStore } from '../state/store'
 import { diffLines } from '../git/output'
@@ -189,14 +189,7 @@ export function GitDialog() {
           <label className="git-field-label" htmlFor="git-commit-message">
             Commit message
           </label>
-          <input
-            id="git-commit-message"
-            className="field-input"
-            type="text"
-            value={panel.message}
-            onChange={(e) => setCommitMessage(e.target.value)}
-            placeholder="Describe what changed…"
-          />
+          <CommitMessageField value={panel.message} onChange={setCommitMessage} />
 
           <div className="git-panel-actions">
             <button
@@ -228,6 +221,51 @@ export function GitDialog() {
         </div>
       </div>
     </div>
+  )
+}
+
+/** Capped at the same height `Field.tsx`'s `StringField` uses for an annotation
+ *  text field — a commit message deserves the identical collapsed-until-focus
+ *  feel, not a different number that happens to also look reasonable. */
+const MAX_MESSAGE_HEIGHT = 240
+
+/** Single-line when idle, grows downward (capped) while focused — same pattern
+ *  as an annotation text field, and, unlike the plain `<input>` this replaces,
+ *  wide enough to actually use the dialog's own width (see `.git-commit-message`
+ *  in git.css: a bare `.field-input` has no width outside a flex row). */
+function CommitMessageField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  const [expanded, setExpanded] = useState(false)
+
+  const resize = () => {
+    const el = ref.current
+    if (!el) return
+    if (!expanded) {
+      el.style.height = ''
+      return
+    }
+    // Reset first so scrollHeight reflects the content, not the current box.
+    el.style.height = ''
+    el.style.height = `${Math.min(el.scrollHeight, MAX_MESSAGE_HEIGHT)}px`
+  }
+
+  useEffect(resize, [expanded, value])
+
+  return (
+    <textarea
+      ref={ref}
+      id="git-commit-message"
+      rows={1}
+      className={`field-input field-textarea git-commit-message${expanded ? ' expanded' : ''}`}
+      value={value}
+      placeholder="Describe what changed…"
+      onFocus={() => setExpanded(true)}
+      onBlur={() => {
+        setExpanded(false)
+        if (ref.current) ref.current.style.height = ''
+      }}
+      onChange={(e) => onChange(e.target.value)}
+    />
   )
 }
 
