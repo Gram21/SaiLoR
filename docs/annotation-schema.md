@@ -110,7 +110,7 @@ thing you want to record. A node is written as a JSON object (its technical name
 | Field         | Type                                   | Required | Default | Meaning                                                                                   |
 | ------------- | -------------------------------------- | -------- | ------- | ----------------------------------------------------------------------------------------- |
 | `name`        | string                                 | **yes**  | —       | The label shown in the form. **Sibling names must be unique** (see below).               |
-| `type`        | `"string"` \| `"number"` \| `"boolean"`| no       | —       | Makes the node an editable field. **Omit it** to make a group (a name‑only branch).       |
+| `type`        | `"string"` \| `"number"` \| `"boolean"` \| `"year"`| no       | —       | Makes the node an editable field. **Omit it** to make a group (a name‑only branch).       |
 | `children`    | array of nodes                         | no       | —       | A nested sub‑taxonomy. A node may have `type`, `children`, or **both**.                    |
 | `min`         | number                                 | no       | `1`     | Minimum number of times this node may occur.                                              |
 | `max`         | number or `null`                       | no       | `1`     | Maximum occurrences. A positive whole number, or `null` for **unbounded**.                |
@@ -131,7 +131,7 @@ Two structural rules the app enforces:
 > familiar one. The two are kept in step **by hand**: if the format changes here, change it there
 > too.
 
-### 3.1 Simple fields (string, number, boolean)
+### 3.1 Simple fields (string, number, boolean, year)
 
 The simplest node is a single field. Add a `type` and you get an editable value:
 
@@ -152,18 +152,27 @@ The simplest node is a single field. Add a `type` and you get an editable value:
 
 ```json
 {
-  "name": "Year",
-  "type": "number"
+  "name": "Publication Year",
+  "type": "year"
 }
 ```
 
-The three types behave as you'd expect:
+The four types behave as you'd expect:
 
 - `boolean` — a checkbox. Empty means `false`.
 - `string` — free text. Empty means "not filled in".
 - `number` — a numeric field. Empty means "not filled in".
+- `year` — a four-digit publication year (1000–2100), rejecting anything else (a typo like `20221`,
+  a decimal, a bare `55`). Empty means "not filled in". Prefer this over a plain `number` for a
+  publication year: it is the same on-disk shape (a JSON number) but with real range validation,
+  where a bare `number` accepts anything.
 
-Put together in a schema, these three might look like:
+> **Opening a `year` field in an older SaiLoR.** A file using `type: "year"` fails to load in a
+> version of the app that predates this type (the same as any new type would) — the whole point of
+> validating `type` against a fixed enum. If you need the file to stay readable by an older SaiLoR,
+> use `type: "number"` instead and accept that it validates less.
+
+Put together in a schema, these might look like:
 
 ```json
 {
@@ -171,7 +180,7 @@ Put together in a schema, these three might look like:
     "schema": [
       { "name": "Relevant", "type": "boolean" },
       { "name": "Study Type", "type": "string" },
-      { "name": "Year", "type": "number" }
+      { "name": "Publication Year", "type": "year" }
     ]
   }
 }

@@ -2,6 +2,7 @@ import type { ResolvedDef } from '../model/schema'
 import type { FieldValue } from '../model/annotations'
 import type { LlmAnswer, RejectedSuggestion, SkippedField, Suggestion } from './types'
 import { parsePath, resolvePath } from './paths'
+import { isPlausibleYear } from '../model/year'
 
 /**
  * Turning a model's answer into `Suggestion[]` is the trust boundary of the AI
@@ -172,6 +173,16 @@ function toString(raw: unknown, def: ResolvedDef): Coerced {
   return { ok: true, value: text }
 }
 
+/** Like `toNumber`, plus the range check that makes this a *year* rather than
+ *  any number — a model that answers `55` or `20221` has misread the paper,
+ *  not found an unusual year, so that is rejected rather than accepted and
+ *  handed on for a human to puzzle over. */
+function toYear(raw: unknown): Coerced {
+  const n = toNumber(raw)
+  if (!n.ok) return n
+  return isPlausibleYear(n.value) ? n : { ok: false, reason: 'not a plausible publication year' }
+}
+
 function coerce(def: ResolvedDef, raw: unknown): Coerced {
   switch (def.type) {
     case 'string':
@@ -180,6 +191,8 @@ function coerce(def: ResolvedDef, raw: unknown): Coerced {
       return toNumber(raw)
     case 'boolean':
       return toBoolean(raw)
+    case 'year':
+      return toYear(raw)
     default:
       // resolvePath only ever returns field defs, so this is unreachable in practice.
       return { ok: false, reason: 'unknown field' }

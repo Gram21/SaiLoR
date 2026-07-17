@@ -4,6 +4,7 @@ import { emptyValue, type AnnotationValueTree, type FieldValue, type InstanceNod
 import { deepEqualJson, type Paper, type Project } from '../model/project'
 import { formatPath, displayPath, resolvePath, type RawSeg } from '../llm/paths'
 import { conflictId, type MergeTree } from './merge'
+import { parseYear } from '../model/year'
 
 /**
  * Field-level review of what changed **locally**, for the commit panel — a
@@ -95,6 +96,8 @@ const PAPER_META_FIELDS: {
 }[] = [
   { canonical: 'title', label: 'Title', type: 'string', get: (p) => p.title },
   { canonical: 'authors', label: 'Authors', type: 'string', get: (p) => p.authors.join(', ') },
+  { canonical: 'year', label: 'Year', type: 'year', get: (p) => p.year ?? null },
+  { canonical: 'venue', label: 'Venue', type: 'string', get: (p) => p.venue ?? null },
   { canonical: 'doi', label: 'DOI', type: 'string', get: (p) => p.doi ?? null },
   { canonical: 'abstract', label: 'Abstract', type: 'string', get: (p) => p.abstract ?? null },
   {
@@ -337,6 +340,16 @@ function writePaperMeta(draft: Project, paperId: string, canonical: string, valu
         .map((a) => a.trim())
         .filter(Boolean)
       break
+    case 'year':
+      // `parseYear` handles a value already shaped as a number (the ordinary
+      // case) and a stringified one (a hand-built decision) identically.
+      paper.year = parseYear(value)
+      break
+    case 'venue': {
+      const s = (value === null ? '' : String(value)).trim()
+      paper.venue = s || undefined
+      break
+    }
     case 'doi': {
       const s = (value === null ? '' : String(value)).trim()
       paper.doi = s || undefined

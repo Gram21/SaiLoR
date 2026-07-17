@@ -79,7 +79,18 @@ describe('validateDraft with screening', () => {
     const issues = validateDraft(
       draft({
         papers: [
-          { uid: 'u1', id: 'p1', title: 'Paper', authors: '', doi: '', abstract: '', pdf: '', annotations: {} },
+          {
+            uid: 'u1',
+            id: 'p1',
+            title: 'Paper',
+            authors: '',
+            doi: '',
+            year: '',
+            venue: '',
+            abstract: '',
+            pdf: '',
+            annotations: {},
+          },
         ],
       }),
     )
@@ -97,7 +108,18 @@ describe('validateDraft with screening', () => {
         screening: null,
         nodes: [{ ...makeNode(), name: 'X', kind: 'string' }],
         papers: [
-          { uid: 'u1', id: 'p1', title: 'Paper', authors: '', doi: '', abstract: '', pdf: '', annotations: {} },
+          {
+            uid: 'u1',
+            id: 'p1',
+            title: 'Paper',
+            authors: '',
+            doi: '',
+            year: '',
+            venue: '',
+            abstract: '',
+            pdf: '',
+            annotations: {},
+          },
         ],
       }),
     )

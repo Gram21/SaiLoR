@@ -10,6 +10,7 @@ import {
 import { deepEqualJson, type AiUsageRecord, type Paper, type Project } from '../model/project'
 import type { ScreeningConfig } from '../model/schema'
 import { formatPath, displayPath, resolvePath, type RawSeg } from '../llm/paths'
+import { parseYear } from '../model/year'
 
 /**
  * The field-level three-way merge at the heart of git support. This module
@@ -32,7 +33,7 @@ import { formatPath, displayPath, resolvePath, type RawSeg } from '../llm/paths'
 /** Which tree inside the project a conflicted value lives in. */
 export type MergeTree =
   | { kind: 'project' } // the project's own top-level fields
-  | { kind: 'paper' } // one paper's metadata (title, pdf, doi, authors, abstract, abstractFromPdf)
+  | { kind: 'paper' } // one paper's metadata (title, pdf, doi, authors, year, venue, abstract, abstractFromPdf)
   | { kind: 'annotations' } // the single / consolidated tree
   | { kind: 'review'; reviewer: string } // one numbered reviewer's own tree
 
@@ -355,6 +356,39 @@ function mergePaper(
     )
   }
 
+  // `year`/`venue` get the identical treatment `abstract`/`abstractFromPdf`
+  // already do: a merge3 call, a conflict on genuine disagreement, and (below)
+  // a slot in `canonicalPaper` and a case in `applyOne`. Omitting either from
+  // any one of those three spots is exactly the abstract-dropping regression
+  // this file was fixed for once already — see `canonicalPaper`'s doc comment.
+  const eqNumU = (a: number | undefined, b: number | undefined) => a === b
+  const nOrNull = (v: number | undefined): FieldValue => (v === undefined ? null : v)
+  const yearM = merge3<number | undefined>(base?.year, ours.year, theirs.year, eqNumU)
+  const year = yearM ? yearM.value : ours.year
+  if (!yearM) {
+    conflicts.push({
+      id: conflictId(ours.id, { kind: 'paper' }, 'year'),
+      paperId: ours.id,
+      paperTitle: ours.title,
+      tree: { kind: 'paper' },
+      canonical: 'year',
+      label: 'Year',
+      // The honest type — and it is what forces the merge dialog's
+      // `MiddleControl` to render a bounded numeric control here rather than
+      // free text, exactly as it must for a `type: 'year'` annotation field.
+      type: 'year',
+      base: nOrNull(base?.year),
+      ours: nOrNull(ours.year),
+      theirs: nOrNull(theirs.year),
+    })
+  }
+
+  const venueM = merge3<string | undefined>(base?.venue, ours.venue, theirs.venue, eqStrU)
+  const venue = venueM ? venueM.value : ours.venue
+  if (!venueM) {
+    pushPaperConflict('venue', 'Venue', sOrNull(base?.venue), sOrNull(ours.venue), sOrNull(theirs.venue))
+  }
+
   const abstractM = merge3<string | undefined>(base?.abstract, ours.abstract, theirs.abstract, eqStrU)
   const abstract = abstractM ? abstractM.value : ours.abstract
   if (!abstractM) {
@@ -449,6 +483,8 @@ function mergePaper(
     title,
     authors,
     doi,
+    year,
+    venue,
     abstract,
     abstractFromPdf,
     pdf,
@@ -472,6 +508,8 @@ function canonicalPaper(schema: ResolvedDef[], p: Paper) {
     title: p.title,
     authors: p.authors,
     doi: p.doi,
+    year: p.year,
+    venue: p.venue,
     abstract: p.abstract,
     abstractFromPdf: p.abstractFromPdf,
     pdf: p.pdf,
@@ -789,6 +827,18 @@ function applyOne(draft: Project, conflict: FieldConflict, value: FieldValue): v
       case 'authors':
         paper.authors = splitAuthors(valueToString(value))
         break
+      case 'year':
+        // `parseYear` also covers a stale/hand-built resolution that hands
+        // back a string (`'2021'`) instead of the number the conflict itself
+        // carries — the model layer must never write anything but a number
+        // here, the same way `writePaperMeta` in changes.ts cannot either.
+        paper.year = parseYear(value)
+        break
+      case 'venue': {
+        const s = valueToString(value).trim()
+        paper.venue = s || undefined
+        break
+      }
       case 'abstract': {
         const s = valueToString(value).trim()
         paper.abstract = s || undefined

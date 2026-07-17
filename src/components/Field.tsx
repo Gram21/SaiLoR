@@ -3,6 +3,7 @@ import { useStore, useAiMark, type PathSeg } from '../state/store'
 import type { ResolvedDef } from '../model/schema'
 import type { FieldValue } from '../model/annotations'
 import { readyToConsolidate } from '../consolidate/readiness'
+import { parseYear, YEAR_MIN, YEAR_MAX } from '../model/year'
 import { ComboBox } from './ComboBox'
 
 const MAX_TEXTAREA_HEIGHT = 240
@@ -64,6 +65,13 @@ export function Field({ def, path, index, value }: FieldProps) {
     if (def.type === 'number') {
       const n = parseNumber(sel)
       if (n !== null) set(n)
+    } else if (def.type === 'year') {
+      // Not `parseNumber`: that grabs the first numeric token in the
+      // selection regardless of size, so a selection like "Vol. 12, 2021"
+      // would read as `12`. `parseYear` looks specifically for a plausible
+      // four-digit year instead.
+      const y = parseYear(sel)
+      if (y !== undefined) set(y)
     } else {
       set(sel)
     }
@@ -87,15 +95,20 @@ export function Field({ def, path, index, value }: FieldProps) {
 
   // A string field with `options` is an enum → dropdown (no free-text grab).
   const isEnum = def.type === 'string' && !!def.options && def.options.length > 0
-  const canGrab = def.type === 'number' || (def.type === 'string' && !isEnum)
+  const canGrab = def.type === 'number' || def.type === 'year' || (def.type === 'string' && !isEnum)
 
   return (
     <div className="field-row">
-      {def.type === 'number' ? (
+      {def.type === 'number' || def.type === 'year' ? (
         <input
           type="number"
           className={`field-input${markClass}`}
           value={value === null || value === undefined ? '' : String(value)}
+          // A bounded, whole-number control for `year` — the same reason the
+          // validator gives it its own message: "a number" invites a decimal
+          // or a magnitude that is not a plausible year, and this catches the
+          // slip before it is ever saved rather than only reporting it later.
+          {...(def.type === 'year' ? { min: YEAR_MIN, max: YEAR_MAX, step: 1 } : {})}
           onFocus={confirm}
           onClick={confirm}
           onChange={(e) => set(e.target.value === '' ? null : Number(e.target.value))}
