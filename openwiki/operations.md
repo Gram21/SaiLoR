@@ -282,7 +282,7 @@ git is installed, check `which git` in a terminal against what a GUI-launched ap
 | Platform | Git support |
 |---|---|
 | Electron (desktop) | Full — clone, status, commit, pull (with field-level merge), push, using the real `git` binary and its config |
-| Browser (any) | None — the controls are not shown at all; see `architecture.md`'s "Git" section for why there is nothing to fall back to |
+| Browser (any) | None — the controls stay visible, dimmed, with a tooltip pointing at the desktop app; see `architecture.md`'s "Git" section for why there is nothing to fall back to |
 
 **Credentials are never handled by SaiLoR.** Every git operation runs through the user's own
 credential helper, SSH agent, and host-key configuration, exactly as a terminal `git` command would.

@@ -6,6 +6,15 @@ import { getPlatform } from '../platform'
 import { Dropdown, type MenuItem } from './Dropdown'
 import { SidebarToggle } from './SidebarToggle'
 
+/** Shown on every git entry point in the browser build, where `getGit()` is
+ *  always `null` (see `PlatformAdapter.getGit()` and architecture.md's "Git"
+ *  section for why: no process spawn, no SSH agent, no credential helper —
+ *  a browser page cannot reach any of what git support needs, permission
+ *  prompt or not). Shown as a disabled control's tooltip, not by hiding the
+ *  control — a reviewer who reaches for it should learn why it doesn't work
+ *  and what to do instead, not wonder whether they misremembered it existing. */
+const GIT_BROWSER_DISABLED_HINT = 'Git support is disabled in the browser version. Use the SaiLoR desktop app if you need it.'
+
 /** Clicks this close together count as the same run; a pause starts over. */
 export const UNLOCK_CLICK_WINDOW_MS = 2500
 /** How many clicks on the app title unlock AI use for the session. */
@@ -69,9 +78,11 @@ export function Toolbar() {
   const selectReviewer = useStore((s) => s.selectReviewer)
 
   // Git support is Electron-only: `getGit()` is null in the browser (no local
-  // git to reach at all), so the entry points below are absent there rather
-  // than shown-and-broken. `probe` distinguishes that from "this machine has
-  // no git installed", which dims the control instead of hiding it.
+  // git to reach at all). The entry points stay visible there too, disabled
+  // with `GIT_BROWSER_DISABLED_HINT` rather than hidden — see that constant.
+  // `probe` is the separate, narrower case of "this machine has no git
+  // installed" (Electron, but nothing to reach), which dims the control the
+  // same way with `gitProbe.error` as the hint instead.
   const git = getPlatform().getGit()
   const gitProbe = useGitStore((s) => s.probe)
   const gitRepo = useGitStore((s) => s.repo)
@@ -139,20 +150,17 @@ export function Toolbar() {
 
   const openItems: MenuItem[] = [
     { type: 'item', label: 'Open file…', shortcut: `${modKey}+O`, onSelect: () => void openProject() },
-    ...(git
-      ? [
-          {
-            type: 'item' as const,
-            label: 'Import from git…',
-            hint:
-              gitProbe && !gitProbe.available
-                ? gitProbe.error
-                : 'Clone a repository and open a project from it',
-            disabled: busy || (gitProbe !== null && !gitProbe.available),
-            onSelect: () => openClone(),
-          },
-        ]
-      : []),
+    {
+      type: 'item',
+      label: 'Import from git…',
+      hint: !git
+        ? GIT_BROWSER_DISABLED_HINT
+        : gitProbe && !gitProbe.available
+          ? gitProbe.error
+          : 'Clone a repository and open a project from it',
+      disabled: !git || busy || (gitProbe !== null && !gitProbe.available),
+      onSelect: () => openClone(),
+    },
     { type: 'separator' },
     { type: 'header', label: 'Recent projects' },
     ...(recents.length > 0
@@ -213,6 +221,30 @@ export function Toolbar() {
         <div className="toolbar-actions">
           <Dropdown label="Open" title="Open a project" disabled={busy} items={openItems} />
           <Dropdown label="Save" title="Save the project" disabled={busy} items={saveItems} />
+          {/* Right next to Open/Save, not down by Validate/Close — same reasoning
+              as those two: an entry point sitting next to the open/save actions
+              reads as "part of getting a project open", not an afterthought.
+              In Electron this is hidden, not disabled, when the open project's
+              JSON isn't inside a work tree at all (`gitRepo` null) — there is
+              nothing here to commit/pull/push, the same way Validate isn't
+              disabled-with-a-reason when there's no annotation schema to check
+              against; it just wouldn't exist. In the browser it is always shown,
+              disabled, with `GIT_BROWSER_DISABLED_HINT` — see the `git` comment
+              above for why hidden isn't the right call there. */}
+          {(git ? gitRepo : true) && (
+            <button
+              type="button"
+              title={
+                !git
+                  ? GIT_BROWSER_DISABLED_HINT
+                  : `Commit, pull and push this project — ${gitRepo?.branch ?? 'detached HEAD'}`
+              }
+              onClick={() => void openGitPanel()}
+              disabled={!git || !project || busy || editorOpen}
+            >
+              Git
+            </button>
+          )}
           <button
             type="button"
             title={
@@ -235,19 +267,6 @@ export function Toolbar() {
           >
             Close
           </button>
-          {/* Only rendered when the open project's JSON actually sits inside a
-              work tree — `gitRepo` is null otherwise, including when git is
-              missing from this machine's PATH. */}
-          {gitRepo && (
-            <button
-              type="button"
-              title={`Commit, pull and push this project — ${gitRepo.branch ?? 'detached HEAD'}`}
-              onClick={() => void openGitPanel()}
-              disabled={!project || busy || editorOpen}
-            >
-              Git
-            </button>
-          )}
         </div>
       </div>
 
