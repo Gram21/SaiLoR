@@ -35,6 +35,16 @@ describe('parseAuthorList', () => {
     expect(parseAuthorList('Department of Computer Science')).toEqual([])
   })
 
+  it('keeps names starting with a non-ASCII capital in strict mode', () => {
+    // Regression: strict `looksLikeName` tested `/^[A-Z]/`, so a name led by a
+    // non-ASCII upper-case letter was dropped as if it were prose.
+    expect(parseAuthorList('Łukasz Kaiser, Jane Doe', true)).toEqual(['Łukasz Kaiser', 'Jane Doe'])
+    expect(parseAuthorList('Ángel Cuadra and Øystein Nordvik', true)).toEqual([
+      'Ángel Cuadra',
+      'Øystein Nordvik',
+    ])
+  })
+
   it('strips a leading "Authors:" label', () => {
     expect(parseAuthorList('Authors: A. Author, B. Writer')).toEqual(['A. Author', 'B. Writer'])
     expect(parseAuthorList('By Jane Doe')).toEqual(['Jane Doe'])

@@ -85,7 +85,17 @@ export function normalizeTree(
 function normalizeInstance(def: ResolvedDef, inst: InstanceNode | undefined): InstanceNode {
   const out: InstanceNode = {}
   if (isField(def)) {
-    out.value = inst && 'value' in inst ? (inst.value as FieldValue) : emptyValue(def.type)
+    // The value tree is hand-editable, so an instance array element may be a
+    // bare primitive (`"Study Type": ["RCT"]` instead of `[{value:"RCT"}]`)
+    // rather than the `{value}` object shape. `'value' in inst` would throw a
+    // raw TypeError on a primitive — escaping `loadProject`'s contract to only
+    // ever raise a friendly ProjectLoadError, and aborting a git pull-merge
+    // that loads such a revision. Guard on object-ness exactly as the other
+    // tree walks in this module (`collectAnnotationText`, `isEmptyInstance`) do.
+    out.value =
+      inst && typeof inst === 'object' && 'value' in inst
+        ? (inst.value as FieldValue)
+        : emptyValue(def.type)
   }
   if (def.children.length > 0) {
     out.children = normalizeTree(def.children, inst?.children)

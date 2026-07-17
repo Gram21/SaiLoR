@@ -87,6 +87,13 @@ export async function extractPdfText(
       opts.maxPages !== undefined && opts.maxPages > 0 ? Math.min(opts.maxPages, total) : total
 
     const blocks: string[] = []
+    // Count non-whitespace in the extracted *body* only. The `[page N]` markers
+    // below are structural, not content, and add ~7 chars per page — counting
+    // them (as measuring the whole assembled `text` did) makes a scanned,
+    // text-layer-less PDF of ~27+ pages read as non-empty, so the AI flow's
+    // "refuse to send an image-only PDF" guard is skipped and the model is fed
+    // nothing but page markers.
+    let bodyChars = 0
     for (let i = 1; i <= limit; i++) {
       let pageText = ''
       try {
@@ -98,6 +105,7 @@ export async function extractPdfText(
       } catch {
         // Leave this page's block empty rather than failing the whole extraction.
       }
+      bodyChars += pageText.replace(/\s/g, '').length
       blocks.push(`[page ${i}]\n${pageText}`)
     }
     if (limit < total) {
@@ -105,8 +113,7 @@ export async function extractPdfText(
     }
 
     const text = collapseWhitespace(blocks.join('\n\n'))
-    const nonWhitespace = text.replace(/\s/g, '').length
-    return { text, pages: total, empty: nonWhitespace < EMPTY_CHAR_THRESHOLD }
+    return { text, pages: total, empty: bodyChars < EMPTY_CHAR_THRESHOLD }
   } finally {
     await doc.destroy()
   }

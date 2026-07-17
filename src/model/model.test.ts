@@ -1080,3 +1080,34 @@ describe('Project.protocol (the review protocol)', () => {
     expect('protocol' in out.config).toBe(false)
   })
 })
+
+describe('hand-edited value tree with primitive instances does not crash the loader', () => {
+  // Regression: `normalizeInstance` used `'value' in inst` unguarded, which
+  // throws a raw TypeError on a primitive — escaping loadProject's contract to
+  // only ever raise ProjectLoadError, and (worse) aborting a git pull-merge
+  // that loads such a revision.
+  const schema: AnnotationDef[] = [
+    { name: 'Study Type', type: 'string' },
+    { name: 'Count', type: 'number' },
+    { name: 'Relevant', type: 'boolean' },
+  ]
+  const withInstances = (anno: Record<string, unknown>) =>
+    JSON.stringify({
+      version: 1,
+      config: { schema },
+      papers: [{ id: 'p1', title: 'T', authors: [], pdf: 'a.pdf', annotations: anno }],
+    })
+
+  it.each([
+    ['string', { 'Study Type': ['RCT'] }],
+    ['number', { Count: [42] }],
+    ['boolean', { Relevant: [true] }],
+  ])('normalizes a bare %s instance instead of throwing', (_kind, anno) => {
+    expect(() => loadProject(withInstances(anno))).not.toThrow()
+    const p = loadProject(withInstances(anno))
+    // The malformed shorthand loses its value (degraded to the empty skeleton),
+    // but the file opens and re-serializes cleanly — the defensiveness the
+    // module's own doc comment promises.
+    expect(() => serializeProject(p)).not.toThrow()
+  })
+})
