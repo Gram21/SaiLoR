@@ -8,17 +8,21 @@ name: Publish openwiki → Wiki
 #
 # Layout published to the wiki:
 #   Home.md          — always .github/wiki-assets/Home.md, verbatim: a short landing
-#                       page linking to Development and user-guide/README.
+#                       page linking to user-guide/README first, then Development.
 #   Development.md    — openwiki/Home.md, renamed so the wiki's own Home slot is free
 #                       for the landing page above.
 #   <page>.md          — the rest of openwiki/*.md, unchanged, flat at the wiki root.
-#   _Sidebar.md, _Footer.md — .github/wiki-assets/Sidebar.md and Footer.md (the
-#                       developer-docs sidebar/footer — deliberately kept out of
-#                       openwiki/ itself, see the copy step below), each with the
-#                       matching .github/wiki-assets/*-user-guide.md fragment appended
-#                       inside a `<!-- wiki-sync:NAME:start/end -->` comment pair, so the
-#                       wiki's one (global) sidebar/footer covers both parts. See
-#                       wiki-import.yml for what the markers are for.
+#   _Sidebar.md        — the "User Guide" fragment (.github/wiki-assets/Sidebar-user-
+#                       guide.md) first, then .github/wiki-assets/Sidebar.md (the
+#                       developer-docs sidebar — deliberately kept out of openwiki/
+#                       itself, see the copy step below) — user guide leads, developer
+#                       docs follow, matching Home.md.
+#   _Footer.md          — .github/wiki-assets/Footer.md (developer-docs footer, also
+#                       kept out of openwiki/), then the "User Guide" fragment
+#                       (Footer-user-guide.md) appended last — order unchanged from the
+#                       sidebar's, since a footer reads along one line, not top-to-bottom.
+#                       Both fragments sit inside a `<!-- wiki-sync:NAME:start/end -->`
+#                       comment pair; see wiki-import.yml for what the markers are for.
 #   user-guide/**      — user-guide/*.md and user-guide/screenshots/*.png, unchanged,
 #                       under a matching subfolder (their existing relative links —
 #                       between pages and to screenshots/ — already work unmodified
@@ -111,16 +115,6 @@ jobs:
             esac
           done
 
-          # --- Developer-docs chrome: .github/wiki-assets/Sidebar.md and Footer.md.
-          # These *are* gollum's `_Sidebar.md`/`_Footer.md` for the developer-docs pages
-          # above, but they deliberately do not live in openwiki/ itself — unlike the
-          # pages above, OpenWiki's scheduled regeneration (.github/workflows/openwiki.yml)
-          # never touches them, and keeping them out of that folder is what keeps
-          # openwiki/ to only the content the tool actually owns. Copied unconditionally
-          # (unlike the old openwiki-sourced versions, these two always exist).
-          cp .github/wiki-assets/Sidebar.md stage/_Sidebar.md
-          cp .github/wiki-assets/Footer.md stage/_Footer.md
-
           # --- User guide: user-guide/*.md + user-guide/screenshots/, under a matching
           # subfolder. Copied whole, not flattened, so the pages' existing relative
           # links (to each other, and to screenshots/*.png) keep working unmodified —
@@ -152,13 +146,52 @@ jobs:
             -e "s#(\.\./LICENSE)#(https://github.com/${GITHUB_REPOSITORY}/blob/main/LICENSE)#" \
             stage/user-guide/README.md
 
+          # _Sidebar.md and _Footer.md are gollum's *global* chrome — one copy applies
+          # to every page in the wiki, developer and user-guide alike — so
+          # .github/wiki-assets/Sidebar.md/Footer.md (developer nav only) each need a
+          # "User Guide" section to actually serve as the whole wiki's table of
+          # contents. That fragment lives in a third asset file,
+          # .github/wiki-assets/Sidebar-user-guide.md (and Footer-user-guide.md below),
+          # wrapped in a `<!-- wiki-sync:NAME:start/end -->` comment pair GitHub hides
+          # when rendering — wiki-import.yml looks for that same pair to lift a wiki-UI
+          # edit straight back into the asset file, and to strip the fragment back out
+          # of what continues on to become the plain Sidebar.md/Footer.md asset again.
+          #
+          # The user guide leads in the sidebar, the developer docs follow — Footer.md
+          # keeps the opposite order (its own links first, "User Guide" appended last)
+          # since a footer reads left-to-right along one line rather than top-to-bottom,
+          # so "leads" has no equivalent there.
+          # The trailing `echo` blank line keeps the dev content below from butting
+          # straight up against the (invisible, but still line-based) end marker.
+          # wiki-import.yml strips exactly the marker pair and everything between them,
+          # so that blank line lands back on Sidebar.md's own side as a harmless leading
+          # blank line on import — the same class of cosmetic-only imperfection already
+          # accepted elsewhere here (frontmatter stripping, a stray trailing blank line
+          # on the pre-reorder layout this replaced).
+          {
+            echo '<!-- wiki-sync:user-guide-sidebar:start -->'
+            cat .github/wiki-assets/Sidebar-user-guide.md
+            echo '<!-- wiki-sync:user-guide-sidebar:end -->'
+            echo
+          } > stage/_Sidebar.md
+          cat .github/wiki-assets/Sidebar.md >> stage/_Sidebar.md
+          cp .github/wiki-assets/Footer.md stage/_Footer.md
+          {
+            echo '<!-- wiki-sync:user-guide-footer:start -->'
+            cat .github/wiki-assets/Footer-user-guide.md
+            echo '<!-- wiki-sync:user-guide-footer:end -->'
+          } >> stage/_Footer.md
+
           # .github/wiki-assets/Sidebar.md links its own top "SaiLoR" entry to `Home` —
           # correct as far as that file is concerned (openwiki/Home.md really is named
           # Home, which is exactly what lets scripts/check-wiki-links.js validate the
           # link against the real openwiki page set) but broken once published, since
           # Home.md is staged as Development.md above. Fixed here, on the staged copy
           # only, rather than by writing "Development" into the asset file itself.
-          sed -i 's/\](Home)/\](Development)/' stage/_Sidebar.md
+          # Matched on the exact `[SaiLoR](Home)` link text, not just `](Home)` — the
+          # user-guide fragment prepended above has its own, deliberately unrelated
+          # `[🏠 Wiki home](Home)` link that must keep pointing at the real Home page.
+          sed -i 's/\[SaiLoR\](Home)/[SaiLoR](Development)/' stage/_Sidebar.md
 
           # A wiki with no developer-docs landing page shows a dead "Development" link,
           # so synthesize one when openwiki/ did not provide a Home.md to rename above.
@@ -185,28 +218,6 @@ jobs:
               done
             } > stage/Development.md
           fi
-
-          # _Sidebar.md and _Footer.md are gollum's *global* chrome — one copy applies
-          # to every page in the wiki, developer and user-guide alike — so
-          # .github/wiki-assets/Sidebar.md/Footer.md (developer nav only) each need a
-          # "User Guide" section appended to actually serve as the whole wiki's table of
-          # contents. The fragment itself lives in a third asset file,
-          # .github/wiki-assets/Sidebar-user-guide.md (and Footer-user-guide.md below),
-          # wrapped in a `<!-- wiki-sync:NAME:start/end -->` comment pair GitHub hides
-          # when rendering — wiki-import.yml looks for that same pair to lift a wiki-UI
-          # edit straight back into the asset file, and to strip the fragment back out
-          # of what continues on to become the plain Sidebar.md/Footer.md asset again.
-          {
-            echo
-            echo '<!-- wiki-sync:user-guide-sidebar:start -->'
-            cat .github/wiki-assets/Sidebar-user-guide.md
-            echo '<!-- wiki-sync:user-guide-sidebar:end -->'
-          } >> stage/_Sidebar.md
-          {
-            echo '<!-- wiki-sync:user-guide-footer:start -->'
-            cat .github/wiki-assets/Footer-user-guide.md
-            echo '<!-- wiki-sync:user-guide-footer:end -->'
-          } >> stage/_Footer.md
 
           # The wiki's actual Home page is always .github/wiki-assets/Home.md, verbatim
           # — never taken from openwiki/ or user-guide/ directly, since neither one
