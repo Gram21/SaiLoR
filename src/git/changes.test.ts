@@ -22,6 +22,8 @@ interface PaperOpts {
   title?: string
   authors?: string[]
   doi?: string
+  year?: number
+  venue?: string
   abstract?: string
   abstractFromPdf?: boolean
   pdf?: string
@@ -35,6 +37,8 @@ function paper(id: string, opts: PaperOpts = {}): Record<string, unknown> {
     title: opts.title ?? `Paper ${id}`,
     authors: opts.authors ?? [],
     ...(opts.doi ? { doi: opts.doi } : {}),
+    ...(opts.year !== undefined ? { year: opts.year } : {}),
+    ...(opts.venue ? { venue: opts.venue } : {}),
     ...(opts.abstract ? { abstract: opts.abstract } : {}),
     ...(opts.abstractFromPdf ? { abstractFromPdf: true } : {}),
     pdf: opts.pdf ?? `${id}.pdf`,
@@ -177,6 +181,25 @@ describe('detectFieldChanges — paper metadata', () => {
     expect(c.headValue).toBeNull()
     expect(c.workingValue).toBe('10.1000/xyz')
   })
+
+  it('detects a year change, typed as "year" not "number"', () => {
+    const head = project({ papers: [paper('a', { year: 2021 })] })
+    const working = project({ papers: [paper('a', { year: 2022 })] })
+    const result = detectFieldChanges(head, working)!
+    const c = result.fields.find((f) => f.canonical === 'year')!
+    expect(c.headValue).toBe(2021)
+    expect(c.workingValue).toBe(2022)
+    expect(c.type).toBe('year')
+  })
+
+  it('detects a venue change', () => {
+    const head = project({ papers: [paper('a')] })
+    const working = project({ papers: [paper('a', { venue: 'ICSE' })] })
+    const result = detectFieldChanges(head, working)!
+    const c = result.fields.find((f) => f.canonical === 'venue')!
+    expect(c.headValue).toBeNull()
+    expect(c.workingValue).toBe('ICSE')
+  })
 })
 
 describe('detectFieldChanges — abstract/abstractFromPdf bundling', () => {
@@ -300,6 +323,38 @@ describe('composeContents — field-level dispositions', () => {
   it('defaults to "use" for a field with no recorded decision', () => {
     const { committed } = composeContents(head, working, changes, {})
     expect(committed.papers[0].title).toBe('New Title')
+  })
+})
+
+describe('composeContents — year and venue write-back', () => {
+  // A dedicated pair, not just reused via `title` above: `writePaperMeta`'s
+  // `year` case round-trips the value through `parseYear` rather than writing
+  // it straight through, so this is the one place that boundary is actually
+  // exercised end to end.
+  const head = project({ papers: [paper('a', { year: 2021, venue: 'ICSE' })] })
+  const working = project({ papers: [paper('a', { year: 2022, venue: 'FSE' })] })
+  const changes = detectFieldChanges(head, working)!
+  const yearId = changes.fields.find((f) => f.canonical === 'year')!.id
+  const venueId = changes.fields.find((f) => f.canonical === 'venue')!.id
+
+  it('use: commits the new year and venue', () => {
+    const { committed } = composeContents(head, working, changes, {
+      ...decisionsOf(yearId, 'use'),
+      ...decisionsOf(venueId, 'use'),
+    })
+    expect(committed.papers[0].year).toBe(2022)
+    expect(committed.papers[0].venue).toBe('FSE')
+  })
+
+  it('discard: reverts the working file to the old year and venue', () => {
+    const { committed, workingOut } = composeContents(head, working, changes, {
+      ...decisionsOf(yearId, 'discard'),
+      ...decisionsOf(venueId, 'discard'),
+    })
+    expect(committed.papers[0].year).toBe(2021)
+    expect(committed.papers[0].venue).toBe('ICSE')
+    expect(workingOut.papers[0].year).toBe(2021)
+    expect(workingOut.papers[0].venue).toBe('ICSE')
   })
 })
 

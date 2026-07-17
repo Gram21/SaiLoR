@@ -34,6 +34,8 @@ interface PaperOpts {
   title?: string
   authors?: string[]
   doi?: string
+  year?: number
+  venue?: string
   abstract?: string
   abstractFromPdf?: boolean
   pdf?: string
@@ -50,6 +52,8 @@ function paper(id: string, opts: PaperOpts = {}): Record<string, unknown> {
     title: opts.title ?? `Paper ${id}`,
     authors: opts.authors ?? [],
     ...(opts.doi ? { doi: opts.doi } : {}),
+    ...(opts.year !== undefined ? { year: opts.year } : {}),
+    ...(opts.venue ? { venue: opts.venue } : {}),
     ...(opts.abstract ? { abstract: opts.abstract } : {}),
     ...(opts.abstractFromPdf ? { abstractFromPdf: true } : {}),
     pdf: opts.pdf ?? `${id}.pdf`,
@@ -815,6 +819,72 @@ describe('mergeProjects — paper abstract and abstractFromPdf', () => {
     // silently instead of triggering the "kept, annotated" note.
     const base = project({ papers: [paper('a', { title: 'Kept Paper' })] })
     const ours = project({ papers: [paper('a', { title: 'Kept Paper', abstract: 'New text.' })] })
+    const theirs = project({ papers: [] }) // deleted remotely
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.papers.some((p) => p.id === 'a')).toBe(true)
+    expect(outcome.notes.some((n) => n.kind === 'paper-kept')).toBe(true)
+  })
+})
+
+describe('mergeProjects — paper year and venue', () => {
+  // Ordinary paper-level fields, merged and carried through the same way
+  // title/doi are — added to `mergePaper`'s field list, `canonicalPaper`, and
+  // `applyOne` in the same change that added the fields themselves, precisely
+  // because abstract was once missing from exactly those three spots and
+  // silently dropped on every pull-merge. This block is the regression test
+  // for that not happening again to year/venue.
+  it('carries an unconflicted year and venue through the merge', () => {
+    const base = project({ papers: [paper('a')] })
+    const ours = project({ papers: [paper('a', { year: 2021, venue: 'ICSE' })] })
+    const theirs = project({ papers: [paper('a')] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    const p = outcome.merged.papers.find((x) => x.id === 'a')!
+    expect(p.year).toBe(2021)
+    expect(p.venue).toBe('ICSE')
+  })
+
+  it('conflicts on year when both sides set it differently', () => {
+    const base = project({ papers: [paper('a')] })
+    const ours = project({ papers: [paper('a', { year: 2021 })] })
+    const theirs = project({ papers: [paper('a', { year: 2022 })] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    const c = conflictAt(outcome.conflicts, 'year')!
+    expect(c.tree).toEqual({ kind: 'paper' })
+    expect(c.type).toBe('year')
+    expect(c.ours).toBe(2021)
+    expect(c.theirs).toBe(2022)
+
+    const resolved = applyResolutions(outcome.merged, outcome.conflicts, { [c.id]: 2022 })
+    expect(resolved.papers.find((p) => p.id === 'a')!.year).toBe(2022)
+  })
+
+  it('conflicts on venue when both sides set it differently', () => {
+    const base = project({ papers: [paper('a')] })
+    const ours = project({ papers: [paper('a', { venue: 'ICSE' })] })
+    const theirs = project({ papers: [paper('a', { venue: 'FSE' })] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    const c = conflictAt(outcome.conflicts, 'venue')!
+    expect(c.ours).toBe('ICSE')
+    expect(c.theirs).toBe('FSE')
+
+    const resolved = applyResolutions(outcome.merged, outcome.conflicts, { [c.id]: c.theirs })
+    expect(resolved.papers.find((p) => p.id === 'a')!.venue).toBe('FSE')
+  })
+
+  it('a year/venue-only local edit is never mistaken for "no change" and dropped', () => {
+    // canonicalPaper (paperUnchanged's basis) is what this pins — the same
+    // hazard the abstract-only test above pins for abstract: a paper whose
+    // only edit was its year/venue must not compare equal to the base paper,
+    // or a remote deletion of it would go through silently instead of
+    // triggering the "kept, annotated" note.
+    const base = project({ papers: [paper('a', { title: 'Kept Paper' })] })
+    const ours = project({
+      papers: [paper('a', { title: 'Kept Paper', year: 2021, venue: 'ICSE' })],
+    })
     const theirs = project({ papers: [] }) // deleted remotely
     const outcome = mergeProjects(base, ours, theirs)
     expectMerged(outcome)
