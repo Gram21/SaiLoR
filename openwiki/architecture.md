@@ -191,9 +191,9 @@ App (src/App.tsx)
 ├── GitCloneDialog (src/components/GitCloneDialog.tsx)
 │     Import-from-git modal, driven by useGitStore's clone.phase: setup (URL + destination) → cloning (spinner + elapsed seconds) → error (git's exact text, back to setup) → done (pick the project JSON, opened inside the clone) — Electron only, see "Git" above
 ├── GitDialog (src/components/GitDialog.tsx)
-│     Modal for the open project's own repository: changes + diff, a commit message, Commit, Pull, Push — shown only when the toolbar's Git button is present. When the open project's own file is a tracked, field-diffable modification, its changes are reviewed field by field (Use/Ignore/Discard per row) instead of as one whole-file checkbox — see "Field-level commit review" below
+│     Modal for the open project's own repository: changes + diff, a commit message, Commit, Pull, Push — shown only when the toolbar's Git button is present. When the open project's own file is a tracked, field-diffable modification, its changes are reviewed field by field (Use/Ignore/Discard per row) instead of as one whole-file checkbox — see "Field-level commit review" below. When every row is marked Discard, the primary button relabels to "Discard all" (danger-red) and reverts marked rows directly via `runDiscard` without committing
 ├── GitMergeDialog (src/components/GitMergeDialog.tsx)
-│     The pull's conflict-resolution list: your value left, the remote's right, an editable final value in the middle. No Escape, no backdrop-click, no × — see "Git" above for why
+│     The pull's conflict-resolution list, grouped by paper (one collapsible section per paper, auto-collapsing when its last conflict is decided): your value left, the remote's right, an editable final value in the middle, with full-text wrapping instead of one-line clipping. No Escape, no backdrop-click, no × — see "Git" above for why
 └── ErrorPanel (src/components/ErrorPanel.tsx)
       Modal overlay for load/save errors
 ```
@@ -239,7 +239,7 @@ The result — *including a `null`* — is cached in `localStorage` (`slr.update
 
 ### PaperList search modes
 
-The paper-list search box (`src/components/PaperList.tsx`) has two modes, toggled by a trigger sitting *inside* the input's right-hand edge, labelled **META** (title + authors + DOI, the default) and **TAGS** (the annotation values recorded in the active reviewer's tree; see `currentTree` above). The trigger is given a fixed width rather than relying on its two labels being the same length: the active state is bold, and bold vs. regular text of equal character count still measures a few px apart, which would reintroduce exactly the reflow the fixed width exists to prevent. It replaced a 🔎/🏷 emoji pair whose differing glyph widths visibly resized the control on every toggle. Both modes share one ranking: filter to papers where every query word matches, then sort by distinct words matched, then total matched characters, then original order — only the haystack differs per mode.
+The paper-list search box (`src/components/PaperList.tsx`) has two modes, toggled by a trigger sitting *inside* the input's right-hand edge, labelled **META** (title + authors + DOI + PDF file name + paper ID, the default) and **TAGS** (the annotation values recorded in the active reviewer's tree; see `currentTree` above). The trigger is given a fixed width rather than relying on its two labels being the same length: the active state is bold, and bold vs. regular text of equal character count still measures a few px apart, which would reintroduce exactly the reflow the fixed width exists to prevent. It replaced a 🔎/🏷 emoji pair whose differing glyph widths visibly resized the control on every toggle. Both modes share one ranking: filter to papers where every query word matches, then sort by distinct words matched, then total matched characters, then original order — only the haystack differs per mode. The META haystack (`paperMetadataHaystack`) includes `paper.pdf` (the file name) and `paper.id` so a reviewer can find a paper by the PDF they remember or by its identifier, not just by bibliographic metadata.
 
 Both haystacks are precomputed once per paper in a `useMemo` keyed on `[papers, schema]`, not re-walked on every keystroke. `papers` is a safe key for annotation content too: the store's immer `set` produces a new paper object — and therefore a new `papers` array — on every field edit, so the memo is invalidated exactly when annotation content actually changes, never stale.
 
@@ -287,7 +287,8 @@ Two ways out of the editor: **Save JSON** writes the file and stays put (so you 
 - **`src/state/editorStore.ts`** — a separate Zustand+immer store holding the draft. It deliberately works on the **raw JSON shape**, not the loaded `Project`: each paper's `annotations` object is carried through **verbatim** while the schema is edited, so editing the schema never prunes existing annotation data (it is normalized against the new schema the next time the project is opened for annotating). Key pieces: `EditorNode` (a schema node with a client-side `uid`, where `kind: 'group'` means "no `type`" — a name-only sub-tree), `EditorPaper` (which also keeps the PDF's absolute `sourcePath`), `toAnnotationDefs`/`fromAnnotationDefs` (conversion to/from the compact on-disk `AnnotationDef`), `moveNodeIn` (tree move that refuses to drop a node into itself or its own subtree), `buildProjectJson`, and `validateDraft` — which runs the *real* `projectSchema` + `resolveSchema` validators, so the editor cannot produce a file the loader would reject. On save it writes the JSON and hands it straight to the main store via `loadFromText`.
 - **`SchemaTreeEditor.tsx`** — recursive tree exposing the schema's full expressiveness: name, kind (Group / Text / Number / Yes-no), `min`, `max` (with an ∞ checkbox for `max: null` = unbounded repeats), description, enum `options` (string fields only), nesting, add/remove. Native HTML5 drag-and-drop reorders rows and builds nesting: the drop position comes from the pointer's Y within the target row — top 25% → `before`, bottom 25% → `after`, middle → `inside` (nest as a child).
 - **`PapersEditor.tsx`** — add PDFs one at a time, a whole folder at once, import a reference-manager export, or (outside a screening project) import from a screening project's results (four buttons next to each other in the header/empty state), edit each paper's id/title/authors/DOI/abstract and its `pdf` path, reorder by drag, remove.
-- **`ScreeningReasonsEditor.tsx`** — replaces `SchemaTreeEditor` in the editor body whenever `useEditorStore().screening` is set: an ordered, editable list of exclusion reasons (add / remove / reorder with plain ↑/↓ buttons rather than drag — the list is short enough that drag-and-drop's extra affordance isn't worth it), writing through `setScreeningReasons`. See "Screening" below.
+- **`ScreeningReasonsEditor.tsx`** — replaces `SchemaTreeEditor` in the editor body whenever `useEditorStore().screening` is set: an ordered, editable list of exclusion reasons (add / remove / reorder with plain ↑/↓ buttons rather than drag — the list is short enough that drag-and-drop's extra affordance isn't worth it), writing through `setScreeningReasons`. On blur after renaming a reason, the editor checks `countPapersUsingReason` (`src/screening/reasonUsage.ts`) across both consolidated and per-reviewer trees; if papers still record the old label, it offers to migrate those decisions to the new label (or warns when there is no new label to migrate to), so a rename never silently orphans a decision. See "Screening" below.
+- **`ProtocolEditor.tsx`** — a collapsible *Review protocol* section in the project editor for `Project.protocol` (research questions, search strings, databases, search date, notes). See [Data Model](data-model.md)'s "The review protocol" section for the field's shape and merge behavior.
 
 **Adding PDFs** (`addPdfs`) does two things beyond appending rows:
 - **Duplicate rejection.** A PDF already referenced is skipped rather than added twice, and the skipped names are reported in a dismissible notice. Identity is `pdfKeys()`: the absolute path when known (Electron) *and* the stored relative path — so re-picking the same file, picking it twice in one dialog, or picking one already listed in an opened project all collapse to one entry. Same-named PDFs in different folders stay distinct.
@@ -923,7 +924,7 @@ paper's `annotations` (and, for the screening target, `reviews`) starts **empty*
 title/abstract decision must not silently anchor the second pass's full-text one, whether that
 second pass is an annotation schema or another screening round.
 
-**The import records where the new project came from.** `Project.provenance: ProjectProvenance |
+**The import records where the new project came from, and the project editor shows it.** `Project.provenance: ProjectProvenance |
 null` (`src/model/project.ts`) —
 ```ts
 interface ProjectProvenance {
@@ -946,6 +947,8 @@ as structural, falling back to the plain whole-file commit checkbox — the same
 `config.schema` and friends already get, for the same reason: there is no field-level answer to
 "which import history is right."
 
+Provenance is now surfaced in the project editor as a read-only **"Imported from"** line (`ProvenanceNote` in `ProjectEditor.tsx`), showing the source file/title, the import date, and the carried/dropped counts — previously written to the file but displayed nowhere.
+
 `resolveScreeningImport` also has to solve a real path-integrity problem, not just a metadata
 carry-over: a paper's `pdf` in the screening file is relative to *that* file's directory, so a
 carried row needs a real absolute `sourcePath`, or the moment the reviewer later uses **Change…**
@@ -955,6 +958,14 @@ nothing. `PlatformAdapter.absolutePdfPaths` exists for exactly this (the inverse
 `relativePdfPaths`); `siblingProjectLocation` is the platform op that makes "save the new project
 next to the screening JSON" the default rather than a suggestion in a dialog — a sibling location
 is what keeps every relative `pdf` path resolving with zero rewriting at all.
+
+For `target:'import'` (merging carried papers into an already-open session rather than starting a new
+project), the path-integrity problem is sharper: the open session can live in any directory, almost
+certainly not the screening project's own. `resolveScreeningImport` now rebases each carried paper's
+`pdf` against the open project's location via `relativePdfPaths` — the same pattern `changeLocation`
+uses for "Save as" — rather than copying the verbatim relative path from the source, which would point
+at nothing the moment the reviewer looked. (`target:'start'` doesn't need this because it defaults to
+a sibling of the source.)
 
 **`pendingUnanimous`** (`src/screening/counts.ts`) exists because `adoptUnanimousValues` only ever
 runs for the paper currently open in the Consolidation seat (`useConsolidationAlignment` is driven
@@ -973,7 +984,7 @@ A **✦ AI** button in the annotation column's header asks an LLM to read the cu
 
 The button being clickable requires **both** of two independent things to be true — `Project.aiEnabled && useStore().aiUnlocked` — and either one being false disables it identically:
 
-1. **`Project.aiEnabled`** (`config.ai` in the file, default `true`) — the *project's* say. A provider of a project file can set `config.ai: false` to forbid AI use on that file outright; see `docs/annotation-schema.md`.
+1. **`Project.aiEnabled`** (`config.ai` in the file, default `false` for new projects) — the *project's* say. A provider of a project file can set `config.ai: false` to forbid AI use on that file outright; see `docs/annotation-schema.md`. New projects created in the editor now default to `aiEnabled: false` (writing `config.ai: false` into the file), and the AI-annotation checkbox has been removed from the project editor — with no reachable entry point for the feature itself (`aiUnlocked` below), a control that configures it promises something the app doesn't currently deliver. An existing file's own `config.ai` setting is still read and preserved on save.
 2. **`useStore().aiUnlocked`** (default `false`, in-memory only, never persisted) — the *app's* say, for now: AI-assisted annotation ships in the app but is **off by default regardless of what `config.ai` says**. `config.ai: true` (or omitting it) is necessary but no longer sufficient. The only way to flip this for the running session is the hidden gesture in `Toolbar.tsx`: **`UNLOCK_CLICK_COUNT` (12) clicks on the "SaiLoR" title within `UNLOCK_CLICK_WINDOW_MS` (2500ms) of each other**, counted by the pure `nextTitleClickState()` (deliberately kept out of the component and unit-tested in `Toolbar.test.ts`, since the "N clicks within a window, else the run resets" rule is exactly the kind of off-by-one/timing logic worth pinning down). The title itself carries no `title` attribute, no pointer cursor, and no other affordance hinting that it does anything — nothing changes even mid-run, since the click count lives in a `useRef` specifically so counting does not trigger a re-render. `aiStore.openDialog()` re-checks both flags as a second line of defense in case the dialog is ever reached another way; the disabled button is the primary gate.
 
 Whenever the button is disabled — for **any** reason (busy, no PDF, `aiEnabled` false, or not `aiUnlocked`) — its tooltip is the uninformative `"Coming soon"` rather than a reason, so the button reads as an ordinary disabled control rather than one hinting it can be unlocked. Reaching for a specific one of these reasons in a new codepath is a sign the tooltip logic needs revisiting, not extending — see `AnnotationPanel.tsx`.
@@ -1117,8 +1128,8 @@ other capability gaps — `getOsInfo(): OsInfo | null`, `needsPdfFolderGrant()` 
 Electron (there is no such prompt there), the pathless `rebasePdfPaths` — and it is expressed in the
 type system, not left as a runtime convention: `PlatformAdapter.getGit(): GitPlatform | null`
 returns `null` in the browser, so a caller cannot invoke a git operation without first proving the
-runtime has one. A flat `GitPlatform` capability object rather than fifteen individual methods on
-`PlatformAdapter` is deliberate too: fifteen flat methods would mean fifteen browser stubs, each of
+runtime has one. A flat `GitPlatform` capability object rather than sixteen individual methods on
+`PlatformAdapter` is deliberate too: sixteen flat methods would mean sixteen browser stubs, each of
 which either throws at runtime or silently no-ops — "unavailable" would be something a caller
 discovers by calling it, not something the type checker catches for them. `getOsInfo(): OsInfo |
 null` already established the pattern this follows.
@@ -1135,6 +1146,15 @@ button anywhere to hide, while this one is choosing to surface a capability boun
 instead of omitting the entry point the way the type-level `GitPlatform | null` design would most
 simply suggest.
 
+**On Electron the Git button is now always rendered, disabled with an honest tooltip whenever it
+can't be used** — including the start screen (no project open) and when the open project's file isn't
+in a git repository. The policy is unified through `gitButtonState()` (`Toolbar.tsx`), a pure function
+mirroring the "Import from git…" menu item's precedence: hidden only in the browser (where `getGit()`
+is `null` and the concept doesn't apply), disabled-with-reason everywhere else the capability exists
+but can't currently be used, and enabled only when a project is open in a real git repo and no other
+operation is busy. Showing the button disabled on the start screen — rather than hiding it — keeps the
+layout stable so a reviewer who opens a project doesn't see the toolbar jump.
+
 **A third, distinct case: git is not installed.** `GitPlatform.probe()` runs `git --version`. On
 failure the app says so honestly, with git's own error text, and the git entry points are shown
 **disabled with that reason** rather than hidden entirely — a control this *machine* could offer if
@@ -1145,10 +1165,10 @@ when the *project* turned it off (`config.ai: false`).
 
 ### The renderer never names an argv
 
-Every git operation the renderer can ask for is one of fifteen enumerated IPC handlers in
+Every git operation the renderer can ask for is one of sixteen enumerated IPC handlers in
 `electron/main.ts` (`git:probe`, `git:pickCloneDir`, `git:clone`, `git:pickProjectIn`, `git:info`,
 `git:identity`, `git:status`, `git:headContent`, `git:workingContent`, `git:commitPartial`,
-`git:commit`, `git:push`, `git:pullBegin`, `git:pullFinish`, `git:pullAbort`) — never a general
+`git:commit`, `git:push`, `git:pullBegin`, `git:pullFinish`, `git:pullAbort`, `git:writeWorking`) — never a general
 `git <args>` channel. Git has `--exec-path`, aliases, and the `ext::` remote-helper
 transport; a channel that let the renderer choose the argv would be handing it arbitrary code
 execution wearing a "just run git" label. Main decides what git is actually asked to do; the
@@ -1214,9 +1234,8 @@ claim in the one place both reviewers actually share: the file itself.
   }`. It is silent (`'ok'`) whenever `myEmail` is `null` — no git identity to compare against, which
   covers a solo user, the browser build (`getGit()` is `null`, so identity is never fetched), and a
   seat nobody has claimed yet.
-- **`git config user.email`/`user.name`** are read via `git:identity` — a new enumerated IPC handler
-  in `electron/main.ts` (bringing the renderer-facing git surface to **15** handlers, up from 14; see
-  "The renderer never names an argv" below), exposed through `preload.ts` as `gitIdentity`, typed as
+- **`git config user.email`/`user.name`** are read via `git:identity` — an enumerated IPC handler
+  in `electron/main.ts` (see "The renderer never names an argv" below for the full list), exposed through `preload.ts` as `gitIdentity`, typed as
   `GitPlatform.identity(root): Promise<GitIdentity>` in `src/git/types.ts`, and implemented in
   `src/platform/electron.ts`. Read with the repository itself as the working directory, not once per
   launch — `user.email` is routinely set per-repository, and a reviewer who took that care is exactly
@@ -1468,6 +1487,15 @@ for every `discard` row, unchanged everywhere else). A paper added locally follo
 **discard** deletes it from `workingOut`; a paper removed locally follows it too — **discard**
 restores it from `head` into `workingOut`.
 
+**Standalone discard without committing.** When every changed row is marked Discard (nothing is marked
+Use), the primary button in `GitDialog` relabels from "Commit" to **"Discard all"** and turns
+danger-red. Pressing it calls `runDiscard` (`gitStore.ts`), which composes only `workingOut` (the
+reverted file content) and writes it directly via `git:writeWorking` — a separate IPC handler that
+writes text to the working file without staging or committing anything. This lets a reviewer revert
+all local edits in one action without going through the commit ceremony. The per-row **Discard**
+button was also moved to the row's right edge (opposite Use/Ignore) so the three dispositions read
+left-to-right as a single visual axis.
+
 **Partial-file staging has no native git primitive, so it is a write → commit → write-back
 sequence.** `git:commitPartial` (`electron/main.ts`) writes `committedText` to the file, `git add` +
 `git commit`s it (along with whatever else is in `otherPaths`, the ordinary whole-file selections),
@@ -1503,6 +1531,8 @@ revision (aborts, writes nothing), and the dirty guard refusing to even call `be
 change, decisions surviving and being dropped across a refresh), `setFieldDisposition`/
 `setAllFieldDispositions`, and `runCommit`'s `commitPartial` branch (composed content, success with
 its reload, and a failure surfacing the error without one).
+
+**Serializer round-trip guard.** `src/state/editorStore.test.ts` includes a test that verifies `buildProjectJson` (the editor's serializer) and `serializeProject` (the core's) agree on every root field — if one writes a field the other silently drops, the test fails. This catches the class of bug where a field is lost depending on which path last saved, the same shape of bug that once dropped `abstract` in the merge layer.
 
 ### Rejected: streamed clone progress and a cancel button
 
@@ -1562,12 +1592,13 @@ until every row is decided) leave.
   - `git:commit` — pathspec-limited `add` then `commit -m`
   - `git:push` — plain `git push`; a missing upstream surfaces git's own message rather than inventing `--set-upstream`
   - `git:pullBegin` / `git:pullFinish` / `git:pullAbort` — the pull classification and its two ways to conclude; see "Git" above for the full command sequence
+  - `git:writeWorking` — writes `composeContents`'s `workingOut` directly to the working file, letting a reviewer discard local edits without committing (see "Field-level commit review" above)
 - **Menu**: custom template with File, Edit, View, Window menus.
   - The **Edit** menu is hand-built: **Undo/Redo** send `app:undo` / `app:redo` to the renderer (routing to the store's history) rather than the native text-undo role, so undo works app-wide; cut/copy/paste/selectAll keep their native roles.
   - The **View** menu is hand-built (not the default `{ role: 'viewMenu' }`) and deliberately omits zoom roles so that `Ctrl +/-/0` reach the renderer for PDF zoom (and `Ctrl+Shift +/-/0` for app font scaling) instead of triggering native browser/Electron zoom.
 - **Unsaved-changes quit flow**: a window `close` handler (`promptUnsavedChanges`) intercepts the close/quit when `isDirty` is set, and shows a native **Save / Don't Save / Cancel** dialog. "Save" asks the renderer to save (`app:requestSave`) and closes once it reports back; "Don't Save" closes discarding changes. A `before-quit` flag lets the guard resume `app.quit()` after confirmation (so Cmd+Q fully quits on macOS, where destroying the window alone would not).
 
-**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods: `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, plus the quit/menu coordination — `setDirty`, `onRequestSave`, `saveComplete`, `onUndo`, `onRedo` — and the fifteen `git*` methods (`gitProbe`, `gitPickCloneDir`, `gitClone`, `gitPickProjectIn`, `gitInfo`, `gitIdentity`, `gitStatus`, `gitHeadContent`, `gitWorkingContent`, `gitCommitPartial`, `gitCommit`, `gitPush`, `gitPullBegin`, `gitPullFinish`, `gitPullAbort`) mirroring the `git:*` IPC handlers one for one. This `window.slr` object is the detection signal for `isElectron()`.
+**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods: `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, plus the quit/menu coordination — `setDirty`, `onRequestSave`, `saveComplete`, `onUndo`, `onRedo` — and the sixteen `git*` methods (`gitProbe`, `gitPickCloneDir`, `gitClone`, `gitPickProjectIn`, `gitInfo`, `gitIdentity`, `gitStatus`, `gitHeadContent`, `gitWorkingContent`, `gitCommitPartial`, `gitCommit`, `gitPush`, `gitPullBegin`, `gitPullFinish`, `gitPullAbort`, `gitWriteWorking`) mirroring the `git:*` IPC handlers one for one. This `window.slr` object is the detection signal for `isElectron()`.
 
 ## Hooks
 
