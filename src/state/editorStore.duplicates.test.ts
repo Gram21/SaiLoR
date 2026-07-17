@@ -48,6 +48,7 @@ interface FixturePaper {
   title: string
   authors: string[]
   doi?: string
+  year?: number
 }
 
 /** A real editor session, built by running a real project JSON through the
@@ -62,6 +63,7 @@ function openProjectWith(papers: FixturePaper[]): void {
       title: p.title,
       authors: p.authors,
       ...(p.doi ? { doi: p.doi } : {}),
+      ...(p.year !== undefined ? { year: p.year } : {}),
       pdf: `${p.id}.pdf`,
       annotations: {},
     })),
@@ -162,6 +164,43 @@ describe('importReferences — a probable duplicate opens the review dialog', ()
       where: 'batch',
       index: 0,
     })
+  })
+})
+
+describe("importReferences — an existing paper's own year takes part in the veto", () => {
+  beforeEach(reset)
+
+  // The point of wiring `EditorPaper.year` into `paperToDupRecord`: before it,
+  // only the incoming reference carried a year, so a same-title pair years
+  // apart could not be told apart against a project's own papers.
+  it('a fuzzy-title match years apart from an existing paper is a fresh paper, not a duplicate', async () => {
+    openProjectWith([
+      { id: 'p1', title: 'Continuous Integration Best Practices', authors: [], year: 2015 },
+    ])
+    referencePicked = {
+      name: 'refs.bib',
+      text: `@article{a, title = {Continuous Integraton Best Practices}, year = {2022}}`,
+    }
+    await useEditorStore.getState().importReferences()
+    // The year gap demotes the fuzzy title match to `new`, so it imports
+    // straight through with no review dialog at all.
+    expect(useEditorStore.getState().duplicateReview).toBeNull()
+    expect(useEditorStore.getState().papers.map((p) => p.title)).toEqual([
+      'Continuous Integration Best Practices',
+      'Continuous Integraton Best Practices',
+    ])
+  })
+
+  it('the same fuzzy-title match in the same year is still a probable duplicate', async () => {
+    openProjectWith([
+      { id: 'p1', title: 'Continuous Integration Best Practices', authors: [], year: 2015 },
+    ])
+    referencePicked = {
+      name: 'refs.bib',
+      text: `@article{a, title = {Continuous Integraton Best Practices}, year = {2015}}`,
+    }
+    await useEditorStore.getState().importReferences()
+    expect(useEditorStore.getState().duplicateReview?.verdicts[0].kind).toBe('probable')
   })
 })
 

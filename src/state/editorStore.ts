@@ -325,12 +325,20 @@ function splitAuthors(authors: string): string[] {
 }
 
 function paperToDupRecord(p: EditorPaper): DupRecord {
-  return { title: p.title, authors: splitAuthors(p.authors), doi: p.doi || undefined }
+  return {
+    title: p.title,
+    authors: splitAuthors(p.authors),
+    doi: p.doi || undefined,
+    // `EditorPaper.year` is the editor's free-text string; `parseYear` gives
+    // the number `duplicates.ts`'s year-gap veto needs, or `undefined` (which
+    // the veto reads as "no year, don't veto"). Supplying it on *both* sides
+    // is what lets a same-title/different-year pair be told apart — before
+    // `EditorPaper` had a year, only the incoming reference carried one and
+    // the veto could never fire against an existing paper.
+    year: parseYear(p.year),
+  }
 }
 
-/** `RefEntry.year` is real (`references.ts` parses it), but nothing here
- *  carries it into `EditorPaper` yet — see `duplicates.ts`'s `DupRecord.year`
- *  doc comment for what wiring it up later unlocks. */
 function refToDupRecord(entry: RefEntry): DupRecord {
   return { title: entry.title, authors: entry.authors, doi: entry.doi, year: entry.year }
 }

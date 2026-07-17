@@ -18,9 +18,10 @@ export interface DupRecord {
   title: string
   authors: string[]
   doi?: string
-  /** Absent until every caller can supply it (`EditorPaper` has no `year` yet).
-   *  A record missing it never blocks a match on that account — see
-   *  `YEAR_GAP_VETO` — it just can't corroborate or veto one either. */
+  /** Optional because a real bibliographic record often has no year at all (a
+   *  reference export that omitted it, a paper added by PDF alone). A record
+   *  missing it never blocks a match on that account — see `YEAR_GAP_VETO` —
+   *  it just can't corroborate or veto one either. */
   year?: number
 }
 
