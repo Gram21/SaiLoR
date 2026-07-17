@@ -12,6 +12,7 @@ import { ScreeningPanel } from './components/ScreeningPanel'
 import { ScreeningRecord } from './components/ScreeningRecord'
 import { ScreeningSummary } from './components/ScreeningSummary'
 import { ScreeningImportDialog } from './components/ScreeningImportDialog'
+import { DuplicateReviewDialog } from './components/DuplicateReviewDialog'
 import { ErrorPanel } from './components/ErrorPanel'
 import { HelpDialog } from './components/HelpDialog'
 import { ValidationDialog } from './components/ValidationDialog'
@@ -274,6 +275,7 @@ export function App() {
       <LlmSettingsDialog />
       <ScreeningSummary />
       <ScreeningImportDialog />
+      <DuplicateReviewDialog />
       <GitCloneDialog />
       <GitDialog />
       <GitMergeDialog />
