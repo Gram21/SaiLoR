@@ -17,9 +17,10 @@ import {
   type InstanceNode,
 } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
-import { alignNode } from '../consolidate/align'
+import { alignNode, alignableNodes } from '../consolidate/align'
 import { applyAlignment } from '../consolidate/apply'
 import { unanimousFills } from '../consolidate/unanimous'
+import { consolidatorHasAnswered } from '../consolidate/readiness'
 import { validateProject, type UnannotatedPaper, type ValidationIssue } from '../model/validate'
 import { formatPath, resolvePath } from '../llm/paths'
 import { isUnanswered } from '../llm/fields'
@@ -232,6 +233,12 @@ interface AppState {
   agreementOpen: boolean
   /** Whether the "every field reviewers disagree on" overview is open. Session-only, like `validationOpen`. */
   disagreementsOpen: boolean
+  /**
+   * Progress/result of the last `adoptAllUnanimousAnnotations` run, or null
+   * before the first run and after `dismissUnanimousRun`. Session-only, like
+   * `validationOpen`.
+   */
+  unanimousRun: UnanimousRun | null
   /** Shown when closing a project with unsaved changes. */
   closePromptOpen: boolean
   /** The running version, injected from package.json at build time. */
@@ -427,6 +434,21 @@ interface AppState {
    * per-paper scheduler (`useConsolidationAlignment`) exists at all.
    */
   adoptAllUnanimousScreening: () => number
+  /**
+   * Same idea as `adoptAllUnanimousScreening`, for an ordinary (non-screening)
+   * schema: align every paper's reviewers, then adopt what they unanimously
+   * agree on, across the whole project. Unlike screening, this schema *can*
+   * have repeatable nodes, so — unlike screening — each paper must be aligned
+   * immediately before it is read; see `adoptAllUnanimousAnnotations`'s
+   * implementation for why the two cannot share one driver.
+   *
+   * Async and yields between papers (see `UnanimousRun`), because matching a
+   * hundred papers in one blocking pass would freeze the window; progress is
+   * published to `unanimousRun` rather than returned.
+   */
+  adoptAllUnanimousAnnotations: () => Promise<void>
+  /** Clear the summary `adoptAllUnanimousAnnotations` leaves behind when it finishes. */
+  dismissUnanimousRun: () => void
 }
 
 /** What `applyAiSuggestions` actually did, for the summary shown to the reviewer. */
@@ -434,6 +456,17 @@ export interface AiApplyResult {
   filled: number
   /** Suggestions not written: the field is no longer empty, or the path no longer resolves. */
   skipped: number
+}
+
+/** Progress of a running `adoptAllUnanimousAnnotations`. Session-only. */
+export interface UnanimousRun {
+  done: number
+  total: number
+  /** Papers that got at least one value. */
+  filled: number
+  /** Papers left alone because alignment could not vouch for their order. */
+  skipped: number
+  running: boolean
 }
 
 /**
@@ -514,6 +547,7 @@ export const useStore = create<AppState>()(
     validationOpen: false,
     agreementOpen: false,
     disagreementsOpen: false,
+    unanimousRun: null,
     closePromptOpen: false,
     appVersion: APP_VERSION,
     update: null,
@@ -625,6 +659,9 @@ export const useStore = create<AppState>()(
         s.validationOpen = false
         s.agreementOpen = false
         s.disagreementsOpen = false
+        // Also the run's bail-out: a step of `adoptAllUnanimousAnnotations`
+        // checks this between papers and stops once it is no longer set.
+        s.unanimousRun = null
         s.closePromptOpen = false
         s.currentReviewer = null
         s.consolidationTarget = null
@@ -726,6 +763,8 @@ export const useStore = create<AppState>()(
           s.validationOpen = false
           s.agreementOpen = false
           s.disagreementsOpen = false
+          // Also the run's bail-out — see `closeProject`.
+          s.unanimousRun = null
           s.consolidationTarget = null
           s.screeningFilter = 'all'
           s.screeningShowPdf = false
@@ -1230,7 +1269,7 @@ export const useStore = create<AppState>()(
       // not auto-matched for this node; comparing them by hand still works. That
       // is the safe side of the trade: a stale match is visible, a silently
       // re-pointed answer is not.
-      if (hasAnnotations([def], { [nodeName]: paper.annotations[nodeName] ?? [] })) return false
+      if (consolidatorHasAnswered(def, paper.annotations)) return false
 
       // Only the numbered reviewers get a vote, and only the ones who have
       // actually written something. The consolidated tree is what is being
@@ -1492,6 +1531,103 @@ export const useStore = create<AppState>()(
       return filledPapers
     },
 
+    adoptAllUnanimousAnnotations: async () => {
+      const project = get().project
+      // Screening has its own button (`adoptAllUnanimousScreening`): its
+      // schema has no repeatable node, so it needs none of the lining-up
+      // below and stays synchronous.
+      if (!project || project.screening !== null || project.reviewers <= 1) return
+      // A second run would interleave two coalesce chains and split the batch
+      // across two undo entries.
+      if (get().unanimousRun?.running) return
+
+      const schema = project.schema
+      const alignable = alignableNodes(schema)
+      const alignableDefs = schema.filter((d) => alignable.includes(d.name))
+      const paperIds = project.papers.map((p) => p.id)
+
+      set((s) => {
+        s.unanimousRun = { done: 0, total: paperIds.length, filled: 0, skipped: 0, running: true }
+      })
+
+      // One undo press for the whole batch, the way lining a single paper up
+      // already is (see `alignConsolidationNode`): `coalesce` turns true only
+      // once something has actually changed, so the one entry that does get
+      // pushed holds the project as it was before the first write. A keystroke
+      // typed by the consolidator mid-run pushes its own entry and splits the
+      // chain — the data stays correct (every write here is idempotent, so a
+      // rerun repairs it), only the undo granularity degrades. Accepted rather
+      // than guarded against: blocking the form for a background fill would be
+      // worse than that.
+      let coalesce = false
+      let filled = 0
+      let skipped = 0
+
+      for (const paperId of paperIds) {
+        // Closing or replacing the project clears `unanimousRun`, which is
+        // what stops a run whose papers are no longer the ones on screen.
+        if (!get().unanimousRun?.running) return
+
+        // Re-read every iteration: immer swaps in a new `project` object on
+        // every write, so a `paper` captured before the loop started would be
+        // stale by the second iteration.
+        const paper = get().project?.papers.find((p) => p.id === paperId)
+        if (paper) {
+          // Alignment declines to re-match a node the consolidator has
+          // answered, and says so by changing nothing — which is
+          // indistinguishable from "already lined up". So the question is
+          // asked here instead: if any alignable node is in that state, this
+          // paper's entries are in an order nothing has vouched for, and
+          // reading across them at a fixed index would invent agreement
+          // rather than find it.
+          //
+          // The paper is left alone whole rather than adopted in part: a
+          // paper whose node the consolidator has answered is one they have
+          // already opened, and opening it is what ran this exact fill
+          // interactively. Recovering the rest would mean asking whether the
+          // data happens to already sit in aligned order — a real question,
+          // but one that costs a full match per blocked node to answer and
+          // buys back only papers that were already filled when they were
+          // opened.
+          const blocked = alignableDefs.some((def) => consolidatorHasAnswered(def, paper.annotations))
+          if (blocked) {
+            skipped++
+          } else {
+            for (const nodeName of alignable) {
+              if (get().alignConsolidationNode(paperId, nodeName, coalesce)) coalesce = true
+            }
+            if (get().adoptUnanimousValues(paperId, coalesce) > 0) {
+              coalesce = true
+              filled++
+            }
+          }
+        }
+
+        set((s) => {
+          if (!s.unanimousRun) return
+          s.unanimousRun.done++
+          s.unanimousRun.filled = filled
+          s.unanimousRun.skipped = skipped
+        })
+        // Matching one large paper measures in the hundreds of milliseconds
+        // (see `useConsolidationAlignment`), so a hundred of them in one pass
+        // would freeze the window. A paper is the smallest unit that can be
+        // yielded between and still be correct: all of its nodes must be
+        // lined up before any of its values are read across.
+        await yieldToBrowser()
+      }
+
+      set((s) => {
+        if (s.unanimousRun) s.unanimousRun.running = false
+      })
+    },
+
+    dismissUnanimousRun: () => {
+      set((s) => {
+        s.unanimousRun = null
+      })
+    },
+
     undo: () => {
       const st = get()
       if (st.past.length === 0 || !st.project) return
@@ -1588,6 +1724,9 @@ function pushPast(s: AppState, snap: HistoryEntry): void {
   if (s.past.length > HISTORY_LIMIT) s.past.shift()
   s.future = []
 }
+
+/** Back to the event loop, so a progress count paints and the window stays live. */
+const yieldToBrowser = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0))
 
 function currentPaper(s: AppState) {
   if (!s.project || !s.currentPaperId) return null

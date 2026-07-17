@@ -1,4 +1,4 @@
-import { hasAnnotations } from '../model/annotations'
+import { hasAnnotations, type AnnotationValueTree } from '../model/annotations'
 import type { Paper } from '../model/project'
 import type { ResolvedDef } from '../model/schema'
 
@@ -35,4 +35,19 @@ export function readyToConsolidate(
 /** How many of a project's papers every reviewer has annotated, for the UI to report. */
 export function readyCount(schema: ResolvedDef[], papers: Paper[], reviewerCount: number): number {
   return papers.filter((p) => readyToConsolidate(schema, p, reviewerCount)).length
+}
+
+/**
+ * Whether the consolidator has committed an answer under `def`.
+ *
+ * The rule two callers must agree on: `alignConsolidationNode`, which refuses to
+ * re-match a node once an answer hangs off it, and the batch adopt action, which
+ * must then refuse to read that node across at a fixed index — alignment having
+ * declined means the reviewers are left in whatever order they were already in,
+ * and agreement found there would be an artefact of the index rather than of
+ * what anyone said. Two copies of this rule drifting apart would mean the batch
+ * adopting exactly the papers alignment judged unsafe to touch.
+ */
+export function consolidatorHasAnswered(def: ResolvedDef, consolidated: AnnotationValueTree): boolean {
+  return hasAnnotations([def], { [def.name]: consolidated[def.name] ?? [] })
 }
