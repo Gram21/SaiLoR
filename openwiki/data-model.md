@@ -680,7 +680,19 @@ Three places in this codebase do that, and each needs its own defence:
   0.2 instead of 1.0, aligning a perfect match as though it barely matched.
 - **Canonical paths built from field names.** See `formatPath`/`parsePath` — an
   ambiguous encoding there does not corrupt the file, it resolves to a *different
-  field*, so a committed answer lands on the wrong one.
+  field*, so a committed answer lands on the wrong one. `/`, `[`, `]` and `\` are
+  escaped; **leading and trailing whitespace deliberately is not**, because
+  changing the format would strand every canonical already stored under the old
+  spelling. Instead `resolveSchema` refuses a schema whose sibling names differ
+  only by surrounding spaces — the one point where that ambiguity can still be
+  caught, since once both names exist no path can name one of them — and
+  `resolvePath` resolves a *lone* padded name through a trimmed fallback, which
+  is safe precisely because of that refusal.
+- **The LLM prompt.** Field names, descriptions and enum options are
+  user-authored and land in a section structured by line breaks and `-` bullets,
+  so `prompt.ts` flattens each to one line and JSON-quotes the options. Screening
+  exclusion reasons become enum options, so this is ordinary reviewer content in
+  a structural position, not just a hostile file.
 
 `conflictId` (`git/merge.ts`) is the pattern to copy when adding another
 composite key: it `JSON.stringify`s its parts rather than joining them, so no
