@@ -1149,6 +1149,12 @@ button.paper-search-mode:hover {
   text-align: center;
   padding: 40px;
 }
+.welcome-logo {
+  display: block;
+  /* `text-align: center` on the box centers inline content, but an <img> is
+     block-level once sized, so it needs its own auto margins. */
+  margin: 0 auto 12px;
+}
 .welcome-box h1 {
   margin: 0 0 8px;
 }
