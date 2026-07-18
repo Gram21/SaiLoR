@@ -120,14 +120,25 @@ function SchemaNodeRow({
    * editor has guarded the identical hazard from the start; the schema editor
    * never did.
    */
-  const confirmDestructive = (name: string, what: 'rename' | 'remove'): boolean => {
-    const count = countPapersUsingField(papers, name)
-    if (count === 0) return true
-    const many = count === 1 ? '1 paper' : `${count} papers`
+  const confirmDestructive = (what: 'rename' | 'remove', ...names: (string | null)[]): boolean => {
+    // Several candidate names, because a rename may be typed but not yet
+    // committed: clicking a <button> does not move focus on macOS/Chromium, so
+    // pressing × right after retyping the name never fires the input's blur.
+    // Checking only the live name would then find nothing (papers still record
+    // the *old* one) and delete the answers with no warning — the same bypass
+    // that made this guard necessary in the first place.
+    const candidates = [...new Set(names.filter((n): n is string => !!n))]
+    let worst = { name: '', count: 0 }
+    for (const candidate of candidates) {
+      const count = countPapersUsingField(papers, candidate)
+      if (count > worst.count) worst = { name: candidate, count }
+    }
+    if (worst.count === 0) return true
+    const many = worst.count === 1 ? '1 paper' : `${worst.count} papers`
     const verb = what === 'rename' ? 'Renaming' : 'Removing'
     return window.confirm(
-      `${many} record an answer under "${name}". ${verb} it will discard ${
-        count === 1 ? 'that answer' : 'those answers'
+      `${many} record an answer under "${worst.name}". ${verb} it will discard ${
+        worst.count === 1 ? 'that answer' : 'those answers'
       } — including every reviewer's own — the next time the project is saved, and it cannot be undone afterwards.\n\nContinue?`,
     )
   }
@@ -136,7 +147,7 @@ function SchemaNodeRow({
     const from = nameOnFocus.current
     nameOnFocus.current = null
     if (from === null || from === node.name) return
-    if (!confirmDestructive(from, 'rename')) {
+    if (!confirmDestructive('rename', from)) {
       // Put the old name back — the reviewer declined to lose the answers.
       updateNode(node.uid, { name: from })
     }
@@ -335,7 +346,7 @@ function SchemaNodeRow({
           className="remove-btn"
           title="Remove this field and its children"
           onClick={() => {
-            if (confirmDestructive(node.name, 'remove')) removeNode(node.uid)
+            if (confirmDestructive('remove', node.name, nameOnFocus.current)) removeNode(node.uid)
           }}
         >
           ×
