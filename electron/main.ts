@@ -796,6 +796,13 @@ ipcMain.on('llm:abort', (_e, requestId: string) => {
   inFlight.get(requestId)?.abort()
 })
 
+/**
+ * How long any single LLM call may take before it is aborted. Generous: a
+ * large paper against a slow reasoning model legitimately takes minutes, and
+ * cutting off real work is worse than waiting.
+ */
+const LLM_TIMEOUT_MS = 10 * 60 * 1000
+
 ipcMain.handle(
   'llm:call',
   async (
@@ -837,6 +844,13 @@ ipcMain.handle(
 
     const controller = new AbortController()
     inFlight.set(requestId, controller)
+    // An endpoint that accepts the connection and then never answers would
+    // otherwise hang forever: `fetch` has no default timeout, and the two
+    // calls that are not the main annotation run — listing models and
+    // verifying a target — pass no signal of their own and offer the reviewer
+    // no way to give up. A misconfigured self-hosted endpoint is the ordinary
+    // way to reach this, not a hostile one.
+    const timer = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS)
     try {
       const res = await net.fetch(request.url, {
         method: request.method ?? 'POST',
@@ -856,6 +870,7 @@ ipcMain.handle(
       })
       return { ok: res.ok, status: res.status, body: await res.text() }
     } finally {
+      clearTimeout(timer)
       inFlight.delete(requestId)
     }
   },
