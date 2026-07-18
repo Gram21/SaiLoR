@@ -319,6 +319,25 @@ function splitBibEntries(text: string): string[] {
       else if (text[k] === close) depth--
       k++
     }
+
+    // Ran to the end without closing: this entry has an unbalanced brace. One
+    // stray `{` — a hand-edit, a LaTeX-heavy abstract — used to consume the
+    // rest of the file, so a 500-entry export whose third entry was malformed
+    // silently imported three papers. That directly contradicts this module's
+    // contract that a malformed entry is *skipped*, and the failure is
+    // invisible: no error, just a short list.
+    //
+    // Resync instead: give up on this entry and resume from the next `@` that
+    // starts a line, which is where a well-formed file puts them.
+    if (depth > 0) {
+      const resync = text.slice(at + 1).search(/(?:^|\n)[ \t]*@/)
+      if (resync === -1) break
+      // `search` is relative to at+1, and its match may include the newline.
+      const abs = at + 1 + resync
+      i = text[abs] === '@' ? abs : abs + 1
+      continue
+    }
+
     if (type && type !== 'comment' && type !== 'string' && type !== 'preamble') {
       entries.push(text.slice(at, k))
     }
@@ -532,18 +551,57 @@ function finalizeRis(cur: RisDraft): RefEntry | null {
   }
 }
 
+/**
+ * Append a wrapped continuation line to the value it continues.
+ *
+ * Only the prose fields wrap in practice, and only they are safe to join: an
+ * identifier or a path (DO, L1, UR) that appeared to wrap would more likely be
+ * a malformed file than a long value, and gluing a stray line onto a DOI would
+ * quietly corrupt it. Authors are excluded too — RIS gives one author per line,
+ * so a line following AU is a new name, not a continuation of the last one.
+ */
+function appendRis(cur: RisDraft, tag: string, cont: string): void {
+  const text = collapseSpace(unescapeLatex(cont))
+  if (!text) return
+  if ((tag === 'TI' || tag === 'T1') && cur.title) cur.title = `${cur.title} ${text}`
+  else if (tag === 'AB' && cur.abstractAB) cur.abstractAB = `${cur.abstractAB} ${text}`
+  else if (tag === 'N2' && cur.abstract) cur.abstract = `${cur.abstract} ${text}`
+}
+
 function parseRis(text: string): RefEntry[] {
   const lines = text.split(/\r\n|\r|\n/)
   const records: RefEntry[] = []
   let cur: RisDraft | null = null
 
+  // The tag whose value a continuation line belongs to. RIS wraps long values
+  // onto following lines with no tag of their own, and dropping them truncated
+  // a wrapped title mid-sentence — which then also changed how duplicate
+  // detection scored it.
+  let lastTag: string | null = null
+
   for (const rawLine of lines) {
     const m = rawLine.match(/^([A-Za-z][A-Za-z0-9])\s{0,2}-\s?(.*)$/)
-    if (!m) continue
+    if (!m) {
+      const cont = rawLine.trim()
+      if (cur && lastTag && cont) appendRis(cur, lastTag, cont)
+      continue
+    }
     const tag = m[1].toUpperCase()
     const value = m[2].trim()
+    lastTag = tag
 
     if (tag === 'TY') {
+      // A new record starts here, so whatever was in progress ends here —
+      // finalize it rather than dropping it on the floor. Files with no `ER`
+      // lines exist (hand-edited, truncated, or written by a sloppy exporter),
+      // and overwriting `cur` meant every record but the *last* vanished with
+      // no error: three records in, one out. The trailing-record rescue at the
+      // bottom of this function already recognised the same problem; this is
+      // the same rescue for the records before it.
+      if (cur) {
+        const prev = finalizeRis(cur)
+        if (prev) records.push(prev)
+      }
       cur = { authors: [] }
       continue
     }

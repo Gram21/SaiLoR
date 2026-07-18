@@ -427,6 +427,13 @@ function naiveClassify(existing: DupRecord[], incoming: DupRecord[]): DupVerdict
     if (exA === exB) {
       if (yearVeto) return null
       if (doiConflict) return { kind: 'probable', reason: { via: 'title', score: 1 } }
+      // Identical titles with no author in common are not merged silently —
+      // see the same rule in `duplicates.ts`. `authorSim` returns null when
+      // either side has no authors, which abstains rather than voting against.
+      const authSim = authorSim(a.authors, b.authors)
+      if (authSim !== null && authSim === 0) {
+        return { kind: 'probable', reason: { via: 'title', score: 1 } }
+      }
       return { kind: 'certain', reason: { via: 'title', score: 1 } }
     }
 
@@ -518,5 +525,42 @@ describe('cost guards are sound', () => {
         expect(g.reason.via, `entry ${i} reason.via`).toBe(n.reason.via)
       }
     }
+  })
+})
+
+describe('identical titles need an author in common before merging silently', () => {
+  const rec = (title: string, authors: string[], year?: number, doi = ''): DupRecord => ({
+    title, authors, year, doi,
+  })
+
+  it('demotes an exact-title match with completely disjoint authors', () => {
+    // "Introduction", "Editorial", "Discussion" are shared by unrelated papers
+    // all over a proceedings-heavy corpus. `certain` merges without asking, and
+    // the merge then writes one paper's DOI, year and venue onto the other —
+    // a wrong record rather than a missing one.
+    const out = classifyImport(
+      [rec('Introduction', ['Ada Lovelace'], 2001)],
+      [rec('Introduction', ['Grace Hopper'], 2002, '10.1/xyz')],
+    )
+    expect(out[0].kind).toBe('probable')
+  })
+
+  it('still merges when one surname is shared, so shortened author lists are unaffected', () => {
+    // "et al." truncation and initials-vs-full-names still share a surname.
+    const out = classifyImport(
+      [rec('A Study of Things', ['Jane Doe', 'John Roe', 'Ann Poe'], 2010)],
+      [rec('A Study of Things', ['J. Doe'], 2010)],
+    )
+    expect(out[0].kind).toBe('certain')
+  })
+
+  it('abstains when either side records no authors', () => {
+    // No author evidence votes neither way — the same rule the base-title tier
+    // already follows.
+    const out = classifyImport(
+      [rec('A Study of Things', [], 2010)],
+      [rec('A Study of Things', ['Jane Doe'], 2010)],
+    )
+    expect(out[0].kind).toBe('certain')
   })
 })
