@@ -54,36 +54,71 @@ export interface ResolvedPath {
  */
 const ESCAPABLE = new Set(['\\', '/', '[', ']'])
 
+/**
+ * A backslash introduces an escape **only** when the next character is one this
+ * format punctuates (`/ [ ]`) or a backslash itself; anywhere else it is a
+ * literal backslash. That asymmetry is deliberate and load-bearing: the old
+ * format allowed a bare `\` inside a name and passed it through verbatim, so a
+ * field named `Cost\Benefit` already has canonical strings persisted as
+ * `Cost\Benefit` — in `paper.equal` marks and AI-mark keys. Escaping every
+ * backslash unconditionally would re-canonicalise it to `Cost\\Benefit`,
+ * silently orphaning those marks and making `resolvePath` fail on the stored
+ * ones. Under this rule such a name still escapes to itself, so *every* name
+ * that worked before this module learned to escape still round-trips to the
+ * identical string.
+ */
+function needsEscape(ch: string | undefined): boolean {
+  return ch !== undefined && ESCAPABLE.has(ch)
+}
+
 function escapeName(name: string): string {
   let out = ''
-  for (const ch of name) out += ESCAPABLE.has(ch) ? `\\${ch}` : ch
+  for (let i = 0; i < name.length; i++) {
+    const ch = name[i]
+    if (ch === '/' || ch === '[' || ch === ']') {
+      out += `\\${ch}`
+      continue
+    }
+    // Only a backslash that would otherwise *read* as an escape has to be
+    // escaped — i.e. one immediately before an escapable character.
+    if (ch === '\\' && needsEscape(name[i + 1])) {
+      out += '\\\\'
+      continue
+    }
+    out += ch
+  }
   return out
 }
 
-function unescapeName(s: string): string {
-  let out = ''
-  for (let i = 0; i < s.length; i++) {
-    if (s[i] === '\\' && i + 1 < s.length) {
-      out += s[i + 1]
+/** One decoded character and whether it arrived escaped — enough to find the
+ *  `[n]` suffix without re-deriving escape state from backslash counting. */
+interface DecodedChar {
+  ch: string
+  escaped: boolean
+}
+
+function decode(part: string): DecodedChar[] {
+  const out: DecodedChar[] = []
+  for (let i = 0; i < part.length; i++) {
+    if (part[i] === '\\' && needsEscape(part[i + 1])) {
+      out.push({ ch: part[i + 1], escaped: true })
       i++
-    } else {
-      out += s[i]
+      continue
     }
+    out.push({ ch: part[i], escaped: false })
   }
   return out
 }
 
 /** Split on unescaped "/" only, keeping escape sequences intact for the
- *  per-segment parser. Returns null on a dangling trailing backslash. */
-function splitSegments(raw: string): string[] | null {
+ *  per-segment parser. */
+function splitSegments(raw: string): string[] {
   const parts: string[] = []
   let cur = ''
   for (let i = 0; i < raw.length; i++) {
     const ch = raw[i]
-    if (ch === '\\') {
-      const next = raw[i + 1]
-      if (next === undefined) return null
-      cur += `\\${next}`
+    if (ch === '\\' && needsEscape(raw[i + 1])) {
+      cur += ch + raw[i + 1]
       i++
       continue
     }
@@ -101,37 +136,43 @@ function splitSegments(raw: string): string[] | null {
 /** One segment: a (possibly escaped) name with an optional unescaped `[n]`. */
 function parseSegment(part: string): RawSeg | null {
   // Trimmed for tolerance of "A / B" spacing in a hand-written or model-written
-  // path; genuine leading/trailing spaces in a name are normalised away by
-  // `resolveSchema`, so nothing legitimate is lost here.
-  const trimmed = part.trim()
-  let namePart = trimmed
-  let index = 0
+  // path. Trimming the raw text (not the decoded characters) matches what the
+  // pre-escaping parser did, so ordinary paths parse identically.
+  const decoded = decode(part.trim())
 
-  const m = /\[(\d+)\]$/.exec(trimmed)
-  if (m) {
-    const bracketAt = trimmed.length - m[0].length
-    // Only a `[` that is not itself escaped opens an index suffix.
-    let backslashes = 0
-    for (let i = bracketAt - 1; i >= 0 && trimmed[i] === '\\'; i--) backslashes++
-    if (backslashes % 2 === 0) {
-      namePart = trimmed.slice(0, bracketAt)
-      index = Number(m[1])
+  // A trailing, *unescaped* `[digits]` is an index suffix; anything else is
+  // part of the name.
+  let nameEnd = decoded.length
+  let index = 0
+  const last = decoded[decoded.length - 1]
+  if (last && last.ch === ']' && !last.escaped) {
+    let i = decoded.length - 2
+    let digits = ''
+    while (i >= 0 && !decoded[i].escaped && decoded[i].ch >= '0' && decoded[i].ch <= '9') {
+      digits = decoded[i].ch + digits
+      i--
+    }
+    if (digits !== '' && i >= 0 && decoded[i].ch === '[' && !decoded[i].escaped) {
+      nameEnd = i
+      index = Number(digits)
     }
   }
 
-  // A `[` or `]` still standing unescaped in the name is malformed, exactly as
-  // before escaping existed ("A[", "A[x]", "A[-1]", "A[]" are all rejected).
+  // A `[` or `]` still standing unescaped inside the name is malformed, exactly
+  // as before escaping existed ("A[", "A[x]", "A[-1]", "A[]" are all rejected).
   // Only the escaped forms are a legitimate part of a name, so a path that
   // ignores the format cannot quietly resolve to something.
-  for (let i = 0; i < namePart.length; i++) {
-    if (namePart[i] === '\\') {
-      i++
-      continue
-    }
-    if (namePart[i] === '[' || namePart[i] === ']') return null
+  let name = ''
+  for (let i = 0; i < nameEnd; i++) {
+    const d = decoded[i]
+    if (!d.escaped && (d.ch === '[' || d.ch === ']')) return null
+    name += d.ch
   }
+  // The pre-escaping parser trimmed the name again after stripping the index
+  // suffix, so "Findings [1]" yielded "Findings". Kept for byte-compatibility;
+  // a name whose own padding matters was never representable in this format.
+  name = name.trim()
 
-  const name = unescapeName(namePart)
   if (name === '') return null
   if (!Number.isSafeInteger(index) || index < 0) return null
   return { name, index }
@@ -141,7 +182,7 @@ function parseSegment(part: string): RawSeg | null {
 export function parsePath(raw: string): RawSeg[] | null {
   if (typeof raw !== 'string') return null
   const parts = splitSegments(raw)
-  if (parts === null || parts.length === 0) return null
+  if (parts.length === 0) return null
 
   const segs: RawSeg[] = []
   for (const part of parts) {
@@ -155,7 +196,15 @@ export function parsePath(raw: string): RawSeg[] | null {
 /** Canonical text form. Index 0 is left implicit, so paths compare stably. */
 export function formatPath(segs: RawSeg[]): string {
   return segs
-    .map((s) => (s.index === 0 ? escapeName(s.name) : `${escapeName(s.name)}[${s.index}]`))
+    .map((seg) => {
+      const name = escapeName(seg.name)
+      if (seg.index === 0) return name
+      // A name ending in a backslash would swallow the suffix's '[' as an
+      // escape, so double it. Only reachable for a name that actually ends in
+      // one — every other name is untouched.
+      const safe = name.endsWith('\\') ? `${name}\\` : name
+      return `${safe}[${seg.index}]`
+    })
     .join('/')
 }
 

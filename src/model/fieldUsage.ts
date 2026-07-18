@@ -13,11 +13,12 @@ import type { AnnotationValueTree, InstanceNode } from './annotations'
  * analogous rename in the screening reasons editor — the two hazards are the
  * same shape, and this closes the half that had no guard.
  *
- * Matching is by name at **any depth**, not by a resolved path. Sibling names
- * are unique but the same name may legitimately appear at two levels, so this
- * can over-count — deliberately, because the operation it guards is
- * unrecoverable and a spurious confirmation costs a click while a missed one
- * costs a reviewer's work.
+ * Matching is by the field's **path** from the root, not by its name anywhere
+ * in the tree. Matching on the bare name over-warned in the most common editor
+ * action there is — add a field, type a name another field already uses,
+ * change your mind, delete it — and a guard that cries wolf on a node holding
+ * nothing is a guard users learn to click through, which defeats it exactly
+ * when it matters.
  */
 export interface AnswerBearingPaper {
   annotations?: unknown
@@ -74,27 +75,26 @@ function instanceHasAnswer(inst: unknown): boolean {
   return false
 }
 
-/** Does `tree` hold an answer under a node named `name`, at any depth? */
-function treeUsesName(tree: AnnotationValueTree, name: string): boolean {
-  for (const [key, list] of Object.entries(tree)) {
-    if (!Array.isArray(list)) continue
-    if (key === name && list.some(instanceHasAnswer)) return true
-    // Not this node — look inside its instances' children for one that is.
-    for (const inst of list) {
-      if (!inst || typeof inst !== 'object') continue
-      const children = asTree((inst as InstanceNode).children)
-      if (children && treeUsesName(children, name)) return true
-    }
-  }
-  return false
+/** Does `tree` hold an answer at exactly `path` (names from this level down)? */
+function treeUsesPath(tree: AnnotationValueTree, path: string[]): boolean {
+  const [head, ...rest] = path
+  const list = tree[head]
+  if (!Array.isArray(list)) return false
+  if (rest.length === 0) return list.some(instanceHasAnswer)
+  return list.some((inst) => {
+    if (!inst || typeof inst !== 'object') return false
+    const children = asTree((inst as InstanceNode).children)
+    return children ? treeUsesPath(children, rest) : false
+  })
 }
 
 /**
- * How many of these papers record an answer under a field named `name`, across
- * their consolidated tree and every reviewer's own. `''` never matches — a
- * blank name is not a field anyone has answered.
+ * How many of these papers record an answer at `path` — the field's names from
+ * the schema root down to it — across their consolidated tree and every
+ * reviewer's own. An empty path, or one with a blank segment, matches nothing:
+ * a half-typed field is not one anyone has answered.
  */
-export function countPapersUsingField(papers: AnswerBearingPaper[], name: string): number {
-  if (name.trim() === '') return 0
-  return papers.filter((p) => treesOf(p).some((t) => treeUsesName(t, name))).length
+export function countPapersUsingField(papers: AnswerBearingPaper[], path: string[]): number {
+  if (path.length === 0 || path.some((seg) => seg.trim() === '')) return 0
+  return papers.filter((p) => treesOf(p).some((t) => treeUsesPath(t, path))).length
 }
