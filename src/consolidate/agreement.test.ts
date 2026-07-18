@@ -228,3 +228,40 @@ describe('agreementInput on a screening project', () => {
     expect(unitCount).toBe(1) // Findings/Claim: neither reviewer answered, so skipped, not a unit
   })
 })
+
+describe('boolean fields are excluded rather than counted as agreements', () => {
+  it('drops every boolean unit and reports how many', () => {
+    // A boolean only ever reached the two-answer gate when *every* reviewer
+    // ticked it true: true/false scored one answerer, false/false scored none.
+    // So the surviving boolean units were guaranteed agreements and every real
+    // boolean disagreement was discarded — the coefficient came out higher
+    // than the truth, which for a published statistic is the worst direction
+    // to be wrong in.
+    const schema = resolveSchema([
+      { name: 'Kind', type: 'string' },
+      { name: 'Relevant', type: 'boolean' },
+    ])
+    const t = (kind: string, rel: boolean) =>
+      normalizeTree(schema, { Kind: [{ value: kind }], Relevant: [{ value: rel }] })
+
+    const project = makeProject({
+      schema,
+      papers: [
+        // Both tick true: previously a free agreement unit.
+        makePaper({ id: 'p1', reviews: { '1': t('RCT', true), '2': t('RCT', true) } }),
+        // A real disagreement on the boolean: previously discarded entirely.
+        makePaper({ id: 'p2', reviews: { '1': t('RCT', true), '2': t('Cohort', false) } }),
+      ],
+    })
+
+    const built = agreementInput(project)
+    expect(built.booleansExcluded).toBe(2)
+    // Only the two `Kind` fields remain as units.
+    expect(built.unitCount).toBe(2)
+    for (const unit of built.input.units) {
+      for (const v of Object.values(unit)) {
+        expect(v === 'true' || v === 'false').toBe(false)
+      }
+    }
+  })
+})

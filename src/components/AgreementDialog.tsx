@@ -121,6 +121,15 @@ export function AgreementDialog() {
                 {built.skipped > 0 &&
                   `${built.skipped} more ${built.skipped === 1 ? 'was' : 'were'} skipped for having fewer than two answers.`}
               </p>
+              {built.booleansExcluded > 0 && (
+                <p className="agreement-basis">
+                  <strong>{built.booleansExcluded}</strong> yes/no field
+                  {built.booleansExcluded === 1 ? ' was' : 's were'} left out. An unticked box reads
+                  the same whether the reviewer considered it and said no or never looked at it, so
+                  there is no way to tell an agreement from an absence — counting them would report
+                  more agreement than the data supports.
+                </p>
+              )}
               <ul className="agreement-metrics">
                 {METRICS.map((m) => {
                   const applicability = m.applicable(built.input)
