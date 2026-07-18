@@ -18,6 +18,7 @@ const mockPlatform = {
   checkRecents: async (entries: RecentEntry[]) =>
     entries.map((e) => ({ ...e, available: existing.has(e.id) })),
   getOsInfo: () => null,
+  openProject: async () => ({ text: PROJECT, handle: { kind: 'electron' as const, path: '/opened.json' }, name: 'opened.json' }),
   openRecent: async (id: string) => (existing.has(id) ? { text: PROJECT, handle: {}, name: id } : null),
   saveProject: async () => ({ kind: 'electron' as const, path: '/x.json' }),
 }
@@ -42,8 +43,11 @@ beforeEach(() => {
   saved = 0
   recents = []
   existing = new Set()
-  // Stub save() so the close flow can be driven without real I/O.
+  // Stub save() so the close flow can be driven without real I/O. The prompt
+  // flags are reset too: these tests share one store instance.
   useStore.setState({
+    closePromptOpen: false,
+    pendingAfterPrompt: null,
     save: async () => {
       saved++
       if (saveResult) useStore.setState({ dirty: false })
@@ -166,5 +170,88 @@ describe('recents availability', () => {
     useStore.getState().forgetRecent('/gone.json')
 
     expect(useStore.getState().recents).toHaveLength(0)
+  })
+})
+
+describe('opening another project guards unsaved changes the same way closing does', () => {
+  // Regression: `requestCloseProject` deliberately prompts, but Open (Ctrl+O,
+  // the Open menu, and any recent) went straight to `loadFromText`, replacing
+  // the project — and discarding unsaved work — with no dialog at all.
+  it('prompts instead of opening when the current project is dirty', () => {
+    openProject()
+    useStore.setState({ dirty: true })
+
+    useStore.getState().requestOpenProject()
+
+    expect(useStore.getState().closePromptOpen).toBe(true)
+    expect(useStore.getState().pendingAfterPrompt).toEqual({ kind: 'open' })
+    // Still on the original project — nothing was replaced.
+    expect(useStore.getState().projectTitle).toBe('My Review')
+  })
+
+  it('opens straight away when there is nothing to lose', () => {
+    openProject()
+    expect(useStore.getState().dirty).toBe(false)
+
+    useStore.getState().requestOpenProject()
+
+    expect(useStore.getState().closePromptOpen).toBe(false)
+    expect(useStore.getState().pendingAfterPrompt).toBeNull()
+  })
+
+  it('remembers which recent to open across the prompt', () => {
+    existing = new Set(['/other.json'])
+    openProject()
+    useStore.setState({ dirty: true })
+
+    useStore.getState().requestOpenRecent('/other.json')
+
+    expect(useStore.getState().closePromptOpen).toBe(true)
+    expect(useStore.getState().pendingAfterPrompt).toEqual({
+      kind: 'openRecent',
+      id: '/other.json',
+    })
+  })
+
+  it('cancelling keeps the project and drops the pending open', async () => {
+    openProject()
+    useStore.setState({ dirty: true })
+    useStore.getState().requestOpenProject()
+
+    await useStore.getState().resolveClosePrompt('cancel')
+
+    expect(useStore.getState().closePromptOpen).toBe(false)
+    expect(useStore.getState().pendingAfterPrompt).toBeNull()
+    expect(useStore.getState().project).not.toBeNull()
+    expect(useStore.getState().dirty).toBe(true)
+  })
+
+  it('a failed save keeps the project rather than opening over it', async () => {
+    openProject()
+    useStore.setState({ dirty: true })
+    saveResult = false
+    useStore.getState().requestOpenProject()
+
+    await useStore.getState().resolveClosePrompt('save')
+
+    expect(saved).toBe(1)
+    expect(useStore.getState().pendingAfterPrompt).toBeNull()
+    expect(useStore.getState().project).not.toBeNull()
+    expect(useStore.getState().dirty).toBe(true)
+  })
+
+  it('discarding proceeds to the pending recent', async () => {
+    existing = new Set(['/other.json'])
+    openProject()
+    useStore.setState({ dirty: true })
+    useStore.getState().requestOpenRecent('/other.json')
+
+    await useStore.getState().resolveClosePrompt('discard')
+
+    expect(useStore.getState().closePromptOpen).toBe(false)
+    expect(useStore.getState().pendingAfterPrompt).toBeNull()
+    // The recent was actually opened (same fixture text, loaded fresh).
+    expect(useStore.getState().project).not.toBeNull()
+    expect(useStore.getState().dirty).toBe(false)
   })
 })

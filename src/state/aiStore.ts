@@ -279,6 +279,10 @@ export const useAiStore = create<AiState>()(
         let cursor: string | undefined
         for (let page = 0; page < MAX_MODEL_PAGES; page++) {
           const req = buildModelsRequest(saved, cursor)
+          // Null means the provider handed back a pagination cursor pointing
+          // off its own origin; keep the pages already fetched rather than
+          // follow it with the API key attached.
+          if (!req) break
           const res = await getPlatform().callLlm(req)
           if (!res.ok) throw new Error(extractError(saved.provider, res.status, res.body))
           const parsed = parseModelsResponse(saved.provider, safeJson(res.body))

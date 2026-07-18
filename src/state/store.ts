@@ -249,8 +249,15 @@ interface AppState {
    * `validationOpen`.
    */
   unanimousRun: UnanimousRun | null
-  /** Shown when closing a project with unsaved changes. */
+  /** Shown when discarding an open project's unsaved changes. */
   closePromptOpen: boolean
+  /**
+   * What to do once the unsaved-changes prompt is answered. Closing is not the
+   * only way to lose the open project — opening another one (or a recent)
+   * replaces it just as completely — so the prompt has to carry the action it
+   * is guarding rather than assume "close".
+   */
+  pendingAfterPrompt: { kind: 'close' } | { kind: 'open' } | { kind: 'openRecent'; id: string } | null
   /** The running version, injected from package.json at build time. */
   appVersion: string
   /** Set only when a *newer* release exists; null while up to date or unknowable. */
@@ -318,6 +325,14 @@ interface AppState {
 
   openProject: () => Promise<void>
   openRecent: (id: string) => Promise<void>
+  /**
+   * Open another project, prompting to save first when the current one is
+   * dirty. Every entry point a *user* can reach must go through these rather
+   * than `openProject`/`openRecent` directly: replacing the open project
+   * discards unsaved work exactly as closing it does, and used not to ask.
+   */
+  requestOpenProject: () => void
+  requestOpenRecent: (id: string) => void
   /** Drop a project from the recents list. */
   forgetRecent: (id: string) => void
   /** Re-check which recents still exist, marking the rest unavailable. */
@@ -577,6 +592,7 @@ export const useStore = create<AppState>()(
     disagreementsOpen: false,
     unanimousRun: null,
     closePromptOpen: false,
+    pendingAfterPrompt: null,
     appVersion: APP_VERSION,
     update: null,
     past: [],
@@ -642,29 +658,70 @@ export const useStore = create<AppState>()(
       if (get().dirty) {
         set((s) => {
           s.closePromptOpen = true
+          s.pendingAfterPrompt = { kind: 'close' }
         })
         return
       }
       get().closeProject()
     },
 
+    requestOpenProject: () => {
+      // Nothing open, or nothing to lose: straight through.
+      if (!get().project || !get().dirty) {
+        void get().openProject()
+        return
+      }
+      set((s) => {
+        s.closePromptOpen = true
+        s.pendingAfterPrompt = { kind: 'open' }
+      })
+    },
+
+    requestOpenRecent: (id) => {
+      if (!get().project || !get().dirty) {
+        void get().openRecent(id)
+        return
+      }
+      set((s) => {
+        s.closePromptOpen = true
+        s.pendingAfterPrompt = { kind: 'openRecent', id }
+      })
+    },
+
     resolveClosePrompt: async (choice) => {
+      const pending = get().pendingAfterPrompt
       if (choice === 'cancel') {
         set((s) => {
           s.closePromptOpen = false
+          s.pendingAfterPrompt = null
         })
         return
       }
       if (choice === 'save' && !(await get().save())) {
-        // The save failed or was cancelled — keep the project open.
+        // The save failed or was cancelled — keep the project open, and drop
+        // the pending action with it: the reviewer asked to save first, and
+        // that did not happen.
         set((s) => {
           s.closePromptOpen = false
+          s.pendingAfterPrompt = null
         })
         return
       }
       set((s) => {
         s.closePromptOpen = false
+        s.pendingAfterPrompt = null
       })
+      // `openProject`/`openRecent` replace the open project wholesale
+      // (`loadFromText` resets every per-project field), so there is nothing to
+      // close first.
+      if (pending?.kind === 'open') {
+        void get().openProject()
+        return
+      }
+      if (pending?.kind === 'openRecent') {
+        void get().openRecent(pending.id)
+        return
+      }
       get().closeProject()
     },
 
@@ -691,6 +748,7 @@ export const useStore = create<AppState>()(
         // checks this between papers and stops once it is no longer set.
         s.unanimousRun = null
         s.closePromptOpen = false
+        s.pendingAfterPrompt = null
         s.currentReviewer = null
         s.consolidationTarget = null
         s.screeningFilter = 'all'
@@ -734,6 +792,33 @@ export const useStore = create<AppState>()(
     },
 
     loadFromUrl: async (url) => {
+      // `?project=` is attacker-reachable: a link like
+      // `https://trusted.example/?project=https://evil.example/review.json`
+      // shows the trusted host in the URL bar while the corpus — papers,
+      // screening reasons, every annotation — comes from somewhere else, and
+      // `setServerBase` below then anchors every PDF fetch there too. There is
+      // no XSS sink for that content to reach and no cookies ride along
+      // (`fetch` defaults to same-origin credentials), so the harm is
+      // research-integrity rather than code execution: a reviewer working, in
+      // good faith, on a corpus that is not theirs. Confirm anything that
+      // leaves this origin, and let same-origin (the documented
+      // `?project=/reviews/x.json` deployment) through untouched.
+      if (!sameOriginUrl(url)) {
+        const ok =
+          typeof window !== 'undefined' &&
+          window.confirm(
+            `This link loads a project from another site:\n\n${originOf(url) ?? url}\n\n` +
+              `Its papers, annotations and PDFs would all come from there, not from ` +
+              `${typeof location !== 'undefined' ? location.origin : 'this site'}. ` +
+              `Only continue if you trust whoever sent you this link.`,
+          )
+        if (!ok) {
+          set((s) => {
+            s.busy = false
+          })
+          return
+        }
+      }
       set((s) => {
         s.busy = true
       })
@@ -1792,6 +1877,30 @@ function ensureInstance(
 }
 
 /** Push a pre-mutation snapshot onto the undo stack and clear the redo stack. */
+/**
+ * Is `url` on the same origin as the page? Relative URLs (`/reviews/x.json` —
+ * the shape the deployment docs use) resolve against the current location and
+ * are therefore same-origin by construction. An unparseable URL counts as
+ * cross-origin: fail closed.
+ */
+function sameOriginUrl(url: string): boolean {
+  if (typeof location === 'undefined') return true // non-browser (tests, Electron)
+  try {
+    return new URL(url, location.href).origin === location.origin
+  } catch {
+    return false
+  }
+}
+
+/** The origin a `?project=` URL points at, for the confirmation's wording. */
+function originOf(url: string): string | null {
+  try {
+    return new URL(url, typeof location !== 'undefined' ? location.href : undefined).origin
+  } catch {
+    return null
+  }
+}
+
 function pushPast(s: AppState, snap: HistoryEntry): void {
   s.past.push(snap)
   if (s.past.length > HISTORY_LIMIT) s.past.shift()

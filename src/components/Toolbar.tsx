@@ -98,8 +98,8 @@ export function gitButtonState(
 
 /** Top bar: Open / Save menus, appearance controls, help, and the dirty indicator. */
 export function Toolbar() {
-  const openProject = useStore((s) => s.openProject)
-  const openRecent = useStore((s) => s.openRecent)
+  const requestOpenProject = useStore((s) => s.requestOpenProject)
+  const requestOpenRecent = useStore((s) => s.requestOpenRecent)
   const save = useStore((s) => s.save)
   const saveAs = useStore((s) => s.saveAs)
   const sidebarCollapsed = useStore((s) => s.sidebarCollapsed)
@@ -223,7 +223,7 @@ export function Toolbar() {
   ]
 
   const openItems: MenuItem[] = [
-    { type: 'item', label: 'Open file…', shortcut: `${modKey}+O`, onSelect: () => void openProject() },
+    { type: 'item', label: 'Open file…', shortcut: `${modKey}+O`, onSelect: () => requestOpenProject() },
     {
       type: 'item',
       label: 'Import from git…',
@@ -250,7 +250,7 @@ export function Toolbar() {
             // The path on hover is what tells two same-named projects apart.
             hint: missing ? `Not found — ${where}` : `${label}\n${where}`,
             disabled: missing,
-            onSelect: () => void openRecent(r.id),
+            onSelect: () => requestOpenRecent(r.id),
             onRemove: () => forgetRecent(r.id),
             removeTitle: 'Remove from recent projects',
           }
