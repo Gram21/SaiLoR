@@ -323,6 +323,22 @@ function classifyPair(a: PreparedRecord, b: PreparedRecord): PairMatch | null {
   if (a.exactTitle === b.exactTitle) {
     if (yearVeto) return null
     if (doiConflict) return { kind: 'probable', reason: { via: 'title', score: 1 } }
+    // Identical titles and *not one author in common* is not a duplicate we
+    // should merge without asking. Titles like "Introduction", "Editorial" or
+    // "Discussion" are shared by unrelated papers all over a proceedings-heavy
+    // corpus, and `certain` merges silently: `fillFromRef` then writes one
+    // paper's DOI, year and venue onto the other, which is a wrong record
+    // rather than a missing one.
+    //
+    // Complete disjointness only, not the similarity threshold used below. A
+    // shortened author list ("et al.") or initials-vs-full-names still shares a
+    // surname and stays `certain`, so ordinary matches are unaffected — and an
+    // empty author list on either side abstains rather than voting against,
+    // the same rule as the base-title tier.
+    const bothHaveAuthors = a.authorSurnames.size > 0 && b.authorSurnames.size > 0
+    if (bothHaveAuthors && diceOfSets(a.authorSurnames, b.authorSurnames) === 0) {
+      return { kind: 'probable', reason: { via: 'title', score: 1 } }
+    }
     return { kind: 'certain', reason: { via: 'title', score: 1 } }
   }
 

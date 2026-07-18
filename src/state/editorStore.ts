@@ -1952,7 +1952,22 @@ export const useEditorStore = create<EditorState>()(
           const toAdd: EditorPaper[] = []
           let skipped = 0
           for (const row of rows) {
-            const match = findMatchingPaper(s.papers, { title: row.title, authors: [], doi: row.doi })
+            // The row's *whole* identity, not just its title and DOI. Passing
+            // `authors: []` and no year discarded exactly the two signals that
+            // tell same-titled papers apart: with no authors the disjoint-author
+            // demotion cannot fire, and with no year the year-gap veto cannot
+            // either. A screening project whose included paper merely shared a
+            // title with something already in the editor was reported as
+            // "already in the project, skipped" and silently dropped — its DOI,
+            // year and screening decision with it. `importReferences` passes
+            // full records and gets this right; this path is the same question
+            // and must be asked the same way.
+            const match = findMatchingPaper(s.papers, {
+              title: row.title,
+              authors: splitAuthors(row.authors),
+              doi: row.doi,
+              year: parseYear(row.year),
+            })
             if (match) {
               skipped++
               continue

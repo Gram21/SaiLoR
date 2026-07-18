@@ -590,3 +590,61 @@ describe('pdfHintFileName', () => {
     expect(pdfHintFileName('doe2020.pdf')).toBe('doe2020.pdf')
   })
 })
+
+describe('malformed files must not take the rest of the file with them', () => {
+  it('keeps every RIS record when the file has no ER lines', () => {
+    // Truncated, hand-edited, or sloppily exported files exist. Starting a new
+    // record used to overwrite the one in progress, so three records in gave
+    // one record out — the last — with no error at all.
+    const ris = [
+      'TY  - JOUR', 'TI  - First Paper', 'AU  - A, One', '',
+      'TY  - JOUR', 'TI  - Second Paper', 'AU  - B, Two', '',
+      'TY  - JOUR', 'TI  - Third Paper', 'AU  - C, Three', '',
+    ].join('\n')
+    expect(parseReferences(ris, 'x.ris').map((e) => e.title)).toEqual([
+      'First Paper',
+      'Second Paper',
+      'Third Paper',
+    ])
+  })
+
+  it('joins RIS continuation lines instead of truncating the value', () => {
+    const ris = [
+      'TY  - JOUR',
+      'TI  - A Very Long Title That Wraps Across',
+      '      Two Physical Lines',
+      'AU  - A, One',
+      'ER  - ',
+    ].join('\n')
+    expect(parseReferences(ris, 'x.ris')[0].title).toBe(
+      'A Very Long Title That Wraps Across Two Physical Lines',
+    )
+  })
+
+  it('does not treat a line after AU as a continuation of the author', () => {
+    // RIS gives one author per line, so a following line is a new name at most
+    // — never more of the last one. Gluing them would invent an author.
+    const ris = ['TY  - JOUR', 'TI  - T', 'AU  - Doe, Jane', 'not a tag line', 'ER  - '].join('\n')
+    expect(parseReferences(ris, 'x.ris')[0].authors).toEqual(['Jane Doe'])
+  })
+
+  it('skips one unbalanced BibTeX entry and recovers the rest', () => {
+    // A single stray brace used to consume everything after it, so a 500-entry
+    // export with a malformed third entry imported three papers and said
+    // nothing. The module's contract is that a malformed entry is skipped.
+    const bib = [
+      '@article{k1, title={First Paper}, note={cost is {high}, year={2020}}',
+      '@article{k2, title={Second Paper}, year={2021}}',
+      '@article{k3, title={Third Paper}, year={2022}}',
+    ].join('\n')
+    expect(parseReferences(bib, 'x.bib').map((e) => e.title)).toEqual([
+      'Second Paper',
+      'Third Paper',
+    ])
+  })
+
+  it('still parses a well-formed final entry with no trailing newline', () => {
+    const bib = '@article{k1, title={Only}, year={2020}}'
+    expect(parseReferences(bib, 'x.bib').map((e) => e.title)).toEqual(['Only'])
+  })
+})
