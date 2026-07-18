@@ -60,6 +60,25 @@ jobs:
           OPENWIKI_MODEL_ID: z-ai/glm-5.2
           OPENWIKI_TELEMETRY_DISABLED: "1"
 
+      - name: Discard OpenWiki's self-scaffolded workflow and agent-file snippets
+        if: steps.recent_commits.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          # The `openwiki` CLI unconditionally re-scaffolds its own recurrence
+          # setup on every run (confirmed by reading the installed package's
+          # dist/code-mode.js — ensureCodeModeRepoSetup — since there is no
+          # documented flag to disable it): it (re)writes
+          # .github/workflows/openwiki-update.yml with its own default
+          # schedule/env, and refreshes an OPENWIKI:START/END-delimited
+          # snippet in AGENTS.md and CLAUDE.md. This job's own workflow file
+          # (this one) is the intentionally customized replacement, so none of
+          # that scaffolding must reach the PR. `add-paths: openwiki` below
+          # already keeps it out of the commit, but that relies on that field
+          # never being widened later — discarding it here is an explicit,
+          # independent guarantee.
+          rm -f .github/workflows/openwiki-update.yml
+          git checkout -- AGENTS.md CLAUDE.md
+
       - name: Create OpenWiki update pull request
         if: steps.recent_commits.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v7
