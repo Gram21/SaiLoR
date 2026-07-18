@@ -23,7 +23,7 @@ import { applyAlignment } from '../consolidate/apply'
 import { unanimousFills } from '../consolidate/unanimous'
 import { consolidatorHasAnswered } from '../consolidate/readiness'
 import { validateProject, type UnannotatedPaper, type ValidationIssue } from '../model/validate'
-import { formatPath, resolvePath } from '../llm/paths'
+import { formatPath, resolvePath, MAX_UNBOUNDED_INDEX } from '../llm/paths'
 import { isUnanswered } from '../llm/fields'
 import type { Suggestion } from '../llm/types'
 import {
@@ -1862,7 +1862,9 @@ function ensureInstance(
 ): { inst: InstanceNode; def: ResolvedDef } | null {
   const def = defs.find((d) => d.name === name)
   if (!def) return null
-  if (def.max !== null && index >= def.max) return null
+  // See `MAX_UNBOUNDED_INDEX`: the push loop below materializes every instance
+  // up to `index`, so an unbounded node still needs a ceiling.
+  if (index >= (def.max === null ? MAX_UNBOUNDED_INDEX : def.max)) return null
 
   // The JSON is hand-editable, so this key may hold something that is not a list
   // of instances at all. Replace it rather than crash — the AI is filling an empty

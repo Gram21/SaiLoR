@@ -10,6 +10,14 @@ import '../platform/pdfjs'
 // In-PDF search uses the CSS Custom Highlight API to tint matches without
 // mutating react-pdf's text-layer DOM. Highlight/CSS.highlights aren't in the
 // TS lib yet, so reach for them dynamically and degrade gracefully.
+/**
+ * The most pages this viewer will mount. There is no virtualization: every page
+ * is a React element with its own canvas, text layer and annotation layer, plus
+ * an entry in `pageRefs`. Real documents do not reach five figures, and a
+ * hostile one can claim 16 million from 2.4 KB — see `onLoadSuccess`.
+ */
+const MAX_PDF_PAGES = 5000
+
 const HL_NAME = 'slr-pdf-search'
 const HL_NAME_ACTIVE = 'slr-pdf-search-active'
 const highlightRegistry: Map<string, unknown> | undefined =
@@ -84,6 +92,8 @@ export function PdfViewer() {
   const [needsFolderGrant, setNeedsFolderGrant] = useState(false)
   const [grantingFolder, setGrantingFolder] = useState(false)
   const [numPages, setNumPages] = useState(0)
+  /** The document's real page count when it exceeded `MAX_PDF_PAGES`, else 0. */
+  const [truncatedPages, setTruncatedPages] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInput, setPageInput] = useState('1')
   const [width, setWidth] = useState(600)
@@ -130,6 +140,7 @@ export function PdfViewer() {
     setError(null)
     setNeedsFolderGrant(false)
     setNumPages(0)
+    setTruncatedPages(0)
     setCurrentPage(1)
     setPageInput('1')
     pageRefs.current = []
@@ -523,7 +534,17 @@ export function PdfViewer() {
                   }
                 }}
               />
-              <span className="pdf-page-total">/ {numPages}</span>
+              <span
+                className="pdf-page-total"
+                title={
+                  truncatedPages
+                    ? `This document reports ${truncatedPages} pages; only the first ${numPages} are shown.`
+                    : undefined
+                }
+              >
+                / {numPages}
+                {truncatedPages ? '+' : ''}
+              </span>
               <button
                 type="button"
                 className="icon-btn"
@@ -664,7 +685,19 @@ export function PdfViewer() {
         ) : url ? (
           <Document
             file={url}
-            onLoadSuccess={(doc) => setNumPages(doc.numPages)}
+            onLoadSuccess={(doc) => {
+              // Cap what we agree to mount. pdf.js correctly ignores a lying
+              // /Count, but it does not dedupe a page tree that is a DAG: a
+              // 2.4 KB file whose /Pages nodes each list the same child twice,
+              // 24 levels deep, reports 16 777 216 pages. There is no
+              // virtualization here, so every page becomes a React element with
+              // a canvas and a text layer — building the element array alone
+              // measured 3.6 s and 3.6 GB at that count, which is a certain
+              // renderer crash from clicking a paper. Real documents do not
+              // reach five figures.
+              setNumPages(Math.min(doc.numPages, MAX_PDF_PAGES))
+              setTruncatedPages(doc.numPages > MAX_PDF_PAGES ? doc.numPages : 0)
+            }}
             onLoadError={(err) => setError(String(err?.message ?? err))}
             loading={<div className="pdf-loading">Loading PDF…</div>}
             // External links open in a new browser tab instead of navigating the

@@ -21,6 +21,9 @@ export interface PdfText {
  */
 const EMPTY_CHAR_THRESHOLD = 200
 
+/** Baselines this many points apart or less are treated as the same line. */
+const Y_TOLERANCE = 2
+
 /**
  * Merge a page's text items into reading-order lines. Mirrors the layout
  * heuristic in pdfMeta.ts (bucket by baseline y, sort each bucket by x) rather
@@ -30,15 +33,25 @@ const EMPTY_CHAR_THRESHOLD = 200
  */
 function linesFromItems(items: { str: string; transform: number[] }[]): string[] {
   const byY = new Map<number, { x: number; str: string }[]>()
+  /** Every y within Y_TOLERANCE of a canonical baseline, mapped to it. */
+  const keyForY = new Map<number, number>()
   for (const item of items) {
     if (!item.str.trim()) continue
     const y = Math.round(item.transform[5])
     // Merge items whose baselines are within a couple of points (same line).
-    let key = y
-    for (const existing of byY.keys()) {
-      if (Math.abs(existing - y) <= 2) {
-        key = existing
-        break
+    //
+    // Via a window index rather than a scan over every baseline seen so far.
+    // The scan was O(items x distinct baselines) — 80 000 items measured at
+    // ~20 s, and the page count is file-controlled, so this ran per page. The
+    // tolerance is +/-2 integer points, so registering that window once per new
+    // baseline answers the same question by lookup. Registering only where
+    // nothing is registered yet preserves the scan's "earliest matching
+    // baseline wins" behaviour, which insertion order gave it for free.
+    let key = keyForY.get(y)
+    if (key === undefined) {
+      key = y
+      for (let d = -Y_TOLERANCE; d <= Y_TOLERANCE; d++) {
+        if (!keyForY.has(y + d)) keyForY.set(y + d, key)
       }
     }
     const parts = byY.get(key) ?? []
@@ -69,6 +82,12 @@ function collapseWhitespace(text: string): string {
 }
 
 /**
+ * Pages read when the caller names no limit. Comfortably past any real paper,
+ * including a thesis or a proceedings volume.
+ */
+export const DEFAULT_MAX_PAGES = 2000
+
+/**
  * Extract the full text of a PDF, one `[page N]` block per page.
  *
  * Only the "document can't be opened at all" failure is allowed to throw —
@@ -83,8 +102,13 @@ export async function extractPdfText(
   const doc = await pdfjs.getDocument({ data }).promise
   try {
     const total = doc.numPages
-    const limit =
-      opts.maxPages !== undefined && opts.maxPages > 0 ? Math.min(opts.maxPages, total) : total
+    // A default, not "unlimited". Both production callers pass nothing, so the
+    // old fallback of `total` made the cap dead code — and the page count comes
+    // from the file: a 2.4 KB PDF whose page tree is a DAG reports 16 million
+    // pages, at ~7 ms each. There is no cancellation on this path, so an
+    // uncapped walk is an indefinite freeze with no way to stop it.
+    const requested = opts.maxPages !== undefined && opts.maxPages > 0 ? opts.maxPages : DEFAULT_MAX_PAGES
+    const limit = Math.min(requested, total)
 
     const blocks: string[] = []
     // Count non-whitespace in the extracted *body* only. The `[page N]` markers

@@ -221,6 +221,13 @@ export function displayPath(segs: RawSeg[]): string {
  * beyond the node's `max`. Everything the model sends goes through here, so a
  * model that ignores the contract cannot reach the project data.
  */
+/**
+ * The highest index accepted for a node declared `max: null`. Far beyond any
+ * hand-authored list, and low enough that filling up to it cannot exhaust
+ * memory.
+ */
+export const MAX_UNBOUNDED_INDEX = 10_000
+
 export function resolvePath(schema: ResolvedDef[], raw: string): ResolvedPath | null {
   const segs = parsePath(raw)
   if (!segs || segs.length === 0) return null
@@ -233,8 +240,15 @@ export function resolvePath(schema: ResolvedDef[], raw: string): ResolvedPath | 
     const def = level.find((d) => d.name === seg.name)
     if (!def) return null
 
-    // `max: null` means unbounded; otherwise the index must fit inside it.
-    if (def.max !== null && seg.index >= def.max) return null
+    // `max: null` means unbounded — but "unbounded" is about what a reviewer
+    // may add by hand, not about what a model may ask us to allocate. The
+    // caller materializes every instance up to the index, so an answer of
+    // `Findings[9007199254740990]` against an unbounded node is an
+    // out-of-memory kill. Both halves of that are outside the user's control:
+    // the node's `max` comes from the project file and the index from the
+    // model's reply, which a prompt-injected PDF can steer.
+    const ceiling = def.max === null ? MAX_UNBOUNDED_INDEX : def.max
+    if (seg.index >= ceiling) return null
 
     const last = i === segs.length - 1
     if (last) {

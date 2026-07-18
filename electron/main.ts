@@ -12,10 +12,11 @@ import {
   shell,
 } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { readFile, writeFile, access, readdir } from 'node:fs/promises'
+import { readFile, writeFile, access, readdir, lstat } from 'node:fs/promises'
 import { constants, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import path from 'node:path'
+import os from 'node:os'
 // The only imports of src/ into electron/: the git URL/path security gate and
 // the porcelain/error-text parsers must not exist twice — see "Git" below for
 // why. Both modules import nothing themselves, so they typecheck identically
@@ -441,7 +442,37 @@ ipcMain.handle('project:openPath', async (_e, filePath: string) => {
   }
 })
 
+/**
+ * Refuse to write through a symlink.
+ *
+ * `writeFile` follows one, so it writes the *target*, wherever that is. A
+ * project folder can arrive by zip, USB, or shared drive with symlinks already
+ * in it, and one write path is never confirmed by a dialog: the sibling
+ * `<name>-fulltext.json` that "Start full-text screening" derives from the
+ * project's own location. Shipping that name as a symlink to `~/.zshrc` turned
+ * one click into an overwrite of a startup file — with substantially
+ * attacker-chosen content, since `serializeProject` round-trips unknown keys
+ * verbatim. Checked with `lstat`, which reports the link itself rather than
+ * what it points at.
+ */
+async function assertNotSymlink(filePath: string): Promise<void> {
+  try {
+    const st = await lstat(filePath)
+    if (st.isSymbolicLink()) {
+      throw new Error(
+        `Refusing to write to "${filePath}": it is a symbolic link, and writing would modify the file it points at instead.`,
+      )
+    }
+  } catch (err) {
+    // Not existing yet is the ordinary case for a new file — only a real lstat
+    // failure other than ENOENT, or our own refusal above, should propagate.
+    const code = (err as NodeJS.ErrnoException).code
+    if (code !== 'ENOENT') throw err
+  }
+}
+
 ipcMain.handle('project:save', async (_e, filePath: string, text: string) => {
+  await assertNotSymlink(filePath)
   await writeFile(filePath, text, 'utf-8')
 })
 
@@ -821,11 +852,46 @@ function gitEnv(): NodeJS.ProcessEnv {
  * the normal path here). Only a failure to launch git at all is signalled
  * with `code: null`.
  */
+/**
+ * Config git must not take from the repository it is run in.
+ *
+ * `gitEnv` strips the inherited environment, but the repository's *own*
+ * `.git/config` is read before git does anything — and several of its keys are
+ * commands git runs. The threat model is not hypothetical: the app's own
+ * documentation describes receiving a project folder, and a folder that arrives
+ * by zip, USB, or shared drive brings its `.git/` with it. A hostile
+ * `core.fsmonitor` runs on `git status`, which the Git button reaches in one
+ * click, and `git:info` fires automatically on project open. Verified: a
+ * `core.fsmonitor` of `printf PWNED > /tmp/proof; false` wrote the file.
+ * `safe.directory` does not help — the copied folder belongs to the reviewer.
+ *
+ * `-c` beats every config file, so this is a hard override rather than a
+ * request. Only keys with no legitimate value for this app are listed: it never
+ * wants a pager, an editor, an external diff, or a filesystem monitor. Keys a
+ * user may legitimately set globally — `core.sshCommand`, `credential.helper`,
+ * `gpg.program` — are deliberately left alone, since overriding them here would
+ * break ordinary setups; they run only on an explicit network action the user
+ * asked for, not on merely opening a folder, which is the boundary that
+ * matters. `.git/hooks` is covered by `core.hooksPath`; `filter.*` drivers
+ * cannot be disabled by `-c` and remain the known residual, reachable only on
+ * an explicit commit or pull.
+ */
+const GIT_SAFE_CONFIG = [
+  '-c', 'core.fsmonitor=false',
+  '-c', `core.hooksPath=${path.join(os.tmpdir(), 'sailor-no-hooks-does-not-exist')}`,
+  '-c', 'core.pager=cat',
+  '-c', 'core.editor=false',
+  '-c', 'core.alternateRefsCommand=',
+  '-c', 'diff.external=',
+  '-c', 'uploadpack.packObjectsHook=',
+  '-c', 'protocol.ext.allow=never',
+]
+
 function runGit(args: string[], cwd?: string, timeout = GIT_TIMEOUT_MS): Promise<GitRun> {
   return new Promise((resolve) => {
     execFile(
       'git',
-      args,
+      [...GIT_SAFE_CONFIG, ...args],
       { cwd, env: gitEnv(), timeout, maxBuffer: GIT_MAX_BUFFER, windowsHide: true },
       (err, stdout, stderr) => {
         const e = err as (Error & { code?: number | string; killed?: boolean }) | null
@@ -859,7 +925,19 @@ const gitOut = (r: GitRun) => r.stdout.trim()
  *  renderer hands back to us for a git:pull* call); never absolute, never an
  *  escape. Re-checked here because the renderer names the relative path. */
 function assertRelPath(p: string): void {
-  if (!p || path.isAbsolute(p) || p.split('/').includes('..') || /[\0\r\n]/.test(p)) {
+  // Split on both separators. On POSIX, `p.split('/')` left
+  // `..\..\Users\victim\.bashrc` as one opaque segment, which passed — while
+  // `path.win32.join` honours the backslashes and walks straight out of the
+  // repository. Not reachable today (the only relPath reaching a write comes
+  // from git's own `--show-prefix`, always `/`-separated), but the check is
+  // here precisely so that stays true if a new caller appears.
+  const segments = p.split(/[\\/]/)
+  if (!p || path.isAbsolute(p) || segments.includes('..') || /[\0\r\n]/.test(p)) {
+    throw new Error(`Refusing to act on the path "${p}".`)
+  }
+  // `.git` is a "valid relative path" that is never project data, and writing
+  // into it — `config`, `hooks/pre-commit` — is a code-execution primitive.
+  if (segments.some((seg) => seg.toLowerCase() === '.git')) {
     throw new Error(`Refusing to act on the path "${p}".`)
   }
 }
@@ -1010,11 +1088,13 @@ ipcMain.handle(
     const fullPath = path.join(root, relPath)
     const paths = [relPath, ...otherPaths]
     try {
+      await assertNotSymlink(fullPath)
       await writeFile(fullPath, committedText, 'utf-8')
       const add = await runGit(['add', '--', ...paths], root)
       if (!add.ok) return add
       return await runGit(['commit', '-m', message, '--', ...paths], root)
     } finally {
+      await assertNotSymlink(fullPath)
       await writeFile(fullPath, workingText, 'utf-8')
     }
   },
@@ -1034,7 +1114,9 @@ ipcMain.handle(
 ipcMain.handle('git:writeWorking', async (_e, root: string, relPath: string, text: string) => {
   assertRelPath(relPath)
   try {
-    await writeFile(path.join(root, relPath), text, 'utf-8')
+    await assertNotSymlink(path.join(root, relPath))
+    await assertNotSymlink(path.join(root, relPath))
+  await writeFile(path.join(root, relPath), text, 'utf-8')
     return { ok: true, code: 0, stdout: '', stderr: '' }
   } catch (err) {
     return { ok: false, code: null, stdout: '', stderr: err instanceof Error ? err.message : String(err) }
@@ -1140,6 +1222,7 @@ ipcMain.handle('git:pullBegin', async (_e, root: string, relPath: string) => {
 
 ipcMain.handle('git:pullFinish', async (_e, root: string, relPath: string, text: string) => {
   assertRelPath(relPath)
+  await assertNotSymlink(path.join(root, relPath))
   await writeFile(path.join(root, relPath), text, 'utf-8')
   const add = await runGit(['add', '--', relPath], root)
   if (!add.ok) return add
