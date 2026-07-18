@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState, type DragEvent } from 'react'
 import {
   useEditorStore,
+  nodePathNames,
+  parentUidOf,
   type DropPosition,
   type EditorNode,
   type EditorNodeKind,
@@ -221,8 +223,39 @@ function SchemaNodeRow({
     e.preventDefault()
     e.stopPropagation()
     const uid = e.dataTransfer.getData('text/plain') || dragUid
-    if (uid && position) moveNode(uid, node.uid, position)
+    if (uid && position && confirmMove(uid, node.uid, position)) {
+      moveNode(uid, node.uid, position)
+    }
     onDragEnd()
+  }
+
+  /**
+   * Dragging a field into or out of a group changes the path its answers are
+   * stored under, orphaning every one of them — the same loss `confirmDestructive`
+   * guards for a rename or a remove, reached by a different gesture and, until
+   * now, with nothing asked.
+   *
+   * Only a change of *parent* counts. Reordering among siblings leaves the path
+   * alone, because answers are keyed by name at each level and never by
+   * position, so warning there would be the crying-wolf failure again.
+   */
+  const confirmMove = (dragUid_: string, targetUid: string, pos: DropPosition): boolean => {
+    const nodes = useEditorStore.getState().nodes
+    const oldParent = parentUidOf(nodes, dragUid_)
+    const newParent = pos === 'inside' ? targetUid : parentUidOf(nodes, targetUid)
+    if (oldParent === undefined || newParent === undefined) return true
+    if (oldParent === newParent) return true // a reorder: nothing moves
+
+    const path = nodePathNames(nodes, dragUid_)
+    if (!path) return true
+    const count = countPapersUsingField(papers, path)
+    if (count === 0) return true
+    const many = count === 1 ? '1 paper' : `${count} papers`
+    return window.confirm(
+      `${many} record an answer under "${path.join(' / ')}". Moving it changes where those answers ` +
+        `belong, so they will be discarded — including every reviewer's own — the next time the ` +
+        `project is saved, and it cannot be undone afterwards.\n\nContinue?`,
+    )
   }
 
   const setOption = (index: number, value: string) =>

@@ -212,6 +212,33 @@ function findNode(nodes: EditorNode[], uid: string): EditorNode | null {
   return null
 }
 
+/**
+ * The names from the schema root down to `uid`, which is the path answers are
+ * stored under — or null if the uid is not in the tree.
+ */
+export function nodePathNames(nodes: EditorNode[], uid: string): string[] | null {
+  for (const n of nodes) {
+    if (n.uid === uid) return [n.name]
+    const below = nodePathNames(n.children, uid)
+    if (below) return [n.name, ...below]
+  }
+  return null
+}
+
+/**
+ * The uid of `uid`'s parent, or null when it sits at the root. Used to tell a
+ * reorder (same parent, answers unaffected) from a re-parenting (the node's
+ * answer path changes, and every answer under the old one is orphaned).
+ */
+export function parentUidOf(nodes: EditorNode[], uid: string, parent: string | null = null): string | null | undefined {
+  for (const n of nodes) {
+    if (n.uid === uid) return parent
+    const below = parentUidOf(n.children, uid, n.uid)
+    if (below !== undefined) return below
+  }
+  return undefined
+}
+
 /** True if `uid` is `ancestorUid` or lives underneath it (guards illegal moves). */
 export function isSelfOrDescendant(nodes: EditorNode[], ancestorUid: string, uid: string): boolean {
   const ancestor = findNode(nodes, ancestorUid)
