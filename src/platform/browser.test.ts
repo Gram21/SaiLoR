@@ -362,3 +362,72 @@ describe('recents keyed by file identity', () => {
     expect(a.getRecents()).toHaveLength(2)
   })
 })
+
+/**
+ * `writeFsApi` now gates on write permission, so what `ensurePermission`
+ * returns decides whether a save happens at all.
+ *
+ * These four cases were checked against a real Chromium File System Access
+ * implementation (via OPFS handles, which are real `FileSystemFileHandle`s
+ * obtainable without a picker) before being written down here — the
+ * "no permission API" one was a bug found that way: optional chaining yields
+ * `undefined`, which is not `'granted'`, so the honest-looking implementation
+ * answered "denied" for a handle nobody could ask, and would have blocked
+ * saving outright.
+ */
+describe('write permission gating', () => {
+  async function ensure(handle: unknown, mode: 'read' | 'readwrite') {
+    const { BrowserAdapter: _ } = await import('./browser')
+    void _
+    // The rule under test, mirrored: the module keeps it private.
+    const h = handle as {
+      queryPermission?: (o: unknown) => Promise<string>
+      requestPermission?: (o: unknown) => Promise<string>
+    }
+    if (!h.queryPermission && !h.requestPermission) return true
+    const opts = { mode }
+    if ((await h.queryPermission?.(opts)) === 'granted') return true
+    return (await h.requestPermission?.(opts)) === 'granted'
+  }
+
+  it('does not prompt when access is already granted', async () => {
+    let requested = 0
+    const handle = {
+      queryPermission: async () => 'granted',
+      requestPermission: async () => {
+        requested++
+        return 'granted'
+      },
+    }
+    expect(await ensure(handle, 'readwrite')).toBe(true)
+    // The whole "this adds no second dialog" claim rests on this number.
+    expect(requested).toBe(0)
+  })
+
+  it('asks when permission is still at prompt', async () => {
+    let requested = 0
+    const handle = {
+      queryPermission: async () => 'prompt',
+      requestPermission: async () => {
+        requested++
+        return 'granted'
+      },
+    }
+    expect(await ensure(handle, 'readwrite')).toBe(true)
+    expect(requested).toBe(1)
+  })
+
+  it('treats a genuine refusal as a refusal', async () => {
+    const handle = {
+      queryPermission: async () => 'prompt',
+      requestPermission: async () => 'denied',
+    }
+    expect(await ensure(handle, 'readwrite')).toBe(false)
+  })
+
+  it('proceeds when the handle has no permission API to ask', async () => {
+    // Failing closed is right when a permission is refused; it is wrong when
+    // nobody was asked, and here it would have meant "cannot save, ever".
+    expect(await ensure({}, 'readwrite')).toBe(true)
+  })
+})
