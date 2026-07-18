@@ -210,7 +210,30 @@ This serves the app on `http://localhost:8080`. The volume in `docker-compose.ym
 http://localhost:8080/?project=/projects/project.example.json
 ```
 
-The `nginx.conf` adds the correct MIME type for `.mjs` files (needed by the pdf.js worker), sets immutable caching for hashed `/assets/`, serves `/projects/` with permissive CORS headers, and falls back to `index.html` for SPA routing.
+The `nginx.conf` adds the correct MIME type for `.mjs` files (needed by the pdf.js worker), sets immutable caching for hashed `/assets/`, serves `/projects/` same-origin only, and falls back to `index.html` for SPA routing. It also sets `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy: frame-ancestors 'none'` and `Referrer-Policy: no-referrer` on every response.
+
+**`/projects/` no longer sends `Access-Control-Allow-Origin: *`.** It used to, which meant any
+website a reviewer happened to visit could read every project file the deployment serves — the
+review data and the reviewers' recorded identities — with a plain `fetch`, needing only the URL. On
+a localhost or intranet deployment that is a low bar. The app and its project files are served from
+the same origin in `docker-compose.yml` and in everything these docs describe, and same-origin
+fetches need no CORS header, so nothing in the documented setup changes.
+
+If you genuinely serve the app from a *different* origin than its project files, add the one origin
+you mean to the `/projects/` block — never `*`:
+
+```nginx
+add_header Access-Control-Allow-Origin "https://sailor.example.org" always;
+```
+
+Understand what that grants: any page on that origin can read every project file, so it should be an
+origin you control and trust as much as the data.
+
+**A note on `add_header` inheritance, because it is a trap.** nginx applies a level's `add_header`
+directives only when that level declares *none* of its own. The `/assets/` and `*.mjs` locations set
+`Cache-Control`, so they would otherwise lose every server-level security header — including
+`nosniff`, on the locations that serve the JavaScript. The config repeats the security headers inside
+those blocks on purpose; removing the duplication silently removes the protection.
 
 Equivalent raw Docker commands:
 
