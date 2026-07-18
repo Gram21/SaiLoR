@@ -128,9 +128,18 @@ function toNumber(raw: unknown): Coerced {
   }
   if (typeof raw === 'string') {
     const text = raw.trim()
-    // Number('') is 0 and Number('Infinity') is Infinity — neither is an answer.
-    const n = text === '' ? NaN : Number(text)
-    if (Number.isFinite(n)) return { ok: true, value: n }
+    // A decimal number, optionally signed, optionally in scientific notation —
+    // and nothing else. `Number()` alone is far more permissive than this
+    // module's contract: it reads '0x20' as 32, '0b101' as 5, '0o17' as 15 and
+    // '' as 0, none of which is "exactly one honest reading" of what a paper
+    // says. A paper does not write a sample size in hexadecimal, so accepting
+    // it silently records a number nobody wrote. Rejections are shown to the
+    // reviewer, so over-rejecting costs a visible row while over-accepting
+    // costs invisible wrong data.
+    if (/^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(text)) {
+      const n = Number(text)
+      if (Number.isFinite(n)) return { ok: true, value: n }
+    }
   }
   return { ok: false, reason: 'not a number' }
 }
@@ -219,6 +228,12 @@ function toEvidence(raw: unknown): string {
  * noise such as `1.0000000001`.
  */
 function toConfidence(raw: unknown): number | null {
+  // An empty or whitespace-only string is *not* a confidence of zero.
+  // `Number('')` is 0, which sits inside the valid range, so a model that sent
+  // an empty confidence had "0%" rendered against its answer — a claim of
+  // total uncertainty it never made, which is exactly the invention the
+  // paragraph above says to avoid.
+  if (typeof raw === 'string' && raw.trim() === '') return null
   const n = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw.trim()) : NaN
   if (!Number.isFinite(n) || n < 0 || n > 1) return null
   return Math.min(1, Math.max(0, n))
