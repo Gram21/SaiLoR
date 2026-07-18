@@ -49,7 +49,11 @@ export interface ScreeningCounts {
  */
 export function screeningCounts(project: Project, currentReviewer: string | null): ScreeningCounts {
   const reasons = project.screening?.reasons ?? []
-  const byReason: Record<string, number> = {}
+  // Null-prototype: reasons come from the project file, which is hand-editable
+  // by design, and a reason of "constructor" or "__proto__" would otherwise be
+  // found on Object.prototype — booking the paper against an inherited member
+  // instead of counting it as having no recorded reason.
+  const byReason: Record<string, number> = Object.create(null)
   for (const r of reasons) byReason[r] = 0
 
   let included = 0
@@ -65,7 +69,7 @@ export function screeningCounts(project: Project, currentReviewer: string | null
     else {
       excluded++
       const reason = screeningReason(tree)
-      if (reason && reason in byReason) byReason[reason]++
+      if (reason && Object.hasOwn(byReason, reason)) byReason[reason]++
       else excludedWithoutReason++
     }
   }

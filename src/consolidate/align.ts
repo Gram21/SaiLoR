@@ -150,7 +150,21 @@ function simAgainstSlot(
   for (const [reviewer, index] of Object.entries(slot.members)) {
     parts.push(instanceSim(def, entry, lists[reviewer]?.[index], cache))
   }
-  return combine(parts)
+  const merged = combine(parts)
+  // Per *member*, not summed over them. `combine` averages the score but adds
+  // the weights up, and the assignment maximises score × weight — so a slot two
+  // reviewers had already landed in scored roughly twice a slot holding one,
+  // and outbid it even at strictly worse agreement. With three reviewers, one
+  // of whom recorded fewer entries than the anchor, an exact match could be
+  // pulled into a crowded slot while the identical anchor entry it belonged
+  // with was left alone at agreement 0. Dividing by the member count makes
+  // slots comparable no matter how full they are, which is what "how well does
+  // this entry fit this slot" was always supposed to mean.
+  //
+  // Only two reviewers means every slot holds exactly one member, so the bias
+  // cancels and nothing about the two-reviewer case changes.
+  const n = parts.length
+  return n > 1 ? { ...merged, weight: merged.weight / n } : merged
 }
 
 /**

@@ -141,4 +141,22 @@ describe('updateFrom', () => {
   it('says nothing when the release could not be determined', () => {
     expect(updateFrom('0.1.0', null)).toBeNull()
   })
+
+  it('orders pre-releases past the ninth numerically, not lexicographically', () => {
+    // "rc.10" < "rc.2" as strings, so this inverted at exactly the tenth RC:
+    // rc.2 was never offered rc.10, and rc.10 was offered rc.2 as an "update".
+    expect(isNewerVersion('1.0.1-rc.10', '1.0.1-rc.2')).toBe(true)
+    expect(isNewerVersion('1.0.1-rc.2', '1.0.1-rc.10')).toBe(false)
+    expect(isNewerVersion('1.0.1-beta.9', '1.0.1-beta.11')).toBe(false)
+  })
+
+  it('sorts a numeric pre-release identifier below an alphanumeric one', () => {
+    expect(isNewerVersion('1.0.0-alpha.beta', '1.0.0-alpha.1')).toBe(true)
+    expect(isNewerVersion('1.0.0-alpha.1', '1.0.0-alpha.beta')).toBe(false)
+  })
+
+  it('treats a longer pre-release tag as newer than its own prefix', () => {
+    expect(isNewerVersion('1.0.0-alpha.1', '1.0.0-alpha')).toBe(true)
+    expect(isNewerVersion('1.0.0-alpha', '1.0.0-alpha.1')).toBe(false)
+  })
 })

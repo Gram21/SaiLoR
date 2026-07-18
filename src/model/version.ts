@@ -104,7 +104,37 @@ export function isNewerVersion(latest: string, current: string): boolean {
   if (a.pre === b.pre) return false
   if (!a.pre) return true
   if (!b.pre) return false
-  return a.pre > b.pre
+  return comparePre(a.pre, b.pre) > 0
+}
+
+/**
+ * Compare two pre-release tags the way semver §11.4 does: dot-separated
+ * identifiers, left to right, numeric ones compared as numbers and sorting
+ * below alphanumeric ones, and a longer tag beating its own prefix.
+ *
+ * Comparing the raw strings agreed with this right up to the tenth
+ * pre-release, then inverted: "rc.10" < "rc.2" lexicographically, so a user on
+ * rc.2 was never offered rc.10, and a user on rc.10 was offered rc.2 as an
+ * update — a downgrade, with a live download button.
+ */
+function comparePre(a: string, b: string): number {
+  const xs = a.split('.')
+  const ys = b.split('.')
+  for (let i = 0; i < Math.max(xs.length, ys.length); i++) {
+    const x = xs[i]
+    const y = ys[i]
+    // Ran out of identifiers: the shorter tag is the lower one.
+    if (x === undefined) return -1
+    if (y === undefined) return 1
+    if (x === y) continue
+    const xNum = /^\d+$/.test(x)
+    const yNum = /^\d+$/.test(y)
+    if (xNum && yNum) return Number(x) - Number(y)
+    // "Numeric identifiers always have lower precedence than non-numeric ones."
+    if (xNum !== yNum) return xNum ? -1 : 1
+    return x < y ? -1 : 1
+  }
+  return 0
 }
 
 /**

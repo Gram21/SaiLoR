@@ -155,4 +155,21 @@ describe('pendingUnanimous', () => {
     })
     expect(pendingUnanimous(p)).toBe(0)
   })
+
+  it('counts an inherited-member reason as "no reason recorded"', () => {
+    // Screening files are hand-editable by design (and an LLM can write the
+    // Reason field), so "constructor" is reachable. `reason in byReason` found
+    // it on Object.prototype: the paper counted as excluded-with-a-reason,
+    // byReason.constructor went NaN, and the reason table summed to 0 against
+    // a non-zero excluded count — the paper vanished from the breakdown.
+    for (const evil of ['constructor', 'toString', '__proto__', 'valueOf']) {
+      const p = project({
+        papers: [paper({ annotations: tree(DECISION_EXCLUDE, evil) })],
+      })
+      const c = screeningCounts(p, null)
+      expect(c.excluded).toBe(1)
+      expect(c.excludedWithoutReason).toBe(1)
+      for (const n of Object.values(c.byReason)) expect(n).toBe(0)
+    }
+  })
 })

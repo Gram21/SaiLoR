@@ -288,4 +288,27 @@ describe('alignPaper', () => {
     expect(alignment.slots).toHaveLength(1)
     expect(alignment.slots[0].members['1']).toBe(0)
   })
+
+  it('does not let a crowded slot outbid a better-matching empty one', () => {
+    // Three reviewers, one recording fewer entries than the anchor. The
+    // assignment maximised score x weight, and `combine` summed the weights, so
+    // a slot two reviewers were already in scored about twice a slot holding
+    // one -- enough to win on nothing but headcount. R3's 200 was consolidated
+    // with two 300s while R1's own identical 200 sat alone, showing agreement 0
+    // for an answer two reviewers had in fact given the same.
+    const schema = resolveSchema([
+      { name: 'F', max: null, children: [{ name: 'N', type: 'number' }] },
+    ])
+    const rev = (ns: number[]): AnnotationValueTree => ({
+      F: ns.map((n) => ({ children: { N: [{ value: n }] } })),
+    })
+    const slots = alignPaper(schema, {
+      '1': rev([300, 200]),
+      '2': rev([300]),
+      '3': rev([200]),
+    })['F'].slots
+
+    expect(slots[0].members).toEqual({ '1': 0, '2': 0 })
+    expect(slots[1].members).toEqual({ '1': 1, '3': 0 })
+  })
 })
