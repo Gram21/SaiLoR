@@ -150,8 +150,9 @@ npm run typecheck
 ├── .github/workflows/openwiki.yml Scheduled weekly OpenWiki doc refresh (only when code changed)
 ├── .github/CODEOWNERS     Default reviewers for pull requests
 ├── docs/                  In-depth authoring guide (annotation-schema.md)
-├── build/icon.png         App icon (also the macOS dock / packaged-bundle icon)
-├── public/favicon.svg     Browser favicon
+├── public/logo.svg        App logo — source of truth; also shown on the welcome screen
+├── build/icon.png         Generated from public/logo.svg (dock / packaged-bundle icon)
+├── public/favicon.svg     Browser favicon (separate, hand-simplified for 16px tabs)
 ├── Dockerfile             Production: multi-stage Node build → nginx runtime
 ├── docker-compose.yml     Production: builds and serves on port 8080 with ./samples mounted
 ├── nginx.conf             MIME fix for .mjs, /assets/ caching, /projects/ serving, SPA fallback
