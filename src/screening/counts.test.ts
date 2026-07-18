@@ -3,7 +3,7 @@ import { resolveSchema } from '../model/schema'
 import { normalizeTree, type AnnotationValueTree } from '../model/annotations'
 import type { Paper, Project } from '../model/project'
 import { screeningSchemaDefs, DECISION_EXCLUDE, DECISION_INCLUDE } from './schema'
-import { screeningCounts, pendingUnanimous } from './counts'
+import { screeningCounts, pendingUnanimous, pendingUnanimousDecisions } from './counts'
 
 const REASONS = ['Wrong topic', 'Duplicate', 'Not in English']
 const SCHEMA = resolveSchema(screeningSchemaDefs({ reasons: REASONS }))
@@ -191,6 +191,43 @@ describe('pendingUnanimous', () => {
         }),
       ],
     })
+    expect(pendingUnanimous(p)).toBe(1)
+  })
+
+  it('does not count an already-decided paper as having no final decision', () => {
+    // The import dialog says "N of the not-yet-screened papers ... so this
+    // project has no final decision for them". A paper the consolidator already
+    // excluded, lacking only a unanimous reason, must not be counted there:
+    // the sentence would promise that adopting changes an inclusion count that
+    // is already settled. The panel's own notice still counts it, because the
+    // "Adopt all" button beside it does fill that reason.
+    const p = project({
+      reviewers: 2,
+      papers: [
+        paper({
+          annotations: tree(DECISION_EXCLUDE),
+          reviews: {
+            '1': tree(DECISION_EXCLUDE, 'Duplicate'),
+            '2': tree(DECISION_EXCLUDE, 'Duplicate'),
+          },
+        }),
+      ],
+    })
+    expect(pendingUnanimousDecisions(p)).toBe(0)
+    expect(pendingUnanimous(p)).toBe(1)
+  })
+
+  it('counts an undecided paper both ways', () => {
+    const p = project({
+      reviewers: 2,
+      papers: [
+        paper({
+          annotations: tree(),
+          reviews: { '1': tree(DECISION_INCLUDE), '2': tree(DECISION_INCLUDE) },
+        }),
+      ],
+    })
+    expect(pendingUnanimousDecisions(p)).toBe(1)
     expect(pendingUnanimous(p)).toBe(1)
   })
 })

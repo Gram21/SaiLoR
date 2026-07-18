@@ -30,7 +30,7 @@ import { parseYear } from '../model/year'
 import { getPlatform, type OpenedProject, type PickedPdf, type ProjectLocation, type SaveHandle } from '../platform'
 import { DEFAULT_SCREENING_REASONS, screeningSchemaDefs } from '../screening/schema'
 import { screeningReason, screeningStatus } from '../screening/status'
-import { pendingUnanimous } from '../screening/counts'
+import { pendingUnanimousDecisions } from '../screening/counts'
 import { renameReasonInPapers } from '../screening/reasonUsage'
 import { useStore } from './store'
 
@@ -700,9 +700,11 @@ export interface ScreeningImportDraft {
   excludedCount: number
   /** Reason → how many excluded papers cited it, for the summary. */
   excludedByReason: Record<string, number>
-  /** Papers every reviewer decided identically that Consolidation had not
-   *  adopted at the time this was read — see `screening/counts.ts`'s
-   *  `pendingUnanimous`. Only ever nonzero when `reviewers > 1`. */
+  /** Papers still undecided that every reviewer decided identically, which
+   *  Consolidation had not adopted at the time this was read — see
+   *  `screening/counts.ts`'s `pendingUnanimousDecisions`. Decisions only,
+   *  because the dialog showing this promises adopting would change the
+   *  inclusion counts. Only ever nonzero when `reviewers > 1`. */
   pendingUnanimousCount: number
   /** The source's seat count. Not a `multiReviewer` boolean: a `startKind:
    *  'screening'` target inherits this number outright (see
@@ -1689,7 +1691,7 @@ export const useEditorStore = create<EditorState>()(
           sourceTitle: project.title,
           screening: project.screening!,
           ...partition,
-          pendingUnanimousCount: pendingUnanimous(project),
+          pendingUnanimousCount: pendingUnanimousDecisions(project),
           reviewers: project.reviewers,
         }
       })
@@ -1730,7 +1732,7 @@ export const useEditorStore = create<EditorState>()(
           sourceTitle: project.title,
           screening: project.screening!,
           ...partition,
-          pendingUnanimousCount: pendingUnanimous(project),
+          pendingUnanimousCount: pendingUnanimousDecisions(project),
           reviewers: project.reviewers,
         }
       })

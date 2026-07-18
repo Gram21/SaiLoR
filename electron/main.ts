@@ -882,10 +882,15 @@ const GIT_SAFE_CONFIG = [
   '-c', 'core.pager=cat',
   '-c', 'core.editor=false',
   '-c', 'core.alternateRefsCommand=',
-  '-c', 'diff.external=',
   '-c', 'uploadpack.packObjectsHook=',
   '-c', 'protocol.ext.allow=never',
 ]
+// `diff.external` is deliberately NOT in that list. Setting it empty makes git
+// try to run the empty string — "cannot run : No such file or directory", and
+// the diff dies — so an attacker's external differ would be swapped for a
+// guaranteed failure rather than the built-in one. `--no-ext-diff` on the diff
+// itself is the mechanism that actually means "use your own", and it is passed
+// where the diff is run.
 
 function runGit(args: string[], cwd?: string, timeout = GIT_TIMEOUT_MS): Promise<GitRun> {
   return new Promise((resolve) => {
@@ -1022,7 +1027,7 @@ ipcMain.handle('git:status', async (_e, root: string) => {
   // sequences into the <pre> as literal text. --no-pager costs one token and
   // removes a whole class of hang.
   const diff = hasHead
-    ? (await runGit(['--no-pager', 'diff', '--no-color', 'HEAD', '--'], root)).stdout
+    ? (await runGit(['--no-pager', 'diff', '--no-ext-diff', '--no-color', 'HEAD', '--'], root)).stdout
     : ''
   return { porcelain, diff }
 })
@@ -1115,8 +1120,7 @@ ipcMain.handle('git:writeWorking', async (_e, root: string, relPath: string, tex
   assertRelPath(relPath)
   try {
     await assertNotSymlink(path.join(root, relPath))
-    await assertNotSymlink(path.join(root, relPath))
-  await writeFile(path.join(root, relPath), text, 'utf-8')
+    await writeFile(path.join(root, relPath), text, 'utf-8')
     return { ok: true, code: 0, stdout: '', stderr: '' }
   } catch (err) {
     return { ok: false, code: null, stdout: '', stderr: err instanceof Error ? err.message : String(err) }

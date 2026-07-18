@@ -1280,7 +1280,7 @@ export const useStore = create<AppState>()(
       // dropped if its path no longer resolves, or if the field has since been
       // answered — the reviewer's own work is never overwritten.
       const accepted = suggestions.flatMap((sug) => {
-        const at = resolvePath(schema, sug.path)
+        const at = resolvePath(schema, sug.path, { maxUnboundedIndex: MAX_UNBOUNDED_INDEX })
         if (!at) return []
         const current = peekValue(readTree, at.path, at.name, at.index)
         if (!isUnanswered(at.def, current)) return []

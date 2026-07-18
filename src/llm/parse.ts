@@ -1,7 +1,7 @@
 import type { ResolvedDef } from '../model/schema'
 import type { FieldValue } from '../model/annotations'
 import type { LlmAnswer, RejectedSuggestion, SkippedField, Suggestion } from './types'
-import { parsePath, resolvePath } from './paths'
+import { parsePath, resolvePath, MAX_UNBOUNDED_INDEX } from './paths'
 import { isPlausibleYear } from '../model/year'
 
 /**
@@ -258,7 +258,7 @@ export function parseAnswer(schema: ResolvedDef[], raw: string): LlmAnswer {
     }
 
     const rawPath = typeof entry.path === 'string' ? entry.path.trim() : ''
-    const resolved = rawPath === '' ? null : resolvePath(defs, rawPath)
+    const resolved = rawPath === '' ? null : resolvePath(defs, rawPath, { maxUnboundedIndex: MAX_UNBOUNDED_INDEX })
     if (!resolved) {
       // resolvePath already covers unknown names, group paths, out-of-range
       // indices and bad syntax; the reviewer only needs to know we refused it.
