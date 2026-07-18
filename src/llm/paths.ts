@@ -258,7 +258,16 @@ export function resolvePath(
 
   for (let i = 0; i < segs.length; i++) {
     const seg = segs[i]
-    const def = level.find((d) => d.name === seg.name)
+    // Exact match first. Falling back to a trimmed comparison covers a def
+    // whose own name carries surrounding whitespace: `parseSegment` trims the
+    // segment (so "Findings [1]" reads as "Findings"), so the canonical this
+    // module *itself* produced for a name like "Claim " would otherwise fail to
+    // resolve — leaving every answer under it permanently uncommittable and
+    // re-detected as a change forever, which is the exact failure this file's
+    // header warns about. The fallback is safe because `resolveSchema` refuses a
+    // schema holding two sibling names that trim alike, so at most one can match.
+    const def =
+      level.find((d) => d.name === seg.name) ?? level.find((d) => d.name.trim() === seg.name)
     if (!def) return null
 
     // `max: null` means unbounded. A ceiling applies only when the caller asks
