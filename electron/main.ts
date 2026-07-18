@@ -200,6 +200,15 @@ function isAppUrl(url: string): boolean {
 }
 
 function createWindow() {
+  // Both flags describe the *previous* window's close, not this one. On macOS
+  // the app outlives its last window (`window-all-closed` only quits off
+  // darwin), so a window closed via the unsaved-changes prompt leaves
+  // `allowClose = true` behind — and the next window, reopened from the dock,
+  // would then sail past the close guard (`if (allowClose || !isDirty) return`)
+  // and discard a whole session's unsaved work without ever prompting.
+  allowClose = false
+  isQuitting = false
+
   const state = loadWindowState()
   const useSavedPosition = positionIsOnScreen(state)
   const win = new BrowserWindow({

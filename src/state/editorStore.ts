@@ -1238,6 +1238,11 @@ export const useEditorStore = create<EditorState>()(
         // turn it back on, so a new project starts opted out.
         s.aiEnabled = false
         s.reviewers = 1
+        // Seat claims belong to the project they were read from. Left behind,
+        // a previously *edited* project's identities get written into this
+        // brand-new file, and whoever opens it is warned off seats nobody
+        // ever claimed (`checkSeat` reports a mismatch against a stranger).
+        s.reviewerIdentities = {}
         s.screening = null
         s.extra = {}
         s.provenance = null
@@ -1360,7 +1365,16 @@ export const useEditorStore = create<EditorState>()(
       const location = await platform.pickProjectLocation(current?.name ?? 'project.json')
       if (!location) return
       // PDFs are referenced relative to the JSON, so moving the JSON re-derives
-      // every path we still know an absolute source for.
+      // every path. Two mechanisms, because the papers differ in what we know
+      // about them:
+      //  - added in this session: we still hold the absolute source, so
+      //    re-deriving from that is exact.
+      //  - loaded from the opened file: `editorStateFromOpened` deliberately
+      //    leaves `sourcePath` undefined, so there is no absolute source — but
+      //    their `pdf` is relative to the *current* location, which is exactly
+      //    what `rebasePdfPaths` re-anchors (the same call `store.ts`'s
+      //    `saveAs` makes). Without this second pass, moving an opened project
+      //    left every one of its PDFs pointing at nothing, silently.
       const papers = get().papers
       const withSource = papers.filter((p) => p.sourcePath)
       let rederived: string[] = []
@@ -1370,14 +1384,25 @@ export const useEditorStore = create<EditorState>()(
           location,
         )
       }
+      const withoutSource = papers.filter((p) => !p.sourcePath)
+      let rebased: string[] = []
+      if (withoutSource.length > 0 && current) {
+        rebased = await platform.rebasePdfPaths(
+          withoutSource.map((p) => p.pdf),
+          current.handle,
+          location.handle,
+        )
+      }
       const snap = snapshotOf(get())
       lastEditKey = null
       set((s) => {
         pushPast(s, snap)
         s.location = location
         let i = 0
+        let j = 0
         for (const p of s.papers) {
           if (p.sourcePath) p.pdf = rederived[i++] ?? p.pdf
+          else p.pdf = rebased[j++] ?? p.pdf
         }
         s.dirty = true
       })
@@ -1837,6 +1862,11 @@ export const useEditorStore = create<EditorState>()(
           // keeps the existing single-reviewer default — deliberate, not an
           // oversight, and outside this feature's mandate to revisit.
           s.reviewers = screeningTarget ? draft.reviewers : 1
+          // Same reason as `startNew`: seat claims belong to the project they
+          // were read from. The *source screening* project's identities must
+          // not be written into the new file — each phase's seats are claimed
+          // afresh by whoever actually sits in them.
+          s.reviewerIdentities = {}
           // The source's own reasons seed the new list, not
           // DEFAULT_SCREENING_REASONS: they are the pre-registered protocol's
           // own vocabulary (already chosen once, by this same team), and
