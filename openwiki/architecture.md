@@ -111,12 +111,21 @@ started it may no longer count. `openRecent` therefore asks for `readwrite`
 instead of `read`: one prompt, at the moment the reviewer expects one, on the
 reasoning that opening a project in an editor implies intent to save it.
 `writeFsApi` keeps a check as a fallback. Worth knowing when reading this: the
-failure it guards against was reasoned from the API contract, not observed in a
-real browser — Chrome may prompt on `createWritable()` by itself, in which case
-the guard is a no-op, since `queryPermission` short-circuits when access is
-already granted.
+failure it guards against was reasoned from the API contract, then **partly
+verified** against a real Chromium File System Access implementation:
+`queryPermission`/`requestPermission` exist on handles, `queryPermission` with
+`readwrite` short-circuits when access is already granted (measured:
+`requestPermission` called zero times), a handle survives an IndexedDB
+structured-clone round trip and still answers `isSameEntry`, and `createWritable`
+round-trips content. Still unverified is whether a *picker-derived* handle
+restored after a page reload prompts on `createWritable()` by itself — that
+needs a native file dialog and a human permission decision no automation can
+drive. `ensurePermission` also returns `true` when a handle exposes no
+permission API at all (optional chaining yields `undefined`, which is not
+`'granted'`), so a browser that implements handles without the permission
+methods can still save rather than being blocked outright.
 
-When the File System Access API is available, the `BrowserAdapter` also persists handles in IndexedDB (`src/platform/idb.ts`) so they survive page reloads. `openProject()` and `saveProject()` (via the FSAPI Save As flow) call `rememberHandle()` which stores the handle under a `recent:<name>` key and pushes an entry to `slr.recents.browser`. `openRecent(id)` retrieves the handle from IndexedDB, re-requests read permission (via `ensureReadPermission`), and re-reads the file. If the handle is missing or permission is denied, the entry is pruned from recents.
+When the File System Access API is available, the `BrowserAdapter` also persists handles in IndexedDB (`src/platform/idb.ts`) so they survive page reloads. `openProject()` and `saveProject()` (via the FSAPI Save As flow) call `rememberHandle()` which stores the handle under a `recent:<id>` key (opaque id, not file name — see above) and pushes an entry to `slr.recents.browser`. `openRecent(id)` retrieves the handle from IndexedDB, re-requests `readwrite` permission (via `ensureWritePermission`), and re-reads the file. If the handle is missing the entry is kept and marked unavailable; if permission is denied the entry is also kept (so the user can retry) and the error is thrown.
 
 **Opening any new project — local or server-mode — clears whatever the *previous* project's PDFs resolved through**, via `clearLocalPdfGrants()` (drops `pdfDir`/`pdfFileMap`) alongside resetting `serverBase`, from all three project-load paths plus `setServerBase()` itself. Without this, switching from Project A (with a granted folder or a set server base) to Project B would silently keep resolving PDFs through A's leftover grant — at best a confusing "not found", at worst the *wrong* PDF's bytes for a path that happens to collide between the two projects.
 
