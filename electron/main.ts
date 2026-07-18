@@ -12,7 +12,7 @@ import {
   shell,
 } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { readFile, writeFile, access, readdir, lstat } from 'node:fs/promises'
+import { readFile, writeFile, access, readdir, lstat, realpath } from 'node:fs/promises'
 import { constants, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import path from 'node:path'
@@ -22,6 +22,7 @@ import os from 'node:os'
 // why. Both modules import nothing themselves, so they typecheck identically
 // under this file's tsconfig (node types) and the renderer's (DOM types).
 import { validateGitUrl, validateClonePath } from '../src/git/url'
+import { relPathProblem } from '../src/git/relpath'
 import { gitErrorText, parsePorcelain } from '../src/git/output'
 import type { GitRun } from '../src/git/types'
 
@@ -347,8 +348,29 @@ function registerPdfProtocol() {
     if (resolved !== base && !resolved.startsWith(base + path.sep)) {
       return new Response('Forbidden', { status: 403 })
     }
+    // `path.resolve` is pure string arithmetic — it collapses `..` but follows
+    // no links, so a symlink *inside* the project directory resolves to a path
+    // that passes the check above and is then served from wherever it actually
+    // points. A project folder is received material and can ship one: a
+    // `pdfs/paper.pdf` linked to `/etc/passwd` read as in-bounds. `realpath`
+    // resolves the chain, so the second check sees the real destination.
+    let real: string
     try {
-      return await net.fetch(pathToFileURL(resolved).toString())
+      real = await realpath(resolved)
+    } catch {
+      return new Response('Not found', { status: 404 })
+    }
+    let realBase: string
+    try {
+      realBase = await realpath(base)
+    } catch {
+      return new Response('No project open', { status: 404 })
+    }
+    if (real !== realBase && !real.startsWith(realBase + path.sep)) {
+      return new Response('Forbidden', { status: 403 })
+    }
+    try {
+      return await net.fetch(pathToFileURL(real).toString())
     } catch {
       return new Response('Not found', { status: 404 })
     }
@@ -469,6 +491,44 @@ async function assertNotSymlink(filePath: string): Promise<void> {
     const code = (err as NodeJS.ErrnoException).code
     if (code !== 'ENOENT') throw err
   }
+}
+
+/**
+ * Refuse a write whose resolved location is outside `root`.
+ *
+ * `assertNotSymlink` only inspects the final component, which leaves the
+ * directory case open: a repository carrying `sub -> /somewhere/else` accepts a
+ * relative path of `sub/project.json` — `assertRelPath` sees no `..`, and the
+ * leaf really is an ordinary file — and the write lands outside the repository.
+ * Resolving the *parent* with `realpath` follows every link in the chain, so
+ * containment is checked against where the write actually goes rather than
+ * where the path string claims it goes.
+ *
+ * The parent must exist, which it always does here: these are writes into a
+ * repository git has already populated.
+ */
+async function assertInsideRoot(root: string, filePath: string): Promise<void> {
+  const base = await realpath(root)
+  let parent: string
+  try {
+    parent = await realpath(path.dirname(filePath))
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new Error(`Refusing to write to "${filePath}": its folder does not exist.`)
+    }
+    throw err
+  }
+  if (parent !== base && !parent.startsWith(base + path.sep)) {
+    throw new Error(
+      `Refusing to write to "${filePath}": it resolves to "${parent}", outside the repository.`,
+    )
+  }
+}
+
+/** Both checks, for a write into a git repository at `root`. */
+async function assertWritableIn(root: string, filePath: string): Promise<void> {
+  await assertInsideRoot(root, filePath)
+  await assertNotSymlink(filePath)
 }
 
 ipcMain.handle('project:save', async (_e, filePath: string, text: string) => {
@@ -891,6 +951,14 @@ const GIT_SAFE_CONFIG = [
 // guaranteed failure rather than the built-in one. `--no-ext-diff` on the diff
 // itself is the mechanism that actually means "use your own", and it is passed
 // where the diff is run.
+//
+// `--no-textconv` is passed there for the same reason and is not optional.
+// `diff.<driver>.textconv` is selected by an in-tree `.gitattributes`, so `-c`
+// cannot pre-empt it and `--no-ext-diff` does not cover it — they are separate
+// mechanisms. Verified: a received folder carrying `* diff=evil` plus a
+// `diff.evil.textconv` in its own config executes that command on `git status`,
+// which is one click from opening the project, exactly like the `core.fsmonitor`
+// case above.
 
 function runGit(args: string[], cwd?: string, timeout = GIT_TIMEOUT_MS): Promise<GitRun> {
   return new Promise((resolve) => {
@@ -930,21 +998,12 @@ const gitOut = (r: GitRun) => r.stdout.trim()
  *  renderer hands back to us for a git:pull* call); never absolute, never an
  *  escape. Re-checked here because the renderer names the relative path. */
 function assertRelPath(p: string): void {
-  // Split on both separators. On POSIX, `p.split('/')` left
-  // `..\..\Users\victim\.bashrc` as one opaque segment, which passed — while
-  // `path.win32.join` honours the backslashes and walks straight out of the
-  // repository. Not reachable today (the only relPath reaching a write comes
-  // from git's own `--show-prefix`, always `/`-separated), but the check is
-  // here precisely so that stays true if a new caller appears.
-  const segments = p.split(/[\\/]/)
-  if (!p || path.isAbsolute(p) || segments.includes('..') || /[\0\r\n]/.test(p)) {
-    throw new Error(`Refusing to act on the path "${p}".`)
-  }
-  // `.git` is a "valid relative path" that is never project data, and writing
-  // into it — `config`, `hooks/pre-commit` — is a code-execution primitive.
-  if (segments.some((seg) => seg.toLowerCase() === '.git')) {
-    throw new Error(`Refusing to act on the path "${p}".`)
-  }
+  // The rule itself lives in `src/git/relpath.ts` so the test suite can reach
+  // it — `electron/` is outside vitest's include. Same arrangement as
+  // `validateGitUrl`, and for the same reason: a security gate with no tests is
+  // a security gate nobody can change safely.
+  const problem = relPathProblem(p)
+  if (problem) throw new Error(`Refusing to act on the path "${p}" (${problem}).`)
 }
 
 ipcMain.handle('git:probe', async () => {
@@ -1027,7 +1086,7 @@ ipcMain.handle('git:status', async (_e, root: string) => {
   // sequences into the <pre> as literal text. --no-pager costs one token and
   // removes a whole class of hang.
   const diff = hasHead
-    ? (await runGit(['--no-pager', 'diff', '--no-ext-diff', '--no-color', 'HEAD', '--'], root)).stdout
+    ? (await runGit(['--no-pager', 'diff', '--no-ext-diff', '--no-textconv', '--no-color', 'HEAD', '--'], root)).stdout
     : ''
   return { porcelain, diff }
 })
@@ -1093,13 +1152,13 @@ ipcMain.handle(
     const fullPath = path.join(root, relPath)
     const paths = [relPath, ...otherPaths]
     try {
-      await assertNotSymlink(fullPath)
+      await assertWritableIn(root, fullPath)
       await writeFile(fullPath, committedText, 'utf-8')
       const add = await runGit(['add', '--', ...paths], root)
       if (!add.ok) return add
       return await runGit(['commit', '-m', message, '--', ...paths], root)
     } finally {
-      await assertNotSymlink(fullPath)
+      await assertWritableIn(root, fullPath)
       await writeFile(fullPath, workingText, 'utf-8')
     }
   },
@@ -1119,7 +1178,7 @@ ipcMain.handle(
 ipcMain.handle('git:writeWorking', async (_e, root: string, relPath: string, text: string) => {
   assertRelPath(relPath)
   try {
-    await assertNotSymlink(path.join(root, relPath))
+    await assertWritableIn(root, path.join(root, relPath))
     await writeFile(path.join(root, relPath), text, 'utf-8')
     return { ok: true, code: 0, stdout: '', stderr: '' }
   } catch (err) {
@@ -1226,7 +1285,7 @@ ipcMain.handle('git:pullBegin', async (_e, root: string, relPath: string) => {
 
 ipcMain.handle('git:pullFinish', async (_e, root: string, relPath: string, text: string) => {
   assertRelPath(relPath)
-  await assertNotSymlink(path.join(root, relPath))
+  await assertWritableIn(root, path.join(root, relPath))
   await writeFile(path.join(root, relPath), text, 'utf-8')
   const add = await runGit(['add', '--', relPath], root)
   if (!add.ok) return add
