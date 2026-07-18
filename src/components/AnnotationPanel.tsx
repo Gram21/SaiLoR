@@ -140,10 +140,14 @@ export function AnnotationPanel() {
         {isConsolidation && unanimousRun && !unanimousRun.running && (
           <div className="consolidation-run-notice">
             <span>
+              {unanimousRun.interrupted
+                ? `Stopped after ${unanimousRun.done} of ${unanimousRun.total} papers, because you undid part of the run. `
+                : ''}
               Adopted unanimous values on {unanimousRun.filled} paper
               {unanimousRun.filled === 1 ? '' : 's'}.
               {unanimousRun.skipped > 0 &&
                 ` ${unanimousRun.skipped} left alone — you have already answered a matched group there.`}
+              {unanimousRun.interrupted && ' Run it again to finish the rest.'}
             </span>
             <button type="button" onClick={dismissUnanimousRun}>
               Dismiss

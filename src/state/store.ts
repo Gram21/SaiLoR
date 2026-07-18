@@ -249,6 +249,16 @@ interface AppState {
    * `validationOpen`.
    */
   unanimousRun: UnanimousRun | null
+  /**
+   * Bumped whenever a different project is loaded or the current one closed.
+   *
+   * Components hold local UI state that is *about* the open project — a search
+   * query, a filter — and `project` itself is not usable as a change signal
+   * because immer swaps it on every keystroke. Without this, PaperList's search
+   * survived a project switch and hid every paper in the newly opened one
+   * behind a query typed against the last.
+   */
+  projectGeneration: number
   /** Shown when discarding an open project's unsaved changes. */
   closePromptOpen: boolean
   /**
@@ -497,6 +507,10 @@ interface AppState {
   adoptAllUnanimousAnnotations: () => Promise<void>
   /** Clear the summary `adoptAllUnanimousAnnotations` leaves behind when it finishes. */
   dismissUnanimousRun: () => void
+  /** Stop a batch adopt-unanimous run part-way. Called by undo/redo, whose
+   *  history entry would otherwise be inconsistent with what the run went on
+   *  to write — see the implementation. */
+  stopUnanimousRun: () => void
 }
 
 /** What `applyAiSuggestions` actually did, for the summary shown to the reviewer. */
@@ -515,6 +529,10 @@ export interface UnanimousRun {
   /** Papers left alone because alignment could not vouch for their order. */
   skipped: number
   running: boolean
+  /** True when an undo or redo stopped the run part-way, so the summary can
+   *  say the totals describe what was adopted before it stopped rather than
+   *  the whole project. */
+  interrupted?: boolean
 }
 
 /**
@@ -596,6 +614,7 @@ export const useStore = create<AppState>()(
     agreementOpen: false,
     disagreementsOpen: false,
     unanimousRun: null,
+    projectGeneration: 0,
     closePromptOpen: false,
     pendingAfterPrompt: null,
     appVersion: APP_VERSION,
@@ -734,6 +753,7 @@ export const useStore = create<AppState>()(
       lastFieldKey = null
       projectGeneration++
       set((s) => {
+        s.projectGeneration = projectGeneration
         s.project = null
         s.currentPaperId = null
         s.saveHandle = null
@@ -862,6 +882,7 @@ export const useStore = create<AppState>()(
         if (handle) getPlatform().rememberProject(handle, name, project.title)
         projectGeneration++
         set((s) => {
+          s.projectGeneration = projectGeneration
           s.project = project
           s.saveHandle = handle
           s.projectName = name
@@ -1812,7 +1833,33 @@ export const useStore = create<AppState>()(
       })
     },
 
+    /**
+     * Stop a batch adopt-unanimous run, if one is in flight.
+     *
+     * Called from undo and redo. The run writes one paper per macrotask and
+     * coalesces them all into the single history entry its first paper pushed,
+     * so a history move landing in the middle of it leaves no coherent state:
+     * the undo reverts the papers written so far, the run carries on writing
+     * more *without* pushing a snapshot (coalesce skips it) and so never
+     * invalidates `future`, and the redo the reviewer naturally reaches for
+     * then restores the pre-undo papers while discarding everything written
+     * after it. Measured on a six-paper run: no undo/redo position existed
+     * that held all six.
+     *
+     * Stopping the run makes the undo mean what it says — revert what was
+     * adopted — and the loop's own `running` check does the rest.
+     */
+    stopUnanimousRun: () => {
+      set((s) => {
+        if (s.unanimousRun?.running) {
+          s.unanimousRun.running = false
+          s.unanimousRun.interrupted = true
+        }
+      })
+    },
+
     undo: () => {
+      get().stopUnanimousRun()
       const st = get()
       if (st.past.length === 0 || !st.project) return
       lastFieldKey = null
@@ -1835,6 +1882,7 @@ export const useStore = create<AppState>()(
     },
 
     redo: () => {
+      get().stopUnanimousRun()
       const st = get()
       if (st.future.length === 0 || !st.project) return
       lastFieldKey = null

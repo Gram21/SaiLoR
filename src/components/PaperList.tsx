@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, type CSSProperties } from 'react'
+import { memo, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { useStore, currentTree } from '../state/store'
 import { hasAnnotations, annotationText } from '../model/annotations'
 import { completeness, completenessPercent, hasRequiredFields, type Completeness } from '../model/completeness'
@@ -180,6 +180,18 @@ export function PaperList() {
 
   const [query, setQuery] = useState('')
   const [mode, setMode] = useState<SearchMode>('metadata')
+
+  // Clear the search when a different project is opened. This component never
+  // unmounts across a project change, so a query typed against the last project
+  // stayed in the box and hid every paper in the new one behind "No matching
+  // papers" — recoverable, since the query is visible, but it reads as an empty
+  // project. Keyed on `projectGeneration` rather than on `project`, which immer
+  // replaces on every keystroke and would clear the box as you type.
+  const generation = useStore((s) => s.projectGeneration)
+  useEffect(() => {
+    setQuery('')
+    setMode('metadata')
+  }, [generation])
 
   // Build the search index once per project: one lowercased haystack per
   // paper, per mode. Annotation content changes as the reviewer types into a
