@@ -628,6 +628,12 @@ The parsers' contract is that a malformed *entry* is skipped — not that a
 malformed entry takes the rest of the file with it. Three ways that was violated,
 all of them silent:
 
+- **An entry written outside a list** (`"Study Type": "RCT"`, or a lone
+  `{"value": "RCT"}`, where the format wants `["RCT"]`) is adopted as that one
+  entry rather than dropped. Dropping it opened the file cleanly and let the
+  next ordinary save write `null` over a real answer — the same hazard
+  `normalizeInstance` already guards for a bare primitive *inside* the list.
+  `null` and an absent key still mean no answer.
 - **A RIS file with no `ER` lines** kept only its last record, because starting a
   new record overwrote the one in progress. Records are now finalized when the
   next `TY` arrives, the same rescue the final record already had.

@@ -93,6 +93,29 @@ try/catch powerless because there was no rejection to catch. `tx.error` is null 
 aborts, so the error paths carry an explicit fallback rather than rejecting with `null`, and an open
 that was reported blocked but later succeeds closes the connection it can no longer hand back.
 
+**Recents identify a file, not a file name.** Two reviews both saved as
+`review.json` used to collapse into one recents entry *and* one IndexedDB key,
+so the second open overwrote the first's handle and the surviving entry opened
+the wrong project. Electron sidesteps this with the absolute path; the File
+System Access API exposes none, so `rememberHandle` mints an opaque id — after
+asking the existing entries, via the API's own `isSameEntry`, whether they
+already hold this file, so that reopening one reuses its entry instead of piling
+up duplicates. Entries written before this keep their name-based ids and are
+adopted rather than duplicated.
+
+**Write permission is requested at open time**, not at save time.
+`createWritable()` needs `readwrite`, and a handle restored from IndexedDB is
+back at `prompt` after a reload — but requesting permission needs transient user
+activation, and by the time a save has serialized the project the click that
+started it may no longer count. `openRecent` therefore asks for `readwrite`
+instead of `read`: one prompt, at the moment the reviewer expects one, on the
+reasoning that opening a project in an editor implies intent to save it.
+`writeFsApi` keeps a check as a fallback. Worth knowing when reading this: the
+failure it guards against was reasoned from the API contract, not observed in a
+real browser — Chrome may prompt on `createWritable()` by itself, in which case
+the guard is a no-op, since `queryPermission` short-circuits when access is
+already granted.
+
 When the File System Access API is available, the `BrowserAdapter` also persists handles in IndexedDB (`src/platform/idb.ts`) so they survive page reloads. `openProject()` and `saveProject()` (via the FSAPI Save As flow) call `rememberHandle()` which stores the handle under a `recent:<name>` key and pushes an entry to `slr.recents.browser`. `openRecent(id)` retrieves the handle from IndexedDB, re-requests read permission (via `ensureReadPermission`), and re-reads the file. If the handle is missing or permission is denied, the entry is pruned from recents.
 
 **Opening any new project — local or server-mode — clears whatever the *previous* project's PDFs resolved through**, via `clearLocalPdfGrants()` (drops `pdfDir`/`pdfFileMap`) alongside resetting `serverBase`, from all three project-load paths plus `setServerBase()` itself. Without this, switching from Project A (with a granted folder or a set server base) to Project B would silently keep resolving PDFs through A's leftover grant — at best a confusing "not found", at worst the *wrong* PDF's bytes for a path that happens to collide between the two projects.
