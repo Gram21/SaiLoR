@@ -145,6 +145,20 @@ export type TextSimCache = Map<string, number>
  * an escape rather than typed literally, so it survives an editor or a tool
  * that strips control characters from the source.
  */
+/**
+ * Separator for the pair cache key, with the first string's length in front of
+ * it.
+ *
+ * The length prefix is what makes the key unambiguous. Joining with a separator
+ * alone assumes the separator cannot occur inside a value, and no character
+ * satisfies that: a value holding this one made two *different* pairs spell the
+ * same key, so the second pair silently took the first one's cached score.
+ * Measured: two identical strings scored 0.2 instead of 1.0, which in a
+ * consolidation run means entries that match perfectly are aligned as though
+ * they barely match — wrong, and invisible. A NUL reaches an annotation value
+ * through a hand-edited project file (the format is meant to be hand-editable),
+ * a paste, or PDF text extraction.
+ */
 const KEY_SEP = '\u0000'
 
 /**
@@ -162,7 +176,8 @@ export function stringSimilarity(rawA: string, rawB: string, cache?: TextSimCach
   if (!cache) return computeStringSimilarity(rawA, rawB)
   // One key per unordered pair: the measure is symmetric, and the matcher asks
   // both ways round.
-  const key = rawA < rawB ? rawA + KEY_SEP + rawB : rawB + KEY_SEP + rawA
+  const [lo, hi] = rawA < rawB ? [rawA, rawB] : [rawB, rawA]
+  const key = `${lo.length}${KEY_SEP}${lo}${hi}`
   const hit = cache.get(key)
   if (hit !== undefined) return hit
   const score = computeStringSimilarity(rawA, rawB)
