@@ -320,11 +320,18 @@ Two ways out of the editor: **Save JSON** writes the file and stays put (so you 
   checks both the live name and any uncommitted one, because clicking a `<button>` does not move
   focus on macOS/Chromium and the input's blur would otherwise never fire.
 
-  Two honest gaps. Dragging a field between groups changes its path, orphaning its answers, and
-  `moveNode` has no guard — the path-based match does not catch it either. And a group renamed but
-  not yet saved makes its children's paths miss the old answers; that one is deliberate, since
-  renaming the group is itself guarded, so reaching that state means the reviewer already agreed to
-  discard those answers.
+  **Dragging carries the same guard**, since it is the same loss reached by a different gesture:
+  moving a field into or out of a group changes the path its answers live under. Only a change of
+  *parent* asks — reordering among siblings leaves the path alone, because answers are keyed by name
+  at each level and never by position, so warning there would be the crying-wolf failure again.
+  `nodePathNames` and `parentUidOf` (`src/state/editorStore.ts`) are what tell the two apart;
+  `parentUidOf` returns `null` for a root-level node and `undefined` for a uid that is not in the
+  tree, and the guard branches on that difference rather than treating an unknown node as safe.
+
+  One deliberate gap remains: a group renamed but not yet saved makes its children's paths miss the
+  old answers, so removing a child then asks nothing. That is intentional — renaming the group is
+  itself guarded, so reaching that state means the reviewer has already been told those answers will
+  be discarded and agreed.
 - **`PapersEditor.tsx`** — add PDFs one at a time, a whole folder at once, import a reference-manager export, or (outside a screening project) import from a screening project's results (four buttons next to each other in the header/empty state), edit each paper's id/title/authors/DOI/abstract and its `pdf` path, reorder by drag, remove.
 - **`ScreeningReasonsEditor.tsx`** — replaces `SchemaTreeEditor` in the editor body whenever `useEditorStore().screening` is set: an ordered, editable list of exclusion reasons (add / remove / reorder with plain ↑/↓ buttons rather than drag — the list is short enough that drag-and-drop's extra affordance isn't worth it), writing through `setScreeningReasons`. On blur after renaming a reason, the editor checks `countPapersUsingReason` (`src/screening/reasonUsage.ts`) across both consolidated and per-reviewer trees; if papers still record the old label, it offers to migrate those decisions to the new label (or warns when there is no new label to migrate to), so a rename never silently orphans a decision. See "Screening" below.
 - **`ProtocolEditor.tsx`** — a collapsible *Review protocol* section in the project editor for `Project.protocol` (research questions, search strings, databases, search date, notes). See [Data Model](data-model.md)'s "The review protocol" section for the field's shape and merge behavior.
