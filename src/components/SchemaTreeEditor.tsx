@@ -170,6 +170,15 @@ function SchemaNodeRow({
 
   // Answers nest exactly as the schema does, so a child's path is this node's
   // path plus its own name.
+  //
+  // These are the *live* names, so an uncommitted rename of a group makes its
+  // children's paths miss the answers stored under the old one. That is
+  // harmless in practice, and deliberately not worked around: renaming the
+  // group is itself guarded, so reaching this state means the reviewer was
+  // already warned those answers would be discarded and said yes. A second
+  // warning when they then delete a child would be telling them something they
+  // have already agreed to. If they declined, the rename is reverted and these
+  // paths are correct again.
   const childAncestors = useMemo(() => [...ancestors, node.name], [ancestors, node.name])
 
   const unbounded = node.max === null
