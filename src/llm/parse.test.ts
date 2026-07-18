@@ -334,3 +334,48 @@ describe('a mixed, realistic answer', () => {
     ])
   })
 })
+
+describe('coercion does not invent values the model never sent', () => {
+  const schema = resolveSchema([
+    { name: 'Count', type: 'number' },
+    { name: 'Note', type: 'string' },
+  ])
+
+  it('rejects non-decimal number notations rather than reading them as numbers', () => {
+    // A paper does not write a sample size in hexadecimal. `Number()` alone
+    // reads all of these as numbers, which would silently record a value
+    // nobody wrote; rejecting puts a visible row in front of the reviewer.
+    for (const raw of ['0x20', '0b101', '0o17', '1_000', '   ', '', 'Infinity', '12px']) {
+      const out = parseAnswer(schema, one('Count', raw))
+      expect(out.fields.length, `${JSON.stringify(raw)} accepted`).toBe(0)
+      expect(out.rejected.length, `${JSON.stringify(raw)} not reported`).toBe(1)
+    }
+  })
+
+  it('still accepts the decimal spellings a paper actually uses', () => {
+    for (const [raw, want] of [
+      ['42', 42],
+      ['-7', -7],
+      ['3.5', 3.5],
+      ['.5', 0.5],
+      ['1e3', 1000],
+      ['2.5E-2', 0.025],
+      [' 42 ', 42],
+    ] as const) {
+      const out = parseAnswer(schema, one('Count', raw))
+      expect(out.fields[0]?.value, JSON.stringify(raw)).toBe(want)
+    }
+  })
+
+  it('reads an empty confidence as "none given", not as 0%', () => {
+    // Number('') is 0, which sits inside the valid range, so an empty
+    // confidence used to render as "0%" — a claim of total uncertainty the
+    // model never made.
+    for (const raw of ['', '   ']) {
+      const out = parseAnswer(schema, one('Note', 'x', { confidence: raw }))
+      expect(out.fields[0]?.confidence, JSON.stringify(raw)).toBeNull()
+    }
+    // A real zero still reads as zero.
+    expect(parseAnswer(schema, one('Note', 'x', { confidence: 0 })).fields[0]?.confidence).toBe(0)
+  })
+})

@@ -346,7 +346,16 @@ export const useAiStore = create<AiState>()(
         }
       })
 
-      controller = new AbortController()
+      // Held in a local as well as the module slot, so this run can tell
+      // whether *it* was the one aborted and whether it is still the current
+      // run when it finishes. Reading the module slot alone got both wrong:
+      // `cancel` nulled it before the rejection arrived, so the abort check
+      // below saw `undefined` and reported "AbortError: aborted" as a failure
+      // instead of returning quietly to setup — and the `finally` cleared
+      // whatever was in the slot, including a *newer* run's controller, which
+      // left that run uncancellable.
+      const myController = new AbortController()
+      controller = myController
       const started = Date.now()
       stopTicker()
       ticker = setInterval(() => {
@@ -409,7 +418,7 @@ export const useAiStore = create<AiState>()(
               })
 
         set((s) => { s.phase = 'calling' })
-        const res = await getPlatform().callLlm(req, controller.signal)
+        const res = await getPlatform().callLlm(req, myController.signal)
         if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
 
         set((s) => { s.phase = 'parsing' })
@@ -429,6 +438,12 @@ export const useAiStore = create<AiState>()(
         const answer = parseAnswer(app.project.schema, text)
 
         stopTicker()
+        // A superseded run must not publish its answer. `runFor` already points
+        // at the newer run, so these rows would be reviewed and applied against
+        // *its* paper — the wrong-paper fabrication that `runFor` exists to
+        // prevent, reached through a different door. Discard silently: the run
+        // the reviewer is watching is still going.
+        if (controller !== myController) return
         set((s) => {
           s.answer = answer
           // Everything is pre-ticked: the reviewer's job is to *remove* what is
@@ -439,19 +454,25 @@ export const useAiStore = create<AiState>()(
         })
       } catch (err) {
         stopTicker()
-        const aborted = controller?.signal.aborted
+        const aborted = myController.signal.aborted
+        // A superseded run must not narrate over the one that replaced it.
+        if (controller !== myController && !aborted) {
+          return
+        }
         set((s) => {
           s.phase = aborted ? 'setup' : 'error'
           s.error = aborted ? null : err instanceof Error ? err.message : String(err)
         })
       } finally {
-        controller = null
+        if (controller === myController) controller = null
       }
     },
 
     cancel: () => {
+      // Abort only. Clearing the slot here is what made the run's own catch
+      // unable to tell an abort from a failure; the run clears it itself when
+      // it settles, if it is still the current one.
       controller?.abort()
-      controller = null
       stopTicker()
       set((s) => {
         if (s.phase === 'reading' || s.phase === 'calling' || s.phase === 'parsing') {
