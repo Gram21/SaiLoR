@@ -293,3 +293,72 @@ describe('absolutePdfPaths / siblingProjectLocation: no filesystem paths in the 
     expect(result).toBeNull()
   })
 })
+
+/**
+ * Recents identify a *file*, not a file name. Two reviews both saved as
+ * `review.json` used to collapse into one entry and — worse — one IndexedDB
+ * key, so the second open overwrote the first's handle and the surviving entry
+ * opened the wrong project.
+ *
+ * `localStorage` is not exposed in this test environment (recents.ts wraps
+ * every touch in try/catch, so without a stub `pushRecent` silently no-ops and
+ * there is nothing to assert), and IndexedDB is not either — both are stubbed
+ * here rather than globally, so no other test file's behaviour changes.
+ */
+describe('recents keyed by file identity', () => {
+  const idb = new Map<string, unknown>()
+
+  /** A handle that reports `isSameEntry` only against itself. */
+  function fakeHandle(name: string) {
+    const h = {
+      name,
+      kind: 'file' as const,
+      isSameEntry: (other: unknown) => Promise.resolve(other === h),
+    }
+    return h
+  }
+
+  beforeEach(() => {
+    idb.clear()
+    const mem = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => mem.get(k) ?? null,
+      setItem: (k: string, v: string) => void mem.set(k, v),
+      removeItem: (k: string) => void mem.delete(k),
+      clear: () => mem.clear(),
+      key: () => null,
+      length: 0,
+    })
+    vi.doMock('./idb', () => ({
+      idbGet: async (k: string) => idb.get(k),
+      idbSet: async (k: string, v: unknown) => void idb.set(k, v),
+      idbDelete: async (k: string) => void idb.delete(k),
+    }))
+    // `getRecents` returns nothing at all unless the File System Access API is
+    // present — recents depend on persistent handles, which only it provides.
+    vi.stubGlobal('showOpenFilePicker', () => Promise.resolve([]))
+  })
+
+  it('keeps two same-named projects apart, and does not duplicate a re-open', async () => {
+    vi.resetModules()
+    const { BrowserAdapter: Adapter } = await import('./browser')
+    const a = new Adapter()
+    const one = fakeHandle('review.json')
+    const two = fakeHandle('review.json')
+
+    const remember = (
+      a as unknown as { rememberHandle: (n: string, h: unknown) => Promise<void> }
+    ).rememberHandle.bind(a)
+
+    await remember('review.json', one)
+    await remember('review.json', two)
+    expect(a.getRecents()).toHaveLength(2)
+    // Distinct ids means distinct IndexedDB keys: neither handle overwrote the
+    // other, which is the failure that made the survivor open the wrong project.
+    expect(new Set(a.getRecents().map((e) => e.id)).size).toBe(2)
+
+    // Re-opening the first reuses its entry rather than minting a third.
+    await remember('review.json', one)
+    expect(a.getRecents()).toHaveLength(2)
+  })
+})

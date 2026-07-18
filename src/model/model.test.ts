@@ -1114,4 +1114,29 @@ describe('hand-edited value tree with primitive instances does not crash the loa
     const reloaded = loadProject(serializeProject(p))
     expect(reloaded.papers[0].annotations[field as string][0].value).toBe(expected)
   })
+
+  it.each([
+    ['bare string', { 'Study Type': 'RCT' }, 'Study Type', 'RCT'],
+    ['bare number', { Count: 42 }, 'Count', 42],
+    ['bare boolean', { Relevant: true }, 'Relevant', true],
+    ['single {value} object', { 'Study Type': { value: 'RCT' } }, 'Study Type', 'RCT'],
+  ])(
+    'adopts a %s written where the format wants a list',
+    (_kind, anno, field, expected) => {
+      // The same hazard as the shorthand above, one level up: the entry is not
+      // wrapped in an array at all. Dropping it opened the file cleanly and let
+      // the next save write null over a real answer.
+      const p = loadProject(withInstances(anno as Record<string, unknown>))
+      expect(p.papers[0].annotations[field as string][0].value).toBe(expected)
+      const reloaded = loadProject(serializeProject(p))
+      expect(reloaded.papers[0].annotations[field as string][0].value).toBe(expected)
+    },
+  )
+
+  it('still treats null and an absent key as no answer, not as a value', () => {
+    for (const anno of [{ 'Study Type': null }, {}]) {
+      const p = loadProject(withInstances(anno as Record<string, unknown>))
+      expect(p.papers[0].annotations['Study Type'][0].value).toBeNull()
+    }
+  })
 })
