@@ -73,15 +73,37 @@ Return exactly this JSON object:
 "fields" holds one entry per value you extracted; "confidence" is between 0.0 and 1.0.
 "skipped" holds the fields you deliberately left empty, with a short reason.`
 
+/**
+ * Flatten a schema-supplied string to one line before it goes into the prompt.
+ *
+ * Field names, descriptions and enum options are all user-authored, and this
+ * section of the prompt is structured by line breaks and `-` bullets. A
+ * description containing a newline followed by "## Rules" adds a second Rules
+ * heading; an option containing one forges a whole extra "Fields to fill"
+ * section. Screening exclusion reasons become enum options, so this is ordinary
+ * reviewer-authored content, not only a hostile file — and a project received
+ * from a collaborator can carry any of it.
+ *
+ * Nothing is rejected: the reviewer's wording is theirs, and a description that
+ * happens to contain a line break should still reach the model. It just cannot
+ * be allowed to look like prompt structure.
+ */
+function oneLine(text: string): string {
+  return text.replace(/\s+/g, ' ').trim()
+}
+
 /** One line per field the model is asked to fill: what it is, and what is allowed. */
 function fieldLines(targets: FieldTarget[]): string {
   return targets
     .map((t) => {
       const bits: string[] = [t.def.type ?? 'value']
       if (t.def.required) bits.push('required')
-      if (t.def.options?.length) bits.push(`one of: ${t.def.options.map((o) => `"${o}"`).join(', ')}`)
-      const head = `- ${t.path} (${bits.join('; ')})`
-      return t.def.description ? `${head}\n    ${t.def.description}` : head
+      if (t.def.options?.length) {
+        bits.push(`one of: ${t.def.options.map((o) => JSON.stringify(oneLine(o))).join(', ')}`)
+      }
+      const head = `- ${oneLine(t.path)} (${bits.join('; ')})`
+      const description = t.def.description ? oneLine(t.def.description) : ''
+      return description ? `${head}\n    ${description}` : head
     })
     .join('\n')
 }
