@@ -650,6 +650,42 @@ initials still shares a surname and stays `certain`; an empty author list on
 either side abstains rather than voting against, the same rule the base-title
 tier already followed.
 
+## Values a reviewer types are text, never structure
+
+A recurring question is whether an annotation value containing JSON
+metacharacters — a quote, a brace, a backslash — can break the file the way a
+quote breaks a naively built SQL query. It cannot. Values go through
+`JSON.stringify`, which escapes them, so a value can never close the string it
+lives in and start a new key. `src/model/jsonvalues.test.ts` pins this down with
+quotes, braces, backslashes, a deliberate `"}, "papers": [], "evil": "`, control
+characters, a lone surrogate and `__proto__` as a value, all round-tripping
+byte-exactly. There is also no CSV or spreadsheet export, so the
+formula-injection risk that usually comes with one (`=cmd|…` executing when the
+file is opened in Excel) does not arise — worth knowing if an export is ever
+added.
+
+**The risk that is real is elsewhere: anywhere a value is used as *structure*.**
+Three places in this codebase do that, and each needs its own defence:
+
+- **Object keys.** A value used as a key means `__proto__`, `constructor` and
+  `toString` behave differently from ordinary strings. The screening reason
+  tallies (`byReason`, `excludedByReason`) are `Object.create(null)` for exactly
+  this reason; `metrics.ts` counts in `Map`s, which are immune; `disagreements.ts`
+  keys by reviewer id rather than by value.
+- **Cache keys joined with a separator.** `stringSimilarity`'s pair cache prefixes
+  the key with the first string's length, because joining with a separator alone
+  assumes that separator cannot occur inside a value — and no character
+  satisfies that. It previously used a bare NUL, and a value containing one made
+  two different pairs share a cache entry: a pair of identical strings scored
+  0.2 instead of 1.0, aligning a perfect match as though it barely matched.
+- **Canonical paths built from field names.** See `formatPath`/`parsePath` — an
+  ambiguous encoding there does not corrupt the file, it resolves to a *different
+  field*, so a committed answer lands on the wrong one.
+
+`conflictId` (`git/merge.ts`) is the pattern to copy when adding another
+composite key: it `JSON.stringify`s its parts rather than joining them, so no
+part can impersonate a delimiter.
+
 ## Error Handling
 
 `ProjectLoadError` (`src/model/project.ts`) extends `Error` with a `details: string[]` array. It is thrown for:
