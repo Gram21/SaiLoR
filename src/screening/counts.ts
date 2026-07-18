@@ -1,6 +1,7 @@
 import type { AnnotationValueTree } from '../model/annotations'
 import type { Paper, Project } from '../model/project'
 import { unanimousFills } from '../consolidate/unanimous'
+import { SCREENING_DECISION } from './schema'
 import { screeningReason, screeningStatus } from './status'
 
 /**
@@ -92,22 +93,48 @@ export function screeningCounts(project: Project, currentReviewer: string | null
  * paper open in the Consolidation seat, so a project whose consolidator never
  * opened paper X has no consolidated decision for it even though the reviewers
  * agreed. Reported rather than fixed silently — see `adoptAllUnanimousScreening`.
+ *
+ * Counts *any* pending fill, because this drives the notice sitting next to the
+ * "Adopt all" button and that button adopts everything unanimous. Counting only
+ * decisions made the two disagree: two reviewers who both excluded a paper for
+ * the same reason, where the consolidator set the decision by hand and left the
+ * reason blank, produced a reason fill and no decision fill — no notice,
+ * nothing offering to adopt the reason, and the paper booked as
+ * excluded-without-a-reason permanently.
+ *
+ * For "how many papers still have no final decision", which is a different
+ * question with a different answer, use {@link pendingUnanimousDecisions}.
  */
 export function pendingUnanimous(project: Project): number {
+  return countPendingUnanimous(project, false)
+}
+
+/**
+ * Papers that are still undecided *and* whose reviewers all chose the same
+ * decision — the ones where adopting would change the included/excluded counts.
+ *
+ * Separate from {@link pendingUnanimous} on purpose. The screening-import
+ * dialog speaks specifically about "the not-yet-screened papers" and about the
+ * project having no final decision for them, so a paper that already has a
+ * decision and merely lacks a unanimous *reason* must not be counted there: the
+ * sentence would be false, promising that adopting changes an inclusion count
+ * that is already settled.
+ */
+export function pendingUnanimousDecisions(project: Project): number {
+  return countPendingUnanimous(project, true)
+}
+
+function countPendingUnanimous(project: Project, decisionsOnly: boolean): number {
   if (project.reviewers <= 1) return 0
   let count = 0
   for (const paper of project.papers) {
     const reviews: Record<string, AnnotationValueTree | undefined> = {}
     for (let i = 1; i <= project.reviewers; i++) reviews[String(i)] = paper.reviews[String(i)]
     const fills = unanimousFills(project.schema, reviews, paper.annotations)
-    // Any pending fill, not just the Decision. `adoptAllUnanimousScreening`
-    // adopts everything unanimous, so counting only Decisions made the notice
-    // and the button it offers disagree: two reviewers who both excluded a
-    // paper for the same reason, where the consolidator had set the Decision by
-    // hand but left the Reason blank, produced a Reason fill and no Decision
-    // fill. The notice never appeared, nothing offered to adopt the reason, and
-    // the paper booked as excluded-without-a-reason for good.
-    if (fills.length > 0) count++
+    const matches = decisionsOnly
+      ? fills.some((f) => f.path.length === 0 && f.name === SCREENING_DECISION)
+      : fills.length > 0
+    if (matches) count++
   }
   return count
 }

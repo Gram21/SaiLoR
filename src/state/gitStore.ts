@@ -392,12 +392,18 @@ export const useGitStore = create<GitState>()(
         if (!git || !clone?.dest) return
         const p = await git.pickProjectIn(clone.dest)
         if (!p) return
-        get().closeClone()
         // `requestOpenRecent`, not `openRecent`: opening the clone replaces
         // whatever project is on screen, discarding its unsaved changes exactly
         // as Ctrl+O would. This button is reachable from the toolbar with a
         // dirty project open, so it has to go through the same prompt.
         useStore.getState().requestOpenRecent(p)
+        // Only dismiss the clone panel once the open has actually happened.
+        // `requestOpenRecent` opens immediately when nothing is dirty, but
+        // otherwise only queues the intent behind the save prompt — and
+        // cancelling that prompt, or a save that fails, drops the intent. If
+        // the panel were already gone, the reviewer would be left with no
+        // project opened and no way back to the clone they just made.
+        if (!useStore.getState().pendingAfterPrompt) get().closeClone()
       },
 
       openPanel: async () => {

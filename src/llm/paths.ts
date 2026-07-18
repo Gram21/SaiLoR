@@ -222,13 +222,34 @@ export function displayPath(segs: RawSeg[]): string {
  * model that ignores the contract cannot reach the project data.
  */
 /**
- * The highest index accepted for a node declared `max: null`. Far beyond any
- * hand-authored list, and low enough that filling up to it cannot exhaust
- * memory.
+ * The highest index accepted for a node declared `max: null`, when the caller
+ * asks for a ceiling. Far beyond any hand-authored list, and low enough that
+ * filling up to it cannot exhaust memory.
  */
 export const MAX_UNBOUNDED_INDEX = 10_000
 
-export function resolvePath(schema: ResolvedDef[], raw: string): ResolvedPath | null {
+export interface ResolveOptions {
+  /**
+   * Reject an index at or beyond this on a node declared `max: null`.
+   *
+   * Opt-in, and only the LLM entry points opt in. The ceiling exists because
+   * those callers *materialize* every instance up to the index, so a reply of
+   * `Findings[9007199254740990]` is an out-of-memory kill — but the same
+   * function also resolves paths that already exist in the project, and there
+   * a ceiling silently drops real data. Applying it everywhere made
+   * `applyOne` (git/merge.ts) skip a conflict the reviewer had explicitly
+   * resolved, at a path the project legitimately held: the merge kept "ours"
+   * with no error, discarding a decision they had just made by hand. Nothing
+   * bounds the "+" button at 10 000 either, so the index is reachable.
+   */
+  maxUnboundedIndex?: number
+}
+
+export function resolvePath(
+  schema: ResolvedDef[],
+  raw: string,
+  opts: ResolveOptions = {},
+): ResolvedPath | null {
   const segs = parsePath(raw)
   if (!segs || segs.length === 0) return null
 
@@ -240,14 +261,9 @@ export function resolvePath(schema: ResolvedDef[], raw: string): ResolvedPath | 
     const def = level.find((d) => d.name === seg.name)
     if (!def) return null
 
-    // `max: null` means unbounded — but "unbounded" is about what a reviewer
-    // may add by hand, not about what a model may ask us to allocate. The
-    // caller materializes every instance up to the index, so an answer of
-    // `Findings[9007199254740990]` against an unbounded node is an
-    // out-of-memory kill. Both halves of that are outside the user's control:
-    // the node's `max` comes from the project file and the index from the
-    // model's reply, which a prompt-injected PDF can steer.
-    const ceiling = def.max === null ? MAX_UNBOUNDED_INDEX : def.max
+    // `max: null` means unbounded. A ceiling applies only when the caller asks
+    // for one — see `ResolveOptions.maxUnboundedIndex`.
+    const ceiling = def.max === null ? (opts.maxUnboundedIndex ?? Infinity) : def.max
     if (seg.index >= ceiling) return null
 
     const last = i === segs.length - 1

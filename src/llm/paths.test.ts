@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { resolveSchema, type ResolvedDef } from '../model/schema'
-import { parsePath, formatPath, displayPath, resolvePath } from './paths'
+import { parsePath, formatPath, displayPath, resolvePath, MAX_UNBOUNDED_INDEX } from './paths'
 
 // ---------------------------------------------------------------------------
 // The schema is built through resolveSchema, so these tests run against exactly
@@ -338,5 +338,28 @@ describe('names containing the format\'s own punctuation round-trip', () => {
     const schema = resolveSchema([{ name: 'Sub-questions / RQs', type: 'string' }])
     const canonical = formatPath([{ name: 'Sub-questions / RQs', index: 0 }])
     expect(resolvePath(schema, canonical)?.name).toBe('Sub-questions / RQs')
+  })
+})
+
+describe('unbounded-index ceiling', () => {
+  const schema = resolveSchema([
+    { name: 'Findings', min: 0, max: null, children: [{ name: 'Claim', type: 'string' }] },
+  ])
+
+  it('has no ceiling unless the caller asks for one', () => {
+    // git/merge.ts's applyOne and git/changes.ts resolve paths that already
+    // exist in the project. A ceiling there silently dropped a conflict the
+    // reviewer had explicitly resolved by hand — the merge kept "ours" with no
+    // error. Only the LLM entry points, which materialize every instance up to
+    // the index, opt in.
+    expect(resolvePath(schema, 'Findings[10000]/Claim')).not.toBeNull()
+    expect(resolvePath(schema, 'Findings[99999]/Claim')).not.toBeNull()
+  })
+
+  it('applies the ceiling when asked', () => {
+    const opts = { maxUnboundedIndex: MAX_UNBOUNDED_INDEX }
+    expect(resolvePath(schema, 'Findings[9999]/Claim', opts)).not.toBeNull()
+    expect(resolvePath(schema, 'Findings[10000]/Claim', opts)).toBeNull()
+    expect(resolvePath(schema, 'Findings[9007199254740990]/Claim', opts)).toBeNull()
   })
 })
