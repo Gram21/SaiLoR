@@ -289,6 +289,27 @@ credential helper, SSH agent, and host-key configuration, exactly as a terminal 
 The one thing that is turned off is a *terminal* prompt (`GIT_TERMINAL_PROMPT=0`) — there is no
 terminal for git to prompt at, so leaving that on would hang the app instead of failing honestly.
 
+**A repository's own config is overridden, because a received folder is untrusted input.** Several
+`.git/config` keys name commands git runs, and a project folder that arrives by zip, USB, or shared
+drive brings its `.git/` along. A hostile `core.fsmonitor` executes on `git status` — one click on
+the **Git** button — and `git:info` runs automatically on project open, so this is reachable without
+the user doing anything git-shaped at all. Every git call therefore passes fixed `-c` overrides
+(`core.fsmonitor`, `core.hooksPath`, `core.pager`, `core.editor`, `core.alternateRefsCommand`,
+`uploadpack.packObjectsHook`, `protocol.ext.allow`), which outrank every config file.
+
+Two practical consequences worth knowing:
+
+- **Your repository's hooks do not run** for operations SaiLoR performs. If you rely on a
+  `pre-commit` hook, run those commits from a terminal.
+- **Your credential helper, SSH command and signing program are untouched**, so authentication and
+  commit signing work exactly as they do in a terminal. Those only run on an explicit network action
+  you asked for, never on merely opening a folder.
+
+`filter.*` clean/smudge drivers cannot be overridden this way and remain the known residual; they run
+only on an explicit commit or pull. See `architecture.md`'s "The repository's own config is not
+trusted" for the full reasoning, including why `diff.external` is handled with `--no-ext-diff` on the
+diff call instead of an override.
+
 **What `git → Commit` does for the project's own file**: when it is a tracked modification that
 parses as a project on both HEAD and the working tree, its changes are listed field by field —
 "Title: Was `X`, now `Y`" — instead of one whole-file tick. Each row is **Use** (commit the new
