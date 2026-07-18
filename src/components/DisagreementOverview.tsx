@@ -44,8 +44,12 @@ export function DisagreementOverview() {
   // gotten to yet. `verdict.agree` already folds in `markedEqual` (see
   // `disagreements.ts`), so a field the consolidator has declared equivalent
   // drops out here too, without any extra check.
+  // Gated on `open` for the same reason as AgreementDialog's `built`: this
+  // component stays mounted for the whole session, so an ungated memo would
+  // re-walk (and re-align) every paper on every project change — every
+  // annotation keystroke — for a list nobody is looking at.
   const groups: PaperGroup[] = useMemo(() => {
-    if (!project) return []
+    if (!open || !project) return []
     const byPaper = new Map<string, PaperGroup>()
     for (const verdict of projectVerdicts(project)) {
       if (verdict.answeredBy.length < 2 || verdict.agree) continue
@@ -58,7 +62,7 @@ export function DisagreementOverview() {
       byPaper.set(verdict.paperId, group)
     }
     return [...byPaper.values()]
-  }, [project])
+  }, [open, project])
 
   if (!open || !project) return null
 

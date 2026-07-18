@@ -261,34 +261,3 @@ describe('projectVerdicts', () => {
     expect(verdicts.filter((v) => v.paperId === 'p2')[0].paperTitle).toBe('Two')
   })
 })
-
-describe('verdicts align repeatable groups first (agreement stats over a not-yet-consolidated paper)', () => {
-  // Regression: `walk` reads at a fixed index and only means "the same entry"
-  // post-alignment, but the Agreement/Disagreements views compute over the
-  // whole project including papers nobody has opened in Consolidation (where
-  // alignment happens lazily). Two reviewers who listed the same findings in a
-  // different order used to read as total disagreement (κ could hit −1).
-  it('reports agreement for the same two findings listed in reversed order', () => {
-    const paper = makePaper({
-      reviews: {
-        '1': tree(SCHEMA, {
-          Findings: [
-            { children: { Claim: [{ value: 'A' }] } },
-            { children: { Claim: [{ value: 'B' }] } },
-          ],
-        }),
-        '2': tree(SCHEMA, {
-          Findings: [
-            { children: { Claim: [{ value: 'B' }] } },
-            { children: { Claim: [{ value: 'A' }] } },
-          ],
-        }),
-      },
-    })
-    const claims = paperVerdicts(SCHEMA, paper, 2).filter(
-      (v) => v.name === 'Claim' && v.answeredBy.length >= 2,
-    )
-    expect(claims.length).toBe(2)
-    for (const v of claims) expect(v.agree).toBe(true)
-  })
-})

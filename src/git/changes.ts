@@ -338,9 +338,20 @@ function containerAt(root: AnnotationValueTree, path: RawSeg[]): AnnotationValue
  * in; `writeAnnotationValue` would silently no-op and the added answer would
  * be dropped from the commit *and* left permanently uncommittable (the next
  * scan re-detects it, so "use" no-ops again forever). Growing to the working
- * shape first gives every used value a home. Padded-but-unused slots stay
- * empty and prune away on serialize (they are trailing, since an instance is
- * only ever appended), so this never fabricates a committed value.
+ * shape first gives every used value a home.
+ *
+ * Padding never fabricates a *value* — a padded slot is an empty skeleton. A
+ * padded slot that ends up unused is usually trailing and prunes away on
+ * serialize, but not always: choosing "use" on `Findings[2]` while ignoring
+ * `Findings[1]` leaves slot 1 empty and *interior*, and `pruneTree` keeps
+ * interior gaps on purpose (position is meaningful — see its doc comment). The
+ * committed file then shows a blank "Finding #2", which is the honest reading
+ * of "commit the third finding, not the second" on a positional list; the
+ * alternative, sliding #3 up, would silently re-point an answer.
+ *
+ * `max` is respected, so a working tree that somehow exceeds the schema bound
+ * (a hand-edit, or a `max` lowered under existing data) cannot grow the
+ * committed tree past it.
  */
 function growTreeToSource(
   defs: ResolvedDef[],
@@ -353,7 +364,8 @@ function growTreeToSource(
     const tgtList = target[def.name]
     if (!Array.isArray(tgtList)) continue
     if (Array.isArray(srcList)) {
-      while (tgtList.length < srcList.length) tgtList.push(makeInstance(def))
+      const limit = def.max === null ? srcList.length : Math.min(srcList.length, def.max)
+      while (tgtList.length < limit) tgtList.push(makeInstance(def))
     }
     if (def.children.length > 0) {
       for (let i = 0; i < tgtList.length; i++) {

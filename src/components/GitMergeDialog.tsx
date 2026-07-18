@@ -28,6 +28,8 @@ export function GitMergeDialog() {
   const takeAll = useGitStore((s) => s.takeAll)
   const finishMerge = useGitStore((s) => s.finishMerge)
   const cancelMerge = useGitStore((s) => s.cancelMerge)
+  const error = useGitStore((s) => s.panel?.error ?? null)
+  const dismissPanelMessage = useGitStore((s) => s.dismissPanelMessage)
 
   // One conflict list per paper (paperId '' is the project's own fields,
   // which belong to no paper), in the order `mergeProjects` produced them —
@@ -163,6 +165,25 @@ export function GitMergeDialog() {
             })}
           </ul>
         </div>
+
+        {/* The Git panel renders `panel.error`, but it returns null while a
+            merge is open — so without this a failure raised *by* the merge
+            (most often the finishing commit being rejected: no `user.email`
+            configured, or a commit hook) would leave the reviewer staring at
+            an unexplained dialog whose Finish button silently re-fails. */}
+        {error && (
+          <div className="git-message git-message-error">
+            <pre className="git-message-text">{error}</pre>
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={dismissPanelMessage}
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         <div className="git-merge-footer">
           <button type="button" onClick={() => void cancelMerge()}>
