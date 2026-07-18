@@ -72,7 +72,7 @@ Each schema node defines a field or group in the taxonomy:
 | `name` | yes | — | Display label; must be unique among siblings |
 | `type` | no | (group) | `"string"` \| `"number"` \| `"boolean"` \| `"year"`. Omit for a name-only group node |
 | `children` | no | `[]` | Sub-taxonomy. A node may have `type`, `children`, or both |
-| `min` | no | `1` | Minimum occurrences |
+| `min` | no | `1` | Minimum occurrences. Materialized eagerly at load, so it is bounded in aggregate — see the instance budget below |
 | `max` | no | `1` | Max occurrences: a positive integer, or `null` for unbounded |
 | `options` | no | — | Array of strings on a `string` field → renders as a filterable enum dropdown (ComboBox). Only valid when `type` is `"string"` |
 | `required` | no | `false` | Marks a **field** (a node with a `type`) as one the reviewer must fill; shown with a red `*`, checked by `validate.ts`'s `required` issue. Rejected on a group (holds no value); **silently dropped on a `boolean`** — a checkbox is never "empty" (`isEmptyValue` returns `false` for booleans), so `required` there can never fire. `resolveSchema` drops the flag on load (not a load error), and the schema editor doesn't offer it for a boolean field |
@@ -84,6 +84,24 @@ Each schema node defines a field or group in the taxonomy:
 - A node must have a `type` or non-empty `children` (a name-only node with neither is rejected)
 - `options` is only allowed on a `type: "string"` node; using it on any other type (or a group) is a schema error
 - Sibling names must be unique (enforced during resolution, not zod)
+- `name` may not be `__proto__` (enforced during resolution)
+
+**The instance budget** (`assertInstanceBudget`, enforced during resolution). A schema whose empty
+tree would materialize more than `MAX_INITIAL_INSTANCES` (100 000) instances is rejected with a
+`SchemaError`.
+
+This exists because `min` is not a lazy declaration: `initTree`/`normalizeTree` *materialize*
+`max(min, 1)` instances per node, recursively, at load, before the reviewer has entered anything.
+The file describing an enormous tree stays tiny — a flat `min: 1000000000` is 139 bytes, and ten
+nested groups of `min: 10` is about 500 bytes describing 10¹⁰ instances — so the cost is entirely
+invisible from the file's size. Unbounded, that is an out-of-memory kill of the process during load,
+with no error dialog and no chance to close the file.
+
+The budget is checked on the **product** down each branch rather than as a per-node ceiling on
+`min`, because a per-node cap cannot help: any ceiling above 1 still multiplies with depth. It
+short-circuits as soon as the cap is passed, so a 10¹⁰ schema is refused in about a millisecond.
+Real schemas are nowhere near it — a 100-row × 20-field checklist scores 2 100, and a typical
+taxonomy scores in the low hundreds.
 
 **`"year"`** is a `number` on disk — same `FieldValue`, same `emptyValue()` — with a real range check
 `validate.ts` applies that a plain `number` field never gets: an integer in `[YEAR_MIN, YEAR_MAX]`
@@ -608,11 +626,28 @@ Called during serialization. For each node:
 
 `ProjectLoadError` (`src/model/project.ts`) extends `Error` with a `details: string[]` array. It is thrown for:
 - Invalid JSON
+- **Nesting deeper than `MAX_JSON_DEPTH` (200 levels)** — checked by `exceedsDepth` on the raw data
+  *before* anything walks it
 - Zod validation failures (issues mapped to `"path: message"` strings)
-- Schema resolution errors (duplicate names, max < min, no type/children)
+- Schema resolution errors (duplicate names, max < min, no type/children, `__proto__`, the instance
+  budget above)
 - Duplicate paper IDs
 
 The store catches these and sets `loadError` state, which `ErrorPanel` displays as a modal overlay.
+
+**Why the depth check comes first.** Nearly every traversal in the app is recursive — zod's own
+validation, `resolveDefs`, `normalizeTree`, `deepEqualJson`, `serializeProject` — and each gives out
+somewhere between a few hundred and a few thousand levels. A ~29 KB file nested 704 deep made
+`projectSchema.parse` throw a raw `RangeError`, which escapes this function's "throws
+`ProjectLoadError` with friendly details" contract and lands in the store's generic fallback. One
+check at the entrance covers all of them. It matters for unknown keys in particular: those are passed
+through verbatim into `extra`, so their depth is otherwise unbounded and surfaces later in
+`deepEqualJson` — which crashes the **read-only git-status path**, not just save. `exceedsDepth` is
+iterative, so it cannot itself overflow on the input it exists to reject, and a `RangeError` escaping
+the zod parse is still converted as a backstop.
+
+200 is far above anything real: the annotation tree costs 3 JSON levels per schema nesting level, so
+the limit allows 64 levels of schema nesting against a real-world 2–4.
 
 ## Testing
 
@@ -628,6 +663,12 @@ The store catches these and sets `loadError` state, which `ErrorPanel` displays 
 - `needsShapeMigration`/the auto-migrate-on-open path: an old-shape file gets fixed and re-saved through a real handle, never through a `'download'` or `null` one, and is stable (no re-migration, byte-identical re-serialization) once fixed — verified end-to-end against real files on disk, not just mocked platform calls
 
 `src/state/store.reviewers.test.ts` covers the routing rule (`currentTree`) itself: which tree each store action reads/writes for single-reviewer, a numbered reviewer, Consolidation, and the unselected state; that selecting a reviewer is not an undo step and doesn't set `dirty`; and that the selection persists per project (a `describe` block also covers claiming a seat via a git identity, and `takeSeat`'s explicit-override path — see `architecture.md`'s "Reviewer seat identity"). `src/state/store.aimarks.test.ts` covers the reviewer-scoped AI mark keys specifically.
+
+`src/model/hostile.test.ts` covers the load-time refusals specifically, from the attacker's side
+rather than the schema author's: a flat enormous `min`, nested `min`s that multiply, deep nesting in
+the schema, and deep nesting under an *unknown* key (the `extra` passthrough) — each asserting a
+`ProjectLoadError` rather than a crash — plus a deliberately generous legitimate schema that must
+still load, so the limits cannot be tightened into rejecting real work without a test failing.
 
 Several newer pure modules have their own dedicated test files: `src/model/year.test.ts` (`parseYear`/`isPlausibleYear` boundaries and string-scanning behavior), `src/model/duplicates.test.ts` (`classifyImport`'s four-tier priority, the year-gap veto, author-surname Dice edge cases, and a differential test that the cheap cost-guard agrees pair-for-pair with an unguarded reference), `src/model/identity.test.ts` (`sameIdentity`'s email-only truth table, `checkSeat`), and `src/model/completeness.test.ts` (the required-only-when-declared denominator rule, boolean exclusion, per-instance counting for repeatables). One honest gap as of this writing: `Paper.year`/`Paper.venue` themselves are pinned down at the parsing/validation layer (`year.test.ts`, `references.test.ts`), but the git-layer behavior described above — `merge.ts`'s conflict handling, `changes.ts`'s field-level review row, and `similarity.ts`'s identity-not-magnitude scoring — has no dedicated test coverage yet.
 

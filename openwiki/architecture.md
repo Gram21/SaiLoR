@@ -83,6 +83,16 @@ Has three tiers of capability:
 
 This used to only run for an FSAPI handle — every other local-open path (Firefox/Safari, or Chromium without the FSAPI grant) fell straight through to a `fetch` against the *app's own* page URL, which obviously never contains the reviewer's PDFs. That fetch didn't even fail cleanly: on a dev server or any SPA-style static host it 200s with `index.html` instead of 404ing, so the failure surfaced three layers away as pdf.js's opaque `InvalidPDFException: Invalid PDF structure` — indistinguishable from an actually-corrupt file. The byte-level check described below catches that case when it's genuinely a server-mode misconfiguration; this local-resolution fix is what stops it from happening at all for the (very common) case of a reviewer just opening their own project file.
 
+Every promise in `src/platform/idb.ts` settles on **abort and blocked**, not just complete/error. A
+transaction can abort with no request having failed — site data cleared, a devtools
+`deleteDatabase`, origin eviction under storage pressure — and that fires `onabort` alone, so a
+promise waiting only on `oncomplete`/`onerror` never settled and its `finally` never ran. That is not
+an abstract leak: `openProject` awaits `rememberHandle` inline, so the picker returned a file and the
+app simply never showed it — no error, no timeout, `busy` stuck on forever, and the caller's own
+try/catch powerless because there was no rejection to catch. `tx.error` is null until a transaction
+aborts, so the error paths carry an explicit fallback rather than rejecting with `null`, and an open
+that was reported blocked but later succeeds closes the connection it can no longer hand back.
+
 When the File System Access API is available, the `BrowserAdapter` also persists handles in IndexedDB (`src/platform/idb.ts`) so they survive page reloads. `openProject()` and `saveProject()` (via the FSAPI Save As flow) call `rememberHandle()` which stores the handle under a `recent:<name>` key and pushes an entry to `slr.recents.browser`. `openRecent(id)` retrieves the handle from IndexedDB, re-requests read permission (via `ensureReadPermission`), and re-reads the file. If the handle is missing or permission is denied, the entry is pruned from recents.
 
 **Opening any new project — local or server-mode — clears whatever the *previous* project's PDFs resolved through**, via `clearLocalPdfGrants()` (drops `pdfDir`/`pdfFileMap`) alongside resetting `serverBase`, from all three project-load paths plus `setServerBase()` itself. Without this, switching from Project A (with a granted folder or a set server base) to Project B would silently keep resolving PDFs through A's leftover grant — at best a confusing "not found", at worst the *wrong* PDF's bytes for a path that happens to collide between the two projects.
@@ -235,6 +245,13 @@ When a newer release exists, the notice offers a **direct download of the instal
 
 `isNewerVersion` compares numeric components, not strings (`0.10.0` > `0.9.0`, which a string compare gets wrong), strips a leading `v`, and sorts a pre-release below its release (`1.0.0-beta` < `1.0.0`). It never claims an update from a version it cannot parse.
 
+Pre-release **tags** are compared the same way, by `comparePre`, following semver §11.4: dot-separated
+identifiers left to right, numeric ones compared as numbers and sorting below alphanumeric ones, and
+a longer tag beating its own prefix. Comparing the raw strings agreed with this exactly until the
+tenth pre-release and then inverted — `"rc.10" < "rc.2"` lexicographically — so a user on `rc.2` was
+never offered `rc.10`, and a user on `rc.10` was offered `rc.2` *as an update*, with a live download
+button. The project ships pre-release versions, so this was live rather than theoretical.
+
 The result — *including a `null`* — is cached in `localStorage` (`slr.updateCheck`) for 24 h, so a private repo or an offline launch doesn't re-request on every startup, and the 60-requests-per-hour unauthenticated rate limit is never a concern.
 
 ### PaperList search modes
@@ -286,6 +303,28 @@ Two ways out of the editor: **Save JSON** writes the file and stays put (so you 
 
 - **`src/state/editorStore.ts`** — a separate Zustand+immer store holding the draft. It deliberately works on the **raw JSON shape**, not the loaded `Project`: each paper's `annotations` object is carried through **verbatim** while the schema is edited, so editing the schema never prunes existing annotation data (it is normalized against the new schema the next time the project is opened for annotating). Key pieces: `EditorNode` (a schema node with a client-side `uid`, where `kind: 'group'` means "no `type`" — a name-only sub-tree), `EditorPaper` (which also keeps the PDF's absolute `sourcePath`), `toAnnotationDefs`/`fromAnnotationDefs` (conversion to/from the compact on-disk `AnnotationDef`), `moveNodeIn` (tree move that refuses to drop a node into itself or its own subtree), `buildProjectJson`, and `validateDraft` — which runs the *real* `projectSchema` + `resolveSchema` validators, so the editor cannot produce a file the loader would reject. On save it writes the JSON and hands it straight to the main store via `loadFromText`.
 - **`SchemaTreeEditor.tsx`** — recursive tree exposing the schema's full expressiveness: name, kind (Group / Text / Number / Yes-no), `min`, `max` (with an ∞ checkbox for `max: null` = unbounded repeats), description, enum `options` (string fields only), nesting, add/remove. Native HTML5 drag-and-drop reorders rows and builds nesting: the drop position comes from the pointer's Y within the target row — top 25% → `before`, bottom 25% → `after`, middle → `inside` (nest as a child).
+
+  **Renaming or removing a field warns first when papers still record answers under it.** Answers are
+  keyed by field name and nothing migrates them: `normalizeTree` builds its output by iterating the
+  schema's defs and drops any key the schema no longer has, so the next load quietly prunes an
+  orphaned answer and the next save makes that permanent. `countPapersUsingField`
+  (`src/model/fieldUsage.ts`) is the counterpart of `reasonUsage.ts` below, walking the consolidated
+  tree and every reviewer's own; an unticked boolean and a blank string are not answers, so neither
+  makes a rename look destructive when it is not.
+
+  It matches the field's **path** from the schema root, not its name anywhere in the tree. Matching
+  the bare name over-warned during the most ordinary editor sequence there is — add a field, type a
+  name another field already uses, change your mind, delete it — and a guard that cries wolf over a
+  node holding nothing is one people learn to click through, which disarms it exactly when it
+  matters. The check runs on `blur` (a committed rename), not per keystroke, and the `×` button
+  checks both the live name and any uncommitted one, because clicking a `<button>` does not move
+  focus on macOS/Chromium and the input's blur would otherwise never fire.
+
+  Two honest gaps. Dragging a field between groups changes its path, orphaning its answers, and
+  `moveNode` has no guard — the path-based match does not catch it either. And a group renamed but
+  not yet saved makes its children's paths miss the old answers; that one is deliberate, since
+  renaming the group is itself guarded, so reaching that state means the reviewer already agreed to
+  discard those answers.
 - **`PapersEditor.tsx`** — add PDFs one at a time, a whole folder at once, import a reference-manager export, or (outside a screening project) import from a screening project's results (four buttons next to each other in the header/empty state), edit each paper's id/title/authors/DOI/abstract and its `pdf` path, reorder by drag, remove.
 - **`ScreeningReasonsEditor.tsx`** — replaces `SchemaTreeEditor` in the editor body whenever `useEditorStore().screening` is set: an ordered, editable list of exclusion reasons (add / remove / reorder with plain ↑/↓ buttons rather than drag — the list is short enough that drag-and-drop's extra affordance isn't worth it), writing through `setScreeningReasons`. On blur after renaming a reason, the editor checks `countPapersUsingReason` (`src/screening/reasonUsage.ts`) across both consolidated and per-reviewer trees; if papers still record the old label, it offers to migrate those decisions to the new label (or warns when there is no new label to migrate to), so a rename never silently orphans a decision. See "Screening" below.
 - **`ProtocolEditor.tsx`** — a collapsible *Review protocol* section in the project editor for `Project.protocol` (research questions, search strings, databases, search date, notes). See [Data Model](data-model.md)'s "The review protocol" section for the field's shape and merge behavior.
@@ -341,7 +380,26 @@ Uses `react-pdf`'s `Document` + `Page` components. The pdf.js worker is loaded f
 
 **In-PDF search.** A 🔍 button in the header (and `Ctrl/Cmd+F`) toggles a find bar below the header; opening it focuses the input so the user can type immediately (via a `searchOpen` effect, since the input isn't mounted on the open transition). `findMatches` walks the text nodes of each rendered text layer (`.react-pdf__Page__textContent`), concatenating them per layer so a query can span multiple spans, and returns DOM `Range`s. Matches are painted with the **CSS Custom Highlight API** (`CSS.highlights` + `::highlight(slr-pdf-search)` / `::highlight(slr-pdf-search-active)`) — this tints the transparent text-layer glyphs without mutating react-pdf's DOM, and degrades gracefully where the API is unavailable. The active match is centered in the scroll container; Enter / Shift+Enter (and the ‹ › buttons) cycle matches. Crucially, the `<Page>` elements are **memoized** (`useMemo` on `[numPages, renderWidth, onTextLayerRendered]`) with a stable `onRenderTextLayerSuccess` callback, so typing in the search box reuses the same element references and React skips re-rendering the pages — otherwise every keystroke would tear down and re-render the text layers (a "TextLayer task cancelled" flood) and matches would never resolve.
 
+**The page count is capped at `MAX_PDF_PAGES` (5 000).** There is no virtualization here: every page
+becomes a React element with its own canvas, text layer and annotation layer, plus an entry in
+`pageRefs`. pdf.js correctly ignores a lying `/Count`, but it does *not* dedupe a page tree that is a
+**DAG** — a 2.4 KB file whose `/Pages` nodes each list the same child twice, 24 levels deep, reports
+16 777 216 pages. Building the element array alone measures 3.6 s and 3.6 GB at that count, which is
+a certain renderer crash from clicking a paper. When a document exceeds the cap the header shows the
+count with a `+` and the real total in its tooltip, so a truncated document says so rather than
+quietly showing fewer pages. `extractPdfText` has the matching `DEFAULT_MAX_PAGES` (2 000): its
+`maxPages` option previously defaulted to the document's own page count, which made the guard dead
+code, and there is no cancellation on that path.
+
 PDF source resolution is async: `getPlatform().getPdfSource(paper.pdf, saveHandle)` returns a `{ url, revoke? }`. The effect cleans up (revokes blob URLs) on paper/handle change or unmount.
+
+**Granting folder access carries the same cancellation guard as the load effect.** In the browser
+build, "Choose folder…" leaves the page interactive while the directory walk and the PDF read are
+still in flight, so the reviewer can select another paper meanwhile — and the load effect then starts
+its own fetch, since the grant it was waiting for has arrived. Without the guard whichever settled
+last won, which could leave paper B selected in the list and the annotation panel with paper A's PDF
+on screen: annotating one paper from another's text, with nothing to show anything was wrong. The
+grant path checks the live paper id before calling `setUrl` and revokes the loser's blob URL.
 
 ## Multiple reviewers & Consolidation
 
@@ -390,6 +448,21 @@ consolidated tree is grown to one entry per slot (the feature's "add the maximum
 automatically" rule). This is why `pruneTree` keeps *interior* gaps and drops only trailing
 empties: a reviewer with no entry for slot 2 holds an empty one there, and closing that gap would
 slide every later entry down a slot and silently re-point the alignment on the next load.
+
+**A slot is scored per member, not summed over them.** As reviewers are matched onto slots in turn,
+each candidate is compared against *everyone already in* the slot — and `combine` averages the score
+but adds the weights up, while the assignment maximises `score × weight`. Summed, a slot two
+reviewers had already landed in scored about twice one holding a single reviewer, and could outbid it
+on headcount alone. `simAgainstSlot` therefore divides by the member count, which makes slots
+comparable however full they are.
+
+This needs **three or more reviewers** *and* one of them recording fewer entries than the anchor: with
+two reviewers every slot holds exactly one member and the bias cancels exactly, which is why it went
+unnoticed. The symptom was the one thing the feature exists to prevent — an exact match pulled into a
+crowded slot while the anchor's identical entry sat alone reporting agreement 0, showing two
+reviewers as disagreeing about an answer they had both given the same way. Note that a project
+consolidated under the old scoring may re-permute its reviewer entries (and go dirty) the first time
+it is opened after the fix; the new alignment is the correct one, but the change is not announced.
 
 **It runs a node at a time, off the paint path.** Matching is not cheap — a large paper measures in
 the hundreds of milliseconds — so the hook yields to the browser between nodes rather than freezing
@@ -976,6 +1049,20 @@ actually recorded, from an import dialog, would be worse than surfacing the gap.
 dialog reports the count and points at `adoptAllUnanimousScreening` (one click, one undo step,
 Consolidation seat only) as the fix.
 
+**There are two counts, deliberately, because there are two questions.**
+`pendingUnanimous` counts papers with *any* pending unanimous fill — a decision, a reason, or both —
+and drives the notice sitting beside the **Adopt all** button in `ScreeningPanel`, so the notice and
+the button it offers cannot disagree. Counting only decisions there meant two reviewers who both
+excluded a paper for the same reason, where the consolidator set the decision by hand and left the
+reason blank, produced no notice and nothing offering to adopt the reason — and the paper booked as
+excluded-without-a-reason permanently.
+
+`pendingUnanimousDecisions` counts only papers that are still **undecided**, and is what the
+screening-import dialog reads. That dialog speaks specifically about "the not-yet-screened papers"
+and about the project having no final decision for them, so a paper that is already decided and
+merely lacks a unanimous reason must not be counted there: the sentence would promise that adopting
+changes an inclusion count which is in fact already settled.
+
 ## AI-assisted annotation (`src/llm`)
 
 A **✦ AI** button in the annotation column's header asks an LLM to read the current paper and propose values for the fields that are **still empty**. The reviewer gets a table — field, proposed value, the supporting quote from the paper, the model's confidence, and a checkbox per row — and **nothing is written until they press Apply**.
@@ -1058,7 +1145,7 @@ The same channel carries the list-models requests from `models.ts`: `LlmHttpRequ
 
 Two gates, and both are unconditional:
 
-- **`parse.ts` validates every proposal against the schema.** `resolvePath` rejects unknown names, group paths (a group holds no value), non-final segments that have no children, and any index at or beyond a node's `max`; then the value must *typecheck* against its `ResolvedDef`. It bends only where models misbehave in a way with exactly one honest reading (`"2021"` → `2021`, `"True"` → `true`, a case-off enum value snapped onto its option). Everything else — `"about 20"`, a value outside the enum, a duplicate answer for the same field — is **rejected, never guessed at**, and rejections are *shown* to the reviewer, because a silently dropped answer looks like the model never said anything. `parseAnswer` never throws: it sits on a network response, where garbage is a normal outcome.
+- **`parse.ts` validates every proposal against the schema.** `resolvePath` rejects unknown names, group paths (a group holds no value), non-final segments that have no children, and any index at or beyond a node's `max` — plus, for the LLM callers only, any index at or beyond `MAX_UNBOUNDED_INDEX` (10 000) on a node declared `max: null`, since `applyAiSuggestions` *materializes* every instance up to the index and a reply of `Findings[9007199254740990]` would otherwise be an out-of-memory kill. That ceiling is opt-in (`ResolveOptions.maxUnboundedIndex`) precisely because the same function also resolves paths that already exist in a project: applied unconditionally it made `git/merge.ts`'s `applyOne` skip a conflict the reviewer had explicitly resolved by hand, keeping "ours" with no error. Only `llm/parse.ts` and `applyAiSuggestions` ask for it; then the value must *typecheck* against its `ResolvedDef`. It bends only where models misbehave in a way with exactly one honest reading (`"2021"` → `2021`, `"True"` → `true`, a case-off enum value snapped onto its option). Everything else — `"about 20"`, a value outside the enum, a duplicate answer for the same field — is **rejected, never guessed at**, and rejections are *shown* to the reviewer, because a silently dropped answer looks like the model never said anything. `parseAnswer` never throws: it sits on a network response, where garbage is a normal outcome.
 - **`applyAiSuggestions` (`src/state/store.ts`) is one undo step.** It decides what to write *before* touching anything — a suggestion is dropped if its path no longer resolves, or if the field has been answered since the model was asked, so **the reviewer's own work is never overwritten** — and if nothing survives, it leaves no empty entry on the undo stack. It then snapshots once and mutates, creating any instances of repeatable nodes the model addressed but that did not exist yet. `lastFieldKey` is reset so the reviewer's next keystroke is not coalesced into the AI's step. `Ctrl/Cmd+Z` therefore undoes the **whole fill** in one go. It returns an `AiApplyResult` (`filled` / `skipped`) for the summary the dialog shows.
 
 ### AI marks
@@ -1213,6 +1300,56 @@ variable. None of this weakens anything a user configured:
 - The `GIT_DIR`-family variables are stripped because SaiLoR may have been launched from a shell
   that happens to be sitting inside some *other* git repository; an inherited `GIT_DIR` would
   silently point every git call below at that repository instead of the project's own.
+
+### The repository's own config is not trusted (`GIT_SAFE_CONFIG`)
+
+The environment is only half the story. A repository's `.git/config` is read before git does
+anything, and several of its keys name **commands git runs** — and this app's documented workflow is
+receiving a project folder from a collaborator. A folder that arrives by zip, USB, or shared drive
+brings its `.git/` with it, so those keys are attacker-controlled input, not user configuration.
+
+The concrete path: a `core.fsmonitor` of `printf PWNED > /tmp/proof; false` executes on
+`git status`, which the Git button reaches in one click, and `git:info` runs *automatically* on
+project open. `.git/hooks/pre-commit` gives the same on commit. Git's `safe.directory` guard does not
+apply, because the copied folder belongs to the reviewer who copied it.
+
+Every `runGit` call therefore prepends a fixed list of `-c` overrides. `-c` outranks every config
+file, so this is a hard override rather than a request:
+
+`core.fsmonitor=false`, `core.hooksPath=<nonexistent>`, `core.pager=cat`, `core.editor=false`,
+`core.alternateRefsCommand=`, `uploadpack.packObjectsHook=`, `protocol.ext.allow=never`.
+
+Two deliberate exclusions, and both are the interesting part:
+
+- **`core.sshCommand`, `credential.helper` and `gpg.program` are left alone.** Because `-c` outranks
+  the *global* config too, overriding them would break the ordinary setups the section above is
+  careful not to touch. They also only run on an explicit network action the user asked for — never
+  on merely opening a folder, which is the boundary that actually matters here.
+- **`diff.external` is not in the list, and this is not an oversight.** Setting it empty does not
+  mean "no external diff": git tries to exec the empty string and the diff dies with `cannot run :`.
+  Swapping an attacker's differ for a guaranteed failure is not a fix — it silently emptied the Git
+  panel's diff for *every* user while `porcelain` kept working, so nothing looked wrong.
+  `--no-ext-diff`, passed on the diff invocation itself, is the flag that actually means "use your
+  own", and it is what the diff call uses.
+
+`filter.*` clean/smudge drivers cannot be disabled by `-c` at all and are the known residual. They
+run only on an explicit commit or pull, not on opening a folder.
+
+### Writes never follow a symlink
+
+`writeFile` follows a symlink and writes the *target*, and one save path is never confirmed by a
+dialog: the sibling `<name>-fulltext.json` that "Start full-text screening" derives from the
+project's own location. Shipping that name as a symlink to `~/.zshrc` turned one click into an
+overwrite of a shell startup file — with substantially attacker-chosen content, since
+`serializeProject` round-trips unknown keys verbatim. Every write in `electron/main.ts` calls
+`assertNotSymlink` first, which uses `lstat` (reporting the link itself rather than what it points
+at). A *parent* directory that is a symlink is fine and stays working — that is ordinary on macOS,
+where `/tmp` is one.
+
+`assertRelPath` splits on both separators, since `p.split('/')` left
+`..\..\Users\victim\.bashrc` as a single opaque segment on POSIX while `path.win32.join` honours
+it, and it rejects any `.git` segment — a valid relative path, but never project data, and a
+write-to-`hooks` primitive.
 
 ### Reviewer seat identity
 
@@ -1603,6 +1740,23 @@ until every row is decided) leave.
 ## Hooks
 
 - **`useKeybindings`** (`src/hooks/useKeybindings.ts`): Global keyboard shortcuts registered on `window.keydown`. Handles open (Ctrl/Cmd+O), save (Ctrl/Cmd+S), save-as (Ctrl/Cmd+Shift+S), paper navigation (Alt+↓/↑, `[`/`]`), zoom/font (Ctrl/Cmd + `+/=/-`/`0` → PDF zoom; add Shift → app font size), and help (F1). Paper navigation skips when typing in a field (unless Alt is held). Zoom/font detection matches `e.key` and `e.code` to handle numpad and international layouts; reset is detected by the digit-0 `e.code` (Shift-independent) to avoid the German Shift+0 → `=` clash. Copy/cut/paste/undo are left to the browser/Electron Edit menu.
+
+  **Bare-key bindings are suppressed while anything blocking is on screen.** The screening decision
+  keys (`I`/`E`/`U`, `1`–`9`) and paper navigation act on the paper *behind* a dialog, invisibly, so
+  `aModalIsOpen()` gates them on a DOM query. The selector lists the blocking surfaces —
+  `.modal-overlay, .error-overlay, .menu` — rather than asserting that every dialog renders a
+  `.modal-overlay`, which was the original rule and was false twice over: a failed save renders
+  `.error-overlay`, and an open `Dropdown` renders `.menu`, so pressing `e` behind a save-failure
+  overlay, or typing the first letter of a project you were hunting for in the Open menu, silently
+  excluded the current paper and auto-advanced. Modifier combos stay live behind a modal on purpose.
+
+  **Ctrl/Cmd+S commits the focused edit first, in the project editor.** The schema field name and the
+  screening reason label both hang their confirm-before-you-lose-answers guards on `blur`, and a
+  keyboard save moves no focus — so without this, Ctrl+S was a way to land a destructive rename
+  without ever being asked. Blur handlers and the zustand writes they make are synchronous, so the
+  save sees the result, including a rename the reviewer just declined. Scoped to the editor:
+  annotation fields have no such guard, and taking someone's cursor mid-sentence to save would be
+  pure cost.
 
 - **`useDirtyGuard`** (`src/hooks/useDirtyGuard.ts`): **Browser only.** Registers a `beforeunload` listener that calls `e.preventDefault()` when either the project *or* the editor's draft is dirty, triggering the browser's "unsaved changes" confirmation. Both, for the same reason `useElectronCloseGuard`'s `isDirty()` checks both: an unsaved schema draft is no less lost on a tab close than an unsaved annotation, and while the editor is open it is the only thing on screen. It is skipped under Electron (`isElectron()`), because a `beforeunload` that returns a value there silently cancels the quit with no dialog — Electron handles unsaved changes via a native dialog in the main process instead (see `useElectronCloseGuard` and the quit flow below).
 
