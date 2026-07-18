@@ -79,7 +79,11 @@ const PROJECT = JSON.stringify({
 
 const st = () => useStore.getState()
 const TEST_USAGE = { provider: 'openai', model: 'gpt-5.5' }
-const apply = (suggestions: Suggestion[]) => st().applyAiSuggestions(suggestions, TEST_USAGE)
+const apply = (suggestions: Suggestion[]) =>
+  st().applyAiSuggestions(suggestions, TEST_USAGE, {
+    paperId: st().currentPaperId!,
+    reviewer: st().currentReviewer,
+  })
 
 const sug = (path: string, value: Suggestion['value']): Suggestion => ({
   path,

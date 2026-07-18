@@ -74,6 +74,17 @@ interface AiState {
   modelsFetchedAt: Record<string, number>
 
   phase: AiPhase
+  /**
+   * What the in-flight (or just-finished) run was *for*: the paper, the
+   * reviewer seat, and the target that answered.
+   *
+   * Recorded when the run starts because every one of them can change while it
+   * is in flight — the dialog stays open, and the paper list, the seat picker
+   * and the target picker all stay usable. Applying reads these rather than
+   * "whatever is selected now", so a reply about paper A can never be written
+   * onto paper B.
+   */
+  runFor: { paperId: string; reviewer: string | null; provider: string; model: string } | null
   error: string | null
   /** Seconds the current call has been running, for the progress line. */
   elapsed: number
@@ -136,6 +147,7 @@ export const useAiStore = create<AiState>()(
     modelsError: {},
     modelsFetchedAt: {},
     phase: 'setup',
+    runFor: null,
     error: null,
     elapsed: 0,
     targets: [],
@@ -325,6 +337,15 @@ export const useAiStore = create<AiState>()(
         return
       }
 
+      set((s) => {
+        s.runFor = {
+          paperId: paper.id,
+          reviewer: app.currentReviewer,
+          provider: config.provider,
+          model: config.model,
+        }
+      })
+
       controller = new AbortController()
       const started = Date.now()
       stopTicker()
@@ -451,11 +472,19 @@ export const useAiStore = create<AiState>()(
 
     apply: () => {
       const chosen = get().rows.filter((r) => r.checked).map((r) => r.suggestion)
-      const config = get().configs.find((c) => c.id === get().selectedId)
-      // The dialog cannot reach the review screen without a config that was
-      // valid at `run()` time; this is a defensive fallback, not an expected path.
-      const usage = { provider: config?.provider ?? 'unknown', model: config?.model ?? 'unknown' }
-      const result = useStore.getState().applyAiSuggestions(chosen, usage)
+      const runFor = get().runFor
+      if (!runFor) return
+      // The target that actually answered, not whichever is selected in the
+      // picker now — switching it between the reply and Apply used to record
+      // the wrong provider and model in `aiUsage`, and deleting it recorded
+      // "unknown". That field is the paper's disclosure of how it was
+      // annotated, so a wrong value there is a research-integrity problem, not
+      // a cosmetic one.
+      const usage = { provider: runFor.provider, model: runFor.model }
+      const result = useStore.getState().applyAiSuggestions(chosen, usage, {
+        paperId: runFor.paperId,
+        reviewer: runFor.reviewer,
+      })
       set((s) => {
         s.applied = result
         s.phase = 'applied'

@@ -341,6 +341,7 @@ describe('AI is not usable from the Consolidation seat', () => {
     const result = st().applyAiSuggestions(
       [{ path: 'Study Type', value: 'RCT', evidence: 'q', confidence: 1 }],
       TEST_USAGE,
+      { paperId: st().currentPaperId!, reviewer: st().currentReviewer },
     )
     expect(result).toEqual({ filled: 0, skipped: 1 })
     expect(st().project!.papers[0].annotations['Study Type'][0].value).toBeNull()
@@ -353,6 +354,7 @@ describe('AI is not usable from the Consolidation seat', () => {
       st().applyAiSuggestions(
         [{ path: 'Study Type', value: 'RCT', evidence: 'q', confidence: 1 }],
         TEST_USAGE,
+        { paperId: st().currentPaperId!, reviewer: st().currentReviewer },
       ).filled,
     ).toBe(1)
   })
