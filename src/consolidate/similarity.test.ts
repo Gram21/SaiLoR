@@ -164,3 +164,33 @@ describe('combine', () => {
     ]).score).toBe(0.75)
   })
 })
+
+const NUL = '\u0000'
+
+describe('similarity cache key', () => {
+  it('does not let two different pairs share a cache entry', () => {
+    // Joining a pair with a separator assumes the separator cannot occur
+    // inside a value, and no character satisfies that. With a plain
+    // `min + NUL + max` key these two pairs spelled the same string:
+    //   pair A = ("a",    "b<NUL>a<NUL>b")
+    //   pair B = ("a<NUL>b", "a<NUL>b")
+    // Pair B is two identical strings and must score 1; pair A scores ~0.2.
+    // Whichever was asked second silently took the other's cached score. A NUL
+    // reaches a value through a hand-edited project file, a paste, or PDF text
+    // extraction, and the consequence is a consolidation alignment that treats
+    // a perfect match as a poor one — wrong, and invisible.
+    const a1 = 'a'
+    const a2 = `b${NUL}a${NUL}b`
+    const b1 = `a${NUL}b`
+    const b2 = `a${NUL}b`
+
+    const trueA = stringSimilarity(a1, a2)
+    const trueB = stringSimilarity(b1, b2)
+    expect(trueA).not.toBe(trueB) // they genuinely differ
+
+    const cache = new Map<string, number>()
+    expect(stringSimilarity(a1, a2, cache)).toBe(trueA)
+    expect(stringSimilarity(b1, b2, cache)).toBe(trueB)
+    expect(cache.size).toBe(2) // two pairs, two entries
+  })
+})
