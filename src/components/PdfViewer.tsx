@@ -91,6 +91,10 @@ export function PdfViewer() {
   const pageRefs = useRef<(HTMLDivElement | null)[]>([])
   const pageInputRef = useRef<HTMLInputElement>(null)
   const revokeRef = useRef<(() => void) | undefined>(undefined)
+  // Which paper is on screen right now, readable from a callback that was
+  // created for a different one — see `grantFolderAccess`.
+  const paperIdRef = useRef(paperId)
+  paperIdRef.current = paperId
 
   // In-PDF search.
   const [searchOpen, setSearchOpen] = useState(false)
@@ -183,10 +187,23 @@ export function PdfViewer() {
         return getPlatform().getPdfSource(pdfPath, saveHandle ?? { kind: 'download' })
       })
       .then((src) => {
+        // The same guard the load effect has, for the same reason. Granting the
+        // folder makes the page interactive again while the directory walk and
+        // the PDF read are still in flight, so the reviewer can select another
+        // paper meanwhile — and the load effect then starts its own fetch,
+        // since the grant it was waiting for has arrived. Whichever settled
+        // last used to win, which could leave paper B selected in the list and
+        // the annotation panel with paper A's PDF on screen: annotating one
+        // paper from another's text, with nothing to show anything was wrong.
+        if (paperIdRef.current !== paperId) {
+          src.revoke?.()
+          return
+        }
+        revokeRef.current?.()
         revokeRef.current = src.revoke
         setUrl(src.url)
       })
-      .catch((err) => setError(String(err?.message ?? err)))
+      .catch((err) => paperIdRef.current === paperId && setError(String(err?.message ?? err)))
       .finally(() => setGrantingFolder(false))
   }
 

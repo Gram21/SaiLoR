@@ -723,7 +723,10 @@ function partitionScreeningPapers(project: Project): {
   const included: ScreeningImportRow[] = []
   const undecided: ScreeningImportRow[] = []
   let excludedCount = 0
-  const excludedByReason: Record<string, number> = {}
+  // Null-prototype — see `screening/counts.ts`. On a plain object a reason of
+  // "constructor" tallied onto a function ("function Object() {...}1" in the
+  // import dialog) and "__proto__" hit the prototype setter, dropping the row.
+  const excludedByReason: Record<string, number> = Object.create(null)
 
   for (const p of project.papers) {
     const status = screeningStatus(p.annotations)

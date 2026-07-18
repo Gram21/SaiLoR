@@ -1621,7 +1621,12 @@ button.paper-search-mode:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  /* Above .modal-overlay (200). Modifier shortcuts stay live behind a modal on
+     purpose, so Ctrl+S with the Help dialog open is an ordinary thing to do —
+     and when that save fails, its error has to be the thing you see. At 100 it
+     mounted underneath the dialog's backdrop and the save looked like it
+     worked. */
+  z-index: 300;
 }
 .error-box {
   background: var(--panel-bg);

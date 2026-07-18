@@ -201,8 +201,22 @@ function isEditable(target: EventTarget | null): boolean {
  * query covers all of them — including any added later — without a list of
  * per-dialog open-flags to keep in sync.
  */
+/**
+ * Is anything blocking-shaped on screen? Bare-key bindings act on the paper
+ * *behind* it, invisibly, so they must not fire.
+ *
+ * This started as a `.modal-overlay` check on the claim that every dialog in
+ * the app renders one. That was wrong twice over: `ErrorPanel` renders
+ * `.error-overlay` (a full-viewport dimming backdrop — a failed save covers the
+ * workspace, and `e` behind it silently excluded the hidden paper), and an open
+ * `Dropdown` renders `.menu`, so typing the first letter of the project you are
+ * hunting for in the Open menu excluded the current paper. Listing the surfaces
+ * beats naming an invariant no one enforces.
+ */
+const BLOCKING_SURFACES = '.modal-overlay, .error-overlay, .menu'
+
 function aModalIsOpen(): boolean {
-  return document.querySelector('.modal-overlay') !== null
+  return document.querySelector(BLOCKING_SURFACES) !== null
 }
 
 /**
