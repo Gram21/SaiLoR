@@ -1,4 +1,4 @@
-import { useRef, useState, type DragEvent } from 'react'
+import { useMemo, useRef, useState, type DragEvent } from 'react'
 import {
   useEditorStore,
   type DropPosition,
@@ -61,6 +61,7 @@ export function SchemaTreeEditor() {
           <SchemaNodeRow
             key={node.uid}
             node={node}
+            ancestors={EMPTY_PATH}
             inDragged={false}
             dragUid={dragUid}
             dropTarget={dropTarget}
@@ -78,8 +79,13 @@ export function SchemaTreeEditor() {
   )
 }
 
+/** Stable identity so the root rows don't remount on every render. */
+const EMPTY_PATH: string[] = []
+
 interface SchemaNodeRowProps {
   node: EditorNode
+  /** Names of this node's ancestors, root first — the answer-tree path to it. */
+  ancestors: string[]
   /** True when this row lives inside the subtree being dragged (an illegal drop). */
   inDragged: boolean
   dragUid: string | null
@@ -92,6 +98,7 @@ interface SchemaNodeRowProps {
 
 function SchemaNodeRow({
   node,
+  ancestors,
   inDragged,
   dragUid,
   dropTarget,
@@ -130,7 +137,7 @@ function SchemaNodeRow({
     const candidates = [...new Set(names.filter((n): n is string => !!n))]
     let worst = { name: '', count: 0 }
     for (const candidate of candidates) {
-      const count = countPapersUsingField(papers, candidate)
+      const count = countPapersUsingField(papers, [...ancestors, candidate])
       if (count > worst.count) worst = { name: candidate, count }
     }
     if (worst.count === 0) return true
@@ -160,6 +167,10 @@ function SchemaNodeRow({
   const dragging = dragUid === node.uid
   const isSubtree = dragging || inDragged
   const position = dropTarget && dropTarget.uid === node.uid ? dropTarget.position : null
+
+  // Answers nest exactly as the schema does, so a child's path is this node's
+  // path plus its own name.
+  const childAncestors = useMemo(() => [...ancestors, node.name], [ancestors, node.name])
 
   const unbounded = node.max === null
   const hasChildren = node.children.length > 0
@@ -398,6 +409,7 @@ function SchemaNodeRow({
             <SchemaNodeRow
               key={child.uid}
               node={child}
+              ancestors={childAncestors}
               inDragged={isSubtree}
               dragUid={dragUid}
               dropTarget={dropTarget}

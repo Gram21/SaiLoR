@@ -393,7 +393,11 @@ export const useGitStore = create<GitState>()(
         const p = await git.pickProjectIn(clone.dest)
         if (!p) return
         get().closeClone()
-        await useStore.getState().openRecent(p)
+        // `requestOpenRecent`, not `openRecent`: opening the clone replaces
+        // whatever project is on screen, discarding its unsaved changes exactly
+        // as Ctrl+O would. This button is reachable from the toolbar with a
+        // dirty project open, so it has to go through the same prompt.
+        useStore.getState().requestOpenRecent(p)
       },
 
       openPanel: async () => {

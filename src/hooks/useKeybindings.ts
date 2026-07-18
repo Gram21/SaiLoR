@@ -34,6 +34,19 @@ export function useKeybindings() {
 
       if (mod && (e.key === 's' || e.key === 'S')) {
         e.preventDefault()
+        // Commit whatever field is being typed into before reading the stores.
+        // Editors hang their confirm-before-you-lose-answers guards on `blur`
+        // (the schema field name, the screening reason label), and a keyboard
+        // save never moves focus — so without this, Ctrl+S is a way to land a
+        // destructive rename without ever being asked. Blur handlers and the
+        // zustand writes they make are synchronous, so `getState()` below sees
+        // the result, including a rename the reviewer just declined.
+        //
+        // Only in the project editor: that is where those guards live, and
+        // annotation fields have none — blurring one would just cost the
+        // reviewer their cursor mid-sentence for saving, which is the exact
+        // moment to not disturb them.
+        if (editing) commitFocusedEdit()
         const editor = useEditorStore.getState()
         if (editing) {
           if (e.shiftKey) void editor.saveAs()
@@ -190,4 +203,14 @@ function isEditable(target: EventTarget | null): boolean {
  */
 function aModalIsOpen(): boolean {
   return document.querySelector('.modal-overlay') !== null
+}
+
+/**
+ * Take focus off the field being typed into, firing its `blur` handler. Clicking
+ * a toolbar button does this for free; a keyboard shortcut does not, which is
+ * how Ctrl+S came to slip past guards that only run on blur.
+ */
+function commitFocusedEdit(): void {
+  const el = document.activeElement
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) el.blur()
 }

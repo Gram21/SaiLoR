@@ -242,14 +242,16 @@ export class SchemaError extends Error {}
 
 function resolveDefs(defs: AnnotationDef[], parentPath: string): ResolvedDef[] {
   const seen = new Set<string>()
-  return defs.map((rawDef) => {
-    // Normalise padding before anything else keys off the name. A canonical
-    // path trims its segments (see `paths.ts`), so a hand-edited file with
-    // both "Claim" and "Claim " as siblings would pass the uniqueness check
-    // here and then collapse to one path — every lookup silently hitting
-    // whichever came first. The editor already trims on input; this closes the
-    // same hole for a file that did not come through it.
-    const def = rawDef.name === rawDef.name.trim() ? rawDef : { ...rawDef, name: rawDef.name.trim() }
+  return defs.map((def) => {
+    // Deliberately NOT trimmed. A `paths.ts` canonical segment is trimmed, so a
+    // padded name resolves poorly — but normalising it *here* is far worse:
+    // `normalizeTree` looks answers up by the resolved def name, so renaming
+    // `"Claim "` to `"Claim"` on load makes the lookup miss the stored
+    // `"Claim "` key and replaces a real answer with an empty instance, which
+    // the next save then makes permanent. Silent data loss on open, for a file
+    // that previously worked. The padded name is left exactly as written; only
+    // path *resolution* is affected by the padding, which is where it was
+    // already, and no answer is put at risk.
     // Annotation trees are plain objects keyed by field name, so a field called
     // `__proto__` would hit `Object.prototype`'s setter instead of creating an
     // own property: the field reads and edits normally (values come back
