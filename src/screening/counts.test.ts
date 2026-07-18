@@ -172,4 +172,25 @@ describe('pendingUnanimous', () => {
       for (const n of Object.values(c.byReason)) expect(n).toBe(0)
     }
   })
+
+  it('counts a paper whose only pending unanimity is the reason', () => {
+    // The notice counted pending *Decision* fills while the button it offers
+    // adopts everything unanimous. A consolidator who set Decision by hand but
+    // left Reason blank produced a Reason fill and no Decision fill: no notice,
+    // nothing offering to adopt the reason, and the paper booked as
+    // excluded-without-a-reason permanently.
+    const p = project({
+      reviewers: 2,
+      papers: [
+        paper({
+          annotations: tree(DECISION_EXCLUDE),
+          reviews: {
+            '1': tree(DECISION_EXCLUDE, 'Duplicate'),
+            '2': tree(DECISION_EXCLUDE, 'Duplicate'),
+          },
+        }),
+      ],
+    })
+    expect(pendingUnanimous(p)).toBe(1)
+  })
 })

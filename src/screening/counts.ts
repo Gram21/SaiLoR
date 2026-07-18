@@ -1,7 +1,6 @@
 import type { AnnotationValueTree } from '../model/annotations'
 import type { Paper, Project } from '../model/project'
 import { unanimousFills } from '../consolidate/unanimous'
-import { SCREENING_DECISION } from './schema'
 import { screeningReason, screeningStatus } from './status'
 
 /**
@@ -85,8 +84,9 @@ export function screeningCounts(project: Project, currentReviewer: string | null
 }
 
 /**
- * Papers every numbered reviewer decided identically that Consolidation has not
- * adopted yet. Zero for a single-reviewer project.
+ * Papers holding something every numbered reviewer recorded identically that
+ * Consolidation has not adopted yet — a decision, a reason, or both. Zero for a
+ * single-reviewer project.
  *
  * These exist because `adoptUnanimousValues` (state/store.ts) only runs for the
  * paper open in the Consolidation seat, so a project whose consolidator never
@@ -100,7 +100,14 @@ export function pendingUnanimous(project: Project): number {
     const reviews: Record<string, AnnotationValueTree | undefined> = {}
     for (let i = 1; i <= project.reviewers; i++) reviews[String(i)] = paper.reviews[String(i)]
     const fills = unanimousFills(project.schema, reviews, paper.annotations)
-    if (fills.some((f) => f.path.length === 0 && f.name === SCREENING_DECISION)) count++
+    // Any pending fill, not just the Decision. `adoptAllUnanimousScreening`
+    // adopts everything unanimous, so counting only Decisions made the notice
+    // and the button it offers disagree: two reviewers who both excluded a
+    // paper for the same reason, where the consolidator had set the Decision by
+    // hand but left the Reason blank, produced a Reason fill and no Decision
+    // fill. The notice never appeared, nothing offered to adopt the reason, and
+    // the paper booked as excluded-without-a-reason for good.
+    if (fills.length > 0) count++
   }
   return count
 }
