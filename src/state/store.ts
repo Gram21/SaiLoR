@@ -918,20 +918,27 @@ export const useStore = create<AppState>()(
         // Carry the reviewer selection over to the new location's own key, or
         // it would silently look unselected the next time this file is opened.
         saveCurrentReviewer(handle, get().currentReviewer)
-        // Drop undo history. Its snapshots hold `paper.pdf` values relative to
-        // the *old* location; undoing after Save As would restore those broken
-        // paths (and, since undo sets `dirty`, re-save them to the new
-        // location). loadFromText clears history for the same reason a location
-        // change invalidates it — so does Save As.
-        lastFieldKey = null
+        // Drop undo history *only when the PDF paths actually moved*. Its
+        // snapshots hold `paper.pdf` relative to the old location, so undoing
+        // after a rebase would restore now-broken paths (and, since undo sets
+        // `dirty`, re-save them). But `toWrite === project` means nothing was
+        // rebased — no `saveHandle` yet (a plain first Ctrl+S delegates here),
+        // or a browser adapter that returns the paths unchanged — and there the
+        // snapshots are still valid. Clearing unconditionally would silently
+        // wipe the undo stack on an ordinary first save, which plain Save has
+        // never done.
+        const pathsMoved = toWrite !== project
+        if (pathsMoved) lastFieldKey = null
         set((s) => {
           s.project = toWrite
           s.saveHandle = handle
           s.projectName = location.name
           s.dirty = false
           s.busy = false
-          s.past = []
-          s.future = []
+          if (pathsMoved) {
+            s.past = []
+            s.future = []
+          }
           s.recents = platform.getRecents()
         })
         return true

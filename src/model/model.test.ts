@@ -1099,15 +1099,19 @@ describe('hand-edited value tree with primitive instances does not crash the loa
     })
 
   it.each([
-    ['string', { 'Study Type': ['RCT'] }],
-    ['number', { Count: [42] }],
-    ['boolean', { Relevant: [true] }],
-  ])('normalizes a bare %s instance instead of throwing', (_kind, anno) => {
+    ['string', { 'Study Type': ['RCT'] }, 'Study Type', 'RCT'],
+    ['number', { Count: [42] }, 'Count', 42],
+    ['boolean', { Relevant: [true] }, 'Relevant', true],
+  ])('adopts a bare %s instance as its value instead of throwing', (_kind, anno, field, expected) => {
     expect(() => loadProject(withInstances(anno))).not.toThrow()
     const p = loadProject(withInstances(anno))
-    // The malformed shorthand loses its value (degraded to the empty skeleton),
-    // but the file opens and re-serializes cleanly — the defensiveness the
-    // module's own doc comment promises.
     expect(() => serializeProject(p)).not.toThrow()
+    // The shorthand's value is *kept*. Normalizing it away would open the file
+    // cleanly and then let the next save overwrite a real answer with null —
+    // silent data loss, and worse than the crash this replaced (a git pull
+    // writes the merged project straight back to disk).
+    expect(p.papers[0].annotations[field as string][0].value).toBe(expected)
+    const reloaded = loadProject(serializeProject(p))
+    expect(reloaded.papers[0].annotations[field as string][0].value).toBe(expected)
   })
 })

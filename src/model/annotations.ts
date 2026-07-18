@@ -87,15 +87,25 @@ function normalizeInstance(def: ResolvedDef, inst: InstanceNode | undefined): In
   if (isField(def)) {
     // The value tree is hand-editable, so an instance array element may be a
     // bare primitive (`"Study Type": ["RCT"]` instead of `[{value:"RCT"}]`)
-    // rather than the `{value}` object shape. `'value' in inst` would throw a
-    // raw TypeError on a primitive — escaping `loadProject`'s contract to only
-    // ever raise a friendly ProjectLoadError, and aborting a git pull-merge
-    // that loads such a revision. Guard on object-ness exactly as the other
-    // tree walks in this module (`collectAnnotationText`, `isEmptyInstance`) do.
-    out.value =
-      inst && typeof inst === 'object' && 'value' in inst
-        ? (inst.value as FieldValue)
-        : emptyValue(def.type)
+    // rather than the `{value}` object shape. `'value' in inst` throws a raw
+    // TypeError on a primitive — escaping `loadProject`'s contract to only ever
+    // raise a friendly ProjectLoadError, and aborting a git pull-merge that
+    // loads such a revision.
+    //
+    // The primitive is *adopted as the value*, not discarded: this walk is the
+    // one that rewrites the file (unlike the read-only `collectAnnotationText`
+    // / `isEmptyInstance`, where skipping merely displays nothing). Normalizing
+    // the shorthand to an empty value would open the file cleanly and then let
+    // the next ordinary save — or `finishPull`'s write-back — overwrite a real
+    // answer with null, turning a loud crash into silent data loss. `false` for
+    // a boolean is the same loss with the value flipped.
+    const raw =
+      inst && typeof inst === 'object'
+        ? 'value' in inst
+          ? (inst.value as FieldValue)
+          : emptyValue(def.type)
+        : (inst as unknown as FieldValue | undefined)
+    out.value = raw === undefined ? emptyValue(def.type) : raw
   }
   if (def.children.length > 0) {
     out.children = normalizeTree(def.children, inst?.children)

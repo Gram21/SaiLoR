@@ -47,7 +47,17 @@ export function AgreementDialog() {
   const setOpen = useStore((s) => s.setAgreementOpen)
   const project = useStore((s) => s.project)
 
-  const built: AgreementInput | null = useMemo(() => (project ? agreementInput(project) : null), [project])
+  // Gated on `open`, not just `project`: this component is mounted for the
+  // whole session (App.tsx renders it unconditionally and it returns null when
+  // closed), so an ungated memo recomputes on *every* project change — i.e.
+  // every annotation keystroke. `agreementInput` aligns each paper's repeatable
+  // groups before comparing (see `disagreements.ts`), which is real work on a
+  // large project, so paying it while the dialog is shut would stall typing.
+  // Opening the dialog is an explicit, occasional action; that is when it runs.
+  const built: AgreementInput | null = useMemo(
+    () => (open && project ? agreementInput(project) : null),
+    [open, project],
+  )
 
   const [selected, setSelected] = useState<Set<string>>(() => new Set())
 
