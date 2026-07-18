@@ -243,15 +243,21 @@ export class SchemaError extends Error {}
 function resolveDefs(defs: AnnotationDef[], parentPath: string): ResolvedDef[] {
   const seen = new Set<string>()
   return defs.map((def) => {
-    // Deliberately NOT trimmed. A `paths.ts` canonical segment is trimmed, so a
-    // padded name resolves poorly — but normalising it *here* is far worse:
-    // `normalizeTree` looks answers up by the resolved def name, so renaming
-    // `"Claim "` to `"Claim"` on load makes the lookup miss the stored
-    // `"Claim "` key and replaces a real answer with an empty instance, which
-    // the next save then makes permanent. Silent data loss on open, for a file
-    // that previously worked. The padded name is left exactly as written; only
-    // path *resolution* is affected by the padding, which is where it was
-    // already, and no answer is put at risk.
+    // Deliberately NOT trimmed. `normalizeTree` looks answers up by the
+    // resolved def name, so renaming `"Claim "` to `"Claim"` on load makes the
+    // lookup miss the stored `"Claim "` key and replaces a real answer with an
+    // empty instance, which the next save then makes permanent — silent data
+    // loss on open, for a file that previously worked.
+    //
+    // An earlier version of this comment claimed the padding affected only path
+    // resolution and put no answer at risk. That was wrong, and the correction
+    // is worth keeping: a canonical segment *is* trimmed by `parsePath`, so with
+    // two siblings named `"Claim"` and `"Claim "` the padded one's canonical
+    // resolved to the *other* def — and `git/changes.ts` writes through
+    // `container[resolved.name]`, so a committed answer landed in the wrong
+    // field. That ambiguity is now refused below, where it can still be caught;
+    // a *lone* padded name is fine and resolves through a trimmed fallback in
+    // `resolvePath`.
     // Annotation trees are plain objects keyed by field name, so a field called
     // `__proto__` would hit `Object.prototype`'s setter instead of creating an
     // own property: the field reads and edits normally (values come back
@@ -271,6 +277,23 @@ function resolveDefs(defs: AnnotationDef[], parentPath: string): ResolvedDef[] {
         `Duplicate sibling annotation name "${def.name}"${
           parentPath ? ` under "${parentPath}"` : ' at the top level'
         }. Sibling names must be unique.`,
+      )
+    }
+    // Siblings that differ only by surrounding whitespace are rejected too,
+    // because the canonical path format cannot tell them apart. `parsePath`
+    // trims a segment (so "Findings [1]" reads as "Findings"), which means the
+    // canonical for "Claim " resolves to the def named "Claim" — and
+    // `git/changes.ts` writes with `container[resolved.name]`, so a reviewer's
+    // committed answer would land in the *other* field. Refusing the schema is
+    // the only place that ambiguity can be caught: once both names exist, no
+    // path can name one of them unambiguously.
+    const clash = [...seen].find((n) => n.trim() === def.name.trim())
+    if (clash !== undefined) {
+      throw new SchemaError(
+        `Annotation names "${clash}" and "${def.name}"${
+          parentPath ? ` under "${parentPath}"` : ' at the top level'
+        } differ only by surrounding spaces, which makes answers to them
+ indistinguishable. Rename one of them.`.replace(/\s*\n\s*/g, ' '),
       )
     }
     seen.add(def.name)
