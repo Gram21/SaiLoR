@@ -19,9 +19,38 @@ interface PermissionCapableHandle {
   requestPermission?(desc: { mode: 'read' | 'readwrite' }): Promise<PermissionState>
 }
 
-async function ensureReadPermission(handle: FileSystemFileHandle): Promise<boolean> {
+/**
+ * Ask for write access, if it is not already granted.
+ *
+ * `createWritable()` needs `readwrite`, and a handle restored from IndexedDB
+ * after a page reload starts back at `prompt` — so a save could fail with a
+ * bare `NotAllowedError` that reads like a bug in the app rather than a
+ * permission the browser is waiting to be asked for.
+ *
+ * **Unverified.** This was reasoned from the API contract, and from the fact
+ * that the code already asked for `read` permission in `openRecent` — the exact
+ * flow where permission resets — while never asking for `readwrite` anywhere at
+ * all. It is not from an observed failure in a real browser. Chrome may prompt
+ * on `createWritable()` by itself, in which case this is a no-op:
+ * `queryPermission` short-circuits when access is already granted, so it adds
+ * no second dialog either way.
+ *
+ * The reason `openRecent` asks for `readwrite` up front rather than leaving it
+ * to the save: requesting permission needs transient user activation, and by
+ * the time a save has serialized the project the click that started it may no
+ * longer count. Opening a project in an editor implies intent to save it, and
+ * the prompt at open time replaces the read prompt rather than adding to it.
+ */
+async function ensureWritePermission(handle: FileSystemFileHandle): Promise<boolean> {
+  return ensurePermission(handle, 'readwrite')
+}
+
+async function ensurePermission(
+  handle: FileSystemFileHandle,
+  mode: 'read' | 'readwrite',
+): Promise<boolean> {
   const h = handle as unknown as PermissionCapableHandle
-  const opts = { mode: 'read' as const }
+  const opts = { mode }
   if ((await h.queryPermission?.(opts)) === 'granted') return true
   return (await h.requestPermission?.(opts)) === 'granted'
 }
@@ -94,10 +123,13 @@ export class BrowserAdapter implements PlatformAdapter {
   }
 
   rememberProject(_handle: SaveHandle, name: string, title?: string): void {
-    // The entry id is the file name (the key rememberHandle stored the handle
-    // under). There is no path to show: the File System Access API exposes none.
+    // Enrich the entry `rememberHandle` already created, found by name because
+    // that is all this callback is given — the id is opaque and belongs to the
+    // handle. Nothing is created here: an entry with no stored handle would be
+    // permanently unavailable, which is worse than no entry at all.
     if (!hasFsApi()) return
-    pushRecent(RECENTS_KEY, { id: name, name, title })
+    const existing = readRecents(RECENTS_KEY).find((e) => e.name === name)
+    if (existing) pushRecent(RECENTS_KEY, { ...existing, name, title })
   }
 
   forgetRecent(id: string): RecentEntry[] {
@@ -155,27 +187,66 @@ export class BrowserAdapter implements PlatformAdapter {
     const handle = await idbGet<FileSystemFileHandle>(recentHandleKey(id))
     // Keep the entry; the caller marks it unavailable rather than forgetting it.
     if (!handle) return null
-    if (!(await ensureReadPermission(handle))) {
+    // `readwrite`, not `read`: this is the one moment with a fresh user gesture
+    // and a prompt the reviewer already expects, and opening a project in an
+    // editor implies intent to save it. Asking later, mid-save, risks the
+    // gesture having expired — see `ensureWritePermission`.
+    if (!(await ensureWritePermission(handle))) {
       // Permission denied; keep it in the list so the user can retry.
-      throw new Error(`Permission to read "${id}" was denied.`)
+      throw new Error(`Permission to open "${id}" was denied.`)
     }
     const file = await handle.getFile()
     const text = await file.text()
     const regId = this.register(handle)
     this.serverBase = null
     this.clearLocalPdfGrants()
-    pushRecent(RECENTS_KEY, { id, name: id })
+    // Refresh the entry's position without renaming it: `id` is opaque now, so
+    // the display name comes from the file itself.
+    pushRecent(RECENTS_KEY, { id, name: file.name })
     return { text, handle: { kind: 'fsapi', path: regId }, name: file.name }
   }
 
-  /** Persist a handle + record it as a recent (keyed by file name). */
+  /**
+   * Persist a handle and record it as a recent, keyed by an id that identifies
+   * the *file* rather than its name.
+   *
+   * The file name is not an identity: two reviews both saved as `review.json`
+   * collapsed into one recents entry and, worse, one IndexedDB key — the second
+   * open overwrote the first's handle, so the surviving entry opened the wrong
+   * project. Electron sidesteps this by using the absolute path; the File
+   * System Access API exposes none, so an opaque id is minted instead.
+   *
+   * A fresh id per open would pile up duplicates every time the same file is
+   * reopened, so existing entries are asked first: `isSameEntry` is the API's
+   * own answer to "is this the same file", and there are at most five to check.
+   * Entries recorded before this existed keep their name-based ids and keep
+   * working — `isSameEntry` matches them just the same, so they are adopted
+   * rather than duplicated.
+   */
   private async rememberHandle(name: string, handle: FileSystemFileHandle): Promise<void> {
     try {
-      await idbSet(recentHandleKey(name), handle)
-      pushRecent(RECENTS_KEY, { id: name, name })
+      const id = (await this.findRecentId(handle)) ?? newRecentId()
+      await idbSet(recentHandleKey(id), handle)
+      pushRecent(RECENTS_KEY, { id, name })
     } catch {
       /* IndexedDB unavailable — recents simply won't persist. */
     }
+  }
+
+  /** The id an already-remembered recent holds for this same file, if any. */
+  private async findRecentId(handle: FileSystemFileHandle): Promise<string | null> {
+    for (const entry of readRecents(RECENTS_KEY)) {
+      try {
+        const known = await idbGet<FileSystemFileHandle>(recentHandleKey(entry.id))
+        // `isSameEntry` is comparatively new; without it there is no way to ask
+        // the question, and minting a new id is the safe answer (a duplicate
+        // entry is a cosmetic annoyance, a shared id is the bug above).
+        if (known && (await known.isSameEntry?.(handle))) return entry.id
+      } catch {
+        /* A handle we can no longer read tells us nothing; try the next. */
+      }
+    }
+    return null
   }
 
   async saveProject(text: string, handle: SaveHandle): Promise<SaveHandle> {
@@ -539,6 +610,18 @@ async function peekTitle(
   }
 }
 
+/**
+ * An opaque id for a remembered file. `crypto.randomUUID` needs a secure
+ * context — which the File System Access API also needs, so it is available
+ * wherever this runs — but it shipped later than the FSA API did, so the
+ * fallback covers the browsers in between. Uniqueness is all that is asked of
+ * it; nothing reads it back.
+ */
+function newRecentId(): string {
+  if (typeof crypto?.randomUUID === 'function') return crypto.randomUUID()
+  return `r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+}
+
 function recentHandleKey(id: string): string {
   return `recent:${id}`
 }
@@ -566,6 +649,11 @@ function hasPdfMagic(buf: ArrayBuffer): boolean {
 }
 
 async function writeFsApi(handle: FileSystemFileHandle, text: string): Promise<void> {
+  if (!(await ensureWritePermission(handle))) {
+    throw new Error(
+      'Permission to write this file was denied. Use "Save as" to choose a location again.',
+    )
+  }
   const writable = await (
     handle as FileSystemFileHandle & { createWritable: () => Promise<FileSystemWritableFileStream> }
   ).createWritable()

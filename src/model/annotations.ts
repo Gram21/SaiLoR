@@ -68,9 +68,19 @@ export function normalizeTree(
   const tree: AnnotationValueTree = {}
   for (const def of defs) {
     const raw = existing?.[def.name]
-    let instances: InstanceNode[] = Array.isArray(raw)
-      ? raw.map((inst) => normalizeInstance(def, inst))
-      : []
+    // A hand-edited file may hold a single entry where the format wants a list
+    // (`"Study Type": "RCT"`, or `{"value": "RCT"}`, instead of `["RCT"]`).
+    // Adopt it as that one entry rather than dropping it: this walk is the one
+    // that rewrites the file, so discarding the value opens the project
+    // cleanly and lets the next ordinary save write `null` over a real answer.
+    // That is exactly the reasoning `normalizeInstance` already spells out for
+    // a bare primitive *inside* the list — the same hazard one level up, which
+    // it simply never covered.
+    //
+    // `null`/`undefined` still yield no instances: that is an absent answer,
+    // not a value written in the wrong shape.
+    const list = Array.isArray(raw) ? raw : raw == null ? [] : [raw as InstanceNode]
+    let instances: InstanceNode[] = list.map((inst) => normalizeInstance(def, inst))
 
     const min = Math.max(def.min, 1)
     while (instances.length < min) instances.push(makeInstance(def))
