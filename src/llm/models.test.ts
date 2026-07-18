@@ -20,7 +20,7 @@ function cfg(provider: Provider, over: Partial<LlmConfig> = {}): LlmConfig {
 describe('buildModelsRequest', () => {
   it('is a bare, sentinel-authenticated GET for every provider — never a real key', () => {
     for (const p of PROVIDER_LIST) {
-      const req = buildModelsRequest(cfg(p.id, { baseUrl: 'http://x' }))
+      const req = buildModelsRequest(cfg(p.id, { baseUrl: 'http://x' }))!
       expect(req.method).toBe('GET')
       expect(req.body).toBeUndefined()
       const serialized = JSON.stringify(req.headers)
@@ -30,49 +30,69 @@ describe('buildModelsRequest', () => {
   })
 
   it('targets the documented list-models endpoint of each provider', () => {
-    expect(buildModelsRequest(cfg('openai')).url).toBe('https://api.openai.com/v1/models')
-    expect(buildModelsRequest(cfg('groq')).url).toBe('https://api.groq.com/openai/v1/models')
-    expect(buildModelsRequest(cfg('mistral')).url).toBe('https://api.mistral.ai/v1/models')
-    expect(buildModelsRequest(cfg('deepseek')).url).toBe('https://api.deepseek.com/v1/models')
-    expect(buildModelsRequest(cfg('xai')).url).toBe('https://api.x.ai/v1/models')
-    expect(buildModelsRequest(cfg('openai-compatible', { baseUrl: 'http://localhost:1234/v1' })).url).toBe(
+    expect(buildModelsRequest(cfg('openai'))!.url).toBe('https://api.openai.com/v1/models')
+    expect(buildModelsRequest(cfg('groq'))!.url).toBe('https://api.groq.com/openai/v1/models')
+    expect(buildModelsRequest(cfg('mistral'))!.url).toBe('https://api.mistral.ai/v1/models')
+    expect(buildModelsRequest(cfg('deepseek'))!.url).toBe('https://api.deepseek.com/v1/models')
+    expect(buildModelsRequest(cfg('xai'))!.url).toBe('https://api.x.ai/v1/models')
+    expect(buildModelsRequest(cfg('openai-compatible', { baseUrl: 'http://localhost:1234/v1' }))!.url).toBe(
       'http://localhost:1234/v1/models',
     )
-    expect(buildModelsRequest(cfg('anthropic')).url).toBe(
+    expect(buildModelsRequest(cfg('anthropic'))!.url).toBe(
       'https://api.anthropic.com/v1/models?limit=100',
     )
-    expect(buildModelsRequest(cfg('google')).url).toBe(
+    expect(buildModelsRequest(cfg('google'))!.url).toBe(
       'https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',
     )
-    expect(buildModelsRequest(cfg('openrouter')).url).toBe(
+    expect(buildModelsRequest(cfg('openrouter'))!.url).toBe(
       'https://openrouter.ai/api/v1/models?limit=200',
     )
   })
 
   it('authenticates the way each provider\'s chat call does', () => {
-    expect(buildModelsRequest(cfg('anthropic')).headers).toEqual({
+    expect(buildModelsRequest(cfg('anthropic'))!.headers).toEqual({
       'x-api-key': API_KEY_SENTINEL,
       'anthropic-version': '2023-06-01',
     })
-    expect(buildModelsRequest(cfg('google')).headers).toEqual({
+    expect(buildModelsRequest(cfg('google'))!.headers).toEqual({
       'x-goog-api-key': API_KEY_SENTINEL,
     })
-    expect(buildModelsRequest(cfg('openai')).headers).toEqual({
+    expect(buildModelsRequest(cfg('openai'))!.headers).toEqual({
       Authorization: `Bearer ${API_KEY_SENTINEL}`,
     })
   })
 
+  it('refuses an OpenRouter cursor that would send the API key off-origin', () => {
+    // Security regression: the cursor was concatenated onto the base's origin,
+    // so a malicious/compromised `links.next` of "@evil.com/v1/models" produced
+    // https://openrouter.ai@evil.com/... — userinfo, not a path — handing the
+    // user's key to evil.com. A cross-origin cursor must now yield no request.
+    // Resolving (rather than concatenating) already defuses the userinfo
+    // trick: "@evil.com/..." is read as a *relative path*, so it stays put.
+    const userinfo = buildModelsRequest(cfg('openrouter'), '@evil.com/v1/models')
+    expect(new URL(userinfo!.url).origin).toBe('https://openrouter.ai')
+    // An outright cross-origin cursor yields no request at all.
+    expect(buildModelsRequest(cfg('openrouter'), 'https://evil.com/v1/models')).toBeNull()
+    expect(buildModelsRequest(cfg('openrouter'), '//evil.com/v1/models')).toBeNull()
+  })
+
+  it('still follows a relative OpenRouter cursor on its own origin', () => {
+    expect(buildModelsRequest(cfg('openrouter'), '/api/v1/models?offset=200')!.url).toBe(
+      'https://openrouter.ai/api/v1/models?offset=200',
+    )
+  })
+
   it('pages Anthropic with after_id and Google with pageToken', () => {
-    expect(buildModelsRequest(cfg('anthropic'), 'model_123').url).toBe(
+    expect(buildModelsRequest(cfg('anthropic'), 'model_123')!.url).toBe(
       'https://api.anthropic.com/v1/models?limit=100&after_id=model_123',
     )
-    expect(buildModelsRequest(cfg('google'), 'tok-abc').url).toBe(
+    expect(buildModelsRequest(cfg('google'), 'tok-abc')!.url).toBe(
       'https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&pageToken=tok-abc',
     )
   })
 
   it('pages OpenRouter by replaying the "next" URL it handed back, against this target\'s origin', () => {
-    const req = buildModelsRequest(cfg('openrouter'), '/api/v1/models?offset=200&limit=200')
+    const req = buildModelsRequest(cfg('openrouter'), '/api/v1/models?offset=200&limit=200')!
     expect(req.url).toBe('https://openrouter.ai/api/v1/models?offset=200&limit=200')
   })
 })

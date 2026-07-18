@@ -1,10 +1,11 @@
-import { useState, type DragEvent } from 'react'
+import { useRef, useState, type DragEvent } from 'react'
 import {
   useEditorStore,
   type DropPosition,
   type EditorNode,
   type EditorNodeKind,
 } from '../state/editorStore'
+import { countPapersUsingField } from '../model/fieldUsage'
 import '../styles/schema-editor.css'
 
 /** Where the currently dragged node would land. */
@@ -104,6 +105,42 @@ function SchemaNodeRow({
   const removeNode = useEditorStore((s) => s.removeNode)
   const moveNode = useEditorStore((s) => s.moveNode)
   const toggleCollapsed = useEditorStore((s) => s.toggleCollapsed)
+  const papers = useEditorStore((s) => s.papers)
+
+  // The field's name when the input gained focus, so a *committed* rename (on
+  // blur) can be checked against what papers actually record — rather than
+  // firing a confirm on every keystroke of the edit. Same shape as the
+  // screening reasons editor's guard, for the same reason.
+  const nameOnFocus = useRef<string | null>(null)
+
+  /**
+   * Answers are keyed by field name, and nothing migrates them: renaming or
+   * removing a field orphans every answer recorded under it, and the next save
+   * makes that permanent. Warn before it happens — the screening reasons
+   * editor has guarded the identical hazard from the start; the schema editor
+   * never did.
+   */
+  const confirmDestructive = (name: string, what: 'rename' | 'remove'): boolean => {
+    const count = countPapersUsingField(papers, name)
+    if (count === 0) return true
+    const many = count === 1 ? '1 paper' : `${count} papers`
+    const verb = what === 'rename' ? 'Renaming' : 'Removing'
+    return window.confirm(
+      `${many} record an answer under "${name}". ${verb} it will discard ${
+        count === 1 ? 'that answer' : 'those answers'
+      } — including every reviewer's own — the next time the project is saved, and it cannot be undone afterwards.\n\nContinue?`,
+    )
+  }
+
+  const commitRename = () => {
+    const from = nameOnFocus.current
+    nameOnFocus.current = null
+    if (from === null || from === node.name) return
+    if (!confirmDestructive(from, 'rename')) {
+      // Put the old name back — the reviewer declined to lose the answers.
+      updateNode(node.uid, { name: from })
+    }
+  }
 
   // The row itself carries the drag, but only once the handle is pressed:
   // a permanently draggable row would break text selection inside its inputs.
@@ -207,7 +244,11 @@ function SchemaNodeRow({
           className="schema-input schema-name"
           placeholder="Field name"
           value={node.name}
+          onFocus={() => {
+            nameOnFocus.current = node.name
+          }}
           onChange={(e) => updateNode(node.uid, { name: e.target.value })}
+          onBlur={commitRename}
         />
 
         <select
@@ -293,7 +334,9 @@ function SchemaNodeRow({
           type="button"
           className="remove-btn"
           title="Remove this field and its children"
-          onClick={() => removeNode(node.uid)}
+          onClick={() => {
+            if (confirmDestructive(node.name, 'remove')) removeNode(node.uid)
+          }}
         >
           ×
         </button>

@@ -301,6 +301,33 @@ async function promptUnsavedChanges(win: BrowserWindow) {
   win.webContents.send('app:requestSave')
 }
 
+/**
+ * Reload, asking first when the renderer has unsaved changes.
+ *
+ * Only a confirmation, not the three-way Save/Don't Save/Cancel of a close: a
+ * reload is a debugging affordance rather than a normal step in a review, and
+ * routing it through the renderer's save round-trip (which can itself open a
+ * native Save dialog) to then reload underneath that is more machinery than the
+ * action warrants. Refusing by default is what matters — the old behaviour
+ * discarded the work outright.
+ */
+async function guardedReload(win: BrowserWindow | undefined, force: boolean) {
+  if (!win) return
+  if (isDirty) {
+    const { response } = await dialog.showMessageBox(win, {
+      type: 'warning',
+      buttons: ['Cancel', 'Reload anyway'],
+      defaultId: 0,
+      cancelId: 0,
+      message: 'Reload and discard unsaved changes?',
+      detail: "Your changes will be lost if you reload before saving them.",
+    })
+    if (response === 0) return
+  }
+  if (force) win.webContents.reloadIgnoringCache()
+  else win.webContents.reload()
+}
+
 /** Complete a close that was deferred for the unsaved-changes prompt. */
 function finishClose(win: BrowserWindow) {
   if (isQuitting) app.quit() // resume the quit; close now passes (allowClose)
@@ -365,8 +392,22 @@ function buildMenu() {
       // (native page zoom would also scale the PDF "paper", which we don't want).
       label: 'View',
       submenu: [
-        { role: 'reload' },
-        { role: 'forceReload' },
+        // Not `{ role: 'reload' }`/`{ role: 'forceReload' }`: those carry
+        // Cmd/Ctrl+R and reload the renderer immediately. A reload emits
+        // neither `close` nor `will-navigate`, so the unsaved-changes guard
+        // below never sees it — and the desktop build deliberately installs no
+        // `beforeunload` handler either (see `useDirtyGuard`), so a reflexive
+        // Ctrl+R threw away every unsaved annotation with no prompt at all.
+        {
+          label: 'Reload',
+          accelerator: 'CmdOrCtrl+R',
+          click: (_item, win) => void guardedReload(win as BrowserWindow | undefined, false),
+        },
+        {
+          label: 'Force Reload',
+          accelerator: 'CmdOrCtrl+Shift+R',
+          click: (_item, win) => void guardedReload(win as BrowserWindow | undefined, true),
+        },
         { role: 'toggleDevTools' },
         { type: 'separator' },
         { role: 'togglefullscreen' },

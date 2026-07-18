@@ -93,7 +93,24 @@ function anthropicReasoning(capabilities: unknown): ReasoningProfile | null {
 
 const V1_MODELS = '/v1/models'
 
-export function buildModelsRequest(cfg: LlmConfig, cursor?: string): LlmHttpRequest {
+/**
+ * Resolve a pagination cursor against the target's base URL and confirm it did
+ * not leave the origin. Returns null when it did — the caller must then stop
+ * paginating rather than send the API key somewhere new.
+ */
+function resolveSameOrigin(base: string, cursor: string): string | null {
+  try {
+    const baseUrl = new URL(base)
+    const next = new URL(cursor, baseUrl)
+    return next.origin === baseUrl.origin ? next.toString() : null
+  } catch {
+    return null
+  }
+}
+
+/** Null when a provider's own pagination cursor cannot be trusted — see
+ *  `resolveSameOrigin`. The caller stops paginating and keeps what it has. */
+export function buildModelsRequest(cfg: LlmConfig, cursor?: string): LlmHttpRequest | null {
   const base = baseOf(cfg)
 
   if (cfg.provider === 'anthropic') {
@@ -123,9 +140,17 @@ export function buildModelsRequest(cfg: LlmConfig, cursor?: string): LlmHttpRequ
     // a follow-up page is just that URL against this target's origin — no
     // offset bookkeeping on this side.
     if (cursor) {
+      // Resolved against the base as a URL, then checked — never concatenated.
+      // `cursor` is whatever `links.next` said, and this request carries the
+      // user's API key: `${origin}${cursor}` let a cursor of "@evil.com/v1/models"
+      // read as userinfo, producing https://openrouter.ai@evil.com/... and
+      // handing the key to evil.com. Resolution keeps a relative cursor working
+      // while the origin check makes an absolute one unable to redirect it.
+      const next = resolveSameOrigin(base, cursor)
+      if (!next) return null
       return {
         configId: cfg.id,
-        url: `${new URL(base).origin}${cursor}`,
+        url: next,
         method: 'GET',
         headers: { Authorization: `Bearer ${API_KEY_SENTINEL}` },
       }

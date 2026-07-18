@@ -278,3 +278,65 @@ describe('resolvePath: a node with both a value and children', () => {
     expect(r.def.type).toBe('number')
   })
 })
+
+describe('names containing the format\'s own punctuation round-trip', () => {
+  // Regression: "/" "[" "]" are the path format's punctuation, but nothing
+  // restricts a schema author from using them in a field name — and these are
+  // ordinary SLR codebook names. Unescaped, "Population / Setting" split into
+  // two segments and resolved to a *different* field, so a git commit wrote the
+  // answer into the wrong place; "Sub-questions / RQs" resolved to nothing at
+  // all, making the field permanently uncommittable.
+  const names = [
+    'Population / Setting',
+    'Cost/Benefit',
+    'Findings[1]',
+    'Ref [see note]',
+    'A]B',
+    'Back\\slash',
+    'Normal Name',
+  ]
+
+  it.each(names)('round-trips %j through formatPath/parsePath', (name) => {
+    const segs = [{ name, index: 0 }]
+    expect(parsePath(formatPath(segs))).toEqual(segs)
+  })
+
+  it.each(names)('round-trips %j at a non-zero index', (name) => {
+    const segs = [{ name, index: 2 }]
+    expect(parsePath(formatPath(segs))).toEqual(segs)
+  })
+
+  it('round-trips a nested path whose every segment needs escaping', () => {
+    const segs = [
+      { name: 'Population / Setting', index: 1 },
+      { name: 'Ref [see note]', index: 0 },
+    ]
+    expect(parsePath(formatPath(segs))).toEqual(segs)
+  })
+
+  it('leaves ordinary names byte-identical, so persisted paper.equal keys still match', () => {
+    // The whole reason escaping is opt-in per character: these strings are
+    // stored in project files.
+    expect(formatPath([{ name: 'Study Type', index: 0 }])).toBe('Study Type')
+    expect(formatPath([{ name: 'Findings', index: 1 }, { name: 'Claim', index: 0 }])).toBe(
+      'Findings[1]/Claim',
+    )
+  })
+
+  it('a slash-named field no longer resolves to a different field', () => {
+    const schema = resolveSchema([
+      { name: 'Population', children: [{ name: 'Setting', type: 'string' }] },
+      { name: 'Population / Setting', type: 'string' },
+    ])
+    const canonical = formatPath([{ name: 'Population / Setting', index: 0 }])
+    const r = resolvePath(schema, canonical)
+    expect(r?.name).toBe('Population / Setting')
+    expect(r?.path).toEqual([]) // top level, NOT inside the Population group
+  })
+
+  it('a slash-named field is resolvable at all (was permanently uncommittable)', () => {
+    const schema = resolveSchema([{ name: 'Sub-questions / RQs', type: 'string' }])
+    const canonical = formatPath([{ name: 'Sub-questions / RQs', index: 0 }])
+    expect(resolvePath(schema, canonical)?.name).toBe('Sub-questions / RQs')
+  })
+})

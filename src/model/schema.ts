@@ -242,7 +242,28 @@ export class SchemaError extends Error {}
 
 function resolveDefs(defs: AnnotationDef[], parentPath: string): ResolvedDef[] {
   const seen = new Set<string>()
-  return defs.map((def) => {
+  return defs.map((rawDef) => {
+    // Normalise padding before anything else keys off the name. A canonical
+    // path trims its segments (see `paths.ts`), so a hand-edited file with
+    // both "Claim" and "Claim " as siblings would pass the uniqueness check
+    // here and then collapse to one path — every lookup silently hitting
+    // whichever came first. The editor already trims on input; this closes the
+    // same hole for a file that did not come through it.
+    const def = rawDef.name === rawDef.name.trim() ? rawDef : { ...rawDef, name: rawDef.name.trim() }
+    // Annotation trees are plain objects keyed by field name, so a field called
+    // `__proto__` would hit `Object.prototype`'s setter instead of creating an
+    // own property: the field reads and edits normally (values come back
+    // through the prototype) but `Object.keys` skips it and `JSON.stringify`
+    // drops it, so a reviewer's answers for it vanish on save with no error.
+    // Rejected rather than silently renamed — this can only come from a
+    // hand-edited file, and quietly changing someone's schema is worse.
+    if (def.name === '__proto__') {
+      throw new SchemaError(
+        `Annotation name "__proto__" is not allowed${
+          parentPath ? ` (under "${parentPath}")` : ''
+        }: answers stored under it cannot be saved. Rename the field.`,
+      )
+    }
     if (seen.has(def.name)) {
       throw new SchemaError(
         `Duplicate sibling annotation name "${def.name}"${

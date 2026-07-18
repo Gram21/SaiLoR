@@ -46,7 +46,7 @@ export function useKeybindings() {
       // Opening a project mid-edit would strand the draft, so ignore it there.
       if (mod && (e.key === 'o' || e.key === 'O')) {
         e.preventDefault()
-        if (!editing) void useStore.getState().openProject()
+        if (!editing) useStore.getState().requestOpenProject()
         return
       }
 
@@ -101,6 +101,17 @@ export function useKeybindings() {
 
       // Paper navigation. Skip when typing in a field unless Alt is held.
       if (editing) return
+      // ...and skip everything below while a modal is open. These bindings act
+      // on the paper *behind* the dialog: pressing `3` while reading the Help
+      // dialog's shortcut table excluded the hidden paper with the third reason
+      // and auto-advanced the selection, with nothing visibly happening. Every
+      // dialog in the app renders `.modal-overlay` (and a `role="dialog"`), so
+      // one DOM check covers them all and cannot drift out of sync with a
+      // hand-maintained list of open-flags. Scoped to the bare-key bindings
+      // below (screening decisions and paper navigation), which are the ones
+      // that fire from a single unmodified keystroke and act on hidden content;
+      // the modifier combos above stay reachable on purpose.
+      if (aModalIsOpen()) return
       const inField = isEditable(e.target)
 
       // Screening is hundreds of papers at seconds each, so the decision is a
@@ -169,4 +180,14 @@ function isEditable(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
   const tag = target.tagName
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable
+}
+
+/**
+ * Is a modal dialog on screen? Every dialog in the app renders a
+ * `.modal-overlay` wrapper (and marks itself `role="dialog"`), so this one
+ * query covers all of them — including any added later — without a list of
+ * per-dialog open-flags to keep in sync.
+ */
+function aModalIsOpen(): boolean {
+  return document.querySelector('.modal-overlay') !== null
 }
