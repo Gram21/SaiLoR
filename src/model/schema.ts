@@ -299,7 +299,56 @@ function resolveDefs(defs: AnnotationDef[], parentPath: string): ResolvedDef[] {
 
 /** Validate + resolve a raw schema array into ResolvedDef nodes. */
 export function resolveSchema(defs: AnnotationDef[]): ResolvedDef[] {
-  return resolveDefs(defs, '')
+  const resolved = resolveDefs(defs, '')
+  assertInstanceBudget(resolved)
+  return resolved
+}
+
+/**
+ * The most instances an empty project may materialize. Generous next to any
+ * real schema — a normal one has `min` 0 or 1 nearly everywhere, so it starts
+ * at roughly one instance per field.
+ */
+const MAX_INITIAL_INSTANCES = 100_000
+
+/**
+ * Refuse a schema whose empty tree would be enormous.
+ *
+ * `min` is a lower bound on instance count, and `initTree`/`normalizeTree`
+ * *materialize* `max(min, 1)` instances per node, recursively, at load — before
+ * the reviewer has entered anything. Nested groups multiply, so the cost is the
+ * product down each branch and the file describing it stays tiny: seven levels
+ * each with `min: 7` is about 400 bytes and 820 000 instances, and ten levels
+ * of ten is ~500 bytes and 10^10 — an out-of-memory kill of the whole process
+ * during load, with no error dialog and no chance to close the file. A flat
+ * `min: 1000000000` does the same in 139 bytes.
+ *
+ * Checked on the resolved schema rather than bounding `min` per node, because
+ * a per-node cap cannot stop the nested case: any ceiling above 1 still
+ * multiplies. The product is what has to be bounded, so the product is what is
+ * measured.
+ */
+function assertInstanceBudget(defs: ResolvedDef[]): void {
+  const total = countInstances(defs, MAX_INITIAL_INSTANCES)
+  if (total > MAX_INITIAL_INSTANCES) {
+    throw new SchemaError(
+      `This schema would create at least ${MAX_INITIAL_INSTANCES} empty entries before anything is filled in. ` +
+        'Lower the "min" values, or nest fewer repeated groups inside each other.',
+    )
+  }
+}
+
+/** Instances an empty tree materializes, stopping once past `cap` so a
+ *  10^10 schema is rejected in the time it takes to exceed the budget. */
+function countInstances(defs: ResolvedDef[], cap: number): number {
+  let total = 0
+  for (const def of defs) {
+    const each = Math.max(def.min, 1)
+    const children = def.children.length > 0 ? countInstances(def.children, cap) : 0
+    total += each * (1 + children)
+    if (total > cap) return total
+  }
+  return total
 }
 
 /** True if a node can occur more than once. */

@@ -534,6 +534,27 @@ export function needsShapeMigration(project: Project, rawText: string): boolean 
  * Parse raw JSON text (or an already-parsed object) into a validated,
  * normalized Project. Throws {@link ProjectLoadError} with friendly details.
  */
+/**
+ * Deeper than any real project and far below where any of the app's recursive
+ * walkers give out (the shallowest, zod's validation, goes at ~700).
+ */
+const MAX_JSON_DEPTH = 200
+
+/** Is `value` nested deeper than `limit`? Iterative, so it cannot itself
+ *  overflow on the very input it exists to reject. */
+function exceedsDepth(value: unknown, limit: number): boolean {
+  const stack: Array<{ v: unknown; d: number }> = [{ v: value, d: 0 }]
+  while (stack.length > 0) {
+    const { v, d } = stack.pop()!
+    if (v === null || typeof v !== 'object') continue
+    if (d >= limit) return true
+    for (const child of Array.isArray(v) ? v : Object.values(v)) {
+      stack.push({ v: child, d: d + 1 })
+    }
+  }
+  return false
+}
+
 export function loadProject(input: string | unknown): Project {
   let data: unknown
   if (typeof input === 'string') {
@@ -546,6 +567,22 @@ export function loadProject(input: string | unknown): Project {
     data = input
   }
 
+  // Depth first, before anything walks the data. Almost every traversal in the
+  // app is recursive — zod's own validation, `resolveDefs`, `normalizeTree`,
+  // `deepEqualJson`, `serializeProject` — and each blows the stack somewhere
+  // between a few hundred and a few thousand levels. A ~29 KB file nested 704
+  // deep made `projectSchema.parse` throw a raw `RangeError`, which escapes
+  // this function's "throws ProjectLoadError with friendly details" contract
+  // and lands in the store's generic fallback. Unknown keys are passed through
+  // verbatim into `extra`, so depth there is unbounded too and surfaces later
+  // in `deepEqualJson` — crashing the read-only git-status path, not just save.
+  // One check at the entrance covers all of them.
+  if (exceedsDepth(data, MAX_JSON_DEPTH)) {
+    throw new ProjectLoadError('The project file is nested too deeply.', [
+      `Nesting deeper than ${MAX_JSON_DEPTH} levels is not supported.`,
+    ])
+  }
+
   let raw
   try {
     raw = projectSchema.parse(data)
@@ -555,6 +592,12 @@ export function loadProject(input: string | unknown): Project {
         'The project file does not match the expected structure.',
         err.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`),
       )
+    }
+    // Belt and braces: the depth guard above should make this unreachable, but
+    // a stack overflow must never leave this function as anything other than a
+    // ProjectLoadError.
+    if (err instanceof RangeError) {
+      throw new ProjectLoadError('The project file is nested too deeply.', [String(err)])
     }
     throw err
   }
