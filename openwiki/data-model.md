@@ -622,6 +622,34 @@ Called during serialization. For each node:
 4. `dehydrateSchema()` converts `ResolvedDef[]` back to compact `AnnotationDef[]` (omits defaults: `min: 1`, `max: 1` are not written back)
 5. Output is `JSON.stringify(out, null, 2)` — pretty-printed with 2-space indent
 
+## Reference import: what a malformed file costs
+
+The parsers' contract is that a malformed *entry* is skipped — not that a
+malformed entry takes the rest of the file with it. Three ways that was violated,
+all of them silent:
+
+- **A RIS file with no `ER` lines** kept only its last record, because starting a
+  new record overwrote the one in progress. Records are now finalized when the
+  next `TY` arrives, the same rescue the final record already had.
+- **RIS continuation lines** (a long value wrapped onto following lines with no
+  tag of its own) were dropped, truncating a title mid-sentence — which then also
+  changed how duplicate detection scored it. Only the prose fields are joined: a
+  line after `AU` is a new author rather than more of the last one, and gluing a
+  stray line onto a DOI would corrupt an identifier.
+- **One unbalanced BibTeX brace** consumed everything after it, so a 500-entry
+  export with a malformed third entry imported three papers and reported success.
+  The scan now resyncs to the next `@` at a line start.
+
+Duplicate classification has a related rule worth knowing: an **exact title match
+with no author in common is `probable`, not `certain`**. Titles like
+"Introduction" and "Editorial" recur across a proceedings-heavy corpus, and a
+`certain` match merges without asking — `fillFromRef` then writes one paper's
+DOI, year and venue onto the other, which is a wrong record rather than a missing
+one. Complete disjointness only, so a shortened author list ("et al.") or
+initials still shares a surname and stays `certain`; an empty author list on
+either side abstains rather than voting against, the same rule the base-title
+tier already followed.
+
 ## Error Handling
 
 `ProjectLoadError` (`src/model/project.ts`) extends `Error` with a `details: string[]` array. It is thrown for:
