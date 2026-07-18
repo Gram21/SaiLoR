@@ -27,13 +27,18 @@ interface PermissionCapableHandle {
  * bare `NotAllowedError` that reads like a bug in the app rather than a
  * permission the browser is waiting to be asked for.
  *
- * **Unverified.** This was reasoned from the API contract, and from the fact
- * that the code already asked for `read` permission in `openRecent` — the exact
- * flow where permission resets — while never asking for `readwrite` anywhere at
- * all. It is not from an observed failure in a real browser. Chrome may prompt
- * on `createWritable()` by itself, in which case this is a no-op:
- * `queryPermission` short-circuits when access is already granted, so it adds
- * no second dialog either way.
+ * **Partly verified.** Against a real Chromium File System Access
+ * implementation: `queryPermission`/`requestPermission` exist on handles,
+ * `queryPermission({mode:'readwrite'})` short-circuits when access is granted
+ * (measured: `requestPermission` called zero times), a handle survives an
+ * IndexedDB round-trip and still answers `isSameEntry` correctly, and
+ * `createWritable()` round-trips content. So this adds no second dialog when
+ * permission is already held.
+ *
+ * What is **still unverified** is the case that motivated it: whether a
+ * *picker-derived* handle restored after a page reload prompts on
+ * `createWritable()` by itself. That needs a native file dialog and a human
+ * permission decision, which no automation can drive — see task #78.
  *
  * The reason `openRecent` asks for `readwrite` up front rather than leaving it
  * to the save: requesting permission needs transient user activation, and by
@@ -50,6 +55,13 @@ async function ensurePermission(
   mode: 'read' | 'readwrite',
 ): Promise<boolean> {
   const h = handle as unknown as PermissionCapableHandle
+  // No permission API at all: there is nothing to ask, so let the operation
+  // itself decide. Optional chaining yields `undefined`, which is not
+  // `'granted'` — so without this the answer would be "denied", and since this
+  // now gates *writing*, a browser that implements handles without the
+  // permission methods could not save at all. Failing closed is right when a
+  // permission is genuinely refused; it is wrong when nobody was asked.
+  if (!h.queryPermission && !h.requestPermission) return true
   const opts = { mode }
   if ((await h.queryPermission?.(opts)) === 'granted') return true
   return (await h.requestPermission?.(opts)) === 'granted'
