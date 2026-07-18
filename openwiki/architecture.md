@@ -442,8 +442,8 @@ entry* and lines them up.
 | `apply.ts` | Writes an alignment into the data |
 | `unanimous.ts` | Finds the fields every reviewer answered identically, for `adoptUnanimousValues` to fill. Owns `comparable()` — the one rule for "did they say the same answer", shared with `disagreements.ts` and the compare popup so the three cannot drift into different verdicts |
 | `disagreements.ts` | The per-field cross-reviewer verdict (`FieldVerdict`): who answered, which category their answer falls in, whether that is agreement. What both the overview and the statistics read |
-| `metrics.ts` | Cohen's κ, Fleiss' κ, Krippendorff's α over abstract units × raters, each with an applicability check that explains refusal in a sentence. Knows nothing about papers or schemas, so it can be checked against published worked examples |
-| `agreement.ts` | Turns `projectVerdicts` into a `MetricInput` |
+| `metrics.ts` | Cohen's κ, Fleiss' κ, Krippendorff's α over abstract units × raters, each with an applicability check that explains refusal in a sentence. Knows nothing about papers or schemas, so it can be checked against published worked examples — and has been, including α with missing data |
+| `agreement.ts` | Turns `projectVerdicts` into a `MetricInput`. **Yes/no fields are excluded** — see below |
 
 **Matching cannot cross**, which is a requirement of the feature: a group's sub-entries are only
 ever matched *inside* an already-matched pair of parents, because the recursion never offers a
@@ -623,6 +623,39 @@ it is worth having all three.
 **⚠ Disagreements** (`DisagreementOverview`) lists every field where the answering reviewers gave
 different categories, grouped by paper; a row jumps to it (`selectPaper` → `openConsolidation`), which
 is the point — finding a disagreement is useless if you then have to hunt for it.
+
+### What the agreement numbers do and do not cover
+
+The three coefficients themselves are verified against published worked
+examples, including Krippendorff's α with missing data. Two things about the
+*input* are worth knowing before quoting a number from this dialog.
+
+**Yes/no fields are excluded, and the dialog says how many.** Every untouched
+boolean reads `false`, so nothing distinguishes "considered it and said no" from
+"never looked" — the same fact that makes `isUnanswered` treat an unticked box as
+unanswered and `similarity.ts` give a `false` no weight. Before this exclusion a
+boolean reached the two-answer gate only when *every* reviewer ticked it true, so
+a true/false split was dropped and false/false scored nothing: the only boolean
+units that survived were guaranteed agreements, and every real boolean
+disagreement was discarded. The coefficient came out **higher** than the truth
+(κ 0.500 measured where the honest value was 0.000), which for a published
+statistic is the worst direction to be wrong in.
+
+**Repeatable-group entries are compared in stored order, not aligned order.**
+This is the known limitation described under `disagreements.ts`, and the metrics
+inherit it: two reviewers who recorded the same findings in a different order
+score as disagreeing. Since this dialog computes over the whole project while
+alignment runs only on papers someone has opened in Consolidation, a coefficient
+from an un-consolidated project can be arbitrarily pessimistic — κ = −0.333
+measured on a two-paper case whose true value is 1.0. Align the papers first.
+
+**All fields share one category universe.** `agreementInput` pools every field of
+every paper into one unit list, so p_e is computed over a merged marginal
+distribution mixing enum labels and free-text answers. Free text contributes
+near-unique categories, which drives p_e toward 0 and κ toward raw percent
+agreement: an enum field with honest κ 0.0 and a free-text field with honest
+κ 1.0 pool to 0.706. Screening escapes this — `decisionOnly` narrows to the
+Decision enum, and that path is sound.
 
 ### Semantic equality (`Paper.equal`)
 
@@ -1153,6 +1186,16 @@ The same channel carries the list-models requests from `models.ts`: `LlmHttpRequ
 Two gates, and both are unconditional:
 
 - **`parse.ts` validates every proposal against the schema.** `resolvePath` rejects unknown names, group paths (a group holds no value), non-final segments that have no children, and any index at or beyond a node's `max` — plus, for the LLM callers only, any index at or beyond `MAX_UNBOUNDED_INDEX` (10 000) on a node declared `max: null`, since `applyAiSuggestions` *materializes* every instance up to the index and a reply of `Findings[9007199254740990]` would otherwise be an out-of-memory kill. That ceiling is opt-in (`ResolveOptions.maxUnboundedIndex`) precisely because the same function also resolves paths that already exist in a project: applied unconditionally it made `git/merge.ts`'s `applyOne` skip a conflict the reviewer had explicitly resolved by hand, keeping "ours" with no error. Only `llm/parse.ts` and `applyAiSuggestions` ask for it; then the value must *typecheck* against its `ResolvedDef`. It bends only where models misbehave in a way with exactly one honest reading (`"2021"` → `2021`, `"True"` → `true`, a case-off enum value snapped onto its option). Everything else — `"about 20"`, a value outside the enum, a duplicate answer for the same field — is **rejected, never guessed at**, and rejections are *shown* to the reviewer, because a silently dropped answer looks like the model never said anything. `parseAnswer` never throws: it sits on a network response, where garbage is a normal outcome.
+- **A reply is only ever applied to what it was asked about.** The run records the paper, the seat
+  and the target that answered (`AiState.runFor`), and `applyAiSuggestions` refuses if any of them
+  has changed. This is not defensive padding: the dialog stays open and the paper list and seat
+  picker stay usable while a call is in flight, so selecting another paper and pressing Apply used
+  to write the reply about paper A onto paper B — fabricated content on a paper nobody read, with an
+  `aiUsage` record vouching for it — and switching seats did the same across reviewers, corrupting
+  the inter-rater data. It **refuses rather than quietly retargeting**: writing to the run's paper
+  while the reviewer looks at a different one would be correct attribution but invisible work, so
+  they would see "applied" and no change. The recorded target is also what `aiUsage` discloses,
+  rather than whichever target the picker happens to show at Apply time.
 - **`applyAiSuggestions` (`src/state/store.ts`) is one undo step.** It decides what to write *before* touching anything — a suggestion is dropped if its path no longer resolves, or if the field has been answered since the model was asked, so **the reviewer's own work is never overwritten** — and if nothing survives, it leaves no empty entry on the undo stack. It then snapshots once and mutates, creating any instances of repeatable nodes the model addressed but that did not exist yet. `lastFieldKey` is reset so the reviewer's next keystroke is not coalesced into the AI's step. `Ctrl/Cmd+Z` therefore undoes the **whole fill** in one go. It returns an `AiApplyResult` (`filled` / `skipped`) for the summary the dialog shows.
 
 ### AI marks
@@ -1339,8 +1382,15 @@ Two deliberate exclusions, and both are the interesting part:
   `--no-ext-diff`, passed on the diff invocation itself, is the flag that actually means "use your
   own", and it is what the diff call uses.
 
-`filter.*` clean/smudge drivers cannot be disabled by `-c` at all and are the known residual. They
-run only on an explicit commit or pull, not on opening a folder.
+**`--no-textconv` on the diff is not optional either.** `diff.<driver>.textconv` is selected by an
+in-tree `.gitattributes`, so `-c` cannot pre-empt it, and `--no-ext-diff` does not cover it — they
+are separate mechanisms. Verified: a received folder carrying `* diff=evil` plus a
+`diff.evil.textconv` in its own config executes that command on `git status`, which is one click
+from opening the project, exactly like the `core.fsmonitor` case.
+
+`filter.*` clean/smudge drivers and custom `merge.<driver>.driver`s cannot be disabled by `-c` at
+all and are the known residuals. Both run only on an explicit commit or pull, not on opening a
+folder — which is the boundary this section is about.
 
 ### Writes never follow a symlink
 
@@ -1353,10 +1403,23 @@ overwrite of a shell startup file — with substantially attacker-chosen content
 at). A *parent* directory that is a symlink is fine and stays working — that is ordinary on macOS,
 where `/tmp` is one.
 
-`assertRelPath` splits on both separators, since `p.split('/')` left
+**Checking the leaf is not enough.** `assertNotSymlink` inspects only the final component, which
+leaves the directory case open: a repository carrying `sub -> /elsewhere` accepts a relative path of
+`sub/project.json` — no `..`, and the leaf really is an ordinary file — and the write lands outside
+the repository. `assertInsideRoot` resolves the *parent* with `realpath`, following every link in
+the chain, so containment is checked against where the write actually goes rather than where the
+path string claims it goes. `slr-file://` had the read-side version of the same hole and now
+realpaths both sides before serving: `path.resolve` collapses `..` but follows no links, so a
+`pdfs/paper.pdf` symlinked to `/etc/passwd` used to resolve inside the project and be served.
+
+The relative-path rule itself lives in **`src/git/relpath.ts`**, not in `electron/main.ts`, for the
+same reason `validateGitUrl` does: `electron/` is outside vitest's include, and a security gate no
+test can reach is one nobody can change safely. It splits on both separators (`p.split('/')` left
 `..\..\Users\victim\.bashrc` as a single opaque segment on POSIX while `path.win32.join` honours
-it, and it rejects any `.git` segment — a valid relative path, but never project data, and a
-write-to-`hooks` primitive.
+it), rejects Windows absolute forms explicitly, and rejects any `.git` segment — a valid relative
+path, but never project data, and a write-to-`hooks` primitive. That comparison strips trailing dots
+and spaces and lowercases, because Win32 strips them from path components itself, so `.git.\config`,
+` .git/config` and `.GIT/config` all reach the same directory.
 
 ### Reviewer seat identity
 
