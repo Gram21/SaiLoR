@@ -17,7 +17,14 @@
   <!-- Transparent background, free-form glyph: a boat whose mainsail is a page of
        text with one line highlighted (the annotation) and whose jib carries a
        checkmark (the review). The silhouette carries the icon at small sizes; the
-       sail details are a bonus at large ones. Teal + highlight red, as in the app. -->
+       sail details are a bonus at large ones. Teal + highlight red, as in the app.
+
+       This is the app's one logo source. `scripts/make-icon.cjs` rasterizes it into
+       `build/icon.png`/`.icns` for the dock/taskbar/installer icon, and the welcome
+       screen (`src/App.tsx`) references this same file directly — one artwork, no
+       second copy to drift out of sync. `public/favicon.svg` is the only deliberate
+       exception: a separately hand-simplified version for 16px browser tabs, where
+       this one's detail turns to mush (see that file's own comment). -->
   <g transform="translate(-8 -40)">
     <!-- Mast -->
     <rect x="501" y="130" width="22" height="615" rx="11" fill="#17708a"/>

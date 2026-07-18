@@ -148,6 +148,17 @@ export function App() {
       ) : (
         <div className="welcome">
           <div className="welcome-box">
+            {/* `BASE_URL`, not a root-absolute path: `base: './'` (vite.config.ts)
+                is what lets the same build run from a server subpath and from
+                Electron's `file://`, and a hard-coded "/logo.svg" would 404 under
+                the latter. */}
+            <img
+              className="welcome-logo"
+              src={`${import.meta.env.BASE_URL}logo.svg`}
+              alt=""
+              width={80}
+              height={80}
+            />
             <h1>SaiLoR</h1>
             <p>Open a project JSON file to begin annotating, or set one up.</p>
             <button type="button" className="primary" onClick={() => void openProject()}>

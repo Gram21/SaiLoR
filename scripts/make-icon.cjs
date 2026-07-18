@@ -1,10 +1,15 @@
 /**
- * Renders build/icon.svg to build/icon.png (1024x1024, transparent), then —
+ * Renders public/logo.svg to build/icon.png (1024x1024, transparent), then —
  * on macOS — builds build/icon.icns from it via the OS's own `sips`/`iconutil`.
  *
  * electron-builder needs a raster icon; the SVG is the source of truth. Rather
  * than pull in a rasterizer (or hand-export and let the two drift apart), this
  * borrows the Chromium that Electron already brings.
+ *
+ * The source SVG lives under `public/`, not `build/`, because it is also the
+ * in-app logo shown on the welcome screen (`src/App.tsx`) — one artwork file
+ * feeds both the packaged app's icon and the running app's own UI, rather than
+ * two copies that could drift apart.
  *
  * The .icns step exists because handing electron-builder the bare PNG and
  * letting *it* auto-convert produced a visibly worse macOS icon (small sizes
@@ -12,7 +17,7 @@
  * does from the same source pixels — `mac.icon` in package.json points at the
  * .icns this produces, not the .png. iconutil is macOS-only, so on other
  * platforms this step is skipped with a note: regenerate the .icns on a Mac
- * (or in CI's macOS runner) whenever icon.svg changes.
+ * (or in CI's macOS runner) whenever logo.svg changes.
  *
  *   npm run icon
  */
@@ -23,7 +28,7 @@ const os = require('node:os')
 const path = require('node:path')
 
 const SIZE = 1024
-const svgPath = path.join(__dirname, '..', 'build', 'icon.svg')
+const svgPath = path.join(__dirname, '..', 'public', 'logo.svg')
 const pngPath = path.join(__dirname, '..', 'build', 'icon.png')
 const icnsPath = path.join(__dirname, '..', 'build', 'icon.icns')
 
