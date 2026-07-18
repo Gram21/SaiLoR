@@ -77,7 +77,16 @@ const PROJECT = JSON.stringify({
 
 const st = () => useStore.getState()
 const TEST_USAGE = { provider: 'openai', model: 'gpt-5.5' }
-const apply = (suggestions: Suggestion[]) => st().applyAiSuggestions(suggestions, TEST_USAGE)
+/**
+ * Apply as the dialog does: for the paper and seat that are current *right now*,
+ * which is what a run started and finished without the reviewer navigating away
+ * looks like. The mismatch cases have their own tests below.
+ */
+const apply = (suggestions: Suggestion[]) =>
+  st().applyAiSuggestions(suggestions, TEST_USAGE, {
+    paperId: st().currentPaperId!,
+    reviewer: st().currentReviewer,
+  })
 
 /** A suggestion as the parser hands it over: path + value, with evidence attached. */
 const sug = (path: string, value: Suggestion['value']): Suggestion => ({
@@ -380,7 +389,10 @@ describe('applyAiSuggestions: usage disclosure', () => {
     apply([sug('Summary', 'first pass')])
 
     const applyAs = (provider: string, model: string, path: string, value: Suggestion['value']) =>
-      st().applyAiSuggestions([sug(path, value)], { provider, model })
+      st().applyAiSuggestions([sug(path, value)], { provider, model }, {
+        paperId: st().currentPaperId!,
+        reviewer: st().currentReviewer,
+      })
 
     applyAs('anthropic', 'claude-5', 'Year', 2021)
     applyAs('openai', 'gpt-6', 'Relevant', true)
@@ -413,5 +425,44 @@ describe('applyAiSuggestions: usage disclosure', () => {
 
     st().redo()
     expect(usage()).toHaveLength(1)
+  })
+})
+
+describe('a reply is only ever applied to what it was asked about', () => {
+  it('refuses when the reviewer has moved to another paper', () => {
+    // The dialog stays open and the paper list stays usable while a call is in
+    // flight, so this is an ordinary sequence, not an exotic one. Writing the
+    // reply onto the new paper is fabricated data on a paper nobody read —
+    // with an aiUsage record vouching for it.
+    const askedAbout = st().currentPaperId! // 'p1', from the beforeEach
+    st().selectPaper('p2')
+
+    const res = st().applyAiSuggestions([sug('Summary', 'about paper ONE')], TEST_USAGE, {
+      paperId: askedAbout,
+      reviewer: st().currentReviewer,
+    })
+
+    expect(res).toEqual({ filled: 0, skipped: 1 })
+    // The tree is always schema-shaped, so "untouched" means every value is
+    // still null rather than the object being empty.
+    const p2 = st().project!.papers.find((p) => p.id === 'p2')!
+    expect(p2.annotations['Summary']?.[0]?.value ?? null).toBeNull()
+    expect(p2.aiUsage ?? []).toEqual([])
+    // ...and the paper it *was* asked about is untouched too: the reply is
+    // still on screen to be applied deliberately.
+    expect(paperById('p1').annotations['Summary']?.[0]?.value ?? null).toBeNull()
+  })
+
+  it('refuses when the run was made for a different seat', () => {
+    // Single-reviewer project here, so `currentReviewer` is null; asking as a
+    // numbered seat is still a mismatch and must be refused rather than
+    // silently retargeted at whatever seat is active.
+    const res = st().applyAiSuggestions([sug('Summary', 'for reviewer ONE')], TEST_USAGE, {
+      paperId: st().currentPaperId!,
+      reviewer: '1',
+    })
+
+    expect(res).toEqual({ filled: 0, skipped: 1 })
+    expect(paperById('p1').annotations['Summary']?.[0]?.value ?? null).toBeNull()
   })
 })

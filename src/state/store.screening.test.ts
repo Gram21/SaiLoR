@@ -185,6 +185,7 @@ describe('applyAiSuggestions on a screening project', () => {
     const result = st().applyAiSuggestions(
       [{ path: 'Decision', value: 'Include', evidence: 'x', confidence: null }],
       { provider: 'openai', model: 'gpt' },
+      { paperId: st().currentPaperId!, reviewer: st().currentReviewer },
     )
     expect(result.filled).toBe(0)
     expect(st().project!.papers[0].annotations.Decision[0].value).toBeNull()

@@ -818,6 +818,14 @@ ipcMain.handle(
     // choosing. It has to be the origin the user configured.
     const target = new URL(request.url)
     const allowed = new URL(config.baseUrl)
+    // Opaque-origin schemes compare equal to each other — `new URL('file:///a')
+    // .origin` and `new URL('file://x/b').origin` are both the string "null" —
+    // so without a scheme check a `file:` base URL would authorise any `file:`
+    // target and turn this into a file reader. Only the two schemes an API
+    // endpoint can actually use are allowed.
+    if (!['https:', 'http:'].includes(target.protocol) || target.protocol !== allowed.protocol) {
+      throw new Error(`Refusing to send the API key over ${target.protocol}.`)
+    }
     if (target.origin !== allowed.origin) {
       throw new Error(`Refusing to send the API key to ${target.origin}.`)
     }
@@ -835,6 +843,16 @@ ipcMain.handle(
         headers,
         body: request.method === 'GET' ? undefined : request.body,
         signal: controller.signal,
+        // The origin check above happens once, before the request. Following a
+        // redirect would carry these headers — including the substituted API
+        // key — to whatever origin the endpoint names, so the check would guard
+        // only the first hop. Provider-specific key headers (`x-api-key`,
+        // `x-goog-api-key`) are *not* stripped by the fetch stack the way
+        // `Authorization` is, so this is a real leak and not a theoretical one.
+        // Refuse the redirect instead: an API endpoint that redirects is
+        // misconfigured, and reporting that is more useful than silently
+        // following it somewhere else.
+        redirect: 'error',
       })
       return { ok: res.ok, status: res.status, body: await res.text() }
     } finally {

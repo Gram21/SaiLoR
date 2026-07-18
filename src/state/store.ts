@@ -376,7 +376,12 @@ interface AppState {
   undo: () => void
   redo: () => void
   /** Write the reviewer-approved AI suggestions into the current paper (one undo step). */
-  applyAiSuggestions: (suggestions: Suggestion[], usage: { provider: string; model: string }) => AiApplyResult
+  applyAiSuggestions: (
+    suggestions: Suggestion[],
+    usage: { provider: string; model: string },
+    /** The paper and seat the run was made for — see `AiState.runFor`. */
+    target: { paperId: string; reviewer: string | null },
+  ) => AiApplyResult
   /** The reviewer looked at an AI-filled field — drop its mark. */
   confirmAiMark: (paperId: string, canonicalPath: string) => void
   /** The hidden gesture landed — allow AI use for the rest of this session. */
@@ -1244,7 +1249,7 @@ export const useStore = create<AppState>()(
       })
     },
 
-    applyAiSuggestions: (suggestions, usage) => {
+    applyAiSuggestions: (suggestions, usage, target) => {
       const prev = get()
       if (!prev.project) return { filled: 0, skipped: suggestions.length }
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) {
@@ -1268,11 +1273,29 @@ export const useStore = create<AppState>()(
         return { filled: 0, skipped: suggestions.length }
       }
       const schema = prev.project.schema
-      const paperNow = currentPaper(prev)
+      // The paper and seat the model was *asked about*, not whichever is
+      // selected now. The dialog stays open and the paper list and seat picker
+      // stay usable while a call is in flight, so those can differ — and
+      // writing a reply about paper A onto paper B is fabricated data on a
+      // paper nobody read, complete with an `aiUsage` record vouching for it.
+      // Refuse rather than guess: the reviewer still has the reply on screen
+      // and can go back to the right paper.
+      // Refuse on any mismatch rather than quietly retargeting. Writing to the
+      // run's paper while the reviewer looks at a different one would be
+      // correct attribution but invisible work — they would see "applied" and
+      // no change. Refusing keeps the reply on screen so they can go back to
+      // the right paper and apply it there.
+      if (target.paperId !== prev.currentPaperId) {
+        return { filled: 0, skipped: suggestions.length }
+      }
+      if (target.reviewer !== prev.currentReviewer) {
+        return { filled: 0, skipped: suggestions.length }
+      }
+      const paperNow = prev.project.papers.find((p) => p.id === target.paperId)
       if (!paperNow) return { filled: 0, skipped: suggestions.length }
-      // Read-only: whichever reviewer is active right now is who "answered
-      // already" is checked against — see `currentTree`.
-      const readTree = currentTree(prev.project, prev.currentReviewer, paperNow)
+      // Read-only: the seat the run was made for is who "answered already" is
+      // checked against — see `currentTree`.
+      const readTree = currentTree(prev.project, target.reviewer, paperNow)
       if (!readTree) return { filled: 0, skipped: suggestions.length }
 
       // Decide what to write *before* touching anything, so a run that turns out to
@@ -1293,20 +1316,23 @@ export const useStore = create<AppState>()(
       lastFieldKey = null
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
       const paperId = paperNow.id
-      const reviewerScope = markReviewerScope(prev.project, prev.currentReviewer)
+      const reviewerScope = markReviewerScope(prev.project, target.reviewer)
       let filled = 0
       set((s) => {
-        const paper = currentPaper(s)
+        // Resolved by id, and against the run's seat — the same target the
+        // read above checked. Re-deriving either from "what is current" here
+        // would reopen the gap the check exists to close.
+        const paper = s.project?.papers.find((p) => p.id === paperId)
         if (!paper) return
-        const target = currentTree(s.project!, s.currentReviewer, paper, true)
-        if (!target) return
+        const writeTree = currentTree(s.project!, target.reviewer, paper, true)
+        if (!writeTree) return
         pushPast(s, snap)
         for (const { at, value } of accepted) {
           // The model may address an entry of a repeatable node that does not exist
           // yet — that is how it records a further Finding. Create the instances it
           // named, along the whole path.
           let level: ResolvedDef[] = s.project!.schema
-          let cursor: AnnotationValueTree | null = target
+          let cursor: AnnotationValueTree | null = writeTree
           for (const seg of at.path) {
             const step = ensureInstance(level, cursor, seg.name, seg.index)
             if (!step) {

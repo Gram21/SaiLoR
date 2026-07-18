@@ -457,6 +457,11 @@ export class BrowserAdapter implements PlatformAdapter {
         headers,
         body: request.method === 'GET' ? undefined : request.body,
         signal,
+        // See the same option in `electron/main.ts`'s `llm:call`: a redirect
+        // would carry the API key to an origin the user never configured, and
+        // the provider-specific key headers survive a cross-origin hop even
+        // though `Authorization` does not.
+        redirect: 'error',
       })
       return { ok: res.ok, status: res.status, body: await res.text() }
     } catch (err) {
