@@ -93,9 +93,18 @@ export function parseAuthorList(raw: string, strict = false): string[] {
       name
         // Superscript affiliation markers and footnote symbols.
         .replace(/[¹²³⁰-₟*†‡§¶#]/g, '')
-        // Trailing/leading digits used as affiliation keys ("Jane Doe 1").
-        .replace(/(^\s*\d+\s*)|(\s*\d+\s*$)/g, '')
         .replace(/\s+/g, ' ')
+        .trim()
+        // Trailing/leading digits used as affiliation keys ("Jane Doe 1").
+        //
+        // Deliberately *after* the whitespace collapse, not before. As
+        // `(^\s*\d+\s*)|(\s*\d+\s*$)` against raw text, the trailing branch
+        // retried at every offset of a whitespace run, which is quadratic: an
+        // /Author of "a" + 256k spaces + "b" — entirely under the PDF's
+        // control, and parsed for every file in a folder import — froze the
+        // main thread for 36 seconds. Once runs are collapsed to one space,
+        // `\s*` can match at most one character and the same intent is linear.
+        .replace(/^\d+\s?|\s?\d+$/g, '')
         .trim(),
     )
     .filter((name) => {
@@ -148,22 +157,35 @@ const COLUMN_GAP_RATIO = 1.5
  */
 const COLUMN_X_TOLERANCE = 12
 
+/** Baselines this many points apart or less are treated as the same line. */
+const Y_TOLERANCE = 2
+
 /** Group a page's text items into lines, keeping each line's dominant font size. */
 export function toLines(items: { str: string; transform: number[]; width?: number }[]): Line[] {
   const byY = new Map<
     number,
     { size: number; parts: { x: number; width: number; str: string }[] }
   >()
+  /** Every y within Y_TOLERANCE of a canonical baseline, mapped to it. */
+  const keyForY = new Map<number, number>()
   for (const item of items) {
     if (!item.str.trim()) continue
     const size = Math.abs(item.transform[3])
     const y = Math.round(item.transform[5])
     // Merge items whose baselines are within a couple of points (same line).
-    let key = y
-    for (const existing of byY.keys()) {
-      if (Math.abs(existing - y) <= 2) {
-        key = existing
-        break
+    //
+    // Via a window index rather than a scan over every baseline seen so far.
+    // The scan was O(items x distinct baselines) — 80 000 items measured at
+    // ~20 s, and the page count is file-controlled, so this ran per page. The
+    // tolerance is +/-2 integer points, so registering that window once per new
+    // baseline answers the same question by lookup. Registering only where
+    // nothing is registered yet preserves the scan's "earliest matching
+    // baseline wins" behaviour, which insertion order gave it for free.
+    let key = keyForY.get(y)
+    if (key === undefined) {
+      key = y
+      for (let d = -Y_TOLERANCE; d <= Y_TOLERANCE; d++) {
+        if (!keyForY.has(y + d)) keyForY.set(y + d, key)
       }
     }
     const line = byY.get(key) ?? { size: 0, parts: [] }
