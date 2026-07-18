@@ -81,6 +81,14 @@ export function useKeybindings() {
 
       if (e.key === 'F1') {
         e.preventDefault()
+        // Not while another dialog is up. Every dialog listens for Escape on
+        // `document` and none stops propagation, so with Help stacked on top a
+        // single Escape closes both — and closing the AI dialog discards a
+        // reviewed set of proposals, which costs the reviewer the API call as
+        // well as the reading. Help is also mounted before the AI dialog and
+        // shares its z-index, so it would render *behind* it and look like F1
+        // did nothing at all.
+        if (aModalIsOpen()) return
         useStore.getState().setHelpOpen(true)
         return
       }

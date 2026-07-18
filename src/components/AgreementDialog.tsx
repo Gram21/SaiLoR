@@ -108,10 +108,25 @@ export function AgreementDialog() {
         </div>
         <div className="modal-body">
           {built.unitCount === 0 ? (
-            <p>
-              No annotation field has been answered by two or more reviewers anywhere in this
-              project yet, so there is nothing to measure agreement over.
-            </p>
+            // Two different "nothing to measure" cases, and saying the wrong one
+            // is worse than saying nothing: telling a reviewer their team has
+            // answered nothing, when in fact every answered field was a yes/no
+            // that cannot be measured, contradicts work they can see on screen.
+            built.booleansExcluded > 0 ? (
+              <p>
+                The only fields two or more reviewers have both answered are yes/no fields, and
+                those cannot be measured. An unticked box reads the same whether the reviewer
+                considered it and said no or never looked at it, so there is no way to tell an
+                agreement from an absence — counting them would report more agreement than the
+                data supports. Agreement can be measured once a text, number, year or
+                multiple-choice field has been answered by at least two reviewers.
+              </p>
+            ) : (
+              <p>
+                No annotation field has been answered by two or more reviewers anywhere in this
+                project yet, so there is nothing to measure agreement over.
+              </p>
+            )
           ) : (
             <>
               <p className="agreement-basis">

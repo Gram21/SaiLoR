@@ -404,3 +404,34 @@ describe('adoptAllUnanimousScreening still works (regression)', () => {
     expect(st().past.length).toBe(pastBefore + 1)
   })
 })
+
+describe('an undo during the run stops it', () => {
+  it('leaves no state where a later redo discards adopted papers', async () => {
+    st().loadFromText(swappedProject(6), null, 'test.json')
+    st().selectReviewer('consolidation')
+
+    // Start the run and undo while it is still working. The run writes one
+    // paper per macrotask and coalesces them all into the history entry its
+    // first paper pushed, so an undo landing mid-run used to revert what was
+    // adopted while the run carried on writing more — without pushing a
+    // snapshot, so `future` was never invalidated and the redo the reviewer
+    // naturally reaches for discarded everything written after the undo.
+    const running = st().adoptAllUnanimousAnnotations()
+    await Promise.resolve()
+    st().undo()
+    await running
+
+    expect(st().unanimousRun?.running).toBe(false)
+    expect(st().unanimousRun?.interrupted).toBe(true)
+
+    // Whatever the undo restored is what the reviewer sees, and a redo returns
+    // to the adopted state — no third, unreachable mixture.
+    const afterUndo = st().project!.papers.map((p) => p.annotations['Study Type'][0].value)
+    st().redo()
+    const afterRedo = st().project!.papers.map((p) => p.annotations['Study Type'][0].value)
+    st().undo()
+    expect(st().project!.papers.map((p) => p.annotations['Study Type'][0].value)).toEqual(afterUndo)
+    st().redo()
+    expect(st().project!.papers.map((p) => p.annotations['Study Type'][0].value)).toEqual(afterRedo)
+  })
+})
