@@ -953,6 +953,57 @@ button.paper-search-mode:hover {
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
   pointer-events: none;
 }
+/* Right-click's persistent view of a description: unlike .tip, this has to
+   accept pointer events (its text is selectable, its links are clickable) and
+   stay open once the mouse moves away from the field name — see NodeName.tsx. */
+.desc-popover {
+  position: fixed;
+  z-index: 300;
+  width: max-content;
+  max-width: 320px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--text);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
+  font-size: 0.85rem;
+}
+.desc-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 4px 5px 10px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+.desc-popover-close {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 7px;
+  font-size: 1rem;
+  line-height: 1;
+  border-radius: 4px;
+}
+.desc-popover-close:hover {
+  color: var(--danger);
+}
+.desc-popover-text {
+  margin: 0;
+  padding: 8px 10px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+}
+.desc-popover-text a {
+  color: var(--accent);
+  text-decoration: underline;
+  word-break: break-all;
+}
 .anno-leaf .anno-name {
   flex: 0 0 40%;
   font-weight: 500;
