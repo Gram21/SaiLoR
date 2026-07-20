@@ -149,6 +149,8 @@ The workflow `.github/workflows/release.yml` runs when a GitHub **release is pub
 
 **OpenWiki auto-update.** A separate scheduled workflow `.github/workflows/openwiki.yml` runs weekly (Mondays 06:00 UTC) and on demand. It first checks whether `main` had any non-`openwiki/**` commits in the last 7 days; only if so does it install and run the `openwiki` CLI (needs the `OPENROUTER_API_KEY` repo secret) and open a `docs: update OpenWiki` pull request. This regenerates these docs from the code, so prefer keeping manual doc edits and the code they describe in sync — see also the manual refresh guidance around `.last-update.json`.
 
+The CLI unconditionally re-scaffolds its own recurrence setup on every run — it (re)writes `.github/workflows/openwiki-update.yml` with its own default schedule/env, and refreshes `OPENWIKI:START/END`-delimited snippets in `AGENTS.md` and `CLAUDE.md`. This workflow file is the intentionally customized replacement, so none of that scaffolding must reach the PR: the job explicitly `rm -f .github/workflows/openwiki-update.yml` and `git checkout -- AGENTS.md CLAUDE.md` before creating the pull request. `add-paths: openwiki` already keeps those files out of the commit, but discarding them here is an independent guarantee that doesn't rely on that field never being widened.
+
 ## Wiki sync
 
 These pages are mirrored to the repository's [GitHub wiki](https://github.com/Gram21/SaiLoR/wiki), in both directions, by two workflows:
