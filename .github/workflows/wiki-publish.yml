@@ -155,13 +155,20 @@ jobs:
               "$f" > "$f.tmp" && mv "$f.tmp" "$f"
           done
 
-          # user-guide/README.md has two links that point outside user-guide/ into the
-          # *main* repo (../README.md, ../LICENSE) — correct there, but there is no such
-          # path in the wiki (a separate git repo with no root README.md of its own), so
-          # they are rewritten to absolute GitHub URLs on the now-flattened copy.
+          # user-guide/README.md has links that point outside user-guide/ into the *main*
+          # repo (../README.md, ../LICENSE, some with a #heading anchor) — correct there,
+          # but there is no such path in the wiki (a separate git repo with no root
+          # README.md of its own), so they are rewritten to absolute GitHub URLs on the
+          # now-flattened copy. GitHub's blob viewer honours the same #anchor on a
+          # rendered .md file, so a rewritten link still lands on the right heading.
+          #
+          # No trailing `)` in the pattern — same trick as the GUIDE_PAGES loop below:
+          # matching only up through the file name, not the closing paren, means one
+          # pattern handles both a bare `(../README.md)` link and one with an anchor
+          # (`(../README.md#quick-start)`), leaving whatever follows untouched.
           sed -i \
-            -e "s#(\.\./README\.md)#(https://github.com/${GITHUB_REPOSITORY}/blob/main/README.md)#" \
-            -e "s#(\.\./LICENSE)#(https://github.com/${GITHUB_REPOSITORY}/blob/main/LICENSE)#" \
+            -e "s#(\.\./README\.md#(https://github.com/${GITHUB_REPOSITORY}/blob/main/README.md#" \
+            -e "s#(\.\./LICENSE#(https://github.com/${GITHUB_REPOSITORY}/blob/main/LICENSE#" \
             stage/User-Guide.md
 
           # Every other link between guide pages is a bare filename with its original,
