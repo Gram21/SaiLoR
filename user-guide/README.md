@@ -28,14 +28,13 @@ the project JSON that will silently eat your changes if you don't know about it.
 
 ## Quick start
 
-```bash
-npm install
-npm run dev            # web version, at http://localhost:5173
-npm run dev:electron   # desktop version
-```
+Download the installer for your system from the [releases page](https://github.com/Gram21/SaiLoR/releases)
+and run it. See the main README's [Installing a release](../README.md#installing-a-release) for the
+exact steps per system, including the one-time Gatekeeper/SmartScreen click-through an unsigned build
+needs on macOS and Windows.
 
-Or grab a packaged build from the project's releases page. See the main [README](../README.md) for
-installation instructions.
+(Building and running from source instead — for development — is covered in the main README's own
+[Quick start](../README.md#quick-start).)
 
 From the start screen:
 
