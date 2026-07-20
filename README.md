@@ -209,9 +209,6 @@ Two optional top-level keys exist specifically to be safe from that `config` reb
   decision before the import proceeds — nothing is silently merged or silently added twice.
 - **Reviewer switch** — on multi-reviewer projects only, centred in the toolbar: pick whether you are
   Reviewer 1…N or Consolidation. See [Working with several reviewers](#working-with-several-reviewers).
-- **✦ AI** — *not available yet.* An LLM proposes values for the fields that are still empty, for
-  you to review before anything is written. The groundwork is in the app but the feature is off in
-  this release; it is planned for a future one. See [Annotating with AI](#annotating-with-ai).
 - **Theme** — toggle light/dark for the app with the ☾/☀ button (top right). The choice is
   remembered. The PDF paper is always rendered on a normal white background, regardless of theme.
 - **Font size** — the `A− A A+` buttons (or the shortcuts below) scale the app's text. This affects
@@ -260,8 +257,7 @@ it) and the project works that way.
 - **Consolidation is the reconciling pass**, not one more opinion. Take that seat and every field
   gets a **⇄** compare button showing every reviewer's answer side by side, flagging whether they
   agree, and letting you click one to adopt it. What Consolidation records is `paper.annotations` —
-  the project's **final result**, and what an export or analysis would read. (The AI button is not
-  offered here: reconciling is a human call on what the reviewers actually said.)
+  the project's **final result**, and what an export or analysis would read.
 - **What everyone already agreed on is filled in for you**, with a light-blue border until you click
   it. Only case and stray whitespace are forgiven — a near-miss in wording, or a field one reviewer
   left blank, stays your call. It leaves your attention for the fields that actually differ.
@@ -334,9 +330,7 @@ reasons.
 - **It reuses the multi-reviewer/Consolidation machinery wholesale**: two reviewers screen
   independently, Consolidation reconciles them, and **⚖ Agreement** reports κ over the include/exclude
   decision specifically — the statistic a screening phase actually reports. Where every reviewer
-  agreed, Consolidation's **Adopt all** takes every one of those decisions at once. AI-assisted
-  screening is not offered: screening decides the review's corpus, which is not a call to hand to a
-  model.
+  agreed, Consolidation's **Adopt all** takes every one of those decisions at once.
 
 **Starting the next phase from a screening project.** Once screening is done, **New from
 screening…** (on the start screen) builds what comes next from the screening JSON, offering a choice
@@ -358,80 +352,6 @@ carried over versus left behind. For a multi-reviewer screening project, "includ
 
 > 📖 Full details, including the derived schema's exact shape, are in
 > [§10 of the schema guide](docs/annotation-schema.md#10-screening-projects).
-
-## Annotating with AI
-
-> 🚧 **Not available yet — planned for a future release.**
-> The groundwork described in this section is built into the app, but the feature is **switched off**
-> in this release: the **✦ AI** button is not shown, and there is no way to set a provider up or
-> start a run. Read this section as a preview of what is coming, and of how it will treat your data
-> when it does, rather than as instructions you can follow today.
-
-The **✦ AI** button at the top of the annotation column asks a language model to read the paper you
-have open and **propose** values for its annotation fields. It is a first draft, not an answer.
-
-**What it does**
-
-- It only looks at the fields that are **still empty**. Anything you have already filled in is not
-  sent as a question and is **never overwritten** — including if you fill a field in while the model
-  is still thinking.
-- You get a table: the field, the value the model proposes, the **verbatim quote from the paper**
-  that supports it, the model's confidence, and a checkbox. Untick anything you don't want.
-  **Nothing is written into your project until you press Apply.**
-- The whole fill lands as a *single* change: one `Ctrl/Cmd + Z` undoes all of it.
-- Proposals that don't fit your schema — a field that doesn't exist, a number that isn't a number, a
-  value outside a dropdown's choices — are refused by the app and listed separately, never applied.
-- The model is instructed to quote the paper for every value and to **leave a field empty rather
-  than guess**. It is still a language model: check the quotes.
-
-<p align="center">
-  <img src="docs/screenshots/ai-review.png" alt="The review table: each proposed value with the quote from the paper that supports it, a confidence, and a checkbox" width="820">
-</p>
-
-Once applied, every field the model filled keeps a **light-blue border** until you click it (or its
-name). That click is you confirming the value — the marks are yours alone: they are never saved into
-the project file and are gone when you reopen it.
-
-<p align="center">
-  <img src="docs/screenshots/ai-marks.png" alt="Annotation fields filled by the AI, each outlined in light blue until confirmed" width="380">
-</p>
-
-**Where it sends your paper**
-
-> ⚠️ **Once enabled, the paper's extracted text will be sent to whichever LLM provider you
-> configure.** (Or the PDF file itself, if you set the target up that way.) It will leave your
-> machine and go to that provider under that provider's terms. **Don't use it on material you are
-> not allowed to share** — papers under a publisher's licence, embargoed manuscripts, anything
-> confidential. The dialog names what will be sent and to whom before anything leaves.
-
-There is no built-in provider and no key ships with the app: nothing is sent anywhere until you set
-up a target yourself.
-
-**Supported providers** — **Anthropic**, **OpenAI**, **Google (Gemini)**, **OpenRouter**, **Groq**,
-**Mistral**, **DeepSeek**, **xAI (Grok)**, or **any OpenAI-compatible endpoint**, including one
-running locally (LM Studio, llama.cpp, vLLM, …). A local endpoint is the one setup where the paper
-does not leave your machine. Only Anthropic, OpenAI, Google and OpenRouter can take the PDF itself —
-the rest always receive the extracted text.
-
-Set one up via **✦ AI → ⚙** (or *Set up an LLM…*): give the target a name, pick the provider, enter
-the model name and your API key, and press **Verify setup** to send a one-word test request. On the
-desktop the key is stored **encrypted with your operating system's keychain** and is never handed to
-the page. In the **browser build** it is stored **unencrypted** in local storage and some providers
-refuse calls made directly from a web page — the desktop app is the supported path for this feature.
-
-<p align="center">
-  <img src="docs/screenshots/ai-settings.png" alt="Setting up an LLM target: name, provider, base URL, model, API key, and a Verify setup button" width="700">
-</p>
-
-<p align="center"><em>Setting up a target — shown in the browser build, which is why it leads with the
-key-storage warning. The desktop app stores the key in your OS keychain instead.</em></p>
-
-**Extraction quality is the ceiling.** The paper is sent as text pulled out of the PDF, and that
-extraction is only as good as the PDF: two-column papers, tables, figures and formulas come out
-imperfectly, and a **scanned** paper yields no text at all (the app stops and tells you, rather than
-letting the model invent a paper from its title). The model is told the text may be garbled and to
-omit a field rather than reconstruct it — but it is one more reason to read the quote before you
-accept a value.
 
 ## Saving
 

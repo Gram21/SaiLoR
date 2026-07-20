@@ -103,9 +103,7 @@ function commonFaqs(): ReactNode {
       <Faq q="Where is my data? Does anything leave my computer?">
         <p>
           Your review is the project JSON file on your own disk, next to its PDFs — the app has no
-          account, no server, and no sync. The one exception is <strong>AI-assisted annotation</strong>:
-          if you use it, the paper's text and your schema are sent to the AI provider you configured.
-          Nothing else is ever transmitted, and the AI dialog names the provider before it sends.
+          account, no server, and no sync.
         </p>
       </Faq>
       <Faq q="Can two people review the same project at once?">
@@ -266,6 +264,12 @@ function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
               text currently selected in the PDF.
             </li>
             <li>
+              A field name with a <em>ⓘ</em> next to it has a description — hover for a quick look,
+              or <strong>right-click</strong> to keep it open: its text is selectable and any link in
+              it is clickable, which the hover version can't offer since it closes as soon as the
+              mouse moves toward it.
+            </li>
+            <li>
               <strong>Validate</strong> checks your annotations against the schema: required fields
               that are still empty, values of the wrong type, and values outside a dropdown's
               choices. Required fields are marked with a red <em>*</em>.
@@ -380,38 +384,6 @@ function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
         ),
       },
       {
-        id: 'ai',
-        title: 'Annotating with AI',
-        body: (
-          <>
-            <p>
-              The <strong>✦ AI</strong> button above the annotation fields asks a language model to
-              read the open paper and <strong>propose</strong> values for it. Only the fields that are{' '}
-              <strong>still empty</strong> are proposed — what you have already filled in is never
-              overwritten.
-            </p>
-            <p>
-              You see every proposal first: the field, the value, the quote from the paper that
-              supports it, and a checkbox. Untick what you don't want;{' '}
-              <strong>nothing is written until you press Apply</strong>. The whole fill counts as one
-              change, so <strong>{MOD}+Z</strong> undoes it in a single step. Fields the AI filled
-              keep a blue border until you look at them.
-            </p>
-            <p>
-              To send the paper, the text is extracted from its PDF and sent to the AI provider you
-              set up under <em>✦ AI → ⚙</em> — so don't use it on papers you may not share. The
-              dialog names the provider before anything is sent, and treat the proposals as a draft:
-              check the quotes.
-            </p>
-            <p>
-              Every AI-assisted fill you apply is <strong>recorded in the saved file</strong>: which
-              provider and model, and when. That disclosure stays with the project so a co-reviewer
-              can see where AI was involved.
-            </p>
-          </>
-        ),
-      },
-      {
         id: 'faq',
         title: 'FAQ',
         body: (
@@ -436,13 +408,6 @@ function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
                 Yes — <em>Edit annotation JSON…</em> on the start screen. Existing answers are
                 preserved. Renaming or removing a field drops the answers stored under it, so treat
                 that as destructive.
-              </p>
-            </Faq>
-            <Faq q="The AI proposed a value that isn't in the paper.">
-              <p>
-                That is exactly what the quote column is for — every proposal must cite the passage
-                it came from, and one that can't be traced to the paper should be unticked. Nothing
-                is written until you press Apply. This is why the tool proposes rather than fills.
               </p>
             </Faq>
             {commonFaqs()}
@@ -596,7 +561,8 @@ function editorHelp(): { lead: ReactNode; sections: HelpSection[] } {
             <li>
               <strong>Add a field</strong> with <em>+ Add field</em>, or nest one under another with{' '}
               <em>+ Child</em>. Each field has a name, a type, and an optional description shown on
-              hover while annotating.
+              hover while annotating — right-click it there to keep it open with any link in it
+              clickable.
             </li>
             <li>
               <strong>Type:</strong> <em>Text</em>, <em>Number</em>, <em>Yes/no</em>, or{' '}
