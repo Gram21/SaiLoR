@@ -229,6 +229,109 @@ describe('agreementInput on a screening project', () => {
   })
 })
 
+describe('agreementInput.perField', () => {
+  it('keeps distinct fields apart, each with its own units', () => {
+    const project = makeProject({
+      papers: [
+        makePaper({
+          reviews: {
+            '1': tree({
+              'Study Type': [{ value: 'RCT' }],
+              Findings: [{ children: { Claim: [{ value: 'A' }] } }],
+            }),
+            '2': tree({
+              'Study Type': [{ value: 'Survey' }],
+              Findings: [{ children: { Claim: [{ value: 'B' }] } }],
+            }),
+          },
+        }),
+      ],
+    })
+    const { perField } = agreementInput(project)
+    const keys = perField.map((f) => f.key)
+    expect(keys).toEqual(['Study Type', 'Findings/Claim'])
+    expect(perField.find((f) => f.key === 'Study Type')!.unitCount).toBe(1)
+    expect(perField.find((f) => f.key === 'Findings/Claim')!.unitCount).toBe(1)
+  })
+
+  it('pools a repeated field\'s instances across papers under one key', () => {
+    const project = makeProject({
+      papers: [
+        makePaper({
+          id: 'p1',
+          reviews: {
+            '1': tree({ Findings: [{ children: { Claim: [{ value: 'A' }] } }] }),
+            '2': tree({ Findings: [{ children: { Claim: [{ value: 'A' }] } }] }),
+          },
+        }),
+        makePaper({
+          id: 'p2',
+          reviews: {
+            '1': tree({
+              Findings: [
+                { children: { Claim: [{ value: 'B' }] } },
+                { children: { Claim: [{ value: 'C' }] } },
+              ],
+            }),
+            '2': tree({
+              Findings: [
+                { children: { Claim: [{ value: 'B' }] } },
+                { children: { Claim: [{ value: 'D' }] } },
+              ],
+            }),
+          },
+        }),
+      ],
+    })
+    const { perField } = agreementInput(project)
+    const findings = perField.find((f) => f.key === 'Findings/Claim')!
+    // p1's one instance + p2's two instances = 3, and "Study Type" (0
+    // answers anywhere) contributes nothing — pooled, not one row per paper.
+    expect(findings.unitCount).toBe(3)
+  })
+
+  it('the label reads "Findings › Claim", ancestor-joined without instance numbers', () => {
+    const project = makeProject({
+      papers: [
+        makePaper({
+          reviews: {
+            '1': tree({ Findings: [{ children: { Claim: [{ value: 'A' }] } }] }),
+            '2': tree({ Findings: [{ children: { Claim: [{ value: 'A' }] } }] }),
+          },
+        }),
+      ],
+    })
+    const { perField } = agreementInput(project)
+    expect(perField.find((f) => f.key === 'Findings/Claim')!.label).toBe('Findings › Claim')
+  })
+
+  it('a screening project has exactly one per-field entry, for Decision', () => {
+    const SCREENING_SCHEMA = resolveSchema(screeningSchemaDefs({ reasons: ['Wrong topic'] }))
+    const project: Project = {
+      version: 1,
+      provenance: null,
+      protocol: null,
+      schema: SCREENING_SCHEMA,
+      aiEnabled: true,
+      reviewers: 2,
+      reviewerIdentities: {},
+      extra: {},
+      screening: { reasons: ['Wrong topic'] },
+      papers: [
+        makePaper({
+          reviews: {
+            '1': normalizeTree(SCREENING_SCHEMA, { Decision: [{ value: 'Exclude' }], Reason: [{ value: 'Wrong topic' }] }),
+            '2': normalizeTree(SCREENING_SCHEMA, { Decision: [{ value: 'Exclude' }], Reason: [{ value: 'Wrong topic' }] }),
+          },
+        }),
+      ],
+    }
+    const { perField } = agreementInput(project)
+    expect(perField).toHaveLength(1)
+    expect(perField[0].key).toBe('Decision')
+  })
+})
+
 describe('boolean fields are excluded rather than counted as agreements', () => {
   it('drops every boolean unit and reports how many', () => {
     // A boolean only ever reached the two-answer gate when *every* reviewer

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { resolveSchema, type AnnotationDef } from '../model/schema'
 import { normalizeTree, type AnnotationValueTree } from '../model/annotations'
 import type { Paper } from '../model/project'
-import { readyToConsolidate, readyCount, consolidatorHasAnswered } from './readiness'
+import { readyToConsolidate, readyCount, consolidatorHasAnswered, needsAlignment, needsAlignmentCount } from './readiness'
 
 const DEFS: AnnotationDef[] = [
   { name: 'Study Type', type: 'string' },
@@ -112,5 +112,68 @@ describe('consolidatorHasAnswered', () => {
 
   it('tolerates a tree with no entry at all for the node', () => {
     expect(consolidatorHasAnswered(def, {} as AnnotationValueTree)).toBe(false)
+  })
+})
+
+describe('needsAlignment', () => {
+  const REPEATABLE_DEFS: AnnotationDef[] = [
+    { name: 'Study Type', type: 'string' },
+    { name: 'Findings', min: 0, max: null, children: [{ name: 'Claim', type: 'string' }] },
+  ]
+  const repeatSchema = resolveSchema(REPEATABLE_DEFS)
+
+  function paperWith(
+    reviews: Record<string, AnnotationValueTree>,
+    consolidated: AnnotationValueTree = {},
+    id = 'p1',
+  ): Paper {
+    const out: Record<string, AnnotationValueTree> = {}
+    for (const [r, t] of Object.entries(reviews)) out[r] = normalizeTree(repeatSchema, t)
+    return {
+      id,
+      title: 'A Paper',
+      authors: [],
+      pdf: 'a.pdf',
+      annotations: normalizeTree(repeatSchema, consolidated),
+      reviews: out,
+      aiUsage: [],
+      equal: [],
+      extra: {},
+    }
+  }
+
+  const twoReviewersWithFindings = {
+    '1': { Findings: [{ children: { Claim: [{ value: 'A' }] } }] },
+    '2': {
+      Findings: [{ children: { Claim: [{ value: 'B' }] } }, { children: { Claim: [{ value: 'C' }] } }],
+    },
+  }
+
+  it('is true when two reviewers recorded Findings and nobody has lined them up', () => {
+    expect(needsAlignment(repeatSchema, paperWith(twoReviewersWithFindings), 2)).toBe(true)
+  })
+
+  it('is false once the consolidator has answered under the node (alignment is frozen, treated as done)', () => {
+    const p = paperWith(twoReviewersWithFindings, { Findings: [{ children: { Claim: [{ value: 'A' }] } }] })
+    expect(needsAlignment(repeatSchema, p, 2)).toBe(false)
+  })
+
+  it('is false when fewer than two reviewers recorded anything under the node', () => {
+    const p = paperWith({ '1': { Findings: [{ children: { Claim: [{ value: 'A' }] } }] }, '2': {} })
+    expect(needsAlignment(repeatSchema, p, 2)).toBe(false)
+  })
+
+  it('is false for a paper with no repeatable content at all', () => {
+    const p = paperWith({ '1': { 'Study Type': [{ value: 'a' }] }, '2': { 'Study Type': [{ value: 'b' }] } })
+    expect(needsAlignment(repeatSchema, p, 2)).toBe(false)
+  })
+
+  it('needsAlignmentCount tallies across a project', () => {
+    const papers = [
+      paperWith(twoReviewersWithFindings, {}, 'p1'),
+      paperWith(twoReviewersWithFindings, { Findings: [{ children: { Claim: [{ value: 'A' }] } }] }, 'p2'),
+      paperWith({ '1': { 'Study Type': [{ value: 'a' }] } }, {}, 'p3'),
+    ]
+    expect(needsAlignmentCount(repeatSchema, papers, 2)).toBe(1)
   })
 })

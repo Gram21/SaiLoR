@@ -17,6 +17,28 @@ export interface AgreementInput {
   skipped: number
   /** Boolean fields left out of the statistic entirely — see `agreementInput`. */
   booleansExcluded: number
+  /**
+   * The same units, broken out per schema field, in schema order — see
+   * `AgreementDialog.tsx`. One coefficient pooled over every field mixes
+   * categories that were never comparable: a `Year` and a free-text `Claim`
+   * do not share a category space, and pooling them into one number hides
+   * that. A repeated field's instances (every paper's every `Findings ›
+   * Claim`) are pooled together here — they *are* the same field — but kept
+   * apart from every other field.
+   */
+  perField: FieldAgreement[]
+}
+
+/** One schema field's own slice of the agreement input. */
+export interface FieldAgreement {
+  /** Groups instances of the same field across papers — ancestor node names
+   *  joined with "/", no instance indices (those are pooled, not part of
+   *  the field's identity). */
+  key: string
+  /** For display: the same path, "Findings › Claim" style. */
+  label: string
+  input: MetricInput
+  unitCount: number
 }
 
 /**
@@ -44,6 +66,10 @@ export function agreementInput(project: Project): AgreementInput {
   const units: Ratings[] = []
   let skipped = 0
   let booleansExcluded = 0
+  // Insertion order = schema order, since `projectVerdicts` walks each
+  // paper's schema top to bottom and every paper shares the same schema —
+  // the first paper to reach a field fixes that field's position here.
+  const perFieldUnits = new Map<string, { label: string; units: Ratings[] }>()
 
   // A screening phase reports agreement on the include/exclude decision. The
   // exclusion reason is a different question — and one only defined on the
@@ -86,7 +112,23 @@ export function agreementInput(project: Project): AgreementInput {
     const ratings: Ratings = {}
     for (const r of raters) ratings[r] = verdict.answeredBy.includes(r) ? verdict.categories[r] : null
     units.push(ratings)
+
+    const segNames = verdict.path.map((s) => s.name)
+    const key = [...segNames, verdict.name].join('/')
+    let bucket = perFieldUnits.get(key)
+    if (!bucket) {
+      bucket = { label: [...segNames, verdict.name].join(' › '), units: [] }
+      perFieldUnits.set(key, bucket)
+    }
+    bucket.units.push(ratings)
   }
 
-  return { input: { raters, units }, unitCount: units.length, skipped, booleansExcluded }
+  const perField: FieldAgreement[] = [...perFieldUnits.entries()].map(([key, { label, units: u }]) => ({
+    key,
+    label,
+    input: { raters, units: u },
+    unitCount: u.length,
+  }))
+
+  return { input: { raters, units }, unitCount: units.length, skipped, booleansExcluded, perField }
 }
