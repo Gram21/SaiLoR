@@ -2022,6 +2022,26 @@ kbd {
 }
 
 /* ---- Agreement dialog ---- */
+.agreement-alignment-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--ai-mark);
+  border-radius: 6px;
+  background: var(--panel-bg);
+}
+.agreement-alignment-warning p {
+  margin: 0;
+  font-size: 0.9em;
+}
+.agreement-alignment-warning button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
 .agreement-basis {
   margin-top: 0;
   color: var(--muted);
@@ -2069,6 +2089,42 @@ kbd {
 .agreement-note {
   color: var(--muted);
   font-size: 0.85em;
+}
+.agreement-perfield {
+  margin-top: 16px;
+}
+.agreement-perfield-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.agreement-perfield-title {
+  margin: 0;
+  font-size: 0.95em;
+}
+.agreement-perfield-scroll {
+  overflow-x: auto;
+}
+.agreement-perfield-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+.agreement-perfield-table th,
+.agreement-perfield-table td {
+  padding: 4px 10px 4px 0;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+.agreement-perfield-table th {
+  color: var(--muted);
+  font-weight: 600;
+}
+.agreement-perfield-na {
+  color: var(--muted);
 }
 
 /* ---- Disagreement overview ---- */

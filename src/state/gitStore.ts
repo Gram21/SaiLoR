@@ -135,7 +135,11 @@ interface GitState {
 
   resolveConflict: (id: string, value: FieldValue) => void
   takeSide: (id: string, side: 'ours' | 'theirs') => void
-  takeAll: (side: 'ours' | 'theirs') => void
+  /** `ids`, when given, scopes the bulk action to those conflicts only — see
+   *  `GitMergeDialog`'s exclusion of other reviewers' own trees from "Use all
+   *  mine"/"Use all remote". Omitted (or absent) means every conflict, the
+   *  original all-of-them behavior. */
+  takeAll: (side: 'ours' | 'theirs', ids?: string[]) => void
   finishMerge: () => Promise<void>
   cancelMerge: () => Promise<void>
 }
@@ -825,11 +829,13 @@ export const useGitStore = create<GitState>()(
         get().resolveConflict(id, side === 'ours' ? conflict.ours : conflict.theirs)
       },
 
-      takeAll: (side) => {
+      takeAll: (side, ids) => {
+        const scope = ids ? new Set(ids) : null
         set((s) => {
           const merge = s.panel?.merge
           if (!merge) return
           for (const c of merge.conflicts) {
+            if (scope && !scope.has(c.id)) continue
             merge.resolutions[c.id] = side === 'ours' ? c.ours : c.theirs
             merge.decided[c.id] = true
           }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../state/store'
 import { useGitStore } from '../state/gitStore'
-import { treeLabel, type FieldConflict } from '../git/merge'
+import { treeLabel, type FieldConflict, type MergeTree } from '../git/merge'
 import type { FieldValue } from '../model/annotations'
 import { YEAR_MIN, YEAR_MAX } from '../model/year'
 import { ComboBox } from './ComboBox'
@@ -23,6 +23,7 @@ import '../styles/git.css'
 export function GitMergeDialog() {
   const merge = useGitStore((s) => s.panel?.merge ?? null)
   const reviewers = useStore((s) => s.project?.reviewers ?? 1)
+  const currentReviewer = useStore((s) => s.currentReviewer)
   const resolveConflict = useGitStore((s) => s.resolveConflict)
   const takeSide = useGitStore((s) => s.takeSide)
   const takeAll = useGitStore((s) => s.takeAll)
@@ -86,6 +87,13 @@ export function GitMergeDialog() {
   const decidedCount = Object.keys(merge.decided).length
   const allDecided = decidedCount >= merge.conflicts.length
 
+  // A conflict in another reviewer's own tree isn't "mine" in any sense the
+  // bulk buttons below can honestly speak for — see `isForeignReview`.
+  const foreignIds = new Set(
+    merge.conflicts.filter((c) => isForeignReview(c.tree, currentReviewer)).map((c) => c.id),
+  )
+  const bulkEligibleIds = merge.conflicts.filter((c) => !foreignIds.has(c.id)).map((c) => c.id)
+
   return (
     <div className="modal-overlay">
       <div
@@ -108,13 +116,20 @@ export function GitMergeDialog() {
           </p>
 
           <div className="git-merge-bulk">
-            <button type="button" onClick={() => takeAll('ours')}>
+            <button type="button" onClick={() => takeAll('ours', bulkEligibleIds)}>
               Use all mine
             </button>
-            <button type="button" onClick={() => takeAll('theirs')}>
+            <button type="button" onClick={() => takeAll('theirs', bulkEligibleIds)}>
               Use all remote
             </button>
           </div>
+          {foreignIds.size > 0 && (
+            <p className="git-merge-foreign-note">
+              {foreignIds.size} field{foreignIds.size === 1 ? '' : 's'} above belong to another
+              reviewer&apos;s own answers, marked <span className="git-merge-foreign-badge">another reviewer</span> —
+              the buttons above skip them. Decide those individually below.
+            </p>
+          )}
 
           {merge.notes.length > 0 && (
             <ul className="git-notes">
@@ -153,6 +168,7 @@ export function GitMergeDialog() {
                           conflict={c}
                           reviewers={reviewers}
                           decided={!!merge.decided[c.id]}
+                          foreign={foreignIds.has(c.id)}
                           value={c.id in merge.resolutions ? merge.resolutions[c.id] : c.ours}
                           onTake={(side) => takeSide(c.id, side)}
                           onChange={(v) => resolveConflict(c.id, v)}
@@ -198,6 +214,18 @@ export function GitMergeDialog() {
   )
 }
 
+/**
+ * Whether a conflict lives in a *different* reviewer's own tree than the
+ * seat merging right now — the case "Use all mine"/"Use all remote" must not
+ * speak for, since neither side of that conflict is the current reviewer's
+ * own opinion. `currentReviewer === null` (nobody has picked a seat yet, or a
+ * single-reviewer project with no `{kind:'review'}` conflicts at all) treats
+ * every review-tree conflict as foreign — there is no seat it could belong to.
+ */
+export function isForeignReview(tree: MergeTree, currentReviewer: string | null): boolean {
+  return tree.kind === 'review' && tree.reviewer !== currentReviewer
+}
+
 /** Type-aware, matching `ConsolidationDialog.tsx`'s local `formatValue` wording
  *  (not exported from there — this module writes its own so it stays free to
  *  diverge if the two dialogs' needs ever do, without one file quietly
@@ -213,12 +241,14 @@ interface ConflictRowProps {
   conflict: FieldConflict
   reviewers: number
   decided: boolean
+  /** True when this is another reviewer's own tree — see `isForeignReview`. */
+  foreign: boolean
   value: FieldValue
   onTake: (side: 'ours' | 'theirs') => void
   onChange: (value: FieldValue) => void
 }
 
-function ConflictRow({ conflict, reviewers, decided, value, onTake, onChange }: ConflictRowProps) {
+function ConflictRow({ conflict, reviewers, decided, foreign, value, onTake, onChange }: ConflictRowProps) {
   // The paper is the group header now (see the grouped list above) — this is
   // just which tree within it: "Reviewer 2", "Consolidation", "Paper
   // details", or nothing for a single-reviewer annotation conflict.
@@ -229,6 +259,14 @@ function ConflictRow({ conflict, reviewers, decided, value, onTake, onChange }: 
       <div className="git-merge-row-head">
         {where && <span className="git-merge-where">{where}</span>}
         <span className="git-merge-label">{conflict.label}</span>
+        {foreign && (
+          <span
+            className="git-merge-foreign-badge"
+            title="Belongs to another reviewer's own answers — the bulk buttons above skip it; use ◀/▶ to decide it here."
+          >
+            another reviewer
+          </span>
+        )}
         {!decided && <span className="git-merge-undecided-badge">not decided yet</span>}
       </div>
       <div className="git-merge-row-body">

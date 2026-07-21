@@ -363,6 +363,21 @@
   font-size: 0.9rem;
 }
 
+.git-merge-foreign-note {
+  margin: -4px 0 10px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.git-merge-foreign-badge {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--ai-mark) 18%, transparent);
+  color: var(--ai-mark);
+  font-size: 0.8em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .git-merge-rows {
   list-style: none;
   margin: 0;

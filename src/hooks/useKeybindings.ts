@@ -190,6 +190,24 @@ export function useKeybindings() {
 function stepPaper(dir: 1 | -1) {
   const { project, currentPaperId, selectPaper } = useStore.getState()
   if (!project) return
+
+  // Step through whatever the paper list is actually showing right now —
+  // its rows carry `data-paper-id` in filtered/search order (see
+  // `PaperList.tsx`) — rather than the project's raw paper order, so a
+  // search filter and [ / ] / Alt+Arrow never disagree about "next". The
+  // list's own local `query`/`mode` state isn't in the store, so the DOM is
+  // the one place both agree on what's currently visible.
+  const rows = document.querySelectorAll<HTMLElement>('.paper-list [role="option"][data-paper-id]')
+  if (rows.length > 0) {
+    const ids = Array.from(rows, (r) => r.dataset.paperId!)
+    const idx = ids.indexOf(currentPaperId ?? '')
+    const next = idx + dir
+    if (next >= 0 && next < ids.length) selectPaper(ids[next])
+    return
+  }
+
+  // Falls back to the project's own order when the list isn't mounted (the
+  // sidebar is collapsed) — there is no visible filter to disagree with then.
   const idx = project.papers.findIndex((p) => p.id === currentPaperId)
   const next = idx + dir
   if (next >= 0 && next < project.papers.length) {

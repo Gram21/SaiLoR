@@ -1,6 +1,7 @@
 import { hasAnnotations, type AnnotationValueTree } from '../model/annotations'
 import type { Paper } from '../model/project'
 import type { ResolvedDef } from '../model/schema'
+import { alignableNodes } from './align'
 
 /**
  * Whether a paper is worth consolidating yet: every numbered reviewer has
@@ -50,4 +51,50 @@ export function readyCount(schema: ResolvedDef[], papers: Paper[], reviewerCount
  */
 export function consolidatorHasAnswered(def: ResolvedDef, consolidated: AnnotationValueTree): boolean {
   return hasAnnotations([def], { [def.name]: consolidated[def.name] ?? [] })
+}
+
+/**
+ * Whether a paper has a repeatable node (Findings, say) that two or more
+ * reviewers recorded entries in, but that Consolidation has not reviewed yet
+ * — `useConsolidationAlignment.ts` only aligns a node once Consolidation
+ * opens *that specific paper*, so a paper nobody has consolidated yet can
+ * still have its reviewers' entries in whatever order each of them happened
+ * to enter them.
+ *
+ * Reading such a paper's entries at a fixed index — which is what
+ * `disagreements.ts`'s verdicts and `agreement.ts`'s coefficients both do —
+ * then compares entries that are not about the same thing, and can read as
+ * near-total disagreement between reviewers who actually agreed, just in a
+ * different order. `consolidatorHasAnswered` is used as the signal here —
+ * matching the meaning `adoptAllUnanimousAnnotations` already gives it (see
+ * store.ts) — but it is a "has this been reviewed" signal, not strictly a
+ * "has this been aligned" one: `alignConsolidationNode` reorders the raw
+ * reviewer arrays *before* any answer exists, so a node can be correctly
+ * aligned yet still read as "needs alignment" here until the consolidator (or
+ * the batch adopt-unanimous action) actually commits a value under it. That
+ * is the conservative side to be wrong on — a caution that outlives its
+ * cause is a nuisance; a caution that clears itself before a human ever
+ * looked is the failure this whole function exists to prevent.
+ */
+export function needsAlignment(schema: ResolvedDef[], paper: Paper, reviewerCount: number): boolean {
+  for (const nodeName of alignableNodes(schema)) {
+    const def = schema.find((d) => d.name === nodeName)
+    if (!def || consolidatorHasAnswered(def, paper.annotations)) continue
+    let reviewersWithEntries = 0
+    for (let i = 1; i <= reviewerCount; i++) {
+      const tree = paper.reviews[String(i)]
+      // `hasAnnotations`, not "the array is non-empty": `normalizeTree` always
+      // pads a node to at least one instance, so an untouched reviewer still
+      // has a slot there — just an empty one, same as `consolidatorHasAnswered`
+      // treats an untouched consolidated node.
+      if (tree && hasAnnotations([def], { [def.name]: tree[def.name] ?? [] })) reviewersWithEntries++
+    }
+    if (reviewersWithEntries >= 2) return true
+  }
+  return false
+}
+
+/** How many of a project's papers `needsAlignment` — for a warning banner. */
+export function needsAlignmentCount(schema: ResolvedDef[], papers: Paper[], reviewerCount: number): number {
+  return papers.filter((p) => needsAlignment(schema, p, reviewerCount)).length
 }

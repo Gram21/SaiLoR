@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { RecentEntry, SaveHandle } from '../platform/adapter'
 import type { GitPlatform, GitRepoInfo, GitRun, PullStart, GitFileChange } from '../git/types'
-import { conflictId } from '../git/merge'
+import { conflictId, type FieldConflict } from '../git/merge'
 
 /**
  * `runPull`'s orchestration is the one place all the pieces of this feature
@@ -561,5 +561,68 @@ describe('runDiscard — field review (writeWorking)', () => {
     expect(writeWorkingCalls).toHaveLength(0)
     expect(openedPaths).toEqual([])
     expect(useGitStore.getState().panel?.notice).toBeNull()
+  })
+})
+
+describe('takeAll — scoped bulk resolution', () => {
+  // Mirrors the hazard GitMergeDialog guards against: "Use all mine" must
+  // not resolve a conflict in a *different* reviewer's own tree just because
+  // it was passed a scope that excludes it.
+  const mine: FieldConflict = {
+    id: conflictId('a', { kind: 'review', reviewer: '1' }, 'Study Type'),
+    paperId: 'a',
+    paperTitle: 'Paper A',
+    tree: { kind: 'review', reviewer: '1' },
+    canonical: 'Study Type',
+    label: 'Study Type',
+    type: 'string',
+    base: 'A',
+    ours: 'mine',
+    theirs: 'remote-mine',
+  }
+  const theirsOwn: FieldConflict = {
+    id: conflictId('a', { kind: 'review', reviewer: '2' }, 'Study Type'),
+    paperId: 'a',
+    paperTitle: 'Paper A',
+    tree: { kind: 'review', reviewer: '2' },
+    canonical: 'Study Type',
+    label: 'Study Type',
+    type: 'string',
+    base: 'A',
+    ours: 'local-copy-of-2',
+    theirs: 'remote-copy-of-2',
+  }
+
+  beforeEach(() => {
+    useGitStore.setState((s) => ({
+      panel: {
+        ...s.panel!,
+        merge: {
+          ref: 'origin/main',
+          merged: useStore.getState().project!,
+          conflicts: [mine, theirsOwn],
+          resolutions: {},
+          decided: {},
+          notes: [],
+        },
+      },
+    }))
+  })
+
+  it('with no scope, resolves every conflict (the original behavior)', () => {
+    useGitStore.getState().takeAll('ours')
+    const merge = useGitStore.getState().panel!.merge!
+    expect(merge.resolutions[mine.id]).toBe('mine')
+    expect(merge.resolutions[theirsOwn.id]).toBe('local-copy-of-2')
+    expect(merge.decided[theirsOwn.id]).toBe(true)
+  })
+
+  it('with a scope, leaves excluded conflicts untouched and undecided', () => {
+    useGitStore.getState().takeAll('ours', [mine.id])
+    const merge = useGitStore.getState().panel!.merge!
+    expect(merge.resolutions[mine.id]).toBe('mine')
+    expect(merge.decided[mine.id]).toBe(true)
+    expect(merge.resolutions[theirsOwn.id]).toBeUndefined()
+    expect(merge.decided[theirsOwn.id]).toBeUndefined()
   })
 })
