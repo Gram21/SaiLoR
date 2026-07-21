@@ -7,6 +7,32 @@ import type { FieldValue } from '../model/annotations'
 import '../styles/git.css'
 
 /**
+ * The confirm text `runPrimaryAction` must show before committing when a
+ * Discard row is mixed in among Use rows — `composeContents` (git/changes.ts)
+ * builds `workingOut` by reverting every Discard field to its last-committed
+ * value, and `runCommit` writes that back to the file on disk unconditionally.
+ * `discardOnlyMode` already has its own, separately-worded confirm for the
+ * case where *every* row is Discard (nothing to commit at all); this is for
+ * the mixed case, which previously reverted the field with no warning.
+ * `null` means proceed without asking — no Discard row, or it's the
+ * discard-only path instead.
+ */
+export function mixedDiscardConfirmMessage(
+  discardOnlyMode: boolean,
+  hasDiscardRow: boolean,
+  discardCount: number,
+  relPath: string,
+): string | null {
+  if (discardOnlyMode || !hasDiscardRow) return null
+  const n = discardCount
+  return (
+    `${n} field${n === 1 ? '' : 's'} marked Discard will be reverted to ${n === 1 ? 'its' : 'their'} ` +
+    `last-committed value in ${relPath} when this commits — ${n === 1 ? 'that change' : 'those changes'} ` +
+    `will be lost, and this cannot be undone.\n\nContinue?`
+  )
+}
+
+/**
  * Git — changes, a diff, a commit message, Pull, Push. Shown for the open
  * project's own repository (`useGitStore().repo`), which the Toolbar's
  * **Git** button gates on.
@@ -78,6 +104,9 @@ export function GitDialog() {
 
   const runPrimaryAction = () => {
     if (!discardOnlyMode) {
+      const discardCount = reviewDispositions.filter((d) => d === 'discard').length
+      const msg = mixedDiscardConfirmMessage(discardOnlyMode, hasDiscardRow, discardCount, repo.relPath)
+      if (msg && !window.confirm(msg)) return
       void runCommit()
       return
     }
