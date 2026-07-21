@@ -178,6 +178,11 @@ button.primary.danger {
 .dirty-dot {
   color: var(--accent);
 }
+.save-status {
+  margin-left: 8px;
+  color: var(--ok);
+  font-size: 0.85em;
+}
 .icon-btn {
   padding: 4px 8px;
 }
@@ -324,6 +329,11 @@ body.resizing * {
   color: var(--muted);
   font-weight: 400;
 }
+.paper-list-progress {
+  color: var(--muted);
+  font-size: 0.85em;
+  font-weight: 400;
+}
 .paper-search {
   position: relative;
   display: flex;
@@ -406,6 +416,10 @@ button.paper-search-mode:hover {
 }
 .paper.active {
   background: var(--accent-weak);
+}
+.paper:focus-visible {
+  outline: 2px solid var(--accent-weak);
+  outline-offset: -2px;
 }
 .paper-info {
   display: flex;

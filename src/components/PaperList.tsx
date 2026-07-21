@@ -135,6 +135,7 @@ export function paperMetadataHaystack(paper: Paper): string {
 const PaperRow = memo(function PaperRow({
   paper,
   active,
+  roving,
   onSelect,
   dotClassName,
   dotLabel,
@@ -142,6 +143,9 @@ const PaperRow = memo(function PaperRow({
 }: {
   paper: Paper
   active: boolean
+  /** Whether this row is the list's one roving tab stop right now — see the
+   *  `rovingId` comment in `PaperList` below. */
+  roving: boolean
   onSelect: (id: string) => void
   dotClassName: string
   dotLabel: string
@@ -149,7 +153,14 @@ const PaperRow = memo(function PaperRow({
 }) {
   const dotStyle = dotFill === null ? undefined : ({ '--fill': `${dotFill}%` } as CSSProperties)
   return (
-    <li className={active ? 'paper active' : 'paper'} onClick={() => onSelect(paper.id)}>
+    <li
+      className={active ? 'paper active' : 'paper'}
+      role="option"
+      aria-selected={active}
+      tabIndex={roving ? 0 : -1}
+      data-paper-id={paper.id}
+      onClick={() => onSelect(paper.id)}
+    >
       {/* `role="img"` because a bare `title` on a `<span>` is not reliably
           announced; `aria-label` carries the same real numbers as the visual
           fill, so the meaning is not only in a hover-only tooltip. */}
@@ -227,6 +238,32 @@ export function PaperList() {
     })
   }, [papers, project, schema, currentReviewer])
 
+  // Corpus-wide progress, over every paper regardless of the current search —
+  // "how far through this review am I", which nothing else in the app answers
+  // (each row's own dot only reports itself). Mirrors the "done" meaning each
+  // row already renders per mode, so it can never disagree with the dots.
+  const progress = useMemo(() => {
+    if (!project) return null
+    if (isScreening) {
+      const done = project.papers.filter(
+        (p) => paperScreeningStatus(project, p, currentReviewer) !== 'undecided',
+      ).length
+      return { done, total: project.papers.length, label: 'screened' }
+    }
+    if (project.reviewers > 1 && currentReviewer === 'consolidation') {
+      const done = project.papers.filter((p) => paperIsMarkedDone(project, p, currentReviewer)).length
+      return { done, total: project.papers.length, label: 'ready to consolidate' }
+    }
+    const done = index.filter(
+      (e) => e.completeness && e.completeness.total > 0 && e.completeness.filled === e.completeness.total,
+    ).length
+    return {
+      done,
+      total: project.papers.length,
+      label: requiredMode ? 'required fields complete' : 'fully annotated',
+    }
+  }, [project, isScreening, currentReviewer, index, requiredMode])
+
   // Filter + rank by how many distinct query words match (then matched chars).
   const words = query.toLowerCase().split(/\s+/).filter((w) => w.length > 0)
   const filtered = useMemo<IndexedPaper[]>(() => {
@@ -261,6 +298,41 @@ export function PaperList() {
   const isFiltered = words.length > 0 || (isScreening && screeningFilter !== 'all')
   const countText = isFiltered ? `${filtered.length} of ${total}` : `${total}`
 
+  // The list's one roving tab stop (standard listbox keyboard pattern: Tab
+  // enters/exits the whole list in one stop, Arrow keys move within it). The
+  // open paper when it's still in view, else the first visible row — so a
+  // query that scrolls the open paper out of the filtered list doesn't leave
+  // the list with no tab stop at all.
+  const rovingId = filtered.some((e) => e.paper.id === currentPaperId)
+    ? currentPaperId
+    : (filtered[0]?.paper.id ?? null)
+
+  // Arrow Up/Down moves selection *and* focus together to the next/previous
+  // visible row — "select follows focus", the same model a native `<select>`
+  // uses, and simpler than tracking a separate unselected "focused" row when
+  // every row already opens on click. Delegated to the list rather than
+  // handled per-row so it costs nothing in the per-row memoization that keeps
+  // large paper lists cheap to re-render (see `PaperRow`'s comment).
+  const onListKeyDown = (e: React.KeyboardEvent<HTMLUListElement>) => {
+    const row = (e.target as HTMLElement).closest<HTMLElement>('[role="option"]')
+    if (!row) return
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      const sib = (e.key === 'ArrowDown' ? row.nextElementSibling : row.previousElementSibling) as
+        | HTMLElement
+        | null
+      const id = sib?.dataset.paperId
+      if (id) {
+        selectPaper(id)
+        sib.focus()
+      }
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      const id = row.dataset.paperId
+      if (id) selectPaper(id)
+    }
+  }
+
   return (
     <div className="panel paper-list">
       <div className="paper-list-head">
@@ -270,6 +342,11 @@ export function PaperList() {
           </span>
           <SidebarToggle />
         </div>
+        {progress && progress.total > 0 && (
+          <div className="paper-list-progress">
+            {progress.done} of {progress.total} {progress.label}
+          </div>
+        )}
         <div className="paper-search">
           <input
             className="paper-search-input"
@@ -323,7 +400,7 @@ export function PaperList() {
           </div>
         )}
       </div>
-      <ul>
+      <ul role="listbox" aria-label="Papers" onKeyDown={onListKeyDown}>
         {filtered.length === 0 ? (
           <li className="paper-list-empty">
             {isFiltered
@@ -359,6 +436,7 @@ export function PaperList() {
                   key={p.id}
                   paper={p}
                   active={active}
+                  roving={p.id === rovingId}
                   onSelect={selectPaper}
                   dotClassName={`status-dot screening-${status}`}
                   dotLabel={title}
@@ -382,6 +460,7 @@ export function PaperList() {
                   key={p.id}
                   paper={p}
                   active={active}
+                  roving={p.id === rovingId}
                   onSelect={selectPaper}
                   dotClassName={annotated ? 'status-dot done' : 'status-dot'}
                   dotLabel={title}
@@ -409,6 +488,7 @@ export function PaperList() {
                   key={p.id}
                   paper={p}
                   active={active}
+                  roving={p.id === rovingId}
                   onSelect={selectPaper}
                   dotClassName={annotated ? 'status-dot done' : 'status-dot'}
                   dotLabel={title}
@@ -428,6 +508,7 @@ export function PaperList() {
                 key={p.id}
                 paper={p}
                 active={active}
+                roving={p.id === rovingId}
                 onSelect={selectPaper}
                 dotClassName={dotClassName}
                 dotLabel={dotLabel}

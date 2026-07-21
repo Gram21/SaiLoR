@@ -13,10 +13,13 @@ interface FieldProps {
   path: PathSeg[]
   index: number
   value: FieldValue
+  /** Accessible name for the control — its `NodeName` is a separate element,
+   *  not a `<label>`, so without this the control has none. */
+  ariaLabel?: string
 }
 
 /** Renders the editable control for a single field instance, plus a "grab from PDF" button. */
-export function Field({ def, path, index, value }: FieldProps) {
+export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
   const setFieldValue = useStore((s) => s.setFieldValue)
   const set = (v: FieldValue) => setFieldValue(path, def.name, index, v)
 
@@ -84,6 +87,7 @@ export function Field({ def, path, index, value }: FieldProps) {
           type="checkbox"
           className={`field-checkbox${markClass}`}
           checked={value === true}
+          aria-label={ariaLabel}
           onFocus={confirm}
           onClick={confirm}
           onChange={(e) => set(e.target.checked)}
@@ -104,6 +108,7 @@ export function Field({ def, path, index, value }: FieldProps) {
           type="number"
           className={`field-input${markClass}`}
           value={value === null || value === undefined ? '' : String(value)}
+          aria-label={ariaLabel}
           // A bounded, whole-number control for `year` — the same reason the
           // validator gives it its own message: "a number" invites a decimal
           // or a magnitude that is not a plausible year, and this catches the
@@ -120,6 +125,7 @@ export function Field({ def, path, index, value }: FieldProps) {
           onChange={(v) => set(v)}
           className={markClass.trim()}
           onInteract={confirm}
+          ariaLabel={ariaLabel}
         />
       ) : (
         <StringField
@@ -127,6 +133,7 @@ export function Field({ def, path, index, value }: FieldProps) {
           onChange={(v) => set(v === '' ? null : v)}
           className={markClass}
           onInteract={confirm}
+          ariaLabel={ariaLabel}
         />
       )}
       {canGrab && (
@@ -149,10 +156,11 @@ interface StringFieldProps {
   onChange: (v: string) => void
   className?: string
   onInteract?: () => void
+  ariaLabel?: string
 }
 
 /** Auto-expanding text field: single-line when idle, grows downward (capped) while focused. */
-function StringField({ value, onChange, className = '', onInteract }: StringFieldProps) {
+function StringField({ value, onChange, className = '', onInteract, ariaLabel }: StringFieldProps) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const [expanded, setExpanded] = useState(false)
 
@@ -181,6 +189,7 @@ function StringField({ value, onChange, className = '', onInteract }: StringFiel
         (expanded ? 'field-input field-textarea expanded' : 'field-input field-textarea') + className
       }
       value={value}
+      aria-label={ariaLabel}
       onClick={onInteract}
       onFocus={() => {
         onInteract?.()

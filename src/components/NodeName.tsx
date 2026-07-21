@@ -85,7 +85,7 @@ export function NodeName({
       onContextMenu={openPopover}
       aria-label={`${def.name}. ${def.description}`}
     >
-      {def.name}
+      {label}
       <span className="info-dot" aria-hidden="true">
         ⓘ
       </span>

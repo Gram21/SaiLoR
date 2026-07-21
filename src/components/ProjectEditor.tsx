@@ -10,6 +10,16 @@ import '../styles/editor.css'
 const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform)
 const MOD = getPlatform().kind === 'electron' && isMac ? '⌘' : 'Ctrl'
 
+/** Issues stay a flat string list (`validateDraft` in editorStore.ts) rather
+ *  than structured per-paper objects, so a "Paper N: …" line is recognized by
+ *  its leading number instead — enough to jump to it without reshaping the
+ *  validator just for this. */
+const ISSUE_PAPER_PREFIX = /^Paper (\d+)/
+/** Past this many, the list stops rendering the rest inline — at a few
+ *  hundred papers `validateDraft` emits one line per paper, which otherwise
+ *  pushes the whole editor off-screen (see PapersEditor.tsx / #82). */
+const ISSUE_DISPLAY_LIMIT = 12
+
 /**
  * Full-screen editor for a project JSON: pick where it lives, build the
  * annotation schema, and attach the PDFs to annotate. Shown instead of the
@@ -53,6 +63,15 @@ export function ProjectEditor() {
   const onClose = () => {
     if (dirty && !window.confirm('Discard the unsaved changes to this project JSON?')) return
     close()
+  }
+
+  // "Paper N: …" issues carry which row they're about; scroll to and focus
+  // it in the (always-visible, never-modal) Papers section below.
+  const jumpToPaper = (index: number) => {
+    const row = document.getElementById(`papers-row-${index}`)
+    if (!row) return
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    row.querySelector<HTMLInputElement>('input')?.focus()
   }
 
   // The full path is the useful bit in Electron; in the browser only a name exists.
@@ -189,10 +208,28 @@ export function ProjectEditor() {
         <div className="editor-issues" role="alert">
           <strong>Fix these before saving:</strong>
           <ul>
-            {issues.map((issue, i) => (
-              <li key={i}>{issue}</li>
-            ))}
+            {issues.slice(0, ISSUE_DISPLAY_LIMIT).map((issue, i) => {
+              const m = ISSUE_PAPER_PREFIX.exec(issue)
+              return (
+                <li key={i}>
+                  {m ? (
+                    <button
+                      type="button"
+                      className="editor-issue-jump"
+                      onClick={() => jumpToPaper(Number(m[1]) - 1)}
+                    >
+                      {issue}
+                    </button>
+                  ) : (
+                    issue
+                  )}
+                </li>
+              )
+            })}
           </ul>
+          {issues.length > ISSUE_DISPLAY_LIMIT && (
+            <p className="editor-issues-more">…and {issues.length - ISSUE_DISPLAY_LIMIT} more.</p>
+          )}
         </div>
       )}
 

@@ -93,6 +93,29 @@
 .editor-error li {
   color: var(--text);
 }
+.editor-issues ul {
+  max-height: 220px;
+  overflow-y: auto;
+}
+.editor-issues-more {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+.editor-issue-jump {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+.editor-issue-jump:hover,
+.editor-issue-jump:focus-visible {
+  text-decoration-style: solid;
+}
 
 .editor-notice {
   display: flex;
