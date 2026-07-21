@@ -27,7 +27,7 @@ export function AnnotationNode({ def, path, container }: AnnotationNodeProps) {
     return (
       <div className="anno-leaf">
         <NodeName def={def} onClick={confirmFirst} />
-        <Field def={def} path={path} index={0} value={inst?.value ?? null} />
+        <Field def={def} path={path} index={0} value={inst?.value ?? null} ariaLabel={def.name} />
       </div>
     )
   }
@@ -76,7 +76,13 @@ export function AnnotationNode({ def, path, container }: AnnotationNodeProps) {
 
           {isField(def) && (
             <div className="anno-instance-field">
-              <Field def={def} path={path} index={i} value={inst.value ?? null} />
+              <Field
+                def={def}
+                path={path}
+                index={i}
+                value={inst.value ?? null}
+                ariaLabel={repeatable ? `${def.name} #${i + 1}` : def.name}
+              />
             </div>
           )}
 

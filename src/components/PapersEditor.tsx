@@ -65,6 +65,23 @@ export function PapersEditor() {
     clearDrag()
   }
 
+  // Removing a paper drops its `annotations` with it, and nothing migrates
+  // them — the same hazard `SchemaTreeEditor`'s rename/remove guard exists
+  // for, just triggered from the papers list instead of the schema tree.
+  const confirmRemove = (paper: EditorPaper) => {
+    const a = paper.annotations
+    const hasAnswers = !!a && typeof a === 'object' && Object.keys(a).length > 0
+    if (hasAnswers) {
+      const name = paper.title || 'This paper'
+      const ok = window.confirm(
+        `"${name}" has recorded annotations. Removing it will discard them — including every ` +
+          'reviewer\'s own — the next time the project is saved, and it cannot be undone afterwards.\n\nContinue?',
+      )
+      if (!ok) return
+    }
+    removePaper(paper.uid)
+  }
+
   const actionButtons = (
     <div className="papers-actions">
       <button type="button" className="primary" disabled={busy} onClick={() => void addPdfs()}>
@@ -121,6 +138,11 @@ export function PapersEditor() {
           {papers.map((paper, i) => (
             <li
               key={paper.uid}
+              // Addressed by 1-based index from the issue list above (`Paper
+              // N: …`, `validateDraft` in editorStore.ts), so "Fix these
+              // before saving" can jump here — see `jumpToPaper` in
+              // ProjectEditor.tsx.
+              id={`papers-row-${i}`}
               className={rowClass(paper.uid, dragUid, dropTarget, Boolean(justAdded[paper.uid]))}
               draggable={armedUid === paper.uid}
               onDragStart={(e) => onDragStart(e, paper.uid)}
@@ -141,7 +163,7 @@ export function PapersEditor() {
               <span className="papers-index">{i + 1}.</span>
               <PaperFields
                 paper={paper}
-                onRemove={() => removePaper(paper.uid)}
+                onRemove={() => confirmRemove(paper)}
                 onInteract={() => confirmAdded(paper.uid)}
               />
             </li>

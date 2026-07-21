@@ -22,6 +22,8 @@ interface ComboBoxProps {
   /** E.g. the screening Reason field before a paper is excluded — there is
    *  nothing to pick yet, and picking must not be possible either. */
   disabled?: boolean
+  /** Accessible name — the input has no visible label of its own. */
+  ariaLabel?: string
 }
 
 /**
@@ -37,6 +39,7 @@ export function ComboBox({
   className = '',
   onInteract,
   disabled = false,
+  ariaLabel,
 }: ComboBoxProps) {
   const options: ComboOption[] = rawOptions.map((o) =>
     typeof o === 'string' ? { id: o, label: o } : o,
@@ -122,6 +125,7 @@ export function ComboBox({
         role="combobox"
         aria-expanded={open}
         aria-autocomplete="list"
+        aria-label={ariaLabel}
         disabled={disabled}
         value={open ? filter : labelOf(value)}
         placeholder={labelOf(value) || 'Select…'}

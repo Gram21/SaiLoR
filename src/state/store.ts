@@ -54,6 +54,8 @@ import {
   safeGet,
   safeSet,
   safeRemove,
+  loadAutosaveEnabled,
+  saveAutosaveEnabled,
 } from './settings'
 
 /** Injected from package.json by vite.config.ts; falls back for non-Vite runners (tests). */
@@ -223,6 +225,12 @@ interface AppState {
   /** The project's own title from its JSON; empty when it doesn't set one. */
   projectTitle: string
   dirty: boolean
+  /** `Date.now()` of the last successful save — drives the toolbar's transient
+   *  "Saved" confirmation. `null` before any save this session. */
+  lastSavedAt: number | null
+  /** Persisted (`localStorage`) opt-in: periodically save unsaved changes
+   *  without waiting for Ctrl+S. See `useAutosave`. */
+  autosaveEnabled: boolean
   loadError: LoadError | null
   busy: boolean
   sidebarCollapsed: boolean
@@ -357,6 +365,7 @@ interface AppState {
   loadFromText: (text: string, handle: SaveHandle | null, name: string) => void
   save: () => Promise<boolean>
   saveAs: () => Promise<boolean>
+  setAutosaveEnabled: (enabled: boolean) => void
   selectPaper: (id: string) => void
   toggleSidebar: () => void
   setPdfSelection: (text: string) => void
@@ -603,6 +612,8 @@ export const useStore = create<AppState>()(
     busy: false,
     sidebarCollapsed: false,
     pdfSelection: '',
+    lastSavedAt: null,
+    autosaveEnabled: loadAutosaveEnabled(),
     theme: loadTheme(),
     fontScale: loadFontScale(),
     pdfZoom: 1,
@@ -980,6 +991,7 @@ export const useStore = create<AppState>()(
           s.saveHandle = handle
           s.dirty = false
           s.busy = false
+          s.lastSavedAt = Date.now()
         })
         return true
       } catch (err) {
@@ -1046,6 +1058,7 @@ export const useStore = create<AppState>()(
           s.projectName = location.name
           s.dirty = false
           s.busy = false
+          s.lastSavedAt = Date.now()
           if (pathsMoved) {
             s.past = []
             s.future = []
@@ -1094,6 +1107,13 @@ export const useStore = create<AppState>()(
       applyTheme(theme)
       set((s) => {
         s.theme = theme
+      })
+    },
+
+    setAutosaveEnabled: (enabled) => {
+      saveAutosaveEnabled(enabled)
+      set((s) => {
+        s.autosaveEnabled = enabled
       })
     },
 

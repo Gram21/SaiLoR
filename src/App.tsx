@@ -32,6 +32,7 @@ import { useKeybindings } from './hooks/useKeybindings'
 import { useDirtyGuard } from './hooks/useDirtyGuard'
 import { useElectronCloseGuard } from './hooks/useElectronCloseGuard'
 import { useConsolidationAlignment } from './hooks/useConsolidationAlignment'
+import { useAutosave } from './hooks/useAutosave'
 import {
   loadPaneWidths,
   savePaneWidths,
@@ -46,6 +47,7 @@ export function App() {
   useDirtyGuard()
   useElectronCloseGuard()
   useConsolidationAlignment()
+  useAutosave()
 
   const project = useStore((s) => s.project)
   const sidebarCollapsed = useStore((s) => s.sidebarCollapsed)

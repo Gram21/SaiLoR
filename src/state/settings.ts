@@ -8,6 +8,7 @@ export type Theme = 'light' | 'dark'
 
 const THEME_KEY = 'slr.theme'
 const FONT_KEY = 'slr.fontScale'
+const AUTOSAVE_KEY = 'slr.autosave'
 
 export const FONT_MIN = 0.7
 export const FONT_MAX = 2.0
@@ -88,6 +89,16 @@ export function applyFontScale(scale: number): void {
 export function clampFont(scale: number): number {
   const clamped = Math.min(FONT_MAX, Math.max(FONT_MIN, scale))
   return Math.round(clamped * 10) / 10
+}
+
+/** Off by default: unprompted background writes are a real behavior change,
+ *  not a safe default, so this only turns on when the reviewer opts in. */
+export function loadAutosaveEnabled(): boolean {
+  return safeGet(AUTOSAVE_KEY) === '1'
+}
+
+export function saveAutosaveEnabled(enabled: boolean): void {
+  safeSet(AUTOSAVE_KEY, enabled ? '1' : '0')
 }
 
 /** Exported so other stores that persist small bits of session state (e.g.

@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../state/store'
 import { useEditorStore } from '../state/editorStore'
 import { useGitStore } from '../state/gitStore'
@@ -102,6 +102,9 @@ export function Toolbar() {
   const requestOpenRecent = useStore((s) => s.requestOpenRecent)
   const save = useStore((s) => s.save)
   const saveAs = useStore((s) => s.saveAs)
+  const autosaveEnabled = useStore((s) => s.autosaveEnabled)
+  const setAutosaveEnabled = useStore((s) => s.setAutosaveEnabled)
+  const lastSavedAt = useStore((s) => s.lastSavedAt)
   const sidebarCollapsed = useStore((s) => s.sidebarCollapsed)
   const runValidation = useStore((s) => s.runValidation)
   const requestCloseProject = useStore((s) => s.requestCloseProject)
@@ -148,6 +151,18 @@ export function Toolbar() {
     titleClicks.current = state
     if (unlocked) unlockAi()
   }
+
+  // A transient "Saved" confirmation, shown a few seconds after every
+  // successful save (manual or autosaved) and then hidden again — `dirty`
+  // going false is silent otherwise, and an autosave in particular has no
+  // other feedback at all.
+  const [showSaved, setShowSaved] = useState(false)
+  useEffect(() => {
+    if (lastSavedAt === null) return
+    setShowSaved(true)
+    const t = setTimeout(() => setShowSaved(false), 2500)
+    return () => clearTimeout(t)
+  }, [lastSavedAt])
 
   const modKey = getPlatform().kind === 'electron' && isMac() ? '⌘' : 'Ctrl'
 
@@ -266,6 +281,15 @@ export function Toolbar() {
       shortcut: `${modKey}+Shift+S`,
       disabled: !project,
       onSelect: () => void saveAs(),
+    },
+    { type: 'separator' },
+    {
+      type: 'item',
+      label: `${autosaveEnabled ? '✓ ' : ''}Autosave every 5 minutes`,
+      hint: autosaveEnabled
+        ? 'Unsaved changes are saved automatically every 5 minutes. Click to turn off.'
+        : 'Automatically save unsaved changes every 5 minutes, in addition to Ctrl+S.',
+      onSelect: () => setAutosaveEnabled(!autosaveEnabled),
     },
   ]
 
@@ -415,6 +439,12 @@ export function Toolbar() {
               {dirty && <span className="dirty-dot" title="Unsaved changes">●</span>}
             </span>
           )}
+          {/* Always in the layout (even empty) so its appearance doesn't shift
+              the project name sideways; `aria-live` carries it to a screen
+              reader the same moment it becomes visible. */}
+          <span className="save-status" role="status" aria-live="polite">
+            {showSaved ? 'Saved' : ''}
+          </span>
         </div>
 
         <div className="toolbar-view">
