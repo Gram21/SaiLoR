@@ -1,7 +1,14 @@
+import { useMemo } from 'react'
 import { useStore, selectCurrentPaper, currentTree } from '../state/store'
 import { useAiStore } from '../state/aiStore'
 import { normalizeTree } from '../model/annotations'
+import { paperVerdicts } from '../consolidate/disagreements'
 import { AnnotationNode } from './AnnotationNode'
+import {
+  consolidationFieldStatus,
+  ConsolidationVerdictsContext,
+  type ConsolidationFieldStatus,
+} from './ConsolidationVerdicts'
 
 /** Right-hand pane: renders the schema recursively for the current paper. */
 export function AnnotationPanel() {
@@ -63,6 +70,18 @@ export function AnnotationPanel() {
   // Deliberately uninformative: the button looks like any other disabled
   // control rather than one hinting that it can be unlocked.
   const aiTitle = aiDisabled ? 'Coming soon' : 'Ask an LLM to propose values for the fields that are still empty'
+  // One index for the whole panel, rather than asking every rendered Field to
+  // re-walk all reviewer trees. Green needs all reviewer answers; a visible
+  // disagreement is red as soon as two answers differ.
+  const consolidationVerdicts = useMemo(() => {
+    const verdicts = new Map<string, ConsolidationFieldStatus>()
+    if (!isConsolidation || !project) return verdicts
+    for (const verdict of paperVerdicts(project.schema, paper, project.reviewers)) {
+      const status = consolidationFieldStatus(verdict.answeredBy.length, project.reviewers, verdict.agree)
+      if (status) verdicts.set(verdict.canonical, status)
+    }
+    return verdicts
+  }, [isConsolidation, paper, project])
 
   return (
     <div className="panel annotations">
@@ -117,9 +136,11 @@ export function AnnotationPanel() {
         )}
       </div>
       <div className="annotations-body">
-        {schema.map((def) => (
-          <AnnotationNode key={def.id} def={def} path={[]} container={container} />
-        ))}
+        <ConsolidationVerdictsContext.Provider value={consolidationVerdicts}>
+          {schema.map((def) => (
+            <AnnotationNode key={def.id} def={def} path={[]} container={container} />
+          ))}
+        </ConsolidationVerdictsContext.Provider>
       </div>
     </div>
   )

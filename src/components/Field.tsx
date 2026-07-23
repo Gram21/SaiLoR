@@ -5,6 +5,7 @@ import type { FieldValue } from '../model/annotations'
 import { readyToConsolidate } from '../consolidate/readiness'
 import { parseYear, YEAR_MIN, YEAR_MAX } from '../model/year'
 import { ComboBox } from './ComboBox'
+import { useConsolidationFieldStatus } from './ConsolidationVerdicts'
 
 const MAX_TEXTAREA_HEIGHT = 240
 
@@ -27,11 +28,14 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
   // reviewer confirming they have seen what the AI put there, so the mark goes.
   const [marked, confirm] = useAiMark(path, def.name, index)
   const markClass = marked ? ' ai-marked' : ''
+  const canonical = fieldPath(path, def.name, index)
   const deferred = useStore((s) => {
     if (s.currentReviewer !== 'consolidation' || !s.currentPaperId) return false
-    return !!s.deferredConsolidations[deferredConsolidationKey(s.currentPaperId, fieldPath(path, def.name, index))]
+    return !!s.deferredConsolidations[deferredConsolidationKey(s.currentPaperId, canonical)]
   })
   const deferredClass = deferred ? ' consolidation-pending' : ''
+  const verdict = useConsolidationFieldStatus(canonical)
+  const verdictClass = verdict ? ` consolidation-${verdict}` : ''
 
   // Only Consolidation gets the compare popup — everyone else has one tree to
   // work with and nothing to reconcile.
@@ -90,7 +94,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
       <div className="field-row">
         <input
           type="checkbox"
-          className={`field-checkbox${markClass}${deferredClass}`}
+          className={`field-checkbox${markClass}${deferredClass}${verdictClass}`}
           checked={value === true}
           aria-label={ariaLabel}
           onFocus={confirm}
@@ -111,7 +115,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
       {def.type === 'number' || def.type === 'year' ? (
         <input
           type="number"
-          className={`field-input${markClass}${deferredClass}`}
+          className={`field-input${markClass}${deferredClass}${verdictClass}`}
           value={value === null || value === undefined ? '' : String(value)}
           aria-label={ariaLabel}
           // A bounded, whole-number control for `year` — the same reason the
@@ -128,7 +132,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
           value={typeof value === 'string' ? value : null}
           options={def.options!}
           onChange={(v) => set(v)}
-          className={`${markClass}${deferredClass}`.trim()}
+          className={`${markClass}${deferredClass}${verdictClass}`.trim()}
           onInteract={confirm}
           ariaLabel={ariaLabel}
         />
@@ -136,7 +140,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
         <StringField
           value={value === null || value === undefined ? '' : String(value)}
           onChange={(v) => set(v === '' ? null : v)}
-          className={`${markClass}${deferredClass}`}
+          className={`${markClass}${deferredClass}${verdictClass}`}
           onInteract={confirm}
           ariaLabel={ariaLabel}
         />

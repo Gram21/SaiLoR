@@ -1177,6 +1177,24 @@ button.paper-search-mode:hover {
   outline-offset: 1px;
   border-radius: 3px;
 }
+.field-input.consolidation-agree {
+  border-color: var(--ok);
+  box-shadow: inset 0 0 0 1px var(--ok);
+}
+.field-checkbox.consolidation-agree {
+  outline: 2px solid var(--ok);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+.field-input.consolidation-disagree {
+  border-color: var(--danger);
+  box-shadow: inset 0 0 0 1px var(--danger);
+}
+.field-checkbox.consolidation-disagree {
+  outline: 2px solid var(--danger);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
 .field-input.consolidation-pending {
   border-color: var(--danger);
   box-shadow: inset 0 0 0 1px var(--danger);
