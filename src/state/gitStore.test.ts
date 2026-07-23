@@ -72,7 +72,6 @@ let beginPullResult: PullStart = { kind: 'up-to-date' }
 let finishPullResult: GitRun = ok()
 
 let infoResult: GitRepoInfo | null = null
-let identityResult: { email: string; name: string } = { email: '', name: '' }
 let statusChanges: GitFileChange[] = []
 let headContentResult: string | null = null
 let workingContentResult: string | null = null
@@ -88,7 +87,6 @@ const fakeGit: GitPlatform = {
   clone: async () => ({ ok: false, error: 'not used here' }),
   pickProjectIn: async () => null,
   info: async () => infoResult,
-  identity: async () => identityResult,
   status: async () => ({ changes: statusChanges, diff: '', diffTruncated: false }),
   commit: async (root, paths, message) => {
     commitCalls.push({ root, paths, message })
@@ -158,7 +156,6 @@ beforeEach(async () => {
   finishCalls = []
   finishPullResult = ok()
   infoResult = null
-  identityResult = { email: '', name: '' }
   statusChanges = []
   headContentResult = null
   workingContentResult = null
@@ -169,7 +166,7 @@ beforeEach(async () => {
   writeWorkingCalls = []
   useStore.getState().loadFromText(projectText('mine'), { kind: 'electron', path: '/repo/review.json' }, 'review.json')
   useStore.setState({ dirty: false })
-  useGitStore.setState({ probe: null, repo: { ...REPO }, identity: null, clone: null, panel: null })
+  useGitStore.setState({ probe: null, repo: { ...REPO }, clone: null, panel: null })
   await useGitStore.getState().openPanel()
 })
 
@@ -439,55 +436,6 @@ describe('runCommit — field review (commitPartial)', () => {
     // rewritten to match it too — the local edit is erased.
     expect(committed.papers[0].title).toBe('Old Title')
     expect(workingOut.papers[0].title).toBe('Old Title')
-  })
-})
-
-/**
- * `refreshRepo`'s second half: fetching this machine's git identity for
- * `ReviewerPrompt`/`Toolbar` to compare against a seat's recorded claimant.
- * `App.tsx` calls this on every `saveHandle` change — see that module's doc
- * comment for why the identity fetch gets its own staleness re-check rather
- * than trusting the one `info` already passed.
- */
-describe('refreshRepo — identity', () => {
-  const HANDLE: SaveHandle = { kind: 'electron', path: '/repo/review.json' }
-
-  it('fetches identity once the project is known to be in a repository', async () => {
-    infoResult = { ...REPO }
-    identityResult = { email: 'alice@kit.edu', name: 'Alice' }
-    await useGitStore.getState().refreshRepo(HANDLE)
-    expect(useGitStore.getState().identity).toEqual({ email: 'alice@kit.edu', name: 'Alice' })
-  })
-
-  it('leaves identity null when the project is not in a repository at all', async () => {
-    infoResult = null
-    await useGitStore.getState().refreshRepo(HANDLE)
-    expect(useGitStore.getState().repo).toBeNull()
-    expect(useGitStore.getState().identity).toBeNull()
-  })
-
-  it('clears a stale identity immediately, before the new one has arrived', async () => {
-    useGitStore.setState({ identity: { email: 'stale@kit.edu', name: '' } })
-    infoResult = { ...REPO }
-    identityResult = { email: 'alice@kit.edu', name: '' }
-    const pending = useGitStore.getState().refreshRepo(HANDLE)
-    expect(useGitStore.getState().identity).toBeNull()
-    await pending
-    expect(useGitStore.getState().identity).toEqual({ email: 'alice@kit.edu', name: '' })
-  })
-
-  it('does not apply an identity fetched for a project that has since changed', async () => {
-    infoResult = { ...REPO }
-    identityResult = { email: 'alice@kit.edu', name: '' }
-    const original = fakeGit.identity
-    fakeGit.identity = async (root) => {
-      // The reviewer opened a different project while this fetch was in flight.
-      useStore.setState({ saveHandle: { kind: 'electron', path: '/repo/other.json' } })
-      return original(root)
-    }
-    await useGitStore.getState().refreshRepo(HANDLE)
-    fakeGit.identity = original
-    expect(useGitStore.getState().identity).toBeNull()
   })
 })
 

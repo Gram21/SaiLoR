@@ -39,17 +39,14 @@ vi.mock('../platform', () => ({ getPlatform: () => mockPlatform }))
 
 const { useStore } = await import('./store')
 
-// Annotations are already in the shape `loadProject` would normalize them to
-// (a plain `{}` genuinely lacks the git-friendly empty skeleton — not just a
-// formatting difference — so it would trigger `loadFromText`'s background
-// "write the fixed-up shape back" step, racing the tests below over the same
-// `written` slot).
+// An empty tree is the canonical on-disk shape for a paper with no annotations,
+// so opening this fixture must not trigger a background migration write.
 const PROJECT = JSON.stringify({
   version: 1,
   config: { schema: [{ name: 'Relevant', type: 'boolean' }] },
   papers: [
-    { id: 'a', title: 'Paper A', authors: [], pdf: 'pdfs/a.pdf', annotations: { Relevant: [{ value: false }] } },
-    { id: 'b', title: 'Paper B', authors: [], pdf: 'pdfs/sub/b.pdf', annotations: { Relevant: [{ value: false }] } },
+    { id: 'a', title: 'Paper A', authors: [], pdf: 'pdfs/a.pdf', annotations: {} },
+    { id: 'b', title: 'Paper B', authors: [], pdf: 'pdfs/sub/b.pdf', annotations: {} },
   ],
 })
 

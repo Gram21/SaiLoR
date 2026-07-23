@@ -15,7 +15,6 @@ import {
   type ProjectProvenance,
   type ProjectProtocol,
 } from '../model/project'
-import { sameIdentity, seatLabel, type ReviewerIdentity } from '../model/identity'
 import type { ScreeningConfig } from '../model/schema'
 import { formatPath, displayPath, resolvePath, type RawSeg } from '../llm/paths'
 import { parseYear } from '../model/year'
@@ -617,36 +616,15 @@ function mergePapers(
 // Project merge
 // ---------------------------------------------------------------------------
 
-function refused(refusals: string[], ours?: Project, theirs?: Project): MergeOutcome {
+function refused(refusals: string[]): MergeOutcome {
   return {
     kind: 'refused',
     reason: 'These two versions of the project cannot be merged field by field.',
-    details: refusals.map((k) => refusalDetail(k, ours, theirs)),
+    details: refusals.map(refusalDetail),
   }
 }
 
-/**
- * `ours`/`theirs` are only used for the `config.reviewerIdentities.<seat>`
- * branch, whose key is dynamic (one per seat) and whose message needs the two
- * actual claimants, not just the fact that something changed — the generic
- * `default` text below would be the worst possible message for what is, by
- * design, the most consequential refusal in the app (see identity.ts's module
- * doc for the hazard it exists to catch). Every other key is a fixed string,
- * so it stays a plain switch.
- */
-function refusalDetail(key: string, ours?: Project, theirs?: Project): string {
-  const seatPrefix = 'config.reviewerIdentities.'
-  if (key.startsWith(seatPrefix)) {
-    const seat = key.slice(seatPrefix.length)
-    const oursEmail = ours?.reviewerIdentities[seat]?.email ?? '(unknown)'
-    const theirsEmail = theirs?.reviewerIdentities[seat]?.email ?? '(unknown)'
-    return (
-      `${seatLabel(seat)} is claimed by ${oursEmail} here and by ${theirsEmail} on the remote. Two ` +
-      'people have been annotating in the same seat, so their answers cannot be told apart — and ' +
-      'merging would blend them into one. Agree who holds which seat, correct ' +
-      'config.reviewerIdentities, then merge again.'
-    )
-  }
+function refusalDetail(key: string): string {
   switch (key) {
     case 'version':
       return 'The file format version was changed on both sides.'
@@ -762,36 +740,7 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
     if (m.value !== undefined) mergedRootExtra[k] = m.value
   }
 
-  // Merged per seat, exactly like `rootExtra` above, but compared by
-  // `sameIdentity` (email only) rather than `deepEqualJson` — a `name`-only
-  // drift on the same email must merge silently, never refuse the whole
-  // merge (see `sameIdentity`'s doc comment). Two *different* emails
-  // claiming the same seat is the one case this whole feature exists to
-  // catch, and it refuses rather than producing a conflict row: a conflict
-  // row can be clicked through, and clicking through is how the chimeric
-  // reviews tree this feature exists to prevent gets built in the first
-  // place — see identity.ts's module doc.
-  const seatKeys = new Set([
-    ...Object.keys(base?.reviewerIdentities ?? {}),
-    ...Object.keys(ours.reviewerIdentities),
-    ...Object.keys(theirs.reviewerIdentities),
-  ])
-  const mergedIdentities: Record<string, ReviewerIdentity> = {}
-  for (const seat of seatKeys) {
-    const m = merge3<ReviewerIdentity | undefined>(
-      base?.reviewerIdentities[seat],
-      ours.reviewerIdentities[seat],
-      theirs.reviewerIdentities[seat],
-      sameIdentity,
-    )
-    if (!m) {
-      rootRefusals.push(`config.reviewerIdentities.${seat}`)
-      continue
-    }
-    if (m.value !== undefined) mergedIdentities[seat] = m.value
-  }
-
-  if (rootRefusals.length > 0) return refused(rootRefusals, ours, theirs)
+  if (rootRefusals.length > 0) return refused(rootRefusals)
 
   // Every tree below is walked against the winning schema, so a field the
   // winning side removed is simply never visited — exactly as `normalizeTree`
@@ -852,7 +801,6 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
       schema: mergedSchema,
       aiEnabled: aiM!.value!,
       reviewers: reviewersM!.value!,
-      reviewerIdentities: mergedIdentities,
       screening: screeningM!.value ?? null,
       provenance: provenanceM!.value ?? null,
       protocol: protocolM!.value ?? null,

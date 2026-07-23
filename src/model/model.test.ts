@@ -517,16 +517,12 @@ describe('multiple reviewers (config.reviewers, Paper.reviews)', () => {
   })
 
   it('a paper no reviewer has touched still gets a full reviews skeleton, one entry per reviewer', () => {
-    // The point of this feature: a reviewer's first real annotation should
-    // change a value on a line that was already there, not add a brand-new
-    // key — that is what makes a later `git merge` of two reviewers' copies
-    // tractable instead of a guaranteed conflict on the `reviews` object itself.
+    // Reviewer keys remain explicit, but an unannotated tree stays empty on
+    // disk rather than serializing the schema's default values.
     const untouched = JSON.parse(serializeProject(loadProject(withReviewers(2))))
     expect(Object.keys(untouched.papers[0].reviews)).toEqual(['1', '2'])
-    const resolved = resolveSchema(sampleSchema)
-    const empty = pruneTree(resolved, normalizeTree(resolved, undefined))
-    expect(untouched.papers[0].reviews['1']).toEqual(empty)
-    expect(untouched.papers[0].reviews['2']).toEqual(empty)
+    expect(untouched.papers[0].reviews['1']).toEqual({})
+    expect(untouched.papers[0].reviews['2']).toEqual({})
   })
 
   it('writes and prunes each reviewer tree the same way annotations is pruned', () => {
@@ -537,10 +533,31 @@ describe('multiple reviewers (config.reviewers, Paper.reviews)', () => {
     )
     const out = JSON.parse(serializeProject(project))
     expect(out.papers[0].reviews['1'].Relevant).toEqual([{ value: true }])
-    // Reviewer 2 never wrote anything, but their key is still there — an empty
-    // skeleton, not a missing key — for the same git-diff reason as above.
-    const resolved = resolveSchema(sampleSchema)
-    expect(out.papers[0].reviews['2']).toEqual(pruneTree(resolved, normalizeTree(resolved, undefined)))
+    // Reviewer 2 never wrote anything, but their key is still there with an
+    // empty tree so the seat order remains explicit.
+    expect(out.papers[0].reviews['2']).toEqual({})
+  })
+
+  it('writes empty annotations as an empty object, without schema defaults', () => {
+    const out = JSON.parse(serializeProject(loadProject(withReviewers(2))))
+    expect(out.papers[0].annotations).toEqual({})
+  })
+
+  it('uses a deterministic paper and reviewer order when serializing', () => {
+    const project = loadProject(
+      JSON.stringify({
+        version: 1,
+        config: { schema: sampleSchema, reviewers: 10 },
+        papers: [
+          { id: 'z', title: 'zebra study', authors: [], pdf: 'z.pdf', annotations: {}, reviews: { '10': {}, '2': {} } },
+          { id: 'a', title: 'Alpha study', authors: [], pdf: 'a.pdf', annotations: {}, reviews: { '2': {}, '10': {} } },
+        ],
+      }),
+    )
+    const out = JSON.parse(serializeProject(project))
+    expect(out.papers.map((paper: { title: string }) => paper.title)).toEqual(['Alpha study', 'zebra study'])
+    expect(Object.keys(out.papers[0].reviews)).toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'])
+    expect(Object.keys(out.papers[0])).toMatchObject(['id', 'title', 'authors', 'pdf', 'annotations', 'reviews'])
   })
 
   it('round-trips a multi-reviewer project — config.reviewers, and every reviewer tree — through load → serialize → reload', () => {
@@ -577,93 +594,20 @@ describe('multiple reviewers (config.reviewers, Paper.reviews)', () => {
   })
 })
 
-describe('config.reviewerIdentities (seat provenance)', () => {
-  const withIdentities = (reviewers: number, reviewerIdentities?: unknown) =>
-    JSON.stringify({
+describe('legacy reviewer identities', () => {
+  it('drops reviewer identities, including Git emails, on the next save', () => {
+    const legacy = JSON.stringify({
       version: 1,
       config: {
         schema: sampleSchema,
-        reviewers,
-        ...(reviewerIdentities === undefined ? {} : { reviewerIdentities }),
+        reviewers: 2,
+        reviewerIdentities: { '1': { email: 'alice@kit.edu', name: 'Alice' } },
       },
-      papers: [{ id: 'p1', title: 'Some Paper', authors: [], pdf: 'pdfs/some.pdf', annotations: {} }],
-    })
-
-  it('back-compat: a file with no identities loads with an empty map', () => {
-    const project = loadProject(withIdentities(2))
-    expect(project.reviewerIdentities).toEqual({})
-  })
-
-  it('back-compat: a plain "reviewers: 2" file round-trips with a byte-identical config — no reviewerIdentities key appears', () => {
-    const text = serializeProject(loadProject(withIdentities(2)))
-    expect(text).not.toContain('reviewerIdentities')
-    const config = JSON.parse(text).config
-    expect(Object.keys(config).sort()).toEqual(['reviewers', 'schema'])
-  })
-
-  it('parses and round-trips identities for numbered seats and consolidation', () => {
-    const project = loadProject(
-      withIdentities(2, {
-        '1': { email: 'alice@kit.edu', name: 'Alice' },
-        '2': { email: 'bob@kit.edu' },
-        consolidation: { email: 'carol@kit.edu', name: 'Carol' },
-      }),
-    )
-    expect(project.reviewerIdentities).toEqual({
-      '1': { email: 'alice@kit.edu', name: 'Alice' },
-      '2': { email: 'bob@kit.edu' },
-      consolidation: { email: 'carol@kit.edu', name: 'Carol' },
-    })
-    const reloaded = loadProject(serializeProject(project))
-    expect(reloaded.reviewerIdentities).toEqual(project.reviewerIdentities)
-  })
-
-  it('drops hand-edited garbage without throwing', () => {
-    expect(() => loadProject(withIdentities(2, 'nope'))).not.toThrow()
-    expect(loadProject(withIdentities(2, 'nope')).reviewerIdentities).toEqual({})
-
-    const project = loadProject(
-      withIdentities(2, {
-        '0': { email: 'a@kit.edu' }, // not a seat
-        '1': { email: 42 }, // not a string email
-        '2': { email: 'ok@kit.edu' },
-      }),
-    )
-    expect(project.reviewerIdentities).toEqual({ '2': { email: 'ok@kit.edu' } })
-  })
-
-  it('is only written when non-empty, grouped with config.reviewers', () => {
-    const withClaim = JSON.parse(
-      serializeProject(loadProject(withIdentities(2, { '1': { email: 'alice@kit.edu' } }))),
-    )
-    expect(withClaim.config.reviewerIdentities).toEqual({ '1': { email: 'alice@kit.edu' } })
-
-    const without = JSON.parse(serializeProject(loadProject(withIdentities(2))))
-    expect('reviewerIdentities' in without.config).toBe(false)
-  })
-
-  it('serializes seats in canonical order regardless of the file\'s own key order', () => {
-    const text = serializeProject(
-      loadProject(
-        withIdentities(3, {
-          consolidation: { email: 'c@kit.edu' },
-          '2': { email: 'b@kit.edu' },
-          '1': { email: 'a@kit.edu' },
-        }),
-      ),
-    )
-    const keys = Object.keys(JSON.parse(text).config.reviewerIdentities)
-    expect(keys).toEqual(['1', '2', 'consolidation'])
-  })
-
-  it('premise: an unrecognised config key is dropped on round-trip, which is why this had to be a typed field', () => {
-    const withUnknownConfigKey = JSON.stringify({
-      version: 1,
-      config: { schema: sampleSchema, someUnknownKey: { a: 1 } },
       papers: [],
     })
-    const text = serializeProject(loadProject(withUnknownConfigKey))
-    expect(text).not.toContain('someUnknownKey')
+    const text = serializeProject(loadProject(legacy))
+    expect(text).not.toContain('reviewerIdentities')
+    expect(text).not.toContain('alice@kit.edu')
   })
 })
 

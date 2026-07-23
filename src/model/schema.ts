@@ -195,12 +195,6 @@ export const projectSchema = z
       /** Number of independent reviewers. Absent or 1 = single-reviewer (the default). */
       reviewers: z.number().int().min(1).max(10).optional(),
       screening: screeningConfigSchema.optional(),
-      // Structural validation lives in `parseReviewerIdentities`, same as
-      // `reviews`/`aiUsage`/`equal` above: the file is hand-editable, and a
-      // malformed claim must be dropped, never thrown over. Declared here only
-      // because `config` is a plain `z.object` — an undeclared key is stripped
-      // before `project.ts` ever sees it.
-      reviewerIdentities: z.unknown().optional(),
     }),
     papers: z.array(paperSchema),
   })

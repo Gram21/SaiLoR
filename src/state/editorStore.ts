@@ -21,11 +21,6 @@ import {
   type ProjectProtocol,
 } from '../model/project'
 import { classifyImport, type DupRecord, type DupVerdict } from '../model/duplicates'
-import {
-  parseReviewerIdentities,
-  serializeReviewerIdentities,
-  type ReviewerIdentity,
-} from '../model/identity'
 import { parseYear } from '../model/year'
 import { getPlatform, type OpenedProject, type PickedPdf, type ProjectLocation, type SaveHandle } from '../platform'
 import { DEFAULT_SCREENING_REASONS, screeningSchemaDefs } from '../screening/schema'
@@ -551,21 +546,12 @@ export function buildProjectJson(state: {
   provenance?: ProjectProvenance | null
   /** Optional for the same reason. Absent/null means no authored protocol. */
   protocol?: ProjectProtocol | null
-  /**
-   * Optional for the same reason `screening` is — see there. The editor never
-   * *edits* who holds a seat (there is no UI for it here), it only carries the
-   * claim through unopened: without this, opening an existing multi-reviewer
-   * project in the editor and saving would silently erase every seat claim,
-   * re-arming the exact hazard `reviewerIdentities` exists to close.
-   */
-  reviewerIdentities?: Record<string, ReviewerIdentity>
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
 }): Record<string, unknown> {
   const title = state.title?.trim()
   const screening = state.screening ?? null
-  const reviewerIdentities = serializeReviewerIdentities(state.reviewerIdentities ?? {})
   return {
     ...state.extra,
     version: state.version,
@@ -581,7 +567,6 @@ export function buildProjectJson(state: {
       schema: screening ? screeningSchemaDefs(screening) : toAnnotationDefs(state.nodes),
       ...(state.aiEnabled ? {} : { ai: false }),
       ...(state.reviewers > 1 ? { reviewers: state.reviewers } : {}),
-      ...(reviewerIdentities ? { reviewerIdentities } : {}),
       ...(screening ? { screening: { reasons: screening.reasons } } : {}),
     },
     papers: state.papers.map((p) => {
@@ -831,9 +816,6 @@ interface EditorState {
    * `SchemaTreeEditor` whenever this is non-null.
    */
   screening: ScreeningConfig | null
-  /** Carried through unopened — see `buildProjectJson`'s doc comment on its
-   *  own `reviewerIdentities` parameter for why this exists at all. */
-  reviewerIdentities: Record<string, ReviewerIdentity>
   extra: Record<string, unknown>
   /** Set when this project's papers were imported from another project (see
    *  `resolveScreeningImport`); null for one started from scratch. Never
@@ -1000,7 +982,6 @@ interface OpenedEditorState {
   aiEnabled: boolean
   reviewers: number
   screening: ScreeningConfig | null
-  reviewerIdentities: Record<string, ReviewerIdentity>
   extra: Record<string, unknown>
   provenance: ProjectProvenance | null
   protocol: ProjectProtocol | null
@@ -1077,9 +1058,6 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
     // Absent or 1 means single-reviewer, same default as project.ts's loader.
     reviewers: parsed.config.reviewers ?? 1,
     screening,
-    reviewerIdentities: parseReviewerIdentities(
-      (parsed.config as { reviewerIdentities?: unknown }).reviewerIdentities,
-    ),
     extra: rootExtra,
     provenance: parseProvenance(data.provenance),
     protocol: parseProtocol(data.protocol),
@@ -1115,7 +1093,6 @@ function openEditorSession(s: EditorState, st: OpenedEditorState): void {
   s.aiEnabled = st.aiEnabled
   s.reviewers = st.reviewers
   s.screening = st.screening
-  s.reviewerIdentities = st.reviewerIdentities
   s.extra = st.extra
   s.provenance = st.provenance
   s.protocol = st.protocol
@@ -1237,7 +1214,6 @@ export const useEditorStore = create<EditorState>()(
     aiEnabled: false,
     reviewers: 1,
     screening: null,
-    reviewerIdentities: {},
     extra: {},
     provenance: null,
     protocol: null,
@@ -1270,11 +1246,6 @@ export const useEditorStore = create<EditorState>()(
         // turn it back on, so a new project starts opted out.
         s.aiEnabled = false
         s.reviewers = 1
-        // Seat claims belong to the project they were read from. Left behind,
-        // a previously *edited* project's identities get written into this
-        // brand-new file, and whoever opens it is warned off seats nobody
-        // ever claimed (`checkSeat` reports a mismatch against a stranger).
-        s.reviewerIdentities = {}
         s.screening = null
         s.extra = {}
         s.provenance = null
@@ -1894,11 +1865,6 @@ export const useEditorStore = create<EditorState>()(
           // keeps the existing single-reviewer default — deliberate, not an
           // oversight, and outside this feature's mandate to revisit.
           s.reviewers = screeningTarget ? draft.reviewers : 1
-          // Same reason as `startNew`: seat claims belong to the project they
-          // were read from. The *source screening* project's identities must
-          // not be written into the new file — each phase's seats are claimed
-          // afresh by whoever actually sits in them.
-          s.reviewerIdentities = {}
           // The source's own reasons seed the new list, not
           // DEFAULT_SCREENING_REASONS: they are the pre-registered protocol's
           // own vocabulary (already chosen once, by this same team), and

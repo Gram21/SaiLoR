@@ -37,7 +37,6 @@ function project(papers: Paper[]): Project {
     schema: SCHEMA,
     aiEnabled: true,
     reviewers: 1,
-    reviewerIdentities: {},
     papers,
     screening: { reasons: REASONS },
     extra: {},

@@ -235,7 +235,6 @@ describe('projectVerdicts', () => {
       schema: SCHEMA,
       aiEnabled: true,
       reviewers: 2,
-      reviewerIdentities: {},
       extra: {},
       screening: null,
       papers: [

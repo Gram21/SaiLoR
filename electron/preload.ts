@@ -66,7 +66,6 @@ contextBridge.exposeInMainWorld('slr', {
   gitClone: (url: string, dest: string) => ipcRenderer.invoke('git:clone', url, dest),
   gitPickProjectIn: (dir: string) => ipcRenderer.invoke('git:pickProjectIn', dir),
   gitInfo: (projectPath: string) => ipcRenderer.invoke('git:info', projectPath),
-  gitIdentity: (root: string) => ipcRenderer.invoke('git:identity', root),
   gitStatus: (root: string) => ipcRenderer.invoke('git:status', root),
   gitCommit: (root: string, paths: string[], message: string) =>
     ipcRenderer.invoke('git:commit', root, paths, message),
