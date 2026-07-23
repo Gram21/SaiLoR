@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useStore, useAiMark, type PathSeg } from '../state/store'
+import { deferredConsolidationKey, fieldPath, useStore, useAiMark, type PathSeg } from '../state/store'
 import type { ResolvedDef } from '../model/schema'
 import type { FieldValue } from '../model/annotations'
 import { readyToConsolidate } from '../consolidate/readiness'
@@ -27,6 +27,11 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
   // reviewer confirming they have seen what the AI put there, so the mark goes.
   const [marked, confirm] = useAiMark(path, def.name, index)
   const markClass = marked ? ' ai-marked' : ''
+  const deferred = useStore((s) => {
+    if (s.currentReviewer !== 'consolidation' || !s.currentPaperId) return false
+    return !!s.deferredConsolidations[deferredConsolidationKey(s.currentPaperId, fieldPath(path, def.name, index))]
+  })
+  const deferredClass = deferred ? ' consolidation-pending' : ''
 
   // Only Consolidation gets the compare popup — everyone else has one tree to
   // work with and nothing to reconcile.
@@ -85,7 +90,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
       <div className="field-row">
         <input
           type="checkbox"
-          className={`field-checkbox${markClass}`}
+          className={`field-checkbox${markClass}${deferredClass}`}
           checked={value === true}
           aria-label={ariaLabel}
           onFocus={confirm}
@@ -106,7 +111,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
       {def.type === 'number' || def.type === 'year' ? (
         <input
           type="number"
-          className={`field-input${markClass}`}
+          className={`field-input${markClass}${deferredClass}`}
           value={value === null || value === undefined ? '' : String(value)}
           aria-label={ariaLabel}
           // A bounded, whole-number control for `year` — the same reason the
@@ -123,7 +128,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
           value={typeof value === 'string' ? value : null}
           options={def.options!}
           onChange={(v) => set(v)}
-          className={markClass.trim()}
+          className={`${markClass}${deferredClass}`.trim()}
           onInteract={confirm}
           ariaLabel={ariaLabel}
         />
@@ -131,7 +136,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
         <StringField
           value={value === null || value === undefined ? '' : String(value)}
           onChange={(v) => set(v === '' ? null : v)}
-          className={markClass}
+          className={`${markClass}${deferredClass}`}
           onInteract={confirm}
           ariaLabel={ariaLabel}
         />

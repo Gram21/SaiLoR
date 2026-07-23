@@ -20,6 +20,7 @@ import { ConsolidationDialog } from './components/ConsolidationDialog'
 import { ReviewerPrompt } from './components/ReviewerPrompt'
 import { AgreementDialog } from './components/AgreementDialog'
 import { DisagreementOverview } from './components/DisagreementOverview'
+import { ConsolidationOverview } from './components/ConsolidationOverview'
 import { ClosePrompt } from './components/ClosePrompt'
 import { AiDialog } from './components/AiDialog'
 import { LlmSettingsDialog } from './components/LlmSettingsDialog'
@@ -282,6 +283,7 @@ export function App() {
       <ConsolidationDialog />
       <ReviewerPrompt />
       <AgreementDialog />
+      <ConsolidationOverview />
       <DisagreementOverview />
       <ClosePrompt />
       <AiDialog />

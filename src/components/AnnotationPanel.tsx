@@ -15,11 +15,8 @@ export function AnnotationPanel() {
   const aiEnabled = useStore((s) => s.project?.aiEnabled ?? true)
   const aiUnlocked = useStore((s) => s.aiUnlocked)
   const openAi = useAiStore((s) => s.openDialog)
-  const setAgreementOpen = useStore((s) => s.setAgreementOpen)
+  const setConsolidationOverviewOpen = useStore((s) => s.setConsolidationOverviewOpen)
   const setDisagreementsOpen = useStore((s) => s.setDisagreementsOpen)
-  const unanimousRun = useStore((s) => s.unanimousRun)
-  const adoptAllUnanimousAnnotations = useStore((s) => s.adoptAllUnanimousAnnotations)
-  const dismissUnanimousRun = useStore((s) => s.dismissUnanimousRun)
 
   if (!paper) {
     return <div className="panel annotations empty">Select a paper to annotate.</div>
@@ -96,64 +93,30 @@ export function AnnotationPanel() {
             </span>
           )}
         </div>
-        {/* Its own row below the title, not squeezed beside it: Consolidation
-            has no AI button (see above), but the three tools that take its place
-            — aggregate agreement, the individual fields it's computed from, and
-            the batch adopt — crowd the title at a normal panel width the same
-            way screening's Consolidation tools did. Same fix, same shape as
-            ScreeningPanel. */}
+        {/* The project-wide actions live in the overview, while this row keeps
+            navigation close to the paper being reconciled. */}
         {isConsolidation && (
           <div className="consolidation-tools annotations-tools-row">
             <button
               type="button"
               className="consolidation-tool-btn"
-              title="Compute inter-rater agreement statistics across the reviewers"
-              onClick={() => setAgreementOpen(true)}
+              title="Open the project-wide Consolidation overview"
+              onClick={() => setConsolidationOverviewOpen(true)}
             >
-              ⚖ Agreement
+              ☰ Overview
             </button>
             <button
               type="button"
               className="consolidation-tool-btn"
-              title="List every annotation field where reviewers disagree"
+              title="List the annotation fields where reviewers disagree on this paper"
               onClick={() => setDisagreementsOpen(true)}
             >
               ⚠ Disagreements
-            </button>
-            <button
-              type="button"
-              className="consolidation-tool-btn"
-              title="Line every paper's reviewers up, then adopt every value they all gave"
-              disabled={unanimousRun?.running}
-              onClick={() => void adoptAllUnanimousAnnotations()}
-            >
-              {unanimousRun?.running
-                ? `Adopting… ${unanimousRun.done}/${unanimousRun.total}`
-                : '⇊ Adopt all unanimous'}
             </button>
           </div>
         )}
       </div>
       <div className="annotations-body">
-        {/* The fills land across every paper, not the one on screen — without
-            this the run would finish silently and look like it did nothing. */}
-        {isConsolidation && unanimousRun && !unanimousRun.running && (
-          <div className="consolidation-run-notice">
-            <span>
-              {unanimousRun.interrupted
-                ? `Stopped after ${unanimousRun.done} of ${unanimousRun.total} papers, because you undid part of the run. `
-                : ''}
-              Adopted unanimous values on {unanimousRun.filled} paper
-              {unanimousRun.filled === 1 ? '' : 's'}.
-              {unanimousRun.skipped > 0 &&
-                ` ${unanimousRun.skipped} left alone — you have already answered a matched group there.`}
-              {unanimousRun.interrupted && ' Run it again to finish the rest.'}
-            </span>
-            <button type="button" onClick={dismissUnanimousRun}>
-              Dismiss
-            </button>
-          </div>
-        )}
         {schema.map((def) => (
           <AnnotationNode key={def.id} def={def} path={[]} container={container} />
         ))}

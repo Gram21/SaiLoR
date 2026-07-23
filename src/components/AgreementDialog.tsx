@@ -96,7 +96,7 @@ async function copyText(text: string): Promise<boolean> {
  */
 export function AgreementDialog() {
   const open = useStore((s) => s.agreementOpen)
-  const setOpen = useStore((s) => s.setAgreementOpen)
+  const closeAgreement = useStore((s) => s.closeAgreement)
   const project = useStore((s) => s.project)
   const adoptAllUnanimousAnnotations = useStore((s) => s.adoptAllUnanimousAnnotations)
   const unanimousRun = useStore((s) => s.unanimousRun)
@@ -138,11 +138,11 @@ export function AgreementDialog() {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Escape') closeAgreement()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, setOpen])
+  }, [open, closeAgreement])
 
   if (!open || !project || !built) return null
 
@@ -156,7 +156,7 @@ export function AgreementDialog() {
   }
 
   return (
-    <div className="modal-overlay" onClick={() => setOpen(false)}>
+    <div className="modal-overlay" onClick={closeAgreement}>
       <div
         className="modal agreement-dialog"
         onClick={(e) => e.stopPropagation()}
@@ -165,7 +165,7 @@ export function AgreementDialog() {
       >
         <div className="modal-head">
           <strong>Inter-rater agreement</strong>
-          <button type="button" className="icon-btn" onClick={() => setOpen(false)} aria-label="Close">
+          <button type="button" className="icon-btn" onClick={closeAgreement} aria-label="Close">
             ×
           </button>
         </div>

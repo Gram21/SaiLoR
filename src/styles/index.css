@@ -1177,6 +1177,15 @@ button.paper-search-mode:hover {
   outline-offset: 1px;
   border-radius: 3px;
 }
+.field-input.consolidation-pending {
+  border-color: var(--danger);
+  box-shadow: inset 0 0 0 1px var(--danger);
+}
+.field-checkbox.consolidation-pending {
+  outline: 2px solid var(--danger);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
 .grab-btn {
   flex: 0 0 auto;
   padding: 3px 8px;
@@ -1824,6 +1833,11 @@ button.paper-search-mode:hover {
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
 }
+.modal-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .modal-body {
   padding: 12px 16px 20px;
   overflow: auto;
@@ -1912,6 +1926,12 @@ kbd {
 .consolidation-row.is-current {
   border-color: var(--accent);
   background: var(--accent-weak);
+}
+.consolidation-defer {
+  width: 100%;
+  margin-top: 4px;
+  color: var(--danger);
+  border-color: var(--danger);
 }
 /* "These answers mean the same thing" — only shown when there's a real
    textual disagreement to declare equivalent (see ConsolidationDialog), so it
@@ -2180,6 +2200,42 @@ kbd {
   margin-right: 4px;
   color: var(--text);
   font-weight: 600;
+}
+
+/* ---- Consolidation overview ---- */
+.consolidation-overview {
+  width: min(640px, 92vw);
+}
+.consolidation-overview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.consolidation-overview-search {
+  margin-bottom: 10px;
+}
+.consolidation-overview-papers {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.consolidation-overview-papers button {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.consolidation-overview-papers li:last-child button {
+  border-bottom: none;
+}
+.consolidation-overview-papers button span:last-child {
+  flex: 0 0 auto;
+  color: var(--muted);
+  white-space: nowrap;
 }
 
 /* ---- First-open reviewer prompt ---- */
