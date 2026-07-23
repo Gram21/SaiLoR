@@ -15,8 +15,6 @@ export interface AgreementInput {
   unitCount: number
   /** Fields skipped because fewer than two reviewers answered them. */
   skipped: number
-  /** Boolean fields left out of the statistic entirely — see `agreementInput`. */
-  booleansExcluded: number
   /**
    * The same units, broken out per schema field, in schema order — see
    * `AgreementDialog.tsx`. One coefficient pooled over every field mixes
@@ -65,7 +63,6 @@ export function agreementInput(project: Project): AgreementInput {
   const raters = Array.from({ length: project.reviewers }, (_, i) => String(i + 1))
   const units: Ratings[] = []
   let skipped = 0
-  let booleansExcluded = 0
   // Insertion order = schema order, since `projectVerdicts` walks each
   // paper's schema top to bottom and every paper shares the same schema —
   // the first paper to reach a field fixes that field's position here.
@@ -81,29 +78,6 @@ export function agreementInput(project: Project): AgreementInput {
 
   for (const verdict of projectVerdicts(project)) {
     if (decisionOnly && !(verdict.path.length === 0 && verdict.name === SCREENING_DECISION)) continue
-
-    // Boolean fields are left out, and this is a correctness fix rather than a
-    // simplification.
-    //
-    // Every untouched boolean reads `false`, so nothing distinguishes "looked
-    // and said no" from "never looked" — which is why `isUnanswered` counts an
-    // unticked box as unanswered, and why `similarity.ts` gives a `false` no
-    // weight. The consequence here was that a boolean only ever reached the
-    // `answeredBy.length >= 2` gate when *every* reviewer ticked it true: a
-    // true/false split scored one answerer and was dropped, false/false scored
-    // none. So the only boolean units that survived were guaranteed agreements,
-    // and every real boolean disagreement was discarded — the coefficient came
-    // out higher than the truth, which for a published statistic is the worst
-    // direction to be wrong in. Measured on a small project: kappa 0.500 where
-    // the honest value over the measurable fields was 0.000.
-    //
-    // Counting them out is the honest reading of what the data supports. The
-    // count is reported separately so the dialog can say so rather than let the
-    // reader assume every field was measured.
-    if (verdict.def.type === 'boolean') {
-      booleansExcluded++
-      continue
-    }
 
     if (verdict.answeredBy.length < 2) {
       skipped++
@@ -130,5 +104,5 @@ export function agreementInput(project: Project): AgreementInput {
     unitCount: u.length,
   }))
 
-  return { input: { raters, units }, unitCount: units.length, skipped, booleansExcluded, perField }
+  return { input: { raters, units }, unitCount: units.length, skipped, perField }
 }

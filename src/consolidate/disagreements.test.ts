@@ -174,7 +174,7 @@ describe('paperVerdicts', () => {
     expect(second!.answeredBy).toEqual(['1']) // reviewer 2 has nothing at index 1
   })
 
-  it('treats an unticked boolean as unanswered, not a disagreeing "false"', () => {
+  it('treats an unticked boolean as a "false" answer that can disagree', () => {
     const paper = makePaper({
       reviews: {
         '1': tree(SCHEMA, { Relevant: [{ value: true }] }),
@@ -182,7 +182,9 @@ describe('paperVerdicts', () => {
       },
     })
     const v = verdictOf(paper, 'Relevant')
-    expect(v.answeredBy).toEqual(['1'])
+    expect(v.answeredBy).toEqual(['1', '2'])
+    expect(v.agree).toBe(false)
+    expect(v.categories).toEqual({ '1': 'true', '2': 'false' })
   })
 
   it('agrees on a boolean both reviewers ticked', () => {
