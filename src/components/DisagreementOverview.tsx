@@ -5,39 +5,32 @@ import { displayPath } from '../llm/paths'
 import type { FieldValue } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
 
-/** One paper's worth of disagreements, in the order `projectVerdicts` walked them. */
-interface PaperGroup {
-  paperId: string
-  paperTitle: string
-  verdicts: FieldVerdict[]
-}
-
 /**
- * "Show me every field where reviewers disagree" — the inverse of hunting
- * through each paper by hand. `AgreementDialog` answers *how much* the
- * reviewers agree in aggregate; this answers *where* they don't, and a click
- * takes the consolidator straight there, because finding a disagreement is
- * only useful if it doesn't then have to be re-found by paging through the
- * paper.
+ * The current paper's unresolved fields. The project-wide overview deliberately
+ * shows only paper-level counts; this dialog is where their exact values are
+ * inspected and resolved.
  *
  * Follows the app's modal pattern (`.modal-overlay` → `.modal` → `.modal-head`
  * + `.modal-body`, Escape-to-close, backdrop click) — see `ValidationDialog.tsx`.
  */
 export function DisagreementOverview() {
   const open = useStore((s) => s.disagreementsOpen)
-  const setOpen = useStore((s) => s.setDisagreementsOpen)
+  const closeDisagreements = useStore((s) => s.closeDisagreements)
+  const setDisagreementsOpen = useStore((s) => s.setDisagreementsOpen)
+  const setConsolidationOverviewOpen = useStore((s) => s.setConsolidationOverviewOpen)
   const project = useStore((s) => s.project)
+  const currentPaperId = useStore((s) => s.currentPaperId)
   const selectPaper = useStore((s) => s.selectPaper)
   const openConsolidation = useStore((s) => s.openConsolidation)
 
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Escape') closeDisagreements()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, setOpen])
+  }, [open, closeDisagreements])
 
   // The two-answers gate that `agreement.ts` gates its statistics on: a field
   // only one reviewer touched is not a disagreement, it's a field nobody has
@@ -48,34 +41,33 @@ export function DisagreementOverview() {
   // component stays mounted for the whole session, so an ungated memo would
   // re-walk (and re-align) every paper on every project change — every
   // annotation keystroke — for a list nobody is looking at.
-  const groups: PaperGroup[] = useMemo(() => {
+  const verdicts: FieldVerdict[] = useMemo(() => {
     if (!open || !project) return []
-    const byPaper = new Map<string, PaperGroup>()
-    for (const verdict of projectVerdicts(project)) {
-      if (verdict.answeredBy.length < 2 || verdict.agree) continue
-      const group = byPaper.get(verdict.paperId) ?? {
-        paperId: verdict.paperId,
-        paperTitle: verdict.paperTitle,
-        verdicts: [],
-      }
-      group.verdicts.push(verdict)
-      byPaper.set(verdict.paperId, group)
-    }
-    return [...byPaper.values()]
-  }, [open, project])
+    return projectVerdicts(project).filter(
+      (verdict) => verdict.paperId === currentPaperId && verdict.answeredBy.length >= 2 && !verdict.agree,
+    )
+  }, [open, project, currentPaperId])
 
   if (!open || !project) return null
 
-  const total = groups.reduce((n, g) => n + g.verdicts.length, 0)
+  const paper = project.papers.find((candidate) => candidate.id === currentPaperId)
 
   const jumpTo = (v: FieldVerdict) => {
     selectPaper(v.paperId)
-    openConsolidation(v.path, v.name, v.index)
-    setOpen(false)
+    openConsolidation(v.path, v.name, v.index, true)
+    // Preserve the overview-return marker while the comparison temporarily
+    // replaces this list. `closeConsolidation` restores the list, whose own
+    // close action can then return to the overview.
+    setDisagreementsOpen(false)
+  }
+
+  const openOverview = () => {
+    closeDisagreements()
+    setConsolidationOverviewOpen(true)
   }
 
   return (
-    <div className="modal-overlay" onClick={() => setOpen(false)}>
+    <div className="modal-overlay" onClick={closeDisagreements}>
       <div
         className="modal disagreement-overview"
         onClick={(e) => e.stopPropagation()}
@@ -84,52 +76,50 @@ export function DisagreementOverview() {
       >
         <div className="modal-head">
           <strong>
-            Disagreements{' '}
-            <span className={total === 0 ? 'help-mode ok' : 'help-mode bad'}>
-              {total === 0
-                ? 'None'
-                : `${total} disagreement${total === 1 ? '' : 's'} across ${groups.length} paper${groups.length === 1 ? '' : 's'}`}
+            Disagreements for {paper?.title ?? 'this paper'}{' '}
+            <span className={verdicts.length === 0 ? 'help-mode ok' : 'help-mode bad'}>
+              {verdicts.length === 0 ? 'None' : `${verdicts.length} to resolve`}
             </span>
           </strong>
-          <button type="button" className="icon-btn" onClick={() => setOpen(false)} aria-label="Close">
-            ×
-          </button>
+          <div className="modal-head-actions">
+            <button type="button" onClick={openOverview}>
+              Overview
+            </button>
+            <button type="button" className="icon-btn" onClick={closeDisagreements} aria-label="Close">
+              ×
+            </button>
+          </div>
         </div>
         <div className="modal-body">
-          {total === 0 ? (
-            <p>Every field two or more reviewers answered agrees — there is nothing to reconcile here.</p>
+          {verdicts.length === 0 ? (
+            <p>Every field two or more reviewers answered agrees — there is nothing to reconcile on this paper.</p>
           ) : (
             <>
               <p className="disagreement-intro">Click a field to open it for consolidation.</p>
-              {groups.map((g) => (
-                <section key={g.paperId} className="disagreement-group">
-                  <h3 className="disagreement-paper-title">{g.paperTitle}</h3>
-                  <ul className="disagreement-rows">
-                    {g.verdicts.map((v) => (
-                      <li key={v.canonical}>
-                        <button
-                          type="button"
-                          className="disagreement-row"
-                          onClick={() => jumpTo(v)}
-                          title="Open this field for consolidation"
-                        >
-                          <span className="disagreement-path">
-                            {displayPath([...v.path, { name: v.name, index: v.index }])}
+              <ul className="disagreement-rows">
+                {verdicts.map((v) => (
+                  <li key={v.canonical}>
+                    <button
+                      type="button"
+                      className="disagreement-row"
+                      onClick={() => jumpTo(v)}
+                      title="Open this field for consolidation"
+                    >
+                      <span className="disagreement-path">
+                        {displayPath([...v.path, { name: v.name, index: v.index }])}
+                      </span>
+                      <span className="disagreement-values">
+                        {v.answeredBy.map((r) => (
+                          <span key={r} className="disagreement-value">
+                            <span className="disagreement-reviewer">R{r}</span>
+                            {formatValue(v.def, v.values[r])}
                           </span>
-                          <span className="disagreement-values">
-                            {v.answeredBy.map((r) => (
-                              <span key={r} className="disagreement-value">
-                                <span className="disagreement-reviewer">R{r}</span>
-                                {formatValue(v.def, v.values[r])}
-                              </span>
-                            ))}
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ))}
+                        ))}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </>
           )}
         </div>

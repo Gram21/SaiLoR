@@ -116,6 +116,11 @@ export function aiMarkKey(
   return reviewer === null ? `${paperId}::${canonicalPath}` : `${paperId}::${reviewer}::${canonicalPath}`
 }
 
+/** Key of a Consolidation field deferred for a different, manually entered value. */
+export function deferredConsolidationKey(paperId: string, canonicalPath: string): string {
+  return `${paperId}::${canonicalPath}`
+}
+
 /** Canonical path of a field instance as the UI addresses it (container path + leaf). */
 export function fieldPath(path: PathSeg[], name: string, index: number): string {
   return formatPath([...path, { name, index }])
@@ -126,6 +131,10 @@ export function fieldPath(path: PathSeg[], name: string, index: number): string 
  *  otherwise the current selection. */
 function markReviewerScope(project: Project | null, currentReviewer: string | null): string | null {
   return project && project.reviewers > 1 ? currentReviewer : null
+}
+
+function isDeferredValueEmpty(value: FieldValue): boolean {
+  return value === null || value === undefined || (typeof value === 'string' && value.trim() === '')
 }
 
 const REVIEWER_KEY_PREFIX = 'slr.currentReviewer.'
@@ -243,8 +252,16 @@ interface AppState {
   validationOpen: boolean
   /** Whether the agreement-statistics dialog is open. Session-only, like `validationOpen`. */
   agreementOpen: boolean
-  /** Whether the "every field reviewers disagree on" overview is open. Session-only, like `validationOpen`. */
+  /** Restore the Consolidation overview when its Agreement dialog closes. */
+  agreementReturnToOverview: boolean
+  /** Whether the overall Consolidation overview is open. Session-only, like `validationOpen`. */
+  consolidationOverviewOpen: boolean
+  /** Whether the current paper's disagreement list is open. Session-only, like `validationOpen`. */
   disagreementsOpen: boolean
+  /** Restore the Consolidation overview when it opened this paper's disagreement list. */
+  disagreementsReturnToOverview: boolean
+  /** Reopen the disagreement list after closing the field comparison it launched. */
+  returnToDisagreements: boolean
   /**
    * Progress/result of the last `adoptAllUnanimousAnnotations` run, or null
    * before the first run and after `dismissUnanimousRun`. Session-only, like
@@ -289,6 +306,8 @@ interface AppState {
    * the file on disk. A plain record (not a Set) keeps immer happy.
    */
   aiMarks: Record<string, true>
+  /** Fields waiting for Consolidation to enter a value other than a reviewer's answer. */
+  deferredConsolidations: Record<string, true>
   /**
    * AI-assisted annotation ships in the app but is off by default for every
    * project, regardless of what its `config.ai` says — a project can still
@@ -378,8 +397,17 @@ interface AppState {
   setValidationOpen: (open: boolean) => void
   /** Open/close the agreement-statistics dialog. View state only — see `agreementOpen`. */
   setAgreementOpen: (open: boolean) => void
-  /** Open/close the disagreement overview. View state only — see `disagreementsOpen`. */
+  /** Replace the Consolidation overview with Agreement, then restore it on close. */
+  openAgreementFromOverview: () => void
+  closeAgreement: () => void
+  /** Open/close the project-wide Consolidation overview. */
+  setConsolidationOverviewOpen: (open: boolean) => void
+  /** Open/close the current paper's disagreement list. */
   setDisagreementsOpen: (open: boolean) => void
+  /** Open one paper's disagreement list from the project-wide overview. */
+  openDisagreementsFromOverview: (paperId: string) => void
+  /** Close the paper list, restoring its originating overview when applicable. */
+  closeDisagreements: () => void
   /** Look for a newer release (cached; silent when it can't be determined). */
   checkForUpdate: () => Promise<void>
 
@@ -404,8 +432,12 @@ interface AppState {
    * switch, not an edit: no undo step, no `dirty`, and never any JSON write. */
   selectReviewer: (reviewer: string | null) => void
   /** Consolidation clicked "compare" on one field — open the popup for it. */
-  openConsolidation: (path: PathSeg[], name: string, index: number) => void
+  openConsolidation: (path: PathSeg[], name: string, index: number, returnToDisagreements?: boolean) => void
   closeConsolidation: () => void
+  /** Store a chosen reviewer value and resolve that disagreement in one undo step. */
+  resolveConsolidationValue: (path: PathSeg[], name: string, index: number, value: FieldValue) => void
+  /** Mark a field for a different, manually entered Consolidation value. */
+  deferConsolidationValue: (path: PathSeg[], name: string, index: number) => void
   /**
    * Match the reviewers' repeated entries under one top-level node, and write
    * the result into the paper: every reviewer's entries reordered so position
@@ -599,7 +631,11 @@ export const useStore = create<AppState>()(
     validationUnannotated: null,
     validationOpen: false,
     agreementOpen: false,
+    agreementReturnToOverview: false,
+    consolidationOverviewOpen: false,
     disagreementsOpen: false,
+    disagreementsReturnToOverview: false,
+    returnToDisagreements: false,
     unanimousRun: null,
     projectGeneration: 0,
     closePromptOpen: false,
@@ -609,6 +645,7 @@ export const useStore = create<AppState>()(
     past: [],
     future: [],
     aiMarks: {},
+    deferredConsolidations: {},
     aiUnlocked: false,
     currentReviewer: null,
     consolidationTarget: null,
@@ -751,11 +788,16 @@ export const useStore = create<AppState>()(
         s.past = []
         s.future = []
         s.aiMarks = {}
+        s.deferredConsolidations = {}
         s.validation = null
         s.validationUnannotated = null
         s.validationOpen = false
         s.agreementOpen = false
+        s.agreementReturnToOverview = false
+        s.consolidationOverviewOpen = false
         s.disagreementsOpen = false
+        s.disagreementsReturnToOverview = false
+        s.returnToDisagreements = false
         // Also the run's bail-out: a step of `adoptAllUnanimousAnnotations`
         // checks this between papers and stops once it is no longer set.
         s.unanimousRun = null
@@ -884,11 +926,16 @@ export const useStore = create<AppState>()(
           s.future = []
           // Marks belong to the papers of the project that is going away.
           s.aiMarks = {}
+          s.deferredConsolidations = {}
           s.validation = null
           s.validationUnannotated = null
           s.validationOpen = false
           s.agreementOpen = false
+          s.agreementReturnToOverview = false
+          s.consolidationOverviewOpen = false
           s.disagreementsOpen = false
+          s.disagreementsReturnToOverview = false
+          s.returnToDisagreements = false
           // Also the run's bail-out — see `closeProject`.
           s.unanimousRun = null
           s.consolidationTarget = null
@@ -1176,11 +1223,48 @@ export const useStore = create<AppState>()(
     setAgreementOpen: (open) =>
       set((s) => {
         s.agreementOpen = open
+        if (!open) s.agreementReturnToOverview = false
+      }),
+
+    openAgreementFromOverview: () =>
+      set((s) => {
+        s.consolidationOverviewOpen = false
+        s.agreementOpen = true
+        s.agreementReturnToOverview = true
+      }),
+
+    closeAgreement: () =>
+      set((s) => {
+        s.agreementOpen = false
+        s.consolidationOverviewOpen = s.agreementReturnToOverview
+        s.agreementReturnToOverview = false
+      }),
+
+    setConsolidationOverviewOpen: (open) =>
+      set((s) => {
+        s.consolidationOverviewOpen = open
       }),
 
     setDisagreementsOpen: (open) =>
       set((s) => {
         s.disagreementsOpen = open
+      }),
+
+    openDisagreementsFromOverview: (paperId) =>
+      set((s) => {
+        if (!s.project?.papers.some((paper) => paper.id === paperId)) return
+        s.currentPaperId = paperId
+        s.pdfSelection = ''
+        s.consolidationOverviewOpen = false
+        s.disagreementsOpen = true
+        s.disagreementsReturnToOverview = true
+      }),
+
+    closeDisagreements: () =>
+      set((s) => {
+        s.disagreementsOpen = false
+        s.consolidationOverviewOpen = s.disagreementsReturnToOverview
+        s.disagreementsReturnToOverview = false
       }),
 
     checkForUpdate: async () => {
@@ -1209,6 +1293,7 @@ export const useStore = create<AppState>()(
       const key = `${JSON.stringify(path)}|${name}|${index}`
       const coalesce = key === lastFieldKey
       lastFieldKey = key
+      const canonical = fieldPath(path, name, index)
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
       set((s) => {
         const paper = currentPaper(s)
@@ -1220,6 +1305,15 @@ export const useStore = create<AppState>()(
         if (!inst) return
         if (!coalesce) pushPast(s, snap)
         inst.value = value
+        const deferredKey = deferredConsolidationKey(paper.id, canonical)
+        if (
+          s.currentReviewer === 'consolidation' &&
+          s.deferredConsolidations[deferredKey] &&
+          !isDeferredValueEmpty(value)
+        ) {
+          delete s.deferredConsolidations[deferredKey]
+          if (!paper.equal.includes(canonical)) paper.equal.push(canonical)
+        }
         s.dirty = true
       })
     },
@@ -1419,15 +1513,51 @@ export const useStore = create<AppState>()(
       })
     },
 
-    openConsolidation: (path, name, index) =>
+    openConsolidation: (path, name, index, returnToDisagreements = false) =>
       set((s) => {
         s.consolidationTarget = { path, name, index }
+        s.returnToDisagreements = returnToDisagreements
       }),
 
     closeConsolidation: () =>
       set((s) => {
         s.consolidationTarget = null
+        s.disagreementsOpen = s.returnToDisagreements
+        s.returnToDisagreements = false
       }),
+
+    resolveConsolidationValue: (path, name, index, value) => {
+      const prev = get()
+      const paper = currentPaper(prev)
+      if (!prev.project || !paper || prev.currentReviewer !== 'consolidation') return
+      const canonical = fieldPath(path, name, index)
+      const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
+      lastFieldKey = null
+      set((s) => {
+        const draft = currentPaper(s)
+        if (!draft) return
+        const container = containerAt(draft.annotations, path)
+        const inst = container[name]?.[index]
+        if (!inst) return
+        pushPast(s, snap)
+        inst.value = value
+        if (!draft.equal.includes(canonical)) draft.equal.push(canonical)
+        delete s.deferredConsolidations[deferredConsolidationKey(draft.id, canonical)]
+        s.dirty = true
+      })
+    },
+
+    deferConsolidationValue: (path, name, index) => {
+      const state = get()
+      const paper = currentPaper(state)
+      if (!paper || state.currentReviewer !== 'consolidation') return
+      const canonical = fieldPath(path, name, index)
+      const key = deferredConsolidationKey(paper.id, canonical)
+      if (state.deferredConsolidations[key]) return
+      set((s) => {
+        s.deferredConsolidations[key] = true
+      })
+    },
 
     alignConsolidationNode: (paperId, nodeName, coalesce) => {
       const prev = get()

@@ -50,7 +50,8 @@ export function ConsolidationDialog() {
   const closeConsolidation = useStore((s) => s.closeConsolidation)
   const project = useStore((s) => s.project)
   const paper = useStore(selectCurrentPaper)
-  const setFieldValue = useStore((s) => s.setFieldValue)
+  const resolveConsolidationValue = useStore((s) => s.resolveConsolidationValue)
+  const deferConsolidationValue = useStore((s) => s.deferConsolidationValue)
   const toggleFieldEquality = useStore((s) => s.toggleFieldEquality)
 
   // Raised when leaving would strand the field, rather than letting it go and
@@ -132,12 +133,17 @@ export function ConsolidationDialog() {
 
   const take = (value: FieldValue | undefined) => {
     const taken = value === undefined ? emptyValue(def.type) : value
-    setFieldValue(target.path, target.name, target.index, taken)
-    // Taking a reviewer's *blank* answer records nothing, so it leaves exactly
-    // the hole closing outright would. The guard is about what the field ends up
-    // holding, not which control was pressed.
-    if (markedEqual && isEmptyValue(def.type, taken)) setConfirmingClose(true)
-    else closeConsolidation()
+    if (isEmptyValue(def.type, taken)) {
+      deferConsolidationValue(target.path, target.name, target.index)
+    } else {
+      resolveConsolidationValue(target.path, target.name, target.index, taken)
+    }
+    closeConsolidation()
+  }
+
+  const defer = () => {
+    deferConsolidationValue(target.path, target.name, target.index)
+    closeConsolidation()
   }
 
   /** Leave, and undo the claim the reviewer declined to back with a value. */
@@ -194,6 +200,9 @@ export function ConsolidationDialog() {
               )
             })}
           </ul>
+          <button type="button" className="consolidation-defer" onClick={defer}>
+            Enter a different value
+          </button>
           {canDeclareEqual && (
             <>
               <label className="consolidation-equal">

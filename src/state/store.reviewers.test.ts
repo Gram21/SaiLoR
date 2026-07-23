@@ -216,6 +216,28 @@ describe('multi-reviewer: Consolidation', () => {
     // by a Consolidation write — same reference, not just an equal value.
     expect(paper.reviews).toBe(reviewsBefore)
   })
+
+  it('stores a selected reviewer value and marks the disagreement resolved in one undo step', () => {
+    st().resolveConsolidationValue([], 'Study Type', 0, 'Reviewer 1 value')
+
+    const paper = st().project!.papers[0]
+    expect(paper.annotations['Study Type'][0].value).toBe('Reviewer 1 value')
+    expect(paper.equal).toContain('Study Type')
+    expect(st().past).toHaveLength(1)
+  })
+
+  it('keeps a different-value field pending until Consolidation fills it, then resolves it', () => {
+    st().deferConsolidationValue([], 'Study Type', 0)
+    expect(st().deferredConsolidations['p1::Study Type']).toBe(true)
+    expect(st().project!.papers[0].equal).not.toContain('Study Type')
+
+    st().setFieldValue([], 'Study Type', 0, 'A third value')
+
+    const paper = st().project!.papers[0]
+    expect(st().deferredConsolidations['p1::Study Type']).toBeUndefined()
+    expect(paper.annotations['Study Type'][0].value).toBe('A third value')
+    expect(paper.equal).toContain('Study Type')
+  })
 })
 
 describe('selecting a reviewer is a view switch, not an edit', () => {
@@ -301,6 +323,77 @@ describe('closeProject resets the reviewer view', () => {
     st().closeProject()
     expect(st().currentReviewer).toBeNull()
     expect(st().consolidationTarget).toBeNull()
+  })
+})
+
+describe('returning from a disagreement comparison', () => {
+  beforeEach(() => {
+    st().loadFromText(multiReviewerProject, null, 'test.json')
+    st().selectPaper('p1')
+    st().selectReviewer('consolidation')
+  })
+
+  it('reopens the current paper disagreement list when it launched the comparison', () => {
+    st().setDisagreementsOpen(true)
+    st().openConsolidation([], 'Study Type', 0, true)
+    st().setDisagreementsOpen(false)
+
+    st().closeConsolidation()
+
+    expect(st().consolidationTarget).toBeNull()
+    expect(st().disagreementsOpen).toBe(true)
+    expect(st().returnToDisagreements).toBe(false)
+  })
+
+  it('does not open the disagreement list after an ordinary field comparison', () => {
+    st().openConsolidation([], 'Study Type', 0)
+    st().closeConsolidation()
+
+    expect(st().disagreementsOpen).toBe(false)
+  })
+
+  it('restores the overview after closing a paper disagreement list opened there', () => {
+    st().setConsolidationOverviewOpen(true)
+    st().openDisagreementsFromOverview('p1')
+
+    expect(st().currentPaperId).toBe('p1')
+    expect(st().consolidationOverviewOpen).toBe(false)
+    expect(st().disagreementsOpen).toBe(true)
+
+    st().closeDisagreements()
+
+    expect(st().disagreementsOpen).toBe(false)
+    expect(st().consolidationOverviewOpen).toBe(true)
+    expect(st().disagreementsReturnToOverview).toBe(false)
+  })
+
+  it('keeps the overview hidden until a field comparison returns to and closes its paper list', () => {
+    st().setConsolidationOverviewOpen(true)
+    st().openDisagreementsFromOverview('p1')
+    st().openConsolidation([], 'Study Type', 0, true)
+    st().setDisagreementsOpen(false)
+
+    st().closeConsolidation()
+
+    expect(st().disagreementsOpen).toBe(true)
+    expect(st().consolidationOverviewOpen).toBe(false)
+    expect(st().disagreementsReturnToOverview).toBe(true)
+
+    st().closeDisagreements()
+    expect(st().consolidationOverviewOpen).toBe(true)
+  })
+
+  it('replaces the overview with Agreement and restores it when Agreement closes', () => {
+    st().setConsolidationOverviewOpen(true)
+    st().openAgreementFromOverview()
+
+    expect(st().consolidationOverviewOpen).toBe(false)
+    expect(st().agreementOpen).toBe(true)
+
+    st().closeAgreement()
+
+    expect(st().agreementOpen).toBe(false)
+    expect(st().consolidationOverviewOpen).toBe(true)
   })
 })
 
