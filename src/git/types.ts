@@ -41,17 +41,6 @@ export interface GitStatus {
   diffTruncated: boolean
 }
 
-/** The reviewer's own `git config` identity in one repository — the raw IPC
- *  shape, both fields always strings. An empty `email` means this machine has
- *  no git identity here (no `user.email` set, at any config level git
- *  reads); the caller declines to guess who that might be rather than treat
- *  it as an error. See `src/model/identity.ts`'s `ReviewerIdentity` for the
- *  validated, non-empty-by-construction shape this becomes once it's checked. */
-export interface GitIdentity {
-  email: string
-  name: string
-}
-
 export interface GitRepoInfo {
   /** Absolute, realpath'd — from `git rev-parse --show-toplevel`. */
   root: string
@@ -98,9 +87,6 @@ export interface GitPlatform {
    *  about opening a project exists twice. */
   pickProjectIn(dir: string): Promise<string | null>
   info(projectPath: string): Promise<GitRepoInfo | null>
-  /** `user.email`/`user.name` as configured for `root` — empty strings mean
-   *  "unset here". See `GitIdentity`. */
-  identity(root: string): Promise<GitIdentity>
   status(root: string): Promise<GitStatus>
   commit(root: string, paths: string[], message: string): Promise<GitRun>
   push(root: string): Promise<GitRun>

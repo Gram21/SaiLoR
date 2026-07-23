@@ -7,16 +7,12 @@ import {
   type ScreeningConfig,
 } from './schema'
 import {
+  hasAnnotations,
   normalizeTree,
   pruneTree,
   type AnnotationValueTree,
 } from './annotations'
 import { screeningSchemaDefs } from '../screening/schema'
-import {
-  parseReviewerIdentities,
-  serializeReviewerIdentities,
-  type ReviewerIdentity,
-} from './identity'
 import { parseYear } from './year'
 
 /**
@@ -209,15 +205,6 @@ export interface Project {
    * built-in Consolidation role that reconciles them into `Paper.annotations`.
    */
   reviewers: number
-  /** Who holds each seat, keyed the way `reviews` is ("1".."N") plus
-   *  "consolidation". Empty for every file written before this existed, and for
-   *  every project nobody has claimed a seat in — which must keep behaving
-   *  exactly as it did then. Absent, never a skeleton: unlike `reviews` (see
-   *  `normalizeReviews`), an unclaimed seat has no diff-friendliness to buy —
-   *  a claim is a rare, deliberate act, and a key appearing in the diff is
-   *  precisely what it looks like. See `src/model/identity.ts` for the hazard
-   *  this exists to catch and why the comparison key is email, not name. */
-  reviewerIdentities: Record<string, ReviewerIdentity>
   papers: Paper[]
   /**
    * The screening configuration when this is a screening project, else null.
@@ -497,16 +484,15 @@ export function deepEqualJson(a: unknown, b: unknown): boolean {
 }
 
 /**
- * Whether a project's `annotations`/`reviews` need the git-friendly empty
- * skeleton written in — a brand-new paper saved before this existed, an
- * untouched reviewer with no key at all, a hand-edited file, or one written by
- * an older version of the app.
+ * Whether a project's `annotations`/`reviews` need the canonical serialized
+ * shape written in — a hand-edited file, or one written by an older version
+ * of the app.
  *
  * `rawText` is re-parsed and compared structurally (via `deepEqualJson`)
  * against what saving `project` right now *would* write, scoped to exactly
  * `annotations` and `reviews` — nothing else about the file's formatting or
- * unrelated content is examined, so this answers "does the skeleton need
- * fixing", never "is this file byte-identical to our own pretty-printer".
+ * unrelated content is examined, so this answers "does the annotation shape
+ * need fixing", never "is this file byte-identical to our own pretty-printer".
  * That distinction is what keeps this from flagging every hand-authored or
  * differently-formatted file that already has the right shape.
  *
@@ -520,10 +506,10 @@ export function needsShapeMigration(project: Project, rawText: string): boolean 
   return project.papers.some((paper, i) => {
     const rawPaper = (rawPapers[i] ?? {}) as Record<string, unknown>
     const rawAnnotations = rawPaper.annotations ?? {}
-    if (!deepEqualJson(pruneTree(project.schema, paper.annotations), rawAnnotations)) return true
+    if (!deepEqualJson(serializedTree(project.schema, paper.annotations), rawAnnotations)) return true
     if (project.reviewers <= 1) return false
     const canonicalReviews = Object.fromEntries(
-      Object.entries(paper.reviews).map(([k, v]) => [k, pruneTree(project.schema, v)]),
+      Object.entries(paper.reviews).map(([k, v]) => [k, serializedTree(project.schema, v)]),
     )
     const rawReviews = rawPaper.reviews ?? {}
     return !deepEqualJson(canonicalReviews, rawReviews)
@@ -659,9 +645,6 @@ export function loadProject(input: string | unknown): Project {
     aiEnabled: raw.config.ai !== false,
     // Absent or 1 means single-reviewer; zod already bounds a present value to [1, 10].
     reviewers: raw.config.reviewers ?? 1,
-    reviewerIdentities: parseReviewerIdentities(
-      (raw.config as { reviewerIdentities?: unknown }).reviewerIdentities,
-    ),
     papers,
     screening,
     extra: extractExtra(raw, KNOWN_ROOT_KEYS),
@@ -675,7 +658,6 @@ export function loadProject(input: string | unknown): Project {
  */
 export function serializeProject(project: Project): string {
   const out: Record<string, unknown> = {
-    ...project.extra,
     version: project.version,
     ...(project.title ? { title: project.title } : {}),
     // Only written when this project was actually imported from another —
@@ -694,18 +676,10 @@ export function serializeProject(project: Project): string {
       schema: dehydrateSchema(project.schema),
       ...(project.aiEnabled ? {} : { ai: false }),
       ...(project.reviewers > 1 ? { reviewers: project.reviewers } : {}),
-      // Grouped with `reviewers`, which it annotates. Only emitted when
-      // non-empty, so every project nobody has claimed a seat in — which is
-      // every file written before this existed — stays byte-identical.
-      ...(() => {
-        const ids = serializeReviewerIdentities(project.reviewerIdentities)
-        return ids ? { reviewerIdentities: ids } : {}
-      })(),
       ...(project.screening ? { screening: { reasons: project.screening.reasons } } : {}),
     },
-    papers: project.papers.map((p) => {
+    papers: [...project.papers].sort(comparePapers).map((p) => {
       const paper: Record<string, unknown> = {
-        ...p.extra,
         id: p.id,
         title: p.title,
         authors: p.authors,
@@ -721,7 +695,7 @@ export function serializeProject(project: Project): string {
       // before this field existed.
       if (p.abstractFromPdf && p.abstract) paper.abstractFromPdf = true
       paper.pdf = p.pdf
-      paper.annotations = pruneTree(project.schema, p.annotations)
+      paper.annotations = serializedTree(project.schema, p.annotations)
       // A single-reviewer paper has no reviewer trees at all — `annotations`
       // alone carries the data — so this stays empty and `reviews` is omitted
       // below, exactly as before this feature existed. A multi-reviewer paper's
@@ -731,17 +705,35 @@ export function serializeProject(project: Project): string {
       const reviewKeys = Object.keys(p.reviews)
       if (reviewKeys.length > 0) {
         paper.reviews = Object.fromEntries(
-          reviewKeys.map((k) => [k, pruneTree(project.schema, p.reviews[k])]),
+          reviewKeys.sort((a, b) => Number(a) - Number(b)).map((k) => [k, serializedTree(project.schema, p.reviews[k])]),
         )
       }
       // Only written when non-empty, so a paper AI has never touched stays clean.
       if (p.aiUsage.length > 0) paper.aiUsage = p.aiUsage
       // Only written when non-empty, so a paper with no equality marks stays clean.
       if (p.equal.length > 0) paper.equal = p.equal
-      return paper
+      return { ...paper, ...p.extra }
     }),
+    ...project.extra,
   }
   return JSON.stringify(out, null, 2)
+}
+
+/** Empty normalized trees exist in memory to bind the form to the schema, but
+ * do not belong in a project file until a reviewer has recorded an answer. */
+function serializedTree(schema: ResolvedDef[], tree: AnnotationValueTree): AnnotationValueTree {
+  return hasAnnotations(schema, tree) ? pruneTree(schema, tree) : {}
+}
+
+/** Case-insensitive title ordering gives git a stable paper order; id breaks
+ * title ties without relying on the engine's sort stability. */
+function comparePapers(a: Paper, b: Paper): number {
+  const compareText = (left: string, right: string): number => (left < right ? -1 : left > right ? 1 : 0)
+  return (
+    compareText(a.title.toLowerCase(), b.title.toLowerCase()) ||
+    compareText(a.title, b.title) ||
+    compareText(a.id, b.id)
+  )
 }
 
 function extractExtra(obj: Record<string, unknown>, known: Set<string>): Record<string, unknown> {

@@ -37,7 +37,6 @@ function makeProject(reviewers: number): Project {
     schema,
     aiEnabled: true,
     reviewers,
-    reviewerIdentities: {},
     papers: [],
     screening: null,
     extra: {},

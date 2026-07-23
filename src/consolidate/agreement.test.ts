@@ -43,7 +43,6 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     schema: SCHEMA,
     aiEnabled: true,
     reviewers: 2,
-    reviewerIdentities: {},
     extra: {},
     papers: [],
     screening: null,
@@ -168,7 +167,6 @@ describe('agreementInput on a screening project', () => {
       schema: SCREENING_SCHEMA,
       aiEnabled: true,
       reviewers: 2,
-      reviewerIdentities: {},
       extra: {},
       papers: [],
       screening: { reasons: ['Wrong topic', 'Duplicate'] },
@@ -314,7 +312,6 @@ describe('agreementInput.perField', () => {
       schema: SCREENING_SCHEMA,
       aiEnabled: true,
       reviewers: 2,
-      reviewerIdentities: {},
       extra: {},
       screening: { reasons: ['Wrong topic'] },
       papers: [

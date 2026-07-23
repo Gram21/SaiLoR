@@ -2239,26 +2239,3 @@ kbd {
   font-size: 0.75em;
   color: var(--muted);
 }
-
-/* ---- Reviewer seat mismatch warning ---- */
-/* Reuses the "question, not a failure" treatment `.consolidation-warning`
-   established: an edge in --danger, not a filled banner, because both ways
-   forward below are legitimate answers, not just a dismissal. */
-.reviewer-mismatch .modal-body {
-  border-left: 3px solid var(--danger);
-  padding-left: 12px;
-}
-.reviewer-mismatch-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-/* Same seat-mismatch signal in the toolbar's own controls — the pill row,
-   the dropdown trigger, and the dropdown menu's rows — so a reviewer who
-   already dismissed the ReviewerPrompt once still sees which seat is not
-   theirs without reopening it. */
-.reviewer-btn.is-mismatch,
-.reviewer-menu-label.is-mismatch {
-  color: var(--danger);
-}

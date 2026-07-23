@@ -310,7 +310,6 @@ describe('validateProject', () => {
       schema: sampleSchema,
       aiEnabled: true,
       reviewers: 1,
-      reviewerIdentities: {},
       papers,
       screening: null,
       extra: {},

@@ -260,17 +260,10 @@ describe('buildProjectJson', () => {
     expect(loadProject(JSON.stringify(buildProjectJson(draft(nodes, [], true, 3)))).reviewers).toBe(3)
   })
 
-  it('carries reviewerIdentities through when supplied, and omits it when absent (existing fixtures keep compiling)', () => {
+  it('never writes reviewer identities into the project JSON', () => {
     const nodes = [node('X', { kind: 'string' })]
-    const without = buildProjectJson(draft(nodes, [], true, 2)).config as Record<string, unknown>
-    expect('reviewerIdentities' in without).toBe(false)
-
-    const state = { ...draft(nodes, [], true, 2), reviewerIdentities: { '1': { email: 'alice@kit.edu' } } }
-    const withIds = buildProjectJson(state).config as Record<string, unknown>
-    expect(withIds.reviewerIdentities).toEqual({ '1': { email: 'alice@kit.edu' } })
-
-    const roundTrip = loadProject(JSON.stringify(buildProjectJson(state)))
-    expect(roundTrip.reviewerIdentities).toEqual({ '1': { email: 'alice@kit.edu' } })
+    const config = buildProjectJson(draft(nodes, [], true, 2)).config as Record<string, unknown>
+    expect('reviewerIdentities' in config).toBe(false)
   })
 })
 
@@ -373,7 +366,6 @@ describe('editorStateFromOpened (shared by "Edit annotation JSON…" and the rec
       },
       config: {
         reviewers: 3,
-        reviewerIdentities: { '1': { email: 'a@x.org' }, consolidation: { email: 'b@x.org', name: 'B' } },
         ai: false,
         schema: [{ name: 'Relevant', type: 'boolean' }],
       },
@@ -384,7 +376,7 @@ describe('editorStateFromOpened (shared by "Edit annotation JSON…" and the rec
     const viaCore = loadProject(serializeProject(loadProject(rich)))
     const viaEditor = loadProject(JSON.stringify(buildProjectJson(editorStateFromOpened(opened(rich)))))
 
-    for (const field of ['title', 'provenance', 'protocol', 'reviewers', 'reviewerIdentities', 'aiEnabled'] as const) {
+    for (const field of ['title', 'provenance', 'protocol', 'reviewers', 'aiEnabled'] as const) {
       expect(viaEditor[field]).toEqual(viaCore[field])
     }
   })
@@ -394,14 +386,7 @@ describe('editorStateFromOpened (shared by "Edit annotation JSON…" and the rec
     expect(st.reviewers).toBe(1)
   })
 
-  // Regression test for Finding B: `config` is entirely rebuilt by
-  // `buildProjectJson` from four/five known fields, and the editor's own root
-  // `extra` collection hardcodes ['version','title','config','papers'] as the
-  // known root keys — so anything living *inside* `config` (unlike a root-level
-  // extra) is invisible to that mechanism and would be silently destroyed by
-  // opening a project in the editor and saving it, unless it is carried
-  // through explicitly like `reviewers`/`screening` already are.
-  it('reads config.reviewerIdentities from an opened project and carries it through a save unchanged', () => {
+  it('removes legacy reviewer identities when an opened project is saved', () => {
     const withClaims = JSON.stringify({
       version: 1,
       config: {
@@ -412,21 +397,11 @@ describe('editorStateFromOpened (shared by "Edit annotation JSON…" and the rec
       papers: [],
     })
     const st = editorStateFromOpened(opened(withClaims))
-    expect(st.reviewerIdentities).toEqual({
-      '1': { email: 'alice@kit.edu', name: 'Alice' },
-      '2': { email: 'bob@kit.edu' },
-    })
-
-    const roundTrip = loadProject(JSON.stringify(buildProjectJson(st)))
-    expect(roundTrip.reviewerIdentities).toEqual(st.reviewerIdentities)
-  })
-
-  it('a project with no claims opens and round-trips with an empty reviewerIdentities, writing nothing new', () => {
-    const st = editorStateFromOpened(opened(projectJson))
-    expect(st.reviewerIdentities).toEqual({})
     const json = buildProjectJson(st)
     const config = json.config as Record<string, unknown>
     expect('reviewerIdentities' in config).toBe(false)
+    expect(JSON.stringify(json)).not.toContain('alice@kit.edu')
+    expect(JSON.stringify(json)).not.toContain('bob@kit.edu')
   })
 })
 
