@@ -393,7 +393,7 @@ export class BrowserAdapter implements PlatformAdapter {
   }
 
   private async resolveViaDir(dir: FileSystemDirectoryHandle, pdfPath: string): Promise<File> {
-    const parts = relParts(pdfPath, dir.name)
+    const { parts, escapedAnchor } = relParts(pdfPath, dir.name)
     try {
       for (let i = 0; i < parts.length - 1; i++) {
         dir = await dir.getDirectoryHandle(parts[i])
@@ -401,19 +401,14 @@ export class BrowserAdapter implements PlatformAdapter {
       const fileHandle = await dir.getFileHandle(parts[parts.length - 1])
       return await fileHandle.getFile()
     } catch {
-      throw new Error(
-        `PDF "${pdfPath}" was not found in the selected folder. Pick the folder that contains the project's PDFs.`,
-      )
+      throw pdfNotFoundError(pdfPath, escapedAnchor)
     }
   }
 
   private resolveViaFileMap(pdfPath: string): File {
-    const file = this.pdfFileMap?.get(relParts(pdfPath, this.pdfFolderName).join('/'))
-    if (!file) {
-      throw new Error(
-        `PDF "${pdfPath}" was not found in the selected folder. Pick the folder that contains the project's PDFs.`,
-      )
-    }
+    const { parts, escapedAnchor } = relParts(pdfPath, this.pdfFolderName)
+    const file = this.pdfFileMap?.get(parts.join('/'))
+    if (!file) throw pdfNotFoundError(pdfPath, escapedAnchor)
     return file
   }
 
@@ -651,6 +646,20 @@ function isAbort(err: unknown): boolean {
   return err instanceof DOMException && err.name === 'AbortError'
 }
 
+/** `relParts`'s result: the normalized segments, plus whether resolving them
+ *  required silently discarding a `..` this anchor genuinely can't answer —
+ *  see `relParts`'s own doc comment for what that means and why it's kept
+ *  distinct rather than folded into "not found". */
+interface NormalizedPdfPath {
+  parts: string[]
+  /** True when a leading `..` had to be dropped without anywhere real to
+   *  resolve it against — the path is climbing outside whatever folder was
+   *  picked, by more than the one self-cancelling hop `anchorName` covers.
+   *  No folder the reviewer could pick next time changes that; it isn't a
+   *  "try a different folder" situation. */
+  escapedAnchor: boolean
+}
+
 /**
  * A stored `pdf` path, split into clean segments and normalized: empty parts
  * and `.` are dropped, and `..` collapses the previous segment the usual
@@ -675,18 +684,24 @@ function isAbort(err: unknown): boolean {
  * "samples" right after it cancel out, leaving just `"pdfs/a.pdf"` to look
  * up inside it.
  *
- * A leading `..` NOT immediately followed by the anchor's own name has
- * nothing to resolve it against and is dropped instead — the lookup then
- * proceeds against whatever's left, which still resolves if the reviewer
- * happened to pick the folder one level up from where the path is climbing
- * to, but otherwise just fails cleanly, the same as before this existed.
- * ponytail: only handles a single self-cancelling leading ".."; genuinely
- * climbing to a *different* ancestor (two-plus leading ".." not named after
- * the anchor) has no answer without a real path, and still can't resolve.
+ * A leading `..` NOT immediately followed by the anchor's own name is
+ * genuinely unresolvable — nothing this function has access to says where it
+ * should go — and is dropped, flagging `escapedAnchor` so the caller can
+ * say so plainly instead of implying a different folder pick would help.
+ * `"../../../../../Downloads/a.pdf"` is the extreme version of the same
+ * thing: five levels with nothing to anchor any of them, versus Electron's
+ * `path.resolve`, which *would* compute a real path there — one this build
+ * would then reject anyway (see `registerPdfProtocol` in electron/main.ts),
+ * since it points outside the project entirely. The browser build has no
+ * such real path to reject in the first place; it just never had one.
+ * ponytail: only resolves a single self-cancelling leading ".."; two-plus
+ * leading ".." (or one not named after the anchor) has no real path to try
+ * against, in this build or any other — not a gap to close, a boundary.
  */
-function relParts(pdfPath: string, anchorName: string | null): string[] {
+function relParts(pdfPath: string, anchorName: string | null): NormalizedPdfPath {
   const segs = pdfPath.split('/').filter((seg) => seg && seg !== '.')
   const parts: string[] = []
+  let escapedAnchor = false
   for (let i = 0; i < segs.length; i++) {
     const seg = segs[i]
     if (seg !== '..') {
@@ -697,9 +712,32 @@ function relParts(pdfPath: string, anchorName: string | null): string[] {
       parts.pop() // internal cancel, e.g. "pdfs/../pdfs/a.pdf"
     } else if (anchorName !== null && segs[i + 1] === anchorName) {
       i++ // leading ".." round-tripping back to the folder we're already in
+    } else {
+      escapedAnchor = true
     }
   }
-  return parts
+  return { parts, escapedAnchor }
+}
+
+/**
+ * `resolveViaDir`/`resolveViaFileMap`'s shared "couldn't find it" error —
+ * two different reasons, two different messages. `escapedAnchor` means the
+ * path climbs further outside the picked folder than `relParts` can ever
+ * resolve in this build; saying "pick the folder that contains the PDFs" for
+ * that would suggest a retry that cannot succeed no matter which folder is
+ * picked, which is worse than not explaining at all.
+ */
+function pdfNotFoundError(pdfPath: string, escapedAnchor: boolean): Error {
+  if (escapedAnchor) {
+    return new Error(
+      `PDF "${pdfPath}" points outside the folder you picked, and the browser build can only read inside the one ` +
+        `folder it was granted — there is no folder to pick that would reach it. Move the PDF inside the project's ` +
+        `own folder, or use the desktop app, which can read any path on disk.`,
+    )
+  }
+  return new Error(
+    `PDF "${pdfPath}" was not found in the selected folder. Pick the folder that contains the project's PDFs.`,
+  )
 }
 
 /**

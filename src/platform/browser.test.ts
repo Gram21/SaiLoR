@@ -265,12 +265,32 @@ describe('getPdfSource (local project): resolves through a picked folder, never 
     spy.mockRestore()
   })
 
-  it('still fails cleanly, not with a crash, when the picked folder does not match what ".." climbs to', async () => {
+  it('names the real reason, not "pick a different folder", when the leading ".." matches neither the picked folder nor any ancestor it could reach', async () => {
+    // "MyProject" doesn't match "samples" — this isn't "you picked the
+    // wrong folder", it's "no folder answers this".
     const spy = mockFolderPicker([fileAt('MyProject/pdfs/paper-a.pdf')])
     const adapter = new BrowserAdapter()
     await expect(
       adapter.getPdfSource('../samples/pdfs/paper-a.pdf', DOWNLOAD_HANDLE),
-    ).rejects.toThrow(/was not found/)
+    ).rejects.toThrow(/points outside the folder you picked/)
+    spy.mockRestore()
+  })
+
+  it('gives the same honest reason for a path that climbs many levels to an unrelated folder', async () => {
+    const spy = mockFolderPicker([fileAt('samples/pdfs/paper-a.pdf')])
+    const adapter = new BrowserAdapter()
+    await expect(
+      adapter.getPdfSource('../../../../../Downloads/Architecture_Review.pdf', DOWNLOAD_HANDLE),
+    ).rejects.toThrow(/points outside the folder you picked/)
+    spy.mockRestore()
+  })
+
+  it('still gives the plain "not found" message for a simple typo\'d filename — no ".." involved', async () => {
+    const spy = mockFolderPicker([fileAt('MyProject/pdfs/paper-a.pdf')])
+    const adapter = new BrowserAdapter()
+    await expect(adapter.getPdfSource('pdfs/paper-b.pdf', DOWNLOAD_HANDLE)).rejects.toThrow(
+      /was not found in the selected folder/,
+    )
     spy.mockRestore()
   })
 })
