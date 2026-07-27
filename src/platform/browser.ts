@@ -107,6 +107,12 @@ export class BrowserAdapter implements PlatformAdapter {
   private pdfDir: FileSystemDirectoryHandle | null = null
   /** Fallback when there is no FSAPI directory picker: relative path → File, from a folder <input>. */
   private pdfFileMap: Map<string, File> | null = null
+  /** The picked PDF folder's own name — the File System Access API never
+   *  exposes a real path, so this is the only anchor `relParts` has to
+   *  resolve a leading ".." against (a round trip back to the folder we're
+   *  already resolving from). Set alongside `pdfDir`/`pdfFileMap`, whichever
+   *  grant path was used. */
+  private pdfFolderName: string | null = null
   private nextId = 0
   /** Set when a project was loaded from a URL (server mode); PDFs resolve against it. */
   private serverBase: string | null = null
@@ -127,6 +133,7 @@ export class BrowserAdapter implements PlatformAdapter {
   private clearLocalPdfGrants(): void {
     this.pdfDir = null
     this.pdfFileMap = null
+    this.pdfFolderName = null
   }
 
   getRecents(): RecentEntry[] {
@@ -354,6 +361,7 @@ export class BrowserAdapter implements PlatformAdapter {
     if (hasFsApi() && typeof fsApi().showDirectoryPicker === 'function') {
       try {
         this.pdfDir = await fsApi().showDirectoryPicker!({ id: 'slr-pdfs', mode: 'read' })
+        this.pdfFolderName = this.pdfDir.name
       } catch (err) {
         if (isAbort(err)) {
           throw new Error("Pick the folder that contains this project's PDFs to view them.")
@@ -381,10 +389,11 @@ export class BrowserAdapter implements PlatformAdapter {
       if (rel) map.set(rel, f)
     }
     this.pdfFileMap = map
+    this.pdfFolderName = files[0].webkitRelativePath.split('/')[0] ?? null
   }
 
   private async resolveViaDir(dir: FileSystemDirectoryHandle, pdfPath: string): Promise<File> {
-    const parts = relParts(pdfPath)
+    const parts = relParts(pdfPath, dir.name)
     try {
       for (let i = 0; i < parts.length - 1; i++) {
         dir = await dir.getDirectoryHandle(parts[i])
@@ -399,7 +408,7 @@ export class BrowserAdapter implements PlatformAdapter {
   }
 
   private resolveViaFileMap(pdfPath: string): File {
-    const file = this.pdfFileMap?.get(relParts(pdfPath).join('/'))
+    const file = this.pdfFileMap?.get(relParts(pdfPath, this.pdfFolderName).join('/'))
     if (!file) {
       throw new Error(
         `PDF "${pdfPath}" was not found in the selected folder. Pick the folder that contains the project's PDFs.`,
@@ -652,24 +661,43 @@ function isAbort(err: unknown): boolean {
  * own folder the same way `path.resolve` does for the Electron build) could
  * never resolve, no matter what folder the reviewer picked.
  *
- * A leading `..` with nothing before it to collapse (climbing above
- * whatever folder was picked) is dropped rather than kept as a literal,
- * unresolvable segment — there is no real filesystem anchor to resolve it
- * against here, unlike `path.resolve`'s `projectDir` in the Electron build;
- * the File System Access API never exposes one. Dropping it means the
- * lookup proceeds against whatever's left, which resolves correctly as long
- * as the *contents* the reviewer picked match what the `..` was climbing
- * to — true for both `resolveViaDir` (a live directory handle) and
- * `resolveViaFileMap` (the `webkitdirectory` fallback's flat map, keyed by
- * path *within* the picked folder, with the folder's own name stripped —
- * so a leading `..` resolves there too, on the same terms).
+ * A leading `..` — climbing above whatever folder was picked — has no real
+ * filesystem anchor to resolve against here, unlike `path.resolve`'s
+ * `projectDir` in the Electron build; the File System Access API never
+ * exposes a parent handle, or any path at all. `anchorName` (the picked
+ * folder's own `.name` — the one piece of real identity FSAPI *does* expose)
+ * covers the one case that actually matters in practice: a `pdf` value like
+ * `"../samples/pdfs/a.pdf"`, written by something computing a path relative
+ * to a *sibling* of the project's own folder, is a round trip — climb out of
+ * "samples", then straight back into a folder also named "samples" — so if
+ * the reviewer picked the folder named "samples" itself (the natural answer
+ * to "pick the folder with this project's PDFs"), the `".."` and the
+ * "samples" right after it cancel out, leaving just `"pdfs/a.pdf"` to look
+ * up inside it.
+ *
+ * A leading `..` NOT immediately followed by the anchor's own name has
+ * nothing to resolve it against and is dropped instead — the lookup then
+ * proceeds against whatever's left, which still resolves if the reviewer
+ * happened to pick the folder one level up from where the path is climbing
+ * to, but otherwise just fails cleanly, the same as before this existed.
+ * ponytail: only handles a single self-cancelling leading ".."; genuinely
+ * climbing to a *different* ancestor (two-plus leading ".." not named after
+ * the anchor) has no answer without a real path, and still can't resolve.
  */
-function relParts(pdfPath: string): string[] {
+function relParts(pdfPath: string, anchorName: string | null): string[] {
+  const segs = pdfPath.split('/').filter((seg) => seg && seg !== '.')
   const parts: string[] = []
-  for (const seg of pdfPath.split('/')) {
-    if (!seg || seg === '.') continue
-    if (seg === '..') parts.pop()
-    else parts.push(seg)
+  for (let i = 0; i < segs.length; i++) {
+    const seg = segs[i]
+    if (seg !== '..') {
+      parts.push(seg)
+      continue
+    }
+    if (parts.length > 0) {
+      parts.pop() // internal cancel, e.g. "pdfs/../pdfs/a.pdf"
+    } else if (anchorName !== null && segs[i + 1] === anchorName) {
+      i++ // leading ".." round-tripping back to the folder we're already in
+    }
   }
   return parts
 }

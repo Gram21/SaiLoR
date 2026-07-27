@@ -252,6 +252,19 @@ describe('getPdfSource (local project): resolves through a picked folder, never 
     spy.mockRestore()
   })
 
+  it('resolves a leading ".." that self-cancels — reviewer picked the folder named "samples" directly', async () => {
+    // Layout: <picked = "samples">/pdfs/paper-a.pdf, the natural answer to
+    // "pick the folder with this project's PDFs". "../samples/pdfs/a.pdf"
+    // climbs out of "samples" and straight back into a folder also named
+    // "samples" — recognized via the picked folder's own name (the first
+    // segment of `webkitRelativePath`), not by a coincidental content match.
+    const spy = mockFolderPicker([fileAt('samples/pdfs/paper-a.pdf')])
+    const adapter = new BrowserAdapter()
+    const src = await adapter.getPdfSource('../samples/pdfs/paper-a.pdf', DOWNLOAD_HANDLE)
+    expect(src.url).toBe('blob:mock-url')
+    spy.mockRestore()
+  })
+
   it('still fails cleanly, not with a crash, when the picked folder does not match what ".." climbs to', async () => {
     const spy = mockFolderPicker([fileAt('MyProject/pdfs/paper-a.pdf')])
     const adapter = new BrowserAdapter()
@@ -266,19 +279,40 @@ describe('getPdfSource (local project): resolves through a picked folder, never 
 function fakeDir(
   dirs: Record<string, FileSystemDirectoryHandle> = {},
   files: Record<string, File> = {},
+  name = '',
 ): FileSystemDirectoryHandle {
   return {
-    async getDirectoryHandle(name: string) {
-      const d = dirs[name]
+    name,
+    async getDirectoryHandle(n: string) {
+      const d = dirs[n]
       if (!d) throw new DOMException('not found', 'NotFoundError')
       return d
     },
-    async getFileHandle(name: string) {
-      const f = files[name]
+    async getFileHandle(n: string) {
+      const f = files[n]
       if (!f) throw new DOMException('not found', 'NotFoundError')
       return { async getFile() { return f } }
     },
   } as unknown as FileSystemDirectoryHandle
+}
+
+/** Stubs the FSAPI pickers for one test so `ensureLocalPdfGrant` takes the
+ *  real-directory-handle branch instead of the `<input webkitdirectory>`
+ *  fallback — `hasFsApi()` gates on `showOpenFilePicker` too, unused here but
+ *  required to exist. */
+function withDirectoryPicker(picked: FileSystemDirectoryHandle) {
+  const w = window as unknown as {
+    showOpenFilePicker: () => Promise<never>
+    showDirectoryPicker: () => Promise<FileSystemDirectoryHandle>
+  }
+  w.showOpenFilePicker = async () => {
+    throw new Error('not used in this test')
+  }
+  w.showDirectoryPicker = async () => picked
+  return () => {
+    delete (window as unknown as { showOpenFilePicker?: unknown }).showOpenFilePicker
+    delete (window as unknown as { showDirectoryPicker?: unknown }).showDirectoryPicker
+  }
 }
 
 describe('getPdfSource (local project, real FSAPI directory handle): "../" climbs to a sibling', () => {
@@ -290,24 +324,28 @@ describe('getPdfSource (local project, real FSAPI directory handle): "../" climb
     // the project's own folder is "samples", netting back to itself the same
     // way path.resolve does in the Electron build) resolves correctly.
     const picked = fakeDir({ samples: fakeDir({ pdfs: fakeDir({}, { 'paper-a.pdf': paperA }) }) })
-    const w = window as unknown as {
-      showOpenFilePicker: () => Promise<never>
-      showDirectoryPicker: () => Promise<FileSystemDirectoryHandle>
-    }
-    // `hasFsApi()` gates on `showOpenFilePicker` too — unused here, just has
-    // to exist as a function for the FSAPI directory-picker branch to run
-    // instead of falling through to the `<input webkitdirectory>` fallback.
-    w.showOpenFilePicker = async () => {
-      throw new Error('not used in this test')
-    }
-    w.showDirectoryPicker = async () => picked
+    const cleanup = withDirectoryPicker(picked)
 
     const adapter = new BrowserAdapter()
     const src = await adapter.getPdfSource('../samples/pdfs/paper-a.pdf', DOWNLOAD_HANDLE)
     expect(src.url).toBe('blob:mock-url')
+    cleanup()
+  })
 
-    delete (window as unknown as { showOpenFilePicker?: unknown }).showOpenFilePicker
-    delete (window as unknown as { showDirectoryPicker?: unknown }).showDirectoryPicker
+  it('resolves a leading ".." that self-cancels — reviewer picked the folder named "samples" directly', async () => {
+    // Layout: <picked = "samples">/pdfs/paper-a.pdf — the natural answer to
+    // "pick the folder with this project's PDFs" is the project's own
+    // folder, "samples". "../samples/pdfs/paper-a.pdf" climbs out of
+    // "samples" and straight back into a folder also named "samples" — a
+    // round trip `relParts` recognizes via the picked handle's own `.name`,
+    // without requiring the reviewer to pick a level higher instead.
+    const picked = fakeDir({ pdfs: fakeDir({}, { 'paper-a.pdf': paperA }) }, {}, 'samples')
+    const cleanup = withDirectoryPicker(picked)
+
+    const adapter = new BrowserAdapter()
+    const src = await adapter.getPdfSource('../samples/pdfs/paper-a.pdf', DOWNLOAD_HANDLE)
+    expect(src.url).toBe('blob:mock-url')
+    cleanup()
   })
 })
 
