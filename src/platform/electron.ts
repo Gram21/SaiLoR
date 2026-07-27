@@ -48,6 +48,10 @@ export interface SlrBridge {
    *  so a blocked or missing PDF gets an honest reason instead of pdf.js's
    *  own opaque failure for an HTTP status it never explains. */
   checkPdfPath(rel: string): Promise<{ ok: true } | { ok: false; reason: 'no-project' | 'escapes' | 'not-found' }>
+  /** Records that the reviewer chose to open `rel` even though it points
+   *  outside the project's own folder, for the rest of this session — see
+   *  `getPdfSource`'s confirm and `allowedEscapes` in electron/main.ts. */
+  allowPdfPath(rel: string): Promise<void>
   /** For each project path: does it still exist, and what title does it now carry? */
   peekProjects(paths: string[]): Promise<{ exists: boolean; title?: string }[]>
   /** Paths of `toFiles` relative to `fromFile`'s directory, POSIX-separated. */
@@ -200,17 +204,32 @@ export class ElectronAdapter implements PlatformAdapter {
     const check = await bridge().checkPdfPath(pdfPath)
     if (!check.ok) {
       if (check.reason === 'escapes') {
-        throw new Error(
-          `PDF "${pdfPath}" points outside the project's own folder and is blocked for safety. A project file is ` +
-            `often shared with other reviewers — a PDF path reaching outside its folder could otherwise be used to ` +
-            `read arbitrary files on your disk from a project you didn't create yourself. Move the PDF inside the ` +
-            `project's folder, or store the project next to it.`,
+        // Not a hard refusal: the reviewer is trusted to know whether they
+        // trust *this* project enough to let it read a file outside its own
+        // folder — see `allowedEscapes` in electron/main.ts for the whole
+        // reasoning. `window.confirm` matches how this app already asks
+        // "are you sure" elsewhere (GitDialog's discard warnings, deleting
+        // an annotated paper) rather than a bespoke dialog for just this.
+        const ok = window.confirm(
+          `PDF "${pdfPath}" is stored outside this project's own folder.\n\n` +
+            `Opening it means reading a file at a path the project itself names. If you didn't author this ` +
+            `project yourself — it came from a collaborator, or somewhere else — that path could point at a file ` +
+            `on your disk you didn't intend to share. Only continue if you trust where this project came from.\n\n` +
+            `Open it anyway?`,
         )
-      }
-      if (check.reason === 'not-found') {
+        if (!ok) {
+          throw new Error(
+            `PDF "${pdfPath}" was not opened — it points outside the project's own folder, and you chose not to open it.`,
+          )
+        }
+        await bridge().allowPdfPath(pdfPath)
+        // Falls through to the URL below: the reviewer just approved this
+        // exact path, so there's nothing left to re-check before using it.
+      } else if (check.reason === 'not-found') {
         throw new Error(`PDF "${pdfPath}" was not found relative to the project's own folder.`)
+      } else {
+        throw new Error('No project is open.')
       }
-      throw new Error('No project is open.')
     }
     // The main process serves files from the project dir via slr-file://.
     // Encode each path segment but keep the separators.

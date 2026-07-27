@@ -41,6 +41,16 @@ const appIcon = nativeImage.createFromPath(path.join(__dirname, '../build/icon.p
 // The base directory of the currently-open project; PDFs resolve against it.
 let projectDir: string | null = null
 
+// A `pdf` value the reviewer explicitly chose to open even though it points
+// outside `projectDir` — see `resolveProjectPath`. Keyed by the exact stored
+// relative path, not by where it resolves to: the decision is "I trust this
+// specific reference in this specific project", not "I trust this file
+// forever". Session-only (in memory, never written to disk) and cleared
+// whenever `projectDir` actually changes to a different directory — an
+// approval for one project's external reference must not silently carry
+// over to a different project that happens to store the same relative path.
+const allowedEscapes = new Set<string>()
+
 // Main window + unsaved-changes coordination for a clean quit.
 let mainWindow: BrowserWindow | null = null
 let isDirty = false
@@ -353,13 +363,18 @@ type ProjectPathCheck =
  * passes the first check and would then read from wherever it actually
  * points. A project folder is received material and can ship one: a
  * `pdfs/paper.pdf` linked to `/etc/passwd` read as in-bounds. `realpath`
- * resolves the chain, so the second check sees the real destination.
+ * resolves the chain, so the second check sees the real destination — but
+ * only when `rel` claimed to be in-bounds to begin with. `allowedEscapes`
+ * (see its own comment) is the reviewer overriding the boundary check
+ * outright for one specific path they were asked about and agreed to; there
+ * is no "inside the project" expectation left to protect for it.
  */
 async function resolveProjectPath(rel: string): Promise<ProjectPathCheck> {
   if (!projectDir) return { ok: false, reason: 'no-project' }
   const resolved = path.resolve(projectDir, rel)
   const base = path.resolve(projectDir)
-  if (resolved !== base && !resolved.startsWith(base + path.sep)) {
+  const withinBase = resolved === base || resolved.startsWith(base + path.sep)
+  if (!withinBase && !allowedEscapes.has(rel)) {
     return { ok: false, reason: 'escapes' }
   }
   let real: string
@@ -368,14 +383,16 @@ async function resolveProjectPath(rel: string): Promise<ProjectPathCheck> {
   } catch {
     return { ok: false, reason: 'not-found' }
   }
-  let realBase: string
-  try {
-    realBase = await realpath(base)
-  } catch {
-    return { ok: false, reason: 'no-project' }
-  }
-  if (real !== realBase && !real.startsWith(realBase + path.sep)) {
-    return { ok: false, reason: 'escapes' }
+  if (withinBase) {
+    let realBase: string
+    try {
+      realBase = await realpath(base)
+    } catch {
+      return { ok: false, reason: 'no-project' }
+    }
+    if (real !== realBase && !real.startsWith(realBase + path.sep)) {
+      return { ok: false, reason: 'escapes' }
+    }
   }
   return { ok: true, real }
 }
@@ -559,7 +576,14 @@ ipcMain.handle('project:save', async (_e, filePath: string, text: string) => {
 })
 
 ipcMain.handle('project:setDir', (_e, filePath: string) => {
-  projectDir = path.dirname(filePath)
+  const dir = path.dirname(filePath)
+  // A path approved for one project's directory says nothing about a
+  // different one that happens to store the same relative path — but
+  // `getPdfSource` re-asserts the *same* directory on every PDF load (see
+  // its own comment), so clearing unconditionally would re-prompt for an
+  // already-approved path every time the reviewer switched back to it.
+  if (dir !== projectDir) allowedEscapes.clear()
+  projectDir = dir
 })
 
 // Only picks a location — the project editor writes through project:save later,
@@ -674,6 +698,15 @@ ipcMain.handle('pdf:read', async (_e, filePath: string) => {
 ipcMain.handle('pdf:checkPath', async (_e, rel: string) => {
   const check = await resolveProjectPath(rel)
   return check.ok ? { ok: true } : { ok: false, reason: check.reason }
+})
+
+// The reviewer was shown `rel` points outside the project's own folder and
+// chose to open it anyway (see `getPdfSource`'s confirm in
+// src/platform/electron.ts) — recorded so `resolveProjectPath` stops
+// refusing this *specific* path for the rest of this session. Scoped to the
+// currently-open project's directory; see `allowedEscapes`'s own comment.
+ipcMain.handle('pdf:allowPath', (_e, rel: string) => {
+  allowedEscapes.add(rel)
 })
 
 // PDF references are stored relative to the project JSON so the project stays

@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('slr', {
   pickReferenceFile: () => ipcRenderer.invoke('reference:pick'),
   readPdf: (filePath: string) => ipcRenderer.invoke('pdf:read', filePath),
   checkPdfPath: (rel: string) => ipcRenderer.invoke('pdf:checkPath', rel),
+  allowPdfPath: (rel: string) => ipcRenderer.invoke('pdf:allowPath', rel),
   peekProjects: (paths: string[]) => ipcRenderer.invoke('project:peek', paths),
   relativePaths: (fromFile: string, toFiles: string[]) =>
     ipcRenderer.invoke('paths:relative', fromFile, toFiles),
