@@ -10,10 +10,15 @@ name: **S**ai**L**o**R**. Open a single JSON "project" file that holds both an a
 annotation fields — optionally grabbing values straight from selected PDF text — and save the
 annotations back into the JSON.
 
-The same codebase runs two ways:
+SaiLoR is a **desktop app** (Electron) — fully local, opens local PDF files, native Open/Save
+dialogs.
 
-- **Desktop app** (Electron) — fully local, opens local PDF files, native Open/Save dialogs.
-- **Web app** — a static build you can host on any server (or open locally in a Chromium browser).
+> **The web/browser build is discontinued.** Earlier versions also ran as a static site you could
+> host or open in a browser; browser file-system limitations (the File System Access API's reach and
+> reliability across browsers) made too many features — multi-file saving, git — impossible to
+> support properly there. The web build, if you open it, now shows a notice pointing you at the
+> desktop app instead of any project-opening UI. If you were using SaiLoR in a browser, switch to
+> the desktop app below — your existing project files open in it unchanged.
 
 <p align="center">
   <img src="docs/screenshots/annotate.png" alt="The three-pane annotation view: papers, the PDF, and the annotation form" width="900">
@@ -26,12 +31,6 @@ The same codebase runs two ways:
 
 ```bash
 npm install
-
-# Web development (browser):
-npm run dev
-# then open http://localhost:5173
-
-# Desktop app (Electron) in dev:
 npm run dev:electron
 ```
 
@@ -107,6 +106,29 @@ on Debian/Ubuntu), or you can extract and run it with `--appimage-extract-and-ru
 > 📖 For a full authoring guide with many examples, see
 > [docs/annotation-schema.md](docs/annotation-schema.md). The summary below is the quick reference.
 
+A project is a `project.json` file next to an `annotations/` folder, not a single JSON file. This is
+what lets two reviewers working on different papers — or different reviewer slots of the same paper —
+never collide in git: each lives in its own file, so ordinary git tracking/diffing/merging handles
+them independently instead of everyone fighting over one big file. (Opening a project still saved in
+the old, pre-v1.3 single-file shape works unchanged — it just migrates to this layout automatically
+the next time it's saved, with no explicit step.)
+
+```
+my-review/
+├── project.json          # schema, protocol, screening config, and paper METADATA only — no answers
+└── annotations/
+    └── <paperId>/
+        ├── consolidated.json   The single/consolidated annotation tree, plus aiUsage + equal
+        └── reviewer-<n>.json   Each independent reviewer's own tree (multi-reviewer only)
+```
+
+Files under `annotations/` are created **lazily** — only once a reviewer has actually written
+something for that paper — and deleted again if it's cleared back to empty. A screening project names
+these `screening-consolidated.json` / `screening-<n>.json` instead, so the two kinds of per-paper
+decision are distinguishable at a glance.
+
+`project.json` itself:
+
 ```jsonc
 {
   "version": 1,
@@ -139,13 +161,15 @@ on Debian/Ubuntu), or you can extract and run it with `--appimage-extract-and-ru
       "year": 2024,                 // optional
       "venue": "…",                 // optional — journal/conference name
       "abstract": "…",              // optional — what screening reads when there is no PDF yet
-      "pdf": "pdfs/paper-a.pdf",    // path relative to this JSON file; "" is only valid in a screening project
-      "annotations": {},            // the final result — written in full (every field, empty) once opened
-      "reviews": {}                 // multi-reviewer only: one full empty tree per reviewer "1".."N", same reason
+      "pdf": "pdfs/paper-a.pdf"     // path relative to this JSON file; "" is only valid in a screening project
     }
   ]
 }
 ```
+
+The app assembles `project.json` and every paper's `annotations/` files into the same logical shape
+you'd get from the pre-v1.3 single-file format when it loads a project — the split only changes what's
+on disk, not how the app (or its own load/save/git internals) reasons about a project in memory.
 
 **Annotation nodes** (`config.schema[]`):
 
@@ -181,8 +205,7 @@ Two optional top-level keys exist specifically to be safe from that `config` reb
 
 ## Using the app
 
-- **Open ▾ menu** — open a project file, or reopen one of the last 5 recent projects. (Recent
-  projects require the desktop app or a Chromium browser; other browsers show only "Open file…".)
+- **Open ▾ menu** — open a project file, or reopen one of the last 5 recent projects.
 - **Save ▾ menu** — Save or Save as…, with their shortcuts shown next to each item.
 - **? (Help)** — opens a dialog describing the workflow and listing all keyboard shortcuts.
 - **Left pane** — collapsible list of papers (toggle with the ☰ button). A completeness dot next to
@@ -355,19 +378,14 @@ carried over versus left behind. For a multi-reviewer screening project, "includ
 
 ## Saving
 
-- **Desktop**: writes to the opened file's path; **Save as** opens a native dialog.
-- **Browser (Chromium)**: uses the File System Access API to save in place / to a new file.
-- **Browser (other)**: downloads the updated JSON.
+Writes `project.json` and the changed files under `annotations/` to the opened project's folder;
+**Save as** opens a native dialog to pick a new location.
 
 ## Git
 
-> **Desktop only, and not by accident.** Git support runs your own `git` binary, so it can use your
-> real `~/.gitconfig`, your credential helper, and your SSH agent. A web page cannot spawn a process
-> or read a config file — there is no permission that changes that — so there is nothing honest to
-> fall back to in the browser build. *Import from remote git…* and the toolbar's **Git** button still
-> appear there, greyed out, rather than vanishing — hover for a note pointing you at the desktop app.
-> If `git` is not on your PATH in the desktop app instead, the same controls appear greyed out with
-> git's own error explaining why.
+> Git support runs your own `git` binary, so it can use your real `~/.gitconfig`, your credential
+> helper, and your SSH agent. If `git` is not on your `PATH`, *Import from remote git…* and the
+> toolbar's **Git** button appear greyed out with git's own error explaining why.
 
 **Import from remote git…** — on the start screen and in the toolbar's *Open* ▾ menu. Paste a repository URL,
 pick a folder, and confirm; the app then clones it. A clone of a repository full of PDFs can take a
@@ -376,17 +394,23 @@ fails, you get git's **exact** error message and land back on the same form with
 in it. On success you pick which project JSON to open, and the file picker already starts inside the
 folder that was just cloned.
 
-**The Git button** appears in the toolbar whenever the open project's JSON file sits inside a git
+**The Git button** appears in the toolbar whenever the open project's folder sits inside a git
 repository. It opens a panel with:
 
-- **Field-level review of the project JSON's own changes** — instead of one whole-file checkbox,
-  every changed field gets its own row ("Field: was *this*, now *that*") with three choices: **Use**
-  (commit the new value), **Ignore** (leave it as an uncommitted local change, offered again next
-  time), or **Discard** (revert it to the committed value — nothing actually happens until you press
-  **Commit** or **Discard all**, never the moment you mark it). **Use all / Ignore all / Discard all**
-  apply one disposition to everything at once.
-  Any change to a file *other* than the project JSON (a PDF you added, say) still shows as a plain
-  whole-file checkbox.
+- **A branch switcher** in the header — a dropdown of local branches, plus **+ New branch…** to
+  create one at the current commit and switch to it right away. Switching with nothing uncommitted is
+  a plain checkout. With uncommitted changes to the project, it asks: commit first (cancels the
+  switch for now), carry the changes into the new branch (merging field by field, same engine as
+  Pull below), or cancel. A branch just created shares its parent's commit, so carrying changes into
+  one can never itself produce a conflict.
+- **Field-level review of the project's own changes** — instead of one whole-file checkbox, every
+  changed field (across `project.json` and every file under `annotations/`) gets its own row ("Field:
+  was *this*, now *that*") with three choices: **Use** (commit the new value), **Ignore** (leave it as
+  an uncommitted local change, offered again next time), or **Discard** (revert it to the committed
+  value — nothing actually happens until you press **Commit** or **Discard all**, never the moment you
+  mark it). **Use all / Ignore all / Discard all** apply one disposition to everything at once.
+  Any change to a file *outside* the project (a PDF you added, say) still shows as a plain whole-file
+  checkbox.
 - a commit message box and a **Commit** button (which relabels to **Discard all** and turns red if
   nothing is left marked *Use*),
 - **Pull** and **Push**.
@@ -412,139 +436,71 @@ hanging.
 
 **What it will not do:**
 
-- Merge a conflict outside the project JSON (a PDF, a `.gitignore`, …) — SaiLoR only knows how to
-  merge the annotation file; anything else is left for you to resolve with git, and the merge is
-  aborted cleanly rather than half-done.
+- Merge a conflict outside the project (a PDF, a `.gitignore`, …) — SaiLoR only knows how to merge
+  the project's own files; anything else is left for you to resolve with git, and the merge (or, for
+  a branch switch, the whole attempt) is aborted cleanly rather than half-done.
 - Merge two copies of the project whose **annotation schema** was changed on both sides, differently —
-  the schema decides the shape of every tree in the file, so there is no field-level answer; the pull
-  refuses and tells you why.
+  the schema decides the shape of every tree, so there is no field-level answer; the pull (or
+  branch-switch merge) refuses and tells you why.
 - Delete a paper the remote deleted if you have annotated it since — it is kept, and you are told.
 
-Live clone progress with a cancel button, and branch switching or history browsing, are not part of
-this either.
+Live clone progress with a cancel button, and history browsing, are not part of this either.
 
 ## Building & testing
 
 ```bash
-npm run build            # static SPA into dist/ (host anywhere)
 npm run build:electron   # desktop installers into release/ (via electron-builder)
 npm test                 # unit tests (model: schema, normalize, round-trip)
 npm run typecheck
 ```
 
+`npm run build` (a static SPA into `dist/`) still exists for CI/typechecking purposes, but is no
+longer a supported way to run the app — see "The web/browser build is discontinued" above.
+
 ## Deployment
-
-### A. Browser variant — static hosting
-
-`npm run build` emits a self-contained static site in `dist/`. Serve that folder from any static
-host (nginx, Apache, S3/CloudFront, GitHub Pages, …). The build uses a relative base, so it also
-works from a subpath.
-
-Place each project JSON next to its `pdfs/` folder on the same host and link to it with
-`?project=<url>` — the app fetches the JSON and resolves its PDFs relative to that URL:
-
-```
-https://your.host/?project=/reviews/2026/project.json
-```
-
-Users can also just click **Open…** in the app to load a local JSON from their own machine.
-
-### B. Browser variant — Docker (recommended for self-hosting)
-
-A multi-stage [`Dockerfile`](Dockerfile) builds the SPA and serves it with nginx; the
-[`docker-compose.yml`](docker-compose.yml) wires up the port and the volume of project files.
-
-```bash
-# Build and start (serves on http://localhost:8080)
-docker compose up -d --build
-
-# Stop
-docker compose down
-```
-
-By default the bundled example folder [`./samples`](samples) is mounted read-only into the
-container and served under the `/projects/` URL namespace, so once the container is up you can
-open:
-
-```
-http://localhost:8080/?project=/projects/project.example.json
-```
-
-To use your own reviews, point the volume in `docker-compose.yml` at your own folder of project
-JSONs and their PDFs — whatever folder you mount is served at `/projects/`:
-
-```yaml
-volumes:
-  - ./my-reviews:/usr/share/nginx/html/projects:ro
-```
-
-```
-my-reviews/
-  my-review.json          # references pdfs/paperX.pdf (paths relative to the JSON)
-  pdfs/
-    paperX.pdf
-```
-
-Open it with `http://localhost:8080/?project=/projects/my-review.json`.
-
-Change the published port by editing the `ports:` mapping in `docker-compose.yml` (default
-`8080:80`). To build/run the image without Compose:
-
-```bash
-docker build -t sailor .
-docker run -d -p 8080:80 -v "$PWD/samples:/usr/share/nginx/html/projects:ro" sailor
-```
-
-> The browser variant is read-only on the server: saving happens client-side (File System Access
-> API or a download), never written back to the container — hence the read-only mount.
-
-### C. Desktop variant — Electron installers
 
 `npm run build:electron` runs `electron-builder` and produces native installers in `release/`
 (the `build` block in [`package.json`](package.json) targets `dmg` on macOS, `nsis` on Windows,
 `AppImage` on Linux). Build on (or cross-build for) each target OS as needed. The desktop app reads
 local PDF files directly, so no server is involved.
 
+> **Static hosting and the production Docker image (`Dockerfile`, `docker-compose.yml`) are
+> discontinued along with the browser build** — they served the now-disabled browser build, so
+> there's nothing left for them to usefully deploy. Ship the Electron installers above instead.
+
 ## Developing with Docker
 
-If you'd rather not install Node locally, a separate dev stack in
-[`docker-compose.dev.yml`](docker-compose.dev.yml) can run the browser dev server or build the
-Electron app in a container. It is **fully separate** from the production `docker-compose.yml`
-above — nothing here runs on a plain `docker compose up`, so deployment is never affected. Pick a
-target with a Compose **profile**:
+If you'd rather not install Node locally, [`docker-compose.dev.yml`](docker-compose.dev.yml) can
+build the Electron app in a container:
 
 ```bash
-# Browser development — Vite dev server with hot reload on http://localhost:5173
-docker compose -f docker-compose.dev.yml --profile browser up --build
-# then open http://localhost:5173/?project=/samples/project.example.json
-
-# Build the Electron desktop app — installers are written to ./release/
 docker compose -f docker-compose.dev.yml --profile electron run --rm electron
 ```
 
-- **Browser dev** ([`Dockerfile.dev`](Dockerfile.dev)) bind-mounts the source for hot reload. If
-  file edits aren't detected (common on macOS/Windows mounts), prefix the command with
-  `VITE_USE_POLLING=1`.
-- **Electron build** ([`Dockerfile.electron`](Dockerfile.electron)) is a Debian image that runs
-  `electron-builder`. It builds **Linux** installers (AppImage) into `./release/`; macOS/Windows
-  installers must be built on their native OS (Windows can be cross-built by basing the image on
-  `electronuserland/builder:wine`). Running the Electron GUI inside the container additionally needs
-  X11 forwarding — for day-to-day desktop development, run `npm run dev:electron` on the host.
+[`Dockerfile.electron`](Dockerfile.electron) is a Debian image that runs `electron-builder`. It
+builds **Linux** installers (AppImage) into `./release/`; macOS/Windows installers must be built on
+their native OS (Windows can be cross-built by basing the image on
+`electronuserland/builder:wine`). Running the Electron GUI inside the container additionally needs
+X11 forwarding — for day-to-day desktop development, run `npm run dev:electron` on the host.
 
 ## Architecture
 
-- `src/model/` — schema types + zod validation, project load/normalize/serialize, annotation
-  instance-tree helpers (unit-tested).
+- `src/model/` — schema types + zod validation, project load/normalize/serialize (including the
+  `project.json` + `annotations/` split and legacy-format migration), annotation instance-tree
+  helpers (unit-tested).
 - `src/screening/` — the derived screening schema, tri-state decision/reason reading, PRISMA-style
   counts, and the two cross-field validation rules screening needs (unit-tested).
-- `src/platform/` — a `PlatformAdapter` seam so the UI is identical in Electron and the browser
-  (`electron.ts` = IPC + `slr-file://` protocol; `browser.ts` = File System Access API / fetch).
-- `src/git/` — field-level change detection and three-way merge of the project JSON (`changes.ts`,
-  `merge.ts`), plus git URL parsing and raw command output handling; the IPC side lives in
-  `electron/main.ts` since only the desktop app can spawn `git`.
+- `src/platform/` — a `PlatformAdapter` seam; `electron.ts` (IPC + `slr-file://` protocol) is the
+  only real implementation now that the browser build is discontinued — `unsupported.ts` stands in
+  for every other runtime, showing the "use the desktop app" notice.
+- `src/git/` — field-level change detection and three-way merge of the project (`changes.ts`,
+  `merge.ts`, shared by both a pull and a carry-changes-over branch switch), plus git URL parsing and
+  raw command output handling; the IPC side lives in `electron/main.ts` since only the desktop app
+  can spawn `git`.
 - `src/llm/` — the AI-annotation layer: prompt, provider request/response shapes, field paths, and
   the parser that validates every proposal against the schema before a reviewer ever sees it.
-- `src/state/store.ts` — Zustand + immer store (`src/state/aiStore.ts` for the AI flow).
+- `src/state/store.ts` — Zustand + immer store (`src/state/aiStore.ts` for the AI flow,
+  `src/state/gitStore.ts` for git).
 - `src/components/` — Toolbar, PaperList, PdfViewer, AnnotationPanel/Node/Field, AiDialog.
 - `electron/` — thin main process (BrowserWindow, Edit-role menu, dialog/fs IPC, PDF protocol) and
   a context-isolated preload.
