@@ -129,6 +129,14 @@ into the match shown, filling in any gaps) or **Different** (adds it as its own 
 row needs a decision before the import can proceed. **Mark all as…** handles a whole batch at once
 when you can eyeball that they're all the same kind of call.
 
+### Paper ids
+
+Every paper has its own `id`, auto-generated from the PDF's file name or title and shown in each row
+so you can hand-edit it — it's what git and any hand-editing keys off, so it must stay **unique**
+within the project. Typing an id that collides with another paper's is flagged right there — a red
+outline on the field and a "duplicate" note next to the label — before you ever get to Save; Save
+itself refuses with the same complaint if a collision is still unresolved.
+
 ## Saving
 
 **Save JSON** writes the file and keeps you in the editor. **Save JSON & Begin Annotating** writes it
