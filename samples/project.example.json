@@ -88,12 +88,7 @@
         "D. Dev"
       ],
       "doi": "10.1000/abc987",
-      "pdf": "pdfs/paper-b.pdf",
-      "annotations": {},
-      "reviews": {
-        "1": {},
-        "2": {}
-      }
+      "pdf": "pdfs/paper-b.pdf"
     },
     {
       "id": "paper-a",
@@ -103,12 +98,7 @@
         "B. Writer"
       ],
       "doi": "10.1000/xyz123",
-      "pdf": "pdfs/paper-a.pdf",
-      "annotations": {},
-      "reviews": {
-        "1": {},
-        "2": {}
-      }
+      "pdf": "pdfs/paper-a.pdf"
     },
     {
       "id": "KeimKaplan2026_ICSEBoF",
@@ -118,12 +108,7 @@
         "A. Kaplan"
       ],
       "doi": "10.48550/arXiv.2601.19548",
-      "pdf": "pdfs/KeimKaplan_FromScatteredToStructured.pdf",
-      "annotations": {},
-      "reviews": {
-        "1": {},
-        "2": {}
-      }
+      "pdf": "pdfs/KeimKaplan_FromScatteredToStructured.pdf"
     },
     {
       "id": "Fuchss2026_LiSSA",
@@ -137,12 +122,7 @@
         "Tobias Thirolf",
         "Anne Koziolek"
       ],
-      "pdf": "pdfs/A1-37.pdf",
-      "annotations": {},
-      "reviews": {
-        "1": {},
-        "2": {}
-      }
+      "pdf": "pdfs/A1-37.pdf"
     },
     {
       "id": "paper-c",
@@ -151,12 +131,7 @@
         "E. Editor"
       ],
       "doi": "10.1000/mno987",
-      "pdf": "pdfs/multipage.pdf",
-      "annotations": {},
-      "reviews": {
-        "1": {},
-        "2": {}
-      }
+      "pdf": "pdfs/multipage.pdf"
     }
   ]
 }

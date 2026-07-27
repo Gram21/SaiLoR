@@ -44,53 +44,15 @@
   },
   "papers": [
     {
-      "id": "paper-a",
-      "title": "Deep Learning for Code Search: A Study",
+      "id": "paper-d",
+      "title": "A Survey of Deep Learning Frameworks for Image Classification",
       "authors": [
-        "A. Author",
-        "B. Writer"
+        "F. Field",
+        "G. Grant"
       ],
-      "doi": "10.1000/xyz123",
-      "abstract": "We present a neural embedding approach for code search that jointly encodes natural language queries and source code snippets into a shared vector space. On a benchmark of over 50,000 query-code pairs, our model improves mean reciprocal rank (MRR) by 12% over prior retrieval baselines.",
-      "pdf": "pdfs/paper-a.pdf",
-      "annotations": {
-        "Decision": [
-          {
-            "value": "Include"
-          }
-        ],
-        "Reason": [
-          {
-            "value": null
-          }
-        ]
-      },
-      "reviews": {
-        "1": {
-          "Decision": [
-            {
-              "value": "Include"
-            }
-          ],
-          "Reason": [
-            {
-              "value": null
-            }
-          ]
-        },
-        "2": {
-          "Decision": [
-            {
-              "value": "Include"
-            }
-          ],
-          "Reason": [
-            {
-              "value": null
-            }
-          ]
-        }
-      }
+      "doi": "10.1000/def456",
+      "abstract": "We compare convolutional and transformer-based architectures for image classification across five standard benchmarks, reporting accuracy, throughput, and parameter counts for each framework.",
+      "pdf": ""
     },
     {
       "id": "paper-b",
@@ -101,92 +63,28 @@
       ],
       "doi": "10.1000/abc987",
       "abstract": "This survey categorizes automated program repair techniques into search-based, semantic, and learning-based approaches, and compares how each is evaluated across common benchmarks. We identify a lack of standardized evaluation protocols as a recurring threat to validity across the surveyed studies.",
-      "pdf": "pdfs/paper-b.pdf",
-      "annotations": {
-        "Decision": [
-          {
-            "value": "Include"
-          }
-        ],
-        "Reason": [
-          {
-            "value": null
-          }
-        ]
-      },
-      "reviews": {
-        "1": {
-          "Decision": [
-            {
-              "value": "Include"
-            }
-          ],
-          "Reason": [
-            {
-              "value": null
-            }
-          ]
-        },
-        "2": {
-          "Decision": [
-            {
-              "value": "Include"
-            }
-          ],
-          "Reason": [
-            {
-              "value": null
-            }
-          ]
-        }
-      }
+      "pdf": "pdfs/paper-b.pdf"
     },
     {
-      "id": "paper-c",
-      "title": "Multi-page Test Document",
+      "id": "paper-e",
+      "title": "Automated Program Repair: An Industrial Case Study (Workshop Report)",
       "authors": [
-        "E. Editor"
+        "H. Hart"
       ],
-      "doi": "10.1000/mno987",
-      "pdf": "pdfs/multipage.pdf",
-      "annotations": {
-        "Decision": [
-          {
-            "value": "Include"
-          }
-        ],
-        "Reason": [
-          {
-            "value": null
-          }
-        ]
-      },
-      "reviews": {
-        "1": {
-          "Decision": [
-            {
-              "value": "Include"
-            }
-          ],
-          "Reason": [
-            {
-              "value": null
-            }
-          ]
-        },
-        "2": {
-          "Decision": [
-            {
-              "value": "Include"
-            }
-          ],
-          "Reason": [
-            {
-              "value": null
-            }
-          ]
-        }
-      }
+      "doi": "10.1000/ghi789",
+      "abstract": "We report on deploying an automated program repair tool inside a single company's CI pipeline over six months, describing patch acceptance rates and developer feedback. Presented at an internal engineering workshop; not independently peer-reviewed.",
+      "pdf": ""
+    },
+    {
+      "id": "paper-a",
+      "title": "Deep Learning for Code Search: A Study",
+      "authors": [
+        "A. Author",
+        "B. Writer"
+      ],
+      "doi": "10.1000/xyz123",
+      "abstract": "We present a neural embedding approach for code search that jointly encodes natural language queries and source code snippets into a shared vector space. On a benchmark of over 50,000 query-code pairs, our model improves mean reciprocal rank (MRR) by 12% over prior retrieval baselines.",
+      "pdf": "pdfs/paper-a.pdf"
     },
     {
       "id": "KeimKaplan2026_ICSEBoF",
@@ -196,45 +94,18 @@
         "A. Kaplan"
       ],
       "doi": "10.48550/arXiv.2601.19548",
-      "pdf": "pdfs/KeimKaplan_FromScatteredToStructured.pdf",
-      "annotations": {
-        "Decision": [
-          {
-            "value": "Include"
-          }
-        ],
-        "Reason": [
-          {
-            "value": null
-          }
-        ]
-      },
-      "reviews": {
-        "1": {
-          "Decision": [
-            {
-              "value": "Include"
-            }
-          ],
-          "Reason": [
-            {
-              "value": null
-            }
-          ]
-        },
-        "2": {
-          "Decision": [
-            {
-              "value": "Include"
-            }
-          ],
-          "Reason": [
-            {
-              "value": null
-            }
-          ]
-        }
-      }
+      "pdf": "pdfs/KeimKaplan_FromScatteredToStructured.pdf"
+    },
+    {
+      "id": "paper-f",
+      "title": "Grammar-Based Program Synthesis for Automated Repair",
+      "authors": [
+        "I. Ivanova",
+        "J. Jung"
+      ],
+      "doi": "10.1000/jkl321",
+      "abstract": "We propose a grammar-guided synthesis approach that constrains the search space of candidate patches using a language-specific context-free grammar, and evaluate it against existing benchmarks for automated repair.",
+      "pdf": ""
     },
     {
       "id": "Fuchss2026_LiSSA",
@@ -248,191 +119,16 @@
         "Tobias Thirolf",
         "Anne Koziolek"
       ],
-      "pdf": "pdfs/A1-37.pdf",
-      "annotations": {
-        "Decision": [
-          {
-            "value": null
-          }
-        ],
-        "Reason": [
-          {
-            "value": null
-          }
-        ]
-      },
-      "reviews": {
-        "1": {
-          "Decision": [
-            {
-              "value": null
-            }
-          ],
-          "Reason": [
-            {
-              "value": null
-            }
-          ]
-        },
-        "2": {
-          "Decision": [
-            {
-              "value": null
-            }
-          ],
-          "Reason": [
-            {
-              "value": null
-            }
-          ]
-        }
-      }
+      "pdf": "pdfs/A1-37.pdf"
     },
     {
-      "id": "paper-d",
-      "title": "A Survey of Deep Learning Frameworks for Image Classification",
+      "id": "paper-c",
+      "title": "Multi-page Test Document",
       "authors": [
-        "F. Field",
-        "G. Grant"
+        "E. Editor"
       ],
-      "doi": "10.1000/def456",
-      "abstract": "We compare convolutional and transformer-based architectures for image classification across five standard benchmarks, reporting accuracy, throughput, and parameter counts for each framework.",
-      "pdf": "",
-      "annotations": {
-        "Decision": [
-          {
-            "value": "Exclude"
-          }
-        ],
-        "Reason": [
-          {
-            "value": "Wrong topic"
-          }
-        ]
-      },
-      "reviews": {
-        "1": {
-          "Decision": [
-            {
-              "value": "Exclude"
-            }
-          ],
-          "Reason": [
-            {
-              "value": "Wrong topic"
-            }
-          ]
-        },
-        "2": {
-          "Decision": [
-            {
-              "value": "Exclude"
-            }
-          ],
-          "Reason": [
-            {
-              "value": "Wrong topic"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "paper-e",
-      "title": "Automated Program Repair: An Industrial Case Study (Workshop Report)",
-      "authors": [
-        "H. Hart"
-      ],
-      "doi": "10.1000/ghi789",
-      "abstract": "We report on deploying an automated program repair tool inside a single company's CI pipeline over six months, describing patch acceptance rates and developer feedback. Presented at an internal engineering workshop; not independently peer-reviewed.",
-      "pdf": "",
-      "annotations": {
-        "Decision": [
-          {
-            "value": "Exclude"
-          }
-        ],
-        "Reason": [
-          {
-            "value": "Not peer-reviewed"
-          }
-        ]
-      },
-      "reviews": {
-        "1": {
-          "Decision": [
-            {
-              "value": "Exclude"
-            }
-          ],
-          "Reason": [
-            {
-              "value": "Not peer-reviewed"
-            }
-          ]
-        },
-        "2": {
-          "Decision": [
-            {
-              "value": "Include"
-            }
-          ],
-          "Reason": [
-            {
-              "value": null
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "paper-f",
-      "title": "Grammar-Based Program Synthesis for Automated Repair",
-      "authors": [
-        "I. Ivanova",
-        "J. Jung"
-      ],
-      "doi": "10.1000/jkl321",
-      "abstract": "We propose a grammar-guided synthesis approach that constrains the search space of candidate patches using a language-specific context-free grammar, and evaluate it against existing benchmarks for automated repair.",
-      "pdf": "",
-      "annotations": {
-        "Decision": [
-          {
-            "value": null
-          }
-        ],
-        "Reason": [
-          {
-            "value": null
-          }
-        ]
-      },
-      "reviews": {
-        "1": {
-          "Decision": [
-            {
-              "value": "Include"
-            }
-          ],
-          "Reason": [
-            {
-              "value": null
-            }
-          ]
-        },
-        "2": {
-          "Decision": [
-            {
-              "value": null
-            }
-          ],
-          "Reason": [
-            {
-              "value": null
-            }
-          ]
-        }
-      }
+      "doi": "10.1000/mno987",
+      "pdf": "pdfs/multipage.pdf"
     }
   ]
 }
