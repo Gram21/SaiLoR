@@ -18,9 +18,25 @@ project JSON to open, and the picker already starts inside the folder that was j
 
 ## The Git panel
 
-The toolbar's **Git** button appears whenever the open project's JSON sits inside a git repository —
+The toolbar's **Git** button appears whenever the open project's folder sits inside a git repository —
 disabled, with a reason on hover, when it doesn't (no project open, or the project isn't in a
 repository).
+
+## Switching branches
+
+The panel's header shows the current branch as a dropdown of every local branch — pick a different
+one to switch:
+
+- **Nothing uncommitted?** It switches right away.
+- **Something uncommitted?** You're asked: **commit first** (closes this and switches nothing — you're
+  already looking at the commit form), **carry the changes over** (switches, then merges your
+  uncommitted work into the new branch field by field — the same engine [Pull](#pull) uses below), or
+  **cancel**.
+
+**+ New branch…**, the last entry in the dropdown, creates a branch at your current commit and
+switches to it right away, going through the exact same carry-over-or-not flow above. Since the new
+branch starts as an identical copy of the one you're on, carrying uncommitted changes into it can
+never itself produce a conflict — there's nothing for your changes to disagree with yet.
 
 ### Field-level commit review
 
@@ -72,18 +88,20 @@ answer into, or take one side wholesale with the ◀ / ▶ buttons.
 committed until every conflict has been decided — the **Finish merge** button stays disabled until
 then.
 
-### What Pull refuses to guess at
+### What Pull (and carrying changes into a new branch) refuses to guess at
 
 A few kinds of disagreement can't be expressed as a field-level conflict, so instead of guessing,
-SaiLoR aborts the merge cleanly and tells you what to reconcile first:
+SaiLoR aborts cleanly — nothing changes — and tells you what to reconcile first. This applies equally
+to Pull and to carrying uncommitted changes into a branch switch, since both go through the same
+merge:
 
 - The **annotation schema** was changed on both sides, differently — it decides the shape of every
-  tree in the file, so there's no per-field answer to offer.
+  tree, so there's no per-field answer to offer.
 - The **review protocol**, or **where the project was imported from**, was edited on both sides,
   differently — each is a single nested record, not something a conflict row can represent piece by
   piece.
-- **A conflict outside the project JSON** (a PDF, a `.gitignore`, anything else git couldn't merge on
-  its own) — resolve it with git directly, then pull again.
+- **A conflict outside the project** (a PDF, a `.gitignore`, anything else git couldn't merge on
+  its own) — resolve it with git directly, then try again.
 - **Two different people claiming the same reviewer seat**, with different git identities — see
   [Reviewer-seat identity](multi-reviewer.md#reviewer-seat-identity).
 
@@ -92,11 +110,14 @@ exactly where it started.
 
 ## What it won't do
 
-- Merge a conflict outside the project JSON (see above) — that's on you and plain git.
+- Merge a conflict outside the project (see above) — that's on you and plain git.
 - Delete a paper the remote deleted, if you've annotated it since — it's kept, and you're told, rather
   than losing your work silently.
-- Show live clone progress with a cancel button, or offer branch switching / history browsing — out of
-  scope for this feature.
+- Carry uncommitted changes across a branch switch if something *outside* the project is also
+  uncommitted (a PDF you added, say) — SaiLoR refuses the whole switch up front rather than guess;
+  commit or discard those first, then try again.
+- Show live clone progress with a cancel button, or offer history browsing — out of scope for this
+  feature.
 
 ## Credentials
 
