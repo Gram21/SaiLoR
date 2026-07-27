@@ -134,6 +134,27 @@ function mockFolderPicker(files: File[]) {
   })
 }
 
+/** Mocks the plain `<input type="file">` (no `webkitdirectory`) the manual
+ *  pick-a-file rescue falls back to — `.click()` immediately "picks" `file`,
+ *  synchronously firing `change`. Install this *after* any earlier
+ *  `mockFolderPicker` has done its job and been restored — both intercept
+ *  every `document.createElement('input')` call indiscriminately, and only
+ *  one should be answering at a time. */
+function mockSingleFilePicker(file: File) {
+  const real = document.createElement.bind(document)
+  return vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+    const el = real(tag)
+    if (tag === 'input') {
+      const input = el as HTMLInputElement
+      input.click = () => {
+        Object.defineProperty(input, 'files', { value: [file], configurable: true })
+        input.dispatchEvent(new Event('change'))
+      }
+    }
+    return el
+  })
+}
+
 describe('getPdfSource (local project): resolves through a picked folder, never a fetch', () => {
   it('builds the path map from webkitRelativePath, stripping the picked folder\'s own name', async () => {
     const spy = mockFolderPicker([
@@ -265,32 +286,63 @@ describe('getPdfSource (local project): resolves through a picked folder, never 
     spy.mockRestore()
   })
 
-  it('names the real reason, not "pick a different folder", when the leading ".." matches neither the picked folder nor any ancestor it could reach', async () => {
-    // "MyProject" doesn't match "samples" — this isn't "you picked the
-    // wrong folder", it's "no folder answers this".
+  it('offers to locate the file directly when the leading ".." matches no ancestor the picked folder could answer for, and fails cleanly if declined', async () => {
+    // "MyProject" doesn't match "samples" — no folder pick answers this, so
+    // instead of just failing, the reviewer is asked to locate the file.
     const spy = mockFolderPicker([fileAt('MyProject/pdfs/paper-a.pdf')])
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
     const adapter = new BrowserAdapter()
     await expect(
       adapter.getPdfSource('../samples/pdfs/paper-a.pdf', DOWNLOAD_HANDLE),
-    ).rejects.toThrow(/points outside the folder you picked/)
+    ).rejects.toThrow(/was not opened.*chose not to locate it/)
+    expect(confirmSpy).toHaveBeenCalledOnce()
+    expect(confirmSpy.mock.calls[0][0]).toContain('../samples/pdfs/paper-a.pdf')
     spy.mockRestore()
   })
 
-  it('gives the same honest reason for a path that climbs many levels to an unrelated folder', async () => {
-    const spy = mockFolderPicker([fileAt('samples/pdfs/paper-a.pdf')])
+  it('resolves by picking the exact file when the reviewer confirms', async () => {
     const adapter = new BrowserAdapter()
-    await expect(
-      adapter.getPdfSource('../../../../../Downloads/Architecture_Review.pdf', DOWNLOAD_HANDLE),
-    ).rejects.toThrow(/points outside the folder you picked/)
-    spy.mockRestore()
+    // Establish the PDF folder grant first (any resolvable path will do),
+    // and restore that mock before installing the single-file one below —
+    // both intercept `document.createElement('input')` indiscriminately.
+    const folderSpy = mockFolderPicker([fileAt('MyProject/pdfs/paper-a.pdf')])
+    await adapter.getPdfSource('pdfs/paper-a.pdf', DOWNLOAD_HANDLE)
+    folderSpy.mockRestore()
+
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const inputSpy = mockSingleFilePicker(fileAt('Architecture_Review.pdf'))
+    const src = await adapter.getPdfSource(
+      '../../../../../Downloads/Architecture_Review.pdf',
+      DOWNLOAD_HANDLE,
+    )
+    expect(src.url).toBe('blob:mock-url')
+    inputSpy.mockRestore()
   })
 
-  it('still gives the plain "not found" message for a simple typo\'d filename — no ".." involved', async () => {
+  it('remembers a manually-picked file for the rest of the session — only asks once', async () => {
+    const adapter = new BrowserAdapter()
+    const folderSpy = mockFolderPicker([fileAt('MyProject/pdfs/paper-a.pdf')])
+    await adapter.getPdfSource('pdfs/paper-a.pdf', DOWNLOAD_HANDLE)
+    folderSpy.mockRestore()
+
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const inputSpy = mockSingleFilePicker(fileAt('Architecture_Review.pdf'))
+    const path = '../../../../../Downloads/Architecture_Review.pdf'
+    await adapter.getPdfSource(path, DOWNLOAD_HANDLE)
+    await adapter.getPdfSource(path, DOWNLOAD_HANDLE)
+
+    expect(confirmSpy).toHaveBeenCalledOnce()
+    inputSpy.mockRestore()
+  })
+
+  it('still gives the plain "not found" message for a simple typo\'d filename — no ".." involved, and never prompts', async () => {
     const spy = mockFolderPicker([fileAt('MyProject/pdfs/paper-a.pdf')])
+    const confirmSpy = vi.spyOn(window, 'confirm')
     const adapter = new BrowserAdapter()
     await expect(adapter.getPdfSource('pdfs/paper-b.pdf', DOWNLOAD_HANDLE)).rejects.toThrow(
       /was not found in the selected folder/,
     )
+    expect(confirmSpy).not.toHaveBeenCalled()
     spy.mockRestore()
   })
 })
