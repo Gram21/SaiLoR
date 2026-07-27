@@ -220,7 +220,7 @@ export function App() {
                   disabled={gitProbe !== null && !gitProbe.available}
                   title={gitProbe && !gitProbe.available ? gitProbe.error : undefined}
                 >
-                  Import from git…
+                  Import from remote git…
                 </button>
               )}
             </div>

@@ -60,10 +60,10 @@ export function GitCloneDialog() {
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Import from git"
+        aria-label="Import from remote git"
       >
         <div className="modal-head">
-          <strong>Import from git</strong>
+          <strong>Import from remote git</strong>
           {clone.phase !== 'cloning' && (
             <button type="button" className="icon-btn" onClick={requestClose} aria-label="Close">
               ×

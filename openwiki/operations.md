@@ -268,7 +268,7 @@ rest of `src/platform/browser.ts` — see "SaiLoR is Electron-desktop-only" abov
 ## Git
 
 **Prerequisite: `git` on this machine's `PATH`.** SaiLoR runs your own `git` binary; it does not
-bundle one. *Import from git…* and the toolbar's **Git** button are shown disabled, with git's own
+bundle one. *Import from remote git…* and the toolbar's **Git** button are shown disabled, with git's own
 error, when `git --version` fails at launch (`GitPlatform.probe()`).
 
 **On macOS specifically, a packaged app's `PATH` does not include Homebrew's `/opt/homebrew/bin`**
@@ -277,7 +277,7 @@ offers to install them — is normally found regardless, but a Homebrew-only `gi
 `/usr/bin/git` will not be. This is a known limitation, documented rather than worked around: there
 is no reliable, portable way to guess at a user's shell-configured `PATH` from a GUI app launched
 outside a shell, and hard-coding a list of common install locations would be exactly the kind of
-brittle guess this codebase avoids elsewhere. If *Import from git…* is dimmed on macOS and you know
+brittle guess this codebase avoids elsewhere. If *Import from remote git…* is dimmed on macOS and you know
 git is installed, check `which git` in a terminal against what a GUI-launched app actually sees.
 
 Git support is Electron-only: clone, status, commit (with field-level review), pull (with
