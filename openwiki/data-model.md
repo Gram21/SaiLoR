@@ -25,6 +25,13 @@ my-review/
         └── reviewer-<n>.json   { annotations } for reviewer n's own tree (multi-reviewer only)
 ```
 
+A **screening** project (`Project.screening` set) uses the same layout with a different filename
+prefix — `screening-consolidated.json` and `screening-<n>.json` instead of `consolidated.json` and
+`reviewer-<n>.json` — so the two kinds of per-paper decision are distinguishable at a glance in the
+folder. Nothing else differs; both are read back by the same regex-based matching in
+`electron/main.ts` (`loadPaperFiles`, `readProjectAtRevision`), which recognises either prefix rather
+than needing to know up front which kind of project it's looking at.
+
 **Why split.** With everything in one file, two reviewers working on different papers — or on
 different reviewer slots of the *same* paper — constantly collided in git: any two saves touched the
 same file, so ordinary tracking, diffing, and merging fought each other on unrelated changes.

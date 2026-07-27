@@ -729,24 +729,32 @@ function serializedTree(schema: ResolvedDef[], tree: AnnotationValueTree): Annot
  * On-disk layout: `project.json` (this file's `serializeProject` output) holds
  * only paper *metadata* — no `annotations`/`reviews`/`aiUsage`/`equal`. Those
  * live under a sibling `annotations/<paperId>/` folder, one JSON file per
- * reviewer (`reviewer-<n>.json`) plus one `consolidated.json` for the
- * `annotations` field (the single/consolidated tree) and the paper-level
- * `aiUsage`/`equal` records. This is what lets two reviewers working on
- * different papers, or the same paper's different reviewer slots, never touch
- * the same file — the merge conflicts the split exists to avoid.
+ * reviewer plus one consolidated file for the `annotations` field (the
+ * single/consolidated tree) and the paper-level `aiUsage`/`equal` records.
+ * This is what lets two reviewers working on different papers, or the same
+ * paper's different reviewer slots, never touch the same file — the merge
+ * conflicts the split exists to avoid.
+ *
+ * A screening project's files are named `screening-<n>.json` /
+ * `screening-consolidated.json` rather than `reviewer-<n>.json` /
+ * `consolidated.json` — same layout, a different prefix purely so the two
+ * kinds of per-paper decision (screening vs. full annotation) are
+ * distinguishable at a glance in the folder, since a project can carry
+ * screening history alongside an annotation schema (see `Project.screening`).
  *
  * `aiUsage`/`equal` are not split per-reviewer even in a multi-reviewer
  * project — `Paper.aiUsage` has always been one array for the whole paper,
  * not one per tree, and `equal` is inherently a consolidation-time concept.
- * Both are small, low-conflict-risk records, so they simply ride along in
- * `consolidated.json` regardless of which tree they actually describe.
+ * Both are small, low-conflict-risk records, so they simply ride along in the
+ * consolidated file regardless of which tree they actually describe.
  * ponytail: if AI usage disclosure ever needs to be attributed to a specific
  * reviewer's edit, give `Paper.aiUsage` entries a `reviewer` field first —
  * this file placement can stay as-is either way.
  */
 export interface ProjectFileEntry {
   /** Relative to the project's `annotations/` folder, e.g.
-   *  `"p1/reviewer-2.json"` or `"p1/consolidated.json"`. */
+   *  `"p1/reviewer-2.json"` or `"p1/consolidated.json"` (`"p1/screening-2.json"` /
+   *  `"p1/screening-consolidated.json"` for a screening project). */
   relPath: string
   /** `null` means "this file should not exist" (the tree/records it would
    *  hold are all empty) — the caller deletes it if present on disk. */
@@ -761,6 +769,8 @@ export interface ProjectFileEntry {
  */
 export function splitProjectFiles(project: Project): { meta: unknown; files: ProjectFileEntry[] } {
   const files: ProjectFileEntry[] = []
+  const reviewerName = project.screening ? 'screening' : 'reviewer'
+  const consolidatedName = project.screening ? 'screening-consolidated' : 'consolidated'
   const metaPapers = [...project.papers].sort(comparePapers).map((p) => {
     const paper: Record<string, unknown> = { id: p.id, title: p.title, authors: p.authors }
     if (p.year !== undefined) paper.year = p.year
@@ -775,7 +785,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
         const tree = p.reviews[String(k)]
         const has = tree !== undefined && hasAnnotations(project.schema, tree)
         files.push({
-          relPath: `${p.id}/reviewer-${k}.json`,
+          relPath: `${p.id}/${reviewerName}-${k}.json`,
           text: has ? JSON.stringify({ annotations: serializedTree(project.schema, tree) }, null, 2) : null,
         })
       }
@@ -787,7 +797,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     if (p.aiUsage.length > 0) consolidated.aiUsage = p.aiUsage
     if (p.equal.length > 0) consolidated.equal = p.equal
     files.push({
-      relPath: `${p.id}/consolidated.json`,
+      relPath: `${p.id}/${consolidatedName}.json`,
       text: Object.keys(consolidated).length > 0 ? JSON.stringify(consolidated, null, 2) : null,
     })
 

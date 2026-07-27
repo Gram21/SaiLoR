@@ -542,22 +542,32 @@ async function safeReadAnnotationFile(annotationsDir: string, relPath: string): 
   }
 }
 
-/** Every `reviewer-<n>.json`/`consolidated.json` present for one paper, read
- *  and parsed defensively — a corrupt file is skipped, not thrown over, same
- *  as a corrupt field anywhere else in a hand-editable project. */
+/** Matches a per-reviewer annotation file's name — `reviewer-<n>.json` for an
+ *  ordinary project, `screening-<n>.json` for a screening one (see
+ *  `splitProjectFiles`'s doc comment for why the prefix differs). Group 1 is
+ *  the reviewer number. */
+const REVIEWER_FILE_RE = /^(?:reviewer|screening)-(\d+)\.json$/
+
+/** Every reviewer/consolidated file present for one paper, read and parsed
+ *  defensively — a corrupt file is skipped, not thrown over, same as a
+ *  corrupt field anywhere else in a hand-editable project. Tries both the
+ *  ordinary and screening consolidated-file names rather than needing to
+ *  know up front which kind of project this is. */
 async function loadPaperFiles(
   annotationsDir: string,
   paperId: string,
 ): Promise<{ consolidated?: unknown; reviewers: Map<string, unknown> }> {
   const reviewers = new Map<string, unknown>()
-  const consolidatedText = await safeReadAnnotationFile(annotationsDir, `${paperId}/consolidated.json`)
   let consolidated: unknown
-  if (consolidatedText !== null) {
+  for (const name of ['consolidated.json', 'screening-consolidated.json']) {
+    const text = await safeReadAnnotationFile(annotationsDir, `${paperId}/${name}`)
+    if (text === null) continue
     try {
-      consolidated = JSON.parse(consolidatedText)
+      consolidated = JSON.parse(text)
     } catch {
       // corrupt file — treat as absent
     }
+    break
   }
   const paperDirResolved = path.resolve(annotationsDir, paperId)
   const base = path.resolve(annotationsDir)
@@ -570,7 +580,7 @@ async function loadPaperFiles(
     }
   }
   for (const entry of entries) {
-    const m = entry.isFile() ? /^reviewer-(\d+)\.json$/.exec(entry.name) : null
+    const m = entry.isFile() ? REVIEWER_FILE_RE.exec(entry.name) : null
     if (!m) continue
     const text = await safeReadAnnotationFile(annotationsDir, `${paperId}/${entry.name}`)
     if (text === null) continue
@@ -1374,9 +1384,13 @@ async function readProjectAtRevision(root: string, relPath: string, rev: string)
   }
   for (const p of paths) {
     const rel = p.slice(dir.length + 1) // "<paperId>/<name>.json"
-    const m = /^([^/]+)\/(consolidated|reviewer-(\d+))\.json$/.exec(rel)
+    // Group 2 catches either consolidated-file name (ordinary or screening);
+    // group 3 catches the reviewer number for either reviewer-file name — see
+    // `splitProjectFiles`'s doc comment for why a screening project uses a
+    // different prefix.
+    const m = /^([^/]+)\/(?:(consolidated|screening-consolidated)|(?:reviewer|screening)-(\d+))\.json$/.exec(rel)
     if (!m) continue
-    const [, paperId, kind, reviewerNum] = m
+    const [, paperId, consolidatedKind, reviewerNum] = m
     const entry = paperFiles.get(paperId)
     if (!entry) continue
     const fileShow = await runGit(['show', `${rev}:${p}`], root)
@@ -1387,7 +1401,7 @@ async function readProjectAtRevision(root: string, relPath: string, rev: string)
     } catch {
       continue // corrupt file at this revision — treat as absent
     }
-    if (kind === 'consolidated') entry.consolidated = parsed
+    if (consolidatedKind) entry.consolidated = parsed
     else entry.reviewers.set(reviewerNum, parsed)
   }
   return JSON.stringify(assembleLegacyProjectJson(raw, paperFiles))

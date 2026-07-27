@@ -34,6 +34,9 @@ my-review/
         └── reviewer-<n>.json   Each independent reviewer's own tree (multi-reviewer only)
 ```
 
+A **screening** project names these `screening-consolidated.json` / `screening-<n>.json` instead —
+same layout, distinguishable at a glance from an annotation project's files.
+
 Per-paper, per-reviewer files are created lazily — only once that reviewer has actually written
 something for that paper — and deleted again if the tree becomes empty. This exists because a
 single all-in-one JSON file used to make two reviewers working on different papers (or different
