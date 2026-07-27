@@ -336,41 +336,63 @@ function finishClose(win: BrowserWindow) {
   else win.destroy()
 }
 
+type ProjectPathCheck =
+  | { ok: true; real: string }
+  | { ok: false; reason: 'no-project' | 'escapes' | 'not-found' }
+
+/**
+ * Resolves `rel` against the open project's directory and checks it stays
+ * inside it — the one place this logic lives, shared by the `slr-file://`
+ * protocol handler below (which then reads the file) and the `pdf:checkPath`
+ * IPC call (which lets the renderer ask *before* handing pdf.js a URL, so a
+ * blocked or missing PDF gets an honest reason instead of pdf.js's own
+ * opaque load-failure message for an HTTP 403/404 it doesn't explain).
+ *
+ * `path.resolve` is pure string arithmetic — it collapses `..` but follows no
+ * links, so a symlink *inside* the project directory resolves to a path that
+ * passes the first check and would then read from wherever it actually
+ * points. A project folder is received material and can ship one: a
+ * `pdfs/paper.pdf` linked to `/etc/passwd` read as in-bounds. `realpath`
+ * resolves the chain, so the second check sees the real destination.
+ */
+async function resolveProjectPath(rel: string): Promise<ProjectPathCheck> {
+  if (!projectDir) return { ok: false, reason: 'no-project' }
+  const resolved = path.resolve(projectDir, rel)
+  const base = path.resolve(projectDir)
+  if (resolved !== base && !resolved.startsWith(base + path.sep)) {
+    return { ok: false, reason: 'escapes' }
+  }
+  let real: string
+  try {
+    real = await realpath(resolved)
+  } catch {
+    return { ok: false, reason: 'not-found' }
+  }
+  let realBase: string
+  try {
+    realBase = await realpath(base)
+  } catch {
+    return { ok: false, reason: 'no-project' }
+  }
+  if (real !== realBase && !real.startsWith(realBase + path.sep)) {
+    return { ok: false, reason: 'escapes' }
+  }
+  return { ok: true, real }
+}
+
 function registerPdfProtocol() {
   // Serve files from the open project's directory, guarding against traversal.
   protocol.handle('slr-file', async (request) => {
-    if (!projectDir) return new Response('No project open', { status: 404 })
     const url = new URL(request.url)
     // URL: slr-file://project/<encoded relative path>
     const rel = decodeURIComponent(url.pathname).replace(/^\/+/, '')
-    const resolved = path.resolve(projectDir, rel)
-    const base = path.resolve(projectDir)
-    if (resolved !== base && !resolved.startsWith(base + path.sep)) {
-      return new Response('Forbidden', { status: 403 })
-    }
-    // `path.resolve` is pure string arithmetic — it collapses `..` but follows
-    // no links, so a symlink *inside* the project directory resolves to a path
-    // that passes the check above and is then served from wherever it actually
-    // points. A project folder is received material and can ship one: a
-    // `pdfs/paper.pdf` linked to `/etc/passwd` read as in-bounds. `realpath`
-    // resolves the chain, so the second check sees the real destination.
-    let real: string
-    try {
-      real = await realpath(resolved)
-    } catch {
-      return new Response('Not found', { status: 404 })
-    }
-    let realBase: string
-    try {
-      realBase = await realpath(base)
-    } catch {
-      return new Response('No project open', { status: 404 })
-    }
-    if (real !== realBase && !real.startsWith(realBase + path.sep)) {
-      return new Response('Forbidden', { status: 403 })
+    const check = await resolveProjectPath(rel)
+    if (!check.ok) {
+      if (check.reason === 'escapes') return new Response('Forbidden', { status: 403 })
+      return new Response(check.reason === 'no-project' ? 'No project open' : 'Not found', { status: 404 })
     }
     try {
-      return await net.fetch(pathToFileURL(real).toString())
+      return await net.fetch(pathToFileURL(check.real).toString())
     } catch {
       return new Response('Not found', { status: 404 })
     }
@@ -641,6 +663,17 @@ ipcMain.handle('pdf:read', async (_e, filePath: string) => {
   const buf = await readFile(filePath)
   // Return a plain Uint8Array; Buffer doesn't survive the IPC boundary intact.
   return new Uint8Array(buf)
+})
+
+// Lets the renderer ask, before ever constructing an slr-file:// URL, whether
+// a paper's `pdf` value is reachable — same check `registerPdfProtocol` makes
+// when actually serving it, just without reading the file. A blocked or
+// missing PDF then gets a specific, honest reason (see `getPdfSource` in
+// src/platform/electron.ts) instead of pdf.js's own opaque failure for
+// whatever HTTP status the protocol handler answered with.
+ipcMain.handle('pdf:checkPath', async (_e, rel: string) => {
+  const check = await resolveProjectPath(rel)
+  return check.ok ? { ok: true } : { ok: false, reason: check.reason }
 })
 
 // PDF references are stored relative to the project JSON so the project stays
