@@ -1,14 +1,22 @@
 import type { PlatformAdapter } from './adapter'
 import { isElectron } from './adapter'
 import { ElectronAdapter } from './electron'
-import { BrowserAdapter } from './browser'
+import { UnsupportedAdapter } from './unsupported'
 
 let cached: PlatformAdapter | null = null
 
-/** Return the adapter appropriate for the current runtime (singleton). */
+/**
+ * Return the adapter appropriate for the current runtime (singleton).
+ *
+ * SaiLoR for the web is discontinued (see `App.tsx`'s `isElectron()` gate,
+ * which blocks every project-opening UI before it can call anything below) —
+ * so the non-Electron case only needs to exist at all because store.ts reads
+ * `getPlatform().getRecents()` at module load, before `App` ever renders.
+ * `UnsupportedAdapter` answers that safely; nothing else should ever reach it.
+ */
 export function getPlatform(): PlatformAdapter {
   if (!cached) {
-    cached = isElectron() ? new ElectronAdapter() : new BrowserAdapter()
+    cached = isElectron() ? new ElectronAdapter() : new UnsupportedAdapter()
   }
   return cached
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { relPathProblem, isSafeRelPath } from './relpath'
+import { relPathProblem, isSafeRelPath, annotationsRelDir } from './relpath'
 
 /**
  * This gate stands in front of file writes into a git repository, and the
@@ -55,5 +55,20 @@ describe('relPathProblem', () => {
 
   it('rejects the empty path', () => {
     expect(relPathProblem('')).toBe('empty')
+  })
+})
+
+describe('annotationsRelDir', () => {
+  it('sits next to the project file when it is at the repo root', () => {
+    expect(annotationsRelDir('project.json')).toBe('annotations')
+  })
+
+  it('sits next to the project file inside a subdirectory', () => {
+    expect(annotationsRelDir('reviews/project.json')).toBe('reviews/annotations')
+    expect(annotationsRelDir('a/b/c/project.json')).toBe('a/b/c/annotations')
+  })
+
+  it('normalizes a Windows-separated relPath to git-style forward slashes', () => {
+    expect(annotationsRelDir('reviews\\project.json')).toBe('reviews/annotations')
   })
 })

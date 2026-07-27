@@ -1,21 +1,27 @@
 ---
 type: landing
 title: SaiLoR Developer Documentation
-description: Home page for SaiLoR developer documentation. SaiLoR is a tool for conducting Systematic Literature Reviews (SLRs) with a single JSON project file holding both the annotation schema and the papers to annotate. Links to quickstart, architecture, data model, and operations pages.
+description: Home page for SaiLoR developer documentation. SaiLoR is an Electron desktop tool for conducting Systematic Literature Reviews (SLRs), storing the annotation schema and paper metadata in project.json and each reviewer's/consolidation's annotation data in a sibling annotations/ folder. Links to quickstart, architecture, data model, and operations pages.
 tags: [home, overview, documentation]
 ---
 
 # SaiLoR — Developer Documentation
 
 **SaiLoR** is a tool for reviewers conducting **Systematic Literature Reviews (SLR)** — the letters
-are in the name: **S**ai**L**o**R**. A single JSON "project" file holds both the annotation schema
-(a nested, cardinality-controlled taxonomy) and the papers to annotate; the app renders each paper's
-PDF beside a form generated from that schema, and writes the annotations back into the same file.
+are in the name: **S**ai**L**o**R**. A `project.json` file holds the annotation schema (a nested,
+cardinality-controlled taxonomy) and the papers' metadata; a sibling `annotations/` folder holds the
+actual annotation data, one file per paper per reviewer (plus a consolidated file), so two reviewers
+working on different papers rarely collide in git. The app renders each paper's PDF beside a form
+generated from the schema, and writes annotations back into that split layout. See
+[Data Model](data-model) for the exact shape and the automatic migration from the old single-file
+format.
 
-One codebase ships two ways: an **Electron desktop app** and a **static web SPA**. That split is the
-thing to understand first — most of the architecture exists to keep the React tree identical across
-both, with a `PlatformAdapter` seam absorbing everything that differs — file dialogs, PDF loading,
-saving.
+**SaiLoR is Electron-desktop-only.** The codebase used to also ship a static web SPA and a Docker
+self-hosting deployment; both are discontinued — the web build now shows a "use the desktop app"
+notice at runtime instead of any project-opening UI. The `PlatformAdapter` seam that used to absorb
+the difference between the Electron and browser runtimes still exists, but the non-Electron
+implementation (`UnsupportedAdapter`) now just refuses every action; see
+[Architecture](architecture)'s Platform Adapter section for why the seam is still there.
 
 This wiki is the **developer** documentation. If you are here to *use* SaiLoR — installing a release,
 authoring a project file, annotating a paper — start with the

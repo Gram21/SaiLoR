@@ -17,8 +17,10 @@ import type {
   GitStatus,
   GitRun,
   PullStart,
+  SplitProject,
 } from '../git/types'
 import { parsePorcelain, capDiff } from '../git/output'
+import { loadProject, splitProjectFiles } from '../model/project'
 
 const RECENTS_KEY = 'slr.recents.electron'
 
@@ -29,7 +31,7 @@ export interface SlrBridge {
   openProject(): Promise<{ path: string; text: string } | null>
   /** Read a specific file by absolute path (for recent files). Null if missing. */
   openPath(path: string): Promise<{ path: string; text: string } | null>
-  saveProject(path: string, text: string): Promise<void>
+  saveProject(path: string, metaText: string, files: Array<{ relPath: string; text: string | null }>): Promise<void>
   /** Register the project's base directory so slr-file:// can resolve PDFs. */
   setProjectDir(path: string): Promise<void>
   /** Pick a location for a project JSON without writing it. Null if cancelled. */
@@ -88,19 +90,19 @@ export interface SlrBridge {
   gitCommit(root: string, paths: string[], message: string): Promise<GitRun>
   gitPush(root: string): Promise<GitRun>
   gitPullBegin(root: string, relPath: string): Promise<PullStart>
-  gitPullFinish(root: string, relPath: string, text: string): Promise<GitRun>
+  gitPullFinish(root: string, relPath: string, working: SplitProject): Promise<GitRun>
   gitPullAbort(root: string): Promise<GitRun>
   gitHeadContent(root: string, relPath: string): Promise<string | null>
   gitWorkingContent(root: string, relPath: string): Promise<string | null>
   gitCommitPartial(
     root: string,
     relPath: string,
-    committedText: string,
-    workingText: string,
+    committed: SplitProject,
+    working: SplitProject,
     otherPaths: string[],
     message: string,
   ): Promise<GitRun>
-  gitWriteWorking(root: string, relPath: string, text: string): Promise<GitRun>
+  gitWriteWorking(root: string, relPath: string, working: SplitProject): Promise<GitRun>
 }
 
 function bridge(): SlrBridge {
@@ -181,7 +183,13 @@ export class ElectronAdapter implements PlatformAdapter {
 
   async saveProject(text: string, handle: SaveHandle): Promise<SaveHandle> {
     if (!handle.path) throw new Error('No file path; use "Save as".')
-    await bridge().saveProject(handle.path, text)
+    // `text` is the logical whole-project JSON (`serializeProject`'s shape) —
+    // the contract every platform shares, and what git-diff/tests deal in.
+    // On disk this build splits it into `project.json` (meta only) plus an
+    // `annotations/<paperId>/…` file per reviewer/consolidated tree; see
+    // `splitProjectFiles`'s own doc comment for why.
+    const { meta, files } = splitProjectFiles(loadProject(text))
+    await bridge().saveProject(handle.path, JSON.stringify(meta, null, 2), files)
     return handle
   }
 
@@ -372,13 +380,13 @@ export class ElectronAdapter implements PlatformAdapter {
     commit: (root, paths, message) => bridge().gitCommit(root, paths, message),
     push: (root) => bridge().gitPush(root),
     beginPull: (root, relPath) => bridge().gitPullBegin(root, relPath),
-    finishPull: (root, relPath, text) => bridge().gitPullFinish(root, relPath, text),
+    finishPull: (root, relPath, working) => bridge().gitPullFinish(root, relPath, working),
     abortPull: (root) => bridge().gitPullAbort(root),
     headContent: (root, relPath) => bridge().gitHeadContent(root, relPath),
     workingContent: (root, relPath) => bridge().gitWorkingContent(root, relPath),
-    commitPartial: (root, relPath, committedText, workingText, otherPaths, message) =>
-      bridge().gitCommitPartial(root, relPath, committedText, workingText, otherPaths, message),
-    writeWorking: (root, relPath, text) => bridge().gitWriteWorking(root, relPath, text),
+    commitPartial: (root, relPath, committed, working, otherPaths, message) =>
+      bridge().gitCommitPartial(root, relPath, committed, working, otherPaths, message),
+    writeWorking: (root, relPath, working) => bridge().gitWriteWorking(root, relPath, working),
   }
 
   getGit(): GitPlatform {

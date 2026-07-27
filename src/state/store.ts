@@ -40,7 +40,6 @@ import {
   type UpdateInfo,
 } from '../model/version'
 import { getPlatform, type SaveHandle } from '../platform'
-import { BrowserAdapter } from '../platform/browser'
 import type { RecentEntry } from '../platform/recents'
 import {
   type Theme,
@@ -374,7 +373,6 @@ interface AppState {
   resolveClosePrompt: (choice: 'save' | 'discard' | 'cancel') => Promise<void>
   /** Discard the open project and return to the start screen. */
   closeProject: () => void
-  loadFromUrl: (url: string) => Promise<void>
   loadFromText: (text: string, handle: SaveHandle | null, name: string) => void
   save: () => Promise<boolean>
   saveAs: () => Promise<boolean>
@@ -841,55 +839,6 @@ export const useStore = create<AppState>()(
         set((s) => {
           s.busy = false
           s.loadError = { message: 'Failed to open the recent file.', details: [String(err)] }
-        })
-      }
-    },
-
-    loadFromUrl: async (url) => {
-      // `?project=` is attacker-reachable: a link like
-      // `https://trusted.example/?project=https://evil.example/review.json`
-      // shows the trusted host in the URL bar while the corpus — papers,
-      // screening reasons, every annotation — comes from somewhere else, and
-      // `setServerBase` below then anchors every PDF fetch there too. There is
-      // no XSS sink for that content to reach and no cookies ride along
-      // (`fetch` defaults to same-origin credentials), so the harm is
-      // research-integrity rather than code execution: a reviewer working, in
-      // good faith, on a corpus that is not theirs. Confirm anything that
-      // leaves this origin, and let same-origin (the documented
-      // `?project=/reviews/x.json` deployment) through untouched.
-      if (!sameOriginUrl(url)) {
-        const ok =
-          typeof window !== 'undefined' &&
-          window.confirm(
-            `This link loads a project from another site:\n\n${originOf(url) ?? url}\n\n` +
-              `Its papers, annotations and PDFs would all come from there, not from ` +
-              `${typeof location !== 'undefined' ? location.origin : 'this site'}. ` +
-              `Only continue if you trust whoever sent you this link.`,
-          )
-        if (!ok) {
-          set((s) => {
-            s.busy = false
-          })
-          return
-        }
-      }
-      set((s) => {
-        s.busy = true
-      })
-      try {
-        const res = await fetch(url)
-        if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`)
-        const text = await res.text()
-        const platform = getPlatform()
-        // In the browser, remember the base URL so sibling PDFs resolve.
-        if (platform instanceof BrowserAdapter) platform.setServerBase(url)
-        const name = url.split('/').pop() || 'project.json'
-        // Loaded from a server: no writable handle (Save falls back to download).
-        get().loadFromText(text, null, name)
-      } catch (err) {
-        set((s) => {
-          s.busy = false
-          s.loadError = { message: 'Failed to load the project from URL.', details: [String(err)] }
         })
       }
     },
@@ -2057,30 +2006,6 @@ function ensureInstance(
 }
 
 /** Push a pre-mutation snapshot onto the undo stack and clear the redo stack. */
-/**
- * Is `url` on the same origin as the page? Relative URLs (`/reviews/x.json` —
- * the shape the deployment docs use) resolve against the current location and
- * are therefore same-origin by construction. An unparseable URL counts as
- * cross-origin: fail closed.
- */
-function sameOriginUrl(url: string): boolean {
-  if (typeof location === 'undefined') return true // non-browser (tests, Electron)
-  try {
-    return new URL(url, location.href).origin === location.origin
-  } catch {
-    return false
-  }
-}
-
-/** The origin a `?project=` URL points at, for the confirmation's wording. */
-function originOf(url: string): string | null {
-  try {
-    return new URL(url, typeof location !== 'undefined' ? location.href : undefined).origin
-  } catch {
-    return null
-  }
-}
-
 function pushPast(s: AppState, snap: HistoryEntry): void {
   s.past.push(snap)
   if (s.past.length > HISTORY_LIMIT) s.past.shift()

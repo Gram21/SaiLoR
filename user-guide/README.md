@@ -2,8 +2,11 @@
 
 SaiLoR helps you run a **Systematic Literature Review (SLR)**: screen candidate papers, extract data
 from the ones that survive, and — if you're a team — reconcile independent reviewers into one final
-result. Everything for a review lives in a single **project JSON file** on your own disk, next to its
-PDFs. There is no account, no server, and no sync.
+result. Everything for a review lives on your own disk, next to its PDFs: a **`project.json`** file
+holding the schema and paper details, plus a sibling **`annotations/`** folder holding what's actually
+been filled in. There is no account, no server, and no sync — and if you're used to older SaiLoR
+projects that were a single JSON file, opening one still works exactly as before; it's upgraded to the
+new layout automatically the next time it's saved.
 
 <p align="center">
   <img src="screenshots/annotate-overview.png" alt="The three-pane annotation view: papers on the left, the PDF in the middle, annotation fields on the right" width="820">
@@ -50,16 +53,12 @@ From the start screen:
 - **New from screening…** — build the next phase (annotation, or a second screening pass) from a
   finished screening project. See [Screening](screening.md).
 
-## Desktop vs. browser
+## Desktop app only
 
-SaiLoR runs two ways, from the same code: a desktop app (Electron) and a static web app. Almost
-everything in this guide works identically in both. The two exceptions:
-
-- **Git support** needs your own local `git` installation, which only the desktop app can reach — see
-  [Git support](git.md).
-- **Picking a folder of PDFs, or a reference file**, uses your OS's native file picker in the desktop
-  app; the browser build uses the File System Access API (Chromium-based browsers) or a plain upload,
-  depending on what your browser supports.
+SaiLoR is a **desktop app (Electron)** — download and run the installer above. SaiLoR used to also
+offer a web version that ran in the browser, but that has been discontinued: browser file-system
+limitations made too many features (saving, git) unreliable to support real review work, so the web
+build now just points you back here instead of opening a project. Use the desktop app.
 
 ## Getting help inside the app
 

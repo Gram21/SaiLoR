@@ -3,6 +3,7 @@ import { useStore } from './state/store'
 import { useEditorStore } from './state/editorStore'
 import { useGitStore } from './state/gitStore'
 import { getPlatform } from './platform'
+import { isElectron } from './platform/adapter'
 import { ProjectEditor } from './components/ProjectEditor'
 import { Toolbar } from './components/Toolbar'
 import { PaperList } from './components/PaperList'
@@ -53,7 +54,6 @@ export function App() {
   const project = useStore((s) => s.project)
   const sidebarCollapsed = useStore((s) => s.sidebarCollapsed)
   const openProject = useStore((s) => s.openProject)
-  const loadFromUrl = useStore((s) => s.loadFromUrl)
   const recents = useStore((s) => s.recents)
   const openRecent = useStore((s) => s.openRecent)
   const forgetRecent = useStore((s) => s.forgetRecent)
@@ -77,12 +77,6 @@ export function App() {
 
   const workspaceRef = useRef<HTMLDivElement>(null)
   const [panes, setPanes] = useState(loadPaneWidths)
-
-  // Server deployment: ?project=<url> auto-loads a hosted project (+ its PDFs).
-  useEffect(() => {
-    const url = new URLSearchParams(window.location.search).get('project')
-    if (url) void loadFromUrl(url)
-  }, [loadFromUrl])
 
   // Look for a newer release once per launch (the result is cached for a day).
   useEffect(() => {
@@ -130,6 +124,44 @@ export function App() {
   const gridTemplateColumns = sidebarCollapsed
     ? `minmax(0, 1fr) 6px ${panes.right}px`
     : `${panes.left}px 6px minmax(0, 1fr) 6px ${panes.right}px`
+
+  // SaiLoR for the web is discontinued as of the split-annotation-file storage
+  // change: too much of the app (multi-file save/load, git) depends on real
+  // filesystem access the File System Access API never gave us reliably
+  // enough across browsers. Gate before any project-opening UI ever renders —
+  // no file picker, no drag-and-drop, nothing that could start a session this
+  // build can't finish.
+  if (!isElectron()) {
+    return (
+      <div className="app">
+        <div className="welcome">
+          <div className="welcome-box">
+            <img
+              className="welcome-logo"
+              src={`${import.meta.env.BASE_URL}logo.svg`}
+              alt=""
+              width={80}
+              height={80}
+            />
+            <h1>SaiLoR</h1>
+            <p>
+              SaiLoR for the web has been discontinued: browser file-system limitations made
+              too many features (multi-file saving, git) unreliable to support real review work.
+            </p>
+            <p>Please use the desktop app instead.</p>
+            <a
+              className="primary"
+              href="https://github.com/Gram21/SaiLoR/releases"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Download SaiLoR
+            </a>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="app">

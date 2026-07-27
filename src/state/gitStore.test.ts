@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { RecentEntry, SaveHandle } from '../platform/adapter'
-import type { GitPlatform, GitRepoInfo, GitRun, PullStart, GitFileChange } from '../git/types'
+import type { GitPlatform, GitRepoInfo, GitRun, PullStart, GitFileChange, SplitProject } from '../git/types'
 import { conflictId, type FieldConflict } from '../git/merge'
 
 /**
@@ -67,7 +67,7 @@ const ok = (stdout = ''): GitRun => ({ ok: true, code: 0, stdout, stderr: '' })
 
 let openedPaths: string[] = []
 let abortCalls = 0
-let finishCalls: { root: string; relPath: string; text: string }[] = []
+let finishCalls: { root: string; relPath: string; working: SplitProject }[] = []
 let beginPullResult: PullStart = { kind: 'up-to-date' }
 let finishPullResult: GitRun = ok()
 
@@ -76,10 +76,23 @@ let statusChanges: GitFileChange[] = []
 let headContentResult: string | null = null
 let workingContentResult: string | null = null
 let commitPartialResult: GitRun = ok()
-let commitPartialCalls: { root: string; relPath: string; committedText: string; workingText: string; otherPaths: string[]; message: string }[] = []
+let commitPartialCalls: {
+  root: string
+  relPath: string
+  committed: SplitProject
+  working: SplitProject
+  otherPaths: string[]
+  message: string
+}[] = []
 let commitCalls: { root: string; paths: string[]; message: string }[] = []
 let writeWorkingResult: GitRun = ok()
-let writeWorkingCalls: { root: string; relPath: string; text: string }[] = []
+let writeWorkingCalls: { root: string; relPath: string; working: SplitProject }[] = []
+
+/** A `SplitProject`'s `files` entry with non-null text at `relPath`, parsed. */
+function fileContent(split: SplitProject, relPath: string): unknown {
+  const f = split.files.find((f) => f.relPath === relPath)
+  return f?.text ? JSON.parse(f.text) : undefined
+}
 
 const fakeGit: GitPlatform = {
   probe: async () => ({ available: true, version: 'git 2.43.0', error: '' }),
@@ -94,8 +107,8 @@ const fakeGit: GitPlatform = {
   },
   push: async () => ok(),
   beginPull: async () => beginPullResult,
-  finishPull: async (root, relPath, text) => {
-    finishCalls.push({ root, relPath, text })
+  finishPull: async (root, relPath, working) => {
+    finishCalls.push({ root, relPath, working })
     return finishPullResult
   },
   abortPull: async () => {
@@ -104,12 +117,12 @@ const fakeGit: GitPlatform = {
   },
   headContent: async () => headContentResult,
   workingContent: async () => workingContentResult,
-  commitPartial: async (root, relPath, committedText, workingText, otherPaths, message) => {
-    commitPartialCalls.push({ root, relPath, committedText, workingText, otherPaths, message })
+  commitPartial: async (root, relPath, committed, working, otherPaths, message) => {
+    commitPartialCalls.push({ root, relPath, committed, working, otherPaths, message })
     return commitPartialResult
   },
-  writeWorking: async (root, relPath, text) => {
-    writeWorkingCalls.push({ root, relPath, text })
+  writeWorking: async (root, relPath, working) => {
+    writeWorkingCalls.push({ root, relPath, working })
     return writeWorkingResult
   },
 }
@@ -211,8 +224,10 @@ describe('runPull', () => {
     }
     await useGitStore.getState().runPull()
     expect(finishCalls).toHaveLength(1)
-    const written = JSON.parse(finishCalls[0].text) as { papers: { annotations: Record<string, { value: unknown }[]> }[] }
-    expect(written.papers[0].annotations['Study Type'][0].value).toBe('mine')
+    const written = fileContent(finishCalls[0].working, 'a/consolidated.json') as {
+      annotations: Record<string, { value: unknown }[]>
+    }
+    expect(written.annotations['Study Type'][0].value).toBe('mine')
     expect(useGitStore.getState().panel?.merge).toBeNull()
   })
 
@@ -405,7 +420,7 @@ describe('runCommit — field review (commitPartial)', () => {
     expect(call.root).toBe('/repo')
     expect(call.relPath).toBe('review.json')
     expect(call.message).toBe('Update title')
-    const committed = JSON.parse(call.committedText) as { papers: { title: string }[] }
+    const committed = JSON.parse(call.committed.metaText) as { papers: { title: string }[] }
     // The default disposition is 'use', so the committed content picks up
     // the working tree's new title.
     expect(committed.papers[0].title).toBe('New Title')
@@ -430,8 +445,8 @@ describe('runCommit — field review (commitPartial)', () => {
     useGitStore.getState().setFieldDisposition(id, 'discard')
     await useGitStore.getState().runCommit()
     const call = commitPartialCalls[0]
-    const committed = JSON.parse(call.committedText) as { papers: { title: string }[] }
-    const workingOut = JSON.parse(call.workingText) as { papers: { title: string }[] }
+    const committed = JSON.parse(call.committed.metaText) as { papers: { title: string }[] }
+    const workingOut = JSON.parse(call.working.metaText) as { papers: { title: string }[] }
     // Discarded: the commit still keeps HEAD's value, and the working file is
     // rewritten to match it too — the local edit is erased.
     expect(committed.papers[0].title).toBe('Old Title')
@@ -458,7 +473,7 @@ describe('runDiscard — field review (writeWorking)', () => {
     const call = writeWorkingCalls[0]
     expect(call.root).toBe('/repo')
     expect(call.relPath).toBe('review.json')
-    const written = JSON.parse(call.text) as { papers: { title: string }[] }
+    const written = JSON.parse(call.working.metaText) as { papers: { title: string }[] }
     // Discarded: the working file is rewritten back to HEAD's value.
     expect(written.papers[0].title).toBe('Old Title')
   })
@@ -496,11 +511,12 @@ describe('runDiscard — field review (writeWorking)', () => {
     await useGitStore.getState().runDiscard()
 
     const call = writeWorkingCalls[0]
-    const written = JSON.parse(call.text) as {
-      papers: { title: string; annotations: { 'Study Type': { value: string }[] } }[]
+    const meta = JSON.parse(call.working.metaText) as { papers: { title: string }[] }
+    const annotations = fileContent(call.working, 'a/consolidated.json') as {
+      annotations: { 'Study Type': { value: string }[] }
     }
-    expect(written.papers[0].title).toBe('Old Title') // reverted
-    expect(written.papers[0].annotations['Study Type'][0].value).toBe('B') // kept
+    expect(meta.papers[0].title).toBe('Old Title') // reverted
+    expect(annotations.annotations['Study Type'][0].value).toBe('B') // kept
   })
 
   it('is a no-op when nothing is marked discard', async () => {

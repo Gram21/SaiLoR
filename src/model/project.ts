@@ -725,6 +725,147 @@ function serializedTree(schema: ResolvedDef[], tree: AnnotationValueTree): Annot
   return hasAnnotations(schema, tree) ? pruneTree(schema, tree) : {}
 }
 
+/**
+ * On-disk layout: `project.json` (this file's `serializeProject` output) holds
+ * only paper *metadata* — no `annotations`/`reviews`/`aiUsage`/`equal`. Those
+ * live under a sibling `annotations/<paperId>/` folder, one JSON file per
+ * reviewer (`reviewer-<n>.json`) plus one `consolidated.json` for the
+ * `annotations` field (the single/consolidated tree) and the paper-level
+ * `aiUsage`/`equal` records. This is what lets two reviewers working on
+ * different papers, or the same paper's different reviewer slots, never touch
+ * the same file — the merge conflicts the split exists to avoid.
+ *
+ * `aiUsage`/`equal` are not split per-reviewer even in a multi-reviewer
+ * project — `Paper.aiUsage` has always been one array for the whole paper,
+ * not one per tree, and `equal` is inherently a consolidation-time concept.
+ * Both are small, low-conflict-risk records, so they simply ride along in
+ * `consolidated.json` regardless of which tree they actually describe.
+ * ponytail: if AI usage disclosure ever needs to be attributed to a specific
+ * reviewer's edit, give `Paper.aiUsage` entries a `reviewer` field first —
+ * this file placement can stay as-is either way.
+ */
+export interface ProjectFileEntry {
+  /** Relative to the project's `annotations/` folder, e.g.
+   *  `"p1/reviewer-2.json"` or `"p1/consolidated.json"`. */
+  relPath: string
+  /** `null` means "this file should not exist" (the tree/records it would
+   *  hold are all empty) — the caller deletes it if present on disk. */
+  text: string | null
+}
+
+/**
+ * Split a `Project` into the meta-only `project.json` body and the set of
+ * per-paper annotation files it should reconcile on disk. Pure and
+ * side-effect-free — `electron/main.ts` does the actual fs writes/deletes, so
+ * this stays unit-testable without touching a filesystem.
+ */
+export function splitProjectFiles(project: Project): { meta: unknown; files: ProjectFileEntry[] } {
+  const files: ProjectFileEntry[] = []
+  const metaPapers = [...project.papers].sort(comparePapers).map((p) => {
+    const paper: Record<string, unknown> = { id: p.id, title: p.title, authors: p.authors }
+    if (p.year !== undefined) paper.year = p.year
+    if (p.venue) paper.venue = p.venue
+    if (p.doi !== undefined) paper.doi = p.doi
+    if (p.abstract !== undefined && p.abstract !== '') paper.abstract = p.abstract
+    if (p.abstractFromPdf && p.abstract) paper.abstractFromPdf = true
+    paper.pdf = p.pdf
+
+    if (project.reviewers > 1) {
+      for (let k = 1; k <= project.reviewers; k++) {
+        const tree = p.reviews[String(k)]
+        const has = tree !== undefined && hasAnnotations(project.schema, tree)
+        files.push({
+          relPath: `${p.id}/reviewer-${k}.json`,
+          text: has ? JSON.stringify({ annotations: serializedTree(project.schema, tree) }, null, 2) : null,
+        })
+      }
+    }
+
+    const consolidated: Record<string, unknown> = {}
+    const hasConsolidatedAnnotations = hasAnnotations(project.schema, p.annotations)
+    if (hasConsolidatedAnnotations) consolidated.annotations = serializedTree(project.schema, p.annotations)
+    if (p.aiUsage.length > 0) consolidated.aiUsage = p.aiUsage
+    if (p.equal.length > 0) consolidated.equal = p.equal
+    files.push({
+      relPath: `${p.id}/consolidated.json`,
+      text: Object.keys(consolidated).length > 0 ? JSON.stringify(consolidated, null, 2) : null,
+    })
+
+    return { ...paper, ...p.extra }
+  })
+
+  const meta = {
+    version: project.version,
+    ...(project.title ? { title: project.title } : {}),
+    ...(project.provenance ? { provenance: project.provenance } : {}),
+    ...(project.protocol ? { protocol: project.protocol } : {}),
+    config: {
+      schema: dehydrateSchema(project.schema),
+      ...(project.aiEnabled ? {} : { ai: false }),
+      ...(project.reviewers > 1 ? { reviewers: project.reviewers } : {}),
+      ...(project.screening ? { screening: { reasons: project.screening.reasons } } : {}),
+    },
+    papers: metaPapers,
+    ...project.extra,
+  }
+  return { meta, files }
+}
+
+/**
+ * Does this parsed `project.json` use the old single-file shape (papers carry
+ * `annotations`/`reviews` inline) rather than the new meta-only shape? Used to
+ * decide whether a project needs migrating to the split layout on open.
+ */
+export function isLegacyProjectShape(raw: unknown): boolean {
+  if (typeof raw !== 'object' || raw === null) return false
+  const papers = (raw as { papers?: unknown }).papers
+  if (!Array.isArray(papers)) return false
+  return papers.some(
+    (p) => typeof p === 'object' && p !== null && ('annotations' in p || 'reviews' in p),
+  )
+}
+
+/**
+ * Reassemble a meta-only `project.json` body plus its per-paper annotation
+ * files back into the legacy whole-project shape `loadProject` already knows
+ * how to parse — so the read path reuses `loadProject` unchanged rather than
+ * duplicating its validation/defaulting logic. `paperFiles` holds each raw
+ * per-paper file, already `JSON.parse`d, exactly as read from disk; a paper
+ * with no files on disk yet (nobody has annotated it) simply gets an empty
+ * entry.
+ */
+export function assembleLegacyProjectJson(
+  meta: unknown,
+  paperFiles: Map<string, { consolidated?: unknown; reviewers: Map<string, unknown> }>,
+): unknown {
+  const m = meta as { papers?: unknown[] }
+  const papers = Array.isArray(m.papers) ? m.papers : []
+  return {
+    ...(meta as object),
+    papers: papers.map((p) => {
+      if (typeof p !== 'object' || p === null || typeof (p as { id?: unknown }).id !== 'string') return p
+      const id = (p as { id: string }).id
+      const entry = paperFiles.get(id)
+      const consolidated = (entry?.consolidated ?? {}) as {
+        annotations?: unknown
+        aiUsage?: unknown
+        equal?: unknown
+      }
+      const reviews: Record<string, unknown> = {}
+      for (const [k, v] of entry?.reviewers ?? []) {
+        reviews[k] = (v as { annotations?: unknown })?.annotations ?? {}
+      }
+      return {
+        ...p,
+        annotations: consolidated.annotations ?? {},
+        ...(Object.keys(reviews).length > 0 ? { reviews } : {}),
+        ...(consolidated.aiUsage !== undefined ? { aiUsage: consolidated.aiUsage } : {}),
+        ...(consolidated.equal !== undefined ? { equal: consolidated.equal } : {}),
+      }
+    }),
+  }
+}
+
 /** Case-insensitive title ordering gives git a stable paper order; id breaks
  * title ties without relying on the engine's sort stability. */
 function comparePapers(a: Paper, b: Paper): number {

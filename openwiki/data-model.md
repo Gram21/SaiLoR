@@ -1,17 +1,58 @@
 ---
 type: reference
 title: SaiLoR Data Model
-description: The SaiLoR project file format (JSON schema for annotation taxonomies and papers), the in-memory TypeScript types (ResolvedDef, Project, Paper, AnnotationValueTree), and the full load → normalize → edit → prune → serialize lifecycle that keeps hand-edited JSON safe.
-tags: [data-model, json, schema, types, lifecycle]
+description: The SaiLoR project on-disk format — a meta-only project.json (schema, protocol, paper metadata) plus a sibling annotations/ folder holding each reviewer's/consolidation's annotation trees, and automatic migration from the old single-file shape — the in-memory TypeScript types (ResolvedDef, Project, Paper, AnnotationValueTree), and the full load → normalize → edit → prune → serialize lifecycle that keeps hand-edited JSON safe.
+tags: [data-model, json, schema, types, lifecycle, split-storage]
 ---
 
 # Data Model
 
-This page describes the project file format, the in-memory data structures, and the full lifecycle from loading to saving.
+This page describes the on-disk project format (the split `project.json` + `annotations/` layout,
+and the in-memory data structures), and the full lifecycle from loading to saving.
 
-## Project File Format
+## On-disk layout: `project.json` + `annotations/`
 
-A project is a single JSON file with this shape:
+A project is no longer one JSON file. `project.json` holds only the schema, paper **metadata**, and
+project-level settings — never annotation data; a sibling `annotations/` folder holds every
+reviewer's/consolidation's actual answers, one file per paper per reviewer:
+
+```
+my-review/
+├── project.json
+└── annotations/
+    └── <paperId>/
+        ├── consolidated.json   { annotations, aiUsage, equal } for this paper
+        └── reviewer-<n>.json   { annotations } for reviewer n's own tree (multi-reviewer only)
+```
+
+**Why split.** With everything in one file, two reviewers working on different papers — or on
+different reviewer slots of the *same* paper — constantly collided in git: any two saves touched the
+same file, so ordinary tracking, diffing, and merging fought each other on unrelated changes.
+Splitting each paper's (and each reviewer's) data into its own file lets git track, diff, and merge
+them independently, eliminating most of those conflicts.
+
+**Per-paper-per-reviewer files are lazy.** A `reviewer-<n>.json` or `consolidated.json` is only
+written once that tree actually holds an answer (`hasAnnotations`), and is deleted again if the tree
+becomes empty — so a project with 200 papers and no annotations yet has an empty `annotations/`
+folder, not 200 near-empty files.
+
+**Migration is automatic and silent.** A project still saved in the old single-file shape
+(`isLegacyProjectShape` — any paper carries `annotations`/`reviews` inline) opens and works exactly as
+before (read via the old, single-blob parser); the **next save** writes the split layout, with no
+explicit "migrate" step or prompt. See "Assembling and splitting on disk" below for the mechanics.
+
+Relevant source: `src/model/project.ts` (`splitProjectFiles`, `isLegacyProjectShape`,
+`assembleLegacyProjectJson`), `electron/main.ts` (`readProjectText`, `writeProjectFiles`,
+`readProjectAtRevision`, the `project:open`/`project:save`/git IPC handlers), `src/git/relpath.ts`
+(`annotationsRelDir`).
+
+## Logical Project (`project.json`'s reassembled shape)
+
+Everything below this point describes the **logical**, reassembled project shape — the same shape a
+pre-split project file always had, and still exactly what `loadProject`/`serializeProject` (the model
+layer) work with. Electron's main process does the reassembly (read) and the split (write) around
+that boundary — see "Assembling and splitting on disk" near the end of this page — so the model layer
+itself needed no change for this feature:
 
 ```jsonc
 {
@@ -24,7 +65,7 @@ A project is a single JSON file with this shape:
   },
   "provenance": null,  // optional; ProjectProvenance | null — see "Screening" below
   "protocol": null,    // optional; ProjectProtocol | null — see below
-  "papers": [ /* Paper[] */ ],
+  "papers": [ /* Paper[] — annotations/reviews live in annotations/ on disk, but appear here once reassembled */ ],
   // any other top-level keys are preserved verbatim on save; keys inside
   // `config`, however, are NOT — config is rebuilt from its known fields on
   // every save, so a hand-added config.<anything> is dropped (this is exactly
@@ -101,6 +142,11 @@ build fails to load, the same as any new type would, since `type` validates agai
 
 ### Paper
 
+This is the **logical** shape — what the reassembled project text and the in-memory `Paper` type both
+look like. On disk, `id`/`title`/`authors`/`year`/`venue`/`doi`/`abstract`/`abstractFromPdf`/`pdf`
+live in `project.json`; `annotations`/`reviews`/`aiUsage`/`equal` live in the sibling
+`annotations/<id>/` files instead — see "On-disk layout" above.
+
 ```jsonc
 {
   "id": "paper-a",            // unique across all papers
@@ -120,7 +166,7 @@ build fails to load, the same as any new type would, since `type` validates agai
 }
 ```
 
-The `samples/project.example.json` file shows a complete working example with a schema containing boolean, string, number, repeatable group, and bounded group nodes. `samples/screening.example.json` is its screening counterpart: the same papers plus abstract-only ones covering every decision state, built through `loadProject`/`serializeProject` so it is in the exact normalized form the app itself would write.
+The `samples/project.example.json` file shows a complete working example with a schema containing boolean, string, number, repeatable group, and bounded group nodes. `samples/screening.example.json` is its screening counterpart: the same papers plus abstract-only ones covering every decision state, built through `loadProject`/`serializeProject` so it is in the exact normalized form the app itself would write. Both samples are still committed in the old single-file shape — `isLegacyProjectShape` — so opening one and saving is also a live example of the automatic migration to the split `annotations/` layout described above.
 
 ## In-Memory Types
 
@@ -324,11 +370,13 @@ compares (`deepEqualJson` — order-independent for object keys, order-sensitive
 JSON's own equality, never a text/string comparison) each paper's `annotations`/`reviews` against
 what saving right now would produce. `loadFromText` (`store.ts`) checks this immediately after
 `loadProject` and, if true, writes the migrated shape back through `getPlatform().saveProject` —
-but only when there is somewhere safe and unsurprising to write it: a real in-place handle
-(`'electron'` or `'fsapi'`), never `'download'` (which would trigger a browser file download the
-instant a project is opened) and never a bare `null` handle (a `?project=` URL, or a browser pick
-with no persistent handle — the project is simply held in its migrated, better shape in memory,
-which converges again harmlessly next time it's opened). The write is fire-and-forget; on success
+but only when there is somewhere safe and unsurprising to write it: a real in-place handle. In
+practice that means every open now, since the only real `PlatformAdapter` left is Electron's, which
+always produces a `'electron'`-kind handle with a real path; the check still guards `SaveHandle`'s
+other kinds (`'fsapi'`, `'download'`, or a bare `null` handle — a `?project=<url>` load or a
+handle-less browser pick, from the deleted browser build) so a migrated-shape write is never attempted
+where there's nowhere safe to put it — the project is simply held in its migrated, better shape in
+memory, converging again harmlessly next time it's opened. The write is fire-and-forget; on success
 `saveHandle` is refreshed the same way an ordinary save updates it, on failure the project is
 marked `dirty` so the ordinary unsaved-changes guard — not an alarming banner for a fix nobody
 asked for — eventually gets it saved.
@@ -599,6 +647,38 @@ produce byte-identical output for the same project regardless of in-memory order
 annotation trees were pre-seeded with null skeletons. This eliminates spurious git diffs from
 re-saving the same content. `needsShapeMigration` compares against `serializedTree` (not `pruneTree`)
 so it detects whether the canonical shape (empty = `{}`) is present.
+
+### Assembling and splitting on disk (Electron main process)
+
+`serializeProject`'s output above is still the **logical** whole-project JSON — `store.ts`'s `save()`
+always builds it first, exactly as before this feature. What changed is what happens to that text on
+the way to disk:
+
+- **Save** (`ElectronAdapter.saveProject`, `src/platform/electron.ts`): re-parses the logical text with
+  `loadProject`, then calls `splitProjectFiles(project)` to get `{ meta, files }` — `meta` is the
+  paper-metadata-only body described in "On-disk layout" above, `files` is every
+  `<paperId>/reviewer-<n>.json` / `<paperId>/consolidated.json` entry (`text: null` meaning "delete
+  this file if present"). Both are sent over IPC (`project:save`) to `writeProjectFiles` in
+  `electron/main.ts`, which writes `project.json`, then reconciles the `annotations/` folder against
+  `files` — writing/creating each non-null entry, deleting each null one.
+- **Open** (`project:open`/`project:openPath` → `readProjectText` in `electron/main.ts`): reads
+  `project.json`; if it's already the old single-file shape (`isLegacyProjectShape`) it's returned
+  as-is; otherwise every paper's `annotations/<paperId>/consolidated.json` and `reviewer-*.json` files
+  are read and spliced back in (`assembleLegacyProjectJson`), producing the same logical whole-project
+  text `loadProject` has always parsed. The renderer's `loadProject` therefore never had to learn the
+  split shape at all — it stays "already exhaustively validated for the single shape", and the
+  reassembly is the one and only place that needs to know the split layout exists on read.
+- A file read via `safeReadAnnotationFile` is resolved and `realpath`-checked against the
+  `annotations/` directory the same way `resolveProjectPath` protects PDF reads — a shared project's
+  `annotations/` folder is exactly as untrusted as its PDFs, so a symlink escape inside it is refused
+  the same way. `writeProjectFiles` applies the matching write-side guards (`assertNotSymlink`,
+  containment checks) before touching anything under `annotations/`.
+- **Git** reads/writes go through the identical `readProjectAtRevision`/`writeProjectFiles` pair —
+  `readProjectAtRevision` reassembles a project as of a given git revision (walking that revision's
+  `annotations/` tree via `git show`) the same way `readProjectText` does for the working tree, so the
+  three-way merge in "Merging two copies of a project" below still operates on one logical `Project`
+  per side, unaware the files backing it are split. See `architecture.md`'s "Git" section for the IPC
+  plumbing.
 
 ## Reference import: what a malformed file costs
 

@@ -1,27 +1,46 @@
 ---
 type: operations
 title: SaiLoR Operations
-description: Operational guide for SaiLoR — development setup (web, Electron, Docker), build commands for the static SPA and desktop installers, testing with Vitest, CI configuration, release packaging, deployment options, and wiki sync mechanics.
-tags: [operations, build, testing, ci, deployment, docker]
+description: Operational guide for SaiLoR — development setup (Electron dev is the only supported way to run the app; the web build is discontinued at runtime), build commands for the desktop installers, testing with Vitest, CI configuration, release packaging, and wiki sync mechanics.
+tags: [operations, build, testing, ci, electron-only]
 ---
 
 # Operations
 
+## SaiLoR is Electron-desktop-only
+
+SaiLoR used to also ship as a static web SPA (File System Access API / download fallback) and as a
+Docker self-hosted deployment. **Both are discontinued as real ways to run the app.** The web build
+still compiles — kept only so the CI/typecheck pipeline and `vite build` keep working — but at
+runtime it renders nothing but a "SaiLoR for the web has been discontinued — use the desktop app"
+notice, gated in `src/App.tsx` before any project-opening UI (file picker, drag-and-drop, `?project=`
+auto-load) can run. The File System Access API adapter (`src/platform/browser.ts`), the IndexedDB
+handle store (`src/platform/idb.ts`), and the `?project=<url>` server-hosted-deployment loader
+(`loadFromUrl` in `src/state/store.ts`) were all **deleted**, not merely disabled — the non-Electron
+`PlatformAdapter` implementation is now `UnsupportedAdapter` (`src/platform/unsupported.ts`), which
+answers every read with "nothing" and throws on every action, as a backstop for the handful of reads
+(`getRecents()`) that happen at store module load, before `App` ever renders and can show the gate.
+Docker self-hosting serves that same static build, so it inherits the same discontinuation notice
+regardless of what project folder is mounted — see "Deployment" below.
+
+Everything in this page below assumes the **Electron desktop app** as the target; the sections below
+that still mention the web dev server or Docker say so explicitly, and exist only for contributors
+iterating on shared renderer code or on the discontinuation screen itself — neither is a usable
+deployment path for a reviewer.
+
 ## Development
 
-### Web dev (browser)
+### Web dev server — not a usable deployment
 
 ```bash
 npm run dev
 ```
 
-Starts the Vite dev server at `http://localhost:5173`. Open the bundled example with:
-
-```
-http://localhost:5173/?project=/samples/project.example.json
-```
-
-The `?project=<url>` query parameter triggers `loadFromUrl()` in `App.tsx`, which fetches the JSON and sets the server base URL for PDF resolution.
+Starts the Vite dev server at `http://localhost:5173`. This is **not** a way to annotate papers: the
+page renders `isElectron()`'s gate and nothing else, the same "use the desktop app" notice the
+production web build shows. It is useful only for contributors working on code shared with the
+Electron renderer, or on the discontinuation screen itself — not for reviewers, and not documented
+as a deployment option.
 
 ### Electron dev (desktop)
 
@@ -42,7 +61,9 @@ npm ≥ 11.17 blocks dependency install scripts until they are approved, and rec
 A separate `docker-compose.dev.yml` (with `Dockerfile.dev` and `Dockerfile.electron`) lets you develop without a local Node install. It is independent of the production `docker-compose.yml` — nothing runs on a plain `docker compose up` — and selects a target with a Compose **profile**:
 
 ```bash
-# Browser dev server (Vite + HMR) on http://localhost:5173
+# Browser dev server (Vite + HMR) on http://localhost:5173 — same discontinuation
+# notice as `npm run dev` above; not a usable deployment, only useful for
+# shared-renderer-code or discontinuation-screen work without a local Node install
 docker compose -f docker-compose.dev.yml --profile browser up --build
 
 # Build the Electron app (Linux AppImage) into ./release/
@@ -187,66 +208,19 @@ Both workflows share a `concurrency: wiki-sync` group (with `cancel-in-progress:
 
 ## Deployment
 
-### A. Static hosting
+### Discontinued: static hosting and Docker self-hosting
 
-Copy `dist/` behind any static host (nginx, Apache, S3, GitHub Pages). Place the project JSON and its `pdfs/` directory alongside (or at the URL referenced by `?project=`). The `base: './'` Vite config ensures the build works from any subpath. Link to a hosted project:
+SaiLoR used to support two server-based deployments: copying `dist/` behind a static host (with a
+project loaded via `?project=<url>`), and the bundled `docker-compose.yml`/`Dockerfile` self-hosting
+setup on port 8080. **Both are discontinued.** The static SPA these deployments serve now shows only
+the "use the desktop app" notice at runtime (`src/App.tsx`'s `isElectron()` gate), regardless of what
+project files are mounted or referenced — the `?project=<url>` loader and the browser's PDF-fetching
+adapter it depended on were deleted, not just disabled (see "SaiLoR is Electron-desktop-only" above).
+The `Dockerfile`, `docker-compose.yml`, and `nginx.conf` files still exist in the repo, but running
+`docker compose up -d --build` now serves a page that tells the visitor to download the desktop app
+instead of anything about their review.
 
-```
-https://your.host/?project=/reviews/2026/project.json
-```
-
-PDF paths in the project file are resolved relative to the project URL (via `BrowserAdapter.setServerBase()`). The `getPdfSource` method fetches each PDF and creates a blob URL for react-pdf.
-
-**A missing PDF on a static host frequently does not 404.** Most SPA-style hosts (a dev server, S3+CloudFront with an SPA rewrite rule, an nginx `try_files … /index.html` config) answer any unmatched path with `200` and the app's own `index.html`, rather than a real 404 — so if a PDF's path is wrong, or the `pdfs/` directory wasn't actually deployed alongside the project JSON, the fetch still "succeeds" and hands pdf.js an HTML page instead of a PDF. `getPdfSource` checks the response actually starts with PDF's magic number (`%PDF-`) before trusting it, so this now surfaces as *"the server answered, but not with a PDF"* naming the exact URL it tried — check that URL directly (e.g. `curl -I <url>`) if you see it; it almost always means the PDF isn't actually being served at the path the project JSON references.
-
-### B. Docker (self-hosting)
-
-The repo includes a multi-stage `Dockerfile` (Node build → nginx runtime) and `docker-compose.yml`:
-
-```bash
-docker compose up -d --build    # build and start
-docker compose down             # stop
-```
-
-This serves the app on `http://localhost:8080`. The volume in `docker-compose.yml` mounts a host folder of project JSONs and their PDFs read-only into the container at `/usr/share/nginx/html/projects`, i.e. served under the `/projects/` URL namespace. It defaults to the bundled `./samples` folder, so the example works out of the box; point it at your own folder to use your own reviews. Open a project:
-
-```
-http://localhost:8080/?project=/projects/project.example.json
-```
-
-The `nginx.conf` adds the correct MIME type for `.mjs` files (needed by the pdf.js worker), sets immutable caching for hashed `/assets/`, serves `/projects/` same-origin only, and falls back to `index.html` for SPA routing. It also sets `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy: frame-ancestors 'none'` and `Referrer-Policy: no-referrer` on every response.
-
-**`/projects/` no longer sends `Access-Control-Allow-Origin: *`.** It used to, which meant any
-website a reviewer happened to visit could read every project file the deployment serves — the
-review data and the reviewers' recorded identities — with a plain `fetch`, needing only the URL. On
-a localhost or intranet deployment that is a low bar. The app and its project files are served from
-the same origin in `docker-compose.yml` and in everything these docs describe, and same-origin
-fetches need no CORS header, so nothing in the documented setup changes.
-
-If you genuinely serve the app from a *different* origin than its project files, add the one origin
-you mean to the `/projects/` block — never `*`:
-
-```nginx
-add_header Access-Control-Allow-Origin "https://sailor.example.org" always;
-```
-
-Understand what that grants: any page on that origin can read every project file, so it should be an
-origin you control and trust as much as the data.
-
-**A note on `add_header` inheritance, because it is a trap.** nginx applies a level's `add_header`
-directives only when that level declares *none* of its own. The `/assets/` and `*.mjs` locations set
-`Cache-Control`, so they would otherwise lose every server-level security header — including
-`nosniff`, on the locations that serve the JavaScript. The config repeats the security headers inside
-those blocks on purpose; removing the duplication silently removes the protection.
-
-Equivalent raw Docker commands:
-
-```bash
-docker build -t sailor .
-docker run -d -p 8080:80 -v "$PWD/samples:/usr/share/nginx/html/projects:ro" sailor
-```
-
-### C. Desktop
+### Desktop
 
 Distribute the `release/` installers produced by `electron-builder`. The desktop app opens local JSON files via native dialog and serves PDFs through the `slr-file://` protocol with no server needed.
 
@@ -282,14 +256,14 @@ In Electron, the Edit menu routes Undo/Redo back into the renderer through IPC; 
 
 Paper navigation with `[`/`]` is disabled when typing in an input field; Alt-arrow navigation works even inside fields. See `src/hooks/useKeybindings.ts`.
 
-## Saving Behavior by Platform
+## Saving Behavior
 
-| Platform | Save | Save as… |
-|---|---|---|
-| Electron | Writes to the opened file path | Native save dialog |
-| Chromium (FSAPI) | Writes in-place via retained handle | `showSaveFilePicker` |
-| Other browsers | Downloads JSON | Downloads JSON |
-| Server mode (no handle) | Falls back to Save as… | Downloads JSON |
+SaiLoR is Electron-only now, so there is one save path: **Save** writes `project.json` plus the
+changed files under `annotations/` to the opened file's location; **Save as…** opens the native save
+dialog, then does the same at the new location. See [Data Model](data-model)'s "On-disk layout" and
+"Assembling and splitting on disk" for exactly what gets written. (The browser's File System Access
+API / download-fallback save paths this table used to compare against were deleted along with the
+rest of `src/platform/browser.ts` — see "SaiLoR is Electron-desktop-only" above.)
 
 ## Git
 
@@ -306,10 +280,11 @@ outside a shell, and hard-coding a list of common install locations would be exa
 brittle guess this codebase avoids elsewhere. If *Import from git…* is dimmed on macOS and you know
 git is installed, check `which git` in a terminal against what a GUI-launched app actually sees.
 
-| Platform | Git support |
-|---|---|
-| Electron (desktop) | Full — clone, status, commit (with field-level review), pull (with field-level merge), push, using the real `git` binary and its config |
-| Browser (any) | None — the controls stay visible, dimmed, with a tooltip pointing at the desktop app; see `architecture.md`'s "Git" section for why there is nothing to fall back to |
+Git support is Electron-only: clone, status, commit (with field-level review), pull (with
+field-level merge), and push, using the real `git` binary and its config. The old browser build's
+"controls stay visible, dimmed" fallback no longer applies — the web build never renders the toolbar
+at all now (see "SaiLoR is Electron-desktop-only" above) — but see `architecture.md`'s "Git" section
+for why there would have been nothing to fall back to even if it did.
 
 **Credentials are never handled by SaiLoR.** Every git operation runs through the user's own
 credential helper, SSH agent, and host-key configuration, exactly as a terminal `git` command would.
@@ -368,19 +343,14 @@ shown in a resolution list; nothing is committed until every row has been decide
   `architecture.md`'s "Rejected: streamed clone progress and a cancel button" for the reasoning.
 - **No branch switching, remote management, or history browsing** — out of scope for this feature.
 
-## PDF Loading in the Browser Build
+## PDF Loading
 
-Opening a **local** project file (any "Open…" that isn't a `?project=<url>` server-mode load) shows a one-time in-app prompt the first time you view a paper — *"SaiLoR needs to know where this project's PDFs are"* — with a **Choose folder…** button. Clicking it opens your browser's own folder picker; pick the folder that contains the project JSON (the one with `pdfs/` inside it, not the `pdfs/` folder itself). That grant is then reused for every PDF in the project for the rest of the session; you're not asked again unless you open a different project.
-
-The in-app prompt exists so the native folder dialog never appears out of nowhere the moment you open a paper — particularly on Firefox, whose own dialog frames this as an "upload," which reads as alarming with no context. If you ever see that native dialog without having clicked **Choose folder…** first, something outside the app triggered it (e.g. the AI-annotation flow reading a paper's PDF for a paper you haven't viewed yet) — it's the same one-time-per-session grant either way, just requested by a different caller.
-
-| Runtime | Mechanism |
-|---|---|
-| Chromium (FSAPI) | `showDirectoryPicker` — a real directory handle, PDFs read lazily by path as you open them |
-| Other browsers (Firefox, Safari) | A folder-picking `<input>` (`webkitdirectory`) — reads the whole folder tree at once on the first prompt |
-| Server mode (`?project=<url>`) | Fetched from the project's URL; no prompt |
-
-A **local** project's PDFs are never fetched from a URL — there isn't one for them to be at. If you instead see an error naming a URL (*"the server answered, but not with a PDF"*), you're in **server mode**, not the local-folder path above — see the static-hosting note below for what that means and how to fix it.
+On the desktop app, PDFs are read straight off disk via the custom `slr-file://` protocol — the main
+process resolves each paper's `pdf` path relative to the project directory, with no folder-grant
+prompt and no server involved. (The browser build used to need a one-time folder-access grant — via
+the File System Access API or a `webkitdirectory` `<input>` fallback — and a server-mode fetch path
+for `?project=<url>` loads; all of that was deleted along with `src/platform/browser.ts`. See "SaiLoR
+is Electron-desktop-only" above.)
 
 ## AI-assisted annotation: setting up an LLM target
 
@@ -435,10 +405,10 @@ such entry — see `docs/annotation-schema.md` §5 for the exact shape.
 
 ### Where the API key is stored
 
-| Runtime | Location | Protection |
-|---|---|---|
-| **Electron (desktop)** | `llm-config.json` in `app.getPath('userData')`, file mode `0600` | Encrypted with Electron's **`safeStorage`**, i.e. the OS keychain (Keychain on macOS, DPAPI on Windows, a Secret Service keyring on Linux). The key is held by the **main process** and never handed to the renderer; the page only ever learns `hasKey: true`. |
-| **Browser (web build)** | `localStorage`, key `slr.llm.configs` | **None. The key is stored in the clear.** Any script on the page, and anyone with access to that browser profile, can read it. The settings dialog says so in red. |
+The key lives in `llm-config.json` in `app.getPath('userData')`, file mode `0600`, encrypted with
+Electron's **`safeStorage`** — the OS keychain (Keychain on macOS, DPAPI on Windows, a Secret Service
+keyring on Linux). The key is held by the **main process** and never handed to the renderer; the page
+only ever learns `hasKey: true`.
 
 Notes:
 
@@ -446,19 +416,11 @@ Notes:
 - **On Linux, `safeStorage` can report "available" while using a weak fallback backend** (`basic_text`) when no keyring/Secret Service is running — the encryption is then little more than obfuscation. The app cannot tell the difference. If the key matters, run the desktop app on a session with a working keyring (gnome-keyring / kwallet), or use a scoped, revocable key.
 - Deleting a target deletes its stored key with it. A stored key is never shown again, so an edit that leaves the key box blank keeps the existing one.
 
-### Limitations of the web build
-
-The desktop app is the supported path for AI annotation. In the browser two things are genuinely worse, and neither is a bug we can fix from this side:
-
-1. **The key is unencrypted** (above). There is no keychain in a page, and no main process to hold the key out of its reach.
-2. **CORS.** The call goes out *from the page*, so it is a cross-origin `POST` and the provider must be willing to answer it:
-   - **Anthropic** refuses browser-origin calls unless the caller opts in; the adapter sends `anthropic-dangerous-direct-browser-access: true` for you.
-   - **A self-hosted OpenAI-compatible endpoint usually sends no CORS headers at all** and will simply fail — LM Studio, llama.cpp and friends do not expect a browser client. Putting a reverse proxy in front of it that adds the CORS headers is the only fix from outside the app.
-   - A cross-origin block surfaces as an opaque `TypeError`, so `BrowserAdapter.callLlm` catches it and re-throws an error naming the likely cause instead of letting it read as "the provider is down".
-
-   The desktop build has none of this: the request is sent by the Electron **main process** (`net.fetch`), which has no origin and no CORS check. See *AI-assisted annotation* in `architecture.md`.
-
-If you use the web build anyway, use a throwaway or tightly scoped key.
+The request itself is sent by the Electron **main process** (`net.fetch`), which has no origin and no
+CORS check. (The web build used to store the key unencrypted in `localStorage` and send the request
+from the page, which meant fighting CORS per provider — all of that, including
+`BrowserAdapter.callLlm`, was deleted along with the rest of `src/platform/browser.ts`; see "SaiLoR is
+Electron-desktop-only" above.)
 
 ### Operational notes
 
