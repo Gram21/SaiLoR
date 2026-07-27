@@ -21,10 +21,6 @@ A project is a single JSON file with this shape:
     "ai": false,       // optional; false disables AI-assisted annotation for this project
     "reviewers": 3,    // optional; >1 turns on independent multi-reviewer annotation
     "screening": { "reasons": ["Wrong topic", "Duplicate"] },  // optional; see "Screening" below
-    "reviewerIdentities": {                                    // optional; see below
-      "1": { "email": "a@example.org" },
-      "consolidation": { "email": "b@example.org", "name": "B. Reviewer" }
-    }
   },
   "provenance": null,  // optional; ProjectProvenance | null — see "Screening" below
   "protocol": null,    // optional; ProjectProtocol | null — see below
@@ -51,17 +47,6 @@ remains the single, final result — see "Multiple reviewers & Consolidation" be
 `serializeProject`/`buildProjectJson` write `config.reviewers` only when it is greater than 1, so a
 single-reviewer file is unaffected byte-for-byte. The project editor edits it as a checkbox +
 number field next to the AI opt-out.
-
-`config.reviewerIdentities: Record<string, ReviewerIdentity>` (`ReviewerIdentity = { email: string;
-name?: string }`) records, per seat (`"1".."N"` or the literal `"consolidation"`), the git identity
-that holds it — written the first time a reviewer with a known git email claims a seat, omitted
-entirely when empty (so a solo project or one whose reviewers never had a git identity to record is
-unaffected byte-for-byte). It exists to close a real hazard: the seat choice itself is otherwise only
-ever recorded per-machine, in `localStorage`, so two different people who each pick "Reviewer 1" on
-their own clone are invisible to each other and their answers merge into one chimeric tree with no
-conflict raised. See `architecture.md`'s "Reviewer seat identity" for the full mechanism (why the
-comparison is email-only, how a mismatch is surfaced, and why it never blocks) and "Merging two
-copies of a project" below for what it does to a merge.
 
 ### AnnotationDef (`src/model/schema.ts`)
 
@@ -157,17 +142,11 @@ interface Project {
   schema: ResolvedDef[]
   aiEnabled: boolean              // config.ai; false for new projects, preserved from file otherwise
   reviewers: number                // config.reviewers; 1 (default) = single-reviewer
-  reviewerIdentities: Record<string, ReviewerIdentity>  // config.reviewerIdentities; {} if none recorded
   papers: Paper[]
   screening: ScreeningConfig | null  // config.screening; see "Screening" below
   provenance: ProjectProvenance | null  // set by "New from screening…"; see "Screening" below
   protocol: ProjectProtocol | null   // the review's authored protocol; see below
   extra: Record<string, unknown>  // unknown top-level fields preserved
-}
-
-interface ReviewerIdentity {
-  email: string   // the only field ever compared (sameIdentity) — see architecture.md's "Reviewer seat identity"
-  name?: string    // display only
 }
 
 interface ProjectProvenance {
@@ -544,23 +523,14 @@ A few more refuse, for reasons that are not "this reshapes the file": `provenanc
 (each a nested record no `FieldConflict` shape can express — for `protocol`, refusing a two-sided
 edit is also the safe choice, since half-dropping a reviewer's authored protocol is worse than
 asking them to reconcile it; the common case of only one side ever setting either still resolves with
-no refusal and no note) and
-`config.reviewerIdentities.<seat>`, which refuses **per seat**, and only when the two sides record
-**different emails** for that seat (compared via `sameIdentity`, which is email-only — a name-only
-edit on the same email merges silently, never refuses). This is deliberately a refusal rather than a
-conflict row: a conflict row can be clicked through without a second thought, and a click-through is
-exactly how the chimeric reviews tree this mechanism exists to prevent would get built. See
-`architecture.md`'s "Reviewer seat identity" for the hazard this closes.
+no refusal and no note).
 
 **Testing**: `src/git/merge.test.ts` builds every base/ours/theirs through the real `loadProject`
 (never a hand-assembled `Project`), so fixtures are exactly as schema-normalized and
 empty-skeleton-shaped as `mergeProjects`' real caller hands it — and pins the field-level guarantee,
 the interior-gap and instance-removal invariants, the multi-reviewer case, every refusal, the
 `abstract`/`abstractFromPdf` merge and its resolve-order gap, and a full
-`serializeProject`/`loadProject` round-trip of a resolved merge. A dedicated `describe` block covers
-`config.reviewerIdentities`: two different emails on one seat refuses, a name-only difference on the
-same email merges silently, and claiming a previously-free seat is an ordinary one-side-changed-it
-merge.
+`serializeProject`/`loadProject` round-trip of a resolved merge.
 
 **A separate, related question — what changed locally, for the commit panel** — is `src/git/changes.ts`'s
 `detectFieldChanges`/`composeContents`, covered in `architecture.md`'s "Field-level commit review".
@@ -616,11 +586,19 @@ Called during serialization. For each node:
 
 ### 5. Serialize (`serializeProject` in `src/model/project.ts`)
 
-1. Spread `project.extra` (unknown top-level fields first)
-2. Write `version`, `config` (dehydrated schema), `papers`
-3. For each paper: spread `paper.extra`, write known fields, then `pruneTree(schema, annotations)`
-4. `dehydrateSchema()` converts `ResolvedDef[]` back to compact `AnnotationDef[]` (omits defaults: `min: 1`, `max: 1` are not written back)
-5. Output is `JSON.stringify(out, null, 2)` — pretty-printed with 2-space indent
+1. Write known root keys (`version`, `config`, `papers`) in canonical order, then spread `project.extra` (unknown top-level fields) at the end
+2. For each paper: write known fields, then spread `paper.extra` at the end
+3. Papers are sorted by `comparePapers()` — case-insensitive title first, then case-sensitive title, then `id` — so repeated saves produce byte-identical output regardless of in-memory order
+4. Review keys (`"1".."N"`) are sorted numerically
+5. Annotation trees use `serializedTree()`: empty trees write `{}` (no null skeleton), non-empty trees write `pruneTree(schema, tree)`
+6. `dehydrateSchema()` converts `ResolvedDef[]` back to compact `AnnotationDef[]` (omits defaults: `min: 1`, `max: 1` are not written back)
+7. Output is `JSON.stringify(out, null, 2)` — pretty-printed with 2-space indent
+
+**Deterministic serialization.** The ordering and empty-tree rules above make `serializeProject`
+produce byte-identical output for the same project regardless of in-memory order or whether empty
+annotation trees were pre-seeded with null skeletons. This eliminates spurious git diffs from
+re-saving the same content. `needsShapeMigration` compares against `serializedTree` (not `pruneTree`)
+so it detects whether the canonical shape (empty = `{}`) is present.
 
 ## Reference import: what a malformed file costs
 
@@ -744,7 +722,7 @@ the limit allows 64 levels of schema nesting against a real-world 2–4.
 - Multiple reviewers: `config.reviewers` defaults/bounds/round-trip, `Paper.reviews` parsing (defensive, normalized, malformed/non-numeric keys dropped) and backfilling (every reviewer `1..N` present as an empty skeleton, an out-of-range key never dropped), serialization staying clean for a single-reviewer project (see the `"multiple reviewers"` describe block in `model.test.ts`)
 - `needsShapeMigration`/the auto-migrate-on-open path: an old-shape file gets fixed and re-saved through a real handle, never through a `'download'` or `null` one, and is stable (no re-migration, byte-identical re-serialization) once fixed — verified end-to-end against real files on disk, not just mocked platform calls
 
-`src/state/store.reviewers.test.ts` covers the routing rule (`currentTree`) itself: which tree each store action reads/writes for single-reviewer, a numbered reviewer, Consolidation, and the unselected state; that selecting a reviewer is not an undo step and doesn't set `dirty`; and that the selection persists per project (a `describe` block also covers claiming a seat via a git identity, and `takeSeat`'s explicit-override path — see `architecture.md`'s "Reviewer seat identity"). `src/state/store.aimarks.test.ts` covers the reviewer-scoped AI mark keys specifically.
+`src/state/store.reviewers.test.ts` covers the routing rule (`currentTree`) itself: which tree each store action reads/writes for single-reviewer, a numbered reviewer, Consolidation, and the unselected state; that selecting a reviewer is not an undo step and doesn't set `dirty`; and that the selection persists per project. `src/state/store.aimarks.test.ts` covers the reviewer-scoped AI mark keys specifically.
 
 `src/model/hostile.test.ts` covers the load-time refusals specifically, from the attacker's side
 rather than the schema author's: a flat enormous `min`, nested `min`s that multiply, deep nesting in
@@ -752,7 +730,7 @@ the schema, and deep nesting under an *unknown* key (the `extra` passthrough) �
 `ProjectLoadError` rather than a crash — plus a deliberately generous legitimate schema that must
 still load, so the limits cannot be tightened into rejecting real work without a test failing.
 
-Several newer pure modules have their own dedicated test files: `src/model/year.test.ts` (`parseYear`/`isPlausibleYear` boundaries and string-scanning behavior), `src/model/duplicates.test.ts` (`classifyImport`'s four-tier priority, the year-gap veto, author-surname Dice edge cases, and a differential test that the cheap cost-guard agrees pair-for-pair with an unguarded reference), `src/model/identity.test.ts` (`sameIdentity`'s email-only truth table, `checkSeat`), and `src/model/completeness.test.ts` (the required-only-when-declared denominator rule, boolean exclusion, per-instance counting for repeatables). One honest gap as of this writing: `Paper.year`/`Paper.venue` themselves are pinned down at the parsing/validation layer (`year.test.ts`, `references.test.ts`), but the git-layer behavior described above — `merge.ts`'s conflict handling, `changes.ts`'s field-level review row, and `similarity.ts`'s identity-not-magnitude scoring — has no dedicated test coverage yet.
+Several newer pure modules have their own dedicated test files: `src/model/year.test.ts` (`parseYear`/`isPlausibleYear` boundaries and string-scanning behavior), `src/model/duplicates.test.ts` (`classifyImport`'s four-tier priority, the year-gap veto, author-surname Dice edge cases, and a differential test that the cheap cost-guard agrees pair-for-pair with an unguarded reference), `src/model/linkify.test.ts` (URL splitting, trailing punctuation stripping, degenerate match handling), and `src/model/completeness.test.ts` (the required-only-when-declared denominator rule, boolean exclusion, per-instance counting for repeatables). One honest gap as of this writing: `Paper.year`/`Paper.venue` themselves are pinned down at the parsing/validation layer (`year.test.ts`, `references.test.ts`), but the git-layer behavior described above — `merge.ts`'s conflict handling, `changes.ts`'s field-level review row, and `similarity.ts`'s identity-not-magnitude scoring — has no dedicated test coverage yet.
 
 **Screening** has its own set of test files, mirroring the `src/consolidate/*.test.ts` convention
 (pure functions, no React, no store imports): `src/screening/schema.test.ts` (the derived schema's

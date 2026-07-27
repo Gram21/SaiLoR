@@ -159,6 +159,8 @@ The entire app state lives in a single Zustand store with immer middleware:
 | `aiMarks` | `Record<string, true>` | Fields the AI filled and the reviewer has not looked at yet, keyed `` `${paperId}::${canonicalPath}` `` for a single-reviewer project, or `` `${paperId}::${reviewer}::${canonicalPath}` `` for a multi-reviewer one (see "AI marks" below). Session-only: it lives *beside* the project, so `serializeProject` cannot see it |
 | `currentReviewer` | `string \| null` | Which reviewer's tree is shown/edited — `"1".."N"`, `"consolidation"`, or `null`. Always `null` for a single-reviewer project; also starts `null` for a multi-reviewer one until picked (see "Multiple reviewers & Consolidation" below). Persisted per project in `localStorage`; not an undo step, does not set `dirty` |
 | `consolidationTarget` | `{ path, name, index } \| null` | The field the Consolidation "compare" popup (`ConsolidationDialog`) is showing, or `null` when closed. Session-only |
+| `consolidationOverviewOpen` | `boolean` | Whether the project-wide `ConsolidationOverview` modal is open. Session-only |
+| `deferredConsolidations` | `Record<string, true>` | Fields where the consolidator chose "Enter a different value" — waiting for a manually entered value. Keyed by `deferredConsolidationKey(paperId, canonicalPath)`. Session-only; cleared on project close/load |
 | `screeningFilter` | `'all' \| 'included' \| 'excluded' \| 'undecided'` | Which decisions the screening paper list shows. Screening projects only; session-only, resets on `closeProject`/`loadFromText` |
 | `screeningShowPdf` | `boolean` | Whether the middle pane shows the PDF instead of `ScreeningRecord`'s title+abstract. Session-only, see "Screening" above |
 | `screeningSummaryOpen` | `boolean` | Whether `ScreeningSummary` (the PRISMA-style counts modal) is open. Session-only |
@@ -181,7 +183,12 @@ The entire app state lives in a single Zustand store with immer middleware:
 - **`undo()` / `redo()`** — swap the current project snapshot with one from the `past`/`future` stack (and switch to the affected paper). The mutating actions push a snapshot before applying; consecutive edits to the *same* field coalesce into one undo step (a module-level `lastFieldKey` tracks this), while add/remove/paper-switch reset it. History is cleared on project load.
 - **`setHelpOpen(open)`** — shows/hides the help dialog
 - **`selectReviewer(reviewer)`** — switches `currentReviewer` and persists the choice per project. A view switch: no undo step, no `dirty`
-- **`openConsolidation(path, name, index)` / `closeConsolidation()`** — open/close the compare popup for one field
+- **`openConsolidation(path, name, index, returnToDisagreements?)` / `closeConsolidation()`** — open/close the compare popup for one field; when `returnToDisagreements` is set, `closeConsolidation` reopens the per-paper disagreement list
+- **`resolveConsolidationValue(path, name, index, value)`** — writes a chosen reviewer value, marks the field equal, and clears any deferral in one undo step
+- **`deferConsolidationValue(path, name, index)`** — marks a field as deferred (waiting for manual entry); `setFieldValue` auto-clears the deferral when a non-empty value is entered
+- **`setConsolidationOverviewOpen(open)`** — toggle the project-wide `ConsolidationOverview` modal
+- **`openAgreementFromOverview()` / `closeAgreement()`** — closes overview, opens agreement, restores overview on close
+- **`openDisagreementsFromOverview(paperId)` / `closeDisagreements()`** — selects paper, closes overview, opens per-paper disagreement list, restores overview on close
 - **`alignConsolidationNode(paperId, nodeName, coalesce)`** — match the reviewers' repeated entries under one node and write the result in (reorder + grow); see "Matching the reviewers' repeated entries" below
 - **`adoptUnanimousValues(paperId, coalesce)`** — fill the consolidated fields every reviewer answered the same way, marking each via `aiMarks`; runs after the matching for a paper
 - **`setScreeningDecision(decision, reason?)` / `setScreeningReason(reason)`** — screening-only field writes, routed through `currentTree` like every other write; see "Screening" below for the auto-advance and reason-clearing rules
@@ -211,9 +218,10 @@ App (src/App.tsx)
 │   └── [otherwise: AnnotationPanel (src/components/AnnotationPanel.tsx)]
 │         ✦ AI button in the column header (opens AiDialog; disabled while busy, when the paper has no PDF, when the project forbids it, when no reviewer is picked yet, or — by default — always, until the hidden unlock; see "AI-assisted annotation" below)
 │         renders the tree `currentTree()` routes to for the active reviewer; prompts to pick a reviewer instead of the form when a multi-reviewer project has none selected yet
+│         Consolidation seat only: "☰ Overview" button (opens `ConsolidationOverview`) + "⚠ Disagreements" button (opens per-paper `DisagreementOverview`); builds a `ConsolidationVerdictsContext` map (per-field agree/disagree status) shared to all child `Field` components via React Context
 │         └── AnnotationNode (src/components/AnnotationNode.tsx) [recursive]
 │               └── Field (src/components/Field.tsx)
-│                     Input control (text/number/checkbox/enum ComboBox) + ⧉ grab-from-PDF button + (Consolidation mode only) ⇄ compare button → opens ConsolidationDialog for that field
+│                     Input control (text/number/checkbox/enum ComboBox) + ⧉ grab-from-PDF button + (Consolidation mode only) ⇄ compare button → opens ConsolidationDialog for that field; reads `useConsolidationFieldStatus(canonical)` from context to add `consolidation-agree`/`consolidation-disagree` CSS classes; checks `deferredConsolidations` for `consolidation-pending` visual state
 ├── [if no project: welcome screen with "Open project…" button, "New from screening…", and (if any) recent projects list]
 ├── AiDialog (src/components/AiDialog.tsx)
 │     Modal driven by useAiStore's phase: pick a target → Start → review table → Apply
@@ -223,7 +231,9 @@ App (src/App.tsx)
 ├── ValidationDialog (src/components/ValidationDialog.tsx)
 │     Modal overlay showing the results of "Validate", scoped to the active reviewer's own tree (or the consolidated one, for Consolidation) — see below
 ├── ConsolidationDialog (src/components/ConsolidationDialog.tsx)
-│     Modal overlay reachable only from Consolidation mode's ⇄ button: every reviewer's answer for one field, side by side; picking one writes it into the consolidated tree
+│     Modal overlay reachable only from Consolidation mode's ⇄ button: every reviewer's answer for one field, side by side; picking one calls `resolveConsolidationValue` (writes value + marks equal + clears deferral), or "Enter a different value" defers for manual entry
+├── ConsolidationOverview (src/components/ConsolidationOverview.tsx)
+│     Project-wide modal for Consolidation's batch actions: lists all papers with ≥1 disagreement, houses "Adopt all unanimous" (with run progress), and opens Agreement / per-paper DisagreementOverview via return-to-flag navigation
 ├── ScreeningSummary (src/components/ScreeningSummary.tsx)
 │     Modal: progress + PRISMA-style include/exclude/reason counts for a screening project
 ├── ScreeningImportDialog (src/components/ScreeningImportDialog.tsx)
@@ -233,9 +243,9 @@ App (src/App.tsx)
 ├── GitCloneDialog (src/components/GitCloneDialog.tsx)
 │     Import-from-git modal, driven by useGitStore's clone.phase: setup (URL + destination) → cloning (spinner + elapsed seconds) → error (git's exact text, back to setup) → done (pick the project JSON, opened inside the clone) — Electron only, see "Git" above
 ├── GitDialog (src/components/GitDialog.tsx)
-│     Modal for the open project's own repository: changes + diff, a commit message, Commit, Pull, Push — shown only when the toolbar's Git button is present. When the open project's own file is a tracked, field-diffable modification, its changes are reviewed field by field (Use/Ignore/Discard per row) instead of as one whole-file checkbox — see "Field-level commit review" below. When every row is marked Discard, the primary button relabels to "Discard all" (danger-red) and reverts marked rows directly via `runDiscard` without committing
+│     Modal for the open project's own repository: changes + diff, a commit message, Commit, Pull, Push — shown only when the toolbar's Git button is present. When the open project's own file is a tracked, field-diffable modification, its changes are reviewed field by field (Use/Ignore/Discard per row) instead of as one whole-file checkbox — see "Field-level commit review" below. When every row is marked Discard, the primary button relabels to "Discard all" (danger-red) and reverts marked rows directly via `runDiscard` without committing. When a Discard row is mixed in among Use rows, `mixedDiscardConfirmMessage()` warns that the Discard field's change will be lost on commit before proceeding
 ├── GitMergeDialog (src/components/GitMergeDialog.tsx)
-│     The pull's conflict-resolution list, grouped by paper (one collapsible section per paper, auto-collapsing when its last conflict is decided): your value left, the remote's right, an editable final value in the middle, with full-text wrapping instead of one-line clipping. No Escape, no backdrop-click, no × — see "Git" above for why
+│     The pull's conflict-resolution list, grouped by paper (one collapsible section per paper, auto-collapsing when its last conflict is decided): your value left, the remote's right, an editable final value in the middle, with full-text wrapping instead of one-line clipping. "Use all mine"/"Use all remote" exclude conflicts in another reviewer's own tree (`isForeignReview()`), badged "another reviewer", leaving them for individual ◀/▶ resolution. No Escape, no backdrop-click, no × — see "Git" above for why
 └── ErrorPanel (src/components/ErrorPanel.tsx)
       Modal overlay for load/save errors
 ```
@@ -468,14 +478,15 @@ entry* and lines them up.
 
 | Module | Does |
 | --- | --- |
-| `similarity.ts` | How alike two answers are, as `{score, weight}`. `weight` is what makes "agrees on five fields" outrank "agrees on one" — averaging scores alone cannot tell those apart, as both average to 1.0. Weight 0 means the pair said nothing (a field only one reviewer filled abstains rather than voting against). Text is `max(levenshtein ratio, token Dice)`; enums compare as labels, never as characters ("High"/"Low" overlap and mean the opposite); a `false` boolean carries no evidence, since every untouched boolean reads `false`; a `year` field is scored as an identity, not a magnitude — 1999 vs. 2999 scores 0 exactly like 1999 vs. 2000, because two different publication years are two different papers, not a near-match the way two head-counts might be (`valueSimilarity`'s dedicated `'year'` branch, checked before the `number` branch's relative-closeness scoring) |
+| `similarity.ts` | How alike two answers are, as `{score, weight}`. `weight` is what makes "agrees on five fields" outrank "agrees on one" — averaging scores alone cannot tell those apart, as both average to 1.0. Weight 0 means the pair said nothing (a field only one reviewer filled abstains rather than voting against). Text is `max(levenshtein ratio, token Dice)`; enums compare as labels, never as characters ("High"/"Low" overlap and mean the opposite); a `false` boolean carries no evidence in the matching context; a `year` field is scored as an identity, not a magnitude — 1999 vs. 2999 scores 0 exactly like 1999 vs. 2000, because two different publication years are two different papers, not a near-match the way two head-counts might be (`valueSimilarity`'s dedicated `'year'` branch, checked before the `number` branch's relative-closeness scoring) |
 | `assign.ts` | Hungarian max-weight assignment. Greedy is not merely worse but wrong here: one locally good pair can force two later entries into a much worse one, and greedy cannot trade the first against the second |
 | `align.ts` | The recursion. `alignNode` returns slots per repeatable node; `alignableNodes` lists what is worth doing |
 | `apply.ts` | Writes an alignment into the data |
 | `unanimous.ts` | Finds the fields every reviewer answered identically, for `adoptUnanimousValues` to fill. Owns `comparable()` — the one rule for "did they say the same answer", shared with `disagreements.ts` and the compare popup so the three cannot drift into different verdicts |
-| `disagreements.ts` | The per-field cross-reviewer verdict (`FieldVerdict`): who answered, which category their answer falls in, whether that is agreement. What both the overview and the statistics read |
+| `disagreements.ts` | The per-field cross-reviewer verdict (`FieldVerdict`): who answered, which category their answer falls in, whether that is agreement. Boolean fields use a different `answeredBy` test (`!== undefined && !== null` instead of `!isUnanswered`) so a present `false` counts as a real answer. What both the overview and the statistics read |
 | `metrics.ts` | Cohen's κ, Fleiss' κ, Krippendorff's α over abstract units × raters, each with an applicability check that explains refusal in a sentence. Knows nothing about papers or schemas, so it can be checked against published worked examples — and has been, including α with missing data |
-| `agreement.ts` | Turns `projectVerdicts` into a `MetricInput`. **Yes/no fields are excluded** — see below |
+| `agreement.ts` | Turns `projectVerdicts` into a `MetricInput`. Booleans are first-class answers (see below). Also produces `perField: FieldAgreement[]` — units bucketed by canonical field path, each with its own `MetricInput` for the per-field breakdown table |
+| `ConsolidationVerdicts` (`src/components/ConsolidationVerdicts.ts`) | `consolidationFieldStatus(answeredCount, reviewerCount, agree)` → `'agree'` / `'disagree'` / `undefined`. Computed once by `AnnotationPanel` via `useMemo`, shared to all `Field` components via `ConsolidationVerdictsContext` (a `ReadonlyMap` keyed by canonical field path); consumed by `Field.tsx` via `useConsolidationFieldStatus(canonical)` |
 
 **Matching cannot cross**, which is a requirement of the feature: a group's sub-entries are only
 ever matched *inside* an already-matched pair of parents, because the recursion never offers a
@@ -570,8 +581,7 @@ feature adds the missing align step for.
   any value can be read across it.
 - **Progress is reported as it runs**: `unanimousRun` (`{ done, total, filled, skipped, running }`)
   drives the button's own label while busy and a dismissible result banner once it finishes. The
-  button lives in `AnnotationPanel.tsx`'s Consolidation tools, alongside ⚖ Agreement and
-  ⚠ Disagreements.
+  button lives in `ConsolidationOverview.tsx`'s project-wide overview, alongside ⚖ Agreement.
 
 **A known, currently unfixed limitation, stated plainly rather than glossed over: the interactive
 per-paper path (`useConsolidationAlignment`, driving an ordinary Consolidation-seat paper view) does
@@ -602,12 +612,9 @@ where `reviewerStorageKey` deliberately persists nothing rather than risk restor
 wrong project. Those ask on **every** load. That is honest (the app genuinely cannot tell who you
 are) but it is the one case where the prompt is not a once-per-project event.
 
-`ReviewerPrompt` also renders a second, unrelated mode: a **mismatch** warning when the already-
-selected seat's recorded holder (`config.reviewerIdentities`) doesn't match this machine's own git
-identity — offering to take the seat or pick another, never blocking outright. See "Reviewer seat
-identity" in the Git section below for the full mechanism (why it's email-only, what it warns about,
-and why a project with no recorded identities is unaffected). The Toolbar's reviewer switch carries
-the same signal as a "Claimed by …" tooltip hint on each seat.
+Seat selection is a local view switch, not project data: it is persisted per project in
+`localStorage` only, never written to the project file, and never compared against anyone else's
+claim — so the copy explains that the selection is remembered only on this machine for this project.
 
 ### Readiness: what Consolidation can act on (`readiness.ts`)
 
@@ -636,8 +643,30 @@ guard is needed there.
 
 ### Agreement and the disagreement overview
 
-Two buttons sit in `.annotations-head-row` in the Consolidation seat only — the slot the ✦ AI button
-occupies elsewhere.
+The Consolidation seat's UI uses a **layered navigation** of modals:
+
+```
+ConsolidationOverview (project-wide, modal)
+  ├─ "Adopt all unanimous" batch action + run-progress display  (moved here from AnnotationPanel)
+  ├─ "Agreement" → AgreementDialog (overview restored on close)
+  └─ Paper row click → DisagreementOverview (per-current-paper, modal)
+       ├─ "Overview" button → back to ConsolidationOverview
+       └─ Field click → ConsolidationDialog (field comparison popup)
+            ├─ reviewer answers to pick from
+            ├─ "Enter a different value" (defer)
+            └─ on close → returns to DisagreementOverview (via returnToDisagreements flag)
+```
+
+`AnnotationPanel` now shows two buttons in the Consolidation seat: **☰ Overview** (opens
+`ConsolidationOverview`) and **⚠ Disagreements** (opens the per-paper `DisagreementOverview`).
+Navigation between modals uses return-to flags in the store
+(`agreementReturnToOverview`, `disagreementsReturnToOverview`, `returnToDisagreements`) so closing
+one modal restores the one that opened it.
+
+**ConsolidationOverview** (`src/components/ConsolidationOverview.tsx`) lists all papers that have ≥1
+disagreement (count per paper), filterable by text search. It houses the **"Adopt all unanimous"**
+batch action with its run-progress display and post-run summary notice. Its **"Agreement"** button
+opens `AgreementDialog`; clicking a paper row opens the per-paper `DisagreementOverview`.
 
 **⚖ Agreement** (`AgreementDialog`) computes the coefficients the reviewer ticks. A **unit** is one
 annotation field on one paper; `agreement.ts` includes only the fields **at least two reviewers
@@ -652,9 +681,28 @@ verbatim on hover — those strings are written as complete user-facing sentence
 Fleiss' needs every reviewer to have rated every unit; Krippendorff's α survives both, which is why
 it is worth having all three.
 
+The dialog also renders a **per-field breakdown table** (`PerFieldTable`) — each metric's coefficient
+bucketed by schema field, so incomparable category spaces (a `Year` field and free-text `Claim` do not
+share categories) are no longer pooled into one misleading number. A **"Copy as TSV"** button exports
+the table. An **alignment warning** banner appears when ≥2 reviewers recorded entries in a repeatable
+group that Consolidation hasn't aligned yet, with a "Line them up now" button that triggers
+`adoptAllUnanimousAnnotations()`.
+
 **⚠ Disagreements** (`DisagreementOverview`) lists every field where the answering reviewers gave
-different categories, grouped by paper; a row jumps to it (`selectPaper` → `openConsolidation`), which
-is the point — finding a disagreement is useless if you then have to hunt for it.
+different categories, filtered to the **current paper only** (it was project-wide before; the
+project-wide view now lives in `ConsolidationOverview`). A row jumps to it (`selectPaper` →
+`openConsolidation`), which is the point — finding a disagreement is useless if you then have to
+hunt for it.
+
+### Per-field verdict coloring (`ConsolidationVerdicts`)
+
+`src/components/ConsolidationVerdicts.ts` provides a React context that gives every `Field` component
+its per-field consolidation status at a glance. `AnnotationPanel` computes a
+`Map<string, ConsolidationFieldStatus>` once per render (via `consolidationFieldStatus()`) and shares
+it through `ConsolidationVerdictsContext`. `Field.tsx` reads
+`useConsolidationFieldStatus(canonical)` and adds a `consolidation-agree` (green) or
+`consolidation-disagree` (red) CSS class — green when all reviewers answered and agree, red when ≥2
+answered and disagree.
 
 ### What the agreement numbers do and do not cover
 
@@ -662,16 +710,18 @@ The three coefficients themselves are verified against published worked
 examples, including Krippendorff's α with missing data. Two things about the
 *input* are worth knowing before quoting a number from this dialog.
 
-**Yes/no fields are excluded, and the dialog says how many.** Every untouched
-boolean reads `false`, so nothing distinguishes "considered it and said no" from
-"never looked" — the same fact that makes `isUnanswered` treat an unticked box as
-unanswered and `similarity.ts` give a `false` no weight. Before this exclusion a
-boolean reached the two-answer gate only when *every* reviewer ticked it true, so
-a true/false split was dropped and false/false scored nothing: the only boolean
-units that survived were guaranteed agreements, and every real boolean
-disagreement was discarded. The coefficient came out **higher** than the truth
-(κ 0.500 measured where the honest value was 0.000), which for a published
-statistic is the worst direction to be wrong in.
+**Yes/no fields are now first-class answers.** Previously boolean fields were
+excluded entirely from agreement statistics — the rationale was that an unticked
+box (`false`) is indistinguishable from "never looked at" — but this meant the
+only boolean units that survived the `answeredBy.length >= 2` gate were
+guaranteed agreements (both ticked `true`), and **every real boolean
+disagreement was silently discarded**. The coefficient came out higher than the
+truth (κ 0.500 measured where the honest value was 0.000). Booleans are now
+treated as real answers: `disagreements.ts`' `walk()` uses a different
+`answeredBy` test for booleans — `values[r] !== undefined && values[r] !== null`
+instead of `!isUnanswered(def, values[r])` — so a present `false` counts as a
+real answer, and a true/false split between two reviewers registers as a
+disagreement.
 
 **Repeatable-group entries are compared in stored order, not aligned order.**
 This is the known limitation described under `disagreements.ts`, and the metrics
@@ -680,14 +730,23 @@ score as disagreeing. Since this dialog computes over the whole project while
 alignment runs only on papers someone has opened in Consolidation, a coefficient
 from an un-consolidated project can be arbitrarily pessimistic — κ = −0.333
 measured on a two-paper case whose true value is 1.0. Align the papers first.
+`needsAlignment()`/`needsAlignmentCount()` (`readiness.ts`) detect papers where
+≥2 reviewers recorded entries in a repeatable group that Consolidation hasn't
+reviewed yet; `AgreementDialog` shows a warning banner with a "Line them up now"
+button that triggers `adoptAllUnanimousAnnotations()` to align + adopt.
 
-**All fields share one category universe.** `agreementInput` pools every field of
-every paper into one unit list, so p_e is computed over a merged marginal
-distribution mixing enum labels and free-text answers. Free text contributes
-near-unique categories, which drives p_e toward 0 and κ toward raw percent
-agreement: an enum field with honest κ 0.0 and a free-text field with honest
-κ 1.0 pool to 0.706. Screening escapes this — `decisionOnly` narrows to the
-Decision enum, and that path is sound.
+**All fields share one pooled category universe for the headline coefficient.**
+`agreementInput` pools every field of every paper into one unit list, so p_e is
+computed over a merged marginal distribution mixing enum labels and free-text
+answers. Free text contributes near-unique categories, which drives p_e toward
+0 and κ toward raw percent agreement: an enum field with honest κ 0.0 and a
+free-text field with honest κ 1.0 pool to 0.706. Screening escapes this —
+`decisionOnly` narrows to the Decision enum, and that path is sound. A
+**per-field breakdown table** (`perField`) mitigates this for the reader: each
+field gets its own coefficient (bucketed by canonical path joined with `/`),
+rendered in `AgreementDialog`'s `PerFieldTable`, with a "Copy as TSV" button
+(`perFieldTsv()`). Cells show `—` when a metric isn't applicable, and blank
+when the coefficient is `null` (e.g. perfect agreement on one unit).
 
 ### Semantic equality (`Paper.equal`)
 
@@ -783,13 +842,16 @@ extra ⇄ button next to the existing ⧉ grab-from-PDF button (and, for a boole
 checkbox) that opens `ConsolidationDialog` for that exact field path. The dialog lists every
 reviewer's raw value for the path (via the same `peekValue`/`fieldPath` machinery `store.ts`
 already uses, and `resolvePath` from `src/llm/paths.ts` to resolve the `ResolvedDef` for display),
-including reviewers who left it empty, and flags whether the answered reviewers agree. Clicking a
-row calls the ordinary `setFieldValue` — Consolidation *is* the active reviewer while the dialog
-is open, so that write already lands in `paper.annotations` via `currentTree()`'s routing; nothing
-dialog-specific exists on the store side beyond `consolidationTarget`/`openConsolidation`/
-`closeConsolidation`. Closing without picking changes nothing. Follows the same modal pattern as
-`ValidationDialog` (`.modal-overlay` → `.modal` → `.modal-head` + `.modal-body`, Escape-to-close,
-backdrop click).
+including reviewers who left it empty, and flags whether the answered reviewers agree. Picking a
+reviewer's value calls `resolveConsolidationValue` — which writes the value, marks the field equal,
+and clears any deferral in one undo step. Taking a reviewer's **blank** answer calls
+`deferConsolidationValue` instead of writing an empty value — the field stays marked as "pending a
+different value" rather than silently leaving a hole. An **"Enter a different value"** button defers
+and closes the dialog, letting the consolidator type a custom answer directly in the annotation
+panel; a deferred field gets a `consolidation-pending` CSS class, and entering a non-empty value via
+`setFieldValue` auto-clears the deferral and adds the field to `paper.equal`. `openConsolidation`
+accepts a `returnToDisagreements` flag so `closeConsolidation` reopens the per-paper disagreement
+list when the dialog was opened from it. Closing without picking changes nothing.
 
 **AI marks and AI-assisted annotation** are reviewer-scoped too — see "AI marks" below and
 `unansweredFields`'s call site in `aiStore.ts`'s `openDialog()`, which now proposes values for the
@@ -1297,8 +1359,8 @@ other capability gaps — `getOsInfo(): OsInfo | null`, `needsPdfFolderGrant()` 
 Electron (there is no such prompt there), the pathless `rebasePdfPaths` — and it is expressed in the
 type system, not left as a runtime convention: `PlatformAdapter.getGit(): GitPlatform | null`
 returns `null` in the browser, so a caller cannot invoke a git operation without first proving the
-runtime has one. A flat `GitPlatform` capability object rather than sixteen individual methods on
-`PlatformAdapter` is deliberate too: sixteen flat methods would mean sixteen browser stubs, each of
+runtime has one. A flat `GitPlatform` capability object rather than fifteen individual methods on
+`PlatformAdapter` is deliberate too: fifteen flat methods would mean fifteen browser stubs, each of
 which either throws at runtime or silently no-ops — "unavailable" would be something a caller
 discovers by calling it, not something the type checker catches for them. `getOsInfo(): OsInfo |
 null` already established the pattern this follows.
@@ -1334,9 +1396,9 @@ when the *project* turned it off (`config.ai: false`).
 
 ### The renderer never names an argv
 
-Every git operation the renderer can ask for is one of sixteen enumerated IPC handlers in
+Every git operation the renderer can ask for is one of fifteen enumerated IPC handlers in
 `electron/main.ts` (`git:probe`, `git:pickCloneDir`, `git:clone`, `git:pickProjectIn`, `git:info`,
-`git:identity`, `git:status`, `git:headContent`, `git:workingContent`, `git:commitPartial`,
+`git:status`, `git:headContent`, `git:workingContent`, `git:commitPartial`,
 `git:commit`, `git:push`, `git:pullBegin`, `git:pullFinish`, `git:pullAbort`, `git:writeWorking`) — never a general
 `git <args>` channel. Git has `--exec-path`, aliases, and the `ext::` remote-helper
 transport; a channel that let the renderer choose the argv would be handing it arbitrary code
@@ -1452,50 +1514,6 @@ it), rejects Windows absolute forms explicitly, and rejects any `.git` segment �
 path, but never project data, and a write-to-`hooks` primitive. That comparison strips trailing dots
 and spaces and lowercases, because Win32 strips them from path components itself, so `.git.\config`,
 ` .git/config` and `.GIT/config` all reach the same directory.
-
-### Reviewer seat identity
-
-Which reviewer "you" are on a multi-reviewer project (`currentReviewer`, see "Multiple reviewers &
-Consolidation" above) used to be decided **per machine**: a seat choice in `localStorage`, keyed by
-clone path, with nothing in the project file recording who actually held which seat. Two different
-people who each clone the repository and both pick "Reviewer 1" are invisible to each other — their
-independently-annotated trees merge field by field with **zero conflicts raised**, producing one
-chimeric tree that silently blends two people's answers. `src/model/identity.ts` (a pure module) and
-`Project.reviewerIdentities: Record<string, ReviewerIdentity>` (written to the file as
-`config.reviewerIdentities`, keyed `"1".."N"` and the literal `"consolidation"`) exist to record the
-claim in the one place both reviewers actually share: the file itself.
-
-- **`ReviewerIdentity = { email: string; name?: string }`.** `sameIdentity(a, b)` compares **email
-  only** — `name` is never read — specifically so a reviewer who re-spells their display name
-  ("J. Keim" → "Jan Keim") never manufactures a false mismatch or a false merge conflict; email is
-  the thing git itself already treats as a stable identity (`user.email`).
-- **`checkSeat(identities, seat, myEmail)`** returns `{ kind: 'ok' }` or `{ kind: 'mismatch', holder
-  }`. It is silent (`'ok'`) whenever `myEmail` is `null` — no git identity to compare against, which
-  covers a solo user, the browser build (`getGit()` is `null`, so identity is never fetched), and a
-  seat nobody has claimed yet.
-- **`git config user.email`/`user.name`** are read via `git:identity` — an enumerated IPC handler
-  in `electron/main.ts` (see "The renderer never names an argv" below for the full list), exposed through `preload.ts` as `gitIdentity`, typed as
-  `GitPlatform.identity(root): Promise<GitIdentity>` in `src/git/types.ts`, and implemented in
-  `src/platform/electron.ts`. Read with the repository itself as the working directory, not once per
-  launch — `user.email` is routinely set per-repository, and a reviewer who took that care is exactly
-  who must not be told they are someone else. An unset key exits non-zero with no output, read back as
-  `''` rather than an error: "no identity here" is not a failure.
-- **`gitStore.ts`'s `refreshRepo`** fetches this identity alongside the ordinary repo status, guarding
-  against the same open-project-changed-underneath-it race the rest of `refreshRepo` already guards
-  against.
-- **On mismatch, the app warns — it never hard-blocks.** `ReviewerPrompt` gains a second render mode:
-  when the currently-selected seat's recorded holder's email doesn't match this machine's git email,
-  it offers **Take this seat** (writes this identity into `reviewerIdentities` for that seat) or
-  **Pick a different seat**, rather than silently proceeding or refusing to open the project.
-  `Toolbar.tsx`'s reviewer switch adds a "Claimed by …" hint to each seat's tooltip (and an
-  `is-mismatch` styling hook) so the seat-holder is visible before a reviewer even picks one. A file
-  with no `reviewerIdentities` at all, or a seat nobody has claimed yet, hits none of this — back
-  compat is exact: a plain `reviewers: 2` file with no identities loads and behaves exactly as before
-  this feature existed.
-- **`mergeProjects` refuses** when two *different* emails claim the same seat (see "What refuses, and
-  why" above) and **`detectFieldChanges` treats any `reviewerIdentities` difference as structural**
-  (see "Field-level commit review" above) — claiming a seat is a configuration fact, not an
-  annotation with a value a reviewer picks between.
 
 ### The module layout
 
@@ -1643,13 +1661,9 @@ it from the code side.
   refusing an entire merge over two people renaming the review would be absurd. Two more refuse for
   two different reasons: `provenance` is a nested record no `FieldConflict` shape can express, not
   something that reshapes the file — the common case (only one side ever sets it) still resolves
-  cleanly with no refusal at all. `config.reviewerIdentities.<seat>` refuses **per seat**, and only
-  when the two sides name **different emails** for the same seat (compared via `sameIdentity` —
-  email only, so a name-only edit merges silently); a name-only difference is not this feature's
-  hazard and must not force a refusal on its own. This is deliberately a refusal, not a conflict row:
-  a conflict row can be clicked through without a second thought, and clicking through is exactly how
-  the chimeric reviews tree this feature exists to prevent gets built — see `identity.ts`'s module
-  doc and "Reviewer seat identity" above.
+  cleanly with no refusal at all. `protocol` is here for the same reason — a nested record no
+  `FieldConflict` row can express, and half-dropping a reviewer's authored protocol is worse than
+  asking them to reconcile it.
 - **The paper-deletion asymmetry.** A paper one side deleted and the other side *changed* is kept,
   with a note, never silently deleted — a field-level UI cannot ask "keep or delete this paper", and
   the two failure directions are not symmetric (a paper nobody wanted is one click from gone; deleted
@@ -1700,14 +1714,10 @@ difference is something the reviewer decides about, not something that might res
 
 **A structural difference refuses field-level review entirely, falling back to the plain file
 checkbox** — the same refusal list `mergeProjects` uses (`config.schema`, `config.reviewers`,
-`config.ai`, `config.screening`, `config.reviewerIdentities`, `version`, `provenance`, root
+`config.ai`, `config.screening`, `version`, `provenance`, `protocol`, root
 `extra`): once the schema itself might differ, "which fields changed" stops being a question with
-a field-level answer. `provenance` is here for a different reason than the rest — it doesn't
-reshape anything, it's just a nested record no `FieldConflict` row can express. `reviewerIdentities`
-is here because claiming a seat isn't an annotation with a "which value do I want" answer; the cost
-is bounded and self-healing — only the one commit that first claims a seat falls back to the
-whole-file checkbox (which still commits it), every commit after that sees `head` and `working`
-already agree and field-level review resumes.
+a field-level answer. `provenance` and `protocol` are here for a different reason than the rest —
+they don't reshape anything, they're just nested records no `FieldConflict` row can express.
 
 **Coupled fields are bundled into one row.** `PAPER_META_BUNDLES` maps `abstract` to its hidden
 dependent, `abstractFromPdf` — the disclosure flag is not an independent fact a reviewer chooses
@@ -1824,7 +1834,6 @@ until every row is decided) leave.
   - `git:clone` — validates the URL/destination (`src/git/url.ts`), then `git clone -- <url> <dest>`
   - `git:pickProjectIn` — `dialog.showOpenDialog` with `defaultPath: dir`, the mechanism that opens the picker already inside a freshly cloned repository
   - `git:info` — `rev-parse --is-inside-work-tree` / `--show-toplevel` / `--show-prefix`, branch, upstream, whether `HEAD` exists
-  - `git:identity` — `git config --get user.email` / `user.name`, run with the repository as cwd; an unset key comes back as `''`, never an error — see "Reviewer seat identity" above
   - `git:status` — raw `status --porcelain=v1 -z` + `diff --no-color HEAD --`, parsed on the renderer side (`src/git/output.ts`)
   - `git:headContent` / `git:workingContent` — the project file's text at `HEAD` (`git show HEAD:relPath`) and on disk (a plain, side-effect-free read); the two inputs `detectFieldChanges` compares for the commit panel's field-level review
   - `git:commitPartial` — the write → `add` + `commit` → write-back sequence field-level commit review needs, since git has no native partial-file staging primitive; see "Field-level commit review" above
@@ -1837,11 +1846,13 @@ until every row is decided) leave.
   - The **View** menu is hand-built (not the default `{ role: 'viewMenu' }`) and deliberately omits zoom roles so that `Ctrl +/-/0` reach the renderer for PDF zoom (and `Ctrl+Shift +/-/0` for app font scaling) instead of triggering native browser/Electron zoom.
 - **Unsaved-changes quit flow**: a window `close` handler (`promptUnsavedChanges`) intercepts the close/quit when `isDirty` is set, and shows a native **Save / Don't Save / Cancel** dialog. "Save" asks the renderer to save (`app:requestSave`) and closes once it reports back; "Don't Save" closes discarding changes. A `before-quit` flag lets the guard resume `app.quit()` after confirmation (so Cmd+Q fully quits on macOS, where destroying the window alone would not).
 
-**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods: `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, plus the quit/menu coordination — `setDirty`, `onRequestSave`, `saveComplete`, `onUndo`, `onRedo` — and the sixteen `git*` methods (`gitProbe`, `gitPickCloneDir`, `gitClone`, `gitPickProjectIn`, `gitInfo`, `gitIdentity`, `gitStatus`, `gitHeadContent`, `gitWorkingContent`, `gitCommitPartial`, `gitCommit`, `gitPush`, `gitPullBegin`, `gitPullFinish`, `gitPullAbort`, `gitWriteWorking`) mirroring the `git:*` IPC handlers one for one. This `window.slr` object is the detection signal for `isElectron()`.
+**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods: `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, plus the quit/menu coordination — `setDirty`, `onRequestSave`, `saveComplete`, `onUndo`, `onRedo` — and the fifteen `git*` methods (`gitProbe`, `gitPickCloneDir`, `gitClone`, `gitPickProjectIn`, `gitInfo`, `gitStatus`, `gitHeadContent`, `gitWorkingContent`, `gitCommitPartial`, `gitCommit`, `gitPush`, `gitPullBegin`, `gitPullFinish`, `gitPullAbort`, `gitWriteWorking`) mirroring the `git:*` IPC handlers one for one. This `window.slr` object is the detection signal for `isElectron()`.
 
 ## Hooks
 
-- **`useKeybindings`** (`src/hooks/useKeybindings.ts`): Global keyboard shortcuts registered on `window.keydown`. Handles open (Ctrl/Cmd+O), save (Ctrl/Cmd+S), save-as (Ctrl/Cmd+Shift+S), paper navigation (Alt+↓/↑, `[`/`]`), zoom/font (Ctrl/Cmd + `+/=/-`/`0` → PDF zoom; add Shift → app font size), and help (F1). Paper navigation skips when typing in a field (unless Alt is held). Zoom/font detection matches `e.key` and `e.code` to handle numpad and international layouts; reset is detected by the digit-0 `e.code` (Shift-independent) to avoid the German Shift+0 → `=` clash. Copy/cut/paste/undo are left to the browser/Electron Edit menu.
+- **`useAutosave`** (`src/hooks/useAutosave.ts`): Periodically saves unsaved annotation changes every 5 minutes when `autosaveEnabled` is on (opt-in, default off, toggled from the Save menu). Skipped while the project editor is open, since `save()` here writes the annotation `project` state, not the editor's own draft. Only fires when `dirty && !busy`.
+
+- **`useKeybindings`** (`src/hooks/useKeybindings.ts`): Global keyboard shortcuts registered on `window.keydown`. Handles open (Ctrl/Cmd+O), save (Ctrl/Cmd+S), save-as (Ctrl/Cmd+Shift+S), paper navigation (Alt+↓/↑, `[`/`]`), zoom/font (Ctrl/Cmd + `+/=/-`/`0` → PDF zoom; add Shift → app font size), and help (F1). Paper navigation skips when typing in a field (unless Alt is held). Zoom/font detection matches `e.key` and `e.code` to handle numpad and international layouts; reset is detected by the digit-0 `e.code` (Shift-independent) to avoid the German Shift+0 → `=` clash. Copy/cut/paste/undo are left to the browser/Electron Edit menu. Paper stepping (`[`/`]` and Alt+Arrow) walks the filtered/searched paper list by querying the DOM for `.paper-list [role="option"][data-paper-id]` rows, falling back to the raw project order only when the sidebar is collapsed — so keyboard stepping and the visible list never disagree about what "next" means.
 
   **Bare-key bindings are suppressed while anything blocking is on screen.** The screening decision
   keys (`I`/`E`/`U`, `1`–`9`) and paper navigation act on the paper *behind* a dialog, invisibly, so
@@ -1871,6 +1882,7 @@ App appearance is controlled by a settings module that persists to `localStorage
 - **Theme**: `'light' | 'dark'` — defaults to OS preference (`prefers-color-scheme`) on first load. `applyTheme()` sets `document.documentElement.dataset.theme`. CSS uses `:root[data-theme='dark']` selectors so the theme is user-controlled, not OS-only.
 - **Font scale**: float from 0.7 to 2.0 (step 0.1). `applyFontScale()` sets the `--app-font-scale` CSS variable on `<html>`. The base font size is `calc(14px * var(--app-font-scale))` and most text sizes use `rem` units so they scale proportionally. The PDF paper itself is always rendered on a white background regardless of theme.
 - **Pane widths**: the left (paper list) and right (annotations) pane widths are persisted via `loadPaneWidths()` / `savePaneWidths()` (localStorage, clamped). `App.tsx` holds them in state, applies them as the workspace grid template, and updates them as the `Splitter` drag handles are dragged.
+- **Autosave**: `loadAutosaveEnabled()` reads from localStorage (`slr.autosave` key), returns `true` only when the stored value is `'1'` — off by default. `saveAutosaveEnabled(enabled)` persists changes. The store reads the initial value on app start and exposes `setAutosaveEnabled()` to toggle it from the Save menu. `useAutosave` (see Hooks above) is the consumer.
 
 `src/main.tsx` calls `applyTheme(loadTheme())` and `applyFontScale(loadFontScale())` before rendering React to avoid a flash of unstyled or wrong-theme content on startup.
 

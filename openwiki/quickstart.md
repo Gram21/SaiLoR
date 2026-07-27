@@ -80,6 +80,7 @@ npm run typecheck
 │   │   ├── project.ts     loadProject / serializeProject, Paper/Project types, deepEqualJson
 │   │   ├── pdfMeta.ts     Best-effort title/author/abstract extraction from a PDF (metadata, then layout heuristic)
 │   │   ├── validate.ts    Checks annotated papers (required / type / enum / cardinality); unannotated papers are skipped, not flagged
+│   │   ├── linkify.ts     Splits free text into plain-text and URL segments for rendering clickable links in descriptions
 │   │   ├── version.ts     Update check against the GitHub releases API (silent while the repo is private)
 │   │   └── model.test.ts  Vitest unit tests for the model
 │   ├── screening/          Screening mode: derived schema, pure logic (unit-tested)
@@ -125,7 +126,9 @@ npm run typecheck
 │   │   ├── SchemaTreeEditor.tsx Drag-and-drop annotation-schema builder (reorder + nest)
 │   │   ├── ScreeningReasonsEditor.tsx  Replaces SchemaTreeEditor when the draft is a screening project
 │   │   ├── PapersEditor.tsx     Add/edit/reorder the PDFs (and abstracts) the project references
-│   │   ├── ValidationDialog.tsx  "Validate" results, grouped by paper, plus a separate "not annotated yet" list
+│   │   ├── ConsolidationOverview.tsx Project-wide modal for Consolidation batch actions (disagreement list, Adopt all unanimous, opens Agreement/disagreements)
+│   │   ├── ConsolidationVerdicts.ts Per-field agree/disagree status via React Context (consumed by Field.tsx)
+│   │   ├── ConsolidationDialog.tsx Modal: every reviewer's answer for one field; resolve, defer, or enter a different value
 │   │   ├── ClosePrompt.tsx      Save / Don't Save / Cancel when closing a dirty project
 │   │   ├── GitCloneDialog.tsx   Import-from-git modal: URL + destination → clone → pick the project JSON
 │   │   ├── GitDialog.tsx        Changes + diff, commit message, Pull, Push
@@ -133,7 +136,8 @@ npm run typecheck
 │   │   ├── HelpDialog.tsx Modal with app intro + keyboard shortcuts (mode-aware, incl. screening)
 │   │   └── ErrorPanel.tsx Error overlay for load/save failures
 │   ├── hooks/
-│   │   ├── useKeybindings.ts       Open, save, save-as, undo/redo, paper nav, PDF zoom / font size, help
+│   │   ├── useKeybindings.ts       Open, save, save-as, undo/redo, paper nav (filtered list order), PDF zoom / font size, help
+│   │   ├── useAutosave.ts          Periodic 5-min autosave (opt-in, skipped while editor is open)
 │   │   ├── useDirtyGuard.ts        beforeunload guard when dirty (browser only)
 │   │   └── useElectronCloseGuard.ts  Electron quit dialog + Edit-menu undo/redo IPC wiring
 │   ├── App.tsx            Component composition, ?project= auto-load, welcome screen with recents, HelpDialog
