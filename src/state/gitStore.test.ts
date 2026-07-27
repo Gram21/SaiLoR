@@ -1,6 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { RecentEntry, SaveHandle } from '../platform/adapter'
-import type { GitPlatform, GitRepoInfo, GitRun, PullStart, GitFileChange, SplitProject } from '../git/types'
+import type {
+  GitPlatform,
+  GitRepoInfo,
+  GitRun,
+  PullStart,
+  GitFileChange,
+  SplitProject,
+  GitBranch,
+  BranchSwitchStart,
+} from '../git/types'
 import { conflictId, type FieldConflict } from '../git/merge'
 
 /**
@@ -88,6 +97,15 @@ let commitCalls: { root: string; paths: string[]; message: string }[] = []
 let writeWorkingResult: GitRun = ok()
 let writeWorkingCalls: { root: string; relPath: string; working: SplitProject }[] = []
 
+let branchesResult: GitBranch[] = []
+let checkoutCalls: { root: string; branch: string }[] = []
+let checkoutResult: GitRun = ok()
+let beginBranchSwitchResult: BranchSwitchStart = { kind: 'no-changes' }
+let branchSwitchFinishCalls: { root: string; relPath: string; resolved: SplitProject }[] = []
+let branchSwitchFinishResult: GitRun = ok()
+let branchSwitchAbortCalls: { root: string; sourceBranch: string }[] = []
+let branchSwitchAbortResult: GitRun = ok()
+
 /** A `SplitProject`'s `files` entry with non-null text at `relPath`, parsed. */
 function fileContent(split: SplitProject, relPath: string): unknown {
   const f = split.files.find((f) => f.relPath === relPath)
@@ -124,6 +142,20 @@ const fakeGit: GitPlatform = {
   writeWorking: async (root, relPath, working) => {
     writeWorkingCalls.push({ root, relPath, working })
     return writeWorkingResult
+  },
+  branches: async () => branchesResult,
+  checkoutBranch: async (root, branch) => {
+    checkoutCalls.push({ root, branch })
+    return checkoutResult
+  },
+  beginBranchSwitch: async () => beginBranchSwitchResult,
+  finishBranchSwitch: async (root, relPath, resolved) => {
+    branchSwitchFinishCalls.push({ root, relPath, resolved })
+    return branchSwitchFinishResult
+  },
+  abortBranchSwitch: async (root, sourceBranch) => {
+    branchSwitchAbortCalls.push({ root, sourceBranch })
+    return branchSwitchAbortResult
   },
 }
 
@@ -177,6 +209,14 @@ beforeEach(async () => {
   commitCalls = []
   writeWorkingResult = ok()
   writeWorkingCalls = []
+  branchesResult = []
+  checkoutCalls = []
+  checkoutResult = ok()
+  beginBranchSwitchResult = { kind: 'no-changes' }
+  branchSwitchFinishCalls = []
+  branchSwitchFinishResult = ok()
+  branchSwitchAbortCalls = []
+  branchSwitchAbortResult = ok()
   useStore.getState().loadFromText(projectText('mine'), { kind: 'electron', path: '/repo/review.json' }, 'review.json')
   useStore.setState({ dirty: false })
   useGitStore.setState({ probe: null, repo: { ...REPO }, clone: null, panel: null })
@@ -562,6 +602,7 @@ describe('takeAll — scoped bulk resolution', () => {
       panel: {
         ...s.panel!,
         merge: {
+          source: { kind: 'pull' },
           ref: 'origin/main',
           merged: useStore.getState().project!,
           conflicts: [mine, theirsOwn],
@@ -588,5 +629,150 @@ describe('takeAll — scoped bulk resolution', () => {
     expect(merge.decided[mine.id]).toBe(true)
     expect(merge.resolutions[theirsOwn.id]).toBeUndefined()
     expect(merge.decided[theirsOwn.id]).toBeUndefined()
+  })
+})
+
+describe('requestSwitchBranch / resolveBranchSwitchPrompt', () => {
+  it('switches straight away when nothing is uncommitted — no prompt', async () => {
+    statusChanges = []
+    await useGitStore.getState().refreshStatus()
+
+    useGitStore.getState().requestSwitchBranch('feature')
+    // requestSwitchBranch fires the checkout as a floating promise — give it
+    // a tick to land before asserting.
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(useGitStore.getState().panel?.branchSwitchPrompt).toBeNull()
+    expect(checkoutCalls).toEqual([{ root: '/repo', branch: 'feature' }])
+  })
+
+  it('is a no-op for the branch already checked out', () => {
+    useGitStore.getState().requestSwitchBranch('main')
+    expect(checkoutCalls).toEqual([])
+    expect(useGitStore.getState().panel?.branchSwitchPrompt).toBeNull()
+  })
+
+  it('opens the three-way prompt when the project has uncommitted changes', async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    await useGitStore.getState().refreshStatus()
+
+    useGitStore.getState().requestSwitchBranch('feature')
+    expect(useGitStore.getState().panel?.branchSwitchPrompt).toEqual({ branch: 'feature' })
+    expect(checkoutCalls).toEqual([])
+  })
+
+  it('"cancel" and "commitFirst" both just close the prompt — nothing is touched', async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    await useGitStore.getState().refreshStatus()
+    useGitStore.getState().requestSwitchBranch('feature')
+
+    await useGitStore.getState().resolveBranchSwitchPrompt('cancel')
+    expect(useGitStore.getState().panel?.branchSwitchPrompt).toBeNull()
+    expect(checkoutCalls).toEqual([])
+    expect(checkoutCalls.length + branchSwitchFinishCalls.length).toBe(0)
+
+    useGitStore.getState().requestSwitchBranch('feature')
+    await useGitStore.getState().resolveBranchSwitchPrompt('commitFirst')
+    expect(useGitStore.getState().panel?.branchSwitchPrompt).toBeNull()
+    expect(checkoutCalls).toEqual([])
+    expect(branchSwitchFinishCalls).toEqual([])
+  })
+
+  it('"carryOver" refuses when something outside the project is also dirty', async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    await useGitStore.getState().refreshStatus()
+    useGitStore.getState().requestSwitchBranch('feature')
+
+    beginBranchSwitchResult = { kind: 'other-files-dirty', paths: ['README.md'] }
+    await useGitStore.getState().resolveBranchSwitchPrompt('carryOver')
+
+    expect(useGitStore.getState().panel?.error).toMatch(/README\.md/)
+    expect(branchSwitchFinishCalls).toEqual([])
+  })
+
+  it('"carryOver" with no conflicts: finishes automatically', async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    await useGitStore.getState().refreshStatus()
+    useGitStore.getState().requestSwitchBranch('feature')
+
+    beginBranchSwitchResult = {
+      kind: 'merge',
+      sourceBranch: 'main',
+      base: projectText(null),
+      ours: projectText('mine'),
+      theirs: projectText(null), // unchanged on theirs' side — no conflict
+    }
+    await useGitStore.getState().resolveBranchSwitchPrompt('carryOver')
+
+    expect(branchSwitchFinishCalls).toHaveLength(1)
+    const written = fileContent(branchSwitchFinishCalls[0].resolved, 'a/consolidated.json') as {
+      annotations: Record<string, { value: unknown }[]>
+    }
+    expect(written.annotations['Study Type'][0].value).toBe('mine')
+    expect(useGitStore.getState().panel?.notice).toMatch(/feature/)
+    expect(useGitStore.getState().panel?.merge).toBeNull()
+  })
+
+  it('"carryOver" with a real conflict opens the resolution dialog, tagged as a branch-switch', async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    await useGitStore.getState().refreshStatus()
+    useGitStore.getState().requestSwitchBranch('feature')
+
+    beginBranchSwitchResult = {
+      kind: 'merge',
+      sourceBranch: 'main',
+      base: projectText(null),
+      ours: projectText('mine'),
+      theirs: projectText('theirs'),
+    }
+    await useGitStore.getState().resolveBranchSwitchPrompt('carryOver')
+
+    const merge = useGitStore.getState().panel?.merge
+    expect(merge).not.toBeNull()
+    expect(merge?.source).toEqual({ kind: 'branch-switch', sourceBranch: 'main' })
+    expect(merge?.ref).toBe('feature')
+    expect(merge?.conflicts).toHaveLength(1)
+    expect(branchSwitchFinishCalls).toEqual([])
+  })
+
+  it('cancelling a branch-switch merge calls abortBranchSwitch with the source branch, not abortPull', async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    await useGitStore.getState().refreshStatus()
+    useGitStore.getState().requestSwitchBranch('feature')
+    beginBranchSwitchResult = {
+      kind: 'merge',
+      sourceBranch: 'main',
+      base: projectText(null),
+      ours: projectText('mine'),
+      theirs: projectText('theirs'),
+    }
+    await useGitStore.getState().resolveBranchSwitchPrompt('carryOver')
+
+    await useGitStore.getState().cancelMerge()
+
+    expect(branchSwitchAbortCalls).toEqual([{ root: '/repo', sourceBranch: 'main' }])
+    expect(abortCalls).toBe(0) // the pull-specific abort, untouched
+    expect(useGitStore.getState().panel?.merge).toBeNull()
+  })
+
+  it('finishing a branch-switch merge calls finishBranchSwitch, not finishPull', async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    await useGitStore.getState().refreshStatus()
+    useGitStore.getState().requestSwitchBranch('feature')
+    beginBranchSwitchResult = {
+      kind: 'merge',
+      sourceBranch: 'main',
+      base: projectText(null),
+      ours: projectText('mine'),
+      theirs: projectText('theirs'),
+    }
+    await useGitStore.getState().resolveBranchSwitchPrompt('carryOver')
+
+    useGitStore.getState().takeAll('ours')
+    await useGitStore.getState().finishMerge()
+
+    expect(branchSwitchFinishCalls).toHaveLength(1)
+    expect(finishCalls).toEqual([]) // the pull-specific finish, untouched
   })
 })

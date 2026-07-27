@@ -18,6 +18,8 @@ import type {
   GitRun,
   PullStart,
   SplitProject,
+  GitBranch,
+  BranchSwitchStart,
 } from '../git/types'
 import { parsePorcelain, capDiff } from '../git/output'
 import { loadProject, splitProjectFiles } from '../model/project'
@@ -103,6 +105,11 @@ export interface SlrBridge {
     message: string,
   ): Promise<GitRun>
   gitWriteWorking(root: string, relPath: string, working: SplitProject): Promise<GitRun>
+  gitBranches(root: string): Promise<GitBranch[]>
+  gitCheckout(root: string, branch: string): Promise<GitRun>
+  gitBranchSwitchBegin(root: string, relPath: string, branch: string): Promise<BranchSwitchStart>
+  gitBranchSwitchFinish(root: string, relPath: string, resolved: SplitProject): Promise<GitRun>
+  gitBranchSwitchAbort(root: string, sourceBranch: string): Promise<GitRun>
 }
 
 function bridge(): SlrBridge {
@@ -387,6 +394,11 @@ export class ElectronAdapter implements PlatformAdapter {
     commitPartial: (root, relPath, committed, working, otherPaths, message) =>
       bridge().gitCommitPartial(root, relPath, committed, working, otherPaths, message),
     writeWorking: (root, relPath, working) => bridge().gitWriteWorking(root, relPath, working),
+    branches: (root) => bridge().gitBranches(root),
+    checkoutBranch: (root, branch) => bridge().gitCheckout(root, branch),
+    beginBranchSwitch: (root, relPath, branch) => bridge().gitBranchSwitchBegin(root, relPath, branch),
+    finishBranchSwitch: (root, relPath, resolved) => bridge().gitBranchSwitchFinish(root, relPath, resolved),
+    abortBranchSwitch: (root, sourceBranch) => bridge().gitBranchSwitchAbort(root, sourceBranch),
   }
 
   getGit(): GitPlatform {

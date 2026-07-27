@@ -1645,6 +1645,125 @@ ipcMain.handle('git:pullAbort', async (_e, root: string) => {
   return runGit(['merge', '--abort'], root)
 })
 
+ipcMain.handle('git:branches', async (_e, root: string) => {
+  const r = await runGit(['branch', '--format=%(refname:short)%09%(HEAD)'], root)
+  if (!r.ok) return []
+  return r.stdout
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      const [name, head] = line.split('\t')
+      return { name, current: head === '*' }
+    })
+})
+
+/** A plain checkout with nothing local to carry — only reached after
+ *  `beginBranchSwitch` confirmed there is nothing project-related to lose
+ *  (`'no-changes'`), or for a repo with no open project at all. The trailing
+ *  `--` is the standard git idiom that disambiguates a branch name from a
+ *  path, belt-and-suspenders alongside the branch list itself already only
+ *  ever offering names `git branch` produced. */
+ipcMain.handle('git:checkout', async (_e, root: string, branch: string) => {
+  return runGit(['checkout', branch, '--'], root)
+})
+
+/**
+ * Checks whether switching to `branch` is safe given the project's
+ * uncommitted state, and — only in the `'merge'` case — actually performs
+ * the switch: stashes the project's own dirty files, checks out `branch`,
+ * and reads the three revisions `mergeProjects` needs. The stash/checkout
+ * happen here (not left for `finishBranchSwitch`) because captured
+ * base/ours/theirs text and the mutation must be atomic with each other —
+ * nothing may change the working tree between "read what's there" and
+ * "stash it" without invalidating `ours`.
+ *
+ * Refuses (touching nothing) whenever anything *outside* the project's own
+ * files is also dirty: SaiLoR knows how to carry the project's uncommitted
+ * changes across a switch (the same field-level merge the pull flow uses),
+ * but has no honest way to carry an arbitrary file's local edit across two
+ * branches that might disagree about it — the same limitation, and the same
+ * refusal, `beginPull`'s `'conflict-elsewhere'` already has.
+ */
+ipcMain.handle('git:branchSwitchBegin', async (_e, root: string, relPath: string, branch: string) => {
+  assertRelPath(relPath)
+  const dir = annotationsRelDir(relPath)
+  const inProjectScope = (p: string) => p === relPath || p === dir || p.startsWith(`${dir}/`)
+
+  const st = await runGit(['status', '--porcelain=v1', '-z'], root)
+  const changes = parsePorcelain(st.stdout)
+  const otherPaths = changes.filter((c) => !inProjectScope(c.path)).map((c) => c.path)
+  if (otherPaths.length > 0) return { kind: 'other-files-dirty', paths: otherPaths }
+  if (!changes.some((c) => inProjectScope(c.path))) return { kind: 'no-changes' }
+
+  const sourceBranchRun = await runGit(['symbolic-ref', '--short', '-q', 'HEAD'], root)
+  const sourceBranch = sourceBranchRun.ok ? gitOut(sourceBranchRun) : ''
+  if (!sourceBranch) return { kind: 'error', message: 'Cannot switch branches from a detached HEAD.' }
+
+  const oldHead = gitOut(await runGit(['rev-parse', 'HEAD'], root))
+  const base = await readProjectAtRevision(root, relPath, oldHead)
+  let ours: string
+  try {
+    ours = await readProjectText(path.join(root, relPath))
+  } catch (err) {
+    return {
+      kind: 'error',
+      message: `Could not read the project's current state: ${err instanceof Error ? err.message : String(err)}`,
+    }
+  }
+  const theirs = await readProjectAtRevision(root, relPath, branch)
+  if (theirs === null) {
+    return { kind: 'error', message: `The project file does not exist on branch "${branch}".` }
+  }
+
+  const stash = await runGit(
+    ['stash', 'push', '-u', '-m', 'sailor: switching branch', '--', relPath, dir],
+    root,
+  )
+  if (!stash.ok) return { kind: 'error', message: gitErrorText(stash) }
+
+  const checkout = await runGit(['checkout', branch, '--'], root)
+  if (!checkout.ok) {
+    // Put things back exactly as they were — nothing about this attempt
+    // should be visible if the checkout itself failed.
+    await runGit(['stash', 'pop'], root)
+    return { kind: 'error', message: gitErrorText(checkout) }
+  }
+
+  return { kind: 'merge', sourceBranch, base, ours, theirs }
+})
+
+/** Writes the merge-resolved project onto the just-checked-out target
+ *  branch's working tree, then drops the stash `beginBranchSwitch` created —
+ *  its content is now fully folded into what was just written, so leaving it
+ *  around would just be a stray entry the reviewer has to notice and clean
+ *  up themselves. */
+ipcMain.handle(
+  'git:branchSwitchFinish',
+  async (
+    _e,
+    root: string,
+    relPath: string,
+    resolved: { metaText: string; files: Array<{ relPath: string; text: string | null }> },
+  ) => {
+    assertRelPath(relPath)
+    const fullPath = path.join(root, relPath)
+    await assertInsideRoot(root, fullPath)
+    await writeProjectFiles(fullPath, resolved.metaText, resolved.files)
+    return runGit(['stash', 'drop'], root)
+  },
+)
+
+/** Reverses an already-completed `beginBranchSwitch`: checks back out to
+ *  `sourceBranch` and restores the stashed changes. Unlike `git:pullAbort`
+ *  (which aborts an in-progress `git merge` that never left a stable state),
+ *  the checkout here already succeeded by the time a reviewer can cancel —
+ *  this undoes it rather than merely stopping something in flight. */
+ipcMain.handle('git:branchSwitchAbort', async (_e, root: string, sourceBranch: string) => {
+  const checkout = await runGit(['checkout', sourceBranch, '--'], root)
+  if (!checkout.ok) return checkout
+  return runGit(['stash', 'pop'], root)
+})
+
 // Remember that a quit is in progress so the close guard can, after the user
 // confirms, resume quitting (rather than merely closing the window on macOS).
 app.on('before-quit', () => {

@@ -47,6 +47,8 @@ export function mixedDiscardConfirmMessage(
 export function GitDialog() {
   const panel = useGitStore((s) => s.panel)
   const repo = useGitStore((s) => s.repo)
+  const branches = useGitStore((s) => s.branches)
+  const requestSwitchBranch = useGitStore((s) => s.requestSwitchBranch)
   const closePanel = useGitStore((s) => s.closePanel)
   const refreshStatus = useGitStore((s) => s.refreshStatus)
   const toggleSelected = useGitStore((s) => s.toggleSelected)
@@ -134,7 +136,24 @@ export function GitDialog() {
       >
         <div className="modal-head">
           <strong>
-            Git — {repo.branch ?? 'detached HEAD'}
+            Git —{' '}
+            {repo.branch && branches.length > 0 ? (
+              <select
+                className="git-branch-select"
+                aria-label="Switch branch"
+                value={repo.branch}
+                disabled={working}
+                onChange={(e) => requestSwitchBranch(e.target.value)}
+              >
+                {branches.map((b) => (
+                  <option key={b.name} value={b.name}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              (repo.branch ?? 'detached HEAD')
+            )}
             <span className="git-upstream"> ▸ {repo.upstream ?? 'no upstream'}</span>
           </strong>
           <button type="button" className="icon-btn" onClick={requestClose} aria-label="Close">

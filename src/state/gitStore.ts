@@ -16,7 +16,7 @@ import { detectFieldChanges, composeContents, type DetectedChanges, type Disposi
 import { repoNameFromUrl } from '../git/url'
 import { annotationsRelDir } from '../git/relpath'
 import { gitErrorText } from '../git/output'
-import type { GitProbe, GitRepoInfo, GitRun, GitStatus } from '../git/types'
+import type { GitProbe, GitRepoInfo, GitRun, GitStatus, GitBranch } from '../git/types'
 import { useStore } from './store'
 
 /**
@@ -44,7 +44,24 @@ interface CloneState {
   startedAt: number
 }
 
+/**
+ * A field-level three-way merge in progress — either a `pull` (merging the
+ * upstream ref) or a `branch-switch` (merging the target branch, carrying
+ * over the reviewer's uncommitted changes). `GitMergeDialog` renders either
+ * identically; only finishing and cancelling need to know which, since they
+ * call different git operations (`finishPull`/`abortPull` vs
+ * `finishBranchSwitch`/`abortBranchSwitch`, the latter needing `sourceBranch`
+ * to check back out to on cancel).
+ */
+type MergeSource =
+  | { kind: 'pull' }
+  | { kind: 'branch-switch'; sourceBranch: string }
+
 interface MergeState {
+  source: MergeSource
+  /** The other side's name — an upstream ref ("origin/main") for a pull, the
+   *  target branch's own name for a branch-switch. Shown as-is, e.g. "Your
+   *  changes and {ref}'s both changed these fields." reads correctly either way. */
   ref: string
   merged: Project
   conflicts: FieldConflict[]
@@ -74,6 +91,19 @@ interface FieldReviewState {
   decisions: Record<string, Disposition>
 }
 
+/**
+ * Asked whenever the reviewer picks a different branch while the project has
+ * uncommitted changes — see `requestSwitchBranch`. `branch` is the target;
+ * resolving with `'carryOver'` starts the merge flow (`MergeState` above),
+ * `'commitFirst'`/`'cancel'` both just close this without switching anything
+ * (the two exist as separate buttons purely so "I meant to commit" reads
+ * differently from "never mind" — the app-side effect is identical: nothing
+ * happens, the reviewer stays on their current branch to commit by hand).
+ */
+interface BranchSwitchPromptState {
+  branch: string
+}
+
 interface PanelState {
   phase: 'idle' | 'loading' | 'working'
   status: GitStatus | null
@@ -85,6 +115,7 @@ interface PanelState {
   error: string | null
   notice: string | null
   merge: MergeState | null
+  branchSwitchPrompt: BranchSwitchPromptState | null
 }
 
 interface GitState {
@@ -95,8 +126,14 @@ interface GitState {
   repo: GitRepoInfo | null
   clone: CloneState | null
   panel: PanelState | null
+  /** Local branches, refreshed whenever the panel opens/refreshes — for the
+   *  branch switcher. Empty when the panel is closed or git is unavailable. */
+  branches: GitBranch[]
 
   probeGit: () => Promise<void>
+  /** Refetch `branches` — called on panel open/refresh and after any
+   *  successful branch switch. */
+  refreshBranches: () => Promise<void>
   /** Called from App.tsx whenever the open project's save handle changes. */
   refreshRepo: (handle: SaveHandle | null) => Promise<void>
 
@@ -136,6 +173,15 @@ interface GitState {
   takeAll: (side: 'ours' | 'theirs', ids?: string[]) => void
   finishMerge: () => Promise<void>
   cancelMerge: () => Promise<void>
+
+  /**
+   * The reviewer picked `branch` from the switcher. With nothing uncommitted
+   * in the project, switches right away; otherwise opens the three-way
+   * prompt (`branchSwitchPrompt`) — commit first (abort the switch for now),
+   * carry the changes into the new branch (merging as needed), or cancel.
+   */
+  requestSwitchBranch: (branch: string) => void
+  resolveBranchSwitchPrompt: (choice: 'commitFirst' | 'carryOver' | 'cancel') => Promise<void>
 }
 
 /** `${parent}/${name}` — there is no `path` module available in the browser
@@ -172,13 +218,14 @@ function toSplitProject(project: Project): SplitProject {
 export const useGitStore = create<GitState>()(
   immer((set, get) => {
     /**
-     * Shared by the zero-conflict fast path in `runPull` and the merge
-     * dialog's `finishMerge`: write the resolved text, and only touch `panel`
-     * once we know whether it actually succeeded. On failure the repository is
-     * genuinely still mid-merge, so `panel.merge` is left in place — Cancel
-     * merge must stay reachable.
+     * Shared by the zero-conflict fast path in `runPull`/`runBranchSwitchCarryOver`
+     * and the merge dialog's `finishMerge`: write the resolved text, and only
+     * touch `panel` once we know whether it actually succeeded. On failure the
+     * repository is genuinely still mid-merge (or mid-branch-switch), so
+     * `panel.merge` is left in place — Cancel merge must stay reachable.
      */
     async function doFinish(
+      source: MergeSource,
       ref: string,
       merged: Project,
       conflicts: FieldConflict[],
@@ -189,7 +236,10 @@ export const useGitStore = create<GitState>()(
       const repo = get().repo
       if (!git || !repo) return
       const resolved = applyResolutions(merged, conflicts, resolutions)
-      const r = await git.finishPull(repo.root, repo.relPath, toSplitProject(resolved))
+      const r =
+        source.kind === 'pull'
+          ? await git.finishPull(repo.root, repo.relPath, toSplitProject(resolved))
+          : await git.finishBranchSwitch(repo.root, repo.relPath, toSplitProject(resolved))
       if (!r.ok) {
         set((s) => {
           if (s.panel) {
@@ -197,12 +247,12 @@ export const useGitStore = create<GitState>()(
             // The repository is genuinely still mid-merge, so Cancel merge must
             // stay reachable (GitMergeDialog renders only while `panel.merge`
             // is set). The conflict path set it before getting here; the
-            // zero-conflict fast path in `runPull` did not — so back-fill it
-            // here rather than wedge a repo with a failed finish (e.g. the
-            // commit rejected for an unset git user.name/email) and no in-app
-            // way to abort.
+            // zero-conflict fast path did not — so back-fill it here rather
+            // than wedge a repo with a failed finish (e.g. the commit
+            // rejected for an unset git user.name/email) and no in-app way
+            // to abort.
             if (!s.panel.merge) {
-              s.panel.merge = { ref, merged, conflicts, resolutions, decided: {}, notes }
+              s.panel.merge = { source, ref, merged, conflicts, resolutions, decided: {}, notes }
             }
           }
         })
@@ -210,12 +260,20 @@ export const useGitStore = create<GitState>()(
       }
       await reloadOpenProject()
       const noteText = notes.length > 0 ? ` ${notes.map((n) => n.message).join(' ')}` : ''
+      const notice =
+        source.kind === 'pull'
+          ? `Merged ${ref}.${noteText} Push when you are ready.`
+          : `Switched to ${ref}, carrying your changes over.${noteText}`
       set((s) => {
         if (s.panel) {
           s.panel.merge = null
-          s.panel.notice = `Merged ${ref}.${noteText} Push when you are ready.`
+          s.panel.notice = notice
         }
       })
+      if (source.kind === 'branch-switch') {
+        await get().refreshRepo(useStore.getState().saveHandle)
+        await get().refreshBranches()
+      }
       await get().refreshStatus()
     }
 
@@ -300,11 +358,12 @@ export const useGitStore = create<GitState>()(
       }
     }
 
-    return {
+    const storeApi: GitState = {
       probe: null,
       repo: null,
       clone: null,
       panel: null,
+      branches: [],
 
       probeGit: async () => {
         const git = getPlatform().getGit()
@@ -426,9 +485,11 @@ export const useGitStore = create<GitState>()(
             error: null,
             notice: null,
             merge: null,
+            branchSwitchPrompt: null,
           }
         })
         await get().refreshStatus()
+        await get().refreshBranches()
         // Default tick: only the open project's own file, when it is in the
         // list *and* not already being handled by field-level review below.
         // Clicking Git means "my annotations", not whatever else is lying
@@ -791,7 +852,7 @@ export const useGitStore = create<GitState>()(
           set((s) => {
             if (s.panel) s.panel.phase = 'idle'
           })
-          await doFinish(start.ref, outcome.merged, outcome.conflicts, {}, outcome.notes)
+          await doFinish({ kind: 'pull' }, start.ref, outcome.merged, outcome.conflicts, {}, outcome.notes)
           return
         }
 
@@ -799,6 +860,7 @@ export const useGitStore = create<GitState>()(
           if (s.panel) {
             s.panel.phase = 'idle'
             s.panel.merge = {
+              source: { kind: 'pull' },
               ref: start.ref,
               merged: outcome.merged,
               conflicts: outcome.conflicts,
@@ -850,14 +912,18 @@ export const useGitStore = create<GitState>()(
       finishMerge: async () => {
         const merge = get().panel?.merge
         if (!merge) return
-        await doFinish(merge.ref, merge.merged, merge.conflicts, merge.resolutions, merge.notes)
+        await doFinish(merge.source, merge.ref, merge.merged, merge.conflicts, merge.resolutions, merge.notes)
       },
 
       cancelMerge: async () => {
         const git = getPlatform().getGit()
         const repo = get().repo
-        if (!git || !repo) return
-        const r = await git.abortPull(repo.root)
+        const merge = get().panel?.merge
+        if (!git || !repo || !merge) return
+        const r =
+          merge.source.kind === 'pull'
+            ? await git.abortPull(repo.root)
+            : await git.abortBranchSwitch(repo.root, merge.source.sourceBranch)
         if (!r.ok) {
           set((s) => {
             if (s.panel) s.panel.error = gitErrorText(r)
@@ -870,7 +936,224 @@ export const useGitStore = create<GitState>()(
             s.panel.notice = 'The merge was aborted. Nothing changed.'
           }
         })
+        if (merge.source.kind === 'branch-switch') {
+          await get().refreshRepo(useStore.getState().saveHandle)
+          await get().refreshBranches()
+          await get().refreshStatus()
+        }
+      },
+
+      refreshBranches: async () => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo) {
+          set((s) => {
+            s.branches = []
+          })
+          return
+        }
+        const branches = await git.branches(repo.root)
+        set((s) => {
+          s.branches = branches
+        })
+      },
+
+      requestSwitchBranch: (branch) => {
+        const repo = get().repo
+        if (!repo || branch === repo.branch) return
+        const dirty = (get().panel?.status?.changes.length ?? 0) > 0
+        if (!dirty) {
+          void runCleanCheckout(branch)
+          return
+        }
+        set((s) => {
+          if (s.panel) s.panel.branchSwitchPrompt = { branch }
+        })
+      },
+
+      resolveBranchSwitchPrompt: async (choice) => {
+        const branch = get().panel?.branchSwitchPrompt?.branch
+        set((s) => {
+          if (s.panel) s.panel.branchSwitchPrompt = null
+        })
+        if (!branch || choice !== 'carryOver') return
+        await runBranchSwitchCarryOver(branch)
       },
     }
+
+    /** A plain checkout — nothing in the project is uncommitted, so there is
+     *  nothing to merge or lose. */
+    async function runCleanCheckout(branch: string): Promise<void> {
+      const git = getPlatform().getGit()
+      const repo = get().repo
+      if (!git || !repo) return
+      set((s) => {
+        if (s.panel) {
+          s.panel.phase = 'working'
+          s.panel.error = null
+          s.panel.notice = null
+        }
+      })
+      const r = await git.checkoutBranch(repo.root, branch)
+      if (!r.ok) {
+        set((s) => {
+          if (s.panel) {
+            s.panel.phase = 'idle'
+            s.panel.error = gitErrorText(r)
+          }
+        })
+        return
+      }
+      await reloadOpenProject()
+      set((s) => {
+        if (s.panel) {
+          s.panel.phase = 'idle'
+          s.panel.notice = `Switched to ${branch}.`
+        }
+      })
+      await get().refreshRepo(useStore.getState().saveHandle)
+      await get().refreshBranches()
+      await get().refreshStatus()
+    }
+
+    /**
+     * The reviewer chose to carry their uncommitted project changes into
+     * `branch`. Mirrors `runPull`'s merge handling almost exactly — the only
+     * real difference is where the three revisions and the mutation
+     * (stash/checkout) come from (`beginBranchSwitch`, not a `git merge`).
+     */
+    async function runBranchSwitchCarryOver(branch: string): Promise<void> {
+      const git = getPlatform().getGit()
+      const repo = get().repo
+      if (!git || !repo) return
+
+      set((s) => {
+        if (s.panel) {
+          s.panel.phase = 'working'
+          s.panel.error = null
+          s.panel.notice = null
+        }
+      })
+
+      const start = await git.beginBranchSwitch(repo.root, repo.relPath, branch)
+
+      if (start.kind === 'no-changes') {
+        set((s) => {
+          if (s.panel) s.panel.phase = 'idle'
+        })
+        await runCleanCheckout(branch)
+        return
+      }
+      if (start.kind === 'other-files-dirty') {
+        set((s) => {
+          if (s.panel) {
+            s.panel.phase = 'idle'
+            s.panel.error =
+              `These files are also uncommitted and aren't part of the project: ${start.paths.join(', ')}. ` +
+              'SaiLoR only knows how to carry the project\'s own changes across a branch switch — ' +
+              'commit or discard those first.'
+          }
+        })
+        return
+      }
+      if (start.kind === 'error') {
+        set((s) => {
+          if (s.panel) {
+            s.panel.phase = 'idle'
+            s.panel.error = start.message
+          }
+        })
+        return
+      }
+
+      // start.kind === 'merge': the stash + checkout already happened —
+      // parse each revision independently so a parse failure names exactly
+      // which one is unreadable, aborting back to `start.sourceBranch` on
+      // any failure the same way `runPull` aborts its in-progress merge.
+      const abort = async () => {
+        await git.abortBranchSwitch(repo.root, start.sourceBranch)
+        await get().refreshRepo(useStore.getState().saveHandle)
+        await get().refreshBranches()
+        await get().refreshStatus()
+      }
+      let base: Project | null
+      try {
+        base = start.base === null ? null : loadProject(start.base)
+      } catch (err) {
+        await abort()
+        set((s) => {
+          if (s.panel) {
+            s.panel.phase = 'idle'
+            s.panel.error = mergeParseError(`${start.sourceBranch} (before switching)`, err)
+          }
+        })
+        return
+      }
+      let ours: Project
+      try {
+        ours = loadProject(start.ours)
+      } catch (err) {
+        await abort()
+        set((s) => {
+          if (s.panel) {
+            s.panel.phase = 'idle'
+            s.panel.error = mergeParseError('your uncommitted changes', err)
+          }
+        })
+        return
+      }
+      let theirs: Project
+      try {
+        theirs = loadProject(start.theirs)
+      } catch (err) {
+        await abort()
+        set((s) => {
+          if (s.panel) {
+            s.panel.phase = 'idle'
+            s.panel.error = mergeParseError(branch, err)
+          }
+        })
+        return
+      }
+
+      const outcome = mergeProjects(base, ours, theirs)
+      if (outcome.kind === 'refused') {
+        await abort()
+        set((s) => {
+          if (s.panel) {
+            s.panel.phase = 'idle'
+            s.panel.error = [outcome.reason, ...outcome.details].join('\n')
+          }
+        })
+        return
+      }
+
+      const source: MergeSource = { kind: 'branch-switch', sourceBranch: start.sourceBranch }
+
+      if (outcome.conflicts.length === 0) {
+        set((s) => {
+          if (s.panel) s.panel.phase = 'idle'
+        })
+        await doFinish(source, branch, outcome.merged, outcome.conflicts, {}, outcome.notes)
+        return
+      }
+
+      set((s) => {
+        if (s.panel) {
+          s.panel.phase = 'idle'
+          s.panel.merge = {
+            source,
+            ref: branch,
+            merged: outcome.merged,
+            conflicts: outcome.conflicts,
+            resolutions: {},
+            decided: {},
+            notes: outcome.notes,
+          }
+        }
+      })
+    }
+
+    return storeApi
   }),
 )
