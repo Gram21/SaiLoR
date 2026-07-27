@@ -232,12 +232,16 @@ export class ElectronAdapter implements PlatformAdapter {
       }
     }
     // The main process serves files from the project dir via slr-file://.
-    // Encode each path segment but keep the separators.
-    const encoded = pdfPath
-      .split('/')
-      .map((seg) => encodeURIComponent(seg))
-      .join('/')
-    return { url: `slr-file://project/${encoded}` }
+    // Carried as a query param, not the URL's path: a `..` segment sitting
+    // in the *path* is a dot-segment by the URL Standard's own definition,
+    // which Chromium's URL parser collapses (per spec, before this string
+    // even reaches `registerPdfProtocol` — before `net.fetch`/`getDocument`
+    // ever issues the request) the exact same way it would for a normal
+    // http(s) link, silently eating every ".." a `pdf` value climbed with
+    // and requesting something else entirely. A query value is never
+    // subject to that normalization, at any parsing layer, so it round-trips
+    // exactly as written.
+    return { url: `slr-file://project/pdf?path=${encodeURIComponent(pdfPath)}` }
   }
 
   // Electron reads PDFs straight off disk via slr-file:// — there is no
