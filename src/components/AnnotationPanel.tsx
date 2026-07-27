@@ -25,6 +25,35 @@ export function AnnotationPanel() {
   const setConsolidationOverviewOpen = useStore((s) => s.setConsolidationOverviewOpen)
   const setDisagreementsOpen = useStore((s) => s.setDisagreementsOpen)
 
+  // Consolidation is the pass where a human decides between what the reviewers
+  // actually said. A model has no standing there: its answer would be a fresh
+  // opinion invented after the fact, written straight into the tree that ships
+  // and dressed as a reconciliation of the others. The button is not rendered at
+  // all in this seat — not merely disabled or transparent, which is what the
+  // locked state below does — and `applyAiSuggestions` refuses from here too, in
+  // case the dialog was opened as a reviewer and the seat then switched.
+  const isConsolidation = currentReviewer === 'consolidation'
+
+  // Hooks must run in the same order on every render, so this has to sit
+  // above the early returns below (no paper selected, no reviewer picked) —
+  // it used to sit after them, so picking a reviewer seat (or selecting a
+  // paper) changed how many hooks this component called and crashed React
+  // with "change in the order of Hooks". The memo itself stays a no-op
+  // (empty map) until there's a paper and a reviewer to compute it for.
+  //
+  // One index for the whole panel, rather than asking every rendered Field to
+  // re-walk all reviewer trees. Green needs all reviewer answers; a visible
+  // disagreement is red as soon as two answers differ.
+  const consolidationVerdicts = useMemo(() => {
+    const verdicts = new Map<string, ConsolidationFieldStatus>()
+    if (!isConsolidation || !project || !paper) return verdicts
+    for (const verdict of paperVerdicts(project.schema, paper, project.reviewers)) {
+      const status = consolidationFieldStatus(verdict.answeredBy.length, project.reviewers, verdict.agree)
+      if (status) verdicts.set(verdict.canonical, status)
+    }
+    return verdicts
+  }, [isConsolidation, paper, project])
+
   if (!paper) {
     return <div className="panel annotations empty">Select a paper to annotate.</div>
   }
@@ -51,14 +80,6 @@ export function AnnotationPanel() {
     ? (currentTree(project, currentReviewer, paper) ?? normalizeTree(schema, undefined))
     : paper.annotations
 
-  // Consolidation is the pass where a human decides between what the reviewers
-  // actually said. A model has no standing there: its answer would be a fresh
-  // opinion invented after the fact, written straight into the tree that ships
-  // and dressed as a reconciliation of the others. The button is not rendered at
-  // all in this seat — not merely disabled or transparent, which is what the
-  // locked state below does — and `applyAiSuggestions` refuses from here too, in
-  // case the dialog was opened as a reviewer and the seat then switched.
-  const isConsolidation = currentReviewer === 'consolidation'
   const aiDisabled = busy || !paper.pdf || !aiEnabled || !aiUnlocked
   // Not unlocked this session at all (the hidden click gesture never
   // happened): the button doesn't just disable, it has no visible presence —
@@ -70,18 +91,6 @@ export function AnnotationPanel() {
   // Deliberately uninformative: the button looks like any other disabled
   // control rather than one hinting that it can be unlocked.
   const aiTitle = aiDisabled ? 'Coming soon' : 'Ask an LLM to propose values for the fields that are still empty'
-  // One index for the whole panel, rather than asking every rendered Field to
-  // re-walk all reviewer trees. Green needs all reviewer answers; a visible
-  // disagreement is red as soon as two answers differ.
-  const consolidationVerdicts = useMemo(() => {
-    const verdicts = new Map<string, ConsolidationFieldStatus>()
-    if (!isConsolidation || !project) return verdicts
-    for (const verdict of paperVerdicts(project.schema, paper, project.reviewers)) {
-      const status = consolidationFieldStatus(verdict.answeredBy.length, project.reviewers, verdict.agree)
-      if (status) verdicts.set(verdict.canonical, status)
-    }
-    return verdicts
-  }, [isConsolidation, paper, project])
 
   return (
     <div className="panel annotations">
