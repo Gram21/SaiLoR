@@ -401,8 +401,15 @@ function registerPdfProtocol() {
   // Serve files from the open project's directory, guarding against traversal.
   protocol.handle('slr-file', async (request) => {
     const url = new URL(request.url)
-    // URL: slr-file://project/<encoded relative path>
-    const rel = decodeURIComponent(url.pathname).replace(/^\/+/, '')
+    // URL: slr-file://project/pdf?path=<encoded relative path> — the path is
+    // carried in the *query*, not the URL path, because a `..` sitting in
+    // the path is a dot-segment by the URL Standard's own definition and
+    // gets collapsed during normal URL parsing (Chromium's, constructing the
+    // request, same as this file's own `new URL()` would) — silently eating
+    // every ".." a `pdf` value climbed with before this handler ever runs.
+    // `searchParams.get` already decodes; see `getPdfSource` in
+    // src/platform/electron.ts, which is the only thing that builds this URL.
+    const rel = url.searchParams.get('path') ?? ''
     const check = await resolveProjectPath(rel)
     if (!check.ok) {
       if (check.reason === 'escapes') return new Response('Forbidden', { status: 403 })
