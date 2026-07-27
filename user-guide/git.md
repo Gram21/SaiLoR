@@ -11,7 +11,7 @@ error explaining why.
 
 ## Cloning a repository
 
-**Import from git…**, on the start screen and in the toolbar's *Open ▾* menu: paste a repository URL,
+**Import from remote git…**, on the start screen and in the toolbar's *Open ▾* menu: paste a repository URL,
 pick a destination folder, confirm. A clone of a repository full of PDFs can take a while, so you get
 a spinner and an elapsed-seconds line rather than a frozen-looking window. On success you pick which
 project JSON to open, and the picker already starts inside the folder that was just cloned.

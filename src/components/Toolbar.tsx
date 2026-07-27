@@ -66,7 +66,7 @@ export interface GitButtonState {
  * reason `nextTitleClickState` is: the precedence of *why it's off* is a rule
  * worth testing without a DOM. The button is always rendered (like Validate and
  * Close beside it, and like every git entry point in the browser), so this only
- * ever decides usable-or-not, mirroring the "Import from git…" item's own
+ * ever decides usable-or-not, mirroring the "Import from remote git…" item's own
  * precedence — the sibling entry point — so the two can't drift.
  */
 export function gitButtonState(
@@ -216,7 +216,7 @@ export function Toolbar() {
     { type: 'item', label: 'Open file…', shortcut: `${modKey}+O`, onSelect: () => requestOpenProject() },
     {
       type: 'item',
-      label: 'Import from git…',
+      label: 'Import from remote git…',
       hint: !git
         ? GIT_BROWSER_DISABLED_HINT
         : gitProbe && !gitProbe.available
