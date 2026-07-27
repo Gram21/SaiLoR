@@ -6,6 +6,7 @@ import {
   isLegacyProjectShape,
   assembleLegacyProjectJson,
 } from './project'
+import { SCREENING_DECISION, DECISION_INCLUDE } from '../screening/schema'
 
 const sampleSchema: AnnotationDef[] = [
   { name: 'Relevant', type: 'boolean' },
@@ -96,6 +97,41 @@ describe('splitProjectFiles', () => {
     const project = loadProject(legacyJson())
     const { files } = splitProjectFiles(project)
     expect(files.some((f) => f.relPath.includes('reviewer-'))).toBe(false)
+  })
+
+  it('uses screening-<n>.json / screening-consolidated.json for a screening project', () => {
+    const raw = {
+      version: 1,
+      config: { reviewers: 2, screening: { reasons: ['Not relevant'] } },
+      papers: [
+        {
+          id: 'p1',
+          title: 'Paper One',
+          authors: ['A'],
+          pdf: 'p1.pdf',
+          annotations: { [SCREENING_DECISION]: [{ value: DECISION_INCLUDE }] },
+          reviews: {
+            '1': { [SCREENING_DECISION]: [{ value: DECISION_INCLUDE }] },
+            '2': {},
+          },
+        },
+      ],
+    }
+    const project = loadProject(raw)
+    const { files } = splitProjectFiles(project)
+
+    expect(files.map((f) => f.relPath).sort()).toEqual([
+      'p1/screening-1.json',
+      'p1/screening-2.json',
+      'p1/screening-consolidated.json',
+    ])
+    const r1 = files.find((f) => f.relPath === 'p1/screening-1.json')
+    expect(r1?.text).toContain(DECISION_INCLUDE)
+    const consolidated = files.find((f) => f.relPath === 'p1/screening-consolidated.json')
+    expect(consolidated?.text).toContain(DECISION_INCLUDE)
+    // Never the ordinary-project names for a screening project.
+    expect(files.some((f) => f.relPath.endsWith('/consolidated.json'))).toBe(false)
+    expect(files.some((f) => /\/reviewer-\d+\.json$/.test(f.relPath))).toBe(false)
   })
 })
 
