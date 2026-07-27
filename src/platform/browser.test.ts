@@ -231,6 +231,84 @@ describe('getPdfSource (local project): resolves through a picked folder, never 
     spy.mockRestore()
     vi.useRealTimers()
   })
+
+  it('collapses an internal ".." in the stored path (e.g. after a rebase) before looking it up', async () => {
+    const spy = mockFolderPicker([fileAt('MyProject/pdfs/paper-a.pdf')])
+    const adapter = new BrowserAdapter()
+    const src = await adapter.getPdfSource('pdfs/../pdfs/paper-a.pdf', DOWNLOAD_HANDLE)
+    expect(src.url).toBe('blob:mock-url')
+    spy.mockRestore()
+  })
+
+  it('resolves a leading ".." when the picked folder\'s contents match what it climbs to', async () => {
+    // The picked folder's own name ("MyProject") is irrelevant — only its
+    // contents matter, so "../samples/pdfs/paper-a.pdf" (normalizing to
+    // "samples/pdfs/paper-a.pdf") resolves as long as *that* subtree exists
+    // under whatever was picked.
+    const spy = mockFolderPicker([fileAt('MyProject/samples/pdfs/paper-a.pdf')])
+    const adapter = new BrowserAdapter()
+    const src = await adapter.getPdfSource('../samples/pdfs/paper-a.pdf', DOWNLOAD_HANDLE)
+    expect(src.url).toBe('blob:mock-url')
+    spy.mockRestore()
+  })
+
+  it('still fails cleanly, not with a crash, when the picked folder does not match what ".." climbs to', async () => {
+    const spy = mockFolderPicker([fileAt('MyProject/pdfs/paper-a.pdf')])
+    const adapter = new BrowserAdapter()
+    await expect(
+      adapter.getPdfSource('../samples/pdfs/paper-a.pdf', DOWNLOAD_HANDLE),
+    ).rejects.toThrow(/was not found/)
+    spy.mockRestore()
+  })
+})
+
+/** A minimal fake `FileSystemDirectoryHandle`: `dirs`/`files` maps by name. */
+function fakeDir(
+  dirs: Record<string, FileSystemDirectoryHandle> = {},
+  files: Record<string, File> = {},
+): FileSystemDirectoryHandle {
+  return {
+    async getDirectoryHandle(name: string) {
+      const d = dirs[name]
+      if (!d) throw new DOMException('not found', 'NotFoundError')
+      return d
+    },
+    async getFileHandle(name: string) {
+      const f = files[name]
+      if (!f) throw new DOMException('not found', 'NotFoundError')
+      return { async getFile() { return f } }
+    },
+  } as unknown as FileSystemDirectoryHandle
+}
+
+describe('getPdfSource (local project, real FSAPI directory handle): "../" climbs to a sibling', () => {
+  const paperA = fileAt('paper-a.pdf')
+
+  it('resolves a leading ".." when the reviewer picked the folder it climbs to', async () => {
+    // Layout: <picked>/samples/pdfs/paper-a.pdf — the reviewer picked the
+    // parent of "samples", so "../samples/pdfs/paper-a.pdf" (as written when
+    // the project's own folder is "samples", netting back to itself the same
+    // way path.resolve does in the Electron build) resolves correctly.
+    const picked = fakeDir({ samples: fakeDir({ pdfs: fakeDir({}, { 'paper-a.pdf': paperA }) }) })
+    const w = window as unknown as {
+      showOpenFilePicker: () => Promise<never>
+      showDirectoryPicker: () => Promise<FileSystemDirectoryHandle>
+    }
+    // `hasFsApi()` gates on `showOpenFilePicker` too — unused here, just has
+    // to exist as a function for the FSAPI directory-picker branch to run
+    // instead of falling through to the `<input webkitdirectory>` fallback.
+    w.showOpenFilePicker = async () => {
+      throw new Error('not used in this test')
+    }
+    w.showDirectoryPicker = async () => picked
+
+    const adapter = new BrowserAdapter()
+    const src = await adapter.getPdfSource('../samples/pdfs/paper-a.pdf', DOWNLOAD_HANDLE)
+    expect(src.url).toBe('blob:mock-url')
+
+    delete (window as unknown as { showOpenFilePicker?: unknown }).showOpenFilePicker
+    delete (window as unknown as { showDirectoryPicker?: unknown }).showDirectoryPicker
+  })
 })
 
 describe('needsPdfFolderGrant / grantPdfFolderAccess', () => {
