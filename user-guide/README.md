@@ -27,7 +27,7 @@ the project JSON that will silently eat your changes if you don't know about it.
 | [Screening](screening.md) | The fast include/exclude pass that usually comes before annotation, and starting the next phase from it |
 | [Working with several reviewers](multi-reviewer.md) | Independent reviewers, Consolidation, agreement statistics, disagreements, reviewer-seat identity |
 | [Setting up a project](project-editor.md) | Building the annotation schema, adding papers, importing references, duplicate detection, the review protocol |
-| [Git support](git.md) | Cloning, committing field by field, pulling, and resolving merge conflicts (desktop app only) |
+| [Git support](git.md) | Cloning, committing field by field, pulling, switching/creating branches, and resolving merge conflicts (desktop app only) |
 
 ## Quick start
 
