@@ -1,7 +1,22 @@
-import { useState, type DragEvent } from 'react'
+import { useMemo, useState, type DragEvent } from 'react'
 import { useEditorStore, type EditorPaper } from '../state/editorStore'
 import { getPlatform } from '../platform'
 import '../styles/papers-editor.css'
+
+/**
+ * Ids sharing a trimmed value with another paper's — mirrors `validateDraft`'s
+ * (`src/state/editorStore.ts`) own dedup exactly: same trim, same "empty
+ * doesn't count" rule (an empty id already gets its own "missing id" error
+ * there). A row flagged here is guaranteed to be one `validateDraft` would
+ * also reject at save time — this only exists to surface it earlier, live,
+ * as the reviewer types, rather than only after they click Save.
+ */
+export function duplicatePaperIds(papers: { id: string }[]): Set<string> {
+  const trimmed = papers.map((p) => p.id.trim()).filter(Boolean)
+  const counts = new Map<string, number>()
+  for (const id of trimmed) counts.set(id, (counts.get(id) ?? 0) + 1)
+  return new Set([...counts].filter(([, n]) => n > 1).map(([id]) => id))
+}
 
 type DropPosition = 'before' | 'after'
 
@@ -33,6 +48,10 @@ export function PapersEditor() {
 
   const isBrowser = getPlatform().kind !== 'electron'
   const jsonName = location?.name ?? 'the project JSON'
+
+  // Live here so a reviewer sees an id collision the moment they cause it,
+  // not only after clicking Save.
+  const duplicateIds = useMemo(() => duplicatePaperIds(papers), [papers])
 
   const clearDrag = () => {
     setDragUid(null)
@@ -163,6 +182,7 @@ export function PapersEditor() {
               <span className="papers-index">{i + 1}.</span>
               <PaperFields
                 paper={paper}
+                duplicateId={duplicateIds.has(paper.id.trim())}
                 onRemove={() => confirmRemove(paper)}
                 onInteract={() => confirmAdded(paper.uid)}
               />
@@ -191,13 +211,16 @@ function rowClass(
 
 interface PaperFieldsProps {
   paper: EditorPaper
+  /** This paper's id collides with another paper's — see `duplicateIds` in
+   *  `PapersEditor`. */
+  duplicateId: boolean
   onRemove: () => void
   /** The reviewer reached this row — drop its "just added" highlight. */
   onInteract: () => void
 }
 
 /** The editable fields of one paper. */
-function PaperFields({ paper, onRemove, onInteract }: PaperFieldsProps) {
+function PaperFields({ paper, duplicateId, onRemove, onInteract }: PaperFieldsProps) {
   const updatePaper = useEditorStore((s) => s.updatePaper)
   const patch = (p: Partial<EditorPaper>) => updatePaper(paper.uid, p)
 
@@ -229,11 +252,14 @@ function PaperFields({ paper, onRemove, onInteract }: PaperFieldsProps) {
         <label className="papers-field">
           <span className="papers-label">
             id <span className="papers-note">unique</span>
+            {duplicateId && <span className="papers-field-warning"> — duplicate</span>}
           </span>
           <input
             type="text"
-            className="papers-input mono small"
+            className={`papers-input mono small${duplicateId ? ' papers-input-invalid' : ''}`}
             value={paper.id}
+            aria-invalid={duplicateId}
+            title={duplicateId ? 'Another paper already uses this id — ids must be unique.' : undefined}
             onFocus={onInteract}
             onChange={(e) => patch({ id: e.target.value })}
           />

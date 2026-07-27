@@ -145,6 +145,15 @@
   font-style: italic;
   opacity: 0.8;
 }
+.papers-field-warning {
+  color: var(--danger);
+  font-style: italic;
+}
+
+.papers-input-invalid {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
 
 .papers-input {
   width: 100%;
