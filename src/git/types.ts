@@ -66,6 +66,43 @@ export interface GitRepoInfo {
 
 export type CloneOutcome = { ok: true; dest: string } | { ok: false; error: string }
 
+/** One local branch, from `git branch --format`. */
+export interface GitBranch {
+  name: string
+  /** True for the branch HEAD currently points at. */
+  current: boolean
+}
+
+/**
+ * The outcome of asking to switch to another branch — mirrors `PullStart`'s
+ * shape for the same reason: one discriminated result the renderer branches
+ * on, computed entirely before anything is mutated except where `'merge'`
+ * says otherwise (see `beginBranchSwitch`'s own doc comment for exactly what
+ * that case has already done by the time it's returned).
+ */
+export type BranchSwitchStart =
+  /** Nothing in the project is uncommitted — a plain `checkoutBranch` suffices. */
+  | { kind: 'no-changes' }
+  /** Something *outside* the project's own files is also dirty — SaiLoR only
+   *  knows how to carry the project's own uncommitted changes across a
+   *  branch switch, not arbitrary repo files. Nothing has been touched. */
+  | { kind: 'other-files-dirty'; paths: string[] }
+  | { kind: 'error'; message: string }
+  | {
+      kind: 'merge'
+      /** The branch switched *from* — `abortBranchSwitch` checks back out to
+       *  this if the reviewer cancels conflict resolution. */
+      sourceBranch: string
+      /** The project's content at the commit being switched away from, or
+       *  `null` when it did not exist there. */
+      base: string | null
+      /** The project's content including the reviewer's uncommitted edits,
+       *  captured before anything was touched. */
+      ours: string
+      /** The target branch's committed content. */
+      theirs: string
+    }
+
 export type PullStart =
   | { kind: 'up-to-date' }
   | { kind: 'fast-forwarded' }
@@ -135,4 +172,29 @@ export interface GitPlatform {
    *  — without staging or committing. The write-counterpart to
    *  `workingContent`, for reverting local edits without a commit. */
   writeWorking(root: string, relPath: string, working: SplitProject): Promise<GitRun>
+
+  /** Local branches, current one first — for the branch switcher. */
+  branches(root: string): Promise<GitBranch[]>
+  /** A plain, no-local-changes checkout — only safe to call after
+   *  `beginBranchSwitch` returned `'no-changes'`, or outside a project's
+   *  repository entirely. */
+  checkoutBranch(root: string, branch: string): Promise<GitRun>
+  /**
+   * Checks whether switching to `branch` is safe, and if the project has
+   * uncommitted changes that can be carried over, does the actual switch
+   * (stash, checkout, read the three revisions) — see
+   * `electron/main.ts`'s handler for exactly what "safe" means and why the
+   * mutation already happened by the time this returns `'merge'`.
+   */
+  beginBranchSwitch(root: string, relPath: string, branch: string): Promise<BranchSwitchStart>
+  /** Writes the resolved project onto the now-checked-out target branch and
+   *  drops the stash `beginBranchSwitch` created — the branch-switch
+   *  counterpart to `finishPull`. */
+  finishBranchSwitch(root: string, relPath: string, resolved: SplitProject): Promise<GitRun>
+  /** Checks back out to `sourceBranch` and restores the stashed changes —
+   *  the branch-switch counterpart to `abortPull`. Unlike `abortPull` (which
+   *  aborts an in-progress git merge with nothing else to undo), this must
+   *  reverse an already-completed checkout, which is why it needs to be told
+   *  which branch to return to. */
+  abortBranchSwitch(root: string, sourceBranch: string): Promise<GitRun>
 }

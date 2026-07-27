@@ -145,6 +145,20 @@
   margin-left: 6px;
 }
 
+.git-branch-select {
+  font: inherit;
+  font-weight: 600;
+  background: var(--bg);
+  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
+.git-branch-select:disabled {
+  opacity: 0.6;
+}
+
 .git-dirty-banner {
   display: flex;
   align-items: center;

@@ -235,9 +235,11 @@ App (src/App.tsx)
 ├── GitCloneDialog (src/components/GitCloneDialog.tsx)
 │     Import-from-git modal, driven by useGitStore's clone.phase: setup (URL + destination) → cloning (spinner + elapsed seconds) → error (git's exact text, back to setup) → done (pick the project JSON, opened inside the clone) — Electron only, see "Git" above
 ├── GitDialog (src/components/GitDialog.tsx)
-│     Modal for the open project's own repository: changes + diff, a commit message, Commit, Pull, Push — shown only when the toolbar's Git button is present. When the open project's own file is a tracked, field-diffable modification, its changes are reviewed field by field (Use/Ignore/Discard per row) instead of as one whole-file checkbox — see "Field-level commit review" below. When every row is marked Discard, the primary button relabels to "Discard all" (danger-red) and reverts marked rows directly via `runDiscard` without committing. When a Discard row is mixed in among Use rows, `mixedDiscardConfirmMessage()` warns that the Discard field's change will be lost on commit before proceeding
+│     Modal for the open project's own repository: changes + diff, a commit message, Commit, Pull, Push, and a branch switcher (a `<select>` in the header over `useGitStore().branches`, driving `requestSwitchBranch`) — shown only when the toolbar's Git button is present. When the open project's own file is a tracked, field-diffable modification, its changes are reviewed field by field (Use/Ignore/Discard per row) instead of as one whole-file checkbox — see "Field-level commit review" below. When every row is marked Discard, the primary button relabels to "Discard all" (danger-red) and reverts marked rows directly via `runDiscard` without committing. When a Discard row is mixed in among Use rows, `mixedDiscardConfirmMessage()` warns that the Discard field's change will be lost on commit before proceeding
+├── BranchSwitchPrompt (src/components/BranchSwitchPrompt.tsx)
+│     Asked when the branch switcher picks a different branch while the project has uncommitted changes — commit first (closes this, switches nothing), carry the changes over (starts the same field-level merge a pull uses), or cancel. See "Switching branches with uncommitted changes" below
 ├── GitMergeDialog (src/components/GitMergeDialog.tsx)
-│     The pull's conflict-resolution list, grouped by paper (one collapsible section per paper, auto-collapsing when its last conflict is decided): your value left, the remote's right, an editable final value in the middle, with full-text wrapping instead of one-line clipping. "Use all mine"/"Use all remote" exclude conflicts in another reviewer's own tree (`isForeignReview()`), badged "another reviewer", leaving them for individual ◀/▶ resolution. No Escape, no backdrop-click, no × — see "Git" above for why
+│     The conflict-resolution list for either a pull or a carry-changes-over branch switch (`panel.merge.source` picks which git calls Finish/Cancel make; the UI itself doesn't need to know which), grouped by paper (one collapsible section per paper, auto-collapsing when its last conflict is decided): your value left, the remote's right, an editable final value in the middle, with full-text wrapping instead of one-line clipping. "Use all mine"/"Use all remote" exclude conflicts in another reviewer's own tree (`isForeignReview()`), badged "another reviewer", leaving them for individual ◀/▶ resolution. No Escape, no backdrop-click, no × — see "Git" above for why
 └── ErrorPanel (src/components/ErrorPanel.tsx)
       Modal overlay for load/save errors
 ```
@@ -1358,7 +1360,7 @@ something a caller discovers by calling it, not something the type checker catch
 **The browser build used to show every git entry point disabled, not absent — moot now that the web
 build never renders the toolbar at all.** Before the full web-build discontinuation, `Toolbar.tsx`
 checked `getGit()` the same way any other caller does, and rather than hiding the **Git** button and
-the Open menu's **Import from git…** item when the capability was `null`, kept them in the layout —
+the Open menu's **Import from remote git…** item when the capability was `null`, kept them in the layout —
 dimmed, with a tooltip telling a reviewer *why* it doesn't work and that the desktop app is where it
 does. That distinction no longer matters in practice: `App.tsx`'s `isElectron()` gate now blocks the
 toolbar from rendering at all outside Electron (see the Overview), so there is no longer a dimmed
@@ -1382,11 +1384,12 @@ dimmed-but-visible when the *project* turned it off (`config.ai: false`).
 
 ### The renderer never names an argv
 
-Every git operation the renderer can ask for is one of fifteen enumerated IPC handlers in
+Every git operation the renderer can ask for is one of the enumerated IPC handlers in
 `electron/main.ts` (`git:probe`, `git:pickCloneDir`, `git:clone`, `git:pickProjectIn`, `git:info`,
 `git:status`, `git:headContent`, `git:workingContent`, `git:commitPartial`,
-`git:commit`, `git:push`, `git:pullBegin`, `git:pullFinish`, `git:pullAbort`, `git:writeWorking`) — never a general
-`git <args>` channel. Git has `--exec-path`, aliases, and the `ext::` remote-helper
+`git:commit`, `git:push`, `git:pullBegin`, `git:pullFinish`, `git:pullAbort`, `git:writeWorking`,
+`git:branches`, `git:checkout`, `git:branchSwitchBegin`, `git:branchSwitchFinish`,
+`git:branchSwitchAbort`) — never a general `git <args>` channel. Git has `--exec-path`, aliases, and the `ext::` remote-helper
 transport; a channel that let the renderer choose the argv would be handing it arbitrary code
 execution wearing a "just run git" label. Main decides what git is actually asked to do; the
 renderer only supplies data (a URL, a path, a commit message, a resolved text).
@@ -1616,6 +1619,43 @@ lose a reviewer's unsaved work with no warning at all. `GitDialog.tsx` shows a d
 **Save project** button and disables Pull (and Commit — committing the file on disk while the
 in-memory copy disagrees with it is its own kind of confusing) while it's up.
 
+### Switching branches with uncommitted changes
+
+`GitDialog.tsx`'s header is a `<select>` over `useGitStore().branches` (`git:branches` —
+`git branch --format`) instead of plain text whenever there is more than one local branch.
+Picking a different one goes through `requestSwitchBranch(branch)`:
+
+- **Nothing uncommitted** (`panel.status.changes` is empty): `git:checkout` — a plain `git checkout
+  <branch> --` — runs immediately, then `reloadOpenProject()` plus a `refreshRepo`/`refreshBranches`
+  to pick up the new branch's own project content and the updated current-branch marker.
+- **Something uncommitted**: `panel.branchSwitchPrompt` opens (`BranchSwitchPrompt.tsx`, the same
+  three-choice shape `ClosePrompt` uses) asking to commit first (closes the prompt, switches nothing —
+  the reviewer is already looking at the commit form), carry the changes over, or cancel.
+
+**Carrying changes over (`resolveBranchSwitchPrompt('carryOver')` → `beginBranchSwitch`)** refuses
+outright, touching nothing, if anything *outside* the project's own files (`relPath` +
+`annotationsRelDir(relPath)`) is also dirty — the same "SaiLoR only knows how to merge the project,
+not arbitrary files" limitation `git:pullBegin`'s `'conflict-elsewhere'` has, checked here *before* any
+mutation rather than after, since there is no clean way to undo a branch switch the way `merge --abort`
+undoes an in-progress pull. When the precondition holds, `git:branchSwitchBegin` does the actual
+mutation as one atomic step: capture `base` (`readProjectAtRevision` at the pre-switch HEAD), `ours`
+(`readProjectText` on the current, still-uncommitted working tree), and `theirs`
+(`readProjectAtRevision` at the target branch) — all pure reads — then `git stash push -u -- relPath
+annotationsRelDir(relPath)` (project-scoped only) and `git checkout <branch> --`. The three texts feed
+the identical `mergeProjects` used for a pull; zero conflicts finishes immediately
+(`git:branchSwitchFinish`: `writeProjectFiles` the resolved split onto the now-checked-out branch, then
+`git stash drop`), otherwise `GitMergeDialog` opens exactly as it does for a pull conflict.
+
+`MergeState` carries a `source: {kind:'pull'} | {kind:'branch-switch', sourceBranch}` so `doFinish`/
+`cancelMerge` call the right pair of git operations (`finishPull`/`abortPull` vs
+`finishBranchSwitch`/`abortBranchSwitch`) — `GitMergeDialog` itself needs no branching on `source`, since
+`merge.ref` (upstream ref for a pull, target branch name for a switch) already reads correctly in its
+generic "Your changes and {ref}'s both changed these fields" wording either way. Cancelling a
+branch-switch merge is a real reversal, not just stopping something in-flight the way aborting a pull's
+`git merge` is: `abortBranchSwitch(root, sourceBranch)` checks back out to `sourceBranch` and `git
+stash pop`s the changes back, since the checkout in `beginBranchSwitch` already completed by the time a
+reviewer can cancel.
+
 ### The merge (`src/git/merge.ts`)
 
 The full reasoning lives in `data-model.md`'s "Merging two copies of a project"; this is the shape of
@@ -1843,6 +1883,9 @@ until every row is decided) leave.
   - `git:push` — plain `git push`; a missing upstream surfaces git's own message rather than inventing `--set-upstream`
   - `git:pullBegin` / `git:pullFinish` / `git:pullAbort` — the pull classification and its two ways to conclude; see "Git" above for the full command sequence
   - `git:writeWorking` — writes `composeContents`'s `workingOut` directly to the working file, letting a reviewer discard local edits without committing (see "Field-level commit review" above)
+  - `git:branches` — `git branch --format` → `{ name, current }[]` for the branch switcher
+  - `git:checkout` — a plain `git checkout <branch> --`, only for the no-local-changes path
+  - `git:branchSwitchBegin` / `git:branchSwitchFinish` / `git:branchSwitchAbort` — carrying uncommitted project changes across a branch switch (stash the project's files, checkout, merge); see "Switching branches with uncommitted changes" above for the full sequence
 - **Menu**: custom template with File, Edit, View, Window menus.
   - The **Edit** menu is hand-built: **Undo/Redo** send `app:undo` / `app:redo` to the renderer (routing to the store's history) rather than the native text-undo role, so undo works app-wide; cut/copy/paste/selectAll keep their native roles.
   - The **View** menu is hand-built (not the default `{ role: 'viewMenu' }`) and deliberately omits zoom roles so that `Ctrl +/-/0` reach the renderer for PDF zoom (and `Ctrl+Shift +/-/0` for app font scaling) instead of triggering native browser/Electron zoom.
