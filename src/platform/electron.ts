@@ -42,6 +42,12 @@ export interface SlrBridge {
   pickReferenceFile(): Promise<{ text: string; name: string } | null>
   /** Raw bytes of a PDF by absolute path (for reading its title/authors). */
   readPdf(path: string): Promise<Uint8Array>
+  /** Whether `rel` (relative to the project's directory) is safe and
+   *  reachable to read via slr-file:// — the same traversal/symlink guard
+   *  `registerPdfProtocol` enforces when actually serving it, checked first
+   *  so a blocked or missing PDF gets an honest reason instead of pdf.js's
+   *  own opaque failure for an HTTP status it never explains. */
+  checkPdfPath(rel: string): Promise<{ ok: true } | { ok: false; reason: 'no-project' | 'escapes' | 'not-found' }>
   /** For each project path: does it still exist, and what title does it now carry? */
   peekProjects(paths: string[]): Promise<{ exists: boolean; title?: string }[]>
   /** Paths of `toFiles` relative to `fromFile`'s directory, POSIX-separated. */
@@ -185,6 +191,27 @@ export class ElectronAdapter implements PlatformAdapter {
     // rendering. The project editor repoints it when picking a new location, so
     // trusting whatever was set last would resolve PDFs against the wrong dir.
     if (projectHandle?.path) await bridge().setProjectDir(projectHandle.path)
+    // Ask before constructing the URL: the protocol handler enforces the same
+    // check when actually serving the file, but a 403/404 from a custom
+    // protocol reaches the reviewer as pdf.js's own generic load-failure
+    // message, which says nothing about *why*. This surfaces the real reason
+    // as a normal thrown Error instead — the load effect in PdfViewer.tsx
+    // already renders whatever this throws.
+    const check = await bridge().checkPdfPath(pdfPath)
+    if (!check.ok) {
+      if (check.reason === 'escapes') {
+        throw new Error(
+          `PDF "${pdfPath}" points outside the project's own folder and is blocked for safety. A project file is ` +
+            `often shared with other reviewers — a PDF path reaching outside its folder could otherwise be used to ` +
+            `read arbitrary files on your disk from a project you didn't create yourself. Move the PDF inside the ` +
+            `project's folder, or store the project next to it.`,
+        )
+      }
+      if (check.reason === 'not-found') {
+        throw new Error(`PDF "${pdfPath}" was not found relative to the project's own folder.`)
+      }
+      throw new Error('No project is open.')
+    }
     // The main process serves files from the project dir via slr-file://.
     // Encode each path segment but keep the separators.
     const encoded = pdfPath
