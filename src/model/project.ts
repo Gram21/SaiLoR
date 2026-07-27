@@ -876,15 +876,11 @@ export function assembleLegacyProjectJson(
   }
 }
 
-/** Case-insensitive title ordering gives git a stable paper order; id breaks
- * title ties without relying on the engine's sort stability. */
+/** Plain string comparison on `id` — deterministic and independent of
+ *  locale/collation settings, unlike title ordering (which also drifts if a
+ *  reviewer ever edits a title after the file was first sorted). */
 function comparePapers(a: Paper, b: Paper): number {
-  const compareText = (left: string, right: string): number => (left < right ? -1 : left > right ? 1 : 0)
-  return (
-    compareText(a.title.toLowerCase(), b.title.toLowerCase()) ||
-    compareText(a.title, b.title) ||
-    compareText(a.id, b.id)
-  )
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
 }
 
 function extractExtra(obj: Record<string, unknown>, known: Set<string>): Record<string, unknown> {

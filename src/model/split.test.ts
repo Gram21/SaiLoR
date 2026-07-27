@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import type { AnnotationDef } from './schema'
 import {
   loadProject,
+  serializeProject,
   splitProjectFiles,
   isLegacyProjectShape,
   assembleLegacyProjectJson,
@@ -132,6 +133,35 @@ describe('splitProjectFiles', () => {
     // Never the ordinary-project names for a screening project.
     expect(files.some((f) => f.relPath.endsWith('/consolidated.json'))).toBe(false)
     expect(files.some((f) => /\/reviewer-\d+\.json$/.test(f.relPath))).toBe(false)
+  })
+})
+
+describe('paper ordering — plain string comparison on id', () => {
+  const raw = {
+    version: 1,
+    config: { schema: sampleSchema },
+    papers: [
+      // Deliberately not id-sorted, and title order would disagree with id
+      // order for the first two — title sorting must not leak back in.
+      { id: 'p10', title: 'Aardvark Paper', authors: [], pdf: 'p10.pdf', annotations: {} },
+      { id: 'P2', title: 'Zebra Paper', authors: [], pdf: 'p2.pdf', annotations: {} },
+      { id: 'p2', title: 'Middle Paper', authors: [], pdf: 'p2b.pdf', annotations: {} },
+    ],
+  }
+
+  it('serializeProject orders papers by plain (case-sensitive) string comparison on id', () => {
+    const project = loadProject(raw)
+    const out = JSON.parse(serializeProject(project)) as { papers: { id: string }[] }
+    // Plain string compare: uppercase 'P2' sorts before lowercase 'p10'/'p2'
+    // (charCode 'P' < 'p'), not the locale-aware or case-insensitive order.
+    expect(out.papers.map((p) => p.id)).toEqual(['P2', 'p10', 'p2'])
+  })
+
+  it('splitProjectFiles orders metaPapers the same way', () => {
+    const project = loadProject(raw)
+    const { meta } = splitProjectFiles(project)
+    const ids = (meta as { papers: { id: string }[] }).papers.map((p) => p.id)
+    expect(ids).toEqual(['P2', 'p10', 'p2'])
   })
 })
 
