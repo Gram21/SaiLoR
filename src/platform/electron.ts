@@ -106,6 +106,7 @@ export interface SlrBridge {
   ): Promise<GitRun>
   gitWriteWorking(root: string, relPath: string, working: SplitProject): Promise<GitRun>
   gitBranches(root: string): Promise<GitBranch[]>
+  gitBranchCreate(root: string, name: string): Promise<GitRun>
   gitCheckout(root: string, branch: string): Promise<GitRun>
   gitBranchSwitchBegin(root: string, relPath: string, branch: string): Promise<BranchSwitchStart>
   gitBranchSwitchFinish(root: string, relPath: string, resolved: SplitProject): Promise<GitRun>
@@ -395,6 +396,7 @@ export class ElectronAdapter implements PlatformAdapter {
       bridge().gitCommitPartial(root, relPath, committed, working, otherPaths, message),
     writeWorking: (root, relPath, working) => bridge().gitWriteWorking(root, relPath, working),
     branches: (root) => bridge().gitBranches(root),
+    createBranch: (root, name) => bridge().gitBranchCreate(root, name),
     checkoutBranch: (root, branch) => bridge().gitCheckout(root, branch),
     beginBranchSwitch: (root, relPath, branch) => bridge().gitBranchSwitchBegin(root, relPath, branch),
     finishBranchSwitch: (root, relPath, resolved) => bridge().gitBranchSwitchFinish(root, relPath, resolved),

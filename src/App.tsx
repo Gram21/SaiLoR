@@ -29,6 +29,7 @@ import { GitCloneDialog } from './components/GitCloneDialog'
 import { GitDialog } from './components/GitDialog'
 import { GitMergeDialog } from './components/GitMergeDialog'
 import { BranchSwitchPrompt } from './components/BranchSwitchPrompt'
+import { NewBranchPrompt } from './components/NewBranchPrompt'
 import { shortenPath } from './platform/recents'
 import { Splitter } from './components/Splitter'
 import { useKeybindings } from './hooks/useKeybindings'
@@ -328,6 +329,7 @@ export function App() {
       <GitDialog />
       <GitMergeDialog />
       <BranchSwitchPrompt />
+      <NewBranchPrompt />
     </div>
   )
 }

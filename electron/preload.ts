@@ -77,6 +77,7 @@ contextBridge.exposeInMainWorld('slr', {
     ipcRenderer.invoke('git:pullFinish', root, relPath, working),
   gitPullAbort: (root: string) => ipcRenderer.invoke('git:pullAbort', root),
   gitBranches: (root: string) => ipcRenderer.invoke('git:branches', root),
+  gitBranchCreate: (root: string, name: string) => ipcRenderer.invoke('git:branchCreate', root, name),
   gitCheckout: (root: string, branch: string) => ipcRenderer.invoke('git:checkout', root, branch),
   gitBranchSwitchBegin: (root: string, relPath: string, branch: string) =>
     ipcRenderer.invoke('git:branchSwitchBegin', root, relPath, branch),

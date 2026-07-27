@@ -104,6 +104,22 @@ interface BranchSwitchPromptState {
   branch: string
 }
 
+/**
+ * The "New branch…" entry in the branch switcher's own state — a name the
+ * reviewer is typing, plus whatever git said the one time they tried to
+ * create it (`error`, distinct from `panel.error` so a failed name doesn't
+ * get lost behind the dialog it belongs to the moment something else
+ * touches the shared one). Creating succeeds via a plain `git branch` at the
+ * current commit; what actually switches to it afterward is the ordinary
+ * `requestSwitchBranch` flow, run exactly as if the reviewer had picked an
+ * existing branch — a freshly cut branch shares its parent's commit, so
+ * that switch can never itself conflict.
+ */
+interface NewBranchPromptState {
+  name: string
+  error: string | null
+}
+
 interface PanelState {
   phase: 'idle' | 'loading' | 'working'
   status: GitStatus | null
@@ -116,6 +132,7 @@ interface PanelState {
   notice: string | null
   merge: MergeState | null
   branchSwitchPrompt: BranchSwitchPromptState | null
+  newBranchPrompt: NewBranchPromptState | null
 }
 
 interface GitState {
@@ -182,6 +199,16 @@ interface GitState {
    */
   requestSwitchBranch: (branch: string) => void
   resolveBranchSwitchPrompt: (choice: 'commitFirst' | 'carryOver' | 'cancel') => Promise<void>
+
+  /** Opens the "New branch…" dialog with an empty name. */
+  openNewBranchPrompt: () => void
+  setNewBranchName: (name: string) => void
+  closeNewBranchPrompt: () => void
+  /** Creates `panel.newBranchPrompt.name` at the current commit, then runs
+   *  the ordinary `requestSwitchBranch` flow against it — a name git itself
+   *  rejects (empty, invalid, already taken) surfaces as
+   *  `newBranchPrompt.error` and leaves the dialog open to fix. */
+  createAndSwitchBranch: () => Promise<void>
 }
 
 /** `${parent}/${name}` — there is no `path` module available in the browser
@@ -486,6 +513,7 @@ export const useGitStore = create<GitState>()(
             notice: null,
             merge: null,
             branchSwitchPrompt: null,
+            newBranchPrompt: null,
           }
         })
         await get().refreshStatus()
@@ -978,6 +1006,52 @@ export const useGitStore = create<GitState>()(
         })
         if (!branch || choice !== 'carryOver') return
         await runBranchSwitchCarryOver(branch)
+      },
+
+      openNewBranchPrompt: () => {
+        set((s) => {
+          if (s.panel) s.panel.newBranchPrompt = { name: '', error: null }
+        })
+      },
+
+      setNewBranchName: (name) => {
+        set((s) => {
+          if (s.panel?.newBranchPrompt) {
+            s.panel.newBranchPrompt.name = name
+            s.panel.newBranchPrompt.error = null
+          }
+        })
+      },
+
+      closeNewBranchPrompt: () => {
+        set((s) => {
+          if (s.panel) s.panel.newBranchPrompt = null
+        })
+      },
+
+      createAndSwitchBranch: async () => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        const name = get().panel?.newBranchPrompt?.name.trim() ?? ''
+        if (!git || !repo) return
+        if (!name) {
+          set((s) => {
+            if (s.panel?.newBranchPrompt) s.panel.newBranchPrompt.error = 'Enter a branch name.'
+          })
+          return
+        }
+        const r = await git.createBranch(repo.root, name)
+        if (!r.ok) {
+          set((s) => {
+            if (s.panel?.newBranchPrompt) s.panel.newBranchPrompt.error = gitErrorText(r)
+          })
+          return
+        }
+        set((s) => {
+          if (s.panel) s.panel.newBranchPrompt = null
+        })
+        await get().refreshBranches()
+        get().requestSwitchBranch(name)
       },
     }
 

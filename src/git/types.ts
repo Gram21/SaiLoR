@@ -175,6 +175,9 @@ export interface GitPlatform {
 
   /** Local branches, current one first — for the branch switcher. */
   branches(root: string): Promise<GitBranch[]>
+  /** Creates `name` at the current `HEAD`, without switching to it — the
+   *  caller always follows this with the ordinary switch flow. */
+  createBranch(root: string, name: string): Promise<GitRun>
   /** A plain, no-local-changes checkout — only safe to call after
    *  `beginBranchSwitch` returned `'no-changes'`, or outside a project's
    *  repository entirely. */

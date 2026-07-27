@@ -238,6 +238,8 @@ App (src/App.tsx)
 │     Modal for the open project's own repository: changes + diff, a commit message, Commit, Pull, Push, and a branch switcher (a `<select>` in the header over `useGitStore().branches`, driving `requestSwitchBranch`) — shown only when the toolbar's Git button is present. When the open project's own file is a tracked, field-diffable modification, its changes are reviewed field by field (Use/Ignore/Discard per row) instead of as one whole-file checkbox — see "Field-level commit review" below. When every row is marked Discard, the primary button relabels to "Discard all" (danger-red) and reverts marked rows directly via `runDiscard` without committing. When a Discard row is mixed in among Use rows, `mixedDiscardConfirmMessage()` warns that the Discard field's change will be lost on commit before proceeding
 ├── BranchSwitchPrompt (src/components/BranchSwitchPrompt.tsx)
 │     Asked when the branch switcher picks a different branch while the project has uncommitted changes — commit first (closes this, switches nothing), carry the changes over (starts the same field-level merge a pull uses), or cancel. See "Switching branches with uncommitted changes" below
+├── NewBranchPrompt (src/components/NewBranchPrompt.tsx)
+│     The branch switcher's "+ New branch…" entry: a name, created at the current commit and switched to right away via the ordinary branch-switch flow (which can never conflict for a branch just cut from `HEAD`). See "Switching branches with uncommitted changes" below
 ├── GitMergeDialog (src/components/GitMergeDialog.tsx)
 │     The conflict-resolution list for either a pull or a carry-changes-over branch switch (`panel.merge.source` picks which git calls Finish/Cancel make; the UI itself doesn't need to know which), grouped by paper (one collapsible section per paper, auto-collapsing when its last conflict is decided): your value left, the remote's right, an editable final value in the middle, with full-text wrapping instead of one-line clipping. "Use all mine"/"Use all remote" exclude conflicts in another reviewer's own tree (`isForeignReview()`), badged "another reviewer", leaving them for individual ◀/▶ resolution. No Escape, no backdrop-click, no × — see "Git" above for why
 └── ErrorPanel (src/components/ErrorPanel.tsx)
@@ -1388,7 +1390,7 @@ Every git operation the renderer can ask for is one of the enumerated IPC handle
 `electron/main.ts` (`git:probe`, `git:pickCloneDir`, `git:clone`, `git:pickProjectIn`, `git:info`,
 `git:status`, `git:headContent`, `git:workingContent`, `git:commitPartial`,
 `git:commit`, `git:push`, `git:pullBegin`, `git:pullFinish`, `git:pullAbort`, `git:writeWorking`,
-`git:branches`, `git:checkout`, `git:branchSwitchBegin`, `git:branchSwitchFinish`,
+`git:branches`, `git:branchCreate`, `git:checkout`, `git:branchSwitchBegin`, `git:branchSwitchFinish`,
 `git:branchSwitchAbort`) — never a general `git <args>` channel. Git has `--exec-path`, aliases, and the `ext::` remote-helper
 transport; a channel that let the renderer choose the argv would be handing it arbitrary code
 execution wearing a "just run git" label. Main decides what git is actually asked to do; the
@@ -1656,6 +1658,16 @@ branch-switch merge is a real reversal, not just stopping something in-flight th
 stash pop`s the changes back, since the checkout in `beginBranchSwitch` already completed by the time a
 reviewer can cancel.
 
+**"+ New branch…"** is the branch `<select>`'s last option (`NewBranchPrompt.tsx`, opened via a
+sentinel value rather than a real branch name). `createAndSwitchBranch` runs `git:branchCreate` (a
+plain `git branch -- <name>`, at the current commit, without switching) and, on success, hands the new
+name straight to `requestSwitchBranch` — the ordinary flow above, run exactly as if the reviewer had
+picked an existing branch. This is deliberately not a special case: a branch just cut from `HEAD`
+shares that exact commit, so `beginBranchSwitch`'s `theirs` is identical to `base`, and carrying
+uncommitted changes across can never itself conflict. A name git's own `check-ref-format` rejects (or
+one already taken) surfaces as `newBranchPrompt.error`, read from the *created* commands' own stderr,
+not hand-validated client-side.
+
 ### The merge (`src/git/merge.ts`)
 
 The full reasoning lives in `data-model.md`'s "Merging two copies of a project"; this is the shape of
@@ -1884,6 +1896,7 @@ until every row is decided) leave.
   - `git:pullBegin` / `git:pullFinish` / `git:pullAbort` — the pull classification and its two ways to conclude; see "Git" above for the full command sequence
   - `git:writeWorking` — writes `composeContents`'s `workingOut` directly to the working file, letting a reviewer discard local edits without committing (see "Field-level commit review" above)
   - `git:branches` — `git branch --format` → `{ name, current }[]` for the branch switcher
+  - `git:branchCreate` — a plain `git branch -- <name>` at the current commit, without switching; the renderer always follows it with the ordinary switch flow
   - `git:checkout` — a plain `git checkout <branch> --`, only for the no-local-changes path
   - `git:branchSwitchBegin` / `git:branchSwitchFinish` / `git:branchSwitchAbort` — carrying uncommitted project changes across a branch switch (stash the project's files, checkout, merge); see "Switching branches with uncommitted changes" above for the full sequence
 - **Menu**: custom template with File, Edit, View, Window menus.

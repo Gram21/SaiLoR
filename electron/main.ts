@@ -1657,6 +1657,21 @@ ipcMain.handle('git:branches', async (_e, root: string) => {
     })
 })
 
+/**
+ * Creates `name` pointing at the current `HEAD`, without switching to it —
+ * the renderer always follows this with the ordinary switch flow
+ * (`requestSwitchBranch`), which is what actually checks it out and, since
+ * a freshly created branch shares the exact commit it was cut from, can
+ * never itself produce a conflict when carrying uncommitted changes across.
+ * `--` disambiguates the name from a path the same way `git:checkout` does;
+ * unlike the branch list (always names git itself produced), this one is
+ * reviewer-typed, so git's own `check-ref-format` rules are what actually
+ * reject an invalid name — surfaced via the run's own stderr.
+ */
+ipcMain.handle('git:branchCreate', async (_e, root: string, name: string) => {
+  return runGit(['branch', '--', name], root)
+})
+
 /** A plain checkout with nothing local to carry — only reached after
  *  `beginBranchSwitch` confirmed there is nothing project-related to lose
  *  (`'no-changes'`), or for a repo with no open project at all. The trailing

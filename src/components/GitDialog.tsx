@@ -7,6 +7,11 @@ import type { Disposition, FieldChange, PaperChange } from '../git/changes'
 import type { FieldValue } from '../model/annotations'
 import '../styles/git.css'
 
+/** The branch switcher's own sentinel value for "New branch…" — never a real
+ *  branch name git itself would produce, so it can share the `<select>`
+ *  with `branches` without colliding. */
+const NEW_BRANCH_OPTION = '__sailor_new_branch__'
+
 /**
  * The confirm text `runPrimaryAction` must show before committing when a
  * Discard row is mixed in among Use rows — `composeContents` (git/changes.ts)
@@ -49,6 +54,7 @@ export function GitDialog() {
   const repo = useGitStore((s) => s.repo)
   const branches = useGitStore((s) => s.branches)
   const requestSwitchBranch = useGitStore((s) => s.requestSwitchBranch)
+  const openNewBranchPrompt = useGitStore((s) => s.openNewBranchPrompt)
   const closePanel = useGitStore((s) => s.closePanel)
   const refreshStatus = useGitStore((s) => s.refreshStatus)
   const toggleSelected = useGitStore((s) => s.toggleSelected)
@@ -143,13 +149,17 @@ export function GitDialog() {
                 aria-label="Switch branch"
                 value={repo.branch}
                 disabled={working}
-                onChange={(e) => requestSwitchBranch(e.target.value)}
+                onChange={(e) => {
+                  if (e.target.value === NEW_BRANCH_OPTION) openNewBranchPrompt()
+                  else requestSwitchBranch(e.target.value)
+                }}
               >
                 {branches.map((b) => (
                   <option key={b.name} value={b.name}>
                     {b.name}
                   </option>
                 ))}
+                <option value={NEW_BRANCH_OPTION}>+ New branch…</option>
               </select>
             ) : (
               (repo.branch ?? 'detached HEAD')
