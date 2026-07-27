@@ -113,6 +113,11 @@ export class BrowserAdapter implements PlatformAdapter {
    *  already resolving from). Set alongside `pdfDir`/`pdfFileMap`, whichever
    *  grant path was used. */
   private pdfFolderName: string | null = null
+  /** A `pdf` value the reviewer rescued by picking that exact file, once the
+   *  picked PDF folder couldn't reach it (see `resolveManually`) — keyed by
+   *  the stored relative path, mirroring the desktop build's `allowedEscapes`
+   *  (electron/main.ts). Session-only, cleared with the other local grants. */
+  private manualPdfFiles = new Map<string, File>()
   private nextId = 0
   /** Set when a project was loaded from a URL (server mode); PDFs resolve against it. */
   private serverBase: string | null = null
@@ -134,6 +139,7 @@ export class BrowserAdapter implements PlatformAdapter {
     this.pdfDir = null
     this.pdfFileMap = null
     this.pdfFolderName = null
+    this.manualPdfFiles.clear()
   }
 
   getRecents(): RecentEntry[] {
@@ -341,9 +347,77 @@ export class BrowserAdapter implements PlatformAdapter {
 
   /** Local PDF resolution: the FSAPI directory picker where available, else a folder-picking `<input>`. */
   private async resolveLocalPdf(pdfPath: string): Promise<File> {
+    // Already rescued once this session (see `resolveManually`) — skip
+    // straight to it rather than re-trying the picked folder and failing
+    // again first.
+    const rescued = this.manualPdfFiles.get(pdfPath)
+    if (rescued) return rescued
+
     await this.ensureLocalPdfGrant()
-    if (this.pdfDir) return this.resolveViaDir(this.pdfDir, pdfPath)
-    return this.resolveViaFileMap(pdfPath)
+    try {
+      return this.pdfDir ? await this.resolveViaDir(this.pdfDir, pdfPath) : this.resolveViaFileMap(pdfPath)
+    } catch (err) {
+      // Only a path that structurally cannot resolve via *any* folder grant
+      // (see `relParts`) gets offered the manual-pick rescue below — an
+      // ordinary "not found" (a typo, a moved file, the wrong folder picked)
+      // stays a plain failure, so a project with several genuinely missing
+      // PDFs doesn't turn every one of them into a confirm dialog.
+      if (err instanceof PdfEscapesAnchorError) return this.resolveManually(pdfPath)
+      throw err
+    }
+  }
+
+  /**
+   * The browser-build counterpart to the desktop app's confirm-to-allow flow
+   * (electron/main.ts's `allowedEscapes`): a `pdf` value pointing outside the
+   * picked PDF folder has no folder-grant path that can ever reach it — the
+   * File System Access API never exposes a parent handle, so no *different*
+   * folder pick answers "climb out of here" the way a real filesystem path
+   * would. Picking the file directly sidesteps that entirely: the reviewer
+   * names the exact file instead of a path relative to anything, and the
+   * browser grants read access to just that one file, however it's laid out
+   * on disk. Confirmed the same way the desktop build asks (`window.confirm`,
+   * matching this app's established "are you sure" pattern rather than a
+   * bespoke dialog), and remembered per path for the rest of the session so
+   * revisiting the same paper doesn't ask again.
+   */
+  private async resolveManually(pdfPath: string): Promise<File> {
+    const ok = window.confirm(
+      `PDF "${pdfPath}" is stored outside the folder you picked, and the browser can't reach it there — there's ` +
+        `no folder to pick that would.\n\n` +
+        `You can instead pick this exact PDF file directly. If you didn't author this project yourself, only do ` +
+        `this if you trust where it came from and recognize the file it's asking for.\n\n` +
+        `Locate "${pdfPath}"?`,
+    )
+    if (!ok) {
+      throw new Error(
+        `PDF "${pdfPath}" was not opened — it points outside the folder you picked, and you chose not to locate it.`,
+      )
+    }
+    const file = await this.pickSinglePdfFile()
+    this.manualPdfFiles.set(pdfPath, file)
+    return file
+  }
+
+  /** A single-PDF picker, FSAPI where available (mirrors `pickPdfs`' own
+   *  shape, just `multiple: false`), else the plain `<input>` fallback. */
+  private async pickSinglePdfFile(): Promise<File> {
+    if (hasFsApi() && typeof fsApi().showOpenFilePicker === 'function') {
+      let handles: FileSystemFileHandle[]
+      try {
+        handles = await fsApi().showOpenFilePicker!({
+          multiple: false,
+          types: [{ description: 'PDF', accept: { 'application/pdf': ['.pdf'] } }],
+        })
+      } catch (err) {
+        if (isAbort(err)) throw new Error('No file was selected.')
+        throw err
+      }
+      return handles[0].getFile()
+    }
+    const file = await pickFileViaInput('application/pdf')
+    if (!file) throw new Error('No file was selected.')
+    return file
   }
 
   /**
@@ -727,12 +801,17 @@ function relParts(pdfPath: string, anchorName: string | null): NormalizedPdfPath
  * that would suggest a retry that cannot succeed no matter which folder is
  * picked, which is worse than not explaining at all.
  */
+/** Marks a "not found" that's specifically the unresolvable-".." case — see
+ *  `relParts` — so `resolveLocalPdf` can offer the manual-pick rescue
+ *  (`resolveManually`) instead of just failing, without doing so for an
+ *  ordinary missing/mistyped file. */
+class PdfEscapesAnchorError extends Error {}
+
 function pdfNotFoundError(pdfPath: string, escapedAnchor: boolean): Error {
   if (escapedAnchor) {
-    return new Error(
+    return new PdfEscapesAnchorError(
       `PDF "${pdfPath}" points outside the folder you picked, and the browser build can only read inside the one ` +
-        `folder it was granted — there is no folder to pick that would reach it. Move the PDF inside the project's ` +
-        `own folder, or use the desktop app, which can read any path on disk.`,
+        `folder it was granted — there is no folder to pick that would reach it.`,
     )
   }
   return new Error(
