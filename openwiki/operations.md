@@ -352,14 +352,6 @@ divergence — reads the three revisions of the project JSON and merges them fie
 `data-model.md`'s "Merging two copies of a project"). Any field both sides changed, differently, is
 shown in a resolution list; nothing is committed until every row has been decided.
 
-**Reviewer seats are checked against your git identity, on a multi-reviewer project.** Opening a
-project reads this machine's `git config user.email` and compares it to whichever seat you have
-selected; a mismatch — someone else's email recorded against "Reviewer 1", say, because two people
-each picked it on their own clone — shows a warning offering to take the seat or pick a different
-one. It never blocks: a solo project, a browser build (no git to check against), and a file with no
-recorded identities all behave exactly as before. See `architecture.md`'s "Reviewer seat identity"
-for the full mechanism, and why the comparison deliberately ignores the display name.
-
 **Known limits, by design, not oversight:**
 
 - **No upstream configured** — surfaces as git's own message, naming the command to fix it; SaiLoR
@@ -367,13 +359,10 @@ for the full mechanism, and why the comparison deliberately ignores the display 
 - **A conflict outside the project JSON** (a PDF, a `.gitignore`, anything else git could not merge
   on its own) — the git merge is aborted cleanly and handed back; resolve it with git directly, then
   pull again.
-- **A schema (or `config.reviewers`, `config.screening`, `version`, `provenance`, or an unrelated
-  `extra` field) changed on both sides, differently** — the whole merge is refused, naming what could
-  not be reconciled, rather than guessing a field-level answer for something that reshapes the file
-  (or, for `provenance`, simply has no field-level shape to guess at).
-- **Two different people claiming the same reviewer seat** — a genuine identity conflict, not
-  something a resolution row can settle either; the merge refuses and names both claimed emails, so
-  it gets fixed by agreeing who holds the seat rather than by clicking through a conflict.
+- **A schema (or `config.reviewers`, `config.screening`, `version`, `provenance`, `protocol`, or an
+  unrelated `extra` field) changed on both sides, differently** — the whole merge is refused, naming
+  what could not be reconciled, rather than guessing a field-level answer for something that reshapes
+  the file (or, for `provenance`/`protocol`, simply has no field-level shape to guess at).
 - **No live clone progress bar, and no cancel button** — a spinner and an elapsed-seconds counter
   say "this has not frozen"; a genuinely stuck clone times out after 15 minutes. See
   `architecture.md`'s "Rejected: streamed clone progress and a cancel button" for the reasoning.
