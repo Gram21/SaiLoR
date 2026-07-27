@@ -643,7 +643,7 @@ Called during serialization. For each node:
 
 1. Write known root keys (`version`, `config`, `papers`) in canonical order, then spread `project.extra` (unknown top-level fields) at the end
 2. For each paper: write known fields, then spread `paper.extra` at the end
-3. Papers are sorted by `comparePapers()` — case-insensitive title first, then case-sensitive title, then `id` — so repeated saves produce byte-identical output regardless of in-memory order
+3. Papers are sorted by `comparePapers()` — plain `<` / `>` comparison on `id` alone — so repeated saves produce byte-identical output regardless of in-memory order. (Previously sorted by title then `id`; switched to `id`-only because title ordering drifted if a reviewer edited a title after the file was first sorted, and depended on locale/collation for tie-breaking.)
 4. Review keys (`"1".."N"`) are sorted numerically
 5. Annotation trees use `serializedTree()`: empty trees write `{}` (no null skeleton), non-empty trees write `pruneTree(schema, tree)`
 6. `dehydrateSchema()` converts `ResolvedDef[]` back to compact `AnnotationDef[]` (omits defaults: `min: 1`, `max: 1` are not written back)
