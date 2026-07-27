@@ -642,9 +642,36 @@ function isAbort(err: unknown): boolean {
   return err instanceof DOMException && err.name === 'AbortError'
 }
 
-/** A stored `pdf` path, split into clean segments (drops empty parts and `.`). */
+/**
+ * A stored `pdf` path, split into clean segments and normalized: empty parts
+ * and `.` are dropped, and `..` collapses the previous segment the usual
+ * way (`"pdfs/../pdfs/a.pdf"` → `["pdfs", "a.pdf"]`). Previously `..` passed
+ * through unchanged, so `resolveViaDir`/`resolveViaFileMap` looked for a
+ * literal folder named `".."`, which never exists — a `pdf` value written
+ * with a `..` (e.g. `"../samples/pdfs/a.pdf"`, netting back to the project's
+ * own folder the same way `path.resolve` does for the Electron build) could
+ * never resolve, no matter what folder the reviewer picked.
+ *
+ * A leading `..` with nothing before it to collapse (climbing above
+ * whatever folder was picked) is dropped rather than kept as a literal,
+ * unresolvable segment — there is no real filesystem anchor to resolve it
+ * against here, unlike `path.resolve`'s `projectDir` in the Electron build;
+ * the File System Access API never exposes one. Dropping it means the
+ * lookup proceeds against whatever's left, which resolves correctly as long
+ * as the *contents* the reviewer picked match what the `..` was climbing
+ * to — true for both `resolveViaDir` (a live directory handle) and
+ * `resolveViaFileMap` (the `webkitdirectory` fallback's flat map, keyed by
+ * path *within* the picked folder, with the folder's own name stripped —
+ * so a leading `..` resolves there too, on the same terms).
+ */
 function relParts(pdfPath: string): string[] {
-  return pdfPath.split('/').filter((p) => p && p !== '.')
+  const parts: string[] = []
+  for (const seg of pdfPath.split('/')) {
+    if (!seg || seg === '.') continue
+    if (seg === '..') parts.pop()
+    else parts.push(seg)
+  }
+  return parts
 }
 
 /**
