@@ -98,6 +98,8 @@ let writeWorkingResult: GitRun = ok()
 let writeWorkingCalls: { root: string; relPath: string; working: SplitProject }[] = []
 
 let branchesResult: GitBranch[] = []
+let createBranchCalls: { root: string; name: string }[] = []
+let createBranchResult: GitRun = ok()
 let checkoutCalls: { root: string; branch: string }[] = []
 let checkoutResult: GitRun = ok()
 let beginBranchSwitchResult: BranchSwitchStart = { kind: 'no-changes' }
@@ -144,6 +146,10 @@ const fakeGit: GitPlatform = {
     return writeWorkingResult
   },
   branches: async () => branchesResult,
+  createBranch: async (root, name) => {
+    createBranchCalls.push({ root, name })
+    return createBranchResult
+  },
   checkoutBranch: async (root, branch) => {
     checkoutCalls.push({ root, branch })
     return checkoutResult
@@ -210,6 +216,8 @@ beforeEach(async () => {
   writeWorkingResult = ok()
   writeWorkingCalls = []
   branchesResult = []
+  createBranchCalls = []
+  createBranchResult = ok()
   checkoutCalls = []
   checkoutResult = ok()
   beginBranchSwitchResult = { kind: 'no-changes' }
@@ -774,5 +782,63 @@ describe('requestSwitchBranch / resolveBranchSwitchPrompt', () => {
 
     expect(branchSwitchFinishCalls).toHaveLength(1)
     expect(finishCalls).toEqual([]) // the pull-specific finish, untouched
+  })
+})
+
+describe('New branch', () => {
+  it('openNewBranchPrompt / setNewBranchName / closeNewBranchPrompt', () => {
+    useGitStore.getState().openNewBranchPrompt()
+    expect(useGitStore.getState().panel?.newBranchPrompt).toEqual({ name: '', error: null })
+
+    useGitStore.getState().setNewBranchName('feature/x')
+    expect(useGitStore.getState().panel?.newBranchPrompt?.name).toBe('feature/x')
+
+    useGitStore.getState().closeNewBranchPrompt()
+    expect(useGitStore.getState().panel?.newBranchPrompt).toBeNull()
+  })
+
+  it('refuses an empty name without calling git', async () => {
+    useGitStore.getState().openNewBranchPrompt()
+    await useGitStore.getState().createAndSwitchBranch()
+    expect(createBranchCalls).toEqual([])
+    expect(useGitStore.getState().panel?.newBranchPrompt?.error).toMatch(/name/i)
+  })
+
+  it("git's own rejection (e.g. a name already taken) surfaces and leaves the dialog open", async () => {
+    createBranchResult = { ok: false, code: 128, stdout: '', stderr: "fatal: a branch named 'x' already exists" }
+    useGitStore.getState().openNewBranchPrompt()
+    useGitStore.getState().setNewBranchName('x')
+    await useGitStore.getState().createAndSwitchBranch()
+
+    expect(useGitStore.getState().panel?.newBranchPrompt).not.toBeNull()
+    expect(useGitStore.getState().panel?.newBranchPrompt?.error).toMatch(/already exists/)
+  })
+
+  it('creates the branch, closes the dialog, and switches to it — clean checkout, nothing dirty', async () => {
+    statusChanges = []
+    await useGitStore.getState().refreshStatus()
+    useGitStore.getState().openNewBranchPrompt()
+    useGitStore.getState().setNewBranchName('feature/y')
+
+    await useGitStore.getState().createAndSwitchBranch()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(createBranchCalls).toEqual([{ root: '/repo', name: 'feature/y' }])
+    expect(useGitStore.getState().panel?.newBranchPrompt).toBeNull()
+    expect(checkoutCalls).toEqual([{ root: '/repo', branch: 'feature/y' }])
+  })
+
+  it('creating with uncommitted changes hands off to the ordinary three-way prompt', async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    await useGitStore.getState().refreshStatus()
+    useGitStore.getState().openNewBranchPrompt()
+    useGitStore.getState().setNewBranchName('feature/z')
+
+    await useGitStore.getState().createAndSwitchBranch()
+
+    expect(createBranchCalls).toEqual([{ root: '/repo', name: 'feature/z' }])
+    expect(useGitStore.getState().panel?.newBranchPrompt).toBeNull()
+    expect(useGitStore.getState().panel?.branchSwitchPrompt).toEqual({ branch: 'feature/z' })
   })
 })
