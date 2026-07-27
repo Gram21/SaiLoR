@@ -81,36 +81,6 @@
   },
   "papers": [
     {
-      "id": "paper-b",
-      "title": "A Survey of Program Repair Techniques",
-      "authors": [
-        "C. Coder",
-        "D. Dev"
-      ],
-      "doi": "10.1000/abc987",
-      "pdf": "pdfs/paper-b.pdf"
-    },
-    {
-      "id": "paper-a",
-      "title": "Deep Learning for Code Search: A Study",
-      "authors": [
-        "A. Author",
-        "B. Writer"
-      ],
-      "doi": "10.1000/xyz123",
-      "pdf": "pdfs/paper-a.pdf"
-    },
-    {
-      "id": "KeimKaplan2026_ICSEBoF",
-      "title": "From Scattered to Structured: A Vision for Automating Architectural Knowledge Management",
-      "authors": [
-        "J. Keim",
-        "A. Kaplan"
-      ],
-      "doi": "10.48550/arXiv.2601.19548",
-      "pdf": "pdfs/KeimKaplan_FromScatteredToStructured.pdf"
-    },
-    {
       "id": "Fuchss2026_LiSSA",
       "title": "Linking Software System Artifacts: Toward Generic Traceability Link Recovery through Retrieval-Augmented Generation",
       "authors": [
@@ -123,6 +93,36 @@
         "Anne Koziolek"
       ],
       "pdf": "pdfs/A1-37.pdf"
+    },
+    {
+      "id": "KeimKaplan2026_ICSEBoF",
+      "title": "From Scattered to Structured: A Vision for Automating Architectural Knowledge Management",
+      "authors": [
+        "J. Keim",
+        "A. Kaplan"
+      ],
+      "doi": "10.48550/arXiv.2601.19548",
+      "pdf": "pdfs/KeimKaplan_FromScatteredToStructured.pdf"
+    },
+    {
+      "id": "paper-a",
+      "title": "Deep Learning for Code Search: A Study",
+      "authors": [
+        "A. Author",
+        "B. Writer"
+      ],
+      "doi": "10.1000/xyz123",
+      "pdf": "pdfs/paper-a.pdf"
+    },
+    {
+      "id": "paper-b",
+      "title": "A Survey of Program Repair Techniques",
+      "authors": [
+        "C. Coder",
+        "D. Dev"
+      ],
+      "doi": "10.1000/abc987",
+      "pdf": "pdfs/paper-b.pdf"
     },
     {
       "id": "paper-c",

@@ -44,70 +44,6 @@
   },
   "papers": [
     {
-      "id": "paper-d",
-      "title": "A Survey of Deep Learning Frameworks for Image Classification",
-      "authors": [
-        "F. Field",
-        "G. Grant"
-      ],
-      "doi": "10.1000/def456",
-      "abstract": "We compare convolutional and transformer-based architectures for image classification across five standard benchmarks, reporting accuracy, throughput, and parameter counts for each framework.",
-      "pdf": ""
-    },
-    {
-      "id": "paper-b",
-      "title": "A Survey of Program Repair Techniques",
-      "authors": [
-        "C. Coder",
-        "D. Dev"
-      ],
-      "doi": "10.1000/abc987",
-      "abstract": "This survey categorizes automated program repair techniques into search-based, semantic, and learning-based approaches, and compares how each is evaluated across common benchmarks. We identify a lack of standardized evaluation protocols as a recurring threat to validity across the surveyed studies.",
-      "pdf": "pdfs/paper-b.pdf"
-    },
-    {
-      "id": "paper-e",
-      "title": "Automated Program Repair: An Industrial Case Study (Workshop Report)",
-      "authors": [
-        "H. Hart"
-      ],
-      "doi": "10.1000/ghi789",
-      "abstract": "We report on deploying an automated program repair tool inside a single company's CI pipeline over six months, describing patch acceptance rates and developer feedback. Presented at an internal engineering workshop; not independently peer-reviewed.",
-      "pdf": ""
-    },
-    {
-      "id": "paper-a",
-      "title": "Deep Learning for Code Search: A Study",
-      "authors": [
-        "A. Author",
-        "B. Writer"
-      ],
-      "doi": "10.1000/xyz123",
-      "abstract": "We present a neural embedding approach for code search that jointly encodes natural language queries and source code snippets into a shared vector space. On a benchmark of over 50,000 query-code pairs, our model improves mean reciprocal rank (MRR) by 12% over prior retrieval baselines.",
-      "pdf": "pdfs/paper-a.pdf"
-    },
-    {
-      "id": "KeimKaplan2026_ICSEBoF",
-      "title": "From Scattered to Structured: A Vision for Automating Architectural Knowledge Management",
-      "authors": [
-        "J. Keim",
-        "A. Kaplan"
-      ],
-      "doi": "10.48550/arXiv.2601.19548",
-      "pdf": "pdfs/KeimKaplan_FromScatteredToStructured.pdf"
-    },
-    {
-      "id": "paper-f",
-      "title": "Grammar-Based Program Synthesis for Automated Repair",
-      "authors": [
-        "I. Ivanova",
-        "J. Jung"
-      ],
-      "doi": "10.1000/jkl321",
-      "abstract": "We propose a grammar-guided synthesis approach that constrains the search space of candidate patches using a language-specific context-free grammar, and evaluate it against existing benchmarks for automated repair.",
-      "pdf": ""
-    },
-    {
       "id": "Fuchss2026_LiSSA",
       "title": "Linking Software System Artifacts: Toward Generic Traceability Link Recovery through Retrieval-Augmented Generation",
       "authors": [
@@ -122,6 +58,38 @@
       "pdf": "pdfs/A1-37.pdf"
     },
     {
+      "id": "KeimKaplan2026_ICSEBoF",
+      "title": "From Scattered to Structured: A Vision for Automating Architectural Knowledge Management",
+      "authors": [
+        "J. Keim",
+        "A. Kaplan"
+      ],
+      "doi": "10.48550/arXiv.2601.19548",
+      "pdf": "pdfs/KeimKaplan_FromScatteredToStructured.pdf"
+    },
+    {
+      "id": "paper-a",
+      "title": "Deep Learning for Code Search: A Study",
+      "authors": [
+        "A. Author",
+        "B. Writer"
+      ],
+      "doi": "10.1000/xyz123",
+      "abstract": "We present a neural embedding approach for code search that jointly encodes natural language queries and source code snippets into a shared vector space. On a benchmark of over 50,000 query-code pairs, our model improves mean reciprocal rank (MRR) by 12% over prior retrieval baselines.",
+      "pdf": "pdfs/paper-a.pdf"
+    },
+    {
+      "id": "paper-b",
+      "title": "A Survey of Program Repair Techniques",
+      "authors": [
+        "C. Coder",
+        "D. Dev"
+      ],
+      "doi": "10.1000/abc987",
+      "abstract": "This survey categorizes automated program repair techniques into search-based, semantic, and learning-based approaches, and compares how each is evaluated across common benchmarks. We identify a lack of standardized evaluation protocols as a recurring threat to validity across the surveyed studies.",
+      "pdf": "pdfs/paper-b.pdf"
+    },
+    {
       "id": "paper-c",
       "title": "Multi-page Test Document",
       "authors": [
@@ -129,6 +97,38 @@
       ],
       "doi": "10.1000/mno987",
       "pdf": "pdfs/multipage.pdf"
+    },
+    {
+      "id": "paper-d",
+      "title": "A Survey of Deep Learning Frameworks for Image Classification",
+      "authors": [
+        "F. Field",
+        "G. Grant"
+      ],
+      "doi": "10.1000/def456",
+      "abstract": "We compare convolutional and transformer-based architectures for image classification across five standard benchmarks, reporting accuracy, throughput, and parameter counts for each framework.",
+      "pdf": ""
+    },
+    {
+      "id": "paper-e",
+      "title": "Automated Program Repair: An Industrial Case Study (Workshop Report)",
+      "authors": [
+        "H. Hart"
+      ],
+      "doi": "10.1000/ghi789",
+      "abstract": "We report on deploying an automated program repair tool inside a single company's CI pipeline over six months, describing patch acceptance rates and developer feedback. Presented at an internal engineering workshop; not independently peer-reviewed.",
+      "pdf": ""
+    },
+    {
+      "id": "paper-f",
+      "title": "Grammar-Based Program Synthesis for Automated Repair",
+      "authors": [
+        "I. Ivanova",
+        "J. Jung"
+      ],
+      "doi": "10.1000/jkl321",
+      "abstract": "We propose a grammar-guided synthesis approach that constrains the search space of candidate patches using a language-specific context-free grammar, and evaluate it against existing benchmarks for automated repair.",
+      "pdf": ""
     }
   ]
 }
