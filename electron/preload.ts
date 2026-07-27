@@ -11,8 +11,8 @@ contextBridge.exposeInMainWorld('slr', {
 
   openProject: () => ipcRenderer.invoke('project:open'),
   openPath: (filePath: string) => ipcRenderer.invoke('project:openPath', filePath),
-  saveProject: (filePath: string, text: string) =>
-    ipcRenderer.invoke('project:save', filePath, text),
+  saveProject: (filePath: string, metaText: string, files: Array<{ relPath: string; text: string | null }>) =>
+    ipcRenderer.invoke('project:save', filePath, metaText, files),
   setProjectDir: (filePath: string) => ipcRenderer.invoke('project:setDir', filePath),
 
   // Project editor: pick a location / PDFs, and relativize the PDF references.
@@ -73,19 +73,19 @@ contextBridge.exposeInMainWorld('slr', {
     ipcRenderer.invoke('git:commit', root, paths, message),
   gitPush: (root: string) => ipcRenderer.invoke('git:push', root),
   gitPullBegin: (root: string, relPath: string) => ipcRenderer.invoke('git:pullBegin', root, relPath),
-  gitPullFinish: (root: string, relPath: string, text: string) =>
-    ipcRenderer.invoke('git:pullFinish', root, relPath, text),
+  gitPullFinish: (root: string, relPath: string, working: unknown) =>
+    ipcRenderer.invoke('git:pullFinish', root, relPath, working),
   gitPullAbort: (root: string) => ipcRenderer.invoke('git:pullAbort', root),
   gitHeadContent: (root: string, relPath: string) => ipcRenderer.invoke('git:headContent', root, relPath),
   gitWorkingContent: (root: string, relPath: string) => ipcRenderer.invoke('git:workingContent', root, relPath),
   gitCommitPartial: (
     root: string,
     relPath: string,
-    committedText: string,
-    workingText: string,
+    committed: unknown,
+    working: unknown,
     otherPaths: string[],
     message: string,
-  ) => ipcRenderer.invoke('git:commitPartial', root, relPath, committedText, workingText, otherPaths, message),
-  gitWriteWorking: (root: string, relPath: string, text: string) =>
-    ipcRenderer.invoke('git:writeWorking', root, relPath, text),
+  ) => ipcRenderer.invoke('git:commitPartial', root, relPath, committed, working, otherPaths, message),
+  gitWriteWorking: (root: string, relPath: string, working: unknown) =>
+    ipcRenderer.invoke('git:writeWorking', root, relPath, working),
 })

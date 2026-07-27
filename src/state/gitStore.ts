@@ -2,7 +2,8 @@ import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import { getPlatform } from '../platform'
 import type { SaveHandle } from '../platform'
-import { loadProject, serializeProject, ProjectLoadError, type Project } from '../model/project'
+import { loadProject, splitProjectFiles, ProjectLoadError, type Project } from '../model/project'
+import type { SplitProject } from '../git/types'
 import type { FieldValue } from '../model/annotations'
 import {
   mergeProjects,
@@ -13,6 +14,7 @@ import {
 } from '../git/merge'
 import { detectFieldChanges, composeContents, type DetectedChanges, type Disposition } from '../git/changes'
 import { repoNameFromUrl } from '../git/url'
+import { annotationsRelDir } from '../git/relpath'
 import { gitErrorText } from '../git/output'
 import type { GitProbe, GitRepoInfo, GitRun, GitStatus } from '../git/types'
 import { useStore } from './store'
@@ -160,6 +162,13 @@ function mergeParseError(rev: string, err: unknown): string {
   return `The project file at ${rev} is not a valid project: ${message} The merge has been aborted; nothing changed.`
 }
 
+/** `splitProjectFiles`, reshaped into the `{metaText, files}` the `GitPlatform`
+ *  write calls take across the IPC boundary. */
+function toSplitProject(project: Project): SplitProject {
+  const { meta, files } = splitProjectFiles(project)
+  return { metaText: JSON.stringify(meta, null, 2), files }
+}
+
 export const useGitStore = create<GitState>()(
   immer((set, get) => {
     /**
@@ -180,7 +189,7 @@ export const useGitStore = create<GitState>()(
       const repo = get().repo
       if (!git || !repo) return
       const resolved = applyResolutions(merged, conflicts, resolutions)
-      const r = await git.finishPull(repo.root, repo.relPath, serializeProject(resolved))
+      const r = await git.finishPull(repo.root, repo.relPath, toSplitProject(resolved))
       if (!r.ok) {
         set((s) => {
           if (s.panel) {
@@ -229,7 +238,22 @@ export const useGitStore = create<GitState>()(
       const git = getPlatform().getGit()
       if (!git) return
 
-      const inStatus = status.changes.some((c) => c.path === repo.relPath && c.code !== '??')
+      // A change under `annotations/` counts too, not just `project.json`
+      // itself — most day-to-day edits are exactly that now that annotations
+      // live in their own per-paper-per-reviewer files. Unlike `relPath`
+      // itself, an untracked ('??') annotation file still counts: a reviewer
+      // answering a paper for the first time creates a brand-new file while
+      // `project.json` stays clean, and that is the routine case field
+      // review exists for — `readProjectAtRevision` already treats "no such
+      // file at HEAD" as an absent (empty) tree, so the new answer surfaces
+      // as an ordinary changed field. `relPath` itself being untracked means
+      // the whole project has never been committed at all, which field
+      // review has nothing to diff against — that case is still skipped.
+      const dir = annotationsRelDir(repo.relPath)
+      const inAnnotationsDir = (p: string) => p === dir || p.startsWith(`${dir}/`)
+      const inStatus = status.changes.some(
+        (c) => (c.path === repo.relPath && c.code !== '??') || inAnnotationsDir(c.path),
+      )
       if (!inStatus) {
         set((s) => {
           if (s.panel) s.panel.fieldReview = null
@@ -513,8 +537,8 @@ export const useGitStore = create<GitState>()(
           r = await git.commitPartial(
             repo.root,
             repo.relPath,
-            serializeProject(committed),
-            serializeProject(workingOut),
+            toSplitProject(committed),
+            toSplitProject(workingOut),
             otherPaths,
             panel.message,
           )
@@ -574,7 +598,7 @@ export const useGitStore = create<GitState>()(
         // Exactly the `workingOut` a commit-with-these-decisions would have
         // left behind — the same compose path, so the two can never drift.
         const { workingOut } = composeContents(review.head, review.working, review.changes, review.decisions)
-        const r = await git.writeWorking(repo.root, repo.relPath, serializeProject(workingOut))
+        const r = await git.writeWorking(repo.root, repo.relPath, toSplitProject(workingOut))
         if (!r.ok) {
           set((s) => {
             if (s.panel) {

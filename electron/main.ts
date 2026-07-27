@@ -12,19 +12,20 @@ import {
   shell,
 } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { readFile, writeFile, access, readdir, lstat, realpath } from 'node:fs/promises'
+import { readFile, writeFile, access, readdir, lstat, realpath, unlink, mkdir } from 'node:fs/promises'
 import { constants, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import path from 'node:path'
 import os from 'node:os'
-// The only imports of src/ into electron/: the git URL/path security gate and
-// the porcelain/error-text parsers must not exist twice — see "Git" below for
-// why. Both modules import nothing themselves, so they typecheck identically
-// under this file's tsconfig (node types) and the renderer's (DOM types).
+// The only imports of src/ into electron/: shared logic that must not exist
+// twice — see "Git" below for the git URL/path/output modules. All of these
+// import nothing DOM-specific themselves, so they typecheck identically under
+// this file's tsconfig (node types) and the renderer's (DOM types).
 import { validateGitUrl, validateClonePath } from '../src/git/url'
-import { relPathProblem } from '../src/git/relpath'
+import { relPathProblem, annotationsRelDir } from '../src/git/relpath'
 import { gitErrorText, parsePorcelain } from '../src/git/output'
 import type { GitRun } from '../src/git/types'
+import { isLegacyProjectShape, assembleLegacyProjectJson } from '../src/model/project'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -489,6 +490,117 @@ function buildMenu() {
 
 // ---- IPC: file dialogs + fs ----
 
+/**
+ * Since v1.3, a project's own annotations live outside `project.json` — one
+ * `annotations/<paperId>/reviewer-<n>.json` (and `consolidated.json`) per
+ * paper, next to it — so that two reviewers editing different papers, or
+ * different reviewer slots of the same paper, never touch the same file and
+ * so never collide in git. `project.json` itself now holds only paper
+ * metadata (see `splitProjectFiles`/`isLegacyProjectShape` in
+ * `src/model/project.ts`).
+ *
+ * The renderer's `loadProject` still only knows the old, single-blob shape —
+ * deliberately: it is already exhaustively validated/defaulted/error-friendly
+ * for that shape, and duplicating that logic for a split-file shape would be
+ * the exact "two implementations of one fact" this codebase avoids elsewhere.
+ * So this file does the reassembly: walk `annotations/`, splice each paper's
+ * files back into its `papers[i]`, and hand the renderer one JSON text in the
+ * shape it already parses. A project still in the pre-v1.3 single-file shape
+ * (`isLegacyProjectShape`) needs no reassembly at all — it already *is* that
+ * shape — and is passed through untouched; it migrates to the split layout
+ * automatically the next time it is saved (`project:save` below always
+ * writes the split layout).
+ */
+
+/**
+ * Resolve `relPath` under `annotationsDir` and read it, refusing anything
+ * that resolves (directly, or via a symlink somewhere in the chain) outside
+ * `annotationsDir` — the same "received material, might contain a symlink
+ * escape" defense as `resolveProjectPath` applies to PDFs, since a shared
+ * project's `annotations/` folder is exactly as untrusted. Returns `null` for
+ * "not there" or "escapes the folder" alike: both mean "no file", not an
+ * error — a paper simply not yet annotated by a given reviewer looks the same
+ * either way.
+ */
+async function safeReadAnnotationFile(annotationsDir: string, relPath: string): Promise<string | null> {
+  const resolved = path.resolve(annotationsDir, relPath)
+  const base = path.resolve(annotationsDir)
+  if (resolved !== base && !resolved.startsWith(base + path.sep)) return null
+  let real: string
+  let realBase: string
+  try {
+    real = await realpath(resolved)
+    realBase = await realpath(base)
+  } catch {
+    return null
+  }
+  if (real !== realBase && !real.startsWith(realBase + path.sep)) return null
+  try {
+    return await readFile(real, 'utf-8')
+  } catch {
+    return null
+  }
+}
+
+/** Every `reviewer-<n>.json`/`consolidated.json` present for one paper, read
+ *  and parsed defensively — a corrupt file is skipped, not thrown over, same
+ *  as a corrupt field anywhere else in a hand-editable project. */
+async function loadPaperFiles(
+  annotationsDir: string,
+  paperId: string,
+): Promise<{ consolidated?: unknown; reviewers: Map<string, unknown> }> {
+  const reviewers = new Map<string, unknown>()
+  const consolidatedText = await safeReadAnnotationFile(annotationsDir, `${paperId}/consolidated.json`)
+  let consolidated: unknown
+  if (consolidatedText !== null) {
+    try {
+      consolidated = JSON.parse(consolidatedText)
+    } catch {
+      // corrupt file — treat as absent
+    }
+  }
+  const paperDirResolved = path.resolve(annotationsDir, paperId)
+  const base = path.resolve(annotationsDir)
+  let entries: Array<{ name: string; isFile(): boolean }> = []
+  if (paperDirResolved === base || paperDirResolved.startsWith(base + path.sep)) {
+    try {
+      entries = await readdir(paperDirResolved, { withFileTypes: true })
+    } catch {
+      entries = []
+    }
+  }
+  for (const entry of entries) {
+    const m = entry.isFile() ? /^reviewer-(\d+)\.json$/.exec(entry.name) : null
+    if (!m) continue
+    const text = await safeReadAnnotationFile(annotationsDir, `${paperId}/${entry.name}`)
+    if (text === null) continue
+    try {
+      reviewers.set(m[1], JSON.parse(text))
+    } catch {
+      // corrupt file — skip this reviewer's tree
+    }
+  }
+  return { consolidated, reviewers }
+}
+
+/** Read `filePath`'s `project.json` and, if it's the split (post-v1.3) shape,
+ *  reassemble its `annotations/` folder into the legacy whole-project text
+ *  `loadProject` accepts. A pre-v1.3 file is returned exactly as read. */
+async function readProjectText(filePath: string): Promise<string> {
+  const text = await readFile(filePath, 'utf-8')
+  const raw: unknown = JSON.parse(text)
+  if (isLegacyProjectShape(raw)) return text
+  const papers = (raw as { papers?: unknown[] }).papers
+  const annotationsDir = path.join(path.dirname(filePath), 'annotations')
+  const paperFiles = new Map<string, { consolidated?: unknown; reviewers: Map<string, unknown> }>()
+  for (const p of Array.isArray(papers) ? papers : []) {
+    const id = (p as { id?: unknown })?.id
+    if (typeof id !== 'string') continue
+    paperFiles.set(id, await loadPaperFiles(annotationsDir, id))
+  }
+  return JSON.stringify(assembleLegacyProjectJson(raw, paperFiles))
+}
+
 ipcMain.handle('project:open', async () => {
   const res = await dialog.showOpenDialog({
     title: 'Open SLR project',
@@ -497,16 +609,16 @@ ipcMain.handle('project:open', async () => {
   })
   if (res.canceled || res.filePaths.length === 0) return null
   const filePath = res.filePaths[0]
-  const text = await readFile(filePath, 'utf-8')
+  const text = await readProjectText(filePath)
   return { path: filePath, text }
 })
 
 ipcMain.handle('project:openPath', async (_e, filePath: string) => {
   try {
-    const text = await readFile(filePath, 'utf-8')
+    const text = await readProjectText(filePath)
     return { path: filePath, text }
   } catch {
-    return null // file moved/deleted/unreadable
+    return null // file moved/deleted/unreadable/corrupt
   }
 })
 
@@ -571,16 +683,68 @@ async function assertInsideRoot(root: string, filePath: string): Promise<void> {
   }
 }
 
-/** Both checks, for a write into a git repository at `root`. */
-async function assertWritableIn(root: string, filePath: string): Promise<void> {
-  await assertInsideRoot(root, filePath)
+/**
+ * Write `project.json` (`metaText`) plus reconcile the `annotations/` folder
+ * against `files`: a non-null entry is written (its paper folder created if
+ * new), a null entry is deleted if present. `files` always lists every
+ * possible reviewer/consolidated slot for every paper (see
+ * `splitProjectFiles`) — this reconciles the whole folder to match the
+ * project state being written on every call, rather than tracking which
+ * trees changed since the last one.
+ * ponytail: O(papers × reviewers) fs calls per write; fine for the corpora
+ * sizes this tool targets, revisit with per-tree dirty tracking if autosave
+ * on very large projects turns out to be slow.
+ *
+ * Shared by `project:save` and every git handler that needs to put a specific
+ * (committed, or working-tree-after-commit) project state onto disk —
+ * `git:commitPartial`'s write→add→commit→restore swap and `git:pullFinish`'s
+ * merge result both go through this, so "how a split project is written" has
+ * exactly one implementation.
+ */
+async function writeProjectFiles(
+  filePath: string,
+  metaText: string,
+  files: Array<{ relPath: string; text: string | null }>,
+): Promise<void> {
   await assertNotSymlink(filePath)
+  await writeFile(filePath, metaText, 'utf-8')
+
+  const annotationsDir = path.join(path.dirname(filePath), 'annotations')
+  await mkdir(annotationsDir, { recursive: true })
+  const realAnnotationsDir = await realpath(annotationsDir)
+  for (const file of files) {
+    const target = path.resolve(annotationsDir, file.relPath)
+    const base = path.resolve(annotationsDir)
+    if (target !== base && !target.startsWith(base + path.sep)) {
+      throw new Error(`Refusing to write annotation file outside the project: "${file.relPath}"`)
+    }
+    if (file.text === null) {
+      try {
+        await unlink(target)
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
+      }
+      continue
+    }
+    await mkdir(path.dirname(target), { recursive: true })
+    // Re-resolve through any symlink now that the parent is guaranteed to
+    // exist, the same "trust the real destination, not the path string"
+    // check `resolveProjectPath`/`safeReadAnnotationFile` apply on read.
+    const realParent = await realpath(path.dirname(target))
+    if (realParent !== realAnnotationsDir && !realParent.startsWith(realAnnotationsDir + path.sep)) {
+      throw new Error(`Refusing to write annotation file outside the project: "${file.relPath}"`)
+    }
+    await assertNotSymlink(target)
+    await writeFile(target, file.text, 'utf-8')
+  }
 }
 
-ipcMain.handle('project:save', async (_e, filePath: string, text: string) => {
-  await assertNotSymlink(filePath)
-  await writeFile(filePath, text, 'utf-8')
-})
+ipcMain.handle(
+  'project:save',
+  async (_e, filePath: string, metaText: string, files: Array<{ relPath: string; text: string | null }>) => {
+    await writeProjectFiles(filePath, metaText, files)
+  },
+)
 
 ipcMain.handle('project:setDir', (_e, filePath: string) => {
   const dir = path.dirname(filePath)
@@ -1184,50 +1348,100 @@ ipcMain.handle('git:status', async (_e, root: string) => {
   return { porcelain, diff }
 })
 
-/** HEAD's copy of the project file, for the commit panel's field-level review
+/**
+ * `readProjectText`'s counterpart for a git revision instead of the working
+ * directory: `project.json` plus every `annotations/<paperId>/*.json` file,
+ * all read via `git show <rev>:<path>` rather than the filesystem, reassembled
+ * into the same legacy whole-project text `loadProject` accepts. `null` when
+ * `relPath` has no such revision at all (e.g. HEAD before the first commit).
+ */
+async function readProjectAtRevision(root: string, relPath: string, rev: string): Promise<string | null> {
+  const show = await runGit(['show', `${rev}:${relPath}`], root)
+  if (!show.ok) return null
+  const text = show.stdout
+  const raw: unknown = JSON.parse(text)
+  if (isLegacyProjectShape(raw)) return text
+
+  const dir = annotationsRelDir(relPath)
+  const lsTree = await runGit(['ls-tree', '-r', '--name-only', rev, '--', dir], root)
+  const paths = lsTree.ok ? lsTree.stdout.split('\n').filter(Boolean) : []
+
+  const papers = (raw as { papers?: unknown[] }).papers
+  const paperFiles = new Map<string, { consolidated?: unknown; reviewers: Map<string, unknown> }>()
+  for (const p of Array.isArray(papers) ? papers : []) {
+    const id = (p as { id?: unknown })?.id
+    if (typeof id === 'string') paperFiles.set(id, { reviewers: new Map() })
+  }
+  for (const p of paths) {
+    const rel = p.slice(dir.length + 1) // "<paperId>/<name>.json"
+    const m = /^([^/]+)\/(consolidated|reviewer-(\d+))\.json$/.exec(rel)
+    if (!m) continue
+    const [, paperId, kind, reviewerNum] = m
+    const entry = paperFiles.get(paperId)
+    if (!entry) continue
+    const fileShow = await runGit(['show', `${rev}:${p}`], root)
+    if (!fileShow.ok) continue
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(fileShow.stdout)
+    } catch {
+      continue // corrupt file at this revision — treat as absent
+    }
+    if (kind === 'consolidated') entry.consolidated = parsed
+    else entry.reviewers.set(reviewerNum, parsed)
+  }
+  return JSON.stringify(assembleLegacyProjectJson(raw, paperFiles))
+}
+
+/** HEAD's copy of the project, reassembled from `project.json` plus
+ *  `annotations/` at HEAD, for the commit panel's field-level review
  *  (`src/git/changes.ts` diffs this against the working copy already in
- *  memory). `null` when the file has no HEAD revision at all — a newly
+ *  memory). `null` when `relPath` has no HEAD revision at all — a newly
  *  added, still-untracked project — in which case the caller falls back to
  *  the plain whole-file commit, the same as it already does for any file
  *  that fails to parse as a project on either side. */
 ipcMain.handle('git:headContent', async (_e, root: string, relPath: string) => {
   assertRelPath(relPath)
-  const r = await runGit(['show', `HEAD:${relPath}`], root)
-  return r.ok ? r.stdout : null
+  return readProjectAtRevision(root, relPath, 'HEAD')
 })
 
 /**
- * The working-tree file's own content, read directly rather than through
- * `store.ts`'s in-memory `project` — which may hold unsaved edits the
- * reviewer never saved to disk, and `git status`/`git diff` (what the commit
- * panel is reviewing) only ever sees what is actually on disk. No git
- * involved, unlike `git:headContent`: this is deliberately the same plain
- * read `project:openPath` already does, not `git show :relPath` (the index's
- * copy, which is a different, and for this feature wrong, thing to diff).
+ * The working tree's own content, reassembled directly from disk rather than
+ * through `store.ts`'s in-memory `project` — which may hold unsaved edits the
+ * reviewer never saved — and rather than git, unlike `git:headContent`: this
+ * is deliberately the same reassembly `project:openPath` does (`readProjectText`),
+ * not `git show :relPath` (the index's copy, a different and for this feature
+ * wrong thing to diff), so what the commit panel reviews is what's really on disk.
  */
 ipcMain.handle('git:workingContent', async (_e, root: string, relPath: string) => {
   assertRelPath(relPath)
   try {
-    return await readFile(path.join(root, relPath), 'utf-8')
+    return await readProjectText(path.join(root, relPath))
   } catch {
     return null
   }
 })
 
 /**
- * Commits `committedText` as `relPath`'s content — which is not necessarily
- * what the working-tree file holds, or ends up holding. This is what makes
- * committing *some* of a file's field-level changes possible at all: git has
- * no native concept of staging part of one file, but nothing requires the
- * content `add` stages to be what is actually on disk.
+ * Commits `committed` (`{metaText, files}`, from `splitProjectFiles`) as
+ * `relPath` + `annotations/`'s content — which is not necessarily what the
+ * working tree holds, or ends up holding. This is what makes committing
+ * *some* of a project's field-level changes possible at all: git has no
+ * native concept of staging part of a file (or part of a corpus), but nothing
+ * requires the content `add` stages to be what is actually on disk.
  *
- * The sequence is write → add → commit → (always) write again: `committedText`
- * goes onto disk just long enough to be staged, then `workingText` — the
- * content the reviewer's working tree should hold afterward, computed by
+ * The sequence is write → add → commit → (always) write again: `committed`
+ * goes onto disk just long enough to be staged, then `working` — the state
+ * the reviewer's working tree should hold afterward, computed by
  * `composeContents` from their Use/Ignore/Discard choices — replaces it. The
  * `finally` is load-bearing: if `add` or `commit` fails partway, the working
- * file must still end up holding `workingText`, never stuck mid-swap holding
+ * tree must still end up holding `working`, never stuck mid-swap holding
  * content that was never actually staged as anything.
+ *
+ * `git add -- relPath annotationsDir` stages every add/modify/delete under
+ * the whole folder in one call — simpler than listing exactly which files
+ * changed, and correct either way since `writeProjectFiles` always reconciles
+ * the folder to match the state it's writing.
  */
 ipcMain.handle(
   'git:commitPartial',
@@ -1235,49 +1449,58 @@ ipcMain.handle(
     _e,
     root: string,
     relPath: string,
-    committedText: string,
-    workingText: string,
+    committed: { metaText: string; files: Array<{ relPath: string; text: string | null }> },
+    working: { metaText: string; files: Array<{ relPath: string; text: string | null }> },
     otherPaths: string[],
     message: string,
   ) => {
     assertRelPath(relPath)
     otherPaths.forEach(assertRelPath)
     const fullPath = path.join(root, relPath)
-    const paths = [relPath, ...otherPaths]
+    const dir = annotationsRelDir(relPath)
+    const paths = [relPath, dir, ...otherPaths]
     try {
-      await assertWritableIn(root, fullPath)
-      await writeFile(fullPath, committedText, 'utf-8')
+      await assertInsideRoot(root, fullPath)
+      await writeProjectFiles(fullPath, committed.metaText, committed.files)
       const add = await runGit(['add', '--', ...paths], root)
       if (!add.ok) return add
       return await runGit(['commit', '-m', message, '--', ...paths], root)
     } finally {
-      await assertWritableIn(root, fullPath)
-      await writeFile(fullPath, workingText, 'utf-8')
+      await assertInsideRoot(root, fullPath)
+      await writeProjectFiles(fullPath, working.metaText, working.files)
     }
   },
 )
 
 /**
- * Writes `text` — the working-tree content the reviewer's field-level
- * "discard" choices compose to (`composeContents`'s `workingOut`) — to the
- * project file, WITHOUT staging or committing anything. This is the "throw
- * away these local edits" counterpart to committing them: `commitPartial`
- * always makes a commit, and a reviewer who only wants to revert should not
- * have to invent one. A single write, deliberately not the write→add→commit
- * →restore swap `commitPartial` needs: there is no staged content that
- * differs from what the file should hold, so a failed write simply leaves the
- * reviewer's edits in place — never a half-reverted file.
+ * Writes `working` (`{metaText, files}`) — the state the reviewer's
+ * field-level "discard" choices compose to (`composeContents`'s
+ * `workingOut`, split) — to the project, WITHOUT staging or committing
+ * anything. This is the "throw away these local edits" counterpart to
+ * committing them: `commitPartial` always makes a commit, and a reviewer who
+ * only wants to revert should not have to invent one. Deliberately not the
+ * write→add→commit→restore swap `commitPartial` needs: there is no staged
+ * content that differs from what the project should hold, so a failed write
+ * simply leaves the reviewer's edits in place — never a half-reverted state.
  */
-ipcMain.handle('git:writeWorking', async (_e, root: string, relPath: string, text: string) => {
-  assertRelPath(relPath)
-  try {
-    await assertWritableIn(root, path.join(root, relPath))
-    await writeFile(path.join(root, relPath), text, 'utf-8')
-    return { ok: true, code: 0, stdout: '', stderr: '' }
-  } catch (err) {
-    return { ok: false, code: null, stdout: '', stderr: err instanceof Error ? err.message : String(err) }
-  }
-})
+ipcMain.handle(
+  'git:writeWorking',
+  async (
+    _e,
+    root: string,
+    relPath: string,
+    working: { metaText: string; files: Array<{ relPath: string; text: string | null }> },
+  ) => {
+    assertRelPath(relPath)
+    try {
+      await assertInsideRoot(root, path.join(root, relPath))
+      await writeProjectFiles(path.join(root, relPath), working.metaText, working.files)
+      return { ok: true, code: 0, stdout: '', stderr: '' }
+    } catch (err) {
+      return { ok: false, code: null, stdout: '', stderr: err instanceof Error ? err.message : String(err) }
+    }
+  },
+)
 
 ipcMain.handle('git:commit', async (_e, root: string, paths: string[], message: string) => {
   paths.forEach(assertRelPath)
@@ -1337,18 +1560,18 @@ ipcMain.handle('git:pullBegin', async (_e, root: string, relPath: string) => {
     return ff.ok ? { kind: 'fast-forwarded' } : { kind: 'error', message: gitErrorText(ff) }
   }
 
-  // Divergent. Read the three revisions of the project file BEFORE touching
+  // Divergent. Read the three revisions of the project (project.json +
+  // annotations/, reassembled — see `readProjectAtRevision`) BEFORE touching
   // the work tree, so nothing that follows can change what gets merged.
   const baseRun = await runGit(['merge-base', 'HEAD', '@{u}'], root)
   const baseSha = baseRun.ok ? gitOut(baseRun) : null
-  const baseShow = baseSha ? await runGit(['show', `${baseSha}:${relPath}`], root) : null
-  const base = baseShow?.ok ? baseShow.stdout : null // null is fine — added on both sides.
-  const oursShow = await runGit(['show', `HEAD:${relPath}`], root)
-  const theirsShow = await runGit(['show', `${ref}:${relPath}`], root)
-  if (!oursShow.ok || !theirsShow.ok) {
+  const base = baseSha ? await readProjectAtRevision(root, relPath, baseSha) : null // null is fine — added on both sides.
+  const ours = await readProjectAtRevision(root, relPath, 'HEAD')
+  const theirs = await readProjectAtRevision(root, relPath, ref)
+  if (ours === null || theirs === null) {
     return {
       kind: 'error',
-      message: `The project file does not exist at ${!oursShow.ok ? 'HEAD' : ref}. Merge this by hand with git.`,
+      message: `The project file does not exist at ${ours === null ? 'HEAD' : ref}. Merge this by hand with git.`,
     }
   }
 
@@ -1360,11 +1583,17 @@ ipcMain.handle('git:pullBegin', async (_e, root: string, relPath: string) => {
     return { kind: 'error', message: gitErrorText(merge) }
   }
 
+  const dir = annotationsRelDir(relPath)
   const st2 = await runGit(['status', '--porcelain=v1', '-z'], root)
   const unmerged = parsePorcelain(st2.stdout)
     .filter((c) => c.unmerged)
     .map((c) => c.path)
-  const others = unmerged.filter((p) => p !== relPath)
+  // Both `relPath` and anything under `dir` are ours to reconcile (git's own
+  // per-file merge may have already resolved some of them cleanly, or left
+  // others with conflict markers — `mergeProjects` re-derives the whole
+  // result from base/ours/theirs regardless, the same way it already did for
+  // the single project file this replaces).
+  const others = unmerged.filter((p) => p !== relPath && p !== dir && !p.startsWith(dir + '/'))
   if (others.length > 0) {
     // SaiLoR knows how to merge an annotation JSON. It does not know how to
     // merge a PDF or a .gitignore — abort cleanly and hand it back rather
@@ -1373,21 +1602,30 @@ ipcMain.handle('git:pullBegin', async (_e, root: string, relPath: string) => {
     return { kind: 'conflict-elsewhere', paths: others }
   }
 
-  return { kind: 'merge', ref, base, ours: oursShow.stdout, theirs: theirsShow.stdout }
+  return { kind: 'merge', ref, base, ours, theirs }
 })
 
-ipcMain.handle('git:pullFinish', async (_e, root: string, relPath: string, text: string) => {
-  assertRelPath(relPath)
-  await assertWritableIn(root, path.join(root, relPath))
-  await writeFile(path.join(root, relPath), text, 'utf-8')
-  const add = await runGit(['add', '--', relPath], root)
-  if (!add.ok) return add
-  // `git commit` after a merge with MERGE_HEAD set records both parents and
-  // allows an empty tree change, which is why the merge commit is made this
-  // way rather than with `commit-tree` or `merge -m`. `--no-edit` takes git's
-  // own prepared MERGE_MSG; GIT_EDITOR=true above is the backstop.
-  return runGit(['commit', '--no-edit'], root)
-})
+ipcMain.handle(
+  'git:pullFinish',
+  async (
+    _e,
+    root: string,
+    relPath: string,
+    working: { metaText: string; files: Array<{ relPath: string; text: string | null }> },
+  ) => {
+    assertRelPath(relPath)
+    const fullPath = path.join(root, relPath)
+    await assertInsideRoot(root, fullPath)
+    await writeProjectFiles(fullPath, working.metaText, working.files)
+    const add = await runGit(['add', '--', relPath, annotationsRelDir(relPath)], root)
+    if (!add.ok) return add
+    // `git commit` after a merge with MERGE_HEAD set records both parents and
+    // allows an empty tree change, which is why the merge commit is made this
+    // way rather than with `commit-tree` or `merge -m`. `--no-edit` takes git's
+    // own prepared MERGE_MSG; GIT_EDITOR=true above is the backstop.
+    return runGit(['commit', '--no-edit'], root)
+  },
+)
 
 ipcMain.handle('git:pullAbort', async (_e, root: string) => {
   return runGit(['merge', '--abort'], root)

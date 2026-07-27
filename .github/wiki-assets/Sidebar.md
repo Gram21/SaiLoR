@@ -16,7 +16,7 @@ Developer documentation
 - [Electron Main Process](architecture#electron-main-process)
 
 **[Data Model](data-model)**
-- [Project File Format](data-model#project-file-format)
+- [On-disk Layout](data-model#on-disk-layout-projectjson--annotations)
 - [In-Memory Types](data-model#in-memory-types)
 - [Lifecycle](data-model#lifecycle-load--normalize--edit--prune--serialize)
 

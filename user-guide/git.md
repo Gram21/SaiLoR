@@ -2,9 +2,9 @@
 
 **Desktop app only.** Git support runs your own `git` binary, so it can use your real
 `~/.gitconfig`, your credential helper, and your SSH agent — exactly as a terminal `git` command
-would. A web page can't spawn a process or read your git config, so there's no honest way to offer
-this in the browser build; the entry points still appear there, greyed out, with a note pointing at
-the desktop app.
+would. (SaiLoR's discontinued web build could never have offered this either — a web page can't spawn
+a process or read your git config — but that's moot now: the web build no longer opens projects at
+all, see the main [README](README.md).)
 
 If `git` isn't on your `PATH` in the desktop app, the same controls appear greyed out with git's own
 error explaining why.

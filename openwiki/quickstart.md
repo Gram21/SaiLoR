@@ -1,30 +1,62 @@
 ---
 type: guide
 title: SaiLoR Quickstart
-description: Introduction to SaiLoR, a tool for conducting Systematic Literature Reviews (SLRs). Covers what SaiLoR is, the full tech stack (React 19, Electron, Vite, Zustand, Zod), quick-start commands for web/desktop/Docker, and the repository layout.
-tags: [quickstart, setup, tech-stack, commands]
+description: Introduction to SaiLoR, a tool for conducting Systematic Literature Reviews (SLRs). Covers what SaiLoR is, the split project.json + annotations/ storage format, the full tech stack (React 19, Electron, Vite, Zustand, Zod), why SaiLoR is now Electron-desktop-only, quick-start commands, and the repository layout.
+tags: [quickstart, setup, tech-stack, commands, electron-only]
 ---
 
 # SaiLoR — Quickstart
 
 ## What is SaiLoR?
 
-SaiLoR is a tool for reviewers conducting **Systematic Literature Reviews (SLRs)** — the letters are in the name: **S**ai**L**o**R**. You open a single JSON "project" file that bundles two things:
+SaiLoR is a tool for reviewers conducting **Systematic Literature Reviews (SLRs)** — the letters are in the name: **S**ai**L**o**R**. You open a "project" — a `project.json` file plus a sibling `annotations/` folder — that together hold:
 
-1. **An annotation schema** — a nested, cardinality-controlled taxonomy defining what fields to extract from each paper.
-2. **A list of papers** — each with a PDF path and an annotation tree that gets filled in as you review.
+1. **An annotation schema** — a nested, cardinality-controlled taxonomy defining what fields to extract from each paper, stored in `project.json`.
+2. **A list of papers** — each with a PDF path and metadata, also in `project.json`.
+3. **Every reviewer's/consolidation's annotation data** — the actual filled-in answers, stored separately under `annotations/<paperId>/` (see "On-disk layout" below and [Data Model](data-model.md)).
 
-The app renders the PDF in the middle pane, shows the annotation form on the right, and lets you **grab text directly from the PDF** to populate fields. Annotations are saved back into the same JSON file.
+The app renders the PDF in the middle pane, shows the annotation form on the right, and lets you **grab text directly from the PDF** to populate fields. Annotations are saved back to the split files described above.
 
 A project can also be set to **screening** mode instead of authoring a schema: one fast
 Include/Exclude decision per paper (plus a reason when excluded), usually made from the title and
 abstract before annotation even begins. See the "Screening" sections of
 [Architecture](architecture.md) and [Data Model](data-model.md).
 
-The codebase runs three ways from a single source:
-- **Desktop app** (Electron) — local files, native Open/Save dialogs, custom `slr-file://` protocol for PDF loading.
-- **Web app** — a static SPA build that can be hosted anywhere; uses the File System Access API (Chromium) or download fallback.
-- **Docker** — multi-stage build (Node → nginx) with a read-only volume of project files (the bundled `samples/` by default) served under `/projects/`; `docker compose up -d --build` serves on port 8080.
+### On-disk layout
+
+```
+my-review/
+├── project.json          Schema, protocol, screening config, and paper METADATA only —
+│                          no annotation data
+└── annotations/
+    └── <paperId>/
+        ├── consolidated.json   The single/consolidated annotation tree, plus aiUsage + equal
+        └── reviewer-<n>.json   Each independent reviewer's own tree (multi-reviewer only)
+```
+
+Per-paper, per-reviewer files are created lazily — only once that reviewer has actually written
+something for that paper — and deleted again if the tree becomes empty. This exists because a
+single all-in-one JSON file used to make two reviewers working on different papers (or different
+reviewer slots of the same paper) collide in git on every save; splitting the data means ordinary
+git tracks, diffs, and merges each paper/reviewer's file independently. **A project saved in the
+old single-file shape opens and continues to work as before — it is migrated to the split layout
+automatically on the next save, with no explicit "migrate" step.** See [Data Model](data-model.md)
+for the full shape and migration mechanics.
+
+## SaiLoR is Electron-desktop-only
+
+**The browser/web build has been discontinued.** SaiLoR used to also ship as a static web SPA
+(File System Access API or download fallback) and as a Docker self-hosted deployment. Both are
+gone as real ways to use the app: the web build still technically compiles (kept only so the
+CI/typecheck pipeline and Vite build still pass), but at runtime it shows a "SaiLoR for the web has
+been discontinued — use the desktop app" message and blocks all project-opening UI before any file
+picker or project state can be reached (`src/App.tsx`'s `isElectron()` gate). Docker self-hosting
+serves that same static build, so it no longer does anything useful either. See
+[Architecture](architecture.md) and [Operations](operations.md) for what this removed
+(`src/platform/browser.ts`, `src/platform/idb.ts`, the `?project=<url>` loader) and why.
+
+The **desktop app (Electron)** — local files, native Open/Save dialogs, custom `slr-file://`
+protocol for PDF loading, and full git integration — is the only supported way to use SaiLoR now.
 
 ## Tech Stack
 
@@ -43,22 +75,20 @@ The codebase runs three ways from a single source:
 ```bash
 npm install
 
-# Web dev (browser):
-npm run dev
-# → http://localhost:5173
-# Open the bundled example: http://localhost:5173/?project=/samples/project.example.json
-
-# Electron dev (desktop):
+# Electron dev (desktop) — the only usable way to run the app for real review work:
 npm run dev:electron
 
-# Build static SPA into dist/:
+# Web dev server — NOT a usable deployment: it renders the discontinuation
+# screen and nothing else. Useful only if you're iterating on that screen
+# itself or on code shared with the Electron renderer.
+npm run dev
+# → http://localhost:5173
+
+# Build static SPA into dist/ (kept only for CI/typecheck; not a supported deployment):
 npm run build
 
 # Build desktop installers into release/:
 npm run build:electron
-
-# Docker (self-hosting — serves on http://localhost:8080):
-docker compose up -d --build
 
 # Unit tests (model: schema, normalize, prune, round-trip):
 npm test
@@ -77,7 +107,7 @@ npm run typecheck
 │   ├── model/              Domain model (pure, unit-tested)
 │   │   ├── schema.ts      AnnotationDef/ResolvedDef types, zod schemas, resolveSchema
 │   │   ├── annotations.ts AnnotationValueTree, normalize/prune/init/add/remove helpers
-│   │   ├── project.ts     loadProject / serializeProject, Paper/Project types, deepEqualJson
+│   │   ├── project.ts     loadProject / serializeProject / splitProjectFiles / isLegacyProjectShape, Paper/Project types, deepEqualJson
 │   │   ├── pdfMeta.ts     Best-effort title/author/abstract extraction from a PDF (metadata, then layout heuristic)
 │   │   ├── validate.ts    Checks annotated papers (required / type / enum / cardinality); unannotated papers are skipped, not flagged
 │   │   ├── linkify.ts     Splits free text into plain-text and URL segments for rendering clickable links in descriptions
@@ -92,15 +122,15 @@ npm run typecheck
 │   │   ├── types.ts       Shared shapes crossing the platform seam: GitRun, GitStatus, PullStart, GitPlatform, …
 │   │   ├── url.ts         validateGitUrl / validateClonePath / repoNameFromUrl — the security gate, imported by electron/main.ts
 │   │   ├── output.ts      parsePorcelain / capDiff / gitErrorText — turning what git printed into data
+│   │   ├── relpath.ts     relPathProblem / isSafeRelPath / annotationsRelDir — the security gate for paths written under a project's annotations/ folder
 │   │   └── merge.ts       mergeProjects / applyResolutions — the field-level three-way merge (see architecture.md's "Git" section)
-│   ├── platform/          Platform abstraction for file I/O, PDF loading, and git
+│   ├── platform/          Platform abstraction for file I/O, PDF loading, and git — Electron only now, see "SaiLoR is Electron-desktop-only" above
 │   │   ├── adapter.ts     PlatformAdapter interface + isElectron()
-│   │   ├── electron.ts    ElectronAdapter (IPC + slr-file://, recents, git)
-│   │   ├── browser.ts     BrowserAdapter (FSAPI / download / fetch, recents, IndexedDB handles; getGit() is null)
+│   │   ├── electron.ts    ElectronAdapter (IPC + slr-file://, recents, git, splits project text into project.json + annotations/ files on save)
+│   │   ├── unsupported.ts UnsupportedAdapter — stands in for the platform outside Electron; every read answers "nothing", every action throws (a backstop — `App.tsx` blocks all project-opening UI before any of this is reachable)
 │   │   ├── pdfjs.ts       Single place configuring the pdf.js worker (viewer + extractor)
-│   │   ├── idb.ts         Tiny IndexedDB wrapper for persisting FileSystemFileHandle objects
 │   │   ├── recents.ts     Recent-projects list in localStorage (max 5)
-│   │   └── index.ts       getPlatform() singleton
+│   │   └── index.ts       getPlatform() singleton (ElectronAdapter or UnsupportedAdapter)
 │   ├── state/
 │   │   ├── store.ts      Zustand + immer store (project, papers, save, annotations, undo/redo, theme, fontScale, pdfZoom, recents, help)
 │   │   ├── editorStore.ts  Draft state for the project editor (schema tree + papers, relative PDF paths, validate/save)
@@ -138,12 +168,12 @@ npm run typecheck
 │   ├── hooks/
 │   │   ├── useKeybindings.ts       Open, save, save-as, undo/redo, paper nav (filtered list order), PDF zoom / font size, help
 │   │   ├── useAutosave.ts          Periodic 5-min autosave (opt-in, skipped while editor is open)
-│   │   ├── useDirtyGuard.ts        beforeunload guard when dirty (browser only)
+│   │   ├── useDirtyGuard.ts        beforeunload guard when dirty (dead code in practice — `isElectron()` gates it out; kept only because it is cheap to keep and Electron's own quit dialog covers the same case)
 │   │   └── useElectronCloseGuard.ts  Electron quit dialog + Edit-menu undo/redo IPC wiring
-│   ├── App.tsx            Component composition, ?project= auto-load, welcome screen with recents, HelpDialog
+│   ├── App.tsx            Component composition; `isElectron()` gate shows the web-discontinued notice and blocks all project-opening UI otherwise; welcome screen with recents, HelpDialog
 │   ├── main.tsx           React root (applies theme + font scale before render)
 │   └── styles/            index.css (full app styling), ai.css, editor.css, papers-editor.css, schema-editor.css, git.css
-├── samples/               Also the default Docker volume (mounted read-only, served at /projects/)
+├── samples/               Single-file example projects (auto-migrate to the split layout on first save)
 │   ├── project.example.json  Example project (title, 4 papers incl. a multi-page PDF) + schema with required and enum fields
 │   ├── screening.example.json  Example screening project (same 4 papers + 3 abstract-only, all decision states)
 │   └── pdfs/                 Sample PDFs (incl. multipage.pdf with an internal link, A1-37.pdf for two-column author parsing)
@@ -157,12 +187,8 @@ npm run typecheck
 ├── public/logo.svg        App logo — source of truth; also shown on the welcome screen
 ├── build/icon.png         Generated from public/logo.svg (dock / packaged-bundle icon)
 ├── public/favicon.svg     Browser favicon (separate, hand-simplified for 16px tabs)
-├── Dockerfile             Production: multi-stage Node build → nginx runtime
-├── docker-compose.yml     Production: builds and serves on port 8080 with ./samples mounted
-├── nginx.conf             MIME fix for .mjs, /assets/ caching, /projects/ serving, SPA fallback
-├── Dockerfile.dev         Dev image: Vite dev server (browser)
-├── Dockerfile.electron    Dev image: electron-builder (Linux AppImage)
-├── docker-compose.dev.yml Dev stack — `browser` / `electron` Compose profiles
+├── Dockerfile, docker-compose.yml, nginx.conf, Dockerfile.dev, Dockerfile.electron  Left in the repo but no longer a meaningful way to run SaiLoR: they build/serve the static web SPA, which now only shows the discontinuation notice at runtime regardless of what's mounted. See "SaiLoR is Electron-desktop-only" above.
+├── docker-compose.dev.yml Dev stack — `browser` (dev server, same discontinuation caveat) / `electron` Compose profiles
 ├── vite.config.ts         Vite + vitest + electron plugin config
 ├── tsconfig*.json         TypeScript project references (app / node)
 └── package.json           Scripts, deps, electron-builder config

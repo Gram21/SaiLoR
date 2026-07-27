@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useGitStore } from '../state/gitStore'
 import { useStore } from '../state/store'
 import { diffLines } from '../git/output'
+import { annotationsRelDir } from '../git/relpath'
 import type { Disposition, FieldChange, PaperChange } from '../git/changes'
 import type { FieldValue } from '../model/annotations'
 import '../styles/git.css'
@@ -76,9 +77,13 @@ export function GitDialog() {
 
   const working = panel.phase === 'working'
   const review = panel.fieldReview
-  // The project file's own row lives in the field-review list below instead,
-  // once there is one — never both.
-  const changes = (panel.status?.changes ?? []).filter((c) => !review || c.path !== repo.relPath)
+  // The project's own rows — `project.json` and everything under
+  // `annotations/` — live in the field-review list below instead, once
+  // there is one — never both.
+  const dir = annotationsRelDir(repo.relPath)
+  const changes = (panel.status?.changes ?? []).filter(
+    (c) => !review || (c.path !== repo.relPath && c.path !== dir && !c.path.startsWith(`${dir}/`)),
+  )
   const selectedCount = Object.keys(panel.selected).length
   const hasUntracked = changes.some((c) => c.code === '??')
   const reviewRowCount = review ? review.changes.fields.length + review.changes.papers.length : 0

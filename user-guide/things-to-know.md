@@ -36,35 +36,43 @@ the top level.
 
 ## No file locking, so two people saving at once overwrite each other
 
-⚠️ SaiLoR reads and writes a plain JSON file. If two people have it open and both save, the second
-save wins completely; the first person's changes are gone with no warning. This is true even within
-one multi-reviewer project, where each reviewer already has their own answer tree in the same file —
-*saving* the file is still one operation on one file.
+⚠️ A project is a `project.json` file plus a sibling `annotations/` folder (one file per paper per
+reviewer, so different reviewers' or different papers' answers live in different files — see
+[Setting up a project](project-editor.md) for why). That split means two reviewers working on
+*different* papers, or different reviewer slots of the same paper, no longer touch the same file at
+all when saving. It does **not** give you file locking, though: if two people have the *same* file
+open — including `project.json` itself, or the same reviewer's answers for the same paper — and both
+save (over email, a shared drive, a synced folder), the second save wins completely; the first
+person's changes are gone with no warning.
 
 Two ways people actually handle this:
 
-- **Take turns.** Whoever's turn it is has the file; pass it along (email, shared drive, whatever)
-  when you're done.
+- **Take turns** on anything you might both touch at once. Whoever's turn it is has the folder; pass
+  it along (email, shared drive, whatever) when you're done.
 - **Use git.** Each person works on their own clone; SaiLoR's git support merges different reviewers'
-  answers field by field instead of overwriting. See [Git support](git.md).
+  answers field by field instead of overwriting, and the file split above means far fewer of those
+  merges even need a decision from you. See [Git support](git.md).
 
 ## PDF paths are relative to the JSON file
 
-⚠️ Every paper's `pdf` path is stored relative to the project JSON's own location, not as an
-absolute path. This is deliberate — it's what lets you zip up the JSON and its `pdfs/` folder and
+⚠️ Every paper's `pdf` path is stored relative to `project.json`'s own location, not as an
+absolute path. This is deliberate — it's what lets you zip up the project and its `pdfs/` folder and
 hand the whole thing to someone else and have it just work. But it means:
 
-- **Moving the JSON file in Finder/Explorer, without using SaiLoR, breaks every PDF reference** unless
-  you move the PDFs along with it in exactly the same relative arrangement.
+- **Moving `project.json` in Finder/Explorer, without using SaiLoR, breaks every PDF reference**
+  unless you move the PDFs along with it in exactly the same relative arrangement — and it also
+  strands your annotations, which live in the sibling `annotations/` folder next to `project.json`,
+  not inside it. **Always move the whole project folder together** — `project.json`, `annotations/`,
+  and `pdfs/` — never `project.json` on its own.
 - **Use *Save as…*, or the project editor's *Change…* button, to relocate a project instead** — both
-  re-derive every PDF path for the new location automatically.
+  re-derive every PDF path for the new location automatically, and move `annotations/` along with it.
 
 ## Two people must not pick the same reviewer seat
 
-⚠️ Each reviewer's answers live in their own tree inside the file (`Reviewer 1`, `Reviewer 2`, …). If
-two *different people* — on two different clones of the same project — both pick "Reviewer 1", their
-answers will merge into one chimeric tree the next time the file is pulled together via git, with **no
-warning**, unless the project file already records who holds each seat.
+⚠️ Each reviewer's answers live in their own file (`annotations/<paper>/reviewer-1.json`,
+`reviewer-2.json`, …). If two *different people* — on two different clones of the same project — both
+pick "Reviewer 1", their answers will merge into one chimeric tree the next time the project is pulled
+together via git, with **no warning**, unless the project already records who holds each seat.
 
 When you're using git, SaiLoR records your git identity (name/email) the first time you claim a seat,
 and warns you if you try to take a seat someone else already claimed. That protection only exists
