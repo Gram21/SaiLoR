@@ -440,6 +440,28 @@ pdf.js-internal attribute: `pageNumberForNode` walks up from the selection's sta
 their closest `.react-pdf__Page` ancestor and looks it up there; a selection spanning two pages is
 treated as unhighlightable (rare in practice, and a highlight is inherently one page's overlay).
 
+**Annotation-tools row.** A 📝 header button toggles `.pdf-annotation-toolbar`, a row rendered
+between the header and the scroll container (same slot the search bar uses), holding a 📌 "Add
+sticky note" toggle and ‹/› buttons to cycle through every mark. Placing a note is one-shot: while
+`placingNote` is on, a plain click on `.pdf-scroll` (a sibling of the existing link-jump
+`onClickCapture`, guarded so it no-ops unless placing) resolves the clicked page and point the same
+way `updateSelectionToolbar` resolves a selection's rects, calls
+`addHighlight(page, [{x,y,...}], undefined, 'note')`, opens its comment popover immediately, and
+turns the placement mode back off — `.pdf-scroll` gets a `placing-note` class for a crosshair cursor
+meanwhile. Cycling walks `sortMarksForCycling(marks)` (page order, then top-to-bottom within a page)
+and, on Next/Prev, scrolls to the target mark's page and briefly pulses it (`flashMarkId` + a CSS
+`flash` class, cleared after 1.5s) rather than force-opening its popover — a nudge, not an edit
+prompt. A note renders as a small fixed-size pinned icon (`.pdf-mark-note`) instead of a
+percentage-sized highlight rect; everything else (the popover, per-reviewer scoping, storage) is
+identical to a highlight, see "PDF marks" in `data-model.md`.
+
+**Export.** A 📤 header button (disabled with no marks) opens `ExportPdfDialog`, which resolves the
+current paper's PDF to an absolute path via the platform's `absolutePdfPaths`, then lets the reviewer
+choose a new file (default, via a native save dialog with `annotatedFileName` as the suggested name)
+or the original file in place (with an inline warning — see "PDF marks" in `data-model.md` for why
+overwriting is risky). The actual embedding happens in the Electron main process
+(`embedPdfAnnotations` → `pdf:embedMarks` IPC → pdf-lib), never in the renderer.
+
 **In-PDF search.** A 🔍 button in the header (and `Ctrl/Cmd+F`) toggles a find bar below the header; opening it focuses the input so the user can type immediately (via a `searchOpen` effect, since the input isn't mounted on the open transition). `findMatches` walks the text nodes of each rendered text layer (`.react-pdf__Page__textContent`), concatenating them per layer so a query can span multiple spans, and returns DOM `Range`s. Matches are painted with the **CSS Custom Highlight API** (`CSS.highlights` + `::highlight(slr-pdf-search)` / `::highlight(slr-pdf-search-active)`) — this tints the transparent text-layer glyphs without mutating react-pdf's DOM, and degrades gracefully where the API is unavailable. The active match is centered in the scroll container; Enter / Shift+Enter (and the ‹ › buttons) cycle matches. Crucially, the `<Page>` elements are **memoized** (`useMemo` on `[numPages, renderWidth, onTextLayerRendered]`) with a stable `onRenderTextLayerSuccess` callback, so typing in the search box reuses the same element references and React skips re-rendering the pages — otherwise every keystroke would tear down and re-render the text layers (a "TextLayer task cancelled" flood) and matches would never resolve.
 
 **The page count is capped at `MAX_PDF_PAGES` (5 000).** There is no virtualization here: every page
