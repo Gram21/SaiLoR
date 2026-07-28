@@ -23,7 +23,7 @@ the project JSON that will silently eat your changes if you don't know about it.
 | Page | What's in it |
 | --- | --- |
 | [Things to know](things-to-know.md) | Warnings worth reading before you rely on this for real review data |
-| [Getting started](getting-started.md) | Opening a project, the three-pane layout, annotating, search, grabbing text from the PDF, highlighting/sticky notes/PDF export, validating |
+| [Getting started](getting-started.md) | Opening a project, the three-pane layout, annotating, search, grabbing text from the PDF, highlighting/sticky notes/PDF export, linking a mark to a field, validating |
 | [Screening](screening.md) | The fast include/exclude pass that usually comes before annotation, and starting the next phase from it |
 | [Working with several reviewers](multi-reviewer.md) | Independent reviewers, Consolidation, agreement statistics, disagreements, reviewer-seat identity |
 | [Setting up a project](project-editor.md) | Building the annotation schema, adding papers, importing references, duplicate detection, the review protocol |
