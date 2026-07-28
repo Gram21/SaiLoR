@@ -420,11 +420,15 @@ interface MarkRect { x: number; y: number; width: number; height: number }  // f
 interface PdfMark {
   id: string
   page: number         // 1-indexed
-  rects: MarkRect[]     // one rect per line of a multi-line selection
+  rects: MarkRect[]     // a highlight: one rect per line of a multi-line selection.
+                        // a note: exactly one rect, whose x/y is the pinned point
+                        // (width/height are placeholder, unused for a note)
   color: string
   comment: string       // '' for a plain highlight with no note
   createdAt: string     // ISO 8601
   updatedAt: string
+  kind: 'highlight' | 'note'   // defaults to 'highlight' — every mark from before this
+                                // field existed parses as one
 }
 ```
 
@@ -456,6 +460,27 @@ where annotation merges must show every disagreement instead.
 **Deliberately outside the undo stack.** `addHighlight`/`setMarkComment`/`setMarkColor`/`removeMark`
 never push a `HistoryEntry`, so PDF marks are not covered by the app's Cmd+Z annotation undo/redo —
 another consequence of treating them as a lower-stakes personal note rather than a reviewed answer.
+
+**Sticky notes reuse everything above.** `addHighlight(page, rects, color, 'note')` (the `kind`
+param defaults to `'highlight'`) creates a note the same way a highlight is created — same storage,
+same per-reviewer scoping, same merge rule — with `rects` holding one placeholder-sized rect at the
+pinned point instead of a traced selection. `PdfViewer.tsx` renders it as a small pinned icon
+(`.pdf-mark-note`) instead of a percentage-sized highlight rect, but it is exactly the same `PdfMark`
+underneath. `sortMarksForCycling` (`src/model/pdfMarks.ts`) gives a stable top-to-bottom, page-by-page
+reading order over every mark (highlight or note) — used by the annotation-tools row's prev/next
+buttons to jump between them.
+
+**Export: burning marks into a real PDF.** A one-way, user-triggered action — separate from, and
+never affecting, the in-app overlay above. `src/model/pdfExport.ts` holds the pure coordinate math
+(`rectToPdfPoints`, `rectToQuadPoints`) converting a `MarkRect`'s top-left/y-down fraction into PDF
+point space (bottom-left origin, y-up); `electron/main.ts` (`embedMarksIntoPdf`, using pdf-lib's
+low-level `PDFContext` API, since pdf-lib has no high-level "add a Highlight annotation" helper)
+builds an actual `/Subtype /Highlight` or `/Subtype /Text` annotation dictionary per mark and appends
+it to the page's `/Annots`, never replacing annotations already in the PDF. The reviewer chooses,
+via `ExportPdfDialog.tsx`, whether to save a new file (default) or overwrite the paper's own PDF in
+place — the latter comes with an inline warning, since that file is shared across reviewers and an
+overwrite is likely to produce a git merge conflict on a binary file the split-storage design (see
+"On-disk layout" above) otherwise never touches.
 
 ## Screening
 
