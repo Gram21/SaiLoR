@@ -627,6 +627,81 @@ button.paper-search-mode:hover {
   color: var(--muted);
   font-size: 0.857rem;
 }
+
+/* PDF highlights/comments — see pdfMarks.ts. Rendered as `<Page>` children,
+   inside the same `position: relative` wrapper react-pdf itself sets, so
+   percentage coordinates line up with the page regardless of zoom. */
+.pdf-marks-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.pdf-mark-rect {
+  position: absolute;
+  opacity: 0.4;
+  mix-blend-mode: multiply;
+  border-radius: 2px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.pdf-mark-rect:hover {
+  opacity: 0.6;
+}
+.pdf-mark-comment-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1px solid var(--bg);
+}
+
+.pdf-highlight-toolbar,
+.pdf-mark-popover {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+}
+.pdf-mark-popover {
+  flex-direction: column;
+  width: 240px;
+}
+.pdf-mark-popover-colors {
+  display: flex;
+  gap: 6px;
+}
+.pdf-color-swatch {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.pdf-color-swatch.active {
+  border-color: var(--text);
+}
+.pdf-mark-comment-input {
+  width: 100%;
+  min-height: 60px;
+  resize: vertical;
+}
+.pdf-mark-popover-actions {
+  display: flex;
+  justify-content: space-between;
+}
+.pdf-mark-delete {
+  color: var(--danger);
+}
 .pdf-scroll {
   flex: 1 1 auto;
   overflow: auto;

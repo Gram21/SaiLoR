@@ -51,6 +51,18 @@ selection into it. Numeric fields pull out the first number in the selection.
 This is the fastest way to fill in most fields without retyping anything from the paper — select the
 sentence that supports a claim, click ⧉ next to *Claim*, done.
 
+## Highlighting and commenting in the PDF
+
+Select text in the PDF and a small color toolbar appears — pick a color to highlight the selection
+and open a note box for it right away. Click any existing highlight later to reopen that box: change
+its color, edit or clear the note, or delete it. Press **Escape**, click elsewhere, or scroll the page
+to close the box without deleting anything.
+
+These highlights and notes are your own — in a multi-reviewer project, each reviewer (and
+Consolidation) sees only their own marks, just like annotation answers. They're saved with the
+project like everything else, but on their own file per paper per reviewer, so two people marking up
+the same PDF never conflict in git.
+
 ## The completeness dot
 
 Each paper in the list carries a status dot on its left. In an ordinary (non-screening) project, it

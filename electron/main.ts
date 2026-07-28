@@ -548,17 +548,29 @@ async function safeReadAnnotationFile(annotationsDir: string, relPath: string): 
  *  the reviewer number. */
 const REVIEWER_FILE_RE = /^(?:reviewer|screening)-(\d+)\.json$/
 
-/** Every reviewer/consolidated file present for one paper, read and parsed
- *  defensively — a corrupt file is skipped, not thrown over, same as a
- *  corrupt field anywhere else in a hand-editable project. Tries both the
+/** Matches a per-reviewer PDF-marks file's name — `marks-<n>.json`, the same
+ *  regardless of screening vs. annotation mode (see `splitProjectFiles`'s
+ *  doc comment for why marks don't share the reviewer/screening split).
+ *  Group 1 is the reviewer number. */
+const MARKS_FILE_RE = /^marks-(\d+)\.json$/
+
+type PaperFiles = {
+  consolidated?: unknown
+  reviewers: Map<string, unknown>
+  marksConsolidated?: unknown
+  reviewMarks: Map<string, unknown>
+}
+
+/** Every reviewer/consolidated/marks file present for one paper, read and
+ *  parsed defensively — a corrupt file is skipped, not thrown over, same as
+ *  a corrupt field anywhere else in a hand-editable project. Tries both the
  *  ordinary and screening consolidated-file names rather than needing to
  *  know up front which kind of project this is. */
-async function loadPaperFiles(
-  annotationsDir: string,
-  paperId: string,
-): Promise<{ consolidated?: unknown; reviewers: Map<string, unknown> }> {
+async function loadPaperFiles(annotationsDir: string, paperId: string): Promise<PaperFiles> {
   const reviewers = new Map<string, unknown>()
+  const reviewMarks = new Map<string, unknown>()
   let consolidated: unknown
+  let marksConsolidated: unknown
   for (const name of ['consolidated.json', 'screening-consolidated.json']) {
     const text = await safeReadAnnotationFile(annotationsDir, `${paperId}/${name}`)
     if (text === null) continue
@@ -568,6 +580,14 @@ async function loadPaperFiles(
       // corrupt file — treat as absent
     }
     break
+  }
+  const marksConsolidatedText = await safeReadAnnotationFile(annotationsDir, `${paperId}/marks-consolidated.json`)
+  if (marksConsolidatedText !== null) {
+    try {
+      marksConsolidated = JSON.parse(marksConsolidatedText)
+    } catch {
+      // corrupt file — treat as absent
+    }
   }
   const paperDirResolved = path.resolve(annotationsDir, paperId)
   const base = path.resolve(annotationsDir)
@@ -580,17 +600,20 @@ async function loadPaperFiles(
     }
   }
   for (const entry of entries) {
-    const m = entry.isFile() ? REVIEWER_FILE_RE.exec(entry.name) : null
-    if (!m) continue
+    if (!entry.isFile()) continue
+    const reviewerMatch = REVIEWER_FILE_RE.exec(entry.name)
+    const marksMatch = MARKS_FILE_RE.exec(entry.name)
+    if (!reviewerMatch && !marksMatch) continue
     const text = await safeReadAnnotationFile(annotationsDir, `${paperId}/${entry.name}`)
     if (text === null) continue
     try {
-      reviewers.set(m[1], JSON.parse(text))
+      if (reviewerMatch) reviewers.set(reviewerMatch[1], JSON.parse(text))
+      else reviewMarks.set(marksMatch![1], JSON.parse(text))
     } catch {
       // corrupt file — skip this reviewer's tree
     }
   }
-  return { consolidated, reviewers }
+  return { consolidated, reviewers, marksConsolidated, reviewMarks }
 }
 
 /** Read `filePath`'s `project.json` and, if it's the split (post-v1.3) shape,
@@ -602,7 +625,7 @@ async function readProjectText(filePath: string): Promise<string> {
   if (isLegacyProjectShape(raw)) return text
   const papers = (raw as { papers?: unknown[] }).papers
   const annotationsDir = path.join(path.dirname(filePath), 'annotations')
-  const paperFiles = new Map<string, { consolidated?: unknown; reviewers: Map<string, unknown> }>()
+  const paperFiles = new Map<string, PaperFiles>()
   for (const p of Array.isArray(papers) ? papers : []) {
     const id = (p as { id?: unknown })?.id
     if (typeof id !== 'string') continue
@@ -1377,20 +1400,24 @@ async function readProjectAtRevision(root: string, relPath: string, rev: string)
   const paths = lsTree.ok ? lsTree.stdout.split('\n').filter(Boolean) : []
 
   const papers = (raw as { papers?: unknown[] }).papers
-  const paperFiles = new Map<string, { consolidated?: unknown; reviewers: Map<string, unknown> }>()
+  const paperFiles = new Map<string, PaperFiles>()
   for (const p of Array.isArray(papers) ? papers : []) {
     const id = (p as { id?: unknown })?.id
-    if (typeof id === 'string') paperFiles.set(id, { reviewers: new Map() })
+    if (typeof id === 'string') paperFiles.set(id, { reviewers: new Map(), reviewMarks: new Map() })
   }
   for (const p of paths) {
     const rel = p.slice(dir.length + 1) // "<paperId>/<name>.json"
     // Group 2 catches either consolidated-file name (ordinary or screening);
-    // group 3 catches the reviewer number for either reviewer-file name — see
+    // group 3 catches the reviewer number for either reviewer-file name (see
     // `splitProjectFiles`'s doc comment for why a screening project uses a
-    // different prefix.
-    const m = /^([^/]+)\/(?:(consolidated|screening-consolidated)|(?:reviewer|screening)-(\d+))\.json$/.exec(rel)
+    // different prefix); group 4 catches marks-consolidated; group 5 the
+    // reviewer number for a marks-<n> file (marks don't split by screening).
+    const m =
+      /^([^/]+)\/(?:(consolidated|screening-consolidated)|(?:reviewer|screening)-(\d+)|(marks-consolidated)|marks-(\d+))\.json$/.exec(
+        rel,
+      )
     if (!m) continue
-    const [, paperId, consolidatedKind, reviewerNum] = m
+    const [, paperId, consolidatedKind, reviewerNum, marksConsolidatedKind, marksReviewerNum] = m
     const entry = paperFiles.get(paperId)
     if (!entry) continue
     const fileShow = await runGit(['show', `${rev}:${p}`], root)
@@ -1402,7 +1429,9 @@ async function readProjectAtRevision(root: string, relPath: string, rev: string)
       continue // corrupt file at this revision — treat as absent
     }
     if (consolidatedKind) entry.consolidated = parsed
-    else entry.reviewers.set(reviewerNum, parsed)
+    else if (reviewerNum) entry.reviewers.set(reviewerNum, parsed)
+    else if (marksConsolidatedKind) entry.marksConsolidated = parsed
+    else entry.reviewMarks.set(marksReviewerNum, parsed)
   }
   return JSON.stringify(assembleLegacyProjectJson(raw, paperFiles))
 }

@@ -14,6 +14,7 @@ import {
 } from './annotations'
 import { screeningSchemaDefs } from '../screening/schema'
 import { parseYear } from './year'
+import { parseMarks, parseReviewMarks, type PdfMark } from './pdfMarks'
 
 /**
  * One AI-assisted-annotation pass applied to a paper: which provider and model
@@ -108,6 +109,17 @@ export interface Paper {
    * doesn't"; see `disagreements.ts`, which has to live with that limit.
    */
   equal: string[]
+  /**
+   * PDF highlights/comments — the single/consolidated reviewer's own marks in
+   * a single-reviewer project, or the Consolidation seat's own reading marks
+   * in a multi-reviewer one. Same "single tree vs. per-reviewer trees" split
+   * `annotations`/`reviews` already has, and for the same reason: each
+   * reviewer marks up their own reading independently. See `pdfMarks.ts`.
+   */
+  marks: PdfMark[]
+  /** Each independent reviewer's own marks, keyed "1".."N" like `reviews`.
+   *  Absent/empty in a single-reviewer project. */
+  reviewMarks: Record<string, PdfMark[]>
   /** Any additional fields present in the source file are preserved on save. */
   extra: Record<string, unknown>
 }
@@ -240,6 +252,8 @@ const KNOWN_PAPER_KEYS = new Set([
   'reviews',
   'aiUsage',
   'equal',
+  'marks',
+  'reviewMarks',
 ])
 /** Exported so `editorStore.ts`'s own root-extra split (`editorStateFromOpened`)
  *  uses this exact list rather than a second hand-maintained copy — see
@@ -632,6 +646,8 @@ export function loadProject(input: string | unknown): Project {
     reviews: normalizeReviews((p as { reviews?: unknown }).reviews, schema, raw.config.reviewers ?? 1),
     aiUsage: parseAiUsage(p.aiUsage),
     equal: parseEqual(p.equal),
+    marks: parseMarks((p as { marks?: unknown }).marks),
+    reviewMarks: parseReviewMarks((p as { reviewMarks?: unknown }).reviewMarks),
     extra: extractExtra(p, KNOWN_PAPER_KEYS),
   }))
 
@@ -712,6 +728,14 @@ export function serializeProject(project: Project): string {
       if (p.aiUsage.length > 0) paper.aiUsage = p.aiUsage
       // Only written when non-empty, so a paper with no equality marks stays clean.
       if (p.equal.length > 0) paper.equal = p.equal
+      // Only written when non-empty, so a paper nobody has highlighted stays clean.
+      if (p.marks.length > 0) paper.marks = p.marks
+      const reviewMarkKeys = Object.keys(p.reviewMarks).filter((k) => p.reviewMarks[k].length > 0)
+      if (reviewMarkKeys.length > 0) {
+        paper.reviewMarks = Object.fromEntries(
+          reviewMarkKeys.sort((a, b) => Number(a) - Number(b)).map((k) => [k, p.reviewMarks[k]]),
+        )
+      }
       return { ...paper, ...p.extra }
     }),
     ...project.extra,
@@ -788,6 +812,11 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
           relPath: `${p.id}/${reviewerName}-${k}.json`,
           text: has ? JSON.stringify({ annotations: serializedTree(project.schema, tree) }, null, 2) : null,
         })
+        const marks = p.reviewMarks[String(k)] ?? []
+        files.push({
+          relPath: `${p.id}/marks-${k}.json`,
+          text: marks.length > 0 ? JSON.stringify({ marks }, null, 2) : null,
+        })
       }
     }
 
@@ -799,6 +828,14 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     files.push({
       relPath: `${p.id}/${consolidatedName}.json`,
       text: Object.keys(consolidated).length > 0 ? JSON.stringify(consolidated, null, 2) : null,
+    })
+    // Marks aren't screening/reviewer-decision data — they're reading notes,
+    // and get their own file family regardless of screening vs. annotation
+    // mode (unlike `reviewerName`/`consolidatedName` above, which distinguish
+    // those two).
+    files.push({
+      relPath: `${p.id}/marks-consolidated.json`,
+      text: p.marks.length > 0 ? JSON.stringify({ marks: p.marks }, null, 2) : null,
     })
 
     return { ...paper, ...p.extra }
@@ -846,7 +883,15 @@ export function isLegacyProjectShape(raw: unknown): boolean {
  */
 export function assembleLegacyProjectJson(
   meta: unknown,
-  paperFiles: Map<string, { consolidated?: unknown; reviewers: Map<string, unknown> }>,
+  paperFiles: Map<
+    string,
+    {
+      consolidated?: unknown
+      reviewers: Map<string, unknown>
+      marksConsolidated?: unknown
+      reviewMarks: Map<string, unknown>
+    }
+  >,
 ): unknown {
   const m = meta as { papers?: unknown[] }
   const papers = Array.isArray(m.papers) ? m.papers : []
@@ -865,12 +910,19 @@ export function assembleLegacyProjectJson(
       for (const [k, v] of entry?.reviewers ?? []) {
         reviews[k] = (v as { annotations?: unknown })?.annotations ?? {}
       }
+      const marksConsolidated = (entry?.marksConsolidated ?? {}) as { marks?: unknown }
+      const reviewMarks: Record<string, unknown> = {}
+      for (const [k, v] of entry?.reviewMarks ?? []) {
+        reviewMarks[k] = (v as { marks?: unknown })?.marks ?? []
+      }
       return {
         ...p,
         annotations: consolidated.annotations ?? {},
         ...(Object.keys(reviews).length > 0 ? { reviews } : {}),
         ...(consolidated.aiUsage !== undefined ? { aiUsage: consolidated.aiUsage } : {}),
         ...(consolidated.equal !== undefined ? { equal: consolidated.equal } : {}),
+        ...(marksConsolidated.marks !== undefined ? { marks: marksConsolidated.marks } : {}),
+        ...(Object.keys(reviewMarks).length > 0 ? { reviewMarks } : {}),
       }
     }),
   }

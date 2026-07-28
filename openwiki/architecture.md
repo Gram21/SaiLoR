@@ -423,6 +423,23 @@ Uses `react-pdf`'s `Document` + `Page` components. The pdf.js worker is loaded f
 
 **Jump history (back/forward).** Clicking an internal PDF link (e.g. a reference) lets the pdf.js LinkService scroll to the destination. An `onClickCapture` on the scroll container notices clicks on `<a>` elements and, after polling briefly, records the pre-jump `scrollTop` on a back stack **only if the view actually moved** (so external links, which don't scroll, are ignored). Two header buttons (↩ / ↪, shown once history exists) then move between positions like a browser: `jumpBack` pops the back stack, pushes the live position onto the forward stack, and scrolls there instantly (`scrollTo` with default behavior — reliable under `prefers-reduced-motion`); `jumpForward` is symmetric. The stacks are refs (with `canJumpBack`/`canJumpForward` state mirroring their lengths) and are cleared when the paper changes.
 
+**Highlights and comments.** Selecting text in the PDF opens a small color-swatch toolbar
+(`updateSelectionToolbar`, anchored at the selection's end via `getClientRects()`); picking a color
+calls the store's `addHighlight` and immediately opens a comment popover for the new mark. Clicking
+an existing highlight reopens that popover (recolor / edit comment / delete). Both popovers dismiss
+on Escape, on an outside `mousedown` (ancestry-checked with `.closest()`, not a `stopPropagation()`
+race, since `mousedown` fires before `click`), and on scroll (their `position: fixed` client
+coordinates go stale the moment the page moves). Each page's marks are rendered as a
+`.pdf-marks-overlay` — `position: absolute; inset: 0` inside react-pdf's own page wrapper (which is
+already `position: relative`), passed as the `<Page>` component's `children` so it layers above the
+canvas/text/annotation layers with no extra measurement or portal needed. Rect positions are plain
+CSS percentages, per `PdfMark`'s resolution-independent coordinate storage — see "PDF marks" in
+`data-model.md` for the underlying model, scoping, and merge rules. Selection-to-page mapping reuses
+`pageRefs` (the same array the scroll-position tracking above already keys off) rather than any
+pdf.js-internal attribute: `pageNumberForNode` walks up from the selection's start/end containers to
+their closest `.react-pdf__Page` ancestor and looks it up there; a selection spanning two pages is
+treated as unhighlightable (rare in practice, and a highlight is inherently one page's overlay).
+
 **In-PDF search.** A 🔍 button in the header (and `Ctrl/Cmd+F`) toggles a find bar below the header; opening it focuses the input so the user can type immediately (via a `searchOpen` effect, since the input isn't mounted on the open transition). `findMatches` walks the text nodes of each rendered text layer (`.react-pdf__Page__textContent`), concatenating them per layer so a query can span multiple spans, and returns DOM `Range`s. Matches are painted with the **CSS Custom Highlight API** (`CSS.highlights` + `::highlight(slr-pdf-search)` / `::highlight(slr-pdf-search-active)`) — this tints the transparent text-layer glyphs without mutating react-pdf's DOM, and degrades gracefully where the API is unavailable. The active match is centered in the scroll container; Enter / Shift+Enter (and the ‹ › buttons) cycle matches. Crucially, the `<Page>` elements are **memoized** (`useMemo` on `[numPages, renderWidth, onTextLayerRendered]`) with a stable `onRenderTextLayerSuccess` callback, so typing in the search box reuses the same element references and React skips re-rendering the pages — otherwise every keystroke would tear down and re-render the text layers (a "TextLayer task cancelled" flood) and matches would never resolve.
 
 **The page count is capped at `MAX_PDF_PAGES` (5 000).** There is no virtualization here: every page

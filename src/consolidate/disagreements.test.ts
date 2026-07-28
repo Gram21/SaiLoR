@@ -35,6 +35,8 @@ function makePaper(overrides: Partial<Paper> = {}): Paper {
     reviews: {},
     aiUsage: [],
     equal: [],
+    marks: [],
+    reviewMarks: {},
     extra: {},
     ...overrides,
   }

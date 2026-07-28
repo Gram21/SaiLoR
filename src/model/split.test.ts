@@ -121,11 +121,12 @@ describe('splitProjectFiles', () => {
     const project = loadProject(raw)
     const { files } = splitProjectFiles(project)
 
-    expect(files.map((f) => f.relPath).sort()).toEqual([
-      'p1/screening-1.json',
-      'p1/screening-2.json',
-      'p1/screening-consolidated.json',
-    ])
+    expect(
+      files
+        .map((f) => f.relPath)
+        .filter((p) => !p.includes('/marks-'))
+        .sort(),
+    ).toEqual(['p1/screening-1.json', 'p1/screening-2.json', 'p1/screening-consolidated.json'])
     const r1 = files.find((f) => f.relPath === 'p1/screening-1.json')
     expect(r1?.text).toContain(DECISION_INCLUDE)
     const consolidated = files.find((f) => f.relPath === 'p1/screening-consolidated.json')
@@ -187,13 +188,17 @@ describe('assembleLegacyProjectJson + splitProjectFiles round-trip', () => {
     const project = loadProject(raw)
     const { meta, files } = splitProjectFiles(project)
 
-    const paperFiles = new Map<string, { consolidated?: unknown; reviewers: Map<string, unknown> }>()
-    paperFiles.set('p1', { reviewers: new Map() })
+    const paperFiles = new Map<
+      string,
+      { consolidated?: unknown; reviewers: Map<string, unknown>; reviewMarks: Map<string, unknown> }
+    >()
+    paperFiles.set('p1', { reviewers: new Map(), reviewMarks: new Map() })
     for (const f of files) {
       if (f.text === null) continue
       const [paperId, name] = f.relPath.split('/')
       const entry = paperFiles.get(paperId)!
       if (name === 'consolidated.json') entry.consolidated = JSON.parse(f.text)
+      else if (name.startsWith('marks-')) continue // this test carries no marks
       else entry.reviewers.set(name.replace(/^reviewer-(\d+)\.json$/, '$1'), JSON.parse(f.text))
     }
 
@@ -213,5 +218,68 @@ describe('assembleLegacyProjectJson + splitProjectFiles round-trip', () => {
     const roundTripped = loadProject(reassembled)
     expect(roundTripped.papers[0].annotations.Relevant[0].value).toBe(false)
     expect(roundTripped.papers[1].annotations.Relevant[0].value).toBe(false)
+  })
+
+  it('round-trips marks/reviewMarks through marks-consolidated.json / marks-<n>.json', () => {
+    const consolidatedMark = {
+      id: 'c1',
+      page: 1,
+      rects: [{ x: 0.1, y: 0.1, width: 0.2, height: 0.05 }],
+      color: '#ffe066',
+      comment: 'consolidated note',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    }
+    const reviewer1Mark = { ...consolidatedMark, id: 'r1', comment: 'reviewer 1 note' }
+    const raw = JSON.parse(
+      legacyJson({
+        reviewers: 2,
+        papers: [
+          {
+            id: 'p1',
+            title: 'Paper One',
+            authors: ['A'],
+            pdf: 'p1.pdf',
+            annotations: {},
+            reviews: { '1': {}, '2': {} },
+            marks: [consolidatedMark],
+            reviewMarks: { '1': [reviewer1Mark] },
+          },
+        ],
+      }),
+    )
+    const project = loadProject(raw)
+    const { meta, files } = splitProjectFiles(project)
+
+    expect(files.some((f) => f.relPath === 'p1/marks-consolidated.json' && f.text !== null)).toBe(true)
+    expect(files.some((f) => f.relPath === 'p1/marks-1.json' && f.text !== null)).toBe(true)
+    expect(files.some((f) => f.relPath === 'p1/marks-2.json' && f.text === null)).toBe(true)
+
+    const paperFiles = new Map<
+      string,
+      {
+        consolidated?: unknown
+        reviewers: Map<string, unknown>
+        marksConsolidated?: unknown
+        reviewMarks: Map<string, unknown>
+      }
+    >()
+    paperFiles.set('p1', { reviewers: new Map(), reviewMarks: new Map() })
+    for (const f of files) {
+      if (f.text === null) continue
+      const [paperId, name] = f.relPath.split('/')
+      const entry = paperFiles.get(paperId)!
+      if (name === 'marks-consolidated.json') entry.marksConsolidated = JSON.parse(f.text)
+      else if (name.startsWith('marks-')) entry.reviewMarks.set(name.replace(/^marks-(\d+)\.json$/, '$1'), JSON.parse(f.text))
+      else if (name === 'consolidated.json') entry.consolidated = JSON.parse(f.text)
+      else entry.reviewers.set(name.replace(/^reviewer-(\d+)\.json$/, '$1'), JSON.parse(f.text))
+    }
+
+    const reassembled = assembleLegacyProjectJson(meta, paperFiles)
+    const roundTripped = loadProject(reassembled)
+
+    expect(roundTripped.papers[0].marks).toEqual([consolidatedMark])
+    expect(roundTripped.papers[0].reviewMarks['1']).toEqual([reviewer1Mark])
+    expect(roundTripped.papers[0].reviewMarks['2']).toBeUndefined()
   })
 })
