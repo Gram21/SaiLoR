@@ -458,11 +458,21 @@ square with a `clip-path`-cut folded corner, shared with the toolbar's static `.
 of a percentage-sized highlight rect; everything else (the popover, per-reviewer scoping, storage) is
 identical to a highlight, see "PDF marks" in `data-model.md`.
 
-**Linking a mark to a field.** The 🔗 button next to every field (`Field.tsx`) is the only way to
-create a link — it opens `FieldLinkPopover`, listing `currentPdfMarks()` with a Link/× per mark
-against this field's canonical path (`fieldPath`). The mark's own popover shows the reverse view
-(which fields it's linked to) read-only, with unlink only — see "Linking a mark to a field" in
-`data-model.md` for the full data-model/orphaning discussion.
+**Linking a mark to a field.** The 🔗 button next to every field (`Field.tsx`, sized to match the ⧉
+grab button beside it — the 🔗 emoji renders larger than ⧉/⇄'s plain glyphs at the same font-size, so
+only the glyph, in its own `.link-icon` span, is shrunk; the button's own box is untouched, keeping
+its height aligned with its neighbors) opens `FieldLinkPopover`, the only way to create a link. It
+shows two things: the already-linked marks (or "No links yet"), each row a snippet button (click to
+jump — `setPendingMarkJump` — plus an unlink ×); and a collapsed "+ Link a highlight or note" toggle
+that, expanded, reveals a scrollable picker (5 rows visible, more via scroll) over every *unlinked*
+mark, with a search box at the bottom filtering by comment text. Its width is seeded once, at open,
+from `.panel.annotations`'s own width (not kept in sync afterward, so it doesn't fight a manual
+resize) and is user-resizable via `resize: horizontal`. Clicking a snippet (in either section) never
+links/closes anything — it only requests `pendingMarkJump` on the store; `PdfViewer` clears it after
+scrolling to and flashing the mark, matching the cycling toolbar's own "jump and flash" action
+(`flashAndScrollTo`, shared by both). The mark's own popover shows the reverse view (which fields
+it's linked to) read-only, with unlink only — see "Linking a mark to a field" in `data-model.md` for
+the full data-model/orphaning discussion.
 
 **Export.** A 📤 header button (disabled with no marks) opens `ExportPdfDialog`, which resolves the
 current paper's PDF to an absolute path via the platform's `absolutePdfPaths`, then lets the reviewer

@@ -780,6 +780,7 @@ button.paper-search-mode:hover {
 }
 .pdf-mark-link-label {
   flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1370,7 +1371,14 @@ button.paper-search-mode:hover {
   padding: 3px 8px;
   color: var(--accent);
 }
-/* "Link this field to a PDF highlight/note as evidence" — see Field.tsx. */
+/* "Link this field to a PDF highlight/note as evidence" — see Field.tsx.
+   The button's own box (padding, font-size, line-height) matches
+   `.grab-btn`/`.compare-btn` exactly, so its height/width lines up with
+   them — only the glyph *inside* it is shrunk (`.link-icon`), since the 🔗
+   emoji renders noticeably larger than their plain text glyphs (⧉, ⇄) at
+   the same font-size; shrinking the button itself instead (an earlier
+   version of this rule did) made it visibly *shorter* than its neighbors,
+   not matching them. */
 .link-btn {
   flex: 0 0 auto;
   padding: 3px 8px;
@@ -1378,6 +1386,14 @@ button.paper-search-mode:hover {
 }
 .link-btn.has-links {
   font-weight: 600;
+}
+.link-icon {
+  font-size: 0.75em;
+}
+.link-count {
+  font-size: 0.65em;
+  font-weight: 700;
+  margin-left: 2px;
 }
 .field-link-wrap {
   position: relative;
@@ -1387,7 +1403,8 @@ button.paper-search-mode:hover {
   z-index: 40;
   top: 100%;
   right: 0;
-  width: 260px;
+  min-width: 220px;
+  max-width: min(90vw, 640px);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1396,6 +1413,11 @@ button.paper-search-mode:hover {
   border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+  /* User-resizable (the popover's own width is only seeded once, at open,
+     from the annotation panel's width — see Field.tsx) — needs `overflow`
+     other than visible for the resize handle to appear. */
+  resize: horizontal;
+  overflow: auto;
 }
 .field-link-list {
   list-style: none;
@@ -1410,20 +1432,54 @@ button.paper-search-mode:hover {
   align-items: center;
   gap: 6px;
 }
-.field-link-snippet {
+.field-link-snippet-btn {
   flex: 1 1 auto;
+  /* Without this a flex item's default `min-width: auto` refuses to shrink
+     below its content's natural width, so the ellipsis below never
+     triggers — the exact reason a long comment used to widen the popover
+     instead of truncating. */
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: left;
   font-size: 0.85rem;
+  padding: 2px 4px;
+  border: none;
+  background: none;
+}
+.field-link-snippet-btn:hover {
+  text-decoration: underline;
 }
 .field-link-unlink {
+  flex: 0 0 auto;
   color: var(--danger);
   padding: 0 4px;
 }
 .field-link-empty {
   color: var(--muted);
   font-size: 0.85rem;
+}
+.field-link-toggle {
+  align-self: flex-start;
+  font-size: 0.85rem;
+  padding: 3px 8px;
+}
+.field-link-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+/* Five rows visible, the rest reachable by scrolling — `field-link-list`'s
+   own `gap`/`li` padding sets the ~28px row height this assumes. */
+.field-link-picker-list {
+  max-height: 148px;
+  overflow-y: auto;
+}
+.field-link-search {
+  width: 100%;
 }
 
 /* Which reviewer's tree is being annotated, echoed right next to the paper

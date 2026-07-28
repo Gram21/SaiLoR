@@ -406,6 +406,16 @@ export function PdfViewer() {
     if (id) setActiveMark({ id, x, y })
   }
 
+  /** Scroll to a mark and briefly pulse it — the shared "show me this one"
+   *  action behind both cycling and a jump requested from elsewhere (the
+   *  field-link popover). */
+  const flashAndScrollTo = (mark: PdfMark) => {
+    scrollToMark(mark)
+    setFlashMarkId(mark.id)
+    if (flashTimeoutRef.current !== undefined) window.clearTimeout(flashTimeoutRef.current)
+    flashTimeoutRef.current = window.setTimeout(() => setFlashMarkId(null), 1500)
+  }
+
   /** Advance the annotation-cycling cursor and flash the mark it lands on.
    *  `cycleIndex` starts `null` (nothing cycled to yet); the first Next/Prev
    *  then lands on the first/last mark respectively. */
@@ -415,12 +425,21 @@ export function PdfViewer() {
     const i = cycleIndex ?? (dir === 1 ? -1 : 0)
     const next = (i + dir + total) % total
     setCycleIndex(next)
-    const mark = sortedMarks[next]
-    scrollToMark(mark)
-    setFlashMarkId(mark.id)
-    if (flashTimeoutRef.current !== undefined) window.clearTimeout(flashTimeoutRef.current)
-    flashTimeoutRef.current = window.setTimeout(() => setFlashMarkId(null), 1500)
+    flashAndScrollTo(sortedMarks[next])
   }
+
+  // A jump requested from elsewhere (the field-link popover's "show me this
+  // mark" before linking it) — scroll to it and clear the request, leaving
+  // whatever popover asked for it open (this never touches `activeMark`).
+  const pendingMarkJump = useStore((s) => s.pendingMarkJump)
+  const setPendingMarkJump = useStore((s) => s.setPendingMarkJump)
+  useEffect(() => {
+    if (!pendingMarkJump) return
+    const mark = marks.find((m) => m.id === pendingMarkJump)
+    if (mark) flashAndScrollTo(mark)
+    setPendingMarkJump(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingMarkJump])
 
   /** While `placingNote` is active, a plain click inside a page drops a
    *  sticky note at that point and opens its comment popover — one shot,
@@ -1078,7 +1097,9 @@ export function PdfViewer() {
                 <ul className="pdf-mark-links">
                   {mark.linkedFields.map((l) => (
                     <li key={l.path}>
-                      <span className="pdf-mark-link-label">{l.label}</span>
+                      <span className="pdf-mark-link-label" title={l.label}>
+                        {l.label}
+                      </span>
                       <button
                         type="button"
                         className="field-link-unlink"

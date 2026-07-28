@@ -493,9 +493,10 @@ overwrite is likely to produce a git merge conflict on a binary file the split-s
 annotation fields a highlight or note is evidence for. Creation is one-directional: the store actions
 `linkMarkToField`/`unlinkMarkFromField` (`src/state/store.ts`) are triggered only from the field side
 — a 🔗 button next to every field (in `Field.tsx`, alongside the existing ⧉ "grab from PDF" button)
-opens a popover listing the paper's current marks to pick from. The mark's own popover
-(`PdfViewer.tsx`) shows the fields it's linked to read-only, with an unlink control, but has no way to
-start a new link — by design, so there's exactly one place a link is created. `useLinkedMarkCount`
+opens a popover: already-linked marks up top, and a fold-out, searchable picker (over every unlinked
+mark) below. The mark's own popover (`PdfViewer.tsx`) shows the fields it's linked to read-only, with
+an unlink control, but has no way to start a new link — by design, so there's exactly one place a
+link is created. `useLinkedMarkCount`
 (`store.ts`) drives the field's `🔗 N` badge; it deliberately returns a plain `number`, not a
 `PdfMark[]`, to avoid the same stale-array-reference hazard `EMPTY_MARKS` (above) exists to prevent —
 a `.filter(...)` result is a fresh reference every selector call even when nothing changed.
