@@ -225,6 +225,11 @@ Two optional top-level keys exist specifically to be safe from that `config` reb
   Include/Exclude decision instead — see [Screening](#screening).
 - **Grab from PDF** — select text in the PDF, then click the **⧉** button next to a string/number
   field to insert it (numeric fields extract the first number).
+- **Highlighting, sticky notes, and PDF export** — select text to highlight it, or drop a sticky
+  note anywhere on the page, each with its own comment. ‹ › buttons jump between every mark on the
+  paper. Marks are your own (per reviewer) and stored separately from the PDF itself, so two
+  reviewers marking up the same file never conflict in git — export them into a real, standalone
+  annotated PDF when you want to share one outside SaiLoR.
 - **Adding papers** — in the project editor: pick individual PDFs, a whole folder of them, or import a
   BibTeX/RIS/CSL-JSON reference export. Importing flags probable duplicates (fuzzy title match, or a
   matching normalized title with similar authors) against papers already in the project and against

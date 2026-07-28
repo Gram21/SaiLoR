@@ -63,16 +63,17 @@ Consolidation) sees only their own marks, just like annotation answers. They're 
 project like everything else, but on their own file per paper per reviewer, so two people marking up
 the same PDF never conflict in git.
 
-**More annotation tools.** The 📝 button in the PDF header opens a row with a 📌 button for dropping
-a sticky note anywhere on the page (click the button, then click the spot in the PDF — the note's
-comment box opens right away) and ‹ › buttons to step through every highlight and note on the paper,
-in reading order.
+**More annotation tools.** The 📝 button in the PDF header opens a row of annotation tools below it:
 
-**Exporting an annotated PDF.** The 📤 button (enabled once you have at least one highlight or note)
-burns your marks into a real PDF file, as standard annotation objects any PDF reader can show — for
-sharing outside SaiLoR. Choose to save it as a new file (the default) or overwrite the paper's own
-PDF in place; the app warns before the second option, since that file is shared with every other
-reviewer and overwriting it is likely to cause a git conflict.
+- A post-it button for dropping a sticky note anywhere on the page — click the button, then click
+  the spot in the PDF, and the note's comment box opens right away.
+- ‹ › buttons to step through every highlight and note on the paper, in reading order, jumping
+  straight to each one's exact spot on the page (not just the top of the page it's on).
+- A 📤 button (enabled once you have at least one highlight or note) that exports the PDF with your
+  marks burned in as real PDF annotation objects any PDF reader can show — for sharing outside
+  SaiLoR. Choose to save it as a new file (the default) or overwrite the paper's own PDF in place;
+  the app warns before the second option, since that file is shared with every other reviewer and
+  overwriting it is likely to cause a git conflict.
 
 ## The completeness dot
 
