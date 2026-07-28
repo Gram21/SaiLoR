@@ -621,6 +621,13 @@ export function currentTree(
  * marks yet has an empty array, not a missing key, so `create` only ever
  * needs to initialize that key the first time a mark is actually added.
  */
+/** Stable empty-array identity for "no marks yet" — returning a fresh `[]`
+ *  literal from a Zustand selector makes every snapshot look like a change,
+ *  which sends `useSyncExternalStore` into an infinite re-render loop (React:
+ *  "Maximum update depth exceeded" / "getSnapshot should be cached"). See
+ *  `currentPdfMarks` and `currentMarks` below, the two places this matters. */
+const EMPTY_MARKS: PdfMark[] = []
+
 export function currentMarks(
   project: Project,
   currentReviewer: string | null,
@@ -632,7 +639,7 @@ export function currentMarks(
   if (currentReviewer === null) return null
   const existing = paper.reviewMarks[currentReviewer]
   if (existing) return existing
-  if (!create) return []
+  if (!create) return EMPTY_MARKS
   paper.reviewMarks[currentReviewer] = []
   return paper.reviewMarks[currentReviewer]
 }
@@ -1355,10 +1362,10 @@ export const useStore = create<AppState>()(
 
     currentPdfMarks: () => {
       const s = get()
-      if (!s.project) return []
+      if (!s.project) return EMPTY_MARKS
       const paper = currentPaper(s)
-      if (!paper) return []
-      return currentMarks(s.project, s.currentReviewer, paper, false) ?? []
+      if (!paper) return EMPTY_MARKS
+      return currentMarks(s.project, s.currentReviewer, paper, false) ?? EMPTY_MARKS
     },
 
     addHighlight: (page, rects, color) => {
