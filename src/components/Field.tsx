@@ -83,9 +83,11 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
   // checkbox or dropdown choice deserves a reason just as much as free text.
   const linkCount = useLinkedMarkCount(path, def.name, index)
   const [linkPopoverOpen, setLinkPopoverOpen] = useState(false)
+  const linkBtnRef = useRef<HTMLButtonElement>(null)
   const linkBtn = (
     <div className="field-link-wrap">
       <button
+        ref={linkBtnRef}
         type="button"
         className={`link-btn${linkCount > 0 ? ' has-links' : ''}`}
         title={
@@ -103,6 +105,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
           path={path}
           name={def.name}
           index={index}
+          triggerRef={linkBtnRef}
           onClose={() => setLinkPopoverOpen(false)}
         />
       )}
@@ -204,6 +207,9 @@ interface FieldLinkPopoverProps {
   path: PathSeg[]
   name: string
   index: number
+  /** The button that opened this popover — its bottom edge (plus a 1px gap)
+   *  is where the popover's top sits; see `placement` below. */
+  triggerRef: React.RefObject<HTMLButtonElement | null>
   onClose: () => void
 }
 
@@ -211,7 +217,7 @@ interface FieldLinkPopoverProps {
  *  instance, plus a fold-out picker (search included) to link more. The only
  *  entry point for creating a link — the mark's own popover (`PdfViewer.tsx`)
  *  only shows/unlinks, never adds. */
-function FieldLinkPopover({ path, name, index, onClose }: FieldLinkPopoverProps) {
+function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkPopoverProps) {
   const marks = useStore((s) => s.currentPdfMarks())
   const linkMark = useStore((s) => s.linkMarkToField)
   const unlinkMark = useStore((s) => s.unlinkMarkFromField)
@@ -221,18 +227,20 @@ function FieldLinkPopover({ path, name, index, onClose }: FieldLinkPopoverProps)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [search, setSearch] = useState('')
 
-  // Centered in the annotation panel — not anchored to the trigger button —
-  // at 95% of the panel's width, seeded once at open (not kept in sync
-  // afterward, so a manual resize via the CSS `resize: horizontal` isn't
-  // fought on the next render). `position: fixed` with this and a
-  // `translate(-50%, -50%)` in the CSS is what makes the seeded point the
-  // popover's actual center regardless of where the button that opened it
-  // happens to sit.
+  // Horizontally centered on the annotation panel — not the trigger button —
+  // at 95% of the panel's width; vertically, directly under the button that
+  // opened it (its bottom edge + 1px). Both seeded once at open, not kept in
+  // sync afterward, so a manual resize via the CSS `resize: horizontal`
+  // isn't fought on the next render. `position: fixed` plus a
+  // `translateX(-50%)` in the CSS is what turns the seeded `left` into the
+  // popover's horizontal center rather than its corner.
   const [placement] = useState<{ left: number; top: number; width: number } | undefined>(() => {
     const panel = document.querySelector('.panel.annotations')
-    if (!panel) return undefined
-    const r = panel.getBoundingClientRect()
-    return { left: r.left + r.width / 2, top: r.top + r.height / 2, width: r.width * 0.95 }
+    const button = triggerRef.current
+    if (!panel || !button) return undefined
+    const panelRect = panel.getBoundingClientRect()
+    const buttonRect = button.getBoundingClientRect()
+    return { left: panelRect.left + panelRect.width / 2, top: buttonRect.bottom + 1, width: panelRect.width * 0.95 }
   })
 
   // Dismiss on Escape or an outside mousedown — same ancestry-checked pattern

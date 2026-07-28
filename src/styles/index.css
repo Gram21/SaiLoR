@@ -1398,13 +1398,14 @@ button.paper-search-mode:hover {
 .field-link-wrap {
   position: relative;
 }
-/* Centered on the annotation panel, not the trigger button — `left`/`top`/
-   `width` are set inline (Field.tsx) from the panel's own bounding box, and
-   this `translate` is what turns that seeded point into the popover's
-   center rather than its corner. */
+/* Horizontally centered on the annotation panel, not the trigger button;
+   vertically, right under whichever button opened it. `left`/`top`/`width`
+   are set inline (Field.tsx) from the panel's and button's own bounding
+   boxes, and this `translateX` is what turns the seeded `left` into the
+   popover's horizontal center rather than its corner. */
 .field-link-popover {
   position: fixed;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
   z-index: 40;
   min-width: 220px;
   max-width: 95vw;
