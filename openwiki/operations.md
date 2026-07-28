@@ -20,13 +20,15 @@ handle store (`src/platform/idb.ts`), and the `?project=<url>` server-hosted-dep
 `PlatformAdapter` implementation is now `UnsupportedAdapter` (`src/platform/unsupported.ts`), which
 answers every read with "nothing" and throws on every action, as a backstop for the handful of reads
 (`getRecents()`) that happen at store module load, before `App` ever renders and can show the gate.
-Docker self-hosting serves that same static build, so it inherits the same discontinuation notice
-regardless of what project folder is mounted — see "Deployment" below.
+Docker self-hosting served that same static build; its `Dockerfile`/`docker-compose.yml`/`nginx.conf`
+have been **removed** from the repo (not just disabled) — the only Docker file left,
+`Dockerfile.electron` (plus the trimmed `docker-compose.dev.yml`), builds the Electron installer
+instead, see "Dev in Docker" below.
 
 Everything in this page below assumes the **Electron desktop app** as the target; the sections below
-that still mention the web dev server or Docker say so explicitly, and exist only for contributors
-iterating on shared renderer code or on the discontinuation screen itself — neither is a usable
-deployment path for a reviewer.
+that still mention the web dev server say so explicitly, and exist only for contributors iterating on
+shared renderer code or on the discontinuation screen itself — not a usable deployment path for a
+reviewer.
 
 ## Development
 
@@ -58,19 +60,15 @@ npm ≥ 11.17 blocks dependency install scripts until they are approved, and rec
 
 ### Dev in Docker (optional)
 
-A separate `docker-compose.dev.yml` (with `Dockerfile.dev` and `Dockerfile.electron`) lets you develop without a local Node install. It is independent of the production `docker-compose.yml` — nothing runs on a plain `docker compose up` — and selects a target with a Compose **profile**:
+`docker-compose.dev.yml` builds the Electron app (Linux AppImage, into `./release/`) without a local
+Node install:
 
 ```bash
-# Browser dev server (Vite + HMR) on http://localhost:5173 — same discontinuation
-# notice as `npm run dev` above; not a usable deployment, only useful for
-# shared-renderer-code or discontinuation-screen work without a local Node install
-docker compose -f docker-compose.dev.yml --profile browser up --build
-
-# Build the Electron app (Linux AppImage) into ./release/
-docker compose -f docker-compose.dev.yml --profile electron run --rm electron
+docker compose -f docker-compose.dev.yml run --rm electron
 ```
 
-The browser-dev service bind-mounts the source for hot reload (set `VITE_USE_POLLING=1` if file changes aren't detected on macOS/Windows mounts). The electron service is a Debian image that runs `electron-builder`; Windows/macOS installers still need their native OS.
+It's a Debian image (`Dockerfile.electron`) that runs `electron-builder`; Windows/macOS installers
+still need their native OS.
 
 ## Build
 
@@ -211,14 +209,12 @@ Both workflows share a `concurrency: wiki-sync` group (with `cancel-in-progress:
 ### Discontinued: static hosting and Docker self-hosting
 
 SaiLoR used to support two server-based deployments: copying `dist/` behind a static host (with a
-project loaded via `?project=<url>`), and the bundled `docker-compose.yml`/`Dockerfile` self-hosting
-setup on port 8080. **Both are discontinued.** The static SPA these deployments serve now shows only
-the "use the desktop app" notice at runtime (`src/App.tsx`'s `isElectron()` gate), regardless of what
-project files are mounted or referenced — the `?project=<url>` loader and the browser's PDF-fetching
-adapter it depended on were deleted, not just disabled (see "SaiLoR is Electron-desktop-only" above).
-The `Dockerfile`, `docker-compose.yml`, and `nginx.conf` files still exist in the repo, but running
-`docker compose up -d --build` now serves a page that tells the visitor to download the desktop app
-instead of anything about their review.
+project loaded via `?project=<url>`), and a bundled `docker-compose.yml`/`Dockerfile` self-hosting
+setup on port 8080. **Both are discontinued and removed.** The `?project=<url>` loader and the
+browser's PDF-fetching adapter it depended on were deleted (see "SaiLoR is Electron-desktop-only"
+above), and the `Dockerfile`, `docker-compose.yml`, `Dockerfile.dev`, and `nginx.conf` files that
+built/served the static SPA were deleted from the repo — only `Dockerfile.electron` and a trimmed
+`docker-compose.dev.yml` (building the desktop installer, see "Dev in Docker" above) remain.
 
 ### Desktop
 

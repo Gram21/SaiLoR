@@ -464,17 +464,13 @@ longer a supported way to run the app — see "The web/browser build is disconti
 `AppImage` on Linux). Build on (or cross-build for) each target OS as needed. The desktop app reads
 local PDF files directly, so no server is involved.
 
-> **Static hosting and the production Docker image (`Dockerfile`, `docker-compose.yml`) are
-> discontinued along with the browser build** — they served the now-disabled browser build, so
-> there's nothing left for them to usefully deploy. Ship the Electron installers above instead.
-
 ## Developing with Docker
 
 If you'd rather not install Node locally, [`docker-compose.dev.yml`](docker-compose.dev.yml) can
 build the Electron app in a container:
 
 ```bash
-docker compose -f docker-compose.dev.yml --profile electron run --rm electron
+docker compose -f docker-compose.dev.yml run --rm electron
 ```
 
 [`Dockerfile.electron`](Dockerfile.electron) is a Debian image that runs `electron-builder`. It
