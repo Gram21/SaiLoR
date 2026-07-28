@@ -34,14 +34,25 @@ export interface PdfMark {
   id: string
   /** 1-indexed, matching react-pdf/pdf.js page numbering. */
   page: number
+  /** A text highlight's rects trace the selection (one per wrapped line). A
+   *  sticky note has exactly one rect, its `x`/`y` the pinned point — its
+   *  `width`/`height` are unused (icon size is fixed in CSS) but kept
+   *  non-zero so `isMarkRect` and every existing rect-consumer stay
+   *  unchanged. */
   rects: MarkRect[]
   /** A CSS color (this app only ever writes one of `MARK_COLORS`, but a
    *  hand-edited file's value is passed through rather than rejected). */
   color: string
-  /** Empty string means "just a highlight, no note attached yet". */
+  /** Empty string means "just a highlight, no note attached yet" — never
+   *  empty in practice for a `note`, but not enforced, same as everything
+   *  else in a hand-editable file. */
   comment: string
   createdAt: string
   updatedAt: string
+  /** `'highlight'` (default, and every mark before this field existed) traces
+   *  selected text. `'note'` pins a sticky note at a point — no text is
+   *  selected to make one. */
+  kind: 'highlight' | 'note'
 }
 
 /** The palette offered when creating or recoloring a highlight — the same
@@ -77,6 +88,7 @@ export function parseMarks(raw: unknown): PdfMark[] {
       comment: typeof e.comment === 'string' ? e.comment : '',
       createdAt: typeof e.createdAt === 'string' ? e.createdAt : '',
       updatedAt: typeof e.updatedAt === 'string' ? e.updatedAt : '',
+      kind: e.kind === 'note' ? 'note' : 'highlight',
     })
   }
   return out

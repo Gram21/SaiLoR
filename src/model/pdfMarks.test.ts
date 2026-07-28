@@ -10,6 +10,7 @@ function mark(overrides: Partial<PdfMark> = {}): PdfMark {
     comment: '',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
+    kind: 'highlight',
     ...overrides,
   }
 }
@@ -48,13 +49,28 @@ describe('parseMarks', () => {
   it('defaults comment/createdAt/updatedAt to empty strings when absent or wrong type', () => {
     const raw = { id: 'm2', page: 1, rects: [{ x: 0, y: 0, width: 1, height: 1 }], color: 'red' }
     expect(parseMarks([raw])).toEqual([
-      { id: 'm2', page: 1, rects: [{ x: 0, y: 0, width: 1, height: 1 }], color: 'red', comment: '', createdAt: '', updatedAt: '' },
+      {
+        id: 'm2',
+        page: 1,
+        rects: [{ x: 0, y: 0, width: 1, height: 1 }],
+        color: 'red',
+        comment: '',
+        createdAt: '',
+        updatedAt: '',
+        kind: 'highlight',
+      },
     ])
   })
 
   it('keeps good entries and drops only the malformed ones from a mixed array', () => {
     const good = mark({ id: 'good' })
     expect(parseMarks([good, { id: 'bad' }, null, 42])).toEqual([good])
+  })
+
+  it('reads kind: "note", and defaults an absent or invalid kind to "highlight"', () => {
+    expect(parseMarks([mark({ kind: 'note' })])[0].kind).toBe('note')
+    expect(parseMarks([mark({ kind: undefined })])[0].kind).toBe('highlight')
+    expect(parseMarks([{ ...mark(), kind: 'bogus' }])[0].kind).toBe('highlight')
   })
 })
 
