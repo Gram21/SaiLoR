@@ -97,6 +97,7 @@ export function PdfViewer() {
   const setMarkComment = useStore((s) => s.setMarkComment)
   const setMarkColor = useStore((s) => s.setMarkColor)
   const removeMark = useStore((s) => s.removeMark)
+  const setExportPdfOpen = useStore((s) => s.setExportPdfOpen)
   // The color-swatch toolbar offered right after a text selection, positioned
   // near where the selection ends — the same "select, then a small popup
   // offers to highlight" flow Preview/Acrobat use.
@@ -842,6 +843,16 @@ export function PdfViewer() {
               +
             </button>
           </div>
+          <button
+            type="button"
+            className="icon-btn"
+            title="Export PDF with annotations"
+            aria-label="Export PDF with annotations"
+            onClick={() => setExportPdfOpen(true)}
+            disabled={marks.length === 0}
+          >
+            📤
+          </button>
         </div>
       </div>
       {searchOpen && (
