@@ -23,6 +23,7 @@ import type {
 } from '../git/types'
 import { parsePorcelain, capDiff } from '../git/output'
 import { loadProject, splitProjectFiles } from '../model/project'
+import type { PdfMark } from '../model/pdfMarks'
 
 const RECENTS_KEY = 'slr.recents.electron'
 
@@ -56,6 +57,14 @@ export interface SlrBridge {
    *  outside the project's own folder, for the rest of this session — see
    *  `getPdfSource`'s confirm and `allowedEscapes` in electron/main.ts. */
   allowPdfPath(rel: string): Promise<void>
+  /** Burn `marks` into the PDF at `pdfAbsPath` as real annotation objects. */
+  embedPdfMarks(
+    pdfAbsPath: string,
+    marks: unknown,
+    target: 'original' | { newPath: string },
+  ): Promise<{ ok: true; path: string } | { ok: false; error: string }>
+  /** Pick where a new annotated PDF should be saved. Null if cancelled. */
+  pickPdfExportPath(suggestedName: string): Promise<string | null>
   /** For each project path: does it still exist, and what title does it now carry? */
   peekProjects(paths: string[]): Promise<{ exists: boolean; title?: string }[]>
   /** Paths of `toFiles` relative to `fromFile`'s directory, POSIX-separated. */
@@ -405,6 +414,21 @@ export class ElectronAdapter implements PlatformAdapter {
 
   getGit(): GitPlatform {
     return this.git
+  }
+
+  // ---- PDF annotation export ----
+  // Thin pass-throughs; the main process owns pdf-lib and the filesystem.
+
+  embedPdfAnnotations(
+    pdfAbsPath: string,
+    marks: PdfMark[],
+    target: 'original' | { newPath: string },
+  ): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+    return bridge().embedPdfMarks(pdfAbsPath, marks, target)
+  }
+
+  pickPdfExportPath(suggestedName: string): Promise<string | null> {
+    return bridge().pickPdfExportPath(suggestedName)
   }
 }
 

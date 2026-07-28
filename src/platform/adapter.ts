@@ -8,6 +8,7 @@ import type { RecentEntry } from './recents'
 import type { OsInfo } from '../model/version'
 import type { LlmConfig, LlmHttpRequest, LlmHttpResponse } from '../llm/types'
 import type { GitPlatform } from '../git/types'
+import type { PdfMark } from '../model/pdfMarks'
 
 export type { RecentEntry }
 export type { OsInfo }
@@ -234,6 +235,27 @@ export interface PlatformAdapter {
    * a separate question, asked by `GitPlatform.probe()`.
    */
   getGit(): GitPlatform | null
+
+  // ---- PDF annotation export ----
+  // A one-way, user-triggered export of the reviewer's/consolidation's marks
+  // into real PDF annotation objects — see src/model/pdfMarks.ts and
+  // src/model/pdfExport.ts for why this is deliberately separate from the
+  // in-app overlay.
+
+  /**
+   * Burn `marks` into `pdfAbsPath` as Highlight/Text annotations, writing
+   * either back to the same file (`'original'`) or to `target.newPath`.
+   * Never throws — a failure (encrypted/corrupt PDF, write error) comes back
+   * as `{ ok: false, error }` so the export dialog can show it inline.
+   */
+  embedPdfAnnotations(
+    pdfAbsPath: string,
+    marks: PdfMark[],
+    target: 'original' | { newPath: string },
+  ): Promise<{ ok: true; path: string } | { ok: false; error: string }>
+
+  /** Ask where a new annotated PDF should be saved. Null if cancelled. */
+  pickPdfExportPath(suggestedName: string): Promise<string | null>
 }
 
 /** True when running inside the Electron shell (preload exposed `window.slr`). */
