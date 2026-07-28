@@ -254,6 +254,11 @@ interface AppState {
   agreementOpen: boolean
   /** Whether the "export PDF with annotations" dialog is open. Session-only, like `validationOpen`. */
   exportPdfOpen: boolean
+  /** A mark id `PdfViewer` should scroll to and flash, requested from
+   *  elsewhere (the field-link popover's "jump to this mark" — clicking a
+   *  candidate to see it in context before linking it). `PdfViewer` clears
+   *  this itself once it has acted on it. Session-only. */
+  pendingMarkJump: string | null
   /** Restore the Consolidation overview when its Agreement dialog closes. */
   agreementReturnToOverview: boolean
   /** Whether the overall Consolidation overview is open. Session-only, like `validationOpen`. */
@@ -400,6 +405,8 @@ interface AppState {
   setAgreementOpen: (open: boolean) => void
   /** Open/close the "export PDF with annotations" dialog. View state only — see `exportPdfOpen`. */
   setExportPdfOpen: (open: boolean) => void
+  /** Request/clear a "scroll to and flash this mark" — see `pendingMarkJump`. */
+  setPendingMarkJump: (markId: string | null) => void
   /** Replace the Consolidation overview with Agreement, then restore it on close. */
   openAgreementFromOverview: () => void
   closeAgreement: () => void
@@ -694,6 +701,7 @@ export const useStore = create<AppState>()(
     validationOpen: false,
     agreementOpen: false,
     exportPdfOpen: false,
+    pendingMarkJump: null,
     agreementReturnToOverview: false,
     consolidationOverviewOpen: false,
     disagreementsOpen: false,
@@ -857,6 +865,7 @@ export const useStore = create<AppState>()(
         s.validationOpen = false
         s.agreementOpen = false
         s.exportPdfOpen = false
+        s.pendingMarkJump = null
         s.agreementReturnToOverview = false
         s.consolidationOverviewOpen = false
         s.disagreementsOpen = false
@@ -1244,6 +1253,11 @@ export const useStore = create<AppState>()(
     setExportPdfOpen: (open) =>
       set((s) => {
         s.exportPdfOpen = open
+      }),
+
+    setPendingMarkJump: (markId) =>
+      set((s) => {
+        s.pendingMarkJump = markId
       }),
 
     openAgreementFromOverview: () =>

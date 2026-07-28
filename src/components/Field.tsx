@@ -95,7 +95,8 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
         }
         onClick={() => setLinkPopoverOpen((v) => !v)}
       >
-        🔗{linkCount > 0 ? ` ${linkCount}` : ''}
+        <span className="link-icon">🔗</span>
+        {linkCount > 0 && <span className="link-count">{linkCount}</span>}
       </button>
       {linkPopoverOpen && (
         <FieldLinkPopover
@@ -206,14 +207,26 @@ interface FieldLinkPopoverProps {
   onClose: () => void
 }
 
-/** Lists the paper's PDF marks so one can be linked (or unlinked) to this
- *  field instance. The only entry point for creating a link — the mark's own
- *  popover (`PdfViewer.tsx`) only shows/unlinks, never adds. */
+/** Shows which of the paper's PDF marks are already linked to this field
+ *  instance, plus a fold-out picker (search included) to link more. The only
+ *  entry point for creating a link — the mark's own popover (`PdfViewer.tsx`)
+ *  only shows/unlinks, never adds. */
 function FieldLinkPopover({ path, name, index, onClose }: FieldLinkPopoverProps) {
   const marks = useStore((s) => s.currentPdfMarks())
   const linkMark = useStore((s) => s.linkMarkToField)
   const unlinkMark = useStore((s) => s.unlinkMarkFromField)
+  const jumpToMark = useStore((s) => s.setPendingMarkJump)
   const canonical = fieldPath(path, name, index)
+
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [search, setSearch] = useState('')
+
+  // Seed the popover's width from the annotation panel's own width — once,
+  // at open, not kept in sync afterward, so a manual resize (see the CSS
+  // `resize: horizontal`) isn't fought on the next render.
+  const [width] = useState<number | undefined>(
+    () => document.querySelector('.panel.annotations')?.getBoundingClientRect().width,
+  )
 
   // Dismiss on Escape or an outside mousedown — same ancestry-checked pattern
   // `PdfViewer.tsx`'s popovers use, since `mousedown` fires before `click` and
@@ -235,36 +248,77 @@ function FieldLinkPopover({ path, name, index, onClose }: FieldLinkPopoverProps)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const linkedMarks = marks.filter((m) => m.linkedFields?.some((l) => l.path === canonical))
+  const unlinkedMarks = marks.filter((m) => !m.linkedFields?.some((l) => l.path === canonical))
+  const needle = search.trim().toLowerCase()
+  const candidates = needle ? unlinkedMarks.filter((m) => m.comment.toLowerCase().includes(needle)) : unlinkedMarks
+
+  // Clicking a mark's own text jumps to it in the PDF (`PdfViewer` scrolls to
+  // and briefly flashes it) without linking/unlinking or closing this popover
+  // — a way to see which mark is which before committing to one.
+  const snippetOf = (m: (typeof marks)[number]) => (
+    <button
+      type="button"
+      className="field-link-snippet-btn"
+      title={m.comment || `Page ${m.page}`}
+      onClick={() => jumpToMark(m.id)}
+    >
+      {m.comment || `p.${m.page}`}
+    </button>
+  )
+
   return (
-    <div className="field-link-popover" onClick={(e) => e.stopPropagation()}>
-      {marks.length === 0 ? (
-        <p className="field-link-empty">No highlights or notes on this paper yet.</p>
+    <div className="field-link-popover" style={width ? { width } : undefined} onClick={(e) => e.stopPropagation()}>
+      {linkedMarks.length === 0 ? (
+        <p className="field-link-empty">No links yet.</p>
       ) : (
         <ul className="field-link-list">
-          {marks.map((m) => {
-            const linked = m.linkedFields?.some((l) => l.path === canonical) ?? false
-            return (
-              <li key={m.id}>
-                <span className="pdf-color-swatch" style={{ background: m.color }} aria-hidden="true" />
-                <span className="field-link-snippet">{m.comment || `p.${m.page}`}</span>
-                {linked ? (
-                  <button
-                    type="button"
-                    className="field-link-unlink"
-                    title="Unlink"
-                    onClick={() => unlinkMark(m.id, canonical)}
-                  >
-                    ×
-                  </button>
-                ) : (
+          {linkedMarks.map((m) => (
+            <li key={m.id}>
+              <span className="pdf-color-swatch" style={{ background: m.color }} aria-hidden="true" />
+              {snippetOf(m)}
+              <button
+                type="button"
+                className="field-link-unlink"
+                title="Unlink"
+                onClick={() => unlinkMark(m.id, canonical)}
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <button type="button" className="field-link-toggle" onClick={() => setPickerOpen((v) => !v)}>
+        {pickerOpen ? 'Cancel' : '+ Link a highlight or note'}
+      </button>
+      {pickerOpen && (
+        <div className="field-link-picker">
+          <ul className="field-link-list field-link-picker-list">
+            {candidates.length === 0 ? (
+              <li className="field-link-empty">
+                {marks.length === 0 ? 'No highlights or notes on this paper yet.' : 'No matches.'}
+              </li>
+            ) : (
+              candidates.map((m) => (
+                <li key={m.id}>
+                  <span className="pdf-color-swatch" style={{ background: m.color }} aria-hidden="true" />
+                  {snippetOf(m)}
                   <button type="button" onClick={() => linkMark(m.id, path, name, index)}>
                     Link
                   </button>
-                )}
-              </li>
-            )
-          })}
-        </ul>
+                </li>
+              ))
+            )}
+          </ul>
+          <input
+            type="text"
+            className="field-link-search"
+            placeholder="Search highlights/notes…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
       )}
       <button type="button" className="primary" onClick={onClose}>
         Done

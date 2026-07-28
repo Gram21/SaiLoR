@@ -76,11 +76,15 @@ the same PDF never conflict in git.
   overwriting it is likely to cause a git conflict.
 
 **Linking a highlight or note to a field.** Next to every annotation field is a small 🔗 button —
-click it to see the paper's highlights and notes and pick one as the evidence for that field ("why
-I picked this value"). The button shows a count once you've linked one or more (`🔗 2`). A highlight
-or note can be linked to any number of fields, and a field can have any number of marks linked to
-it. To remove a link, either click the 🔗 button again and unlink it from there, or open the
-highlight/note itself in the PDF — its box lists every field it's linked to, each with its own ×.
+click it to record why you picked this value. It opens a box showing what's already linked (or "No
+links yet"); click **+ Link a highlight or note** to fold out a scrollable list of the paper's other
+highlights and notes, with a search box at the bottom if there are a lot of them. Clicking a
+highlight/note's text — in either list — jumps to it in the PDF so you can see which one it is,
+without closing the box or changing anything; click **Link** to actually attach it. The button shows
+a count once you've linked one or more (`🔗 2`). A highlight or note can be linked to any number of
+fields, and a field can have any number linked to it. To remove a link, click the × next to it —
+either in the field's own box, or by opening the highlight/note itself in the PDF, where its box
+lists every field it's linked to.
 
 ## The completeness dot
 
