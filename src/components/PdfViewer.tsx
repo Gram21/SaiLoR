@@ -3,7 +3,7 @@ import { Document, Page } from 'react-pdf'
 import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import { useStore, selectCurrentPaper, PDF_ZOOM_MIN, PDF_ZOOM_MAX } from '../state/store'
-import { MARK_COLORS, sortMarksForCycling, type MarkRect } from '../model/pdfMarks'
+import { MARK_COLORS, sortMarksForCycling, type MarkRect, type PdfMark } from '../model/pdfMarks'
 import { getPlatform } from '../platform'
 // Side-effect import: configures the pdf.js worker.
 import '../platform/pdfjs'
@@ -303,6 +303,24 @@ export function PdfViewer() {
     pageRefs.current[clamped - 1]?.scrollIntoView({ block: 'start' })
   }
 
+  /** Scroll to a mark's actual position on its page (not just the page top),
+   *  vertically centering it the same way the in-PDF search's active match is
+   *  centered below. Falls back to `scrollToPage` if the page isn't rendered
+   *  yet (shouldn't happen — every page is mounted, no virtualization). */
+  const scrollToMark = (mark: PdfMark) => {
+    const root = containerRef.current
+    const pageEl = pageRefs.current[mark.page - 1]
+    if (!root || !pageEl) {
+      scrollToPage(mark.page)
+      return
+    }
+    setCurrentPage(mark.page)
+    const pageRect = pageEl.getBoundingClientRect()
+    const rootRect = root.getBoundingClientRect()
+    const markTop = pageRect.top + (mark.rects[0]?.y ?? 0) * pageRect.height
+    root.scrollTop += markTop - rootRect.top - root.clientHeight / 2
+  }
+
   // Commit a typed page number: clamp to [1, numPages] and jump there.
   const commitPageInput = () => {
     const n = parseInt(pageInput, 10)
@@ -397,7 +415,7 @@ export function PdfViewer() {
     const next = (i + dir + total) % total
     setCycleIndex(next)
     const mark = sortedMarks[next]
-    scrollToPage(mark.page)
+    scrollToMark(mark)
     setFlashMarkId(mark.id)
     if (flashTimeoutRef.current !== undefined) window.clearTimeout(flashTimeoutRef.current)
     flashTimeoutRef.current = window.setTimeout(() => setFlashMarkId(null), 1500)
@@ -599,13 +617,11 @@ export function PdfViewer() {
                         style={{
                           left: `${mark.rects[0].x * 100}%`,
                           top: `${mark.rects[0].y * 100}%`,
-                          background: mark.color,
+                          backgroundColor: mark.color,
                         }}
                         title={mark.comment || undefined}
                         onClick={onOpen}
-                      >
-                        📌
-                      </div>
+                      />
                     )
                   }
                   return (
@@ -843,16 +859,6 @@ export function PdfViewer() {
               +
             </button>
           </div>
-          <button
-            type="button"
-            className="icon-btn"
-            title="Export PDF with annotations"
-            aria-label="Export PDF with annotations"
-            onClick={() => setExportPdfOpen(true)}
-            disabled={marks.length === 0}
-          >
-            📤
-          </button>
         </div>
       </div>
       {searchOpen && (
@@ -922,7 +928,7 @@ export function PdfViewer() {
             aria-pressed={placingNote}
             onClick={() => setPlacingNote((v) => !v)}
           >
-            📌
+            <span className="postit-icon" aria-hidden="true" />
           </button>
           <button
             type="button"
@@ -948,6 +954,16 @@ export function PdfViewer() {
             disabled={sortedMarks.length === 0}
           >
             ›
+          </button>
+          <button
+            type="button"
+            className="icon-btn pdf-annotation-toolbar-export"
+            title="Export PDF with annotations"
+            aria-label="Export PDF with annotations"
+            onClick={() => setExportPdfOpen(true)}
+            disabled={marks.length === 0}
+          >
+            📤
           </button>
         </div>
       )}
