@@ -230,6 +230,9 @@ Two optional top-level keys exist specifically to be safe from that `config` reb
   paper. Marks are your own (per reviewer) and stored separately from the PDF itself, so two
   reviewers marking up the same file never conflict in git — export them into a real, standalone
   annotated PDF when you want to share one outside SaiLoR.
+- **Linking a mark to a field** — the **🔗** button next to every field lets you attach one or more
+  highlights/notes as evidence for that value ("why I picked this"), searchable when there are many.
+  Clicking a mark jumps to it in the PDF without linking it, so you can confirm which one it is first.
 - **Adding papers** — in the project editor: pick individual PDFs, a whole folder of them, or import a
   BibTeX/RIS/CSL-JSON reference export. Importing flags probable duplicates (fuzzy title match, or a
   matching normalized title with similar authors) against papers already in the project and against
