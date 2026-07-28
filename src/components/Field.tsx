@@ -221,12 +221,19 @@ function FieldLinkPopover({ path, name, index, onClose }: FieldLinkPopoverProps)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [search, setSearch] = useState('')
 
-  // Seed the popover's width from the annotation panel's own width — once,
-  // at open, not kept in sync afterward, so a manual resize (see the CSS
-  // `resize: horizontal`) isn't fought on the next render.
-  const [width] = useState<number | undefined>(
-    () => document.querySelector('.panel.annotations')?.getBoundingClientRect().width,
-  )
+  // Centered in the annotation panel — not anchored to the trigger button —
+  // at 95% of the panel's width, seeded once at open (not kept in sync
+  // afterward, so a manual resize via the CSS `resize: horizontal` isn't
+  // fought on the next render). `position: fixed` with this and a
+  // `translate(-50%, -50%)` in the CSS is what makes the seeded point the
+  // popover's actual center regardless of where the button that opened it
+  // happens to sit.
+  const [placement] = useState<{ left: number; top: number; width: number } | undefined>(() => {
+    const panel = document.querySelector('.panel.annotations')
+    if (!panel) return undefined
+    const r = panel.getBoundingClientRect()
+    return { left: r.left + r.width / 2, top: r.top + r.height / 2, width: r.width * 0.95 }
+  })
 
   // Dismiss on Escape or an outside mousedown — same ancestry-checked pattern
   // `PdfViewer.tsx`'s popovers use, since `mousedown` fires before `click` and
@@ -268,7 +275,11 @@ function FieldLinkPopover({ path, name, index, onClose }: FieldLinkPopoverProps)
   )
 
   return (
-    <div className="field-link-popover" style={width ? { width } : undefined} onClick={(e) => e.stopPropagation()}>
+    <div
+      className="field-link-popover"
+      style={placement}
+      onClick={(e) => e.stopPropagation()}
+    >
       {linkedMarks.length === 0 ? (
         <p className="field-link-empty">No links yet.</p>
       ) : (
