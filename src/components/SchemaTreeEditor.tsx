@@ -7,7 +7,7 @@ import {
   type EditorNode,
   type EditorNodeKind,
 } from '../state/editorStore'
-import { countPapersUsingField } from '../model/fieldUsage'
+import { countPapersUsingField, countLinksUsingField } from '../model/fieldUsage'
 import '../styles/schema-editor.css'
 
 /** Where the currently dragged node would land. */
@@ -137,18 +137,27 @@ function SchemaNodeRow({
     // the *old* one) and delete the answers with no warning — the same bypass
     // that made this guard necessary in the first place.
     const candidates = [...new Set(names.filter((n): n is string => !!n))]
-    let worst = { name: '', count: 0 }
+    let worst = { name: '', count: 0, links: 0 }
     for (const candidate of candidates) {
-      const count = countPapersUsingField(papers, [...ancestors, candidate])
-      if (count > worst.count) worst = { name: candidate, count }
+      const path = [...ancestors, candidate]
+      const count = countPapersUsingField(papers, path)
+      const links = countLinksUsingField(papers, path)
+      if (count + links > worst.count + worst.links) worst = { name: candidate, count, links }
     }
-    if (worst.count === 0) return true
-    const many = worst.count === 1 ? '1 paper' : `${worst.count} papers`
+    if (worst.count === 0 && worst.links === 0) return true
     const verb = what === 'rename' ? 'Renaming' : 'Removing'
+    const parts: string[] = []
+    if (worst.count > 0) {
+      parts.push(`${worst.count === 1 ? '1 paper records an answer' : `${worst.count} papers record answers`}`)
+    }
+    if (worst.links > 0) {
+      parts.push(
+        `${worst.links === 1 ? '1 paper has a PDF highlight/note linked' : `${worst.links} papers have PDF highlights/notes linked`}`,
+      )
+    }
     return window.confirm(
-      `${many} record an answer under "${worst.name}". ${verb} it will discard ${
-        worst.count === 1 ? 'that answer' : 'those answers'
-      } — including every reviewer's own — the next time the project is saved, and it cannot be undone afterwards.\n\nContinue?`,
+      `${parts.join(', and ')} under "${worst.name}". ${verb} it will discard that — including every ` +
+        `reviewer's own — the next time the project is saved, and it cannot be undone afterwards.\n\nContinue?`,
     )
   }
 
@@ -249,12 +258,19 @@ function SchemaNodeRow({
     const path = nodePathNames(nodes, dragUid_)
     if (!path) return true
     const count = countPapersUsingField(papers, path)
-    if (count === 0) return true
-    const many = count === 1 ? '1 paper' : `${count} papers`
+    const links = countLinksUsingField(papers, path)
+    if (count === 0 && links === 0) return true
+    const parts: string[] = []
+    if (count > 0) parts.push(`${count === 1 ? '1 paper records an answer' : `${count} papers record answers`}`)
+    if (links > 0) {
+      parts.push(
+        `${links === 1 ? '1 paper has a PDF highlight/note linked' : `${links} papers have PDF highlights/notes linked`}`,
+      )
+    }
     return window.confirm(
-      `${many} record an answer under "${path.join(' / ')}". Moving it changes where those answers ` +
-        `belong, so they will be discarded — including every reviewer's own — the next time the ` +
-        `project is saved, and it cannot be undone afterwards.\n\nContinue?`,
+      `${parts.join(', and ')} under "${path.join(' / ')}". Moving it changes where that belongs, so ` +
+        `it will be discarded — including every reviewer's own — the next time the project is saved, ` +
+        `and it cannot be undone afterwards.\n\nContinue?`,
     )
   }
 

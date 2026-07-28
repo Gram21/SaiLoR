@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { deferredConsolidationKey, fieldPath, useStore, useAiMark, type PathSeg } from '../state/store'
+import {
+  deferredConsolidationKey,
+  fieldPath,
+  useStore,
+  useAiMark,
+  useLinkedMarkCount,
+  type PathSeg,
+} from '../state/store'
 import type { ResolvedDef } from '../model/schema'
 import type { FieldValue } from '../model/annotations'
 import { readyToConsolidate } from '../consolidate/readiness'
@@ -71,6 +78,36 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
     </button>
   )
 
+  // "Why did I pick this value" — link a PDF highlight/note as evidence.
+  // Applies to every field type, not just the ones `canGrab` covers below: a
+  // checkbox or dropdown choice deserves a reason just as much as free text.
+  const linkCount = useLinkedMarkCount(path, def.name, index)
+  const [linkPopoverOpen, setLinkPopoverOpen] = useState(false)
+  const linkBtn = (
+    <div className="field-link-wrap">
+      <button
+        type="button"
+        className={`link-btn${linkCount > 0 ? ' has-links' : ''}`}
+        title={
+          linkCount > 0
+            ? `Linked to ${linkCount} PDF mark${linkCount === 1 ? '' : 's'}`
+            : 'Link a PDF highlight or note as evidence'
+        }
+        onClick={() => setLinkPopoverOpen((v) => !v)}
+      >
+        🔗{linkCount > 0 ? ` ${linkCount}` : ''}
+      </button>
+      {linkPopoverOpen && (
+        <FieldLinkPopover
+          path={path}
+          name={def.name}
+          index={index}
+          onClose={() => setLinkPopoverOpen(false)}
+        />
+      )}
+    </div>
+  )
+
   const grabFromPdf = () => {
     const sel = useStore.getState().pdfSelection.trim()
     if (!sel) return
@@ -101,6 +138,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
           onClick={confirm}
           onChange={(e) => set(e.target.checked)}
         />
+        {linkBtn}
         {compareBtn}
       </div>
     )
@@ -155,7 +193,82 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
           ⧉
         </button>
       )}
+      {linkBtn}
       {compareBtn}
+    </div>
+  )
+}
+
+interface FieldLinkPopoverProps {
+  path: PathSeg[]
+  name: string
+  index: number
+  onClose: () => void
+}
+
+/** Lists the paper's PDF marks so one can be linked (or unlinked) to this
+ *  field instance. The only entry point for creating a link — the mark's own
+ *  popover (`PdfViewer.tsx`) only shows/unlinks, never adds. */
+function FieldLinkPopover({ path, name, index, onClose }: FieldLinkPopoverProps) {
+  const marks = useStore((s) => s.currentPdfMarks())
+  const linkMark = useStore((s) => s.linkMarkToField)
+  const unlinkMark = useStore((s) => s.unlinkMarkFromField)
+  const canonical = fieldPath(path, name, index)
+
+  // Dismiss on Escape or an outside mousedown — same ancestry-checked pattern
+  // `PdfViewer.tsx`'s popovers use, since `mousedown` fires before `click` and
+  // a `stopPropagation` on click alone wouldn't beat it.
+  useEffect(() => {
+    const dismiss = (e?: MouseEvent) => {
+      if (e && (e.target as HTMLElement | null)?.closest('.field-link-popover, .link-btn')) return
+      onClose()
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismiss()
+    }
+    window.addEventListener('mousedown', dismiss)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('mousedown', dismiss)
+      window.removeEventListener('keydown', onKey)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return (
+    <div className="field-link-popover" onClick={(e) => e.stopPropagation()}>
+      {marks.length === 0 ? (
+        <p className="field-link-empty">No highlights or notes on this paper yet.</p>
+      ) : (
+        <ul className="field-link-list">
+          {marks.map((m) => {
+            const linked = m.linkedFields?.some((l) => l.path === canonical) ?? false
+            return (
+              <li key={m.id}>
+                <span className="pdf-color-swatch" style={{ background: m.color }} aria-hidden="true" />
+                <span className="field-link-snippet">{m.comment || `p.${m.page}`}</span>
+                {linked ? (
+                  <button
+                    type="button"
+                    className="field-link-unlink"
+                    title="Unlink"
+                    onClick={() => unlinkMark(m.id, canonical)}
+                  >
+                    ×
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => linkMark(m.id, path, name, index)}>
+                    Link
+                  </button>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+      <button type="button" className="primary" onClick={onClose}>
+        Done
+      </button>
     </div>
   )
 }

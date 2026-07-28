@@ -121,6 +121,56 @@ describe('PDF marks — single-reviewer project', () => {
   })
 })
 
+describe('PDF marks — field linking', () => {
+  beforeEach(() => {
+    st().loadFromText(projectText(1), null, 'test.json')
+    st().selectPaper('p1')
+  })
+
+  it('linkMarkToField adds a LinkedField with the canonical path/label, sets dirty, bumps updatedAt', () => {
+    const id = st().addHighlight(1, [rect])!
+    const createdAt = st().currentPdfMarks()[0].updatedAt
+    st().linkMarkToField(id, [], 'Study Type', 0)
+    const mark = st().currentPdfMarks()[0]
+    expect(mark.linkedFields).toEqual([{ path: 'Study Type', label: 'Study Type' }])
+    expect(mark.updatedAt >= createdAt).toBe(true)
+    expect(st().dirty).toBe(true)
+  })
+
+  it('linking the same field twice is a no-op, not a duplicate', () => {
+    const id = st().addHighlight(1, [rect])!
+    st().linkMarkToField(id, [], 'Study Type', 0)
+    st().linkMarkToField(id, [], 'Study Type', 0)
+    expect(st().currentPdfMarks()[0].linkedFields).toHaveLength(1)
+  })
+
+  it('a mark can be linked to more than one field', () => {
+    const id = st().addHighlight(1, [rect])!
+    st().linkMarkToField(id, [], 'Study Type', 0)
+    st().linkMarkToField(id, [], 'Relevant', 0)
+    expect(st().currentPdfMarks()[0].linkedFields?.map((l) => l.path).sort()).toEqual(['Relevant', 'Study Type'])
+  })
+
+  it('unlinkMarkFromField removes one entry and deletes the key once empty', () => {
+    const id = st().addHighlight(1, [rect])!
+    st().linkMarkToField(id, [], 'Study Type', 0)
+    st().unlinkMarkFromField(id, 'Study Type')
+    expect(st().currentPdfMarks()[0].linkedFields).toBeUndefined()
+  })
+
+  it('unlinkMarkFromField on an unknown mark id or path is a no-op', () => {
+    const id = st().addHighlight(1, [rect])!
+    st().linkMarkToField(id, [], 'Study Type', 0)
+    expect(() => st().unlinkMarkFromField('nope', 'Study Type')).not.toThrow()
+    expect(() => st().unlinkMarkFromField(id, 'Nonexistent')).not.toThrow()
+    expect(st().currentPdfMarks()[0].linkedFields).toEqual([{ path: 'Study Type', label: 'Study Type' }])
+  })
+
+  it('linkMarkToField on an unknown mark id is a no-op', () => {
+    expect(() => st().linkMarkToField('nope', [], 'Study Type', 0)).not.toThrow()
+  })
+})
+
 describe('PDF marks — multi-reviewer scoping', () => {
   beforeEach(() => {
     st().loadFromText(projectText(2), null, 'test.json')

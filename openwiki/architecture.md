@@ -449,11 +449,20 @@ way `updateSelectionToolbar` resolves a selection's rects, calls
 `addHighlight(page, [{x,y,...}], undefined, 'note')`, opens its comment popover immediately, and
 turns the placement mode back off — `.pdf-scroll` gets a `placing-note` class for a crosshair cursor
 meanwhile. Cycling walks `sortMarksForCycling(marks)` (page order, then top-to-bottom within a page)
-and, on Next/Prev, scrolls to the target mark's page and briefly pulses it (`flashMarkId` + a CSS
-`flash` class, cleared after 1.5s) rather than force-opening its popover — a nudge, not an edit
-prompt. A note renders as a small fixed-size pinned icon (`.pdf-mark-note`) instead of a
-percentage-sized highlight rect; everything else (the popover, per-reviewer scoping, storage) is
+and, on Next/Prev, `scrollToMark` centers the target mark's exact position (not just its page) in the
+scroll container — using the page element's own `getBoundingClientRect()` plus the mark's fractional
+`y`, the same math the in-PDF search's active-match centering uses — and briefly pulses it
+(`flashMarkId` + a CSS `flash` class, cleared after 1.5s) rather than force-opening its popover — a
+nudge, not an edit prompt. A note renders as a real post-it silhouette (`.pdf-mark-note`, a small
+square with a `clip-path`-cut folded corner, shared with the toolbar's static `.postit-icon`) instead
+of a percentage-sized highlight rect; everything else (the popover, per-reviewer scoping, storage) is
 identical to a highlight, see "PDF marks" in `data-model.md`.
+
+**Linking a mark to a field.** The 🔗 button next to every field (`Field.tsx`) is the only way to
+create a link — it opens `FieldLinkPopover`, listing `currentPdfMarks()` with a Link/× per mark
+against this field's canonical path (`fieldPath`). The mark's own popover shows the reverse view
+(which fields it's linked to) read-only, with unlink only — see "Linking a mark to a field" in
+`data-model.md` for the full data-model/orphaning discussion.
 
 **Export.** A 📤 header button (disabled with no marks) opens `ExportPdfDialog`, which resolves the
 current paper's PDF to an absolute path via the platform's `absolutePdfPaths`, then lets the reviewer

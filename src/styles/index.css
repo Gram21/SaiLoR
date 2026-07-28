@@ -765,6 +765,26 @@ button.paper-search-mode:hover {
 .pdf-mark-delete {
   color: var(--danger);
 }
+.pdf-mark-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pdf-mark-links li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pdf-mark-link-label {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
 .pdf-scroll {
   flex: 1 1 auto;
   overflow: auto;
@@ -1349,6 +1369,61 @@ button.paper-search-mode:hover {
   flex: 0 0 auto;
   padding: 3px 8px;
   color: var(--accent);
+}
+/* "Link this field to a PDF highlight/note as evidence" — see Field.tsx. */
+.link-btn {
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  color: var(--accent);
+}
+.link-btn.has-links {
+  font-weight: 600;
+}
+.field-link-wrap {
+  position: relative;
+}
+.field-link-popover {
+  position: absolute;
+  z-index: 40;
+  top: 100%;
+  right: 0;
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+}
+.field-link-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.field-link-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.field-link-snippet {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+.field-link-unlink {
+  color: var(--danger);
+  padding: 0 4px;
+}
+.field-link-empty {
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 
 /* Which reviewer's tree is being annotated, echoed right next to the paper

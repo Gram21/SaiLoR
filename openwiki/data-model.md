@@ -429,6 +429,13 @@ interface PdfMark {
   updatedAt: string
   kind: 'highlight' | 'note'   // defaults to 'highlight' — every mark from before this
                                 // field existed parses as one
+  linkedFields?: LinkedField[]  // fields this mark is evidence for — see below; undefined
+                                 // (never []) when there are none
+}
+
+interface LinkedField {
+  path: string   // fieldPath's canonical form at link time, e.g. "Findings[1]/Metric"
+  label: string  // displayPath's human label at link time, e.g. "Findings #2 › Metric"
 }
 ```
 
@@ -481,6 +488,32 @@ via `ExportPdfDialog.tsx`, whether to save a new file (default) or overwrite the
 place — the latter comes with an inline warning, since that file is shared across reviewers and an
 overwrite is likely to produce a git merge conflict on a binary file the split-storage design (see
 "On-disk layout" above) otherwise never touches.
+
+**Linking a mark to a field ("why I picked this value").** `PdfMark.linkedFields` records which
+annotation fields a highlight or note is evidence for. Creation is one-directional: the store actions
+`linkMarkToField`/`unlinkMarkFromField` (`src/state/store.ts`) are triggered only from the field side
+— a 🔗 button next to every field (in `Field.tsx`, alongside the existing ⧉ "grab from PDF" button)
+opens a popover listing the paper's current marks to pick from. The mark's own popover
+(`PdfViewer.tsx`) shows the fields it's linked to read-only, with an unlink control, but has no way to
+start a new link — by design, so there's exactly one place a link is created. `useLinkedMarkCount`
+(`store.ts`) drives the field's `🔗 N` badge; it deliberately returns a plain `number`, not a
+`PdfMark[]`, to avoid the same stale-array-reference hazard `EMPTY_MARKS` (above) exists to prevent —
+a `.filter(...)` result is a fresh reference every selector call even when nothing changed.
+
+`LinkedField.path` is `fieldPath`'s canonical form (`src/llm/paths.ts`) — the same name/index-derived
+string `aiMarks`/`deferredConsolidations` already key off — and inherits their known instability: it
+is **not** stable across a schema rename/move, nor across an earlier repeatable instance being
+added/removed (a plain `Array.splice` in `removeInstance` reshuffles every later index with no
+reconciliation). Unlike those two ephemeral, session-only structures, though, a link is **persisted**
+— so `LinkedField.label` denormalizes `displayPath`'s human-readable form at link time, ensuring the
+mark's popover still shows something meaningful even after the schema changes underneath it. To keep
+a rename/remove/cross-group-move from silently orphaning a link with no way to discover it,
+`src/model/fieldUsage.ts`'s `countLinksUsingField` extends the schema editor's existing
+`countPapersUsingField` destructive-edit warning (`SchemaTreeEditor.tsx`) to also count link usage —
+the same "warn before, don't migrate after" policy the editor already applies to answers. A
+repeatable-instance index reshuffle remains an explicit, documented known limitation (matching the
+`aiMarks` precedent) rather than being fixed here — a real fix needs stable per-instance identity
+instead of positional addressing, a schema-wide change out of scope for this feature.
 
 ## Screening
 

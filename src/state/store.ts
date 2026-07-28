@@ -23,7 +23,7 @@ import { applyAlignment } from '../consolidate/apply'
 import { unanimousFills } from '../consolidate/unanimous'
 import { consolidatorHasAnswered } from '../consolidate/readiness'
 import { validateProject, type UnannotatedPaper, type ValidationIssue } from '../model/validate'
-import { formatPath, resolvePath, MAX_UNBOUNDED_INDEX } from '../llm/paths'
+import { formatPath, displayPath, resolvePath, MAX_UNBOUNDED_INDEX } from '../llm/paths'
 import { isUnanswered } from '../llm/fields'
 import type { Suggestion } from '../llm/types'
 import {
@@ -440,6 +440,12 @@ interface AppState {
   setMarkComment: (id: string, comment: string) => void
   setMarkColor: (id: string, color: string) => void
   removeMark: (id: string) => void
+  /** Link a mark to a field instance as supporting evidence — a no-op if
+   *  already linked. */
+  linkMarkToField: (markId: string, path: PathSeg[], name: string, index: number) => void
+  /** Remove one link by its canonical path. No-op if `markId`/`canonicalPath`
+   *  isn't currently linked. */
+  unlinkMarkFromField: (markId: string, canonicalPath: string) => void
   /** Write the reviewer-approved AI suggestions into the current paper (one undo step). */
   applyAiSuggestions: (
     suggestions: Suggestion[],
@@ -1447,6 +1453,39 @@ export const useStore = create<AppState>()(
       })
     },
 
+    linkMarkToField: (markId, path, name, index) => {
+      set((s) => {
+        const paper = currentPaper(s)
+        if (!paper || !s.project) return
+        const marks = currentMarks(s.project, s.currentReviewer, paper, false)
+        const mark = marks?.find((m) => m.id === markId)
+        if (!mark) return
+        const canonical = fieldPath(path, name, index)
+        const label = displayPath([...path, { name, index }])
+        if (!mark.linkedFields) mark.linkedFields = []
+        if (mark.linkedFields.some((l) => l.path === canonical)) return
+        mark.linkedFields.push({ path: canonical, label })
+        mark.updatedAt = new Date().toISOString()
+        s.dirty = true
+      })
+    },
+
+    unlinkMarkFromField: (markId, canonicalPath) => {
+      set((s) => {
+        const paper = currentPaper(s)
+        if (!paper || !s.project) return
+        const marks = currentMarks(s.project, s.currentReviewer, paper, false)
+        const mark = marks?.find((m) => m.id === markId)
+        if (!mark?.linkedFields) return
+        const i = mark.linkedFields.findIndex((l) => l.path === canonicalPath)
+        if (i === -1) return
+        mark.linkedFields.splice(i, 1)
+        if (mark.linkedFields.length === 0) delete mark.linkedFields
+        mark.updatedAt = new Date().toISOString()
+        s.dirty = true
+      })
+    },
+
     applyAiSuggestions: (suggestions, usage, target) => {
       const prev = get()
       if (!prev.project) return { filled: 0, skipped: suggestions.length }
@@ -2180,4 +2219,25 @@ export function useAiMark(path: PathSeg[], name: string, index: number): [boolea
     if (paperId) useStore.getState().confirmAiMark(paperId, canonical)
   }
   return [marked, confirm]
+}
+
+/**
+ * How many PDF marks (highlights/notes) are linked to this field instance —
+ * for the field's link badge. Returns a plain number rather than a `PdfMark[]`
+ * deliberately: a selector returning a freshly-filtered array every call has
+ * the same stale-reference hazard `EMPTY_MARKS` exists to avoid (see its own
+ * doc comment — a fresh `[]`/array literal every call breaks
+ * `useSyncExternalStore`). A number compares correctly with Zustand's default
+ * `Object.is`, sidestepping the problem instead of reproducing it. The full
+ * list (for the popover) is read directly from `currentPdfMarks()` where it's
+ * needed instead, since that already returns a stable reference.
+ */
+export function useLinkedMarkCount(path: PathSeg[], name: string, index: number): number {
+  const canonical = fieldPath(path, name, index)
+  return useStore((s) => {
+    const marks = s.currentPdfMarks()
+    let n = 0
+    for (const m of marks) if (m.linkedFields?.some((l) => l.path === canonical)) n++
+    return n
+  })
 }
