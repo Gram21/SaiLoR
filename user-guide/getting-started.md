@@ -75,6 +75,13 @@ the same PDF never conflict in git.
   the app warns before the second option, since that file is shared with every other reviewer and
   overwriting it is likely to cause a git conflict.
 
+**Linking a highlight or note to a field.** Next to every annotation field is a small 🔗 button —
+click it to see the paper's highlights and notes and pick one as the evidence for that field ("why
+I picked this value"). The button shows a count once you've linked one or more (`🔗 2`). A highlight
+or note can be linked to any number of fields, and a field can have any number of marks linked to
+it. To remove a link, either click the 🔗 button again and unlink it from there, or open the
+highlight/note itself in the PDF — its box lists every field it's linked to, each with its own ×.
+
 ## The completeness dot
 
 Each paper in the list carries a status dot on its left. In an ordinary (non-screening) project, it

@@ -97,6 +97,7 @@ export function PdfViewer() {
   const setMarkComment = useStore((s) => s.setMarkComment)
   const setMarkColor = useStore((s) => s.setMarkColor)
   const removeMark = useStore((s) => s.removeMark)
+  const unlinkMarkFromField = useStore((s) => s.unlinkMarkFromField)
   const setExportPdfOpen = useStore((s) => s.setExportPdfOpen)
   // The color-swatch toolbar offered right after a text selection, positioned
   // near where the selection ends — the same "select, then a small popup
@@ -1073,6 +1074,23 @@ export function PdfViewer() {
                 autoFocus
                 onChange={(e) => setMarkComment(mark.id, e.target.value)}
               />
+              {mark.linkedFields && mark.linkedFields.length > 0 && (
+                <ul className="pdf-mark-links">
+                  {mark.linkedFields.map((l) => (
+                    <li key={l.path}>
+                      <span className="pdf-mark-link-label">{l.label}</span>
+                      <button
+                        type="button"
+                        className="field-link-unlink"
+                        title="Unlink"
+                        onClick={() => unlinkMarkFromField(mark.id, l.path)}
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <div className="pdf-mark-popover-actions">
                 <button
                   type="button"

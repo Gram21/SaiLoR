@@ -230,6 +230,7 @@ describe('assembleLegacyProjectJson + splitProjectFiles round-trip', () => {
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
       kind: 'highlight' as const,
+      linkedFields: [{ path: 'Study Type', label: 'Study Type' }],
     }
     const reviewer1Mark = { ...consolidatedMark, id: 'r1', comment: 'reviewer 1 note' }
     const raw = JSON.parse(

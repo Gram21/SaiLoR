@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { countPapersUsingField, type AnswerBearingPaper } from './fieldUsage'
+import { countPapersUsingField, countLinksUsingField, type AnswerBearingPaper } from './fieldUsage'
+import type { PdfMark } from './pdfMarks'
 
 /**
  * The guard behind the schema editor's rename/remove confirmation: renaming or
@@ -95,5 +96,72 @@ describe('countPapersUsingField', () => {
     expect(countPapersUsingField(papers, ['A', 'C'])).toBe(0)
     expect(countPapersUsingField(papers, ['B', 'C'])).toBe(0)
     expect(countPapersUsingField(papers, ['A', 'B', 'C'])).toBe(1)
+  })
+})
+
+function mark(overrides: Partial<PdfMark> = {}): PdfMark {
+  return {
+    id: 'm1',
+    page: 1,
+    rects: [{ x: 0.1, y: 0.1, width: 0.1, height: 0.05 }],
+    color: '#ffe066',
+    comment: '',
+    createdAt: '',
+    updatedAt: '',
+    kind: 'highlight',
+    ...overrides,
+  }
+}
+
+const paperWithMarks = (marks: PdfMark[], reviewMarks?: Record<string, PdfMark[]>): AnswerBearingPaper => ({
+  extra: { marks, ...(reviewMarks ? { reviewMarks } : {}) },
+})
+
+describe('countLinksUsingField', () => {
+  it('counts a paper with a link at the exact path', () => {
+    const papers = [paperWithMarks([mark({ linkedFields: [{ path: 'Study Type', label: 'Study Type' }] })])]
+    expect(countLinksUsingField(papers, ['Study Type'])).toBe(1)
+  })
+
+  it('ignores a link at a different path', () => {
+    const papers = [paperWithMarks([mark({ linkedFields: [{ path: 'Relevant', label: 'Relevant' }] })])]
+    expect(countLinksUsingField(papers, ['Study Type'])).toBe(0)
+  })
+
+  it('ignores a mark with no links', () => {
+    const papers = [paperWithMarks([mark()])]
+    expect(countLinksUsingField(papers, ['Study Type'])).toBe(0)
+  })
+
+  it("counts a link recorded only in a reviewer's own marks", () => {
+    const papers = [
+      paperWithMarks([], { '1': [mark({ linkedFields: [{ path: 'Study Type', label: 'Study Type' }] })] }),
+    ]
+    expect(countLinksUsingField(papers, ['Study Type'])).toBe(1)
+  })
+
+  it('counts each paper once, not once per reviewer', () => {
+    const linked = mark({ linkedFields: [{ path: 'Study Type', label: 'Study Type' }] })
+    const papers = [paperWithMarks([linked], { '1': [linked], '2': [linked] })]
+    expect(countLinksUsingField(papers, ['Study Type'])).toBe(1)
+  })
+
+  it('matches a nested path exactly, by segment names', () => {
+    const papers = [
+      paperWithMarks([mark({ linkedFields: [{ path: 'Findings[1]/Claim', label: 'Findings #2 › Claim' }] })]),
+    ]
+    expect(countLinksUsingField(papers, ['Findings', 'Claim'])).toBe(1)
+    expect(countLinksUsingField(papers, ['Findings'])).toBe(0)
+  })
+
+  it('a blank or empty path matches nothing', () => {
+    const papers = [paperWithMarks([mark({ linkedFields: [{ path: 'Study Type', label: 'Study Type' }] })])]
+    expect(countLinksUsingField(papers, [''])).toBe(0)
+    expect(countLinksUsingField(papers, [])).toBe(0)
+  })
+
+  it('survives a paper with no marks/reviewMarks at all', () => {
+    expect(() => countLinksUsingField([{}], ['Study Type'])).not.toThrow()
+    expect(countLinksUsingField([{}], ['Study Type'])).toBe(0)
   })
 })

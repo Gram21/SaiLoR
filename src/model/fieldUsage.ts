@@ -1,4 +1,6 @@
 import type { AnnotationValueTree, InstanceNode } from './annotations'
+import { parseMarks, parseReviewMarks, type PdfMark } from './pdfMarks'
+import { parsePath } from '../llm/paths'
 
 /**
  * Answers are stored keyed by the schema field's *name*, so renaming a field in
@@ -97,4 +99,42 @@ function treeUsesPath(tree: AnnotationValueTree, path: string[]): boolean {
 export function countPapersUsingField(papers: AnswerBearingPaper[], path: string[]): number {
   if (path.length === 0 || path.some((seg) => seg.trim() === '')) return 0
   return papers.filter((p) => treesOf(p).some((t) => treeUsesPath(t, path))).length
+}
+
+/**
+ * Every PDF mark (highlight/note) a paper carries, consolidated and every
+ * reviewer's own — same shape `treesOf` reads `extra.reviews` with. The
+ * editor's `EditorPaper` has no typed `marks`/`reviewMarks` fields, so they
+ * arrive here as raw JSON under `extra`, same as `reviews` does; `parseMarks`/
+ * `parseReviewMarks` (`pdfMarks.ts`) already parse that defensively.
+ */
+function marksOf(paper: AnswerBearingPaper): PdfMark[] {
+  const consolidated = parseMarks(paper.extra?.marks)
+  const perReviewer = Object.values(parseReviewMarks(paper.extra?.reviewMarks)).flat()
+  return [...consolidated, ...perReviewer]
+}
+
+/** Does a mark's linked-field canonical path (`fieldPath`'s escaped form)
+ *  name exactly the segments in `path`? Parsed via `parsePath` rather than
+ *  string-prefix-matched, since a name containing `/` or `[` is escaped in
+ *  the canonical form. */
+function linkMatchesPath(linkPath: string, path: string[]): boolean {
+  const segs = parsePath(linkPath)
+  return !!segs && segs.length === path.length && segs.every((s, i) => s.name === path[i])
+}
+
+/**
+ * How many of these papers carry a PDF-mark link ("why I picked this value")
+ * pointing at `path`. The counterpart of `countPapersUsingField` for a field
+ * link rather than an answer — used by the schema editor to warn before a
+ * rename/remove/move orphans one. Unlike an ordinary answer (which the next
+ * load silently prunes and the next save makes permanent), an orphaned link
+ * leaves the *mark* still showing a label for a field that no longer
+ * resolves, with no way for a reviewer to discover or clean it up short of
+ * opening every mark's popover — worth warning about for that reason.
+ */
+export function countLinksUsingField(papers: AnswerBearingPaper[], path: string[]): number {
+  if (path.length === 0 || path.some((seg) => seg.trim() === '')) return 0
+  return papers.filter((p) => marksOf(p).some((m) => m.linkedFields?.some((l) => linkMatchesPath(l.path, path))))
+    .length
 }

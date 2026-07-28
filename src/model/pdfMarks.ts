@@ -53,6 +53,27 @@ export interface PdfMark {
    *  selected text. `'note'` pins a sticky note at a point — no text is
    *  selected to make one. */
   kind: 'highlight' | 'note'
+  /** Fields this mark has been linked to as supporting evidence ("why I
+   *  picked this value"). Undefined on every mark before this feature
+   *  existed, and rewritten back to undefined (never `[]`) once the last
+   *  link is removed — same legacy-default precedent `kind` set. */
+  linkedFields?: LinkedField[]
+}
+
+/**
+ * One field a mark is linked to. `path` is `fieldPath`'s canonical form at
+ * link time (e.g. `Findings[1]/Metric`) — the source of truth for lookups.
+ * `label` is `displayPath`'s human-readable form at link time, denormalized
+ * so a mark's popover still shows something meaningful if the field is later
+ * renamed or removed out from under the link — canonical paths are name/path
+ * derived (see `src/llm/paths.ts`) and are NOT stable across a schema rename,
+ * move, or an earlier repeatable instance being added/removed (which shifts
+ * every later index with no reconciliation — the same known limitation
+ * `aiMarks`/`deferredConsolidations` in `store.ts` already have).
+ */
+export interface LinkedField {
+  path: string
+  label: string
 }
 
 /** The palette offered when creating or recoloring a highlight — the same
@@ -63,6 +84,23 @@ function isMarkRect(v: unknown): v is MarkRect {
   if (typeof v !== 'object' || v === null) return false
   const r = v as Record<string, unknown>
   return (['x', 'y', 'width', 'height'] as const).every((k) => typeof r[k] === 'number' && Number.isFinite(r[k]))
+}
+
+function isLinkedField(v: unknown): v is LinkedField {
+  if (typeof v !== 'object' || v === null) return false
+  const r = v as Record<string, unknown>
+  return typeof r.path === 'string' && !!r.path && typeof r.label === 'string'
+}
+
+/** Defensive parse, same "drop the malformed entry, never throw" rule as
+ *  everything else here. `undefined` (not `[]`) for "no links" so a mark
+ *  with none round-trips byte-identical to one from before this field
+ *  existed, and `marks-*.json` doesn't grow a `"linkedFields": []` on every
+ *  mark that has never been linked to anything. */
+function parseLinkedFields(raw: unknown): LinkedField[] | undefined {
+  if (!Array.isArray(raw)) return undefined
+  const out = raw.filter(isLinkedField)
+  return out.length > 0 ? out : undefined
 }
 
 /**
@@ -89,6 +127,7 @@ export function parseMarks(raw: unknown): PdfMark[] {
       createdAt: typeof e.createdAt === 'string' ? e.createdAt : '',
       updatedAt: typeof e.updatedAt === 'string' ? e.updatedAt : '',
       kind: e.kind === 'note' ? 'note' : 'highlight',
+      linkedFields: parseLinkedFields(e.linkedFields),
     })
   }
   return out

@@ -72,6 +72,25 @@ describe('parseMarks', () => {
     expect(parseMarks([mark({ kind: undefined })])[0].kind).toBe('highlight')
     expect(parseMarks([{ ...mark(), kind: 'bogus' }])[0].kind).toBe('highlight')
   })
+
+  it('reads valid linkedFields, and defaults to undefined when absent or empty', () => {
+    const linked = mark({ linkedFields: [{ path: 'Study Type', label: 'Study Type' }] })
+    expect(parseMarks([linked])[0].linkedFields).toEqual([{ path: 'Study Type', label: 'Study Type' }])
+    expect(parseMarks([mark()])[0].linkedFields).toBeUndefined()
+    expect(parseMarks([mark({ linkedFields: [] })])[0].linkedFields).toBeUndefined()
+  })
+
+  it('drops a malformed linkedFields entry (missing path/label) but keeps the good ones', () => {
+    const raw = {
+      ...mark(),
+      linkedFields: [{ path: 'Good', label: 'Good' }, { path: '' }, { label: 'no path' }, 'not an object'],
+    }
+    expect(parseMarks([raw])[0].linkedFields).toEqual([{ path: 'Good', label: 'Good' }])
+  })
+
+  it('defaults linkedFields to undefined when it is not an array', () => {
+    expect(parseMarks([{ ...mark(), linkedFields: 'nope' }])[0].linkedFields).toBeUndefined()
+  })
 })
 
 describe('parseReviewMarks', () => {
