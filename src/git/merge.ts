@@ -18,6 +18,7 @@ import {
 import type { ScreeningConfig } from '../model/schema'
 import { formatPath, displayPath, resolvePath, type RawSeg } from '../llm/paths'
 import { parseYear } from '../model/year'
+import { mergeMarksList, type PdfMark } from '../model/pdfMarks'
 
 /**
  * The field-level three-way merge at the heart of git support. This module
@@ -499,8 +500,27 @@ function mergePaper(
     reviews,
     aiUsage: mergeAiUsage(ours.aiUsage, theirs.aiUsage),
     equal: mergeEqual(base?.equal, ours.equal, theirs.equal),
+    marks: mergeMarksList(ours.marks, theirs.marks),
+    reviewMarks: mergeReviewMarks(ours.reviewMarks, theirs.reviewMarks),
     extra,
   }
+}
+
+/** Same union-by-reviewer-key shape the `reviews` loop above uses, then a
+ *  per-reviewer `mergeMarksList` — a reviewer's own marks merge the same way
+ *  regardless of whether they're the single/consolidated tree or one seat
+ *  among several. */
+function mergeReviewMarks(
+  ours: Record<string, PdfMark[]>,
+  theirs: Record<string, PdfMark[]>,
+): Record<string, PdfMark[]> {
+  const keys = new Set([...Object.keys(ours), ...Object.keys(theirs)])
+  const out: Record<string, PdfMark[]> = {}
+  for (const k of keys) {
+    const merged = mergeMarksList(ours[k] ?? [], theirs[k] ?? [])
+    if (merged.length > 0) out[k] = merged
+  }
+  return out
 }
 
 /**
@@ -525,6 +545,13 @@ function canonicalPaper(schema: ResolvedDef[], p: Paper) {
     aiUsage: p.aiUsage,
     // A set; JSON just has no way to say so.
     equal: [...p.equal].sort(),
+    // Sorted by id: this is an equality check (is `p` different from some
+    // other snapshot), not the merge itself, and mark array order carries no
+    // meaning worth tripping a false "changed" over.
+    marks: [...p.marks].sort((a, b) => a.id.localeCompare(b.id)),
+    reviewMarks: Object.fromEntries(
+      Object.entries(p.reviewMarks).map(([k, v]) => [k, [...v].sort((a, b) => a.id.localeCompare(b.id))]),
+    ),
     extra: p.extra,
   }
 }

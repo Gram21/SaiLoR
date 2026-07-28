@@ -17,6 +17,7 @@ import {
   type InstanceNode,
 } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
+import { MARK_COLORS, type MarkRect, type PdfMark } from '../model/pdfMarks'
 import { alignNode, alignableNodes } from '../consolidate/align'
 import { applyAlignment } from '../consolidate/apply'
 import { unanimousFills } from '../consolidate/unanimous'
@@ -414,6 +415,24 @@ interface AppState {
   removeInstance: (path: PathSeg[], name: string, index: number) => void
   undo: () => void
   redo: () => void
+
+  /** Every mark (highlight, optionally with a comment) on the current paper's
+   *  PDF, for whoever is currently reviewing — see `currentMarks`. Empty
+   *  outside a paper, or before a reviewer seat is picked on a multi-reviewer
+   *  project. */
+  currentPdfMarks: () => PdfMark[]
+  /** Highlights the selection described by `page`/`rects`, in the color
+   *  given (or the first of `MARK_COLORS`) — the standard "select text,
+   *  highlight it" a PDF viewer offers. Returns the new mark's id so the
+   *  caller can open its comment popover right away. Not part of the
+   *  annotation undo stack (see `pdfMarks.ts`'s own doc comment on why marks
+   *  are a separate, lower-stakes concern from an annotation answer). */
+  addHighlight: (page: number, rects: MarkRect[], color?: string) => string | null
+  /** Replaces a mark's comment text (`''` clears it back to a plain highlight
+   *  with no note). No-op if `id` isn't a mark on the current paper/reviewer. */
+  setMarkComment: (id: string, comment: string) => void
+  setMarkColor: (id: string, color: string) => void
+  removeMark: (id: string) => void
   /** Write the reviewer-approved AI suggestions into the current paper (one undo step). */
   applyAiSuggestions: (
     suggestions: Suggestion[],
@@ -591,6 +610,31 @@ export function currentTree(
   if (!create) return normalizeTree(project.schema, undefined)
   paper.reviews[currentReviewer] = normalizeTree(project.schema, undefined)
   return paper.reviews[currentReviewer]
+}
+
+/**
+ * PDF-marks counterpart to `currentTree`: which reviewer's own highlights and
+ * comments are shown/edited right now, following the exact same routing —
+ * `paper.marks` for a single-reviewer project or the Consolidation seat,
+ * `paper.reviewMarks[currentReviewer]` otherwise. Unlike `currentTree`,
+ * there's no schema-driven skeleton to normalize into: a reviewer with no
+ * marks yet has an empty array, not a missing key, so `create` only ever
+ * needs to initialize that key the first time a mark is actually added.
+ */
+export function currentMarks(
+  project: Project,
+  currentReviewer: string | null,
+  paper: Paper,
+  create = false,
+): PdfMark[] | null {
+  if (project.reviewers <= 1) return paper.marks
+  if (currentReviewer === 'consolidation') return paper.marks
+  if (currentReviewer === null) return null
+  const existing = paper.reviewMarks[currentReviewer]
+  if (existing) return existing
+  if (!create) return []
+  paper.reviewMarks[currentReviewer] = []
+  return paper.reviewMarks[currentReviewer]
 }
 
 /** Walk from a paper's annotation root to the container tree addressed by `path`. */
@@ -1306,6 +1350,78 @@ export const useStore = create<AppState>()(
           list.splice(index, 1)
           s.dirty = true
         }
+      })
+    },
+
+    currentPdfMarks: () => {
+      const s = get()
+      if (!s.project) return []
+      const paper = currentPaper(s)
+      if (!paper) return []
+      return currentMarks(s.project, s.currentReviewer, paper, false) ?? []
+    },
+
+    addHighlight: (page, rects, color) => {
+      const prev = get()
+      if (!prev.project || rects.length === 0) return null
+      if (prev.project.reviewers > 1 && prev.currentReviewer === null) return null
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+      const now = new Date().toISOString()
+      set((s) => {
+        const paper = currentPaper(s)
+        if (!paper) return
+        const marks = currentMarks(s.project!, s.currentReviewer, paper, true)
+        if (!marks) return
+        marks.push({
+          id,
+          page,
+          rects,
+          color: color ?? MARK_COLORS[0],
+          comment: '',
+          createdAt: now,
+          updatedAt: now,
+        })
+        s.dirty = true
+      })
+      return id
+    },
+
+    setMarkComment: (id, comment) => {
+      set((s) => {
+        const paper = currentPaper(s)
+        if (!paper || !s.project) return
+        const marks = currentMarks(s.project, s.currentReviewer, paper, false)
+        const mark = marks?.find((m) => m.id === id)
+        if (!mark) return
+        mark.comment = comment
+        mark.updatedAt = new Date().toISOString()
+        s.dirty = true
+      })
+    },
+
+    setMarkColor: (id, color) => {
+      set((s) => {
+        const paper = currentPaper(s)
+        if (!paper || !s.project) return
+        const marks = currentMarks(s.project, s.currentReviewer, paper, false)
+        const mark = marks?.find((m) => m.id === id)
+        if (!mark) return
+        mark.color = color
+        mark.updatedAt = new Date().toISOString()
+        s.dirty = true
+      })
+    },
+
+    removeMark: (id) => {
+      set((s) => {
+        const paper = currentPaper(s)
+        if (!paper || !s.project) return
+        const marks = currentMarks(s.project, s.currentReviewer, paper, false)
+        if (!marks) return
+        const i = marks.findIndex((m) => m.id === id)
+        if (i === -1) return
+        marks.splice(i, 1)
+        s.dirty = true
       })
     },
 

@@ -21,8 +21,10 @@ my-review/
 ├── project.json
 └── annotations/
     └── <paperId>/
-        ├── consolidated.json   { annotations, aiUsage, equal } for this paper
-        └── reviewer-<n>.json   { annotations } for reviewer n's own tree (multi-reviewer only)
+        ├── consolidated.json      { annotations, aiUsage, equal } for this paper
+        ├── reviewer-<n>.json      { annotations } for reviewer n's own tree (multi-reviewer only)
+        ├── marks-consolidated.json  { marks } — PDF highlights/comments, consolidated/single-reviewer scope
+        └── marks-<n>.json         { marks } for reviewer n's own highlights (multi-reviewer only)
 ```
 
 A **screening** project (`Project.screening` set) uses the same layout with a different filename
@@ -41,7 +43,8 @@ them independently, eliminating most of those conflicts.
 **Per-paper-per-reviewer files are lazy.** A `reviewer-<n>.json` or `consolidated.json` is only
 written once that tree actually holds an answer (`hasAnnotations`), and is deleted again if the tree
 becomes empty — so a project with 200 papers and no annotations yet has an empty `annotations/`
-folder, not 200 near-empty files.
+folder, not 200 near-empty files. `marks-consolidated.json`/`marks-<n>.json` are lazy the same way,
+keyed on the mark list being non-empty rather than `hasAnnotations`.
 
 **Migration is automatic and silent.** A project still saved in the old single-file shape
 (`isLegacyProjectShape` — any paper carries `annotations`/`reviews` inline) opens and works exactly as
@@ -151,8 +154,8 @@ build fails to load, the same as any new type would, since `type` validates agai
 
 This is the **logical** shape — what the reassembled project text and the in-memory `Paper` type both
 look like. On disk, `id`/`title`/`authors`/`year`/`venue`/`doi`/`abstract`/`abstractFromPdf`/`pdf`
-live in `project.json`; `annotations`/`reviews`/`aiUsage`/`equal` live in the sibling
-`annotations/<id>/` files instead — see "On-disk layout" above.
+live in `project.json`; `annotations`/`reviews`/`aiUsage`/`equal`/`marks`/`reviewMarks` live in the
+sibling `annotations/<id>/` files instead — see "On-disk layout" above.
 
 ```jsonc
 {
@@ -168,6 +171,11 @@ live in `project.json`; `annotations`/`reviews`/`aiUsage`/`equal` live in the si
   "reviews": {                // optional; each independent reviewer's own tree, multi-reviewer only
     "1": { /* AnnotationValueTree */ },
     "2": { /* AnnotationValueTree */ }
+  },
+  "marks": [],                // optional; consolidated/single-reviewer PDF highlights, see "PDF marks" below
+  "reviewMarks": {            // optional; each reviewer's own highlights, multi-reviewer only
+    "1": [ /* PdfMark[] */ ],
+    "2": [ /* PdfMark[] */ ]
   },
   // any other keys preserved verbatim on save
 }
@@ -231,6 +239,8 @@ interface Paper {
   annotations: AnnotationValueTree          // the single/consolidated result — unchanged in meaning
   reviews: Record<string, AnnotationValueTree>  // each reviewer's own tree, keyed "1".."N"; {} if single-reviewer
   aiUsage: AiUsageRecord[]        // AI-assisted-annotation disclosure log, oldest first; [] if never used
+  marks: PdfMark[]                 // consolidated/single-reviewer PDF highlights+comments; see "PDF marks" below
+  reviewMarks: Record<string, PdfMark[]>  // each reviewer's own highlights, keyed "1".."N"; {} if single-reviewer
   extra: Record<string, unknown>  // unknown per-paper fields preserved
 }
 
@@ -394,6 +404,58 @@ so a text comparison would flag `equal-but-differently-formatted` (or merely dif
 files as needing migration too — precisely the kind of file every hand-written test fixture in this
 codebase is, which is how this got caught. The comparison is scoped to exactly `annotations` and
 `reviews`; nothing else about a file's formatting or unrelated content is examined.
+
+## PDF marks
+
+Highlighting and comments in the PDF viewer are SaiLoR's **own** data — a `PdfMark` overlay rendered
+by `PdfViewer.tsx` on top of react-pdf's rendering — never real embedded PDF annotation objects
+written into the PDF binary. That was a deliberate choice: writing into the shared PDF would put a
+binary/merge-conflict-prone artifact back into git, exactly what the split `annotations/` layout
+above exists to avoid.
+
+```typescript
+// src/model/pdfMarks.ts
+interface MarkRect { x: number; y: number; width: number; height: number }  // fractions of the page's
+                                                                              // own rendered bounding box
+interface PdfMark {
+  id: string
+  page: number         // 1-indexed
+  rects: MarkRect[]     // one rect per line of a multi-line selection
+  color: string
+  comment: string       // '' for a plain highlight with no note
+  createdAt: string     // ISO 8601
+  updatedAt: string
+}
+```
+
+**Resolution-independent by construction.** A rect's `x`/`y`/`width`/`height` are fractions (0–1) of
+the page's own `getBoundingClientRect()` at capture time, not absolute pixels or a pdf.js viewport
+transform — so the overlay renders back correctly via plain CSS percentage positioning (`left:
+${x*100}%`, …) at any zoom level or window size, with no coordinate math to keep in sync with
+pdf.js's own transforms.
+
+**Scoping and routing mirror `reviews`/`annotations` exactly.** `Paper.marks` is the
+single-reviewer/Consolidation set; `Paper.reviewMarks["N"]` is reviewer N's own set. `currentMarks`
+in `src/state/store.ts` makes the same routing decision `currentTree` makes for annotations:
+single-reviewer or Consolidation → `paper.marks`; a numbered reviewer → `paper.reviewMarks[N]`;
+multi-reviewer with nobody picked yet → `null`/refused. The store actions (`addHighlight`,
+`setMarkComment`, `setMarkColor`, `removeMark`) all route through it, so switching reviewer seat
+switches which highlight set is visible and editable, same as it does for annotation answers.
+
+**On disk**, marks split the same way annotations do — `marks-consolidated.json` /
+`marks-<n>.json` per paper, lazy (written only when non-empty, deleted when the list empties) — see
+"On-disk layout" above. `assembleLegacyProjectJson`/`splitProjectFiles`/`loadPaperFiles` handle them
+alongside `consolidated.json`/`reviewer-<n>.json` in the same read/write passes.
+
+**Merging never drops or prompts.** `mergeMarksList` (used by `mergePaper` in `src/git/merge.ts`)
+unions both sides by `id` and, on a same-`id` conflict, keeps whichever side has the later
+`updatedAt` — no conflict UI, unlike an annotation-answer merge. A highlight is a personal reading
+note, not the record a review reports, so silently keeping the newer edit is an acceptable default
+where annotation merges must show every disagreement instead.
+
+**Deliberately outside the undo stack.** `addHighlight`/`setMarkComment`/`setMarkColor`/`removeMark`
+never push a `HistoryEntry`, so PDF marks are not covered by the app's Cmd+Z annotation undo/redo —
+another consequence of treating them as a lower-stakes personal note rather than a reviewed answer.
 
 ## Screening
 

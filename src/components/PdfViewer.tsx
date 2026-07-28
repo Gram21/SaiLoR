@@ -3,6 +3,7 @@ import { Document, Page } from 'react-pdf'
 import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import { useStore, selectCurrentPaper, PDF_ZOOM_MIN, PDF_ZOOM_MAX } from '../state/store'
+import { MARK_COLORS, type MarkRect } from '../model/pdfMarks'
 import { getPlatform } from '../platform'
 // Side-effect import: configures the pdf.js worker.
 import '../platform/pdfjs'
@@ -87,6 +88,25 @@ export function PdfViewer() {
   const screening = useStore((s) => s.project?.screening != null)
   const toggleScreeningPdf = useStore((s) => s.toggleScreeningPdf)
 
+  // PDF highlights/comments — the standard "select text, highlight it,
+  // optionally attach a note" most PDF viewers offer. See `pdfMarks.ts` for
+  // why these are SaiLoR's own overlay data rather than real PDF annotation
+  // objects written into the file.
+  const marks = useStore((s) => s.currentPdfMarks())
+  const addHighlight = useStore((s) => s.addHighlight)
+  const setMarkComment = useStore((s) => s.setMarkComment)
+  const setMarkColor = useStore((s) => s.setMarkColor)
+  const removeMark = useStore((s) => s.removeMark)
+  // The color-swatch toolbar offered right after a text selection, positioned
+  // near where the selection ends — the same "select, then a small popup
+  // offers to highlight" flow Preview/Acrobat use.
+  const [selectionToolbar, setSelectionToolbar] = useState<
+    { x: number; y: number; page: number; rects: MarkRect[] } | null
+  >(null)
+  // The comment/color popover for one existing highlight, opened by clicking it
+  // (or automatically right after creating one, so a note can be typed at once).
+  const [activeMark, setActiveMark] = useState<{ id: string; x: number; y: number } | null>(null)
+
   const [url, setUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [needsFolderGrant, setNeedsFolderGrant] = useState(false)
@@ -149,6 +169,8 @@ export function PdfViewer() {
     setCanJumpBack(false)
     setCanJumpForward(false)
     setUrl(null)
+    setSelectionToolbar(null)
+    setActiveMark(null)
     revokeRef.current?.()
     revokeRef.current = undefined
     if (!pdfPath) return
@@ -244,6 +266,9 @@ export function PdfViewer() {
       if (el && el.getBoundingClientRect().top - rootTop <= threshold) cur = i + 1
     }
     setCurrentPage(cur)
+    // Popovers are fixed-position at a captured client point; scrolling invalidates it.
+    setSelectionToolbar(null)
+    setActiveMark(null)
   }
 
   // Keep the page input in sync with the current page (unless the user is editing it).
@@ -276,6 +301,71 @@ export function PdfViewer() {
     const sel = window.getSelection()
     const text = sel?.toString() ?? ''
     if (text.trim()) setPdfSelection(text)
+    updateSelectionToolbar(sel, text)
+  }
+
+  /** Which rendered page (1-indexed) `node` sits inside, by finding its
+   *  closest `.react-pdf__Page` ancestor and matching it against `pageRefs`
+   *  — the same elements the scroll-position tracking above already keys
+   *  off, rather than trusting a pdf.js/react-pdf internal attribute. */
+  const pageNumberForNode = (node: Node | null): number | null => {
+    const el = node instanceof Element ? node : node?.parentElement ?? null
+    const pageEl = el?.closest<HTMLElement>('.react-pdf__Page')
+    if (!pageEl) return null
+    const idx = pageRefs.current.indexOf(pageEl as HTMLDivElement)
+    return idx === -1 ? null : idx + 1
+  }
+
+  /** Offers the highlight color toolbar for a real, single-page text
+   *  selection; hides it otherwise (nothing selected, or a selection that
+   *  somehow spans two pages — rare in a PDF text layer, and not worth
+   *  supporting: a highlight is one page's own overlay). */
+  const updateSelectionToolbar = (sel: Selection | null, text: string) => {
+    if (!sel || sel.isCollapsed || !text.trim()) {
+      setSelectionToolbar(null)
+      return
+    }
+    const range = sel.getRangeAt(0)
+    const startPage = pageNumberForNode(range.startContainer)
+    const endPage = pageNumberForNode(range.endContainer)
+    if (startPage === null || startPage !== endPage) {
+      setSelectionToolbar(null)
+      return
+    }
+    const pageEl = pageRefs.current[startPage - 1]
+    if (!pageEl) {
+      setSelectionToolbar(null)
+      return
+    }
+    const pageRect = pageEl.getBoundingClientRect()
+    const clientRects = Array.from(range.getClientRects())
+    const rects: MarkRect[] = clientRects
+      .filter((r) => r.width > 1 && r.height > 1)
+      .map((r) => ({
+        x: (r.left - pageRect.left) / pageRect.width,
+        y: (r.top - pageRect.top) / pageRect.height,
+        width: r.width / pageRect.width,
+        height: r.height / pageRect.height,
+      }))
+    if (rects.length === 0) {
+      setSelectionToolbar(null)
+      return
+    }
+    const anchor = clientRects[clientRects.length - 1] ?? range.getBoundingClientRect()
+    setActiveMark(null)
+    setSelectionToolbar({ x: anchor.right, y: anchor.bottom, page: startPage, rects })
+  }
+
+  /** Highlights the pending selection in `color`, closes the toolbar, and
+   *  opens the new mark's comment popover right away so a note can be typed
+   *  at once — the same flow as clicking an existing highlight. */
+  const commitHighlight = (color: string) => {
+    if (!selectionToolbar) return
+    const { x, y, page, rects } = selectionToolbar
+    const id = addHighlight(page, rects, color)
+    setSelectionToolbar(null)
+    window.getSelection()?.removeAllRanges()
+    if (id) setActiveMark({ id, x, y })
   }
 
   // When an in-PDF link is clicked, the pdf.js LinkService scrolls to the
@@ -371,6 +461,28 @@ export function PdfViewer() {
   // Clear highlights when the viewer unmounts.
   useEffect(() => clearHighlights, [])
 
+  // Dismiss the highlight color toolbar / comment popover on Escape or a
+  // mousedown outside both — checked by ancestry (`closest`) rather than
+  // relying on the popovers' own `stopPropagation`, since that only affects
+  // the later `click` event, not this earlier `mousedown` one.
+  useEffect(() => {
+    if (!selectionToolbar && !activeMark) return
+    const dismiss = (e?: MouseEvent) => {
+      if (e && (e.target as HTMLElement | null)?.closest('.pdf-highlight-toolbar, .pdf-mark-popover')) return
+      setSelectionToolbar(null)
+      setActiveMark(null)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismiss()
+    }
+    window.addEventListener('mousedown', dismiss)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('mousedown', dismiss)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [selectionToolbar, activeMark])
+
   // (Re)compute matches when the query, page set, or a text layer finishes
   // rendering changes. Recomputes against text layers already in the DOM.
   useEffect(() => {
@@ -393,24 +505,69 @@ export function PdfViewer() {
   const onTextLayerRendered = useCallback(() => setTextRenderTick((t) => t + 1), [])
 
   // Memoize the page elements so unrelated re-renders (typing in the search
-  // box, highlight updates) reuse the same element references. React then bails
-  // out of re-rendering the pages, keeping their text layers stable.
+  // box, search-match highlight updates) reuse the same element references.
+  // React then bails out of re-rendering the pages, keeping their text layers
+  // stable. `marks` IS a real dependency — a reviewer's own highlights are
+  // rendered as each page's `children` (react-pdf renders them after its own
+  // canvas/text/annotation layers, inside the same `position: relative`
+  // wrapper, so percentage-based positioning lines up for free) — but that
+  // only re-renders the cheap overlay `<div>`s, never pdf.js's own rendering,
+  // which is driven by `pageNumber`/`width` alone.
   const pages = useMemo(
     () =>
-      Array.from({ length: numPages }, (_, i) => (
-        <Page
-          key={i}
-          pageNumber={i + 1}
-          width={renderWidth}
-          inputRef={(el) => {
-            pageRefs.current[i] = el
-          }}
-          renderTextLayer
-          renderAnnotationLayer
-          onRenderTextLayerSuccess={onTextLayerRendered}
-        />
-      )),
-    [numPages, renderWidth, onTextLayerRendered],
+      Array.from({ length: numPages }, (_, i) => {
+        const pageNumber = i + 1
+        const pageMarks = marks.filter((m) => m.page === pageNumber)
+        return (
+          <Page
+            key={i}
+            pageNumber={pageNumber}
+            width={renderWidth}
+            inputRef={(el) => {
+              pageRefs.current[i] = el
+            }}
+            renderTextLayer
+            renderAnnotationLayer
+            onRenderTextLayerSuccess={onTextLayerRendered}
+          >
+            {pageMarks.length > 0 && (
+              <div className="pdf-marks-overlay">
+                {pageMarks.map((mark) => (
+                  <div key={mark.id}>
+                    {mark.rects.map((r, ri) => (
+                      <div
+                        key={ri}
+                        className="pdf-mark-rect"
+                        style={{
+                          left: `${r.x * 100}%`,
+                          top: `${r.y * 100}%`,
+                          width: `${r.width * 100}%`,
+                          height: `${r.height * 100}%`,
+                          background: mark.color,
+                        }}
+                        title={mark.comment || undefined}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectionToolbar(null)
+                          setActiveMark({ id: mark.id, x: e.clientX, y: e.clientY })
+                        }}
+                      />
+                    ))}
+                    {mark.comment && (
+                      <div
+                        className="pdf-mark-comment-dot"
+                        style={{ left: `${mark.rects[0].x * 100}%`, top: `${mark.rects[0].y * 100}%` }}
+                        aria-hidden="true"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Page>
+        )
+      }),
+    [numPages, renderWidth, onTextLayerRendered, marks],
   )
 
   // Paint the highlights and scroll the active match into view.
@@ -713,6 +870,73 @@ export function PdfViewer() {
           <div className="pdf-loading">Loading PDF…</div>
         )}
       </div>
+      {selectionToolbar && (
+        <div
+          className="pdf-highlight-toolbar"
+          style={{ left: selectionToolbar.x, top: selectionToolbar.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {MARK_COLORS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              className="pdf-color-swatch"
+              style={{ background: c }}
+              title="Highlight"
+              aria-label={`Highlight in ${c}`}
+              onClick={() => commitHighlight(c)}
+            />
+          ))}
+        </div>
+      )}
+      {activeMark &&
+        (() => {
+          const mark = marks.find((m) => m.id === activeMark.id)
+          if (!mark) return null
+          return (
+            <div
+              className="pdf-mark-popover"
+              style={{ left: activeMark.x, top: activeMark.y }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="pdf-mark-popover-colors">
+                {MARK_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`pdf-color-swatch${mark.color === c ? ' active' : ''}`}
+                    style={{ background: c }}
+                    title="Recolor"
+                    aria-label={`Set color ${c}`}
+                    onClick={() => setMarkColor(mark.id, c)}
+                  />
+                ))}
+              </div>
+              <textarea
+                className="field-input field-textarea pdf-mark-comment-input"
+                placeholder="Add a comment…"
+                value={mark.comment}
+                autoFocus
+                onChange={(e) => setMarkComment(mark.id, e.target.value)}
+              />
+              <div className="pdf-mark-popover-actions">
+                <button
+                  type="button"
+                  className="pdf-mark-delete"
+                  onClick={() => {
+                    removeMark(mark.id)
+                    setActiveMark(null)
+                  }}
+                >
+                  Delete
+                </button>
+                <button type="button" className="primary" onClick={() => setActiveMark(null)}>
+                  Done
+                </button>
+              </div>
+            </div>
+          )
+        })()}
     </div>
   )
 }
