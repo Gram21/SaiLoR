@@ -120,6 +120,13 @@ export function mergeMarksList(ours: PdfMark[], theirs: PdfMark[]): PdfMark[] {
   return [...byId.values()]
 }
 
+/** Stable reading order for cycling through every mark on a PDF (the "next/
+ *  previous annotation" toolbar in `PdfViewer`): top-to-bottom by page, then
+ *  top-to-bottom within a page by the first rect's `y`. */
+export function sortMarksForCycling(marks: PdfMark[]): PdfMark[] {
+  return [...marks].sort((a, b) => a.page - b.page || a.rects[0].y - b.rects[0].y)
+}
+
 /**
  * Parse `paper.reviewMarks` defensively — same rule `parseReviews` follows
  * in `project.ts` (only a key that looks like a reviewer number survives).
