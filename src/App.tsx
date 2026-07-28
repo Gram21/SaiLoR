@@ -17,6 +17,7 @@ import { DuplicateReviewDialog } from './components/DuplicateReviewDialog'
 import { ErrorPanel } from './components/ErrorPanel'
 import { HelpDialog } from './components/HelpDialog'
 import { ValidationDialog } from './components/ValidationDialog'
+import { ExportPdfDialog } from './components/ExportPdfDialog'
 import { ConsolidationDialog } from './components/ConsolidationDialog'
 import { ReviewerPrompt } from './components/ReviewerPrompt'
 import { AgreementDialog } from './components/AgreementDialog'
@@ -314,6 +315,7 @@ export function App() {
       <ErrorPanel />
       <HelpDialog />
       <ValidationDialog />
+      <ExportPdfDialog />
       <ConsolidationDialog />
       <ReviewerPrompt />
       <AgreementDialog />

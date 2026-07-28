@@ -23,6 +23,9 @@ contextBridge.exposeInMainWorld('slr', {
   readPdf: (filePath: string) => ipcRenderer.invoke('pdf:read', filePath),
   checkPdfPath: (rel: string) => ipcRenderer.invoke('pdf:checkPath', rel),
   allowPdfPath: (rel: string) => ipcRenderer.invoke('pdf:allowPath', rel),
+  embedPdfMarks: (pdfAbsPath: string, marks: unknown, target: 'original' | { newPath: string }) =>
+    ipcRenderer.invoke('pdf:embedMarks', pdfAbsPath, marks, target),
+  pickPdfExportPath: (suggestedName: string) => ipcRenderer.invoke('pdf:pickExportPath', suggestedName),
   peekProjects: (paths: string[]) => ipcRenderer.invoke('project:peek', paths),
   relativePaths: (fromFile: string, toFiles: string[]) =>
     ipcRenderer.invoke('paths:relative', fromFile, toFiles),

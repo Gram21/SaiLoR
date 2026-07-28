@@ -252,6 +252,8 @@ interface AppState {
   validationOpen: boolean
   /** Whether the agreement-statistics dialog is open. Session-only, like `validationOpen`. */
   agreementOpen: boolean
+  /** Whether the "export PDF with annotations" dialog is open. Session-only, like `validationOpen`. */
+  exportPdfOpen: boolean
   /** Restore the Consolidation overview when its Agreement dialog closes. */
   agreementReturnToOverview: boolean
   /** Whether the overall Consolidation overview is open. Session-only, like `validationOpen`. */
@@ -396,6 +398,8 @@ interface AppState {
   setValidationOpen: (open: boolean) => void
   /** Open/close the agreement-statistics dialog. View state only — see `agreementOpen`. */
   setAgreementOpen: (open: boolean) => void
+  /** Open/close the "export PDF with annotations" dialog. View state only — see `exportPdfOpen`. */
+  setExportPdfOpen: (open: boolean) => void
   /** Replace the Consolidation overview with Agreement, then restore it on close. */
   openAgreementFromOverview: () => void
   closeAgreement: () => void
@@ -683,6 +687,7 @@ export const useStore = create<AppState>()(
     validationUnannotated: null,
     validationOpen: false,
     agreementOpen: false,
+    exportPdfOpen: false,
     agreementReturnToOverview: false,
     consolidationOverviewOpen: false,
     disagreementsOpen: false,
@@ -845,6 +850,7 @@ export const useStore = create<AppState>()(
         s.validationUnannotated = null
         s.validationOpen = false
         s.agreementOpen = false
+        s.exportPdfOpen = false
         s.agreementReturnToOverview = false
         s.consolidationOverviewOpen = false
         s.disagreementsOpen = false
@@ -1227,6 +1233,11 @@ export const useStore = create<AppState>()(
       set((s) => {
         s.agreementOpen = open
         if (!open) s.agreementReturnToOverview = false
+      }),
+
+    setExportPdfOpen: (open) =>
+      set((s) => {
+        s.exportPdfOpen = open
       }),
 
     openAgreementFromOverview: () =>

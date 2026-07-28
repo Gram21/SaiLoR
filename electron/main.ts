@@ -26,6 +26,9 @@ import { relPathProblem, annotationsRelDir } from '../src/git/relpath'
 import { gitErrorText, parsePorcelain } from '../src/git/output'
 import type { GitRun } from '../src/git/types'
 import { isLegacyProjectShape, assembleLegacyProjectJson } from '../src/model/project'
+import { parseMarks, type PdfMark } from '../src/model/pdfMarks'
+import { rectToPdfPoints, rectToQuadPoints } from '../src/model/pdfExport'
+import { PDFDocument, PDFHexString, PDFString, type PDFContext, type PDFDict } from 'pdf-lib'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -911,6 +914,162 @@ ipcMain.handle('pdf:checkPath', async (_e, rel: string) => {
 // currently-open project's directory; see `allowedEscapes`'s own comment.
 ipcMain.handle('pdf:allowPath', (_e, rel: string) => {
   allowedEscapes.add(rel)
+})
+
+// ---- PDF export: burn PdfMarks into real PDF annotation objects ----
+//
+// A one-way, user-triggered export — see src/model/pdfMarks.ts's doc comment
+// for why the live in-app overlay deliberately does NOT do this. pdf-lib has
+// no high-level "add a Highlight annotation" API, so the annotation
+// dictionaries are built by hand via its low-level PDFContext API.
+
+/** `#rrggbb` → `[r, g, b]` floats 0..1, for a PDF `/C` color array. Malformed
+ *  input (a hand-edited file's `color` need not be one of `MARK_COLORS`)
+ *  falls back to a highlighter yellow rather than failing the export. */
+function hexToRgb01(hex: string): [number, number, number] {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex)
+  if (!m) return [1, 0.88, 0.4]
+  return [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255]
+}
+
+/** A mark's comment, PDFHexString-encoded so it survives non-ASCII (pdf-lib's
+ *  `PDFHexString.fromText` UTF-16BE-encodes it, unlike a literal `PDFString`). */
+function contentsOf(mark: PdfMark): PDFHexString {
+  return PDFHexString.fromText(mark.comment)
+}
+
+/** A mark's `createdAt`/`updatedAt` as a PDF date string, or `undefined` when
+ *  absent/unparseable — `context.obj` drops `undefined` entries rather than
+ *  writing a broken date. */
+function pdfDateOf(iso: string): PDFString | undefined {
+  if (!iso) return undefined
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? undefined : PDFString.fromDate(d)
+}
+
+/** A `Highlight` annotation dict for one mark — `/Rect` is the union of all
+ *  its rects' bounding boxes (a multi-line selection), `/QuadPoints` carries
+ *  each line's own quad (§8.4.5) so the highlight follows the text shape
+ *  rather than one wide box. `/CA 0.4` keeps it translucent, so it reads as
+ *  a highlighter stroke rather than a solid block. */
+function buildHighlightAnnotDict(context: PDFContext, mark: PdfMark, pageWidth: number, pageHeight: number): PDFDict {
+  const quadPoints: number[] = []
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  for (const rect of mark.rects) {
+    quadPoints.push(...rectToQuadPoints(rect, pageWidth, pageHeight))
+    const p = rectToPdfPoints(rect, pageWidth, pageHeight)
+    minX = Math.min(minX, p.x)
+    minY = Math.min(minY, p.y)
+    maxX = Math.max(maxX, p.x + p.width)
+    maxY = Math.max(maxY, p.y + p.height)
+  }
+  const [r, g, b] = hexToRgb01(mark.color)
+  return context.obj({
+    Type: 'Annot',
+    Subtype: 'Highlight',
+    Rect: [minX, minY, maxX, maxY],
+    QuadPoints: quadPoints,
+    C: [r, g, b],
+    CA: 0.4,
+    Contents: contentsOf(mark),
+    T: PDFString.of('SaiLoR'),
+    CreationDate: pdfDateOf(mark.createdAt),
+    M: pdfDateOf(mark.updatedAt),
+  })
+}
+
+/** A `Text` ("sticky note") annotation dict for one note mark. Its rect's
+ *  `width`/`height` are a placeholder (see `MarkRect`'s doc comment) — only
+ *  `x`/`y`, the pinned point, is trusted; the icon itself is a small fixed
+ *  box centered on it, since the reader draws its own icon glyph regardless
+ *  of the `/Rect` size. */
+function buildTextAnnotDict(context: PDFContext, mark: PdfMark, pageWidth: number, pageHeight: number): PDFDict {
+  const ICON = 20
+  const point = rectToPdfPoints({ ...mark.rects[0], width: 0, height: 0 }, pageWidth, pageHeight)
+  const [r, g, b] = hexToRgb01(mark.color)
+  return context.obj({
+    Type: 'Annot',
+    Subtype: 'Text',
+    Rect: [point.x - ICON / 2, point.y - ICON / 2, point.x + ICON / 2, point.y + ICON / 2],
+    Name: 'Comment',
+    C: [r, g, b],
+    Contents: contentsOf(mark),
+    T: PDFString.of('SaiLoR'),
+    CreationDate: pdfDateOf(mark.createdAt),
+    M: pdfDateOf(mark.updatedAt),
+    Open: false,
+  })
+}
+
+/** Build and append one annotation per mark, grouped by page. A mark whose
+ *  `page` is beyond what this PDF actually has is skipped — the marks and
+ *  the PDF bytes are two files a reviewer might have edited independently
+ *  (the "annotated" export was regenerated from a shorter/longer PDF), and
+ *  failing the whole export over one stale mark would lose every other one.
+ *  Appends to each page's existing `/Annots` (via pdf-lib's own
+ *  `addAnnot`, which creates the array if absent) rather than replacing it,
+ *  so annotations already in the PDF survive. */
+function embedMarksIntoPdf(pdfDoc: PDFDocument, marks: PdfMark[]): void {
+  const pages = pdfDoc.getPages()
+  const byPage = new Map<number, PdfMark[]>()
+  for (const mark of marks) {
+    const list = byPage.get(mark.page)
+    if (list) list.push(mark)
+    else byPage.set(mark.page, [mark])
+  }
+  for (const [pageNum, pageMarks] of byPage) {
+    const page = pages[pageNum - 1]
+    if (!page) continue
+    const { width, height } = page.getSize()
+    for (const mark of pageMarks) {
+      const dict =
+        mark.kind === 'note'
+          ? buildTextAnnotDict(pdfDoc.context, mark, width, height)
+          : buildHighlightAnnotDict(pdfDoc.context, mark, width, height)
+      page.node.addAnnot(pdfDoc.context.register(dict))
+    }
+  }
+}
+
+ipcMain.handle(
+  'pdf:embedMarks',
+  async (
+    _e,
+    pdfAbsPath: string,
+    marksRaw: unknown,
+    target: 'original' | { newPath: string },
+  ): Promise<{ ok: true; path: string } | { ok: false; error: string }> => {
+    const marks = parseMarks(marksRaw)
+    let pdfDoc: PDFDocument
+    try {
+      const bytes = await readFile(pdfAbsPath)
+      pdfDoc = await PDFDocument.load(bytes, { ignoreEncryption: false })
+    } catch (err) {
+      return { ok: false, error: `Could not open the PDF: ${err instanceof Error ? err.message : String(err)}` }
+    }
+    embedMarksIntoPdf(pdfDoc, marks)
+    const dest = target === 'original' ? pdfAbsPath : target.newPath
+    try {
+      await assertNotSymlink(dest)
+      await writeFile(dest, await pdfDoc.save())
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    }
+    return { ok: true, path: dest }
+  },
+)
+
+ipcMain.handle('pdf:pickExportPath', async (_e, suggestedName: string) => {
+  const res = await dialog.showSaveDialog({
+    title: 'Export annotated PDF',
+    defaultPath: suggestedName,
+    filters: [{ name: 'PDF', extensions: ['pdf'] }],
+  })
+  if (res.canceled || !res.filePath) return null
+  return res.filePath
 })
 
 // PDF references are stored relative to the project JSON so the project stays

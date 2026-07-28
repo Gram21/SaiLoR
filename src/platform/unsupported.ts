@@ -10,6 +10,7 @@ import type {
 import type { RecentEntry } from './recents'
 import type { LlmConfig, LlmHttpRequest, LlmHttpResponse } from '../llm/types'
 import type { GitPlatform } from '../git/types'
+import type { PdfMark } from '../model/pdfMarks'
 
 const UNSUPPORTED = 'SaiLoR for the web is discontinued — use the desktop app.'
 
@@ -113,6 +114,17 @@ export class UnsupportedAdapter implements PlatformAdapter {
   }
 
   getGit(): GitPlatform | null {
+    return null
+  }
+
+  async embedPdfAnnotations(
+    _pdfAbsPath: string,
+    _marks: PdfMark[],
+  ): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+    return { ok: false, error: UNSUPPORTED }
+  }
+
+  async pickPdfExportPath(): Promise<string | null> {
     return null
   }
 }
