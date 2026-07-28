@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseMarks, parseReviewMarks, mergeMarksList, type PdfMark } from './pdfMarks'
+import { parseMarks, parseReviewMarks, mergeMarksList, sortMarksForCycling, type PdfMark } from './pdfMarks'
 
 function mark(overrides: Partial<PdfMark> = {}): PdfMark {
   return {
@@ -110,5 +110,37 @@ describe('mergeMarksList', () => {
   it('never drops a mark — the union is at least as large as either side', () => {
     const merged = mergeMarksList([mark({ id: 'a' }), mark({ id: 'b' })], [mark({ id: 'b' }), mark({ id: 'c' })])
     expect(merged.map((m) => m.id).sort()).toEqual(['a', 'b', 'c'])
+  })
+})
+
+describe('sortMarksForCycling', () => {
+  it('is [] for empty input', () => {
+    expect(sortMarksForCycling([])).toEqual([])
+  })
+
+  it('orders by page ascending', () => {
+    const a = mark({ id: 'a', page: 3 })
+    const b = mark({ id: 'b', page: 1 })
+    const c = mark({ id: 'c', page: 2 })
+    expect(sortMarksForCycling([a, b, c]).map((m) => m.id)).toEqual(['b', 'c', 'a'])
+  })
+
+  it('within a page, orders by the first rect\'s y ascending', () => {
+    const top = mark({ id: 'top', rects: [{ x: 0, y: 0.1, width: 0.1, height: 0.1 }] })
+    const bottom = mark({ id: 'bottom', rects: [{ x: 0, y: 0.8, width: 0.1, height: 0.1 }] })
+    expect(sortMarksForCycling([bottom, top]).map((m) => m.id)).toEqual(['top', 'bottom'])
+  })
+
+  it('is stable for exact ties', () => {
+    const a = mark({ id: 'a' })
+    const b = mark({ id: 'b' })
+    expect(sortMarksForCycling([a, b]).map((m) => m.id)).toEqual(['a', 'b'])
+  })
+
+  it('does not mutate the input array', () => {
+    const marks = [mark({ id: 'a', page: 2 }), mark({ id: 'b', page: 1 })]
+    const copy = [...marks]
+    sortMarksForCycling(marks)
+    expect(marks).toEqual(copy)
   })
 })

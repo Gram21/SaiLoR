@@ -602,6 +602,15 @@ button.paper-search-mode:hover {
 ::highlight(slr-pdf-search-active) {
   background: rgba(255, 145, 0, 0.75);
 }
+.pdf-annotation-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+}
 .pdf-zoom {
   display: flex;
   align-items: center;
@@ -657,6 +666,36 @@ button.paper-search-mode:hover {
   border-radius: 50%;
   background: var(--accent);
   border: 1px solid var(--bg);
+}
+.pdf-mark-note {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%, -100%);
+  border-radius: 50% 50% 50% 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+@keyframes pdf-mark-flash {
+  0%,
+  100% {
+    outline: 3px solid transparent;
+    outline-offset: 2px;
+  }
+  30% {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+.pdf-mark-rect.flash,
+.pdf-mark-note.flash {
+  animation: pdf-mark-flash 1.4s ease-out;
 }
 
 .pdf-highlight-toolbar,
@@ -714,6 +753,9 @@ button.paper-search-mode:hover {
   align-items: safe center;
   gap: 12px;
   background: var(--bg);
+}
+.pdf-scroll.placing-note {
+  cursor: crosshair;
 }
 .pdf-scroll .react-pdf__Page {
   /* The paper is always rendered "normal" (white), regardless of app theme. */

@@ -3,7 +3,7 @@ import { Document, Page } from 'react-pdf'
 import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import { useStore, selectCurrentPaper, PDF_ZOOM_MIN, PDF_ZOOM_MAX } from '../state/store'
-import { MARK_COLORS, type MarkRect } from '../model/pdfMarks'
+import { MARK_COLORS, sortMarksForCycling, type MarkRect } from '../model/pdfMarks'
 import { getPlatform } from '../platform'
 // Side-effect import: configures the pdf.js worker.
 import '../platform/pdfjs'
@@ -107,6 +107,14 @@ export function PdfViewer() {
   // (or automatically right after creating one, so a note can be typed at once).
   const [activeMark, setActiveMark] = useState<{ id: string; x: number; y: number } | null>(null)
 
+  // Annotation-tools row: sticky notes plus cycling through every mark.
+  const [annotationToolbarOpen, setAnnotationToolbarOpen] = useState(false)
+  const [placingNote, setPlacingNote] = useState(false)
+  const [cycleIndex, setCycleIndex] = useState<number | null>(null)
+  const [flashMarkId, setFlashMarkId] = useState<string | null>(null)
+  const flashTimeoutRef = useRef<number | undefined>(undefined)
+  const sortedMarks = useMemo(() => sortMarksForCycling(marks), [marks])
+
   const [url, setUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [needsFolderGrant, setNeedsFolderGrant] = useState(false)
@@ -171,6 +179,10 @@ export function PdfViewer() {
     setUrl(null)
     setSelectionToolbar(null)
     setActiveMark(null)
+    setPlacingNote(false)
+    setCycleIndex(null)
+    setFlashMarkId(null)
+    if (flashTimeoutRef.current !== undefined) window.clearTimeout(flashTimeoutRef.current)
     revokeRef.current?.()
     revokeRef.current = undefined
     if (!pdfPath) return
@@ -205,6 +217,12 @@ export function PdfViewer() {
   // Revoke the last object URL when the viewer itself unmounts (the effect
   // above already revokes on every paper/handle change, via revokeRef).
   useEffect(() => () => revokeRef.current?.(), [])
+
+  // Clear a pending flash timeout when the viewer unmounts (the load effect
+  // above already clears it on every paper change).
+  useEffect(() => () => {
+    if (flashTimeoutRef.current !== undefined) window.clearTimeout(flashTimeoutRef.current)
+  }, [])
 
   // The explicit "Choose folder…" action: a real click, so the native picker
   // is guaranteed to open (some browsers refuse it otherwise) and the
@@ -366,6 +384,39 @@ export function PdfViewer() {
     setSelectionToolbar(null)
     window.getSelection()?.removeAllRanges()
     if (id) setActiveMark({ id, x, y })
+  }
+
+  /** Advance the annotation-cycling cursor and flash the mark it lands on.
+   *  `cycleIndex` starts `null` (nothing cycled to yet); the first Next/Prev
+   *  then lands on the first/last mark respectively. */
+  const cycleTo = (dir: 1 | -1) => {
+    const total = sortedMarks.length
+    if (total === 0) return
+    const i = cycleIndex ?? (dir === 1 ? -1 : 0)
+    const next = (i + dir + total) % total
+    setCycleIndex(next)
+    const mark = sortedMarks[next]
+    scrollToPage(mark.page)
+    setFlashMarkId(mark.id)
+    if (flashTimeoutRef.current !== undefined) window.clearTimeout(flashTimeoutRef.current)
+    flashTimeoutRef.current = window.setTimeout(() => setFlashMarkId(null), 1500)
+  }
+
+  /** While `placingNote` is active, a plain click inside a page drops a
+   *  sticky note at that point and opens its comment popover — one shot,
+   *  same as `commitHighlight` does for a selection. */
+  const placeNote = (e: React.MouseEvent) => {
+    if (!placingNote) return
+    const page = pageNumberForNode(e.target as Node)
+    if (page === null) return
+    const pageEl = pageRefs.current[page - 1]
+    if (!pageEl) return
+    const pageRect = pageEl.getBoundingClientRect()
+    const x = (e.clientX - pageRect.left) / pageRect.width
+    const y = (e.clientY - pageRect.top) / pageRect.height
+    const id = addHighlight(page, [{ x, y, width: 0.02, height: 0.02 }], undefined, 'note')
+    setPlacingNote(false)
+    if (id) setActiveMark({ id, x: e.clientX, y: e.clientY })
   }
 
   // When an in-PDF link is clicked, the pdf.js LinkService scrolls to the
@@ -532,42 +583,63 @@ export function PdfViewer() {
           >
             {pageMarks.length > 0 && (
               <div className="pdf-marks-overlay">
-                {pageMarks.map((mark) => (
-                  <div key={mark.id}>
-                    {mark.rects.map((r, ri) => (
+                {pageMarks.map((mark) => {
+                  const onOpen = (e: React.MouseEvent) => {
+                    e.stopPropagation()
+                    setSelectionToolbar(null)
+                    setActiveMark({ id: mark.id, x: e.clientX, y: e.clientY })
+                  }
+                  const flash = flashMarkId === mark.id ? ' flash' : ''
+                  if (mark.kind === 'note') {
+                    return (
                       <div
-                        key={ri}
-                        className="pdf-mark-rect"
+                        key={mark.id}
+                        className={`pdf-mark-note${flash}`}
                         style={{
-                          left: `${r.x * 100}%`,
-                          top: `${r.y * 100}%`,
-                          width: `${r.width * 100}%`,
-                          height: `${r.height * 100}%`,
+                          left: `${mark.rects[0].x * 100}%`,
+                          top: `${mark.rects[0].y * 100}%`,
                           background: mark.color,
                         }}
                         title={mark.comment || undefined}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectionToolbar(null)
-                          setActiveMark({ id: mark.id, x: e.clientX, y: e.clientY })
-                        }}
-                      />
-                    ))}
-                    {mark.comment && (
-                      <div
-                        className="pdf-mark-comment-dot"
-                        style={{ left: `${mark.rects[0].x * 100}%`, top: `${mark.rects[0].y * 100}%` }}
-                        aria-hidden="true"
-                      />
-                    )}
-                  </div>
-                ))}
+                        onClick={onOpen}
+                      >
+                        📌
+                      </div>
+                    )
+                  }
+                  return (
+                    <div key={mark.id}>
+                      {mark.rects.map((r, ri) => (
+                        <div
+                          key={ri}
+                          className={`pdf-mark-rect${flash}`}
+                          style={{
+                            left: `${r.x * 100}%`,
+                            top: `${r.y * 100}%`,
+                            width: `${r.width * 100}%`,
+                            height: `${r.height * 100}%`,
+                            background: mark.color,
+                          }}
+                          title={mark.comment || undefined}
+                          onClick={onOpen}
+                        />
+                      ))}
+                      {mark.comment && (
+                        <div
+                          className="pdf-mark-comment-dot"
+                          style={{ left: `${mark.rects[0].x * 100}%`, top: `${mark.rects[0].y * 100}%` }}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </Page>
         )
       }),
-    [numPages, renderWidth, onTextLayerRendered, marks],
+    [numPages, renderWidth, onTextLayerRendered, marks, flashMarkId],
   )
 
   // Paint the highlights and scroll the active match into view.
@@ -716,6 +788,21 @@ export function PdfViewer() {
           )}
           <button
             type="button"
+            className={`icon-btn${annotationToolbarOpen ? ' active' : ''}`}
+            title="Annotation tools"
+            aria-label="Annotation tools"
+            aria-pressed={annotationToolbarOpen}
+            onClick={() =>
+              setAnnotationToolbarOpen((open) => {
+                if (open) setPlacingNote(false)
+                return !open
+              })
+            }
+          >
+            📝
+          </button>
+          <button
+            type="button"
             className={`icon-btn${searchOpen ? ' active' : ''}`}
             title="Search in PDF (Ctrl+F)"
             aria-label="Search in PDF"
@@ -814,13 +901,53 @@ export function PdfViewer() {
           </button>
         </div>
       )}
+      {annotationToolbarOpen && (
+        <div className="pdf-annotation-toolbar" role="toolbar" aria-label="Annotation tools">
+          <button
+            type="button"
+            className={`icon-btn${placingNote ? ' active' : ''}`}
+            title="Add sticky note"
+            aria-label="Add sticky note"
+            aria-pressed={placingNote}
+            onClick={() => setPlacingNote((v) => !v)}
+          >
+            📌
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            title="Previous annotation"
+            aria-label="Previous annotation"
+            onClick={() => cycleTo(-1)}
+            disabled={sortedMarks.length === 0}
+          >
+            ‹
+          </button>
+          <span className="pdf-search-count">
+            {sortedMarks.length === 0
+              ? '0 / 0'
+              : `${cycleIndex === null ? '–' : cycleIndex + 1} / ${sortedMarks.length}`}
+          </span>
+          <button
+            type="button"
+            className="icon-btn"
+            title="Next annotation"
+            aria-label="Next annotation"
+            onClick={() => cycleTo(1)}
+            disabled={sortedMarks.length === 0}
+          >
+            ›
+          </button>
+        </div>
+      )}
       <div
-        className="pdf-scroll"
+        className={`pdf-scroll${placingNote ? ' placing-note' : ''}`}
         ref={containerRef}
         onMouseUp={captureSelection}
         onKeyUp={captureSelection}
         onScroll={updateCurrentPage}
         onClickCapture={onPdfClickCapture}
+        onClick={placeNote}
       >
         {error ? (
           <div className="pdf-error">Could not load PDF: {error}</div>
