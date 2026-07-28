@@ -601,25 +601,9 @@ copy‑paste runnable: save it as `project.json`, put the two PDFs under `pdfs/`
 
 ## 7. Opening a project
 
-There are three ways to open a project; pick whichever fits how you're running SaiLoR.
-
-- **In the app — Open ▾ menu.** Click **Open…** to load a local JSON file, or reopen one of the
-  recent projects. (Recent projects and in‑place saving need the desktop app or a Chromium
-  browser; other browsers offer only "Open file…" and download saves.)
-- **Hosted browser build — `?project=<url>`.** Link straight to a project that lives on the same
-  host by adding a `?project=` query parameter pointing at the JSON. The app fetches it and
-  resolves its PDFs relative to that URL, for example:
-
-  ```
-  https://your.host/?project=/reviews/2026/project.json
-  ```
-
-- **Docker deployment — the mounted volume.** Point the volume in `docker-compose.yml` at your
-  folder of JSON files and their `pdfs/` folders (it defaults to the bundled `./samples`). Whatever
-  folder you mount is served read‑only under `/projects/`, so you open a review with, e.g.,
-  `http://localhost:8080/?project=/projects/my-review.json`.
-
-For full deployment and hosting details, see the [README](../README.md#deployment).
+**In the app — Open ▾ menu.** Click **Open…** to load a local JSON file, or reopen one of the
+recent projects. SaiLoR is a desktop (Electron) app — see the [README](../README.md#deployment) for
+building installers.
 
 ---
 

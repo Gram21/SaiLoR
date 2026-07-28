@@ -190,8 +190,8 @@ npm run typecheck
 ├── public/logo.svg        App logo — source of truth; also shown on the welcome screen
 ├── build/icon.png         Generated from public/logo.svg (dock / packaged-bundle icon)
 ├── public/favicon.svg     Browser favicon (separate, hand-simplified for 16px tabs)
-├── Dockerfile, docker-compose.yml, nginx.conf, Dockerfile.dev, Dockerfile.electron  Left in the repo but no longer a meaningful way to run SaiLoR: they build/serve the static web SPA, which now only shows the discontinuation notice at runtime regardless of what's mounted. See "SaiLoR is Electron-desktop-only" above.
-├── docker-compose.dev.yml Dev stack — `browser` (dev server, same discontinuation caveat) / `electron` Compose profiles
+├── Dockerfile.electron    Debian image that runs electron-builder — Linux installers into ./release/
+├── docker-compose.dev.yml Builds the Dockerfile.electron image (`docker compose -f docker-compose.dev.yml run --rm electron`)
 ├── vite.config.ts         Vite + vitest + electron plugin config
 ├── tsconfig*.json         TypeScript project references (app / node)
 └── package.json           Scripts, deps, electron-builder config
