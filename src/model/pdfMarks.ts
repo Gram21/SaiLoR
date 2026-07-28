@@ -34,6 +34,9 @@ export interface PdfMark {
   id: string
   /** 1-indexed, matching react-pdf/pdf.js page numbering. */
   page: number
+  /** A highlight: one rect per wrapped line. A note: exactly one rect, whose
+   *  x/y is the pinned point (width/height are unused, kept non-zero only
+   *  because `isMarkRect` requires finite numbers). */
   rects: MarkRect[]
   /** A CSS color (this app only ever writes one of `MARK_COLORS`, but a
    *  hand-edited file's value is passed through rather than rejected). */
@@ -42,6 +45,9 @@ export interface PdfMark {
   comment: string
   createdAt: string
   updatedAt: string
+  /** 'highlight' is the default/legacy value — every mark written before this
+   *  field existed is a highlight. */
+  kind: 'highlight' | 'note'
 }
 
 /** The palette offered when creating or recoloring a highlight — the same
@@ -77,6 +83,7 @@ export function parseMarks(raw: unknown): PdfMark[] {
       comment: typeof e.comment === 'string' ? e.comment : '',
       createdAt: typeof e.createdAt === 'string' ? e.createdAt : '',
       updatedAt: typeof e.updatedAt === 'string' ? e.updatedAt : '',
+      kind: e.kind === 'note' ? 'note' : 'highlight',
     })
   }
   return out
@@ -106,6 +113,13 @@ export function mergeMarksList(ours: PdfMark[], theirs: PdfMark[]): PdfMark[] {
     if (t.updatedAt && (!o.updatedAt || t.updatedAt > o.updatedAt)) byId.set(t.id, t)
   }
   return [...byId.values()]
+}
+
+/** Stable reading order for cycling through every mark on a PDF (the "next/
+ *  previous annotation" toolbar in `PdfViewer`): top-to-bottom by page, then
+ *  top-to-bottom within a page by the first rect's `y`. */
+export function sortMarksForCycling(marks: PdfMark[]): PdfMark[] {
+  return [...marks].sort((a, b) => a.page - b.page || a.rects[0].y - b.rects[0].y)
 }
 
 /**

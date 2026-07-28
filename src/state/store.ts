@@ -423,11 +423,13 @@ interface AppState {
   currentPdfMarks: () => PdfMark[]
   /** Highlights the selection described by `page`/`rects`, in the color
    *  given (or the first of `MARK_COLORS`) — the standard "select text,
-   *  highlight it" a PDF viewer offers. Returns the new mark's id so the
-   *  caller can open its comment popover right away. Not part of the
-   *  annotation undo stack (see `pdfMarks.ts`'s own doc comment on why marks
-   *  are a separate, lower-stakes concern from an annotation answer). */
-  addHighlight: (page: number, rects: MarkRect[], color?: string) => string | null
+   *  highlight it" a PDF viewer offers. `kind` defaults to 'highlight'; pass
+   *  'note' to drop a sticky note (a single pinned point) instead. Returns
+   *  the new mark's id so the caller can open its comment popover right
+   *  away. Not part of the annotation undo stack (see `pdfMarks.ts`'s own
+   *  doc comment on why marks are a separate, lower-stakes concern from an
+   *  annotation answer). */
+  addHighlight: (page: number, rects: MarkRect[], color?: string, kind?: PdfMark['kind']) => string | null
   /** Replaces a mark's comment text (`''` clears it back to a plain highlight
    *  with no note). No-op if `id` isn't a mark on the current paper/reviewer. */
   setMarkComment: (id: string, comment: string) => void
@@ -1368,7 +1370,7 @@ export const useStore = create<AppState>()(
       return currentMarks(s.project, s.currentReviewer, paper, false) ?? EMPTY_MARKS
     },
 
-    addHighlight: (page, rects, color) => {
+    addHighlight: (page, rects, color, kind) => {
       const prev = get()
       if (!prev.project || rects.length === 0) return null
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) return null
@@ -1387,6 +1389,7 @@ export const useStore = create<AppState>()(
           comment: '',
           createdAt: now,
           updatedAt: now,
+          kind: kind ?? 'highlight',
         })
         s.dirty = true
       })
