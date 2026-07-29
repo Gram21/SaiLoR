@@ -1399,10 +1399,12 @@ button.paper-search-mode:hover {
   position: relative;
 }
 /* Horizontally centered on the annotation panel, not the trigger button;
-   vertically, right under whichever button opened it. `left`/`top`/`width`
-   are set inline (Field.tsx) from the panel's and button's own bounding
-   boxes, and this `translateX` is what turns the seeded `left` into the
-   popover's horizontal center rather than its corner. */
+   vertically, right under whichever button opened it — or above it, when the
+   button sits too near the bottom of the window. `left`/`width` plus either
+   `top` or `bottom`, and a `max-height` for the room actually available, are
+   set inline (Field.tsx) from the panel's and button's own bounding boxes;
+   this `translateX` is what turns the seeded `left` into the popover's
+   horizontal center rather than its corner. */
 .field-link-popover {
   position: fixed;
   transform: translateX(-50%);
@@ -1419,7 +1421,9 @@ button.paper-search-mode:hover {
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
   /* User-resizable (the popover's own width is only seeded once, at open,
      from the annotation panel's width — see Field.tsx) — needs `overflow`
-     other than visible for the resize handle to appear. */
+     other than visible for the resize handle to appear. `auto` is also what
+     makes the inline `max-height` scrollable rather than clipping: a
+     `fixed` popover can't be reached by scrolling the page behind it. */
   resize: horizontal;
   overflow: auto;
 }

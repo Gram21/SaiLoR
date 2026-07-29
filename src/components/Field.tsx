@@ -234,13 +234,29 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
   // isn't fought on the next render. `position: fixed` plus a
   // `translateX(-50%)` in the CSS is what turns the seeded `left` into the
   // popover's horizontal center rather than its corner.
-  const [placement] = useState<{ left: number; top: number; width: number } | undefined>(() => {
+  //
+  // Because it is `fixed`, anything hanging below the viewport is simply
+  // unreachable — the page behind it scrolls, the popover doesn't. So for a
+  // field near the bottom of the window we flip it above the button, and
+  // either way cap its height to the room actually available; the popover's
+  // own `overflow: auto` then makes the overflow scrollable.
+  const [placement] = useState<React.CSSProperties | undefined>(() => {
     const panel = document.querySelector('.panel.annotations')
     const button = triggerRef.current
     if (!panel || !button) return undefined
     const panelRect = panel.getBoundingClientRect()
     const buttonRect = button.getBoundingClientRect()
-    return { left: panelRect.left + panelRect.width / 2, top: buttonRect.bottom + 1, width: panelRect.width * 0.95 }
+    const left = panelRect.left + panelRect.width / 2
+    const width = panelRect.width * 0.95
+
+    const MARGIN = 8 // breathing room against the viewport edge
+    const MIN_BELOW = 180 // below this, flipping above is worth it
+    const below = window.innerHeight - buttonRect.bottom - 1 - MARGIN
+    const above = buttonRect.top - 1 - MARGIN
+    if (below < MIN_BELOW && above > below) {
+      return { left, width, bottom: window.innerHeight - buttonRect.top + 1, maxHeight: above }
+    }
+    return { left, width, top: buttonRect.bottom + 1, maxHeight: below }
   })
 
   // Dismiss on Escape or an outside mousedown — same ancestry-checked pattern
