@@ -18,6 +18,10 @@ import { linkifyText } from '../model/linkify'
  * link. Left-click keeps its existing meaning (marking the field as read); this
  * is additive, not a replacement.
  */
+// Mirrors `.tip { max-width: 280px }` in src/styles/index.css — keep in sync.
+const TIP_MAX_WIDTH = 280
+const TIP_MARGIN = 8
+
 export function NodeName({
   def,
   className = 'anno-name',
@@ -69,7 +73,8 @@ export function NodeName({
     if (!r) return
     const spaceBelow = window.innerHeight - r.bottom
     const openUp = spaceBelow < 80 && r.top > spaceBelow
-    setCoords(openUp ? { x: r.left, bottom: window.innerHeight - r.top + 6 } : { x: r.left, top: r.bottom + 6 })
+    const x = Math.max(TIP_MARGIN, Math.min(r.left, window.innerWidth - TIP_MAX_WIDTH - TIP_MARGIN))
+    setCoords(openUp ? { x, bottom: window.innerHeight - r.top + 6 } : { x, top: r.bottom + 6 })
   }
   const hide = () => setCoords(null)
 
