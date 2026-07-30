@@ -1219,6 +1219,7 @@ button.paper-search-mode:hover {
 .anno-name.has-desc:focus-visible {
   text-decoration-color: var(--accent);
 }
+/* max-width mirrored in NodeName.tsx's TIP_MAX_WIDTH — keep in sync. */
 .tip {
   position: fixed;
   z-index: 300;
