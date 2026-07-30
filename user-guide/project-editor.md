@@ -31,6 +31,9 @@ Each row is one field or group:
   stays free text.
 - **Required** — the reviewer must fill it in before Validate is satisfied. Not offered on *Yes/No*
   fields; see [Things to know](things-to-know.md#a-smaller-one-a-yesno-field-can-never-be-reported-as-missing).
+- **Show only if** — pick a sibling field here to hide this one until that sibling has an answer (a
+  checked *Yes/No*, or anything non-empty for other types). Leave it on *Always visible* for no gating.
+  Only fields at the same level (same group, or the top level) can be picked.
 - **Drag a row's ⠿ handle** to reorder or nest it: drop near a row's top or bottom edge to place it
   before or after; drop in the middle of a row to nest it inside.
 

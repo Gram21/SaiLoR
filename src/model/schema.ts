@@ -34,6 +34,19 @@ export interface AnnotationDef {
   options?: string[]
   /** The reviewer must fill this field in. Defaults to false. */
   required?: boolean
+  /**
+   * Name of a sibling field (in this same `children` array, or the same
+   * root-level list) that gates this node's visibility: hidden until that
+   * sibling has an answer (a positive answer for a boolean, any non-empty
+   * value otherwise). An invalid reference — self, a group with no `type`,
+   * or a name that doesn't exist among the siblings — is silently dropped at
+   * resolve time rather than rejected, the same "degrade defensively on
+   * hand-edited data" convention used elsewhere in this schema. In
+   * particular, a stale reference left behind by renaming/removing the
+   * target sibling in the editor is *not* tracked or warned about — it just
+   * quietly stops gating anything next time the project loads.
+   */
+  visibleIf?: string
   children?: AnnotationDef[]
 }
 
@@ -50,6 +63,7 @@ export interface ResolvedDef {
   /** Enum values for a `string` field (renders as a filterable dropdown). */
   options?: string[]
   required: boolean
+  visibleIf?: string
   children: ResolvedDef[]
 }
 
@@ -70,6 +84,7 @@ export const annotationDefSchema: z.ZodType<AnnotationDef> = z.lazy(() =>
       description: z.string().optional(),
       options: z.array(z.string()).optional(),
       required: z.boolean().optional(),
+      visibleIf: z.string().optional(),
       children: z.array(annotationDefSchema).optional(),
     })
     .strict()
@@ -312,6 +327,15 @@ function resolveDefs(defs: AnnotationDef[], parentPath: string): ResolvedDef[] {
       // offers, and an existing file's stray flag is cleared here rather than
       // rejected, so a file that currently loads keeps loading.
       required: def.type === 'boolean' ? false : (def.required ?? false),
+      // Kept only when it points at a real, answerable sibling in this same
+      // array and isn't a self-reference — see the doc comment on
+      // `AnnotationDef.visibleIf`. Dropped silently otherwise.
+      visibleIf:
+        def.visibleIf !== undefined &&
+        def.visibleIf !== def.name &&
+        defs.some((sib) => sib.name === def.visibleIf && sib.type !== undefined)
+          ? def.visibleIf
+          : undefined,
       children: def.children ? resolveDefs(def.children, id) : [],
     }
   })

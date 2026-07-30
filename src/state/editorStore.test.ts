@@ -89,6 +89,21 @@ describe('schema conversion', () => {
     expect(back[1].required).toBe(false)
     expect(toAnnotationDefs(back)).toEqual(defs)
   })
+
+  it('round-trips visibleIf, and omits it when blank', () => {
+    const defs = toAnnotationDefs([
+      node('Relevant', { kind: 'boolean' }),
+      node('Study Type', { kind: 'string', visibleIf: 'Relevant' }),
+      node('Notes', { kind: 'string' }),
+    ])
+    expect(defs[1].visibleIf).toBe('Relevant')
+    expect(defs[2].visibleIf).toBeUndefined()
+
+    const back = fromAnnotationDefs(defs)
+    expect(back[1].visibleIf).toBe('Relevant')
+    expect(back[2].visibleIf).toBe('')
+    expect(toAnnotationDefs(back)).toEqual(defs)
+  })
 })
 
 describe('updateNode', () => {

@@ -59,6 +59,9 @@ export interface EditorNode {
   options: string[]
   /** The reviewer must fill this field in; meaningless on a group. */
   required: boolean
+  /** Name of a sibling field gating this node's visibility, or '' for "always
+   *  visible" — see `AnnotationDef.visibleIf`. */
+  visibleIf: string
   children: EditorNode[]
   collapsed: boolean
 }
@@ -142,6 +145,7 @@ export function makeNode(): EditorNode {
     description: '',
     options: [],
     required: false,
+    visibleIf: '',
     children: [],
     collapsed: false,
   }
@@ -166,6 +170,8 @@ export function toAnnotationDefs(nodes: EditorNode[]): AnnotationDef[] {
     // empty), so the editor neither offers it nor emits it — matching
     // `resolveSchema`, which drops it on load for the same reason.
     if (n.kind !== 'group' && n.kind !== 'boolean' && n.required) def.required = true
+    const vis = n.visibleIf.trim()
+    if (vis) def.visibleIf = vis
     if (n.children.length > 0) def.children = toAnnotationDefs(n.children)
     return def
   })
@@ -182,6 +188,7 @@ export function fromAnnotationDefs(defs: AnnotationDef[]): EditorNode[] {
     description: d.description ?? '',
     options: d.options ? [...d.options] : [],
     required: d.required ?? false,
+    visibleIf: d.visibleIf ?? '',
     children: d.children ? fromAnnotationDefs(d.children) : [],
     collapsed: false,
   }))
@@ -200,7 +207,7 @@ function findAndRemove(nodes: EditorNode[], uid: string): EditorNode | null {
   return null
 }
 
-function findNode(nodes: EditorNode[], uid: string): EditorNode | null {
+export function findNode(nodes: EditorNode[], uid: string): EditorNode | null {
   for (const n of nodes) {
     if (n.uid === uid) return n
     const found = findNode(n.children, uid)

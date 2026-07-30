@@ -3,6 +3,7 @@ import {
   useEditorStore,
   nodePathNames,
   parentUidOf,
+  findNode,
   type DropPosition,
   type EditorNode,
   type EditorNodeKind,
@@ -277,6 +278,15 @@ function SchemaNodeRow({
   const setOption = (index: number, value: string) =>
     updateNode(node.uid, { options: node.options.map((o, i) => (i === index ? value : o)) })
 
+  // Siblings this node can be gated on: same parent's children (or the root
+  // list, if this node has no parent), excluding groups and this node itself.
+  // Recomputed on every render (not memoized) — it depends on the whole tree
+  // (any sibling's name/kind), not just this node's own props.
+  const allNodes = useEditorStore((s) => s.nodes)
+  const parentUid = parentUidOf(allNodes, node.uid)
+  const siblings = parentUid ? (findNode(allNodes, parentUid)?.children ?? []) : allNodes
+  const siblingFieldOptions = siblings.filter((s) => s.uid !== node.uid && s.kind !== 'group')
+
   const rowClass = [
     'schema-row',
     dragging ? 'dragging' : '',
@@ -401,6 +411,22 @@ function SchemaNodeRow({
           value={node.description}
           onChange={(e) => updateNode(node.uid, { description: e.target.value })}
         />
+
+        {node.kind !== 'group' && (
+          <select
+            className="schema-input schema-visible-if"
+            title="Only show this field once the chosen sibling field has an answer"
+            value={node.visibleIf}
+            onChange={(e) => updateNode(node.uid, { visibleIf: e.target.value })}
+          >
+            <option value="">Always visible</option>
+            {siblingFieldOptions.map((s) => (
+              <option key={s.uid} value={s.name}>
+                Show only if "{s.name}" answered
+              </option>
+            ))}
+          </select>
+        )}
 
         <button
           type="button"

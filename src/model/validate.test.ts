@@ -130,6 +130,30 @@ describe('required', () => {
     const issues = validatePaper(schema, paper({ Count: [{ value: 0 }], Label: [{ value: '0' }] }))
     expect(issues).toEqual([])
   })
+
+  it('skips a required field hidden by an unanswered visibleIf gate', () => {
+    const schema = [
+      def({ name: 'Relevant', type: 'boolean' }),
+      def({ name: 'Claim', type: 'string', required: true, visibleIf: 'Relevant' }),
+    ]
+    const issues = validatePaper(
+      schema,
+      paper({ Relevant: [{ value: false }], Claim: [{ value: null }] }),
+    )
+    expect(issues).toEqual([])
+  })
+
+  it('flags the same required field once its visibleIf gate is answered', () => {
+    const schema = [
+      def({ name: 'Relevant', type: 'boolean' }),
+      def({ name: 'Claim', type: 'string', required: true, visibleIf: 'Relevant' }),
+    ]
+    const issues = validatePaper(
+      schema,
+      paper({ Relevant: [{ value: true }], Claim: [{ value: null }] }),
+    )
+    expect(kinds(issues)).toEqual(['required'])
+  })
 })
 
 describe('type', () => {

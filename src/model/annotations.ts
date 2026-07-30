@@ -178,6 +178,24 @@ export function hasAnnotations(defs: ResolvedDef[], tree: AnnotationValueTree): 
 }
 
 /**
+ * Whether `def` should be shown, given the current answers in `container` (the
+ * same-level value tree `def` is a sibling within). A field with no `visibleIf`
+ * is always visible. Otherwise it is visible exactly when the referenced
+ * sibling has been "answered": `true` for a boolean, or non-null/non-empty for
+ * anything else — deliberately generic, not type-aware, since a boolean's own
+ * default (`false`) already reads as "not answered" under this same rule.
+ * Fails open (visible) if the sibling is missing from `container` entirely —
+ * malformed/stale hand-edited data should never make a field un-showable.
+ */
+export function isFieldVisible(def: ResolvedDef, container: AnnotationValueTree): boolean {
+  if (!def.visibleIf) return true
+  const inst = container[def.visibleIf]?.[0]
+  if (!inst) return true
+  const v = inst.value
+  return v !== null && v !== undefined && v !== '' && v !== false
+}
+
+/**
  * Flatten every filled-in field value under the tree into one lowercased,
  * space-joined string, for "search by annotation content" mode. Mirrors
  * `hasAnnotations`'s walk shape rather than a fresh traversal.

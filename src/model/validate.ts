@@ -1,6 +1,11 @@
 import type { FieldType, ResolvedDef } from './schema'
 import { isField } from './schema'
-import { hasAnnotations, type AnnotationValueTree, type InstanceNode } from './annotations'
+import {
+  hasAnnotations,
+  isFieldVisible,
+  type AnnotationValueTree,
+  type InstanceNode,
+} from './annotations'
 import type { Paper, Project } from './project'
 import { YEAR_MIN, YEAR_MAX, isPlausibleYear } from './year'
 
@@ -167,6 +172,8 @@ function validateTree(
   const map = isPlainObject(tree) ? tree : {}
 
   for (const def of defs) {
+    if (!isFieldVisible(def, map as AnnotationValueTree)) continue
+
     const raw = map[def.name]
     const nodePath = [...ancestors, def.name].join(PATH_SEP)
 
