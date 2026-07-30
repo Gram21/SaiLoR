@@ -1,6 +1,12 @@
 import { fieldPath, useAiMark, useStore, type PathSeg } from '../state/store'
 import { isField, isRepeatable, type ResolvedDef } from '../model/schema'
-import { canAdd, canRemove, isFieldVisible, type AnnotationValueTree } from '../model/annotations'
+import {
+  canAdd,
+  canRemove,
+  isFieldVisible,
+  type AnnotationValueTree,
+  type FieldValue,
+} from '../model/annotations'
 import { Field } from './Field'
 import { NodeName } from './NodeName'
 
@@ -9,9 +15,14 @@ interface AnnotationNodeProps {
   /** Path to the container tree that holds this node's instances. */
   path: PathSeg[]
   container: AnnotationValueTree
+  /** Answers of every field along this node's direct ancestor chain, keyed
+   *  by name — how a `visibleIf` referencing an ancestor (not just a
+   *  same-level sibling) gets resolved. Empty at the root; extended with
+   *  this node's own value as it recurses into its children, below. */
+  ancestorValues?: Record<string, FieldValue>
 }
 
-export function AnnotationNode({ def, path, container }: AnnotationNodeProps) {
+export function AnnotationNode({ def, path, container, ancestorValues = {} }: AnnotationNodeProps) {
   const addInstance = useStore((s) => s.addInstance)
   const removeInstance = useStore((s) => s.removeInstance)
   // Clicking the label of a single-instance field confirms that one field.
@@ -88,16 +99,25 @@ export function AnnotationNode({ def, path, container }: AnnotationNodeProps) {
 
           {def.children.length > 0 && inst.children && (
             <div className="anno-children">
-              {def.children
-                .filter((child) => isFieldVisible(child, inst.children!))
-                .map((child) => (
-                  <AnnotationNode
-                    key={child.id}
-                    def={child}
-                    path={[...path, { name: def.name, index: i }]}
-                    container={inst.children!}
-                  />
-                ))}
+              {(() => {
+                // This instance's own value joins the ancestor chain handed
+                // to its children, so a grandchild's `visibleIf` can reach
+                // all the way up — not just to its immediate parent.
+                const nextAncestorValues = isField(def)
+                  ? { ...ancestorValues, [def.name]: inst.value ?? null }
+                  : ancestorValues
+                return def.children
+                  .filter((child) => isFieldVisible(child, inst.children!, nextAncestorValues))
+                  .map((child) => (
+                    <AnnotationNode
+                      key={child.id}
+                      def={child}
+                      path={[...path, { name: def.name, index: i }]}
+                      container={inst.children!}
+                      ancestorValues={nextAncestorValues}
+                    />
+                  ))
+              })()}
             </div>
           )}
         </div>

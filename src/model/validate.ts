@@ -4,6 +4,7 @@ import {
   hasAnnotations,
   isFieldVisible,
   type AnnotationValueTree,
+  type FieldValue,
   type InstanceNode,
 } from './annotations'
 import type { Paper, Project } from './project'
@@ -168,11 +169,18 @@ function validateTree(
   tree: unknown,
   ancestors: string[],
   emit: Emit,
+  // Answers of every field along this call's direct ancestor chain, keyed by
+  // name — how a `visibleIf` referencing an ancestor (not just a same-level
+  // sibling) gets resolved here, mirroring `AnnotationNode`'s
+  // `ancestorValues`. Unrelated to `ancestors` above, which is display-path
+  // labels, not gate values.
+  gateAncestors: Record<string, unknown> = {},
 ): void {
   const map = isPlainObject(tree) ? tree : {}
 
   for (const def of defs) {
-    if (!isFieldVisible(def, map as AnnotationValueTree)) continue
+    if (!isFieldVisible(def, map as AnnotationValueTree, gateAncestors as Record<string, FieldValue>))
+      continue
 
     const raw = map[def.name]
     const nodePath = [...ancestors, def.name].join(PATH_SEP)
@@ -223,7 +231,12 @@ function validateTree(
       const instance = rawInstance as InstanceNode
       if (isField(def)) validateField(def, instance.value, joined, emit)
       // A node may carry both a value and a sub-tree.
-      if (def.children.length > 0) validateTree(def.children, instance.children, path, emit)
+      if (def.children.length > 0) {
+        const nextGateAncestors = isField(def)
+          ? { ...gateAncestors, [def.name]: instance.value }
+          : gateAncestors
+        validateTree(def.children, instance.children, path, emit, nextGateAncestors)
+      }
     })
   }
 }

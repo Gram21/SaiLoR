@@ -179,19 +179,34 @@ export function hasAnnotations(defs: ResolvedDef[], tree: AnnotationValueTree): 
 
 /**
  * Whether `def` should be shown, given the current answers in `container` (the
- * same-level value tree `def` is a sibling within). A field with no `visibleIf`
- * is always visible. Otherwise it is visible exactly when the referenced
- * sibling has been "answered": `true` for a boolean, or non-null/non-empty for
- * anything else — deliberately generic, not type-aware, since a boolean's own
- * default (`false`) already reads as "not answered" under this same rule.
- * Fails open (visible) if the sibling is missing from `container` entirely —
- * malformed/stale hand-edited data should never make a field un-showable.
+ * same-level value tree `def` is a sibling within) and `ancestors` (the
+ * answers of every field along `def`'s direct ancestor chain, keyed by name —
+ * see `AnnotationNode`'s `ancestorValues`/`validateTree`'s `gateAncestors` for
+ * how callers build this up as they descend the tree). A field with no
+ * `visibleIf` is always visible. Otherwise `container` is checked first (a
+ * same-level sibling), then `ancestors` (an ancestor field) — it is visible
+ * exactly when whichever one matches has been "answered": `true` for a
+ * boolean, or non-null/non-empty for anything else — deliberately generic,
+ * not type-aware, since a boolean's own default (`false`) already reads as
+ * "not answered" under this same rule. Fails open (visible) if `visibleIf`
+ * names something found in neither place — malformed/stale hand-edited data
+ * should never make a field un-showable.
  */
-export function isFieldVisible(def: ResolvedDef, container: AnnotationValueTree): boolean {
+export function isFieldVisible(
+  def: ResolvedDef,
+  container: AnnotationValueTree,
+  ancestors: Record<string, FieldValue> = {},
+): boolean {
   if (!def.visibleIf) return true
-  const inst = container[def.visibleIf]?.[0]
-  if (!inst) return true
-  const v = inst.value
+  const localInst = container[def.visibleIf]?.[0]
+  let v: FieldValue | undefined
+  if (localInst) {
+    v = localInst.value
+  } else if (def.visibleIf in ancestors) {
+    v = ancestors[def.visibleIf]
+  } else {
+    return true
+  }
   return v !== null && v !== undefined && v !== '' && v !== false
 }
 

@@ -35,15 +35,20 @@ export interface AnnotationDef {
   /** The reviewer must fill this field in. Defaults to false. */
   required?: boolean
   /**
-   * Name of a sibling field (in this same `children` array, or the same
-   * root-level list) that gates this node's visibility: hidden until that
-   * sibling has an answer (a positive answer for a boolean, any non-empty
-   * value otherwise). An invalid reference — self, a group with no `type`,
-   * or a name that doesn't exist among the siblings — is silently dropped at
+   * Name of a field that gates this node's visibility: hidden until that
+   * field has an answer (a positive answer for a boolean, any non-empty
+   * value otherwise). It may name a sibling (in this same `children` array,
+   * or the same root-level list) OR any field along this node's direct
+   * ancestor chain — the parent, the parent's parent, and so on, as far up
+   * as the schema goes — so a field nested under "Field A" can gate on
+   * "Field A" itself, not only on its own siblings. It may NOT name a
+   * cousin (an ancestor's sibling, or anything off the straight lineage). An
+   * invalid reference — self, a group with no `type`, or a name that
+   * doesn't exist among the siblings/ancestors — is silently dropped at
    * resolve time rather than rejected, the same "degrade defensively on
    * hand-edited data" convention used elsewhere in this schema. In
    * particular, a stale reference left behind by renaming/removing the
-   * target sibling in the editor is *not* tracked or warned about — it just
+   * target field in the editor is *not* tracked or warned about — it just
    * quietly stops gating anything next time the project loads.
    */
   visibleIf?: string
@@ -252,7 +257,15 @@ export type RawPaper = z.infer<typeof paperSchema>
 
 export class SchemaError extends Error {}
 
-function resolveDefs(defs: AnnotationDef[], parentPath: string): ResolvedDef[] {
+function resolveDefs(
+  defs: AnnotationDef[],
+  parentPath: string,
+  // Names of fields along this array's direct lineage — the parent, its
+  // parent, and so on — that `visibleIf` may also reference, alongside a
+  // same-level sibling. Only a straight ancestor chain, never an ancestor's
+  // own siblings (a cousin field is not "the same lineage").
+  ancestorFieldNames: string[] = [],
+): ResolvedDef[] {
   const seen = new Set<string>()
   return defs.map((def) => {
     // Deliberately NOT trimmed. `normalizeTree` looks answers up by the
@@ -328,15 +341,23 @@ function resolveDefs(defs: AnnotationDef[], parentPath: string): ResolvedDef[] {
       // rejected, so a file that currently loads keeps loading.
       required: def.type === 'boolean' ? false : (def.required ?? false),
       // Kept only when it points at a real, answerable sibling in this same
-      // array and isn't a self-reference — see the doc comment on
+      // array, or a field somewhere in this node's direct ancestor chain, and
+      // isn't a self-reference — see the doc comment on
       // `AnnotationDef.visibleIf`. Dropped silently otherwise.
       visibleIf:
         def.visibleIf !== undefined &&
         def.visibleIf !== def.name &&
-        defs.some((sib) => sib.name === def.visibleIf && sib.type !== undefined)
+        (defs.some((sib) => sib.name === def.visibleIf && sib.type !== undefined) ||
+          ancestorFieldNames.includes(def.visibleIf))
           ? def.visibleIf
           : undefined,
-      children: def.children ? resolveDefs(def.children, id) : [],
+      children: def.children
+        ? resolveDefs(
+            def.children,
+            id,
+            def.type !== undefined ? [...ancestorFieldNames, def.name] : ancestorFieldNames,
+          )
+        : [],
     }
   })
 }

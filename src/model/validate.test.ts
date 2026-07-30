@@ -154,6 +154,37 @@ describe('required', () => {
     )
     expect(kinds(issues)).toEqual(['required'])
   })
+
+  it('skips a required grandchild field gated on a grandparent (an ancestor, not a sibling)', () => {
+    const schema = [
+      def({
+        name: 'Field A',
+        type: 'boolean',
+        children: [
+          def({
+            name: 'Field B',
+            type: 'string',
+            children: [def({ name: 'Field C', type: 'string', required: true, visibleIf: 'Field A' })],
+          }),
+        ],
+      }),
+    ]
+    const hidden = validatePaper(
+      schema,
+      paper({
+        'Field A': [{ value: false, children: { 'Field B': [{ value: 'x', children: { 'Field C': [{ value: null }] } }] } }],
+      }),
+    )
+    expect(hidden).toEqual([])
+
+    const shown = validatePaper(
+      schema,
+      paper({
+        'Field A': [{ value: true, children: { 'Field B': [{ value: 'x', children: { 'Field C': [{ value: null }] } }] } }],
+      }),
+    )
+    expect(kinds(shown)).toEqual(['required'])
+  })
 })
 
 describe('type', () => {
