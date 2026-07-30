@@ -67,6 +67,7 @@ export function AiDialog() {
   const rows = useAiStore((s) => s.rows)
   const applied = useAiStore((s) => s.applied)
   const scanned = useAiStore((s) => s.scanned)
+  const settingsOpen = useAiStore((s) => s.settingsOpen)
 
   const closeDialog = useAiStore((s) => s.closeDialog)
   const setSettingsOpen = useAiStore((s) => s.setSettingsOpen)
@@ -78,13 +79,13 @@ export function AiDialog() {
   const apply = useAiStore((s) => s.apply)
 
   useEffect(() => {
-    if (!open) return
+    if (!open || settingsOpen) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeDialog()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, closeDialog])
+  }, [open, settingsOpen, closeDialog])
 
   if (!open) return null
 
