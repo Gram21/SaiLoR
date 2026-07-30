@@ -7,7 +7,7 @@ import {
   annotationStateFor,
   completenessApplies,
   matchesFilter,
-  ANNOTATION_FILTERS,
+  annotationFiltersFor,
   ANNOTATION_FILTER_LABELS,
   type AnnotationFilter,
   type AnnotationState,
@@ -82,6 +82,7 @@ export function paperAnnotationState(
     currentTree(project, currentReviewer, paper),
     currentFinished(project, currentReviewer, paper) === true,
     completenessApplies(project, currentReviewer),
+    project.finishCheckbox,
   )
 }
 
@@ -294,6 +295,7 @@ export function PaperList() {
           currentFinished(project, currentReviewer, paper) === true,
           !!tree && hasAnnotations(schema, tree),
           required,
+          project.finishCheckbox,
         ),
       }
     })
@@ -467,7 +469,7 @@ export function PaperList() {
             value={annotationFilter}
             onChange={(e) => setAnnotationFilter(e.target.value as AnnotationFilter)}
           >
-            {ANNOTATION_FILTERS.map((f) => (
+            {annotationFiltersFor(project.finishCheckbox).map((f) => (
               <option key={f} value={f}>
                 {ANNOTATION_FILTER_LABELS[f][0].toUpperCase() + ANNOTATION_FILTER_LABELS[f].slice(1)}
               </option>

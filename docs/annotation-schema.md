@@ -57,6 +57,7 @@ The top‑level object has three keys:
   "config": {
     "schema": [],
     "ai": true,
+    "finishCheckbox": true,
     "reviewers": 1
   },
   "papers": []
@@ -83,6 +84,25 @@ sent to a third-party model — an embargoed corpus, or a review whose protocol 
 affects this project file; it is written out only when `false`, so a normal file never carries the
 key. The project editor exposes it as a checkbox (see §2 of the app's *New / Edit annotation JSON*
 screen).
+
+**`config.finishCheckbox` — how a paper counts as finished.** Optional, defaults to `true`.
+
+With the default, reviewers sign each paper off by hand: an **Annotation finished** checkbox sits at
+the top of the annotation panel, and only ticking it turns that paper's dot green in the paper list.
+A full form is not a sign-off — the point is that "done" is a judgement a person made about the
+extraction, not something inferred from the fields being non-empty. Tick it while a `required` field
+is still empty (or empty such a field afterwards) and the paper shows red until the two agree again.
+
+Set it to `false` and the sign-off step disappears: the checkbox is not shown, and a paper counts as
+finished exactly when its schema is fulfilled — every `required` field filled, or every field if the
+schema marks none required. Nothing can be red in this mode, since there is no declaration left for
+the data to contradict, and the paper list's filter drops its *With issues* option accordingly.
+
+Choose `false` when the schema itself already encodes what "complete" means and the extra click buys
+nothing; keep the default when a reviewer's own judgement of "I am done with this paper" is part of
+the protocol. Like `config.ai`, it is written out only when `false`, so a file that never sets it
+stays exactly as it was. Ticks recorded while it was on are kept in the per-paper annotation files
+untouched, so turning it back on restores them.
 
 Note that `config.ai` can only ever *restrict* the feature, not guarantee it: `true` (or omitting
 the key) does not by itself mean the button is available to whoever opens the file — the app may

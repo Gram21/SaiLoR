@@ -91,6 +91,39 @@ describe('the paper a project opens on', () => {
   })
 })
 
+describe('setAnnotationFinished with config.finishCheckbox: false', () => {
+  const noTick = JSON.stringify({
+    version: 1,
+    config: { schema: [{ name: 'A', type: 'string', required: true }], finishCheckbox: false },
+    papers: [{ id: 'p1', title: 'T', authors: [], pdf: 'a.pdf', annotations: {} }],
+  })
+
+  it('refuses to write a flag the project has said it ignores', () => {
+    // The panel hides the checkbox, so this guards a stale click or a future
+    // caller — writing the flag would dirty the file for a value nothing reads.
+    st().loadFromText(noTick, null, 'test.json')
+    st().selectPaper('p1')
+    st().setAnnotationFinished(true)
+    expect(paper().finished).toBe(false)
+    expect(st().dirty).toBe(false)
+  })
+
+  it('opens on the first paper whose schema is not yet fulfilled', () => {
+    const many = JSON.stringify({
+      version: 1,
+      config: { schema: [{ name: 'A', type: 'string', required: true }], finishCheckbox: false },
+      papers: [
+        { id: 'p1', title: 'P1', authors: [], pdf: 'a.pdf', annotations: { A: [{ value: 'x' }] } },
+        { id: 'p2', title: 'P2', authors: [], pdf: 'b.pdf', annotations: {} },
+      ],
+    })
+    // p1 counts as finished without anyone ticking anything, so the landing
+    // pick skips it exactly as it skips a ticked paper.
+    st().loadFromText(many, null, 'test.json')
+    expect(st().currentPaperId).toBe('p2')
+  })
+})
+
 describe('setAnnotationFilter', () => {
   it('resets to "all" when a project is closed, so the next one opens unfiltered', () => {
     st().loadFromText(project(), null, 'test.json')
