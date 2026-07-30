@@ -201,10 +201,10 @@ describe('startFromScreening / resolveScreeningImport', () => {
     expect(st.open).toBe(true)
     expect(st.mode).toBe('new')
     expect(st.screening).toBeNull() // the new project is an annotation project, not screening
-    const ids = st.papers.map((p) => p.id).sort()
-    expect(ids).toEqual(['inc', 'und', 'weird'])
+    const titles = st.papers.map((p) => p.title).sort()
+    expect(titles).toEqual(['Included', 'Undecided', 'Weird decision'])
 
-    const inc = st.papers.find((p) => p.id === 'inc')!
+    const inc = st.papers.find((p) => p.title === 'Included')!
     expect(inc.title).toBe('Included')
     expect(inc.authors).toBe('A')
     expect(inc.doi).toBe('d1')
@@ -219,8 +219,8 @@ describe('startFromScreening / resolveScreeningImport', () => {
   it('skip-undecided: excludes the undecided papers too', async () => {
     await useEditorStore.getState().startFromScreening()
     await useEditorStore.getState().resolveScreeningImport('skip-undecided')
-    const ids = useEditorStore.getState().papers.map((p) => p.id).sort()
-    expect(ids).toEqual(['inc'])
+    const titles = useEditorStore.getState().papers.map((p) => p.title).sort()
+    expect(titles).toEqual(['Included'])
   })
 
   it('cancel leaves the editor closed and clears the pending import', async () => {
@@ -329,7 +329,7 @@ describe('startFromScreening / resolveScreeningImport', () => {
     await useEditorStore.getState().startFromScreening()
     useEditorStore.getState().setScreeningImportKind('screening')
     await useEditorStore.getState().resolveScreeningImport('include-undecided')
-    const inc = useEditorStore.getState().papers.find((p) => p.id === 'inc')!
+    const inc = useEditorStore.getState().papers.find((p) => p.title === 'Included')!
     expect(inc.annotations).toEqual({})
   })
 
@@ -376,7 +376,7 @@ describe('startFromScreening / resolveScreeningImport', () => {
       excluded: 1,
       carried: 3,
     })
-    expect(useEditorStore.getState().papers.map((p) => p.id).sort()).toEqual(['inc', 'und', 'weird'])
+    expect(useEditorStore.getState().papers.map((p) => p.title).sort()).toEqual(['Included', 'Undecided', 'Weird decision'])
   })
 
   it('round-trips end to end: resolve -> buildProjectJson -> loadProject', async () => {
@@ -388,7 +388,7 @@ describe('startFromScreening / resolveScreeningImport', () => {
     const project = loadProject(JSON.stringify(json))
     expect(project.screening).toEqual({ reasons: ['Wrong topic', 'Duplicate'] })
     expect(project.schema.map((d) => d.name)).toEqual(['Decision', 'Reason'])
-    expect(project.papers.map((p) => p.id).sort()).toEqual(['inc', 'und', 'weird'])
+    expect(project.papers.map((p) => p.title).sort()).toEqual(['Included', 'Undecided', 'Weird decision'])
     // First-pass decisions are dropped — every carried paper starts undecided
     // under the new (full-text) reason list.
     expect(project.papers.every((p) => screeningStatus(p.annotations) === 'undecided')).toBe(true)
@@ -473,7 +473,7 @@ describe('startFromScreening / resolveScreeningImport', () => {
       await useEditorStore.getState().importFromScreening()
       await useEditorStore.getState().resolveScreeningImport('include-undecided')
 
-      const paper = useEditorStore.getState().papers.find((p) => p.id === 'inc')!
+      const paper = useEditorStore.getState().papers.find((p) => p.title === 'Included')!
       // Not the verbatim source value — that would point at nothing once
       // written under the open project's own directory.
       expect(paper.pdf).not.toBe('pdfs/inc.pdf')
@@ -496,7 +496,7 @@ describe('startFromScreening / resolveScreeningImport', () => {
       await useEditorStore.getState().importFromScreening()
       await useEditorStore.getState().resolveScreeningImport('include-undecided')
 
-      const paper = useEditorStore.getState().papers.find((p) => p.id === 'inc')!
+      const paper = useEditorStore.getState().papers.find((p) => p.title === 'Included')!
       expect(paper.pdf).toBe('')
       expect(relativeCalls).toHaveLength(0)
     })
@@ -512,10 +512,32 @@ describe('startFromScreening / resolveScreeningImport', () => {
       await useEditorStore.getState().startFromScreening()
       await useEditorStore.getState().resolveScreeningImport('include-undecided')
 
-      const paper = useEditorStore.getState().papers.find((p) => p.id === 'inc')!
+      const paper = useEditorStore.getState().papers.find((p) => p.title === 'Included')!
       expect(paper.pdf).toBe('pdfs/inc.pdf')
       expect(relativeCalls).toHaveLength(0)
     })
+  })
+
+  // Regression for the annotations/ folder collision: `target: 'start'`
+  // shares the source's directory, so a carried row must never reuse an id
+  // that already has files there — not even the id the naive suffix-2
+  // dedup would try next, if the source itself already used it.
+  it('never reuses a source id, even the suffix-2 form, when the source itself already used it', async () => {
+    openResult = {
+      text: screeningJson([
+        { id: 'inc', title: 'Included', authors: [], pdf: '', annotations: { Decision: [{ value: 'Include' }] } },
+        { id: 'inc-2', title: 'Excluded', authors: [], pdf: '', annotations: { Decision: [{ value: 'Exclude' }], Reason: [{ value: 'Duplicate' }] } },
+      ]),
+      handle: SOURCE_HANDLE,
+      name: 'screening.json',
+    }
+    await useEditorStore.getState().startFromScreening()
+    await useEditorStore.getState().resolveScreeningImport('include-undecided')
+
+    const sourceIds = new Set(['inc', 'inc-2'])
+    const papers = useEditorStore.getState().papers
+    expect(papers).toHaveLength(1)
+    for (const p of papers) expect(sourceIds.has(p.id)).toBe(false)
   })
 })
 

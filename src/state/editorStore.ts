@@ -740,6 +740,13 @@ export interface ScreeningImportDraft {
    *  'screening'` target inherits this number outright (see
    *  `resolveScreeningImport`), and one fact must not be stored two ways. */
   reviewers: number
+  /** Every id already present in the source project — not just the carried
+   *  rows, excluded ones too. A `target: 'start'` project is a directory
+   *  sibling of the source and an in-place `import` shares the open
+   *  project's directory in the same way, so any of these ids reused
+   *  verbatim would collide with a file the source project still owns
+   *  under its `annotations/` folder — see `resolveScreeningImport`. */
+  sourceIds: string[]
 }
 
 /** `annotations` is the consolidated tree — the one that ships, in both the
@@ -1764,6 +1771,7 @@ export const useEditorStore = create<EditorState>()(
           ...partition,
           pendingUnanimousCount: pendingUnanimousDecisions(project),
           reviewers: project.reviewers,
+          sourceIds: project.papers.map((p) => p.id),
         }
       })
     },
@@ -1805,6 +1813,7 @@ export const useEditorStore = create<EditorState>()(
           ...partition,
           pendingUnanimousCount: pendingUnanimousDecisions(project),
           reviewers: project.reviewers,
+          sourceIds: project.papers.map((p) => p.id),
         }
       })
     },
@@ -1892,6 +1901,13 @@ export const useEditorStore = create<EditorState>()(
       set((s) => {
         s.busy = false
         let rebasedIdx = 0
+        // `target: 'start'` puts the new project in the source's own
+        // directory (a sibling of its JSON), sharing its `annotations/`
+        // folder. A carried id verbatim-equal to any source paper's id —
+        // included, excluded, or otherwise — would make this pass's still-
+        // undecided (null) marks file overwrite the source pass's recorded
+        // decision the moment this project is saved.
+        const taken = new Set(draft.sourceIds)
         const rows: EditorPaper[] = carried.map((p, i) => {
           const hasSource = !!absolutes[i]
           // `target: 'start'` never rebases (correct by construction — see
@@ -1899,9 +1915,15 @@ export const useEditorStore = create<EditorState>()(
           // was computed, falling back to the verbatim value otherwise (no
           // source path at all, or the browser, which has no paths to rebase).
           const pdf = draft.target !== 'start' && hasSource ? (rebased[rebasedIdx++] ?? p.pdf) : p.pdf
+          let id = p.id
+          if (draft.target === 'start') {
+            let n = 2
+            while (taken.has(id)) id = `${p.id}-${n++}`
+            taken.add(id)
+          }
           return {
             uid: nextUid(),
-            id: p.id,
+            id,
             title: p.title,
             authors: p.authors.join(', '),
             doi: p.doi ?? '',
@@ -1990,6 +2012,12 @@ export const useEditorStore = create<EditorState>()(
           // already in the project (by DOI, then normalized title — same
           // rule `importReferences` uses) is skipped rather than duplicated.
           const existingIds = new Set(s.papers.map((p) => p.id))
+          // Same-directory import: marks-*.json filenames are identical
+          // between screening and annotation mode, so a row whose id matches
+          // one already in the source project's `annotations/` folder would
+          // overwrite that source paper's PDF marks on save, even though it
+          // is not a duplicate paper by title/DOI/year.
+          for (const id of draft.sourceIds) existingIds.add(id)
           const toAdd: EditorPaper[] = []
           let skipped = 0
           for (const row of rows) {
