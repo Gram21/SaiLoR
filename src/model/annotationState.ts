@@ -188,8 +188,11 @@ export const ANNOTATION_FILTER_LABELS: Record<AnnotationFilter, string> = {
  * above them cannot disagree about what "in progress" contains.
  *
  * `null` — the seats with no annotation state at all (screening,
- * Consolidation) — matches only "all", but those seats never render the
- * dropdown, so in practice nothing reaches this with a filter set.
+ * Consolidation) — matches only "all". A stale non-'all' filter carried over
+ * from another seat (e.g. a numbered reviewer's filter surviving a switch to
+ * Consolidation) CAN reach this with `state === null`; callers must decide
+ * for themselves whether the current seat is filterable at all before
+ * applying `annotationFilter` (PaperList does this via `isConsolidationSeat`).
  */
 export function matchesFilter(state: AnnotationState | null, filter: AnnotationFilter): boolean {
   if (filter === 'all') return true

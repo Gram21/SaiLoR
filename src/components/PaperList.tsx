@@ -338,11 +338,11 @@ export function PaperList() {
         if (screeningFilter === 'all' || !project) return true
         return paperScreeningStatus(project, e.paper, currentReviewer) === screeningFilter
       }
-      // `e.state` is null exactly where the dropdown is not rendered (the
-      // Consolidation seat), and `matchesFilter` passes everything under
-      // "all", so switching into that seat can never leave a filter set that
-      // hides every paper.
-      return matchesFilter(e.state, annotationFilter)
+      // The Consolidation seat has no annotation state (`e.state` is null
+      // there) and no filter dropdown, so a stale `annotationFilter` from a
+      // numbered reviewer must not be applied to it — otherwise it hides
+      // every paper with no visible control to clear it.
+      return isConsolidationSeat || matchesFilter(e.state, annotationFilter)
     })
     if (words.length === 0) return base
     const scored = base
