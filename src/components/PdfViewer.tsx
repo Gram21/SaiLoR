@@ -1081,7 +1081,7 @@ export function PdfViewer() {
           style={
             toolbarPos
               ? { left: toolbarPos.left, top: toolbarPos.top }
-              : { left: selectionToolbar.x, top: selectionToolbar.y, visibility: 'hidden' }
+              : { left: selectionToolbar.x, top: selectionToolbar.y, opacity: 0, pointerEvents: 'none' }
           }
           onClick={(e) => e.stopPropagation()}
         >
@@ -1109,7 +1109,7 @@ export function PdfViewer() {
               style={
                 markPopoverPos
                   ? { left: markPopoverPos.left, top: markPopoverPos.top }
-                  : { left: activeMark.x, top: activeMark.y, visibility: 'hidden' }
+                  : { left: activeMark.x, top: activeMark.y, opacity: 0, pointerEvents: 'none' }
               }
               onClick={(e) => e.stopPropagation()}
             >
