@@ -989,6 +989,21 @@ export const useGitStore = create<GitState>()(
       requestSwitchBranch: (branch) => {
         const repo = get().repo
         if (!repo || branch === repo.branch) return
+
+        // Same guard as runPull: `git status` sees the file on disk, not the
+        // reviewer's unsaved annotations in memory. A clean checkout reloads
+        // the project from disk — without this check that would silently
+        // discard unsaved work.
+        if (useStore.getState().dirty) {
+          set((s) => {
+            if (s.panel) {
+              s.panel.error =
+                'Save the project first — switching branches works on the file on disk, and your ' +
+                'unsaved annotations would be lost.'
+            }
+          })
+          return
+        }
         const dirty = (get().panel?.status?.changes.length ?? 0) > 0
         if (!dirty) {
           void runCleanCheckout(branch)

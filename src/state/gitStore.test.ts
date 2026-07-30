@@ -661,6 +661,20 @@ describe('requestSwitchBranch / resolveBranchSwitchPrompt', () => {
     expect(useGitStore.getState().panel?.branchSwitchPrompt).toBeNull()
   })
 
+  it('refuses to switch when in-memory annotations are unsaved, even on a clean git status', async () => {
+    statusChanges = []
+    await useGitStore.getState().refreshStatus()
+    useStore.setState({ dirty: true })
+
+    useGitStore.getState().requestSwitchBranch('feature')
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(checkoutCalls).toEqual([])
+    expect(useGitStore.getState().panel?.branchSwitchPrompt).toBeNull()
+    expect(useGitStore.getState().panel?.error).toMatch(/save the project/i)
+  })
+
   it('opens the three-way prompt when the project has uncommitted changes', async () => {
     statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
     await useGitStore.getState().refreshStatus()
