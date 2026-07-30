@@ -185,6 +185,34 @@ describe('required', () => {
     )
     expect(kinds(shown)).toEqual(['required'])
   })
+
+  it('skips a whole group (and its required children) hidden by visibleIf', () => {
+    const schema = [
+      def({ name: 'Relevant', type: 'boolean' }),
+      def({
+        name: 'Findings',
+        visibleIf: 'Relevant',
+        children: [def({ name: 'Claim', type: 'string', required: true })],
+      }),
+    ]
+    const hidden = validatePaper(
+      schema,
+      paper({
+        Relevant: [{ value: false }],
+        Findings: [{ children: { Claim: [{ value: null }] } }],
+      }),
+    )
+    expect(hidden).toEqual([])
+
+    const shown = validatePaper(
+      schema,
+      paper({
+        Relevant: [{ value: true }],
+        Findings: [{ children: { Claim: [{ value: null }] } }],
+      }),
+    )
+    expect(kinds(shown)).toEqual(['required'])
+  })
 })
 
 describe('type', () => {

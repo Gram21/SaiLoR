@@ -31,12 +31,14 @@ Each row is one field or group:
   stays free text.
 - **Required** — the reviewer must fill it in before Validate is satisfied. Not offered on *Yes/No*
   fields; see [Things to know](things-to-know.md#a-smaller-one-a-yesno-field-can-never-be-reported-as-missing).
-- **Show only if** — pick a field here to hide this one until that field has an answer (a checked
-  *Yes/No*, or anything non-empty for other types). Leave it on *Always visible* for no gating. The
-  dropdown offers fields at the *same level* (same group, or the top level) and, separately, any
-  *ancestor* field this one is nested under — the group it's inside, that group's own group, and so
-  on — so "hide this field until its parent field is answered" works directly. A field further removed
-  than that (a cousin, e.g. a sibling of one of those ancestors) can't be picked.
+- **Show only if** — pick a field here to hide this row until that field has an answer (a checked
+  *Yes/No*, or anything non-empty for other types). Available on *Group* rows too, not just fields —
+  gating a group hides everything nested inside it at once, rather than each field individually. Leave
+  it on *Always visible* for no gating. The dropdown offers fields at the *same level* (same group, or
+  the top level) and, separately, any *ancestor* field this row is nested under — the group it's
+  inside, that group's own group, and so on — so "hide this until its parent field is answered" works
+  directly. A field further removed than that (a cousin, e.g. a sibling of one of those ancestors)
+  can't be picked.
 - **Drag a row's ⠿ handle** to reorder or nest it: drop near a row's top or bottom edge to place it
   before or after; drop in the middle of a row to nest it inside.
 
