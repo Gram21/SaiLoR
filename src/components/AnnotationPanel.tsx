@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
-import { useStore, selectCurrentPaper, currentTree } from '../state/store'
+import { useStore, selectCurrentPaper, currentTree, currentFinished } from '../state/store'
 import { useAiStore } from '../state/aiStore'
 import { normalizeTree, isFieldVisible } from '../model/annotations'
+import { paperCompleteness, paperAnnotationState } from './PaperList'
 import { paperVerdicts } from '../consolidate/disagreements'
 import { AnnotationNode } from './AnnotationNode'
 import {
@@ -25,6 +26,7 @@ export function AnnotationPanel() {
   const setConsolidationOverviewOpen = useStore((s) => s.setConsolidationOverviewOpen)
   const setDisagreementsOpen = useStore((s) => s.setDisagreementsOpen)
   const setSchemaInfoOpen = useStore((s) => s.setSchemaInfoOpen)
+  const setAnnotationFinished = useStore((s) => s.setAnnotationFinished)
 
   // Consolidation is the pass where a human decides between what the reviewers
   // actually said. A model has no standing there: its answer would be a fresh
@@ -80,6 +82,38 @@ export function AnnotationPanel() {
   const container = project
     ? (currentTree(project, currentReviewer, paper) ?? normalizeTree(schema, undefined))
     : paper.annotations
+
+  // The "Annotation finished" checkbox — the reviewer's own sign-off, and the
+  // only thing that turns this paper's dot green in the list (see
+  // `annotationState`).
+  //
+  // Always present, never appearing and disappearing as the last field is
+  // filled and cleared: a control that comes and goes is one a reviewer has
+  // to hunt for, and its absence would read as "this paper cannot be
+  // finished" rather than "not yet". The rule it enforces lives in the color
+  // instead — ticked while the schema is unfulfilled is the `flagged` state,
+  // red here and red in the list, rather than something the UI silently
+  // prevents. That also makes "I am done with this one" sayable on a paper a
+  // reviewer knows they cannot fill further, without the app pretending the
+  // form is complete.
+  //
+  // Red is specifically "a field that had to be filled is empty", not "the
+  // form is not full": see `annotationState`. A schema that marks nothing
+  // required never turns red at all, and a Yes/No field left on "no" is an
+  // answer rather than a hole, so neither can contradict the tick.
+  //
+  // The one place it is *not* shown is where `paperCompleteness` is null — a
+  // screening project or the Consolidation seat — since those seats have
+  // their own dot meanings and no notion of a fulfilled schema at all. One
+  // rule (`completenessApplies`) governs the checkbox, the dot color and the
+  // filter dropdown together.
+  const finishedCompleteness = project ? paperCompleteness(project, paper, currentReviewer) : null
+  const isFinished = project ? currentFinished(project, currentReviewer, paper) === true : false
+  const finishedState = project ? paperAnnotationState(project, paper, currentReviewer) : null
+  // Red only once ticked: an unfilled paper nobody has claimed is finished is
+  // simply unfinished, not wrong.
+  const finishedMismatch = finishedState === 'flagged'
+  const showFinished = finishedCompleteness !== null
 
   const aiDisabled = busy || !paper.pdf || !aiEnabled || !aiUnlocked
   // Not unlocked this session at all (the hidden click gesture never
@@ -154,6 +188,26 @@ export function AnnotationPanel() {
               ⚠ Disagreements
             </button>
           </div>
+        )}
+        {showFinished && (
+          <label
+            className={`annotation-finished${finishedMismatch ? ' mismatch' : ''}${isFinished ? ' on' : ''}`}
+            title={
+              finishedMismatch
+                ? 'This paper is marked finished while a required field is empty — its dot in the paper list is red until the field is filled in or the mark is removed'
+                : 'Mark this paper as finished once you are done with it — only then does its dot in the paper list turn green'
+            }
+          >
+            <input
+              type="checkbox"
+              checked={isFinished}
+              onChange={(e) => setAnnotationFinished(e.target.checked)}
+            />
+            <span>
+              Annotation finished
+              {finishedMismatch && ' — required fields are empty'}
+            </span>
+          </label>
         )}
       </div>
       <div className="annotations-body">

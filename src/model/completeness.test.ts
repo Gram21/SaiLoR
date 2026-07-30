@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { loadProject, serializeProject, type Project } from './project'
 import type { AnnotationDef } from './schema'
 import { completeness, completenessPercent, hasRequiredFields } from './completeness'
+import { validateProject } from './validate'
 
 /**
  * Fixtures are built through `loadProject` (the real load path), matching the
@@ -233,6 +234,65 @@ describe('completeness — adversarial input (must never throw)', () => {
   it('a tree key not present in the schema is ignored', () => {
     const tree = { 'Not In Schema': [{ value: 'x' }] } as unknown as never
     expect(completeness(p.schema, tree)).toEqual({ filled: 0, total: 0 })
+  })
+})
+
+describe('completeness — fields hidden by visibleIf', () => {
+  // A field the form does not show is a field the reviewer cannot fill, so
+  // counting it would put the denominator permanently out of reach — and,
+  // because `annotationState` reads this fraction, would paint a finished
+  // paper red over a field nobody can answer while `validate.ts` (which
+  // applies the same gate) reports no problem at all.
+  const GATED: AnnotationDef[] = [
+    { name: 'Study Type', type: 'string', required: true },
+    { name: 'Excluded', type: 'boolean' },
+    { name: 'Reason', type: 'string', required: true, visibleIf: 'Excluded' },
+  ]
+
+  it('skips a gated-off field entirely, so the ratio can still reach 100%', () => {
+    const p = project(GATED, {
+      'Study Type': [{ value: 'RCT' }],
+      Excluded: [{ value: false }],
+      Reason: [{ value: null }],
+    })
+    expect(completeness(p.schema, p.papers[0].annotations)).toEqual({ filled: 1, total: 1 })
+  })
+
+  it('counts it as soon as the gate opens', () => {
+    const p = project(GATED, {
+      'Study Type': [{ value: 'RCT' }],
+      Excluded: [{ value: true }],
+      Reason: [{ value: null }],
+    })
+    expect(completeness(p.schema, p.papers[0].annotations)).toEqual({ filled: 1, total: 2 })
+  })
+
+  it('resolves a gate pointing at an ancestor, not just a same-level sibling', () => {
+    // The same threading `validateTree`'s `gateAncestors` does — without it,
+    // `Detail` would be treated as ungated (visible) and counted.
+    const NESTED: AnnotationDef[] = [
+      {
+        name: 'Outer',
+        type: 'boolean',
+        children: [{ name: 'Detail', type: 'string', required: true, visibleIf: 'Outer' }],
+      },
+    ]
+    const closed = project(NESTED, { Outer: [{ value: false, children: { Detail: [{ value: null }] } }] })
+    expect(completeness(closed.schema, closed.papers[0].annotations)).toEqual({ filled: 0, total: 0 })
+
+    const open = project(NESTED, { Outer: [{ value: true, children: { Detail: [{ value: null }] } }] })
+    expect(completeness(open.schema, open.papers[0].annotations)).toEqual({ filled: 0, total: 1 })
+  })
+
+  it('agrees with validateProject about the same paper — neither reports a hole the other cannot see', () => {
+    const p = project(GATED, {
+      'Study Type': [{ value: 'RCT' }],
+      Excluded: [{ value: false }],
+      Reason: [{ value: null }],
+    })
+    const c = completeness(p.schema, p.papers[0].annotations)
+    expect(validateProject(p).issues).toEqual([])
+    expect(c.filled).toBe(c.total)
   })
 })
 

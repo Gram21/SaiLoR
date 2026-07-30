@@ -249,8 +249,14 @@ function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
               <em>Edit annotation JSON…</em> on the start screen.
             </li>
             <li>
-              <strong>Pick a paper</strong> from the left list. A green dot marks papers that already
-              have annotations. The button in the list's header hides it to make room for the paper;
+              <strong>Pick a paper</strong> from the left list — a project opens on the first paper
+              you have not marked finished, so reopening a review lands where the work is. Each
+              paper's dot fills as its fields
+              are filled in — amber while it is still yours to finish, green once you tick{' '}
+              <em>Annotation finished</em> at the top of the annotation panel, red if you tick it
+              while fields are still empty. The dropdown under the search box filters the list by
+              that state and counts it. The button in the list's header hides the list to make room
+              for the paper;
               once hidden, the same button in the top bar brings it back.
             </li>
             <li>

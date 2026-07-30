@@ -29,6 +29,8 @@ function paper(overrides: Partial<Paper> = {}): Paper {
     equal: [],
     marks: [],
     reviewMarks: {},
+    finished: false,
+    reviewsFinished: {},
     extra: {},
     ...overrides,
   }
