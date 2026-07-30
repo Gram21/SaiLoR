@@ -178,17 +178,39 @@ describe('paperVerdicts', () => {
     expect(second!.answeredBy).toEqual(['1']) // reviewer 2 has nothing at index 1
   })
 
-  it('treats an unticked boolean as a "false" answer that can disagree', () => {
+  it('treats an unticked boolean as a "false" answer that can disagree, on a paper the reviewer worked', () => {
     const paper = makePaper({
       reviews: {
         '1': tree(SCHEMA, { Relevant: [{ value: true }] }),
-        '2': tree(SCHEMA, {}), // never ticked
+        '2': tree(SCHEMA, { 'Study Type': [{ value: 'RCT' }] }), // worked the paper, left Relevant unticked
       },
     })
     const v = verdictOf(paper, 'Relevant')
     expect(v.answeredBy).toEqual(['1', '2'])
     expect(v.agree).toBe(false)
     expect(v.categories).toEqual({ '1': 'true', '2': 'false' })
+  })
+
+  it('does not count a boolean skeleton "false" as an answer on a paper nobody has opened', () => {
+    const paper = makePaper({
+      reviews: {
+        '1': tree(SCHEMA, {}), // never opened
+        '2': tree(SCHEMA, {}), // never opened
+      },
+    })
+    const v = verdictOf(paper, 'Relevant')
+    expect(v.answeredBy).toEqual([])
+  })
+
+  it('counts a boolean skeleton "false" from an untouched reviewer as no answer, even if the other reviewer answered', () => {
+    const paper = makePaper({
+      reviews: {
+        '1': tree(SCHEMA, { Relevant: [{ value: true }] }),
+        '2': tree(SCHEMA, {}), // never opened
+      },
+    })
+    const v = verdictOf(paper, 'Relevant')
+    expect(v.answeredBy).toEqual(['1'])
   })
 
   it('agrees on a boolean both reviewers ticked', () => {
