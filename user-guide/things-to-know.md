@@ -26,6 +26,9 @@ want to record something SaiLoR doesn't have a field for, two places are actuall
 - **The review protocol** (research questions, search strings, databases, search date, notes) has a
   real, dedicated home: the project editor's *Review protocol* section, saved as a top-level
   `protocol` key. See [Setting up a project](project-editor.md#the-review-protocol).
+- **A schema-wide comment** likewise has a dedicated home: the project editor's *Schema info*
+  section, saved as a top-level `schemaInfo` key. See
+  [Setting up a project](project-editor.md#schema-info).
 - **Any other top-level key** (not nested under `config`) survives untouched. `{"version": 1,
   "myLabNotes": "…", "config": {...}, "papers": [...]}` keeps `myLabNotes` forever, exactly as
   written, because top-level keys the app doesn't recognize are preserved verbatim — only `config`'s

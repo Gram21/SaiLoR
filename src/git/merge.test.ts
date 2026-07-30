@@ -78,6 +78,7 @@ interface ProjectOpts {
   /** Root-level, not under `extra` — a real field, same rule `screening` follows. */
   provenance?: unknown
   protocol?: unknown
+  schemaInfo?: unknown
 }
 
 function project(opts: ProjectOpts = {}): Project {
@@ -91,6 +92,7 @@ function project(opts: ProjectOpts = {}): Project {
     ...(opts.title !== undefined ? { title: opts.title } : {}),
     ...(opts.provenance !== undefined ? { provenance: opts.provenance } : {}),
     ...(opts.protocol !== undefined ? { protocol: opts.protocol } : {}),
+    ...(opts.schemaInfo !== undefined ? { schemaInfo: opts.schemaInfo } : {}),
     config,
     papers: opts.papers ?? [],
     ...(opts.extra ?? {}),
@@ -823,6 +825,29 @@ describe('mergeProjects — project title', () => {
     const c = conflictAt(outcome.conflicts, 'title')!
     expect(c.tree).toEqual({ kind: 'project' })
     expect(c.paperId).toBe('')
+  })
+})
+
+describe('mergeProjects — schema info comment', () => {
+  it('conflicts, but does not refuse the whole merge', () => {
+    const base = project({ schemaInfo: 'X' })
+    const ours = project({ schemaInfo: 'Y' })
+    const theirs = project({ schemaInfo: 'Z' })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    const c = conflictAt(outcome.conflicts, 'schemaInfo')!
+    expect(c.tree).toEqual({ kind: 'project' })
+    expect(c.paperId).toBe('')
+  })
+
+  it('one side changing it, the other leaving it alone, merges without a conflict', () => {
+    const base = project({ schemaInfo: 'X' })
+    const ours = project({ schemaInfo: 'X' })
+    const theirs = project({ schemaInfo: 'Y' })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(conflictAt(outcome.conflicts, 'schemaInfo')).toBeUndefined()
+    expect(outcome.merged.schemaInfo).toBe('Y')
   })
 })
 

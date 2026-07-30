@@ -1025,6 +1025,62 @@ describe('Project.protocol (the review protocol)', () => {
   })
 })
 
+describe('Project.schemaInfo (the schema-wide comment)', () => {
+  const withSchemaInfo = (schemaInfo: unknown) =>
+    JSON.stringify({
+      version: 1,
+      config: { schema: sampleSchema },
+      ...(schemaInfo === undefined ? {} : { schemaInfo }),
+      papers: [{ id: 'p1', title: 'Some Paper', authors: [], pdf: 'pdfs/some.pdf', annotations: {} }],
+    })
+
+  it('is null when the project records none', () => {
+    expect(loadProject(withSchemaInfo(undefined)).schemaInfo).toBeNull()
+  })
+
+  it('loads a non-blank string', () => {
+    expect(loadProject(withSchemaInfo('Read the inclusion criteria first.')).schemaInfo).toBe(
+      'Read the inclusion criteria first.',
+    )
+  })
+
+  it('round-trips through load -> serialize -> reload', () => {
+    const once = serializeProject(loadProject(withSchemaInfo('See the protocol doc.')))
+    expect(loadProject(once).schemaInfo).toBe('See the protocol doc.')
+  })
+
+  it('is written only when present, so a project without one stays byte-clean', () => {
+    const untouched = JSON.parse(serializeProject(loadProject(withSchemaInfo(undefined))))
+    expect('schemaInfo' in untouched).toBe(false)
+  })
+
+  it('a blank or whitespace-only string degrades to null', () => {
+    expect(loadProject(withSchemaInfo('   ')).schemaInfo).toBeNull()
+    expect(loadProject(withSchemaInfo('')).schemaInfo).toBeNull()
+  })
+
+  it('drops a non-string value and never lets it reappear under extra', () => {
+    for (const bad of [42, [], {}, null] as unknown[]) {
+      const project = loadProject(withSchemaInfo(bad))
+      expect(project.schemaInfo).toBeNull()
+      expect('schemaInfo' in project.extra).toBe(false)
+      expect('schemaInfo' in JSON.parse(serializeProject(project))).toBe(false)
+    }
+  })
+
+  it('config.schemaInfo is a trap — nesting it under config silently loses it on save', () => {
+    const text = JSON.stringify({
+      version: 1,
+      config: { schema: sampleSchema, schemaInfo: 'nested, will be lost' },
+      papers: [{ id: 'p1', title: 'Some Paper', authors: [], pdf: 'pdfs/some.pdf', annotations: {} }],
+    })
+    const project = loadProject(text)
+    expect(project.schemaInfo).toBeNull()
+    const out = JSON.parse(serializeProject(project)) as { config: Record<string, unknown> }
+    expect('schemaInfo' in out.config).toBe(false)
+  })
+})
+
 describe('hand-edited value tree with primitive instances does not crash the loader', () => {
   // Regression: `normalizeInstance` used `'value' in inst` unguarded, which
   // throws a raw TypeError on a primitive — escaping loadProject's contract to

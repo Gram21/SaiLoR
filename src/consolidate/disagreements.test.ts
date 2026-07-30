@@ -234,6 +234,7 @@ describe('projectVerdicts', () => {
       version: 1,
       provenance: null,
       protocol: null,
+      schemaInfo: null,
       schema: SCHEMA,
       aiEnabled: true,
       reviewers: 2,

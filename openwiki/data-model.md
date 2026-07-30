@@ -75,6 +75,7 @@ itself needed no change for this feature:
   },
   "provenance": null,  // optional; ProjectProvenance | null — see "Screening" below
   "protocol": null,    // optional; ProjectProtocol | null — see below
+  "schemaInfo": null,  // optional; string | null — a free-text schema-wide comment, see below
   "papers": [ /* Paper[] — annotations/reviews live in annotations/ on disk, but appear here once reassembled */ ],
   // any other top-level keys are preserved verbatim on save; keys inside
   // `config`, however, are NOT — config is rebuilt from its known fields on
@@ -207,6 +208,7 @@ interface Project {
   screening: ScreeningConfig | null  // config.screening; see "Screening" below
   provenance: ProjectProvenance | null  // set by "New from screening…"; see "Screening" below
   protocol: ProjectProtocol | null   // the review's authored protocol; see below
+  schemaInfo: string | null   // free-text schema-wide comment; see below
   extra: Record<string, unknown>  // unknown top-level fields preserved
 }
 
@@ -628,6 +630,26 @@ A guard covers the two-serializer hazard the whole thing depends on: `buildProje
 serializer) and `serializeProject` (the core's) must both carry every root field or one silently
 drops it depending on which path last saved — `editorStore.test.ts` round-trips a project with every
 root field set through both and fails if they disagree.
+
+## The schema-wide comment (`Project.schemaInfo`)
+
+`Project.schemaInfo: string | null` is a single free-text note about the annotation schema as a
+whole — what the fields mean together, how to use them, anything a reviewer should read before
+annotating — authored in the project editor's collapsed *Schema info* section. It follows `protocol`'s
+precedent exactly: a root-level field (so it survives `config`'s save-time rebuild), parsed
+defensively by `parseSchemaInfo` (anything other than a non-blank string degrades to `null`, never
+thrown), written only when non-null, and covered by the same `editorStore.test.ts` two-serializer
+round-trip guard. Unlike `protocol`, it is one plain string rather than a nested record, so a
+two-sided divergent edit gets a `FieldConflict` for the reviewer to resolve later (the same pattern
+`title` uses) instead of refusing the whole merge — a conflict row expresses "pick one string" just
+fine, where it cannot express "half a protocol".
+
+`AnnotationPanel` shows an ⓘ button in its header whenever `schemaInfo` is set, opening
+`SchemaInfoDialog`. That dialog also opens automatically the first time a project with a comment is
+loaded (`store.ts`'s `schemaInfoOpen`, set in `loadFromText`) — dismissible via its × button, an
+"Okay" button, an outside click, or Escape, same as `HelpDialog`. It renders at a higher z-index
+(400) than every other modal in the app, including a `HelpDialog` already open underneath it, per the
+explicit requirement that it never end up blocked by anything else.
 
 ## Merging two copies of a project
 

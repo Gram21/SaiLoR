@@ -183,6 +183,9 @@ export const projectSchema = z
     // Root-level, not under `config`, precisely so it survives a save — see
     // `ProjectProtocol`'s doc comment. Loosely typed, parsed in `parseProtocol`.
     protocol: z.unknown().optional(),
+    // Same reasoning as `protocol` above — root-level so it survives a save,
+    // loosely typed here and parsed in `parseSchemaInfo`.
+    schemaInfo: z.unknown().optional(),
     config: z.object({
       // Optional-and-unbounded here: a screening project's schema is derived,
       // not authored (see `screeningConfigSchema` above), so it may be absent

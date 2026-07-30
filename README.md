@@ -199,6 +199,9 @@ Two optional top-level keys exist specifically to be safe from that `config` reb
 
 - **`protocol`** — the review's own protocol (research questions, search strings, databases searched,
   search date, notes), authored from the project editor's *Review protocol* section.
+- **`schemaInfo`** — a free-text, schema-wide comment authored from the project editor's *Schema
+  info* section, shown to reviewers via an ⓘ button on the annotation panel (opens automatically the
+  first time a project with one is loaded).
 - **`provenance`** — a read-only record of where a project came from, written automatically when it
   was built via *New from screening…*: the source project, when, and how many papers were carried
   over versus left behind.
