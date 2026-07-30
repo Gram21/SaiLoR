@@ -16,6 +16,7 @@ import { ScreeningImportDialog } from './components/ScreeningImportDialog'
 import { DuplicateReviewDialog } from './components/DuplicateReviewDialog'
 import { ErrorPanel } from './components/ErrorPanel'
 import { HelpDialog } from './components/HelpDialog'
+import { SchemaInfoDialog } from './components/SchemaInfoDialog'
 import { ValidationDialog } from './components/ValidationDialog'
 import { ExportPdfDialog } from './components/ExportPdfDialog'
 import { ConsolidationDialog } from './components/ConsolidationDialog'
@@ -314,6 +315,7 @@ export function App() {
       )}
       <ErrorPanel />
       <HelpDialog />
+      <SchemaInfoDialog />
       <ValidationDialog />
       <ExportPdfDialog />
       <ConsolidationDialog />

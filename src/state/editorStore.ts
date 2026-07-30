@@ -15,6 +15,7 @@ import {
   loadProject,
   parseProvenance,
   parseProtocol,
+  parseSchemaInfo,
   KNOWN_ROOT_KEYS,
   type Project,
   type ProjectProvenance,
@@ -116,6 +117,7 @@ interface EditorSnapshot {
   extra: Record<string, unknown>
   provenance: ProjectProvenance | null
   protocol: ProjectProtocol | null
+  schemaInfo: string | null
 }
 
 const HISTORY_LIMIT = 100
@@ -546,6 +548,8 @@ export function buildProjectJson(state: {
   provenance?: ProjectProvenance | null
   /** Optional for the same reason. Absent/null means no authored protocol. */
   protocol?: ProjectProtocol | null
+  /** Optional for the same reason. Absent/null means no schema comment. */
+  schemaInfo?: string | null
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
@@ -559,6 +563,7 @@ export function buildProjectJson(state: {
     ...(title ? { title } : {}),
     ...(state.provenance ? { provenance: state.provenance } : {}),
     ...(state.protocol ? { protocol: state.protocol } : {}),
+    ...(state.schemaInfo ? { schemaInfo: state.schemaInfo } : {}),
     // `ai` is only written when disabled, and `reviewers` only when it says
     // more than the single-reviewer default — matching serializeProject.
     config: {
@@ -824,6 +829,9 @@ interface EditorState {
   /** The review's authored protocol, or null. Unlike `provenance`, this one
    *  *is* edited in the UI (`ProjectEditor`'s protocol section). */
   protocol: ProjectProtocol | null
+  /** Free-text "about this schema" note, or null. Edited in the UI alongside
+   *  the schema tree; shown to reviewers via `AnnotationPanel`'s info button. */
+  schemaInfo: string | null
   nodes: EditorNode[]
   papers: EditorPaper[]
   dirty: boolean
@@ -880,6 +888,9 @@ interface EditorState {
    *  fields). Pass `null` to clear it. Coalesced like `setTitle` so a burst of
    *  typing is one undo step. */
   setProtocol: (protocol: ProjectProtocol | null) => void
+  /** Replace the schema-wide info comment. Pass `null` to clear it. Coalesced
+   *  like `setProtocol` so a burst of typing is one undo step. */
+  setSchemaInfo: (schemaInfo: string | null) => void
 
   addNode: (parentUid: string | null) => void
   updateNode: (uid: string, patch: Partial<EditorNode>) => void
@@ -950,6 +961,7 @@ function snapshotOf(s: EditorState): EditorSnapshot {
     extra: s.extra,
     provenance: s.provenance,
     protocol: s.protocol,
+    schemaInfo: s.schemaInfo,
   }
 }
 
@@ -965,6 +977,7 @@ function applySnapshot(s: EditorState, snap: EditorSnapshot): void {
   s.extra = snap.extra
   s.provenance = snap.provenance
   s.protocol = snap.protocol
+  s.schemaInfo = snap.schemaInfo
 }
 
 /** Push a pre-mutation snapshot onto the undo stack and drop the redo stack. */
@@ -985,6 +998,7 @@ interface OpenedEditorState {
   extra: Record<string, unknown>
   provenance: ProjectProvenance | null
   protocol: ProjectProtocol | null
+  schemaInfo: string | null
   nodes: EditorNode[]
   papers: EditorPaper[]
 }
@@ -1061,6 +1075,7 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
     extra: rootExtra,
     provenance: parseProvenance(data.provenance),
     protocol: parseProtocol(data.protocol),
+    schemaInfo: parseSchemaInfo(data.schemaInfo),
     // A screening project's schema is derived, not authored, so there is
     // nothing for the schema-builder tree to hold — see `ProjectEditor.tsx`,
     // which renders `ScreeningReasonsEditor` instead whenever `screening` is set.
@@ -1096,6 +1111,7 @@ function openEditorSession(s: EditorState, st: OpenedEditorState): void {
   s.extra = st.extra
   s.provenance = st.provenance
   s.protocol = st.protocol
+  s.schemaInfo = st.schemaInfo
   s.nodes = st.nodes
   s.papers = st.papers
   s.dirty = false
@@ -1217,6 +1233,7 @@ export const useEditorStore = create<EditorState>()(
     extra: {},
     provenance: null,
     protocol: null,
+    schemaInfo: null,
     nodes: [],
     papers: [],
     dirty: false,
@@ -1250,6 +1267,7 @@ export const useEditorStore = create<EditorState>()(
         s.extra = {}
         s.provenance = null
         s.protocol = null
+        s.schemaInfo = null
         s.nodes = [makeNode()]
         s.papers = []
         s.dirty = false
@@ -1442,6 +1460,18 @@ export const useEditorStore = create<EditorState>()(
       set((s) => {
         if (!coalesce) pushPast(s, snap)
         s.protocol = protocol
+        s.dirty = true
+      })
+    },
+
+    setSchemaInfo: (schemaInfo) => {
+      const key = 'project:schemaInfo'
+      const coalesce = key === lastEditKey
+      lastEditKey = key
+      const snap = snapshotOf(get())
+      set((s) => {
+        if (!coalesce) pushPast(s, snap)
+        s.schemaInfo = schemaInfo
         s.dirty = true
       })
     },
@@ -1895,6 +1925,7 @@ export const useEditorStore = create<EditorState>()(
           // threading it through is a separate change. A fresh project starts
           // with none, exactly as one started from scratch does.
           s.protocol = null
+          s.schemaInfo = null
           s.provenance = {
             kind: 'screening-import',
             source: {

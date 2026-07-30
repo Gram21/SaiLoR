@@ -45,6 +45,8 @@ export function ProjectEditor() {
   const setScreening = useEditorStore((s) => s.setScreening)
   const provenance = useEditorStore((s) => s.provenance)
   const protocol = useEditorStore((s) => s.protocol)
+  const schemaInfo = useEditorStore((s) => s.schemaInfo)
+  const setSchemaInfo = useEditorStore((s) => s.setSchemaInfo)
   const dirty = useEditorStore((s) => s.dirty)
   const busy = useEditorStore((s) => s.busy)
   const error = useEditorStore((s) => s.error)
@@ -273,6 +275,31 @@ export function ProjectEditor() {
               data it produced. Every field is optional.
             </p>
             <ProtocolEditor />
+          </details>
+        </section>
+
+        <section className="editor-section">
+          {/* Same "open when already recorded" rule as the protocol section
+              above, for the same reason. */}
+          <details className="editor-protocol-details" open={schemaInfo !== null}>
+            <summary>
+              <h2>Schema info</h2>
+              <span className="editor-protocol-summary-hint">
+                {schemaInfo ? 'recorded' : 'optional'}
+              </span>
+            </summary>
+            <p className="editor-hint">
+              A free-text note shown to reviewers via an ⓘ button on the annotation panel — what the
+              fields mean as a whole, how to use them, anything worth reading before annotating. Opens
+              automatically the first time a reviewer loads this project.
+            </p>
+            <textarea
+              className="protocol-textarea"
+              rows={4}
+              value={schemaInfo ?? ''}
+              placeholder="E.g. how to interpret ambiguous cases, or a link to the coding guide"
+              onChange={(e) => setSchemaInfo(e.target.value.trim() === '' ? null : e.target.value)}
+            />
           </details>
         </section>
 

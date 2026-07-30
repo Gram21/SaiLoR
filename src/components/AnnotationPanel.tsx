@@ -24,6 +24,7 @@ export function AnnotationPanel() {
   const openAi = useAiStore((s) => s.openDialog)
   const setConsolidationOverviewOpen = useStore((s) => s.setConsolidationOverviewOpen)
   const setDisagreementsOpen = useStore((s) => s.setDisagreementsOpen)
+  const setSchemaInfoOpen = useStore((s) => s.setSchemaInfoOpen)
 
   // Consolidation is the pass where a human decides between what the reviewers
   // actually said. A model has no standing there: its answer would be a fresh
@@ -97,6 +98,17 @@ export function AnnotationPanel() {
       <div className="annotations-head">
         <div className="annotations-head-row">
           <h2>Annotations</h2>
+          {!!project?.schemaInfo && (
+            <button
+              type="button"
+              className="schema-info-btn"
+              title="About this schema"
+              aria-label="About this schema"
+              onClick={() => setSchemaInfoOpen(true)}
+            >
+              ⓘ
+            </button>
+          )}
           {!isConsolidation && (
             <button
               type="button"

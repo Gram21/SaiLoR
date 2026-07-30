@@ -816,6 +816,31 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
     })
   }
 
+  // Same reasoning as `title` just above — one string, so a conflict row
+  // expresses a real disagreement perfectly, unlike `provenance`/`protocol`'s
+  // nested-record refusal.
+  const schemaInfoM = merge3<string | null>(
+    base?.schemaInfo ?? null,
+    ours.schemaInfo,
+    theirs.schemaInfo,
+    (a, b) => a === b,
+  )
+  const schemaInfo = schemaInfoM ? schemaInfoM.value : ours.schemaInfo
+  if (!schemaInfoM) {
+    conflicts.push({
+      id: conflictId('', { kind: 'project' }, 'schemaInfo'),
+      paperId: '',
+      paperTitle: '',
+      tree: { kind: 'project' },
+      canonical: 'schemaInfo',
+      label: 'Schema info',
+      type: 'string',
+      base: sOrNull(base?.schemaInfo ?? undefined),
+      ours: sOrNull(ours.schemaInfo ?? undefined),
+      theirs: sOrNull(theirs.schemaInfo ?? undefined),
+    })
+  }
+
   const paperRefusals: string[] = []
   const papers = mergePapers(mergedSchema, base, ours, theirs, conflicts, notes, paperRefusals)
   if (paperRefusals.length > 0) return refused(paperRefusals)
@@ -831,6 +856,7 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
       screening: screeningM!.value ?? null,
       provenance: provenanceM!.value ?? null,
       protocol: protocolM!.value ?? null,
+      schemaInfo,
       papers,
       extra: mergedRootExtra,
     },

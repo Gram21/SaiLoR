@@ -254,6 +254,10 @@ interface AppState {
   agreementOpen: boolean
   /** Whether the "export PDF with annotations" dialog is open. Session-only, like `validationOpen`. */
   exportPdfOpen: boolean
+  /** Whether the schema-info dialog is open. Auto-set true by `loadFromText`
+   *  when the opened project has a `schemaInfo` comment; otherwise toggled by
+   *  the annotation panel's ⓘ button. Session-only, like `validationOpen`. */
+  schemaInfoOpen: boolean
   /** A mark id `PdfViewer` should scroll to and flash, requested from
    *  elsewhere (the field-link popover's "jump to this mark" — clicking a
    *  candidate to see it in context before linking it). `PdfViewer` clears
@@ -405,6 +409,8 @@ interface AppState {
   setAgreementOpen: (open: boolean) => void
   /** Open/close the "export PDF with annotations" dialog. View state only — see `exportPdfOpen`. */
   setExportPdfOpen: (open: boolean) => void
+  /** Open/close the schema-info dialog. View state only — see `schemaInfoOpen`. */
+  setSchemaInfoOpen: (open: boolean) => void
   /** Request/clear a "scroll to and flash this mark" — see `pendingMarkJump`. */
   setPendingMarkJump: (markId: string | null) => void
   /** Replace the Consolidation overview with Agreement, then restore it on close. */
@@ -701,6 +707,7 @@ export const useStore = create<AppState>()(
     validationOpen: false,
     agreementOpen: false,
     exportPdfOpen: false,
+    schemaInfoOpen: false,
     pendingMarkJump: null,
     agreementReturnToOverview: false,
     consolidationOverviewOpen: false,
@@ -865,6 +872,7 @@ export const useStore = create<AppState>()(
         s.validationOpen = false
         s.agreementOpen = false
         s.exportPdfOpen = false
+        s.schemaInfoOpen = false
         s.pendingMarkJump = null
         s.agreementReturnToOverview = false
         s.consolidationOverviewOpen = false
@@ -955,6 +963,12 @@ export const useStore = create<AppState>()(
           s.validationUnannotated = null
           s.validationOpen = false
           s.agreementOpen = false
+          // Opened once per project load, so a reviewer sees it before
+          // annotating; dismissible from there via the ⓘ button or the
+          // dialog's own close/Okay buttons. Reset (not carried over) here
+          // too, unlike `exportPdfOpen`, so switching projects never leaves a
+          // stale dialog open or skips a schema comment the new file has.
+          s.schemaInfoOpen = !!project.schemaInfo
           s.agreementReturnToOverview = false
           s.consolidationOverviewOpen = false
           s.disagreementsOpen = false
@@ -1253,6 +1267,11 @@ export const useStore = create<AppState>()(
     setExportPdfOpen: (open) =>
       set((s) => {
         s.exportPdfOpen = open
+      }),
+
+    setSchemaInfoOpen: (open) =>
+      set((s) => {
+        s.schemaInfoOpen = open
       }),
 
     setPendingMarkJump: (markId) =>

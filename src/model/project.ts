@@ -203,6 +203,12 @@ export interface Project {
    *  reason `provenance` is: constructing a `Project` without deciding what to
    *  do with it should be a type error, not a silent drop in `mergeProjects`. */
   protocol: ProjectProtocol | null
+  /** Free-text "about this schema" note — what the annotation fields mean as a
+   *  whole, how to use them, anything a reviewer should read before starting —
+   *  shown via an info button in the annotation panel, auto-opened once when a
+   *  project that has one is loaded. Null when the file records none. Required
+   *  (not optional) for the same reason `protocol` is. */
+  schemaInfo: string | null
   schema: ResolvedDef[]
   /**
    * Whether AI-assisted annotation is available for this project. Defaults to
@@ -259,7 +265,15 @@ const KNOWN_PAPER_KEYS = new Set([
  *  uses this exact list rather than a second hand-maintained copy — see
  *  `deepEqualJson`'s doc comment for why a second implementation of "the same
  *  fact" is the bug this codebase specifically avoids. */
-export const KNOWN_ROOT_KEYS = new Set(['version', 'title', 'provenance', 'protocol', 'config', 'papers'])
+export const KNOWN_ROOT_KEYS = new Set([
+  'version',
+  'title',
+  'provenance',
+  'protocol',
+  'schemaInfo',
+  'config',
+  'papers',
+])
 
 /**
  * Parse `reviews` defensively, the same rule `annotations`/`aiUsage` follow:
@@ -435,6 +449,15 @@ export function parseProtocol(raw: unknown): ProjectProtocol | null {
   if (typeof r.searchDate === 'string' && r.searchDate.trim() !== '') protocol.searchDate = r.searchDate
   if (typeof r.notes === 'string' && r.notes.trim() !== '') protocol.notes = r.notes
   return Object.keys(protocol).length > 0 ? protocol : null
+}
+
+/**
+ * Parse `schemaInfo` defensively — hand-editable, so anything other than a
+ * non-blank string degrades to `null` rather than throwing. Exported so
+ * `editorStore.ts` shares this exact parse.
+ */
+export function parseSchemaInfo(raw: unknown): string | null {
+  return typeof raw === 'string' && raw.trim() !== '' ? raw : null
 }
 
 export function parseProvenance(raw: unknown): ProjectProvenance | null {
@@ -656,6 +679,7 @@ export function loadProject(input: string | unknown): Project {
     title: raw.title,
     provenance: parseProvenance(raw.provenance),
     protocol: parseProtocol(raw.protocol),
+    schemaInfo: parseSchemaInfo(raw.schemaInfo),
     schema,
     // Absent means enabled; only an explicit `false` opts out.
     aiEnabled: raw.config.ai !== false,
@@ -681,6 +705,8 @@ export function serializeProject(project: Project): string {
     ...(project.provenance ? { provenance: project.provenance } : {}),
     // Likewise only written when a protocol was actually authored.
     ...(project.protocol ? { protocol: project.protocol } : {}),
+    // Likewise only written when a schema comment was actually authored.
+    ...(project.schemaInfo ? { schemaInfo: project.schemaInfo } : {}),
     // `ai` is only written when disabled, and `reviewers` only when it says
     // anything beyond the single-reviewer default — so a normal file, and a
     // single-reviewer file, both stay exactly as clean as before this feature.
@@ -846,6 +872,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     ...(project.title ? { title: project.title } : {}),
     ...(project.provenance ? { provenance: project.provenance } : {}),
     ...(project.protocol ? { protocol: project.protocol } : {}),
+    ...(project.schemaInfo ? { schemaInfo: project.schemaInfo } : {}),
     config: {
       schema: dehydrateSchema(project.schema),
       ...(project.aiEnabled ? {} : { ai: false }),

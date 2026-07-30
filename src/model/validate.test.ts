@@ -309,6 +309,7 @@ describe('validateProject', () => {
       version: 1,
       provenance: null,
       protocol: null,
+      schemaInfo: null,
       schema: sampleSchema,
       aiEnabled: true,
       reviewers: 1,

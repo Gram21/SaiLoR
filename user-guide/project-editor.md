@@ -80,6 +80,15 @@ pre-registered SLR needs to report:
 Every field is optional, and it's saved as a real, dedicated `protocol` key in the project JSON — see
 why that matters in
 [Things to know](things-to-know.md#hand-editing-config-in-the-json-silently-deletes-your-changes).
+
+### Schema info
+
+Another optional, collapsible section, right below the protocol one: a single free-text note about
+the schema as a whole — what the fields mean together, how to use them, anything a reviewer should
+read before they start. Unlike a field's own description (hover its ⓘ marker while annotating), this
+one is shown once per project: an ⓘ button in the annotation panel's header opens it, and it also
+opens on its own the first time a reviewer loads a project that has one — closed via its × button, an
+"Okay" button, or Escape.
 The section starts collapsed unless the project already has a protocol recorded, so an existing one is
 never hidden behind a disclosure you'd have to know to open.
 

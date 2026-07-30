@@ -1085,6 +1085,19 @@ button.paper-search-mode:hover {
 .ai-btn:disabled.ai-btn-hidden {
   opacity: 0;
 }
+.schema-info-btn {
+  padding: 2px 7px;
+  font-size: 0.95rem;
+  line-height: 1;
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+.schema-info-btn:hover {
+  background: var(--accent-weak);
+}
 .annotations-paper-title {
   color: var(--muted);
   font-size: 0.857rem;
@@ -2156,6 +2169,26 @@ button.paper-search-mode:hover {
   margin: 0;
   padding-left: 18px;
 }
+/*
+ * The schema-info dialog can be reopened while another modal (e.g. Help) is
+ * already showing, and the explicit ask was that it never end up blocked by
+ * anything else — so it sits above every other overlay this app has,
+ * including `.llm-settings-overlay` (210), the previous highest. Written as
+ * a compound selector for the same reason that one is: the win must not
+ * depend on stylesheet load order.
+ */
+.modal-overlay.schema-info-overlay {
+  z-index: 400;
+}
+.schema-info-text {
+  white-space: pre-wrap;
+}
+.schema-info-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 16px 16px;
+}
+
 .help-keys {
   border-collapse: collapse;
   width: 100%;
