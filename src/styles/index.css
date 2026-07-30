@@ -1289,8 +1289,26 @@ button.paper-search-mode:hover {
 }
 .combo-input {
   width: 100%;
-  padding-right: 24px;
+  padding-right: 40px;
   cursor: pointer;
+}
+.combo-clear {
+  position: absolute;
+  right: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.85em;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.combo-clear:hover {
+  color: var(--text);
+  background: var(--accent-weak);
 }
 .combo-caret {
   position: absolute;
