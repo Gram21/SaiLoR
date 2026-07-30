@@ -187,6 +187,43 @@ describe('schema resolution', () => {
     ])
     expect(resolved[1].visibleIf).toBeUndefined()
   })
+
+  it('keeps visibleIf that names a direct ancestor (parent, grandparent, ...)', () => {
+    const resolved = resolveSchema([
+      {
+        name: 'Field A',
+        type: 'boolean',
+        children: [
+          {
+            name: 'Field B',
+            type: 'string',
+            visibleIf: 'Field A',
+            children: [{ name: 'Field C', type: 'string', visibleIf: 'Field A' }],
+          },
+        ],
+      },
+    ])
+    const fieldA = resolved[0]
+    const fieldB = fieldA.children[0]
+    const fieldC = fieldB.children[0]
+    expect(fieldB.visibleIf).toBe('Field A')
+    // Field C is two levels down from Field A — still a straight ancestor
+    // chain, not just an immediate parent.
+    expect(fieldC.visibleIf).toBe('Field A')
+  })
+
+  it('drops visibleIf that names a cousin (an ancestor sibling, not the ancestor itself)', () => {
+    const resolved = resolveSchema([
+      { name: 'Uncle', type: 'boolean' },
+      {
+        name: 'Field A',
+        type: 'boolean',
+        children: [{ name: 'Field B', type: 'string', visibleIf: 'Uncle' }],
+      },
+    ])
+    const fieldB = resolved[1].children[0]
+    expect(fieldB.visibleIf).toBeUndefined()
+  })
 })
 
 describe('annotation tree init', () => {
@@ -240,6 +277,37 @@ describe('isFieldVisible', () => {
       { name: 'Study Type', type: 'string', visibleIf: 'Relevant' },
     ])
     expect(isFieldVisible(gated, {})).toBe(true)
+  })
+
+  it('checks the ancestors map when the gate is not a same-level sibling', () => {
+    const resolved = resolveSchema([
+      {
+        name: 'Field A',
+        type: 'boolean',
+        children: [{ name: 'Field B', type: 'string', visibleIf: 'Field A' }],
+      },
+    ])
+    const fieldB = resolved[0].children[0]
+    expect(isFieldVisible(fieldB, {}, { 'Field A': false })).toBe(false)
+    expect(isFieldVisible(fieldB, {}, { 'Field A': true })).toBe(true)
+  })
+
+  it('prefers a same-level sibling over the ancestors map when both hold the same name', () => {
+    const [, gated] = resolveSchema([
+      { name: 'Relevant', type: 'boolean' },
+      { name: 'Study Type', type: 'string', visibleIf: 'Relevant' },
+    ])
+    // The sibling container says answered; a stale/unrelated ancestors entry
+    // of the same name must not override that.
+    expect(isFieldVisible(gated, { Relevant: [{ value: true }] }, { Relevant: false })).toBe(true)
+  })
+
+  it('fails open when the gate name is in neither the container nor the ancestors map', () => {
+    const [, gated] = resolveSchema([
+      { name: 'Relevant', type: 'boolean' },
+      { name: 'Study Type', type: 'string', visibleIf: 'Relevant' },
+    ])
+    expect(isFieldVisible(gated, {}, { 'Something Else': true })).toBe(true)
   })
 })
 

@@ -236,26 +236,6 @@ export function ProjectEditor() {
       )}
 
       <div className="editor-body">
-        {screening ? (
-          <section className="editor-section">
-            <h2>Exclusion reasons</h2>
-            <p className="editor-hint">
-              Why a paper is excluded. Reviewers pick one of these when they exclude a paper — there is
-              no free-text option, so the counts this project reports per reason stay meaningful.
-            </p>
-            <ScreeningReasonsEditor />
-          </section>
-        ) : (
-          <section className="editor-section">
-            <h2>Annotation schema</h2>
-            <p className="editor-hint">
-              The fields reviewers fill in for each paper. A <em>Group</em> holds nested fields; set
-              an unbounded maximum to let a field repeat. Drag rows to reorder or to nest them.
-            </p>
-            <SchemaTreeEditor />
-          </section>
-        )}
-
         <section className="editor-section">
           {/* Collapsed by default: optional, and most projects that use it set
               it once at the start and rarely reopen it — but open on its own
@@ -302,6 +282,26 @@ export function ProjectEditor() {
             />
           </details>
         </section>
+
+        {screening ? (
+          <section className="editor-section">
+            <h2>Exclusion reasons</h2>
+            <p className="editor-hint">
+              Why a paper is excluded. Reviewers pick one of these when they exclude a paper — there is
+              no free-text option, so the counts this project reports per reason stay meaningful.
+            </p>
+            <ScreeningReasonsEditor />
+          </section>
+        ) : (
+          <section className="editor-section">
+            <h2>Annotation schema</h2>
+            <p className="editor-hint">
+              The fields reviewers fill in for each paper. A <em>Group</em> holds nested fields; set
+              an unbounded maximum to let a field repeat. Drag rows to reorder or to nest them.
+            </p>
+            <SchemaTreeEditor />
+          </section>
+        )}
 
         <section className="editor-section">
           <h2>Papers</h2>

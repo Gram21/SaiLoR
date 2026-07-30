@@ -287,6 +287,16 @@ function SchemaNodeRow({
   const siblings = parentUid ? (findNode(allNodes, parentUid)?.children ?? []) : allNodes
   const siblingFieldOptions = siblings.filter((s) => s.uid !== node.uid && s.kind !== 'group')
 
+  // Ancestors this node can also be gated on — the parent, its parent, and so
+  // on up the straight lineage (never a cousin, i.e. an ancestor's own
+  // sibling) — mirroring `resolveDefs`'s ancestor-chain rule in schema.ts.
+  const ancestorFieldOptions: EditorNode[] = []
+  for (let uid = parentUid; uid; uid = parentUidOf(allNodes, uid)) {
+    const ancestor = findNode(allNodes, uid)
+    if (!ancestor) break
+    if (ancestor.kind !== 'group') ancestorFieldOptions.push(ancestor)
+  }
+
   const rowClass = [
     'schema-row',
     dragging ? 'dragging' : '',
@@ -415,16 +425,29 @@ function SchemaNodeRow({
         {node.kind !== 'group' && (
           <select
             className="schema-input schema-visible-if"
-            title="Only show this field once the chosen sibling field has an answer"
+            title="Only show this field once the chosen field has an answer"
             value={node.visibleIf}
             onChange={(e) => updateNode(node.uid, { visibleIf: e.target.value })}
           >
             <option value="">Always visible</option>
-            {siblingFieldOptions.map((s) => (
-              <option key={s.uid} value={s.name}>
-                Show only if "{s.name}" answered
-              </option>
-            ))}
+            {siblingFieldOptions.length > 0 && (
+              <optgroup label="Same level">
+                {siblingFieldOptions.map((s) => (
+                  <option key={s.uid} value={s.name}>
+                    Show only if "{s.name}" answered
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {ancestorFieldOptions.length > 0 && (
+              <optgroup label="Ancestors">
+                {ancestorFieldOptions.map((s) => (
+                  <option key={s.uid} value={s.name}>
+                    Show only if "{s.name}" (ancestor) answered
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         )}
 
