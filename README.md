@@ -122,6 +122,10 @@ my-review/
         └── reviewer-<n>.json   Each independent reviewer's own tree (multi-reviewer only)
 ```
 
+Each of those files also carries that seat's `"finished": true` once its reviewer ticks **Annotation
+finished** in the panel — the sign-off lives next to the answers it is about, so it merges as
+independently as they do.
+
 Files under `annotations/` are created **lazily** — only once a reviewer has actually written
 something for that paper — and deleted again if it's cleared back to empty. A screening project names
 these `screening-consolidated.json` / `screening-<n>.json` instead, so the two kinds of per-paper
@@ -213,9 +217,16 @@ Two optional top-level keys exist specifically to be safe from that `config` reb
 - **? (Help)** — opens a dialog describing the workflow and listing all keyboard shortcuts.
 - **Left pane** — collapsible list of papers (toggle with the ☰ button). A completeness dot next to
   each paper fills in proportionally as fields are completed (a fraction of required fields if any
-  are marked required, otherwise of all fields) — in a **screening project** this becomes a tri-state
-  marker (included / excluded / undecided) with a filter above the list instead; see
-  [Screening](#screening).
+  are marked required, otherwise of all fields). The fill is progress and the color is state: amber
+  while the paper is still yours to finish, **green** once you tick the **Annotation finished**
+  checkbox in the annotation panel, **red** if that box is ticked while a field the schema marks
+  `required` is still empty — so "done" is always something a reviewer said, not something the form
+  inferred, and a mark that contradicts the data says so instead of going quiet. (A schema that
+  requires nothing never goes red, and a Yes/No answer is never a hole.) A dropdown under the
+  search box filters the list into *In progress* (anything not ticked finished), *Finished*, and
+  *With issues*, and counts the selected bucket (`finished: 5/100`). In a **screening project** the
+  dot becomes a tri-state marker (included / excluded / undecided) with its own filter instead, and
+  there is no checkbox; see [Screening](#screening).
 - **Search** — the box above the paper list matches title, authors, DOI, abstract, the PDF's file
   name, and the paper's own id by default. Click the **META**/**TAGS** trigger on its right edge to
   switch to searching your own recorded annotation content instead.

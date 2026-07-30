@@ -120,6 +120,30 @@ export interface Paper {
   /** Each independent reviewer's own marks, keyed "1".."N" like `reviews`.
    *  Absent/empty in a single-reviewer project. */
   reviewMarks: Record<string, PdfMark[]>
+  /**
+   * The reviewer's own "I am done with this paper" declaration for the
+   * single/consolidated tree — the checkbox in the annotation panel, and the
+   * only thing that turns the paper list's dot green (see `paperIsFinished`
+   * in `PaperList.tsx`).
+   *
+   * Deliberately *not* derived from the data: a full tree means every field
+   * has something in it, which is a fact about the form, not a judgement that
+   * the extraction is right. Only a human can make the second claim, so it is
+   * stored rather than computed. The checkbox is only offered once the schema
+   * is actually fulfilled, so a `true` here always started life alongside a
+   * complete tree — but it is not re-derived on load, and a later edit that
+   * empties a field leaves the flag standing while the dot stops being green
+   * (`PaperList.tsx` requires both), so nothing silently un-declares what a
+   * reviewer declared.
+   *
+   * Same single-tree-vs-per-reviewer split as `annotations`/`reviews` and
+   * `marks`/`reviewMarks`, and for the same reason: being finished is a
+   * per-seat statement.
+   */
+  finished: boolean
+  /** Each numbered reviewer's own finished flag, keyed "1".."N" like `reviews`.
+   *  Absent/empty in a single-reviewer project. */
+  reviewsFinished: Record<string, boolean>
   /** Any additional fields present in the source file are preserved on save. */
   extra: Record<string, unknown>
 }
@@ -260,6 +284,8 @@ const KNOWN_PAPER_KEYS = new Set([
   'equal',
   'marks',
   'reviewMarks',
+  'finished',
+  'reviewsFinished',
 ])
 /** Exported so `editorStore.ts`'s own root-extra split (`editorStateFromOpened`)
  *  uses this exact list rather than a second hand-maintained copy — see
@@ -326,6 +352,28 @@ function normalizeReviews(
   for (let i = 1; i <= reviewerCount; i++) {
     const key = String(i)
     if (!(key in out)) out[key] = normalizeTree(schema, undefined)
+  }
+  return out
+}
+
+/**
+ * Parse `reviewsFinished` defensively, the same rule `reviews` follows: the
+ * file is hand-editable, so a key that could never be reached by
+ * `currentFinished`'s routing (anything but a reviewer number) is dropped, as
+ * is any value that isn't literally `true` — the flag is a declaration, and
+ * "present but not `true`" has to mean "not declared", never "truthy enough".
+ *
+ * Unlike `normalizeReviews`, no skeleton is filled in for reviewers who have
+ * not declared anything: `false` *is* the absent state here, so a missing key
+ * already reads correctly, and writing `false` for everyone would put a line
+ * in every reviewer's file saying something they never said.
+ */
+function parseReviewsFinished(raw: unknown): Record<string, boolean> {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return {}
+  const out: Record<string, boolean> = {}
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!/^[1-9]\d*$/.test(key) || value !== true) continue
+    out[key] = true
   }
   return out
 }
@@ -671,6 +719,9 @@ export function loadProject(input: string | unknown): Project {
     equal: parseEqual(p.equal),
     marks: parseMarks((p as { marks?: unknown }).marks),
     reviewMarks: parseReviewMarks((p as { reviewMarks?: unknown }).reviewMarks),
+    // Only a literal `true` declares anything — see `parseReviewsFinished`.
+    finished: (p as { finished?: unknown }).finished === true,
+    reviewsFinished: parseReviewsFinished((p as { reviewsFinished?: unknown }).reviewsFinished),
     extra: extractExtra(p, KNOWN_PAPER_KEYS),
   }))
 
@@ -762,6 +813,16 @@ export function serializeProject(project: Project): string {
           reviewMarkKeys.sort((a, b) => Number(a) - Number(b)).map((k) => [k, p.reviewMarks[k]]),
         )
       }
+      // Only written when actually declared, so a paper nobody has marked
+      // finished stays exactly as clean as before this field existed — the
+      // same rule `aiUsage`/`equal`/`marks` follow.
+      if (p.finished) paper.finished = true
+      const finishedKeys = Object.keys(p.reviewsFinished).filter((k) => p.reviewsFinished[k])
+      if (finishedKeys.length > 0) {
+        paper.reviewsFinished = Object.fromEntries(
+          finishedKeys.sort((a, b) => Number(a) - Number(b)).map((k) => [k, true]),
+        )
+      }
       return { ...paper, ...p.extra }
     }),
     ...project.extra,
@@ -834,9 +895,26 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
       for (let k = 1; k <= project.reviewers; k++) {
         const tree = p.reviews[String(k)]
         const has = tree !== undefined && hasAnnotations(project.schema, tree)
+        // `finished` rides in the same per-reviewer file as that reviewer's
+        // tree, so the declaration and the data it is about stay one file —
+        // and, like the tree, never collide with another reviewer's save.
+        // It can also keep the file alive on its own: a reviewer who ticked
+        // the box and then cleared a field still said something, and dropping
+        // the file would silently un-say it.
+        const finished = p.reviewsFinished[String(k)] === true
         files.push({
           relPath: `${p.id}/${reviewerName}-${k}.json`,
-          text: has ? JSON.stringify({ annotations: serializedTree(project.schema, tree) }, null, 2) : null,
+          text:
+            has || finished
+              ? JSON.stringify(
+                  {
+                    ...(has ? { annotations: serializedTree(project.schema, tree!) } : {}),
+                    ...(finished ? { finished: true } : {}),
+                  },
+                  null,
+                  2,
+                )
+              : null,
         })
         const marks = p.reviewMarks[String(k)] ?? []
         files.push({
@@ -851,6 +929,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     if (hasConsolidatedAnnotations) consolidated.annotations = serializedTree(project.schema, p.annotations)
     if (p.aiUsage.length > 0) consolidated.aiUsage = p.aiUsage
     if (p.equal.length > 0) consolidated.equal = p.equal
+    if (p.finished) consolidated.finished = true
     files.push({
       relPath: `${p.id}/${consolidatedName}.json`,
       text: Object.keys(consolidated).length > 0 ? JSON.stringify(consolidated, null, 2) : null,
@@ -932,10 +1011,16 @@ export function assembleLegacyProjectJson(
         annotations?: unknown
         aiUsage?: unknown
         equal?: unknown
+        finished?: unknown
       }
       const reviews: Record<string, unknown> = {}
+      const reviewsFinished: Record<string, unknown> = {}
       for (const [k, v] of entry?.reviewers ?? []) {
         reviews[k] = (v as { annotations?: unknown })?.annotations ?? {}
+        // Only lifted when actually declared, so the reassembled shape stays
+        // as close as possible to what a legacy single file would have held —
+        // `loadProject` rejects anything but `true` either way.
+        if ((v as { finished?: unknown })?.finished === true) reviewsFinished[k] = true
       }
       const marksConsolidated = (entry?.marksConsolidated ?? {}) as { marks?: unknown }
       const reviewMarks: Record<string, unknown> = {}
@@ -950,6 +1035,8 @@ export function assembleLegacyProjectJson(
         ...(consolidated.equal !== undefined ? { equal: consolidated.equal } : {}),
         ...(marksConsolidated.marks !== undefined ? { marks: marksConsolidated.marks } : {}),
         ...(Object.keys(reviewMarks).length > 0 ? { reviewMarks } : {}),
+        ...(consolidated.finished !== undefined ? { finished: consolidated.finished } : {}),
+        ...(Object.keys(reviewsFinished).length > 0 ? { reviewsFinished } : {}),
       }
     }),
   }

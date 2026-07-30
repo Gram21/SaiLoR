@@ -1,6 +1,7 @@
 import type { ResolvedDef } from './schema'
 import { isField } from './schema'
-import type { AnnotationValueTree } from './annotations'
+import type { AnnotationValueTree, FieldValue } from './annotations'
+import { isFieldVisible } from './annotations'
 import { isEmptyValue } from './validate'
 
 /**
@@ -46,6 +47,16 @@ export function hasRequiredFields(defs: ResolvedDef[]): boolean {
  * exactly what the form is showing — adding an empty entry lowers the ratio
  * (the form now really does show one more unanswered field), and removing it,
  * or saving (which drops trailing empties), recovers it.
+ *
+ * Fields hidden by `visibleIf` are skipped entirely, exactly as `validate.ts`
+ * skips them — and for a stronger reason here than there. A hidden field is
+ * one the form does not show, so a reviewer cannot fill it: counting it puts
+ * a denominator out of reach behind a dot that can never complete, and, since
+ * the "finished but a required field is empty" mark reads this same fraction
+ * (see `annotationState.ts`), it would paint such a paper permanently red
+ * over a field nobody could answer — while the Validate dialog, correctly,
+ * reports no problem at all. The two must agree about the same paper, so they
+ * apply the same gate.
  */
 export function completeness(
   defs: ResolvedDef[],
@@ -64,8 +75,14 @@ function walk(
   tree: AnnotationValueTree,
   requiredOnly: boolean,
   acc: Completeness,
+  // Answers of every field along this call's direct ancestor chain, keyed by
+  // name — how a `visibleIf` pointing at an ancestor rather than a same-level
+  // sibling is resolved. Threaded exactly as `validateTree`'s `gateAncestors`
+  // is, so the two walks gate on identical values.
+  gateAncestors: Record<string, FieldValue> = {},
 ): void {
   for (const def of defs) {
+    if (!isFieldVisible(def, tree ?? {}, gateAncestors)) continue
     const raw = tree?.[def.name]
     const instances = Array.isArray(raw) ? raw : []
     for (const inst of instances) {
@@ -75,7 +92,17 @@ function walk(
         if (!isEmptyValue(def.type, inst.value)) acc.filled++
       }
       if (def.children.length > 0) {
-        walk(def.children, inst.children ?? {}, requiredOnly, acc)
+        walk(
+          def.children,
+          inst.children ?? {},
+          requiredOnly,
+          acc,
+          // `?? null`: a hand-edited file can omit `value` entirely, and
+          // `isFieldVisible` treats an absent and a null answer the same way
+          // (both hide what they gate), so this is `validateTree`'s raw
+          // `instance.value` without needing its cast.
+          isField(def) ? { ...gateAncestors, [def.name]: inst.value ?? null } : gateAncestors,
+        )
       }
     }
   }

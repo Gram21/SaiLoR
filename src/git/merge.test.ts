@@ -637,6 +637,47 @@ describe('mergeProjects — Paper.equal (a boolean set)', () => {
   })
 })
 
+describe('mergeProjects — the finished declaration', () => {
+  it('takes the side that changed it', () => {
+    const base = project({ papers: [paper('a')] })
+    const ours = project({ papers: [paper('a', { extra: { finished: true } })] })
+    const theirs = project({ papers: [paper('a')] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.papers[0].finished).toBe(true)
+  })
+
+  it('keeps the declaration when one side ticked it and the other unticked it', () => {
+    // Deliberately asymmetric, like the deleted-vs-changed paper rule: a
+    // wrongly-kept sign-off is one click from gone, a dropped one is a
+    // reviewer's statement silently discarded.
+    const base = project({ papers: [paper('a', { extra: { finished: true } })] })
+    const ours = project({ papers: [paper('a')] })
+    const theirs = project({ papers: [paper('a', { extra: { finished: true } })] })
+    const flipped = mergeProjects(base, ours, theirs)
+    expectMerged(flipped)
+    expect(flipped.merged.papers[0].finished).toBe(false) // only ours changed it
+
+    const both = mergeProjects(
+      base,
+      project({ papers: [paper('a')] }),
+      project({ papers: [paper('a', { extra: { finished: true } })] }),
+    )
+    expectMerged(both)
+    expect(both.merged.papers[0].finished).toBe(false)
+  })
+
+  it('unions per-reviewer declarations', () => {
+    const opts = { reviewers: 2, papers: [paper('a')] }
+    const base = project(opts)
+    const ours = project({ ...opts, papers: [paper('a', { extra: { reviewsFinished: { '1': true } } })] })
+    const theirs = project({ ...opts, papers: [paper('a', { extra: { reviewsFinished: { '2': true } } })] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.papers[0].reviewsFinished).toEqual({ '1': true, '2': true })
+  })
+})
+
 describe('mergeProjects — paper metadata conflicts', () => {
   it('conflicts on title, with canonical "title" under the paper tree', () => {
     const base = project({ papers: [paper('a', { title: 'T0' })] })

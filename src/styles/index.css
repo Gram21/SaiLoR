@@ -11,6 +11,11 @@
   --accent-weak: #e2f0f5;
   --danger: #b71c1c;
   --ok: #16a34a;
+  /* Work in progress — the annotation dots' fill until a reviewer marks the
+     paper finished (see `.status-dot.partial`). Amber-600: readable against
+     the light panel, and unmistakably neither the green nor the red it sits
+     between in the same list. */
+  --progress: #d97706;
   /* Fields the AI filled, until the reviewer looks at them. Deeper than the dark
      theme's tint so it still reads as blue against a white input. */
   --ai-mark: #3d9ad9;
@@ -33,6 +38,7 @@
   --accent-weak: #163740;
   --danger: #e06666;
   --ok: #4ade80;
+  --progress: #fbbf24;
   --ai-mark: #7cc4e8;
   color-scheme: dark;
 }
@@ -449,17 +455,45 @@ button.paper-search-mode:hover {
   background: var(--ok);
   border-color: var(--ok);
 }
-/* The completeness dot's partial fill (see `completenessPercent` in
-   `model/completeness.ts`): a pie slice via conic-gradient, `--fill` set
-   inline per row as a percentage. Only ever used strictly between 0 and
-   100 — those two endpoints render with the plain `.status-dot` and
-   `.status-dot.done` classes above instead, so this rule never has to
-   reproduce their exact look at the boundary. `border-color` stays the
-   plain `--muted` outline (not `--ok`) so a half-filled dot still reads as
-   "in progress", the same role the border already plays on the empty dot. */
-.status-dot.partial {
-  background: conic-gradient(var(--ok) var(--fill), transparent 0);
+/* The annotation-state dots (see `annotationState` in
+   `model/annotationState.ts`). The *fill* is progress — a pie slice via
+   conic-gradient, `--fill` set inline per row as a percentage, unchanged from
+   when the dot only ever meant progress. The *color* is the state:
+
+     amber  the paper is still the reviewer's to finish (`partial`,`complete`)
+     green  they ticked "Annotation finished" and it still holds (`finished`)
+     red    they ticked it but the schema is not fulfilled (`flagged`)
+
+   so a glance down the list separates "not done yet" from "done" from
+   "something is wrong here" without reading a single tooltip. `--fill`
+   defaults to 50% for the one case that has no percentage to give (a
+   boolean-only schema — see `completenessPercent`): a half dot reads as "in
+   progress, degree unknown", which is exactly what is known there. */
+.status-dot.untouched {
+  background: transparent;
   border-color: var(--muted);
+}
+.status-dot.partial {
+  background: conic-gradient(var(--progress) var(--fill, 50%), transparent 0);
+  border-color: var(--muted);
+}
+/* Every field filled, nobody has signed off: solid amber, so it is visibly
+   the end of the progress ramp and just as visibly not green. */
+.status-dot.complete {
+  background: var(--progress);
+  border-color: var(--progress);
+}
+.status-dot.finished {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+/* Keeps the progress fill — how much is missing is the useful part of this
+   state — in the danger color, with a matching outline so an *empty* flagged
+   paper (ticked with nothing filled in) still reads as red rather than as an
+   ordinary untouched dot. */
+.status-dot.flagged {
+  background: conic-gradient(var(--danger) var(--fill, 100%), transparent 0);
+  border-color: var(--danger);
 }
 /* Screening's tri-state marker, replacing the plain done/not-done dot for a
    screening project (see `paperScreeningStatus` in PaperList.tsx). Included
@@ -478,6 +512,28 @@ button.paper-search-mode:hover {
 .status-dot.screening-undecided {
   background: transparent;
   border-color: var(--muted);
+}
+
+/* Annotation-state filter above the paper list, non-screening projects only
+   (see `annotationState`). A dropdown rather than screening's segmented row:
+   five prose labels do not fit across the sidebar. Full width so it lines up
+   with the search box above it, and tinted like an active
+   `.screening-filter-btn` while it is actually filtering — otherwise a list
+   hiding most of its papers looks like an empty project. */
+.annotation-filter {
+  width: 100%;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  color: var(--text);
+  font-size: 0.78rem;
+}
+.annotation-filter.active {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 /* Segmented include/exclude/undecided filter above the paper list, screening
@@ -1055,6 +1111,40 @@ button.paper-search-mode:hover {
   margin: 0;
   font-size: 1rem;
 }
+/* The reviewer's "Annotation finished" sign-off in the annotation panel's
+   header. Always present (see `AnnotationPanel.tsx`), so its resting state is
+   deliberately quiet — muted, like any other unticked option. Ticked, it
+   takes the same color its dot in the paper list just took: green for a
+   finished paper, red (`.mismatch`) for one declared finished with fields
+   still empty. The two are the same statement in two places, so they say it
+   in the same color. */
+.annotation-finished {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 0.85em;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+.annotation-finished input {
+  margin: 0;
+  cursor: pointer;
+}
+.annotation-finished.on {
+  color: var(--ok);
+}
+.annotation-finished.on input {
+  accent-color: var(--ok);
+}
+.annotation-finished.mismatch {
+  color: var(--danger);
+}
+.annotation-finished.mismatch input {
+  accent-color: var(--danger);
+}
+
 /* Title on the left, the AI button on the right. */
 .annotations-head-row {
   display: flex;

@@ -26,6 +26,8 @@ function paper(reviews: Record<string, AnnotationValueTree>, id = 'p1'): Paper {
     equal: [],
     marks: [],
     reviewMarks: {},
+    finished: false,
+    reviewsFinished: {},
     extra: {},
   }
 }
@@ -142,6 +144,8 @@ describe('needsAlignment', () => {
       equal: [],
       marks: [],
       reviewMarks: {},
+      finished: false,
+      reviewsFinished: {},
       extra: {},
     }
   }
