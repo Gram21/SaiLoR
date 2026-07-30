@@ -29,7 +29,7 @@ export function NodeName({
   onClick?: () => void
 }) {
   const ref = useRef<HTMLSpanElement>(null)
-  const [coords, setCoords] = useState<{ x: number; y: number } | null>(null)
+  const [coords, setCoords] = useState<{ x: number; top?: number; bottom?: number } | null>(null)
 
   // The persistent popover. `origin` is where the right-click landed; `pos` is
   // the on-screen position after clamping to the viewport, computed once the
@@ -58,9 +58,18 @@ export function NodeName({
     )
   }
 
+  // Opens above the label instead, when there isn't enough room below (a
+  // field near the bottom of the panel) but there is above — same "flip
+  // toward whichever side has room" rule `ComboBox`'s menu follows. A short
+  // description rarely exceeds ~80px tall; a `bottom` anchor (rather than
+  // computing `top` from an as-yet-unrendered height) grows it upward
+  // without needing to know that height in advance.
   const show = () => {
     const r = ref.current?.getBoundingClientRect()
-    if (r) setCoords({ x: r.left, y: r.bottom })
+    if (!r) return
+    const spaceBelow = window.innerHeight - r.bottom
+    const openUp = spaceBelow < 80 && r.top > spaceBelow
+    setCoords(openUp ? { x: r.left, bottom: window.innerHeight - r.top + 6 } : { x: r.left, top: r.bottom + 6 })
   }
   const hide = () => setCoords(null)
 
@@ -91,7 +100,14 @@ export function NodeName({
       </span>
       {coords &&
         createPortal(
-          <span className="tip" role="tooltip" style={{ left: coords.x, top: coords.y + 6 }}>
+          <span
+            className="tip"
+            role="tooltip"
+            style={{
+              left: coords.x,
+              ...(coords.top !== undefined ? { top: coords.top } : { bottom: coords.bottom }),
+            }}
+          >
             {def.description}
           </span>,
           document.body,
