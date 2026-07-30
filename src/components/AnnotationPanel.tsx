@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useStore, selectCurrentPaper, currentTree } from '../state/store'
 import { useAiStore } from '../state/aiStore'
-import { normalizeTree } from '../model/annotations'
+import { normalizeTree, isFieldVisible } from '../model/annotations'
 import { paperVerdicts } from '../consolidate/disagreements'
 import { AnnotationNode } from './AnnotationNode'
 import {
@@ -158,9 +158,11 @@ export function AnnotationPanel() {
       </div>
       <div className="annotations-body">
         <ConsolidationVerdictsContext.Provider value={consolidationVerdicts}>
-          {schema.map((def) => (
-            <AnnotationNode key={def.id} def={def} path={[]} container={container} />
-          ))}
+          {schema
+            .filter((def) => isFieldVisible(def, container))
+            .map((def) => (
+              <AnnotationNode key={def.id} def={def} path={[]} container={container} />
+            ))}
         </ConsolidationVerdictsContext.Provider>
       </div>
     </div>

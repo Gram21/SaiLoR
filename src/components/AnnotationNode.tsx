@@ -1,6 +1,6 @@
 import { fieldPath, useAiMark, useStore, type PathSeg } from '../state/store'
 import { isField, isRepeatable, type ResolvedDef } from '../model/schema'
-import { canAdd, canRemove, type AnnotationValueTree } from '../model/annotations'
+import { canAdd, canRemove, isFieldVisible, type AnnotationValueTree } from '../model/annotations'
 import { Field } from './Field'
 import { NodeName } from './NodeName'
 
@@ -88,14 +88,16 @@ export function AnnotationNode({ def, path, container }: AnnotationNodeProps) {
 
           {def.children.length > 0 && inst.children && (
             <div className="anno-children">
-              {def.children.map((child) => (
-                <AnnotationNode
-                  key={child.id}
-                  def={child}
-                  path={[...path, { name: def.name, index: i }]}
-                  container={inst.children!}
-                />
-              ))}
+              {def.children
+                .filter((child) => isFieldVisible(child, inst.children!))
+                .map((child) => (
+                  <AnnotationNode
+                    key={child.id}
+                    def={child}
+                    path={[...path, { name: def.name, index: i }]}
+                    container={inst.children!}
+                  />
+                ))}
             </div>
           )}
         </div>

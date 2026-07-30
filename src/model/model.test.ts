@@ -8,6 +8,7 @@ import {
   canRemove,
   makeInstance,
   annotationText,
+  isFieldVisible,
   type AnnotationValueTree,
 } from './annotations'
 import { loadProject, serializeProject, ProjectLoadError } from './project'
@@ -160,6 +161,32 @@ describe('schema resolution', () => {
     expect(isRepeatable(resolved[3])).toBe(true)
     expect(isRepeatable(resolved[0])).toBe(false)
   })
+
+  it('keeps visibleIf when it names a real sibling field', () => {
+    const resolved = resolveSchema([
+      { name: 'Relevant', type: 'boolean' },
+      { name: 'Study Type', type: 'string', visibleIf: 'Relevant' },
+    ])
+    expect(resolved[1].visibleIf).toBe('Relevant')
+  })
+
+  it('drops visibleIf that self-references', () => {
+    const resolved = resolveSchema([{ name: 'Relevant', type: 'boolean', visibleIf: 'Relevant' }])
+    expect(resolved[0].visibleIf).toBeUndefined()
+  })
+
+  it('drops visibleIf that names a nonexistent sibling', () => {
+    const resolved = resolveSchema([{ name: 'Relevant', type: 'boolean', visibleIf: 'Nope' }])
+    expect(resolved[0].visibleIf).toBeUndefined()
+  })
+
+  it('drops visibleIf that names a sibling group (no type)', () => {
+    const resolved = resolveSchema([
+      { name: 'Findings', children: [{ name: 'Claim', type: 'string' }] },
+      { name: 'Study Type', type: 'string', visibleIf: 'Findings' },
+    ])
+    expect(resolved[1].visibleIf).toBeUndefined()
+  })
 })
 
 describe('annotation tree init', () => {
@@ -179,6 +206,40 @@ describe('annotation tree init', () => {
     const inst = makeInstance(findings)
     expect(inst.children!['Confidence'][0].value).toBeNull()
     expect(inst.value).toBeUndefined() // group node has no value
+  })
+})
+
+describe('isFieldVisible', () => {
+  it('is always true when the def has no visibleIf', () => {
+    const [relevant] = resolveSchema([{ name: 'Relevant', type: 'boolean' }])
+    expect(isFieldVisible(relevant, {})).toBe(true)
+  })
+
+  it('is true for a boolean gate only once it is true', () => {
+    const [, gated] = resolveSchema([
+      { name: 'Relevant', type: 'boolean' },
+      { name: 'Study Type', type: 'string', visibleIf: 'Relevant' },
+    ])
+    expect(isFieldVisible(gated, { Relevant: [{ value: false }] })).toBe(false)
+    expect(isFieldVisible(gated, { Relevant: [{ value: true }] })).toBe(true)
+  })
+
+  it('is true for a string/number gate once it is non-empty', () => {
+    const [, gated] = resolveSchema([
+      { name: 'Kind', type: 'string' },
+      { name: 'Detail', type: 'string', visibleIf: 'Kind' },
+    ])
+    expect(isFieldVisible(gated, { Kind: [{ value: '' }] })).toBe(false)
+    expect(isFieldVisible(gated, { Kind: [{ value: null }] })).toBe(false)
+    expect(isFieldVisible(gated, { Kind: [{ value: 'RCT' }] })).toBe(true)
+  })
+
+  it('fails open when the gate sibling is missing from the container', () => {
+    const [, gated] = resolveSchema([
+      { name: 'Relevant', type: 'boolean' },
+      { name: 'Study Type', type: 'string', visibleIf: 'Relevant' },
+    ])
+    expect(isFieldVisible(gated, {})).toBe(true)
   })
 })
 
