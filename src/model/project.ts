@@ -240,6 +240,28 @@ export interface Project {
    */
   aiEnabled: boolean
   /**
+   * Whether reviewers sign a paper off by hand — the "Annotation finished"
+   * checkbox in the annotation panel. Defaults to true; the provider of the
+   * file opts out with `config.finishCheckbox: false`.
+   *
+   * With it **off**, a paper counts as finished exactly when its schema is
+   * fulfilled (every field the completeness dot counts is filled — required
+   * fields only where the schema marks any, all fields otherwise). Nobody
+   * ticks anything, so `Paper.finished`/`reviewsFinished` are not read at
+   * all, and the "finished but a required field is empty" state becomes
+   * unreachable by construction — there is no declaration left to contradict
+   * the data.
+   *
+   * The flag is a *project* setting rather than a per-reviewer preference:
+   * whether "done" means "a human said so" or "the form is full" decides what
+   * every green dot in the file means, and two reviewers of one review
+   * disagreeing about that would make the counts they report incomparable.
+   *
+   * Any ticks recorded while it was on are kept in the file untouched, so
+   * turning it back on restores them rather than starting the review over.
+   */
+  finishCheckbox: boolean
+  /**
    * Number of independent reviewers. 1 (the default; `config.reviewers`
    * absent or 1) means single-reviewer: every paper carries one
    * `annotations` tree and nobody picks a reviewer. More than 1 means each
@@ -734,6 +756,9 @@ export function loadProject(input: string | unknown): Project {
     schema,
     // Absent means enabled; only an explicit `false` opts out.
     aiEnabled: raw.config.ai !== false,
+    // Absent means enabled, same rule as `ai` above; only an explicit `false`
+    // opts out, so a file predating this option behaves exactly as before.
+    finishCheckbox: (raw.config as { finishCheckbox?: unknown }).finishCheckbox !== false,
     // Absent or 1 means single-reviewer; zod already bounds a present value to [1, 10].
     reviewers: raw.config.reviewers ?? 1,
     papers,
@@ -768,6 +793,7 @@ export function serializeProject(project: Project): string {
       // for anything reading it without SaiLoR.
       schema: dehydrateSchema(project.schema),
       ...(project.aiEnabled ? {} : { ai: false }),
+      ...(project.finishCheckbox ? {} : { finishCheckbox: false }),
       ...(project.reviewers > 1 ? { reviewers: project.reviewers } : {}),
       ...(project.screening ? { screening: { reasons: project.screening.reasons } } : {}),
     },
@@ -955,6 +981,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     config: {
       schema: dehydrateSchema(project.schema),
       ...(project.aiEnabled ? {} : { ai: false }),
+      ...(project.finishCheckbox ? {} : { finishCheckbox: false }),
       ...(project.reviewers > 1 ? { reviewers: project.reviewers } : {}),
       ...(project.screening ? { screening: { reasons: project.screening.reasons } } : {}),
     },

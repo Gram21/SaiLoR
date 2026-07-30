@@ -41,6 +41,8 @@ export function ProjectEditor() {
   const setTitle = useEditorStore((s) => s.setTitle)
   const reviewers = useEditorStore((s) => s.reviewers)
   const setReviewers = useEditorStore((s) => s.setReviewers)
+  const finishCheckbox = useEditorStore((s) => s.finishCheckbox)
+  const setFinishCheckbox = useEditorStore((s) => s.setFinishCheckbox)
   const screening = useEditorStore((s) => s.screening)
   const setScreening = useEditorStore((s) => s.setScreening)
   const provenance = useEditorStore((s) => s.provenance)
@@ -186,6 +188,46 @@ export function ProjectEditor() {
           reviewer, who compares everyone's answers and records the final, agreed result — that
           consolidated result is what the project's saved output actually contains.
         </p>
+      )}
+
+      {/* Hidden for a screening draft: one include/exclude decision already
+          settles a paper there, so the annotation panel shows no checkbox and
+          the setting would configure nothing. */}
+      {!screening && (
+        <>
+          <div className="editor-location">
+            <span className="editor-location-label">Finishing</span>
+            <label
+              className="editor-ai-toggle"
+              title="When on, a paper only counts as finished once a reviewer ticks it off by hand. When off, a fulfilled schema is enough."
+            >
+              <input
+                type="checkbox"
+                checked={finishCheckbox}
+                onChange={(e) => setFinishCheckbox(e.target.checked)}
+                disabled={busy}
+              />
+              <span>Reviewers mark papers as finished</span>
+            </label>
+          </div>
+          <p className="editor-hint editor-reviewers-hint">
+            {finishCheckbox ? (
+              <>
+                An <strong>Annotation finished</strong> checkbox appears at the top of the
+                annotation panel, and only ticking it turns a paper's dot green — so "done" is a
+                judgement a reviewer made, not something inferred from the fields being non-empty.
+                A paper ticked while a <em>required</em> field is empty shows red until the two
+                agree.
+              </>
+            ) : (
+              <>
+                No checkbox: a paper counts as finished as soon as its schema is fulfilled — every{' '}
+                <em>required</em> field filled, or every field if nothing is marked required. Ticks
+                already recorded stay in the file, so turning this back on restores them.
+              </>
+            )}
+          </p>
+        </>
       )}
 
       {error && (

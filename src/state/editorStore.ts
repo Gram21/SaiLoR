@@ -115,6 +115,7 @@ interface EditorSnapshot {
   version: number
   title: string
   aiEnabled: boolean
+  finishCheckbox: boolean
   reviewers: number
   screening: ScreeningConfig | null
   extra: Record<string, unknown>
@@ -546,6 +547,9 @@ export function buildProjectJson(state: {
   version: number
   title?: string
   aiEnabled: boolean
+  /** Optional so callers predating this option keep compiling; absent means
+   *  enabled, matching `Project.finishCheckbox`'s default. */
+  finishCheckbox?: boolean
   reviewers: number
   /** Optional so existing test fixtures (and any other caller predating this
    *  feature) keep compiling unchanged — absent means "not a screening draft". */
@@ -578,6 +582,7 @@ export function buildProjectJson(state: {
       // never the (empty) authored node list — see `Project.screening`.
       schema: screening ? screeningSchemaDefs(screening) : toAnnotationDefs(state.nodes),
       ...(state.aiEnabled ? {} : { ai: false }),
+      ...(state.finishCheckbox === false ? { finishCheckbox: false } : {}),
       ...(state.reviewers > 1 ? { reviewers: state.reviewers } : {}),
       ...(screening ? { screening: { reasons: screening.reasons } } : {}),
     },
@@ -610,6 +615,7 @@ export function validateDraft(state: {
   version: number
   title?: string
   aiEnabled: boolean
+  finishCheckbox?: boolean
   reviewers: number
   /** Optional for the same reason `buildProjectJson`'s is — see there. */
   screening?: ScreeningConfig | null
@@ -819,6 +825,10 @@ interface EditorState {
   title: string
   /** Whether reviewers may use AI-assisted annotation on this project. */
   aiEnabled: boolean
+  /** Whether reviewers sign papers off by hand — see `Project.finishCheckbox`.
+   *  Carried through the editor untouched so editing a schema never silently
+   *  changes what "finished" means for the review. */
+  finishCheckbox: boolean
   /** Independent reviewers before Consolidation reconciles them; 1 = single-reviewer. */
   reviewers: number
   /**
@@ -884,6 +894,9 @@ interface EditorState {
   setTitle: (title: string) => void
   setAiEnabled: (enabled: boolean) => void
   setReviewers: (n: number) => void
+  /** Toggle hand sign-off for this project — see `Project.finishCheckbox`.
+   *  Its own undo step, like `setScreening`. */
+  setFinishCheckbox: (on: boolean) => void
   /** Turn screening on (seeding `DEFAULT_SCREENING_REASONS`) or off. Its own undo step. */
   setScreening: (on: boolean) => void
   setScreeningReasons: (reasons: string[]) => void
@@ -963,6 +976,7 @@ function snapshotOf(s: EditorState): EditorSnapshot {
     version: s.version,
     title: s.title,
     aiEnabled: s.aiEnabled,
+    finishCheckbox: s.finishCheckbox,
     reviewers: s.reviewers,
     screening: s.screening,
     extra: s.extra,
@@ -979,6 +993,7 @@ function applySnapshot(s: EditorState, snap: EditorSnapshot): void {
   s.version = snap.version
   s.title = snap.title
   s.aiEnabled = snap.aiEnabled
+  s.finishCheckbox = snap.finishCheckbox
   s.reviewers = snap.reviewers
   s.screening = snap.screening
   s.extra = snap.extra
@@ -1000,6 +1015,7 @@ interface OpenedEditorState {
   version: number
   title: string
   aiEnabled: boolean
+  finishCheckbox: boolean
   reviewers: number
   screening: ScreeningConfig | null
   extra: Record<string, unknown>
@@ -1076,6 +1092,8 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
     title: parsed.title ?? '',
     // Absent means enabled; only an explicit `false` opts out.
     aiEnabled: parsed.config.ai !== false,
+    // Same rule, same reason — see `Project.finishCheckbox`.
+    finishCheckbox: (parsed.config as { finishCheckbox?: unknown }).finishCheckbox !== false,
     // Absent or 1 means single-reviewer, same default as project.ts's loader.
     reviewers: parsed.config.reviewers ?? 1,
     screening,
@@ -1113,6 +1131,7 @@ function openEditorSession(s: EditorState, st: OpenedEditorState): void {
   s.version = st.version
   s.title = st.title
   s.aiEnabled = st.aiEnabled
+  s.finishCheckbox = st.finishCheckbox
   s.reviewers = st.reviewers
   s.screening = st.screening
   s.extra = st.extra
@@ -1235,6 +1254,10 @@ export const useEditorStore = create<EditorState>()(
     // silently claim a feature nobody can use. `config.ai: false` is written
     // out just like an explicit opt-out would be — see serializeProject.
     aiEnabled: false,
+    // Enabled by default, unlike `aiEnabled` above: hand sign-off is the
+    // behavior every project has unless its author opts out, and a new
+    // project should get the default rather than the opt-out.
+    finishCheckbox: true,
     reviewers: 1,
     screening: null,
     extra: {},
@@ -1269,6 +1292,7 @@ export const useEditorStore = create<EditorState>()(
         // See the initial-state comment above: no reachable feature, no UI to
         // turn it back on, so a new project starts opted out.
         s.aiEnabled = false
+        s.finishCheckbox = true
         s.reviewers = 1
         s.screening = null
         s.extra = {}
@@ -1490,6 +1514,18 @@ export const useEditorStore = create<EditorState>()(
       set((s) => {
         pushPast(s, snap)
         s.reviewers = clamped
+        s.dirty = true
+      })
+    },
+
+    setFinishCheckbox: (on) => {
+      // A single toggle, so it is its own undo step (no coalescing) — same
+      // shape as `setScreening` below.
+      lastEditKey = null
+      const snap = snapshotOf(get())
+      set((s) => {
+        pushPast(s, snap)
+        s.finishCheckbox = on
         s.dirty = true
       })
     },
@@ -1892,6 +1928,7 @@ export const useEditorStore = create<EditorState>()(
           // project — including one built from a screening import — starts
           // opted out.
           s.aiEnabled = false
+          s.finishCheckbox = true
           // A second screening pass repeats the same protocol step with the
           // same screening team, so its seat count is a property of the
           // protocol being continued — dual screening is a PRISMA-reportable

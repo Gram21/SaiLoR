@@ -241,6 +241,7 @@ export function detectFieldChanges(head: Project, working: Project): DetectedCha
     !deepEqualJson(head.schema, working.schema) ||
     head.reviewers !== working.reviewers ||
     head.aiEnabled !== working.aiEnabled ||
+    head.finishCheckbox !== working.finishCheckbox ||
     !deepEqualJson(head.screening, working.screening) ||
     head.version !== working.version ||
     !deepEqualJson(head.extra, working.extra) ||

@@ -41,6 +41,7 @@ function project(papers: Paper[]): Project {
     schemaInfo: null,
     schema: SCHEMA,
     aiEnabled: true,
+    finishCheckbox: true,
     reviewers: 1,
     papers,
     screening: { reasons: REASONS },

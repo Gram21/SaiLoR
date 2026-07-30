@@ -397,6 +397,7 @@ describe('validateProject', () => {
       schemaInfo: null,
       schema: sampleSchema,
       aiEnabled: true,
+      finishCheckbox: true,
       reviewers: 1,
       papers,
       screening: null,

@@ -239,6 +239,7 @@ describe('projectVerdicts', () => {
       schemaInfo: null,
       schema: SCHEMA,
       aiEnabled: true,
+      finishCheckbox: true,
       reviewers: 2,
       extra: {},
       screening: null,

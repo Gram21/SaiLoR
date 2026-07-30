@@ -153,6 +153,7 @@ decision are distinguishable at a glance.
       }
     ],
     "reviewers": 2,                 // optional, 1–10 (default 1) — see below
+    "finishCheckbox": false,        // optional (default true) — see "Marking papers finished"
     "screening": { "reasons": ["Wrong topic", "Duplicate"] }  // optional — see "Screening" below;
                                      // when present, "schema" above is ignored and derived from this
   },
@@ -222,9 +223,11 @@ Two optional top-level keys exist specifically to be safe from that `config` reb
   checkbox in the annotation panel, **red** if that box is ticked while a field the schema marks
   `required` is still empty — so "done" is always something a reviewer said, not something the form
   inferred, and a mark that contradicts the data says so instead of going quiet. (A schema that
-  requires nothing never goes red, and a Yes/No answer is never a hole.) A dropdown under the
-  search box filters the list into *In progress* (anything not ticked finished), *Finished*, and
-  *With issues*, and counts the selected bucket (`finished: 5/100`). In a **screening project** the
+  requires nothing never goes red, and a Yes/No answer is never a hole.) Set
+  `config.finishCheckbox: false` to drop the sign-off step: papers then count as finished as soon as
+  the schema is fulfilled, and no paper can be *With issues*. A dropdown under the search box filters
+  the list into *In progress* (anything not finished), *Finished*, and *With issues*, and counts the
+  selected bucket (`finished: 5/100`). In a **screening project** the
   dot becomes a tri-state marker (included / excluded / undecided) with its own filter instead, and
   there is no checkbox; see [Screening](#screening).
 - **Search** — the box above the paper list matches title, authors, DOI, abstract, the PDF's file

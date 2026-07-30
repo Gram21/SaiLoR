@@ -144,6 +144,17 @@ box.
 The tick is yours alone: in a multi-reviewer project each reviewer — and Consolidation — has their
 own checkbox and their own green dot, saved in their own file.
 
+### Turning the checkbox off
+
+If you'd rather not sign papers off by hand, put `"finishCheckbox": false` in the project file's
+`config`. Papers then count as finished the moment their schema is fulfilled — all required fields
+filled, or all fields where the schema requires nothing — and the checkbox disappears. Nothing can
+be red in that mode (there is no declaration left to contradict the data), so the filter drops its
+*With issues* option too.
+
+The default is `true`. Ticks recorded before you turned it off stay in the file untouched, so
+turning it back on picks up exactly where you left off.
+
 ### Where a project opens
 
 Opening a project puts you on the **first paper that isn't finished** — including one showing red —
