@@ -1,6 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+/** Keep in sync with `.combo-menu`'s `max-height` in index.css — used to
+ *  decide whether there's enough room to open downward at all. Exported for
+ *  `ModelPicker`, which reuses the same `.combo-menu` class/flip logic. */
+export const COMBO_MENU_MAX_HEIGHT = 240
+
 /** An option whose displayed text differs from the value it commits. */
 export interface ComboOption {
   id: string
@@ -49,7 +54,17 @@ export function ComboBox({
   const [open, setOpen] = useState(false)
   const [filter, setFilter] = useState('')
   const [highlight, setHighlight] = useState(0)
-  const [rect, setRect] = useState<{ left: number; top: number; width: number } | null>(null)
+  const [rect, setRect] = useState<{
+    left: number
+    width: number
+    maxHeight: number
+    /** Exactly one of `top`/`bottom` is set — `bottom` when the menu opens
+     *  upward (not enough room below the input) so it grows away from
+     *  whichever screen edge triggered the flip, without needing to know its
+     *  own rendered height up front. */
+    top?: number
+    bottom?: number
+  } | null>(null)
 
   const needle = filter.trim().toLowerCase()
   const filtered = needle
@@ -68,14 +83,25 @@ export function ComboBox({
     setFilter('')
   }
 
-  // Position the portaled menu under the input, following scroll/resize.
+  // Position the portaled menu under the input, following scroll/resize —
+  // or above it, when there isn't enough room below (a field near the
+  // bottom of the annotation panel) but there is above, so the menu never
+  // opens off-screen.
   useLayoutEffect(() => {
     if (!open) return
     const update = () => {
       const el = inputRef.current
       if (!el) return
       const r = el.getBoundingClientRect()
-      setRect({ left: r.left, top: r.bottom, width: r.width })
+      const spaceBelow = window.innerHeight - r.bottom
+      const spaceAbove = r.top
+      const openUp = spaceBelow < COMBO_MENU_MAX_HEIGHT && spaceAbove > spaceBelow
+      const maxHeight = Math.max(0, (openUp ? spaceAbove : spaceBelow) - 8)
+      setRect(
+        openUp
+          ? { left: r.left, width: r.width, bottom: window.innerHeight - r.top + 4, maxHeight }
+          : { left: r.left, width: r.width, top: r.bottom + 4, maxHeight },
+      )
     }
     update()
     window.addEventListener('scroll', update, true)
@@ -154,7 +180,12 @@ export function ComboBox({
           <div
             className="combo-menu"
             role="listbox"
-            style={{ left: rect.left, top: rect.top + 4, width: rect.width }}
+            style={{
+              left: rect.left,
+              width: rect.width,
+              maxHeight: rect.maxHeight,
+              ...(rect.top !== undefined ? { top: rect.top } : { bottom: rect.bottom }),
+            }}
           >
             {filtered.length === 0 ? (
               <div className="combo-empty">No matches</div>

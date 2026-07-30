@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ModelInfo } from '../llm/types'
+import { COMBO_MENU_MAX_HEIGHT } from './ComboBox'
 
 interface ModelPickerProps {
   id: string
@@ -37,7 +38,13 @@ export function ModelPicker({
   const inputRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
   const [highlight, setHighlight] = useState(0)
-  const [rect, setRect] = useState<{ left: number; top: number; width: number } | null>(null)
+  const [rect, setRect] = useState<{
+    left: number
+    width: number
+    maxHeight: number
+    top?: number
+    bottom?: number
+  } | null>(null)
   // Set on the first blur, and never reset: the point is "this field has been
   // left in a state the reviewer should look at", not a live typing check.
   const [touched, setTouched] = useState(false)
@@ -49,13 +56,24 @@ export function ModelPicker({
       )
     : models
 
+  // Opens above the input instead, when there isn't room below (a field near
+  // the bottom of the panel) but there is above — see `ComboBox`, the same fix.
   useLayoutEffect(() => {
     if (!open) return
     const update = () => {
       const el = inputRef.current
       if (!el) return
       const r = el.getBoundingClientRect()
-      setRect({ left: r.left, top: r.bottom, width: Math.max(r.width, 280) })
+      const width = Math.max(r.width, 280)
+      const spaceBelow = window.innerHeight - r.bottom
+      const spaceAbove = r.top
+      const openUp = spaceBelow < COMBO_MENU_MAX_HEIGHT && spaceAbove > spaceBelow
+      const maxHeight = Math.max(0, (openUp ? spaceAbove : spaceBelow) - 8)
+      setRect(
+        openUp
+          ? { left: r.left, width, bottom: window.innerHeight - r.top + 4, maxHeight }
+          : { left: r.left, width, top: r.bottom + 4, maxHeight },
+      )
     }
     update()
     window.addEventListener('scroll', update, true)
@@ -136,7 +154,12 @@ export function ModelPicker({
           <div
             className="combo-menu"
             role="listbox"
-            style={{ left: rect.left, top: rect.top + 4, width: rect.width }}
+            style={{
+              left: rect.left,
+              width: rect.width,
+              maxHeight: rect.maxHeight,
+              ...(rect.top !== undefined ? { top: rect.top } : { bottom: rect.bottom }),
+            }}
           >
             {filtered.length === 0 ? (
               <div className="combo-empty">No matches</div>
