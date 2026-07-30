@@ -73,6 +73,32 @@ function findMatches(root: HTMLElement, query: string): Range[] {
   return ranges
 }
 
+/** Clamps a `position: fixed` popover anchored at `anchor` (a raw click point)
+ *  into the viewport, the same two-pass measure-then-clamp approach as
+ *  `NodeName`'s description popover: the first mount is unclamped so the
+ *  popover's real size can be measured, then this effect (before paint,
+ *  hence `useLayoutEffect` not `useEffect`) clamps it. */
+function useClampedAnchor(ref: React.RefObject<HTMLDivElement | null>, anchor: { x: number; y: number } | null) {
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!anchor || !el) {
+      setPos(null)
+      return
+    }
+    const m = 8
+    const r = el.getBoundingClientRect()
+    setPos({
+      left: Math.min(Math.max(m, anchor.x), window.innerWidth - r.width - m),
+      top: Math.min(Math.max(m, anchor.y), window.innerHeight - r.height - m),
+    })
+    // Deliberately just `[anchor]`, not `[anchor, pos]` — `pos` is what this
+    // effect sets, so adding it as a dep would re-run on every clamp, which
+    // re-measures the (unchanged) box and sets the same `pos` again forever.
+  }, [anchor])
+  return pos
+}
+
 /** Middle pane: renders the current paper's PDF and captures text selection. */
 export function PdfViewer() {
   // Subscribe to primitive fields only. Subscribing to the whole paper object
@@ -108,6 +134,10 @@ export function PdfViewer() {
   // The comment/color popover for one existing highlight, opened by clicking it
   // (or automatically right after creating one, so a note can be typed at once).
   const [activeMark, setActiveMark] = useState<{ id: string; x: number; y: number } | null>(null)
+  const toolbarRef = useRef<HTMLDivElement>(null)
+  const markPopoverRef = useRef<HTMLDivElement>(null)
+  const toolbarPos = useClampedAnchor(toolbarRef, selectionToolbar)
+  const markPopoverPos = useClampedAnchor(markPopoverRef, activeMark)
 
   // Annotation-tools row: sticky notes plus cycling through every mark.
   const [annotationToolbarOpen, setAnnotationToolbarOpen] = useState(false)
@@ -1046,8 +1076,13 @@ export function PdfViewer() {
       </div>
       {selectionToolbar && (
         <div
+          ref={toolbarRef}
           className="pdf-highlight-toolbar"
-          style={{ left: selectionToolbar.x, top: selectionToolbar.y }}
+          style={
+            toolbarPos
+              ? { left: toolbarPos.left, top: toolbarPos.top }
+              : { left: selectionToolbar.x, top: selectionToolbar.y, visibility: 'hidden' }
+          }
           onClick={(e) => e.stopPropagation()}
         >
           {MARK_COLORS.map((c) => (
@@ -1069,8 +1104,13 @@ export function PdfViewer() {
           if (!mark) return null
           return (
             <div
+              ref={markPopoverRef}
               className="pdf-mark-popover"
-              style={{ left: activeMark.x, top: activeMark.y }}
+              style={
+                markPopoverPos
+                  ? { left: markPopoverPos.left, top: markPopoverPos.top }
+                  : { left: activeMark.x, top: activeMark.y, visibility: 'hidden' }
+              }
               onClick={(e) => e.stopPropagation()}
             >
               <div className="pdf-mark-popover-colors">
