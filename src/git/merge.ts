@@ -746,6 +746,18 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
   const aiM = merge3<boolean | undefined>(base?.aiEnabled, ours.aiEnabled, theirs.aiEnabled, eqBool)
   if (!aiM) rootRefusals.push('config.ai')
 
+  // Refused rather than picked when both sides changed it differently: this
+  // decides what every green dot in the file means (see
+  // `Project.finishCheckbox`), so guessing would silently redefine both
+  // reviewers' progress reports.
+  const finishM = merge3<boolean | undefined>(
+    base?.finishCheckbox,
+    ours.finishCheckbox,
+    theirs.finishCheckbox,
+    eqBool,
+  )
+  if (!finishM) rootRefusals.push('config.finishCheckbox')
+
   const reviewersM = merge3<number | undefined>(base?.reviewers, ours.reviewers, theirs.reviewers, eqNum)
   if (!reviewersM) rootRefusals.push('config.reviewers')
 
@@ -890,6 +902,7 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
       title,
       schema: mergedSchema,
       aiEnabled: aiM!.value!,
+      finishCheckbox: finishM!.value!,
       reviewers: reviewersM!.value!,
       screening: screeningM!.value ?? null,
       provenance: provenanceM!.value ?? null,

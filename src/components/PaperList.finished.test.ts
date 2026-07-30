@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { loadProject, serializeProject, splitProjectFiles, assembleLegacyProjectJson, type Project } from '../model/project'
 import type { AnnotationDef } from '../model/schema'
 import { paperIsFinished, paperAnnotationState } from './PaperList'
-import { annotationState, matchesFilter } from '../model/annotationState'
+import { annotationState, matchesFilter, annotationFiltersFor } from '../model/annotationState'
 
 /**
  * The reviewer's explicit "Annotation finished" declaration — the checkbox in
@@ -162,6 +162,68 @@ describe('paperAnnotationState — what the dot’s color says', () => {
     expect(state(bool({}))).toBe('untouched')
     expect(state(bool({ annotations: { Relevant: [{ value: true }] } }))).toBe('partial')
     expect(state(bool({ finished: true }))).toBe('finished')
+  })
+})
+
+describe('config.finishCheckbox: false — a fulfilled schema is finished', () => {
+  const noTick = (paper: Record<string, unknown>, schema: unknown[] = SCHEMA) =>
+    loadProject({
+      version: 1,
+      config: { schema, finishCheckbox: false },
+      papers: [{ id: 'p1', title: 'P', authors: [], pdf: 'p.pdf', ...paper }],
+    })
+
+  it('defaults to enabled, and only an explicit false opts out', () => {
+    expect(project({}).finishCheckbox).toBe(true)
+    expect(noTick({}).finishCheckbox).toBe(false)
+  })
+
+  it('is finished as soon as every required field is filled, with nothing ticked', () => {
+    const p = noTick({ annotations: FULL })
+    expect(p.papers[0].finished).toBe(false)
+    expect(state(p)).toBe('finished')
+  })
+
+  it('still distinguishes untouched from part-filled', () => {
+    expect(state(noTick({}))).toBe('untouched')
+    expect(state(noTick({ annotations: PARTIAL }))).toBe('partial')
+  })
+
+  it('never reaches "complete" or "flagged" — neither can exist without a tick', () => {
+    // `complete` is "full but unsigned", which cannot occur when nothing is
+    // signed; `flagged` is a declaration contradicting the data, and there is
+    // no declaration. Every reachable state is checked so a future edit
+    // cannot reintroduce one of them unnoticed.
+    for (const paper of [{}, { annotations: PARTIAL }, { annotations: FULL }]) {
+      expect(state(noTick(paper))).not.toBe('complete')
+      expect(state(noTick(paper))).not.toBe('flagged')
+    }
+  })
+
+  it('ignores a tick left over from before the option was turned off', () => {
+    // Two papers with identical data must show identical dots; honoring a
+    // stale flag would make one of them red for a reason the project has
+    // declared irrelevant. The flag itself is kept in the file — turning the
+    // option back on restores it.
+    const stale = noTick({ finished: true })
+    expect(state(stale)).toBe('untouched')
+    expect(stale.papers[0].finished).toBe(true)
+    expect(state(noTick({ annotations: PARTIAL, finished: true }))).toBe('partial')
+  })
+
+  it('round-trips through both save formats, and stays out of a default file', () => {
+    const off = JSON.parse(serializeProject(noTick({ annotations: FULL })))
+    expect(off.config.finishCheckbox).toBe(false)
+    expect(loadProject(off).finishCheckbox).toBe(false)
+    expect(splitProjectFiles(noTick({})).meta).toMatchObject({ config: { finishCheckbox: false } })
+    // A project using the default writes nothing, so files predating the
+    // option stay byte-identical through a save.
+    expect(JSON.parse(serializeProject(project({}))).config).not.toHaveProperty('finishCheckbox')
+  })
+
+  it('drops the "with issues" option from the filter dropdown', () => {
+    expect(annotationFiltersFor(true)).toContain('issues')
+    expect(annotationFiltersFor(false)).toEqual(['all', 'in-progress', 'finished'])
   })
 })
 

@@ -70,8 +70,21 @@ export function annotationState(
   finished: boolean,
   touched: boolean,
   hasRequired: boolean,
+  requireTick = true,
 ): AnnotationState | null {
   if (c === null) return null
+  // `config.finishCheckbox: false` — nobody signs anything off, so a
+  // fulfilled schema *is* finished (see `Project.finishCheckbox`). The stored
+  // tick is not read at all: it may hold a declaration from before the option
+  // was turned off, and honoring half of it would make two papers with
+  // identical data show different colors for a reason the project has
+  // declared irrelevant. `complete` and `flagged` are both unreachable here —
+  // the first because a fulfilled schema goes straight to green, the second
+  // because there is no declaration left for the data to contradict.
+  if (!requireTick) {
+    if (c.total === 0) return touched ? 'finished' : 'untouched'
+    return c.filled === c.total ? 'finished' : c.filled === 0 ? 'untouched' : 'partial'
+  }
   if (c.total === 0) return finished ? 'finished' : touched ? 'partial' : 'untouched'
   const complete = c.filled === c.total
   if (finished) return complete || !hasRequired ? 'finished' : 'flagged'
@@ -112,6 +125,7 @@ export function annotationStateFor(
   tree: AnnotationValueTree | null,
   finished: boolean,
   applies: boolean,
+  requireTick = true,
 ): AnnotationState | null {
   if (!applies) return null
   return annotationState(
@@ -119,6 +133,7 @@ export function annotationStateFor(
     finished,
     !!tree && hasAnnotations(schema, tree),
     hasRequiredFields(schema),
+    requireTick,
   )
 }
 
@@ -148,6 +163,14 @@ export type AnnotationFilter = 'all' | 'in-progress' | 'finished' | 'issues'
 
 /** Order shown in the dropdown: everything, then the natural progression. */
 export const ANNOTATION_FILTERS: AnnotationFilter[] = ['all', 'in-progress', 'finished', 'issues']
+
+/** The dropdown's options for a project, dropping `issues` where no paper can
+ *  ever be in that state (`config.finishCheckbox: false` — see
+ *  `annotationState`). An option that always selects nothing is worse than no
+ *  option: it reads as "no problems found" rather than "not applicable". */
+export function annotationFiltersFor(requireTick: boolean): AnnotationFilter[] {
+  return requireTick ? ANNOTATION_FILTERS : ANNOTATION_FILTERS.filter((f) => f !== 'issues')
+}
 
 /** The dropdown's option text, and the word the counter under it uses
  *  ("finished: 5/100"). Lowercase so it reads as a sentence in the counter;

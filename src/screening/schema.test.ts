@@ -56,6 +56,7 @@ describe('isScreening', () => {
     schemaInfo: null,
     schema: [],
     aiEnabled: true,
+    finishCheckbox: true,
     reviewers: 1,
     papers: [],
     extra: {},

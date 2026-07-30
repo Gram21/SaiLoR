@@ -215,6 +215,9 @@ export const projectSchema = z
       schema: z.array(annotationDefSchema).optional(),
       /** When false, the provider of this file has disabled AI-assisted annotation. */
       ai: z.boolean().optional(),
+      /** When false, reviewers do not sign papers off by hand — a fulfilled
+       *  schema alone counts as finished. See `Project.finishCheckbox`. */
+      finishCheckbox: z.boolean().optional(),
       /** Number of independent reviewers. Absent or 1 = single-reviewer (the default). */
       reviewers: z.number().int().min(1).max(10).optional(),
       screening: screeningConfigSchema.optional(),

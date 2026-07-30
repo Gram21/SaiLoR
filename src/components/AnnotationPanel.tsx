@@ -107,13 +107,17 @@ export function AnnotationPanel() {
   // their own dot meanings and no notion of a fulfilled schema at all. One
   // rule (`completenessApplies`) governs the checkbox, the dot color and the
   // filter dropdown together.
+  // `config.finishCheckbox: false` removes the control entirely: with the
+  // project deciding "done" from the data, a checkbox would either do nothing
+  // or claim an authority it no longer has. See `Project.finishCheckbox`.
+  const finishCheckboxEnabled = project?.finishCheckbox !== false
   const finishedCompleteness = project ? paperCompleteness(project, paper, currentReviewer) : null
   const isFinished = project ? currentFinished(project, currentReviewer, paper) === true : false
   const finishedState = project ? paperAnnotationState(project, paper, currentReviewer) : null
   // Red only once ticked: an unfilled paper nobody has claimed is finished is
   // simply unfinished, not wrong.
   const finishedMismatch = finishedState === 'flagged'
-  const showFinished = finishedCompleteness !== null
+  const showFinished = finishCheckboxEnabled && finishedCompleteness !== null
 
   const aiDisabled = busy || !paper.pdf || !aiEnabled || !aiUnlocked
   // Not unlocked this session at all (the hidden click gesture never

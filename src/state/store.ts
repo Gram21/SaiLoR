@@ -742,6 +742,7 @@ function firstUnfinishedPaperId(project: Project, currentReviewer: string | null
       currentTree(project, currentReviewer, paper),
       currentFinished(project, currentReviewer, paper) === true,
       true,
+      project.finishCheckbox,
     )
     if (state !== 'finished') return paper.id
   }
@@ -1501,6 +1502,11 @@ export const useStore = create<AppState>()(
     setAnnotationFinished: (finished) => {
       const prev = get()
       if (!prev.project) return
+      // The project decides "done" from the data, so there is no declaration
+      // to make (`config.finishCheckbox: false`). The panel hides the
+      // checkbox too; this guards the action itself, so a stale click or a
+      // future caller cannot write a flag the project has said it ignores.
+      if (!prev.project.finishCheckbox) return
       // Multi-reviewer, nobody picked yet: nothing to attribute the
       // declaration to — the same guard every editing action uses.
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) return
