@@ -23,7 +23,7 @@ import { applyAlignment } from '../consolidate/apply'
 import { unanimousFills } from '../consolidate/unanimous'
 import { consolidatorHasAnswered } from '../consolidate/readiness'
 import { validateProject, type UnannotatedPaper, type ValidationIssue } from '../model/validate'
-import { formatPath, displayPath, resolvePath, MAX_UNBOUNDED_INDEX } from '../llm/paths'
+import { formatPath, displayPath, resolvePath, parsePath, MAX_UNBOUNDED_INDEX } from '../llm/paths'
 import { isUnanswered } from '../llm/fields'
 import type { Suggestion } from '../llm/types'
 import {
@@ -129,6 +129,41 @@ export function deferredConsolidationKey(paperId: string, canonicalPath: string)
 /** Canonical path of a field instance as the UI addresses it (container path + leaf). */
 export function fieldPath(path: PathSeg[], name: string, index: number): string {
   return formatPath([...path, { name, index }])
+}
+
+/**
+ * Rewrite a canonical path after the instance at `path/name[index]` was
+ * removed from a repeatable list. Every sibling after the removed index
+ * shifts down by one, so any path/key naming it (mark links, AI marks,
+ * `paper.equal`, deferred consolidations) has to shift with it or it keeps
+ * pointing at whichever entry inherited the old slot. Returns `null` when
+ * `canonical` named the removed instance itself (or something inside it) —
+ * the caller drops those. Defensive-parse convention: an unparseable or
+ * unrelated path comes back unchanged rather than throwing.
+ */
+export function shiftCanonicalPath(
+  canonical: string,
+  path: PathSeg[],
+  name: string,
+  index: number,
+): string | null {
+  const segs = parsePath(canonical)
+  if (!segs) return canonical
+  const depth = path.length
+  if (segs.length <= depth) return canonical
+  for (let i = 0; i < depth; i++) {
+    const seg = segs[i]
+    if (seg.name.trim() !== path[i].name.trim() || seg.index !== path[i].index) return canonical
+  }
+  const seg = segs[depth]
+  if (seg.name.trim() !== name.trim()) return canonical
+  if (seg.index === index) return null
+  if (seg.index > index) {
+    const next = [...segs]
+    next[depth] = { name: seg.name, index: seg.index - 1 }
+    return formatPath(next)
+  }
+  return canonical
 }
 
 /** The reviewer scope a mark key should use right now: `null` for a
@@ -1495,6 +1530,70 @@ export const useStore = create<AppState>()(
           pushPast(s, snap)
           list.splice(index, 1)
           s.dirty = true
+
+          // Every other structure addresses a field instance by canonical
+          // path with an embedded index, so removing anything but the last
+          // entry has to shift the survivors' indices too — otherwise a
+          // mark linked to entry #3 keeps pointing at whatever now sits in
+          // slot #3 instead of following the entry it was actually about.
+          const marks = currentMarks(s.project!, s.currentReviewer, paper, false) ?? EMPTY_MARKS
+          for (const mark of marks) {
+            if (!mark.linkedFields) continue
+            let changed = false
+            const next: typeof mark.linkedFields = []
+            for (const link of mark.linkedFields) {
+              const shifted = shiftCanonicalPath(link.path, path, name, index)
+              if (shifted === null) {
+                changed = true
+                continue
+              }
+              if (shifted !== link.path) {
+                const segs = parsePath(shifted)
+                next.push({ path: shifted, label: segs ? displayPath(segs) : link.label })
+                changed = true
+              } else {
+                next.push(link)
+              }
+            }
+            if (changed) {
+              if (next.length === 0) delete mark.linkedFields
+              else mark.linkedFields = next
+              mark.updatedAt = new Date().toISOString()
+            }
+          }
+
+          const scope = markReviewerScope(s.project!, s.currentReviewer)
+          const prefix = aiMarkKey(paper.id, '', scope)
+          for (const key of Object.keys(s.aiMarks)) {
+            if (!key.startsWith(prefix)) continue
+            const canonical = key.slice(prefix.length)
+            const shifted = shiftCanonicalPath(canonical, path, name, index)
+            if (shifted === canonical) continue
+            delete s.aiMarks[key]
+            if (shifted !== null) s.aiMarks[aiMarkKey(paper.id, shifted, scope)] = true
+          }
+
+          if (s.project!.reviewers <= 1 || s.currentReviewer === 'consolidation') {
+            for (let i = 0; i < paper.equal.length; i++) {
+              const shifted = shiftCanonicalPath(paper.equal[i], path, name, index)
+              if (shifted !== paper.equal[i]) {
+                if (shifted === null) paper.equal.splice(i, 1), i--
+                else paper.equal[i] = shifted
+              }
+            }
+            // `deferredConsolidations` is session state kept outside the undo
+            // snapshot, so an undo of this removal leaves its keys shifted —
+            // pre-existing behavior, out of scope here.
+            const dcPrefix = `${paper.id}::`
+            for (const key of Object.keys(s.deferredConsolidations)) {
+              if (!key.startsWith(dcPrefix)) continue
+              const canonical = key.slice(dcPrefix.length)
+              const shifted = shiftCanonicalPath(canonical, path, name, index)
+              if (shifted === canonical) continue
+              delete s.deferredConsolidations[key]
+              if (shifted !== null) s.deferredConsolidations[`${dcPrefix}${shifted}`] = true
+            }
+          }
         }
       })
     },
