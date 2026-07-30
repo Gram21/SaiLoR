@@ -32,6 +32,8 @@ function paper(annotations: AnnotationValueTree, over: Partial<Paper> = {}): Pap
     equal: [],
     marks: [],
     reviewMarks: {},
+    finished: false,
+    reviewsFinished: {},
     extra: {},
     ...over,
   }

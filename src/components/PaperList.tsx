@@ -1,7 +1,17 @@
 import { memo, useEffect, useMemo, useState, type CSSProperties } from 'react'
-import { useStore, currentTree } from '../state/store'
+import { useStore, currentTree, currentFinished } from '../state/store'
 import { hasAnnotations, annotationText } from '../model/annotations'
 import { completeness, completenessPercent, hasRequiredFields, type Completeness } from '../model/completeness'
+import {
+  annotationState,
+  annotationStateFor,
+  completenessApplies,
+  matchesFilter,
+  ANNOTATION_FILTERS,
+  ANNOTATION_FILTER_LABELS,
+  type AnnotationFilter,
+  type AnnotationState,
+} from '../model/annotationState'
 import { readyToConsolidate } from '../consolidate/readiness'
 import { screeningStatus, type ScreeningStatus } from '../screening/status'
 import { SidebarToggle } from './SidebarToggle'
@@ -10,6 +20,18 @@ import type { Paper, Project } from '../model/project'
 /** Which text a query word is matched against. */
 type SearchMode = 'metadata' | 'annotations'
 
+/** The sentence each state's dot leads its tooltip/`aria-label` with, before
+ *  the raw numbers. Spelled out rather than reusing the dropdown's terse
+ *  option labels: this is the only place the color's *meaning* is stated, and
+ *  it is the sole route to it for a screen reader. */
+const DOT_LABELS: Record<AnnotationState, string> = {
+  untouched: 'Not started',
+  partial: 'In progress',
+  complete: 'Ready to finish — tick "Annotation finished" in the panel',
+  finished: 'Marked finished',
+  flagged: 'Marked finished, but a required field is empty',
+}
+
 /** A paper paired with a precomputed, lowercased searchable string per mode. */
 interface IndexedPaper {
   paper: Paper
@@ -17,25 +39,9 @@ interface IndexedPaper {
   annotationHaystack: string
   /** `null` when the fill does not apply to this seat — see `completenessApplies`. */
   completeness: Completeness | null
-}
-
-/**
- * Whether the completeness dot's partial fill applies to this seat at all.
- *
- * A screening project already has its own tri-state included/excluded/
- * undecided marker (`paperScreeningStatus`); the derived screening schema
- * marks nothing required, so a fill would fall back to counting both of its
- * fields (Decision, Reason) — meaning an "Include" decision, which needs no
- * Reason, would render as a half-full dot for a paper that is actually done.
- * The Consolidation seat's dot means *readiness* (`paperIsMarkedDone`), a
- * different question ("has every reviewer answered") that a per-field fill
- * cannot express without conflating it with how much Consolidation itself
- * has typed — so it keeps its own binary dot instead.
- */
-function completenessApplies(project: Project, currentReviewer: string | null): boolean {
-  if (project.screening != null) return false
-  if (project.reviewers > 1 && currentReviewer === 'consolidation') return false
-  return true
+  /** `null` in the seats where completeness does not apply — the same seats
+   *  `completeness` above is null for. */
+  state: AnnotationState | null
 }
 
 /**
@@ -51,6 +57,43 @@ export function paperCompleteness(
 ): Completeness | null {
   if (!completenessApplies(project, currentReviewer)) return null
   return completeness(project.schema, currentTree(project, currentReviewer, paper))
+}
+
+/**
+ * A paper's annotation state for the active seat — the dot's color, what the
+ * filter dropdown matches, and what the counter counts. `null` where
+ * completeness does not apply (screening, Consolidation); see
+ * `annotationState` for the states themselves.
+ *
+ * Always derived, never stored: only the reviewer's tick is persisted, so
+ * emptying a field on a finished paper re-evaluates the mark by itself (it
+ * becomes `flagged`), and refilling it restores `finished` — no separate
+ * invalidation step exists that could be missed. Exported standalone
+ * (mirroring `paperCompleteness` / `paperIsMarkedDone`) so this is directly
+ * unit-testable without rendering the list.
+ */
+export function paperAnnotationState(
+  project: Project,
+  paper: Paper,
+  currentReviewer: string | null,
+): AnnotationState | null {
+  return annotationStateFor(
+    project.schema,
+    currentTree(project, currentReviewer, paper),
+    currentFinished(project, currentReviewer, paper) === true,
+    completenessApplies(project, currentReviewer),
+  )
+}
+
+/** Shorthand for "green in the list": declared finished *and* still complete.
+ *  Both halves are required — a full form is nobody's sign-off, and a
+ *  sign-off does not survive the data it was about going away. */
+export function paperIsFinished(
+  project: Project,
+  paper: Paper,
+  currentReviewer: string | null,
+): boolean {
+  return paperAnnotationState(project, paper, currentReviewer) === 'finished'
 }
 
 /**
@@ -181,8 +224,11 @@ export function PaperList() {
   const selectPaper = useStore((s) => s.selectPaper)
   const screeningFilter = useStore((s) => s.screeningFilter)
   const setScreeningFilter = useStore((s) => s.setScreeningFilter)
+  const annotationFilter = useStore((s) => s.annotationFilter)
+  const setAnnotationFilter = useStore((s) => s.setAnnotationFilter)
   const schema = project?.schema ?? []
   const isScreening = project?.screening != null
+  const isConsolidationSeat = (project?.reviewers ?? 1) > 1 && currentReviewer === 'consolidation'
   // Whether the dot's fill (where it applies at all) is a fraction of
   // *required* fields or of every field — see `completeness.ts`. Derived from
   // the schema alone, so it is the same for every row; computed once here
@@ -216,6 +262,11 @@ export function PaperList() {
   const index = useMemo<IndexedPaper[]>(() => {
     if (!papers || !project) return []
     const applies = completenessApplies(project, currentReviewer)
+    // Schema-wide, so it is hoisted out of the per-paper loop — the same
+    // value `requiredMode` holds for the dot's denominator, recomputed here
+    // rather than added to this memo's deps (it is derived from `schema`,
+    // which is already a dep).
+    const required = hasRequiredFields(schema)
     return papers.map((paper) => {
       // The active reviewer's own tree, so the sidebar answers "which papers
       // did *I* record this in" — the same tree the form and validation show.
@@ -225,6 +276,7 @@ export function PaperList() {
       // when a numbered reviewer has never opened this paper, which is not
       // free to repeat over a large paper list.
       const tree = currentTree(project, currentReviewer, paper)
+      const c = applies ? completeness(schema, tree) : null
       return {
         paper,
         // Searchable metadata: title, authors, DOI, abstract, PDF path and
@@ -233,7 +285,16 @@ export function PaperList() {
         // file they remember or by its identifier. See `paperMetadataHaystack`.
         metadataHaystack: paperMetadataHaystack(paper),
         annotationHaystack: annotationText(schema, tree ?? {}),
-        completeness: applies ? completeness(schema, tree) : null,
+        completeness: c,
+        // Same inputs `paperAnnotationState` uses, off the tree and
+        // completeness already computed here rather than walking them again
+        // per row — a large paper list re-derives this on every keystroke.
+        state: annotationState(
+          c,
+          currentFinished(project, currentReviewer, paper) === true,
+          !!tree && hasAnnotations(schema, tree),
+          required,
+        ),
       }
     })
   }, [papers, project, schema, currentReviewer])
@@ -244,32 +305,42 @@ export function PaperList() {
   // row already renders per mode, so it can never disagree with the dots.
   const progress = useMemo(() => {
     if (!project) return null
+    const total = project.papers.length
     if (isScreening) {
       const done = project.papers.filter(
         (p) => paperScreeningStatus(project, p, currentReviewer) !== 'undecided',
       ).length
-      return { done, total: project.papers.length, label: 'screened' }
+      return { total, text: `${done} of ${total} screened` }
     }
     if (project.reviewers > 1 && currentReviewer === 'consolidation') {
       const done = project.papers.filter((p) => paperIsMarkedDone(project, p, currentReviewer)).length
-      return { done, total: project.papers.length, label: 'ready to consolidate' }
+      return { total, text: `${done} of ${total} ready to consolidate` }
     }
-    const done = index.filter(
-      (e) => e.completeness && e.completeness.total > 0 && e.completeness.filled === e.completeness.total,
-    ).length
-    return {
-      done,
-      total: project.papers.length,
-      label: requiredMode ? 'required fields complete' : 'fully annotated',
-    }
-  }, [project, isScreening, currentReviewer, index, requiredMode])
+    // Counts whichever bucket the filter dropdown is showing, so "finished:
+    // 5/100" answers the question the reviewer just asked the list. With no
+    // filter set it counts `finished` — the headline number of an annotation
+    // project, and what this row said before the filter existed; counting
+    // "all papers" there would only restate the total next to it. Either way
+    // it counts by the same rule the rows are filtered by, over every paper
+    // regardless of the search box, so the two can never disagree.
+    const bucket: AnnotationFilter = annotationFilter === 'all' ? 'finished' : annotationFilter
+    const done = index.filter((e) => matchesFilter(e.state, bucket)).length
+    return { total, text: `${ANNOTATION_FILTER_LABELS[bucket]}: ${done}/${total}` }
+  }, [project, isScreening, currentReviewer, index, annotationFilter])
 
   // Filter + rank by how many distinct query words match (then matched chars).
   const words = query.toLowerCase().split(/\s+/).filter((w) => w.length > 0)
   const filtered = useMemo<IndexedPaper[]>(() => {
     const base = index.filter((e) => {
-      if (!isScreening || screeningFilter === 'all' || !project) return true
-      return paperScreeningStatus(project, e.paper, currentReviewer) === screeningFilter
+      if (isScreening) {
+        if (screeningFilter === 'all' || !project) return true
+        return paperScreeningStatus(project, e.paper, currentReviewer) === screeningFilter
+      }
+      // `e.state` is null exactly where the dropdown is not rendered (the
+      // Consolidation seat), and `matchesFilter` passes everything under
+      // "all", so switching into that seat can never leave a filter set that
+      // hides every paper.
+      return matchesFilter(e.state, annotationFilter)
     })
     if (words.length === 0) return base
     const scored = base
@@ -290,12 +361,14 @@ export function PaperList() {
     return scored.map((e) => e.entry)
     // `words` is derived from `query`; keying on both is intentional.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, query, mode, isScreening, screeningFilter, project, currentReviewer])
+  }, [index, query, mode, isScreening, screeningFilter, annotationFilter, project, currentReviewer])
 
   if (!project) return null
 
   const total = project.papers.length
-  const isFiltered = words.length > 0 || (isScreening && screeningFilter !== 'all')
+  const isFiltered =
+    words.length > 0 ||
+    (isScreening ? screeningFilter !== 'all' : !isConsolidationSeat && annotationFilter !== 'all')
   const countText = isFiltered ? `${filtered.length} of ${total}` : `${total}`
 
   // The list's one roving tab stop (standard listbox keyboard pattern: Tab
@@ -342,11 +415,7 @@ export function PaperList() {
           </span>
           <SidebarToggle />
         </div>
-        {progress && progress.total > 0 && (
-          <div className="paper-list-progress">
-            {progress.done} of {progress.total} {progress.label}
-          </div>
-        )}
+        {progress && progress.total > 0 && <div className="paper-list-progress">{progress.text}</div>}
         <div className="paper-search">
           <input
             className="paper-search-input"
@@ -384,6 +453,27 @@ export function PaperList() {
             {mode === 'annotations' ? 'TAGS' : 'META'}
           </button>
         </div>
+        {/* A dropdown rather than the segmented row screening uses: five
+            states with prose labels do not fit across the sidebar's width,
+            and unlike screening's three decisions these are read far less
+            often than they are glanced at in the dots. Hidden in the
+            Consolidation seat, whose papers have no annotation state
+            (`completenessApplies`) — the readiness dot is the question there. */}
+        {!isScreening && !isConsolidationSeat && (
+          <select
+            className={`annotation-filter${annotationFilter === 'all' ? '' : ' active'}`}
+            aria-label="Filter by annotation state"
+            title="Show only papers in one annotation state. The line above counts that state across the whole project."
+            value={annotationFilter}
+            onChange={(e) => setAnnotationFilter(e.target.value as AnnotationFilter)}
+          >
+            {ANNOTATION_FILTERS.map((f) => (
+              <option key={f} value={f}>
+                {ANNOTATION_FILTER_LABELS[f][0].toUpperCase() + ANNOTATION_FILTER_LABELS[f].slice(1)}
+              </option>
+            ))}
+          </select>
+        )}
         {isScreening && (
           <div className="screening-filter" role="group" aria-label="Filter by screening status">
             {(['all', 'undecided', 'included', 'excluded'] as const).map((f) => (
@@ -481,28 +571,26 @@ export function PaperList() {
             // old binary dot rather than showing a meaningless 0%.
             const c = entry.completeness ?? { filled: 0, total: 0 }
             const pct = completenessPercent(c)
-            if (pct === null) {
-              const title = annotated ? 'Has annotations' : 'Not annotated yet'
-              return (
-                <PaperRow
-                  key={p.id}
-                  paper={p}
-                  active={active}
-                  roving={p.id === rovingId}
-                  onSelect={selectPaper}
-                  dotClassName={annotated ? 'status-dot done' : 'status-dot'}
-                  dotLabel={title}
-                  dotFill={null}
-                />
-              )
-            }
-            // 0% and 100% reuse the exact pre-existing classes, so the two
-            // endpoints render pixel-identical to the dot's previous
-            // touched/untouched meaning; only genuinely partial states get
-            // the new conic-gradient fill.
-            const dotClassName =
-              pct === 0 ? 'status-dot' : pct === 100 ? 'status-dot done' : 'status-dot partial'
-            const dotLabel = `${c.filled} of ${c.total} ${requiredMode ? 'required ' : ''}fields filled`
+            const state = entry.state ?? 'untouched'
+            // The dot keeps showing *progress* exactly as before — the same
+            // pie-slice fill over the same numbers — and the state only
+            // decides its color: amber while the paper is still the
+            // reviewer's to finish, green once they tick the box, red when
+            // the tick and the data disagree. So the fill answers "how far",
+            // the color answers "whose move is it", and neither has to be
+            // read out of the other.
+            //
+            // `pct === null` is the degenerate case a fraction cannot
+            // describe (a boolean-only schema, or no tree at all in a
+            // multi-reviewer project with nobody picked): there the dot falls
+            // back to a fill-less marker, the same as before.
+            const fieldsLabel =
+              pct === null
+                ? annotated
+                  ? 'Has annotations'
+                  : 'Not annotated yet'
+                : `${c.filled} of ${c.total} ${requiredMode ? 'required ' : ''}fields filled`
+            const dotLabel = `${DOT_LABELS[state]} — ${fieldsLabel}`
             return (
               <PaperRow
                 key={p.id}
@@ -510,9 +598,12 @@ export function PaperList() {
                 active={active}
                 roving={p.id === rovingId}
                 onSelect={selectPaper}
-                dotClassName={dotClassName}
+                dotClassName={`status-dot ${state}`}
                 dotLabel={dotLabel}
-                dotFill={pct === 0 || pct === 100 ? null : pct}
+                // Only the genuinely partial fills carry a percentage; the
+                // endpoints are solid, and the degenerate `pct === null` case
+                // uses the CSS fallback rather than inventing a number.
+                dotFill={pct === null || pct === 0 || pct === 100 ? null : pct}
               />
             )
           })

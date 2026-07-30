@@ -59,6 +59,8 @@ function makePaper(opts: {
     equal: [],
     marks: [],
     reviewMarks: {},
+    finished: false,
+    reviewsFinished: {},
     extra: {},
   }
 }

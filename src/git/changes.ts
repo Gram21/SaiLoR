@@ -84,10 +84,12 @@ function abstractFromPdfLabel(value: FieldValue): FieldValue {
 
 /** Paper-level fields eligible for field-level review, in display order.
  *  `id` is identity, not a field; `annotations`/`reviews`/`aiUsage`/`equal`/
- *  `extra` are handled separately below (`aiUsage` and `equal` are system
- *  bookkeeping, not something a reviewer picks a value for, so they are
- *  never split out as their own rows — they simply carry over with whichever
- *  disposition the paper they belong to ends up with as a whole). */
+ *  `finished`/`reviewsFinished`/`extra` are handled separately below
+ *  (`aiUsage` and `equal` are system bookkeeping, and `finished` is a
+ *  statement about a whole paper rather than a value a reviewer picks among
+ *  two candidates, so none of them are split out as their own rows — they
+ *  simply carry over with whichever disposition the paper they belong to ends
+ *  up with as a whole). */
 const PAPER_META_FIELDS: {
   canonical: string
   label: string

@@ -32,6 +32,11 @@ import {
   SCREENING_REASON,
 } from '../screening/schema'
 import { screeningStatus, type ScreeningStatus } from '../screening/status'
+import {
+  annotationStateFor,
+  completenessApplies,
+  type AnnotationFilter,
+} from '../model/annotationState'
 import { screeningIssues } from '../screening/validate'
 import { extractPdfMeta } from '../model/pdfMeta'
 import {
@@ -345,6 +350,11 @@ interface AppState {
   consolidationTarget: { path: PathSeg[]; name: string; index: number } | null
   /** Which decisions the screening paper list shows. Session-only, like the search box's mode. */
   screeningFilter: ScreeningStatus | 'all'
+  /** Which annotation state the (non-screening) paper list shows, and which
+   *  one its "finished: 5/100" counter reports. Session-only, like
+   *  `screeningFilter` — a filter is a way of looking at the project right
+   *  now, not a property of it worth writing to the file. */
+  annotationFilter: AnnotationFilter
   /** Screening reads title + abstract by default; the PDF is the escalation path. Session-only. */
   screeningShowPdf: boolean
   /** Whether the screening progress/PRISMA summary modal is open. Session-only. */
@@ -430,6 +440,16 @@ interface AppState {
   setFieldValue: (path: PathSeg[], name: string, index: number, value: FieldValue) => void
   addInstance: (path: PathSeg[], def: ResolvedDef) => void
   removeInstance: (path: PathSeg[], name: string, index: number) => void
+  /** Tick/untick "annotation finished" for the current paper and seat — the
+   *  checkbox in the annotation panel, and the only thing that turns the
+   *  paper list's dot green (see `Paper.finished`). Pushes no history entry
+   *  of its own — it is a declaration about the work, not an edit to it, and
+   *  a reviewer reaching for undo means "take back what I typed". It still
+   *  rides along inside the project snapshots undo/redo restore, exactly like
+   *  PDF marks do, so undoing the edit that completed the paper takes the
+   *  declaration back with it — which is the coherent outcome, since that
+   *  state was neither complete nor declared. */
+  setAnnotationFinished: (finished: boolean) => void
   undo: () => void
   redo: () => void
 
@@ -524,6 +544,8 @@ interface AppState {
   /** Record the exclusion reason. No-op unless the seat's current decision is Exclude. */
   setScreeningReason: (reason: string | null) => void
   setScreeningFilter: (filter: ScreeningStatus | 'all') => void
+  /** Which annotation state the paper list shows — see `annotationFilter`. */
+  setAnnotationFilter: (filter: AnnotationFilter) => void
   toggleScreeningPdf: () => void
   setScreeningSummaryOpen: (open: boolean) => void
   /**
@@ -670,6 +692,62 @@ export function currentMarks(
   return paper.reviewMarks[currentReviewer]
 }
 
+/**
+ * `currentTree`'s counterpart for the "finished" declaration: whose checkbox
+ * is being shown/toggled right now, following the exact same seat routing —
+ * `paper.finished` for a single-reviewer project or the Consolidation seat,
+ * `paper.reviewsFinished[currentReviewer]` otherwise, and `null` when nobody
+ * has picked a seat (an unattributed declaration is as meaningless as an
+ * unattributed edit). Read-only: there is no `create` variant, since the flag
+ * has no skeleton to initialise — an absent key already means `false`.
+ */
+export function currentFinished(
+  project: Project,
+  currentReviewer: string | null,
+  paper: Paper,
+): boolean | null {
+  if (project.reviewers <= 1) return paper.finished
+  if (currentReviewer === 'consolidation') return paper.finished
+  if (currentReviewer === null) return null
+  return paper.reviewsFinished[currentReviewer] === true
+}
+
+/**
+ * Which paper a project opens on: the first one this seat has *not* finished,
+ * rather than simply the first in the list.
+ *
+ * Reopening a review in progress should land where the work is. The first
+ * paper is only the right answer on a brand-new project — on any project that
+ * has been worked through, it is a paper the reviewer already signed off, and
+ * landing on it invites re-reading (or re-editing) settled work before
+ * getting to what is left.
+ *
+ * "Not finished" is the dot's own `finished` state (see `annotationState`), so
+ * the app lands on the first paper whose dot is not green — including a
+ * `flagged` one, which is precisely a paper still needing attention. Falls
+ * back to the first paper when every paper is finished (nothing is left to
+ * land on, and an empty selection would show "Select a paper to annotate" on
+ * a completed review) and wherever the state does not apply at all: a
+ * screening project, the Consolidation seat, or a multi-reviewer project with
+ * no seat picked yet, where nothing can be attributed and the list opens as
+ * it always did.
+ */
+function firstUnfinishedPaperId(project: Project, currentReviewer: string | null): string | null {
+  const fallback = project.papers[0]?.id ?? null
+  const applies = completenessApplies(project, currentReviewer)
+  if (!applies || (project.reviewers > 1 && currentReviewer === null)) return fallback
+  for (const paper of project.papers) {
+    const state = annotationStateFor(
+      project.schema,
+      currentTree(project, currentReviewer, paper),
+      currentFinished(project, currentReviewer, paper) === true,
+      true,
+    )
+    if (state !== 'finished') return paper.id
+  }
+  return fallback
+}
+
 /** Walk from a paper's annotation root to the container tree addressed by `path`. */
 function containerAt(root: AnnotationValueTree, path: PathSeg[]): AnnotationValueTree {
   let tree = root
@@ -728,6 +806,7 @@ export const useStore = create<AppState>()(
     currentReviewer: null,
     consolidationTarget: null,
     screeningFilter: 'all',
+    annotationFilter: 'all',
     screeningShowPdf: false,
     screeningSummaryOpen: false,
     screeningAbstractReads: {},
@@ -887,6 +966,7 @@ export const useStore = create<AppState>()(
         s.currentReviewer = null
         s.consolidationTarget = null
         s.screeningFilter = 'all'
+        s.annotationFilter = 'all'
         s.screeningShowPdf = false
         s.screeningSummaryOpen = false
         s.screeningAbstractReads = {}
@@ -938,6 +1018,11 @@ export const useStore = create<AppState>()(
         // nothing more than whitespace or key order and resave files that
         // were already perfectly fine.
         const needsMigration = needsShapeMigration(project, text)
+        // The seat has to be resolved before the landing paper, since which
+        // papers count as finished is per-seat. Same value the `set` below
+        // stores; computed once here so the two cannot disagree.
+        const reviewer = project.reviewers > 1 ? loadCurrentReviewer(handle, project.reviewers) : null
+        const landingPaperId = firstUnfinishedPaperId(project, reviewer)
         // The title only becomes known once the JSON is parsed, so the recents
         // entry is enriched here rather than in the adapter's open path.
         if (handle) getPlatform().rememberProject(handle, name, project.title)
@@ -949,7 +1034,7 @@ export const useStore = create<AppState>()(
           s.projectName = name
           s.projectTitle = project.title ?? ''
           s.recents = getPlatform().getRecents()
-          s.currentPaperId = project.papers[0]?.id ?? null
+          s.currentPaperId = landingPaperId
           s.dirty = false
           s.loadError = null
           s.busy = false
@@ -978,6 +1063,7 @@ export const useStore = create<AppState>()(
           s.unanimousRun = null
           s.consolidationTarget = null
           s.screeningFilter = 'all'
+          s.annotationFilter = 'all'
           s.screeningShowPdf = false
           s.screeningSummaryOpen = false
           // Re-derive rather than carry over: a single-reviewer project never
@@ -985,15 +1071,14 @@ export const useStore = create<AppState>()(
           // persisted for *this* file (or null — unselected — if there is
           // none, so the reviewer picks explicitly rather than inheriting
           // whoever the previously open project happened to be showing).
-          s.currentReviewer = project.reviewers > 1 ? loadCurrentReviewer(handle, project.reviewers) : null
+          s.currentReviewer = reviewer
           s.screeningAbstractReads = {}
         })
         lastFieldKey = null
         // The paper the project opens on gets the same treatment `selectPaper`
         // gives every one after it — the reviewer never selected this one by
         // hand, so nothing else would ever fire for it.
-        const firstPaperId = project.papers[0]?.id
-        if (firstPaperId) void get().extractScreeningAbstract(firstPaperId)
+        if (landingPaperId) void get().extractScreeningAbstract(landingPaperId)
         // Write the migrated shape back in place — never a download, and never
         // a "where should this go" prompt, just because a file's shape needed
         // updating. A project with nowhere stable to write (a `?project=` URL,
@@ -1410,6 +1495,32 @@ export const useStore = create<AppState>()(
           list.splice(index, 1)
           s.dirty = true
         }
+      })
+    },
+
+    setAnnotationFinished: (finished) => {
+      const prev = get()
+      if (!prev.project) return
+      // Multi-reviewer, nobody picked yet: nothing to attribute the
+      // declaration to — the same guard every editing action uses.
+      if (prev.project.reviewers > 1 && prev.currentReviewer === null) return
+      set((s) => {
+        const paper = currentPaper(s)
+        if (!paper) return
+        const project = s.project!
+        if (project.reviewers <= 1 || s.currentReviewer === 'consolidation') {
+          if (paper.finished === finished) return
+          paper.finished = finished
+        } else {
+          const reviewer = s.currentReviewer!
+          if ((paper.reviewsFinished[reviewer] === true) === finished) return
+          // Deleted rather than set to `false`: absent *is* the undeclared
+          // state (see `parseReviewsFinished`), so unticking has to leave the
+          // file exactly as it was before the box was ever ticked.
+          if (finished) paper.reviewsFinished[reviewer] = true
+          else delete paper.reviewsFinished[reviewer]
+        }
+        s.dirty = true
       })
     },
 
@@ -1904,6 +2015,11 @@ export const useStore = create<AppState>()(
     setScreeningFilter: (filter) =>
       set((s) => {
         s.screeningFilter = filter
+      }),
+
+    setAnnotationFilter: (filter) =>
+      set((s) => {
+        s.annotationFilter = filter
       }),
 
     toggleScreeningPdf: () =>

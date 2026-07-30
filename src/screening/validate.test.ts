@@ -27,6 +27,8 @@ function paper(annotations: AnnotationValueTree): Paper {
     equal: [],
     marks: [],
     reviewMarks: {},
+    finished: false,
+    reviewsFinished: {},
     extra: {},
   }
 }

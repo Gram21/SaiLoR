@@ -100,10 +100,75 @@ fills in proportionally as fields are completed:
   than staying permanently empty.
 - Hover a dot (or check its accessible label) for the actual numbers: "3 of 12 fields filled".
 
+The **fill** is always progress; the **color** says whose move it is:
+
+| Dot | State | Meaning |
+| --- | --- | --- |
+| empty | *Not started* | nothing filled in yet |
+| amber slice | *In progress* | partly filled |
+| solid amber | *Ready to finish* | every counted field is filled, but nobody has said it's done |
+| solid green | *Finished* | you ticked **Annotation finished** and it still holds |
+| red | *Finished, required fields missing* | ticked while a **required** field is empty — see below |
+
 This dot means something different depending on your seat: for a numbered reviewer it's your own
-progress; for **Consolidation** it's a simple done/not-done marker instead (whether every reviewer has
-recorded something for that paper yet); in a **screening** project it becomes the tri-state
-include/exclude/undecided marker described in [Screening](screening.md).
+progress and your own sign-off; for **Consolidation** it's a simple done/not-done marker instead
+(whether every reviewer has recorded something for that paper yet); in a **screening** project it
+becomes the tri-state include/exclude/undecided marker described in [Screening](screening.md).
+
+## Marking a paper finished
+
+A completely filled form is not the same as a finished paper, so SaiLoR does not decide that for
+you. The **Annotation finished** checkbox sits at the top of the annotation panel, under the paper's
+title, and is always there — tick it when you're done with the paper. Only then does its dot turn
+green.
+
+### When red appears
+
+Red means one specific thing: **a field that had to be filled is empty on a paper you called
+finished.** "Had to be filled" is the schema's own `required` flag — the same rule
+[Validate](#validating) uses — so the red dot and the Validate dialog can never disagree.
+
+- If your schema marks **nothing** required, no paper ever turns red. An unanswered question is
+  often the right record of a paper that doesn't address it, and ticking the box says so.
+- A **Yes/No** field is never a hole. Unticking it records *no*, which is an answer — it can't turn
+  a finished paper red even if the field is marked required. (Same reason Validate never reports a
+  Yes/No field as missing.)
+- Ticking early — before a required field is filled — is allowed rather than blocked. Sometimes a
+  paper genuinely can't be filled in further; the app marks the disagreement instead of hiding it.
+
+The mark is re-evaluated from the current data, live, as you type: **it is not tied to saving.**
+Empty a required field on a finished paper and it turns red at once; refill it and it goes green
+again. Nothing is ever silently un-ticked — the declaration is yours to withdraw by unticking the
+box.
+
+The tick is yours alone: in a multi-reviewer project each reviewer — and Consolidation — has their
+own checkbox and their own green dot, saved in their own file.
+
+### Where a project opens
+
+Opening a project puts you on the **first paper that isn't finished** — including one showing red —
+rather than on paper 1, which on a review you've been working through is something you already
+signed off. If every paper is finished, it opens on the first one as before. Screening projects, and
+a multi-reviewer project where you haven't picked a seat yet, also open on the first paper: neither
+has a per-seat "finished" to go by.
+
+## Filtering by annotation state
+
+The dropdown under the search box narrows the list to one of three buckets:
+
+- **In progress** — every paper you have *not* ticked as finished, whatever its dot shows: untouched,
+  part-filled, and filled-but-not-yet-signed-off alike. Undo some annotations, or untick the box on a
+  paper you had finished, and it comes back here.
+- **Finished** — ticked and still holding.
+- **With issues** — ticked while a required field is empty (the red dots).
+
+The five dot colors are unchanged; the filter is just coarser than they are, since "what still needs
+work" is the question you actually ask a list.
+
+The line under "Papers" counts whichever bucket is selected, across the whole project regardless of
+the search box: `finished: 5/100`. With no filter set it counts *finished*, the headline number.
+Screening projects keep their own include/exclude/undecided filter instead, and the Consolidation
+seat has neither — its dot answers "has every reviewer annotated this paper" instead.
 
 ## Validating
 

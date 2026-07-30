@@ -502,8 +502,36 @@ function mergePaper(
     equal: mergeEqual(base?.equal, ours.equal, theirs.equal),
     marks: mergeMarksList(ours.marks, theirs.marks),
     reviewMarks: mergeReviewMarks(ours.reviewMarks, theirs.reviewMarks),
+    // A plain 3-way merge per seat, falling back to `true` when the two sides
+    // genuinely diverge (one ticked the box while the other unticked it) —
+    // the same asymmetry `mergePapers` applies to a deleted-vs-changed paper:
+    // a wrongly-kept declaration is one click from gone, a dropped one is a
+    // reviewer's statement silently discarded. Not a `FieldConflict`: the
+    // conflict UI resolves annotation *field values*, and this is neither in
+    // a tree nor addressable by a canonical path.
+    finished:
+      merge3<boolean>(base?.finished ?? false, ours.finished, theirs.finished, (a, b) => a === b)
+        ?.value ?? true,
+    reviewsFinished: mergeReviewsFinished(base?.reviewsFinished, ours.reviewsFinished, theirs.reviewsFinished),
     extra,
   }
+}
+
+/** `mergeEqual`'s set-union shape, per reviewer key: the flags are really a
+ *  set of "seats that declared themselves done", and the same
+ *  keep-the-declaration tiebreak as `finished` above applies to each. */
+function mergeReviewsFinished(
+  base: Record<string, boolean> | undefined,
+  ours: Record<string, boolean>,
+  theirs: Record<string, boolean>,
+): Record<string, boolean> {
+  const keys = new Set([...Object.keys(base ?? {}), ...Object.keys(ours), ...Object.keys(theirs)])
+  const out: Record<string, boolean> = {}
+  for (const k of keys) {
+    const m = merge3<boolean>(base?.[k] === true, ours[k] === true, theirs[k] === true, (a, b) => a === b)
+    if (m?.value ?? true) out[k] = true
+  }
+  return out
 }
 
 /** Same union-by-reviewer-key shape the `reviews` loop above uses, then a
@@ -551,6 +579,16 @@ function canonicalPaper(schema: ResolvedDef[], p: Paper) {
     marks: [...p.marks].sort((a, b) => a.id.localeCompare(b.id)),
     reviewMarks: Object.fromEntries(
       Object.entries(p.reviewMarks).map(([k, v]) => [k, [...v].sort((a, b) => a.id.localeCompare(b.id))]),
+    ),
+    finished: p.finished,
+    // Only the `true` keys, matching what `serializeProject` writes — an
+    // explicit `false` and an absent key are the same state (see
+    // `parseReviewsFinished`) and must not read as a change.
+    reviewsFinished: Object.fromEntries(
+      Object.keys(p.reviewsFinished)
+        .filter((k) => p.reviewsFinished[k])
+        .sort()
+        .map((k) => [k, true]),
     ),
     extra: p.extra,
   }
