@@ -171,6 +171,21 @@ export function ComboBox({
         onBlur={() => setOpen(false)}
         onKeyDown={onKeyDown}
       />
+      {value !== null && !disabled && (
+        <button
+          type="button"
+          className="combo-clear"
+          aria-label="Clear selection"
+          title="Clear selection"
+          onMouseDown={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+          }}
+          onClick={() => onChange(null)}
+        >
+          ×
+        </button>
+      )}
       <span className="combo-caret" aria-hidden="true">
         ▾
       </span>
