@@ -224,6 +224,14 @@ describe('schema resolution', () => {
     const fieldB = resolved[1].children[0]
     expect(fieldB.visibleIf).toBeUndefined()
   })
+
+  it('keeps visibleIf on a group (a node with children but no type), gating the whole group', () => {
+    const resolved = resolveSchema([
+      { name: 'Relevant', type: 'boolean' },
+      { name: 'Findings', visibleIf: 'Relevant', children: [{ name: 'Claim', type: 'string' }] },
+    ])
+    expect(resolved[1].visibleIf).toBe('Relevant')
+  })
 })
 
 describe('annotation tree init', () => {

@@ -422,34 +422,32 @@ function SchemaNodeRow({
           onChange={(e) => updateNode(node.uid, { description: e.target.value })}
         />
 
-        {node.kind !== 'group' && (
-          <select
-            className="schema-input schema-visible-if"
-            title="Only show this field once the chosen field has an answer"
-            value={node.visibleIf}
-            onChange={(e) => updateNode(node.uid, { visibleIf: e.target.value })}
-          >
-            <option value="">Always visible</option>
-            {siblingFieldOptions.length > 0 && (
-              <optgroup label="Same level">
-                {siblingFieldOptions.map((s) => (
-                  <option key={s.uid} value={s.name}>
-                    Show only if "{s.name}" answered
-                  </option>
-                ))}
-              </optgroup>
-            )}
-            {ancestorFieldOptions.length > 0 && (
-              <optgroup label="Ancestors">
-                {ancestorFieldOptions.map((s) => (
-                  <option key={s.uid} value={s.name}>
-                    Show only if "{s.name}" (ancestor) answered
-                  </option>
-                ))}
-              </optgroup>
-            )}
-          </select>
-        )}
+        <select
+          className="schema-input schema-visible-if"
+          title="Only show this field/group once the chosen field has an answer"
+          value={node.visibleIf}
+          onChange={(e) => updateNode(node.uid, { visibleIf: e.target.value })}
+        >
+          <option value="">Always visible</option>
+          {siblingFieldOptions.length > 0 && (
+            <optgroup label="Same level">
+              {siblingFieldOptions.map((s) => (
+                <option key={s.uid} value={s.name}>
+                  Show only if "{s.name}" answered
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {ancestorFieldOptions.length > 0 && (
+            <optgroup label="Ancestors">
+              {ancestorFieldOptions.map((s) => (
+                <option key={s.uid} value={s.name}>
+                  Show only if "{s.name}" (ancestor) answered
+                </option>
+              ))}
+            </optgroup>
+          )}
+        </select>
 
         <button
           type="button"
