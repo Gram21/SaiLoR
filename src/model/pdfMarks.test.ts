@@ -165,10 +165,43 @@ describe('sortMarksForCycling', () => {
     expect(sortMarksForCycling([a, b, c]).map((m) => m.id)).toEqual(['b', 'c', 'a'])
   })
 
-  it('within a page, orders by the first rect\'s y ascending', () => {
+  it('within a page and the same column, orders by the first rect\'s y ascending', () => {
     const top = mark({ id: 'top', rects: [{ x: 0, y: 0.1, width: 0.1, height: 0.1 }] })
     const bottom = mark({ id: 'bottom', rects: [{ x: 0, y: 0.8, width: 0.1, height: 0.1 }] })
     expect(sortMarksForCycling([bottom, top]).map((m) => m.id)).toEqual(['top', 'bottom'])
+  })
+
+  it('finishes the left column before starting the right one', () => {
+    // A two-column layout: "right" sits higher up the page (smaller y) than
+    // "left", but in the right-hand column. Column must win over raw y, so
+    // the left column finishes before the right one starts, rather than the
+    // two being interleaved by absolute vertical position.
+    const left = mark({ id: 'left', rects: [{ x: 0.1, y: 0.5, width: 0.1, height: 0.1 }] })
+    const right = mark({ id: 'right', rects: [{ x: 0.6, y: 0.1, width: 0.1, height: 0.1 }] })
+    expect(sortMarksForCycling([right, left]).map((m) => m.id)).toEqual(['left', 'right'])
+  })
+
+  it('does not let x jitter within one column override y', () => {
+    // Two highlights in the same (left) column, at different indentation —
+    // a highlighted line starting mid-sentence sits at a different x than
+    // one starting at the margin. Reading order must still follow y, not the
+    // incidental x difference between two same-column lines.
+    const earlier = mark({ id: 'earlier', rects: [{ x: 0.15, y: 0.2, width: 0.1, height: 0.1 }] })
+    const later = mark({ id: 'later', rects: [{ x: 0.05, y: 0.6, width: 0.1, height: 0.1 }] })
+    expect(sortMarksForCycling([later, earlier]).map((m) => m.id)).toEqual(['earlier', 'later'])
+  })
+
+  it('buckets by which half of the page x falls in, not the raw value', () => {
+    // Both left-column marks, y decides between them; the right-column mark
+    // comes after both regardless of its own y.
+    const leftTop = mark({ id: 'leftTop', rects: [{ x: 0.05, y: 0.1, width: 0.1, height: 0.1 }] })
+    const leftBottom = mark({ id: 'leftBottom', rects: [{ x: 0.2, y: 0.3, width: 0.1, height: 0.1 }] })
+    const right = mark({ id: 'right', rects: [{ x: 0.55, y: 0.05, width: 0.1, height: 0.1 }] })
+    expect(sortMarksForCycling([right, leftBottom, leftTop]).map((m) => m.id)).toEqual([
+      'leftTop',
+      'leftBottom',
+      'right',
+    ])
   })
 
   it('is stable for exact ties', () => {

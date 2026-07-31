@@ -179,14 +179,48 @@ export function mergeMarksList(ours: PdfMark[], theirs: PdfMark[]): PdfMark[] {
   return [...byId.values()]
 }
 
-/** Stable reading order for cycling through every mark on a PDF (the "next/
- *  previous annotation" toolbar in `PdfViewer`): top-to-bottom by page, then
- *  top-to-bottom within a page by the first rect's `y`. A cross-page
- *  highlight's fragments are deduped down to one (its earliest-page
- *  fragment, since that sorts first) so cycling lands on it once, not once
- *  per page it touches. */
+/** The x fraction (0..1 of the page width) splitting a two-column layout's
+ *  left half from its right half — see `columnOf`. Body text rarely starts
+ *  past the page's own midpoint even when indented, so a plain left/right
+ *  split at 0.5 is enough to tell "this reviewer's left column" from "this
+ *  reviewer's right column" without any real layout analysis. */
+const COLUMN_SPLIT_X = 0.5
+
+/** Which half of the page a rect's left edge falls in — 0 for the left
+ *  column, 1 for the right. See `sortMarksForCycling`. */
+function columnOf(rect: MarkRect): number {
+  return rect.x < COLUMN_SPLIT_X ? 0 : 1
+}
+
+/**
+ * Stable reading order for cycling through every mark on a PDF (the "next/
+ * previous annotation" toolbar in `PdfViewer`, and the page-ordered tail of
+ * the field-link popover's list): by page, then by column (`columnOf` — left
+ * half before right half), then by the first rect's `y` within that column.
+ *
+ * Neither "just `y`" nor "just `x`, then `y`" is actually reading order.
+ * Plain `y` interleaves a two-column paper's columns by absolute vertical
+ * position — a highlight near the top of the right column would sort before
+ * one halfway down the left column, which is not the order a reader
+ * encounters them in. Plain `x` overcorrects: two highlights in the *same*
+ * column rarely share an identical left edge (indentation, where a
+ * selection happens to start mid-line), so sorting on raw `x` before `y`
+ * can reorder two highlights on the very same column by that jitter alone.
+ * Bucketing into a column first and only comparing `y` inside it gets both
+ * right: unaffected by micro-differences in `x` within one column, but still
+ * finishes the left column before starting the right one.
+ *
+ * A cross-page highlight's fragments are deduped down to one (its
+ * earliest-page fragment, since that sorts first) so cycling lands on it
+ * once, not once per page it touches.
+ */
 export function sortMarksForCycling(marks: PdfMark[]): PdfMark[] {
-  const sorted = [...marks].sort((a, b) => a.page - b.page || a.rects[0].y - b.rects[0].y)
+  const sorted = [...marks].sort(
+    (a, b) =>
+      a.page - b.page ||
+      columnOf(a.rects[0]) - columnOf(b.rects[0]) ||
+      a.rects[0].y - b.rects[0].y,
+  )
   return dedupeMarkGroups(sorted)
 }
 
