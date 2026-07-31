@@ -65,6 +65,10 @@ export interface SlrBridge {
   ): Promise<{ ok: true; path: string } | { ok: false; error: string }>
   /** Pick where a new annotated PDF should be saved. Null if cancelled. */
   pickPdfExportPath(suggestedName: string): Promise<string | null>
+  /** Pick where a plain-text export should be saved. Null if cancelled. */
+  pickTextExportPath(suggestedName: string): Promise<string | null>
+  /** Write `text` to `absPath`. */
+  writeTextFile(absPath: string, text: string): Promise<{ ok: true; path: string } | { ok: false; error: string }>
   /** For each project path: does it still exist, and what title does it now carry? */
   peekProjects(paths: string[]): Promise<{ exists: boolean; title?: string }[]>
   /** Paths of `toFiles` relative to `fromFile`'s directory, POSIX-separated. */
@@ -429,6 +433,16 @@ export class ElectronAdapter implements PlatformAdapter {
 
   pickPdfExportPath(suggestedName: string): Promise<string | null> {
     return bridge().pickPdfExportPath(suggestedName)
+  }
+
+  // ---- Plain-text export ----
+
+  pickTextExportPath(suggestedName: string): Promise<string | null> {
+    return bridge().pickTextExportPath(suggestedName)
+  }
+
+  writeTextFile(absPath: string, text: string): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+    return bridge().writeTextFile(absPath, text)
   }
 }
 

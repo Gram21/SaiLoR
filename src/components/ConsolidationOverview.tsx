@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { projectVerdicts } from '../consolidate/disagreements'
+import { projectVerdicts, type FieldVerdict } from '../consolidate/disagreements'
+import { projectDisagreementsText } from '../consolidate/exportDisagreements'
 import { consolidationFieldStatus } from './ConsolidationVerdicts'
 import { paperMetadataHaystack } from './PaperList'
 import { useStore } from '../state/store'
+import { Dropdown } from './Dropdown'
+import { useExportTextMenu } from '../hooks/useExportTextMenu'
 
 interface DisagreementPaper {
   id: string
@@ -37,9 +40,12 @@ export function ConsolidationOverview() {
     return () => document.removeEventListener('keydown', onKey)
   }, [open, setOpen])
 
-  const papers = useMemo<DisagreementPaper[]>(() => {
-    if (!open || !project) return []
-    const counts = new Map<string, number>()
+  // Every disagreement verdict, grouped by paper — the export's own input, and
+  // what `papers` below derives its per-paper counts from, so the two can
+  // never disagree about which paper has how many.
+  const verdictsByPaper = useMemo<Map<string, FieldVerdict[]>>(() => {
+    const map = new Map<string, FieldVerdict[]>()
+    if (!open || !project) return map
     for (const verdict of projectVerdicts(project)) {
       // The same verdict the field's own red border comes from — see
       // `DisagreementOverview`'s note on why this calls rather than restates.
@@ -52,16 +58,35 @@ export function ConsolidationOverview() {
           verdict.participantCount,
         ) === 'disagree'
       ) {
-        counts.set(verdict.paperId, (counts.get(verdict.paperId) ?? 0) + 1)
+        const list = map.get(verdict.paperId)
+        if (list) list.push(verdict)
+        else map.set(verdict.paperId, [verdict])
       }
     }
+    return map
+  }, [open, project])
+
+  const papers = useMemo<DisagreementPaper[]>(() => {
+    if (!project) return []
     return project.papers.flatMap((paper) => {
-      const disagreements = counts.get(paper.id)
-      return disagreements
-        ? [{ id: paper.id, title: paper.title, disagreements, metadataHaystack: paperMetadataHaystack(paper) }]
+      const verdicts = verdictsByPaper.get(paper.id)
+      return verdicts
+        ? [
+            {
+              id: paper.id,
+              title: paper.title,
+              disagreements: verdicts.length,
+              metadataHaystack: paperMetadataHaystack(paper),
+            },
+          ]
         : []
     })
-  }, [open, project])
+  }, [project, verdictsByPaper])
+
+  const exportMenu = useExportTextMenu(
+    () => (project ? projectDisagreementsText(project.papers, verdictsByPaper) : ''),
+    'disagreements.txt',
+  )
 
   const words = query.toLowerCase().split(/\s+/).filter(Boolean)
   const filtered = papers.filter((paper) => words.every((word) => paper.metadataHaystack.includes(word)))
@@ -99,6 +124,8 @@ export function ConsolidationOverview() {
             <button type="button" onClick={openAgreementFromOverview}>
               Agreement
             </button>
+            <Dropdown label="Export" title="Export every paper's disagreements" items={exportMenu.items} />
+            {exportMenu.status && <span className="export-status">{exportMenu.status}</span>}
           </div>
           {unanimousRun && !unanimousRun.running && (
             <div className="consolidation-run-notice">

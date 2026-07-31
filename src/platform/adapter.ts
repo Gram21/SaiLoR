@@ -256,6 +256,21 @@ export interface PlatformAdapter {
 
   /** Ask where a new annotated PDF should be saved. Null if cancelled. */
   pickPdfExportPath(suggestedName: string): Promise<string | null>
+
+  // ---- Plain-text export ----
+  // A generic "save this text to a file the reviewer picks" — the disagreement
+  // export (src/consolidate/exportDisagreements.ts) is the first user, but
+  // nothing here is specific to it. Split into a picker and a writer, the same
+  // shape as the PDF export above, rather than one combined call, so a future
+  // caller that already knows the destination (e.g. always overwriting a
+  // fixed report file) can skip straight to `writeTextFile`.
+
+  /** Ask where a text file should be saved. Null if cancelled. */
+  pickTextExportPath(suggestedName: string): Promise<string | null>
+
+  /** Write `text` to `absPath`. Never throws — a failure (permissions, a
+   *  symlinked destination) comes back as `{ ok: false, error }`. */
+  writeTextFile(absPath: string, text: string): Promise<{ ok: true; path: string } | { ok: false; error: string }>
 }
 
 /** True when running inside the Electron shell (preload exposed `window.slr`). */

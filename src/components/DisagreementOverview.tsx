@@ -1,10 +1,11 @@
 import { useEffect, useMemo } from 'react'
 import { useStore } from '../state/store'
-import { projectVerdicts, type FieldVerdict } from '../consolidate/disagreements'
+import { projectVerdicts, formatValue, type FieldVerdict } from '../consolidate/disagreements'
+import { paperDisagreementsText } from '../consolidate/exportDisagreements'
 import { consolidationFieldStatus } from './ConsolidationVerdicts'
 import { displayPath } from '../llm/paths'
-import type { FieldValue } from '../model/annotations'
-import type { ResolvedDef } from '../model/schema'
+import { Dropdown } from './Dropdown'
+import { useExportTextMenu } from '../hooks/useExportTextMenu'
 
 /**
  * The current paper's unresolved fields. The project-wide overview deliberately
@@ -58,9 +59,18 @@ export function DisagreementOverview() {
     )
   }, [open, project, currentPaperId])
 
-  if (!open || !project) return null
+  // Computed unconditionally (before the early return below) so it is always
+  // in scope for the export hook — hooks can't follow that return themselves.
+  const paper = useMemo(
+    () => project?.papers.find((candidate) => candidate.id === currentPaperId),
+    [project, currentPaperId],
+  )
+  const exportMenu = useExportTextMenu(
+    () => (paper ? paperDisagreementsText(paper, verdicts) : ''),
+    `${paper?.id ?? 'paper'}-disagreements.txt`,
+  )
 
-  const paper = project.papers.find((candidate) => candidate.id === currentPaperId)
+  if (!open || !project) return null
 
   const jumpTo = (v: FieldVerdict) => {
     selectPaper(v.paperId)
@@ -92,6 +102,8 @@ export function DisagreementOverview() {
             </span>
           </strong>
           <div className="modal-head-actions">
+            {exportMenu.status && <span className="export-status">{exportMenu.status}</span>}
+            <Dropdown label="Export" title="Export these disagreements" items={exportMenu.items} align="right" />
             <button type="button" onClick={openOverview}>
               Overview
             </button>
@@ -136,13 +148,4 @@ export function DisagreementOverview() {
       </div>
     </div>
   )
-}
-
-/** Human-readable rendering of one reviewer's raw value, type-aware — the
- *  same rendering rule `ConsolidationDialog` uses for the same values. */
-function formatValue(def: ResolvedDef, value: FieldValue | undefined): string {
-  if (value === undefined || value === null) return '— left empty —'
-  if (def.type === 'boolean') return value ? 'Yes' : 'No'
-  if (typeof value === 'string' && value.trim() === '') return '— left empty —'
-  return String(value)
 }
