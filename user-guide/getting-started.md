@@ -54,9 +54,18 @@ sentence that supports a claim, click ⧉ next to *Claim*, done.
 ## Highlighting and commenting in the PDF
 
 Select text in the PDF and a small color toolbar appears — pick a color to highlight the selection
-and open a note box for it right away. Click any existing highlight later to reopen that box: change
-its color, edit or clear the note, or delete it. Press **Escape**, click elsewhere, or scroll the page
-to close the box without deleting anything.
+and open a note box for it right away, or press **a** to use the first color without reaching for the
+mouse. A selection that runs onto the next page becomes one continuous highlight instead of stopping
+at the page break; a running header or footer caught in that spillover is left out automatically,
+though selecting into one yourself still highlights it. Click any existing highlight later to reopen
+that box: change its color, edit or clear the note, or delete it. Press **Escape**, click elsewhere, or
+scroll the page to close the box without deleting anything.
+
+Hovering a highlight or note (without clicking) shows its comment — or, for a highlight with no
+comment, the text it covers — plus any fields it's linked to, in a small tooltip, so you can check
+what a mark is without opening it. **Ctrl/Cmd+scroll** zooms the PDF in and out. Deleting a highlight
+or note that's linked to one or more fields asks you to confirm first, naming which fields would lose
+their evidence.
 
 These highlights and notes are your own — in a multi-reviewer project, each reviewer (and
 Consolidation) sees only their own marks, just like annotation answers. They're saved with the
@@ -210,6 +219,8 @@ annotating:
 | Ctrl/Cmd+Shift+S | Save as… |
 | Ctrl/Cmd+Z / Shift+Z | Undo / redo an annotation change |
 | Ctrl/Cmd+F | Search within the PDF |
+| Ctrl/Cmd+scroll | Zoom the PDF |
+| a | Highlight the current PDF selection with the first color |
 | Alt+↓ / `]` | Next paper |
 | Alt+↑ / `[` | Previous paper |
 | F1 | Open help |

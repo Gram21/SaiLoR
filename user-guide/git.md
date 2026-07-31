@@ -116,6 +116,9 @@ exactly where it started.
 - Carry uncommitted changes across a branch switch if something *outside* the project is also
   uncommitted (a PDF you added, say) — SaiLoR refuses the whole switch up front rather than guess;
   commit or discard those first, then try again.
+- Switch branches while you have **unsaved annotation edits** — a clean `git status` doesn't see
+  those, only what's on disk, so the switch is refused with an error telling you to save first
+  (**Ctrl/Cmd+S**) rather than silently reloading the project and losing them.
 - Show live clone progress with a cancel button, or offer history browsing — out of scope for this
   feature.
 
