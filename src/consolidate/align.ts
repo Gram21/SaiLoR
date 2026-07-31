@@ -70,14 +70,44 @@ const ORDER_TIE_BREAK = 1e-6
 
 /**
  * What an entry earns by opening a brand-new slot instead of being forced into
- * an existing one it shares no evidence with. Smaller than `ORDER_TIE_BREAK`,
- * so a same-position pairing with zero evidence still wins that slot (the old,
- * harmless behavior for two blank entries in the same relative order) — but
- * larger than the zero mass of being forced into an unrelated slot, so an entry
- * that genuinely matches nothing gets its own slot rather than corrupting one
- * that belongs to someone else's entry. See `alignList`.
+ * an existing one it does not belong in. Smaller than `ORDER_TIE_BREAK`, so a
+ * same-position pairing with zero evidence still wins that slot (two blank
+ * entries in the same relative order) — but larger than the zero a rejected
+ * pairing scores, so an entry that matches nothing gets its own slot rather
+ * than corrupting one that belongs to someone else's entry. See `alignList`.
  */
 const NEW_SLOT_WEIGHT = ORDER_TIE_BREAK / 10
+
+/**
+ * How alike two entries must be before they can be called *the same entry*.
+ *
+ * Without a floor, `maxWeightAssignment` always pairs as many entries as it
+ * can: it maximises total agreement, and two entries with 0.18 similarity
+ * still beat leaving one unmatched at 0. So a reviewer's finding that nobody
+ * else recorded was silently married to whichever leftover entry the solver
+ * happened to have — reported to the consolidator as a *disagreement about one
+ * finding* rather than as two separate findings, which is both wrong and
+ * invisible.
+ *
+ * Read as "strictly more alike than different" (`score > 0.5`), which is why
+ * the comparison below is `>` and not `>=`: at exactly half, the evidence says
+ * as much against the pairing as for it, and the honest reading of a coin flip
+ * is "these are two things", not "these are one thing".
+ *
+ * The trade-off is deliberate and one-directional. Splitting a pair that
+ * really was one entry is visible and fixable — the consolidator sees two
+ * groups, deletes one, fills the other. Merging two entries that were never
+ * the same thing is invisible: it looks exactly like a legitimate
+ * disagreement. This module errs toward the mistake a human can see, the same
+ * way `fieldUsage.ts` warns rather than migrating.
+ *
+ * ponytail: a flat threshold over crude text similarity — heavy paraphrase
+ * ("Tests reduce defects" vs "Unit testing lowers defect density" scores
+ * ~0.31) splits into two slots. Upgrade path is a better `stringSimilarity`
+ * (embeddings, stemming), not a lower number here: dropping the floor to
+ * catch paraphrase re-admits the false pairings this exists to stop.
+ */
+const MIN_MATCH_SCORE = 0.5
 
 /** A node holds several entries, so its entries need matching at all. */
 export function isRepeatable(def: ResolvedDef): boolean {
@@ -241,14 +271,15 @@ function alignList(
     const weights = entries.map((entry, i) => {
       const row = slots.map((slot, s) => {
         const sim = simAgainstSlot(def, entry, slot, lists, cache)
-        // The order nudge only applies when the slot has nothing to go on
-        // either (`sim.weight === 0`, the same "no evidence" `NO_EVIDENCE`
-        // means elsewhere): with real evidence a slot's mass of exactly 0 is
-        // a genuine "definitely not this one", and must not be dressed up as
-        // a tie just because the entry sits at that slot's index — see
-        // `NEW_SLOT_WEIGHT`, which needs that case to actually lose.
-        const tieBreak = sim.weight === 0 && i === s ? ORDER_TIE_BREAK : 0
-        return agreementMass(sim) + tieBreak
+        // Nothing comparable either way: no grounds to pair them and none to
+        // separate them, so fall back to the order the reviewers already used.
+        if (sim.weight === 0) return i === s ? ORDER_TIE_BREAK : 0
+        // Compared, and they are not the same entry — see `MIN_MATCH_SCORE`.
+        // Scoring 0 (not the real mass) is what lets the new-slot column below
+        // win instead, which is the whole point: a weak-but-nonzero mass would
+        // still outbid it.
+        if (sim.score <= MIN_MATCH_SCORE) return 0
+        return agreementMass(sim)
       })
       // One "open a new slot" column per entry — interchangeable, so it does
       // not matter which entry lands on which; each still starts its own slot.
