@@ -223,33 +223,61 @@ describe('config.finishCheckbox: false — a fulfilled schema is finished', () =
 
   it('drops the "with issues" option from the filter dropdown', () => {
     expect(annotationFiltersFor(true)).toContain('issues')
-    expect(annotationFiltersFor(false)).toEqual(['all', 'in-progress', 'finished'])
+    expect(annotationFiltersFor(false)).toEqual(['all', 'open', 'in-progress', 'finished'])
   })
 })
 
-describe('matchesFilter — the three buckets the dropdown offers', () => {
-  it('puts every paper whose box is not ticked under "in progress"', () => {
+describe('matchesFilter — the buckets the dropdown offers', () => {
+  it('puts every paper whose box is not ticked under "open"', () => {
     for (const s of ['untouched', 'partial', 'complete'] as const) {
-      expect(matchesFilter(s, 'in-progress')).toBe(true)
+      expect(matchesFilter(s, 'open')).toBe(true)
       expect(matchesFilter(s, 'finished')).toBe(false)
       expect(matchesFilter(s, 'issues')).toBe(false)
     }
   })
 
-  it('keeps the two ticked states out of "in progress" — they are what "done" means', () => {
-    expect(matchesFilter('finished', 'in-progress')).toBe(false)
-    expect(matchesFilter('flagged', 'in-progress')).toBe(false)
+  it('keeps the two ticked states out of "open" — they are what "done" means', () => {
+    expect(matchesFilter('finished', 'open')).toBe(false)
+    expect(matchesFilter('flagged', 'open')).toBe(false)
     expect(matchesFilter('finished', 'finished')).toBe(true)
     expect(matchesFilter('flagged', 'issues')).toBe(true)
   })
 
-  it('returns an undone annotation to "in progress", however it was undone', () => {
+  it('narrows "in progress" to the started papers — "open" minus the untouched', () => {
+    // Same unfinished states as "open", but only when the paper has been
+    // touched (≥1 annotation entry). An untouched-and-unstarted paper is open
+    // but not yet in progress.
+    for (const s of ['untouched', 'partial', 'complete'] as const) {
+      expect(matchesFilter(s, 'in-progress', true)).toBe(true)
+      expect(matchesFilter(s, 'in-progress', false)).toBe(false)
+    }
+    // A ticked paper is never in progress, touched or not.
+    expect(matchesFilter('finished', 'in-progress', true)).toBe(false)
+    expect(matchesFilter('flagged', 'in-progress', true)).toBe(false)
+  })
+
+  it('reads "in progress" from touched, not from the dot — a Yes/No-only paper counts', () => {
+    // Completeness ignores booleans, so a paper whose only annotation is a
+    // Yes/No answer keeps an `untouched` dot while genuinely being started.
+    // "In progress" must still list it; "open" already does.
+    expect(matchesFilter('untouched', 'in-progress', true)).toBe(true)
+    expect(matchesFilter('untouched', 'open')).toBe(true)
+  })
+
+  it('defaults touched to false — omitting it only ever empties "in progress"', () => {
+    expect(matchesFilter('partial', 'in-progress')).toBe(false)
+    // The buckets that never consult `touched` are unaffected by omitting it.
+    expect(matchesFilter('partial', 'open')).toBe(true)
+    expect(matchesFilter('finished', 'finished')).toBe(true)
+  })
+
+  it('returns an undone annotation to "open", however it was undone', () => {
     // Values cleared back to nothing, and the tick removed from a full form:
-    // both are papers in progress again, and neither may fall out of the list
-    // a reviewer works from.
-    expect(matchesFilter(state(project({ paper: { annotations: FULL, finished: true } })), 'in-progress')).toBe(false)
-    expect(matchesFilter(state(project({ paper: { annotations: FULL } })), 'in-progress')).toBe(true)
-    expect(matchesFilter(state(project({})), 'in-progress')).toBe(true)
+    // both are open papers again, and neither may fall out of the list a
+    // reviewer works from.
+    expect(matchesFilter(state(project({ paper: { annotations: FULL, finished: true } })), 'open')).toBe(false)
+    expect(matchesFilter(state(project({ paper: { annotations: FULL } })), 'open')).toBe(true)
+    expect(matchesFilter(state(project({})), 'open')).toBe(true)
   })
 
   it('passes everything under "all", including seats with no state at all', () => {
@@ -257,12 +285,13 @@ describe('matchesFilter — the three buckets the dropdown offers', () => {
     expect(matchesFilter('flagged', 'all')).toBe(true)
   })
 
-  it('covers every state exactly once across the three buckets', () => {
-    // A state that matched two buckets would be double-counted by the
-    // counter; one that matched none would be invisible in every filtered
-    // view but "all".
+  it('covers every state exactly once across the "open"/finished/issues partition', () => {
+    // A state that matched two of these buckets would be double-counted by the
+    // counter; one that matched none would be invisible in every filtered view
+    // but "all". "In progress" is deliberately excluded here — it is a subset
+    // of "open", not a fourth disjoint bucket.
     for (const s of ['untouched', 'partial', 'complete', 'finished', 'flagged'] as const) {
-      const hits = (['in-progress', 'finished', 'issues'] as const).filter((f) => matchesFilter(s, f))
+      const hits = (['open', 'finished', 'issues'] as const).filter((f) => matchesFilter(s, f))
       expect(hits).toHaveLength(1)
     }
   })

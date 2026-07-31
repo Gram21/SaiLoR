@@ -174,11 +174,15 @@ has a per-seat "finished" to go by.
 
 ## Filtering by annotation state
 
-The dropdown under the search box narrows the list to one of three buckets:
+The dropdown under the search box narrows the list to one of these buckets:
 
-- **In progress** — every paper you have *not* ticked as finished, whatever its dot shows: untouched,
+- **Open** — every paper you have *not* ticked as finished, whatever its dot shows: untouched,
   part-filled, and filled-but-not-yet-signed-off alike. Undo some annotations, or untick the box on a
   paper you had finished, and it comes back here.
+- **In progress** — the papers you have actually *started*: those with at least one annotation
+  recorded, still not signed off. This is **Open** minus the papers you have not touched yet, so it
+  answers "what have I begun and not finished". (A paper whose only entry is a Yes/No answer counts as
+  started even though its dot still reads empty — the fill ignores Yes/No fields.)
 - **Finished** — ticked and still holding.
 - **With issues** — ticked while a required field is empty (the red dots).
 
