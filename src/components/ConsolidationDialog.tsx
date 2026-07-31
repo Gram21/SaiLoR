@@ -5,6 +5,7 @@ import { emptyValue, type FieldValue } from '../model/annotations'
 import { alignedReviews } from '../model/alignment'
 import { isEmptyValue } from '../model/validate'
 import { comparable } from '../consolidate/unanimous'
+import { formatValue } from '../consolidate/disagreements'
 import { SCREENING_DECISION } from '../screening/schema'
 import type { ResolvedDef } from '../model/schema'
 
@@ -269,12 +270,4 @@ export function ConsolidationDialog() {
       </div>
     </div>
   )
-}
-
-/** Human-readable rendering of one reviewer's raw value, type-aware. */
-function formatValue(def: ResolvedDef, value: FieldValue | undefined): string {
-  if (value === undefined || value === null) return '— left empty —'
-  if (def.type === 'boolean') return value ? 'Yes' : 'No'
-  if (typeof value === 'string' && value.trim() === '') return '— left empty —'
-  return String(value)
 }

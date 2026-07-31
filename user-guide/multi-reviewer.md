@@ -73,9 +73,17 @@ Two buttons above the annotation fields, visible only in the Consolidation seat:
   <img src="screenshots/disagreements-dialog.png" alt="The Disagreements dialog listing one field where the two reviewers gave different answers, with both answers shown side by side" width="700">
 </p>
 
-**⚠ Disagreements** lists every field the reviewers answered differently, across the whole project —
-click one to jump straight to it instead of hunting paper by paper. **⚖ Agreement** reports the usual
-inter-rater coefficients — Cohen's κ, Fleiss' κ, and Krippendorff's α — tick any combination you want.
+**⚠ Disagreements** lists every field the reviewers answered differently on the current paper — click
+one to jump straight to it. Its **Overview** button opens the same list project-wide, one row per
+paper with a disagreement, to reach any of them without hunting paper by paper. **⚖ Agreement** reports
+the usual inter-rater coefficients — Cohen's κ, Fleiss' κ, and Krippendorff's α — tick any combination
+you want.
+
+Both the per-paper list and the project-wide overview have an **Export** button — **Copy to clipboard**
+or **Save to file…** — producing plain text: each paper's ID, authors, and title, then every
+disagreement under it as the exact field location followed by each reviewer's value, one per line. The
+project-wide export covers every paper with at least one disagreement; a paper with none is left out
+rather than padding the file with an empty entry.
 
 <p align="center">
   <img src="screenshots/agreement-dialog.png" alt="The Agreement dialog showing Cohen's kappa, Fleiss' kappa, and Krippendorff's alpha all computed from real overlapping annotations" width="700">

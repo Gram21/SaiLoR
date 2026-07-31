@@ -1077,6 +1077,29 @@ ipcMain.handle('pdf:pickExportPath', async (_e, suggestedName: string) => {
   return res.filePath
 })
 
+ipcMain.handle('text:pickExportPath', async (_e, suggestedName: string) => {
+  const res = await dialog.showSaveDialog({
+    title: 'Export as text',
+    defaultPath: suggestedName,
+    filters: [{ name: 'Text', extensions: ['txt'] }],
+  })
+  if (res.canceled || !res.filePath) return null
+  return res.filePath
+})
+
+ipcMain.handle(
+  'text:write',
+  async (_e, absPath: string, text: string): Promise<{ ok: true; path: string } | { ok: false; error: string }> => {
+    try {
+      await assertNotSymlink(absPath)
+      await writeFile(absPath, text, 'utf8')
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    }
+    return { ok: true, path: absPath }
+  },
+)
+
 // PDF references are stored relative to the project JSON so the project stays
 // portable. Forward slashes keep the JSON identical across platforms.
 ipcMain.handle('paths:relative', (_e, fromFile: string, toFiles: string[]) => {

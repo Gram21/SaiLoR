@@ -127,4 +127,12 @@ export class UnsupportedAdapter implements PlatformAdapter {
   async pickPdfExportPath(): Promise<string | null> {
     return null
   }
+
+  async pickTextExportPath(): Promise<string | null> {
+    return null
+  }
+
+  async writeTextFile(): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+    return { ok: false, error: UNSUPPORTED }
+  }
 }
