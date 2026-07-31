@@ -303,6 +303,8 @@ interface AppState {
    *  candidate to see it in context before linking it). `PdfViewer` clears
    *  this itself once it has acted on it. Session-only. */
   pendingMarkJump: string | null
+  /** Canonical field path whose link popover is open, or null. Session-only, like `validationOpen`. */
+  openLinkPopoverField: string | null
   /** Restore the Consolidation overview when its Agreement dialog closes. */
   agreementReturnToOverview: boolean
   /** Whether the overall Consolidation overview is open. Session-only, like `validationOpen`. */
@@ -458,6 +460,8 @@ interface AppState {
   setSchemaInfoOpen: (open: boolean) => void
   /** Request/clear a "scroll to and flash this mark" — see `pendingMarkJump`. */
   setPendingMarkJump: (markId: string | null) => void
+  /** Open/close a field's link popover, closing any other field's — see `openLinkPopoverField`. */
+  setOpenLinkPopoverField: (canonical: string | null) => void
   /** Replace the Consolidation overview with Agreement, then restore it on close. */
   openAgreementFromOverview: () => void
   closeAgreement: () => void
@@ -823,6 +827,7 @@ export const useStore = create<AppState>()(
     exportPdfOpen: false,
     schemaInfoOpen: false,
     pendingMarkJump: null,
+    openLinkPopoverField: null,
     agreementReturnToOverview: false,
     consolidationOverviewOpen: false,
     disagreementsOpen: false,
@@ -989,6 +994,7 @@ export const useStore = create<AppState>()(
         s.exportPdfOpen = false
         s.schemaInfoOpen = false
         s.pendingMarkJump = null
+        s.openLinkPopoverField = null
         s.agreementReturnToOverview = false
         s.consolidationOverviewOpen = false
         s.disagreementsOpen = false
@@ -1398,6 +1404,11 @@ export const useStore = create<AppState>()(
     setPendingMarkJump: (markId) =>
       set((s) => {
         s.pendingMarkJump = markId
+      }),
+
+    setOpenLinkPopoverField: (canonical) =>
+      set((s) => {
+        s.openLinkPopoverField = canonical
       }),
 
     openAgreementFromOverview: () =>
