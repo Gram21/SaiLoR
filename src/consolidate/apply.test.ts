@@ -112,6 +112,25 @@ describe('applyAlignment', () => {
     expect(pruneTree(schema, reviews['1'])['Findings']).toHaveLength(1)
   })
 
+  it('does not grow the most prolific reviewer\'s saved file when another reviewer has an entry nobody else matched', () => {
+    // Reviewer 1: a, b, c. Reviewer 2: d, a — "d" opens a fourth slot (see
+    // align.test.ts), which pads Reviewer 1's *in-memory* tree with a trailing
+    // blank fourth entry so every reviewer's array is the same length. That
+    // blank must not survive to what actually gets saved: pruneTree drops
+    // trailing empties, and Reviewer 1 never wrote a fourth finding.
+    const { schema, reviews, consolidated } = setup(FINDINGS, {
+      '1': { Findings: [finding('a'), finding('b'), finding('c')] },
+      '2': { Findings: [finding('d'), finding('a')] },
+    })
+    applyAlignment(schema, alignPaper(schema, reviews), reviews, consolidated)
+
+    expect(claims(pruneTree(schema, reviews['1']))).toEqual(['a', 'b', 'c'])
+    // Reviewer 2's own two entries are still there, just reordered onto the
+    // shared slots — the pre-existing "position N means the same entry for
+    // everyone" contract, not something the fourth slot changes.
+    expect(claims(pruneTree(schema, reviews['2']))).toEqual(['a', null, null, 'd'])
+  })
+
   it('reorders a nested group inside its matched parent', () => {
     const defs: AnnotationDef[] = [
       {
