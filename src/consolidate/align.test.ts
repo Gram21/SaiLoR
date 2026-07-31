@@ -171,6 +171,68 @@ describe('alignPaper', () => {
     expect(slotsOf(evidence, '2')).toEqual([1, 0])
   })
 
+  it('opens an extra slot for an entry that matches none of the anchor\'s, instead of forcing it into one', () => {
+    // Reviewer 1: a, b, c. Reviewer 2: d, a — "d" is not one of 1's three.
+    // Forcing it into whatever slot the assignment problem has left over
+    // (b or c) would silently conflate two unrelated findings. It must get a
+    // slot of its own instead, appended after the three the anchor opened.
+    const { schema, reviews } = setup(findings, {
+      '1': {
+        Findings: [
+          { children: { Claim: [{ value: 'a' }] } },
+          { children: { Claim: [{ value: 'b' }] } },
+          { children: { Claim: [{ value: 'c' }] } },
+        ],
+      },
+      '2': {
+        Findings: [
+          { children: { Claim: [{ value: 'd' }] } },
+          { children: { Claim: [{ value: 'a' }] } },
+        ],
+      },
+    })
+    const alignment = alignPaper(schema, reviews)['Findings']
+
+    expect(alignment.slots).toHaveLength(4)
+    expect(alignment.counts).toEqual({ '1': 3, '2': 2 })
+
+    // "a" matched across both reviewers, in whichever slot 1's "a" already sits.
+    const aSlot = alignment.slots.find((s) => s.members['1'] === 0)
+    expect(aSlot?.members).toEqual({ '1': 0, '2': 1 })
+    expect(aSlot?.agreement).toBe(1)
+
+    // "b" and "c" stay Reviewer 1's alone — not stolen by "d".
+    const bSlot = alignment.slots.find((s) => s.members['1'] === 1)
+    const cSlot = alignment.slots.find((s) => s.members['1'] === 2)
+    expect(bSlot?.members).toEqual({ '1': 1 })
+    expect(cSlot?.members).toEqual({ '1': 2 })
+
+    // "d" gets the fourth, newly-opened slot, to itself.
+    const dSlot = alignment.slots.find((s) => s.members['2'] === 0)
+    expect(dSlot?.members).toEqual({ '2': 0 })
+  })
+
+  it('lets a later reviewer land in a slot an earlier one had to open fresh', () => {
+    // Reviewer 1: a, b. Reviewer 2: c (opens slot 3). Reviewer 3 also has c —
+    // it must join Reviewer 2's new slot, not open a fourth of its own.
+    const { schema, reviews } = setup(findings, {
+      '1': {
+        Findings: [
+          { children: { Claim: [{ value: 'a' }] } },
+          { children: { Claim: [{ value: 'b' }] } },
+        ],
+      },
+      '2': { Findings: [{ children: { Claim: [{ value: 'c' }] } }] },
+      '3': { Findings: [{ children: { Claim: [{ value: 'c' }] } }] },
+    })
+    const alignment = alignPaper(schema, reviews)['Findings']
+
+    expect(alignment.slots).toHaveLength(3)
+    const cSlot = alignment.slots.find((s) => s.members['2'] !== undefined)
+    expect(cSlot?.members).toEqual({ '2': 0, '3': 0 })
+    expect(cSlot?.agreement).toBe(1)
+  })
+
   it('opens as many slots as the most prolific reviewer used', () => {
     const { schema, reviews } = setup(findings, {
       '1': { Findings: [{ children: { Claim: [{ value: 'One' }] } }] },
