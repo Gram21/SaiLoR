@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { parseMarks, parseReviewMarks, mergeMarksList, sortMarksForCycling, dedupeMarkGroups, type PdfMark } from './pdfMarks'
+import {
+  parseMarks,
+  parseReviewMarks,
+  mergeMarksList,
+  sortMarksForCycling,
+  dedupeMarkGroups,
+  orderMarksForLinking,
+  type PdfMark,
+} from './pdfMarks'
 
 function mark(overrides: Partial<PdfMark> = {}): PdfMark {
   return {
@@ -198,5 +206,49 @@ describe('dedupeMarkGroups', () => {
 
   it('is [] for empty input', () => {
     expect(dedupeMarkGroups([])).toEqual([])
+  })
+})
+
+describe('orderMarksForLinking', () => {
+  it('pins the 3 most recently created marks first, most recent first', () => {
+    const old = mark({ id: 'old', createdAt: '2026-01-01T00:00:00.000Z', page: 5 })
+    const r1 = mark({ id: 'r1', createdAt: '2026-01-02T00:00:00.000Z', page: 1 })
+    const r2 = mark({ id: 'r2', createdAt: '2026-01-03T00:00:00.000Z', page: 2 })
+    const r3 = mark({ id: 'r3', createdAt: '2026-01-04T00:00:00.000Z', page: 3 })
+    expect(orderMarksForLinking([old, r1, r2, r3]).map((m) => m.id)).toEqual(['r3', 'r2', 'r1', 'old'])
+  })
+
+  it('does not repeat a recent mark in the page-ordered tail', () => {
+    const recent = mark({ id: 'recent', createdAt: '2026-01-05T00:00:00.000Z', page: 1 })
+    const other = mark({ id: 'other', createdAt: '2026-01-01T00:00:00.000Z', page: 2 })
+    const ids = orderMarksForLinking([other, recent]).map((m) => m.id)
+    expect(ids).toEqual(['recent', 'other'])
+    expect(ids.filter((id) => id === 'recent')).toHaveLength(1)
+  })
+
+  it('with 4 or more marks, sorts everything past the pinned 3 by page', () => {
+    const a = mark({ id: 'a', createdAt: '2026-01-01T00:00:00.000Z', page: 4 })
+    const b = mark({ id: 'b', createdAt: '2026-01-02T00:00:00.000Z', page: 3 })
+    const c = mark({ id: 'c', createdAt: '2026-01-03T00:00:00.000Z', page: 2 })
+    const d = mark({ id: 'd', createdAt: '2026-01-04T00:00:00.000Z', page: 1 })
+    // Recent 3, most-recent-first: d, c, b. Only "a" is left for the tail.
+    expect(orderMarksForLinking([a, b, c, d]).map((m) => m.id)).toEqual(['d', 'c', 'b', 'a'])
+  })
+
+  it('is the identity order for 3 or fewer marks (all of them are "recent")', () => {
+    const a = mark({ id: 'a', createdAt: '2026-01-01T00:00:00.000Z', page: 3 })
+    const b = mark({ id: 'b', createdAt: '2026-01-02T00:00:00.000Z', page: 1 })
+    expect(orderMarksForLinking([a, b]).map((m) => m.id)).toEqual(['b', 'a'])
+  })
+
+  it('does not mutate the input array', () => {
+    const marks = [mark({ id: 'a', page: 2 }), mark({ id: 'b', page: 1 })]
+    const copy = [...marks]
+    orderMarksForLinking(marks)
+    expect(marks).toEqual(copy)
+  })
+
+  it('is [] for empty input', () => {
+    expect(orderMarksForLinking([])).toEqual([])
   })
 })

@@ -210,6 +210,30 @@ export function dedupeMarkGroups(marks: PdfMark[]): PdfMark[] {
   return out
 }
 
+/** How many of the most-recently-created marks pin to the top of the
+ *  field-link popover's list, ahead of the page-ordered rest — see
+ *  `orderMarksForLinking`. */
+const RECENT_LINK_CANDIDATES = 3
+
+/**
+ * Order marks for the field-link popover: the `RECENT_LINK_CANDIDATES` most
+ * recently created first, then everything else in `sortMarksForCycling`'s
+ * page-then-position reading order.
+ *
+ * A reviewer who just highlighted or noted something is almost always about
+ * to go link it — burying that highlight on page 40 of a page-ordered list
+ * would defeat the point of having just made it. Each mark appears exactly
+ * once: a mark pinned to the top by recency is filtered back out of the
+ * page-ordered tail rather than repeated.
+ */
+export function orderMarksForLinking(marks: PdfMark[]): PdfMark[] {
+  const byRecency = [...marks].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const recent = byRecency.slice(0, RECENT_LINK_CANDIDATES)
+  const recentIds = new Set(recent.map((m) => m.id))
+  const rest = sortMarksForCycling(marks).filter((m) => !recentIds.has(m.id))
+  return [...recent, ...rest]
+}
+
 /**
  * Parse `paper.reviewMarks` defensively — same rule `parseReviews` follows
  * in `project.ts` (only a key that looks like a reviewer number survives).

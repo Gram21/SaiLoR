@@ -245,6 +245,7 @@ export function PdfViewer() {
   const removeMark = useStore((s) => s.removeMark)
   const unlinkMarkFromField = useStore((s) => s.unlinkMarkFromField)
   const setExportPdfOpen = useStore((s) => s.setExportPdfOpen)
+  const setLastCreatedMarkId = useStore((s) => s.setLastCreatedMarkId)
   // The color-swatch toolbar offered right after a text selection, positioned
   // near where the selection ends — the same "select, then a small popup
   // offers to highlight" flow Preview/Acrobat use.
@@ -695,7 +696,10 @@ export function PdfViewer() {
     }
     setSelectionToolbar(null)
     window.getSelection()?.removeAllRanges()
-    if (id) setActiveMark({ id, x, y })
+    if (id) {
+      setActiveMark({ id, x, y })
+      setLastCreatedMarkId(id)
+    }
   }
 
   /** Flash a mark, and scroll to it first unless `onlyIfHidden` says it's
@@ -764,7 +768,10 @@ export function PdfViewer() {
     const y = (e.clientY - pageRect.top) / pageRect.height
     const id = addHighlight(page, [{ x, y, width: 0.02, height: 0.02 }], undefined, 'note')
     setPlacingNote(false)
-    if (id) setActiveMark({ id, x: e.clientX, y: e.clientY })
+    if (id) {
+      setActiveMark({ id, x: e.clientX, y: e.clientY })
+      setLastCreatedMarkId(id)
+    }
   }
 
   // When an in-PDF link is clicked, the pdf.js LinkService scrolls to the
