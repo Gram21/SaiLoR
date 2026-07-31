@@ -88,8 +88,10 @@ the same PDF never conflict in git.
 click it to record why you picked this value. It opens a box showing what's already linked (or "No
 links yet"); click **+ Link a highlight or note** to fold out a scrollable list of the paper's other
 highlights and notes, with a search box at the bottom if there are a lot of them. That list is sorted
-with your 3 most recently made highlights/notes first (a little extra space marks where that group
-ends), then everything else in reading order down the paper. Clicking a highlight/note's own text — in
+with up to 3 highlights/notes you made *this session* first, most recent first (a little extra space
+marks where that group ends), then everything else in reading order down the paper — a highlight
+that's simply been in the file since a previous sitting is never pinned there, however new its own
+timestamp looks. Clicking a highlight/note's own text — in
 either list — jumps to it in the PDF so you can see which one it is, without closing the box or
 changing anything; click **Link** to attach it — its button flips to **×** right there without the row
 jumping anywhere, and it moves up into the linked list above the next time you open the box. The 🔗

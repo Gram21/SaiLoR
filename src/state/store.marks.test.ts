@@ -416,3 +416,45 @@ describe('lastCreatedMarkId — allowed-field narrowing', () => {
     expect(st().lastCreatedMarkId).toBeNull()
   })
 })
+
+describe('sessionCreatedMarkIds', () => {
+  beforeEach(() => {
+    st().loadFromText(
+      JSON.stringify({
+        version: 1,
+        config: { schema },
+        papers: [
+          { id: 'p1', title: 'One', authors: [], pdf: 'p1.pdf', annotations: {} },
+          { id: 'p2', title: 'Two', authors: [], pdf: 'p2.pdf', annotations: {} },
+        ],
+      }),
+      null,
+      'test.json',
+    )
+    st().selectPaper('p1')
+  })
+
+  it('records every mark addHighlight creates', () => {
+    // Never reset (see its own doc comment), so earlier tests in this file
+    // may already have left ids behind — assert containment, not exact
+    // equality, and check order via the tail rather than the whole array.
+    const id1 = st().addHighlight(1, [rect])!
+    const id2 = st().addHighlight(1, [rect])!
+    expect(st().sessionCreatedMarkIds.slice(-2)).toEqual([id1, id2])
+  })
+
+  it('survives a paper switch — "this session" means the whole app run, not the current paper', () => {
+    const id = st().addHighlight(1, [rect])!
+    st().selectPaper('p2')
+    expect(st().sessionCreatedMarkIds).toContain(id)
+  })
+
+  it('survives a reviewer switch', () => {
+    st().loadFromText(projectText(2), null, 'test.json')
+    st().selectPaper('p1')
+    st().selectReviewer('1')
+    const id = st().addHighlight(1, [rect])!
+    st().selectReviewer('2')
+    expect(st().sessionCreatedMarkIds).toContain(id)
+  })
+})

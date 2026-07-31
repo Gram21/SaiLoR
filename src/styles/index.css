@@ -1622,14 +1622,18 @@ button.paper-search-mode:hover {
 .field-link-snippet-btn:hover {
   text-decoration: underline;
 }
-/* Deliberately left at the plain `button` box (padding/border/radius) rather
-   than shrunk to fit the "×" glyph — it sits in the same row as the unstyled
-   Link button candidates use, and a small × next to a full-size Link button
-   read as two different weights of action when they are actually the same
-   one (add/remove this link), just flipped. Only the color marks it as the
-   undo. */
-.field-link-unlink {
+/* Shared by the × (unlink) button and the plain Link button beside it in the
+   picker, so the two are the same width, not just the same box — a row
+   whose action button changes size as it flips between "Link" and "×" reads
+   as the row itself resizing, which is exactly the instability the rest of
+   this popover's layout was built to avoid. The width is sized to "Link",
+   the longer of the two labels; "×" just centers in the leftover space. */
+.field-link-action {
   flex: 0 0 auto;
+  min-width: 48px;
+  text-align: center;
+}
+.field-link-unlink {
   color: var(--danger);
 }
 .field-link-empty {

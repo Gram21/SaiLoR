@@ -210,25 +210,32 @@ export function dedupeMarkGroups(marks: PdfMark[]): PdfMark[] {
   return out
 }
 
-/** How many of the most-recently-created marks pin to the top of the
- *  field-link popover's list, ahead of the page-ordered rest — see
+/** How many of this session's own marks pin to the top of the field-link
+ *  popover's list, ahead of the page-ordered rest — see
  *  `orderMarksForLinking`. */
 const RECENT_LINK_CANDIDATES = 3
 
 /**
- * Order marks for the field-link popover: the `RECENT_LINK_CANDIDATES` most
- * recently created first, then everything else in `sortMarksForCycling`'s
- * page-then-position reading order.
+ * Order marks for the field-link popover: up to `RECENT_LINK_CANDIDATES` of
+ * *this session's own* marks, most recently made first, then everything else
+ * in `sortMarksForCycling`'s page-then-position reading order.
  *
  * A reviewer who just highlighted or noted something is almost always about
  * to go link it — burying that highlight on page 40 of a page-ordered list
- * would defeat the point of having just made it. Each mark appears exactly
- * once: a mark pinned to the top by recency is filtered back out of the
- * page-ordered tail rather than repeated.
+ * would defeat the point of having just made it. Scoped to `sessionMarkIds`
+ * (marks created since the app was opened, tracked by `addHighlight` in
+ * store.ts) rather than every mark's `createdAt`, so reopening a paper with
+ * old highlights doesn't pin three of them at random — there is nothing
+ * "recent" about a mark from a previous sitting. Fewer than three (including
+ * zero) session marks means fewer than three pinned; this never pads with
+ * marks that don't qualify.
+ *
+ * Each mark appears exactly once: a mark pinned to the top is filtered back
+ * out of the page-ordered tail rather than repeated.
  */
-export function orderMarksForLinking(marks: PdfMark[]): PdfMark[] {
-  const byRecency = [...marks].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  const recent = byRecency.slice(0, RECENT_LINK_CANDIDATES)
+export function orderMarksForLinking(marks: PdfMark[], sessionMarkIds: ReadonlySet<string>): PdfMark[] {
+  const sessionMarks = marks.filter((m) => sessionMarkIds.has(m.id))
+  const recent = [...sessionMarks].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, RECENT_LINK_CANDIDATES)
   const recentIds = new Set(recent.map((m) => m.id))
   const rest = sortMarksForCycling(marks).filter((m) => !recentIds.has(m.id))
   return [...recent, ...rest]

@@ -227,6 +227,10 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
   const lastCreatedMarkId = useStore((s) => s.lastCreatedMarkId)
   const lastCreatedMarkAllowedField = useStore((s) => s.lastCreatedMarkAllowedField)
   const setLastCreatedMarkId = useStore((s) => s.setLastCreatedMarkId)
+  // A `Set` for `orderMarksForLinking`'s `.has` checks — rebuilt each render
+  // from the store's array, which is cheap at the sizes a paper's marks ever
+  // reach and avoids a second piece of state to keep in sync.
+  const sessionCreatedMarkIds = new Set(useStore((s) => s.sessionCreatedMarkIds))
   const canonical = fieldPath(path, name, index)
   const isLinkedNow = (m: (typeof marks)[number]) => m.linkedFields?.some((l) => l.path === canonical) ?? false
 
@@ -337,8 +341,20 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
   // `orderMarksForLinking`. Fixed regardless of link state, so linking or
   // unlinking one during this session never reshuffles the picker either:
   // only its own Link/× button changes.
-  const candidates = orderMarksForLinking(marks.filter((m) => !initiallyLinkedIds.has(m.id)))
-  const recentIds = new Set(candidates.slice(0, 3).map((m) => m.id))
+  const candidates = orderMarksForLinking(
+    marks.filter((m) => !initiallyLinkedIds.has(m.id)),
+    sessionCreatedMarkIds,
+  )
+  // Not just "the first 3 of `candidates`" — with fewer than 3 session marks,
+  // that would misclassify however many page-ordered marks fill the rest of
+  // the first 3 slots as pinned too. `orderMarksForLinking` puts every pinned
+  // mark before every page-ordered one, so filtering down to this session's
+  // own marks and taking the first 3 of *those* recovers exactly the pinned
+  // set, however many (0–3) of them there are, even when this session made
+  // more than 3 marks in total and the rest ended up in the page-ordered tail.
+  const recentIds = new Set(
+    candidates.filter((m) => sessionCreatedMarkIds.has(m.id)).slice(0, 3).map((m) => m.id),
+  )
   const needle = search.trim().toLowerCase()
   const filteredCandidates = needle
     ? candidates.filter((m) => (m.comment || m.text || '').toLowerCase().includes(needle))
@@ -377,7 +393,7 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
               {snippetOf(m)}
               <button
                 type="button"
-                className="field-link-unlink"
+                className="field-link-action field-link-unlink"
                 title="Unlink"
                 onClick={() => unlinkMark(m.id, canonical)}
               >
@@ -407,14 +423,18 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
                     {linked ? (
                       <button
                         type="button"
-                        className="field-link-unlink"
+                        className="field-link-action field-link-unlink"
                         title="Unlink"
                         onClick={() => unlinkMark(m.id, canonical)}
                       >
                         ×
                       </button>
                     ) : (
-                      <button type="button" onClick={() => linkMark(m.id, path, name, index)}>
+                      <button
+                        type="button"
+                        className="field-link-action"
+                        onClick={() => linkMark(m.id, path, name, index)}
+                      >
                         Link
                       </button>
                     )}
