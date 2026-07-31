@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-07-27T18:13:08.822Z",
+  "updatedAt": "2026-07-31T20:57:36.594Z",
   "command": "update",
-  "gitHead": "191ed3d82e54c7b38112234d23e622e781410762",
+  "gitHead": "aa8c8e8f6b065bf94f471498401a52d6f6bcdc77",
   "model": "z-ai/glm-5.2"
 }

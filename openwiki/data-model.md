@@ -1,7 +1,7 @@
 ---
 type: reference
 title: SaiLoR Data Model
-description: The SaiLoR project on-disk format — a meta-only project.json (schema, protocol, paper metadata) plus a sibling annotations/ folder holding each reviewer's/consolidation's annotation trees, and automatic migration from the old single-file shape — the in-memory TypeScript types (ResolvedDef, Project, Paper, AnnotationValueTree), and the full load → normalize → edit → prune → serialize lifecycle that keeps hand-edited JSON safe.
+description: The SaiLoR project on-disk format — a meta-only project.json (schema, protocol, paper metadata) plus a sibling annotations/ folder holding each reviewer's/consolidation's annotation trees, and automatic migration from the old single-file shape — the in-memory TypeScript types (ResolvedDef, Project, Paper, AnnotationValueTree), PDF marks, stored consolidation alignment, annotation state/finished flags, and the full load → normalize → edit → prune → serialize lifecycle that keeps hand-edited JSON safe.
 tags: [data-model, json, schema, types, lifecycle, split-storage]
 ---
 
@@ -179,6 +179,11 @@ sibling `annotations/<id>/` files instead — see "On-disk layout" above.
     "1": [ /* PdfMark[] */ ],
     "2": [ /* PdfMark[] */ ]
   },
+  "finished": false,          // optional; the reviewer's "I'm done with this paper" declaration — only
+                              // written when true (absent = undeclared). See "Annotation state" below.
+  "reviewsFinished": {        // optional; each numbered reviewer's own finished flag, keyed "1".."N"
+    "1": true                 // like `reviews`, multi-reviewer only; absent key = undeclared
+  },
   // any other keys preserved verbatim on save
 }
 ```
@@ -210,6 +215,8 @@ interface Project {
   provenance: ProjectProvenance | null  // set by "New from screening…"; see "Screening" below
   protocol: ProjectProtocol | null   // the review's authored protocol; see below
   schemaInfo: string | null   // free-text schema-wide comment; see below
+  finishCheckbox: boolean     // config.finishCheckbox; defaults true — when false, a fulfilled schema
+                              // alone counts as finished, no tick needed. See "Annotation state" below
   extra: Record<string, unknown>  // unknown top-level fields preserved
 }
 
@@ -244,6 +251,8 @@ interface Paper {
   aiUsage: AiUsageRecord[]        // AI-assisted-annotation disclosure log, oldest first; [] if never used
   marks: PdfMark[]                 // consolidated/single-reviewer PDF highlights+comments; see "PDF marks" below
   reviewMarks: Record<string, PdfMark[]>  // each reviewer's own highlights, keyed "1".."N"; {} if single-reviewer
+  finished: boolean                // the reviewer's "done with this paper" declaration; see "Annotation state" below
+  reviewsFinished: Record<string, boolean>  // each numbered reviewer's own finished flag, keyed "1".."N"
   extra: Record<string, unknown>  // unknown per-paper fields preserved
 }
 
@@ -408,6 +417,25 @@ files as needing migration too — precisely the kind of file every hand-written
 codebase is, which is how this got caught. The comparison is scoped to exactly `annotations` and
 `reviews`; nothing else about a file's formatting or unrelated content is examined.
 
+### Stored alignment (`src/model/alignment.ts`)
+
+Consolidation's entry-matching — which of each reviewer's repeated entries are "the same entry" — is
+persisted as an explicit **`StoredAlignment`** mapping, not as a physical reordering of reviewer
+trees. Each slot records `members: Record<reviewerId, index>` pointing into each reviewer's *own
+unmodified array*. `parseAlignment` defensively parses the hand-editable JSON, dropping malformed
+entries rather than throwing. `alignedReviews(defs, alignment, reviews)` produces a throwaway
+projected copy where index N means the same entry for everyone — slots a reviewer didn't fill become
+empty instances, and entries the mapping has no slot for (a late addition after matching was
+recorded) are appended rather than dropped.
+
+This replaced the older approach of physically permuting every reviewer's entries so position N was
+the same entry for all. That polluted reviewers' own data: a reviewer who recorded one finding that
+others listed third would see two blank entries above theirs, dragging down their completeness score
+and triggering false validation errors. Consolidation's bookkeeping is now its own persisted record
+and never touches reviewer trees. The `pruneTree` interior-gap guarantee above still holds — it is
+what makes the stored alignment survive a save/reload round-trip — but the alignment itself is no
+longer encoded *as* the ordering of the arrays.
+
 ## PDF marks
 
 Highlighting and comments in the PDF viewer are SaiLoR's **own** data — a `PdfMark` overlay rendered
@@ -432,6 +460,9 @@ interface PdfMark {
   updatedAt: string
   kind: 'highlight' | 'note'   // defaults to 'highlight' — every mark from before this
                                 // field existed parses as one
+  groupId?: string              // present on fragments of a cross-page highlight (shared across
+                                // pages so store actions can propagate edits to all fragments);
+                                // absent on single-page marks
   linkedFields?: LinkedField[]  // fields this mark is evidence for — see below; undefined
                                  // (never []) when there are none
 }
@@ -476,9 +507,12 @@ param defaults to `'highlight'`) creates a note the same way a highlight is crea
 same per-reviewer scoping, same merge rule — with `rects` holding one placeholder-sized rect at the
 pinned point instead of a traced selection. `PdfViewer.tsx` renders it as a small pinned icon
 (`.pdf-mark-note`) instead of a percentage-sized highlight rect, but it is exactly the same `PdfMark`
-underneath. `sortMarksForCycling` (`src/model/pdfMarks.ts`) gives a stable top-to-bottom, page-by-page
-reading order over every mark (highlight or note) — used by the annotation-tools row's prev/next
-buttons to jump between them.
+underneath. `sortMarksForCycling` (`src/model/pdfMarks.ts`) gives a stable reading order over every
+mark (highlight or note) — page, then **column** (left half before right half via `columnOf`, not raw
+`x`, so two-column papers read correctly), then top-to-bottom within a column — used by the
+annotation-tools row's prev/next buttons to jump between them. `dedupeMarkGroups` first collapses
+cross-page highlight fragments sharing a `groupId` down to one representative, so cycling lands on a
+cross-page highlight once, not once per page.
 
 **Export: burning marks into a real PDF.** A one-way, user-triggered action — separate from, and
 never affecting, the in-app overlay above. `src/model/pdfExport.ts` holds the pure coordinate math
@@ -506,18 +540,74 @@ a `.filter(...)` result is a fresh reference every selector call even when nothi
 
 `LinkedField.path` is `fieldPath`'s canonical form (`src/llm/paths.ts`) — the same name/index-derived
 string `aiMarks`/`deferredConsolidations` already key off — and inherits their known instability: it
-is **not** stable across a schema rename/move, nor across an earlier repeatable instance being
-added/removed (a plain `Array.splice` in `removeInstance` reshuffles every later index with no
-reconciliation). Unlike those two ephemeral, session-only structures, though, a link is **persisted**
-— so `LinkedField.label` denormalizes `displayPath`'s human-readable form at link time, ensuring the
-mark's popover still shows something meaningful even after the schema changes underneath it. To keep
-a rename/remove/cross-group-move from silently orphaning a link with no way to discover it,
-`src/model/fieldUsage.ts`'s `countLinksUsingField` extends the schema editor's existing
-`countPapersUsingField` destructive-edit warning (`SchemaTreeEditor.tsx`) to also count link usage —
-the same "warn before, don't migrate after" policy the editor already applies to answers. A
-repeatable-instance index reshuffle remains an explicit, documented known limitation (matching the
-`aiMarks` precedent) rather than being fixed here — a real fix needs stable per-instance identity
-instead of positional addressing, a schema-wide change out of scope for this feature.
+is **not** stable across a schema rename/move. Unlike those two ephemeral, session-only structures,
+though, a link is **persisted** — so `LinkedField.label` denormalizes `displayPath`'s human-readable
+form at link time, ensuring the mark's popover still shows something meaningful even after the schema
+changes underneath it. To keep a rename/remove/cross-group-move from silently orphaning a link with
+no way to discover it, `src/model/fieldUsage.ts`'s `countLinksUsingField` extends the schema editor's
+existing `countPapersUsingField` destructive-edit warning (`SchemaTreeEditor.tsx`) to also count link
+usage — the same "warn before, don't migrate after" policy the editor already applies to answers.
+
+**Index shifts from repeatable-instance removal are now reconciled.** `removeInstance` (`store.ts`)
+calls `shiftCanonicalPath` to update every mark link, AI mark key, `Paper.equal` entry, and deferred
+consolidation key that embeds an index at or after the removed position — links pointing *into* the
+removed instance are dropped, links to later siblings have their index decremented, and the `label`
+is re-derived from the shifted path. When `linkedFields` becomes empty after removal it is deleted
+entirely, maintaining the "undefined means no links" round-trip invariant.
+
+## Annotation state (`Paper.finished`, `AnnotationState`)
+
+`Paper.finished` (single-reviewer/Consolidation) and `Paper.reviewsFinished["N"]` (each numbered
+reviewer) are per-paper, per-seat **declarations** — a reviewer's own "I am done with this paper"
+tick, deliberately not derived from the data. A full annotation tree means every field has something,
+which is a fact about the form, not a judgment that the extraction is right; only a human can make
+the second claim. Both are only written when `true` — absent means undeclared, never `false` — the
+same rule `aiUsage`/`equal`/`marks` follow.
+
+`Project.finishCheckbox` (`config.finishCheckbox`, defaults `true`) is the project-level switch:
+when `false`, a fulfilled schema alone counts as finished — nobody ticks anything, `Paper.finished`
+is not read, and the `flagged` state below is unreachable. The annotation panel hides its checkbox;
+the `issues` filter is dropped from the dropdown. When `true` (the default), the reviewer must tick
+"Annotation finished" explicitly.
+
+### The 5-state vocabulary (`src/model/annotationState.ts`)
+
+`annotationState()` combines completeness (a data fact) with `finished` (a human declaration) into a
+single 5-value vocabulary that drives the paper-list dot color, the filter dropdown, and the progress
+counter:
+
+| State | Meaning |
+|---|---|
+| `untouched` | Nothing filled in, nothing declared |
+| `partial` | Some fields filled, still incomplete |
+| `complete` | Every countable field is filled, but not yet signed off — a full form, not a finished paper |
+| `finished` | Complete **and** declared finished. The only green state. |
+| `flagged` | Declared finished while a required field is empty. An error state, re-evaluated on every read, so it flips to/from `finished` automatically as fields are emptied/refilled. Only reachable when the schema marks something `required` and `finishCheckbox` is `true`. |
+
+Completeness and finished are deliberately independent inputs: a full form is a fact about data;
+"finished" is a human declaration. The function is the one place they are combined, and since it is
+re-derived from current data on every read, emptying a field on a finished paper automatically flips
+it to `flagged` with no invalidation step.
+
+`completenessApplies()` gates whether this vocabulary applies to a seat at all — it returns `false`
+for screening projects and the Consolidation seat (those keep their own tri-state/binary markers).
+
+### Filters (`AnnotationFilter`)
+
+The paper-list filter dropdown maps the 5 states into 4 buckets plus "all":
+
+| Filter | What it shows |
+|---|---|
+| `all` | Every paper |
+| `open` | Every paper whose finished box is **not** ticked: `untouched`, `partial`, and `complete` alike |
+| `in-progress` | The started subset of `open`: papers with at least one annotation entry, still not signed off |
+| `finished` | Signed off and still holding (`state === 'finished'`) |
+| `issues` | Signed off while a required field is empty (`state === 'flagged'`) |
+
+The progress bar counts whichever bucket the filter is currently showing — `finished: 5/100` with no
+filter, `open: 80/100` with "open" selected — always over every paper regardless of the search box,
+so the counter and the rows can never disagree. `annotationFiltersFor(requireTick)` drops the `issues`
+option when `finishCheckbox` is `false`.
 
 ## Screening
 
@@ -671,6 +761,10 @@ that resolving an `abstract` conflict does not retroactively touch `abstractFrom
 already have resolved on its own via the "only one side changed it" rule below; see
 `architecture.md`'s "Git" section for the full reasoning and the bug this fixed.
 
+**`finished`/`reviewsFinished`** merge per-seat as ordinary booleans (`merge3<boolean>`), so a
+reviewer who ticked "done" on one side and not the other takes the ticked side — a declaration is
+never silently lost. `finishCheckbox` is on the refuses-to-merge list below (it is `config`-level).
+
 **The one rule**: a side that did not change a value away from the merge base does not get a vote on
 it. A field only one side changed takes that side's value automatically; a field both sides changed
 to the *same* thing is not a conflict either; only a field both sides changed to *different* things
@@ -709,7 +803,7 @@ drop a genuine disclosure and misreport how AI was used on a paper.
 sides changed it, differently" cannot happen — a mark can never conflict.
 
 **What refuses, rather than guessing.** A change to `version`, `config.schema`, `config.ai`,
-`config.reviewers`, `config.screening`, or a root/paper `extra` key, made differently on both sides,
+`config.reviewers`, `config.screening`, `config.finishCheckbox`, or a root/paper `extra` key, made differently on both sides,
 refuses the whole merge and names what could not be reconciled, instead of picking a field-level
 answer for something that reshapes the file — most obviously the schema (and, for the same reason,
 `config.screening`: whether a project screens at all, or its reason list, decides `config.schema` via
@@ -777,8 +871,8 @@ Called during serialization. For each node:
 - Keep the first `max(min, 1)` instances unconditionally
 - Drop the empty instances **trailing** the end of the list (so saved files stay tidy)
 - Keep an empty instance that has a filled one after it — position carries meaning. Consolidation
-  records which of each reviewer's entries are the same entry by lining their lists up
-  (`src/consolidate/apply.ts`), and a reviewer with no entry for the second slot holds an empty one
+  records which of each reviewer's entries are the same entry via a persisted `StoredAlignment`
+  (`src/model/alignment.ts`), and a reviewer with no entry for the second slot holds an empty one
   there. Closing that gap would slide every later entry down a slot and silently re-point the
   alignment on the next load
 - An instance is "empty" (`isEmptyInstance`) if its field value is falsy (boolean: `false`; others: `null`/`undefined`/`""`) AND all recursive children are empty
@@ -961,7 +1055,9 @@ the schema, and deep nesting under an *unknown* key (the `extra` passthrough) �
 `ProjectLoadError` rather than a crash — plus a deliberately generous legitimate schema that must
 still load, so the limits cannot be tightened into rejecting real work without a test failing.
 
-Several newer pure modules have their own dedicated test files: `src/model/year.test.ts` (`parseYear`/`isPlausibleYear` boundaries and string-scanning behavior), `src/model/duplicates.test.ts` (`classifyImport`'s four-tier priority, the year-gap veto, author-surname Dice edge cases, and a differential test that the cheap cost-guard agrees pair-for-pair with an unguarded reference), `src/model/linkify.test.ts` (URL splitting, trailing punctuation stripping, degenerate match handling), and `src/model/completeness.test.ts` (the required-only-when-declared denominator rule, boolean exclusion, per-instance counting for repeatables). One honest gap as of this writing: `Paper.year`/`Paper.venue` themselves are pinned down at the parsing/validation layer (`year.test.ts`, `references.test.ts`), but the git-layer behavior described above — `merge.ts`'s conflict handling, `changes.ts`'s field-level review row, and `similarity.ts`'s identity-not-magnitude scoring — has no dedicated test coverage yet.
+Several newer pure modules have their own dedicated test files: `src/model/year.test.ts` (`parseYear`/`isPlausibleYear` boundaries and string-scanning behavior), `src/model/duplicates.test.ts` (`classifyImport`'s four-tier priority, the year-gap veto, author-surname Dice edge cases, and a differential test that the cheap cost-guard agrees pair-for-pair with an unguarded reference), `src/model/linkify.test.ts` (URL splitting, trailing punctuation stripping, degenerate match handling), `src/model/completeness.test.ts` (the required-only-when-declared denominator rule, boolean exclusion, per-instance counting for repeatables), and `src/model/alignment.test.ts` (stored alignment projection, non-mutation of input trees, unmapped-entry appending, nested repeatable alignment, `parseAlignment` round-trip and garbage-dropping). One honest gap as of this writing: `Paper.year`/`Paper.venue` themselves are pinned down at the parsing/validation layer (`year.test.ts`, `references.test.ts`), but the git-layer behavior described above — `merge.ts`'s conflict handling, `changes.ts`'s field-level review row, and `similarity.ts`'s identity-not-magnitude scoring — has no dedicated test coverage yet.
+
+**Annotation state and finished** are covered by `src/state/store.finished.test.ts` and `src/state/editorStore.finished.test.ts` (the finished flag's seat routing, serialization-only-when-true, `finishCheckbox` opt-out, and the `flagged` state's re-evaluation on field changes), and `src/state/store.reindex.test.ts` (mark-link/AI-mark/equal-key reindexing on instance removal). `src/model/pdfMarks.test.ts` covers the column-then-y sort, cross-page `groupId` deduplication, and the `columnOf` bucketing. `src/consolidate/exportDisagreements.test.ts` covers the plain-text export format.
 
 **Screening** has its own set of test files, mirroring the `src/consolidate/*.test.ts` convention
 (pure functions, no React, no store imports): `src/screening/schema.test.ts` (the derived schema's
