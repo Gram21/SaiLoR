@@ -102,9 +102,23 @@ export function App() {
   // can move it into or out of one — an effect, not a call from store.ts,
   // because gitStore reads the main store and the main store must not read
   // back (see gitStore.ts's own doc comment).
+  //
+  // Keyed on the handle's *path*, not its object identity: `gitStore`'s own
+  // `reloadOpenProject` (after a field-level commit/discard, a pull, or a
+  // branch switch) re-opens the *same* file and hands back a fresh handle
+  // object every time, purely as a side effect of going through the ordinary
+  // open path. Keying on identity re-ran `refreshRepo` on every one of those
+  // reloads too — which starts by nulling `gitStore`'s `repo` — racing the
+  // very `refreshStatus()` call those same flows make right afterward. When
+  // `refreshRepo`'s null won that race, `refreshStatus` saw `repo` as null
+  // and silently skipped refreshing `panel.status`, leaving the Git dialog's
+  // changes list stuck showing the just-committed change until the reviewer
+  // clicked the manual ↻ refresh. The repo itself cannot change from a
+  // same-path reload, so there is nothing to re-probe.
   useEffect(() => {
     void refreshRepo(saveHandle)
-  }, [saveHandle, refreshRepo])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saveHandle?.path, refreshRepo])
 
   // Persist pane widths whenever they change (avoids stale-closure saves).
   useEffect(() => {
