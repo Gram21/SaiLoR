@@ -950,6 +950,10 @@ function applyOne(draft: Project, conflict: FieldConflict, value: FieldValue): v
       const s = valueToString(value).trim()
       draft.title = s || undefined
     }
+    if (conflict.canonical === 'schemaInfo') {
+      const s = valueToString(value).trim()
+      draft.schemaInfo = s || null
+    }
     return
   }
 
