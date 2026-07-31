@@ -859,6 +859,7 @@ button.paper-search-mode:hover {
 .pdf-mark-tooltip-text {
   margin: 0;
   white-space: pre-wrap;
+  overflow-wrap: break-word;
 }
 .pdf-mark-tooltip-links {
   list-style: none;
