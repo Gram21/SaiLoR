@@ -1459,8 +1459,9 @@ export const useStore = create<AppState>()(
 
     checkForUpdate: async () => {
       const cached = readUpdateCache()
-      // GitHub allows 60 unauthenticated calls an hour per IP, so a daily check
-      // is plenty — a fresh cache answers without touching the network.
+      // Called on every startup so an update notice shows up promptly, not
+      // once a day — the short-lived cache below only absorbs a rapid
+      // crash-restart loop, it isn't meant to skip real day-to-day launches.
       if (cached) {
         set((s) => {
           s.update = updateFrom(APP_VERSION, cached.release)

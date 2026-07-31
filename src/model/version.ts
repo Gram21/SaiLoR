@@ -9,15 +9,20 @@
  * simply shows no update notice. It starts working the moment the repo is made
  * public, with no code change.
  *
- * The API allows 60 unauthenticated requests per hour per IP, so the result is
- * cached (see CHECK_INTERVAL_MS) rather than fetched on every launch.
+ * Runs on every app startup, so a user sees the notice as soon as it exists —
+ * not just once a day. The API allows 60 unauthenticated requests per hour per
+ * IP, so the result is still cached (see CHECK_INTERVAL_MS), just for a short
+ * window: enough to absorb a crash-restart loop or a scripted relaunch without
+ * burning through the hourly limit, short enough that a normal day of
+ * launches still hits the network each time.
  */
 
 export const RELEASES_URL = 'https://github.com/Gram21/SaiLoR/releases'
 const LATEST_RELEASE_API = 'https://api.github.com/repos/Gram21/SaiLoR/releases/latest'
 
-/** How long a check result stays fresh. */
-export const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000
+/** How long a check result stays fresh — just long enough to survive a rapid
+ *  relaunch loop, not to skip real day-to-day startups. */
+export const CHECK_INTERVAL_MS = 15 * 60 * 1000
 
 export interface UpdateInfo {
   /** Version of the newest release, e.g. "0.2.0". */
