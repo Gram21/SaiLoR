@@ -34,6 +34,22 @@ function clearHighlights() {
   highlightRegistry?.delete(HL_NAME_ACTIVE)
 }
 
+/**
+ * Whether a mark's own rect already sits inside the scroll container's
+ * visible band, in viewport pixels — pure and DOM-measurement-free so it can
+ * be unit tested without a real layout. `pageRect`/`rootRect` are each side's
+ * `getBoundingClientRect()`; `mark.rects[0]` is the same corner `scrollToMark`
+ * centers on, since a mark's overlay position is always expressed relative to
+ * its own page.
+ */
+export function markVerticallyVisible(mark: PdfMark, pageRect: DOMRect, rootRect: DOMRect): boolean {
+  const rect = mark.rects[0]
+  if (!rect) return false
+  const top = pageRect.top + rect.y * pageRect.height
+  const bottom = top + rect.height * pageRect.height
+  return top >= rootRect.top && bottom <= rootRect.bottom
+}
+
 /** Find all ranges matching `query` within each text layer under `root`. */
 function findMatches(root: HTMLElement, query: string): Range[] {
   const ranges: Range[] = []
@@ -682,11 +698,25 @@ export function PdfViewer() {
     if (id) setActiveMark({ id, x, y })
   }
 
-  /** Scroll to a mark and briefly pulse it — the shared "show me this one"
-   *  action behind both cycling and a jump requested from elsewhere (the
-   *  field-link popover). */
-  const flashAndScrollTo = (mark: PdfMark) => {
-    scrollToMark(mark)
+  /** Flash a mark, and scroll to it first unless `onlyIfHidden` says it's
+   *  already on screen — the shared "show me this one" action behind cycling,
+   *  a jump requested from elsewhere (the field-link popover), and picking a
+   *  mark to link from that popover's own list.
+   *
+   *  Cycling (`cycleTo`) always scrolls: Next/Prev is a request to move, even
+   *  to a mark already in view (centering it is the point). `onlyIfHidden` is
+   *  for callers where the mark was only *named*, not navigated to — jumping
+   *  the page out from under someone who can already see what they clicked is
+   *  disorienting, not helpful. */
+  const flashAndScrollTo = (mark: PdfMark, opts: { onlyIfHidden?: boolean } = {}) => {
+    const root = containerRef.current
+    const pageEl = pageRefs.current[mark.page - 1]
+    const alreadyVisible =
+      !!opts.onlyIfHidden &&
+      !!root &&
+      !!pageEl &&
+      markVerticallyVisible(mark, pageEl.getBoundingClientRect(), root.getBoundingClientRect())
+    if (!alreadyVisible) scrollToMark(mark)
     setFlashMarkId(mark.id)
     if (flashTimeoutRef.current !== undefined) window.clearTimeout(flashTimeoutRef.current)
     flashTimeoutRef.current = window.setTimeout(() => setFlashMarkId(null), 1500)
@@ -705,14 +735,17 @@ export function PdfViewer() {
   }
 
   // A jump requested from elsewhere (the field-link popover's "show me this
-  // mark" before linking it) — scroll to it and clear the request, leaving
+  // mark" before linking it) — flash it and clear the request, leaving
   // whatever popover asked for it open (this never touches `activeMark`).
+  // `onlyIfHidden`: the mark was named, not navigated to — if it's already on
+  // screen, scrolling would just move the page out from under someone who can
+  // already see what they clicked.
   const pendingMarkJump = useStore((s) => s.pendingMarkJump)
   const setPendingMarkJump = useStore((s) => s.setPendingMarkJump)
   useEffect(() => {
     if (!pendingMarkJump) return
     const mark = marks.find((m) => m.id === pendingMarkJump)
-    if (mark) flashAndScrollTo(mark)
+    if (mark) flashAndScrollTo(mark, { onlyIfHidden: true })
     setPendingMarkJump(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingMarkJump])
