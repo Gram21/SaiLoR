@@ -305,6 +305,16 @@ interface AppState {
   pendingMarkJump: string | null
   /** Canonical field path whose link popover is open, or null. Session-only, like `validationOpen`. */
   openLinkPopoverField: string | null
+  /** A canonical field path `AnnotationPanel` should scroll to and flash,
+   *  requested from elsewhere (Validation's "jump to this field", clicking
+   *  an issue rather than only the paper it's on). `AnnotationPanel` clears
+   *  this itself once it has acted on it — same one-shot-request shape as
+   *  `pendingMarkJump`. */
+  pendingFieldJump: string | null
+  /** The field currently pulsing after a jump — see `pendingFieldJump`.
+   *  Set alongside clearing `pendingFieldJump`, cleared again after the
+   *  flash animation's own duration. */
+  flashFieldPath: string | null
   /** Restore the Consolidation overview when its Agreement dialog closes. */
   agreementReturnToOverview: boolean
   /** Whether the overall Consolidation overview is open. Session-only, like `validationOpen`. */
@@ -462,6 +472,10 @@ interface AppState {
   setPendingMarkJump: (markId: string | null) => void
   /** Open/close a field's link popover, closing any other field's — see `openLinkPopoverField`. */
   setOpenLinkPopoverField: (canonical: string | null) => void
+  /** Request/clear a "scroll to and flash this field" — see `pendingFieldJump`. */
+  setPendingFieldJump: (canonical: string | null) => void
+  /** Set/clear the field currently pulsing — see `flashFieldPath`. */
+  setFlashFieldPath: (canonical: string | null) => void
   /** Replace the Consolidation overview with Agreement, then restore it on close. */
   openAgreementFromOverview: () => void
   closeAgreement: () => void
@@ -839,6 +853,8 @@ export const useStore = create<AppState>()(
     schemaInfoOpen: false,
     pendingMarkJump: null,
     openLinkPopoverField: null,
+    pendingFieldJump: null,
+    flashFieldPath: null,
     agreementReturnToOverview: false,
     consolidationOverviewOpen: false,
     disagreementsOpen: false,
@@ -1006,6 +1022,8 @@ export const useStore = create<AppState>()(
         s.schemaInfoOpen = false
         s.pendingMarkJump = null
         s.openLinkPopoverField = null
+        s.pendingFieldJump = null
+        s.flashFieldPath = null
         s.agreementReturnToOverview = false
         s.consolidationOverviewOpen = false
         s.disagreementsOpen = false
@@ -1420,6 +1438,16 @@ export const useStore = create<AppState>()(
     setOpenLinkPopoverField: (canonical) =>
       set((s) => {
         s.openLinkPopoverField = canonical
+      }),
+
+    setPendingFieldJump: (canonical) =>
+      set((s) => {
+        s.pendingFieldJump = canonical
+      }),
+
+    setFlashFieldPath: (canonical) =>
+      set((s) => {
+        s.flashFieldPath = canonical
       }),
 
     openAgreementFromOverview: () =>

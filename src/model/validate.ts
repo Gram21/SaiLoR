@@ -9,6 +9,7 @@ import {
 } from './annotations'
 import type { Paper, Project } from './project'
 import { YEAR_MIN, YEAR_MAX, isPlausibleYear } from './year'
+import { formatPath, type RawSeg } from '../llm/paths'
 
 /**
  * Validation walks the resolved schema against a paper's annotation tree and
@@ -28,6 +29,12 @@ export interface ValidationIssue {
   paperTitle: string
   /** Human-readable field path, e.g. "Findings #2 › Evidence › Metric" */
   path: string
+  /** Canonical machine path (`llm/paths.ts`'s `formatPath` form, e.g.
+   *  "Findings[1]/Evidence/Metric") naming the same field — empty string for
+   *  a paper-level issue that names no specific field (a caught structural
+   *  error). Lets a consumer (`ValidationDialog`) jump straight to the
+   *  field itself, not just the paper it's on. */
+  canonicalPath: string
   kind: IssueKind
   message: string
 }
@@ -114,7 +121,25 @@ function listOptions(options: string[]): string {
 // Walking
 // ---------------------------------------------------------------------------
 
-type Emit = (kind: IssueKind, path: string, message: string) => void
+/**
+ * Where an issue is, in the two shapes this module and its consumers each
+ * need: `segs` is the canonical (`llm/paths.ts`) form, always index-0-implicit
+ * — a stable machine path, for jumping straight to the field. `displayParts`
+ * is this module's own, older human-readable convention — deliberately NOT
+ * `displayPath`, whose "number only past index 0" rule differs from the one
+ * already shipped here: a segment is numbered as soon as its node repeats
+ * *anywhere* in the list, so even its first instance reads "Findings #1",
+ * not bare "Findings" — changing that would be a silent, untested-for
+ * behaviour change to every issue message, not just a plumbing detail.
+ */
+interface PathAcc {
+  segs: RawSeg[]
+  displayParts: string[]
+}
+
+const ROOT: PathAcc = { segs: [], displayParts: [] }
+
+type Emit = (kind: IssueKind, loc: PathAcc, message: string) => void
 
 /** `null`/`undefined` is "not answered", which is the `required` check's job, not the type check's. */
 function typeMismatch(type: FieldType, value: unknown): boolean {
@@ -131,7 +156,7 @@ function typeMismatch(type: FieldType, value: unknown): boolean {
   }
 }
 
-function validateField(def: ResolvedDef, value: unknown, path: string, emit: Emit): void {
+function validateField(def: ResolvedDef, value: unknown, loc: PathAcc, emit: Emit): void {
   const type = def.type as FieldType
 
   if (typeMismatch(type, value)) {
@@ -142,7 +167,7 @@ function validateField(def: ResolvedDef, value: unknown, path: string, emit: Emi
     // reason for a whole new kind — but "should be a year" alone gives no
     // hint of the actual bound, so the expected clause spells it out.
     const expected = type === 'year' ? `a year between ${YEAR_MIN} and ${YEAR_MAX}` : `a ${type}`
-    emit('type', path, `"${def.name}" should be ${expected} but holds ${actual}.`)
+    emit('type', loc, `"${def.name}" should be ${expected} but holds ${actual}.`)
     // A mistyped value tells us nothing about requiredness or enum membership.
     return
   }
@@ -150,14 +175,14 @@ function validateField(def: ResolvedDef, value: unknown, path: string, emit: Emi
   const empty = isEmptyValue(type, value)
 
   if (def.required && empty) {
-    emit('required', path, `"${def.name}" is required but empty.`)
+    emit('required', loc, `"${def.name}" is required but empty.`)
   }
 
   if (def.options && def.options.length > 0 && !empty && typeof value === 'string') {
     if (!def.options.includes(value)) {
       emit(
         'enum',
-        path,
+        loc,
         `"${def.name}" holds ${preview(value)}, which is not one of: ${listOptions(def.options)}.`,
       )
     }
@@ -167,13 +192,13 @@ function validateField(def: ResolvedDef, value: unknown, path: string, emit: Emi
 function validateTree(
   defs: ResolvedDef[],
   tree: unknown,
-  ancestors: string[],
+  ancestors: PathAcc,
   emit: Emit,
   // Answers of every field along this call's direct ancestor chain, keyed by
   // name — how a `visibleIf` referencing an ancestor (not just a same-level
   // sibling) gets resolved here, mirroring `AnnotationNode`'s
-  // `ancestorValues`. Unrelated to `ancestors` above, which is display-path
-  // labels, not gate values.
+  // `ancestorValues`. Unrelated to `ancestors` above, which is path
+  // segments, not gate values.
   gateAncestors: Record<string, unknown> = {},
 ): void {
   const map = isPlainObject(tree) ? tree : {}
@@ -183,12 +208,17 @@ function validateTree(
       continue
 
     const raw = map[def.name]
-    const nodePath = [...ancestors, def.name].join(PATH_SEP)
+    // Points at instance 0 — right for a whole-node issue (cardinality, or
+    // "should hold a list") that isn't about any one instance in particular.
+    const nodeLoc: PathAcc = {
+      segs: [...ancestors.segs, { name: def.name, index: 0 }],
+      displayParts: [...ancestors.displayParts, def.name],
+    }
 
     if (raw !== undefined && !Array.isArray(raw)) {
       emit(
         'type',
-        nodePath,
+        nodeLoc,
         `"${def.name}" should hold a list of entries but holds ${describeActual(raw)}.`,
       )
       continue
@@ -200,42 +230,45 @@ function validateTree(
     if (instances.length < def.min) {
       emit(
         'cardinality',
-        nodePath,
+        nodeLoc,
         `"${def.name}" needs at least ${def.min} ${entries(def.min)} but has ${instances.length}.`,
       )
     }
     if (def.max !== null && instances.length > def.max) {
       emit(
         'cardinality',
-        nodePath,
+        nodeLoc,
         `"${def.name}" allows at most ${def.max} ${entries(def.max)} but has ${instances.length}.`,
       )
     }
 
     instances.forEach((rawInstance, index) => {
-      // Only number an instance when there is more than one, so simple
-      // non-repeating fields read as "Relevant", not "Relevant #1".
+      // Only number the display segment when the node actually repeats, so
+      // simple non-repeating fields read as "Relevant", not "Relevant #1" —
+      // the canonical segment always carries the real index regardless.
       const segment = instances.length > 1 ? `${def.name} #${index + 1}` : def.name
-      const path = [...ancestors, segment]
-      const joined = path.join(PATH_SEP)
+      const loc: PathAcc = {
+        segs: [...ancestors.segs, { name: def.name, index }],
+        displayParts: [...ancestors.displayParts, segment],
+      }
 
       if (!isPlainObject(rawInstance)) {
         emit(
           'type',
-          joined,
+          loc,
           `"${def.name}" entry should be an object but is ${describeActual(rawInstance)}.`,
         )
         return
       }
 
       const instance = rawInstance as InstanceNode
-      if (isField(def)) validateField(def, instance.value, joined, emit)
+      if (isField(def)) validateField(def, instance.value, loc, emit)
       // A node may carry both a value and a sub-tree.
       if (def.children.length > 0) {
         const nextGateAncestors = isField(def)
           ? { ...gateAncestors, [def.name]: instance.value }
           : gateAncestors
-        validateTree(def.children, instance.children, path, emit, nextGateAncestors)
+        validateTree(def.children, instance.children, loc, emit, nextGateAncestors)
       }
     })
   }
@@ -248,18 +281,19 @@ function validateTree(
 /** Problems with one paper's annotations. Empty when it is valid. */
 export function validatePaper(schema: ResolvedDef[], paper: Paper): ValidationIssue[] {
   const issues: ValidationIssue[] = []
-  const emit: Emit = (kind, path, message) => {
+  const emit: Emit = (kind, loc, message) => {
     issues.push({
       paperId: paper?.id ?? '',
       paperTitle: paper?.title ?? '',
-      path,
+      path: loc.displayParts.join(PATH_SEP),
+      canonicalPath: formatPath(loc.segs),
       kind,
       message,
     })
   }
 
   const tree: AnnotationValueTree | undefined = paper?.annotations
-  validateTree(Array.isArray(schema) ? schema : [], tree, [], emit)
+  validateTree(Array.isArray(schema) ? schema : [], tree, ROOT, emit)
   return issues
 }
 
@@ -296,6 +330,7 @@ export function validateProject(project: Project): ProjectValidation {
         paperId: paper?.id ?? '',
         paperTitle: paper?.title ?? '',
         path: '',
+        canonicalPath: '',
         kind: 'type',
         message: `Could not validate this paper's annotations: ${String(err)}`,
       })

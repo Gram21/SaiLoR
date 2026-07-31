@@ -331,11 +331,20 @@ describe('paths', () => {
         },
       },
     ]
-    const paths = validatePaper(sampleSchema, paper(tree)).map((i) => i.path)
-    expect(paths).toEqual([
+    const issues = validatePaper(sampleSchema, paper(tree))
+    expect(issues.map((i) => i.path)).toEqual([
       'Findings #1 › Evidence › Metric',
       'Findings #2 › Claim',
       'Findings #2 › Evidence #2 › Metric',
+    ])
+    // The canonical path always carries the real 0-based index, regardless
+    // of whether the display path bothered to number it — "Findings #1"
+    // above is canonically index 0, left implicit, same as `formatPath`
+    // treats every other node's first instance.
+    expect(issues.map((i) => i.canonicalPath)).toEqual([
+      'Findings/Evidence/Metric',
+      'Findings[1]/Claim',
+      'Findings[1]/Evidence[1]/Metric',
     ])
   })
 

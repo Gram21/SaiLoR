@@ -36,6 +36,10 @@ export function screeningIssues(project: Project, currentReviewer: string | null
         paperId: paper.id,
         paperTitle: paper.title,
         path: SCREENING_REASON,
+        // Screening has no annotation-panel field to jump to (its schema is
+        // derived from the reasons list, not authored) — ValidationDialog
+        // falls back to a paper-only jump when this is empty.
+        canonicalPath: '',
         kind: 'screening',
         message: 'Excluded, but no exclusion reason is recorded.',
       })
@@ -44,6 +48,10 @@ export function screeningIssues(project: Project, currentReviewer: string | null
         paperId: paper.id,
         paperTitle: paper.title,
         path: SCREENING_REASON,
+        // Screening has no annotation-panel field to jump to (its schema is
+        // derived from the reasons list, not authored) — ValidationDialog
+        // falls back to a paper-only jump when this is empty.
+        canonicalPath: '',
         kind: 'screening',
         message: 'An exclusion reason is recorded, but this paper is not excluded.',
       })

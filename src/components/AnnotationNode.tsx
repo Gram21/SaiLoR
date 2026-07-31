@@ -25,6 +25,10 @@ interface AnnotationNodeProps {
 export function AnnotationNode({ def, path, container, ancestorValues = {} }: AnnotationNodeProps) {
   const addInstance = useStore((s) => s.addInstance)
   const removeInstance = useStore((s) => s.removeInstance)
+  // The field currently pulsing after a "jump to this field" request (from
+  // Validation) — a plain string, so every node just compares its own
+  // canonical path against it rather than each subscribing separately.
+  const flashFieldPath = useStore((s) => s.flashFieldPath)
   // Clicking the label of a single-instance field confirms that one field.
   const [, confirmFirst] = useAiMark(path, def.name, 0)
 
@@ -35,8 +39,12 @@ export function AnnotationNode({ def, path, container, ancestorValues = {} }: An
   // Common case: a single, non-repeatable leaf field on one row.
   if (leaf && !repeatable) {
     const inst = instances[0]
+    const canonical = fieldPath(path, def.name, 0)
     return (
-      <div className="anno-leaf">
+      <div
+        className={`anno-leaf${canonical === flashFieldPath ? ' field-flash' : ''}`}
+        data-canonical={canonical}
+      >
         <NodeName def={def} onClick={confirmFirst} />
         <Field def={def} path={path} index={0} value={inst?.value ?? null} ariaLabel={def.name} />
       </div>
@@ -85,17 +93,24 @@ export function AnnotationNode({ def, path, container, ancestorValues = {} }: An
             </div>
           )}
 
-          {isField(def) && (
-            <div className="anno-instance-field">
-              <Field
-                def={def}
-                path={path}
-                index={i}
-                value={inst.value ?? null}
-                ariaLabel={repeatable ? `${def.name} #${i + 1}` : def.name}
-              />
-            </div>
-          )}
+          {isField(def) &&
+            (() => {
+              const canonical = fieldPath(path, def.name, i)
+              return (
+                <div
+                  className={`anno-instance-field${canonical === flashFieldPath ? ' field-flash' : ''}`}
+                  data-canonical={canonical}
+                >
+                  <Field
+                    def={def}
+                    path={path}
+                    index={i}
+                    value={inst.value ?? null}
+                    ariaLabel={repeatable ? `${def.name} #${i + 1}` : def.name}
+                  />
+                </div>
+              )
+            })()}
 
           {def.children.length > 0 && inst.children && (
             <div className="anno-children">

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Document, Page } from 'react-pdf'
 import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
@@ -97,6 +98,109 @@ function useClampedAnchor(ref: React.RefObject<HTMLDivElement | null>, anchor: {
     // re-measures the (unchanged) box and sets the same `pos` again forever.
   }, [anchor])
   return pos
+}
+
+/** Where a mark's hover tooltip should render, and which way it opens —
+ *  same "flip up when there's no room below" rule `NodeName`'s description
+ *  tooltip already follows, computed fresh from whichever rect the mouse is
+ *  actually over (a highlight can wrap several lines, each its own rect). */
+function markTooltipCoords(el: HTMLElement): { x: number; top?: number; bottom?: number } {
+  const r = el.getBoundingClientRect()
+  const spaceBelow = window.innerHeight - r.bottom
+  const openUp = spaceBelow < 100 && r.top > spaceBelow
+  return openUp ? { x: r.left, bottom: window.innerHeight - r.top + 6 } : { x: r.left, top: r.bottom + 6 }
+}
+
+/** One mark's rendered overlay (a sticky-note dot, or one `<div>` per
+ *  highlighted line) plus its hover tooltip — split out of the memoized
+ *  `pages` array below purely so it can own its own hover state without
+ *  that state forcing every page to re-render. Shows the mark's comment
+ *  (or, lacking one, the text it was created from) and, when it has any,
+ *  the fields it's linked to as evidence — the same information the
+ *  click-to-open popover shows, available at a glance without opening it. */
+function MarkOverlayItem({
+  mark,
+  flash,
+  onOpen,
+}: {
+  mark: PdfMark
+  flash: string
+  onOpen: (e: React.MouseEvent) => void
+}) {
+  const [coords, setCoords] = useState<{ x: number; top?: number; bottom?: number } | null>(null)
+  const hasInfo = !!(mark.comment || mark.text || (mark.linkedFields && mark.linkedFields.length > 0))
+  const show = (e: React.MouseEvent<HTMLElement>) => {
+    if (hasInfo) setCoords(markTooltipCoords(e.currentTarget))
+  }
+  const hide = () => setCoords(null)
+
+  const tooltip = coords && (
+    <div
+      className="tip pdf-mark-tooltip"
+      role="tooltip"
+      style={{
+        left: coords.x,
+        ...(coords.top !== undefined ? { top: coords.top } : { bottom: coords.bottom }),
+      }}
+    >
+      {(mark.comment || mark.text) && <p className="pdf-mark-tooltip-text">{mark.comment || mark.text}</p>}
+      {mark.linkedFields && mark.linkedFields.length > 0 && (
+        <ul className="pdf-mark-tooltip-links">
+          {mark.linkedFields.map((l) => (
+            <li key={l.path}>🔗 {l.label}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+
+  if (mark.kind === 'note') {
+    return (
+      <>
+        <div
+          className={`pdf-mark-note${flash}`}
+          style={{
+            left: `${mark.rects[0].x * 100}%`,
+            top: `${mark.rects[0].y * 100}%`,
+            backgroundColor: mark.color,
+          }}
+          onClick={onOpen}
+          onMouseEnter={show}
+          onMouseLeave={hide}
+        />
+        {tooltip && createPortal(tooltip, document.body)}
+      </>
+    )
+  }
+
+  return (
+    <div>
+      {mark.rects.map((r, ri) => (
+        <div
+          key={ri}
+          className={`pdf-mark-rect${flash}`}
+          style={{
+            left: `${r.x * 100}%`,
+            top: `${r.y * 100}%`,
+            width: `${r.width * 100}%`,
+            height: `${r.height * 100}%`,
+            background: mark.color,
+          }}
+          onClick={onOpen}
+          onMouseEnter={show}
+          onMouseLeave={hide}
+        />
+      ))}
+      {mark.comment && (
+        <div
+          className="pdf-mark-comment-dot"
+          style={{ left: `${mark.rects[0].x * 100}%`, top: `${mark.rects[0].y * 100}%` }}
+          aria-hidden="true"
+        />
+      )}
+      {tooltip && createPortal(tooltip, document.body)}
+    </div>
+  )
 }
 
 /** Middle pane: renders the current paper's PDF and captures text selection. */
@@ -833,55 +937,18 @@ export function PdfViewer() {
           >
             {pageMarks.length > 0 && (
               <div className="pdf-marks-overlay">
-                {pageMarks.map((mark) => {
-                  const onOpen = (e: React.MouseEvent) => {
-                    e.stopPropagation()
-                    setSelectionToolbar(null)
-                    setActiveMark({ id: mark.id, x: e.clientX, y: e.clientY })
-                  }
-                  const flash = flashMarkId === mark.id ? ' flash' : ''
-                  if (mark.kind === 'note') {
-                    return (
-                      <div
-                        key={mark.id}
-                        className={`pdf-mark-note${flash}`}
-                        style={{
-                          left: `${mark.rects[0].x * 100}%`,
-                          top: `${mark.rects[0].y * 100}%`,
-                          backgroundColor: mark.color,
-                        }}
-                        title={mark.comment || undefined}
-                        onClick={onOpen}
-                      />
-                    )
-                  }
-                  return (
-                    <div key={mark.id}>
-                      {mark.rects.map((r, ri) => (
-                        <div
-                          key={ri}
-                          className={`pdf-mark-rect${flash}`}
-                          style={{
-                            left: `${r.x * 100}%`,
-                            top: `${r.y * 100}%`,
-                            width: `${r.width * 100}%`,
-                            height: `${r.height * 100}%`,
-                            background: mark.color,
-                          }}
-                          title={mark.comment || undefined}
-                          onClick={onOpen}
-                        />
-                      ))}
-                      {mark.comment && (
-                        <div
-                          className="pdf-mark-comment-dot"
-                          style={{ left: `${mark.rects[0].x * 100}%`, top: `${mark.rects[0].y * 100}%` }}
-                          aria-hidden="true"
-                        />
-                      )}
-                    </div>
-                  )
-                })}
+                {pageMarks.map((mark) => (
+                  <MarkOverlayItem
+                    key={mark.id}
+                    mark={mark}
+                    flash={flashMarkId === mark.id ? ' flash' : ''}
+                    onOpen={(e) => {
+                      e.stopPropagation()
+                      setSelectionToolbar(null)
+                      setActiveMark({ id: mark.id, x: e.clientX, y: e.clientY })
+                    }}
+                  />
+                ))}
               </div>
             )}
           </Page>

@@ -24,6 +24,7 @@ export function ValidationDialog() {
   const unannotated = useStore((s) => s.validationUnannotated)
   const setOpen = useStore((s) => s.setValidationOpen)
   const selectPaper = useStore((s) => s.selectPaper)
+  const setPendingFieldJump = useStore((s) => s.setPendingFieldJump)
 
   // Group by paper, preserving the paper order validateProject walked in.
   const byPaper = useMemo(() => {
@@ -49,6 +50,16 @@ export function ValidationDialog() {
 
   const goToPaper = (paperId: string) => {
     selectPaper(paperId)
+    setOpen(false)
+  }
+
+  // Jumps to the paper AND, when the issue names one, scrolls the annotation
+  // panel to that exact field and flashes it — `canonicalPath` is empty only
+  // for a screening issue (no annotation-panel field to point at) or a
+  // caught structural error, in which case this is the same as `goToPaper`.
+  const goToIssue = (issue: ValidationIssue) => {
+    selectPaper(issue.paperId)
+    if (issue.canonicalPath) setPendingFieldJump(issue.canonicalPath)
     setOpen(false)
   }
 
@@ -108,11 +119,22 @@ export function ValidationDialog() {
                   <ul className="validation-issues">
                     {group.issues.map((issue, i) => (
                       <li key={i}>
-                        <span className={`validation-kind kind-${issue.kind}`}>
-                          {KIND_LABEL[issue.kind]}
-                        </span>
-                        <span className="validation-path">{issue.path}</span>
-                        <span className="validation-msg">{issue.message}</span>
+                        <button
+                          type="button"
+                          className="validation-issue"
+                          onClick={() => goToIssue(issue)}
+                          title={
+                            issue.canonicalPath
+                              ? 'Jump to this field'
+                              : 'Open this paper'
+                          }
+                        >
+                          <span className={`validation-kind kind-${issue.kind}`}>
+                            {KIND_LABEL[issue.kind]}
+                          </span>
+                          <span className="validation-path">{issue.path}</span>
+                          <span className="validation-msg">{issue.message}</span>
+                        </button>
                       </li>
                     ))}
                   </ul>
