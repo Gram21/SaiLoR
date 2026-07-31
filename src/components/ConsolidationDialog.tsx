@@ -31,6 +31,22 @@ export function closingWouldStrand(
 }
 
 /**
+ * The compare popup's agreement verdict. Decided in `comparable()` form, not
+ * raw equality, because `disagreements.ts` (the status dot, the disagreement
+ * list, every coefficient) and `unanimous.ts` (auto-adoption) both do — and
+ * unanimous.ts's own comment names this popup as the third consumer that must
+ * reach the same verdict. A consolidator's equivalence mark overrides, same as
+ * `MARKED_EQUAL_CATEGORY` in disagreements.ts.
+ */
+export function agreementVerdict(
+  answered: Array<FieldValue | undefined>,
+  markedEqual: boolean,
+): 'agree' | 'disagree' | null {
+  if (answered.length === 0) return null
+  return markedEqual || new Set(answered.map(comparable)).size === 1 ? 'agree' : 'disagree'
+}
+
+/**
  * Only reachable from Consolidation mode's "compare" button on a field (see
  * `Field.tsx`). Shows every reviewer's answer for that one field, side by
  * side, so the final call is informed rather than a guess. Picking a row
@@ -104,11 +120,7 @@ export function ConsolidationDialog() {
   const answered = rows
     .map((r) => r.value)
     .filter((v) => !isEmptyValue(def.type, v ?? emptyValue(def.type)))
-  const distinct = new Set(answered.map((v) => JSON.stringify(v)))
-  // A field the consolidator has declared equivalent reads as agreement no
-  // matter what the raw text says — that declaration *is* the reconciliation.
-  const agreement: 'agree' | 'disagree' | null =
-    answered.length === 0 ? null : distinct.size === 1 || markedEqual ? 'agree' : 'disagree'
+  const agreement = agreementVerdict(answered, markedEqual)
 
   // The checkbox only makes sense when there is something to declare: at
   // least two reviewers answered, and their answers still differ once case
