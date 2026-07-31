@@ -1674,7 +1674,15 @@ ipcMain.handle(
       await writeProjectFiles(fullPath, committed.metaText, committed.files)
       const add = await runGit(['add', '--', ...paths], root)
       if (!add.ok) return add
-      return await runGit(['commit', '-m', message, '--', ...paths], root)
+      // `add` tolerates a directory pathspec that matches nothing; `commit` does
+      // not ("pathspec 'annotations' did not match any file(s) known to git").
+      // A project with no annotations at all leaves the folder existing and
+      // empty, so only restrict the commit by `dir` when something is staged
+      // under it (an add, a modify, or a delete — `diff --cached` still reports
+      // a staged deletion, `ls-files` does not).
+      const staged = await runGit(['diff', '--cached', '--name-only', '--', dir], root)
+      const commitPaths = !staged.ok || gitOut(staged) ? paths : paths.filter((p) => p !== dir)
+      return await runGit(['commit', '-m', message, '--', ...commitPaths], root)
     } finally {
       await assertInsideRoot(root, fullPath)
       await writeProjectFiles(fullPath, working.metaText, working.files)
