@@ -384,47 +384,105 @@ export function PdfViewer() {
     return idx === -1 ? null : idx + 1
   }
 
-  /** The last actual text content inside `root` — deliberately NOT
-   *  `root.lastChild`. pdf.js appends a trailing `.endOfContent` marker div
-   *  to every text layer purely to extend the mouse hit-area for "select to
-   *  the end of the page"; its CSS collapses to zero height normally but
-   *  expands to cover the *entire* page (`inset: 0`) the moment a selection
-   *  is in progress (`.textLayer.selecting .endOfContent`). Ending a Range
-   *  with `setEndAfter(textLayer.lastChild)` during a real drag-select
-   *  therefore included that div, and `getClientRects()` on the resulting
-   *  Range returned one giant page-covering rect instead of the actual
-   *  highlighted lines. Walking to the last real `Text` node sidesteps the
-   *  marker entirely. */
-  const lastTextNode = (root: Node): Text | null => {
+  /** Every actual text node inside `root`, in document order — deliberately
+   *  gathered via a `SHOW_TEXT` walk rather than `root.lastChild`/children:
+   *  pdf.js appends a trailing `.endOfContent` marker div to every text layer
+   *  purely to extend the mouse hit-area for "select to the end of the
+   *  page"; its CSS collapses to zero height normally but expands to cover
+   *  the *entire* page (`inset: 0`) the moment a selection is in progress
+   *  (`.textLayer.selecting .endOfContent`), and can be left stuck expanded
+   *  on a page whose own `mouseup` never fires (the drag ended on a later
+   *  page). It holds no text, so a `SHOW_TEXT` walk skips it for free —
+   *  ending a Range there via `setEndAfter(lastChild)` used to include it
+   *  and blow a highlight rect out to the whole page. */
+  const textNodesOf = (root: Node): Text[] => {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
-    let last: Text | null = null
-    for (let n = walker.nextNode(); n; n = walker.nextNode()) last = n as Text
-    return last
+    const nodes: Text[] = []
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) nodes.push(n as Text)
+    return nodes
   }
+
+  /** Top of `node` as a fraction of `pageEl`'s own height (0 = page top),
+   *  the same coordinate space `rectsForPageRange` renders marks in. */
+  const textNodeTopFraction = (node: Text, pageEl: HTMLDivElement): number => {
+    const r = document.createRange()
+    r.selectNode(node)
+    const rect = r.getBoundingClientRect()
+    const pageRect = pageEl.getBoundingClientRect()
+    return pageRect.height > 0 ? (rect.top - pageRect.top) / pageRect.height : 0
+  }
+
+  /** A running header/footer (page number, title, authors, journal name —
+   *  whatever a template repeats on every page) should only end up in a
+   *  highlight when the reviewer's own drag actually touched it, not
+   *  because a selection that continues onto/from a neighboring page swept
+   *  over it along the way. This is the fraction of page height, measured
+   *  from the top and from the bottom, treated as "probably a running
+   *  header/footer" when deciding how far to auto-extend a selection's
+   *  boundary on a page the reviewer didn't start or end their drag on —
+   *  never applied to the page(s) they actually clicked/released on, whose
+   *  real boundary is kept exactly as given regardless of where it falls. */
+  const AUTO_EXTEND_MARGIN = 0.08
 
   /** Split a Range that may cross page boundaries into one sub-range per page
    *  it touches (`startPage`..`endPage` inclusive), each clamped to that
-   *  page's own text layer. A page found to intersect the range that turns
-   *  out empty (e.g. the boundary lands exactly on a page's edge) is simply
-   *  omitted from the result. */
+   *  page's own text layer. On a page whose boundary is auto-extended
+   *  (i.e. every page except the one the selection truly starts/ends on),
+   *  the extension stops before a likely running header/footer — see
+   *  `AUTO_EXTEND_MARGIN` — so a highlight that merely continues past a
+   *  page break doesn't also grab that page's title/page-number/byline
+   *  line. A page found to intersect the range that turns out empty (e.g.
+   *  the boundary lands exactly on a page's edge, or the whole page is
+   *  header/footer) is simply omitted from the result. */
   const splitRangeByPage = (range: Range, startPage: number, endPage: number): { page: number; range: Range }[] => {
     const out: { page: number; range: Range }[] = []
     for (let p = startPage; p <= endPage; p++) {
       const pageEl = pageRefs.current[p - 1]
       const textLayer = pageEl?.querySelector('.react-pdf__Page__textContent')
       if (!pageEl || !textLayer) continue
-      const sub = document.createRange()
-      if (p === startPage) {
-        sub.setStart(range.startContainer, range.startOffset)
-      } else {
-        sub.setStart(textLayer, 0)
+      const nodes = textNodesOf(textLayer)
+
+      // The header-clipped start / footer-clipped end, when this page's
+      // corresponding boundary is auto-extended rather than the reviewer's
+      // own click/release point (see `AUTO_EXTEND_MARGIN`). `null` means
+      // "nothing past the header" / "nothing before the footer" — the whole
+      // page read as header/footer, vanishingly rare but handled below by
+      // simply contributing no range for this page.
+      const clippedStart = nodes.find((n) => textNodeTopFraction(n, pageEl) >= AUTO_EXTEND_MARGIN) ?? null
+      let clippedEnd: Text | null = null
+      for (let i = nodes.length - 1; i >= 0; i--) {
+        if (textNodeTopFraction(nodes[i], pageEl) <= 1 - AUTO_EXTEND_MARGIN) {
+          clippedEnd = nodes[i]
+          break
+        }
       }
-      if (p === endPage) {
-        sub.setEnd(range.endContainer, range.endOffset)
-      } else {
-        // Ends at this page's last real text, not its last DOM child.
-        const last = lastTextNode(textLayer)
-        if (last) sub.setEnd(last, last.length)
+
+      const sub = document.createRange()
+      try {
+        if (p === startPage) {
+          sub.setStart(range.startContainer, range.startOffset)
+        } else if (clippedStart) {
+          sub.setStart(clippedStart, 0)
+        } else {
+          continue // whole page is header/footer — nothing of it belongs in this highlight
+        }
+        if (p === endPage) {
+          sub.setEnd(range.endContainer, range.endOffset)
+        } else if (clippedEnd) {
+          sub.setEnd(clippedEnd, clippedEnd.length)
+        } else {
+          continue
+        }
+      } catch {
+        // The clipped boundary landed on the wrong side of the reviewer's
+        // own real click/release point on this page (e.g. they started
+        // their selection inside what looks like a footer) — the header/
+        // footer heuristic doesn't apply to a directly-touched boundary
+        // anyway, so fall back to this page's full, unclipped text.
+        sub.setStart(p === startPage ? range.startContainer : textLayer, p === startPage ? range.startOffset : 0)
+        const last = nodes[nodes.length - 1]
+        if (p === endPage) sub.setEnd(range.endContainer, range.endOffset)
+        else if (last) sub.setEnd(last, last.length)
         else sub.setEnd(textLayer, 0)
       }
       out.push({ page: p, range: sub })
