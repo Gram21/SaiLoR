@@ -129,7 +129,7 @@ export function PdfViewer() {
   // near where the selection ends — the same "select, then a small popup
   // offers to highlight" flow Preview/Acrobat use.
   const [selectionToolbar, setSelectionToolbar] = useState<
-    { x: number; y: number; page: number; rects: MarkRect[]; text: string } | null
+    { x: number; y: number; spans: { page: number; rects: MarkRect[] }[]; text: string } | null
   >(null)
   // The comment/color popover for one existing highlight, opened by clicking it
   // (or automatically right after creating one, so a note can be typed at once).
@@ -384,10 +384,55 @@ export function PdfViewer() {
     return idx === -1 ? null : idx + 1
   }
 
-  /** Offers the highlight color toolbar for a real, single-page text
-   *  selection; hides it otherwise (nothing selected, or a selection that
-   *  somehow spans two pages — rare in a PDF text layer, and not worth
-   *  supporting: a highlight is one page's own overlay). */
+  /** Split a Range that may cross page boundaries into one sub-range per page
+   *  it touches (`startPage`..`endPage` inclusive), each clamped to that
+   *  page's own text layer. A page found to intersect the range that turns
+   *  out empty (e.g. the boundary lands exactly on a page's edge) is simply
+   *  omitted from the result. */
+  const splitRangeByPage = (range: Range, startPage: number, endPage: number): { page: number; range: Range }[] => {
+    const out: { page: number; range: Range }[] = []
+    for (let p = startPage; p <= endPage; p++) {
+      const pageEl = pageRefs.current[p - 1]
+      const textLayer = pageEl?.querySelector('.react-pdf__Page__textContent')
+      if (!pageEl || !textLayer) continue
+      const sub = document.createRange()
+      if (p === startPage) {
+        sub.setStart(range.startContainer, range.startOffset)
+      } else {
+        sub.setStart(textLayer, 0)
+      }
+      if (p === endPage) {
+        sub.setEnd(range.endContainer, range.endOffset)
+      } else {
+        // Ends after everything in this page's text layer.
+        const last = textLayer.lastChild
+        if (last) sub.setEndAfter(last)
+        else sub.setEnd(textLayer, 0)
+      }
+      out.push({ page: p, range: sub })
+    }
+    return out
+  }
+
+  /** Rects for one page's (sub-)range, as fractions of that page's own
+   *  rendered size — the same math every single-page selection has always
+   *  used, factored out so a cross-page selection can reuse it per page. */
+  const rectsForPageRange = (range: Range, pageEl: HTMLDivElement): MarkRect[] => {
+    const pageRect = pageEl.getBoundingClientRect()
+    return Array.from(range.getClientRects())
+      .filter((r) => r.width > 1 && r.height > 1)
+      .map((r) => ({
+        x: (r.left - pageRect.left) / pageRect.width,
+        y: (r.top - pageRect.top) / pageRect.height,
+        width: r.width / pageRect.width,
+        height: r.height / pageRect.height,
+      }))
+  }
+
+  /** Offers the highlight color toolbar for a real text selection — a single
+   *  page, or a selection spanning a contiguous forward page range (split
+   *  into one highlight fragment per page via `splitRangeByPage`). Hides it
+   *  otherwise (nothing selected, or a malformed/backward range). */
   const updateSelectionToolbar = (sel: Selection | null, text: string) => {
     if (!sel || sel.isCollapsed || !text.trim()) {
       setSelectionToolbar(null)
@@ -396,32 +441,48 @@ export function PdfViewer() {
     const range = sel.getRangeAt(0)
     const startPage = pageNumberForNode(range.startContainer)
     const endPage = pageNumberForNode(range.endContainer)
-    if (startPage === null || startPage !== endPage) {
+    if (startPage === null || endPage === null || endPage < startPage) {
       setSelectionToolbar(null)
       return
     }
-    const pageEl = pageRefs.current[startPage - 1]
-    if (!pageEl) {
+
+    if (startPage === endPage) {
+      const pageEl = pageRefs.current[startPage - 1]
+      if (!pageEl) {
+        setSelectionToolbar(null)
+        return
+      }
+      const rects = rectsForPageRange(range, pageEl)
+      if (rects.length === 0) {
+        setSelectionToolbar(null)
+        return
+      }
+      const clientRects = Array.from(range.getClientRects())
+      const anchor = clientRects[clientRects.length - 1] ?? range.getBoundingClientRect()
+      setActiveMark(null)
+      setSelectionToolbar({ x: anchor.right, y: anchor.bottom, spans: [{ page: startPage, rects }], text })
+      return
+    }
+
+    const perPage = splitRangeByPage(range, startPage, endPage)
+    const spans: { page: number; rects: MarkRect[] }[] = []
+    let anchor: { x: number; y: number } | null = null
+    for (const { page, range: pageRange } of perPage) {
+      const pageEl = pageRefs.current[page - 1]
+      if (!pageEl) continue
+      const rects = rectsForPageRange(pageRange, pageEl)
+      if (rects.length === 0) continue
+      spans.push({ page, rects })
+      const clientRects = Array.from(pageRange.getClientRects())
+      const last = clientRects[clientRects.length - 1] ?? pageRange.getBoundingClientRect()
+      anchor = { x: last.right, y: last.bottom }
+    }
+    if (spans.length === 0 || !anchor) {
       setSelectionToolbar(null)
       return
     }
-    const pageRect = pageEl.getBoundingClientRect()
-    const clientRects = Array.from(range.getClientRects())
-    const rects: MarkRect[] = clientRects
-      .filter((r) => r.width > 1 && r.height > 1)
-      .map((r) => ({
-        x: (r.left - pageRect.left) / pageRect.width,
-        y: (r.top - pageRect.top) / pageRect.height,
-        width: r.width / pageRect.width,
-        height: r.height / pageRect.height,
-      }))
-    if (rects.length === 0) {
-      setSelectionToolbar(null)
-      return
-    }
-    const anchor = clientRects[clientRects.length - 1] ?? range.getBoundingClientRect()
     setActiveMark(null)
-    setSelectionToolbar({ x: anchor.right, y: anchor.bottom, page: startPage, rects, text })
+    setSelectionToolbar({ x: anchor.x, y: anchor.y, spans, text })
   }
 
   /** Highlights the pending selection in `color`, closes the toolbar, and
@@ -429,8 +490,13 @@ export function PdfViewer() {
    *  at once — the same flow as clicking an existing highlight. */
   const commitHighlight = (color: string) => {
     if (!selectionToolbar) return
-    const { x, y, page, rects, text } = selectionToolbar
-    const id = addHighlight(page, rects, color, undefined, text)
+    const { x, y, spans, text } = selectionToolbar
+    const groupId = spans.length > 1 ? `${Date.now()}-${Math.random().toString(36).slice(2)}` : undefined
+    let id: string | null = null
+    for (const span of spans) {
+      const spanId = addHighlight(span.page, span.rects, color, undefined, text, groupId)
+      if (id === null) id = spanId
+    }
     setSelectionToolbar(null)
     window.getSelection()?.removeAllRanges()
     if (id) setActiveMark({ id, x, y })

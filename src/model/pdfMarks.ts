@@ -66,6 +66,16 @@ export interface PdfMark {
    *  existed, and rewritten back to undefined (never `[]`) once the last
    *  link is removed — same legacy-default precedent `kind` set. */
   linkedFields?: LinkedField[]
+  /** Present only on a mark that's one page-fragment of a highlight that
+   *  spans a page boundary — every fragment sharing a `groupId` is one
+   *  logical highlight rendered as disjoint regions on different pages.
+   *  Absent (undefined) for every ordinary single-page mark, including
+   *  every mark that existed before this feature. Store actions
+   *  (`setMarkComment`, `setMarkColor`, `linkMarkToField`,
+   *  `unlinkMarkFromField`, `removeMark`) keep all fragments sharing a
+   *  `groupId` in sync, so from a reviewer's perspective they behave as one
+   *  highlight that happens to render on two pages. */
+  groupId?: string
 }
 
 /**
@@ -137,6 +147,7 @@ export function parseMarks(raw: unknown): PdfMark[] {
       updatedAt: typeof e.updatedAt === 'string' ? e.updatedAt : '',
       kind: e.kind === 'note' ? 'note' : 'highlight',
       linkedFields: parseLinkedFields(e.linkedFields),
+      groupId: typeof e.groupId === 'string' && e.groupId ? e.groupId : undefined,
     })
   }
   return out
@@ -170,9 +181,33 @@ export function mergeMarksList(ours: PdfMark[], theirs: PdfMark[]): PdfMark[] {
 
 /** Stable reading order for cycling through every mark on a PDF (the "next/
  *  previous annotation" toolbar in `PdfViewer`): top-to-bottom by page, then
- *  top-to-bottom within a page by the first rect's `y`. */
+ *  top-to-bottom within a page by the first rect's `y`. A cross-page
+ *  highlight's fragments are deduped down to one (its earliest-page
+ *  fragment, since that sorts first) so cycling lands on it once, not once
+ *  per page it touches. */
 export function sortMarksForCycling(marks: PdfMark[]): PdfMark[] {
-  return [...marks].sort((a, b) => a.page - b.page || a.rects[0].y - b.rects[0].y)
+  const sorted = [...marks].sort((a, b) => a.page - b.page || a.rects[0].y - b.rects[0].y)
+  return dedupeMarkGroups(sorted)
+}
+
+/**
+ * Collapse a mark list down to one representative per logical mark — every
+ * fragment sharing a `groupId` becomes one entry (the first one in the
+ * input order survives). A mark with no `groupId` is its own group of one.
+ * The single place every "list/count marks" consumer (cycling, the
+ * field-link popover, the linked-mark count badge) routes through, so they
+ * can never disagree about what counts as "one mark".
+ */
+export function dedupeMarkGroups(marks: PdfMark[]): PdfMark[] {
+  const seen = new Set<string>()
+  const out: PdfMark[] = []
+  for (const m of marks) {
+    const key = m.groupId ?? m.id
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(m)
+  }
+  return out
 }
 
 /**

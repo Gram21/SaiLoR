@@ -121,6 +121,72 @@ describe('PDF marks — single-reviewer project', () => {
   })
 })
 
+describe('PDF marks — grouped (cross-page) highlights', () => {
+  beforeEach(() => {
+    st().loadFromText(projectText(1), null, 'test.json')
+    st().selectPaper('p1')
+  })
+
+  it('removeMark on one fragment removes every fragment sharing its groupId', () => {
+    const id1 = st().addHighlight(1, [rect], undefined, undefined, undefined, 'g1')!
+    st().addHighlight(2, [rect], undefined, undefined, undefined, 'g1')!
+    st().removeMark(id1)
+    expect(st().currentPdfMarks()).toEqual([])
+  })
+
+  it('removeMark on an ungrouped mark only removes that one mark (regression guard)', () => {
+    const id1 = st().addHighlight(1, [rect])!
+    const id2 = st().addHighlight(1, [rect])!
+    st().removeMark(id1)
+    expect(st().currentPdfMarks().map((m) => m.id)).toEqual([id2])
+  })
+
+  it('setMarkComment on one fragment propagates to the other fragments', () => {
+    const id1 = st().addHighlight(1, [rect], undefined, undefined, undefined, 'g1')!
+    const id2 = st().addHighlight(2, [rect], undefined, undefined, undefined, 'g1')!
+    st().setMarkComment(id1, 'shared note')
+    const marks = st().currentPdfMarks()
+    expect(marks.find((m) => m.id === id1)?.comment).toBe('shared note')
+    expect(marks.find((m) => m.id === id2)?.comment).toBe('shared note')
+  })
+
+  it('setMarkComment on an ungrouped mark does not touch other marks (regression guard)', () => {
+    const id1 = st().addHighlight(1, [rect])!
+    const id2 = st().addHighlight(1, [rect])!
+    st().setMarkComment(id1, 'mine')
+    expect(st().currentPdfMarks().find((m) => m.id === id2)?.comment).toBe('')
+  })
+
+  it('setMarkColor on one fragment propagates to the other fragments', () => {
+    const id1 = st().addHighlight(1, [rect], undefined, undefined, undefined, 'g1')!
+    const id2 = st().addHighlight(2, [rect], undefined, undefined, undefined, 'g1')!
+    st().setMarkColor(id1, '#d0bfff')
+    const marks = st().currentPdfMarks()
+    expect(marks.find((m) => m.id === id1)?.color).toBe('#d0bfff')
+    expect(marks.find((m) => m.id === id2)?.color).toBe('#d0bfff')
+  })
+
+  it('linkMarkToField on one fragment links every fragment, without double-adding on a repeat call', () => {
+    const id1 = st().addHighlight(1, [rect], undefined, undefined, undefined, 'g1')!
+    const id2 = st().addHighlight(2, [rect], undefined, undefined, undefined, 'g1')!
+    st().linkMarkToField(id1, [], 'Study Type', 0)
+    st().linkMarkToField(id2, [], 'Study Type', 0)
+    const marks = st().currentPdfMarks()
+    expect(marks.find((m) => m.id === id1)?.linkedFields).toEqual([{ path: 'Study Type', label: 'Study Type' }])
+    expect(marks.find((m) => m.id === id2)?.linkedFields).toEqual([{ path: 'Study Type', label: 'Study Type' }])
+  })
+
+  it('unlinkMarkFromField on one fragment removes the link from every fragment', () => {
+    const id1 = st().addHighlight(1, [rect], undefined, undefined, undefined, 'g1')!
+    const id2 = st().addHighlight(2, [rect], undefined, undefined, undefined, 'g1')!
+    st().linkMarkToField(id1, [], 'Study Type', 0)
+    st().unlinkMarkFromField(id2, 'Study Type')
+    const marks = st().currentPdfMarks()
+    expect(marks.find((m) => m.id === id1)?.linkedFields).toBeUndefined()
+    expect(marks.find((m) => m.id === id2)?.linkedFields).toBeUndefined()
+  })
+})
+
 describe('PDF marks — field linking', () => {
   beforeEach(() => {
     st().loadFromText(projectText(1), null, 'test.json')
