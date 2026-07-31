@@ -87,8 +87,12 @@ export function useKeybindings() {
         // reviewed set of proposals, which costs the reviewer the API call as
         // well as the reading. Help is also mounted before the AI dialog and
         // shares its z-index, so it would render *behind* it and look like F1
-        // did nothing at all.
-        if (aModalIsOpen()) return
+        // did nothing at all. ReviewerPrompt is excluded from this guard (see
+        // BLOCKING_SURFACES_FOR_HELP below): it has no Escape handler and
+        // unmounts outright once Help opens rather than stacking with it, so
+        // neither risk above applies to it — and it is the one dialog whose
+        // documented escape hatch *is* F1.
+        if (document.querySelector(BLOCKING_SURFACES_FOR_HELP)) return
         useStore.getState().setHelpOpen(true)
         return
       }
@@ -247,6 +251,15 @@ function isEditable(target: EventTarget | null): boolean {
  * beats naming an invariant no one enforces.
  */
 const BLOCKING_SURFACES = '.modal-overlay, .error-overlay, .menu'
+
+// Same as BLOCKING_SURFACES, but F1's own branch uses this instead: it excludes
+// ReviewerPrompt's overlay (opted out via its marker attribute) so F1 can
+// still open Help while that prompt is up. Still blocks correctly if the
+// prompt is ever stacked with ErrorPanel, ClosePrompt, or an open Dropdown —
+// which a naive `!document.querySelector('.reviewer-prompt')` shortcut would
+// not.
+const BLOCKING_SURFACES_FOR_HELP =
+  '.modal-overlay:not([data-yields-to-help]), .error-overlay, .menu'
 
 function aModalIsOpen(): boolean {
   return document.querySelector(BLOCKING_SURFACES) !== null

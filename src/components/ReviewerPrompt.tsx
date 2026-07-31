@@ -36,7 +36,11 @@ export function ReviewerPrompt() {
   const total = project.papers.length
 
   return (
-    <div className="modal-overlay">
+    // Opt-out marker excludes this overlay from useKeybindings.ts's F1 guard,
+    // so F1 still opens Help while this prompt is up (see that file's F1
+    // branch for why the exclusion lives there and not in a keydown handler
+    // here).
+    <div className="modal-overlay" data-yields-to-help>
       <div className="modal reviewer-prompt" role="dialog" aria-modal="true">
         <div className="modal-head">
           <strong>This review has {project.reviewers} reviewers</strong>
@@ -97,7 +101,8 @@ export function ReviewerPrompt() {
             </button>
           </div>
           <p className="reviewer-prompt-note">
-            Remembered for this project — you can switch from the toolbar whenever you like.
+            Remembered for this project — you can switch from the toolbar whenever you like. Press
+            F1 to read Help before choosing.
           </p>
         </div>
       </div>
