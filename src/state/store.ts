@@ -19,7 +19,7 @@ import {
 import type { ResolvedDef } from '../model/schema'
 import { MARK_COLORS, type MarkRect, type PdfMark } from '../model/pdfMarks'
 import { alignNode, alignableNodes } from '../consolidate/align'
-import { applyAlignment } from '../consolidate/apply'
+import { applyAlignment, remapAlignedPath } from '../consolidate/apply'
 import { unanimousFills } from '../consolidate/unanimous'
 import { consolidatorHasAnswered } from '../consolidate/readiness'
 import { validateProject, type UnannotatedPaper, type ValidationIssue } from '../model/validate'
@@ -1981,6 +1981,63 @@ export const useStore = create<AppState>()(
         for (const r of Object.keys(reviews)) draftReviews[r] = draft.reviews[r]
         changed = applyAlignment(s.project!.schema, alignment, draftReviews, draft.annotations)
         if (!changed) return
+
+        // `applyAlignment` just permuted each reviewer's entries under this
+        // node into the shared slot order. Anything that names an entry by
+        // canonical path + index — a mark's linked-field, or an AI-mark key —
+        // still names the *old* index, and now silently points at whatever
+        // entry inherited that slot. Re-point every such reference for every
+        // reviewer who voted, in the same producer/snapshot/dirty flag as the
+        // permutation itself, so it is one undo step, not a second one.
+        for (const reviewer of Object.keys(reviews)) {
+          const marks: PdfMark[] = draft.reviewMarks[reviewer] ?? []
+          for (const mark of marks) {
+            if (!mark.linkedFields) continue
+            let markChanged = false
+            const next: typeof mark.linkedFields = []
+            for (const link of mark.linkedFields) {
+              const segs = parsePath(link.path)
+              if (!segs) {
+                next.push(link)
+                continue
+              }
+              const remapped = remapAlignedPath(alignment, reviewer, segs)
+              const path = formatPath(remapped)
+              if (path !== link.path) {
+                next.push({ path, label: displayPath(remapped) })
+                markChanged = true
+              } else {
+                next.push(link)
+              }
+            }
+            if (markChanged) {
+              mark.linkedFields = next
+              mark.updatedAt = new Date().toISOString()
+            }
+          }
+
+          // aiMarks live outside the undo snapshot (see `removeInstance`'s own
+          // note on this), so undo restores the marks above but not these keys.
+          //
+          // Two phases, not an interleaved delete/set per key: under a swap
+          // (entry 0 and 1 trade places) an interleaved loop would delete the
+          // key it had just written for the other side, losing one of the two
+          // marks. Collect first, mutate after.
+          const prefix = aiMarkKey(paperId, '', reviewer)
+          const renames: { oldKey: string; newKey: string }[] = []
+          for (const key of Object.keys(s.aiMarks)) {
+            if (!key.startsWith(prefix)) continue
+            const canonical = key.slice(prefix.length)
+            const segs = parsePath(canonical)
+            if (!segs) continue
+            const remapped = remapAlignedPath(alignment, reviewer, segs)
+            const newCanonical = formatPath(remapped)
+            if (newCanonical !== canonical) renames.push({ oldKey: key, newKey: aiMarkKey(paperId, newCanonical, reviewer) })
+          }
+          for (const { oldKey } of renames) delete s.aiMarks[oldKey]
+          for (const { newKey } of renames) s.aiMarks[newKey] = true
+        }
+
         // One undo step for the whole paper, not one per node: the reviewer sees
         // a single "the entries were lined up" event and undoes it in one press.
         // `coalesce` is the scheduler saying this is a later node of a run whose
