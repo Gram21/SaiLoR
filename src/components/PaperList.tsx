@@ -42,6 +42,11 @@ interface IndexedPaper {
   /** `null` in the seats where completeness does not apply — the same seats
    *  `completeness` above is null for. */
   state: AnnotationState | null
+  /** Whether this seat has recorded at least one annotation entry for the
+   *  paper — what the `in-progress` filter narrows `open` by (`matchesFilter`).
+   *  Independent of `state`: a paper touched only through a Yes/No answer is
+   *  `touched` while its dot stays `untouched` (completeness ignores booleans). */
+  touched: boolean
 }
 
 /**
@@ -278,6 +283,9 @@ export function PaperList() {
       // free to repeat over a large paper list.
       const tree = currentTree(project, currentReviewer, paper)
       const c = applies ? completeness(schema, tree) : null
+      // Computed once and shared: it is both the `touched` argument to
+      // `annotationState` below and the field the `in-progress` filter reads.
+      const touched = !!tree && hasAnnotations(schema, tree)
       return {
         paper,
         // Searchable metadata: title, authors, DOI, abstract, PDF path and
@@ -287,13 +295,14 @@ export function PaperList() {
         metadataHaystack: paperMetadataHaystack(paper),
         annotationHaystack: annotationText(schema, tree ?? {}),
         completeness: c,
+        touched,
         // Same inputs `paperAnnotationState` uses, off the tree and
         // completeness already computed here rather than walking them again
         // per row — a large paper list re-derives this on every keystroke.
         state: annotationState(
           c,
           currentFinished(project, currentReviewer, paper) === true,
-          !!tree && hasAnnotations(schema, tree),
+          touched,
           required,
           project.finishCheckbox,
         ),
@@ -326,7 +335,7 @@ export function PaperList() {
     // it counts by the same rule the rows are filtered by, over every paper
     // regardless of the search box, so the two can never disagree.
     const bucket: AnnotationFilter = annotationFilter === 'all' ? 'finished' : annotationFilter
-    const done = index.filter((e) => matchesFilter(e.state, bucket)).length
+    const done = index.filter((e) => matchesFilter(e.state, bucket, e.touched)).length
     return { total, text: `${ANNOTATION_FILTER_LABELS[bucket]}: ${done}/${total}` }
   }, [project, isScreening, currentReviewer, index, annotationFilter])
 
@@ -342,7 +351,7 @@ export function PaperList() {
       // there) and no filter dropdown, so a stale `annotationFilter` from a
       // numbered reviewer must not be applied to it — otherwise it hides
       // every paper with no visible control to clear it.
-      return isConsolidationSeat || matchesFilter(e.state, annotationFilter)
+      return isConsolidationSeat || matchesFilter(e.state, annotationFilter, e.touched)
     })
     if (words.length === 0) return base
     const scored = base
