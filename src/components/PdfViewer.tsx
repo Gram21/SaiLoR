@@ -384,6 +384,24 @@ export function PdfViewer() {
     return idx === -1 ? null : idx + 1
   }
 
+  /** The last actual text content inside `root` — deliberately NOT
+   *  `root.lastChild`. pdf.js appends a trailing `.endOfContent` marker div
+   *  to every text layer purely to extend the mouse hit-area for "select to
+   *  the end of the page"; its CSS collapses to zero height normally but
+   *  expands to cover the *entire* page (`inset: 0`) the moment a selection
+   *  is in progress (`.textLayer.selecting .endOfContent`). Ending a Range
+   *  with `setEndAfter(textLayer.lastChild)` during a real drag-select
+   *  therefore included that div, and `getClientRects()` on the resulting
+   *  Range returned one giant page-covering rect instead of the actual
+   *  highlighted lines. Walking to the last real `Text` node sidesteps the
+   *  marker entirely. */
+  const lastTextNode = (root: Node): Text | null => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+    let last: Text | null = null
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) last = n as Text
+    return last
+  }
+
   /** Split a Range that may cross page boundaries into one sub-range per page
    *  it touches (`startPage`..`endPage` inclusive), each clamped to that
    *  page's own text layer. A page found to intersect the range that turns
@@ -404,9 +422,9 @@ export function PdfViewer() {
       if (p === endPage) {
         sub.setEnd(range.endContainer, range.endOffset)
       } else {
-        // Ends after everything in this page's text layer.
-        const last = textLayer.lastChild
-        if (last) sub.setEndAfter(last)
+        // Ends at this page's last real text, not its last DOM child.
+        const last = lastTextNode(textLayer)
+        if (last) sub.setEnd(last, last.length)
         else sub.setEnd(textLayer, 0)
       }
       out.push({ page: p, range: sub })
