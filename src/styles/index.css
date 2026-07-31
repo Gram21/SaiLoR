@@ -1596,6 +1596,15 @@ button.paper-search-mode:hover {
   align-items: center;
   gap: 6px;
 }
+/* Where the "recently added" pinned marks give way to the page-ordered rest
+   — see `orderMarksForLinking`. Only ever applied to one row, so a border
+   plus its own top margin reads as a seam without needing a whole extra
+   element in the list. */
+.field-link-gap {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
 .field-link-snippet-btn {
   flex: 1 1 auto;
   /* Without this a flex item's default `min-width: auto` refuses to shrink
@@ -1615,32 +1624,19 @@ button.paper-search-mode:hover {
 .field-link-snippet-btn:hover {
   text-decoration: underline;
 }
+/* Deliberately left at the plain `button` box (padding/border/radius) rather
+   than shrunk to fit the "×" glyph — it sits in the same row as the unstyled
+   Link button candidates use, and a small × next to a full-size Link button
+   read as two different weights of action when they are actually the same
+   one (add/remove this link), just flipped. Only the color marks it as the
+   undo. */
 .field-link-unlink {
   flex: 0 0 auto;
   color: var(--danger);
-  padding: 0 4px;
 }
 .field-link-empty {
   color: var(--muted);
   font-size: 0.85rem;
-}
-.field-link-toggle {
-  align-self: flex-start;
-  font-size: 0.85rem;
-  padding: 3px 8px;
-}
-.field-link-picker {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-top: 6px;
-  border-top: 1px solid var(--border);
-}
-/* Five rows visible, the rest reachable by scrolling — `field-link-list`'s
-   own `gap`/`li` padding sets the ~28px row height this assumes. */
-.field-link-picker-list {
-  max-height: 148px;
-  overflow-y: auto;
 }
 .field-link-search {
   width: 100%;

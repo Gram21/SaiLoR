@@ -307,6 +307,14 @@ interface AppState {
   pendingMarkJump: string | null
   /** Canonical field path whose link popover is open, or null. Session-only, like `validationOpen`. */
   openLinkPopoverField: string | null
+  /** The mark `PdfViewer` most recently created (a highlight or note, not an
+   *  edit to an existing one) and nobody has linked to a field yet. The next
+   *  field-link popover to open consumes it — auto-linking it there instead
+   *  of making the reviewer find and click it in the list, since finishing a
+   *  highlight and immediately going to link it is the whole point of having
+   *  just made it. Cleared the moment any popover consumes it, so it is only
+   *  ever offered once. Session-only, like `pendingMarkJump`. */
+  lastCreatedMarkId: string | null
   /** A canonical field path `AnnotationPanel` should scroll to and flash,
    *  requested from elsewhere (Validation's "jump to this field", clicking
    *  an issue rather than only the paper it's on). `AnnotationPanel` clears
@@ -474,6 +482,8 @@ interface AppState {
   setPendingMarkJump: (markId: string | null) => void
   /** Open/close a field's link popover, closing any other field's — see `openLinkPopoverField`. */
   setOpenLinkPopoverField: (canonical: string | null) => void
+  /** Set/clear `lastCreatedMarkId` — see its own doc comment. */
+  setLastCreatedMarkId: (markId: string | null) => void
   /** Request/clear a "scroll to and flash this field" — see `pendingFieldJump`. */
   setPendingFieldJump: (canonical: string | null) => void
   /** Set/clear the field currently pulsing — see `flashFieldPath`. */
@@ -855,6 +865,7 @@ export const useStore = create<AppState>()(
     schemaInfoOpen: false,
     pendingMarkJump: null,
     openLinkPopoverField: null,
+    lastCreatedMarkId: null,
     pendingFieldJump: null,
     flashFieldPath: null,
     agreementReturnToOverview: false,
@@ -1024,6 +1035,7 @@ export const useStore = create<AppState>()(
         s.schemaInfoOpen = false
         s.pendingMarkJump = null
         s.openLinkPopoverField = null
+        s.lastCreatedMarkId = null
         s.pendingFieldJump = null
         s.flashFieldPath = null
         s.agreementReturnToOverview = false
@@ -1299,6 +1311,10 @@ export const useStore = create<AppState>()(
       set((s) => {
         s.currentPaperId = id
         s.pdfSelection = ''
+        // Belongs to the paper it was made on — carrying it to a different
+        // one risks auto-linking a much later click to a mark the reviewer
+        // has long since stopped thinking about.
+        s.lastCreatedMarkId = null
       })
       // Screening reads the abstract, so a screening paper that has none needs
       // one *here* — by the time the reviewer is looking at the record view,
@@ -1440,6 +1456,11 @@ export const useStore = create<AppState>()(
     setOpenLinkPopoverField: (canonical) =>
       set((s) => {
         s.openLinkPopoverField = canonical
+      }),
+
+    setLastCreatedMarkId: (markId) =>
+      set((s) => {
+        s.lastCreatedMarkId = markId
       }),
 
     setPendingFieldJump: (canonical) =>
@@ -1975,6 +1996,10 @@ export const useStore = create<AppState>()(
       saveCurrentReviewer(get().saveHandle, reviewer)
       set((s) => {
         s.currentReviewer = reviewer
+        // Marks are per-seat too (`reviewMarks`) — a mark just made under one
+        // reviewer isn't even visible under another's, so there is nothing
+        // for a later popover to auto-link.
+        s.lastCreatedMarkId = null
       })
     },
 

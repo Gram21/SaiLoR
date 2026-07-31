@@ -85,15 +85,22 @@ the same PDF never conflict in git.
   overwriting it is likely to cause a git conflict.
 
 **Linking a highlight or note to a field.** Next to every annotation field is a small 🔗 button —
-click it to record why you picked this value. It opens a box showing what's already linked (or "No
-links yet"); click **+ Link a highlight or note** to fold out a scrollable list of the paper's other
-highlights and notes, with a search box at the bottom if there are a lot of them. Clicking a
-highlight/note's text — in either list — jumps to it in the PDF so you can see which one it is,
-without closing the box or changing anything; click **Link** to actually attach it. The button shows
-a count once you've linked one or more (`🔗 2`). A highlight or note can be linked to any number of
-fields, and a field can have any number linked to it. To remove a link, click the × next to it —
-either in the field's own box, or by opening the highlight/note itself in the PDF, where its box
-lists every field it's linked to.
+click it to record why you picked this value. It opens a box listing every highlight and note on the
+paper, each with a **Link**/**×** button showing whether it's already linked to this field, plus a
+search box if there are a lot of them. Clicking a highlight/note's own text — rather than its button —
+jumps to it in the PDF so you can see which one it is, without closing the box or changing anything.
+The list is sorted with your 3 most recently made highlights/notes first, then everything else in
+reading order down the paper; linking or unlinking one never moves it in the list, only its button
+flips between Link and ×. The 🔗 button shows a count once you've linked one or more (`🔗 2`). A
+highlight or note can be linked to any number of fields, and a field can have any number linked to it.
+
+If you highlight or note something and then open a field's 🔗 box right away, that highlight/note is
+linked automatically — there's nothing to find or click, since making it and going to link it are
+almost always the same motion. This only fires once, for the very next 🔗 box you open after making
+it.
+
+To remove a link, click its × — either in the field's own box, or by opening the highlight/note itself
+in the PDF, where its box lists every field it's linked to.
 
 ## The completeness dot
 

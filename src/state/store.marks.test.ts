@@ -281,3 +281,48 @@ describe('PDF marks — multi-reviewer scoping', () => {
     expect(st().currentPdfMarks()[0].comment).toBe('')
   })
 })
+
+describe('lastCreatedMarkId', () => {
+  beforeEach(() => {
+    st().loadFromText(
+      JSON.stringify({
+        version: 1,
+        config: { schema },
+        papers: [
+          { id: 'p1', title: 'One', authors: [], pdf: 'p1.pdf', annotations: {} },
+          { id: 'p2', title: 'Two', authors: [], pdf: 'p2.pdf', annotations: {} },
+        ],
+      }),
+      null,
+      'test.json',
+    )
+    st().selectPaper('p1')
+  })
+
+  it('is set and cleared by setLastCreatedMarkId', () => {
+    expect(st().lastCreatedMarkId).toBeNull()
+    st().setLastCreatedMarkId('m1')
+    expect(st().lastCreatedMarkId).toBe('m1')
+    st().setLastCreatedMarkId(null)
+    expect(st().lastCreatedMarkId).toBeNull()
+  })
+
+  it('is cleared by switching papers', () => {
+    // A mark belongs to the paper it was made on — carrying the pending id to
+    // a different paper risks auto-linking a much later click there.
+    st().setLastCreatedMarkId('m1')
+    st().selectPaper('p2')
+    expect(st().lastCreatedMarkId).toBeNull()
+  })
+
+  it('is cleared by switching reviewer seats', () => {
+    // Marks are per-seat too (`reviewMarks`); a mark made under one reviewer
+    // is not even visible under another's.
+    st().loadFromText(projectText(2), null, 'test.json')
+    st().selectPaper('p1')
+    st().selectReviewer('1')
+    st().setLastCreatedMarkId('m1')
+    st().selectReviewer('2')
+    expect(st().lastCreatedMarkId).toBeNull()
+  })
+})
