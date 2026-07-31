@@ -124,6 +124,16 @@ export interface SlrBridge {
   gitBranchSwitchBegin(root: string, relPath: string, branch: string): Promise<BranchSwitchStart>
   gitBranchSwitchFinish(root: string, relPath: string, resolved: SplitProject): Promise<GitRun>
   gitBranchSwitchAbort(root: string, sourceBranch: string): Promise<GitRun>
+
+  // Self-update (Windows/Linux only — main.ts is a no-op on darwin). Download
+  // and install are only ever triggered by the two calls below, never on their own.
+  checkForNativeUpdate(): Promise<{ supported: boolean }>
+  downloadNativeUpdate(): Promise<void>
+  installNativeUpdate(): Promise<void>
+  onNativeUpdateAvailable(cb: (info: { version: string }) => void): void
+  onNativeUpdateProgress(cb: (p: { percent: number }) => void): void
+  onNativeUpdateDownloaded(cb: () => void): void
+  onNativeUpdateError(cb: (message: string) => void): void
 }
 
 function bridge(): SlrBridge {
@@ -443,6 +453,36 @@ export class ElectronAdapter implements PlatformAdapter {
 
   writeTextFile(absPath: string, text: string): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
     return bridge().writeTextFile(absPath, text)
+  }
+
+  // ---- Self-update ----
+
+  checkForNativeUpdate(): Promise<{ supported: boolean }> {
+    return bridge().checkForNativeUpdate()
+  }
+
+  downloadNativeUpdate(): Promise<void> {
+    return bridge().downloadNativeUpdate()
+  }
+
+  installNativeUpdate(): Promise<void> {
+    return bridge().installNativeUpdate()
+  }
+
+  onNativeUpdateAvailable(cb: (info: { version: string }) => void): void {
+    bridge().onNativeUpdateAvailable(cb)
+  }
+
+  onNativeUpdateProgress(cb: (p: { percent: number }) => void): void {
+    bridge().onNativeUpdateProgress(cb)
+  }
+
+  onNativeUpdateDownloaded(cb: () => void): void {
+    bridge().onNativeUpdateDownloaded(cb)
+  }
+
+  onNativeUpdateError(cb: (message: string) => void): void {
+    bridge().onNativeUpdateError(cb)
   }
 }
 

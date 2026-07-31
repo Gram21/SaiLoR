@@ -10,6 +10,9 @@ interface IntegrationBridge {
   saveComplete(ok: boolean): void
   onUndo(cb: () => void): void
   onRedo(cb: () => void): void
+  onNativeUpdateProgress(cb: (p: { percent: number }) => void): void
+  onNativeUpdateDownloaded(cb: () => void): void
+  onNativeUpdateError(cb: (message: string) => void): void
 }
 
 /**
@@ -39,6 +42,11 @@ export function useElectronCloseGuard() {
     // Edit-menu Undo/Redo.
     slr.onUndo(() => (editing() ? useEditorStore.getState().undo() : useStore.getState().undo()))
     slr.onRedo(() => (editing() ? useEditorStore.getState().redo() : useStore.getState().redo()))
+
+    // Self-update progress (win/linux only — a no-op on mac, see electron/main.ts).
+    slr.onNativeUpdateProgress((p) => useStore.getState().noteUpdateProgress(p.percent))
+    slr.onNativeUpdateDownloaded(() => useStore.getState().noteUpdateDownloaded())
+    slr.onNativeUpdateError((message) => useStore.getState().noteUpdateError(message))
 
     // Either an unsaved draft or unsaved annotations should block a clean quit.
     const isDirty = () => useStore.getState().dirty || useEditorStore.getState().dirty

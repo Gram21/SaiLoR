@@ -271,6 +271,32 @@ export interface PlatformAdapter {
   /** Write `text` to `absPath`. Never throws — a failure (permissions, a
    *  symlinked destination) comes back as `{ ok: false, error }`. */
   writeTextFile(absPath: string, text: string): Promise<{ ok: true; path: string } | { ok: false; error: string }>
+
+  // ---- Self-update ----
+  // Windows/Linux only — macOS has no reliable unsigned/unnotarized auto-update
+  // path (see electron/main.ts), so it stays on the check-only banner that
+  // `getOsInfo`/`fetchLatestRelease` already drive. `supported: false` (the
+  // browser build, or Electron-on-mac) means the caller should not offer the
+  // download/install UI at all.
+  //
+  // Download and install are both explicit, user-triggered calls — nothing
+  // here runs on a timer or as a side effect of `checkForNativeUpdate`.
+
+  /** Ask whether a newer version can be downloaded. `supported: false` on the
+   *  browser build or on macOS, where this whole flow is disabled. */
+  checkForNativeUpdate(): Promise<{ supported: boolean }>
+
+  /** Start downloading the update found by `checkForNativeUpdate`. Progress
+   *  and completion arrive via the `onNativeUpdate*` callbacks below. */
+  downloadNativeUpdate(): Promise<void>
+
+  /** Quit and install the update already downloaded. */
+  installNativeUpdate(): Promise<void>
+
+  onNativeUpdateAvailable(cb: (info: { version: string }) => void): void
+  onNativeUpdateProgress(cb: (p: { percent: number }) => void): void
+  onNativeUpdateDownloaded(cb: () => void): void
+  onNativeUpdateError(cb: (message: string) => void): void
 }
 
 /** True when running inside the Electron shell (preload exposed `window.slr`). */

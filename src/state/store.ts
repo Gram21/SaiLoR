@@ -400,6 +400,12 @@ interface AppState {
   appVersion: string
   /** Set only when a *newer* release exists; null while up to date or unknowable. */
   update: UpdateInfo | null
+  /** Download progress (0-100) of the native self-update, once started. Win/linux only. */
+  updateProgress: number | null
+  /** The native self-update has finished downloading and can be installed. */
+  updateReady: boolean
+  /** The native self-update's download/check failed. Cleared on the next attempt. */
+  updateError: string | null
   /** Undo/redo history of annotation changes (session-only). */
   past: HistoryEntry[]
   future: HistoryEntry[]
@@ -537,6 +543,16 @@ interface AppState {
   closeDisagreements: () => void
   /** Look for a newer release (cached; silent when it can't be determined). */
   checkForUpdate: () => Promise<void>
+  /** Start downloading the update found by `checkForUpdate`. Win/linux only —
+   *  a no-op wherever `checkForNativeUpdate` reports unsupported (mac, browser). */
+  downloadUpdate: () => Promise<void>
+  /** Quit and install the update `updateReady` confirmed is downloaded. */
+  installUpdate: () => Promise<void>
+  /** Wired by `useElectronCloseGuard` to the bridge's progress/downloaded/error
+   *  events — not meant to be called from UI code directly. */
+  noteUpdateProgress: (percent: number) => void
+  noteUpdateDownloaded: () => void
+  noteUpdateError: (message: string) => void
 
   setFieldValue: (path: PathSeg[], name: string, index: number, value: FieldValue) => void
   addInstance: (path: PathSeg[], def: ResolvedDef) => void
@@ -917,6 +933,9 @@ export const useStore = create<AppState>()(
     pendingAfterPrompt: null,
     appVersion: APP_VERSION,
     update: null,
+    updateProgress: null,
+    updateReady: false,
+    updateError: null,
     past: [],
     future: [],
     aiMarks: {},
@@ -1569,14 +1588,51 @@ export const useStore = create<AppState>()(
         set((s) => {
           s.update = updateFrom(APP_VERSION, cached.release)
         })
-        return
+      } else {
+        const release = await fetchLatestRelease(getPlatform().getOsInfo())
+        writeUpdateCache(release)
+        set((s) => {
+          s.update = updateFrom(APP_VERSION, release)
+        })
       }
-      const release = await fetchLatestRelease(getPlatform().getOsInfo())
-      writeUpdateCache(release)
-      set((s) => {
-        s.update = updateFrom(APP_VERSION, release)
-      })
+      // Only ask electron-updater's own feed whether it can actually download
+      // something once the GitHub-API check above has already confirmed a
+      // newer version exists — that check stays the single source of truth
+      // for "is there an update"; this one only ever drives the download
+      // mechanics on win/linux (mac reports { supported: false }, see
+      // electron/main.ts). Never triggers a download by itself.
+      if (get().update && getPlatform().getOsInfo()?.platform !== 'darwin') {
+        void getPlatform().checkForNativeUpdate()
+      }
     },
+
+    downloadUpdate: async () => {
+      set((s) => {
+        s.updateError = null
+      })
+      await getPlatform().downloadNativeUpdate()
+    },
+
+    installUpdate: async () => {
+      await getPlatform().installNativeUpdate()
+    },
+
+    noteUpdateProgress: (percent) =>
+      set((s) => {
+        s.updateProgress = percent
+      }),
+
+    noteUpdateDownloaded: () =>
+      set((s) => {
+        s.updateProgress = 100
+        s.updateReady = true
+      }),
+
+    noteUpdateError: (message) =>
+      set((s) => {
+        s.updateError = message
+        s.updateProgress = null
+      }),
 
     setFieldValue: (path, name, index, value) => {
       const prev = get()
