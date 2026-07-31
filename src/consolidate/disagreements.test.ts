@@ -291,3 +291,70 @@ describe('projectVerdicts', () => {
     expect(verdicts.filter((v) => v.paperId === 'p2')[0].paperTitle).toBe('Two')
   })
 })
+
+describe('paperVerdicts — one-sided entries', () => {
+  const finding = (claim: string) => ({ Claim: [{ value: claim }] })
+
+  /** Reviewer 1 recorded two findings, reviewer 2 only the first of them. */
+  function splitPaper(alignment: Paper['alignment']): Paper {
+    return makePaper({
+      reviews: {
+        '1': tree(SCHEMA, { Findings: [{ children: finding('Shared') }, { children: finding('Mine alone') }] }),
+        '2': tree(SCHEMA, { Findings: [{ children: finding('Shared') }] }),
+      },
+      alignment,
+    })
+  }
+
+  const MAPPING: Paper['alignment'] = {
+    Findings: [{ members: { '1': 0, '2': 0 } }, { members: { '1': 1 } }],
+  }
+
+  it('flags a field in an entry only one reviewer recorded', () => {
+    const v = verdictOf(splitPaper(MAPPING), 'Findings[1]/Claim')
+    expect(v.oneSided).toBe(true)
+    // `agree` stays true — one answer cannot conflict with itself, and this
+    // must not become a rated disagreement in the κ statistics.
+    expect(v.agree).toBe(true)
+    expect(v.answeredBy).toEqual(['1'])
+  })
+
+  it('leaves a genuinely shared entry alone', () => {
+    const v = verdictOf(splitPaper(MAPPING), 'Findings/Claim')
+    expect(v.oneSided).toBe(false)
+    expect(v.answeredBy).toEqual(['1', '2'])
+  })
+
+  it('propagates one-sidedness into the entry\'s nested children', () => {
+    // A metric under a finding only reviewer 1 recorded is not a field
+    // reviewer 2 declined to answer — the whole group is theirs alone.
+    const paper = makePaper({
+      reviews: {
+        '1': tree(SCHEMA, {
+          Findings: [
+            { children: { ...finding('Mine alone'), Evidence: [{ children: { Metric: [{ value: 'p<0.05' }] } }] } },
+          ],
+        }),
+        '2': tree(SCHEMA, { Findings: [{ children: finding('Something else entirely') }] }),
+      },
+      alignment: { Findings: [{ members: { '1': 0 } }, { members: { '2': 0 } }] },
+    })
+    expect(verdictOf(paper, 'Findings/Evidence/Metric').oneSided).toBe(true)
+  })
+
+  it('claims nothing when only one reviewer has worked the paper at all', () => {
+    // Every entry is trivially one-sided then, and calling that a disagreement
+    // with a reviewer who has not started would be noise.
+    const paper = makePaper({
+      reviews: { '1': tree(SCHEMA, { Findings: [{ children: finding('Only opinion') }] }) },
+      alignment: { Findings: [{ members: { '1': 0 } }] },
+    })
+    expect(verdictOf(paper, 'Findings/Claim').oneSided).toBe(false)
+  })
+
+  it('claims nothing on a paper whose entries have never been matched', () => {
+    // No mapping recorded — nobody has opened Consolidation here, so there is
+    // no basis for saying whose entry is whose.
+    expect(verdictOf(splitPaper({}), 'Findings[1]/Claim').oneSided).toBe(false)
+  })
+})
