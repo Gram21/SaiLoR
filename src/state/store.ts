@@ -506,7 +506,13 @@ interface AppState {
    *  part of the annotation undo stack (see `pdfMarks.ts`'s own doc comment
    *  on why marks are a separate, lower-stakes concern from an annotation
    *  answer). */
-  addHighlight: (page: number, rects: MarkRect[], color?: string, kind?: PdfMark['kind']) => string | null
+  addHighlight: (
+    page: number,
+    rects: MarkRect[],
+    color?: string,
+    kind?: PdfMark['kind'],
+    text?: string,
+  ) => string | null
   /** Replaces a mark's comment text (`''` clears it back to a plain highlight
    *  with no note). No-op if `id` isn't a mark on the current paper/reviewer. */
   setMarkComment: (id: string, comment: string) => void
@@ -1654,7 +1660,7 @@ export const useStore = create<AppState>()(
       return currentMarks(s.project, s.currentReviewer, paper, false) ?? EMPTY_MARKS
     },
 
-    addHighlight: (page, rects, color, kind) => {
+    addHighlight: (page, rects, color, kind, text) => {
       const prev = get()
       if (!prev.project || rects.length === 0) return null
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) return null
@@ -1671,6 +1677,7 @@ export const useStore = create<AppState>()(
           rects,
           color: color ?? MARK_COLORS[0],
           comment: '',
+          text,
           createdAt: now,
           updatedAt: now,
           kind: kind ?? 'highlight',

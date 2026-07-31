@@ -129,7 +129,7 @@ export function PdfViewer() {
   // near where the selection ends — the same "select, then a small popup
   // offers to highlight" flow Preview/Acrobat use.
   const [selectionToolbar, setSelectionToolbar] = useState<
-    { x: number; y: number; page: number; rects: MarkRect[] } | null
+    { x: number; y: number; page: number; rects: MarkRect[]; text: string } | null
   >(null)
   // The comment/color popover for one existing highlight, opened by clicking it
   // (or automatically right after creating one, so a note can be typed at once).
@@ -421,7 +421,7 @@ export function PdfViewer() {
     }
     const anchor = clientRects[clientRects.length - 1] ?? range.getBoundingClientRect()
     setActiveMark(null)
-    setSelectionToolbar({ x: anchor.right, y: anchor.bottom, page: startPage, rects })
+    setSelectionToolbar({ x: anchor.right, y: anchor.bottom, page: startPage, rects, text })
   }
 
   /** Highlights the pending selection in `color`, closes the toolbar, and
@@ -429,8 +429,8 @@ export function PdfViewer() {
    *  at once — the same flow as clicking an existing highlight. */
   const commitHighlight = (color: string) => {
     if (!selectionToolbar) return
-    const { x, y, page, rects } = selectionToolbar
-    const id = addHighlight(page, rects, color)
+    const { x, y, page, rects, text } = selectionToolbar
+    const id = addHighlight(page, rects, color, undefined, text)
     setSelectionToolbar(null)
     window.getSelection()?.removeAllRanges()
     if (id) setActiveMark({ id, x, y })
@@ -578,6 +578,23 @@ export function PdfViewer() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Ctrl/Cmd+wheel zooms the PDF (matching pinch-to-zoom-via-ctrl+wheel that
+  // browsers/trackpads synthesize) instead of scrolling it. Needs a real DOM
+  // listener with `passive: false` — React's synthetic wheel handler is
+  // passive by default, so `preventDefault` on it would warn/no-op.
+  useEffect(() => {
+    const root = containerRef.current
+    if (!root) return
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return
+      e.preventDefault()
+      if (e.deltaY < 0) zoomIn()
+      else if (e.deltaY > 0) zoomOut()
+    }
+    root.addEventListener('wheel', onWheel, { passive: false })
+    return () => root.removeEventListener('wheel', onWheel)
+  }, [zoomIn, zoomOut])
+
   // Clear highlights when the viewer unmounts.
   useEffect(() => clearHighlights, [])
 
@@ -602,6 +619,28 @@ export function PdfViewer() {
       window.removeEventListener('keydown', onKey)
     }
   }, [selectionToolbar, activeMark])
+
+  // Pressing "a" while the highlight toolbar is up (text selected) is a
+  // shortcut for clicking its first color swatch — same as `useKeybindings.ts`'s
+  // shortcuts, guarded against firing while the user is typing elsewhere.
+  useEffect(() => {
+    if (!selectionToolbar) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'a' && e.key !== 'A') return
+      const target = e.target
+      const editable =
+        target instanceof HTMLElement &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      if (editable) return
+      e.preventDefault()
+      commitHighlight(MARK_COLORS[0])
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selectionToolbar])
 
   // (Re)compute matches when the query, page set, or a text layer finishes
   // rendering changes. Recomputes against text layers already in the DOM.
@@ -1157,6 +1196,14 @@ export function PdfViewer() {
                   type="button"
                   className="pdf-mark-delete"
                   onClick={() => {
+                    const links = mark.linkedFields ?? []
+                    if (links.length > 0) {
+                      const ok = window.confirm(
+                        `This highlight is linked to ${links.length} field${links.length === 1 ? '' : 's'} as evidence ` +
+                          `(${links.map((l) => l.label).join(', ')}). Delete it anyway?`,
+                      )
+                      if (!ok) return
+                    }
                     removeMark(mark.id)
                     setActiveMark(null)
                   }}

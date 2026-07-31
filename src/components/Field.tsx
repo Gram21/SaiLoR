@@ -299,10 +299,10 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
     <button
       type="button"
       className="field-link-snippet-btn"
-      title={m.comment || `Page ${m.page}`}
+      title={m.comment || m.text || `Page ${m.page}`}
       onClick={() => jumpToMark(m.id)}
     >
-      {m.comment || `p.${m.page}`}
+      {m.comment || m.text || `p.${m.page}`}
     </button>
   )
 

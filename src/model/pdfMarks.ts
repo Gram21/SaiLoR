@@ -47,6 +47,14 @@ export interface PdfMark {
    *  empty in practice for a `note`, but not enforced, same as everything
    *  else in a hand-editable file. */
   comment: string
+  /** The raw text selected at the moment a `'highlight'` mark was created —
+   *  captured once, never edited afterward. Always `undefined` for a
+   *  `'note'` (no selection is involved in making one) and for any mark
+   *  predating this field. Used only as a fallback display label — e.g. the
+   *  field-link popover shows this when `comment` is empty — the same "user
+   *  note first, else something to tell marks apart by" role `comment`
+   *  plays elsewhere. */
+  text?: string
   createdAt: string
   updatedAt: string
   /** `'highlight'` (default, and every mark before this field existed) traces
@@ -124,6 +132,7 @@ export function parseMarks(raw: unknown): PdfMark[] {
       rects: e.rects as MarkRect[],
       color: e.color,
       comment: typeof e.comment === 'string' ? e.comment : '',
+      text: typeof e.text === 'string' && e.text ? e.text : undefined,
       createdAt: typeof e.createdAt === 'string' ? e.createdAt : '',
       updatedAt: typeof e.updatedAt === 'string' ? e.updatedAt : '',
       kind: e.kind === 'note' ? 'note' : 'highlight',
