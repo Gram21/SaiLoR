@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseMarks, parseReviewMarks, mergeMarksList, sortMarksForCycling, type PdfMark } from './pdfMarks'
+import { parseMarks, parseReviewMarks, mergeMarksList, sortMarksForCycling, dedupeMarkGroups, type PdfMark } from './pdfMarks'
 
 function mark(overrides: Partial<PdfMark> = {}): PdfMark {
   return {
@@ -97,6 +97,13 @@ describe('parseMarks', () => {
   it('defaults linkedFields to undefined when it is not an array', () => {
     expect(parseMarks([{ ...mark(), linkedFields: 'nope' }])[0].linkedFields).toBeUndefined()
   })
+
+  it('reads a valid groupId, drops a non-string one, and defaults to undefined when absent', () => {
+    expect(parseMarks([mark({ groupId: 'g1' })])[0].groupId).toBe('g1')
+    expect(parseMarks([{ ...mark(), groupId: 42 }])[0].groupId).toBeUndefined()
+    expect(parseMarks([{ ...mark(), groupId: '' }])[0].groupId).toBeUndefined()
+    expect(parseMarks([mark()])[0].groupId).toBeUndefined()
+  })
 })
 
 describe('parseReviewMarks', () => {
@@ -167,5 +174,29 @@ describe('sortMarksForCycling', () => {
     const copy = [...marks]
     sortMarksForCycling(marks)
     expect(marks).toEqual(copy)
+  })
+
+  it('collapses a grouped pair to just its earliest-page fragment', () => {
+    const frag1 = mark({ id: 'a', page: 1, groupId: 'g1' })
+    const frag2 = mark({ id: 'b', page: 2, groupId: 'g1' })
+    expect(sortMarksForCycling([frag2, frag1]).map((m) => m.id)).toEqual(['a'])
+  })
+})
+
+describe('dedupeMarkGroups', () => {
+  it('collapses marks sharing a groupId down to the first one seen', () => {
+    const a = mark({ id: 'a', groupId: 'g1' })
+    const b = mark({ id: 'b', groupId: 'g1' })
+    const c = mark({ id: 'c' })
+    expect(dedupeMarkGroups([a, b, c]).map((m) => m.id)).toEqual(['a', 'c'])
+  })
+
+  it('keeps every mark when none share a groupId', () => {
+    const marks = [mark({ id: 'a' }), mark({ id: 'b' }), mark({ id: 'c' })]
+    expect(dedupeMarkGroups(marks)).toEqual(marks)
+  })
+
+  it('is [] for empty input', () => {
+    expect(dedupeMarkGroups([])).toEqual([])
   })
 })

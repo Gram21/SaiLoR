@@ -9,6 +9,7 @@ import {
 } from '../state/store'
 import type { ResolvedDef } from '../model/schema'
 import type { FieldValue } from '../model/annotations'
+import { dedupeMarkGroups } from '../model/pdfMarks'
 import { readyToConsolidate } from '../consolidate/readiness'
 import { parseYear, YEAR_MIN, YEAR_MAX } from '../model/year'
 import { ComboBox } from './ComboBox'
@@ -219,7 +220,7 @@ interface FieldLinkPopoverProps {
  *  entry point for creating a link — the mark's own popover (`PdfViewer.tsx`)
  *  only shows/unlinks, never adds. */
 function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkPopoverProps) {
-  const marks = useStore((s) => s.currentPdfMarks())
+  const marks = dedupeMarkGroups(useStore((s) => s.currentPdfMarks()))
   const linkMark = useStore((s) => s.linkMarkToField)
   const unlinkMark = useStore((s) => s.unlinkMarkFromField)
   const jumpToMark = useStore((s) => s.setPendingMarkJump)

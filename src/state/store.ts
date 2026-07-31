@@ -17,7 +17,7 @@ import {
   type InstanceNode,
 } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
-import { MARK_COLORS, type MarkRect, type PdfMark } from '../model/pdfMarks'
+import { MARK_COLORS, type MarkRect, type PdfMark, dedupeMarkGroups } from '../model/pdfMarks'
 import { alignNode, alignableNodes } from '../consolidate/align'
 import { applyAlignment, remapAlignedPath } from '../consolidate/apply'
 import { unanimousFills } from '../consolidate/unanimous'
@@ -512,6 +512,11 @@ interface AppState {
     color?: string,
     kind?: PdfMark['kind'],
     text?: string,
+    /** Set only when this mark is one page-fragment of a highlight that
+     *  spans a page boundary — every fragment sharing a `groupId` is kept
+     *  in sync (comment/color/links) by the mutating actions below, so a
+     *  reviewer sees one logical highlight rendered on multiple pages. */
+    groupId?: string,
   ) => string | null
   /** Replaces a mark's comment text (`''` clears it back to a plain highlight
    *  with no note). No-op if `id` isn't a mark on the current paper/reviewer. */
@@ -1660,7 +1665,7 @@ export const useStore = create<AppState>()(
       return currentMarks(s.project, s.currentReviewer, paper, false) ?? EMPTY_MARKS
     },
 
-    addHighlight: (page, rects, color, kind, text) => {
+    addHighlight: (page, rects, color, kind, text, groupId) => {
       const prev = get()
       if (!prev.project || rects.length === 0) return null
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) return null
@@ -1681,6 +1686,7 @@ export const useStore = create<AppState>()(
           createdAt: now,
           updatedAt: now,
           kind: kind ?? 'highlight',
+          groupId,
         })
         s.dirty = true
       })
@@ -1694,8 +1700,17 @@ export const useStore = create<AppState>()(
         const marks = currentMarks(s.project, s.currentReviewer, paper, false)
         const mark = marks?.find((m) => m.id === id)
         if (!mark) return
+        const now = new Date().toISOString()
         mark.comment = comment
-        mark.updatedAt = new Date().toISOString()
+        mark.updatedAt = now
+        if (mark.groupId) {
+          for (const m of marks!) {
+            if (m.id !== mark.id && m.groupId === mark.groupId) {
+              m.comment = comment
+              m.updatedAt = now
+            }
+          }
+        }
         s.dirty = true
       })
     },
@@ -1707,8 +1722,17 @@ export const useStore = create<AppState>()(
         const marks = currentMarks(s.project, s.currentReviewer, paper, false)
         const mark = marks?.find((m) => m.id === id)
         if (!mark) return
+        const now = new Date().toISOString()
         mark.color = color
-        mark.updatedAt = new Date().toISOString()
+        mark.updatedAt = now
+        if (mark.groupId) {
+          for (const m of marks!) {
+            if (m.id !== mark.id && m.groupId === mark.groupId) {
+              m.color = color
+              m.updatedAt = now
+            }
+          }
+        }
         s.dirty = true
       })
     },
@@ -1719,9 +1743,12 @@ export const useStore = create<AppState>()(
         if (!paper || !s.project) return
         const marks = currentMarks(s.project, s.currentReviewer, paper, false)
         if (!marks) return
-        const i = marks.findIndex((m) => m.id === id)
-        if (i === -1) return
-        marks.splice(i, 1)
+        const mark = marks.find((m) => m.id === id)
+        if (!mark) return
+        const groupId = mark.groupId
+        for (let i = marks.length - 1; i >= 0; i--) {
+          if (marks[i].id === id || (groupId && marks[i].groupId === groupId)) marks.splice(i, 1)
+        }
         s.dirty = true
       })
     },
@@ -1735,10 +1762,14 @@ export const useStore = create<AppState>()(
         if (!mark) return
         const canonical = fieldPath(path, name, index)
         const label = displayPath([...path, { name, index }])
-        if (!mark.linkedFields) mark.linkedFields = []
-        if (mark.linkedFields.some((l) => l.path === canonical)) return
-        mark.linkedFields.push({ path: canonical, label })
-        mark.updatedAt = new Date().toISOString()
+        const now = new Date().toISOString()
+        const group = mark.groupId ? marks!.filter((m) => m.groupId === mark.groupId) : [mark]
+        for (const m of group) {
+          if (!m.linkedFields) m.linkedFields = []
+          if (m.linkedFields.some((l) => l.path === canonical)) continue
+          m.linkedFields.push({ path: canonical, label })
+          m.updatedAt = now
+        }
         s.dirty = true
       })
     },
@@ -1749,12 +1780,17 @@ export const useStore = create<AppState>()(
         if (!paper || !s.project) return
         const marks = currentMarks(s.project, s.currentReviewer, paper, false)
         const mark = marks?.find((m) => m.id === markId)
-        if (!mark?.linkedFields) return
-        const i = mark.linkedFields.findIndex((l) => l.path === canonicalPath)
-        if (i === -1) return
-        mark.linkedFields.splice(i, 1)
-        if (mark.linkedFields.length === 0) delete mark.linkedFields
-        mark.updatedAt = new Date().toISOString()
+        if (!mark) return
+        const now = new Date().toISOString()
+        const group = mark.groupId ? marks!.filter((m) => m.groupId === mark.groupId) : [mark]
+        for (const m of group) {
+          if (!m.linkedFields) continue
+          const i = m.linkedFields.findIndex((l) => l.path === canonicalPath)
+          if (i === -1) continue
+          m.linkedFields.splice(i, 1)
+          if (m.linkedFields.length === 0) delete m.linkedFields
+          m.updatedAt = now
+        }
         s.dirty = true
       })
     },
@@ -2570,7 +2606,7 @@ export function useAiMark(path: PathSeg[], name: string, index: number): [boolea
 export function useLinkedMarkCount(path: PathSeg[], name: string, index: number): number {
   const canonical = fieldPath(path, name, index)
   return useStore((s) => {
-    const marks = s.currentPdfMarks()
+    const marks = dedupeMarkGroups(s.currentPdfMarks())
     let n = 0
     for (const m of marks) if (m.linkedFields?.some((l) => l.path === canonical)) n++
     return n
