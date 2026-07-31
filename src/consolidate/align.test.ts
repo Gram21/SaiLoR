@@ -212,6 +212,51 @@ describe('alignPaper', () => {
     expect(dSlot?.members).toEqual({ '2': 0 })
   })
 
+  it('does not marry two entries that were never about the same thing', () => {
+    // R1 recorded three groups, R2 two — one shared, one R2-only. Before the
+    // MIN_MATCH_SCORE floor, max-weight assignment paired R2's unrelated group
+    // with one of R1's leftovers at ~0.18 agreement, because a weak pairing
+    // still beats leaving an entry unmatched at 0. The consolidator then saw
+    // "one group the two of you disagree about" instead of "two groups only
+    // one of you recorded" — wrong, and indistinguishable from a real dispute.
+    const defs: AnnotationDef[] = [
+      {
+        name: 'G',
+        max: null,
+        children: [
+          { name: 'F1', type: 'string' },
+          { name: 'F2', type: 'string' },
+        ],
+      },
+    ]
+    const g = (f1: string, f2: string) => ({
+      children: { F1: [{ value: f1 }], F2: [{ value: f2 }] },
+    })
+    const { schema, reviews } = setup(defs, {
+      '1': {
+        G: [
+          g('Tests reduce defects', 'Table 1'),
+          g('Reviews find bugs', 'Section 4'),
+          g('Reviews find bugs', 'Figure 9'),
+        ],
+      },
+      '2': {
+        G: [g('Pair programming slows delivery', 'Appendix B'), g('Tests reduce defects', 'Table 1')],
+      },
+    })
+    const alignment = alignPaper(schema, reviews)['G']
+
+    expect(alignment.slots).toHaveLength(4)
+    // The one genuinely shared group, and nothing else, is matched.
+    expect(alignment.slots.map((s) => s.members)).toEqual([
+      { '1': 0, '2': 1 },
+      { '1': 1 },
+      { '1': 2 },
+      { '2': 0 },
+    ])
+    expect(alignment.slots[0].agreement).toBe(1)
+  })
+
   it('lets a later reviewer land in a slot an earlier one had to open fresh', () => {
     // Reviewer 1: a, b. Reviewer 2: c (opens slot 3). Reviewer 3 also has c —
     // it must join Reviewer 2's new slot, not open a fourth of its own.
