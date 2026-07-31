@@ -68,6 +68,17 @@ export type TreeAlignment = Record<string, NodeAlignment>
  */
 const ORDER_TIE_BREAK = 1e-6
 
+/**
+ * What an entry earns by opening a brand-new slot instead of being forced into
+ * an existing one it shares no evidence with. Smaller than `ORDER_TIE_BREAK`,
+ * so a same-position pairing with zero evidence still wins that slot (the old,
+ * harmless behavior for two blank entries in the same relative order) — but
+ * larger than the zero mass of being forced into an unrelated slot, so an entry
+ * that genuinely matches nothing gets its own slot rather than corrupting one
+ * that belongs to someone else's entry. See `alignList`.
+ */
+const NEW_SLOT_WEIGHT = ORDER_TIE_BREAK / 10
+
 /** A node holds several entries, so its entries need matching at all. */
 export function isRepeatable(def: ResolvedDef): boolean {
   return def.max === null || def.max > 1
@@ -167,20 +178,41 @@ function simAgainstSlot(
   return n > 1 ? { ...merged, weight: merged.weight / n } : merged
 }
 
+function newSlot(): AlignedSlot {
+  return { members: {}, children: {}, agreement: 0, evidence: 0 }
+}
+
 /**
  * Build the slots for one repeatable node across every reviewer.
  *
  * Matching N reviewers at once is the multi-dimensional assignment problem,
  * which is NP-hard and would be absurd for the sizes involved. Instead the
  * reviewer with the most entries anchors the slots — they are the one who
- * defines how many there are, and the feature's rule is that the consolidated
- * tree gets that many — and everyone else is matched onto those slots in turn.
- * Later reviewers are matched against *all* members already in a slot, not just
- * the anchor, so a slot's identity firms up as reviewers agree on it.
+ * seeds the first ones — and everyone else is matched onto those slots in
+ * turn. Later reviewers are matched against *all* members already in a slot,
+ * not just the anchor, so a slot's identity firms up as reviewers agree on it.
+ *
+ * An entry a reviewer records that genuinely matches none of the slots seen so
+ * far (no evidence of overlap with any of them) opens a new slot of its own
+ * instead of being forced into whichever existing one the assignment problem
+ * has left over — see `NEW_SLOT_WEIGHT`. Reviewer A recording three findings
+ * and Reviewer B recording two, one of which A never wrote down, ends up with
+ * four slots, not three: A's third finding and B's unmatched one both stand on
+ * their own, ready for the consolidator to verify or discard, rather than
+ * silently smeared into "disagreement" on some unrelated slot. A later
+ * reviewer can still land in a slot a previous one opened this way — new
+ * slots join the same array everyone after them matches against.
  *
  * The order reviewers are folded in is fixed (most entries first, then by id) so
  * the same input always produces the same alignment. An alignment that shifted
  * between runs would reorder saved data for no reason.
+ *
+ * Slot order is otherwise the anchor's own list order, with newly-opened slots
+ * appended after it — never reshuffled by how well a slot matches. Position N
+ * naming the same entry for everyone across a save and reload (see
+ * `applyAlignment`'s doc comment) depends on that order being stable; a
+ * "matched first" resort would change which index a reviewer's own entries
+ * land on for reasons having nothing to do with what they recorded.
  */
 function alignList(
   def: ResolvedDef,
@@ -193,31 +225,45 @@ function alignList(
   const counts: Record<string, number> = {}
   for (const r of reviewers) counts[r] = lists[r].length
 
-  const slotCount = Math.max(0, ...reviewers.map((r) => lists[r].length))
-  const slots: AlignedSlot[] = Array.from({ length: slotCount }, () => ({
-    members: {},
-    children: {},
-    agreement: 0,
-    evidence: 0,
-  }))
-  if (slotCount === 0) return { slots, counts }
+  if (reviewers.every((r) => lists[r].length === 0)) return { slots: [], counts }
 
   const [anchor, ...rest] = reviewers
-  lists[anchor].forEach((_, i) => {
-    slots[i].members[anchor] = i
+  const slots: AlignedSlot[] = lists[anchor].map((_, i) => {
+    const slot = newSlot()
+    slot.members[anchor] = i
+    return slot
   })
 
   for (const reviewer of rest) {
     const entries = lists[reviewer]
     if (entries.length === 0) continue
-    const weights = entries.map((entry, i) =>
-      slots.map((slot, s) => {
-        const mass = agreementMass(simAgainstSlot(def, entry, slot, lists, cache))
-        return mass + (i === s ? ORDER_TIE_BREAK : 0)
-      }),
-    )
-    maxWeightAssignment(weights).forEach((slotIndex, entryIndex) => {
-      if (slotIndex >= 0) slots[slotIndex].members[reviewer] = entryIndex
+    const baseSlotCount = slots.length
+    const weights = entries.map((entry, i) => {
+      const row = slots.map((slot, s) => {
+        const sim = simAgainstSlot(def, entry, slot, lists, cache)
+        // The order nudge only applies when the slot has nothing to go on
+        // either (`sim.weight === 0`, the same "no evidence" `NO_EVIDENCE`
+        // means elsewhere): with real evidence a slot's mass of exactly 0 is
+        // a genuine "definitely not this one", and must not be dressed up as
+        // a tie just because the entry sits at that slot's index — see
+        // `NEW_SLOT_WEIGHT`, which needs that case to actually lose.
+        const tieBreak = sim.weight === 0 && i === s ? ORDER_TIE_BREAK : 0
+        return agreementMass(sim) + tieBreak
+      })
+      // One "open a new slot" column per entry — interchangeable, so it does
+      // not matter which entry lands on which; each still starts its own slot.
+      for (let j = 0; j < entries.length; j++) row.push(NEW_SLOT_WEIGHT)
+      return row
+    })
+    maxWeightAssignment(weights).forEach((col, entryIndex) => {
+      if (col < 0) return
+      if (col < baseSlotCount) {
+        slots[col].members[reviewer] = entryIndex
+        return
+      }
+      const slot = newSlot()
+      slot.members[reviewer] = entryIndex
+      slots.push(slot)
     })
   }
 
@@ -229,6 +275,7 @@ function alignList(
       cache,
     )
   }
+
   return { slots, counts }
 }
 
