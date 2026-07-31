@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useStore } from '../state/store'
 import { projectVerdicts, type FieldVerdict } from '../consolidate/disagreements'
+import { consolidationFieldStatus } from './ConsolidationVerdicts'
 import { displayPath } from '../llm/paths'
 import type { FieldValue } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
@@ -32,11 +33,12 @@ export function DisagreementOverview() {
     return () => document.removeEventListener('keydown', onKey)
   }, [open, closeDisagreements])
 
-  // The two-answers gate that `agreement.ts` gates its statistics on: a field
-  // only one reviewer touched is not a disagreement, it's a field nobody has
-  // gotten to yet. `verdict.agree` already folds in `markedEqual` (see
-  // `disagreements.ts`), so a field the consolidator has declared equivalent
-  // drops out here too, without any extra check.
+  // Exactly the fields the annotation panel paints red, by calling the same
+  // function rather than restating its rule — this list and the border beside
+  // the field are two views of one verdict, and a second copy of the
+  // condition is how they start disagreeing about what counts. `verdict.agree`
+  // already folds in `markedEqual` (see `disagreements.ts`), so a field the
+  // consolidator has declared equivalent drops out without any extra check.
   // Gated on `open` for the same reason as AgreementDialog's `built`: this
   // component stays mounted for the whole session, so an ungated memo would
   // re-walk (and re-align) every paper on every project change — every
@@ -46,12 +48,13 @@ export function DisagreementOverview() {
     return projectVerdicts(project).filter(
       (verdict) =>
         verdict.paperId === currentPaperId &&
-        ((verdict.answeredBy.length >= 2 && !verdict.agree) ||
-          // An entry only one reviewer recorded is a disagreement about
-          // whether it belongs at all — see `FieldVerdict.oneSided`. It is not
-          // expressible as two conflicting answers, so it fails the gate above
-          // and has to be admitted on its own terms.
-          (verdict.oneSided && verdict.answeredBy.length >= 1)),
+        consolidationFieldStatus(
+          verdict.answeredBy.length,
+          project.reviewers,
+          verdict.agree,
+          verdict.oneSided,
+          verdict.participantCount,
+        ) === 'disagree',
     )
   }, [open, project, currentPaperId])
 

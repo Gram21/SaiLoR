@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { projectVerdicts } from '../consolidate/disagreements'
+import { consolidationFieldStatus } from './ConsolidationVerdicts'
 import { paperMetadataHaystack } from './PaperList'
 import { useStore } from '../state/store'
 
@@ -40,9 +41,16 @@ export function ConsolidationOverview() {
     if (!open || !project) return []
     const counts = new Map<string, number>()
     for (const verdict of projectVerdicts(project)) {
+      // The same verdict the field's own red border comes from — see
+      // `DisagreementOverview`'s note on why this calls rather than restates.
       if (
-        (verdict.answeredBy.length >= 2 && !verdict.agree) ||
-        (verdict.oneSided && verdict.answeredBy.length >= 1)
+        consolidationFieldStatus(
+          verdict.answeredBy.length,
+          project.reviewers,
+          verdict.agree,
+          verdict.oneSided,
+          verdict.participantCount,
+        ) === 'disagree'
       ) {
         counts.set(verdict.paperId, (counts.get(verdict.paperId) ?? 0) + 1)
       }
