@@ -138,31 +138,38 @@ export function annotationStateFor(
 }
 
 /**
- * What the paper list's filter dropdown offers — three buckets over the five
+ * What the paper list's filter dropdown offers — four buckets over the five
  * states, plus "all".
  *
  * The states exist to color a single dot precisely; a filter answers a
- * coarser question ("what still needs work?"), and five options to express
- * three intentions is a menu to read rather than a control to use. So:
+ * coarser question ("what still needs work?"). So:
  *
- *  - `in-progress` — simply every paper whose "Annotation finished" box is
- *    not ticked: untouched, part-filled, and filled-but-not-signed-off
- *    alike. Undoing annotations lands a paper back here, whether the values
- *    were cleared (`untouched` / `partial`) or the tick was removed
- *    (`complete`) — it is again a paper in progress, and no separate "was
- *    finished once" bucket survives to hide it from the list a reviewer
- *    works from.
+ *  - `open` — every paper whose "Annotation finished" box is not ticked:
+ *    untouched, part-filled, and filled-but-not-signed-off alike. Undoing
+ *    annotations lands a paper back here, whether the values were cleared
+ *    (`untouched` / `partial`) or the tick was removed (`complete`) — it is
+ *    again an open paper, and no separate "was finished once" bucket survives
+ *    to hide it from the list a reviewer works from.
+ *  - `in-progress` — the started subset of `open`: papers with at least one
+ *    annotation entry recorded, still not signed off. This is `open` minus the
+ *    papers nobody has touched yet, so it answers "what have I actually begun
+ *    and not finished". A paper touched only through a Yes/No answer counts as
+ *    started even though its dot stays `untouched` (completeness ignores
+ *    booleans), so this is decided from `touched`, not from the state — see
+ *    `matchesFilter`.
  *  - `finished` — signed off and still holding.
  *  - `issues` — signed off while a required field is empty (`flagged`), the
  *    only state that is neither done nor merely unstarted.
  *
- * The dot keeps all five colors: within "in progress" the fill and its shade
- * still separate untouched from part-filled from ready-to-finish.
+ * The dot keeps all five colors: within `open` the fill and its shade still
+ * separate untouched from part-filled from ready-to-finish.
  */
-export type AnnotationFilter = 'all' | 'in-progress' | 'finished' | 'issues'
+export type AnnotationFilter = 'all' | 'open' | 'in-progress' | 'finished' | 'issues'
 
-/** Order shown in the dropdown: everything, then the natural progression. */
-export const ANNOTATION_FILTERS: AnnotationFilter[] = ['all', 'in-progress', 'finished', 'issues']
+/** Order shown in the dropdown: everything, then the natural progression —
+ *  `open` (all unfinished) narrowing to `in-progress` (only the started ones),
+ *  then the two ticked buckets. */
+export const ANNOTATION_FILTERS: AnnotationFilter[] = ['all', 'open', 'in-progress', 'finished', 'issues']
 
 /** The dropdown's options for a project, dropping `issues` where no paper can
  *  ever be in that state (`config.finishCheckbox: false` — see
@@ -177,15 +184,24 @@ export function annotationFiltersFor(requireTick: boolean): AnnotationFilter[] {
  *  the dropdown capitalizes the first letter itself. */
 export const ANNOTATION_FILTER_LABELS: Record<AnnotationFilter, string> = {
   all: 'all papers',
+  open: 'open',
   'in-progress': 'in progress',
   finished: 'finished',
   issues: 'with issues',
 }
 
 /**
- * Does a paper in `state` belong under `filter`? The single mapping from the
- * five dot states to the three buckets, so the list's rows and the counter
- * above them cannot disagree about what "in progress" contains.
+ * Does a paper belong under `filter`? The single mapping from the five dot
+ * states (plus `touched`) to the buckets, so the list's rows and the counter
+ * above them cannot disagree about what each bucket contains.
+ *
+ * `touched` — whether this seat has recorded at least one annotation entry for
+ * the paper — is read only by `in-progress`, the started subset of `open`. It
+ * is a separate input rather than something derived from `state` because the
+ * two can legitimately disagree: a paper touched only through a Yes/No answer
+ * is `touched` while its dot state is still `untouched` (completeness ignores
+ * booleans; see `annotationState`). It defaults to `false`, which the other
+ * buckets never consult, so a caller asking about any of them may omit it.
  *
  * `null` — the seats with no annotation state at all (screening,
  * Consolidation) — matches only "all". A stale non-'all' filter carried over
@@ -194,14 +210,22 @@ export const ANNOTATION_FILTER_LABELS: Record<AnnotationFilter, string> = {
  * for themselves whether the current seat is filterable at all before
  * applying `annotationFilter` (PaperList does this via `isConsolidationSeat`).
  */
-export function matchesFilter(state: AnnotationState | null, filter: AnnotationFilter): boolean {
+export function matchesFilter(
+  state: AnnotationState | null,
+  filter: AnnotationFilter,
+  touched = false,
+): boolean {
   if (filter === 'all') return true
   if (state === null) return false
   if (filter === 'finished') return state === 'finished'
   if (filter === 'issues') return state === 'flagged'
-  // "in progress" is the complement of the two ticked states: `finished` and
-  // `flagged` are both papers whose box *is* ticked (they differ only in
-  // whether the data still backs it), so everything else is a paper nobody
-  // has called done.
-  return state !== 'finished' && state !== 'flagged'
+  // `open` and `in-progress` both exclude the two ticked states: `finished`
+  // and `flagged` are the papers whose box *is* ticked (they differ only in
+  // whether the data still backs it), so everything else is a paper nobody has
+  // called done.
+  const unfinished = state !== 'finished' && state !== 'flagged'
+  // `in-progress` narrows that to the papers actually started; an untouched
+  // paper is `open` but not yet in progress.
+  if (filter === 'in-progress') return unfinished && touched
+  return unfinished // `open`
 }

@@ -226,8 +226,9 @@ Two optional top-level keys exist specifically to be safe from that `config` reb
   requires nothing never goes red, and a Yes/No answer is never a hole.) Set
   `config.finishCheckbox: false` to drop the sign-off step: papers then count as finished as soon as
   the schema is fulfilled, and no paper can be *With issues*. A dropdown under the search box filters
-  the list into *In progress* (anything not finished), *Finished*, and *With issues*, and counts the
-  selected bucket (`finished: 5/100`). In a **screening project** the
+  the list into *Open* (anything not finished), *In progress* (the started subset — anything with at
+  least one annotation, still not finished), *Finished*, and *With issues*, and counts the selected
+  bucket (`finished: 5/100`). In a **screening project** the
   dot becomes a tri-state marker (included / excluded / undecided) with its own filter instead, and
   there is no checkbox; see [Screening](#screening).
 - **Search** — the box above the paper list matches title, authors, DOI, abstract, the PDF's file
