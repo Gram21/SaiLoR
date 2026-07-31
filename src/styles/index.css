@@ -1597,13 +1597,11 @@ button.paper-search-mode:hover {
   gap: 6px;
 }
 /* Where the "recently added" pinned marks give way to the page-ordered rest
-   — see `orderMarksForLinking`. Only ever applied to one row, so a border
-   plus its own top margin reads as a seam without needing a whole extra
-   element in the list. */
+   — see `orderMarksForLinking`. Just a bit more breathing room than the
+   list's own row gap, not a rule — the seam only needs to read as a soft
+   grouping, not a hard division within one list of the same kind of thing. */
 .field-link-gap {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
+  margin-top: 12px;
 }
 .field-link-snippet-btn {
   flex: 1 1 auto;
@@ -1637,6 +1635,24 @@ button.paper-search-mode:hover {
 .field-link-empty {
   color: var(--muted);
   font-size: 0.85rem;
+}
+.field-link-toggle {
+  align-self: flex-start;
+  font-size: 0.85rem;
+  padding: 3px 8px;
+}
+.field-link-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+/* Five rows visible, the rest reachable by scrolling — `field-link-list`'s
+   own `gap`/`li` padding sets the ~28px row height this assumes. */
+.field-link-picker-list {
+  max-height: 148px;
+  overflow-y: auto;
 }
 .field-link-search {
   width: 100%;

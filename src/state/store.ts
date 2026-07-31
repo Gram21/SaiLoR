@@ -308,13 +308,33 @@ interface AppState {
   /** Canonical field path whose link popover is open, or null. Session-only, like `validationOpen`. */
   openLinkPopoverField: string | null
   /** The mark `PdfViewer` most recently created (a highlight or note, not an
-   *  edit to an existing one) and nobody has linked to a field yet. The next
-   *  field-link popover to open consumes it — auto-linking it there instead
-   *  of making the reviewer find and click it in the list, since finishing a
+   *  edit to an existing one) and nobody has linked to a field yet — offered
+   *  to the next field-link popover to open, auto-linking it there instead of
+   *  making the reviewer find and click it in the list, since finishing a
    *  highlight and immediately going to link it is the whole point of having
-   *  just made it. Cleared the moment any popover consumes it, so it is only
+   *  just made it.
+   *
+   *  Only stays valid through two kinds of "next thing" — see
+   *  `lastCreatedMarkAllowedField` — anything else in between (editing a
+   *  different field, adding/removing an instance, undo, touching another
+   *  mark, ...) drops it back to `null` via `clearPendingMarkLink`, so a
+   *  popover opened later offers nothing and the reviewer picks by hand.
+   *  Cleared outright the moment a popover does consume it, so it is only
    *  ever offered once. Session-only, like `pendingMarkJump`. */
   lastCreatedMarkId: string | null
+  /**
+   * Narrows what `lastCreatedMarkId` may still be auto-linked to.
+   *
+   * `null` while nothing has happened yet since the mark was made — any
+   * field's popover may still claim it (case (a): highlight, then link).
+   * Set to a canonical field path the first time that field is edited —
+   * from then on, only *that* field's popover may claim it (case (b):
+   * highlight, type the value into the field it belongs to, then link) —
+   * editing a *different* field invalidates the pending mark entirely
+   * rather than re-narrowing, since a second field's answer is no longer
+   * "the very next thing" after making the mark.
+   */
+  lastCreatedMarkAllowedField: string | null
   /** A canonical field path `AnnotationPanel` should scroll to and flash,
    *  requested from elsewhere (Validation's "jump to this field", clicking
    *  an issue rather than only the paper it's on). `AnnotationPanel` clears
@@ -866,6 +886,7 @@ export const useStore = create<AppState>()(
     pendingMarkJump: null,
     openLinkPopoverField: null,
     lastCreatedMarkId: null,
+    lastCreatedMarkAllowedField: null,
     pendingFieldJump: null,
     flashFieldPath: null,
     agreementReturnToOverview: false,
@@ -1036,6 +1057,7 @@ export const useStore = create<AppState>()(
         s.pendingMarkJump = null
         s.openLinkPopoverField = null
         s.lastCreatedMarkId = null
+        s.lastCreatedMarkAllowedField = null
         s.pendingFieldJump = null
         s.flashFieldPath = null
         s.agreementReturnToOverview = false
@@ -1315,6 +1337,7 @@ export const useStore = create<AppState>()(
         // one risks auto-linking a much later click to a mark the reviewer
         // has long since stopped thinking about.
         s.lastCreatedMarkId = null
+        s.lastCreatedMarkAllowedField = null
       })
       // Screening reads the abstract, so a screening paper that has none needs
       // one *here* — by the time the reviewer is looking at the record view,
@@ -1461,6 +1484,7 @@ export const useStore = create<AppState>()(
     setLastCreatedMarkId: (markId) =>
       set((s) => {
         s.lastCreatedMarkId = markId
+        s.lastCreatedMarkAllowedField = null
       }),
 
     setPendingFieldJump: (canonical) =>
@@ -1558,6 +1582,7 @@ export const useStore = create<AppState>()(
         if (!inst) return
         if (!coalesce) pushPast(s, snap)
         inst.value = value
+        noteFieldTouchForPendingMarkLink(s, canonical)
         const deferredKey = deferredConsolidationKey(paper.id, canonical)
         if (
           s.currentReviewer === 'consolidation' &&
@@ -1587,6 +1612,7 @@ export const useStore = create<AppState>()(
         if (list && (def.max === null || list.length < def.max)) {
           pushPast(s, snap)
           list.push(makeInstance(def))
+          clearPendingMarkLink(s)
           s.dirty = true
         }
       })
@@ -1608,6 +1634,7 @@ export const useStore = create<AppState>()(
         if (list && index >= 0 && index < list.length) {
           pushPast(s, snap)
           list.splice(index, 1)
+          clearPendingMarkLink(s)
           s.dirty = true
 
           // Every other structure addresses a field instance by canonical
@@ -1762,6 +1789,7 @@ export const useStore = create<AppState>()(
             }
           }
         }
+        clearPendingMarkLink(s)
         s.dirty = true
       })
     },
@@ -1784,6 +1812,7 @@ export const useStore = create<AppState>()(
             }
           }
         }
+        clearPendingMarkLink(s)
         s.dirty = true
       })
     },
@@ -1800,10 +1829,15 @@ export const useStore = create<AppState>()(
         for (let i = marks.length - 1; i >= 0; i--) {
           if (marks[i].id === id || (groupId && marks[i].groupId === groupId)) marks.splice(i, 1)
         }
+        clearPendingMarkLink(s)
         s.dirty = true
       })
     },
 
+    // Also how the field-link popover's own auto-link offer (see
+    // `lastCreatedMarkId`) is fulfilled — that call lands here like any
+    // other, and `clearPendingMarkLink` below consuming the offer as a side
+    // effect is exactly the "offered once" behavior it is supposed to have.
     linkMarkToField: (markId, path, name, index) => {
       set((s) => {
         const paper = currentPaper(s)
@@ -1821,6 +1855,7 @@ export const useStore = create<AppState>()(
           m.linkedFields.push({ path: canonical, label })
           m.updatedAt = now
         }
+        clearPendingMarkLink(s)
         s.dirty = true
       })
     },
@@ -1842,6 +1877,7 @@ export const useStore = create<AppState>()(
           if (m.linkedFields.length === 0) delete m.linkedFields
           m.updatedAt = now
         }
+        clearPendingMarkLink(s)
         s.dirty = true
       })
     },
@@ -1959,6 +1995,9 @@ export const useStore = create<AppState>()(
             appliedAt: new Date().toISOString(),
           })
         }
+        // A bulk write across however many fields the model addressed, not the
+        // one-field edit `lastCreatedMarkId` stays alive through.
+        clearPendingMarkLink(s)
         s.dirty = true
       })
       return { filled, skipped: suggestions.length - filled }
@@ -2000,6 +2039,7 @@ export const useStore = create<AppState>()(
         // reviewer isn't even visible under another's, so there is nothing
         // for a later popover to auto-link.
         s.lastCreatedMarkId = null
+        s.lastCreatedMarkAllowedField = null
       })
     },
 
@@ -2031,6 +2071,7 @@ export const useStore = create<AppState>()(
         if (!inst) return
         pushPast(s, snap)
         inst.value = value
+        noteFieldTouchForPendingMarkLink(s, canonical)
         if (!draft.equal.includes(canonical)) draft.equal.push(canonical)
         delete s.deferredConsolidations[deferredConsolidationKey(draft.id, canonical)]
         s.dirty = true
@@ -2046,6 +2087,7 @@ export const useStore = create<AppState>()(
       if (state.deferredConsolidations[key]) return
       set((s) => {
         s.deferredConsolidations[key] = true
+        clearPendingMarkLink(s)
       })
     },
 
@@ -2185,6 +2227,7 @@ export const useStore = create<AppState>()(
         const i = draft.equal.indexOf(canonical)
         if (i >= 0) draft.equal.splice(i, 1)
         else draft.equal.push(canonical)
+        clearPendingMarkLink(s)
         s.dirty = true
       })
     },
@@ -2500,6 +2543,7 @@ export const useStore = create<AppState>()(
         // and simple answer is to drop them all — the reviewer keeps the values,
         // just not the "look here" hints.
         s.aiMarks = {}
+        clearPendingMarkLink(s)
       })
     },
 
@@ -2520,6 +2564,7 @@ export const useStore = create<AppState>()(
         // Symmetric with undo: the history restores values, not marks, and a redo
         // cannot know which of the restored values came from the model.
         s.aiMarks = {}
+        clearPendingMarkLink(s)
       })
     },
   })),
@@ -2579,6 +2624,44 @@ function pushPast(s: AppState, snap: HistoryEntry): void {
   s.past.push(snap)
   if (s.past.length > HISTORY_LIMIT) s.past.shift()
   s.future = []
+}
+
+/**
+ * Drop a pending "just created this mark" offer outright — the reviewer did
+ * something that isn't one of the two moves `lastCreatedMarkId` stays alive
+ * through (see its own doc comment): edited a field other than the one the
+ * mark turns out to belong to, added/removed an instance, touched another
+ * mark, undid something, ... Called at the start of every such action, on
+ * the same draft the action is about to mutate.
+ *
+ * A no-op whenever nothing is pending, so every caller can call it
+ * unconditionally rather than checking first.
+ */
+function clearPendingMarkLink(s: AppState): void {
+  s.lastCreatedMarkId = null
+  s.lastCreatedMarkAllowedField = null
+}
+
+/**
+ * Record that `canonical` is the field just edited, on the draft a field
+ * edit is about to apply to — called from `setFieldValue` before it writes
+ * the new value.
+ *
+ * The first field touched after a mark is created narrows the pending offer
+ * to that field alone (case (b): highlight, type the value in, then link —
+ * still auto-links). Touching a *second*, different field means the
+ * reviewer has moved on to something else, so the offer is withdrawn
+ * entirely rather than re-narrowed to the new field — by then it is no
+ * longer "the very next thing" after making the mark. Editing the same
+ * field again (typing further into it) changes nothing.
+ */
+function noteFieldTouchForPendingMarkLink(s: AppState, canonical: string): void {
+  if (!s.lastCreatedMarkId) return
+  if (s.lastCreatedMarkAllowedField === null) {
+    s.lastCreatedMarkAllowedField = canonical
+  } else if (s.lastCreatedMarkAllowedField !== canonical) {
+    clearPendingMarkLink(s)
+  }
 }
 
 /** Back to the event loop, so a progress count paints and the window stays live. */
