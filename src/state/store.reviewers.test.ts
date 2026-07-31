@@ -418,4 +418,34 @@ describe('switching reviewer breaks undo-coalescing (no cross-reviewer data loss
     expect(st().project!.papers[0].reviews['1']['Study Type'][0].value).toBe('A')
     expect(st().project!.papers[0].reviews['2']['Study Type'][0].value).toBeNull()
   })
+
+  it('jumping to another paper from the Consolidation overview also resets the coalescing key', () => {
+    // Regression: openDisagreementsFromOverview switched currentPaperId without
+    // resetting lastFieldKey, so an edit to the same field name on the new
+    // paper glued onto the previous paper's undo step — one Undo wiped both
+    // papers' answers, and retyping cleared `future`, losing the first paper's
+    // answer for good.
+    const twoPapers = JSON.stringify({
+      version: 1,
+      config: { schema, reviewers: 3 },
+      papers: [
+        { id: 'p1', title: 'T1', authors: [], pdf: 'a.pdf', annotations: {} },
+        { id: 'p2', title: 'T2', authors: [], pdf: 'b.pdf', annotations: {} },
+      ],
+    })
+    st().loadFromText(twoPapers, null, 'test.json')
+    st().selectPaper('p1')
+    st().selectReviewer('consolidation')
+    st().setFieldValue([], 'Study Type', 0, 'A')
+
+    st().setConsolidationOverviewOpen(true)
+    st().openDisagreementsFromOverview('p2')
+    st().closeDisagreements()
+    st().setFieldValue([], 'Study Type', 0, 'B')
+
+    st().undo() // should undo only p2's edit
+
+    expect(st().project!.papers[1].annotations['Study Type'][0].value).toBeNull()
+    expect(st().project!.papers[0].annotations['Study Type'][0].value).toBe('A')
+  })
 })
