@@ -392,6 +392,10 @@ export function PaperList() {
     const row = (e.target as HTMLElement).closest<HTMLElement>('[role="option"]')
     if (!row) return
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      // This branch deliberately covers Alt+Arrow too (the global
+      // next/previous-paper shortcut): useKeybindings.ts defers to us via
+      // e.defaultPrevented, since a modifier guard here would let the window
+      // handler step the paper without moving DOM focus.
       e.preventDefault()
       const sib = (e.key === 'ArrowDown' ? row.nextElementSibling : row.previousElementSibling) as
         | HTMLElement
