@@ -29,6 +29,13 @@ interface PaperOpts {
   pdf?: string
   annotations?: Record<string, unknown>
   reviews?: Record<string, unknown>
+  finished?: boolean
+  reviewsFinished?: Record<string, boolean>
+  marks?: unknown[]
+  reviewMarks?: Record<string, unknown[]>
+  aiUsage?: unknown[]
+  equal?: string[]
+  extra?: Record<string, unknown>
 }
 
 function paper(id: string, opts: PaperOpts = {}): Record<string, unknown> {
@@ -44,6 +51,27 @@ function paper(id: string, opts: PaperOpts = {}): Record<string, unknown> {
     pdf: opts.pdf ?? `${id}.pdf`,
     annotations: opts.annotations ?? {},
     ...(opts.reviews ? { reviews: opts.reviews } : {}),
+    ...(opts.finished !== undefined ? { finished: opts.finished } : {}),
+    ...(opts.reviewsFinished ? { reviewsFinished: opts.reviewsFinished } : {}),
+    ...(opts.marks ? { marks: opts.marks } : {}),
+    ...(opts.reviewMarks ? { reviewMarks: opts.reviewMarks } : {}),
+    ...(opts.aiUsage ? { aiUsage: opts.aiUsage } : {}),
+    ...(opts.equal ? { equal: opts.equal } : {}),
+    ...(opts.extra ? opts.extra : {}),
+  }
+}
+
+/** A minimal `PdfMark`-shaped raw object, valid input to `parseMarks`. */
+function rawMark(id: string): Record<string, unknown> {
+  return {
+    id,
+    page: 1,
+    rects: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.05 }],
+    color: '#ffe066',
+    comment: 'note',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    kind: 'highlight',
   }
 }
 
@@ -53,6 +81,8 @@ interface ProjectOpts {
   papers?: Record<string, unknown>[]
   provenance?: unknown
   protocol?: unknown
+  title?: string
+  schemaInfo?: string | null
 }
 
 function project(opts: ProjectOpts = {}): Project {
@@ -60,6 +90,8 @@ function project(opts: ProjectOpts = {}): Project {
   if (opts.reviewers !== undefined) config.reviewers = opts.reviewers
   return loadProject({
     version: 1,
+    ...(opts.title !== undefined ? { title: opts.title } : {}),
+    ...(opts.schemaInfo !== undefined ? { schemaInfo: opts.schemaInfo } : {}),
     ...(opts.provenance !== undefined ? { provenance: opts.provenance } : {}),
     ...(opts.protocol !== undefined ? { protocol: opts.protocol } : {}),
     config,
@@ -108,6 +140,26 @@ describe('detectFieldChanges — structural changes refuse field-level review', 
     const head = project({ papers: [paper('a')] })
     const working = project({ papers: [paper('a')], protocol: { researchQuestions: ['RQ1'] } })
     expect(detectFieldChanges(head, working)).toBeNull()
+  })
+
+  it('returns null when the project title differs', () => {
+    const head = project({ papers: [paper('a')], title: 'Old Review' })
+    const working = project({ papers: [paper('a')], title: 'New Review' })
+    expect(detectFieldChanges(head, working)).toBeNull()
+  })
+
+  it('returns null when schemaInfo differs', () => {
+    const head = project({ papers: [paper('a')], schemaInfo: 'v1' })
+    const working = project({ papers: [paper('a')], schemaInfo: 'v2' })
+    expect(detectFieldChanges(head, working)).toBeNull()
+  })
+
+  it('is not obstructed by an identical-but-absent title on both sides', () => {
+    const head = project({ papers: [paper('a')] })
+    const working = project({
+      papers: [paper('a', { annotations: { Relevant: [{ value: true }] } })],
+    })
+    expect(detectFieldChanges(head, working)).not.toBeNull()
   })
 
   it('is not obstructed by an identical provenance on both sides', () => {
@@ -456,6 +508,61 @@ describe('composeContents — paper removed locally', () => {
     const { committed, workingOut } = composeContents(head, working, changes, decisionsOf(paperChangeId, 'discard'))
     expect(committed.papers.map((p) => p.id)).toEqual(['a'])
     expect(workingOut.papers.map((p) => p.id)).toEqual(['a'])
+  })
+})
+
+describe('composeContents — paper bookkeeping rides along with the paper', () => {
+  // Regression: finished flags, PDF marks, equal, aiUsage, and paper-level
+  // extra are never their own field-review row (see PAPER_META_FIELDS), so
+  // they used to be silently dropped from `committed` even when a real
+  // field-level change put the paper through field review at all.
+  const head = project({ papers: [paper('a', { title: 'Old Title' })] })
+  const working = project({
+    papers: [
+      paper('a', {
+        title: 'New Title', // a real field change, so `changes.fields` is non-empty
+        finished: true,
+        marks: [rawMark('m1')],
+        aiUsage: [{ provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-01-01T00:00:00.000Z' }],
+        equal: ['Study Type'],
+        extra: { customKey: 'customValue' },
+      }),
+    ],
+  })
+  const changes = detectFieldChanges(head, working)!
+  const titleId = changes.fields.find((f) => f.canonical === 'title')!.id
+
+  function expectBookkeepingCarriedOver(committedPaper: Project['papers'][number]): void {
+    expect(committedPaper.finished).toBe(true)
+    expect(committedPaper.marks).toEqual(working.papers[0].marks)
+    expect(committedPaper.aiUsage).toEqual(working.papers[0].aiUsage)
+    expect(committedPaper.equal).toEqual(['Study Type'])
+    expect(committedPaper.extra).toEqual({ customKey: 'customValue' })
+  }
+
+  it('carries over under the default "use" disposition', () => {
+    const { committed } = composeContents(head, working, changes, {})
+    expectBookkeepingCarriedOver(committed.papers[0])
+  })
+
+  it('still carries over when the field row itself is "ignore" — bookkeeping has no disposition', () => {
+    const { committed } = composeContents(head, working, changes, decisionsOf(titleId, 'ignore'))
+    expect(committed.papers[0].title).toBe('Old Title') // the field row's own disposition still applies
+    expectBookkeepingCarriedOver(committed.papers[0])
+  })
+
+  it('leaves a HEAD-only paper (a removed row left at "ignore") with HEAD\'s own bookkeeping', () => {
+    const headOnly = project({
+      papers: [paper('a', { finished: true, marks: [rawMark('m1')], equal: ['Study Type'] })],
+    })
+    const workingGone = project({ papers: [] })
+    const removedChanges = detectFieldChanges(headOnly, workingGone)!
+    const removedId = removedChanges.papers[0].id
+    const { committed } = composeContents(headOnly, workingGone, removedChanges, decisionsOf(removedId, 'ignore'))
+    // Explicitly 'ignore'd, so the deletion is not committed — the paper stays with HEAD's own bookkeeping.
+    expect(committed.papers[0].finished).toBe(true)
+    expect(committed.papers[0].marks).toEqual(headOnly.papers[0].marks)
+    expect(committed.papers[0].equal).toEqual(['Study Type'])
   })
 })
 
