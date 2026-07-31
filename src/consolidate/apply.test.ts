@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { resolveSchema, type AnnotationDef } from '../model/schema'
 import { normalizeTree, pruneTree, type AnnotationValueTree } from '../model/annotations'
 import { alignPaper } from './align'
-import { applyAlignment } from './apply'
+import { applyAlignment, remapAlignedPath } from './apply'
 
 const FINDINGS: AnnotationDef[] = [
   {
@@ -186,5 +186,97 @@ describe('applyAlignment', () => {
     const after = JSON.stringify(reviews)
     applyAlignment(schema, alignPaper(schema, reviews), reviews, consolidated)
     expect(JSON.stringify(reviews)).toBe(after)
+  })
+})
+
+describe('remapAlignedPath', () => {
+  it('translates a reviewer-local index to its new slot, matching what applyAlignment actually did', () => {
+    const { schema, reviews, consolidated } = setup(FINDINGS, {
+      '1': { Findings: [finding('Alpha'), finding('Beta'), finding('Gamma')] },
+      '2': { Findings: [finding('Gamma'), finding('Alpha'), finding('Beta')] },
+    })
+    const alignment = alignPaper(schema, reviews)
+    applyAlignment(schema, alignment, reviews, consolidated)
+
+    // Reviewer 2's original entry 0 ('Gamma') is the one this remaps — find
+    // where it actually landed, rather than hand-picking an index.
+    const newIndex = claims(reviews['2']).indexOf('Gamma')
+
+    expect(remapAlignedPath(alignment, '2', [{ name: 'Findings', index: 0 }])).toEqual([
+      { name: 'Findings', index: newIndex },
+    ])
+  })
+
+  it('remaps a nested repeatable child within its matched parent slot', () => {
+    const defs: AnnotationDef[] = [
+      {
+        name: 'Finding',
+        max: null,
+        children: [
+          { name: 'Claim', type: 'string' },
+          { name: 'Evidence', max: null, children: [{ name: 'Metric', type: 'string' }] },
+        ],
+      },
+    ]
+    const ev = (m: string) => ({ children: { Metric: [{ value: m }] } })
+    const { schema, reviews, consolidated } = setup(defs, {
+      '1': {
+        Finding: [
+          { children: { Claim: [{ value: 'Alpha' }], Evidence: [ev('precision'), ev('recall')] } },
+          { children: { Claim: [{ value: 'Beta' }], Evidence: [ev('f1')] } },
+        ],
+      },
+      '2': {
+        Finding: [
+          { children: { Claim: [{ value: 'Beta' }], Evidence: [ev('f1')] } },
+          { children: { Claim: [{ value: 'Alpha' }], Evidence: [ev('recall'), ev('precision')] } },
+        ],
+      },
+    })
+    const alignment = alignPaper(schema, reviews)
+    applyAlignment(schema, alignment, reviews, consolidated)
+
+    // Reviewer 2's Finding[1]/Evidence[0] was 'recall', which lands at
+    // Finding[0]/Evidence[1] after alignment.
+    const remapped = remapAlignedPath(alignment, '2', [
+      { name: 'Finding', index: 1 },
+      { name: 'Evidence', index: 0 },
+    ])
+    expect(remapped).toEqual([
+      { name: 'Finding', index: 0 },
+      { name: 'Evidence', index: 1 },
+    ])
+  })
+
+  it('remaps the repeatable index and keeps a trailing leaf field segment as-is', () => {
+    const { schema, reviews, consolidated } = setup(FINDINGS, {
+      '1': { Findings: [finding('Alpha'), finding('Beta'), finding('Gamma')] },
+      '2': { Findings: [finding('Gamma'), finding('Alpha'), finding('Beta')] },
+    })
+    const alignment = alignPaper(schema, reviews)
+    applyAlignment(schema, alignment, reviews, consolidated)
+    const newIndex = claims(reviews['2']).indexOf('Gamma')
+
+    const remapped = remapAlignedPath(alignment, '2', [
+      { name: 'Findings', index: 0 },
+      { name: 'Claim', index: 0 },
+    ])
+    expect(remapped).toEqual([
+      { name: 'Findings', index: newIndex },
+      { name: 'Claim', index: 0 },
+    ])
+  })
+
+  it('leaves an unknown node name unchanged', () => {
+    const { schema, reviews, consolidated } = setup(FINDINGS, {
+      '1': { Findings: [finding('Alpha'), finding('Beta')] },
+      '2': { Findings: [finding('Beta'), finding('Alpha')] },
+    })
+    const alignment = alignPaper(schema, reviews)
+    applyAlignment(schema, alignment, reviews, consolidated)
+
+    expect(remapAlignedPath(alignment, '2', [{ name: 'NoSuchNode', index: 0 }])).toEqual([
+      { name: 'NoSuchNode', index: 0 },
+    ])
   })
 })

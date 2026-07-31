@@ -63,13 +63,42 @@ const schema = [
 const finding = (claim: string) => ({ children: { Claim: [{ value: claim }] } })
 
 /** Two reviewers who recorded the same findings in opposite orders. */
-function projectText(reviewers: number, reviews: Record<string, unknown>): string {
+function projectText(
+  reviewers: number,
+  reviews: Record<string, unknown>,
+  reviewMarks?: Record<string, unknown>,
+): string {
   return JSON.stringify({
     version: 1,
     config: { schema, reviewers },
-    papers: [{ id: 'p1', title: 'T', authors: [], pdf: 'a.pdf', annotations: {}, reviews }],
+    papers: [
+      {
+        id: 'p1',
+        title: 'T',
+        authors: [],
+        pdf: 'a.pdf',
+        annotations: {},
+        reviews,
+        ...(reviewMarks ? { reviewMarks } : {}),
+      },
+    ],
   })
 }
+
+// `formatPath` omits `[0]` for index 0 — match that when building expectations.
+const findingsPath = (index: number) => (index === 0 ? 'Findings/Claim' : `Findings[${index}]/Claim`)
+
+const pdfMark = (id: string, linkedFields: { path: string; label: string }[]) => ({
+  id,
+  page: 1,
+  rects: [{ x: 0.1, y: 0.1, width: 0.2, height: 0.05 }],
+  color: '#ffe066',
+  comment: '',
+  createdAt: '2024-01-01T00:00:00.000Z',
+  updatedAt: '2024-01-01T00:00:00.000Z',
+  kind: 'highlight' as const,
+  linkedFields,
+})
 
 const swapped = {
   '1': { Findings: [finding('Alpha'), finding('Beta'), finding('Gamma')] },
@@ -219,6 +248,80 @@ describe('alignConsolidationNode', () => {
     st().setFieldValue([], 'Study Type', 0, 'RCT')
     expect(st().alignConsolidationNode('p1', 'Findings', false)).toBe(true)
     expect(claimsOf('2')).toEqual(['Alpha', 'Beta', 'Gamma'])
+  })
+
+  it('re-points a reviewer\'s PDF evidence link when alignment permutes their entries', () => {
+    // Reviewer 2's entry 0 ('Gamma') is what the link names — the bug this
+    // guards against re-pointed it at whatever entry inherited slot 0.
+    st().loadFromText(
+      projectText(2, swapped, {
+        '2': [pdfMark('m1', [{ path: 'Findings[0]/Claim', label: 'Findings #1 › Claim' }])],
+      }),
+      null,
+      'test.json',
+    )
+    st().selectPaper('p1')
+    st().selectReviewer('consolidation')
+
+    // The mark survived the defensive parse in `loadFromText`.
+    expect(st().project!.papers[0].reviewMarks['2']).toHaveLength(1)
+    expect(st().project!.papers[0].reviewMarks['2'][0].linkedFields).toEqual([
+      { path: 'Findings[0]/Claim', label: 'Findings #1 › Claim' },
+    ])
+
+    useStore.setState((s) => {
+      s.aiMarks[`p1::2::Findings[0]/Claim`] = true
+    })
+
+    st().alignConsolidationNode('p1', 'Findings', false)
+
+    const newIndex = claimsOf('2').indexOf('Gamma')
+    expect(newIndex).toBeGreaterThanOrEqual(0)
+    const link = st().project!.papers[0].reviewMarks['2'][0].linkedFields![0]
+    expect(link.path).toBe(findingsPath(newIndex))
+    // The claim the link now names is the same text ('Gamma') it named before.
+    expect(claimsOf('2')[newIndex]).toBe('Gamma')
+
+    // The old aiMarks key is gone, the new one is present.
+    expect(st().aiMarks['p1::2::Findings[0]/Claim']).toBeUndefined()
+    expect(st().aiMarks[`p1::2::${findingsPath(newIndex)}`]).toBe(true)
+  })
+
+  it('re-points marks at BOTH Findings[0] and Findings[1] under a swap, without clobbering either', () => {
+    // The case the two-phase aiMarks rewrite exists for: entries 0 and 1 trade
+    // slots, so an interleaved delete/set loop would delete the key it had
+    // just written for the other side, losing one of the two marks.
+    st().loadFromText(
+      projectText(2, swapped, {
+        '2': [
+          pdfMark('m1', [{ path: 'Findings[0]/Claim', label: 'Findings #1 › Claim' }]),
+          pdfMark('m2', [{ path: 'Findings[1]/Claim', label: 'Findings #2 › Claim' }]),
+        ],
+      }),
+      null,
+      'test.json',
+    )
+    st().selectPaper('p1')
+    st().selectReviewer('consolidation')
+
+    useStore.setState((s) => {
+      s.aiMarks['p1::2::Findings[0]/Claim'] = true
+      s.aiMarks['p1::2::Findings[1]/Claim'] = true
+    })
+    st().alignConsolidationNode('p1', 'Findings', false)
+
+    const afterClaims = claimsOf('2')
+    const marks = st().project!.papers[0].reviewMarks['2']
+    const gammaIndex = afterClaims.indexOf('Gamma')
+    const alphaIndex = afterClaims.indexOf('Alpha')
+    expect(marks[0].linkedFields![0].path).toBe(findingsPath(gammaIndex))
+    expect(marks[1].linkedFields![0].path).toBe(findingsPath(alphaIndex))
+
+    // Both aiMarks survived — the naive interleaved loop fails this.
+    const aiMarks = st().aiMarks
+    expect(aiMarks[`p1::2::${findingsPath(gammaIndex)}`]).toBe(true)
+    expect(aiMarks[`p1::2::${findingsPath(alphaIndex)}`]).toBe(true)
+    expect(Object.keys(aiMarks).filter((k) => /^p1::2::Findings(\[\d+\])?\/Claim$/.test(k))).toHaveLength(2)
   })
 })
 

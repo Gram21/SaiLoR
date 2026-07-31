@@ -1,6 +1,7 @@
 import { makeInstance, type AnnotationValueTree, type InstanceNode } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
 import { isRepeatable, type TreeAlignment } from './align'
+import type { PathSeg } from '../state/store'
 
 /**
  * Write an alignment into the data, which is how it is remembered.
@@ -29,6 +30,45 @@ export function applyAlignment(
   consolidated: AnnotationValueTree,
 ): boolean {
   return applyLevel(schema, alignment, reviews, consolidated)
+}
+
+/**
+ * Rewrite one reviewer's canonical path after `applyAlignment` has permuted
+ * their repeatable entries into the shared slot order — the permutation
+ * counterpart to `shiftCanonicalPath` in `store.ts` (that one handles a
+ * removal shifting indices down; this one handles a whole-array reorder).
+ * Without it, a mark linked to "Findings #1" keeps naming index 0 even after
+ * alignment moved that reviewer's first entry into slot 2 — the link (and
+ * any AI mark) would silently point at whatever now sits in the old slot.
+ *
+ * Walks `segs` left to right against the alignment, translating each
+ * reviewer-local index into its slot index. The first segment the alignment
+ * has no node for — most commonly a path's trailing leaf field, since
+ * `alignLevel` never creates a node for a childless non-repeatable def — ends
+ * the walk: that segment and everything after it are appended unchanged. A
+ * whole-path bail on the first miss would silently no-op the entire rewrite,
+ * because every real path's leaf lands here.
+ *
+ * An entry left stranded past `clampToMax` in `applyLevel` ("should not
+ * arise", apply.ts) has no slot and is deliberately not remapped either —
+ * it falls out through the same unmatched-segment path.
+ */
+export function remapAlignedPath(
+  alignment: TreeAlignment,
+  reviewer: string,
+  segs: PathSeg[],
+): PathSeg[] {
+  const out: PathSeg[] = []
+  let level = alignment
+  for (let i = 0; i < segs.length; i++) {
+    const seg = segs[i]
+    const node = level[seg.name]
+    const s = node?.slots.findIndex((slot) => slot.members[reviewer] === seg.index) ?? -1
+    if (!node || s === -1) return [...out, ...segs.slice(i)]
+    out.push({ name: seg.name, index: s })
+    level = node.slots[s].children
+  }
+  return out
 }
 
 function applyLevel(
