@@ -85,10 +85,7 @@ function projectText(
   })
 }
 
-// `formatPath` omits `[0]` for index 0 — match that when building expectations.
-const findingsPath = (index: number) => (index === 0 ? 'Findings/Claim' : `Findings[${index}]/Claim`)
-
-const pdfMark = (id: string, linkedFields: { path: string; label: string }[]) => ({
+const pdfMark =(id: string, linkedFields: { path: string; label: string }[]) => ({
   id,
   page: 1,
   rects: [{ x: 0.1, y: 0.1, width: 0.2, height: 0.05 }],
@@ -124,10 +121,23 @@ describe('alignConsolidationNode', () => {
     st().selectReviewer('consolidation')
   })
 
-  it('lines the reviewers up and grows the consolidated tree', () => {
+  it('records the matching and grows the consolidated tree, leaving the reviewers alone', () => {
+    const before = JSON.stringify(st().project!.papers[0].reviews)
     expect(st().alignConsolidationNode('p1', 'Findings', false)).toBe(true)
+
+    // Nobody's own list moved — this is the guarantee the stored mapping
+    // exists to provide. Reviewer 2 still has the order they typed.
+    expect(JSON.stringify(st().project!.papers[0].reviews)).toBe(before)
     expect(claimsOf('1')).toEqual(['Alpha', 'Beta', 'Gamma'])
-    expect(claimsOf('2')).toEqual(['Alpha', 'Beta', 'Gamma'])
+    expect(claimsOf('2')).toEqual(['Gamma', 'Alpha', 'Beta'])
+
+    // The correspondence is recorded instead: slot N names each reviewer's own
+    // index for that entry.
+    expect(st().project!.papers[0].alignment['Findings']).toEqual([
+      { members: { '1': 0, '2': 1 } },
+      { members: { '1': 1, '2': 2 } },
+      { members: { '1': 2, '2': 0 } },
+    ])
     expect(st().project!.papers[0].annotations['Findings']).toHaveLength(3)
   })
 
@@ -141,6 +151,9 @@ describe('alignConsolidationNode', () => {
     st().alignConsolidationNode('p1', 'Findings', false)
     expect(st().past).toHaveLength(1)
     st().undo()
+    // The recorded matching is what undo takes back now — the reviewers' own
+    // entries were never moved, so there is nothing else to restore.
+    expect(st().project!.papers[0].alignment['Findings']).toBeUndefined()
     expect(claimsOf('2')).toEqual(['Gamma', 'Alpha', 'Beta'])
   })
 
@@ -247,50 +260,51 @@ describe('alignConsolidationNode', () => {
     st().alignConsolidationNode('p1', 'Study Type', false)
     st().setFieldValue([], 'Study Type', 0, 'RCT')
     expect(st().alignConsolidationNode('p1', 'Findings', false)).toBe(true)
-    expect(claimsOf('2')).toEqual(['Alpha', 'Beta', 'Gamma'])
+    expect(st().project!.papers[0].alignment['Findings']).toHaveLength(3)
   })
 
-  it('re-points a reviewer\'s PDF evidence link when alignment permutes their entries', () => {
-    // Reviewer 2's entry 0 ('Gamma') is what the link names — the bug this
-    // guards against re-pointed it at whatever entry inherited slot 0.
+  it('covers the union when the reviewers recorded overlapping but different groups', () => {
+    // The acceptance case, in the notation it was reported in.
+    //   Reviewer 1: G1(V1,V2)  G2(V3,V4)  G3(V3,V5)
+    //   Reviewer 2: G4(V6,V7)  G1(V1,V2)
+    // Consolidation must offer four groups — G1 matched, G2/G3/G4 each
+    // recorded by only one reviewer — while both reviewers keep their own
+    // list exactly as they typed it.
+    const g = (claim: string, evidence: string) => ({
+      children: { Claim: [{ value: claim }], Evidence: [{ value: evidence }] },
+    })
     st().loadFromText(
-      projectText(2, swapped, {
-        '2': [pdfMark('m1', [{ path: 'Findings[0]/Claim', label: 'Findings #1 › Claim' }])],
+      projectText(2, {
+        '1': { Findings: [g('V1', 'V2'), g('V3', 'V4'), g('V3', 'V5')] },
+        '2': { Findings: [g('V6', 'V7'), g('V1', 'V2')] },
       }),
       null,
       'test.json',
     )
     st().selectPaper('p1')
     st().selectReviewer('consolidation')
+    expect(st().alignConsolidationNode('p1', 'Findings', false)).toBe(true)
 
-    // The mark survived the defensive parse in `loadFromText`.
-    expect(st().project!.papers[0].reviewMarks['2']).toHaveLength(1)
-    expect(st().project!.papers[0].reviewMarks['2'][0].linkedFields).toEqual([
-      { path: 'Findings[0]/Claim', label: 'Findings #1 › Claim' },
+    const paper = st().project!.papers[0]
+    expect(paper.alignment['Findings']).toEqual([
+      { members: { '1': 0, '2': 1 } }, // G1 — the only real match
+      { members: { '1': 1 } }, // G2 — reviewer 1 alone
+      { members: { '1': 2 } }, // G3 — reviewer 1 alone
+      { members: { '2': 0 } }, // G4 — reviewer 2 alone
     ])
-
-    useStore.setState((s) => {
-      s.aiMarks[`p1::2::Findings[0]/Claim`] = true
-    })
-
-    st().alignConsolidationNode('p1', 'Findings', false)
-
-    const newIndex = claimsOf('2').indexOf('Gamma')
-    expect(newIndex).toBeGreaterThanOrEqual(0)
-    const link = st().project!.papers[0].reviewMarks['2'][0].linkedFields![0]
-    expect(link.path).toBe(findingsPath(newIndex))
-    // The claim the link now names is the same text ('Gamma') it named before.
-    expect(claimsOf('2')[newIndex]).toBe('Gamma')
-
-    // The old aiMarks key is gone, the new one is present.
-    expect(st().aiMarks['p1::2::Findings[0]/Claim']).toBeUndefined()
-    expect(st().aiMarks[`p1::2::${findingsPath(newIndex)}`]).toBe(true)
+    // Four groups laid out for the consolidator to verify or delete.
+    expect(paper.annotations['Findings']).toHaveLength(4)
+    // Neither reviewer's own list gained, lost, or moved an entry.
+    expect(claimsOf('1')).toEqual(['V1', 'V3', 'V3'])
+    expect(claimsOf('2')).toEqual(['V6', 'V1'])
   })
 
-  it('re-points marks at BOTH Findings[0] and Findings[1] under a swap, without clobbering either', () => {
-    // The case the two-phase aiMarks rewrite exists for: entries 0 and 1 trade
-    // slots, so an interleaved delete/set loop would delete the key it had
-    // just written for the other side, losing one of the two marks.
+  it('leaves a reviewer\'s PDF evidence links and AI marks exactly where they were', () => {
+    // These used to have to be rewritten: alignment permuted reviewer 2's
+    // entries, so every canonical path naming one pointed at whatever entry
+    // inherited that index. Nothing moves any more, so the correct behavior is
+    // now the absence of a rewrite — the marks must come out byte-identical,
+    // not "correctly re-pointed".
     st().loadFromText(
       projectText(2, swapped, {
         '2': [
@@ -304,24 +318,20 @@ describe('alignConsolidationNode', () => {
     st().selectPaper('p1')
     st().selectReviewer('consolidation')
 
+    const before = JSON.stringify(st().project!.papers[0].reviewMarks)
     useStore.setState((s) => {
       s.aiMarks['p1::2::Findings[0]/Claim'] = true
       s.aiMarks['p1::2::Findings[1]/Claim'] = true
     })
-    st().alignConsolidationNode('p1', 'Findings', false)
 
-    const afterClaims = claimsOf('2')
-    const marks = st().project!.papers[0].reviewMarks['2']
-    const gammaIndex = afterClaims.indexOf('Gamma')
-    const alphaIndex = afterClaims.indexOf('Alpha')
-    expect(marks[0].linkedFields![0].path).toBe(findingsPath(gammaIndex))
-    expect(marks[1].linkedFields![0].path).toBe(findingsPath(alphaIndex))
+    expect(st().alignConsolidationNode('p1', 'Findings', false)).toBe(true)
 
-    // Both aiMarks survived — the naive interleaved loop fails this.
-    const aiMarks = st().aiMarks
-    expect(aiMarks[`p1::2::${findingsPath(gammaIndex)}`]).toBe(true)
-    expect(aiMarks[`p1::2::${findingsPath(alphaIndex)}`]).toBe(true)
-    expect(Object.keys(aiMarks).filter((k) => /^p1::2::Findings(\[\d+\])?\/Claim$/.test(k))).toHaveLength(2)
+    expect(JSON.stringify(st().project!.papers[0].reviewMarks)).toBe(before)
+    expect(st().aiMarks['p1::2::Findings[0]/Claim']).toBe(true)
+    expect(st().aiMarks['p1::2::Findings[1]/Claim']).toBe(true)
+    // Reviewer 2's entry 0 is still 'Gamma', so the link that named it still
+    // names it — which is the whole reason no rewrite is needed.
+    expect(claimsOf('2')[0]).toBe('Gamma')
   })
 })
 

@@ -4,10 +4,12 @@ import {
   loadProject,
   serializeProject,
   needsShapeMigration,
+  deepEqualJson,
   ProjectLoadError,
   type Project,
   type Paper,
 } from '../model/project'
+import { alignedReviews } from '../model/alignment'
 import {
   hasAnnotations,
   makeInstance,
@@ -19,7 +21,7 @@ import {
 import type { ResolvedDef } from '../model/schema'
 import { MARK_COLORS, type MarkRect, type PdfMark, dedupeMarkGroups } from '../model/pdfMarks'
 import { alignNode, alignableNodes } from '../consolidate/align'
-import { applyAlignment, remapAlignedPath } from '../consolidate/apply'
+import { growConsolidated, toStoredAlignment } from '../consolidate/apply'
 import { unanimousFills } from '../consolidate/unanimous'
 import { consolidatorHasAnswered } from '../consolidate/readiness'
 import { validateProject, type UnannotatedPaper, type ValidationIssue } from '../model/validate'
@@ -2061,70 +2063,28 @@ export const useStore = create<AppState>()(
       const alignment = alignNode(project.schema, reviews, nodeName)
       const snap: HistoryEntry = { project, paperId: prev.currentPaperId }
 
+      // The matching for this one node, in its stored form. Merged into
+      // whatever other nodes have already been matched rather than replacing
+      // them — the scheduler works one node at a time.
+      const stored = toStoredAlignment(alignment)
+
       let changed = false
       set((s) => {
         const draft = s.project!.papers.find((p) => p.id === paperId)
         if (!draft) return
-        const draftReviews: Record<string, AnnotationValueTree> = {}
-        for (const r of Object.keys(reviews)) draftReviews[r] = draft.reviews[r]
-        changed = applyAlignment(s.project!.schema, alignment, draftReviews, draft.annotations)
+
+        // Nothing here touches `draft.reviews`. Recording who matched whom no
+        // longer means rewriting the reviewers' own entries into slot order,
+        // so a reviewer's list stays exactly as they left it — which is also
+        // why the linked-mark and AI-mark canonical paths that used to be
+        // re-pointed here need no fixing up at all any more: they still name
+        // the index they always named.
+        const mappingChanged = !deepEqualJson(draft.alignment[nodeName], stored[nodeName])
+        const grew = growConsolidated(s.project!.schema, alignment, draft.annotations)
+        changed = mappingChanged || grew
         if (!changed) return
 
-        // `applyAlignment` just permuted each reviewer's entries under this
-        // node into the shared slot order. Anything that names an entry by
-        // canonical path + index — a mark's linked-field, or an AI-mark key —
-        // still names the *old* index, and now silently points at whatever
-        // entry inherited that slot. Re-point every such reference for every
-        // reviewer who voted, in the same producer/snapshot/dirty flag as the
-        // permutation itself, so it is one undo step, not a second one.
-        for (const reviewer of Object.keys(reviews)) {
-          const marks: PdfMark[] = draft.reviewMarks[reviewer] ?? []
-          for (const mark of marks) {
-            if (!mark.linkedFields) continue
-            let markChanged = false
-            const next: typeof mark.linkedFields = []
-            for (const link of mark.linkedFields) {
-              const segs = parsePath(link.path)
-              if (!segs) {
-                next.push(link)
-                continue
-              }
-              const remapped = remapAlignedPath(alignment, reviewer, segs)
-              const path = formatPath(remapped)
-              if (path !== link.path) {
-                next.push({ path, label: displayPath(remapped) })
-                markChanged = true
-              } else {
-                next.push(link)
-              }
-            }
-            if (markChanged) {
-              mark.linkedFields = next
-              mark.updatedAt = new Date().toISOString()
-            }
-          }
-
-          // aiMarks live outside the undo snapshot (see `removeInstance`'s own
-          // note on this), so undo restores the marks above but not these keys.
-          //
-          // Two phases, not an interleaved delete/set per key: under a swap
-          // (entry 0 and 1 trade places) an interleaved loop would delete the
-          // key it had just written for the other side, losing one of the two
-          // marks. Collect first, mutate after.
-          const prefix = aiMarkKey(paperId, '', reviewer)
-          const renames: { oldKey: string; newKey: string }[] = []
-          for (const key of Object.keys(s.aiMarks)) {
-            if (!key.startsWith(prefix)) continue
-            const canonical = key.slice(prefix.length)
-            const segs = parsePath(canonical)
-            if (!segs) continue
-            const remapped = remapAlignedPath(alignment, reviewer, segs)
-            const newCanonical = formatPath(remapped)
-            if (newCanonical !== canonical) renames.push({ oldKey: key, newKey: aiMarkKey(paperId, newCanonical, reviewer) })
-          }
-          for (const { oldKey } of renames) delete s.aiMarks[oldKey]
-          for (const { newKey } of renames) s.aiMarks[newKey] = true
-        }
+        if (mappingChanged) draft.alignment[nodeName] = stored[nodeName]
 
         // One undo step for the whole paper, not one per node: the reviewer sees
         // a single "the entries were lined up" event and undoes it in one press.
@@ -2152,7 +2112,15 @@ export const useStore = create<AppState>()(
       const reviews: Record<string, AnnotationValueTree | undefined> = {}
       for (let i = 1; i <= project.reviewers; i++) reviews[String(i)] = paper.reviews[String(i)]
 
-      const fills = unanimousFills(project.schema, reviews, paper.annotations)
+      // Through the mapping, not raw: `unanimousFills` reads every reviewer at
+      // one index, which only means "the same entry" in slot space. Before the
+      // reviewers' arrays stopped being permuted this was true of the stored
+      // data itself; now the lined-up view has to be asked for explicitly.
+      const fills = unanimousFills(
+        project.schema,
+        alignedReviews(project.schema, paper.alignment, reviews),
+        paper.annotations,
+      )
       if (fills.length === 0) return 0
 
       const snap: HistoryEntry = { project, paperId: prev.currentPaperId }

@@ -58,6 +58,7 @@ function makePaper(opts: {
     reviews: opts.reviews ?? {},
     aiUsage: [],
     equal: [],
+    alignment: {},
     marks: [],
     reviewMarks: {},
     finished: false,

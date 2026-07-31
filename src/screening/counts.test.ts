@@ -27,6 +27,7 @@ function paper(overrides: Partial<Paper> = {}): Paper {
     reviews: {},
     aiUsage: [],
     equal: [],
+    alignment: {},
     marks: [],
     reviewMarks: {},
     finished: false,
