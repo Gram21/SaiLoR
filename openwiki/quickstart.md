@@ -111,6 +111,10 @@ npm run typecheck
 │   │   ├── schema.ts      AnnotationDef/ResolvedDef types, zod schemas, resolveSchema
 │   │   ├── annotations.ts AnnotationValueTree, normalize/prune/init/add/remove helpers
 │   │   ├── project.ts     loadProject / serializeProject / splitProjectFiles / isLegacyProjectShape, Paper/Project types, deepEqualJson
+│   │   ├── annotationState.ts  5-state annotation vocabulary (untouched/partial/complete/finished/flagged), filter buckets
+│   │   ├── alignment.ts   StoredAlignment — persisted consolidation entry-matching mapping, alignedReviews projection
+│   │   ├── pdfMarks.ts    PdfMark type, sortMarksForCycling (column-then-y), cross-page groupId deduplication
+│   │   ├── pdfExport.ts   Pure coordinate math for burning marks into real PDF annotations
 │   │   ├── pdfMeta.ts     Best-effort title/author/abstract extraction from a PDF (metadata, then layout heuristic)
 │   │   ├── validate.ts    Checks annotated papers (required / type / enum / cardinality); unannotated papers are skipped, not flagged
 │   │   ├── linkify.ts     Splits free text into plain-text and URL segments for rendering clickable links in descriptions
@@ -149,8 +153,10 @@ npm run typecheck
 │   │   ├── AnnotationPanel.tsx  Right pane — renders schema recursively
 │   │   ├── AnnotationNode.tsx   Recursive node (fields, groups, repeatable instances)
 │   │   ├── NodeName.tsx   Node label with ⓘ description tooltip (portaled)
-│   │   ├── Field.tsx      Input control (text/number/checkbox/enum dropdown) + "grab from PDF" button
-│   │   ├── ComboBox.tsx   Filterable dropdown for enum (options) string fields
+│   │   ├── Field.tsx      Input control (text/number/checkbox/enum dropdown) + "grab from PDF" button + 🔗 field-link popover
+│   │   ├── ComboBox.tsx   Filterable dropdown for enum (options) string fields, with clear (×) button
+│   │   ├── ExportPdfDialog.tsx  Modal — burn in-app marks into real PDF annotations (new file or overwrite)
+│   │   ├── SchemaInfoDialog.tsx  Modal — shows the schema-wide info comment (auto-opens on first load)
 │   │   ├── ScreeningRecord.tsx  Middle pane for a screening project — title/authors/DOI + abstract, swaps to PdfViewer
 │   │   ├── ScreeningPanel.tsx   Right pane for a screening project — Include/Exclude + Reason, progress
 │   │   ├── ScreeningSummary.tsx Modal — PRISMA-style include/exclude/reason counts
@@ -171,8 +177,10 @@ npm run typecheck
 │   ├── hooks/
 │   │   ├── useKeybindings.ts       Open, save, save-as, undo/redo, paper nav (filtered list order), PDF zoom / font size, help
 │   │   ├── useAutosave.ts          Periodic 5-min autosave (opt-in, skipped while editor is open)
+│   │   ├── useExportTextMenu.ts    Reusable "Copy to clipboard" / "Save to file…" dropdown for text exports
 │   │   ├── useDirtyGuard.ts        beforeunload guard when dirty (dead code in practice — `isElectron()` gates it out; kept only because it is cheap to keep and Electron's own quit dialog covers the same case)
 │   │   └── useElectronCloseGuard.ts  Electron quit dialog + Edit-menu undo/redo IPC wiring
+│   ├── clipboard.ts       copyText — clipboard write with legacy fallback, never throws
 │   ├── App.tsx            Component composition; `isElectron()` gate shows the web-discontinued notice and blocks all project-opening UI otherwise; welcome screen with recents, HelpDialog
 │   ├── main.tsx           React root (applies theme + font scale before render)
 │   └── styles/            index.css (full app styling), ai.css, editor.css, papers-editor.css, schema-editor.css, git.css
@@ -185,6 +193,7 @@ npm run typecheck
 ├── .github/workflows/ci.yml       GitHub Actions — runs scripts/ci.sh on push to main and on every pull request
 ├── .github/workflows/release.yml  GitHub Actions — builds desktop installers on release, attaches them
 ├── .github/workflows/openwiki.yml Scheduled weekly OpenWiki doc refresh (only when code changed)
+├── .github/workflows/openwiki-update.yml  Triggered OpenWiki doc update on push to main
 ├── .github/CODEOWNERS     Default reviewers for pull requests
 ├── docs/                  In-depth authoring guide (annotation-schema.md)
 ├── public/logo.svg        App logo — source of truth; also shown on the welcome screen

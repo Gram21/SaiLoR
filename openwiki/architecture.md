@@ -1,7 +1,7 @@
 ---
 type: architecture
 title: SaiLoR Architecture
-description: Deep dive into SaiLoR's architecture — why the web SPA runtime was discontinued (Electron-desktop-only now), the split project.json + annotations/ on-disk storage format, the PlatformAdapter seam, the Zustand store with undo/redo, the component tree, git integration, the Electron main process, and build wiring.
+description: Deep dive into SaiLoR's architecture — why the web SPA runtime was discontinued (Electron-desktop-only now), the split project.json + annotations/ on-disk storage format, the PlatformAdapter seam, the Zustand store with undo/redo, the component tree, PDF marks and field-linking, multi-reviewer consolidation with stored alignment, annotation state/finished flags, git integration, the Electron main process, and build wiring.
 tags: [architecture, platform-adapter, state-management, electron, git, electron-only, split-storage]
 ---
 
@@ -58,6 +58,10 @@ Three more exist for the **project editor** (see below):
 - `relativePdfPaths(pdfs, location)` — the `pdf` values to store, **relative to the JSON's directory**, computed via IPC.
 - `absolutePdfPaths(pdfPaths, from)` — the inverse: absolute paths for values relative to `from`'s directory. Added for `startFromScreening`/`importFromScreening` (see "Screening" below) — a paper carried in from a screening project needs a real `sourcePath`, not just the relative path the source file stored, or `changeLocation` cannot re-derive it later.
 - `siblingProjectLocation(source, fileName)` — the location `fileName` would have if it sat next to `source`'s directory; writes and prompts nothing. What makes "save the new annotation project next to the screening JSON" the *default* rather than a dialog suggestion.
+
+Two generic plain-text export methods round out the adapter:
+- `pickTextExportPath(suggestedName)` — native save dialog for a `.txt`-style file; returns an absolute path or `null` if cancelled.
+- `writeTextFile(absPath, text)` — writes text to the path; never throws, returns `{ ok: true, path }` or `{ ok: false, error }`. The disagreement export is the first user, but nothing here is specific to it.
 
 One more is its own capability object rather than a flat method: `getGit(): GitPlatform | null` —
 git operations against the user's own git installation, or `null` where the runtime cannot reach one.
@@ -154,6 +158,10 @@ The entire app state lives in a single Zustand store with immer middleware:
 | `consolidationTarget` | `{ path, name, index } \| null` | The field the Consolidation "compare" popup (`ConsolidationDialog`) is showing, or `null` when closed. Session-only |
 | `consolidationOverviewOpen` | `boolean` | Whether the project-wide `ConsolidationOverview` modal is open. Session-only |
 | `deferredConsolidations` | `Record<string, true>` | Fields where the consolidator chose "Enter a different value" — waiting for a manually entered value. Keyed by `deferredConsolidationKey(paperId, canonicalPath)`. Session-only; cleared on project close/load |
+| `annotationFilter` | `AnnotationFilter` | Which papers the annotation paper list shows (`'all'` / `'open'` / `'in-progress'` / `'finished'` / `'issues'`). Non-screening, non-Consolidation seats only; session-only, resets on project close/load |
+| `pendingMarkJump` | `string \| null` | A mark id another component asked the PDF viewer to scroll to and flash. Cleared after `flashAndScrollTo` runs. Session-only |
+| `lastCreatedMarkId` | `string \| null` | The most recently created mark's id, for auto-linking to the next field opened. Session-only; cleared by `clearPendingMarkLink` |
+| `schemaInfoOpen` | `boolean` | Whether the `SchemaInfoDialog` is open. Session-only; set in `loadFromText` for auto-open on first load of a project with a schema comment |
 | `screeningFilter` | `'all' \| 'included' \| 'excluded' \| 'undecided'` | Which decisions the screening paper list shows. Screening projects only; session-only, resets on `closeProject`/`loadFromText` |
 | `screeningShowPdf` | `boolean` | Whether the middle pane shows the PDF instead of `ScreeningRecord`'s title+abstract. Session-only, see "Screening" above |
 | `screeningSummaryOpen` | `boolean` | Whether `ScreeningSummary` (the PRISMA-style counts modal) is open. Session-only |
@@ -181,8 +189,11 @@ The entire app state lives in a single Zustand store with immer middleware:
 - **`setConsolidationOverviewOpen(open)`** — toggle the project-wide `ConsolidationOverview` modal
 - **`openAgreementFromOverview()` / `closeAgreement()`** — closes overview, opens agreement, restores overview on close
 - **`openDisagreementsFromOverview(paperId)` / `closeDisagreements()`** — selects paper, closes overview, opens per-paper disagreement list, restores overview on close
-- **`alignConsolidationNode(paperId, nodeName, coalesce)`** — match the reviewers' repeated entries under one node and write the result in (reorder + grow); see "Matching the reviewers' repeated entries" below
+- **`alignConsolidationNode(paperId, nodeName, coalesce)`** — match the reviewers' repeated entries under one node and write the result as a `StoredAlignment` (no reviewer reordering); see "Matching the reviewers' repeated entries" below
 - **`adoptUnanimousValues(paperId, coalesce)`** — fill the consolidated fields every reviewer answered the same way, marking each via `aiMarks`; runs after the matching for a paper
+- **`setAnnotationFinished(finished)`** — toggle the active seat's "done with this paper" declaration (`paper.finished` or `paper.reviewsFinished[reviewer]`); no undo history entry of its own
+- **`setAnnotationFilter(filter)`** — set the paper-list filter (`AnnotationFilter`); session-only
+- **`linkMarkToField(markId, field)` / `unlinkMarkFromField(markId, field)`** — create/remove a mark-to-field link; propagates to all fragments sharing a `groupId`
 - **`setScreeningDecision(decision, reason?)` / `setScreeningReason(reason)`** — screening-only field writes, routed through `currentTree` like every other write; see "Screening" below for the auto-advance and reason-clearing rules
 - **`adoptAllUnanimousScreening()`** — `adoptUnanimousValues` for every paper in one undo step; safe unscheduled (unlike the per-paper alignment scheduler) because a screening schema has nothing for `align.ts` to line up — see "Screening" below
 - **`adoptAllUnanimousAnnotations()`** — the ordinary-schema counterpart: aligns, then adopts, paper by paper, in one undo step, skipping any paper the consolidator has already partly answered; see "Batch-adopting across the whole project" above
@@ -312,6 +323,39 @@ The paper-list dot used to be binary: touched or not, via `hasAnnotations`. `src
 
 **`PaperRow` was pulled out of `PaperList`'s `.map()` and wrapped in `React.memo`.** Its props (`paper`, `active`, `onSelect`, `dotClassName`, `dotLabel`, `dotFill`) are deliberately primitives — `dotFill` is passed as a bare number rather than the `Completeness` object, specifically so memo's shallow comparison is cheap and correct. This pays off because of how the store's immer `set()` already works (see "State Management" above): editing one field produces a new object for exactly that one paper, leaving the other 1999 array entries referencing their old objects — confirmed directly by `PaperList.perf.test.ts`, which asserts exactly 1 of 2000 paper objects changes identity per edit. So a single edit re-renders exactly one row's `PaperRow`, not all 2000. Measured cost (from the feature's own commit message): recomputing `completeness` (and the search haystack) over 2000 papers costs on the order of 3–4ms, and the row re-render this memoization buys back drops to single-digit milliseconds — comfortably fast enough that no windowing/virtualization was added for this.
 
+### Annotation state and the finished flag (`src/model/annotationState.ts`)
+
+The paper-list dot's **color** is driven by a 5-state vocabulary computed from completeness (a data
+fact) combined with the reviewer's "I'm done" declaration (`Paper.finished`):
+
+| State | Meaning | Dot color |
+|---|---|---|
+| `untouched` | Nothing filled in | amber |
+| `partial` | Some fields filled, still incomplete | amber |
+| `complete` | Every countable field is filled, but not declared finished | amber |
+| `finished` | Complete **and** the reviewer ticked "Annotation finished" | green |
+| `flagged` | Declared finished while a required field is empty | red |
+
+`annotationState()` is the one function that combines completeness + finished + touched +
+`hasRequired` + `Project.finishCheckbox`. It is **never stored** — always re-derived from current
+data on every read, so emptying a field on a finished paper automatically flips it to `flagged` with
+no invalidation step. `finishCheckbox` (project-level config, defaults `true`) controls whether a
+tick is required: when `false`, a fulfilled schema alone counts as `finished` and `flagged` is
+unreachable.
+
+The **filter dropdown** (`AnnotationFilter`: `all` / `open` / `in-progress` / `finished` / `issues`)
+maps the 5 states into 4 buckets: `open` = all unfinished (untouched + partial + complete);
+`in-progress` = the started subset of open (touched, still unfinished); `finished` = signed off and
+holding; `issues` = flagged. The progress bar counts whichever bucket the filter is currently
+showing. The filter is session-only (not persisted to the file) and is deliberately bypassed in the
+Consolidation seat so a filter set by a numbered reviewer doesn't hide papers.
+
+`setAnnotationFinished(finished)` is the store action: routes to `paper.finished` or
+`paper.reviewsFinished[reviewer]` via the same seat-routing pattern as `currentTree`, deletes the
+key on untick (absent = undeclared, not `false`), marks dirty, and pushes no undo history entry of
+its own. `firstUnfinishedPaperId()` lands on the first paper the active seat hasn't finished, so
+reopening a review in progress returns to the work, not to paper #1.
+
 ### Validation
 
 `src/model/validate.ts` checks a reviewer's annotations against the schema; the **Validate** button in the toolbar runs `validateProject(project)` and `ValidationDialog` shows the result grouped by paper (click a paper to jump to it). Four issue kinds: `required` (a field marked required is empty), `type` (the stored value doesn't match the field's type — the JSON is hand-editable), `enum` (a value outside the field's `options`), and `cardinality` (an instance count outside `[min, max]`).
@@ -437,8 +481,18 @@ CSS percentages, per `PdfMark`'s resolution-independent coordinate storage — s
 `data-model.md` for the underlying model, scoping, and merge rules. Selection-to-page mapping reuses
 `pageRefs` (the same array the scroll-position tracking above already keys off) rather than any
 pdf.js-internal attribute: `pageNumberForNode` walks up from the selection's start/end containers to
-their closest `.react-pdf__Page` ancestor and looks it up there; a selection spanning two pages is
-treated as unhighlightable (rare in practice, and a highlight is inherently one page's overlay).
+their closest `.react-pdf__Page` ancestor and looks it up there. A selection spanning two pages is
+split by `splitRangeByPage()` into one sub-range per page — each fragment becomes a separate `PdfMark`
+sharing a `groupId`, so store actions (`setMarkComment`, `setMarkColor`, `linkMarkToField`,
+`removeMark`) propagate edits to all fragments. On pages that are *auto-extended* (not the page where
+the reviewer's click or release happened), the top/bottom 8% (`AUTO_EXTEND_MARGIN`) is treated as a
+running-header/footer zone and excluded from the selection, so a cross-page highlight doesn't drag in
+repeated page headers. Popovers are clamped to the viewport via `useClampedAnchor()`, which measures
+the `position: fixed` popover after first mount and constrains it to viewport bounds with an 8px margin.
+
+**Hover tooltips.** Hovering a mark shows a portaled tooltip (`createPortal` to `document.body`) with
+the mark's comment (or, lacking one, the captured selection text) and a list of linked fields with 🔗
+icons. The tooltip flips upward when there's <100px below (`markTooltipCoords`).
 
 **Annotation-tools row.** A 📝 header button toggles `.pdf-annotation-toolbar`, a row rendered
 between the header and the scroll container (same slot the search bar uses), holding a 📌 "Add
@@ -448,8 +502,9 @@ sticky note" toggle and ‹/› buttons to cycle through every mark. Placing a n
 way `updateSelectionToolbar` resolves a selection's rects, calls
 `addHighlight(page, [{x,y,...}], undefined, 'note')`, opens its comment popover immediately, and
 turns the placement mode back off — `.pdf-scroll` gets a `placing-note` class for a crosshair cursor
-meanwhile. Cycling walks `sortMarksForCycling(marks)` (page order, then top-to-bottom within a page)
-and, on Next/Prev, `scrollToMark` centers the target mark's exact position (not just its page) in the
+meanwhile. Cycling walks `sortMarksForCycling(marks)` — page, then column (left before right via
+`columnOf`), then top-to-bottom within a column — with `dedupeMarkGroups` first collapsing
+cross-page fragments sharing a `groupId` to one representative, and on Next/Prev, `scrollToMark` centers the target mark's exact position (not just its page) in the
 scroll container — using the page element's own `getBoundingClientRect()` plus the mark's fractional
 `y`, the same math the in-PDF search's active-match centering uses — and briefly pulses it
 (`flashMarkId` + a CSS `flash` class, cleared after 1.5s) rather than force-opening its popover — a
@@ -458,21 +513,28 @@ square with a `clip-path`-cut folded corner, shared with the toolbar's static `.
 of a percentage-sized highlight rect; everything else (the popover, per-reviewer scoping, storage) is
 identical to a highlight, see "PDF marks" in `data-model.md`.
 
-**Linking a mark to a field.** The 🔗 button next to every field (`Field.tsx`, sized to match the ⧉
-grab button beside it — the 🔗 emoji renders larger than ⧉/⇄'s plain glyphs at the same font-size, so
-only the glyph, in its own `.link-icon` span, is shrunk; the button's own box is untouched, keeping
-its height aligned with its neighbors) opens `FieldLinkPopover`, the only way to create a link. It
-shows two things: the already-linked marks (or "No links yet"), each row a snippet button (click to
-jump — `setPendingMarkJump` — plus an unlink ×); and a collapsed "+ Link a highlight or note" toggle
-that, expanded, reveals a scrollable picker (5 rows visible, more via scroll) over every *unlinked*
-mark, with a search box at the bottom filtering by comment text. Its width is seeded once, at open,
-from `.panel.annotations`'s own width (not kept in sync afterward, so it doesn't fight a manual
-resize) and is user-resizable via `resize: horizontal`. Clicking a snippet (in either section) never
-links/closes anything — it only requests `pendingMarkJump` on the store; `PdfViewer` clears it after
-scrolling to and flashing the mark, matching the cycling toolbar's own "jump and flash" action
-(`flashAndScrollTo`, shared by both). The mark's own popover shows the reverse view (which fields
-it's linked to) read-only, with unlink only — see "Linking a mark to a field" in `data-model.md` for
-the full data-model/orphaning discussion.
+**Linking a mark to a field.** The 🔗 button next to every field (`Field.tsx`) opens
+`FieldLinkPopover`, the only way to create a link. It shows **two lists**: the top section holds
+marks already linked *before the popover opened* (`initiallyLinkedIds`, computed once at open) — each
+row a snippet button (click to jump via `setPendingMarkJump` — plus an unlink ×); and a fold-out
+picker below, revealing every *unlinked* mark, ordered by `orderMarksForLinking()` (up to 3
+session-created marks pinned to the top, then everything else in page-column-y reading order). A
+search input filters by comment or text. **Newly linked marks during this session stay in the
+picker** (with their button flipped to ×) rather than jumping into the top list — the top list is
+frozen at open, and the picker order is frozen too, so linking/unlinking only changes button state,
+never reshuffles. The popover is centered on the annotation panel at 95% width, and flips above the
+trigger when there's <180px below. Clicking a snippet never links/closes anything — it only requests
+`pendingMarkJump`; `PdfViewer` scrolls only if the mark isn't already visible (`onlyIfHidden: true`)
+and flashes it for 1.5s. The mark's own popover shows the reverse view (which fields it's linked to)
+read-only, with unlink only — see "Linking a mark to a field" in `data-model.md` for the full
+data-model/orphaning discussion.
+
+**Auto-link.** When a reviewer creates a mark, `addHighlight` records the new mark id in
+`lastCreatedMarkId`. If the reviewer then opens a field's link popover, the mark is auto-linked on
+mount if either no field was touched after mark creation (case: highlight then link) or the field
+touched was this one (case: highlight, type value, then link). `noteFieldTouchForPendingMarkLink`
+tracks the first field touched after mark creation; touching a *second* different field clears the
+offer entirely. The auto-linked mark appears in the picker (not the top list) for this first session.
 
 **Export.** A 📤 header button (disabled with no marks) opens `ExportPdfDialog`, which resolves the
 current paper's PDF to an absolute path via the platform's `absolutePdfPaths`, then lets the reviewer
@@ -526,24 +588,37 @@ entry* and lines them up.
 | --- | --- |
 | `similarity.ts` | How alike two answers are, as `{score, weight}`. `weight` is what makes "agrees on five fields" outrank "agrees on one" — averaging scores alone cannot tell those apart, as both average to 1.0. Weight 0 means the pair said nothing (a field only one reviewer filled abstains rather than voting against). Text is `max(levenshtein ratio, token Dice)`; enums compare as labels, never as characters ("High"/"Low" overlap and mean the opposite); a `false` boolean carries no evidence in the matching context; a `year` field is scored as an identity, not a magnitude — 1999 vs. 2999 scores 0 exactly like 1999 vs. 2000, because two different publication years are two different papers, not a near-match the way two head-counts might be (`valueSimilarity`'s dedicated `'year'` branch, checked before the `number` branch's relative-closeness scoring) |
 | `assign.ts` | Hungarian max-weight assignment. Greedy is not merely worse but wrong here: one locally good pair can force two later entries into a much worse one, and greedy cannot trade the first against the second |
-| `align.ts` | The recursion. `alignNode` returns slots per repeatable node; `alignableNodes` lists what is worth doing |
-| `apply.ts` | Writes an alignment into the data |
+| `align.ts` | The recursion. `alignNode` returns slots per repeatable node; `alignableNodes` lists what is worth doing. A `MIN_MATCH_SCORE` floor (0.5) prevents pairing entries that are more different than alike; a `NEW_SLOT_WEIGHT` lets a genuinely-unmatched entry open its own slot rather than being forced into an existing one |
+| `apply.ts` | Converts the computed `TreeAlignment` into the persistable `StoredAlignment` (`toStoredAlignment`) and grows the consolidated tree to fit the slot count (`growConsolidated`) — never deletes entries the consolidator may have added, never touches reviewer trees |
+| `alignment.ts` (`src/model/`) | `StoredAlignment`/`StoredSlot` types, `parseAlignment` (defensive), `alignedReviews` (throwaway projected copy for fixed-index reads). See "Stored alignment" in [Data Model](data-model) |
+| `exportDisagreements.ts` | Renders a paper's or project's disagreements as plain text (ID, authors, title, each field path with every reviewer's value indented under it). Consumed by `useExportTextMenu`'s clipboard/file export |
 | `unanimous.ts` | Finds the fields every reviewer answered identically, for `adoptUnanimousValues` to fill. Owns `comparable()` — the one rule for "did they say the same answer", shared with `disagreements.ts` and the compare popup so the three cannot drift into different verdicts |
-| `disagreements.ts` | The per-field cross-reviewer verdict (`FieldVerdict`): who answered, which category their answer falls in, whether that is agreement. Boolean fields use a different `answeredBy` test (`!== undefined && !== null` instead of `!isUnanswered`) so a present `false` counts as a real answer. What both the overview and the statistics read |
+| `disagreements.ts` | The per-field cross-reviewer verdict (`FieldVerdict`): who answered, which category their answer falls in, whether that is agreement. Boolean fields use a different `answeredBy` test (`!== undefined && !== null` instead of `!isUnanswered`) so a present `false` counts as a real answer. A `oneSided` flag marks entries only some reviewers recorded — kept separate from `agree` because it carries no agreement information and would corrupt κ statistics if folded in. Untouched boolean skeletons (`false` values from `normalizeReviews` on a paper a reviewer never opened) are excluded via `touchedBy`/`hasAnnotations` at paper granularity. Uses `alignedReviews` to project through the stored mapping so fixed-index reads mean "the same entry". What both the overview and the statistics read |
 | `metrics.ts` | Cohen's κ, Fleiss' κ, Krippendorff's α over abstract units × raters, each with an applicability check that explains refusal in a sentence. Knows nothing about papers or schemas, so it can be checked against published worked examples — and has been, including α with missing data |
 | `agreement.ts` | Turns `projectVerdicts` into a `MetricInput`. Booleans are first-class answers (see below). Also produces `perField: FieldAgreement[]` — units bucketed by canonical field path, each with its own `MetricInput` for the per-field breakdown table |
-| `ConsolidationVerdicts` (`src/components/ConsolidationVerdicts.ts`) | `consolidationFieldStatus(answeredCount, reviewerCount, agree)` → `'agree'` / `'disagree'` / `undefined`. Computed once by `AnnotationPanel` via `useMemo`, shared to all `Field` components via `ConsolidationVerdictsContext` (a `ReadonlyMap` keyed by canonical field path); consumed by `Field.tsx` via `useConsolidationFieldStatus(canonical)` |
+| `ConsolidationVerdicts` (`src/components/ConsolidationVerdicts.ts`) | `consolidationFieldStatus(answeredCount, reviewerCount, agree, oneSided, participantCount)` → `'agree'` / `'disagree'` / `undefined`. Three-tier: `oneSided` (entry only some reviewers recorded) → `disagree`; full agreement → `agree`; ≥2 answered and disagree → `disagree`; one answered and others blank → `disagree` (silence against a recorded value is a difference the consolidator must settle). `participantCount` is deliberately not `project.reviewers` — a reviewer who hasn't started the paper is not withholding an answer. Computed once by `AnnotationPanel` via `useMemo`, shared to all `Field` components via `ConsolidationVerdictsContext` (a `ReadonlyMap` keyed by canonical field path); consumed by `Field.tsx` via `useConsolidationFieldStatus(canonical)` |
 
 **Matching cannot cross**, which is a requirement of the feature: a group's sub-entries are only
 ever matched *inside* an already-matched pair of parents, because the recursion never offers a
 candidate from another group. It is structural, not a rule applied afterwards.
 
-**The mapping is stored as the ordering itself** — there is no mapping field in the file. Every
-reviewer's entries are reordered so position N means the same entry for everyone, and the
+**The mapping is stored as an explicit `StoredAlignment`** (`src/model/alignment.ts`) — a persisted
+record of which reviewer entries are "the same entry", with `members: Record<reviewerId, index>`
+pointing into each reviewer's *own unmodified array*. Reviewer trees are never reordered; instead,
+`alignedReviews(defs, alignment, reviews)` produces a throwaway projected copy where index N means
+the same entry for everyone, with empty instances filling slots a reviewer didn't record. The
 consolidated tree is grown to one entry per slot (the feature's "add the maximum number
-automatically" rule). This is why `pruneTree` keeps *interior* gaps and drops only trailing
-empties: a reviewer with no entry for slot 2 holds an empty one there, and closing that gap would
-slide every later entry down a slot and silently re-point the alignment on the next load.
+automatically" rule, in `apply.ts`'s `growConsolidated`). This is why `pruneTree` keeps *interior*
+gaps and drops only trailing empties: a reviewer with no entry for slot 2 holds an empty one there,
+and closing that gap would slide every later entry down a slot and silently re-point the stored
+alignment on the next load.
+
+Previously the mapping was encoded *as the physical ordering* of every reviewer's entries — each
+reviewer's array was permuted so position N was the same entry for all. This was replaced because it
+polluted reviewers' own data: a reviewer who recorded one finding that others listed third would see
+two blank entries above theirs, dragging down their completeness score and triggering false
+validation errors. Consolidation's bookkeeping is now its own persisted record and never touches
+reviewer trees.
 
 **A slot is scored per member, not summed over them.** As reviewers are matched onto slots in turn,
 each candidate is compared against *everyone already in* the slot — and `combine` averages the score
@@ -556,9 +631,9 @@ This needs **three or more reviewers** *and* one of them recording fewer entries
 two reviewers every slot holds exactly one member and the bias cancels exactly, which is why it went
 unnoticed. The symptom was the one thing the feature exists to prevent — an exact match pulled into a
 crowded slot while the anchor's identical entry sat alone reporting agreement 0, showing two
-reviewers as disagreeing about an answer they had both given the same way. Note that a project
-consolidated under the old scoring may re-permute its reviewer entries (and go dirty) the first time
-it is opened after the fix; the new alignment is the correct one, but the change is not announced.
+reviewers as disagreeing about an answer they had both given the same way. A project consolidated
+under the old scoring may re-align its reviewer entries (and go dirty) the first time it is opened
+after the fix; the new alignment is the correct one, but the change is not announced.
 
 **It runs a node at a time, off the paint path.** Matching is not cheap — a large paper measures in
 the hundreds of milliseconds — so the hook yields to the browser between nodes rather than freezing
@@ -714,7 +789,10 @@ one modal restores the one that opened it.
 **ConsolidationOverview** (`src/components/ConsolidationOverview.tsx`) lists all papers that have ≥1
 disagreement (count per paper), filterable by text search. It houses the **"Adopt all unanimous"**
 batch action with its run-progress display and post-run summary notice. Its **"Agreement"** button
-opens `AgreementDialog`; clicking a paper row opens the per-paper `DisagreementOverview`.
+opens `AgreementDialog`; clicking a paper row opens the per-paper `DisagreementOverview`. Both the
+overview and the per-paper view carry an **Export** dropdown (`useExportTextMenu`) with "Copy to
+clipboard" and "Save to file…" options, rendering the current disagreements as plain text via
+`src/consolidate/exportDisagreements.ts`.
 
 **⚖ Agreement** (`AgreementDialog`) computes the coefficients the reviewer ticks. A **unit** is one
 annotation field on one paper; `agreement.ts` includes only the fields **at least two reviewers
@@ -750,7 +828,11 @@ its per-field consolidation status at a glance. `AnnotationPanel` computes a
 it through `ConsolidationVerdictsContext`. `Field.tsx` reads
 `useConsolidationFieldStatus(canonical)` and adds a `consolidation-agree` (green) or
 `consolidation-disagree` (red) CSS class — green when all reviewers answered and agree, red when ≥2
-answered and disagree.
+answered and disagree, or when a field sits in an entry only some reviewers recorded (`oneSided`), or
+when one reviewer answered and others left it blank (silence against a value is a difference to
+settle). `participantCount` (reviewers who have worked this paper) rather than `project.reviewers`
+is the denominator, so a reviewer who hasn't started the paper doesn't count as withholding an
+answer.
 
 ### What the agreement numbers do and do not cover
 
@@ -771,15 +853,13 @@ instead of `!isUnanswered(def, values[r])` — so a present `false` counts as a
 real answer, and a true/false split between two reviewers registers as a
 disagreement.
 
-**Repeatable-group entries are compared in stored order, not aligned order.**
-This is the known limitation described under `disagreements.ts`, and the metrics
-inherit it: two reviewers who recorded the same findings in a different order
-score as disagreeing. Since this dialog computes over the whole project while
-alignment runs only on papers someone has opened in Consolidation, a coefficient
-from an un-consolidated project can be arbitrarily pessimistic — κ = −0.333
-measured on a two-paper case whose true value is 1.0. Align the papers first.
-`needsAlignment()`/`needsAlignmentCount()` (`readiness.ts`) detect papers where
-≥2 reviewers recorded entries in a repeatable group that Consolidation hasn't
+**Repeatable-group entries are compared through the stored alignment, not raw stored order.**
+`disagreements.ts` now uses `alignedReviews` to project reviewer trees through the `StoredAlignment`
+mapping before reading at a fixed index, so two reviewers who recorded the same findings in a
+different order are compared correctly once Consolidation has aligned the paper. The alignment itself
+runs only on papers someone has opened in Consolidation, so a coefficient from an un-consolidated
+project can still be pessimistic — `needsAlignment()`/`needsAlignmentCount()` (`readiness.ts`)
+detect papers where ≥2 reviewers recorded entries in a repeatable group that Consolidation hasn't
 reviewed yet; `AgreementDialog` shows a warning banner with a "Line them up now"
 button that triggers `adoptAllUnanimousAnnotations()` to align + adopt.
 
@@ -890,7 +970,11 @@ extra ⇄ button next to the existing ⧉ grab-from-PDF button (and, for a boole
 checkbox) that opens `ConsolidationDialog` for that exact field path. The dialog lists every
 reviewer's raw value for the path (via the same `peekValue`/`fieldPath` machinery `store.ts`
 already uses, and `resolvePath` from `src/llm/paths.ts` to resolve the `ResolvedDef` for display),
-including reviewers who left it empty, and flags whether the answered reviewers agree. Picking a
+including reviewers who left it empty, and flags whether the answered reviewers agree.
+`agreementVerdict` uses `comparable()` (from `unanimous.ts`) so answers differing only in
+case/whitespace read as agreement — consistent with the status dot and the κ statistics. The
+"these answers mean the same thing" checkbox (`canDeclareEqual`) only appears when ≥2 answers
+differ even after normalization. Picking a
 reviewer's value calls `resolveConsolidationValue` — which writes the value, marks the field equal,
 and clears any deferral in one undo step. Taking a reviewer's **blank** answer calls
 `deferConsolidationValue` instead of writing an empty value — the field stays marked as "pending a
