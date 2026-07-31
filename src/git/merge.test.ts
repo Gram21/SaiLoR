@@ -890,6 +890,17 @@ describe('mergeProjects — schema info comment', () => {
     expect(conflictAt(outcome.conflicts, 'schemaInfo')).toBeUndefined()
     expect(outcome.merged.schemaInfo).toBe('Y')
   })
+
+  it('applyResolutions actually writes the chosen value into schemaInfo', () => {
+    const base = project({ schemaInfo: 'X' })
+    const ours = project({ schemaInfo: 'Y' })
+    const theirs = project({ schemaInfo: 'Z' })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    const c = conflictAt(outcome.conflicts, 'schemaInfo')!
+    expect(applyResolutions(outcome.merged, outcome.conflicts, { [c.id]: c.theirs }).schemaInfo).toBe('Z')
+    expect(applyResolutions(outcome.merged, outcome.conflicts, { [c.id]: '' }).schemaInfo).toBeNull()
+  })
 })
 
 describe('applyResolutions', () => {
