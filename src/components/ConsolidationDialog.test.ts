@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { resolveSchema, type AnnotationDef, type ResolvedDef } from '../model/schema'
-import { closingWouldStrand } from './ConsolidationDialog'
+import { closingWouldStrand, agreementVerdict } from './ConsolidationDialog'
 
 /**
  * The compare popup's one piece of real logic: whether leaving now would strand
@@ -56,5 +56,26 @@ describe('closingWouldStrand', () => {
     // `0` is falsy; a naive truthiness check here would demand the reviewer
     // pick a value they had already picked.
     expect(closingWouldStrand(num, true, 0)).toBe(false)
+  })
+})
+
+describe('agreementVerdict', () => {
+  it('agrees when answers differ only by case and whitespace', () => {
+    // The bug: raw JSON.stringify equality flagged this as disagreement even
+    // though the dot, the disagreement list, and the coefficients all treat
+    // it as agreement, and unanimous adoption already auto-filled it.
+    expect(agreementVerdict(['RCT', 'rct '], false)).toBe('agree')
+  })
+
+  it('disagrees on genuinely different answers', () => {
+    expect(agreementVerdict(['RCT', 'Cohort'], false)).toBe('disagree')
+  })
+
+  it('agrees when the consolidator marked them equivalent, even if they differ', () => {
+    expect(agreementVerdict(['RCT', 'Cohort'], true)).toBe('agree')
+  })
+
+  it('is null when nobody answered', () => {
+    expect(agreementVerdict([], false)).toBe(null)
   })
 })
