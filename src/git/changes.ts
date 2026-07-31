@@ -89,7 +89,7 @@ function abstractFromPdfLabel(value: FieldValue): FieldValue {
  *  statement about a whole paper rather than a value a reviewer picks among
  *  two candidates, so none of them are split out as their own rows — they
  *  simply carry over with whichever disposition the paper they belong to ends
- *  up with as a whole). */
+ *  up with as a whole, via the bookkeeping loop in `composeContents`). */
 const PAPER_META_FIELDS: {
   canonical: string
   label: string
@@ -225,7 +225,7 @@ function diffPaperMeta(head: Paper, working: Paper, out: FieldChange[]): void {
  * What changed locally, field by field — the data source for the commit
  * panel's review UI. Returns `null` when `head` and `working` disagree on
  * anything that reshapes the file (`config.schema`, `config.reviewers`,
- * `config.ai`, `config.screening`, `version`,
+ * `config.ai`, `config.screening`, `version`, `title`, `schemaInfo`,
  * `provenance`, `protocol`, or a root `extra` key): once the schema itself is
  * different, "which fields changed" is not a question with a field-level
  * answer any more than it is for `merge.ts`'s three-way merge, which refuses
@@ -246,7 +246,9 @@ export function detectFieldChanges(head: Project, working: Project): DetectedCha
     head.version !== working.version ||
     !deepEqualJson(head.extra, working.extra) ||
     !deepEqualJson(head.provenance, working.provenance) ||
-    !deepEqualJson(head.protocol, working.protocol)
+    !deepEqualJson(head.protocol, working.protocol) ||
+    (head.title ?? '') !== (working.title ?? '') ||
+    head.schemaInfo !== working.schemaInfo
   if (structural) return null
 
   const fields: FieldChange[] = []
@@ -279,7 +281,8 @@ export function detectFieldChanges(head: Project, working: Project): DetectedCha
   // Field-level diffing only makes sense for a paper present on both sides —
   // one only one side has is already fully covered by the paper-level rows
   // above, and paper-level `extra` is intentionally not field-diffed (the
-  // same scope line PAPER_META_FIELDS draws: it rides along with the paper).
+  // same scope line PAPER_META_FIELDS draws: it rides along with the paper,
+  // via the bookkeeping loop in `composeContents`).
   for (const p of working.papers) {
     const h = headById.get(p.id)
     if (!h) continue
@@ -485,6 +488,25 @@ export function composeContents(
       changes.papers.filter((pc) => pc.kind === 'removed' && disposition(pc.id) === 'use').map((pc) => pc.paperId),
     )
     if (removeIds.size > 0) draft.papers = draft.papers.filter((p) => !removeIds.has(p.id))
+
+    // Paper-level bookkeeping (finished flags, PDF marks, equality marks, AI
+    // usage, extra) has no field-review row of its own — see PAPER_META_FIELDS'
+    // doc comment — so it never goes through `applyField`. It rides along with
+    // whichever disposition the paper as a whole ends up with: for a paper
+    // present on both sides that's always working's own bookkeeping, since
+    // `committed` otherwise stays HEAD's copy of these fields.
+    const workingById = new Map(working.papers.map((p) => [p.id, p]))
+    for (const draftPaper of draft.papers) {
+      const w = workingById.get(draftPaper.id)
+      if (!w) continue
+      draftPaper.finished = w.finished
+      draftPaper.reviewsFinished = w.reviewsFinished
+      draftPaper.marks = w.marks
+      draftPaper.reviewMarks = w.reviewMarks
+      draftPaper.equal = w.equal
+      draftPaper.aiUsage = w.aiUsage
+      draftPaper.extra = w.extra
+    }
 
     // Before writing any "use" value, grow each committed tree that will
     // receive one to the working tree's shape, so a reviewer-added repeatable
