@@ -1424,7 +1424,11 @@ export const useStore = create<AppState>()(
         s.disagreementsOpen = open
       }),
 
-    openDisagreementsFromOverview: (paperId) =>
+    openDisagreementsFromOverview: (paperId) => {
+      // Jumping to another paper: reset the coalescing key, or the next edit to
+      // the same field would fold into the undo entry of the paper we left —
+      // one Undo would then wipe both papers' answers.
+      lastFieldKey = null
       set((s) => {
         if (!s.project?.papers.some((paper) => paper.id === paperId)) return
         s.currentPaperId = paperId
@@ -1432,7 +1436,8 @@ export const useStore = create<AppState>()(
         s.consolidationOverviewOpen = false
         s.disagreementsOpen = true
         s.disagreementsReturnToOverview = true
-      }),
+      })
+    },
 
     closeDisagreements: () =>
       set((s) => {
