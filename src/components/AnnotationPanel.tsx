@@ -60,6 +60,7 @@ export function AnnotationPanel() {
         project.reviewers,
         verdict.agree,
         verdict.oneSided,
+        verdict.participantCount,
       )
       if (status) verdicts.set(verdict.canonical, status)
     }

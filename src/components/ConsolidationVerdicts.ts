@@ -23,12 +23,22 @@ export function consolidationFieldStatus(
   reviewerCount: number,
   agree: boolean,
   oneSided = false,
+  participantCount = reviewerCount,
 ): ConsolidationFieldStatus | undefined {
+  // Checked before agreement, not after: nothing inside an entry only some
+  // reviewers recorded can be agreement, whatever the values look like. A
+  // Yes/No left unticked in a finding the other reviewer never wrote down
+  // reads as a shared `false` — two reviewers "agreeing" about a finding only
+  // one of them has. An empty row is still just an empty row, though.
+  if (oneSided) return answeredCount >= 1 ? 'disagree' : undefined
+
   if (answeredCount === reviewerCount && agree) return 'agree'
   if (answeredCount >= 2 && !agree) return 'disagree'
-  // Someone recorded this; at least one other participant had no such entry.
-  // Nobody having filled it in is not a disagreement, just an empty row.
-  if (oneSided && answeredCount >= 1) return 'disagree'
+  // Some participants answered and others left it blank. Silence against a
+  // recorded value is a difference the consolidator still has to settle —
+  // take the value, or accept the blank — even though it is not two answers
+  // in conflict and so never reaches the rule above.
+  if (answeredCount >= 1 && answeredCount < participantCount) return 'disagree'
   return undefined
 }
 
