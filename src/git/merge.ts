@@ -19,6 +19,7 @@ import type { ScreeningConfig } from '../model/schema'
 import { formatPath, displayPath, resolvePath, type RawSeg } from '../llm/paths'
 import { parseYear } from '../model/year'
 import { mergeMarksList, type PdfMark } from '../model/pdfMarks'
+import type { StoredAlignment } from '../model/alignment'
 
 /**
  * The field-level three-way merge at the heart of git support. This module
@@ -500,6 +501,7 @@ function mergePaper(
     reviews,
     aiUsage: mergeAiUsage(ours.aiUsage, theirs.aiUsage),
     equal: mergeEqual(base?.equal, ours.equal, theirs.equal),
+    alignment: mergeAlignment(base?.alignment, ours.alignment, theirs.alignment),
     marks: mergeMarksList(ours.marks, theirs.marks),
     reviewMarks: mergeReviewMarks(ours.reviewMarks, theirs.reviewMarks),
     // A plain 3-way merge per seat, falling back to `true` when the two sides
@@ -515,6 +517,42 @@ function mergePaper(
     reviewsFinished: mergeReviewsFinished(base?.reviewsFinished, ours.reviewsFinished, theirs.reviewsFinished),
     extra,
   }
+}
+
+/**
+ * Merge the recorded entry matching, one node at a time.
+ *
+ * Per node rather than whole-record: two consolidators working on different
+ * nodes of the same paper have not disagreed about anything, and merging the
+ * whole map as one value would make them look like they had.
+ *
+ * A node genuinely matched differently on both sides keeps *ours*, silently
+ * and without a `FieldConflict`. That is the one place in this file where
+ * dropping a side is right rather than lossy: unlike an answer, this is not
+ * something a reviewer said — it is a derived claim about their entries, and
+ * the losing side is recoverable by reopening Consolidation on that paper.
+ * Raising a conflict would ask a human to arbitrate between two machine
+ * guesses, in a UI built for reconciling annotation *values*, over a record
+ * that has no canonical path to address it by.
+ *
+ * The mismatch it can leave behind — a mapping that no longer describes what
+ * that reviewer's array holds, because the merged array came from the other
+ * side — is already the same staleness `alignedReviews` is built to survive:
+ * unmapped entries are appended rather than dropped, so no answer disappears
+ * from the lined-up view.
+ */
+function mergeAlignment(
+  base: StoredAlignment | undefined,
+  ours: StoredAlignment,
+  theirs: StoredAlignment,
+): StoredAlignment {
+  const out: StoredAlignment = {}
+  for (const name of new Set([...Object.keys(ours), ...Object.keys(theirs)])) {
+    const merged = merge3(base?.[name], ours[name], theirs[name], deepEqualJson)
+    const value = merged ? merged.value : ours[name]
+    if (value !== undefined) out[name] = value
+  }
+  return out
 }
 
 /** `mergeEqual`'s set-union shape, per reviewer key: the flags are really a
@@ -573,6 +611,7 @@ function canonicalPaper(schema: ResolvedDef[], p: Paper) {
     aiUsage: p.aiUsage,
     // A set; JSON just has no way to say so.
     equal: [...p.equal].sort(),
+    alignment: p.alignment,
     // Sorted by id: this is an equality check (is `p` different from some
     // other snapshot), not the merge itself, and mark array order carries no
     // meaning worth tripping a false "changed" over.

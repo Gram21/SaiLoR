@@ -181,6 +181,7 @@ describe('assembleLegacyProjectJson + splitProjectFiles round-trip', () => {
             reviews: { '1': { Relevant: [{ value: true }] }, '2': {} },
             aiUsage: [{ provider: 'openai', model: 'gpt-5', appliedAt: '2026-01-01T00:00:00.000Z' }],
             equal: ['Relevant'],
+            alignment: { Relevant: [{ members: { '1': 0, '2': 0 } }] },
           },
         ],
       }),
@@ -209,6 +210,11 @@ describe('assembleLegacyProjectJson + splitProjectFiles round-trip', () => {
     expect(roundTripped.papers[0].reviews['1']).toEqual(project.papers[0].reviews['1'])
     expect(roundTripped.papers[0].aiUsage).toEqual(project.papers[0].aiUsage)
     expect(roundTripped.papers[0].equal).toEqual(project.papers[0].equal)
+    // Consolidation's recorded entry matching rides in the consolidated file,
+    // and has to survive the split/reassemble like everything else there — a
+    // lost mapping would re-point every cross-reviewer comparison on the paper.
+    expect(roundTripped.papers[0].alignment).toEqual(project.papers[0].alignment)
+    expect(roundTripped.papers[0].alignment).toEqual({ Relevant: [{ members: { '1': 0, '2': 0 } }] })
   })
 
   it('gives an empty tree for a paper with no files on disk yet', () => {

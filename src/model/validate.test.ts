@@ -30,6 +30,7 @@ function paper(annotations: AnnotationValueTree, over: Partial<Paper> = {}): Pap
     reviews: {},
     aiUsage: [],
     equal: [],
+    alignment: {},
     marks: [],
     reviewMarks: {},
     finished: false,

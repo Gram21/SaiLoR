@@ -504,6 +504,7 @@ export function composeContents(
       draftPaper.marks = w.marks
       draftPaper.reviewMarks = w.reviewMarks
       draftPaper.equal = w.equal
+      draftPaper.alignment = w.alignment
       draftPaper.aiUsage = w.aiUsage
       draftPaper.extra = w.extra
     }

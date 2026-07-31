@@ -15,6 +15,7 @@ import {
 import { screeningSchemaDefs } from '../screening/schema'
 import { parseYear } from './year'
 import { parseMarks, parseReviewMarks, type PdfMark } from './pdfMarks'
+import { parseAlignment, type StoredAlignment } from './alignment'
 
 /**
  * One AI-assisted-annotation pass applied to a paper: which provider and model
@@ -109,6 +110,14 @@ export interface Paper {
    * doesn't"; see `disagreements.ts`, which has to live with that limit.
    */
   equal: string[]
+  /**
+   * Which of each reviewer's repeated entries are the same entry, as worked
+   * out by Consolidation's matcher. Empty until somebody opens the
+   * Consolidation seat on this paper — and in a single-reviewer project,
+   * forever, since there is nothing to match. See `model/alignment.ts` for
+   * why this is recorded rather than baked into the reviewers' own ordering.
+   */
+  alignment: StoredAlignment
   /**
    * PDF highlights/comments — the single/consolidated reviewer's own marks in
    * a single-reviewer project, or the Consolidation seat's own reading marks
@@ -304,6 +313,7 @@ const KNOWN_PAPER_KEYS = new Set([
   'reviews',
   'aiUsage',
   'equal',
+  'alignment',
   'marks',
   'reviewMarks',
   'finished',
@@ -739,6 +749,7 @@ export function loadProject(input: string | unknown): Project {
     reviews: normalizeReviews((p as { reviews?: unknown }).reviews, schema, raw.config.reviewers ?? 1),
     aiUsage: parseAiUsage(p.aiUsage),
     equal: parseEqual(p.equal),
+    alignment: parseAlignment((p as { alignment?: unknown }).alignment),
     marks: parseMarks((p as { marks?: unknown }).marks),
     reviewMarks: parseReviewMarks((p as { reviewMarks?: unknown }).reviewMarks),
     // Only a literal `true` declares anything — see `parseReviewsFinished`.
@@ -831,6 +842,9 @@ export function serializeProject(project: Project): string {
       if (p.aiUsage.length > 0) paper.aiUsage = p.aiUsage
       // Only written when non-empty, so a paper with no equality marks stays clean.
       if (p.equal.length > 0) paper.equal = p.equal
+      // Same rule again: a paper Consolidation has never matched stays exactly
+      // as clean as before this field existed.
+      if (Object.keys(p.alignment).length > 0) paper.alignment = p.alignment
       // Only written when non-empty, so a paper nobody has highlighted stays clean.
       if (p.marks.length > 0) paper.marks = p.marks
       const reviewMarkKeys = Object.keys(p.reviewMarks).filter((k) => p.reviewMarks[k].length > 0)
@@ -955,6 +969,11 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     if (hasConsolidatedAnnotations) consolidated.annotations = serializedTree(project.schema, p.annotations)
     if (p.aiUsage.length > 0) consolidated.aiUsage = p.aiUsage
     if (p.equal.length > 0) consolidated.equal = p.equal
+    // Consolidation's own bookkeeping about the reviewers' entries, so it
+    // belongs in the consolidated file rather than in anyone's reviewer file —
+    // and, being one record about all of them, it could not live in a
+    // per-reviewer file without being split into pieces that mean nothing alone.
+    if (Object.keys(p.alignment).length > 0) consolidated.alignment = p.alignment
     if (p.finished) consolidated.finished = true
     files.push({
       relPath: `${p.id}/${consolidatedName}.json`,
@@ -1038,6 +1057,7 @@ export function assembleLegacyProjectJson(
         annotations?: unknown
         aiUsage?: unknown
         equal?: unknown
+        alignment?: unknown
         finished?: unknown
       }
       const reviews: Record<string, unknown> = {}
@@ -1060,6 +1080,7 @@ export function assembleLegacyProjectJson(
         ...(Object.keys(reviews).length > 0 ? { reviews } : {}),
         ...(consolidated.aiUsage !== undefined ? { aiUsage: consolidated.aiUsage } : {}),
         ...(consolidated.equal !== undefined ? { equal: consolidated.equal } : {}),
+        ...(consolidated.alignment !== undefined ? { alignment: consolidated.alignment } : {}),
         ...(marksConsolidated.marks !== undefined ? { marks: marksConsolidated.marks } : {}),
         ...(Object.keys(reviewMarks).length > 0 ? { reviewMarks } : {}),
         ...(consolidated.finished !== undefined ? { finished: consolidated.finished } : {}),

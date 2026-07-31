@@ -173,9 +173,13 @@ describe('adoptAllUnanimousAnnotations', () => {
     await st().adoptAllUnanimousAnnotations()
 
     for (const paperId of ['p1', 'p2']) {
+      // Each reviewer keeps the order they typed — the matching is recorded,
+      // not applied to their data — while the consolidated tree below comes
+      // out lined up, which is the point of the batch.
       expect(claimsOf(paperId, '1')).toEqual(['Alpha', 'Beta', 'Gamma'])
-      expect(claimsOf(paperId, '2')).toEqual(['Alpha', 'Beta', 'Gamma'])
+      expect(claimsOf(paperId, '2')).toEqual(['Gamma', 'Alpha', 'Beta'])
       const paper = st().project!.papers.find((p) => p.id === paperId)!
+      expect(paper.alignment['Findings']).toHaveLength(3)
       expect(paper.annotations['Findings']).toHaveLength(3)
       const claims = paper.annotations['Findings'].map((f) => f.children?.['Claim']?.[0]?.value)
       expect(claims).toEqual(['Alpha', 'Beta', 'Gamma'])

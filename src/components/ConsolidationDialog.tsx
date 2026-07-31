@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useStore, selectCurrentPaper, fieldPath, peekValue } from '../state/store'
 import { resolvePath, displayPath } from '../llm/paths'
 import { emptyValue, type FieldValue } from '../model/annotations'
+import { alignedReviews } from '../model/alignment'
 import { isEmptyValue } from '../model/validate'
 import { comparable } from '../consolidate/unanimous'
 import { SCREENING_DECISION } from '../screening/schema'
@@ -112,9 +113,18 @@ export function ConsolidationDialog() {
   const label = displayPath([...target.path, { name: target.name, index: target.index }])
 
   const reviewerIds = Array.from({ length: project.reviewers }, (_, i) => String(i + 1))
+  // `target.index` is a consolidated-tree index, i.e. a slot. Reading each
+  // reviewer's own array at that number would only line up if their entries had
+  // been permuted into slot order, which consolidation no longer does — so the
+  // rows come from the lined-up view instead (see `model/alignment.ts`).
+  const lined = alignedReviews(
+    project.schema,
+    paper.alignment,
+    Object.fromEntries(reviewerIds.map((r) => [r, paper.reviews[r]])),
+  )
   const rows = reviewerIds.map((reviewer) => ({
     reviewer,
-    value: peekValue(paper.reviews[reviewer] ?? {}, target.path, target.name, target.index),
+    value: peekValue(lined[reviewer] ?? {}, target.path, target.name, target.index),
   }))
 
   const answered = rows

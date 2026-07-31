@@ -36,12 +36,20 @@ or analysis would actually read.
   across by hand is exactly the task during which a real disagreement further down gets missed. Only
   case and stray whitespace are forgiven automatically; a genuine difference in wording, or a field
   one reviewer left blank, is still your call.
-- **Repeatable groups are lined up for you.** Opening a paper in Consolidation adds as many entries as
-  the busiest reviewer recorded, and works out which of each reviewer's entries are the *same* entry —
-  two people rarely list the same three findings in the same order. Your *Finding #2* becomes
-  everyone's *Finding #2*, so the compare button lines up answers about the same thing instead of
-  reporting a disagreement that was really just a difference of ordering. A group you've already
-  answered is left alone, not reordered underneath you.
+- **Repeatable groups are lined up for you.** Opening a paper in Consolidation works out which of each
+  reviewer's entries are the *same* entry — two people rarely list the same three findings in the same
+  order — so the compare button lines up answers about the same thing instead of reporting a
+  disagreement that was really just a difference of ordering. A group you've already answered is left
+  alone, not re-matched underneath you.
+- **Every entry gets a slot, even one only one reviewer recorded.** Consolidation lists the *union*, not
+  just the busiest reviewer's count: if you recorded three findings and your co-reviewer recorded two,
+  one of which you never wrote down, you get four groups — the shared one, filled in as agreement, and
+  three that only one of you has, for you to confirm or delete. Two entries are only ever paired when
+  they are genuinely more alike than not; entries with nothing in common each keep their own group
+  rather than being forced together and reported as a disagreement they were never about.
+- **Your own answers are never rearranged.** Lining the entries up is bookkeeping Consolidation keeps to
+  itself: in your own reviewer seat your groups stay exactly as you typed them, in your order, with no
+  blank entries inserted to match somebody else's count.
 
 Clicking a compare button shows every reviewer's value, and whether they agree:
 
