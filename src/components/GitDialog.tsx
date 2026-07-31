@@ -71,7 +71,10 @@ export function GitDialog() {
   const save = useStore((s) => s.save)
 
   useEffect(() => {
-    if (!panel || panel.merge) return
+    // Any nested overlay (merge dialog, branch-switch prompt, new-branch
+    // prompt) owns Escape while it is open — this listener would otherwise
+    // also fire and closePanel() away the commit message and dispositions.
+    if (!panel || panel.merge || panel.branchSwitchPrompt || panel.newBranchPrompt) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closePanel()
     }
