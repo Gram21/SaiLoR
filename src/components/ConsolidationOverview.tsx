@@ -40,7 +40,10 @@ export function ConsolidationOverview() {
     if (!open || !project) return []
     const counts = new Map<string, number>()
     for (const verdict of projectVerdicts(project)) {
-      if (verdict.answeredBy.length >= 2 && !verdict.agree) {
+      if (
+        (verdict.answeredBy.length >= 2 && !verdict.agree) ||
+        (verdict.oneSided && verdict.answeredBy.length >= 1)
+      ) {
         counts.set(verdict.paperId, (counts.get(verdict.paperId) ?? 0) + 1)
       }
     }

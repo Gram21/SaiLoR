@@ -44,7 +44,14 @@ export function DisagreementOverview() {
   const verdicts: FieldVerdict[] = useMemo(() => {
     if (!open || !project) return []
     return projectVerdicts(project).filter(
-      (verdict) => verdict.paperId === currentPaperId && verdict.answeredBy.length >= 2 && !verdict.agree,
+      (verdict) =>
+        verdict.paperId === currentPaperId &&
+        ((verdict.answeredBy.length >= 2 && !verdict.agree) ||
+          // An entry only one reviewer recorded is a disagreement about
+          // whether it belongs at all — see `FieldVerdict.oneSided`. It is not
+          // expressible as two conflicting answers, so it fails the gate above
+          // and has to be admitted on its own terms.
+          (verdict.oneSided && verdict.answeredBy.length >= 1)),
     )
   }, [open, project, currentPaperId])
 

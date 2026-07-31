@@ -55,7 +55,12 @@ export function AnnotationPanel() {
     const verdicts = new Map<string, ConsolidationFieldStatus>()
     if (!isConsolidation || !project || !paper) return verdicts
     for (const verdict of paperVerdicts(project.schema, paper, project.reviewers)) {
-      const status = consolidationFieldStatus(verdict.answeredBy.length, project.reviewers, verdict.agree)
+      const status = consolidationFieldStatus(
+        verdict.answeredBy.length,
+        project.reviewers,
+        verdict.agree,
+        verdict.oneSided,
+      )
       if (status) verdicts.set(verdict.canonical, status)
     }
     return verdicts
