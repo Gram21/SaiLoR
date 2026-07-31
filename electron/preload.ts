@@ -102,4 +102,26 @@ contextBridge.exposeInMainWorld('slr', {
   ) => ipcRenderer.invoke('git:commitPartial', root, relPath, committed, working, otherPaths, message),
   gitWriteWorking: (root: string, relPath: string, working: unknown) =>
     ipcRenderer.invoke('git:writeWorking', root, relPath, working),
+
+  // Self-update (Windows/Linux only — see electron/main.ts). Download/install
+  // are only ever triggered by these two explicit calls, never on their own.
+  checkForNativeUpdate: () => ipcRenderer.invoke('update:check'),
+  downloadNativeUpdate: () => ipcRenderer.invoke('update:download'),
+  installNativeUpdate: () => ipcRenderer.invoke('update:install'),
+  onNativeUpdateAvailable: (cb: (info: { version: string }) => void) => {
+    ipcRenderer.removeAllListeners('update:available')
+    ipcRenderer.on('update:available', (_e, info) => cb(info))
+  },
+  onNativeUpdateProgress: (cb: (p: { percent: number }) => void) => {
+    ipcRenderer.removeAllListeners('update:progress')
+    ipcRenderer.on('update:progress', (_e, p) => cb(p))
+  },
+  onNativeUpdateDownloaded: (cb: () => void) => {
+    ipcRenderer.removeAllListeners('update:downloaded')
+    ipcRenderer.on('update:downloaded', () => cb())
+  },
+  onNativeUpdateError: (cb: (message: string) => void) => {
+    ipcRenderer.removeAllListeners('update:error')
+    ipcRenderer.on('update:error', (_e, message) => cb(message))
+  },
 })

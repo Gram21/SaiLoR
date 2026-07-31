@@ -29,6 +29,7 @@ import { isLegacyProjectShape, assembleLegacyProjectJson } from '../src/model/pr
 import { parseMarks, type PdfMark } from '../src/model/pdfMarks'
 import { rectToPdfPoints, rectToQuadPoints } from '../src/model/pdfExport'
 import { PDFDocument, PDFHexString, PDFString, type PDFContext, type PDFDict } from 'pdf-lib'
+import { autoUpdater } from 'electron-updater'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -1099,6 +1100,59 @@ ipcMain.handle(
     return { ok: true, path: absPath }
   },
 )
+
+// ---- Self-update (Windows/Linux only) ----
+//
+// macOS is excluded: electron-updater's Squirrel.Mac path needs the
+// downloaded update to pass Gatekeeper, which needs a real Apple Developer ID
+// signature *and* notarization — this project only ad-hoc-signs on mac (see
+// afterPack.cjs), so a real auto-installed update would show up as "damaged."
+// Mac keeps the existing check-only banner (src/model/version.ts) untouched.
+//
+// Nothing here runs on its own: `autoDownload`/`autoInstallOnAppQuit` are both
+// off, so a download only starts when the renderer calls `update:download`
+// (the reviewer clicked "Download update"), and installing only happens on
+// `update:install` ("Restart to update").
+if (process.platform !== 'darwin') {
+  autoUpdater.autoDownload = false
+  autoUpdater.autoInstallOnAppQuit = false
+
+  autoUpdater.on('update-available', (info) => {
+    mainWindow?.webContents.send('update:available', { version: info.version })
+  })
+  autoUpdater.on('download-progress', (p) => {
+    mainWindow?.webContents.send('update:progress', { percent: p.percent })
+  })
+  autoUpdater.on('update-downloaded', () => {
+    mainWindow?.webContents.send('update:downloaded')
+  })
+  autoUpdater.on('error', (err) => {
+    mainWindow?.webContents.send('update:error', err instanceof Error ? err.message : String(err))
+  })
+}
+
+ipcMain.handle('update:check', async () => {
+  if (process.platform === 'darwin') return { supported: false }
+  try {
+    await autoUpdater.checkForUpdates()
+  } catch (err) {
+    // Failure is reported to the renderer via the 'error' listener above;
+    // the check itself failing silently here is fine — there's nothing more
+    // useful to return, and the manual download link stays available either way.
+    mainWindow?.webContents.send('update:error', err instanceof Error ? err.message : String(err))
+  }
+  return { supported: true }
+})
+
+ipcMain.handle('update:download', () => {
+  if (process.platform === 'darwin') return
+  void autoUpdater.downloadUpdate()
+})
+
+ipcMain.handle('update:install', () => {
+  if (process.platform === 'darwin') return
+  autoUpdater.quitAndInstall()
+})
 
 // PDF references are stored relative to the project JSON so the project stays
 // portable. Forward slashes keep the JSON identical across platforms.

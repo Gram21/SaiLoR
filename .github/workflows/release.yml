@@ -25,9 +25,14 @@ jobs:
           - os: macos-latest
             artifacts: release/*.dmg
           - os: windows-latest
-            artifacts: release/*.exe
+            artifacts: |
+              release/*.exe
+              release/*.exe.blockmap
+              release/latest.yml
           - os: ubuntu-latest
-            artifacts: release/*.AppImage
+            artifacts: |
+              release/*.AppImage
+              release/latest-linux.yml
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout

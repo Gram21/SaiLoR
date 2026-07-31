@@ -72,6 +72,11 @@ export function App() {
   const appVersion = useStore((s) => s.appVersion)
   const update = useStore((s) => s.update)
   const checkForUpdate = useStore((s) => s.checkForUpdate)
+  const updateProgress = useStore((s) => s.updateProgress)
+  const updateReady = useStore((s) => s.updateReady)
+  const updateError = useStore((s) => s.updateError)
+  const downloadUpdate = useStore((s) => s.downloadUpdate)
+  const installUpdate = useStore((s) => s.installUpdate)
 
   const saveHandle = useStore((s) => s.saveHandle)
   const gitProbe = useGitStore((s) => s.probe)
@@ -303,23 +308,46 @@ export function App() {
                     <strong>Version {update.latest} is available</strong> — you have {appVersion}.
                   </span>
                   <span className="update-links">
-                    {/* When we know the machine, link straight at its installer;
-                        otherwise the release page is the best we can offer. */}
-                    {update.download && (
-                      <a
-                        className="update-download"
-                        href={update.download.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={update.download.name}
-                      >
-                        Download for {update.download.label}
-                      </a>
+                    {isElectron() && getPlatform().getOsInfo()?.platform !== 'darwin' ? (
+                      // Windows/Linux: a real, explicitly user-triggered download +
+                      // install, never automatic — see electron/main.ts. macOS has
+                      // no reliable unsigned auto-update path, so it keeps the plain
+                      // download link below instead.
+                      updateReady ? (
+                        <button type="button" className="update-download" onClick={() => void installUpdate()}>
+                          Restart to update
+                        </button>
+                      ) : updateProgress != null ? (
+                        <span>Downloading update… {Math.round(updateProgress)}%</span>
+                      ) : (
+                        <button type="button" className="update-download" onClick={() => void downloadUpdate()}>
+                          Download update
+                        </button>
+                      )
+                    ) : (
+                      // When we know the machine, link straight at its installer;
+                      // otherwise the release page is the best we can offer.
+                      update.download && (
+                        <a
+                          className="update-download"
+                          href={update.download.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={update.download.name}
+                        >
+                          Download for {update.download.label}
+                        </a>
+                      )
                     )}
                     <a href={update.url} target="_blank" rel="noopener noreferrer">
                       Release notes
                     </a>
                   </span>
+                  {updateError && (
+                    <span className="update-error">
+                      Update download failed — use the link on the release page instead.
+                    </span>
+                  )}
                 </div>
               )}
               <span className="version-label">SaiLoR v{appVersion}</span>

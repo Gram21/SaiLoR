@@ -135,4 +135,17 @@ export class UnsupportedAdapter implements PlatformAdapter {
   async writeTextFile(): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
     return { ok: false, error: UNSUPPORTED }
   }
+
+  async checkForNativeUpdate(): Promise<{ supported: boolean }> {
+    return { supported: false }
+  }
+
+  async downloadNativeUpdate(): Promise<void> {}
+
+  async installNativeUpdate(): Promise<void> {}
+
+  onNativeUpdateAvailable(): void {}
+  onNativeUpdateProgress(): void {}
+  onNativeUpdateDownloaded(): void {}
+  onNativeUpdateError(): void {}
 }
