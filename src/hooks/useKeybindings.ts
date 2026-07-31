@@ -176,8 +176,15 @@ export function useKeybindings() {
         e.preventDefault()
         stepPaper(dir)
       }
-      if (e.altKey && e.key === 'ArrowDown') return nav(1)
-      if (e.altKey && e.key === 'ArrowUp') return nav(-1)
+      // PaperList's onListKeyDown already handles this exact combo when a
+      // paper row has DOM focus, moving selection and focus together by one
+      // row and calling preventDefault. Re-running nav() here double-advances
+      // the selection while the focus ring lags a row behind, so defer to it
+      // via e.defaultPrevented. Deliberate trade: this is the one case where
+      // Alt+Arrow does not work "even while typing in a field" — ComboBox/
+      // ModelPicker preventDefault on arrows while their input is focused.
+      if (e.altKey && e.key === 'ArrowDown' && !e.defaultPrevented) return nav(1)
+      if (e.altKey && e.key === 'ArrowUp' && !e.defaultPrevented) return nav(-1)
       if (!inField && e.key === ']') return nav(1)
       if (!inField && e.key === '[') return nav(-1)
     }
