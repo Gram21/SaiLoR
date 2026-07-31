@@ -6,6 +6,42 @@ import { createPortal } from 'react-dom'
  *  `ModelPicker`, which reuses the same `.combo-menu` class/flip logic. */
 export const COMBO_MENU_MAX_HEIGHT = 240
 
+/** The menu never grows wider than this, however long an option's label is —
+ *  a generous cap so a single absurd label can't produce an absurd menu;
+ *  `.combo-option`'s own ellipsis (index.css) takes over past this point. */
+const COMBO_MENU_MAX_WIDTH = 480
+
+/** How much of `.combo-menu`/`.combo-option`'s own padding a label needs
+ *  clear of, on top of its own rendered width, to read as comfortably
+ *  unclipped rather than merely not-yet-clipped. */
+const COMBO_MENU_WIDTH_PADDING = 28
+
+/**
+ * The widest of `labels`, rendered exactly as `.combo-option` would. A
+ * hidden, `.combo-option`-classed probe reuses the real CSS (font, weight,
+ * letter-spacing) instead of guessing a `canvas.measureText` font string —
+ * cheap enough to run once per menu open, over every option rather than
+ * just the filtered ones, so the menu's width doesn't jump around as a
+ * reviewer types a filter.
+ */
+function measureWidestLabel(labels: string[]): number {
+  if (labels.length === 0) return 0
+  const probe = document.createElement('div')
+  probe.className = 'combo-option'
+  probe.style.position = 'absolute'
+  probe.style.visibility = 'hidden'
+  probe.style.width = 'max-content'
+  probe.style.whiteSpace = 'nowrap'
+  document.body.appendChild(probe)
+  let max = 0
+  for (const label of labels) {
+    probe.textContent = label
+    max = Math.max(max, probe.scrollWidth)
+  }
+  document.body.removeChild(probe)
+  return max
+}
+
 /** An option whose displayed text differs from the value it commits. */
 export interface ComboOption {
   id: string
@@ -87,8 +123,21 @@ export function ComboBox({
   // or above it, when there isn't enough room below (a field near the
   // bottom of the annotation panel) but there is above, so the menu never
   // opens off-screen.
+  //
+  // Horizontally, the menu is no longer bound to the input's own (often
+  // narrow) width: it grows to fit the widest option label, up to
+  // `COMBO_MENU_MAX_WIDTH` — first leftward, keeping its right edge pinned
+  // to the input's own right edge, since that reads as "expanding out of
+  // the field" rather than sliding the whole menu sideways. Only once that
+  // alone can't fit (the nearest panel/dialog's left edge is reached first)
+  // does it also grow rightward, past the input, up to that container's
+  // right edge. If even the full container span isn't enough, `.combo-option`
+  // ellipsizes whatever is left over — this never makes the menu narrower
+  // than the input itself.
   useLayoutEffect(() => {
     if (!open) return
+    const desiredWidth =
+      Math.min(COMBO_MENU_MAX_WIDTH, measureWidestLabel(options.map((o) => o.label)) + COMBO_MENU_WIDTH_PADDING)
     const update = () => {
       const el = inputRef.current
       if (!el) return
@@ -97,10 +146,23 @@ export function ComboBox({
       const spaceAbove = r.top
       const openUp = spaceBelow < COMBO_MENU_MAX_HEIGHT && spaceAbove > spaceBelow
       const maxHeight = Math.max(0, (openUp ? spaceAbove : spaceBelow) - 8)
+
+      // The nearest panel or dialog the input sits in — `.panel` covers the
+      // annotation/screening panes, `.modal` covers a dialog like AiDialog's
+      // — falling back to the viewport when neither is an ancestor.
+      const MARGIN = 8
+      const boundRect = el.closest('.panel, .modal')?.getBoundingClientRect()
+      const boundLeft = (boundRect?.left ?? 0) + MARGIN
+      const boundRight = (boundRect?.right ?? window.innerWidth) - MARGIN
+
+      const width = Math.max(r.width, Math.min(desiredWidth, boundRight - boundLeft))
+      const growLeftOnly = r.right - width >= boundLeft
+      const left = growLeftOnly ? r.right - width : boundLeft
+
       setRect(
         openUp
-          ? { left: r.left, width: r.width, bottom: window.innerHeight - r.top + 4, maxHeight }
-          : { left: r.left, width: r.width, top: r.bottom + 4, maxHeight },
+          ? { left, width, bottom: window.innerHeight - r.top + 4, maxHeight }
+          : { left, width, top: r.bottom + 4, maxHeight },
       )
     }
     update()
@@ -110,6 +172,7 @@ export function ComboBox({
       window.removeEventListener('scroll', update, true)
       window.removeEventListener('resize', update)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   // Keep the highlighted option within bounds as the filter narrows.

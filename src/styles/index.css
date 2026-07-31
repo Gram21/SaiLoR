@@ -777,6 +777,14 @@ button.paper-search-mode:hover {
 .pdf-mark-note.flash {
   animation: pdf-mark-flash 1.4s ease-out;
 }
+/* A field jumped to from elsewhere (currently: Validation) — same pulse the
+   PDF pane's own "flash" gives a mark, so the two "show me this" affordances
+   read as one visual language. */
+.anno-leaf.field-flash,
+.anno-instance-field.field-flash {
+  animation: pdf-mark-flash 1.4s ease-out;
+  border-radius: 6px;
+}
 
 .pdf-highlight-toolbar,
 .pdf-mark-popover {
@@ -844,6 +852,28 @@ button.paper-search-mode:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.85rem;
+}
+.pdf-mark-tooltip {
+  max-width: 260px;
+}
+.pdf-mark-tooltip-text {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.pdf-mark-tooltip-links {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 4px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+}
+.pdf-mark-tooltip-links li {
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pdf-mark-tooltip-text + .pdf-mark-tooltip-links {
+  margin-top: 6px;
 }
 .pdf-scroll {
   flex: 1 1 auto;
@@ -1725,14 +1755,25 @@ button.paper-search-mode:hover {
   list-style: none;
 }
 .validation-issues li {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 2px 8px;
-  padding: 6px 0;
   border-bottom: 1px solid var(--border);
 }
 .validation-issues li:last-child {
   border-bottom: none;
+}
+.validation-issue {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 8px;
+  width: 100%;
+  padding: 6px 0;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.validation-issue:hover {
+  background: var(--accent-weak);
 }
 .validation-kind {
   grid-row: span 2;

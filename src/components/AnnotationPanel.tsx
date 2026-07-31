@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useStore, selectCurrentPaper, currentTree, currentFinished } from '../state/store'
 import { useAiStore } from '../state/aiStore'
 import { normalizeTree, isFieldVisible } from '../model/annotations'
@@ -27,6 +27,10 @@ export function AnnotationPanel() {
   const setDisagreementsOpen = useStore((s) => s.setDisagreementsOpen)
   const setSchemaInfoOpen = useStore((s) => s.setSchemaInfoOpen)
   const setAnnotationFinished = useStore((s) => s.setAnnotationFinished)
+  const pendingFieldJump = useStore((s) => s.pendingFieldJump)
+  const setPendingFieldJump = useStore((s) => s.setPendingFieldJump)
+  const flashFieldPath = useStore((s) => s.flashFieldPath)
+  const setFlashFieldPath = useStore((s) => s.setFlashFieldPath)
 
   // Consolidation is the pass where a human decides between what the reviewers
   // actually said. A model has no standing there: its answer would be a fresh
@@ -56,6 +60,27 @@ export function AnnotationPanel() {
     }
     return verdicts
   }, [isConsolidation, paper, project])
+
+  // A field jump requested from elsewhere (Validation's "jump to this
+  // field", clicking an issue rather than only the paper it's on) — scroll
+  // to it and start the flash, then clear the request. `selectPaper` (called
+  // before this is set) already lands the right paper before this effect
+  // runs, so every field is in the DOM by the time `querySelector` looks.
+  useEffect(() => {
+    if (!pendingFieldJump) return
+    const el = document.querySelector(`[data-canonical="${CSS.escape(pendingFieldJump)}"]`)
+    el?.scrollIntoView({ block: 'center' })
+    setFlashFieldPath(pendingFieldJump)
+    setPendingFieldJump(null)
+  }, [pendingFieldJump, setPendingFieldJump, setFlashFieldPath])
+
+  // The flash's own lifetime — split from the effect above so setting
+  // `flashFieldPath` is always the one thing that starts (and restarts) it.
+  useEffect(() => {
+    if (!flashFieldPath) return
+    const t = window.setTimeout(() => setFlashFieldPath(null), 1500)
+    return () => window.clearTimeout(t)
+  }, [flashFieldPath, setFlashFieldPath])
 
   if (!paper) {
     return <div className="panel annotations empty">Select a paper to annotate.</div>
