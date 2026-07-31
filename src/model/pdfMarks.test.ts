@@ -210,45 +210,68 @@ describe('dedupeMarkGroups', () => {
 })
 
 describe('orderMarksForLinking', () => {
-  it('pins the 3 most recently created marks first, most recent first', () => {
+  it('pins up to 3 of this session\'s own marks first, most recent first', () => {
     const old = mark({ id: 'old', createdAt: '2026-01-01T00:00:00.000Z', page: 5 })
     const r1 = mark({ id: 'r1', createdAt: '2026-01-02T00:00:00.000Z', page: 1 })
     const r2 = mark({ id: 'r2', createdAt: '2026-01-03T00:00:00.000Z', page: 2 })
     const r3 = mark({ id: 'r3', createdAt: '2026-01-04T00:00:00.000Z', page: 3 })
-    expect(orderMarksForLinking([old, r1, r2, r3]).map((m) => m.id)).toEqual(['r3', 'r2', 'r1', 'old'])
+    const session = new Set(['r1', 'r2', 'r3'])
+    expect(orderMarksForLinking([old, r1, r2, r3], session).map((m) => m.id)).toEqual(['r3', 'r2', 'r1', 'old'])
   })
 
-  it('does not repeat a recent mark in the page-ordered tail', () => {
+  it('never pins a mark this session did not create, however recent its createdAt', () => {
+    // The whole point: an old project opened for the first time today has
+    // old marks with new-looking nothing about them — `createdAt` alone
+    // cannot say what's actually recent to this sitting.
+    const notThisSession = mark({ id: 'a', createdAt: '2026-06-01T00:00:00.000Z', page: 2 })
+    const alsoNot = mark({ id: 'b', createdAt: '2026-06-02T00:00:00.000Z', page: 1 })
+    expect(orderMarksForLinking([notThisSession, alsoNot], new Set()).map((m) => m.id)).toEqual(['b', 'a'])
+  })
+
+  it('pins fewer than 3 when fewer than 3 marks were made this session', () => {
+    const mine = mark({ id: 'mine', createdAt: '2026-01-02T00:00:00.000Z', page: 5 })
+    const other1 = mark({ id: 'o1', createdAt: '2026-01-01T00:00:00.000Z', page: 1 })
+    const other2 = mark({ id: 'o2', createdAt: '2026-01-01T00:00:00.000Z', page: 2 })
+    const ids = orderMarksForLinking([other1, other2, mine], new Set(['mine'])).map((m) => m.id)
+    expect(ids).toEqual(['mine', 'o1', 'o2'])
+  })
+
+  it('does not repeat a pinned mark in the page-ordered tail', () => {
     const recent = mark({ id: 'recent', createdAt: '2026-01-05T00:00:00.000Z', page: 1 })
     const other = mark({ id: 'other', createdAt: '2026-01-01T00:00:00.000Z', page: 2 })
-    const ids = orderMarksForLinking([other, recent]).map((m) => m.id)
+    const ids = orderMarksForLinking([other, recent], new Set(['recent'])).map((m) => m.id)
     expect(ids).toEqual(['recent', 'other'])
     expect(ids.filter((id) => id === 'recent')).toHaveLength(1)
   })
 
-  it('with 4 or more marks, sorts everything past the pinned 3 by page', () => {
+  it('with more than 3 session marks, pins only the 3 most recent of them', () => {
     const a = mark({ id: 'a', createdAt: '2026-01-01T00:00:00.000Z', page: 4 })
     const b = mark({ id: 'b', createdAt: '2026-01-02T00:00:00.000Z', page: 3 })
     const c = mark({ id: 'c', createdAt: '2026-01-03T00:00:00.000Z', page: 2 })
     const d = mark({ id: 'd', createdAt: '2026-01-04T00:00:00.000Z', page: 1 })
-    // Recent 3, most-recent-first: d, c, b. Only "a" is left for the tail.
-    expect(orderMarksForLinking([a, b, c, d]).map((m) => m.id)).toEqual(['d', 'c', 'b', 'a'])
-  })
-
-  it('is the identity order for 3 or fewer marks (all of them are "recent")', () => {
-    const a = mark({ id: 'a', createdAt: '2026-01-01T00:00:00.000Z', page: 3 })
-    const b = mark({ id: 'b', createdAt: '2026-01-02T00:00:00.000Z', page: 1 })
-    expect(orderMarksForLinking([a, b]).map((m) => m.id)).toEqual(['b', 'a'])
+    // All 4 are this session's; only the 3 most recent (d, c, b) get pinned.
+    expect(orderMarksForLinking([a, b, c, d], new Set(['a', 'b', 'c', 'd'])).map((m) => m.id)).toEqual([
+      'd',
+      'c',
+      'b',
+      'a',
+    ])
   })
 
   it('does not mutate the input array', () => {
     const marks = [mark({ id: 'a', page: 2 }), mark({ id: 'b', page: 1 })]
     const copy = [...marks]
-    orderMarksForLinking(marks)
+    orderMarksForLinking(marks, new Set(['a']))
     expect(marks).toEqual(copy)
   })
 
   it('is [] for empty input', () => {
-    expect(orderMarksForLinking([])).toEqual([])
+    expect(orderMarksForLinking([], new Set())).toEqual([])
+  })
+
+  it('is plain page order when nothing was made this session', () => {
+    const a = mark({ id: 'a', createdAt: '2026-01-02T00:00:00.000Z', page: 2 })
+    const b = mark({ id: 'b', createdAt: '2026-01-01T00:00:00.000Z', page: 1 })
+    expect(orderMarksForLinking([a, b], new Set()).map((m) => m.id)).toEqual(['b', 'a'])
   })
 })

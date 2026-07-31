@@ -335,6 +335,22 @@ interface AppState {
    * "the very next thing" after making the mark.
    */
   lastCreatedMarkAllowedField: string | null
+  /**
+   * Every mark id `addHighlight` has produced since the app was opened —
+   * across every paper and reviewer seat, never pruned or reset by anything
+   * short of quitting.
+   *
+   * Powers `orderMarksForLinking`'s "pin what you just made" section in the
+   * field-link popover: it needs to tell "this highlight is from a minute
+   * ago" from "this highlight has sat in the file since last week" apart,
+   * and a mark's own `createdAt` alone cannot — a project opened for the
+   * first time today has old marks with old timestamps, but nothing about
+   * them is *recent* to this sitting. Not session-only in the sense the rest
+   * of this section's fields are (those are cleared on project close); this
+   * one is deliberately not, since "how long has this app been open"
+   * doesn't reset just because the reviewer switched papers.
+   */
+  sessionCreatedMarkIds: string[]
   /** A canonical field path `AnnotationPanel` should scroll to and flash,
    *  requested from elsewhere (Validation's "jump to this field", clicking
    *  an issue rather than only the paper it's on). `AnnotationPanel` clears
@@ -887,6 +903,7 @@ export const useStore = create<AppState>()(
     openLinkPopoverField: null,
     lastCreatedMarkId: null,
     lastCreatedMarkAllowedField: null,
+    sessionCreatedMarkIds: [],
     pendingFieldJump: null,
     flashFieldPath: null,
     agreementReturnToOverview: false,
@@ -1766,6 +1783,7 @@ export const useStore = create<AppState>()(
           kind: kind ?? 'highlight',
           groupId,
         })
+        s.sessionCreatedMarkIds.push(id)
         s.dirty = true
       })
       return id
