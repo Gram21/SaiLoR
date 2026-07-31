@@ -326,3 +326,93 @@ describe('lastCreatedMarkId', () => {
     expect(st().lastCreatedMarkId).toBeNull()
   })
 })
+
+describe('lastCreatedMarkId — allowed-field narrowing', () => {
+  const twoFieldSchema = [
+    { name: 'Study Type', type: 'string' as const },
+    { name: 'Notes', type: 'string' as const },
+  ]
+
+  function twoFieldProjectText(): string {
+    return JSON.stringify({
+      version: 1,
+      config: { schema: twoFieldSchema },
+      papers: [{ id: 'p1', title: 'One', authors: [], pdf: 'p1.pdf', annotations: {} }],
+    })
+  }
+
+  beforeEach(() => {
+    st().loadFromText(twoFieldProjectText(), null, 'test.json')
+    st().selectPaper('p1')
+  })
+
+  it('stays allowed for any field until a field is actually edited', () => {
+    st().setLastCreatedMarkId('m1')
+    expect(st().lastCreatedMarkAllowedField).toBeNull()
+  })
+
+  it('narrows to the field on its first edit', () => {
+    st().setLastCreatedMarkId('m1')
+    st().setFieldValue([], 'Study Type', 0, 'RCT')
+    expect(st().lastCreatedMarkId).toBe('m1')
+    expect(st().lastCreatedMarkAllowedField).toBe('Study Type')
+  })
+
+  it('stays narrowed across repeated edits of the same field', () => {
+    st().setLastCreatedMarkId('m1')
+    st().setFieldValue([], 'Study Type', 0, 'RCT')
+    st().setFieldValue([], 'Study Type', 0, 'RCTX')
+    expect(st().lastCreatedMarkId).toBe('m1')
+    expect(st().lastCreatedMarkAllowedField).toBe('Study Type')
+  })
+
+  it('invalidates outright when a different field is edited', () => {
+    // Case (b) only exempts *the* field the mark ends up linked to — editing
+    // a second, different field means the reviewer has moved on, so the
+    // offer is withdrawn rather than re-narrowed to the new field.
+    st().setLastCreatedMarkId('m1')
+    st().setFieldValue([], 'Study Type', 0, 'RCT')
+    st().setFieldValue([], 'Notes', 0, 'a note')
+    expect(st().lastCreatedMarkId).toBeNull()
+    expect(st().lastCreatedMarkAllowedField).toBeNull()
+  })
+
+  it('invalidates on addInstance/removeInstance', () => {
+    const repeatSchema = [{ name: 'Findings', min: 1, max: null, children: [{ name: 'Claim', type: 'string' as const }] }]
+    st().loadFromText(
+      JSON.stringify({
+        version: 1,
+        config: { schema: repeatSchema },
+        papers: [{ id: 'p1', title: 'One', authors: [], pdf: 'p1.pdf', annotations: {} }],
+      }),
+      null,
+      'test.json',
+    )
+    st().selectPaper('p1')
+    st().setLastCreatedMarkId('m1')
+    st().addInstance([], repeatSchema[0] as never)
+    expect(st().lastCreatedMarkId).toBeNull()
+  })
+
+  it('invalidates on undo/redo', () => {
+    st().setFieldValue([], 'Study Type', 0, 'RCT')
+    st().setLastCreatedMarkId('m1')
+    st().undo()
+    expect(st().lastCreatedMarkId).toBeNull()
+  })
+
+  it('invalidates when a different mark is touched (comment/color/remove)', () => {
+    const otherId = st().addHighlight(1, [{ x: 0.1, y: 0.1, width: 0.1, height: 0.1 }])!
+    st().setLastCreatedMarkId('m1')
+    st().setMarkComment(otherId, 'hi')
+    expect(st().lastCreatedMarkId).toBeNull()
+  })
+
+  it('invalidates when a mark is manually linked to a field', () => {
+    // A manual "Link" click on some candidate is itself another action.
+    const otherId = st().addHighlight(1, [{ x: 0.1, y: 0.1, width: 0.1, height: 0.1 }])!
+    st().setLastCreatedMarkId('m1')
+    st().linkMarkToField(otherId, [], 'Study Type', 0)
+    expect(st().lastCreatedMarkId).toBeNull()
+  })
+})

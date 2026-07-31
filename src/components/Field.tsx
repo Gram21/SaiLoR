@@ -215,29 +215,53 @@ interface FieldLinkPopoverProps {
   onClose: () => void
 }
 
-/** One list of every PDF mark on the paper, each showing Link/× for whether
- *  it names this field instance as evidence. The only entry point for
- *  creating a link — the mark's own popover (`PdfViewer.tsx`) only
- *  shows/unlinks, never adds. */
+/** Shows which of the paper's PDF marks are already linked to this field
+ *  instance, plus a fold-out picker (search included) to link more. The only
+ *  entry point for creating a link — the mark's own popover (`PdfViewer.tsx`)
+ *  only shows/unlinks, never adds. */
 function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkPopoverProps) {
   const marks = dedupeMarkGroups(useStore((s) => s.currentPdfMarks()))
   const linkMark = useStore((s) => s.linkMarkToField)
   const unlinkMark = useStore((s) => s.unlinkMarkFromField)
   const jumpToMark = useStore((s) => s.setPendingMarkJump)
   const lastCreatedMarkId = useStore((s) => s.lastCreatedMarkId)
+  const lastCreatedMarkAllowedField = useStore((s) => s.lastCreatedMarkAllowedField)
   const setLastCreatedMarkId = useStore((s) => s.setLastCreatedMarkId)
   const canonical = fieldPath(path, name, index)
+  const isLinkedNow = (m: (typeof marks)[number]) => m.linkedFields?.some((l) => l.path === canonical) ?? false
 
+  // Whether the mark the reviewer just made (if any) belongs to *this*
+  // field's popover — see `lastCreatedMarkAllowedField`'s own doc comment for
+  // the two cases this allows. Read once, synchronously, from the values the
+  // store already has as this component first renders — before the effect
+  // below has had a chance to act on them — so it doubles as this popover's
+  // initial `pickerOpen` state (below): if a link is about to appear in the
+  // picker, the picker should already be open to show it.
+  const [willAutoLink] = useState(
+    () => !!lastCreatedMarkId && (lastCreatedMarkAllowedField === null || lastCreatedMarkAllowedField === canonical),
+  )
+
+  // Which marks were already linked to this field *before* this popover
+  // opened — the top list only ever shows these, so a mark linked during
+  // this session (by hand, or by the auto-link below) does not jump up into
+  // it; it stays in the picker below, its own button flipped to "×", until
+  // the reviewer closes and reopens. Computed once, from `marks` as they
+  // stood on the very first render — deliberately *before* the auto-link
+  // effect has run, so a mark it is about to link is excluded here too.
+  const [initiallyLinkedIds] = useState(() => new Set(marks.filter(isLinkedNow).map((m) => m.id)))
+
+  const [pickerOpen, setPickerOpen] = useState(willAutoLink)
   const [search, setSearch] = useState('')
 
   // Auto-link the highlight/note the reviewer just made, once — see
   // `lastCreatedMarkId`'s own doc comment. Finishing a mark and immediately
-  // opening a field to link it is the whole point of having just made it,
-  // so there is nothing to search for or click on the first time through.
+  // opening a field to link it (or typing the value in first) is meant to
+  // need no search or click at all — but see `willAutoLink` above for why it
+  // still doesn't jump to the top list this time around.
   // `linkMarkToField` already no-ops on an unknown id or an existing link,
   // so nothing here needs to check either case first.
   useEffect(() => {
-    if (lastCreatedMarkId) linkMark(lastCreatedMarkId, path, name, index)
+    if (willAutoLink) linkMark(lastCreatedMarkId!, path, name, index)
     setLastCreatedMarkId(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -301,22 +325,30 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // The top list only ever shows a mark that was *both* linked before this
+  // popover opened *and* is still linked now — unlinking one still drops it
+  // immediately (that direction was never the problem); only newly-linked
+  // marks are held back from appearing here, by `initiallyLinkedIds`.
+  const topList = marks.filter((m) => initiallyLinkedIds.has(m.id) && isLinkedNow(m))
+  // Everything else, in the picker: whatever wasn't linked when this popover
+  // opened, whether or not it has been linked since — see `topList` above.
   // Recently-added first (a reviewer who just made a mark is almost always
   // about to link it), then everything else in page order — see
   // `orderMarksForLinking`. Fixed regardless of link state, so linking or
-  // unlinking a mark never moves it: only its own Link/× button changes.
-  const ordered = orderMarksForLinking(marks)
-  const recentIds = new Set(ordered.slice(0, 3).map((m) => m.id))
+  // unlinking one during this session never reshuffles the picker either:
+  // only its own Link/× button changes.
+  const candidates = orderMarksForLinking(marks.filter((m) => !initiallyLinkedIds.has(m.id)))
+  const recentIds = new Set(candidates.slice(0, 3).map((m) => m.id))
   const needle = search.trim().toLowerCase()
-  const filtered = needle
-    ? ordered.filter((m) => (m.comment || m.text || '').toLowerCase().includes(needle))
-    : ordered
+  const filteredCandidates = needle
+    ? candidates.filter((m) => (m.comment || m.text || '').toLowerCase().includes(needle))
+    : candidates
 
   // The row where the "recently added" group gives way to the page-ordered
-  // rest, so a small gap can mark the seam — only meaningful when both groups
-  // actually survive the search filter.
-  const gapBeforeIndex = filtered.findIndex(
-    (m, i) => i > 0 && recentIds.has(filtered[i - 1].id) && !recentIds.has(m.id),
+  // rest, so a little extra space can mark the seam — only meaningful when
+  // both groups actually survive the search filter.
+  const gapBeforeIndex = filteredCandidates.findIndex(
+    (m, i) => i > 0 && recentIds.has(filteredCandidates[i - 1].id) && !recentIds.has(m.id),
   )
 
   // Clicking a mark's own text jumps to it in the PDF (`PdfViewer` scrolls to
@@ -335,23 +367,39 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
 
   return (
     <div className="field-link-popover" style={placement} onClick={(e) => e.stopPropagation()}>
-      {marks.length === 0 ? (
-        <p className="field-link-empty">No highlights or notes on this paper yet.</p>
+      {topList.length === 0 ? (
+        <p className="field-link-empty">No links yet.</p>
       ) : (
-        <>
-          <input
-            type="text"
-            className="field-link-search"
-            placeholder="Search highlights/notes…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {filtered.length === 0 ? (
-            <p className="field-link-empty">No matches.</p>
-          ) : (
-            <ul className="field-link-list">
-              {filtered.map((m, i) => {
-                const linked = m.linkedFields?.some((l) => l.path === canonical) ?? false
+        <ul className="field-link-list">
+          {topList.map((m) => (
+            <li key={m.id}>
+              <span className="pdf-color-swatch" style={{ background: m.color }} aria-hidden="true" />
+              {snippetOf(m)}
+              <button
+                type="button"
+                className="field-link-unlink"
+                title="Unlink"
+                onClick={() => unlinkMark(m.id, canonical)}
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <button type="button" className="field-link-toggle" onClick={() => setPickerOpen((v) => !v)}>
+        {pickerOpen ? 'Cancel' : '+ Link a highlight or note'}
+      </button>
+      {pickerOpen && (
+        <div className="field-link-picker">
+          <ul className="field-link-list field-link-picker-list">
+            {filteredCandidates.length === 0 ? (
+              <li className="field-link-empty">
+                {candidates.length === 0 ? 'No highlights or notes on this paper yet.' : 'No matches.'}
+              </li>
+            ) : (
+              filteredCandidates.map((m, i) => {
+                const linked = isLinkedNow(m)
                 return (
                   <li key={m.id} className={i === gapBeforeIndex ? 'field-link-gap' : undefined}>
                     <span className="pdf-color-swatch" style={{ background: m.color }} aria-hidden="true" />
@@ -372,10 +420,17 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
                     )}
                   </li>
                 )
-              })}
-            </ul>
-          )}
-        </>
+              })
+            )}
+          </ul>
+          <input
+            type="text"
+            className="field-link-search"
+            placeholder="Search highlights/notes…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
       )}
       <button type="button" className="primary" onClick={onClose}>
         Done
