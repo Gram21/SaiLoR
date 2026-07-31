@@ -36,6 +36,8 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
   const [marked, confirm] = useAiMark(path, def.name, index)
   const markClass = marked ? ' ai-marked' : ''
   const canonical = fieldPath(path, def.name, index)
+  const linkPopoverOpen = useStore((s) => s.openLinkPopoverField === canonical)
+  const setOpenLinkPopoverField = useStore((s) => s.setOpenLinkPopoverField)
   const deferred = useStore((s) => {
     if (s.currentReviewer !== 'consolidation' || !s.currentPaperId) return false
     return !!s.deferredConsolidations[deferredConsolidationKey(s.currentPaperId, canonical)]
@@ -82,7 +84,6 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
   // Applies to every field type, not just the ones `canGrab` covers below: a
   // checkbox or dropdown choice deserves a reason just as much as free text.
   const linkCount = useLinkedMarkCount(path, def.name, index)
-  const [linkPopoverOpen, setLinkPopoverOpen] = useState(false)
   const linkBtnRef = useRef<HTMLButtonElement>(null)
   const linkBtn = (
     <div className="field-link-wrap">
@@ -95,7 +96,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
             ? `Linked to ${linkCount} PDF mark${linkCount === 1 ? '' : 's'}`
             : 'Link a PDF highlight or note as evidence'
         }
-        onClick={() => setLinkPopoverOpen((v) => !v)}
+        onClick={() => setOpenLinkPopoverField(linkPopoverOpen ? null : canonical)}
       >
         <span className="link-icon">🔗</span>
         {linkCount > 0 && <span className="link-count">{linkCount}</span>}
@@ -106,7 +107,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
           name={def.name}
           index={index}
           triggerRef={linkBtnRef}
-          onClose={() => setLinkPopoverOpen(false)}
+          onClose={() => setOpenLinkPopoverField(null)}
         />
       )}
     </div>
@@ -264,6 +265,13 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
   // a `stopPropagation` on click alone wouldn't beat it.
   useEffect(() => {
     const dismiss = (e?: MouseEvent) => {
+      // `.link-btn` here is what stops a field's own trigger from reopening
+      // the popover it just closed: mousedown closes it, React flushes
+      // before the `click` fires, and the render-captured `linkPopoverOpen`
+      // used by that `onClick` handler is then already false. A sibling
+      // field's popover opening and this one closing is now handled by the
+      // shared `openLinkPopoverField` id making this Field's selector go
+      // false and unmount — not by this dismisser.
       if (e && (e.target as HTMLElement | null)?.closest('.field-link-popover, .link-btn')) return
       onClose()
     }
