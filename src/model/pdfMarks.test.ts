@@ -73,6 +73,12 @@ describe('parseMarks', () => {
     expect(parseMarks([{ ...mark(), kind: 'bogus' }])[0].kind).toBe('highlight')
   })
 
+  it('reads a valid text, drops a non-string, and defaults to undefined when absent', () => {
+    expect(parseMarks([mark({ text: 'the selected snippet' })])[0].text).toBe('the selected snippet')
+    expect(parseMarks([{ ...mark(), text: 42 }])[0].text).toBeUndefined()
+    expect(parseMarks([mark()])[0].text).toBeUndefined()
+  })
+
   it('reads valid linkedFields, and defaults to undefined when absent or empty', () => {
     const linked = mark({ linkedFields: [{ path: 'Study Type', label: 'Study Type' }] })
     expect(parseMarks([linked])[0].linkedFields).toEqual([{ path: 'Study Type', label: 'Study Type' }])

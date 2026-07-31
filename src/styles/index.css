@@ -805,6 +805,9 @@ button.paper-search-mode:hover {
   border: 2px solid transparent;
   border-radius: 50%;
   cursor: pointer;
+  /* Stops flexbox (e.g. `.field-link-list li`) shrinking it into an oval
+     when a sibling's long text wants the space. */
+  flex-shrink: 0;
 }
 .pdf-color-swatch.active {
   border-color: var(--text);
