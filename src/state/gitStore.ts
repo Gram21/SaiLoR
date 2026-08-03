@@ -648,11 +648,16 @@ export const useGitStore = create<GitState>()(
 
         // A field-level commit may have rewritten the working file (any
         // "discard" decision does), so the app's in-memory project — if this
-        // is the file currently open — has to be re-read from disk, the same
-        // reason a finished pull always does. `dirty` is guaranteed false
-        // here: the Commit button is disabled while it isn't, precisely so
-        // this reload can never discard unsaved work.
-        if (usedFieldReview) await reloadOpenProject()
+        // is the file currently open — has to be re-read from disk. This is
+        // the reviewer's own rewrite of their own commit, not a different
+        // project being loaded, so it uses the lightweight resync rather
+        // than `reloadOpenProject` (which resets the whole view — selected
+        // paper, filters, reopens the schema-info dialog — appropriate after
+        // a pull/merge/branch-switch, but not after committing your own
+        // work). `dirty` is guaranteed false here: the Commit button is
+        // disabled while it isn't, precisely so this can never discard
+        // unsaved work.
+        if (usedFieldReview) await useStore.getState().resyncProjectFromDisk()
 
         set((s) => {
           if (s.panel) {
@@ -700,9 +705,13 @@ export const useGitStore = create<GitState>()(
 
         // The working file was rewritten, so the in-memory project has to be
         // re-read from disk — the same reason `runCommit`'s field path
-        // reloads. `dirty` is guaranteed false: the Discard button is
-        // disabled while it isn't, so this reload can never drop unsaved work.
-        await reloadOpenProject()
+        // resyncs, and for the same reason it uses the lightweight
+        // `resyncProjectFromDisk` rather than `reloadOpenProject`: this is
+        // the reviewer's own rewrite, not a different project being loaded,
+        // so the view (selected paper, filters, schema-info dialog) must
+        // stay put. `dirty` is guaranteed false: the Discard button is
+        // disabled while it isn't, so this can never drop unsaved work.
+        await useStore.getState().resyncProjectFromDisk()
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'idle'

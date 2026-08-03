@@ -488,6 +488,21 @@ describe('runCommit — field review (commitPartial)', () => {
     expect(useGitStore.getState().panel?.phase).toBe('idle')
   })
 
+  it('resyncs the project data without resetting the reviewer\'s view', async () => {
+    // Simulate a reviewer mid-session: a paper selected, a non-default
+    // filter, and the schema-info dialog dismissed. A field-level commit
+    // must refresh `project` from disk (the mocked `openRecent` above always
+    // returns Study Type: 'reloaded') without touching any of this — that's
+    // the whole point of `resyncProjectFromDisk` over `loadFromText`/
+    // `reloadOpenProject`, which would reset all three.
+    useStore.setState({ currentPaperId: 'a', screeningFilter: 'included', schemaInfoOpen: false })
+    await useGitStore.getState().runCommit()
+    expect(useStore.getState().project?.papers[0].annotations['Study Type']?.[0]?.value).toBe('reloaded')
+    expect(useStore.getState().currentPaperId).toBe('a')
+    expect(useStore.getState().screeningFilter).toBe('included')
+    expect(useStore.getState().schemaInfoOpen).toBe(false)
+  })
+
   it('a "discard" decision writes HEAD\'s value back into the working-tree output', async () => {
     const id = conflictId('a', { kind: 'paper' }, 'title')
     useGitStore.getState().setFieldDisposition(id, 'discard')
