@@ -118,7 +118,7 @@ npm run typecheck
 │   │   ├── pdfMeta.ts     Best-effort title/author/abstract extraction from a PDF (metadata, then layout heuristic)
 │   │   ├── validate.ts    Checks annotated papers (required / type / enum / cardinality); unannotated papers are skipped, not flagged
 │   │   ├── linkify.ts     Splits free text into plain-text and URL segments for rendering clickable links in descriptions
-│   │   ├── version.ts     Update check against the GitHub releases API (silent while the repo is private)
+│   │   ├── version.ts     Update check against the GitHub releases API (silent while the repo is private); the win/linux in-app self-updater (electron-updater) hangs off this check
 │   │   └── model.test.ts  Vitest unit tests for the model
 │   ├── screening/          Screening mode: derived schema, pure logic (unit-tested)
 │   │   ├── schema.ts      The derived two-node (Decision/Reason) schema; isScreening()
@@ -139,7 +139,7 @@ npm run typecheck
 │   │   ├── recents.ts     Recent-projects list in localStorage (max 5)
 │   │   └── index.ts       getPlatform() singleton (ElectronAdapter or UnsupportedAdapter)
 │   ├── state/
-│   │   ├── store.ts      Zustand + immer store (project, papers, save, annotations, undo/redo, theme, fontScale, pdfZoom, recents, help)
+│   │   ├── store.ts      Zustand + immer store (project, papers, save, annotations, undo/redo, theme, fontScale, pdfZoom, recents, help, native self-update progress on win/linux)
 │   │   ├── editorStore.ts  Draft state for the project editor (schema tree + papers, relative PDF paths, validate/save)
 │   │   ├── gitStore.ts    Zustand + immer store for the clone flow and the commit/pull/push panel (reads store.ts one-way; store.ts never imports it)
 │   │   └── settings.ts   Theme + font-scale persistence (localStorage), applyTheme/applyFontScale
