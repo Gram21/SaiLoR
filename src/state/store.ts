@@ -495,6 +495,13 @@ interface AppState {
   /** Discard the open project and return to the start screen. */
   closeProject: () => void
   loadFromText: (text: string, handle: SaveHandle | null, name: string) => void
+  /** Re-reads the open project from disk in place, after a field-level git
+   *  commit/discard rewrote the working file underneath it — see
+   *  `gitStore.ts`'s `runCommit`/`runDiscard`. Unlike `loadFromText`, this is
+   *  not "a project was opened": the reviewer's view (selected paper,
+   *  filters, the schema-info dialog, undo history) is left exactly as it
+   *  was, only the project data itself is refreshed. */
+  resyncProjectFromDisk: () => Promise<void>
   save: () => Promise<boolean>
   saveAs: () => Promise<boolean>
   setAutosaveEnabled: (enabled: boolean) => void
@@ -1262,6 +1269,25 @@ export const useStore = create<AppState>()(
           s.loadError = le
           s.busy = false
         })
+      }
+    },
+
+    resyncProjectFromDisk: async () => {
+      const handle = get().saveHandle
+      if (!handle?.path) return
+      const opened = await getPlatform().openRecent(handle.path)
+      if (!opened) return
+      try {
+        const project = loadProject(opened.text)
+        set((s) => {
+          s.project = project
+          s.saveHandle = opened.handle
+        })
+      } catch {
+        // The file on disk is malformed — leave the in-memory project (still
+        // valid) exactly as it was rather than surface a load error for a
+        // resync the reviewer never asked for; a real problem here will
+        // resurface the next time they actually open/reload the project.
       }
     },
 
