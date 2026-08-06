@@ -18,6 +18,8 @@
  */
 
 export const RELEASES_URL = 'https://github.com/Gram21/SaiLoR/releases'
+/** Where "Report a bug" links open — a pre-filled-nothing new issue on the repo. */
+export const NEW_ISSUE_URL = 'https://github.com/Gram21/SaiLoR/issues/new'
 const LATEST_RELEASE_API = 'https://api.github.com/repos/Gram21/SaiLoR/releases/latest'
 
 /** How long a check result stays fresh — just long enough to survive a rapid
