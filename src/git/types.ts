@@ -66,11 +66,16 @@ export interface GitRepoInfo {
 
 export type CloneOutcome = { ok: true; dest: string } | { ok: false; error: string }
 
-/** One local branch, from `git branch --format`. */
+/** One branch, from `git for-each-ref` over `refs/heads` and `refs/remotes`. */
 export interface GitBranch {
   name: string
-  /** True for the branch HEAD currently points at. */
+  /** True for the branch HEAD currently points at. Never true for a remote one. */
   current: boolean
+  /** True for a remote-tracking ref ("origin/main"). Those can be *merged* but
+   *  never *switched to* — checking one out would detach HEAD — so the branch
+   *  switcher filters them out and only the merge picker offers them. They are
+   *  also only as fresh as the last fetch; `beginMerge` is what fetches. */
+  remote: boolean
 }
 
 /**
@@ -103,16 +108,23 @@ export type BranchSwitchStart =
       theirs: string
     }
 
-export type PullStart =
+/**
+ * The outcome of starting a merge of some ref into the current branch. A pull
+ * *is* one of these — "merge `@{u}`" — which is why `PullStart` below is this
+ * union plus the one case only a pull can hit. Both are produced by the same
+ * `beginMergeInto` in the main process, so the renderer handles the shared
+ * cases in exactly one place (`applyMergeStart` in `gitStore.ts`).
+ */
+export type MergeStart =
   | { kind: 'up-to-date' }
   | { kind: 'fast-forwarded' }
   | { kind: 'dirty'; paths: string[] }
-  | { kind: 'no-upstream'; branch: string | null }
   | { kind: 'conflict-elsewhere'; paths: string[] }
   | { kind: 'error'; message: string }
   | {
       kind: 'merge'
-      /** The upstream ref that was merged, e.g. "origin/main" — shown to the reviewer. */
+      /** The ref that was merged — "origin/main" for a pull, a branch name for
+       *  an explicit merge. Shown to the reviewer. */
       ref: string
       /** The project file's text at the merge base, or `null` when it did not exist there
        *  (added independently on both sides). */
@@ -120,6 +132,8 @@ export type PullStart =
       ours: string
       theirs: string
     }
+
+export type PullStart = MergeStart | { kind: 'no-upstream'; branch: string | null }
 
 /**
  * Git operations against **the user's own git installation**. See
@@ -139,7 +153,20 @@ export interface GitPlatform {
   commit(root: string, paths: string[], message: string): Promise<GitRun>
   push(root: string): Promise<GitRun>
   beginPull(root: string, relPath: string): Promise<PullStart>
+  /**
+   * Merges `ref` — a local branch or a remote-tracking one — into the current
+   * branch. The same operation `beginPull` performs against `@{u}`, minus the
+   * upstream lookup, so it is finished and aborted with `finishPull` /
+   * `abortPull` rather than a pair of its own. Fetches first when `ref` is
+   * remote-tracking, so the merge is against current data.
+   */
+  beginMerge(root: string, relPath: string, ref: string): Promise<MergeStart>
+  /** Writes the resolved project, stages it and records the merge commit —
+   *  for a pull and for `beginMerge` alike (both leave the repository
+   *  mid-merge with `MERGE_HEAD` set, which is all this needs). */
   finishPull(root: string, relPath: string, working: SplitProject): Promise<GitRun>
+  /** `git merge --abort` — undoes whichever of `beginPull`/`beginMerge` is in
+   *  flight, leaving the work tree exactly as it was. */
   abortPull(root: string): Promise<GitRun>
   /** HEAD's copy of the project — `relPath` (`project.json`) plus its
    *  `annotations/` folder, reassembled into one logical text — for the
@@ -173,7 +200,8 @@ export interface GitPlatform {
    *  `workingContent`, for reverting local edits without a commit. */
   writeWorking(root: string, relPath: string, working: SplitProject): Promise<GitRun>
 
-  /** Local branches, current one first — for the branch switcher. */
+  /** Local branches and remote-tracking ones — the switcher takes the locals,
+   *  the merge picker takes both (see `GitBranch.remote`). */
   branches(root: string): Promise<GitBranch[]>
   /** Creates `name` at the current `HEAD`, without switching to it — the
    *  caller always follows this with the ordinary switch flow. */

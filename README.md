@@ -439,7 +439,13 @@ repository. It opens a panel with:
   checkbox.
 - a commit message box and a **Commit** button (which relabels to **Discard all** and turns red if
   nothing is left marked *Use*),
-- **Pull** and **Push**.
+- **Merge branch…**, **Pull** and **Push**.
+
+**Merge branch…** merges a branch you pick into the one you are on, through the same field-by-field
+engine as Pull — already-up-to-date, fast-forward, clean merge, or the same conflict dialog. The list
+covers local branches *and* remote-tracking ones (`origin/side`); picking a remote one fetches first.
+Unlike a branch switch, merging never moves you off your branch, so there is no stash to unwind — a
+cancelled merge is a plain `git merge --abort`.
 
 **Pull merges annotations field by field, not line by line.** A field only *you* changed keeps your
 value. A field only the *remote* changed takes theirs. Only a field you **both** changed — to
@@ -466,8 +472,8 @@ hanging.
   the project's own files; anything else is left for you to resolve with git, and the merge (or, for
   a branch switch, the whole attempt) is aborted cleanly rather than half-done.
 - Merge two copies of the project whose **annotation schema** was changed on both sides, differently —
-  the schema decides the shape of every tree, so there is no field-level answer; the pull (or
-  branch-switch merge) refuses and tells you why.
+  the schema decides the shape of every tree, so there is no field-level answer; the pull (or the
+  merge, or the branch-switch merge) refuses and tells you why.
 - Delete a paper the remote deleted if you have annotated it since — it is kept, and you are told.
 
 Live clone progress with a cancel button, and history browsing, are not part of this either.

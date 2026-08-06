@@ -5,6 +5,7 @@ import type {
   GitRepoInfo,
   GitRun,
   PullStart,
+  MergeStart,
   GitFileChange,
   SplitProject,
   GitBranch,
@@ -78,6 +79,8 @@ let openedPaths: string[] = []
 let abortCalls = 0
 let finishCalls: { root: string; relPath: string; working: SplitProject }[] = []
 let beginPullResult: PullStart = { kind: 'up-to-date' }
+let beginMergeResult: MergeStart = { kind: 'up-to-date' }
+let beginMergeCalls: string[] = []
 let finishPullResult: GitRun = ok()
 
 let infoResult: GitRepoInfo | null = null
@@ -127,6 +130,10 @@ const fakeGit: GitPlatform = {
   },
   push: async () => ok(),
   beginPull: async () => beginPullResult,
+  beginMerge: async (_root, _relPath, ref) => {
+    beginMergeCalls.push(ref)
+    return beginMergeResult
+  },
   finishPull: async (root, relPath, working) => {
     finishCalls.push({ root, relPath, working })
     return finishPullResult
@@ -206,6 +213,8 @@ beforeEach(async () => {
   abortCalls = 0
   finishCalls = []
   finishPullResult = ok()
+  beginMergeResult = { kind: 'up-to-date' }
+  beginMergeCalls = []
   infoResult = null
   statusChanges = []
   headContentResult = null
@@ -811,6 +820,93 @@ describe('requestSwitchBranch / resolveBranchSwitchPrompt', () => {
 
     expect(branchSwitchFinishCalls).toHaveLength(1)
     expect(finishCalls).toEqual([]) // the pull-specific finish, untouched
+  })
+})
+
+describe('runMergeBranch', () => {
+  it('refuses while the project has unsaved annotations — nothing reaches git', async () => {
+    useStore.setState({ dirty: true })
+    await useGitStore.getState().runMergeBranch('feature')
+    expect(useGitStore.getState().panel?.error).toMatch(/save the project first/i)
+    expect(beginMergeCalls).toEqual([])
+  })
+
+  it('is a no-op for the branch already checked out', async () => {
+    await useGitStore.getState().runMergeBranch('main')
+    expect(beginMergeCalls).toEqual([])
+  })
+
+  it('passes the chosen ref through, remote-tracking ones included', async () => {
+    await useGitStore.getState().runMergeBranch('origin/feature')
+    expect(beginMergeCalls).toEqual(['origin/feature'])
+    expect(useGitStore.getState().panel?.notice).toMatch(/up to date/i)
+  })
+
+  it('fast-forward: the open project is re-opened, and the notice names the branch', async () => {
+    beginMergeResult = { kind: 'fast-forwarded' }
+    await useGitStore.getState().runMergeBranch('feature')
+    expect(openedPaths).toEqual(['/repo/review.json'])
+    expect(useGitStore.getState().panel?.notice).toMatch(/feature/)
+  })
+
+  it('a conflict-free merge commits on its own via finishPull', async () => {
+    beginMergeResult = {
+      kind: 'merge',
+      ref: 'feature',
+      base: projectText(null),
+      ours: projectText('mine'),
+      theirs: projectText(null), // unchanged on theirs' side — no conflict
+    }
+    await useGitStore.getState().runMergeBranch('feature')
+
+    expect(finishCalls).toHaveLength(1)
+    expect(branchSwitchFinishCalls).toEqual([]) // not the branch-switch path
+    expect(useGitStore.getState().panel?.merge).toBeNull()
+    expect(useGitStore.getState().panel?.notice).toMatch(/merged feature into main/i)
+  })
+
+  it('a real conflict opens the resolution dialog, tagged as a merge-branch', async () => {
+    beginMergeResult = {
+      kind: 'merge',
+      ref: 'feature',
+      base: projectText(null),
+      ours: projectText('mine'),
+      theirs: projectText('theirs'),
+    }
+    await useGitStore.getState().runMergeBranch('feature')
+
+    const merge = useGitStore.getState().panel?.merge
+    expect(merge?.source).toEqual({ kind: 'merge-branch' })
+    expect(merge?.ref).toBe('feature')
+    expect(merge?.conflicts).toHaveLength(1)
+    expect(finishCalls).toEqual([])
+  })
+
+  it('finishing and cancelling use the pull operations, not the branch-switch ones', async () => {
+    beginMergeResult = {
+      kind: 'merge',
+      ref: 'feature',
+      base: projectText(null),
+      ours: projectText('mine'),
+      theirs: projectText('theirs'),
+    }
+    await useGitStore.getState().runMergeBranch('feature')
+    await useGitStore.getState().cancelMerge()
+    expect(abortCalls).toBe(1)
+    expect(branchSwitchAbortCalls).toEqual([])
+
+    await useGitStore.getState().runMergeBranch('feature')
+    useGitStore.getState().takeAll('ours')
+    await useGitStore.getState().finishMerge()
+    expect(finishCalls).toHaveLength(1)
+    expect(branchSwitchFinishCalls).toEqual([])
+  })
+
+  it('conflict-elsewhere is reported without opening the dialog', async () => {
+    beginMergeResult = { kind: 'conflict-elsewhere', paths: ['pdfs/a.pdf'] }
+    await useGitStore.getState().runMergeBranch('feature')
+    expect(useGitStore.getState().panel?.error).toMatch(/pdfs\/a\.pdf/)
+    expect(useGitStore.getState().panel?.merge).toBeNull()
   })
 })
 

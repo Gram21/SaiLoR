@@ -88,12 +88,29 @@ answer into, or take one side wholesale with the ◀ / ▶ buttons.
 committed until every conflict has been decided — the **Finish merge** button stays disabled until
 then.
 
-### What Pull (and carrying changes into a new branch) refuses to guess at
+## Merging another branch
+
+**Merge branch…**, next to Pull at the bottom of the panel, merges a branch you pick **into the one
+you're on** — the ordinary `git merge`, with the same field-by-field reconciliation Pull uses. Pick a
+branch and it either reports "already up to date", fast-forwards, commits the merge straight away when
+the two sides don't disagree, or opens the same conflict dialog above when they do. Cancel there and
+the merge is aborted; the repository ends up exactly where it started.
+
+The list is grouped: **Local** branches, and **Remote** ones (`origin/side`) that a fetch has brought
+in. Picking a remote one fetches first, so you get that branch as it is now, not as it was the last
+time anything fetched. Merging never moves you off your branch — that's what
+[Switching branches](#switching-branches) is for.
+
+Both Merge and Pull work on the **file on disk**, so both are greyed out while you have unsaved
+annotations, and both refuse outright if anything else in the repository is uncommitted — commit or
+stash that first.
+
+### What Pull, Merge, and carrying changes into a new branch refuse to guess at
 
 A few kinds of disagreement can't be expressed as a field-level conflict, so instead of guessing,
 SaiLoR aborts cleanly — nothing changes — and tells you what to reconcile first. This applies equally
-to Pull and to carrying uncommitted changes into a branch switch, since both go through the same
-merge:
+to Pull, to Merge branch…, and to carrying uncommitted changes into a branch switch, since all three
+go through the same merge:
 
 - The **annotation schema** was changed on both sides, differently — it decides the shape of every
   tree, so there's no per-field answer to offer.

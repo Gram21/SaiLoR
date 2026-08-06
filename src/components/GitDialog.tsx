@@ -5,12 +5,18 @@ import { diffLines } from '../git/output'
 import { annotationsRelDir } from '../git/relpath'
 import type { Disposition, FieldChange, PaperChange } from '../git/changes'
 import type { FieldValue } from '../model/annotations'
+import type { GitBranch } from '../git/types'
 import '../styles/git.css'
 
 /** The branch switcher's own sentinel value for "New branch…" — never a real
  *  branch name git itself would produce, so it can share the `<select>`
  *  with `branches` without colliding. */
 const NEW_BRANCH_OPTION = '__sailor_new_branch__'
+
+/** The merge picker's resting value — an always-selected placeholder, so the
+ *  `<select>` reads as a menu of actions rather than a setting. Same reason it
+ *  can share the list with real branch names as `NEW_BRANCH_OPTION` above. */
+const MERGE_PLACEHOLDER = '__sailor_merge_placeholder__'
 
 /**
  * The confirm text `runPrimaryAction` must show before committing when a
@@ -65,6 +71,7 @@ export function GitDialog() {
   const runDiscard = useGitStore((s) => s.runDiscard)
   const runPush = useGitStore((s) => s.runPush)
   const runPull = useGitStore((s) => s.runPull)
+  const runMergeBranch = useGitStore((s) => s.runMergeBranch)
   const dismissPanelMessage = useGitStore((s) => s.dismissPanelMessage)
 
   const dirty = useStore((s) => s.dirty)
@@ -95,6 +102,10 @@ export function GitDialog() {
   const changes = (panel.status?.changes ?? []).filter(
     (c) => !review || (c.path !== repo.relPath && c.path !== dir && !c.path.startsWith(`${dir}/`)),
   )
+  // The switcher only ever offers local branches — checking out a
+  // remote-tracking ref would detach HEAD. The merge picker takes both.
+  const localBranches = branches.filter((b) => !b.remote)
+  const mergeable = branches.filter((b) => !b.current)
   const selectedCount = Object.keys(panel.selected).length
   const hasUntracked = changes.some((c) => c.code === '??')
   const reviewRowCount = review ? review.changes.fields.length + review.changes.papers.length : 0
@@ -146,7 +157,7 @@ export function GitDialog() {
         <div className="modal-head">
           <strong>
             Git —{' '}
-            {repo.branch && branches.length > 0 ? (
+            {repo.branch && localBranches.length > 0 ? (
               <select
                 className="git-branch-select"
                 aria-label="Switch branch"
@@ -157,7 +168,7 @@ export function GitDialog() {
                   else requestSwitchBranch(e.target.value)
                 }}
               >
-                {branches.map((b) => (
+                {localBranches.map((b) => (
                   <option key={b.name} value={b.name}>
                     {b.name}
                   </option>
@@ -306,6 +317,24 @@ export function GitDialog() {
               {discardOnlyMode ? 'Discard all' : 'Commit'}
             </button>
             <div className="git-panel-actions-right">
+              {mergeable.length > 0 && (
+                <select
+                  className="git-merge-select"
+                  aria-label="Merge a branch into this one"
+                  // Always the placeholder: picking an option is an action, not
+                  // a setting, so the control snaps back to "Merge branch…".
+                  value={MERGE_PLACEHOLDER}
+                  disabled={working || dirty}
+                  onChange={(e) => {
+                    const ref = e.target.value
+                    if (ref !== MERGE_PLACEHOLDER) void runMergeBranch(ref)
+                  }}
+                >
+                  <option value={MERGE_PLACEHOLDER}>Merge branch…</option>
+                  <MergeBranchOptions branches={mergeable} remote={false} label="Local" />
+                  <MergeBranchOptions branches={mergeable} remote={true} label="Remote" />
+                </select>
+              )}
               <button type="button" disabled={working || dirty || !repo.upstream} onClick={() => void runPull()}>
                 Pull
               </button>
@@ -326,6 +355,31 @@ export function GitDialog() {
         </div>
       </div>
     </div>
+  )
+}
+
+/** One namespace of the merge picker, or nothing at all when that namespace is
+ *  empty — an `<optgroup>` with no options still renders its label, which would
+ *  show a "Remote" heading in every repository that has no remote. */
+function MergeBranchOptions({
+  branches,
+  remote,
+  label,
+}: {
+  branches: GitBranch[]
+  remote: boolean
+  label: string
+}) {
+  const rows = branches.filter((b) => b.remote === remote)
+  if (rows.length === 0) return null
+  return (
+    <optgroup label={label}>
+      {rows.map((b) => (
+        <option key={b.name} value={b.name}>
+          {b.name}
+        </option>
+      ))}
+    </optgroup>
   )
 }
 

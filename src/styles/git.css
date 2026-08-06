@@ -159,6 +159,21 @@
   opacity: 0.6;
 }
 
+/** Sits in the Pull/Push row, so it takes the surrounding buttons' metrics
+ *  rather than the header switcher's compact ones. */
+.git-merge-select {
+  font: inherit;
+  background: var(--bg);
+  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+
+.git-merge-select:disabled {
+  opacity: 0.6;
+}
+
 .git-dirty-banner {
   display: flex;
   align-items: center;

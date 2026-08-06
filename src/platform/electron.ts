@@ -17,6 +17,7 @@ import type {
   GitStatus,
   GitRun,
   PullStart,
+  MergeStart,
   SplitProject,
   GitBranch,
   BranchSwitchStart,
@@ -107,6 +108,7 @@ export interface SlrBridge {
   gitPullBegin(root: string, relPath: string): Promise<PullStart>
   gitPullFinish(root: string, relPath: string, working: SplitProject): Promise<GitRun>
   gitPullAbort(root: string): Promise<GitRun>
+  gitMergeBegin(root: string, relPath: string, ref: string): Promise<MergeStart>
   gitHeadContent(root: string, relPath: string): Promise<string | null>
   gitWorkingContent(root: string, relPath: string): Promise<string | null>
   gitCommitPartial(
@@ -413,6 +415,7 @@ export class ElectronAdapter implements PlatformAdapter {
     beginPull: (root, relPath) => bridge().gitPullBegin(root, relPath),
     finishPull: (root, relPath, working) => bridge().gitPullFinish(root, relPath, working),
     abortPull: (root) => bridge().gitPullAbort(root),
+    beginMerge: (root, relPath, ref) => bridge().gitMergeBegin(root, relPath, ref),
     headContent: (root, relPath) => bridge().gitHeadContent(root, relPath),
     workingContent: (root, relPath) => bridge().gitWorkingContent(root, relPath),
     commitPartial: (root, relPath, committed, working, otherPaths, message) =>

@@ -16,7 +16,7 @@ import { detectFieldChanges, composeContents, type DetectedChanges, type Disposi
 import { repoNameFromUrl } from '../git/url'
 import { annotationsRelDir } from '../git/relpath'
 import { gitErrorText } from '../git/output'
-import type { GitProbe, GitRepoInfo, GitRun, GitStatus, GitBranch } from '../git/types'
+import type { GitProbe, GitRepoInfo, GitRun, GitStatus, GitBranch, MergeStart } from '../git/types'
 import { useStore } from './store'
 
 /**
@@ -45,23 +45,26 @@ interface CloneState {
 }
 
 /**
- * A field-level three-way merge in progress — either a `pull` (merging the
- * upstream ref) or a `branch-switch` (merging the target branch, carrying
- * over the reviewer's uncommitted changes). `GitMergeDialog` renders either
- * identically; only finishing and cancelling need to know which, since they
- * call different git operations (`finishPull`/`abortPull` vs
- * `finishBranchSwitch`/`abortBranchSwitch`, the latter needing `sourceBranch`
- * to check back out to on cancel).
+ * A field-level three-way merge in progress — a `pull` (merging the upstream
+ * ref), a `merge-branch` (merging another branch into this one), or a
+ * `branch-switch` (merging the target branch, carrying over the reviewer's
+ * uncommitted changes). `GitMergeDialog` renders all three identically; only
+ * finishing and cancelling need to know which, and only `branch-switch`
+ * actually differs there — it alone moved HEAD, so it needs
+ * `finishBranchSwitch`/`abortBranchSwitch` and the `sourceBranch` to check
+ * back out to on cancel. `pull` and `merge-branch` are both an ordinary git
+ * merge, finished and aborted by `finishPull`/`abortPull`.
  */
 type MergeSource =
   | { kind: 'pull' }
+  | { kind: 'merge-branch' }
   | { kind: 'branch-switch'; sourceBranch: string }
 
 interface MergeState {
   source: MergeSource
   /** The other side's name — an upstream ref ("origin/main") for a pull, the
-   *  target branch's own name for a branch-switch. Shown as-is, e.g. "Your
-   *  changes and {ref}'s both changed these fields." reads correctly either way. */
+   *  branch's own name for a merge or a branch-switch. Shown as-is, e.g. "Your
+   *  changes and {ref}'s both changed these fields." reads correctly for all three. */
   ref: string
   merged: Project
   conflicts: FieldConflict[]
@@ -179,6 +182,14 @@ interface GitState {
   runDiscard: () => Promise<void>
   runPush: () => Promise<void>
   runPull: () => Promise<void>
+  /**
+   * Merge `ref` — a local branch or a remote-tracking one — into the current
+   * branch. The same flow as `runPull` against an explicitly chosen ref: a
+   * fast-forward or a clean merge commits and reloads straight away, anything
+   * the two sides disagree on opens `GitMergeDialog`. A no-op for the branch
+   * already checked out.
+   */
+  runMergeBranch: (ref: string) => Promise<void>
   dismissPanelMessage: () => void
 
   resolveConflict: (id: string, value: FieldValue) => void
@@ -264,9 +275,9 @@ export const useGitStore = create<GitState>()(
       if (!git || !repo) return
       const resolved = applyResolutions(merged, conflicts, resolutions)
       const r =
-        source.kind === 'pull'
-          ? await git.finishPull(repo.root, repo.relPath, toSplitProject(resolved))
-          : await git.finishBranchSwitch(repo.root, repo.relPath, toSplitProject(resolved))
+        source.kind === 'branch-switch'
+          ? await git.finishBranchSwitch(repo.root, repo.relPath, toSplitProject(resolved))
+          : await git.finishPull(repo.root, repo.relPath, toSplitProject(resolved))
       if (!r.ok) {
         set((s) => {
           if (s.panel) {
@@ -290,7 +301,9 @@ export const useGitStore = create<GitState>()(
       const notice =
         source.kind === 'pull'
           ? `Merged ${ref}.${noteText} Push when you are ready.`
-          : `Switched to ${ref}, carrying your changes over.${noteText}`
+          : source.kind === 'merge-branch'
+            ? `Merged ${ref} into ${repo.branch ?? 'the current branch'}.${noteText} Push when you are ready.`
+            : `Switched to ${ref}, carrying your changes over.${noteText}`
       set((s) => {
         if (s.panel) {
           s.panel.merge = null
@@ -302,6 +315,143 @@ export const useGitStore = create<GitState>()(
         await get().refreshBranches()
       }
       await get().refreshStatus()
+    }
+
+    /**
+     * The single most important guard in this store: `git status` sees the
+     * file on disk, not the reviewer's unsaved annotations in memory. A
+     * fast-forward or a finished merge reloads the file from disk — without
+     * this check that would silently discard unsaved work. Returns false when
+     * the caller must stop. `verb` reads into the message ("pulling works on
+     * the file on disk").
+     */
+    function guardDirtyForMerge(verb: string): boolean {
+      if (!useStore.getState().dirty) return true
+      set((s) => {
+        if (s.panel) {
+          s.panel.error =
+            `Save the project first — ${verb} works on the file on disk, and your unsaved ` +
+            'annotations would be lost.'
+        }
+      })
+      return false
+    }
+
+    /**
+     * Everything a merge does once git has classified it — shared by `runPull`
+     * and `runMergeBranch`, which differ only in how they name the other side.
+     * A pull's own `'no-upstream'` case is handled by its caller before this
+     * runs, which is why `MergeStart` and not `PullStart` is what arrives here.
+     *
+     * `ffLabel` is what a fast-forward reports having moved to: the upstream
+     * for a pull, the branch's own name for a merge.
+     */
+    async function applyMergeStart(start: MergeStart, source: MergeSource, ffLabel: string): Promise<void> {
+      const git = getPlatform().getGit()
+      const repo = get().repo
+      if (!git || !repo) return
+
+      const fail = (error: string) =>
+        set((s) => {
+          if (s.panel) {
+            s.panel.phase = 'idle'
+            s.panel.error = error
+          }
+        })
+
+      if (start.kind === 'up-to-date') {
+        set((s) => {
+          if (s.panel) {
+            s.panel.phase = 'idle'
+            s.panel.notice = 'Already up to date.'
+          }
+        })
+        return
+      }
+      if (start.kind === 'fast-forwarded') {
+        await reloadOpenProject()
+        set((s) => {
+          if (s.panel) {
+            s.panel.phase = 'idle'
+            s.panel.notice = `Updated to ${ffLabel}.`
+          }
+        })
+        await get().refreshStatus()
+        return
+      }
+      if (start.kind === 'dirty') {
+        fail(`This repository has uncommitted changes: ${start.paths.join(', ')}. Commit them first.`)
+        return
+      }
+      if (start.kind === 'conflict-elsewhere') {
+        fail(
+          `Git could not merge these files on its own: ${start.paths.join(', ')}. SaiLoR only ` +
+            'knows how to merge the project JSON — resolve these with git and try again. The ' +
+            'merge has been aborted; nothing changed.',
+        )
+        return
+      }
+      if (start.kind === 'error') {
+        fail(start.message)
+        return
+      }
+
+      // start.kind === 'merge': parse each revision independently, so a
+      // parse failure names exactly which one is unreadable.
+      let base: Project | null
+      try {
+        base = start.base === null ? null : loadProject(start.base)
+      } catch (err) {
+        await git.abortPull(repo.root)
+        fail(mergeParseError('the merge base', err))
+        return
+      }
+      let ours: Project
+      try {
+        ours = loadProject(start.ours)
+      } catch (err) {
+        await git.abortPull(repo.root)
+        fail(mergeParseError('HEAD (your copy)', err))
+        return
+      }
+      let theirs: Project
+      try {
+        theirs = loadProject(start.theirs)
+      } catch (err) {
+        await git.abortPull(repo.root)
+        fail(mergeParseError(start.ref, err))
+        return
+      }
+
+      const outcome = mergeProjects(base, ours, theirs)
+      if (outcome.kind === 'refused') {
+        await git.abortPull(repo.root)
+        fail([outcome.reason, ...outcome.details].join('\n'))
+        return
+      }
+
+      if (outcome.conflicts.length === 0) {
+        set((s) => {
+          if (s.panel) s.panel.phase = 'idle'
+        })
+        await doFinish(source, start.ref, outcome.merged, outcome.conflicts, {}, outcome.notes)
+        return
+      }
+
+      set((s) => {
+        if (s.panel) {
+          s.panel.phase = 'idle'
+          s.panel.merge = {
+            source,
+            ref: start.ref,
+            merged: outcome.merged,
+            conflicts: outcome.conflicts,
+            resolutions: {},
+            decided: {},
+            notes: outcome.notes,
+          }
+        }
+      })
     }
 
     /**
@@ -746,20 +896,7 @@ export const useGitStore = create<GitState>()(
         const repo = get().repo
         if (!git || !repo) return
 
-        // The single most important guard in this store: `git status` sees
-        // the file on disk, not the reviewer's unsaved annotations in memory.
-        // A fast-forward or a finished merge reloads the file from disk —
-        // without this check that would silently discard unsaved work.
-        if (useStore.getState().dirty) {
-          set((s) => {
-            if (s.panel) {
-              s.panel.error =
-                'Save the project first — pulling works on the file on disk, and your unsaved ' +
-                'annotations would be lost.'
-            }
-          })
-          return
-        }
+        if (!guardDirtyForMerge('pulling')) return
 
         set((s) => {
           if (s.panel) {
@@ -770,36 +907,6 @@ export const useGitStore = create<GitState>()(
         })
 
         const start = await git.beginPull(repo.root, repo.relPath)
-
-        if (start.kind === 'up-to-date') {
-          set((s) => {
-            if (s.panel) {
-              s.panel.phase = 'idle'
-              s.panel.notice = 'Already up to date.'
-            }
-          })
-          return
-        }
-        if (start.kind === 'fast-forwarded') {
-          await reloadOpenProject()
-          set((s) => {
-            if (s.panel) {
-              s.panel.phase = 'idle'
-              s.panel.notice = `Updated to ${repo.upstream ?? 'the remote'}.`
-            }
-          })
-          await get().refreshStatus()
-          return
-        }
-        if (start.kind === 'dirty') {
-          set((s) => {
-            if (s.panel) {
-              s.panel.phase = 'idle'
-              s.panel.error = `This repository has uncommitted changes: ${start.paths.join(', ')}. Commit them first.`
-            }
-          })
-          return
-        }
         if (start.kind === 'no-upstream') {
           set((s) => {
             if (s.panel) {
@@ -809,104 +916,26 @@ export const useGitStore = create<GitState>()(
           })
           return
         }
-        if (start.kind === 'conflict-elsewhere') {
-          set((s) => {
-            if (s.panel) {
-              s.panel.phase = 'idle'
-              s.panel.error =
-                `Git could not merge these files on its own: ${start.paths.join(', ')}. SaiLoR only ` +
-                'knows how to merge the project JSON — resolve these with git and pull again. The ' +
-                'merge has been aborted; nothing changed.'
-            }
-          })
-          return
-        }
-        if (start.kind === 'error') {
-          set((s) => {
-            if (s.panel) {
-              s.panel.phase = 'idle'
-              s.panel.error = start.message
-            }
-          })
-          return
-        }
+        await applyMergeStart(start, { kind: 'pull' }, repo.upstream ?? 'the remote')
+      },
 
-        // start.kind === 'merge': parse each revision independently, so a
-        // parse failure names exactly which one is unreadable.
-        let base: Project | null
-        try {
-          base = start.base === null ? null : loadProject(start.base)
-        } catch (err) {
-          await git.abortPull(repo.root)
-          set((s) => {
-            if (s.panel) {
-              s.panel.phase = 'idle'
-              s.panel.error = mergeParseError('the merge base', err)
-            }
-          })
-          return
-        }
-        let ours: Project
-        try {
-          ours = loadProject(start.ours)
-        } catch (err) {
-          await git.abortPull(repo.root)
-          set((s) => {
-            if (s.panel) {
-              s.panel.phase = 'idle'
-              s.panel.error = mergeParseError('HEAD (your copy)', err)
-            }
-          })
-          return
-        }
-        let theirs: Project
-        try {
-          theirs = loadProject(start.theirs)
-        } catch (err) {
-          await git.abortPull(repo.root)
-          set((s) => {
-            if (s.panel) {
-              s.panel.phase = 'idle'
-              s.panel.error = mergeParseError(start.ref, err)
-            }
-          })
-          return
-        }
+      runMergeBranch: async (ref) => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo || ref === repo.branch) return
 
-        const outcome = mergeProjects(base, ours, theirs)
-        if (outcome.kind === 'refused') {
-          await git.abortPull(repo.root)
-          set((s) => {
-            if (s.panel) {
-              s.panel.phase = 'idle'
-              s.panel.error = [outcome.reason, ...outcome.details].join('\n')
-            }
-          })
-          return
-        }
-
-        if (outcome.conflicts.length === 0) {
-          set((s) => {
-            if (s.panel) s.panel.phase = 'idle'
-          })
-          await doFinish({ kind: 'pull' }, start.ref, outcome.merged, outcome.conflicts, {}, outcome.notes)
-          return
-        }
+        if (!guardDirtyForMerge('merging')) return
 
         set((s) => {
           if (s.panel) {
-            s.panel.phase = 'idle'
-            s.panel.merge = {
-              source: { kind: 'pull' },
-              ref: start.ref,
-              merged: outcome.merged,
-              conflicts: outcome.conflicts,
-              resolutions: {},
-              decided: {},
-              notes: outcome.notes,
-            }
+            s.panel.phase = 'working'
+            s.panel.error = null
+            s.panel.notice = null
           }
         })
+
+        const start = await git.beginMerge(repo.root, repo.relPath, ref)
+        await applyMergeStart(start, { kind: 'merge-branch' }, ref)
       },
 
       dismissPanelMessage: () => {
@@ -958,9 +987,9 @@ export const useGitStore = create<GitState>()(
         const merge = get().panel?.merge
         if (!git || !repo || !merge) return
         const r =
-          merge.source.kind === 'pull'
-            ? await git.abortPull(repo.root)
-            : await git.abortBranchSwitch(repo.root, merge.source.sourceBranch)
+          merge.source.kind === 'branch-switch'
+            ? await git.abortBranchSwitch(repo.root, merge.source.sourceBranch)
+            : await git.abortPull(repo.root)
         if (!r.ok) {
           set((s) => {
             if (s.panel) s.panel.error = gitErrorText(r)
@@ -999,20 +1028,9 @@ export const useGitStore = create<GitState>()(
         const repo = get().repo
         if (!repo || branch === repo.branch) return
 
-        // Same guard as runPull: `git status` sees the file on disk, not the
-        // reviewer's unsaved annotations in memory. A clean checkout reloads
-        // the project from disk — without this check that would silently
-        // discard unsaved work.
-        if (useStore.getState().dirty) {
-          set((s) => {
-            if (s.panel) {
-              s.panel.error =
-                'Save the project first — switching branches works on the file on disk, and your ' +
-                'unsaved annotations would be lost.'
-            }
-          })
-          return
-        }
+        // A clean checkout reloads the project from disk, so the same guard
+        // applies here as to a merge.
+        if (!guardDirtyForMerge('switching branches')) return
         const dirty = (get().panel?.status?.changes.length ?? 0) > 0
         if (!dirty) {
           void runCleanCheckout(branch)
