@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { useStore } from '../state/store'
 import { useEditorStore } from '../state/editorStore'
 import { getPlatform } from '../platform'
+import { NEW_ISSUE_URL } from '../model/version'
 
 const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform)
 const MOD = getPlatform().kind === 'electron' && isMac ? '⌘' : 'Ctrl'
@@ -793,14 +794,25 @@ export function HelpDialog() {
                     : 'Getting started'}
             </span>
           </strong>
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={() => setHelpOpen(false)}
-            aria-label="Close"
-          >
-            ×
-          </button>
+          <div className="modal-head-actions">
+            <a
+              className="icon-btn help-report-bug"
+              href={NEW_ISSUE_URL}
+              target="_blank"
+              rel="noreferrer"
+              title="Report a bug on GitHub — opens a new issue in your browser"
+            >
+              Report a bug
+            </a>
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={() => setHelpOpen(false)}
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         <div className="modal-body" ref={bodyRef}>
