@@ -159,9 +159,10 @@
   opacity: 0.6;
 }
 
-/** The "Merge branch…" button in the Pull/Push row — deliberately quieter
- *  than its neighbors (no border, muted text) so merging reads as the rarer,
- *  more deliberate action next to the every-session Pull/Push. */
+/** The "Merge branch…" button in the modal header, next to the close button —
+ *  deliberately quieter than a normal button (no border, muted text) so
+ *  merging reads as the rarer, more deliberate action it is, kept out of the
+ *  every-session commit/pull/push row. */
 .git-merge-branch-btn {
   font: inherit;
   background: none;

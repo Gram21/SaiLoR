@@ -175,9 +175,22 @@ export function GitDialog() {
             )}
             <span className="git-upstream"> ▸ {repo.upstream ?? 'no upstream'}</span>
           </strong>
-          <button type="button" className="icon-btn" onClick={requestClose} aria-label="Close">
-            ×
-          </button>
+          <div className="modal-head-actions">
+            {mergeable.length > 0 && (
+              <button
+                type="button"
+                className="git-merge-branch-btn"
+                title="Merge another branch into this one — a separate, deliberate action from Pull."
+                disabled={working || dirty}
+                onClick={openMergeBranchPrompt}
+              >
+                Merge branch…
+              </button>
+            )}
+            <button type="button" className="icon-btn" onClick={requestClose} aria-label="Close">
+              ×
+            </button>
+          </div>
         </div>
 
         <div className="modal-body">
@@ -312,17 +325,6 @@ export function GitDialog() {
               {discardOnlyMode ? 'Discard all' : 'Commit'}
             </button>
             <div className="git-panel-actions-right">
-              {mergeable.length > 0 && (
-                <button
-                  type="button"
-                  className="git-merge-branch-btn"
-                  title="Merge another branch into this one — a separate, deliberate action from Pull."
-                  disabled={working || dirty}
-                  onClick={openMergeBranchPrompt}
-                >
-                  Merge branch…
-                </button>
-              )}
               <button type="button" disabled={working || dirty || !repo.upstream} onClick={() => void runPull()}>
                 Pull
               </button>
