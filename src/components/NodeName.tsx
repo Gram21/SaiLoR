@@ -1,7 +1,19 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ResolvedDef } from '../model/schema'
-import { linkifyText } from '../model/linkify'
+import { linkifyText, type LinkifySegment } from '../model/linkify'
+import { getPlatform } from '../platform'
+
+const isMac = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform)
+const MOD = getPlatform().kind === 'electron' && isMac ? '⌘' : 'Ctrl'
+
+/** The one link to jump straight to on modifier-click, or `undefined` when the
+ *  description has none or more than one — a multi-link description still
+ *  needs the right-click popover since there's no way to guess "which one". */
+export function findSingleLink(segments: LinkifySegment[]): string | undefined {
+  const links = segments.filter((s) => s.href)
+  return links.length === 1 ? links[0].href : undefined
+}
 
 /**
  * Renders an annotation node's name. When the node has a `description`, the name
@@ -86,18 +98,30 @@ export function NodeName({
   }
   const closePopover = () => setOrigin(null)
 
+  // Ctrl/Cmd-click a single-link description to open it directly, skipping
+  // the right-click popover — a shortcut for the common case, not a
+  // replacement: plain click still marks the field read as before.
+  const singleLink = findSingleLink(linkifyText(def.description))
+  const handleClick = (e: React.MouseEvent) => {
+    if ((e.ctrlKey || e.metaKey) && singleLink) {
+      e.preventDefault()
+      window.open(singleLink, '_blank', 'noopener,noreferrer')
+    }
+    onClick?.()
+  }
+
   return (
     <span
       ref={ref}
       className={`${className} has-desc`}
       tabIndex={0}
-      onClick={onClick}
+      onClick={handleClick}
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}
       onBlur={hide}
       onContextMenu={openPopover}
-      aria-label={`${def.name}. ${def.description}`}
+      aria-label={`${def.name}. ${def.description}${singleLink ? ` (${MOD}-click to open the link)` : ''}`}
     >
       {label}
       <span className="info-dot" aria-hidden="true">
