@@ -439,9 +439,11 @@ repository. It opens a panel with:
   checkbox.
 - a commit message box and a **Commit** button (which relabels to **Discard all** and turns red if
   nothing is left marked *Use*),
-- a quieter **Merge branch…** text button, plus **Pull** and **Push**.
+- **Pull** and **Push**.
 
-**Merge branch…** opens a small dialog — pick a branch (local or remote-tracking, e.g. `origin/side`;
+A quieter **Merge branch…** text button sits in the panel's header, next to the close button — kept
+out of the primary commit/pull/push row since merging is a rare, deliberate action. It opens a small
+dialog — pick a branch (local or remote-tracking, e.g. `origin/side`;
 picking a remote one fetches first), see it spelled out plainly ("Merge *branch* into the current
 branch *yours*"), confirm — and it merges through the same field-by-field engine as Pull:
 already-up-to-date, fast-forward, a clean merge commit right away, or the same conflict dialog. It's a
