@@ -159,8 +159,26 @@
   opacity: 0.6;
 }
 
-/** Sits in the Pull/Push row, so it takes the surrounding buttons' metrics
- *  rather than the header switcher's compact ones. */
+/** The "Merge branch…" button in the Pull/Push row — deliberately quieter
+ *  than its neighbors (no border, muted text) so merging reads as the rarer,
+ *  more deliberate action next to the every-session Pull/Push. */
+.git-merge-branch-btn {
+  font: inherit;
+  background: none;
+  color: var(--muted);
+  border: none;
+  padding: 4px 6px;
+}
+
+.git-merge-branch-btn:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.git-merge-branch-btn:disabled {
+  opacity: 0.6;
+}
+
+/** The branch `<select>` inside `MergeBranchPrompt`'s own dialog. */
 .git-merge-select {
   font: inherit;
   background: var(--bg);
@@ -168,6 +186,8 @@
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 4px 6px;
+  width: 100%;
+  margin-bottom: 8px;
 }
 
 .git-merge-select:disabled {

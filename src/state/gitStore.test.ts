@@ -910,6 +910,53 @@ describe('runMergeBranch', () => {
   })
 })
 
+describe('Merge branch prompt', () => {
+  beforeEach(() => {
+    useGitStore.setState({
+      branches: [
+        { name: 'main', current: true, remote: false },
+        { name: 'feature', current: false, remote: false },
+        { name: 'origin/feature', current: false, remote: true },
+      ],
+    })
+  })
+
+  it('opens defaulted to the first mergeable branch, not the checked-out one', () => {
+    useGitStore.getState().openMergeBranchPrompt()
+    expect(useGitStore.getState().panel?.mergeBranchPrompt).toEqual({ branch: 'feature' })
+  })
+
+  it('does nothing when there is no other branch to merge', () => {
+    useGitStore.setState({ branches: [{ name: 'main', current: true, remote: false }] })
+    useGitStore.getState().openMergeBranchPrompt()
+    expect(useGitStore.getState().panel?.mergeBranchPrompt).toBeNull()
+  })
+
+  it('setMergeBranchPromptBranch / closeMergeBranchPrompt', () => {
+    useGitStore.getState().openMergeBranchPrompt()
+    useGitStore.getState().setMergeBranchPromptBranch('origin/feature')
+    expect(useGitStore.getState().panel?.mergeBranchPrompt).toEqual({ branch: 'origin/feature' })
+
+    useGitStore.getState().closeMergeBranchPrompt()
+    expect(useGitStore.getState().panel?.mergeBranchPrompt).toBeNull()
+  })
+
+  it('confirming runs runMergeBranch against the picked branch and closes the dialog', async () => {
+    useGitStore.getState().openMergeBranchPrompt()
+    useGitStore.getState().setMergeBranchPromptBranch('origin/feature')
+
+    await useGitStore.getState().confirmMergeBranchPrompt()
+
+    expect(beginMergeCalls).toEqual(['origin/feature'])
+    expect(useGitStore.getState().panel?.mergeBranchPrompt).toBeNull()
+  })
+
+  it('confirming with no prompt open is a no-op', async () => {
+    await useGitStore.getState().confirmMergeBranchPrompt()
+    expect(beginMergeCalls).toEqual([])
+  })
+})
+
 describe('New branch', () => {
   it('openNewBranchPrompt / setNewBranchName / closeNewBranchPrompt', () => {
     useGitStore.getState().openNewBranchPrompt()

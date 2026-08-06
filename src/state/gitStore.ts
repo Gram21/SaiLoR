@@ -123,6 +123,18 @@ interface NewBranchPromptState {
   error: string | null
 }
 
+/**
+ * The "Merge branch…" button's own dialog — deliberately its own small
+ * prompt, not the inline branch-switcher `<select>`, so merging (a rare,
+ * deliberate action) doesn't sit as prominently as Commit/Pull/Push (what a
+ * reviewer does every session). `branch` is whichever mergeable branch the
+ * dialog opened with or the reviewer since picked; there is always at least
+ * one, since the button that opens this is itself hidden otherwise.
+ */
+interface MergeBranchPromptState {
+  branch: string
+}
+
 interface PanelState {
   phase: 'idle' | 'loading' | 'working'
   status: GitStatus | null
@@ -136,6 +148,7 @@ interface PanelState {
   merge: MergeState | null
   branchSwitchPrompt: BranchSwitchPromptState | null
   newBranchPrompt: NewBranchPromptState | null
+  mergeBranchPrompt: MergeBranchPromptState | null
 }
 
 interface GitState {
@@ -190,6 +203,15 @@ interface GitState {
    * already checked out.
    */
   runMergeBranch: (ref: string) => Promise<void>
+  /** Opens the "Merge branch…" dialog, defaulting to the first mergeable
+   *  branch — one that exists whenever the button that calls this is shown. */
+  openMergeBranchPrompt: () => void
+  setMergeBranchPromptBranch: (branch: string) => void
+  closeMergeBranchPrompt: () => void
+  /** Runs `runMergeBranch` against `panel.mergeBranchPrompt.branch` and closes
+   *  the dialog — the outcome (a notice, an error, or `GitMergeDialog` taking
+   *  over) is exactly `runMergeBranch`'s own, shown in the ordinary panel. */
+  confirmMergeBranchPrompt: () => Promise<void>
   dismissPanelMessage: () => void
 
   resolveConflict: (id: string, value: FieldValue) => void
@@ -664,6 +686,7 @@ export const useGitStore = create<GitState>()(
             merge: null,
             branchSwitchPrompt: null,
             newBranchPrompt: null,
+            mergeBranchPrompt: null,
           }
         })
         await get().refreshStatus()
@@ -936,6 +959,38 @@ export const useGitStore = create<GitState>()(
 
         const start = await git.beginMerge(repo.root, repo.relPath, ref)
         await applyMergeStart(start, { kind: 'merge-branch' }, ref)
+      },
+
+      openMergeBranchPrompt: () => {
+        const repo = get().repo
+        const first = get()
+          .branches.filter((b) => !b.current)
+          .find((b) => b.name !== repo?.branch)?.name
+        if (!first) return
+        set((s) => {
+          if (s.panel) s.panel.mergeBranchPrompt = { branch: first }
+        })
+      },
+
+      setMergeBranchPromptBranch: (branch) => {
+        set((s) => {
+          if (s.panel?.mergeBranchPrompt) s.panel.mergeBranchPrompt.branch = branch
+        })
+      },
+
+      closeMergeBranchPrompt: () => {
+        set((s) => {
+          if (s.panel) s.panel.mergeBranchPrompt = null
+        })
+      },
+
+      confirmMergeBranchPrompt: async () => {
+        const branch = get().panel?.mergeBranchPrompt?.branch
+        set((s) => {
+          if (s.panel) s.panel.mergeBranchPrompt = null
+        })
+        if (!branch) return
+        await get().runMergeBranch(branch)
       },
 
       dismissPanelMessage: () => {
