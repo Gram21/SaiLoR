@@ -439,13 +439,16 @@ repository. It opens a panel with:
   checkbox.
 - a commit message box and a **Commit** button (which relabels to **Discard all** and turns red if
   nothing is left marked *Use*),
-- **Merge branch…**, **Pull** and **Push**.
+- a quieter **Merge branch…** text button, plus **Pull** and **Push**.
 
-**Merge branch…** merges a branch you pick into the one you are on, through the same field-by-field
-engine as Pull — already-up-to-date, fast-forward, clean merge, or the same conflict dialog. The list
-covers local branches *and* remote-tracking ones (`origin/side`); picking a remote one fetches first.
-Unlike a branch switch, merging never moves you off your branch, so there is no stash to unwind — a
-cancelled merge is a plain `git merge --abort`.
+**Merge branch…** opens a small dialog — pick a branch (local or remote-tracking, e.g. `origin/side`;
+picking a remote one fetches first), see it spelled out plainly ("Merge *branch* into the current
+branch *yours*"), confirm — and it merges through the same field-by-field engine as Pull:
+already-up-to-date, fast-forward, a clean merge commit right away, or the same conflict dialog. It's a
+separate button rather than folded into Pull/Push because merging another branch in is a deliberate,
+occasional action, not something reached for every session. Unlike a branch switch, merging never
+moves you off your branch, so there is no stash to unwind — a cancelled merge is a plain
+`git merge --abort`.
 
 **Pull merges annotations field by field, not line by line.** A field only *you* changed keeps your
 value. A field only the *remote* changed takes theirs. Only a field you **both** changed — to

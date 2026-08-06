@@ -90,15 +90,18 @@ then.
 
 ## Merging another branch
 
-**Merge branch…**, next to Pull at the bottom of the panel, merges a branch you pick **into the one
-you're on** — the ordinary `git merge`, with the same field-by-field reconciliation Pull uses. Pick a
-branch and it either reports "already up to date", fast-forwards, commits the merge straight away when
-the two sides don't disagree, or opens the same conflict dialog above when they do. Cancel there and
-the merge is aborted; the repository ends up exactly where it started.
+**Merge branch…**, a quieter text button next to Pull and Push at the bottom of the panel — merging is
+a deliberate, occasional action, so it deliberately doesn't sit as prominently as the controls you use
+every session. It opens a small dialog: pick a branch from the dropdown (grouped into **Local**
+branches and **Remote** ones like `origin/side` that a fetch has brought in), and the dialog spells out
+the direction in plain language — "Merge *branch* into the current branch *your-branch*" — so it's
+never ambiguous which way things merge. Press **OK** and it runs the ordinary `git merge`, with the
+same field-by-field reconciliation Pull uses: "already up to date", a fast-forward, a merge commit
+made straight away when the two sides don't disagree, or the same conflict dialog above when they do.
+Cancel there and the merge is aborted; the repository ends up exactly where it started.
 
-The list is grouped: **Local** branches, and **Remote** ones (`origin/side`) that a fetch has brought
-in. Picking a remote one fetches first, so you get that branch as it is now, not as it was the last
-time anything fetched. Merging never moves you off your branch — that's what
+Picking a remote branch fetches first, so you get it as it is now, not as it was the last time
+anything fetched. Merging never moves you off your branch — that's what
 [Switching branches](#switching-branches) is for.
 
 Both Merge and Pull work on the **file on disk**, so both are greyed out while you have unsaved
