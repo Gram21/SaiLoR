@@ -90,8 +90,8 @@ then.
 
 ## Merging another branch
 
-**Merge branch…**, a quieter text button next to Pull and Push at the bottom of the panel — merging is
-a deliberate, occasional action, so it deliberately doesn't sit as prominently as the controls you use
+**Merge branch…**, a quieter text button in the panel's header, next to the close button — merging is
+a deliberate, occasional action, so it deliberately doesn't sit in the commit/pull/push row you use
 every session. It opens a small dialog: pick a branch from the dropdown (grouped into **Local**
 branches and **Remote** ones like `origin/side` that a fetch has brought in), and the dialog spells out
 the direction in plain language — "Merge *branch* into the current branch *your-branch*" — so it's
