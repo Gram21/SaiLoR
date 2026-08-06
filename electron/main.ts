@@ -23,8 +23,9 @@ import os from 'node:os'
 // this file's tsconfig (node types) and the renderer's (DOM types).
 import { validateGitUrl, validateClonePath } from '../src/git/url'
 import { relPathProblem, annotationsRelDir } from '../src/git/relpath'
+import { refProblem } from '../src/git/ref'
 import { gitErrorText, parsePorcelain } from '../src/git/output'
-import type { GitRun } from '../src/git/types'
+import type { GitRun, MergeStart } from '../src/git/types'
 import { isLegacyProjectShape, assembleLegacyProjectJson } from '../src/model/project'
 import { parseMarks, type PdfMark } from '../src/model/pdfMarks'
 import { rectToPdfPoints, rectToQuadPoints } from '../src/model/pdfExport'
@@ -1550,6 +1551,15 @@ function assertRelPath(p: string): void {
   if (problem) throw new Error(`Refusing to act on the path "${p}" (${problem}).`)
 }
 
+/** A ref the renderer named. Every ref it can name came out of `git:branches`,
+ *  so this only ever fires on a value that did not — which is exactly the case
+ *  worth refusing. Rule in `src/git/ref.ts`, for the same testability reason as
+ *  `assertRelPath` above. */
+function assertRef(ref: string): void {
+  const problem = refProblem(ref)
+  if (problem) throw new Error(`Refusing to act on the ref "${ref}" (${problem}).`)
+}
+
 ipcMain.handle('git:probe', async () => {
   const r = await runGit(['--version'])
   return r.ok
@@ -1821,44 +1831,43 @@ ipcMain.handle('git:push', async (_e, root: string) => {
 })
 
 /**
- * The pull classification. Contract: this always returns with the repository
- * in exactly one of two states — not mid-merge, for every outcome except
- * `'merge'`, or mid-merge with nothing unmerged except `relPath`, for
- * `'merge'`. It never returns leaving a half-merge the renderer did not ask for.
+ * Are there uncommitted tracked changes that would block a merge? Shared by
+ * every flow that merges, since a merge started over a dirty tree is a merge
+ * whose abort cannot cleanly put things back.
  */
-ipcMain.handle('git:pullBegin', async (_e, root: string, relPath: string) => {
-  assertRelPath(relPath)
-
+async function mergeBlockingDirtyPaths(root: string): Promise<string[]> {
   const st = await runGit(['status', '--porcelain=v1', '-z'], root)
   // Untracked files ('??') never block a merge, so they are not "dirty" here.
-  const dirty = parsePorcelain(st.stdout)
+  return parsePorcelain(st.stdout)
     .filter((c) => c.code !== '??')
     .map((c) => c.path)
-  if (dirty.length > 0) return { kind: 'dirty', paths: dirty }
+}
 
-  const up = await runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], root)
-  if (!up.ok) {
-    const branchRun = await runGit(['symbolic-ref', '--short', '-q', 'HEAD'], root)
-    return { kind: 'no-upstream', branch: branchRun.ok ? gitOut(branchRun) || null : null }
-  }
-  const ref = gitOut(up)
-
-  const fetch = await runGit(['fetch'], root, GIT_NETWORK_TIMEOUT_MS)
-  if (!fetch.ok) return { kind: 'error', message: gitErrorText(fetch) }
-
-  if ((await runGit(['merge-base', '--is-ancestor', '@{u}', 'HEAD'], root)).ok) {
+/**
+ * Merge `ref` into the current branch, up to the point where the reviewer has
+ * to decide something. A pull is one of these (`ref` = `@{u}`); so is an
+ * explicit branch merge. Assumes the caller has already checked the work tree
+ * is clean.
+ *
+ * Contract: this always returns with the repository in exactly one of two
+ * states — not mid-merge, for every outcome except `'merge'`, or mid-merge
+ * with nothing unmerged except the project's own files, for `'merge'`. It
+ * never returns leaving a half-merge the renderer did not ask for.
+ */
+async function beginMergeInto(root: string, relPath: string, ref: string): Promise<MergeStart> {
+  if ((await runGit(['merge-base', '--is-ancestor', ref, 'HEAD'], root)).ok) {
     return { kind: 'up-to-date' }
   }
 
-  if ((await runGit(['merge-base', '--is-ancestor', 'HEAD', '@{u}'], root)).ok) {
-    const ff = await runGit(['merge', '--ff-only', '@{u}'], root)
+  if ((await runGit(['merge-base', '--is-ancestor', 'HEAD', ref], root)).ok) {
+    const ff = await runGit(['merge', '--ff-only', ref], root)
     return ff.ok ? { kind: 'fast-forwarded' } : { kind: 'error', message: gitErrorText(ff) }
   }
 
   // Divergent. Read the three revisions of the project (project.json +
   // annotations/, reassembled — see `readProjectAtRevision`) BEFORE touching
   // the work tree, so nothing that follows can change what gets merged.
-  const baseRun = await runGit(['merge-base', 'HEAD', '@{u}'], root)
+  const baseRun = await runGit(['merge-base', 'HEAD', ref], root)
   const baseSha = baseRun.ok ? gitOut(baseRun) : null
   const base = baseSha ? await readProjectAtRevision(root, relPath, baseSha) : null // null is fine — added on both sides.
   const ours = await readProjectAtRevision(root, relPath, 'HEAD')
@@ -1898,8 +1907,69 @@ ipcMain.handle('git:pullBegin', async (_e, root: string, relPath: string) => {
   }
 
   return { kind: 'merge', ref, base, ours, theirs }
+}
+
+/** The pull classification: resolve the upstream, fetch, then merge it in.
+ *  Inherits `beginMergeInto`'s contract. */
+ipcMain.handle('git:pullBegin', async (_e, root: string, relPath: string) => {
+  assertRelPath(relPath)
+
+  const dirty = await mergeBlockingDirtyPaths(root)
+  if (dirty.length > 0) return { kind: 'dirty', paths: dirty }
+
+  const up = await runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], root)
+  if (!up.ok) {
+    const branchRun = await runGit(['symbolic-ref', '--short', '-q', 'HEAD'], root)
+    return { kind: 'no-upstream', branch: branchRun.ok ? gitOut(branchRun) || null : null }
+  }
+  const ref = gitOut(up)
+
+  const fetch = await runGit(['fetch'], root, GIT_NETWORK_TIMEOUT_MS)
+  if (!fetch.ok) return { kind: 'error', message: gitErrorText(fetch) }
+
+  return beginMergeInto(root, relPath, ref)
 })
 
+/**
+ * Merge an arbitrary branch — local or remote-tracking — into the current one.
+ * Deliberately the *pull* shape and not the branch-switch shape: merging does
+ * not move HEAD, so there is no stash/checkout dance to undo, and
+ * `git:pullFinish`/`git:pullAbort` finish and abort this identically.
+ */
+ipcMain.handle('git:mergeBegin', async (_e, root: string, relPath: string, ref: string) => {
+  assertRelPath(relPath)
+  assertRef(ref)
+
+  const dirty = await mergeBlockingDirtyPaths(root)
+  if (dirty.length > 0) return { kind: 'dirty', paths: dirty }
+
+  // A remote-tracking ref is only as fresh as the last fetch, and the branch
+  // list the reviewer picked from may have been read long before. Refresh it
+  // so "merge origin/side" means what it says. A local branch needs nothing.
+  if (ref.startsWith('refs/remotes/') || (await isRemoteTrackingRef(root, ref))) {
+    const fetch = await runGit(['fetch'], root, GIT_NETWORK_TIMEOUT_MS)
+    if (!fetch.ok) return { kind: 'error', message: gitErrorText(fetch) }
+  }
+
+  // `^{commit}` both resolves the ref and rejects anything that is not one —
+  // the existence half of the guard `assertRef` cannot do from the string.
+  if (!(await runGit(['rev-parse', '--verify', '-q', `${ref}^{commit}`], root)).ok) {
+    return { kind: 'error', message: `There is no branch named ${ref}.` }
+  }
+
+  return beginMergeInto(root, relPath, ref)
+})
+
+/** True when `ref` names something under `refs/remotes/` — checked against git
+ *  rather than guessed from the "origin/" prefix, since a local branch may
+ *  legitimately be called that. */
+async function isRemoteTrackingRef(root: string, ref: string): Promise<boolean> {
+  const r = await runGit(['rev-parse', '--symbolic-full-name', '--verify', '-q', ref], root)
+  return r.ok && gitOut(r).startsWith('refs/remotes/')
+}
+
+/** Records the merge commit for a pull or an explicit branch merge alike —
+ *  both leave `MERGE_HEAD` set, which is all this needs. */
 ipcMain.handle(
   'git:pullFinish',
   async (
@@ -1922,20 +1992,39 @@ ipcMain.handle(
   },
 )
 
+/** Undoes whichever of `git:pullBegin`/`git:mergeBegin` is in flight — a merge
+ *  is a merge regardless of which ref started it. */
 ipcMain.handle('git:pullAbort', async (_e, root: string) => {
   return runGit(['merge', '--abort'], root)
 })
 
+/**
+ * Local branches and remote-tracking ones, in one list. The switcher takes the
+ * locals (checking out a remote-tracking ref would detach HEAD); the merge
+ * picker takes both. `for-each-ref` rather than `git branch -a` because it
+ * gives the full refname, which is what says which namespace a row came from
+ * without having to parse a "remotes/" prefix back off the short name.
+ */
 ipcMain.handle('git:branches', async (_e, root: string) => {
-  const r = await runGit(['branch', '--format=%(refname:short)%09%(HEAD)'], root)
+  const r = await runGit(
+    ['for-each-ref', '--format=%(refname)%09%(refname:short)%09%(HEAD)', 'refs/heads', 'refs/remotes'],
+    root,
+  )
   if (!r.ok) return []
   return r.stdout
     .split('\n')
     .filter(Boolean)
-    .map((line) => {
-      const [name, head] = line.split('\t')
-      return { name, current: head === '*' }
-    })
+    .map((line) => line.split('\t'))
+    // `refs/remotes/origin/HEAD` is a symref pointing at the remote's default
+    // branch, not a branch of its own — merging it would silently mean
+    // "origin/main" under another name. Matched on the *full* refname: its
+    // short form is bare "origin", which no name-based test would catch.
+    .filter(([refname]) => !refname.endsWith('/HEAD'))
+    .map(([refname, name, head]) => ({
+      name,
+      current: head === '*',
+      remote: refname.startsWith('refs/remotes/'),
+    }))
 })
 
 /**
