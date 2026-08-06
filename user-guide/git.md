@@ -33,10 +33,16 @@ one to switch:
   uncommitted work into the new branch field by field — the same engine [Pull](#pull) uses below), or
   **cancel**.
 
-**+ New branch…**, the last entry in the dropdown, creates a branch at your current commit and
+**+ New branch…**, near the end of the dropdown, creates a branch at your current commit and
 switches to it right away, going through the exact same carry-over-or-not flow above. Since the new
 branch starts as an identical copy of the one you're on, carrying uncommitted changes into it can
 never itself produce a conflict — there's nothing for your changes to disagree with yet.
+
+**- Delete branch…**, the last entry, opens a small dialog to pick a local branch (never the one
+you're on) and delete it. Git refuses on its own — with its own message shown verbatim — when the
+branch isn't fully merged into the one you're on; there's no force option here, so if you really mean
+it, do that from a terminal. Only local branches are offered: deleting a remote one needs
+`git push origin --delete`, a different, more consequential operation this dialog doesn't attempt.
 
 ### Field-level commit review
 
@@ -63,7 +69,12 @@ because committing at that point would write nothing new; pressing it just perfo
 directly, with no message needed.
 
 Any change to a file *other* than the open project's own — a PDF you added, say — still shows as a
-plain whole-file checkbox underneath, exactly as before field-level review existed.
+plain whole-file checkbox underneath, exactly as before field-level review existed. Each of those
+rows also has a small **↺** button: for a file you've already committed before, it reverts that one
+file back to the last commit; for a new, untracked file, it deletes it from disk. Either way you're
+asked to confirm first, and it cannot be undone. A renamed file or one with an unresolved merge
+conflict has no ↺ at all — reverting either correctly takes more than SaiLoR does here, so it's left
+for you to sort out with git directly rather than have the button guess.
 
 ## Pull
 
@@ -107,6 +118,17 @@ anything fetched. Merging never moves you off your branch — that's what
 Both Merge and Pull work on the **file on disk**, so both are greyed out while you have unsaved
 annotations, and both refuse outright if anything else in the repository is uncommitted — commit or
 stash that first.
+
+## Commit history
+
+**History…**, next to Merge branch… in the panel's header, lists the commits that changed the open
+project's own file — not the whole repository, just this project — newest first. Click a row to see
+what it changed: the same field-by-field "Was/Now" view the commit review above uses, computed
+against that commit's parent, but read-only — history is for looking back, not for redoing a
+decision. A commit shows "Initial commit — nothing to compare" if it has no parent, and a note about
+the schema/protocol/etc. having changed instead of a diff if that commit isn't one field-level diffing
+can make sense of. The list is capped at the latest 250 commits; past that it says so rather than
+cutting off silently.
 
 ### What Pull, Merge, and carrying changes into a new branch refuse to guess at
 

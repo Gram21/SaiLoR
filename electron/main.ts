@@ -24,7 +24,7 @@ import os from 'node:os'
 import { validateGitUrl, validateClonePath } from '../src/git/url'
 import { relPathProblem, annotationsRelDir } from '../src/git/relpath'
 import { refProblem } from '../src/git/ref'
-import { gitErrorText, parsePorcelain } from '../src/git/output'
+import { gitErrorText, parsePorcelain, parseGitLog } from '../src/git/output'
 import type { GitRun, MergeStart } from '../src/git/types'
 import { isLegacyProjectShape, assembleLegacyProjectJson } from '../src/model/project'
 import { parseMarks, type PdfMark } from '../src/model/pdfMarks'
@@ -1720,6 +1720,68 @@ ipcMain.handle('git:workingContent', async (_e, root: string, relPath: string) =
 })
 
 /**
+ * Commit history for the open project's own file — `git log` scoped to
+ * `relPath` and its `annotations/` dir, not the whole repo, matching how Pull
+ * and Merge are already scoped. Capped rather than paginated: a review
+ * project with more than `LOG_MAX_COMMITS` commits touching one file is a
+ * problem nobody has hit yet, so `truncated` just says so rather than
+ * building `--skip` support for it.
+ */
+const LOG_MAX_COMMITS = 250
+
+ipcMain.handle('git:logBegin', async (_e, root: string, relPath: string) => {
+  assertRelPath(relPath)
+  const dir = annotationsRelDir(relPath)
+  const r = await runGit(
+    [
+      'log',
+      `--max-count=${LOG_MAX_COMMITS}`,
+      '--date=iso-strict',
+      '--format=%x00%H%x09%aI%x09%s',
+      '--',
+      relPath,
+      dir,
+    ],
+    root,
+  )
+  if (!r.ok) return { commits: [], truncated: false, error: gitErrorText(r) }
+  const commits = parseGitLog(r.stdout)
+  return { commits, truncated: commits.length === LOG_MAX_COMMITS, error: null }
+})
+
+/**
+ * The two revisions of the project a commit-history row needs to show a
+ * field-level diff for: the commit itself, and its first parent. Deliberately
+ * returns raw text rather than parsing it here — `loadProject`/
+ * `detectFieldChanges` are renderer-side (`src/git/changes.ts`, called from
+ * `gitStore.ts`), and every other IPC call in this file keeps that same
+ * boundary (`git:headContent`, `git:pullBegin`'s `base`/`ours`/`theirs`):
+ * this process only ever fetches; the renderer parses and diffs.
+ *
+ * `readProjectAtRevision` for `rev` was written for `git:headContent`, where
+ * the input is always valid HEAD — its own internal `JSON.parse` is
+ * unguarded there. Reused here for arbitrary historical revisions, a
+ * malformed one would throw out of this handler instead of rejecting
+ * cleanly, so both calls are wrapped.
+ */
+ipcMain.handle('git:logDiff', async (_e, root: string, relPath: string, rev: string) => {
+  assertRelPath(relPath)
+  if (refProblem(rev)) return { kind: 'error', message: 'Not a valid revision.' }
+  let head: string | null, parent: string | null
+  try {
+    ;[head, parent] = await Promise.all([
+      readProjectAtRevision(root, relPath, rev),
+      readProjectAtRevision(root, relPath, `${rev}^`),
+    ])
+  } catch {
+    return { kind: 'error', message: 'The project file could not be read at this revision.' }
+  }
+  if (head === null) return { kind: 'error', message: 'Could not read this revision.' }
+  if (parent === null) return { kind: 'initial' }
+  return { kind: 'texts', head, parent }
+})
+
+/**
  * Commits `committed` (`{metaText, files}`, from `splitProjectFiles`) as
  * `relPath` + `annotations/`'s content — which is not necessarily what the
  * working tree holds, or ends up holding. This is what makes committing
@@ -1806,6 +1868,41 @@ ipcMain.handle(
     }
   },
 )
+
+/**
+ * Reverts or deletes a single changed file *other* than the project's own
+ * tracked file/`annotations/` — the whole-file counterpart to that file's
+ * field-level Discard. Re-derives the file's own status here rather than
+ * trusting a code the renderer cached, since the working tree can have
+ * changed since the panel last refreshed. An untracked file (`??`) has no
+ * committed version to revert to, so discarding it means deleting it from
+ * disk; a tracked, modified/deleted file reverts via the classic
+ * `checkout -- <path>` file-restore idiom (this codebase never requires a
+ * git new enough for `git restore`). Refuses — rather than guessing — a
+ * rename (`git status` reports it as the *new* path; correctly reverting one
+ * needs more than a single checkout) or an unresolved merge conflict.
+ */
+ipcMain.handle('git:discardFile', async (_e, root: string, relPath: string) => {
+  assertRelPath(relPath)
+  const st = await runGit(['status', '--porcelain=v1', '-z', '--', relPath], root)
+  const [change] = parsePorcelain(st.stdout)
+  if (!change) return { ok: true, code: 0, stdout: '', stderr: '' } // already clean — nothing to do
+  if (change.unmerged || change.from) {
+    return {
+      ok: false,
+      code: null,
+      stdout: '',
+      stderr: 'Discarding a merge conflict or a rename is not supported here — use git directly.',
+    }
+  }
+  if (change.code.startsWith('?')) {
+    const fullPath = path.join(root, relPath)
+    await assertInsideRoot(root, fullPath)
+    await unlink(fullPath)
+    return { ok: true, code: 0, stdout: '', stderr: '' }
+  }
+  return runGit(['checkout', '--', relPath], root)
+})
 
 ipcMain.handle('git:commit', async (_e, root: string, paths: string[], message: string) => {
   paths.forEach(assertRelPath)
@@ -2040,6 +2137,19 @@ ipcMain.handle('git:branches', async (_e, root: string) => {
  */
 ipcMain.handle('git:branchCreate', async (_e, root: string, name: string) => {
   return runGit(['branch', '--', name], root)
+})
+
+/**
+ * `-d`, never `-D`: git itself refuses when `branch` isn't fully merged into
+ * the current one, and that refusal — surfaced via the returned `GitRun`'s
+ * `ok: false` and `gitErrorText` — is the answer this app wants, not a force
+ * option to override it. `branch` always comes from `git:branches`' own
+ * output (the picker only ever offers real names), the same trust model
+ * `git:branchCreate`/`git:checkout` already use — hence just `--`, no
+ * `refProblem`-style validation.
+ */
+ipcMain.handle('git:branchDelete', async (_e, root: string, branch: string) => {
+  return runGit(['branch', '-d', '--', branch], root)
 })
 
 /** A plain checkout with nothing local to carry — only reached after

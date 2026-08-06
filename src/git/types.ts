@@ -135,6 +135,35 @@ export type MergeStart =
 
 export type PullStart = MergeStart | { kind: 'no-upstream'; branch: string | null }
 
+/** One entry from `git log`, for the history panel — see `parseGitLog` in
+ *  `src/git/output.ts` for how the `date` string (ISO 8601) is produced. */
+export interface CommitRecord {
+  hash: string
+  date: string
+  subject: string
+}
+
+export interface LogBeginResult {
+  commits: CommitRecord[]
+  /** True when the log was cut off at the cap (`electron/main.ts`'s
+   *  `LOG_MAX_COMMITS`) rather than genuinely ending there. */
+  truncated: boolean
+  error: string | null
+}
+
+/**
+ * The raw material for a commit-history row's field-level diff: the
+ * project's text at the commit itself and at its first parent. Deliberately
+ * text, not a parsed `Project` or a `DetectedChanges` — `loadProject`/
+ * `detectFieldChanges` are renderer-side (called from `gitStore.ts`, the same
+ * as `refreshFieldReview`'s `head`/`working` pair), so this process only ever
+ * fetches, never parses or diffs.
+ */
+export type LogRevisionFetch =
+  | { kind: 'initial' } // no parent — the first commit to touch this file
+  | { kind: 'error'; message: string }
+  | { kind: 'texts'; head: string; parent: string }
+
 /**
  * Git operations against **the user's own git installation**. See
  * `PlatformAdapter.getGit()`'s doc comment for why this exists only in
@@ -161,6 +190,12 @@ export interface GitPlatform {
    * remote-tracking, so the merge is against current data.
    */
   beginMerge(root: string, relPath: string, ref: string): Promise<MergeStart>
+  /** `git log`, scoped to `relPath` and its `annotations/` dir — for the
+   *  commit-history panel. Capped, not paginated; `truncated` says so. */
+  logBegin(root: string, relPath: string): Promise<LogBeginResult>
+  /** The two revisions a history row's diff needs, fetched but not parsed —
+   *  see `LogRevisionFetch`'s own doc comment for why. */
+  logDiff(root: string, relPath: string, rev: string): Promise<LogRevisionFetch>
   /** Writes the resolved project, stages it and records the merge commit —
    *  for a pull and for `beginMerge` alike (both leave the repository
    *  mid-merge with `MERGE_HEAD` set, which is all this needs). */
@@ -206,6 +241,9 @@ export interface GitPlatform {
   /** Creates `name` at the current `HEAD`, without switching to it — the
    *  caller always follows this with the ordinary switch flow. */
   createBranch(root: string, name: string): Promise<GitRun>
+  /** `git branch -d` — refuses (via `ok: false`) when `branch` isn't fully
+   *  merged into the current one. No force option. Local branches only. */
+  deleteBranch(root: string, branch: string): Promise<GitRun>
   /** A plain, no-local-changes checkout — only safe to call after
    *  `beginBranchSwitch` returned `'no-changes'`, or outside a project's
    *  repository entirely. */
@@ -228,4 +266,10 @@ export interface GitPlatform {
    *  reverse an already-completed checkout, which is why it needs to be told
    *  which branch to return to. */
   abortBranchSwitch(root: string, sourceBranch: string): Promise<GitRun>
+
+  /** Reverts (tracked) or deletes (untracked) a single changed file outside
+   *  the project's own tracked file/`annotations/` — the whole-file
+   *  counterpart to that file's field-level Discard. Refuses (`ok: false`)
+   *  for a rename or an unresolved merge conflict. */
+  discardFile(root: string, relPath: string): Promise<GitRun>
 }

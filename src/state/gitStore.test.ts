@@ -10,6 +10,8 @@ import type {
   SplitProject,
   GitBranch,
   BranchSwitchStart,
+  LogBeginResult,
+  LogRevisionFetch,
 } from '../git/types'
 import { conflictId, type FieldConflict } from '../git/merge'
 
@@ -111,6 +113,14 @@ let branchSwitchFinishResult: GitRun = ok()
 let branchSwitchAbortCalls: { root: string; sourceBranch: string }[] = []
 let branchSwitchAbortResult: GitRun = ok()
 
+let deleteBranchCalls: { root: string; branch: string }[] = []
+let deleteBranchResult: GitRun = ok()
+let logBeginResult: LogBeginResult = { commits: [], truncated: false, error: null }
+let logDiffCalls: string[] = []
+let logDiffResult: LogRevisionFetch = { kind: 'initial' }
+let discardFileCalls: { root: string; relPath: string }[] = []
+let discardFileResult: GitRun = ok()
+
 /** A `SplitProject`'s `files` entry with non-null text at `relPath`, parsed. */
 function fileContent(split: SplitProject, relPath: string): unknown {
   const f = split.files.find((f) => f.relPath === relPath)
@@ -152,10 +162,19 @@ const fakeGit: GitPlatform = {
     writeWorkingCalls.push({ root, relPath, working })
     return writeWorkingResult
   },
+  logBegin: async () => logBeginResult,
+  logDiff: async (_root, _relPath, rev) => {
+    logDiffCalls.push(rev)
+    return logDiffResult
+  },
   branches: async () => branchesResult,
   createBranch: async (root, name) => {
     createBranchCalls.push({ root, name })
     return createBranchResult
+  },
+  deleteBranch: async (root, branch) => {
+    deleteBranchCalls.push({ root, branch })
+    return deleteBranchResult
   },
   checkoutBranch: async (root, branch) => {
     checkoutCalls.push({ root, branch })
@@ -169,6 +188,10 @@ const fakeGit: GitPlatform = {
   abortBranchSwitch: async (root, sourceBranch) => {
     branchSwitchAbortCalls.push({ root, sourceBranch })
     return branchSwitchAbortResult
+  },
+  discardFile: async (root, relPath) => {
+    discardFileCalls.push({ root, relPath })
+    return discardFileResult
   },
 }
 
@@ -234,6 +257,13 @@ beforeEach(async () => {
   branchSwitchFinishResult = ok()
   branchSwitchAbortCalls = []
   branchSwitchAbortResult = ok()
+  deleteBranchCalls = []
+  deleteBranchResult = ok()
+  logBeginResult = { commits: [], truncated: false, error: null }
+  logDiffCalls = []
+  logDiffResult = { kind: 'initial' }
+  discardFileCalls = []
+  discardFileResult = ok()
   useStore.getState().loadFromText(projectText('mine'), { kind: 'electron', path: '/repo/review.json' }, 'review.json')
   useStore.setState({ dirty: false })
   useGitStore.setState({ probe: null, repo: { ...REPO }, clone: null, panel: null })
@@ -1012,5 +1042,173 @@ describe('New branch', () => {
     expect(createBranchCalls).toEqual([{ root: '/repo', name: 'feature/z' }])
     expect(useGitStore.getState().panel?.newBranchPrompt).toBeNull()
     expect(useGitStore.getState().panel?.branchSwitchPrompt).toEqual({ branch: 'feature/z' })
+  })
+})
+
+describe('Delete branch prompt', () => {
+  beforeEach(() => {
+    useGitStore.setState({
+      branches: [
+        { name: 'main', current: true, remote: false },
+        { name: 'feature', current: false, remote: false },
+        { name: 'origin/feature', current: false, remote: true },
+      ],
+    })
+  })
+
+  it('opens defaulted to a non-current local branch, never a remote one', () => {
+    useGitStore.getState().openDeleteBranchPrompt()
+    expect(useGitStore.getState().panel?.deleteBranchPrompt).toEqual({ branch: 'feature' })
+  })
+
+  it('does nothing when there is no other local branch', () => {
+    useGitStore.setState({ branches: [{ name: 'main', current: true, remote: false }] })
+    useGitStore.getState().openDeleteBranchPrompt()
+    expect(useGitStore.getState().panel?.deleteBranchPrompt).toBeNull()
+  })
+
+  it('setDeleteBranchPromptBranch / closeDeleteBranchPrompt', () => {
+    useGitStore.getState().openDeleteBranchPrompt()
+    useGitStore.getState().setDeleteBranchPromptBranch('other')
+    expect(useGitStore.getState().panel?.deleteBranchPrompt).toEqual({ branch: 'other' })
+
+    useGitStore.getState().closeDeleteBranchPrompt()
+    expect(useGitStore.getState().panel?.deleteBranchPrompt).toBeNull()
+  })
+
+  it('confirming deletes the branch, closes the dialog, refreshes the list, and shows a notice', async () => {
+    useGitStore.getState().openDeleteBranchPrompt()
+    await useGitStore.getState().confirmDeleteBranchPrompt()
+
+    expect(deleteBranchCalls).toEqual([{ root: '/repo', branch: 'feature' }])
+    expect(useGitStore.getState().panel?.deleteBranchPrompt).toBeNull()
+    expect(useGitStore.getState().panel?.notice).toMatch(/deleted feature/i)
+  })
+
+  it("git's refusal (not fully merged) surfaces as panel.error, not thrown", async () => {
+    deleteBranchResult = { ok: false, code: 1, stdout: '', stderr: "error: branch 'feature' is not fully merged" }
+    useGitStore.getState().openDeleteBranchPrompt()
+    await useGitStore.getState().confirmDeleteBranchPrompt()
+
+    expect(useGitStore.getState().panel?.error).toMatch(/not fully merged/)
+    expect(useGitStore.getState().panel?.deleteBranchPrompt).toBeNull()
+  })
+
+  it('confirming with no prompt open is a no-op', async () => {
+    await useGitStore.getState().confirmDeleteBranchPrompt()
+    expect(deleteBranchCalls).toEqual([])
+  })
+})
+
+describe('Commit history', () => {
+  it('openHistory fetches and populates the commit list', async () => {
+    logBeginResult = {
+      commits: [{ hash: 'abc123', date: '2024-01-01T00:00:00Z', subject: 'Answer paper A' }],
+      truncated: false,
+      error: null,
+    }
+    await useGitStore.getState().openHistory()
+
+    expect(useGitStore.getState().panel?.history?.commits).toEqual(logBeginResult.commits)
+    expect(useGitStore.getState().panel?.history?.truncated).toBe(false)
+  })
+
+  it('closeHistory clears the panel', async () => {
+    await useGitStore.getState().openHistory()
+    useGitStore.getState().closeHistory()
+    expect(useGitStore.getState().panel?.history).toBeNull()
+  })
+
+  it('loadCommitDiff is a no-op when already fetched or in flight', async () => {
+    await useGitStore.getState().openHistory()
+    const first = useGitStore.getState().loadCommitDiff('abc123')
+    // A second call while the first is still in flight ('loading') must not
+    // issue a second IPC call — this is what keeps the diff lazy and once-only.
+    void useGitStore.getState().loadCommitDiff('abc123')
+    await first
+    await useGitStore.getState().loadCommitDiff('abc123')
+
+    expect(logDiffCalls).toEqual(['abc123'])
+  })
+
+  it('an initial commit (no parent) resolves to kind "initial"', async () => {
+    logDiffResult = { kind: 'initial' }
+    await useGitStore.getState().openHistory()
+    await useGitStore.getState().loadCommitDiff('abc123')
+
+    expect(useGitStore.getState().panel?.history?.diffs['abc123']).toEqual({ kind: 'initial' })
+  })
+
+  it('an unreadable revision resolves to kind "error"', async () => {
+    logDiffResult = { kind: 'error', message: 'Could not read this revision.' }
+    await useGitStore.getState().openHistory()
+    await useGitStore.getState().loadCommitDiff('abc123')
+
+    expect(useGitStore.getState().panel?.history?.diffs['abc123']).toEqual({
+      kind: 'error',
+      message: 'Could not read this revision.',
+    })
+  })
+
+  it('a genuine field change parses and diffs into kind "changes"', async () => {
+    logDiffResult = { kind: 'texts', head: projectText('after'), parent: projectText('before') }
+    await useGitStore.getState().openHistory()
+    await useGitStore.getState().loadCommitDiff('abc123')
+
+    const diff = useGitStore.getState().panel?.history?.diffs['abc123']
+    expect(diff === 'loading' ? undefined : diff?.kind).toBe('changes')
+    if (diff !== 'loading' && diff?.kind === 'changes') {
+      expect(diff.changes.fields).toHaveLength(1)
+      // `loadCommitDiff` calls `detectFieldChanges(parent, head)`, so
+      // headValue is the older side (parent) and workingValue the newer (head).
+      expect(diff.changes.fields[0].headValue).toBe('before')
+      expect(diff.changes.fields[0].workingValue).toBe('after')
+    }
+  })
+
+  it('a structural change (or unparsable revision) resolves to kind "structural"', async () => {
+    logDiffResult = {
+      kind: 'texts',
+      head: projectTextWithSchema([{ name: 'Different', type: 'string' }]),
+      parent: projectText('before'),
+    }
+    await useGitStore.getState().openHistory()
+    await useGitStore.getState().loadCommitDiff('abc123')
+
+    expect(useGitStore.getState().panel?.history?.diffs['abc123']).toEqual({ kind: 'structural' })
+  })
+})
+
+describe('runDiscardFile', () => {
+  it('reverts a tracked file, clears it from panel.selected, and refreshes status', async () => {
+    statusChanges = [{ path: 'notes.txt', code: ' M', unmerged: false }]
+    await useGitStore.getState().refreshStatus()
+    useGitStore.getState().toggleSelected('notes.txt')
+
+    await useGitStore.getState().runDiscardFile('notes.txt')
+
+    expect(discardFileCalls).toEqual([{ root: '/repo', relPath: 'notes.txt' }])
+    expect(useGitStore.getState().panel?.selected['notes.txt']).toBeUndefined()
+  })
+
+  it('deletes an untracked file the same way, from the caller\'s perspective', async () => {
+    statusChanges = [{ path: 'scratch.pdf', code: '??', unmerged: false }]
+    await useGitStore.getState().refreshStatus()
+
+    await useGitStore.getState().runDiscardFile('scratch.pdf')
+
+    expect(discardFileCalls).toEqual([{ root: '/repo', relPath: 'scratch.pdf' }])
+  })
+
+  it('a refusal (rename or conflict) surfaces as panel.error', async () => {
+    discardFileResult = {
+      ok: false,
+      code: null,
+      stdout: '',
+      stderr: 'Discarding a merge conflict or a rename is not supported here — use git directly.',
+    }
+    await useGitStore.getState().runDiscardFile('renamed.txt')
+
+    expect(useGitStore.getState().panel?.error).toMatch(/rename/)
   })
 })

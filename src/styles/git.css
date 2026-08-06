@@ -163,7 +163,7 @@
  *  deliberately quieter than a normal button (no border, muted text) so
  *  merging reads as the rarer, more deliberate action it is, kept out of the
  *  every-session commit/pull/push row. */
-.git-merge-branch-btn {
+.git-header-action-btn {
   font: inherit;
   background: none;
   color: var(--muted);
@@ -171,11 +171,11 @@
   padding: 4px 6px;
 }
 
-.git-merge-branch-btn:hover:not(:disabled) {
+.git-header-action-btn:hover:not(:disabled) {
   text-decoration: underline;
 }
 
-.git-merge-branch-btn:disabled {
+.git-header-action-btn:disabled {
   opacity: 0.6;
 }
 
@@ -224,6 +224,8 @@
   border-radius: 8px;
 }
 .git-change-row {
+  display: flex;
+  align-items: center;
   border-bottom: 1px solid var(--border);
 }
 .git-change-row:last-child {
@@ -235,6 +237,15 @@
   gap: 8px;
   padding: 6px 10px;
   cursor: pointer;
+  flex: 1 1 auto;
+  min-width: 0; /* lets .git-change-path's own ellipsis actually take effect */
+}
+/* The per-row Discard button — visible but unobtrusive, matching the same
+ *  restraint `.git-header-action-btn` uses for the rarer merge/history
+ *  actions, just sized to sit inline with a compact row instead of a header. */
+.git-change-row > .icon-btn {
+  margin-right: 8px;
+  flex: none;
 }
 .git-change-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -580,4 +591,56 @@
   justify-content: space-between;
   padding: 12px 16px;
   border-top: 1px solid var(--border);
+}
+
+/* --- commit history --------------------------------------------------- */
+
+.git-history-rows {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-height: 60vh;
+  overflow: auto;
+}
+.git-history-row {
+  border-bottom: 1px solid var(--border);
+}
+.git-history-row:last-child {
+  border-bottom: none;
+}
+.git-history-row-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.git-history-date {
+  color: var(--muted);
+  font-size: 0.85rem;
+  flex: none;
+  white-space: nowrap;
+}
+.git-history-subject {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.git-history-hash {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--muted);
+  font-size: 0.85rem;
+  flex: none;
+}
+.git-history-diff {
+  padding: 0 10px 10px 34px; /* clears the chevron column above */
 }

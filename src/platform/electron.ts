@@ -21,6 +21,8 @@ import type {
   SplitProject,
   GitBranch,
   BranchSwitchStart,
+  LogBeginResult,
+  LogRevisionFetch,
 } from '../git/types'
 import { parsePorcelain, capDiff } from '../git/output'
 import { loadProject, splitProjectFiles } from '../model/project'
@@ -109,6 +111,8 @@ export interface SlrBridge {
   gitPullFinish(root: string, relPath: string, working: SplitProject): Promise<GitRun>
   gitPullAbort(root: string): Promise<GitRun>
   gitMergeBegin(root: string, relPath: string, ref: string): Promise<MergeStart>
+  gitLogBegin(root: string, relPath: string): Promise<LogBeginResult>
+  gitLogDiff(root: string, relPath: string, rev: string): Promise<LogRevisionFetch>
   gitHeadContent(root: string, relPath: string): Promise<string | null>
   gitWorkingContent(root: string, relPath: string): Promise<string | null>
   gitCommitPartial(
@@ -120,8 +124,10 @@ export interface SlrBridge {
     message: string,
   ): Promise<GitRun>
   gitWriteWorking(root: string, relPath: string, working: SplitProject): Promise<GitRun>
+  gitDiscardFile(root: string, relPath: string): Promise<GitRun>
   gitBranches(root: string): Promise<GitBranch[]>
   gitBranchCreate(root: string, name: string): Promise<GitRun>
+  gitBranchDelete(root: string, branch: string): Promise<GitRun>
   gitCheckout(root: string, branch: string): Promise<GitRun>
   gitBranchSwitchBegin(root: string, relPath: string, branch: string): Promise<BranchSwitchStart>
   gitBranchSwitchFinish(root: string, relPath: string, resolved: SplitProject): Promise<GitRun>
@@ -416,13 +422,17 @@ export class ElectronAdapter implements PlatformAdapter {
     finishPull: (root, relPath, working) => bridge().gitPullFinish(root, relPath, working),
     abortPull: (root) => bridge().gitPullAbort(root),
     beginMerge: (root, relPath, ref) => bridge().gitMergeBegin(root, relPath, ref),
+    logBegin: (root, relPath) => bridge().gitLogBegin(root, relPath),
+    logDiff: (root, relPath, rev) => bridge().gitLogDiff(root, relPath, rev),
     headContent: (root, relPath) => bridge().gitHeadContent(root, relPath),
     workingContent: (root, relPath) => bridge().gitWorkingContent(root, relPath),
     commitPartial: (root, relPath, committed, working, otherPaths, message) =>
       bridge().gitCommitPartial(root, relPath, committed, working, otherPaths, message),
     writeWorking: (root, relPath, working) => bridge().gitWriteWorking(root, relPath, working),
+    discardFile: (root, relPath) => bridge().gitDiscardFile(root, relPath),
     branches: (root) => bridge().gitBranches(root),
     createBranch: (root, name) => bridge().gitBranchCreate(root, name),
+    deleteBranch: (root, branch) => bridge().gitBranchDelete(root, branch),
     checkoutBranch: (root, branch) => bridge().gitCheckout(root, branch),
     beginBranchSwitch: (root, relPath, branch) => bridge().gitBranchSwitchBegin(root, relPath, branch),
     finishBranchSwitch: (root, relPath, resolved) => bridge().gitBranchSwitchFinish(root, relPath, resolved),
