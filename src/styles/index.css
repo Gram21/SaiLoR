@@ -193,6 +193,24 @@ button.primary.danger {
   padding: 4px 8px;
 }
 
+/* The Help dialog's "Report a bug" is a plain link (opens GitHub in the
+   browser), but sits among icon-btn buttons in the header, so it needs the
+   same button look — `a` doesn't pick up the base `button` rule above. */
+a.help-report-bug {
+  display: inline-flex;
+  align-items: center;
+  font: inherit;
+  color: var(--text);
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  text-decoration: none;
+  cursor: pointer;
+}
+a.help-report-bug:hover {
+  border-color: var(--accent);
+}
+
 .workspace {
   flex: 1 1 auto;
   display: grid;
@@ -1962,6 +1980,10 @@ button.paper-search-mode:hover {
   gap: 8px;
 }
 .version-label {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.welcome-report-bug {
   color: var(--muted);
   font-size: 0.8rem;
 }

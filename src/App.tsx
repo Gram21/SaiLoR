@@ -4,6 +4,7 @@ import { useEditorStore } from './state/editorStore'
 import { useGitStore } from './state/gitStore'
 import { getPlatform } from './platform'
 import { isElectron } from './platform/adapter'
+import { NEW_ISSUE_URL } from './model/version'
 import { ProjectEditor } from './components/ProjectEditor'
 import { Toolbar } from './components/Toolbar'
 import { PaperList } from './components/PaperList'
@@ -352,6 +353,15 @@ export function App() {
                 </div>
               )}
               <span className="version-label">SaiLoR v{appVersion}</span>
+              <a
+                className="welcome-report-bug"
+                href={NEW_ISSUE_URL}
+                target="_blank"
+                rel="noreferrer"
+                title="Report a bug on GitHub — opens a new issue in your browser"
+              >
+                Report a bug
+              </a>
             </div>
           </div>
         </div>
