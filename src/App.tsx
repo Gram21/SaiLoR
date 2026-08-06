@@ -34,6 +34,8 @@ import { GitMergeDialog } from './components/GitMergeDialog'
 import { BranchSwitchPrompt } from './components/BranchSwitchPrompt'
 import { NewBranchPrompt } from './components/NewBranchPrompt'
 import { MergeBranchPrompt } from './components/MergeBranchPrompt'
+import { DeleteBranchPrompt } from './components/DeleteBranchPrompt'
+import { GitHistoryDialog } from './components/GitHistoryDialog'
 import { shortenPath } from './platform/recents'
 import { Splitter } from './components/Splitter'
 import { useKeybindings } from './hooks/useKeybindings'
@@ -388,6 +390,8 @@ export function App() {
       <BranchSwitchPrompt />
       <NewBranchPrompt />
       <MergeBranchPrompt />
+      <DeleteBranchPrompt />
+      <GitHistoryDialog />
     </div>
   )
 }

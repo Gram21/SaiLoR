@@ -97,6 +97,42 @@ export function parsePorcelain(raw: string): GitFileChange[] {
   return out
 }
 
+/** One entry from `git log`, for the history panel. */
+export interface CommitRecord {
+  hash: string
+  /** ISO 8601 (`--date=iso-strict`) — the caller formats it for display. */
+  date: string
+  subject: string
+}
+
+/**
+ * Parse `git log --format=%x00%H%x09%aI%x09%s`. Same shape as `parsePorcelain`
+ * above: NUL-terminated records, defensive against a short or malformed one
+ * (a subject that itself contains a tab or newline would otherwise desync the
+ * fields, so this splits on only the first two tabs and takes everything
+ * after as the subject verbatim, rather than a blind `.split('\t')`).
+ */
+export function parseGitLog(raw: string): CommitRecord[] {
+  if (!raw) return []
+  const records = raw.split('\0').filter((r) => r.length > 0)
+  const out: CommitRecord[] = []
+
+  for (const record of records) {
+    const firstTab = record.indexOf('\t')
+    if (firstTab === -1) continue
+    const secondTab = record.indexOf('\t', firstTab + 1)
+    if (secondTab === -1) continue
+
+    const hash = record.slice(0, firstTab)
+    const date = record.slice(firstTab + 1, secondTab)
+    const subject = record.slice(secondTab + 1)
+    if (!hash) continue
+
+    out.push({ hash, date, subject })
+  }
+  return out
+}
+
 /** What to show when a git command failed. stderr first, because that is where
  *  git puts the reason; stdout only when it said nothing else. */
 export function gitErrorText(run: GitRun): string {

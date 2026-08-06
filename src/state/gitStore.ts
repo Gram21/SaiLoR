@@ -16,7 +16,15 @@ import { detectFieldChanges, composeContents, type DetectedChanges, type Disposi
 import { repoNameFromUrl } from '../git/url'
 import { annotationsRelDir } from '../git/relpath'
 import { gitErrorText } from '../git/output'
-import type { GitProbe, GitRepoInfo, GitRun, GitStatus, GitBranch, MergeStart } from '../git/types'
+import type {
+  GitProbe,
+  GitRepoInfo,
+  GitRun,
+  GitStatus,
+  GitBranch,
+  MergeStart,
+  CommitRecord,
+} from '../git/types'
 import { useStore } from './store'
 
 /**
@@ -135,6 +143,38 @@ interface MergeBranchPromptState {
   branch: string
 }
 
+/** The "- Delete branch…" entry's own dialog — mirrors `MergeBranchPromptState`
+ *  exactly, down to always defaulting to a real branch (never the current
+ *  one), since the sentinel that opens this is itself only offered when one
+ *  exists. */
+interface DeleteBranchPromptState {
+  branch: string
+}
+
+/**
+ * One commit row's field-level diff, computed by `loadCommitDiff` from the raw
+ * text `GitPlatform.logDiff` fetches — this is where `loadProject`/
+ * `detectFieldChanges` actually run, on the renderer side, the same as every
+ * other diff in this store (`refreshFieldReview`, `runPull`).
+ */
+export type LogDiffResult =
+  | { kind: 'initial' } // no parent — the first commit to touch this file
+  | { kind: 'structural' } // a structural field changed, or either side failed to parse
+  | { kind: 'error'; message: string }
+  | { kind: 'changes'; changes: DetectedChanges }
+
+/** The commit-history panel's own state — opened from the Git panel's
+ *  "History…" button, independent of everything else it does (no relation to
+ *  `dirty`/`phase`, since browsing history never touches the working tree). */
+interface HistoryState {
+  commits: CommitRecord[]
+  truncated: boolean
+  error: string | null
+  /** Keyed by commit hash — computed once per hash per time the panel is
+   *  opened, never eagerly for the whole list (see `loadCommitDiff`). */
+  diffs: Record<string, LogDiffResult | 'loading'>
+}
+
 interface PanelState {
   phase: 'idle' | 'loading' | 'working'
   status: GitStatus | null
@@ -149,6 +189,8 @@ interface PanelState {
   branchSwitchPrompt: BranchSwitchPromptState | null
   newBranchPrompt: NewBranchPromptState | null
   mergeBranchPrompt: MergeBranchPromptState | null
+  deleteBranchPrompt: DeleteBranchPromptState | null
+  history: HistoryState | null
 }
 
 interface GitState {
@@ -212,6 +254,33 @@ interface GitState {
    *  the dialog — the outcome (a notice, an error, or `GitMergeDialog` taking
    *  over) is exactly `runMergeBranch`'s own, shown in the ordinary panel. */
   confirmMergeBranchPrompt: () => Promise<void>
+
+  /** Opens the "- Delete branch…" dialog, defaulting to the first local
+   *  branch that isn't current — one that exists whenever the sentinel that
+   *  calls this is shown at all. */
+  openDeleteBranchPrompt: () => void
+  setDeleteBranchPromptBranch: (branch: string) => void
+  closeDeleteBranchPrompt: () => void
+  /** `git branch -d` against `panel.deleteBranchPrompt.branch`, closing the
+   *  dialog either way — on success, refreshes the branch list and shows a
+   *  notice; on failure (typically "not fully merged"), git's own refusal
+   *  text becomes `panel.error`. */
+  confirmDeleteBranchPrompt: () => Promise<void>
+
+  /** Opens the commit-history panel for the open project's own file and
+   *  fetches its `git log`. */
+  openHistory: () => Promise<void>
+  closeHistory: () => void
+  /** Fetches and computes the field-level diff for `hash`, once — a no-op if
+   *  it's already fetched or in flight. Never called for the whole list at
+   *  once; only when a commit row is expanded. */
+  loadCommitDiff: (hash: string) => Promise<void>
+
+  /** Reverts (tracked) or deletes (untracked) a single changed file other
+   *  than the project's own — the whole-file counterpart to the project's
+   *  field-level Discard. */
+  runDiscardFile: (path: string) => Promise<void>
+
   dismissPanelMessage: () => void
 
   resolveConflict: (id: string, value: FieldValue) => void
@@ -687,6 +756,8 @@ export const useGitStore = create<GitState>()(
             branchSwitchPrompt: null,
             newBranchPrompt: null,
             mergeBranchPrompt: null,
+            deleteBranchPrompt: null,
+            history: null,
           }
         })
         await get().refreshStatus()
@@ -991,6 +1062,117 @@ export const useGitStore = create<GitState>()(
         })
         if (!branch) return
         await get().runMergeBranch(branch)
+      },
+
+      openDeleteBranchPrompt: () => {
+        const first = get()
+          .branches.filter((b) => !b.current && !b.remote)
+          .find(Boolean)?.name
+        if (!first) return
+        set((s) => {
+          if (s.panel) s.panel.deleteBranchPrompt = { branch: first }
+        })
+      },
+
+      setDeleteBranchPromptBranch: (branch) => {
+        set((s) => {
+          if (s.panel?.deleteBranchPrompt) s.panel.deleteBranchPrompt.branch = branch
+        })
+      },
+
+      closeDeleteBranchPrompt: () => {
+        set((s) => {
+          if (s.panel) s.panel.deleteBranchPrompt = null
+        })
+      },
+
+      confirmDeleteBranchPrompt: async () => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        const branch = get().panel?.deleteBranchPrompt?.branch
+        set((s) => {
+          if (s.panel) s.panel.deleteBranchPrompt = null
+        })
+        if (!git || !repo || !branch) return
+        const r = await git.deleteBranch(repo.root, branch)
+        if (!r.ok) {
+          set((s) => {
+            if (s.panel) s.panel.error = gitErrorText(r)
+          })
+          return
+        }
+        await get().refreshBranches()
+        set((s) => {
+          if (s.panel) s.panel.notice = `Deleted ${branch}.`
+        })
+      },
+
+      openHistory: async () => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo) return
+        set((s) => {
+          if (s.panel) s.panel.history = { commits: [], truncated: false, error: null, diffs: {} }
+        })
+        const result = await git.logBegin(repo.root, repo.relPath)
+        set((s) => {
+          if (!s.panel?.history) return
+          s.panel.history.commits = result.commits
+          s.panel.history.truncated = result.truncated
+          s.panel.history.error = result.error
+        })
+      },
+
+      closeHistory: () => {
+        set((s) => {
+          if (s.panel) s.panel.history = null
+        })
+      },
+
+      loadCommitDiff: async (hash) => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo) return
+        if (get().panel?.history?.diffs[hash] !== undefined) return // fetched or already in flight
+
+        set((s) => {
+          if (s.panel?.history) s.panel.history.diffs[hash] = 'loading'
+        })
+
+        const fetch = await git.logDiff(repo.root, repo.relPath, hash)
+        let result: LogDiffResult
+        if (fetch.kind === 'initial' || fetch.kind === 'error') {
+          result = fetch
+        } else {
+          try {
+            const head = loadProject(fetch.head)
+            const parent = loadProject(fetch.parent)
+            const changes = detectFieldChanges(parent, head)
+            result = changes ? { kind: 'changes', changes } : { kind: 'structural' }
+          } catch {
+            result = { kind: 'structural' }
+          }
+        }
+        set((s) => {
+          if (s.panel?.history) s.panel.history.diffs[hash] = result
+        })
+      },
+
+      runDiscardFile: async (path) => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo) return
+        set((s) => {
+          if (s.panel) s.panel.phase = 'working'
+        })
+        const r = await git.discardFile(repo.root, path)
+        set((s) => {
+          if (!s.panel) return
+          s.panel.phase = 'idle'
+          if (r.ok) delete s.panel.selected[path]
+          else s.panel.error = gitErrorText(r)
+        })
+        if (r.ok) await get().refreshStatus()
       },
 
       dismissPanelMessage: () => {

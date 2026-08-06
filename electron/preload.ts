@@ -83,8 +83,12 @@ contextBridge.exposeInMainWorld('slr', {
   gitPullAbort: (root: string) => ipcRenderer.invoke('git:pullAbort', root),
   gitMergeBegin: (root: string, relPath: string, ref: string) =>
     ipcRenderer.invoke('git:mergeBegin', root, relPath, ref),
+  gitLogBegin: (root: string, relPath: string) => ipcRenderer.invoke('git:logBegin', root, relPath),
+  gitLogDiff: (root: string, relPath: string, rev: string) =>
+    ipcRenderer.invoke('git:logDiff', root, relPath, rev),
   gitBranches: (root: string) => ipcRenderer.invoke('git:branches', root),
   gitBranchCreate: (root: string, name: string) => ipcRenderer.invoke('git:branchCreate', root, name),
+  gitBranchDelete: (root: string, branch: string) => ipcRenderer.invoke('git:branchDelete', root, branch),
   gitCheckout: (root: string, branch: string) => ipcRenderer.invoke('git:checkout', root, branch),
   gitBranchSwitchBegin: (root: string, relPath: string, branch: string) =>
     ipcRenderer.invoke('git:branchSwitchBegin', root, relPath, branch),
@@ -104,6 +108,7 @@ contextBridge.exposeInMainWorld('slr', {
   ) => ipcRenderer.invoke('git:commitPartial', root, relPath, committed, working, otherPaths, message),
   gitWriteWorking: (root: string, relPath: string, working: unknown) =>
     ipcRenderer.invoke('git:writeWorking', root, relPath, working),
+  gitDiscardFile: (root: string, relPath: string) => ipcRenderer.invoke('git:discardFile', root, relPath),
 
   // Self-update (Windows/Linux only — see electron/main.ts). Download/install
   // are only ever triggered by these two explicit calls, never on their own.

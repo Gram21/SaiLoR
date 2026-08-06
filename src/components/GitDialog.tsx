@@ -12,6 +12,10 @@ import '../styles/git.css'
  *  with `branches` without colliding. */
 const NEW_BRANCH_OPTION = '__sailor_new_branch__'
 
+/** The branch switcher's sentinel for "- Delete branch…" — same trick as
+ *  `NEW_BRANCH_OPTION`, never a real branch name git itself would produce. */
+const DELETE_BRANCH_OPTION = '__sailor_delete_branch__'
+
 /**
  * The confirm text `runPrimaryAction` must show before committing when a
  * Discard row is mixed in among Use rows — `composeContents` (git/changes.ts)
@@ -66,6 +70,9 @@ export function GitDialog() {
   const runPush = useGitStore((s) => s.runPush)
   const runPull = useGitStore((s) => s.runPull)
   const openMergeBranchPrompt = useGitStore((s) => s.openMergeBranchPrompt)
+  const openDeleteBranchPrompt = useGitStore((s) => s.openDeleteBranchPrompt)
+  const openHistory = useGitStore((s) => s.openHistory)
+  const runDiscardFile = useGitStore((s) => s.runDiscardFile)
   const dismissPanelMessage = useGitStore((s) => s.dismissPanelMessage)
 
   const dirty = useStore((s) => s.dirty)
@@ -73,10 +80,19 @@ export function GitDialog() {
 
   useEffect(() => {
     // Any nested overlay (merge dialog, branch-switch prompt, new-branch
-    // prompt, merge-branch prompt) owns Escape while it is open — this
-    // listener would otherwise also fire and closePanel() away the commit
-    // message and dispositions.
-    if (!panel || panel.merge || panel.branchSwitchPrompt || panel.newBranchPrompt || panel.mergeBranchPrompt) return
+    // prompt, merge-branch prompt, delete-branch prompt, history) owns Escape
+    // while it is open — this listener would otherwise also fire and
+    // closePanel() away the commit message and dispositions.
+    if (
+      !panel ||
+      panel.merge ||
+      panel.branchSwitchPrompt ||
+      panel.newBranchPrompt ||
+      panel.mergeBranchPrompt ||
+      panel.deleteBranchPrompt ||
+      panel.history
+    )
+      return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closePanel()
     }
@@ -87,6 +103,9 @@ export function GitDialog() {
   if (!panel || !repo) return null
   // The merge resolution dialog takes over from here — see GitMergeDialog.
   if (panel.merge) return null
+  // Ditto for the delete-branch confirm and the history panel.
+  if (panel.deleteBranchPrompt) return null
+  if (panel.history) return null
 
   const working = panel.phase === 'working'
   const review = panel.fieldReview
@@ -160,6 +179,7 @@ export function GitDialog() {
                 disabled={working}
                 onChange={(e) => {
                   if (e.target.value === NEW_BRANCH_OPTION) openNewBranchPrompt()
+                  else if (e.target.value === DELETE_BRANCH_OPTION) openDeleteBranchPrompt()
                   else requestSwitchBranch(e.target.value)
                 }}
               >
@@ -169,6 +189,9 @@ export function GitDialog() {
                   </option>
                 ))}
                 <option value={NEW_BRANCH_OPTION}>+ New branch…</option>
+                {localBranches.some((b) => !b.current) && (
+                  <option value={DELETE_BRANCH_OPTION}>- Delete branch…</option>
+                )}
               </select>
             ) : (
               (repo.branch ?? 'detached HEAD')
@@ -179,7 +202,7 @@ export function GitDialog() {
             {mergeable.length > 0 && (
               <button
                 type="button"
-                className="git-merge-branch-btn"
+                className="git-header-action-btn"
                 title="Merge another branch into this one — a separate, deliberate action from Pull."
                 disabled={working || dirty}
                 onClick={openMergeBranchPrompt}
@@ -187,6 +210,15 @@ export function GitDialog() {
                 Merge branch…
               </button>
             )}
+            <button
+              type="button"
+              className="git-header-action-btn"
+              title={`See past commits to ${repo.relPath}.`}
+              disabled={working}
+              onClick={() => void openHistory()}
+            >
+              History…
+            </button>
             <button type="button" className="icon-btn" onClick={requestClose} aria-label="Close">
               ×
             </button>
@@ -266,21 +298,52 @@ export function GitDialog() {
             </p>
           ) : (
             <ul className="git-changes">
-              {changes.map((c) => (
-                <li key={c.path} className="git-change-row">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={!!panel.selected[c.path]}
-                      onChange={() => toggleSelected(c.path)}
-                    />
-                    <span className="git-change-code">{c.code}</span>
-                    <span className="git-change-path">
-                      {c.from ? `${c.from} → ${c.path}` : c.path}
-                    </span>
-                  </label>
-                </li>
-              ))}
+              {changes.map((c) => {
+                // Reverting a rename correctly needs more than one `checkout`,
+                // and an unresolved conflict has no single well-defined
+                // "discard" — refuse rather than guess, same as elsewhere.
+                const discardable = !c.from && !c.unmerged
+                const untracked = c.code.startsWith('?')
+                const discard = () => {
+                  const ok = window.confirm(
+                    untracked
+                      ? `Delete the untracked file ${c.path}? This cannot be undone.`
+                      : `Discard changes to ${c.path}? This reverts it to the last commit and cannot be undone.`,
+                  )
+                  if (ok) void runDiscardFile(c.path)
+                }
+                return (
+                  <li key={c.path} className="git-change-row">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={!!panel.selected[c.path]}
+                        onChange={() => toggleSelected(c.path)}
+                      />
+                      <span className="git-change-code">{c.code}</span>
+                      <span className="git-change-path">
+                        {c.from ? `${c.from} → ${c.path}` : c.path}
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      title={
+                        discardable
+                          ? untracked
+                            ? 'Delete this untracked file'
+                            : 'Discard changes to this file'
+                          : 'Discarding a rename or an unresolved conflict is not supported here'
+                      }
+                      aria-label={untracked ? `Delete ${c.path}` : `Discard changes to ${c.path}`}
+                      disabled={working || !discardable}
+                      onClick={discard}
+                    >
+                      ↺
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
           )}
 
@@ -397,7 +460,9 @@ function CommitMessageField({ value, onChange }: { value: string; onChange: (v: 
  *  on purpose (see that file's comment): this dialog stays free to diverge
  *  in how it renders a value without one quietly depending on the other's
  *  private helper. */
-function formatValue(value: FieldValue): string {
+/** Exported for `GitHistoryDialog`'s read-only rows — same "Was/Now" text for
+ *  the same field values, no reason to duplicate it. */
+export function formatValue(value: FieldValue): string {
   if (value === undefined || value === null) return '— empty —'
   if (typeof value === 'boolean') return value ? 'Yes' : 'No'
   if (typeof value === 'string' && value.trim() === '') return '— empty —'

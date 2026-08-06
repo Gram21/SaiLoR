@@ -424,11 +424,12 @@ folder that was just cloned.
 repository. It opens a panel with:
 
 - **A branch switcher** in the header — a dropdown of local branches, plus **+ New branch…** to
-  create one at the current commit and switch to it right away. Switching with nothing uncommitted is
-  a plain checkout. With uncommitted changes to the project, it asks: commit first (cancels the
-  switch for now), carry the changes into the new branch (merging field by field, same engine as
-  Pull below), or cancel. A branch just created shares its parent's commit, so carrying changes into
-  one can never itself produce a conflict.
+  create one at the current commit and switch to it right away, and **- Delete branch…** to remove
+  one (git itself refuses if it isn't fully merged, no force option here). Switching with nothing
+  uncommitted is a plain checkout. With uncommitted changes to the project, it asks: commit first
+  (cancels the switch for now), carry the changes into the new branch (merging field by field, same
+  engine as Pull below), or cancel. A branch just created shares its parent's commit, so carrying
+  changes into one can never itself produce a conflict.
 - **Field-level review of the project's own changes** — instead of one whole-file checkbox, every
   changed field (across `project.json` and every file under `annotations/`) gets its own row ("Field:
   was *this*, now *that*") with three choices: **Use** (commit the new value), **Ignore** (leave it as
@@ -436,7 +437,8 @@ repository. It opens a panel with:
   value — nothing actually happens until you press **Commit** or **Discard all**, never the moment you
   mark it). **Use all / Ignore all / Discard all** apply one disposition to everything at once.
   Any change to a file *outside* the project (a PDF you added, say) still shows as a plain whole-file
-  checkbox.
+  checkbox, now with its own small **↺** to revert (tracked) or delete (untracked) that one file —
+  refused for a rename or an unresolved conflict rather than guessed at.
 - a commit message box and a **Commit** button (which relabels to **Discard all** and turns red if
   nothing is left marked *Use*),
 - **Pull** and **Push**.
@@ -451,6 +453,13 @@ separate button rather than folded into Pull/Push because merging another branch
 occasional action, not something reached for every session. Unlike a branch switch, merging never
 moves you off your branch, so there is no stash to unwind — a cancelled merge is a plain
 `git merge --abort`.
+
+**History…**, beside it, lists the commits that touched the open project's own file — not the whole
+repository — newest first, capped at the latest 250. Expanding a commit computes the same
+field-by-field "Was/Now" diff the commit review above uses, against that commit's parent, read-only
+and fetched lazily (one commit at a time, never the whole list up front). A commit with no parent
+says so instead of trying to diff nothing; one where the schema/protocol/etc. changed says so instead
+of a diff it cannot honestly produce.
 
 **Pull merges annotations field by field, not line by line.** A field only *you* changed keeps your
 value. A field only the *remote* changed takes theirs. Only a field you **both** changed — to
@@ -480,8 +489,11 @@ hanging.
   the schema decides the shape of every tree, so there is no field-level answer; the pull (or the
   merge, or the branch-switch merge) refuses and tells you why.
 - Delete a paper the remote deleted if you have annotated it since — it is kept, and you are told.
+- Delete a remote branch, or force-delete a local one that isn't fully merged — both are left to a
+  terminal.
+- Revert a rename or an unresolved merge conflict via the whole-file ↺ — same reasoning as above.
 
-Live clone progress with a cancel button, and history browsing, are not part of this either.
+Live clone progress with a cancel button is not part of this either.
 
 ## Building & testing
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parsePorcelain, capDiff, gitErrorText, diffLines, MAX_DIFF_CHARS } from './output'
+import { parsePorcelain, capDiff, gitErrorText, diffLines, parseGitLog, MAX_DIFF_CHARS } from './output'
 import type { GitRun } from './types'
 
 describe('parsePorcelain', () => {
@@ -185,5 +185,41 @@ describe('gitErrorText', () => {
 
   it('reports "could not be started" when code is null', () => {
     expect(gitErrorText(run({ code: null }))).toBe('git could not be started.')
+  })
+})
+
+describe('parseGitLog', () => {
+  it('parses no commits', () => {
+    expect(parseGitLog('')).toEqual([])
+  })
+
+  it('parses one commit', () => {
+    const raw = '\0abc123\t2024-01-02T03:04:05+00:00\tFix the thing'
+    expect(parseGitLog(raw)).toEqual([
+      { hash: 'abc123', date: '2024-01-02T03:04:05+00:00', subject: 'Fix the thing' },
+    ])
+  })
+
+  it('parses several commits, in order', () => {
+    const raw = '\0aaa\t2024-01-01T00:00:00+00:00\tFirst\0bbb\t2024-01-02T00:00:00+00:00\tSecond'
+    expect(parseGitLog(raw)).toEqual([
+      { hash: 'aaa', date: '2024-01-01T00:00:00+00:00', subject: 'First' },
+      { hash: 'bbb', date: '2024-01-02T00:00:00+00:00', subject: 'Second' },
+    ])
+  })
+
+  it('keeps a tab inside the subject rather than desyncing the fields', () => {
+    const raw = '\0abc\t2024-01-01T00:00:00+00:00\tHas\ta\ttab'
+    expect(parseGitLog(raw)).toEqual([{ hash: 'abc', date: '2024-01-01T00:00:00+00:00', subject: 'Has\ta\ttab' }])
+  })
+
+  it('skips a record with fewer than two tabs', () => {
+    const raw = '\0onlyonefield\0abc\t2024-01-01T00:00:00+00:00\tOk'
+    expect(parseGitLog(raw)).toEqual([{ hash: 'abc', date: '2024-01-01T00:00:00+00:00', subject: 'Ok' }])
+  })
+
+  it('allows an empty subject', () => {
+    const raw = '\0abc\t2024-01-01T00:00:00+00:00\t'
+    expect(parseGitLog(raw)).toEqual([{ hash: 'abc', date: '2024-01-01T00:00:00+00:00', subject: '' }])
   })
 })
