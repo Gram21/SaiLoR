@@ -499,8 +499,11 @@ interface AppState {
    *  commit/discard rewrote the working file underneath it — see
    *  `gitStore.ts`'s `runCommit`/`runDiscard`. Unlike `loadFromText`, this is
    *  not "a project was opened": the reviewer's view (selected paper,
-   *  filters, the schema-info dialog, undo history) is left exactly as it
-   *  was, only the project data itself is refreshed. */
+   *  filters, the schema-info dialog) is left exactly as it was, only the
+   *  project data itself is refreshed. Undo/redo history is cleared, same as
+   *  `loadFromText` — those snapshots branch off the project as it stood
+   *  before this read, so keeping them would let a later Ctrl+Z silently
+   *  resurrect exactly what the resync just discarded. */
   resyncProjectFromDisk: () => Promise<void>
   save: () => Promise<boolean>
   saveAs: () => Promise<boolean>
@@ -1282,7 +1285,17 @@ export const useStore = create<AppState>()(
         set((s) => {
           s.project = project
           s.saveHandle = opened.handle
+          // The undo/redo stacks hold snapshots that branch off the *old*
+          // in-memory project — `undo` restores `entry.project` wholesale
+          // (see below), so leaving them in place lets a Ctrl+Z after a
+          // resync silently discard whatever the disk read just brought in
+          // and resurrect a whole-project snapshot from before it. Same
+          // reasoning as `loadFromText`'s reset, and for the same reason: the
+          // re-read project is not the one these snapshots were taken from.
+          s.past = []
+          s.future = []
         })
+        lastFieldKey = null
       } catch {
         // The file on disk is malformed — leave the in-memory project (still
         // valid) exactly as it was rather than surface a load error for a
@@ -1302,9 +1315,19 @@ export const useStore = create<AppState>()(
       try {
         const text = serializeProject(project)
         const handle = await platform.saveProject(text, saveHandle)
+        // Nothing blocks input while the write above is in flight (Field.tsx
+        // writes every keystroke straight to the store, and screening's I/E/U
+        // keys aren't gated on `busy` either), so a reviewer can type a new
+        // answer before this promise resolves. That edit already set `dirty`
+        // back to `true` for itself; only the snapshot that was actually
+        // serialized (`project`, captured above) may clear it, or the toolbar
+        // would say "Saved" — and Cmd+Q would not prompt — for an edit that
+        // never reached disk. Same guard as the migration write in
+        // `loadFromText` above.
+        const stillCurrent = get().project === project
         set((s) => {
           s.saveHandle = handle
-          s.dirty = false
+          if (stillCurrent) s.dirty = false
           s.busy = false
           s.lastSavedAt = Date.now()
         })
@@ -1367,18 +1390,29 @@ export const useStore = create<AppState>()(
         // never done.
         const pathsMoved = toWrite !== project
         if (pathsMoved) lastFieldKey = null
+        // Same race as `save()`, plus a second hazard: `toWrite` is a copy of
+        // the pre-await `project` with only its PDF paths changed, so
+        // unconditionally assigning it to `s.project` would also erase an
+        // edit made during the awaits above, not just leave `dirty` wrong
+        // about it. Adopt `toWrite` (and clear dirty / drop history) only if
+        // nothing else landed in the meantime; otherwise the newer project
+        // already in the store is the one with the edit, and it genuinely
+        // has not been saved anywhere yet.
+        const stillCurrent = get().project === project
         set((s) => {
-          s.project = toWrite
           s.saveHandle = handle
           s.projectName = location.name
-          s.dirty = false
           s.busy = false
           s.lastSavedAt = Date.now()
-          if (pathsMoved) {
-            s.past = []
-            s.future = []
-          }
           s.recents = platform.getRecents()
+          if (stillCurrent) {
+            s.project = toWrite
+            s.dirty = false
+            if (pathsMoved) {
+              s.past = []
+              s.future = []
+            }
+          }
         })
         return true
       } catch (err) {

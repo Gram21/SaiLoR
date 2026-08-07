@@ -94,6 +94,41 @@ describe('splitProjectFiles', () => {
     expect(r2?.text).toBeNull()
   })
 
+  it('writes a reviewer tree numbered above the current config.reviewers, rather than dropping it', () => {
+    // Lowering config.reviewers (a reviewer leaves the project) must not be
+    // what deletes their tree — normalizeReviews's own contract, and
+    // docs/annotation-schema.md's "Lowering the reviewer count" section,
+    // both promise reviewer 3's tree survives and reappears if the count is
+    // raised back. splitProjectFiles has to honor that on every write, not
+    // just leave the key untouched in memory.
+    const raw = JSON.parse(
+      legacyJson({
+        reviewers: 2,
+        papers: [
+          {
+            id: 'p1',
+            title: 'Paper One',
+            authors: ['A'],
+            pdf: 'p1.pdf',
+            annotations: {},
+            reviews: {
+              '1': { Relevant: [{ value: true }] },
+              '2': {},
+              '3': { Relevant: [{ value: true }] },
+            },
+            reviewsFinished: { '3': true },
+          },
+        ],
+      }),
+    )
+    const project = loadProject(raw)
+    const { files } = splitProjectFiles(project)
+
+    const r3 = files.find((f) => f.relPath === 'p1/reviewer-3.json')
+    expect(r3?.text).toContain('Relevant')
+    expect(r3?.text).toContain('"finished": true')
+  })
+
   it('never emits reviewer-*.json files for a single-reviewer project', () => {
     const project = loadProject(legacyJson())
     const { files } = splitProjectFiles(project)

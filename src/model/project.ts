@@ -931,8 +931,24 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     if (p.abstractFromPdf && p.abstract) paper.abstractFromPdf = true
     paper.pdf = p.pdf
 
+    // The configured range, plus any reviewer number `parseReviews`/
+    // `parseReviewsFinished` kept even though it now falls outside it —
+    // lowering `config.reviewers` (a lead losing a reviewer) must not be what
+    // deletes that reviewer's tree, exactly as `normalizeReviews`'s doc
+    // comment promises for the in-memory shape. Without this, a reviewer
+    // numbered above the current count never makes it into a split file at
+    // all: not on an ordinary Save As, and not on the one-time legacy-shape
+    // migration write, which would silently drop their tree from the only
+    // copy that write produces.
+    const reviewerSlots = new Set<number>()
     if (project.reviewers > 1) {
-      for (let k = 1; k <= project.reviewers; k++) {
+      for (let k = 1; k <= project.reviewers; k++) reviewerSlots.add(k)
+    }
+    for (const key of Object.keys(p.reviews)) reviewerSlots.add(Number(key))
+    for (const key of Object.keys(p.reviewMarks)) reviewerSlots.add(Number(key))
+    for (const key of Object.keys(p.reviewsFinished)) reviewerSlots.add(Number(key))
+    if (reviewerSlots.size > 0) {
+      for (const k of [...reviewerSlots].sort((a, b) => a - b)) {
         const tree = p.reviews[String(k)]
         const has = tree !== undefined && hasAnnotations(project.schema, tree)
         // `finished` rides in the same per-reviewer file as that reviewer's
