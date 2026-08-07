@@ -30,16 +30,64 @@ const DELETE_BRANCH_OPTION = '__sailor_delete_branch__'
 export function mixedDiscardConfirmMessage(
   discardOnlyMode: boolean,
   hasDiscardRow: boolean,
-  discardCount: number,
+  fieldDiscardCount: number,
+  paperDiscardCount: number,
   relPath: string,
 ): string | null {
   if (discardOnlyMode || !hasDiscardRow) return null
-  const n = discardCount
-  return (
-    `${n} field${n === 1 ? '' : 's'} marked Discard will be reverted to ${n === 1 ? 'its' : 'their'} ` +
-    `last-committed value in ${relPath} when this commits — ${n === 1 ? 'that change' : 'those changes'} ` +
-    `will be lost, and this cannot be undone.\n\nContinue?`
-  )
+
+  // Field-only wording, kept byte-for-byte from before `paperDiscardCount`
+  // existed — the common case (nobody added/removed a paper this session)
+  // must read exactly as it always has.
+  if (paperDiscardCount === 0) {
+    const n = fieldDiscardCount
+    return (
+      `${n} field${n === 1 ? '' : 's'} marked Discard will be reverted to ${n === 1 ? 'its' : 'their'} ` +
+      `last-committed value in ${relPath} when this commits — ${n === 1 ? 'that change' : 'those changes'} ` +
+      `will be lost, and this cannot be undone.\n\nContinue?`
+    )
+  }
+
+  // A `PaperChange` marked Discard is not "a field": `composeContents` drops
+  // the paper from `committed` entirely, and `writeProjectFiles` then deletes
+  // its `consolidated.json`, every `reviewer-<n>.json`, and every
+  // `marks-*.json`. Calling that "1 field" (the old, shared count did) badly
+  // undersells what is about to be lost — so a paper row gets its own,
+  // explicit sentence naming exactly that.
+  const p = paperDiscardCount
+  const paperPart =
+    `${p} paper${p === 1 ? '' : 's'} marked Discard will be deleted entirely, along with ` +
+    `${p === 1 ? 'its' : 'their'} annotations — every reviewer's file and the consolidated result — ` +
+    'when this commits'
+  if (fieldDiscardCount === 0) {
+    return `${paperPart}. This cannot be undone.\n\nContinue?`
+  }
+  const f = fieldDiscardCount
+  const fieldPart =
+    `${f} field${f === 1 ? '' : 's'} marked Discard will be reverted to ${f === 1 ? 'its' : 'their'} ` +
+    `last-committed value in ${relPath}`
+  return `${paperPart}. Separately, ${fieldPart}. This cannot be undone.\n\nContinue?`
+}
+
+/**
+ * Is `path` the open project's own tracked file, or does it live under its
+ * `annotations/` folder? Deliberately independent of whether field review
+ * (`panel.fieldReview`) is currently available — review is routinely
+ * unavailable (a schema edit, a reviewer-count change, a project-title/
+ * protocol/provenance edit, an unparseable/uncommitted project, or simply no
+ * field/paper-meta change at all, which is exactly what a marks-only edit —
+ * adding PDF highlights — produces, since `detectFieldChanges` never diffs
+ * `marks`/`reviewMarks`) and the project's own rows fall back to the plain
+ * whole-file checkbox in that case (see this file's own doc comment). The
+ * per-file ↺ must never apply to these regardless: there is no committed
+ * copy of an untracked `annotations/<paperId>/*.json` to recover from.
+ * Exported so `GitDialog.test.ts` can assert this without rendering the
+ * component. The real enforcement is server-side — `git:discardFile` takes
+ * `projectRelPath` and refuses the same paths itself.
+ */
+export function isProjectOwnPath(path: string, relPath: string): boolean {
+  const dir = annotationsRelDir(relPath)
+  return path === relPath || path === dir || path.startsWith(`${dir}/`)
 }
 
 /**
@@ -110,12 +158,13 @@ export function GitDialog() {
   const working = panel.phase === 'working'
   const review = panel.fieldReview
   // The project's own rows — `project.json` and everything under
-  // `annotations/` — live in the field-review list below instead, once
-  // there is one — never both.
-  const dir = annotationsRelDir(repo.relPath)
-  const changes = (panel.status?.changes ?? []).filter(
-    (c) => !review || (c.path !== repo.relPath && c.path !== dir && !c.path.startsWith(`${dir}/`)),
-  )
+  // `annotations/` — live in the field-review list below instead, whenever
+  // there is one to show them there. When there isn't (see
+  // `isProjectOwnPath`'s own comment for why that's routine, not rare), they
+  // fall back to the plain checkbox below instead of vanishing — but never
+  // get the per-file ↺, which `isProjectOwnPath` alone (not gated on
+  // `review`) is what withholds.
+  const changes = (panel.status?.changes ?? []).filter((c) => !review || !isProjectOwnPath(c.path, repo.relPath))
   // The switcher only ever offers local branches — checking out a
   // remote-tracking ref would detach HEAD. The merge picker takes both.
   const localBranches = branches.filter((b) => !b.remote)
@@ -132,6 +181,15 @@ export function GitDialog() {
     : []
   const hasUseRow = reviewDispositions.includes('use')
   const hasDiscardRow = reviewDispositions.includes('discard')
+  // Separate counts for the mixed-discard confirm (`mixedDiscardConfirmMessage`)
+  // — a `PaperChange` marked Discard is not "a field" (see that function's
+  // own comment for why the old shared count badly undersold what it does).
+  const paperDiscardCount = review
+    ? review.changes.papers.filter((p) => (review.decisions[p.id] ?? 'use') === 'discard').length
+    : 0
+  const fieldDiscardCount = review
+    ? review.changes.fields.filter((f) => (review.decisions[f.id] ?? 'use') === 'discard').length
+    : 0
   // No other file is selected, and nothing in the review would end up
   // committed — every row is Ignore or Discard. Committing would write
   // nothing new, so the button's only honest job left is discarding.
@@ -145,18 +203,24 @@ export function GitDialog() {
 
   const runPrimaryAction = () => {
     if (!discardOnlyMode) {
-      const discardCount = reviewDispositions.filter((d) => d === 'discard').length
-      const msg = mixedDiscardConfirmMessage(discardOnlyMode, hasDiscardRow, discardCount, repo.relPath)
+      const msg = mixedDiscardConfirmMessage(discardOnlyMode, hasDiscardRow, fieldDiscardCount, paperDiscardCount, repo.relPath)
       if (msg && !window.confirm(msg)) return
       void runCommit()
       return
     }
     const n = reviewDispositions.filter((d) => d === 'discard').length
-    const ok = window.confirm(
-      `Discard ${n} change${n === 1 ? '' : 's'} in ${repo.relPath}? This reverts ` +
-        `${n === 1 ? 'it' : 'them'} in the file on disk and cannot be undone. Nothing is committed.`,
-    )
-    if (ok) void runDiscard()
+    // Same undercount `mixedDiscardConfirmMessage` fixes, for the same
+    // reason: a discarded paper here means deleting it and every one of its
+    // annotation files, not just "reverting" a value — worth its own clause
+    // rather than folding silently into the generic "N changes" count.
+    const msg =
+      paperDiscardCount > 0
+        ? `Discard ${n} change${n === 1 ? '' : 's'} in ${repo.relPath}, including ${paperDiscardCount} ` +
+          `paper${paperDiscardCount === 1 ? '' : 's'} that will be deleted along with ` +
+          `${paperDiscardCount === 1 ? 'its' : 'their'} annotations? This cannot be undone. Nothing is committed.`
+        : `Discard ${n} change${n === 1 ? '' : 's'} in ${repo.relPath}? This reverts ` +
+          `${n === 1 ? 'it' : 'them'} in the file on disk and cannot be undone. Nothing is committed.`
+    if (window.confirm(msg)) void runDiscard()
   }
 
   return (
@@ -299,19 +363,42 @@ export function GitDialog() {
           ) : (
             <ul className="git-changes">
               {changes.map((c) => {
-                // Reverting a rename correctly needs more than one `checkout`,
-                // and an unresolved conflict has no single well-defined
-                // "discard" — refuse rather than guess, same as elsewhere.
-                const discardable = !c.from && !c.unmerged
+                // The project's own file/`annotations/` tree must never get
+                // this button, review or no review (see `isProjectOwnPath`'s
+                // own comment) — there is no committed copy of an untracked
+                // annotation file to recover from. `git:discardFile` refuses
+                // the same paths server-side; this is the (non-authoritative)
+                // renderer half of that guard.
+                const isOwn = isProjectOwnPath(c.path, repo.relPath)
+                // `git status --porcelain` collapses a wholly-untracked
+                // directory into one record like `?? exports/` — trailing
+                // slash preserved. Reverting a rename correctly needs more
+                // than one `checkout`, and an unresolved conflict has no
+                // single well-defined "discard" — refuse rather than guess,
+                // same as elsewhere.
+                const isDir = c.path.endsWith('/')
+                const discardable = !isOwn && !c.from && !c.unmerged
                 const untracked = c.code.startsWith('?')
                 const discard = () => {
                   const ok = window.confirm(
                     untracked
-                      ? `Delete the untracked file ${c.path}? This cannot be undone.`
+                      ? isDir
+                        ? `Delete the untracked folder ${c.path} and everything in it? This cannot be undone.`
+                        : `Delete the untracked file ${c.path}? This cannot be undone.`
                       : `Discard changes to ${c.path}? This reverts it to the last commit and cannot be undone.`,
                   )
                   if (ok) void runDiscardFile(c.path)
                 }
+                const title = isOwn
+                  ? "This project's own files are handled by the field review above (or the whole-file " +
+                    'commit checkbox), never discarded here.'
+                  : discardable
+                    ? untracked
+                      ? isDir
+                        ? 'Delete this untracked folder and everything in it'
+                        : 'Delete this untracked file'
+                      : 'Discard changes to this file'
+                    : 'Discarding a rename or an unresolved conflict is not supported here'
                 return (
                   <li key={c.path} className="git-change-row">
                     <label>
@@ -328,14 +415,14 @@ export function GitDialog() {
                     <button
                       type="button"
                       className="icon-btn"
-                      title={
-                        discardable
-                          ? untracked
-                            ? 'Delete this untracked file'
-                            : 'Discard changes to this file'
-                          : 'Discarding a rename or an unresolved conflict is not supported here'
+                      title={title}
+                      aria-label={
+                        isOwn
+                          ? `Cannot discard ${c.path} here`
+                          : untracked
+                            ? `Delete ${c.path}`
+                            : `Discard changes to ${c.path}`
                       }
-                      aria-label={untracked ? `Delete ${c.path}` : `Discard changes to ${c.path}`}
                       disabled={working || !discardable}
                       onClick={discard}
                     >

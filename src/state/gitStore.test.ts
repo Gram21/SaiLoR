@@ -118,7 +118,7 @@ let deleteBranchResult: GitRun = ok()
 let logBeginResult: LogBeginResult = { commits: [], truncated: false, error: null }
 let logDiffCalls: string[] = []
 let logDiffResult: LogRevisionFetch = { kind: 'initial' }
-let discardFileCalls: { root: string; relPath: string }[] = []
+let discardFileCalls: { root: string; relPath: string; projectRelPath: string }[] = []
 let discardFileResult: GitRun = ok()
 
 /** A `SplitProject`'s `files` entry with non-null text at `relPath`, parsed. */
@@ -189,8 +189,8 @@ const fakeGit: GitPlatform = {
     branchSwitchAbortCalls.push({ root, sourceBranch })
     return branchSwitchAbortResult
   },
-  discardFile: async (root, relPath) => {
-    discardFileCalls.push({ root, relPath })
+  discardFile: async (root, relPath, projectRelPath) => {
+    discardFileCalls.push({ root, relPath, projectRelPath })
     return discardFileResult
   },
 }
@@ -554,6 +554,32 @@ describe('runCommit — field review (commitPartial)', () => {
     expect(committed.papers[0].title).toBe('Old Title')
     expect(workingOut.papers[0].title).toBe('Old Title')
   })
+
+  // Bug 1, the most severe of the four: `refreshFieldReview` snapshots
+  // `working` once and nothing re-reads it before `composeContents` writes
+  // over the *entire* project. The routine way the file changes underneath
+  // it: the dirty banner's own "Save project" button writes to disk without
+  // refreshing this panel (`App.tsx`'s refresh effect doesn't key on a
+  // save). This is the regression test for the guard that closes that hole.
+  it('the working file changed on disk since the review was loaded — refuses to write, refreshes the review instead', async () => {
+    // Simulates exactly that: Save (or an unattended autosave) wrote a
+    // *different* title to disk after `refreshFieldReview` captured 'New
+    // Title' into `review.working`.
+    workingContentResult = paperMetaText('Newer Title')
+
+    await useGitStore.getState().runCommit()
+
+    expect(commitPartialCalls).toHaveLength(0)
+    expect(commitCalls).toHaveLength(0)
+    expect(openedPaths).toEqual([]) // no resync either — nothing was written
+    expect(useGitStore.getState().panel?.error).toMatch(/changed on disk/i)
+    expect(useGitStore.getState().panel?.phase).toBe('idle')
+    // The review has been reloaded against the current file, so the
+    // reviewer sees the real working value, not the stale one they were
+    // about to commit over.
+    const fc = useGitStore.getState().panel?.fieldReview?.changes.fields[0]
+    expect(fc?.workingValue).toBe('Newer Title')
+  })
 })
 
 describe('runDiscard — field review (writeWorking)', () => {
@@ -627,6 +653,24 @@ describe('runDiscard — field review (writeWorking)', () => {
     expect(writeWorkingCalls).toHaveLength(0)
     expect(openedPaths).toEqual([])
     expect(useGitStore.getState().panel?.notice).toBeNull()
+  })
+
+  // Bug 1's other half: `runDiscard` composes from the same stale
+  // `review.working` snapshot `runCommit` does, and writes it via
+  // `writeWorking` instead of `commitPartial` — the same hole, the same fix.
+  it('the working file changed on disk since the review was loaded — refuses to write, refreshes the review instead', async () => {
+    const id = conflictId('a', { kind: 'paper' }, 'title')
+    useGitStore.getState().setFieldDisposition(id, 'discard')
+    workingContentResult = paperMetaText('Newer Title')
+
+    await useGitStore.getState().runDiscard()
+
+    expect(writeWorkingCalls).toHaveLength(0)
+    expect(openedPaths).toEqual([])
+    expect(useGitStore.getState().panel?.error).toMatch(/changed on disk/i)
+    expect(useGitStore.getState().panel?.phase).toBe('idle')
+    const fc = useGitStore.getState().panel?.fieldReview?.changes.fields[0]
+    expect(fc?.workingValue).toBe('Newer Title')
   })
 })
 
@@ -1187,7 +1231,7 @@ describe('runDiscardFile', () => {
 
     await useGitStore.getState().runDiscardFile('notes.txt')
 
-    expect(discardFileCalls).toEqual([{ root: '/repo', relPath: 'notes.txt' }])
+    expect(discardFileCalls).toEqual([{ root: '/repo', relPath: 'notes.txt', projectRelPath: 'review.json' }])
     expect(useGitStore.getState().panel?.selected['notes.txt']).toBeUndefined()
   })
 
@@ -1197,7 +1241,7 @@ describe('runDiscardFile', () => {
 
     await useGitStore.getState().runDiscardFile('scratch.pdf')
 
-    expect(discardFileCalls).toEqual([{ root: '/repo', relPath: 'scratch.pdf' }])
+    expect(discardFileCalls).toEqual([{ root: '/repo', relPath: 'scratch.pdf', projectRelPath: 'review.json' }])
   })
 
   it('a refusal (rename or conflict) surfaces as panel.error', async () => {
@@ -1210,5 +1254,41 @@ describe('runDiscardFile', () => {
     await useGitStore.getState().runDiscardFile('renamed.txt')
 
     expect(useGitStore.getState().panel?.error).toMatch(/rename/)
+  })
+
+  // Bug 2's second layer: the project's own relPath is always passed through
+  // so the main process — the real guard, not just the renderer's withheld
+  // ↺ button — can refuse a discard that targets the project's own file or
+  // its `annotations/` tree.
+  it('passes the open project\'s own relPath through as projectRelPath', async () => {
+    statusChanges = [{ path: 'exports/summary.csv', code: '??', unmerged: false }]
+    await useGitStore.getState().refreshStatus()
+
+    await useGitStore.getState().runDiscardFile('exports/summary.csv')
+
+    expect(discardFileCalls).toEqual([
+      { root: '/repo', relPath: 'exports/summary.csv', projectRelPath: 'review.json' },
+    ])
+  })
+
+  // Bug 3: an untracked directory used to reach a bare `unlink()` in the main
+  // process, which throws EISDIR — an uncaught rejection that left
+  // `panel.phase` stuck at 'working' since nothing here awaited it inside a
+  // `try`. The main process itself no longer throws for this case, but this
+  // is the belt-and-suspenders match: any rejection, from any cause, must
+  // still leave the panel usable.
+  it('a rejecting discardFile leaves phase idle and sets panel.error, rather than wedging the panel', async () => {
+    statusChanges = [{ path: 'exports/', code: '??', unmerged: false }]
+    await useGitStore.getState().refreshStatus()
+    const original = fakeGit.discardFile
+    fakeGit.discardFile = async () => {
+      throw new Error('EISDIR: illegal operation on a directory')
+    }
+
+    await useGitStore.getState().runDiscardFile('exports/')
+    fakeGit.discardFile = original
+
+    expect(useGitStore.getState().panel?.phase).toBe('idle')
+    expect(useGitStore.getState().panel?.error).toMatch(/EISDIR/)
   })
 })

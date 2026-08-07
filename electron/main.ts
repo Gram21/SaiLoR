@@ -12,7 +12,7 @@ import {
   shell,
 } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { readFile, writeFile, access, readdir, lstat, realpath, unlink, mkdir } from 'node:fs/promises'
+import { readFile, writeFile, access, readdir, lstat, realpath, unlink, mkdir, rm } from 'node:fs/promises'
 import { constants, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import path from 'node:path'
@@ -1881,27 +1881,63 @@ ipcMain.handle(
  * git new enough for `git restore`). Refuses — rather than guessing — a
  * rename (`git status` reports it as the *new* path; correctly reverting one
  * needs more than a single checkout) or an unresolved merge conflict.
+ *
+ * `projectRelPath` is the open project's own `relPath` — this is the real
+ * guard against deleting the project's own untracked annotation files
+ * (`GitDialog.tsx`'s `isProjectOwnPath` withholds the ↺ button for the same
+ * paths, but that is UI, not enforcement, and the renderer must not be the
+ * only thing standing between a stray click and data with no committed copy
+ * to recover from). Refuses whenever `relPath` *is* `projectRelPath` or
+ * falls under its `annotationsRelDir(...)`, the same wording style as the
+ * rename/conflict refusal above.
+ *
+ * The whole body is wrapped in `try`/`catch`, unlike most handlers here:
+ * `runDiscardFile` in `gitStore.ts` awaits this with no fallback of its own,
+ * so an uncaught rejection would leave `panel.phase` stuck at `'working'`
+ * — this is what a wholly-untracked directory used to do (`git status`
+ * collapses one into a single `?? exports/` record, which reached `unlink()`
+ * and threw `EISDIR`). Every failure, expected or not, comes back as an
+ * ordinary `{ok: false}` instead.
  */
-ipcMain.handle('git:discardFile', async (_e, root: string, relPath: string) => {
-  assertRelPath(relPath)
-  const st = await runGit(['status', '--porcelain=v1', '-z', '--', relPath], root)
-  const [change] = parsePorcelain(st.stdout)
-  if (!change) return { ok: true, code: 0, stdout: '', stderr: '' } // already clean — nothing to do
-  if (change.unmerged || change.from) {
-    return {
-      ok: false,
-      code: null,
-      stdout: '',
-      stderr: 'Discarding a merge conflict or a rename is not supported here — use git directly.',
+ipcMain.handle('git:discardFile', async (_e, root: string, relPath: string, projectRelPath: string) => {
+  try {
+    assertRelPath(relPath)
+    const projectDir = annotationsRelDir(projectRelPath)
+    if (relPath === projectRelPath || relPath === projectDir || relPath.startsWith(`${projectDir}/`)) {
+      return {
+        ok: false,
+        code: null,
+        stdout: '',
+        stderr: "Discarding the project's own file here is not supported — use the field review above.",
+      }
     }
+    const st = await runGit(['status', '--porcelain=v1', '-z', '--', relPath], root)
+    const [change] = parsePorcelain(st.stdout)
+    if (!change) return { ok: true, code: 0, stdout: '', stderr: '' } // already clean — nothing to do
+    if (change.unmerged || change.from) {
+      return {
+        ok: false,
+        code: null,
+        stdout: '',
+        stderr: 'Discarding a merge conflict or a rename is not supported here — use git directly.',
+      }
+    }
+    if (change.code.startsWith('?')) {
+      const fullPath = path.join(root, relPath)
+      await assertInsideRoot(root, fullPath)
+      // A wholly-untracked directory reports as one porcelain record whose
+      // path ends in "/" — a plain `unlink` on that throws EISDIR.
+      if (relPath.endsWith('/')) {
+        await rm(fullPath, { recursive: true, force: true })
+      } else {
+        await unlink(fullPath)
+      }
+      return { ok: true, code: 0, stdout: '', stderr: '' }
+    }
+    return await runGit(['checkout', '--', relPath], root)
+  } catch (err) {
+    return { ok: false, code: null, stdout: '', stderr: err instanceof Error ? err.message : String(err) }
   }
-  if (change.code.startsWith('?')) {
-    const fullPath = path.join(root, relPath)
-    await assertInsideRoot(root, fullPath)
-    await unlink(fullPath)
-    return { ok: true, code: 0, stdout: '', stderr: '' }
-  }
-  return runGit(['checkout', '--', relPath], root)
 })
 
 ipcMain.handle('git:commit', async (_e, root: string, paths: string[], message: string) => {
