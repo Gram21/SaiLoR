@@ -25,6 +25,7 @@ import { validateGitUrl, validateClonePath } from '../src/git/url'
 import { relPathProblem, annotationsRelDir } from '../src/git/relpath'
 import { refProblem } from '../src/git/ref'
 import { gitErrorText, parsePorcelain, parseGitLog } from '../src/git/output'
+import { ownAnnotationPathMatcher } from '../src/git/ownAnnotationPath'
 import type { GitRun, MergeStart } from '../src/git/types'
 import { isLegacyProjectShape, assembleLegacyProjectJson } from '../src/model/project'
 import { parseMarks, type PdfMark } from '../src/model/pdfMarks'
@@ -811,6 +812,58 @@ ipcMain.handle('project:pickSavePath', async (_e, suggestedName: string) => {
   if (res.canceled || !res.filePath) return null
   return { path: res.filePath }
 })
+
+/**
+ * Would writing a project to `destPath` start sharing an `annotations/`
+ * folder with another, unrelated project already sitting in that directory?
+ * Two *different* project kinds sharing paper ids on purpose (SaiLoR's own
+ * "Start full-text screening" flow) never actually collide on a filename —
+ * one writes `screening-N.json`, the other `reviewer-N.json`, for the same
+ * paper id — so this only flags a **same-family** overlap: another project
+ * file, of the same screening/non-screening kind, that shares at least one
+ * paper id. Called from `saveAs()` right after the destination is picked and
+ * before anything is written — the only moment a new sharing relationship
+ * can be created; it cannot retroactively protect a folder two projects
+ * already share from an earlier, unguarded Save As.
+ *
+ * Not git-specific — Save As works with no repository at all — so this
+ * lives in the plain `project:*` namespace like `pickSavePath` above it,
+ * not alongside the `git:*` handlers.
+ */
+ipcMain.handle(
+  'project:checkSiblingCollision',
+  async (_e, destPath: string, paperIds: string[], screening: boolean) => {
+    const destDir = path.dirname(destPath)
+    const destName = path.basename(destPath)
+    let entries: string[]
+    try {
+      entries = await readdir(destDir)
+    } catch {
+      return null // destination directory doesn't exist yet — nothing to collide with
+    }
+    const ownIds = new Set(paperIds)
+    for (const name of entries) {
+      if (name === destName || !name.endsWith('.json')) continue
+      let raw: unknown
+      try {
+        raw = JSON.parse(await readFile(path.join(destDir, name), 'utf-8'))
+      } catch {
+        continue // not a project file (or not readable) — not our concern
+      }
+      const candidatePapers = (raw as { papers?: unknown[] } | null)?.papers
+      if (!Array.isArray(candidatePapers)) continue
+      const candidateScreening = Boolean((raw as { config?: { screening?: unknown } })?.config?.screening)
+      if (candidateScreening !== screening) continue // different family — filenames can't collide
+      const overlapping: string[] = []
+      for (const p of candidatePapers) {
+        const id = (p as { id?: unknown } | null)?.id
+        if (typeof id === 'string' && ownIds.has(id)) overlapping.push(id)
+      }
+      if (overlapping.length > 0) return { siblingName: name, overlappingIds: overlapping }
+    }
+    return null
+  },
+)
 
 ipcMain.handle('pdf:pick', async () => {
   const res = await dialog.showOpenDialog({
@@ -2025,12 +2078,32 @@ async function beginMergeInto(root: string, relPath: string, ref: string): Promi
   const unmerged = parsePorcelain(st2.stdout)
     .filter((c) => c.unmerged)
     .map((c) => c.path)
-  // Both `relPath` and anything under `dir` are ours to reconcile (git's own
-  // per-file merge may have already resolved some of them cleanly, or left
-  // others with conflict markers — `mergeProjects` re-derives the whole
-  // result from base/ours/theirs regardless, the same way it already did for
-  // the single project file this replaces).
-  const others = unmerged.filter((p) => p !== relPath && p !== dir && !p.startsWith(dir + '/'))
+  // `relPath` and this project's own family of files under `dir` are ours to
+  // reconcile (git's own per-file merge may have already resolved some of
+  // them cleanly, or left others with conflict markers — `mergeProjects`
+  // re-derives the whole result from base/ours/theirs regardless, the same
+  // way it already did for the single project file this replaces).
+  //
+  // "Anything under `dir`" used to be the whole test — wrong whenever a
+  // sibling project shares the folder: its file would be waived through this
+  // check instead of aborting the merge, git's own line-based merge would
+  // leave raw conflict-marker text inside it, and that would then get
+  // committed. `matchesOwn` is the union of `ours`' and `theirs`' own paper
+  // lists — union, not just `ours`, because a paper the remote side added is
+  // legitimately this project's family too even though it's absent from
+  // `ours`, and using only `ours` would misclassify an ordinary new-paper
+  // pull as `conflict-elsewhere`.
+  let matchesOwn: (rel: string) => boolean
+  try {
+    const matchesOurs = ownAnnotationPathMatcher(JSON.parse(ours))
+    const matchesTheirs = ownAnnotationPathMatcher(JSON.parse(theirs))
+    matchesOwn = (rel) => matchesOurs(rel) || matchesTheirs(rel)
+  } catch {
+    // Can't tell what's ours — fail toward the existing conflict-elsewhere
+    // abort rather than guessing something unreadable is safe to merge over.
+    matchesOwn = () => false
+  }
+  const others = unmerged.filter((p) => p !== relPath && !(p.startsWith(`${dir}/`) && matchesOwn(p.slice(dir.length + 1))))
   if (others.length > 0) {
     // SaiLoR knows how to merge an annotation JSON. It does not know how to
     // merge a PDF or a .gitignore — abort cleanly and hand it back rather
@@ -2230,11 +2303,35 @@ ipcMain.handle('git:checkout', async (_e, root: string, branch: string) => {
  * but has no honest way to carry an arbitrary file's local edit across two
  * branches that might disagree about it — the same limitation, and the same
  * refusal, `beginPull`'s `'conflict-elsewhere'` already has.
+ *
+ * "The project's own files" used to mean *anything* under `annotations/` —
+ * wrong whenever a sibling project's file sits in the same folder (SaiLoR's
+ * own "Start full-text screening" flow creates exactly this layout on
+ * purpose). `matchesOwn` narrows that to the paper-id/filename shapes this
+ * project's own family would actually write (`ownAnnotationPathMatcher`), so
+ * a sibling's uncommitted work is treated as "other files dirty" and refused
+ * — same as any file this app doesn't know how to carry — instead of being
+ * silently stashed alongside this project's own and left behind if the
+ * eventual `finishBranchSwitch` never writes it back.
  */
 ipcMain.handle('git:branchSwitchBegin', async (_e, root: string, relPath: string, branch: string) => {
   assertRelPath(relPath)
   const dir = annotationsRelDir(relPath)
-  const inProjectScope = (p: string) => p === relPath || p === dir || p.startsWith(`${dir}/`)
+  // Read the *working tree's* current project.json, not HEAD — an
+  // uncommitted new paper must still count as this project's own. A
+  // directory that collapses to one opaque `?? annotations/` porcelain
+  // record (nothing under it tracked anywhere yet) can't be resolved to
+  // individual files at all; `matchesOwn` returning `false` for everything
+  // in that case is what makes it fail toward a clean `other-files-dirty`
+  // refusal instead of guessing that an unreadable blob is ours.
+  let matchesOwn: (rel: string) => boolean
+  try {
+    matchesOwn = ownAnnotationPathMatcher(JSON.parse(await readProjectText(path.join(root, relPath))))
+  } catch {
+    matchesOwn = () => false
+  }
+  const inProjectScope = (p: string) =>
+    p === relPath || (p.startsWith(`${dir}/`) && matchesOwn(p.slice(dir.length + 1)))
 
   const st = await runGit(['status', '--porcelain=v1', '-z'], root)
   const changes = parsePorcelain(st.stdout)

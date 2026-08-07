@@ -42,6 +42,11 @@ export interface SlrBridge {
   setProjectDir(path: string): Promise<void>
   /** Pick a location for a project JSON without writing it. Null if cancelled. */
   pickSavePath(suggestedName: string): Promise<{ path: string } | null>
+  checkSiblingCollision(
+    destPath: string,
+    paperIds: string[],
+    screening: boolean,
+  ): Promise<{ siblingName: string; overlappingIds: string[] } | null>
   /** Pick PDFs to reference. Returns their absolute paths, [] if cancelled. */
   pickPdfs(): Promise<string[]>
   /** Pick a folder; returns the absolute paths of every PDF inside it (recursively). [] if cancelled. */
@@ -310,6 +315,14 @@ export class ElectronAdapter implements PlatformAdapter {
       name: baseName(res.path),
       path: res.path,
     }
+  }
+
+  async checkSiblingCollision(
+    destPath: string,
+    paperIds: string[],
+    screening: boolean,
+  ): Promise<{ siblingName: string; overlappingIds: string[] } | null> {
+    return bridge().checkSiblingCollision(destPath, paperIds, screening)
   }
 
   async pickPdfs(): Promise<PickedPdf[]> {

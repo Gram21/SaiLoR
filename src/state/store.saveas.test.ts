@@ -10,6 +10,8 @@ import type { SaveHandle, ProjectLocation } from '../platform/adapter'
  */
 let written: { text: string; handle: SaveHandle } | null = null
 let destination: ProjectLocation | null = null
+let collisionResult: { siblingName: string; overlappingIds: string[] } | null = null
+let collisionCalls: { destPath: string; paperIds: string[]; screening: boolean }[] = []
 
 const mockPlatform = {
   kind: 'electron' as const,
@@ -20,6 +22,10 @@ const mockPlatform = {
   checkRecents: async (e: unknown[]) => e,
   getOsInfo: () => null,
   pickProjectLocation: async () => destination,
+  checkSiblingCollision: async (destPath: string, paperIds: string[], screening: boolean) => {
+    collisionCalls.push({ destPath, paperIds, screening })
+    return collisionResult
+  },
   saveProject: async (text: string, handle: SaveHandle) => {
     written = { text, handle }
     return handle
@@ -65,6 +71,8 @@ function writtenPdfs(): string[] {
 describe('saveAs re-derives the PDF paths for the new location', () => {
   beforeEach(() => {
     written = null
+    collisionResult = null
+    collisionCalls = []
     useStore.getState().loadFromText(PROJECT, { kind: 'electron', path: '/reviews/x.json' }, 'x.json')
   })
 
@@ -121,5 +129,26 @@ describe('saveAs re-derives the PDF paths for the new location', () => {
 
     useStore.getState().undo() // must be a no-op — history was cleared
     expect(useStore.getState().project!.papers[0].pdf).toBe(rebased)
+  })
+
+  it('refuses when the destination already holds a sibling sharing a paper id and family', async () => {
+    destination = at('/shared/backup.json')
+    collisionResult = { siblingName: 'other.json', overlappingIds: ['a'] }
+    expect(await useStore.getState().saveAs()).toBe(false)
+    expect(written).toBeNull()
+    expect(collisionCalls).toEqual([{ destPath: '/shared/backup.json', paperIds: ['a', 'b'], screening: false }])
+    const err = useStore.getState().loadError
+    expect(err?.message).toMatch(/other\.json/)
+    expect(err?.message).toMatch(/shares a paper/)
+    expect(err?.details?.[0]).toMatch(/\ba\b/)
+    expect(useStore.getState().busy).toBe(false)
+  })
+
+  it('proceeds normally when there is no collision', async () => {
+    destination = at('/other/y.json')
+    collisionResult = null
+    expect(await useStore.getState().saveAs()).toBe(true)
+    expect(written).not.toBeNull()
+    expect(collisionCalls).toHaveLength(1)
   })
 })

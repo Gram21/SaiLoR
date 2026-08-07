@@ -495,6 +495,14 @@ hanging.
 
 Live clone progress with a cancel button is not part of this either.
 
+**Sharing a folder between two SaiLoR projects** (e.g. "Start full-text screening" saving the new
+project next to the screening one it came from) is supported deliberately, since the two use
+different annotation-file names for the same paper — but a *second* project of the same kind in
+that folder is not: a branch switch or merge treats an unrecognized file under `annotations/` the
+same as any other file it doesn't know how to handle (refuses cleanly), and Save As refuses outright
+if the destination already holds another project sharing paper IDs and file names, rather than let
+the two start silently overwriting each other.
+
 ## Building & testing
 
 ```bash
