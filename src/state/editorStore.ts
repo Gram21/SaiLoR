@@ -1160,6 +1160,27 @@ function openEditorSession(s: EditorState, st: OpenedEditorState): void {
   s.duplicateReview = null
 }
 
+/**
+ * Take focus off the field being typed into, firing its `blur` handler. The
+ * schema field name and screening reason label editors hang their
+ * confirm-before-you-lose-answers guards on `blur` (renaming/removing a field
+ * orphans every reviewer's answers stored under the old name — see
+ * `SchemaTreeEditor.tsx`'s `commitRename`), and two of `save`/`saveAs`'s
+ * callers never move focus on their own: a keyboard shortcut doesn't, and
+ * neither does clicking a `<button>` on macOS/Chromium (the same browser
+ * quirk `SchemaTreeEditor.tsx`'s own comment documents for its `×` button).
+ * Called at the top of `save`/`saveAs` below rather than by each caller
+ * individually, so the native quit dialog's Save button — which calls
+ * `save()` directly with no chance to run its own pre-save step — gets the
+ * same guard as the toolbar and Ctrl+S. Blur handlers and the zustand writes
+ * they make are synchronous, so the rest of `save`/`saveAs` sees the result,
+ * including a rename the reviewer just declined.
+ */
+function commitFocusedEdit(): void {
+  const el = document.activeElement
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) el.blur()
+}
+
 /** Map a load failure to the editor's error shape. */
 function openError(err: unknown): EditorError {
   const details =
@@ -2139,6 +2160,10 @@ export const useEditorStore = create<EditorState>()(
     },
 
     save: async () => {
+      // See `commitFocusedEdit`'s own comment: this must run before anything
+      // below reads the draft, so a declined rename is already reverted (and
+      // an accepted one already applied) by the time `buildProjectJson` runs.
+      commitFocusedEdit()
       const st = get()
       if (!st.location) {
         set((s) => {
