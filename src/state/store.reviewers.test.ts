@@ -200,6 +200,124 @@ describe('multi-reviewer: a numbered reviewer', () => {
   })
 })
 
+// Bug: `removeInstance` shifted `mark.linkedFields`/`aiMarks`/`paper.equal`/
+// `deferredConsolidations` when a repeatable entry was deleted, but never
+// touched `paper.alignment` — the record of which reviewer's entry sits in
+// which consolidated slot. Left unfixed, every slot at or above the removed
+// index kept pointing at the entry that used to be there, misattributing
+// reviewer answers to the wrong slot in every compare popup from then on.
+describe('multi-reviewer: deleting a repeatable entry shifts alignment (Bug 1)', () => {
+  const findingsDef = () => st().project!.schema[2] // Findings (repeatable)
+
+  beforeEach(() => {
+    st().loadFromText(multiReviewerProject, null, 'test.json')
+    st().selectPaper('p1')
+
+    // Reviewers 1 and 2 each record the same two findings, in the same
+    // order, so the matcher's exact-text similarity lines slot 0 up with
+    // "Alpha" and slot 1 up with "Beta" deterministically.
+    for (const reviewer of ['1', '2']) {
+      st().selectReviewer(reviewer)
+      st().setFieldValue([{ name: 'Findings', index: 0 }], 'Claim', 0, 'Alpha')
+      st().addInstance([], findingsDef())
+      st().setFieldValue([{ name: 'Findings', index: 1 }], 'Claim', 0, 'Beta')
+    }
+
+    st().alignConsolidationNode('p1', 'Findings', false)
+  })
+
+  it('lines up the fixture the rest of this block assumes', () => {
+    const alignment = st().project!.papers[0].alignment.Findings
+    expect(alignment).toEqual([{ members: { '1': 0, '2': 0 } }, { members: { '1': 1, '2': 1 } }])
+  })
+
+  it("a reviewer deleting their own entry shifts only their own slot memberships", () => {
+    st().selectReviewer('1')
+    st().removeInstance([], 'Findings', 0)
+
+    const alignment = st().project!.papers[0].alignment.Findings
+    // Reviewer 1's entry at the removed slot is gone, not left dangling...
+    expect(alignment[0].members['1']).toBeUndefined()
+    // ...and their entry above it shifted down to follow the same real entry.
+    expect(alignment[1].members['1']).toBe(0)
+    // Reviewer 2 never touched anything here — their memberships are exactly
+    // what they were.
+    expect(alignment[0].members['2']).toBe(0)
+    expect(alignment[1].members['2']).toBe(1)
+
+    // A subsequent read attributes the right reviewer value to the right
+    // slot: reviewer 1's sole remaining entry ("Beta") now projects into
+    // slot 1, not slot 0.
+    const reviewer1Tree = st().project!.papers[0].reviews['1']
+    expect(reviewer1Tree.Findings[0].value ?? null).toBeNull()
+    expect(reviewer1Tree.Findings[0].children?.Claim[0]?.value).toBe('Beta')
+  })
+
+  it('the consolidator deleting a consolidated entry drops that slot, not the array positions', () => {
+    st().selectReviewer('consolidation')
+    // The consolidated tree was grown to one entry per slot by
+    // `alignConsolidationNode` above; delete the first of them.
+    st().removeInstance([], 'Findings', 0)
+
+    const alignment = st().project!.papers[0].alignment.Findings
+    // Slot 0 (Alpha) is gone entirely — not decremented, spliced — so slot
+    // numbering keeps tracking the now-shorter consolidated array.
+    expect(alignment).toHaveLength(1)
+    // What used to be slot 1 (Beta) is untouched: its members still name the
+    // reviewers' own, unmoved indices.
+    expect(alignment[0].members).toEqual({ '1': 1, '2': 1 })
+  })
+})
+
+// Bug: a node the consolidator already answered under was frozen against
+// *any* re-matching, including simply adding a reviewer who had no slot
+// assignment at all yet (one added to the project later, or one who just
+// hadn't started this paper). Their real answers sat in their own tree
+// forever, invisible to every compare popup and dropped from agreement
+// stats.
+describe('multi-reviewer: a late reviewer is added to a frozen node (Bug 4)', () => {
+  beforeEach(() => {
+    st().loadFromText(multiReviewerProject, null, 'test.json')
+    st().selectPaper('p1')
+
+    // Reviewers 1 and 2 agree on one finding; reviewer 3 has not started.
+    for (const reviewer of ['1', '2']) {
+      st().selectReviewer(reviewer)
+      st().setFieldValue([{ name: 'Findings', index: 0 }], 'Claim', 0, 'Shared finding')
+    }
+    st().alignConsolidationNode('p1', 'Findings', false)
+
+    // The consolidator commits an answer, freezing the node — the whole
+    // point of `consolidatorHasAnswered`.
+    st().selectReviewer('consolidation')
+    st().setFieldValue([{ name: 'Findings', index: 0 }], 'Claim', 0, 'Consolidated answer')
+  })
+
+  it('refuses to re-match once the consolidator has answered (sanity check on the freeze itself)', () => {
+    st().selectReviewer('1')
+    st().setFieldValue([{ name: 'Findings', index: 0 }], 'Claim', 0, 'Changed my mind')
+    expect(st().alignConsolidationNode('p1', 'Findings', false)).toBe(false)
+    // Frozen means frozen: the existing pairing is untouched even though a
+    // fresh match would now see different text.
+    expect(st().project!.papers[0].alignment.Findings[0].members).toEqual({ '1': 0, '2': 0 })
+  })
+
+  it('places a reviewer who had no slot at all once they finally answer', () => {
+    st().selectReviewer('3')
+    st().setFieldValue([{ name: 'Findings', index: 0 }], 'Claim', 0, 'Shared finding')
+
+    expect(st().alignConsolidationNode('p1', 'Findings', false)).toBe(true)
+
+    const alignment = st().project!.papers[0].alignment.Findings
+    // The existing pairing the consolidator already answered against is
+    // untouched...
+    expect(alignment[0].members['1']).toBe(0)
+    expect(alignment[0].members['2']).toBe(0)
+    // ...and reviewer 3, previously absent from every slot, is now placed.
+    expect(alignment[0].members['3']).toBe(0)
+  })
+})
+
 describe('multi-reviewer: Consolidation', () => {
   beforeEach(() => {
     st().loadFromText(multiReviewerProject, null, 'test.json')
@@ -217,16 +335,28 @@ describe('multi-reviewer: Consolidation', () => {
     expect(paper.reviews).toBe(reviewsBefore)
   })
 
-  it('stores a selected reviewer value and marks the disagreement resolved in one undo step', () => {
+  // Was 'stores a selected reviewer value and marks the disagreement resolved
+  // in one undo step', and asserted `paper.equal` gained 'Study Type'. That
+  // locked in a real bug: picking a reviewer's answer is the normal, routine
+  // act of consolidating, not a declaration that the reviewers agreed. `equal`
+  // feeds straight into Cohen's kappa/Fleiss' kappa/Krippendorff's alpha (see
+  // `disagreements.ts`/`agreement.ts`), so every resolved disagreement was
+  // quietly inflating the very statistic this feature exists to report
+  // honestly. Only the explicit "these answers mean the same thing" checkbox
+  // (`toggleFieldEquality`) may set it now.
+  it('stores a selected reviewer value in one undo step, without marking it agreed', () => {
     st().resolveConsolidationValue([], 'Study Type', 0, 'Reviewer 1 value')
 
     const paper = st().project!.papers[0]
     expect(paper.annotations['Study Type'][0].value).toBe('Reviewer 1 value')
-    expect(paper.equal).toContain('Study Type')
+    expect(paper.equal).not.toContain('Study Type')
     expect(st().past).toHaveLength(1)
   })
 
-  it('keeps a different-value field pending until Consolidation fills it, then resolves it', () => {
+  // Was '...then resolves it', and asserted `paper.equal` gained 'Study Type'
+  // once the deferred value was filled in — the same bug as above, reached
+  // through the deferred-value path instead of the compare popup.
+  it('keeps a different-value field pending until Consolidation fills it, without marking it agreed', () => {
     st().deferConsolidationValue([], 'Study Type', 0)
     expect(st().deferredConsolidations['p1::Study Type']).toBe(true)
     expect(st().project!.papers[0].equal).not.toContain('Study Type')
@@ -236,7 +366,21 @@ describe('multi-reviewer: Consolidation', () => {
     const paper = st().project!.papers[0]
     expect(st().deferredConsolidations['p1::Study Type']).toBeUndefined()
     expect(paper.annotations['Study Type'][0].value).toBe('A third value')
-    expect(paper.equal).toContain('Study Type')
+    expect(paper.equal).not.toContain('Study Type')
+  })
+
+  it('the explicit "these answers mean the same thing" checkbox still sets equal', () => {
+    st().toggleFieldEquality('p1', 'Study Type')
+    expect(st().project!.papers[0].equal).toContain('Study Type')
+  })
+
+  it('clears equal when a consolidation-seat edit leaves the field empty', () => {
+    st().toggleFieldEquality('p1', 'Study Type')
+    expect(st().project!.papers[0].equal).toContain('Study Type')
+
+    st().setFieldValue([], 'Study Type', 0, '')
+
+    expect(st().project!.papers[0].equal).not.toContain('Study Type')
   })
 })
 
