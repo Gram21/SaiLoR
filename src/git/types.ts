@@ -267,9 +267,19 @@ export interface GitPlatform {
    *  which branch to return to. */
   abortBranchSwitch(root: string, sourceBranch: string): Promise<GitRun>
 
-  /** Reverts (tracked) or deletes (untracked) a single changed file outside
-   *  the project's own tracked file/`annotations/` — the whole-file
-   *  counterpart to that file's field-level Discard. Refuses (`ok: false`)
-   *  for a rename or an unresolved merge conflict. */
-  discardFile(root: string, relPath: string): Promise<GitRun>
+  /**
+   * Reverts (tracked) or deletes (untracked) a single changed file outside
+   * the project's own tracked file/`annotations/` — the whole-file
+   * counterpart to that file's field-level Discard. Refuses (`ok: false`)
+   * for a rename or an unresolved merge conflict, or an untracked directory
+   * (deleted recursively instead of the `unlink` a plain file gets).
+   *
+   * `projectRelPath` is the open project's own `relPath` — the real guard
+   * against this deleting the project's own untracked annotation files: the
+   * renderer withholds the ↺ button for those rows too (see `GitDialog.tsx`'s
+   * `isProjectOwnPath`), but that is UI, not enforcement, so this refuses the
+   * same thing server-side whenever `relPath` is `projectRelPath` itself or
+   * falls under its `annotationsRelDir(...)`.
+   */
+  discardFile(root: string, relPath: string, projectRelPath: string): Promise<GitRun>
 }

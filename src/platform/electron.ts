@@ -124,7 +124,7 @@ export interface SlrBridge {
     message: string,
   ): Promise<GitRun>
   gitWriteWorking(root: string, relPath: string, working: SplitProject): Promise<GitRun>
-  gitDiscardFile(root: string, relPath: string): Promise<GitRun>
+  gitDiscardFile(root: string, relPath: string, projectRelPath: string): Promise<GitRun>
   gitBranches(root: string): Promise<GitBranch[]>
   gitBranchCreate(root: string, name: string): Promise<GitRun>
   gitBranchDelete(root: string, branch: string): Promise<GitRun>
@@ -429,7 +429,7 @@ export class ElectronAdapter implements PlatformAdapter {
     commitPartial: (root, relPath, committed, working, otherPaths, message) =>
       bridge().gitCommitPartial(root, relPath, committed, working, otherPaths, message),
     writeWorking: (root, relPath, working) => bridge().gitWriteWorking(root, relPath, working),
-    discardFile: (root, relPath) => bridge().gitDiscardFile(root, relPath),
+    discardFile: (root, relPath, projectRelPath) => bridge().gitDiscardFile(root, relPath, projectRelPath),
     branches: (root) => bridge().gitBranches(root),
     createBranch: (root, name) => bridge().gitBranchCreate(root, name),
     deleteBranch: (root, branch) => bridge().gitBranchDelete(root, branch),

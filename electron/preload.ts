@@ -108,7 +108,8 @@ contextBridge.exposeInMainWorld('slr', {
   ) => ipcRenderer.invoke('git:commitPartial', root, relPath, committed, working, otherPaths, message),
   gitWriteWorking: (root: string, relPath: string, working: unknown) =>
     ipcRenderer.invoke('git:writeWorking', root, relPath, working),
-  gitDiscardFile: (root: string, relPath: string) => ipcRenderer.invoke('git:discardFile', root, relPath),
+  gitDiscardFile: (root: string, relPath: string, projectRelPath: string) =>
+    ipcRenderer.invoke('git:discardFile', root, relPath, projectRelPath),
 
   // Self-update (Windows/Linux only — see electron/main.ts). Download/install
   // are only ever triggered by these two explicit calls, never on their own.

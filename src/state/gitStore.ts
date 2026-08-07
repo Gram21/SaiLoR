@@ -276,9 +276,21 @@ interface GitState {
    *  once; only when a commit row is expanded. */
   loadCommitDiff: (hash: string) => Promise<void>
 
-  /** Reverts (tracked) or deletes (untracked) a single changed file other
-   *  than the project's own — the whole-file counterpart to the project's
-   *  field-level Discard. */
+  /**
+   * Reverts (tracked) or deletes (untracked) a single changed file other
+   * than the project's own — the whole-file counterpart to the project's
+   * field-level Discard.
+   *
+   * Unlike `runDiscard`, this never needs a `dirty` guard or a
+   * `resyncProjectFromDisk` afterward: `path` can never be the project's own
+   * tracked file or anything under its `annotations/` folder. `GitDialog.tsx`
+   * withholds the ↺ button for those rows (`isProjectOwnPath`), and
+   * `git:discardFile` refuses them again server-side given `repo.relPath` —
+   * see that handler's own doc comment. Every *other* file this can act on
+   * (a stray README, an untracked `exports/` folder, …) is one the in-memory
+   * `project` never reads from, so there is nothing there for `dirty` to be
+   * guarding or for a resync to catch up on.
+   */
   runDiscardFile: (path: string) => Promise<void>
 
   dismissPanelMessage: () => void
@@ -626,6 +638,56 @@ export const useGitStore = create<GitState>()(
       }
     }
 
+    /**
+     * The guard `runCommit` and `runDiscard` share before writing anything:
+     * both compose their output from `review.working`, a snapshot
+     * `refreshFieldReview` took at some point in the past — nothing re-reads
+     * it afterward. If the file on disk has since changed, composing against
+     * the stale snapshot and writing the result back would silently discard
+     * whatever changed it. The routine way this happens: the dirty banner's
+     * own "Save project" button writes the in-memory project to disk without
+     * refreshing `panel.fieldReview` (`App.tsx`'s refresh effect is keyed on
+     * `saveHandle?.path`, which a save doesn't change), so `dirty` flips
+     * false, Commit un-disables, and committing writes the pre-save content
+     * over the hour of work Save just put on disk. `useAutosave.ts` can do
+     * the same unattended.
+     *
+     * Compares `loadProject` of a fresh read against `review.working`, not
+     * the raw file text: both are `Project` objects built by the same
+     * normalizing parser, so two reads of equivalent content always
+     * serialize identically regardless of the raw text's formatting or key
+     * order, while a raw-text comparison could false-positive on a purely
+     * cosmetic difference. An unreadable/unparseable current file counts as
+     * "changed" — there is nothing safe to proceed against.
+     *
+     * Returns true when it is still safe to proceed. False means the caller
+     * must stop: the field review has already been refreshed against the
+     * current file and `panel.error` explains why.
+     */
+    async function guardFieldReviewFresh(repo: GitRepoInfo, review: FieldReviewState): Promise<boolean> {
+      const git = getPlatform().getGit()
+      if (!git) return false
+      let current: Project | null = null
+      try {
+        const text = await git.workingContent(repo.root, repo.relPath)
+        current = text === null ? null : loadProject(text)
+      } catch {
+        current = null
+      }
+      if (current && JSON.stringify(current) === JSON.stringify(review.working)) return true
+
+      await get().refreshStatus()
+      set((s) => {
+        if (s.panel) {
+          s.panel.phase = 'idle'
+          s.panel.error =
+            `${repo.relPath} changed on disk since this review was loaded, so nothing was written. ` +
+            'The review below has been reloaded from the current file — check your choices again.'
+        }
+      })
+      return false
+    }
+
     const storeApi: GitState = {
       probe: null,
       repo: null,
@@ -844,6 +906,12 @@ export const useGitStore = create<GitState>()(
         const repo = get().repo
         const panel = get().panel
         if (!git || !repo || !panel) return
+
+        // See `guardFieldReviewFresh`: composing from a stale review snapshot
+        // would silently overwrite whatever changed on disk since it was taken.
+        const review = panel.fieldReview
+        if (review && !(await guardFieldReviewFresh(repo, review))) return
+
         // A rename contributes both its new path and its "from" path, or the
         // deletion of the old path is left behind.
         const changes = panel.status?.changes ?? []
@@ -862,7 +930,6 @@ export const useGitStore = create<GitState>()(
           }
         })
 
-        const review = panel.fieldReview
         let r: GitRun
         let usedFieldReview = false
         if (review) {
@@ -924,6 +991,10 @@ export const useGitStore = create<GitState>()(
         // in that state, this is the belt-and-suspenders match.
         const hasDiscard = Object.values(review.decisions).some((d) => d === 'discard')
         if (!hasDiscard) return
+
+        // See `guardFieldReviewFresh`: composing from a stale review snapshot
+        // would silently overwrite whatever changed on disk since it was taken.
+        if (!(await guardFieldReviewFresh(repo, review))) return
 
         set((s) => {
           if (s.panel) {
@@ -1165,7 +1236,25 @@ export const useGitStore = create<GitState>()(
         set((s) => {
           if (s.panel) s.panel.phase = 'working'
         })
-        const r = await git.discardFile(repo.root, path)
+        // `discardFile` itself never throws (see its own doc comment in
+        // `electron/main.ts` — every failure comes back as `{ok: false}`),
+        // but this `try` is the belt-and-suspenders match anyway: an
+        // uncaught rejection here would escape the `void runDiscardFile(...)`
+        // call in GitDialog.tsx and leave `phase` stuck at 'working',
+        // disabling the whole panel until it's reopened (that was exactly
+        // how the untracked-directory bug wedged it).
+        let r: GitRun
+        try {
+          r = await git.discardFile(repo.root, path, repo.relPath)
+        } catch (err) {
+          set((s) => {
+            if (s.panel) {
+              s.panel.phase = 'idle'
+              s.panel.error = err instanceof Error ? err.message : String(err)
+            }
+          })
+          return
+        }
         set((s) => {
           if (!s.panel) return
           s.panel.phase = 'idle'
