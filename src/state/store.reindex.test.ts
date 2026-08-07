@@ -177,7 +177,10 @@ describe('removeInstance — multi-reviewer scoping', () => {
     st().addInstance([], defOf('Finding'))
     const consolidationId = st().addHighlight(1, [rect])!
     st().linkMarkToField(consolidationId, [], 'Finding', 2)
-    st().resolveConsolidationValue([], 'Finding', 2, 'x') // adds 'Finding[2]' to paper.equal
+    // Resolving a value settles the field but no longer marks it "the
+    // reviewers agreed" (see store.reviewers.test.ts) — `paper.equal` stays
+    // empty here, so this test now exercises only `deferredConsolidations`.
+    st().resolveConsolidationValue([], 'Finding', 2, 'x')
     st().deferConsolidationValue([], 'Finding', 2)
 
     st().selectReviewer('2')
@@ -187,7 +190,7 @@ describe('removeInstance — multi-reviewer scoping', () => {
 
     st().selectReviewer('consolidation')
     expect(st().currentPdfMarks()[0].linkedFields).toEqual([{ path: 'Finding[2]', label: 'Finding #3' }])
-    expect(st().project!.papers[0].equal).toEqual(['Finding[2]'])
+    expect(st().project!.papers[0].equal).toEqual([])
     expect(Object.keys(st().deferredConsolidations)).toEqual(['p1::Finding[2]'])
   })
 })

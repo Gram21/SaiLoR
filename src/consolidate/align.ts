@@ -1,6 +1,7 @@
 import type { AnnotationValueTree, InstanceNode } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
 import { isField } from '../model/schema'
+import type { StoredAlignment, StoredSlot } from '../model/alignment'
 import { maxWeightAssignment } from './assign'
 import {
   agreementMass,
@@ -395,6 +396,170 @@ function compareReviewerIds(x: string, y: string): number {
   const ny = Number(y)
   if (Number.isFinite(nx) && Number.isFinite(ny)) return nx - ny
   return x < y ? -1 : x > y ? 1 : 0
+}
+
+/**
+ * Add reviewers who have no key at all in an already-frozen alignment,
+ * without moving anyone who does.
+ *
+ * `alignConsolidationNode` (store.ts) refuses to recompute a node once the
+ * consolidator has committed an answer under it, for good reason: slot N
+ * means a particular thing to them by then, and a fresh `alignList` run is
+ * free to reshuffle it (see that function's own comment). But the freeze was
+ * written assuming every reviewer already had *some* mapping. A reviewer
+ * added to the project after the freeze — or one who simply had not started
+ * this paper yet — has no key in any slot's `members` at all, and the freeze
+ * gave them no way to ever get one: their real answers sat in their own tree
+ * forever, never placed into a consolidated slot, and dropped out of
+ * unanimity checks and agreement stats.
+ *
+ * This runs the same per-reviewer folding `alignList`'s main loop does for a
+ * newly-added voice, seeded from the existing frozen slots instead of fresh
+ * ones — an existing reviewer's `members[r]` is never read or written, only
+ * entries for reviewers absent from every slot. Recurses into each touched
+ * slot's children the same way, so a newcomer's nested repeatable entries
+ * (Evidence within a Finding, say) get placed too, without moving whatever
+ * nested matching earlier reviewers were already frozen into.
+ *
+ * Operates directly on the stored (persisted) shape rather than `TreeAlignment`
+ * — there is no live `agreement`/`evidence` to maintain here, only membership.
+ */
+export function widenAlignment(
+  defs: ResolvedDef[],
+  existing: StoredAlignment,
+  trees: Record<string, AnnotationValueTree | undefined>,
+  cache: TextSimCache,
+): { alignment: StoredAlignment; changed: boolean } {
+  const out: StoredAlignment = {}
+  let changed = false
+
+  for (const def of defs) {
+    const lists: Record<string, InstanceNode[]> = {}
+    for (const [reviewer, tree] of Object.entries(trees)) {
+      const raw = tree?.[def.name]
+      lists[reviewer] = Array.isArray(raw) ? raw : []
+    }
+    const existingSlots = existing[def.name]
+    if (!existingSlots) continue // never frozen here; a full alignment will handle it
+
+    if (isRepeatable(def)) {
+      const widened = widenList(def, existingSlots, lists, cache)
+      out[def.name] = widened.slots
+      if (widened.changed) changed = true
+      continue
+    }
+    if (def.children.length === 0) continue // a plain field: nothing to place
+
+    // Fixed single entry: only ever one slot. A newcomer with an entry and no
+    // assignment yet takes index 0 there, same rule `alignLevel` uses fresh.
+    const slot = existingSlots[0] ?? { members: {} }
+    const nextMembers = { ...slot.members }
+    let memberAdded = false
+    for (const [reviewer, list] of Object.entries(lists)) {
+      if (nextMembers[reviewer] === undefined && list.length > 0) {
+        nextMembers[reviewer] = 0
+        memberAdded = true
+      }
+    }
+    const childTrees: Record<string, AnnotationValueTree | undefined> = {}
+    for (const [reviewer, index] of Object.entries(nextMembers)) {
+      childTrees[reviewer] = lists[reviewer]?.[index]?.children
+    }
+    const widenedChildren = widenAlignment(def.children, slot.children ?? {}, childTrees, cache)
+    const nextSlot: StoredSlot = { members: nextMembers }
+    if (Object.keys(widenedChildren.alignment).length > 0) nextSlot.children = widenedChildren.alignment
+    out[def.name] = [nextSlot]
+    if (memberAdded || widenedChildren.changed) changed = true
+  }
+
+  return { alignment: out, changed }
+}
+
+/**
+ * `widenAlignment`'s repeatable-node case: fold every reviewer absent from
+ * `existingSlots` into them, one reviewer at a time, mirroring `alignList`'s
+ * `rest` loop exactly — matched against the slots' current members by the same
+ * similarity, or opened into a new slot when nothing fits (see
+ * `NEW_SLOT_WEIGHT`/`MIN_MATCH_SCORE` there for why). The only difference is
+ * where the slots being folded into came from: a frozen, previously-computed
+ * set instead of a fresh anchor.
+ */
+function widenList(
+  def: ResolvedDef,
+  existingSlots: StoredSlot[],
+  lists: Record<string, InstanceNode[]>,
+  cache: TextSimCache,
+): { slots: StoredSlot[]; changed: boolean } {
+  const known = new Set<string>()
+  for (const slot of existingSlots) for (const r of Object.keys(slot.members)) known.add(r)
+
+  const newcomers = Object.keys(lists)
+    .filter((r) => !known.has(r) && lists[r].length > 0)
+    .sort(compareReviewerIds)
+
+  if (newcomers.length === 0) return { slots: existingSlots, changed: false }
+
+  // Plain member-bag copies to fold into — `simAgainstSlot` only reads
+  // `.members`, and `children` is carried through untouched until a slot is
+  // actually widened below.
+  const slots: StoredSlot[] = existingSlots.map((s) => {
+    const slot: StoredSlot = { members: { ...s.members } }
+    if (s.children) slot.children = s.children
+    return slot
+  })
+  let changed = false
+
+  for (const reviewer of newcomers) {
+    const entries = lists[reviewer]
+    const asAlignedSlots: AlignedSlot[] = slots.map((s) => ({
+      members: s.members,
+      children: {},
+      agreement: 0,
+      evidence: 0,
+    }))
+    const baseSlotCount = slots.length
+    const weights = entries.map((entry, i) => {
+      const row = asAlignedSlots.map((slot, s) => {
+        const sim = simAgainstSlot(def, entry, slot, lists, cache)
+        if (sim.weight === 0) return i === s ? ORDER_TIE_BREAK : 0
+        if (sim.score <= MIN_MATCH_SCORE) return 0
+        return agreementMass(sim)
+      })
+      for (let j = 0; j < entries.length; j++) row.push(NEW_SLOT_WEIGHT)
+      return row
+    })
+    maxWeightAssignment(weights).forEach((col, entryIndex) => {
+      if (col < 0) return
+      changed = true
+      if (col < baseSlotCount) {
+        slots[col].members[reviewer] = entryIndex
+      } else {
+        slots.push({ members: { [reviewer]: entryIndex } })
+      }
+    })
+  }
+
+  // Recurse into the children of every slot a newcomer actually landed in —
+  // never the others, which is what keeps this a *widening* update: a slot
+  // nobody new joined has nothing here to place, and its frozen nested
+  // matching is left exactly as it was.
+  if (def.children.length > 0) {
+    for (const slot of slots) {
+      const touchedByNewcomer = Object.keys(slot.members).some((r) => newcomers.includes(r))
+      if (!touchedByNewcomer) continue
+      const childTrees: Record<string, AnnotationValueTree | undefined> = {}
+      for (const [reviewer, index] of Object.entries(slot.members)) {
+        childTrees[reviewer] = lists[reviewer]?.[index]?.children
+      }
+      const widenedChildren = widenAlignment(def.children, slot.children ?? {}, childTrees, cache)
+      if (widenedChildren.changed) {
+        slot.children = widenedChildren.alignment
+        changed = true
+      }
+    }
+  }
+
+  return { slots, changed }
 }
 
 /**

@@ -9,7 +9,7 @@ import {
   type Project,
   type Paper,
 } from '../model/project'
-import { alignedReviews } from '../model/alignment'
+import { alignedReviews, type StoredAlignment, type StoredSlot } from '../model/alignment'
 import {
   hasAnnotations,
   makeInstance,
@@ -20,8 +20,8 @@ import {
 } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
 import { MARK_COLORS, type MarkRect, type PdfMark, dedupeMarkGroups } from '../model/pdfMarks'
-import { alignNode, alignableNodes } from '../consolidate/align'
-import { growConsolidated, toStoredAlignment } from '../consolidate/apply'
+import { alignNode, alignableNodes, widenAlignment, type TreeAlignment } from '../consolidate/align'
+import { growConsolidated, toStoredAlignment, storedAsTreeAlignment } from '../consolidate/apply'
 import { unanimousFills } from '../consolidate/unanimous'
 import { consolidatorHasAnswered } from '../consolidate/readiness'
 import { validateProject, type UnannotatedPaper, type ValidationIssue } from '../model/validate'
@@ -166,6 +166,42 @@ export function shiftCanonicalPath(
     return formatPath(next)
   }
   return canonical
+}
+
+/**
+ * Descend into `alignment` along `path` to find the slots for node `name`,
+ * the same way `containerAt` descends the annotation tree — except a step
+ * here does not mean "index `seg.index` of this array", it means "whichever
+ * slot the caller's notion of `seg.index` belongs to", because `alignment`'s
+ * levels are keyed by node name and addressed by slot position, not by any
+ * one reviewer's array index directly.
+ *
+ * `resolveIndex` is what tells the two callers of `removeInstance`'s
+ * alignment fixup apart: a reviewer's own edit names *their* array index at
+ * each level, so it has to search `members` for it; a consolidator's edit
+ * names the consolidated array's own index, which (by `growConsolidated`'s
+ * invariant that the consolidated array is never reordered, only grown) is
+ * the slot's position directly.
+ *
+ * Returns `undefined` wherever the path does not resolve — an unaligned node,
+ * or a segment `resolveIndex` cannot place — so the caller can simply skip
+ * the fixup rather than fabricate a slot list that was never computed.
+ */
+function alignmentSlotsAt(
+  alignment: StoredAlignment,
+  path: PathSeg[],
+  name: string,
+  resolveIndex: (slots: StoredSlot[], seg: PathSeg) => number,
+): StoredSlot[] | undefined {
+  let level = alignment
+  for (const seg of path) {
+    const slots = level[seg.name]
+    if (!slots) return undefined
+    const slotIndex = resolveIndex(slots, seg)
+    if (slotIndex < 0 || slotIndex >= slots.length) return undefined
+    level = slots[slotIndex].children ?? {}
+  }
+  return level[name]
 }
 
 /** The reviewer scope a mark key should use right now: `null` for a
@@ -1716,14 +1752,27 @@ export const useStore = create<AppState>()(
         if (!coalesce) pushPast(s, snap)
         inst.value = value
         noteFieldTouchForPendingMarkLink(s, canonical)
-        const deferredKey = deferredConsolidationKey(paper.id, canonical)
-        if (
-          s.currentReviewer === 'consolidation' &&
-          s.deferredConsolidations[deferredKey] &&
-          !isDeferredValueEmpty(value)
-        ) {
-          delete s.deferredConsolidations[deferredKey]
-          if (!paper.equal.includes(canonical)) paper.equal.push(canonical)
+        if (s.currentReviewer === 'consolidation') {
+          if (isDeferredValueEmpty(value)) {
+            // A consolidation-seat write that leaves the field empty must not
+            // leave it flagged "the reviewers' answers mean the same thing" —
+            // see `closingWouldStrand`'s own comment for the failure this
+            // avoids: the field would read as resolved everywhere while
+            // holding no answer, and nothing would ever surface it again.
+            // `closingWouldStrand` only guards the compare popup's own close
+            // path; this covers every other way a consolidation write can
+            // empty a field afterward (an ordinary in-panel edit, say).
+            const i = paper.equal.indexOf(canonical)
+            if (i >= 0) paper.equal.splice(i, 1)
+          } else {
+            // Picking a value for a field that was deferred settles it, but
+            // does not by itself mean the reviewers agreed — only the
+            // explicit "these answers mean the same thing" checkbox
+            // (`toggleFieldEquality`) may set `equal`. This just clears the
+            // now-satisfied deferral.
+            const deferredKey = deferredConsolidationKey(paper.id, canonical)
+            if (s.deferredConsolidations[deferredKey]) delete s.deferredConsolidations[deferredKey]
+          }
         }
         s.dirty = true
       })
@@ -1831,6 +1880,48 @@ export const useStore = create<AppState>()(
               if (shifted === canonical) continue
               delete s.deferredConsolidations[key]
               if (shifted !== null) s.deferredConsolidations[`${dcPrefix}${shifted}`] = true
+            }
+          }
+
+          // `paper.alignment` records which reviewer's own array index sits in
+          // which consolidated slot. The splice above just shifted every
+          // survivor's real index down by one, and nothing above has told
+          // `alignment` that happened — left alone, every slot at or above the
+          // removed one keeps pointing at the entry that used to live there.
+          // A reviewer's later edit then gets attributed to the wrong slot in
+          // every compare popup, or — for the consolidator's own deletion of a
+          // consolidated entry — a later "adopt this answer" click can
+          // overwrite one finding's text with a different finding's, and a
+          // shifted `paper.equal` index marks the wrong pairing "equivalent".
+          // Single-reviewer projects never populate `alignment` at all (see
+          // its own doc comment), so there is nothing to fix there.
+          if (s.project!.reviewers > 1 && s.currentReviewer !== null) {
+            if (s.currentReviewer === 'consolidation') {
+              // The consolidated array is only ever grown in slot order
+              // (`growConsolidated`), never reordered, so the removed
+              // consolidated index *is* the slot position at every level —
+              // dropping that slot keeps the rest tracking the shrunk array,
+              // exactly like the splice above did for the array itself.
+              const slots = alignmentSlotsAt(paper.alignment, path, name, (_slots, seg) => seg.index)
+              if (slots && index >= 0 && index < slots.length) slots.splice(index, 1)
+            } else {
+              // A reviewer removed one of their own entries. `members[reviewer]`
+              // is their array index, so the same rule `paper.equal`'s indices
+              // follow above applies per reviewer instead of per canonical path:
+              // drop the entry that named the removed index, decrement every
+              // one above it.
+              const reviewer = s.currentReviewer
+              const slots = alignmentSlotsAt(paper.alignment, path, name, (levelSlots, seg) =>
+                levelSlots.findIndex((slot) => slot.members[reviewer] === seg.index),
+              )
+              if (slots) {
+                for (const slot of slots) {
+                  const at = slot.members[reviewer]
+                  if (at === undefined) continue
+                  if (at === index) delete slot.members[reviewer]
+                  else if (at > index) slot.members[reviewer] = at - 1
+                }
+              }
             }
           }
         }
@@ -2206,7 +2297,12 @@ export const useStore = create<AppState>()(
         pushPast(s, snap)
         inst.value = value
         noteFieldTouchForPendingMarkLink(s, canonical)
-        if (!draft.equal.includes(canonical)) draft.equal.push(canonical)
+        // Picking a reviewer's answer settles the field — it is the normal,
+        // routine act of consolidating — but it does not mean the reviewers
+        // agreed. Only the explicit "these answers mean the same thing"
+        // checkbox (`toggleFieldEquality`) may set `equal`; folding every
+        // resolved disagreement into it here silently inflated every
+        // agreement statistic the feature exists to report honestly.
         delete s.deferredConsolidations[deferredConsolidationKey(draft.id, canonical)]
         s.dirty = true
       })
@@ -2240,11 +2336,16 @@ export const useStore = create<AppState>()(
       // describe something it was never about. Matching is a service offered
       // before the work starts, not a thing done underneath it.
       //
-      // The cost is that entries a reviewer adds *after* consolidation began are
-      // not auto-matched for this node; comparing them by hand still works. That
-      // is the safe side of the trade: a stale match is visible, a silently
-      // re-pointed answer is not.
-      if (consolidatorHasAnswered(def, paper.annotations)) return false
+      // That freeze must protect *existing* pairings, not lock out a reviewer
+      // who simply has no assignment yet — one added to the project after the
+      // freeze, or one who had not started this paper when it happened. Their
+      // real answers exist in their own tree but, with no way to widen a frozen
+      // node, never got placed into any consolidated slot, and dropped out of
+      // unanimity checks and agreement stats. So a frozen node still runs
+      // `widenAlignment` below instead of returning outright — it only ever
+      // adds a reviewer absent from every slot's `members`, never moves one
+      // already there.
+      const frozen = consolidatorHasAnswered(def, paper.annotations)
 
       // Only the numbered reviewers get a vote, and only the ones who have
       // actually written something. The consolidated tree is what is being
@@ -2261,13 +2362,19 @@ export const useStore = create<AppState>()(
 
       // Computed against the current (frozen) state before opening a draft: this
       // is the expensive part, and immer drafts are not worth proxying it through.
-      const alignment = alignNode(project.schema, reviews, nodeName)
+      let nodeStored: StoredSlot[]
+      let treeForGrow: TreeAlignment
+      if (frozen) {
+        const widened = widenAlignment([def], { [nodeName]: paper.alignment[nodeName] ?? [] }, reviews, new Map())
+        if (!widened.changed) return false
+        nodeStored = widened.alignment[nodeName] ?? []
+        treeForGrow = storedAsTreeAlignment(widened.alignment)
+      } else {
+        const alignment = alignNode(project.schema, reviews, nodeName)
+        nodeStored = toStoredAlignment(alignment)[nodeName] ?? []
+        treeForGrow = alignment
+      }
       const snap: HistoryEntry = { project, paperId: prev.currentPaperId }
-
-      // The matching for this one node, in its stored form. Merged into
-      // whatever other nodes have already been matched rather than replacing
-      // them — the scheduler works one node at a time.
-      const stored = toStoredAlignment(alignment)
 
       let changed = false
       set((s) => {
@@ -2280,12 +2387,12 @@ export const useStore = create<AppState>()(
         // why the linked-mark and AI-mark canonical paths that used to be
         // re-pointed here need no fixing up at all any more: they still name
         // the index they always named.
-        const mappingChanged = !deepEqualJson(draft.alignment[nodeName], stored[nodeName])
-        const grew = growConsolidated(s.project!.schema, alignment, draft.annotations)
+        const mappingChanged = !deepEqualJson(draft.alignment[nodeName], nodeStored)
+        const grew = growConsolidated(s.project!.schema, treeForGrow, draft.annotations)
         changed = mappingChanged || grew
         if (!changed) return
 
-        if (mappingChanged) draft.alignment[nodeName] = stored[nodeName]
+        if (mappingChanged) draft.alignment[nodeName] = nodeStored
 
         // One undo step for the whole paper, not one per node: the reviewer sees
         // a single "the entries were lined up" event and undoes it in one press.

@@ -38,6 +38,30 @@ export function toStoredAlignment(alignment: TreeAlignment): StoredAlignment {
 }
 
 /**
+ * The reverse of `toStoredAlignment`, filled in with stub `agreement`/
+ * `evidence`/`counts` — reshaped just enough for `growConsolidated`, which
+ * only ever reads `.slots.length` and `.slots[s].children`. Used when a
+ * node's mapping came from `widenAlignment` (store.ts's frozen-node path)
+ * rather than a fresh `alignNode` computation, which produces the stored
+ * shape directly instead of a live `TreeAlignment`.
+ */
+export function storedAsTreeAlignment(stored: StoredAlignment): TreeAlignment {
+  const out: TreeAlignment = {}
+  for (const [name, slots] of Object.entries(stored)) {
+    out[name] = {
+      slots: slots.map((slot) => ({
+        members: slot.members,
+        children: storedAsTreeAlignment(slot.children ?? {}),
+        agreement: 0,
+        evidence: 0,
+      })),
+      counts: {},
+    }
+  }
+  return out
+}
+
+/**
  * Give the consolidated tree one entry per slot.
  *
  * Only ever grows. The consolidator may have added entries of their own, and a
