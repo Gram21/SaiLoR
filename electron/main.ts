@@ -2101,8 +2101,20 @@ async function isRemoteTrackingRef(root: string, ref: string): Promise<boolean> 
   return r.ok && gitOut(r).startsWith('refs/remotes/')
 }
 
-/** Records the merge commit for a pull or an explicit branch merge alike —
- *  both leave `MERGE_HEAD` set, which is all this needs. */
+/**
+ * Records the merge commit for a pull or an explicit branch merge alike —
+ * both leave `MERGE_HEAD` set, which is all this needs.
+ *
+ * Wrapped in `try`/`catch`, unlike a plain sequence of awaits: a throw here
+ * (`assertInsideRoot`'s refusal, a symlinked annotation path, `ENOSPC`/
+ * `EACCES`) would otherwise reject the IPC call, and `doFinish` in
+ * `gitStore.ts` has no catch of its own around this — its careful "leave
+ * `panel.merge` in place so Cancel merge stays reachable" recovery only runs
+ * for an `{ok: false}` result, not a rejection. An uncaught one there throws
+ * out of `doFinish` silently: `applyMergeStart` already moved `phase` back to
+ * `'idle'`, so the panel looks ordinary while the repo is still mid-merge
+ * with some annotation files rewritten and others not.
+ */
 ipcMain.handle(
   'git:pullFinish',
   async (
@@ -2111,17 +2123,21 @@ ipcMain.handle(
     relPath: string,
     working: { metaText: string; files: Array<{ relPath: string; text: string | null }> },
   ) => {
-    assertRelPath(relPath)
-    const fullPath = path.join(root, relPath)
-    await assertInsideRoot(root, fullPath)
-    await writeProjectFiles(fullPath, working.metaText, working.files)
-    const add = await runGit(['add', '--', relPath, annotationsRelDir(relPath)], root)
-    if (!add.ok) return add
-    // `git commit` after a merge with MERGE_HEAD set records both parents and
-    // allows an empty tree change, which is why the merge commit is made this
-    // way rather than with `commit-tree` or `merge -m`. `--no-edit` takes git's
-    // own prepared MERGE_MSG; GIT_EDITOR=true above is the backstop.
-    return runGit(['commit', '--no-edit'], root)
+    try {
+      assertRelPath(relPath)
+      const fullPath = path.join(root, relPath)
+      await assertInsideRoot(root, fullPath)
+      await writeProjectFiles(fullPath, working.metaText, working.files)
+      const add = await runGit(['add', '--', relPath, annotationsRelDir(relPath)], root)
+      if (!add.ok) return add
+      // `git commit` after a merge with MERGE_HEAD set records both parents and
+      // allows an empty tree change, which is why the merge commit is made this
+      // way rather than with `commit-tree` or `merge -m`. `--no-edit` takes git's
+      // own prepared MERGE_MSG; GIT_EDITOR=true above is the backstop.
+      return await runGit(['commit', '--no-edit'], root)
+    } catch (err) {
+      return { ok: false, code: null, stdout: '', stderr: err instanceof Error ? err.message : String(err) }
+    }
   },
 )
 
@@ -2263,11 +2279,18 @@ ipcMain.handle('git:branchSwitchBegin', async (_e, root: string, relPath: string
   return { kind: 'merge', sourceBranch, base, ours, theirs }
 })
 
-/** Writes the merge-resolved project onto the just-checked-out target
- *  branch's working tree, then drops the stash `beginBranchSwitch` created —
- *  its content is now fully folded into what was just written, so leaving it
- *  around would just be a stray entry the reviewer has to notice and clean
- *  up themselves. */
+/**
+ * Writes the merge-resolved project onto the just-checked-out target
+ * branch's working tree, then drops the stash `beginBranchSwitch` created —
+ * its content is now fully folded into what was just written, so leaving it
+ * around would just be a stray entry the reviewer has to notice and clean
+ * up themselves.
+ *
+ * Wrapped in `try`/`catch` for the same reason `git:pullFinish` is: a throw
+ * here would reject past `doFinish`'s own recovery in `gitStore.ts`, leaving
+ * the checkout already moved, the stash still present, and the panel showing
+ * no error — see that handler's doc comment for the full reasoning.
+ */
 ipcMain.handle(
   'git:branchSwitchFinish',
   async (
@@ -2276,11 +2299,15 @@ ipcMain.handle(
     relPath: string,
     resolved: { metaText: string; files: Array<{ relPath: string; text: string | null }> },
   ) => {
-    assertRelPath(relPath)
-    const fullPath = path.join(root, relPath)
-    await assertInsideRoot(root, fullPath)
-    await writeProjectFiles(fullPath, resolved.metaText, resolved.files)
-    return runGit(['stash', 'drop'], root)
+    try {
+      assertRelPath(relPath)
+      const fullPath = path.join(root, relPath)
+      await assertInsideRoot(root, fullPath)
+      await writeProjectFiles(fullPath, resolved.metaText, resolved.files)
+      return await runGit(['stash', 'drop'], root)
+    } catch (err) {
+      return { ok: false, code: null, stdout: '', stderr: err instanceof Error ? err.message : String(err) }
+    }
   },
 )
 
