@@ -745,8 +745,10 @@ explicit requirement that it never end up blocked by anything else.
 ## Merging two copies of a project
 
 `src/git/merge.ts`'s `mergeProjects(base, ours, theirs)` is a three-way merge over three parsed
-`Project`s — not over the file's text — driven by git's **Pull**. This is the data-model view of what
-it does; `architecture.md`'s "Git" section covers the plumbing that gets it there.
+`Project`s — not over the file's text — driven by git's **Pull**, **Merge branch…**, and the
+carry-changes-over branch switch (all three share the same `beginMergeInto`/`applyMergeStart`
+plumbing — see `architecture.md`'s "Git" section). This is the data-model view of what it does;
+`architecture.md`'s "Git" section covers the plumbing that gets it there.
 
 **The identity a field is merged under is `(paper id, tree, canonical field path)`.** `canonical` is
 `formatPath`'s form (`src/llm/paths.ts`), e.g. `"Findings[1]/Claim"` — but the path alone is **not**
