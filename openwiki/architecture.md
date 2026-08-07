@@ -15,12 +15,15 @@ static web SPA; **the web runtime is now discontinued** — `src/App.tsx`'s `isE
 the browser-only platform code (`src/platform/browser.ts`, `src/platform/idb.ts`) and the
 `?project=<url>` server-deployment loader (`loadFromUrl` in `src/state/store.ts`) were deleted
 outright. SaiLoR is Electron-desktop-only now. See "SaiLoR is Electron-desktop-only" below for the
+<!-- openwiki: broken internal link [operations] file "operations" does not exist. Fix the href or restore the target, then delete this comment. -->
+<!-- openwiki: broken internal link [quickstart] file "quickstart" does not exist. Fix the href or restore the target, then delete this comment. -->
 reasoning, and [Operations](operations)/[Quickstart](quickstart) for what this means for running the
 app day to day.
 
 The app also changed how a project is stored on disk: `project.json` now holds only the schema and
 paper metadata, never annotation data — every reviewer's/consolidation's actual answers live in a
 sibling `annotations/<paperId>/` folder instead, one file per reviewer plus a consolidated file. See
+<!-- openwiki: broken internal link [data-model] file "data-model" does not exist. Fix the href or restore the target, then delete this comment. -->
 "Assembling and splitting a project on disk" below and [Data Model](data-model)'s "On-disk layout"
 for the full shape and why (git-merge conflicts between reviewers editing the same all-in-one file).
 
@@ -89,6 +92,7 @@ Delegates to `window.slr` (the preload bridge). File operations use IPC to the m
 
 **`saveProject(text, handle)` is where the on-disk split happens.** `text` is the logical
 whole-project JSON `serializeProject()` produced (the same shape as before this feature — the model
+<!-- openwiki: broken internal link [data-model] file "data-model" does not exist. Fix the href or restore the target, then delete this comment. -->
 layer never learned the split shape, see [Data Model](data-model)'s "Assembling and splitting on
 disk"). `ElectronAdapter.saveProject` re-parses it with `loadProject`, calls `splitProjectFiles()` to
 get `{ meta, files }`, and sends both over the `project:save` IPC, which `electron/main.ts` writes as
@@ -249,13 +253,19 @@ App (src/App.tsx)
 ├── GitCloneDialog (src/components/GitCloneDialog.tsx)
 │     Import-from-git modal, driven by useGitStore's clone.phase: setup (URL + destination) → cloning (spinner + elapsed seconds) → error (git's exact text, back to setup) → done (pick the project JSON, opened inside the clone) — Electron only, see "Git" above
 ├── GitDialog (src/components/GitDialog.tsx)
-│     Modal for the open project's own repository: changes + diff, a commit message, Commit, Pull, Push, and a branch switcher (a `<select>` in the header over `useGitStore().branches`, driving `requestSwitchBranch`) — shown only when the toolbar's Git button is present. When the open project's own file is a tracked, field-diffable modification, its changes are reviewed field by field (Use/Ignore/Discard per row) instead of as one whole-file checkbox — see "Field-level commit review" below. When every row is marked Discard, the primary button relabels to "Discard all" (danger-red) and reverts marked rows directly via `runDiscard` without committing. When a Discard row is mixed in among Use rows, `mixedDiscardConfirmMessage()` warns that the Discard field's change will be lost on commit before proceeding
+│     Modal for the open project's own repository: changes + diff, a commit message, Commit, Pull, Push, a branch switcher (a `<select>` in the header over the *local* rows of `useGitStore().branches`, driving `requestSwitchBranch`), and two quieter header buttons — **Merge branch…** and **History…** — deliberately kept out of the commit/pull/push row since both are occasional, deliberate actions rather than something a reviewer reaches for every session. When the open project's own file is a tracked, field-diffable modification, its changes are reviewed field by field (Use/Ignore/Discard per row) instead of as one whole-file checkbox — see "Field-level commit review" below. Non-project changed files each get their own **↺** (whole-file discard, see "Whole-file discard" below). When every row is marked Discard, the primary button relabels to "Discard all" (danger-red) and reverts marked rows directly via `runDiscard` without committing. When a Discard row is mixed in among Use rows, `mixedDiscardConfirmMessage()` warns that the Discard field's change will be lost on commit before proceeding
 ├── BranchSwitchPrompt (src/components/BranchSwitchPrompt.tsx)
 │     Asked when the branch switcher picks a different branch while the project has uncommitted changes — commit first (closes this, switches nothing), carry the changes over (starts the same field-level merge a pull uses), or cancel. See "Switching branches with uncommitted changes" below
 ├── NewBranchPrompt (src/components/NewBranchPrompt.tsx)
 │     The branch switcher's "+ New branch…" entry: a name, created at the current commit and switched to right away via the ordinary branch-switch flow (which can never conflict for a branch just cut from `HEAD`). See "Switching branches with uncommitted changes" below
+├── DeleteBranchPrompt (src/components/DeleteBranchPrompt.tsx)
+│     The branch switcher's "- Delete branch…" entry: pick a local branch (never the current one), confirm; `git branch -d` refuses on its own when the branch isn't fully merged, and that refusal surfaces as `panel.error` once this dialog closes. Remote branches are out of scope (needs `git push origin --delete`). Mirrors `NewBranchPrompt`'s shape. See "Deleting a branch" below
+├── MergeBranchPrompt (src/components/MergeBranchPrompt.tsx)
+│     The "Merge branch…" button's own small prompt — pick a branch (local or remote-tracking, grouped into `<optgroup>`s) and see the direction spelled out plainly ("Merge *branch* into the current branch *yours*"), confirm. Deliberately its own prompt rather than the inline branch switcher, so merging (a rare, deliberate action) doesn't sit as prominently as Commit/Pull/Push. See "Merging another branch" below
 ├── GitMergeDialog (src/components/GitMergeDialog.tsx)
-│     The conflict-resolution list for either a pull or a carry-changes-over branch switch (`panel.merge.source` picks which git calls Finish/Cancel make; the UI itself doesn't need to know which), grouped by paper (one collapsible section per paper, auto-collapsing when its last conflict is decided): your value left, the remote's right, an editable final value in the middle, with full-text wrapping instead of one-line clipping. "Use all mine"/"Use all remote" exclude conflicts in another reviewer's own tree (`isForeignReview()`), badged "another reviewer", leaving them for individual ◀/▶ resolution. No Escape, no backdrop-click, no × — see "Git" above for why
+│     The conflict-resolution list for a pull, a merge-branch, or a carry-changes-over branch switch (`panel.merge.source` picks which git calls Finish/Cancel make; only `branch-switch` differs, since it alone moved HEAD — the UI itself doesn't need to know which), grouped by paper (one collapsible section per paper, auto-collapsing when its last conflict is decided): your value left, the remote's right, an editable final value in the middle, with full-text wrapping instead of one-line clipping. "Use all mine"/"Use all remote" exclude conflicts in another reviewer's own tree (`isForeignReview()`), badged "another reviewer", leaving them for individual ◀/▶ resolution. No Escape, no backdrop-click, no × — see "Git" above for why
+├── GitHistoryDialog (src/components/GitHistoryDialog.tsx)
+│     The "History…" button's read-only dialog: one row per commit that touched the open project's own file (scoped to `relPath` + `annotations/`, not the whole repo), newest first, capped at 250. Expanding a row fetches its field-level diff lazily (one commit at a time, cached by hash in `panel.history.diffs`), rendered with the same `formatValue` Was/Now text the commit review uses but without Use/Ignore/Discard controls — history is for looking back, not for redoing a decision. See "Commit history" below
 └── ErrorPanel (src/components/ErrorPanel.tsx)
       Modal overlay for load/save errors
 ```
@@ -285,7 +295,7 @@ The **grab-from-PDF** button (⧉) reads `useStore.getState().pdfSelection` and 
 
 ### Annotation names and descriptions
 
-`src/components/NodeName.tsx` renders schema node names. When a definition has a `description`, the UI adds an `ⓘ` marker, shows the description as a hover/focus tooltip, and renders that tooltip in a portal so it is not clipped by the annotation panel scroll container. The wrapper also includes an `aria-label` that combines the name and description for assistive technology.
+`src/components/NodeName.tsx` renders schema node names. When a definition has a `description`, the UI adds an `ⓘ` marker, shows the description as a hover/focus tooltip, and renders that tooltip in a portal so it is not clipped by the annotation panel scroll container. The wrapper also includes an `aria-label` that combines the name and description for assistive technology. When the description contains exactly one link (and only then — `findSingleLink` returns `undefined` for zero or for two-or-more links, since there is no way to guess which one a multi-link description means), **Ctrl/Cmd-clicking the name opens that link directly** in a new browser tab, skipping the right-click popover: a shortcut for the common case, not a replacement for it (plain click still marks the field read as before). The `aria-label` appends a "(Ctrl-click to open the link)" hint when a single link is present.
 
 ### Update check
 
@@ -397,6 +407,11 @@ The **help dialog is mode-aware**. `HelpDialog` derives a mode from `useEditorSt
 - **Editing the annotation JSON** (the editor is open) — schema building, drag-to-nest, adding PDFs, the two save buttons.
 
 Shared sections (appearance, license) render in all three.
+
+A **Report a bug** link — pointing at `NEW_ISSUE_URL` (`src/model/version.ts`, a pre-filled-nothing
+new issue on the repo) — sits in both the help dialog's header (next to the close button, behind a
+`.modal-head-actions` wrapper) and on the start screen (next to the version label), opening the
+GitHub new-issue page in the system browser.
 
 Two ways out of the editor: **Save JSON** writes the file and stays put (so you can keep building), while **Save JSON & Begin Annotating** writes it and hands it to the annotation view (`loadFromText`) — that split is `save()` vs `saveAndAnnotate()`. Both validate first, so an invalid draft neither writes nor closes. The editor has its own **undo/redo** history (`past`/`future` snapshots, same shape as the annotation store, with consecutive keystrokes in one input coalesced into a single step), and `useKeybindings` / `useElectronCloseGuard` route `Ctrl+S` / `Ctrl+Z` / `Ctrl+Shift+Z` / `Ctrl+Y` to it whenever it is open.
 
@@ -607,6 +622,7 @@ entry* and lines them up.
 | `assign.ts` | Hungarian max-weight assignment. Greedy is not merely worse but wrong here: one locally good pair can force two later entries into a much worse one, and greedy cannot trade the first against the second |
 | `align.ts` | The recursion. `alignNode` returns slots per repeatable node; `alignableNodes` lists what is worth doing. A `MIN_MATCH_SCORE` floor (0.5) prevents pairing entries that are more different than alike; a `NEW_SLOT_WEIGHT` lets a genuinely-unmatched entry open its own slot rather than being forced into an existing one |
 | `apply.ts` | Converts the computed `TreeAlignment` into the persistable `StoredAlignment` (`toStoredAlignment`) and grows the consolidated tree to fit the slot count (`growConsolidated`) — never deletes entries the consolidator may have added, never touches reviewer trees |
+<!-- openwiki: broken internal link [data-model] file "data-model" does not exist. Fix the href or restore the target, then delete this comment. -->
 | `alignment.ts` (`src/model/`) | `StoredAlignment`/`StoredSlot` types, `parseAlignment` (defensive), `alignedReviews` (throwaway projected copy for fixed-index reads). See "Stored alignment" in [Data Model](data-model) |
 | `exportDisagreements.ts` | Renders a paper's or project's disagreements as plain text (ID, authors, title, each field path with every reviewer's value indented under it). Consumed by `useExportTextMenu`'s clipboard/file export |
 | `unanimous.ts` | Finds the fields every reviewer answered identically, for `adoptUnanimousValues` to fill. Owns `comparable()` — the one rule for "did they say the same answer", shared with `disagreements.ts` and the compare popup so the three cannot drift into different verdicts |
@@ -1549,8 +1565,9 @@ Every git operation the renderer can ask for is one of the enumerated IPC handle
 `electron/main.ts` (`git:probe`, `git:pickCloneDir`, `git:clone`, `git:pickProjectIn`, `git:info`,
 `git:status`, `git:headContent`, `git:workingContent`, `git:commitPartial`,
 `git:commit`, `git:push`, `git:pullBegin`, `git:pullFinish`, `git:pullAbort`, `git:writeWorking`,
-`git:branches`, `git:branchCreate`, `git:checkout`, `git:branchSwitchBegin`, `git:branchSwitchFinish`,
-`git:branchSwitchAbort`) — never a general `git <args>` channel. Git has `--exec-path`, aliases, and the `ext::` remote-helper
+`git:branches`, `git:branchCreate`, `git:branchDelete`, `git:checkout`, `git:branchSwitchBegin`,
+`git:branchSwitchFinish`, `git:branchSwitchAbort`, `git:mergeBegin`, `git:logBegin`, `git:logDiff`,
+`git:discardFile`) — never a general `git <args>` channel. Git has `--exec-path`, aliases, and the `ext::` remote-helper
 transport; a channel that let the renderer choose the argv would be handing it arbitrary code
 execution wearing a "just run git" label. Main decides what git is actually asked to do; the
 renderer only supplies data (a URL, a path, a commit message, a resolved text).
@@ -1559,8 +1576,10 @@ Every call uses `execFile` with an **argument array**, never a shell string, and
 before any user-supplied path or URL — a repository URL or a destination path is user input reaching
 a spawned process, and without both, a URL like `--upload-pack=/bin/sh` would be read as an option
 rather than an argument. `src/git/url.ts` (`validateGitUrl`/`validateClonePath`) is the actual gate,
-and **`electron/main.ts` imports it** — the first, and (with `src/git/output.ts`'s `gitErrorText`)
-one of only two, imports of `src/` into `electron/`. That is deliberate and load-bearing: a security
+and **`electron/main.ts` imports it** — the first of three imports of `src/` into `electron/`
+(the others are `src/git/relpath.ts`'s `relPathProblem`/`annotationsRelDir` and
+`src/git/ref.ts`'s `refProblem`, plus `src/git/output.ts`'s `gitErrorText`/`parsePorcelain`/`parseGitLog`).
+That is deliberate and load-bearing: a security
 gate must not exist twice, the same reason `comparable()` in `src/consolidate/unanimous.ts` is one
 shared function rather than three copies that could drift. Both modules import nothing themselves,
 so they typecheck identically under `tsconfig.node.json` (`types: ["node"]`) and `tsconfig.app.json`
@@ -1669,13 +1688,14 @@ and spaces and lowercases, because Win32 strips them from path components itself
 
 | Module | Purpose |
 | --- | --- |
-| `src/git/types.ts` | Shared shapes crossing the platform seam: `GitRun`, `GitProbe`, `GitFileChange`, `GitStatus`, `GitRepoInfo`, `CloneOutcome`, `PullStart`, and the `GitPlatform` interface itself. |
+| `src/git/types.ts` | Shared shapes crossing the platform seam: `GitRun`, `GitProbe`, `GitFileChange`, `GitStatus`, `GitRepoInfo`, `CloneOutcome`, `PullStart` (and `MergeStart` — the merge cases shared by pull and an explicit merge-branch), `CommitRecord`/`LogBeginResult`/`LogRevisionFetch` (the commit-history panel's data), `GitBranch` (now carrying a `remote` flag), and the `GitPlatform` interface itself. |
 | `src/git/url.ts` | Pure. `validateGitUrl`, `validateClonePath`, `repoNameFromUrl` — the security gate, imported by `electron/main.ts` (see above). |
-| `src/git/output.ts` | Pure. `parsePorcelain` (turns `git status --porcelain=v1 -z` into `GitFileChange[]`), `capDiff` (caps a diff for the DOM), `diffLines` (splits a unified diff into per-line `add`/`remove`/`context` for the coloured view — see below), `gitErrorText` (what to show when a git command failed) — also imported by `electron/main.ts`, so the "what does a failed run's message say" logic exists once. |
+| `src/git/ref.ts` | Pure. `refProblem`/`isSafeRef` — the security gate for ref names the renderer hands to git (a branch to merge, a revision to diff), imported by `electron/main.ts` (`assertRef`). Same reason `url.ts`/`relpath.ts` live here: `electron/` is outside vitest's include, so a gate no test can reach is one nobody can change safely. |
+| `src/git/output.ts` | Pure. `parsePorcelain` (turns `git status --porcelain=v1 -z` into `GitFileChange[]`), `parseGitLog` (turns `git log --format=%x00%H%x09%aI%x09%s` into `CommitRecord[]`, splitting on only the first two tabs so a tab inside a subject does not desync the fields), `capDiff` (caps a diff for the DOM), `diffLines` (splits a unified diff into per-line `add`/`remove`/`context` for the coloured view — see below), `gitErrorText` (what to show when a git command failed) — also imported by `electron/main.ts`, so the "what does a failed run's message say" logic exists once. |
 | `src/git/merge.ts` | Pure. The field-level three-way merge — see below. Knows nothing about git or the DOM, the same shape `src/consolidate/` follows. |
-| `src/git/changes.ts` | Pure. Field-level *local* change detection and composition for the commit panel — see "Field-level commit review" below. Reuses `merge.ts`'s `conflictId`/`MergeTree` for row identity, but not its three-way `merge3` rule (only one side, the working tree, has changed here). |
-| `src/state/gitStore.ts` | The clone flow and the commit/pull/push panel; owns the pull orchestration and the field-review state. |
-| `src/components/GitCloneDialog.tsx`, `GitDialog.tsx`, `GitMergeDialog.tsx` | Views over `gitStore`. |
+| `src/git/changes.ts` | Pure. Field-level *local* change detection and composition for the commit panel — see "Field-level commit review" below. Reuses `merge.ts`'s `conflictId`/`MergeTree` for row identity, but not its three-way `merge3` rule (only one side, the working tree, has changed here). Also drives the read-only commit-history diff (see "Commit history" below). |
+| `src/state/gitStore.ts` | The clone flow and the commit/pull/push panel; owns the pull/merge-branch orchestration (shared `applyMergeStart`), the field-review state, the branch switcher, the merge-branch and delete-branch prompts, the commit-history panel, and the whole-file discard action. |
+| `src/components/GitCloneDialog.tsx`, `GitDialog.tsx`, `GitMergeDialog.tsx`, `GitHistoryDialog.tsx`, `MergeBranchPrompt.tsx`, `DeleteBranchPrompt.tsx` | Views over `gitStore`. |
 
 **Each dialog's width class is `.modal.git-*-dialog`, not bare `.git-*-dialog`** — a single-class
 selector has the same specificity as index.css's own `.modal` (which also sets `width`), so which
@@ -1721,27 +1741,36 @@ imports `gitStore` (it does not import `aiStore` either, for the same reason). R
 an effect in `App.tsx`, not a call made from inside `store.ts` — the same shape the AI store's own
 wiring already has.
 
+`MergeState.source` is now one of three kinds — `{kind:'pull'}`, `{kind:'merge-branch'}`, or
+`{kind:'branch-switch', sourceBranch}` — but only `branch-switch` actually differs at finish/cancel
+time (it alone moved HEAD, so it needs `finishBranchSwitch`/`abortBranchSwitch` and the
+`sourceBranch` to check back out to on cancel). `pull` and `merge-branch` are both an ordinary git
+merge, finished and aborted by `finishPull`/`abortPull`, which is why `doFinish`/`cancelMerge` branch
+on `source.kind === 'branch-switch'` rather than on each kind. The three flows share two helpers:
+`guardDirtyForMerge(verb)` (the in-memory dirty guard — see "Two gates before a pull touches
+anything" below, now shared by pull, merge-branch, and branch-switch) and `applyMergeStart(start,
+source, ffLabel)` (everything a merge does once git has classified it, from `'up-to-date'` through
+the conflict dialog — see "Merging another branch" below).
+
 ### The pull command sequence
 
-`git:pullBegin` (`electron/main.ts`) is the classification a pull starts with, run in this order:
+The merge core is `beginMergeInto(root, relPath, ref)` (`electron/main.ts`), shared by pull and an
+explicit merge-branch (see "Merging another branch" below). It assumes the caller has already
+checked the work tree is clean, then runs in this order:
 
-1. `git status --porcelain=v1 -z` — any tracked change (an untracked file, code `??`, never blocks a
-   merge) means `{ kind: 'dirty', paths }`.
-2. No `@{u}` (no upstream configured) means `{ kind: 'no-upstream', branch }`.
-3. `git fetch`. A failure means `{ kind: 'error', message }`.
-4. `HEAD` already an ancestor of `@{u}` means `{ kind: 'up-to-date' }`.
-5. `@{u}` already an ancestor of `HEAD` means a fast-forward: `git merge --ff-only @{u}`, then
-   `{ kind: 'fast-forwarded' }` or `{ kind: 'error', message }`.
-6. Otherwise the histories have diverged. The merge base and the **reassembled logical project** at
+1. `git merge-base --is-ancestor <ref> HEAD` succeeds → `{ kind: 'up-to-date' }`.
+2. `git merge-base --is-ancestor HEAD <ref>` succeeds → a fast-forward: `git merge --ff-only <ref>`,
+   then `{ kind: 'fast-forwarded' }` or `{ kind: 'error', message }`.
+3. Otherwise the histories have diverged. The merge base and the **reassembled logical project** at
    all three revisions (`git merge-base`, then `readProjectAtRevision` — `project.json` +
    `annotations/`, walked via `git show`/`git ls-tree` at that revision — for each of base/ours/theirs)
    are read **before** anything touches the work tree, so nothing that follows can change what
    actually gets merged.
-7. `git merge --no-commit --no-ff <ref>`. If it never even started (`MERGE_HEAD` absent — unrelated
+4. `git merge --no-commit --no-ff <ref>`. If it never even started (`MERGE_HEAD` absent — unrelated
    histories, a hook refusing) that is `{ kind: 'error', message }`, without ever calling `merge
    --abort` (which would itself fail with "There is no merge to abort" — checking `MERGE_HEAD` first
    is what keeps the next point true).
-8. If anything **other than the project's own files** — `relPath` itself and everything under its
+5. If anything **other than the project's own files** — `relPath` itself and everything under its
    `annotationsRelDir(relPath)` folder — is left unmerged, SaiLoR does not know how to help; it knows
    how to merge an annotation JSON, not a PDF or a `.gitignore`. Within the project's own files,
    git's own per-file line merge may have already resolved some of the (now much smaller, mostly
@@ -1750,12 +1779,19 @@ wiring already has.
    regardless, exactly as it did for the single project file this layout replaces. A genuine conflict
    *outside* the project's files aborts the git merge (`git merge --abort`) and returns
    `{ kind: 'conflict-elsewhere', paths }`; nothing is half-done.
-9. Otherwise: `{ kind: 'merge', ref, base, ours, theirs }` — the three texts, handed to
+6. Otherwise: `{ kind: 'merge', ref, base, ours, theirs }` — the three texts, handed to
    `mergeProjects` (below).
 
-**Contract**: `git:pullBegin` always returns with the repository in exactly one of two states — not
-mid-merge, for every outcome except `'merge'`, or mid-merge with nothing unmerged except the project
-file, for `'merge'`. It never returns leaving a half-merge the renderer did not ask for.
+`git:pullBegin` wraps `beginMergeInto`: it first checks for blocking dirty paths
+(`mergeBlockingDirtyPaths`, shared with `git:mergeBegin`), resolves the upstream (`@{u}`), fetches,
+and then calls `beginMergeInto(root, relPath, ref)`. Its own `'no-upstream'` case is the one outcome
+only a pull can hit, which is why `PullStart = MergeStart | { kind: 'no-upstream', branch }` and
+`applyMergeStart` (renderer-side) takes the `MergeStart` subset.
+
+**Contract**: `beginMergeInto` (and therefore both `git:pullBegin` and `git:mergeBegin`) always
+returns with the repository in exactly one of two states — not mid-merge, for every outcome except
+`'merge'`, or mid-merge with nothing unmerged except the project file, for `'merge'`. It never
+returns leaving a half-merge the renderer did not ask for.
 
 `git:pullFinish(root, relPath, working)` always writes `working` — the *merged* project's own
 `{ metaText, files }` (from `splitProjectFiles`) via `writeProjectFiles` — over whatever git's own
@@ -1768,23 +1804,30 @@ one anyway.
 
 ### Two gates before a pull touches anything: on-disk clean, and in-memory clean
 
-`git:pullBegin`'s `'dirty'` check answers one question: is the **file on disk** clean by git's own
-`status`. It says nothing about the reviewer's **unsaved, in-memory** annotations — those exist only
-in the React state and are invisible to git entirely. `gitStore.ts`'s `runPull()` therefore refuses
-outright, before ever calling `beginPull`, when `useStore.getState().dirty` is true: a fast-forward
-or a finished merge reloads the project file from disk (`reloadOpenProject`, which is exactly
-`openRecent(path)` — the file changed underneath the open project, so the in-memory copy is stale
-either way), and without this guard that reload would silently discard whatever the reviewer had not
-yet saved. This is the single most important line in the whole feature: get it wrong and a pull can
-lose a reviewer's unsaved work with no warning at all. `GitDialog.tsx` shows a dirty-banner with a
-**Save project** button and disables Pull (and Commit — committing the file on disk while the
-in-memory copy disagrees with it is its own kind of confusing) while it's up.
+`mergeBlockingDirtyPaths` (`electron/main.ts`, shared by `git:pullBegin` and `git:mergeBegin`)
+answers one question: is the **file on disk** clean by git's own `status`. It says nothing about
+the reviewer's **unsaved, in-memory** annotations — those exist only in the React state and are
+invisible to git entirely. `gitStore.ts`'s `guardDirtyForMerge(verb)` therefore refuses outright,
+before ever calling `beginPull`/`beginMerge`, when `useStore.getState().dirty` is true: a
+fast-forward or a finished merge reloads the project file from disk (`reloadOpenProject`, which is
+exactly `openRecent(path)` — the file changed underneath the open project, so the in-memory copy is
+stale either way), and without this guard that reload would silently discard whatever the reviewer
+had not yet saved. This is the single most important line in the whole feature: get it wrong and a
+pull (or a merge-branch) can lose a reviewer's unsaved work with no warning at all. The same guard
+also covers `requestSwitchBranch`'s clean-checkout path, since a checkout reloads the project the
+same way. `GitDialog.tsx` shows a dirty-banner with a **Save project** button and disables Pull,
+Commit, and the **Merge branch…** header button (but not **History…**, which never touches the
+working tree) while it's up.
 
 ### Switching branches with uncommitted changes
 
-`GitDialog.tsx`'s header is a `<select>` over `useGitStore().branches` (`git:branches` —
-`git branch --format`) instead of plain text whenever there is more than one local branch.
-Picking a different one goes through `requestSwitchBranch(branch)`:
+`GitDialog.tsx`'s header is a `<select>` over `useGitStore().branches` (`git:branches` — now
+`git for-each-ref` over `refs/heads` **and** `refs/remotes`, returning `{ name, current, remote }`
+and filtering out `refs/remotes/origin/HEAD`, a symref to the remote's default branch that is not a
+branch of its own) instead of plain text whenever there is more than one local branch. The switcher
+takes only the local ones (`!b.remote`), since checking out a remote-tracking ref would detach HEAD;
+the merge picker (below) takes both. Picking a different one goes through
+`requestSwitchBranch(branch)`:
 
 - **Nothing uncommitted** (`panel.status.changes` is empty): `git:checkout` — a plain `git checkout
   <branch> --` — runs immediately, then `reloadOpenProject()` plus a `refreshRepo`/`refreshBranches`
@@ -1807,15 +1850,16 @@ the identical `mergeProjects` used for a pull; zero conflicts finishes immediate
 (`git:branchSwitchFinish`: `writeProjectFiles` the resolved split onto the now-checked-out branch, then
 `git stash drop`), otherwise `GitMergeDialog` opens exactly as it does for a pull conflict.
 
-`MergeState` carries a `source: {kind:'pull'} | {kind:'branch-switch', sourceBranch}` so `doFinish`/
-`cancelMerge` call the right pair of git operations (`finishPull`/`abortPull` vs
-`finishBranchSwitch`/`abortBranchSwitch`) — `GitMergeDialog` itself needs no branching on `source`, since
-`merge.ref` (upstream ref for a pull, target branch name for a switch) already reads correctly in its
-generic "Your changes and {ref}'s both changed these fields" wording either way. Cancelling a
-branch-switch merge is a real reversal, not just stopping something in-flight the way aborting a pull's
-`git merge` is: `abortBranchSwitch(root, sourceBranch)` checks back out to `sourceBranch` and `git
-stash pop`s the changes back, since the checkout in `beginBranchSwitch` already completed by the time a
-reviewer can cancel.
+`MergeState` carries a `source: {kind:'pull'} | {kind:'merge-branch'} | {kind:'branch-switch',
+sourceBranch}` so `doFinish`/`cancelMerge` call the right pair of git operations
+(`finishPull`/`abortPull` for `pull` and `merge-branch`; `finishBranchSwitch`/`abortBranchSwitch`
+only for `branch-switch`) — `GitMergeDialog` itself needs no branching on `source`, since `merge.ref`
+(upstream ref for a pull, target branch name for a switch, chosen branch for a merge) already reads
+correctly in its generic "Your changes and {ref}'s both changed these fields" wording either way.
+Cancelling a branch-switch merge is a real reversal, not just stopping something in-flight the way
+aborting a pull's or merge-branch's `git merge` is: `abortBranchSwitch(root, sourceBranch)` checks
+back out to `sourceBranch` and `git stash pop`s the changes back, since the checkout in
+`beginBranchSwitch` already completed by the time a reviewer can cancel.
 
 **"+ New branch…"** is the branch `<select>`'s last option (`NewBranchPrompt.tsx`, opened via a
 sentinel value rather than a real branch name). `createAndSwitchBranch` runs `git:branchCreate` (a
@@ -1826,6 +1870,67 @@ shares that exact commit, so `beginBranchSwitch`'s `theirs` is identical to `bas
 uncommitted changes across can never itself conflict. A name git's own `check-ref-format` rejects (or
 one already taken) surfaces as `newBranchPrompt.error`, read from the *created* commands' own stderr,
 not hand-validated client-side.
+
+### Deleting a branch
+
+**"- Delete branch…"** is the branch `<select>`'s last option (`DeleteBranchPrompt.tsx`, opened via
+`DELETE_BRANCH_OPTION`, the same sentinel trick as `NEW_BRANCH_OPTION`). It offers only local
+branches other than the current one — deleting a remote-tracking ref needs `git push origin --delete`,
+a network operation with consequences for other people, out of scope here. Confirming runs
+`git:branchDelete`, which is `git branch -d -- <branch>` — never `-D`: git itself refuses when the
+branch is not fully merged into the current one, and that refusal (`ok: false`, surfaced verbatim as
+`panel.error` once the dialog closes) is the answer this app wants, not a force option to override
+it. `branch` always comes from `git:branches`' own output, so no `refProblem`-style validation is
+needed — the same trust model `git:branchCreate`/`git:checkout` already use.
+
+### Merging another branch
+
+The quieter **Merge branch…** button sits in `GitDialog.tsx`'s header, next to **History…** and the
+close button — kept out of the primary commit/pull/push row since merging is a rare, deliberate
+action, not something a reviewer reaches for every session. It opens `MergeBranchPrompt.tsx`, a
+small dialog that picks a branch (grouped into Local and Remote ones like `origin/side`; picking a
+remote one fetches first) and spells the direction out plainly ("Merge *branch* into the current
+branch *yours*"). The button is only shown when there is at least one mergeable branch (`!b.current`),
+so `openMergeBranchPrompt` can safely default to the first one.
+
+Confirming calls `runMergeBranch(ref)` (`gitStore.ts`), which is the same flow as `runPull` against
+an explicitly chosen ref: the same `guardDirtyForMerge('merging')` dirty guard, then
+`git:mergeBegin` (`electron/main.ts`). `git:mergeBegin` wraps `beginMergeInto` (above): the same
+dirty-path check, an optional `git fetch` (only when `ref` is remote-tracking, verified by
+`isRemoteTrackingRef` against `refs/remotes/` rather than guessed from an "origin/" prefix — a local
+branch may legitimately be called that), a `rev-parse --verify -q <ref>^{commit}` existence check
+(the half of the guard `assertRef` cannot do from the string alone), and then `beginMergeInto`. The
+outcome is handled by the shared `applyMergeStart(start, { kind: 'merge-branch' }, ref)`: an
+up-to-date notice, a fast-forward reload, a clean conflict-free merge committed straight away
+through `finishPull` (the same `git:pullFinish` a pull uses, since both leave `MERGE_HEAD` set), or
+`GitMergeDialog` taking over for a real conflict. `finishMerge`/`cancelMerge` route to
+`finishPull`/`abortPull` for both `pull` and `merge-branch`, since neither moved HEAD — unlike a
+branch-switch merge, whose cancellation is a real reversal (`abortBranchSwitch` checks back out to
+`sourceBranch` and `git stash pop`s the changes back).
+
+### Commit history
+
+**History…**, beside **Merge branch…** in `GitDialog.tsx`'s header, opens `GitHistoryDialog.tsx`,
+which lists the commits that touched the open project's own file — `git log` scoped to `relPath` and
+its `annotationsRelDir` (not the whole repo), newest first, capped at `LOG_MAX_COMMITS` (250).
+`openHistory` (`gitStore.ts`) calls `git:logBegin` and stores the result as `panel.history`; a
+`truncated` flag says so rather than building `--skip` pagination for a case nobody has hit yet.
+Browsing history never touches the working tree, so it has no `dirty`/`phase` coupling — it owns its
+own `HistoryState`, and `GitDialog.tsx` returns `null` (handing the modal to `GitHistoryDialog`)
+while `panel.history` is set.
+
+Expanding a commit row calls `loadCommitDiff(hash)` — fetched lazily, one commit at a time, never
+the whole list up front, and once-only (a second call while the first is in flight is a no-op). It
+calls `git:logDiff(root, relPath, rev)`, which fetches the project's reassembled logical text at
+`rev` and at `rev^` via `readProjectAtRevision` — deliberately raw text, not a parsed `Project` or a
+`DetectedChanges`: `loadProject`/`detectFieldChanges` are renderer-side, so this process only ever
+fetches, never parses or diffs (the same boundary `git:headContent`/`git:pullBegin` already keep).
+The renderer then runs `detectFieldChanges(parent, head)` and produces a `LogDiffResult`:
+`'initial'` (no parent — the first commit to touch this file), `'error'` (the revision could not be
+read), `'structural'` (the schema/protocol/etc. changed, or either side failed to parse — the same
+refusal list field-level review uses), or `'changes'` (the same `DetectedChanges` the commit panel
+renders, reused here read-only via `GitDialog.tsx`'s exported `formatValue`). `refProblem` gates
+the `rev` argument before it reaches git.
 
 ### The merge (`src/git/merge.ts`)
 
@@ -1953,6 +2058,18 @@ reviewer revert all local edits in one action without going through the commit c
 **Discard** button was also moved to the row's right edge (opposite Use/Ignore) so the three
 dispositions read left-to-right as a single visual axis.
 
+**Whole-file discard for files *other* than the project's own.** Each non-project changed row (a
+PDF you added, a `.gitignore` you edited) carries its own small **↺** button alongside the plain
+whole-file checkbox. `runDiscardFile(path)` (`gitStore.ts`) calls `git:discardFile`
+(`electron/main.ts`), which re-derives the file's own `git status` (the working tree can have
+changed since the panel last refreshed) and either reverts a tracked modification via
+`git checkout -- <path>` (this codebase never requires a git new enough for `git restore`) or
+deletes an untracked file (`??`) from disk via `unlink` — there is no committed version to revert
+to for an untracked file. It refuses — rather than guessing — a rename (`git status` reports it as
+the *new* path; correctly reverting one needs more than a single checkout) or an unresolved merge
+conflict (`change.unmerged`), surfacing git's own refusal text as `panel.error` and clearing the
+row from `panel.selected` on success. `assertInsideRoot` guards the untracked-file deletion path.
+
 **Partial-file staging has no native git primitive, so it is a write → commit → write-back
 sequence, now over the split layout.** `git:commitPartial` (`electron/main.ts`) takes `committed` and
 `working`, each `{ metaText, files }` from `splitProjectFiles`: it writes `committed` via
@@ -1970,6 +2087,20 @@ implicitly calling `refreshStatus`) recomputes `detectFieldChanges` from scratch
 (`gitStore.ts`) carries forward any decision whose row id is still present in the new result and
 drops the rest — an accidental re-scan must never silently reset a reviewer's careful per-row choices,
 but a row that stopped being a change (its id vanished) has nothing left to carry the decision about.
+
+**After a field-level commit or Discard, the open project is *resynced*, not *reloaded*.** A
+field-level commit (or the whole-project `runDiscard`) rewrites the working file underneath the
+reviewer's in-memory project, so the in-memory copy is stale and has to be re-read from disk. But this
+is the reviewer's own rewrite of their own commit (or their own discard), not a different project being
+loaded the way a pull/merge/branch-switch is — so it must not reset the reviewer's view (selected
+paper, filters, the schema-info dialog, undo history). `runCommit`/`runDiscard` therefore call
+`useStore.getState().resyncProjectFromDisk()` instead of `reloadOpenProject()`: it re-reads the
+project from disk via `openRecent(handle.path)` and replaces `s.project`/`s.saveHandle` only, leaving
+the rest of the store alone. `dirty` is guaranteed false at this point (the Commit/Discard buttons are
+disabled while it isn't), so the resync can never drop unsaved work. A malformed file on disk is
+swallowed silently — leave the still-valid in-memory project as it was rather than surface a load error
+for a resync the reviewer never asked for; a real problem will resurface the next time they actually
+open/reload the project.
 
 ### Testing
 
@@ -1992,7 +2123,22 @@ revision (aborts, writes nothing), and the dirty guard refusing to even call `be
 `refreshFieldReview`'s branches (untracked, unreadable, unparseable, structural, a genuine detected
 change, decisions surviving and being dropped across a refresh), `setFieldDisposition`/
 `setAllFieldDispositions`, and `runCommit`'s `commitPartial` branch (composed content, success with
-its reload, and a failure surfacing the error without one).
+its reload, and a failure surfacing the error without one). The v1.7.0 changes added dedicated suites:
+`runMergeBranch` (the dirty guard, the no-op-when-current branch, remote-tracking ref passthrough,
+fast-forward reload, a conflict-free merge committing via `finishPull`, a real conflict opening the
+dialog tagged `merge-branch`, finish/cancel routing to the pull operations, and `conflict-elsewhere`
+without a dialog), the Merge branch prompt and Delete branch prompt lifecycle (defaulting to the
+first mergeable/non-current branch, git's "not fully merged" refusal surfacing as `panel.error`),
+the commit-history panel (`openHistory`/`closeHistory`, `loadCommitDiff`'s once-only fetch, the
+`initial`/`error`/`changes`/`structural` outcomes), and `runDiscardFile` (tracked revert, untracked
+delete, refusal surfacing as `panel.error`). A `runCommit` resync test asserts the reviewer's view
+(selected paper, screening filter, schema-info dialog state) survives the
+`resyncProjectFromDisk` reload. `src/git/ref.test.ts` pins `refProblem`/`isSafeRef` (the names git
+itself produces, empty, option-like, control characters, revision syntax, `check-ref-format`
+forbiddens, dotted/`.lock` components at any level). `src/git/output.test.ts` covers `parseGitLog`
+(no commits, in-order, a tab inside a subject, a record with fewer than two tabs, an empty subject).
+`src/components/NodeName.test.ts` covers `findSingleLink` (no link, exactly one link, two or more
+links → no single target).
 
 **Serializer round-trip guard.** `src/state/editorStore.test.ts` includes a test that verifies `buildProjectJson` (the editor's serializer) and `serializeProject` (the core's) agree on every root field — if one writes a field the other silently drops, the test fails. This catches the class of bug where a field is lost depending on which path last saved, the same shape of bug that once dropped `abstract` in the merge layer.
 
@@ -2024,6 +2170,7 @@ until every row is decided) leave.
 - **Dev vs prod**: loads `VITE_DEV_SERVER_URL` in dev, `dist/index.html` in production.
 - **External links**: `setWindowOpenHandler` sends `target="_blank"` links (external links in PDFs) to the system browser via `shell.openExternal` and denies the popup; `will-navigate` prevents any off-app navigation of the window itself. Only `http:`/`https:`/`mailto:` URLs are passed to the OS.
 - **`slr-file://` protocol**: registered as privileged (secure, stream, fetch API, **CORS-enabled**). Handler resolves paths relative to `projectDir` with traversal guard (`path.resolve` + prefix check). Returns 403 for traversal attempts, 404 for missing files. `corsEnabled` is required, not cosmetic: the renderer's origin (dev server, or `file://` when packaged) differs from `slr-file://`, so loading a PDF is a cross-origin request. Without it Chromium rejects the request *before* `protocol.handle` runs, and pdf.js surfaces the opaque failure as `Unexpected server response (0)`.
+<!-- openwiki: broken internal link [data-model] file "data-model" does not exist. Fix the href or restore the target, then delete this comment. -->
 - **IPC handlers** (project ones now speak the split `project.json` + `annotations/` layout — see [Data Model](data-model)'s "Assembling and splitting on disk"):
   - `project:open` — `dialog.showOpenDialog` → `readProjectText` (reassembles a split project's `annotations/` files into the logical whole-project text `loadProject` expects; passes an old single-file project through untouched)
   - `project:openPath` — the same `readProjectText` reassembly, by absolute path (for re-opening recent projects); returns `null` if the file is missing or unreadable
@@ -2054,17 +2201,22 @@ until every row is decided) leave.
   - `git:push` — plain `git push`; a missing upstream surfaces git's own message rather than inventing `--set-upstream`
   - `git:pullBegin` / `git:pullFinish` / `git:pullAbort` — the pull classification and its two ways to conclude; see "Git" above for the full command sequence
   - `git:writeWorking` — writes `composeContents`'s `workingOut` directly to the working file, letting a reviewer discard local edits without committing (see "Field-level commit review" above)
-  - `git:branches` — `git branch --format` → `{ name, current }[]` for the branch switcher
+  - `git:branches` — `git for-each-ref` over `refs/heads` and `refs/remotes` → `{ name, current, remote }[]`; the switcher takes the locals, the merge picker takes both (see "Merging another branch"). `refs/remotes/origin/HEAD` (a symref, not a branch) is filtered out
   - `git:branchCreate` — a plain `git branch -- <name>` at the current commit, without switching; the renderer always follows it with the ordinary switch flow
+  - `git:branchDelete` — `git branch -d -- <branch>` (never `-D`); git itself refuses when the branch isn't fully merged into the current one, and that refusal (surfaced via the returned `GitRun`'s `ok: false` and `gitErrorText`) is the answer this app wants — no force option. Local branches only; deleting a remote one needs `git push origin --delete`, a more consequential network operation this app doesn't attempt
   - `git:checkout` — a plain `git checkout <branch> --`, only for the no-local-changes path
   - `git:branchSwitchBegin` / `git:branchSwitchFinish` / `git:branchSwitchAbort` — carrying uncommitted project changes across a branch switch (stash the project's files, checkout, merge); see "Switching branches with uncommitted changes" above for the full sequence
+  - `git:mergeBegin` — merges an arbitrary branch — local or remote-tracking — into the current one, via the shared `beginMergeInto`; finished and aborted by `git:pullFinish`/`git:pullAbort` (a merge is a merge regardless of which ref started it). Fetches first when the ref is a remote-tracking one, so the merge is against current data; validates the ref with `assertRef`/`refProblem` and verifies it resolves to a commit (`rev-parse --verify -q <ref>^{commit}`). See "Merging another branch" above for the full sequence
+  - `git:logBegin` — `git log` scoped to `relPath` and its `annotations/` dir (not the whole repo), capped at `LOG_MAX_COMMITS` (250) rather than paginated; `truncated` says so. `--date=iso-strict` and `--format=%x00%H%x09%aI%x09%s` produce NUL-terminated records parsed by `parseGitLog` (`src/git/output.ts`). For the commit-history panel
+  - `git:logDiff` — the two revisions a history row's field-level diff needs (`<rev>` and `<rev>^`), as raw text via `readProjectAtRevision`. Returns raw text rather than parsing it here, the same boundary every other IPC call keeps: this process only ever fetches; the renderer (`loadProject`/`detectFieldChanges`, called from `loadCommitDiff` in `gitStore.ts`) parses and diffs. `{kind:'initial'}` when the commit has no parent (the first commit to touch this file); `{kind:'error'}` when the revision can't be read
+  - `git:discardFile` — reverts (tracked, `git checkout -- <path>`) or deletes (untracked, `unlink`) a single changed file *other* than the project's own tracked file/`annotations/`; the whole-file counterpart to the project's field-level Discard. Re-derives the file's own status here rather than trusting a cached code, and refuses a rename (`change.from`) or an unresolved merge conflict (`change.unmerged`) rather than guessing. See "Whole-file discard" above
   - `update:check` / `update:download` / `update:install` — the native self-update surface, Windows/Linux only (see "In-app self-update" above). All three no-op on macOS. `update:check` primes `electron-updater` against the GitHub feed configured in `package.json`'s `build.publish` block but starts no download; the `update-available` / `download-progress` / `update-downloaded` / `error` events are pushed back to the renderer via `webContents.send('update:*')` and surface through the `onNativeUpdate*` preload subscriptions.
 - **Menu**: custom template with File, Edit, View, Window menus.
   - The **Edit** menu is hand-built: **Undo/Redo** send `app:undo` / `app:redo` to the renderer (routing to the store's history) rather than the native text-undo role, so undo works app-wide; cut/copy/paste/selectAll keep their native roles.
   - The **View** menu is hand-built (not the default `{ role: 'viewMenu' }`) and deliberately omits zoom roles so that `Ctrl +/-/0` reach the renderer for PDF zoom (and `Ctrl+Shift +/-/0` for app font scaling) instead of triggering native browser/Electron zoom.
 - **Unsaved-changes quit flow**: a window `close` handler (`promptUnsavedChanges`) intercepts the close/quit when `isDirty` is set, and shows a native **Save / Don't Save / Cancel** dialog. "Save" asks the renderer to save (`app:requestSave`) and closes once it reports back; "Don't Save" closes discarding changes. A `before-quit` flag lets the guard resume `app.quit()` after confirmation (so Cmd+Q fully quits on macOS, where destroying the window alone would not).
 
-**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods: `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, plus the quit/menu coordination — `setDirty`, `onRequestSave`, `saveComplete`, `onUndo`, `onRedo` — the fifteen `git*` methods (`gitProbe`, `gitPickCloneDir`, `gitClone`, `gitPickProjectIn`, `gitInfo`, `gitStatus`, `gitHeadContent`, `gitWorkingContent`, `gitCommitPartial`, `gitCommit`, `gitPush`, `gitPullBegin`, `gitPullFinish`, `gitPullAbort`, `gitWriteWorking`) mirroring the `git:*` IPC handlers one for one, and the native self-update surface — `checkForNativeUpdate`, `downloadNativeUpdate`, `installNativeUpdate`, plus the `onNativeUpdate*` event subscriptions (`onNativeUpdateAvailable`, `onNativeUpdateProgress`, `onNativeUpdateDownloaded`, `onNativeUpdateError`) mirroring the `update:*` handlers in `electron/main.ts` (win/linux only; no-ops on macOS). This `window.slr` object is the detection signal for `isElectron()`.
+**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods: `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, plus the quit/menu coordination — `setDirty`, `onRequestSave`, `saveComplete`, `onUndo`, `onRedo` — the `git*` methods (`gitProbe`, `gitPickCloneDir`, `gitClone`, `gitPickProjectIn`, `gitInfo`, `gitStatus`, `gitHeadContent`, `gitWorkingContent`, `gitCommitPartial`, `gitCommit`, `gitPush`, `gitPullBegin`, `gitPullFinish`, `gitPullAbort`, `gitMergeBegin`, `gitLogBegin`, `gitLogDiff`, `gitWriteWorking`, `gitDiscardFile`, `gitBranches`, `gitBranchCreate`, `gitBranchDelete`, `gitCheckout`, `gitBranchSwitchBegin`, `gitBranchSwitchFinish`, `gitBranchSwitchAbort`) mirroring the `git:*` IPC handlers one for one, and the native self-update surface — `checkForNativeUpdate`, `downloadNativeUpdate`, `installNativeUpdate`, plus the `onNativeUpdate*` event subscriptions (`onNativeUpdateAvailable`, `onNativeUpdateProgress`, `onNativeUpdateDownloaded`, `onNativeUpdateError`) mirroring the `update:*` handlers in `electron/main.ts` (win/linux only; no-ops on macOS). This `window.slr` object is the detection signal for `isElectron()`.
 
 ## Hooks
 
@@ -2132,7 +2284,11 @@ App appearance is controlled by a settings module that persists to `localStorage
   readonly` field, not a fresh object literal per `getGit()` call, since `getPlatform()` is a
   singleton and a new object every call would make every `useGitStore` selector see a "different"
   platform and churn. Keep the *decision* (what the operation does, what it validates) in `src/git/`
-  where it is unit-testable; keep the *argv* in `electron/main.ts` where it is enforced.
+  where it is unit-testable; keep the *argv* in `electron/main.ts` where it is enforced. If the
+  operation takes a ref name the renderer chooses (a branch to merge, a revision to diff), validate
+  it with `refProblem` (`src/git/ref.ts`, imported as `assertRef` in `electron/main.ts`) — the same
+  pattern as `assertRelPath` for paths, and for the same reason: it is a security gate on input that
+  reaches a spawned process, kept out of `electron/` so the test suite can reach it.
 - **Adding a new settings/appearance option**: Add to `src/state/settings.ts` (load/apply functions), add state + actions to the store, add UI controls to `Toolbar.tsx`, and add keybindings if needed.
 - **Touching anything that reads or writes the current paper's annotation data**: route it through `currentTree()` (`src/state/store.ts`) rather than `paper.annotations` directly, or it will silently ignore reviewer selection on a multi-reviewer project. Grep for `.annotations` across `src/` and check each hit against "should this see the active reviewer's tree or always the consolidated one". The direct reads that remain outside `src/model/` are deliberate: `currentTree()`'s own body; `ConsolidationDialog`, which reads the consolidated tree *on purpose* (it is showing you what the final answer currently is); `editorStore`, which edits the file's papers and has no reviewer concept; and null-project fallbacks.
 - **Reading a screening project's schema**: always go through `loadProject`/`Project.schema`, never the raw file. `config.screening.reasons` is the single source of truth; `config.schema` in the on-disk JSON is a *projection* of it that `loadProject` ignores and `serializeProject` rewrites on every save (see *Screening* above). A tool that reads the raw JSON's `config.schema` directly (rather than through this app) will see the derived snapshot from whenever the file was last saved, not something it can trust to reflect a hand-edited `reasons` list until the file is re-saved.

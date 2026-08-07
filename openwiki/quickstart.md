@@ -104,7 +104,7 @@ npm run typecheck
 
 ```
 ├── electron/              Electron main process + preload
-│   ├── main.ts            IPC handlers (open, openPath, save, saveAs, setDir, llm:*, git:*), slr-file:// protocol, window/menu setup, window-state persistence
+│   ├── main.ts            IPC handlers (open, openPath, save, saveAs, setDir, llm:*, git:* incl. mergeBegin/logBegin/logDiff/discardFile/branchDelete), slr-file:// protocol, window/menu setup, window-state persistence
 │   └── preload.ts         contextBridge → window.slr API (openProject, openPath, save, saveAs, git*, …)
 ├── src/
 │   ├── model/              Domain model (pure, unit-tested)
@@ -118,7 +118,7 @@ npm run typecheck
 │   │   ├── pdfMeta.ts     Best-effort title/author/abstract extraction from a PDF (metadata, then layout heuristic)
 │   │   ├── validate.ts    Checks annotated papers (required / type / enum / cardinality); unannotated papers are skipped, not flagged
 │   │   ├── linkify.ts     Splits free text into plain-text and URL segments for rendering clickable links in descriptions
-│   │   ├── version.ts     Update check against the GitHub releases API (silent while the repo is private); the win/linux in-app self-updater (electron-updater) hangs off this check
+│   │   ├── version.ts     Update check against the GitHub releases API (silent while the repo is private); the win/linux in-app self-updater (electron-updater) hangs off this check. Also `NEW_ISSUE_URL`, where the Help dialog's and start screen's "Report a bug" links open
 │   │   └── model.test.ts  Vitest unit tests for the model
 │   ├── screening/          Screening mode: derived schema, pure logic (unit-tested)
 │   │   ├── schema.ts      The derived two-node (Decision/Reason) schema; isScreening()
@@ -126,14 +126,15 @@ npm run typecheck
 │   │   ├── counts.ts      screeningCounts (PRISMA-style totals + per-reason breakdown), pendingUnanimous
 │   │   └── validate.ts    screeningIssues — the two cross-field validation rules screening needs
 │   ├── git/                Git support — pure logic; the plumbing (electron/main.ts) and UI stay thin
-│   │   ├── types.ts       Shared shapes crossing the platform seam: GitRun, GitStatus, PullStart, GitPlatform, …
+│   │   ├── types.ts       Shared shapes crossing the platform seam: GitRun, GitStatus, PullStart/MergeStart, GitBranch (with `remote`), CommitRecord, GitPlatform, …
 │   │   ├── url.ts         validateGitUrl / validateClonePath / repoNameFromUrl — the security gate, imported by electron/main.ts
-│   │   ├── output.ts      parsePorcelain / capDiff / gitErrorText — turning what git printed into data
+│   │   ├── output.ts      parsePorcelain / parseGitLog / capDiff / gitErrorText — turning what git printed into data
+│   │   ├── ref.ts         refProblem / isSafeRef — the security gate for ref names handed to git (a branch to merge, a revision to diff), imported by electron/main.ts
 │   │   ├── relpath.ts     relPathProblem / isSafeRelPath / annotationsRelDir — the security gate for paths written under a project's annotations/ folder
 │   │   └── merge.ts       mergeProjects / applyResolutions — the field-level three-way merge (see architecture.md's "Git" section)
 │   ├── platform/          Platform abstraction for file I/O, PDF loading, and git — Electron only now, see "SaiLoR is Electron-desktop-only" above
 │   │   ├── adapter.ts     PlatformAdapter interface + isElectron()
-│   │   ├── electron.ts    ElectronAdapter (IPC + slr-file://, recents, git, splits project text into project.json + annotations/ files on save)
+│   │   ├── electron.ts    ElectronAdapter (IPC + slr-file://, recents, git incl. merge/log/discard-file/branch-delete, splits project text into project.json + annotations/ files on save)
 │   │   ├── unsupported.ts UnsupportedAdapter — stands in for the platform outside Electron; every read answers "nothing", every action throws (a backstop — `App.tsx` blocks all project-opening UI before any of this is reachable)
 │   │   ├── pdfjs.ts       Single place configuring the pdf.js worker (viewer + extractor)
 │   │   ├── recents.ts     Recent-projects list in localStorage (max 5)
@@ -141,7 +142,7 @@ npm run typecheck
 │   ├── state/
 │   │   ├── store.ts      Zustand + immer store (project, papers, save, annotations, undo/redo, theme, fontScale, pdfZoom, recents, help, native self-update progress on win/linux)
 │   │   ├── editorStore.ts  Draft state for the project editor (schema tree + papers, relative PDF paths, validate/save)
-│   │   ├── gitStore.ts    Zustand + immer store for the clone flow and the commit/pull/push panel (reads store.ts one-way; store.ts never imports it)
+│   │   ├── gitStore.ts    Zustand + immer store for the clone flow, the commit/pull/push panel, the merge-branch/delete-branch prompts, the commit-history panel, and whole-file discard (reads store.ts one-way; store.ts never imports it)
 │   │   └── settings.ts   Theme + font-scale persistence (localStorage), applyTheme/applyFontScale
 │   ├── components/        React UI
 │   │   ├── Toolbar.tsx    Open ▾ / Save ▾ dropdowns, font controls, theme toggle, help button, Git button
@@ -152,7 +153,7 @@ npm run typecheck
 │   │   ├── PdfViewer.tsx  Middle pane — react-pdf, zoom controls, multi-page navigation, jump history (back/forward), in-PDF search (Ctrl+F), text selection capture
 │   │   ├── AnnotationPanel.tsx  Right pane — renders schema recursively
 │   │   ├── AnnotationNode.tsx   Recursive node (fields, groups, repeatable instances)
-│   │   ├── NodeName.tsx   Node label with ⓘ description tooltip (portaled)
+│   │   ├── NodeName.tsx   Node label with ⓘ description tooltip (portaled); Ctrl/Cmd-click opens a single-link description directly
 │   │   ├── Field.tsx      Input control (text/number/checkbox/enum dropdown) + "grab from PDF" button + 🔗 field-link popover
 │   │   ├── ComboBox.tsx   Filterable dropdown for enum (options) string fields, with clear (×) button
 │   │   ├── ExportPdfDialog.tsx  Modal — burn in-app marks into real PDF annotations (new file or overwrite)
@@ -170,8 +171,11 @@ npm run typecheck
 │   │   ├── ConsolidationDialog.tsx Modal: every reviewer's answer for one field; resolve, defer, or enter a different value
 │   │   ├── ClosePrompt.tsx      Save / Don't Save / Cancel when closing a dirty project
 │   │   ├── GitCloneDialog.tsx   Import-from-git modal: URL + destination → clone → pick the project JSON
-│   │   ├── GitDialog.tsx        Changes + diff, commit message, Pull, Push
-│   │   ├── GitMergeDialog.tsx   Pull's conflict-resolution list
+│   │   ├── GitDialog.tsx        Changes + diff, commit message, Pull, Push, branch switcher, Merge branch… and History… header buttons
+│   │   ├── GitMergeDialog.tsx   Pull's, merge-branch's, and branch-switch's conflict-resolution list
+│   │   ├── MergeBranchPrompt.tsx  "Merge branch…" button's own small prompt — pick a branch, see the direction spelled out
+│   │   ├── DeleteBranchPrompt.tsx  "- Delete branch…" entry's own dialog — pick a local branch to delete
+│   │   ├── GitHistoryDialog.tsx  "History…" button's read-only commit-history panel, with lazy per-commit field diffs
 │   │   ├── HelpDialog.tsx Modal with app intro + keyboard shortcuts (mode-aware, incl. screening)
 │   │   └── ErrorPanel.tsx Error overlay for load/save failures
 │   ├── hooks/

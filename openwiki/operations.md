@@ -242,6 +242,7 @@ Distribute the `release/` installers produced by `electron-builder`. The desktop
 | `Ctrl/Cmd + C/V/X` | Native copy/paste/cut (browser or Electron Edit menu) |
 | `I` / `E` / `U` | Screening only: include / exclude / un-decide the current paper |
 | `1`–`9` | Screening only: exclude with the Nth configured reason |
+| `Ctrl/Cmd` + click a field name | Open the field description's single link directly (only when the description has exactly one link) |
 
 Note: plain `Ctrl/Cmd +/-/0` zooms the **PDF paper**; adding **Shift** scales the **app font**. (On a US keyboard "+" is `Shift+=`, so PDF zoom-in is `Ctrl+=`; on layouts with a dedicated `+` key it maps to `Ctrl++` directly.)
 
@@ -258,6 +259,7 @@ Paper navigation with `[`/`]` is disabled when typing in an input field; Alt-arr
 
 SaiLoR is Electron-only now, so there is one save path: **Save** writes `project.json` plus the
 changed files under `annotations/` to the opened file's location; **Save as…** opens the native save
+<!-- openwiki: broken internal link [data-model] file "data-model" does not exist. Fix the href or restore the target, then delete this comment. -->
 dialog, then does the same at the new location. See [Data Model](data-model)'s "On-disk layout" and
 "Assembling and splitting on disk" for exactly what gets written. (The browser's File System Access
 API / download-fallback save paths this table used to compare against were deleted along with the
@@ -317,13 +319,36 @@ value), **Ignore** (leave it uncommitted, offered again next time), or **Discard
 only once Commit is actually pressed — picking Discard does not touch the file by itself). Coupled
 fields, like an abstract and whether it was PDF-extracted, are shown as one row. Every other changed
 file — and the project file itself, when a schema/reviewer-count/etc. change makes field-level review
-impossible — keeps the plain whole-file checkbox. See `architecture.md`'s "Field-level commit review"
-for the mechanics.
+impossible — keeps the plain whole-file checkbox. Each of those non-project rows also has a small
+**↺** button to revert (a tracked modification) or delete (an untracked file) that one file; a
+rename or an unresolved merge conflict has no ↺ (reverting either correctly takes more than SaiLoR
+does here). See `architecture.md`'s "Field-level commit review" and "Whole-file discard" for the
+mechanics.
 
 **What `git → Pull` does**: fetches, and either fast-forwards, reports up to date, or — on a genuine
 divergence — reads the three revisions of the project JSON and merges them field by field (see
 `data-model.md`'s "Merging two copies of a project"). Any field both sides changed, differently, is
 shown in a resolution list; nothing is committed until every row has been decided.
+
+**Merge branch…** (a quieter text button in the Git panel's header, next to **History…**) merges
+another branch — local or remote-tracking (e.g. `origin/side`; picking a remote one fetches first) —
+into the current branch through the same field-by-field engine as Pull: already-up-to-date,
+fast-forward, a clean merge commit right away, or the same conflict dialog. It is a separate button
+rather than folded into Pull/Push because merging another branch in is a deliberate, occasional
+action, not something reached for every session. Unlike a branch switch, merging never moves you off
+your branch, so a cancelled merge is a plain `git merge --abort`. Both Merge and Pull work on the
+file on disk, so both are greyed out while you have unsaved annotations.
+
+**History…** lists the commits that touched the open project's own file (not the whole repository),
+newest first, capped at the latest 250. Expanding a commit shows the same field-by-field "Was/Now"
+diff the commit review uses, read-only and fetched lazily (one commit at a time). See
+`architecture.md`'s "Commit history" for the mechanics.
+
+**Switching and deleting branches**: the branch switcher in the Git panel's header offers the local
+branches; **+ New branch…** creates one at the current commit and switches to it, and **- Delete
+branch…** removes a local branch (`git branch -d` — git itself refuses if it isn't fully merged, no
+force option here). See `architecture.md`'s "Switching branches with uncommitted changes" and
+"Deleting a branch".
 
 **Known limits, by design, not oversight:**
 
@@ -333,13 +358,18 @@ shown in a resolution list; nothing is committed until every row has been decide
   on its own) — the git merge is aborted cleanly and handed back; resolve it with git directly, then
   pull again.
 - **A schema (or `config.reviewers`, `config.screening`, `version`, `provenance`, `protocol`, or an
-  unrelated `extra` field) changed on both sides, differently** — the whole merge is refused, naming
-  what could not be reconciled, rather than guessing a field-level answer for something that reshapes
-  the file (or, for `provenance`/`protocol`, simply has no field-level shape to guess at).
+  unrelated `extra` field) changed on both sides, differently** — the whole merge (or merge-branch,
+  or carry-changes-into-a-new-branch merge) is refused, naming what could not be reconciled, rather
+  than guessing a field-level answer for something that reshapes the file (or, for
+  `provenance`/`protocol`, simply has no field-level shape to guess at).
 - **No live clone progress bar, and no cancel button** — a spinner and an elapsed-seconds counter
   say "this has not frozen"; a genuinely stuck clone times out after 15 minutes. See
   `architecture.md`'s "Rejected: streamed clone progress and a cancel button" for the reasoning.
-- **No branch switching, remote management, or history browsing** — out of scope for this feature.
+- **No deleting a remote branch, or force-deleting a local one that isn't fully merged** — both are
+  left to a terminal (the latter needs `git branch -D`, which this app never runs).
+- **No reverting a rename or an unresolved merge conflict via the whole-file ↺** — correctly
+  reverting either takes more than SaiLoR does here, so the button is refused rather than guessed
+  at; sort it out with git directly.
 
 ## PDF Loading
 
