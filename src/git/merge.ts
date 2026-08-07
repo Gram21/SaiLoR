@@ -78,6 +78,7 @@ export type MergeNoteKind =
   | 'schema-remote'
   | 'reviewers-remote'
   | 'screening-remote'
+  | 'repeatable-additions-kept'
 
 export interface MergeNote {
   kind: MergeNoteKind
@@ -174,11 +175,71 @@ function arrOf(tree: AnnotationValueTree | undefined, name: string): InstanceNod
 }
 
 /**
+ * A JSON-comparable snapshot of one repeatable instance's whole subtree
+ * (its own value, if it is a field, plus every nested repeatable array under
+ * it), used only to ask "did this instance change from another instance",
+ * never written to `merged`. Needed because positional matching means
+ * comparing `bArr[i]` to `oArr[i]` requires actually looking past the top
+ * field to know whether *anything* underneath differs.
+ */
+function snapshotInstance(def: ResolvedDef, inst: InstanceNode | undefined): unknown {
+  return {
+    value: isField(def) ? valueAt(def, inst) : undefined,
+    children: def.children.length > 0 ? snapshotTree(def.children, inst?.children) : undefined,
+  }
+}
+
+function snapshotTree(defs: ResolvedDef[], tree: AnnotationValueTree | undefined): unknown {
+  const out: Record<string, unknown> = {}
+  for (const d of defs) out[d.name] = arrOf(tree, d.name).map((inst) => snapshotInstance(d, inst))
+  return out
+}
+
+/**
+ * Bug: a deletion on one side shifts every later index, so positional
+ * matching can strand an edit the other side made on what is now a phantom
+ * slot (see the module doc's Bug 2). This can't be resolved by guessing —
+ * there is no way to tell, from the shrunk array alone, which surviving
+ * entry the edit "really" belongs to — so it is detected instead: one side's
+ * instance count dropped below base's while the *other* side changed an
+ * instance at or beyond the position that drop would have removed.
+ */
+function shrunkAndEdited(
+  def: ResolvedDef,
+  bArr: InstanceNode[],
+  oArr: InstanceNode[],
+  tArr: InstanceNode[],
+): boolean {
+  const bLen = bArr.length
+  let shrunkLen: number
+  let otherArr: InstanceNode[]
+  if (oArr.length < bLen && tArr.length >= bLen) {
+    shrunkLen = oArr.length
+    otherArr = tArr
+  } else if (tArr.length < bLen && oArr.length >= bLen) {
+    shrunkLen = tArr.length
+    otherArr = oArr
+  } else {
+    return false
+  }
+  for (let i = shrunkLen; i < bLen; i++) {
+    if (!deepEqualJson(snapshotInstance(def, bArr[i]), snapshotInstance(def, otherArr[i]))) return true
+  }
+  return false
+}
+
+/**
  * Builds a `mergeTree` closure bound to one paper/tree's conflict sink, so the
  * recursion doesn't have to keep re-threading `paperId`/`paperTitle` through
  * every level.
  */
-function makeTreeMerger(paperId: string, paperTitle: string, conflicts: FieldConflict[]) {
+function makeTreeMerger(
+  paperId: string,
+  paperTitle: string,
+  conflicts: FieldConflict[],
+  notes: MergeNote[],
+  refusals: string[],
+) {
   /**
    * Walks the merged schema. `count` is a union of all three sides' instance
    * counts (clamped to `def.max`), and the arrays are never compacted —
@@ -202,11 +263,46 @@ function makeTreeMerger(paperId: string, paperTitle: string, conflicts: FieldCon
       const bArr = arrOf(base, def.name)
       const oArr = arrOf(ours, def.name)
       const tArr = arrOf(theirs, def.name)
-      let count = Math.max(bArr.length, oArr.length, tArr.length, Math.max(def.min, 1))
-      if (def.max !== null) count = Math.min(count, def.max)
+      // Bugs 1 and 2 are both specifically about *repeatable* nodes — where
+      // an index is one of several parallel instances, so "the base doesn't
+      // have one there" is a real, meaningful absence. A `max: 1` field's
+      // array is always exactly one long once resolved; an empty `bArr` for
+      // one of those means only "this paper didn't exist at the base" (see
+      // `mergePaper`'s `base: Paper | undefined`), not "both sides grew it",
+      // and must fall straight through to the ordinary per-field merge3 below
+      // — which is what already correctly conflicts a brand-new paper added
+      // independently on both sides with different values for the same field.
+      const repeatable = def.max === null || def.max > 1
+
+      // Bug 2: refuse rather than strand an edit on a phantom slot. See
+      // `shrunkAndEdited`'s doc comment.
+      if (repeatable && shrunkAndEdited(def, bArr, oArr, tArr)) {
+        refusals.push(
+          `verbatim:${def.name} on "${paperTitle}" was shortened on one side and edited on the other; ` +
+            `SaiLoR can't tell which entry your edit belongs to. Reconcile that paper by hand.`,
+        )
+        out[def.name] = oArr
+        continue
+      }
+
+      // Bug 1: when *both* sides grew this node past base's length, the
+      // surplus instances on each side are additions, not competing values
+      // for the same slot — overlaying them index-by-index (the ordinary
+      // path below) makes one side's addition silently disappear, or worse,
+      // lets a resolution recombine unrelated fields from two different new
+      // entries into one nobody wrote. This mirrors `mergePapers`' own
+      // keep-both asymmetry for a paper deleted on one side and changed on
+      // the other: a duplicate is a five-second cleanup, a silently dropped
+      // or invented finding is not. Only the truly new tail is appended raw;
+      // every index the base already had still goes through the ordinary
+      // per-field merge below, conflicts included.
+      const bothGrew = repeatable && oArr.length > bArr.length && tArr.length > bArr.length
+      const mergeCount = bothGrew
+        ? bArr.length
+        : Math.max(bArr.length, oArr.length, tArr.length, Math.max(def.min, 1))
 
       const instances: InstanceNode[] = []
-      for (let i = 0; i < count; i++) {
+      for (let i = 0; i < mergeCount; i++) {
         const segs: RawSeg[] = [...prefix, { name: def.name, index: i }]
         const inst: InstanceNode = {}
 
@@ -249,7 +345,16 @@ function makeTreeMerger(paperId: string, paperTitle: string, conflicts: FieldCon
 
         instances.push(inst)
       }
-      out[def.name] = instances
+
+      if (bothGrew) {
+        instances.push(...oArr.slice(bArr.length), ...tArr.slice(bArr.length))
+        notes.push({
+          kind: 'repeatable-additions-kept',
+          message: `Both sides added new "${def.name}" entries for "${paperTitle}"; they were all kept and may need de-duplicating.`,
+        })
+      }
+
+      out[def.name] = def.max !== null ? instances.slice(0, def.max) : instances
     }
     return out
   }
@@ -315,6 +420,7 @@ function mergePaper(
   ours: Paper,
   theirs: Paper,
   conflicts: FieldConflict[],
+  notes: MergeNote[],
   refusals: string[],
 ): Paper {
   const eqStr = (a: string, b: string) => a === b
@@ -451,7 +557,7 @@ function mergePaper(
     if (m.value !== undefined) extra[k] = m.value
   }
 
-  const mergeTree = makeTreeMerger(ours.id, title, conflicts)
+  const mergeTree = makeTreeMerger(ours.id, title, conflicts, notes, refusals)
   const annotations = mergeTree(
     schema,
     { kind: 'annotations' },
@@ -711,7 +817,7 @@ function mergePapers(
       continue
     }
 
-    if (o && t) out.push(mergePaper(schema, b, o, t, conflicts, refusals))
+    if (o && t) out.push(mergePaper(schema, b, o, t, conflicts, notes, refusals))
   }
   return out
 }
@@ -729,6 +835,12 @@ function refused(refusals: string[]): MergeOutcome {
 }
 
 function refusalDetail(key: string): string {
+  // A handful of refusals (a stranded repeatable-node edit, a schema removal
+  // that would discard answers) are specific enough — naming a paper, a
+  // field, a count — that the generic "X was changed on both sides" shape
+  // below would garble them. Those push their finished sentence here
+  // directly instead of a short key.
+  if (key.startsWith('verbatim:')) return key.slice('verbatim:'.length)
   switch (key) {
     case 'version':
       return 'The file format version was changed on both sides.'
@@ -761,6 +873,105 @@ function refusalDetail(key: string): string {
  *  is worth showing ("the remote changed X"), never to decide a value. */
 function changedFromBase(base: unknown, side: unknown): boolean {
   return !deepEqualJson(base, side)
+}
+
+/**
+ * Schema nodes present in `baseDefs` but missing from `mergedDefs` at the
+ * same position, at any depth — paired with the ancestor name path needed to
+ * find that node's data inside an actual paper tree (see `countAtPath`).
+ * A node whose parent survives but which is itself gone is still a removal
+ * worth counting, even though the winning side kept everything around it.
+ */
+function collectRemovedDefs(
+  baseDefs: ResolvedDef[],
+  mergedDefs: ResolvedDef[],
+  path: string[] = [],
+): { path: string[]; def: ResolvedDef }[] {
+  const mergedByName = new Map(mergedDefs.map((d) => [d.name, d]))
+  const out: { path: string[]; def: ResolvedDef }[] = []
+  for (const def of baseDefs) {
+    const merged = mergedByName.get(def.name)
+    if (!merged) {
+      out.push({ path, def })
+    } else if (def.children.length > 0) {
+      out.push(...collectRemovedDefs(def.children, merged.children, [...path, def.name]))
+    }
+  }
+  return out
+}
+
+/** Sum of non-empty answers stored anywhere under `def`'s own subtree in
+ *  `tree` — what a removal at this node would discard. "Non-empty" is
+ *  exactly `emptyValue(def.type)`, the same absent-vs-empty rule `valueAt`
+ *  applies everywhere else in this file: an untouched boolean (`false`) is
+ *  not an answer, an explicitly unset string (`null`) is not an answer. */
+function countAnswers(defs: ResolvedDef[], tree: AnnotationValueTree | undefined): number {
+  let n = 0
+  for (const def of defs) {
+    for (const inst of arrOf(tree, def.name)) {
+      if (isField(def) && valueAt(def, inst) !== emptyValue(def.type)) n++
+      if (def.children.length > 0) n += countAnswers(def.children, inst.children)
+    }
+  }
+  return n
+}
+
+/** Descends `tree` through `path` (every instance at every level — a
+ *  removed node under a repeatable ancestor can have answers in more than
+ *  one of that ancestor's rows) and sums `countAnswers` for `def` at the
+ *  bottom. The side that actually dropped this node has no array under that
+ *  name at all, so `arrOf` returns `[]` for it and contributes 0 — summing
+ *  over both `ours` and `theirs` trees below can never double-count. */
+function countAtPath(path: string[], def: ResolvedDef, tree: AnnotationValueTree | undefined): number {
+  if (path.length === 0) return countAnswers([def], tree)
+  const [head, ...rest] = path
+  let n = 0
+  for (const inst of arrOf(tree, head)) n += countAtPath(rest, def, inst.children)
+  return n
+}
+
+/**
+ * Bug 3: `mergedSchema` decides the *schema*, correctly — but every
+ * annotation tree below is then walked against only that winning schema, so
+ * a field the losing side removed is simply never visited, silently
+ * extending that schema vote to answers nobody agreed to discard. Refuses
+ * (naming the field and how many answers are at stake) exactly when there is
+ * something real to lose; a removal nobody had answered under proceeds
+ * exactly as before.
+ */
+function schemaRemovalRefusal(
+  base: Project | null,
+  mergedSchema: ResolvedDef[],
+  ours: Project,
+  theirs: Project,
+): string | null {
+  if (!base) return null // nothing existed at the base to have answers removed from.
+  const removed = collectRemovedDefs(base.schema, mergedSchema)
+  if (removed.length === 0) return null
+
+  const trees = [
+    ...ours.papers.map((p) => p.annotations),
+    ...theirs.papers.map((p) => p.annotations),
+    ...ours.papers.flatMap((p) => Object.values(p.reviews)),
+    ...theirs.papers.flatMap((p) => Object.values(p.reviews)),
+  ]
+
+  let total = 0
+  const names: string[] = []
+  for (const { path, def } of removed) {
+    const count = trees.reduce((sum, t) => sum + countAtPath(path, def, t), 0)
+    if (count > 0) {
+      total += count
+      names.push(def.name)
+    }
+  }
+  if (total === 0) return null
+
+  return (
+    `verbatim:The schema change removes ${names.map((n) => `"${n}"`).join(', ')}, which ` +
+    `${total === 1 ? 'holds 1 answer' : `holds ${total} answers`} across your reviewers. ` +
+    `Export or push what you have before retrying, then reconcile the schema so it doesn't drop them.`
+  )
 }
 
 /**
@@ -860,8 +1071,12 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
 
   // Every tree below is walked against the winning schema, so a field the
   // winning side removed is simply never visited — exactly as `normalizeTree`
-  // would drop it on the next ordinary load.
+  // would drop it on the next ordinary load. See `schemaRemovalRefusal` for
+  // why that is only safe when nothing answered is actually being dropped.
   const mergedSchema = schemaM!.value!
+
+  const schemaRemoval = schemaRemovalRefusal(base, mergedSchema, ours, theirs)
+  if (schemaRemoval) return refused([schemaRemoval])
 
   const notes: MergeNote[] = []
   if (!changedFromBase(base?.schema, ours.schema) && changedFromBase(base?.schema, theirs.schema)) {

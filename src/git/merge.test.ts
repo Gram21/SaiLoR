@@ -30,6 +30,25 @@ const REPEAT: AnnotationDef[] = [
   { name: 'Findings', max: null, children: [{ name: 'Claim', type: 'string' }] },
 ]
 
+const REPEAT2: AnnotationDef[] = [
+  {
+    name: 'Findings',
+    max: null,
+    children: [
+      { name: 'Claim', type: 'string' },
+      { name: 'Metric', type: 'string' },
+    ],
+  },
+]
+
+function findings2Tree(rows: [string, string][]): Record<string, unknown> {
+  return {
+    Findings: rows.map(([claim, metric]) => ({
+      children: { Claim: [{ value: claim }], Metric: [{ value: metric }] },
+    })),
+  }
+}
+
 interface PaperOpts {
   title?: string
   authors?: string[]
@@ -219,15 +238,76 @@ describe('mergeProjects — the field-level guarantee', () => {
 })
 
 describe('mergeProjects — repeatable nodes', () => {
-  it('conflicts only at the colliding index when both sides grow the list', () => {
-    const base = project({ schema: REPEAT, papers: [paper('a', { annotations: findingsTree(['A']) })] })
-    const ours = project({ schema: REPEAT, papers: [paper('a', { annotations: findingsTree(['A', 'B']) })] })
-    const theirs = project({ schema: REPEAT, papers: [paper('a', { annotations: findingsTree(['A', 'C']) })] })
+  it('keeps both entries — not a conflict, not a dropped one — when both sides append', () => {
+    // The corrected expectation for what used to be "conflicts only at the
+    // colliding index when both sides grow the list": that framing was the
+    // bug. Both sides *added* a new, unrelated entry at the same position;
+    // treating that as one slot with two competing values either destroyed
+    // one entry outright ("use all remote") or let a reviewer recombine the
+    // two into a finding neither of them wrote. See Bug 1 in merge.ts.
+    const base = project({ schema: REPEAT2, papers: [paper('a', { annotations: findings2Tree([['A', 'a']]) })] })
+    const ours = project({
+      schema: REPEAT2,
+      papers: [paper('a', { annotations: findings2Tree([['A', 'a'], ['B', 'b']]) })],
+    })
+    const theirs = project({
+      schema: REPEAT2,
+      papers: [paper('a', { annotations: findings2Tree([['A', 'a'], ['C', 'c']]) })],
+    })
     const outcome = mergeProjects(base, ours, theirs)
     expectMerged(outcome)
-    expect(outcome.merged.papers[0].annotations.Findings).toHaveLength(2)
-    expect(outcome.conflicts).toHaveLength(1)
-    expect(outcome.conflicts[0].canonical).toBe('Findings[1]/Claim')
+    expect(outcome.conflicts).toEqual([])
+    const rows = outcome.merged.papers[0].annotations.Findings.map(
+      (f) => [f.children!.Claim[0].value, f.children!.Metric[0].value] as const,
+    )
+    expect(rows).toContainEqual(['B', 'b'])
+    expect(rows).toContainEqual(['C', 'c'])
+    // The pathological outcome — a row combining one side's Claim with the
+    // other's Metric, a finding neither reviewer wrote — must not be
+    // reachable, from either the merge itself or a resolution built on it.
+    expect(rows.some(([claim, metric]) => (claim === 'B' && metric === 'c') || (claim === 'C' && metric === 'b'))).toBe(
+      false,
+    )
+    expect(outcome.notes.some((n) => n.kind === 'repeatable-additions-kept')).toBe(true)
+  })
+
+  it('refuses when one side deletes an entry and the other edits an entry stranded past the deletion', () => {
+    // Bug 2: a deletion shifts every later index, so ours' correction to
+    // finding B's Metric lands on the same array slot theirs' deletion of A
+    // vacated. There is no safe guess here — refuse and name the paper.
+    const base = project({
+      schema: REPEAT2,
+      papers: [paper('a', { annotations: findings2Tree([['A', 'a'], ['B', 'b']]) })],
+    })
+    const ours = project({
+      schema: REPEAT2,
+      papers: [paper('a', { annotations: findings2Tree([['A', 'a'], ['B', 'b2']]) })],
+    })
+    const theirs = project({
+      schema: REPEAT2,
+      papers: [paper('a', { annotations: findings2Tree([['B', 'b']]) })],
+    })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectRefused(outcome)
+    expect(outcome.details.some((d) => /Findings/.test(d) && /Paper a/.test(d))).toBe(true)
+  })
+
+  it('refuses the symmetric case: ours deletes, theirs edits the stranded entry', () => {
+    const base = project({
+      schema: REPEAT2,
+      papers: [paper('a', { annotations: findings2Tree([['A', 'a'], ['B', 'b']]) })],
+    })
+    const ours = project({
+      schema: REPEAT2,
+      papers: [paper('a', { annotations: findings2Tree([['B', 'b']]) })],
+    })
+    const theirs = project({
+      schema: REPEAT2,
+      papers: [paper('a', { annotations: findings2Tree([['A', 'a'], ['B2', 'b']]) })],
+    })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectRefused(outcome)
+    expect(outcome.details.some((d) => /Findings/.test(d) && /Paper a/.test(d))).toBe(true)
   })
 
   it('grows cleanly when only one side adds an entry', () => {
@@ -393,6 +473,34 @@ describe('mergeProjects — schema changes', () => {
   const PLUS_Y: AnnotationDef[] = [...SIMPLE, { name: 'Extra Y', type: 'string' }]
 
   it('uses the remote schema when only the remote changed it, and drops a field it removed', () => {
+    const base = project({ schema: SIMPLE, papers: [paper('a')] })
+    const ours = project({ schema: SIMPLE, papers: [paper('a')] })
+    const theirs = project({ schema: MINUS_RELEVANT, papers: [paper('a')] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.schema.map((d) => d.name)).toEqual(['Study Type', 'Year'])
+    expect(outcome.merged.papers[0].annotations.Relevant).toBeUndefined()
+    expect(outcome.notes.some((n) => n.kind === 'schema-remote')).toBe(true)
+  })
+
+  it('refuses when the remote removes a schema field that a reviewer answered', () => {
+    // Bug 3: `merge3` correctly picks theirs' schema (only theirs changed
+    // it), but walking only the winning schema means `Relevant` — which
+    // ours answered and theirs never touched — is silently never visited.
+    const base = project({ schema: SIMPLE, papers: [paper('a')] })
+    const ours = project({
+      schema: SIMPLE,
+      papers: [paper('a', { annotations: { Relevant: [{ value: true }] } })],
+    })
+    const theirs = project({ schema: MINUS_RELEVANT, papers: [paper('a')] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectRefused(outcome)
+    expect(outcome.details.some((d) => /Relevant/.test(d) && /\b1\b/.test(d))).toBe(true)
+  })
+
+  it('still merges cleanly when a remote schema removal has no answers under it', () => {
+    // The complementary, legitimate case: nothing is at stake, so the
+    // ordinary "remote schema wins" path must not regress into a refusal.
     const base = project({ schema: SIMPLE, papers: [paper('a')] })
     const ours = project({ schema: SIMPLE, papers: [paper('a')] })
     const theirs = project({ schema: MINUS_RELEVANT, papers: [paper('a')] })
