@@ -1397,6 +1397,36 @@ export const useStore = create<AppState>()(
           return false
         }
 
+        // Refuse rather than silently start sharing an `annotations/` folder
+        // with another project already in that directory — this is the only
+        // moment such a sharing relationship gets created, so it's the only
+        // moment it can be caught. `location.path` is Electron-only (the
+        // browser build never reaches this at all); no path means nothing to
+        // check against.
+        if (location.path) {
+          const collision = await platform.checkSiblingCollision(
+            location.path,
+            project.papers.map((p) => p.id),
+            project.screening !== null,
+          )
+          if (collision) {
+            set((s) => {
+              s.busy = false
+              const noun = collision.overlappingIds.length === 1 ? 'a paper' : 'papers'
+              s.loadError = {
+                message:
+                  `Can't save here — "${collision.siblingName}" in this folder already shares ${noun} ` +
+                  "with this project and uses the same annotation files, so saving here would let the " +
+                  "two projects silently overwrite each other's answers. Choose a different folder.",
+                details: [
+                  `Shared paper id${collision.overlappingIds.length === 1 ? '' : 's'}: ${collision.overlappingIds.join(', ')}`,
+                ],
+              }
+            })
+            return false
+          }
+        }
+
         let toWrite = project
         if (saveHandle) {
           const rebased = await platform.rebasePdfPaths(

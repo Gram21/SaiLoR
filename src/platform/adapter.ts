@@ -141,6 +141,22 @@ export interface PlatformAdapter {
    */
   pickProjectLocation(suggestedName: string): Promise<ProjectLocation | null>
 
+  /**
+   * Would writing this project to `destPath` start sharing an
+   * `annotations/` folder with a *different* project already sitting in
+   * that directory? `null` when there's no collision (including "not
+   * implemented on this platform" — the browser build never reaches this,
+   * see `unsupported.ts`). Checked between `pickProjectLocation` and the
+   * actual write in `saveAs()`, since that's the only moment a new sharing
+   * relationship is created — it can't retroactively protect a folder two
+   * projects already share from an earlier, unguarded Save As.
+   */
+  checkSiblingCollision(
+    destPath: string,
+    paperIds: string[],
+    screening: boolean,
+  ): Promise<{ siblingName: string; overlappingIds: string[] } | null>
+
   /** Pick one or more PDFs to reference. Returns [] if cancelled. */
   pickPdfs(): Promise<PickedPdf[]>
 

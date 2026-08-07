@@ -73,6 +73,10 @@ export class UnsupportedAdapter implements PlatformAdapter {
     return null
   }
 
+  async checkSiblingCollision(): Promise<{ siblingName: string; overlappingIds: string[] } | null> {
+    return null
+  }
+
   async pickPdfs(): Promise<PickedPdf[]> {
     return []
   }
