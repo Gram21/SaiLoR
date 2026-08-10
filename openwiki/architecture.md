@@ -15,16 +15,13 @@ static web SPA; **the web runtime is now discontinued** — `src/App.tsx`'s `isE
 the browser-only platform code (`src/platform/browser.ts`, `src/platform/idb.ts`) and the
 `?project=<url>` server-deployment loader (`loadFromUrl` in `src/state/store.ts`) were deleted
 outright. SaiLoR is Electron-desktop-only now. See "SaiLoR is Electron-desktop-only" below for the
-<!-- openwiki: broken internal link [operations] file "operations" does not exist. Fix the href or restore the target, then delete this comment. -->
-<!-- openwiki: broken internal link [quickstart] file "quickstart" does not exist. Fix the href or restore the target, then delete this comment. -->
-reasoning, and [Operations](operations)/[Quickstart](quickstart) for what this means for running the
+reasoning, and [Operations](operations.md)/[Quickstart](quickstart.md) for what this means for running the
 app day to day.
 
 The app also changed how a project is stored on disk: `project.json` now holds only the schema and
 paper metadata, never annotation data — every reviewer's/consolidation's actual answers live in a
 sibling `annotations/<paperId>/` folder instead, one file per reviewer plus a consolidated file. See
-<!-- openwiki: broken internal link [data-model] file "data-model" does not exist. Fix the href or restore the target, then delete this comment. -->
-"Assembling and splitting a project on disk" below and [Data Model](data-model)'s "On-disk layout"
+"Assembling and splitting a project on disk" below and [Data Model](data-model.md)'s "On-disk layout"
 for the full shape and why (git-merge conflicts between reviewers editing the same all-in-one file).
 
 The **PlatformAdapter** interface remains the architectural seam abstracting file I/O and PDF loading
@@ -92,8 +89,7 @@ Delegates to `window.slr` (the preload bridge). File operations use IPC to the m
 
 **`saveProject(text, handle)` is where the on-disk split happens.** `text` is the logical
 whole-project JSON `serializeProject()` produced (the same shape as before this feature — the model
-<!-- openwiki: broken internal link [data-model] file "data-model" does not exist. Fix the href or restore the target, then delete this comment. -->
-layer never learned the split shape, see [Data Model](data-model)'s "Assembling and splitting on
+layer never learned the split shape, see [Data Model](data-model.md)'s "Assembling and splitting on
 disk"). `ElectronAdapter.saveProject` re-parses it with `loadProject`, calls `splitProjectFiles()` to
 get `{ meta, files }`, and sends both over the `project:save` IPC, which `electron/main.ts` writes as
 `project.json` plus a reconciled `annotations/` folder. `openProject`/`openRecent` are symmetric on
@@ -620,10 +616,9 @@ entry* and lines them up.
 | --- | --- |
 | `similarity.ts` | How alike two answers are, as `{score, weight}`. `weight` is what makes "agrees on five fields" outrank "agrees on one" — averaging scores alone cannot tell those apart, as both average to 1.0. Weight 0 means the pair said nothing (a field only one reviewer filled abstains rather than voting against). Text is `max(levenshtein ratio, token Dice)`; enums compare as labels, never as characters ("High"/"Low" overlap and mean the opposite); a `false` boolean carries no evidence in the matching context; a `year` field is scored as an identity, not a magnitude — 1999 vs. 2999 scores 0 exactly like 1999 vs. 2000, because two different publication years are two different papers, not a near-match the way two head-counts might be (`valueSimilarity`'s dedicated `'year'` branch, checked before the `number` branch's relative-closeness scoring) |
 | `assign.ts` | Hungarian max-weight assignment. Greedy is not merely worse but wrong here: one locally good pair can force two later entries into a much worse one, and greedy cannot trade the first against the second |
-| `align.ts` | The recursion. `alignNode` returns slots per repeatable node; `alignableNodes` lists what is worth doing. A `MIN_MATCH_SCORE` floor (0.5) prevents pairing entries that are more different than alike; a `NEW_SLOT_WEIGHT` lets a genuinely-unmatched entry open its own slot rather than being forced into an existing one |
-| `apply.ts` | Converts the computed `TreeAlignment` into the persistable `StoredAlignment` (`toStoredAlignment`) and grows the consolidated tree to fit the slot count (`growConsolidated`) — never deletes entries the consolidator may have added, never touches reviewer trees |
-<!-- openwiki: broken internal link [data-model] file "data-model" does not exist. Fix the href or restore the target, then delete this comment. -->
-| `alignment.ts` (`src/model/`) | `StoredAlignment`/`StoredSlot` types, `parseAlignment` (defensive), `alignedReviews` (throwaway projected copy for fixed-index reads). See "Stored alignment" in [Data Model](data-model) |
+| `align.ts` | The recursion. `alignNode` returns slots per repeatable node; `alignableNodes` lists what is worth doing. A `MIN_MATCH_SCORE` floor (0.5) prevents pairing entries that are more different than alike; a `NEW_SLOT_WEIGHT` lets a genuinely-unmatched entry open its own slot rather than being forced into an existing one. `widenAlignment`/`widenList` fold a reviewer absent from every slot's `members` into an already-frozen alignment without moving anyone already there (see "A node the consolidator has already answered" below) |
+| `apply.ts` | Converts the computed `TreeAlignment` into the persistable `StoredAlignment` (`toStoredAlignment`), converts a `StoredAlignment` back into a `TreeAlignment` for `growConsolidated` (`storedAsTreeAlignment`), and grows the consolidated tree to fit the slot count (`growConsolidated`) — never deletes entries the consolidator may have added, never touches reviewer trees |
+| `alignment.ts` (`src/model/`) | `StoredAlignment`/`StoredSlot` types, `parseAlignment` (defensive), `alignedReviews` (throwaway projected copy for fixed-index reads). See "Stored alignment" in [Data Model](data-model.md) |
 | `exportDisagreements.ts` | Renders a paper's or project's disagreements as plain text (ID, authors, title, each field path with every reviewer's value indented under it). Consumed by `useExportTextMenu`'s clipboard/file export |
 | `unanimous.ts` | Finds the fields every reviewer answered identically, for `adoptUnanimousValues` to fill. Owns `comparable()` — the one rule for "did they say the same answer", shared with `disagreements.ts` and the compare popup so the three cannot drift into different verdicts |
 | `disagreements.ts` | The per-field cross-reviewer verdict (`FieldVerdict`): who answered, which category their answer falls in, whether that is agreement. Boolean fields use a different `answeredBy` test (`!== undefined && !== null` instead of `!isUnanswered`) so a present `false` counts as a real answer. A `oneSided` flag marks entries only some reviewers recorded — kept separate from `agree` because it carries no agreement information and would corrupt κ statistics if folded in. Untouched boolean skeletons (`false` values from `normalizeReviews` on a paper a reviewer never opened) are excluded via `touchedBy`/`hasAnnotations` at paper granularity. Uses `alignedReviews` to project through the stored mapping so fixed-index reads mean "the same entry". What both the overview and the statistics read |
@@ -674,11 +669,16 @@ the window as it opens. Whatever the reviewer opens the ⇄ compare popup on jum
 `alignConsolidationNode(paperId, nodeName, coalesce)` is the store action; `coalesce` folds later
 nodes into the undo entry the run's first node pushed, so lining a paper up is one undo press.
 
-**A node the consolidator has already answered is never re-matched.** Their entry N means a
-particular thing to them; re-matching could move a different entry into slot N, leaving their
-recorded answer describing something it was never about. The cost is that entries added *after*
-consolidation began are not auto-matched for that node — the safe side of the trade, since a stale
-match is visible and a silently re-pointed answer is not.
+**A node the consolidator has already answered is never re-matched *for reviewers already in a
+slot*.** Their entry N means a particular thing to them; re-matching could move a different entry
+into slot N, leaving their recorded answer describing something it was never about. The freeze now
+protects only *existing pairings*: a reviewer absent from every slot's `members` — one added to the
+project after the freeze, or one who had not started this paper when it happened — is still placed,
+by `widenAlignment`/`widenList` (`align.ts`) folding them into the frozen slots the same way
+`alignList`'s incremental loop folds in a new reviewer, without moving anyone already there. The
+cost the trade still carries is that entries a reviewer *adds* after consolidation began are not
+auto-matched for that node; comparing them by hand still works. That is the safe side: a stale match
+is visible, a silently re-pointed answer is not.
 
 ### Unanimous answers are adopted (`adoptUnanimousValues`)
 
@@ -1008,13 +1008,16 @@ including reviewers who left it empty, and flags whether the answered reviewers 
 case/whitespace read as agreement — consistent with the status dot and the κ statistics. The
 "these answers mean the same thing" checkbox (`canDeclareEqual`) only appears when ≥2 answers
 differ even after normalization. Picking a
-reviewer's value calls `resolveConsolidationValue` — which writes the value, marks the field equal,
-and clears any deferral in one undo step. Taking a reviewer's **blank** answer calls
-`deferConsolidationValue` instead of writing an empty value — the field stays marked as "pending a
-different value" rather than silently leaving a hole. An **"Enter a different value"** button defers
-and closes the dialog, letting the consolidator type a custom answer directly in the annotation
-panel; a deferred field gets a `consolidation-pending` CSS class, and entering a non-empty value via
-`setFieldValue` auto-clears the deferral and adds the field to `paper.equal`. `openConsolidation`
+reviewer's value calls `resolveConsolidationValue` — which writes the value and clears any deferral
+in one undo step. It does **not** mark the field `equal`: settling a disagreement is the routine act
+of consolidating, not a declaration that the reviewers agreed, and folding every resolution into
+`Paper.equal` was silently inflating every agreement statistic (κ/α). Only the explicit "these
+answers mean the same thing" checkbox (`toggleFieldEquality`) may set `equal`. Taking a reviewer's
+**blank** answer calls `deferConsolidationValue` instead of writing an empty value — the field stays
+marked as "pending a different value" rather than silently leaving a hole. An **"Enter a different
+value"** button defers and closes the dialog, letting the consolidator type a custom answer directly
+in the annotation panel; a deferred field gets a `consolidation-pending` CSS class, and entering a
+non-empty value via `setFieldValue` auto-clears the deferral. `openConsolidation`
 accepts a `returnToDisagreements` flag so `closeConsolidation` reopens the per-paper disagreement
 list when the dialog was opened from it. Closing without picking changes nothing.
 
@@ -1691,6 +1694,8 @@ and spaces and lowercases, because Win32 strips them from path components itself
 | `src/git/types.ts` | Shared shapes crossing the platform seam: `GitRun`, `GitProbe`, `GitFileChange`, `GitStatus`, `GitRepoInfo`, `CloneOutcome`, `PullStart` (and `MergeStart` — the merge cases shared by pull and an explicit merge-branch), `CommitRecord`/`LogBeginResult`/`LogRevisionFetch` (the commit-history panel's data), `GitBranch` (now carrying a `remote` flag), and the `GitPlatform` interface itself. |
 | `src/git/url.ts` | Pure. `validateGitUrl`, `validateClonePath`, `repoNameFromUrl` — the security gate, imported by `electron/main.ts` (see above). |
 | `src/git/ref.ts` | Pure. `refProblem`/`isSafeRef` — the security gate for ref names the renderer hands to git (a branch to merge, a revision to diff), imported by `electron/main.ts` (`assertRef`). Same reason `url.ts`/`relpath.ts` live here: `electron/` is outside vitest's include, so a gate no test can reach is one nobody can change safely. |
+| `src/git/relpath.ts` | Pure. `relPathProblem`/`isSafeRelPath`/`annotationsRelDir` — the security gate for paths written under a project's `annotations/` folder, and the derivation of that folder's name from the project file's own directory. `annotationsRelDir` is what every git flow (stash, add, merge's conflict-elsewhere check, branch-switch's in-scope check) uses to name the folder; it says nothing about whether that folder holds only this project's files (see `ownAnnotationPath.ts` for that). |
+| `src/git/ownAnnotationPath.ts` | Pure. `ownAnnotationPathMatcher(raw)` builds a predicate answering "does this path, relative to the `annotations/` folder, belong to *this* project?" — matching `<paperId>/<name>.json` where `paperId` is one of `raw.papers[].id` and `<name>` is the consolidated/numbered-reviewer/marks file the `screening`/`reviewer` family `raw.config.screening` selects, exactly as `splitProjectFiles` writes them. Used by the merge's conflict-elsewhere check and the branch-switch in-scope check to narrow "anything under `annotations/`" to this project's own family, so a sibling project sharing the folder is treated as "other files dirty"/"conflict elsewhere" and refused rather than silently stashed, merged over, or deleted. Lives here, not in `electron/main.ts`, for the same reason `relpath.ts`/`ref.ts` do: a correctness-load-bearing check with no test coverage is one nobody can change safely. |
 | `src/git/output.ts` | Pure. `parsePorcelain` (turns `git status --porcelain=v1 -z` into `GitFileChange[]`), `parseGitLog` (turns `git log --format=%x00%H%x09%aI%x09%s` into `CommitRecord[]`, splitting on only the first two tabs so a tab inside a subject does not desync the fields), `capDiff` (caps a diff for the DOM), `diffLines` (splits a unified diff into per-line `add`/`remove`/`context` for the coloured view — see below), `gitErrorText` (what to show when a git command failed) — also imported by `electron/main.ts`, so the "what does a failed run's message say" logic exists once. |
 | `src/git/merge.ts` | Pure. The field-level three-way merge — see below. Knows nothing about git or the DOM, the same shape `src/consolidate/` follows. |
 | `src/git/changes.ts` | Pure. Field-level *local* change detection and composition for the commit panel — see "Field-level commit review" below. Reuses `merge.ts`'s `conflictId`/`MergeTree` for row identity, but not its three-way `merge3` rule (only one side, the working tree, has changed here). Also drives the read-only commit-history diff (see "Commit history" below). |
@@ -1770,14 +1775,20 @@ checked the work tree is clean, then runs in this order:
    histories, a hook refusing) that is `{ kind: 'error', message }`, without ever calling `merge
    --abort` (which would itself fail with "There is no merge to abort" — checking `MERGE_HEAD` first
    is what keeps the next point true).
-5. If anything **other than the project's own files** — `relPath` itself and everything under its
-   `annotationsRelDir(relPath)` folder — is left unmerged, SaiLoR does not know how to help; it knows
-   how to merge an annotation JSON, not a PDF or a `.gitignore`. Within the project's own files,
-   git's own per-file line merge may have already resolved some of the (now much smaller, mostly
-   non-overlapping) `annotations/*.json` files cleanly and left conflict markers in others — it
-   doesn't matter either way, since `mergeProjects` re-derives the whole result from base/ours/theirs
-   regardless, exactly as it did for the single project file this layout replaces. A genuine conflict
-   *outside* the project's files aborts the git merge (`git merge --abort`) and returns
+5. If anything **other than the project's own files** — `relPath` itself and this project's own
+   family of files under its `annotationsRelDir(relPath)` folder (narrowed by
+   `ownAnnotationPathMatcher`, so a sibling project's file in the same folder is *not* waived
+   through) — is left unmerged, SaiLoR does not know how to help; it knows how to merge an
+   annotation JSON, not a PDF or a `.gitignore`. The "own family" matcher is the union of `ours`'
+   and `theirs`' own paper lists — union, not just `ours`, because a paper the remote side added is
+   legitimately this project's family too even though it is absent from `ours`, and using only
+   `ours` would misclassify an ordinary new-paper pull as `conflict-elsewhere`. Within the
+   project's own files, git's own per-file line merge may have already resolved some of the (now
+   much smaller, mostly non-overlapping) `annotations/*.json` files cleanly and left conflict
+   markers in others — it doesn't matter either way, since `mergeProjects` re-derives the whole
+   result from base/ours/theirs regardless, exactly as it did for the single project file this
+   layout replaces. A genuine conflict outside the project's files (or a sibling's file git could
+   not merge cleanly) aborts the git merge (`git merge --abort`) and returns
    `{ kind: 'conflict-elsewhere', paths }`; nothing is half-done.
 6. Otherwise: `{ kind: 'merge', ref, base, ours, theirs }` — the three texts, handed to
    `mergeProjects` (below).
@@ -1800,7 +1811,14 @@ line-based attempt produced for `project.json` and every file under `annotations
 with `MERGE_HEAD` set is what records both parents and tolerates an empty tree change, which is why
 the merge commit is finished this way rather than with `commit-tree` or `merge -m`; `--no-edit` takes
 git's own prepared `MERGE_MSG`, and `GIT_EDITOR=true` (above) is the backstop if it ever tried to open
-one anyway.
+one anyway. The whole handler is wrapped in `try`/`catch`, unlike a plain sequence of awaits: a
+throw here (`assertInsideRoot`'s refusal, a symlinked annotation path, `ENOSPC`/`EACCES`) would
+otherwise reject the IPC call, and `gitStore.ts`'s `doFinish` has no catch of its own around this —
+its "leave `panel.merge` in place so Cancel merge stays reachable" recovery only runs for an
+`{ok: false}` result, not a rejection. An uncaught one would throw out of `doFinish` silently:
+`applyMergeStart` already moved `phase` back to `'idle'`, so the panel looks ordinary while the repo
+sits mid-merge with some annotation files rewritten and others not. `git:branchSwitchFinish` is
+wrapped for the same reason.
 
 ### Two gates before a pull touches anything: on-disk clean, and in-memory clean
 
@@ -1837,18 +1855,24 @@ the merge picker (below) takes both. Picking a different one goes through
   the reviewer is already looking at the commit form), carry the changes over, or cancel.
 
 **Carrying changes over (`resolveBranchSwitchPrompt('carryOver')` → `beginBranchSwitch`)** refuses
-outright, touching nothing, if anything *outside* the project's own files (`relPath` +
-`annotationsRelDir(relPath)`) is also dirty — the same "SaiLoR only knows how to merge the project,
-not arbitrary files" limitation `git:pullBegin`'s `'conflict-elsewhere'` has, checked here *before* any
-mutation rather than after, since there is no clean way to undo a branch switch the way `merge --abort`
-undoes an in-progress pull. When the precondition holds, `git:branchSwitchBegin` does the actual
-mutation as one atomic step: capture `base` (`readProjectAtRevision` at the pre-switch HEAD), `ours`
-(`readProjectText` on the current, still-uncommitted working tree), and `theirs`
-(`readProjectAtRevision` at the target branch) — all pure reads — then `git stash push -u -- relPath
-annotationsRelDir(relPath)` (project-scoped only) and `git checkout <branch> --`. The three texts feed
-the identical `mergeProjects` used for a pull; zero conflicts finishes immediately
-(`git:branchSwitchFinish`: `writeProjectFiles` the resolved split onto the now-checked-out branch, then
-`git stash drop`), otherwise `GitMergeDialog` opens exactly as it does for a pull conflict.
+outright, touching nothing, if anything *outside* the project's own files is also dirty — the same
+"SaiLoR only knows how to merge the project, not arbitrary files" limitation `git:pullBegin`'s
+`'conflict-elsewhere'` has, checked here *before* any mutation rather than after, since there is no
+clean way to undo a branch switch the way `merge --abort` undoes an in-progress pull. "The project's
+own files" is narrowed by `ownAnnotationPathMatcher` (built from the *working tree's* current
+`project.json`, not HEAD — an uncommitted new paper must still count as this project's own) to this
+project's own paper-id/filename family under `annotationsRelDir(relPath)`, so a sibling project's
+uncommitted file in the same folder is treated as "other files dirty" and refused — same as any file
+this app does not know how to carry — instead of being silently stashed alongside this project's
+own and left behind if the eventual `finishBranchSwitch` never writes it back. When the precondition
+holds, `git:branchSwitchBegin` does the actual mutation as one atomic step: capture `base`
+(`readProjectAtRevision` at the pre-switch HEAD), `ours` (`readProjectText` on the current,
+still-uncommitted working tree), and `theirs` (`readProjectAtRevision` at the target branch) — all
+pure reads — then `git stash push -u -- relPath annotationsRelDir(relPath)` (project-scoped only)
+and `git checkout <branch> --`. The three texts feed the identical `mergeProjects` used for a pull;
+zero conflicts finishes immediately (`git:branchSwitchFinish`: `writeProjectFiles` the resolved split
+onto the now-checked-out branch, then `git stash drop`), otherwise `GitMergeDialog` opens exactly as
+it does for a pull conflict.
 
 `MergeState` carries a `source: {kind:'pull'} | {kind:'merge-branch'} | {kind:'branch-switch',
 sourceBranch}` so `doFinish`/`cancelMerge` call the right pair of git operations
@@ -1957,7 +1981,26 @@ it from the code side.
 - **Repeatable arrays are unioned by index and never compacted.** `count` is the union of all three
   sides' lengths (clamped to `def.max`); position is never closed up, because position carries
   meaning — consolidation lines up each reviewer's entries by index (`src/consolidate/apply.ts`), and
-  closing a gap here would silently re-point that alignment.
+  closing a gap here would silently re-point that alignment. When **both sides grew** a repeatable
+  node past base's length, the surplus instances on each side are additions, not competing values for
+  the same slot: only the base-aligned range (`0..base.length`) still merges per-field (conflicts and
+  all), and each side's surplus is appended raw — mirroring `mergePapers`' own keep-both asymmetry for
+  a paper deleted on one side and changed on the other, since a duplicate is a five-second cleanup
+  but a silently dropped or recombined finding is not. A `repeatable-additions-kept` note names the
+  paper and node so the reviewer knows to de-duplicate.
+- **A deletion on one side that strands an edit on the other refuses.** Deleting an entry shifts
+  every later index, so an edit the other side made at/after that position would land on a phantom
+  slot — undetectable by guessing, since there is no way to tell from the shrunk array alone which
+  surviving entry the edit "really" belongs to. `shrunkAndEdited` detects exactly that shape (one
+  side's instance count dropped below base's while the other side changed an instance at or beyond
+  the position the drop would have removed) and pushes a `verbatim:` refusal naming the paper and the
+  node, rather than producing a half-empty ghost or destroying the correction.
+- **A schema removal that would discard answers refuses.** `mergeProjects` picks the winning schema
+  correctly but then walks only that schema, so a field the winning side removed is never visited —
+  silently extending that schema vote to answers nobody agreed to discard. `schemaRemovalRefusal`
+  now counts real (non-empty) answers under anything the schema removal would drop, across every
+  paper and every reviewer/consolidation tree, and refuses (naming the field(s) and the count) when
+  that is nonzero; a removal with nothing under it still merges exactly as before.
 - **A conflicted field holds *our* value in `merged` until it is resolved.** If the resolution dialog
   is ever bypassed, the file still holds the local reviewer's own work — the safe side. It is not a
   decision on the merge's part: `GitMergeDialog` marks every conflicted row undecided regardless, and
@@ -2064,11 +2107,20 @@ whole-file checkbox. `runDiscardFile(path)` (`gitStore.ts`) calls `git:discardFi
 (`electron/main.ts`), which re-derives the file's own `git status` (the working tree can have
 changed since the panel last refreshed) and either reverts a tracked modification via
 `git checkout -- <path>` (this codebase never requires a git new enough for `git restore`) or
-deletes an untracked file (`??`) from disk via `unlink` — there is no committed version to revert
-to for an untracked file. It refuses — rather than guessing — a rename (`git status` reports it as
-the *new* path; correctly reverting one needs more than a single checkout) or an unresolved merge
-conflict (`change.unmerged`), surfacing git's own refusal text as `panel.error` and clearing the
-row from `panel.selected` on success. `assertInsideRoot` guards the untracked-file deletion path.
+deletes an untracked file (`??`) from disk — there is no committed version to revert to for an
+untracked file. A wholly-untracked directory collapses to one `git status` record; it is removed
+recursively (`rm`), not `unlink` (which throws `EISDIR`). It refuses — rather than guessing — a
+rename (`git status` reports it as the *new* path; correctly reverting one needs more than a single
+checkout) or an unresolved merge conflict (`change.unmerged`), surfacing git's own refusal text as
+`panel.error` and clearing the row from `panel.selected` on success. `assertInsideRoot` guards the
+untracked-file deletion path, and the whole handler is wrapped in `try`/`catch` so every failure
+comes back as `{ok: false}` data rather than an uncaught IPC rejection that would leave the panel's
+`phase` stuck at `'working'`. The handler also takes the open project's own `projectRelPath` and
+refuses whenever `path` *is* `projectRelPath` or falls under its `annotationsRelDir(...)` — the
+server-side guard behind `GitDialog.tsx`'s `isProjectOwnPath`, which withholds the ↺ button for the
+same paths but is UI, not enforcement. There is no committed copy of an untracked annotation file to
+recover from, so a marks-only change (field review never diffs PDF marks, so the per-file button
+was reachable for them) must not be able to reach them.
 
 **Partial-file staging has no native git primitive, so it is a write → commit → write-back
 sequence, now over the split layout.** `git:commitPartial` (`electron/main.ts`) takes `committed` and
@@ -2088,6 +2140,18 @@ implicitly calling `refreshStatus`) recomputes `detectFieldChanges` from scratch
 drops the rest — an accidental re-scan must never silently reset a reviewer's careful per-row choices,
 but a row that stopped being a change (its id vanished) has nothing left to carry the decision about.
 
+**Commit/Discard re-verify the field-review snapshot against disk before writing.** Both `runCommit`
+and `runDiscard` compose their output from `review.working`, a snapshot `refreshFieldReview` took at
+some point in the past — nothing re-read it afterward. If the file on disk changed since (the dirty
+banner's own "Save project" button, or `useAutosave`, writes the in-memory project to disk without
+refreshing `panel.fieldReview`, so `dirty` flips false, Commit un-disables, and committing would
+write the pre-save content over the work Save just put on disk), `guardFieldReviewFresh` catches it:
+it compares `loadProject` of a fresh `git:workingContent` read against `review.working` (parsed
+`Project` objects, not raw text, so two reads of equivalent content always match regardless of
+formatting or key order), refreshes the review against the current file, sets `panel.error` to
+explain why nothing was written, and returns `false` — the caller must stop. An unreadable/unparseable
+current file counts as "changed": there is nothing safe to proceed against.
+
 **After a field-level commit or Discard, the open project is *resynced*, not *reloaded*.** A
 field-level commit (or the whole-project `runDiscard`) rewrites the working file underneath the
 reviewer's in-memory project, so the in-memory copy is stale and has to be re-read from disk. But this
@@ -2096,7 +2160,11 @@ loaded the way a pull/merge/branch-switch is — so it must not reset the review
 paper, filters, the schema-info dialog, undo history). `runCommit`/`runDiscard` therefore call
 `useStore.getState().resyncProjectFromDisk()` instead of `reloadOpenProject()`: it re-reads the
 project from disk via `openRecent(handle.path)` and replaces `s.project`/`s.saveHandle` only, leaving
-the rest of the store alone. `dirty` is guaranteed false at this point (the Commit/Discard buttons are
+the rest of the store alone. It also clears the undo/redo stacks (`s.past = []; s.future = []`), the
+same way `loadFromText` already does: those snapshots branch off the pre-resync project, and `undo`
+restores `entry.project` wholesale, so one Ctrl+Z afterward would otherwise silently restore a
+whole-project snapshot from before the resync — undoing the discard/commit across the entire project.
+`dirty` is guaranteed false at this point (the Commit/Discard buttons are
 disabled while it isn't), so the resync can never drop unsaved work. A malformed file on disk is
 swallowed silently — leave the still-valid in-memory project as it was rather than surface a load error
 for a resync the reviewer never asked for; a real problem will resurface the next time they actually
@@ -2107,11 +2175,19 @@ open/reload the project.
 `src/git/merge.test.ts` builds every fixture through the real `loadProject`, never a hand-assembled
 `Project`, so base/ours/theirs are exactly as schema-normalized and empty-skeleton-shaped as
 `mergeProjects`' actual caller hands it. It covers the field-level guarantee in both directions,
-repeatable-node growth (colliding and non-colliding), the interior-gap and instance-removal
-invariants, the multi-reviewer headline case (disjoint edits by two reviewers, zero conflicts), the
+repeatable-node growth (both-sides-append keeps both entries, not a conflict; the base-aligned range
+still conflicts per-field), the interior-gap and instance-removal
+invariants, the `shrunkAndEdited` refusal (a deletion on one side stranding an edit on the other),
+the `schemaRemovalRefusal` (a schema removal with answers under it), the multi-reviewer headline case (disjoint edits by two reviewers, zero conflicts), the
 paper add/remove asymmetry, every refusal, the `aiUsage` union, the `Paper.equal` boolean-set merge,
 the `abstract`/`abstractFromPdf` merge (including the documented resolve-order gap above),
 `applyResolutions`, and a full round-trip through `serializeProject`/`loadProject`.
+`src/git/ownAnnotationPath.test.ts` covers `ownAnnotationPathMatcher`: matching an in-scope paper id
+across every file the family writes, rejecting an out-of-scope id (the sibling case), rejecting a
+filename shape the family does not write, the screening family's own names (and that the
+non-screening family's do not leak through), the legitimate screening-to-full-text sibling
+relationship (the two matchers never agree on the same filename), and a malformed `raw` matching
+nothing.
 `src/git/changes.test.ts` covers `detectFieldChanges` (structural refusal, no changes, paper-metadata
 diffing, the `abstract`/`abstractFromPdf` bundle including its no-primary-row fallback, annotation
 tree fields including nested repeatable groups and per-reviewer trees, paper add/remove) and
@@ -2131,16 +2207,20 @@ without a dialog), the Merge branch prompt and Delete branch prompt lifecycle (d
 first mergeable/non-current branch, git's "not fully merged" refusal surfacing as `panel.error`),
 the commit-history panel (`openHistory`/`closeHistory`, `loadCommitDiff`'s once-only fetch, the
 `initial`/`error`/`changes`/`structural` outcomes), and `runDiscardFile` (tracked revert, untracked
-delete, refusal surfacing as `panel.error`). A `runCommit` resync test asserts the reviewer's view
+delete, refusal surfacing as `panel.error`). `guardFieldReviewFresh` is covered by a
+`runCommit`/`runDiscard` suite that asserts a stale snapshot (the file changed on disk since the
+review was loaded) is caught: nothing is written, the review is refreshed, and `panel.error` explains
+why. A `runCommit` resync test asserts the reviewer's view
 (selected paper, screening filter, schema-info dialog state) survives the
-`resyncProjectFromDisk` reload. `src/git/ref.test.ts` pins `refProblem`/`isSafeRef` (the names git
+`resyncProjectFromDisk` reload, and `src/state/store.save.test.ts` asserts the resync clears
+undo/redo history (one Ctrl+Z after it must not resurrect a pre-resync whole-project snapshot). `src/git/ref.test.ts` pins `refProblem`/`isSafeRef` (the names git
 itself produces, empty, option-like, control characters, revision syntax, `check-ref-format`
 forbiddens, dotted/`.lock` components at any level). `src/git/output.test.ts` covers `parseGitLog`
 (no commits, in-order, a tab inside a subject, a record with fewer than two tabs, an empty subject).
 `src/components/NodeName.test.ts` covers `findSingleLink` (no link, exactly one link, two or more
 links → no single target).
 
-**Serializer round-trip guard.** `src/state/editorStore.test.ts` includes a test that verifies `buildProjectJson` (the editor's serializer) and `serializeProject` (the core's) agree on every root field — if one writes a field the other silently drops, the test fails. This catches the class of bug where a field is lost depending on which path last saved, the same shape of bug that once dropped `abstract` in the merge layer.
+**Serializer round-trip guard.** `src/state/editorStore.test.ts` includes a test that verifies `buildProjectJson` (the editor's serializer) and `serializeProject` (the core's) agree on every root field — if one writes a field the other silently drops, the test fails. This catches the class of bug where a field is lost depending on which path last saved, the same shape of bug that once dropped `abstract` in the merge layer. `src/state/editorStore.save.test.ts` and `src/state/store.save.test.ts` cover the save/saveAs race: an edit made mid-write (after the snapshot was serialized but before the promise resolves) must survive — `dirty` must not be cleared and `s.project` must not be overwritten for an edit that never reached disk.
 
 ### Rejected: streamed clone progress and a cancel button
 
@@ -2161,6 +2241,47 @@ checkout in a state they cannot get out of without the command line, which is th
 UI must never produce. Only **Cancel merge** (`git merge --abort`) and **Finish merge** (disabled
 until every row is decided) leave.
 
+### Sibling projects sharing a folder
+
+Two project files in one directory share one `annotations/` folder, since `annotationsRelDir`
+(`src/git/relpath.ts`) derives it purely from the project file's own directory. SaiLoR's own "Start
+full-text screening" flow creates exactly this layout on purpose (it saves a derived project as a
+sibling JSON next to the screening project it came from), and an ad hoc Save As into an occupied
+folder does the same by accident. The two legitimate siblings never collide on an actual filename —
+one writes `screening-N.json`, the other `reviewer-N.json` for the same paper id — which is what
+makes sharing paper ids across the two families safe. Three operations used to assume "anything
+under `annotations/`" meant "this project's own", so a sibling's file was silently stashed, merged
+over, or deleted:
+
+- A **branch switch's carry-changes stash** covered the whole folder; `finishBranchSwitch` wrote
+  back only this project's own files and dropped the stash — any uncommitted work belonging to a
+  sibling project that got swept into the stash was gone. `git:branchSwitchBegin` now narrows its
+  scope with `ownAnnotationPathMatcher` (built from the working tree's current `project.json`, not
+  HEAD, so an uncommitted new paper still counts), so a sibling's file is treated as "other files
+  dirty" and the switch is refused cleanly.
+- A **merge's conflict-elsewhere check** waived anything under the folder through as "ours to
+  reconcile"; a sibling's file got merged over by git's own line-based merge (raw conflict markers
+  included) and committed. `beginMergeInto` now narrows the same way, using the union of `ours`' and
+  `theirs`' own paper lists (a paper the remote side added is this project's family too).
+- **Save As** never checked the destination for an existing project sharing paper ids. The moment it
+  landed in an occupied folder, an ordinary future save of either file could null-and-delete the
+  other's still-live annotation file for any paper id they had in common. `saveAs()` (`store.ts`)
+  now calls `platform.checkSiblingCollision(destPath, paperIds, screening)` between
+  `pickProjectLocation` and the write, and refuses (naming the sibling and the shared ids) when a
+  *same-family* project sharing at least one paper id is already there — the only moment such a
+  sharing relationship is created, so the only moment it can be caught. A different-family sibling
+  (the legitimate screening-to-full-text case) never collides on a filename, which is exactly what
+  the check verifies before allowing it.
+
+`ownAnnotationPathMatcher` (`src/git/ownAnnotationPath.ts`) builds the predicate "does this path,
+relative to `annotations/`, belong to the project described by this raw `project.json`?" — matching
+`splitProjectFiles`' own `<paperId>/<name>.json` naming, using the `screening`/`reviewer` name family
+`config.screening` selects. It lives in `src/git/` rather than `electron/main.ts` for the same
+reason `relpath.ts`/`ref.ts`/`url.ts` do: `electron/` is outside vitest's include, and a
+correctness-load-bearing check with no test coverage is one nobody can change safely. A malformed
+`raw` (unparseable, no `papers` array) makes the matcher return `false` for everything, which makes
+every caller fail toward a clean refusal rather than guessing an unreadable blob is safe.
+
 ## Electron Main Process
 
 **`electron/main.ts`** is a thin main process:
@@ -2170,13 +2291,13 @@ until every row is decided) leave.
 - **Dev vs prod**: loads `VITE_DEV_SERVER_URL` in dev, `dist/index.html` in production.
 - **External links**: `setWindowOpenHandler` sends `target="_blank"` links (external links in PDFs) to the system browser via `shell.openExternal` and denies the popup; `will-navigate` prevents any off-app navigation of the window itself. Only `http:`/`https:`/`mailto:` URLs are passed to the OS.
 - **`slr-file://` protocol**: registered as privileged (secure, stream, fetch API, **CORS-enabled**). Handler resolves paths relative to `projectDir` with traversal guard (`path.resolve` + prefix check). Returns 403 for traversal attempts, 404 for missing files. `corsEnabled` is required, not cosmetic: the renderer's origin (dev server, or `file://` when packaged) differs from `slr-file://`, so loading a PDF is a cross-origin request. Without it Chromium rejects the request *before* `protocol.handle` runs, and pdf.js surfaces the opaque failure as `Unexpected server response (0)`.
-<!-- openwiki: broken internal link [data-model] file "data-model" does not exist. Fix the href or restore the target, then delete this comment. -->
-- **IPC handlers** (project ones now speak the split `project.json` + `annotations/` layout — see [Data Model](data-model)'s "Assembling and splitting on disk"):
+- **IPC handlers** (project ones now speak the split `project.json` + `annotations/` layout — see [Data Model](data-model.md)'s "Assembling and splitting on disk"):
   - `project:open` — `dialog.showOpenDialog` → `readProjectText` (reassembles a split project's `annotations/` files into the logical whole-project text `loadProject` expects; passes an old single-file project through untouched)
   - `project:openPath` — the same `readProjectText` reassembly, by absolute path (for re-opening recent projects); returns `null` if the file is missing or unreadable
   - `project:save` — `writeProjectFiles(filePath, metaText, files)`: writes `project.json` (`metaText`, the meta-only body `splitProjectFiles` produced) and reconciles `annotations/` against `files` (writing each non-null entry, deleting each null one)
   - `project:setDir` — sets `projectDir` from the project file's directory
   - `project:pickSavePath` — `dialog.showSaveDialog` to choose where a project JSON should live; **writes nothing** (the project editor picks a location before there is a file; "Save as" reuses this plus `project:save`, there is no separate `project:saveAs` handler)
+  - `project:checkSiblingCollision` — would writing a project to `destPath` start sharing an `annotations/` folder with another, same-family project already in that directory? Reads every other `.json` in the destination directory, checks for a shared paper id and the same screening/non-screening kind, and returns `{ siblingName, overlappingIds }` or `null`. Called from `saveAs()` right after the destination is picked and before anything is written — the only moment a new sharing relationship can be created. Not git-specific (Save As works with no repository at all), so it lives in the `project:*` namespace like `pickSavePath`, not alongside the `git:*` handlers. Two *different* project kinds sharing paper ids (SaiLoR's own "Start full-text screening" flow) never collide on a filename, so only a same-family overlap is flagged
   - `project:peek` — `{ exists, title }` per path, for refreshing recents' displayed titles without a full open
   - `pdf:pick` — `dialog.showOpenDialog` with `multiSelections` to add PDFs; returns absolute paths
   - `pdf:pickFolder` — `dialog.showOpenDialog` with `properties: ['openDirectory']`, then a recursive `readdir` walk collecting every `.pdf` (a directory that can't be read is skipped, not fatal); returns absolute paths
@@ -2205,18 +2326,18 @@ until every row is decided) leave.
   - `git:branchCreate` — a plain `git branch -- <name>` at the current commit, without switching; the renderer always follows it with the ordinary switch flow
   - `git:branchDelete` — `git branch -d -- <branch>` (never `-D`); git itself refuses when the branch isn't fully merged into the current one, and that refusal (surfaced via the returned `GitRun`'s `ok: false` and `gitErrorText`) is the answer this app wants — no force option. Local branches only; deleting a remote one needs `git push origin --delete`, a more consequential network operation this app doesn't attempt
   - `git:checkout` — a plain `git checkout <branch> --`, only for the no-local-changes path
-  - `git:branchSwitchBegin` / `git:branchSwitchFinish` / `git:branchSwitchAbort` — carrying uncommitted project changes across a branch switch (stash the project's files, checkout, merge); see "Switching branches with uncommitted changes" above for the full sequence
+  - `git:branchSwitchBegin` / `git:branchSwitchFinish` / `git:branchSwitchAbort` — carrying uncommitted project changes across a branch switch (stash the project's own files only — narrowed by `ownAnnotationPathMatcher` so a sibling's file in the same folder is left alone — checkout, merge); see "Switching branches with uncommitted changes" above for the full sequence. `git:branchSwitchFinish` is wrapped in `try`/`catch` for the same reason `git:pullFinish` is
   - `git:mergeBegin` — merges an arbitrary branch — local or remote-tracking — into the current one, via the shared `beginMergeInto`; finished and aborted by `git:pullFinish`/`git:pullAbort` (a merge is a merge regardless of which ref started it). Fetches first when the ref is a remote-tracking one, so the merge is against current data; validates the ref with `assertRef`/`refProblem` and verifies it resolves to a commit (`rev-parse --verify -q <ref>^{commit}`). See "Merging another branch" above for the full sequence
   - `git:logBegin` — `git log` scoped to `relPath` and its `annotations/` dir (not the whole repo), capped at `LOG_MAX_COMMITS` (250) rather than paginated; `truncated` says so. `--date=iso-strict` and `--format=%x00%H%x09%aI%x09%s` produce NUL-terminated records parsed by `parseGitLog` (`src/git/output.ts`). For the commit-history panel
   - `git:logDiff` — the two revisions a history row's field-level diff needs (`<rev>` and `<rev>^`), as raw text via `readProjectAtRevision`. Returns raw text rather than parsing it here, the same boundary every other IPC call keeps: this process only ever fetches; the renderer (`loadProject`/`detectFieldChanges`, called from `loadCommitDiff` in `gitStore.ts`) parses and diffs. `{kind:'initial'}` when the commit has no parent (the first commit to touch this file); `{kind:'error'}` when the revision can't be read
-  - `git:discardFile` — reverts (tracked, `git checkout -- <path>`) or deletes (untracked, `unlink`) a single changed file *other* than the project's own tracked file/`annotations/`; the whole-file counterpart to the project's field-level Discard. Re-derives the file's own status here rather than trusting a cached code, and refuses a rename (`change.from`) or an unresolved merge conflict (`change.unmerged`) rather than guessing. See "Whole-file discard" above
+  - `git:discardFile` — reverts (tracked, `git checkout -- <path>`) or deletes (untracked, `rm -r` for a directory, `unlink` for a file) a single changed file *other* than the project's own tracked file/`annotations/`; the whole-file counterpart to the project's field-level Discard. Takes the open project's own `projectRelPath` and refuses whenever `relPath` is it or falls under its `annotationsRelDir(...)`, so the renderer's own `isProjectOwnPath` withhold is not the only guard. Re-derives the file's own status here rather than trusting a cached code, and refuses a rename (`change.from`) or an unresolved merge conflict (`change.unmerged`) rather than guessing. Wrapped in `try`/`catch` so every failure comes back as `{ok: false}` data. See "Whole-file discard" above
   - `update:check` / `update:download` / `update:install` — the native self-update surface, Windows/Linux only (see "In-app self-update" above). All three no-op on macOS. `update:check` primes `electron-updater` against the GitHub feed configured in `package.json`'s `build.publish` block but starts no download; the `update-available` / `download-progress` / `update-downloaded` / `error` events are pushed back to the renderer via `webContents.send('update:*')` and surface through the `onNativeUpdate*` preload subscriptions.
 - **Menu**: custom template with File, Edit, View, Window menus.
   - The **Edit** menu is hand-built: **Undo/Redo** send `app:undo` / `app:redo` to the renderer (routing to the store's history) rather than the native text-undo role, so undo works app-wide; cut/copy/paste/selectAll keep their native roles.
   - The **View** menu is hand-built (not the default `{ role: 'viewMenu' }`) and deliberately omits zoom roles so that `Ctrl +/-/0` reach the renderer for PDF zoom (and `Ctrl+Shift +/-/0` for app font scaling) instead of triggering native browser/Electron zoom.
 - **Unsaved-changes quit flow**: a window `close` handler (`promptUnsavedChanges`) intercepts the close/quit when `isDirty` is set, and shows a native **Save / Don't Save / Cancel** dialog. "Save" asks the renderer to save (`app:requestSave`) and closes once it reports back; "Don't Save" closes discarding changes. A `before-quit` flag lets the guard resume `app.quit()` after confirmation (so Cmd+Q fully quits on macOS, where destroying the window alone would not).
 
-**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods: `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, plus the quit/menu coordination — `setDirty`, `onRequestSave`, `saveComplete`, `onUndo`, `onRedo` — the `git*` methods (`gitProbe`, `gitPickCloneDir`, `gitClone`, `gitPickProjectIn`, `gitInfo`, `gitStatus`, `gitHeadContent`, `gitWorkingContent`, `gitCommitPartial`, `gitCommit`, `gitPush`, `gitPullBegin`, `gitPullFinish`, `gitPullAbort`, `gitMergeBegin`, `gitLogBegin`, `gitLogDiff`, `gitWriteWorking`, `gitDiscardFile`, `gitBranches`, `gitBranchCreate`, `gitBranchDelete`, `gitCheckout`, `gitBranchSwitchBegin`, `gitBranchSwitchFinish`, `gitBranchSwitchAbort`) mirroring the `git:*` IPC handlers one for one, and the native self-update surface — `checkForNativeUpdate`, `downloadNativeUpdate`, `installNativeUpdate`, plus the `onNativeUpdate*` event subscriptions (`onNativeUpdateAvailable`, `onNativeUpdateProgress`, `onNativeUpdateDownloaded`, `onNativeUpdateError`) mirroring the `update:*` handlers in `electron/main.ts` (win/linux only; no-ops on macOS). This `window.slr` object is the detection signal for `isElectron()`.
+**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods: `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, `pickSavePath`, `checkSiblingCollision`, plus the quit/menu coordination — `setDirty`, `onRequestSave`, `saveComplete`, `onUndo`, `onRedo` — the `git*` methods (`gitProbe`, `gitPickCloneDir`, `gitClone`, `gitPickProjectIn`, `gitInfo`, `gitStatus`, `gitHeadContent`, `gitWorkingContent`, `gitCommitPartial`, `gitCommit`, `gitPush`, `gitPullBegin`, `gitPullFinish`, `gitPullAbort`, `gitMergeBegin`, `gitLogBegin`, `gitLogDiff`, `gitWriteWorking`, `gitDiscardFile`, `gitBranches`, `gitBranchCreate`, `gitBranchDelete`, `gitCheckout`, `gitBranchSwitchBegin`, `gitBranchSwitchFinish`, `gitBranchSwitchAbort`) mirroring the `git:*` IPC handlers one for one, and the native self-update surface — `checkForNativeUpdate`, `downloadNativeUpdate`, `installNativeUpdate`, plus the `onNativeUpdate*` event subscriptions (`onNativeUpdateAvailable`, `onNativeUpdateProgress`, `onNativeUpdateDownloaded`, `onNativeUpdateError`) mirroring the `update:*` handlers in `electron/main.ts` (win/linux only; no-ops on macOS). This `window.slr` object is the detection signal for `isElectron()`.
 
 ## Hooks
 
@@ -2233,13 +2354,17 @@ until every row is decided) leave.
   overlay, or typing the first letter of a project you were hunting for in the Open menu, silently
   excluded the current paper and auto-advanced. Modifier combos stay live behind a modal on purpose.
 
-  **Ctrl/Cmd+S commits the focused edit first, in the project editor.** The schema field name and the
-  screening reason label both hang their confirm-before-you-lose-answers guards on `blur`, and a
-  keyboard save moves no focus — so without this, Ctrl+S was a way to land a destructive rename
-  without ever being asked. Blur handlers and the zustand writes they make are synchronous, so the
-  save sees the result, including a rename the reviewer just declined. Scoped to the editor:
-  annotation fields have no such guard, and taking someone's cursor mid-sentence to save would be
-  pure cost.
+  **Every save of the project editor commits the focused edit first.** The schema field name and the
+  screening reason label both hang their confirm-before-you-lose-answers guards on `blur`, and neither
+  a keyboard save nor a `<button>` click (on macOS/Chromium, clicking a button never moves focus) moves
+  focus — so without this, Save was a way to land a destructive rename without ever being asked. The
+  guard now lives inside `editorStore`'s `save()`/`saveAs()` themselves (`commitFocusedEdit`, called
+  before anything else), so every entry point — the Ctrl+S shortcut here, the toolbar Save/Save &
+  Annotate buttons, and the native quit dialog's Save button (which calls `save()` directly with no
+  chance to run its own pre-save step) — shares the one guard instead of each needing its own copy.
+  Blur handlers and the zustand writes they make are synchronous, so the rest of `save`/`saveAs` sees
+  the result, including a rename the reviewer just declined. Scoped to the editor: annotation fields
+  have no such guard, and taking someone's cursor mid-sentence to save would be pure cost.
 
 - **`useDirtyGuard`** (`src/hooks/useDirtyGuard.ts`): **Browser only, and dead code in practice now.** Registers a `beforeunload` listener that calls `e.preventDefault()` when either the project *or* the editor's draft is dirty, triggering the browser's "unsaved changes" confirmation. It is skipped under Electron (`isElectron()`), because a `beforeunload` that returns a value there silently cancels the quit with no dialog — Electron handles unsaved changes via a native dialog in the main process instead (see `useElectronCloseGuard` and the quit flow below). Since `App.tsx`'s discontinuation gate now blocks all project-opening UI outside Electron, `dirty` can never become `true` in the one runtime where this hook is live, so it never actually fires — left in place because it is harmless and cheap to keep, not because it does anything.
 

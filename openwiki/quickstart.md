@@ -131,6 +131,7 @@ npm run typecheck
 │   │   ├── output.ts      parsePorcelain / parseGitLog / capDiff / gitErrorText — turning what git printed into data
 │   │   ├── ref.ts         refProblem / isSafeRef — the security gate for ref names handed to git (a branch to merge, a revision to diff), imported by electron/main.ts
 │   │   ├── relpath.ts     relPathProblem / isSafeRelPath / annotationsRelDir — the security gate for paths written under a project's annotations/ folder
+│   │   ├── ownAnnotationPath.ts  ownAnnotationPathMatcher — does a path under annotations/ belong to *this* project or a sibling sharing the folder? (pure, unit-tested; imported by electron/main.ts for branch-switch/merge/Save-As guards)
 │   │   └── merge.ts       mergeProjects / applyResolutions — the field-level three-way merge (see architecture.md's "Git" section)
 │   ├── platform/          Platform abstraction for file I/O, PDF loading, and git — Electron only now, see "SaiLoR is Electron-desktop-only" above
 │   │   ├── adapter.ts     PlatformAdapter interface + isElectron()
