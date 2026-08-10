@@ -259,11 +259,26 @@ Paper navigation with `[`/`]` is disabled when typing in an input field; Alt-arr
 
 SaiLoR is Electron-only now, so there is one save path: **Save** writes `project.json` plus the
 changed files under `annotations/` to the opened file's location; **Save as…** opens the native save
-<!-- openwiki: broken internal link [data-model] file "data-model" does not exist. Fix the href or restore the target, then delete this comment. -->
-dialog, then does the same at the new location. See [Data Model](data-model)'s "On-disk layout" and
+dialog, then does the same at the new location. See [Data Model](data-model.md)'s "On-disk layout" and
 "Assembling and splitting on disk" for exactly what gets written. (The browser's File System Access
 API / download-fallback save paths this table used to compare against were deleted along with the
 rest of `src/platform/browser.ts` — see "SaiLoR is Electron-desktop-only" above.)
+
+**A mid-save edit survives.** The write is a multi-file operation that takes hundreds of
+milliseconds, and nothing blocks input during it. An edit typed while the write is in flight sets
+`dirty` back to true for itself; only the snapshot that was actually serialized may clear `dirty`,
+or the toolbar would say "Saved" — and quitting would not prompt — for an edit that never reached
+disk. `saveAs()` applies the same guard to `s.project` too, so a mid-await edit is not erased from
+memory by the pre-await snapshot overwriting it.
+
+**Save as… refuses a folder that already holds a sibling sharing paper ids and file names.** Two
+project files in one directory share one `annotations/` folder, and an ordinary future save of
+either can null-and-delete the other's still-live annotation file for any paper id they have in
+common. Save As checks the destination after it is picked and before anything is written: if another
+`.json` of the same screening/non-screening kind already sits there sharing at least one paper id, it
+refuses with a message naming the sibling and the shared ids. Two *different* project kinds sharing
+paper ids (SaiLoR's own "Start full-text screening" flow) never collide on a filename, so only a
+same-family overlap is flagged. See `architecture.md`'s "Sibling projects sharing a folder".
 
 ## Git
 
@@ -322,8 +337,11 @@ file — and the project file itself, when a schema/reviewer-count/etc. change m
 impossible — keeps the plain whole-file checkbox. Each of those non-project rows also has a small
 **↺** button to revert (a tracked modification) or delete (an untracked file) that one file; a
 rename or an unresolved merge conflict has no ↺ (reverting either correctly takes more than SaiLoR
-does here). See `architecture.md`'s "Field-level commit review" and "Whole-file discard" for the
-mechanics.
+does here). **Commit and Discard re-verify the field-review snapshot against the file on disk
+immediately before writing** — if the file changed since the review was loaded (the dirty banner's
+own Save button or an autosave can do this without refreshing the review), nothing is written and the
+review is reloaded from the current file with an explanation. See `architecture.md`'s "Field-level
+commit review" and "Whole-file discard" for the mechanics.
 
 **What `git → Pull` does**: fetches, and either fast-forwards, reports up to date, or — on a genuine
 divergence — reads the three revisions of the project JSON and merges them field by field (see
@@ -362,6 +380,18 @@ force option here). See `architecture.md`'s "Switching branches with uncommitted
   or carry-changes-into-a-new-branch merge) is refused, naming what could not be reconciled, rather
   than guessing a field-level answer for something that reshapes the file (or, for
   `provenance`/`protocol`, simply has no field-level shape to guess at).
+- **A repeatable entry deleted on one side and edited on the other** — the merge is refused naming
+  the paper and the node. A deletion shifts every later index, so the edit lands on a phantom slot;
+  there is no way to tell from the shrunk array alone which surviving entry it belongs to.
+- **A schema removal that would discard answers** — if the winning schema drops a field that still
+  holds non-empty answers across any paper or reviewer tree, the whole merge is refused naming the
+  field(s) and the count. A removal with nothing answered under it still merges.
+- **Two sibling projects of the same kind sharing a folder** — a branch switch or merge treats an
+  unrecognized file under `annotations/` the same as any other file it does not know how to handle
+  (refuses cleanly), and Save As refuses outright if the destination already holds another project
+  sharing paper ids and file names, rather than let the two start silently overwriting each other.
+  Two *different* project kinds sharing paper ids (screening and full-text) is supported
+  deliberately — they never collide on a filename.
 - **No live clone progress bar, and no cancel button** — a spinner and an elapsed-seconds counter
   say "this has not frozen"; a genuinely stuck clone times out after 15 minutes. See
   `architecture.md`'s "Rejected: streamed clone progress and a cancel button" for the reasoning.

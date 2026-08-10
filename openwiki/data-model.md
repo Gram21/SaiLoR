@@ -783,6 +783,15 @@ reads as all-empty on that side, the field-level rule takes the empties (since t
 change it either), and the ordinary trailing-empty prune drops the now-trailing instance on the next
 save — deletion falls out of the same rule that handles an ordinary edit.
 
+**When both sides grow a repeatable node past base's length, each side's surplus is appended raw,
+not overlaid index-by-index.** Overlaying them positionally would silently destroy one side's
+addition ("use all remote"), or let a resolution recombine unrelated fields from two different new
+entries into one nobody wrote. Only the base-aligned range still merges per-field (conflicts
+included); once both sides grow past base's length, each side's surplus instances are appended
+verbatim, with a `repeatable-additions-kept` note — trading a recoverable duplicate for an
+unrecoverable loss, the same keep-both asymmetry a paper deleted on one side and changed on the
+other already uses.
+
 **Papers merge by id**, in ours' own order followed by the papers only theirs has (in theirs' order).
 A paper one side deleted and the other side *changed* is **kept**, with a note — a field-level UI has
 no way to ask "keep or delete this whole paper", and the two failure directions are not symmetric (an
@@ -818,12 +827,22 @@ A few more refuse, for reasons that are not "this reshapes the file": `provenanc
 (each a nested record no `FieldConflict` shape can express — for `protocol`, refusing a two-sided
 edit is also the safe choice, since half-dropping a reviewer's authored protocol is worse than
 asking them to reconcile it; the common case of only one side ever setting either still resolves with
-no refusal and no note).
+no refusal and no note). Two repeatable-node refusals refuse for a different reason again — they are
+undetectable by guessing, so they are detected instead: a **deletion on one side that strands an edit
+on the other** (one side's instance count dropped below base's while the other side changed an
+instance at or beyond the position that drop would have removed — there is no way to tell, from the
+shrunk array alone, which surviving entry the edit "really" belongs to) refuses naming the paper and
+the node; and a **schema removal that would discard answers** (the winning schema dropped a field,
+but non-empty answers still exist under it across any paper or reviewer/consolidation tree on either
+side) refuses naming the field(s) and the count. A removal with nothing answered under it still
+merges exactly as before — `normalizeTree` would drop it on the next ordinary load anyway.
 
 **Testing**: `src/git/merge.test.ts` builds every base/ours/theirs through the real `loadProject`
 (never a hand-assembled `Project`), so fixtures are exactly as schema-normalized and
 empty-skeleton-shaped as `mergeProjects`' real caller hands it — and pins the field-level guarantee,
-the interior-gap and instance-removal invariants, the multi-reviewer case, every refusal, the
+the interior-gap and instance-removal invariants, both repeatable-node growth cases
+(both-sides-append keeps both entries with a note, not a conflict; the base-aligned range still
+conflicts per-field), the `shrunkAndEdited` refusal, the `schemaRemovalRefusal`, the multi-reviewer case, every refusal, the
 `abstract`/`abstractFromPdf` merge and its resolve-order gap, and a full
 `serializeProject`/`loadProject` round-trip of a resolved merge.
 
@@ -905,9 +924,14 @@ the way to disk:
   `loadProject`, then calls `splitProjectFiles(project)` to get `{ meta, files }` — `meta` is the
   paper-metadata-only body described in "On-disk layout" above, `files` is every
   `<paperId>/reviewer-<n>.json` / `<paperId>/consolidated.json` entry (`text: null` meaning "delete
-  this file if present"). Both are sent over IPC (`project:save`) to `writeProjectFiles` in
-  `electron/main.ts`, which writes `project.json`, then reconciles the `annotations/` folder against
-  `files` — writing/creating each non-null entry, deleting each null one.
+  this file if present"). The reviewer slots written are the configured range **plus** any reviewer
+  number `parseReviews`/`parseReviewsFinished` kept even though it now falls outside it — lowering
+  `config.reviewers` (a lead losing a reviewer) must not be what deletes that reviewer's tree, exactly
+  as `normalizeReviews`'s doc comment promises for the in-memory shape. Without this, a reviewer
+  numbered above the current count never made it into a split file at all: not on an ordinary Save As,
+  and not on the one-time legacy-shape migration write. Both are sent over IPC (`project:save`) to
+  `writeProjectFiles` in `electron/main.ts`, which writes `project.json`, then reconciles the
+  `annotations/` folder against `files` — writing/creating each non-null entry, deleting each null one.
 - **Open** (`project:open`/`project:openPath` → `readProjectText` in `electron/main.ts`): reads
   `project.json`; if it's already the old single-file shape (`isLegacyProjectShape`) it's returned
   as-is; otherwise every paper's `annotations/<paperId>/consolidated.json` and `reviewer-*.json` files
