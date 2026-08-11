@@ -76,8 +76,9 @@ contextBridge.exposeInMainWorld('slr', {
   gitPickProjectIn: (dir: string) => ipcRenderer.invoke('git:pickProjectIn', dir),
   gitInfo: (projectPath: string) => ipcRenderer.invoke('git:info', projectPath),
   gitStatus: (root: string) => ipcRenderer.invoke('git:status', root),
-  gitCommit: (root: string, paths: string[], message: string) =>
-    ipcRenderer.invoke('git:commit', root, paths, message),
+  gitCommit: (root: string, paths: string[], message: string, amend: boolean) =>
+    ipcRenderer.invoke('git:commit', root, paths, message, amend),
+  gitLastCommitMessage: (root: string) => ipcRenderer.invoke('git:lastCommitMessage', root),
   gitPush: (root: string) => ipcRenderer.invoke('git:push', root),
   gitPullBegin: (root: string, relPath: string) => ipcRenderer.invoke('git:pullBegin', root, relPath),
   gitPullFinish: (root: string, relPath: string, working: unknown) =>
@@ -107,7 +108,8 @@ contextBridge.exposeInMainWorld('slr', {
     working: unknown,
     otherPaths: string[],
     message: string,
-  ) => ipcRenderer.invoke('git:commitPartial', root, relPath, committed, working, otherPaths, message),
+    amend: boolean,
+  ) => ipcRenderer.invoke('git:commitPartial', root, relPath, committed, working, otherPaths, message, amend),
   gitWriteWorking: (root: string, relPath: string, working: unknown) =>
     ipcRenderer.invoke('git:writeWorking', root, relPath, working),
   gitDiscardFile: (root: string, relPath: string, projectRelPath: string) =>

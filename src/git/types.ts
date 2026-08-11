@@ -179,7 +179,14 @@ export interface GitPlatform {
   pickProjectIn(dir: string): Promise<string | null>
   info(projectPath: string): Promise<GitRepoInfo | null>
   status(root: string): Promise<GitStatus>
-  commit(root: string, paths: string[], message: string): Promise<GitRun>
+  /** `amend` folds this commit into HEAD (`git commit --amend`) instead of
+   *  creating a new one — for fixing up a just-made commit's message or
+   *  contents before it's shared. */
+  commit(root: string, paths: string[], message: string, amend: boolean): Promise<GitRun>
+  /** HEAD's own commit message (`%B`, trailing newline stripped) — used to
+   *  prefill the commit-message field when the reviewer switches to amend.
+   *  `null` when there is no HEAD commit yet. */
+  lastCommitMessage(root: string): Promise<string | null>
   push(root: string): Promise<GitRun>
   beginPull(root: string, relPath: string): Promise<PullStart>
   /**
@@ -228,6 +235,7 @@ export interface GitPlatform {
     working: SplitProject,
     otherPaths: string[],
     message: string,
+    amend: boolean,
   ): Promise<GitRun>
   /** Writes `working` to the project — the state the reviewer's field-level
    *  "discard" choices compose to (`composeContents`'s `workingOut`, split)

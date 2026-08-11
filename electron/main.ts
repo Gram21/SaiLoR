@@ -1865,6 +1865,7 @@ ipcMain.handle(
     working: { metaText: string; files: Array<{ relPath: string; text: string | null }> },
     otherPaths: string[],
     message: string,
+    amend: boolean,
   ) => {
     assertRelPath(relPath)
     otherPaths.forEach(assertRelPath)
@@ -1884,7 +1885,9 @@ ipcMain.handle(
       // a staged deletion, `ls-files` does not).
       const staged = await runGit(['diff', '--cached', '--name-only', '--', dir], root)
       const commitPaths = !staged.ok || gitOut(staged) ? paths : paths.filter((p) => p !== dir)
-      return await runGit(['commit', '-m', message, '--', ...commitPaths], root)
+      const args = ['commit', '-m', message]
+      if (amend) args.push('--amend')
+      return await runGit([...args, '--', ...commitPaths], root)
     } finally {
       await assertInsideRoot(root, fullPath)
       await writeProjectFiles(fullPath, working.metaText, working.files)
@@ -1993,20 +1996,30 @@ ipcMain.handle('git:discardFile', async (_e, root: string, relPath: string, proj
   }
 })
 
-ipcMain.handle('git:commit', async (_e, root: string, paths: string[], message: string) => {
-  paths.forEach(assertRelPath)
-  if (paths.length === 0) {
-    return { ok: false, code: null, stdout: '', stderr: 'Nothing selected to commit.' }
-  }
-  // `add` then a pathspec-limited commit: `add` handles an untracked or
-  // deleted path uniformly, and the pathspec means the user's own separately
-  // staged work elsewhere in the repo is neither committed nor disturbed.
-  const add = await runGit(['add', '--', ...paths], root)
-  if (!add.ok) return add
-  // `--` protects the paths but deliberately not `message`: `-m` consumes the
-  // next argument whatever it starts with, and rejecting a message beginning
-  // with "-" would reject a legitimate one.
-  return runGit(['commit', '-m', message, '--', ...paths], root)
+ipcMain.handle(
+  'git:commit',
+  async (_e, root: string, paths: string[], message: string, amend: boolean) => {
+    paths.forEach(assertRelPath)
+    if (paths.length === 0) {
+      return { ok: false, code: null, stdout: '', stderr: 'Nothing selected to commit.' }
+    }
+    // `add` then a pathspec-limited commit: `add` handles an untracked or
+    // deleted path uniformly, and the pathspec means the user's own separately
+    // staged work elsewhere in the repo is neither committed nor disturbed.
+    const add = await runGit(['add', '--', ...paths], root)
+    if (!add.ok) return add
+    // `--` protects the paths but deliberately not `message`: `-m` consumes the
+    // next argument whatever it starts with, and rejecting a message beginning
+    // with "-" would reject a legitimate one.
+    const args = ['commit', '-m', message]
+    if (amend) args.push('--amend')
+    return runGit([...args, '--', ...paths], root)
+  },
+)
+
+ipcMain.handle('git:lastCommitMessage', async (_e, root: string) => {
+  const r = await runGit(['log', '-1', '--format=%B'], root)
+  return r.ok ? r.stdout.replace(/\n$/, '') : null
 })
 
 ipcMain.handle('git:push', async (_e, root: string) => {

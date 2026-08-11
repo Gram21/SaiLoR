@@ -110,7 +110,8 @@ export interface SlrBridge {
   /** Raw porcelain/diff text — parsed on this side of the IPC boundary
    *  (`src/git/output.ts`), where the parser is unit-tested. */
   gitStatus(root: string): Promise<{ porcelain: string; diff: string }>
-  gitCommit(root: string, paths: string[], message: string): Promise<GitRun>
+  gitCommit(root: string, paths: string[], message: string, amend: boolean): Promise<GitRun>
+  gitLastCommitMessage(root: string): Promise<string | null>
   gitPush(root: string): Promise<GitRun>
   gitPullBegin(root: string, relPath: string): Promise<PullStart>
   gitPullFinish(root: string, relPath: string, working: SplitProject): Promise<GitRun>
@@ -127,6 +128,7 @@ export interface SlrBridge {
     working: SplitProject,
     otherPaths: string[],
     message: string,
+    amend: boolean,
   ): Promise<GitRun>
   gitWriteWorking(root: string, relPath: string, working: SplitProject): Promise<GitRun>
   gitDiscardFile(root: string, relPath: string, projectRelPath: string): Promise<GitRun>
@@ -429,7 +431,8 @@ export class ElectronAdapter implements PlatformAdapter {
       const capped = capDiff(diff)
       return { changes: parsePorcelain(porcelain), diff: capped.text, diffTruncated: capped.truncated }
     },
-    commit: (root, paths, message) => bridge().gitCommit(root, paths, message),
+    commit: (root, paths, message, amend) => bridge().gitCommit(root, paths, message, amend),
+    lastCommitMessage: (root) => bridge().gitLastCommitMessage(root),
     push: (root) => bridge().gitPush(root),
     beginPull: (root, relPath) => bridge().gitPullBegin(root, relPath),
     finishPull: (root, relPath, working) => bridge().gitPullFinish(root, relPath, working),
@@ -439,8 +442,8 @@ export class ElectronAdapter implements PlatformAdapter {
     logDiff: (root, relPath, rev) => bridge().gitLogDiff(root, relPath, rev),
     headContent: (root, relPath) => bridge().gitHeadContent(root, relPath),
     workingContent: (root, relPath) => bridge().gitWorkingContent(root, relPath),
-    commitPartial: (root, relPath, committed, working, otherPaths, message) =>
-      bridge().gitCommitPartial(root, relPath, committed, working, otherPaths, message),
+    commitPartial: (root, relPath, committed, working, otherPaths, message, amend) =>
+      bridge().gitCommitPartial(root, relPath, committed, working, otherPaths, message, amend),
     writeWorking: (root, relPath, working) => bridge().gitWriteWorking(root, relPath, working),
     discardFile: (root, relPath, projectRelPath) => bridge().gitDiscardFile(root, relPath, projectRelPath),
     branches: (root) => bridge().gitBranches(root),

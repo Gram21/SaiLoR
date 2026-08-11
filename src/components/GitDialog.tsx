@@ -113,6 +113,7 @@ export function GitDialog() {
   const setFieldDisposition = useGitStore((s) => s.setFieldDisposition)
   const setAllFieldDispositions = useGitStore((s) => s.setAllFieldDispositions)
   const setCommitMessage = useGitStore((s) => s.setCommitMessage)
+  const setAmend = useGitStore((s) => s.setAmend)
   const runCommit = useGitStore((s) => s.runCommit)
   const runDiscard = useGitStore((s) => s.runDiscard)
   const runPush = useGitStore((s) => s.runPush)
@@ -205,6 +206,14 @@ export function GitDialog() {
     if (!discardOnlyMode) {
       const msg = mixedDiscardConfirmMessage(discardOnlyMode, hasDiscardRow, fieldDiscardCount, paperDiscardCount, repo.relPath)
       if (msg && !window.confirm(msg)) return
+      if (
+        panel.amend &&
+        !window.confirm(
+          'Amending replaces the previous commit. If you already pushed it, pushing again will require a force push. Continue?',
+        )
+      ) {
+        return
+      }
       void runCommit()
       return
     }
@@ -303,6 +312,15 @@ export function GitDialog() {
             Commit message
           </label>
           <CommitMessageField value={panel.message} onChange={setCommitMessage} />
+          <label className="git-amend-checkbox">
+            <input
+              type="checkbox"
+              checked={panel.amend}
+              disabled={working || dirty}
+              onChange={(e) => void setAmend(e.target.checked)}
+            />
+            Amend previous commit
+          </label>
 
           <div className="git-panel-actions">
             <button
@@ -318,7 +336,7 @@ export function GitDialog() {
               }
               onClick={runPrimaryAction}
             >
-              {discardOnlyMode ? 'Discard all' : 'Commit'}
+              {discardOnlyMode ? 'Discard all' : panel.amend ? 'Amend' : 'Commit'}
             </button>
             <div className="git-panel-actions-right">
               <button type="button" disabled={working || dirty || !repo.upstream} onClick={() => void runPull()}>

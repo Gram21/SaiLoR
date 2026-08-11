@@ -69,6 +69,15 @@
   width: 100%;
 }
 
+.git-amend-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .git-muted {
   color: var(--muted);
 }

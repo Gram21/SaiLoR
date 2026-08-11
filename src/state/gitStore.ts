@@ -179,6 +179,9 @@ interface PanelState {
   phase: 'idle' | 'loading' | 'working'
   status: GitStatus | null
   message: string
+  /** When true, the next commit folds into HEAD (`git commit --amend`)
+   *  instead of creating a new one — see `setAmend`. */
+  amend: boolean
   /** Paths ticked for the next commit — every changed file *except* the open
    *  project's own, whenever `fieldReview` is handling that one instead. */
   selected: Record<string, true>
@@ -231,6 +234,11 @@ interface GitState {
    *  "Use all remote" already offers, for the analogous question here. */
   setAllFieldDispositions: (disposition: Disposition) => void
   setCommitMessage: (message: string) => void
+  /** Toggles amend mode. Turning it on prefills an empty message with HEAD's
+   *  own commit message, fetched fresh rather than from any cached history,
+   *  so it reflects amending on top of whatever HEAD actually is right now.
+   *  Never overwrites text the reviewer already typed. */
+  setAmend: (amend: boolean) => Promise<void>
   runCommit: () => Promise<void>
   /** Apply the field review's current 'discard' decisions to the working
    *  tree — revert those rows to HEAD's value — WITHOUT making a commit. */
@@ -810,6 +818,7 @@ export const useGitStore = create<GitState>()(
             phase: 'idle',
             status: null,
             message: '',
+            amend: false,
             selected: {},
             fieldReview: null,
             error: null,
@@ -901,6 +910,22 @@ export const useGitStore = create<GitState>()(
         })
       },
 
+      setAmend: async (amend) => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        set((s) => {
+          if (s.panel) s.panel.amend = amend
+        })
+        if (amend && git && repo && !get().panel?.message.trim()) {
+          const last = await git.lastCommitMessage(repo.root)
+          if (last) {
+            set((s) => {
+              if (s.panel && s.panel.amend && !s.panel.message.trim()) s.panel.message = last
+            })
+          }
+        }
+      },
+
       runCommit: async () => {
         const git = getPlatform().getGit()
         const repo = get().repo
@@ -941,10 +966,11 @@ export const useGitStore = create<GitState>()(
             toSplitProject(workingOut),
             otherPaths,
             panel.message,
+            panel.amend,
           )
           usedFieldReview = true
         } else {
-          r = await git.commit(repo.root, otherPaths, panel.message)
+          r = await git.commit(repo.root, otherPaths, panel.message, panel.amend)
         }
 
         if (!r.ok) {
@@ -974,7 +1000,8 @@ export const useGitStore = create<GitState>()(
           if (s.panel) {
             s.panel.phase = 'idle'
             s.panel.message = ''
-            s.panel.notice = 'Committed.'
+            s.panel.amend = false
+            s.panel.notice = panel.amend ? 'Amended.' : 'Committed.'
           }
         })
         await get().refreshStatus()

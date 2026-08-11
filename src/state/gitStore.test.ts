@@ -97,8 +97,10 @@ let commitPartialCalls: {
   working: SplitProject
   otherPaths: string[]
   message: string
+  amend: boolean
 }[] = []
-let commitCalls: { root: string; paths: string[]; message: string }[] = []
+let commitCalls: { root: string; paths: string[]; message: string; amend: boolean }[] = []
+let lastCommitMessageResult: string | null = null
 let writeWorkingResult: GitRun = ok()
 let writeWorkingCalls: { root: string; relPath: string; working: SplitProject }[] = []
 
@@ -134,10 +136,11 @@ const fakeGit: GitPlatform = {
   pickProjectIn: async () => null,
   info: async () => infoResult,
   status: async () => ({ changes: statusChanges, diff: '', diffTruncated: false }),
-  commit: async (root, paths, message) => {
-    commitCalls.push({ root, paths, message })
+  commit: async (root, paths, message, amend) => {
+    commitCalls.push({ root, paths, message, amend })
     return ok()
   },
+  lastCommitMessage: async () => lastCommitMessageResult,
   push: async () => ok(),
   beginPull: async () => beginPullResult,
   beginMerge: async (_root, _relPath, ref) => {
@@ -154,8 +157,8 @@ const fakeGit: GitPlatform = {
   },
   headContent: async () => headContentResult,
   workingContent: async () => workingContentResult,
-  commitPartial: async (root, relPath, committed, working, otherPaths, message) => {
-    commitPartialCalls.push({ root, relPath, committed, working, otherPaths, message })
+  commitPartial: async (root, relPath, committed, working, otherPaths, message, amend) => {
+    commitPartialCalls.push({ root, relPath, committed, working, otherPaths, message, amend })
     return commitPartialResult
   },
   writeWorking: async (root, relPath, working) => {
@@ -245,6 +248,7 @@ beforeEach(async () => {
   commitPartialResult = ok()
   commitPartialCalls = []
   commitCalls = []
+  lastCommitMessageResult = null
   writeWorkingResult = ok()
   writeWorkingCalls = []
   branchesResult = []
@@ -579,6 +583,55 @@ describe('runCommit — field review (commitPartial)', () => {
     // about to commit over.
     const fc = useGitStore.getState().panel?.fieldReview?.changes.fields[0]
     expect(fc?.workingValue).toBe('Newer Title')
+  })
+})
+
+describe('Amend', () => {
+  it('setAmend(true) prefills an empty message with lastCommitMessage', async () => {
+    lastCommitMessageResult = 'Previous commit subject'
+    await useGitStore.getState().setAmend(true)
+    expect(useGitStore.getState().panel?.amend).toBe(true)
+    expect(useGitStore.getState().panel?.message).toBe('Previous commit subject')
+  })
+
+  it('setAmend(true) never overwrites a message the reviewer already typed', async () => {
+    useGitStore.getState().setCommitMessage('My own message')
+    lastCommitMessageResult = 'Previous commit subject'
+    await useGitStore.getState().setAmend(true)
+    expect(useGitStore.getState().panel?.message).toBe('My own message')
+  })
+
+  it('setAmend(false) just clears the flag, no fetch', async () => {
+    await useGitStore.getState().setAmend(true)
+    await useGitStore.getState().setAmend(false)
+    expect(useGitStore.getState().panel?.amend).toBe(false)
+    expect(useGitStore.getState().panel?.message).toBe('')
+  })
+
+  it('runCommit passes amend through to the whole-file commit call', async () => {
+    statusChanges = [{ path: 'notes.txt', code: ' M', unmerged: false }]
+    await useGitStore.getState().refreshStatus()
+    useGitStore.getState().toggleSelected('notes.txt')
+    useGitStore.getState().setCommitMessage('Fixed message')
+    await useGitStore.getState().setAmend(true)
+    await useGitStore.getState().runCommit()
+    expect(commitCalls).toHaveLength(1)
+    expect(commitCalls[0].amend).toBe(true)
+    // Amend mode is cleared after a successful commit, same as the message.
+    expect(useGitStore.getState().panel?.amend).toBe(false)
+    expect(useGitStore.getState().panel?.notice).toBe('Amended.')
+  })
+
+  it('runCommit passes amend through to commitPartial when a field review is active', async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    headContentResult = paperMetaText('Old Title')
+    workingContentResult = paperMetaText('New Title')
+    await useGitStore.getState().refreshStatus()
+    useGitStore.getState().setCommitMessage('Fixed message')
+    await useGitStore.getState().setAmend(true)
+    await useGitStore.getState().runCommit()
+    expect(commitPartialCalls).toHaveLength(1)
+    expect(commitPartialCalls[0].amend).toBe(true)
   })
 })
 
