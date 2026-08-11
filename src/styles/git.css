@@ -370,7 +370,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 12px;
+  margin: 12px 0;
 }
 .git-panel-actions-right {
   display: flex;

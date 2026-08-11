@@ -299,6 +299,37 @@ export function GitDialog() {
             </div>
           )}
 
+          <label className="git-field-label" htmlFor="git-commit-message">
+            Commit message
+          </label>
+          <CommitMessageField value={panel.message} onChange={setCommitMessage} />
+
+          <div className="git-panel-actions">
+            <button
+              type="button"
+              className={`primary${discardOnlyMode ? ' danger' : ''}`}
+              title={nothingPending ? 'Nothing to commit or discard — every reviewed field is set to Ignore.' : undefined}
+              disabled={
+                working ||
+                dirty ||
+                (selectedCount === 0 && !review) ||
+                nothingPending ||
+                (!discardOnlyMode && !panel.message.trim())
+              }
+              onClick={runPrimaryAction}
+            >
+              {discardOnlyMode ? 'Discard all' : 'Commit'}
+            </button>
+            <div className="git-panel-actions-right">
+              <button type="button" disabled={working || dirty || !repo.upstream} onClick={() => void runPull()}>
+                Pull
+              </button>
+              <button type="button" disabled={working} onClick={() => void runPush()}>
+                Push
+              </button>
+            </div>
+          </div>
+
           {review && (
             <>
               <div className="git-changes-head">
@@ -452,37 +483,6 @@ export function GitDialog() {
           )}
           {panel.status?.diffTruncated && <p className="git-muted">Diff truncated.</p>}
           {hasUntracked && <p className="git-muted">Untracked files have no diff yet.</p>}
-
-          <label className="git-field-label" htmlFor="git-commit-message">
-            Commit message
-          </label>
-          <CommitMessageField value={panel.message} onChange={setCommitMessage} />
-
-          <div className="git-panel-actions">
-            <button
-              type="button"
-              className={`primary${discardOnlyMode ? ' danger' : ''}`}
-              title={nothingPending ? 'Nothing to commit or discard — every reviewed field is set to Ignore.' : undefined}
-              disabled={
-                working ||
-                dirty ||
-                (selectedCount === 0 && !review) ||
-                nothingPending ||
-                (!discardOnlyMode && !panel.message.trim())
-              }
-              onClick={runPrimaryAction}
-            >
-              {discardOnlyMode ? 'Discard all' : 'Commit'}
-            </button>
-            <div className="git-panel-actions-right">
-              <button type="button" disabled={working || dirty || !repo.upstream} onClick={() => void runPull()}>
-                Pull
-              </button>
-              <button type="button" disabled={working} onClick={() => void runPush()}>
-                Push
-              </button>
-            </div>
-          </div>
 
           {(panel.error || panel.notice) && (
             <div className={panel.error ? 'git-message git-message-error' : 'git-message git-message-notice'}>
