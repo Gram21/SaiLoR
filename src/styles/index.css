@@ -734,6 +734,15 @@ button.paper-search-mode:hover {
 .pdf-mark-rect:hover {
   opacity: 0.6;
 }
+/* While the reviewer is dragging a text selection that started on (or passes
+   over) a mark — see `handleMarkMouseDown` in PdfViewer.tsx — the mark itself
+   must stop claiming the pointer so the drag reaches the real text layer
+   underneath instead of the empty overlay div. Restored the instant the
+   gesture ends, so an ordinary click/hover is completely unaffected. */
+.pdf-marks-dragging .pdf-mark-rect,
+.pdf-marks-dragging .pdf-mark-note {
+  pointer-events: none;
+}
 .pdf-mark-comment-dot {
   position: absolute;
   width: 8px;
@@ -743,6 +752,9 @@ button.paper-search-mode:hover {
   border-radius: 50%;
   background: var(--accent);
   border: 1px solid var(--bg);
+  /* Purely decorative (aria-hidden, no handlers) — never worth letting it
+     steal a mousedown that landed on these 8px, highlighted text or not. */
+  pointer-events: none;
 }
 /* A small square of "paper" with a folded-down corner — the classic sticky-note
    silhouette — rather than a map-pin/teardrop shape. Shared by the placed note

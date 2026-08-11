@@ -127,6 +127,12 @@ function markTooltipCoords(el: HTMLElement): { x: number; top?: number; bottom?:
   return openUp ? { x: r.left, bottom: window.innerHeight - r.top + 6 } : { x: r.left, top: r.bottom + 6 }
 }
 
+/** The subset of a mouse event `onOpen` actually needs — deliberately not
+ *  `React.MouseEvent`, since `handleMarkMouseDown` calls it once more from a
+ *  plain native `MouseEvent` (a `document`-level listener has no React event
+ *  to hand it), and both shapes satisfy this one. */
+type MarkOpenEvent = { clientX: number; clientY: number; stopPropagation: () => void }
+
 /** One mark's rendered overlay (a sticky-note dot, or one `<div>` per
  *  highlighted line) plus its hover tooltip — split out of the memoized
  *  `pages` array below purely so it can own its own hover state without
@@ -138,10 +144,15 @@ function MarkOverlayItem({
   mark,
   flash,
   onOpen,
+  onMarkMouseDown,
 }: {
   mark: PdfMark
   flash: string
-  onOpen: (e: React.MouseEvent) => void
+  onOpen: (e: MarkOpenEvent) => void
+  /** See `handleMarkMouseDown`'s own doc comment — replaces the plain
+   *  `onClick` this used to have, so a drag starting here can anchor a real
+   *  text selection instead of grabbing an empty overlay div. */
+  onMarkMouseDown: (e: React.MouseEvent<HTMLElement>, onOpen: (e: MarkOpenEvent) => void) => void
 }) {
   const [coords, setCoords] = useState<{ x: number; top?: number; bottom?: number } | null>(null)
   const hasInfo = !!(mark.comment || mark.text || (mark.linkedFields && mark.linkedFields.length > 0))
@@ -180,7 +191,7 @@ function MarkOverlayItem({
             top: `${mark.rects[0].y * 100}%`,
             backgroundColor: mark.color,
           }}
-          onClick={onOpen}
+          onMouseDown={(e) => onMarkMouseDown(e, onOpen)}
           onMouseEnter={show}
           onMouseLeave={hide}
         />
@@ -202,7 +213,7 @@ function MarkOverlayItem({
             height: `${r.height * 100}%`,
             background: mark.color,
           }}
-          onClick={onOpen}
+          onMouseDown={(e) => onMarkMouseDown(e, onOpen)}
           onMouseEnter={show}
           onMouseLeave={hide}
         />
@@ -259,6 +270,11 @@ export function PdfViewer() {
   const markPopoverRef = useRef<HTMLDivElement>(null)
   const toolbarPos = useClampedAnchor(toolbarRef, selectionToolbar)
   const markPopoverPos = useClampedAnchor(markPopoverRef, activeMark)
+  // True for exactly the span of a mousedown-to-mouseup gesture that started
+  // on a mark and turned into a drag — see `handleMarkMouseDown`. Adds
+  // `.pdf-marks-dragging` to the scroll container, which is what actually
+  // lets that drag's later mousemoves reach the text layer underneath.
+  const [markDragActive, setMarkDragActive] = useState(false)
 
   // Annotation-tools row: sticky notes plus cycling through every mark.
   const [annotationToolbarOpen, setAnnotationToolbarOpen] = useState(false)
@@ -497,6 +513,77 @@ export function PdfViewer() {
     const text = (sel?.toString() ?? '').normalize('NFC')
     if (text.trim()) setPdfSelection(text)
     updateSelectionToolbar(sel, text)
+  }
+
+  /**
+   * A mark (a highlight's rect, or a sticky note's icon) sits, in the DOM,
+   * on top of pdf.js's own text layer — that's how it can be clicked to open
+   * its popover and hovered for a tooltip. The cost: the overlay div itself
+   * holds no text, so a mousedown there could never anchor a native text
+   * selection, and the drag this bug report is about — trying to select the
+   * very text a mark highlights — landed entirely on that empty div instead
+   * of reaching the real text underneath.
+   *
+   * Click-to-open and hover both still work exactly as before; only how
+   * "click" is detected changes, from a native `onClick` to this function
+   * doing it manually, because that's what makes the fix possible: for the
+   * *first* mousedown to find real text underneath at all,
+   * `document.caretRangeFromPoint` needs the mark's `pointer-events` already
+   * off (it hit-tests the same way a real click would, so a `pointer-events:
+   * auto` div in the way is exactly as opaque to it as to the mouse) —
+   * meaning it has to go off immediately, before we even know yet whether
+   * this gesture will turn out to be a click or a drag. `.pdf-marks-dragging`
+   * (toggled via `markDragActive`) is that switch, applied to every mark at
+   * once via one class on the scroll container rather than per-element
+   * juggling. With it off across the whole gesture, the native `click` this
+   * mousedown would have produced no longer lands on the mark either — so
+   * the plain-click case is handled right here too, once mouseup confirms
+   * the pointer never moved.
+   *
+   * `caretRangeFromPoint`/`Selection.extend` rather than leaning on the
+   * browser's own drag-selection continuation: whether a mousedown that
+   * *started* on a non-text element still puts the browser into "extend the
+   * selection on mousemove" mode on its own is exactly the kind of internal
+   * behavior worth not depending on. Driving both ends explicitly — anchor
+   * on mousedown, extend on every mousemove past a small threshold — works
+   * the same way regardless. Both are standard, broadly-supported DOM APIs;
+   * SaiLoR only ever runs inside Electron/Chromium, so there is no other
+   * engine's support to worry about.
+   */
+  const handleMarkMouseDown = (e: React.MouseEvent<HTMLElement>, onOpen: (e: MarkOpenEvent) => void) => {
+    if (e.button !== 0) return // left button only — never hijack a right-click
+    setMarkDragActive(true)
+
+    const startX = e.clientX
+    const startY = e.clientY
+    const sel = window.getSelection()
+    const anchor = document.caretRangeFromPoint(startX, startY)
+    if (sel && anchor) {
+      sel.removeAllRanges()
+      sel.addRange(anchor)
+    }
+
+    let dragging = false
+    const DRAG_THRESHOLD_PX = 4
+    const onMove = (ev: MouseEvent) => {
+      if (!dragging) {
+        if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_THRESHOLD_PX) return
+        dragging = true
+      }
+      const focus = sel && document.caretRangeFromPoint(ev.clientX, ev.clientY)
+      if (focus) sel.extend(focus.startContainer, focus.startOffset)
+    }
+    const onUp = (ev: MouseEvent) => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      setMarkDragActive(false)
+      // Not a drag: restore the click-to-open behavior the native `onClick`
+      // used to provide (and can't anymore — see this function's own doc
+      // comment for why pointer-events had to be off for the whole gesture).
+      if (!dragging) onOpen(ev)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
   }
 
   /** Which rendered page (1-indexed) `node` sits inside, by finding its
@@ -993,6 +1080,7 @@ export function PdfViewer() {
                       setSelectionToolbar(null)
                       setActiveMark({ id: mark.id, x: e.clientX, y: e.clientY })
                     }}
+                    onMarkMouseDown={handleMarkMouseDown}
                   />
                 ))}
               </div>
@@ -1312,7 +1400,7 @@ export function PdfViewer() {
         </div>
       )}
       <div
-        className={`pdf-scroll${placingNote ? ' placing-note' : ''}`}
+        className={`pdf-scroll${placingNote ? ' placing-note' : ''}${markDragActive ? ' pdf-marks-dragging' : ''}`}
         ref={containerRef}
         onMouseUp={captureSelection}
         onKeyUp={captureSelection}
