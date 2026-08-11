@@ -30,8 +30,10 @@ const Y_TOLERANCE = 2
  * than naively joining `item.str` in item order — pdf.js does not promise
  * items in reading order, and a two-column paper joined naively is soup.
  * Duplicated here (not imported) to keep this module independent of pdfMeta.ts.
+ * Exported for `pdfText.test.ts`'s own direct test of the NFC normalization
+ * below, rather than only through the heavier real-PDF `extractPdfText` tests.
  */
-function linesFromItems(items: { str: string; transform: number[] }[]): string[] {
+export function linesFromItems(items: { str: string; transform: number[] }[]): string[] {
   const byY = new Map<number, { x: number; str: string }[]>()
   /** Every y within Y_TOLERANCE of a canonical baseline, mapped to it. */
   const keyForY = new Map<number, number>()
@@ -65,6 +67,12 @@ function linesFromItems(items: { str: string; transform: number[] }[]): string[]
         .sort((a, b) => a.x - b.x)
         .map((p) => p.str)
         .join('')
+        // Some fonts' ToUnicode maps give pdf.js an accented letter as a base
+        // character and a combining mark in two separate adjacent items
+        // ("e" + U+0301) rather than one precomposed one ("é") — normalizing
+        // must happen after the join, not per-item, since the pieces to
+        // recompose can straddle the item boundary this just joined across.
+        .normalize('NFC')
         .replace(/\s+/g, ' ')
         .trim(),
     )

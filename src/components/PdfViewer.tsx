@@ -488,7 +488,13 @@ export function PdfViewer() {
   // Capture the current text selection inside the viewer.
   const captureSelection = () => {
     const sel = window.getSelection()
-    const text = sel?.toString() ?? ''
+    // NFC: pdf.js's text layer can place an accented letter's base character
+    // and combining mark in separate adjacent DOM spans (see pdfText.ts's
+    // identical fix for the same font/CMap quirk on the full-extraction
+    // path) — a selection spanning that boundary reads back decomposed
+    // ("e" + ´) unless normalized here, right where the browser's own
+    // selection text is captured.
+    const text = (sel?.toString() ?? '').normalize('NFC')
     if (text.trim()) setPdfSelection(text)
     updateSelectionToolbar(sel, text)
   }

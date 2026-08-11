@@ -9,6 +9,7 @@ import {
   titleAndAuthorsFromLines,
   abstractFromLines,
   extractPdfMeta,
+  toLines,
 } from './pdfMeta'
 import { pdfjs } from '../platform/pdfjs'
 
@@ -64,6 +65,17 @@ describe('parseAuthorList', () => {
   it('is lenient by default so metadata forms like "Doe, Jane" survive', () => {
     expect(parseAuthorList('Doe, Jane')).toEqual(['Doe', 'Jane'])
   })
+
+  it('recomposes an accented letter the metadata Author field carries decomposed', () => {
+    // Built from escapes, not literal glyphs, so the source can't silently
+    // carry the wrong codepoint: \u0065\u0301 is "e" + COMBINING ACUTE
+    // ACCENT (two codepoints), not one precomposed "\u00e9". Some PDF
+    // producers write the Author metadata field this way, independently of
+    // whatever the text layer does (see the identical fix in `toLines`).
+    const decomposed = `Ren\u0065\u0301 Dupont`
+    expect(decomposed).not.toBe(decomposed.normalize('NFC')) // sanity: genuinely decomposed
+    expect(parseAuthorList(decomposed)).toEqual(['Ren\u00e9 Dupont'])
+  })
 })
 
 describe('isPlausibleTitle', () => {
@@ -84,6 +96,34 @@ describe('isPlausibleTitle', () => {
 describe('cleanTitle', () => {
   it('collapses the whitespace a wrapped title picks up', () => {
     expect(cleanTitle('  Deep   Learning\n for  Code Search ')).toBe('Deep Learning for Code Search')
+  })
+
+  it('recomposes an accented letter the metadata Title field carries decomposed', () => {
+    // \u0065\u0301 is "e" + COMBINING ACUTE ACCENT (two codepoints), not
+    // one precomposed "\u00e9" — built from escapes so the source can't
+    // silently carry the wrong one.
+    const decomposed = `Caf\u0065\u0301 Culture`
+    expect(decomposed).not.toBe(decomposed.normalize('NFC')) // sanity: genuinely decomposed
+    expect(cleanTitle(decomposed)).toBe('Caf\u00e9 Culture')
+  })
+})
+
+describe('toLines', () => {
+  it('recomposes an accented letter split across two adjacent items, in both the line and its segment text', () => {
+    // Some fonts' ToUnicode maps hand pdf.js a base letter and a combining
+    // mark as separate items ("e" + U+0301) rather than one precomposed
+    // "\u00e9" — normalizing must happen after the items are joined into a
+    // line/segment, not per-item, since the pieces to recompose straddle
+    // the item boundary the join crosses.
+    const items = [
+      { str: 'Caf', transform: [0, 0, 0, 10, 0, 100] },
+      { str: 'e', transform: [0, 0, 0, 10, 20, 100] },
+      { str: '\u0301', transform: [0, 0, 0, 10, 25, 100] },
+    ]
+    const lines = toLines(items)
+    expect(lines).toHaveLength(1)
+    expect(lines[0].text).toBe('Caf\u00e9')
+    expect(lines[0].segments).toEqual([{ x: 0, text: 'Caf\u00e9' }])
   })
 })
 

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
-import { extractPdfText } from './pdfText'
+import { extractPdfText, linesFromItems } from './pdfText'
 import { pdfjs } from '../platform/pdfjs'
 
 // Under vitest/jsdom, import.meta.url for platform/pdfjs.ts resolves to an
@@ -24,6 +24,26 @@ function loadPdf(path: string): ArrayBuffer {
   const buf = readFileSync(path)
   return new Uint8Array(buf).buffer
 }
+
+describe('linesFromItems', () => {
+  it('recomposes an accented letter split across two adjacent items into one precomposed character', () => {
+    // Some fonts' ToUnicode maps hand pdf.js a base letter and a combining
+    // mark as separate runs ("e" + U+0301 COMBINING ACUTE ACCENT) rather than
+    // one precomposed "é" — the bug this guards: without NFC normalization
+    // after the join, "café" round-trips as "cafe´" (or similar), not "café".
+    const items = [
+      { str: 'caf', transform: [0, 0, 0, 0, 0, 100] },
+      { str: 'e', transform: [0, 0, 0, 0, 10, 100] },
+      { str: '́', transform: [0, 0, 0, 0, 15, 100] },
+    ]
+    expect(linesFromItems(items)).toEqual(['café'])
+  })
+
+  it('is a no-op for text that was already precomposed', () => {
+    const items = [{ str: 'café résumé', transform: [0, 0, 0, 0, 0, 100] }]
+    expect(linesFromItems(items)).toEqual(['café résumé'])
+  })
+})
 
 describe('extractPdfText', () => {
   it('reports the right page count and a marker per page for a multi-page PDF', async () => {

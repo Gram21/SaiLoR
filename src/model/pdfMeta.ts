@@ -46,7 +46,10 @@ export function isPlausibleTitle(raw: string): boolean {
 }
 
 export function cleanTitle(raw: string): string {
-  return raw.replace(/\s+/g, ' ').trim()
+  // NFC: the PDF's own embedded metadata is a separate source from the text
+  // layer (see `toLines`'s `clean`) and can carry the same decomposed-accent
+  // artefact independently, depending on how the producing tool wrote it.
+  return raw.normalize('NFC').replace(/\s+/g, ' ').trim()
 }
 
 const AFFILIATION = /(universit|institut|department|faculty|school|laborator|college|inc\.|gmbh|@)/i
@@ -91,6 +94,10 @@ export function parseAuthorList(raw: string, strict = false): string[] {
     .split(/[,;]/)
     .map((name) =>
       name
+        // NFC first: metadata's Author field is a separate source from the
+        // text layer and can carry the same decomposed-accent artefact
+        // independently — same reasoning as `cleanTitle`.
+        .normalize('NFC')
         // Superscript affiliation markers and footnote symbols.
         .replace(/[¹²³⁰-₟*†‡§¶#]/g, '')
         .replace(/\s+/g, ' ')
@@ -221,7 +228,13 @@ export function toLines(items: { str: string; transform: number[]; width?: numbe
         prevEnd = p.x + p.width
       }
       if (current !== '') segments.push({ x: currentX, text: current })
-      const clean = (s: string) => s.replace(/\s+/g, ' ').trim()
+      // NFC: some fonts' ToUnicode maps give pdf.js an accented letter as a
+      // base character and a combining mark in separate adjacent items
+      // ("e" + U+0301) rather than one precomposed one ("é") — normalizing
+      // after the joins above (not per-item) is what recomposes a pair that
+      // straddled an item boundary. Covers title/author/abstract alike, since
+      // all three read from this function's output.
+      const clean = (s: string) => s.normalize('NFC').replace(/\s+/g, ' ').trim()
       return {
         y,
         size: l.size,
