@@ -9,6 +9,7 @@ import {
   nativeImage,
   safeStorage,
   screen,
+  session,
   shell,
 } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -240,7 +241,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true,
     },
   })
   if (state.isMaximized) win.maximize()
@@ -645,6 +646,12 @@ async function readProjectText(filePath: string): Promise<string> {
   return JSON.stringify(assembleLegacyProjectJson(raw, paperFiles))
 }
 
+/** Absolute project-file paths `project:save` will actually write to — every
+ *  path this session has legitimately opened (read successfully as a project)
+ *  or chosen as a fresh Save-As target. Without this, `project:save` would
+ *  write attacker-chosen content to any absolute path the renderer named. */
+const knownProjectPaths = new Set<string>()
+
 ipcMain.handle('project:open', async () => {
   const res = await dialog.showOpenDialog({
     title: 'Open SLR project',
@@ -654,12 +661,14 @@ ipcMain.handle('project:open', async () => {
   if (res.canceled || res.filePaths.length === 0) return null
   const filePath = res.filePaths[0]
   const text = await readProjectText(filePath)
+  knownProjectPaths.add(path.resolve(filePath))
   return { path: filePath, text }
 })
 
 ipcMain.handle('project:openPath', async (_e, filePath: string) => {
   try {
     const text = await readProjectText(filePath)
+    knownProjectPaths.add(path.resolve(filePath))
     return { path: filePath, text }
   } catch {
     return null // file moved/deleted/unreadable/corrupt
@@ -786,6 +795,9 @@ async function writeProjectFiles(
 ipcMain.handle(
   'project:save',
   async (_e, filePath: string, metaText: string, files: Array<{ relPath: string; text: string | null }>) => {
+    if (!knownProjectPaths.has(path.resolve(filePath))) {
+      throw new Error(`Refusing to save to "${filePath}": it was not opened or chosen via a dialog this session.`)
+    }
     await writeProjectFiles(filePath, metaText, files)
   },
 )
@@ -810,6 +822,7 @@ ipcMain.handle('project:pickSavePath', async (_e, suggestedName: string) => {
     filters: [{ name: 'SLR project', extensions: ['json'] }],
   })
   if (res.canceled || !res.filePath) return null
+  knownProjectPaths.add(path.resolve(res.filePath))
   return { path: res.filePath }
 })
 
@@ -865,6 +878,13 @@ ipcMain.handle(
   },
 )
 
+/** Absolute paths `pdf:read` will actually read — every path this session has
+ *  handed back from `pdf:pick`/`pdf:pickFolder`, both native dialogs. Reading
+ *  a PDF's bytes (for title/author extraction) is otherwise "any absolute
+ *  path the renderer names," which a compromised renderer could point at any
+ *  file on disk; this narrows it to "a file the reviewer actually selected." */
+const readablePdfPaths = new Set<string>()
+
 ipcMain.handle('pdf:pick', async () => {
   const res = await dialog.showOpenDialog({
     title: 'Add PDFs',
@@ -872,6 +892,7 @@ ipcMain.handle('pdf:pick', async () => {
     properties: ['openFile', 'multiSelections'],
   })
   if (res.canceled) return []
+  res.filePaths.forEach((p) => readablePdfPaths.add(path.resolve(p)))
   return res.filePaths
 })
 
@@ -902,7 +923,9 @@ ipcMain.handle('pdf:pickFolder', async () => {
     properties: ['openDirectory'],
   })
   if (res.canceled || res.filePaths.length === 0) return []
-  return collectPdfsRecursive(res.filePaths[0])
+  const paths = await collectPdfsRecursive(res.filePaths[0])
+  paths.forEach((p) => readablePdfPaths.add(path.resolve(p)))
+  return paths
 })
 
 ipcMain.handle('reference:pick', async () => {
@@ -949,8 +972,13 @@ ipcMain.handle('project:peek', async (_e, paths: string[]) => {
 
 // Raw bytes of a PDF, so the editor can read its title/authors. Unlike the
 // slr-file:// protocol this is not confined to the project directory — the user
-// may pick PDFs from anywhere, and they chose the file via a native dialog.
+// may pick PDFs from anywhere, and they chose the file via a native dialog —
+// which `readablePdfPaths` is what actually enforces: only a path this
+// session handed back from that dialog is readable here.
 ipcMain.handle('pdf:read', async (_e, filePath: string) => {
+  if (!readablePdfPaths.has(path.resolve(filePath))) {
+    throw new Error(`"${filePath}" was not selected via a file picker.`)
+  }
   const buf = await readFile(filePath)
   // Return a plain Uint8Array; Buffer doesn't survive the IPC boundary intact.
   return new Uint8Array(buf)
@@ -967,13 +995,30 @@ ipcMain.handle('pdf:checkPath', async (_e, rel: string) => {
   return check.ok ? { ok: true } : { ok: false, reason: check.reason }
 })
 
-// The reviewer was shown `rel` points outside the project's own folder and
-// chose to open it anyway (see `getPdfSource`'s confirm in
-// src/platform/electron.ts) — recorded so `resolveProjectPath` stops
-// refusing this *specific* path for the rest of this session. Scoped to the
-// currently-open project's directory; see `allowedEscapes`'s own comment.
-ipcMain.handle('pdf:allowPath', (_e, rel: string) => {
+// Asks the reviewer whether to open a PDF that points outside the project's
+// own folder, and — only on "yes" — records it so `resolveProjectPath` stops
+// refusing this *specific* path for the rest of this session. The dialog
+// lives here, not in the renderer: a compromised renderer must not be able to
+// self-approve its own escape by simply calling this with no confirmation at
+// all — the `window.confirm` this replaced could be skipped by calling the
+// bridge method directly. Scoped to the currently-open project's directory;
+// see `allowedEscapes`'s own comment.
+ipcMain.handle('pdf:allowPath', async (_e, rel: string) => {
+  if (!mainWindow) return false
+  const { response } = await dialog.showMessageBox(mainWindow, {
+    type: 'warning',
+    buttons: ['Cancel', 'Open anyway'],
+    defaultId: 0,
+    cancelId: 0,
+    message: `PDF "${rel}" is stored outside this project's own folder.`,
+    detail:
+      `Opening it means reading a file at a path the project itself names. If you didn't author this ` +
+      `project yourself — it came from a collaborator, or somewhere else — that path could point at a file ` +
+      `on your disk you didn't intend to share. Only continue if you trust where this project came from.`,
+  })
+  if (response !== 1) return false
   allowedEscapes.add(rel)
+  return true
 })
 
 // ---- PDF export: burn PdfMarks into real PDF annotation objects ----
@@ -1094,6 +1139,14 @@ function embedMarksIntoPdf(pdfDoc: PDFDocument, marks: PdfMark[]): void {
   }
 }
 
+/** Absolute paths this session has handed back from `pdf:pickExportPath`/
+ *  `text:pickExportPath` — the only "export to a new file" destinations
+ *  `pdf:embedMarks`/`text:write` will write to. Writing over the paper's own
+ *  PDF (`pdf:embedMarks`'s `'original'` target) is unaffected: that
+ *  destination is the project's own referenced PDF, not a fresh path a
+ *  compromised renderer could otherwise invent. */
+const writableExportPaths = new Set<string>()
+
 ipcMain.handle(
   'pdf:embedMarks',
   async (
@@ -1102,6 +1155,10 @@ ipcMain.handle(
     marksRaw: unknown,
     target: 'original' | { newPath: string },
   ): Promise<{ ok: true; path: string } | { ok: false; error: string }> => {
+    const dest = target === 'original' ? pdfAbsPath : target.newPath
+    if (target !== 'original' && !writableExportPaths.has(path.resolve(dest))) {
+      return { ok: false, error: `"${dest}" was not chosen via the export dialog.` }
+    }
     const marks = parseMarks(marksRaw)
     let pdfDoc: PDFDocument
     try {
@@ -1111,7 +1168,6 @@ ipcMain.handle(
       return { ok: false, error: `Could not open the PDF: ${err instanceof Error ? err.message : String(err)}` }
     }
     embedMarksIntoPdf(pdfDoc, marks)
-    const dest = target === 'original' ? pdfAbsPath : target.newPath
     try {
       await assertNotSymlink(dest)
       await writeFile(dest, await pdfDoc.save())
@@ -1129,6 +1185,7 @@ ipcMain.handle('pdf:pickExportPath', async (_e, suggestedName: string) => {
     filters: [{ name: 'PDF', extensions: ['pdf'] }],
   })
   if (res.canceled || !res.filePath) return null
+  writableExportPaths.add(path.resolve(res.filePath))
   return res.filePath
 })
 
@@ -1139,12 +1196,16 @@ ipcMain.handle('text:pickExportPath', async (_e, suggestedName: string) => {
     filters: [{ name: 'Text', extensions: ['txt'] }],
   })
   if (res.canceled || !res.filePath) return null
+  writableExportPaths.add(path.resolve(res.filePath))
   return res.filePath
 })
 
 ipcMain.handle(
   'text:write',
   async (_e, absPath: string, text: string): Promise<{ ok: true; path: string } | { ok: false; error: string }> => {
+    if (!writableExportPaths.has(path.resolve(absPath))) {
+      return { ok: false, error: `"${absPath}" was not chosen via the export dialog.` }
+    }
     try {
       await assertNotSymlink(absPath)
       await writeFile(absPath, text, 'utf8')
@@ -1236,8 +1297,21 @@ ipcMain.handle('paths:absolute', (_e, fromFile: string, rels: string[]) => {
 
 // Where a new project JSON would live if it sat next to `sourceFile` — the
 // default location for "New from screening…" (see `siblingProjectLocation`).
+// Registers the result as a legitimate `project:save` target: `sourceFile`
+// must already be a project this session knows about, and `fileName` must be
+// a plain file name with no path separators — so this can only ever name a
+// fresh file in that same, already-known directory, never an arbitrary path.
 ipcMain.handle('paths:sibling', (_e, sourceFile: string, fileName: string) => {
-  return path.join(path.dirname(sourceFile), fileName)
+  if (!knownProjectPaths.has(path.resolve(sourceFile))) {
+    throw new Error(`"${sourceFile}" is not a project this session has open.`)
+  }
+  const safeName = path.basename(fileName)
+  if (!safeName || safeName !== fileName) {
+    throw new Error(`"${fileName}" is not a valid file name.`)
+  }
+  const result = path.join(path.dirname(sourceFile), safeName)
+  knownProjectPaths.add(path.resolve(result))
+  return result
 })
 
 ipcMain.on('app:setDirty', (_e, dirty: boolean) => {
@@ -1261,6 +1335,12 @@ app.whenReady().then(() => {
   if (process.platform === 'darwin' && app.dock && !appIcon.isEmpty()) {
     app.dock.setIcon(appIcon)
   }
+  // This app has no legitimate use for camera/mic/geolocation/notifications/
+  // etc. — deny every permission request rather than let Chromium's defaults
+  // (which allow some of these with a user prompt) apply to a window that
+  // renders untrusted PDFs.
+  session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false))
+  session.defaultSession.setPermissionCheckHandler(() => false)
   registerPdfProtocol()
   buildMenu()
   createWindow()
@@ -1613,6 +1693,20 @@ function assertRef(ref: string): void {
   if (problem) throw new Error(`Refusing to act on the ref "${ref}" (${problem}).`)
 }
 
+/** Repository roots this session has actually resolved via `git:info` (a
+ *  project the reviewer opened) or `git:clone` (a repository this app itself
+ *  just cloned) — populated below in those two handlers. A handler that
+ *  switches or checks out a branch is told `root` by the renderer, and
+ *  without this it would run against whatever directory a compromised
+ *  renderer named, not one this session ever actually opened. */
+const knownGitRoots = new Set<string>()
+
+function assertRoot(root: string): void {
+  if (!knownGitRoots.has(path.resolve(root))) {
+    throw new Error(`Refusing to act on "${root}": not a repository this session opened.`)
+  }
+}
+
 ipcMain.handle('git:probe', async () => {
   const r = await runGit(['--version'])
   return r.ok
@@ -1635,6 +1729,7 @@ ipcMain.handle('git:clone', async (_e, url: string, dest: string) => {
   const badDest = validateClonePath(dest)
   if (badDest) return { ok: false, error: badDest }
   const r = await runGit(['clone', '--', url, dest], undefined, GIT_NETWORK_TIMEOUT_MS)
+  if (r.ok) knownGitRoots.add(path.resolve(dest))
   return r.ok ? { ok: true, dest } : { ok: false, error: gitErrorText(r) }
 })
 
@@ -1670,6 +1765,7 @@ ipcMain.handle('git:info', async (_e, projectPath: string) => {
   const branch = branchRun.ok ? gitOut(branchRun) || null : null // null = detached HEAD
   const upRun = await runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], dir)
   const upstream = upRun.ok ? gitOut(upRun) || null : null
+  if (root) knownGitRoots.add(path.resolve(root))
   return { root, relPath, branch, upstream, hasHead }
 })
 
@@ -2297,6 +2393,8 @@ ipcMain.handle('git:branchDelete', async (_e, root: string, branch: string) => {
  *  path, belt-and-suspenders alongside the branch list itself already only
  *  ever offering names `git branch` produced. */
 ipcMain.handle('git:checkout', async (_e, root: string, branch: string) => {
+  assertRoot(root)
+  assertRef(branch)
   return runGit(['checkout', branch, '--'], root)
 })
 
@@ -2328,7 +2426,9 @@ ipcMain.handle('git:checkout', async (_e, root: string, branch: string) => {
  * eventual `finishBranchSwitch` never writes it back.
  */
 ipcMain.handle('git:branchSwitchBegin', async (_e, root: string, relPath: string, branch: string) => {
+  assertRoot(root)
   assertRelPath(relPath)
+  assertRef(branch)
   const dir = annotationsRelDir(relPath)
   // Read the *working tree's* current project.json, not HEAD — an
   // uncommitted new paper must still count as this project's own. A
@@ -2427,6 +2527,8 @@ ipcMain.handle(
  *  the checkout here already succeeded by the time a reviewer can cancel —
  *  this undoes it rather than merely stopping something in flight. */
 ipcMain.handle('git:branchSwitchAbort', async (_e, root: string, sourceBranch: string) => {
+  assertRoot(root)
+  assertRef(sourceBranch)
   const checkout = await runGit(['checkout', sourceBranch, '--'], root)
   if (!checkout.ok) return checkout
   return runGit(['stash', 'pop'], root)

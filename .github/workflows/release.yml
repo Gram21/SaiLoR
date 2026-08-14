@@ -24,6 +24,14 @@ jobs:
         include:
           - os: macos-latest
             artifacts: release/*.dmg
+          # Unsigned: no code-signing certificate is configured (CSC_LINK/
+          # CSC_KEY_PASSWORD, or win.certificateSubjectName + publisherName in
+          # package.json). electron-updater's own signature-verification path
+          # on Windows therefore has nothing to check the downloaded update
+          # against, so the update feed's HTTPS transport + sha512 hash catch
+          # a corrupted download but not a hostile one published under this
+          # feed. Get a certificate (an EV or standard Authenticode cert) and
+          # set both before relying on this for anything beyond convenience.
           - os: windows-latest
             artifacts: |
               release/*.exe

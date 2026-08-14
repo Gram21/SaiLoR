@@ -61,10 +61,12 @@ export interface SlrBridge {
    *  so a blocked or missing PDF gets an honest reason instead of pdf.js's
    *  own opaque failure for an HTTP status it never explains. */
   checkPdfPath(rel: string): Promise<{ ok: true } | { ok: false; reason: 'no-project' | 'escapes' | 'not-found' }>
-  /** Records that the reviewer chose to open `rel` even though it points
-   *  outside the project's own folder, for the rest of this session — see
-   *  `getPdfSource`'s confirm and `allowedEscapes` in electron/main.ts. */
-  allowPdfPath(rel: string): Promise<void>
+  /** Asks the reviewer (via a native dialog in the main process) whether to
+   *  open `rel` even though it points outside the project's own folder, and
+   *  records the approval for the rest of this session if they say yes — see
+   *  `pdf:allowPath` and `allowedEscapes` in electron/main.ts. Resolves to
+   *  whether the reviewer approved. */
+  allowPdfPath(rel: string): Promise<boolean>
   /** Burn `marks` into the PDF at `pdfAbsPath` as real annotation objects. */
   embedPdfMarks(
     pdfAbsPath: string,
@@ -261,22 +263,16 @@ export class ElectronAdapter implements PlatformAdapter {
         // Not a hard refusal: the reviewer is trusted to know whether they
         // trust *this* project enough to let it read a file outside its own
         // folder — see `allowedEscapes` in electron/main.ts for the whole
-        // reasoning. `window.confirm` matches how this app already asks
-        // "are you sure" elsewhere (GitDialog's discard warnings, deleting
-        // an annotated paper) rather than a bespoke dialog for just this.
-        const ok = window.confirm(
-          `PDF "${pdfPath}" is stored outside this project's own folder.\n\n` +
-            `Opening it means reading a file at a path the project itself names. If you didn't author this ` +
-            `project yourself — it came from a collaborator, or somewhere else — that path could point at a file ` +
-            `on your disk you didn't intend to share. Only continue if you trust where this project came from.\n\n` +
-            `Open it anyway?`,
-        )
-        if (!ok) {
+        // reasoning. The confirmation dialog itself runs in the main process
+        // (`pdf:allowPath`), not here: a renderer that could approve its own
+        // escape by simply calling the bridge method would make this check
+        // no check at all.
+        const approved = await bridge().allowPdfPath(pdfPath)
+        if (!approved) {
           throw new Error(
             `PDF "${pdfPath}" was not opened — it points outside the project's own folder, and you chose not to open it.`,
           )
         }
-        await bridge().allowPdfPath(pdfPath)
         // Falls through to the URL below: the reviewer just approved this
         // exact path, so there's nothing left to re-check before using it.
       } else if (check.reason === 'not-found') {

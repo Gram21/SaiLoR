@@ -17,7 +17,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
         with:
-          persist-credentials: true
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Check for recent commits on main
@@ -83,6 +83,7 @@ jobs:
         if: steps.recent_commits.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           add-paths: openwiki
           branch: openwiki/update
           commit-message: "docs: update OpenWiki"
