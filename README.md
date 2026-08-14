@@ -535,7 +535,10 @@ Three layers of tests, by what each one can actually catch:
   ([`branchSwitch.integration.test.tsx`](src/test/integration/branchSwitch.integration.test.tsx)); and
   screening decisions converted into a new annotation project, including the real id-collision
   renaming
-  ([`screeningImport.integration.test.tsx`](src/test/integration/screeningImport.integration.test.tsx)).
+  ([`screeningImport.integration.test.tsx`](src/test/integration/screeningImport.integration.test.tsx));
+  and a `git pull` against a real remote (a bare repo standing in for "origin"), diverged by a real
+  push from a second clone, resolved through the same merge dialog
+  ([`pull.integration.test.tsx`](src/test/integration/pull.integration.test.tsx)).
   Slower than the unit suite on purpose (real scratch repos per test), so it's kept out of the PR
   path and gated in front of release builds instead (`.github/workflows/release.yml`).
 - **`npm run test:e2e`** (`e2e/`, [Playwright](https://playwright.dev/)) — the one thing jsdom
