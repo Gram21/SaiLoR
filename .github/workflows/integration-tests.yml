@@ -1,0 +1,57 @@
+name: Integration tests
+
+# The jsdom-based integration suite (src/test/integration/) and the
+# Playwright/Electron e2e smoke tests (e2e/) — pulled into their own
+# reusable workflow so `release.yml` can gate its build job on them via
+# `uses:`, while this file stays independently triggerable (Actions tab →
+# "Run workflow", or `gh workflow run integration-tests.yml`) for a fast
+# check without a full release run.
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+  # A real Electron smoke test — launches the actual packaged main process
+  # and drives its real contextBridge/IPC, which the jsdom-based
+  # integration-test job above cannot reach (it mocks the platform seam
+  # entirely). Needs a real display even though nothing is screenshotted:
+  # Electron opens a real native window on Linux regardless, hence xvfb-run.
+  e2e-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Xvfb
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      - name: Run Electron smoke test
+        run: xvfb-run -a npm run test:e2e
