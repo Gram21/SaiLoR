@@ -24,23 +24,32 @@ jobs:
         include:
           - os: macos-latest
             artifacts: release/*.dmg
-          # Unsigned: no code-signing certificate is configured (CSC_LINK/
-          # CSC_KEY_PASSWORD, or win.certificateSubjectName + publisherName in
-          # package.json). electron-updater's own signature-verification path
-          # on Windows therefore has nothing to check the downloaded update
-          # against, so the update feed's HTTPS transport + sha512 hash catch
-          # a corrupted download but not a hostile one published under this
-          # feed. Get a certificate (an EV or standard Authenticode cert) and
-          # set both before relying on this for anything beyond convenience.
+            feed: ''
+          # The *installer* itself is unsigned: no Authenticode certificate is
+          # configured (CSC_LINK/CSC_KEY_PASSWORD, or win.certificateSubjectName
+          # + publisherName in package.json). That's a separate concern from
+          # update *authenticity*, which the "Sign update metadata" step below
+          # does cover: it signs `latest.yml`/`latest-linux.yml` with this
+          # project's own Ed25519 release key, and `electron/main.ts` verifies
+          # that signature (see `src/model/updateSignature.ts`) before ever
+          # downloading an update — so a hostile release under this feed is
+          # caught even without a purchased certificate. What a real
+          # certificate would still add: removing Windows SmartScreen's
+          # "unrecognized publisher" warning on the installer itself, which
+          # only builds reputation through an Authenticode identity over time.
           - os: windows-latest
             artifacts: |
               release/*.exe
               release/*.exe.blockmap
               release/latest.yml
+              release/latest.yml.sig
+            feed: release/latest.yml
           - os: ubuntu-latest
             artifacts: |
               release/*.AppImage
               release/latest-linux.yml
+              release/latest-linux.yml.sig
+            feed: release/latest-linux.yml
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -55,6 +64,17 @@ jobs:
       - name: Build packaged Electron app
         shell: bash
         run: ./scripts/build-electron.sh
+
+      # Windows/Linux only (matrix.feed is empty on mac, which has no
+      # electron-updater feed at all — see the comment above). Signs with
+      # RELEASE_SIGNING_PRIVATE_KEY (an Ed25519 PEM secret); the matching
+      # public key is baked into the app (`src/model/updateSignature.ts`).
+      - name: Sign update metadata
+        if: matrix.feed != ''
+        shell: bash
+        env:
+          RELEASE_SIGNING_PRIVATE_KEY: ${{ secrets.RELEASE_SIGNING_PRIVATE_KEY }}
+        run: node scripts/sign-release.cjs "${{ matrix.feed }}"
 
       # Keep a copy on the workflow run so a manual (workflow_dispatch) build is
       # still downloadable even though there is no release to attach it to.

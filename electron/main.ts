@@ -19,9 +19,10 @@ import { execFile } from 'node:child_process'
 import path from 'node:path'
 import os from 'node:os'
 // The only imports of src/ into electron/: shared logic that must not exist
-// twice — see "Git" below for the git URL/path/output modules. All of these
-// import nothing DOM-specific themselves, so they typecheck identically under
-// this file's tsconfig (node types) and the renderer's (DOM types).
+// twice — see "Git" below for the git URL/path/output modules, and "Self-update"
+// for `updateSignature`. All of these import nothing DOM-specific themselves,
+// so they typecheck identically under this file's tsconfig (node types) and
+// the renderer's (DOM types).
 import { validateGitUrl, validateClonePath } from '../src/git/url'
 import { relPathProblem, annotationsRelDir } from '../src/git/relpath'
 import { refProblem } from '../src/git/ref'
@@ -31,6 +32,7 @@ import type { GitRun, MergeStart } from '../src/git/types'
 import { isLegacyProjectShape, assembleLegacyProjectJson } from '../src/model/project'
 import { parseMarks, type PdfMark } from '../src/model/pdfMarks'
 import { rectToPdfPoints, rectToQuadPoints } from '../src/model/pdfExport'
+import { verifyReleaseSignature, RELEASE_PUBLIC_KEY_B64 } from '../src/model/updateSignature'
 import { PDFDocument, PDFHexString, PDFString, type PDFContext, type PDFDict } from 'pdf-lib'
 import { autoUpdater } from 'electron-updater'
 
@@ -1233,6 +1235,7 @@ if (process.platform !== 'darwin') {
   autoUpdater.autoInstallOnAppQuit = false
 
   autoUpdater.on('update-available', (info) => {
+    latestUpdateVersion = info.version
     mainWindow?.webContents.send('update:available', { version: info.version })
   })
   autoUpdater.on('download-progress', (p) => {
@@ -1244,6 +1247,46 @@ if (process.platform !== 'darwin') {
   autoUpdater.on('error', (err) => {
     mainWindow?.webContents.send('update:error', err instanceof Error ? err.message : String(err))
   })
+}
+
+// This project's release repository — the same `owner`/`repo` electron-updater
+// itself reads from package.json's `build.publish` to build its own feed URLs.
+const UPDATE_REPO_OWNER = 'Gram21'
+const UPDATE_REPO_NAME = 'SaiLoR'
+
+/** The version `update-available` last reported, so `update:download` can
+ *  verify the feed file for *that* release before trusting anything in it. */
+let latestUpdateVersion: string | null = null
+
+/**
+ * There is no purchased code-signing certificate for Windows/Linux (see
+ * `release.yml`), so `electron-updater`'s own sha512 check on the downloaded
+ * installer only catches transport corruption — the hash comes from the same
+ * release as the installer, so whoever can publish one can publish a
+ * matching hash for the other. This independently fetches the same feed file
+ * electron-updater is about to use, verifies it was signed by this
+ * project's own release-signing key (see `src/model/updateSignature.ts`),
+ * and only then lets the download proceed — chaining trust: our signature
+ * check covers the feed file, and electron-updater's own existing sha512
+ * check covers the installer against that (now-trusted) feed file.
+ */
+async function verifyUpdateFeed(version: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const feedName = process.platform === 'win32' ? 'latest.yml' : 'latest-linux.yml'
+  const base = `https://github.com/${UPDATE_REPO_OWNER}/${UPDATE_REPO_NAME}/releases/download/v${version}/${feedName}`
+  try {
+    const [feedRes, sigRes] = await Promise.all([net.fetch(base), net.fetch(`${base}.sig`)])
+    if (!feedRes.ok || !sigRes.ok) {
+      return { ok: false, error: `Could not fetch the release's signed update metadata (${feedName}).` }
+    }
+    const feedBytes = new Uint8Array(await feedRes.arrayBuffer())
+    const signatureB64 = (await sigRes.text()).trim()
+    if (!verifyReleaseSignature(feedBytes, signatureB64, RELEASE_PUBLIC_KEY_B64)) {
+      return { ok: false, error: 'This update failed signature verification and was not downloaded.' }
+    }
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: `Could not verify the update's signature: ${err instanceof Error ? err.message : String(err)}` }
+  }
 }
 
 ipcMain.handle('update:check', async () => {
@@ -1259,8 +1302,14 @@ ipcMain.handle('update:check', async () => {
   return { supported: true }
 })
 
-ipcMain.handle('update:download', () => {
+ipcMain.handle('update:download', async () => {
   if (process.platform === 'darwin') return
+  if (!latestUpdateVersion) return // nothing to download — no update was ever reported
+  const verified = await verifyUpdateFeed(latestUpdateVersion)
+  if (!verified.ok) {
+    mainWindow?.webContents.send('update:error', verified.error)
+    return
+  }
   void autoUpdater.downloadUpdate()
 })
 
