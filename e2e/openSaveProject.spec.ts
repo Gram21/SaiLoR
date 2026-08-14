@@ -125,3 +125,73 @@ test('real git IPC round-trip: probe and status through the hardened runGit wrap
 
   await app.close()
 })
+
+test('split-file save/reopen round-trip: real per-paper annotation files on disk', async () => {
+  // Every jsdom integration test's fake `saveProject` writes one merged
+  // text — none of them touch the real split layout (`project.json` +
+  // `annotations/<id>/*.json`) that `electron/main.ts`'s `writeProjectFiles`
+  // actually produces, or the reassembly (`readProjectText` →
+  // `assembleLegacyProjectJson`) a real reopen does to turn that back into
+  // the single shape the app works with in memory. This is the one test
+  // that exercises both directions for real.
+  const dir = mkdtempSync(join(tmpdir(), 'sailor-e2e-split-'))
+  const path = join(dir, 'project.json')
+  // Starts as an ordinary (legacy, single-file) project — same shape
+  // "New annotation JSON…" would produce before its first save.
+  writeFileSync(
+    path,
+    JSON.stringify({
+      version: 1,
+      config: { schema: [{ name: 'Study Type', type: 'string' }] },
+      papers: [{ id: 'p1', title: 'Paper One', authors: [], pdf: 'p1.pdf', annotations: {} }],
+    }),
+  )
+
+  const app = await electron.launch({ args: [join(process.cwd(), 'dist-electron/main.js')] })
+  const page = await app.firstWindow()
+  type Bridge = {
+    openPath(path: string): Promise<{ path: string; text: string } | null>
+    saveProject(path: string, meta: string, files: Array<{ relPath: string; text: string | null }>): Promise<void>
+  }
+
+  // Registers `path` in `knownProjectPaths` — required before any save.
+  await page.evaluate((p) => (globalThis as unknown as { slr: Bridge }).slr.openPath(p), path)
+
+  // A real save writing the *split* layout: `project.json` carries only
+  // metadata (no inline `annotations`), and the paper's actual answer lives
+  // in its own per-paper file — exactly what a real save does once a
+  // project has moved past the legacy single-file shape.
+  const metaOnly = JSON.stringify({
+    version: 1,
+    config: { schema: [{ name: 'Study Type', type: 'string' }] },
+    papers: [{ id: 'p1', title: 'Paper One', authors: [], pdf: 'p1.pdf' }],
+  })
+  const consolidatedText = JSON.stringify({ annotations: { 'Study Type': [{ value: 'RCT' }] } })
+  await page.evaluate(
+    (args: { path: string; meta: string; text: string }) =>
+      (globalThis as unknown as { slr: Bridge }).slr.saveProject(args.path, args.meta, [
+        { relPath: 'p1/consolidated.json', text: args.text },
+      ]),
+    { path, meta: metaOnly, text: consolidatedText },
+  )
+
+  const annotationFile = join(dir, 'annotations', 'p1', 'consolidated.json')
+  expect(existsSync(annotationFile)).toBe(true)
+  expect(JSON.parse(readFileSync(annotationFile, 'utf-8'))).toEqual({ annotations: { 'Study Type': [{ value: 'RCT' }] } })
+  // `project.json` on disk stays meta-only — the schema field name is
+  // expected there, but the actual answer ("RCT") lives only in the
+  // per-paper file, not duplicated back into it.
+  expect(readFileSync(path, 'utf-8')).not.toContain('RCT')
+
+  // Reopening now takes the reassembly path (`isLegacyProjectShape` is false
+  // once `papers[].annotations` is gone from the meta file) — reads the real
+  // per-paper file back off disk and reassembles the single shape the app
+  // expects in memory.
+  const reopened = await page.evaluate((p) => (globalThis as unknown as { slr: Bridge }).slr.openPath(p), path)
+  expect(reopened).not.toBeNull()
+  const reassembled = JSON.parse(reopened!.text) as { papers: Array<{ annotations?: { 'Study Type'?: Array<{ value: string }> } }> }
+  expect(reassembled.papers[0]?.annotations?.['Study Type']?.[0]?.value).toBe('RCT')
+
+  await app.close()
+  rmSync(dir, { recursive: true, force: true })
+})

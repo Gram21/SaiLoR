@@ -543,9 +543,14 @@ Three layers of tests, by what each one can actually catch:
   path and gated in front of release builds instead (`.github/workflows/release.yml`).
 - **`npm run test:e2e`** (`e2e/`, [Playwright](https://playwright.dev/)) — the one thing jsdom
   structurally can't reach: a real Electron main process, real `contextBridge`-exposed `window.slr`,
-  real `ipcMain` handlers, real filesystem. Drives `openPath`/`saveProject` (including the
-  `knownProjectPaths` guard that refuses a save to a path never opened) and a real
-  `gitProbe`/`gitStatus` round-trip through the hardened `runGit` wrapper. Needs
+  real `ipcMain` handlers, real filesystem, real git (including a real bare repo standing in for a
+  remote). [`openSaveProject.spec.ts`](e2e/openSaveProject.spec.ts) covers `openPath`/`saveProject`
+  (including the `knownProjectPaths` guard that refuses a save to a path never opened), a
+  `gitProbe`/`gitStatus` round-trip through the hardened `runGit` wrapper, and the split-file
+  save/reopen round-trip — a real save writes `project.json` (meta-only) plus a real per-paper file
+  under `annotations/`, and a real reopen reassembles them back into the single shape the app works
+  with in memory. [`gitPush.spec.ts`](e2e/gitPush.spec.ts) pushes a real commit to a real bare
+  "origin" and confirms it landed there, read back independently of the app. Needs
   `dist-electron/main.js` built first (`npm run test:e2e` does this itself); on Linux, Electron still
   opens a real window even for a silent smoke test, so CI wraps it in `xvfb-run`. Also gated in front
   of release builds, alongside `test:integration`.
