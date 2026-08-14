@@ -23,6 +23,10 @@ let originDir: string
 let repoDir: string
 let peerDir: string
 let projectJsonPath: string
+// Whatever `git init`'s default branch actually is on this machine — CI
+// runners and local dev can disagree ("main" vs "master" depending on git
+// version/config), so this must never be hardcoded.
+let mainBranch: string
 
 function git(args: string[], cwd = repoDir) {
   return execFileSync('git', args, { cwd, encoding: 'utf8' })
@@ -240,7 +244,7 @@ beforeAll(() => {
   writeFileSync(projectJsonPath, baseProjectJson())
   git(['add', '-A'])
   git(['commit', '-m', 'Initial commit'])
-  const mainBranch = git(['branch', '--show-current']).trim()
+  mainBranch = git(['branch', '--show-current']).trim()
   git(['remote', 'add', 'origin', originDir])
   git(['push', '-u', 'origin', mainBranch])
 
@@ -293,7 +297,7 @@ describe('pull against a real remote resolves a real conflict', () => {
 
     await useGitStore.getState().refreshRepo({ kind: 'electron', path: projectJsonPath })
     await useGitStore.getState().openPanel()
-    expect(useGitStore.getState().repo?.upstream).toBe('origin/main')
+    expect(useGitStore.getState().repo?.upstream).toBe(`origin/${mainBranch}`)
 
     render(
       <>
@@ -318,7 +322,7 @@ describe('pull against a real remote resolves a real conflict', () => {
     // fetched remote branch, not yet pushed back.
     const parents = git(['log', '-1', '--format=%P']).trim().split(' ')
     expect(parents).toHaveLength(2)
-    const ahead = git(['rev-list', '--count', 'origin/main..HEAD']).trim()
+    const ahead = git(['rev-list', '--count', `origin/${mainBranch}..HEAD`]).trim()
     expect(Number(ahead)).toBeGreaterThan(0) // local is ahead — nothing auto-pushed
     const committedFiles = git(['ls-tree', '-r', '--name-only', 'HEAD']).trim().split('\n')
     const committedText = committedFiles.map((f) => git(['show', `HEAD:${f}`])).join('\n')
