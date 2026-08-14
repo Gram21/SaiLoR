@@ -121,11 +121,15 @@ jobs:
           #     openwiki's own landing page (developer docs) moves aside to make room.
           # openwiki/ itself no longer has a `_Sidebar.md`/`_Footer.md` to skip here —
           # see the next step for where those now come from and why.
+          OPENWIKI_PAGES=""
           for f in openwiki/*.md; do
             case "$(basename "$f")" in
               index.md|INSTRUCTIONS.md) continue ;;
-              Home.md) cp "$f" "stage/Development.md" ;;
-              *) cp "$f" "stage/$(basename "$f")" ;;
+              Home.md) cp "$f" "stage/Development.md"; OPENWIKI_PAGES="$OPENWIKI_PAGES Home:Development" ;;
+              *)
+                cp "$f" "stage/$(basename "$f")"
+                OPENWIKI_PAGES="$OPENWIKI_PAGES $(basename "$f" .md):$(basename "$f" .md)"
+                ;;
             esac
           done
 
@@ -153,6 +157,24 @@ jobs:
           find stage -name '*.md' | while read -r f; do
             awk 'NR==1 && $0=="---"{infm=1; next} infm && $0=="---"{infm=0; next} !infm' \
               "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+          done
+
+          # openwiki/*.md's own cross-links between its pages are bare filenames WITH
+          # the ".md" extension (`[Architecture](architecture.md)`) — correct for
+          # browsing openwiki/ directly in the repo (a real relative path to a real
+          # file), which is one of its two audiences and the reason
+          # scripts/check-wiki-links.js accepts both forms as equivalent. But the wiki
+          # gives each page a URL with no extension (`.../wiki/architecture`), so once
+          # mirrored there, the very same link is a dead one, not a working shortcut —
+          # this is what actually broke the "Architecture" link (and every other
+          # openwiki cross-link) once published. Rewritten here, on the staged copies
+          # only, the same way the GUIDE_PAGES loop below does it for user-guide links;
+          # openwiki's own copy in the main repo is left exactly as it needs to be.
+          # Home.md is staged as Development.md above, so its own link target is
+          # rewritten to match via the same "src:dest" pairing, not just a plain
+          # ".md" strip.
+          for pair in $OPENWIKI_PAGES; do
+            sed -i "s#(${pair%%:*}\.md#(${pair#*:}#g" stage/*.md
           done
 
           # user-guide/README.md has links that point outside user-guide/ into the *main*
