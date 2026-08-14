@@ -1,8 +1,8 @@
 ---
 type: operations
 title: SaiLoR Operations
-description: Operational guide for SaiLoR — development setup (Electron dev is the only supported way to run the app; the web build is discontinued at runtime), build commands for the desktop installers, testing with Vitest, CI configuration, release packaging, and wiki sync mechanics.
-tags: [operations, build, testing, ci, electron-only]
+description: Operational guide for SaiLoR — development setup (Electron dev is the only supported way to run the app; the web build is discontinued at runtime), build commands for the desktop installers, unit/integration/e2e testing (Vitest, React Testing Library, Playwright), CI configuration, release packaging (gated on the integration/e2e suite via a reusable workflow), and wiki sync mechanics.
+tags: [operations, build, testing, integration-testing, e2e, ci, electron-only]
 ---
 
 # Operations
@@ -107,7 +107,7 @@ Output directory: `release/`. The `appId` is `io.github.gram21.sailor`, product 
 ## Testing
 
 ```bash
-npm test          # vitest run (single pass)
+npm test          # vitest run (single pass) — unit tests only
 npm run test:watch  # vitest in watch mode
 ```
 
@@ -123,6 +123,35 @@ Test coverage:
 - Round-trip: load → edit → serialize → reload preserves data
 - Extra/unknown field preservation
 - Prune: trailing empty removal, min retention
+
+### Integration tests (`src/test/integration/`)
+
+```bash
+npm run test:integration
+```
+
+A second, separate vitest config (`vitest.integration.config.ts`, standalone rather than merged with `vite.config.ts` — Vite's `mergeConfig` concatenates array fields like `test.include` instead of replacing them, which would have pulled the whole unit suite into this run too). Each test walks one full use case through the *real* rendered React components (`SchemaTreeEditor`, `PdfViewer`, `AnnotationPanel`, `GitDialog`, `ConsolidationDialog`, `GitMergeDialog`, `BranchSwitchPrompt`, `ScreeningPanel`, `ScreeningImportDialog`) with real DOM events via React Testing Library — `getPlatform()` is the only thing mocked, and its `GitPlatform` shells real `execFileSync('git', …)` calls against a real scratch repository created in `beforeAll`/`beforeEach`, so a git-shaped assertion is checked against real git output, not a hand-rolled stub. `vite.config.ts`'s own `test.exclude` keeps `**/*.integration.test.{ts,tsx}` out of the plain `npm test` run — the naming convention alone (`*.integration.test.tsx` vs `*.test.tsx`) does **not** exclude a file from a glob that only looks for `.test.tsx` at the end, which is exactly the bug this exclude entry fixes (both suites ran on every PR for a time before it was added).
+
+| File | Covers |
+|---|---|
+| `annotationWorkflow.integration.test.tsx` | Author a schema (one field of each type via `SchemaTreeEditor`) → annotate a PDF (highlight, sticky note, comment, a field value) → commit through `GitDialog`'s plain whole-file path. |
+| `consolidationAndMerge.integration.test.tsx` | Two reviewer seats disagree on the same field → `ConsolidationDialog`'s compare popup reconciles them → the same field is then diverged on two real branches and merged, producing a genuine `FieldConflict` resolved through `GitMergeDialog`. |
+| `branchSwitch.integration.test.tsx` | An uncommitted change carried across a branch switch via a real `git stash`, into a real conflict against the target branch, resolved without ever creating a commit (a branch switch only ever rewrites the working tree). |
+| `pull.integration.test.tsx` | `git pull` against a real remote (a bare repo standing in for "origin"), diverged by a real push from a second clone — same conflict/resolution machinery as the explicit merge, reached via `beginPull`'s real `@{u}` + `fetch` instead of an explicit ref. |
+| `screeningImport.integration.test.tsx` | Real include/exclude decisions via `ScreeningPanel` → `startFromScreening` → `ScreeningImportDialog` → `resolveScreeningImport` converts the survivors into a new annotation-project draft, including the real id-collision renaming a `target: 'start'` import applies. |
+| `discard.integration.test.tsx` | Reverting an uncommitted field to its last-committed value via the field review's "Discard" disposition + "Discard all" — `writeWorking`, never a commit. The only integration test with real `headContent`/`workingContent` (every other test stubs them to `null`, which is what forces `refreshFieldReview` onto the simpler whole-file commit path instead of populating field review at all). |
+
+Two deliberate simplifications recur across these fakes: (1) the scratch repos stay in the **legacy single-file project shape** (`papers[].annotations` inline) throughout, rather than the split `project.json` + `annotations/<id>/*.json` layout a real save produces — sufficient for exercising the git logic itself, and any test that needs the split shape reassembles it via the real `assembleLegacyProjectJson` before writing, so `git status`/`diff` never sees a spurious format-only change; (2) jsdom performs no real layout, so `annotationWorkflow`'s PDF-selection test patches `Element.prototype.getBoundingClientRect`/`Range.prototype.getClientRects` to fixed, non-zero rects — `react-pdf` itself is mocked to skip real PDF.js parsing/canvas rendering, down to the exact DOM shape (`.react-pdf__Page`, `.react-pdf__Page__textContent`) `PdfViewer`'s own selection code queries for.
+
+### End-to-end tests (`e2e/`, Playwright + a real Electron process)
+
+```bash
+npm run test:e2e   # builds dist-electron/ first, then runs the Playwright suite
+```
+
+The one layer that reaches what the integration suite structurally cannot: a real Electron main process, a real `contextBridge`-exposed `window.slr`, real `ipcMain` handlers, real filesystem, real git. `playwright.config.ts` runs `workers: 1` (each test launches its own Electron process; there's no shared state to parallelize, and doing so would only cost CPU/RAM). `openSaveProject.spec.ts` covers `openPath`/`saveProject` (including the `knownProjectPaths` guard in `electron/main.ts` that refuses a save to a path never opened), a `gitProbe`/`gitStatus` round-trip through the hardened `runGit`/`gitEnv`/`GIT_SAFE_CONFIG` wrapper, and the split-file save/reopen round-trip — a real save writes `project.json` (meta-only) plus a real per-paper file under `annotations/`, and a real reopen reassembles them back into the shape the app works with in memory (`writeProjectFiles` → `readProjectText` → `assembleLegacyProjectJson`, none of which the integration suite's mocked platform ever touches for real). `gitPush.spec.ts` pushes a real commit to a real bare repo standing in for a remote and confirms it landed there by reading the bare repo directly, independent of the app. On Linux, Electron opens a real native window even for a screenshot-free smoke test, so CI wraps the run in `xvfb-run`.
+
+Both suites are slow by unit-test standards on purpose (real scratch repos, a real Electron process per test) and are gated in front of release builds rather than run on every PR — see "Release builds" below.
 
 ## Type Checking
 
@@ -166,7 +195,9 @@ Users who already have a "damaged" copy can fix it in place by clearing the quar
 
 **macOS architectures.** The mac target builds **both** `arm64` (Apple Silicon) and `x64` (Intel) dmgs — the first release shipped arm64 only, leaving Intel users with nothing that ran. `artifactName` puts the arch in the file name so the two are tellable apart.
 
-The workflow `.github/workflows/release.yml` runs when a GitHub **release is published**. It fans out over a matrix of `macos-latest`, `windows-latest`, and `ubuntu-latest`, runs `./scripts/build-electron.sh` on each, and then attaches the OS-specific installer plus the `electron-updater` metadata to the release via `softprops/action-gh-release`: `release/*.dmg` on mac, `release/*.exe` + `release/*.exe.blockmap` + `release/latest.yml` on Windows, and `release/*.AppImage` + `release/latest-linux.yml` on Linux. The Windows/Linux extras are the update feed `electron-updater` downloads at runtime (see the `--publish never` note above), so omitting them from a release breaks the in-app self-updater for that platform; macOS has no equivalent. Each job also uploads its artifact to the workflow run (`actions/upload-artifact`), so a manual `workflow_dispatch` run — which has no release to attach to — still produces downloadable installers. The builds are unsigned (no code-signing certificates are configured). As with CI, the build logic lives in the shell script so it stays runnable locally and portable across providers.
+The workflow `.github/workflows/release.yml` runs when a GitHub **release is published** (and via manual `workflow_dispatch`). Its `build` job `needs: integration-tests` — a single job that calls the reusable workflow `.github/workflows/integration-tests.yml` (`uses: ./.github/workflows/integration-tests.yml`) rather than duplicating the `integration-test`/`e2e-test` job bodies inline. A broken end-to-end workflow (schema authoring, PDF annotation, git commit/merge/pull/branch-switch/discard, screening import — see "Testing" above) must not reach a packaged release, and the call blocks `build` until *both* jobs inside the reusable workflow succeed. Being its own file also makes `integration-tests.yml` independently triggerable — `gh workflow run integration-tests.yml`, or the Actions tab — for a fast check without running a full release.
+
+Once gated, `build` fans out over a matrix of `macos-latest`, `windows-latest`, and `ubuntu-latest`, runs `./scripts/build-electron.sh` on each, and then attaches the OS-specific installer plus the `electron-updater` metadata to the release via `softprops/action-gh-release`: `release/*.dmg` on mac, `release/*.exe` + `release/*.exe.blockmap` + `release/latest.yml` on Windows, and `release/*.AppImage` + `release/latest-linux.yml` on Linux. The Windows/Linux extras are the update feed `electron-updater` downloads at runtime (see the `--publish never` note above), so omitting them from a release breaks the in-app self-updater for that platform; macOS has no equivalent. Each job also uploads its artifact to the workflow run (`actions/upload-artifact`), so a manual `workflow_dispatch` run — which has no release to attach to — still produces downloadable installers. The builds are unsigned (no code-signing certificates are configured). As with CI, the build logic lives in the shell script so it stays runnable locally and portable across providers.
 
 **OpenWiki auto-update.** A separate scheduled workflow `.github/workflows/openwiki.yml` runs weekly (Mondays 06:00 UTC) and on demand. It first checks whether `main` had any non-`openwiki/**` commits in the last 7 days; only if so does it install and run the `openwiki` CLI (needs the `OPENROUTER_API_KEY` repo secret) and open a `docs: update OpenWiki` pull request. This regenerates these docs from the code, so prefer keeping manual doc edits and the code they describe in sync — see also the manual refresh guidance around `.last-update.json`.
 
@@ -491,6 +522,6 @@ Electron-desktop-only" above.)
 - **Adding a new npm script**: Add to `scripts` in `package.json`. The existing scripts use `cross-env` for environment variables (needed because `ELECTRON=1` must be set cross-platform).
 - **Changing the Vite config**: `vite.config.ts` is the single config for both Vite build and Vitest. The `ELECTRON=1` flag conditionally includes the electron plugin. The `base: './'` is important for Electron `file://` loading — do not change to `/`.
 - **Adding electron-builder targets**: Update the `build` section in `package.json`. Current targets are dmg (mac), nsis (win), AppImage (linux). If the new target should be served by the in-app self-updater, also add its `latest-*.yml` / `*.blockmap` artifacts to the `release.yml` matrix and ensure `build.publish` points at the right GitHub repo — `electron-updater` reads that feed at runtime (see the `--publish never` note above). macOS is deliberately excluded from auto-update.
-- **Adding new test files**: Place as `*.test.ts` or `*.test.tsx` anywhere under `src/`. The vitest `include` pattern is `src/**/*.test.{ts,tsx}`.
+- **Adding new test files**: Place as `*.test.ts` or `*.test.tsx` anywhere under `src/`. The vitest `include` pattern is `src/**/*.test.{ts,tsx}`. A real-components, real-git integration test goes under `src/test/integration/` instead, named `*.integration.test.tsx` — `vite.config.ts`'s `test.exclude` keeps that pattern out of the plain `npm test` run; `vitest.integration.config.ts` is the separate config that picks it up (`npm run test:integration`). An Electron-process-level e2e test goes under `e2e/` and is picked up automatically by `playwright.config.ts`'s `testDir`.
 - **TypeScript config**: Uses project references — `tsconfig.json` references `tsconfig.app.json` (renderer/src code) and `tsconfig.node.json` (electron + vite config). `tsc -b` builds both.
 - **Changing what CI runs**: Edit `scripts/ci.sh` (the source of truth), not the GitHub workflow. `.github/workflows/ci.yml` only provides the Node toolchain and calls the script, so any change stays in sync with local runs and portable to other CI providers.
