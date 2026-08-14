@@ -536,9 +536,14 @@ Three layers of tests, by what each one can actually catch:
   screening decisions converted into a new annotation project, including the real id-collision
   renaming
   ([`screeningImport.integration.test.tsx`](src/test/integration/screeningImport.integration.test.tsx));
-  and a `git pull` against a real remote (a bare repo standing in for "origin"), diverged by a real
+  a `git pull` against a real remote (a bare repo standing in for "origin"), diverged by a real
   push from a second clone, resolved through the same merge dialog
-  ([`pull.integration.test.tsx`](src/test/integration/pull.integration.test.tsx)).
+  ([`pull.integration.test.tsx`](src/test/integration/pull.integration.test.tsx)); and discarding an
+  uncommitted field-level change back to its last-committed value through the real field review,
+  which never touches git history at all (`writeWorking`, not a commit) — the one test where
+  `headContent`/`workingContent` are real rather than stubbed to `null`, since that's what's needed
+  to populate field review in the first place
+  ([`discard.integration.test.tsx`](src/test/integration/discard.integration.test.tsx)).
   Slower than the unit suite on purpose (real scratch repos per test), so it's kept out of the PR
   path and gated in front of release builds instead (`.github/workflows/release.yml`).
 - **`npm run test:e2e`** (`e2e/`, [Playwright](https://playwright.dev/)) — the one thing jsdom
