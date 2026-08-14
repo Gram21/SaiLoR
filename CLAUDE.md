@@ -10,3 +10,7 @@ This repository has a generated `openwiki/` evidence index. It is optional just-
 The scheduled OpenWiki GitHub Actions workflow refreshes the repository wiki. Do not hand-edit generated OpenWiki pages unless explicitly asked; prefer updating source code/docs and letting OpenWiki regenerate.
 
 <!-- OPENWIKI:END -->
+
+## Git commits
+
+Do not add a `Co-Authored-By` trailer (or any AI-attribution line) to commit messages in this repository.
