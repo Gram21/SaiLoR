@@ -60,5 +60,17 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     include: ['src/**/*.test.{ts,tsx}'],
+    // The integration suite (src/test/integration/) spins up a real scratch
+    // git repo per test and is slow by unit-test standards on purpose — kept
+    // out of the default `vitest run` (`npm test`, run on every PR) and run
+    // on its own via `npm run test:integration` instead. Setting `exclude`
+    // replaces vitest's own default list rather than adding to it, so its
+    // usual entries are repeated here alongside ours.
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/.{idea,git,cache,output,temp}/**',
+      '**/*.integration.test.{ts,tsx}',
+    ],
   },
 })

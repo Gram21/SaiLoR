@@ -17,7 +17,56 @@ permissions:
   contents: write
 
 jobs:
+  # Gates the build below: a broken end-to-end workflow (schema authoring,
+  # PDF annotation, git commit — see src/test/integration/) must not reach a
+  # packaged release. jsdom-based, so no display server is needed, unlike a
+  # real Electron/browser GUI test would.
+  integration-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+  # A real Electron smoke test — launches the actual packaged main process
+  # and drives its real contextBridge/IPC, which the jsdom-based
+  # integration-test job above cannot reach (it mocks the platform seam
+  # entirely). Needs a real display even though nothing is screenshotted:
+  # Electron opens a real native window on Linux regardless, hence xvfb-run.
+  e2e-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Xvfb
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      - name: Run Electron smoke test
+        run: xvfb-run -a npm run test:e2e
+
   build:
+    needs: [integration-test, e2e-test]
     strategy:
       fail-fast: false
       matrix:

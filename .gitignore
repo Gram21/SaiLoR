@@ -226,3 +226,7 @@ dist-electron/
 release/
 *.tsbuildinfo
 
+# Playwright
+test-results/
+playwright-report/
+

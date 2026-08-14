@@ -506,13 +506,46 @@ the two start silently overwriting each other.
 ## Building & testing
 
 ```bash
-npm run build:electron   # desktop installers into release/ (via electron-builder)
-npm test                 # unit tests (model: schema, normalize, round-trip)
+npm run build:electron    # desktop installers into release/ (via electron-builder)
+npm test                  # unit tests (model: schema, normalize, round-trip) — run on every PR
+npm run test:integration  # real-component end-to-end scenarios — gated in front of release builds
+npm run test:e2e          # real Electron process smoke tests — gated in front of release builds
 npm run typecheck
 ```
 
 `npm run build` (a static SPA into `dist/`) still exists for CI/typechecking purposes, but is no
 longer a supported way to run the app — see "The web/browser build is discontinued" above.
+
+Three layers of tests, by what each one can actually catch:
+
+- **`npm test`** — plain vitest, no rendering. ~1800 tests of pure logic: schema resolution, project
+  load/normalize/serialize, the three-way merge, git output parsing, and so on. Fast, runs on every
+  PR via `scripts/ci.sh`.
+- **`npm run test:integration`** (`src/test/integration/`) — jsdom + React Testing Library. Each test
+  walks one full use case through the *real* rendered components with real clicks/typing/DOM events —
+  `getPlatform()` is the only thing mocked, and even that mock's `GitPlatform` shells out to a real
+  `git` binary against a real scratch repository, so a git-shaped assertion is checked against real
+  git output, not a stub. Covers: authoring a schema → annotating a PDF (highlight/note/comment/field
+  value) → committing
+  ([`annotationWorkflow.integration.test.tsx`](src/test/integration/annotationWorkflow.integration.test.tsx));
+  two reviewers disagreeing → Consolidation reconciling them → a real merge conflict on the same field
+  ([`consolidationAndMerge.integration.test.tsx`](src/test/integration/consolidationAndMerge.integration.test.tsx));
+  switching branches with an uncommitted change that the target branch also touched — a real
+  `stash`-carry-over into a real conflict, resolved without committing
+  ([`branchSwitch.integration.test.tsx`](src/test/integration/branchSwitch.integration.test.tsx)); and
+  screening decisions converted into a new annotation project, including the real id-collision
+  renaming
+  ([`screeningImport.integration.test.tsx`](src/test/integration/screeningImport.integration.test.tsx)).
+  Slower than the unit suite on purpose (real scratch repos per test), so it's kept out of the PR
+  path and gated in front of release builds instead (`.github/workflows/release.yml`).
+- **`npm run test:e2e`** (`e2e/`, [Playwright](https://playwright.dev/)) — the one thing jsdom
+  structurally can't reach: a real Electron main process, real `contextBridge`-exposed `window.slr`,
+  real `ipcMain` handlers, real filesystem. Drives `openPath`/`saveProject` (including the
+  `knownProjectPaths` guard that refuses a save to a path never opened) and a real
+  `gitProbe`/`gitStatus` round-trip through the hardened `runGit` wrapper. Needs
+  `dist-electron/main.js` built first (`npm run test:e2e` does this itself); on Linux, Electron still
+  opens a real window even for a silent smoke test, so CI wraps it in `xvfb-run`. Also gated in front
+  of release builds, alongside `test:integration`.
 
 ## Deployment
 

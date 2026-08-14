@@ -19,5 +19,11 @@
 
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "electron/**/*.ts"]
+  "include": [
+    "vite.config.ts",
+    "vitest.integration.config.ts",
+    "playwright.config.ts",
+    "electron/**/*.ts",
+    "e2e/**/*.ts"
+  ]
 }
