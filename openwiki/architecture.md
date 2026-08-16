@@ -30,6 +30,120 @@ has one real implementation and one inert stand-in (`UnsupportedAdapter`) rather
 ones. See "Why the seam still exists" below for why it was not simply deleted along with the browser
 adapter.
 
+## Architecture Diagram
+
+High-level process/data flow — renderer (React + Zustand) talks to the Electron main process only
+through the `window.slr` bridge (`electron/preload.ts`); the main process is the only thing that
+touches the filesystem, spawns `git`, or calls out to an LLM provider.
+
+```mermaid
+flowchart TB
+    subgraph Renderer["Renderer process (Chromium, React 19)"]
+        direction TB
+        App["App.tsx<br/>isElectron() discontinuation gate"]
+        Components["Component tree<br/>Toolbar, PaperList, PdfViewer,<br/>AnnotationPanel, ConsolidationDialog,<br/>GitDialog, AiDialog, ..."]
+        Store["Zustand store (useStore)<br/>project state, undo/redo, aiMarks"]
+        Model["Model layer<br/>schema.ts, annotations.ts,<br/>duplicates.ts, references.ts"]
+        GitStore["gitStore"]
+        Llm["src/llm<br/>prompt / parse / models"]
+        Platform["PlatformAdapter<br/>ElectronAdapter / UnsupportedAdapter"]
+
+        App --> Components
+        Components --> Store
+        Store --> Model
+        Components --> GitStore
+        Components --> Llm
+        Store --> Platform
+    end
+
+    Bridge["window.slr<br/>(preload.ts contextBridge)"]
+
+    Platform -->|"project:*, pdf:*"| Bridge
+    GitStore -->|"git:*"| Bridge
+    Llm -->|"llm:*"| Bridge
+
+    subgraph Main["Electron main process (electron/main.ts)"]
+        direction TB
+        IPC["IPC handlers<br/>project:*, pdf:*, git:*, llm:*, update:*"]
+        Protocol["slr-file:// protocol<br/>CORS-enabled, path-traversal guarded"]
+        Window["BrowserWindow + menu<br/>window-state.json, quit flow"]
+    end
+
+    Bridge --> IPC
+    IPC --- Window
+
+    subgraph Disk["On-disk project"]
+        ProjectJson["project.json<br/>schema + paper metadata"]
+        Annotations["annotations/&lt;paperId&gt;/<br/>one file per reviewer + consolidated"]
+        Pdfs["Referenced PDFs<br/>(paths relative to project.json)"]
+    end
+
+    subgraph GitRepo["Local git repository"]
+        GitBinary["git CLI<br/>(child_process)"]
+    end
+
+    subgraph External["External services"]
+        LlmProviders["LLM providers<br/>OpenAI / Anthropic-compatible / etc."]
+    end
+
+    IPC -->|"read/write"| ProjectJson
+    IPC -->|"read/write"| Annotations
+    Protocol -->|"serve"| Pdfs
+    IPC -->|"spawn"| GitBinary
+    IPC -->|"net.fetch"| LlmProviders
+```
+
+### C4: System Context
+
+```mermaid
+C4Context
+    title SaiLoR — System Context
+
+    Person(reviewer, "Reviewer/Researcher", "Annotates, screens, and consolidates papers for a systematic literature review")
+
+    System(sailor, "SaiLoR", "Electron desktop app (React + Zustand)", "Single/multi-reviewer annotation, screening, and consolidation of SLR papers")
+
+    System_Ext(llm, "LLM Provider", "OpenAI / Anthropic-compatible / etc.", "Optional AI-assisted field suggestions from a paper's PDF text")
+    System_Ext(gitRemote, "Git remote", "GitHub/GitLab/etc.", "Shares a project repo across reviewers; reached only via the user's local git install")
+    SystemDb_Ext(fs, "Local filesystem", "project.json + annotations/ + PDFs", "The project's on-disk storage; not a network service, just the machine's own disk")
+
+    Rel(reviewer, sailor, "Opens/annotates/screens/consolidates a project")
+    Rel(sailor, llm, "Sends paper text/PDF, receives field suggestions", "HTTPS, main process only")
+    Rel(sailor, gitRemote, "Clone / pull / push the project repo", "git protocol, via local git CLI")
+    Rel(sailor, fs, "Reads/writes project.json, annotations/, PDFs", "file I/O, main process only")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
+```
+
+### C4: Container
+
+```mermaid
+C4Container
+    title SaiLoR — Containers
+
+    Person(reviewer, "Reviewer/Researcher")
+
+    System_Boundary(sailor, "SaiLoR (Electron app)") {
+        Container(renderer, "Renderer", "React 19 + Zustand + immer", "Component tree, state store, model layer, gitStore, src/llm — no direct filesystem/network/process access")
+        Container(main, "Main process", "Node.js (electron/main.ts)", "IPC handlers, slr-file:// protocol, window/menu, spawns git, calls LLM providers")
+        Container(preload, "Preload bridge", "electron/preload.ts", "contextBridge-exposed window.slr — the only channel between renderer and main")
+    }
+
+    ContainerDb(disk, "Project storage", "JSON files on disk", "project.json (schema + metadata) + annotations/<paperId>/ (per-reviewer + consolidated)")
+    Container_Ext(gitcli, "git CLI", "external binary", "Invoked via child_process; SaiLoR never re-implements git")
+    System_Ext(llmApi, "LLM Provider API", "HTTPS")
+
+    Rel(reviewer, renderer, "Uses the UI")
+    Rel(renderer, preload, "Calls window.slr.*", "contextBridge, in-process")
+    Rel(preload, main, "IPC (project:*, pdf:*, git:*, llm:*, update:*)")
+    Rel(main, renderer, "Serves PDFs", "slr-file:// protocol, CORS-enabled")
+    Rel(main, disk, "Read/write project + annotations")
+    Rel(main, gitcli, "Spawn (clone/status/commit/push/pull/merge)")
+    Rel(main, llmApi, "net.fetch with substituted API key", "HTTPS")
+
+    UpdateLayoutConfig($c4ShapeInRow="4", $c4BoundaryInRow="1")
+```
+
 ## Platform Adapter Pattern
 
 The entire file-system and PDF-loading layer is abstracted behind a single interface:
