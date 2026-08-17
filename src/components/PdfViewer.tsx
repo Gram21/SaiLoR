@@ -6,6 +6,7 @@ import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import { useStore, selectCurrentPaper, PDF_ZOOM_MIN, PDF_ZOOM_MAX } from '../state/store'
 import { MARK_COLORS, sortMarksForCycling, type MarkRect, type PdfMark } from '../model/pdfMarks'
+import { detectEntryBox } from '../model/refPreview'
 import { getPlatform } from '../platform'
 // Side-effect import: configures the pdf.js worker.
 import '../platform/pdfjs'
@@ -153,11 +154,11 @@ export function destinationPoint(dest: unknown[]): { x: number | null; y: number
   }
 }
 
-/** On-screen size cap (CSS px) for the internal-link hover preview — a window
- *  onto the destination page at its current render scale, big enough for a
- *  typical bibliography entry's few lines. */
+/** On-screen size cap (CSS px) for the internal-link hover preview. The crop
+ *  is scaled down to fit this box when it's larger — never clipped, so a wide
+ *  reference entry shows whole lines, just smaller. */
 const LINK_PREVIEW_MAX_W = 560
-const LINK_PREVIEW_MAX_H = 150
+const LINK_PREVIEW_MAX_H = 240
 
 /** The subset of a mouse event `onOpen` actually needs — deliberately not
  *  `React.MouseEvent`, since `handleMarkMouseDown` calls it once more from a
@@ -951,11 +952,13 @@ export function PdfViewer() {
   }
 
   /** Build the hover preview for one internal-link annotation: resolve where
-   *  it points, then copy a `LINK_PREVIEW_MAX_W`×`MAX_H` window (starting just
-   *  above/left of the destination point) out of the destination page's
-   *  rendered canvas, 1:1 at the current zoom — the preview is exactly as
-   *  readable as the page itself. Returns `null` for external links, dangling
-   *  destinations, or a destination page whose canvas hasn't rendered yet. */
+   *  it points, fit a crop box to the destination's own entry from the page's
+   *  text layout (`detectEntryBox` — the SumatraPDF behavior; falls back to a
+   *  page-wide window below the destination when there's no entry to fit to),
+   *  then copy that crop out of the destination page's already-rendered
+   *  canvas, scaled down if needed to fit the preview's size cap. Returns
+   *  `null` for external links, dangling destinations, or a destination page
+   *  whose canvas hasn't rendered yet. */
   const resolveLinkPreview = async (
     doc: PDFDocumentProxy,
     pageNum: number,
@@ -979,20 +982,50 @@ export function PdfViewer() {
     const [vx, vy] = vp.convertToViewportPoint(x ?? view[0], y ?? view[3])
     const rect = canvas.getBoundingClientRect()
     if (rect.width === 0 || rect.height === 0) return null
-    const pad = 6 // so the first line/character at the destination isn't clipped
-    const cropX = Math.max(0, Math.min(1, vx / vp.width) * rect.width - pad)
-    const cropY = Math.max(0, Math.min(1, vy / vp.height) * rect.height - pad)
-    const width = Math.min(LINK_PREVIEW_MAX_W, rect.width - cropX)
-    const height = Math.min(LINK_PREVIEW_MAX_H, rect.height - cropY)
-    if (width < 40 || height < 20) return null // destination at the very page edge
+
+    // Fit the crop to the destination's entry (bibliography item, glossary
+    // entry, …) from the page's text layout, in the same scale-1 viewport
+    // coordinates as vx/vy.
+    const textContent = await targetPage.getTextContent()
+    const textItems = textContent.items.flatMap((it) => {
+      if (!('str' in it)) return [] // TextMarkedContent — no geometry
+      const [ix, iy] = vp.convertToViewportPoint(it.transform[4], it.transform[5])
+      return [{ str: it.str, x: ix, y: iy - it.height, w: it.width, h: it.height }]
+    })
+    const entry = detectEntryBox(textItems, x !== null ? vx : null, vy, vp.height)
+
+    // The crop, in CSS px on the rendered page. Fallback (no entry to fit
+    // to — a figure/table/section target, an image-only page): a page-wide
+    // window below the destination, so whole lines always stay visible and
+    // the target's surroundings give context.
+    const k = rect.width / vp.width // CSS px per viewport unit
+    const pad = 6
+    let crop: { x: number; y: number; w: number; h: number }
+    if (entry) {
+      crop = { x: entry.x * k, y: entry.y * k, w: entry.w * k, h: entry.h * k }
+    } else {
+      const cx = Math.max(0, Math.min(1, vx / vp.width) * rect.width - pad)
+      const cy = Math.max(0, Math.min(1, vy / vp.height) * rect.height - pad)
+      const cw = rect.width - cx
+      crop = { x: cx, y: cy, w: cw, h: cw * (LINK_PREVIEW_MAX_H / LINK_PREVIEW_MAX_W) }
+    }
+    crop.x = Math.max(0, crop.x)
+    crop.y = Math.max(0, crop.y)
+    crop.w = Math.min(crop.w, rect.width - crop.x)
+    crop.h = Math.min(crop.h, rect.height - crop.y)
+    if (crop.w < 40 || crop.h < 12) return null // destination at the very page edge
+
+    // Copy at the source canvas's full resolution; scale down only at
+    // display time (the img's width/height), so a shrunk preview stays sharp.
     const scale = canvas.width / rect.width // backing px per CSS px
     const out = document.createElement('canvas')
-    out.width = Math.round(width * scale)
-    out.height = Math.round(height * scale)
+    out.width = Math.round(crop.w * scale)
+    out.height = Math.round(crop.h * scale)
     const ctx = out.getContext('2d')
     if (!ctx) return null
-    ctx.drawImage(canvas, cropX * scale, cropY * scale, width * scale, height * scale, 0, 0, out.width, out.height)
-    return { img: out.toDataURL(), width, height }
+    ctx.drawImage(canvas, crop.x * scale, crop.y * scale, crop.w * scale, crop.h * scale, 0, 0, out.width, out.height)
+    const fit = Math.min(1, LINK_PREVIEW_MAX_W / crop.w, LINK_PREVIEW_MAX_H / crop.h)
+    return { img: out.toDataURL(), width: Math.round(crop.w * fit), height: Math.round(crop.h * fit) }
   }
 
   // Hover handlers for pdf.js's annotation-layer links, delegated from the
