@@ -36,8 +36,7 @@ High-level process/data flow — renderer (React + Zustand) talks to the Electro
 through the `window.slr` bridge (`electron/preload.ts`); the main process is the only thing that
 touches the filesystem, spawns `git`, or calls out to an LLM provider.
 
-<!-- openwiki: mermaid parse failed and this diagram was converted to a text fence so it does not break rendering. Fix the diagram source and restore the mermaid fence. Parser error: Heuristic: a semicolon inside a label breaks rendering; rephrase the label. -->
-```text
+```mermaid
 flowchart TB
     subgraph Renderer["Renderer process (Chromium, React 19)"]
         direction TB
@@ -96,8 +95,7 @@ flowchart TB
 
 ### C4: System Context
 
-<!-- openwiki: mermaid parse failed and this diagram was converted to a text fence so it does not break rendering. Fix the diagram source and restore the mermaid fence. Parser error: Heuristic: a semicolon inside a label breaks rendering; rephrase the label. -->
-```text
+```mermaid
 C4Context
     title SaiLoR — System Context
 
@@ -119,8 +117,7 @@ C4Context
 
 ### C4: Container
 
-<!-- openwiki: mermaid parse failed and this diagram was converted to a text fence so it does not break rendering. Fix the diagram source and restore the mermaid fence. Parser error: Heuristic: a semicolon inside a label breaks rendering; rephrase the label. -->
-```text
+```mermaid
 C4Container
     title SaiLoR — Containers
 
