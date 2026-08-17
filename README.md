@@ -29,12 +29,9 @@ dialogs.
 
 ## Quick start
 
-```bash
-npm install
-npm run dev:electron
-```
+Either [install a release](#installing-a-release) or [clone this repository and run the tool with npm](#run-the-development-variant-with-npm).
 
-## Installing a release
+### Installing a release
 
 Grab the file for your system from the [releases page](https://github.com/Gram21/SaiLoR/releases):
 
@@ -54,7 +51,7 @@ Grab the file for your system from the [releases page](https://github.com/Gram21
 > now live in a `SaiLoR` folder (on macOS, `~/Library/Application Support/SaiLoR`). On first run
 > the app migrates the old "SLR Helper" folder automatically, so nothing is lost.
 
-### macOS
+#### macOS
 
 1. Open the `.dmg` and drag **SaiLoR** into your **Applications** folder.
 2. Open the app. macOS blocks it, saying it *"cannot be opened because Apple cannot check
@@ -81,14 +78,14 @@ xattr -cr "/Applications/SaiLoR.app"
 ```
 </details>
 
-### Windows
+#### Windows
 
 1. Run `SaiLoR-<version>-windows-x64.exe`.
 2. Windows SmartScreen shows *"Windows protected your PC"*. Click **More info**, then
    **Run anyway**.
 3. Follow the installer.
 
-### Linux
+#### Linux
 
 The AppImage is a single self-contained file — no installation needed. Make it executable
 and run it:
@@ -100,6 +97,22 @@ chmod +x "SaiLoR-<version>-linux-x64.AppImage"
 
 If it fails to start, your distribution may be missing FUSE (`sudo apt install libfuse2`
 on Debian/Ubuntu), or you can extract and run it with `--appimage-extract-and-run`.
+
+### Run the development variant with npm
+
+Clone the repository and move into it:
+
+```bash
+git clone https://github.com/Gram21/SaiLoR.git
+cd SaiLoR
+```
+
+Then install dependencies and start the app:
+
+```bash
+npm install
+npm run dev:electron
+```
 
 ## Project file format
 
