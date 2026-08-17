@@ -13,13 +13,6 @@ annotations back into the JSON.
 SaiLoR is a **desktop app** (Electron) — fully local, opens local PDF files, native Open/Save
 dialogs.
 
-> **The web/browser build is discontinued.** Earlier versions also ran as a static site you could
-> host or open in a browser; browser file-system limitations (the File System Access API's reach and
-> reliability across browsers) made too many features — multi-file saving, git — impossible to
-> support properly there. The web build, if you open it, now shows a notice pointing you at the
-> desktop app instead of any project-opening UI. If you were using SaiLoR in a browser, switch to
-> the desktop app below — your existing project files open in it unchanged.
-
 <p align="center">
   <img src="docs/screenshots/annotate.png" alt="The three-pane annotation view: papers, the PDF, and the annotation form" width="900">
 </p>
