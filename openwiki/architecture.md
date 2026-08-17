@@ -36,7 +36,8 @@ High-level process/data flow — renderer (React + Zustand) talks to the Electro
 through the `window.slr` bridge (`electron/preload.ts`); the main process is the only thing that
 touches the filesystem, spawns `git`, or calls out to an LLM provider.
 
-```mermaid
+<!-- openwiki: mermaid parse failed and this diagram was converted to a text fence so it does not break rendering. Fix the diagram source and restore the mermaid fence. Parser error: Heuristic: a semicolon inside a label breaks rendering; rephrase the label. -->
+```text
 flowchart TB
     subgraph Renderer["Renderer process (Chromium, React 19)"]
         direction TB
@@ -95,7 +96,8 @@ flowchart TB
 
 ### C4: System Context
 
-```mermaid
+<!-- openwiki: mermaid parse failed and this diagram was converted to a text fence so it does not break rendering. Fix the diagram source and restore the mermaid fence. Parser error: Heuristic: a semicolon inside a label breaks rendering; rephrase the label. -->
+```text
 C4Context
     title SaiLoR — System Context
 
@@ -117,7 +119,8 @@ C4Context
 
 ### C4: Container
 
-```mermaid
+<!-- openwiki: mermaid parse failed and this diagram was converted to a text fence so it does not break rendering. Fix the diagram source and restore the mermaid fence. Parser error: Heuristic: a semicolon inside a label breaks rendering; rephrase the label. -->
+```text
 C4Container
     title SaiLoR — Containers
 
@@ -363,7 +366,7 @@ App (src/App.tsx)
 ├── GitCloneDialog (src/components/GitCloneDialog.tsx)
 │     Import-from-git modal, driven by useGitStore's clone.phase: setup (URL + destination) → cloning (spinner + elapsed seconds) → error (git's exact text, back to setup) → done (pick the project JSON, opened inside the clone) — Electron only, see "Git" above
 ├── GitDialog (src/components/GitDialog.tsx)
-│     Modal for the open project's own repository: changes + diff, a commit message, Commit, Pull, Push, a branch switcher (a `<select>` in the header over the *local* rows of `useGitStore().branches`, driving `requestSwitchBranch`), and two quieter header buttons — **Merge branch…** and **History…** — deliberately kept out of the commit/pull/push row since both are occasional, deliberate actions rather than something a reviewer reaches for every session. When the open project's own file is a tracked, field-diffable modification, its changes are reviewed field by field (Use/Ignore/Discard per row) instead of as one whole-file checkbox — see "Field-level commit review" below. Non-project changed files each get their own **↺** (whole-file discard, see "Whole-file discard" below). When every row is marked Discard, the primary button relabels to "Discard all" (danger-red) and reverts marked rows directly via `runDiscard` without committing. When a Discard row is mixed in among Use rows, `mixedDiscardConfirmMessage()` warns that the Discard field's change will be lost on commit before proceeding
+│     Modal for the open project's own repository: a commit message field with an **Amend previous commit** checkbox, Commit (or Amend), Pull, Push, a branch switcher (a `<select>` in the header over the *local* rows of `useGitStore().branches`, driving `requestSwitchBranch`), and two quieter header buttons — **Merge branch…** and **History…** — deliberately kept out of the commit/pull/push row since both are occasional, deliberate actions rather than something a reviewer reaches for every session. The message field and Commit/Pull/Push row sit above the changes list (message-first layout). When the open project's own file is a tracked, field-diffable modification, its changes are reviewed field by field (Use/Ignore/Discard per row) instead of as one whole-file checkbox — see "Field-level commit review" below. Non-project changed files each get their own **↺** (whole-file discard, see "Whole-file discard" below). When every row is marked Discard, the primary button relabels to "Discard all" (danger-red) and reverts marked rows directly via `runDiscard` without committing. When a Discard row is mixed in among Use rows, `mixedDiscardConfirmMessage()` warns that the Discard field's change will be lost on commit before proceeding
 ├── BranchSwitchPrompt (src/components/BranchSwitchPrompt.tsx)
 │     Asked when the branch switcher picks a different branch while the project has uncommitted changes — commit first (closes this, switches nothing), carry the changes over (starts the same field-level merge a pull uses), or cancel. See "Switching branches with uncommitted changes" below
 ├── NewBranchPrompt (src/components/NewBranchPrompt.tsx)
@@ -439,6 +442,8 @@ The mechanics run on top of `electron-updater`, added in `electron/main.ts` and 
 - **UI.** `src/App.tsx` picks the branch with `isElectron() && getPlatform().getOsInfo()?.platform !== 'darwin'`: win/linux renders the download/progress/restart buttons and an `update-error` notice; everything else falls back to the manual `pickInstaller` link. On a download failure the banner keeps the release-notes link so the user can still update manually.
 
 `electron-updater` finds its feed through the `build.publish` block in `package.json` (`{ provider: "github", owner: "Gram21", repo: "SaiLoR" }`) and the `latest.yml` / `latest-linux.yml` update metadata the release workflow now attaches alongside the Windows/Linux installers — see the `--publish never` note in [operations](operations.md) for why that publish block does not make `electron-builder` publish on build, and why those metadata files must ship with every release.
+
+**The feed itself is signature-verified before any download.** `electron-updater`'s own sha512 check on the downloaded installer only catches transport corruption — the hash it compares against comes from the same release channel as the installer, so anyone who can publish one (a leaked token, a compromised maintainer account) can publish a matching hash for the other. There is no purchased code-signing certificate for Windows/Linux, so `electron-updater`'s publisher-signature check has nothing to verify against either. `verifyUpdateFeed` (in `electron/main.ts`'s `update:download` handler, gated on `latestUpdateVersion` set by the `update-available` event) closes that gap independently: it fetches the same feed file `electron-updater` is about to use *and* its sibling `<feed>.sig` from the release, and only lets `autoUpdater.downloadUpdate()` proceed once `verifyReleaseSignature(feedBytes, signatureB64, RELEASE_PUBLIC_KEY_B64)` (in `src/model/updateSignature.ts`) confirms the feed was signed by this project's own Ed25519 release key. The public key is baked into the app at build time and never fetched from the channel being verified, so a compromised release cannot also republish a matching fake key. The chain is: our signature check covers the feed file, and `electron-updater`'s existing sha512 check then covers the installer against that now-trusted feed. A signature failure surfaces as `update:error` and leaves the manual download link available. The release workflow's "Sign update metadata" step (`scripts/sign-release.cjs`, run with the `RELEASE_SIGNING_PRIVATE_KEY` secret) writes the `.sig` next to each feed and attaches both — see [operations](operations.md).
 
 ### PaperList search modes
 
@@ -568,6 +573,8 @@ Two ways out of the editor: **Save JSON** writes the file and stays put (so you 
 
 **Growing that block is guarded, and the guard is what makes it safe.** The line under the authors is far more often an affiliation or an email row than the rest of the list, and absorbing one does not merely add noise — it *destroys* names, since the last author fuses with it into a single entry (`"John Smith Karlsruhe Institute of Technology"`) that `parseAuthorList` then drops wholesale as an affiliation. So a candidate line is kept only when the block including it yields strictly **more** names than the block without it. That tests the join on its own evidence, which is both simpler and harder to fool than trying to recognise an affiliation line up front — a real continuation adds names by construction, and every kind of line that shouldn't be absorbed takes them away. Everything is best-effort and only ever pre-fills — rows appear immediately with a name-derived placeholder, extraction patches them in the background, and it never overwrites a value the user has already typed. The pdf.js worker is configured once in `src/platform/pdfjs.ts`, shared by the viewer and the extractor. The same background pass also tries an abstract (`abstractFromLines`) when the row has none — see the Screening section's "A missing abstract is extracted from the PDF, and flagged durably" for why that one gets a persisted `abstractFromPdf` disclosure the title/author guesses above do not need.
 
+**Accented characters are normalized to NFC after every join.** Some fonts' ToUnicode CMaps give pdf.js an accented letter as a base character and a separate combining mark in two adjacent text-layer items ("e" + U+0301) rather than one precomposed character ("é"), and PDF producers can write the same decomposed form into embedded `Title`/`Author` metadata independently. Joining without normalizing left "é"/"ö" reading back as "e´"/"o¨" wherever text left a PDF — title/author extraction, full-text extraction, and a selection grabbed into an annotation field. `toLines`/`cleanTitle`/`parseAuthorList` (in `pdfMeta.ts`), `linesFromItems` (in `pdfText.ts`), and `captureSelection` (in `PdfViewer.tsx`, where the browser's own selection text is first read) each run `.normalize('NFC')` after their join, not per-item — the pieces to recompose can straddle the item boundary the join crosses.
+
 **Adding a whole folder of PDFs** (`addPdfFolder`) is `addPdfs` with a different picker: both funnel into a shared `addPickedPdfs(picked)` closure in `editorStore.ts` that does the duplicate rejection, row creation, and background title/author extraction described above. Only `pickPdfs()` vs `pickPdfFolder()` differs. `pickPdfFolder()` returns every `.pdf` found recursively under the chosen folder via a plain recursive `readdir` walk over the real filesystem, filtered to file names ending in `.pdf`.
 
 **Importing references** (`importReferences`) reads a BibTeX/RIS/CSL-JSON export from a reference manager (Zotero, Mendeley, JabRef, EndNote) and turns each entry into a paper row, without requiring a PDF to already be attached. `src/model/references.ts` (`parseReferences(text, filename)`) is a pure, defensive parser — the format is picked from the extension, content-sniffed as a fallback — that **never throws**: a malformed entry (unbalanced braces, a missing field, an entry with no title) is skipped rather than failing the whole file. For each parsed `RefEntry`, `editorStore.ts` **dedupes against existing rows** via `classifyImport` (see "Duplicate detection at import" below): a `certain` match fills in that row's *empty* fields only (never overwriting something the reviewer already typed) and counts as "updated" or "already complete" in the summary notice; a `probable` match is held back for the reviewer to decide (`DuplicateReviewDialog`); a `new` entry adds a fresh row with `pdf: ''` (or the imported `pdfHint`'s file name as a placeholder, if the reference file named one) for the reviewer to attach a PDF to afterward. The whole import (including any duplicate-review decisions) is one undo step. Because `pdf: ''` is something `addPdfs`/`addPdfFolder` never produce, `validateDraft` reports it as a named per-paper issue ("Paper N has no PDF attached") rather than letting it reach `buildProjectJson`/`save()`, which still requires the on-disk `pdf` to be non-empty (`paperSchema` in `src/model/schema.ts` is unchanged — this tolerance is draft-only).
@@ -631,6 +638,19 @@ the reviewer's click or release happened), the top/bottom 8% (`AUTO_EXTEND_MARGI
 running-header/footer zone and excluded from the selection, so a cross-page highlight doesn't drag in
 repeated page headers. Popovers are clamped to the viewport via `useClampedAnchor()`, which measures
 the `position: fixed` popover after first mount and constrains it to viewport bounds with an 8px margin.
+
+**Text selection reaches through a highlight mark.** A mark's rect/note `div` sits above pdf.js's text
+layer (so it can be clicked and hovered) with `pointer-events: auto`, but that same div carries no text
+of its own — a drag starting on it could never anchor a native selection, so selecting text under or near
+a highlight silently grabbed the empty overlay instead. Marks therefore handle `mousedown` manually: the
+handler flips a `.pdf-marks-dragging` class onto the overlay (turning `pointer-events: none` for every
+mark at once), uses `document.caretRangeFromPoint` to find the real text underneath, and drives the
+selection explicitly via `Selection.addRange`/`extend` on each `mousemove` rather than relying on native
+drag-continuation. A plain click (no real movement) restores `pointer-events` and fires the mark's open
+callback itself, since the native `click` event can no longer be trusted to hit the right target once
+`pointer-events` was toggled mid-gesture. The purely decorative comment-dot indicator is
+`pointer-events: none` always — it has no handlers but defaulted to `auto` and could needlessly steal a
+`mousedown` too.
 
 **Hover tooltips.** Hovering a mark shows a portaled tooltip (`createPortal` to `document.body`) with
 the mark's comment (or, lacking one, the captured selection text) and a list of linked fields with 🔗
@@ -1507,7 +1527,7 @@ If a later product decision makes AI available by default again, `aiUnlocked` an
 | `src/llm/providers.ts` | Everything that differs per vendor for the *annotation* call: `PROVIDERS` (base URL, whether the URL is editable, whether the provider can take a PDF, which output-length parameter it wants — see below), `buildRequest` (Anthropic `/v1/messages`, Google `/v1beta/models/{model}:generateContent`, or OpenAI-style `/v1/chat/completions` for the rest — plus, when `cfg.reasoningEffort` is set, each provider's own reasoning-effort field, see below), `extractText` and `extractError`. `join()` tolerates a user-typed base URL that already ends in `/v1` or the full chat path. Also exports `baseOf`/`join` for `models.ts` to reuse, and `googleThinkingMechanism`/`GOOGLE_BUDGET_BY_LEVEL` for Gemini's level-vs-budget split. |
 | `src/llm/models.ts` | The *model-listing* call: `buildModelsRequest(cfg, cursor?)` (a GET, per-provider endpoint/auth/pagination) and `parseModelsResponse(provider, json)` (→ `ModelsPage`, defensive against every shape above). Also where reasoning-effort **support** is detected per model — see below. |
 | `src/llm/parse.ts` | `parseAnswer(schema, raw)` — the trust boundary. Digs the JSON object out of whatever the model sent (fences, prose, stray braces), then validates **every** proposal against its `ResolvedDef`. |
-| `src/model/pdfText.ts` | `extractPdfText(bytes)` — the paper as plain text, one `[page N]` block per page, using the same reading-order heuristic as `pdfMeta.ts`. Reports `empty: true` when a document yields almost no characters (a scan). |
+| `src/model/pdfText.ts` | `extractPdfText(bytes)` — the paper as plain text, one `[page N]` block per page, using the same reading-order heuristic as `pdfMeta.ts`. Reports `empty: true` when a document yields almost no characters (a scan). Joins adjacent text-layer items then runs `.normalize('NFC')` *after* the join (not per-item — the base character and combining mark that recompose an "é" can straddle the item boundary the join crosses), so accented letters extracted from a PDF never read back as a base glyph plus a stray combining mark. |
 
 `src/state/aiStore.ts` (a separate Zustand+immer store, kept out of the main store for the same reason the project editor is) owns the flow; `src/components/AiDialog.tsx` and `LlmSettingsDialog.tsx` are views over it.
 
@@ -1684,7 +1704,7 @@ Every git operation the renderer can ask for is one of the enumerated IPC handle
 `git:commit`, `git:push`, `git:pullBegin`, `git:pullFinish`, `git:pullAbort`, `git:writeWorking`,
 `git:branches`, `git:branchCreate`, `git:branchDelete`, `git:checkout`, `git:branchSwitchBegin`,
 `git:branchSwitchFinish`, `git:branchSwitchAbort`, `git:mergeBegin`, `git:logBegin`, `git:logDiff`,
-`git:discardFile`) — never a general `git <args>` channel. Git has `--exec-path`, aliases, and the `ext::` remote-helper
+`git:discardFile`, `git:lastCommitMessage`) — never a general `git <args>` channel. Git has `--exec-path`, aliases, and the `ext::` remote-helper
 transport; a channel that let the renderer choose the argv would be handing it arbitrary code
 execution wearing a "just run git" label. Main decides what git is actually asked to do; the
 renderer only supplies data (a URL, a path, a commit message, a resolved text).
@@ -1801,6 +1821,43 @@ path, but never project data, and a write-to-`hooks` primitive. That comparison 
 and spaces and lowercases, because Win32 strips them from path components itself, so `.git.\config`,
 ` .git/config` and `.GIT/config` all reach the same directory.
 
+### Renderer-named paths are allowlisted to what a dialog actually produced
+
+The path/ref/symlink rules above constrain the *shape* of a path a renderer may
+hand the main process. A separate class of guards constrains its *provenance*:
+every IPC handler that reads or writes an absolute path the renderer names
+(`project:save`, `pdf:read`, `pdf:embedMarks`, `text:write`, `git:checkout`,
+`git:branchSwitchBegin`/`Abort`, …) first checks that path against a
+session-scoped `Set` that only a native dialog or an already-legitimate open
+can populate. A compromised renderer cannot reach any file on disk merely by
+naming its absolute path — it can only reach a path this session's own user
+action produced.
+
+| Allowlist (`electron/main.ts`) | Populated by | Guarded handlers |
+|---|---|---|
+| `knownProjectPaths` | `project:open`/`project:openPath` (a successful read), `project:pickSavePath` (a Save-As dialog), `paths:sibling` (a fresh file next to a known project — `sourceFile` must already be known and `fileName` must be a bare name, so it can only name a new file in an already-known directory) | `project:save` refuses any path not in the set |
+| `readablePdfPaths` | `pdf:pick`/`pdf:pickFolder` (native file/directory dialogs) | `pdf:read` (raw PDF bytes for title/author extraction) refuses anything not picked this session |
+| `writableExportPaths` | `pdf:pickExportPath`/`text:pickExportPath` (native save dialogs) | `pdf:embedMarks` (the `{ newPath }` target — `'original'`, the project's own referenced PDF, is unaffected) and `text:write` refuse any path not chosen via the export dialog |
+| `knownGitRoots` | `git:info` (a project the reviewer opened) and `git:clone` (a repository this app itself just cloned) | `assertRoot(root)` gates every checkout/branch-switch/branch-delete handler — a renderer cannot point git at a repository this session never opened |
+
+**The "open a PDF outside the project folder" confirmation was moved into the
+main process for the same reason.** It used to be a `window.confirm` in the
+renderer, which a compromised renderer could skip by calling the bridge's
+`allowPdfPath` directly — self-approving its own escape. `pdf:allowPath` is now
+an async handler that shows its own native `dialog.showMessageBox` (Cancel /
+Open anyway) and only records the escape on "Open anyway", returning whether it
+was approved. The renderer's `getPdfSource` awaits that result rather than
+confirming itself.
+
+**Renderer sandbox and permissions.** The `BrowserWindow` is created with
+`sandbox: true` (alongside the existing `contextIsolation: true` /
+`nodeIntegration: false`), and `session.defaultSession` installs a
+permission-request/check handler that denies every Chromium permission
+(camera, microphone, geolocation, notifications, …) unconditionally — this app
+has no legitimate use for any of them, and the renderer is treated as
+untrusted because it renders PDFs and project files that may come from
+elsewhere.
+
 ### The module layout
 
 | Module | Purpose |
@@ -1813,7 +1870,7 @@ and spaces and lowercases, because Win32 strips them from path components itself
 | `src/git/output.ts` | Pure. `parsePorcelain` (turns `git status --porcelain=v1 -z` into `GitFileChange[]`), `parseGitLog` (turns `git log --format=%x00%H%x09%aI%x09%s` into `CommitRecord[]`, splitting on only the first two tabs so a tab inside a subject does not desync the fields), `capDiff` (caps a diff for the DOM), `diffLines` (splits a unified diff into per-line `add`/`remove`/`context` for the coloured view — see below), `gitErrorText` (what to show when a git command failed) — also imported by `electron/main.ts`, so the "what does a failed run's message say" logic exists once. |
 | `src/git/merge.ts` | Pure. The field-level three-way merge — see below. Knows nothing about git or the DOM, the same shape `src/consolidate/` follows. |
 | `src/git/changes.ts` | Pure. Field-level *local* change detection and composition for the commit panel — see "Field-level commit review" below. Reuses `merge.ts`'s `conflictId`/`MergeTree` for row identity, but not its three-way `merge3` rule (only one side, the working tree, has changed here). Also drives the read-only commit-history diff (see "Commit history" below). |
-| `src/state/gitStore.ts` | The clone flow and the commit/pull/push panel; owns the pull/merge-branch orchestration (shared `applyMergeStart`), the field-review state, the branch switcher, the merge-branch and delete-branch prompts, the commit-history panel, and the whole-file discard action. |
+| `src/state/gitStore.ts` | The clone flow and the commit/pull/push panel (including the Amend toggle); owns the pull/merge-branch orchestration (shared `applyMergeStart`), the field-review state, the branch switcher, the merge-branch and delete-branch prompts, the commit-history panel, and the whole-file discard action. |
 | `src/components/GitCloneDialog.tsx`, `GitDialog.tsx`, `GitMergeDialog.tsx`, `GitHistoryDialog.tsx`, `MergeBranchPrompt.tsx`, `DeleteBranchPrompt.tsx` | Views over `gitStore`. |
 
 **Each dialog's width class is `.modal.git-*-dialog`, not bare `.git-*-dialog`** — a single-class
@@ -2284,6 +2341,24 @@ swallowed silently — leave the still-valid in-memory project as it was rather 
 for a resync the reviewer never asked for; a real problem will resurface the next time they actually
 open/reload the project.
 
+**Amend folds a commit into HEAD instead of creating a new one.** An "Amend
+previous commit" checkbox above the commit message field, when checked, makes
+the primary button run `git commit --amend` (scoped to the same pathspec —
+whole-file selection or the field-review `commitPartial` path — as an ordinary
+commit would use) rather than a fresh commit. Checking the box prefills an
+empty message field with HEAD's own commit message, fetched fresh via the
+`git:lastCommitMessage` IPC handler (`git log -1 --format=%B`) — but only if
+the field is still empty, so it never overwrites anything the reviewer already
+typed. The `amend` flag is threaded through the existing `git:commit`/
+`git:commitPartial` IPC calls (and `GitPlatform.commit`/`commitPartial`) end
+to end rather than as a parallel amend-specific call, since amend is otherwise
+identical to an ordinary commit — same `add`-then-`commit` shape, just one
+extra `--amend` flag. Because amending rewrites history, `runCommit` confirms
+first ("Amending replaces the previous commit. If you already pushed it,
+pushing again will require a force push. Continue?") and clears `panel.amend`
+after a successful commit. The checkbox is disabled while `dirty` (unsaved
+annotations) — amend, like commit, operates on the file on disk.
+
 ### Testing
 
 `src/git/merge.test.ts` builds every fixture through the real `loadProject`, never a hand-assembled
@@ -2432,7 +2507,8 @@ every caller fail toward a clean refusal rather than guessing an unreadable blob
   - `git:status` — raw `status --porcelain=v1 -z` + `diff --no-color HEAD --`, parsed on the renderer side (`src/git/output.ts`)
   - `git:headContent` / `git:workingContent` — the project's **reassembled logical text** at `HEAD` (`readProjectAtRevision`, walking `project.json` + `annotations/` at that revision via `git show`/`git ls-tree`) and on disk (`readProjectText`, a plain, side-effect-free read); the two inputs `detectFieldChanges` compares for the commit panel's field-level review
   - `git:commitPartial` — the write → `add` + `commit` → write-back sequence field-level commit review needs, since git has no native partial-file staging primitive; see "Field-level commit review" above
-  - `git:commit` — pathspec-limited `add` then `commit -m`
+  - `git:commit` — pathspec-limited `add` then `commit -m` (or `commit -m --amend` when the panel's Amend checkbox is set)
+  - `git:lastCommitMessage` — `git log -1 --format=%B`, to prefill the message field when the reviewer switches to amend
   - `git:push` — plain `git push`; a missing upstream surfaces git's own message rather than inventing `--set-upstream`
   - `git:pullBegin` / `git:pullFinish` / `git:pullAbort` — the pull classification and its two ways to conclude; see "Git" above for the full command sequence
   - `git:writeWorking` — writes `composeContents`'s `workingOut` directly to the working file, letting a reviewer discard local edits without committing (see "Field-level commit review" above)
@@ -2451,7 +2527,7 @@ every caller fail toward a clean refusal rather than guessing an unreadable blob
   - The **View** menu is hand-built (not the default `{ role: 'viewMenu' }`) and deliberately omits zoom roles so that `Ctrl +/-/0` reach the renderer for PDF zoom (and `Ctrl+Shift +/-/0` for app font scaling) instead of triggering native browser/Electron zoom.
 - **Unsaved-changes quit flow**: a window `close` handler (`promptUnsavedChanges`) intercepts the close/quit when `isDirty` is set, and shows a native **Save / Don't Save / Cancel** dialog. "Save" asks the renderer to save (`app:requestSave`) and closes once it reports back; "Don't Save" closes discarding changes. A `before-quit` flag lets the guard resume `app.quit()` after confirmation (so Cmd+Q fully quits on macOS, where destroying the window alone would not).
 
-**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods: `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, `pickSavePath`, `checkSiblingCollision`, plus the quit/menu coordination — `setDirty`, `onRequestSave`, `saveComplete`, `onUndo`, `onRedo` — the `git*` methods (`gitProbe`, `gitPickCloneDir`, `gitClone`, `gitPickProjectIn`, `gitInfo`, `gitStatus`, `gitHeadContent`, `gitWorkingContent`, `gitCommitPartial`, `gitCommit`, `gitPush`, `gitPullBegin`, `gitPullFinish`, `gitPullAbort`, `gitMergeBegin`, `gitLogBegin`, `gitLogDiff`, `gitWriteWorking`, `gitDiscardFile`, `gitBranches`, `gitBranchCreate`, `gitBranchDelete`, `gitCheckout`, `gitBranchSwitchBegin`, `gitBranchSwitchFinish`, `gitBranchSwitchAbort`) mirroring the `git:*` IPC handlers one for one, and the native self-update surface — `checkForNativeUpdate`, `downloadNativeUpdate`, `installNativeUpdate`, plus the `onNativeUpdate*` event subscriptions (`onNativeUpdateAvailable`, `onNativeUpdateProgress`, `onNativeUpdateDownloaded`, `onNativeUpdateError`) mirroring the `update:*` handlers in `electron/main.ts` (win/linux only; no-ops on macOS). This `window.slr` object is the detection signal for `isElectron()`.
+**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods: `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, `pickSavePath`, `checkSiblingCollision`, plus the quit/menu coordination — `setDirty`, `onRequestSave`, `saveComplete`, `onUndo`, `onRedo` — the `git*` methods (`gitProbe`, `gitPickCloneDir`, `gitClone`, `gitPickProjectIn`, `gitInfo`, `gitStatus`, `gitHeadContent`, `gitWorkingContent`, `gitCommitPartial`, `gitCommit`, `gitPush`, `gitPullBegin`, `gitPullFinish`, `gitPullAbort`, `gitMergeBegin`, `gitLogBegin`, `gitLogDiff`, `gitWriteWorking`, `gitDiscardFile`, `gitBranches`, `gitBranchCreate`, `gitBranchDelete`, `gitCheckout`, `gitBranchSwitchBegin`, `gitBranchSwitchFinish`, `gitBranchSwitchAbort`, `gitLastCommitMessage`) mirroring the `git:*` IPC handlers one for one, and the native self-update surface — `checkForNativeUpdate`, `downloadNativeUpdate`, `installNativeUpdate`, plus the `onNativeUpdate*` event subscriptions (`onNativeUpdateAvailable`, `onNativeUpdateProgress`, `onNativeUpdateDownloaded`, `onNativeUpdateError`) mirroring the `update:*` handlers in `electron/main.ts` (win/linux only; no-ops on macOS). This `window.slr` object is the detection signal for `isElectron()`.
 
 ## Hooks
 
