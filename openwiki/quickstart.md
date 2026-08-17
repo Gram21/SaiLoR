@@ -104,7 +104,7 @@ npm run typecheck
 
 ```
 ├── electron/              Electron main process + preload
-│   ├── main.ts            IPC handlers (open, openPath, save, saveAs, setDir, llm:*, git:* incl. mergeBegin/logBegin/logDiff/discardFile/branchDelete), slr-file:// protocol, window/menu setup, window-state persistence
+│   ├── main.ts            IPC handlers (open, openPath, save, saveAs, setDir, llm:*, git:* incl. mergeBegin/logBegin/logDiff/discardFile/branchDelete/lastCommitMessage, native update:* incl. Ed25519 feed-signature verification), slr-file:// protocol, window/menu setup, window-state persistence, sandbox: true
 │   └── preload.ts         contextBridge → window.slr API (openProject, openPath, save, saveAs, git*, …)
 ├── src/
 │   ├── model/              Domain model (pure, unit-tested)
@@ -119,6 +119,7 @@ npm run typecheck
 │   │   ├── validate.ts    Checks annotated papers (required / type / enum / cardinality); unannotated papers are skipped, not flagged
 │   │   ├── linkify.ts     Splits free text into plain-text and URL segments for rendering clickable links in descriptions
 │   │   ├── version.ts     Update check against the GitHub releases API (silent while the repo is private); the win/linux in-app self-updater (electron-updater) hangs off this check. Also `NEW_ISSUE_URL`, where the Help dialog's and start screen's "Report a bug" links open
+│   │   ├── updateSignature.ts  Ed25519 verification of the electron-updater feed (`latest.yml`/`latest-linux.yml`) before a native update is downloaded — the release workflow signs each feed with `scripts/sign-release.cjs`; imported by `electron/main.ts`
 │   │   └── model.test.ts  Vitest unit tests for the model
 │   ├── screening/          Screening mode: derived schema, pure logic (unit-tested)
 │   │   ├── schema.ts      The derived two-node (Decision/Reason) schema; isScreening()
@@ -172,7 +173,7 @@ npm run typecheck
 │   │   ├── ConsolidationDialog.tsx Modal: every reviewer's answer for one field; resolve, defer, or enter a different value
 │   │   ├── ClosePrompt.tsx      Save / Don't Save / Cancel when closing a dirty project
 │   │   ├── GitCloneDialog.tsx   Import-from-git modal: URL + destination → clone → pick the project JSON
-│   │   ├── GitDialog.tsx        Changes + diff, commit message, Pull, Push, branch switcher, Merge branch… and History… header buttons
+│   │   ├── GitDialog.tsx        Commit message (with Amend checkbox), Commit/Pull/Push (above the changes list), branch switcher, Merge branch… and History… header buttons
 │   │   ├── GitMergeDialog.tsx   Pull's, merge-branch's, and branch-switch's conflict-resolution list
 │   │   ├── MergeBranchPrompt.tsx  "Merge branch…" button's own small prompt — pick a branch, see the direction spelled out
 │   │   ├── DeleteBranchPrompt.tsx  "- Delete branch…" entry's own dialog — pick a local branch to delete
