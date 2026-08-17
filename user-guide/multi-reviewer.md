@@ -50,6 +50,14 @@ or analysis would actually read.
 - **Your own answers are never rearranged.** Lining the entries up is bookkeeping Consolidation keeps to
   itself: in your own reviewer seat your groups stay exactly as you typed them, in your order, with no
   blank entries inserted to match somebody else's count.
+- **Consolidation signs papers off too.** The panel's checkbox reads **Consolidation finished** in this
+  seat, and works exactly like a reviewer's (see
+  [Marking a paper finished](getting-started.md#marking-a-paper-finished)): the paper list's dot fills as
+  the consolidated record fills, turns green when you tick the box, and goes red if you tick it while a
+  `required` field is empty. The filter dropdown and its counter work here as well, so "which papers have
+  I still not settled" is one glance. Whether every reviewer has answered a paper yet is a separate fact:
+  it's in each dot's tooltip and in the `· 3/10 ready` half of the counter, and it's what the **⇄** button
+  waits for before it will open.
 
 Clicking a compare button shows every reviewer's value, and whether they agree:
 

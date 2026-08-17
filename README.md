@@ -122,9 +122,10 @@ my-review/
         └── reviewer-<n>.json   Each independent reviewer's own tree (multi-reviewer only)
 ```
 
-Each of those files also carries that seat's `"finished": true` once its reviewer ticks **Annotation
-finished** in the panel — the sign-off lives next to the answers it is about, so it merges as
-independently as they do.
+Each of those files also carries that seat's `"finished": true` once its holder ticks the sign-off box
+in the panel — **Annotation finished** for a reviewer, **Consolidation finished** in the Consolidation
+seat, which signs off `consolidated.json` the same way. The declaration lives next to the answers it is
+about, so it merges as independently as they do.
 
 Files under `annotations/` are created **lazily** — only once a reviewer has actually written
 something for that paper — and deleted again if it's cleared back to empty. A screening project names
@@ -228,9 +229,12 @@ Two optional top-level keys exist specifically to be safe from that `config` reb
   the schema is fulfilled, and no paper can be *With issues*. A dropdown under the search box filters
   the list into *Open* (anything not finished), *In progress* (the started subset — anything with at
   least one annotation, still not finished), *Finished*, and *With issues*, and counts the selected
-  bucket (`finished: 5/100`). In a **screening project** the
-  dot becomes a tri-state marker (included / excluded / undecided) with its own filter instead, and
-  there is no checkbox; see [Screening](#screening).
+  bucket (`finished: 5/100`). Every seat gets this, the **Consolidation** seat included — there the dot
+  tracks the consolidated record and the checkbox reads *Consolidation finished*, while "has every
+  reviewer answered this paper yet" moves into the dot's tooltip and a second counter
+  (`finished: 5/100 · 82/100 ready`). In a **screening project** the dot becomes a tri-state marker
+  (included / excluded / undecided) with its own filter instead, and there is no checkbox; see
+  [Screening](#screening).
 - **Search** — the box above the paper list matches title, authors, DOI, abstract, the PDF's file
   name, and the paper's own id by default. Click the **META**/**TAGS** trigger on its right edge to
   switch to searching your own recorded annotation content instead.

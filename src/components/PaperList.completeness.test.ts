@@ -5,8 +5,8 @@ import { paperCompleteness } from './PaperList'
 
 /**
  * `paperCompleteness` is the single place that decides whether the paper
- * list's dot fill applies to the current seat at all — see its doc comment
- * and `completenessApplies` in `PaperList.tsx`. Separate file from
+ * list's dot fill applies at all — see its doc comment and
+ * `completenessApplies` in `annotationState.ts`. Separate file from
  * `PaperList.test.ts` (which already covers `paperIsMarkedDone`) rather than
  * added to it, so this stream's diff does not touch a file a sibling change
  * could also be touching.
@@ -54,9 +54,24 @@ describe('paperCompleteness', () => {
     expect(paperCompleteness(p, p.papers[0], '1')).toBeNull()
   })
 
-  it('is null in the Consolidation seat of a multi-reviewer project', () => {
-    const p = project({ reviewers: 3 })
+  it('is null for a screening project in its Consolidation seat too', () => {
+    const p = project({ screening: { reasons: ['Wrong topic'] }, reviewers: 2 })
     expect(paperCompleteness(p, p.papers[0], 'consolidation')).toBeNull()
+  })
+
+  it('is computed in the Consolidation seat, from the consolidated tree', () => {
+    // That tree is the record which ships, so it carries a fill and a sign-off
+    // like any other seat's work — readiness ("has every reviewer answered")
+    // moved into the dot's tooltip instead. See `completenessApplies`.
+    const p = project({ reviewers: 3, annotations: { 'Study Type': [{ value: 'RCT' }] } })
+    expect(paperCompleteness(p, p.papers[0], 'consolidation')).toEqual({ filled: 1, total: 1 })
+  })
+
+  it('does not credit the Consolidation seat with a reviewer’s answers', () => {
+    // Reviewer 1 filled the required field; the consolidator has not adopted
+    // anything yet, and their dot must say so rather than reading across.
+    const p = project({ reviewers: 2, reviews: { '1': { 'Study Type': [{ value: 'RCT' }] } } })
+    expect(paperCompleteness(p, p.papers[0], 'consolidation')).toEqual({ filled: 0, total: 1 })
   })
 
   it('is computed normally for a single-reviewer project', () => {

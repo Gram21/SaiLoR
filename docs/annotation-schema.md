@@ -93,6 +93,11 @@ A full form is not a sign-off — the point is that "done" is a judgement a pers
 extraction, not something inferred from the fields being non-empty. Tick it while a `required` field
 is still empty (or empty such a field afterwards) and the paper shows red until the two agree again.
 
+In a multi-reviewer project every seat gets its own checkbox and its own green dot, the Consolidation
+seat included — there it reads **Consolidation finished** and is stored as the paper's `finished`
+key, alongside the consolidated `annotations` it signs off (each numbered reviewer's tick lives in
+`reviewsFinished` instead).
+
 Set it to `false` and the sign-off step disappears: the checkbox is not shown, and a paper counts as
 finished exactly when its schema is fulfilled — every `required` field filled, or every field if the
 schema marks none required. Nothing can be red in this mode, since there is no declaration left for

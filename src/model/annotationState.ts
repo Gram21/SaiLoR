@@ -35,10 +35,10 @@ import type { Project } from './project'
 export type AnnotationState = 'untouched' | 'partial' | 'complete' | 'finished' | 'flagged'
 
 /**
- * `null` where completeness itself does not apply — a screening project or the
- * Consolidation seat (see `completenessApplies` in `PaperList.tsx`). Those
- * seats have their own dot meanings and no finished checkbox, so they have no
- * state in this vocabulary at all, rather than a misleading one.
+ * `null` where completeness itself does not apply — a screening project (see
+ * `completenessApplies` below). Screening has its own dot meaning and no
+ * finished checkbox, so it has no state in this vocabulary at all, rather than
+ * a misleading one.
  *
  * `hasRequired` is what makes `flagged` mean something. Red says "you called
  * this finished while a field that *had* to be filled is empty" — so it can
@@ -93,23 +93,50 @@ export function annotationState(
 }
 
 /**
- * Whether this vocabulary applies to a seat at all — the one gate behind the
- * dot's color, the finished checkbox, and the filter dropdown, so a seat can
- * never have two of the three.
+ * Whether this vocabulary applies to a project at all — the one gate behind
+ * the dot's color, the finished checkbox, and the filter dropdown, so a seat
+ * can never have two of the three.
  *
- * A screening project already has its own tri-state included/excluded/
- * undecided marker; the derived screening schema marks nothing required, so a
- * fill would count both of its fields (Decision, Reason) — meaning an
- * "Include" decision, which needs no Reason, would read as half done for a
- * paper that is actually settled. The Consolidation seat's dot means
- * *readiness* ("has every reviewer answered"), a different question that a
- * per-field fill cannot express without conflating it with how much
- * Consolidation itself has typed.
+ * Only a screening project is excluded. It already has its own tri-state
+ * included/excluded/undecided marker; the derived screening schema marks
+ * nothing required, so a fill would count both of its fields (Decision,
+ * Reason) — meaning an "Include" decision, which needs no Reason, would read
+ * as half done for a paper that is actually settled.
+ *
+ * **Consolidation is included**, which is why this needs no seat argument at
+ * all. The consolidated tree is the record that actually ships, making it the
+ * one tree in the project most in need of a sign-off — and the storage is
+ * already there for it: `currentFinished`/`setAnnotationFinished` (store.ts)
+ * route that seat's tick to `Paper.finished`, the same field the lone reviewer
+ * of a single-reviewer project ticks. So the Consolidation dot reports the
+ * consolidator's own progress and sign-off like any other seat's, and readiness
+ * ("has every reviewer answered this paper") moves into the dot's tooltip — the
+ * same trade `paperScreeningStatus` makes for this seat. Readiness keeps its
+ * teeth where they matter: the compare popup's own gate (`Field.tsx`) is
+ * untouched by this.
+ *
+ * What that fill deliberately does *not* claim is that a human filled it:
+ * `adoptUnanimousValues` copies every unanimous answer into the consolidated
+ * tree just from opening the paper. That is exactly why the tick still decides
+ * the color rather than the data — an auto-filled paper reads as `complete`
+ * ("ready to finish"), never as `finished`, until the consolidator says so.
  */
-export function completenessApplies(project: Project, currentReviewer: string | null): boolean {
-  if (project.screening != null) return false
-  if (project.reviewers > 1 && currentReviewer === 'consolidation') return false
-  return true
+export function completenessApplies(project: Project): boolean {
+  return project.screening == null
+}
+
+/**
+ * What the annotation panel's sign-off checkbox is called in a seat — one
+ * definition, because the paper list's `complete` tooltip sends the reader to
+ * that control *by name* ("tick X in the panel"), and a tooltip naming a box
+ * the seat does not have would send them hunting for it.
+ *
+ * Consolidation signs off the reconciled record rather than its own
+ * extraction; the rule behind the box is identical either way (see
+ * `completenessApplies`), only the noun changes to say which pass it ends.
+ */
+export function finishCheckboxLabel(isConsolidation: boolean): string {
+  return isConsolidation ? 'Consolidation finished' : 'Annotation finished'
 }
 
 /**
@@ -203,12 +230,12 @@ export const ANNOTATION_FILTER_LABELS: Record<AnnotationFilter, string> = {
  * booleans; see `annotationState`). It defaults to `false`, which the other
  * buckets never consult, so a caller asking about any of them may omit it.
  *
- * `null` — the seats with no annotation state at all (screening,
- * Consolidation) — matches only "all". A stale non-'all' filter carried over
- * from another seat (e.g. a numbered reviewer's filter surviving a switch to
- * Consolidation) CAN reach this with `state === null`; callers must decide
- * for themselves whether the current seat is filterable at all before
- * applying `annotationFilter` (PaperList does this via `isConsolidationSeat`).
+ * `null` — no annotation state at all, which is now only a screening project
+ * (`completenessApplies`) — matches only "all", so a filter carried over from
+ * an annotation project cannot silently empty a screening list. Callers must
+ * still decide for themselves whether the current seat is filterable at all
+ * before applying `annotationFilter`; PaperList does this by offering the
+ * screening filter instead.
  */
 export function matchesFilter(
   state: AnnotationState | null,

@@ -469,10 +469,6 @@ button.paper-search-mode:hover {
   border-radius: 50%;
   border: 1px solid var(--muted);
 }
-.status-dot.done {
-  background: var(--ok);
-  border-color: var(--ok);
-}
 /* The annotation-state dots (see `annotationState` in
    `model/annotationState.ts`). The *fill* is progress — a pie slice via
    conic-gradient, `--fill` set inline per row as a percentage, unchanged from
@@ -513,9 +509,9 @@ button.paper-search-mode:hover {
   background: conic-gradient(var(--danger) var(--fill, 100%), transparent 0);
   border-color: var(--danger);
 }
-/* Screening's tri-state marker, replacing the plain done/not-done dot for a
-   screening project (see `paperScreeningStatus` in PaperList.tsx). Included
-   reuses the same green as `.status-dot.done` — "included" is this project's
+/* Screening's tri-state marker, replacing the states above for a screening
+   project (see `paperScreeningStatus` in PaperList.tsx). Included
+   reuses the same green as `.status-dot.finished` — "included" is this project's
    version of "settled, and the good outcome". Excluded gets its own muted
    treatment so it reads as "settled, but not carried forward" rather than
    simply "not done yet", which the plain undecided dot already means. */
