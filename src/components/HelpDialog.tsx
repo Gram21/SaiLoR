@@ -383,9 +383,17 @@ function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
             <p>
               You don't have to wait for everyone to finish before consolidating: the seat is always
               open, and it is the individual <em>papers</em> that wait. One that not every reviewer
-              has annotated yet shows as not ready in the list and keeps its <strong>⇄</strong>{' '}
-              buttons disabled — the missing reviewer's column would otherwise look like they found
-              nothing, when the truth is they haven't looked yet.
+              has annotated yet keeps its <strong>⇄</strong> buttons disabled and says so in its dot's
+              tooltip — the missing reviewer's column would otherwise look like they found nothing,
+              when the truth is they haven't looked yet. The line under <em>Papers</em> counts those,
+              as the <em>… · 3/10 ready</em> half of its text.
+            </p>
+            <p>
+              Consolidation signs papers off like any other seat: the checkbox at the top of the panel
+              reads <em>Consolidation finished</em>, the paper's dot fills as the consolidated record
+              fills and turns green once you tick it, and the filter dropdown narrows the list to what
+              you have not settled yet. That tick is yours alone — it is stored with the consolidated
+              result and claims nothing about whether the reviewers have all answered the paper.
             </p>
           </>
         ),

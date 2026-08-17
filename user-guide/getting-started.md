@@ -131,10 +131,12 @@ The **fill** is always progress; the **color** says whose move it is:
 | solid green | *Finished* | you ticked **Annotation finished** and it still holds |
 | red | *Finished, required fields missing* | ticked while a **required** field is empty — see below |
 
-This dot means something different depending on your seat: for a numbered reviewer it's your own
-progress and your own sign-off; for **Consolidation** it's a simple done/not-done marker instead
-(whether every reviewer has recorded something for that paper yet); in a **screening** project it
-becomes the tri-state include/exclude/undecided marker described in [Screening](screening.md).
+The dot always tracks **your own seat**: as a numbered reviewer it's your progress and your sign-off,
+and in **Consolidation** it's the consolidated record's progress and *your* sign-off on it. Whether
+every reviewer has answered a paper yet — the thing that decides if it's workable at all — is in that
+dot's tooltip in the Consolidation seat, and counted in the line under "Papers" (`… · 3/10 ready`).
+In a **screening** project the dot becomes the tri-state include/exclude/undecided marker described in
+[Screening](screening.md) instead.
 
 ## Marking a paper finished
 
@@ -163,7 +165,10 @@ again. Nothing is ever silently un-ticked — the declaration is yours to withdr
 box.
 
 The tick is yours alone: in a multi-reviewer project each reviewer — and Consolidation — has their
-own checkbox and their own green dot, saved in their own file.
+own checkbox and their own green dot, saved in their own file. In the Consolidation seat the box reads
+**Consolidation finished**, since what you're signing off there is the reconciled record rather than
+your own extraction; it is stored with the consolidated result, and says nothing about whether the
+reviewers have all answered the paper.
 
 ### Turning the checkbox off
 
@@ -203,8 +208,9 @@ work" is the question you actually ask a list.
 
 The line under "Papers" counts whichever bucket is selected, across the whole project regardless of
 the search box: `finished: 5/100`. With no filter set it counts *finished*, the headline number.
-Screening projects keep their own include/exclude/undecided filter instead, and the Consolidation
-seat has neither — its dot answers "has every reviewer annotated this paper" instead.
+Screening projects keep their own include/exclude/undecided filter instead. The Consolidation seat has
+the same dropdown and the same counter as any other, plus a second number for how many papers every
+reviewer has answered: `finished: 5/100 · 82/100 ready`.
 
 ## Validating
 

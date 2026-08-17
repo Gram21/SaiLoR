@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useStore, selectCurrentPaper, currentTree, currentFinished } from '../state/store'
 import { useAiStore } from '../state/aiStore'
 import { normalizeTree, isFieldVisible } from '../model/annotations'
+import { finishCheckboxLabel } from '../model/annotationState'
 import { paperCompleteness, paperAnnotationState } from './PaperList'
 import { paperVerdicts } from '../consolidate/disagreements'
 import { AnnotationNode } from './AnnotationNode'
@@ -134,10 +135,17 @@ export function AnnotationPanel() {
   // answer rather than a hole, so neither can contradict the tick.
   //
   // The one place it is *not* shown is where `paperCompleteness` is null — a
-  // screening project or the Consolidation seat — since those seats have
-  // their own dot meanings and no notion of a fulfilled schema at all. One
-  // rule (`completenessApplies`) governs the checkbox, the dot color and the
-  // filter dropdown together.
+  // screening project, which has its own tri-state marker and no notion of a
+  // fulfilled schema at all. One rule (`completenessApplies`) governs the
+  // checkbox, the dot color and the filter dropdown together.
+  //
+  // The Consolidation seat *does* get it: the consolidated tree is the record
+  // that ships, so "I am done reconciling this paper" is the sign-off that most
+  // needs saying, and the store has always routed that seat's tick to
+  // `Paper.finished` — see `completenessApplies`. Only the wording changes
+  // there, to name what is being signed off rather than to mean something
+  // different by it.
+  //
   // `config.finishCheckbox: false` removes the control entirely: with the
   // project deciding "done" from the data, a checkbox would either do nothing
   // or claim an authority it no longer has. See `Project.finishCheckbox`.
@@ -230,7 +238,9 @@ export function AnnotationPanel() {
             title={
               finishedMismatch
                 ? 'This paper is marked finished while a required field is empty — its dot in the paper list is red until the field is filled in or the mark is removed'
-                : 'Mark this paper as finished once you are done with it — only then does its dot in the paper list turn green'
+                : isConsolidation
+                  ? 'Mark this paper as consolidated once you are done reconciling it — only then does its dot in the paper list turn green. This is your own sign-off, separate from whether every reviewer has answered the paper.'
+                  : 'Mark this paper as finished once you are done with it — only then does its dot in the paper list turn green'
             }
           >
             <input
@@ -239,7 +249,12 @@ export function AnnotationPanel() {
               onChange={(e) => setAnnotationFinished(e.target.checked)}
             />
             <span>
-              Annotation finished
+              {/* Named for what it signs off, not for a different rule: the
+                  consolidator's tick is stored, colored and counted exactly
+                  like a reviewer's (see `completenessApplies`). The name lives
+                  in `finishCheckboxLabel` because the paper list's amber dot
+                  points at this control by name. */}
+              {finishCheckboxLabel(isConsolidation)}
               {finishedMismatch && ' — required fields are empty'}
             </span>
           </label>

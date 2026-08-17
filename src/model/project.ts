@@ -130,20 +130,20 @@ export interface Paper {
    *  Absent/empty in a single-reviewer project. */
   reviewMarks: Record<string, PdfMark[]>
   /**
-   * The reviewer's own "I am done with this paper" declaration for the
-   * single/consolidated tree — the checkbox in the annotation panel, and the
-   * only thing that turns the paper list's dot green (see `paperIsFinished`
-   * in `PaperList.tsx`).
+   * The "I am done with this paper" declaration for the single/consolidated
+   * tree — the checkbox in the annotation panel, and the only thing that turns
+   * the paper list's dot green (see `paperIsFinished` in `PaperList.tsx`).
+   * Written by the lone reviewer of a single-reviewer project, and by the
+   * consolidator of a multi-reviewer one: it belongs to whoever owns
+   * `annotations`, exactly like `marks` does.
    *
    * Deliberately *not* derived from the data: a full tree means every field
    * has something in it, which is a fact about the form, not a judgement that
    * the extraction is right. Only a human can make the second claim, so it is
-   * stored rather than computed. The checkbox is only offered once the schema
-   * is actually fulfilled, so a `true` here always started life alongside a
-   * complete tree — but it is not re-derived on load, and a later edit that
-   * empties a field leaves the flag standing while the dot stops being green
-   * (`PaperList.tsx` requires both), so nothing silently un-declares what a
-   * reviewer declared.
+   * stored rather than computed. It is not re-derived on load either, so a
+   * later edit that empties a field leaves the flag standing while the dot
+   * stops being green (`PaperList.tsx` requires both) — nothing silently
+   * un-declares what a reviewer declared.
    *
    * Same single-tree-vs-per-reviewer split as `annotations`/`reviews` and
    * `marks`/`reviewMarks`, and for the same reason: being finished is a
@@ -249,9 +249,11 @@ export interface Project {
    */
   aiEnabled: boolean
   /**
-   * Whether reviewers sign a paper off by hand — the "Annotation finished"
-   * checkbox in the annotation panel. Defaults to true; the provider of the
-   * file opts out with `config.finishCheckbox: false`.
+   * Whether a paper is signed off by hand — the "Annotation finished"
+   * checkbox in the annotation panel ("Consolidation finished" in the
+   * Consolidation seat, which gets one of its own; see `completenessApplies`).
+   * Defaults to true; the provider of the file opts out with
+   * `config.finishCheckbox: false`.
    *
    * With it **off**, a paper counts as finished exactly when its schema is
    * fulfilled (every field the completeness dot counts is filled — required

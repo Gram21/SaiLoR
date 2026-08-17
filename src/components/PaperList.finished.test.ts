@@ -138,13 +138,52 @@ describe('paperAnnotationState — what the dot’s color says', () => {
     expect(paperAnnotationState(p, p.papers[0], '1')).toBe('complete')
   })
 
-  it('is null in the seats where completeness does not apply (screening, Consolidation)', () => {
-    // Neither seat offers the checkbox, the filter dropdown, or these colors —
-    // both keep their own dot meaning.
+  it('is null for a screening project, the one place completeness does not apply', () => {
+    // Screening offers neither the checkbox, the filter dropdown, nor these
+    // colors — it keeps its own include/exclude/undecided marker.
     const screening = project({ screening: { reasons: ['Wrong topic'] }, paper: { finished: true } })
     expect(paperAnnotationState(screening, screening.papers[0], null)).toBeNull()
-    const consolidation = project({ reviewers: 3, paper: { annotations: FULL, finished: true } })
-    expect(paperAnnotationState(consolidation, consolidation.papers[0], 'consolidation')).toBeNull()
+    const screeningMulti = project({
+      screening: { reasons: ['Wrong topic'] },
+      reviewers: 2,
+      paper: { finished: true },
+    })
+    expect(paperAnnotationState(screeningMulti, screeningMulti.papers[0], 'consolidation')).toBeNull()
+  })
+
+  describe('the Consolidation seat', () => {
+    // It signs its own work off like any other seat: the states below are read
+    // off the consolidated tree and `Paper.finished` — the pair that seat has
+    // always written (see `completenessApplies`). Readiness is a separate fact,
+    // reported in the dot's tooltip, and deliberately not mixed in here.
+    const consolidated = (paper: Record<string, unknown>) => {
+      const p = project({ reviewers: 3, paper })
+      return paperAnnotationState(p, p.papers[0], 'consolidation')
+    }
+
+    it('runs the same states over the consolidated tree and tick', () => {
+      expect(consolidated({})).toBe('untouched')
+      expect(consolidated({ annotations: PARTIAL })).toBe('partial')
+      expect(consolidated({ annotations: FULL })).toBe('complete')
+      expect(consolidated({ annotations: FULL, finished: true })).toBe('finished')
+      expect(consolidated({ annotations: PARTIAL, finished: true })).toBe('flagged')
+    })
+
+    it('does not read a numbered reviewer’s tick as its own', () => {
+      // The mirror of the case above this describe block: neither seat's
+      // sign-off is the other's.
+      expect(consolidated({ annotations: FULL, reviewsFinished: { '1': true } })).toBe('complete')
+    })
+
+    it('is not affected by how much the reviewers filled in', () => {
+      // A paper every reviewer completed is still the consolidator's to do.
+      expect(consolidated({ reviews: { '1': FULL, '2': FULL, '3': FULL } })).toBe('untouched')
+    })
+
+    it('is green in that seat once ticked', () => {
+      const p = project({ reviewers: 3, paper: { annotations: FULL, finished: true } })
+      expect(paperIsFinished(p, p.papers[0], 'consolidation')).toBe(true)
+    })
   })
 
   it('never claims a paper is finished before a seat is picked', () => {

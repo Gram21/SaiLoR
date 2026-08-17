@@ -218,6 +218,14 @@ export function ProjectEditor() {
                 judgement a reviewer made, not something inferred from the fields being non-empty.
                 A paper ticked while a <em>required</em> field is empty shows red until the two
                 agree.
+                {multiReviewer && (
+                  <>
+                    {' '}
+                    Every seat gets its own box and its own green dot, including{' '}
+                    <strong>Consolidation</strong>, which signs the consolidated result off the same
+                    way.
+                  </>
+                )}
               </>
             ) : (
               <>

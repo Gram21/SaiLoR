@@ -902,13 +902,18 @@ export function currentFinished(
  * back to the first paper when every paper is finished (nothing is left to
  * land on, and an empty selection would show "Select a paper to annotate" on
  * a completed review) and wherever the state does not apply at all: a
- * screening project, the Consolidation seat, or a multi-reviewer project with
- * no seat picked yet, where nothing can be attributed and the list opens as
- * it always did.
+ * screening project, or a multi-reviewer project with no seat picked yet,
+ * where nothing can be attributed and the list opens as it always did.
+ *
+ * The Consolidation seat is included, having a sign-off of its own
+ * (`completenessApplies`): reopening a project as the consolidator lands on the
+ * first paper *they* have not signed off, for exactly the reason a reviewer's
+ * seat does. `loadCurrentReviewer` restores the seat before this runs, so that
+ * happens on the very first render rather than after a seat switch.
  */
 function firstUnfinishedPaperId(project: Project, currentReviewer: string | null): string | null {
   const fallback = project.papers[0]?.id ?? null
-  const applies = completenessApplies(project, currentReviewer)
+  const applies = completenessApplies(project)
   if (!applies || (project.reviewers > 1 && currentReviewer === null)) return fallback
   for (const paper of project.papers) {
     const state = annotationStateFor(
