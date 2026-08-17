@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { markVerticallyVisible } from './PdfViewer'
+import { destinationPoint, markVerticallyVisible } from './PdfViewer'
 import type { PdfMark } from '../model/pdfMarks'
 
 function mark(overrides: Partial<PdfMark> = {}): PdfMark {
@@ -22,6 +22,40 @@ function mark(overrides: Partial<PdfMark> = {}): PdfMark {
 function rect(top: number, height: number): DOMRect {
   return { top, height, bottom: top + height, left: 0, right: 0, width: 0, x: 0, y: top, toJSON: () => ({}) }
 }
+
+describe('destinationPoint', () => {
+  // dest[0] is the target page Ref — destinationPoint never reads it.
+  const ref = { num: 42, gen: 0 }
+
+  it('reads x and y from an XYZ destination', () => {
+    expect(destinationPoint([ref, { name: 'XYZ' }, 72, 680, 0])).toEqual({ x: 72, y: 680 })
+  })
+
+  it('treats an XYZ null coordinate ("keep current") as unspecified', () => {
+    expect(destinationPoint([ref, { name: 'XYZ' }, null, 680, null])).toEqual({ x: null, y: 680 })
+  })
+
+  it('reads only y from FitH/FitBH', () => {
+    expect(destinationPoint([ref, { name: 'FitH' }, 680])).toEqual({ x: null, y: 680 })
+    expect(destinationPoint([ref, { name: 'FitBH' }, 680])).toEqual({ x: null, y: 680 })
+  })
+
+  it('reads only x from FitV/FitBV', () => {
+    expect(destinationPoint([ref, { name: 'FitV' }, 72])).toEqual({ x: 72, y: null })
+    expect(destinationPoint([ref, { name: 'FitBV' }, 72])).toEqual({ x: 72, y: null })
+  })
+
+  it('anchors a FitR at its rectangle\'s top-left', () => {
+    expect(destinationPoint([ref, { name: 'FitR' }, 72, 600, 300, 680])).toEqual({ x: 72, y: 680 })
+  })
+
+  it('is fully unspecified for whole-page fits and malformed kinds', () => {
+    expect(destinationPoint([ref, { name: 'Fit' }])).toEqual({ x: null, y: null })
+    expect(destinationPoint([ref, { name: 'FitB' }])).toEqual({ x: null, y: null })
+    expect(destinationPoint([ref])).toEqual({ x: null, y: null })
+    expect(destinationPoint([ref, null, 72, 680])).toEqual({ x: null, y: null })
+  })
+})
 
 describe('markVerticallyVisible', () => {
   it('is true when the mark sits well inside the scroll container', () => {
