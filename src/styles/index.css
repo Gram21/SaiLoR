@@ -906,6 +906,23 @@ button.paper-search-mode:hover {
 .pdf-mark-tooltip-text + .pdf-mark-tooltip-links {
   margin-top: 6px;
 }
+/* Hover preview of an internal link's destination (a strip of the destination
+   page, rendered as an <img>) — framed like a page, not like a .tip, since it
+   shows page content on the page's own background. */
+.pdf-link-preview {
+  position: fixed;
+  z-index: 300;
+  padding: 4px;
+  border-radius: 6px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+.pdf-link-preview img {
+  display: block;
+  border-radius: 3px;
+}
 .pdf-scroll {
   flex: 1 1 auto;
   overflow: auto;

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Document, Page } from 'react-pdf'
+import type { PDFDocumentProxy } from 'pdfjs-dist'
 import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import { useStore, selectCurrentPaper, PDF_ZOOM_MIN, PDF_ZOOM_MAX } from '../state/store'
@@ -126,6 +127,37 @@ function markTooltipCoords(el: HTMLElement): { x: number; top?: number; bottom?:
   const openUp = spaceBelow < 100 && r.top > spaceBelow
   return openUp ? { x: r.left, bottom: window.innerHeight - r.top + 6 } : { x: r.left, top: r.bottom + 6 }
 }
+
+/** The x/y a PDF explicit destination points at, in PDF user space, with
+ *  `null` for each axis the destination kind leaves unspecified (a `FitH`
+ *  names only a vertical position, a `FitV` only a horizontal one, a plain
+ *  `Fit` neither). Exported for its unit test — the rest of the link-preview
+ *  flow needs a live pdf.js document and a rendered canvas. */
+export function destinationPoint(dest: unknown[]): { x: number | null; y: number | null } {
+  const kind = (dest[1] as { name?: string } | null | undefined)?.name
+  const num = (v: unknown): number | null => (typeof v === 'number' ? v : null)
+  switch (kind) {
+    case 'XYZ':
+      return { x: num(dest[2]), y: num(dest[3]) }
+    case 'FitH':
+    case 'FitBH':
+      return { x: null, y: num(dest[2]) }
+    case 'FitV':
+    case 'FitBV':
+      return { x: num(dest[2]), y: null }
+    case 'FitR':
+      // [ref, {FitR}, x1, y1, x2, y2] — anchor at the rectangle's top-left.
+      return { x: num(dest[2]), y: num(dest[5]) }
+    default:
+      return { x: null, y: null }
+  }
+}
+
+/** On-screen size cap (CSS px) for the internal-link hover preview — a window
+ *  onto the destination page at its current render scale, big enough for a
+ *  typical bibliography entry's few lines. */
+const LINK_PREVIEW_MAX_W = 560
+const LINK_PREVIEW_MAX_H = 150
 
 /** The subset of a mouse event `onOpen` actually needs — deliberately not
  *  `React.MouseEvent`, since `handleMarkMouseDown` calls it once more from a
@@ -312,6 +344,25 @@ export function PdfViewer() {
   const matchesRef = useRef<Range[]>([])
   const searchInputRef = useRef<HTMLInputElement>(null)
 
+  // Reference hovering (#8): hovering an internal PDF link (a citation, a
+  // figure/table reference, a TOC entry) previews its destination — a strip
+  // of the destination page, copied from that page's already-rendered canvas
+  // (every page is mounted, no virtualization), so no extra pdf.js render.
+  const pdfDocRef = useRef<PDFDocumentProxy | null>(null)
+  const linkHoverTokenRef = useRef(0)
+  const [linkPreview, setLinkPreview] = useState<{
+    left: number
+    top?: number
+    bottom?: number
+    img: string
+    width: number
+    height: number
+  } | null>(null)
+  const hideLinkPreview = () => {
+    linkHoverTokenRef.current++ // invalidates any in-flight resolution too
+    setLinkPreview(null)
+  }
+
   // Jump history (back/forward for in-PDF link jumps). Scroll positions before a
   // link jump go on the back stack; back/forward move between them like a browser.
   const backStackRef = useRef<number[]>([])
@@ -351,6 +402,8 @@ export function PdfViewer() {
     setPlacingNote(false)
     setCycleIndex(null)
     setFlashMarkId(null)
+    pdfDocRef.current = null
+    hideLinkPreview()
     if (flashTimeoutRef.current !== undefined) window.clearTimeout(flashTimeoutRef.current)
     revokeRef.current?.()
     revokeRef.current = undefined
@@ -456,6 +509,7 @@ export function PdfViewer() {
     // Popovers are fixed-position at a captured client point; scrolling invalidates it.
     setSelectionToolbar(null)
     setActiveMark(null)
+    hideLinkPreview()
   }
 
   // Keep the page input in sync with the current page (unless the user is editing it).
@@ -891,8 +945,96 @@ export function PdfViewer() {
   const onPdfClickCapture = (e: React.MouseEvent) => {
     const el = e.target as HTMLElement | null
     if (!el?.closest('a')) return
+    hideLinkPreview() // the jump is about to move the view out from under it
     const root = containerRef.current
     if (root) recordJumpIfMoved(root.scrollTop)
+  }
+
+  /** Build the hover preview for one internal-link annotation: resolve where
+   *  it points, then copy a `LINK_PREVIEW_MAX_W`×`MAX_H` window (starting just
+   *  above/left of the destination point) out of the destination page's
+   *  rendered canvas, 1:1 at the current zoom — the preview is exactly as
+   *  readable as the page itself. Returns `null` for external links, dangling
+   *  destinations, or a destination page whose canvas hasn't rendered yet. */
+  const resolveLinkPreview = async (
+    doc: PDFDocumentProxy,
+    pageNum: number,
+    annotationId: string,
+  ): Promise<{ img: string; width: number; height: number } | null> => {
+    const srcPage = await doc.getPage(pageNum)
+    const annots: { id: string; url?: string; dest?: string | unknown[] }[] = await srcPage.getAnnotations()
+    const annot = annots.find((a) => a.id === annotationId)
+    if (!annot || annot.url || !annot.dest) return null // external link, or no jump target
+    const dest = typeof annot.dest === 'string' ? await doc.getDestination(annot.dest) : annot.dest
+    if (!Array.isArray(dest) || dest.length === 0) return null
+    // The explicit destination's page: usually a Ref, but some producers
+    // (and remote-destination edge cases) put a plain page index there.
+    const targetIndex = typeof dest[0] === 'number' ? dest[0] : await doc.getPageIndex(dest[0])
+    const canvas = pageRefs.current[targetIndex]?.querySelector('canvas')
+    if (!canvas || canvas.width === 0) return null
+    const targetPage = await doc.getPage(targetIndex + 1)
+    const { x, y } = destinationPoint(dest)
+    const vp = targetPage.getViewport({ scale: 1 })
+    const view = targetPage.view // [x0, y0, x1, y1] in PDF user space
+    const [vx, vy] = vp.convertToViewportPoint(x ?? view[0], y ?? view[3])
+    const rect = canvas.getBoundingClientRect()
+    if (rect.width === 0 || rect.height === 0) return null
+    const pad = 6 // so the first line/character at the destination isn't clipped
+    const cropX = Math.max(0, Math.min(1, vx / vp.width) * rect.width - pad)
+    const cropY = Math.max(0, Math.min(1, vy / vp.height) * rect.height - pad)
+    const width = Math.min(LINK_PREVIEW_MAX_W, rect.width - cropX)
+    const height = Math.min(LINK_PREVIEW_MAX_H, rect.height - cropY)
+    if (width < 40 || height < 20) return null // destination at the very page edge
+    const scale = canvas.width / rect.width // backing px per CSS px
+    const out = document.createElement('canvas')
+    out.width = Math.round(width * scale)
+    out.height = Math.round(height * scale)
+    const ctx = out.getContext('2d')
+    if (!ctx) return null
+    ctx.drawImage(canvas, cropX * scale, cropY * scale, width * scale, height * scale, 0, 0, out.width, out.height)
+    return { img: out.toDataURL(), width, height }
+  }
+
+  // Hover handlers for pdf.js's annotation-layer links, delegated from the
+  // scroll container (the `<a>`s are pdf.js DOM, not React's — same reason
+  // `onPdfClickCapture` works this way). `mouseover`/`mouseout` re-fire when
+  // moving between a link's descendants; the `relatedTarget` checks keep the
+  // preview stable across those.
+  const onPdfMouseOver = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement | null
+    const a = target?.closest('.react-pdf__Page__annotations a')
+    if (!(a instanceof HTMLAnchorElement)) return
+    const from = e.relatedTarget instanceof Node ? e.relatedTarget : null
+    if (from && a.contains(from)) return // still inside the same link
+    const section = a.closest<HTMLElement>('section[data-annotation-id]')
+    const annotationId = section?.dataset.annotationId
+    const doc = pdfDocRef.current
+    const pageNum = pageNumberForNode(a)
+    if (!annotationId || !doc || pageNum === null) return
+    const anchor = a.getBoundingClientRect() // captured now — resolution is async
+    const token = ++linkHoverTokenRef.current
+    resolveLinkPreview(doc, pageNum, annotationId)
+      .then((p) => {
+        if (!p || token !== linkHoverTokenRef.current) return
+        // Same flip-up-when-cramped placement as `markTooltipCoords`, with the
+        // preview's real height (known only now) instead of its fixed guess.
+        const spaceBelow = window.innerHeight - anchor.bottom
+        const openUp = spaceBelow < p.height + 12 && anchor.top > spaceBelow
+        setLinkPreview({
+          left: Math.max(8, Math.min(anchor.left, window.innerWidth - p.width - 16)),
+          ...(openUp ? { bottom: window.innerHeight - anchor.top + 6 } : { top: anchor.bottom + 6 }),
+          ...p,
+        })
+      })
+      .catch(() => {}) // a malformed destination just means no preview
+  }
+  const onPdfMouseOut = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement | null
+    const a = target?.closest('.react-pdf__Page__annotations a')
+    if (!a) return
+    const to = e.relatedTarget instanceof Node ? e.relatedTarget : null
+    if (to && a.contains(to)) return
+    hideLinkPreview()
   }
 
   const jumpBack = () => {
@@ -1407,6 +1549,8 @@ export function PdfViewer() {
         onScroll={updateCurrentPage}
         onClickCapture={onPdfClickCapture}
         onClick={placeNote}
+        onMouseOver={onPdfMouseOver}
+        onMouseOut={onPdfMouseOut}
       >
         {error ? (
           <div className="pdf-error">Could not load PDF: {error}</div>
@@ -1440,6 +1584,7 @@ export function PdfViewer() {
               // reach five figures.
               setNumPages(Math.min(doc.numPages, MAX_PDF_PAGES))
               setTruncatedPages(doc.numPages > MAX_PDF_PAGES ? doc.numPages : 0)
+              pdfDocRef.current = doc // for resolving link destinations on hover
             }}
             onLoadError={(err) => setError(String(err?.message ?? err))}
             loading={<div className="pdf-loading">Loading PDF…</div>}
@@ -1560,6 +1705,20 @@ export function PdfViewer() {
             </div>
           )
         })()}
+      {linkPreview &&
+        createPortal(
+          <div
+            className="pdf-link-preview"
+            role="tooltip"
+            style={{
+              left: linkPreview.left,
+              ...(linkPreview.top !== undefined ? { top: linkPreview.top } : { bottom: linkPreview.bottom }),
+            }}
+          >
+            <img src={linkPreview.img} width={linkPreview.width} height={linkPreview.height} alt="Preview of the link's destination" />
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }
