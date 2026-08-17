@@ -6,8 +6,9 @@ import type { RecentEntry, SaveHandle } from '../platform/adapter'
  * of PDF highlights and comments. Routed through `currentMarks` exactly like
  * `currentTree` routes annotation answers — single-reviewer/Consolidation
  * share `paper.marks`, each other reviewer gets their own
- * `paper.reviewMarks[n]`. Deliberately outside the annotation undo stack (see
- * `pdfMarks.ts`'s doc comment) — these tests only assert `dirty`, never `past`.
+ * `paper.reviewMarks[n]`. Each is its own undo step, same as any other
+ * annotation edit — Ctrl+Z right after drawing a highlight undoes the
+ * highlight, not whatever was last edited before it.
  */
 
 const mockPlatform = {
@@ -115,9 +116,48 @@ describe('PDF marks — single-reviewer project', () => {
     expect(st().currentPdfMarks()).toEqual([])
   })
 
-  it('is not part of the annotation undo stack', () => {
+  it('addHighlight pushes its own undo step — undo removes the highlight', () => {
     st().addHighlight(1, [rect])
-    expect(st().past).toHaveLength(0)
+    expect(st().past).toHaveLength(1)
+    expect(st().currentPdfMarks()).toHaveLength(1)
+    st().undo()
+    expect(st().currentPdfMarks()).toEqual([])
+  })
+
+  it('removeMark is undoable — undo restores the removed highlight', () => {
+    const id = st().addHighlight(1, [rect])!
+    st().removeMark(id)
+    expect(st().currentPdfMarks()).toEqual([])
+    st().undo()
+    expect(st().currentPdfMarks()).toHaveLength(1)
+    expect(st().currentPdfMarks()[0].id).toBe(id)
+  })
+
+  it('setMarkColor is undoable', () => {
+    const id = st().addHighlight(1, [rect])!
+    st().setMarkColor(id, '#d0bfff')
+    st().undo()
+    expect(st().currentPdfMarks().find((m) => m.id === id)?.color).not.toBe('#d0bfff')
+  })
+
+  it('setMarkComment coalesces consecutive edits into one undo step, like a field value', () => {
+    const id = st().addHighlight(1, [rect])!
+    const afterCreate = st().past.length
+    st().setMarkComment(id, 'w')
+    st().setMarkComment(id, 'wo')
+    st().setMarkComment(id, 'worth citing')
+    expect(st().past.length).toBe(afterCreate + 1)
+    st().undo()
+    expect(st().currentPdfMarks()[0].comment).toBe('')
+  })
+
+  it('editing a different mark\'s comment breaks the coalescing run', () => {
+    const idA = st().addHighlight(1, [rect])!
+    const idB = st().addHighlight(1, [{ ...rect, x: 0.5 }])!
+    st().setMarkComment(idA, 'a')
+    const afterA = st().past.length
+    st().setMarkComment(idB, 'b')
+    expect(st().past.length).toBe(afterA + 1)
   })
 })
 

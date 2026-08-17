@@ -2008,11 +2008,17 @@ export const useStore = create<AppState>()(
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) return null
       const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`
       const now = new Date().toISOString()
+      // Its own undo step, like every other mark mutation below — without
+      // this, Ctrl+Z right after drawing a highlight had no snapshot to pop
+      // and silently undid whatever *earlier* edit was last recorded instead.
+      const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
+      lastFieldKey = null
       set((s) => {
         const paper = currentPaper(s)
         if (!paper) return
         const marks = currentMarks(s.project!, s.currentReviewer, paper, true)
         if (!marks) return
+        pushPast(s, snap)
         marks.push({
           id,
           page,
@@ -2032,12 +2038,26 @@ export const useStore = create<AppState>()(
     },
 
     setMarkComment: (id, comment) => {
+      const prev = get()
+      if (!prev.project) return
+      // Typed character by character, like a field value — collapse a run of
+      // keystrokes into the mark's own single undo step rather than one per
+      // character. Sharing `lastFieldKey` (keyed distinctly, `mark-comment:id`)
+      // means every other coalescable edit already resets it correctly:
+      // moving to a different field, a different mark, or any other mark
+      // mutation below all break the run, same as they already do for
+      // `setFieldValue`'s own coalescing.
+      const key = `mark-comment:${id}`
+      const coalesce = key === lastFieldKey
+      lastFieldKey = key
+      const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
       set((s) => {
         const paper = currentPaper(s)
         if (!paper || !s.project) return
         const marks = currentMarks(s.project, s.currentReviewer, paper, false)
         const mark = marks?.find((m) => m.id === id)
         if (!mark) return
+        if (!coalesce) pushPast(s, snap)
         const now = new Date().toISOString()
         mark.comment = comment
         mark.updatedAt = now
@@ -2055,12 +2075,17 @@ export const useStore = create<AppState>()(
     },
 
     setMarkColor: (id, color) => {
+      const prev = get()
+      if (!prev.project) return
+      const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
       set((s) => {
         const paper = currentPaper(s)
         if (!paper || !s.project) return
         const marks = currentMarks(s.project, s.currentReviewer, paper, false)
         const mark = marks?.find((m) => m.id === id)
         if (!mark) return
+        pushPast(s, snap)
+        lastFieldKey = null
         const now = new Date().toISOString()
         mark.color = color
         mark.updatedAt = now
@@ -2078,6 +2103,9 @@ export const useStore = create<AppState>()(
     },
 
     removeMark: (id) => {
+      const prev = get()
+      if (!prev.project) return
+      const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
       set((s) => {
         const paper = currentPaper(s)
         if (!paper || !s.project) return
@@ -2085,6 +2113,8 @@ export const useStore = create<AppState>()(
         if (!marks) return
         const mark = marks.find((m) => m.id === id)
         if (!mark) return
+        pushPast(s, snap)
+        lastFieldKey = null
         const groupId = mark.groupId
         for (let i = marks.length - 1; i >= 0; i--) {
           if (marks[i].id === id || (groupId && marks[i].groupId === groupId)) marks.splice(i, 1)
@@ -2099,12 +2129,17 @@ export const useStore = create<AppState>()(
     // other, and `clearPendingMarkLink` below consuming the offer as a side
     // effect is exactly the "offered once" behavior it is supposed to have.
     linkMarkToField: (markId, path, name, index) => {
+      const prev = get()
+      if (!prev.project) return
+      const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
       set((s) => {
         const paper = currentPaper(s)
         if (!paper || !s.project) return
         const marks = currentMarks(s.project, s.currentReviewer, paper, false)
         const mark = marks?.find((m) => m.id === markId)
         if (!mark) return
+        pushPast(s, snap)
+        lastFieldKey = null
         const canonical = fieldPath(path, name, index)
         const label = displayPath([...path, { name, index }])
         const now = new Date().toISOString()
@@ -2121,12 +2156,17 @@ export const useStore = create<AppState>()(
     },
 
     unlinkMarkFromField: (markId, canonicalPath) => {
+      const prev = get()
+      if (!prev.project) return
+      const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
       set((s) => {
         const paper = currentPaper(s)
         if (!paper || !s.project) return
         const marks = currentMarks(s.project, s.currentReviewer, paper, false)
         const mark = marks?.find((m) => m.id === markId)
         if (!mark) return
+        pushPast(s, snap)
+        lastFieldKey = null
         const now = new Date().toISOString()
         const group = mark.groupId ? marks!.filter((m) => m.groupId === mark.groupId) : [mark]
         for (const m of group) {
