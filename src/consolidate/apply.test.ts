@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { resolveSchema, type AnnotationDef } from '../model/schema'
 import { normalizeTree, pruneTree, type AnnotationValueTree } from '../model/annotations'
-import { alignPaper } from './align'
+import { alignNode } from './align'
 import { growConsolidated, toStoredAlignment } from './apply'
 
 const FINDINGS: AnnotationDef[] = [
@@ -39,7 +39,7 @@ describe('growConsolidated', () => {
       '2': { Findings: [finding('Gamma'), finding('Alpha')] },
     })
     const before = JSON.stringify(reviews)
-    growConsolidated(schema, alignPaper(schema, reviews), consolidated)
+    growConsolidated(schema, alignNode(schema, reviews, 'Findings'), consolidated)
     expect(JSON.stringify(reviews)).toBe(before)
   })
 
@@ -48,7 +48,7 @@ describe('growConsolidated', () => {
       '1': { Findings: [finding('Alpha')] },
       '2': { Findings: [finding('Alpha'), finding('Beta'), finding('Gamma')] },
     })
-    expect(growConsolidated(schema, alignPaper(schema, reviews), consolidated)).toBe(true)
+    expect(growConsolidated(schema, alignNode(schema, reviews, 'Findings'), consolidated)).toBe(true)
     expect(consolidated['Findings']).toHaveLength(3)
   })
 
@@ -59,7 +59,7 @@ describe('growConsolidated', () => {
       '1': { Findings: [finding('a'), finding('b'), finding('c')] },
       '2': { Findings: [finding('d'), finding('a')] },
     })
-    growConsolidated(schema, alignPaper(schema, reviews), consolidated)
+    growConsolidated(schema, alignNode(schema, reviews, 'Findings'), consolidated)
 
     expect(consolidated['Findings']).toHaveLength(4)
     // ...and neither reviewer's stored list gained a phantom entry for it.
@@ -72,7 +72,7 @@ describe('growConsolidated', () => {
     const consolidated = normalizeTree(resolveSchema(FINDINGS), {
       Findings: [finding('Alpha'), finding('Mine'), finding('Also mine')],
     })
-    growConsolidated(schema, alignPaper(schema, reviews), consolidated)
+    growConsolidated(schema, alignNode(schema, reviews, 'Findings'), consolidated)
     expect(claims(consolidated)).toEqual(['Alpha', 'Mine', 'Also mine'])
   })
 
@@ -82,8 +82,8 @@ describe('growConsolidated', () => {
       '1': { Findings: [finding('Alpha'), finding('Beta')] },
       '2': { Findings: [finding('Alpha'), finding('Beta')] },
     })
-    expect(growConsolidated(schema, alignPaper(schema, reviews), consolidated)).toBe(true)
-    expect(growConsolidated(schema, alignPaper(schema, reviews), consolidated)).toBe(false)
+    expect(growConsolidated(schema, alignNode(schema, reviews, 'Findings'), consolidated)).toBe(true)
+    expect(growConsolidated(schema, alignNode(schema, reviews, 'Findings'), consolidated)).toBe(false)
   })
 
   it('respects a node\'s max when growing', () => {
@@ -92,7 +92,7 @@ describe('growConsolidated', () => {
       '1': { Findings: [{ value: 'a' }, { value: 'b' }] },
       '2': { Findings: [{ value: 'b' }, { value: 'a' }] },
     })
-    growConsolidated(schema, alignPaper(schema, reviews), consolidated)
+    growConsolidated(schema, alignNode(schema, reviews, 'Findings'), consolidated)
     expect(consolidated['Findings']).toHaveLength(2)
   })
 
@@ -122,7 +122,7 @@ describe('growConsolidated', () => {
         ],
       },
     })
-    growConsolidated(schema, alignPaper(schema, reviews), consolidated)
+    growConsolidated(schema, alignNode(schema, reviews, 'Finding'), consolidated)
 
     expect(consolidated['Finding']).toHaveLength(2)
     // The "Alpha" slot is the one holding two pieces of evidence.
@@ -137,9 +137,9 @@ describe('growConsolidated', () => {
       '1': { Findings: [finding('Alpha'), finding('Beta')] },
       '2': { Findings: [finding('Beta'), finding('Alpha')] },
     })
-    growConsolidated(schema, alignPaper(schema, reviews), consolidated)
+    growConsolidated(schema, alignNode(schema, reviews, 'Findings'), consolidated)
     const after = JSON.stringify(consolidated)
-    growConsolidated(schema, alignPaper(schema, reviews), consolidated)
+    growConsolidated(schema, alignNode(schema, reviews, 'Findings'), consolidated)
     expect(JSON.stringify(consolidated)).toBe(after)
   })
 })
@@ -150,7 +150,7 @@ describe('toStoredAlignment', () => {
       '1': { Findings: [finding('Alpha'), finding('Beta')] },
       '2': { Findings: [finding('Beta')] },
     })
-    const stored = toStoredAlignment(alignPaper(schema, reviews))
+    const stored = toStoredAlignment(alignNode(schema, reviews, 'Findings'))
 
     expect(stored['Findings']).toEqual([{ members: { '1': 0 } }, { members: { '1': 1, '2': 0 } }])
     // No `agreement`/`evidence`/`counts` — they are re-derived, never stored.
@@ -174,7 +174,7 @@ describe('toStoredAlignment', () => {
       '1': { Finding: [{ children: { Claim: [{ value: 'Alpha' }], Evidence: [ev('precision'), ev('recall')] } }] },
       '2': { Finding: [{ children: { Claim: [{ value: 'Alpha' }], Evidence: [ev('recall'), ev('precision')] } }] },
     })
-    const stored = toStoredAlignment(alignPaper(schema, reviews))
+    const stored = toStoredAlignment(alignNode(schema, reviews, 'Finding'))
 
     const slot = stored['Finding'][0]
     expect(slot.members).toEqual({ '1': 0, '2': 0 })

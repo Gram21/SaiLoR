@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { isSafeRef, refProblem } from './ref'
+import { refProblem } from './ref'
 
 describe('refProblem', () => {
   it('accepts the branch names git itself produces', () => {
     for (const ref of ['main', 'feature/x', 'origin/main', 'origin/feature/nested/x', 'v1.6.2', 'a_b-c']) {
       expect(refProblem(ref), ref).toBeNull()
-      expect(isSafeRef(ref), ref).toBe(true)
     }
   })
 

@@ -44,11 +44,6 @@ export function relPathProblem(p: string): RelPathProblem | null {
   return null
 }
 
-/** True when `p` is safe to join onto a repository root. */
-export function isSafeRelPath(p: string): boolean {
-  return relPathProblem(p) === null
-}
-
 /** The project's `annotations/` folder, git-style (forward slashes,
  *  repo-root-relative) — derived from the project file's own `relPath` so
  *  the derivation has one implementation, shared by the main process (which

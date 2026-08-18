@@ -399,7 +399,7 @@ export class ElectronAdapter implements PlatformAdapter {
   async callLlm(request: LlmHttpRequest, signal?: AbortSignal): Promise<LlmHttpResponse> {
     // An AbortSignal cannot cross IPC, so the call is given an id and Cancel
     // sends a separate abort message that main matches against it.
-    const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    const requestId = crypto.randomUUID()
     const onAbort = () => bridge().abortLlm(requestId)
     signal?.addEventListener('abort', onAbort, { once: true })
     try {

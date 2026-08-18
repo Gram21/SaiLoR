@@ -2136,7 +2136,7 @@ export const useStore = create<AppState>()(
       const prev = get()
       if (!prev.project || rects.length === 0) return null
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) return null
-      const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+      const id = crypto.randomUUID()
       const now = new Date().toISOString()
       // Its own undo step, like every other mark mutation below — without
       // this, Ctrl+Z right after drawing a highlight had no snapshot to pop

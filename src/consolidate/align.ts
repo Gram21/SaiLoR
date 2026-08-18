@@ -563,22 +563,12 @@ function widenList(
 }
 
 /**
- * Align every reviewer's tree for one paper.
- *
- * `reviews` is keyed by reviewer id and must *exclude* the consolidated tree:
- * consolidation is the thing being built from this, not a voice in it.
- */
-export function alignPaper(
-  schema: ResolvedDef[],
-  reviews: Record<string, AnnotationValueTree>,
-): TreeAlignment {
-  return alignLevel(schema, reviews, new Map())
-}
-
-/**
  * Align one top-level node, returning an alignment shaped like a whole-paper
  * one but holding only that node — `applyAlignment` skips what it does not find,
  * so a partial result applies as-is.
+ *
+ * `reviews` is keyed by reviewer id and must *exclude* the consolidated tree:
+ * consolidation is the thing being built from this, not a voice in it.
  *
  * The unit the scheduler works in. A node is independent of its siblings, so
  * doing them one at a time is what lets the work be spread across frames and

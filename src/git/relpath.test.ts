@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { relPathProblem, isSafeRelPath, annotationsRelDir } from './relpath'
+import { relPathProblem, annotationsRelDir } from './relpath'
 
 /**
  * This gate stands in front of file writes into a git repository, and the
@@ -10,7 +10,7 @@ import { relPathProblem, isSafeRelPath, annotationsRelDir } from './relpath'
 describe('relPathProblem', () => {
   it('accepts ordinary project-relative paths', () => {
     for (const p of ['project.json', 'papers/a.json', 'a/b/c/d.json', 'my.git/x', '..git/x', 'git/x']) {
-      expect(isSafeRelPath(p), p).toBe(true)
+      expect(relPathProblem(p), p).toBeNull()
     }
   })
 

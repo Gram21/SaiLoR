@@ -983,7 +983,7 @@ export function PdfViewer() {
   const commitHighlight = (color: string) => {
     if (!selectionToolbar) return
     const { x, y, spans, text } = selectionToolbar
-    const groupId = spans.length > 1 ? `${Date.now()}-${Math.random().toString(36).slice(2)}` : undefined
+    const groupId = spans.length > 1 ? crypto.randomUUID() : undefined
     let id: string | null = null
     for (const span of spans) {
       const spanId = addHighlight(span.page, span.rects, color, undefined, text, groupId)

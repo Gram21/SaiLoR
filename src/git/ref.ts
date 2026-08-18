@@ -58,8 +58,3 @@ export function refProblem(ref: string): RefProblem | null {
   }
   return null
 }
-
-/** True when `ref` is safe to pass to git as a branch name. */
-export function isSafeRef(ref: string): boolean {
-  return refProblem(ref) === null
-}

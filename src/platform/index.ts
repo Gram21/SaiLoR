@@ -1,7 +1,7 @@
 import type { PlatformAdapter } from './adapter'
 import { isElectron } from './adapter'
 import { ElectronAdapter } from './electron'
-import { UnsupportedAdapter } from './unsupported'
+import { createUnsupportedAdapter } from './unsupported'
 
 let cached: PlatformAdapter | null = null
 
@@ -12,11 +12,12 @@ let cached: PlatformAdapter | null = null
  * which blocks every project-opening UI before it can call anything below) —
  * so the non-Electron case only needs to exist at all because store.ts reads
  * `getPlatform().getRecents()` at module load, before `App` ever renders.
- * `UnsupportedAdapter` answers that safely; nothing else should ever reach it.
+ * `createUnsupportedAdapter` answers that safely; nothing else should ever
+ * reach it.
  */
 export function getPlatform(): PlatformAdapter {
   if (!cached) {
-    cached = isElectron() ? new ElectronAdapter() : new UnsupportedAdapter()
+    cached = isElectron() ? new ElectronAdapter() : createUnsupportedAdapter()
   }
   return cached
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { resolveSchema, type AnnotationDef } from '../model/schema'
 import { normalizeTree, type AnnotationValueTree } from '../model/annotations'
-import { alignPaper, type NodeAlignment } from './align'
+import { alignNode, type NodeAlignment } from './align'
 
 /** Resolve a schema and normalise each reviewer's raw tree against it. */
 function setup(defs: AnnotationDef[], raw: Record<string, AnnotationValueTree>) {
@@ -18,7 +18,7 @@ function slotsOf(alignment: NodeAlignment, reviewer: string): number[] {
   return alignment.slots.map((s) => s.members[reviewer] ?? -1)
 }
 
-describe('alignPaper', () => {
+describe('alignNode', () => {
   const findings: AnnotationDef[] = [
     {
       name: 'Findings',
@@ -48,7 +48,7 @@ describe('alignPaper', () => {
         ],
       },
     })
-    const alignment = alignPaper(schema, reviews)['Findings']
+    const alignment = alignNode(schema, reviews, 'Findings')['Findings']
 
     expect(slotsOf(alignment, '1')).toEqual([0, 1, 2])
     expect(slotsOf(alignment, '2')).toEqual([2, 1, 0])
@@ -61,7 +61,7 @@ describe('alignPaper', () => {
       '1': { Findings: [{ children: { Claim: [{ value: 'Unit tests reduce defects' }] } }] },
       '2': { Findings: [{ children: { Claim: [{ value: 'unit tests reduce defect' }] } }] },
     })
-    const alignment = alignPaper(schema, reviews)['Findings']
+    const alignment = alignNode(schema, reviews, 'Findings')['Findings']
     expect(alignment.slots[0].members).toEqual({ '1': 0, '2': 0 })
     expect(alignment.slots[0].agreement).toBeGreaterThan(0.8)
   })
@@ -80,7 +80,7 @@ describe('alignPaper', () => {
         ],
       },
     })
-    const alignment = alignPaper(schema, reviews)['Findings']
+    const alignment = alignNode(schema, reviews, 'Findings')['Findings']
     const slotWithR1 = alignment.slots.find((s) => s.members['1'] !== undefined)
     expect(slotWithR1?.members['2']).toBe(1)
   })
@@ -113,7 +113,7 @@ describe('alignPaper', () => {
         ],
       },
     })
-    const alignment = alignPaper(schema, reviews)['Study']
+    const alignment = alignNode(schema, reviews, 'Study')['Study']
     expect(slotsOf(alignment, '2')).toEqual([1, 0])
     for (const slot of alignment.slots) expect(slot.agreement).toBe(1)
   })
@@ -159,7 +159,7 @@ describe('alignPaper', () => {
         ],
       },
     })
-    const alignment = alignPaper(schema, reviews)['Finding']
+    const alignment = alignNode(schema, reviews, 'Finding')['Finding']
     // Parents swapped...
     expect(slotsOf(alignment, '2')).toEqual([1, 0])
 
@@ -191,7 +191,7 @@ describe('alignPaper', () => {
         ],
       },
     })
-    const alignment = alignPaper(schema, reviews)['Findings']
+    const alignment = alignNode(schema, reviews, 'Findings')['Findings']
 
     expect(alignment.slots).toHaveLength(4)
     expect(alignment.counts).toEqual({ '1': 3, '2': 2 })
@@ -244,7 +244,7 @@ describe('alignPaper', () => {
         G: [g('Pair programming slows delivery', 'Appendix B'), g('Tests reduce defects', 'Table 1')],
       },
     })
-    const alignment = alignPaper(schema, reviews)['G']
+    const alignment = alignNode(schema, reviews, 'G')['G']
 
     expect(alignment.slots).toHaveLength(4)
     // The one genuinely shared group, and nothing else, is matched.
@@ -270,7 +270,7 @@ describe('alignPaper', () => {
       '2': { Findings: [{ children: { Claim: [{ value: 'c' }] } }] },
       '3': { Findings: [{ children: { Claim: [{ value: 'c' }] } }] },
     })
-    const alignment = alignPaper(schema, reviews)['Findings']
+    const alignment = alignNode(schema, reviews, 'Findings')['Findings']
 
     expect(alignment.slots).toHaveLength(3)
     const cSlot = alignment.slots.find((s) => s.members['2'] !== undefined)
@@ -289,7 +289,7 @@ describe('alignPaper', () => {
         ],
       },
     })
-    const alignment = alignPaper(schema, reviews)['Findings']
+    const alignment = alignNode(schema, reviews, 'Findings')['Findings']
     expect(alignment.slots).toHaveLength(3)
     expect(alignment.counts).toEqual({ '1': 1, '2': 3 })
     // Reviewer 1's single entry lands with its counterpart, not just in slot 0.
@@ -313,7 +313,7 @@ describe('alignPaper', () => {
       },
       '3': { Findings: [{ children: { Claim: [{ value: 'Beta' }] } }] },
     })
-    const alignment = alignPaper(schema, reviews)['Findings']
+    const alignment = alignNode(schema, reviews, 'Findings')['Findings']
     const betaSlot = alignment.slots.find((s) => s.members['3'] !== undefined)
     // Whichever slot Beta ended up in, all three reviewers' Betas are in it.
     expect(betaSlot).toBeDefined()
@@ -328,7 +328,7 @@ describe('alignPaper', () => {
       '1': { Findings: [{}, {}, {}] },
       '2': { Findings: [{}, {}, {}] },
     })
-    const alignment = alignPaper(schema, reviews)['Findings']
+    const alignment = alignNode(schema, reviews, 'Findings')['Findings']
     expect(slotsOf(alignment, '1')).toEqual([0, 1, 2])
     expect(slotsOf(alignment, '2')).toEqual([0, 1, 2])
     expect(alignment.slots.every((s) => s.evidence === 0)).toBe(true)
@@ -348,7 +348,7 @@ describe('alignPaper', () => {
       '1': { Risk: [{ children: { Level: [{ value: 'High' }] } }] },
       '2': { Risk: [{ children: { Level: [{ value: 'Low' }] } }] },
     })
-    const alignment = alignPaper(schema, reviews)['Risk']
+    const alignment = alignNode(schema, reviews, 'Risk')['Risk']
     expect(alignment.slots[0].agreement).toBe(0)
   })
 
@@ -357,7 +357,7 @@ describe('alignPaper', () => {
       '1': { Findings: [{ children: { Claim: [{ value: 'Same' }], Evidence: [{ value: 'Table 1' }] } }] },
       '2': { Findings: [{ children: { Claim: [{ value: 'Same' }] } }] },
     })
-    const alignment = alignPaper(schema, reviews)['Findings']
+    const alignment = alignNode(schema, reviews, 'Findings')['Findings']
     // Claim agrees; the Evidence only Reviewer 1 filled abstains rather than
     // halving the score.
     expect(alignment.slots[0].agreement).toBe(1)
@@ -381,8 +381,8 @@ describe('alignPaper', () => {
       })
     const first = build()
     const second = build()
-    expect(JSON.stringify(alignPaper(first.schema, first.reviews))).toBe(
-      JSON.stringify(alignPaper(second.schema, second.reviews)),
+    expect(JSON.stringify(alignNode(first.schema, first.reviews, 'Findings'))).toBe(
+      JSON.stringify(alignNode(second.schema, second.reviews, 'Findings')),
     )
   })
 
@@ -391,7 +391,7 @@ describe('alignPaper', () => {
       '1': { Findings: [{ children: { Claim: [{ value: 'Alpha' }] } }] },
       '2': {},
     })
-    const alignment = alignPaper(schema, reviews)['Findings']
+    const alignment = alignNode(schema, reviews, 'Findings')['Findings']
     expect(alignment.slots).toHaveLength(1)
     expect(alignment.slots[0].members['1']).toBe(0)
   })
@@ -409,11 +409,11 @@ describe('alignPaper', () => {
     const rev = (ns: number[]): AnnotationValueTree => ({
       F: ns.map((n) => ({ children: { N: [{ value: n }] } })),
     })
-    const slots = alignPaper(schema, {
+    const slots = alignNode(schema, {
       '1': rev([300, 200]),
       '2': rev([300]),
       '3': rev([200]),
-    })['F'].slots
+    }, 'F')['F'].slots
 
     expect(slots[0].members).toEqual({ '1': 0, '2': 0 })
     expect(slots[1].members).toEqual({ '1': 1, '3': 0 })
