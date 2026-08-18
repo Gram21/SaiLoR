@@ -1807,13 +1807,18 @@ ipcMain.handle('git:info', async (_e, projectPath: string) => {
   // /private/tmp), so `path.relative(root, projectPath)` would compute a `..`
   // escape that points nowhere. `--show-prefix` is git's own answer to "where
   // in the work tree is my cwd", which is exactly what's needed here.
-  const root = gitOut(await runGit(['rev-parse', '--show-toplevel'], dir))
-  const prefix = gitOut(await runGit(['rev-parse', '--show-prefix'], dir))
+  const [topRun, prefixRun, headRun, branchRun, upRun] = await Promise.all([
+    runGit(['rev-parse', '--show-toplevel'], dir),
+    runGit(['rev-parse', '--show-prefix'], dir),
+    runGit(['rev-parse', '--verify', '-q', 'HEAD'], dir),
+    runGit(['symbolic-ref', '--short', '-q', 'HEAD'], dir),
+    runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], dir),
+  ])
+  const root = gitOut(topRun)
+  const prefix = gitOut(prefixRun)
   const relPath = prefix + path.basename(projectPath)
-  const hasHead = (await runGit(['rev-parse', '--verify', '-q', 'HEAD'], dir)).ok
-  const branchRun = await runGit(['symbolic-ref', '--short', '-q', 'HEAD'], dir)
+  const hasHead = headRun.ok
   const branch = branchRun.ok ? gitOut(branchRun) || null : null // null = detached HEAD
-  const upRun = await runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], dir)
   const upstream = upRun.ok ? gitOut(upRun) || null : null
   if (root) knownGitRoots.add(path.resolve(root))
   return { root, relPath, branch, upstream, hasHead }
