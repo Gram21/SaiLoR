@@ -1,6 +1,13 @@
 .github/workflows/openwiki-update.yml
 
 .claude
+.clinerules
+.cursor
+.opencode
+.windsurf
+copilot-instructions.md
+
+CLAUDE-SECURITY-*
 
 # File created using '.gitignore Generator' for Visual Studio Code: https://bit.ly/vscode-gig
 # Created by https://www.toptal.com/developers/gitignore/api/linux,macos,node,windows
