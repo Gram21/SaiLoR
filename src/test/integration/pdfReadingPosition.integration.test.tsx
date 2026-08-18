@@ -19,21 +19,30 @@ if (typeof globalThis.localStorage === 'undefined') {
   })
 }
 
-// jsdom performs no real layout. Rect geometry here deliberately models the
-// exact regression this suite guards: every page starts at a small
-// "loading placeholder" height, and only grows to its real rendered height
-// once that page's own `onRenderTextLayerSuccess` has fired — the same two
-// phases a real PDF page goes through (react-pdf mounts the page's wrapper
-// div immediately, but its real content/height only lands once pdf.js
-// finishes rendering it).
+// jsdom performs no real layout, so every rect here is hand-modeled — but
+// modeled to actually behave like a real scrollable container, not just
+// return a fixed position: a page's `top` reflects the *current* scrollTop
+// of its nearest `.pdf-scroll` ancestor (scrolling down moves content up
+// relative to the viewport, same as a real browser), and each page starts
+// at a small "loading placeholder" height that only grows to its real
+// rendered height once that page's own `onRenderTextLayerSuccess` has
+// fired. Without the scroll feedback, a test could not tell a correct,
+// self-correcting `scrollTop +=` from one that silently accumulates error
+// on every re-application.
 const PLACEHOLDER_HEIGHT = 20
 const REAL_HEIGHT = 1000
 const renderedPages = new Set<number>()
-Element.prototype.getBoundingClientRect = function () {
+Element.prototype.getBoundingClientRect = function (this: Element) {
+  if (this.classList?.contains('pdf-scroll')) {
+    return { left: 0, top: 0, right: 800, bottom: 800, width: 800, height: 800, x: 0, y: 0, toJSON() {} }
+  }
+  const scrollEl = this.closest('.pdf-scroll') as HTMLElement | null
+  const scrollTop = scrollEl?.scrollTop ?? 0
   const idx = this instanceof HTMLElement ? Number(this.dataset.pageIndex ?? '0') : 0
-  let top = 0
-  for (let i = 0; i < idx; i++) top += renderedPages.has(i) ? REAL_HEIGHT : PLACEHOLDER_HEIGHT
+  let cumulative = 0
+  for (let i = 0; i < idx; i++) cumulative += renderedPages.has(i) ? REAL_HEIGHT : PLACEHOLDER_HEIGHT
   const height = renderedPages.has(idx) ? REAL_HEIGHT : PLACEHOLDER_HEIGHT
+  const top = cumulative - scrollTop
   return { left: 0, top, right: 800, bottom: top + height, width: 800, height, x: 0, y: top, toJSON() {} }
 }
 // jsdom implements neither of these.
@@ -43,8 +52,10 @@ class StubResizeObserver {
   disconnect() {}
 }
 ;(globalThis as { ResizeObserver?: unknown }).ResizeObserver = StubResizeObserver
-const scrollIntoViewSpy = vi.fn()
-Element.prototype.scrollIntoView = scrollIntoViewSpy
+// jsdom has no real scrollIntoView; only the plain page-jump fallback path
+// (pages not mounted yet) still calls it — the primary rect-based path
+// drives `scrollTop` directly and is asserted on that instead.
+Element.prototype.scrollIntoView = vi.fn()
 
 const NUM_PAGES = 5
 // Filled by each mocked `<Page>` on mount; the test calls these directly
@@ -126,7 +137,6 @@ const handle: SaveHandle = { kind: 'electron', path: '/reviews/reading-position.
 beforeEach(() => {
   localStorage.clear()
   cleanup()
-  scrollIntoViewSpy.mockClear()
   renderedPages.clear()
   textLayerCallbacks.clear()
 })
@@ -137,8 +147,8 @@ async function flush() {
   })
 }
 
-function scrolledPageIndices(): number[] {
-  return scrollIntoViewSpy.mock.instances.map((el) => Number((el as HTMLElement).dataset.pageIndex))
+function scrollEl(container: HTMLElement): HTMLDivElement {
+  return container.querySelector('.pdf-scroll') as HTMLDivElement
 }
 
 describe('reopening a project scrolls to the remembered PDF page', () => {
@@ -153,7 +163,8 @@ describe('reopening a project scrolls to the remembered PDF page', () => {
       st().loadFromText(project, handle, 'reading-position.json')
       expect(st().initialPdfPosition).toEqual({ paperId: 'p1', page: 3, offsetFraction: 0 })
 
-      render(<PdfViewer />)
+      const { container } = render(<PdfViewer />)
+      const root = scrollEl(container)
       // Let getPdfSource's promise and Document's onLoadSuccess settle —
       // every page mounts at PLACEHOLDER_HEIGHT, none have "rendered" yet.
       await act(async () => {
@@ -161,10 +172,10 @@ describe('reopening a project scrolls to the remembered PDF page', () => {
         await Promise.resolve()
       })
 
-      // First scroll happens immediately once pages exist, while everything
-      // is still placeholder-sized — this alone is what the pre-fix code
-      // considered "done" (and cleared the request right after).
-      expect(scrolledPageIndices()).toContain(2)
+      // First alignment happens immediately once pages exist, while
+      // everything is still placeholder-sized: pages 1-2 (index 0, 1) at
+      // PLACEHOLDER_HEIGHT each, ahead of page 3 (index 2).
+      expect(root.scrollTop).toBe(2 * PLACEHOLDER_HEIGHT)
       // The request must still be pending — clearing here, before layout
       // has actually settled, is exactly the bug: nothing would re-snap
       // page 3 back into place once earlier pages grow.
@@ -183,10 +194,10 @@ describe('reopening a project scrolls to the remembered PDF page', () => {
         textLayerCallbacks.get(2)?.()
       })
 
-      // The fix must have re-applied the scroll to page 3 again, after its
-      // real position (now much further down) was known.
-      const callsAfterGrowth = scrolledPageIndices().filter((i) => i === 2).length
-      expect(callsAfterGrowth).toBeGreaterThan(1)
+      // The fix must have re-applied the alignment against page 3's real,
+      // grown position — landing exactly at the two preceding pages' real
+      // combined height, not wherever the stale placeholder math left it.
+      expect(root.scrollTop).toBe(2 * REAL_HEIGHT)
       expect(st().initialPdfPosition).not.toBeNull() // still settling
 
       // No further rendering activity — the one-shot request finally clears.
@@ -209,30 +220,29 @@ describe('reopening a project scrolls to the remembered PDF page', () => {
     st().loadFromText(project, handle, 'reading-position.json')
     expect(st().initialPdfPosition).toEqual({ paperId: 'p1', page: 3, offsetFraction: 0.5 })
 
-    // Page 3 (index 2) already at its real height from the start, so the
-    // offset applies against REAL_HEIGHT immediately — isolates this test
-    // from the separate placeholder-growth re-snap behavior covered above.
+    // Every page already at its real height, isolating this test from the
+    // separate placeholder-growth re-snap behavior covered above.
+    renderedPages.add(0)
+    renderedPages.add(1)
     renderedPages.add(2)
     const { container } = render(<PdfViewer />)
     await flush()
     await flush()
 
-    const root = container.querySelector('.pdf-scroll') as HTMLDivElement
-    // `scrollIntoView` is mocked to a no-op above, so page 3's own
-    // REAL_HEIGHT (already rendered, immediately, in this test's mock) is
-    // the only thing left to move `scrollTop` — exactly the offset applied
-    // on top of the plain page-level jump.
-    expect(root.scrollTop).toBe(0.5 * REAL_HEIGHT)
+    const root = scrollEl(container)
+    // Two full real-height pages before page 3, plus half of page 3's own
+    // real height.
+    expect(root.scrollTop).toBe(2 * REAL_HEIGHT + 0.5 * REAL_HEIGHT)
   })
 
   it('does nothing when there is no remembered position', async () => {
     st().loadFromText(project, handle, 'no-position.json')
     expect(st().initialPdfPosition).toBeNull()
 
-    render(<PdfViewer />)
+    const { container } = render(<PdfViewer />)
     await flush()
     await flush()
 
-    expect(scrollIntoViewSpy).not.toHaveBeenCalled()
+    expect(scrollEl(container).scrollTop).toBe(0)
   })
 })

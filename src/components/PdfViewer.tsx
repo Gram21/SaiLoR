@@ -646,11 +646,26 @@ export function PdfViewer() {
   // the request is only dropped once nothing has re-rendered for a bit.
   useEffect(() => {
     if (numPages === 0 || !initialPdfPosition || initialPdfPosition.paperId !== paperId) return
-    scrollToPage(initialPdfPosition.page)
     const root = containerRef.current
     const pageEl = pageRefs.current[initialPdfPosition.page - 1]
-    if (root && pageEl && initialPdfPosition.offsetFraction > 0) {
-      root.scrollTop += initialPdfPosition.offsetFraction * pageEl.getBoundingClientRect().height
+    if (root && pageEl) {
+      // The same rect-delta technique `scrollToMark` already uses, not
+      // `scrollIntoView` + a separate manual adjustment: combining two
+      // different scrolling mechanisms for one jump is exactly what let the
+      // page land right while the offset within it didn't — `scrollIntoView`
+      // makes its own assumptions about "into view" that a relative
+      // `scrollTop` delta computed a beat later isn't guaranteed to agree
+      // with. One combined delta, computed from the same rects, is what
+      // `scrollToMark` already relies on for the identical kind of jump.
+      const pageRect = pageEl.getBoundingClientRect()
+      const rootRect = root.getBoundingClientRect()
+      const targetTop = pageRect.top + initialPdfPosition.offsetFraction * pageRect.height
+      root.scrollTop += targetTop - rootRect.top
+      setCurrentPage(initialPdfPosition.page)
+    } else {
+      // Pages not mounted yet — fall back to the plain page jump; the next
+      // render tick (pages now present) retries with the full rect math above.
+      scrollToPage(initialPdfPosition.page)
     }
     const t = window.setTimeout(clearInitialPdfPosition, 800)
     return () => window.clearTimeout(t)
