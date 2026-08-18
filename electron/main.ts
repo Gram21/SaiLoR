@@ -28,6 +28,8 @@ import { relPathProblem, annotationsRelDir } from '../src/git/relpath'
 import { refProblem } from '../src/git/ref'
 import { gitErrorText, parsePorcelain, parseGitLog } from '../src/git/output'
 import { ownAnnotationPathMatcher } from '../src/git/ownAnnotationPath'
+import { readAllConcurrently } from '../src/git/concurrentRead'
+import { deriveGitInfo } from '../src/git/deriveGitInfo'
 import type { GitRun, MergeStart } from '../src/git/types'
 import { isLegacyProjectShape, assembleLegacyProjectJson } from '../src/model/project'
 import { parseMarks, type PdfMark } from '../src/model/pdfMarks'
@@ -644,8 +646,7 @@ async function readProjectText(filePath: string): Promise<string> {
     const id = (p as { id?: unknown })?.id
     if (typeof id === 'string') ids.push(id)
   }
-  const loaded = await Promise.all(ids.map((id) => loadPaperFiles(annotationsDir, id, screening)))
-  const paperFiles = new Map<string, PaperFiles>(ids.map((id, i) => [id, loaded[i]]))
+  const paperFiles = await readAllConcurrently(ids, (id) => loadPaperFiles(annotationsDir, id, screening))
   return JSON.stringify(assembleLegacyProjectJson(raw, paperFiles))
 }
 
@@ -1807,21 +1808,16 @@ ipcMain.handle('git:info', async (_e, projectPath: string) => {
   // /private/tmp), so `path.relative(root, projectPath)` would compute a `..`
   // escape that points nowhere. `--show-prefix` is git's own answer to "where
   // in the work tree is my cwd", which is exactly what's needed here.
-  const [topRun, prefixRun, headRun, branchRun, upRun] = await Promise.all([
+  const [top, prefix, head, branch, upstream] = await Promise.all([
     runGit(['rev-parse', '--show-toplevel'], dir),
     runGit(['rev-parse', '--show-prefix'], dir),
     runGit(['rev-parse', '--verify', '-q', 'HEAD'], dir),
     runGit(['symbolic-ref', '--short', '-q', 'HEAD'], dir),
     runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], dir),
   ])
-  const root = gitOut(topRun)
-  const prefix = gitOut(prefixRun)
-  const relPath = prefix + path.basename(projectPath)
-  const hasHead = headRun.ok
-  const branch = branchRun.ok ? gitOut(branchRun) || null : null // null = detached HEAD
-  const upstream = upRun.ok ? gitOut(upRun) || null : null
-  if (root) knownGitRoots.add(path.resolve(root))
-  return { root, relPath, branch, upstream, hasHead }
+  const info = deriveGitInfo(path.basename(projectPath), { top, prefix, head, branch, upstream })
+  if (info.root) knownGitRoots.add(path.resolve(info.root))
+  return info
 })
 
 ipcMain.handle('git:status', async (_e, root: string) => {
