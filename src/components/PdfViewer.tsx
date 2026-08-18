@@ -52,6 +52,49 @@ export function markVerticallyVisible(mark: PdfMark, pageRect: DOMRect, rootRect
   return top >= rootRect.top && bottom <= rootRect.bottom
 }
 
+/** Fraction of `b`'s area that overlaps `a` — used to catch two rects that
+ *  are (near-)duplicates of each other, not two rects that merely sit side
+ *  by side on the same line (those overlap ~0). */
+function overlapRatio(a: MarkRect, b: MarkRect): number {
+  const left = Math.max(a.x, b.x)
+  const right = Math.min(a.x + a.width, b.x + b.width)
+  const top = Math.max(a.y, b.y)
+  const bottom = Math.min(a.y + a.height, b.y + b.height)
+  if (right <= left || bottom <= top) return 0
+  const area = b.width * b.height
+  return area > 0 ? ((right - left) * (bottom - top)) / area : 0
+}
+
+/**
+ * `Range.getClientRects()` can report the same visual line twice — a
+ * documented cross-browser quirk (bidi reordering, or a text node the layout
+ * engine split internally) rather than anything pdf.js's text layer does
+ * wrong. Rendered as-is, a fully-covered middle line of a multi-line
+ * highlight gets two nearly-identical, semi-transparent rects stacked on top
+ * of each other, reading as "marked twice" rather than once. Two rects that
+ * genuinely sit side by side on the same line (pdf.js gives each text run
+ * its own span, so an ordinary line is several adjacent, non-overlapping
+ * rects) have ~0 overlap and are left alone; only rects that substantially
+ * cover one another are folded into their union.
+ */
+export function dedupeOverlappingRects(rects: MarkRect[]): MarkRect[] {
+  const out: MarkRect[] = []
+  for (const r of rects) {
+    const i = out.findIndex((o) => overlapRatio(o, r) > 0.6 || overlapRatio(r, o) > 0.6)
+    if (i === -1) {
+      out.push(r)
+      continue
+    }
+    const o = out[i]
+    const left = Math.min(o.x, r.x)
+    const top = Math.min(o.y, r.y)
+    const right = Math.max(o.x + o.width, r.x + r.width)
+    const bottom = Math.max(o.y + o.height, r.y + r.height)
+    out[i] = { x: left, y: top, width: right - left, height: bottom - top }
+  }
+  return out
+}
+
 /** Find all ranges matching `query` within each text layer under `root`. */
 function findMatches(root: HTMLElement, query: string): Range[] {
   const ranges: Range[] = []
@@ -764,7 +807,7 @@ export function PdfViewer() {
    *  used, factored out so a cross-page selection can reuse it per page. */
   const rectsForPageRange = (range: Range, pageEl: HTMLDivElement): MarkRect[] => {
     const pageRect = pageEl.getBoundingClientRect()
-    return Array.from(range.getClientRects())
+    const rects = Array.from(range.getClientRects())
       .filter((r) => r.width > 1 && r.height > 1)
       .map((r) => ({
         x: (r.left - pageRect.left) / pageRect.width,
@@ -772,6 +815,7 @@ export function PdfViewer() {
         width: r.width / pageRect.width,
         height: r.height / pageRect.height,
       }))
+    return dedupeOverlappingRects(rects)
   }
 
   /** Offers the highlight color toolbar for a real text selection — a single

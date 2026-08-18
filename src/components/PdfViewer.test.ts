@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { destinationPoint, markVerticallyVisible } from './PdfViewer'
-import type { PdfMark } from '../model/pdfMarks'
+import { destinationPoint, markVerticallyVisible, dedupeOverlappingRects } from './PdfViewer'
+import type { PdfMark, MarkRect } from '../model/pdfMarks'
 
 function mark(overrides: Partial<PdfMark> = {}): PdfMark {
   return {
@@ -97,5 +97,38 @@ describe('markVerticallyVisible', () => {
       ],
     })
     expect(markVerticallyVisible(multi, rect(0, 1000), rect(0, 800))).toBe(true)
+  })
+})
+
+describe('dedupeOverlappingRects', () => {
+  const r = (x: number, y: number, width: number, height: number): MarkRect => ({ x, y, width, height })
+
+  it('leaves distinct, non-overlapping rects alone', () => {
+    // Three separate lines of a multi-line highlight.
+    const rects = [r(0.1, 0.1, 0.3, 0.05), r(0.05, 0.2, 0.5, 0.05), r(0.05, 0.3, 0.2, 0.05)]
+    expect(dedupeOverlappingRects(rects)).toEqual(rects)
+  })
+
+  it('leaves side-by-side rects on the same line alone — pdf.js gives each text run its own span', () => {
+    const rects = [r(0.1, 0.2, 0.2, 0.05), r(0.3, 0.2, 0.2, 0.05)]
+    expect(dedupeOverlappingRects(rects)).toEqual(rects)
+  })
+
+  it('folds a near-duplicate middle-line rect into one, the reported "marked twice" bug', () => {
+    // Range.getClientRects() reporting the same fully-covered line as two
+    // near-identical, heavily-overlapping rects — the actual bug report.
+    const rects = [r(0.05, 0.2, 0.5, 0.05), r(0.05, 0.201, 0.5, 0.05)]
+    const out = dedupeOverlappingRects(rects)
+    expect(out).toHaveLength(1)
+    expect(out[0]).toMatchObject({ x: 0.05, width: 0.5 })
+  })
+
+  it('unions two overlapping duplicates rather than arbitrarily discarding one', () => {
+    // Slightly different extents (rounding) — the merged rect must cover both.
+    const rects = [r(0.05, 0.2, 0.4, 0.05), r(0.1, 0.2, 0.45, 0.05)]
+    const out = dedupeOverlappingRects(rects)
+    expect(out).toHaveLength(1)
+    expect(out[0].x).toBeCloseTo(0.05)
+    expect(out[0].x + out[0].width).toBeCloseTo(0.55)
   })
 })
