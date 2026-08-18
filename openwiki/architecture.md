@@ -1,7 +1,7 @@
 ---
 type: architecture
 title: SaiLoR Architecture
-description: Deep dive into SaiLoR's architecture — why the web SPA runtime was discontinued (Electron-desktop-only now), the split project.json + annotations/ on-disk storage format, the PlatformAdapter seam, the Zustand store with undo/redo, the component tree, PDF marks and field-linking, multi-reviewer consolidation with stored alignment, annotation state/finished flags, git integration, the Electron main process, and build wiring.
+description: Deep dive into SaiLoR's architecture — why the web SPA runtime was discontinued (Electron-desktop-only now), the split project.json + annotations/ on-disk storage format, the PlatformAdapter seam, the Zustand store with undo/redo (incl. PDF marks), reading-position persistence, PDF internal-link hover previews, the component tree, PDF marks and field-linking, multi-reviewer consolidation with stored alignment, annotation state/finished flags (Consolidation included), git integration (concurrent reads), the Electron main process, and build wiring.
 tags: [architecture, platform-adapter, state-management, electron, git, electron-only, split-storage]
 ---
 
@@ -40,13 +40,22 @@ touches the filesystem, spawns `git`, or calls out to an LLM provider.
 flowchart TB
     subgraph Renderer["Renderer process (Chromium, React 19)"]
         direction TB
-        App["App.tsx<br/>isElectron() discontinuation gate"]
-        Components["Component tree<br/>Toolbar, PaperList, PdfViewer,<br/>AnnotationPanel, ConsolidationDialog,<br/>GitDialog, AiDialog, ..."]
-        Store["Zustand store (useStore)<br/>project state, undo/redo, aiMarks"]
-        Model["Model layer<br/>schema.ts, annotations.ts,<br/>duplicates.ts, references.ts"]
+        App["App.tsx
+isElectron() discontinuation gate"]
+        Components["Component tree
+Toolbar, PaperList, PdfViewer,
+AnnotationPanel, ConsolidationDialog,
+GitDialog, AiDialog, ..."]
+        Store["Zustand store (useStore)
+project state, undo/redo, aiMarks"]
+        Model["Model layer
+schema.ts, annotations.ts,
+duplicates.ts, references.ts"]
         GitStore["gitStore"]
-        Llm["src/llm<br/>prompt / parse / models"]
-        Platform["PlatformAdapter<br/>ElectronAdapter / UnsupportedAdapter"]
+        Llm["src/llm
+prompt / parse / models"]
+        Platform["PlatformAdapter
+ElectronAdapter / UnsupportedAdapter"]
 
         App --> Components
         Components --> Store
@@ -56,7 +65,8 @@ flowchart TB
         Store --> Platform
     end
 
-    Bridge["window.slr<br/>(preload.ts contextBridge)"]
+    Bridge["window.slr
+(preload.ts contextBridge)"]
 
     Platform -->|"project:*, pdf:*"| Bridge
     GitStore -->|"git:*"| Bridge
@@ -64,26 +74,34 @@ flowchart TB
 
     subgraph Main["Electron main process (electron/main.ts)"]
         direction TB
-        IPC["IPC handlers<br/>project:*, pdf:*, git:*, llm:*, update:*"]
-        Protocol["slr-file:// protocol<br/>CORS-enabled, path-traversal guarded"]
-        Window["BrowserWindow + menu<br/>window-state.json, quit flow"]
+        IPC["IPC handlers
+project:*, pdf:*, git:*, llm:*, update:*"]
+        Protocol["slr-file:// protocol
+CORS-enabled, path-traversal guarded"]
+        Window["BrowserWindow + menu
+window-state.json, quit flow"]
     end
 
     Bridge --> IPC
     IPC --- Window
 
     subgraph Disk["On-disk project"]
-        ProjectJson["project.json<br/>schema + paper metadata"]
-        Annotations["annotations/&lt;paperId&gt;/<br/>one file per reviewer + consolidated"]
-        Pdfs["Referenced PDFs<br/>(paths relative to project.json)"]
+        ProjectJson["project.json
+schema + paper metadata"]
+        Annotations["annotations/paperId/
+one file per reviewer + consolidated"]
+        Pdfs["Referenced PDFs
+paths relative to project.json"]
     end
 
     subgraph GitRepo["Local git repository"]
-        GitBinary["git CLI<br/>(child_process)"]
+        GitBinary["git CLI
+child_process"]
     end
 
     subgraph External["External services"]
-        LlmProviders["LLM providers<br/>OpenAI / Anthropic-compatible / etc."]
+        LlmProviders["LLM providers
+OpenAI / Anthropic-compatible / etc."]
     end
 
     IPC -->|"read/write"| ProjectJson
@@ -275,8 +293,9 @@ The entire app state lives in a single Zustand store with immer middleware:
 | `consolidationTarget` | `{ path, name, index } \| null` | The field the Consolidation "compare" popup (`ConsolidationDialog`) is showing, or `null` when closed. Session-only |
 | `consolidationOverviewOpen` | `boolean` | Whether the project-wide `ConsolidationOverview` modal is open. Session-only |
 | `deferredConsolidations` | `Record<string, true>` | Fields where the consolidator chose "Enter a different value" — waiting for a manually entered value. Keyed by `deferredConsolidationKey(paperId, canonicalPath)`. Session-only; cleared on project close/load |
-| `annotationFilter` | `AnnotationFilter` | Which papers the annotation paper list shows (`'all'` / `'open'` / `'in-progress'` / `'finished'` / `'issues'`). Non-screening, non-Consolidation seats only; session-only, resets on project close/load |
+| `annotationFilter` | `AnnotationFilter` | Which papers the annotation paper list shows (`'all'` / `'open'` / `'in-progress'` / `'finished'` / `'issues'`). Non-screening seats (Consolidation included now); session-only, resets on project close/load |
 | `pendingMarkJump` | `string \| null` | A mark id another component asked the PDF viewer to scroll to and flash. Cleared after `flashAndScrollTo` runs. Session-only |
+| `initialPdfPosition` | `{ paperId: string; page: number } \| null` | The paper/page a just-opened project should scroll to on its first render, restored from `loadReadingPosition` (per-project `localStorage`). `PdfViewer` consumes it once its pages mount and clears it via `clearInitialPdfPosition`; dropped if the reviewer navigates to a different paper first. Session-only |
 | `lastCreatedMarkId` | `string \| null` | The most recently created mark's id, for auto-linking to the next field opened. Session-only; cleared by `clearPendingMarkLink` |
 | `schemaInfoOpen` | `boolean` | Whether the `SchemaInfoDialog` is open. Session-only; set in `loadFromText` for auto-open on first load of a project with a schema comment |
 | `screeningFilter` | `'all' \| 'included' \| 'excluded' \| 'undecided'` | Which decisions the screening paper list shows. Screening projects only; session-only, resets on `closeProject`/`loadFromText` |
@@ -297,7 +316,7 @@ The entire app state lives in a single Zustand store with immer middleware:
 - **`zoomInPdf()` / `zoomOutPdf()` / `resetPdfZoom()`** — adjusts `pdfZoom` by ±0.2 (clamped to 0.4–3.0, rounded to 2 decimals) or resets to 1; session-only, not persisted
 - **`applyAiSuggestions(suggestions)`** — writes the reviewer-approved AI proposals into the current paper as **one undo step**, and marks every field it wrote (see "AI-assisted annotation" below)
 - **`confirmAiMark(paperId, canonicalPath)`** — drops one AI mark; the reviewer clicked into that field (or its label)
-- **`undo()` / `redo()`** — swap the current project snapshot with one from the `past`/`future` stack (and switch to the affected paper). The mutating actions push a snapshot before applying; consecutive edits to the *same* field coalesce into one undo step (a module-level `lastFieldKey` tracks this), while add/remove/paper-switch reset it. History is cleared on project load.
+- **`undo()` / `redo()`** — swap the current project snapshot with one from the `past`/`future` stack (and switch to the affected paper). The mutating actions push a snapshot before applying; consecutive edits to the *same* field coalesce into one undo step (a module-level `lastFieldKey` tracks this), while add/remove/paper-switch reset it. PDF mark mutations (`addHighlight`/`setMarkComment`/`setMarkColor`/`removeMark`/`linkMarkToField`/`unlinkMarkFromField`) each push their own snapshot too — `setMarkComment` coalesces consecutive keystrokes into one step via the same `lastFieldKey` mechanism (keyed as `mark-comment:<id>`). History is cleared on project load.
 - **`setHelpOpen(open)`** — shows/hides the help dialog
 - **`selectReviewer(reviewer)`** — switches `currentReviewer` and persists the choice per project. A view switch: no undo step, no `dirty`
 - **`openConsolidation(path, name, index, returnToDisagreements?)` / `closeConsolidation()`** — open/close the compare popup for one field; when `returnToDisagreements` is set, `closeConsolidation` reopens the per-paper disagreement list
@@ -327,12 +346,12 @@ App (src/App.tsx)
 │     Reviewer switch (multi-reviewer projects only), centered on the toolbar — Reviewer 1..N + Consolidation, hidden entirely for a single-reviewer project; pills at ≤5 reviewers, a dropdown above that; see "Multiple reviewers & Consolidation" below
 ├── [if project loaded: workspace — a CSS grid whose column widths come from resizable panes]
 │   ├── PaperList (src/components/PaperList.tsx)
-│   │     List of papers with search box (META / TAGS modes, see below); a dot showing the active reviewer's completeness — a conic-gradient partial fill, not just touched/untouched, see "Completeness dot" below (screening and Consolidation keep their own tri-state/binary markers); click to select
+│   │     List of papers with search box (META / TAGS modes, see below); a dot showing the active seat's completeness — a conic-gradient partial fill, not just touched/untouched, see "Completeness dot" below (screening keeps its own tri-state marker; Consolidation now uses the same 5-state dot as any other seat); click to select
 │   ├── Splitter (src/components/Splitter.tsx) ×2  — drag handles between the panes
 │   ├── [screening project + PDF pane not toggled on: ScreeningRecord (src/components/ScreeningRecord.tsx)]
 │   │     Title/authors/DOI header + the abstract (or "No abstract recorded"); a "Read the PDF" button swaps to PdfViewer when paper.pdf !== ''
 │   ├── [otherwise, including the screening PDF toggle: PdfViewer (src/components/PdfViewer.tsx)]
-│   │     react-pdf Document+Page; ResizeObserver for width; zoom controls; multi-page navigation; jump history (back/forward); in-PDF search (Ctrl+F); text selection capture; empty state for paper.pdf === '' (screening only)
+│   │     react-pdf Document+Page; ResizeObserver for width; zoom controls; multi-page navigation; jump history (back/forward); in-PDF search (Ctrl+F, debounced); text selection capture; internal-link hover previews; empty state for paper.pdf === '' (screening only)
 │   ├── [screening project: ScreeningPanel (src/components/ScreeningPanel.tsx)]
 │   │     Include/Exclude decision buttons + a Reason ComboBox (disabled unless Exclude) + progress line; ◧ Summary always, ⚖ Agreement / ⚠ Disagreements in the Consolidation seat — see "Screening" below
 │   └── [otherwise: AnnotationPanel (src/components/AnnotationPanel.tsx)]
@@ -458,7 +477,7 @@ The paper-list dot used to be binary: touched or not, via `hasAnnotations`. `src
 - **Booleans are excluded from the count entirely**, for the same reason the Validation section below documents `isEmptyValue`/`hasAnnotations` disagreeing on them: an untouched checkbox reads `false`, indistinguishable from a deliberate "no", so there is no way to count it as "filled" or "unfilled" that isn't a guess. Completeness is a third function with its own opinion here — it doesn't count the field at all.
 - **Repeatable instances are counted per present instance**, not once per node, so adding a second Finding grows the denominator along with the numerator.
 - **`completenessPercent(c)`** returns `null` — the signal to fall back to the old binary dot — whenever `c.total === 0` (an empty schema). It otherwise clamps to `[5, 99]` for any non-zero, non-total count, so a paper at 1/200 fields doesn't visually read as empty and one at 199/200 doesn't read as done; the literal old `status-dot`/`status-dot done` classes are reused verbatim at exactly 0% and 100%, rather than rendering a conic gradient that would look the same as those two classes anyway.
-- **Screening projects and the Consolidation seat opt out**, keeping their existing tri-state/binary markers: `paperCompleteness()` (`PaperList.tsx`) returns `null` for them, the same "nothing to compute" signal `total === 0` produces, so both routes land on the same old-dot fallback with no separate branch.
+- **Only screening projects opt out**, keeping their tri-state marker: `paperCompleteness()` (`PaperList.tsx`) returns `null` for them, the same "nothing to compute" signal `total === 0` produces, so both routes land on the same old-dot fallback with no separate branch. The Consolidation seat is **included** — the consolidated tree is the record that ships, so it carries a fill and a sign-off like any other seat's work. `completenessApplies(project)` (no seat argument — see below) is the single gate.
 
 **`PaperRow` was pulled out of `PaperList`'s `.map()` and wrapped in `React.memo`.** Its props (`paper`, `active`, `onSelect`, `dotClassName`, `dotLabel`, `dotFill`) are deliberately primitives — `dotFill` is passed as a bare number rather than the `Completeness` object, specifically so memo's shallow comparison is cheap and correct. This pays off because of how the store's immer `set()` already works (see "State Management" above): editing one field produces a new object for exactly that one paper, leaving the other 1999 array entries referencing their old objects — confirmed directly by `PaperList.perf.test.ts`, which asserts exactly 1 of 2000 paper objects changes identity per edit. So a single edit re-renders exactly one row's `PaperRow`, not all 2000. Measured cost (from the feature's own commit message): recomputing `completeness` (and the search haystack) over 2000 papers costs on the order of 3–4ms, and the row re-render this memoization buys back drops to single-digit milliseconds — comfortably fast enough that no windowing/virtualization was added for this.
 
@@ -482,18 +501,34 @@ no invalidation step. `finishCheckbox` (project-level config, defaults `true`) c
 tick is required: when `false`, a fulfilled schema alone counts as `finished` and `flagged` is
 unreachable.
 
+`completenessApplies(project)` is the one gate behind the dot's color, the finished checkbox, and
+the filter dropdown — it takes only `project` (no seat argument), and returns `false` solely for a
+screening project. The Consolidation seat is included: the consolidated tree is the record that
+ships, so the consolidator gets the same 5-state vocabulary, the same filter dropdown, and a
+sign-off checkbox of their own. `finishCheckboxLabel(isConsolidation)` returns the checkbox's
+label — "Annotation finished" for a reviewer, "Consolidation finished" for the consolidator — so
+the paper list's amber `complete` dot can name the control it points the reader at. The
+consolidator's tick is stored in `Paper.finished` (the same field a lone reviewer ticks), and
+`adoptUnanimousValues` auto-filling the consolidated tree only makes the paper read as `complete`
+("ready to finish"), never `finished` — only the human tick does that. Readiness ("has every
+reviewer answered this paper") moves into the dot's tooltip and a second `· N/M ready` counter in
+the Consolidation seat, rather than being what colors the dot.
+
 The **filter dropdown** (`AnnotationFilter`: `all` / `open` / `in-progress` / `finished` / `issues`)
 maps the 5 states into 4 buckets: `open` = all unfinished (untouched + partial + complete);
 `in-progress` = the started subset of open (touched, still unfinished); `finished` = signed off and
 holding; `issues` = flagged. The progress bar counts whichever bucket the filter is currently
-showing. The filter is session-only (not persisted to the file) and is deliberately bypassed in the
-Consolidation seat so a filter set by a numbered reviewer doesn't hide papers.
+showing. The filter is session-only (not persisted to the file) and is now offered in the
+Consolidation seat too — its papers carry the same five states as any other seat's, so "which
+papers have I not signed off" is the same question there as anywhere.
 
 `setAnnotationFinished(finished)` is the store action: routes to `paper.finished` or
 `paper.reviewsFinished[reviewer]` via the same seat-routing pattern as `currentTree`, deletes the
 key on untick (absent = undeclared, not `false`), marks dirty, and pushes no undo history entry of
 its own. `firstUnfinishedPaperId()` lands on the first paper the active seat hasn't finished, so
-reopening a review in progress returns to the work, not to paper #1.
+reopening a review in progress returns to the work, not to paper #1 — the Consolidation seat is
+included here too, so reopening as the consolidator lands on the first paper *they* have not signed
+off.
 
 ### Validation
 
@@ -702,7 +737,7 @@ or the original file in place (with an inline warning — see "PDF marks" in `da
 overwriting is risky). The actual embedding happens in the Electron main process
 (`embedPdfAnnotations` → `pdf:embedMarks` IPC → pdf-lib), never in the renderer.
 
-**In-PDF search.** A 🔍 button in the header (and `Ctrl/Cmd+F`) toggles a find bar below the header; opening it focuses the input so the user can type immediately (via a `searchOpen` effect, since the input isn't mounted on the open transition). `findMatches` walks the text nodes of each rendered text layer (`.react-pdf__Page__textContent`), concatenating them per layer so a query can span multiple spans, and returns DOM `Range`s. Matches are painted with the **CSS Custom Highlight API** (`CSS.highlights` + `::highlight(slr-pdf-search)` / `::highlight(slr-pdf-search-active)`) — this tints the transparent text-layer glyphs without mutating react-pdf's DOM, and degrades gracefully where the API is unavailable. The active match is centered in the scroll container; Enter / Shift+Enter (and the ‹ › buttons) cycle matches. Crucially, the `<Page>` elements are **memoized** (`useMemo` on `[numPages, renderWidth, onTextLayerRendered]`) with a stable `onRenderTextLayerSuccess` callback, so typing in the search box reuses the same element references and React skips re-rendering the pages — otherwise every keystroke would tear down and re-render the text layers (a "TextLayer task cancelled" flood) and matches would never resolve.
+**In-PDF search.** A 🔍 button in the header (and `Ctrl/Cmd+F`) toggles a find bar below the header; opening it focuses the input so the user can type immediately (via a `searchOpen` effect, since the input isn't mounted on the open transition). `findMatches` walks the text nodes of each rendered text layer (`.react-pdf__Page__textContent`), concatenating them per layer so a query can span multiple spans, and returns DOM `Range`s. The query is **debounced** (`debouncedQuery`, a 150ms `setTimeout` on `query`) so a fast typist doesn't trigger one full text-layer re-scan per keystroke; the input itself still reflects `query` immediately, only the (re)search is delayed. Matches are painted with the **CSS Custom Highlight API** (`CSS.highlights` + `::highlight(slr-pdf-search)` / `::highlight(slr-pdf-search-active)`) — this tints the transparent text-layer glyphs without mutating react-pdf's DOM, and degrades gracefully where the API is unavailable. The active match is centered in the scroll container; Enter / Shift+Enter (and the ‹ › buttons) cycle matches. Crucially, the `<Page>` elements are **memoized** (`useMemo` on `[numPages, renderWidth, onTextLayerRendered]`) with a stable `onRenderTextLayerSuccess` callback, so typing in the search box reuses the same element references and React skips re-rendering the pages — otherwise every keystroke would tear down and re-render the text layers (a "TextLayer task cancelled" flood) and matches would never resolve.
 
 **The page count is capped at `MAX_PDF_PAGES` (5 000).** There is no virtualization here: every page
 becomes a React element with its own canvas, text layer and annotation layer, plus an entry in
@@ -716,6 +751,45 @@ quietly showing fewer pages. `extractPdfText` has the matching `DEFAULT_MAX_PAGE
 code, and there is no cancellation on that path.
 
 PDF source resolution is async: `getPlatform().getPdfSource(paper.pdf, saveHandle)` returns a `{ url, revoke? }` — on Electron always `slr-file://`, resolved synchronously enough on disk that the "which paper is this response for" race the deleted browser build's folder-grant flow used to guard against doesn't arise here. The effect cleans up (revokes blob URLs, though `slr-file://` produces none) on paper/handle change or unmount.
+
+**Reading position is persisted per project.** Reopening a project lands on the same paper and PDF
+page the reviewer was last looking at, rather than on `firstUnfinishedPaperId`'s default. The store
+keeps `initialPdfPosition: { paperId, page } | null` as a one-shot request: `loadFromText` populates
+it from `loadReadingPosition(handle)` (the same per-machine, `localStorage`, keyed-by-path
+convention as the reviewer seat — `slr.readingPosition.<handlePath>`), and `PdfViewer` consumes it
+once its pages mount and clears it via `clearInitialPdfPosition()`. The write side is debounced
+(`noteReadingPosition`, 500ms after a page change), and takes `paperId` explicitly rather than reading
+`currentPaperId` at fire time — by then the reviewer may have switched papers. `Save As`
+(`changeLocation`) carries the position to the new path, the same carry-over it already does for the
+reviewer seat. The position is dropped if the paper it names no longer exists, and never applies to a
+project with no stable handle. See `src/state/store.readingPosition.test.ts`.
+
+**Internal-link hover previews.** Hovering an internal PDF link (a citation, figure/table reference,
+or TOC entry) shows a strip of the destination page — copied from that page's already-rendered canvas
+(no extra pdf.js render, since every page is mounted) — fitted to the destination's own entry
+(bibliography item, glossary entry, …) rather than a fixed window. `detectEntryBox`
+(`src/model/refPreview.ts`, unit-tested in `src/model/refPreview.test.ts`) is a compact port of the
+essential steps of SumatraPDF's `DetectEntryBox`: anchor on the text line nearest the link
+destination, expand it into a gap-bounded line run (gutters between columns are wider than spacing
+within a line, so the run never leaves its column), then walk following lines until the next entry
+starts (a line back at the entry's left margin) or a paragraph gap. `destinationPoint`
+(`PdfViewer.tsx`) reads the x/y a PDF explicit destination points at (XYZ/FitH/FitV/FitR kinds, `null`
+for unspecified axes). `resolveLinkPreview` ties them together: resolve the destination's page and
+crop box, copy the crop out of the rendered canvas at full backing-store resolution, and scale down
+only at display time. Falls back to a page-wide window below the destination when there is no entry to
+fit to (a figure/table target, an image-only page), and returns `null` for external links or dangling
+destinations. A `linkHoverTokenRef` invalidates any in-flight resolution on mouseout. The preview is
+a portaled `.pdf-link-preview` tooltip (`.pdf-link-preview img`).
+
+**Deduplicating overlapping highlight rects.** `Range.getClientRects()` can report the same visual
+line twice — a documented cross-browser quirk (bidi reordering, or an internally split text node)
+rather than anything pdf.js's text layer does wrong. Rendered as-is, a fully-covered middle line of a
+multi-line highlight got two nearly-identical, semi-transparent rects stacked on each other, reading
+as "marked twice". `dedupeOverlappingRects` (`PdfViewer.tsx`, tested in
+`src/components/PdfViewer.test.ts`) folds any two rects that substantially cover one another
+(`overlapRatio > 0.6`) into their union; side-by-side rects on the same line (pdf.js gives each text
+run its own span, so an ordinary line is several adjacent, non-overlapping rects) have ~0 overlap and
+are left alone. It runs in `rectsForPageRange` before the rects are stored as a `PdfMark`.
 
 ## Multiple reviewers & Consolidation
 
@@ -919,7 +993,9 @@ The **Consolidation seat itself is not gated** — a consolidator may legitimate
 that are ready while the rest are still being reviewed. The gate is per paper instead, and one rule
 drives both places it shows, so they cannot disagree:
 
-- the paper list's dot (`paperIsMarkedDone`) reads "ready to consolidate" in that seat;
+- the paper list's dot tooltip reports "ready to consolidate" in that seat (the dot itself now
+  reports the consolidator's own progress and sign-off — see "The paper-list dot in Consolidation"
+  below);
 - a field's ⇄ compare button is **disabled** on a paper not every reviewer has annotated. That
   reviewer's column would otherwise render empty, which reads as "they found nothing here" when the
   truth is "they have not looked yet" — inviting a decision on evidence that does not exist.
@@ -1369,24 +1445,29 @@ person's browser session cannot deliver on a shared, git-tracked project file �
 on every single open, for every reviewer, of every paper, is wasted work `abstractFromPdf` avoids
 for free once the first extraction lands.
 
-### The paper-list dot's meaning changes in Consolidation, and the mitigation
+### The paper-list dot in Consolidation: progress and sign-off, readiness in the tooltip
 
 A screening project's paper list gets a **tri-state** marker (undecided / included / excluded, via
 `paperScreeningStatus` in `PaperList.tsx`) instead of the plain done/not-done dot — a single boolean
-dot is nearly meaningless once every paper's whole state is one field. The rule is uniform across
-every seat: it reads whatever `currentTree` routes to, same as `paperIsMarkedDone` always has. In
-the **Consolidation seat**, `currentTree` is `paper.annotations`, so the dot reads as "the final
-decision so far" — which is the right thing for that seat to show.
+dot is nearly meaningless once every paper's whole state is one field. The Consolidation seat, by
+contrast, now carries the **same 5-state dot as any other seat** (`completenessApplies` no longer
+excludes it): the dot fills as the consolidated tree fills, turns green when the consolidator ticks
+**Consolidation finished**, and goes red if they tick it while a `required` field is empty. The
+filter dropdown and its counter work there too, so "which papers have I not settled" is one glance —
+the same question it answers for a numbered reviewer.
 
-**The cost, stated plainly: in Consolidation this dot stops meaning `readyToConsolidate`** — the
-signal `paperIsMarkedDone` computes there for an ordinary project (every numbered reviewer has
-recorded something). Losing that signal outright would be a regression, since it is what tells the
-consolidator which papers are actually workable. The mitigation is that it has not actually been
-lost, only moved: `readyToConsolidate` still runs and is reported in the marker's `title` tooltip,
-and — this is the part that matters — the **⇄ compare button's own readiness gate in `Field.tsx` is
-completely untouched**. That gate is the thing that actually protects a consolidator from deciding
-based on an absent reviewer's empty column; the paper-list dot was always a secondary, at-a-glance
-cue on top of it, never the enforcement mechanism itself.
+**Readiness — whether every reviewer has answered a paper yet — is a separate fact, reported in the
+dot's tooltip and in the `· N/M ready` half of the Consolidation seat's sidebar counter.** It used to
+be this row's whole text and what colored the dot; moving it into the tooltip is the same trade the
+screening branch above makes (screening's own readiness signal lives in its dot's tooltip, not its
+color). Green in the Consolidation seat therefore means "I have signed this off", not "everyone has
+answered it" — the two can legitimately disagree, since a consolidator can finish a paper one
+reviewer never reached. The **⇄ compare button's own readiness gate in `Field.tsx` is completely
+untouched**: that gate is the thing that actually protects a consolidator from deciding based on an
+absent reviewer's empty column; the paper-list dot was always a secondary, at-a-glance cue on top of
+it, never the enforcement mechanism itself. `paperIsMarkedDone` still computes readiness
+(`readyToConsolidate`) for the Consolidation seat, and `PaperList` appends its result to the dot's
+tooltip rather than using it for the dot's color.
 
 ### Auto-advance: one rule, forward-only
 
@@ -2500,9 +2581,9 @@ every caller fail toward a clean refusal rather than guessing an unreadable blob
   - `git:pickCloneDir` — `dialog.showOpenDialog` for the clone destination folder
   - `git:clone` — validates the URL/destination (`src/git/url.ts`), then `git clone -- <url> <dest>`
   - `git:pickProjectIn` — `dialog.showOpenDialog` with `defaultPath: dir`, the mechanism that opens the picker already inside a freshly cloned repository
-  - `git:info` — `rev-parse --is-inside-work-tree` / `--show-toplevel` / `--show-prefix`, branch, upstream, whether `HEAD` exists
-  - `git:status` — raw `status --porcelain=v1 -z` + `diff --no-color HEAD --`, parsed on the renderer side (`src/git/output.ts`)
-  - `git:headContent` / `git:workingContent` — the project's **reassembled logical text** at `HEAD` (`readProjectAtRevision`, walking `project.json` + `annotations/` at that revision via `git show`/`git ls-tree`) and on disk (`readProjectText`, a plain, side-effect-free read); the two inputs `detectFieldChanges` compares for the commit panel's field-level review
+  - `git:info` — `rev-parse --show-toplevel` / `--show-prefix`, `--verify HEAD`, current branch, upstream. These five independent calls are run concurrently via `Promise.all`; `deriveGitInfo` (`src/git/deriveGitInfo.ts`, unit-tested) maps each result to its field — extracted out of `electron/main.ts` so a `Promise.all` destructure swap cannot silently mix two same-shaped results with no type error to catch it
+  - `git:status` — raw `status --porcelain=v1 -z` + `diff --no-color HEAD --` (run concurrently via `Promise.all`), parsed on the renderer side (`src/git/output.ts`)
+  - `git:headContent` / `git:workingContent` — the project's **reassembled logical text** at `HEAD` (`readProjectAtRevision`, walking `project.json` + `annotations/` at that revision — the per-file `git show` calls are filtered first, then run concurrently via `readAllConcurrently` in `src/git/concurrentRead.ts`) and on disk (`readProjectText`, a plain, side-effect-free read whose own per-paper `loadPaperFiles` calls are likewise concurrent); the two inputs `detectFieldChanges` compares for the commit panel's field-level review
   - `git:commitPartial` — the write → `add` + `commit` → write-back sequence field-level commit review needs, since git has no native partial-file staging primitive; see "Field-level commit review" above
   - `git:commit` — pathspec-limited `add` then `commit -m` (or `commit -m --amend` when the panel's Amend checkbox is set)
   - `git:lastCommitMessage` — `git log -1 --format=%B`, to prefill the message field when the reviewer switches to amend

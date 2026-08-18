@@ -111,8 +111,9 @@ npm run typecheck
 │   │   ├── schema.ts      AnnotationDef/ResolvedDef types, zod schemas, resolveSchema
 │   │   ├── annotations.ts AnnotationValueTree, normalize/prune/init/add/remove helpers
 │   │   ├── project.ts     loadProject / serializeProject / splitProjectFiles / isLegacyProjectShape, Paper/Project types, deepEqualJson
-│   │   ├── annotationState.ts  5-state annotation vocabulary (untouched/partial/complete/finished/flagged), filter buckets
+│   │   ├── annotationState.ts  5-state annotation vocabulary (untouched/partial/complete/finished/flagged), filter buckets, completenessApplies (project-only gate), finishCheckboxLabel (seat-aware checkbox name)
 │   │   ├── alignment.ts   StoredAlignment — persisted consolidation entry-matching mapping, alignedReviews projection
+│   │   ├── refPreview.ts  detectEntryBox — SumatraPDF-style fit of a hover-preview crop to the destination's own entry (pure, unit-tested)
 │   │   ├── pdfMarks.ts    PdfMark type, sortMarksForCycling (column-then-y), cross-page groupId deduplication
 │   │   ├── pdfExport.ts   Pure coordinate math for burning marks into real PDF annotations
 │   │   ├── pdfMeta.ts     Best-effort title/author/abstract extraction from a PDF (metadata, then layout heuristic)
@@ -133,6 +134,8 @@ npm run typecheck
 │   │   ├── ref.ts         refProblem / isSafeRef — the security gate for ref names handed to git (a branch to merge, a revision to diff), imported by electron/main.ts
 │   │   ├── relpath.ts     relPathProblem / isSafeRelPath / annotationsRelDir — the security gate for paths written under a project's annotations/ folder
 │   │   ├── ownAnnotationPath.ts  ownAnnotationPathMatcher — does a path under annotations/ belong to *this* project or a sibling sharing the folder? (pure, unit-tested; imported by electron/main.ts for branch-switch/merge/Save-As guards)
+│   │   ├── concurrentRead.ts  readAllConcurrently — concurrent one-per-id reads preserving id→result mapping (extracted from readProjectText for testability; used by readProjectText, readProjectAtRevision)
+│   │   ├── deriveGitInfo.ts   deriveGitInfo — maps git:info's five concurrent git calls to their fields (extracted for testability)
 │   │   └── merge.ts       mergeProjects / applyResolutions — the field-level three-way merge (see architecture.md's "Git" section)
 │   ├── platform/          Platform abstraction for file I/O, PDF loading, and git — Electron only now, see "SaiLoR is Electron-desktop-only" above
 │   │   ├── adapter.ts     PlatformAdapter interface + isElectron()
@@ -142,7 +145,9 @@ npm run typecheck
 │   │   ├── recents.ts     Recent-projects list in localStorage (max 5)
 │   │   └── index.ts       getPlatform() singleton (ElectronAdapter or UnsupportedAdapter)
 │   ├── state/
-│   │   ├── store.ts      Zustand + immer store (project, papers, save, annotations, undo/redo, theme, fontScale, pdfZoom, recents, help, native self-update progress on win/linux)
+│   │   ├── store.ts      Zustand + immer store (project, papers, save, annotations, undo/redo incl. PDF marks, theme, fontScale, pdfZoom, recents, reading position, help, native self-update progress on win/linux)
+│   │   ├── store.readingPosition.test.ts  "Continue where you left off" — reopening a project lands on the same paper and PDF page
+│   │   ├── store.marks.test.ts  PDF mark mutations (addHighlight/setMarkComment/setMarkColor/removeMark) and their undo steps
 │   │   ├── editorStore.ts  Draft state for the project editor (schema tree + papers, relative PDF paths, validate/save)
 │   │   ├── gitStore.ts    Zustand + immer store for the clone flow, the commit/pull/push panel, the merge-branch/delete-branch prompts, the commit-history panel, and whole-file discard (reads store.ts one-way; store.ts never imports it)
 │   │   └── settings.ts   Theme + font-scale persistence (localStorage), applyTheme/applyFontScale
@@ -152,7 +157,7 @@ npm run typecheck
 │   │   ├── Dropdown.tsx   Reusable click-to-open dropdown menu
 │   │   ├── PaperList.tsx  Left pane — paper list with search box and annotation status dots
 │   │   ├── Splitter.tsx   Drag handles between the three panes (widths persisted)
-│   │   ├── PdfViewer.tsx  Middle pane — react-pdf, zoom controls, multi-page navigation, jump history (back/forward), in-PDF search (Ctrl+F), text selection capture
+│   │   ├── PdfViewer.tsx  Middle pane — react-pdf, zoom controls, multi-page navigation, jump history (back/forward), in-PDF search (Ctrl+F, debounced), text selection capture, internal-link hover previews (destination entry fit), dedupe of overlapping highlight rects
 │   │   ├── AnnotationPanel.tsx  Right pane — renders schema recursively
 │   │   ├── AnnotationNode.tsx   Recursive node (fields, groups, repeatable instances)
 │   │   ├── NodeName.tsx   Node label with ⓘ description tooltip (portaled); Ctrl/Cmd-click opens a single-link description directly
@@ -214,6 +219,6 @@ npm run typecheck
 
 ## Where to Go Next
 
-- [Architecture](architecture.md) — platform adapter pattern, state management, component tree, Electron integration
-- [Data Model](data-model.md) — project file format, schema resolution, annotation tree lifecycle (load → normalize → edit → prune → serialize)
+- [Architecture](architecture.md) — platform adapter pattern, state management (incl. undoable PDF marks, reading-position persistence), component tree, PDF internal-link hover previews, Electron integration
+- [Data Model](data-model.md) — project file format, schema resolution, annotation tree lifecycle (load → normalize → edit → prune → serialize), Consolidation finished flag
 - [Operations](operations.md) — build, test, deployment, keyboard shortcuts, change guidance

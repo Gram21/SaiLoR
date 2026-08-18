@@ -1,7 +1,7 @@
 ---
 type: reference
 title: SaiLoR Data Model
-description: The SaiLoR project on-disk format — a meta-only project.json (schema, protocol, paper metadata) plus a sibling annotations/ folder holding each reviewer's/consolidation's annotation trees, and automatic migration from the old single-file shape — the in-memory TypeScript types (ResolvedDef, Project, Paper, AnnotationValueTree), PDF marks, stored consolidation alignment, annotation state/finished flags, and the full load → normalize → edit → prune → serialize lifecycle that keeps hand-edited JSON safe.
+description: The SaiLoR project on-disk format — a meta-only project.json (schema, protocol, paper metadata) plus a sibling annotations/ folder holding each reviewer's/consolidation's annotation trees, and automatic migration from the old single-file shape — the in-memory TypeScript types (ResolvedDef, Project, Paper, AnnotationValueTree), PDF marks (each mutation undoable), stored consolidation alignment, annotation state/finished flags (Consolidation included), and the full load → normalize → edit → prune → serialize lifecycle that keeps hand-edited JSON safe.
 tags: [data-model, json, schema, types, lifecycle, split-storage]
 ---
 
@@ -251,7 +251,7 @@ interface Paper {
   aiUsage: AiUsageRecord[]        // AI-assisted-annotation disclosure log, oldest first; [] if never used
   marks: PdfMark[]                 // consolidated/single-reviewer PDF highlights+comments; see "PDF marks" below
   reviewMarks: Record<string, PdfMark[]>  // each reviewer's own highlights, keyed "1".."N"; {} if single-reviewer
-  finished: boolean                // the reviewer's "done with this paper" declaration; see "Annotation state" below
+  finished: boolean                // the seat's "done with this paper" declaration (lone reviewer or consolidator); see "Annotation state" below
   reviewsFinished: Record<string, boolean>  // each numbered reviewer's own finished flag, keyed "1".."N"
   extra: Record<string, unknown>  // unknown per-paper fields preserved
 }
@@ -394,21 +394,28 @@ Two pieces make this hold in practice:
   closes the same gap for `reviews`.
 
 **A file that doesn't have this shape yet is migrated automatically, and re-saved.**
-`needsShapeMigration(project, rawText)` (`project.ts`) re-parses the raw text and structurally
-compares (`deepEqualJson` — order-independent for object keys, order-sensitive for arrays, i.e.
-JSON's own equality, never a text/string comparison) each paper's `annotations`/`reviews` against
-what saving right now would produce. `loadFromText` (`store.ts`) checks this immediately after
-`loadProject` and, if true, writes the migrated shape back through `getPlatform().saveProject` —
-but only when there is somewhere safe and unsurprising to write it: a real in-place handle. In
-practice that means every open now, since the only real `PlatformAdapter` left is Electron's, which
-always produces a `'electron'`-kind handle with a real path; the check still guards `SaveHandle`'s
-other kinds (`'fsapi'`, `'download'`, or a bare `null` handle — a `?project=<url>` load or a
-handle-less browser pick, from the deleted browser build) so a migrated-shape write is never attempted
-where there's nowhere safe to put it — the project is simply held in its migrated, better shape in
-memory, converging again harmlessly next time it's opened. The write is fire-and-forget; on success
-`saveHandle` is refreshed the same way an ordinary save updates it, on failure the project is
-marked `dirty` so the ordinary unsaved-changes guard — not an alarming banner for a fix nobody
-asked for — eventually gets it saved.
+`needsShapeMigration(project, rawData)` (`project.ts`) takes the same already-parsed value handed to
+`loadProject` (no re-parse — the old `rawText: string` signature was cut to avoid a redundant second
+`JSON.parse`) and structurally compares (`deepEqualJson` — order-independent for object keys,
+order-sensitive for arrays, i.e. JSON's own equality, never a text/string comparison) each paper's
+`annotations`/`reviews` against what saving right now would produce. `loadFromText` (`store.ts`)
+checks this immediately after `loadProject` and, if true, writes the migrated shape back through
+`getPlatform().saveProject` — but only when there is somewhere safe and unsurprising to write it: a
+real in-place handle. In practice that means every open now, since the only real `PlatformAdapter`
+left is Electron's, which always produces a `'electron'`-kind handle with a real path; the check
+still guards `SaveHandle`'s other kinds (`'fsapi'`, `'download'`, or a bare `null` handle — a
+`?project=<url>` load or a handle-less browser pick, from the deleted browser build) so a
+migrated-shape write is never attempted where there's nowhere safe to put it — the project is
+simply held in its migrated, better shape in memory, converging again harmlessly next time it's
+opened. The write is fire-and-forget; on success `saveHandle` is refreshed the same way an ordinary
+save updates it, on failure the project is marked `dirty` so the ordinary unsaved-changes guard —
+not an alarming banner for a fix nobody asked for — eventually gets it saved.
+
+**The migration check is deferred one tick** (`setTimeout(…, 0)`) so the `set` that paints the
+newly opened project runs first: `needsShapeMigration` walks every paper's (and, for multi-reviewer,
+every reviewer's) annotation tree, which is real work on a large file, and its only consequence is
+deciding whether to kick off the already-fire-and-forget resave — nothing here needs to happen
+before the UI shows the project.
 
 `needsShapeMigration` deliberately compares **parsed values**, not the canonical re-serialization's
 *text* against the raw file's text: `serializeProject` always pretty-prints with its own key order,
@@ -498,9 +505,16 @@ unions both sides by `id` and, on a same-`id` conflict, keeps whichever side has
 note, not the record a review reports, so silently keeping the newer edit is an acceptable default
 where annotation merges must show every disagreement instead.
 
-**Deliberately outside the undo stack.** `addHighlight`/`setMarkComment`/`setMarkColor`/`removeMark`
-never push a `HistoryEntry`, so PDF marks are not covered by the app's Cmd+Z annotation undo/redo —
-another consequence of treating them as a lower-stakes personal note rather than a reviewed answer.
+**Each mark mutation is its own undo step.** `addHighlight`/`setMarkColor`/`removeMark`/
+`linkMarkToField`/`unlinkMarkFromField` each push a `HistoryEntry` snapshot (project + paperId)
+before mutating, so Ctrl+Z right after drawing a highlight undoes the highlight, not whatever was
+last edited before it. `setMarkComment` coalesces consecutive edits to the *same* mark's comment into
+one undo step — the same `lastFieldKey` mechanism `setFieldValue` uses for field-value coalescing,
+keyed distinctly as `mark-comment:<id>` — so a run of keystrokes in one mark's comment is a single
+undo step, while switching to a different mark or any other mark mutation breaks the run. Each
+mutation also clears `lastFieldKey` (except `setMarkComment`'s own coalescing key), so a color change
+or removal after a comment edit cannot accidentally coalesce with it. See
+[architecture](architecture.md) and `src/state/store.marks.test.ts`.
 
 **Sticky notes reuse everything above.** `addHighlight(page, rects, color, 'note')` (the `kind`
 param defaults to `'highlight'`) creates a note the same way a highlight is created — same storage,
@@ -562,13 +576,16 @@ reviewer) are per-paper, per-seat **declarations** — a reviewer's own "I am do
 tick, deliberately not derived from the data. A full annotation tree means every field has something,
 which is a fact about the form, not a judgment that the extraction is right; only a human can make
 the second claim. Both are only written when `true` — absent means undeclared, never `false` — the
-same rule `aiUsage`/`equal`/`marks` follow.
+same rule `aiUsage`/`equal`/`marks` follow. The Consolidation seat's tick goes to `Paper.finished`
+(the same field the lone reviewer of a single-reviewer project ticks) — it signs off the consolidated
+record, and the checkbox is labelled "Consolidation finished" in that seat (`finishCheckboxLabel`).
 
 `Project.finishCheckbox` (`config.finishCheckbox`, defaults `true`) is the project-level switch:
 when `false`, a fulfilled schema alone counts as finished — nobody ticks anything, `Paper.finished`
 is not read, and the `flagged` state below is unreachable. The annotation panel hides its checkbox;
 the `issues` filter is dropped from the dropdown. When `true` (the default), the reviewer must tick
-"Annotation finished" explicitly.
+the sign-off box explicitly — "Annotation finished" for a reviewer, "Consolidation finished" in the
+Consolidation seat.
 
 ### The 5-state vocabulary (`src/model/annotationState.ts`)
 
@@ -589,8 +606,11 @@ Completeness and finished are deliberately independent inputs: a full form is a 
 re-derived from current data on every read, emptying a field on a finished paper automatically flips
 it to `flagged` with no invalidation step.
 
-`completenessApplies()` gates whether this vocabulary applies to a seat at all — it returns `false`
-for screening projects and the Consolidation seat (those keep their own tri-state/binary markers).
+`completenessApplies(project)` gates whether this vocabulary applies at all — it takes only `project`
+(no seat argument) and returns `false` solely for a screening project. The Consolidation seat is
+included: the consolidated tree is the record that ships, so it carries the same 5-state dot and a
+sign-off checkbox of its own (`finishCheckboxLabel(isConsolidation)` → "Consolidation finished"),
+stored in `Paper.finished` like a lone reviewer's tick.
 
 ### Filters (`AnnotationFilter`)
 
@@ -607,7 +627,10 @@ The paper-list filter dropdown maps the 5 states into 4 buckets plus "all":
 The progress bar counts whichever bucket the filter is currently showing — `finished: 5/100` with no
 filter, `open: 80/100` with "open" selected — always over every paper regardless of the search box,
 so the counter and the rows can never disagree. `annotationFiltersFor(requireTick)` drops the `issues`
-option when `finishCheckbox` is `false`.
+option when `finishCheckbox` is `false`. The Consolidation seat gets the same dropdown and counter as
+any other seat, plus a second `· N/M ready` number (from `paperIsMarkedDone`/`readyToConsolidate`)
+reporting how many papers every reviewer has answered — the fact that decides whether a paper is
+workable at all, which used to be this row's whole text and now lives alongside the sign-off count.
 
 ## Screening
 
