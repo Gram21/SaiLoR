@@ -613,12 +613,24 @@ export function PdfViewer() {
   // reviewer navigates to a *different* paper before this ever runs, so the
   // `paperId` match here only needs to guard the ordinary "haven't gotten to
   // it yet" case, not a stale one.
+  //
+  // Re-applied on every `textRenderTick` (each page's own text layer finishing)
+  // rather than scrolled to once and done: the moment `numPages` is known,
+  // every page is still at its "loading" placeholder height, not its real
+  // rendered one — scrolling to the target page then lands on wherever that
+  // placeholder currently sits, and as earlier pages finish rendering at
+  // their real (larger) height moments later, that growth pushes the target
+  // page down and out from under the scroll position already applied,
+  // silently landing back on an earlier page. Re-snapping on each render
+  // tick keeps the target pinned through that settling, and the request is
+  // only dropped once nothing has re-rendered for a bit.
   useEffect(() => {
     if (numPages === 0 || !initialPdfPosition || initialPdfPosition.paperId !== paperId) return
     scrollToPage(initialPdfPosition.page)
-    clearInitialPdfPosition()
+    const t = window.setTimeout(clearInitialPdfPosition, 800)
+    return () => window.clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [numPages, initialPdfPosition, paperId])
+  }, [numPages, initialPdfPosition, paperId, textRenderTick])
 
   /** Scroll to a mark's actual position on its page (not just the page top),
    *  vertically centering it the same way the in-PDF search's active match is
