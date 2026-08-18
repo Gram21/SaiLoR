@@ -253,6 +253,48 @@ function saveCurrentReviewer(handle: SaveHandle | null, reviewer: string | null)
   else safeSet(key, reviewer)
 }
 
+const READING_POSITION_KEY_PREFIX = 'slr.readingPosition.'
+
+/** Same per-machine, `localStorage`, keyed-by-path convention as
+ *  `reviewerStorageKey` — see its own doc comment. Reopening the file should
+ *  land back on the paper and PDF page a reviewer was last looking at,
+ *  purely as a local convenience; it has no business in the shared project
+ *  JSON, where it would just be diff noise every time someone opens the file. */
+function readingPositionKey(handle: SaveHandle | null): string | null {
+  return handle?.path ? `${READING_POSITION_KEY_PREFIX}${handle.path}` : null
+}
+
+interface StoredReadingPosition {
+  paperId: string
+  page: number
+}
+
+/** The persisted reading position for this project, or null when there is
+ *  none, the project has no stable key, or the stored value is malformed. Not
+ *  checked against the project's own paper list here — `loadFromText` does
+ *  that, since only it knows the freshly loaded papers. */
+function loadReadingPosition(handle: SaveHandle | null): StoredReadingPosition | null {
+  const key = readingPositionKey(handle)
+  if (!key) return null
+  const stored = safeGet(key)
+  if (!stored) return null
+  try {
+    const parsed = JSON.parse(stored) as { paperId?: unknown; page?: unknown }
+    if (typeof parsed.paperId === 'string' && Number.isInteger(parsed.page) && (parsed.page as number) >= 1) {
+      return { paperId: parsed.paperId, page: parsed.page as number }
+    }
+  } catch {
+    /* malformed — treat exactly like "none stored" */
+  }
+  return null
+}
+
+function saveReadingPosition(handle: SaveHandle | null, paperId: string | null, page: number): void {
+  const key = readingPositionKey(handle)
+  if (!key || !paperId) return
+  safeSet(key, JSON.stringify({ paperId, page }))
+}
+
 export interface LoadError {
   message: string
   details: string[]
@@ -341,6 +383,19 @@ interface AppState {
    *  candidate to see it in context before linking it). `PdfViewer` clears
    *  this itself once it has acted on it. Session-only. */
   pendingMarkJump: string | null
+  /**
+   * The paper/page a just-opened project's landing paper should scroll to on
+   * its very first render, restored from `loadReadingPosition` — a reviewer
+   * reopening a project lands back where they left off instead of wherever
+   * `firstUnfinishedPaperId` would otherwise put them. `PdfViewer` consumes
+   * this itself once its pages are actually mounted and clears it, the same
+   * single-shot shape as `pendingMarkJump`. `paperId` guards against a
+   * reviewer navigating to a different paper before the landing paper's PDF
+   * finishes loading — `PdfViewer` also drops it outright the moment the
+   * open paper no longer matches, so it can never misapply to a paper opened
+   * later by hand. Session-only.
+   */
+  initialPdfPosition: { paperId: string; page: number } | null
   /** Canonical field path whose link popover is open, or null. Session-only, like `validationOpen`. */
   openLinkPopoverField: string | null
   /** The mark `PdfViewer` most recently created (a highlight or note, not an
@@ -568,6 +623,21 @@ interface AppState {
   setSchemaInfoOpen: (open: boolean) => void
   /** Request/clear a "scroll to and flash this mark" — see `pendingMarkJump`. */
   setPendingMarkJump: (markId: string | null) => void
+  /** `PdfViewer` calls this once it has scrolled to (or dropped) an
+   *  `initialPdfPosition` — see its own doc comment. */
+  clearInitialPdfPosition: () => void
+  /**
+   * Persists `page` as `paperId`'s reading position, for the next time this
+   * project is opened — see `saveReadingPosition`. Takes `paperId` explicitly
+   * rather than reading `currentPaperId` off the store: the call is debounced
+   * from `PdfViewer`, and by the time it actually fires the reviewer may
+   * already have switched to a different paper — writing whichever paper is
+   * *current by then* would attribute an old page number to the wrong paper.
+   * A no-op with no stable save location (server mode, a browser
+   * download-only save): the same case `saveCurrentReviewer` already
+   * quietly skips.
+   */
+  noteReadingPosition: (paperId: string, page: number) => void
   /** Open/close a field's link popover, closing any other field's — see `openLinkPopoverField`. */
   setOpenLinkPopoverField: (canonical: string | null) => void
   /** Set/clear `lastCreatedMarkId` — see its own doc comment. */
@@ -967,6 +1037,7 @@ export const useStore = create<AppState>()(
     exportPdfOpen: false,
     schemaInfoOpen: false,
     pendingMarkJump: null,
+    initialPdfPosition: null,
     openLinkPopoverField: null,
     lastCreatedMarkId: null,
     lastCreatedMarkAllowedField: null,
@@ -1216,7 +1287,19 @@ export const useStore = create<AppState>()(
         // papers count as finished is per-seat. Same value the `set` below
         // stores; computed once here so the two cannot disagree.
         const reviewer = project.reviewers > 1 ? loadCurrentReviewer(handle, project.reviewers) : null
-        const landingPaperId = firstUnfinishedPaperId(project, reviewer)
+        // A remembered reading position always wins over the "first
+        // unfinished paper" heuristic — that heuristic exists for when there
+        // is nothing better to go on (a fresh machine, a project just pulled
+        // from git), not to override where the reviewer actually left off.
+        // Ignored if the paper it names no longer exists (deleted since, or
+        // this is a different project that happens to reuse the same file
+        // path — vanishingly rare, but cheap to guard).
+        const savedPosition = loadReadingPosition(handle)
+        const savedPaperStillExists =
+          !!savedPosition && project.papers.some((p) => p.id === savedPosition.paperId)
+        const landingPaperId = savedPaperStillExists
+          ? savedPosition!.paperId
+          : firstUnfinishedPaperId(project, reviewer)
         // The title only becomes known once the JSON is parsed, so the recents
         // entry is enriched here rather than in the adapter's open path.
         if (handle) getPlatform().rememberProject(handle, name, project.title)
@@ -1229,6 +1312,10 @@ export const useStore = create<AppState>()(
           s.projectTitle = project.title ?? ''
           s.recents = getPlatform().getRecents()
           s.currentPaperId = landingPaperId
+          s.initialPdfPosition =
+            savedPaperStillExists && landingPaperId
+              ? { paperId: landingPaperId, page: savedPosition!.page }
+              : null
           s.dirty = false
           s.loadError = null
           s.busy = false
@@ -1450,6 +1537,11 @@ export const useStore = create<AppState>()(
         // Carry the reviewer selection over to the new location's own key, or
         // it would silently look unselected the next time this file is opened.
         saveCurrentReviewer(handle, get().currentReviewer)
+        // Same carry-over for the reading position, or reopening the file at
+        // its new location would land on the "first unfinished paper" default
+        // instead of wherever the reviewer actually was.
+        const oldPosition = loadReadingPosition(saveHandle)
+        if (oldPosition) saveReadingPosition(handle, oldPosition.paperId, oldPosition.page)
         // Drop undo history *only when the PDF paths actually moved*. Its
         // snapshots hold `paper.pdf` relative to the old location, so undoing
         // after a rebase would restore now-broken paths (and, since undo sets
@@ -1642,6 +1734,15 @@ export const useStore = create<AppState>()(
       set((s) => {
         s.pendingMarkJump = markId
       }),
+
+    clearInitialPdfPosition: () =>
+      set((s) => {
+        s.initialPdfPosition = null
+      }),
+
+    noteReadingPosition: (paperId, page) => {
+      saveReadingPosition(get().saveHandle, paperId, page)
+    },
 
     setOpenLinkPopoverField: (canonical) =>
       set((s) => {

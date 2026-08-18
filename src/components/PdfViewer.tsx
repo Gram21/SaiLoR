@@ -317,6 +317,13 @@ export function PdfViewer() {
   const authors = useStore((s) => (selectCurrentPaper(s)?.authors ?? []).join(', '))
   const doi = useStore((s) => selectCurrentPaper(s)?.doi)
   const saveHandle = useStore((s) => s.saveHandle)
+  // "Continue where you left off": the paper/page to land on right after a
+  // project opens (`loadFromText` populates this from `loadReadingPosition`),
+  // and the write side that keeps it current as the reviewer scrolls. See
+  // `initialPdfPosition`'s own doc comment for the single-shot/race-guard shape.
+  const initialPdfPosition = useStore((s) => s.initialPdfPosition)
+  const clearInitialPdfPosition = useStore((s) => s.clearInitialPdfPosition)
+  const noteReadingPosition = useStore((s) => s.noteReadingPosition)
   const setPdfSelection = useStore((s) => s.setPdfSelection)
   const screening = useStore((s) => s.project?.screening != null)
   const toggleScreeningPdf = useStore((s) => s.toggleScreeningPdf)
@@ -451,6 +458,15 @@ export function PdfViewer() {
     if (flashTimeoutRef.current !== undefined) window.clearTimeout(flashTimeoutRef.current)
     revokeRef.current?.()
     revokeRef.current = undefined
+    // A pending "land on this page" request belongs to whichever paper it
+    // was computed for — if the reviewer has navigated to a different paper
+    // before that page was ever reached (the landing paper's PDF was still
+    // loading), it must not carry over and misapply once *this* paper's
+    // pages mount. Read fresh rather than via a hook value, so this reset
+    // effect (which runs on every ordinary paper switch) doesn't itself need
+    // `initialPdfPosition` in its own dependency list.
+    const pending = useStore.getState().initialPdfPosition
+    if (pending && pending.paperId !== paperId) clearInitialPdfPosition()
     if (!pdfPath) return
 
     // A locally opened browser project needs a one-time folder grant before
@@ -478,7 +494,7 @@ export function PdfViewer() {
     return () => {
       cancelled = true
     }
-  }, [paperId, pdfPath, saveHandle])
+  }, [paperId, pdfPath, saveHandle, clearInitialPdfPosition])
 
   // Revoke the last object URL when the viewer itself unmounts (the effect
   // above already revokes on every paper/handle change, via revokeRef).
@@ -561,6 +577,19 @@ export function PdfViewer() {
     if (document.activeElement !== pageInputRef.current) setPageInput(String(currentPage))
   }, [currentPage])
 
+  // "Continue where you left off": persists the current page as the reviewer
+  // scrolls, debounced so a fast scroll through many pages doesn't spam
+  // localStorage with one write per frame. `paperId` is captured here, in the
+  // closure this effect re-runs, rather than read fresh when the timeout
+  // fires — by then the reviewer may already be looking at a different
+  // paper, and writing *that* one's id against a page number captured for
+  // this one would attribute it to the wrong paper.
+  useEffect(() => {
+    if (!paperId) return
+    const t = window.setTimeout(() => noteReadingPosition(paperId, currentPage), 500)
+    return () => window.clearTimeout(t)
+  }, [paperId, currentPage, noteReadingPosition])
+
   const scrollToPage = (n: number) => {
     const count = pageRefs.current.length
     if (count === 0) return
@@ -568,6 +597,19 @@ export function PdfViewer() {
     setCurrentPage(clamped)
     pageRefs.current[clamped - 1]?.scrollIntoView({ block: 'start' })
   }
+
+  // Once this paper's pages are actually mounted, jump to the remembered
+  // page from a just-opened project and consume the one-shot request. The
+  // reset effect above already drops `initialPdfPosition` the moment the
+  // reviewer navigates to a *different* paper before this ever runs, so the
+  // `paperId` match here only needs to guard the ordinary "haven't gotten to
+  // it yet" case, not a stale one.
+  useEffect(() => {
+    if (numPages === 0 || !initialPdfPosition || initialPdfPosition.paperId !== paperId) return
+    scrollToPage(initialPdfPosition.page)
+    clearInitialPdfPosition()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [numPages, initialPdfPosition, paperId])
 
   /** Scroll to a mark's actual position on its page (not just the page top),
    *  vertically centering it the same way the in-PDF search's active match is
