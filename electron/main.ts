@@ -1821,8 +1821,12 @@ ipcMain.handle('git:info', async (_e, projectPath: string) => {
 })
 
 ipcMain.handle('git:status', async (_e, root: string) => {
-  const porcelain = (await runGit(['status', '--porcelain=v1', '-z'], root)).stdout
-  const hasHead = (await runGit(['rev-parse', '--verify', '-q', 'HEAD'], root)).ok
+  const [statusRun, headRun] = await Promise.all([
+    runGit(['status', '--porcelain=v1', '-z'], root),
+    runGit(['rev-parse', '--verify', '-q', 'HEAD'], root),
+  ])
+  const porcelain = statusRun.stdout
+  const hasHead = headRun.ok
   // --no-color: a user with color.diff=always would otherwise leak ANSI escape
   // sequences into the <pre> as literal text. --no-pager costs one token and
   // removes a whole class of hang.
@@ -1860,6 +1864,19 @@ async function readProjectAtRevision(root: string, relPath: string, rev: string)
   const consolidatedName = screening ? 'screening-consolidated' : 'consolidated'
   const reviewerPrefix = screening ? 'screening' : 'reviewer'
   const re = new RegExp(`^([^/]+)\\/(?:(${consolidatedName})|${reviewerPrefix}-(\\d+)|(marks-consolidated)|marks-(\\d+))\\.json$`)
+  // Filtered first, purely so the (independent, one-per-file) `git show`
+  // calls below can run concurrently rather than one at a time — the same
+  // fix as `readProjectText`'s own per-paper loop, one hop further out. This
+  // path backs `git:headContent`, which the Git panel re-fetches on every
+  // status refresh (not just project-open), so it runs far more often.
+  const matched: {
+    path: string
+    paperId: string
+    consolidatedKind?: string
+    reviewerNum?: string
+    marksConsolidatedKind?: string
+    marksReviewerNum?: string
+  }[] = []
   for (const p of paths) {
     const rel = p.slice(dir.length + 1) // "<paperId>/<name>.json"
     // Group 2 catches this project's own consolidated-file name (ordinary or
@@ -1872,9 +1889,15 @@ async function readProjectAtRevision(root: string, relPath: string, rev: string)
     const m = re.exec(rel)
     if (!m) continue
     const [, paperId, consolidatedKind, reviewerNum, marksConsolidatedKind, marksReviewerNum] = m
-    const entry = paperFiles.get(paperId)
-    if (!entry) continue
-    const fileShow = await runGit(['show', `${rev}:${p}`], root)
+    if (!paperFiles.has(paperId)) continue
+    matched.push({ path: p, paperId, consolidatedKind, reviewerNum, marksConsolidatedKind, marksReviewerNum })
+  }
+  const shows = await readAllConcurrently(
+    matched.map((f) => f.path),
+    (p) => runGit(['show', `${rev}:${p}`], root),
+  )
+  for (const f of matched) {
+    const fileShow = shows.get(f.path)!
     if (!fileShow.ok) continue
     let parsed: unknown
     try {
@@ -1882,10 +1905,11 @@ async function readProjectAtRevision(root: string, relPath: string, rev: string)
     } catch {
       continue // corrupt file at this revision — treat as absent
     }
-    if (consolidatedKind) entry.consolidated = parsed
-    else if (reviewerNum) entry.reviewers.set(reviewerNum, parsed)
-    else if (marksConsolidatedKind) entry.marksConsolidated = parsed
-    else entry.reviewMarks.set(marksReviewerNum, parsed)
+    const entry = paperFiles.get(f.paperId)!
+    if (f.consolidatedKind) entry.consolidated = parsed
+    else if (f.reviewerNum) entry.reviewers.set(f.reviewerNum, parsed)
+    else if (f.marksConsolidatedKind) entry.marksConsolidated = parsed
+    else entry.reviewMarks.set(f.marksReviewerNum!, parsed)
   }
   return JSON.stringify(assembleLegacyProjectJson(raw, paperFiles))
 }
