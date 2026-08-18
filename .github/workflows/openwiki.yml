@@ -50,7 +50,12 @@ jobs:
 
       - name: Install OpenWiki
         if: steps.recent_commits.outputs.changed == 'true'
-        run: npm install --global openwiki
+        # mermaid + jsdom are openwiki's optional peer deps for validating generated
+        # mermaid fences with the real parser; installed as globals alongside openwiki
+        # itself so Node's module resolution finds them in the shared global
+        # node_modules dir. Without them it falls back to a crude regex heuristic that
+        # false-positives on valid diagrams (e.g. any `<br/>` inside a bracketed label).
+        run: npm install --global openwiki mermaid jsdom
 
       - name: Run OpenWiki
         if: steps.recent_commits.outputs.changed == 'true'
