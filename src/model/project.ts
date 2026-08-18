@@ -615,12 +615,12 @@ export function deepEqualJson(a: unknown, b: unknown): boolean {
  * That distinction is what keeps this from flagging every hand-authored or
  * differently-formatted file that already has the right shape.
  *
- * `rawText` is assumed to be exactly what `loadProject` just parsed
- * successfully to produce `project` — this only re-parses it, it does not
- * revalidate it, so call it right after `loadProject`, not independently.
+ * `rawData` is assumed to be the same already-parsed value handed to
+ * `loadProject` to produce `project` — this does not revalidate it, so call
+ * it right after `loadProject`, not independently.
  */
-export function needsShapeMigration(project: Project, rawText: string): boolean {
-  const data = JSON.parse(rawText) as { papers?: unknown[] }
+export function needsShapeMigration(project: Project, rawData: unknown): boolean {
+  const data = rawData as { papers?: unknown[] }
   const rawPapers = Array.isArray(data.papers) ? data.papers : []
   return project.papers.some((paper, i) => {
     const rawPaper = (rawPapers[i] ?? {}) as Record<string, unknown>

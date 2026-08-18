@@ -1274,15 +1274,6 @@ export const useStore = create<AppState>()(
     loadFromText: (text, handle, name) => {
       try {
         const project = loadProject(text)
-        // `loadProject` already normalizes every paper's `annotations` and
-        // (for a multi-reviewer project) backfills a skeleton for every
-        // reviewer who has not written anything — see `normalizeReviews`.
-        // `needsShapeMigration` asks, structurally, whether the file on disk
-        // already had that shape — deliberately *not* a text comparison
-        // against the canonical re-serialization, which would also trip on
-        // nothing more than whitespace or key order and resave files that
-        // were already perfectly fine.
-        const needsMigration = needsShapeMigration(project, text)
         // The seat has to be resolved before the landing paper, since which
         // papers count as finished is per-seat. Same value the `set` below
         // stores; computed once here so the two cannot disagree.
@@ -1360,37 +1351,56 @@ export const useStore = create<AppState>()(
         // gives every one after it — the reviewer never selected this one by
         // hand, so nothing else would ever fire for it.
         if (landingPaperId) void get().extractScreeningAbstract(landingPaperId)
-        // Write the migrated shape back in place — never a download, and never
-        // a "where should this go" prompt, just because a file's shape needed
-        // updating. A project with nowhere stable to write (a `?project=` URL,
-        // or a browser pick with no in-place handle) simply keeps the better
-        // shape in memory; it converges again, harmlessly, next time it opens.
-        if (needsMigration && handle && handle.kind !== 'download') {
-          getPlatform()
-            .saveProject(serializeProject(project), handle)
-            .then((newHandle) => {
-              // A second load may have already replaced this project (the user
-              // opened something else before this write landed) — in which
-              // case the result belongs to a project nobody is looking at
-              // anymore, and applying it would resurrect a stale handle.
-              if (get().project === project) {
-                set((s) => {
-                  s.saveHandle = newHandle
-                })
-              }
-            })
-            .catch(() => {
-              // No alarming banner for a fix the reviewer never asked for and
-              // has no different action to take — the ordinary unsaved-changes
-              // guard already exists for exactly "memory doesn't match disk",
-              // and will ask about it the same way any other edit would.
-              if (get().project === project) {
-                set((s) => {
-                  s.dirty = true
-                })
-              }
-            })
-        }
+        // Deferred one tick (same `setTimeout(…, 0)` precedent as
+        // `yieldToBrowser` below) so the `set` above gets to paint the newly
+        // opened project before this runs: `needsShapeMigration` walks every
+        // paper's (and, for multi-reviewer, every reviewer's) annotation tree,
+        // which is real work on a large file, and its only consequence is
+        // deciding whether to kick off the already-fire-and-forget resave
+        // below — nothing here needs to happen before the UI shows the project.
+        setTimeout(() => {
+          const rawData = JSON.parse(text) as unknown
+          // `loadProject` already normalizes every paper's `annotations` and
+          // (for a multi-reviewer project) backfills a skeleton for every
+          // reviewer who has not written anything — see `normalizeReviews`.
+          // `needsShapeMigration` asks, structurally, whether the file on disk
+          // already had that shape — deliberately *not* a text comparison
+          // against the canonical re-serialization, which would also trip on
+          // nothing more than whitespace or key order and resave files that
+          // were already perfectly fine.
+          const needsMigration = needsShapeMigration(project, rawData)
+          // Write the migrated shape back in place — never a download, and never
+          // a "where should this go" prompt, just because a file's shape needed
+          // updating. A project with nowhere stable to write (a `?project=` URL,
+          // or a browser pick with no in-place handle) simply keeps the better
+          // shape in memory; it converges again, harmlessly, next time it opens.
+          if (needsMigration && handle && handle.kind !== 'download') {
+            getPlatform()
+              .saveProject(serializeProject(project), handle)
+              .then((newHandle) => {
+                // A second load may have already replaced this project (the user
+                // opened something else before this write landed) — in which
+                // case the result belongs to a project nobody is looking at
+                // anymore, and applying it would resurrect a stale handle.
+                if (get().project === project) {
+                  set((s) => {
+                    s.saveHandle = newHandle
+                  })
+                }
+              })
+              .catch(() => {
+                // No alarming banner for a fix the reviewer never asked for and
+                // has no different action to take — the ordinary unsaved-changes
+                // guard already exists for exactly "memory doesn't match disk",
+                // and will ask about it the same way any other edit would.
+                if (get().project === project) {
+                  set((s) => {
+                    s.dirty = true
+                  })
+                }
+              })
+          }
+        }, 0)
       } catch (err) {
         const le: LoadError =
           err instanceof ProjectLoadError
