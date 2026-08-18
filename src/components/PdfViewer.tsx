@@ -389,6 +389,15 @@ export function PdfViewer() {
   // In-PDF search.
   const [searchOpen, setSearchOpen] = useState(false)
   const [query, setQuery] = useState('')
+  // `findMatches` walks every rendered page's text layer with a TreeWalker —
+  // real work for a long document. Debounced so a fast typist doesn't trigger
+  // one full re-scan per keystroke; the input itself still reflects `query`
+  // immediately, only the (re)search is delayed.
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQuery(query), 150)
+    return () => window.clearTimeout(t)
+  }, [query])
   const [matchCount, setMatchCount] = useState(0)
   const [activeMatch, setActiveMatch] = useState(0)
   const [textRenderTick, setTextRenderTick] = useState(0)
@@ -1282,10 +1291,10 @@ export function PdfViewer() {
     return () => window.removeEventListener('keydown', onKey)
   }, [selectionToolbar])
 
-  // (Re)compute matches when the query, page set, or a text layer finishes
-  // rendering changes. Recomputes against text layers already in the DOM.
+  // (Re)compute matches when the (debounced) query, page set, or a text layer
+  // finishes rendering changes. Recomputes against text layers already in the DOM.
   useEffect(() => {
-    if (!searchOpen || !query) {
+    if (!searchOpen || !debouncedQuery) {
       matchesRef.current = []
       setMatchCount(0)
       setActiveMatch(0)
@@ -1293,11 +1302,11 @@ export function PdfViewer() {
       return
     }
     const root = containerRef.current
-    const ranges = root ? findMatches(root, query) : []
+    const ranges = root ? findMatches(root, debouncedQuery) : []
     matchesRef.current = ranges
     setMatchCount(ranges.length)
     setActiveMatch((prev) => (ranges.length ? Math.min(prev, ranges.length - 1) : 0))
-  }, [query, searchOpen, numPages, textRenderTick])
+  }, [debouncedQuery, searchOpen, numPages, textRenderTick])
 
   // Stable callback so the memoized pages below don't change identity (which
   // would tear down and re-render the text layers on every search keystroke).
