@@ -586,17 +586,36 @@ export function PdfViewer() {
     if (document.activeElement !== pageInputRef.current) setPageInput(String(currentPage))
   }, [currentPage])
 
-  // "Continue where you left off": persists the current page as the reviewer
-  // scrolls, debounced so a fast scroll through many pages doesn't spam
-  // localStorage with one write per frame. `paperId` is captured here, in the
-  // closure this effect re-runs, rather than read fresh when the timeout
-  // fires — by then the reviewer may already be looking at a different
-  // paper, and writing *that* one's id against a page number captured for
-  // this one would attribute it to the wrong paper.
+  /** How far scrolled into `pageNumber`, as a fraction of that page's own
+   *  current rendered height (0 = its top) — the same "fraction of the page"
+   *  convention `MarkRect` already uses. Reads live ref values, so it's
+   *  always safe to call without being a `useEffect` dependency itself. */
+  const readOffsetFraction = (pageNumber: number): number => {
+    const root = containerRef.current
+    const pageEl = pageRefs.current[pageNumber - 1]
+    if (!root || !pageEl) return 0
+    const pageRect = pageEl.getBoundingClientRect()
+    if (pageRect.height <= 0) return 0
+    const fraction = (root.getBoundingClientRect().top - pageRect.top) / pageRect.height
+    return Math.min(1, Math.max(0, fraction))
+  }
+
+  // "Continue where you left off": persists the current page — and how far
+  // scrolled into it — as the reviewer scrolls, debounced so a fast scroll
+  // through many pages doesn't spam localStorage with one write per frame.
+  // `paperId` is captured here, in the closure this effect re-runs, rather
+  // than read fresh when the timeout fires — by then the reviewer may
+  // already be looking at a different paper, and writing *that* one's id
+  // against a position captured for this one would attribute it to the
+  // wrong paper.
   useEffect(() => {
     if (!paperId) return
-    const t = window.setTimeout(() => noteReadingPosition(paperId, currentPage), 500)
+    const t = window.setTimeout(
+      () => noteReadingPosition(paperId, currentPage, readOffsetFraction(currentPage)),
+      500,
+    )
     return () => window.clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paperId, currentPage, noteReadingPosition])
 
   const scrollToPage = (n: number) => {
@@ -608,25 +627,31 @@ export function PdfViewer() {
   }
 
   // Once this paper's pages are actually mounted, jump to the remembered
-  // page from a just-opened project and consume the one-shot request. The
-  // reset effect above already drops `initialPdfPosition` the moment the
-  // reviewer navigates to a *different* paper before this ever runs, so the
-  // `paperId` match here only needs to guard the ordinary "haven't gotten to
-  // it yet" case, not a stale one.
+  // page/offset from a just-opened project and consume the one-shot
+  // request. The reset effect above already drops `initialPdfPosition` the
+  // moment the reviewer navigates to a *different* paper before this ever
+  // runs, so the `paperId` match here only needs to guard the ordinary
+  // "haven't gotten to it yet" case, not a stale one.
   //
   // Re-applied on every `textRenderTick` (each page's own text layer finishing)
   // rather than scrolled to once and done: the moment `numPages` is known,
   // every page is still at its "loading" placeholder height, not its real
-  // rendered one — scrolling to the target page then lands on wherever that
-  // placeholder currently sits, and as earlier pages finish rendering at
-  // their real (larger) height moments later, that growth pushes the target
-  // page down and out from under the scroll position already applied,
-  // silently landing back on an earlier page. Re-snapping on each render
-  // tick keeps the target pinned through that settling, and the request is
-  // only dropped once nothing has re-rendered for a bit.
+  // rendered one — scrolling to the target position then lands on wherever
+  // that placeholder currently sits, and as earlier pages finish rendering
+  // at their real (larger) height moments later, that growth pushes the
+  // target page (and the offset within it, recomputed from that page's own
+  // *current* height each time) down and out from under the scroll position
+  // already applied, silently landing back on an earlier spot. Re-snapping
+  // on each render tick keeps the target pinned through that settling, and
+  // the request is only dropped once nothing has re-rendered for a bit.
   useEffect(() => {
     if (numPages === 0 || !initialPdfPosition || initialPdfPosition.paperId !== paperId) return
     scrollToPage(initialPdfPosition.page)
+    const root = containerRef.current
+    const pageEl = pageRefs.current[initialPdfPosition.page - 1]
+    if (root && pageEl && initialPdfPosition.offsetFraction > 0) {
+      root.scrollTop += initialPdfPosition.offsetFraction * pageEl.getBoundingClientRect().height
+    }
     const t = window.setTimeout(clearInitialPdfPosition, 800)
     return () => window.clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps

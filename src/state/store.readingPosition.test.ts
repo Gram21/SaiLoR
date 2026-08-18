@@ -76,12 +76,30 @@ describe('reading position is persisted per project', () => {
     st().loadFromText(twoPaperProject, handle, 'x.json')
     expect(st().currentPaperId).toBe('p2') // the default landing, before anything is noted
 
-    st().noteReadingPosition('p1', 7)
+    st().noteReadingPosition('p1', 7, 0.4)
     st().closeProject()
 
     st().loadFromText(twoPaperProject, handle, 'x.json')
     expect(st().currentPaperId).toBe('p1')
-    expect(st().initialPdfPosition).toEqual({ paperId: 'p1', page: 7 })
+    expect(st().initialPdfPosition).toEqual({ paperId: 'p1', page: 7, offsetFraction: 0.4 })
+  })
+
+  it('defaults offsetFraction to 0 for a stored position from before it existed', () => {
+    const handle = handleAt('/reviews/legacy.json')
+    // Simulates a value written by an older build — page only, no offset.
+    localStorage.setItem(`slr.readingPosition.${handle.path}`, JSON.stringify({ paperId: 'p1', page: 2 }))
+    st().loadFromText(twoPaperProject, handle, 'legacy.json')
+    expect(st().initialPdfPosition).toEqual({ paperId: 'p1', page: 2, offsetFraction: 0 })
+  })
+
+  it('clamps a malformed offsetFraction into [0, 1] rather than trusting it verbatim', () => {
+    const handle = handleAt('/reviews/malformed.json')
+    localStorage.setItem(
+      `slr.readingPosition.${handle.path}`,
+      JSON.stringify({ paperId: 'p1', page: 2, offsetFraction: 5 }),
+    )
+    st().loadFromText(twoPaperProject, handle, 'malformed.json')
+    expect(st().initialPdfPosition).toEqual({ paperId: 'p1', page: 2, offsetFraction: 1 })
   })
 
   it('falls back to firstUnfinishedPaperId when nothing was ever noted', () => {
@@ -93,7 +111,7 @@ describe('reading position is persisted per project', () => {
   it('ignores a stored position naming a paper that no longer exists', () => {
     const handle = handleAt('/reviews/y.json')
     st().loadFromText(twoPaperProject, handle, 'y.json')
-    st().noteReadingPosition('p1', 3)
+    st().noteReadingPosition('p1', 3, 0)
 
     const onePaperProject = JSON.stringify({
       version: 1,
@@ -107,7 +125,7 @@ describe('reading position is persisted per project', () => {
 
   it('does not leak a position across two different projects', () => {
     st().loadFromText(twoPaperProject, handleAt('/reviews/a.json'), 'a.json')
-    st().noteReadingPosition('p1', 5)
+    st().noteReadingPosition('p1', 5, 0)
 
     st().loadFromText(twoPaperProject, handleAt('/reviews/b.json'), 'b.json')
     expect(st().currentPaperId).toBe('p2')
@@ -116,7 +134,7 @@ describe('reading position is persisted per project', () => {
 
   it('does not persist or restore anything for a project with no stable handle', () => {
     st().loadFromText(twoPaperProject, null, 'test.json')
-    expect(() => st().noteReadingPosition('p1', 2)).not.toThrow()
+    expect(() => st().noteReadingPosition('p1', 2, 0)).not.toThrow()
     st().loadFromText(twoPaperProject, null, 'test.json')
     expect(st().currentPaperId).toBe('p2')
     expect(st().initialPdfPosition).toBeNull()
@@ -125,7 +143,7 @@ describe('reading position is persisted per project', () => {
   it('clearInitialPdfPosition drops the pending request', () => {
     const handle = handleAt('/reviews/z.json')
     st().loadFromText(twoPaperProject, handle, 'z.json')
-    st().noteReadingPosition('p1', 4)
+    st().noteReadingPosition('p1', 4, 0)
     st().closeProject()
     st().loadFromText(twoPaperProject, handle, 'z.json')
     expect(st().initialPdfPosition).not.toBeNull()

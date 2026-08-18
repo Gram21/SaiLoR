@@ -267,6 +267,14 @@ function readingPositionKey(handle: SaveHandle | null): string | null {
 interface StoredReadingPosition {
   paperId: string
   page: number
+  /** How far scrolled into `page`, as a fraction of that page's own rendered
+   *  height (0 = its very top, close to 1 = near its bottom) — the same
+   *  "fraction of the page" convention `MarkRect` already uses, chosen for
+   *  the same reason: resolution/zoom-independent, so it still lands in
+   *  roughly the right spot even if the page renders at a different size
+   *  than it did when this was captured. Optional so an older stored value
+   *  (page only) still loads — treated as 0 (page top) when absent. */
+  offsetFraction: number
 }
 
 /** The persisted reading position for this project, or null when there is
@@ -279,9 +287,13 @@ function loadReadingPosition(handle: SaveHandle | null): StoredReadingPosition |
   const stored = safeGet(key)
   if (!stored) return null
   try {
-    const parsed = JSON.parse(stored) as { paperId?: unknown; page?: unknown }
+    const parsed = JSON.parse(stored) as { paperId?: unknown; page?: unknown; offsetFraction?: unknown }
     if (typeof parsed.paperId === 'string' && Number.isInteger(parsed.page) && (parsed.page as number) >= 1) {
-      return { paperId: parsed.paperId, page: parsed.page as number }
+      const offsetFraction =
+        typeof parsed.offsetFraction === 'number' && Number.isFinite(parsed.offsetFraction)
+          ? Math.min(1, Math.max(0, parsed.offsetFraction))
+          : 0
+      return { paperId: parsed.paperId, page: parsed.page as number, offsetFraction }
     }
   } catch {
     /* malformed — treat exactly like "none stored" */
@@ -289,10 +301,15 @@ function loadReadingPosition(handle: SaveHandle | null): StoredReadingPosition |
   return null
 }
 
-function saveReadingPosition(handle: SaveHandle | null, paperId: string | null, page: number): void {
+function saveReadingPosition(
+  handle: SaveHandle | null,
+  paperId: string | null,
+  page: number,
+  offsetFraction: number,
+): void {
   const key = readingPositionKey(handle)
   if (!key || !paperId) return
-  safeSet(key, JSON.stringify({ paperId, page }))
+  safeSet(key, JSON.stringify({ paperId, page, offsetFraction }))
 }
 
 export interface LoadError {
@@ -395,7 +412,7 @@ interface AppState {
    * open paper no longer matches, so it can never misapply to a paper opened
    * later by hand. Session-only.
    */
-  initialPdfPosition: { paperId: string; page: number } | null
+  initialPdfPosition: { paperId: string; page: number; offsetFraction: number } | null
   /** Canonical field path whose link popover is open, or null. Session-only, like `validationOpen`. */
   openLinkPopoverField: string | null
   /** The mark `PdfViewer` most recently created (a highlight or note, not an
@@ -637,7 +654,7 @@ interface AppState {
    * download-only save): the same case `saveCurrentReviewer` already
    * quietly skips.
    */
-  noteReadingPosition: (paperId: string, page: number) => void
+  noteReadingPosition: (paperId: string, page: number, offsetFraction: number) => void
   /** Open/close a field's link popover, closing any other field's — see `openLinkPopoverField`. */
   setOpenLinkPopoverField: (canonical: string | null) => void
   /** Set/clear `lastCreatedMarkId` — see its own doc comment. */
@@ -1305,7 +1322,7 @@ export const useStore = create<AppState>()(
           s.currentPaperId = landingPaperId
           s.initialPdfPosition =
             savedPaperStillExists && landingPaperId
-              ? { paperId: landingPaperId, page: savedPosition!.page }
+              ? { paperId: landingPaperId, page: savedPosition!.page, offsetFraction: savedPosition!.offsetFraction }
               : null
           s.dirty = false
           s.loadError = null
@@ -1551,7 +1568,9 @@ export const useStore = create<AppState>()(
         // its new location would land on the "first unfinished paper" default
         // instead of wherever the reviewer actually was.
         const oldPosition = loadReadingPosition(saveHandle)
-        if (oldPosition) saveReadingPosition(handle, oldPosition.paperId, oldPosition.page)
+        if (oldPosition) {
+          saveReadingPosition(handle, oldPosition.paperId, oldPosition.page, oldPosition.offsetFraction)
+        }
         // Drop undo history *only when the PDF paths actually moved*. Its
         // snapshots hold `paper.pdf` relative to the old location, so undoing
         // after a rebase would restore now-broken paths (and, since undo sets
@@ -1750,8 +1769,8 @@ export const useStore = create<AppState>()(
         s.initialPdfPosition = null
       }),
 
-    noteReadingPosition: (paperId, page) => {
-      saveReadingPosition(get().saveHandle, paperId, page)
+    noteReadingPosition: (paperId, page, offsetFraction) => {
+      saveReadingPosition(get().saveHandle, paperId, page, offsetFraction)
     },
 
     setOpenLinkPopoverField: (canonical) =>

@@ -147,11 +147,11 @@ describe('reopening a project scrolls to the remembered PDF page', () => {
     try {
       st().loadFromText(project, handle, 'reading-position.json')
       st().selectPaper('p1')
-      st().noteReadingPosition('p1', 3)
+      st().noteReadingPosition('p1', 3, 0)
       st().closeProject()
 
       st().loadFromText(project, handle, 'reading-position.json')
-      expect(st().initialPdfPosition).toEqual({ paperId: 'p1', page: 3 })
+      expect(st().initialPdfPosition).toEqual({ paperId: 'p1', page: 3, offsetFraction: 0 })
 
       render(<PdfViewer />)
       // Let getPdfSource's promise and Document's onLoadSuccess settle —
@@ -197,6 +197,32 @@ describe('reopening a project scrolls to the remembered PDF page', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('also restores the scroll offset within the target page, not just the page itself', async () => {
+    st().loadFromText(project, handle, 'reading-position.json')
+    st().selectPaper('p1')
+    // Halfway down page 3.
+    st().noteReadingPosition('p1', 3, 0.5)
+    st().closeProject()
+
+    st().loadFromText(project, handle, 'reading-position.json')
+    expect(st().initialPdfPosition).toEqual({ paperId: 'p1', page: 3, offsetFraction: 0.5 })
+
+    // Page 3 (index 2) already at its real height from the start, so the
+    // offset applies against REAL_HEIGHT immediately — isolates this test
+    // from the separate placeholder-growth re-snap behavior covered above.
+    renderedPages.add(2)
+    const { container } = render(<PdfViewer />)
+    await flush()
+    await flush()
+
+    const root = container.querySelector('.pdf-scroll') as HTMLDivElement
+    // `scrollIntoView` is mocked to a no-op above, so page 3's own
+    // REAL_HEIGHT (already rendered, immediately, in this test's mock) is
+    // the only thing left to move `scrollTop` — exactly the offset applied
+    // on top of the plain page-level jump.
+    expect(root.scrollTop).toBe(0.5 * REAL_HEIGHT)
   })
 
   it('does nothing when there is no remembered position', async () => {
