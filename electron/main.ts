@@ -639,12 +639,13 @@ async function readProjectText(filePath: string): Promise<string> {
   const papers = (raw as { papers?: unknown[] }).papers
   const annotationsDir = path.join(path.dirname(filePath), 'annotations')
   const screening = Boolean((raw as { config?: { screening?: unknown } })?.config?.screening)
-  const paperFiles = new Map<string, PaperFiles>()
+  const ids: string[] = []
   for (const p of Array.isArray(papers) ? papers : []) {
     const id = (p as { id?: unknown })?.id
-    if (typeof id !== 'string') continue
-    paperFiles.set(id, await loadPaperFiles(annotationsDir, id, screening))
+    if (typeof id === 'string') ids.push(id)
   }
+  const loaded = await Promise.all(ids.map((id) => loadPaperFiles(annotationsDir, id, screening)))
+  const paperFiles = new Map<string, PaperFiles>(ids.map((id, i) => [id, loaded[i]]))
   return JSON.stringify(assembleLegacyProjectJson(raw, paperFiles))
 }
 
