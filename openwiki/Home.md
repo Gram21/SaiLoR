@@ -20,7 +20,7 @@ format.
 self-hosting deployment; both are discontinued — the web build now shows a "use the desktop app"
 notice at runtime instead of any project-opening UI. The `PlatformAdapter` seam that used to absorb
 the difference between the Electron and browser runtimes still exists, but the non-Electron
-implementation (`UnsupportedAdapter`) now just refuses every action; see
+implementation (`createUnsupportedAdapter`) now just refuses every action; see
 [Architecture](architecture.md)'s Platform Adapter section for why the seam is still there.
 
 This wiki is the **developer** documentation. If you are here to *use* SaiLoR — installing a release,

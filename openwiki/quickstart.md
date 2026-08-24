@@ -140,13 +140,13 @@ npm run typecheck
 │   ├── platform/          Platform abstraction for file I/O, PDF loading, and git — Electron only now, see "SaiLoR is Electron-desktop-only" above
 │   │   ├── adapter.ts     PlatformAdapter interface + isElectron()
 │   │   ├── electron.ts    ElectronAdapter (IPC + slr-file://, recents, git incl. merge/log/discard-file/branch-delete, splits project text into project.json + annotations/ files on save)
-│   │   ├── unsupported.ts UnsupportedAdapter — stands in for the platform outside Electron; every read answers "nothing", every action throws (a backstop — `App.tsx` blocks all project-opening UI before any of this is reachable)
+│   │   ├── unsupported.ts createUnsupportedAdapter — stands in for the platform outside Electron; a Proxy that answers the two pre-gate reads (kind, getRecents) for real and throws on everything else (a backstop — `App.tsx` blocks all project-opening UI before any of this is reachable)
 │   │   ├── pdfjs.ts       Single place configuring the pdf.js worker (viewer + extractor)
 │   │   ├── recents.ts     Recent-projects list in localStorage (max 5)
-│   │   └── index.ts       getPlatform() singleton (ElectronAdapter or UnsupportedAdapter)
+│   │   └── index.ts       getPlatform() singleton (ElectronAdapter or createUnsupportedAdapter)
 │   ├── state/
 │   │   ├── store.ts      Zustand + immer store (project, papers, save, annotations, undo/redo incl. PDF marks, theme, fontScale, pdfZoom, recents, reading position, help, native self-update progress on win/linux)
-│   │   ├── store.readingPosition.test.ts  "Continue where you left off" — reopening a project lands on the same paper and PDF page
+│   │   ├── store.readingPosition.test.ts  "Continue where you left off" — reopening a project lands on the same paper, PDF page, and scroll offset within it (offsetFraction compat/clamp)
 │   │   ├── store.marks.test.ts  PDF mark mutations (addHighlight/setMarkComment/setMarkColor/removeMark) and their undo steps
 │   │   ├── editorStore.ts  Draft state for the project editor (schema tree + papers, relative PDF paths, validate/save)
 │   │   ├── gitStore.ts    Zustand + immer store for the clone flow, the commit/pull/push panel, the merge-branch/delete-branch prompts, the commit-history panel, and whole-file discard (reads store.ts one-way; store.ts never imports it)
@@ -157,7 +157,7 @@ npm run typecheck
 │   │   ├── Dropdown.tsx   Reusable click-to-open dropdown menu
 │   │   ├── PaperList.tsx  Left pane — paper list with search box and annotation status dots
 │   │   ├── Splitter.tsx   Drag handles between the three panes (widths persisted)
-│   │   ├── PdfViewer.tsx  Middle pane — react-pdf, zoom controls, multi-page navigation, jump history (back/forward), in-PDF search (Ctrl+F, debounced), text selection capture, internal-link hover previews (destination entry fit), dedupe of overlapping highlight rects
+│   │   ├── PdfViewer.tsx  Middle pane — react-pdf, zoom controls, multi-page navigation, jump history (back/forward), in-PDF search (Ctrl+F, debounced), text selection capture, internal-link hover previews (destination entry fit), dedupe of overlapping highlight rects, "continue where you left off" scroll-position restore (page + offset, re-snapped across render ticks)
 │   │   ├── AnnotationPanel.tsx  Right pane — renders schema recursively
 │   │   ├── AnnotationNode.tsx   Recursive node (fields, groups, repeatable instances)
 │   │   ├── NodeName.tsx   Node label with ⓘ description tooltip (portaled); Ctrl/Cmd-click opens a single-link description directly
@@ -216,6 +216,23 @@ npm run typecheck
 ├── tsconfig*.json         TypeScript project references (app / node)
 └── package.json           Scripts, deps, electron-builder config
 ```
+
+## Task Routing
+
+Where to start for common change areas (source entry points → symbols → focused tests → minimal validation):
+
+| Change area / intent | Wiki page | Source entry points | Key symbols / types | Focused tests | Minimal validation |
+|---|---|---|---|---|---|
+| Annotation field value / instance lifecycle | [Architecture](architecture.md) | `src/state/store.ts` | `setFieldValue`, `addInstance`, `removeInstance`, `currentTree` | `src/state/store.test.ts` | `npm test -- src/state/store.test.ts` |
+| PDF mark (highlight/note) + its undo step | [Architecture](architecture.md) | `src/components/PdfViewer.tsx`, `src/state/store.ts` | `addHighlight`, `setMarkComment`, `removeMark`, `linkMarkToField` | `src/state/store.marks.test.ts` | `npm test -- src/state/store.marks.test.ts` |
+| "Continue where you left off" reading position | [Architecture](architecture.md) | `src/components/PdfViewer.tsx`, `src/state/store.ts` | `noteReadingPosition`, `loadReadingPosition`, `initialPdfPosition`, `readOffsetFraction`, `textRenderTick` | `src/state/store.readingPosition.test.ts` (persistence), `src/test/integration/pdfReadingPosition.integration.test.tsx` (scroll geometry) | `npm test -- src/state/store.readingPosition.test.ts`; integration: `npm run test:integration` |
+| Platform adapter / file-IO / PDF-loading seam | [Architecture](architecture.md) | `src/platform/adapter.ts`, `src/platform/electron.ts`, `src/platform/index.ts`, `src/platform/unsupported.ts` | `PlatformAdapter`, `ElectronAdapter`, `createUnsupportedAdapter`, `getPlatform` | `src/test/integration/*.integration.test.tsx` (mocks `getPlatform`) | `npm run typecheck` |
+| Electron IPC surface (main/preload/adapter) | [Architecture](architecture.md), [Operations](operations.md) | `electron/main.ts`, `electron/preload.ts`, `src/platform/electron.ts` | `SlrBridge`, `bridge()` | `e2e/openSaveProject.spec.ts` | `npm run typecheck` |
+| Consolidation entry matching | [Architecture](architecture.md) | `src/consolidate/align.ts`, `src/consolidate/apply.ts`, `src/state/store.ts` | `alignNode`, `alignableNodes`, `growConsolidated` | `src/consolidate/align.test.ts`, `src/consolidate/apply.test.ts` | `npm test -- src/consolidate` |
+| Git ref/path safety primitives | [Architecture](architecture.md) | `src/git/ref.ts`, `src/git/relpath.ts` | `refProblem`, `relPathProblem`, `annotationsRelDir` | `src/git/ref.test.ts`, `src/git/relpath.test.ts` | `npm test -- src/git/ref.test.ts src/git/relpath.test.ts` |
+| Schema resolution / model round-trip | [Data Model](data-model.md) | `src/model/schema.ts`, `src/model/project.ts`, `src/model/annotations.ts` | `resolveSchema`, `loadProject`, `serializeProject`, `normalizeTree` | `src/model/model.test.ts` | `npm test -- src/model/model.test.ts` |
+| Project editor (schema tree + papers) | [Operations](operations.md) | `src/state/editorStore.ts` | `editorStore`, `buildProjectJson` | `src/state/editorStore.test.ts` (+ siblings) | `npm test -- src/state/editorStore.test.ts` |
+| Build / CI / release | [Operations](operations.md) | `scripts/ci.sh`, `scripts/build-electron.sh`, `.github/workflows/ci.yml` | — | `e2e/` (release-gated) | `npm run typecheck && npm test` |
 
 ## Where to Go Next
 

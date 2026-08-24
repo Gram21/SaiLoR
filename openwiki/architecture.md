@@ -26,7 +26,7 @@ for the full shape and why (git-merge conflicts between reviewers editing the sa
 
 The **PlatformAdapter** interface remains the architectural seam abstracting file I/O and PDF loading
 — it is still what `ElectronAdapter` implements — but with the web runtime discontinued, the seam now
-has one real implementation and one inert stand-in (`UnsupportedAdapter`) rather than two competing
+has one real implementation and one inert stand-in (`createUnsupportedAdapter`) rather than two competing
 ones. See "Why the seam still exists" below for why it was not simply deleted along with the browser
 adapter.
 
@@ -170,7 +170,7 @@ The entire file-system and PDF-loading layer is abstracted behind a single inter
 src/platform/adapter.ts     →  PlatformAdapter interface
 src/platform/index.ts       →  getPlatform() singleton factory
 src/platform/electron.ts    →  ElectronAdapter — the only real implementation now
-src/platform/unsupported.ts →  UnsupportedAdapter — inert stand-in outside Electron, see below
+src/platform/unsupported.ts →  createUnsupportedAdapter — inert Proxy stand-in outside Electron, see below
 ```
 
 **`PlatformAdapter`** (`src/platform/adapter.ts`) defines these operations (the list below is a
@@ -197,9 +197,10 @@ Two generic plain-text export methods round out the adapter:
 
 One more is its own capability object rather than a flat method: `getGit(): GitPlatform | null` —
 git operations against the user's own git installation, or `null` where the runtime cannot reach one.
-`UnsupportedAdapter` (the non-Electron stand-in) always returns `null` here, same as the deleted
-`BrowserAdapter` did — the type-level shape that made git support unreachable outside Electron didn't
-need to change when the web runtime itself became unreachable. See "Git" below.
+`UnsupportedAdapter`/`createUnsupportedAdapter` (the non-Electron stand-in) always returns `null`
+here, same as the deleted `BrowserAdapter` did — the type-level shape that made git support
+unreachable outside Electron didn't need to change when the web runtime itself became unreachable.
+See "Git" below.
 
 **Project title.** A project JSON may set a top-level `title`; the app shows it wherever it would otherwise show the file name (toolbar, recents list, Open menu), falling back to the file name when absent. It is a first-class key on `Project` (not swallowed into `extra`, which would duplicate it on save) and is only written when non-empty. The project editor exposes it as a *Project title* field next to the JSON location.
 
@@ -213,7 +214,9 @@ need to change when the web runtime itself became unreachable. See "Git" below.
 
 Recent projects are managed by `src/platform/recents.ts` — up to 5 entries in `localStorage`. The entry `id` is the absolute file path.
 
-`getPlatform()` (`src/platform/index.ts`) returns a singleton: `ElectronAdapter` if `window.slr` exists (preload bridge), otherwise `UnsupportedAdapter`. Detection uses `isElectron()` which checks for the preload-bridged `window.slr` object.
+`getPlatform()` (`src/platform/index.ts`) returns a singleton: `ElectronAdapter` if `window.slr`
+exists (preload bridge), otherwise `createUnsupportedAdapter()`. Detection uses `isElectron()` which
+checks for the preload-bridged `window.slr` object.
 
 ### ElectronAdapter (`src/platform/electron.ts`)
 
@@ -232,19 +235,23 @@ untouched. See "Assembling and splitting a project on disk" below for the full m
 ### Why the seam still exists
 
 `PlatformAdapter` was built to abstract over two real runtimes; now it abstracts over one real
-runtime (`ElectronAdapter`) and one that refuses everything (`UnsupportedAdapter`,
+runtime (`ElectronAdapter`) and one that refuses everything (`createUnsupportedAdapter`,
 `src/platform/unsupported.ts`). It was not collapsed away because `App.tsx`'s `isElectron()` gate
 renders *after* React's hooks have already run for that pass — `useStore`, `useEditorStore`, and a
 few module-level reads (`getPlatform().getRecents()` at store creation, before `App` ever mounts) all
 still execute in a non-Electron runtime, and something has to answer those calls safely rather than
-throwing during module init. `UnsupportedAdapter` implements the full interface: every read-only
-query returns "nothing" (`[]`, `null`), every action throws `"SaiLoR for the web is discontinued — use
-the desktop app."` as a backstop in case anything is ever wired up to call one of these directly. In
-ordinary operation nothing reaches it, because the gate blocks the UI first — but the type system
-still requires a `PlatformAdapter` to exist before `App` can render at all, so something inert has to
-fill that slot.
+throwing during module init. The only things genuinely read before that gate ever renders are `kind`
+(`LlmSettingsDialog.tsx`) and `getRecents` (the store's initial state, at module load); everything
+else is a backstop for a call this app's own gating says can't happen. `createUnsupportedAdapter`
+answers those two reads for real and implements every other `PlatformAdapter` method as a single
+`Proxy` `get`-trap that returns a function throwing
+`"SaiLoR for the web is discontinued — use the desktop app."` — one trap rather than ~30 individual
+stub methods, since the only methods that ever actually run are the two it implements for real. In
+ordinary operation nothing reaches the trap, because the gate blocks the UI first — but the type
+system still requires a `PlatformAdapter` to exist before `App` can render at all, so something inert
+has to fill that slot.
 
-### UnsupportedAdapter (`src/platform/unsupported.ts`)
+### createUnsupportedAdapter (`src/platform/unsupported.ts`)
 
 The non-Electron `PlatformAdapter` implementation used to be `BrowserAdapter` — a substantial piece of
 code covering three capability tiers (Chromium's File System Access API, a `webkitdirectory`
@@ -255,10 +262,11 @@ deleted** when the web runtime was discontinued — `getPdfSource`'s folder-gran
 opaque-id recents scheme FSAPI's pathless handles needed, all of it, along with the deleted-code paths
 that used to be reachable through them.
 
-What replaced it is `UnsupportedAdapter` (see "Why the seam still exists" above): every read-only
-method returns an empty/`null` result, every action-performing method throws
-`"SaiLoR for the web is discontinued — use the desktop app."` There is nothing else to document here —
-it is deliberately inert, a backstop rather than a feature.
+What replaced it is `createUnsupportedAdapter` (see "Why the seam still exists" above): a small real
+object answering the two reads that genuinely happen before the gate (`kind: 'browser'`,
+`getRecents: () => []`), wrapped in a `Proxy` whose `get`-trap returns a throwing function for every
+other property. There is nothing else to document here — it is deliberately inert, a backstop rather
+than a feature.
 
 ## State Management
 
@@ -295,7 +303,7 @@ The entire app state lives in a single Zustand store with immer middleware:
 | `deferredConsolidations` | `Record<string, true>` | Fields where the consolidator chose "Enter a different value" — waiting for a manually entered value. Keyed by `deferredConsolidationKey(paperId, canonicalPath)`. Session-only; cleared on project close/load |
 | `annotationFilter` | `AnnotationFilter` | Which papers the annotation paper list shows (`'all'` / `'open'` / `'in-progress'` / `'finished'` / `'issues'`). Non-screening seats (Consolidation included now); session-only, resets on project close/load |
 | `pendingMarkJump` | `string \| null` | A mark id another component asked the PDF viewer to scroll to and flash. Cleared after `flashAndScrollTo` runs. Session-only |
-| `initialPdfPosition` | `{ paperId: string; page: number } \| null` | The paper/page a just-opened project should scroll to on its first render, restored from `loadReadingPosition` (per-project `localStorage`). `PdfViewer` consumes it once its pages mount and clears it via `clearInitialPdfPosition`; dropped if the reviewer navigates to a different paper first. Session-only |
+| `initialPdfPosition` | `{ paperId: string; page: number; offsetFraction: number } \| null` | The paper/page/scroll-offset a just-opened project should scroll to on its first render, restored from `loadReadingPosition` (per-project `localStorage`). `offsetFraction` is how far into `page` as a fraction of its own rendered height (0 = top), the same convention `MarkRect` uses; absent on older stored positions, loaded as `0`. `PdfViewer` consumes it once its pages mount and clears it via `clearInitialPdfPosition`; dropped if the reviewer navigates to a different paper first. Session-only |
 | `lastCreatedMarkId` | `string \| null` | The most recently created mark's id, for auto-linking to the next field opened. Session-only; cleared by `clearPendingMarkLink` |
 | `schemaInfoOpen` | `boolean` | Whether the `SchemaInfoDialog` is open. Session-only; set in `loadFromText` for auto-open on first load of a project with a schema comment |
 | `screeningFilter` | `'all' \| 'included' \| 'excluded' \| 'undecided'` | Which decisions the screening paper list shows. Screening projects only; session-only, resets on `closeProject`/`loadFromText` |
@@ -453,7 +461,7 @@ The mechanics run on top of `electron-updater`, added in `electron/main.ts` and 
 
 - **Two sources of truth stay separate.** The GitHub-API check above (`version.ts` / `checkForUpdate`) remains the *only* thing that decides "is there an update" — it sets `useStore.update`, which is what renders the banner at all. Only once it has confirmed a newer version exists does `checkForUpdate` *additionally* call `checkForNativeUpdate`, and only on non-darwin platforms. That call hands control to `electron-updater`'s own feed purely to drive the download/install mechanics, never to re-decide whether an update exists. The store unit test (`src/state/store.update.test.ts`) pins exactly this gate: `checkForNativeUpdate` must not fire when no newer version is found, and must not fire on macOS even when one is.
 - **Nothing runs automatically.** `autoUpdater.autoDownload` and `autoInstallOnAppQuit` are both `false` in `electron/main.ts`. A download only starts when the renderer calls `update:download` (the reviewer clicked "Download update"), and installing only happens on `update:install` ("Restart to update"). `checkForNativeUpdate` itself never starts a download; it only primes `electron-updater` so the later `download`/`install` calls have something to act on.
-- **macOS is short-circuited at the main-process boundary.** Every `update:*` handler returns early (`{ supported: false }` for `update:check`, a no-op otherwise) when `process.platform === 'darwin'`, and the `autoUpdater` event wiring is never even registered on mac. The `UnsupportedAdapter` (the non-Electron stand-in) mirrors this by reporting `{ supported: false }`, so the download/install UI is never offered there either.
+- **macOS is short-circuited at the main-process boundary.** Every `update:*` handler returns early (`{ supported: false }` for `update:check`, a no-op otherwise) when `process.platform === 'darwin'`, and the `autoUpdater` event wiring is never even registered on mac. The non-Electron stand-in (`createUnsupportedAdapter`) never reaches `checkForNativeUpdate` at all — it lives behind the same `App.tsx` `isElectron()` gate that blocks the download/install UI before any such call, so the macOS short-circuit and the non-Electron backstop keep the UI unoffered from two different directions.
 - **State.** `useStore` carries three session-only fields for this flow — `updateProgress` (`number | null`, 0–100), `updateReady` (`boolean`, the download finished and a restart would install it), and `updateError` (`string | null`, cleared on the next attempt). `downloadUpdate` / `installUpdate` are the user-triggered actions; `noteUpdateProgress` / `noteUpdateDownloaded` / `noteUpdateError` are wired from the bridge's events by `useElectronCloseGuard` (see Hooks below) and are not meant to be called from UI code directly.
 - **UI.** `src/App.tsx` picks the branch with `isElectron() && getPlatform().getOsInfo()?.platform !== 'darwin'`: win/linux renders the download/progress/restart buttons and an `update-error` notice; everything else falls back to the manual `pickInstaller` link. On a download failure the banner keeps the release-notes link so the user can still update manually.
 
@@ -752,17 +760,44 @@ code, and there is no cancellation on that path.
 
 PDF source resolution is async: `getPlatform().getPdfSource(paper.pdf, saveHandle)` returns a `{ url, revoke? }` — on Electron always `slr-file://`, resolved synchronously enough on disk that the "which paper is this response for" race the deleted browser build's folder-grant flow used to guard against doesn't arise here. The effect cleans up (revokes blob URLs, though `slr-file://` produces none) on paper/handle change or unmount.
 
-**Reading position is persisted per project.** Reopening a project lands on the same paper and PDF
-page the reviewer was last looking at, rather than on `firstUnfinishedPaperId`'s default. The store
-keeps `initialPdfPosition: { paperId, page } | null` as a one-shot request: `loadFromText` populates
-it from `loadReadingPosition(handle)` (the same per-machine, `localStorage`, keyed-by-path
-convention as the reviewer seat — `slr.readingPosition.<handlePath>`), and `PdfViewer` consumes it
-once its pages mount and clears it via `clearInitialPdfPosition()`. The write side is debounced
-(`noteReadingPosition`, 500ms after a page change), and takes `paperId` explicitly rather than reading
-`currentPaperId` at fire time — by then the reviewer may have switched papers. `Save As`
-(`changeLocation`) carries the position to the new path, the same carry-over it already does for the
-reviewer seat. The position is dropped if the paper it names no longer exists, and never applies to a
-project with no stable handle. See `src/state/store.readingPosition.test.ts`.
+**Reading position is persisted per project, including how far scrolled into the page.** Reopening a
+project lands on the same paper and the same spot within its PDF page the reviewer was last looking
+at, rather than on `firstUnfinishedPaperId`'s default or the page's top. The store keeps
+`initialPdfPosition: { paperId, page, offsetFraction } | null` as a one-shot request:
+`loadFromText` populates it from `loadReadingPosition(handle)` (the same per-machine, `localStorage`,
+keyed-by-path convention as the reviewer seat — `slr.readingPosition.<handlePath>`), and `PdfViewer`
+consumes it once its pages mount and clears it via `clearInitialPdfPosition()`. `offsetFraction` is
+how far scrolled into `page`, as a fraction of that page's own rendered height (0 = its top, close to
+1 = near its bottom) — the same resolution/zoom-independent "fraction of the page" convention
+`MarkRect` already uses for highlight positions, so it still lands in roughly the right spot even if
+the page renders at a different size than it did when captured. A stored position from before
+`offsetFraction` existed has none; it loads as `0` (page top), not a crash or a discarded position,
+and a malformed value is clamped into `[0, 1]`.
+
+The write side is debounced (`noteReadingPosition`, 500ms after a page change), takes `paperId`
+explicitly rather than reading `currentPaperId` at fire time (by then the reviewer may have switched
+papers), and reads the offset via a `readOffsetFraction` helper that measures live ref values at fire
+time rather than being a `useEffect` dependency itself. `Save As` (`changeLocation`) carries the
+position to the new path, the same carry-over it already does for the reviewer seat. The position is
+dropped if the paper it names no longer exists, and never applies to a project with no stable handle.
+
+The restore is **re-applied on every `textRenderTick`** rather than scrolled to once and done: the
+moment `numPages` is known, every page is still at its "loading" placeholder height, not its real
+rendered one — scrolling to the target page then lands on wherever that placeholder currently sits,
+and as earlier pages finish rendering at their real (larger) height moments later, that growth pushes
+the target page (and the offset within it, recomputed from that page's own *current* height each time)
+down and out from under the scroll position already applied. Re-snapping on each render tick keeps the
+target pinned through that settling, and the one-shot request is only dropped once nothing has
+re-rendered for 800ms. The restore itself uses the single **rect-delta technique** `scrollToMark`
+already relies on for the identical kind of jump — read the target page's and the container's current
+rects, compute one combined `scrollTop` delta (the page's own top plus the fraction of its height to
+land at), and apply it in one shot — rather than combining `scrollIntoView({block: 'start'})` for the
+page with a separate manual `scrollTop` increment for the offset, which let the page land right while
+the offset within it silently did not. It falls back to the plain page-only `scrollToPage` jump only
+when the target page is not yet mounted. See `src/state/store.readingPosition.test.ts` for the
+persistence/restore/`offsetFraction`-compat behavior, and
+`src/test/integration/pdfReadingPosition.integration.test.tsx` for the two-phase placeholder→real
+geometry the re-snap and rect-delta restore exist to handle.
 
 **Internal-link hover previews.** Hovering an internal PDF link (a citation, figure/table reference,
 or TOC entry) shows a strip of the destination page — copied from that page's already-rendered canvas
@@ -1742,7 +1777,7 @@ helper. Shipping it and calling it "git support" would be dishonest about what a
 
 **The conclusion: git support is Electron-only.** This is expressed in the type system, not left as a
 runtime convention: `PlatformAdapter.getGit(): GitPlatform | null` returns `null` outside Electron
-(`UnsupportedAdapter`, formerly `BrowserAdapter`), so a caller cannot invoke a git operation without
+(`createUnsupportedAdapter`, formerly `BrowserAdapter`), so a caller cannot invoke a git operation without
 first proving the runtime has one. A flat `GitPlatform` capability object rather than fifteen
 individual methods on `PlatformAdapter` is deliberate too: fifteen flat methods would mean fifteen
 non-Electron stubs, each of which either throws at runtime or silently no-ops — "unavailable" would be
@@ -2662,7 +2697,7 @@ App appearance is controlled by a settings module that persists to `localStorage
 
 ## Change Guidance
 
-- **Adding a new platform operation**: Add it to `PlatformAdapter`, implement it in `ElectronAdapter`, and add a stub returning "nothing"/throwing to `UnsupportedAdapter` (so the interface stays fully implemented for the non-Electron backstop — see "Why the seam still exists" above), then call from the store or components.
+- **Adding a new platform operation**: Add it to `PlatformAdapter`, implement it in `ElectronAdapter`, then call from the store or components. No change to `createUnsupportedAdapter` is needed — its `Proxy` trap auto-throws `"SaiLoR for the web is discontinued"` for any method not on its real object (`kind`, `getRecents`), so a newly added method is a backstop by default; see "Why the seam still exists" above.
 - **Adding a new annotation field type**: Update `FieldType` in `schema.ts`, `emptyValue()` in `annotations.ts`, and `Field.tsx` rendering. Consider validation in the zod schema. Also teach the AI layer about it: `isUnanswered()` in `src/llm/fields.ts`, `coerce()` in `src/llm/parse.ts`, and the type rules in `src/llm/prompt.ts`.
 - **Adding a new LLM provider**: Add it to `Provider` in `src/llm/types.ts` and to `PROVIDERS` in `src/llm/providers.ts` (base URL, whether it is editable, whether it can take a PDF, `tokenParam`), then handle its request shape in `buildRequest` and its response shape in `extractText` / `extractError`. Also add a branch to `buildModelsRequest` / `parseModelsResponse` in `src/llm/models.ts` — its list-models endpoint, auth, and pagination scheme are almost never identical to another provider's chat endpoint even when the chat shape is "OpenAI-compatible" (Mistral's `/v1/models` returns a bare array, not `{data:[...]}`; OpenRouter paginates, Groq doesn't). Decide reasoning-effort support last, and only from what you can confirm — a model-ID pattern if the provider's own docs name specific models, or nothing at all (`null`) if you can't confirm the field/values, per the DeepSeek/`openai-compatible` precedent above. Nothing else needs to change — `PROVIDER_LIST` drives the settings dropdown and the "which providers can take a PDF" hint automatically, so the platform and UI layers are provider-agnostic.
 
