@@ -161,6 +161,27 @@ function checkDir(dir, { tocPage, chrome, exempt, extraPages = [] }) {
   return { problems, fileCount: pages.size, pageCount }
 }
 
+// openwiki/{concepts,operations,workflows}/*.md are content pages one level deep.
+// GitHub's hosted wiki does not serve pages that live in a subdirectory, so
+// wiki-publish.yml flattens each to the wiki root under an explicit "Section-Page"
+// name (its own SUBWIKI_PAGES table — kept in sync with this one by hand, the same
+// way GUIDE_PAGES is duplicated between wiki-publish.yml and wiki-import.yml) and
+// only Sidebar.md/Footer.md ever link to that flat name. Each subsection's own
+// index.md is OpenWiki's auto-generated directory listing (never published, same as
+// the top-level one), so it is left out here too, and its own links go unchecked —
+// nothing in the wiki ever points at or through it.
+const SUBWIKI_PAGES = [
+  ['concepts/annotation-schema', 'Concepts-Annotation-Schema'],
+  ['concepts/data-model', 'Concepts-Data-Model'],
+  ['operations/build-release', 'Operations-Build-Release'],
+  ['operations/electron-shell', 'Operations-Electron-Shell'],
+  ['workflows/consolidation', 'Workflows-Consolidation'],
+  ['workflows/git-integration', 'Workflows-Git-Integration'],
+  ['workflows/llm-annotation', 'Workflows-LLM-Annotation'],
+  ['workflows/pdf-viewing', 'Workflows-PDF-Viewing'],
+  ['workflows/screening', 'Workflows-Screening'],
+]
+
 const results = [
   checkDir('openwiki', {
     tocPage: '_Sidebar',
@@ -176,13 +197,28 @@ const results = [
     // sense above (GitHub gives them no special treatment; the exclusion is entirely
     // our own choice), so both get their own exemption from the sidebar-reachability
     // check instead of being folded into `chrome`, which would misdescribe them.
-    exempt: new Set(['index', 'INSTRUCTIONS']),
+    // Each SUBWIKI_PAGES page is also registered under its own real basename (see
+    // extraPages below) purely so same-page `#anchor` links and bare sibling
+    // cross-references (`pdf-viewing.md` linking `llm-annotation.md`) resolve — that
+    // basename is never itself a reachable wiki page (only the flat alias is), so it
+    // is exempted here the same way index/INSTRUCTIONS are.
+    exempt: new Set(['index', 'INSTRUCTIONS', ...SUBWIKI_PAGES.map(([src]) => basename(src))]),
     // _Sidebar.md and _Footer.md deliberately live outside openwiki/ (see
     // wiki-publish.yml's header) but are still openwiki's own sidebar/footer, linking
     // into its page set — see the file header for why they're checked from here.
+    // SUBWIKI_PAGES entries are folded in the same way, each registered twice: once
+    // under its flat alias (what Sidebar.md/Footer.md actually link to) and once
+    // under its real basename (see the `exempt` comment above for why).
     extraPages: [
       { name: '_Sidebar', path: '.github/wiki-assets/Sidebar.md' },
       { name: '_Footer', path: '.github/wiki-assets/Footer.md' },
+      ...SUBWIKI_PAGES.flatMap(([src, flat]) => {
+        const path = `openwiki/${src}.md`
+        return [
+          { name: flat, path },
+          { name: basename(src), path },
+        ]
+      }),
     ],
   }),
   checkDir('user-guide', {

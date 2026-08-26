@@ -1,7 +1,7 @@
 **These pages are a mirror.** They are maintained in
 [`openwiki/`](https://github.com/Gram21/SaiLoR/tree/main/openwiki) in the repository and published
 here automatically. Editing a page here is fine — the change is committed back to that folder — but
-the folder is the source of truth. See [Operations → Wiki sync](operations#wiki-sync).
+the folder is the source of truth. See [Operations → Wiki sync](Operations-Build-Release#wiki-sync-mechanics).
 
 [Repository](https://github.com/Gram21/SaiLoR) ·
 [README](https://github.com/Gram21/SaiLoR#readme) ·

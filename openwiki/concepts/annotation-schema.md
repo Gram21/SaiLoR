@@ -133,7 +133,7 @@ shape. The annotation value tree mirrors this: at each level it is an object
 keyed by node `name`, where each key holds an **array of instances** (bounded by
 `min`/`max`), and each instance is an object with an optional `value` (for
 fields) and/or `children` (a nested tree). See
-[`/openwiki/concepts/data-model.md`](/openwiki/concepts/data-model.md) for the
+[`data-model.md`](data-model.md) for the
 on-disk shape.
 
 The tree machinery in `src/model/annotations.ts` enforces cardinality on
@@ -154,7 +154,7 @@ read/normalize/save:
   instances, keeping required instances (up to `min`, at least one). An empty
   instance with a filled one after it is a deliberate gap and is kept, because
   position carries meaning for consolidation's reviewer alignment (see
-  `/openwiki/concepts/data-model.md`).
+  `data-model.md`).
 - `canAdd`/`canRemove` gate the form's `+ Add` / `×` controls against `max` and
   `min` respectively.
 
@@ -488,11 +488,11 @@ hands a model the schema it has never seen via `SCHEMA_FORMAT_DOC` in
 consolidation alignment (`src/consolidate/`), and the git merge/reviewers
 machinery. See:
 
-- [`/openwiki/architecture.md`](/openwiki/architecture.md) for the overall
+- [`../architecture.md`](../architecture.md) for the overall
   runtime and the split on-disk storage layout.
-- [`/openwiki/concepts/data-model.md`](/openwiki/concepts/data-model.md) for the
+- [`data-model.md`](data-model.md) for the
   on-disk annotation value tree and the per-reviewer / consolidation split.
-- [`/openwiki/workflows/screening.md`](/openwiki/workflows/screening.md) for the
+- [`../workflows/screening.md`](../workflows/screening.md) for the
   screening project workflow and the derived screening schema.
 - `docs/annotation-schema.md` for the user-facing authoring guide with
   copy-paste examples.

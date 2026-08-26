@@ -12,6 +12,14 @@ name: Publish openwiki → Wiki
 #   Development.md    — openwiki/Home.md, renamed so the wiki's own Home slot is free
 #                       for the landing page above.
 #   <page>.md          — the rest of openwiki/*.md, unchanged, flat at the wiki root.
+#   <Section-Page>.md   — openwiki/{concepts,operations,workflows}/*.md, one level deep
+#                       in the repo but flattened to the wiki root under an explicit
+#                       "Section-Page" name (Concepts-Data-Model, Operations-Build-
+#                       Release, ...) — GitHub's hosted wiki does not serve pages that
+#                       live in a subdirectory, same constraint as the User-Guide
+#                       flattening below. Each subsection's own index.md (OpenWiki's
+#                       auto-generated directory listing) is skipped, like the
+#                       top-level one.
 #   _Sidebar.md        — the "🏠 Wiki home" link and "User Guide" fragment
 #                       (.github/wiki-assets/Sidebar-user-guide.md) first, then
 #                       .github/wiki-assets/Sidebar.md (the developer-docs sidebar —
@@ -133,6 +141,25 @@ jobs:
             esac
           done
 
+          # --- Developer docs, one level deep: openwiki/{concepts,operations,workflows}/*.md
+          # — same content, same audience, just grouped into subsections. Each
+          # subsection's own index.md is OpenWiki's auto-generated directory listing,
+          # the same kind of generator bookkeeping the top-level index.md is skipped
+          # for above, so it is skipped here too. Every other page in a subsection is a
+          # real content page, but GitHub's hosted wiki does not serve pages that live
+          # in a subdirectory (see the User-Guide flattening below for the identical
+          # constraint), so each is flattened to the wiki root under an explicit
+          # "Section-Page" name. Hand-written rather than derived from the path, so an
+          # acronym in a filename (llm, pdf) keeps its real casing (LLM, PDF) instead of
+          # becoming Llm/Pdf. Folded into OPENWIKI_PAGES so the cross-link rewrite loop
+          # below (which already knows how to turn `(concepts/data-model.md` into
+          # `(Concepts-Data-Model`) handles these exactly like any other openwiki page.
+          SUBWIKI_PAGES="concepts/annotation-schema:Concepts-Annotation-Schema concepts/data-model:Concepts-Data-Model operations/build-release:Operations-Build-Release operations/electron-shell:Operations-Electron-Shell workflows/consolidation:Workflows-Consolidation workflows/git-integration:Workflows-Git-Integration workflows/llm-annotation:Workflows-LLM-Annotation workflows/pdf-viewing:Workflows-PDF-Viewing workflows/screening:Workflows-Screening"
+          for pair in $SUBWIKI_PAGES; do
+            cp "openwiki/${pair%%:*}.md" "stage/${pair#*:}.md"
+            OPENWIKI_PAGES="$OPENWIKI_PAGES $pair"
+          done
+
           # --- User guide: user-guide/*.md, flattened to the wiki root under new names
           # (see the header above for why) — screenshots/ is the one thing that keeps
           # its own subfolder, since it holds assets rather than pages. A plain
@@ -175,6 +202,27 @@ jobs:
           # ".md" strip.
           for pair in $OPENWIKI_PAGES; do
             sed -i "s#(${pair%%:*}\.md#(${pair#*:}#g" stage/*.md
+          done
+
+          # A SUBWIKI_PAGES page's own cross-links are written relative to *its own*
+          # location, same reasoning as the block above: a same-subsection sibling is a
+          # bare "(name.md" (`concepts/annotation-schema.md` linking `data-model.md`),
+          # and anything reached by walking up to openwiki/ root is "(../name.md" or
+          # "(../dir/name.md" (`../architecture.md`, `../workflows/screening.md`) — all
+          # correct for browsing openwiki/ directly, all still real relative paths the
+          # loop above never matches. Restricted to each page's own staged copy (not
+          # stage/*.md at large) so a same-named bare link elsewhere in the wiki is
+          # never touched by accident.
+          for pair in $SUBWIKI_PAGES; do
+            f="stage/${pair#*:}.md"
+            [ -f "$f" ] || continue
+            for sib in $SUBWIKI_PAGES; do
+              [ "$(dirname "${sib%%:*}")" = "$(dirname "${pair%%:*}")" ] || continue
+              sed -i "s#($(basename "${sib%%:*}")\.md#(${sib#*:}#g" "$f"
+            done
+            for op in $OPENWIKI_PAGES; do
+              sed -i "s#(\.\./${op%%:*}\.md#(${op#*:}#g" "$f"
+            done
           done
 
           # user-guide/README.md has links that point outside user-guide/ into the *main*
@@ -241,16 +289,17 @@ jobs:
             echo '<!-- wiki-sync:user-guide-footer:end -->'
           } >> stage/_Footer.md
 
-          # .github/wiki-assets/Sidebar.md links its own top "SaiLoR" entry to `Home` —
-          # correct as far as that file is concerned (openwiki/Home.md really is named
-          # Home, which is exactly what lets scripts/check-wiki-links.js validate the
-          # link against the real openwiki page set) but broken once published, since
-          # Home.md is staged as Development.md above. Fixed here, on the staged copy
-          # only, rather than by writing "Development" into the asset file itself.
-          # Matched on the exact `[SaiLoR](Home)` link text, not just `](Home)` — the
-          # user-guide fragment prepended above has its own, deliberately unrelated
-          # `[🏠 Wiki home](Home)` link that must keep pointing at the real Home page.
-          sed -i 's/\[SaiLoR\](Home)/[SaiLoR](Development)/' stage/_Sidebar.md
+          # .github/wiki-assets/Sidebar.md links its own top "SaiLoR — Developer
+          # Documentation" entry to `Home` — correct as far as that file is concerned
+          # (openwiki/Home.md really is named Home, which is exactly what lets
+          # scripts/check-wiki-links.js validate the link against the real openwiki
+          # page set) but broken once published, since Home.md is staged as
+          # Development.md above. Fixed here, on the staged copy only, rather than by
+          # writing "Development" into the asset file itself. Matched on the exact
+          # link text, not just `](Home)` — the user-guide fragment prepended above
+          # has its own, deliberately unrelated `[🏠 Wiki home](Home)` link that must
+          # keep pointing at the real Home page.
+          sed -i 's/\[SaiLoR — Developer Documentation\](Home)/[SaiLoR — Developer Documentation](Development)/' stage/_Sidebar.md
 
           # A wiki with no developer-docs landing page shows a dead "Development" link,
           # so synthesize one when openwiki/ did not provide a Home.md to rename above.

@@ -94,9 +94,10 @@ jobs:
           extract_marked_block wiki/_Sidebar.md user-guide-sidebar .github/wiki-assets/Sidebar-user-guide.md
           extract_marked_block wiki/_Footer.md user-guide-footer .github/wiki-assets/Footer-user-guide.md
 
-          # wiki-publish.yml rewrites .github/wiki-assets/Sidebar.md's own "SaiLoR" link
-          # from Home to Development (Home.md is staged under that name — see its
-          # comment). Reverse it here too, unconditionally, for the same reason as the
+          # wiki-publish.yml rewrites .github/wiki-assets/Sidebar.md's own top
+          # "SaiLoR — Developer Documentation" link from Home to Development (Home.md
+          # is staged under that name — see its comment). Reverse it here too,
+          # unconditionally, for the same reason as the
           # user-guide/README.md links above: the asset file's own copy needs to say
           # `Home` — the real openwiki page name — so scripts/check-wiki-links.js can
           # keep validating it against the actual openwiki page set.
@@ -108,6 +109,71 @@ jobs:
           # lifted out, straight to the asset file it was published from instead.
           [ -f wiki/_Sidebar.md ] && mv wiki/_Sidebar.md .github/wiki-assets/Sidebar.md
           [ -f wiki/_Footer.md ] && mv wiki/_Footer.md .github/wiki-assets/Footer.md
+
+          # openwiki/{concepts,operations,workflows}/*.md are published flat at the wiki
+          # root too, under an explicit "Section-Page" name (see wiki-publish.yml's
+          # header for why and the exact table, kept identical here so the two
+          # directions agree). Reverse both rewrites the same way the GUIDE_PAGES block
+          # below does for user-guide pages: fix up cross-links first, then move each
+          # page back under its real openwiki/ subdirectory, before the general openwiki
+          # rsync at the bottom — which only expects flat files, not this section's own
+          # naming scheme.
+          SUBWIKI_PAGES="concepts/annotation-schema:Concepts-Annotation-Schema concepts/data-model:Concepts-Data-Model operations/build-release:Operations-Build-Release operations/electron-shell:Operations-Electron-Shell workflows/consolidation:Workflows-Consolidation workflows/git-integration:Workflows-Git-Integration workflows/llm-annotation:Workflows-LLM-Annotation workflows/pdf-viewing:Workflows-PDF-Viewing workflows/screening:Workflows-Screening"
+
+          # Each SUBWIKI_PAGES page's own cross-links, once on the wiki, use the flat
+          # alias throughout — including a same-subsection sibling and a root-level or
+          # other-subsection page, both of which are real relative paths once the file
+          # is back under openwiki/ (a bare "data-model.md" sibling, a
+          # "../architecture.md" or "../workflows/screening.md" walk-up). Fix those up
+          # on each page's OWN staged copy first — the exact mirror of
+          # wiki-publish.yml's SUBWIKI_PAGES rewrite, run in reverse — before the
+          # generic rewrite below (every *other* file referencing one of these pages)
+          # runs. The two must never both touch the same file, or whichever runs last
+          # wins with the wrong answer, so this loop is skipped for files identified as
+          # a SUBWIKI_PAGES page's own dest below.
+          TOP_PAGES="architecture:architecture quickstart:quickstart testing:testing Development:Home"
+          for pair in $SUBWIKI_PAGES; do
+            dest="${pair#*:}"
+            f="wiki/$dest.md"
+            [ -f "$f" ] || continue
+            mydir="$(dirname "${pair%%:*}")"
+            for sib in $SUBWIKI_PAGES; do
+              [ "${sib#*:}" = "$dest" ] && continue
+              if [ "$(dirname "${sib%%:*}")" = "$mydir" ]; then
+                sed -i "s#(${sib#*:}#($(basename "${sib%%:*}").md#g" "$f"
+              else
+                sed -i "s#(${sib#*:}#(../${sib%%:*}.md#g" "$f"
+              fi
+            done
+            for top in $TOP_PAGES; do
+              sed -i "s#(${top%%:*}#(../${top#*:}.md#g" "$f"
+            done
+          done
+
+          # Every *other* page's reference to one of these flat aliases (Development.md's
+          # generated links, or a human editing a different page on the wiki) becomes
+          # the real root-relative path — the same form every openwiki cross-link into a
+          # subsection already uses (see wiki-publish.yml's OPENWIKI_PAGES rewrite).
+          # Excludes each SUBWIKI_PAGES page's own dest file, already handled above with
+          # the dir-aware form instead.
+          for pair in $SUBWIKI_PAGES; do
+            dest="${pair#*:}"
+            [ -f "wiki/$dest.md" ] || continue
+            for f in wiki/*.md; do
+              case "$(basename "$f")" in
+                Concepts-*.md | Operations-*.md | Workflows-*.md) continue ;;
+              esac
+              sed -i "s#(${dest}#(${pair%%:*}.md#g" "$f"
+            done
+          done
+
+          # Move each page back to its real openwiki/ subdirectory.
+          for pair in $SUBWIKI_PAGES; do
+            dest="${pair#*:}"
+            [ -f "wiki/$dest.md" ] || continue
+            mkdir -p "openwiki/$(dirname "${pair%%:*}")"
+            mv "wiki/$dest.md" "openwiki/${pair%%:*}.md"
+          done
 
           # The user guide's pages are published flat at the wiki root, under new names
           # (README -> User-Guide, screening -> Guide-Screening, …) — see
