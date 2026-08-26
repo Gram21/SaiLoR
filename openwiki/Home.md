@@ -3,6 +3,27 @@ type: landing
 title: SaiLoR Developer Documentation
 description: Home page for SaiLoR developer documentation. SaiLoR is an Electron desktop tool for conducting Systematic Literature Reviews (SLRs), storing the annotation schema and paper metadata in project.json and each reviewer's/consolidation's annotation data in a sibling annotations/ folder. Links to quickstart, architecture, data model, and operations pages.
 tags: [home, overview, documentation]
+verified:
+  - by: openwiki/0.4.0
+    at: 2026-08-26T09:23:05.972Z
+sources:
+  - id: openwiki-source-6d3ac2bdfb0e76882a670989
+    resource: repo://.github/workflows/openwiki.yml
+  - id: openwiki-source-794b8a6d2fa178d64fce49a3
+    resource: repo://.github/workflows/wiki-import.yml
+  - id: openwiki-source-a7a8965ff53d3530162adf6d
+    resource: repo://.github/workflows/wiki-publish.yml
+  - id: openwiki-source-cfc82c903899c2457ec703b0
+    resource: repo://docs/annotation-schema.md
+  - id: openwiki-source-23775c3de52f3ab95a13cb8b
+    resource: repo://README.md
+  - id: openwiki-source-54631e6ebf1d3b815c4a5eed
+    resource: repo://src/App.tsx
+  - id: openwiki-source-776dd28cc442c205e0a91460
+    resource: repo://src/platform/index.ts
+  - id: openwiki-source-9b49ad2f97827d5ed9890232
+    resource: repo://src/platform/unsupported.ts
+generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
 ---
 
 # SaiLoR — Developer Documentation
@@ -13,7 +34,7 @@ cardinality-controlled taxonomy) and the papers' metadata; a sibling `annotation
 actual annotation data, one file per paper per reviewer (plus a consolidated file), so two reviewers
 working on different papers rarely collide in git. The app renders each paper's PDF beside a form
 generated from the schema, and writes annotations back into that split layout. See
-[Data Model](data-model.md) for the exact shape and the automatic migration from the old single-file
+[Data Model](concepts/data-model.md) for the exact shape and the automatic migration from the old single-file
 format.
 
 **SaiLoR is Electron-desktop-only.** The codebase used to also ship a static web SPA and a Docker
@@ -25,25 +46,28 @@ implementation (`createUnsupportedAdapter`) now just refuses every action; see
 
 This wiki is the **developer** documentation. If you are here to *use* SaiLoR — installing a release,
 authoring a project file, annotating a paper — start with the
-[README](https://github.com/Gram21/SaiLoR#readme) instead.
+[README](https://github.com/Gram21/SaiLoR#readme) instead, and use
+[`docs/annotation-schema.md`](https://github.com/Gram21/SaiLoR/blob/main/docs/annotation-schema.md)
+as the project file authoring reference.
 
 ## Contents
 
 | Page | What it covers |
 |---|---|
-| **[Quickstart](quickstart.md)** | What SaiLoR is, the tech stack, the commands you actually need, and the repository layout. **Start here.** |
-| **[Architecture](architecture.md)** | The `PlatformAdapter` seam, the Zustand stores and undo/redo, the component tree, the git integration, the Electron main process, and how the build is wired. |
-| **[Data Model](data-model.md)** | The project file format, the in-memory types, and the load → normalize → edit → prune → serialize lifecycle that keeps a hand-edited JSON safe. |
-| **[Operations](operations.md)** | Developing, building, testing, CI, releasing the desktop installers, deployment (static / Docker / Electron), and how these wiki pages are kept in sync. |
+| **[Quickstart](quickstart.md)** | What SaiLoR is, the split `project.json` + `annotations/` storage format, the tech stack (React 19, Electron, Vite, Zustand, Zod), why SaiLoR is Electron-desktop-only, the commands you actually need, and the repository layout. **Start here.** |
+| **[Architecture](architecture.md)** | The renderer/main process split, the `PlatformAdapter` seam (and why the inert non-Electron adapter still exists), the Zustand stores and undo/redo (incl. PDF marks), the component tree, multi-reviewer consolidation with stored alignment, the git integration (concurrent reads), the Electron main process and signed update feed, and how the build is wired. |
+| **[Data Model](concepts/data-model.md)** | The project on-disk format (meta-only `project.json` plus a sibling `annotations/` folder), the in-memory TypeScript types, PDF marks, stored consolidation alignment, annotation state/finished flags, and the load → normalize → edit → prune → serialize lifecycle that keeps a hand-edited JSON safe. |
+| **[Operations](operations/index.md)** | Developing (Electron dev is the only supported way to run the app), building the desktop installers, unit/integration/e2e testing (Vitest, React Testing Library, Playwright), CI, release packaging gated on the integration/e2e suite, deployment, keyboard shortcuts, saving behavior, and how these wiki pages are kept in sync. |
 
 ## How this wiki is maintained
 
 **Do not treat this wiki as the original.** These pages live in
 [`openwiki/`](https://github.com/Gram21/SaiLoR/tree/main/openwiki) in the main repository and are
-mirrored here by a GitHub Action; the folder is the source of truth, and publishing *replaces* the
-wiki rather than merging into it.
+mirrored to the GitHub wiki by a GitHub Action; the folder is the source of truth, and publishing
+*replaces* the wiki rather than merging into it.
 
-Editing a page here is still fine: a second Action imports wiki edits back into `openwiki/` and
-commits them to `main`, so the two do not drift. See
-[Operations → Wiki sync](operations.md#wiki-sync) for the mechanics — including
-why the two Actions cannot trigger each other in a loop.
+Editing a page on the wiki is still fine: a second Action imports wiki edits back into `openwiki/`
+and commits them to `main`, so the two do not drift. See
+[Operations → Wiki sync](operations/build-release.md#wiki-sync-mechanics) for the mechanics — including the three
+independent loop-prevention guards that stop the two Actions triggering each other forever, and the
+shared `concurrency: wiki-sync` group that keeps them from racing on the same wiki.

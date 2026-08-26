@@ -1,0 +1,326 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:b79e6a4962e2aa351760b4ad5178fcdab2674b5f7ad852182cd34a2f1c0477e1",
+  "claims": [
+    {
+      "id": "claim_0bfba0ad57324c858d4748e034707d01",
+      "statement": "Screening is an alternative project mode selected by Project.screening (ScreeningConfig | null); isScreening(project) returns true iff project.screening is set, and this single predicate is what every caller uses to branch into screening behavior.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L291-L291",
+          "version": "repo-lines-v1:sha256:b74cef3d568a3361fa0c031bf5a01665e0ee1c49e1379e8e0373b7c2fc0555fd:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjc0Y2VmM2Q1NjhhMzM2MWZhMGMwMzFiZjVhMDE2NjVlMGVlMWM0OWUxMzc5ZThlMDM3M2I3YzJmYzA1NTVmZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjc0Y2VmM2Q1NjhhMzM2MWZhMGMwMzFiZjVhMDE2NjVlMGVlMWM0OWUxMzc5ZThlMDM3M2I3YzJmYzA1NTVmZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTVhMTdlM2NhZWNiMmY3ZmRkNmYyNDQ1NTU4M2RjNDMzOWRmODQyZDVjMTNmYzZkNTY5NWJmZDQ3MzdmYmU4NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzc1YjE1ZmFkOWI3ZmI5MDVhMjRiYjY1NDU0NzU0ODI1YzM4NzFhYzYyZjZkNTk1ZGU3YTEzOTBmODg0YWQxNyJ9"
+        },
+        {
+          "resource": "repo://src/screening/schema.ts#L69-L72",
+          "version": "repo-lines-v1:sha256:8c72477b38b265c39492ad2d76164b627292738abb6e2a935c7db038ac878a7d:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDFhMWVlNWJmMDNkODkwZTMyZjFlYTI0MzZmYjNkZjQyNDU0OWEwZGRlY2QzYjAyZmNiMjZiZjdhNDgxMzgxYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjM4ZDMyOTQxYzliYTQ1YzNlYmNmZjBjOTI2ZDFmZDAxYWJiOWJkNDgwY2FiNzdjZmZjZmE0ZDUwZTYyNDMyOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_ef244393576945cea6a53b6d9fbf7cb4",
+      "statement": "A screening project's schema is never read from the file: loadProject derives it fresh from config.screening.reasons on every load via screeningSchemaDefs, and serializeProject writes the derived schema back so the file stays self-describing for non-SaiLoR readers while the on-disk reason list can never disagree with the dropdown the reviewer sees.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L710-L726",
+          "version": "repo-lines-v1:sha256:667e191935ecb055831690825cb02d1aa7a19883ba90dccfda71771fcc70a813:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4N2NjY2FiMThiMDJhNzMyMzU4YjI3ZmIyN2MxYzhkNWVjMWZmNzgxYzYyYzNhMGVlNjA5ZmZkYWE0Yzk2ZDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM2MTZlNGZmNWFlMGFlYjdjMTBkNTJmNjk0MmQ0OWRjYjhkYTNhZjczN2Y0Nzg0NmRhYTE4OTU4NTMwNDE4MzkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4MWZjNGJmYjc1ODZjMjQzMDA5MzNmN2RiYmYxMzM0ZTI2NWNhZjM4NDlhNWIyZGE1YTg2N2U0ZjExZjRmOWYifQ"
+        },
+        {
+          "resource": "repo://src/model/project.ts#L802-L811",
+          "version": "repo-lines-v1:sha256:98651badcc578c568d13c87e623f0797434b95a9e162ef95cc5a11232660e60c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNjNGYxODdiOGM1MmM1ZjMxOGZlYTJlYzI4OTBlMTA3ZTkwNzRjNzhhNWY5OTBlYTM0MmNiN2QyMjg3NjFkZDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdkOTQxZGIzODBiOGUxYTBiOGZhMTQ2NmZiMWYwYzg0YWVhMGQ2MjE1NTg2YzUzODFhZTIwZDc2MDNmZWIxZTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdmOTM0ZjAyNDM3Yzk1N2MxMzBmMmQ3NjI5MDFhYWMyYzNjYTA5MDc1ZGJiYzM3MThhOGZmODNiMTFjMTA4MGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU0MTZlNTc5N2I1NjU4OTY3OGY5ZTRkZmNiYTM4NTk1MDYxODZiYTY0MDM1NzQ1YTkxOWEwNThkYjIwYTczYjYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_772b2ada4b4a40e696b46e57df08fa83",
+      "statement": "The derived schema is a fixed two-node shape: Decision is a two-option string enum (Include/Exclude) rather than a boolean, because the codebase's isEmptyValue/isUnanswered/hasAnnotations machinery treats a boolean as empty until true, which would make an Exclude checkbox unable to distinguish 'include' from 'not yet looked at'; Reason's options are a copy of config.screening.reasons.",
+      "evidence": [
+        {
+          "resource": "repo://src/screening/schema.ts#L4-L67",
+          "version": "repo-lines-v1:sha256:0dceb02609290ca4dc08e0e13cca8ea92a3828ef0c0f576b1b71a87a057cb23c:eyJzZWxlY3RlZExpbmVDb3VudCI6NjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjgwNDgxMTM4OWEzM2ViYmUwYTc4ZmYwMWUzNmI3M2NmYzYxZWIyMjI1OWVjZWYzMzgzM2IyYTMzOGUzOTQyODYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRhMWQ2MGI3NjY0MjFmZmY2ZWNlYzM0MzhlMGIzYTA3NmQ4YTQ4MWIxNmM1OTg4ODg4ZTJhYjM2YTExM2NjM2QifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d15dab89567340a78d5d8d99fa8c5cf1",
+      "statement": "ScreeningConfig is { reasons: string[] } and is the only authorable part of a screening schema; parseScreening trims, dedupes, drops blanks, and throws ProjectLoadError if no reasons survive, and the zod superRefine lets a screening project omit config.schema entirely while requiring it for everyone else.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L464-L484",
+          "version": "repo-lines-v1:sha256:fcd7a566a120e8cf35a577be8fd35ee19faca6b6230741beb23d6757721f2ba1:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2NjQzZDM3OTNhOTYxZDY2OTc5NjY5YmEyNmU4NWFlNWIxYTUyZmM5ZDdjMGE3ZmRhOGYwY2NlMWMwMDdlMmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMwMDI3ZjA0MjIyODZlNzEzMmQ4MDE4YzE5MmMyNDA1ZWRkOWU2NGY5NTc0ZmJmZTJjZTUyNzNiMzk2OWZjYzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4YjYyN2U4MTcwNmQ5YzUxZmVlNDMwN2U0OTgzYmVkOTk5ZDlhZGE4NzI5ZTFiMmQxYzMyNzQ3NjMxZDViMjAifQ"
+        },
+        {
+          "resource": "repo://src/model/schema.ts#L176-L236",
+          "version": "repo-lines-v1:sha256:6b7e872d8e7b868164cd544d3e8c4732e8f8aacf5e9faa864b7629924aa4e8d0:eyJzZWxlY3RlZExpbmVDb3VudCI6NjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYzYjFmY2M5NTVmY2YxMjg5Yjg2NzBmNzc2ZTNhM2VjMWRkZWMzNDM5MTQ3NWI0YWJhZjIyMjVhZTJjNmNhMWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE4MzU1MmFiNTcxNDk0YjM5OWIxODE5OTYyMmRiZTNiMzgyNmViNjFmY2QxZjc0Y2ZiMTJhYmNmODhlNGY3MjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRmMWM2NWJiMWI5NTRjYTJjYzYxY2ZjZTQxMWVmNjY2ZTFiZWE5MzQ1YmUwZWI1ZjY1M2E1OTk5MmIzZTUyZDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIyZTM2MTk0OTIwNjcxOThmM2I2MTVjNTE5NWQyNGI4NDMzZDk0OWQ1YzYxNjdkOGM3MTYwNWQ1YTY5ZTliMTgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a144d9a51b404c808f3e83891bf45541",
+      "statement": "DEFAULT_SCREENING_REASONS seeds a new screening project with ordinary SLR exclusion reasons including 'Other' as an authored escape hatch for a closed enum.",
+      "evidence": [
+        {
+          "resource": "repo://src/screening/schema.ts#L31-L45",
+          "version": "repo-lines-v1:sha256:f3081827a924f603cf7f2769e82611085fd7c44bd49dc88c151c61bf31076244:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5NDE2ZTA5Zjc4YmEzMTZjMDMyNTY4MjEzYjg1NWVlNzU2ZTQxNTY1ZDkxOGYwOTUxOWM4MWZkNjIwZjQwNjAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI4YzE2YjliOGNlMDY1ZTRmZTZlMzAzMmQ5YWM5YmVhNmQ1YjE3YTdmZjI0M2UyMGNjNDk1MDMzNDc4MjcxOGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU1OTgxMDZjN2MwOTk3NWViODY0NjI2ODg0Nzg1NDY2MzY0NWNjNjAzMWIxMGMxZDQ3N2QzNGI1NzU1ZDBiZTEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7f2fa245c6d74fb89117fbd62bc05228",
+      "statement": "screeningStatus reads a tree as 'included'/'excluded'/'undecided', with any null/missing tree, missing node, or unrecognized value reading as 'undecided' (the conservative direction), so importFromScreening never silently drops a paper it merely cannot parse; screeningReason returns the reason only when meaningful and callers must check the status first.",
+      "evidence": [
+        {
+          "resource": "repo://src/screening/status.ts#L1-L30",
+          "version": "repo-lines-v1:sha256:3540191844ac2485bb8be45b01edcfdf8f94767b6a0cf2f82577fe7482b23bc1:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjczNmRhZDQwMmNhZjE4YzJmNGRkZjNmOThlNzI2MDMzNzQ1MGRmMzAwYWE2NzNjMTgyMzQzNjgzN2IxYWZjYTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a89760e19b6442948a0abc0b82d2f35f",
+      "statement": "screeningCounts returns PRISMA-style totals (total/included/excluded/undecided), a byReason map keyed by every configured reason including unused ones (PRISMA reports the pre-registered list in full), and an excludedWithoutReason bucket for excluded papers whose reason is blank or not configured; byReason is built with Object.create(null) so a hand-edited reason of 'constructor'/'__proto__' cannot collide with Object.prototype.",
+      "evidence": [
+        {
+          "resource": "repo://src/screening/counts.ts#L26-L85",
+          "version": "repo-lines-v1:sha256:d30c22427edf7645b4cd0f37c3df626cd80913fceab0b7f615f220c08dc921d7:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0OTA5N2YwMTA5ZDVhZWYxMTY1NDY1ZTAwYTRmZmFmNmZlMzc5NGQ3YzYzZjhkODkxNDgxZjhiOTBlYTdkZDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY5ZGU4NjkxNDBhMDgxZTA1ZDM1ZGIwMGExYTVlN2NjNGYwN2I0OTJlYzkwOTliY2FkOWE1ODUwOWY4Y2JmMTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE3ZGM3N2ZlMGQyZDAzZTgyNGNjOGQ1Mjg0ZGE0NjA5YWJhNzM0NzM4NjYzYjA5OTJlYTg0OWFlM2M0OWZmNzkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_66c6cdc3bd7d47298ff5e593715b63c0",
+      "statement": "counts.ts is deliberately store-free: seatTree reimplements the store's currentTree seat routing (single-reviewer and Consolidation read paper.annotations; a numbered reviewer reads paper.reviews[n]; null reads nothing) so the module stays independently testable and never creates a reviewer's tree.",
+      "evidence": [
+        {
+          "resource": "repo://src/screening/counts.ts#L8-L24",
+          "version": "repo-lines-v1:sha256:5a45712174fe8f4767eb248a927d54f9e1ec1cd9c063a8eac0852b25aae84fc6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA3MjM0ZWRlM2VhNzI2MTllMGFjZTBmNDU1ZGE2OWI0N2YxOGZlOWE2ZjQ1Mzg5NDM5NjgzYTU0NDM3ZDNhMTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhmMWUyMzA3OTU1NTVkMTVlODljNTI2NTFiNzU2ZTQwMDFlMzcyNzUzN2FmNTcxMTM3M2ZlZWZhZjBiOGVmZWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIzZjI2YmIyZjJhZjMwMWI1MzJlM2E3NzlmMjQwOGFmODIzNjQ2Y2IzMjUyNzlmODQxODU5YzBkNmIwZGQ2ZDcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7fdcf24a77b24b0ea2641cddef48f385",
+      "statement": "pendingUnanimous counts papers holding any unanimous fill Consolidation has not adopted (decision, reason, or both) and drives the ScreeningPanel 'Adopt all' notice, while pendingUnanimousDecisions counts only still-undecided papers whose reviewers all chose the same decision and drives the screening-import dialog's 'not yet screened' count; the two are separate because the panel's button adopts everything but the dialog's promise is specifically about changing inclusion counts.",
+      "evidence": [
+        {
+          "resource": "repo://src/screening/counts.ts#L87-L140",
+          "version": "repo-lines-v1:sha256:fa0d2878c45b6dea0a024eed37d74ddfec83305945f59ca9c31ddb1c126eaa9f:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiNTgwZTk2NGY4M2E0NzNmNDNkNDQzODQ2Mjk0OWQ2OGI1NjAwZmRhNzg3ZjE2Mzc0NWQwMGRlODljYmYzNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_46da21891c3944129b2be0381860dd51",
+      "statement": "Both pending-unanimous counts delegate to unanimousFills (consolidate/unanimous.ts), the same agreement routine annotation consolidation uses, and are zero for a single-reviewer project.",
+      "evidence": [
+        {
+          "resource": "repo://src/consolidate/unanimous.ts#L1-L30",
+          "version": "repo-lines-v1:sha256:b342033b65f823a11a67d628a950d38e27385d5258bd60903bffd959ffc81ce9:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUxYTc1OWJkNmE0MzQ5ZWQwMmQ0NDc0NmVjZmI5NjZiYTc5MzkwN2M3NGFmYzA4NTRjY2UxMzBjNGE4YjBmZjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMwNWFkN2M2ZGI4YmRkODI5MmE1MDY2YTQ4ZjU0ODY0MDYzNDM1ZjdjMzczNTA4YTUzMjA0MWRkMGJkMDNiNzEifQ"
+        },
+        {
+          "resource": "repo://src/screening/counts.ts#L127-L140",
+          "version": "repo-lines-v1:sha256:3cc53a542484f782b67b833d0e7601728996152ad4a71a4cc3c57cae9454bc6c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE5MDljN2M4NGQ5YTA1ODBlNjY3MGEwODcwNGJjZDFmYTM5ZGNmY2YyZWJiMmJiOGE0YWZhYzY1N2Y4ZjY1MDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhmNDI2YWQ0NzkxYjc1NmQ1MzY3NWNkMDdlMTdmNDUzZDFmODQwYWI3ZGY4Y2I4M2UxYmIxMzJhNWZlY2Y2ZTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_88873231579a46b38164e1aeefcb42a6",
+      "statement": "reasonUsage.ts guards reason renames and deletes: countPapersUsingReason reports how many papers record a reason across both the consolidated annotations tree and each reviewer's tree (kept under extra.reviews in the editor's representation), and renameReasonInPapers rewrites from->to immutably preserving identity for unchanged papers and trees so dirty-tracking only marks what actually changed and === means no-op.",
+      "evidence": [
+        {
+          "resource": "repo://src/screening/reasonUsage.ts#L1-L119",
+          "version": "repo-lines-v1:sha256:ff79ac939070c9901f80cd7ea7b1606251061a1c57edc8782edb62b8058120f5:eyJzZWxlY3RlZExpbmVDb3VudCI6MTE5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIwNDYyYjAzMjFjZWViNzE3ODFhNWQ0M2FlNTMxZGNjMmM2OTM2YzYxN2JmZmJlNTllOWYyNTA2MGQ1MWNlYWM1IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_fc24248c59f64183b6ce93b54a1f3827",
+      "statement": "screeningIssues enforces the two cross-field rules the schema cannot express: Exclude requires a reason and Include must not have one; it issues kind:'screening' ValidationIssues, uses the same seatTree routing, reports malformed trees as no issues rather than throwing, and sets canonicalPath:'' so ValidationDialog falls back to a paper-only jump.",
+      "evidence": [
+        {
+          "resource": "repo://src/screening/validate.ts#L1-L61",
+          "version": "repo-lines-v1:sha256:c245681429f383eef4c40c8f920ad80146d6aacd3c080c4a8d4de4d484a0dc60:eyJzZWxlY3RlZExpbmVDb3VudCI6NjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjczNmRhZDQwMmNhZjE4YzJmNGRkZjNmOThlNzI2MDMzNzQ1MGRmMzAwYWE2NzNjMTgyMzQzNjgzN2IxYWZjYTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_fb2b17e6c10f410bbc1684974ca99aa1",
+      "statement": "The store's validate action appends screeningIssues to ordinary schema validation issues over the original project (not the remapped papers) because screeningIssues reads decision and reason together rather than a single active tree.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/store.ts#L1716-L1738",
+          "version": "repo-lines-v1:sha256:bf2fbc30cb270523f6bd803506145fb3899b7aa8427764d900b2e2fe962c9017:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQzMjU2NWE2NTRmOWJkMDI4MDYyYzE1OGUyNTcxYWE2OWQ4MDEyZTk1Yjg2YjA3MTk2ZGEwYWU4NmQxMTMzZGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE4MzU1MmFiNTcxNDk0YjM5OWIxODE5OTYyMmRiZTNiMzgyNmViNjFmY2QxZjc0Y2ZiMTJhYmNmODhlNGY3MjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzMDg0ZTFlMDM3ZDBmNjViMWQ1ODVmMTgwODBmZTg0NTVjODhlYzJjYTk2MDA2OTU4NDQ4ZWU3M2Y2ZjVkNWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJlNzc3OTdlNzE0ZTNjYTMyOTVkYThkNmVlYjRmNDViNWQyODRkMzFhOGNhZGIwMjU4YmYzNzQwNDkyYmRlMTMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0afa8557abf248c9a95d9baab6a40c7e",
+      "statement": "App.tsx swaps the workspace panes based on project.screening: when set, the middle pane is ScreeningRecord (unless screeningShowPdf is on, then PdfViewer) and the right pane is ScreeningPanel instead of AnnotationPanel.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.tsx#L206-L209",
+          "version": "repo-lines-v1:sha256:bcdfeb819df80c83f9e92d9e9e179aae24f1666ab1f359c309df877311cfd9c7:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzJhNWU0ZDIwOWI1OGIyYmJkOTIzYTcyMGRhZWVjMTZmMzViNWI0NzUyMmFhYmQ4MWY3YTQ3N2IzOWQwNWZiOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWYyMTVmZDAzY2ZjMmJlZWJmODA0YTE3YWM1ZTk0Nzk1MWY3Y2QyZGMwNTYwNTIyNDk5YzYwNmZkYmNkNzE4NSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNWFiMTRkNzUyNTg1YTE5ZWE2MzkzMTQ2YzNhNTcyOWM5ZGI5MGRiMmNjZDRlMjM3NmEyYjYxNmY2OWEwNDM3ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzMwNmI4ZWE2NjhiOTcwOWIyYzY0Njg3NGZlY2JjMzY1NWYyZDk1MjE3NzY2MTYxYWY5OWJmNGI2MDI0YTM5ZiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_8d2ee9e7aa3b4cae95037cd331edf018",
+      "statement": "ScreeningRecord is the default middle-pane surface shown instead of PdfViewer because screening is normally a title+abstract decision and the PDF is often absent; it shows title/authors/venue/DOI/abstract, flags abstractFromPdf extractions as possibly incomplete, and exposes an untouched PdfViewer via a 'Read the PDF' button that flips screeningShowPdf.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ScreeningRecord.tsx#L1-L61",
+          "version": "repo-lines-v1:sha256:2fa25219ba3beca9bb4a9f4e55b534652fb47becef329abda8d56a92c118fb94:eyJzZWxlY3RlZExpbmVDb3VudCI6NjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1ZWVhNjZmMWNkNTIyMjJiZDgxOGY2N2M4OGY2MzM5NzkzYjNkOGUxMjQ5ZTZkM2IzNzBlMWVlZDBjNTVhMGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2MjY3OTM1ZmM2MzM0NjVkODQ4YjQwYTRlZDY5NjdlN2I3YTMyM2Y4MWNkNTNjMTEwYWUyMTAyOTY4N2FhMTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3569950118574adcbd1e53c5888c1d21",
+      "statement": "ScreeningPanel is the right-pane decision control replacing AnnotationPanel: two buttons (Include via I, Exclude via E; pressing the active one clears it), a Reason ComboBox disabled unless excluded, a Summary button (plus Consolidation-only Agreement and Disagreements buttons), a Consolidation-only pending-unanimous notice with Adopt all, and a progress line; it withholds the form when no reviewer is picked in a multi-reviewer project.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ScreeningPanel.tsx#L1-L179",
+          "version": "repo-lines-v1:sha256:96ed2ae5ac139011cdac3ba1605e7994ab5a5a59c38f4a6bd24fe9685fbd9b48:eyJzZWxlY3RlZExpbmVDb3VudCI6MTc5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIyNjFhYTNjMDIyNWNkNDg1M2M4YjBhZTkwODA0ZTE1MWExZDcyMjFkMjc5OTgzZjRlMTU5NzYwZDg2YTA1Yzg3IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI1NjI2NzkzNWZjNjMzNDY1ZDg0OGI0MGE0ZWQ2OTY3ZTdiN2EzMjNmODFjZDUzYzExMGFlMjEwMjk2ODdhYTEzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MSwiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_95a3e5c5af664172845aa0b2c0512a52",
+      "statement": "setScreeningDecision writes both Decision and Reason in one mutation (clears the reason on any non-Exclude, writes a supplied reason when excluding via the 1-9 shortcuts so the exclusion and reason are one undo step), reads wasUndecided before mutating, and auto-advances selection to the next undecided paper when transitioning from undecided to a non-null decision; setScreeningReason is a no-op unless the seat's own decision is Exclude, delegating to setFieldValue otherwise.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/store.ts#L2681-L2745",
+          "version": "repo-lines-v1:sha256:c5f6e6ffb6f99afed01c9b0bd65f4e24e76b0c918e58f61231b2b6ac8c001145:eyJzZWxlY3RlZExpbmVDb3VudCI6NjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMzYjEyOWZhNDNmYjU1YWFhYjU0NTJkMGRiNTIxMGM2NjBjYzA2OGZlZjgxOGNmMDQ4ZjlmYzFlNjk2ZGY0NzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFmMGNkYjk3MmE3YmZiN2VkMjQ2ZjlmZjY3MjM4NWU1NWY0OTY4ZmMxMTA0M2RjNWI2ODRkNTFkZmEzMWRiY2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJkMjU0NGE4YzVkN2UzMTU5NmU5NDRhOWEzZDQxZWE5NzliN2Q5YmU2MmQwYjQ2NDI2NWQ1YjJjZjllYWI3NmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgzNDYwMmQzNTI0YmRiYWRkNjZmZjc3MzA1MmMyNmQ3Zjg5YWM5MmZkODRmYjkyNTYwMzQzNzAzMzE2M2FmOTcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a034991eafd8446b92347aa926680a45",
+      "statement": "adoptAllUnanimousScreening iterates every paper calling adoptUnanimousValues with coalescing so the batch is one undo step, returns the filled-paper count, and is synchronous because screening has no repeatable node (unlike the annotation path's adoptAllUnanimousAnnotations).",
+      "evidence": [
+        {
+          "resource": "repo://src/state/store.ts#L2835-L2848",
+          "version": "repo-lines-v1:sha256:810da04b4028d6bb5c9ea2081951b5e24285c474c2375a88b9ceed1235ddc6e6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ5Mzg0NzUyZmZhMGE5MDUyNjgwNTQ4YWQ5YmJhYTNiNmY5Y2JlZDdkYTMwOTY4MDdiNzA5OTU3MmFhOGZmZTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFmMGNkYjk3MmE3YmZiN2VkMjQ2ZjlmZjY3MjM4NWU1NWY0OTY4ZmMxMTA0M2RjNWI2ODRkNTFkZmEzMWRiY2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk3MWZhOTJjNTJmYzA4Y2UwZDMyM2VhNmI4ODk4YzcyMWJhNzg4ODQ5ZWJiYzg2MjljYTE3M2ViYmU0MTZiNzMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRmNjhmY2QyMGM5Y2Q4Nzg3ZDllZDJmYzU0NzZjZjRlMDA2NjdhMzVjZTRiN2VjM2UwZDAxZjAwYzFmNDg2MjQifQ"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L2850-L2856",
+          "version": "repo-lines-v1:sha256:1869e9e2a9fd286fd4dce91c266262d8fdd1156867195930dd3982052a3832d8:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzZiM2MwMzNkMTBlM2NiMDhiYzE0MzFjODJiODdmNGUyNjA1NGE3MzU1Mjc2M2NiODA0ZjVkNTk3NGY3NDU3MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTNjMWE1MmNkNmVlYTI5YzgzYzQ4YzQ4Mzg0NTdjYjgwMTVlZWE2YjUyOTNlNGY2NDdkZjQ0MTNjMTYzNzE2ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGJhZDY2NjNjMjc2Y2JhODYzMzk2YTA3YzNmNGIxOGYxYzZlYzM4ODFmZTE4Yzc5ODBhNzE2NDYwYjQ1Y2YzNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTc3YzBhZWE4ODNiYTE1YWZlMGY2MzI2MDljMzRmYTA3ZTJmNTIwZDljNzc4MzUzZDlmODlmYmU2OTI1YTRlNiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_e64b3aa13f914956b038c4b4c832d9b9",
+      "statement": "ScreeningSummary is a PRISMA-counts modal (ValidationDialog pattern, Escape/backdrop close) showing total/included/excluded/undecided plus a per-reason table for every configured reason and an excludedWithoutReason row when non-zero, labeled by which seat it counts.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ScreeningSummary.tsx#L1-L98",
+          "version": "repo-lines-v1:sha256:da7fe903ef327ebfe3af59b4a54fee0f30b68d5db0ca211a2aacc85d5f71b976:eyJzZWxlY3RlZExpbmVDb3VudCI6OTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVkYjEwNDk5ZmU1OTEyNmYyNDA4MmJhYWU5YzY0NjhmYTg1Yzg5NmE0YmYwMzBjMTliYTc3ZWJkYTkzNWFiNDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2MjY3OTM1ZmM2MzM0NjVkODQ4YjQwYTRlZDY5NjdlN2I3YTMyM2Y4MWNkNTNjMTEwYWUyMTAyOTY4N2FhMTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_324d41959af0426f909926469857fedb",
+      "statement": "ScreeningImportDialog is a pre-commit summary shown before writing: included papers are always carried, excluded never carried (with per-reason breakdown), undecided carried by default with an explicit 'leave them out' escape hatch; for target:'start' a radio chooses annotation vs second-screening project; when reviewers>1 and pendingUnanimousCount>0 it advises opening as Consolidation and using Adopt all first.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ScreeningImportDialog.tsx#L1-L130",
+          "version": "repo-lines-v1:sha256:fe91733cec600c601fcd56e6983a1c56745f1ba6a18247fe07969a2c392968db:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI1ZGExZTc1MjZjMTEzOGI0YWJmYjJiNmM5YWZjMTdiYjk3OWNjMmJhYTI2ODA4ZTZiYzJjNzlmZDM1NDFkNDE4IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI1NjI2NzkzNWZjNjMzNDY1ZDg0OGI0MGE0ZWQ2OTY3ZTdiN2EzMjNmODFjZDUzYzExMGFlMjEwMjk2ODdhYTEzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MSwiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_59f21582a54344f6bb97af2d0f549d38",
+      "statement": "ScreeningReasonsEditor replaces SchemaTreeEditor for screening drafts and manages the ordered exclusion-reason list (order drives the 1-9 key shortcuts); on a committed rename it offers via confirm to migrate papers recording the old label (migrateScreeningReason), and on a remove it warns the same way since there is no new label to migrate to.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ScreeningReasonsEditor.tsx#L1-L151",
+          "version": "repo-lines-v1:sha256:60812f4d715f755dc5f6bc55fc50eb63603c4875ab1ae95c61a79694578e47dc:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI1YmFiMDQzYzA1MjUwYzdmZWNkNTljYTA0YjMyNmJlY2JiNTlmOTRhZjViMmY1Y2MzYzAwZTM4ZWQxZGU2NjgwIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI1NjI2NzkzNWZjNjMzNDY1ZDg0OGI0MGE0ZWQ2OTY3ZTdiN2EzMjNmODFjZDUzYzExMGFlMjEwMjk2ODdhYTEzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MSwiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_9600bf2346c3436b8ac251181dd3768b",
+      "statement": "Screening keybindings are bare letters/numbers only, never while typing in a field or while any modal is open (a DOM check for .modal-overlay covers every dialog so a keypress inside a dialog cannot act on the hidden paper): I/E/U set Include/Exclude/undecided and 1-9 exclude with the Nth configured reason.",
+      "evidence": [
+        {
+          "resource": "repo://src/hooks/useKeybindings.ts#L121-L172",
+          "version": "repo-lines-v1:sha256:cd6e894d5347a675f8aca6ae11fe038c6f441b60df1dcf5306994a5cc0e54d79:eyJzZWxlY3RlZExpbmVDb3VudCI6NTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliNjJmNjBkODU5MGE1NzljZjQ2ZjhkNjczNzhjNGM1NzJiOTYyY2VjY2RiOTBjN2E1ZjdiNDJiOTYwNzgyYTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY1ZTM5N2JlYWYyNWFlZmEyNzA4MDk2MDE1OGJiZmE0NDg4NDcxNDM0MjUwOGNjMzJmNzlkNWIyY2E1YzIzNDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIzYzU4Njc3YWY4ZTE3YzcxZDJhNTFlOTY0ZjE0YTEyYzhjZGMzNGE1NTRjMzBhYzJkMjY3YTNiMmJjMjUzYzIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9dc01e9351ac49a6b3da89b2c2896b77",
+      "statement": "A screening project uses the same split storage as annotation but with a different prefix: reviewer files are screening-<n>.json (not reviewer-<n>.json) and the consolidated file is screening-consolidated.json (not consolidated.json); splitProjectFiles and ownAnnotationPathMatcher derive the prefix from project.screening, which lets a screening-to-full-text sibling relationship keep working without file collisions.",
+      "evidence": [
+        {
+          "resource": "repo://src/git/ownAnnotationPath.ts#L47-L63",
+          "version": "repo-lines-v1:sha256:302526a7259c81ede20dae10c291cfe9e85d442ce3d5913fdf0bb7b1092fab34:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJmYzZjZWU3YzBiYWU0Yzk0MDM1NGU4YWQyMTc3ZWFkOTk0YjM4ZmRhOWVlODQ2YzAyYTAwZWQyNWI4MmQ3MzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk0MDBiZjUwNjkyN2Q3NmEzNjA4YjMyNzVjMWIyZjIxYjlhYjBmOWFiYTVmZTNjZGRlOGM1ZjBmMTlmMDUxYjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        },
+        {
+          "resource": "repo://src/model/project.ts#L891-L926",
+          "version": "repo-lines-v1:sha256:f52f4c413f6eb5e3e0c88a55d1d49b2482237931242d3baf526a62f0f5eb7b4f:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAzNWIwYzI2NzVmNjNjZmZlOGFmOTdiMzQzOWM2N2Q3YWIyM2Q1ZWFlOThjYjJmM2UzMTYxODE2N2VlZmVmM2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUzMTU1YWY5MDk1ZTZmZTU0NzI5MDQxZWM3ZTFjNzEzNjhkZmIwMWU3MDAzOWEzYWVjYWFiNmJmNWIzZjc5NWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRkNGEzNGUyMjE5NDAxODUyZjQ0YzlkNDljMDA0ZWU2NTU1MDZmMDFmYTkwN2RkZDJiYTEwMzMzNTVkZmE5MWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRiNzMwZjY4ODJlMTdiYjcyNjZlOGY0Mzg2MGViOWZhNTY2MTk5MTg5OGZjODE0YzA5OGVhMzk1ZjljNzAxMzYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a26db04261b74e7ea8927acd41b38241",
+      "statement": "startFromScreening and importFromScreening pick/parse a screening project (refusing one whose screening is null), partition it into included (always carried)/undecided (carried by default)/excluded (never carried, with per-reason tally) by reading each paper's consolidated annotations tree (the result that ships), set a screeningImport draft, and resolveScreeningImport commits the carried papers into a new sibling project (named -fulltext or -annotation) or the open session.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/editorStore.ts#L1766-L1840",
+          "version": "repo-lines-v1:sha256:529a539ff6c994b11d1ed08743315190ca60977125f43d9abb482d477c51fdc7:eyJzZWxlY3RlZExpbmVDb3VudCI6NzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZmYTcyZWE1YjI1ZTE4OTM3YTJkM2EwZTRhNzE5NDg3N2NhODAzNDJmNDFlNWFhNTg5N2RkNjI3ZmFkYjljYjIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFmMGNkYjk3MmE3YmZiN2VkMjQ2ZjlmZjY3MjM4NWU1NWY0OTY4ZmMxMTA0M2RjNWI2ODRkNTFkZmEzMWRiY2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJkMjU0NGE4YzVkN2UzMTU5NmU5NDRhOWEzZDQxZWE5NzliN2Q5YmU2MmQwYjQ2NDI2NWQ1YjJjZjllYWI3NmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU2YjA2YTA3OTg5Yjc4NTIwNWY0YTg3ZmI0MmFjZTY1NDg4ZWVmN2RhNmMyMjk3ZjU4ZGI5OTdlNjVmNmIxYjEifQ"
+        },
+        {
+          "resource": "repo://src/state/editorStore.ts#L1847-L1896",
+          "version": "repo-lines-v1:sha256:e1a24d6a86e6da3bd92a93bb491df16f77c84490b2d1aa69987e0e432027ef12:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcwOTI5MDQ5Y2ZjNzk1YzRmMTBmZTc5ZjIwYzU5MmU0YTkwMTkwYWMyNTJkMzA0NmJmYjIzNGEyZjYxNTI4MjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdhOTU0ZDBlOWEwYmI0NTE5NTA5YWIxNTk1MmIyZDY0NzQwYWE0ODliYzE2MjhkY2VlNjMyYTIyZWFlNTFkNDMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkzN2UyY2JiODg5Mzg5N2ZkZjVkMDk0NjhmMTMwZDA4ZWVhMTVlN2Y4Y2MwMmMwYzJlYTBkYzgxMDlhNWQ1MGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU0Mzk2YWNiM2YwNDRkNTk2YTkwMDAxYmZjZDZiNjZkZmY4MTdkOGFiOWY2NDIxNzlmNWFiODA5NDQxZDc3YTUifQ"
+        },
+        {
+          "resource": "repo://src/state/editorStore.ts#L752-L792",
+          "version": "repo-lines-v1:sha256:d69b54c33797743aac8157665b8a6e0d66837632327be14264c7cdfc4fe6b5b5:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYwOTc2NGM0MWIwNTIzY2Q0NTlmOTMyNDBlYTBmYjU3MjhlNjYzYWYyMTQ4YzQ1N2EwZTU1NTYxNDc2ZThjMjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY0YjNiNzRhYmRkYTFiYTRjNDYzMzZjMGE5M2ZhMjcxYzU0MDkyNDAyNjI3ZTJiYWQxMGFkNTg2MDRiMzUwMjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJkNDBkNTE0MDAxMzZmODUxODFiY2UwMDc5ZDIzNTkxZDI0ZjI4ZmFiOGMzNTQwZGI5ZWRmOTM2YmMyZGVhZjUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e4eb99311ead4ec2b4e98b3e0c8cdf96",
+      "statement": "importFromScreening is blocked when the open project is itself a screening project; a carried row arrives undecided under the open project's own reasons, but in-place import into screening stays blocked because the two-pass workflow is fully served by startFromScreening.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/editorStore.ts#L1800-L1810",
+          "version": "repo-lines-v1:sha256:6b2776e05cb2abae2ccac5706e185607a58e7c79eef1d8f504336512294ed91e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJmYmQ1YjNjMDI4OTdiOWE2MmJhYWJlYWFlMGY0ZDE4ODdiMDgyNGRlNzYyOGFiNzMwZGQ2OWYzOTMzOTgzNTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZiMzg2NGQ4ZWQ0MGMyMjQ3MGUzODJiYmM1YWIyODYwMjQwZGU2YjY5OTljMWJjMGMwOWEzOTYzYzQ2YmMyMmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJkMjU0NGE4YzVkN2UzMTU5NmU5NDRhOWEzZDQxZWE5NzliN2Q5YmU2MmQwYjQ2NDI2NWQ1YjJjZjllYWI3NmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI4YmE5N2M0Njg1OWFjYTgyNjM5YjRlN2JhYTZhMTY0NGVjMDNlMjI3ZWNjMzk1YzYxM2RjNWE4OTBlOTZkMTcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_2f73bc1d9b524c97af27aeab89133c2d",
+      "statement": "An imported project records a ProjectProvenance with kind:'screening-import', the source file name (never its absolute path, since files are committed to git and shared), the import time, and a counts snapshot (included/undecided/excluded/carried) that is not derivable later because screening continues in the source after import; carried is the number PRISMA's flow diagram wants.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L193-L222",
+          "version": "repo-lines-v1:sha256:3f4b7c036aa6485d225a4bf486431038834e6bc3d7bc3fc6daa41188753e9360:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM4OTUzNTI0MGNhMDMyZDE4ZjMwYjQ1YzY3OWUyN2M3NGRmNzRkODRkOTkxMTI4NzIxNzZlYzJhNjZjMDRiMDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUwY2JlNWU1YzQ5M2ZjMTljYjI3ODEzY2YzYmQ1ODg4N2QyZWU4ZWQ1MzQ2MjQ3MzU1MjA0NzBhMTM0OTcwN2UifQ"
+        },
+        {
+          "resource": "repo://src/model/project.ts#L545-L571",
+          "version": "repo-lines-v1:sha256:ede15060384d1e92f79a787dead668b52c9737737d2981b85ce647082cb265f3:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIxMDhmZjNjNWI2NWFhM2MwYWI1N2M1NTI0MjNiOWYxZGNmNTc0MWRmZjJjYjc2ODllYWMzMGJmZTE2YzBjMWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY2MTAxYWJlMmFlYjA2MGNhY2VhNjJhYWI4MDg1YmFlYzZiZjZjYmU3NzUzZjFmNzM5NWNiYWZkMWU0NDM0ZTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1MDU4NmM1MWMzYzU1MGQxZjA0MzI1ZjNkNmQyZmIxMWVjMTNiY2MzYWViNGNjZmUxNTNiZTNjNjBjN2RlOGUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_2570446c55944ff9ba0055fded88b9b5",
+      "statement": "partitionScreeningPapers and its excludedByReason tally use Object.create(null) so a hand-edited reason of 'constructor'/'__proto__' cannot collide with Object.prototype and drop a row from the import dialog.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/editorStore.ts#L764-L768",
+          "version": "repo-lines-v1:sha256:c42f5a26b4290f9226b93346974ed1d6cdfc2a56de4c8c274785559359620123:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTdiMGI1MDk4ZTVlZTQ4OWM0ZGM4Mzk1MGNkMDE2NmY2ZGNjNjI1NmM3ZTExOGQxM2UzZjA2ZTExZjM0ZTc3YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzEwOTllNzk5YjY2NmI2ZDk2NjMyNzUzMTk3YzM1YjY3ZWEwNzlmYjUwYThjMjViMWIyNGVmYzEyMmJmOTg0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNWViNTA3ZGQwNzI3NTU0MGViYWY2MDFjMzk5YjczYzU1MzQ4OGZlMGNkMjUxMGVjYWM5ZTI4ZjRjMzQ5OTE5ZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDQ5NzQwMTA5N2JiNDBkOTRlN2JiMzE0OTA0YmMwNWU5MzgwMzg1M2QyMTA5MWE2MDFmNjA5Yzg5N2EzMzhiMSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_85c8c79d5c1f4a878fc71c9cc97791e5",
+      "statement": "The ScreeningImportDraft distinguishes target:'start' (fresh editor session, where startKind chooses annotation vs screening) from target:'import' (add rows into the already-open session, whose kind is already fixed), carries the source's own ScreeningConfig to seed a second-screening target's reason list, and stores pendingUnanimousCount (decisions only) plus the source's reviewer count and every source id to avoid annotations-folder collisions.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/editorStore.ts#L705-L750",
+          "version": "repo-lines-v1:sha256:468f965b60925d13b2048d696001b8ae809f21ae519df3ab118d835f0814eb2c:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFiN2E3ZWU1NjMwZTc2ZmU4ZmQyZGNhNDQzZWJlOTJkMzdiNmM5MWUyYjg0NWFkODY2MzBlMDhlMGQyZGYwZDgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMwMjBhOWFhNzc2NDNhYTllYjk3MWVlN2UwZWM5OWU5ZWE2NzdhMjZmNmI1MDJiMTY3OTg2NGJjZDFlZDJhODEifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.4.0",
+    "at": "2026-08-26T09:23:05.972Z"
+  }
+}

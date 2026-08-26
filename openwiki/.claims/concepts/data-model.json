@@ -1,0 +1,414 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:40ec91e7c1ad006bf1076336e1304b31962ee4f83d095e1092b74f9c8d930b88",
+  "claims": [
+    {
+      "id": "claim_4aa05d1f422f4ebb87bc38edcf7c65e4",
+      "statement": "The on-disk project format is split: project.json holds only meta (schema/protocol/paper metadata, no annotations/reviews/aiUsage/equal), while annotations/<paperId>/ holds consolidated.json, reviewer-<n>.json, marks-consolidated.json, and marks-<n>.json. Screening projects use screening-<n>.json / screening-consolidated.json prefixes instead of reviewer-/consolidated.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L881-L906",
+          "version": "repo-lines-v1:sha256:d511a8bde9860df7a8aeeb4648d0b7828078ab40a641486a514091775f26a925:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVlMDM4NDFjMThmYWQ4ZDRmMWQ1M2JlN2EyZTQwNjBjZDU4NzliYjlmZTAwYjA1ZTUxMmVmNDFiOTQ0ZjZmOWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU5MTVkNThkMjZjODc1ODM4YWMyNGVlZTljYjgzMDI3YTYwY2FiYTNhNzE4NDg1NTAzNWE1NWMzYjc1ZTk2M2EifQ"
+        },
+        {
+          "resource": "repo://src/model/project.ts#L907-L1009",
+          "version": "repo-lines-v1:sha256:41bb990f1b7016e5de23cbdd6b4d9b3f7fe33dd0ab2816dcbb8f96c487979f56:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAzLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJhOTc5ODhiMThmMDA3YmEzNGY4OTEyNWM4YzJjM2I4Mzc4MWY5ZWIzNGNkYWVmNTZmOWQ4NTdiNWQ4N2RiMjBhIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI5YzhlNDdjMDM0ZWUwZWFmMWZhMWVmMzZjZmE0NzBkODczZWU1OGEyYzUxNTQ0NTM1Zjc4NGZmYjcxNDU2ZGE5IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIyY2IwMDkyMWU3ODI5NmY2YWUwY2UyNzc0N2FiMjJiYjA2MGZmNGM3ZTA4MzU0ZDMxMzMzYWJiNmQ0Y2VjOGM0IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIxMDE1NGUxYTU0NTkxMzc2OGU1NjVhOTI5ZGQ1ZDU2YWY3YzA3YmQ3ZDRiYmVjNDNiMDI5ZDdhMWY3ZWY1MGFmIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_c8ea29ef0428427fa8650c522767a38c",
+      "statement": "splitProjectFiles is a pure side-effect-free function returning {meta, files} where each ProjectFileEntry has relPath and a text of null meaning the file should not exist (caller deletes it if present on disk). electron.ts and gitStore.ts perform the actual fs writes/deletes.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L907-L1029",
+          "version": "repo-lines-v1:sha256:37df0e6846ab7722a812a2c1946253d51f582f139e4456b566a5b44efa422b84:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIzLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJhOTc5ODhiMThmMDA3YmEzNGY4OTEyNWM4YzJjM2I4Mzc4MWY5ZWIzNGNkYWVmNTZmOWQ4NTdiNWQ4N2RiMjBhIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIyY2IwMDkyMWU3ODI5NmY2YWUwY2UyNzc0N2FiMjJiYjA2MGZmNGM3ZTA4MzU0ZDMxMzMzYWJiNmQ0Y2VjOGM0IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIzZGYyMjk2ZjY1Nzc2MDhhNTQ4NjRmZDM4MDgyY2Y0M2UzODY2MDQzNDExNGNhYjBiOGViZTQ0ZjM1MjViZTIzIn0"
+        },
+        {
+          "resource": "repo://src/platform/electron.ts#L232-L242",
+          "version": "repo-lines-v1:sha256:adfb369496d3a451428c071962fe6cfe7578c40dd20b3a382d9f86349ad5ec0f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0YzZmNjliZWQyNWQxYTgzNTI2NTU5YTQ0NzVjOWZlNzQzNjFkMGJjZTg3YWMyZGIyNzVkNjM0OWY1ZTkzZjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk3ZDg2MzJlNTRlOTI5OGFiYjk1ODcyN2UyZDUxNDA4YWJhZjEzNjYwMzUzNzkxMDE0MGFiZjY1YjMwYWI2MTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFjMGQ3MTcxZjY3NzFmMjA2OTY0ZTIwYjE3YjBiMTlhYzIzNmNlMTA1NGUyYTcwYWU3NTA2NmM4NWMyNjliYjIifQ"
+        },
+        {
+          "resource": "repo://src/state/gitStore.ts#L360-L365",
+          "version": "repo-lines-v1:sha256:64f436e1b00c499d2e777c61aa1823e21ae0a1d78f6e10577dc03f9edb9bbb25:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQ5MWRlYWRkMjZiYTg1NmU3ODg4ZjJlN2FjZDI1NGNlOTVkYWMxOTk0MGQ3ZTNjMDQ1MTllYjcyYzZiZDFiNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjU2NDVkZTE4MzE2MjFiOWFmOTAwMTVhZTg3MTI2MDExNDQ5YzJiMmMwYjI1Y2VhMzQwMTgwNjAxMWQwNjI5YyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTI3NTEyOGRkYzAxOGRmNDMyYjM1ODk3NzBmYmQwZmE3NTVhZWU2NzQ0MTllNWMyMWZjZWM5OGQxNzY4N2UwOSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_7d2fb57f5cb04a6aba93d88d7db96c23",
+      "statement": "aiUsage and equal are not split per reviewer even in a multi-reviewer project; aiUsage is one array for the whole paper and equal is a consolidation-time concept, so both ride in the consolidated.json file regardless of which tree they describe.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L897-L906",
+          "version": "repo-lines-v1:sha256:518a8bcb5df7f1fa581654b721f407d1876d0f3e8c4e12f1a466c101e32d34c7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYyM2NiNGMxM2Q2Nzc1OWQ1NGY3NjcxZDQ0MDM0OTcyZDA5MDNhMzlkMDhhZmFlNzNiYjk4MWViOWFiMGRjZjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRlMzVjN2JmZmUzNmUzNzljYmVlZGRkYWU4ZjJkMDcwMWNlMjA2OTg3YzA4NGQ2MDA2Yzc5MTUyYjAwNTRjMGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU5MTVkNThkMjZjODc1ODM4YWMyNGVlZTljYjgzMDI3YTYwY2FiYTNhNzE4NDg1NTAzNWE1NWMzYjc1ZTk2M2EifQ"
+        },
+        {
+          "resource": "repo://src/model/project.ts#L985-L999",
+          "version": "repo-lines-v1:sha256:6b2eccf1a9fea94b1a6cb60ae7627a19dbbe52874182d2919bb44119a7c9e05b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBlYzI5MDllNjlmNDg3YmFmYmQ0OTdiMjM1YzJhM2VmMDExY2I5NjI2MzMxYTJjMWY1MzZlNDhhNDJmOGUxYTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0NzVlOTRhOTA0YWM0OWIzMTU0ZDQ2NzJhNjZlODYyOWI4NmRhYzc0ZTNlMjkzN2JlNjkyN2FlM2RhMTFjNTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA0YjlhMGIxNmI5OTEwYmFhNWQwYTRkY2FmZjhhNjBjNDI5NjMzYmYyYWUzY2JhY2M4MjAyOTA3NTgwZDEwY2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI5YmEyZDRjZDFlMmNmMDNhZWZjMWY2ZGViOTc3OGVmNGQ4MzgzYzRmZmE3YjliMTNhZjBjMjcyMDM1M2NiY2QifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d35183f2be384f619cf53e5a9af19360",
+      "statement": "The in-memory Project type carries version, title, provenance, protocol, schemaInfo, schema (ResolvedDef[]), aiEnabled, finishCheckbox, reviewers, papers, screening, and extra. provenance/protocol/schemaInfo are required-not-optional (T | null) so constructing a Project without deciding what to do with them is a type error, not a silent drop, which matters at mergeProjects.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L160-L244",
+          "version": "repo-lines-v1:sha256:73f5d6baf302bde6287087936c7a1e5ee7f2668078ed968f929be957a765e0aa:eyJzZWxlY3RlZExpbmVDb3VudCI6ODUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliZjIyMjc3MGZmMDE0N2MzMTc3NDA3YTEwYjIwNDU4OWZhZDE0ZGUwNTQwNWQ2ZmU1YjFiYmYxOWQxMzVlN2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ1N2M3MDczMDIxMzQ4MzBjMzY5ZjY3ZDc3ZmUyYzNhODYzNTRhZDBiNmUwZDlkMjMzMTA5MWViZDY1MGQyMDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ0ZGZlMDA3ZTg2ZmUxMGQ0MDIyZjVlZmRmYzI5MjQ5MWFkMzA3M2E5NWFmODllNGFlYmM5OTU5OTRiMGJhMmYifQ"
+        },
+        {
+          "resource": "repo://src/model/project.ts#L224-L294",
+          "version": "repo-lines-v1:sha256:6dc5a48707d3dee36ca0d883e7a5d47a4d89fb0e48540a8dc9cfb0a7e265bb0e:eyJzZWxlY3RlZExpbmVDb3VudCI6NzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUzM2ZkMDI2Mzk4ZTQ3OTA0NmVjMzA5NzE2M2Y2YTAwZDIxYmVjNzIwOWU1NjJmNDViMmJiZTJhYzNjZjEwNWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFiNzc0ZmY3ZmQxYTcwN2NjMTk2NjcyOGZmZTU2NTY2ZDFkZTEzMzZhOTEyYmFkYjUzMDE3OGY1MmZjMjcwYjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc1NmFmZmQxZWNmMmNjMjMyODg3MGZhYmMxM2QwZTdlOTcwMWEzYTFiYTVjZjYzMDI4MWZmOGJjYjFhNTRiMzYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e5126d94f3ba4d54b8efeb4e494053cb",
+      "statement": "protocol and schemaInfo live at the project root, not under config, because config is a strict zod object rebuilt from scratch on every save and would silently drop anything hand-added under it. They are loosely typed in zod and parsed structurally by parseProtocol/parseSchemaInfo.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L160-L176",
+          "version": "repo-lines-v1:sha256:d920cbe99737dfc1b7e5e7c45e4ca88da4a8989733e8c9ed25ed16e739705ffd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ1N2M3MDczMDIxMzQ4MzBjMzY5ZjY3ZDc3ZmUyYzNhODYzNTRhZDBiNmUwZDlkMjMzMTA5MWViZDY1MGQyMDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRmN2Q1MWI0NTRkNDAwOGQyMTRkMmNjYWE2ZTU5ZTk3NzNiMjc2ZjY0YTFiMTQ3NDFlZmQxYjMxNWFmMGZjNDUifQ"
+        },
+        {
+          "resource": "repo://src/model/project.ts#L521-L543",
+          "version": "repo-lines-v1:sha256:7fb3e915849ed8a3b5223549a5a52af31e00d431b1f8e01df6df57f251911f6c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRiYmQ0YmExNTdiZGFhNGI1OTRlZjNjYzZhOTgxMGUwNDkzNzI1OWFlOTM5Yzg5ZGE4NzY2NDcyYjFmNjM3YzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYxZjdjMmZjNDM5YWJjNGQyMzZkMGU4NzZmNjdiYWNjZjk1MDdhNmZjOTY2ODg0ZDliYzcyMGI1ZjY0MDhlMzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA1YzhhOGQyMTI5NTY2Y2ExZTY5NTJmZDBhMTAwMGE5NDBiMjJhZjU2NDJhZGQxZjU2NTJhZjNjNzRhZjM3NWMifQ"
+        },
+        {
+          "resource": "repo://src/model/schema.ts#L195-L228",
+          "version": "repo-lines-v1:sha256:529c2ee0ca87de5e7fe2badce85770bc9aa1cf7440b5f96db4ac573b08fb9058:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhmNmViN2RlOWQ4OGM4M2FlZjcyM2VkNDIzMzM3NjgxMTRkOTZkYjk2NTgyMDZkOWUzMGRhM2UzMjllMDgxZmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhYmM1MzA3ZWY4ZWM0N2QyNmU5NTYxOTc3MjJmY2ZkOGRjZTZhYTQ0MzMzMzRhOTUwOWE1ZDQ1NDIxMTk3MTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBmMGU2ZTczNzJiNTJiZWE0MDJmNDI5NWQ1ZGNkZGM3OWE0ZTQyOTlmNjRhZjY3N2NlZmQxMTJjZDc3YTE3ZTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZlZjJlNTFlNTQ0ZDViMmJhNzU4NzhkMzEzZGQwZDgzMTdiZWU2MmE4YTY3NzZlZWU0YzAzMzlkN2Y5OTdkZDIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e42df367b1164149a24f6ab3ba1d7d85",
+      "statement": "For a screening project the schema is derived from config.screening.reasons (screeningSchemaDefs) on every load and config.schema is ignored; the derived schema is written back on save so the file stays self-describing but the two can never drift. Project.screening is the single source of truth.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L284-L291",
+          "version": "repo-lines-v1:sha256:b9739a3d55c56eb43ccd041bd65b25f85a2eec394cf2e12f50d22d5ef9737319:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGYyYTJmOTk2ZjA4ZTY4MGJkMjkyMTM1YTZmYTQ5NzhiZGEyNmU2MDJkODRmMzNjYjFkNTk0Nzc1ZDQzMDRiNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjc0Y2VmM2Q1NjhhMzM2MWZhMGMwMzFiZjVhMDE2NjVlMGVlMWM0OWUxMzc5ZThlMDM3M2I3YzJmYzA1NTVmZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDk2OGUxZjAwZjg1Njg4ZGYyMDBlMGQ4NDMzZjQ1MGY3NjE5OGI3YjVkZWQ1NTJkYTBhYmNiZjM5YWU0NzAwNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzc1YjE1ZmFkOWI3ZmI5MDVhMjRiYjY1NDU0NzU0ODI1YzM4NzFhYzYyZjZkNTk1ZGU3YTEzOTBmODg0YWQxNyJ9"
+        },
+        {
+          "resource": "repo://src/model/project.ts#L710-L726",
+          "version": "repo-lines-v1:sha256:667e191935ecb055831690825cb02d1aa7a19883ba90dccfda71771fcc70a813:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4N2NjY2FiMThiMDJhNzMyMzU4YjI3ZmIyN2MxYzhkNWVjMWZmNzgxYzYyYzNhMGVlNjA5ZmZkYWE0Yzk2ZDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM2MTZlNGZmNWFlMGFlYjdjMTBkNTJmNjk0MmQ0OWRjYjhkYTNhZjczN2Y0Nzg0NmRhYTE4OTU4NTMwNDE4MzkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4MWZjNGJmYjc1ODZjMjQzMDA5MzNmN2RiYmYxMzM0ZTI2NWNhZjM4NDlhNWIyZGE1YTg2N2U0ZjExZjRmOWYifQ"
+        },
+        {
+          "resource": "repo://src/screening/schema.ts#L47-L67",
+          "version": "repo-lines-v1:sha256:e77df606715eca9b2c12c51c085ffa332acc9fa8a27be4e6cd66ba2d33a45ded:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjljMTcxYThiZmU2NjIyOTI1YjRiYmY0NWVhZjU3NTBlMGMwZjQ2MjExN2ZkMzJhOWY1ODJhZWNiN2I0NGIxYTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRhMWQ2MGI3NjY0MjFmZmY2ZWNlYzM0MzhlMGIzYTA3NmQ4YTQ4MWIxNmM1OTg4ODg4ZTJhYjM2YTExM2NjM2QifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_98332d6481ae4e5fb6bec49a137b1274",
+      "statement": "Paper repeats the single-tree-vs-per-reviewer split four times (annotations/reviews, marks/reviewMarks, finished/reviewsFinished) because each reviewer owns their own reading independently and the consolidated seat owns the reconciled record that ships. In a single-reviewer project the per-reviewer maps stay empty.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L37-L158",
+          "version": "repo-lines-v1:sha256:6a9ab958b4513ec3ded1657d34dbdffd83192aa40bae7a0fbfebb1b45f493098:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI4OWNkZTQ1YWY4NGFlZmMyM2YwNDBhNTM0ZDYyYjQxNWEyMzNjMzM4NDY3NzExM2FiMjExOWNhNGU3NjJhNWZmIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJhNDIyZGVhMGI5MjEyZDdkZjFjMzE1MTdiMTZjYzFhMDc3NDdkODUyOTZhMGU4MDEyZTg4YWQxODg2ZDc4YzBkIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI5NDlhNzM1MDc3YWVjODJmZDY5Mjg5NDk1ZTBmY2VhY2U5ZmE3OGE1ZTMxYzQ5MWQ4YjhiNmI2ZTdiMzE3ZTIxIn0"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L908-L974",
+          "version": "repo-lines-v1:sha256:f6f966fe2aa0755257be36f0504240dbb7fcb1b5a089c3ce680088333cf7b3a3:eyJzZWxlY3RlZExpbmVDb3VudCI6NjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQzMWY0OGI4N2E4Y2QxMDg3N2E3MWIwMzA5OGQ3YmFkMjc1NTQ5ZDVlN2ZiZjdjZWE2NTYxMTZiNWNkYTFjNjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA1NzNjZTE0ZThkYTkyY2Y0MzA3NTk0YThlM2MwNmNjYmRlZTYzMTYyYTVlNmYwZGIzNTkzMDQwOTgxOWU1OWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZjNWEwOGRjOTk1YjI0NGVhYzMzMTgyYTE2NWRkNDg0YTdiODlhYjc4ZTljOGZmZmRjYTc2ZmViMDRmYjU3NDYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_80965f4800a843318767a4bfcebbe22f",
+      "statement": "Paper.finished is stored, not derived from the data: a full tree is a fact about the form, not a judgement that the extraction is right. It is not re-derived on load, so a later edit that empties a field leaves the flag standing while the dot stops being green (the paper list requires both) — nothing silently un-declares a reviewer's declaration.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L132-L155",
+          "version": "repo-lines-v1:sha256:b750ca63ed32badf84ebd86cdfed84ba0ea6ee521a7cf1d94178919161898d73:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmMmEyZjk5NmYwOGU2ODBiZDI5MjEzNWE2ZmE0OTc4YmRhMjZlNjAyZDg0ZjMzY2IxZDU5NDc3NWQ0MzA0YjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkY2YxOWNiZmU3NDFhODk3MjAzOTJiYjZlNTkzMDMzZmYyM2UwYzE0M2JiNzYwOGU3MzA2NDRlNTI3MjFlYjEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc4ZWRmNTViNmZlZjJmZmQ4ZmQ2MmU4M2M0MzYwMzFhYTBhNTRlMjE0ZGJjYzcxYmIwNTc0MWQ4MDY2MzE1OTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImViZjdkYTFmZThkNDFkMGViM2RhYzBkY2JkOWJjOWIyMzFmYzYyMDQ3ZTcwZDBmYWEyZjc5ZTg1MWI1MDc2OWEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d5e38331aa914354bb82097894fe1f00",
+      "statement": "The annotation value tree mirrors the schema: AnnotationValueTree is a map keyed by node name holding InstanceNode[] (bounded by min/max); each InstanceNode may carry a value (if a field) and/or children. emptyValue defaults false for boolean and null otherwise; makeInstance/initTree build fresh instances recursively at min.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/annotations.ts#L1-L55",
+          "version": "repo-lines-v1:sha256:95742345d6b9a875a0e639a651a4b21b95a7d45f4197f19f545aba25fe98653c:eyJzZWxlY3RlZExpbmVDb3VudCI6NTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU5MTI2ZTU4YzNiMmQzNDJhNGQ4MThkYzE4NDg2MTUwODc1MDllZjAyNDE1OWQ0OTA1YjcxOWQ5MDhlMmZmNTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZhM2YwYzc0ZTE2NzcyOGYzMWIzNGFlODIxZTEzZjczNTE1ZDY1YzI4ZGZlNTNiZjYwZGZjNDFiNmQyYTk2MDEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f7f2acf7c3144dedab194fa2b44f8a9d",
+      "statement": "StoredAlignment records which of each reviewer's repeated entries are the same entry as an explicit mapping rather than by reordering reviewers' arrays (the pre-v1.7 approach that wrote Consolidation bookkeeping into other people's data). alignedReviews projects reviewers' trees through the mapping as a throwaway lined-up view without touching stored trees. It is persisted because slot N must keep meaning the same thing once a consolidator commits an answer under it.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/alignment.ts#L1-L161",
+          "version": "repo-lines-v1:sha256:161d432e5dd73bcc97bf5afdcc7165633f005cd1588608ae6b13543f0d226c49:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI3NjIwODkxM2Y5ZDRhNGYyYmZjNDliNDM0ZWFlMTY2ZWRlMzcyYWRmYWZjMzQ0MjkyZjgwMjVkNzAzODlhNmVhIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_fa3047810ffd4eac9988094a19fb9b81",
+      "statement": "loadProject is the single load entry point: it depth-guards first (MAX_JSON_DEPTH 200, before any recursive walker), parses with zod (ZodError/RangeError become friendly ProjectLoadError), resolves the schema, checks duplicate paper ids, and builds each Paper with defensive parse helpers that drop malformed entries rather than throwing.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L638-L781",
+          "version": "repo-lines-v1:sha256:57500e738d0e2e596a9d4522ae9694a83cd56fcedcd7941e2201712a0843d98c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQ0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlYWYyMmNmMDczMjU5MmMyNDcxNDFjYmU2MWVmYTExMDEyNjEyZjVhMzEyMmI5YWY5YmJhZjUyZjU3MjRkMTk0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJkY2Y5NWYyYTJmZjQ1NDQyZTEzNWQwNGY2NmZiMjU0YmE3MDEwZWUzMmJlOGIzYWNhMDAyNzNlMTc3ZDA5ZjIzIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIzNWQ2NTRhOTFhMTE5ODM0YzUyZmU3OTZiYmE4MWM2OGI5ZTljODIzZDgwYzE5YTEyMzZlMjU3MmY2MjE0MDNlIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_ca15b76eadff40beb1fd4965d13a5599",
+      "statement": "normalizeTree reconciles a value tree against the schema: drops keys not in the schema, coerces instance structure, pads up to min (at least 1), clamps to max. It adopts shorthand shapes (bare primitive, single entry where a list is wanted) as the value rather than dropping them, because this walk rewrites the file and discarding would let the next save overwrite a real answer with null.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/annotations.ts#L57-L124",
+          "version": "repo-lines-v1:sha256:a1bf95fe57935c8f8902cd0d787a3de321e6d346f7abb06bb756bba2e5a51476:eyJzZWxlY3RlZExpbmVDb3VudCI6NjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRjOWUzM2UxYTA3NmJjYzZmYmM0OWNkNzM5OTFjZWQ5MjhiNjVlOWEzYzI5MDcyNjBmMTJlNWNkMDA3MmUwYzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA4OTE3MjBmYWM0Y2Y2ZTNkMGZiMjdjNGI0NDJkMDE5NjJjZDhiMjkxYTQ1M2Y5NWVjNDA1OTVjMjA2NDc1YWIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c41296845ff74783a828e6fa1fbf432d",
+      "statement": "normalizeReviews backfills a skeleton tree for every reviewer 1..reviewerCount who has no tree, so a reviewer's first annotation is a value-on-existing-line change in a git diff rather than a new field appearing. It never removes a key for a reviewer number above reviewerCount: lowering the count hides that reviewer's tree but must not delete it.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L378-L391",
+          "version": "repo-lines-v1:sha256:a84a3ce870bed308ace4c58e890c261300f0bef555bd51b1e65c3bf61627165c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3YjAwZTc5ZTkyNjA4NWQxNGMwZmJmMmExMzhjYjViMTYyN2UxNTVlMzZkY2JkZTY4OTQ1NzNmZmUwMzllNGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBjNzBiYWQ5MzljZDViZTEwMjFhMjAzZWMxMGI0MjhlNzE2ZGExNzcxOTRlOGJhZDBkNjRmNWEyZDc2ZWVlZDgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY2Y2RhYmVlZmYxODQxMjZlMWJlODliZjI0YTI2Njk2NTk5MGU3YzdmNzBhMmZkZjU3NzVjOWUzMzRhZDU4ZDcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ab63450566f4454c81f60e3dcca9d504",
+      "statement": "Edits (setFieldValue/addInstance/removeInstance) route through currentTree to the correct seat's tree: single-reviewer or Consolidation seat writes paper.annotations; a numbered reviewer writes paper.reviews[currentReviewer] (lazily created on first write). setFieldValue coalesces consecutive edits of the same field into one undo step.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/store.ts#L1898-L1966",
+          "version": "repo-lines-v1:sha256:82ee2108ca58d14abcb5062af43cbcf40c9e6bcbf83481268005204123b2493c:eyJzZWxlY3RlZExpbmVDb3VudCI6NjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIxOTQ2YTQxZTllYTRlMjk0MmM5NmIxMzU2ZmFiZmM4ODY5MDcxZjYxZGU4ZDg5ZjIzMjQ1OTg4MGU4Y2U0NzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFmMGNkYjk3MmE3YmZiN2VkMjQ2ZjlmZjY3MjM4NWU1NWY0OTY4ZmMxMTA0M2RjNWI2ODRkNTFkZmEzMWRiY2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI5NzhlMjI2YTUxYTU1YzdhYmM2N2RkNWZkYTVhNjZiZjZhMGRmNTk5ODcxMTE1MzA0NTllMWUzOTYzMmI1NWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI1NGVmOTYxODA1MDRkNDU3NDZlMzYxYzY2Njc4YWRkZDcwZDFjZTJiZjVhYzBhZmU5NGU0NjQ5MzAyZmQwNTEifQ"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L908-L922",
+          "version": "repo-lines-v1:sha256:631bdc1e524a185da6c201c3ffd943969b2a9eaaefcfaf6dafe9214a596034d4:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQzMWY0OGI4N2E4Y2QxMDg3N2E3MWIwMzA5OGQ3YmFkMjc1NTQ5ZDVlN2ZiZjdjZWE2NTYxMTZiNWNkYTFjNjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA1NzNjZTE0ZThkYTkyY2Y0MzA3NTk0YThlM2MwNmNjYmRlZTYzMTYyYTVlNmYwZGIzNTkzMDQwOTgxOWU1OWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM5OTE0ZjU4NmM1ZGI1YmRlZmM0YjMyNTQzYjJjNDhjMDRjN2RmMTg1OWZhMmExMmU4NDRiOTEwMmIwMGVlZjkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e70e415ad41b490392df4d1fb430a896",
+      "statement": "removeInstance shifts canonical paths of survivors after splicing a non-last entry, because every structure addresses a field instance by canonical path with an embedded index. It rewrites linked-field mark paths, AI marks, paper.equal entries, and deferred consolidations via shiftCanonicalPath (dropping those that named the removed instance).",
+      "evidence": [
+        {
+          "resource": "repo://src/state/store.ts#L136-L166",
+          "version": "repo-lines-v1:sha256:68bab58b77617d4cf1e95f074e4ce4edfbe83f7ed0c793ee7c5b61c02d05ec69:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkyOTRmMWY1Y2RhMDJkNDk4Y2Y5OWQyNTQ1Zjk4NzkzYzI5YjJkOGFkN2YyNzEzOWY5NWM2NjQ2MjY0YzliZGYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNhOWFlN2M4NjQ2N2IxNzVkMTA4OTM4NDk0MjAyNDhjNzBhMjUxZmY3MjNlZTQxYWVlMGFhMTc5YTI2Zjg1MjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEyMzY4NTc5YzA2YTdkMTBhNDBkZmEwOTdhMGM4MzhlYmFkMzBkMDM5ODQ0N2EwZDRjOWIxMmNkZTdjNWNkYWYifQ"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L1968-L2049",
+          "version": "repo-lines-v1:sha256:953229dbcfc53fbf527b3d62f5225903c24999b13b3710bc52e9711c50254569:eyJzZWxlY3RlZExpbmVDb3VudCI6ODIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjljODFhNGY2YmZkMDBiMWIzOWMzOTc5OTY0YmMyNjlkYTE1ZDlmYzNlNzdiYTM5NjU5MzkwZTVmYjJjMjBlNjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg4MDA1ZDU3MTA2YTM2MmViMDAwZGFmM2RhNDY3NGM4MmI1MThmZjVhMmUyZjY3ZWU4ZTc1N2EzMzNjMmFmNjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJkMjU0NGE4YzVkN2UzMTU5NmU5NDRhOWEzZDQxZWE5NzliN2Q5YmU2MmQwYjQ2NDI2NWQ1YjJjZjllYWI3NmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk1N2FkNDRkYTZmZWNmMmY2NTg2ZTU3YzhiZTEyYzMyYWQ2ODY5OTQ0MzIyMTBjNWNjZDg0OWQ2MTU2YjYwMDMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_03ac38d53b1542808beb25c96e571a45",
+      "statement": "pruneTree drops only trailing empty instances from each list (required instances up to min are always kept). Non-trailing empties are kept because position carries meaning: Consolidation lines reviewers' lists up by index, and closing a gap would silently re-point the alignment at the wrong entries on the next load.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/annotations.ts#L136-L169",
+          "version": "repo-lines-v1:sha256:2913d71d7193974d8029845b048e598f65a96774f8174c773ac733f9b407f751:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYzYzUwYTFlMGY1ZmUwNDhkNTFhNDI3NmY0YzM0ZjQ4YmU3ZWY4M2I0N2YzMDY1Yzk4N2Q5ZGEwOTE2NWJjOTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ3MWQ5YjZmNTUwMGNiYTNmM2Y5YjU5ZTE5Yzc5MzQ5YWYwMjcwYTA3YTZkZWVjMDVmNjgwMDI3NmM4NGNiZjgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d7355f4ff3414c28b707884bf011c232",
+      "statement": "serializedTree(schema, tree) is hasAnnotations(schema, tree) ? pruneTree(schema, tree) : {} — an empty normalized tree exists in memory to bind the form to the schema but does not belong in a file until a reviewer has recorded an answer. This rule is shared by serializeProject and splitProjectFiles.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L875-L879",
+          "version": "repo-lines-v1:sha256:da8d321d47bf8bcfb613549e0f2d810fbdcab5cb97db8eed03a71a19120e8186:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDQ0YjkzM2I2MDI4OWEwMDg4MjExMWE4NzU0ZjJkODY3MjZiYzE1YjMzYzkxZjQ5MjU1ZDFkOWVkZGRiMTk3ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmJmN2M3ZDE4ZjVhN2JmOTBjYmRhYzI3YWU5NjNhNDVjZjEzM2NmNmIwNzU3NTQyYWNkNmM4NmViYjM0NzRkZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMmMxMmYyNjRlMmQ3NTc2NTUyZGI2MmI4NjUyYzZkYmI2YmMzMWFkYWQwN2ZkNDM2ZDZiNTk0MGM0Y2QzNDlmMCJ9"
+        },
+        {
+          "resource": "repo://src/model/project.ts#L963-L1007",
+          "version": "repo-lines-v1:sha256:ea940ac908b1fa82034845c12059fb2d91b6db37c40af3ca841c5e7d71758323:eyJzZWxlY3RlZExpbmVDb3VudCI6NDUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkyNjI1N2I1ZDMyYmI4NDJmMTcxOGFkMTAzMjA2NGU5NGIxZjBhNjAzYmUwNDg1NTc5M2IxMGExMzE1YTI5MTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0NzVlOTRhOTA0YWM0OWIzMTU0ZDQ2NzJhNjZlODYyOWI4NmRhYzc0ZTNlMjkzN2JlNjkyN2FlM2RhMTFjNTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZjNmU2MzNhM2M4MTY5NzBiMTgyNDMwMjJmMjIyZDYzMTU1ZDIyOTk0MzU0ZmZiOTE3MGEyZWQ5NGIwYjIxNzUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFmMTk1NmNiYzJlOWFlODBjMDkxMGE5MTg1YWFkN2U4NjRiMjZkMmE5YmNmMmM3MWIxOGUzMTAyNmMzNTg0NWEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_caed3ca07cb842339bf0264c933ab376",
+      "statement": "serializeProject and splitProjectFiles sort papers by plain case-sensitive string comparison on id (comparePapers), which is deterministic and locale-independent, unlike title ordering which also drifts if a reviewer edits a title after first sort.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L1111-L1116",
+          "version": "repo-lines-v1:sha256:86945aedff13ecf74270006c65290686e17ce0345fd23ad2a005c1a585d56e1b:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNmE5MmVlODVmYmJkMjVlNjE5ODVhOGIxNDUyNDRmMmQ4YTJiYTI2ZWJkNjI4YTRmZjRkMDVlYzIyYmNkZjMyMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZmI1ODBlOTY0ZjgzYTQ3M2Y0M2Q0NDM4NDYyOTQ5ZDY4YjU2MDBmZGE3ODdmMTYzNzQ1ZDAwZGU4OWNiZjM2YSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTY1NWVkZmM1NTM1MDNhNGFlNzMxOTE4MGYzZjBlNjZkMDA0M2I4ZDc3ODdhMmYxMmFmODI1ZThlMjc2ZjUzMCJ9"
+        },
+        {
+          "resource": "repo://src/model/project.ts#L813-L814",
+          "version": "repo-lines-v1:sha256:054a45576942bed9d4e6e7af62e19b09f1e5eead0b6b545f9882640ee73eb929:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiY2EwMzFkNzgwZWJiMjZkMjZhN2EwYzA3ZGU4ODRlNDNjMjFhZTljZWY0YmUwYzNhZDc0MWUxOTRlYmQzODQwNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjZhMzQ5MTkyNmQ3MTBiODQyNGUyY2YxM2RhZDcwMmVlZWExZWJhMDJlYmNhMWNjMzM0ZWFjMzIzZTBiNTk4OSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOWYzZjNiMjQyNDYxNWI0NjhmNGZiN2JkNDI1NGJjZjg4N2RkZTNjZmI4NzAzYmViYWM1OThjNDI0YjBkZDcyYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTQxYjBjMDEyMWJlNGRkNjBkNjljZWE1MTI1NjcyMDFmMGRjY2JmMTNjZWQ1YzIyMjQ0ODg4ZGRmY2FkNzk0MiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_405c0ae0c6d9406f85aa1cdcb846ef81",
+      "statement": "deepEqualJson is structural JSON equality: order-independent for object keys, order-sensitive for arrays, exactly JSON's notion otherwise. It is deliberately not a text comparison; needsShapeMigration uses it so whitespace/key-order rewrites never look like a reason to migrate a fine file, and git/merge.ts shares it for three-way field-change decisions.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L573-L603",
+          "version": "repo-lines-v1:sha256:c89c0ff57b7f2456def7a8450a6cebea58b1ecc18a76ac107851dd08eda9ed02:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiNTgwZTk2NGY4M2E0NzNmNDNkNDQzODQ2Mjk0OWQ2OGI1NjAwZmRhNzg3ZjE2Mzc0NWQwMGRlODljYmYzNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU4OTE3OTE5MTEwYjUxODZlMDBmZDMzZWU2NmM3OTU5MWYzMWY5MmVhYzFjN2FmNDRiNTAyZmZjN2FmZjQwN2UifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_477a51abe69e496889a128c89734e2e8",
+      "statement": "needsShapeMigration structurally compares the file's annotations/reviews (via deepEqualJson) against what saving now would write, scoped to those fields only. If migration is needed and the project has a stable write handle, the store silently re-serializes and saves in place on open — never a download or prompt — deferred one tick so the UI paints first.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L605-L636",
+          "version": "repo-lines-v1:sha256:213909d4aec443972da97adc84637c8a8b57d739c2b0a9145d35a24f1f598a87:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM0MGM1ZDNkYzNhNzczMDc5M2M4OTI3OTQ4YjU1OTY2NDIwN2Y3OWJhODc3NzNjMjE1MDA0NDMxOTYyZmQ0ODgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM2MmMwYzgxZmE5NWM5YTJjNGZiMmQyMDlhMjdkODQyNDU4NzY2MmZlMGQyZDEwNjY1ODIwNzU5ZTQ2NTY3M2IifQ"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L1371-L1420",
+          "version": "repo-lines-v1:sha256:64cd76de6e0bc63bb85ed8d063d570db220d3997421a7dcbb1ca1e8370051c10:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYjY2NGVkMjYzN2JiN2I0YTZiMzY1Y2U5NWNlMWFhODY2YzBkNjUzNWNhMWQxNWE0NzU3MzUzZjdhMmI5OTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxOWJjZTY0ZTc4N2Y3NDM3ZDE3YzYxZTFmZjg0ZWJhN2IyOTJiNzAzN2FmOGYzNzE2NzNiNWQ5ZWI0MTU2ZWEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIzYzVkZjEwMjk0NGRmZWZhMjBjZGZkZDYyM2U0MDZjNzYxMDkzZmM2OGY5ZjQ0Y2M5MjA0MmQxNjhiNTY2NjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJiYzdhMGFkODQ0ZGI5NjZiZDg4YTA0OTYwYjg5OGYyMGI5YmVhZmQzZTI1NzlmN2M4YTRiZTdiNjk0MDU2MDgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f6851da8bd9e4c35a4de052238d23027",
+      "statement": "isLegacyProjectShape detects whether a parsed project.json uses the old single-file shape (any paper carries annotations or reviews inline). assembleLegacyProjectJson reassembles a meta-only body plus per-paper files back into the legacy whole-project shape loadProject already parses, so the read path reuses loadProject unchanged.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L1031-L1109",
+          "version": "repo-lines-v1:sha256:abb3c87cd9b8ccba8810ef5527c8f074fd995ac8c6b4f51791d25cd9c4b20afd:eyJzZWxlY3RlZExpbmVDb3VudCI6NzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE4NjIxNjgxODEzNzU5MjhlNDQ5YWM3NTM3ODdjOGVmMDgwNmY5NmQ4M2VhMDVlOWQ5YjRmZWE3NzdjZDlhNzAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZlNTc5NGMxZTFiYWFhYzI5MDg4MzNlYjY2ZmU2ZTEzZmFlZmZiMDY0NWRmODhkOGIzZWJmNjZlY2U5M2U0NTEifQ"
+        },
+        {
+          "resource": "repo://src/model/split.test.ts#L28-L48",
+          "version": "repo-lines-v1:sha256:8a1b3d8deebe218c11b03d649ef8d0575f0b23fe30f3b4cb802a8de7cc128bea:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM1MGJhZjc1ZTIwYzg1OGQ5OTMwMjg2NjQ2YzAwZDM3NjBmZDc0MzA0ZTM0NmJkMmRiYTk2Nzc0YzIzODVlNGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRjZjk1ZjJhMmZmNDU0NDJlMTM1ZDA0ZjY2ZmIyNTRiYTcwMTBlZTMyYmU4YjNhY2EwMDI3M2UxNzdkMDlmMjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg3OGE0OGRlMjQzZDBlMTM3OGQ2ZTEwOTNmMmUxYzE1NTc3ZmRmNGFjMDdjOWYzNjVhMjc3MTI1OGNjNTUxMzMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3393bb98e8ba4311a97f95000af5f5e2",
+      "statement": "Per-paper-per-reviewer files are written only when the tree holds answers (hasAnnotations) or the reviewer's finished flag is set, and deleted (text: null) when empty. marks files are written when the mark list is non-empty. A null text is the delete signal: splitProjectFiles is pure, so the caller deletes any on-disk file whose entry is null.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L945-L1007",
+          "version": "repo-lines-v1:sha256:0b2f70f718e237d612ffa0dff84486dcc431997fa5401c8bde72a793d043cc76:eyJzZWxlY3RlZExpbmVDb3VudCI6NjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFiYjg1ZDA2NDYxZTJjMWViNTI3NzU1NmQxZTk4NWMzNTg4MTE2YWFlMWQ5OGI5NjY2ZWQ1MDJjYzkzMTc4NzYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0NzVlOTRhOTA0YWM0OWIzMTU0ZDQ2NzJhNjZlODYyOWI4NmRhYzc0ZTNlMjkzN2JlNjkyN2FlM2RhMTFjNTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ2ZWY5ODRmYWIwOWJkNTZmNGY5NjhiZjFlM2EyMjdiNTY2YjU1MmZhNjNjMThkNzQ4ZTEyMzY2YTAxYTU0NWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFmMTk1NmNiYzJlOWFlODBjMDkxMGE5MTg1YWFkN2U4NjRiMjZkMmE5YmNmMmM3MWIxOGUzMTAyNmMzNTg0NWEifQ"
+        },
+        {
+          "resource": "repo://src/model/split.test.ts#L64-L95",
+          "version": "repo-lines-v1:sha256:fc219e9223b2afc59ddec60b4902918180d36df2107b78342167d16d1826c0c2:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQwMGMxNTMxM2UxNzYxYWViMzg0NGEzMzZlZWZhODdmZWJkMmU2YzY2ZDE0NjFhYzg4MTg2NDYzYWUzZGQzOGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU0NWRkMDEzMWMyNDFmYTNjMzc0YTM0YmEzMzcyZTk3NDFmNzE0YjQxMjMzOGZiYWRkYmU2ZjdiNjJlNjQxM2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRkNDE4YTEzNDY5YmM1YzNkYjBmZWNjYzgxMWRhZDhiZDIxYzQzOTE2YjI5NGMwZTI3ZWQ5NTU1ODk1YjdkZjAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6bafea3a959b499b9dd27cc1bff6736d",
+      "statement": "splitProjectFiles emits reviewer slots as the union of 1..reviewers and every reviewer number parseReviews/parseReviewsFinished kept (including ones above the current count), so lowering config.reviewers does not delete that reviewer's tree and it reappears if the count is raised back — the same contract normalizeReviews makes for the in-memory shape.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L936-L983",
+          "version": "repo-lines-v1:sha256:15a9cfdd309d54cc2fab2aa19b559059c82865c71dd236b88e3d88fc47a9a85c:eyJzZWxlY3RlZExpbmVDb3VudCI6NDgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkyNzRkMmNmMjk4YmNmMmY1NmM0NzA4ZWMzYzkwMjFiY2YzMmZiNTdhNzFmMTUwM2Y5MDA1MjhiOTU4OGFkOGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ5ZDZmZjllMzA0NWM5Y2EzNTgyOTJhOTkyYzM5NDliMDMwYzUxOTU1NWQ5ZGZjM2VkMWUzMTAyOTVhNWQxNjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU4NWI0MjBiZjU2NDYyNWMzYzk4OTlmNjg4MTJmODc2ZDU1MWRmYWU2ZWU2YzAxOTQyMzNhZDBmM2MxZThjZTkifQ"
+        },
+        {
+          "resource": "repo://src/model/split.test.ts#L97-L130",
+          "version": "repo-lines-v1:sha256:72444c0d43861555d7a69c3d9a996b93e6055d2050dd2cf356c921306a8e65e7:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY2MGI4ZWU5YWVjYThjNTk3YjgyNjkwYWVhZTMyYTM5Zjk5NzdlMTRlM2RlZGYzNGE2YzNkMGU0YThiYjdkN2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRhYmUwNzE5Zjc1MjE1MWZmM2M5MWI2MGM4ZDE4N2E3MDUwZTc2NDhkOWQ5Yjk1Y2ZlMGEzMmEzNzZmMmZkZGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlhMjNjODU1ZmE0YzM5MWE2ZGE4ZDg0YTQ0ZmUyODcwNTFjYTZkNzc1ODc1ZmUwOWI5NGZmOTMyMzQ4MmU0YTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7719812740e940848e30e05bfc7b6e13",
+      "statement": "annotationState defines a single five-state vocabulary (untouched/partial/complete/finished/flagged) behind the paper list dot, its state filter, and its finished counter, so they can never disagree. The two inputs are independent: completeness (a fact about the data) and finished (a reviewer's declaration); annotationState is the one place they combine.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/annotationState.ts#L1-L93",
+          "version": "repo-lines-v1:sha256:d67ea6483c58fc0bb456b4feddfd541d64f97115b4776070db85c7401559dc3b:eyJzZWxlY3RlZExpbmVDb3VudCI6OTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3YWUwMDg4MDM0ZTU5NDQ5YWM2ZDM0MDI3NjgwZmI5YTU3YTQ2MDg0ZTkyNmQ1OTcxNWI4MDU1OTc4NWM5MTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc0MTAwMzc4ZmU2NDA0ZDViMDI2ODYzOGNjNzhhYTFhMWM1NjExNTE0ODA0MzQ1YjA2NGRkNTUzZmVkMjBhNzUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_1da8f3374eba49b2a86762201dde4145",
+      "statement": "The flagged state (declared finished while a required field is empty) is re-evaluated from current data on every read, so it flips to and from finished on its own as fields empty and refill — nothing has to be saved and no separate invalidation step exists. It is only reachable in a schema that marks something required (hasRequiredFields).",
+      "evidence": [
+        {
+          "resource": "repo://src/model/annotationState.ts#L16-L93",
+          "version": "repo-lines-v1:sha256:a4c2baff0b3442033406f166ca49ecaaa3cdbf86cff685342c542e57e83000df:eyJzZWxlY3RlZExpbmVDb3VudCI6NzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkyYmQ0MTg1NTVmNTg5OGMwNDE5NGEzMWViZDEyNzM3MzkxZDczNjRhZDJmOTY2NGQ2YTQyNjIzMjk1YjE0ZjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYxMGZjYjcwZDE1NDY0YzYwOGZkNDA5Njk3NTIxMmU4NjNlYTYwZmFhYmZiNTEzYmRkZjNiM2JhZTA1NjkzYTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc0MTAwMzc4ZmU2NDA0ZDViMDI2ODYzOGNjNzhhYTFhMWM1NjExNTE0ODA0MzQ1YjA2NGRkNTUzZmVkMjBhNzUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_962c70ed188d4e31bd1dd61c4a93eeaf",
+      "statement": "completenessApplies is the one gate behind the dot's color, the finished checkbox, and the filter dropdown. Only a screening project is excluded (it has its own tri-state marker and a derived schema marking nothing required). Consolidation is included, which is why the gate needs no seat argument: the consolidated tree's tick routes to Paper.finished like a lone reviewer's.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/annotationState.ts#L95-L126",
+          "version": "repo-lines-v1:sha256:0c2faafc9d6c4c848c386c1d16cb980d745f721999e4db3bc65c93e0b263ec76:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIzNjg2MWNkMzNjZmZhYjY1M2ZjNDA4MjY2YmZlMTBmNDgwZGVhM2ZhNmI1MWIxN2QyYzg4MjgwYTE4MWJiZmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM4MGJjYzMyNzU2MGIwNTQ4NjdmMGVmY2ExMjQ5ZmQzNDBkYTEwOWY1Mjc1NTQ4YzliNzNlOThjOWY3YTRhYjUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b65d15c82c22412caac9473ed0e1a96e",
+      "statement": "finishCheckboxLabel(isConsolidation) returns 'Consolidation finished' for the Consolidation seat and 'Annotation finished' otherwise — one definition because the paper list's complete tooltip sends the reader to that control by name.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/annotationState.ts#L128-L140",
+          "version": "repo-lines-v1:sha256:0f0c5f5cda6089bccf34f1600e3d5c78afb4f32f799b04647c0def0b24f82ad9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAzNGM4M2FmYTUyMGVjZmVjNmYyY2UzMmU5N2EwYmQwODJhMWI0YmZmZGM5YWNlYmVhOTgxZmVhYWU3OGRmZjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNmNDdmYjFjYmYxNDNjMjM0OTY2Njk1MzBiOGNhOTFhODdkYmY3Mjc3MzVlMjk0YTgyZmVkNDA3NzdlMWJkNGIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_dc10039c9dfe41d583aaf8949c5c2772",
+      "statement": "When config.finishCheckbox is false, nobody signs off, so a fulfilled schema is finished and the stored tick is not read at all (it may hold a stale declaration). complete and flagged are both unreachable; any ticks recorded while it was on are kept in the file so turning it back on restores them.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/annotationState.ts#L76-L87",
+          "version": "repo-lines-v1:sha256:23778b9a34c4567e6872aeaa7343715ce45a04fa791fe6c4722ab99769429814:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUzMjBhZmQ1MGVlYzRjYTA2N2JlMGUxMTU1NTAwZDNmYmJlMjAwM2JhYThjM2U4YWE4YWUxZjVjZmIwYWI2N2UiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYxZTVkY2ZiYmUzYTc3MjE2MGRlZmViZDIxNmZmYjFmZjI1OTIxZjZiNWVjOWVlM2Q3MWJkOWU3MGYwZjQzOGMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBiYTA3MDZlYjA2MWQ4NWY2MGQ4MDZkMjcyNDk1OWRjZTdmNWNlODFjYTUyNGU5OGE3OGMzODVkZDcwODJlNGQifQ"
+        },
+        {
+          "resource": "repo://src/model/project.ts#L251-L274",
+          "version": "repo-lines-v1:sha256:53c2536aff072fbfca62b3a32e3fe344d3e2caeb28892d21fdb1231e80063903:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmMmEyZjk5NmYwOGU2ODBiZDI5MjEzNWE2ZmE0OTc4YmRhMjZlNjAyZDg0ZjMzY2IxZDU5NDc3NWQ0MzA0YjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY1M2JiZjVkYmNkN2JkYmNkM2UyNjU3ZDk4MWJiYzhlYjdkYjdmYmU5NzQ5MjliN2RjYzk5MGVkNDM2ZjQ3MzAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM5ODI3MDUxNTEwZDE4N2NkMDI5MGVjMGU1ODkzMTAwYzdhZTZmNWE3MDAyZjgxY2YyYzVhOTljZjJkMTYzYWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk4M2FmZGVmNDAyNjc1ZjZhODQ5YzNiODcwZTNiZTI3MjE4N2M4OGYzZGFmZmQ2NTA0OTM3ZGE1N2RmZDk0NWQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_5ea55aa2c353489688ff75a469201e8b",
+      "statement": "AnnotationFilter is all/open/in-progress/finished/issues — four buckets over the five states. open is every paper whose box is not ticked; in-progress is its started subset (decided from touched, not state, since a Yes/No-only paper is touched while its dot stays untouched); issues is flagged. annotationFiltersFor drops issues when no paper can reach it (finishCheckbox false); matchesFilter is the single mapping and a null (screening) state matches only all.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/annotationState.ts#L167-L258",
+          "version": "repo-lines-v1:sha256:45b58d49b6d75f2ca4785f1139e0fd1f8fd7654fa0dcc5dd18a4f40e228c5b64:eyJzZWxlY3RlZExpbmVDb3VudCI6OTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM0MGM1ZDNkYzNhNzczMDc5M2M4OTI3OTQ4YjU1OTY2NDIwN2Y3OWJhODc3NzNjMjE1MDA0NDMxOTYyZmQ0ODgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_eff672f8425747309cd6fb037c7365c1",
+      "statement": "loadProject uses a uniform defensive-parse convention for hand-editable fields (reviews, aiUsage, equal, alignment, marks, provenance, protocol, schemaInfo): malformed entries are dropped, never thrown over. The one exception is parseScreening, whose reasons are the schema's enum and cannot be degraded past — an empty result is a load error, not an empty list.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L338-L484",
+          "version": "repo-lines-v1:sha256:732335051795ba26efccb3aa553b03502d324c0b6f4ae8184823f84c7c36544c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQ3LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlYWYyMmNmMDczMjU5MmMyNDcxNDFjYmU2MWVmYTExMDEyNjEyZjVhMzEyMmI5YWY5YmJhZjUyZjU3MjRkMTk0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI3NDBmODFmZDg5ODMzYTdkMmYxZGY3MGM4NjNiMjU5ZjYzMzM1YTU3ZWMxNzYxZjkxNzZjODJhZjNjNmUxYTJlIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI2OGI2MjdlODE3MDZkOWM1MWZlZTQzMDdlNDk4M2JlZDk5OWQ5YWRhODcyOWUxYjJkMWMzMjc0NzYzMWQ1YjIwIn0"
+        },
+        {
+          "resource": "repo://src/model/project.ts#L737-L781",
+          "version": "repo-lines-v1:sha256:4ed4cfdc3751721e25e6d32ff1163df90cfa7c250e7e11bbd5c01fd1c17bf140:eyJzZWxlY3RlZExpbmVDb3VudCI6NDUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZlMTExYmZkYzU4YWM4YTI3YjE2ODc2ZGU0OWQzNmVjOGJhMmJiMzY5OGU5NWNkNjM3NDgxZmZiZjJjNzc3MGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY3MWU0YTJlNTgyNjZiMGZmNzM1MzcyMzlmNzUzM2I5ZWVjZWI1YWVjMzljYzgwYjA3Nzg5YTE0ODkxZWU1MDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM1ZDY1NGE5MWExMTk4MzRjNTJmZTc5NmJiYTgxYzY4YjllOWM4MjNkODBjMTlhMTIzNmUyNTcyZjYyMTQwM2UifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_57b7694b39d44468b500b51049335196",
+      "statement": "loadProject depth-guards the parsed JSON (exceedsDepth, MAX_JSON_DEPTH 200) before any recursive walker runs, because zod validation, resolveDefs, normalizeTree, deepEqualJson, and serializeProject are all recursive and blow the stack between a few hundred and a few thousand levels; without the guard a deeply nested hand-edited file escapes the function's throws-ProjectLoadError contract as a raw RangeError.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L642-L708",
+          "version": "repo-lines-v1:sha256:0f9cc55c04b9b44291eac91db04ce7d3fdfb0fe05062a170806996809e30e194:eyJzZWxlY3RlZExpbmVDb3VudCI6NjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdmNGEwYzZmNzYzZTcyZWM5YzAzN2ZiNjUwNGNiMDdlMzczMjk0Y2ZjODE0OTRjYmQ2MmVkOWVjNDgwNTk2MTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcwMDBiNmQ3ZTdhMjg2NWE5ODFkZjIwZGI2YWYwYzM5NzA0ZmYwNzVmODc3NjhiMTZmNjBiYjFiZTU0MDdmMGMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_2e512129ed0b47789cc6d30c12f8dc1a",
+      "statement": "For a screening project splitProjectFiles names per-reviewer files screening-<n>.json and the consolidated file screening-consolidated.json instead of reviewer-/consolidated — same layout, a different prefix so screening decisions and full annotations are distinguishable in the folder. marks-* files keep the same name in both modes.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L924-L926",
+          "version": "repo-lines-v1:sha256:6de09d622319ebeeb19bccba88bdd43140e7c0f5bf4f5b8772f9fd88a9c195d7:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWVkZjY4Y2NjNjIzNmVmY2ZiNzlhOTNkNTI5ZjAzMjM4NzBmZGU2MDRkYzQ3Yzg2YTRlODI5MzI2NmQ4YjljOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTMxNTVhZjkwOTVlNmZlNTQ3MjkwNDFlYzdlMWM3MTM2OGRmYjAxZTcwMDM5YTNhZWNhYWI2YmY1YjNmNzk1ZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDZhMWFhNzZkMjRkNDViNDQ3ZGFhMTdhYzJhMjk0YWM0NTg2YjMyYmY0YjVmYTdiNjY2YzlkZmNkODc2MGQzOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZGI3MzBmNjg4MmUxN2JiNzI2NmU4ZjQzODYwZWI5ZmE1NjYxOTkxODk4ZmM4MTRjMDk4ZWEzOTVmOWM3MDEzNiJ9"
+        },
+        {
+          "resource": "repo://src/model/split.test.ts#L138-L172",
+          "version": "repo-lines-v1:sha256:1c9a32a196d45574fb25a964104810df6f66c0a0b114845a89a6290759f69087:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4MTdkY2I3OTA3NGUyMTEwY2QzZTA4ODI1M2NjNjZmMDM3YmFlZmZiYjBjMGU3MjdmMmZmNzY2OTA4OTE3NjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM2YmUyYzczNTdiNjllNWJjYmU3MzJhZjIyY2M4MmE3MWRiZDg4YTdjZDdkZjgwNTAwMTE2N2ViOTM0ZjJjZjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBhMjU0YWY0YTAzZDFkZmE5MjJlMGZhOGZmYTUxNmQ3MTk5ZTcxOTA3Y2QxNzczZTcxMDM4ZjdjZTZkMjgyYTQifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.4.0",
+    "at": "2026-08-26T09:23:05.972Z"
+  }
+}

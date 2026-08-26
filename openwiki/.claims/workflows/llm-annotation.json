@@ -1,0 +1,644 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:2bad6a2ed287326f0958adfc1edc16008a4d08a57e0cc1306b13e6639139df52",
+  "claims": [
+    {
+      "id": "claim_eb5bb858466c4613aa44b7409a4c5e03",
+      "statement": "An API key never lives in the renderer: LlmConfig has no apiKey field; the desktop app holds the key in the Electron main process encrypted with safeStorage, splices it into outgoing requests there, and the renderer only ever sees hasKey.",
+      "evidence": [
+        {
+          "resource": "repo://electron/main.ts#L1417-L1429",
+          "version": "repo-lines-v1:sha256:27cfa92f256d6cd1bc4a2c3acd12550a70e7ddd2ebfdad9dc5f8b7169416a321:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2ZjlhMTFmOTYxNGYyZWFhNjQ3NjQ2ZDI1Y2Q0MjQwNmIwNDMzZjE4OGI0MWFmNDczZmUxZDFmYjdlMmY3ZDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc5NWMyZjI1MmRkYjZjZjU1ZDU3YzRhODAxZDgwZDNlMzIxOTc0Y2QyYzQwZjY5NmYzYjJiMzJlZjZjM2NjNzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMxYzQyM2VhZTY5ZTE3ZmM2ZDk1MGUwM2RlMGNmYjgzMjQ0YWExMjU2MTU5MWMxOGJkOTNjMDQ4ZTQ2YzljNTMifQ"
+        },
+        {
+          "resource": "repo://electron/main.ts#L1448-L1464",
+          "version": "repo-lines-v1:sha256:08603ecf1fc3c513b0fe4a6e850cd03ec99aeeed3ff5520dc0957d0a2bcbc4d0:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBmYWYyZDQyZTRjYTNmYzY2NTliMTA0NzI3YjcxM2M0NWExNTJkY2NjMDg4YmIwMjQ2YzA1YjliZDQyZWFiZmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEwM2YzNDRhMzA2NTFmNTg5YmQ2NmM1YzYyMjExMmFhNmRlYzcyMWEzMzA0ZmJlNTVlNjkwOGRjMTAwNDVkODAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIzODlmODU0OTExNjZhYWRiODg0M2M2Y2E0ZmZiZTU2Yjg5NjRkYWQ1OTQ3ODZkYmJjMzNiYTk4MWYxMzI0MmQifQ"
+        },
+        {
+          "resource": "repo://src/llm/types.ts#L27-L46",
+          "version": "repo-lines-v1:sha256:17c5ca47dc9169ce58c34dec6ab0371b32aa286373d2e2a77a68056c6943574c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUyMjA1OTcxMGI3OGM3NDkwZGI3OWVjMzBhZjQ1M2U2M2M3M2JmNGZjNmU1YWM1Yjk4YzZiN2M0NWViOWUyYmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImEwNjEzNTc0MTc4ODFjZThkNWZjNDIyMmE3MDc1N2EzNmY4ZWMxMGI3YmJiNzViM2QwN2QxODFkNTAxZDBkYjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRkN2I2MmIyYTVhOTM4OTA3Mzg4MjcxOWM5NGMyNzY2NDdlYjcyZTRkNTJjMDA2Yjc5ZjM1YjVhYzUzYmE1NjMifQ"
+        },
+        {
+          "resource": "repo://src/llm/types.ts#L6-L10",
+          "version": "repo-lines-v1:sha256:3e0bf39ab1aeccda59d66f5d8c906c2ae3cfe24bccf4298093a0fd15a7029e45:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiN2I0MGU2OWMzNDNjZmE2YWRmOTE0ZTc1M2RjOGU3ODZhNjNiMDdhYjI1YWY3N2FiZWQzMDNiNTgzM2UwYzU0NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWU3NTRkNmJiZDBhMmUxZTY1YWUyNWI1Y2I1OGM4NDhhNjI5M2IxNmZjM2NmMzk2MTg4OTA2NmRmMzhjY2Q1NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWQ0NjczZjU0MTQwNjgzNWY1MWViZmQ0MGM2Mzg4OWZkYjYyNzExZTRlZGI0YzAwODQ2ZDJkOWJiYzQ4NWE0NiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_8e1b0de973ac4945a86e1a1a44c12f8a",
+      "statement": "The renderer builds the entire LLM request but can only place the literal sentinel API_KEY_SENTINEL ('{{apiKey}}') where the key goes; the main process substitutes the real key by replacing the sentinel across every header value just before sending.",
+      "evidence": [
+        {
+          "resource": "repo://electron/main.ts#L1536-L1539",
+          "version": "repo-lines-v1:sha256:4fcc87cc26bdf8d8f94adee3daab19d8616954c017056f46f5cf60ebd4ee4b8a:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzRlODY3NGE0OGJkMWNlYzkyZGQ4NDcyMDc1NmVjOWY1Yzk1Yjc2YTgxOWNhYjhlZGY4MzM0OGY0MGZjMTVlZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzBjMWYxODhmMTQyZWQ3YTgyNDY4MGIyMDcxNzJjNTUxOWJjNjE0YTQ4ZmRhN2NmMTY3ZWRiOGRkZjc5OTU2YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTBhNjE5Y2ExOTdjODAyN2U3MjFmM2RkNTY5ZmVkZjM0ODA4NWJjODJmOTM2ODNiOTA5Zjk3YWM0MWZjM2E1ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiY2EyN2Q4YmRiNjk2YzExYzgwMTU4MDE1ZTJlNjI3Y2RjOTBlY2JiMTdmYjJjOWI1YzY3NWY0NTEzYWY3MzUwYiJ9"
+        },
+        {
+          "resource": "repo://src/llm/types.ts#L81-L97",
+          "version": "repo-lines-v1:sha256:66875b05a0d0ecae9eedca1c1b1e76b95dbd04208ddc9a1544ee5797ee5d8ffa:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMzNjdhZTBkZTVmMTUxMWIyZWVkY2I3MTQwOGFiZjNhMzgxNzg2NTYzZTQ3MTZjOTYzMzk3NzRlZTMzOWIzOTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRiNmVjMTgyNDQ3NzFlOGU0MzQ2MzRhNDcyYzdmNmJiYjRiY2JiNjRjNDljODBhNDI4NjI2ZDAwNjgxMmNmMDYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_1312ab657502485689cfea058470ebce",
+      "statement": "There are nine providers (anthropic, openai, google, openrouter, groq, mistral, deepseek, xai, openai-compatible); only openai-compatible has an editable base URL, and only openai-compatible has supportsModelListing false (no safe endpoint/shape to assume for an arbitrary self-hosted server).",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/providers.ts#L55-L157",
+          "version": "repo-lines-v1:sha256:9b46ce71cc71e481a82b2aed7c4e630d6e23c11745e603b6e8c1af30bc1599cc:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAzLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIyOGUzNThkZGVkNDA0ZDBmZmYxYmU1NzQ4MmZmNTQ0ZjQ3MWZjMjVmMWRjOWE4ZWExMjFlNjM5Y2VhZTM0MzNjIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlOGE3MjhlMjUyM2U1YjM4ZGFkN2FlOTlkZGVkZDZhY2NiMDg4NmFmNzhmNmRiNDY1Y2YxZjFhOTE2YzNjZDhmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI1MDk5Y2I4YjUwNGQ0MDAyMGUzZGJkMTMyMTk5ODc2OGFjNDUyNGJjYjE4ZjcyYmFlYTNlMGIxMjY5M2ZlZTQ2In0"
+        },
+        {
+          "resource": "repo://src/llm/types.ts#L12-L21",
+          "version": "repo-lines-v1:sha256:b57501e5820cdd2db70cbc46fad538728bd5f4a895c6852928cf2d1e04ba0943:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA3YmIzN2VmNTAzMjJlZjdiZWE0ZmFmMDkxZWUwMjE5MjY0MGEzNmUxNWI4MjIwNDVhNWI3ZGIzZDUyMmUzNjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4M2I0ZmRjMmQ3N2JmMmZhOTkxMGQwMmUzOTYzZjY1NDk0OTU5N2JmMjlkMzk1MjBlMTBiOWU1ODBkOTk1NDciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjUzMzQyOTQ0OGQ2ODg5YjFiMDdiYjMyYmY5YTQ4N2U1ZjAzZmI0MDI3YzFlMTdjZGNmOWYxNTRjYjI2YWMwMTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVkNzAxNmI4ZTU3Yjk3MDQ2ZmNkMmI2NTI3NGYyODhkNGIzMmIwYzBmNjhiYWM4MTEyNTc3ZTBlZDQxYWYxYTcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_bdc9253c048a4776a277099e77217e53",
+      "statement": "supportsPdf is false for groq, mistral, deepseek, xai, and openai-compatible (no single inline-attachment request), so a target set to send the PDF against them silently falls back to extracted text at run time.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/AiDialog.tsx#L49-L51",
+          "version": "repo-lines-v1:sha256:875e2c4321bd0d5934887a08be202987c64bd6aca1ec40ee02bb6cd497ad34ba:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTlhMTQyMGMxNzFiNTE3ZDc2YWJhMWNlZTA0ZmM1Y2I1NWE4OGI5NTRhNWM2MDRmMTM3M2MyMWRlZjIxZTAzOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2UxZmQxNjQzNzFjMDczYmM1ZDdhMWVkMWQ5ZmQ2NGFiOGJiOGI5Y2E2NGI3NjkzMzU3NjYwMGVhMzRkZDhiNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWE3NDkyYzVlZWFhYTM0NjlmOTlkODIzNzU2NWYwZGM1ZjlkYWQyYzdhZTgzNTIxMTBjYTRlNmU2NGExNDg4MyJ9"
+        },
+        {
+          "resource": "repo://src/llm/providers.ts#L99-L156",
+          "version": "repo-lines-v1:sha256:c3c1df7adbe55b01bba269a552fec4d49c9d9a35cc2d5ce605d74d4c151653bd:eyJzZWxlY3RlZExpbmVDb3VudCI6NTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5ZjQyMGFhNTc5OTlmYWNkYjkyNTllYmVmZTlmNTJmMTU2MDljNzFmYzc0MzJkYjdjMjUwYmUzY2VjNGRkYzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJlYzI4NzI3YWNhMjhmY2UyY2YxZTFhZDgzODllODNlOWU3ZTNiMjhkYzI3MjRmZTJjYzE0NTQxYTRkMDk2N2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMwZThhMGQxNGViNWY0NzYwZWExYmQ2NDY4ZDJhNjk4ZTQxNWFjNDcwNjZiOTc3ODlkYjk2NzE1OWY1OGFkM2EifQ"
+        },
+        {
+          "resource": "repo://src/state/aiStore.ts#L402-L405",
+          "version": "repo-lines-v1:sha256:b2133120b7b595a0193bab7558a9508c8f9648f04659a1ff998f12d6388f3304:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWQwNzQzYzUwNWExMDU2YWE5ZWZjNWU4Y2FjYmE2ZGFlOTA3Y2MyNTgyYzRmZTU1ZTQ3ODJjZDVlZGU2NWQ4YyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTZiMDQ0OTE0Njk3MjJlODM2M2E5NGU0MDQ0NTM4ZTAxM2EyYTIxN2UzNmIxZTU2OGJhNjBhY2I3YjRjOGYyZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2MzOTc1MGI2OWFhYTg0MjhkOGMxNTFlMWJmNGIxNDAyZGMxZjg5NjRjMDAwYmQzMzgyNjZmZjQ4NTNjYTdmYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjU0NGY1ZDQ4ZmU3OTI0NGVlZmIyMTdiMDVjNmEzM2MxYWYxNGUwZGE2NGM5YTJmZTJkNzIwZjQ1NWQ2MjBiOCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_add64f39d1fc4d8a92ef2b1c6082253d",
+      "statement": "Each provider carries a tokenParam of 'max_tokens' or 'max_completion_tokens' to avoid the OpenAI-specific rename trap: OpenAI/Groq/xAI require max_completion_tokens on newer models while OpenRouter/Mistral/DeepSeek/self-hosted servers still use max_tokens; sending the wrong one fails the call.",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/providers.ts#L345-L356",
+          "version": "repo-lines-v1:sha256:8dc230605b7f224e7104a07bc21c4c3053131373c845e67b415e42a6a99a96ee:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU1ZTliOWU4YzZlMDdkMWU3YmNlMmU0NWM4MzJkYTcwZTgyYTk0MWE3OTgwNjBjMjQwNDBmNmVlMjcyODU3OGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmYTY2ZDFiYTQzNTAzZmFiYjA0ZTc5NjdiMDlkYzBhZDA1NTY0NDUzZGQ4MTRhNjk1MTNmZThkZmJkZjMwZjkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk3ZDg2MzJlNTRlOTI5OGFiYjk1ODcyN2UyZDUxNDA4YWJhZjEzNjYwMzUzNzkxMDE0MGFiZjY1YjMwYWI2MTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjEyZWJkODU3NDUyNjgzMjZmODEzMDg3MmQ2MjQ4NjNkZmZkOTc3MGM3NTY4NzIwNjg1NzI5MjM1ZTQ5MGUxMjcifQ"
+        },
+        {
+          "resource": "repo://src/llm/providers.ts#L38-L53",
+          "version": "repo-lines-v1:sha256:7207a2128dab0afb8d1a5f1ec74a50377d87bd7c9d2c911702515186f2550964:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmMmEyZjk5NmYwOGU2ODBiZDI5MjEzNWE2ZmE0OTc4YmRhMjZlNjAyZDg0ZjMzY2IxZDU5NDc3NWQ0MzA0YjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImEwOTQxN2ZjYzRmNjI3ZGUyYzkxZTJjMjkwN2E1ZDhjMmQ2YWMyMTIyNjMwOWVlNzhhYTFkZTBkYjI2YzQ3MmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyMjgxMjMyNjJjM2NkNjRjMDM5NTFiZjU0MWIzMTc2OTZiNmI5MzZlZWRkMTcwMWM1ZjgyNWY5NGU1MjQwYzcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_92143810d2344365bdd5d2d70d24a9ba",
+      "statement": "buildRequest produces three genuinely different request shapes: Anthropic (POST /v1/messages, x-api-key, body with max_tokens/system/messages), Google (model in URL path, x-goog-api-key, generateContent body), and OpenAI-shaped (POST /v1/chat/completions, Bearer auth, the provider's tokenParam).",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/providers.ts#L282-L369",
+          "version": "repo-lines-v1:sha256:198fa447bc0079c021396f650b0a9e3402f5f8f2546048fc04bdfa6f8961debf:eyJzZWxlY3RlZExpbmVDb3VudCI6ODgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFjMzliMWNkZDM0Nzg5NGExNWY3ODhlZTYwZTk0N2I5OTJlYjgzOTk3NTBhOTI0NWViMzhhN2E5NTA5NTc4MGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRhZTI2ZTc0Mjc4NDg3NDdlOWQ0M2RiYmJlNGRjODYwODhlYzNkNzAxMzA2NzlkZGYxMjY0Yjg1YzhhNzgwZDgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFlNGRkMjM3MjdiZjM3N2ZhZGE0MDZlNDQ4OTAzYTE1NjlmY2E3Yjk5MTNhNWUwOGQwNTE1NmNhMTJkZDFiZmEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b9b51877fbb243e8a747fddd8f517da8",
+      "statement": "For Google, reasoning effort switches between thinkingLevel (named, Gemini 3.x via googleThinkingMechanism) and thinkingBudget (a token count derived from the chosen level via GOOGLE_BUDGET_BY_LEVEL, Gemini 2.5.x); the two are mutually exclusive and sending both is an error.",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/providers.ts#L271-L280",
+          "version": "repo-lines-v1:sha256:e81f2e640ece00e88cc6f9a6531b740007e126e84a83199caadaaa91581ca76c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNiNTA0ZWM4MTAwNzRjNmFkZmMzNjhiZjRiOGQ1MjUwN2M3NDM4N2E1NDZjNDllYmUyYjQ0YWRlMzMzMWRmYjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ1ZDhmNDNhOGYzZDU2ZTBkNjQ0YTY0YjA5YThmMGRlM2EwN2FjZmMzY2Y5ZDkzOWVhYzcxNmNiNWNmYzU1MTgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjcwNDBhMTZjZjBhNGY5NjM5YWE3ODAzZGVlOTE2ODgxZDNiZDE2MTgzMDI4MDM0MjBlNTZjYjU0NGE1YjUzY2UiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU4ODQ2ZDRhNjIxYWNhZmI4Yjg5MGNlZGM3MjhmNzJkOTllNTFjZTQ0MGJlMTVjMjhhOTIwNjllZTE3NDAzMDMifQ"
+        },
+        {
+          "resource": "repo://src/llm/providers.ts#L322-L343",
+          "version": "repo-lines-v1:sha256:8919240594f084ac1abe048bf78fbbd8025667ef8697686e25cb240aae82bf84:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyYjQzZDFkZTM2Zjk1M2NlYTFkMmJjN2EyZTE5YWQ4MTcyZjYxZGI1YTdlMjI2N2E4NzA0OThmZmY4ZGZlZmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA3NzdlZmZiODczYWY5MDljMGJkZmZmNTczZGFlNDU3ZWI3OTEzYmZiMjI2OWVmZTA4YTFiYzQzYTZiZWRkYmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNkMzU4M2QzNDBhYmEwZmJmYzk5ODBiMzhlODAxMjI3NTA3ZWZiZTdjYzQzODlmNDU5YjNmNGEwYTQ1NmMxOGQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0088b88b590d4af7b8b0516e6fda6594",
+      "statement": "Reasoning effort for OpenAI-shaped providers is sent as reasoning_effort (flat) for all except OpenRouter, which takes { reasoning: { effort } } (nested).",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/providers.ts#L360-L368",
+          "version": "repo-lines-v1:sha256:d9affa0a4ea666dd002e33375845e87c906e6ac30e210b453fc88d82844b5537:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOWRjYTRhMWM1Y2MxYTVhNTYxNmM3NmFmMWY0OTUxYWJhZjU0NDU2YWY4OTc3NzhiNTM5NGNkNjQ1YzQ3MzMwOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTJlYmQ4NTc0NTI2ODMyNmY4MTMwODcyZDYyNDg2M2RmZmQ5NzcwYzc1Njg3MjA2ODU3MjkyMzVlNDkwZTEyNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWVkMjM2YTMyNGQ3MDViNjA4ZDFlOTU3NWRmMDdjNWQyOTcyMTIxZjE0ZWM5OGExYWM1Zjk0MGNkYWFiMmU0OSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_c9c862882dae4c6497378c251b58ab4c",
+      "statement": "DEFAULT_MAX_TOKENS is deliberately generous (8192) because on reasoning-capable models the output budget is shared between hidden reasoning tokens and the visible answer; reasoning can exhaust the whole budget before any visible token is written, surfacing as a truncation flag with no usable text rather than an error.",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/providers.ts#L176-L189",
+          "version": "repo-lines-v1:sha256:4a9a3f0a89f542d270fa5d4a9bd31bc899c0406c1f4872a7780d0db72b67382d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZjNWQxNGMzYjNhNGJhZjlmM2Q2MjFkYjU5NTBkZDZhMzg1ZWFmYTE2ZTE4OTllOWMwZmE2OWU1NDA1OWI5MTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhhODdkNzcxYWZmNWJhZDZjNGU4NDJhZDYzZjU0NTM1MzRmMmIyNzUzNmIyOTQxZGM4MTdmYmJhNmI4NTY4YjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg2MWMyNmRiZWMwZmViMDg1NWZkNzEzYTBhNjk0MTAyM2EzYzk3YTRhZjEwNTFiN2NhNjM2M2U3MWRlZmJjZjIifQ"
+        },
+        {
+          "resource": "repo://src/llm/providers.ts#L421-L446",
+          "version": "repo-lines-v1:sha256:71158541144a9184f7dad776397d0f906e57eb4fe809c3d17bd6c1e0d9d05d21:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg2NjRhZTQ1ZWM0OGQ0ZDRhZDRiZjYyYWU2MWIyZTIzZjcwZjBjYTQzMWRlMzQzZDZiMjBkOTRiNGRmODkzYmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMxZWNhNDE0YzY0NzQyMjExMGYwNTExMjIzZDI5Njc1N2Y3OWM3ZTdlYWY1ZGE5MWNiZGM2MWU1OGE2MDgxNTYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_57b1c8e8854c4c918919e1326a6b3867",
+      "statement": "Provider response reading is deliberately tolerant: extractText degrades to '' and extractError always yields something readable; wasTruncated distinguishes a 2xx response cut off by the token budget from the model having nothing to say, letting the store give a targeted 'budget exhausted on reasoning' message instead of 'the reply was empty'.",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/providers.ts#L382-L446",
+          "version": "repo-lines-v1:sha256:eb96cbdbe2adcbe2d03458e8c1db5e050b0d02efb34421d459b0afdf2f84136c:eyJzZWxlY3RlZExpbmVDb3VudCI6NjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlkYTA3YTlkZTk3ZGM1NmM3MDRjM2Y3NDEwMTc2MmQzOTIwMzg1OGFjY2I4NGUwMmFmMDRlM2ZiNDUyYTA2YWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVhMGZiYWFhYjkwNDRiYzI4NTgxZGM3NGU4NDEyODIzN2RjYzVlYjgxYWIxMThiMzQ2OTMyM2QwMDZhYWRjNDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMxZWNhNDE0YzY0NzQyMjExMGYwNTExMjIzZDI5Njc1N2Y3OWM3ZTdlYWY1ZGE5MWNiZGM2MWU1OGE2MDgxNTYifQ"
+        },
+        {
+          "resource": "repo://src/state/aiStore.ts#L431-L437",
+          "version": "repo-lines-v1:sha256:6cf94adc22dc38f509bb549bdcbb6dfe6fbf465c3c5728023137985b12820363:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDM0YTUzMmFlODc1OTE1ZDdmOGM0YTc1YTMzN2YwOGViZWNhN2IzNDUxOWQ1YTY0OTY4ZGZjNjcyYTBiNzA5MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTZiMDQ0OTE0Njk3MjJlODM2M2E5NGU0MDQ0NTM4ZTAxM2EyYTIxN2UzNmIxZTU2OGJhNjBhY2I3YjRjOGYyZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDNjYmRhOWZkYjMzNmYwMzExODc0ZTg3MmY2ZTA4ZTNkNzJhMWQ1ODVjZDdmOWJhNTM5NWYwMWIwODQzZDI3NyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiN2RkY2ViZWZiNmY5NTE1ZWEzMTRlZjQxMzBjNmE0ZTVmMTcwNDVhODdkODRlMWNmZjhhYjZlY2ZmYjYyOTc3ZCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_94ce04cc3f264ec998fa11b9635f02c1",
+      "statement": "Model discovery resolves each provider's list-models endpoint into flat ModelInfo {id, label, reasoning}; reasoning is read from the response where the provider says so (Anthropic capabilities.effort, Google thinking flag, OpenRouter supported_efforts) and otherwise inferred from a model-ID pattern (OpenAI o[0-9]/gpt-5 excluding -chat, Groq gpt-oss, xAI grok-4.5, Mistral small/medium).",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/models.ts#L14-L90",
+          "version": "repo-lines-v1:sha256:a084d0f68dc8c8bcace16ed44eb22bb9fdeea626ed02ef46f19e5aa3f853b3d9:eyJzZWxlY3RlZExpbmVDb3VudCI6NzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYyM2NiNGMxM2Q2Nzc1OWQ1NGY3NjcxZDQ0MDM0OTcyZDA5MDNhMzlkMDhhZmFlNzNiYjk4MWViOWFiMGRjZjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc5MmY0OWY2NDgyMDEwYmExZDhkNWRjY2QzNzJiMWVhNzliNmVhMzUyMTA1NzkyN2RmMDkwNDdhMzVjMDUxMTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE5ZTNmMjM4ZTk2NWQyMzMxNDJiZWIzMmNmNzM2NzIwNTMwYzM1MmFmZmI2N2FjMmVhYzAzNzk5NTk3OWZiN2MifQ"
+        },
+        {
+          "resource": "repo://src/llm/models.ts#L246-L257",
+          "version": "repo-lines-v1:sha256:183f305857c9f9fc23af208cfa5e01a9a0dbf7320d60f8a132a642de677ae103:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1NGJlMGJkOTAyMjcxODViOWRlMmEyNDA2MTY4MDQzZjJmMGY5NzQxMDI3MWFiMGNhZTU1YjYzOTAzOWU1MDYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRjNGQ0NWZiYmYyYjM1MWZlODQwNmMzNDQ2N2E2MDc0YTEyNzJiZDJkZmJiNDc5OWJmMDU5NWQyYmI5MDlhYzkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f0e40faabd3b421e8087ccde7466b0ed",
+      "statement": "DeepSeek and openai-compatible are deliberately left with no reasoning-effort control (DeepSeek's contract unconfirmed, self-hosted servers have no single shape), so the app never offers a control that silently does nothing on some servers.",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/models.ts#L22-L29",
+          "version": "repo-lines-v1:sha256:7d469e19072175ba74ac3310bc1a508b1b2b09974198b7744fe9ca38bb289e43:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTU0ZGRjMGMwNTVlYTI5ZWQ5ZTU4MzliYzU2MTJkZGI4ZGRlNDkwMDE0MmM2MzE3NmQyOTM0MmQ4YTNmOTNjMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGEwNmYwZWIzNzQ2ZTJmYjA3ODE5MTg4NTNjZDFjYWExYWQ1Yzk0ZWM0YTc4MjkzZjRhZjAwNzhjZmI0OTVhNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTYxMzNiZjU2MTlmNmVhYjdlNGM5YzJhYTc1N2UxYmRmMmE0NzIzMDc3NTI3MDE2ZmQ5N2NhNTM0Y2MwZjQzNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTExNWZiMWM4ZjQ3ODM4N2UwMTE0MjdiMzljZDNmZGZlNzRiOTZiNWMwOTRiNTc4MTlhYTRkYjI0Zjg2NDBiMCJ9"
+        },
+        {
+          "resource": "repo://src/llm/models.ts#L254-L256",
+          "version": "repo-lines-v1:sha256:8d4f045a88cbb8890b50472df1b63e2d5bd8ca9b4f94b290aff2dbe9efefe166:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDVhOGFlZWZhZTg3MjllMjc0NzI1Mjg0NmU5MGYwZjA4Y2RmMjA4OWE4NjQ1Mzg3ZmRmNTMzNWE0M2Q5NWFhYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjk4OWZlMWY0MGUxODFjZGNiMWJlZDEwYTc1ZDJlYTJiYmFkYWZkNTYyYTZjOWNkYmQ1Y2FlNWM0NGVmNTg4ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMGU3ZmEwYWJhYmU2OTE2MThkMjRkNDFjMWQ2MDkxMDVmM2ZmOTI4MTQxZTFkNTA0MWNjZDUwNGY5Nzk5OWFlNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_4163734c07344d449234784a9ee3efa3",
+      "statement": "The list-models pagination cursor is resolved as a URL against the base and rejected if it leaves the origin (resolveSameOrigin); this prevents a malicious cursor like '@evil.com/v1/models' parsing as userinfo and redirecting an API-key-bearing request to an attacker host.",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/models.ts#L138-L157",
+          "version": "repo-lines-v1:sha256:bd1da1012f279f65a60c739f434a7d7066fbb5c6e7761d6e91c05bbb614e8a5d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUyZDU3ZTMwNjBkMzg1OGJiNGZjMTgzMmNiZjRjNjBkZWM3ODE3M2MxZWY1YmU4YjY3ZDc2N2U4ZTA1NDE4N2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk3ZDg2MzJlNTRlOTI5OGFiYjk1ODcyN2UyZDUxNDA4YWJhZjEzNjYwMzUzNzkxMDE0MGFiZjY1YjMwYWI2MTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE0MDc4YjBjOTk0ZjA5ZjFkZTViZTQ3YTY3ZDIzMmQ4YzNiMmUyNDE1MzM4NTk0OTFjMTU1MjRhYTkxNTBkODkifQ"
+        },
+        {
+          "resource": "repo://src/llm/models.ts#L96-L109",
+          "version": "repo-lines-v1:sha256:335471fcd0ed69841254c53022a3e2d9629dfd2868f263a7dbad58800e87efe4:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFmZTM2MjI4Y2FkMjBkM2RiYmU0MDQxNjg3Zjc3MmY5ZmViYjFmNWEyZDI4MTVkZDQxNzk0MWUxMzA5MWY0NjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUwNzViNTZkODg5NmRiY2I4NDMzZTRiMDU0MjFmMmEzZmFlNTkwZWE5NGM4MGYxMDZmYmNiM2U1ZDdkMGE4ODcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e9a3f01392534caba164e56597f69de2",
+      "statement": "fetchModels is cached per config id for MODELS_TTL_MS (1 hour) to make reopening the settings dialog instant; an explicit force refresh bypasses it, and it never attempts openai-compatible.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/aiStore.ts#L273-L304",
+          "version": "repo-lines-v1:sha256:37fbf7051da0b7bb835b967fd3a97209ecc272359b8eb05fdf4764f99756defd:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIzYmY0OTcxN2ZjYWQ1N2YyNGZhNTljNTJkNzM4MGNiYWIwYzgzMWJjZTkzYTNlMDIwMmM1Yzg1MGE2YTA4YzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YjA0NDkxNDY5NzIyZTgzNjNhOTRlNDA0NDUzOGUwMTNhMmEyMTdlMzZiMWU1NjhiYTYwYWNiN2I0YzhmMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYyYzU5NjJhYmVlMzg1NTcxNTlmM2YzZGFkNTNlMWUyNmM1OWQzNWYwOGZhMTEwZDY5ZTMxNTFkMDY5OTlmYTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg2YjNhOTMxMjhjMWJkM2RkNTUyYjM5NGY0OWY4N2Q2NjBiOGFiODFhYjczOTRkNDdkMGI3ZTA2NzQ0Y2I2MWEifQ"
+        },
+        {
+          "resource": "repo://src/state/aiStore.ts#L41-L46",
+          "version": "repo-lines-v1:sha256:1a41acbfc2ab8d90e8360852c2747539409b3b7a0d5bfa687a6e60cc39dafff1:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDBiY2VlZmE0MjM0OTlkNmIyNjhlMzkwNTFmODcwZTEzZGQ3NmRmMjk3ZGU2ODJhM2M3Y2I2ZDNhMzZlZjc4OSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZGVhYzc2OTI5MjFhNGQ0ZjFmOTM5ZGUwMjVmYTljMDFjMWY4MzRlZjIxMDYyNzU4MWQ0OGZmMDRkMmE4ZTg3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjA4ODhlNWQzMWIyMDE3NTNiODJjZmJhYjNjNTA5YzA5Zjk1YmRjYWQ1OGJjZWU4ZTQ2ZWFjNTg3NjZkZTFmYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDlmZTZmOTBiNzAwNjU2ZDJkMTcwMDI5OTZmMDVkOGMwMmRhZTBlNTVlOTJiMjg5MWJjMThkMzZlY2YxYmM1YiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_31745c43cc624c43b4cb18dba7a91867",
+      "statement": "The system prompt teaches the model how an annotation schema is written (SCHEMA_FORMAT_DOC mirroring docs/annotation-schema.md §3) before showing one, so it reads an unfamiliar schema rather than pattern-matches; the format doc and the docs page must move together.",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/prompt.ts#L29-L47",
+          "version": "repo-lines-v1:sha256:abf89ab638f3dce11dfb8f44e5827f94fe4ae552c8df2fc134b3101f2b1eba43:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE4NDc1ZDZlYjM2ZjczNTZlMDQwNjY0OGQ0YzNlZjRjYjg0MjViNDhiZDE1MzljMzIwZmJiNWYwN2Q2NGFkMTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRhYjY0NmVkNzcwMDFiOWJhZWI4YjAzM2ZmNzM5MzFhMTIyNzU1YmNlMDVjZTM5ZjI4MGIzYTNmZTk3NTBjZTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgzOTgzNjFjMzNmYTRjM2FmOTkwNTNmOTI3NDlkNWUxZGE5MTgzMGIyOWIxNDgzMDdlMmQ1NWJkODRkNGY5ZGQifQ"
+        },
+        {
+          "resource": "repo://src/llm/prompt.ts#L8-L18",
+          "version": "repo-lines-v1:sha256:411d5fd6061a3508c688fb3d7a6e80e2bf959d7ff737f6942ed4e698105ee5be:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYzNDNiMDhmMmYzODY3ZDY5ODE0ZjdjOTZmMDQ0YzJhMmNhMDlmYjJlMWQ0ZTQ2YzY3ZWIzZTY5MmM0Y2ZlMTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRlYzk0NDdmYjc1ODNmMDE2OWNkN2JjZmY2OWYwODk3NjExMTY0Mjg4NDBjYjc1NDQ2YTEwNWIyODIwZDQ2YjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNkMDY3MzkyMzAwOGRiZmU0YzM2NTdhMDhjMmZiZjI3Mzc4ZTExOWFkOGI4YWFjM2M4YTNiYTE5YzFlNGQ1MjQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c5d336988c174658bba999dc3fe9b32e",
+      "statement": "buildSystemPrompt is delivery-aware: when the paper arrives as extracted text it adds a rule warning the extraction is lossy (tables/figures/layout may be garbled, do not reconstruct illegible content), so the model does not confidently reconstruct a mangled table.",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/prompt.ts#L116-L131",
+          "version": "repo-lines-v1:sha256:06269a598cc705fc80d4159da0c1d7ef5312acc09147525aa7a8b2d35fb06374:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEzNzgzYjA4NzhiZGEzNjE1ZWI4YWFkNjY2NmNhMWM5NTFkNDMwZWY0ZDczOTVhMGE2ODdkZWIwYjQyNmZkMDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNkYjI5Y2ZhOGJlODUxYjE4N2NiZDUyZDhiY2EzNDA1NDdiMTdlNjk2ZTRjNzU0ZDEyYzljMjA5MGI3NTUxZmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBiMDYzYjAxZjI0MDQxYTFhOTE4YWE2YWIyNjBiZWQzNTMwYWMzZDlmYjEwYTVmZTM5YTczOGY0YjYyNjcwNmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJlNzQ1YjEwYjViZDYzZWFhYTQxNjAyMGE3NmFkMzU3MzgxMjYxZjM4Y2JhM2QyYjczZjkxMjJjYmJkYTBhNTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9a9fee99687a44409a50c7e7f04e5675",
+      "statement": "Every prompt rule pushes the model toward omitting a field rather than inventing one: ground values in the paper with no outside knowledge, omit fields the paper does not answer, quote a verbatim snippet of evidence for every value (or omit it), respect field types, and match enum options verbatim.",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/prompt.ts#L150-L165",
+          "version": "repo-lines-v1:sha256:7f170cd2d35737a268dc0a45fb7dec14ac31854f8c6ecdae0579c069c6b2bec9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUyNGIwODdjNGMwNDIyZmE4NDQ1MTQ2ODA4OWE4YWM3M2MwZmIxYWM0Y2E4NzhmZTJlNDM1MDlmNDg2YWJiNjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlmZWMwZmYyMDNhMTY3NDdkOWY4NDUzZDBjZmU0YTY4NDVhZTFmMjkxNzkwZDc1MjcyOTNiYmEyYTRmYWYxYWEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjZGFjNGQyNDQwNTdiODkyMTZhODQ3MTE1ZDA5MWU2ZmZhYWU4YjA1MzcxMDFjMzE1Y2JjMTMyMTQ5NTRjY2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiNTIxNzFjOTY4NTk2MmUyZjI4ZmVlYWZhNDM5ZTgxMzcwOWZjM2U5MTBlNmQxNDhmODY0OTZiNTgyMjMwOGQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_cdecfb817b2e4c0b89d2a3540d88abd2",
+      "statement": "extractPdfText reconstructs reading-order lines by bucketing pdf.js items by baseline y and sorting each bucket by x (naive item-order join of a two-column paper is soup), normalizes to NFC after the join, and flags empty below EMPTY_CHAR_THRESHOLD (200 chars) as a scanned/image-only PDF that run() refuses to send.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/pdfText.ts#L36-L80",
+          "version": "repo-lines-v1:sha256:bec072182125bb13a0f962d5ff8b75ed4096fc050bb638e6e0465d012bc8e0e6:eyJzZWxlY3RlZExpbmVDb3VudCI6NDUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFiNWJlYjMxYzIzZWIyNThjNDY1OTI5OGU3ZmYyOWVkYWVjMTYxZTViNzM2YThlMWNmODljN2VhMjZjNTc3MTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk3MzBiYzI4MGY3MDBiZmU0ZmIxZGQ1MDQxYWU5YzdjMTkxN2E1YTY2NWQwZTdkODk1ZWE5OGM1NDhlOWIwNzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4NWQwYjYyMTc3Yzk5MjZkOWMxYTQxMDViYTZjMTQxOGFmOTQxMDZlYTc5YTIyNjM5MzFlNTk3ZDQ2ODkzYTkifQ"
+        },
+        {
+          "resource": "repo://src/model/pdfText.ts#L96-L118",
+          "version": "repo-lines-v1:sha256:45a1303e8b692d4e285733c58e35669e0785cbf6cdf149c8c67f1d906605a575:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQwOWMxYWYyMzBkYWJlNzEzMzcwYTk0ODQ5OTA3ZmU5YzFlOWEwMDZiNDE4MTdiYTYzODBkZDUxMjgxNjUyMGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY3YjkwYjNmMmI0MDUyYmI5Njg5MzBmNTQ5NjY0NGZiMWE1NWMzYzkxODIzZDI5NzMxYjU0MjY5ODI2Yzc3YjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY3ZWRlMzRlNDllNzNhZmMzMWVlOWNjYjlkZTlkMDFiYWE0NmJlZTc4ZWI0ZjcxYTE0MmEwYzU5MDA3YjdlZmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE4OWM2MGM1MWYwNjQ0OTg4NjA5ZDk0NTA0MTFmMTQwMWZhODBiYzNiNjJiN2EzNWEyNmFhYTVjZjllYzE4MjMifQ"
+        },
+        {
+          "resource": "repo://src/state/aiStore.ts#L386-L401",
+          "version": "repo-lines-v1:sha256:c07736da1f70ddf46684e242a8df3cc32cfee07332945b6c6066d1d9f7e5143b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmZmU0MmNlMzBkMGJmOWI1NDUyMGI2ZGU0NjM1ODAyZWUwYWJjMmIzZTMzNDMyMDRiYzE2YzA5YzAzNWYwZjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg4MDA1ZDU3MTA2YTM2MmViMDAwZGFmM2RhNDY3NGM4MmI1MThmZjVhMmUyZjY3ZWU4ZTc1N2EzMzNjMmFmNjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFmY2U5NGI2OGU2M2Q1NzFkNGQ2MTYwMTZjNTk4NmEwMjZjZmY5OGQzNzYwNWJjMzdhZmIxZjBjMmU2NWIxMTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk4YWE0ODY2MjAzZTUxMWYxYjliMzlmNjllYjI2ZWE2MTBjNDRkOWM3NzdiNDhiZDc3YTEzMTFkNTJjYWM2MjIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8038a144f0e04c9b982f0efa9ba9b6da",
+      "statement": "parseAnswer is the trust boundary of the AI feature and never throws; it returns fields (accepted Suggestion[]), skipped (fields left empty with reasons), and rejected (refused suggestions kept and shown, because a silently dropped answer looks like the model said nothing).",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/parse.ts#L256-L262",
+          "version": "repo-lines-v1:sha256:3917e1dadd8242fc3074c1c1dd812e29e54481867c2d656f6c0585745cc770ea:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDVkMTdjN2NjMmY3MDY5MmJmODFhYjA5MmU3NDA2NDM5MjVhZDM1ZDVjOWU1ZTNlNTI3OGVlODY2NGM5Zjc0YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTM3NGZlYWJjNDJhYmRmYmM0OTZiYmZmNjI0N2U1MzQ1ZWE0NWU4MDEzZGIwYWU4NWViYTcyZTRlNTMwNWE1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDI2YmEyNTBiYTQyNTAyMGU3YzYwYjVjN2NiMThlNjdjMzkwYTVmNjZjYTZmZjJiZDliMTUzMzNmYzYyZjMxYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzJiM2M1ODg3MjRkY2M2NTc4YzMyZjRhN2JkNDk5MjY1MDQ4ZWYwMmZmZDc1MWQ3Njk0NDg1NDM1MDM2YWZkNCJ9"
+        },
+        {
+          "resource": "repo://src/llm/parse.ts#L7-L23",
+          "version": "repo-lines-v1:sha256:626d230c02ce54afe7677e03e8533428ef9d01e18705fa2b7d5afc6b4bcf1d6e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE2NjI1N2ViNzZlYjgwYzFiMjk4MWM0MmIyMzQwZDUwZTk0MzZhYmMyYmJiNmQzZWE1YjI2ZjgxNWVkOTI1MTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU2MTY1MWNiNzA5ZmUwNzQxYWQ0MDI0ZDM3ZTFmYmMwYzAxNzc3MjJhOTdlNTk4ODNlZTUwY2ViN2YwMjEyZjkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3208122a89424ea5b7c14f0a96b2c11a",
+      "statement": "extractObject tolerates a direct JSON parse, a ```json fence (with tag often missing/misspelled), and a balanced-brace scanner that knows about string literals/escapes (a regex cannot do this: a non-greedy match stops at the first '}' which usually sits inside a quoted evidence string).",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/parse.ts#L35-L116",
+          "version": "repo-lines-v1:sha256:a65a53eb48bdc7360887cfd0db8281cebe3c02dd26a3b31fb25c622cddb9c8ec:eyJzZWxlY3RlZExpbmVDb3VudCI6ODIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhmNmViYzczM2M2ODllMzAzOTIzMWNlZTQzZDY1ZDcyOTgxNTVmNWVkZjZmYmZkYjRiY2QyMDU2Y2M5MzY0ZGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM2MmFhZDJkNWM1OWFkMWViMGRjMjU5MWIwOTAxYTdkMzA4Nzc0NjZmNDY4NTUzMGE0NGQ2ZTU5ZGVmYTNjNjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE1NDQzYTE1ZWQ2NjIxYzE5ZDliOWM4MWUwYTBiODE3MmNlYTczY2I5NjJkZTkwNjVhYTI1MzBiOTFlZmU2MTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4b7df347cf1b4e0ab54e788d5775e3dc",
+      "statement": "Coercion bends only where there is exactly one honest reading: \"2021\" becomes number 2021, \"true\"/\"True\" becomes boolean, a case- or whitespace-off enum answer is snapped to its canonical option; everything else (\"about 20\", a value not in the enum, an empty string, a number for a string field) is rejected, never guessed.",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/parse.ts#L124-L209",
+          "version": "repo-lines-v1:sha256:e7e78e69f2ec513229840a97855588d5a4fa266e79b3810b6da2c9b1c56b827d:eyJzZWxlY3RlZExpbmVDb3VudCI6ODYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlmMjg4OTgzNTJmZGRhYzI2Y2M1ZGIxMWZkOTAzNDI5NGY1OTQ3ZjVjNWQxNzQ5ZjRmNjkxMTExYTAyNzhkYzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJiMjU0NzM2NDgzODI5MjE1NDRkMmYwMDA3ODFjZjk3OTQ5N2FiNDdmMjUwZDk0M2EyNWIzYmJjZGVjNWJmMjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZjYzUwMjc1YmJlNzIwODc5MTNkZWE0NDVhNTYzMzdmZjIzNTA1NWI5OTg1ZTBlZjIwNDhhZGM3ZmVmZjdiMjYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_bc1773c3c2234ed590bfb5ef23cf8eec",
+      "statement": "Confidence outside 0..1 is dropped to null rather than clamped, because a model answering 95 may mean percent or a 1..100 scale; an empty string is not confidence 0 (Number('') is 0 inside the range).",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/parse.ts#L222-L240",
+          "version": "repo-lines-v1:sha256:c765d25cb4826f43ff79f7276f8ad40c9a2763306587620772ef17786fdab8d5:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg2NjRhZTQ1ZWM0OGQ0ZDRhZDRiZjYyYWU2MWIyZTIzZjcwZjBjYTQzMWRlMzQzZDZiMjBkOTRiNGRmODkzYmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJiYjc0ODJlNTAxZjRlYzE3ZmE5YjY0Yjg1MDhkZjA4MzNhOTJmMjM3ZmJjNDU1ZWZkNWJmZmU2MjRjZmVhYTcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9686bf7015e543579cd0839e61e2eaec",
+      "statement": "resolvePath checks paths against the schema (not the current data) so the model may name an index that does not exist yet to record a further entry of a repeatable node; missing instances are created at apply time.",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/paths.ts#L11-L16",
+          "version": "repo-lines-v1:sha256:4ee7a20ffe0c24f086cf025d24e6db1240b15d006665f030fbd7770e2516b822:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjIzY2I0YzEzZDY3NzU5ZDU0Zjc2NzFkNDQwMzQ5NzJkMDkwM2EzOWQwOGFmYWU3M2JiOTgxZWI5YWIwZGNmMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmJmOWViMjA2NjRlNTA0MDI2MWI2ZjlmYmY4OGYwYjhjOGU0NGU1YjM5ZDk2NTQ4NGI4NzhlYmI1ZGUyODU3YSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTJmYzZjZTA3NWE4YTI2ODYxZDhjNGE3ODgyYjNjODJjMzY5MGJmNDkzZmU0ZTk2Y2Q2NjU0MjRkM2QwNTc1NyJ9"
+        },
+        {
+          "resource": "repo://src/llm/paths.ts#L248-L296",
+          "version": "repo-lines-v1:sha256:65a2ed26e8a3c81aaadbeddcb54eab9b19c03a78dceafe99a1372ba2273d42d9:eyJzZWxlY3RlZExpbmVDb3VudCI6NDksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE1OWJiN2EwZGRkNDE0ZGMyNmFmNTVlYWFkNTQyNzkyMmZkNWFiNmU3ZjM1NTg4MmU3NThkNmQwZTVhMTVkODUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiYWY2NDEwMTUyYjdhOTY1NTI5YTRmNjExMWYzOTU5ODM3MjBjNzIwZGM2ODAwYWJlMTNkZDU3ZDNlMThlYjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b5c3cd7659424a7dbbf8a68e731792e6",
+      "statement": "The maxUnboundedIndex option (MAX_UNBOUNDED_INDEX = 10000) is opt-in and only the LLM entry points opt in, because materializing every instance up to a named index makes a huge index an out-of-memory kill; applying the ceiling everywhere silently dropped real data in git/merge.ts.",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/parse.ts#L276-L276",
+          "version": "repo-lines-v1:sha256:26107b72217644fcc46e4c07b9e240ff0ff1736b3a0bc14213732b06ece73dac:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjYxMDdiNzIyMTc2NDRmY2M0NmU0YzA3YjllMjQwZmYwZmYxNzM2YjNhMGJjMTQyMTM3MzJiMDZlY2U3M2RhYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjYxMDdiNzIyMTc2NDRmY2M0NmU0YzA3YjllMjQwZmYwZmYxNzM2YjNhMGJjMTQyMTM3MzJiMDZlY2U3M2RhYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDU0N2ZkYzYyMDM3ZmJlMzUyNWZkNGEzNzZmODE3MTU4MmQyZjMyMmI4NGUzZTUxOGM0MjAwM2ZkYWM5NzZkZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWE2MTg5NjVmNzU5MWUzOTViMDFlOWI5YWI3MWNjMzI0NjZhZDA4MjEzYzVjZWJhZTQ0ZTcyMWU0ZTk2ODY0ZSJ9"
+        },
+        {
+          "resource": "repo://src/llm/paths.ts#L224-L246",
+          "version": "repo-lines-v1:sha256:c21f2835549a9248a6c54d325c8fa47181d358ee979587fbc4db57f74e3acd9f:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMyMWNiZTU3MjMwZDI2M2Y2MjI3MzQxM2E1MjZkNGFmMTQyNTQyODc4NzUzNmRjOTFkZmJiY2M3NDNmNWE1NmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIzYTU3YmEyMTVlOWQ0ODdhMjQzOGU0MTY0MjZiMDViNzk5ODBiN2Q2YzhiNDc2ZDQ5NjdiNWRlNWViNTgxNGYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_77015fc191894f5ca74289ee4a3d27a9",
+      "statement": "Node names may contain /, [, ], or \\ and are escaped with a backslash; a name with none of these characters must escape to itself for byte-compatibility, because canonical path strings are persisted (they key paper.equal marks and AI-mark keys).",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/paths.ts#L196-L209",
+          "version": "repo-lines-v1:sha256:f73222619f8a13f32741caa8c2c7770109b6ed00e440b1bfb91061017ed5cd66:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0MTVlZDIzMjAwZDI1NTQzMGU4NWZkOTdmM2VlMDE2ODIwMmM5OGY3Y2U3ZmYyODdkMjU5YzE3MWU3MWJkMWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMzYzkwYzk4YzVhZmNlMGE5NzNlNTc2MjE5NThjOTdmNTlkNWZhMjRmZTBmZjA0YjFlNTJjODkxMDRkY2NlZWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc0ZjQyZDEzMTZkNWQ5ZjEzMDczYTdmMGQ3ZjY2NTBjYjAyODAwOTJmNjA1OGExOTFkOGJlMWZlNjI0MGJjOTgifQ"
+        },
+        {
+          "resource": "repo://src/llm/paths.ts#L36-L55",
+          "version": "repo-lines-v1:sha256:359be1d617c49005d8e27fb4ec0d66bef8a4a1c4009c80ca0fb1ac36811b9673:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE1ZTdhMTFiOGE5MDE2YTRhNjRmMGRmYWVlYmI4MjhmMDQ5NjY0Y2QxY2EyOTczZjE4NWNhNWViNjVhOWZkOTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk4YzE1MDk4YTkxNmYyZmJmM2FjNzJmZGM4NjRlODFiNjIyODFlMmU1OGQxMTliZTlkNzA0M2ViN2M1MGZiNmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImViZTE1Mzk1MTgwODQ1NGY2YmMwNGMyYjdkNzM3ZjBmNDhlZDlkZjFmZWE1Y2I1N2MzOGVlMGZkZTc1ZDM2ZTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6cbec85f0e164812af273ea8cbc1c86d",
+      "statement": "isUnanswered matches validate.ts's empty notion for strings/numbers but booleans have their own rule: a boolean is offered unless already true (the AI can propose flipping to true, never to false, and never clears a ticked box), because the data model cannot represent an unanswered boolean.",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/fields.ts#L18-L33",
+          "version": "repo-lines-v1:sha256:576461a57086929bf5768f7ab5ea2774e64d21d15fa829189e65e0acc747bdab:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBjMTZlZGZjZmU3N2JjNzRlMGU3YTBjOTI1M2FkMDU2M2MzMzA5YmNlMjIxZmIzMzcyMzI1NGY0ODY1ZDM4YzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA3ZmI1YTViYmVjYjBkN2ViNmE3ODQ0OWE2NGFhMTkyNGNhYTgxMTdiMzVmYjczMGFmZmRlYTdhNDFkMTYyMTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjljYmZlYWYzNTQ5NzIzMjBjNDVjZWQzOTc2OGI3NGI4OGRjYjI3N2RhMjk1NjRiYTVkYTQ1MGM4MzAwMDZlOTIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c68977b5177c461b98f2792233e5bf5a",
+      "statement": "useAiStore owns the AI flow as a phase state machine (setup → reading → calling → parsing → review → applied, with error reachable from network/extraction stages) and is kept separate from the main store; the UI invariant is nothing is sent until Start and nothing is written until Apply.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/AiDialog.tsx#L11-L18",
+          "version": "repo-lines-v1:sha256:e197c5e41a408bf08cb382a2353aba23886c6a7bb3682ded7c3b5797f99ddb99:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjdjNjFkYzkwMzAyZWFjNTRlMTY3YWRlMWQ1MzU4NWZkNmI2OWJkZTUxZWNiMmVjYjc2MDlhNjU5NzUwYmZlYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzliNDZjYzcyZDkwNWYzNTFmZDA5YzYwZGFlMmQ5ODYzOGFlN2RkMjkzZDVlZmZjZGZiZWQzNzg0ZWNlN2E5YiJ9"
+        },
+        {
+          "resource": "repo://src/state/aiStore.ts#L13-L22",
+          "version": "repo-lines-v1:sha256:d1fa99062cf31f5779d9ee3f12096b437080d2bdae666f01ac98af03978a57a0:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ5Y2EyMGRhYjE2YjFlMTU4OWEwMjU5Y2M5NmQwNmM0NGFmMzJkN2E2OWQ1YmZlMzM3N2E1YzQwN2IxMTZmYmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk4NTM3NmI1MjA4YzM0MmNjNDU5YTcwMDU5ZDFhODg0YmQwYmE0NzkwZThlMDMyMzM3OTQ5ZDI5MmI5NTZlYmYifQ"
+        },
+        {
+          "resource": "repo://src/state/aiStore.ts#L48-L56",
+          "version": "repo-lines-v1:sha256:757455489e476c17c3e3101ef579d3b7fbe345b0d0e3c0c09746850010893cb1:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiN2U4ZTdlNjI0MmMxN2MwYTUyMWZkNDRmYjFlMmQ0OWRjNjAzYmRjOWJlN2FjMzc5MzQ5MjU3NGQyOTZiYjFiYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2YyMzFlZjgxNzkxMTM2M2EzZGNhMTRmOTJjYWUzMjM3MzZkYWFkOGRmNmRhYzRkZmFkYzg3ZDk1ODE3MmZkYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMGZjY2IwOTEwZDRlMzc2MmY1NTk4ZjI1YTY0ZTYxMDhiZTA1YzViZDUyNjc4NDVkYjYxMDc4NmI2MzM5NjQxMCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_62c159c2e55642e4986abccba3127bb4",
+      "statement": "runFor is recorded when a run starts and apply reads it rather than the current selection, so a reply about paper A cannot be written onto paper B while the dialog, paper list, seat picker, and target picker stay usable in flight; a superseded run returns silently rather than publishing or narrating over the replacement.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/aiStore.ts#L441-L461",
+          "version": "repo-lines-v1:sha256:691b8508301318643c8a07af75355d0f7303880f7b9ef9d4f0c15890e71dbe3d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI0ODcyYmYwMThlMDhkNDA3YWExY2FjNTMzMGVjMWZlMjlhYTk1MGJjMTg2MGEwN2NjMjgyNTE4MzI3MGQzYzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YjA0NDkxNDY5NzIyZTgzNjNhOTRlNDA0NDUzOGUwMTNhMmEyMTdlMzZiMWU1NjhiYTYwYWNiN2I0YzhmMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdkZGNlYmVmYjZmOTUxNWVhMzE0ZWY0MTMwYzZhNGU1ZjE3MDQ1YTg3ZDg0ZTFjZmY4YWI2ZWNmZmI2Mjk3N2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgxNmFjMGI0NTQ4MWUxZmQ0OGI0OWE3NzhhYTYyODdiNTQ5Njc2YjFhM2FmYzNlYmE0OWYwMGIwOTM1ZDIyOWMifQ"
+        },
+        {
+          "resource": "repo://src/state/aiStore.ts#L77-L88",
+          "version": "repo-lines-v1:sha256:30c2b219b1ad34b02bba75310dc8ab48ab5c1affb2dc964b77281a43877ba500:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmMmEyZjk5NmYwOGU2ODBiZDI5MjEzNWE2ZmE0OTc4YmRhMjZlNjAyZDg0ZjMzY2IxZDU5NDc3NWQ0MzA0YjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJhZmQ2ZWVhNDFiMGMwZGYwMDAxZmYwM2NkZDYwNjNhNmY1MDU5Y2UwM2JkYjI3YmM4OTNkMzQ1NTk4ZDZiNTkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE4NjIwY2EwNDc5MDYwYjk1YWEyOTUxNzU1N2FhYThkY2M1NDRjNTVhODZhMmJlMmRiNjA3NDU2ZDgxNDAxY2UiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhmMTMzOWJkY2VkMjE1ZTkzNmM1NzYzYjY2YTliNzFlYWJmNGIzNGY2Y2FlMTlhMTA5YjE3YzhiYzU2YjdlYjcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_357f19a02dc34e45839b3ed7dd0cc051",
+      "statement": "At review every suggestion row is pre-ticked so the reviewer's job is to remove what is wrong (the direction that makes a careless click safe-ish); apply passes only the checked rows.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/aiStore.ts#L447-L453",
+          "version": "repo-lines-v1:sha256:6edd31a558565ba07b4626b8c351cc4353bb3d81f25e2cc1b4bc260ef15c0770:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjJkYTE3MGY4YTE3YmU5ZTgzZTUyZDMxM2U0YzkzMjk5ODEyZTIyMjAwOTVjMDIzM2YwYjA2ZmZiMjBhMTRiZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjgyNzk5OTI2NzI4OTk5NTVmOWZjMjhiZGVlZTgzZGRlYzNhYjY3MmQ5NzllNWQwMGFmNmM2OTNiMTEwMjQ0MyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODAxYWYzMjc1NmYzZTZjNjg1YmE4NTJkYTgzNmExYjU1YzNiZTkwMjAyYjZhMTE2NTRlMjY2NDk4NDU1YTk5ZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTI1N2E2Mjg0NTFiNGVkM2RiNjQ3ZGMwNjIyMjU3NTE4N2NlNjJlMzk0ZjFiNjM2MmJlOWJmZmY0MjQ0MWFlMSJ9"
+        },
+        {
+          "resource": "repo://src/state/aiStore.ts#L494-L496",
+          "version": "repo-lines-v1:sha256:a725780edca60e7d9eff117091049f0b147cb3b8106a2b099d5e7833bf8e0bee:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTQ5YmU0ZjE0MjgxOTk5ZmZlMzYxMTAxZjE0ZGRmMjgwNTkxY2QwMzlkZjdmZWRhY2IzYjEyOTI5OGI2MGMyMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjc5NGU1YjU5MmVkNzQ3ZmVhYzU3MmY5ZTczYjhmZDc5ZWM1N2YxYzJkMDJmNDc4MWM5MzJiODhhY2I1ZTk0ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZmYxM2M2ZTEzZmI2YTlmNDFmMWY0NmM3NjQwOGMzYThlNzliYTBlZDEyZDZhMDhlZjI4NWQ0MDk5ODc0OGNiMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWFkOWU4MDI1YzQxMTM4MDY0MDAzMzY2OTRhNmE1YTRkNTQyZGIwZDQ2ZjdmNjk1ZjlmNWZkMGMxZmU4OGI0ZSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_88ed8793e0884971b1dbc0042b788444",
+      "statement": "cancel aborts only and does not clear the controller slot (clearing it there made the run's own catch unable to tell an abort from a failure); the run clears the slot itself when it settles if it is still current.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/aiStore.ts#L348-L358",
+          "version": "repo-lines-v1:sha256:6fb4e0a3f67cf617ea3b4d460699922b1c98f9e5ed62e90c3e76e26eebb315b5:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg0NjI4N2RmNGQwMjJiMGJjZmQ1NTJiNmJjNzQ1ZmMxMTIwOTcyNmM1OGYzOTBmNjQ5ZDA1OTdiZTBkNzQ2MjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRmMGUxYTc5MmQ2MDQ0ZDE1MmYzNWIwYjZjMGE4OGFiMmM0NTk1ZGFkNzZmMmJlODQzYTE0ZjllNDZjMmVhMjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE3MjU4ODg1MGFlMzI4NWU5MDI5MWRlMTBkZjRiM2M5NDI3ZWVkNjg5ZjQzMzE3MGI4NTVjN2NmMWFiOTBjYmUifQ"
+        },
+        {
+          "resource": "repo://src/state/aiStore.ts#L471-L482",
+          "version": "repo-lines-v1:sha256:1164426722d6166ebedd073c1f840e7584f8753a3b1cf378874223be9640963a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcyNDgxZWI0MWZjODFhZGY1YjA5MGM3MTY4Yjk1NmJiZGI5M2VjNGMxN2MxZGY3Y2QzZmM3YzUwMWVjZTYyYjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFmMGNkYjk3MmE3YmZiN2VkMjQ2ZjlmZjY3MjM4NWU1NWY0OTY4ZmMxMTA0M2RjNWI2ODRkNTFkZmEzMWRiY2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk3MWZhOTJjNTJmYzA4Y2UwZDMyM2VhNmI4ODk4YzcyMWJhNzg4ODQ5ZWJiYzg2MjljYTE3M2ViYmU0MTZiNzMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJiZGJjNGYyM2I0MTExN2IwNWQ1NmM3OWI2OWI3NWUwZGI3NmEyOWY4Zjk0NjlhOThiMmQzNzQ2OTllMjlkNGUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_23cd08cbc8a14663847201a97c762a25",
+      "statement": "verifyConfig saves the target first (the key must be stored before use), sends the smallest request that reliably answers ('Reply with OK'), uses a 2048-token budget below the real run, and distinguishes empty reply from budget-exhausted-on-reasoning via wasTruncated.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/aiStore.ts#L246-L271",
+          "version": "repo-lines-v1:sha256:9ac72e8e00ed8fec749365bcac2308c43538e304fc07c1867f48478022fbea4d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJlM2FjODBhNDRkZDhjMjE0ZWIzY2Y5M2VjZGFjYTM0ZWE2OWM1MGMyNWFmYTZmMjQ1YTVmZjNlMDNlM2I1OWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFmMGNkYjk3MmE3YmZiN2VkMjQ2ZjlmZjY3MjM4NWU1NWY0OTY4ZmMxMTA0M2RjNWI2ODRkNTFkZmEzMWRiY2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhkNWMxMTQyMzYwNzkwZGI0YTk2OTBhMjZlOTI5MGFiYWJmMmFlYWQ3MmQ3OTMxODIyOTZlZWY1MTFhMzY5YjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdhYzE3ZjU2MTIxMDhjYTdkMTE4NmU0M2FlODdkYzcwZGZiYTFhOTRhYjc4ZGYwYWUxMWNkY2Y0NzUzMDc4NjkifQ"
+        },
+        {
+          "resource": "repo://src/state/aiStore.ts#L32-L33",
+          "version": "repo-lines-v1:sha256:bb3b2655509fe5f5ab454439142ff438fecdce6aabaad08873d9e827b4c182a1:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzI0ZDU4MmFmOTA3M2QyNGQwZjc3YTExYzVkYTg5NGViNzA2NThlY2U0YmFiNjc2NTU5MmU4NTFhNTVlNmIxNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDY5NGY4YWMzNjFkY2JlZTEzNWRhNjQ0NjJmZDAzNDcyYjA5NDYyMTkzMjBiYjFjNDc3YTFjOWYyZDFkZDYwYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDgxNmZjNjQzMzliMmE2NjdiYzQ4NTBkMTc5ZGY0MDg3NDhjM2FhOGUzNDIyOWQyNmNiOGVkMTc4ZTFhOGJlNyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_8a2efb4092064058917466f8da339108",
+      "statement": "applyAiSuggestions is the only place model output reaches the project data and guarantees: it never overwrites the reviewer (a field answered since or a path that no longer resolves is skipped), the whole fill is one undo step, and a run that writes nothing leaves no trace.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/store.ai.test.ts#L7-L17",
+          "version": "repo-lines-v1:sha256:ad4a78ab1ca4af45ef1846d19026bc3a4c441bd55bd590be0bd63be878220c26:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkxZjc1MDFlNjkxNTc4OTdiYTQ1N2IxOTYzZTg3OWVlYTA3NGRkZGUwZDAxMGY2MWQwNWFmYWIxMGZjOWZkMzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjljNDA3M2Y1NTYxZTdhN2I2NjZlMTVkMzM0MzNhZGQ5NTVhOGEzNTY3ZDQwNTliZGI2Zjk3MDY3ZTRiYWRhOGMifQ"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L2364-L2375",
+          "version": "repo-lines-v1:sha256:2dc5e9414bb652b1eb805829bbdceb964d60b5bf24b93ae9172da2ec2dc7f457:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmYTgyYjU1NjlkYTM2MzkxNDI0Yjg4NzQ2MmRkMjJlYjU3YzE2YTM5M2JjYTIwYTM1MDk4NDIyNWNhNmZhODgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4MjBlMWFiZTNkMjZlZGZlMTQ4MTQ4ZTBjZmYyZTZmYmQzMjIxZDY4MGU4OGFiM2M5MTg2NGZlMmI2YzJhM2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiNjM3ZmQ2NjNlNmVhMjJhOTRhMGFlMGY4YzY3OWY4MmIwYjMzYjFmM2Y5MDdmODhhZjg4ZTg2MDY0ZmY0NzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRhNWIwODUwY2I2NTY1YTRjY2IyNDFlNzM4ODY4OWE1NzZhMmQ4YzAwOWU3MDNkNzFkYzgxNWVhN2NlODIzNjAifQ"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L743-L749",
+          "version": "repo-lines-v1:sha256:220f4191642cf60830d912bbb26eb026e8b82f2ed7bae5886e7acd6acbe5aae2:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTNkMTFmNDk0MmMyOGNkZTczNzI4ZDdmZTJhMTRjMWRlZWY1Mjg4YmY2YzJmZGI1NWY5MTBlMTVjZWY4MjQwMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzg5MTNhNzIyMmI3ZjdlMzgyN2Q3Mjg3M2EzNjNkNDk5NjdhNWE1MTNhNGM0ZjQ4Nzk1YWUzY2M3ZDQ3NzNiOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2Y2ZmIyZWEwMTEwMDg4YjQ1YjQxODQxMjc3NGFmZDAwYjRhMDk0NjE1YzAxNDIxZjU2YWNhZDQxNjA5ODFlZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWNhZWY4ZTQxZTliNWFlNmQzZTU0OTgxOTliY2FmZjIyOTNjMzgwN2E1OGQ5NTc5MjVkMzc3MTY3ZWY1NzY2ZiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_2c30b1f137aa4fbca099d6d775a321fa",
+      "statement": "applyAiSuggestions refuses at apply time if the project is multi-reviewer with no seat, the seat is Consolidation, it is a screening project, or the current paper/reviewer no longer matches the run's target — defending against retargeting rather than trusting the UI.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/store.ts#L2318-L2356",
+          "version": "repo-lines-v1:sha256:124a8a07459421f4dc0c3541d55decf09ccedfc1d3fdb6780a772513217b650e:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU3NDUxYzk3MzM1NDUzNWY2MmNjZGRjNDBkNzllYmI5NjJhYmQwZmFiNDhjOWQzMTEwOTE3NDU0ZjUyYTQ2M2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliNjJmNjBkODU5MGE1NzljZjQ2ZjhkNjczNzhjNGM1NzJiOTYyY2VjY2RiOTBjN2E1ZjdiNDJiOTYwNzgyYTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM5ZDg2ZGIyMTQ2MTVhZTFhMTA0YjhkNDk3ODNhZTY2NjRlZThmYWVlNjk4MzQzOWRiY2Y5YzJjMzFlZTc2MDgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFlNmUzMGU3MDljOTc5NjNjYWY5ODM3OWJmNTA5ZDk0MzVjODJlMmYyZDUwMzU4MzdjZmE0Y2Y5OGJiMDk5MDUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b8064404790a425db3f61f67a692ad78",
+      "statement": "applyAiSuggestions usage comes from runFor (provider/model), not the current target selection, so switching the target between reply and Apply does not record the wrong provider/model.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/aiStore.ts#L498-L508",
+          "version": "repo-lines-v1:sha256:77ce008c70c8838698d9f2dee07e9636a7076aa611adc18dda75873706cab6f7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIyNzBhN2EzMWRhOGJmOTYyZTU3ZTFjZjcwYzJjMjYyNTljMmJjNTUyNjdiMTVkZWI2NmQxMTFlNjExMzc1YzYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE4MzU1MmFiNTcxNDk0YjM5OWIxODE5OTYyMmRiZTNiMzgyNmViNjFmY2QxZjc0Y2ZiMTJhYmNmODhlNGY3MjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQxYWI1YTM4YmMzNjY3ZmJmNmUzNWQ5ZTY3NjA0OGVhZWE0NDg4MjMzOTUyNzgxMWRkOTljMzEyYjQzZmQ0ZjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVkZTAyODJiMzY5YzBkZTY5MTM0ZDM3NThmODM5OTIwMDk5YzdkNzYxZjhiYmE3NTliZGY5ODYwZmYyY2IwMDAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8a86d582b0fc40118b2f0202beea9d05",
+      "statement": "aiMarks is session-only (lives beside the project, never serialized to disk) and marks fields the app filled that the reviewer has not looked at; useAiMark exposes the marked/confirm pair and confirmAiMark drops the mark.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/store.ts#L3131-L3143",
+          "version": "repo-lines-v1:sha256:7e76cd5bf641074d9d90c97e07d3010b55f3a301fd4b15a3626ca29a32d4f10f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZhZDcwNTE2NTBkOWI2ODA1YmY0NmZiNDcxZWYyZWU0ZWU3NzI3ZGJkYjJkNDlkY2M1OTM5YzRjZGZlMmFiMDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY1ZjVhYzllMzZhZGQyZjIzNDA5NzVhY2I4MzRmOWRlNTA0ZjQ5ZjViYjE3ZjVhMjQzOGIwZTJlOGIyMjUwZTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdmNjQ5MWQ3NTllZTU5NGVhMDRlOWFlYzlkYjhkNjBkMzkwZWM2ZDlhOTVlZGJhMzRmNzY0OWFlNzU0YWMzYjUifQ"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L520-L531",
+          "version": "repo-lines-v1:sha256:053912a3058c8a260cfc1f69374b128bbe7ed745b38f86005cf8708634e72c3e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmMmEyZjk5NmYwOGU2ODBiZDI5MjEzNWE2ZmE0OTc4YmRhMjZlNjAyZDg0ZjMzY2IxZDU5NDc3NWQ0MzA0YjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE3NjM1NTg1Y2Y2NTVlNWZiNDliNzllODllOTViODJmNjRhZWNlZTU3MDgyNzM3NDQ2ZjliZmMxZGIwZjdmOTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU4NThjOTdkYTI1ZDUzN2ExMjFkMjY1MGUxZjYyMTQ5ZjlhZjM0YTIyYjI0MGVhMzM2Y2E1NTA5ZmY1N2M5MGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQyZTI3ODQzYzAwMDc4ZTA1ZTMzZjY5MTcwYmQzNzI3Y2VjYzgwYjk0NDdmZTVlZjYxYzA1ODI2NjllNGU2YjEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_82f4a3cda0a64379aaa04033e1c183cf",
+      "statement": "AiUsageRecord is a persisted disclosure record appended to paper.aiUsage only when a fill actually changes something, recording provider, model, and the Apply timestamp; a wrong value there is a research-integrity problem.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L24-L35",
+          "version": "repo-lines-v1:sha256:c6a7705c06d7b74bed04655fe18503edd3010ad58db92f11cbc16c4081f98e9f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU5Y2FlMzk5MDM3M2FlMWMwN2Y5NGZmOGFhMDA1NWJhZGJhOWIxYzU0NGYwZDAzMWVkNTEzYzVmY2ExYTJlYjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUyMzRhOTM3YTEwOTRiM2MzMjUxZTUzZDViOGIxMGI4NzRhYWJiM2RkYjVmNDE5YWNmNWViMzYyZDUwMTQzMTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyZWM2NGNhMjdhMjFjMzAyOTc5MmNmMzAwMzM5NjJjNjNjZGI5OTAzZmY2ZWJiZDM1YzlhZTY0YWFiZDllMTAifQ"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L2418-L2427",
+          "version": "repo-lines-v1:sha256:2436f796f00311530ff1599a2966b5d95e04579ee0f8f42530e1423e337144ca:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhmYjFiOGI4MTAwNWU4MTQ5MzMxYWYyYzcwNjY4MGU0OTg1ZmFmZmMyNDY2M2UwNzI5ZGMwM2Q4ZmIzMGQ4ZDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YjA0NDkxNDY5NzIyZTgzNjNhOTRlNDA0NDUzOGUwMTNhMmEyMTdlMzZiMWU1NjhiYTYwYWNiN2I0YzhmMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRmNmFhZDY0OWRmNmE3MmUzNDE5NGM4NzQzN2VkNzAxZjI4NWQwMThlNTExYWRmZDNlMTE4ZmEzNzBjZDQ2NDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQwNzZjZGJlYTEzOWVlY2Q3MjMzOWE2NDQxZjUzMjgxMjMxOGZhNWMyMTE2MzAwZDAyZWM0MTU4ZWMwZWUyNmUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a78168b60c914df59b5951f80c98dc99",
+      "statement": "LlmSettingsDialog enforces the key-invariant in the UI: an existing key is only ever hasKey (never shown/pre-filled), leaving the key box blank on an edit keeps the stored key, and Verify saves the target first because the key must be stored before anything can use it.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/LlmSettingsDialog.tsx#L11-L24",
+          "version": "repo-lines-v1:sha256:9017a97d15ccdf83367089622585bb985ec4b635d622024dca63255dce95d98b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI5ZmY0YmI3OWYyMjMxNjYwOWEzOTM3MWQ3OGU3NzBkOGQzMDMzYWE0NGNhYjY0MWUxZTYxOGNkNmU5MmY0YzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdmMjgzYWQ1MWVkZGVmZGRmNTVjYmQ0NTY1YzU1NDNiMDBkNTQzMTc3ZGNkYjU5YWU5YWJjMGE1NDc5MWNiMmYifQ"
+        },
+        {
+          "resource": "repo://src/components/LlmSettingsDialog.tsx#L210-L213",
+          "version": "repo-lines-v1:sha256:00d1533abae9e43c464af63425332901a319e351b839f1e9edb450cb9160ce62:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyZjczYWNhNzdiNDA4ZDcwMTViN2YwZDYwM2EzNGZiNDZlN2JmMDY4YzBjYTIyZWNiYjZmNTg1YzY5OWY4NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGI0YmY2N2NkYTAzYjA1M2MzOWRhNzRhYzU2Nzk1YmMwYzA1NWE3NTJiNWUxMTlhOWE2MjU4NTE0Zjg1M2Y4MSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmFkOWFjNzZlZmNmNmUzNDVlNmMyNjYzNzFiOWRlOTU4NTc2MDA3YTQyYjE1MzJmODJlMTdhM2JjMzNlMDgxNiJ9"
+        },
+        {
+          "resource": "repo://src/components/LlmSettingsDialog.tsx#L515-L526",
+          "version": "repo-lines-v1:sha256:8b513ce167c555f9bcba3538547f7dcdad70db9178ac7645e125279cfbd84331:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEzMWM2MzU1NTgxNWFjZmExMzUyMGQ4MjNiM2RjYzgyYmM5OWE3MGQ0NjZlNjkxZjE2ODRmMDRlMzU1ZWU0MDYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxNWZmZWUzMDE0NjQ3MmEyY2ViNDIzMjg1MDkwZjdmY2Q0YzlmYjZiOGRhZWRhNGU5MTdiZTdkMTg4MjUxM2YiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU5MzhkZTFjMjA4MDYyYjUwNDY3OTA2ZTgwYjBiODEwMjYwZWMwZjM4Mzc2MTkwMDBkYmMzOWUxMzgyMjVjYWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU5NjY0N2UxNGFkZDI4YTgxNDVhYTQwOTI3MThmM2NhMDJiNjBmMDZlOTA4YjI4ODY0NGY4N2UzYTY2OTViYzQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_710f5be5306e4b7ba9d5c7d5ee623b75",
+      "statement": "The settings dialog shows an honest runtime-specific notice: the key is encrypted in the OS keychain on desktop, but unencrypted in browser local storage on the web (why the desktop app is the supported path for AI annotation).",
+      "evidence": [
+        {
+          "resource": "repo://src/components/LlmSettingsDialog.tsx#L305-L323",
+          "version": "repo-lines-v1:sha256:7abdb99f91248e8ebe3b5efe70db2089648e071490e90ac2fb03f6de67468d90:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJmNWNhMDA3MDIxNjA3ZDUwNmRjMjY4ZmVmOGI1ZDZhOTRiNjFhNzNjYTNjOGI0NDFhYzQyZGU5NGM0NTM2MmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA4ODNlODNhNjM2NzFlMjhjOTVmZmVmZjA2NTA3ODE3MzU1Mzk3OTBlNTU4MTU1YTk1ZGZiYzJlYjA0ZTQ2NTkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVkZTg5YWVlZTJiZTZmYTA3YzRjN2I3ZjNiZWRiZTcxMDVmNTIxNjM2MGQxZjQzMzliZTlhMzk0YmFlODVhOWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdhZjZhMjBlN2Y4NjE1N2YzODMzYjEwNDAwMzhhZWZjM2Q5ZmVlNDU3MGM3YzcwZWM3ZGMyZTdkMDc0Y2Q3YWYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_fb0a7548e60744419db43e13e1d394aa",
+      "statement": "Switching provider resets the base URL, clears the model and reasoning effort (they belong to the old catalog), and clears the fetched model list; a reasoning-effort selector appears only for a model with a ReasoningProfile and a useEffect keeps reasoningEffort in step with the selected model.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/LlmSettingsDialog.tsx#L124-L140",
+          "version": "repo-lines-v1:sha256:154e667779f8165191d4cc515592e8d71815c405c7aae017b8c8eec9a19f0efe:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA3NzQwNjU2MTBmZmUzMDIzNjFlNjU1ZDgxNzBlZTY4MDNlOGJhZTFiNmVhYjAwMGEzMjBlYWEzOGE3MjUwY2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFjMGYyZGY0ZDJkYjVmMTRjYmU0NWI4NjhhMDQxYWFiNTVmYjI2OThiOWE5NWM5ZGUzZDI0NmI1MGQzOGNiNGEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjUwZGMxNjMwYzc4ZDZkMzYwOGI3YjViOWUwYWM5OTMyODNhNmNiZTI0NTEwMzQ1NWExZjU4ODAwMGJmMzcyYWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZkZDk2ZDQ5OWM1ODQ5ZDVjNmU5MTNjMGZhYTUwNTYwOWRmNzkwZmMwZjZhMzFhNTIzOTM1NjlkNGQxMTZlODEifQ"
+        },
+        {
+          "resource": "repo://src/components/LlmSettingsDialog.tsx#L178-L201",
+          "version": "repo-lines-v1:sha256:c96b8997426a03f550479f054dffee2221844e8310b6954019da443ba6709cf5:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNhMmYzYWNkMjIyNzQ3NzU2YTRmZTg4MTA4YzcwZGNkZjAzYzBmMzI2YjcxYjNmZDc1ODZlNmYzMmU2MmQzYTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjUwODVhMTk4MjU5MDQ1OTIxNDdmMzdiNjc2NzY0Yjc1ZDM0M2IzODIzYzQ1MTAxNjkzZGQzNGRjYTNmMGE5ZTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdmNTFiNmI5OWQ3MDlkNjYzYmUwOWZkNzI4ZTIzZDI0ODU3ZGNhNmQ5NjRjODhlMjhjODRmYzI3M2RhMGVlYzMifQ"
+        },
+        {
+          "resource": "repo://src/components/LlmSettingsDialog.tsx#L482-L499",
+          "version": "repo-lines-v1:sha256:240b2a4bf201272dea5011600ad194453a9ec854240e6466c71cb676c8f534bd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFkZTdiMWQyMTVkZmM3M2YzYTM3ZWQ0MTU2NWY5NTM4YzY2OTFmOGVmMjJkYmI4ZTQ3YTUyNDNhMzQ1MDVjYTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU1ODFlNGYzNjBiYWVhZjY5YTUwNmIxZDIxODlkMzIwODYxNGIxYjM1NmM2N2Y0NDk4NGM4NTdiNDY4NGU5ZmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE0ZmUzN2VlNTFjNWM1MGU5NTcyYTVjNTZmYzQ5NWE4ZThiMDZkYmIyYjhiNmY1N2IwNDAxMzkxZGU2NjA3NmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYyMmY2MTRjZjhjNzI2NWZlYjI1YmM4MjRkYWU1N2RiNGRjZDk0YjhlOTU5ZDFkNGIwNjhlMjViMzc5MTc4MTMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_19222a0eaee642458b755f63c3a6b2a5",
+      "statement": "ModelPicker is deliberately not ComboBox: the model field is a free-text input the reviewer can always type into (a catalog may be incomplete or unfetched), with a searchable dropdown and a red invalid flag judged only against a list actually fetched (an empty list means unknown, never invalid).",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ModelPicker.tsx#L115-L118",
+          "version": "repo-lines-v1:sha256:4a241a0bf221ee24a3541a7fddc57040f1b715fdf6f0efbedee2866eba5222af:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOWViNDJmM2M3Njk2Y2M3YjI2MTQzMmNjZTA1NTY4ZmNhMjI5MTI3YjQzNGJmYjgxMjQ3YTAxY2IxNGJiYzU2NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNzdkOThjZTJkZWJiM2U1NDBkM2E1NjUwMjgzNTI1ZDllMjc1ZDkyYzIzY2RhZWRlMmZjMDgyNTc5NTlmZDhkNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTdkODYzMmU1NGU5Mjk4YWJiOTU4NzI3ZTJkNTE0MDhhYmFmMTM2NjAzNTM3OTEwMTQwYWJmNjViMzBhYjYxMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWExZDk3OGEwYjkyMWZkOGI3YTNhZDhhZjFjMDJmN2I3YTkyNzMwMjIxYTQ0NzE2ODljYmRiYTI0MjA2N2UzNSJ9"
+        },
+        {
+          "resource": "repo://src/components/ModelPicker.tsx#L16-L28",
+          "version": "repo-lines-v1:sha256:09aee64754ce0e56f579a543814154cc892da77ca0953fe554d18af00881976f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ1ZWY1NWRiYmFkMzJlNDJlNTQ1NDYxZjNmNTk1NWQ1M2FiNWU4OGRkOWJlZmY1MTRhZjNmYWNiNmIwYmZhZDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1MGU3MDkzOWE0MDkwOTVkYWY2YWVlYjZhYjc1OTlmNDM1NGNhZmJjMjI1ZDRiMGFkZTYzZDYyZTZkY2YwYjcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_875bd268e77b4b15b6b9a2ce46ed7c31",
+      "statement": "The preload bridge exposes five LLM calls (llmConfigs, saveLlmConfig, deleteLlmConfig, callLlm, abortLlm) with no way to read a stored API key back; abortLlm is a send (fire-and-forget), the rest are invokes.",
+      "evidence": [
+        {
+          "resource": "repo://electron/preload.ts#L43-L51",
+          "version": "repo-lines-v1:sha256:9999ef4b15b2cf74a471c28c679bc617cdcb41c0a3d8c9b6e040b576295e167c:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjg5ODVkYzUwNjFkMzQyZTliOTE0MDdmYmJjMjhkYWI3ZmFlMWNkZWM2NmQyMTEwNzJhMDI5OWU5ODZlNzEzMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTFiODAwNGU4NzgxZjk0ODNhYjIwNTI2MjBlYTNlNDRmYzk3MjQ2ODY4MzhlNmM3MmQwNjIyYTVjYmNlZDM1NCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTdlY2EyNGM0MGZkOWI2NDMwMzM5YzIwOWVhMzg5MmY3ZmNjNGNkNDExYzYwMzg5MGFiYjJmZWNjMWIyMjllZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTViZmM0ZTA2YjJmZTFiMjk2ZWM4MDI1MTc2NGU4MTU2MzI3Mjc5MjkzZTExMWE4YmU2M2JjZTkwMDY5MTA4MSJ9"
+        },
+        {
+          "resource": "repo://src/platform/electron.ts#L386-L410",
+          "version": "repo-lines-v1:sha256:50e323468c1ceabb1072e74af1e0bb53760eb39ef7b5371fddce4f5ed9298427:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcyNGI1ZWE2OWU3MzM2NmE1YmMxNzhmNTdmOTEzZmRmZGEzYmY5NjYzNTJlNWRhMTBkZjI1YmYzOGRlMWZjM2YiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMwYTdmM2RkNzAyNzQyYWY4YmI1ZjY2NGUzMWUyNjIzZjUwNGRjYTFlZmJhYzlkMjg2ZTUwM2ZhMGU2MmRmNjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdmZjk5NzZmZTJjODg1OWU0MDZhOWI2YWY1NjQ1MzM4YWI1ZmYzZmZiMTk0NDA0OWY2NTYwYzAzNWZkMjUwZDIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_418e288b292d41e0a3cd7dbbd3ec455b",
+      "statement": "callLlm generates a requestId so the renderer's AbortSignal (which cannot cross IPC) maps to a separate llm:abort send that the main process matches against the in-flight request.",
+      "evidence": [
+        {
+          "resource": "repo://electron/main.ts#L1488-L1493",
+          "version": "repo-lines-v1:sha256:1af7fe75e0518e6d839c8d9669b099dff0a95567eb7f6a84963669e1165ea72b:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWZkZTk5NjI2Nzg3Y2Y3NWYzMTcwZTU4M2Y1YTU4ZjhiOWE3Yzc2MDFjOGQ2ZGUwMTY2NjhmNjcxNGQ4ZmZhZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODU4MGI3NjUxOGRhZTk3OWZhZWJkMDIzNjdhMjkyOTJhNTBkOTc2MDkyMjUxYTM4YTZjZTMwODgwYmE0MjgyNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzllZmZlNjhkN2VlYWU3NGRmZThhOTNkNDVkODA5MWEzNmFhYWZiZTk4ZTYyNzA1ZDcxMWJkOWFkZTY5ZGNiZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTA2NzViYTg2MTliZWRiMTRhZTg0NzU5ZGEyOGUyYTkzZDlkNTA4MjNhOTM4MWUwMWY5YTk3MjNhYjY5MWMyZSJ9"
+        },
+        {
+          "resource": "repo://src/platform/electron.ts#L399-L410",
+          "version": "repo-lines-v1:sha256:36f6d131c32015401b33bb39021b575c2a3c18082984e74bbaae50c877d493fe:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhmYjZkZTBlZTRiOWI1ZWI3MTM0YmM5YmY5ZDUxMTA2MGJhOGQ2YjgxMTA3ZTY4YjE2YjY5ZTU4Mzc3MGRmMGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdmMDVkMTU2Y2ZiYTBjNzA5ZTFhNmFhM2M5YWFlN2MyMTVhYTQ4NDc3MTdiZGVhYTc3ZGQ3MDlkODlhNWUxY2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdmZjk5NzZmZTJjODg1OWU0MDZhOWI2YWY1NjQ1MzM4YWI1ZmYzZmZiMTk0NDA0OWY2NTYwYzAzNWZkMjUwZDIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3f337e8e94a0423cb31ccaf6e1053d16",
+      "statement": "The llm:call handler re-derives the configured origin and refuses to send the key unless the request URL scheme is http/https and matches the base protocol, and the origin matches exactly — preventing a compromised renderer posting the key to a host of its choosing, and avoiding a file: base authorizing any file: target.",
+      "evidence": [
+        {
+          "resource": "repo://electron/main.ts#L1519-L1535",
+          "version": "repo-lines-v1:sha256:b0ee7a463ddef4654fcf1935a4f865644a2f8f0c538907052abc61dc5e9d99f0:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUzZWU0NzZiZjIxN2YzYzBiNGFiYjI5MTNjYTY5ODE0OGZlYjZlNTliMzU5ZjBhNDU3MWM1OGMzYzk4NzczM2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIyMzFkYjJkMTdmOWIxZGI1YzliZmQ0NTE2Yzg0MzEzZTY0MjkyMWRlYzFlMTNiZDQ1MDI1YzA3NzBmZTU5NjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY5NzM5YmY3OTg3ZTU5MGZhNzU4OTQ3ZDA2NWJlOWUxMTA2YTliYmZiY2NhMGU5MTEwMmFlODk2NmFmOWQ5MDMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e9920a27c57347b0b22c5827ad843d0e",
+      "statement": "The llm:call handler sends with net.fetch (no document origin, bypasses CORS that would block a renderer file:// fetch), uses redirect: 'error' to refuse redirects (following one would carry the substituted key — including unstripped provider-specific headers — past the origin check), and enforces a 10-minute timeout via an AbortController backed by an in-flight map.",
+      "evidence": [
+        {
+          "resource": "repo://electron/main.ts#L1500-L1571",
+          "version": "repo-lines-v1:sha256:840a3edbedd709618452496b7df6bf0bde3fee1424a995569d424514fefd4125:eyJzZWxlY3RlZExpbmVDb3VudCI6NzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUyNjFkZGFkZWQ1NGQ5Y2EwMzgzNGVjMDE5MmY4M2FiY2M5ZTA4Y2JmOGJjMGMwNzk3NGJlNGZmZDBkNjdmNDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYzMmIyMDM5ZDVkNTFjNDVjMGNlMTAyZWE4Nzg3YmJmMTZiZDY5ZmFkOTRlOGI2NDA0YzhjOGJlYmM3NDdmZDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY5ZDkwODgwYzUyNzA4N2Y2MmVhMzVmNzU3ODAzZjIxNjMzNzhmNTAwY2E1NGUzNzYwZmIwMWVmOTQ2NGQxMWEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_640a124a8cc84561a9a90b6d45a8cdff",
+      "statement": "encryptKey refuses rather than write the key in the clear when safeStorage is unavailable (e.g. Linux without a keyring), and publicConfigs strips the key and adds hasKey before returning configs to the renderer.",
+      "evidence": [
+        {
+          "resource": "repo://electron/main.ts#L1447-L1460",
+          "version": "repo-lines-v1:sha256:1ccf4534c99b6c7f2d9bc384cee61c48b752234cf2995307f06c06501d689d25:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI2MTQzNDEwMzQ2Y2U4ZjUzOWMyZjMzOTI2YjNjMDRmMmRhNWUyMGE5YjUyMTYyM2QyY2JmYjEyOTZjYzdlMmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEwMjQyZDJkZjBmODczM2RjNWYxOGUyY2FiOWRjYzdlMDUxM2Q3ZTNhZGY3Y2ViNjcxMmFhMjk0OTBhNjNjM2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ2ZDYxZDhjNDk1MDYwZmFlZTI0MTIxNzg5YjAxNWFiNTllMzlkODFiNmJmMzZkNzYyN2RiZGYxNDdmNDE1ZjgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_1b7acc069fb04df2a0c67d86df573137",
+      "statement": "AI-assisted annotation is off by default for every project and unlocked only by a hidden per-session gesture (aiUnlocked, wired in Toolbar); a project can forbid it (config.ai: false always wins) but cannot turn it on by itself, and aiUnlocked is never persisted.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L247-L250",
+          "version": "repo-lines-v1:sha256:297c2404b645e06ec6debcd120b0cd46c61ff8c5e25022aec8dafa10b8f3da1e:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDg3M2I4NjZlZjNkMzBiYzc3ZWNjNzg2NmQ4YmJkNDYzZDcxMmVhOTExMTMwZGZhNGM3ZDc1ZjJmNTBhNTdkOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWI0MGY3YzQxOGEyMjE0YjYyNzFhNzFhOGUzYmQ0N2NmZmM3MWM1YjE1YmU5NWQzZDJjODQ5ZjBhZGM0M2VlOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTg3YmRkYTdiNGE4NDUxMjY0NDI0MTk2Y2U1MjhhMzFmOTA3ZGEyNzVkZTk3YzYyOGE5MDY1MTFlMmFmM2QzNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2EzZTg5NTlhNWY0YTdhNzA0YTU5ZjFjODQzNGU2ZmViMTUxMGJiYTA3NmZjMDA3NzdhNzU5MzlmZTY4YmNmZiJ9"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L2447-L2452",
+          "version": "repo-lines-v1:sha256:9f54581db16ba487478677101b9baec9901c43f5c29887e272932b446e2986d1:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTY4NjhiZmI5MTUwNTQyNzU0NDk0YWYzZjYyNDlkOGY3Mjg3YTExZTVjNjg3NjBkNzZiYTFkN2Y3NDdhOGI3YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMWYwY2RiOTcyYTdiZmI3ZWQyNDZmOWZmNjcyMzg1ZTU1ZjQ5NjhmYzExMDQzZGM1YjY4NGQ1MWRmYTMxZGJjYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmQyNTQ0YThjNWQ3ZTMxNTk2ZTk0NGE5YTNkNDFlYTk3OWI3ZDliZTYyZDBiNDY0MjY1ZDViMmNmOWVhYjc2YyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmRlMzk1OWNkYzFlNjg1NjkwYWY3YzBjZmQyNzY3Y2VhYjM2YmFlYWY3OTk0ZjYxY2MwZDcyNjA0NjZjZWQ0YiJ9"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L534-L542",
+          "version": "repo-lines-v1:sha256:24a6e220f30c7cb14663a28f0d582d834df2d50b8181a9932259ac39915af570:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGYyYTJmOTk2ZjA4ZTY4MGJkMjkyMTM1YTZmYTQ5NzhiZGEyNmU2MDJkODRmMzNjYjFkNTk0Nzc1ZDQzMDRiNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjlkNzg0Y2UzYjYzNmU0OTBlOTg2YjYyNDU2YjA0OWRlMmY4ZTI1MjFiNTcwNWNmOWRmYjk0NjcwNDE3Mzg5OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjBjZmExOGM2ZTZlZjRmZTJmNDdmZmNmMzE2MTJmODViMTkwMzQ0YzI3NzVlMzQxNTZlNmQ4Y2U1ZmEyNDhiNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWI4YWI1OGE0MDk0YjQ2ZDljODFiMTEyMDYxNWIyNTAyMTEwOGFiNTZkMTI0ZTMwMWQxNmI2MmZmN2I1NTI5NiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_a3e55ff077b24d408f3e9c33de43b318",
+      "statement": "join appends a path to a base URL without duplicating what the user already typed, accepting http://host:1234, …/v1, or the full …/v1/chat/completions as the endpoint for openai-compatible.",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/providers.ts#L199-L222",
+          "version": "repo-lines-v1:sha256:194f631e6976a1f9055c6ab9a8416a90fc34f39d8f6a417a25535196cd32daf7:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYxNDZkMGMzM2VlNzYzYjk2YTA2MWJjNzQ1NmUzMTA4ZTUzMDg1YzJhNDA1NTYyZDhmNTJmNzY4YWRmMDFiOGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJlMDg1ODQ0MGI0OGY5YzRjYzhmNGRlMjdkM2Y3NjNiZjBiN2VmYjMyNjc2MzkzNTYyZWNkODg1NmUxOWQ2MDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY0Y2RjNTMwYTZmNGE5Y2U4YTVmZDg0MjBkNDdiZmM4ODMwNWZjNjg2OTM4NjQ4MWQ2MDBhOGRkNjkyMjI3YjIifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.4.0",
+    "at": "2026-08-26T09:23:05.972Z"
+  }
+}

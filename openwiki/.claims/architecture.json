@@ -1,0 +1,248 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:d962934c73b9a594bfa5288fb8d4b3d9eb432a1ce6b350c84b0b9c541dba8316",
+  "claims": [
+    {
+      "id": "claim_77c235236a4f499f9da38bd07202a799",
+      "statement": "SaiLoR is a single React codebase run as an Electron desktop app; the web/SPA runtime is discontinued. App.tsx's isElectron() gate checks for the preload-bridged window.slr object and, when absent, renders a 'use the desktop app' notice that blocks every project-opening UI before any of it can be reached.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.tsx#L161-L191",
+          "version": "repo-lines-v1:sha256:04671694b84e047582848b41fd450daaec50d1874fd72121f0c296930afe3830:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRjMDQzNTM0MmFkYmM2MzJmMDIwMzQyZDQ5YWU2MDEwZjg0YzBiYzgyN2EyMDNlNWNiZGE2NDQ1Zjk0N2E5NjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjczMjQxOTJjNmVkZmUyYWQ2ZWUxNjAxMjFiYjU1ODc2NDE5NTRhM2ViYTljM2VlMTg0NWZjNDJjNmU0ZGM1OGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAwZGFlMmY0ZmExOWQyZDRhZWFkYWZhOWMxOWE0OTllZmQ5OGJiMWYxODFiMWUwMTI5ZmZlNDg2MDg4YzBjNTAifQ"
+        },
+        {
+          "resource": "repo://src/platform/adapter.ts#L319-L321",
+          "version": "repo-lines-v1:sha256:6870b76bc493e61fd244995396eb37495ad7cc642efdeb02551dce2a274f2e86:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMWNiYjk2ZjRhYzZlZjkyOGIwYjNhZTczOGE2ODkxZTM2YTk0NTZlODhlOTlkNTRiYzJiNGMxMWE5YWU1ODdlYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjUxYjA2NzQ3NjRhZWUyOGU2YmFiNjdlNmNiZjFiM2VjYWQ3ZmJjMjQxZTY2NTA1YWZiMTZmMmEyMGM0ZDU5ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_3f404acf3a284594b2d0c12df0a649aa",
+      "statement": "The renderer (React 19 + Zustand + immer) talks to the Electron main process only through the window.slr bridge exposed by electron/preload.ts via contextBridge; the main process is the only thing that touches the filesystem, spawns git, or calls LLM providers.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.tsx#L1-L54",
+          "version": "repo-lines-v1:sha256:00ae16d8ea551f134f924baa80f1b9ec61ae4c5033ce7491abf12b964505d4b3:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY3YzA3MDRlZjFiZDljMjM3MmJmNDk2NDkzMzM1NWE3ZTMxNGRiZGQ4YTdkM2EzOWY2ZDFlNjRiMTE3OGI1MGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhlYWMyNTg2MzA4NjA4NGUzNzIxMTk5ZDIzMzYzOWZiYzVlNzdmM2FiYmYxMDhkMDk0M2Y0MGVkZWU4ZWQxM2YifQ"
+        },
+        {
+          "resource": "repo://src/state/gitStore.ts#L30-L40",
+          "version": "repo-lines-v1:sha256:a2d695b9bd623d511684215a32fdee57dec17fc1499ab29cfadb525047afde35:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg5MDg0Y2M1MGM5MjljOTE1ZmYwMDEzZGRkYjI3ZWQwMTU1NjY5ZmVkNGEyYjg5MGU2MTY1ZDFlNGJkNjA1YWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU4NjZiODk5Njc2ZWFhYmM0YzJhZTc1NDI0MDU1MmYyYjg2NGY4NjdiNDhlZjM1MmZkYzQ0ZjRhZTZlNGQ2MGQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7ddeb97d49aa482bb92a0a5d566cf2cc",
+      "statement": "The PlatformAdapter interface in src/platform/adapter.ts is the architectural seam abstracting file I/O and PDF loading; getPlatform() in src/platform/index.ts is a singleton factory returning ElectronAdapter when isElectron() is true, otherwise createUnsupportedAdapter().",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/adapter.ts#L59-L61",
+          "version": "repo-lines-v1:sha256:032ffde2e40a6dd666c0cc4bd0e4824661e09367f0d01f9b8c500a9d18a84469:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGY5MTM5YmE5MzVjOTNjYjMwZDYyNmZkZGJkMWVhNTkxYjcwMmNiMzhhNTMyNDJjN2FhNzIxMjcxMDIzOTNhZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2Y3YTdlOGU1MjIzNTYzMzRjMmI4MzI2ODgxM2ZhN2E2ZmYyZTQ4M2Q0MWY4NzRhMDQxYmIxZDNlMzFmY2NhOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTI3Mzg4MzRiOTA2ZmFlN2RmNjBjYzc0YWU1MjU2MmZhN2MyOTZmNWY1MWM1NjVhOTRkY2I5ODA4ZDc3YjFkOCJ9"
+        },
+        {
+          "resource": "repo://src/platform/index.ts#L1-L23",
+          "version": "repo-lines-v1:sha256:1804999eb7ed16556427337db71869445dbbe9fc93a342e9422e6b0b5490af7e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNjNWU2MDQzMjdmNDA1YTA5M2Y3YTkwZjE2NDVmMmIwNDVhNTZjZDYyMDEyNmZhOTYwNmI5M2QwYmQ4ZGFlNzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY4MTdiZDM0YjE2YjY2MWU0ODM4MTYwN2ZlNDBjZmJjMmJkYTFmOGE4ZTM0ZDRmZTQ1M2NlNDRlNzJkYzFhOTQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7f0eba7a90644f6d86236dbac8bc6e41",
+      "statement": "The PlatformAdapter seam still exists despite the web build being discontinued because App.tsx's isElectron() gate renders after React's hooks and module-level reads (getPlatform().getRecents() at store creation) already execute in a non-Electron runtime; something inert must answer those reads safely rather than throwing during module init.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/index.ts#L8-L17",
+          "version": "repo-lines-v1:sha256:9737e2863c16e74bee2357dcb67bae0ec434deee0d69ae878c150b373800263f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRkYmJiY2NiMTU4YjhjNWIyOTk4ODkyMzc5NmJhMzJlOWFiZmU3MDk3ODA4YzU3ZDIwYWU1NmY2YjE5MzNmOGYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQyZTc0ODA2NDRjMWY4YTVmYzgxY2E3MmJmYTkwOWQzMDgzMzFiM2U1MzYwOTdjOTdmNGQwNWZlM2I4YTY0MjYifQ"
+        },
+        {
+          "resource": "repo://src/platform/unsupported.ts#L1-L28",
+          "version": "repo-lines-v1:sha256:f45653a3cbb5ecb8e59c8b5692354331cbd7be92ae2e01b0355afd407ca1cf42:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNjNWU2MDQzMjdmNDA1YTA5M2Y3YTkwZjE2NDVmMmIwNDVhNTZjZDYyMDEyNmZhOTYwNmI5M2QwYmQ4ZGFlNzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_db8574a7362b4118b9c38a6e7d6cf57a",
+      "statement": "createUnsupportedAdapter implements a small real object answering the two reads that genuinely happen before the gate (kind: 'browser', getRecents: () => []) and wraps it in a Proxy whose get-trap returns a function throwing 'SaiLoR for the web is discontinued — use the desktop app.' for every other property — one trap rather than ~30 individual stub methods.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/unsupported.ts#L15-L28",
+          "version": "repo-lines-v1:sha256:602deec280f59188fff1087dbf10533c6e753ff5c554cc01581573b69c7c7e65:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYwYTBjZWM0YTUxNjdkMjgyMmVlMDJjYzc5Nzg4OWMxNjBiNTBlYmE4ZDc4MWFkNjhkYzhhM2FjNzAzNDA5Y2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNmM2ZmYTAwYWRjM2JjMGU3YjM4Y2Q5OWUyZDJlYmI5NWNiNjhkYTlmNTMxZTVmNWI0NTQ2YjZkZDQ4YmMyMzAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_5c22bf9f238243fba2f6a129e6eabd29",
+      "statement": "ElectronAdapter delegates file operations to window.slr IPC handlers and serves PDFs via the custom slr-file://project/pdf protocol, resolving paths relative to a project directory set via setProjectDir on open/save-as; saveProject re-parses the logical whole-project text via loadProject, splits it with splitProjectFiles, and sends {metaText, files} over the project:save IPC.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/electron.ts#L232-L240",
+          "version": "repo-lines-v1:sha256:ac040c426f6f08d301fcc266145711e1d5d3357d42254ea5cab9eacd21752771:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjRjNmY2OWJlZDI1ZDFhODM1MjY1NTlhNDQ3NWM5ZmU3NDM2MWQwYmNlODdhYzJkYjI3NWQ2MzQ5ZjVlOTNmMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGE5YTVlNTQ0ZGMwZDk5OGVmYmQ4ZDgyMjhiYWFkMjU0M2E3YzgyN2M5MzI3ZDRiMmZlMGJiZTc1YzBjMTZlOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTdkODYzMmU1NGU5Mjk4YWJiOTU4NzI3ZTJkNTE0MDhhYmFmMTM2NjAzNTM3OTEwMTQwYWJmNjViMzBhYjYxMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDg1MjU4NGQwNzNhNGJlZGIwOWQyYzJkMmVhMDYzODhkNjllYzYyOTI4MDAyMWFlM2Y4NDc5MDhjYzUyYzFlYyJ9"
+        },
+        {
+          "resource": "repo://src/platform/electron.ts#L284-L294",
+          "version": "repo-lines-v1:sha256:795d5eca74298db2c43643cede82e11ea3e4ca1e4504b951d464df8213a6e295:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZkYjMwNDk3OTE0ZmMzZTVmZTY4MjUzYzcwOTI3MmQxNGFkOGEzYjAxNDljY2ViNDJlNGYwYzAyOTk3MTI1NzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAzN2M0ZTQ2MTE3ZTE0N2VjMDI0YjA4NDU2NzA5N2VhNjQ2NzNlYmVmZDJkZWRiMTk0OWUwNmM5MDRkYTRkYTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYzNGZkYjI2Zjc5NzJiNDRlZWIyMjVkNGQ2ZmViOTE0ZDI3MGEyNTg0NGFhNDFmZGYyMzkwMTQwY2JmYjM4YjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM3Y2MzYjRiYmFkODBhZDg4N2NjZTFhNGE1ZGU2MWRiNzJmMDc4NWU0YmU1ZWM3ZDJhNmVkY2M5ZWU5NzkzYmYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_659085e65f90431b90f23e976518f1b9",
+      "statement": "PlatformAdapter.getGit() returns a GitPlatform capability object on Electron (the user's own git binary via child_process) and null outside Electron (createUnsupportedAdapter), so a caller cannot invoke a git operation without first proving the runtime has one; getOsInfo(): OsInfo | null established the same nullable-capability pattern.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/adapter.ts#L253-L253",
+          "version": "repo-lines-v1:sha256:43cf3fe404a63d90db094610d1109b2c6cf3d58f6292ed4eae67a3176a8d74cd:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDNjZjNmZTQwNGE2M2Q5MGRiMDk0NjEwZDExMDliMmM2Y2YzZDU4ZjYyOTJlZDRlYWU2N2EzMTc2YThkNzRjZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDNjZjNmZTQwNGE2M2Q5MGRiMDk0NjEwZDExMDliMmM2Y2YzZDU4ZjYyOTJlZDRlYWU2N2EzMTc2YThkNzRjZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzAzNjBmOTBkNmRlNTE0MTFlZjdiNzcxNTlhODNjOWVhYWU0ZGQ0MzcyY2M2OWRkMTY1OTdhN2ViMWU2NzljYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTllZDgzZDhiNjk3N2NkNjU5MmRjODhmMzkwMmFlNzc2YWFiZDRkY2QxZTk3OGUwZTg3ZGExMDE4MGJkNmFhNiJ9"
+        },
+        {
+          "resource": "repo://src/platform/electron.ts#L454-L454",
+          "version": "repo-lines-v1:sha256:4cf4d6057317fd09234decb7dc2841cd0fc1449e41e3aa47e02effbfde1446a7:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGNmNGQ2MDU3MzE3ZmQwOTIzNGRlY2I3ZGMyODQxY2QwZmMxNDQ5ZTQxZTNhYTQ3ZTAyZWZmYmZkZTE0NDZhNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGNmNGQ2MDU3MzE3ZmQwOTIzNGRlY2I3ZGMyODQxY2QwZmMxNDQ5ZTQxZTNhYTQ3ZTAyZWZmYmZkZTE0NDZhNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjM3NDBjZjI1N2QwMGIzOWJkYzkyOTA0OTI3ODcyMzg0ZjYzZmViNzBhN2NjOTY4YzYwZTI1OTE3YTEzZDAyMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTcwY2VjMDk2OTE4ZjRmNzc2Nzc5MzM3ZjBhY2ZiMzQwODY0MjE3Y2UwNGZjNDhiZDZjZTljZmE5OGYyNzc1OCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_717c46ddccb8414cb63d6eced3746dc2",
+      "statement": "The app state lives in a Zustand store with immer middleware in src/state/store.ts (useStore), holding project, currentPaperId, saveHandle, undo/redo past/future stacks, theme, fontScale, pdfZoom, recents, aiMarks, reading position, self-update state, currentReviewer, and consolidation/screening UI state; the store reads getPlatform().getRecents() at module load for its initial recents.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/store.ts#L1-L66",
+          "version": "repo-lines-v1:sha256:97745e95e9e7d697ab5b043723f614b4a37dc31d0dba0595051853036b118941:eyJzZWxlY3RlZExpbmVDb3VudCI6NjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM0NzUwODdhMzk2OWI5Yzc2ZmEwMmZmNWIwMDlkYTAwMDdlZGUzZjA3ODllYzA0YjlhNDA2MWE5YmQyOGI0Y2UifQ"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L101-L118",
+          "version": "repo-lines-v1:sha256:2e1074995ef8637ae197c26152c2257802c90d55f4a61231313aecbeeac483ef:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRkMmVkYTMxZmU5ZWQyNGE1ZGVkNjM0YjJlZjNhNWM3Y2ZhNjRmNjFlNGI2NjdhNjE5M2E3Yjk0ZGMyMWFkYzciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI0NjdmMThjZGViMmUyN2I5MGQzNDc2YjI2ZWJlYjdkZTk5YWE3NTFmYzFiMDBhMTcwNTU2OGQ5ZjExZWQ4YzAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiNTgwZTk2NGY4M2E0NzNmNDNkNDQzODQ2Mjk0OWQ2OGI1NjAwZmRhNzg3ZjE2Mzc0NWQwMGRlODljYmYzNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY0Yjc2Y2NkYzI1OWYxZGQyNzMxNGM2NjAxMWZjMDJmYTM4YjJhYzYzMThiYTU0YjU1NTVlNDBlYmJiOWIwZmMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e6882a72c79545a5821f9f725500912b",
+      "statement": "Undo/redo stores whole-project snapshots in past/future HistoryEntry[] (capped at 100, session-only). Each entry is {project, paperId}; consecutive edits to the same field coalesce into one undo step via a module-level lastFieldKey, while add/remove/paper-switch reset it. PDF mark mutations each push their own snapshot, and history is cleared on project load.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/store.ts",
+          "version": "repo-file-v1:sha256:9a8700164d0130851923506c94814726ae97271f1ca0ccea87998313f7c35d8d"
+        }
+      ]
+    },
+    {
+      "id": "claim_fd541c4efcfa407481a99c30c56c1d8c",
+      "statement": "editorStore.ts (src/state/editorStore.ts) is a separate Zustand+immer store holding the project editor draft, working on the raw JSON shape rather than the loaded Project so editing the schema never prunes existing annotation data; on save it writes the JSON and hands it to the main store via loadFromText. It has its own undo/redo history and commits the focused edit before saving.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/editorStore.ts#L33-L60",
+          "version": "repo-lines-v1:sha256:7cb7ea11729a3755d190c0fa94f1b543c5792becdbe017b78003389d4bbc7fd7:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI4OTJmNjRmYzE3ZDFlZTdlNzIwMDMxNzM5ZTc3ZTAzMGJlNzAwMjYyMzQzYjZhNjZiZGY5MTQyYzY5YjQxNzQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFjMTRiZTg3N2RkODk2MDliMDE0ZjY4YmIwM2I5ZWE2NzcwOWVhZmRhOTg0NTlmYzk3YjQzYTRlZWUzMzQ2OTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdlMDA3MjEwZTA4MjJhM2U2MDYzMTBhODgyZmNjNTViODRiNmNmY2ViNzVhZDRkNTc5ZjNjNjcyYjE1YWIyZGYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_098aa39da777446490a1ed3cb5c09727",
+      "statement": "gitStore.ts (src/state/gitStore.ts) is a separate Zustand+immer store for the clone flow and commit/pull/push/merge/branch/history panel. Its dependency direction is one-way: gitStore reads and drives useStore via useStore.getState(), but store.ts never imports gitStore — so refreshing the repo when the open project changes is an effect in App.tsx, not a call from store.ts.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.tsx#L110-L130",
+          "version": "repo-lines-v1:sha256:f0890b248ab50b3ec8ff5bd4a14f1c5c8700100ddb12d7cb3b9b7d412d332cc0:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE2MzI1ZDIxMDRhOGU3Yjk5NDhlMjkyYTA3YWUzZDFkZWUzMTlkZjkzNDAxYzEyYWRiZTBlYzAxMzA4YzUxMzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIyOWQ4MzQxMDA0NjVkYWZjZmUzOWUxNDVjNjc2M2M5YTZkMjU5ODAzMWI4OTMxZjQ1MTZjM2E2MjliNTZmNGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU0MDJmOTljMTJmYjM2Yzc2ODRjMWNmNDEyMzIxYWUzZDUwOTI2Nzk5MDVlMjQ5MDQzOWU4NmRjYmRlNWI0N2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM2YTllNDUyMjZjMjc1NWRkMTNkNjZjZTcwYzM2NTBlODNkZjBiZTI4NzM5MmYzMWE1ZDNmZGMzMmMzNzM2MDMifQ"
+        },
+        {
+          "resource": "repo://src/state/gitStore.ts#L30-L40",
+          "version": "repo-lines-v1:sha256:a2d695b9bd623d511684215a32fdee57dec17fc1499ab29cfadb525047afde35:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg5MDg0Y2M1MGM5MjljOTE1ZmYwMDEzZGRkYjI3ZWQwMTU1NjY5ZmVkNGEyYjg5MGU2MTY1ZDFlNGJkNjA1YWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU4NjZiODk5Njc2ZWFhYmM0YzJhZTc1NDI0MDU1MmYyYjg2NGY4NjdiNDhlZjM1MmZkYzQ0ZjRhZTZlNGQ2MGQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4d41af0d2a3d4403b77967daad7c174f",
+      "statement": "aiStore.ts (src/state/aiStore.ts) is a separate Zustand+immer store owning the AI-assisted annotation flow (config/call state), kept out of the main store because it is a self-contained mode with its own lifecycle; the only place it meets the main store is apply(), which hands reviewer-approved values to applyAiSuggestions.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/aiStore.ts#L1-L21",
+          "version": "repo-lines-v1:sha256:3535dd0c98390e16a01af5c2b57fbe448228e6f3fee58429083339b77920f53b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYxNDk5MWVjZmU0NGJjNjhjOTVhN2ZjMzBlY2ZmMGQyNmRkZWY3N2IyNDczMTFjNTljYjRhMjg5YWE1MTA1NDgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_160352f3a05d454da0e6820f5199aceb",
+      "statement": "settings.ts (src/state/settings.ts) persists app appearance (theme via slr.theme, fontScale via slr.fontScale, autosave via slr.autosave, pane widths) to localStorage and applies them to the document root; main.tsx calls applyTheme(loadTheme()) and applyFontScale(loadFontScale()) before rendering React to avoid a flash of wrong-theme content.",
+      "evidence": [
+        {
+          "resource": "repo://src/main.tsx#L1-L15",
+          "version": "repo-lines-v1:sha256:c73482f61f819934006f6d1ee484f9d1c6c18067532213230e8ab481767a7073:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmNjhkOGQ2OTM0MDMzYmIxNGFlMWRmM2Q5MGNiOTg1OWE1MWUxMWIwNWQxZmZkZjcyNWU4NjdkMDk2YTU0NTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhZmJhMDUyN2MzOTUzYzRiNmUwZTViNTczOWJhODM2MTJmODA1M2JjZGM5NDY2NzMwMTkzY2QxZDU5MGI0MDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/state/settings.ts#L1-L30",
+          "version": "repo-lines-v1:sha256:b072f6bdf1f97f0295b82c5a096e2f0e41c56d65e0e5c158ae574a17a883e3b4:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI4YTM1NDc4MzE1YzI5ZTY4MDViY2IxMDBlOTI5NzgyOGMwZTIxYzk3Njg4OTVkOWFmNWNkOGJkOGFiYTBiYjUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_640f1e305bfb481faecc6a02e1b3a78c",
+      "statement": "The component tree is a three-pane layout (papers | PDF | annotation form): App renders Toolbar, a workspace CSS grid with PaperList, two Splitter drag handles, PdfViewer (or ScreeningRecord for screening), and AnnotationPanel (or ScreeningPanel); AnnotationNode renders the annotation tree recursively, Field renders per-type inputs. Modals (ConsolidationDialog, GitDialog, AiDialog, GitMergeDialog, GitHistoryDialog, etc.) render at the App level.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.tsx#L193-L200",
+          "version": "repo-lines-v1:sha256:7f3866f394b67261699ab4b43b49908bd9ff764515cddd27e69f857cdfd1d582:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTcyMTZlOGU5YzBhMWE2OGQwNmMyZmJhYTVmZDIxMzk0ODJiOGVmZDBhMTkzMTViOTE1ZTZjY2U4NDlkODlkYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiN2QyNTFjOTIyMmY2NTNlYzA5NDJjNGYyZDMyNmRkOWEzNGM2ZmI0YWY0MDUyMDllZGU3Mzc2NDMxOGQ5NWE2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGJmMzlhODcyMzY3MGViMGExYWZiYTEzNmExOTBhMzcyNzM3NmMyYmZkMDExZjBmZWEyMTM1NzU1YjRmOGQ2MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTMwODhjYmY4N2Y4MzdiYmU2YTUwMDQ0NGE0OWQ2OWYwOTMxYjIxNzU3OWNkMGNiYWIwZWI1MmU4N2JiNjVjYyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_8f537e6b718a490da4fed02b7665c379",
+      "statement": "vite.config.ts uses base: './' (works from server subpath and file://), injects __APP_VERSION__ from package.json, and conditionally adds vite-plugin-electron when ELECTRON=1: main is electron/main.ts and preload is emitted as CJS with a .cjs extension (package is type: module). The renderer is a plain web build with no Node in the renderer.",
+      "evidence": [
+        {
+          "resource": "repo://vite.config.ts#L1-L46",
+          "version": "repo-lines-v1:sha256:e87add724549b664df6b2bf26d27e89a86beebb3ae2319c546ac6efeffc48086:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFiOTE0ZWZhNWRlMjhlMTAzZjE5ZWUzMDcwNGE1YWQ3ZWU0ZTg5MGUxOTQ3MGU5YTg1OGEyNzJkNTc5MGI2ODAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk2NGQ4YzA3MzQyOTg5MzEwMTU3NmQ4OGQ5OTEyN2U4OWQ2ODkxZDNiMTdlODlkZjAyZWM5YWU3MDcwNWQ4YmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRlNTY5NWZhZTI1ODI5NDYwNGQ1MmRlNjE1OGM3MTYyNDhiNTFkYmZhNTU2YWE1YzU1ZWFkZmE5MzgxMDk4ZTQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_565eaa338b6846008522b35d9b3b2202",
+      "statement": "TypeScript is split across two project-reference files coordinated by the bare tsconfig.json: tsconfig.app.json (renderer, include src, types vite/client, JSX, DOM libs) and tsconfig.node.json (main/preload/build/e2e, types node). Both are noEmit: true and neither is composite, which lets pure modules like src/git/url.ts and src/git/relpath.ts be imported into electron/main.ts under the node program and reached by vitest's src/** include under the app program, typechecking identically in both.",
+      "evidence": [
+        {
+          "resource": "repo://tsconfig.app.json#L1-L25",
+          "version": "repo-lines-v1:sha256:5e6ab96fe8d7313bad38d32c23a8cf9dbfd2d3c4a09d6a29cad54df35ea6c09b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE2ZmIwOGZkYTFhY2I5NTdiNjExNmJkMzc4MTFhMWZlNDFhMDE2MTFjMDYzMWVkYmY3ODZkNjg4OWEyN2E1NWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://tsconfig.json#L1-L7",
+          "version": "repo-lines-v1:sha256:770b4140bbb581e2dfd9ea9946ffc9c75a1d86ba7d2db5f77c83e37cbdf9d808:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTZmYjA4ZmRhMWFjYjk1N2I2MTE2YmQzNzgxMWExZmU0MWEwMTYxMWMwNjMxZWRiZjc4NmQ2ODg5YTI3YTU1YyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        },
+        {
+          "resource": "repo://tsconfig.node.json#L1-L29",
+          "version": "repo-lines-v1:sha256:4ef0d82fd6f52066de3d99a775cd21a1ef5d4366ebbe1fa3529e30f247913d7c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE2ZmIwOGZkYTFhY2I5NTdiNjExNmJkMzc4MTFhMWZlNDFhMDE2MTFjMDYzMWVkYmY3ODZkNjg4OWEyN2E1NWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_922dbe3ab48e46469c8a35be949aef5a",
+      "statement": "On disk, a project stores only schema and paper metadata in project.json; every reviewer's and the consolidated annotation answers live in a sibling annotations/<paperId>/ folder, one file per reviewer plus a consolidated file. The split was introduced to avoid git-merge conflicts between reviewers editing the same all-in-one file; the model layer keeps the logical whole-project shape and ElectronAdapter.saveProject does the split, while the read side reassembles a split project back into that logical text before handing it to the renderer.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/electron.ts#L232-L240",
+          "version": "repo-lines-v1:sha256:ac040c426f6f08d301fcc266145711e1d5d3357d42254ea5cab9eacd21752771:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjRjNmY2OWJlZDI1ZDFhODM1MjY1NTlhNDQ3NWM5ZmU3NDM2MWQwYmNlODdhYzJkYjI3NWQ2MzQ5ZjVlOTNmMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGE5YTVlNTQ0ZGMwZDk5OGVmYmQ4ZDgyMjhiYWFkMjU0M2E3YzgyN2M5MzI3ZDRiMmZlMGJiZTc1YzBjMTZlOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTdkODYzMmU1NGU5Mjk4YWJiOTU4NzI3ZTJkNTE0MDhhYmFmMTM2NjAzNTM3OTEwMTQwYWJmNjViMzBhYjYxMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDg1MjU4NGQwNzNhNGJlZGIwOWQyYzJkMmVhMDYzODhkNjllYzYyOTI4MDAyMWFlM2Y4NDc5MDhjYzUyYzFlYyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_d008f538eb744b648d3ba76fae24b004",
+      "statement": "currentTree(project, currentReviewer, paper, create?) is the single routing decision every mutating action and reader goes through: single-reviewer → paper.annotations; Consolidation → paper.annotations (the tree that ships); a numbered reviewer → paper.reviews[N]; nobody picked on a multi-reviewer project → null. Mutating actions pass create=true (safe inside immer set) while read-only computations pass nothing.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/store.ts",
+          "version": "repo-file-v1:sha256:9a8700164d0130851923506c94814726ae97271f1ca0ccea87998313f7c35d8d"
+        }
+      ]
+    },
+    {
+      "id": "claim_7f47d88c2e12478ba46ae0030de487d5",
+      "statement": "isElectron() is defined in src/platform/adapter.ts and checks for the preload-bridged window.slr object; it is both the App.tsx discontinuation gate and the selection criterion in getPlatform().",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/adapter.ts#L318-L321",
+          "version": "repo-lines-v1:sha256:10ca21e3bc34bb3871d3b482246baa874ede8557b1160db79ba40b3d0dfad3b4:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiN2VmYTBkYjY2MzYxNTgxMGM5NzI3MmJhZjgxNzk1NzU4YzEzZTYxY2Y5ZGRhZWRlMWJkZmE1NDU3NDNmOTVjMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDY0NjA0OGIwOWRmM2M4ZjViYjE2MmJlYmUwZjVjNzMwOGQzYWZlMDc4Y2Y5NjgzY2ExYWVlNDRlNmMzNWUwNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        },
+        {
+          "resource": "repo://src/platform/index.ts#L19-L21",
+          "version": "repo-lines-v1:sha256:5134832ae2215be68c5511f657df73b3da9d9b686456873d5cd19052a6940875:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjZhMjBjZWQ4NDQ1YTMwYTUxZjgzZjhhODk0MGZhYTM3NjFiZGRjZGQyNWI0ZTQ0M2UwNWZjYjJkYjJiZTk3MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWYyYzc4MDQwYTY0YTEwY2RiMWRjN2EzYzM3MDk0Zjc5OWQ4OTk5MzkwMzk1ZjI0ZTk2NWVlOGMyMDlhMDA5OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzZhOTgxZTJlNWNkNmQ0OGE3M2Q0NzFiM2I3ZDBhZTliZjgxNDI1OGY5YjE0YWQ3MGJjMjJiOTg1NmUwN2RlZSJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.4.0",
+    "at": "2026-08-26T09:23:05.972Z"
+  }
+}

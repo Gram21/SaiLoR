@@ -1,0 +1,388 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:b60aaaa4012c1f43c5145623596d36210801b23aa647fd58849aadffe77c7c9d",
+  "claims": [
+    {
+      "id": "claim_a861526a7b204e6f8aa8abf90e74c4fb",
+      "statement": "SaiLoR has three deliberately separated test tiers: Vitest unit tests (the default, fastest tier, run on every PR), a jsdom integration suite that mocks the platform seam and spins up real scratch git repos (slower, kept off the default run), and Playwright/Electron e2e smoke tests for the real main process / contextBridge / IPC.",
+      "evidence": [
+        {
+          "resource": "repo://playwright.config.ts#L1-L19",
+          "version": "repo-lines-v1:sha256:05d3d7bbe2e98e4bc634fdf2c86aa046dfbaa8b837991aef7f7c5dba54a7875a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI3YjQ4ZTU2MDY5YTBlNGRhODA5NmI1ZTIyNTU1ZjlhM2I3YTVjMTVmY2Y0ZDlhM2RhNTA1MTE5ZGMyYjYyNWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://vite.config.ts#L59-L75",
+          "version": "repo-lines-v1:sha256:ddd7210cc88ebf2de4663b3379bc06f4a87afbcd6a93378ef0a724e2ff2b92bd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5MzZkZjdhNWEzYWFmMTgwY2ZmZDFkNjVjNjQ2ZWY2YWVhMzUyY2MyNzc3NDY4NjE5OWNkOGZiM2U4OTljN2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEwMWFjMzA5OWJiMWEwZWE4NzQ3NDRmZTFiOGJlYzA3YzRiZWU3NjA3YjgyN2NmYTFlNjhiOTU3YjM1MDY5NmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUifQ"
+        },
+        {
+          "resource": "repo://vitest.integration.config.ts#L4-L20",
+          "version": "repo-lines-v1:sha256:215e3e35d25ad3885ac139fb82c6165ef2c03bd9ea45a15c2eb0bb5dfbc55b58:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcwMGNiNjFlZjhiYzU2YjMxN2Q5ZGMyYTMyNDE5ZDZkNmEzYzJjYmNiOTEyM2MzYjk4NjdjMzQ2OTJiMzgyMTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjllOGFkMTFiNDJhNmQxNzQ0MzA0ZmJlNmQ3MDAwZjFlZDJjZjQyMTRhOWU2OTZhZWJiNTkzMTcyOGYwZTA0ZjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_963822971b6d42aaad66333527580c8a",
+      "statement": "The Vitest unit tier is configured in the test block of vite.config.ts with environment jsdom, globals true, include src/**/*.test.{ts,tsx}, and an exclude list that explicitly drops *.integration.test.{ts,tsx} (the exclude replaces Vite's default list rather than appending, so the usual node_modules/dist/etc. entries are repeated alongside it).",
+      "evidence": [
+        {
+          "resource": "repo://vite.config.ts#L59-L75",
+          "version": "repo-lines-v1:sha256:ddd7210cc88ebf2de4663b3379bc06f4a87afbcd6a93378ef0a724e2ff2b92bd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5MzZkZjdhNWEzYWFmMTgwY2ZmZDFkNjVjNjQ2ZWY2YWVhMzUyY2MyNzc3NDY4NjE5OWNkOGZiM2U4OTljN2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEwMWFjMzA5OWJiMWEwZWE4NzQ3NDRmZTFiOGJlYzA3YzRiZWU3NjA3YjgyN2NmYTFlNjhiOTU3YjM1MDY5NmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_159be14b5527430cb06b04a9815ec717",
+      "statement": "The unit tier runs via `npm test` (`vitest run`) and `npm run test:watch` (`vitest`), as defined in package.json scripts.",
+      "evidence": [
+        {
+          "resource": "repo://package.json#L15-L16",
+          "version": "repo-lines-v1:sha256:292a91d6898558f59a41a6cdbb07fd4a5fb4e27991e3d1c3b4f71a6071db0fd0:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjQxZmMyNDllZmE3MWIwZTdhOTdmN2Y0ZWI4Yjg5NDk0YTU5Y2IzZjg3ZDcxYmU2YWFkNjNhYTNiYTVlM2QzYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGNkYmQ3Y2EyZDEzYWQzNTFkMjBkNzYzOTJjNDI3MzI3NzdmYjU3MmVlZmRjZmI5NTU1ZjcwYjQ0NDQ5MTIyNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGZjMGRkNWRkOTA0NzQ4NTg1MWZkOTJmZTgwZThlMjQ5YmNjNTJmYTBkYTNhNDZjMWEzMjUwNDhhZDEyNjFjYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzNjNGNlNjlkMGEyNWE5MTk4N2FhOTlhYjM2NTFiZWM2ODMwNDU1MmQwMWI0YjI0OTdmNTQwMTRiNWIxMzEzNyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_3849787e01564b62946b34b029c25cea",
+      "statement": "The integration tier uses a standalone config (vitest.integration.config.ts) rather than mergeConfig over vite.config.ts, because Vite's mergeConfig concatenates array fields like test.include instead of replacing them, which would silently pull the ~90 unit test files into the integration run too.",
+      "evidence": [
+        {
+          "resource": "repo://vitest.integration.config.ts#L4-L20",
+          "version": "repo-lines-v1:sha256:215e3e35d25ad3885ac139fb82c6165ef2c03bd9ea45a15c2eb0bb5dfbc55b58:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcwMGNiNjFlZjhiYzU2YjMxN2Q5ZGMyYTMyNDE5ZDZkNmEzYzJjYmNiOTEyM2MzYjk4NjdjMzQ2OTJiMzgyMTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjllOGFkMTFiNDJhNmQxNzQ0MzA0ZmJlNmQ3MDAwZjFlZDJjZjQyMTRhOWU2OTZhZWJiNTkzMTcyOGYwZTA0ZjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_14f77c01e1fa45eb8f968764ac139af1",
+      "statement": "The integration tier runs via `npm run test:integration` (`vitest run --config vitest.integration.config.ts`) and includes only src/test/integration/**/*.integration.test.tsx.",
+      "evidence": [
+        {
+          "resource": "repo://package.json#L17-L17",
+          "version": "repo-lines-v1:sha256:1a5e3d2b1ed0c8c07710d1292f9a92870dc4882046a4603f6451cf3b92943628:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMWE1ZTNkMmIxZWQwYzhjMDc3MTBkMTI5MmY5YTkyODcwZGM0ODgyMDQ2YTQ2MDNmNjQ1MWNmM2I5Mjk0MzYyOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMWE1ZTNkMmIxZWQwYzhjMDc3MTBkMTI5MmY5YTkyODcwZGM0ODgyMDQ2YTQ2MDNmNjQ1MWNmM2I5Mjk0MzYyOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjQxZjgzNTllNTZmODM4MmY4MzI2Mjk0MzMwMzkzMDYxN2RhZjNhNGQwNjU3NGZlMTVlYjExMjY1NWNhMWU0NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWUyMTc3MWZiNjY2Zjk4ODIwYzZlNTNjZTM3MTJjODIxMDRlNDE2ZDMyN2JiMTA4ZTFjZDZiMjE4YzQ4NjYyYiJ9"
+        },
+        {
+          "resource": "repo://vitest.integration.config.ts#L17-L20",
+          "version": "repo-lines-v1:sha256:0d131393bae78ed29291c18093a3bc086c06b2d44e348ad5fa391c59951f0f2d:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMGVhZTdmNjM4Y2UwY2E1ZTg3ZmZhOTIzZDY1ZGE5MzJkZGE1YThiMzExM2M1ZDVhNmRhYjg2YmY1N2QwMmY2YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQ1Y2QyZmI0ZjNkZjg4NDUxNTI1NWIzOTUyM2YyZjhiNTQ3MmJlZWE5ZjU2NmZmY2EyMDRkYjgwMjU2MTA0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDQ1OThkNjJhODQ1NzViNDRiMzk2NzFkZDU3ODkxOGVmZTJhOTgwOGZjNDQ1ODE1ZTk1MmY5YWY4MzIxYmUyYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODU4MGI3NjUxOGRhZTk3OWZhZWJkMDIzNjdhMjkyOTJhNTBkOTc2MDkyMjUxYTM4YTZjZTMwODgwYmE0MjgyNSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_c60680b918f74fa9b7d8432c308571cb",
+      "statement": "Integration tests mock getPlatform() to inject a fake PlatformAdapter at that single seam, which makes the whole app run under jsdom without a real Electron environment (the same interface that lets the app run in Electron and in a plain browser).",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/adapter.ts#L59-L95",
+          "version": "repo-lines-v1:sha256:2ea8df1804f5ca819a79554ca4ee583a3e0e8a983ea9f7295b880523da2d7970:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmOTEzOWJhOTM1YzkzY2IzMGQ2MjZmZGRiZDFlYTU5MWI3MDJjYjM4YTUzMjQyYzdhYTcyMTI3MTAyMzkzYWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImExNDI4Zjg2ZTNlZjI4MmM0Yzk4ODdlNDljNjNhMDVmMWJjZWM5MDY2NTljZDEyYTZlNTUwMmFkMmRhOGFmMGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdmN2E3ZThlNTIyMzU2MzM0YzJiODMyNjg4MTNmYTdhNmZmMmU0ODNkNDFmODc0YTA0MWJiMWQzZTMxZmNjYTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBkY2MyMzgwNjUyNDMxOTc4YjU0YmYxNTNhMGQzNWQzMmQxN2VkYWUxZTk5MDQ0MzcyOTYyYjM1ZjA0OTEwNWMifQ"
+        },
+        {
+          "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L159-L189",
+          "version": "repo-lines-v1:sha256:d371bd797621959ab8457c242cb07620fe634ff5ad094ed240bfcd635b7b4205:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY3ZjA5ZWI5ZTE2MWVmMjQwMjkzYmVlNjQwYjBkYTc2MjI3NGMwYTBiNzMyMmY1YThmZWJiYTM0OTQzMjZhMjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA5YTEzMjA3MDRmOTJiNzc3NTBiYWI2OWM0ODIyMWMyMjMxNmY1YzkyYzRlZDQwZmRiOTg3ZTkzNjQ0ZmFhMjkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlmMTVhZmJkMTE3NjlhM2MxMTkzYjRiMGJlZThjZGE4MzRlMDBiN2IzNDdhNDE4MWY0YTc4ZGI5OGQ2YTIzYzUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlkNDUyZjBkMTMwOTVmNTMwNzJiNWVlMTdjZDUxOTM0Yjk0MDhlZTMxODQwOTI1NDRmM2Y2MTlkYWE5M2JhZGIifQ"
+        },
+        {
+          "resource": "repo://src/test/integration/screeningImport.integration.test.tsx#L23-L64",
+          "version": "repo-lines-v1:sha256:54cd9c269e9149fb8365def15ceb3b04baf617c4769804e7eded7876177139e2:eyJzZWxlY3RlZExpbmVDb3VudCI6NDIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY3ZjA5ZWI5ZTE2MWVmMjQwMjkzYmVlNjQwYjBkYTc2MjI3NGMwYTBiNzMyMmY1YThmZWJiYTM0OTQzMjZhMjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA5YTEzMjA3MDRmOTJiNzc3NTBiYWI2OWM0ODIyMWMyMjMxNmY1YzkyYzRlZDQwZmRiOTg3ZTkzNjQ0ZmFhMjkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ5NjNiMjE2NWRjNjI4OTllZmU5ODYzZmYxNGQ1OGM4OGUxNjA1M2FlMjBhMDk0NmQ0NDg5NzRjZmRiMTA3YTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcxMDRkNTM4MjRjYWY2YjZiMmNlYzdkZGNmZDE5NDA5ZWQ4YTVmM2YyNzhhNzE5Zjg4MDY4ZDAyYWI4M2NmNTIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c687ebb5e4b5406bbe9c8b3566a955e4",
+      "statement": "Each integration test spins up a real scratch git repository per test (mkdtempSync, git init, initial commit) and wires a fake GitPlatform whose status/commit/beginPull/etc. shell out to the real git binary against that directory, so merge/pull/push/branch-switch/discard flows run against genuine git rather than a stub.",
+      "evidence": [
+        {
+          "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L199-L209",
+          "version": "repo-lines-v1:sha256:daffd51efa8e58dd1f34382b909e9c5e01f76ddbc6b36a523c6cc97b66a79b36:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRjNTc2ZjRlZDc3YTY0OGUxZDBkMDc5MzMxZGM5NzI2NjE2NjhlY2Q1ZTYyMWM0Mzg4MDdjOGRkODgyNjRlZDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEzODEyZmI2NzJmOGIwYjQ0OGEwMzQzN2I5OWNiYzEwMDlkMzAxZmExZDZlMjFmY2FjOGE2NWNjYjIwYWU3NGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFjZDQ3YTQ4ZjM2ZDkxNDA4MDk0MjdkMTc1YzgzYWQyNjI2ZDBlNjgwMDY3YzdiYjg1ZWU4ZDI1MTdiNWQxZWMifQ"
+        },
+        {
+          "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L82-L158",
+          "version": "repo-lines-v1:sha256:d40463bf6e313830ed0ea014bf620f1719c2d3d1442199b3fb27fca2607a99e1:eyJzZWxlY3RlZExpbmVDb3VudCI6NzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY2YmEyYjU5OTY3MzJlNzEzOTBkM2UwY2M1YjliZmRmZTU4YWUzZDZkMzgzY2VhYTMyNzRiMzc1OTY1NWRlYmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAxN2RmNTkyYTA1NjUwOTViZDFmMDBmODQ5ZGY1ZmUxODcwZmFmMzJjN2NlYjRjMDJiZTBlNDI5Yzc5OGQzMWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY2ZWVjMmNhYjBmYThkY2FiYTE0YjFmMmMyMzUzMzc2M2JiOGEwMjc0NjI5ZmU4OGVjOTdkMGZjMzY3ZjVmYjMifQ"
+        },
+        {
+          "resource": "repo://src/test/integration/pull.integration.test.tsx#L35-L120",
+          "version": "repo-lines-v1:sha256:f9fee6ddc5a2b424fbef41f64b8e9cae25176e7dc89fa9ee590159747f9d45b2:eyJzZWxlY3RlZExpbmVDb3VudCI6ODYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk0OTNmMDNmYzhmNDRmZWQ0MDM2ZWFlOTQ2Y2ZhY2IzZDU2MjQyODg4NDEzM2Q4NGJiNTg1Mzc2NDYwYWE0NWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhNzRmYTRiZDc5YzU3N2UyYmEwN2E4NjIwYzFhZWZlNDAyZDhlMDdkM2EyNTRlZmJhZmY3NjliYTcxZThhZTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNjN2YyZTRiYmU0Y2M5OTBmYzJjZGU1NjBjZjQ1NDQyZmYxOWYwM2NiODdjMGJhNjI5NThhOThkZGZmMmVjMWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFiNWQzODQwNWRmZjI0MWRiZWYyZDM1ZjFkYWYyYmQ2NDg0NDY2Njc2N2NkMjg2MzEwZGVjMTY0OTMzOGQ4NjEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_777e09ef18c94fc7a02a40ac5213a0b9",
+      "statement": "Integration tests render the real React components with React Testing Library (render/screen/userEvent) and drive them with real clicks/typing/DOM events, not direct store calls; because jsdom performs no real layout they stub getBoundingClientRect/Range.getClientRects/ResizeObserver and mock react-pdf, but everything above that (selection capture, mark creation, the comment popover, annotation form, Git panel) is the genuine component code.",
+      "evidence": [
+        {
+          "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L216-L339",
+          "version": "repo-lines-v1:sha256:e6e34c740d1969e11b1222ee14608eb41037cc318e919aa2d4130e23fb0e8c35:eyJzZWxlY3RlZExpbmVDb3VudCI6MTI0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI1NGM2NmFhZjIxOGFkZDZkODNlMDJhZTJjNzA1Y2JmYmY4NmI5MTQwMjllYWE0ZmQyMDhkOThkMmQxNzg3NjJlIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJiMjM1MjU4OWMzNGQzYzYwNjg1OTMxYjZlY2M0ZDUwOTkxYTdjNTZjOGZiYTI4OTQxMTQ2NTc2OTAyNzJjYWMzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI4NTUxNDU3ZDI3MmU4OTdlOWFmNmU1ODM0MTJkZDdkMzI3ODQ4ODY5NTJjOWEzZDNjOWE1NGY1OWY1NTM5NWIzIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MSwiZm9sbG93aW5nQ29udGV4dEhhc2giOiI4NTgwYjc2NTE4ZGFlOTc5ZmFlYmQwMjM2N2EyOTI5MmE1MGQ5NzYwOTIyNTFhMzhhNmNlMzA4ODBiYTQyODI1In0"
+        },
+        {
+          "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L25-L80",
+          "version": "repo-lines-v1:sha256:82cf737add59b813318f5e07f266ee0e3dcf96ca7d7097e6bbd83e8b8c0b7310:eyJzZWxlY3RlZExpbmVDb3VudCI6NTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY2YmEyYjU5OTY3MzJlNzEzOTBkM2UwY2M1YjliZmRmZTU4YWUzZDZkMzgzY2VhYTMyNzRiMzc1OTY1NWRlYmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVjMmQ3YjBlNmZjNGYwYzI5YjhkZjgzMmIzM2Y1NjJmZmEwMzg1MzQ4ODYzNWEzNDNhZTNhMjQ2NDcxNzRhMjIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRhZTljYzNjOGNmZjcyNzdhNDU0ZWIwYzUxNTNiOGFmNDk5ZWM5Nzc3NmJmNzFmOWFiMjg1Zjc1YjAzMTE1OTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgwYzQ1YzM4YzdmMTMzODRhM2RiYWRmZjk1OTk5ODBlNzNkZTdjNjk4ODMzNDcxZDQwZmVmM2ZiYjgzNTM1NGUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f94a8a9e8e694d068a9089fcd24f6ede",
+      "statement": "Integration tests verify outcomes independently of the app by reading the scratch repo directly (e.g. git log -1 --format=%s, git show HEAD:project.json), so a green test proves a real commit landed rather than just that the store claims it did.",
+      "evidence": [
+        {
+          "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L330-L338",
+          "version": "repo-lines-v1:sha256:04c92a35c9667866fffc917ff3769d652c1ea3bc0a03ac5a9708877c09b10455:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTc1YzcxNTkyOGQ1ZmQxYjg3MzMwZGY1OWU0NmIyMGU1MzVjN2MyNjE1ZmU0OGVlZjI2MzY5NjBmOWU5ZTcyOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODhmMTQ5NzAyYTNkMmQ5MjE5ZDUxNWUyYzBkMWM2ZWJhNGZjNmIwODgxZjExMDBjM2E5NTA2NzdmMWViOTYwZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjIsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjFiMjA4MmFkZDlhMjllMDYyZTYwZDQ2ZGJhMWUxZjdjNTNhMGUwNTBiODgxMThjMTEwMjE4YmNjZTA1NTJkMCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_2ec262d7da574ae8872ec76e97a49c13",
+      "statement": "The integration suite in src/test/integration/ covers annotationWorkflow (schema authoring, PDF annotation, git commit), consolidationAndMerge, branchSwitch (stash-carry-over field-level conflict), pull (real git pull against a bare origin diverged by a second clone), discard (writeWorking not commit), pdfReadingPosition, and screeningImport.",
+      "evidence": [
+        {
+          "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L13-L23",
+          "version": "repo-lines-v1:sha256:290634ca00b0146140ad05440d2af814961c8f1121e7c8e5534eb4aed984ec2f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY1NmM3ZGZmMWE3Yjg2Nzg2NjFjZWJkOTEzMmUyOTM1YjYwNTgyNWM4ODM2NGIzNTg5Y2QxZjg3YzQ2MmU4MDQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY1NTQ3YjAxZjJiYzA4MWRkMDg0ODk3MmJjZTBiOWQyYjliOGY3Zjc5OTczYmRjYTk3Mzk2NDg2MWUwOTA5ZDgifQ"
+        },
+        {
+          "resource": "repo://src/test/integration/branchSwitch.integration.test.tsx#L12-L19",
+          "version": "repo-lines-v1:sha256:581910509b4d04930a12b674a69f2b8bb390eff0c51420c7686357c2c1941856:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTNiY2U2NDEyMGMyYTI2NjA0NmFlMzI1YjA1ZjlmMGM1M2NlMTdjYjE4NmVmZDBhYWM2ZmMzZDUwMjk4NGVlOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTgzNzYxMDg0MDJhYzgxNjk4MzkxMTQzZTExMDBiYzkzM2UxMDlhZDJmYmMyM2Y5M2MyOTc3ODgzMjliNjA1NiJ9"
+        },
+        {
+          "resource": "repo://src/test/integration/discard.integration.test.tsx#L12-L23",
+          "version": "repo-lines-v1:sha256:87c708ca7370673d4a746851f2e6ec86548534665917f961b233bb1d79a6dd22:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY1NmM3ZGZmMWE3Yjg2Nzg2NjFjZWJkOTEzMmUyOTM1YjYwNTgyNWM4ODM2NGIzNTg5Y2QxZjg3YzQ2MmU4MDQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE4Mzc2MTA4NDAyYWM4MTY5ODM5MTE0M2UxMTAwYmM5MzNlMTA5YWQyZmJjMjNmOTNjMjk3Nzg4MzI5YjYwNTYifQ"
+        },
+        {
+          "resource": "repo://src/test/integration/pull.integration.test.tsx#L12-L20",
+          "version": "repo-lines-v1:sha256:a50ff836b167c2541a975d4c7356d8160ca67f78793439b97a536734b402a710:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTMwMjA5NDkxMmY5MjcyODZlM2JkZDViMGVlOWY4NzUxZWRjMWY5M2MzYjU4YjRlZTMwYWJhYWE5OTFjOTY3MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODk1YjZjNGU3MDE2YjViN2IxYTU5ZjQ4Yzc3ZTJiMzRkMWI3YjQ3MDkwYjAyMmUwMDQzODY2MmI1MGJhOGU4MSJ9"
+        },
+        {
+          "resource": "repo://src/test/integration/screeningImport.integration.test.tsx#L10-L18",
+          "version": "repo-lines-v1:sha256:102938068520940560153115401a49809fe90197bdad45c9f289e5ac4800c67c:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2RiNWZkY2YxOWVkYmMzMjZhNjY3OTU3ZmRhM2NiM2E5MTQ5YTMwM2JkMWY3MmZmMWQ4ZDVmNmJkMzZlYTc2NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTgzNzYxMDg0MDJhYzgxNjk4MzkxMTQzZTExMDBiYzkzM2UxMDlhZDJmYmMyM2Y5M2MyOTc3ODgzMjliNjA1NiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_d42b74f8857b4384be5e4c00e6eb94ba",
+      "statement": "The e2e tier runs via `npm run test:e2e` which is `cross-env ELECTRON=1 npm run build && playwright test`; it requires ELECTRON=1 and a built app (the script builds dist-electron/main.js first).",
+      "evidence": [
+        {
+          "resource": "repo://package.json#L18-L18",
+          "version": "repo-lines-v1:sha256:4a1985784cbf3731456c397febc3d89f72bd1714b74724ae82cb97b33d7116f1:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGExOTg1Nzg0Y2JmMzczMTQ1NmMzOTdmZWJjM2Q4OWY3MmJkMTcxNGI3NDcyNGFlODJjYjk3YjMzZDcxMTZmMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGExOTg1Nzg0Y2JmMzczMTQ1NmMzOTdmZWJjM2Q4OWY3MmJkMTcxNGI3NDcyNGFlODJjYjk3YjMzZDcxMTZmMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjMyNTRiZjNmMThiNzE4NGIwZDNlZDAwOWY1ZTQ5YzhiYzgzY2FmM2NkYTRkMjBiNzk5Yjk4NzJlMDg3ZGVmMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDM1NTc3ZDExNzNkOGQ2YjkyYjk1NTdjMDZjNzY1OTY0NmIzZDRiNGUyMzc3MGVmMDNhN2ExYWM1OTViYmEwNSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_5ad433de33c74b16ada7382cc425fc59",
+      "statement": "The Playwright config is an Electron smoke test for the class of bug jsdom structurally cannot see: the preload bridge and the main process's IPC handlers actually wired up correctly; it deliberately does not duplicate the UI-shaped coverage already in the jsdom integration suite, and runs with workers: 1 because each test launches its own real Electron process with no shared state to race.",
+      "evidence": [
+        {
+          "resource": "repo://playwright.config.ts#L1-L19",
+          "version": "repo-lines-v1:sha256:05d3d7bbe2e98e4bc634fdf2c86aa046dfbaa8b837991aef7f7c5dba54a7875a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI3YjQ4ZTU2MDY5YTBlNGRhODA5NmI1ZTIyNTU1ZjlhM2I3YTVjMTVmY2Y0ZDlhM2RhNTA1MTE5ZGMyYjYyNWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d628efea66d5449882b78b0dce0e2387",
+      "statement": "The e2e tests drive the window.slr bridge methods directly (openPath, saveProject, gitProbe, gitStatus, gitPush) rather than through the rendered UI, because the native Open/Save dialogs a real user click would hit are exactly what Playwright cannot drive here.",
+      "evidence": [
+        {
+          "resource": "repo://e2e/openSaveProject.spec.ts#L45-L95",
+          "version": "repo-lines-v1:sha256:f35ee3e0463ae5d2e928d91f3264bd5255c4ecaed181d3b3535a7b69924a4ed6:eyJzZWxlY3RlZExpbmVDb3VudCI6NTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJiYmEwZjdmZGQ4MTAzZDQ5YTNhNGI4MGQxMWZiNTAzNGMwZDhlNTk2ZDQxZTk5ZWFjNTYwZDI0ODhlY2I3MTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImExZDA5ZDExZTQ0ZjNiM2U3MTBkMTVlZDMxYTMyMjhjN2UxYzFjYWE0ZDhlMDllNmZmMDIxZDU4YzgwYTU2NmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc3MDk4ODcwMDEzNTU2OTVmY2VmZjY4MzYwMGI5MjMwODMxZDk3YTI5YTZiMTQ3YWM1MmQ5MWIyNmIzN2Q1ZTUifQ"
+        },
+        {
+          "resource": "repo://e2e/openSaveProject.spec.ts#L7-L23",
+          "version": "repo-lines-v1:sha256:b4f1fb401ba2696d9c966ff7066fc6dc5bdae2dfb531f9af4146961b7dfc895a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIzZjFmMTBmODYyMGQ4YTcyOWZhMjhmNTdiOTQ3ZmRlM2M0Y2Y0ZWFmZmQyYmJhZWUzNjFhYzY2YWEwZWVlODAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMxZTdjMzVjMDgyMjA1YTI1NDExNmFmMjY0YzkyMDQ1MmY3YWJlNzJmYTE0OGJjYjg4NjUyMzRiMjliOTYzNmUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c60abca0a20c4d6fabc5ad032327a5b2",
+      "statement": "The openSaveProject e2e test exercises a real guard in electron/main.ts's project:save handler that refuses to write to any path not first opened via project:open/openPath (knownProjectPaths); it proves the guard is real by asserting a save to an unopened path is rejected with /was not opened or chosen/, while a save to the previously opened path succeeds and writes through the real IPC handler.",
+      "evidence": [
+        {
+          "resource": "repo://e2e/openSaveProject.spec.ts#L58-L94",
+          "version": "repo-lines-v1:sha256:f45b2e338dcce49e3b85e09a0c7ab0e6fdb2c649fe80c17802c073afa14ad9fe:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJkNzlhYTY0MDk3OGI3NWFiMDU4NDUyODNmOGVkZTgyYmY0MDg3NGE0NWY0ZGEyYzNjZTljZjAzMzAzMmM5OTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA4ZDUwYjk5YTgyNTQ0NjIzZjc1NjI5ZDg1YzEzYTJhN2RiYmIxYzkwOTcxZDdhNzYyNzYzYmUwODc1MmRkMGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU5NWY4YjIzNDhjOTlkMGQ0N2QwMjBkYTExNTkwOTMzOWNjNDM1YTk5YzJmMmMwYjYyZWQxZmFmMmZkZDlkYmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ4Y2FlZTNjOTM1YjdmMjk3ZjIxNWQ1NWEwYTJjMDhkYmFkNWZlNjFlODViNzEwODE1MDllMjI5ZDIzZTUyNmMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b479606e150848509dd210ef378732e1",
+      "statement": "The openSaveProject e2e test is the only one that reaches electron/main.ts's real runGit/gitEnv/GIT_SAFE_CONFIG wrapper (which strips GIT_DIR, disables hooks/pager/ext-diff) through the real contextBridge/IPC path, via gitProbe (available true, version matches /git version/) and gitStatus against a real git directory.",
+      "evidence": [
+        {
+          "resource": "repo://e2e/openSaveProject.spec.ts#L97-L127",
+          "version": "repo-lines-v1:sha256:6c9e0413d9309b682463b04c37dd8d5c233c2580dc29ba53d993dde21f9642cd:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUwMWIxYzU5MjE2YjJhZDJhYWYwODgzNTZmOTQ2YzllMTk3ZTgzYzEwYjNlYTU3Yzc1ZGU5NjlkOTNhZDI2YjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk3MzI5NTJhNDZjODBlNWVlY2ZlY2Q0NjY1ZTE5OWExYzFkZTY1MWJlNmU1NjJiYmE2MjVkZjhkZGE2ZTg3N2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRlOGE4OWRiZGMwZWM5ZDAzODI1YmYwZTczNzg3ZTcwYWIxMjIwNWY5N2I0OGE5ZjljZjMxZWZiNjU0OGQxNmMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a9307ca3242340319d11c480ae12112b",
+      "statement": "The openSaveProject e2e test is the only test that exercises the real split layout save (project.json carries metadata only; annotations/<id>/*.json holds the per-paper answer) and the reassembly (readProjectText → assembleLegacyProjectJson) a real reopen does to turn the split files back into the single in-memory shape; it confirms project.json stays meta-only (not containing the answer) and the per-paper file holds it.",
+      "evidence": [
+        {
+          "resource": "repo://e2e/openSaveProject.spec.ts#L129-L196",
+          "version": "repo-lines-v1:sha256:4682a4c07887e9ae64fd3746139699bb8de8a26fa16f54aff04ae631f0d259d2:eyJzZWxlY3RlZExpbmVDb3VudCI6NjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIwZjVhNThlZmM1NzZkNjc5YjU5MGE3Zjc3MmZlMGVmYWE5OTNmMzI2NmZkMjJlYTE1MTY1MDQyNjA3NjQwMTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQzM2IyMjQ3OWM2MmY2MDAxNzBjMDJkNzNkMDFmMTM0YWUzMzhhY2Y0MjMyODAzOWIzM2I0NTZkMDJiZjFlZjEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk3MzI5NTJhNDZjODBlNWVlY2ZlY2Q0NjY1ZTE5OWExYzFkZTY1MWJlNmU1NjJiYmE2MjVkZjhkZGE2ZTg3N2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d9e9a9c8d1924e8f814770facdcc2c6e",
+      "statement": "The gitPush e2e test drives the real git:push IPC handler (plain git push through the hardened runGit wrapper) against a real bare origin, establishes upstream tracking with real git first, then confirms the commit landed by reading the bare repo directly (git log -1 --format=%s in originDir), independent of the app and of the local clone's own idea of what happened.",
+      "evidence": [
+        {
+          "resource": "repo://e2e/gitPush.spec.ts#L7-L70",
+          "version": "repo-lines-v1:sha256:5d6ebfbe951b6c4817433a6b27721d61da378d19a157b5e467947f24ee3b28a5:eyJzZWxlY3RlZExpbmVDb3VudCI6NjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIzZjFmMTBmODYyMGQ4YTcyOWZhMjhmNTdiOTQ3ZmRlM2M0Y2Y0ZWFmZmQyYmJhZWUzNjFhYzY2YWEwZWVlODAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_81b14439394140b89ba90adc085b3171",
+      "statement": "scripts/ci.sh is the provider-agnostic single source of truth for whether the app builds and passes its checks; CI providers only check out the code, provide a Node toolchain, and run this script, so the same checks run locally with ./scripts/ci.sh. It runs steps in order with set -euo pipefail: typecheck (tsc -b), wiki link check (check:wiki), tests (vitest, unit tier only), and build (vite build).",
+      "evidence": [
+        {
+          "resource": "repo://scripts/ci.sh#L1-L50",
+          "version": "repo-lines-v1:sha256:ef259eac4c65725fad7661ad2a7ac88eb7c288d986db468469a4d337e67f8724:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFkOTVmYzA0YTgwYzk1MmY0OWNlNDE4ODYyN2M1M2IwZmJlOGM0NDA0MWI5NTJkNTkyYWNkMWRlOTk4NjE0NjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4MTExYTJlMDI4MDA1ZmViOTkzMTcwNzdlMDRhNTEwNzQ1MDExNjU0Y2M5NzVjNzdjMmMwODJhYWI1YzY0YjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_13b5fa5e42974a2ba3e334427c2781d8",
+      "statement": "The CI workflow (.github/workflows/ci.yml) runs ./scripts/ci.sh on ubuntu-latest (Node 24) on every push to main and every pull request, running the unit tier only (npm test excludes integration tests); it is deliberately not triggered on push to every branch to avoid building a branch with an open PR twice.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/ci.yml#L1-L37",
+          "version": "repo-lines-v1:sha256:a4c4e1299cd1d1f88395862622b4c38cf3564f4a519e06fc67d32e0981e7e938:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2ZTFiMzJmYTA5MDc5YWUyZjAwMDFmZmYwZWNhMjdiNDk4NTk1N2Q0ZWI0ODU3OTI5YjNjZjA1OGZhYWU1NDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVjMzM4NjMzZTAyMTg4Y2I4ZDA3YzNjMzhjZTAzNjRjZWRjNDI2NjNjYzFkZjFkMzYxOWM3MWNjMzQzZTE5NzQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c3524e78841e4cd395d667350ce21161",
+      "statement": "integration-tests.yml is a reusable workflow (workflow_call + workflow_dispatch) with two jobs: integration-test (npm run test:integration) and e2e-test (xvfb-run -a npm run test:e2e, which needs a real display because Electron opens a real native window on Linux); it stays independently triggerable for a fast check without a full release run.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/integration-tests.yml#L1-L57",
+          "version": "repo-lines-v1:sha256:aaaaf971cfc1dc528037a30d3614eb967e9317f44352003bfaffaa811fa25354:eyJzZWxlY3RlZExpbmVDb3VudCI6NTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ5NzIzYThjNDgxMmQ2YzFlYTNhMGFkZDJhOGU1Njg0MTZkNTI1MzgyYmFkNDVmMDE3NjQ5YzE4YWM1MWVhZDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMyNmY2ZDVjYTA2ZDcxMzMxOTM0YzBmZjc0ODdiYWNkOTMyYTg5ZDA2ZmUxOWJhNjE1ZmQxNTM4ODVlZjQ0MjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_730a523d3d804a27b44917503e64ed5d",
+      "statement": "release.yml (on release published) gates the build job on the integration-tests reusable workflow via needs: integration-tests, so a broken end-to-end workflow (schema authoring, PDF annotation, git commit, merge/pull/branch-switch/discard, screening import, real IPC) is blocked from reaching a packaged release; the build job then builds packaged Electron apps for macOS/Windows/Linux via electron-builder.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/release.yml#L1-L102",
+          "version": "repo-lines-v1:sha256:8d7f25a81ec1b691e532937d2cd808862dee2470f1f276b6580d552b12a879c9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIxMmVlZjkwMzBkMGM3MDI5MDEwYzQ2MzU2ODlmNTgzMjhkMTA5ZTZhODVlZDFhOTI0NWIyMGYzOTU1YjdkYjM5IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJiYmIyNGE4MjdjNzdjMzM2ZjY3ODFmODRhM2NhYTdhYTNlOTRmOWNlMmM1Y2Q1M2Q1MzNlNGYzNDRjYjM2Yjk5IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_5f37a643f05043598e440b85d3fa0286",
+      "statement": "Pure model tests in src/model/*.test.ts cover schema resolution (defaults, path ids, duplicate sibling names, enum options, max<min rejection, required defaults), normalizeTree/pruneTree/canAdd/canRemove, and loadProject→serializeProject round-trip, with fixtures built through the real load path (loadProject/serializeProject) so inputs are exactly as schema-normalized as a real file would be.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/model.test.ts#L1-L120",
+          "version": "repo-lines-v1:sha256:ae101a3b0ce9869d0c3c5acf68601222f9998b3e842a94ae8439a1d20225d1b5:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJhMjg0MmNlNzY2NDZlMzU2YmIwYmI1MDRkZmE1YTFlZmYyODdmNzI5MmNkMjI0NmE5MDNlYmFhNDc4YmQzNWJkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzMGMxZjE4OGYxNDJlZDdhODI0NjgwYjIwNzE3MmM1NTE5YmM2MTRhNDhmZGE3Y2YxNjdlZGI4ZGRmNzk5NTZjIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJhNDZmMTc0NzQyZGI5YmRlNzJmNGQyZmQ4ZDk1ZDdkYWMzNTQ4YTBjMzQ0YmIwOTVmNzAzZTJlMWUxYWE5ZmQxIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_947346b6dd244ab490d10f9b259594c8",
+      "statement": "Store tests (src/state/store.*.test.ts) mock the platform seam at getPlatform() with a kind:'browser' fake PlatformAdapter, use a beforeEach that loads a known project via loadFromText, and cover annotation lifecycle, undo/redo (including coalescing consecutive same-field edits into one step and a new edit clearing the redo stack), marks, reading position, reviewer seats, save/save-as, and the unlockAi session flag.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/store.marks.test.ts#L1-L38",
+          "version": "repo-lines-v1:sha256:9df0ded46527bf988f366452449f744b5fface6bfd7c597e4db9b325c1aabda5:eyJzZWxlY3RlZExpbmVDb3VudCI6MzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRiMjkyNWQwMjkyZGQyMDUyN2NmN2IwNDkyMTQ2YjU1MTkwNzg0MmI5ZGFhMDNiZmYxMzQ2MzM2ZjQyZTNlNjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc2ZWFlMWE4MjY1ODUzZjFhOGU5YmY3Y2FjNmE4NjIxZTEzYjg1MTg1ZWEzOWNiMWQ0YmVlZjVlMGFjZThjZmMifQ"
+        },
+        {
+          "resource": "repo://src/state/store.test.ts#L1-L109",
+          "version": "repo-lines-v1:sha256:e9a451b4b66d50b8c273baff62daaf6c55aa9d703740072f36d4e73a2d82112f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlNTY5OTNhMDhkODcxNDY1YjYzYTgzNmIzOWIwOTljNzczYjk3OTMzOGNlMzFkNWY1YzM5YWUyYTliMmNkY2YyIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJiMjM1MjU4OWMzNGQzYzYwNjg1OTMxYjZlY2M0ZDUwOTkxYTdjNTZjOGZiYTI4OTQxMTQ2NTc2OTAyNzJjYWMzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MSwiZm9sbG93aW5nQ29udGV4dEhhc2giOiI4NTgwYjc2NTE4ZGFlOTc5ZmFlYmQwMjM2N2EyOTI5MmE1MGQ5NzYwOTIyNTFhMzhhNmNlMzA4ODBiYTQyODI1In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_55bca3af6fdd47feb3d610d18e558575",
+      "statement": "gitStore.test.ts stubs the full GitPlatform shape and drives runPull's orchestration (dirty guard, pull classification, parse boundary, merge, resolution dialog) through each branch via beginPullResult/finishPullResult, exercising exactly the branch each test means to test.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/gitStore.test.ts#L18-L100",
+          "version": "repo-lines-v1:sha256:a73a1d7acd6ec7c26ffdf45984addaf16d9da9c81b28aca97be82fd201ca5612:eyJzZWxlY3RlZExpbmVDb3VudCI6ODMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJmNGU2MzFmMjkxNGMwMTc0NmVkZDRlZTc1ZmMxZmM1MTY1ODM2NWNlMDFlMGJjZTQ5ZDNlNGM5MGFmYmU1YTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVlYTAyNTczZGI0Njg5NTk1ZGQxN2NjMzVhZmU5M2Y3ZDA2ODE2ZWQ3NGU5N2E4ODZkYzA4YzQ4NjE0OTlkODAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU2YzYyMTQwMWE3ZTQ1YTQ4YWI4MGI3MjY5MzgwMjNjYjdlYzQzMzIzZDcwMzhmOTZkYmQyZTg4YWUyMzNjZTQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ba7e73a9cef9433eb993ba357fe666a6",
+      "statement": "merge.test.ts in src/git builds base/ours/theirs fixtures through loadProject (the real load path, not hand-assembled Project objects) so each side is exactly as schema-normalized and empty-skeleton-shaped as a file mergeProjects' caller would actually hand it, covering merge3/mergeProjects/applyResolutions/conflictId over repeatable findings and paper-meta fields.",
+      "evidence": [
+        {
+          "resource": "repo://src/git/merge.test.ts#L16-L80",
+          "version": "repo-lines-v1:sha256:4e2e773032c2732fb05f897ab51f555ae50239806745f68509a3df54d31493e5:eyJzZWxlY3RlZExpbmVDb3VudCI6NjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4MGJmMTczMDE4MzE0Mzc4YTk1ODk2NDkyZjljZGIwNTIxMzM2Y2VhMzYzOTRkMWQ1ZjY1NDI2YmRiNTM3MjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY4MjdlNzRmOGNkYjA2YzhkMTkzYjdkNWI4OTljMWQ0ZWFiNTQ3OGU4NTk2M2Q5OTgzODc5ZmRjNjI5NjQxZDMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk3OWRjNjdmNzNkYjUyMGRiMDQ2YWQ3NmY3ODdjZjA5YjFiNTdmYzg1MmZhMTM2Mzc3NTA1MzQ0NDdkYmYwOTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6d40f584e86f416e8f4be616fdc6e3c8",
+      "statement": "ref.test.ts covers refProblem, the ref/path safety guard that refuses empty refs, option-like refs (--upload-pack=…), control characters, revision syntax (main^, main~1, main:path, main@{1}), and everything git check-ref-format forbids (spaces, ? * [ \\ , leading/trailing/double slashes, trailing dot, .lock) at any path level.",
+      "evidence": [
+        {
+          "resource": "repo://src/git/ref.test.ts#L1-L41",
+          "version": "repo-lines-v1:sha256:ed779e18258fc87895deb12fc51ecb378d780ab72357fef81d69416183a5d46e:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI2MDM3NzM4NmIzNjVjOTI0NzIyYzU0MzRhZDQ0ZTk1YzM0YmQ5MGEzZTk4ZjlkMzA5NjdiYmM2ODRkY2Y1ZDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJkNTRmOTJiMmQwNzY5YjkyMjZjM2QyYWYwNWFmNTE0MWE2N2JjNzRkYWJmYTllYjc5YTg0ZmM2ZGQ2ZGFmYjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYxYjIwODJhZGQ5YTI5ZTA2MmU2MGQ0NmRiYTFlMWY3YzUzYTBlMDUwYjg4MTE4YzExMDIxOGJjY2UwNTUyZDAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_92684a7918694b6ca1a18ed7f8f8aae0",
+      "statement": "Component tests in src/components/*.test.ts test pure helper functions extracted from components directly without rendering (e.g. PaperList's paperIsMarkedDone, GitDialog's mixedDiscardConfirmMessage and isProjectOwnPath, PdfViewer's destinationPoint/markVerticallyVisible/dedupeOverlappingRects, PapersEditor's duplicatePaperIds); the rendered-component coverage lives in the integration suite instead.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/GitDialog.test.ts#L1-L60",
+          "version": "repo-lines-v1:sha256:5b91ce8c7e9a93306416b04a242350891f928c28a69266a71ad1865482ea959b:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEyODQyY2U3NjY0NmUzNTZiYjBiYjUwNGRmYTVhMWVmZjI4N2Y3MjkyY2QyMjQ2YTkwM2ViYWE0NzhiZDM1YmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjczZjU1NDdkMzRjNTYwOTMzMTI4ZmY5ZTBlOGMxYjVkZjYyY2ZmYTAzM2QyNzNjMDI2ZDc1OTI3YzA4ZDYwM2UifQ"
+        },
+        {
+          "resource": "repo://src/components/PaperList.test.ts#L1-L80",
+          "version": "repo-lines-v1:sha256:480647d65fa268a7c57090324fafe2500404cd2ed3519c336ff41ad9104f60cf:eyJzZWxlY3RlZExpbmVDb3VudCI6ODAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEyODQyY2U3NjY0NmUzNTZiYjBiYjUwNGRmYTVhMWVmZjI4N2Y3MjkyY2QyMjQ2YTkwM2ViYWE0NzhiZDM1YmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY4MmIxMTYxMjE0Y2E3ZDM0OGExYzVlNmFiYzI2OGU3ZDdhN2NjN2M5YTZlOGYxZmExZTUyYzdiYjkxYjM2NjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ1YzZiMWQzNTcyYmIwNWI1YTcyNTBkY2NkM2JiNTkzOGViOTE4NWExN2YyYWZmNTg1ZWI5OGMwNjEzYzBhMzYifQ"
+        },
+        {
+          "resource": "repo://src/components/PapersEditor.test.ts#L1-L29",
+          "version": "repo-lines-v1:sha256:b7d874206bebb54cbba9375b174fc846aa307ebfd7e1b887a8ebfc8cb0ea4fd7:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEyODQyY2U3NjY0NmUzNTZiYjBiYjUwNGRmYTVhMWVmZjI4N2Y3MjkyY2QyMjQ2YTkwM2ViYWE0NzhiZDM1YmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/components/PdfViewer.test.ts#L1-L58",
+          "version": "repo-lines-v1:sha256:f944967d6bfabdc42e7f74259c50ad7163a246d453513c9f6754286804e3709d:eyJzZWxlY3RlZExpbmVDb3VudCI6NTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEyODQyY2U3NjY0NmUzNTZiYjBiYjUwNGRmYTVhMWVmZjI4N2Y3MjkyY2QyMjQ2YTkwM2ViYWE0NzhiZDM1YmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjEyNmZkMjVkNjcyMzA1OWI5MzNhNjg4ZTE3NzhjZGRlMTBjZWUzNmY0MWI3YzNiZTdkYTUyODlhNThjMTZjOWQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_287fa4de46bb4c9e9489705890a7749e",
+      "statement": "paperIsMarkedDone (PaperList) decides the paper-list status dot; in Consolidation the dot must mean 'every numbered reviewer has answered', read from paper.reviews, not 'does paper.annotations have anything' — because adoptUnanimousValues fills paper.annotations just from opening the paper, making annotations presence no longer a signal the consolidator produced.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/PaperList.test.ts#L8-L80",
+          "version": "repo-lines-v1:sha256:cf56b4e1e88600875938c9b419cd453fca450cdaeae8691170cd1c7214aca585:eyJzZWxlY3RlZExpbmVDb3VudCI6NzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY4MmIxMTYxMjE0Y2E3ZDM0OGExYzVlNmFiYzI2OGU3ZDdhN2NjN2M5YTZlOGYxZmExZTUyYzdiYjkxYjM2NjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU3ZGI2N2UxN2YyZGJhNWQ3ZDY2NzI5M2E1MDg1MDQ5MzJkNjE2MjBlNzE4NWQ0YzI3YWQxY2IwZmIwNTY2NWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ1YzZiMWQzNTcyYmIwNWI1YTcyNTBkY2NkM2JiNTkzOGViOTE4NWExN2YyYWZmNTg1ZWI5OGMwNjEzYzBhMzYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_42371748a3724eab812fcebe0d050d70",
+      "statement": "mixedDiscardConfirmMessage (GitDialog) warns before a commit silently reverts or deletes a Discard row; a PaperChange marked Discard deletes the paper and all its annotation files (consolidated.json, every reviewer-<n>.json), so it is named as '1 paper' (with 'deleted') rather than the badly-underselling '1 field ... reverted', and discard-only mode suppresses this warning because it has its own separate confirm.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/GitDialog.test.ts#L4-L55",
+          "version": "repo-lines-v1:sha256:76f08d553be7fce5cdbf636f046fb459bf6804cde049f552bca7325c6cd8e792:eyJzZWxlY3RlZExpbmVDb3VudCI6NTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlhM2RiMGU0MDcwMzczZGJjYTk3M2E0YWQ0NjA1MmI1NGM5MmNkYTFjODdlZGIwYWZkZDFiYzJkNzIzMzMwYWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQyYjZkY2FlODkwMGYxYzU0Y2E3MzhkZDhjNDY0N2I4YzZlMjIyOGY4ZjRlYWZhMzQyOWFhMWZjNzNhMWIyM2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU4MjY3MjhkNWJhM2YzZjRlNzEzOGMwNDcxNmZmZWM4Y2I0YjNiYWY4MmVkMGY2OGY0YzliZmQyZjgyN2I5OTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_72d8713bc95242db895c7311a43f83da",
+      "statement": "Because jsdom has no layout engine, the integration tests give every element a fixed non-zero getBoundingClientRect (800x1000) and Range.getClientRects a 100x20 rect, which is enough for PdfViewer's own width>1 && height>1 filter (rectsForPageRange) to keep selection rects so the real selection-to-highlight code path produces a real mark; ResizeObserver and the CSS Custom Highlight API (used for in-PDF search) are stubbed as unused.",
+      "evidence": [
+        {
+          "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L25-L50",
+          "version": "repo-lines-v1:sha256:b36b57910f765477efa08ceed885f5320c9f73a381dccfe5cbd2786a28f0efa9:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY2YmEyYjU5OTY3MzJlNzEzOTBkM2UwY2M1YjliZmRmZTU4YWUzZDZkMzgzY2VhYTMyNzRiMzc1OTY1NWRlYmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4OTE4MWQzODk5YWQzOTgwMTI1Mzc0MmZjYzRmYmYxZGI2YWMwY2IwYzY0MjhkZDZiNDZkZDEzNDhjMWE0ZjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRhZTljYzNjOGNmZjcyNzdhNDU0ZWIwYzUxNTNiOGFmNDk5ZWM5Nzc3NmJmNzFmOWFiMjg1Zjc1YjAzMTE1OTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNhNDIwMzE3NzRkMjdlNWQ4YzE2YTA0YjZkMzFjNmI5MjU4ZTQ1Y2VkYmFmOTNmMDY3NWQ1YWE0YTIzYzQ1NzMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_857b0eb8dd2845aebe6c742fcabfa30f",
+      "statement": "PlatformAdapter (src/platform/adapter.ts) is the platform abstraction for file I/O and PDF loading that the React app talks only to, so the same code runs inside Electron (native dialogs + fs) and in a plain browser (File System Access API / downloads / fetch); it exposes openProject/saveProject/rebasePdfPaths/getPdfSource/needsPdfFolderGrant/grantPdfFolderAccess plus getGit(), and is the single seam integration tests mock.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/adapter.ts#L1-L135",
+          "version": "repo-lines-v1:sha256:c03df8d88c2f6e75acd0ef3f16b18d2b1417c6a3406b207e286b8676db70b83d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTM1LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlYWYyMmNmMDczMjU5MmMyNDcxNDFjYmU2MWVmYTExMDEyNjEyZjVhMzEyMmI5YWY5YmJhZjUyZjU3MjRkMTk0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI3MzM1YzFjMDE3NTVlMzEwZDNhYjYzZWE5NmMzZDY2OTlmY2YzMDUwZTVmODhmMDdjN2I1OGFhMzYxNjdlMTNiIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI4OTVlYjIzZjgzN2Q4MTAzNDA4ZDdjY2U2YmEzNWEzZTFjZDEwY2JjZGJlNWEwOWY5MzFjNWFlN2EzMGUwNjJjIn0"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.4.0",
+    "at": "2026-08-26T09:23:05.972Z"
+  }
+}

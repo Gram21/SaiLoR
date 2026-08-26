@@ -1,0 +1,312 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:3931d19e992e087189c44efdad1d852b4ccf61a6ea00460f23737a7e36d36f5c",
+  "claims": [
+    {
+      "id": "claim_73038aa7de1248059ddba1afcb29f3d4",
+      "statement": "SaiLoR is a tool for conducting Systematic Literature Reviews (SLRs); a project is a project.json file (annotation schema + paper metadata) plus a sibling annotations/<paperId>/ folder (per-reviewer and consolidated annotation data), and the app renders each paper's PDF beside a schema-generated annotation form, writing annotations back to that split layout.",
+      "evidence": [
+        {
+          "resource": "repo://README.md#L7-L13",
+          "version": "repo-lines-v1:sha256:5760849b4d402694c7a056dcfc0183a5977804dd7f3c4069019d3548c9326817:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMGUzMGNhYTRkODhlMDc5YzI3NGRkZjc2NmUzZWEzNmQzNjczMWIwYmU0NzUzYjIxN2VhMmY2NjFiOGJhMWY0ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDYzOTk4ZmRmMTU4MTNjZmU5YjljYTcyNWVjMjNhOTEzMjc0YjI1OWJlMTRlY2RlYmZjNWNlMTVkMWNiODVkNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGY1OGYzZDc1NmRhMjQ3ODllMTBiNzdlYTA1NWJhNjRjMGM5ZGQ3ZmUzZmY3ZjY4NjBkNmEzY2UzNjVkMzg1MCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWZlNzQwMmM5MWY3NzY4ZjBkMjA0Yjc4NTRlYTY0MmQ5YzkzNTc5ZmRlNGYyMTQxMjQ2MDY2YmU2ODk3YWE0NCJ9"
+        },
+        {
+          "resource": "repo://src/model/project.ts#L882-L925",
+          "version": "repo-lines-v1:sha256:197bee44fdd51bccc3897ff1370cb696f218882810dcca3e932da61927fdf709:eyJzZWxlY3RlZExpbmVDb3VudCI6NDQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4ZmYzYzUxMWU5ZTVkMTkzNDQ0NDhkOTA2MDg5Zjc1NTBlOGZjMGI0NWExZjBmOWU1YzUxZjQwMzE5Yzc5NjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBjNDkxMzM4NDkzNDA2NDUzYmVlMjEwMjA3MjE0NmY3MDMyNWU2YTE1ZDdhYjU0OTRkYzEyYzI5NzM3YjRhZjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM3OTI5ZTkxZTBmOTljM2U4MjVkZTY5YjQzNWZiNjQ4NGQxYjBhMWRmMmY0NjU2MWFiZjFhMjlmMDQxODhiODgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNjOWQ4ZGI5ZWMwYWRmYjFhOGFlNjcxZjFjZjE1MjNhNGQ1YTU2MTY2NzViYTUxOTk5NWNkMTQyOTc5ZTMyMTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_89c2af7d819841758529fe0e1361b7b1",
+      "statement": "Per-paper annotation files under annotations/ are created lazily (only once a reviewer writes something for that paper) and deleted again if the tree becomes empty; a project saved in the old single-file shape still opens and is migrated to the split layout automatically on the next save, with no explicit migrate step.",
+      "evidence": [
+        {
+          "resource": "repo://README.md#L114-L121",
+          "version": "repo-lines-v1:sha256:41a088e3059fbc476e3d12134b568ed15527ffde7602a110d2c93ece34918c9a:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTE2MWY4YWIxMWRjNDY1NzM3Yzk3MGNmMDMwODY4ZjZmMzE2ZWVhMzRjMjE4NjgyNzE4OTA5YzQxNTNmYTBjYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjI3MDBhNzE2NjRkNjNjMDdhNWZjYjg5YTAxNWQyZDY2YTA2N2EwZTM1YWQ2YmM0OGFkNWE2YWI4NDFiMzg2OCJ9"
+        },
+        {
+          "resource": "repo://src/model/project.ts#L1036-L1087",
+          "version": "repo-lines-v1:sha256:10a3c87711a7b834fe7059e21aeda392836c44863b95687d5d0237f0a65dfa3c:eyJzZWxlY3RlZExpbmVDb3VudCI6NTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhhYThjMDMxODI3NjQ0NDFiYTY5NGFhYTBmZTJmNmQ0MTk0MGJhNmJkZTAwNzlhZGY3ZTJiYmE3MzY0OTgwMTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4OWEzZjg4ZGEzNjFmYjU1MjgxZTEyMjMwZDcxOTMzMmFhYjllMTEyNTlhNTE5YzIxZWU5ZDMxNmRiMGE3ODkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZhYzdkYzVhZjJkN2VjYWUyZTcyNTQwZTY5M2IyZmVlZjAxNmNjYjJhY2U5NzBhZjRiYjEzZDVlY2JiZWIyMjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZiYjNmYWFjNTM2NGU5ODk4OTI3YmFiNjA4YzkzOWI4YzY0NmU2ZGVmOTc1NGVjMWMzZTFkMjI5ODgxZDdjZTgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0e2cb9c151ed4da4b4c5666151a60d1a",
+      "statement": "A screening project names its per-paper files screening-consolidated.json / screening-<n>.json instead of consolidated.json / reviewer-<n>.json, so screening and annotation project files are distinguishable at a glance while sharing the same layout.",
+      "evidence": [
+        {
+          "resource": "repo://README.md#L136-L139",
+          "version": "repo-lines-v1:sha256:b5b9c805001de851b7dc6f552c9119476ac40f3a3c8cecdce1630cc5a0f8ea06:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMWIxZjdmZjIxMTE4MmFmYzE2MDJjZTZjN2VkZDBmM2YzMjIwMDBjMGJhMWY4NTg2YjcxMzNjZTY0Y2Y1ZDMzZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWY1NTU0M2JhOThkMGRhZWIyYTVmMzdkMjFlNmYwYTczZWI0ZDk0MGIzZGVhYjhlMGZmNGM1MTljNTJiZTg0NSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjQ0MmUxZTA4OWM4NjM5ZWFjZjJmMzE0ZGQwZGQ5MWZhYTg2ZDUwMWQ4OTEzZWVkMWNjNDAxNGViYjQ5MDNkZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTkxNjdiOTg3MDA1MWIzZjI0NTY0ZmUyYzQwZGI1ODFmMTY3ODdkNjQwOGIyNjExMGY3ZDRmNmUyZGM4YmUwNiJ9"
+        },
+        {
+          "resource": "repo://src/screening/schema.ts#L70-L72",
+          "version": "repo-lines-v1:sha256:088d081cbe1cb36bfc5af8ac6890a4fe749163dad9e89b8bfc1b4e09e989ee4c:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDJkOWNiYjI1N2RhNWZlYjkzMzdkM2RmODg0ZDZmYjBlZGM1NmY2ZDBiYzIyMWZiYWEyMDljZmNkMjVlZjYzYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTQ2NjdjZWRhMmQ5YzA4MzNlZWZhZjQ3Y2Y2NjU2Y2VkZTYyNTJhMzNiMDQ1MTg0MzZjODNhZjQ4YWE4NTE3NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_190613cc9cb64754a2917bf3a8124bb1",
+      "statement": "The web/browser build is discontinued at runtime: src/App.tsx's isElectron() gate shows a 'SaiLoR for the web has been discontinued — use the desktop app' notice and blocks all project-opening UI before any file picker or project state is reached; npm run dev shows only that discontinuation screen, and Electron dev (npm run dev:electron) is the only usable way to run the app.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.tsx#L155-L191",
+          "version": "repo-lines-v1:sha256:ffcae4997794c754baefac4c41786b7b0e9257d6ef768844f1323da9ced04b11:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc0MTYwNGQ0ZGQ4ZDExYzNjODYzYzU2ZDExNjMzMGE4ZDEwYmMyNTAyNjNlNWExMDcwYzg3OWFlNjIxZTQ1MTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFhNzhjN2Y1NTc5NmRiMGNkNjQ1MWQyM2ZhMTI1MjE1ZmU1NGU1ZjBmOWJhNWVmNGNiM2EwZjJlMTdhN2Y5NGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAwZGFlMmY0ZmExOWQyZDRhZWFkYWZhOWMxOWE0OTllZmQ5OGJiMWYxODFiMWUwMTI5ZmZlNDg2MDg4YzBjNTAifQ"
+        },
+        {
+          "resource": "repo://src/platform/adapter.ts",
+          "version": "repo-file-v1:sha256:947fd40048a5e7a7a60e605a409c2aeb8cb42d16a3297f8237159b556d382f82"
+        }
+      ]
+    },
+    {
+      "id": "claim_0c4fcd0d07e84dc09c7c1e4f37e86cef",
+      "statement": "The non-Electron platform adapter (createUnsupportedAdapter) is a Proxy that answers the two pre-gate reads (kind, getRecents) for real and throws on everything else; getPlatform() returns the ElectronAdapter when isElectron() is true and the unsupported adapter otherwise, so App.tsx blocks all project-opening UI before any of the unsupported adapter is reachable.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/index.ts#L14-L20",
+          "version": "repo-lines-v1:sha256:98c36b96541de0e19f5bb8852487ba394e06d6b5ba164ba36cd2bb530d0d893c:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGFiYzYyM2UzZWY0ZDZlNmVhNDE3MTE4NGZhY2QxNjFlNjBjNDU3NjQ1NDExMGRlM2UyNmVkYzc2OWM1MzgxYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDdjYzVmMzFlNTkzYmQzOGJmNDcxZTBiNGU3NmVjZjVjMjM1MGU2OGI0ZTEwYmMzZTc4NGQwODM5YmQxMWZkYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWY3OTI1ZTVjNTYxYmRiNmZkNDQwN2U2ZmY4N2Q1ZWFlMDgxMTk3NmZlMjQxNjExNTU4Yzc3MWU2YTUwNDVmNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDFkYmE2ZWM1NDllYWFlOTdlYmJhMDY5NWU1NzRhOTg0NDAwYTUxYzRhNGRkNTU5MGQyZWI2MzBiZDNiMjRkMSJ9"
+        },
+        {
+          "resource": "repo://src/platform/unsupported.ts#L15-L20",
+          "version": "repo-lines-v1:sha256:ae260f3f0ea17d6fe68b33bec78329acc5be959e7659dd5e676ba9be6c69a9d1:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjBhMGNlYzRhNTE2N2QyODIyZWUwMmNjNzk3ODg5YzE2MGI1MGViYThkNzgxYWQ2OGRjOGEzYWM3MDM0MDljYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiY2VjZGNlYWY3MDYzYjk3ZTM4ZDQ4NWQ0NTc5ZTYwZTIwODA5MmE3MjgyMjU4NzBiYjkwMzMzNjZkOGE3YzkzYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiM2YzZmZhMDBhZGMzYmMwZTdiMzhjZDk5ZTJkMmViYjk1Y2I2OGRhOWY1MzFlNWY1YjQ1NDZiNmRkNDhiYzIzMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWU3MmM4NzU5ZTIwNzhmZWVlODBmN2ZlZTAzZjY4MjlhMTFmMzc2MThkN2RiMTI0ZjU3NDU2MDhlODk2ZTQ3OSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_f93bd1ccba614f4996513f78aa058eb3",
+      "statement": "The tech stack is React 19 + TypeScript, Zustand with immer middleware, Zod validation, react-pdf (pdf.js) rendering, Electron 43, Vite 6 with vite-plugin-electron, and Vitest 3 + jsdom for testing with Playwright for e2e.",
+      "evidence": [
+        {
+          "resource": "repo://package.json#L23-L50",
+          "version": "repo-lines-v1:sha256:5e28c5814a58e35bd1d9dff357e3ecd362ab5aba0da3396a1456f4e845f3bd13:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJhM2I0NjlkOWUwOTc1NzIyNDY2NjczNGM5ZWY3YjI1NGQ4ODUzNGY1ZDViYjcwOTg5NjA4MDVjNTUzZGMzMDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMzMTQzMDliMTI5MTE0NTcyMDRmOGExMjIxZTU2ZjAxY2VmMzUzZDE4M2NmNmM4YzkyM2ZmYWJiYWJkNzA5NjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQyZDZlZTdiY2FmMzk5N2MxNDI0Y2MzZDczZWQ1YmVhNWU5ZWM0YzQ0NTM3YWE3MmMzYWZkZDE5MDZkYThlN2UifQ"
+        },
+        {
+          "resource": "repo://vite.config.ts#L21-L45",
+          "version": "repo-lines-v1:sha256:84bcf6ed4e9663df2892b941f4c8e97fce5b7903aa363f6dff42ece49af1fb54:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE5MzZiMWZiNGZmZjIxNGQ2NzQ3OTcyYTc3OGQ5M2UwMTNlYjk2ZDgxYTMyM2NiN2QzYzgyMTlkZDcwNGM4NDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUwZDA0NmZiMGRiY2Q2MzA2OTZmYWNhMGJlMTlmN2Y3ZGEwMzlmNzJhNDVjZTdmNmE3ZGU0MGI3N2FhYzQ0OGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJlYTU2NmZjN2U0YzNkNWNiMDFjNmM2Nzk2MTc5ZDdkMzJiN2E5MDM4NDBkMjkzMmM4YmI4OTM4Y2Y2OTQ3NGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY5ODFiYzYxZjRhNWRmZmE4OGM1MzcxMGZmYzVlNzdiODZiMzI3YjQxZWViMGIzNmNkOWE2NzQ4NmJhMzI1OTIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ca6418e5aee6457c81511f4406e7c5a1",
+      "statement": "The npm scripts are dev (vite), dev:electron (cross-env ELECTRON=1 vite), build (tsc -b && vite build), build:electron (build + electron-builder), test (vitest run), test:integration (vitest run with vitest.integration.config.ts), test:e2e (build + playwright), and typecheck (tsc -b --noEmit).",
+      "evidence": [
+        {
+          "resource": "repo://package.json#L9-L22",
+          "version": "repo-lines-v1:sha256:0e090d4535b757cdb4ac7979bacf6730b5faf1f688e82daca9a2ba929d907cdb:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM0ODMzZDU5NDljMDNhNDBjYTk1MjQ5MTYxMGE2NjU5NjQ0YjNhYTQ2NjM2MmY3OTkwMjBkYmYxOTgxNTQ3ZGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI0NGVlMTdjYzcyYTU5NDMxOTY2NTFiY2NhNzAwMmU4ZjMzNjBlYWI4MTBjNmI4MzM5MGE1N2FiNTRiMTlhYjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRhYTVkYWNkZTQ2YTJlZjgxZGU4YTViZTc1ZTk1NGY0ZTFhYzA3NTBiNzIwZDBhOGFhZWQxNGQ2ODY4MjViNmQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_59cbc08e73fc4dd6b0918afbe5d3a284",
+      "statement": "The default vitest run (npm test) excludes the integration suite (*.integration.test.{ts,tsx}), which spins up a real scratch git repo per test and is slow; it runs on its own via npm run test:integration using the standalone vitest.integration.config.ts, and is gated in front of release builds.",
+      "evidence": [
+        {
+          "resource": "repo://vite.config.ts#L59-L74",
+          "version": "repo-lines-v1:sha256:f855ebb7dcb27e381cc64c11433ca8057c9ca7ef971913a1e9487344609ce9a4:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5MzZkZjdhNWEzYWFmMTgwY2ZmZDFkNjVjNjQ2ZWY2YWVhMzUyY2MyNzc3NDY4NjE5OWNkOGZiM2U4OTljN2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM2M2Q1MzVjZTM4MDYzZDZiNGM1MWQ4YzM4NmE3ZjliM2U1ODBhMTRhMTBjMDdiMTk4ZGZhZjE5YzkzYTNiZmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEwMWFjMzA5OWJiMWEwZWE4NzQ3NDRmZTFiOGJlYzA3YzRiZWU3NjA3YjgyN2NmYTFlNjhiOTU3YjM1MDY5NmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ2NjQ4ZTYxMDEyNGY5YjM2ZDA3MjNmNDg3NTYwZDM3MGY4Zjc4MDU3MzU1MGI2NmU2ZmU1MTEwYWI5YWU5NTIifQ"
+        },
+        {
+          "resource": "repo://vitest.integration.config.ts#L4-L20",
+          "version": "repo-lines-v1:sha256:215e3e35d25ad3885ac139fb82c6165ef2c03bd9ea45a15c2eb0bb5dfbc55b58:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcwMGNiNjFlZjhiYzU2YjMxN2Q5ZGMyYTMyNDE5ZDZkNmEzYzJjYmNiOTEyM2MzYjk4NjdjMzQ2OTJiMzgyMTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjllOGFkMTFiNDJhNmQxNzQ0MzA0ZmJlNmQ3MDAwZjFlZDJjZjQyMTRhOWU2OTZhZWJiNTkzMTcyOGYwZTA0ZjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ba273306ff6a47d185c000086ba854f6",
+      "statement": "test:e2e builds the Electron app first (cross-env ELECTRON=1 npm run build && playwright test) and drives a real Electron main process, real contextBridge-exposed window.slr, and real ipcMain handlers; it is gated in front of release builds via the integration-tests workflow.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/release.yml#L19-L29",
+          "version": "repo-lines-v1:sha256:5554486efd4ad203ffb83fa51b01914c9647f7d6a2e21ac93c26674e2a04b880:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU5ZDgwMTU0ZWQ0MmZjNWM3NzliMTMzMTU3OGI1OGI4OWM4MDFlYWNlNzRmMjRjZDQ4ZWI0YTIzNTc5NDBhOTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFlZGMzMWU2Zjg2ODA3ZjgyNGNmZjJkZTg3NDMyMDM5NjI2ZDM3ZDBjMzdkYzI4MTliOTI4NjBmMmFiYWY1ZjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFhODQ5NWE2MDRhMzhlNmJmMGY1NmQxMTQyMjhjMjUyZWEyODFhMTY3ZmRhNjUwMjExZjUwZTRmZWY3MWRjZGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUxOTgzZjRjMjExYTFiNDZhZjk5YjlkNmViMmMyYTA1ODhjNTEyOGEwYmQyMmNiZTJhMzQ1N2Q4ODFiZjYwYjQifQ"
+        },
+        {
+          "resource": "repo://e2e/openSaveProject.spec.ts#L1-L23",
+          "version": "repo-lines-v1:sha256:ded53589e4c301173810f2b623ee15b36c703be516e07ee52f8a473ddaf676bd:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjExMDc1NzY1MTBkY2RjMjEzYTczZmJjMjEwMjNlN2YwMTA1MjQyYjA1ZTlhZTYzNDRkYjc4MDE4YzAzNzQ2OTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMxZTdjMzVjMDgyMjA1YTI1NDExNmFmMjY0YzkyMDQ1MmY3YWJlNzJmYTE0OGJjYjg4NjUyMzRiMjliOTYzNmUifQ"
+        },
+        {
+          "resource": "repo://package.json#L19-L19",
+          "version": "repo-lines-v1:sha256:58b16f5afec75bacf83ad032ce4f7a626123a906816612291f8eaa6fe66e568c:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNThiMTZmNWFmZWM3NWJhY2Y4M2FkMDMyY2U0ZjdhNjI2MTIzYTkwNjgxNjYxMjI5MWY4ZWFhNmZlNjZlNTY4YyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNThiMTZmNWFmZWM3NWJhY2Y4M2FkMDMyY2U0ZjdhNjI2MTIzYTkwNjgxNjYxMjI5MWY4ZWFhNmZlNjZlNTY4YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDFmZmU1MTJiMWFlNzAzYjIwNTVhODM2NDZmMTAzOTA4Y2U4MWRkMjA3ZTVjMTU3MDJkODVkNWQ2N2NjNzhiZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzMxNDMwOWIxMjkxMTQ1NzIwNGY4YTEyMjFlNTZmMDFjZWYzNTNkMTgzY2Y2YzhjOTIzZmZhYmJhYmQ3MDk2NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_3db558b016c646dda7ea2e0d88a95b30",
+      "statement": "scripts/ci.sh is the provider-agnostic CI pipeline (install → typecheck → wiki-link check → test → build) and scripts/build-electron.sh packages the desktop app for the host OS via electron-builder into ./release/.",
+      "evidence": [
+        {
+          "resource": "repo://scripts/build-electron.sh#L36-L39",
+          "version": "repo-lines-v1:sha256:ea34043bcbddf4a60ca333135635be18e1e6f7f4c7ee433cba930d5516cd96fa:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTI5Y2VjODAzOThjMGY3OGNmOTBkZGFiMjE4NWQ3MWYyMzhkNTBkYzE1NGI3ODFlMGE2ZTkzYjYyYWJlMTJiYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMGZjODU2NDMwMzg0OTBiOWIzNTIwNWNlY2MwMWRkODExN2Y3Mzk2Yzk5N2I0MGU1Zjc3MGJlZGZjNmM5OTUzMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMmE3NTViNDU5ZmFiZjEwMmRiZGY3Zjc3ZDQ0NmNjZmZjNTI5NDBhZmNiZTg3MjQxNGQ4ZDdhN2YzYmZhZDQ3MCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTAxOGVmMGE2NzA5ZjU2YzBhZGYxYWEyOTIxNDU3ODRhNTQyOGE0MTNjYjE1YWQ0OWIwZDc3YzUxNzQxOTAyMyJ9"
+        },
+        {
+          "resource": "repo://scripts/ci.sh#L22-L49",
+          "version": "repo-lines-v1:sha256:ebef44e1d7c40949e7d66bc9dabeb1cb3c7cb4049215111f8ca3b9fb6622d34d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkMTNhMDUxNzk5Mzk2OTk4YjkyNmYzNjkzMTg0NDZjNWRkOTAyYjRlOTMwMWNkOGQ0YjAxMmI1YTAzOGU5OWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhMTA2NWYxNjYyOTkwZDViYzY5YmRlZDlkOWVkMTIwZWE3NDIyYzVkZjkwY2Q1M2M1NzNjZWY1ZGMyYjgyMWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4MTExYTJlMDI4MDA1ZmViOTkzMTcwNzdlMDRhNTEwNzQ1MDExNjU0Y2M5NzVjNzdjMmMwODJhYWI1YzY0YjcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8bc3d7fb6e12461d9bb0de1a7d4f4a32",
+      "statement": "The Electron main process (electron/main.ts) registers IPC handler groups project:*, pdf:*, git:*, llm:*, text:*, paths:*, and update:*, implements the slr-file:// protocol, sets up the window/menu and window-state persistence, and runs with sandbox:true.",
+      "evidence": [
+        {
+          "resource": "repo://electron/main.ts#L248-L248",
+          "version": "repo-lines-v1:sha256:85511fe843848e09fb0414f661542738da7da58830eb461c38fe268e4ecbe4e2:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODU1MTFmZTg0Mzg0OGUwOWZiMDQxNGY2NjE1NDI3MzhkYTdkYTU4ODMwZWI0NjFjMzhmZTI2OGU0ZWNiZTRlMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODU1MTFmZTg0Mzg0OGUwOWZiMDQxNGY2NjE1NDI3MzhkYTdkYTU4ODMwZWI0NjFjMzhmZTI2OGU0ZWNiZTRlMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzNjZmQzYmI4OGMwYzkxMjBlMzNlNzZhNTMwYzdlOTExMDQzMjQxNDUxMTljNWJmN2NmNDFiZDcyZjQ3YzQzOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDczYjY3OTExNzQxYjA2MDRiOGMwNGM2YTlhNTA5YzkzNDljMTQ0NGZiNGQ0Nzc2MjI5ZDdhMTFiMmNjYjUxYiJ9"
+        },
+        {
+          "resource": "repo://electron/main.ts#L659-L2604",
+          "version": "repo-lines-v1:sha256:754859fc0df39b2a3ed8cad9bd363787137faed180f7290bfd091942569313b6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTk0NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMGZlNzEwMWE3ZTJiMzBmZDU4MjIzMWU2NmM3NTJlMzljMzA1NGViMzQ2ZmI1ODE4MWYyNDQyYmIzYzA3NGQ2OCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTYyNDc5MmVlMmUxZGQwMDc3OWNhZjM1YjJiOWYxNTVkZmMxZDY0MmFiNjgwNGE0MTEzZjUyZGQ5YTI0YmI0NSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTNiMjQ5ZDE4YWEzOWJhOWI4MmQ4YzhmNTQ4YTk5NjQzOTQxYWFhOGZmNTU1NTg5MjRiMGU0ZmEwYWRmYjE3NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNmY3YThhYmFiMDk3MDI1NGRiYzAyNDVjNmYzNDYyZjNmODNkZjQ0OWUwNWE5Yzc2MTAxNjNlNjkzNDFmNWMxNyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_bf2a2b664af243ec98506f92eceb0233",
+      "statement": "The Electron preload bridge (electron/preload.ts) exposes the SlrBridge interface to the renderer as window.slr via contextBridge.exposeInMainWorld, mirroring the SlrBridge interface in src/platform/electron.ts and invoking ipcMain handlers for openProject, openPath, saveProject, git, llm, etc.",
+      "evidence": [
+        {
+          "resource": "repo://electron/preload.ts#L1-L40",
+          "version": "repo-lines-v1:sha256:8b910ca8acd1acff333e41f1c6ada53db568e017f27d38f877ebb067e0d021a5:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ3MTNmNjk0YTFiZTUwNDE4Y2JjYWJkNDI0Mjc3ZjM4MzkzOTI1ODBhZDVmN2NjYTk0ZWE3ZGRlNjc1YmYxOTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk1ZTQyNDFlMTE3NmU4YzI0ZjNjZGZiZTU2MjkyMzQ0ZjI3NDU2M2U2ZmVlZTNkZTIyNGU1YmJlZDFhM2UwM2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjczMTM2NDE2MWE2MzNiZTEwMDczOGVmMWRmZjJlNDg4ODMyNDczNTFiNDlmOWRkYWJmZjlmYTk3NzBlZWQ0OTUifQ"
+        },
+        {
+          "resource": "repo://src/platform/electron.ts#L416-L416",
+          "version": "repo-lines-v1:sha256:7761cbf5d1356c5070e63d895e1f3a6a3bb92416540847119de48fe9c96bc272:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzc2MWNiZjVkMTM1NmM1MDcwZTYzZDg5NWUxZjNhNmEzYmI5MjQxNjU0MDg0NzExOWRlNDhmZTljOTZiYzI3MiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNzc2MWNiZjVkMTM1NmM1MDcwZTYzZDg5NWUxZjNhNmEzYmI5MjQxNjU0MDg0NzExOWRlNDhmZTljOTZiYzI3MiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzNjMzY5NDBmNzQ1M2E0ZmM2MDU0ZTU1NmQ1NzQ5MzdkYzg3ODcyNTIwYWQ2NzRmZjUzMDkxMzZmOTJkMWY5OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjc0NGU4NDJiYWE1YmQ1MGQ2MjE2MjgyN2ViOTEwMTkzM2JjNWU4NjUxMWYxZmExY2NhZTI2NDkzMDZkMzFhMCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_6b479e3dd11e45839426562a528e3391",
+      "statement": "The domain model in src/model/ is pure and unit-tested: schema.ts (AnnotationDef/ResolvedDef types, zod schemas, resolveSchema), annotations.ts (AnnotationValueTree, normalizeTree, makeInstance), project.ts (loadProject, serializeProject, splitProjectFiles, isLegacyProjectShape, Paper/Project types), and validate.ts (required/type/enum/cardinality checks that skip unannotated papers rather than flag them).",
+      "evidence": [
+        {
+          "resource": "repo://src/model/annotations.ts#L36-L64",
+          "version": "repo-lines-v1:sha256:60f04faa6e91e345f6af47af4f532c3744af364e06bf3c8a9c3bdcba492e5eef:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZlMWI2MWE4ZDdiOTVkZTMxZTQxN2QxMjUwZjBjYmNlNTllMTA3YzZkYTBhMjUwZWQzNTgxNWZjNjhlZTA5ZGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFiMzAzZWUyMjZkOWY0N2EwNjY3NzYyN2Q4NjMwYzlmZTM5ZDQ2MzA3NzMzNjYyOGQ0NDMzYWQyNzQyYmJiZGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRhYjNjZjQ4NDNhZTY2NWE3MjYwODI0OTE4OTI4ODRhZjAyNDY5MWI5MzA1MTNjZWExNDk4MzlkNTUwMTQyODQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRmYmU1ZjU3YWE0M2MwMDIxZWViNTJlOGQ0YjJkZjMzM2ZlYjhlZjNiYmY3MmI1OTNjMWYwOTM0M2JkMWY4NDYifQ"
+        },
+        {
+          "resource": "repo://src/model/project.ts#L663-L1047",
+          "version": "repo-lines-v1:sha256:21b5ac99e0b973f90a6fa9c6be0f49a11d0b425b5bcd0555db29409462afffe0:eyJzZWxlY3RlZExpbmVDb3VudCI6Mzg1LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlZGU0OGQ4YTkwMzNmODE5NjE1NTFmNDUyNjI2M2VjNTUzMjVhYTRlZTk5ODAyYjBmNGQ5YWNjNjljOGY3YWQxIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJjZjFiZjQ5ZWEyMjNlNzBhZjAxY2NlYmFjZGIyMmVlY2RkNDVkNzQyMzlmNWY2MjFkZWRhY2Q0NTBkNGU2YzdhIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI2YTFiYjBjMWZhNDUwMzQ5ZTYxNjE4NjkwYmZmZTE1MDI5MGViYTVhYzdmMWM4ZDgzZjdmYjIyNTQ5ZDIyNDU0IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI3ZDNjMmYzOGJhMTEwZmY0ODhmZThiNzM4OGNlZmViYjg2YjVkMWFkOWMwOGVlZWRiODIyMmFhZGUwNzk4MWNiIn0"
+        },
+        {
+          "resource": "repo://src/model/schema.ts#L369-L369",
+          "version": "repo-lines-v1:sha256:1a25628ed49705799db47dde5b9571e14b253bea8b390f40987f8ab2e26a307a:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMWEyNTYyOGVkNDk3MDU3OTlkYjQ3ZGRlNWI5NTcxZTE0YjI1M2JlYThiMzkwZjQwOTg3ZjhhYjJlMjZhMzA3YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMWEyNTYyOGVkNDk3MDU3OTlkYjQ3ZGRlNWI5NTcxZTE0YjI1M2JlYThiMzkwZjQwOTg3ZjhhYjJlMjZhMzA3YSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTljYTAyYjBiNDFiM2UwMWZhMWI1ZmI2YmY0M2ZiMzE1ZGYyZDY3MjRiYTVmNDk0ZTI0YWM3YTk2YjEyYTQ4NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiN2MwYTJkZDJiNDJkNGJmM2ZlNjhiNTEwMjk2N2M4NDIwMjhjOTRiZDczYzM0Yjk1MzRkMTg5NTM1Yjg0OTM5ZiJ9"
+        },
+        {
+          "resource": "repo://src/model/validate.ts",
+          "version": "repo-file-v1:sha256:0177b6c97ba7f227819cc21ee958f93a4b5bac49ae017346bfb5e4a6b4cb76f1"
+        }
+      ]
+    },
+    {
+      "id": "claim_0f6c7b8d48f947959fab4116c08e6750",
+      "statement": "The main Zustand+immer store (src/state/store.ts) owns project, papers, save, annotations, undo/redo including PDF marks, and the currentTree routing that selects the single-reviewer or Consolidation annotation tree; setFieldValue coalesces consecutive edits of one field and addInstance/removeInstance manage repeatable group instances.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/store.ts#L1898-L1946",
+          "version": "repo-lines-v1:sha256:ffa3bc9ba81056d4420c78863104c515ef930dddb0da482143b490a0d963f3ac:eyJzZWxlY3RlZExpbmVDb3VudCI6NDksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIxOTQ2YTQxZTllYTRlMjk0MmM5NmIxMzU2ZmFiZmM4ODY5MDcxZjYxZGU4ZDg5ZjIzMjQ1OTg4MGU4Y2U0NzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJlZjQwZTU5NDUxNjUzODY1YjI2Y2E2ZWQyNTlkOWRmZjMzYzFjZmFiMTNmZmY5N2ExYmYzYTkxOGM4M2E4ZDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI5NzhlMjI2YTUxYTU1YzdhYmM2N2RkNWZkYTVhNjZiZjZhMGRmNTk5ODcxMTE1MzA0NTllMWUzOTYzMmI1NWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIwODk1M2I2NmRmYmM5MzFiNjRhMTgwYTcwMjg5MDVlMWE5YjVjMjQxMWRiYWMxMTgyMzFlMTJkYTFmZTYyYzQifQ"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L690-L691",
+          "version": "repo-lines-v1:sha256:82864dd731d0aead3d3fe474faff8183cb35970363e5144a1734ea13a9417288:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiM2UwNGJjMzZjOTFkZDY0OWM1YWIyNjUzZTM0ZmRmOGI0ZjczZmVhNTM1MDM1Y2IzNDAxODU5ODVhNGM2NWUwZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmFkZjQ0MjE5ZDVlZjNmZmY3NDZkZDVhMGRlZGExNDUyM2U0YzI0MDAxZjAxNWE2MTk3MjgzODBmOTNkMDkwMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzlhYzIwMzllNWJhNGM2YTA1NGMzZGFmMjMzOGI5YjJmMWZjN2Y1ZWYzNTcwZTkzZDgwY2Q4OTkxNzIwZjc1MSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDcwNjg5Yjg2Yjc1OWQ3MGZiOWZmZWVhNzIxMjgwNDQ4ZmQxOGIyOTU5ODU4NmFkMjgxNDI2OWU3Y2UwZjQ1MyJ9"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L908-L1008",
+          "version": "repo-lines-v1:sha256:7251654af883fe64f74d34c877c4d95b99e22f5cd7a5137cb223fded0d02df33:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI0MzFmNDhiODdhOGNkMTA4NzdhNzFiMDMwOThkN2JhZDI3NTU0OWQ1ZTdmYmY3Y2VhNjU2MTE2YjVjZGExYzYzIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJlZmUzNzExZWIzYjhjZDYxYzMxYjYzMmY5MzhmNzU3ZDRlODI5YzkxYTgwMGE0Yzc3NzcyMTE3YjllNTJmZWNjIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIwNTczY2UxNGU4ZGE5MmNmNDMwNzU5NGE4ZTNjMDZjY2JkZWU2MzE2MmE1ZTZmMGRiMzU5MzA0MDk4MTllNTlhIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJkYjZlODEwOGNkMzUwNmFiZjRkZTBlMWMxN2Q2NDM5ZjU1ZWJmMWM3NzljZmE4ZjU3Y2EwYjc0NTRhODAzNDVmIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_7252b32bd4cb4942a2364e7ddfa122bc",
+      "statement": "The AI-assisted annotation flow is kept in a separate aiStore.ts with its own phase lifecycle; the only place it meets the main store is applyAiSuggestions, a single-undo-step batch write that never overwrites the reviewer's own values and records a permanent aiUsage disclosure.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/project.ts#L20-L35",
+          "version": "repo-lines-v1:sha256:351e4e7f637d169d1273c3d3841cdc00f6eca8b616ab20ef540ae4b6490909af:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNmNWEyZjNhZGFmNzNlNTZkYmU2MDgyOTEzZGUzYzU0MDJhN2QxOWIxZGMwYjVhMWJiZGU3ZmYwNzQ3NjhjZjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyZWM2NGNhMjdhMjFjMzAyOTc5MmNmMzAwMzM5NjJjNjNjZGI5OTAzZmY2ZWJiZDM1YzlhZTY0YWFiZDllMTAifQ"
+        },
+        {
+          "resource": "repo://src/state/aiStore.ts#L13-L20",
+          "version": "repo-lines-v1:sha256:ddc379932f283f9b9fc9d98cfab1ea5bfb7ef39b26e3746c5d03035ff08e80db:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjI0ODc2OGUzYTMyMGI3MTkyMzgxYTkzNjYyMjAwOTljMTMyNjcyOGRjOGVhNWRiNmQxZGQwMTkwMzc4Njk2OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDljYTIwZGFiMTZiMWUxNTg5YTAyNTljYzk2ZDA2YzQ0YWYzMmQ3YTY5ZDViZmUzMzc3YTVjNDA3YjExNmZiZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjllN2I2ZDQzMDczZmQzYTU2OTgzOWNjOTUxZGU0MTFhMDljMWRhMTNjZGY4Y2JlMzhiZWYzNzlhMDYzMzNhZiJ9"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L744-L859",
+          "version": "repo-lines-v1:sha256:15acc26e2f4d3b2d3aa28380600677e00caf3ae342205920498f31199a708235:eyJzZWxlY3RlZExpbmVDb3VudCI6MTE2LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIzODgyZjdjNDZlYjE1YmZkNDk1ZDNjZWRhYTFlZjZkZDlkOTBkZGVjYTBlYTE2MzEzOWMyMWVlZWY2ZWFlOWU0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJiYTUyMzg4OGNmY2UxMDBkZTEwMmVhNWZkZTRkOGZjODVhNWRlN2I4NWRiNzI0M2JiYmNlMTU2ZmY5MGFlMTU0IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI1OWU3NzYyMDA1Njc0ZWFmMjNlMjg3ZGJlZmNhYWRkYmMwZGY2YTc4M2UzMGY3NTY1OWI4MzQ2MGEzZmI5ZjNlIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIzZTM5YzU5OWE1YjgyN2E2NzAyNDFjMDQ2MGMzYmQzNTFjNDEyMzRkOTMzZmY5ZWJiOTg5NGZiNjlhYmUyNjVlIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_04c92a114e754dc79d3af18aa6bdc4d4",
+      "statement": "The multi-reviewer consolidation logic lives in src/consolidate/ as pure, unit-tested functions: align.ts (alignNode, alignableNodes for hierarchical non-crossing entry matching), apply.ts (growConsolidated), and the supporting similarity, metrics, disagreements, unanimous, and readiness modules.",
+      "evidence": [
+        {
+          "resource": "repo://src/consolidate/align.ts#L577-L592",
+          "version": "repo-lines-v1:sha256:25a1fa54dff2850291f91fa7f006db75aeae953571d2da3a1fd339411d73a321:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAzOTEzYzdlZTQxMTUzYzJjZmJhODZlMjExOGRhM2I2YTQ5MjBjNDkwZjk2MjY0ZjZlZjJkYWViNTE2NmEyMTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2NGUzMDhjNGQwNTkyZWExNzA5NTJhM2QzOWM1Y2ZiNjc5MjgxYmU2OTY5YzBlODA5YzBhODIxMmM3YzY2MjEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImExOGRiYTI5NTQ0OWEyODlkYWQ5YjQ3NDBiODA0ODQ4NTA4ZTI4ZGRmYzljZDNkNjRjNDhmOGVkMTA4NmJjMDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUxODkwMmI4NjEzYTllZmEzY2IyODA2OGZiNzUxYWY2ZDBhOGExMmM3ZTlmMTMyZWQ2MDgzZjVjNjAyYTEzMzkifQ"
+        },
+        {
+          "resource": "repo://src/consolidate/apply.ts#L42-L92",
+          "version": "repo-lines-v1:sha256:56c6c0b3a71c198b108614591c85a82f7333e3d49272ee0abcaaa1458737f97c:eyJzZWxlY3RlZExpbmVDb3VudCI6NTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxNGZhMTc0ZWIyNDM3NzA0MzIyYTE4ZDJmOTFmN2IzYTU0YzRlNTdlYWU5MzAyMzg4ZjU2NmIyNjhjYmYyZDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2YTg3YjEzNmNmNWY2ZGE1MGU0NzhjMjQ2MjA2MDgxNTNhZjFmMWM1ZmZjZDNhNWNhNGJmMjVjOWRlMTA2ZjgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdjNzcxZjdiMTBhMThmZTRhZjRjZDRkNTk5YjE3Zjc5MWUzMTZmYTcxZTEyOWUxMjI0MTY3NjE4ODk0M2JmMWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk3ZDg2MzJlNTRlOTI5OGFiYjk1ODcyN2UyZDUxNDA4YWJhZjEzNjYwMzUzNzkxMDE0MGFiZjY1YjMwYWI2MTMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_fbe27ebeb98c479982c9377f168018e2",
+      "statement": "The git integration's pure logic lives in src/git/merge.ts as mergeProjects and applyResolutions (the field-level three-way merge), with security gates in ref.ts (refProblem, isSafeRef), relpath.ts (relPathProblem, isSafeRelPath, annotationsRelDir), url.ts (validateGitUrl), and ownAnnotationPath.ts; the electron/main.ts plumbing and gitStore.ts UI stay thin over these.",
+      "evidence": [
+        {
+          "resource": "repo://src/git/merge.ts#L982-L1280",
+          "version": "repo-lines-v1:sha256:8e06c834d9cd86a510ea9cd7161e577d3342b7f1aa25011b1ac044a6391ed3a8:eyJzZWxlY3RlZExpbmVDb3VudCI6Mjk5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiYjkxM2ZhYThlZjY2MjEzYzQ0MjQ5ZTM1OTAzNjYxOGE0NmZhMDA4ZjY3ZDExY2M1OWI0MDEwNWU1YTliY2YzIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJmNjA3NmE0MjZmMDZhM2ZlYjY1MTFmNGE0MzFhYjFkNmEwYTY1YTlmM2M0YTMyN2NlYTllYmNiMDliMjIzMzA2IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJhOGU1YjZjODliZjViOTkwOTllNTM0YzFhNjdhMjU2ZjA3ZTViNTQzZGVkZjhmMWE5MWQ4NzZhM2I2MDE3MWI2IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI1YjQyZGFmYTJjNDY0Y2I5ZTU1MGE2MTdjNDkxNGIxYTMyZGYzMWNkNGQzZTM2MGNkOTVlMGUxYTdmNzc2Yzg2In0"
+        },
+        {
+          "resource": "repo://src/git/ref.ts#L1-L5",
+          "version": "repo-lines-v1:sha256:eb119e200c0bb44795675b0bb90a3c675eeb5a941f65b58f89e64eeb67b80cc5:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGE2MTE3MjgyMWQ5MjZjMTc5OTU4ZTJiZDIxMThjMWQ0Y2YwZjRlNTVmZjZiM2VlMDIwODQ1Y2M3MTExMjhmZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWE3OGYyNzc0NTY1ZjVkNGNiM2Y4Yzg5M2M2YmM0YTRlY2RiOTYyMTJhZTQ5ZWJjNDVjNjUwMzYxZWVlMTI1YiJ9"
+        },
+        {
+          "resource": "repo://src/git/relpath.ts",
+          "version": "repo-file-v1:sha256:a24de616eefe0a106a4a8c2e8204021aa5d341086c8ad4af1e593913945973d6"
+        },
+        {
+          "resource": "repo://src/git/url.ts",
+          "version": "repo-file-v1:sha256:00c1e9fef3f506784af9021ecdb01bac931e78f78891f0ad533f2cc435409490"
+        }
+      ]
+    },
+    {
+      "id": "claim_c47f7ffc16e14f0a807d2c9c02b39b3f",
+      "statement": "Screening mode is a derived two-node (Decision/Reason) schema (src/screening/schema.ts, isScreening) with a tri-state status read (screeningStatus: included/excluded/undecided), PRISMA-style counts (screeningCounts), and two cross-field validation rules (screeningIssues); it reuses the multi-reviewer/Consolidation machinery.",
+      "evidence": [
+        {
+          "resource": "repo://src/screening/counts.ts#L50-L66",
+          "version": "repo-lines-v1:sha256:07ff773553f5dac6b768b64a65404a3709a68622a3c3e8f1f0dc0f27a549d391:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUzMmU3NDM5OWM0ZTY0YjI1N2VmNGQ3NDc4MmE1Njc2ODYwNDc3ZjRlNzQ5MWM4Y2MzYTBiZmI5OTZkMWNlMmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJjYTRiMDY0NmM5MTI3Y2Y2MTIyZDU4YzBiZjVhNjkyYTU2MzM2ZWFmNGJlZTg1YTIwN2M2NTUxMTc1YTg2NWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjgwZjhmYjhmNTAyNTBkNzgyODU5MWMyNjE1MjczZGVkNjNhNmRhODZmYzU3YTY1ZWVhY2E0ZjRjZTU5ODdlYzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU1YzA0NjJiMzFlYjAyZjkwOTEwZmQzNTdjNTI3ZGZmMzRhYmI4M2M2NmU3NWQ1NWViMTBiNDBkZTBkNmQxZTEifQ"
+        },
+        {
+          "resource": "repo://src/screening/schema.ts#L70-L72",
+          "version": "repo-lines-v1:sha256:088d081cbe1cb36bfc5af8ac6890a4fe749163dad9e89b8bfc1b4e09e989ee4c:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDJkOWNiYjI1N2RhNWZlYjkzMzdkM2RmODg0ZDZmYjBlZGM1NmY2ZDBiYzIyMWZiYWEyMDljZmNkMjVlZjYzYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTQ2NjdjZWRhMmQ5YzA4MzNlZWZhZjQ3Y2Y2NjU2Y2VkZTYyNTJhMzNiMDQ1MTg0MzZjODNhZjQ4YWE4NTE3NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        },
+        {
+          "resource": "repo://src/screening/status.ts#L14-L14",
+          "version": "repo-lines-v1:sha256:8c8005252957a043945b96e6c6f0d3f616c90dd00dccc5ec12f00744bbed07b5:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGM4MDA1MjUyOTU3YTA0Mzk0NWI5NmU2YzZmMGQzZjYxNmM5MGRkMDBkY2NjNWVjMTJmMDA3NDRiYmVkMDdiNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGM4MDA1MjUyOTU3YTA0Mzk0NWI5NmU2YzZmMGQzZjYxNmM5MGRkMDBkY2NjNWVjMTJmMDA3NDRiYmVkMDdiNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzQxYjkwMzY1ZmJiYTRiMjZkYjAzNjcxNGY5YmQ0YTlhMDI0ZWIzNWNmY2RhZTQwMTkwYzcyOTlhNTY0MTJlYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOGU0NTU3Zjc0ZjkwMmJjODc0MjJhZjg2NTUzOWY0ZTJlYjVlZjIxMzA5ZTE5YTAzYmMxOWIzMDVlYWFiOTkxZCJ9"
+        },
+        {
+          "resource": "repo://src/screening/validate.ts#L32-L32",
+          "version": "repo-lines-v1:sha256:bca4b0646c9127cf6122d58c0bf5a692a56336eaf4bee85a207c6551175a865d:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYmNhNGIwNjQ2YzkxMjdjZjYxMjJkNThjMGJmNWE2OTJhNTYzMzZlYWY0YmVlODVhMjA3YzY1NTExNzVhODY1ZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYmNhNGIwNjQ2YzkxMjdjZjYxMjJkNThjMGJmNWE2OTJhNTYzMzZlYWY0YmVlODVhMjA3YzY1NTExNzVhODY1ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjExODI0Mjc0MTdhMGIxN2RiNzQ4NmJmOTRkMTcyZjk4N2M3NjJjYmU5MjA4OTUwMTBhZTNmODRlMWI0ZThiYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzYyNzE3YmFhZjlmMDk1NGVhZTdiNzMxYWI2NGQ4NGY3ZDk5MGM5NWViN2NkNzFhNTVjMTQ0ODE4ZjBlYjYxYiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_1e6fec23976b4782b4c02fab06a417d3",
+      "statement": "Native self-update authenticity is covered by Ed25519 feed-signature verification (src/model/updateSignature.ts), which electron/main.ts verifies before downloading an update; the release workflow signs each electron-updater feed (latest.yml/latest-linux.yml) with scripts/sign-release.cjs, separate from the unsigned installer itself.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/release.yml#L37-L60",
+          "version": "repo-lines-v1:sha256:5c96f233ebdd18db60ecbd99ff110c9b1cc3b8c3b932159553bf26ff5e77ce18:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM3MGUyOGM4YWIzYzhjNDhmYWVlMGQ2YWY2NDY1OGZlMGU1NGViOTczY2NjMzA3ZmRmZTliMDlkNjI3YzI0Y2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZiMzIxOTk0ODA3YzBiZjhmYWI2NGFjZTY0OTgwYzQ1OGZiYThhYWI0MWY1YzQ4YmFkZThjN2YyYzM4OGU4YzYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVlZmU4MGMwZTZiYTM3M2E2NmRmMWRkMDgwNzM2Yjk5NzQyMmQxYWRlZTFkZDY3NjI5MTFhYmM5ZDBhZjNlZDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkxZDUwZGJmNGRkMGYzYThjOTdiMmMyODQ3YWJhMTA2ZDVlZmYyNGUzODM3Y2Y0NDRlZmRlYzc3YWY0ODI3MTQifQ"
+        },
+        {
+          "resource": "repo://scripts/sign-release.cjs",
+          "version": "repo-file-v1:sha256:c1c6a1c1f2d0ae0c2d92a769f26a5ec88ac4a6a9c66f44ae4de5550a918c7989"
+        },
+        {
+          "resource": "repo://src/model/updateSignature.ts",
+          "version": "repo-file-v1:sha256:47a6d67382523cc0f4a02d78d9c22745e61c8891c700151f3c9f06ba29e2a9c6"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.4.0",
+    "at": "2026-08-26T09:23:05.972Z"
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:772cde9cd1f8cb06febdddcc701175b02f9ffba0342b1528229227e33612fb6f",
+  "claims": [
+    {
+      "id": "claim_b007bc47337e4255a24a9724101a405c",
+      "statement": "SaiLoR is a tool for conducting Systematic Literature Reviews (SLR); a project is a project.json file holding the annotation schema (a nested, cardinality-controlled taxonomy) and paper metadata, with a sibling annotations/ folder holding the actual annotation data, one file per paper per reviewer plus a consolidated file, so two reviewers working on different papers rarely collide in git.",
+      "evidence": [
+        {
+          "resource": "repo://README.md#L1-L11",
+          "version": "repo-lines-v1:sha256:ab45fe9a2a60fd592fa945570c590589ef9df5cd22bd4442a082aa860238ecbe:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkwNTkxNDAwMGMxODFjNjZiYjZlNzAwMDQyM2UwNzNlZjQyNzY4MmYxNTM1NTFjZWExNDk0ZmY4NGYwYmY5NDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg0MDNkYTU5OGQzMjAyOTFhYTAwNGFjNWUyODkzOGEwYTVkMjBiMmUxYWI1NGQxYWQyZTM5MmI0NzIyZDI0NDYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdhMDNiZWU5YjUyMTE4YjdmZjZkMGI3ZDQxYTUwYTI5MmRkN2Y3Nzg0YTQ3M2U5YTM1YzQxNmNiZDk4Y2NiZWUifQ"
+        },
+        {
+          "resource": "repo://README.md#L110-L129",
+          "version": "repo-lines-v1:sha256:b62423e514597dd1a23e9c03d3beee5899ec0d373e5f98064a8c0438df18e756:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0ZDdhMGZmN2FhYmI5ZDU1ODQ5NDg0MmI4ODc1NmE0YzYwODk1ZWFmYjA0ZDQ1N2JjNTQwMzFjYjNjYWEzNmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3YzA2YzU2MWQ1YzMyNzM0MzY4NTI2OGE0NmIzMzkxZjM5OThlZWU4OTBkMmJlNTFmMGQyMWNjNGE1M2FlNmQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI3MWY5MzhjZmJlN2IwZWM2MzMwNmEwYTNlOTdmNTJhYTg2MWFhNDgzNzVlZjFiYWIzNThiYzVjYWJkY2ViMDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU3OTMwZTQ5MzZhYzNhMmVkOGZhYmNlMTZkMjk1YjZiNmEwZWQ0M2VjODc1YTI0Y2FlYjVlMTgzYjQzMmFhNjUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_560bac1bcc174ce5aa50cea9e87d7c35",
+      "statement": "SaiLoR is Electron-desktop-only: it used to also ship a static web SPA and a Docker self-hosting deployment, both discontinued; the web build now shows a 'use the desktop app' notice at runtime instead of any project-opening UI, gated by App.tsx's isElectron() check before any project-opening UI renders.",
+      "evidence": [
+        {
+          "resource": "repo://README.md#L12-L14",
+          "version": "repo-lines-v1:sha256:7a03bee9b52118b7ff6d0b7d41a50a292dd7f7784a473e9a35c416cbd98ccbee:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTU2YTVhNjgxYzg2NWNkODBkNWI0ZWMyOTdjM2RhYWMxZDU1YTg5ZTEyNGJiOWNhNTMxN2M1ZjY5YWJjNjhjNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTg1ZGE3MTRlODA0ZWEyZjNkY2MxZDI1MjViN2VkZjY5NjMzMDdhMmM2Yzg5NTExMWFmNWM2YTRkMzMzOTI5ZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDFlMjRlMjk1Yzk1MzZhZWFiYjU3ODg1OGQ0MDhiY2I4N2MxYjllMzhmOGUxNTkwNjhiNGI2N2I3NzYzZjM4ZiJ9"
+        },
+        {
+          "resource": "repo://src/App.tsx#L155-L161",
+          "version": "repo-lines-v1:sha256:aa63b727354f094899ed96c5c7d9598264fdd0c74142f75ed5762d4a699f65f1:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzQxNjA0ZDRkZDhkMTFjM2M4NjNjNTZkMTE2MzMwYThkMTBiYzI1MDI2M2U1YTEwNzBjODc5YWU2MjFlNDUxMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGMwNDM1MzQyYWRiYzYzMmYwMjAzNDJkNDlhZTYwMTBmODRjMGJjODI3YTIwM2U1Y2JkYTY0NDVmOTQ3YTk2NyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWE3OGM3ZjU1Nzk2ZGIwY2Q2NDUxZDIzZmExMjUyMTVmZTU0ZTVmMGY5YmE1ZWY0Y2IzYTBmMmUxN2E3Zjk0YiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTBiNDc1YmY3ZDEyYTE0MGZiYThlYmE0MmRlOWIwN2UyZWIwYTI0NDFkY2MwMzk4MTBlMGFiYzczYzliYTA0ZSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_bff90af22a094fe3b93c26d3eb910dc3",
+      "statement": "The PlatformAdapter seam still exists, but the non-Electron implementation createUnsupportedAdapter now refuses every action: it answers only kind and getRecents for real and throws 'SaiLoR for the web is discontinued — use the desktop app' for any other method via a Proxy trap, as a backstop for calls the app's own gating says cannot happen.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/index.ts#L1-L20",
+          "version": "repo-lines-v1:sha256:0561873176a7e878de045f76854b33cef3c9d1e174b13017029e12df55bc2fa4:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNjNWU2MDQzMjdmNDA1YTA5M2Y3YTkwZjE2NDVmMmIwNDVhNTZjZDYyMDEyNmZhOTYwNmI5M2QwYmQ4ZGFlNzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ3Y2M1ZjMxZTU5M2JkMzhiZjQ3MWUwYjRlNzZlY2Y1YzIzNTBlNjhiNGUxMGJjM2U3ODRkMDgzOWJkMTFmZGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxZGJhNmVjNTQ5ZWFhZTk3ZWJiYTA2OTVlNTc0YTk4NDQwMGE1MWM0YTRkZDU1OTBkMmViNjMwYmQzYjI0ZDEifQ"
+        },
+        {
+          "resource": "repo://src/platform/unsupported.ts#L1-L28",
+          "version": "repo-lines-v1:sha256:f45653a3cbb5ecb8e59c8b5692354331cbd7be92ae2e01b0355afd407ca1cf42:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNjNWU2MDQzMjdmNDA1YTA5M2Y3YTkwZjE2NDVmMmIwNDVhNTZjZDYyMDEyNmZhOTYwNmI5M2QwYmQ4ZGFlNzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8dc59c63c9434a378cbb71cb5bfeace4",
+      "statement": "This wiki is developer documentation; users should start with the README for installation/usage and use docs/annotation-schema.md as the project file authoring reference.",
+      "evidence": [
+        {
+          "resource": "repo://README.md#L110-L113",
+          "version": "repo-lines-v1:sha256:324846b94d8a5fceb82e1412b5b69757cea465f9b084a95cc4e8c71d9c80b7f2:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjRkN2EwZmY3YWFiYjlkNTU4NDk0ODQyYjg4NzU2YTRjNjA4OTVlYWZiMDRkNDU3YmM1NDAzMWNiM2NhYTM2YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjljMDcwOTI4OTFmNWQzN2ZhNDdkZjA4NTkxNTdmMzc0NWNhMDQzM2Q2ODYzOGUzMmRkMmIyMDYwN2Q2YjM5MCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjcxZjkzOGNmYmU3YjBlYzYzMzA2YTBhM2U5N2Y1MmFhODYxYWE0ODM3NWVmMWJhYjM1OGJjNWNhYmRjZWIwMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjFjZGYzZGM2MzkyY2NkZDAwYjM0YWYxMGU0MzE5NWVjOWI1MWZlYzZmYjgwYzg3MGIxMzc4Mzc4MmZlYjc4NyJ9"
+        },
+        {
+          "resource": "repo://README.md#L20-L22",
+          "version": "repo-lines-v1:sha256:2c2326e88d359631fbcd426d0cb416523e8be564749428fe97245fbb6b8df43e:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGRkNWU0Yjc1ZjBlOGFjYTY5NjhlY2FhODgxYzU0ZWQyZjZjZmVjYWNhYjg4ODkyNGE4NTk5ZTVmNTBhMjIyMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDFiYWVlYThmNDAzYTU2NGVmODY3ZDE1ZTNmMWYzOWIzYjNhYWNjYjQ1ODU4ZmNjZjU3MjIwOTRmY2I3OWJiZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjljNDY4ZjRkYzNkOGE1OTFiMzEyZTRjOWY5NWI4ZTFhY2Y4NDRkZGI5MjE2MzFiMzI4MDVjYjAyYjAxMzIwOSJ9"
+        },
+        {
+          "resource": "repo://docs/annotation-schema.md",
+          "version": "repo-file-v1:sha256:024ea7a551c12b9cbf263cb3b3a52ce0a8f460548dd08b201860639c476bfad3"
+        }
+      ]
+    },
+    {
+      "id": "claim_bb14ed44039744d7b3a0c7463103d823",
+      "statement": "The openwiki/ folder in the main repository is the source of truth for these wiki pages, mirrored to the GitHub wiki by wiki-publish.yml (on push to main touching openwiki/**), which replaces the wiki rather than merging into it.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/wiki-publish.yml#L1-L8",
+          "version": "repo-lines-v1:sha256:4c0bb27038d31324714243263a9b24a470c16a9cbd8f1e13cd03a1d7e8bc9023:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNmNiMTZkYjRlMTc1MjgzZTVlOTNiMGJiNmJhNjQ1M2QzNTAxOWYxMzBhZjlhMmFjOGM3YTM5ZDIwN2ExMjEzNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzJjNDg1OGUyMmNjMmM5NjdiNDIxNTBmYTU1MDU2MmEyYzgzOWMyY2ViY2FhYjkxY2FiZGY2ZjRkYTAyMDAyMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODUzZjRiMzMzMjA2MmI2ZjI5MWJmMDk1ODM5MWVkOTQxMTJjYzY3MWM4MmU4NzA4NWRiNjg2NWExMjc2N2U2OCJ9"
+        },
+        {
+          "resource": "repo://.github/workflows/wiki-publish.yml#L54-L62",
+          "version": "repo-lines-v1:sha256:ad45dc75ca445cb763623d43ee34dc0593df50df6c971c42a87a51752154a789:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTk2ZGM0ODE0OWY1YTgzZDFlZDZkYmIzOWJiYzdlMmI5MDJhYTNkMzRkNmJkNWFlNGIyOTFiNjhkZjBjYTc5YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiM2YyZmE3M2YwNzA0ODlkOTcyNGEwMjlkZmI1MDJhYTA4ODUwN2QwODU3OWJiYmNjOTRlZDkzNWMxYTA1MzMxNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZmE4YzY5OGMyMjFhZjJhMTcwOTE4NjRlMmUyMTk0MzRkZTY0YzEyYjBmZGE3Yjk1YzI4ZTgyMzNhYjE5NTliZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzk0NjJkNWYyYzIwN2U2YjRmODI4NDNkOTE1NGZmMGJiYWQwMzQzOTI0YjJjM2M0YmFiZDk5Yjg3Y2NkNGI4MiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_acf893f3966f43b5b3ce236810882f01",
+      "statement": "Wiki edits are imported back into openwiki/ and committed to main by wiki-import.yml (firing on gollum, a wiki page create/edit), so the wiki and openwiki/ do not drift.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/wiki-import.yml#L1-L11",
+          "version": "repo-lines-v1:sha256:f0c1071fd5608faa1676e6a19a9b8f757e7dd9c369594e16d59784f3d6d2fa40:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJlNzE4MDczY2IwODA1NDQ0MjhjNDQzNjBiMjRlNTNlODNlYTg1NjEzZTc5ZTVkM2U3OTQ5NmI4NjIyNTIyOWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJlN2ZhMGI4NGEzN2U2Mjk5NDM2N2QzNmE4Yzc3OWU1MmNjYmMyZmZhMmE2YWFkMTZjOTQwNzExZjM0OGU4NzciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNkNzBkMjkwNjU3MjJlZjhlZGNkZTJmNGJlYjUzMTllYWQwOTBhZWEyNDk4YmZmZjAzZjZmYjc3NzZjNDYwZmMifQ"
+        },
+        {
+          "resource": "repo://.github/workflows/wiki-import.yml#L17-L34",
+          "version": "repo-lines-v1:sha256:fa3f4d47098cc6c3fd9cccc0c5e1796eb8cc7cbbc2fb9609d493d1961c890076:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU5NmRjNDgxNDlmNWE4M2QxZWQ2ZGJiMzliYmM3ZTJiOTAyYWEzZDM0ZDZiZDVhZTRiMjkxYjY4ZGYwY2E3OWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMzY2UwYzMwNDgwODU2NTczNDdlMGM1NjBkZWQ5ODU1MDhmZmI0N2E3ZWI2ZjBjYmUzOWExMzI3Y2Y3M2M4OWMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjExM2M1ODVhYjdkNmRjNWYyNjJkOWNmNmUwMTI0MzAyZGYwMWFlODBjNWJmNDFmMmIxZjRkZGRiYmM2ODdhMzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUzY2Q4NDQxZTZlODk4MGY5OTY5MDk3YjA5Njc2MDhmOGI5YjNlOGE4YzBjODFlOGEwNjZlNjI5ZGEwNjExMzMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c61f4e519a1e45898809cd5b19c2ade0",
+      "statement": "The two sync workflows use three independent loop-prevention guards (the GITHUB_TOKEN not raising workflow-triggering events, content convergence via git diff --cached --quiet, and a [wiki-sync] provenance marker plus sender filtering) and share a concurrency: wiki-sync group with cancel-in-progress: false so the two directions never run at once and race on the same wiki.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/wiki-import.yml#L24-L34",
+          "version": "repo-lines-v1:sha256:39eabcc718b5f23fb109b99da81b754301d96d387b9285d185b2a7d4936573cf:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRhOWYyNzc5OWY0OTg2NTk4MDA1MTc0YWUyN2I0MDFhNDUwODA5MDFlMWQ0Y2JiOTFjYzNkODE4N2M4YTIxOTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMzY2UwYzMwNDgwODU2NTczNDdlMGM1NjBkZWQ5ODU1MDhmZmI0N2E3ZWI2ZjBjYmUzOWExMzI3Y2Y3M2M4OWMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFhODQ5NWE2MDRhMzhlNmJmMGY1NmQxMTQyMjhjMjUyZWEyODFhMTY3ZmRhNjUwMjExZjUwZTRmZWY3MWRjZGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUzY2Q4NDQxZTZlODk4MGY5OTY5MDk3YjA5Njc2MDhmOGI5YjNlOGE4YzBjODFlOGEwNjZlNjI5ZGEwNjExMzMifQ"
+        },
+        {
+          "resource": "repo://.github/workflows/wiki-publish.yml#L64-L79",
+          "version": "repo-lines-v1:sha256:ef9fd216350be780f5c652d4e0ad89017fd00583e9d4c349dbf986db7d3f5065:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM1MjYyNDdlZGUwMDZlOWJkYWI5YzY4NTA3Mjg0MjVkMWI0MTY2Y2FmNWNhYzUwY2YwOTU1YzQ0ZDI0YzFhOGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1NWVmNWZlMThlMWJmMDMwZDQ5NjQ5MzY3YWEyNjZkZjJmMjQwNDk4YTUxZTViOTkxZGNiOGRjNmQwY2I3NGUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU1OWQ4NzY0YzNiN2Q3NGM1Yjg2N2MwYTBjYzc2MDYwYjNiNWNiMjc3MWI4ZGM5YmQ2ZjBlYzc0ZDFjYzgzY2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImViYWY0MDcxNjUzM2E0ZmJmMjk2ZWU3YjhmNzlhNTc4YTEzYTVmNGExMjM0N2Q0NWM1NTYxNzgwMjQ0Y2I2ZDcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_89caa2d414704523b277dbcbd9040ca7",
+      "statement": "The developer wiki is generated/maintained by the OpenWiki update workflow, which runs weekly and on demand, only when main has recent non-openwiki commits, installs the openwiki CLI, and opens a 'docs: update OpenWiki' pull request regenerating these docs from the code.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/openwiki.yml#L1-L60",
+          "version": "repo-lines-v1:sha256:8de60283a8ce6653baae1dd9d6e12513614b114c57e3f7e04971d4dcfd6acc46:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2MDI3ODdhZjZkY2MwODM0ZGUxMjFjYmIxY2I5NWY5NDU5YjcyMWVhYjAzNDlmMTA1MDFiOTk2YzFjNzdmZmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcwZThmOWZhNDBlN2JkMDQ5OWQxYzBkODNmZDc1OGFhODViMzA4NDJkYmQ2MWYwZWE2YjdhZTEwZWZlYzc2ZDAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlhYTgyMWU4MTE4NTAyZDc4Y2I1Nzg0Y2U3YzMzNzY5YmViOGIxOWQzOGYxZmJiZGRiZmQwYjA0ZmFhZDgzMTIifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.4.0",
+    "at": "2026-08-26T09:23:05.972Z"
+  }
+}

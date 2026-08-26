@@ -1,0 +1,258 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:62fcad80d96abacf313e209e7819ab3baf19d84e96dfbaadc41a87b7d39b734e",
+  "claims": [
+    {
+      "id": "claim_123f0138b0aa4b489aae3eeb36b2f13a",
+      "statement": "The build pipeline has two modes: `npm run build` (`tsc -b && vite build`) produces a static SPA in `dist/` with no Electron output, and `npm run build:electron` (`cross-env ELECTRON=1 npm run build && electron-builder --publish never`) activates the Electron main/preload build and packages the desktop app. The `vite-plugin-electron` integration is gated on `ELECTRON=1`; without it `vite` builds only the renderer.",
+      "evidence": [
+        {
+          "resource": "repo://package.json#L12-L13",
+          "version": "repo-lines-v1:sha256:c9809d584a7bcf20f254c4f2ee20ba7d43c50bf8c110250185dc167b1982e080:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzQwNmJjNDIzYWFiNDAxNDIxYTA0ZjE1ODAyNjRlZTU1Y2U4N2RlMDk3ZGM5OGMyNmJhYTZiYTBjZTRjMmVjMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjU2ZjQ2ZDg5ODI1MGQ0NThkY2E2N2FmMmYwMDAyYzRkMTlkNDAyZWE0ZjZlZGEwNzViMjI5ZmFmZDllMDRiNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWE1OTQ1YTMxMTkxMDE1ZjQ2Y2YwZjAxMjMyMDY4YWQzYzIwMjg0ODFmM2I4ZDYxMjZlYWQyMzc1MjE2YTliOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjQxZjgzNTllNTZmODM4MmY4MzI2Mjk0MzMwMzkzMDYxN2RhZjNhNGQwNjU3NGZlMTVlYjExMjY1NWNhMWU0NSJ9"
+        },
+        {
+          "resource": "repo://vite.config.ts#L6-L45",
+          "version": "repo-lines-v1:sha256:727da32e242bcc671d1d7938a57389bb48dbd87c28b1706e9628128bb93e4351:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM1NjJjNTI4ODMxMmRmZTBhYzQ5NDU1ODg3YjQyYmYxNzVjMWMyZDhjM2IzZjc3YjhlMjg2NzVlMWM5YTFjZTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUwZDA0NmZiMGRiY2Q2MzA2OTZmYWNhMGJlMTlmN2Y3ZGEwMzlmNzJhNDVjZTdmNmE3ZGU0MGI3N2FhYzQ0OGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVkMmRmYTBlMzdhYTU1MmVlNWNhMDNiYzRiZGQwYzE0ZTg2OTQ2Yzg5M2FhODYzMGJkMzNjNmNiY2IxYzVmOTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY5ODFiYzYxZjRhNWRmZmE4OGM1MzcxMGZmYzVlNzdiODZiMzI3YjQxZWViMGIzNmNkOWE2NzQ4NmJhMzI1OTIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_5e6ec9022ce3411987f14f02bf0e1419",
+      "statement": "The Electron preload script is emitted as CommonJS with a `.cjs` extension because the package is `type: module`; a `.js`/`.mjs` preload would be treated as ESM while Electron loads preload scripts as CommonJS. Vite's rollup output is forced to `format: cjs` with `entryFileNames: '[name].cjs'`.",
+      "evidence": [
+        {
+          "resource": "repo://package.json#L7-L8",
+          "version": "repo-lines-v1:sha256:aecb64e7a648d5586332a41c2706e50a2e6a24b40e14040f83c0b72a59c08464:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjU2ZDgzMDkwYzZmYjkzNDYzYWQ0ZjJmODVmOGNhNTU3NmY3ZTg1ZTEyMWQ5NThhNTM3MThlMjFkOWY3NmU2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmI2Mjc0NGVmZGMwZGZmYTQ5NzE4MGI5MTMxNDdhYTUwNDY3OWNmNDk2ZWM1MDBlODM0NmEwMTg4YjFmZGQxMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2M0NTgzMDQ2MTlmZWYxYmJiMGRhY2UxNGMwMjlkMDMzNzM1OTM3ZTUzOTM1NzcyZDJhMTA2NWVjYTA0MTU3ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWE1OTQ1YTMxMTkxMDE1ZjQ2Y2YwZjAxMjMyMDY4YWQzYzIwMjg0ODFmM2I4ZDYxMjZlYWQyMzc1MjE2YTliOCJ9"
+        },
+        {
+          "resource": "repo://vite.config.ts#L29-L40",
+          "version": "repo-lines-v1:sha256:1a9f90c988548be4ab1fe8de7e01b1bf3df66b6ad76e1dc9e3e7c62233c6eed1:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBhMDFmNTU1YzIxNjRiZTRkYjQ5ODAwMDQ3YWIwY2MwZjQ1NzkyYTBmODZiZWQ5YmQ1MTMwYzRjZGYyZDNjNTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQwOTNkY2UwMmZhM2U1YzBiOGMxYzg2YWM2N2U4NzYzZTNhMjQ5YWFhZDAxZjlhOGVkZTJkNjcyNzE1MGJkNzgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZkYzZkNDBhZDlhNjQ5ZTYyNTQ0NTE3ZThlNTIwMzU1ZGJiMWRhMzU1OTNmMjQ3M2FkOTIwNzdkNzJjMWEzNDMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE4NGE2MjE2YzZhNzVkNjBkMTlhNmU1OWU4MWQ1YTYxYjdhYWVkOTM3MjNmNjUyMjJjZDQ1MTExYjUwZjZlOGEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d512433d8b114757b964025df55ab19f",
+      "statement": "`scripts/ci.sh` is the provider-agnostic single source of truth for CI, running from the repo root under `set -euo pipefail` in order: install (`npm ci` or `npm install`, skippable via `SKIP_INSTALL=1`), typecheck (`npm run typecheck`), wiki-link check (`npm run check:wiki`), tests (`npm test`), and the static SPA build (`npm run build`).",
+      "evidence": [
+        {
+          "resource": "repo://scripts/ci.sh#L1-L50",
+          "version": "repo-lines-v1:sha256:ef259eac4c65725fad7661ad2a7ac88eb7c288d986db468469a4d337e67f8724:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFkOTVmYzA0YTgwYzk1MmY0OWNlNDE4ODYyN2M1M2IwZmJlOGM0NDA0MWI5NTJkNTkyYWNkMWRlOTk4NjE0NjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4MTExYTJlMDI4MDA1ZmViOTkzMTcwNzdlMDRhNTEwNzQ1MDExNjU0Y2M5NzVjNzdjMmMwODJhYWI1YzY0YjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_51fff641705d42c6874e4ee2297d91eb",
+      "statement": "`.github/workflows/ci.yml` runs `scripts/ci.sh` on `ubuntu-latest` (Node 24) on push to `main` and on every pull request, but deliberately does not add a push-on-every-branch trigger to avoid double-building PR branches. A concurrency group keyed on `${{ github.workflow }}-${{ github.ref }}` with `cancel-in-progress: true` keeps only the newest run per ref.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/ci.yml#L1-L37",
+          "version": "repo-lines-v1:sha256:a4c4e1299cd1d1f88395862622b4c38cf3564f4a519e06fc67d32e0981e7e938:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2ZTFiMzJmYTA5MDc5YWUyZjAwMDFmZmYwZWNhMjdiNDk4NTk1N2Q0ZWI0ODU3OTI5YjNjZjA1OGZhYWU1NDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVjMzM4NjMzZTAyMTg4Y2I4ZDA3YzNjMzhjZTAzNjRjZWRjNDI2NjNjYzFkZjFkMzYxOWM3MWNjMzQzZTE5NzQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_1df55825edbc48c18babb2ccbe614a53",
+      "statement": "The integration and e2e tests live in a reusable workflow `integration-tests.yml` (`workflow_call`/`workflow_dispatch`) separate from per-PR CI. The `integration-test` job runs the jsdom-based `test:integration` suite (which mocks the platform seam), while the `e2e-test` job runs a real packaged-Electron Playwright smoke test (`test:e2e`) under `xvfb-run -a` because Electron opens a real native window on Linux.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/integration-tests.yml#L1-L57",
+          "version": "repo-lines-v1:sha256:aaaaf971cfc1dc528037a30d3614eb967e9317f44352003bfaffaa811fa25354:eyJzZWxlY3RlZExpbmVDb3VudCI6NTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ5NzIzYThjNDgxMmQ2YzFlYTNhMGFkZDJhOGU1Njg0MTZkNTI1MzgyYmFkNDVmMDE3NjQ5YzE4YWM1MWVhZDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMyNmY2ZDVjYTA2ZDcxMzMxOTM0YzBmZjc0ODdiYWNkOTMyYTg5ZDA2ZmUxOWJhNjE1ZmQxNTM4ODVlZjQ0MjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d3589fe97e6f47fe985c0dc217fbcc32",
+      "statement": "The default vitest config excludes the slow integration suite (`*.integration.test.*`) so `npm test` is a fast per-PR unit gate; the integration suite runs separately via `test:integration` with its own `vitest.integration.config.ts`.",
+      "evidence": [
+        {
+          "resource": "repo://package.json#L16-L18",
+          "version": "repo-lines-v1:sha256:41ffe512b1ae703b2055a83646f103908ce81dd207e5c15702d85d5d67cc78bf:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGNkYmQ3Y2EyZDEzYWQzNTFkMjBkNzYzOTJjNDI3MzI3NzdmYjU3MmVlZmRjZmI5NTU1ZjcwYjQ0NDQ5MTIyNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGExOTg1Nzg0Y2JmMzczMTQ1NmMzOTdmZWJjM2Q4OWY3MmJkMTcxNGI3NDcyNGFlODJjYjk3YjMzZDcxMTZmMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGJhMDg3MDcyM2JiNDVkNWRmMDUzNDJmYTMyYmRmZTk2YWQyMjllMDEzODU3YWFiMjFmN2FiNzBkM2YxZGIxNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDM1NTc3ZDExNzNkOGQ2YjkyYjk1NTdjMDZjNzY1OTY0NmIzZDRiNGUyMzc3MGVmMDNhN2ExYWM1OTViYmEwNSJ9"
+        },
+        {
+          "resource": "repo://vite.config.ts#L59-L75",
+          "version": "repo-lines-v1:sha256:ddd7210cc88ebf2de4663b3379bc06f4a87afbcd6a93378ef0a724e2ff2b92bd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5MzZkZjdhNWEzYWFmMTgwY2ZmZDFkNjVjNjQ2ZWY2YWVhMzUyY2MyNzc3NDY4NjE5OWNkOGZiM2U4OTljN2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEwMWFjMzA5OWJiMWEwZWE4NzQ3NDRmZTFiOGJlYzA3YzRiZWU3NjA3YjgyN2NmYTFlNjhiOTU3YjM1MDY5NmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ba0a9097870140418f883cfd76dbf04c",
+      "statement": "`release.yml` triggers on a published GitHub Release (and `workflow_dispatch` dry runs), gates its build job on the reusable `integration-tests.yml` via `uses:`, and runs a per-OS matrix (`fail-fast: false`): macOS produces dmg (arm64+x64), Windows nsis, Linux AppImage, each via `scripts/build-electron.sh`.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/release.yml#L1-L75",
+          "version": "repo-lines-v1:sha256:3efc42171cd4a59575a7aa22692b564652e11fef0ef34056f41de873294d8486:eyJzZWxlY3RlZExpbmVDb3VudCI6NzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEyZWVmOTAzMGQwYzcwMjkwMTBjNDYzNTY4OWY1ODMyOGQxMDllNmE4NWVkMWE5MjQ1YjIwZjM5NTViN2RiMzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0ZjI4M2VkYzZlOWM4ZTk5NDJhOTZiNmQ3NmI4YjA2ZGU0MmJjZTdhMWFjYTMwZWMyNGI2YzI4NGJmOGFjMjkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQwZDc4NzI2ODRkNzkyZjM3NzA3YjBhYTUyMWI2MTQxMDk0ZWIzOWU4N2E0ZThhYThlMTNjNDQ5ZjVjMjg5ZWMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_37a8d25f164a472da64ae40ad1ddf0aa",
+      "statement": "`release.yml` always uploads artifacts to the workflow run (`if-no-files-found: error`) so manual `workflow_dispatch` builds are downloadable, but attaches them to the release via `softprops/action-gh-release` only when `github.event_name == 'release'`. Windows uploads `*.exe`, `*.exe.blockmap`, `latest.yml`, `latest.yml.sig`; Linux uploads `*.AppImage`, `latest-linux.yml`, `latest-linux.yml.sig`; macOS uploads `*.dmg` with no feed.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/release.yml#L88-L102",
+          "version": "repo-lines-v1:sha256:4c1b4349be402c4ae02efcf674493bf3bd1186fab1391780bdc232cfa65ce6dd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZjOTU4MmEyYWMxMWRhNDNiNDdmMjE5ZDlkM2E1MjUzYjIzMjM0Nzg3MmIzMmM5YTUxMWRmOTNmNzQ4OTIwN2UiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJiYjI0YTgyN2M3N2MzMzZmNjc4MWY4NGEzY2FhN2FhM2U5NGY5Y2UyYzVjZDUzZDUzM2U0ZjM0NGNiMzZiOTkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU4MGFkYWQ5ODkyZmJhNzQyOTFiYTU5Nzk4NjFiMjQzMTU5MTU4MDM4MjE4YTVmNjdkODJiM2ZkMjYwNzIwNzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f7e34d7ad3f74fe39206a0cb86707922",
+      "statement": "`scripts/build-electron.sh` mirrors `ci.sh`: runs from the repo root, optionally installs deps (`SKIP_INSTALL=1` to skip), runs `npm run build:electron`, and lists `./release/`. electron-builder auto-detects the host OS and emits the matching target (dmg/nsis/AppImage) into `./release/`.",
+      "evidence": [
+        {
+          "resource": "repo://scripts/build-electron.sh#L1-L40",
+          "version": "repo-lines-v1:sha256:6be26e29425d5a77129ae222902b5d7d7dd5497824f73656f1317db02893d519:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFkOTVmYzA0YTgwYzk1MmY0OWNlNDE4ODYyN2M1M2IwZmJlOGM0NDA0MWI5NTJkNTkyYWNkMWRlOTk4NjE0NjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUwMThlZjBhNjcwOWY1NmMwYWRmMWFhMjkyMTQ1Nzg0YTU0MjhhNDEzY2IxNWFkNDliMGQ3N2M1MTc0MTkwMjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_67e213c6b89f4660b089279c136f63ac",
+      "statement": "Because there is no purchased Authenticode/Apple certificate, `scripts/sign-release.cjs` independently signs the electron-updater feed file (`latest.yml`/`latest-linux.yml`) with an Ed25519 private key from the `RELEASE_SIGNING_PRIVATE_KEY` secret, writing `<path>.sig` (base64). It runs only on Windows/Linux (macOS has no feed).",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/release.yml#L77-L86",
+          "version": "repo-lines-v1:sha256:1248e02e77df373c02d3cbef709df7198766fd0716851ee9c4d6af8f1542873c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5NDIxMGIxNTQ4OGQ4MTVkZTc0NzAyZTAyYWQwMmFhMDIxOTU5NDc3ZWRhZDEyYmNhYTcxMjYwODNiMDhjODciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmOGJiYTc3YzAwNTIyYTgyMTU3M2FmZjcyMTcwODdjMzhlMjNkZDkwOGE2NmEwYTM5YWMyMjUzZjFmZDRiNTkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVjZjExNjk4MDk0MjM5NjI5ZDEzYWQ1ZmY5OWQ1NWMyZjYwNzBlZWRhNjZmN2UzYjUyOThiOWE0YTY1YmJmMGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFiNGFjM2EzODA3NTUxM2M3YzRmYjlhYTU0NDU2MTI3OGViZDgzODFkOTZjNWJhM2I3N2YwNmNhNWEzNmNmMWMifQ"
+        },
+        {
+          "resource": "repo://scripts/sign-release.cjs#L1-L31",
+          "version": "repo-lines-v1:sha256:c1c6a1c1f2d0ae0c2d92a769f26a5ec88ac4a6a9c66f44ae4de5550a918c7989:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJlMjU2NWVmNjc4ZWM5NTNlNmI0ZGU3YmQ1ZmMyY2RkM2IxYjliNjUyNWJhZWYyMjQ3OGU4OTI2N2YxNTNmYTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk0MzJlZjEyY2E0NzEzMDlkY2MzOGQ5N2FkMGY3MTBjZGM1NGE4MTA4NGMzMjI2YTE4OTQwZDRiYWM5MTdjZDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f8a55064a1f64133ad669b9da05570a5",
+      "statement": "The matching release-signing public key is baked into the app at build time (`RELEASE_PUBLIC_KEY_B64` in `src/model/updateSignature.ts`) and never fetched from the release channel, so a compromised release cannot republish a matching fake key. `verifyReleaseSignature` returns false for any malformed key, malformed signature, or genuine mismatch.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/updateSignature.ts#L28-L59",
+          "version": "repo-lines-v1:sha256:0bd526b4a23902a4c7624dab08f8fdc6e7774b42d09e69843fcf2a6305c72535:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhlZmNhNzYyYzM1ODI4ZDhhNjI4NWE2NWQzY2Y3ZmE3YjhiNzc5ZDc1Mzk3MzA2MmI1MmI5NTU2NTc5MjY3ZDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQwYzM1OGJlNzNkZjQ3YzZiODIxZDI5MzQxZjIzMTI4N2MyZWJiYjExNDAwNzFmMWIzN2NmMmNkZWQxY2ZiN2MiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0564e5627e2a4c0d93b03b3224188ec4",
+      "statement": "At runtime `electron/main.ts`'s `verifyUpdateFeed` fetches the feed file and its `.sig` directly from the release download URL and only proceeds to `autoUpdater.downloadUpdate()` after `verifyReleaseSignature` passes, chaining trust: the project's signature covers the feed file and electron-updater's sha512 check then covers the installer against the now-trusted feed. `autoDownload` and `autoInstallOnAppQuit` are both false, so downloads require an explicit `update:download` and installs require `update:install`.",
+      "evidence": [
+        {
+          "resource": "repo://electron/main.ts#L1235-L1237",
+          "version": "repo-lines-v1:sha256:4848955b0c7aa7df90b7e0c2b177d7ed72847731822a22a357b7c1ed4f9e0337:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTdjN2Q3YWM3NDQ4MmY4NmU2YjdlY2Y4NzkwNDY1ZGMxMDNmYjhjOGI5MmU4MTFjN2E1ZDM0ZTYxYzAzNTM5MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmIwZDYxMThmYjZiNjUyY2VmNThkYmUzNWNjMTU1NzFiODhhNjY2ODdhOWQ3ODZjZmZiZmU4OWY1MjE5NzYzNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODI4NTRhYWYyMDc2N2M1NzQ1NWFkMDJlMTI1N2NiMDBiMDdjMjRiYWNhMzUyZGZiOWM4NDVjZjkxZWFmMDhiMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmE3YWQxNzVjZGJhNDYyMzgxZjgwYTQ3N2ViZjcwNjU2NjVjNDRhNDcwYjYyNWY5MDk5NTI4Y2Y5MjEwZDRkYyJ9"
+        },
+        {
+          "resource": "repo://electron/main.ts#L1275-L1316",
+          "version": "repo-lines-v1:sha256:eb92a9ba1d90ac89e67ab882dbb52f3b019e5d7a3ae18baafe5a8f2792815030:eyJzZWxlY3RlZExpbmVDb3VudCI6NDIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUzOTk4YjhjZDQ0NzY3NDNjZDExMDY0ODkwOWVjMDY4YWQ1OWI1YTQ5ZWE0Y2ExNTlkNzNkMDI3NzYwZDkzODciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhYTlhZWYwYjBmNTA2NTZiYzkxOTY0OTZjNmVhMTVlMDNjODI2Zjg4ZDNlNDY5OTYxN2YyODZhNzI0NmRhOTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA4MGQ4MjMxOGRlMDRkYzY5MTVlMmYxMTliNGFhZjgyYjJlYWZlNTk2NmExN2M2N2EyNmUzZTYzNjczZTQ2OGUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b359dc5baf3e40d2a9e2810f103bdca4",
+      "statement": "Self-update is Windows/Linux only. macOS is excluded because electron-updater's Squirrel.Mac path needs a real Apple Developer ID signature and notarization to pass Gatekeeper, which the project does not have; mac keeps a check-only update banner instead.",
+      "evidence": [
+        {
+          "resource": "repo://electron/main.ts#L1223-L1241",
+          "version": "repo-lines-v1:sha256:7b3e5c10927406bcb95542143add96a46615e7638786fbb3fc24e50e226dc261:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcyNTFlZThiZjhiZDQwYjMxZjkyYjMzODhhNzAxODIyMjU5YTgzOTkyYTUyZjJhNGYyMDlkMTBlNjNmNGJiZGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMzY2JmMGRkMDQ5ODBmMjI5ZGMxMjE4ZDY3MTVlODE4NzBiNGIzM2RlNGFjMWY4ZWY2ZDNiM2IwNmQxMWFkOWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY5ZDkwODgwYzUyNzA4N2Y2MmVhMzVmNzU3ODAzZjIxNjMzNzhmNTAwY2E1NGUzNzYwZmIwMWVmOTQ2NGQxMWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIwOThmOTM2OGQyMzdiNDM4Yjk2ZmQ1ZDY2ZGQwMmIyNjA3ZGYzNDY5MjhlNGUyMDYyYTJhZDUzMDk2ZmUwODEifQ"
+        },
+        {
+          "resource": "repo://electron/main.ts#L1294-L1295",
+          "version": "repo-lines-v1:sha256:c164b4dfa6d136fe2259bbc2a66a7a40cf755d7ffef04fc08938cb6a807ee04b:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzdhMTBjZmU1OThmZDUyNGUzMTBjODg3YzUxMDljMGE5NTdlN2JjN2UyYWFjNWEyYmIwOTg0ZjI5YTFmYTk4YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTM1ZDhmMmJkOTgwYzQ4NjIxNTk0MjllZTQ5OTBiNWQ4MjYzYTA2ZGYyZGQ3NWIwNGRhYTQzZDQ5Mjc2ZGI2OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZmI1ODBlOTY0ZjgzYTQ3M2Y0M2Q0NDM4NDYyOTQ5ZDY4YjU2MDBmZGE3ODdmMTYzNzQ1ZDAwZGU4OWNiZjM2YSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiN2VmOTEyYTUxNDRiYzNkNGJjYTRmN2ZlZDg3ZGE0OGY1YWI1NjM2NWUzOWZiMTVhMmNkODc0YzI3MTQ0NGQ3MyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_e38edea154124cb8b529647fdaf7765e",
+      "statement": "The installers themselves are unsigned by Apple/Microsoft. On macOS the `afterPack` hook (`scripts/afterPack.cjs`) applies a free ad-hoc signature (`codesign --force --deep --sign -`) when no `CSC_LINK`/`CSC_NAME` certificate is configured, downgrading the quarantine 'damaged' dead-end to an 'unidentified developer' prompt the user can bypass; if a real certificate is configured the hook returns early so it does not clobber a proper signature.",
+      "evidence": [
+        {
+          "resource": "repo://scripts/afterPack.cjs#L1-L32",
+          "version": "repo-lines-v1:sha256:93c15e81ef4cc7bd3cfc2dd5c119b56939b6a41b07363891aaa7e1022117b20b:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc4M2Q3Yzk4Y2Y2OTA2N2U4Y2EwNzgzYzI0MThkOGEwOGEzNTQ2MjFmYTExMTRlZDIwMTJkZDI4YjMxMTk3ZDYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlmNGVlM2M0NzNiZjUwMDZjYWM4OWIwOTZhYjZlMGY1N2MzMzcxZTlkNjVkZWJhMTljZTczNjliOTFkMjUxYTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_134bd341ad66478d8a9236e022b79123",
+      "statement": "The electron-builder `build` config in `package.json` sets appId `io.github.gram21.sailor`, productName `SaiLoR`, asar true, compression maximum, electronLanguages `en-US`, a files list (dist, dist-electron, build/icon.png, excluding maps and node_modules), output dir `release`, the `afterPack` hook, a GitHub publish provider (owner Gram21/repo SaiLoR), and platform targets: macOS dmg arm64+x64, Windows nsis, Linux AppImage, each with a `${productName}-${version}-<os>-${arch}.${ext}` artifactName.",
+      "evidence": [
+        {
+          "resource": "repo://package.json#L51-L117",
+          "version": "repo-lines-v1:sha256:51ddb3e2490c8c10710fce6e3df1738fd06a36971a2e5d57cbf83fa57123c626:eyJzZWxlY3RlZExpbmVDb3VudCI6NjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdiMDcyMDFiZGI2YmMwNTkyMDg0OTYzNjgxODYxYTRmYTE0YWZkYTU5MWI2ZDU2NjFiNzQ1OGQ5MjFkNWQwZWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE4NzI4MzU4MjlhYzJjY2Y5NTlhMDNkNzc2N2ZhNDM2ZmE5NWE3NzIyNTlkOTA0ZDhmMzVmZTg3ZjE2ZmM5MjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcyMWIxM2Y4MGVjNTI0OTExYTQwMTYxZjFiMmNhOWRjODlkOTgzMzRmNzg4MWVjMWIzYzc2Yjg2MDBiNzE4NDMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9605ca1903244305b374bd3d55fd09d5",
+      "statement": "`package.json` declares `allowScripts: { \"esbuild@0.25.12\": true }`, permitting only esbuild's install script to run while blocking all other post-install scripts.",
+      "evidence": [
+        {
+          "resource": "repo://package.json#L118-L120",
+          "version": "repo-lines-v1:sha256:721b13f80ec524911a40161f1b2ca9dc89d98334f7881ec1b3c76b8600b71843:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOWM2YTVhMDllYTUzM2MyZjEwN2E4NjgyMGI4MDY4ZWQyYjllZjZlNzgzYTdkMzIyNTQ3MTYwMDU3ZThjNzA3NyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWI0N2FiYmExZWJjZjQ3MDZjOGRiMDk0ODU4ZDI4YmVkZDk2YjYxMjIxYjVjOWJmZTIwNDg4NWQ5M2I3ZWIzMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_59e997597284483d9d67448a3810bd8c",
+      "statement": "`Dockerfile.electron` is a build image for the Linux Electron installer using a Debian base (`node:22-bookworm`, not Alpine) because electron-builder needs glibc; it installs `ca-certificates` and `fakeroot`, runs `npm ci`, and defaults to `npm run build:electron`, producing Linux AppImage installers into `/app/release`. Windows/macOS installers must be built on their native OS (Windows can be cross-built by swapping the base for `electronuserland/builder:wine`).",
+      "evidence": [
+        {
+          "resource": "repo://Dockerfile.electron#L1-L32",
+          "version": "repo-lines-v1:sha256:4df376afd0f71a53fb1a5677c3ef40320883a5c211db87ee372be23d17b7ba83:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlYjQ4YmQ3NThhMDRiMjU4MGM2MDIxYTg2ZGZiY2UyMTFmMDE1YTFkZDVjYzRmMzljMTNiNmVjZmUxNTcyOTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZkNjNmNTI4ZGZmOWEwNzMxZmU3OTM3MTQyYmQ4MDAxYjRlNTYyZmViN2U1OGNjNmRiOGM4ZDYyZmNkYTkyMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ecf7718793084eef957925a1582d9e27",
+      "statement": "`docker-compose.dev.yml` bind-mounts the source at `.:/app` (with a named `/app/node_modules`) so the image only carries toolchain + dependencies; the standard invocation is `docker compose -f docker-compose.dev.yml run --rm electron`, and the `CMD` can be overridden for other tasks like `npm run build` or `npm test`.",
+      "evidence": [
+        {
+          "resource": "repo://docker-compose.dev.yml#L1-L16",
+          "version": "repo-lines-v1:sha256:f699737ddd7c6a7789cef5324ef2680be06bbdde9473fd6cdc240872ca88f703:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhMGMyMWFlYzI4ZTY2MjBmZWMyMjQ1ODllOWEwMjQ2OTllZjNiZThlZmNhZGRhYTE2YjQzNTNiZWFiMmU1NWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI2OWZlZWQ4Yzk2ZGZkMTAwYzk0ODU2M2YxOGM2YzBhM2EwYzM2ZWRhMmE3NmQwYWIzNjI4ODMzMDU2YzM1OTgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9c27d5e47c364529828874b8c72e96a0",
+      "statement": "`openwiki.yml` is the scheduled weekly (Monday 06:00 UTC) OpenWiki refresh: it stops early unless `main` has relevant (non-`openwiki/**`) commits in the last 7 days, installs `openwiki` plus `mermaid`/`jsdom` for real mermaid-fence validation, runs `openwiki --update --print`, discards the CLI's self-scaffolded `openwiki-update.yml` and `AGENTS.md`/`CLAUDE.md` snippets, and opens a PR scoped to `openwiki`.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/openwiki.yml#L1-L99",
+          "version": "repo-lines-v1:sha256:5201493cd3da72b9b43ddd1a893da1b3c1bd93a0167112b052f0ae171c7799ee:eyJzZWxlY3RlZExpbmVDb3VudCI6OTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2MDI3ODdhZjZkY2MwODM0ZGUxMjFjYmIxY2I5NWY5NDU5YjcyMWVhYjAzNDlmMTA1MDFiOTk2YzFjNzdmZmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0Nzc5NmQzMTczMmZiY2U4OTk4YTJmN2U3YjFiYjk3NTVjMjNlNTg1MDMyMGI5MDkzN2Q4MmMzZmQwZTYyYTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4935551a39d0407ea70e00c43c21c122",
+      "statement": "`wiki-publish.yml` triggers on push to `main` under `openwiki/**`, `user-guide/**`, `.github/wiki-assets/**`, or the workflow file, and replaces the GitHub wiki with a combined layout: Home landing page, `Development.md` (from `openwiki/Home.md`), flat `openwiki/*.md`, flattened/renamed `user-guide/*.md` (`Guide-*`), and a global `_Sidebar.md`/`_Footer.md` assembled from `.github/wiki-assets/` plus a user-guide fragment. It strips OKF frontmatter, rewrites cross-links for extensionless wiki URLs, and `rsync --delete` mirrors, committing as `github-actions[bot]` with a `[wiki-sync]` marker.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/wiki-publish.yml#L1-L309",
+          "version": "repo-lines-v1:sha256:1f22c74ae8393aced6d8a06c5b5575dfa1e5a683b80a4adea4c8c1068de2b580:eyJzZWxlY3RlZExpbmVDb3VudCI6MzA5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI2Y2IxNmRiNGUxNzUyODNlNWU5M2IwYmI2YmE2NDUzZDM1MDE5ZjEzMGFmOWEyYWM4YzdhMzlkMjA3YTEyMTM0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzZTEwYzY2OThhMjc3YmRjMjAxNWE5OGJmM2ZkNTkwNzM0YmRjMjhmZTZlMjUzODU4ZTQ5OThhYzFlYzc3MjkzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_66c08000247f4650aee1ec43741d1cea",
+      "statement": "`wiki-import.yml` is the reverse direction, triggering on `gollum` (wiki create/update) and `workflow_dispatch`; it clones the wiki and maps each published piece back to its repo source (`Development.md`→`openwiki/Home.md`, `Guide-*`→`user-guide/<src>.md`, `_Sidebar`/`_Footer` user-guide fragments→`.github/wiki-assets/` lifted out of their `<!-- wiki-sync:NAME:start/end -->` marker pairs), then `rsync --delete` mirrors remaining `*.md` into `openwiki/` and commits to `main` with a `[wiki-sync]` marker.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/wiki-import.yml#L1-L189",
+          "version": "repo-lines-v1:sha256:005b150f9dce6cb48e7e77cd9f74e5932af50823580b4bae732ff30b623bf041:eyJzZWxlY3RlZExpbmVDb3VudCI6MTg5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiZTcxODA3M2NiMDgwNTQ0NDI4YzQ0MzYwYjI0ZTUzZTgzZWE4NTYxM2U3OWU1ZDNlNzk0OTZiODYyMjUyMjlkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzZTdjNmI1ZmMxYTNmNTg5ZTZiNzEyZTJhYTkzZTk0MTIyMmRkZDQwNDUxNThkMDkxYzRiM2ViMWZjY2I5MDFmIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_b09ea28534f1489798a30923839c0643",
+      "statement": "Publish and import would otherwise form an infinite loop (publish→gollum→import→main push→publish). Three independent layers prevent it: both share a `concurrency: group: wiki-sync` with `cancel-in-progress: false` so they never run concurrently; `wiki-publish.yml` skips commits whose message contains `[wiki-sync]`; and `wiki-import.yml` skips when `github.event.sender.login == 'github-actions[bot]'`, so each direction only reacts to human-originated changes on the other side.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/wiki-import.yml#L24-L35",
+          "version": "repo-lines-v1:sha256:ab79fdb3ae7adddda86fece738cfc584219502441c27d7d38b795885c9317f7c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRhOWYyNzc5OWY0OTg2NTk4MDA1MTc0YWUyN2I0MDFhNDUwODA5MDFlMWQ0Y2JiOTFjYzNkODE4N2M4YTIxOTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM4OTk5MTEwM2Y2YmE4ODhlM2RlNzY1MWM1YTMwNWM3N2U1NTQ3Njc3M2FiYTgzOTU5MWVjYzViZDBmMmFiMWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFhODQ5NWE2MDRhMzhlNmJmMGY1NmQxMTQyMjhjMjUyZWEyODFhMTY3ZmRhNjUwMjExZjUwZTRmZWY3MWRjZGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZjMDE4MDVjZjUzNjUyYTU2OTg0MTkwZTI2MjEzMDUzMDA5YTY5MWIwZmUyZTI4MDVmNGU0MjUwNWVlMDc4MmMifQ"
+        },
+        {
+          "resource": "repo://.github/workflows/wiki-publish.yml#L67-L79",
+          "version": "repo-lines-v1:sha256:98fb6dbf70932bb04d9b39f53c61ab924d7f85f863f12d682ad043418a3fcd3c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA1YzA0ZTYzODc0YmVmMzY1ODllMjRjNTQ0M2QyN2M0MTRkMDQyNWQ4NTViZTRiZWM2Y2JmY2E5YWRkMjBkNDgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1NWVmNWZlMThlMWJmMDMwZDQ5NjQ5MzY3YWEyNjZkZjJmMjQwNDk4YTUxZTViOTkxZGNiOGRjNmQwY2I3NGUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFhODQ5NWE2MDRhMzhlNmJmMGY1NmQxMTQyMjhjMjUyZWEyODFhMTY3ZmRhNjUwMjExZjUwZTRmZWY3MWRjZGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImViYWY0MDcxNjUzM2E0ZmJmMjk2ZWU3YjhmNzlhNTc4YTEzYTVmNGExMjM0N2Q0NWM1NTYxNzgwMjQ0Y2I2ZDcifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.4.0",
+    "at": "2026-08-26T09:23:05.972Z"
+  }
+}

@@ -1,8 +1,79 @@
 ---
 type: guide
 title: SaiLoR Quickstart
-description: Introduction to SaiLoR, a tool for conducting Systematic Literature Reviews (SLRs). Covers what SaiLoR is, the split project.json + annotations/ storage format, the full tech stack (React 19, Electron, Vite, Zustand, Zod), why SaiLoR is now Electron-desktop-only, quick-start commands, and the repository layout.
-tags: [quickstart, setup, tech-stack, commands, electron-only]
+description: Introduction to SaiLoR, an Electron-desktop-only tool for conducting Systematic Literature Reviews (SLRs). Covers what SaiLoR is, the split project.json + annotations/ storage format, the full tech stack (React 19, Electron 43, Vite 6, Zustand+immer, Zod, react-pdf), quick-start commands, the repository layout, and a task-routing map to the right wiki page for common change areas.
+tags: [quickstart, setup, tech-stack, commands, electron-only, task-routing]
+verified:
+  - by: openwiki/0.4.0
+    at: 2026-08-26T09:23:05.972Z
+sources:
+  - id: openwiki-source-4d1d392666be6dfdd7a91a2e
+    resource: repo://.github/workflows/release.yml
+  - id: openwiki-source-5c59216b8218fe8745f9ce38
+    resource: repo://e2e/openSaveProject.spec.ts
+  - id: openwiki-source-8d6b6eb5e58f91e157e37bde
+    resource: repo://electron/main.ts
+  - id: openwiki-source-4934747c1d2001daf65dee21
+    resource: repo://electron/preload.ts
+  - id: openwiki-source-5b54a58d1b51cd490b0e7162
+    resource: repo://package.json
+  - id: openwiki-source-23775c3de52f3ab95a13cb8b
+    resource: repo://README.md
+  - id: openwiki-source-ebc09c37829da6e456c89f67
+    resource: repo://scripts/build-electron.sh
+  - id: openwiki-source-0744bbc5adcd6bd563690bde
+    resource: repo://scripts/ci.sh
+  - id: openwiki-source-1d3476a6e83c1e73809d1a15
+    resource: repo://scripts/sign-release.cjs
+  - id: openwiki-source-54631e6ebf1d3b815c4a5eed
+    resource: repo://src/App.tsx
+  - id: openwiki-source-0e14c9aaf12eaa87038c7351
+    resource: repo://src/consolidate/align.ts
+  - id: openwiki-source-a258703e59a20a265c4d7784
+    resource: repo://src/consolidate/apply.ts
+  - id: openwiki-source-645237ab18a1b0effda09b72
+    resource: repo://src/git/merge.ts
+  - id: openwiki-source-d2e79df56d937d834ecbd575
+    resource: repo://src/git/ref.ts
+  - id: openwiki-source-edb4606d45ab1f4b8b69cb80
+    resource: repo://src/git/relpath.ts
+  - id: openwiki-source-45eebe3ca36ab988bd9323a9
+    resource: repo://src/git/url.ts
+  - id: openwiki-source-ded932c19c04aac08bb5edf2
+    resource: repo://src/model/annotations.ts
+  - id: openwiki-source-68e9e61da0efb614946dda70
+    resource: repo://src/model/project.ts
+  - id: openwiki-source-a0459bce65b7490683280544
+    resource: repo://src/model/schema.ts
+  - id: openwiki-source-d550d6b8b447fac29ab966c2
+    resource: repo://src/model/updateSignature.ts
+  - id: openwiki-source-ff5f46fa2216a7ebb3226632
+    resource: repo://src/model/validate.ts
+  - id: openwiki-source-24c09c3b54387889db23d752
+    resource: repo://src/platform/adapter.ts
+  - id: openwiki-source-769f5f5c1e3631cf9ab273bc
+    resource: repo://src/platform/electron.ts
+  - id: openwiki-source-776dd28cc442c205e0a91460
+    resource: repo://src/platform/index.ts
+  - id: openwiki-source-9b49ad2f97827d5ed9890232
+    resource: repo://src/platform/unsupported.ts
+  - id: openwiki-source-5f3156110d9aafbc8e103762
+    resource: repo://src/screening/counts.ts
+  - id: openwiki-source-c0a5a9016440eaf62ed2a380
+    resource: repo://src/screening/schema.ts
+  - id: openwiki-source-479c74ae5cbf30b0a06174a1
+    resource: repo://src/screening/status.ts
+  - id: openwiki-source-fa765b0e395ba25b6016d05a
+    resource: repo://src/screening/validate.ts
+  - id: openwiki-source-c1ab92e18d72fec6435ab66e
+    resource: repo://src/state/aiStore.ts
+  - id: openwiki-source-89409d7a9c0280067e058c1a
+    resource: repo://src/state/store.ts
+  - id: openwiki-source-5e1b077422a94ae165e88e4e
+    resource: repo://vite.config.ts
+  - id: openwiki-source-9b13c737ac155b0b0c8d76b9
+    resource: repo://vitest.integration.config.ts
+generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
 ---
 
 # SaiLoR — Quickstart
@@ -13,14 +84,13 @@ SaiLoR is a tool for reviewers conducting **Systematic Literature Reviews (SLRs)
 
 1. **An annotation schema** — a nested, cardinality-controlled taxonomy defining what fields to extract from each paper, stored in `project.json`.
 2. **A list of papers** — each with a PDF path and metadata, also in `project.json`.
-3. **Every reviewer's/consolidation's annotation data** — the actual filled-in answers, stored separately under `annotations/<paperId>/` (see "On-disk layout" below and [Data Model](data-model.md)).
+3. **Every reviewer's/consolidation's annotation data** — the actual filled-in answers, stored separately under `annotations/<paperId>/` (see "On-disk layout" below and [Data Model](concepts/data-model.md)).
 
 The app renders the PDF in the middle pane, shows the annotation form on the right, and lets you **grab text directly from the PDF** to populate fields. Annotations are saved back to the split files described above.
 
 A project can also be set to **screening** mode instead of authoring a schema: one fast
 Include/Exclude decision per paper (plus a reason when excluded), usually made from the title and
-abstract before annotation even begins. See the "Screening" sections of
-[Architecture](architecture.md) and [Data Model](data-model.md).
+abstract before annotation even begins. See [Screening Mode](workflows/screening.md).
 
 ### On-disk layout
 
@@ -43,8 +113,8 @@ single all-in-one JSON file used to make two reviewers working on different pape
 reviewer slots of the same paper) collide in git on every save; splitting the data means ordinary
 git tracks, diffs, and merges each paper/reviewer's file independently. **A project saved in the
 old single-file shape opens and continues to work as before — it is migrated to the split layout
-automatically on the next save, with no explicit "migrate" step.** See [Data Model](data-model.md)
-for the full shape and migration mechanics.
+automatically on the next save, with no explicit "migrate" step.** See
+[Data Model](concepts/data-model.md) for the full shape and migration mechanics.
 
 ## SaiLoR is Electron-desktop-only
 
@@ -55,11 +125,13 @@ CI/typecheck pipeline and Vite build still pass), but at runtime it shows a "Sai
 been discontinued — use the desktop app" message and blocks all project-opening UI before any file
 picker or project state can be reached (`src/App.tsx`'s `isElectron()` gate). Docker self-hosting
 serves that same static build, so it no longer does anything useful either. See
-[Architecture](architecture.md) and [Operations](operations.md) for what this removed
-(`src/platform/browser.ts`, `src/platform/idb.ts`, the `?project=<url>` loader) and why.
+[Architecture](architecture.md) for what this removed (`src/platform/browser.ts`,
+`src/platform/idb.ts`, the `?project=<url>` loader) and why.
 
 The **desktop app (Electron)** — local files, native Open/Save dialogs, custom `slr-file://`
 protocol for PDF loading, and full git integration — is the only supported way to use SaiLoR now.
+`npm run dev` (the plain web dev server) shows only the discontinuation screen and nothing else;
+Electron dev is the only usable way to run the app.
 
 ## Tech Stack
 
@@ -71,7 +143,7 @@ protocol for PDF loading, and full git integration — is the only supported way
 | PDF rendering | react-pdf (pdf.js) |
 | Desktop shell | Electron 43 |
 | Build tool | Vite 6 (with vite-plugin-electron) |
-| Testing | Vitest 3 + jsdom |
+| Testing | Vitest 3 + jsdom; Playwright for e2e |
 
 ## Quick Commands
 
@@ -96,9 +168,20 @@ npm run build:electron
 # Unit tests (model: schema, normalize, prune, round-trip):
 npm test
 
+# Integration tests (spin up real scratch git repos; slow, gated before release):
+npm run test:integration
+
+# End-to-end tests (real Electron; builds first, gated before release):
+npm run test:e2e
+
 # Type check only:
 npm run typecheck
 ```
+
+`scripts/ci.sh` chains the provider-agnostic CI pipeline (install → typecheck → wiki-link check →
+test → build). `scripts/build-electron.sh` packages the desktop app for the host OS. See
+[Build, CI, and Release](operations/build-release.md) for the full pipeline, GitHub Actions
+workflows, Docker-based builds, and release signing.
 
 ## Repository Layout
 
@@ -136,7 +219,9 @@ npm run typecheck
 │   │   ├── ownAnnotationPath.ts  ownAnnotationPathMatcher — does a path under annotations/ belong to *this* project or a sibling sharing the folder? (pure, unit-tested; imported by electron/main.ts for branch-switch/merge/Save-As guards)
 │   │   ├── concurrentRead.ts  readAllConcurrently — concurrent one-per-id reads preserving id→result mapping (extracted from readProjectText for testability; used by readProjectText, readProjectAtRevision)
 │   │   ├── deriveGitInfo.ts   deriveGitInfo — maps git:info's five concurrent git calls to their fields (extracted for testability)
-│   │   └── merge.ts       mergeProjects / applyResolutions — the field-level three-way merge (see architecture.md's "Git" section)
+│   │   └── merge.ts       mergeProjects / applyResolutions — the field-level three-way merge
+│   ├── llm/                AI-assisted annotation — pure logic (providers, prompt, parse, paths, models)
+│   ├── consolidate/        Multi-reviewer consolidation — pure logic (align, apply, similarity, metrics, disagreements, unanimous, readiness)
 │   ├── platform/          Platform abstraction for file I/O, PDF loading, and git — Electron only now, see "SaiLoR is Electron-desktop-only" above
 │   │   ├── adapter.ts     PlatformAdapter interface + isElectron()
 │   │   ├── electron.ts    ElectronAdapter (IPC + slr-file://, recents, git incl. merge/log/discard-file/branch-delete, splits project text into project.json + annotations/ files on save)
@@ -150,92 +235,73 @@ npm run typecheck
 │   │   ├── store.marks.test.ts  PDF mark mutations (addHighlight/setMarkComment/setMarkColor/removeMark) and their undo steps
 │   │   ├── editorStore.ts  Draft state for the project editor (schema tree + papers, relative PDF paths, validate/save)
 │   │   ├── gitStore.ts    Zustand + immer store for the clone flow, the commit/pull/push panel, the merge-branch/delete-branch prompts, the commit-history panel, and whole-file discard (reads store.ts one-way; store.ts never imports it)
+│   │   ├── aiStore.ts     Zustand store for the AI-assisted annotation flow (its own phase lifecycle; meets the main store only at `applyAiSuggestions`)
 │   │   └── settings.ts   Theme + font-scale persistence (localStorage), applyTheme/applyFontScale
-│   ├── components/        React UI
-│   │   ├── Toolbar.tsx    Open ▾ / Save ▾ dropdowns, font controls, theme toggle, help button, Git button
-│   │   ├── SidebarToggle.tsx  Show/hide the paper list (in its header; moves to the toolbar when hidden)
-│   │   ├── Dropdown.tsx   Reusable click-to-open dropdown menu
-│   │   ├── PaperList.tsx  Left pane — paper list with search box and annotation status dots
-│   │   ├── Splitter.tsx   Drag handles between the three panes (widths persisted)
-│   │   ├── PdfViewer.tsx  Middle pane — react-pdf, zoom controls, multi-page navigation, jump history (back/forward), in-PDF search (Ctrl+F, debounced), text selection capture, internal-link hover previews (destination entry fit), dedupe of overlapping highlight rects, "continue where you left off" scroll-position restore (page + offset, re-snapped across render ticks)
-│   │   ├── AnnotationPanel.tsx  Right pane — renders schema recursively
-│   │   ├── AnnotationNode.tsx   Recursive node (fields, groups, repeatable instances)
-│   │   ├── NodeName.tsx   Node label with ⓘ description tooltip (portaled); Ctrl/Cmd-click opens a single-link description directly
-│   │   ├── Field.tsx      Input control (text/number/checkbox/enum dropdown) + "grab from PDF" button + 🔗 field-link popover
-│   │   ├── ComboBox.tsx   Filterable dropdown for enum (options) string fields, with clear (×) button
-│   │   ├── ExportPdfDialog.tsx  Modal — burn in-app marks into real PDF annotations (new file or overwrite)
-│   │   ├── SchemaInfoDialog.tsx  Modal — shows the schema-wide info comment (auto-opens on first load)
-│   │   ├── ScreeningRecord.tsx  Middle pane for a screening project — title/authors/DOI + abstract, swaps to PdfViewer
-│   │   ├── ScreeningPanel.tsx   Right pane for a screening project — Include/Exclude + Reason, progress
-│   │   ├── ScreeningSummary.tsx Modal — PRISMA-style include/exclude/reason counts
-│   │   ├── ScreeningImportDialog.tsx  Modal — pre-commit summary for importing from a screening project
-│   │   ├── ProjectEditor.tsx    Create/edit a project JSON (location bar + schema/screening + papers)
-│   │   ├── SchemaTreeEditor.tsx Drag-and-drop annotation-schema builder (reorder + nest)
-│   │   ├── ScreeningReasonsEditor.tsx  Replaces SchemaTreeEditor when the draft is a screening project
-│   │   ├── PapersEditor.tsx     Add/edit/reorder the PDFs (and abstracts) the project references
-│   │   ├── ConsolidationOverview.tsx Project-wide modal for Consolidation batch actions (disagreement list, Adopt all unanimous, opens Agreement/disagreements)
-│   │   ├── ConsolidationVerdicts.ts Per-field agree/disagree status via React Context (consumed by Field.tsx)
-│   │   ├── ConsolidationDialog.tsx Modal: every reviewer's answer for one field; resolve, defer, or enter a different value
-│   │   ├── ClosePrompt.tsx      Save / Don't Save / Cancel when closing a dirty project
-│   │   ├── GitCloneDialog.tsx   Import-from-git modal: URL + destination → clone → pick the project JSON
-│   │   ├── GitDialog.tsx        Commit message (with Amend checkbox), Commit/Pull/Push (above the changes list), branch switcher, Merge branch… and History… header buttons
-│   │   ├── GitMergeDialog.tsx   Pull's, merge-branch's, and branch-switch's conflict-resolution list
-│   │   ├── MergeBranchPrompt.tsx  "Merge branch…" button's own small prompt — pick a branch, see the direction spelled out
-│   │   ├── DeleteBranchPrompt.tsx  "- Delete branch…" entry's own dialog — pick a local branch to delete
-│   │   ├── GitHistoryDialog.tsx  "History…" button's read-only commit-history panel, with lazy per-commit field diffs
-│   │   ├── HelpDialog.tsx Modal with app intro + keyboard shortcuts (mode-aware, incl. screening)
-│   │   └── ErrorPanel.tsx Error overlay for load/save failures
-│   ├── hooks/
-│   │   ├── useKeybindings.ts       Open, save, save-as, undo/redo, paper nav (filtered list order), PDF zoom / font size, help
-│   │   ├── useAutosave.ts          Periodic 5-min autosave (opt-in, skipped while editor is open)
-│   │   ├── useExportTextMenu.ts    Reusable "Copy to clipboard" / "Save to file…" dropdown for text exports
-│   │   ├── useDirtyGuard.ts        beforeunload guard when dirty (dead code in practice — `isElectron()` gates it out; kept only because it is cheap to keep and Electron's own quit dialog covers the same case)
-│   │   └── useElectronCloseGuard.ts  Electron quit dialog + Edit-menu undo/redo IPC wiring
+│   ├── components/        React UI (Toolbar, PaperList, PdfViewer, AnnotationPanel, Field, Screening*, Consolidation*, Git*, Ai*, LlmSettingsDialog, ModelPicker, …)
+│   ├── hooks/             useKeybindings, useAutosave, useExportTextMenu, useDirtyGuard, useElectronCloseGuard
 │   ├── clipboard.ts       copyText — clipboard write with legacy fallback, never throws
 │   ├── App.tsx            Component composition; `isElectron()` gate shows the web-discontinued notice and blocks all project-opening UI otherwise; welcome screen with recents, HelpDialog
 │   ├── main.tsx           React root (applies theme + font scale before render)
 │   └── styles/            index.css (full app styling), ai.css, editor.css, papers-editor.css, schema-editor.css, git.css
+├── e2e/                    Playwright e2e (openSaveProject, gitPush) — real Electron, gated on build
 ├── samples/               Single-file example projects (auto-migrate to the split layout on first save)
-│   ├── project.example.json  Example project (title, 4 papers incl. a multi-page PDF) + schema with required and enum fields
-│   ├── screening.example.json  Example screening project (same 4 papers + 3 abstract-only, all decision states)
-│   └── pdfs/                 Sample PDFs (incl. multipage.pdf with an internal link, A1-37.pdf for two-column author parsing)
 ├── scripts/ci.sh          Provider-agnostic CI pipeline (install → typecheck → test → build)
 ├── scripts/build-electron.sh  Provider-agnostic desktop build (electron-builder for the host OS)
-├── .github/workflows/ci.yml       GitHub Actions — runs scripts/ci.sh on push to main and on every pull request
-├── .github/workflows/release.yml  GitHub Actions — builds desktop installers on release, attaches them
-├── .github/workflows/openwiki.yml Scheduled weekly OpenWiki doc refresh (only when code changed)
-├── .github/workflows/openwiki-update.yml  Triggered OpenWiki doc update on push to main
-├── .github/CODEOWNERS     Default reviewers for pull requests
-├── docs/                  In-depth authoring guide (annotation-schema.md)
+├── scripts/sign-release.cjs  Ed25519 signs the electron-updater feed for native self-update
+├── .github/workflows/     ci.yml, integration-tests.yml, release.yml, openwiki*.yml
+├── Dockerfile.electron    Debian image that runs electron-builder — Linux installers into ./release/
+├── docker-compose.dev.yml Builds the Dockerfile.electron image
+├── docs/                  In-depth authoring guide (annotation-schema.md) — the user-facing reference
 ├── public/logo.svg        App logo — source of truth; also shown on the welcome screen
 ├── build/icon.png         Generated from public/logo.svg (dock / packaged-bundle icon)
-├── public/favicon.svg     Browser favicon (separate, hand-simplified for 16px tabs)
-├── Dockerfile.electron    Debian image that runs electron-builder — Linux installers into ./release/
-├── docker-compose.dev.yml Builds the Dockerfile.electron image (`docker compose -f docker-compose.dev.yml run --rm electron`)
 ├── vite.config.ts         Vite + vitest + electron plugin config
+├── vitest.integration.config.ts  Standalone config for the integration suite (separate from `npm test`)
 ├── tsconfig*.json         TypeScript project references (app / node)
 └── package.json           Scripts, deps, electron-builder config
 ```
 
 ## Task Routing
 
-Where to start for common change areas (source entry points → symbols → focused tests → minimal validation):
+Where to start for common change areas (wiki page → source entry points → key symbols/types → focused tests → minimal validation):
 
 | Change area / intent | Wiki page | Source entry points | Key symbols / types | Focused tests | Minimal validation |
 |---|---|---|---|---|---|
-| Annotation field value / instance lifecycle | [Architecture](architecture.md) | `src/state/store.ts` | `setFieldValue`, `addInstance`, `removeInstance`, `currentTree` | `src/state/store.test.ts` | `npm test -- src/state/store.test.ts` |
-| PDF mark (highlight/note) + its undo step | [Architecture](architecture.md) | `src/components/PdfViewer.tsx`, `src/state/store.ts` | `addHighlight`, `setMarkComment`, `removeMark`, `linkMarkToField` | `src/state/store.marks.test.ts` | `npm test -- src/state/store.marks.test.ts` |
-| "Continue where you left off" reading position | [Architecture](architecture.md) | `src/components/PdfViewer.tsx`, `src/state/store.ts` | `noteReadingPosition`, `loadReadingPosition`, `initialPdfPosition`, `readOffsetFraction`, `textRenderTick` | `src/state/store.readingPosition.test.ts` (persistence), `src/test/integration/pdfReadingPosition.integration.test.tsx` (scroll geometry) | `npm test -- src/state/store.readingPosition.test.ts`; integration: `npm run test:integration` |
-| Platform adapter / file-IO / PDF-loading seam | [Architecture](architecture.md) | `src/platform/adapter.ts`, `src/platform/electron.ts`, `src/platform/index.ts`, `src/platform/unsupported.ts` | `PlatformAdapter`, `ElectronAdapter`, `createUnsupportedAdapter`, `getPlatform` | `src/test/integration/*.integration.test.tsx` (mocks `getPlatform`) | `npm run typecheck` |
-| Electron IPC surface (main/preload/adapter) | [Architecture](architecture.md), [Operations](operations.md) | `electron/main.ts`, `electron/preload.ts`, `src/platform/electron.ts` | `SlrBridge`, `bridge()` | `e2e/openSaveProject.spec.ts` | `npm run typecheck` |
-| Consolidation entry matching | [Architecture](architecture.md) | `src/consolidate/align.ts`, `src/consolidate/apply.ts`, `src/state/store.ts` | `alignNode`, `alignableNodes`, `growConsolidated` | `src/consolidate/align.test.ts`, `src/consolidate/apply.test.ts` | `npm test -- src/consolidate` |
-| Git ref/path safety primitives | [Architecture](architecture.md) | `src/git/ref.ts`, `src/git/relpath.ts` | `refProblem`, `relPathProblem`, `annotationsRelDir` | `src/git/ref.test.ts`, `src/git/relpath.test.ts` | `npm test -- src/git/ref.test.ts src/git/relpath.test.ts` |
-| Schema resolution / model round-trip | [Data Model](data-model.md) | `src/model/schema.ts`, `src/model/project.ts`, `src/model/annotations.ts` | `resolveSchema`, `loadProject`, `serializeProject`, `normalizeTree` | `src/model/model.test.ts` | `npm test -- src/model/model.test.ts` |
-| Project editor (schema tree + papers) | [Operations](operations.md) | `src/state/editorStore.ts` | `editorStore`, `buildProjectJson` | `src/state/editorStore.test.ts` (+ siblings) | `npm test -- src/state/editorStore.test.ts` |
-| Build / CI / release | [Operations](operations.md) | `scripts/ci.sh`, `scripts/build-electron.sh`, `.github/workflows/ci.yml` | — | `e2e/` (release-gated) | `npm run typecheck && npm test` |
+| Annotation field value / instance lifecycle | [Architecture](architecture.md) | `src/state/store.ts` | `setFieldValue`, `addInstance`, `removeInstance`, `currentTree` | `src/state/store.test.ts`, `src/state/store.reviewers.test.ts` | `npm test -- src/state/store.test.ts` |
+| PDF mark (highlight/note) + its undo step | [PDF Viewer and Marks](workflows/pdf-viewing.md) | `src/components/PdfViewer.tsx`, `src/state/store.ts`, `src/model/pdfMarks.ts` | `addHighlight`, `setMarkComment`, `removeMark`, `linkMarkToField` | `src/state/store.marks.test.ts`, `src/model/pdfMarks.test.ts` | `npm test -- src/state/store.marks.test.ts` |
+| "Continue where you left off" reading position | [PDF Viewer and Marks](workflows/pdf-viewing.md) | `src/components/PdfViewer.tsx`, `src/state/store.ts` | `noteReadingPosition`, `loadReadingPosition`, `initialPdfPosition`, `readOffsetFraction` | `src/state/store.readingPosition.test.ts`, `src/test/integration/pdfReadingPosition.integration.test.tsx` | `npm test -- src/state/store.readingPosition.test.ts`; integration: `npm run test:integration` |
+| Schema resolution / model round-trip | [Annotation Schema and Validation](concepts/annotation-schema.md), [Project Data Model](concepts/data-model.md) | `src/model/schema.ts`, `src/model/project.ts`, `src/model/annotations.ts` | `resolveSchema`, `loadProject`, `serializeProject`, `splitProjectFiles`, `isLegacyProjectShape`, `normalizeTree` | `src/model/model.test.ts`, `src/model/split.test.ts` | `npm test -- src/model/model.test.ts` |
+| Consolidation entry matching / alignment | [Multi-Reviewer Consolidation](workflows/consolidation.md) | `src/consolidate/align.ts`, `src/consolidate/apply.ts`, `src/state/store.ts` | `alignNode`, `alignableNodes`, `growConsolidated` | `src/consolidate/align.test.ts`, `src/consolidate/apply.test.ts` | `npm test -- src/consolidate` |
+| Git merge / three-way field merge | [Git Integration](workflows/git-integration.md) | `src/git/merge.ts`, `src/git/changes.ts`, `src/state/gitStore.ts` | `mergeProjects`, `applyResolutions` | `src/git/merge.test.ts`, `src/state/gitStore.test.ts` | `npm test -- src/git/merge.test.ts` |
+| Git ref/path safety primitives | [Git Integration](workflows/git-integration.md) | `src/git/ref.ts`, `src/git/relpath.ts`, `src/git/url.ts`, `src/git/ownAnnotationPath.ts` | `refProblem`, `relPathProblem`, `annotationsRelDir`, `validateGitUrl` | `src/git/ref.test.ts`, `src/git/relpath.test.ts`, `src/git/url.test.ts` | `npm test -- src/git/ref.test.ts src/git/relpath.test.ts` |
+| LLM annotation (AI-assisted pre-fill) | [AI-Assisted Annotation](workflows/llm-annotation.md) | `src/llm/providers.ts`, `src/llm/prompt.ts`, `src/llm/parse.ts`, `src/state/aiStore.ts`, `src/state/store.ts` | `buildRequest`, `buildSystemPrompt`, `parseAnswer`, `applyAiSuggestions` | `src/llm/parse.test.ts`, `src/state/store.ai.test.ts`, `src/state/aiStore.models.test.ts` | `npm test -- src/llm src/state/store.ai.test.ts` |
+| Screening mode (Include/Exclude + reason) | [Screening Mode](workflows/screening.md) | `src/screening/schema.ts`, `src/screening/status.ts`, `src/screening/counts.ts`, `src/screening/validate.ts`, `src/state/store.ts` | `isScreening`, `screeningStatus`, `screeningCounts`, `screeningIssues` | `src/screening/counts.test.ts`, `src/screening/status.test.ts`, `src/state/store.screening.test.ts` | `npm test -- src/screening src/state/store.screening.test.ts` |
+| Platform adapter / file-IO / PDF-loading seam | [Architecture](architecture.md) | `src/platform/adapter.ts`, `src/platform/electron.ts`, `src/platform/index.ts`, `src/platform/unsupported.ts` | `PlatformAdapter`, `ElectronAdapter`, `createUnsupportedAdapter`, `getPlatform`, `isElectron` | `src/test/integration/*.integration.test.tsx` (mocks `getPlatform`) | `npm run typecheck` |
+| Electron IPC surface (main/preload/adapter) | [Electron Main Process and IPC](operations/electron-shell.md) | `electron/main.ts`, `electron/preload.ts`, `src/platform/electron.ts` | `window.slr` bridge, `ipcMain` handlers (`project:*`, `pdf:*`, `git:*`, `llm:*`, `text:*`, `paths:*`, `update:*`) | `e2e/openSaveProject.spec.ts`, `e2e/gitPush.spec.ts` | `npm run test:e2e` |
+| Native self-update / signed release feed | [Electron Main Process and IPC](operations/electron-shell.md), [Build, CI, and Release](operations/build-release.md) | `src/model/updateSignature.ts`, `src/model/version.ts`, `electron/main.ts` | Ed25519 feed verification, `electron-updater` | `src/model/updateSignature.test.ts`, `src/model/version.test.ts` | `npm test -- src/model/updateSignature.test.ts src/model/version.test.ts` |
+| Project editor (schema tree + papers) | [Annotation Schema and Validation](concepts/annotation-schema.md) | `src/state/editorStore.ts`, `src/components/ProjectEditor.tsx` | `editorStore`, `buildProjectJson` | `src/state/editorStore.test.ts` (+ siblings) | `npm test -- src/state/editorStore.test.ts` |
+| Build / CI / release / packaging | [Build, CI, and Release](operations/build-release.md) | `scripts/ci.sh`, `scripts/build-electron.sh`, `vite.config.ts`, `package.json` | `build:electron`, electron-builder config | `e2e/` (release-gated) | `npm run typecheck && npm test` |
 
 ## Where to Go Next
 
-- [Architecture](architecture.md) — platform adapter pattern, state management (incl. undoable PDF marks, reading-position persistence), component tree, PDF internal-link hover previews, Electron integration
-- [Data Model](data-model.md) — project file format, schema resolution, annotation tree lifecycle (load → normalize → edit → prune → serialize), Consolidation finished flag
-- [Operations](operations.md) — build, test, deployment, keyboard shortcuts, change guidance
+- [Architecture](architecture.md) — the renderer/main process split, the `PlatformAdapter` seam,
+  the Zustand stores and undo/redo (incl. undoable PDF marks), the component tree, multi-reviewer
+  consolidation with stored alignment, and how the build is wired.
+- [Annotation Schema and Validation](concepts/annotation-schema.md) — `AnnotationDef`/`ResolvedDef`
+  types, zod schemas, `resolveSchema`, field types, cardinality, and validation rules.
+- [Project Data Model](concepts/data-model.md) — the on-disk `project.json` + `annotations/`
+  format, the in-memory types, and the load → normalize → edit → prune → serialize lifecycle.
+- [Multi-Reviewer Consolidation](workflows/consolidation.md) — entry matching, agreement scoring,
+  stored alignment, and the consolidation UI.
+- [Git Integration](workflows/git-integration.md) — clone-to-import, commit/pull/push, the
+  field-level three-way merge, and the security gates.
+- [AI-Assisted Annotation](workflows/llm-annotation.md) — the provider abstraction, prompt
+  construction, response parsing, and API-key security.
+- [PDF Viewer and Marks](workflows/pdf-viewing.md) — react-pdf rendering, text-selection capture,
+  highlights/notes, mark export, and reading-position persistence.
+- [Screening Mode](workflows/screening.md) — the derived Decision/Reason schema, tri-state
+  status, PRISMA-style counts, and the screening UI.
+- [Electron Main Process and IPC](operations/electron-shell.md) — the main process, preload bridge,
+  `slr-file://` protocol, IPC handler groups, and the signed self-update feed.
+- [Build, CI, and Release](operations/build-release.md) — the Vite + electron-builder pipeline,
+  CI, release packaging, and Docker-based builds.
+- [Testing Strategy](testing.md) — Vitest unit tests, the integration suite, and Playwright e2e.

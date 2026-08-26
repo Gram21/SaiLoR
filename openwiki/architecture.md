@@ -3,6 +3,41 @@ type: architecture
 title: SaiLoR Architecture
 description: Deep dive into SaiLoR's architecture — why the web SPA runtime was discontinued (Electron-desktop-only now), the split project.json + annotations/ on-disk storage format, the PlatformAdapter seam, the Zustand store with undo/redo (incl. PDF marks), reading-position persistence, PDF internal-link hover previews, the component tree, PDF marks and field-linking, multi-reviewer consolidation with stored alignment, annotation state/finished flags (Consolidation included), git integration (concurrent reads), the Electron main process, and build wiring.
 tags: [architecture, platform-adapter, state-management, electron, git, electron-only, split-storage]
+verified:
+  - by: openwiki/0.4.0
+    at: 2026-08-26T09:23:05.972Z
+sources:
+  - id: openwiki-source-54631e6ebf1d3b815c4a5eed
+    resource: repo://src/App.tsx
+  - id: openwiki-source-95bfccfd0c712f6e72040e0d
+    resource: repo://src/main.tsx
+  - id: openwiki-source-24c09c3b54387889db23d752
+    resource: repo://src/platform/adapter.ts
+  - id: openwiki-source-769f5f5c1e3631cf9ab273bc
+    resource: repo://src/platform/electron.ts
+  - id: openwiki-source-776dd28cc442c205e0a91460
+    resource: repo://src/platform/index.ts
+  - id: openwiki-source-9b49ad2f97827d5ed9890232
+    resource: repo://src/platform/unsupported.ts
+  - id: openwiki-source-c1ab92e18d72fec6435ab66e
+    resource: repo://src/state/aiStore.ts
+  - id: openwiki-source-f222dc1d70cd27df6524150a
+    resource: repo://src/state/editorStore.ts
+  - id: openwiki-source-abd876b19e1ac7ba524a3f34
+    resource: repo://src/state/gitStore.ts
+  - id: openwiki-source-7de537554b150aa21478d9ce
+    resource: repo://src/state/settings.ts
+  - id: openwiki-source-89409d7a9c0280067e058c1a
+    resource: repo://src/state/store.ts
+  - id: openwiki-source-81cf84df6b5988f0684554d1
+    resource: repo://tsconfig.app.json
+  - id: openwiki-source-98d5ddb014a0fd4d678f6f2a
+    resource: repo://tsconfig.json
+  - id: openwiki-source-66b17f07b4ebfe7c85be1d44
+    resource: repo://tsconfig.node.json
+  - id: openwiki-source-5e1b077422a94ae165e88e4e
+    resource: repo://vite.config.ts
+generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
 ---
 
 # Architecture
@@ -15,13 +50,13 @@ static web SPA; **the web runtime is now discontinued** — `src/App.tsx`'s `isE
 the browser-only platform code (`src/platform/browser.ts`, `src/platform/idb.ts`) and the
 `?project=<url>` server-deployment loader (`loadFromUrl` in `src/state/store.ts`) were deleted
 outright. SaiLoR is Electron-desktop-only now. See "SaiLoR is Electron-desktop-only" below for the
-reasoning, and [Operations](operations.md)/[Quickstart](quickstart.md) for what this means for running the
+reasoning, and [Operations](operations/index.md)/[Quickstart](quickstart.md) for what this means for running the
 app day to day.
 
 The app also changed how a project is stored on disk: `project.json` now holds only the schema and
 paper metadata, never annotation data — every reviewer's/consolidation's actual answers live in a
 sibling `annotations/<paperId>/` folder instead, one file per reviewer plus a consolidated file. See
-"Assembling and splitting a project on disk" below and [Data Model](data-model.md)'s "On-disk layout"
+"Assembling and splitting a project on disk" below and [Data Model](concepts/data-model.md)'s "On-disk layout"
 for the full shape and why (git-merge conflicts between reviewers editing the same all-in-one file).
 
 The **PlatformAdapter** interface remains the architectural seam abstracting file I/O and PDF loading
@@ -224,7 +259,7 @@ Delegates to `window.slr` (the preload bridge). File operations use IPC to the m
 
 **`saveProject(text, handle)` is where the on-disk split happens.** `text` is the logical
 whole-project JSON `serializeProject()` produced (the same shape as before this feature — the model
-layer never learned the split shape, see [Data Model](data-model.md)'s "Assembling and splitting on
+layer never learned the split shape, see [Data Model](concepts/data-model.md)'s "Assembling and splitting on
 disk"). `ElectronAdapter.saveProject` re-parses it with `loadProject`, calls `splitProjectFiles()` to
 get `{ meta, files }`, and sends both over the `project:save` IPC, which `electron/main.ts` writes as
 `project.json` plus a reconciled `annotations/` folder. `openProject`/`openRecent` are symmetric on
@@ -440,7 +475,7 @@ The start screen shows the running version at the bottom (`SaiLoR v0.1.0`) and, 
 
 **This only works while the repository is public.** GitHub answers **404** to an unauthenticated request for a private repo's releases, and the app is *distributed* — embedding a token to get around that would ship a credential to every user, so we don't. The check is therefore written to fail silently: a 404 (private), 403 (rate-limited), network error, draft release, or unparseable version all yield `null`, and the app simply shows no notice. It starts working the moment the repo is made public, with no code change.
 
-When a newer release exists, the notice's call to action depends on the runtime. On **macOS** (and in any non-Electron runtime) it offers a **direct download of the installer for this machine** rather than dumping the user on the releases page: `pickInstaller` matches the release's assets against the OS/arch reported by `getOsInfo()` (Electron exposes `process.platform`/`process.arch` through the preload bridge; the browser returns `null`, since a web deployment has no installer and updates by redeploying). Matching keys off the OS/arch we bake into the artifact names (`SaiLoR-0.2.0-macos-arm64.dmg`), so it stays correct as long as package.json's `artifactName` patterns do. When nothing matches it offers **nothing** rather than the wrong binary, and the release-notes link is always there as a fallback. macOS stays on this manual path on purpose: `electron-updater`'s Squirrel.Mac backend needs a signed-and-notarized bundle to pass Gatekeeper, and this project only ad-hoc-signs on mac (see the *macOS code signing* note in [operations](operations.md)), so an auto-installed update would show up as "damaged."
+When a newer release exists, the notice's call to action depends on the runtime. On **macOS** (and in any non-Electron runtime) it offers a **direct download of the installer for this machine** rather than dumping the user on the releases page: `pickInstaller` matches the release's assets against the OS/arch reported by `getOsInfo()` (Electron exposes `process.platform`/`process.arch` through the preload bridge; the browser returns `null`, since a web deployment has no installer and updates by redeploying). Matching keys off the OS/arch we bake into the artifact names (`SaiLoR-0.2.0-macos-arm64.dmg`), so it stays correct as long as package.json's `artifactName` patterns do. When nothing matches it offers **nothing** rather than the wrong binary, and the release-notes link is always there as a fallback. macOS stays on this manual path on purpose: `electron-updater`'s Squirrel.Mac backend needs a signed-and-notarized bundle to pass Gatekeeper, and this project only ad-hoc-signs on mac (see the *macOS code signing* note in [operations](operations/index.md)), so an auto-installed update would show up as "damaged."
 
 `isNewerVersion` compares numeric components, not strings (`0.10.0` > `0.9.0`, which a string compare gets wrong), strips a leading `v`, and sorts a pre-release below its release (`1.0.0-beta` < `1.0.0`). It never claims an update from a version it cannot parse.
 
@@ -465,9 +500,9 @@ The mechanics run on top of `electron-updater`, added in `electron/main.ts` and 
 - **State.** `useStore` carries three session-only fields for this flow — `updateProgress` (`number | null`, 0–100), `updateReady` (`boolean`, the download finished and a restart would install it), and `updateError` (`string | null`, cleared on the next attempt). `downloadUpdate` / `installUpdate` are the user-triggered actions; `noteUpdateProgress` / `noteUpdateDownloaded` / `noteUpdateError` are wired from the bridge's events by `useElectronCloseGuard` (see Hooks below) and are not meant to be called from UI code directly.
 - **UI.** `src/App.tsx` picks the branch with `isElectron() && getPlatform().getOsInfo()?.platform !== 'darwin'`: win/linux renders the download/progress/restart buttons and an `update-error` notice; everything else falls back to the manual `pickInstaller` link. On a download failure the banner keeps the release-notes link so the user can still update manually.
 
-`electron-updater` finds its feed through the `build.publish` block in `package.json` (`{ provider: "github", owner: "Gram21", repo: "SaiLoR" }`) and the `latest.yml` / `latest-linux.yml` update metadata the release workflow now attaches alongside the Windows/Linux installers — see the `--publish never` note in [operations](operations.md) for why that publish block does not make `electron-builder` publish on build, and why those metadata files must ship with every release.
+`electron-updater` finds its feed through the `build.publish` block in `package.json` (`{ provider: "github", owner: "Gram21", repo: "SaiLoR" }`) and the `latest.yml` / `latest-linux.yml` update metadata the release workflow now attaches alongside the Windows/Linux installers — see the `--publish never` note in [operations](operations/index.md) for why that publish block does not make `electron-builder` publish on build, and why those metadata files must ship with every release.
 
-**The feed itself is signature-verified before any download.** `electron-updater`'s own sha512 check on the downloaded installer only catches transport corruption — the hash it compares against comes from the same release channel as the installer, so anyone who can publish one (a leaked token, a compromised maintainer account) can publish a matching hash for the other. There is no purchased code-signing certificate for Windows/Linux, so `electron-updater`'s publisher-signature check has nothing to verify against either. `verifyUpdateFeed` (in `electron/main.ts`'s `update:download` handler, gated on `latestUpdateVersion` set by the `update-available` event) closes that gap independently: it fetches the same feed file `electron-updater` is about to use *and* its sibling `<feed>.sig` from the release, and only lets `autoUpdater.downloadUpdate()` proceed once `verifyReleaseSignature(feedBytes, signatureB64, RELEASE_PUBLIC_KEY_B64)` (in `src/model/updateSignature.ts`) confirms the feed was signed by this project's own Ed25519 release key. The public key is baked into the app at build time and never fetched from the channel being verified, so a compromised release cannot also republish a matching fake key. The chain is: our signature check covers the feed file, and `electron-updater`'s existing sha512 check then covers the installer against that now-trusted feed. A signature failure surfaces as `update:error` and leaves the manual download link available. The release workflow's "Sign update metadata" step (`scripts/sign-release.cjs`, run with the `RELEASE_SIGNING_PRIVATE_KEY` secret) writes the `.sig` next to each feed and attaches both — see [operations](operations.md).
+**The feed itself is signature-verified before any download.** `electron-updater`'s own sha512 check on the downloaded installer only catches transport corruption — the hash it compares against comes from the same release channel as the installer, so anyone who can publish one (a leaked token, a compromised maintainer account) can publish a matching hash for the other. There is no purchased code-signing certificate for Windows/Linux, so `electron-updater`'s publisher-signature check has nothing to verify against either. `verifyUpdateFeed` (in `electron/main.ts`'s `update:download` handler, gated on `latestUpdateVersion` set by the `update-available` event) closes that gap independently: it fetches the same feed file `electron-updater` is about to use *and* its sibling `<feed>.sig` from the release, and only lets `autoUpdater.downloadUpdate()` proceed once `verifyReleaseSignature(feedBytes, signatureB64, RELEASE_PUBLIC_KEY_B64)` (in `src/model/updateSignature.ts`) confirms the feed was signed by this project's own Ed25519 release key. The public key is baked into the app at build time and never fetched from the channel being verified, so a compromised release cannot also republish a matching fake key. The chain is: our signature check covers the feed file, and `electron-updater`'s existing sha512 check then covers the installer against that now-trusted feed. A signature failure surfaces as `update:error` and leaves the manual download link available. The release workflow's "Sign update metadata" step (`scripts/sign-release.cjs`, run with the `RELEASE_SIGNING_PRIVATE_KEY` secret) writes the `.sig` next to each feed and attaches both — see [operations](operations/index.md).
 
 ### PaperList search modes
 
@@ -603,7 +638,7 @@ Two ways out of the editor: **Save JSON** writes the file and stays put (so you 
   be discarded and agreed.
 - **`PapersEditor.tsx`** — add PDFs one at a time, a whole folder at once, import a reference-manager export, or (outside a screening project) import from a screening project's results (four buttons next to each other in the header/empty state), edit each paper's id/title/authors/DOI/abstract and its `pdf` path, reorder by drag, remove.
 - **`ScreeningReasonsEditor.tsx`** — replaces `SchemaTreeEditor` in the editor body whenever `useEditorStore().screening` is set: an ordered, editable list of exclusion reasons (add / remove / reorder with plain ↑/↓ buttons rather than drag — the list is short enough that drag-and-drop's extra affordance isn't worth it), writing through `setScreeningReasons`. On blur after renaming a reason, the editor checks `countPapersUsingReason` (`src/screening/reasonUsage.ts`) across both consolidated and per-reviewer trees; if papers still record the old label, it offers to migrate those decisions to the new label (or warns when there is no new label to migrate to), so a rename never silently orphans a decision. See "Screening" below.
-- **`ProtocolEditor.tsx`** — a collapsible *Review protocol* section in the project editor for `Project.protocol` (research questions, search strings, databases, search date, notes). See [Data Model](data-model.md)'s "The review protocol" section for the field's shape and merge behavior.
+- **`ProtocolEditor.tsx`** — a collapsible *Review protocol* section in the project editor for `Project.protocol` (research questions, search strings, databases, search date, notes). See [Data Model](concepts/data-model.md)'s "The review protocol" section for the field's shape and merge behavior.
 
 **Adding PDFs** (`addPdfs`) does two things beyond appending rows:
 - **Duplicate rejection.** A PDF already referenced is skipped rather than added twice, and the skipped names are reported in a dismissible notice. Identity is `pdfKeys()`: the absolute path when known (Electron) *and* the stored relative path — so re-picking the same file, picking it twice in one dialog, or picking one already listed in an opened project all collapse to one entry. Same-named PDFs in different folders stay distinct.
@@ -858,7 +893,7 @@ entry* and lines them up.
 | `assign.ts` | Hungarian max-weight assignment. Greedy is not merely worse but wrong here: one locally good pair can force two later entries into a much worse one, and greedy cannot trade the first against the second |
 | `align.ts` | The recursion. `alignNode` returns slots per repeatable node; `alignableNodes` lists what is worth doing. A `MIN_MATCH_SCORE` floor (0.5) prevents pairing entries that are more different than alike; a `NEW_SLOT_WEIGHT` lets a genuinely-unmatched entry open its own slot rather than being forced into an existing one. `widenAlignment`/`widenList` fold a reviewer absent from every slot's `members` into an already-frozen alignment without moving anyone already there (see "A node the consolidator has already answered" below) |
 | `apply.ts` | Converts the computed `TreeAlignment` into the persistable `StoredAlignment` (`toStoredAlignment`), converts a `StoredAlignment` back into a `TreeAlignment` for `growConsolidated` (`storedAsTreeAlignment`), and grows the consolidated tree to fit the slot count (`growConsolidated`) — never deletes entries the consolidator may have added, never touches reviewer trees |
-| `alignment.ts` (`src/model/`) | `StoredAlignment`/`StoredSlot` types, `parseAlignment` (defensive), `alignedReviews` (throwaway projected copy for fixed-index reads). See "Stored alignment" in [Data Model](data-model.md) |
+| `alignment.ts` (`src/model/`) | `StoredAlignment`/`StoredSlot` types, `parseAlignment` (defensive), `alignedReviews` (throwaway projected copy for fixed-index reads). See "Stored alignment" in [Data Model](concepts/data-model.md) |
 | `exportDisagreements.ts` | Renders a paper's or project's disagreements as plain text (ID, authors, title, each field path with every reviewer's value indented under it). Consumed by `useExportTextMenu`'s clipboard/file export |
 | `unanimous.ts` | Finds the fields every reviewer answered identically, for `adoptUnanimousValues` to fill. Owns `comparable()` — the one rule for "did they say the same answer", shared with `disagreements.ts` and the compare popup so the three cannot drift into different verdicts |
 | `disagreements.ts` | The per-field cross-reviewer verdict (`FieldVerdict`): who answered, which category their answer falls in, whether that is agreement. Boolean fields use a different `answeredBy` test (`!== undefined && !== null` instead of `!isUnanswered`) so a present `false` counts as a real answer. A `oneSided` flag marks entries only some reviewers recorded — kept separate from `agree` because it carries no agreement information and would corrupt κ statistics if folded in. Untouched boolean skeletons (`false` values from `normalizeReviews` on a paper a reviewer never opened) are excluded via `touchedBy`/`hasAnnotations` at paper granularity. Uses `alignedReviews` to project through the stored mapping so fixed-index reads mean "the same entry". What both the overview and the statistics read |
@@ -2593,7 +2628,7 @@ every caller fail toward a clean refusal rather than guessing an unreadable blob
 - **Dev vs prod**: loads `VITE_DEV_SERVER_URL` in dev, `dist/index.html` in production.
 - **External links**: `setWindowOpenHandler` sends `target="_blank"` links (external links in PDFs) to the system browser via `shell.openExternal` and denies the popup; `will-navigate` prevents any off-app navigation of the window itself. Only `http:`/`https:`/`mailto:` URLs are passed to the OS.
 - **`slr-file://` protocol**: registered as privileged (secure, stream, fetch API, **CORS-enabled**). Handler resolves paths relative to `projectDir` with traversal guard (`path.resolve` + prefix check). Returns 403 for traversal attempts, 404 for missing files. `corsEnabled` is required, not cosmetic: the renderer's origin (dev server, or `file://` when packaged) differs from `slr-file://`, so loading a PDF is a cross-origin request. Without it Chromium rejects the request *before* `protocol.handle` runs, and pdf.js surfaces the opaque failure as `Unexpected server response (0)`.
-- **IPC handlers** (project ones now speak the split `project.json` + `annotations/` layout — see [Data Model](data-model.md)'s "Assembling and splitting on disk"):
+- **IPC handlers** (project ones now speak the split `project.json` + `annotations/` layout — see [Data Model](concepts/data-model.md)'s "Assembling and splitting on disk"):
   - `project:open` — `dialog.showOpenDialog` → `readProjectText` (reassembles a split project's `annotations/` files into the logical whole-project text `loadProject` expects; passes an old single-file project through untouched)
   - `project:openPath` — the same `readProjectText` reassembly, by absolute path (for re-opening recent projects); returns `null` if the file is missing or unreadable
   - `project:save` — `writeProjectFiles(filePath, metaText, files)`: writes `project.json` (`metaText`, the meta-only body `splitProjectFiles` produced) and reconciles `annotations/` against `files` (writing each non-null entry, deleting each null one)
@@ -2693,7 +2728,9 @@ App appearance is controlled by a settings module that persists to `localStorage
 
 ## Build Configuration
 
-**`vite.config.ts`** uses `base: './'` so the built SPA works from both a server subpath and `file://` (for Electron). The `ELECTRON=1` environment variable conditionally adds the `vite-plugin-electron` plugin which builds `electron/main.ts` and `electron/preload.ts` (preload emitted as `.cjs` since the package is `type: module`).
+**`vite.config.ts`** uses `base: './'` so the built SPA works from both a server subpath and `file://` (for Electron), and injects `__APP_VERSION__` from `package.json` so the package file stays the single source of truth for the version. The `ELECTRON=1` environment variable conditionally adds the `vite-plugin-electron` plugin: with it, `electron/main.ts` is built as the main-process entry and `electron/preload.ts` is emitted as **CJS with a `.cjs` extension** (preload scripts load as CommonJS, and the package is `type: module` so a plain `.js`/`.mjs` would be treated as ESM). The renderer is a **plain web build** — Node is deliberately not bundled into the renderer, which talks to main only through the `window.slr` preload bridge. Without `ELECTRON=1`, `vite` still produces a static SPA bundle, but `App.tsx`'s `isElectron()` gate blocks every project-opening UI in that runtime before it can do anything (see the Overview).
+
+**TypeScript is split across two project-reference files** coordinated by the bare `tsconfig.json`: `tsconfig.app.json` (the renderer — `include: ["src"]`, `types: ["vite/client"]`, JSX, DOM libs) and `tsconfig.node.json` (the main process, preload, build config, and e2e — `include: ["vite.config.ts", "electron/**/*.ts", …]`, `types: ["node"]`). Both are `noEmit: true` (Vite/esbuild emit the JS; tsc only type-checks), and neither is `composite`, which is what lets a pure module like `src/git/url.ts` or `src/git/relpath.ts` be imported into `electron/main.ts` (under the node program) *and* reached by vitest's `src/**` test include (under the app program) and typecheck identically in both — the security gates `validateGitUrl`/`relPathProblem`/`refProblem` rely on exactly that dual-membership to stay unit-tested from the renderer's program while being enforced in the main process.
 
 ## Change Guidance
 
