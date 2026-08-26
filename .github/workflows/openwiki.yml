@@ -62,7 +62,7 @@ jobs:
         run: openwiki --update --print
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          OPENWIKI_MODEL_ID: z-ai/glm-5.2
+          OPENWIKI_MODEL_ID: z-ai/glm-5.3-flash
           OPENWIKI_TELEMETRY_DISABLED: "1"
 
       - name: Discard OpenWiki's self-scaffolded workflow and agent-file snippets
