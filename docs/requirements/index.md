@@ -61,6 +61,11 @@ category so requirements can be inserted without renumbering.
   `electron/`, `e2e/` Playwright specs, integration tests, and 393 commits of history.
 - Test names and assertions were treated as primary evidence of intended behavior; commit
   hashes are cited where a feature's introduction pins the requirement.
+- Every requirement's **Type** field states Functional/Non-functional plus the ISO/IEC 25010
+  quality characteristic (2011 edition names: Functional Suitability, Performance Efficiency,
+  Compatibility, Usability, Reliability, Security, Maintainability, Portability), with the
+  sub-characteristic added where it disambiguates. Functional requirements fall under
+  Functional Suitability; design constraints are labeled as such in addition.
 - Thin-evidence areas deliberately not turned into requirements: exact visual styling,
   internal performance optimizations without a tested threshold, and the discontinued
   browser/Docker deployment (documented only as the REQ-PLT-10 refusal behavior).
