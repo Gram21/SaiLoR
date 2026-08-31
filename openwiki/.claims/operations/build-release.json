@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:62fcad80d96abacf313e209e7819ab3baf19d84e96dfbaadc41a87b7d39b734e",
+  "pageVersion": "sha256:72a17c51414135d181187346d809aa7414237294022ddbc1fa97add7a545bc26",
   "claims": [
     {
       "id": "claim_123f0138b0aa4b489aae3eeb36b2f13a",
@@ -212,32 +212,154 @@
       "evidence": [
         {
           "resource": "repo://.github/workflows/openwiki.yml#L1-L99",
-          "version": "repo-lines-v1:sha256:5201493cd3da72b9b43ddd1a893da1b3c1bd93a0167112b052f0ae171c7799ee:eyJzZWxlY3RlZExpbmVDb3VudCI6OTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2MDI3ODdhZjZkY2MwODM0ZGUxMjFjYmIxY2I5NWY5NDU5YjcyMWVhYjAzNDlmMTA1MDFiOTk2YzFjNzdmZmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0Nzc5NmQzMTczMmZiY2U4OTk4YTJmN2U3YjFiYjk3NTVjMjNlNTg1MDMyMGI5MDkzN2Q4MmMzZmQwZTYyYTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "version": "repo-lines-v1:sha256:d260a839eb0fd4cd41a0c1f644e099e33c2defa628d468c390c192df9ca35959:eyJzZWxlY3RlZExpbmVDb3VudCI6OTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2MDI3ODdhZjZkY2MwODM0ZGUxMjFjYmIxY2I5NWY5NDU5YjcyMWVhYjAzNDlmMTA1MDFiOTk2YzFjNzdmZmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0Nzc5NmQzMTczMmZiY2U4OTk4YTJmN2U3YjFiYjk3NTVjMjNlNTg1MDMyMGI5MDkzN2Q4MmMzZmQwZTYyYTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
     {
-      "id": "claim_4935551a39d0407ea70e00c43c21c122",
-      "statement": "`wiki-publish.yml` triggers on push to `main` under `openwiki/**`, `user-guide/**`, `.github/wiki-assets/**`, or the workflow file, and replaces the GitHub wiki with a combined layout: Home landing page, `Development.md` (from `openwiki/Home.md`), flat `openwiki/*.md`, flattened/renamed `user-guide/*.md` (`Guide-*`), and a global `_Sidebar.md`/`_Footer.md` assembled from `.github/wiki-assets/` plus a user-guide fragment. It strips OKF frontmatter, rewrites cross-links for extensionless wiki URLs, and `rsync --delete` mirrors, committing as `github-actions[bot]` with a `[wiki-sync]` marker.",
+      "id": "claim_bd0abc2ef8ad4004b66edcab06aa2fd9",
+      "statement": "The static SPA build remains the per-PR type-check/build gate, but the browser deployment itself is discontinued: the non-Electron runtime uses `createUnsupportedAdapter`, which refuses every action and surfaces a 'SaiLoR for the web is discontinued — use the desktop app.' notice instead of project-opening UI, while the `PlatformAdapter` seam is kept even though Electron is the only real implementation.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/wiki-publish.yml#L1-L309",
-          "version": "repo-lines-v1:sha256:1f22c74ae8393aced6d8a06c5b5575dfa1e5a683b80a4adea4c8c1068de2b580:eyJzZWxlY3RlZExpbmVDb3VudCI6MzA5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI2Y2IxNmRiNGUxNzUyODNlNWU5M2IwYmI2YmE2NDUzZDM1MDE5ZjEzMGFmOWEyYWM4YzdhMzlkMjA3YTEyMTM0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzZTEwYzY2OThhMjc3YmRjMjAxNWE5OGJmM2ZkNTkwNzM0YmRjMjhmZTZlMjUzODU4ZTQ5OThhYzFlYzc3MjkzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+          "resource": "repo://src/platform/unsupported.ts#L4-L27",
+          "version": "repo-lines-v1:sha256:eac0b6a887983396bd8335ae0bba0d815c5e26b7fcf2af69902d7645aac1bc70:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4YzI3NDliODFlMGI2Y2NjZDlmOGQwODllY2ZmMTRkZDU2OWI1YzEzYTYxMTM5MTkzYWQ1MzA0ZGJhZDcwZjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ5YmE3OWUwNTQ1YjAzY2Y3ZjViMDVhYTNjYjNjMTdlY2ZjZWYzZGM3YmU1ZjQxOTg4NGQxN2E0ZGE4MGZjMGYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        },
+        {
+          "resource": "repo://vite.config.ts#L6-L9",
+          "version": "repo-lines-v1:sha256:ad46369864a4bf29da78dc985bd10c16a7f5a96766f792187b2bd0716dae348a:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzU2MmM1Mjg4MzEyZGZlMGFjNDk0NTU4ODdiNDJiZjE3NWMxYzJkOGMzYjNmNzdiOGUyODY3NWUxYzlhMWNlNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjQ4MjIyOGRkYjkzOTQzZWY1ODRiYTI5MmVmODZjZTk0MTg4YzdiODg1NTZlYWQyMGNlN2RhNTE2ZDYyNWZiNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNWQyZGZhMGUzN2FhNTUyZWU1Y2EwM2JjNGJkZDBjMTRlODY5NDZjODkzYWE4NjMwYmQzM2M2Y2JjYjFjNWY5NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTI3MWVkMzgzZTFiMGI5Yzg5YTg5MGVhZjA4ZGY5ZTIyZmU5MGY3MTZmMjAwZTA1YjcxNmNjZDM5Mjc5YzA4YyJ9"
         }
       ]
     },
     {
-      "id": "claim_66c08000247f4650aee1ec43741d1cea",
-      "statement": "`wiki-import.yml` is the reverse direction, triggering on `gollum` (wiki create/update) and `workflow_dispatch`; it clones the wiki and maps each published piece back to its repo source (`Development.md`→`openwiki/Home.md`, `Guide-*`→`user-guide/<src>.md`, `_Sidebar`/`_Footer` user-guide fragments→`.github/wiki-assets/` lifted out of their `<!-- wiki-sync:NAME:start/end -->` marker pairs), then `rsync --delete` mirrors remaining `*.md` into `openwiki/` and commits to `main` with a `[wiki-sync]` marker.",
+      "id": "claim_0b4c6dc219a848ab9aa015f39b5e98be",
+      "statement": "Exactly three wiki-related workflows exist in `.github/workflows/` (`openwiki.yml`, `wiki-publish.yml`, `wiki-import.yml`). The `openwiki` CLI unconditionally re-scaffolds its own recurrence setup on every run — rewriting `.github/workflows/openwiki-update.yml` with its default schedule and refreshing `OPENWIKI:START/END` snippets in `AGENTS.md`/`CLAUDE.md` — so `openwiki.yml` explicitly deletes/discards all of it on every run as an explicit, independent guarantee (beyond the PR's `add-paths: openwiki` filter), and the repo deliberately carries only the customized `openwiki.yml`.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/wiki-import.yml#L1-L189",
-          "version": "repo-lines-v1:sha256:005b150f9dce6cb48e7e77cd9f74e5932af50823580b4bae732ff30b623bf041:eyJzZWxlY3RlZExpbmVDb3VudCI6MTg5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiZTcxODA3M2NiMDgwNTQ0NDI4YzQ0MzYwYjI0ZTUzZTgzZWE4NTYxM2U3OWU1ZDNlNzk0OTZiODYyMjUyMjlkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzZTdjNmI1ZmMxYTNmNTg5ZTZiNzEyZTJhYTkzZTk0MTIyMmRkZDQwNDUxNThkMDkxYzRiM2ViMWZjY2I5MDFmIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+          "resource": "repo://.github/workflows/openwiki.yml#L68-L85",
+          "version": "repo-lines-v1:sha256:5cd8c8f06a50cbb32a606fe43bef518756dd30b6de483c67b4e9414ebdf647f2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEwZmI3ZjVhMjgyMzAzYzE1NTBjZjA1YjUyNzJjMzAwNWUwZWIxNjRmNTZjNjAxMDgxMWRhZDA4YTMzYWViYTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFiN2VjMThkMzgwNjIxMDUzMGZiNzExNWI3NDY3OTIxNTlmNzI4OWJlNzllNTg5NDcwYTBhNjE4NWFiZGJjZWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU2YjUyNjBjN2FiODJjMWNlMjU2ZDE1OGJhZDU3ZDIxY2RjZDQ4OWY2MDBjYzYzMmQ3ZmMxMGVmMTQ5M2NjNWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRmYzBlM2RmMTBkYWM5NDI2OGE1MDk3NmNiZmU3N2ZjYzdmZDk1ZWUyOTc3ODczZDQyNWQ5ZmUxNDZlZjg4MTEifQ"
         }
       ]
     },
     {
-      "id": "claim_b09ea28534f1489798a30923839c0643",
+      "id": "claim_49be44d087c9408bbf4357405c890e0e",
+      "statement": "`wiki-publish.yml` (*Publish openwiki → Wiki*) triggers on push to `main` under `openwiki/**`, `user-guide/**`, `.github/wiki-assets/**`, or the workflow file (plus `workflow_dispatch`), and stages a combined wiki layout: `Home.md` copied verbatim from `.github/wiki-assets/Home.md` (first line `<!-- wiki-sync:auto-home -->`), `openwiki/Home.md` staged as `Development.md` (with a synthesized fallback `Development.md` carrying the same marker when `openwiki/` provides none), flat top-level `openwiki/*.md` (skipping `index.md`/`INSTRUCTIONS.md` as generator bookkeeping), `SUBWIKI_PAGES` flattening of `openwiki/{concepts,operations,workflows}/*.md` to `Concepts-*`/`Operations-*`/`Workflows-*` names, `GUIDE_PAGES` flattening of `user-guide/*.md` to `User-Guide`/`Guide-*`, `screenshots/` flattened alongside, and `_Sidebar.md`/`_Footer.md` assembled from the wiki-assets chrome. It strips OKF YAML frontmatter (gollum cannot render it), rewrites cross-links to the wiki's extensionless flat URLs on the staged copies only, and `rsync --delete` replaces the wiki (not a merge), committing as `github-actions[bot]` with a `[wiki-sync]` marker only when something actually changed.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/wiki-publish.yml#L109-L187",
+          "version": "repo-lines-v1:sha256:c6dce070309b695ca3520b51ef537f3deb93bd0c52694becbbf7d94f8bbfac12:eyJzZWxlY3RlZExpbmVDb3VudCI6NzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYzYzJjNzI1Y2EyNmQzZjMzOTA4MWRjNWJmYjQ5ZDE2ZDc5YTFkMTkyMmY1ODMyNDVjMjU0YWJhNGU3YmQyMjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM4MTMzM2RmNjZkNTk1YzYyMjM3NDEyZTdkMTYwN2I1Y2ZiMDExNDdmMGYzYTlkYjdiN2FjNGU3MjljNDNkMjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM0NzAxNWMzZTU0M2ZhNWU1NzU3OTIxMWQzZDYzOWFiMTYzNmEwODUzYTc1MTc4YmNhZDcyMGFjNTRiOTI2OWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE0OWJjNWQzOTMzYTk3N2MwYTNmZWUxZDIzYjAzNzk2OTlkNWQ1NDY5ODM4NjQyNmUzZmU1NjM3OTQxNTQyNWYifQ"
+        },
+        {
+          "resource": "repo://.github/workflows/wiki-publish.yml#L338-L357",
+          "version": "repo-lines-v1:sha256:337136f2d1aa02480aec57750e6352f452066f8bbec710bda699e659d8201161:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNlMGVhY2U0NTI1OWY5YTQ4ZjE2YWIxOGRmNWNhYTE4OWE3OWU5NWRiZDI2NjNiOTgzZDcyMzVmNDZjYTU0YmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNmZGRhNTRjOTZmMDkzYjdmNzlhMzBkNjM0ODNhNGQ2ZWViZjIxM2JiOGM0YzhkZTFkYmNmMTM4MGIyMTlhNDciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ2YmYyZDIzYWRkNjkzNjdjZDE3ZjUyMDU0OWUzNDllZTAwYzc1ZDQwMDYyMDAwMTI4NTg1NjRmMGU3ZTQ4N2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNlMTBjNjY5OGEyNzdiZGMyMDE1YTk4YmYzZmQ1OTA3MzRiZGMyOGZlNmUyNTM4NThlNDk5OGFjMWVjNzcyOTMifQ"
+        },
+        {
+          "resource": "repo://.github/workflows/wiki-publish.yml#L62-L102",
+          "version": "repo-lines-v1:sha256:aab7dad9eac4de79931c5f495b9c24be1e73a6101a4e210383e5641ebf9e8ebc:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU5NmRjNDgxNDlmNWE4M2QxZWQ2ZGJiMzliYmM3ZTJiOTAyYWEzZDM0ZDZiZDVhZTRiMjkxYjY4ZGYwY2E3OWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJmNTU5NzljZTczMDIwMzNlNmIyZmQ3ZDg4ZjUzN2EzYjhlMDkxZWEzMDVjODExZmZhMTI3NGJmNTc2NGVhNWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZhOGM2OThjMjIxYWYyYTE3MDkxODY0ZTJlMjE5NDM0ZGU2NGMxMmIwZmRhN2I5NWMyOGU4MjMzYWIxOTU5YmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY5OWFjZjNkYTUyMzViMmI3M2IwOWU3NmJmNTk0NThhMjMxZTkxM2UyNDhjY2RhODZlZGY0NjA4ZDFkNjdmNDIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8fd12c789df34c188377bab5092588ee",
+      "statement": "`wiki-import.yml` (*Import Wiki → openwiki*) is the reverse direction, triggering on `gollum` (a wiki page create/update) and `workflow_dispatch`. It clones the wiki and undoes the publish mapping: a `Home.md` still carrying the `wiki-sync:auto-home` marker is dropped as a no-op while a human-replaced Home becomes the new `.github/wiki-assets/Home.md` template; `Development.md` → `openwiki/Home.md`; the marked \"User Guide\" fragments are extracted into `.github/wiki-assets/Sidebar-user-guide.md`/`Footer-user-guide.md` and the remainders become the plain developer-docs `Sidebar.md`/`Footer.md` assets (dev-docs link rewritten back to `Home`); `SUBWIKI_PAGES`/`GUIDE_PAGES` reverse renames run dir-aware per-page link fixups before the generic rewrite and move each page back under `openwiki/{concepts,operations,workflows}/` and `user-guide/`; `screenshots/` is restored only if the wiki actually has it (a temporarily missing folder is never mistaken for a deletion); and the remaining `*.md` are rsynced into `openwiki/` preserving `.last-update.json`, committing to `main` as `github-actions[bot]` with a `[wiki-sync]` marker.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/wiki-import.yml#L121-L176",
+          "version": "repo-lines-v1:sha256:3b6778312d2b5479eef3e5064949f33018630bb4d2324ea153da5b5e0ca5c64b:eyJzZWxlY3RlZExpbmVDb3VudCI6NTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM3MjhmMTBkOTQ4Y2NjODg0ZWRlMGY1MGQ5NzI0MDUwYzg3ODc1ZTdjZTZhZWUxZTNkMWRlZTAyZWMxNDE5ZTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM4MTMzM2RmNjZkNTk1YzYyMjM3NDEyZTdkMTYwN2I1Y2ZiMDExNDdmMGYzYTlkYjdiN2FjNGU3MjljNDNkMjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNmNzVkNmY4MjQ4ZTVhYmM1NTg1ZTUzNzc0MGE4MTVjNDY5MjBjZGM0MTViOWM3MjQ1MmViMjU2NzRlMWViOTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYwZGE0OTZkNDc3ZWZkMDFkNjVmNjY5MWIyNjc5ZTFjZmNkZTY3NzkwN2ZlNTk0ODZhZDBmM2JjZGU0ZGQwZTQifQ"
+        },
+        {
+          "resource": "repo://.github/workflows/wiki-import.yml#L185-L254",
+          "version": "repo-lines-v1:sha256:36f1d7facd648cbb19a2862a82e027bb6d1132d2b6af929fd8369395fe36ddb6:eyJzZWxlY3RlZExpbmVDb3VudCI6NzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1YzY2MDJmNWM4N2JkZGM0MGI2Y2Y5ZmFjYzdiNTFhYWEzYTcyNzZlYWJkMWFmODdiM2E4YjQ4ZjQxMGU0MzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE5MzA1NDM4NjI4NWNjMmQ1MGFhMGJjMzgzYjE0NjBmYTM0MzVhMjcwMDYxNGZhZjNiZDBjNmI3OThkZThlMGEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk0MzQ2MmU3MjZkZmNjMWJlMWU4ZTgzMzE4ZjI1M2Q3MDBmZDlkMGM2Mzk5NTkyMzgwN2I3YTFhZDc4MjczYTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNlN2M2YjVmYzFhM2Y1ODllNmI3MTJlMmFhOTNlOTQxMjIyZGRkNDA0NTE1OGQwOTFjNGIzZWIxZmNjYjkwMWYifQ"
+        },
+        {
+          "resource": "repo://.github/workflows/wiki-import.yml#L48-L111",
+          "version": "repo-lines-v1:sha256:9a9a11e8e02c111c329cbb0b5b10cf2e1f051abb3e8b0542ed5b4eade2f29d25:eyJzZWxlY3RlZExpbmVDb3VudCI6NjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ0ZTg2NTgwYjM5ODcyMWMwNDAxMTRiZjYxZWMzZDUyZWY1ZTIyYmU3MzNhYjc3OWNlYTkwNDNiYTQ4ODhjZGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU3YTY5NDJiNGM3YzdmNDRiZWExMWE0NjM3OTcyNDVhOGYyY2JhMDc4ZTI2NjI3MmM2OTQ3MjM1ZmYxOTM4ZGEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdlOWZmODZkM2FiZTEyYmZhZjQzMjAwZDIyNmIxMmFlNjBkNjY3MThmMTc1ZTBmMmJiMjg2ZGE0YTY5NjRiZTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ1MjI1MzNhZTRiNmI0MjExOTViOTRiM2JjYzc0Zjg5MzExMjNmODk4M2Q5MTEzMWU4OTcxMjFiMWU0NGNjMTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4afb580613694ad48332710916a21cf4",
+      "statement": "`.github/wiki-assets/` is the publish-side chrome source. `Sidebar.md`/`Footer.md` are the developer-docs navigation, deliberately kept out of `openwiki/` so `scripts/check-wiki-links.js` can validate them as `extraPages` against the real openwiki page set (they link into it and the orphan check runs against `Sidebar.md`). `Sidebar-user-guide.md`/`Footer-user-guide.md` are \"User Guide\" fragments wrapped in `<!-- wiki-sync:user-guide-sidebar|footer:start/end -->` marker pairs — invisible HTML comments on the wiki — that `wiki-import.yml` lifts back out on round-trip. The sidebar leads with the user guide (fragment first, developer nav after, matching Home.md); the footer appends the fragment last since a footer reads along one line rather than top-to-bottom. Publish rewrites `Sidebar.md`'s own `[SaiLoR — Developer Documentation](Home)` link to `Development` on the staged copy only (Home.md is staged as Development.md), matched on exact link text so the fragment's `[🏠 Wiki home](Home)` keeps pointing at the real Home page — the asset file itself keeps saying `Home`, the real openwiki page name, so it keeps validating.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/wiki-import.yml#L84-L95",
+          "version": "repo-lines-v1:sha256:c9b9f5df9c7e0fd3e5f448b269fddce142bc0c446841a261e670634a678cde59:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhhZGVhMzdmNzA1N2NjYmVhYTI1NGMyZWIwY2MxMGNhY2ViZmIzYzExZmNkNDhlOTAwNjc0YzM3ZjdlZmFiMzUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY2ZDhkNWQ5YWNjYmIxNjQyMzlhNDk0MjIzMGMyYmZkNzAzNGRkOTk0Nzg4MjAyMjMwOGEwNGVmM2U1YWEzNDkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRlMTRmZTMwNDQ1ODc1NTVjNGU0MTZiZjBiN2MzM2I0OWYxOWY4NjFkY2U4YWFkYzdiOTJhYjcxZjQxYjEzMjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUyYTkyNjI3OGRiNDFjYjIyZDk0MDNkZDljNmE4OTUyZmQ5Y2RlNmQ2MTQ0MmM4Y2Q5YzM4NTE5MWRkZmMzZmEifQ"
+        },
+        {
+          "resource": "repo://.github/workflows/wiki-publish.yml#L256-L302",
+          "version": "repo-lines-v1:sha256:0f7323a47e35cd9eb17346a028365513ceb50f5790c71652497b5d033368c4e0:eyJzZWxlY3RlZExpbmVDb3VudCI6NDcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxZjMxNWYwMzk5OWI1NDM3N2VjMWJkNDhkOGRjOGUzMGMxNThjZmY1ZmRlMGQ4ZmE2MDdkMjQ4NzMxZTdjNTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJhMWM4OTRkYjg4MThjYjA1OTg2NmMzNTAzYTgzYTA0ZmNlYTgzZjk2NjliNjZhZjM1ZTU5YzQ4Mjk2NjU5MGEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA4MjEwNjkyNDhlMjNlMmUwOTViZmNhM2Q0ODMwZTFiY2MyNGU0MDYyODJiN2M1ZDgyOTBjMzEzODlkN2RhZmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk4YTlkYmRmNzRlZDZjZWVkOGE5MWNkMzc4OTljN2ZjM2FjMjhmMmM2MTUxMDA0MTg4NTFjNWUyZTNmZmY1ZTAifQ"
+        },
+        {
+          "resource": "repo://scripts/check-wiki-links.js#L206-L222",
+          "version": "repo-lines-v1:sha256:6b92314dab5f4b6ee3d3d1e5303a541e7e2c92f36e59ea317e2dbc0fb9e83128:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNlNWNhZTBmZGVkMWU4ZjczNmM5YzUyNjI1YTA5MDY0YjdhMWU1ZThhMzM1ZjBhMjNjMWFkMWZhZWZkOThkNzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM2M2Q1MzVjZTM4MDYzZDZiNGM1MWQ4YzM4NmE3ZjliM2U1ODBhMTRhMTBjMDdiMTk4ZGZhZjE5YzkzYTNiZmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU4NWMyODEyOTQyOWQ2NDc1NmY3MTM2OWFjMjE1ZWU1ZGYyMGZkNGJiNGQ5ZTg4OGY1OWRiNjg0MjFiODAxMDQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc2Nzg4NjFkMzlkOWYzN2QxMjk1N2MwYWFkYjRjNDUwMTIzNDFkYjJhNDlhMmFmYmUwZjkyMTRjNTQwOThkMzEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c45405ba73d94d0fbd4d0d6917020d8a",
+      "statement": "The wiki `Home.md` carries the `<!-- wiki-sync:auto-home -->` marker as a round-trip contract: publish always stages `.github/wiki-assets/Home.md` verbatim and synthesizes a fallback `Development.md` with the same marker when `openwiki/` has no `Home.md` (so import can recognize it as ours rather than a human's page), while import drops a still-marked `Home.md` as a no-op and treats an unmarked Home as a human's wholesale replacement that becomes the new asset template — never `openwiki/Home.md`, which is `Development.md` now.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/wiki-import.yml#L52-L74",
+          "version": "repo-lines-v1:sha256:5cd99f4ca19b3d03ada69276096fb9735b247b2f2c517bef3bd1011b46946651:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU5NGRkMDRmYmIwZGFmNWYxZTdmOTlhMzc5YjMxZDdlMjlkOTM1ZjA4NWVhZTcwZDIwNDUzNTM5YjNhZjJiYjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJmNTU5NzljZTczMDIwMzNlNmIyZmQ3ZDg4ZjUzN2EzYjhlMDkxZWEzMDVjODExZmZhMTI3NGJmNTc2NGVhNWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU4YjE3MmZhYzljOGQyZjgxOTc0MzNhMjFhZmEwY2M2OTc4N2NmYTU4NDAzNjdkNjU3MTVjMWUxMmE3OTY2YzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMwMDFiNzBjZDcxZmZkMjJiZmM4MzY0OGNiNjgxMDU2YjEzMzk4MWUzMDRkMTMxZWIwN2NiMGI3ZTAzMDQyZTUifQ"
+        },
+        {
+          "resource": "repo://.github/workflows/wiki-publish.yml#L304-L336",
+          "version": "repo-lines-v1:sha256:c633e9f3bd9de581042c0214c1c0b2961af358774e797c8896ec0268b2fe9469:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU0MTgyOTFlYzFmYjZlZWVjNjMyODIzYzExYTZmYWZkMDE1NWMxNzRiMGZkZjk4MmRmYjk1MzE4ZDk1ZGY3MDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE2NTkzNjVmYzFlN2JmZTE3OTE0ODcwYzFiN2ExNmVlNmFjMjNjOThiMWJkOGM2ZDhkNTllNDM4OWVmMWFhZWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIzOGEwNzBhNmFkZjM2ZjE0YzkyOTE1ZjE5NTkwZTFlOTdjYjMxMTllYmQ5ZTAxMjEwYjg5YjQ5MWIwZjk2MzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjczYmQxYmNlNjVjMjQ5OTYyNGU2NzViMWY3ZDRlNzk5MTY1MTg3ZDg0ZDY3NmNkNmMzYWY1ZWM5NGEwYTZjNjIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b767defa65c945a9b710ba3aef120a4e",
+      "statement": "All publish-side transforms — OKF frontmatter stripping, extensionless cross-link rewrites (bare `name.md` → flat alias; dir-aware relative fixes for `SUBWIKI_PAGES` pages: same-subsection siblings stay bare, walk-ups become `../name.md`; `user-guide/README.md`'s `../README.md`/`../LICENSE` links → absolute GitHub URLs preserving `#heading` anchors; `Home` → `Development` in the staged sidebar) — run on the staged copies only; the repo's own `openwiki/`, `user-guide/`, and `.github/wiki-assets/` files keep the forms that are correct for repo browsing and for `scripts/check-wiki-links.js` validation.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/wiki-publish.yml#L184-L254",
+          "version": "repo-lines-v1:sha256:0507f67e31027e42e2ca684c70d0307ca7ab8ac9d2df222b18071ca556564e81:eyJzZWxlY3RlZExpbmVDb3VudCI6NzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlYzZkNjc4MTJlMTkyMWFkZDEyNzExZGRlYWZiNTA5YjAwMmViYTAxOGQ4NWM3OGNhZTc1Y2Y4ZTFkZjRiZmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM4MTMzM2RmNjZkNTk1YzYyMjM3NDEyZTdkMTYwN2I1Y2ZiMDExNDdmMGYzYTlkYjdiN2FjNGU3MjljNDNkMjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNlOTNjMmJhNjdkYzYzZmNjZjY5YWQ2YzgwODA0YTlmYWYyNzNkMDQ3ZGExZDE5MDljYzdiYTk0YjI0ZmQxODciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjllYzExNjJmOWIxOWFkYjJkODE4MWI2NmI3NzQ5YzAzNmYzMjNjMTEzMzdlOGI4YzNmZmIxZjhhMzM4MWNkNjYifQ"
+        },
+        {
+          "resource": "repo://.github/workflows/wiki-publish.yml#L296-L302",
+          "version": "repo-lines-v1:sha256:62c06bf24b6d42a498dee7688d0c73ca911c942fb09f83191b64675c179a4414:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWIwN2FkNjNjY2QxODI5ZGY4NzNkZmVhZmUwMGU3YzRmOWI5M2Q4OTAxYmU0ZjhiZWQ3NTFlYjFmYzg0NDlhZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYmExYzg5NGRiODgxOGNiMDU5ODY2YzM1MDNhODNhMDRmY2VhODNmOTY2OWI2NmFmMzVlNTljNDgyOTY2NTkwYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjMwNjdiMTBjODQ4ZmI1NWJmMjAzNzg5ZWZiMjY4YTY1MzY5MGE2NTI0ZTY4ZWI5NzRkZWYxMmExYTIwZjE5YiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOThhOWRiZGY3NGVkNmNlZWQ4YTkxY2QzNzg5OWM3ZmMzYWMyOGYyYzYxNTEwMDQxODg1MWM1ZTJlM2ZmZjVlMCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_aedc1f94424f42bfa43206ca64bb66b0",
+      "statement": "`scripts/check-wiki-links.js` (`npm run check:wiki`, step 3 of `scripts/ci.sh`) is the wiki's build step over `openwiki/` and `user-guide/`, enforcing four rules: (1) every internal link resolves to a page (both bare `name` and `name.md` forms accepted); (2) every `#anchor` matches GitHub's own anchor-slug rules, reproduced rather than approximated, including the `-1`/`-2` suffixes GitHub appends to duplicate headings in document order; (3) every link/image outside the bare-page-name form — a path leaving the directory or an image — resolves to a real file on disk, with screenshots scanned via a separate `<img src=\"...\">` pass (they are embedded as HTML for the `width=` attribute, so the markdown-link scan never sees them); and (4) every page is reachable from the directory's hand-maintained table of contents — `.github/wiki-assets/Sidebar.md` for `openwiki/`, the \"Guide contents\" table of `user-guide/README.md` for the user guide — so a new page cannot be trivially left orphaned.",
+      "evidence": [
+        {
+          "resource": "repo://scripts/check-wiki-links.js#L1-L28",
+          "version": "repo-lines-v1:sha256:3dfa6a9c9863a1fc2d6ff80e15a759b62675dd1a1103c6f2ecb8dc7aa9dd9586:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE1OWM0Nzg3MmI3MWYxMjU4OTk0Mjg5MjQ2NGU3NjRjMGRiMzUwYzIwYjcyMjI4NjQ1NjE1Y2MzNmUwYTA3MjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjllZWJlMmJhNjk0MDM0ZGU3MmNiNjI4YzQ5OTNiZWFiMjg5NDAxODU5YjAwYTM4MzAwNjBlZmQxNjkxYTM4N2MifQ"
+        },
+        {
+          "resource": "repo://scripts/check-wiki-links.js#L39-L45",
+          "version": "repo-lines-v1:sha256:7449cd665bc16c11504990699aabe40baa89722f7a68136d01555d9191ad23c8:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDY1MTU4MzJmMGVlY2EwZGRmNWZhMTI2NmIwMDI5YTQ0MWM4YzkzNzQyZDcyNWUyZmE4MjZhMzIxYjA3Y2E2NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTI1M2Y3ODQ4NGM1MDlmYWEwODcxYTU1YTk3NDg5MjEzZGJhMmFmMDdkNzliMzhlOGY4OGJiYTBkNzk2N2Y0YiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGEzMWY0MWRiYjg1OGZlNWUxMjFiOTk1Mjc3MjhiZjkxZGUzNWY5MTJlNTJlOTgyMWZlNmY2ODI2MzAwMzllYyJ9"
+        },
+        {
+          "resource": "repo://scripts/check-wiki-links.js#L97-L158",
+          "version": "repo-lines-v1:sha256:d18fd319cb77d32bd0ba20f689058866897f7008d7a23a59b5bb51efaecc9f3d:eyJzZWxlY3RlZExpbmVDb3VudCI6NjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZjYzAzYjViN2I3NjdhOWI5NjhjYzA4NGI3MTA4YWIxMjg4ZTNjZTY3Yjg2MmY1OGE4YTk1ZWY1YzNjOTBiYjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhmOWQxM2YxMTZiMzFlOTdjNzA5YmMzNjE5MGI5MTAyODhlMzkwNzIzYTk0MjFjNzMyODViNzRmZjlmYWRkNDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIwYjk2NWYxNzgzOGZlMTM3NjhhZDA5NjdiYTgxYWI3YjFjYzhiMDI2ZTFmNzZhN2NhZTVkNGMyZjM4NDA3NTgifQ"
+        },
+        {
+          "resource": "repo://scripts/ci.sh#L41-L42",
+          "version": "repo-lines-v1:sha256:29f7aa2aee82165ad95164e109525e041ce22f8485ab15d03bef253fccd79c75:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzViZTE3ZjZmNzdjNzMzY2FkYzY4OTUzNDZkOWFkOTlhMDhlODhjZmIxMDliMTA3MDI5YWJjOWM1NDg5ODI1OSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWZkNjJkNWYzZTVkYzhjNDk1MmE2OWEyNmE4MzcwOWMzMGY5ZjRiN2ZhNTI5YjMwNzBmMzdlYTNjMTYxOTE0NiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTg2MDA0NzMwYmE4N2Q3NDJiNTJmNTdiNTMyYWVkNjQ2MGRlYzkxNGJkMjk2OWIwMTY5ZWYzYTQ2YTViMDU4ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDUwMWFlZTg5NDE0NDM0M2ZjYTkyMTFjYTg0ZTMwMzEyMzI3MGU2MWY3ZjQ4YTBiNWI2N2VjZWQxNjg0ZjMyNiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_7417f7c36f184f12bb17b1eb4ac08f2e",
+      "statement": "`index.md` (OKF's own directory listing) and `INSTRUCTIONS.md` (the brief handed to the generator) are deliberately exempt from the orphan check — generator bookkeeping that is never published to the wiki. Each `SUBWIKI_PAGES` page is registered in the checker twice (under its flat alias, what `Sidebar.md` actually links to, and under its real basename so same-page `#anchor` links and bare sibling cross-references resolve, the basename exempted since only the flat alias is a reachable wiki page). The `SUBWIKI_PAGES` table is hand-duplicated across `wiki-publish.yml`, `wiki-import.yml`, and `check-wiki-links.js`, with `.github/wiki-assets/Sidebar.md` linking the flat names — so adding, moving, or renaming an openwiki subsection page requires updating all four in the same change. The duplication is the price of the flattening, which exists because GitHub's hosted wiki cannot serve pages that live in subdirectories.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/wiki-publish.yml#L144-L161",
+          "version": "repo-lines-v1:sha256:a3e4f624d6aa1e6bbd807c1215e5de3202b94800f66de083a92befd224a51807:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA1YjQ0MWMyZGIwNDZjNDIwNDE4NGY2NGRlYTAwNDhlMTExYThjZWE0OWU0YTFhZjBkMTFiYjMyOTA5YzJiNjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM4MTMzM2RmNjZkNTk1YzYyMjM3NDEyZTdkMTYwN2I1Y2ZiMDExNDdmMGYzYTlkYjdiN2FjNGU3MjljNDNkMjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIyY2RjMTNkN2EzZTI2Yzk5YjU1MDJkNzI1N2U4YTUzNmI5NTRjNzUzYWM2NjJhYTI2ZmQyODI4MTk5ZDBjOTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI4ZjdlOWQ0OTM3NGNkMzg1OTBhNGEzNTYxZWFmY2QxNTZhN2ZlMmM4N2ExMWQyYmQ4MWFjMjBkNDRiOTRjYzIifQ"
+        },
+        {
+          "resource": "repo://scripts/check-wiki-links.js#L164-L231",
+          "version": "repo-lines-v1:sha256:b9f5ed9e96b4555252f7e72748fdd4c04c210faa6628937321939bd32a0ac79b:eyJzZWxlY3RlZExpbmVDb3VudCI6NjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEyNDBhZGRkMTdlYzdiNjdlMDAzYjAyZTBmYzQ3YjJjMTA0NGE1NmJkYjQzMDg2NTQ3M2EyZDFhZjdmN2Q5YjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5NDE2ZTA5Zjc4YmEzMTZjMDMyNTY4MjEzYjg1NWVlNzU2ZTQxNTY1ZDkxOGYwOTUxOWM4MWZkNjIwZjQwNjAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQzMDlkOTYxMDEwNzViYjE2NjQ2YmZjMDkwOTEzNmYxZjZlZjZmYTU2NjQyNDhhNzAyZDI1YjNhYjcwZTYyYzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZhMmU1NjAzZGUzNDBmM2I5NjYzYjllNzUxNjIxNGIwNzliYTY5ZTIzMDMyY2EyYTY0YjI1NDA2OWUwYTVkZjkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8585818f73b64193b416a43780f90b78",
       "statement": "Publish and import would otherwise form an infinite loop (publish→gollum→import→main push→publish). Three independent layers prevent it: both share a `concurrency: group: wiki-sync` with `cancel-in-progress: false` so they never run concurrently; `wiki-publish.yml` skips commits whose message contains `[wiki-sync]`; and `wiki-import.yml` skips when `github.event.sender.login == 'github-actions[bot]'`, so each direction only reacts to human-originated changes on the other side.",
       "evidence": [
         {
@@ -245,14 +367,14 @@
           "version": "repo-lines-v1:sha256:ab79fdb3ae7adddda86fece738cfc584219502441c27d7d38b795885c9317f7c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRhOWYyNzc5OWY0OTg2NTk4MDA1MTc0YWUyN2I0MDFhNDUwODA5MDFlMWQ0Y2JiOTFjYzNkODE4N2M4YTIxOTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM4OTk5MTEwM2Y2YmE4ODhlM2RlNzY1MWM1YTMwNWM3N2U1NTQ3Njc3M2FiYTgzOTU5MWVjYzViZDBmMmFiMWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFhODQ5NWE2MDRhMzhlNmJmMGY1NmQxMTQyMjhjMjUyZWEyODFhMTY3ZmRhNjUwMjExZjUwZTRmZWY3MWRjZGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZjMDE4MDVjZjUzNjUyYTU2OTg0MTkwZTI2MjEzMDUzMDA5YTY5MWIwZmUyZTI4MDVmNGU0MjUwNWVlMDc4MmMifQ"
         },
         {
-          "resource": "repo://.github/workflows/wiki-publish.yml#L67-L79",
-          "version": "repo-lines-v1:sha256:98fb6dbf70932bb04d9b39f53c61ab924d7f85f863f12d682ad043418a3fcd3c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA1YzA0ZTYzODc0YmVmMzY1ODllMjRjNTQ0M2QyN2M0MTRkMDQyNWQ4NTViZTRiZWM2Y2JmY2E5YWRkMjBkNDgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1NWVmNWZlMThlMWJmMDMwZDQ5NjQ5MzY3YWEyNjZkZjJmMjQwNDk4YTUxZTViOTkxZGNiOGRjNmQwY2I3NGUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFhODQ5NWE2MDRhMzhlNmJmMGY1NmQxMTQyMjhjMjUyZWEyODFhMTY3ZmRhNjUwMjExZjUwZTRmZWY3MWRjZGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImViYWY0MDcxNjUzM2E0ZmJmMjk2ZWU3YjhmNzlhNTc4YTEzYTVmNGExMjM0N2Q0NWM1NTYxNzgwMjQ0Y2I2ZDcifQ"
+          "resource": "repo://.github/workflows/wiki-publish.yml#L75-L88",
+          "version": "repo-lines-v1:sha256:1c9e8b231e31ca6920ea152e0d9d875424837ae102db5fc30a4415db38019b86:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA1YzA0ZTYzODc0YmVmMzY1ODllMjRjNTQ0M2QyN2M0MTRkMDQyNWQ4NTViZTRiZWM2Y2JmY2E5YWRkMjBkNDgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM4OTk5MTEwM2Y2YmE4ODhlM2RlNzY1MWM1YTMwNWM3N2U1NTQ3Njc3M2FiYTgzOTU5MWVjYzViZDBmMmFiMWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFhODQ5NWE2MDRhMzhlNmJmMGY1NmQxMTQyMjhjMjUyZWEyODFhMTY3ZmRhNjUwMjExZjUwZTRmZWY3MWRjZGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRjM2IyZWJhYWJmNTc4ODA0OWNlZTA3NWRjYTM2ZTY3YjEzZTc4NDJkZTNlNmY3ZjNkZDY0YzZjMDAxNzMyYTYifQ"
         }
       ]
     }
   ],
   "verification": {
-    "by": "openwiki/0.4.0",
-    "at": "2026-08-26T09:23:05.972Z"
+    "by": "openwiki/0.4.3",
+    "at": "2026-08-31T11:56:15.381Z"
   }
 }
