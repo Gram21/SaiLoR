@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:62fcad80d96abacf313e209e7819ab3baf19d84e96dfbaadc41a87b7d39b734e",
+  "pageVersion": "sha256:f26fdd963e920a359dd714569652221d945ea28886f623d44e931d19bac378e5",
   "claims": [
     {
       "id": "claim_123f0138b0aa4b489aae3eeb36b2f13a",
@@ -208,31 +208,31 @@
     },
     {
       "id": "claim_9c27d5e47c364529828874b8c72e96a0",
-      "statement": "`openwiki.yml` is the scheduled weekly (Monday 06:00 UTC) OpenWiki refresh: it stops early unless `main` has relevant (non-`openwiki/**`) commits in the last 7 days, installs `openwiki` plus `mermaid`/`jsdom` for real mermaid-fence validation, runs `openwiki --update --print`, discards the CLI's self-scaffolded `openwiki-update.yml` and `AGENTS.md`/`CLAUDE.md` snippets, and opens a PR scoped to `openwiki`.",
+      "statement": "`openwiki.yml` is the scheduled weekly (Monday 06:00 UTC) OpenWiki refresh, but it does no work inline: it is a thin reusable-workflow call that delegates entirely to `ardoco/actions/.github/workflows/openwiki.yml@main` (triggered via `workflow_dispatch` + cron), passing the `OPENROUTER_API_KEY` secret. The actual generation logic — installing the `openwiki` CLI, running `--update --print`, opening a PR — lives in that shared workflow, not in this repo's file.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/openwiki.yml#L1-L99",
-          "version": "repo-lines-v1:sha256:5201493cd3da72b9b43ddd1a893da1b3c1bd93a0167112b052f0ae171c7799ee:eyJzZWxlY3RlZExpbmVDb3VudCI6OTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2MDI3ODdhZjZkY2MwODM0ZGUxMjFjYmIxY2I5NWY5NDU5YjcyMWVhYjAzNDlmMTA1MDFiOTk2YzFjNzdmZmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0Nzc5NmQzMTczMmZiY2U4OTk4YTJmN2U3YjFiYjk3NTVjMjNlNTg1MDMyMGI5MDkzN2Q4MmMzZmQwZTYyYTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://.github/workflows/openwiki.yml#L1-L17",
+          "version": "repo-lines-v1:sha256:bf077ccef0e2cd34134360b05d6efa4f00b44ee578eb40b00f56b6ed10ae9927:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2MDI3ODdhZjZkY2MwODM0ZGUxMjFjYmIxY2I5NWY5NDU5YjcyMWVhYjAzNDlmMTA1MDFiOTk2YzFjNzdmZmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1MWYyNDA1MTEwMzEwZGVhMTE4Yzk2Y2QxMGY2MDdlNjE4N2U5ZDFiYzc0MDUyZjI1YjcxMDE2ODBkMWU0ZTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
     {
       "id": "claim_4935551a39d0407ea70e00c43c21c122",
-      "statement": "`wiki-publish.yml` triggers on push to `main` under `openwiki/**`, `user-guide/**`, `.github/wiki-assets/**`, or the workflow file, and replaces the GitHub wiki with a combined layout: Home landing page, `Development.md` (from `openwiki/Home.md`), flat `openwiki/*.md`, flattened/renamed `user-guide/*.md` (`Guide-*`), and a global `_Sidebar.md`/`_Footer.md` assembled from `.github/wiki-assets/` plus a user-guide fragment. It strips OKF frontmatter, rewrites cross-links for extensionless wiki URLs, and `rsync --delete` mirrors, committing as `github-actions[bot]` with a `[wiki-sync]` marker.",
+      "statement": "`wiki-publish.yml` triggers on push to `main` under `openwiki/**`, `user-guide/**`, `.github/wiki-assets/**`, or the workflow file (plus `workflow_dispatch`), and replaces the GitHub wiki with a combined layout: `Home.md` (always `.github/wiki-assets/Home.md` verbatim), `Development.md` (from `openwiki/Home.md`, renamed), the rest of `openwiki/*.md` flat at the wiki root, `openwiki/{concepts,operations,workflows}/*.md` flattened under explicit `Section-Page` names, flattened `user-guide/*.md` renamed to `Guide-*`, `user-guide/screenshots/**` flattened alongside, and a global `_Sidebar.md`/`_Footer.md` assembled from `.github/wiki-assets/` plus a user-guide fragment wrapped in `<!-- wiki-sync:NAME:start/end -->` marker pairs. It strips OKF frontmatter, rewrites cross-links for extensionless wiki URLs (including `Home`→`Development` in the sidebar and `../README.md`→absolute GitHub URLs in the user guide), `rsync --delete` replaces the wiki, and commits as `github-actions[bot]` with a `[wiki-sync]` marker. `index.md` and `INSTRUCTIONS.md` are deliberately excluded.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/wiki-publish.yml#L1-L309",
-          "version": "repo-lines-v1:sha256:1f22c74ae8393aced6d8a06c5b5575dfa1e5a683b80a4adea4c8c1068de2b580:eyJzZWxlY3RlZExpbmVDb3VudCI6MzA5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI2Y2IxNmRiNGUxNzUyODNlNWU5M2IwYmI2YmE2NDUzZDM1MDE5ZjEzMGFmOWEyYWM4YzdhMzlkMjA3YTEyMTM0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzZTEwYzY2OThhMjc3YmRjMjAxNWE5OGJmM2ZkNTkwNzM0YmRjMjhmZTZlMjUzODU4ZTQ5OThhYzFlYzc3MjkzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+          "resource": "repo://.github/workflows/wiki-publish.yml#L1-L358",
+          "version": "repo-lines-v1:sha256:f02c26fba34372574b4eff10920709c141c3c102079ecab15f3cf145ab2b50cb:eyJzZWxlY3RlZExpbmVDb3VudCI6MzU4LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI2Y2IxNmRiNGUxNzUyODNlNWU5M2IwYmI2YmE2NDUzZDM1MDE5ZjEzMGFmOWEyYWM4YzdhMzlkMjA3YTEyMTM0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzZTEwYzY2OThhMjc3YmRjMjAxNWE5OGJmM2ZkNTkwNzM0YmRjMjhmZTZlMjUzODU4ZTQ5OThhYzFlYzc3MjkzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
     {
       "id": "claim_66c08000247f4650aee1ec43741d1cea",
-      "statement": "`wiki-import.yml` is the reverse direction, triggering on `gollum` (wiki create/update) and `workflow_dispatch`; it clones the wiki and maps each published piece back to its repo source (`Development.md`→`openwiki/Home.md`, `Guide-*`→`user-guide/<src>.md`, `_Sidebar`/`_Footer` user-guide fragments→`.github/wiki-assets/` lifted out of their `<!-- wiki-sync:NAME:start/end -->` marker pairs), then `rsync --delete` mirrors remaining `*.md` into `openwiki/` and commits to `main` with a `[wiki-sync]` marker.",
+      "statement": "`wiki-import.yml` is the reverse direction, triggering on `gollum` (wiki create/update) and `workflow_dispatch`; it shares a `concurrency: group: wiki-sync` with `wiki-publish.yml`, and its sender guard skips `github-actions[bot]` (unless `workflow_dispatch`). It clones the wiki and maps each published piece back to its repo source: `Home.md` is dropped if it still carries the `<!-- wiki-sync:auto-home -->` marker, otherwise replaces `.github/wiki-assets/Home.md`; `Development.md`→`openwiki/Home.md`; the `Section-Page` flattened pages→`openwiki/{section}/<page>.md` (reversing the name flattening and cross-link rewrites); flattened `Guide-*`→`user-guide/<src>.md` (reversing renames, link rewrites, and absolute URLs back to `../README.md`/`../LICENSE`); `screenshots/`→`user-guide/screenshots/`; the `_Sidebar`/`_Footer` user-guide fragments→`.github/wiki-assets/` (lifted out of their `<!-- wiki-sync:NAME:start/end -->` marker pairs) with the `Development`→`Home` link reversed; then `rsync --delete --include '*.md' --exclude '*'` mirrors remaining `*.md` into `openwiki/` and commits to `main` with a `[wiki-sync]` marker.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/wiki-import.yml#L1-L189",
-          "version": "repo-lines-v1:sha256:005b150f9dce6cb48e7e77cd9f74e5932af50823580b4bae732ff30b623bf041:eyJzZWxlY3RlZExpbmVDb3VudCI6MTg5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiZTcxODA3M2NiMDgwNTQ0NDI4YzQ0MzYwYjI0ZTUzZTgzZWE4NTYxM2U3OWU1ZDNlNzk0OTZiODYyMjUyMjlkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzZTdjNmI1ZmMxYTNmNTg5ZTZiNzEyZTJhYTkzZTk0MTIyMmRkZDQwNDUxNThkMDkxYzRiM2ViMWZjY2I5MDFmIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+          "resource": "repo://.github/workflows/wiki-import.yml#L1-L255",
+          "version": "repo-lines-v1:sha256:ba83bbd0d4a86079df095c2fce173d261f739b7b9aab81d0efec08bd65e04f2c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjU1LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiZTcxODA3M2NiMDgwNTQ0NDI4YzQ0MzYwYjI0ZTUzZTgzZWE4NTYxM2U3OWU1ZDNlNzk0OTZiODYyMjUyMjlkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzZTdjNmI1ZmMxYTNmNTg5ZTZiNzEyZTJhYTkzZTk0MTIyMmRkZDQwNDUxNThkMDkxYzRiM2ViMWZjY2I5MDFmIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
@@ -252,7 +252,7 @@
     }
   ],
   "verification": {
-    "by": "openwiki/0.4.0",
-    "at": "2026-08-26T09:23:05.972Z"
+    "by": "openwiki/0.5.0",
+    "at": "2026-09-01T19:42:14.192Z"
   }
 }

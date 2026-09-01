@@ -4,8 +4,8 @@ title: SaiLoR Developer Documentation
 description: Home page for SaiLoR developer documentation. SaiLoR is an Electron desktop tool for conducting Systematic Literature Reviews (SLRs), storing the annotation schema and paper metadata in project.json and each reviewer's/consolidation's annotation data in a sibling annotations/ folder. Links to quickstart, architecture, data model, and operations pages.
 tags: [home, overview, documentation]
 verified:
-  - by: openwiki/0.4.0
-    at: 2026-08-26T09:23:05.972Z
+  - by: openwiki/0.5.0
+    at: 2026-09-01T19:42:14.192Z
 sources:
   - id: openwiki-source-6d3ac2bdfb0e76882a670989
     resource: repo://.github/workflows/openwiki.yml
@@ -23,7 +23,7 @@ sources:
     resource: repo://src/platform/index.ts
   - id: openwiki-source-9b49ad2f97827d5ed9890232
     resource: repo://src/platform/unsupported.ts
-generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
+generated: { by: "openwiki/0.5.0", at: "2026-09-01T19:42:14.192Z" }
 ---
 
 # SaiLoR — Developer Documentation
@@ -67,7 +67,11 @@ mirrored to the GitHub wiki by a GitHub Action; the folder is the source of trut
 *replaces* the wiki rather than merging into it.
 
 Editing a page on the wiki is still fine: a second Action imports wiki edits back into `openwiki/`
-and commits them to `main`, so the two do not drift. See
-[Operations → Wiki sync](operations/build-release.md#wiki-sync-mechanics) for the mechanics — including the three
-independent loop-prevention guards that stop the two Actions triggering each other forever, and the
-shared `concurrency: wiki-sync` group that keeps them from racing on the same wiki.
+and commits them to `main`, so the two do not drift. A third, `openwiki.yml`, regenerates these
+pages from the code on a weekly Monday 06:00 UTC schedule (and on demand via `workflow_dispatch`),
+delegating the update to the `ardoco/actions` reusable OpenWiki workflow rather than running the
+steps inline. See [Operations → Wiki sync](operations/build-release.md#wiki-sync-mechanics) for
+the mechanics — including the three independent loop-prevention guards that stop the two sync
+Actions triggering each other forever: the shared `concurrency: wiki-sync` group (so the two
+directions never run at once), a `[wiki-sync]` commit-message guard on publish, and a
+`github-actions[bot]` sender guard on import.

@@ -3,9 +3,6 @@ type: operations
 title: Build, CI, and Release
 description: The Vite + vite-plugin-electron build pipeline, the provider-agnostic CI/electron-builder packaging scripts, GitHub Actions workflows, Ed25519 release signing, Docker Electron builds, and wiki sync mechanics.
 tags: [build, ci, release, electron-builder, docker, signing, github-actions, openwiki]
-verified:
-  - by: openwiki/0.4.0
-    at: 2026-08-26T09:23:05.972Z
 sources:
   - id: openwiki-source-164e2da859b5277df81c7d94
     resource: repo://.github/workflows/ci.yml
@@ -39,7 +36,10 @@ sources:
     resource: repo://src/model/updateSignature.ts
   - id: openwiki-source-5e1b077422a94ae165e88e4e
     resource: repo://vite.config.ts
-generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
+generated: { by: "openwiki/0.5.0", at: "2026-09-01T19:42:14.192Z" }
+verified:
+  - by: openwiki/0.5.0
+    at: 2026-09-01T19:42:14.192Z
 ---
 
 # Build, CI, and Release
@@ -327,49 +327,62 @@ app no longer ships a containerized web server.
 
 ## Wiki sync mechanics
 
-Four workflows keep `openwiki/` (developer docs), `user-guide/` (the user
-guide), and the GitHub wiki in sync. Two are about *generating* docs; two are
+Three workflows keep `openwiki/` (developer docs), `user-guide/` (the user
+guide), and the GitHub wiki in sync. One is about *generating* docs; two are
 about *mirroring* them to/from the wiki.
 
 ### OpenWiki generation
 
 - **`openwiki.yml`** — the **scheduled weekly refresh**. Runs on a Monday 06:00
-  UTC cron and `workflow_dispatch`. It first checks whether `main` has any
-  relevant commits in the last 7 days (`git rev-list --since="7 days ago"`
-  excluding `openwiki/**`); if not, it stops early so an OpenWiki-only commit
-  doesn't re-trigger it. Otherwise it installs `openwiki` plus its `mermaid`/
-  `jsdom` optional peers (for real mermaid-fence validation), runs
-  `openwiki --update --print`, then explicitly discards OpenWiki's
-  self-scaffolded `openwiki-update.yml` and its `AGENTS.md`/`CLAUDE.md` snippets
-  (the CLI rewrites them unconditionally), and opens a PR scoped to `openwiki`
-  via `peter-evans/create-pull-request`. This is the customized replacement for
-  the CLI's own default scaffolded workflow.
-- **`openwiki-update.yml`** — the CLI-scaffolded variant: a daily 08:00 UTC cron
-  running `openwiki code --update --print`, whose PR includes `openwiki`,
-  `AGENTS.md`, `CLAUDE.md`, and the workflow file itself. In the live repo this
-  is superseded by `openwiki.yml` (which deletes the scaffolded copy each run);
-  it is kept here as the reference of what the CLI emits by default.
+  UTC cron and `workflow_dispatch`, but does no work inline: it is a thin
+  reusable-workflow call that delegates entirely to
+  `ardoco/actions/.github/workflows/openwiki.yml@main`, passing the
+  `OPENROUTER_API_KEY` secret. The actual generation logic (installing the
+  `openwiki` CLI, running `--update --print`, opening a PR) lives in that shared
+  workflow, not in this repo — this file only supplies the trigger and the
+  secret.
 
 ### Wiki mirroring (publish ↔ import)
 
 - **`wiki-publish.yml`** (*Publish openwiki → Wiki*) — triggers on `push` to
   `main` under `openwiki/**`, `user-guide/**`, `.github/wiki-assets/**`, or the
-  workflow file itself. It clones `SaiLoR.wiki.git`, stages a combined layout
-  (Home landing page, `Development.md` from `openwiki/Home.md`, flat
-  `openwiki/*.md`, flattened `user-guide/*.md` renamed to `Guide-*`, a global
+  workflow file itself, and `workflow_dispatch`. It clones `SaiLoR.wiki.git`,
+  stages a combined layout: `Home.md` (always `.github/wiki-assets/Home.md`,
+  verbatim), `Development.md` (from `openwiki/Home.md`, renamed so the wiki's
+  own Home slot is free for the landing page), the rest of `openwiki/*.md` flat
+  at the wiki root, `openwiki/{concepts,operations,workflows}/*.md` flattened
+  one level deep under explicit `Section-Page` names
+  (`Operations-Build-Release`, `Workflows-LLM-Annotation`, … — hand-written to
+  keep acronym casing), flattened `user-guide/*.md` renamed to `Guide-*`,
+  `user-guide/screenshots/**` flattened alongside the pages, and a global
   `_Sidebar.md`/`_Footer.md` assembled from `.github/wiki-assets/` plus a
-  user-guide fragment), strips OKF frontmatter, rewrites cross-links for the
-  wiki's extensionless URLs, and `rsync --delete` replaces the wiki. It commits
-  as `github-actions[bot]` with a `[wiki-sync]` marker.
+  user-guide fragment wrapped in `<!-- wiki-sync:NAME:start/end -->` marker
+  pairs. It strips OKF frontmatter, rewrites cross-links (bare `.md` filenames
+  → extensionless wiki URLs, `Home` → `Development` in the sidebar,
+  `../README.md` → absolute GitHub URLs in the user guide), and
+  `rsync --delete` replaces the wiki. It commits as `github-actions[bot]` with a
+  `[wiki-sync]` marker.
+
+  `index.md` and `INSTRUCTIONS.md` are deliberately excluded — the former is
+  OpenWiki's own directory listing, the latter is the generator's config; both
+  are invisible-or-redundant on the wiki, so they stay in the repo only.
+
 - **`wiki-import.yml`** (*Import Wiki → openwiki*) — the reverse direction,
   triggering on `gollum` (a wiki page create/update) and `workflow_dispatch`.
   It clones the wiki and maps each published piece back to its repo source:
-  `Development.md` → `openwiki/Home.md`, flattened `Guide-*` →
-  `user-guide/<src>.md` (reversing the renames and link rewrites), the
-  `_Sidebar`/`_Footer` user-guide fragments → `.github/wiki-assets/` (lifted
-  out of their `<!-- wiki-sync:NAME:start/end -->` marker pairs), then
-  `rsync --delete` mirrors the remaining `*.md` into `openwiki/`. It commits to
-  `main` with a `[wiki-sync]` marker.
+  `Home.md` is dropped if it still carries the `<!-- wiki-sync:auto-home -->`
+  marker (still the published template, nobody edited it), otherwise it
+  replaces `.github/wiki-assets/Home.md`; `Development.md` → `openwiki/Home.md`;
+  the `Section-Page` flattened pages → `openwiki/{section}/<page>.md` (reversing
+  both the name flattening and the cross-link rewrites, including
+  same-subsection siblings and `../` walk-ups); flattened `Guide-*` →
+  `user-guide/<src>.md` (reversing the renames, link rewrites, and the absolute
+  GitHub URLs back to `../README.md`/`../LICENSE`); `screenshots/` →
+  `user-guide/screenshots/`; the `_Sidebar`/`_Footer` user-guide fragments →
+  `.github/wiki-assets/` (lifted out of their `<!-- wiki-sync:NAME:start/end -->`
+  marker pairs) and the `Development` → `Home` link reversed; then
+  `rsync --delete --include '*.md' --exclude '*'` mirrors the remaining `*.md`
+  into `openwiki/`. It commits to `main` with a `[wiki-sync]` marker.
 
 ### Why the two cannot trigger each other in a loop
 
@@ -383,8 +396,9 @@ independent layers prevent it:
 2. **Commit-message guard** — `wiki-publish.yml` skips when the triggering
    commit message contains `[wiki-sync]` (the marker import's commits carry),
    so it never re-publishes a commit the import workflow itself created.
-3. **Sender guard** — `wiki-import.yml` skips when
-   `github.event.sender.login == 'github-actions[bot]'` (the identity publish
+3. **Sender guard** — `wiki-import.yml` skips unless
+   `github.event_name == 'workflow_dispatch'` (a manual run) or
+   `github.event.sender.login != 'github-actions[bot]'` (the identity publish
    commits as), so it ignores wiki writes made by the publish workflow itself
    and only reacts to a human editing the wiki.
 

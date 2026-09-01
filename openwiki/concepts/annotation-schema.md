@@ -4,8 +4,8 @@ title: Annotation Schema and Validation
 description: How a hand-authored schema in project.json becomes a typed, validated annotation form — AnnotationDef/ResolvedDef types, zod validation, field types, cardinality, required/enum/type/cardinality checks, completeness, and duplicate detection.
 tags: [annotation-schema, validation, schema, completeness, duplicates, zod]
 verified:
-  - by: openwiki/0.4.0
-    at: 2026-08-26T09:23:05.972Z
+  - by: openwiki/0.5.0
+    at: 2026-09-01T19:42:14.192Z
 sources:
   - id: openwiki-source-4599b619fa759e59c83c5e95
     resource: repo://src/components/PaperList.tsx
