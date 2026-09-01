@@ -4,8 +4,8 @@ title: Testing Strategy
 description: The three-tier test architecture for SaiLoR — Vitest unit tests, a jsdom integration suite with real scratch git repos, and Playwright/Electron e2e smoke tests — plus the CI gating that ties them together.
 tags: [testing, vitest, playwright, integration-tests, e2e, ci, react-testing-library]
 verified:
-  - by: openwiki/0.4.0
-    at: 2026-08-26T09:23:05.972Z
+  - by: openwiki/0.5.0
+    at: 2026-09-01T19:42:14.192Z
 sources:
   - id: openwiki-source-164e2da859b5277df81c7d94
     resource: repo://.github/workflows/ci.yml

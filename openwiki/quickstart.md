@@ -4,8 +4,8 @@ title: SaiLoR Quickstart
 description: Introduction to SaiLoR, an Electron-desktop-only tool for conducting Systematic Literature Reviews (SLRs). Covers what SaiLoR is, the split project.json + annotations/ storage format, the full tech stack (React 19, Electron 43, Vite 6, Zustand+immer, Zod, react-pdf), quick-start commands, the repository layout, and a task-routing map to the right wiki page for common change areas.
 tags: [quickstart, setup, tech-stack, commands, electron-only, task-routing]
 verified:
-  - by: openwiki/0.4.0
-    at: 2026-08-26T09:23:05.972Z
+  - by: openwiki/0.5.0
+    at: 2026-09-01T19:42:14.192Z
 sources:
   - id: openwiki-source-4d1d392666be6dfdd7a91a2e
     resource: repo://.github/workflows/release.yml
@@ -73,7 +73,7 @@ sources:
     resource: repo://vite.config.ts
   - id: openwiki-source-9b13c737ac155b0b0c8d76b9
     resource: repo://vitest.integration.config.ts
-generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
+generated: { by: "openwiki/0.5.0", at: "2026-09-01T19:42:14.192Z" }
 ---
 
 # SaiLoR — Quickstart
@@ -268,7 +268,7 @@ Where to start for common change areas (wiki page → source entry points → ke
 |---|---|---|---|---|---|
 | Annotation field value / instance lifecycle | [Architecture](architecture.md) | `src/state/store.ts` | `setFieldValue`, `addInstance`, `removeInstance`, `currentTree` | `src/state/store.test.ts`, `src/state/store.reviewers.test.ts` | `npm test -- src/state/store.test.ts` |
 | PDF mark (highlight/note) + its undo step | [PDF Viewer and Marks](workflows/pdf-viewing.md) | `src/components/PdfViewer.tsx`, `src/state/store.ts`, `src/model/pdfMarks.ts` | `addHighlight`, `setMarkComment`, `removeMark`, `linkMarkToField` | `src/state/store.marks.test.ts`, `src/model/pdfMarks.test.ts` | `npm test -- src/state/store.marks.test.ts` |
-| "Continue where you left off" reading position | [PDF Viewer and Marks](workflows/pdf-viewing.md) | `src/components/PdfViewer.tsx`, `src/state/store.ts` | `noteReadingPosition`, `loadReadingPosition`, `initialPdfPosition`, `readOffsetFraction` | `src/state/store.readingPosition.test.ts`, `src/test/integration/pdfReadingPosition.integration.test.tsx` | `npm test -- src/state/store.readingPosition.test.ts`; integration: `npm run test:integration` |
+| "Continue where you left off" reading position | [PDF Viewer and Marks](workflows/pdf-viewing.md) | `src/components/PdfViewer.tsx`, `src/state/store.ts` | `noteReadingPosition`, `initialPdfPosition`, `offsetFraction`, `clearInitialPdfPosition` | `src/state/store.readingPosition.test.ts`, `src/test/integration/pdfReadingPosition.integration.test.tsx` | `npm test -- src/state/store.readingPosition.test.ts`; integration: `npm run test:integration` |
 | Schema resolution / model round-trip | [Annotation Schema and Validation](concepts/annotation-schema.md), [Project Data Model](concepts/data-model.md) | `src/model/schema.ts`, `src/model/project.ts`, `src/model/annotations.ts` | `resolveSchema`, `loadProject`, `serializeProject`, `splitProjectFiles`, `isLegacyProjectShape`, `normalizeTree` | `src/model/model.test.ts`, `src/model/split.test.ts` | `npm test -- src/model/model.test.ts` |
 | Consolidation entry matching / alignment | [Multi-Reviewer Consolidation](workflows/consolidation.md) | `src/consolidate/align.ts`, `src/consolidate/apply.ts`, `src/state/store.ts` | `alignNode`, `alignableNodes`, `growConsolidated` | `src/consolidate/align.test.ts`, `src/consolidate/apply.test.ts` | `npm test -- src/consolidate` |
 | Git merge / three-way field merge | [Git Integration](workflows/git-integration.md) | `src/git/merge.ts`, `src/git/changes.ts`, `src/state/gitStore.ts` | `mergeProjects`, `applyResolutions` | `src/git/merge.test.ts`, `src/state/gitStore.test.ts` | `npm test -- src/git/merge.test.ts` |
