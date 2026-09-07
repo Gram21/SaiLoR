@@ -204,3 +204,222 @@
 .schema-empty p {
   margin: 0;
 }
+
+/* ---- Visibility gate ----
+   The row shows only a summary; editing happens in `VisibleIfDialog`, which
+   reuses the shared `.modal*` classes from index.css. */
+.schema-visible-if {
+  /* Never shrunk: this is the row's only summary of a rule that can be several
+     conditions deep, so the description input (`flex: 1 1 40%`) gives way
+     instead. */
+  flex: 0 0 auto;
+  max-width: 240px;
+  padding: 3px 8px;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.visible-if-mode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+.visible-if-mode-label {
+  color: var(--muted);
+}
+.visible-if-values label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+/* Field on the left, its match test on the right, remove last — a grid rather
+   than a wrapping flex row so every condition lines up at the same columns,
+   whatever its depth or which value control it happens to show. */
+.visible-if-row {
+  display: grid;
+  /* Handle, field, match test, tools. */
+  grid-template-columns: auto minmax(220px, 1fr) minmax(240px, 1.1fr) auto;
+  align-items: start;
+  gap: 8px;
+  padding: 4px 0;
+}
+/* The drag handle sits on the row's first text line, not centred on a row
+   whose match column may be three lines tall. */
+.visible-if-row > .schema-handle {
+  padding-top: 4px;
+}
+.visible-if-values {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+/* Its own line, not trailing the last checkbox it happens to sit beside. */
+.visible-if-values > .schema-hint {
+  flex: 1 0 100%;
+}
+.visible-if-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+/* Pushes Cancel/Save to the right edge, keeping "Always visible" on the left. */
+.visible-if-clear {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto;
+}
+
+/* Wider than the shared 680px: a condition is a field picker beside its match
+   test, and at 680px both truncate. */
+/* `.modal` in index.css caps the shared width at 680px and is loaded after
+   this file, so the override has to out-specify it. */
+.modal.visible-if-dialog {
+  width: min(880px, 94vw);
+}
+
+/* Which node is being gated: its full answer-tree path, plus its kind. */
+.visible-if-context {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+.visible-if-kind {
+  padding: 1px 6px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  color: var(--accent);
+  font-size: 0.85em;
+  font-weight: 400;
+}
+
+/* A group of conditions. Nested ones repeat this block, so the indent and the
+   left rule accumulate with the depth on their own. */
+.visible-if-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+/* A nested group is boxed, not just indented: at two levels deep an indent
+   alone stops telling you where the group starts and ends. */
+.visible-if-group:not(.visible-if-group-root) {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: var(--bg);
+  padding: 6px 8px;
+}
+.visible-if-joiner {
+  align-self: flex-start;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+.visible-if-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.visible-if-group-foot {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+/* One condition: the field (with its level information) beside its match. */
+.visible-if-target,
+.visible-if-match {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.visible-if-match label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+/* The Yes/No picker states one word — it should not stretch to the column. */
+.visible-if-match > select {
+  max-width: 140px;
+}
+/* Reorder/remove, stacked at the end of the condition's row (or in a nested
+   group's header). Small and quiet: they are per-entry plumbing, not the
+   thing being read. */
+.visible-if-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  align-self: flex-start;
+}
+.visible-if-tools .icon-btn {
+  padding: 0 5px;
+  line-height: 1.4;
+}
+.visible-if-tools .icon-btn:disabled {
+  opacity: 0.35;
+}
+
+/* Moving an entry between groups is the same gesture as reordering the schema
+   tree, so it reuses that block's class names and its two indicators: a line
+   at the edge the entry would land on, an outline when it would go inside a
+   group. Only the box is different (a condition row or a group box, not a
+   schema row), which is why these selectors exist at all. */
+.visible-if-row,
+.visible-if-group {
+  /* The drop indicators are absolutely positioned edges of this box. */
+  position: relative;
+}
+.visible-if-row.dragging,
+.visible-if-group.dragging {
+  opacity: 0.4;
+}
+.visible-if-row.drag-over-before::before,
+.visible-if-group.drag-over-before::before,
+.visible-if-row.drag-over-after::after,
+.visible-if-group.drag-over-after::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+.visible-if-row.drag-over-before::before,
+.visible-if-group.drag-over-before::before {
+  top: -2px;
+}
+.visible-if-row.drag-over-after::after,
+.visible-if-group.drag-over-after::after {
+  bottom: -2px;
+}
+/* An outline rather than a border: the root group has no border of its own to
+   recolour, and an outline does not move anything inside the box either. */
+.visible-if-group.drag-over-inside {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  background: var(--accent-weak);
+}
+
+/* The repeatable-group caveat for a cross-branch condition — said once, under
+   the whole gate, and only while one is actually in use. */
+.visible-if-elsewhere-note {
+  margin: 8px 0 0;
+}
+
+.visible-if-summary {
+  margin: 10px 0 0;
+  padding: 6px 8px;
+  border-left: 2px solid var(--accent);
+  font-style: italic;
+}

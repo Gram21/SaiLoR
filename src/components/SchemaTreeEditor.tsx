@@ -9,6 +9,7 @@ import {
   type EditorNodeKind,
 } from '../state/editorStore'
 import { countPapersUsingField, countLinksUsingField } from '../model/fieldUsage'
+import { VisibleIfDialog, describeVisibleIf, describeVisibleIfFull } from './VisibleIfDialog'
 import '../styles/schema-editor.css'
 
 /** Where the currently dragged node would land. */
@@ -175,6 +176,10 @@ function SchemaNodeRow({
   // The row itself carries the drag, but only once the handle is pressed:
   // a permanently draggable row would break text selection inside its inputs.
   const [armed, setArmed] = useState(false)
+
+  // The visibility-gate dialog, mounted only while open so its draft starts
+  // from the node's current gate without an effect to resync it.
+  const [gateOpen, setGateOpen] = useState(false)
 
   const dragging = dragUid === node.uid
   const isSubtree = dragging || inDragged
@@ -422,32 +427,17 @@ function SchemaNodeRow({
           onChange={(e) => updateNode(node.uid, { description: e.target.value })}
         />
 
-        <select
-          className="schema-input schema-visible-if"
-          title="Only show this field/group once the chosen field has an answer"
-          value={node.visibleIf}
-          onChange={(e) => updateNode(node.uid, { visibleIf: e.target.value })}
+        {/* A gate can now be several conditions with values, which no single
+            <select> can express — so the row only summarises it and the
+            editing happens in a dialog. */}
+        <button
+          type="button"
+          className="schema-visible-if"
+          title={describeVisibleIfFull(node.visibleIf)}
+          onClick={() => setGateOpen(true)}
         >
-          <option value="">Always visible</option>
-          {siblingFieldOptions.length > 0 && (
-            <optgroup label="Same level">
-              {siblingFieldOptions.map((s) => (
-                <option key={s.uid} value={s.name}>
-                  Show only if "{s.name}" answered
-                </option>
-              ))}
-            </optgroup>
-          )}
-          {ancestorFieldOptions.length > 0 && (
-            <optgroup label="Ancestors">
-              {ancestorFieldOptions.map((s) => (
-                <option key={s.uid} value={s.name}>
-                  Show only if "{s.name}" (ancestor) answered
-                </option>
-              ))}
-            </optgroup>
-          )}
-        </select>
+          {describeVisibleIf(node.visibleIf)}
+        </button>
 
         <button
           type="button"
@@ -468,6 +458,21 @@ function SchemaNodeRow({
           ×
         </button>
       </div>
+
+      {gateOpen && (
+        <VisibleIfDialog
+          node={node}
+          // Already the node's own path, root first: the children's ancestor
+          // list *is* this node's path.
+          nodePath={childAncestors}
+          siblings={siblingFieldOptions}
+          ancestors={ancestorFieldOptions}
+          // Everything else in the schema is a legal target too — the dialog
+          // excludes this node and its own subtree from the tree itself.
+          nodes={allNodes}
+          onClose={() => setGateOpen(false)}
+        />
+      )}
 
       {node.kind === 'string' && (
         <div className="schema-options">
