@@ -110,6 +110,30 @@ const NEW_SLOT_WEIGHT = ORDER_TIE_BREAK / 10
  */
 const MIN_MATCH_SCORE = 0.5
 
+/**
+ * The degenerate matching problem: a repeatable node where nobody recorded
+ * more than one entry, and nothing hangs below it.
+ *
+ * There is exactly one way to pair these, so `MIN_MATCH_SCORE` has no false
+ * pairing left to protect against — and refusing the pair is not neutral: it
+ * produces two half-empty slots, each reporting the *other* reviewer as
+ * having recorded nothing, where one plain disagreement belongs. Two
+ * reviewers picking different options of a repeatable enum ("Benchmark" vs
+ * "Case study") is the common case, and it is a disagreement about one
+ * answer, not two answers nobody else gave.
+ *
+ * Restricted to childless nodes on purpose. With sub-fields, "one entry each"
+ * no longer means "one thing each": two reviewers who each recorded a single
+ * Finding may well have recorded *different* findings, and merging them there
+ * is the invisible mistake `MIN_MATCH_SCORE` exists to avoid. Groups that
+ * agree on all or most of their sub-fields already clear the threshold on
+ * their own — `combine` weight-averages, so four matching sub-fields out of
+ * five score ~0.8 — so nothing is lost by leaving them to it.
+ */
+function singlePairing(def: ResolvedDef, lists: Record<string, InstanceNode[]>): boolean {
+  return def.children.length === 0 && Object.values(lists).every((l) => l.length <= 1)
+}
+
 /** A node holds several entries, so its entries need matching at all. */
 export function isRepeatable(def: ResolvedDef): boolean {
   return def.max === null || def.max > 1
@@ -257,6 +281,13 @@ function alignList(
   for (const r of reviewers) counts[r] = lists[r].length
 
   if (reviewers.every((r) => lists[r].length === 0)) return { slots: [], counts }
+
+  if (singlePairing(def, lists)) {
+    const slot = newSlot()
+    for (const r of reviewers) if (lists[r].length > 0) slot.members[r] = 0
+    scoreSlot(def, slot, lists, cache)
+    return { slots: [slot], counts }
+  }
 
   const [anchor, ...rest] = reviewers
   const slots: AlignedSlot[] = lists[anchor].map((_, i) => {
@@ -498,6 +529,14 @@ function widenList(
     .sort(compareReviewerIds)
 
   if (newcomers.length === 0) return { slots: existingSlots, changed: false }
+
+  // Same degenerate case `alignList` short-circuits, from the frozen side: one
+  // entry apiece and one existing slot leaves the newcomer nowhere else to go.
+  if (singlePairing(def, lists) && existingSlots.length === 1) {
+    const members = { ...existingSlots[0].members }
+    for (const r of newcomers) members[r] = 0
+    return { slots: [{ members }], changed: true }
+  }
 
   // Plain member-bag copies to fold into — `simAgainstSlot` only reads
   // `.members`, and `children` is carried through untouched until a slot is

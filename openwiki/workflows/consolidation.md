@@ -135,6 +135,14 @@ real agreement:
   trade-off is one-directional: splitting a pair that really was one entry is
   visible and fixable, while merging two entries that were never the same thing
   is invisible.
+  The floor is skipped in one degenerate case (`singlePairing`): a repeatable
+  node with no sub-fields where nobody recorded more than one entry. There is
+  only one possible pairing, so the floor has no false pairing left to prevent,
+  and refusing the pair would produce two half-empty slots — each reporting the
+  other reviewer as having recorded nothing — where one plain disagreement
+  belongs. Nodes *with* sub-fields keep the floor even at one entry each: "one
+  entry" is not "the same entry" there, and groups agreeing on most sub-fields
+  clear 0.5 on their own anyway.
 - `NEW_SLOT_WEIGHT` and `ORDER_TIE_BREAK` — an entry that matches none of the
   existing slots opens a new slot of its own rather than being forced into a
   leftover one. A reviewer recording a finding nobody else wrote down ends up

@@ -69,7 +69,13 @@ for the glossary.
 ### REQ-CON-110 — Similarity threshold for merging
 - **Description:** When two reviewers' entries have a similarity score of 0.5 or lower, the system shall place them in separate slots instead of merging them.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/consolidate/align.ts:70-111,277-299` (`MIN_MATCH_SCORE`)
+- **Evidence:** `src/consolidate/align.ts:82-111` (`MIN_MATCH_SCORE`)
+- **Status:** Implemented
+
+### REQ-CON-115 — Compare single entries of a repeatable field regardless of similarity
+- **Description:** When a repeatable schema node has no sub-fields and no reviewer recorded more than one entry for it, the system shall place all reviewers' entries in a single slot regardless of their similarity score, so that differing answers are presented as one disagreement rather than as two one-sided entries.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/consolidate/align.ts:113-135` (`singlePairing`), `src/consolidate/align.test.ts:421-461`
 - **Status:** Implemented
 
 ### REQ-CON-120 — Persist only slot membership

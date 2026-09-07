@@ -419,3 +419,44 @@ describe('alignNode', () => {
     expect(slots[1].members).toEqual({ '1': 1, '3': 0 })
   })
 })
+
+describe('single-entry repeatable fields', () => {
+  const evalType: AnnotationDef[] = [{ name: 'Evaluation Type', type: 'string', max: null }]
+
+  it('pairs one entry each even when the answers are nothing alike', () => {
+    // Used to split into two slots, each showing the other reviewer as having
+    // recorded nothing — a plain disagreement dressed up as two entries.
+    const { schema, reviews } = setup(evalType, {
+      '1': { 'Evaluation Type': [{ value: 'Benchmark' }] },
+      '2': { 'Evaluation Type': [{ value: 'Case study' }] },
+    })
+    const alignment = alignNode(schema, reviews, 'Evaluation Type')['Evaluation Type']
+
+    expect(alignment.slots).toHaveLength(1)
+    expect(alignment.slots[0].members).toEqual({ '1': 0, '2': 0 })
+  })
+
+  it('still splits once a reviewer records more than one', () => {
+    const { schema, reviews } = setup(evalType, {
+      '1': { 'Evaluation Type': [{ value: 'Benchmark' }, { value: 'User study' }] },
+      '2': { 'Evaluation Type': [{ value: 'Simulation' }] },
+    })
+    const alignment = alignNode(schema, reviews, 'Evaluation Type')['Evaluation Type']
+
+    expect(alignment.slots).toHaveLength(3)
+  })
+
+  it('leaves groups with sub-fields to the similarity floor', () => {
+    // Two genuinely different findings, one each: merging them would hide that.
+    const { schema, reviews } = setup(
+      [{ name: 'Findings', max: null, children: [{ name: 'Claim', type: 'string' }] }],
+      {
+        '1': { Findings: [{ children: { Claim: [{ value: 'Tests reduce defects' }] } }] },
+        '2': { Findings: [{ children: { Claim: [{ value: 'CI speeds delivery' }] } }] },
+      },
+    )
+    const alignment = alignNode(schema, reviews, 'Findings')['Findings']
+
+    expect(alignment.slots).toHaveLength(2)
+  })
+})
