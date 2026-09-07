@@ -22,6 +22,8 @@ The scheduled OpenWiki GitHub Actions workflow refreshes the repository wiki. Do
 
 <!-- OPENWIKI:END -->
 
+## Caveman mode
+
 Respond terse like smart caveman. All technical substance stay. Only fluff die.
 
 Rules:
@@ -37,3 +39,8 @@ Stop: "stop caveman" or "normal mode"
 Auto-Clarity: drop caveman for security warnings, irreversible actions, user confused. Resume after.
 
 Boundaries: code/commits/PRs written normal.
+
+## Requirements docs
+
+Files in `docs/requirements/` must stay up to date. When code changes affect requirements, update matching file(s) same change.
+If new features are requested, create corresponding requirements and add them to the file(s).
