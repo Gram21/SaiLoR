@@ -165,6 +165,7 @@ thing you want to record. A node is written as a JSON object (its technical name
 | `options`     | array of strings                       | no       | —       | Turns a `string` field into an **enum dropdown** of allowed values (see §3.2).            |
 | `required`    | boolean                                | no       | `false` | Marks a **field** the reviewer must fill in. Shows a `*` next to the name; an empty one is reported by validation. Only valid on a node with a `type` — **and never on a `boolean`**: an unticked checkbox is already a real answer (`false`), so a boolean is never "empty" and `required` on one can never fire. The editor doesn't offer it there, and a stray one in a hand-edited file is dropped on load (not an error). |
 | `description` | string                                 | no       | —       | A help note. The name shows an ⓘ marker and reveals this text on hover.                    |
+| `visibleIf`   | string or object                       | no       | —       | Hides this node until another field is answered — or holds a specific value. Combine several conditions with AND/OR (see §3.6). |
 
 Two structural rules the app enforces:
 
@@ -373,6 +374,149 @@ You can bound a repeatable group as well. Between one and three threats:
   ]
 }
 ```
+
+### 3.6 Conditional visibility: `visibleIf`
+
+A node can be hidden until another field says it is relevant. In the shortest form,
+`visibleIf` is the **name of another field**, and the node appears once that field has an
+answer:
+
+```json
+[
+  { "name": "Relevant", "type": "boolean" },
+  { "name": "Study Type", "type": "string", "visibleIf": "Relevant" }
+]
+```
+
+`Study Type` stays hidden while `Relevant` is unticked, and appears the moment it is ticked.
+"Answered" means: ticked for a `boolean`, and any non-empty value for everything else.
+
+**Which fields may be referenced.** A condition may name
+
+- a **field at the same level** (a sibling in the same `children` array, or in the root list), or
+- a field **anywhere on the direct ancestor chain** — the parent, its parent, and so on, named by
+  its bare name, or
+- **any other field in the schema**, named by its **path from the root**, slash-joined:
+  `"Outcomes/Effect Size"`. A root-level field referenced from inside a group is a one-segment
+  path, so a bare name that is neither a sibling nor an ancestor is looked up this way too.
+
+It may **not** name a group (a group holds no value), itself, or anything **inside its own
+sub-tree** — a field under a hidden node can never be answered, so such a gate could never
+open. An unusable reference is dropped silently when the project loads, and simply stops
+gating anything — a renamed or removed target field is *not* reported.
+
+The distinction between the two spellings matters inside a **repeatable** group. A bare name is
+resolved per entry: `Findings[2]/Evidence` gated on the bare name `Claim` reads *that same
+entry's* `Claim`. A path from the root is resolved once, taking the **first** entry of every
+repeatable node along the way — there is no "current" entry outside the gated node's own
+lineage, so the first one is what a cross-branch condition reads.
+
+`visibleIf` works on a **group** too, in which case the whole sub-tree is hidden. A hidden
+field is skipped by validation and by the completeness dot, so a `required` field behind an
+unsatisfied gate never counts against a paper.
+
+#### Matching a specific value
+
+The longer form of `visibleIf` is an object with a `mode` and a list of `conditions`:
+
+```json
+{
+  "name": "Exclusion Reason",
+  "type": "string",
+  "visibleIf": {
+    "mode": "all",
+    "conditions": [{ "field": "Relevant", "equals": [false] }]
+  }
+}
+```
+
+Now `Exclusion Reason` appears exactly when `Relevant` is **unticked** — something the short
+form cannot express, since an unticked box reads as "not answered".
+
+`equals` lists the values that satisfy the condition; several values mean "any of these".
+It only works on a field with a **closed set of answers**:
+
+- a `boolean` field — `[true]`, `[false]`, or both;
+- a `string` field with **`options`** — any subset of those options.
+
+```json
+{
+  "name": "Sample Size",
+  "type": "number",
+  "visibleIf": {
+    "mode": "all",
+    "conditions": [{ "field": "Evaluation Type", "equals": ["Controlled experiment", "User study"] }]
+  }
+}
+```
+
+On a free-text, `number` or `year` field there is no set to choose from, so an `equals` there is
+dropped on load and the condition falls back to plain "is it answered". Values that are not
+among the target's `options` are dropped the same way.
+
+#### Combining conditions: AND / OR
+
+With more than one condition, `mode` decides how they combine:
+
+- `"all"` — **AND**: every condition must hold.
+- `"any"` — **OR**: at least one condition must hold.
+
+```json
+{
+  "name": "Replication Package URL",
+  "type": "string",
+  "visibleIf": {
+    "mode": "all",
+    "conditions": [
+      { "field": "Relevant", "equals": [true] },
+      { "field": "Artifacts Available", "equals": [true] }
+    ]
+  }
+}
+```
+
+Each condition is looked up on its own, so one condition may watch a sibling and the next an
+ancestor. A condition naming a field that cannot be found at all is treated as satisfied — a
+malformed gate never makes a field permanently unreachable.
+
+#### Nested condition groups
+
+An entry of `conditions` may be **another gate** instead of a single condition, which is how a
+mixed rule gets written: the inner group carries its own `mode`, and the outer one combines it
+with everything else.
+
+```json
+{
+  "name": "Sample Size",
+  "type": "number",
+  "visibleIf": {
+    "mode": "all",
+    "conditions": [
+      { "field": "Relevant", "equals": [true] },
+      {
+        "mode": "any",
+        "conditions": [
+          { "field": "Study Type", "equals": ["Controlled experiment"] },
+          { "field": "Study Type", "equals": ["User study"] }
+        ]
+      }
+    ]
+  }
+}
+```
+
+That reads: shown if `Relevant` is ticked **and** (`Study Type` is a controlled experiment **or**
+a user study). Groups may nest as deeply as the rule needs. A group that ends up with no usable
+conditions is dropped from its parent, exactly as a single unusable condition is — and if that
+empties the whole gate, the node becomes always visible again.
+
+(The example above is deliberately over-written to show the nesting: two `equals` on the same
+field are the same thing as one condition listing both values.)
+
+In the project editor you do not write any of this by hand: the schema row has a **link
+button** showing the current rule ("Always visible", `If "Relevant" = Yes`, …), and
+clicking it opens a dialog where conditions are added, pointed at a field, given values, and
+combined with AND or OR — including nested groups, for the mixed rules above.
 
 ---
 

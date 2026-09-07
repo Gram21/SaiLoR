@@ -71,9 +71,9 @@ the project editor. See the [index](index.md) for the glossary.
 ## Annotation schema
 
 ### REQ-DAT-110 — Schema node structure
-- **Description:** The system shall accept schema nodes with a non-empty name, an optional field type of string, number, boolean, or year, cardinality bounds `min` (integer ≥ 0, default 1) and `max` (integer ≥ 1 or null for unbounded, default 1, at least `min` when finite), optional description, enum options (string fields only), a required flag (typed fields only), a `visibleIf` reference, and children, rejecting unknown node keys and nodes with neither a type nor children.
+- **Description:** The system shall accept schema nodes with a non-empty name, an optional field type of string, number, boolean, or year, cardinality bounds `min` (integer ≥ 0, default 1) and `max` (integer ≥ 1 or null for unbounded, default 1, at least `min` when finite), optional description, enum options (string fields only), a required flag (typed fields only), a `visibleIf` gate (either a bare field name or an object with a `mode` of `all`/`any` and a non-empty list of entries, each a `{ field, equals? }` condition or a nested group of the same shape), and children, rejecting unknown node keys and nodes with neither a type nor children.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/schema.ts:24-124`, `src/model/model.test.ts:58-144`
+- **Evidence:** `src/model/schema.ts:26-195`, `src/model/model.test.ts:58-144`
 - **Status:** Implemented
 
 ### REQ-DAT-120 — Unique sibling names
@@ -88,10 +88,10 @@ the project editor. See the [index](index.md) for the glossary.
 - **Evidence:** `src/model/schema.ts:340-345`, `src/model/model.test.ts:130`
 - **Status:** Implemented
 
-### REQ-DAT-140 — Restrict visibleIf targets
-- **Description:** The system shall honor a `visibleIf` reference only when it names a same-level typed sibling or a typed field on the direct ancestor chain, and shall drop invalid references at schema resolution.
+### REQ-DAT-140 — Restrict visibleIf targets and values
+- **Description:** The system shall normalize every `visibleIf` gate at schema resolution — expanding the bare-name form into a single `all` condition and recursing into nested groups — and shall resolve each condition's `field` as a same-level typed sibling, else a typed field on the direct ancestor chain, else a slash-joined absolute path from the schema root, dropping the condition when it resolves to the gated node itself, to anything in the gated node's own subtree, to a group, or to nothing; then any group left empty, and, once none is left, the whole gate. An `equals` shall be honored only on a boolean field (its `true`/`false`) or a string field with non-empty `options` (values among those options); values the target cannot hold, and any `equals` on a free-text, number, or year field, shall be dropped so that the condition degrades to "is it answered".
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/schema.ts:346-363`, `src/model/model.test.ts:165-235`
+- **Evidence:** `src/model/schema.ts:346-443`, `src/model/model.test.ts:171-623`
 - **Status:** Implemented
 
 ### REQ-DAT-150 — Bound schema instance fan-out
@@ -129,9 +129,9 @@ the project editor. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-DAT-200 — Skip hidden fields in validation
-- **Description:** When a field or group is hidden by an unanswered `visibleIf` gate, the system shall exclude it from validation.
+- **Description:** When a field or group is hidden by an unsatisfied `visibleIf` gate — whether the gate asks for any answer or for specific values — the system shall exclude it from validation.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/validate.ts:206-272`, `src/model/validate.test.ts:137-192`
+- **Evidence:** `src/model/validate.ts:206-280`, `src/model/validate.test.ts:137-284`
 - **Status:** Implemented
 
 ### REQ-DAT-210 — Separate unannotated papers
@@ -145,7 +145,7 @@ the project editor. See the [index](index.md) for the glossary.
 ### REQ-DAT-220 — Completeness over the validated field set
 - **Description:** The system shall compute a paper's completeness as filled over counted fields, counting only required fields when the schema marks any field required and all fields otherwise, excluding boolean fields and fields hidden by visibility gates, using the same rule as validation.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/completeness.ts:24-59`, `src/model/completeness.test.ts:89-284`
+- **Evidence:** `src/model/completeness.ts:24-59`, `src/model/completeness.test.ts:89-351`
 - **Status:** Implemented
 
 ### REQ-DAT-230 — Non-misleading percentage display
@@ -285,9 +285,9 @@ the project editor. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-EDT-60 — Edit schema tree graphically
-- **Description:** The system shall provide a drag-and-drop schema tree editor offering group, text, number, year, and yes/no nodes, inline enum options, cardinality inputs with an unbounded toggle, descriptions, a required checkbox for eligible fields, a `visibleIf` selector restricted to legal targets, and refusal of drops into a node's own subtree.
+- **Description:** The system shall provide a drag-and-drop schema tree editor offering group, text, number, year, and yes/no nodes, inline enum options, cardinality inputs with an unbounded toggle, descriptions, a required checkbox for eligible fields, a visibility-gate button that summarizes the node's `visibleIf` and opens a dialog for editing it (the gated node's tree path and type, conditions restricted to legal targets and labelled with each target's level and value kind, an explicit any-answer/specific-value choice per condition, values offered only for yes/no and option-list fields, arbitrarily nested AND/OR groups that can be extended after creation, targets listed same-level first then ancestors then the rest of the schema in document order, per-entry reordering and removal, and drag-and-drop of a condition or a whole group into another group), and refusal of drops into a node's own subtree.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/components/SchemaTreeEditor.tsx:20-26,211-240,285-509`
+- **Evidence:** `src/components/SchemaTreeEditor.tsx:20-26,211-240,285-470`, `src/components/VisibleIfDialog.tsx:150-1004`, `src/components/VisibleIfDialog.test.ts`
 - **Status:** Implemented
 
 ### REQ-EDT-70 — Record the review protocol

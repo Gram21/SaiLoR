@@ -21,9 +21,9 @@ export. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-ANN-30 — Conditional field visibility
-- **Description:** When a node defines a `visibleIf` reference, the system shall show the node only while the referenced same-level or ancestor field is answered.
+- **Description:** When a node defines a `visibleIf` gate, the system shall show the node only while the gate holds: each condition is satisfied when the referenced field is answered, or — where the condition lists `equals` values — when that field holds one of them, the field being resolved as a same-level sibling, else an ancestor, else an absolute path walked from the paper's root tree taking the first entry of every repeatable node along it; entries are combined with AND (`mode: "all"`) or OR (`mode: "any"`), an entry may itself be a nested group with its own mode, and a condition whose field is found nowhere is treated as satisfied.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/annotations.ts:195-211`, `src/components/AnnotationNode.tsx:115-135`, commits `254ad06`, `e1b3dd0`, `a5061b0`
+- **Evidence:** `src/model/annotations.ts:216-287`, `src/model/model.test.ts:645-948`, `src/components/AnnotationNode.tsx:115-140`, `src/components/AnnotationPanel.tsx:264-270`, commits `254ad06`, `e1b3dd0`, `a5061b0`
 - **Status:** Implemented
 
 ### REQ-ANN-40 — Cardinality-controlled instances

@@ -8,7 +8,7 @@ Reach it from the start screen (**New annotation JSON…** / **Edit annotation J
 *Open ▾* while a project is already open.
 
 <p align="center">
-  <img src="screenshots/project-editor-schema.png" alt="The project editor: location, title, screening toggle, reviewer count, the review protocol section, and the schema tree" width="900">
+  <img src="screenshots/project-editor-schema.png" alt="The project editor: location, title, screening toggle, reviewer count, the review protocol section, and the schema tree with a visibility button on every row" width="900">
 </p>
 
 ## Where the JSON lives
@@ -31,14 +31,62 @@ Each row is one field or group:
   stays free text.
 - **Required** — the reviewer must fill it in before Validate is satisfied. Not offered on *Yes/No*
   fields; see [Things to know](things-to-know.md#a-smaller-one-a-yesno-field-can-never-be-reported-as-missing).
-- **Show only if** — pick a field here to hide this row until that field has an answer (a checked
-  *Yes/No*, or anything non-empty for other types). Available on *Group* rows too, not just fields —
-  gating a group hides everything nested inside it at once, rather than each field individually. Leave
-  it on *Always visible* for no gating. The dropdown offers fields at the *same level* (same group, or
-  the top level) and, separately, any *ancestor* field this row is nested under — the group it's
-  inside, that group's own group, and so on — so "hide this until its parent field is answered" works
-  directly. A field further removed than that (a cousin, e.g. a sibling of one of those ancestors)
-  can't be picked.
+- **The visibility button** — every row carries a button spelling out when the row is shown:
+  *Always visible*, `If "Relevant" has any answer`, `If "Relevant" = Yes`, or
+  *If all of 2 conditions* (the full rule is in its tooltip). Click it to open the **When to show
+  "…"** dialog, which names the field being gated and its type, and where you add one or more
+  **conditions** and pick, per condition:
+  - the **field to watch** — the picker lists, in this order, fields at the *same level* (same
+    group, or the top level), then *ancestor* fields this row is nested under (nearest first: the
+    group it's inside, that group's own group, and so on), then everything *elsewhere in the
+    schema*, top to bottom, shown with its path. The only fields you cannot watch are the row
+    itself and anything nested **under** it — a field inside a hidden node can never be answered,
+    so such a rule could never open. A condition on a field from elsewhere reads the **first**
+    entry of any repeatable group on the way to it (the dialog says so when you use one);
+    same-level and ancestor conditions read the entry the row itself belongs to.
+  - **what counts as satisfied** — *has any answer*, or *has a specific value*. The first is the
+    plain "the reviewer filled this in" test: a ticked box on a *Yes/No* field, any non-empty value
+    on every other kind — and it stays available for every field, whatever its type. The second
+    offers *Yes* / *No* on a *Yes/No* field, and the option list on a *Text* field with fixed
+    choices (tick several and any one of them counts). Free text, *Number* and *Year* have no fixed
+    set of answers to pick from, so *has any answer* is the only test there, and the dialog says so.
+
+  Every field in the picker is labelled with **where it lives** (same level, or how far up the tree
+  it sits and in which group) and **what it holds** (Yes/No, Number, Year, free text, or text with
+  N fixed choices), so you can tell two same-named fields in different branches apart.
+
+  With two or more conditions you also choose how they combine: **all of these must hold (AND)** or
+  **any of these may hold (OR)**. **+ Add group** nests a group with its own AND/OR inside the
+  current one, which is how a mixed rule is built — *Relevant is Yes* **and** *(Evaluation Type is a
+  controlled experiment* **or** *a user study)*. Groups nest as deeply as the rule needs, and one
+  left empty is simply dropped.
+
+  Every group keeps its own **+ Add condition** / **+ Add group** buttons, labelled *Add to this
+  group*, so you can extend a group at any time — not only when you create it. Each condition and
+  each nested group also carries **↑ / ↓** buttons that move it among its neighbours, and **×** to
+  remove it; the arrows stop at the first and last entry of the group they are in.
+
+  To move something *between* groups, **drag its ⠿ handle** — the same gesture the schema tree
+  itself uses. Drop near an entry's top or bottom edge to land before or after it, or in the middle
+  of a group to move inside that group; drop on the outer rule to lift an entry back out to the top
+  level. A group can be dragged whole, carrying its conditions and its own AND/OR with it, and a
+  drop into itself is refused. Nothing has to be deleted and rebuilt, so a condition you already
+  filled in keeps its values. A sentence under the conditions always spells the whole rule out, so
+  you can read back what you built:
+
+<p align="center">
+  <img src="screenshots/project-editor-visibility.png" alt="The 'When to show' dialog: the gated field and its type, an AND/OR selector, a condition on Relevant = Yes, a nested OR group matching two Evaluation Type options, and the rule spelled out as a sentence" width="900">
+</p>
+
+  **Always visible**, bottom left, clears the gate again — it removes every condition, and says so
+  next to the button. Nothing is written to the project until you press **Save**.
+
+  Note that *No* on a *Yes/No* field needs the explicit value condition: an unticked box counts as
+  "not answered", so *has any answer* never fires for it — which is exactly how you show an
+  "Exclusion reason" field only once *Relevant* is unticked.
+
+  Gating is available on *Group* rows too, not just fields — gating a group hides everything nested
+  inside it at once, rather than each field individually.
 - **Drag a row's ⠿ handle** to reorder or nest it: drop near a row's top or bottom edge to place it
   before or after; drop in the middle of a row to nest it inside.
 
