@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { ResolvedDef } from './schema'
+import { gateOn, type ResolvedDef } from './schema'
 import type { AnnotationValueTree } from './annotations'
 import type { Paper, Project } from './project'
 import { validatePaper, validateProject, type UnannotatedPaper, type ValidationIssue } from './validate'
@@ -137,7 +137,7 @@ describe('required', () => {
   it('skips a required field hidden by an unanswered visibleIf gate', () => {
     const schema = [
       def({ name: 'Relevant', type: 'boolean' }),
-      def({ name: 'Claim', type: 'string', required: true, visibleIf: 'Relevant' }),
+      def({ name: 'Claim', type: 'string', required: true, visibleIf: gateOn('Relevant') }),
     ]
     const issues = validatePaper(
       schema,
@@ -149,13 +149,56 @@ describe('required', () => {
   it('flags the same required field once its visibleIf gate is answered', () => {
     const schema = [
       def({ name: 'Relevant', type: 'boolean' }),
-      def({ name: 'Claim', type: 'string', required: true, visibleIf: 'Relevant' }),
+      def({ name: 'Claim', type: 'string', required: true, visibleIf: gateOn('Relevant') }),
     ]
     const issues = validatePaper(
       schema,
       paper({ Relevant: [{ value: true }], Claim: [{ value: null }] }),
     )
     expect(kinds(issues)).toEqual(['required'])
+  })
+
+  it('skips a required field hidden by an unsatisfied value condition', () => {
+    const schema = [
+      def({ name: 'Kind', type: 'string', options: ['RCT', 'survey'] }),
+      def({
+        name: 'Claim',
+        type: 'string',
+        required: true,
+        visibleIf: { mode: 'all', conditions: [{ field: 'Kind', equals: ['RCT'] }] },
+      }),
+    ]
+    // Answered, but not with the value the gate asks for.
+    expect(
+      validatePaper(schema, paper({ Kind: [{ value: 'survey' }], Claim: [{ value: null }] })),
+    ).toEqual([])
+    expect(
+      kinds(validatePaper(schema, paper({ Kind: [{ value: 'RCT' }], Claim: [{ value: null }] }))),
+    ).toEqual(['required'])
+  })
+
+  it('skips a required field behind an unsatisfied nested group, and flags it once satisfied', () => {
+    const schema = [
+      def({ name: 'Relevant', type: 'boolean' }),
+      def({ name: 'Kind', type: 'string', options: ['RCT', 'survey'] }),
+      def({
+        name: 'Claim',
+        type: 'string',
+        required: true,
+        // "Relevant is Yes AND (Kind is RCT OR ...)"
+        visibleIf: {
+          mode: 'all',
+          conditions: [
+            { field: 'Relevant', equals: [true] },
+            { mode: 'any', conditions: [{ field: 'Kind', equals: ['RCT'] }] },
+          ],
+        },
+      }),
+    ]
+    const answers = (kind: string) =>
+      paper({ Relevant: [{ value: true }], Kind: [{ value: kind }], Claim: [{ value: null }] })
+    expect(validatePaper(schema, answers('survey'))).toEqual([])
+    expect(kinds(validatePaper(schema, answers('RCT')))).toEqual(['required'])
   })
 
   it('skips a required grandchild field gated on a grandparent (an ancestor, not a sibling)', () => {
@@ -167,7 +210,7 @@ describe('required', () => {
           def({
             name: 'Field B',
             type: 'string',
-            children: [def({ name: 'Field C', type: 'string', required: true, visibleIf: 'Field A' })],
+            children: [def({ name: 'Field C', type: 'string', required: true, visibleIf: gateOn('Field A') })],
           }),
         ],
       }),
@@ -189,12 +232,33 @@ describe('required', () => {
     expect(kinds(shown)).toEqual(['required'])
   })
 
+  it('skips a required field hidden by a gate on another branch (an absolute path)', () => {
+    const schema = [
+      def({ name: 'Findings', children: [def({ name: 'Relevant', type: 'boolean' })] }),
+      def({
+        name: 'Study Type',
+        type: 'string',
+        required: true,
+        visibleIf: gateOn('Findings/Relevant'),
+      }),
+    ]
+    const answers = (relevant: boolean) =>
+      paper({
+        Findings: [{ children: { Relevant: [{ value: relevant }] } }],
+        'Study Type': [{ value: null }],
+      })
+    // Resolved against the paper's whole tree, which `validatePaper` threads
+    // in — so the dialog hides exactly what the form hides.
+    expect(validatePaper(schema, answers(false))).toEqual([])
+    expect(kinds(validatePaper(schema, answers(true)))).toEqual(['required'])
+  })
+
   it('skips a whole group (and its required children) hidden by visibleIf', () => {
     const schema = [
       def({ name: 'Relevant', type: 'boolean' }),
       def({
         name: 'Findings',
-        visibleIf: 'Relevant',
+        visibleIf: gateOn('Relevant'),
         children: [def({ name: 'Claim', type: 'string', required: true })],
       }),
     ]

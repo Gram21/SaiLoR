@@ -1,5 +1,11 @@
-import type { ResolvedDef, FieldType } from './schema'
-import { isField } from './schema'
+import type {
+  ResolvedDef,
+  FieldType,
+  VisibleCondition,
+  VisibleIfEntry,
+  VisibleIfSpec,
+} from './schema'
+import { isConditionGroup, isField } from './schema'
 
 /**
  * Annotation data mirrors the schema. At each level it is a map keyed by node
@@ -184,30 +190,96 @@ export function hasAnnotations(defs: ResolvedDef[], tree: AnnotationValueTree): 
  * see `AnnotationNode`'s `ancestorValues`/`validateTree`'s `gateAncestors` for
  * how callers build this up as they descend the tree). A field with no
  * `visibleIf` is always visible. Otherwise `container` is checked first (a
- * same-level sibling), then `ancestors` (an ancestor field) — it is visible
- * exactly when whichever one matches has been "answered": `true` for a
- * boolean, or non-null/non-empty for anything else — deliberately generic,
- * not type-aware, since a boolean's own default (`false`) already reads as
- * "not answered" under this same rule. Fails open (visible) if `visibleIf`
- * names something found in neither place — malformed/stale hand-edited data
- * should never make a field un-showable.
+ * same-level sibling), then `ancestors` (an ancestor field), then — if the
+ * caller passed `root`, the paper's whole value tree — the condition's name
+ * is walked as a slash-joined absolute path from the schema root, which is
+ * how a gate on a cousin or an unrelated branch is evaluated (see
+ * `AnnotationDef.visibleIf` for the matching resolution order).
+ *
+ * It is visible exactly when whichever one matches has been "answered":
+ * `true` for a boolean, or non-null/non-empty for anything else —
+ * deliberately generic, not type-aware, since a boolean's own default
+ * (`false`) already reads as "not answered" under this same rule. Fails open
+ * (visible) if `visibleIf` names something found in none of the three places
+ * — malformed/stale hand-edited data should never make a field un-showable,
+ * and a caller that passes no `root` therefore fails open on every non-local
+ * condition.
+ *
+ * The path walk takes **instance 0** at every level, the same convention
+ * `container[field]?.[0]` already uses for a same-level sibling. So a gate
+ * reaching across into a repeatable group reads that group's *first* entry,
+ * deliberately: outside its own lineage there is no "current" instance to
+ * speak of. Only a bare name resolved through `container`/`ancestors` gets
+ * the per-instance answer, which is exactly why the bare-name form is kept
+ * as its own route rather than rewritten into a path.
  */
 export function isFieldVisible(
   def: ResolvedDef,
   container: AnnotationValueTree,
   ancestors: Record<string, FieldValue> = {},
+  root?: AnnotationValueTree,
 ): boolean {
-  if (!def.visibleIf) return true
-  const localInst = container[def.visibleIf]?.[0]
+  const spec = def.visibleIf
+  if (!spec) return true
+  return specHolds(spec, container, ancestors, root)
+}
+
+/** A gate (or one of its nested groups): AND for `all`, OR for `any`. */
+function specHolds(
+  spec: VisibleIfSpec,
+  container: AnnotationValueTree,
+  ancestors: Record<string, FieldValue>,
+  root: AnnotationValueTree | undefined,
+): boolean {
+  const holds = (entry: VisibleIfEntry) =>
+    isConditionGroup(entry)
+      ? specHolds(entry, container, ancestors, root)
+      : conditionHolds(entry, container, ancestors, root)
+  return spec.mode === 'any' ? spec.conditions.some(holds) : spec.conditions.every(holds)
+}
+
+/**
+ * One clause of a gate. Without `equals` this is the original "is it answered"
+ * test; with it, the answer must be one of the listed values — which is why a
+ * value condition only exists on a boolean or an enum string (see
+ * `VisibleCondition`). Fails open, per clause, for a field found in none of
+ * `container`, `ancestors` and `root`.
+ */
+function conditionHolds(
+  cond: VisibleCondition,
+  container: AnnotationValueTree,
+  ancestors: Record<string, FieldValue>,
+  root: AnnotationValueTree | undefined,
+): boolean {
+  const localInst = container[cond.field]?.[0]
   let v: FieldValue | undefined
   if (localInst) {
     v = localInst.value
-  } else if (def.visibleIf in ancestors) {
-    v = ancestors[def.visibleIf]
+  } else if (cond.field in ancestors) {
+    v = ancestors[cond.field]
   } else {
-    return true
+    const remote = root && instanceAtPath(root, cond.field)
+    if (!remote) return true
+    v = remote.value
   }
+  if (cond.equals && cond.equals.length > 0) return cond.equals.some((want) => want === v)
   return v !== null && v !== undefined && v !== '' && v !== false
+}
+
+/** Instance 0 at every level along a slash-joined absolute path — see
+ *  `isFieldVisible` for why the first instance, and nothing else, is read. */
+function instanceAtPath(
+  root: AnnotationValueTree,
+  path: string,
+): InstanceNode | undefined {
+  let tree: AnnotationValueTree | undefined = root
+  let inst: InstanceNode | undefined
+  for (const seg of path.split('/')) {
+    inst = tree?.[seg]?.[0]
+    if (!inst) return undefined
+    tree = inst.children
+  }
+  return inst
 }
 
 /**

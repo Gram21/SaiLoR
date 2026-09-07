@@ -267,6 +267,53 @@ describe('completeness — fields hidden by visibleIf', () => {
     expect(completeness(p.schema, p.papers[0].annotations)).toEqual({ filled: 1, total: 2 })
   })
 
+  it('skips a field whose value condition is unsatisfied, and counts it once it is met', () => {
+    const VALUE_GATED: AnnotationDef[] = [
+      { name: 'Kind', type: 'string', options: ['RCT', 'survey'] },
+      {
+        name: 'Sample Size',
+        type: 'string',
+        required: true,
+        visibleIf: { mode: 'all', conditions: [{ field: 'Kind', equals: ['RCT'] }] },
+      },
+    ]
+    const other = project(VALUE_GATED, { Kind: [{ value: 'survey' }], 'Sample Size': [{ value: null }] })
+    expect(completeness(other.schema, other.papers[0].annotations)).toEqual({ filled: 0, total: 0 })
+
+    const match = project(VALUE_GATED, { Kind: [{ value: 'RCT' }], 'Sample Size': [{ value: null }] })
+    expect(completeness(match.schema, match.papers[0].annotations)).toEqual({ filled: 0, total: 1 })
+  })
+
+  it('skips a field behind an unsatisfied nested group, and counts it once satisfied', () => {
+    const NESTED_GROUP: AnnotationDef[] = [
+      { name: 'Relevant', type: 'boolean' },
+      { name: 'Kind', type: 'string', options: ['RCT', 'survey'] },
+      {
+        name: 'Sample Size',
+        type: 'string',
+        required: true,
+        // "Relevant is Yes AND (Kind is RCT OR ...)"
+        visibleIf: {
+          mode: 'all',
+          conditions: [
+            { field: 'Relevant', equals: [true] },
+            { mode: 'any', conditions: [{ field: 'Kind', equals: ['RCT'] }] },
+          ],
+        },
+      },
+    ]
+    const answers = (kind: string) => ({
+      Relevant: [{ value: true }],
+      Kind: [{ value: kind }],
+      'Sample Size': [{ value: null }],
+    })
+    const other = project(NESTED_GROUP, answers('survey'))
+    expect(completeness(other.schema, other.papers[0].annotations)).toEqual({ filled: 0, total: 0 })
+
+    const match = project(NESTED_GROUP, answers('RCT'))
+    expect(completeness(match.schema, match.papers[0].annotations)).toEqual({ filled: 0, total: 1 })
+  })
+
   it('resolves a gate pointing at an ancestor, not just a same-level sibling', () => {
     // The same threading `validateTree`'s `gateAncestors` does — without it,
     // `Detail` would be treated as ungated (visible) and counted.
@@ -281,6 +328,24 @@ describe('completeness — fields hidden by visibleIf', () => {
     expect(completeness(closed.schema, closed.papers[0].annotations)).toEqual({ filled: 0, total: 0 })
 
     const open = project(NESTED, { Outer: [{ value: true, children: { Detail: [{ value: null }] } }] })
+    expect(completeness(open.schema, open.papers[0].annotations)).toEqual({ filled: 0, total: 1 })
+  })
+
+  it('resolves a gate pointing at another branch by absolute path', () => {
+    // Neither a sibling nor an ancestor, so this one needs the root tree
+    // `walk` threads through — without it `Study Type` would be counted.
+    const CROSS: AnnotationDef[] = [
+      { name: 'Findings', children: [{ name: 'Relevant', type: 'boolean' }] },
+      { name: 'Study Type', type: 'string', required: true, visibleIf: 'Findings/Relevant' },
+    ]
+    const answers = (relevant: boolean) => ({
+      Findings: [{ children: { Relevant: [{ value: relevant }] } }],
+      'Study Type': [{ value: null }],
+    })
+    const closed = project(CROSS, answers(false))
+    expect(completeness(closed.schema, closed.papers[0].annotations)).toEqual({ filled: 0, total: 0 })
+
+    const open = project(CROSS, answers(true))
     expect(completeness(open.schema, open.papers[0].annotations)).toEqual({ filled: 0, total: 1 })
   })
 

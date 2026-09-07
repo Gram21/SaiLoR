@@ -23,6 +23,49 @@ import { z } from 'zod'
  */
 export type FieldType = 'string' | 'number' | 'boolean' | 'year'
 
+/**
+ * One clause of a visibility gate. `field` names the watched field: a bare
+ * name for a same-level sibling or a field on the direct ancestor chain, or a
+ * slash-joined absolute path from the schema root (`"Findings/Claim"`) for
+ * anything else — see {@link AnnotationDef.visibleIf}.
+ *
+ * `equals` narrows the clause from "has any answer" to "holds one of these
+ * values", which only a field with a *closed* set of answers can support: a
+ * boolean (`true`/`false`) or a `string` field with `options`. On a free-text,
+ * number or year field there is no set to pick from, so an `equals` is dropped
+ * at resolve time and the clause degrades to plain "answered" — the same
+ * defensive-degrade convention the rest of this schema uses. An empty or
+ * absent `equals` always means "any answer counts".
+ */
+export interface VisibleCondition {
+  field: string
+  /** Values that satisfy this clause; empty/absent = any answer. */
+  equals?: (string | boolean)[]
+}
+
+/**
+ * A visibility gate: one or more entries combined with AND (`all`) or OR
+ * (`any`). A single entry behaves identically under either mode.
+ *
+ * An entry is either a {@link VisibleCondition} or another spec, which is what
+ * makes a mixed rule like "Relevant is Yes AND (Study Type is RCT OR Survey)"
+ * expressible: the inner group carries its own `mode`. Nesting is arbitrarily
+ * deep; a group left with no entries at resolve time is dropped, exactly as a
+ * single unusable condition is.
+ */
+export interface VisibleIfSpec {
+  mode: 'all' | 'any'
+  conditions: VisibleIfEntry[]
+}
+
+/** One entry of a gate: a leaf condition, or a nested group of them. */
+export type VisibleIfEntry = VisibleCondition | VisibleIfSpec
+
+/** True when a gate entry is a nested group rather than a leaf condition. */
+export function isConditionGroup(entry: VisibleIfEntry): entry is VisibleIfSpec {
+  return 'conditions' in entry
+}
+
 export interface AnnotationDef {
   name: string
   type?: FieldType
@@ -35,23 +78,39 @@ export interface AnnotationDef {
   /** The reviewer must fill this field in. Defaults to false. */
   required?: boolean
   /**
-   * Name of a field that gates this node's visibility: hidden until that
-   * field has an answer (a positive answer for a boolean, any non-empty
-   * value otherwise). It may name a sibling (in this same `children` array,
-   * or the same root-level list) OR any field along this node's direct
-   * ancestor chain — the parent, the parent's parent, and so on, as far up
-   * as the schema goes — so a field nested under "Field A" can gate on
-   * "Field A" itself, not only on its own siblings. It may NOT name a
-   * cousin (an ancestor's sibling, or anything off the straight lineage). An
-   * invalid reference — self, a group with no `type`, or a name that
-   * doesn't exist among the siblings/ancestors — is silently dropped at
-   * resolve time rather than rejected, the same "degrade defensively on
-   * hand-edited data" convention used elsewhere in this schema. In
+   * Gates this node's visibility. Either a bare field name (shorthand for
+   * "hidden until that field has an answer" — a positive answer for a
+   * boolean, any non-empty value otherwise) or a {@link VisibleIfSpec}, which
+   * can watch several fields at once (AND/OR) and match specific values.
+   *
+   * Every condition's `field` may name any answerable field in the schema
+   * except this node itself and the fields inside its own subtree — gating on
+   * a descendant could never open, since a field under a hidden node can
+   * never be answered. It is written in one of two forms, resolved in this
+   * order (see `resolveSpec`):
+   *  1. a bare name, meaning a sibling (in this same `children` array, or the
+   *     same root-level list),
+   *  2. failing that, a bare name meaning a field along this node's direct
+   *     ancestor chain — the parent, the parent's parent, and so on — so a
+   *     field nested under "Field A" can gate on "Field A" itself,
+   *  3. failing that, a slash-joined absolute path from the schema root
+   *     (`"Findings/Claim"`, the same shape {@link ResolvedDef.id} uses),
+   *     which is how a cousin, an unrelated branch, or a root-level field
+   *     seen from inside a group is named.
+   *
+   * The first two routes are exactly what a bare name has always meant, so
+   * every file written before paths existed resolves unchanged — and keeps
+   * the per-instance semantics that only a node's own lineage has (see
+   * `isFieldVisible`). An invalid reference — self, a descendant, a group
+   * with no `type`, or a name/path that resolves to nothing — is silently
+   * dropped at resolve time rather than rejected, the same "degrade
+   * defensively on hand-edited data" convention used elsewhere here. In
    * particular, a stale reference left behind by renaming/removing the
    * target field in the editor is *not* tracked or warned about — it just
-   * quietly stops gating anything next time the project loads.
+   * quietly stops gating anything next time the project loads. A spec whose
+   * every condition is dropped that way stops gating altogether.
    */
-  visibleIf?: string
+  visibleIf?: string | VisibleIfSpec
   children?: AnnotationDef[]
 }
 
@@ -68,7 +127,9 @@ export interface ResolvedDef {
   /** Enum values for a `string` field (renders as a filterable dropdown). */
   options?: string[]
   required: boolean
-  visibleIf?: string
+  /** Normalized: the shorthand string form is expanded into a one-condition
+   *  spec, and invalid conditions are dropped (see `resolveVisibleIf`). */
+  visibleIf?: VisibleIfSpec
   children: ResolvedDef[]
 }
 
@@ -77,6 +138,28 @@ export interface ResolvedDef {
 // ---------------------------------------------------------------------------
 
 const fieldTypeSchema = z.enum(['string', 'number', 'boolean', 'year'])
+
+const visibleConditionSchema: z.ZodType<VisibleCondition> = z
+  .object({
+    field: z.string().min(1, '"visibleIf" condition needs a field name'),
+    equals: z.array(z.union([z.string(), z.boolean()])).optional(),
+  })
+  .strict()
+
+// Groups nest, so this is lazy for the same reason `annotationDefSchema` is.
+const visibleIfSpecSchema: z.ZodType<VisibleIfSpec> = z.lazy(() =>
+  z
+    .object({
+      mode: z.enum(['all', 'any']),
+      conditions: z
+        .array(z.union([visibleConditionSchema, visibleIfSpecSchema]))
+        .min(1, '"visibleIf" needs at least one condition'),
+    })
+    .strict(),
+)
+
+/** The two accepted on-disk forms: a bare field name, or a full spec. */
+const visibleIfInputSchema = z.union([z.string(), visibleIfSpecSchema])
 
 // zod has no native recursion helper for input inference, so we type it lazily.
 export const annotationDefSchema: z.ZodType<AnnotationDef> = z.lazy(() =>
@@ -89,7 +172,7 @@ export const annotationDefSchema: z.ZodType<AnnotationDef> = z.lazy(() =>
       description: z.string().optional(),
       options: z.array(z.string()).optional(),
       required: z.boolean().optional(),
-      visibleIf: z.string().optional(),
+      visibleIf: visibleIfInputSchema.optional(),
       children: z.array(annotationDefSchema).optional(),
     })
     .strict()
@@ -260,14 +343,137 @@ export type RawPaper = z.infer<typeof paperSchema>
 
 export class SchemaError extends Error {}
 
+/**
+ * Normalize `def.visibleIf` into a {@link VisibleIfSpec}, dropping what cannot
+ * be honored: a self-reference, a field inside this node's own subtree, a
+ * name/path that resolves to nothing answerable, and an `equals` on a field
+ * with no closed set of answers (see {@link VisibleCondition}). A spec left
+ * with no conditions gates nothing, so it becomes `undefined` — same outcome
+ * the lone bad name had before this took several.
+ */
+function resolveVisibleIf(
+  def: AnnotationDef,
+  siblings: AnnotationDef[],
+  ancestorFields: AnnotationDef[],
+  root: AnnotationDef[],
+  selfId: string,
+): VisibleIfSpec | undefined {
+  const raw = def.visibleIf
+  if (raw === undefined) return undefined
+  const spec: VisibleIfSpec =
+    typeof raw === 'string' ? { mode: 'all', conditions: [{ field: raw }] } : raw
+
+  return resolveSpec(spec, def, siblings, ancestorFields, root, selfId)
+}
+
+/** `resolveVisibleIf`'s recursion: the same rules applied to a nested group. */
+function resolveSpec(
+  spec: VisibleIfSpec,
+  def: AnnotationDef,
+  siblings: AnnotationDef[],
+  ancestorFields: AnnotationDef[],
+  root: AnnotationDef[],
+  selfId: string,
+): VisibleIfSpec | undefined {
+  const conditions: VisibleIfEntry[] = []
+  for (const entry of spec.conditions) {
+    if (isConditionGroup(entry)) {
+      const nested = resolveSpec(entry, def, siblings, ancestorFields, root, selfId)
+      if (nested) conditions.push(nested)
+      continue
+    }
+    if (entry.field === def.name) continue
+    // Sibling, then ancestor chain, then absolute path — the order the doc
+    // comment on `AnnotationDef.visibleIf` spells out, and the reason a bare
+    // name that resolved locally before still does. Neither a sibling nor an
+    // ancestor can sit inside this node's subtree, so only the path route has
+    // to rule that out.
+    const target =
+      siblings.find((sib) => sib.name === entry.field && sib.type !== undefined) ??
+      ancestorFields.find((anc) => anc.name === entry.field) ??
+      resolveFieldPath(root, entry.field, selfId)
+    if (!target) continue
+    const equals = resolveEquals(target, entry.equals)
+    conditions.push(equals.length > 0 ? { field: entry.field, equals } : { field: entry.field })
+  }
+  if (conditions.length === 0) return undefined
+  return { mode: spec.mode, conditions }
+}
+
+/**
+ * Walk a slash-joined absolute path (`"Findings/Claim"`, the shape
+ * {@link ResolvedDef.id} uses) from the schema root. Returns nothing — so the
+ * condition is dropped — when the path names the gated node itself or
+ * anything in its subtree (`selfId` and everything under `selfId/`: a field
+ * below a hidden node can never be answered, so the gate could never open),
+ * when a segment does not exist, or when it lands on a group with no `type`.
+ */
+function resolveFieldPath(
+  root: AnnotationDef[],
+  path: string,
+  selfId: string,
+): AnnotationDef | undefined {
+  if (path === selfId || path.startsWith(`${selfId}/`)) return undefined
+  let level = root
+  let found: AnnotationDef | undefined
+  for (const seg of path.split('/')) {
+    found = level.find((d) => d.name === seg)
+    if (!found) return undefined
+    level = found.children ?? []
+  }
+  return found && found.type !== undefined ? found : undefined
+}
+
+/** The subset of `equals` the target field can actually hold; empty means the
+ *  condition falls back to "answered". */
+function resolveEquals(
+  target: AnnotationDef,
+  equals: (string | boolean)[] | undefined,
+): (string | boolean)[] {
+  if (!equals || equals.length === 0) return []
+  if (target.type === 'boolean') {
+    return [...new Set(equals.filter((v) => typeof v === 'boolean'))]
+  }
+  if (target.type === 'string' && target.options && target.options.length > 0) {
+    const allowed = new Set(target.options)
+    return [...new Set(equals.filter((v): v is string => typeof v === 'string' && allowed.has(v)))]
+  }
+  return []
+}
+
+/** A gate on one field being answered — the shorthand form, expanded. */
+export function gateOn(field: string): VisibleIfSpec {
+  return { mode: 'all', conditions: [{ field }] }
+}
+
+/** The compact on-disk form: the bare-name shorthand when that says the same
+ *  thing, the full spec otherwise. Keeps a hand-written schema (and a file
+ *  written before value conditions existed) round-tripping unchanged. */
+export function compactVisibleIf(spec: VisibleIfSpec): string | VisibleIfSpec {
+  const [only] = spec.conditions
+  if (
+    spec.conditions.length === 1 &&
+    !isConditionGroup(only) &&
+    (!only.equals || only.equals.length === 0)
+  ) {
+    return only.field
+  }
+  return spec
+}
+
 function resolveDefs(
   defs: AnnotationDef[],
   parentPath: string,
-  // Names of fields along this array's direct lineage — the parent, its
-  // parent, and so on — that `visibleIf` may also reference, alongside a
-  // same-level sibling. Only a straight ancestor chain, never an ancestor's
-  // own siblings (a cousin field is not "the same lineage").
-  ancestorFieldNames: string[] = [],
+  // The whole schema, unchanged all the way down: a `visibleIf` condition may
+  // also name its target by absolute path from here (see `resolveFieldPath`),
+  // which is what lets a gate reach a cousin or an unrelated branch.
+  root: AnnotationDef[],
+  // Fields along this array's direct lineage — the parent, its parent, and so
+  // on — that `visibleIf` may also reference, alongside a same-level sibling.
+  // Only a straight ancestor chain, never an ancestor's own siblings (a cousin
+  // field is not "the same lineage"). Whole defs, not just names, because a
+  // value condition has to be checked against the target's type/options.
+  ancestorFields: AnnotationDef[] = [],
 ): ResolvedDef[] {
   const seen = new Set<string>()
   return defs.map((def) => {
@@ -343,22 +549,18 @@ function resolveDefs(
       // offers, and an existing file's stray flag is cleared here rather than
       // rejected, so a file that currently loads keeps loading.
       required: def.type === 'boolean' ? false : (def.required ?? false),
-      // Kept only when it points at a real, answerable sibling in this same
-      // array, or a field somewhere in this node's direct ancestor chain, and
-      // isn't a self-reference — see the doc comment on
+      // Kept only where it points at a real, answerable field that is neither
+      // this node nor anything in its subtree — reached as a sibling in this
+      // same array, a field in this node's direct ancestor chain, or an
+      // absolute path from the schema root. See the doc comment on
       // `AnnotationDef.visibleIf`. Dropped silently otherwise.
-      visibleIf:
-        def.visibleIf !== undefined &&
-        def.visibleIf !== def.name &&
-        (defs.some((sib) => sib.name === def.visibleIf && sib.type !== undefined) ||
-          ancestorFieldNames.includes(def.visibleIf))
-          ? def.visibleIf
-          : undefined,
+      visibleIf: resolveVisibleIf(def, defs, ancestorFields, root, id),
       children: def.children
         ? resolveDefs(
             def.children,
             id,
-            def.type !== undefined ? [...ancestorFieldNames, def.name] : ancestorFieldNames,
+            root,
+            def.type !== undefined ? [...ancestorFields, def] : ancestorFields,
           )
         : [],
     }
@@ -367,7 +569,7 @@ function resolveDefs(
 
 /** Validate + resolve a raw schema array into ResolvedDef nodes. */
 export function resolveSchema(defs: AnnotationDef[]): ResolvedDef[] {
-  const resolved = resolveDefs(defs, '')
+  const resolved = resolveDefs(defs, '', defs)
   assertInstanceBudget(resolved)
   return resolved
 }

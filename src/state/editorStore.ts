@@ -5,8 +5,13 @@ import {
   projectSchema,
   resolveSchema,
   SchemaError,
+  compactVisibleIf,
+  gateOn,
+  isConditionGroup,
   type AnnotationDef,
   type FieldType,
+  type VisibleIfEntry,
+  type VisibleIfSpec,
   type ScreeningConfig,
 } from '../model/schema'
 import { extractPdfMeta } from '../model/pdfMeta'
@@ -59,9 +64,11 @@ export interface EditorNode {
   options: string[]
   /** The reviewer must fill this field in; meaningless on a group. */
   required: boolean
-  /** Name of a sibling field gating this node's visibility, or '' for "always
-   *  visible" — see `AnnotationDef.visibleIf`. */
-  visibleIf: string
+  /** Gate on this node's visibility, or null for "always visible" — see
+   *  `AnnotationDef.visibleIf`. Always the expanded spec form here, even for a
+   *  file that stored the bare-name shorthand; `toAnnotationDefs` compacts it
+   *  back on save. */
+  visibleIf: VisibleIfSpec | null
   children: EditorNode[]
   collapsed: boolean
 }
@@ -146,7 +153,7 @@ export function makeNode(): EditorNode {
     description: '',
     options: [],
     required: false,
-    visibleIf: '',
+    visibleIf: null,
     children: [],
     collapsed: false,
   }
@@ -155,6 +162,40 @@ export function makeNode(): EditorNode {
 // ---------------------------------------------------------------------------
 // Conversion between the editor tree and the on-disk AnnotationDef shape
 // ---------------------------------------------------------------------------
+
+/** Deep copy of a gate, so the editor's draft never aliases the parsed file's
+ *  objects (immer freezes them, and the dialog edits in place). */
+function cloneSpec(spec: VisibleIfSpec): VisibleIfSpec {
+  return {
+    mode: spec.mode,
+    conditions: spec.conditions.map((entry) =>
+      isConditionGroup(entry)
+        ? cloneSpec(entry)
+        : // `equals` is copied too, not aliased: the dialog edits the draft's
+          // conditions in place, and immer freezes what came out of the file.
+          { field: entry.field, ...(entry.equals ? { equals: [...entry.equals] } : {}) },
+    ),
+  }
+}
+
+/** Drop a gate that says nothing: blank field names, and the whole thing once
+ *  no condition is left. Mirrors `resolveSchema`, which drops unresolvable
+ *  conditions on load — this just keeps them out of the file to begin with. */
+function cleanVisibleIf(spec: VisibleIfSpec | null): VisibleIfSpec | null {
+  if (!spec) return null
+  const conditions: VisibleIfEntry[] = []
+  for (const entry of spec.conditions) {
+    if (isConditionGroup(entry)) {
+      // An empty nested group says nothing either — same rule, one level down.
+      const nested = cleanVisibleIf(entry)
+      if (nested) conditions.push(nested)
+      continue
+    }
+    const field = entry.field.trim()
+    if (field !== '') conditions.push({ ...entry, field })
+  }
+  return conditions.length > 0 ? { mode: spec.mode, conditions } : null
+}
 
 /** Editor tree → the compact AnnotationDef[] written to `config.schema`. */
 export function toAnnotationDefs(nodes: EditorNode[]): AnnotationDef[] {
@@ -171,8 +212,8 @@ export function toAnnotationDefs(nodes: EditorNode[]): AnnotationDef[] {
     // empty), so the editor neither offers it nor emits it — matching
     // `resolveSchema`, which drops it on load for the same reason.
     if (n.kind !== 'group' && n.kind !== 'boolean' && n.required) def.required = true
-    const vis = n.visibleIf.trim()
-    if (vis) def.visibleIf = vis
+    const vis = cleanVisibleIf(n.visibleIf)
+    if (vis) def.visibleIf = compactVisibleIf(vis)
     if (n.children.length > 0) def.children = toAnnotationDefs(n.children)
     return def
   })
@@ -189,7 +230,12 @@ export function fromAnnotationDefs(defs: AnnotationDef[]): EditorNode[] {
     description: d.description ?? '',
     options: d.options ? [...d.options] : [],
     required: d.required ?? false,
-    visibleIf: d.visibleIf ?? '',
+    visibleIf:
+      d.visibleIf === undefined
+        ? null
+        : typeof d.visibleIf === 'string'
+          ? gateOn(d.visibleIf)
+          : cloneSpec(d.visibleIf),
     children: d.children ? fromAnnotationDefs(d.children) : [],
     collapsed: false,
   }))

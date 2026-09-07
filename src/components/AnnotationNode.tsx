@@ -20,9 +20,20 @@ interface AnnotationNodeProps {
    *  same-level sibling) gets resolved. Empty at the root; extended with
    *  this node's own value as it recurses into its children, below. */
   ancestorValues?: Record<string, FieldValue>
+  /** The paper's whole value tree — how a `visibleIf` that names its target
+   *  by absolute path (a cousin, or an unrelated branch, neither of which is
+   *  on the ancestor chain) gets resolved. Unchanged all the way down, unlike
+   *  `ancestorValues`; the panel passes its own root container. */
+  root?: AnnotationValueTree
 }
 
-export function AnnotationNode({ def, path, container, ancestorValues = {} }: AnnotationNodeProps) {
+export function AnnotationNode({
+  def,
+  path,
+  container,
+  ancestorValues = {},
+  root,
+}: AnnotationNodeProps) {
   const addInstance = useStore((s) => s.addInstance)
   const removeInstance = useStore((s) => s.removeInstance)
   // The field currently pulsing after a "jump to this field" request (from
@@ -122,7 +133,9 @@ export function AnnotationNode({ def, path, container, ancestorValues = {} }: An
                   ? { ...ancestorValues, [def.name]: inst.value ?? null }
                   : ancestorValues
                 return def.children
-                  .filter((child) => isFieldVisible(child, inst.children!, nextAncestorValues))
+                  .filter((child) =>
+                    isFieldVisible(child, inst.children!, nextAncestorValues, root),
+                  )
                   .map((child) => (
                     <AnnotationNode
                       key={child.id}
@@ -130,6 +143,7 @@ export function AnnotationNode({ def, path, container, ancestorValues = {} }: An
                       path={[...path, { name: def.name, index: i }]}
                       container={inst.children!}
                       ancestorValues={nextAncestorValues}
+                      root={root}
                     />
                   ))
               })()}

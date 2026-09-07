@@ -15,6 +15,7 @@ import {
 } from './editorStore'
 import { useStore } from './store'
 import { loadProject, serializeProject } from '../model/project'
+import { gateOn, type VisibleCondition, type VisibleIfSpec } from '../model/schema'
 import type { OpenedProject } from '../platform'
 
 function node(name: string, patch: Partial<EditorNode> = {}): EditorNode {
@@ -93,16 +94,90 @@ describe('schema conversion', () => {
   it('round-trips visibleIf, and omits it when blank', () => {
     const defs = toAnnotationDefs([
       node('Relevant', { kind: 'boolean' }),
-      node('Study Type', { kind: 'string', visibleIf: 'Relevant' }),
+      node('Study Type', { kind: 'string', visibleIf: gateOn('Relevant') }),
       node('Notes', { kind: 'string' }),
     ])
-    expect(defs[1].visibleIf).toBe('Relevant')
+    expect(defs[1].visibleIf).toBe('Relevant') // compacted to the bare-name shorthand
     expect(defs[2].visibleIf).toBeUndefined()
 
     const back = fromAnnotationDefs(defs)
-    expect(back[1].visibleIf).toBe('Relevant')
-    expect(back[2].visibleIf).toBe('')
+    expect(back[1].visibleIf).toEqual(gateOn('Relevant'))
+    expect(back[2].visibleIf).toBeNull()
     expect(toAnnotationDefs(back)).toEqual(defs)
+  })
+
+  it('round-trips a multi-condition gate with equals', () => {
+    const spec = {
+      mode: 'any' as const,
+      conditions: [{ field: 'Relevant', equals: [true] }, { field: 'Kind', equals: ['RCT'] }],
+    }
+    const defs = toAnnotationDefs([node('Claim', { kind: 'string', visibleIf: spec })])
+    // Too much to say as a bare name, so the full spec is written.
+    expect(defs[0].visibleIf).toEqual(spec)
+    expect(fromAnnotationDefs(defs)[0].visibleIf).toEqual(spec)
+  })
+
+  it('omits a gate whose field names are all blank', () => {
+    const defs = toAnnotationDefs([
+      node('Claim', {
+        kind: 'string',
+        visibleIf: { mode: 'all', conditions: [{ field: '  ' }, { field: '' }] },
+      }),
+    ])
+    expect(defs[0].visibleIf).toBeUndefined()
+  })
+
+  it('round-trips a gate with a nested condition group', () => {
+    const spec: VisibleIfSpec = {
+      mode: 'all',
+      conditions: [
+        { field: 'Relevant', equals: [true] },
+        { mode: 'any', conditions: [{ field: 'Kind', equals: ['RCT'] }, { field: 'Notes' }] },
+      ],
+    }
+    const defs = toAnnotationDefs([node('Claim', { kind: 'string', visibleIf: spec })])
+    // A group can never be said as a bare name, so the full spec is written.
+    expect(defs[0].visibleIf).toEqual(spec)
+
+    const back = fromAnnotationDefs(defs)
+    expect(back[0].visibleIf).toEqual(spec)
+    expect(toAnnotationDefs(back)).toEqual(defs)
+  })
+
+  it('omits blank-field conditions and empty nested groups from a gate', () => {
+    const defs = toAnnotationDefs([
+      node('Claim', {
+        kind: 'string',
+        visibleIf: {
+          mode: 'all',
+          conditions: [
+            { field: ' Relevant ' },
+            { field: '  ' },
+            { mode: 'any', conditions: [{ field: '' }] },
+          ],
+        },
+      }),
+    ])
+    // Everything but the one real condition is gone, so what is left compacts.
+    expect(defs[0].visibleIf).toBe('Relevant')
+  })
+
+  it('deep-copies a nested gate, so editing the draft never touches the parsed def', () => {
+    const spec: VisibleIfSpec = {
+      mode: 'all',
+      conditions: [
+        { field: 'Relevant', equals: [true] },
+        { mode: 'any', conditions: [{ field: 'Kind', equals: ['RCT'] }] },
+      ],
+    }
+    const [back] = fromAnnotationDefs([{ name: 'Claim', type: 'string', visibleIf: spec }])
+    const nested = back.visibleIf!.conditions[1] as VisibleIfSpec
+    nested.mode = 'all'
+    ;(nested.conditions[0] as VisibleCondition).field = 'Other'
+    expect(spec.conditions[1]).toEqual({
+      mode: 'any',
+      conditions: [{ field: 'Kind', equals: ['RCT'] }],
+    })
   })
 })
 

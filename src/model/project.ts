@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import {
+  compactVisibleIf,
   projectSchema,
   resolveSchema,
   SchemaError,
@@ -1153,7 +1154,7 @@ export function dehydrateSchema(defs: ResolvedDef[]): unknown[] {
     if (d.description !== undefined) out.description = d.description
     if (d.options !== undefined) out.options = d.options
     if (d.required) out.required = true
-    if (d.visibleIf !== undefined) out.visibleIf = d.visibleIf
+    if (d.visibleIf !== undefined) out.visibleIf = compactVisibleIf(d.visibleIf)
     if (d.children.length > 0) out.children = dehydrateSchema(d.children)
     return out
   })

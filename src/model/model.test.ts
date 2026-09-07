@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { resolveSchema, isRepeatable, type AnnotationDef } from './schema'
+import {
+  resolveSchema,
+  isRepeatable,
+  gateOn,
+  compactVisibleIf,
+  type AnnotationDef,
+} from './schema'
 import {
   initTree,
   normalizeTree,
@@ -167,7 +173,7 @@ describe('schema resolution', () => {
       { name: 'Relevant', type: 'boolean' },
       { name: 'Study Type', type: 'string', visibleIf: 'Relevant' },
     ])
-    expect(resolved[1].visibleIf).toBe('Relevant')
+    expect(resolved[1].visibleIf).toEqual(gateOn('Relevant'))
   })
 
   it('drops visibleIf that self-references', () => {
@@ -206,13 +212,15 @@ describe('schema resolution', () => {
     const fieldA = resolved[0]
     const fieldB = fieldA.children[0]
     const fieldC = fieldB.children[0]
-    expect(fieldB.visibleIf).toBe('Field A')
+    expect(fieldB.visibleIf).toEqual(gateOn('Field A'))
     // Field C is two levels down from Field A — still a straight ancestor
     // chain, not just an immediate parent.
-    expect(fieldC.visibleIf).toBe('Field A')
+    expect(fieldC.visibleIf).toEqual(gateOn('Field A'))
   })
 
-  it('drops visibleIf that names a cousin (an ancestor sibling, not the ancestor itself)', () => {
+  it('resolves a root-level bare name seen from inside a group through the path route', () => {
+    // Neither a sibling nor an ancestor of Field B, so the first two routes
+    // miss and "Uncle" is read as a one-segment absolute path.
     const resolved = resolveSchema([
       { name: 'Uncle', type: 'boolean' },
       {
@@ -222,7 +230,92 @@ describe('schema resolution', () => {
       },
     ])
     const fieldB = resolved[1].children[0]
-    expect(fieldB.visibleIf).toBeUndefined()
+    expect(fieldB.visibleIf).toEqual(gateOn('Uncle'))
+  })
+
+  it('keeps visibleIf naming a field in an unrelated branch by absolute path', () => {
+    const resolved = resolveSchema([
+      { name: 'Findings', children: [{ name: 'Claim', type: 'string' }] },
+      { name: 'Method', children: [{ name: 'Detail', type: 'string', visibleIf: 'Findings/Claim' }] },
+      { name: 'Study Type', type: 'string', visibleIf: 'Findings/Claim' },
+    ])
+    // From a cousin one level down, and from a root-level sibling of the branch.
+    expect(resolved[1].children[0].visibleIf).toEqual(gateOn('Findings/Claim'))
+    expect(resolved[2].visibleIf).toEqual(gateOn('Findings/Claim'))
+  })
+
+  it('drops visibleIf naming a field inside the gated node\'s own subtree', () => {
+    // A field under a hidden node can never be answered, so such a gate could
+    // never open — for a group and for a field that owns a sub-tree alike.
+    const resolved = resolveSchema([
+      {
+        name: 'Findings',
+        visibleIf: 'Findings/Claim',
+        children: [{ name: 'Claim', type: 'string' }],
+      },
+      {
+        name: 'Field A',
+        type: 'boolean',
+        visibleIf: 'Field A/Field B',
+        children: [{ name: 'Field B', type: 'string' }],
+      },
+    ])
+    expect(resolved[0].visibleIf).toBeUndefined()
+    expect(resolved[1].visibleIf).toBeUndefined()
+  })
+
+  it('drops an absolute path that names the gated node itself, a group, or nothing', () => {
+    const resolved = resolveSchema([
+      { name: 'Method', children: [{ name: 'Detail', type: 'string' }] },
+      {
+        name: 'Findings',
+        children: [
+          // Its own path — the bare-name self check cannot see this one.
+          { name: 'Claim', type: 'string', visibleIf: 'Findings/Claim' },
+          { name: 'Evidence', type: 'string', visibleIf: 'Method' },
+          { name: 'Confidence', type: 'string', visibleIf: 'Method/Nope' },
+        ],
+      },
+    ])
+    expect(resolved[1].children.map((c) => c.visibleIf)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ])
+  })
+
+  it('applies the equals rules to a cross-branch target too', () => {
+    const resolved = resolveSchema([
+      {
+        name: 'Findings',
+        children: [
+          { name: 'Relevant', type: 'boolean' },
+          { name: 'Kind', type: 'string', options: ['RCT', 'survey'] },
+          { name: 'Notes', type: 'string' },
+        ],
+      },
+      {
+        name: 'Study Type',
+        type: 'string',
+        visibleIf: {
+          mode: 'all',
+          conditions: [
+            { field: 'Findings/Relevant', equals: [true] },
+            { field: 'Findings/Kind', equals: ['RCT', 'case study'] },
+            // Free text across a branch has no closed set either.
+            { field: 'Findings/Notes', equals: ['x'] },
+          ],
+        },
+      },
+    ])
+    expect(resolved[1].visibleIf).toEqual({
+      mode: 'all',
+      conditions: [
+        { field: 'Findings/Relevant', equals: [true] },
+        { field: 'Findings/Kind', equals: ['RCT'] },
+        { field: 'Findings/Notes' },
+      ],
+    })
   })
 
   it('keeps visibleIf on a group (a node with children but no type), gating the whole group', () => {
@@ -230,7 +323,302 @@ describe('schema resolution', () => {
       { name: 'Relevant', type: 'boolean' },
       { name: 'Findings', visibleIf: 'Relevant', children: [{ name: 'Claim', type: 'string' }] },
     ])
-    expect(resolved[1].visibleIf).toBe('Relevant')
+    expect(resolved[1].visibleIf).toEqual(gateOn('Relevant'))
+  })
+
+  it('expands the legacy bare-name form into a one-condition spec', () => {
+    const resolved = resolveSchema([
+      { name: 'Relevant', type: 'boolean' },
+      { name: 'Study Type', type: 'string', visibleIf: 'Relevant' },
+    ])
+    expect(resolved[1].visibleIf).toEqual({ mode: 'all', conditions: [{ field: 'Relevant' }] })
+  })
+
+  it('keeps an equals on a boolean target and on an enum-string target', () => {
+    const resolved = resolveSchema([
+      { name: 'Relevant', type: 'boolean' },
+      { name: 'Kind', type: 'string', options: ['RCT', 'survey'] },
+      {
+        name: 'Claim',
+        type: 'string',
+        visibleIf: {
+          mode: 'all',
+          conditions: [
+            { field: 'Relevant', equals: [true] },
+            { field: 'Kind', equals: ['RCT'] },
+          ],
+        },
+      },
+    ])
+    expect(resolved[2].visibleIf).toEqual({
+      mode: 'all',
+      conditions: [
+        { field: 'Relevant', equals: [true] },
+        { field: 'Kind', equals: ['RCT'] },
+      ],
+    })
+  })
+
+  it('drops an equals on a target with no closed answer set, degrading to "answered"', () => {
+    // Free text, number and year have no set to pick from — see VisibleCondition.
+    const resolved = resolveSchema([
+      { name: 'Notes', type: 'string' },
+      { name: 'Count', type: 'number' },
+      { name: 'Year', type: 'year' },
+      {
+        name: 'Claim',
+        type: 'string',
+        visibleIf: {
+          mode: 'all',
+          conditions: [
+            { field: 'Notes', equals: ['x'] },
+            { field: 'Count', equals: ['3'] },
+            { field: 'Year', equals: ['2020'] },
+          ],
+        },
+      },
+    ])
+    expect(resolved[3].visibleIf).toEqual({
+      mode: 'all',
+      conditions: [{ field: 'Notes' }, { field: 'Count' }, { field: 'Year' }],
+    })
+  })
+
+  it('filters equals values the target cannot hold', () => {
+    const resolved = resolveSchema([
+      { name: 'Kind', type: 'string', options: ['RCT', 'survey'] },
+      { name: 'Relevant', type: 'boolean' },
+      {
+        name: 'Claim',
+        type: 'string',
+        visibleIf: {
+          mode: 'any',
+          conditions: [
+            // "case study" is not an option; a string is not a boolean.
+            { field: 'Kind', equals: ['RCT', 'case study'] },
+            { field: 'Relevant', equals: ['yes', false] },
+          ],
+        },
+      },
+    ])
+    expect(resolved[2].visibleIf).toEqual({
+      mode: 'any',
+      conditions: [
+        { field: 'Kind', equals: ['RCT'] },
+        { field: 'Relevant', equals: [false] },
+      ],
+    })
+  })
+
+  it('drops the whole spec when every condition is invalid', () => {
+    const resolved = resolveSchema([
+      { name: 'Findings', children: [{ name: 'Claim', type: 'string' }] },
+      {
+        name: 'Study Type',
+        type: 'string',
+        visibleIf: {
+          mode: 'all',
+          conditions: [
+            { field: 'Nope' }, // does not exist
+            { field: 'Findings' }, // a group, not answerable
+            { field: 'Study Type' }, // self-reference
+          ],
+        },
+      },
+    ])
+    expect(resolved[1].visibleIf).toBeUndefined()
+  })
+
+  it('keeps only the valid conditions of a mixed spec, preserving the mode', () => {
+    const resolved = resolveSchema([
+      { name: 'Relevant', type: 'boolean' },
+      {
+        name: 'Study Type',
+        type: 'string',
+        visibleIf: {
+          mode: 'any',
+          conditions: [{ field: 'Nope' }, { field: 'Relevant', equals: [true] }],
+        },
+      },
+    ])
+    expect(resolved[1].visibleIf).toEqual({
+      mode: 'any',
+      conditions: [{ field: 'Relevant', equals: [true] }],
+    })
+  })
+
+  it('accepts a nested condition group on disk, and rejects an unknown key inside one', () => {
+    const withGate = (visibleIf: unknown) =>
+      JSON.stringify({
+        config: {
+          schema: [
+            { name: 'Relevant', type: 'boolean' },
+            { name: 'Kind', type: 'string', options: ['RCT', 'survey'] },
+            { name: 'Claim', type: 'string', visibleIf },
+          ],
+        },
+        papers: [],
+      })
+    const nested = {
+      mode: 'all',
+      conditions: [
+        { field: 'Relevant', equals: [true] },
+        { mode: 'any', conditions: [{ field: 'Kind', equals: ['RCT'] }] },
+      ],
+    }
+    expect(loadProject(withGate(nested)).schema[2].visibleIf).toEqual(nested)
+    // Both levels stay strict: a typo'd key is a load error, not a silent drop.
+    expect(() =>
+      loadProject(
+        withGate({
+          mode: 'all',
+          conditions: [{ mode: 'any', conditions: [{ field: 'Kind', euqals: ['RCT'] }] }],
+        }),
+      ),
+    ).toThrow(ProjectLoadError)
+    expect(() =>
+      loadProject(
+        withGate({
+          mode: 'all',
+          conditions: [{ mode: 'any', conditions: [{ field: 'Kind' }], all: true }],
+        }),
+      ),
+    ).toThrow(ProjectLoadError)
+  })
+
+  it('keeps a valid nested structure, and every nested mode, verbatim', () => {
+    const spec = {
+      mode: 'all' as const,
+      conditions: [
+        { field: 'Relevant', equals: [true] },
+        {
+          mode: 'any' as const,
+          conditions: [
+            { field: 'Kind', equals: ['RCT'] },
+            { mode: 'all' as const, conditions: [{ field: 'Notes' }] },
+          ],
+        },
+      ],
+    }
+    const resolved = resolveSchema([
+      { name: 'Relevant', type: 'boolean' },
+      { name: 'Kind', type: 'string', options: ['RCT', 'survey'] },
+      { name: 'Notes', type: 'string' },
+      { name: 'Claim', type: 'string', visibleIf: spec },
+    ])
+    expect(resolved[3].visibleIf).toEqual(spec)
+  })
+
+  it('drops invalid conditions inside a nested group, keeping the rest', () => {
+    const resolved = resolveSchema([
+      { name: 'Relevant', type: 'boolean' },
+      { name: 'Findings', children: [{ name: 'Claim', type: 'string' }] },
+      {
+        name: 'Study Type',
+        type: 'string',
+        visibleIf: {
+          mode: 'all',
+          conditions: [
+            { field: 'Relevant' },
+            {
+              mode: 'any',
+              conditions: [
+                { field: 'Nope' }, // does not exist
+                { field: 'Findings' }, // a group, not answerable
+                { field: 'Study Type' }, // self-reference
+                { field: 'Relevant', equals: [false] },
+              ],
+            },
+          ],
+        },
+      },
+    ])
+    expect(resolved[2].visibleIf).toEqual({
+      mode: 'all',
+      conditions: [
+        { field: 'Relevant' },
+        { mode: 'any', conditions: [{ field: 'Relevant', equals: [false] }] },
+      ],
+    })
+  })
+
+  it('drops a nested group left with no valid conditions, and the gate once nothing is left', () => {
+    const partial = resolveSchema([
+      { name: 'Relevant', type: 'boolean' },
+      {
+        name: 'Study Type',
+        type: 'string',
+        visibleIf: {
+          mode: 'all',
+          conditions: [{ field: 'Relevant' }, { mode: 'any', conditions: [{ field: 'Nope' }] }],
+        },
+      },
+    ])
+    // The empty group vanishes rather than making the parent unsatisfiable.
+    expect(partial[1].visibleIf).toEqual({ mode: 'all', conditions: [{ field: 'Relevant' }] })
+
+    const whole = resolveSchema([
+      { name: 'Relevant', type: 'boolean' },
+      {
+        name: 'Study Type',
+        type: 'string',
+        visibleIf: {
+          mode: 'all',
+          conditions: [{ mode: 'any', conditions: [{ field: 'Nope' }] }],
+        },
+      },
+    ])
+    expect(whole[1].visibleIf).toBeUndefined()
+  })
+
+  it('applies the equals rules inside a nested group too', () => {
+    const resolved = resolveSchema([
+      { name: 'Kind', type: 'string', options: ['RCT', 'survey'] },
+      { name: 'Relevant', type: 'boolean' },
+      { name: 'Notes', type: 'string' },
+      {
+        name: 'Claim',
+        type: 'string',
+        visibleIf: {
+          mode: 'all',
+          conditions: [
+            {
+              mode: 'any',
+              conditions: [
+                // Filtered to what the target can hold, exactly as at the top level.
+                { field: 'Kind', equals: ['RCT', 'case study'] },
+                { field: 'Relevant', equals: ['yes', true] },
+                // Free text has no closed set, so the equals degrades to "answered".
+                { field: 'Notes', equals: ['x'] },
+              ],
+            },
+          ],
+        },
+      },
+    ])
+    expect(resolved[3].visibleIf).toEqual({
+      mode: 'all',
+      conditions: [
+        {
+          mode: 'any',
+          conditions: [
+            { field: 'Kind', equals: ['RCT'] },
+            { field: 'Relevant', equals: [true] },
+            { field: 'Notes' },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('compactVisibleIf never shortens a single nested group to a bare name', () => {
+    // Only a lone plain "is it answered" condition has a bare-name equivalent.
+    expect(compactVisibleIf(gateOn('Relevant'))).toBe('Relevant')
+    const group = {
+      mode: 'all' as const,
+      conditions: [{ mode: 'any' as const, conditions: [{ field: 'Relevant' }] }],
+    }
+    expect(compactVisibleIf(group)).toEqual(group)
   })
 })
 
@@ -316,6 +704,245 @@ describe('isFieldVisible', () => {
       { name: 'Study Type', type: 'string', visibleIf: 'Relevant' },
     ])
     expect(isFieldVisible(gated, {}, { 'Something Else': true })).toBe(true)
+  })
+
+  it('mode "all" needs every condition, mode "any" needs only one', () => {
+    const schema = (mode: 'all' | 'any'): AnnotationDef[] => [
+      { name: 'Relevant', type: 'boolean' },
+      { name: 'Kind', type: 'string', options: ['RCT', 'survey'] },
+      {
+        name: 'Claim',
+        type: 'string',
+        visibleIf: {
+          mode,
+          conditions: [
+            { field: 'Relevant', equals: [true] },
+            { field: 'Kind', equals: ['RCT'] },
+          ],
+        },
+      },
+    ]
+    const both = { Relevant: [{ value: true }], Kind: [{ value: 'RCT' }] }
+    const one = { Relevant: [{ value: true }], Kind: [{ value: 'survey' }] }
+    const neither = { Relevant: [{ value: false }], Kind: [{ value: 'survey' }] }
+
+    const [, , all] = resolveSchema(schema('all'))
+    expect(isFieldVisible(all, both)).toBe(true)
+    expect(isFieldVisible(all, one)).toBe(false)
+
+    const [, , any] = resolveSchema(schema('any'))
+    expect(isFieldVisible(any, one)).toBe(true)
+    expect(isFieldVisible(any, neither)).toBe(false)
+  })
+
+  it('shows a field gated on a boolean being false — what "answered" could never express', () => {
+    const [, gated] = resolveSchema([
+      { name: 'Relevant', type: 'boolean' },
+      {
+        name: 'Exclusion Reason',
+        type: 'string',
+        visibleIf: { mode: 'all', conditions: [{ field: 'Relevant', equals: [false] }] },
+      },
+    ])
+    expect(isFieldVisible(gated, { Relevant: [{ value: false }] })).toBe(true)
+    expect(isFieldVisible(gated, { Relevant: [{ value: true }] })).toBe(false)
+  })
+
+  it('matches any of several enum values', () => {
+    const [, gated] = resolveSchema([
+      { name: 'Kind', type: 'string', options: ['RCT', 'survey', 'case study'] },
+      {
+        name: 'Sample Size',
+        type: 'string',
+        visibleIf: { mode: 'all', conditions: [{ field: 'Kind', equals: ['RCT', 'survey'] }] },
+      },
+    ])
+    expect(isFieldVisible(gated, { Kind: [{ value: 'RCT' }] })).toBe(true)
+    expect(isFieldVisible(gated, { Kind: [{ value: 'survey' }] })).toBe(true)
+    expect(isFieldVisible(gated, { Kind: [{ value: 'case study' }] })).toBe(false)
+  })
+
+  it('resolves a value condition against the ancestors map', () => {
+    const resolved = resolveSchema([
+      {
+        name: 'Field A',
+        type: 'boolean',
+        children: [
+          {
+            name: 'Field B',
+            type: 'string',
+            visibleIf: { mode: 'all', conditions: [{ field: 'Field A', equals: [false] }] },
+          },
+        ],
+      },
+    ])
+    const fieldB = resolved[0].children[0]
+    expect(isFieldVisible(fieldB, {}, { 'Field A': false })).toBe(true)
+    expect(isFieldVisible(fieldB, {}, { 'Field A': true })).toBe(false)
+  })
+
+  it('evaluates an outer "all" around an inner "any", and the other way round', () => {
+    const schema = (outer: 'all' | 'any', inner: 'all' | 'any'): AnnotationDef[] => [
+      { name: 'Relevant', type: 'boolean' },
+      { name: 'Kind', type: 'string', options: ['RCT', 'survey'] },
+      { name: 'Notes', type: 'string' },
+      {
+        name: 'Claim',
+        type: 'string',
+        visibleIf: {
+          mode: outer,
+          conditions: [
+            { field: 'Relevant', equals: [true] },
+            {
+              mode: inner,
+              conditions: [{ field: 'Kind', equals: ['RCT'] }, { field: 'Notes' }],
+            },
+          ],
+        },
+      },
+    ]
+    const tree = (relevant: boolean, kind: string, notes: string) => ({
+      Relevant: [{ value: relevant }],
+      Kind: [{ value: kind }],
+      Notes: [{ value: notes }],
+    })
+
+    // "Relevant is Yes AND (Kind is RCT OR Notes answered)"
+    const [, , , allAny] = resolveSchema(schema('all', 'any'))
+    expect(isFieldVisible(allAny, tree(true, 'survey', 'x'))).toBe(true)
+    expect(isFieldVisible(allAny, tree(true, 'RCT', ''))).toBe(true)
+    expect(isFieldVisible(allAny, tree(true, 'survey', ''))).toBe(false)
+    expect(isFieldVisible(allAny, tree(false, 'RCT', 'x'))).toBe(false)
+
+    // "Relevant is Yes OR (Kind is RCT AND Notes answered)"
+    const [, , , anyAll] = resolveSchema(schema('any', 'all'))
+    expect(isFieldVisible(anyAll, tree(false, 'RCT', 'x'))).toBe(true)
+    expect(isFieldVisible(anyAll, tree(true, 'survey', ''))).toBe(true)
+    expect(isFieldVisible(anyAll, tree(false, 'RCT', ''))).toBe(false)
+  })
+
+  it('evaluates a group two levels deep, including a condition on an ancestor field', () => {
+    const resolved = resolveSchema([
+      {
+        name: 'Field A',
+        type: 'boolean',
+        children: [
+          { name: 'Kind', type: 'string', options: ['RCT', 'survey'] },
+          { name: 'Notes', type: 'string' },
+          {
+            name: 'Detail',
+            type: 'string',
+            visibleIf: {
+              mode: 'all',
+              conditions: [
+                // An ancestor field, mixed with two levels of nesting below it.
+                { field: 'Field A', equals: [true] },
+                {
+                  mode: 'any',
+                  conditions: [
+                    { field: 'Kind', equals: ['RCT'] },
+                    {
+                      mode: 'all',
+                      conditions: [{ field: 'Kind', equals: ['survey'] }, { field: 'Notes' }],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ])
+    const detail = resolved[0].children[2]
+    const container = (kind: string, notes: string) => ({
+      Kind: [{ value: kind }],
+      Notes: [{ value: notes }],
+    })
+    expect(isFieldVisible(detail, container('RCT', ''), { 'Field A': true })).toBe(true)
+    expect(isFieldVisible(detail, container('survey', 'x'), { 'Field A': true })).toBe(true)
+    expect(isFieldVisible(detail, container('survey', ''), { 'Field A': true })).toBe(false)
+    expect(isFieldVisible(detail, container('RCT', 'x'), { 'Field A': false })).toBe(false)
+  })
+
+  it('fails open inside a nested group for a name in neither the container nor the ancestors', () => {
+    const [, , gated] = resolveSchema([
+      { name: 'Relevant', type: 'boolean' },
+      { name: 'Kind', type: 'string', options: ['RCT'] },
+      {
+        name: 'Claim',
+        type: 'string',
+        visibleIf: {
+          mode: 'all',
+          conditions: [
+            { field: 'Relevant', equals: [true] },
+            { mode: 'all', conditions: [{ field: 'Kind', equals: ['RCT'] }] },
+          ],
+        },
+      },
+    ])
+    // Kind is missing entirely (stale/hand-edited data), so its clause — and
+    // with it the nested group — must not hide the field.
+    expect(isFieldVisible(gated, { Relevant: [{ value: true }] })).toBe(true)
+    // Present but not matching still hides it.
+    expect(
+      isFieldVisible(gated, { Relevant: [{ value: true }], Kind: [{ value: null }] }),
+    ).toBe(false)
+  })
+
+  it('reads instance 0 of a repeatable branch for a cross-branch condition', () => {
+    const [, summary] = resolveSchema([
+      { name: 'Findings', max: null, children: [{ name: 'Claim', type: 'string' }] },
+      { name: 'Summary', type: 'string', visibleIf: 'Findings/Claim' },
+    ])
+    const root = (...claims: (string | null)[]): AnnotationValueTree => ({
+      Findings: claims.map((value) => ({ children: { Claim: [{ value }] } })),
+      Summary: [{ value: null }],
+    })
+    const first = root('yes', null)
+    expect(isFieldVisible(summary, first, {}, first)).toBe(true)
+    // Only the first entry is consulted: outside its own lineage a gate has no
+    // "current" instance to read, so a later entry cannot open it.
+    const later = root(null, 'yes')
+    expect(isFieldVisible(summary, later, {}, later)).toBe(false)
+  })
+
+  it('fails open on a cross-branch condition when no root tree is passed', () => {
+    const [, summary] = resolveSchema([
+      { name: 'Findings', children: [{ name: 'Claim', type: 'string' }] },
+      { name: 'Summary', type: 'string', visibleIf: 'Findings/Claim' },
+    ])
+    const tree: AnnotationValueTree = {
+      Findings: [{ children: { Claim: [{ value: null }] } }],
+      Summary: [{ value: null }],
+    }
+    // The path is not a key of the container, and a caller with no root to
+    // walk must never hide a field it cannot judge.
+    expect(isFieldVisible(summary, tree)).toBe(true)
+    expect(isFieldVisible(summary, tree, {}, tree)).toBe(false)
+  })
+
+  it('keeps reading its own instance for a bare-name gate inside a repeatable group', () => {
+    const [findings] = resolveSchema([
+      {
+        name: 'Findings',
+        max: null,
+        children: [
+          { name: 'Relevant', type: 'boolean' },
+          { name: 'Claim', type: 'string', visibleIf: 'Relevant' },
+        ],
+      },
+    ])
+    const claim = findings.children[1]
+    const root: AnnotationValueTree = {
+      Findings: [
+        { children: { Relevant: [{ value: false }], Claim: [{ value: null }] } },
+        { children: { Relevant: [{ value: true }], Claim: [{ value: null }] } },
+      ],
+    }
+    // Per entry, not instance 0 for all of them — the bare-name form keeps the
+    // per-instance semantics the path form deliberately does not have.
+    expect(isFieldVisible(claim, root.Findings[0].children!, {}, root)).toBe(false)
+    expect(isFieldVisible(claim, root.Findings[1].children!, {}, root)).toBe(true)
   })
 })
 

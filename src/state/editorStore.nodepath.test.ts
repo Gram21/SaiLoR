@@ -18,7 +18,7 @@ function n(uid: string, name: string, children: EditorNode[] = []): EditorNode {
     description: '',
     options: [],
     required: false,
-    visibleIf: '',
+    visibleIf: null,
     collapsed: false,
     children,
   } as EditorNode

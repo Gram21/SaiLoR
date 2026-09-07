@@ -63,7 +63,10 @@ export function completeness(
   tree: AnnotationValueTree | null | undefined,
 ): Completeness {
   const acc: Completeness = { filled: 0, total: 0 }
-  walk(defs, tree ?? {}, hasRequiredFields(defs), acc)
+  const root = tree ?? {}
+  // `root` twice, exactly as `validatePaper` passes it: the level being walked
+  // and the tree a cross-branch `visibleIf` resolves against.
+  walk(defs, root, hasRequiredFields(defs), acc, {}, root)
   return acc
 }
 
@@ -80,9 +83,13 @@ function walk(
   // sibling is resolved. Threaded exactly as `validateTree`'s `gateAncestors`
   // is, so the two walks gate on identical values.
   gateAncestors: Record<string, FieldValue> = {},
+  // The paper's whole tree, for a `visibleIf` naming its target by absolute
+  // path instead of by bare name — threaded like `validateTree`'s `gateRoot`,
+  // for the same reason the ancestors are: the two walks must gate alike.
+  gateRoot?: AnnotationValueTree,
 ): void {
   for (const def of defs) {
-    if (!isFieldVisible(def, tree ?? {}, gateAncestors)) continue
+    if (!isFieldVisible(def, tree ?? {}, gateAncestors, gateRoot)) continue
     const raw = tree?.[def.name]
     const instances = Array.isArray(raw) ? raw : []
     for (const inst of instances) {
@@ -102,6 +109,7 @@ function walk(
           // (both hide what they gate), so this is `validateTree`'s raw
           // `instance.value` without needing its cast.
           isField(def) ? { ...gateAncestors, [def.name]: inst.value ?? null } : gateAncestors,
+          gateRoot,
         )
       }
     }

@@ -263,9 +263,18 @@ export function AnnotationPanel() {
       <div className="annotations-body">
         <ConsolidationVerdictsContext.Provider value={consolidationVerdicts}>
           {schema
-            .filter((def) => isFieldVisible(def, container))
+            // `container` is both the top level and the root a cross-branch
+            // `visibleIf` path resolves against — the same pair
+            // `validatePaper`/`completeness` pass.
+            .filter((def) => isFieldVisible(def, container, {}, container))
             .map((def) => (
-              <AnnotationNode key={def.id} def={def} path={[]} container={container} />
+              <AnnotationNode
+                key={def.id}
+                def={def}
+                path={[]}
+                container={container}
+                root={container}
+              />
             ))}
         </ConsolidationVerdictsContext.Provider>
       </div>

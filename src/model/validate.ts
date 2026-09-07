@@ -200,11 +200,22 @@ function validateTree(
   // `ancestorValues`. Unrelated to `ancestors` above, which is path
   // segments, not gate values.
   gateAncestors: Record<string, unknown> = {},
+  // The paper's whole tree, for a `visibleIf` naming its target by absolute
+  // path (a cousin, or an unrelated branch) rather than by bare name.
+  // Unchanged all the way down, like `resolveDefs`'s own `root`.
+  gateRoot?: AnnotationValueTree,
 ): void {
   const map = isPlainObject(tree) ? tree : {}
 
   for (const def of defs) {
-    if (!isFieldVisible(def, map as AnnotationValueTree, gateAncestors as Record<string, FieldValue>))
+    if (
+      !isFieldVisible(
+        def,
+        map as AnnotationValueTree,
+        gateAncestors as Record<string, FieldValue>,
+        gateRoot,
+      )
+    )
       continue
 
     const raw = map[def.name]
@@ -268,7 +279,7 @@ function validateTree(
         const nextGateAncestors = isField(def)
           ? { ...gateAncestors, [def.name]: instance.value }
           : gateAncestors
-        validateTree(def.children, instance.children, loc, emit, nextGateAncestors)
+        validateTree(def.children, instance.children, loc, emit, nextGateAncestors, gateRoot)
       }
     })
   }
@@ -293,7 +304,10 @@ export function validatePaper(schema: ResolvedDef[], paper: Paper): ValidationIs
   }
 
   const tree: AnnotationValueTree | undefined = paper?.annotations
-  validateTree(Array.isArray(schema) ? schema : [], tree, ROOT, emit)
+  // The same tree twice: once as the level being walked, once as the root a
+  // cross-branch `visibleIf` is resolved against, so the dialog hides exactly
+  // what the form hides.
+  validateTree(Array.isArray(schema) ? schema : [], tree, ROOT, emit, {}, tree)
   return issues
 }
 
