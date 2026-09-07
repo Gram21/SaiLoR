@@ -1,9 +1,10 @@
 # SaiLoR — Software Requirements
 
 Requirements reverse-engineered from the implemented codebase (source, tests, docs, and
-commit history) as of 2026-08-27 (v1.8.1). Every requirement documents behavior that is
-actually implemented; each entry cites its evidence. IDs are numbered in steps of ten per
-category so requirements can be inserted without renumbering.
+commit history) as of 2026-08-27 (v1.8.1), with incremental updates through 2026-09-07
+(main at `8b93cbe`) for behavior changed since. Every requirement documents behavior that
+is actually implemented; each entry cites its evidence. IDs are numbered in steps of ten
+per category so requirements can be inserted without renumbering.
 
 ## Files
 
@@ -46,13 +47,13 @@ category so requirements can be inserted without renumbering.
 | Category | Requirements |
 |---|---|
 | Data model & editor (DAT/EDT) | 47 |
-| Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 43 |
+| Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 45 |
 | Screening (SCR) | 38 |
 | Consolidation (CON) | 40 |
 | Git integration (GIT) | 39 |
 | LLM annotation (LLM) | 31 |
-| Platform & shell (PLT) | 34 |
-| **Total** | **272** |
+| Platform & shell (PLT) | 36 |
+| **Total** | **276** |
 
 ## Method & evidence notes
 

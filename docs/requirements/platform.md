@@ -39,7 +39,21 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-60 — Tolerate corrupt annotation files
 - **Description:** When an individual annotation file is unreadable or corrupt during project open, the system shall treat that file as absent and continue opening the project.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:585-631`
+- **Evidence:** `electron/main.ts:585-641`
+- **Status:** Implemented
+
+### REQ-PLT-61 — Never delete unparseable annotation files
+- **Description:** When writing the `annotations/` folder, the system shall never delete an existing annotation file whose on-disk content is non-empty and not valid JSON, even when the in-memory project state maps that slot to absent.
+- **Type:** Non-functional (ISO 25010: Reliability)
+- **Evidence:** `src/model/project.ts:1041-1049` (`isDeletableAnnotationText`), `electron/main.ts:793-811`
+- **Verified by:** `src/model/split.test.ts` (`isDeletableAnnotationText` describe block)
+- **Status:** Implemented
+
+### REQ-PLT-62 — Report unparseable annotation files on open
+- **Description:** When a project opens with one or more annotation files that could not be parsed, the system shall keep the project loaded and shall surface a load error naming the affected files (capped at ten, with a count of any remainder) instead of silently treating them as unannotated.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/store.ts:320-343,1133-1136,1312-1315`, `src/platform/adapter.ts:20-27`
+- **Verified by:** `src/state/store.corruptFiles.test.ts`
 - **Status:** Implemented
 
 ### REQ-PLT-70 — Refuse symlinked and escaping write targets

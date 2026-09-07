@@ -94,6 +94,12 @@ export. See the [index](index.md) for the glossary.
 - **Evidence:** `src/components/PaperList.tsx:187-189,366-394,452-488`
 - **Status:** Implemented
 
+### REQ-LST-25 — Case-sensitive paper search toggle
+- **Description:** The system shall provide an "Aa" toggle on the paper search box that switches word matching from case-insensitive (default) to exact-case, applying to whichever search mode (metadata or annotations) is active, and shall reset to case-insensitive when a different project is opened.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/PaperList.tsx:187-192,269,281,324,378,391,484-496`, commit `f3eea85`
+- **Status:** Implemented
+
 ### REQ-LST-30 — Five-state annotation indicator
 - **Description:** The system shall display per paper one of five annotation states — untouched, partial (with a proportional fill of filled versus counted fields), complete, finished, or flagged — each with a tooltip stating the state and the filled-field count, derived from live data at read time.
 - **Type:** Functional (ISO 25010: Functional Suitability)
@@ -154,6 +160,12 @@ export. See the [index](index.md) for the glossary.
 - **Description:** The system shall provide an in-PDF search opened with Ctrl/Cmd+F that matches text across page text layers with a 150 ms input debounce, displays the match count, cycles matches with Enter and Shift+Enter, highlights and centers the active match, and closes with Escape.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/PdfViewer.tsx:98-136,390-405,1246-1280,1618-1673`, commit `c206c49`
+- **Status:** Implemented
+
+### REQ-PDF-55 — Case-sensitive in-PDF search toggle
+- **Description:** The system shall provide an "Aa" toggle on the in-PDF search box that switches text-layer matching from case-insensitive (default) to exact-case.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/PdfViewer.tsx:100,393,1359,1363,1646-1659`, commit `f3eea85`
 - **Status:** Implemented
 
 ### REQ-PDF-60 — Capture normalized text selection
