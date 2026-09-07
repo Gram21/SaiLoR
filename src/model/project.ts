@@ -1029,6 +1029,26 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
 }
 
 /**
+ * May the annotation file currently holding `text` on disk be deleted when the
+ * project no longer has anything for that slot? Yes for an empty file or one
+ * that parses as JSON; no for anything else — content we cannot read is
+ * content we cannot know we already have. A file carrying git conflict
+ * markers (`<<<<<<<`) is the case this exists for: the loader treats an
+ * unparseable annotation file as absent (deliberately, so one corrupt tree
+ * cannot block opening a project), which makes the next save reconcile the
+ * slot to `null` and unlink the only copy of that reviewer's work.
+ */
+export function isDeletableAnnotationText(text: string): boolean {
+  if (text.trim() === '') return true
+  try {
+    JSON.parse(text)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
  * Does this parsed `project.json` use the old single-file shape (papers carry
  * `annotations`/`reviews` inline) rather than the new meta-only shape? Used to
  * decide whether a project needs migrating to the split layout on open.

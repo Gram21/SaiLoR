@@ -317,6 +317,32 @@ export interface LoadError {
   details: string[]
 }
 
+/** How many corrupt file names `corruptFilesWarning` lists before it stops. */
+const CORRUPT_LIST_LIMIT = 10
+
+/**
+ * The warning shown when a project opened with annotation files that could not
+ * be parsed (`OpenedProject.corruptFiles`). Those files load as absent — a
+ * seat looks unannotated — so saying nothing would let a reviewer redo or
+ * overwrite work that is still on disk. The files themselves are never
+ * deleted (see `writeProjectFiles` in `electron/main.ts`).
+ */
+function corruptFilesWarning(paths: string[]): LoadError {
+  const listed = paths.slice(0, CORRUPT_LIST_LIMIT)
+  const rest = paths.length - listed.length
+  return {
+    message:
+      paths.length === 1
+        ? 'One annotation file could not be read; its data is missing from this session.'
+        : `${paths.length} annotation files could not be read; their data is missing from this session.`,
+    details: [
+      ...listed.map((p) => `annotations/${p}`),
+      ...(rest > 0 ? [`…and ${rest} more`] : []),
+      'They are not valid JSON — a leftover git merge conflict is the usual cause. The files are left on disk untouched; repair them (or restore them from git) and reopen the project.',
+    ],
+  }
+}
+
 /**
  * One undo/redo snapshot. Because the store uses immer, each `project` is an
  * immutable value with structural sharing, so keeping references to previous
@@ -1104,6 +1130,10 @@ export const useStore = create<AppState>()(
         get().loadFromText(opened.text, opened.handle, opened.name)
         set((s) => {
           s.recents = platform.getRecents()
+          // After `loadFromText`, which clears `loadError` on success.
+          if (!s.loadError && opened.corruptFiles && opened.corruptFiles.length > 0) {
+            s.loadError = corruptFilesWarning(opened.corruptFiles)
+          }
         })
       } catch (err) {
         set((s) => {
@@ -1279,6 +1309,9 @@ export const useStore = create<AppState>()(
         get().loadFromText(opened.text, opened.handle, opened.name)
         set((s) => {
           s.recents = platform.getRecents()
+          if (!s.loadError && opened.corruptFiles && opened.corruptFiles.length > 0) {
+            s.loadError = corruptFilesWarning(opened.corruptFiles)
+          }
         })
       } catch (err) {
         set((s) => {

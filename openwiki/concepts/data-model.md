@@ -400,7 +400,11 @@ Per-paper-per-reviewer files are written **only when the tree holds answers**
 - `reviewer-<n>.json` — written when reviewer `n`'s tree has answers (`has`)
   *or* their `finished` flag is set (a reviewer who ticked the box and then
   cleared a field still said something; dropping the file would silently
-  un-say it). Otherwise `text: null` → delete if present.
+  un-say it). Otherwise `text: null` → delete if present, unless the file on
+  disk does not parse as JSON (`isDeletableAnnotationText`): the read path maps
+  an unparseable annotation file to "absent", so reconciling that slot away
+  would unlink the only copy of, say, a reviewer tree committed with git
+  conflict markers in it.
 - `consolidated.json` — written when any of the consolidated `annotations`,
   `aiUsage`, `equal`, `alignment`, or `finished` is non-empty; otherwise
   `null`.

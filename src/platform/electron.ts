@@ -34,9 +34,9 @@ const RECENTS_KEY = 'slr.recents.electron'
 export interface SlrBridge {
   /** The machine this build is running on (from process.platform / process.arch). */
   os: { platform: string; arch: string }
-  openProject(): Promise<{ path: string; text: string } | null>
+  openProject(): Promise<{ path: string; text: string; corrupt: string[] } | null>
   /** Read a specific file by absolute path (for recent files). Null if missing. */
-  openPath(path: string): Promise<{ path: string; text: string } | null>
+  openPath(path: string): Promise<{ path: string; text: string; corrupt: string[] } | null>
   saveProject(path: string, metaText: string, files: Array<{ relPath: string; text: string | null }>): Promise<void>
   /** Register the project's base directory so slr-file:// can resolve PDFs. */
   setProjectDir(path: string): Promise<void>
@@ -212,6 +212,7 @@ export class ElectronAdapter implements PlatformAdapter {
       text: res.text,
       handle: { kind: 'electron', path: res.path },
       name: baseName(res.path),
+      corruptFiles: res.corrupt,
     }
   }
 
@@ -226,6 +227,7 @@ export class ElectronAdapter implements PlatformAdapter {
       text: res.text,
       handle: { kind: 'electron', path: res.path },
       name: baseName(res.path),
+      corruptFiles: res.corrupt,
     }
   }
 

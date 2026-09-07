@@ -31,7 +31,7 @@ import { ownAnnotationPathMatcher } from '../src/git/ownAnnotationPath'
 import { readAllConcurrently } from '../src/git/concurrentRead'
 import { deriveGitInfo } from '../src/git/deriveGitInfo'
 import type { GitRun, MergeStart } from '../src/git/types'
-import { isLegacyProjectShape, assembleLegacyProjectJson } from '../src/model/project'
+import { isLegacyProjectShape, assembleLegacyProjectJson, isDeletableAnnotationText } from '../src/model/project'
 import { parseMarks, type PdfMark } from '../src/model/pdfMarks'
 import { rectToPdfPoints, rectToQuadPoints } from '../src/model/pdfExport'
 import { verifyReleaseSignature, RELEASE_PUBLIC_KEY_B64 } from '../src/model/updateSignature'
@@ -582,7 +582,12 @@ type PaperFiles = {
  *  file names this project's own kind (`screening`) owns, never the other
  *  kind's — so a sibling project sharing the same `annotations/` folder can
  *  never shadow this one's reviewer/consolidated data on read. */
-async function loadPaperFiles(annotationsDir: string, paperId: string, screening: boolean): Promise<PaperFiles> {
+async function loadPaperFiles(
+  annotationsDir: string,
+  paperId: string,
+  screening: boolean,
+  corruptOut?: string[],
+): Promise<PaperFiles> {
   const reviewers = new Map<string, unknown>()
   const reviewMarks = new Map<string, unknown>()
   let consolidated: unknown
@@ -593,7 +598,10 @@ async function loadPaperFiles(annotationsDir: string, paperId: string, screening
     try {
       consolidated = JSON.parse(consolidatedText)
     } catch {
-      // corrupt file — treat as absent
+      // corrupt file — treat as absent, but tell the caller so the user can
+      // be shown which files were skipped (they are never deleted, see
+      // `writeProjectFiles`).
+      corruptOut?.push(`${paperId}/${consolidatedName}`)
     }
   }
   const marksConsolidatedText = await safeReadAnnotationFile(annotationsDir, `${paperId}/marks-consolidated.json`)
@@ -601,7 +609,7 @@ async function loadPaperFiles(annotationsDir: string, paperId: string, screening
     try {
       marksConsolidated = JSON.parse(marksConsolidatedText)
     } catch {
-      // corrupt file — treat as absent
+      corruptOut?.push(`${paperId}/marks-consolidated.json`)
     }
   }
   const paperDirResolved = path.resolve(annotationsDir, paperId)
@@ -626,6 +634,7 @@ async function loadPaperFiles(annotationsDir: string, paperId: string, screening
       else reviewMarks.set(marksMatch![1], JSON.parse(text))
     } catch {
       // corrupt file — skip this reviewer's tree
+      corruptOut?.push(`${paperId}/${entry.name}`)
     }
   }
   return { consolidated, reviewers, marksConsolidated, reviewMarks }
@@ -633,8 +642,11 @@ async function loadPaperFiles(annotationsDir: string, paperId: string, screening
 
 /** Read `filePath`'s `project.json` and, if it's the split (post-v1.3) shape,
  *  reassemble its `annotations/` folder into the legacy whole-project text
- *  `loadProject` accepts. A pre-v1.3 file is returned exactly as read. */
-async function readProjectText(filePath: string): Promise<string> {
+ *  `loadProject` accepts. A pre-v1.3 file is returned exactly as read.
+ *  `corruptOut`, when passed, collects the `<paperId>/<file>` paths that could
+ *  not be parsed and were therefore loaded as absent — the open handlers pass
+ *  one so the renderer can name them to the user. */
+async function readProjectText(filePath: string, corruptOut?: string[]): Promise<string> {
   const text = await readFile(filePath, 'utf-8')
   const raw: unknown = JSON.parse(text)
   if (isLegacyProjectShape(raw)) return text
@@ -646,7 +658,7 @@ async function readProjectText(filePath: string): Promise<string> {
     const id = (p as { id?: unknown })?.id
     if (typeof id === 'string') ids.push(id)
   }
-  const paperFiles = await readAllConcurrently(ids, (id) => loadPaperFiles(annotationsDir, id, screening))
+  const paperFiles = await readAllConcurrently(ids, (id) => loadPaperFiles(annotationsDir, id, screening, corruptOut))
   return JSON.stringify(assembleLegacyProjectJson(raw, paperFiles))
 }
 
@@ -664,16 +676,18 @@ ipcMain.handle('project:open', async () => {
   })
   if (res.canceled || res.filePaths.length === 0) return null
   const filePath = res.filePaths[0]
-  const text = await readProjectText(filePath)
+  const corrupt: string[] = []
+  const text = await readProjectText(filePath, corrupt)
   knownProjectPaths.add(path.resolve(filePath))
-  return { path: filePath, text }
+  return { path: filePath, text, corrupt }
 })
 
 ipcMain.handle('project:openPath', async (_e, filePath: string) => {
   try {
-    const text = await readProjectText(filePath)
+    const corrupt: string[] = []
+    const text = await readProjectText(filePath, corrupt)
     knownProjectPaths.add(path.resolve(filePath))
-    return { path: filePath, text }
+    return { path: filePath, text, corrupt }
   } catch {
     return null // file moved/deleted/unreadable/corrupt
   }
@@ -743,7 +757,8 @@ async function assertInsideRoot(root: string, filePath: string): Promise<void> {
 /**
  * Write `project.json` (`metaText`) plus reconcile the `annotations/` folder
  * against `files`: a non-null entry is written (its paper folder created if
- * new), a null entry is deleted if present. `files` always lists every
+ * new), a null entry is deleted if present — unless what is present does not
+ * parse as JSON (see `isDeletableAnnotationText`). `files` always lists every
  * possible reviewer/consolidated slot for every paper (see
  * `splitProjectFiles`) — this reconciles the whole folder to match the
  * project state being written on every call, rather than tracking which
@@ -776,6 +791,18 @@ async function writeProjectFiles(
       throw new Error(`Refusing to write annotation file outside the project: "${file.relPath}"`)
     }
     if (file.text === null) {
+      // Never delete a file we could not read as JSON: `loadPaperFiles` maps
+      // an unparseable annotation file to "absent", which arrives back here as
+      // an empty slot — deleting it then would destroy the only copy of, say,
+      // a reviewer tree that merely got committed with git conflict markers in
+      // it. Leave it on disk for the user to repair.
+      let existing: string | null = null
+      try {
+        existing = await readFile(target, 'utf-8')
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
+      }
+      if (existing !== null && !isDeletableAnnotationText(existing)) continue
       try {
         await unlink(target)
       } catch (err) {

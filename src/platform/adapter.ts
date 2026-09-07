@@ -20,6 +20,13 @@ export interface OpenedProject {
   handle: SaveHandle
   /** Display name / path of the opened file (for the title bar). */
   name: string
+  /**
+   * `annotations/<paperId>/<file>` paths that could not be parsed and were
+   * loaded as absent (they are left on disk untouched). Non-empty means the
+   * project opened with data missing — the UI says so rather than letting a
+   * reviewer assume an empty seat is empty.
+   */
+  corruptFiles?: string[]
 }
 
 export interface SaveHandle {

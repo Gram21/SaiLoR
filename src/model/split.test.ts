@@ -5,6 +5,7 @@ import {
   serializeProject,
   splitProjectFiles,
   isLegacyProjectShape,
+  isDeletableAnnotationText,
   assembleLegacyProjectJson,
 } from './project'
 import { SCREENING_DECISION, DECISION_INCLUDE } from '../screening/schema'
@@ -324,5 +325,25 @@ describe('assembleLegacyProjectJson + splitProjectFiles round-trip', () => {
     expect(roundTripped.papers[0].marks).toEqual([consolidatedMark])
     expect(roundTripped.papers[0].reviewMarks['1']).toEqual([reviewer1Mark])
     expect(roundTripped.papers[0].reviewMarks['2']).toBeUndefined()
+  })
+})
+
+describe('isDeletableAnnotationText', () => {
+  it('allows deleting an empty or valid-JSON file', () => {
+    expect(isDeletableAnnotationText('')).toBe(true)
+    expect(isDeletableAnnotationText('  \n')).toBe(true)
+    expect(isDeletableAnnotationText('{"annotations":{}}')).toBe(true)
+  })
+
+  it('keeps a file with git conflict markers or otherwise broken JSON', () => {
+    const conflicted = [
+      '<<<<<<< HEAD',
+      '{"annotations":{"Relevant":true}}',
+      '=======',
+      '{"annotations":{"Relevant":false}}',
+      '>>>>>>> origin/main',
+    ].join('\n')
+    expect(isDeletableAnnotationText(conflicted)).toBe(false)
+    expect(isDeletableAnnotationText('{"annotations":')).toBe(false)
   })
 })
