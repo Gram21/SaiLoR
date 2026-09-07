@@ -366,8 +366,8 @@ body.resizing * {
   width: 100%;
   min-width: 0;
   padding: 5px 9px;
-  /* Reserve room for the mode trigger so typed text can never run under it. */
-  padding-right: 52px;
+  /* Reserve room for the case and mode triggers so typed text can never run under them. */
+  padding-right: 84px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg);
@@ -412,6 +412,35 @@ button.paper-search-mode:hover {
   border-color: var(--border);
 }
 .paper-search-mode.active {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-weight: 700;
+}
+/* Toggles whether the query matches exact case. Same visual language as
+   `.paper-search-mode`, narrower and offset to sit left of it. */
+.paper-search-case {
+  position: absolute;
+  top: 50%;
+  right: 48px;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+}
+button.paper-search-case:hover {
+  color: var(--text);
+  border-color: var(--border);
+}
+.paper-search-case.active {
   border-color: var(--accent);
   background: var(--accent-weak);
   color: var(--accent);

@@ -457,6 +457,13 @@ describe('annotationText (annotation-mode search haystack)', () => {
     const resolved = resolveSchema(sampleSchema)
     expect(annotationText(resolved, {})).toBe('')
   })
+
+  it('keeps original case when caseSensitive is true', () => {
+    const resolved = resolveSchema(sampleSchema)
+    const tree = initTree(resolved)
+    tree['Study Type'][0].value = 'RCT'
+    expect(annotationText(resolved, tree, true)).toBe('RCT')
+  })
 })
 
 describe('config.ai (AI-annotation opt-out)', () => {

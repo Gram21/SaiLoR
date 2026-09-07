@@ -223,10 +223,11 @@ export function isFieldVisible(
  * Defensive like the rest of this module's tree walks: the project JSON is
  * hand-editable, so a value tree may not match the schema's shape at runtime.
  */
-export function annotationText(defs: ResolvedDef[], tree: AnnotationValueTree): string {
+export function annotationText(defs: ResolvedDef[], tree: AnnotationValueTree, caseSensitive = false): string {
   const parts: string[] = []
   collectAnnotationText(defs, tree, parts)
-  return parts.join(' ').toLowerCase()
+  const joined = parts.join(' ')
+  return caseSensitive ? joined : joined.toLowerCase()
 }
 
 function collectAnnotationText(defs: ResolvedDef[], tree: AnnotationValueTree, out: string[]): void {

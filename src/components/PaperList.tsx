@@ -184,8 +184,12 @@ export function paperScreeningStatus(
  * always present (non-optional on Paper), so unlike `doi`/`abstract` they
  * need no empty-string fallback.
  */
+function paperMetadataRaw(paper: Paper): string {
+  return `${paper.title} ${paper.authors.join(' ')} ${paper.doi ?? ''} ${paper.abstract ?? ''} ${paper.pdf} ${paper.id}`
+}
+
 export function paperMetadataHaystack(paper: Paper): string {
-  return `${paper.title} ${paper.authors.join(' ')} ${paper.doi ?? ''} ${paper.abstract ?? ''} ${paper.pdf} ${paper.id}`.toLowerCase()
+  return paperMetadataRaw(paper).toLowerCase()
 }
 
 /**
@@ -262,6 +266,7 @@ export function PaperList() {
 
   const [query, setQuery] = useState('')
   const [mode, setMode] = useState<SearchMode>('metadata')
+  const [caseSensitive, setCaseSensitive] = useState(false)
 
   // Clear the search when a different project is opened. This component never
   // unmounts across a project change, so a query typed against the last project
@@ -273,6 +278,7 @@ export function PaperList() {
   useEffect(() => {
     setQuery('')
     setMode('metadata')
+    setCaseSensitive(false)
   }, [generation])
 
   // Build the search index once per project: one lowercased haystack per
@@ -311,8 +317,12 @@ export function PaperList() {
         // id. Abstract is here because screening is decided on title +
         // abstract; the PDF path and id let a reviewer find a paper by the
         // file they remember or by its identifier. See `paperMetadataHaystack`.
-        metadataHaystack: paperMetadataHaystack(paper),
-        annotationHaystack: annotationText(schema, tree ?? {}),
+        // Kept in original case (not lowercased like the exported
+        // `paperMetadataHaystack`/default `annotationText`) so the
+        // case-sensitive toggle below can match against it directly; the
+        // case-insensitive path lowercases it at match time instead.
+        metadataHaystack: paperMetadataRaw(paper),
+        annotationHaystack: annotationText(schema, tree ?? {}, true),
         completeness: c,
         touched,
         // Same inputs `paperAnnotationState` uses, off the tree and
@@ -363,7 +373,9 @@ export function PaperList() {
   }, [project, isScreening, isConsolidationSeat, currentReviewer, index, annotationFilter])
 
   // Filter + rank by how many distinct query words match (then matched chars).
-  const words = query.toLowerCase().split(/\s+/).filter((w) => w.length > 0)
+  // Case-insensitive by default (both the query and haystack are lowercased);
+  // the toggle below matches the raw, original-case haystack instead.
+  const words = (caseSensitive ? query : query.toLowerCase()).split(/\s+/).filter((w) => w.length > 0)
   const filtered = useMemo<IndexedPaper[]>(() => {
     const base = index.filter((e) => {
       if (isScreening) {
@@ -375,7 +387,8 @@ export function PaperList() {
     if (words.length === 0) return base
     const scored = base
       .map((e, i) => {
-        const haystack = mode === 'annotations' ? e.annotationHaystack : e.metadataHaystack
+        const raw = mode === 'annotations' ? e.annotationHaystack : e.metadataHaystack
+        const haystack = caseSensitive ? raw : raw.toLowerCase()
         let matched = 0
         let chars = 0
         for (const w of words) {
@@ -389,9 +402,9 @@ export function PaperList() {
       .filter((e) => e.matched > 0)
     scored.sort((a, b) => b.matched - a.matched || b.chars - a.chars || a.i - b.i)
     return scored.map((e) => e.entry)
-    // `words` is derived from `query`; keying on both is intentional.
+    // `words` is derived from `query`/`caseSensitive`; keying on both is intentional.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, query, mode, isScreening, screeningFilter, annotationFilter, project, currentReviewer])
+  }, [index, query, mode, caseSensitive, isScreening, screeningFilter, annotationFilter, project, currentReviewer])
 
   if (!project) return null
 
@@ -468,6 +481,20 @@ export function PaperList() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+          <button
+            type="button"
+            className={`paper-search-case${caseSensitive ? ' active' : ''}`}
+            title={
+              caseSensitive
+                ? 'Matching exact case (e.g. "AI" no longer matches "contains"). Click to ignore case again.'
+                : 'Ignoring case (e.g. "AI" also matches "contains"). Click to match exact case instead.'
+            }
+            aria-label="Toggle case-sensitive search"
+            aria-pressed={caseSensitive}
+            onClick={() => setCaseSensitive((c) => !c)}
+          >
+            Aa
+          </button>
           <button
             type="button"
             className={`paper-search-mode${mode === 'annotations' ? ' active' : ''}`}

@@ -95,10 +95,11 @@ export function dedupeOverlappingRects(rects: MarkRect[]): MarkRect[] {
   return out
 }
 
-/** Find all ranges matching `query` within each text layer under `root`. */
-function findMatches(root: HTMLElement, query: string): Range[] {
+/** Find all ranges matching `query` within each text layer under `root`.
+ *  Case-insensitive unless `caseSensitive` is set. */
+function findMatches(root: HTMLElement, query: string, caseSensitive: boolean): Range[] {
   const ranges: Range[] = []
-  const needle = query.toLowerCase()
+  const needle = caseSensitive ? query : query.toLowerCase()
   if (!needle) return ranges
   const layers = root.querySelectorAll<HTMLElement>('.react-pdf__Page__textContent')
   layers.forEach((layer) => {
@@ -112,7 +113,7 @@ function findMatches(root: HTMLElement, query: string): Range[] {
       nodes.push(n as Text)
       hay += (n as Text).data
     }
-    const lower = hay.toLowerCase()
+    const lower = caseSensitive ? hay : hay.toLowerCase()
     const locate = (offset: number): { node: Text; offset: number } | null => {
       for (let i = nodes.length - 1; i >= 0; i--) {
         if (starts[i] <= offset) return { node: nodes[i], offset: offset - starts[i] }
@@ -389,6 +390,7 @@ export function PdfViewer() {
   // In-PDF search.
   const [searchOpen, setSearchOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [searchCaseSensitive, setSearchCaseSensitive] = useState(false)
   // `findMatches` walks every rendered page's text layer with a TreeWalker —
   // real work for a long document. Debounced so a fast typist doesn't trigger
   // one full re-scan per keystroke; the input itself still reflects `query`
@@ -1354,11 +1356,11 @@ export function PdfViewer() {
       return
     }
     const root = containerRef.current
-    const ranges = root ? findMatches(root, debouncedQuery) : []
+    const ranges = root ? findMatches(root, debouncedQuery, searchCaseSensitive) : []
     matchesRef.current = ranges
     setMatchCount(ranges.length)
     setActiveMatch((prev) => (ranges.length ? Math.min(prev, ranges.length - 1) : 0))
-  }, [debouncedQuery, searchOpen, numPages, textRenderTick])
+  }, [debouncedQuery, searchOpen, searchCaseSensitive, numPages, textRenderTick])
 
   // Stable callback so the memoized pages below don't change identity (which
   // would tear down and re-render the text layers on every search keystroke).
@@ -1641,6 +1643,20 @@ export function PdfViewer() {
           <span className="pdf-search-count">
             {query ? (matchCount ? `${activeMatch + 1} / ${matchCount}` : '0 / 0') : ''}
           </span>
+          <button
+            type="button"
+            className={`icon-btn pdf-search-case${searchCaseSensitive ? ' active' : ''}`}
+            title={
+              searchCaseSensitive
+                ? 'Matching exact case (e.g. "AI" no longer matches "contains"). Click to ignore case again.'
+                : 'Ignoring case (e.g. "AI" also matches "contains"). Click to match exact case instead.'
+            }
+            aria-label="Toggle case-sensitive search"
+            aria-pressed={searchCaseSensitive}
+            onClick={() => setSearchCaseSensitive((c) => !c)}
+          >
+            Aa
+          </button>
           <button
             type="button"
             className="icon-btn"
