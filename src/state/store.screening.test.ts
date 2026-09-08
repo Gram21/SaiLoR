@@ -145,6 +145,22 @@ describe('setScreeningDecision', () => {
     expect(st().currentPaperId).toBe('p1')
   })
 
+  it('toggling a decision back to null (the panel\'s "click the same button again" path) clears it', () => {
+    // ScreeningPanel.decide() re-sends the current decision as `null` when the
+    // reviewer clicks the already-active choice again — this is the store-level
+    // effect of that toggle, undecided being the paper's actual resting state.
+    st().loadFromText(screeningProject(), null, 'test.json')
+    st().selectPaper('p1')
+    st().setScreeningDecision('Exclude', 'Duplicate')
+    expect(st().project!.papers[0].annotations.Decision[0].value).toBe('Exclude')
+
+    st().selectPaper('p1')
+    st().setScreeningDecision(null)
+    const paper = st().project!.papers[0]
+    expect(paper.annotations.Decision[0].value).toBeNull()
+    expect(paper.annotations.Reason[0].value).toBeNull()
+  })
+
   it('stops at the last paper rather than wrapping', () => {
     st().loadFromText(screeningProject({ papers: [{ id: 'only', title: 'Only', authors: [], pdf: '', annotations: {} }] }), null, 'test.json')
     st().selectPaper('only')

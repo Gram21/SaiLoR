@@ -17,7 +17,7 @@ import {
   isFieldVisible,
   type AnnotationValueTree,
 } from './annotations'
-import { loadProject, serializeProject, ProjectLoadError } from './project'
+import { loadProject, serializeProject, ProjectLoadError, needsShapeMigration } from './project'
 
 const sampleSchema: AnnotationDef[] = [
   { name: 'Relevant', type: 'boolean' },
@@ -619,6 +619,133 @@ describe('schema resolution', () => {
       conditions: [{ mode: 'any' as const, conditions: [{ field: 'Relevant' }] }],
     }
     expect(compactVisibleIf(group)).toEqual(group)
+  })
+})
+
+describe('loadProject: input validation', () => {
+  it('rejects invalid JSON with a friendly message', () => {
+    try {
+      loadProject('{ not json')
+      expect.unreachable('expected loadProject to throw')
+    } catch (err) {
+      expect(err).toBeInstanceOf(ProjectLoadError)
+      expect((err as ProjectLoadError).message).toBe('The file is not valid JSON.')
+    }
+  })
+
+  it('reports structural errors per path', () => {
+    try {
+      loadProject(
+        JSON.stringify({
+          config: { schema: sampleSchema },
+          papers: [{ id: 'p1', authors: [], pdf: 'a.pdf', annotations: {} }],
+        }),
+      )
+      expect.unreachable('expected loadProject to throw')
+    } catch (err) {
+      expect(err).toBeInstanceOf(ProjectLoadError)
+      expect((err as ProjectLoadError).message).toBe('The project file does not match the expected structure.')
+      // Missing `title` on papers[0] — the path is reported, not just "invalid".
+      expect((err as ProjectLoadError).details.some((d) => d.startsWith('papers.0.title'))).toBe(true)
+    }
+  })
+
+  it('rejects duplicate paper identifiers', () => {
+    const dup = JSON.stringify({
+      config: { schema: sampleSchema },
+      papers: [
+        { id: 'p1', title: 'One', authors: [], pdf: 'a.pdf', annotations: {} },
+        { id: 'p1', title: 'Two', authors: [], pdf: 'b.pdf', annotations: {} },
+      ],
+    })
+    try {
+      loadProject(dup)
+      expect.unreachable('expected loadProject to throw')
+    } catch (err) {
+      expect(err).toBeInstanceOf(ProjectLoadError)
+      expect((err as ProjectLoadError).details.join(' ')).toMatch(/"p1" appears more than once/)
+    }
+  })
+})
+
+describe('needsShapeMigration', () => {
+  const schema = resolveSchema([{ name: 'Claim', type: 'string' }])
+  const basePaper = (annotations: AnnotationValueTree) => ({
+    id: 'p1',
+    title: 'T',
+    authors: [],
+    pdf: 'a.pdf',
+    annotations,
+    reviews: {},
+    aiUsage: [],
+    equal: [],
+    alignment: {},
+    marks: [],
+    reviewMarks: {},
+    finished: false,
+    reviewsFinished: {},
+    extra: {},
+  })
+  const baseProject = (papers: ReturnType<typeof basePaper>[]) => ({
+    version: 1,
+    provenance: null,
+    protocol: null,
+    schemaInfo: null,
+    schema,
+    aiEnabled: true,
+    finishCheckbox: true,
+    reviewers: 1,
+    papers,
+    screening: null,
+    extra: {},
+  })
+
+  it('flags a legacy scaffolded-but-empty tree written on disk as needing migration', () => {
+    const project = baseProject([basePaper({ Claim: [{ value: null }] })])
+    const raw = { papers: [{ annotations: { Claim: [{ value: null }] } }] }
+    expect(needsShapeMigration(project as never, raw)).toBe(true)
+  })
+
+  it('does not flag a file already written in the canonical pruned shape', () => {
+    const project = baseProject([basePaper({ Claim: [{ value: null }] })])
+    const raw = { papers: [{ annotations: {} }] }
+    expect(needsShapeMigration(project as never, raw)).toBe(false)
+  })
+
+  it('does not flag a filled-in tree that already matches the canonical shape', () => {
+    const project = baseProject([basePaper({ Claim: [{ value: 'x' }] })])
+    const raw = { papers: [{ annotations: { Claim: [{ value: 'x' }] } }] }
+    expect(needsShapeMigration(project as never, raw)).toBe(false)
+  })
+})
+
+describe('Paper.finished (a human declaration, not derived)', () => {
+  const projectJson = (paperOverrides: Record<string, unknown>) =>
+    JSON.stringify({
+      version: 1,
+      config: { schema: [{ name: 'Claim', type: 'string' }] },
+      papers: [{ id: 'p1', title: 'T', authors: [], pdf: 'a.pdf', annotations: {}, ...paperOverrides }],
+    })
+
+  it('only a literal true declares finished; other truthy values do not', () => {
+    expect(loadProject(projectJson({ finished: true })).papers[0].finished).toBe(true)
+    expect(loadProject(projectJson({ finished: 'true' })).papers[0].finished).toBe(false)
+    expect(loadProject(projectJson({ finished: 1 })).papers[0].finished).toBe(false)
+    expect(loadProject(projectJson({}))).toBeTruthy()
+    expect(loadProject(projectJson({})).papers[0].finished).toBe(false)
+  })
+
+  it('is not re-derived from the annotation data: stays true even though the schema is unfulfilled', () => {
+    const project = loadProject(projectJson({ finished: true }))
+    expect(project.papers[0].annotations.Claim[0].value).toBeNull()
+    expect(project.papers[0].finished).toBe(true)
+  })
+
+  it('round-trips through serialize/reload, and is omitted from the file when false', () => {
+    const finished = JSON.parse(serializeProject(loadProject(projectJson({ finished: true }))))
+    expect(finished.papers[0].finished).toBe(true)
+    const untouched = JSON.parse(serializeProject(loadProject(projectJson({}))))
+    expect('finished' in untouched.papers[0]).toBe(false)
   })
 })
 
