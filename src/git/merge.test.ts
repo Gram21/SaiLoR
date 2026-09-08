@@ -453,6 +453,21 @@ describe('mergeProjects — papers added and removed', () => {
     expect(outcome.notes.some((n) => n.kind === 'paper-kept')).toBe(true)
   })
 
+  it('keeps a paper removed locally if theirs annotated it', () => {
+    // The symmetric branch of the test above: this time ours is the side that
+    // deleted the paper, and theirs is the side that annotated it. Same
+    // removal asymmetry, mirrored.
+    const base = project({ papers: [paper('a'), paper('b')] })
+    const ours = project({ papers: [paper('a')] })
+    const theirs = project({
+      papers: [paper('a'), paper('b', { annotations: { 'Study Type': [{ value: 'RCT' }] } })],
+    })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.papers.map((p) => p.id)).toEqual(['a', 'b'])
+    expect(outcome.notes.some((n) => n.kind === 'paper-kept')).toBe(true)
+  })
+
   it('drops a paper removed on both sides silently', () => {
     const base = project({ papers: [paper('a'), paper('b')] })
     const ours = project({ papers: [paper('a')] })
