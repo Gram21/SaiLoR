@@ -417,11 +417,14 @@ export const useAiStore = create<AiState>()(
                 filename: paper.pdf.split('/').pop() ?? 'paper.pdf',
               })
 
-        set((s) => { s.phase = 'calling' })
+        // A stale run (superseded by a newer one) still runs to completion so its
+        // in-flight request can be discarded cleanly, but it must not visibly move
+        // `phase` backwards over the newer run's, nor stop the newer run's ticker.
+        if (controller === myController) set((s) => { s.phase = 'calling' })
         const res = await getPlatform().callLlm(req, myController.signal)
         if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
 
-        set((s) => { s.phase = 'parsing' })
+        if (controller === myController) set((s) => { s.phase = 'parsing' })
         const json = safeJson(res.body)
         const text = extractText(config.provider, json)
         // A truncated, empty answer would otherwise read as "the model proposed
@@ -437,7 +440,7 @@ export const useAiStore = create<AiState>()(
         }
         const answer = parseAnswer(app.project.schema, text)
 
-        stopTicker()
+        if (controller === myController) stopTicker()
         // A superseded run must not publish its answer. `runFor` already points
         // at the newer run, so these rows would be reviewed and applied against
         // *its* paper — the wrong-paper fabrication that `runFor` exists to
