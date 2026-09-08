@@ -32,7 +32,7 @@ vi.mock('../platform', () => ({ getPlatform: () => mockPlatform }))
 const { useEditorStore, makeNode } = await import('../state/editorStore')
 const { ProjectEditor } = await import('./ProjectEditor')
 
-const LOCATION = { handle: { kind: 'browser' as const }, name: 'project.json', path: undefined }
+const LOCATION = { handle: { kind: 'download' as const }, name: 'project.json', path: undefined }
 
 function reset() {
   useEditorStore.setState({

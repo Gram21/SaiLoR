@@ -114,6 +114,9 @@ describe('pane widths', () => {
   it('clamps stored widths back into their min/max range', () => {
     savePaneWidths({ left: PANE_LEFT_MIN - 100, right: PANE_RIGHT_MAX + 100 })
     expect(loadPaneWidths()).toEqual({ left: PANE_LEFT_MIN, right: PANE_RIGHT_MAX })
+
+    savePaneWidths({ left: PANE_LEFT_MAX + 100, right: PANE_RIGHT_MIN - 100 })
+    expect(loadPaneWidths()).toEqual({ left: PANE_LEFT_MAX, right: PANE_RIGHT_MIN })
   })
 })
 
