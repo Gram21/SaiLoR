@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { resolveSchema } from '../model/schema'
 import { parseAnswer } from './parse'
+import { MAX_UNBOUNDED_INDEX } from './paths'
 import type { LlmAnswer } from './types'
 
 // ---------------------------------------------------------------------------
@@ -138,6 +139,20 @@ describe('path validation', () => {
     const answer = parseAnswer(schema, one('Findings[2]/Claim', 'third'))
     expect(answer.fields).toEqual([])
     expect(reasons(answer)).toEqual(['unknown field'])
+  })
+
+  it('caps an index on an unbounded repeatable node, rather than materializing whatever the model sent', () => {
+    // Findings/Evidence is bounded (max 2), so this exercises the ceiling that
+    // applies to a node declared max: null — parseAnswer wires MAX_UNBOUNDED_INDEX
+    // into resolvePath so a reply like "Findings[9007199254740990]" cannot ask the
+    // caller to materialize billions of instances.
+    const unbounded = resolveSchema([{ name: 'Tags', max: null, children: [{ name: 'Tag', type: 'string' }] }])
+    const atCeiling = parseAnswer(unbounded, one(`Tags[${MAX_UNBOUNDED_INDEX}]/Tag`, 'x'))
+    expect(atCeiling.fields).toEqual([])
+    expect(reasons(atCeiling)).toEqual(['unknown field'])
+
+    const belowCeiling = parseAnswer(unbounded, one(`Tags[${MAX_UNBOUNDED_INDEX - 1}]/Tag`, 'x'))
+    expect(belowCeiling.fields).toHaveLength(1)
   })
 
   it('rejects a missing or non-string path', () => {
