@@ -106,6 +106,7 @@ describe('valueSimilarity', () => {
   const enumDef = def({ name: 'Level', type: 'string', options: ['High', 'Medium', 'Low'] })
   const num = def({ name: 'Participants', type: 'number' })
   const bool = def({ name: 'Replicated', type: 'boolean' })
+  const year = def({ name: 'Published', type: 'year' })
 
   it('abstains when either side is blank', () => {
     expect(valueSimilarity(text, null, 'something')).toEqual(NO_EVIDENCE)
@@ -123,6 +124,14 @@ describe('valueSimilarity', () => {
     expect(valueSimilarity(num, 40, 40)).toEqual({ score: 1, weight: 1 })
     expect(valueSimilarity(num, 40, 41).score).toBeGreaterThan(0.95)
     expect(valueSimilarity(num, 40, 4000).score).toBeLessThan(0.1)
+  })
+
+  it('compares years by exact equality, never by closeness', () => {
+    // 1999 and 2999 share three of four digits but are two different papers'
+    // years, not a near-match — unlike the `number` branch's relative scoring.
+    expect(valueSimilarity(year, 1999, 1999)).toEqual({ score: 1, weight: 1 })
+    expect(valueSimilarity(year, 1999, 2999)).toEqual({ score: 0, weight: 1 })
+    expect(valueSimilarity(year, 2020, 2021)).toEqual({ score: 0, weight: 1 })
   })
 
   it('ignores a boolean nobody ticked', () => {

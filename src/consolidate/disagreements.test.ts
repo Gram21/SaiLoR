@@ -358,3 +358,32 @@ describe('paperVerdicts — one-sided entries', () => {
     expect(verdictOf(splitPaper({}), 'Findings[1]/Claim').oneSided).toBe(false)
   })
 })
+
+describe('paperVerdicts — reads reviewers through the stored alignment', () => {
+  it('compares by matched slot, not raw array position, when reviewers recorded entries in different orders', () => {
+    const finding = (claim: string) => ({ children: { Claim: [{ value: claim }] } })
+    // Reviewer 1 recorded Alpha then Beta; reviewer 2 recorded them in the
+    // opposite order. A naive same-index comparison would read both slots as
+    // disagreements (Alpha vs Beta, Beta vs Alpha); the alignment says slot 0
+    // is "Alpha" for both and slot 1 is "Beta" for both.
+    const paper = makePaper({
+      reviews: {
+        '1': tree(SCHEMA, { Findings: [finding('Alpha'), finding('Beta')] }),
+        '2': tree(SCHEMA, { Findings: [finding('Beta'), finding('Alpha')] }),
+      },
+      alignment: {
+        Findings: [
+          { members: { '1': 0, '2': 1 } },
+          { members: { '1': 1, '2': 0 } },
+        ],
+      },
+    })
+    const verdicts = paperVerdicts(SCHEMA, paper, 2)
+    const slot0 = verdicts.find((v) => v.canonical === 'Findings/Claim')!
+    const slot1 = verdicts.find((v) => v.canonical === 'Findings[1]/Claim')!
+    expect(slot0.values).toEqual({ '1': 'Alpha', '2': 'Alpha' })
+    expect(slot0.agree).toBe(true)
+    expect(slot1.values).toEqual({ '1': 'Beta', '2': 'Beta' })
+    expect(slot1.agree).toBe(true)
+  })
+})

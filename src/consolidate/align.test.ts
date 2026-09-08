@@ -386,6 +386,33 @@ describe('alignNode', () => {
     )
   })
 
+  it('is deterministic across reruns with three reviewers tied on entry count', () => {
+    // Reviewers 1 and 2 both recorded two entries, tying on count — the anchor
+    // is then picked by id (`compareReviewerIds`), which must be stable so the
+    // slot arrangement does not vary from run to run.
+    const build = () =>
+      setup(findings, {
+        '1': {
+          Findings: [
+            { children: { Claim: [{ value: 'Alpha' }] } },
+            { children: { Claim: [{ value: 'Beta' }] } },
+          ],
+        },
+        '2': {
+          Findings: [
+            { children: { Claim: [{ value: 'Beta' }] } },
+            { children: { Claim: [{ value: 'Alpha' }] } },
+          ],
+        },
+        '3': { Findings: [{ children: { Claim: [{ value: 'Beta' }] } }] },
+      })
+    const first = build()
+    const second = build()
+    expect(JSON.stringify(alignNode(first.schema, first.reviews, 'Findings'))).toBe(
+      JSON.stringify(alignNode(second.schema, second.reviews, 'Findings')),
+    )
+  })
+
   it('handles a reviewer who recorded nothing at all', () => {
     const { schema, reviews } = setup(findings, {
       '1': { Findings: [{ children: { Claim: [{ value: 'Alpha' }] } }] },
