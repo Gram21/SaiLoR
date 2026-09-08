@@ -278,5 +278,9 @@ describe('run: a superseded run is discarded', () => {
 
     expect(ai().answer?.fields[0]?.value).toBe('from run two')
     expect(ai().rows[0]?.suggestion.value).toBe('from run two')
+    // The stale run's own phase transitions ('calling'/'parsing') must also be
+    // silenced, not just its answer — otherwise it visibly knocks the UI back
+    // over the newer run's 'review' after the reviewer is already looking at it.
+    expect(ai().phase).toBe('review')
   })
 })
