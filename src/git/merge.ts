@@ -22,17 +22,13 @@ import { mergeMarksList, type PdfMark } from '../model/pdfMarks'
 import type { StoredAlignment } from '../model/alignment'
 
 /**
- * The field-level three-way merge at the heart of git support. This module
- * knows nothing about git and nothing about the DOM — it takes a parsed
- * `Project` at the merge base (or `null`, when the file was added on both
- * branches independently) plus the two divergent copies, and returns either a
- * merged project (with any real conflicts listed for the resolution dialog)
- * or a refusal naming what could not be reconciled this way. `src/consolidate/`
- * is the pattern this follows: small, pure, hammered by unit tests.
+ * Field-level three-way merge for git support. Takes a parsed `Project` at the
+ * merge base (`null` if added independently on both branches) plus the two
+ * divergent copies, and returns a merged project with conflicts for the
+ * resolution dialog, or a refusal naming what couldn't be reconciled.
  *
- * The one rule, applied at every granularity from a project's title down to a
- * single annotation field: **a side that did not change a value away from the
- * base does not get a vote on it.** See `merge3`.
+ * The one rule, at every granularity down to a single field: a side that did
+ * not change a value away from the base does not get a vote on it. See `merge3`.
  */
 
 // ---------------------------------------------------------------------------
@@ -62,7 +58,6 @@ export interface FieldConflict {
    *  (title, pdf, doi, authors) is rendered as a plain string. */
   type: FieldType
   options?: string[]
-  /** The value at the merge base. */
   base: FieldValue
   /** The local value. Also what `merged` holds until the conflict is resolved. */
   ours: FieldValue
@@ -97,14 +92,10 @@ export type Resolutions = Record<string, FieldValue>
 // ---------------------------------------------------------------------------
 
 /**
- * The whole merge, in four lines, applied at every granularity: a side that
- * did not change a value away from the base does not get a vote on it. That
- * is precisely the guarantee this feature exists for — the fields you changed
- * cannot be overwritten by a remote that did not touch them, and vice versa —
- * and it is not a special case bolted on afterwards; it is the rule.
- *
- * Returns `null` only when both sides changed the value, to different things.
- * That is the one case no algorithm can settle and a person has to look at.
+ * The whole merge rule in four lines: fields you changed can't be overwritten
+ * by a remote that didn't touch them, and vice versa. Returns `null` only
+ * when both sides changed the value to different things — the one case a
+ * person has to resolve.
  */
 export function merge3<T>(
   base: T,
@@ -128,8 +119,8 @@ function treeKey(t: MergeTree): string {
 
 /**
  * One conflict's identity. `JSON.stringify` of the three parts rather than a
- * joined string: a paper id and a field path can both contain anything, and an
- * ambiguous key here would silently apply one field's resolution to another.
+ * joined string, since a paper id or field path could contain the separator
+ * and collide.
  */
 export function conflictId(paperId: string, tree: MergeTree, canonical: string): string {
   return JSON.stringify([paperId, treeKey(tree), canonical])
@@ -156,14 +147,10 @@ export function treeLabel(tree: MergeTree, reviewers: number): string {
 
 /**
  * One field's value at one revision, with an absent slot read as `emptyValue`.
- *
- * This is not a convenience — it is required for correctness. `pruneTree`
- * drops the *trailing* empty instances on save, so an instance that
- * exists-but-is-empty and one that is simply not there are the same thing on
- * disk and must merge the same way. Read them differently and two things
- * break at once: a field one side filled in from nothing would conflict
- * against an "absent" base instead of an unopposed change, and an entry the
- * remote deleted would come back.
+ * Required for correctness: `pruneTree` drops trailing empty instances on
+ * save, so "exists but empty" and "not there" are the same state on disk and
+ * must merge the same way, or an unopposed fill-in wrongly conflicts and a
+ * remote deletion comes back.
  */
 function valueAt(def: ResolvedDef, inst: InstanceNode | undefined): FieldValue {
   return inst && 'value' in inst ? (inst.value ?? emptyValue(def.type)) : emptyValue(def.type)
@@ -175,12 +162,10 @@ function arrOf(tree: AnnotationValueTree | undefined, name: string): InstanceNod
 }
 
 /**
- * A JSON-comparable snapshot of one repeatable instance's whole subtree
- * (its own value, if it is a field, plus every nested repeatable array under
- * it), used only to ask "did this instance change from another instance",
- * never written to `merged`. Needed because positional matching means
- * comparing `bArr[i]` to `oArr[i]` requires actually looking past the top
- * field to know whether *anything* underneath differs.
+ * A JSON-comparable snapshot of one repeatable instance's whole subtree, used
+ * only to ask "did this instance change", never written to `merged`. Needed
+ * because positional matching (`bArr[i]` vs `oArr[i]`) must look past the top
+ * field to see whether anything nested differs.
  */
 function snapshotInstance(def: ResolvedDef, inst: InstanceNode | undefined): unknown {
   return {
@@ -196,13 +181,11 @@ function snapshotTree(defs: ResolvedDef[], tree: AnnotationValueTree | undefined
 }
 
 /**
- * Bug: a deletion on one side shifts every later index, so positional
- * matching can strand an edit the other side made on what is now a phantom
- * slot (see the module doc's Bug 2). This can't be resolved by guessing —
- * there is no way to tell, from the shrunk array alone, which surviving
- * entry the edit "really" belongs to — so it is detected instead: one side's
- * instance count dropped below base's while the *other* side changed an
- * instance at or beyond the position that drop would have removed.
+ * Bug 2: a deletion on one side shifts every later index, so positional
+ * matching can strand an edit the other side made on what's now a phantom
+ * slot. Not resolvable by guessing which surviving entry the edit "really"
+ * belongs to, so it's detected instead: one side's count dropped below
+ * base's while the other side changed an instance at or beyond that drop.
  */
 function shrunkAndEdited(
   def: ResolvedDef,
@@ -228,11 +211,8 @@ function shrunkAndEdited(
   return false
 }
 
-/**
- * Builds a `mergeTree` closure bound to one paper/tree's conflict sink, so the
- * recursion doesn't have to keep re-threading `paperId`/`paperTitle` through
- * every level.
- */
+/** Builds a `mergeTree` closure bound to one paper/tree's conflict sink, so the
+ *  recursion doesn't re-thread `paperId`/`paperTitle` through every level. */
 function makeTreeMerger(
   paperId: string,
   paperTitle: string,
@@ -241,14 +221,13 @@ function makeTreeMerger(
   refusals: string[],
 ) {
   /**
-   * Walks the merged schema. `count` is a union of all three sides' instance
-   * counts (clamped to `def.max`), and the arrays are never compacted —
-   * position carries meaning (consolidation lines up each reviewer's entries
-   * by index; see `src/consolidate/apply.ts`), so closing a gap here would
-   * silently re-point that alignment. A field only one side changed away from
-   * the base takes that side automatically (`merge3`'s job); a field both
-   * changed, differently, becomes a conflict row and `merged` holds *our*
-   * value until it is resolved — the safe side if resolution is ever skipped.
+   * Walks the merged schema. Instance count is the union of all three sides
+   * (clamped to `def.max`); arrays are never compacted because position
+   * carries meaning (consolidation lines up reviewer entries by index — see
+   * `src/consolidate/apply.ts`), so closing a gap would re-point that
+   * alignment. A field both sides changed differently becomes a conflict row,
+   * and `merged` holds *our* value until resolved — the safe side if
+   * resolution is skipped.
    */
   function mergeTree(
     defs: ResolvedDef[],
@@ -263,19 +242,13 @@ function makeTreeMerger(
       const bArr = arrOf(base, def.name)
       const oArr = arrOf(ours, def.name)
       const tArr = arrOf(theirs, def.name)
-      // Bugs 1 and 2 are both specifically about *repeatable* nodes — where
-      // an index is one of several parallel instances, so "the base doesn't
-      // have one there" is a real, meaningful absence. A `max: 1` field's
-      // array is always exactly one long once resolved; an empty `bArr` for
-      // one of those means only "this paper didn't exist at the base" (see
-      // `mergePaper`'s `base: Paper | undefined`), not "both sides grew it",
-      // and must fall straight through to the ordinary per-field merge3 below
-      // — which is what already correctly conflicts a brand-new paper added
-      // independently on both sides with different values for the same field.
+      // Bugs 1 and 2 only apply to *repeatable* nodes, where "base doesn't
+      // have one there" is a meaningful absence. A `max: 1` field's array is
+      // always length 1 once resolved, so an empty `bArr` there just means
+      // the paper didn't exist at base — fall through to ordinary merge3.
       const repeatable = def.max === null || def.max > 1
 
-      // Bug 2: refuse rather than strand an edit on a phantom slot. See
-      // `shrunkAndEdited`'s doc comment.
+      // Bug 2: refuse rather than strand an edit on a phantom slot.
       if (repeatable && shrunkAndEdited(def, bArr, oArr, tArr)) {
         refusals.push(
           `verbatim:${def.name} on "${paperTitle}" was shortened on one side and edited on the other; ` +
@@ -285,17 +258,12 @@ function makeTreeMerger(
         continue
       }
 
-      // Bug 1: when *both* sides grew this node past base's length, the
-      // surplus instances on each side are additions, not competing values
-      // for the same slot — overlaying them index-by-index (the ordinary
-      // path below) makes one side's addition silently disappear, or worse,
-      // lets a resolution recombine unrelated fields from two different new
-      // entries into one nobody wrote. This mirrors `mergePapers`' own
-      // keep-both asymmetry for a paper deleted on one side and changed on
-      // the other: a duplicate is a five-second cleanup, a silently dropped
-      // or invented finding is not. Only the truly new tail is appended raw;
-      // every index the base already had still goes through the ordinary
-      // per-field merge below, conflicts included.
+      // Bug 1: when both sides grew this node past base's length, the surplus
+      // instances are additions, not competing values for the same slot —
+      // overlaying them index-by-index would silently drop one side's
+      // addition or recombine fields from two different new entries into one
+      // nobody wrote. Only the new tail is appended raw; indices base already
+      // had still go through the ordinary per-field merge below.
       const bothGrew = repeatable && oArr.length > bArr.length && tArr.length > bArr.length
       const mergeCount = bothGrew
         ? bArr.length
@@ -365,10 +333,8 @@ function makeTreeMerger(
 // Paper merge
 // ---------------------------------------------------------------------------
 
-/** Matches `editorStore.ts`'s existing authors round-trip exactly (its
- *  `join(', ')` / `split(',').map(trim).filter(Boolean)`), so a resolved
- *  conflict reads back through the same rule the project editor already uses
- *  rather than a second one invented here. */
+/** Matches `editorStore.ts`'s existing authors round-trip exactly, so a
+ *  resolved conflict reads back through the same rule the editor uses. */
 function joinAuthors(authors: string[] | undefined): string {
   return (authors ?? []).join(', ')
 }
@@ -396,10 +362,9 @@ function mergeAiUsage(ours: AiUsageRecord[], theirs: AiUsageRecord[]): AiUsageRe
 }
 
 /**
- * `Paper.equal` is a set spelled as an array. A boolean has only two values,
- * so "both sides changed it, differently" is impossible — `merge3`'s first
- * branch (`eq(ours, theirs)`) always takes it. A field marked equal here can
- * never conflict.
+ * `Paper.equal` is a set spelled as an array. A boolean has only two values, so
+ * `merge3` always takes its `eq(ours, theirs)` branch — a field marked equal
+ * here can never conflict.
  */
 function mergeEqual(base: string[] | undefined, ours: string[], theirs: string[]): string[] {
   const bSet = new Set(base ?? [])
@@ -471,11 +436,9 @@ function mergePaper(
     )
   }
 
-  // `year`/`venue` get the identical treatment `abstract`/`abstractFromPdf`
-  // already do: a merge3 call, a conflict on genuine disagreement, and (below)
-  // a slot in `canonicalPaper` and a case in `applyOne`. Omitting either from
-  // any one of those three spots is exactly the abstract-dropping regression
-  // this file was fixed for once already — see `canonicalPaper`'s doc comment.
+  // `year`/`venue` need the same three spots `abstract`/`abstractFromPdf` do
+  // (merge3 call, `canonicalPaper` slot, `applyOne` case) — omitting one is
+  // the abstract-dropping regression this file was fixed for once already.
   const eqNumU = (a: number | undefined, b: number | undefined) => a === b
   const nOrNull = (v: number | undefined): FieldValue => (v === undefined ? null : v)
   const yearM = merge3<number | undefined>(base?.year, ours.year, theirs.year, eqNumU)
@@ -488,9 +451,8 @@ function mergePaper(
       tree: { kind: 'paper' },
       canonical: 'year',
       label: 'Year',
-      // The honest type — and it is what forces the merge dialog's
-      // `MiddleControl` to render a bounded numeric control here rather than
-      // free text, exactly as it must for a `type: 'year'` annotation field.
+      // Forces the merge dialog's MiddleControl to render a bounded numeric
+      // control here rather than free text.
       type: 'year',
       base: nOrNull(base?.year),
       ours: nOrNull(ours.year),
@@ -510,15 +472,11 @@ function mergePaper(
     pushPaperConflict('abstract', 'Abstract', sOrNull(base?.abstract), sOrNull(ours.abstract), sOrNull(theirs.abstract))
   }
 
-  // Independent of `abstract` itself — a real (if rare) gap this leaves: the
-  // reviewer could pick one side's abstract text and the other side's
-  // abstractFromPdf flag, producing a text/flag combination neither side
-  // actually had. `applyOne`'s screening review is a per-field UI with no
-  // concept of "these two rows must be resolved together"; bundling the two
-  // into one decision (the way `changes.ts` does for the *commit* flow) would
-  // need the same treatment here, and is left for that to potentially extend
-  // to rather than duplicating now. What matters more is not losing the
-  // abstract at all, which mergePaper did before this field existed here.
+  // Merged independently of `abstract`: a known gap is the reviewer picking
+  // one side's abstract text with the other side's abstractFromPdf flag,
+  // since the per-field conflict UI can't bundle two rows into one decision
+  // (`changes.ts` does that for the commit flow). Not losing the abstract at
+  // all matters more, which is what this field fixes.
   const eqBoolU = (a: boolean | undefined, b: boolean | undefined) => a === b
   const abstractFromPdfM = merge3<boolean | undefined>(
     base?.abstractFromPdf,
@@ -567,10 +525,9 @@ function mergePaper(
     [],
   )
 
-  // A reviewer's tree is never deleted by a merge — only by both sides having
-  // already dropped it. Lowering `config.reviewers` on one side hides a
-  // reviewer's tree; it must not be what deletes it (the same rule
-  // `normalizeReviews` already applies on load).
+  // A reviewer's tree is only deleted when both sides dropped it. Lowering
+  // `config.reviewers` on one side just hides it (same rule `normalizeReviews`
+  // applies on load), it must not delete it.
   const reviewKeys = new Set([
     ...Object.keys(base?.reviews ?? {}),
     ...Object.keys(ours.reviews),
@@ -610,13 +567,9 @@ function mergePaper(
     alignment: mergeAlignment(base?.alignment, ours.alignment, theirs.alignment),
     marks: mergeMarksList(ours.marks, theirs.marks),
     reviewMarks: mergeReviewMarks(ours.reviewMarks, theirs.reviewMarks),
-    // A plain 3-way merge per seat, falling back to `true` when the two sides
-    // genuinely diverge (one ticked the box while the other unticked it) —
-    // the same asymmetry `mergePapers` applies to a deleted-vs-changed paper:
-    // a wrongly-kept declaration is one click from gone, a dropped one is a
-    // reviewer's statement silently discarded. Not a `FieldConflict`: the
-    // conflict UI resolves annotation *field values*, and this is neither in
-    // a tree nor addressable by a canonical path.
+    // Plain 3-way merge, falling back to `true` on genuine divergence (same
+    // keep-over-drop asymmetry as `mergePapers`). Not a `FieldConflict`: this
+    // isn't in a tree or addressable by a canonical path.
     finished:
       merge3<boolean>(base?.finished ?? false, ours.finished, theirs.finished, (a, b) => a === b)
         ?.value ?? true,
@@ -626,26 +579,18 @@ function mergePaper(
 }
 
 /**
- * Merge the recorded entry matching, one node at a time.
+ * Merge the recorded entry matching, one node at a time — merging the whole
+ * map as one value would make two consolidators who touched different nodes
+ * look like they'd disagreed.
  *
- * Per node rather than whole-record: two consolidators working on different
- * nodes of the same paper have not disagreed about anything, and merging the
- * whole map as one value would make them look like they had.
+ * A node matched differently on both sides silently keeps *ours*, no
+ * `FieldConflict`: this is a derived claim, not something a reviewer said, the
+ * losing side is recoverable by reopening Consolidation, and there's no
+ * canonical path to raise a conflict on it by.
  *
- * A node genuinely matched differently on both sides keeps *ours*, silently
- * and without a `FieldConflict`. That is the one place in this file where
- * dropping a side is right rather than lossy: unlike an answer, this is not
- * something a reviewer said — it is a derived claim about their entries, and
- * the losing side is recoverable by reopening Consolidation on that paper.
- * Raising a conflict would ask a human to arbitrate between two machine
- * guesses, in a UI built for reconciling annotation *values*, over a record
- * that has no canonical path to address it by.
- *
- * The mismatch it can leave behind — a mapping that no longer describes what
- * that reviewer's array holds, because the merged array came from the other
- * side — is already the same staleness `alignedReviews` is built to survive:
- * unmapped entries are appended rather than dropped, so no answer disappears
- * from the lined-up view.
+ * Any resulting mismatch (mapping no longer describing what the merged array
+ * holds) is the same staleness `alignedReviews` already tolerates: unmapped
+ * entries are appended, not dropped.
  */
 function mergeAlignment(
   base: StoredAlignment | undefined,
@@ -661,9 +606,8 @@ function mergeAlignment(
   return out
 }
 
-/** `mergeEqual`'s set-union shape, per reviewer key: the flags are really a
- *  set of "seats that declared themselves done", and the same
- *  keep-the-declaration tiebreak as `finished` above applies to each. */
+/** `mergeEqual`'s set-union shape, per reviewer key: same
+ *  keep-the-declaration tiebreak as `finished` above, applied to each seat. */
 function mergeReviewsFinished(
   base: Record<string, boolean> | undefined,
   ours: Record<string, boolean>,
@@ -678,10 +622,8 @@ function mergeReviewsFinished(
   return out
 }
 
-/** Same union-by-reviewer-key shape the `reviews` loop above uses, then a
- *  per-reviewer `mergeMarksList` — a reviewer's own marks merge the same way
- *  regardless of whether they're the single/consolidated tree or one seat
- *  among several. */
+/** Same union-by-reviewer-key shape as the `reviews` loop above, then a
+ *  per-reviewer `mergeMarksList`. */
 function mergeReviewMarks(
   ours: Record<string, PdfMark[]>,
   theirs: Record<string, PdfMark[]>,
@@ -696,10 +638,9 @@ function mergeReviewMarks(
 }
 
 /**
- * Whether a paper is unchanged for merge purposes: structurally identical once
- * both are read through the merged schema. Compared in the shape
- * `serializeProject` would write, so a difference that only exists in memory —
- * a padded instance, a key order — is not mistaken for an edit.
+ * Whether a paper is unchanged for merge purposes, compared in the shape
+ * `serializeProject` would write so an in-memory-only difference (a padded
+ * instance, key order) isn't mistaken for an edit.
  */
 function canonicalPaper(schema: ResolvedDef[], p: Paper) {
   return {
@@ -718,17 +659,15 @@ function canonicalPaper(schema: ResolvedDef[], p: Paper) {
     // A set; JSON just has no way to say so.
     equal: [...p.equal].sort(),
     alignment: p.alignment,
-    // Sorted by id: this is an equality check (is `p` different from some
-    // other snapshot), not the merge itself, and mark array order carries no
-    // meaning worth tripping a false "changed" over.
+    // Sorted by id: this is an equality check, not the merge itself, and mark
+    // order carries no meaning worth a false "changed".
     marks: [...p.marks].sort((a, b) => a.id.localeCompare(b.id)),
     reviewMarks: Object.fromEntries(
       Object.entries(p.reviewMarks).map(([k, v]) => [k, [...v].sort((a, b) => a.id.localeCompare(b.id))]),
     ),
     finished: p.finished,
-    // Only the `true` keys, matching what `serializeProject` writes — an
-    // explicit `false` and an absent key are the same state (see
-    // `parseReviewsFinished`) and must not read as a change.
+    // Only the `true` keys, matching `serializeProject`: an explicit `false`
+    // and an absent key are the same state (see `parseReviewsFinished`).
     reviewsFinished: Object.fromEntries(
       Object.keys(p.reviewsFinished)
         .filter((k) => p.reviewsFinished[k])
@@ -744,16 +683,12 @@ function paperUnchanged(schema: ResolvedDef[], a: Paper, b: Paper): boolean {
 }
 
 /**
- * Papers by id: ours' own order, then the papers only theirs has, appended in
- * theirs' order. Deterministic, and it puts the person doing the pull's own
- * file back the way they left it.
+ * Papers by id: ours' own order, then the papers only theirs has, in theirs' order.
  *
- * **The removal asymmetry**: a paper one side deleted and the other side
- * *changed* is kept, with a note, never deleted. A field-level UI cannot ask
- * "keep or delete this paper", and the two outcomes are not symmetric — a
- * kept paper nobody wanted is one click from gone; annotated work a merge
- * deleted is gone. Only when both sides agree (the paper is untouched on the
- * side that kept it) does the deletion actually happen.
+ * Removal asymmetry: a paper deleted on one side but changed on the other is
+ * kept, with a note, never deleted — a kept paper nobody wanted is one click
+ * from gone, but annotated work a merge deleted is gone for good. Deletion
+ * only goes through when both sides agree (untouched on the side that kept it).
  */
 function mergePapers(
   schema: ResolvedDef[],
@@ -835,11 +770,9 @@ function refused(refusals: string[]): MergeOutcome {
 }
 
 function refusalDetail(key: string): string {
-  // A handful of refusals (a stranded repeatable-node edit, a schema removal
-  // that would discard answers) are specific enough — naming a paper, a
-  // field, a count — that the generic "X was changed on both sides" shape
-  // below would garble them. Those push their finished sentence here
-  // directly instead of a short key.
+  // A few refusals (a stranded repeatable-node edit, a schema removal
+  // discarding answers) name specifics the generic message below would
+  // garble, so they push their finished sentence here instead of a key.
   if (key.startsWith('verbatim:')) return key.slice('verbatim:'.length)
   switch (key) {
     case 'version':
@@ -876,11 +809,9 @@ function changedFromBase(base: unknown, side: unknown): boolean {
 }
 
 /**
- * Schema nodes present in `baseDefs` but missing from `mergedDefs` at the
- * same position, at any depth — paired with the ancestor name path needed to
- * find that node's data inside an actual paper tree (see `countAtPath`).
- * A node whose parent survives but which is itself gone is still a removal
- * worth counting, even though the winning side kept everything around it.
+ * Schema nodes in `baseDefs` but missing from `mergedDefs`, at any depth,
+ * paired with the ancestor path needed to find that node's data in an actual
+ * paper tree (see `countAtPath`).
  */
 function collectRemovedDefs(
   baseDefs: ResolvedDef[],
@@ -900,11 +831,9 @@ function collectRemovedDefs(
   return out
 }
 
-/** Sum of non-empty answers stored anywhere under `def`'s own subtree in
- *  `tree` — what a removal at this node would discard. "Non-empty" is
- *  exactly `emptyValue(def.type)`, the same absent-vs-empty rule `valueAt`
- *  applies everywhere else in this file: an untouched boolean (`false`) is
- *  not an answer, an explicitly unset string (`null`) is not an answer. */
+/** Sum of non-empty answers under `def`'s subtree in `tree` — what a removal
+ *  here would discard. "Non-empty" uses the same absent-vs-empty rule as
+ *  `valueAt`: an untouched boolean or unset string is not an answer. */
 function countAnswers(defs: ResolvedDef[], tree: AnnotationValueTree | undefined): number {
   let n = 0
   for (const def of defs) {
@@ -916,12 +845,10 @@ function countAnswers(defs: ResolvedDef[], tree: AnnotationValueTree | undefined
   return n
 }
 
-/** Descends `tree` through `path` (every instance at every level — a
- *  removed node under a repeatable ancestor can have answers in more than
- *  one of that ancestor's rows) and sums `countAnswers` for `def` at the
- *  bottom. The side that actually dropped this node has no array under that
- *  name at all, so `arrOf` returns `[]` for it and contributes 0 — summing
- *  over both `ours` and `theirs` trees below can never double-count. */
+/** Descends `tree` through `path` (every instance at every level, since a
+ *  removed node under a repeatable ancestor can have answers in more than one
+ *  row) and sums `countAnswers` for `def` at the bottom. The side that
+ *  dropped this node has no array there, so it contributes 0 — no double-count. */
 function countAtPath(path: string[], def: ResolvedDef, tree: AnnotationValueTree | undefined): number {
   if (path.length === 0) return countAnswers([def], tree)
   const [head, ...rest] = path
@@ -931,13 +858,10 @@ function countAtPath(path: string[], def: ResolvedDef, tree: AnnotationValueTree
 }
 
 /**
- * Bug 3: `mergedSchema` decides the *schema*, correctly — but every
- * annotation tree below is then walked against only that winning schema, so
- * a field the losing side removed is simply never visited, silently
- * extending that schema vote to answers nobody agreed to discard. Refuses
- * (naming the field and how many answers are at stake) exactly when there is
- * something real to lose; a removal nobody had answered under proceeds
- * exactly as before.
+ * Bug 3: every tree is walked against only the winning schema, so a field the
+ * losing side removed is never visited, silently extending that schema vote
+ * to answers nobody agreed to discard. Refuses (naming the field and answer
+ * count) only when there's something real to lose.
  */
 function schemaRemovalRefusal(
   base: Project | null,
@@ -975,9 +899,9 @@ function schemaRemovalRefusal(
 }
 
 /**
- * The whole merge. `base === null` means the project file did not exist at the
- * merge base — added on both branches independently — and collapses cleanly:
- * no base papers, and every base field value reads as absent/empty.
+ * The whole merge. `base === null` means the project file didn't exist at the
+ * merge base (added on both branches independently); every base value then
+ * reads as absent/empty.
  */
 export function mergeProjects(base: Project | null, ours: Project, theirs: Project): MergeOutcome {
   const eqNum = (a: number | undefined, b: number | undefined) => a === b
@@ -985,8 +909,7 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
   const rootRefusals: string[] = []
 
   // Re-shaping decisions: a difference here changes the shape of every tree
-  // in the file, so there is no field-level answer — refuse and name it,
-  // rather than guess. See `refusalDetail` for why each one specifically.
+  // in the file, so there's no field-level answer — refuse rather than guess.
   const versionM = merge3<number | undefined>(base?.version, ours.version, theirs.version, eqNum)
   if (!versionM) rootRefusals.push('version')
 
@@ -996,10 +919,9 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
   const aiM = merge3<boolean | undefined>(base?.aiEnabled, ours.aiEnabled, theirs.aiEnabled, eqBool)
   if (!aiM) rootRefusals.push('config.ai')
 
-  // Refused rather than picked when both sides changed it differently: this
-  // decides what every green dot in the file means (see
-  // `Project.finishCheckbox`), so guessing would silently redefine both
-  // reviewers' progress reports.
+  // Refused on two-sided disagreement: this decides what every green dot in
+  // the file means (see `Project.finishCheckbox`), so guessing would silently
+  // redefine both reviewers' progress reports.
   const finishM = merge3<boolean | undefined>(
     base?.finishCheckbox,
     ours.finishCheckbox,
@@ -1011,11 +933,9 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
   const reviewersM = merge3<number | undefined>(base?.reviewers, ours.reviewers, theirs.reviewers, eqNum)
   if (!reviewersM) rootRefusals.push('config.reviewers')
 
-  // Reshaping for the same reason `schema` is: whether a project screens at
-  // all, and its reason list, decides `config.schema` via `screeningSchemaDefs`
-  // — see data-model.md's "Screening" section. A field-level answer here would
-  // be answering a question ("what schema does this file even have") that a
-  // single conflict row cannot express.
+  // Reshaping like `schema`: whether a project screens, and its reasons,
+  // decides `config.schema` via `screeningSchemaDefs` (see data-model.md's
+  // "Screening" section) — too much for one conflict row to express.
   const screeningM = merge3<ScreeningConfig | null | undefined>(
     base?.screening,
     ours.screening,
@@ -1024,14 +944,9 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
   )
   if (!screeningM) rootRefusals.push('config.screening')
 
-  // Not a reshaping field like the others above — it decides nothing about
-  // the shape of any tree — but it is a nested record, not a string/number/
-  // boolean, so `FieldConflict.type` cannot express a conflict row for it
-  // (see the doc comment on `title` below for the field that *can*). Refusal
-  // is the only honest option when both sides actually disagree; the common
-  // case (only one side ever sets it) resolves cleanly through `merge3` with
-  // no refusal and no note — see the `screening-remote`-style notes below for
-  // why this deliberately doesn't add one: nothing here reshapes anything.
+  // Doesn't reshape any tree, but is a nested record `FieldConflict.type`
+  // can't express as a conflict row, so genuine two-sided disagreement must
+  // refuse; the common one-side-sets-it case merges cleanly via `merge3`.
   const provenanceM = merge3<ProjectProvenance | null | undefined>(
     base?.provenance,
     ours.provenance,
@@ -1040,10 +955,8 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
   )
   if (!provenanceM) rootRefusals.push('provenance')
 
-  // Same shape and same reasoning as `provenance` just above: a nested record
-  // `FieldConflict` cannot express, so two-sided disagreement refuses (a
-  // reviewer's authored protocol must never be silently half-dropped), while
-  // the ordinary case — one side edits it, or nobody does — merges cleanly.
+  // Same reasoning as `provenance` above: two-sided disagreement refuses so a
+  // reviewer's authored protocol is never silently half-dropped.
   const protocolM = merge3<ProjectProtocol | null | undefined>(
     base?.protocol,
     ours.protocol,
@@ -1069,10 +982,10 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
 
   if (rootRefusals.length > 0) return refused(rootRefusals)
 
-  // Every tree below is walked against the winning schema, so a field the
-  // winning side removed is simply never visited — exactly as `normalizeTree`
-  // would drop it on the next ordinary load. See `schemaRemovalRefusal` for
-  // why that is only safe when nothing answered is actually being dropped.
+  // Every tree below is walked against the winning schema, so a field it
+  // removed is simply never visited — same as `normalizeTree` would drop it
+  // on the next ordinary load. Safe because `schemaRemovalRefusal` already
+  // refused if that would discard an answer.
   const mergedSchema = schemaM!.value!
 
   const schemaRemoval = schemaRemovalRefusal(base, mergedSchema, ours, theirs)
@@ -1100,9 +1013,8 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
 
   const conflicts: FieldConflict[] = []
 
-  // Project.title is deliberately not in the refusal list above: it is one
-  // string, a conflict row expresses it perfectly, and refusing an entire
-  // merge because two people renamed the review would be absurd.
+  // Not in the refusal list above: one string, a conflict row expresses it
+  // fine — refusing the whole merge over a renamed review would be absurd.
   const titleM = merge3<string | undefined>(base?.title, ours.title, theirs.title, (a, b) => a === b)
   const title = titleM ? titleM.value : ours.title
   if (!titleM) {
@@ -1120,9 +1032,8 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
     })
   }
 
-  // Same reasoning as `title` just above — one string, so a conflict row
-  // expresses a real disagreement perfectly, unlike `provenance`/`protocol`'s
-  // nested-record refusal.
+  // Same as `title` above: one string, so a conflict row works here, unlike
+  // `provenance`/`protocol`'s nested-record refusal.
   const schemaInfoM = merge3<string | null>(
     base?.schemaInfo ?? null,
     ours.schemaInfo,
@@ -1180,10 +1091,9 @@ function valueToString(v: FieldValue): string {
 
 /**
  * Defensive, non-throwing walk to the container tree addressed by `path` —
- * the counterpart to `containerAt` in `src/state/store.ts`, reimplemented
- * here (rather than imported) because this module must not pull in a runtime
- * symbol from the store, and because a conflict id resolved against a schema
- * that has since changed must be skipped, never throw.
+ * counterpart to `containerAt` in `src/state/store.ts`, reimplemented (not
+ * imported) so a conflict id resolved against a since-changed schema is
+ * skipped, never thrown.
  */
 function containerAt(
   root: AnnotationValueTree,
@@ -1231,10 +1141,9 @@ function applyOne(draft: Project, conflict: FieldConflict, value: FieldValue): v
         paper.authors = splitAuthors(valueToString(value))
         break
       case 'year':
-        // `parseYear` also covers a stale/hand-built resolution that hands
-        // back a string (`'2021'`) instead of the number the conflict itself
-        // carries — the model layer must never write anything but a number
-        // here, the same way `writePaperMeta` in changes.ts cannot either.
+        // `parseYear` also covers a stale/hand-built resolution handing back
+        // a string instead of a number — this must never write anything but
+        // a number, same as `writePaperMeta` in changes.ts.
         paper.year = parseYear(value)
         break
       case 'venue': {
@@ -1267,15 +1176,13 @@ function applyOne(draft: Project, conflict: FieldConflict, value: FieldValue): v
 
 /**
  * Write the reviewer's choices into the merged project. An id with no
- * resolution keeps what `mergeProjects` left there (our value); a resolution
- * for an id that is not in `conflicts` is ignored — it belongs to a merge
- * that is no longer the one being finalized.
+ * resolution keeps `mergeProjects`'s value; a resolution for an id not in
+ * `conflicts` is ignored (stale merge).
  *
- * Built with immer's `produce` (already a direct dependency, and it handles a
- * frozen input the way a Zustand store hands one over) rather than
- * `structuredClone` (not something to bet on under every test runtime) or
- * `JSON.parse(JSON.stringify(...))` (which drops `undefined`-valued keys that
- * `deepEqualJson` and the round-trip both care about).
+ * Uses immer's `produce` (already a dependency, handles a frozen input like a
+ * Zustand store hands over) rather than `structuredClone` or
+ * `JSON.parse(JSON.stringify(...))`, which drops `undefined`-valued keys that
+ * `deepEqualJson` cares about.
  */
 export function applyResolutions(
   merged: Project,

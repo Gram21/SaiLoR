@@ -36,19 +36,16 @@ import { renameReasonInPapers } from '../screening/reasonUsage'
 import { useStore } from './store'
 
 /**
- * Draft state for the project editor: build or edit a project JSON (its
- * annotation schema + the PDFs it references) before/without annotating.
- *
- * The editor works on the *raw* JSON shape rather than the loaded `Project`, so
- * existing papers' `annotations` are preserved verbatim while the schema is
- * edited. They are normalized against the (possibly changed) schema the next
- * time the project is opened for annotating.
+ * Draft state for the project editor: build or edit a project JSON before/
+ * without annotating. Works on the *raw* JSON shape rather than the loaded
+ * `Project`, so existing papers' `annotations` are preserved verbatim while
+ * the schema is edited — they're normalized against it next time the project
+ * is opened for annotating.
  */
 
 /** A schema node in the editor. `group` means "no `type`" — a name-only
- *  sub-tree. The rest is exactly `FieldType`, imported rather than
- *  re-spelled, so this cannot silently drift from the set of types the model
- *  layer actually understands. */
+ *  sub-tree. The rest is `FieldType`, imported so it can't drift from the
+ *  model layer's own set of types. */
 export type EditorNodeKind = 'group' | FieldType
 
 export interface EditorNode {
@@ -65,9 +62,8 @@ export interface EditorNode {
   /** The reviewer must fill this field in; meaningless on a group. */
   required: boolean
   /** Gate on this node's visibility, or null for "always visible" — see
-   *  `AnnotationDef.visibleIf`. Always the expanded spec form here, even for a
-   *  file that stored the bare-name shorthand; `toAnnotationDefs` compacts it
-   *  back on save. */
+   *  `AnnotationDef.visibleIf`. Always the expanded spec form, even for a
+   *  bare-name shorthand file; `toAnnotationDefs` compacts it back on save. */
   visibleIf: VisibleIfSpec | null
   children: EditorNode[]
   collapsed: boolean
@@ -80,11 +76,9 @@ export interface EditorPaper {
   /** Comma-separated in the UI; split on save. */
   authors: string
   doi: string
-  /** Free text in the editor, exactly like every other paper field here —
-   *  parsed to `Paper.year`'s number (or dropped) at `buildProjectJson`,
-   *  the same boundary `doi`'s trimming crosses. Never stored as a number in
-   *  the editor: a mid-typed "202" would otherwise have to round-trip through
-   *  a numeric input's own ideas about what a partial number looks like. */
+  /** Free text, parsed to `Paper.year`'s number (or dropped) at
+   *  `buildProjectJson`. Never a number in the editor: a mid-typed "202"
+   *  would otherwise fight a numeric input's own ideas about partial numbers. */
   year: string
   /** See `Paper.venue`. */
   venue: string
@@ -96,9 +90,9 @@ export interface EditorPaper {
   sourcePath?: string
   /** Preserved verbatim when editing an existing file. */
   annotations?: unknown
-  /** True when `abstract` came from the PDF-text heuristic (`addPickedPdfs`
-   *  below) rather than a reference file or typing — see `Paper.abstractFromPdf`.
-   *  Cleared the moment a reference import provides a real one (`fillFromRef`). */
+  /** True when `abstract` came from the PDF-text heuristic (`addPickedPdfs`)
+   *  rather than a reference file or typing — see `Paper.abstractFromPdf`.
+   *  Cleared once a reference import provides a real one (`fillFromRef`). */
   abstractFromPdf?: boolean
   extra?: Record<string, unknown>
 }
@@ -133,11 +127,8 @@ interface EditorSnapshot {
 
 const HISTORY_LIMIT = 100
 
-/**
- * The last edited field, so consecutive edits to the *same* input (typing a
- * name character by character) collapse into one undo step instead of one per
- * keystroke. Any other action resets it. Mirrors the annotation store.
- */
+/** Last edited field: lets consecutive edits to the same input collapse into
+ *  one undo step instead of one per keystroke. Mirrors the annotation store. */
 let lastEditKey: string | null = null
 
 let uidCounter = 0
@@ -171,8 +162,7 @@ function cloneSpec(spec: VisibleIfSpec): VisibleIfSpec {
     conditions: spec.conditions.map((entry) =>
       isConditionGroup(entry)
         ? cloneSpec(entry)
-        : // `equals` is copied too, not aliased: the dialog edits the draft's
-          // conditions in place, and immer freezes what came out of the file.
+        : // `equals` copied too, not aliased — same reason as cloneSpec itself.
           { field: entry.field, ...(entry.equals ? { equals: [...entry.equals] } : {}) },
     ),
   }
@@ -208,9 +198,8 @@ export function toAnnotationDefs(nodes: EditorNode[]): AnnotationDef[] {
     if (desc) def.description = desc
     const opts = n.options.map((o) => o.trim()).filter(Boolean)
     if (n.kind === 'string' && opts.length > 0) def.options = opts
-    // Never written for a boolean: it is a no-op there (a checkbox is never
-    // empty), so the editor neither offers it nor emits it — matching
-    // `resolveSchema`, which drops it on load for the same reason.
+    // Never written for a boolean: a checkbox is never empty, so `required`
+    // is a no-op there — matches `resolveSchema`, which drops it on load too.
     if (n.kind !== 'group' && n.kind !== 'boolean' && n.required) def.required = true
     const vis = cleanVisibleIf(n.visibleIf)
     if (vis) def.visibleIf = compactVisibleIf(vis)
@@ -276,11 +265,8 @@ export function nodePathNames(nodes: EditorNode[], uid: string): string[] | null
   return null
 }
 
-/**
- * The uid of `uid`'s parent, or null when it sits at the root. Used to tell a
- * reorder (same parent, answers unaffected) from a re-parenting (the node's
- * answer path changes, and every answer under the old one is orphaned).
- */
+/** The uid of `uid`'s parent, or null at the root. Distinguishes a reorder
+ *  (same parent) from a re-parenting (answer path changes, orphaning answers). */
 export function parentUidOf(nodes: EditorNode[], uid: string, parent: string | null = null): string | null | undefined {
   for (const n of nodes) {
     if (n.uid === uid) return parent
@@ -316,11 +302,8 @@ function insertRelative(
   return false
 }
 
-/**
- * Move a node in the tree. A node cannot be dropped into itself or its own
- * subtree (that would detach the subtree from the root), so such moves are
- * rejected. Exported for tests.
- */
+/** Move a node in the tree. Rejects dropping a node into itself or its own
+ *  subtree (that would detach the subtree from the root). Exported for tests. */
 export function moveNodeIn(
   nodes: EditorNode[],
   dragUid: string,
@@ -359,11 +342,8 @@ export function titleFromName(name: string): string {
   return name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim()
 }
 
-/**
- * Identity of a referenced PDF, for duplicate detection. The absolute path is
- * the truth when we have one (Electron); otherwise the stored relative path is
- * the best we can do (the browser exposes no paths).
- */
+/** Identity of a referenced PDF, for duplicate detection: the absolute path
+ *  when we have one (Electron), else the stored relative path (browser has none). */
 export function pdfKeys(paper: Pick<EditorPaper, 'pdf' | 'sourcePath'>): string[] {
   const keys: string[] = []
   if (paper.sourcePath) keys.push(paper.sourcePath)
@@ -399,9 +379,8 @@ export function makePaperFromPdf(
 // Importing references (BibTeX / RIS / CSL-JSON)
 // ---------------------------------------------------------------------------
 
-/** The same split `buildProjectJson` uses to turn the editable comma-joined
- *  field back into a list — one implementation, so a duplicate-detection
- *  adapter and the save path never quietly disagree on what an author list is. */
+/** Same split `buildProjectJson` uses, so the duplicate-detection adapter and
+ *  the save path never disagree on what an author list is. */
 function splitAuthors(authors: string): string[] {
   return authors
     .split(',')
@@ -414,12 +393,8 @@ function paperToDupRecord(p: EditorPaper): DupRecord {
     title: p.title,
     authors: splitAuthors(p.authors),
     doi: p.doi || undefined,
-    // `EditorPaper.year` is the editor's free-text string; `parseYear` gives
-    // the number `duplicates.ts`'s year-gap veto needs, or `undefined` (which
-    // the veto reads as "no year, don't veto"). Supplying it on *both* sides
-    // is what lets a same-title/different-year pair be told apart — before
-    // `EditorPaper` had a year, only the incoming reference carried one and
-    // the veto could never fire against an existing paper.
+    // Needed on both sides so the year-gap veto (duplicates.ts) can tell a
+    // same-title/different-year pair apart, not just when the incoming ref has one.
     year: parseYear(p.year),
   }
 }
@@ -429,13 +404,11 @@ function refToDupRecord(entry: RefEntry): DupRecord {
 }
 
 /**
- * The existing paper a parsed reference *certainly* refers to, if any — DOI or
- * an exact normalized title, the same two signals this always used. A merely
- * *probable* match (see `classifyImport`) is deliberately not a match here:
- * this function's callers either fill fields into what it returns or skip the
- * row outright, and neither of those is safe to do on a guess. A thin adapter
- * over `classifyImport` rather than its own comparison, so there is exactly
- * one place that decides what "the same paper" means.
+ * The existing paper a parsed reference *certainly* refers to, if any (DOI or
+ * exact normalized title). A merely *probable* match is deliberately not
+ * returned here: callers fill fields into the result or skip the row
+ * outright, neither of which is safe on a guess. Delegates to
+ * `classifyImport` so there is one place deciding "the same paper".
  */
 export function findMatchingPaper(papers: EditorPaper[], entry: RefEntry): EditorPaper | undefined {
   const verdict = classifyImport(papers.map(paperToDupRecord), [refToDupRecord(entry)])[0]
@@ -488,10 +461,8 @@ function fillFromRef(match: EditorPaper, entry: RefEntry): boolean {
     match.venue = entry.venue
     changed = true
   }
-  // A heuristic-extracted abstract (`abstractFromPdf`) is lower-confidence than
-  // one a reference manager actually recorded, so a real one is allowed to
-  // replace it — unlike every other field here, which never overwrites
-  // something already present.
+  // Unlike every other field here, a heuristic-extracted abstract IS allowed
+  // to be overwritten: it's lower-confidence than one a reference manager recorded.
   if ((!match.abstract.trim() || match.abstractFromPdf) && entry.abstract) {
     match.abstract = entry.abstract
     match.abstractFromPdf = undefined
@@ -514,21 +485,19 @@ function summarizeImport(total: number, updated: number, unchanged: number): str
 export type DuplicateDecision = 'merge' | 'separate'
 
 /**
- * A batch of parsed references that `classifyImport` found at least one
- * *probable* duplicate in, waiting on the reviewer's per-pair decision before
- * anything is written — the same "nothing committed until a choice is made"
- * shape `ScreeningImportDraft` uses. `certain`/`new` entries in `verdicts`
- * need no decision; only a `'probable'` entry is ever read from `decisions`.
+ * A batch with at least one `classifyImport`-flagged *probable* duplicate,
+ * waiting on the reviewer's per-pair decision before anything is written
+ * (same "nothing committed until a choice is made" shape as
+ * `ScreeningImportDraft`). Only a `'probable'` verdict is ever read from `decisions`.
  */
 export interface DuplicateReviewDraft {
   sourceName: string
   entries: RefEntry[]
   /** Index-aligned with `entries`, straight from `classifyImport`. */
   verdicts: DupVerdict[]
-  /** `existingUids[j]` is the `uid` `classifyImport`'s `{ where: 'existing',
-   *  index: j }` refers to — a snapshot taken at classification time, since a
-   *  verdict's index is only meaningful against the papers array as it stood
-   *  then. */
+  /** `existingUids[j]` is the uid `classifyImport`'s `{ where: 'existing', index: j }`
+   *  refers to — a snapshot, since a verdict's index only makes sense against
+   *  the papers array as it stood at classification time. */
   existingUids: string[]
   /** Keyed by entry index; absent means "not decided yet". */
   decisions: Record<number, DuplicateDecision>
@@ -536,15 +505,11 @@ export interface DuplicateReviewDraft {
 
 /**
  * Commit a parsed batch into `s.papers`, in index order, per verdict and (for
- * a `'probable'` verdict) the reviewer's decision.
+ * `'probable'`) the reviewer's decision.
  *
- * Index order matters beyond readability: a `{ where: 'batch', index }`
- * target always points at an *earlier* entry (see `classifyImport`'s doc
- * comment), so by the time entry `i` is processed, `resolvedUid[target.index]`
- * has already been set — whether that earlier entry became a new row or was
- * itself merged into an existing one. A batch target therefore always
- * resolves to wherever its own match actually landed, however many links long
- * the chain is, without needing a union-find to get there.
+ * Must run in index order: a `{ where: 'batch', index }` target always points
+ * at an earlier entry, so `resolvedUid[target.index]` is already set by the
+ * time entry `i` runs — resolving chained matches without needing a union-find.
  */
 function commitImport(
   s: EditorState,
@@ -637,9 +602,8 @@ export function buildProjectJson(state: {
       out.id = p.id.trim()
       out.title = p.title.trim()
       out.authors = splitAuthors(p.authors)
-      // `buildProjectJson` is a second serializer (it does not go through
-      // `serializeProject`), so the string→number boundary for `year` lives
-      // here, symmetric with the number→string one in `editorStateFromOpened`.
+      // A second serializer (doesn't go through `serializeProject`), so the
+      // string→number boundary for `year` lives here, mirroring `editorStateFromOpened`.
       const y = parseYear(p.year)
       if (y !== undefined) out.year = y
       if (p.venue.trim()) out.venue = p.venue.trim()
@@ -687,9 +651,8 @@ export function validateDraft(state: {
   state.papers.forEach((p, i) => {
     if (!p.id.trim()) errors.push(`Paper ${i + 1}: missing id.`)
     if (!p.title.trim()) errors.push(`Paper ${i + 1}: missing title.`)
-    // Screening is normally done on title + abstract, from a reference-manager
-    // export with no PDFs at all — requiring one there would rule out the
-    // whole workflow. Requiring one everywhere else is unchanged.
+    // Screening runs on title + abstract from a reference-manager export with
+    // no PDFs at all, so a PDF is only required outside of screening.
     if (!p.pdf.trim() && !screening) errors.push(`Paper ${i + 1} has no PDF attached.`)
   })
   const ids = state.papers.map((p) => p.id.trim()).filter(Boolean)
@@ -703,10 +666,8 @@ export function validateDraft(state: {
   const json = buildProjectJson(state)
   try {
     const raw = projectSchema.parse(json)
-    // `buildProjectJson` always writes a non-empty `config.schema` — derived
-    // when screening, authored otherwise — so this is never actually empty;
-    // the zod type is merely optional to accommodate a non-screening project
-    // whose schema failed validation for some other reason.
+    // `buildProjectJson` always writes a non-empty `config.schema`; the zod
+    // type is only optional to accommodate other schema-validation failures.
     resolveSchema(raw.config.schema ?? [])
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -731,9 +692,9 @@ function countUnnamed(nodes: EditorNode[]): number {
 // Importing from a screening project
 // ---------------------------------------------------------------------------
 
-/** One paper carried over from a screening project. Deliberately narrower than
- *  `EditorPaper`: `reviews`/`equal`/`aiUsage` are the screening phase's own
- *  record and mean nothing against a different (annotation) schema. */
+/** One paper carried over from a screening project. Narrower than `EditorPaper`:
+ *  `reviews`/`equal`/`aiUsage` are the screening phase's own record, meaningless
+ *  against a different (annotation) schema. */
 export interface ScreeningImportRow {
   id: string
   title: string
@@ -749,17 +710,16 @@ export interface ScreeningImportRow {
 }
 
 /**
- * What `startFromScreening`/`importFromScreening` found in a screening
- * project, before the reviewer answers "what about the papers nobody screened
- * yet" — see `resolveScreeningImport`, which is what actually commits rows.
+ * What `startFromScreening`/`importFromScreening` found, before the reviewer
+ * answers "what about the papers nobody screened yet" — `resolveScreeningImport`
+ * is what actually commits rows.
  */
 export interface ScreeningImportDraft {
   /** `start`: a fresh editor session next to the screening JSON. `import`:
    *  add rows into the editor session already open. */
   target: 'start' | 'import'
-  /** Which kind of project `target: 'start'` creates. Meaningless when
-   *  `target === 'import'` — the open project's kind is already fixed by the
-   *  session that is already open. */
+  /** Which kind of project `target: 'start'` creates. Meaningless for
+   *  `target: 'import'` — that session's kind is already fixed. */
   startKind: 'annotation' | 'screening'
   sourceHandle: SaveHandle
   sourceName: string
@@ -776,29 +736,24 @@ export interface ScreeningImportDraft {
   excludedCount: number
   /** Reason → how many excluded papers cited it, for the summary. */
   excludedByReason: Record<string, number>
-  /** Papers still undecided that every reviewer decided identically, which
-   *  Consolidation had not adopted at the time this was read — see
-   *  `screening/counts.ts`'s `pendingUnanimousDecisions`. Decisions only,
-   *  because the dialog showing this promises adopting would change the
-   *  inclusion counts. Only ever nonzero when `reviewers > 1`. */
+  /** Undecided papers every reviewer decided identically, not yet adopted by
+   *  Consolidation (see `pendingUnanimousDecisions`) — surfaced but not
+   *  auto-carried, since adopting them would change the inclusion counts.
+   *  Only nonzero when `reviewers > 1`. */
   pendingUnanimousCount: number
   /** The source's seat count. Not a `multiReviewer` boolean: a `startKind:
-   *  'screening'` target inherits this number outright (see
-   *  `resolveScreeningImport`), and one fact must not be stored two ways. */
+   *  'screening'` target inherits it outright (see `resolveScreeningImport`). */
   reviewers: number
-  /** Every id already present in the source project — not just the carried
-   *  rows, excluded ones too. A `target: 'start'` project is a directory
-   *  sibling of the source and an in-place `import` shares the open
-   *  project's directory in the same way, so any of these ids reused
-   *  verbatim would collide with a file the source project still owns
-   *  under its `annotations/` folder — see `resolveScreeningImport`. */
+  /** Every id in the source project, carried or not: a `target: 'start'`
+   *  project shares the source's directory (and `annotations/` folder), so a
+   *  reused id would collide with a file the source still owns — see
+   *  `resolveScreeningImport`. */
   sourceIds: string[]
 }
 
-/** `annotations` is the consolidated tree — the one that ships, in both the
- *  single- and multi-reviewer case (see `openwiki/architecture.md`). Reading
- *  `reviews` here would import an individual reviewer's opinion, not the
- *  project's actual result. */
+/** `annotations` is the consolidated tree that ships, single- or
+ *  multi-reviewer (see `openwiki/architecture.md`); `reviews` would be one
+ *  reviewer's opinion, not the project's actual result. */
 function partitionScreeningPapers(project: Project): {
   included: ScreeningImportRow[]
   undecided: ScreeningImportRow[]
@@ -808,9 +763,8 @@ function partitionScreeningPapers(project: Project): {
   const included: ScreeningImportRow[] = []
   const undecided: ScreeningImportRow[] = []
   let excludedCount = 0
-  // Null-prototype — see `screening/counts.ts`. On a plain object a reason of
-  // "constructor" tallied onto a function ("function Object() {...}1" in the
-  // import dialog) and "__proto__" hit the prototype setter, dropping the row.
+  // Null-prototype: a plain object let a reason of "constructor" tally onto a
+  // function and "__proto__" hit the prototype setter, dropping the row.
   const excludedByReason: Record<string, number> = Object.create(null)
 
   for (const p of project.papers) {
@@ -879,22 +833,19 @@ interface EditorState {
   /** Whether reviewers may use AI-assisted annotation on this project. */
   aiEnabled: boolean
   /** Whether reviewers sign papers off by hand — see `Project.finishCheckbox`.
-   *  Carried through the editor untouched so editing a schema never silently
-   *  changes what "finished" means for the review. */
+   *  Carried untouched so editing a schema never silently changes it. */
   finishCheckbox: boolean
   /** Independent reviewers before Consolidation reconciles them; 1 = single-reviewer. */
   reviewers: number
-  /**
-   * Set when this draft is a screening project: its schema is derived from
-   * these reasons (see `src/screening/schema.ts`), and `nodes` is unused —
-   * `ProjectEditor` renders `ScreeningReasonsEditor` instead of
-   * `SchemaTreeEditor` whenever this is non-null.
-   */
+  /** Set when this draft is a screening project: its schema is derived from
+   *  these reasons (`src/screening/schema.ts`) and `nodes` is unused —
+   *  `ProjectEditor` renders `ScreeningReasonsEditor` instead of
+   *  `SchemaTreeEditor` whenever this is non-null. */
   screening: ScreeningConfig | null
   extra: Record<string, unknown>
-  /** Set when this project's papers were imported from another project (see
-   *  `resolveScreeningImport`); null for one started from scratch. Never
-   *  edited directly in the UI — a durable record, not a setting. */
+  /** Set when this project's papers were imported from another (see
+   *  `resolveScreeningImport`); null otherwise. Never edited in the UI —
+   *  a durable record, not a setting. */
   provenance: ProjectProvenance | null
   /** The review's authored protocol, or null. Unlike `provenance`, this one
    *  *is* edited in the UI (`ProjectEditor`'s protocol section). */
@@ -913,29 +864,22 @@ interface EditorState {
   notice: string | null
   /** How many just-added PDFs are still being read for their title/authors. */
   extracting: number
-  /**
-   * Papers added in this session that the reviewer hasn't looked at yet, keyed
-   * by `uid`. Mirrors the annotation store's `aiMarks`: session-only, not part
-   * of `EditorSnapshot`/undo (an add already has its own undo step; unmarking
-   * one is not a meaningful edit to revert to), and never written to the file.
-   */
+  /** Papers added this session the reviewer hasn't looked at yet, keyed by
+   *  `uid`. Mirrors the annotation store's `aiMarks`: session-only, not part
+   *  of undo (the add already has its own step; unmarking isn't a meaningful
+   *  edit to revert to), never written to the file. */
   justAdded: Record<string, true>
   /** Undo/redo history of draft edits (session-only). */
   past: EditorSnapshot[]
   future: EditorSnapshot[]
-  /**
-   * A screening project picked via `startFromScreening`/`importFromScreening`,
-   * parsed and partitioned, waiting on the reviewer's answer to "what about the
-   * papers nobody screened yet" before anything is written. Session-only —
-   * never part of undo, since nothing has been committed to the draft yet.
-   */
+  /** A screening project picked via `startFromScreening`/`importFromScreening`,
+   *  parsed and partitioned, waiting on the reviewer's answer to "what about
+   *  the papers nobody screened yet". Session-only — nothing committed yet,
+   *  so nothing for undo to know about. */
   screeningImport: ScreeningImportDraft | null
-  /**
-   * Set by `importReferences` whenever `classifyImport` found at least one
-   * *probable* duplicate in the batch — nothing from that import has been
-   * committed yet. Session-only, same reasoning as `screeningImport`: nothing
-   * in here has touched the draft, so there is nothing for undo to know about.
-   */
+  /** Set by `importReferences` when `classifyImport` found a *probable*
+   *  duplicate in the batch — nothing committed yet. Session-only, same
+   *  reasoning as `screeningImport`. */
   duplicateReview: DuplicateReviewDraft | null
 
   startNew: () => Promise<void>
@@ -954,12 +898,11 @@ interface EditorState {
   setScreening: (on: boolean) => void
   setScreeningReasons: (reasons: string[]) => void
   /** Rewrite an exclusion reason across every paper that recorded it (see
-   *  `renameReasonInPapers`) — offered by `ScreeningReasonsEditor` when a
-   *  rename would otherwise orphan existing decisions. Its own undo step. */
+   *  `renameReasonInPapers`), so a rename doesn't orphan existing decisions.
+   *  Its own undo step. */
   migrateScreeningReason: (from: string, to: string) => void
-  /** Replace the whole authored protocol (the editor assembles it from its
-   *  fields). Pass `null` to clear it. Coalesced like `setTitle` so a burst of
-   *  typing is one undo step. */
+  /** Replace the whole authored protocol; pass `null` to clear it. Coalesced
+   *  like `setTitle` so a burst of typing is one undo step. */
   setProtocol: (protocol: ProjectProtocol | null) => void
   /** Replace the schema-wide info comment. Pass `null` to clear it. Coalesced
    *  like `setProtocol` so a burst of typing is one undo step. */
@@ -980,18 +923,14 @@ interface EditorState {
   removePaper: (uid: string) => void
   movePaper: (dragUid: string, targetUid: string, position: 'before' | 'after') => void
 
-  /**
-   * Create a new project — annotation or screening, the reviewer's choice —
-   * from a screening project's included papers: pick the screening JSON,
-   * then open the pre-commit summary (`screeningImport`) before anything is
-   * written.
-   */
+  /** Create a new project (annotation or screening, reviewer's choice) from a
+   *  screening project's included papers: pick the JSON, then open the
+   *  pre-commit summary (`screeningImport`) before anything is written. */
   startFromScreening: () => Promise<void>
   /** The papers-only half of the above, for an editor session already open. */
   importFromScreening: () => Promise<void>
-  /** Choose what `target: 'start'` builds. A no-op when there is no pending
-   *  import, or it targets an already-open session. Not undoable — the draft
-   *  is session-only, same as the rest of `screeningImport`. */
+  /** Choose what `target: 'start'` builds. No-op with no pending import, or
+   *  one targeting an already-open session. Not undoable — session-only. */
   setScreeningImportKind: (kind: 'annotation' | 'screening') => void
   /** Answer the pre-commit import summary opened by either action above. */
   resolveScreeningImport: (choice: 'include-undecided' | 'skip-undecided' | 'cancel') => Promise<void>
@@ -1001,10 +940,9 @@ interface EditorState {
   setDuplicateDecision: (entryIndex: number, decision: DuplicateDecision) => void
   /** Decide every still-open `'probable'` row at once. */
   setAllDuplicateDecisions: (decision: DuplicateDecision) => void
-  /** `'apply'` commits the batch (every `'probable'` row must be decided
-   *  first — see `DuplicateReviewDialog`); `'cancel'` discards the whole
-   *  import, undecided rows included. Synchronous: nothing here reads a file
-   *  or asks the platform for anything, `importReferences` already did that. */
+  /** `'apply'` commits the batch (every `'probable'` row must already be
+   *  decided — see `DuplicateReviewDialog`); `'cancel'` discards it all.
+   *  Synchronous: `importReferences` already did the file reading. */
   resolveDuplicateReview: (choice: 'apply' | 'cancel') => void
 
   undo: () => void
@@ -1080,16 +1018,15 @@ interface OpenedEditorState {
 }
 
 /**
- * Parse an opened project into the editor's draft shape. Throws on invalid JSON
- * or a structure the loader rejects, so callers can show a friendly error. This
- * is shared by "Edit annotation JSON…" (file picker) and the per-recent pen.
+ * Parse an opened project into the editor's draft shape. Throws on invalid
+ * JSON or a rejected structure so callers can show a friendly error. Shared
+ * by "Edit annotation JSON…" and the per-recent pen.
  */
 export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState {
   const data = JSON.parse(opened.text) as Record<string, unknown>
   const parsed = projectSchema.parse(data)
-  // Trimmed/deduped the same way `project.ts`'s loader treats it — a broken
-  // reasons list is still worth surfacing in the reasons editor rather than
-  // failing to open, since the editor's whole job is letting it be fixed.
+  // Trimmed/deduped like `project.ts`'s loader — a broken reasons list should
+  // open into the reasons editor so it can be fixed, not fail to load.
   const screening: ScreeningConfig | null = parsed.config.screening
     ? { reasons: dedupeTrim(parsed.config.screening.reasons) }
     : null
@@ -1108,10 +1045,8 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
     ])
     const extra: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(p)) if (!known.has(k)) extra[k] = v
-    // The same lenient repair `project.ts`'s loader applies to `year` — a
-    // hand-edited `"2021"` string opens here exactly as it would in the
-    // annotation view, rather than landing in `extra` because this map alone
-    // stayed stricter.
+    // Same lenient `year` repair as `project.ts`'s loader, so a hand-edited
+    // `"2021"` string opens here rather than landing in `extra`.
     const year = parseYear(p.year)
     return {
       uid: nextUid(),
@@ -1131,10 +1066,9 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
       extra,
     }
   })
-  // `KNOWN_ROOT_KEYS` — not a second hand-maintained list — so a key this
-  // editor now knows about (like `provenance`) can never end up both parsed
-  // explicitly below *and* riding along in `extra`, which would make it look
-  // "changed" on every git diff even when nothing about it did.
+  // Shared `KNOWN_ROOT_KEYS`, not a second hand-maintained list, so a key
+  // parsed explicitly below (like `provenance`) can't also ride along in
+  // `extra` and look "changed" on every diff.
   const rootExtra: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(data)) {
     if (!KNOWN_ROOT_KEYS.has(k)) rootExtra[k] = v
@@ -1155,8 +1089,7 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
     protocol: parseProtocol(data.protocol),
     schemaInfo: parseSchemaInfo(data.schemaInfo),
     // A screening project's schema is derived, not authored, so there is
-    // nothing for the schema-builder tree to hold — see `ProjectEditor.tsx`,
-    // which renders `ScreeningReasonsEditor` instead whenever `screening` is set.
+    // nothing for the schema-builder tree to hold — see `ProjectEditor.tsx`.
     nodes: screening ? [] : fromAnnotationDefs(parsed.config.schema ?? []),
     papers,
   }
@@ -1207,20 +1140,13 @@ function openEditorSession(s: EditorState, st: OpenedEditorState): void {
 }
 
 /**
- * Take focus off the field being typed into, firing its `blur` handler. The
- * schema field name and screening reason label editors hang their
- * confirm-before-you-lose-answers guards on `blur` (renaming/removing a field
- * orphans every reviewer's answers stored under the old name — see
- * `SchemaTreeEditor.tsx`'s `commitRename`), and two of `save`/`saveAs`'s
- * callers never move focus on their own: a keyboard shortcut doesn't, and
- * neither does clicking a `<button>` on macOS/Chromium (the same browser
- * quirk `SchemaTreeEditor.tsx`'s own comment documents for its `×` button).
- * Called at the top of `save`/`saveAs` below rather than by each caller
- * individually, so the native quit dialog's Save button — which calls
- * `save()` directly with no chance to run its own pre-save step — gets the
- * same guard as the toolbar and Ctrl+S. Blur handlers and the zustand writes
- * they make are synchronous, so the rest of `save`/`saveAs` sees the result,
- * including a rename the reviewer just declined.
+ * Take focus off the field being typed into, firing its `blur` handler — the
+ * schema field name / screening reason editors hang their confirm-before-
+ * losing-answers guard there (`SchemaTreeEditor.tsx`'s `commitRename`), and
+ * neither a keyboard shortcut nor a macOS/Chromium button click moves focus
+ * on its own. Called at the top of `save`/`saveAs` (rather than by each
+ * caller) so the native quit dialog's Save button gets the same guard.
+ * Synchronous, so the rest of `save`/`saveAs` sees the result.
  */
 function commitFocusedEdit(): void {
   const el = document.activeElement
@@ -1239,21 +1165,18 @@ function openError(err: unknown): EditorError {
 export const useEditorStore = create<EditorState>()(
   immer((set, get) => {
     /**
-     * Shared by `addPdfs` and `addPdfFolder` — they differ only in how the
-     * PDFs are picked. Skips PDFs the project already references, creates a
-     * row per new one with a name-derived placeholder, marks each "just
-     * added", then reads title/authors from each in the background without
-     * clobbering anything the user typed while that read was in flight.
+     * Shared by `addPdfs`/`addPdfFolder` (differ only in how PDFs are picked).
+     * Skips already-referenced PDFs, adds a row per new one with a
+     * name-derived placeholder marked "just added", then reads title/authors
+     * in the background without clobbering anything typed meanwhile.
      */
     const addPickedPdfs = async (picked: PickedPdf[]) => {
       if (picked.length === 0) return
       const platform = getPlatform()
       const rel = await platform.relativePdfPaths(picked, get().location)
 
-      // Skip PDFs the project already references. Match on the absolute path
-      // when we have one, and on the stored relative path otherwise — so
-      // re-picking the same file, or one already listed in an edited project,
-      // doesn't create a second entry.
+      // Skip PDFs already referenced: match on absolute path when we have one,
+      // else the stored relative path, so re-picking a file doesn't duplicate it.
       const seen = new Set(get().papers.flatMap(pdfKeys))
       const fresh: { uid: string; placeholder: string; read?: () => Promise<ArrayBuffer> }[] = []
       const skipped: string[] = []
@@ -1321,16 +1244,12 @@ export const useEditorStore = create<EditorState>()(
     location: null,
     version: 1,
     title: '',
-    // Off by default while AI-assisted annotation itself has no reachable
-    // entry point in the app (see `aiUnlocked` in store.ts) — there is no UI
-    // here to turn it back on either (see ProjectEditor.tsx's own comment on
-    // why the toggle is gone), so a new project written today should not
-    // silently claim a feature nobody can use. `config.ai: false` is written
-    // out just like an explicit opt-out would be — see serializeProject.
+    // Off by default: AI-assisted annotation has no reachable entry point
+    // (see `aiUnlocked` in store.ts) and no UI here to re-enable it, so a new
+    // project shouldn't silently claim a feature nobody can use.
     aiEnabled: false,
-    // Enabled by default, unlike `aiEnabled` above: hand sign-off is the
-    // behavior every project has unless its author opts out, and a new
-    // project should get the default rather than the opt-out.
+    // Enabled by default, unlike `aiEnabled`: hand sign-off is every
+    // project's behavior unless its author opts out.
     finishCheckbox: true,
     reviewers: 1,
     screening: null,
@@ -1428,9 +1347,8 @@ export const useEditorStore = create<EditorState>()(
         return
       }
       if (!opened) {
-        // The file is gone. The editor never opens; instead grey the entry (the
-        // drive may come back) and surface the error on the welcome screen, exactly
-        // as store.openRecent does for the annotate path.
+        // File gone: grey the entry (the drive may come back) and surface the
+        // error on the welcome screen, as store.openRecent does for annotate.
         set((s) => {
           s.busy = false
         })
@@ -1462,12 +1380,9 @@ export const useEditorStore = create<EditorState>()(
         s.issues = []
         s.notice = null
         s.justAdded = {}
-        // The draft is gone, so there is nothing left to save. Leaving this set
-        // made Electron's quit guard — which prompts when *either* store is
-        // dirty (`useElectronCloseGuard`) — go on claiming unsaved changes for
-        // a draft the user had already chosen to discard. The next `startNew`/
-        // `startEdit` rebuilds the draft from scratch anyway, so nothing here
-        // is worth carrying across a close.
+        // Clear dirty: otherwise Electron's quit guard (`useElectronCloseGuard`,
+        // which prompts when either store is dirty) keeps claiming unsaved
+        // changes for a draft the user already chose to discard.
         s.dirty = false
         s.past = []
         s.future = []
@@ -1490,17 +1405,12 @@ export const useEditorStore = create<EditorState>()(
       const current = get().location
       const location = await platform.pickProjectLocation(current?.name ?? 'project.json')
       if (!location) return
-      // PDFs are referenced relative to the JSON, so moving the JSON re-derives
-      // every path. Two mechanisms, because the papers differ in what we know
-      // about them:
-      //  - added in this session: we still hold the absolute source, so
-      //    re-deriving from that is exact.
-      //  - loaded from the opened file: `editorStateFromOpened` deliberately
-      //    leaves `sourcePath` undefined, so there is no absolute source — but
-      //    their `pdf` is relative to the *current* location, which is exactly
-      //    what `rebasePdfPaths` re-anchors (the same call `store.ts`'s
-      //    `saveAs` makes). Without this second pass, moving an opened project
-      //    left every one of its PDFs pointing at nothing, silently.
+      // PDFs are relative to the JSON, so moving it re-derives every path.
+      // Two mechanisms: papers added this session still have an absolute
+      // `sourcePath` to re-derive from exactly; papers loaded from the file
+      // have none (`editorStateFromOpened` leaves it undefined), so their
+      // `pdf` — relative to the *current* location — is re-anchored via
+      // `rebasePdfPaths` instead (same call `store.ts`'s `saveAs` makes).
       const papers = get().papers
       const withSource = papers.filter((p) => p.sourcePath)
       let rederived: string[] = []
@@ -1673,10 +1583,8 @@ export const useEditorStore = create<EditorState>()(
         Object.assign(node, patch)
         // Enum options only exist on string fields.
         if (node.kind !== 'string') node.options = []
-        // A group holds no value, so it cannot be required; a boolean is never
-        // empty, so `required` on one is a no-op (see `resolveSchema`). Both
-        // are cleared here so switching a field to either type drops a stale
-        // flag rather than carrying a meaningless one.
+        // `required` is meaningless on a group (no value) or boolean (never
+        // empty, see `resolveSchema`) — cleared so switching type drops the stale flag.
         if (node.kind === 'group' || node.kind === 'boolean') node.required = false
         s.dirty = true
       })
@@ -1728,17 +1636,15 @@ export const useEditorStore = create<EditorState>()(
         return
       }
 
-      // Classified *before* the mutating `set` below, against a plain read of
-      // the current papers — `classifyImport` is pure and synchronous, so
-      // nothing can change between this read and the `set` call it feeds.
+      // Classified before the mutating `set` below — `classifyImport` is pure
+      // and synchronous, so nothing changes between this read and that call.
       const papers = get().papers
       const existingUids = papers.map((p) => p.uid)
       const verdicts = classifyImport(papers.map(paperToDupRecord), entries.map(refToDupRecord))
 
-      // A probable match is never silently merged and never silently added
-      // twice — it has to go through the reviewer. `certain`/`new` entries need
-      // no such thing, and demoting *every* import to a review dialog would
-      // turn a routine re-import of an unchanged `.bib` into a wall of prompts.
+      // A probable match always goes through the reviewer, never silently
+      // merged or duplicated; `certain`/`new` don't, or a routine re-import
+      // of an unchanged `.bib` would be a wall of prompts.
       if (verdicts.some((v) => v.kind === 'probable')) {
         set((s) => {
           s.duplicateReview = { sourceName: picked.name, entries, verdicts, existingUids, decisions: {} }
@@ -1757,9 +1663,8 @@ export const useEditorStore = create<EditorState>()(
     },
 
     confirmAdded: (uid) => {
-      // Focusing a row that was never marked is the common case (every field
-      // focus in an untouched paper list calls this) — don't churn the store
-      // for a mark that isn't there.
+      // Common case: every field focus in an untouched list calls this, so
+      // don't churn the store for a mark that isn't there.
       if (!get().justAdded[uid]) return
       set((s) => {
         delete s.justAdded[uid]
@@ -1826,10 +1731,8 @@ export const useEditorStore = create<EditorState>()(
         s.busy = false
         s.screeningImport = {
           target: 'start',
-          // The existing button's long-standing output — deciding this
-          // silently would undermine the one thing this dialog exists for:
-          // making the choice explicit rather than automatic. The reviewer
-          // opts into a second screening pass with the radio in the dialog.
+          // Deciding this silently would undermine the dialog's whole point —
+          // the reviewer opts into a second screening pass via its radio.
           startKind: 'annotation',
           sourceHandle: opened.handle,
           sourceName: opened.name,
@@ -1844,15 +1747,11 @@ export const useEditorStore = create<EditorState>()(
     },
 
     importFromScreening: async () => {
-      // In-place import *into* a screening project is not the "nonsense" it
-      // once looked like: a carried row arrives with `annotations: {}`, i.e.
-      // undecided under the open project's own reasons — perfectly
-      // well-defined. It stays blocked anyway, for three reasons: unblocking
-      // it means editing PapersEditor.tsx's own gate, which is not part of
-      // this feature; the two-pass workflow this exists for is fully served
-      // by `startFromScreening` (a *second*, independently reasoned
-      // screening project); and "pool two independent screens into one" is a
-      // distinct workflow with no demonstrated need yet.
+      // Importing into an open screening project is well-defined (a carried
+      // row just arrives undecided under its reasons) but stays blocked: the
+      // two-pass workflow is already served by `startFromScreening`'s second,
+      // independent project, and unblocking this is a separate feature with
+      // no demonstrated need.
       if (get().screening !== null) return
       set((s) => {
         s.busy = true
@@ -1899,10 +1798,9 @@ export const useEditorStore = create<EditorState>()(
         })
         return
       }
-      // Carried by default — dropping an undecided paper silently removes it
-      // from a systematic review, which is unacceptable; the reviewer opts
-      // out explicitly instead. Only an explicit `Decision: 'Exclude'` ever
-      // drops a paper here.
+      // Carried by default: silently dropping an undecided paper from a
+      // systematic review is unacceptable, so only an explicit `Decision:
+      // 'Exclude'` (or the reviewer's own opt-out) ever drops one.
       const carried =
         choice === 'include-undecided' ? [...draft.included, ...draft.undecided] : draft.included
 
@@ -1911,17 +1809,15 @@ export const useEditorStore = create<EditorState>()(
       })
       const platform = getPlatform()
 
-      // The new project's default save location is next to the screening
-      // JSON: a sibling shares its directory, so every carried paper's
-      // relative `pdf` still resolves without being rewritten at all.
+      // Default save location is next to the screening JSON: a sibling shares
+      // its directory, so every carried paper's relative `pdf` still resolves
+      // without being rewritten.
       let location: ProjectLocation | null = null
       if (draft.target === 'start') {
         const baseName = (draft.sourceHandle.path ?? draft.sourceName).split(/[\\/]/).pop() ?? draft.sourceName
-        // "-fulltext", not "-screening": the second screening pass in an SLR
-        // *is* the full-text screen, and naming it for the workflow it serves
-        // beats naming it for its data shape (which would read
-        // "screening-screening.json" for the overwhelmingly common source
-        // name). Only a suggestion — the save dialog lets the reviewer rename.
+        // "-fulltext", not "-screening": names the workflow (the second pass
+        // *is* the full-text screen), not the data shape. Only a suggestion —
+        // the save dialog lets the reviewer rename.
         const suffix = draft.startKind === 'screening' ? 'fulltext' : 'annotation'
         const suggested = `${baseName.replace(/\.json$/i, '')}-${suffix}.json`
         location = await platform.siblingProjectLocation(draft.sourceHandle, suggested)
@@ -1935,20 +1831,15 @@ export const useEditorStore = create<EditorState>()(
       }
 
       // Each carried row needs a real absolute source, not just the relative
-      // path the screening file stored — otherwise the moment the reviewer
-      // uses "Change…" on the new project, `changeLocation` (which only
-      // re-derives `pdf` for rows with a `sourcePath`) would silently leave
-      // every PDF pointing at nothing.
+      // path the screening file stored — otherwise `changeLocation` (which
+      // only re-derives `pdf` for rows with a `sourcePath`) would silently
+      // leave every PDF pointing at nothing after a later "Change…".
       const absolutes = await platform.absolutePdfPaths(carried.map((p) => p.pdf), draft.sourceHandle)
 
-      // Merging into an already-open session (`target !== 'start'`) drops the
-      // carried papers into whatever directory that project already lives in
-      // — almost certainly not the screening project's own directory, unlike
-      // `target: 'start'` above, which defaults to a sibling of the source for
-      // exactly this reason. Re-derive `pdf` against the open project's own
-      // location first, the identical `relativePdfPaths` pattern
-      // `changeLocation` uses for "Save as" — left verbatim, every one of
-      // these paths would point at nothing the moment the reviewer looked.
+      // Merging into an already-open session drops papers into whatever
+      // directory it already lives in — not the screening project's own, so
+      // re-derive `pdf` against it first (same `relativePdfPaths` pattern as
+      // `changeLocation`'s "Save as"), or every path points at nothing.
       let rebased: string[] = []
       if (draft.target !== 'start') {
         const withSource = carried
@@ -1968,19 +1859,15 @@ export const useEditorStore = create<EditorState>()(
       set((s) => {
         s.busy = false
         let rebasedIdx = 0
-        // `target: 'start'` puts the new project in the source's own
-        // directory (a sibling of its JSON), sharing its `annotations/`
-        // folder. A carried id verbatim-equal to any source paper's id —
-        // included, excluded, or otherwise — would make this pass's still-
-        // undecided (null) marks file overwrite the source pass's recorded
-        // decision the moment this project is saved.
+        // `target: 'start'` shares the source's directory and `annotations/`
+        // folder, so a carried id equal to any source paper's id would make
+        // this pass's undecided marks overwrite the source's recorded decision.
         const taken = new Set(draft.sourceIds)
         const rows: EditorPaper[] = carried.map((p, i) => {
           const hasSource = !!absolutes[i]
-          // `target: 'start'` never rebases (correct by construction — see
-          // above); `target: 'import'` uses the re-derived path whenever one
-          // was computed, falling back to the verbatim value otherwise (no
-          // source path at all, or the browser, which has no paths to rebase).
+          // `target: 'start'` never rebases (correct by construction);
+          // `target: 'import'` uses the re-derived path when computed, else
+          // falls back to the verbatim value.
           const pdf = draft.target !== 'start' && hasSource ? (rebased[rebasedIdx++] ?? p.pdf) : p.pdf
           let id = p.id
           if (draft.target === 'start') {
@@ -2012,35 +1899,25 @@ export const useEditorStore = create<EditorState>()(
           s.location = location
           s.version = 1
           s.title = ''
-          // See the initial-state comment near the top of this store: no
-          // reachable AI feature, no UI to turn it back on, so a fresh
-          // project — including one built from a screening import — starts
-          // opted out.
+          // Same reasoning as the initial-state comment above: no reachable
+          // AI feature, so a fresh project starts opted out even here.
           s.aiEnabled = false
           s.finishCheckbox = true
-          // A second screening pass repeats the same protocol step with the
-          // same screening team, so its seat count is a property of the
-          // protocol being continued — dual screening is a PRISMA-reportable
-          // design property, and silently resetting it to one reviewer could
-          // convert a dual-screened review into a single-screened one without
-          // anyone noticing. Data extraction (the annotation target) is a
-          // different phase with its own independent staffing decision, so it
-          // keeps the existing single-reviewer default — deliberate, not an
-          // oversight, and outside this feature's mandate to revisit.
+          // A second screening pass keeps the same team, so its seat count
+          // (a PRISMA-reportable design property) is inherited, not reset to
+          // 1 — that would silently turn dual-screening into single. The
+          // annotation target has its own independent staffing default.
           s.reviewers = screeningTarget ? draft.reviewers : 1
-          // The source's own reasons seed the new list, not
-          // DEFAULT_SCREENING_REASONS: they are the pre-registered protocol's
-          // own vocabulary (already chosen once, by this same team), and
-          // PRISMA reports exclusions per reason across both passes — a
-          // disjoint generic list would make the two passes' numbers
-          // un-poolable. Editable immediately in ScreeningReasonsEditor, same
-          // as any other screening project's reasons.
+          // Seeded from the source's own reasons, not DEFAULT_SCREENING_REASONS:
+          // they're the pre-registered protocol's vocabulary, and PRISMA
+          // reports exclusions per reason across both passes — a disjoint
+          // generic list would make the two un-poolable. Still editable in
+          // ScreeningReasonsEditor.
           s.screening = screeningTarget ? { reasons: [...draft.screening.reasons] } : null
           s.extra = {}
-          // A screening draft's schema is derived from `screening.reasons`,
-          // not authored (see `Project.screening`), so there is nothing for
-          // the schema-builder tree to hold — `editorStateFromOpened` uses
-          // the same empty array for the same reason.
+          // Derived from `screening.reasons`, not authored (see
+          // `Project.screening`) — same empty-array reasoning as
+          // `editorStateFromOpened`.
           s.nodes = screeningTarget ? [] : [makeNode()]
           s.papers = rows
           s.dirty = true
@@ -2051,12 +1928,9 @@ export const useEditorStore = create<EditorState>()(
           s.justAdded = Object.fromEntries(rows.map((r) => [r.uid, true as const]))
           s.past = []
           s.future = []
-          // Left for the reviewer to author in the new project rather than
-          // carried from the source: the protocol *is* the same review across
-          // both phases, so carrying it would be defensible, but the import
-          // draft does not currently capture the source's protocol, and
-          // threading it through is a separate change. A fresh project starts
-          // with none, exactly as one started from scratch does.
+          // Not carried from the source: the import draft doesn't currently
+          // capture the source's protocol; threading it through is a
+          // separate change. Starts empty, like a from-scratch project.
           s.protocol = null
           s.schemaInfo = null
           s.provenance = {
@@ -2074,30 +1948,23 @@ export const useEditorStore = create<EditorState>()(
             },
           }
         } else {
-          // Adding into an editor session already open: one undo step for the
-          // whole import (only when it actually adds something), and a paper
-          // already in the project (by DOI, then normalized title — same
-          // rule `importReferences` uses) is skipped rather than duplicated.
+          // Adding into an already-open session: one undo step for the whole
+          // import, and a paper already present (by DOI, then normalized
+          // title — same rule `importReferences` uses) is skipped, not duplicated.
           const existingIds = new Set(s.papers.map((p) => p.id))
           // Same-directory import: marks-*.json filenames are identical
-          // between screening and annotation mode, so a row whose id matches
-          // one already in the source project's `annotations/` folder would
-          // overwrite that source paper's PDF marks on save, even though it
-          // is not a duplicate paper by title/DOI/year.
+          // between screening/annotation, so an id matching one in the
+          // source's `annotations/` folder would overwrite its PDF marks,
+          // even for a non-duplicate paper.
           for (const id of draft.sourceIds) existingIds.add(id)
           const toAdd: EditorPaper[] = []
           let skipped = 0
           for (const row of rows) {
-            // The row's *whole* identity, not just its title and DOI. Passing
-            // `authors: []` and no year discarded exactly the two signals that
-            // tell same-titled papers apart: with no authors the disjoint-author
-            // demotion cannot fire, and with no year the year-gap veto cannot
-            // either. A screening project whose included paper merely shared a
-            // title with something already in the editor was reported as
-            // "already in the project, skipped" and silently dropped — its DOI,
-            // year and screening decision with it. `importReferences` passes
-            // full records and gets this right; this path is the same question
-            // and must be asked the same way.
+            // Pass the row's whole identity, not just title/DOI: omitting
+            // authors/year disables the disjoint-author demotion and the
+            // year-gap veto, so a merely same-titled paper was misreported as
+            // "already in the project" and silently dropped. `importReferences`
+            // already gets this right by passing full records.
             const match = findMatchingPaper(s.papers, {
               title: row.title,
               authors: splitAuthors(row.authors),
@@ -2206,9 +2073,8 @@ export const useEditorStore = create<EditorState>()(
     },
 
     save: async () => {
-      // See `commitFocusedEdit`'s own comment: this must run before anything
-      // below reads the draft, so a declined rename is already reverted (and
-      // an accepted one already applied) by the time `buildProjectJson` runs.
+      // Must run before anything below reads the draft — see
+      // `commitFocusedEdit`'s own comment.
       commitFocusedEdit()
       const st = get()
       if (!st.location) {

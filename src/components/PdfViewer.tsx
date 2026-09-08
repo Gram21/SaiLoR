@@ -12,13 +12,12 @@ import { getPlatform } from '../platform'
 import '../platform/pdfjs'
 
 // In-PDF search uses the CSS Custom Highlight API to tint matches without
-// mutating react-pdf's text-layer DOM. Highlight/CSS.highlights aren't in the
-// TS lib yet, so reach for them dynamically and degrade gracefully.
+// mutating react-pdf's text-layer DOM. Not in the TS lib yet, so reach for
+// it dynamically and degrade gracefully.
 /**
- * The most pages this viewer will mount. There is no virtualization: every page
- * is a React element with its own canvas, text layer and annotation layer, plus
- * an entry in `pageRefs`. Real documents do not reach five figures, and a
- * hostile one can claim 16 million from 2.4 KB — see `onLoadSuccess`.
+ * Page cap: no virtualization, every page becomes its own canvas/text/annotation
+ * layer, and a hostile PDF can claim millions of pages from a tiny file — see
+ * `onLoadSuccess`.
  */
 const MAX_PDF_PAGES = 5000
 
@@ -37,12 +36,9 @@ function clearHighlights() {
 }
 
 /**
- * Whether a mark's own rect already sits inside the scroll container's
- * visible band, in viewport pixels — pure and DOM-measurement-free so it can
- * be unit tested without a real layout. `pageRect`/`rootRect` are each side's
- * `getBoundingClientRect()`; `mark.rects[0]` is the same corner `scrollToMark`
- * centers on, since a mark's overlay position is always expressed relative to
- * its own page.
+ * Whether a mark's rect already sits inside the scroll container's visible
+ * band. Pure (no DOM reads) so it's unit-testable; `pageRect`/`rootRect` are
+ * `getBoundingClientRect()` results passed in by the caller.
  */
 export function markVerticallyVisible(mark: PdfMark, pageRect: DOMRect, rootRect: DOMRect): boolean {
   const rect = mark.rects[0]
@@ -52,9 +48,8 @@ export function markVerticallyVisible(mark: PdfMark, pageRect: DOMRect, rootRect
   return top >= rootRect.top && bottom <= rootRect.bottom
 }
 
-/** Fraction of `b`'s area that overlaps `a` — used to catch two rects that
- *  are (near-)duplicates of each other, not two rects that merely sit side
- *  by side on the same line (those overlap ~0). */
+/** Fraction of `b`'s area overlapping `a` — catches near-duplicate rects
+ *  without flagging rects that merely sit side by side (overlap ~0). */
 function overlapRatio(a: MarkRect, b: MarkRect): number {
   const left = Math.max(a.x, b.x)
   const right = Math.min(a.x + a.width, b.x + b.width)
@@ -66,16 +61,11 @@ function overlapRatio(a: MarkRect, b: MarkRect): number {
 }
 
 /**
- * `Range.getClientRects()` can report the same visual line twice — a
- * documented cross-browser quirk (bidi reordering, or a text node the layout
- * engine split internally) rather than anything pdf.js's text layer does
- * wrong. Rendered as-is, a fully-covered middle line of a multi-line
- * highlight gets two nearly-identical, semi-transparent rects stacked on top
- * of each other, reading as "marked twice" rather than once. Two rects that
- * genuinely sit side by side on the same line (pdf.js gives each text run
- * its own span, so an ordinary line is several adjacent, non-overlapping
- * rects) have ~0 overlap and are left alone; only rects that substantially
- * cover one another are folded into their union.
+ * `Range.getClientRects()` can report the same visual line twice (a
+ * cross-browser quirk, not a pdf.js bug), which would render as a double-
+ * opacity "marked twice" line. Rects that substantially overlap are folded
+ * into their union; rects merely side by side on the same line (~0 overlap)
+ * are left alone.
  */
 export function dedupeOverlappingRects(rects: MarkRect[]): MarkRect[] {
   const out: MarkRect[] = []
@@ -136,11 +126,9 @@ function findMatches(root: HTMLElement, query: string, caseSensitive: boolean): 
   return ranges
 }
 
-/** Clamps a `position: fixed` popover anchored at `anchor` (a raw click point)
- *  into the viewport, the same two-pass measure-then-clamp approach as
- *  `NodeName`'s description popover: the first mount is unclamped so the
- *  popover's real size can be measured, then this effect (before paint,
- *  hence `useLayoutEffect` not `useEffect`) clamps it. */
+/** Clamps a `position: fixed` popover anchored at a raw click point into the
+ *  viewport. Two-pass: first mount is unclamped so the popover's real size
+ *  can be measured, then `useLayoutEffect` (before paint) clamps it. */
 function useClampedAnchor(ref: React.RefObject<HTMLDivElement | null>, anchor: { x: number; y: number } | null) {
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
   useLayoutEffect(() => {
@@ -155,17 +143,14 @@ function useClampedAnchor(ref: React.RefObject<HTMLDivElement | null>, anchor: {
       left: Math.min(Math.max(m, anchor.x), window.innerWidth - r.width - m),
       top: Math.min(Math.max(m, anchor.y), window.innerHeight - r.height - m),
     })
-    // Deliberately just `[anchor]`, not `[anchor, pos]` — `pos` is what this
-    // effect sets, so adding it as a dep would re-run on every clamp, which
-    // re-measures the (unchanged) box and sets the same `pos` again forever.
+    // Deliberately just `[anchor]`: adding `pos` (which this effect sets)
+    // would re-trigger on every clamp, looping forever.
   }, [anchor])
   return pos
 }
 
-/** Where a mark's hover tooltip should render, and which way it opens —
- *  same "flip up when there's no room below" rule `NodeName`'s description
- *  tooltip already follows, computed fresh from whichever rect the mouse is
- *  actually over (a highlight can wrap several lines, each its own rect). */
+/** Where a mark's hover tooltip should render, flipping up when there's no
+ *  room below — computed from whichever rect the mouse is actually over. */
 function markTooltipCoords(el: HTMLElement): { x: number; top?: number; bottom?: number } {
   const r = el.getBoundingClientRect()
   const spaceBelow = window.innerHeight - r.bottom
@@ -173,11 +158,9 @@ function markTooltipCoords(el: HTMLElement): { x: number; top?: number; bottom?:
   return openUp ? { x: r.left, bottom: window.innerHeight - r.top + 6 } : { x: r.left, top: r.bottom + 6 }
 }
 
-/** The x/y a PDF explicit destination points at, in PDF user space, with
- *  `null` for each axis the destination kind leaves unspecified (a `FitH`
- *  names only a vertical position, a `FitV` only a horizontal one, a plain
- *  `Fit` neither). Exported for its unit test — the rest of the link-preview
- *  flow needs a live pdf.js document and a rendered canvas. */
+/** The x/y a PDF explicit destination points at, in PDF user space; `null`
+ *  for each axis the destination kind leaves unspecified. Exported for its
+ *  unit test — the rest of the link-preview flow needs a live pdf.js doc. */
 export function destinationPoint(dest: unknown[]): { x: number | null; y: number | null } {
   const kind = (dest[1] as { name?: string } | null | undefined)?.name
   const num = (v: unknown): number | null => (typeof v === 'number' ? v : null)
@@ -199,24 +182,18 @@ export function destinationPoint(dest: unknown[]): { x: number | null; y: number
 }
 
 /** On-screen size cap (CSS px) for the internal-link hover preview. The crop
- *  is scaled down to fit this box when it's larger — never clipped, so a wide
- *  reference entry shows whole lines, just smaller. */
+ *  is scaled down, never clipped, so a wide reference entry stays whole. */
 const LINK_PREVIEW_MAX_W = 560
 const LINK_PREVIEW_MAX_H = 240
 
-/** The subset of a mouse event `onOpen` actually needs — deliberately not
- *  `React.MouseEvent`, since `handleMarkMouseDown` calls it once more from a
- *  plain native `MouseEvent` (a `document`-level listener has no React event
- *  to hand it), and both shapes satisfy this one. */
+/** The subset of a mouse event `onOpen` needs — not `React.MouseEvent`,
+ *  since `handleMarkMouseDown` also calls it from a plain native
+ *  `MouseEvent` (a `document`-level listener), and both satisfy this shape. */
 type MarkOpenEvent = { clientX: number; clientY: number; stopPropagation: () => void }
 
-/** One mark's rendered overlay (a sticky-note dot, or one `<div>` per
- *  highlighted line) plus its hover tooltip — split out of the memoized
- *  `pages` array below purely so it can own its own hover state without
- *  that state forcing every page to re-render. Shows the mark's comment
- *  (or, lacking one, the text it was created from) and, when it has any,
- *  the fields it's linked to as evidence — the same information the
- *  click-to-open popover shows, available at a glance without opening it. */
+/** One mark's rendered overlay plus its hover tooltip — split out of the
+ *  memoized `pages` array so its own hover state doesn't force every page
+ *  to re-render. */
 function MarkOverlayItem({
   mark,
   flash,
@@ -226,9 +203,8 @@ function MarkOverlayItem({
   mark: PdfMark
   flash: string
   onOpen: (e: MarkOpenEvent) => void
-  /** See `handleMarkMouseDown`'s own doc comment — replaces the plain
-   *  `onClick` this used to have, so a drag starting here can anchor a real
-   *  text selection instead of grabbing an empty overlay div. */
+  /** See `handleMarkMouseDown` — replaces plain `onClick` so a drag starting
+   *  here can anchor a real text selection instead of grabbing the overlay div. */
   onMarkMouseDown: (e: React.MouseEvent<HTMLElement>, onOpen: (e: MarkOpenEvent) => void) => void
 }) {
   const [coords, setCoords] = useState<{ x: number; top?: number; bottom?: number } | null>(null)
@@ -309,19 +285,18 @@ function MarkOverlayItem({
 
 /** Middle pane: renders the current paper's PDF and captures text selection. */
 export function PdfViewer() {
-  // Subscribe to primitive fields only. Subscribing to the whole paper object
-  // would re-run the load effect on every annotation edit (immer returns a new
-  // paper object), which would reload — and briefly blank — the PDF.
+  // Subscribe to primitive fields only — the whole paper object changes
+  // identity on every annotation edit (immer), which would re-trigger the
+  // load effect and briefly blank the PDF.
   const paperId = useStore((s) => selectCurrentPaper(s)?.id ?? null)
   const pdfPath = useStore((s) => selectCurrentPaper(s)?.pdf ?? null)
   const title = useStore((s) => selectCurrentPaper(s)?.title ?? '')
   const authors = useStore((s) => (selectCurrentPaper(s)?.authors ?? []).join(', '))
   const doi = useStore((s) => selectCurrentPaper(s)?.doi)
   const saveHandle = useStore((s) => s.saveHandle)
-  // "Continue where you left off": the paper/page to land on right after a
-  // project opens (`loadFromText` populates this from `loadReadingPosition`),
-  // and the write side that keeps it current as the reviewer scrolls. See
-  // `initialPdfPosition`'s own doc comment for the single-shot/race-guard shape.
+  // "Continue where you left off": paper/page to land on after a project
+  // opens (populated by `loadFromText`), plus the write side that keeps it
+  // current as the reviewer scrolls.
   const initialPdfPosition = useStore((s) => s.initialPdfPosition)
   const clearInitialPdfPosition = useStore((s) => s.clearInitialPdfPosition)
   const noteReadingPosition = useStore((s) => s.noteReadingPosition)
@@ -329,10 +304,8 @@ export function PdfViewer() {
   const screening = useStore((s) => s.project?.screening != null)
   const toggleScreeningPdf = useStore((s) => s.toggleScreeningPdf)
 
-  // PDF highlights/comments — the standard "select text, highlight it,
-  // optionally attach a note" most PDF viewers offer. See `pdfMarks.ts` for
-  // why these are SaiLoR's own overlay data rather than real PDF annotation
-  // objects written into the file.
+  // PDF highlights/comments. See `pdfMarks.ts` for why these are SaiLoR's
+  // own overlay data rather than real PDF annotation objects.
   const marks = useStore((s) => s.currentPdfMarks())
   const addHighlight = useStore((s) => s.addHighlight)
   const setMarkComment = useStore((s) => s.setMarkComment)
@@ -341,9 +314,7 @@ export function PdfViewer() {
   const unlinkMarkFromField = useStore((s) => s.unlinkMarkFromField)
   const setExportPdfOpen = useStore((s) => s.setExportPdfOpen)
   const setLastCreatedMarkId = useStore((s) => s.setLastCreatedMarkId)
-  // The color-swatch toolbar offered right after a text selection, positioned
-  // near where the selection ends — the same "select, then a small popup
-  // offers to highlight" flow Preview/Acrobat use.
+  // Color-swatch toolbar offered after a text selection, near where it ends.
   const [selectionToolbar, setSelectionToolbar] = useState<
     { x: number; y: number; spans: { page: number; rects: MarkRect[] }[]; text: string } | null
   >(null)
@@ -354,10 +325,10 @@ export function PdfViewer() {
   const markPopoverRef = useRef<HTMLDivElement>(null)
   const toolbarPos = useClampedAnchor(toolbarRef, selectionToolbar)
   const markPopoverPos = useClampedAnchor(markPopoverRef, activeMark)
-  // True for exactly the span of a mousedown-to-mouseup gesture that started
-  // on a mark and turned into a drag — see `handleMarkMouseDown`. Adds
-  // `.pdf-marks-dragging` to the scroll container, which is what actually
-  // lets that drag's later mousemoves reach the text layer underneath.
+  // True for the span of a mousedown-to-mouseup gesture that started on a
+  // mark and turned into a drag — see `handleMarkMouseDown`. Adds
+  // `.pdf-marks-dragging`, which lets the drag's mousemoves reach the text
+  // layer underneath the mark.
   const [markDragActive, setMarkDragActive] = useState(false)
 
   // Annotation-tools row: sticky notes plus cycling through every mark.
@@ -382,8 +353,8 @@ export function PdfViewer() {
   const pageRefs = useRef<(HTMLDivElement | null)[]>([])
   const pageInputRef = useRef<HTMLInputElement>(null)
   const revokeRef = useRef<(() => void) | undefined>(undefined)
-  // Which paper is on screen right now, readable from a callback that was
-  // created for a different one — see `grantFolderAccess`.
+  // Which paper is on screen now, readable from a callback created for a
+  // different one — see `grantFolderAccess`.
   const paperIdRef = useRef(paperId)
   paperIdRef.current = paperId
 
@@ -391,10 +362,8 @@ export function PdfViewer() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [searchCaseSensitive, setSearchCaseSensitive] = useState(false)
-  // `findMatches` walks every rendered page's text layer with a TreeWalker —
-  // real work for a long document. Debounced so a fast typist doesn't trigger
-  // one full re-scan per keystroke; the input itself still reflects `query`
-  // immediately, only the (re)search is delayed.
+  // `findMatches` walks every page's text layer — real work for a long
+  // document, so debounce it; the input still reflects `query` immediately.
   const [debouncedQuery, setDebouncedQuery] = useState('')
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedQuery(query), 150)
@@ -406,10 +375,9 @@ export function PdfViewer() {
   const matchesRef = useRef<Range[]>([])
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  // Reference hovering (#8): hovering an internal PDF link (a citation, a
-  // figure/table reference, a TOC entry) previews its destination — a strip
-  // of the destination page, copied from that page's already-rendered canvas
-  // (every page is mounted, no virtualization), so no extra pdf.js render.
+  // Reference hovering: hovering an internal PDF link previews its
+  // destination, copied from that page's already-rendered canvas (every
+  // page is mounted) so no extra pdf.js render is needed.
   const pdfDocRef = useRef<PDFDocumentProxy | null>(null)
   const linkHoverTokenRef = useRef(0)
   const [linkPreview, setLinkPreview] = useState<{
@@ -470,23 +438,15 @@ export function PdfViewer() {
     revokeRef.current?.()
     revokeRef.current = undefined
     // A pending "land on this page" request belongs to whichever paper it
-    // was computed for — if the reviewer has navigated to a different paper
-    // before that page was ever reached (the landing paper's PDF was still
-    // loading), it must not carry over and misapply once *this* paper's
-    // pages mount. Read fresh rather than via a hook value, so this reset
-    // effect (which runs on every ordinary paper switch) doesn't itself need
-    // `initialPdfPosition` in its own dependency list.
+    // was computed for — drop it if the reviewer switched papers before it
+    // was reached. Read fresh so this effect doesn't need it as a dependency.
     const pending = useStore.getState().initialPdfPosition
     if (pending && pending.paperId !== paperId) clearInitialPdfPosition()
     if (!pdfPath) return
 
     // A locally opened browser project needs a one-time folder grant before
-    // any of its PDFs can be read. Ask for it explicitly — a button below,
-    // driven by a real click — rather than let getPdfSource pop the native
-    // picker unannounced the moment a paper is first opened, which reads as
-    // the app doing something on its own for no visible reason (and, on
-    // Firefox, opens with the browser's own "upload files?" framing, which
-    // is alarming to see with no context).
+    // its PDFs can be read. Require an explicit button click rather than
+    // popping the native picker unannounced (alarming, especially on Firefox).
     if (getPlatform().needsPdfFolderGrant()) {
       setNeedsFolderGrant(true)
       return
@@ -517,9 +477,8 @@ export function PdfViewer() {
     if (flashTimeoutRef.current !== undefined) window.clearTimeout(flashTimeoutRef.current)
   }, [])
 
-  // The explicit "Choose folder…" action: a real click, so the native picker
-  // is guaranteed to open (some browsers refuse it otherwise) and the
-  // reviewer sees why they're being asked before the OS dialog appears.
+  // A real click, so the native picker is guaranteed to open (some browsers
+  // refuse it otherwise) and the reviewer sees why before the OS dialog appears.
   const grantFolderAccess = () => {
     if (!pdfPath) return
     setGrantingFolder(true)
@@ -531,14 +490,9 @@ export function PdfViewer() {
         return getPlatform().getPdfSource(pdfPath, saveHandle ?? { kind: 'download' })
       })
       .then((src) => {
-        // The same guard the load effect has, for the same reason. Granting the
-        // folder makes the page interactive again while the directory walk and
-        // the PDF read are still in flight, so the reviewer can select another
-        // paper meanwhile — and the load effect then starts its own fetch,
-        // since the grant it was waiting for has arrived. Whichever settled
-        // last used to win, which could leave paper B selected in the list and
-        // the annotation panel with paper A's PDF on screen: annotating one
-        // paper from another's text, with nothing to show anything was wrong.
+        // Same guard as the load effect: granting access is async, and the
+        // reviewer may have switched papers before it resolves. Without this,
+        // paper A's PDF could render while paper B is selected.
         if (paperIdRef.current !== paperId) {
           src.revoke?.()
           return
@@ -563,9 +517,8 @@ export function PdfViewer() {
     return () => ro.disconnect()
   }, [])
 
-  // Update the "current page" from the scroll position: the last page whose top
-  // has scrolled into the upper part of the viewport. Runs on every scroll, so
-  // it also reflects jumps made by internal PDF links.
+  // Current page = last page whose top has scrolled into the upper viewport.
+  // Runs on every scroll, so it also reflects jumps from internal PDF links.
   const updateCurrentPage = () => {
     const root = containerRef.current
     if (!root) return
@@ -588,10 +541,9 @@ export function PdfViewer() {
     if (document.activeElement !== pageInputRef.current) setPageInput(String(currentPage))
   }, [currentPage])
 
-  /** How far scrolled into `pageNumber`, as a fraction of that page's own
-   *  current rendered height (0 = its top) — the same "fraction of the page"
-   *  convention `MarkRect` already uses. Reads live ref values, so it's
-   *  always safe to call without being a `useEffect` dependency itself. */
+  /** How far scrolled into `pageNumber`, as a fraction of its rendered height
+   *  (0 = top) — same convention as `MarkRect`. Reads live refs, so it's safe
+   *  to call without being a `useEffect` dependency. */
   const readOffsetFraction = (pageNumber: number): number => {
     const root = containerRef.current
     const pageEl = pageRefs.current[pageNumber - 1]
@@ -602,14 +554,10 @@ export function PdfViewer() {
     return Math.min(1, Math.max(0, fraction))
   }
 
-  // "Continue where you left off": persists the current page — and how far
-  // scrolled into it — as the reviewer scrolls, debounced so a fast scroll
-  // through many pages doesn't spam localStorage with one write per frame.
-  // `paperId` is captured here, in the closure this effect re-runs, rather
-  // than read fresh when the timeout fires — by then the reviewer may
-  // already be looking at a different paper, and writing *that* one's id
-  // against a position captured for this one would attribute it to the
-  // wrong paper.
+  // "Continue where you left off": persists page + scroll offset, debounced
+  // so fast scrolling doesn't spam localStorage. `paperId` is captured in the
+  // closure rather than read fresh, so a late-firing timeout can't attribute
+  // this position to a paper the reviewer has since switched to.
   useEffect(() => {
     if (!paperId) return
     const t = window.setTimeout(
@@ -628,37 +576,19 @@ export function PdfViewer() {
     pageRefs.current[clamped - 1]?.scrollIntoView({ block: 'start' })
   }
 
-  // Once this paper's pages are actually mounted, jump to the remembered
-  // page/offset from a just-opened project and consume the one-shot
-  // request. The reset effect above already drops `initialPdfPosition` the
-  // moment the reviewer navigates to a *different* paper before this ever
-  // runs, so the `paperId` match here only needs to guard the ordinary
-  // "haven't gotten to it yet" case, not a stale one.
-  //
-  // Re-applied on every `textRenderTick` (each page's own text layer finishing)
-  // rather than scrolled to once and done: the moment `numPages` is known,
-  // every page is still at its "loading" placeholder height, not its real
-  // rendered one — scrolling to the target position then lands on wherever
-  // that placeholder currently sits, and as earlier pages finish rendering
-  // at their real (larger) height moments later, that growth pushes the
-  // target page (and the offset within it, recomputed from that page's own
-  // *current* height each time) down and out from under the scroll position
-  // already applied, silently landing back on an earlier spot. Re-snapping
-  // on each render tick keeps the target pinned through that settling, and
-  // the request is only dropped once nothing has re-rendered for a bit.
+  // Jump to the remembered page/offset once this paper's pages mount, and
+  // consume the one-shot request. Re-applied on every `textRenderTick`
+  // (not just once) because pages start at placeholder height and grow as
+  // their text layers render, which would otherwise push the target out
+  // from under an already-applied scroll position.
   useEffect(() => {
     if (numPages === 0 || !initialPdfPosition || initialPdfPosition.paperId !== paperId) return
     const root = containerRef.current
     const pageEl = pageRefs.current[initialPdfPosition.page - 1]
     if (root && pageEl) {
-      // The same rect-delta technique `scrollToMark` already uses, not
-      // `scrollIntoView` + a separate manual adjustment: combining two
-      // different scrolling mechanisms for one jump is exactly what let the
-      // page land right while the offset within it didn't — `scrollIntoView`
-      // makes its own assumptions about "into view" that a relative
-      // `scrollTop` delta computed a beat later isn't guaranteed to agree
-      // with. One combined delta, computed from the same rects, is what
-      // `scrollToMark` already relies on for the identical kind of jump.
+      // Same rect-delta technique as `scrollToMark`, not `scrollIntoView` +
+      // a manual adjustment — mixing the two let the page land right while
+      // the offset within it didn't.
       const pageRect = pageEl.getBoundingClientRect()
       const rootRect = root.getBoundingClientRect()
       const targetTop = pageRect.top + initialPdfPosition.offsetFraction * pageRect.height
@@ -674,10 +604,9 @@ export function PdfViewer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numPages, initialPdfPosition, paperId, textRenderTick])
 
-  /** Scroll to a mark's actual position on its page (not just the page top),
-   *  vertically centering it the same way the in-PDF search's active match is
-   *  centered below. Falls back to `scrollToPage` if the page isn't rendered
-   *  yet (shouldn't happen — every page is mounted, no virtualization). */
+  /** Scroll to a mark's position on its page, centering it like the in-PDF
+   *  search's active match. Falls back to `scrollToPage` if not rendered yet
+   *  (shouldn't happen — no virtualization). */
   const scrollToMark = (mark: PdfMark) => {
     const root = containerRef.current
     const pageEl = pageRefs.current[mark.page - 1]
@@ -707,51 +636,31 @@ export function PdfViewer() {
   // Capture the current text selection inside the viewer.
   const captureSelection = () => {
     const sel = window.getSelection()
-    // NFC: pdf.js's text layer can place an accented letter's base character
-    // and combining mark in separate adjacent DOM spans (see pdfText.ts's
-    // identical fix for the same font/CMap quirk on the full-extraction
-    // path) — a selection spanning that boundary reads back decomposed
-    // ("e" + ´) unless normalized here, right where the browser's own
-    // selection text is captured.
+    // NFC: pdf.js can split an accented letter's base + combining mark across
+    // adjacent spans (see pdfText.ts's identical fix), so a selection crossing
+    // that boundary reads back decomposed unless normalized here.
     const text = (sel?.toString() ?? '').normalize('NFC')
     if (text.trim()) setPdfSelection(text)
     updateSelectionToolbar(sel, text)
   }
 
   /**
-   * A mark (a highlight's rect, or a sticky note's icon) sits, in the DOM,
-   * on top of pdf.js's own text layer — that's how it can be clicked to open
-   * its popover and hovered for a tooltip. The cost: the overlay div itself
-   * holds no text, so a mousedown there could never anchor a native text
-   * selection, and the drag this bug report is about — trying to select the
-   * very text a mark highlights — landed entirely on that empty div instead
-   * of reaching the real text underneath.
+   * A mark's overlay div sits on top of pdf.js's text layer so it can be
+   * clicked/hovered, but that means a mousedown starting on a mark could
+   * never anchor a native text selection — dragging to select text "through"
+   * a highlight landed on the empty overlay div instead of the real text.
    *
-   * Click-to-open and hover both still work exactly as before; only how
-   * "click" is detected changes, from a native `onClick` to this function
-   * doing it manually, because that's what makes the fix possible: for the
-   * *first* mousedown to find real text underneath at all,
-   * `document.caretRangeFromPoint` needs the mark's `pointer-events` already
-   * off (it hit-tests the same way a real click would, so a `pointer-events:
-   * auto` div in the way is exactly as opaque to it as to the mouse) —
-   * meaning it has to go off immediately, before we even know yet whether
-   * this gesture will turn out to be a click or a drag. `.pdf-marks-dragging`
-   * (toggled via `markDragActive`) is that switch, applied to every mark at
-   * once via one class on the scroll container rather than per-element
-   * juggling. With it off across the whole gesture, the native `click` this
-   * mousedown would have produced no longer lands on the mark either — so
-   * the plain-click case is handled right here too, once mouseup confirms
-   * the pointer never moved.
+   * Fix: turn off pointer-events on marks for the whole gesture (via
+   * `.pdf-marks-dragging`, one class on the scroll container) so
+   * `document.caretRangeFromPoint` can see the real text underneath, and
+   * drive selection manually (anchor on mousedown, extend on mousemove past
+   * a threshold) since disabling pointer-events also kills the native click
+   * and drag-selection this used to rely on.
    *
-   * `caretRangeFromPoint`/`Selection.extend` rather than leaning on the
-   * browser's own drag-selection continuation: whether a mousedown that
-   * *started* on a non-text element still puts the browser into "extend the
-   * selection on mousemove" mode on its own is exactly the kind of internal
-   * behavior worth not depending on. Driving both ends explicitly — anchor
-   * on mousedown, extend on every mousemove past a small threshold — works
-   * the same way regardless. Both are standard, broadly-supported DOM APIs;
-   * SaiLoR only ever runs inside Electron/Chromium, so there is no other
-   * engine's support to worry about.
+   * `caretRangeFromPoint`/`Selection.extend` rather than the browser's own
+   * drag-selection continuation, since whether a mousedown starting on a
+   * non-text element keeps extending the selection isn't reliable to depend
+   * on (moot here — SaiLoR only runs in Electron/Chromium).
    */
   const handleMarkMouseDown = (e: React.MouseEvent<HTMLElement>, onOpen: (e: MarkOpenEvent) => void) => {
     if (e.button !== 0) return // left button only — never hijack a right-click
@@ -780,19 +689,16 @@ export function PdfViewer() {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
       setMarkDragActive(false)
-      // Not a drag: restore the click-to-open behavior the native `onClick`
-      // used to provide (and can't anymore — see this function's own doc
-      // comment for why pointer-events had to be off for the whole gesture).
+      // Not a drag: restore click-to-open, which native `onClick` can no
+      // longer provide (see this function's doc comment).
       if (!dragging) onOpen(ev)
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
   }
 
-  /** Which rendered page (1-indexed) `node` sits inside, by finding its
-   *  closest `.react-pdf__Page` ancestor and matching it against `pageRefs`
-   *  — the same elements the scroll-position tracking above already keys
-   *  off, rather than trusting a pdf.js/react-pdf internal attribute. */
+  /** Which rendered page (1-indexed) `node` sits inside — matched via
+   *  `pageRefs` rather than trusting a pdf.js/react-pdf internal attribute. */
   const pageNumberForNode = (node: Node | null): number | null => {
     const el = node instanceof Element ? node : node?.parentElement ?? null
     const pageEl = el?.closest<HTMLElement>('.react-pdf__Page')
@@ -801,17 +707,11 @@ export function PdfViewer() {
     return idx === -1 ? null : idx + 1
   }
 
-  /** Every actual text node inside `root`, in document order — deliberately
-   *  gathered via a `SHOW_TEXT` walk rather than `root.lastChild`/children:
-   *  pdf.js appends a trailing `.endOfContent` marker div to every text layer
-   *  purely to extend the mouse hit-area for "select to the end of the
-   *  page"; its CSS collapses to zero height normally but expands to cover
-   *  the *entire* page (`inset: 0`) the moment a selection is in progress
-   *  (`.textLayer.selecting .endOfContent`), and can be left stuck expanded
-   *  on a page whose own `mouseup` never fires (the drag ended on a later
-   *  page). It holds no text, so a `SHOW_TEXT` walk skips it for free —
-   *  ending a Range there via `setEndAfter(lastChild)` used to include it
-   *  and blow a highlight rect out to the whole page. */
+  /** Every text node inside `root`, via a `SHOW_TEXT` walk rather than
+   *  `root.lastChild`/children: pdf.js appends a trailing `.endOfContent`
+   *  marker div (extends the hit-area for "select to end of page") that can
+   *  get stuck expanded to the whole page — `SHOW_TEXT` skips it for free,
+   *  where `setEndAfter(lastChild)` used to include it and blow out the rect. */
   const textNodesOf = (root: Node): Text[] => {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
     const nodes: Text[] = []
@@ -829,28 +729,17 @@ export function PdfViewer() {
     return pageRect.height > 0 ? (rect.top - pageRect.top) / pageRect.height : 0
   }
 
-  /** A running header/footer (page number, title, authors, journal name —
-   *  whatever a template repeats on every page) should only end up in a
-   *  highlight when the reviewer's own drag actually touched it, not
-   *  because a selection that continues onto/from a neighboring page swept
-   *  over it along the way. This is the fraction of page height, measured
-   *  from the top and from the bottom, treated as "probably a running
-   *  header/footer" when deciding how far to auto-extend a selection's
-   *  boundary on a page the reviewer didn't start or end their drag on —
-   *  never applied to the page(s) they actually clicked/released on, whose
-   *  real boundary is kept exactly as given regardless of where it falls. */
+  /** Fraction of page height (from top and bottom) treated as a likely
+   *  running header/footer when auto-extending a selection onto a page the
+   *  reviewer didn't start/end their drag on — never applied to the page(s)
+   *  they actually clicked/released on. */
   const AUTO_EXTEND_MARGIN = 0.08
 
-  /** Split a Range that may cross page boundaries into one sub-range per page
-   *  it touches (`startPage`..`endPage` inclusive), each clamped to that
-   *  page's own text layer. On a page whose boundary is auto-extended
-   *  (i.e. every page except the one the selection truly starts/ends on),
-   *  the extension stops before a likely running header/footer — see
-   *  `AUTO_EXTEND_MARGIN` — so a highlight that merely continues past a
-   *  page break doesn't also grab that page's title/page-number/byline
-   *  line. A page found to intersect the range that turns out empty (e.g.
-   *  the boundary lands exactly on a page's edge, or the whole page is
-   *  header/footer) is simply omitted from the result. */
+  /** Split a Range crossing page boundaries into one sub-range per page
+   *  (`startPage`..`endPage`), clamped to that page's text layer. On pages
+   *  other than the true start/end, the boundary stops before a likely
+   *  header/footer (see `AUTO_EXTEND_MARGIN`). A page that ends up empty
+   *  (e.g. entirely header/footer) is omitted. */
   const splitRangeByPage = (range: Range, startPage: number, endPage: number): { page: number; range: Range }[] => {
     const out: { page: number; range: Range }[] = []
     for (let p = startPage; p <= endPage; p++) {
@@ -859,12 +748,9 @@ export function PdfViewer() {
       if (!pageEl || !textLayer) continue
       const nodes = textNodesOf(textLayer)
 
-      // The header-clipped start / footer-clipped end, when this page's
-      // corresponding boundary is auto-extended rather than the reviewer's
-      // own click/release point (see `AUTO_EXTEND_MARGIN`). `null` means
-      // "nothing past the header" / "nothing before the footer" — the whole
-      // page read as header/footer, vanishingly rare but handled below by
-      // simply contributing no range for this page.
+      // Header-clipped start / footer-clipped end for an auto-extended
+      // boundary (see `AUTO_EXTEND_MARGIN`). `null` means the whole page
+      // read as header/footer — handled below by contributing no range.
       const clippedStart = nodes.find((n) => textNodeTopFraction(n, pageEl) >= AUTO_EXTEND_MARGIN) ?? null
       let clippedEnd: Text | null = null
       for (let i = nodes.length - 1; i >= 0; i--) {
@@ -891,11 +777,9 @@ export function PdfViewer() {
           continue
         }
       } catch {
-        // The clipped boundary landed on the wrong side of the reviewer's
-        // own real click/release point on this page (e.g. they started
-        // their selection inside what looks like a footer) — the header/
-        // footer heuristic doesn't apply to a directly-touched boundary
-        // anyway, so fall back to this page's full, unclipped text.
+        // Clipped boundary landed on the wrong side of the reviewer's real
+        // click/release point (e.g. selection started inside a footer) —
+        // fall back to this page's full, unclipped text.
         sub.setStart(p === startPage ? range.startContainer : textLayer, p === startPage ? range.startOffset : 0)
         const last = nodes[nodes.length - 1]
         if (p === endPage) sub.setEnd(range.endContainer, range.endOffset)
@@ -999,16 +883,10 @@ export function PdfViewer() {
     }
   }
 
-  /** Flash a mark, and scroll to it first unless `onlyIfHidden` says it's
-   *  already on screen — the shared "show me this one" action behind cycling,
-   *  a jump requested from elsewhere (the field-link popover), and picking a
-   *  mark to link from that popover's own list.
-   *
-   *  Cycling (`cycleTo`) always scrolls: Next/Prev is a request to move, even
-   *  to a mark already in view (centering it is the point). `onlyIfHidden` is
-   *  for callers where the mark was only *named*, not navigated to — jumping
-   *  the page out from under someone who can already see what they clicked is
-   *  disorienting, not helpful. */
+  /** Flash a mark, scrolling to it first unless `onlyIfHidden` says it's
+   *  already on screen. Cycling always scrolls (Next/Prev means "move,
+   *  centering it"); `onlyIfHidden` is for callers where the mark was only
+   *  named, not navigated to — jumping the page would be disorienting. */
   const flashAndScrollTo = (mark: PdfMark, opts: { onlyIfHidden?: boolean } = {}) => {
     const root = containerRef.current
     const pageEl = pageRefs.current[mark.page - 1]
@@ -1035,12 +913,8 @@ export function PdfViewer() {
     flashAndScrollTo(sortedMarks[next])
   }
 
-  // A jump requested from elsewhere (the field-link popover's "show me this
-  // mark" before linking it) — flash it and clear the request, leaving
-  // whatever popover asked for it open (this never touches `activeMark`).
-  // `onlyIfHidden`: the mark was named, not navigated to — if it's already on
-  // screen, scrolling would just move the page out from under someone who can
-  // already see what they clicked.
+  // A jump requested from elsewhere (the field-link popover) — flash the
+  // mark and clear the request, leaving that popover open.
   const pendingMarkJump = useStore((s) => s.pendingMarkJump)
   const setPendingMarkJump = useStore((s) => s.setPendingMarkJump)
   useEffect(() => {
@@ -1071,10 +945,9 @@ export function PdfViewer() {
     }
   }
 
-  // When an in-PDF link is clicked, the pdf.js LinkService scrolls to the
-  // destination. We record the position we jumped *from* so the user can get
-  // back. The scroll happens asynchronously after the click, so poll briefly and
-  // only record if the view actually moved (ignores external links, which don't).
+  // Record the position jumped from so the reviewer can get back. The scroll
+  // happens async after the click, so poll briefly and only record if the
+  // view actually moved (ignores external links, which don't move it).
   const JUMP_THRESHOLD = 24
   const recordJumpIfMoved = (from: number) => {
     let tries = 0
@@ -1100,14 +973,11 @@ export function PdfViewer() {
     if (root) recordJumpIfMoved(root.scrollTop)
   }
 
-  /** Build the hover preview for one internal-link annotation: resolve where
-   *  it points, fit a crop box to the destination's own entry from the page's
-   *  text layout (`detectEntryBox` — the SumatraPDF behavior; falls back to a
-   *  page-wide window below the destination when there's no entry to fit to),
-   *  then copy that crop out of the destination page's already-rendered
-   *  canvas, scaled down if needed to fit the preview's size cap. Returns
-   *  `null` for external links, dangling destinations, or a destination page
-   *  whose canvas hasn't rendered yet. */
+  /** Build the hover preview for an internal-link annotation: resolve its
+   *  destination, fit a crop box to the destination's entry (`detectEntryBox`,
+   *  SumatraPDF-style; falls back to a page-wide window), then copy that crop
+   *  from the destination page's rendered canvas. Returns `null` for external
+   *  links, dangling destinations, or an unrendered destination page. */
   const resolveLinkPreview = async (
     doc: PDFDocumentProxy,
     pageNum: number,
@@ -1133,8 +1003,7 @@ export function PdfViewer() {
     if (rect.width === 0 || rect.height === 0) return null
 
     // Fit the crop to the destination's entry (bibliography item, glossary
-    // entry, …) from the page's text layout, in the same scale-1 viewport
-    // coordinates as vx/vy.
+    // entry, …), in the same scale-1 viewport coordinates as vx/vy.
     const textContent = await targetPage.getTextContent()
     const textItems = textContent.items.flatMap((it) => {
       if (!('str' in it)) return [] // TextMarkedContent — no geometry
@@ -1143,10 +1012,8 @@ export function PdfViewer() {
     })
     const entry = detectEntryBox(textItems, x !== null ? vx : null, vy, vp.height)
 
-    // The crop, in CSS px on the rendered page. Fallback (no entry to fit
-    // to — a figure/table/section target, an image-only page): a page-wide
-    // window below the destination, so whole lines always stay visible and
-    // the target's surroundings give context.
+    // Crop in CSS px on the rendered page. Fallback (no entry to fit — a
+    // figure/table/section target): a page-wide window below the destination.
     const k = rect.width / vp.width // CSS px per viewport unit
     const pad = 6
     let crop: { x: number; y: number; w: number; h: number }
@@ -1178,10 +1045,9 @@ export function PdfViewer() {
   }
 
   // Hover handlers for pdf.js's annotation-layer links, delegated from the
-  // scroll container (the `<a>`s are pdf.js DOM, not React's — same reason
-  // `onPdfClickCapture` works this way). `mouseover`/`mouseout` re-fire when
-  // moving between a link's descendants; the `relatedTarget` checks keep the
-  // preview stable across those.
+  // scroll container (the `<a>`s are pdf.js DOM, not React's). `relatedTarget`
+  // checks keep the preview stable as mouseover/mouseout re-fire between a
+  // link's descendants.
   const onPdfMouseOver = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement | null
     const a = target?.closest('.react-pdf__Page__annotations a')
@@ -1281,10 +1147,9 @@ export function PdfViewer() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // Ctrl/Cmd+wheel zooms the PDF (matching pinch-to-zoom-via-ctrl+wheel that
-  // browsers/trackpads synthesize) instead of scrolling it. Needs a real DOM
-  // listener with `passive: false` — React's synthetic wheel handler is
-  // passive by default, so `preventDefault` on it would warn/no-op.
+  // Ctrl/Cmd+wheel zooms instead of scrolling (matches trackpad pinch-zoom).
+  // Needs a real DOM listener with `passive: false` — React's synthetic
+  // wheel handler is passive, so `preventDefault` on it would no-op.
   useEffect(() => {
     const root = containerRef.current
     if (!root) return
@@ -1301,10 +1166,9 @@ export function PdfViewer() {
   // Clear highlights when the viewer unmounts.
   useEffect(() => clearHighlights, [])
 
-  // Dismiss the highlight color toolbar / comment popover on Escape or a
-  // mousedown outside both — checked by ancestry (`closest`) rather than
-  // relying on the popovers' own `stopPropagation`, since that only affects
-  // the later `click` event, not this earlier `mousedown` one.
+  // Dismiss the toolbar/popover on Escape or an outside mousedown — checked
+  // via `closest` rather than the popovers' `stopPropagation`, which only
+  // affects the later `click` event, not this earlier `mousedown`.
   useEffect(() => {
     if (!selectionToolbar && !activeMark) return
     const dismiss = (e?: MouseEvent) => {
@@ -1323,9 +1187,8 @@ export function PdfViewer() {
     }
   }, [selectionToolbar, activeMark])
 
-  // Pressing "a" while the highlight toolbar is up (text selected) is a
-  // shortcut for clicking its first color swatch — same as `useKeybindings.ts`'s
-  // shortcuts, guarded against firing while the user is typing elsewhere.
+  // Pressing "a" while the highlight toolbar is up is a shortcut for its
+  // first color swatch — guarded against firing while typing elsewhere.
   useEffect(() => {
     if (!selectionToolbar) return
     const onKey = (e: KeyboardEvent) => {
@@ -1366,15 +1229,10 @@ export function PdfViewer() {
   // would tear down and re-render the text layers on every search keystroke).
   const onTextLayerRendered = useCallback(() => setTextRenderTick((t) => t + 1), [])
 
-  // Memoize the page elements so unrelated re-renders (typing in the search
-  // box, search-match highlight updates) reuse the same element references.
-  // React then bails out of re-rendering the pages, keeping their text layers
-  // stable. `marks` IS a real dependency — a reviewer's own highlights are
-  // rendered as each page's `children` (react-pdf renders them after its own
-  // canvas/text/annotation layers, inside the same `position: relative`
-  // wrapper, so percentage-based positioning lines up for free) — but that
-  // only re-renders the cheap overlay `<div>`s, never pdf.js's own rendering,
-  // which is driven by `pageNumber`/`width` alone.
+  // Memoize pages so unrelated re-renders (typing in search, match updates)
+  // reuse the same elements, keeping text layers stable. `marks` is still a
+  // dependency since highlights render as each page's `children`, but that
+  // only touches the cheap overlay `<div>`s, never pdf.js's own rendering.
   const pages = useMemo(
     () =>
       Array.from({ length: numPages }, (_, i) => {
@@ -1444,9 +1302,8 @@ export function PdfViewer() {
     return <div className="panel pdf empty">No paper selected.</div>
   }
 
-  // Reachable now that a screening project may relax `pdf` to `""` — a
-  // non-screening project's `pdf` is still required (`model/schema.ts`), so
-  // this was unreachable before that relaxation existed.
+  // Reachable now that a screening project may relax `pdf` to `""` (a
+  // non-screening project's `pdf` is still required — `model/schema.ts`).
   if (!pdfPath) {
     return (
       <div className="panel pdf empty">
@@ -1769,25 +1626,19 @@ export function PdfViewer() {
           <Document
             file={url}
             onLoadSuccess={(doc) => {
-              // Cap what we agree to mount. pdf.js correctly ignores a lying
-              // /Count, but it does not dedupe a page tree that is a DAG: a
-              // 2.4 KB file whose /Pages nodes each list the same child twice,
-              // 24 levels deep, reports 16 777 216 pages. There is no
-              // virtualization here, so every page becomes a React element with
-              // a canvas and a text layer — building the element array alone
-              // measured 3.6 s and 3.6 GB at that count, which is a certain
-              // renderer crash from clicking a paper. Real documents do not
-              // reach five figures.
+              // Cap what we mount: pdf.js ignores a lying /Count but doesn't
+              // dedupe a DAG page tree — a 2.4 KB file can report 16M pages,
+              // which without virtualization would try to build 16M page
+              // elements (measured 3.6s/3.6GB), a certain renderer crash.
               setNumPages(Math.min(doc.numPages, MAX_PDF_PAGES))
               setTruncatedPages(doc.numPages > MAX_PDF_PAGES ? doc.numPages : 0)
               pdfDocRef.current = doc // for resolving link destinations on hover
             }}
             onLoadError={(err) => setError(String(err?.message ?? err))}
             loading={<div className="pdf-loading">Loading PDF…</div>}
-            // External links open in a new browser tab instead of navigating the
-            // app away. In Electron, the main process turns this into a system
-            // browser open (setWindowOpenHandler). Internal links are unaffected —
-            // pdf.js's LinkService scrolls to the destination without navigating.
+            // External links open in a new tab instead of navigating the app
+            // away; Electron's main process turns this into a system browser
+            // open. Internal links are unaffected — LinkService just scrolls.
             externalLinkTarget="_blank"
             externalLinkRel="noopener noreferrer"
           >

@@ -19,12 +19,9 @@ import { parseMarks, parseReviewMarks, type PdfMark } from './pdfMarks'
 import { parseAlignment, type StoredAlignment } from './alignment'
 
 /**
- * One AI-assisted-annotation pass applied to a paper: which provider and model
- * produced it, and when. A permanent disclosure record, not a UI hint — unlike
- * the session-only "unconfirmed" marks (`aiMarks` in the store), this is meant
- * to survive into the saved file so a co-reviewer, or the reviewer themself
- * later, can see that (and how) AI was used on this paper. Append-only: each
- * `applyAiSuggestions` call that actually writes something adds one entry.
+ * One AI-assisted-annotation pass applied to a paper. A permanent disclosure
+ * record (unlike the session-only `aiMarks` in the store) meant to survive
+ * into the saved file so any reviewer can see AI was used. Append-only.
  */
 export interface AiUsageRecord {
   /** The provider id at the time of use, e.g. "openai" — not the display label. */
@@ -41,114 +38,63 @@ export interface Paper {
   authors: string[]
   doi?: string
   /**
-   * Publication year. `undefined`, not a sentinel, means "unknown" —
-   * deliberately including the "in press" / "to appear" case: those describe
-   * a publication *status*, not a year, and encoding a status into a numeric
-   * field would make every consumer handle a value that is sometimes a
-   * magnitude and sometimes a label. A venue-less preprint the author wants
-   * to flag as forthcoming spells that in `venue` (free text) instead, e.g.
-   * `"To appear in ICSE 2026"`.
-   *
-   * A number, not a string: every parser in `references.ts` already commits
-   * to one (a regex match run through `Number`, or CSL's `date-parts[0][0]`),
-   * so a string would force a redundant number→string conversion on import
-   * and lose numeric sort/filter for no benefit.
+   * `undefined` means "unknown", including "in press"/"to appear" — those are a
+   * publication *status*, not a year, so they belong in `venue` free text
+   * instead (e.g. `"To appear in ICSE 2026"`), not encoded into this number.
    */
   year?: number
   /**
-   * Where the paper appeared — journal, conference/proceedings, or publisher,
-   * whichever the source called it. One free-text field, not separate
-   * journal/proceedings fields: no source format (BibTeX journal/booktitle/
-   * publisher, RIS JF/JO/T2, CSL container-title) reliably distinguishes
-   * them, and a screener just needs to read "TSE" or "ICSE 2024".
+   * One free-text field, not separate journal/proceedings/publisher fields: no
+   * source format reliably distinguishes them, and a screener just needs to
+   * read "TSE" or "ICSE 2024".
    */
   venue?: string
-  /**
-   * The paper's abstract when the source had one. Screening is normally
-   * decided on title + abstract, so this is the reading surface when there is
-   * no PDF; it is ordinary paper metadata otherwise.
-   */
+  /** Screening is normally decided on title + abstract, so this is the
+   *  reading surface when there is no PDF. */
   abstract?: string
   /**
-   * True when `abstract` was produced by the PDF-text heuristic
-   * (`extractPdfMeta` in `pdfMeta.ts`) rather than typed, imported from a
-   * reference file, or otherwise authored. A durable disclosure, like
-   * `aiUsage` — it must survive into the saved file so every reviewer who
-   * opens this paper sees the same "unverified, proceed with caution" the
-   * extracting session did, not just whoever happened to trigger it. Cleared
-   * (never true) once a human or a reference-file import provides a real
-   * abstract — see `fillFromRef` in `editorStore.ts`.
+   * True when `abstract` came from the PDF-text heuristic (`extractPdfMeta` in
+   * `pdfMeta.ts`) rather than being typed or imported. A durable disclosure
+   * like `aiUsage`, so every later reviewer sees "unverified". Cleared once a
+   * human or reference-file import provides a real abstract (`fillFromRef` in
+   * `editorStore.ts`).
    */
   abstractFromPdf?: boolean
   pdf: string
-  /** The single/consolidated result. Unchanged in meaning by multi-reviewer
-   *  support: this is still what `validateProject`, `hasAnnotations`, and any
-   *  future export read, and what a single-reviewer project uses exclusively. */
+  /** The single/consolidated result — what `validateProject`, `hasAnnotations`,
+   *  and export read, and what a single-reviewer project uses exclusively. */
   annotations: AnnotationValueTree
-  /**
-   * Each independent reviewer's own annotations, keyed "1".."N" (a string
-   * reviewer number, matching `Project.reviewers`). Absent/empty in a
-   * single-reviewer project — `annotations` alone carries the data then, same
-   * as before this feature existed.
-   */
+  /** Each independent reviewer's own annotations, keyed "1".."N". Absent/empty
+   *  in a single-reviewer project — `annotations` alone carries the data. */
   reviews: Record<string, AnnotationValueTree>
-  /**
-   * AI-assisted annotation passes applied to this paper, oldest first — array
-   * order alone establishes "the order of use", `appliedAt` makes it explicit
-   * even if the array is ever hand-edited or reordered. Empty when AI has never
-   * been used on this paper.
-   */
+  /** AI-assisted annotation passes, oldest first. Empty when AI has never
+   *  been used on this paper. */
   aiUsage: AiUsageRecord[]
   /**
-   * Canonical field paths (`formatPath` form) where the consolidator has
-   * declared the reviewers' differing answers to mean the same thing — e.g.
-   * "RCT" and "randomized controlled trial". Empty until Consolidation marks
-   * anything.
-   *
-   * One boolean per field, not per reviewer pair. Exact for two reviewers —
-   * the common case, and the only shape a single mark can honestly describe —
-   * but with three or more it cannot express "these two agree but that one
-   * doesn't"; see `disagreements.ts`, which has to live with that limit.
+   * Canonical field paths where the consolidator has declared the reviewers'
+   * differing answers to mean the same thing (e.g. "RCT" vs. "randomized
+   * controlled trial"). One boolean per field, not per reviewer pair — exact
+   * for two reviewers, but with three+ it can't express "these two agree but
+   * that one doesn't"; see `disagreements.ts`.
    */
   equal: string[]
-  /**
-   * Which of each reviewer's repeated entries are the same entry, as worked
-   * out by Consolidation's matcher. Empty until somebody opens the
-   * Consolidation seat on this paper — and in a single-reviewer project,
-   * forever, since there is nothing to match. See `model/alignment.ts` for
-   * why this is recorded rather than baked into the reviewers' own ordering.
-   */
+  /** Which of each reviewer's repeated entries are the same entry, per
+   *  Consolidation's matcher. Empty until the Consolidation seat runs; see
+   *  `model/alignment.ts` for why this is recorded rather than derived. */
   alignment: StoredAlignment
-  /**
-   * PDF highlights/comments — the single/consolidated reviewer's own marks in
-   * a single-reviewer project, or the Consolidation seat's own reading marks
-   * in a multi-reviewer one. Same "single tree vs. per-reviewer trees" split
-   * `annotations`/`reviews` already has, and for the same reason: each
-   * reviewer marks up their own reading independently. See `pdfMarks.ts`.
-   */
+  /** PDF highlights/comments for the single/consolidated tree. Same
+   *  single-tree-vs-per-reviewer split as `annotations`/`reviews`. */
   marks: PdfMark[]
   /** Each independent reviewer's own marks, keyed "1".."N" like `reviews`.
    *  Absent/empty in a single-reviewer project. */
   reviewMarks: Record<string, PdfMark[]>
   /**
-   * The "I am done with this paper" declaration for the single/consolidated
-   * tree — the checkbox in the annotation panel, and the only thing that turns
-   * the paper list's dot green (see `paperIsFinished` in `PaperList.tsx`).
-   * Written by the lone reviewer of a single-reviewer project, and by the
-   * consolidator of a multi-reviewer one: it belongs to whoever owns
-   * `annotations`, exactly like `marks` does.
-   *
-   * Deliberately *not* derived from the data: a full tree means every field
-   * has something in it, which is a fact about the form, not a judgement that
-   * the extraction is right. Only a human can make the second claim, so it is
-   * stored rather than computed. It is not re-derived on load either, so a
-   * later edit that empties a field leaves the flag standing while the dot
-   * stops being green (`PaperList.tsx` requires both) — nothing silently
-   * un-declares what a reviewer declared.
-   *
-   * Same single-tree-vs-per-reviewer split as `annotations`/`reviews` and
-   * `marks`/`reviewMarks`, and for the same reason: being finished is a
-   * per-seat statement.
+   * The "I am done with this paper" checkbox — turns the paper list's dot
+   * green (see `paperIsFinished` in `PaperList.tsx`). Deliberately *not*
+   * derived from the data: a full tree just means the form is full, not that
+   * a human judged the extraction correct. Not re-derived on load either, so
+   * a later edit emptying a field leaves this flag standing (the dot still
+   * requires both) — nothing silently un-declares what was declared.
    */
   finished: boolean
   /** Each numbered reviewer's own finished flag, keyed "1".."N" like `reviews`.
@@ -159,21 +105,11 @@ export interface Paper {
 }
 
 /**
- * The review's own protocol — its research questions, the search it ran, and
- * the criteria behind it — recorded *inside* the project file so a
- * pre-registered SLR's defining decisions travel with the data they produced,
- * rather than living in a separate document that drifts from it. Every field
- * is optional and authored by hand (unlike `ProjectProvenance`, which the app
- * writes on a screening import): a project that records none of this behaves
- * exactly as it did before this existed.
- *
- * A first-class field, not a `config` key, for a load-bearing reason: `config`
- * is a strict zod object rebuilt from scratch on every save (see
- * `serializeProject`), so anything hand-added under it — `config.protocol`,
- * `config.researchQuestions` — is *silently dropped* the first time the file
- * is saved. Root-level `extra` would survive, but a reviewer has no way to
- * know which of the two a stray key lands in. Making this an explicit,
- * parsed, round-tripped field is the only way the protocol is actually safe.
+ * The review's own protocol (research questions, search, criteria), recorded
+ * *inside* the project file so it travels with the data it produced. A
+ * first-class field, not a `config` key: `config` is rebuilt from scratch on
+ * every save (see `serializeProject`), so anything hand-added under it would
+ * be silently dropped on the next save.
  */
 export interface ProjectProtocol {
   /** The review's research questions, one per entry. */
@@ -192,33 +128,25 @@ export interface ProjectProtocol {
 }
 
 /**
- * Where a project file's papers came from, when it was built by importing
- * from another project rather than started from scratch — recorded so a
- * shared, git-committed file can answer "where did this come from" (a PRISMA
- * flow diagram needs exactly this) without SaiLoR itself, and without either
- * source file still being reachable.
+ * Where a project's papers came from when built by importing from another
+ * project, so a shared git-committed file can answer "where did this come
+ * from" (for a PRISMA flow diagram) without either source file reachable.
  */
 export interface ProjectProvenance {
-  /** Only one origin produces a project today; a discriminant keeps a second
-   *  one (a reference-file import, say) additive rather than breaking. */
+  /** Only one origin exists today; a discriminant keeps a second one additive. */
   kind: 'screening-import'
   source: {
     /** The source project's `title`, when it had one. */
     title?: string
-    /** The source's file name at import time — never its path: these files
-     *  are committed to git and shared, and an absolute path leaks the
-     *  author's filesystem layout into every clone. */
+    /** File name only, never a path — these files are committed to git and
+     *  shared, and a path leaks the author's filesystem layout. */
     file: string
   }
   /** ISO 8601, the moment of import. */
   importedAt: string
-  /**
-   * The source's census at import time, and what actually landed here. A
-   * snapshot, not a cache: screening continues in the source after the
-   * import, and papers are added to and removed from this project, so
-   * nothing here is derivable from either file later — which is exactly why
-   * it is stored. `carried` is the number PRISMA's flow diagram wants.
-   */
+  /** The source's census at import time. A snapshot, not derivable later since
+   *  papers get added/removed afterward. `carried` is what PRISMA's flow
+   *  diagram wants. */
   counts: { included: number; undecided: number; excluded: number; carried: number }
 }
 
@@ -226,68 +154,50 @@ export interface Project {
   version: number
   /** Display name for the review; empty when the file doesn't set one. */
   title?: string
-  /** Set when this project's papers were imported from another project;
-   *  null for a project started from scratch. Required (not optional) so
-   *  that constructing a `Project` without deciding what to do with it is a
-   *  type error, not a silent drop — see `mergeProjects`, which is exactly
-   *  the place a silent `undefined` would lose it. */
+  /** Set when this project's papers were imported from another project; null
+   *  otherwise. Required, not optional, so `mergeProjects` can't silently
+   *  drop it via an unhandled `undefined`. */
   provenance: ProjectProvenance | null
-  /** The review's authored protocol (research questions, search, criteria), or
-   *  null when the file records none. Required (not optional) for the same
-   *  reason `provenance` is: constructing a `Project` without deciding what to
-   *  do with it should be a type error, not a silent drop in `mergeProjects`. */
+  /** The review's authored protocol, or null when the file records none.
+   *  Required for the same reason `provenance` is. */
   protocol: ProjectProtocol | null
-  /** Free-text "about this schema" note — what the annotation fields mean as a
-   *  whole, how to use them, anything a reviewer should read before starting —
-   *  shown via an info button in the annotation panel, auto-opened once when a
-   *  project that has one is loaded. Null when the file records none. Required
-   *  (not optional) for the same reason `protocol` is. */
+  /** Free-text "about this schema" note shown via an info button in the
+   *  annotation panel, auto-opened once on load. Required for the same reason
+   *  `protocol` is. */
   schemaInfo: string | null
   schema: ResolvedDef[]
-  /**
-   * Whether AI-assisted annotation is available for this project. Defaults to
-   * true; the provider of the file opts out with `config.ai: false`.
-   */
+  /** Whether AI-assisted annotation is available. Defaults to true; opt out
+   *  with `config.ai: false`. */
   aiEnabled: boolean
   /**
-   * Whether a paper is signed off by hand — the "Annotation finished"
-   * checkbox in the annotation panel ("Consolidation finished" in the
-   * Consolidation seat, which gets one of its own; see `completenessApplies`).
-   * Defaults to true; the provider of the file opts out with
-   * `config.finishCheckbox: false`.
+   * Whether a paper must be signed off by hand ("Annotation finished"
+   * checkbox). Defaults to true; opt out with `config.finishCheckbox: false`.
    *
    * With it **off**, a paper counts as finished exactly when its schema is
-   * fulfilled (every field the completeness dot counts is filled — required
-   * fields only where the schema marks any, all fields otherwise). Nobody
-   * ticks anything, so `Paper.finished`/`reviewsFinished` are not read at
-   * all, and the "finished but a required field is empty" state becomes
-   * unreachable by construction — there is no declaration left to contradict
-   * the data.
+   * fulfilled, so `Paper.finished`/`reviewsFinished` are never read and the
+   * "finished but a required field is empty" state is unreachable.
    *
-   * The flag is a *project* setting rather than a per-reviewer preference:
-   * whether "done" means "a human said so" or "the form is full" decides what
-   * every green dot in the file means, and two reviewers of one review
-   * disagreeing about that would make the counts they report incomparable.
+   * A *project* setting, not per-reviewer: whether "done" means "a human said
+   * so" or "the form is full" decides what every green dot means, so two
+   * reviewers can't disagree about that within one review.
    *
-   * Any ticks recorded while it was on are kept in the file untouched, so
-   * turning it back on restores them rather than starting the review over.
+   * Ticks recorded while on are kept untouched, so turning it back on
+   * restores them rather than starting over.
    */
   finishCheckbox: boolean
   /**
-   * Number of independent reviewers. 1 (the default; `config.reviewers`
-   * absent or 1) means single-reviewer: every paper carries one
-   * `annotations` tree and nobody picks a reviewer. More than 1 means each
-   * reviewer 1..N annotates independently into `Paper.reviews[N]`, plus a
-   * built-in Consolidation role that reconciles them into `Paper.annotations`.
+   * Number of independent reviewers. 1 (default) means single-reviewer: one
+   * `annotations` tree per paper. More than 1 means reviewers 1..N annotate
+   * independently into `Paper.reviews[N]`, reconciled by a Consolidation role
+   * into `Paper.annotations`.
    */
   reviewers: number
   papers: Paper[]
   /**
    * The screening configuration when this is a screening project, else null.
    * A screening project's `schema` is *derived* from this (see
-   * `src/screening/schema.ts`) and whatever `config.schema` said in the file is
-   * ignored — this is the single source of truth, and the schema written back
-   * out is a projection of it, so the two can never drift.
+   * `src/screening/schema.ts`); `config.schema` in the file is ignored, so the
+   * two can never drift.
    */
   screening: ScreeningConfig | null
   /** Additional top-level fields preserved verbatim on save. */
@@ -322,10 +232,8 @@ const KNOWN_PAPER_KEYS = new Set([
   'finished',
   'reviewsFinished',
 ])
-/** Exported so `editorStore.ts`'s own root-extra split (`editorStateFromOpened`)
- *  uses this exact list rather than a second hand-maintained copy — see
- *  `deepEqualJson`'s doc comment for why a second implementation of "the same
- *  fact" is the bug this codebase specifically avoids. */
+/** Exported so `editorStore.ts`'s root-extra split reuses this exact list
+ *  rather than a second hand-maintained copy. */
 export const KNOWN_ROOT_KEYS = new Set([
   'version',
   'title',
@@ -337,13 +245,9 @@ export const KNOWN_ROOT_KEYS = new Set([
 ])
 
 /**
- * Parse `reviews` defensively, the same rule `annotations`/`aiUsage` follow:
- * the file is hand-editable, so a malformed entry is dropped, never thrown
- * over. A key is only kept when it looks like a reviewer number ("1", "2",
- * …) — anything else could never be reached by `currentTree`'s routing and
- * would just be dead weight riding along in the file. Each surviving tree is
- * normalized against the schema exactly like `annotations` is, so a reviewer
- * switching schemas mid-review still gets a well-formed tree to write into.
+ * Parse `reviews` defensively: the file is hand-editable, so a malformed entry
+ * is dropped, never thrown over. Only keys that look like a reviewer number
+ * are kept — anything else is unreachable dead weight.
  */
 function parseReviews(raw: unknown, schema: ResolvedDef[]): Record<string, AnnotationValueTree> {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return {}
@@ -356,25 +260,15 @@ function parseReviews(raw: unknown, schema: ResolvedDef[]): Record<string, Annot
 }
 
 /**
- * `parseReviews`, plus a skeleton for every reviewer `1..reviewerCount` who has
- * no tree of their own yet.
+ * `parseReviews`, plus a skeleton for every reviewer `1..reviewerCount` with no
+ * tree yet — so a reviewer's *first* annotation is a value-on-an-existing-line
+ * change for git, not a brand-new field appearing from nowhere.
  *
- * A reviewer who has not started otherwise has no key in `reviews` at all —
- * fine for the app, which treats a missing tree as "hasn't answered" either
- * way, but bad for a JSON diff: their *first* annotation would then look like
- * a whole new field appearing out of nowhere, when every other reviewer's
- * equivalent field was there the whole time. A key that already exists with
- * `null`s in it turns that into an ordinary value-on-an-existing-line change —
- * the shape a git merge actually copes with.
+ * Never removes a key `parseReviews` already kept, including a reviewer number
+ * *above* `reviewerCount`: lowering the count must not be what deletes that
+ * reviewer's tree.
  *
- * Never removes a key `parseReviews` already kept, including one for a
- * reviewer number *above* `reviewerCount` — lowering the count hides that
- * reviewer's tree, and this must not be the thing that deletes it (see the
- * schema guide's "Lowering the reviewer count" section).
- *
- * Single-reviewer projects are untouched: `reviews` stays `{}`, exactly as
- * before this existed — `annotations` alone carries the data there, and
- * giving it a phantom "reviewer 1" would only be confusing.
+ * Single-reviewer projects are untouched: `reviews` stays `{}`.
  */
 function normalizeReviews(
   raw: unknown,
@@ -392,16 +286,12 @@ function normalizeReviews(
 }
 
 /**
- * Parse `reviewsFinished` defensively, the same rule `reviews` follows: the
- * file is hand-editable, so a key that could never be reached by
- * `currentFinished`'s routing (anything but a reviewer number) is dropped, as
- * is any value that isn't literally `true` — the flag is a declaration, and
- * "present but not `true`" has to mean "not declared", never "truthy enough".
+ * Parse `reviewsFinished` defensively: drops keys that aren't a reviewer
+ * number, and any value that isn't literally `true` (the flag is a
+ * declaration; "present but not `true`" must mean "not declared").
  *
- * Unlike `normalizeReviews`, no skeleton is filled in for reviewers who have
- * not declared anything: `false` *is* the absent state here, so a missing key
- * already reads correctly, and writing `false` for everyone would put a line
- * in every reviewer's file saying something they never said.
+ * Unlike `normalizeReviews`, no skeleton is filled in: `false` *is* the absent
+ * state here, so a missing key already reads correctly.
  */
 function parseReviewsFinished(raw: unknown): Record<string, boolean> {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return {}
@@ -436,11 +326,9 @@ function parseAiUsage(raw: unknown): AiUsageRecord[] {
 }
 
 /**
- * Parse `equal` defensively, the same rule `reviews`/`aiUsage` follow: the
- * file is hand-editable, so anything that isn't a string is dropped, never
- * thrown over. Deduped, since the mark is really a set — JSON just has no set
- * type to spell that with — and a hand-edited duplicate should not toggle
- * differently from a clean one.
+ * Parse `equal` defensively, same rule as `reviews`/`aiUsage`: non-strings are
+ * dropped, never thrown over. Deduped since the mark is really a set, so a
+ * hand-edited duplicate doesn't toggle differently from a clean one.
  */
 function parseEqual(raw: unknown): string[] {
   if (!Array.isArray(raw)) return []
@@ -456,11 +344,9 @@ function parseEqual(raw: unknown): string[] {
 
 /**
  * Parse `config.screening` defensively-but-strictly. Unlike `reviews`/`equal`,
- * a broken value here cannot be degraded past: the reasons *are* the schema's
- * enum, so a screening project with none of them has no way to record why
- * anything was excluded. Trimmed and deduped — the list is really a set, and
- * a duplicated option would render as a broken dropdown — but an empty result
- * is a load error, not an empty list.
+ * a broken value here can't be degraded past: the reasons *are* the schema's
+ * enum, so an empty result is a load error, not an empty list. Trimmed and
+ * deduped since the list is really a set.
  */
 function parseScreening(raw: unknown): ScreeningConfig | null {
   if (raw === undefined) return null
@@ -485,33 +371,23 @@ function parseScreening(raw: unknown): ScreeningConfig | null {
 }
 
 /**
- * Parse `provenance` defensively — the file is hand-editable, so a malformed
- * record is dropped, never thrown over. Unlike `parseScreening`, which throws
- * on a broken value: screening's reasons *are* the schema, so a broken list
- * cannot be degraded past, but provenance is inert documentation nothing in
- * the app reads back, so a broken one degrades to "no provenance" exactly
- * like `aiUsage`. The whole record is rejected if any piece fails — a
- * half-parsed provenance (a `counts` with one field missing, say) would be a
- * misleading one, not a merely incomplete one.
+ * Parse `provenance` defensively — hand-editable, so a malformed record
+ * degrades to "no provenance", never thrown over, unlike `parseScreening`
+ * (whose reasons are the schema itself and can't degrade past empty).
+ * Rejected all-or-nothing: a half-parsed record (e.g. `counts` missing a
+ * field) would be misleading, not just incomplete.
  *
  * Exported so `editorStore.ts`'s `editorStateFromOpened` shares this exact
- * parse rather than a second copy — the file it reads is the same shape, and
- * a screening-import draft's provenance must be judged by the identical rule
- * a plain `loadProject` would apply to the same bytes.
+ * parse rather than a second copy.
  */
 /**
- * Parse `protocol` defensively — hand-editable, so a malformed record is
- * degraded, never thrown over (the same rule `parseProvenance` follows and for
- * the same reason: the app renders it but nothing downstream depends on its
- * shape). Unlike provenance, this is degraded *field by field* rather than
- * all-or-nothing: a reviewer's protocol is authored text, so a single
- * malformed key (a `databases` that is a string, say) should not throw away
- * the research questions next to it. A record that ends up entirely empty
- * after dropping bad fields parses to `null`, so an empty `{}` never survives
- * a round-trip as a stray key.
+ * Parse `protocol` defensively, same degrade-not-throw rule as
+ * `parseProvenance`, but field-by-field rather than all-or-nothing: a single
+ * malformed key (e.g. `databases` as a string) shouldn't discard the rest of
+ * the authored protocol. Degrades to `null` once every field is dropped, so
+ * an empty `{}` never round-trips as a stray key.
  *
- * Exported so `editorStore.ts` shares this exact parse rather than a second
- * copy — the same "one shared implementation" rule as `parseProvenance`.
+ * Exported so `editorStore.ts` shares this exact parse.
  */
 function parseStringList(raw: unknown): string[] | undefined {
   if (!Array.isArray(raw)) return undefined
@@ -572,21 +448,14 @@ export function parseProvenance(raw: unknown): ProjectProvenance | null {
 }
 
 /**
- * Structural equality for plain JSON values: order-independent for object
- * keys (a hand-edited file listing fields in a different order than the
- * schema is not "different"), order-*sensitive* for arrays (an array is an
- * ordered list — reordering `Findings` genuinely changes which entry is
- * which), exactly JSON's own notion of equality otherwise. Deliberately not a
- * text/string comparison: `needsShapeMigration` uses this specifically so
- * that whitespace, indentation and stray key order — which even this file's
- * own `serializeProject` freely rewrites on every ordinary save — never look
- * like a reason to migrate a file that is already semantically fine.
+ * Structural equality for plain JSON: object keys are order-independent,
+ * array elements are order-sensitive (reordering genuinely changes meaning).
+ * Deliberately not a text comparison — `needsShapeMigration` relies on that so
+ * reformatting alone (which `serializeProject` does on every save) never
+ * looks like a reason to migrate.
  *
- * Exported for `src/git/merge.ts`, which needs the identical notion of
- * "structurally the same JSON value" to decide whether a field changed on a
- * side of a three-way merge — a second implementation of this would be a bug
- * waiting, the same reason `comparable()` in `src/consolidate/unanimous.ts`
- * exists as a single shared function rather than three copies.
+ * Exported for `src/git/merge.ts`, which needs the identical notion for
+ * three-way merges — a second implementation would be a bug waiting to happen.
  */
 export function deepEqualJson(a: unknown, b: unknown): boolean {
   if (a === b) return true
@@ -604,21 +473,14 @@ export function deepEqualJson(a: unknown, b: unknown): boolean {
 }
 
 /**
- * Whether a project's `annotations`/`reviews` need the canonical serialized
- * shape written in — a hand-edited file, or one written by an older version
- * of the app.
+ * Whether `project`'s `annotations`/`reviews` still need the canonical
+ * serialized shape (hand-edited file, or written by an older app version).
+ * Compares structurally (`deepEqualJson`) against what saving `project` would
+ * write now, scoped to just those two fields, so unrelated formatting
+ * differences never falsely trigger a migration.
  *
- * `rawText` is re-parsed and compared structurally (via `deepEqualJson`)
- * against what saving `project` right now *would* write, scoped to exactly
- * `annotations` and `reviews` — nothing else about the file's formatting or
- * unrelated content is examined, so this answers "does the annotation shape
- * need fixing", never "is this file byte-identical to our own pretty-printer".
- * That distinction is what keeps this from flagging every hand-authored or
- * differently-formatted file that already has the right shape.
- *
- * `rawData` is assumed to be the same already-parsed value handed to
- * `loadProject` to produce `project` — this does not revalidate it, so call
- * it right after `loadProject`, not independently.
+ * `rawData` must be the same already-parsed value passed to `loadProject` to
+ * produce `project` — call this right after `loadProject`, not independently.
  */
 export function needsShapeMigration(project: Project, rawData: unknown): boolean {
   const data = rawData as { papers?: unknown[] }
@@ -673,16 +535,11 @@ export function loadProject(input: string | unknown): Project {
     data = input
   }
 
-  // Depth first, before anything walks the data. Almost every traversal in the
-  // app is recursive — zod's own validation, `resolveDefs`, `normalizeTree`,
-  // `deepEqualJson`, `serializeProject` — and each blows the stack somewhere
-  // between a few hundred and a few thousand levels. A ~29 KB file nested 704
-  // deep made `projectSchema.parse` throw a raw `RangeError`, which escapes
-  // this function's "throws ProjectLoadError with friendly details" contract
-  // and lands in the store's generic fallback. Unknown keys are passed through
-  // verbatim into `extra`, so depth there is unbounded too and surfaces later
-  // in `deepEqualJson` — crashing the read-only git-status path, not just save.
-  // One check at the entrance covers all of them.
+  // Depth check first: nearly every traversal here is recursive (zod,
+  // resolveDefs, normalizeTree, deepEqualJson, serializeProject) and overflows
+  // the stack at a few hundred levels — a real file nested 704 deep threw a raw
+  // RangeError that escaped this function's ProjectLoadError contract. One
+  // check here covers all of them, including `extra`'s unbounded key depth.
   if (exceedsDepth(data, MAX_JSON_DEPTH)) {
     throw new ProjectLoadError('The project file is nested too deeply.', [
       `Nesting deeper than ${MAX_JSON_DEPTH} levels is not supported.`,
@@ -699,22 +556,18 @@ export function loadProject(input: string | unknown): Project {
         err.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`),
       )
     }
-    // Belt and braces: the depth guard above should make this unreachable, but
-    // a stack overflow must never leave this function as anything other than a
-    // ProjectLoadError.
+    // Belt and braces: depth guard above should make this unreachable, but a
+    // stack overflow must never escape as anything but ProjectLoadError.
     if (err instanceof RangeError) {
       throw new ProjectLoadError('The project file is nested too deeply.', [String(err)])
     }
     throw err
   }
 
-  // A screening project's schema is not read from the file: it is derived from
-  // `config.screening.reasons` every time, so a hand-edited reason list can
-  // never disagree with the dropdown the reviewer actually sees. `serializeProject`
-  // writes the derived schema back, which is what keeps the file self-describing
-  // for anything reading it without SaiLoR. `raw.config.schema!` below is safe:
-  // the zod `superRefine` guarantees it is present and non-empty whenever
-  // `screening` is null.
+  // A screening project's schema is derived from `config.screening.reasons`
+  // every load, never read from the file, so a hand-edited reason list can't
+  // disagree with the dropdown shown. `raw.config.schema!` is safe: zod's
+  // `superRefine` guarantees it's present whenever `screening` is null.
   const screening = parseScreening((raw.config as { screening?: unknown }).screening)
   let schema: ResolvedDef[]
   try {
@@ -797,14 +650,12 @@ export function serializeProject(project: Project): string {
     ...(project.protocol ? { protocol: project.protocol } : {}),
     // Likewise only written when a schema comment was actually authored.
     ...(project.schemaInfo ? { schemaInfo: project.schemaInfo } : {}),
-    // `ai` is only written when disabled, and `reviewers` only when it says
-    // anything beyond the single-reviewer default — so a normal file, and a
-    // single-reviewer file, both stay exactly as clean as before this feature.
+    // `ai`/`reviewers` are only written when they differ from the default, so
+    // an ordinary or single-reviewer file stays exactly as clean as before.
     config: {
-      // For a screening project this is the derived projection of
-      // `config.screening.reasons`, not anything hand-authored — see
-      // `Project.screening`. Written anyway so the file stays self-describing
-      // for anything reading it without SaiLoR.
+      // Derived projection of `config.screening.reasons` for a screening
+      // project (see `Project.screening`), written so the file stays
+      // self-describing.
       schema: dehydrateSchema(project.schema),
       ...(project.aiEnabled ? {} : { ai: false }),
       ...(project.finishCheckbox ? {} : { finishCheckbox: false }),
@@ -823,18 +674,14 @@ export function serializeProject(project: Project): string {
       if (p.venue) paper.venue = p.venue
       if (p.doi !== undefined) paper.doi = p.doi
       if (p.abstract !== undefined && p.abstract !== '') paper.abstract = p.abstract
-      // Only written alongside a real abstract, and only when true — so a
-      // typed or reference-imported abstract stays exactly as clean as
-      // before this field existed.
+      // Only written alongside a real abstract and only when true, so a typed
+      // or imported abstract stays as clean as before this field existed.
       if (p.abstractFromPdf && p.abstract) paper.abstractFromPdf = true
       paper.pdf = p.pdf
       paper.annotations = serializedTree(project.schema, p.annotations)
-      // A single-reviewer paper has no reviewer trees at all — `annotations`
-      // alone carries the data — so this stays empty and `reviews` is omitted
-      // below, exactly as before this feature existed. A multi-reviewer paper's
-      // `p.reviews` is never empty: `normalizeReviews` gives every reviewer
-      // `1..N` a skeleton whether or not they have written anything, precisely
-      // so the key is already there — on an existing line — the day they do.
+      // Single-reviewer papers have no reviewer trees, so `reviews` stays empty
+      // and is omitted below; `normalizeReviews` gives multi-reviewer papers a
+      // skeleton for every reviewer, so this is never empty for them.
       const reviewKeys = Object.keys(p.reviews)
       if (reviewKeys.length > 0) {
         paper.reviews = Object.fromEntries(
@@ -845,8 +692,8 @@ export function serializeProject(project: Project): string {
       if (p.aiUsage.length > 0) paper.aiUsage = p.aiUsage
       // Only written when non-empty, so a paper with no equality marks stays clean.
       if (p.equal.length > 0) paper.equal = p.equal
-      // Same rule again: a paper Consolidation has never matched stays exactly
-      // as clean as before this field existed.
+      // Same rule: an unmatched paper stays exactly as clean as before this
+      // field existed.
       if (Object.keys(p.alignment).length > 0) paper.alignment = p.alignment
       // Only written when non-empty, so a paper nobody has highlighted stays clean.
       if (p.marks.length > 0) paper.marks = p.marks
@@ -856,9 +703,8 @@ export function serializeProject(project: Project): string {
           reviewMarkKeys.sort((a, b) => Number(a) - Number(b)).map((k) => [k, p.reviewMarks[k]]),
         )
       }
-      // Only written when actually declared, so a paper nobody has marked
-      // finished stays exactly as clean as before this field existed — the
-      // same rule `aiUsage`/`equal`/`marks` follow.
+      // Only written when declared, so an unfinished paper stays as clean as
+      // before this field existed — same rule as `aiUsage`/`equal`/`marks`.
       if (p.finished) paper.finished = true
       const finishedKeys = Object.keys(p.reviewsFinished).filter((k) => p.reviewsFinished[k])
       if (finishedKeys.length > 0) {
@@ -880,30 +726,22 @@ function serializedTree(schema: ResolvedDef[], tree: AnnotationValueTree): Annot
 }
 
 /**
- * On-disk layout: `project.json` (this file's `serializeProject` output) holds
- * only paper *metadata* — no `annotations`/`reviews`/`aiUsage`/`equal`. Those
- * live under a sibling `annotations/<paperId>/` folder, one JSON file per
- * reviewer plus one consolidated file for the `annotations` field (the
- * single/consolidated tree) and the paper-level `aiUsage`/`equal` records.
- * This is what lets two reviewers working on different papers, or the same
- * paper's different reviewer slots, never touch the same file — the merge
- * conflicts the split exists to avoid.
+ * On-disk layout: `project.json` holds only paper metadata; `annotations`,
+ * `reviews`, `aiUsage`, `equal` live under a sibling `annotations/<paperId>/`
+ * folder, one file per reviewer plus one consolidated file — so two reviewers
+ * (or the same paper's different slots) never touch the same file and cause
+ * merge conflicts.
  *
- * A screening project's files are named `screening-<n>.json` /
- * `screening-consolidated.json` rather than `reviewer-<n>.json` /
- * `consolidated.json` — same layout, a different prefix purely so the two
- * kinds of per-paper decision (screening vs. full annotation) are
- * distinguishable at a glance in the folder, since a project can carry
- * screening history alongside an annotation schema (see `Project.screening`).
+ * A screening project uses `screening-<n>.json`/`screening-consolidated.json`
+ * instead of `reviewer-<n>.json`/`consolidated.json` — same layout, prefix
+ * only so the two kinds of decision are distinguishable in the folder.
  *
- * `aiUsage`/`equal` are not split per-reviewer even in a multi-reviewer
- * project — `Paper.aiUsage` has always been one array for the whole paper,
- * not one per tree, and `equal` is inherently a consolidation-time concept.
- * Both are small, low-conflict-risk records, so they simply ride along in the
- * consolidated file regardless of which tree they actually describe.
- * ponytail: if AI usage disclosure ever needs to be attributed to a specific
- * reviewer's edit, give `Paper.aiUsage` entries a `reviewer` field first —
- * this file placement can stay as-is either way.
+ * `aiUsage`/`equal` always ride in the consolidated file even in a
+ * multi-reviewer project — both are paper-wide, low-conflict-risk records,
+ * not per-reviewer trees.
+ * ponytail: if AI usage ever needs attribution to a specific reviewer's edit,
+ * give `Paper.aiUsage` entries a `reviewer` field first — this placement can
+ * stay as-is either way.
  */
 export interface ProjectFileEntry {
   /** Relative to the project's `annotations/` folder, e.g.
@@ -934,15 +772,9 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     if (p.abstractFromPdf && p.abstract) paper.abstractFromPdf = true
     paper.pdf = p.pdf
 
-    // The configured range, plus any reviewer number `parseReviews`/
-    // `parseReviewsFinished` kept even though it now falls outside it —
-    // lowering `config.reviewers` (a lead losing a reviewer) must not be what
-    // deletes that reviewer's tree, exactly as `normalizeReviews`'s doc
-    // comment promises for the in-memory shape. Without this, a reviewer
-    // numbered above the current count never makes it into a split file at
-    // all: not on an ordinary Save As, and not on the one-time legacy-shape
-    // migration write, which would silently drop their tree from the only
-    // copy that write produces.
+    // Configured range plus any reviewer number already kept despite falling
+    // outside it — lowering `config.reviewers` must not be what deletes that
+    // reviewer's tree (same promise `normalizeReviews` makes in memory).
     const reviewerSlots = new Set<number>()
     if (project.reviewers > 1) {
       for (let k = 1; k <= project.reviewers; k++) reviewerSlots.add(k)
@@ -954,12 +786,10 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
       for (const k of [...reviewerSlots].sort((a, b) => a - b)) {
         const tree = p.reviews[String(k)]
         const has = tree !== undefined && hasAnnotations(project.schema, tree)
-        // `finished` rides in the same per-reviewer file as that reviewer's
-        // tree, so the declaration and the data it is about stay one file —
-        // and, like the tree, never collide with another reviewer's save.
-        // It can also keep the file alive on its own: a reviewer who ticked
-        // the box and then cleared a field still said something, and dropping
-        // the file would silently un-say it.
+        // Rides in the same per-reviewer file as that reviewer's tree, so it
+        // never collides with another reviewer's save; it can also keep the
+        // file alive alone — ticking the box then clearing a field still said
+        // something, and dropping the file would un-say it.
         const finished = p.reviewsFinished[String(k)] === true
         files.push({
           relPath: `${p.id}/${reviewerName}-${k}.json`,
@@ -988,20 +818,16 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     if (hasConsolidatedAnnotations) consolidated.annotations = serializedTree(project.schema, p.annotations)
     if (p.aiUsage.length > 0) consolidated.aiUsage = p.aiUsage
     if (p.equal.length > 0) consolidated.equal = p.equal
-    // Consolidation's own bookkeeping about the reviewers' entries, so it
-    // belongs in the consolidated file rather than in anyone's reviewer file —
-    // and, being one record about all of them, it could not live in a
-    // per-reviewer file without being split into pieces that mean nothing alone.
+    // Consolidation's own bookkeeping about all reviewers' entries — belongs
+    // in the consolidated file since it can't be split into per-reviewer pieces.
     if (Object.keys(p.alignment).length > 0) consolidated.alignment = p.alignment
     if (p.finished) consolidated.finished = true
     files.push({
       relPath: `${p.id}/${consolidatedName}.json`,
       text: Object.keys(consolidated).length > 0 ? JSON.stringify(consolidated, null, 2) : null,
     })
-    // Marks aren't screening/reviewer-decision data — they're reading notes,
-    // and get their own file family regardless of screening vs. annotation
-    // mode (unlike `reviewerName`/`consolidatedName` above, which distinguish
-    // those two).
+    // Marks are reading notes, not screening/reviewer decisions, so they get
+    // their own file family regardless of screening vs. annotation mode.
     files.push({
       relPath: `${p.id}/marks-consolidated.json`,
       text: p.marks.length > 0 ? JSON.stringify({ marks: p.marks }, null, 2) : null,
@@ -1030,14 +856,11 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
 }
 
 /**
- * May the annotation file currently holding `text` on disk be deleted when the
- * project no longer has anything for that slot? Yes for an empty file or one
- * that parses as JSON; no for anything else — content we cannot read is
- * content we cannot know we already have. A file carrying git conflict
- * markers (`<<<<<<<`) is the case this exists for: the loader treats an
- * unparseable annotation file as absent (deliberately, so one corrupt tree
- * cannot block opening a project), which makes the next save reconcile the
- * slot to `null` and unlink the only copy of that reviewer's work.
+ * May the file currently holding `text` be deleted when the project no longer
+ * needs that slot? Yes for empty/parseable JSON; no otherwise — an
+ * unparseable file (e.g. mid git-conflict-markers) must survive, since the
+ * loader treats it as absent and a save would otherwise unlink the only copy
+ * of that reviewer's work.
  */
 export function isDeletableAnnotationText(text: string): boolean {
   if (text.trim() === '') return true
@@ -1064,13 +887,11 @@ export function isLegacyProjectShape(raw: unknown): boolean {
 }
 
 /**
- * Reassemble a meta-only `project.json` body plus its per-paper annotation
- * files back into the legacy whole-project shape `loadProject` already knows
- * how to parse — so the read path reuses `loadProject` unchanged rather than
- * duplicating its validation/defaulting logic. `paperFiles` holds each raw
- * per-paper file, already `JSON.parse`d, exactly as read from disk; a paper
- * with no files on disk yet (nobody has annotated it) simply gets an empty
- * entry.
+ * Reassemble a meta-only `project.json` plus its per-paper annotation files
+ * into the legacy whole-project shape `loadProject` already parses — so the
+ * read path reuses `loadProject`'s validation rather than duplicating it.
+ * `paperFiles` holds each raw per-paper file, already `JSON.parse`d; a paper
+ * with none on disk yet gets an empty entry.
  */
 export function assembleLegacyProjectJson(
   meta: unknown,
@@ -1103,9 +924,8 @@ export function assembleLegacyProjectJson(
       const reviewsFinished: Record<string, unknown> = {}
       for (const [k, v] of entry?.reviewers ?? []) {
         reviews[k] = (v as { annotations?: unknown })?.annotations ?? {}
-        // Only lifted when actually declared, so the reassembled shape stays
-        // as close as possible to what a legacy single file would have held —
-        // `loadProject` rejects anything but `true` either way.
+        // Only lifted when actually declared — `loadProject` rejects anything
+        // but literal `true` anyway.
         if ((v as { finished?: unknown })?.finished === true) reviewsFinished[k] = true
       }
       const marksConsolidated = (entry?.marksConsolidated ?? {}) as { marks?: unknown }

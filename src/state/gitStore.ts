@@ -28,15 +28,11 @@ import type {
 import { useStore } from './store'
 
 /**
- * State for the git flows: importing from a repository, and the commit/pull/
- * push panel. Kept out of the main store for the same reason `aiStore` and
- * the project editor are: a self-contained mode with its own lifecycle that
- * the ordinary annotation path never needs to know about.
- *
- * Dependency direction is one-way: `gitStore` reads and drives `useStore`
- * (`useStore.getState()`), but `store.ts` never imports this module — the
- * same shape `aiStore` already has. Refreshing `repo` when the open project
- * changes is therefore an `App.tsx` effect, not a call from inside `store.ts`.
+ * State for the git flows (import + commit/pull/push panel), kept out of the
+ * main store like `aiStore` — a self-contained mode the ordinary annotation
+ * path never needs to know about. Dependency direction is one-way: this
+ * reads/drives `useStore`, never the reverse, so refreshing `repo` on project
+ * change is an `App.tsx` effect, not a call from `store.ts`.
  */
 
 interface CloneState {
@@ -46,22 +42,18 @@ interface CloneState {
   parent: string | null
   /** Exactly what git printed. Shown verbatim, never summarised. */
   error: string
-  /** Where the repository landed, once it has. */
   dest: string | null
   /** Wall-clock start, for the elapsed-seconds line — a clone of a repo of PDFs is slow. */
   startedAt: number
 }
 
 /**
- * A field-level three-way merge in progress — a `pull` (merging the upstream
- * ref), a `merge-branch` (merging another branch into this one), or a
- * `branch-switch` (merging the target branch, carrying over the reviewer's
- * uncommitted changes). `GitMergeDialog` renders all three identically; only
- * finishing and cancelling need to know which, and only `branch-switch`
- * actually differs there — it alone moved HEAD, so it needs
- * `finishBranchSwitch`/`abortBranchSwitch` and the `sourceBranch` to check
- * back out to on cancel. `pull` and `merge-branch` are both an ordinary git
- * merge, finished and aborted by `finishPull`/`abortPull`.
+ * A field-level three-way merge in progress. `GitMergeDialog` renders all
+ * three kinds identically; only finish/cancel differ, and only for
+ * `branch-switch` — it alone moved HEAD, so it needs
+ * `finishBranchSwitch`/`abortBranchSwitch` and `sourceBranch` to check back
+ * out to on cancel. `pull`/`merge-branch` are an ordinary git merge, finished
+ * and aborted by `finishPull`/`abortPull`.
  */
 type MergeSource =
   | { kind: 'pull' }
@@ -70,61 +62,50 @@ type MergeSource =
 
 interface MergeState {
   source: MergeSource
-  /** The other side's name — an upstream ref ("origin/main") for a pull, the
-   *  branch's own name for a merge or a branch-switch. Shown as-is, e.g. "Your
-   *  changes and {ref}'s both changed these fields." reads correctly for all three. */
+  /** The other side's name (upstream ref, or branch name) — shown as-is so
+   *  "Your changes and {ref}'s both changed these fields." reads for all three. */
   ref: string
   merged: Project
   conflicts: FieldConflict[]
   resolutions: Resolutions
-  /** Which rows the reviewer has actually decided. A row starts pre-filled with
-   *  our value so the control has something to show; that is not a decision. */
+  /** Rows the reviewer actually decided — a row starts pre-filled with our
+   *  value so the control has something to show, but that isn't a decision. */
   decided: Record<string, true>
   notes: MergeNote[]
 }
 
 /**
- * Field-level review of the open project's own file, when it is a tracked
+ * Field-level review of the open project's own file, when it's a tracked
  * modification that parses as a project on both HEAD and the working tree —
  * see `refreshFieldReview`. `null` for every other case (untracked, deleted,
- * unparseable, or a structural difference `detectFieldChanges` itself
- * refuses), in which the project file falls back to the plain file-level
- * checkbox `panel.selected` already handles for every other changed file.
+ * unparseable, or structural), which falls back to the plain file-level
+ * checkbox `panel.selected` handles for every other changed file.
  */
 interface FieldReviewState {
   head: Project
   working: Project
   changes: DetectedChanges
-  /** Absent means 'use' — the default `composeContents` itself applies, so a
-   *  reviewer who never touches a row still commits everything they changed,
-   *  the same "clicking Git commits my annotations" default the plain
-   *  file-level checkbox already has. */
+  /** Absent means 'use' — a reviewer who never touches a row still commits
+   *  everything they changed, matching the plain checkbox's default. */
   decisions: Record<string, Disposition>
 }
 
 /**
- * Asked whenever the reviewer picks a different branch while the project has
- * uncommitted changes — see `requestSwitchBranch`. `branch` is the target;
- * resolving with `'carryOver'` starts the merge flow (`MergeState` above),
- * `'commitFirst'`/`'cancel'` both just close this without switching anything
- * (the two exist as separate buttons purely so "I meant to commit" reads
- * differently from "never mind" — the app-side effect is identical: nothing
- * happens, the reviewer stays on their current branch to commit by hand).
+ * Asked when the reviewer picks a different branch with uncommitted changes —
+ * see `requestSwitchBranch`. `'carryOver'` starts the merge flow (`MergeState`
+ * above); `'commitFirst'`/`'cancel'` both just close this without switching
+ * (separate buttons only so the wording matches intent — the effect is identical).
  */
 interface BranchSwitchPromptState {
   branch: string
 }
 
 /**
- * The "New branch…" entry in the branch switcher's own state — a name the
- * reviewer is typing, plus whatever git said the one time they tried to
- * create it (`error`, distinct from `panel.error` so a failed name doesn't
- * get lost behind the dialog it belongs to the moment something else
- * touches the shared one). Creating succeeds via a plain `git branch` at the
- * current commit; what actually switches to it afterward is the ordinary
- * `requestSwitchBranch` flow, run exactly as if the reviewer had picked an
- * existing branch — a freshly cut branch shares its parent's commit, so
- * that switch can never itself conflict.
+ * The "New branch…" dialog's own state. `error` is distinct from
+ * `panel.error` so a failed name isn't lost behind the dialog the moment
+ * something else touches the shared one. After a plain `git branch` creates
+ * it, switching runs the ordinary `requestSwitchBranch` flow — a freshly cut
+ * branch shares its parent's commit, so that switch can never conflict.
  */
 interface NewBranchPromptState {
   name: string
@@ -132,30 +113,26 @@ interface NewBranchPromptState {
 }
 
 /**
- * The "Merge branch…" button's own dialog — deliberately its own small
- * prompt, not the inline branch-switcher `<select>`, so merging (a rare,
- * deliberate action) doesn't sit as prominently as Commit/Pull/Push (what a
- * reviewer does every session). `branch` is whichever mergeable branch the
- * dialog opened with or the reviewer since picked; there is always at least
- * one, since the button that opens this is itself hidden otherwise.
+ * The "Merge branch…" dialog — deliberately its own small prompt, not the
+ * inline branch-switcher `<select>`, so merging (rare) doesn't sit as
+ * prominently as Commit/Pull/Push. `branch` always has a value since the
+ * button that opens this is itself hidden when no mergeable branch exists.
  */
 interface MergeBranchPromptState {
   branch: string
 }
 
-/** The "- Delete branch…" entry's own dialog — mirrors `MergeBranchPromptState`
- *  exactly, down to always defaulting to a real branch (never the current
- *  one), since the sentinel that opens this is itself only offered when one
- *  exists. */
+/** The "- Delete branch…" dialog — mirrors `MergeBranchPromptState`, always
+ *  defaulting to a real, non-current branch since the sentinel that opens
+ *  this is only offered when one exists. */
 interface DeleteBranchPromptState {
   branch: string
 }
 
 /**
  * One commit row's field-level diff, computed by `loadCommitDiff` from the raw
- * text `GitPlatform.logDiff` fetches — this is where `loadProject`/
- * `detectFieldChanges` actually run, on the renderer side, the same as every
- * other diff in this store (`refreshFieldReview`, `runPull`).
+ * text `GitPlatform.logDiff` fetches — parsed on the renderer side, same as
+ * every other diff in this store.
  */
 export type LogDiffResult =
   | { kind: 'initial' } // no parent — the first commit to touch this file
@@ -163,15 +140,14 @@ export type LogDiffResult =
   | { kind: 'error'; message: string }
   | { kind: 'changes'; changes: DetectedChanges }
 
-/** The commit-history panel's own state — opened from the Git panel's
- *  "History…" button, independent of everything else it does (no relation to
- *  `dirty`/`phase`, since browsing history never touches the working tree). */
+/** The commit-history panel's state — independent of `dirty`/`phase` since
+ *  browsing history never touches the working tree. */
 interface HistoryState {
   commits: CommitRecord[]
   truncated: boolean
   error: string | null
-  /** Keyed by commit hash — computed once per hash per time the panel is
-   *  opened, never eagerly for the whole list (see `loadCommitDiff`). */
+  /** Keyed by commit hash — computed lazily per hash, not for the whole list
+   *  (see `loadCommitDiff`). */
   diffs: Record<string, LogDiffResult | 'loading'>
 }
 
@@ -229,15 +205,13 @@ interface GitState {
   refreshStatus: () => Promise<void>
   toggleSelected: (path: string) => void
   setFieldDisposition: (id: string, disposition: Disposition) => void
-  /** Every field/paper row in the current field review, at once — the same
-   *  "one click covers the whole list" `GitMergeDialog`'s "Use all mine" /
-   *  "Use all remote" already offers, for the analogous question here. */
+  /** Sets every field/paper row in the current field review at once — like
+   *  `GitMergeDialog`'s "Use all mine"/"Use all remote". */
   setAllFieldDispositions: (disposition: Disposition) => void
   setCommitMessage: (message: string) => void
-  /** Toggles amend mode. Turning it on prefills an empty message with HEAD's
-   *  own commit message, fetched fresh rather than from any cached history,
-   *  so it reflects amending on top of whatever HEAD actually is right now.
-   *  Never overwrites text the reviewer already typed. */
+  /** Toggling amend on prefills an empty message with HEAD's commit message,
+   *  fetched fresh so it matches whatever HEAD actually is right now. Never
+   *  overwrites text the reviewer already typed. */
   setAmend: (amend: boolean) => Promise<void>
   runCommit: () => Promise<void>
   /** Apply the field review's current 'discard' decisions to the working
@@ -246,58 +220,43 @@ interface GitState {
   runPush: () => Promise<void>
   runPull: () => Promise<void>
   /**
-   * Merge `ref` — a local branch or a remote-tracking one — into the current
-   * branch. The same flow as `runPull` against an explicitly chosen ref: a
-   * fast-forward or a clean merge commits and reloads straight away, anything
-   * the two sides disagree on opens `GitMergeDialog`. A no-op for the branch
-   * already checked out.
+   * Merge `ref` into the current branch, same flow as `runPull` against an
+   * explicit ref: fast-forward or clean merge commits and reloads right
+   * away, disagreement opens `GitMergeDialog`. No-op for the checked-out branch.
    */
   runMergeBranch: (ref: string) => Promise<void>
   /** Opens the "Merge branch…" dialog, defaulting to the first mergeable
-   *  branch — one that exists whenever the button that calls this is shown. */
+   *  branch (always exists when the calling button is shown). */
   openMergeBranchPrompt: () => void
   setMergeBranchPromptBranch: (branch: string) => void
   closeMergeBranchPrompt: () => void
-  /** Runs `runMergeBranch` against `panel.mergeBranchPrompt.branch` and closes
-   *  the dialog — the outcome (a notice, an error, or `GitMergeDialog` taking
-   *  over) is exactly `runMergeBranch`'s own, shown in the ordinary panel. */
+  /** Runs `runMergeBranch` against `panel.mergeBranchPrompt.branch` and closes the dialog. */
   confirmMergeBranchPrompt: () => Promise<void>
 
   /** Opens the "- Delete branch…" dialog, defaulting to the first local
-   *  branch that isn't current — one that exists whenever the sentinel that
-   *  calls this is shown at all. */
+   *  non-current branch (always exists when the sentinel is shown). */
   openDeleteBranchPrompt: () => void
   setDeleteBranchPromptBranch: (branch: string) => void
   closeDeleteBranchPrompt: () => void
-  /** `git branch -d` against `panel.deleteBranchPrompt.branch`, closing the
-   *  dialog either way — on success, refreshes the branch list and shows a
-   *  notice; on failure (typically "not fully merged"), git's own refusal
-   *  text becomes `panel.error`. */
+  /** `git branch -d` against `panel.deleteBranchPrompt.branch`; on failure
+   *  (typically "not fully merged"), git's refusal text becomes `panel.error`. */
   confirmDeleteBranchPrompt: () => Promise<void>
 
-  /** Opens the commit-history panel for the open project's own file and
-   *  fetches its `git log`. */
+  /** Opens the commit-history panel for the open project's file and fetches its `git log`. */
   openHistory: () => Promise<void>
   closeHistory: () => void
-  /** Fetches and computes the field-level diff for `hash`, once — a no-op if
-   *  it's already fetched or in flight. Never called for the whole list at
-   *  once; only when a commit row is expanded. */
+  /** Fetches and computes the field-level diff for `hash` once — no-op if
+   *  already fetched/in flight; only called when a commit row is expanded. */
   loadCommitDiff: (hash: string) => Promise<void>
 
   /**
    * Reverts (tracked) or deletes (untracked) a single changed file other
-   * than the project's own — the whole-file counterpart to the project's
-   * field-level Discard.
-   *
-   * Unlike `runDiscard`, this never needs a `dirty` guard or a
-   * `resyncProjectFromDisk` afterward: `path` can never be the project's own
-   * tracked file or anything under its `annotations/` folder. `GitDialog.tsx`
-   * withholds the ↺ button for those rows (`isProjectOwnPath`), and
-   * `git:discardFile` refuses them again server-side given `repo.relPath` —
-   * see that handler's own doc comment. Every *other* file this can act on
-   * (a stray README, an untracked `exports/` folder, …) is one the in-memory
-   * `project` never reads from, so there is nothing there for `dirty` to be
-   * guarding or for a resync to catch up on.
+   * than the project's own — the whole-file counterpart to field-level
+   * Discard. Unlike `runDiscard`, needs no `dirty` guard or resync
+   * afterward: `path` can never be the project's own tracked file or
+   * anything under `annotations/` (enforced both in `GitDialog.tsx` and
+   * server-side in `git:discardFile`), so nothing here is ever read by the
+   * in-memory `project`.
    */
   runDiscardFile: (path: string) => Promise<void>
 
@@ -305,19 +264,16 @@ interface GitState {
 
   resolveConflict: (id: string, value: FieldValue) => void
   takeSide: (id: string, side: 'ours' | 'theirs') => void
-  /** `ids`, when given, scopes the bulk action to those conflicts only — see
-   *  `GitMergeDialog`'s exclusion of other reviewers' own trees from "Use all
-   *  mine"/"Use all remote". Omitted (or absent) means every conflict, the
-   *  original all-of-them behavior. */
+  /** `ids`, when given, scopes the bulk action to those conflicts only.
+   *  Omitted means every conflict. */
   takeAll: (side: 'ours' | 'theirs', ids?: string[]) => void
   finishMerge: () => Promise<void>
   cancelMerge: () => Promise<void>
 
   /**
-   * The reviewer picked `branch` from the switcher. With nothing uncommitted
-   * in the project, switches right away; otherwise opens the three-way
-   * prompt (`branchSwitchPrompt`) — commit first (abort the switch for now),
-   * carry the changes into the new branch (merging as needed), or cancel.
+   * The reviewer picked `branch`. Switches right away if nothing's
+   * uncommitted; otherwise opens the three-way prompt (`branchSwitchPrompt`):
+   * commit first, carry changes over (merging as needed), or cancel.
    */
   requestSwitchBranch: (branch: string) => void
   resolveBranchSwitchPrompt: (choice: 'commitFirst' | 'carryOver' | 'cancel') => Promise<void>
@@ -367,11 +323,9 @@ function toSplitProject(project: Project): SplitProject {
 export const useGitStore = create<GitState>()(
   immer((set, get) => {
     /**
-     * Shared by the zero-conflict fast path in `runPull`/`runBranchSwitchCarryOver`
-     * and the merge dialog's `finishMerge`: write the resolved text, and only
-     * touch `panel` once we know whether it actually succeeded. On failure the
-     * repository is genuinely still mid-merge (or mid-branch-switch), so
-     * `panel.merge` is left in place — Cancel merge must stay reachable.
+     * Shared by the zero-conflict fast path (`runPull`/`runBranchSwitchCarryOver`)
+     * and `finishMerge`. On failure the repo is still mid-merge, so `panel.merge`
+     * is left in place — Cancel merge must stay reachable.
      */
     async function doFinish(
       source: MergeSource,
@@ -393,13 +347,9 @@ export const useGitStore = create<GitState>()(
         set((s) => {
           if (s.panel) {
             s.panel.error = gitErrorText(r)
-            // The repository is genuinely still mid-merge, so Cancel merge must
-            // stay reachable (GitMergeDialog renders only while `panel.merge`
-            // is set). The conflict path set it before getting here; the
-            // zero-conflict fast path did not — so back-fill it here rather
-            // than wedge a repo with a failed finish (e.g. the commit
-            // rejected for an unset git user.name/email) and no in-app way
-            // to abort.
+            // Back-fill `panel.merge` if the conflict path didn't already set it,
+            // so Cancel merge stays reachable rather than wedging a repo with a
+            // failed finish (e.g. unset git user.name/email) and no way to abort.
             if (!s.panel.merge) {
               s.panel.merge = { source, ref, merged, conflicts, resolutions, decided: {}, notes }
             }
@@ -429,12 +379,9 @@ export const useGitStore = create<GitState>()(
     }
 
     /**
-     * The single most important guard in this store: `git status` sees the
-     * file on disk, not the reviewer's unsaved annotations in memory. A
-     * fast-forward or a finished merge reloads the file from disk — without
-     * this check that would silently discard unsaved work. Returns false when
-     * the caller must stop. `verb` reads into the message ("pulling works on
-     * the file on disk").
+     * `git status` sees disk, not the reviewer's unsaved in-memory annotations;
+     * a fast-forward/finished merge reloads from disk, which would silently
+     * discard unsaved work without this check. `verb` reads into the message.
      */
     function guardDirtyForMerge(verb: string): boolean {
       if (!useStore.getState().dirty) return true
@@ -451,11 +398,7 @@ export const useGitStore = create<GitState>()(
     /**
      * Everything a merge does once git has classified it — shared by `runPull`
      * and `runMergeBranch`, which differ only in how they name the other side.
-     * A pull's own `'no-upstream'` case is handled by its caller before this
-     * runs, which is why `MergeStart` and not `PullStart` is what arrives here.
-     *
-     * `ffLabel` is what a fast-forward reports having moved to: the upstream
-     * for a pull, the branch's own name for a merge.
+     * `ffLabel` is what a fast-forward reports having moved to.
      */
     async function applyMergeStart(start: MergeStart, source: MergeSource, ffLabel: string): Promise<void> {
       const git = getPlatform().getGit()
@@ -566,35 +509,25 @@ export const useGitStore = create<GitState>()(
     }
 
     /**
-     * Recomputes `panel.fieldReview` for the open project's own file, given
-     * the `status` `refreshStatus` just fetched. Every failure mode — the
-     * file isn't in `status.changes` at all, it's untracked (no HEAD
-     * revision), either revision fails to parse as a project, or
-     * `detectFieldChanges` itself refuses because something structural
-     * changed — lands on `null`, which is exactly what makes the project
-     * file fall back to the plain file-level checkbox: nothing here ever
-     * surfaces as an *error*, since "can't review this one field by field"
-     * is routine, not exceptional.
+     * Recomputes `panel.fieldReview` for the open project's own file. Every
+     * failure mode (untracked, unparseable, structural change) lands on
+     * `null` — falls back to the plain file-level checkbox, never surfaces
+     * as an error, since "can't review field by field" is routine.
      *
      * Existing decisions survive a refresh that leaves the same fields
-     * changed (an incidental ↻ click must not silently reset a reviewer's
-     * careful per-row choices) and are dropped for any id no longer present.
+     * changed (a ↻ click must not reset a reviewer's per-row choices).
      */
     async function refreshFieldReview(repo: GitRepoInfo, status: GitStatus): Promise<void> {
       const git = getPlatform().getGit()
       if (!git) return
 
-      // A change under `annotations/` counts too, not just `project.json`
-      // itself — most day-to-day edits are exactly that now that annotations
-      // live in their own per-paper-per-reviewer files. Unlike `relPath`
-      // itself, an untracked ('??') annotation file still counts: a reviewer
-      // answering a paper for the first time creates a brand-new file while
-      // `project.json` stays clean, and that is the routine case field
-      // review exists for — `readProjectAtRevision` already treats "no such
-      // file at HEAD" as an absent (empty) tree, so the new answer surfaces
-      // as an ordinary changed field. `relPath` itself being untracked means
-      // the whole project has never been committed at all, which field
-      // review has nothing to diff against — that case is still skipped.
+      // A change under `annotations/` counts too, not just `project.json` —
+      // most edits are exactly that now that annotations live in per-paper
+      // files. Unlike `relPath`, an untracked ('??') annotation file still
+      // counts: a first answer for a paper creates a new file while
+      // `project.json` stays clean — the routine case field review exists
+      // for. `relPath` itself untracked means never committed, so there's
+      // nothing to diff against — that case is still skipped.
       const dir = annotationsRelDir(repo.relPath)
       const inAnnotationsDir = (p: string) => p === dir || p.startsWith(`${dir}/`)
       const inStatus = status.changes.some(
@@ -647,30 +580,17 @@ export const useGitStore = create<GitState>()(
     }
 
     /**
-     * The guard `runCommit` and `runDiscard` share before writing anything:
-     * both compose their output from `review.working`, a snapshot
-     * `refreshFieldReview` took at some point in the past — nothing re-reads
-     * it afterward. If the file on disk has since changed, composing against
-     * the stale snapshot and writing the result back would silently discard
-     * whatever changed it. The routine way this happens: the dirty banner's
-     * own "Save project" button writes the in-memory project to disk without
-     * refreshing `panel.fieldReview` (`App.tsx`'s refresh effect is keyed on
-     * `saveHandle?.path`, which a save doesn't change), so `dirty` flips
-     * false, Commit un-disables, and committing writes the pre-save content
-     * over the hour of work Save just put on disk. `useAutosave.ts` can do
-     * the same unattended.
+     * Guard `runCommit`/`runDiscard` share before writing: both compose from
+     * `review.working`, a snapshot nothing re-reads afterward, so if the file
+     * changed on disk since, composing against it would silently discard that
+     * change — e.g. the dirty banner's "Save project" writes to disk without
+     * refreshing `panel.fieldReview`, so `dirty` flips false and committing
+     * would overwrite the save.
      *
-     * Compares `loadProject` of a fresh read against `review.working`, not
-     * the raw file text: both are `Project` objects built by the same
-     * normalizing parser, so two reads of equivalent content always
-     * serialize identically regardless of the raw text's formatting or key
-     * order, while a raw-text comparison could false-positive on a purely
-     * cosmetic difference. An unreadable/unparseable current file counts as
-     * "changed" — there is nothing safe to proceed against.
-     *
-     * Returns true when it is still safe to proceed. False means the caller
-     * must stop: the field review has already been refreshed against the
-     * current file and `panel.error` explains why.
+     * Compares parsed `Project` objects, not raw text, since the same parser
+     * normalizes both reads identically regardless of formatting. Returns
+     * true when safe to proceed; false means the caller must stop — the
+     * review has been refreshed and `panel.error` explains why.
      */
     async function guardFieldReviewFresh(repo: GitRepoInfo, review: FieldReviewState): Promise<boolean> {
       const git = getPlatform().getGit()
@@ -798,17 +718,12 @@ export const useGitStore = create<GitState>()(
         if (!git || !clone?.dest) return
         const p = await git.pickProjectIn(clone.dest)
         if (!p) return
-        // `requestOpenRecent`, not `openRecent`: opening the clone replaces
-        // whatever project is on screen, discarding its unsaved changes exactly
-        // as Ctrl+O would. This button is reachable from the toolbar with a
-        // dirty project open, so it has to go through the same prompt.
+        // `requestOpenRecent`, not `openRecent`: this replaces whatever project
+        // is on screen, so it must go through the same dirty-project prompt as Ctrl+O.
         useStore.getState().requestOpenRecent(p)
-        // Only dismiss the clone panel once the open has actually happened.
-        // `requestOpenRecent` opens immediately when nothing is dirty, but
-        // otherwise only queues the intent behind the save prompt — and
-        // cancelling that prompt, or a save that fails, drops the intent. If
-        // the panel were already gone, the reviewer would be left with no
-        // project opened and no way back to the clone they just made.
+        // Only dismiss the clone panel once the open actually happened —
+        // `requestOpenRecent` may just queue behind the save prompt, and if that's
+        // cancelled the reviewer would be left with no project and no way back.
         if (!useStore.getState().pendingAfterPrompt) get().closeClone()
       },
 
@@ -833,10 +748,8 @@ export const useGitStore = create<GitState>()(
         })
         await get().refreshStatus()
         await get().refreshBranches()
-        // Default tick: only the open project's own file, when it is in the
-        // list *and* not already being handled by field-level review below.
-        // Clicking Git means "my annotations", not whatever else is lying
-        // around the repo — everything else is one visible tick away.
+        // Default tick: only the open project's own file (when not already
+        // handled by field review) — clicking Git means "my annotations".
         const repo = get().repo
         const panel = get().panel
         if (repo && !panel?.fieldReview && panel?.status?.changes.some((c) => c.path === repo.relPath)) {
@@ -983,17 +896,11 @@ export const useGitStore = create<GitState>()(
           return
         }
 
-        // A field-level commit may have rewritten the working file (any
-        // "discard" decision does), so the app's in-memory project — if this
-        // is the file currently open — has to be re-read from disk. This is
-        // the reviewer's own rewrite of their own commit, not a different
-        // project being loaded, so it uses the lightweight resync rather
-        // than `reloadOpenProject` (which resets the whole view — selected
-        // paper, filters, reopens the schema-info dialog — appropriate after
-        // a pull/merge/branch-switch, but not after committing your own
-        // work). `dirty` is guaranteed false here: the Commit button is
-        // disabled while it isn't, precisely so this can never discard
-        // unsaved work.
+        // A "discard" decision rewrites the working file, so re-read it from
+        // disk — via the lightweight resync, not `reloadOpenProject` (which
+        // would reset the whole view), since this is the reviewer's own
+        // rewrite, not a different project loading. `dirty` is guaranteed
+        // false here (Commit is disabled otherwise), so nothing unsaved is lost.
         if (usedFieldReview) await useStore.getState().resyncProjectFromDisk()
 
         set((s) => {
@@ -1045,14 +952,9 @@ export const useGitStore = create<GitState>()(
           return
         }
 
-        // The working file was rewritten, so the in-memory project has to be
-        // re-read from disk — the same reason `runCommit`'s field path
-        // resyncs, and for the same reason it uses the lightweight
-        // `resyncProjectFromDisk` rather than `reloadOpenProject`: this is
-        // the reviewer's own rewrite, not a different project being loaded,
-        // so the view (selected paper, filters, schema-info dialog) must
-        // stay put. `dirty` is guaranteed false: the Discard button is
-        // disabled while it isn't, so this can never drop unsaved work.
+        // Same resync as `runCommit`'s field path, for the same reason: this
+        // is the reviewer's own rewrite, not a different project loading, so
+        // the view must stay put. `dirty` is guaranteed false here.
         await useStore.getState().resyncProjectFromDisk()
         set((s) => {
           if (s.panel) {
@@ -1263,13 +1165,9 @@ export const useGitStore = create<GitState>()(
         set((s) => {
           if (s.panel) s.panel.phase = 'working'
         })
-        // `discardFile` itself never throws (see its own doc comment in
-        // `electron/main.ts` — every failure comes back as `{ok: false}`),
-        // but this `try` is the belt-and-suspenders match anyway: an
-        // uncaught rejection here would escape the `void runDiscardFile(...)`
-        // call in GitDialog.tsx and leave `phase` stuck at 'working',
-        // disabling the whole panel until it's reopened (that was exactly
-        // how the untracked-directory bug wedged it).
+        // `discardFile` itself never throws, but this `try` guards against an
+        // uncaught rejection leaving `phase` stuck at 'working' (how the
+        // untracked-directory bug once wedged the whole panel).
         let r: GitRun
         try {
           r = await git.discardFile(repo.root, path, repo.relPath)
@@ -1486,10 +1384,9 @@ export const useGitStore = create<GitState>()(
     }
 
     /**
-     * The reviewer chose to carry their uncommitted project changes into
-     * `branch`. Mirrors `runPull`'s merge handling almost exactly — the only
-     * real difference is where the three revisions and the mutation
-     * (stash/checkout) come from (`beginBranchSwitch`, not a `git merge`).
+     * Carries uncommitted project changes into `branch`. Mirrors `runPull`'s
+     * merge handling — differs only in where the revisions/mutation come from
+     * (`beginBranchSwitch`, not `git merge`).
      */
     async function runBranchSwitchCarryOver(branch: string): Promise<void> {
       const git = getPlatform().getGit()
@@ -1535,10 +1432,9 @@ export const useGitStore = create<GitState>()(
         return
       }
 
-      // start.kind === 'merge': the stash + checkout already happened —
-      // parse each revision independently so a parse failure names exactly
-      // which one is unreadable, aborting back to `start.sourceBranch` on
-      // any failure the same way `runPull` aborts its in-progress merge.
+      // start.kind === 'merge': stash + checkout already happened — parse each
+      // revision independently so a failure names which one, aborting back
+      // to `start.sourceBranch` like `runPull` aborts its in-progress merge.
       const abort = async () => {
         await git.abortBranchSwitch(repo.root, start.sourceBranch)
         await get().refreshRepo(useStore.getState().saveHandle)

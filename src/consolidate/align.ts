@@ -13,27 +13,15 @@ import {
 } from './similarity'
 
 /**
- * Work out which of each reviewer's repeated entries are *the same entry*.
+ * Work out which of each reviewer's repeated entries are *the same entry*,
+ * since reviewers need not record them in the same order (Reviewer 1's
+ * Finding #1 may be Reviewer 2's Finding #3) — comparing slot by slot would
+ * report disagreement everywhere.
  *
- * Two reviewers annotating one paper both record, say, three Findings — but
- * nothing makes them record them in the same order. Reviewer 1's Finding #1 may
- * be Reviewer 2's Finding #3. Comparing them slot by slot would then report
- * disagreement everywhere and be worse than useless. This module recovers the
- * correspondence first, so the comparison is between entries that are actually
- * about the same thing.
- *
- * Two properties matter, and both fall out of the shape of the algorithm rather
- * than being enforced afterwards:
- *
- * **Matching is optimal, not greedy.** Each node's entries are paired by
- * `maxWeightAssignment`, which maximises total agreement over the whole set
- * (see `assign.ts` for why greedy is not merely worse but wrong).
- *
- * **Matching is hierarchical, so it cannot cross.** A group's sub-entries are
- * only ever matched *inside* an already-matched pair of parents. There is no
- * point at which Finding A could pair with Finding B while A's Evidence pairs
- * with C's — the recursion never offers C as a candidate. The consistency the
- * feature requires is structural, not a rule applied after the fact.
+ * Matching is optimal, not greedy: entries are paired by `maxWeightAssignment`,
+ * which maximises total agreement (see `assign.ts` for why greedy is wrong).
+ * Matching is also hierarchical and so cannot cross: sub-entries are only
+ * matched *inside* an already-matched pair of parents, never across parents.
  */
 
 /** One consolidated entry, and which reviewer entry each side contributed. */
@@ -62,73 +50,54 @@ export interface NodeAlignment {
 export type TreeAlignment = Record<string, NodeAlignment>
 
 /**
- * Nudges an otherwise tied pairing towards the order the reviewers already used.
- * Two entries that share no comparable content give the matcher nothing to go
- * on, and it would be free to shuffle them arbitrarily; small enough that any
- * real agreement outranks it.
+ * Nudges an otherwise-tied pairing towards the reviewers' original order, when
+ * entries share no comparable content and the matcher would otherwise shuffle
+ * them arbitrarily. Small enough that any real agreement outranks it.
  */
 const ORDER_TIE_BREAK = 1e-6
 
 /**
- * What an entry earns by opening a brand-new slot instead of being forced into
- * an existing one it does not belong in. Smaller than `ORDER_TIE_BREAK`, so a
- * same-position pairing with zero evidence still wins that slot (two blank
- * entries in the same relative order) — but larger than the zero a rejected
- * pairing scores, so an entry that matches nothing gets its own slot rather
- * than corrupting one that belongs to someone else's entry. See `alignList`.
+ * What an entry earns by opening a new slot instead of being forced into one
+ * it doesn't belong in. Smaller than `ORDER_TIE_BREAK` (so a same-position
+ * zero-evidence pairing still wins its slot) but larger than a rejected
+ * pairing's zero (so an unmatched entry gets its own slot). See `alignList`.
  */
 const NEW_SLOT_WEIGHT = ORDER_TIE_BREAK / 10
 
 /**
- * How alike two entries must be before they can be called *the same entry*.
+ * How alike two entries must be before they count as *the same entry*.
  *
- * Without a floor, `maxWeightAssignment` always pairs as many entries as it
- * can: it maximises total agreement, and two entries with 0.18 similarity
- * still beat leaving one unmatched at 0. So a reviewer's finding that nobody
- * else recorded was silently married to whichever leftover entry the solver
- * happened to have — reported to the consolidator as a *disagreement about one
- * finding* rather than as two separate findings, which is both wrong and
- * invisible.
+ * Without a floor, `maxWeightAssignment` maximises total agreement and would
+ * always pair leftovers rather than leave them unmatched at 0 — silently
+ * merging a reviewer's unique finding into whatever entry was left, reported
+ * as a disagreement rather than two separate findings.
  *
- * Read as "strictly more alike than different" (`score > 0.5`), which is why
- * the comparison below is `>` and not `>=`: at exactly half, the evidence says
- * as much against the pairing as for it, and the honest reading of a coin flip
- * is "these are two things", not "these are one thing".
+ * `score > 0.5` ("strictly more alike than different"), not `>=`: at exactly
+ * half the evidence is a coin flip, and a coin flip reads as "two things".
  *
- * The trade-off is deliberate and one-directional. Splitting a pair that
- * really was one entry is visible and fixable — the consolidator sees two
- * groups, deletes one, fills the other. Merging two entries that were never
- * the same thing is invisible: it looks exactly like a legitimate
- * disagreement. This module errs toward the mistake a human can see, the same
- * way `fieldUsage.ts` warns rather than migrating.
+ * The trade-off is one-directional by design: splitting a real pair is
+ * visible and fixable by the consolidator; merging two unrelated entries is
+ * invisible, indistinguishable from a real disagreement. This errs toward the
+ * mistake a human can see (cf. `fieldUsage.ts` warning rather than migrating).
  *
- * ponytail: a flat threshold over crude text similarity — heavy paraphrase
- * ("Tests reduce defects" vs "Unit testing lowers defect density" scores
- * ~0.31) splits into two slots. Upgrade path is a better `stringSimilarity`
- * (embeddings, stemming), not a lower number here: dropping the floor to
- * catch paraphrase re-admits the false pairings this exists to stop.
+ * ponytail: flat threshold over crude text similarity, so heavy paraphrase
+ * (~0.31 similarity) splits into two slots. Upgrade path is a better
+ * `stringSimilarity` (embeddings, stemming) — not lowering this number, which
+ * would re-admit the false pairings the floor exists to stop.
  */
 const MIN_MATCH_SCORE = 0.5
 
 /**
- * The degenerate matching problem: a repeatable node where nobody recorded
- * more than one entry, and nothing hangs below it.
+ * Degenerate case: a childless repeatable node where nobody recorded more
+ * than one entry. There's exactly one way to pair these, so `MIN_MATCH_SCORE`
+ * has nothing to protect against — refusing the pair would instead produce
+ * two half-empty slots where one plain disagreement (e.g. "Benchmark" vs
+ * "Case study") belongs.
  *
- * There is exactly one way to pair these, so `MIN_MATCH_SCORE` has no false
- * pairing left to protect against — and refusing the pair is not neutral: it
- * produces two half-empty slots, each reporting the *other* reviewer as
- * having recorded nothing, where one plain disagreement belongs. Two
- * reviewers picking different options of a repeatable enum ("Benchmark" vs
- * "Case study") is the common case, and it is a disagreement about one
- * answer, not two answers nobody else gave.
- *
- * Restricted to childless nodes on purpose. With sub-fields, "one entry each"
- * no longer means "one thing each": two reviewers who each recorded a single
- * Finding may well have recorded *different* findings, and merging them there
- * is the invisible mistake `MIN_MATCH_SCORE` exists to avoid. Groups that
- * agree on all or most of their sub-fields already clear the threshold on
- * their own — `combine` weight-averages, so four matching sub-fields out of
- * five score ~0.8 — so nothing is lost by leaving them to it.
+ * Restricted to childless nodes: with sub-fields, "one entry each" doesn't
+ * mean "one thing each" — two single Findings could genuinely differ, which
+ * is the invisible mistake `MIN_MATCH_SCORE` guards against. Groups that
+ * actually agree on most sub-fields already clear the threshold on their own.
  */
 function singlePairing(def: ResolvedDef, lists: Record<string, InstanceNode[]>): boolean {
   return def.children.length === 0 && Object.values(lists).every((l) => l.length <= 1)
@@ -140,18 +109,14 @@ export function isRepeatable(def: ResolvedDef): boolean {
 }
 
 /**
- * How alike two entries of the same node are.
+ * How alike two entries of the same node are. Recursive and bottom-up: a
+ * Finding is compared through its Claim and Evidence, with Evidence's own
+ * repeated entries matched first — so nested groups match on their contents,
+ * not just their top-level fields.
  *
- * Recursive, because a group is only as alike as its contents: a Finding is
- * compared through its Claim and its Evidence, and its Evidence — itself
- * repeatable — is compared by solving the smaller matching problem first. The
- * cost therefore builds bottom-up, which is also why nested groups match
- * sensibly rather than by their top-level fields alone.
- *
- * Not worth memoising on the entry pair, which is the obvious thing to try and
- * measurably does nothing: the matcher asks about each pair of entries roughly
- * once, so there is no repetition at this level to collect. The repetition is
- * all in the text underneath — see `TextSimCache`, which is what `cache` is.
+ * Not worth memoising on the entry pair: each pair is asked about once, so
+ * there's no repetition here to collect. The repetition is in the text
+ * underneath — see `TextSimCache` (`cache`).
  */
 function instanceSim(
   def: ResolvedDef,
@@ -178,12 +143,9 @@ function instanceSim(
 
 /**
  * How alike two *lists* of entries are: match them optimally, then judge the
- * pairs that matching produced.
- *
- * Entries left over (one reviewer recorded four, the other three) are not
- * counted against the pair. That is the same rule an unanswered field follows —
- * see `Sim` — and for the same reason: a reviewer recording less says nothing
- * about whether what they *did* record is the same thing.
+ * resulting pairs. Leftover entries (unequal list lengths) aren't counted
+ * against the pair — same rule as an unanswered field (see `Sim`): recording
+ * less says nothing about whether what *was* recorded matches.
  */
 function listSim(
   def: ResolvedDef,
@@ -217,18 +179,10 @@ function simAgainstSlot(
     parts.push(instanceSim(def, entry, lists[reviewer]?.[index], cache))
   }
   const merged = combine(parts)
-  // Per *member*, not summed over them. `combine` averages the score but adds
-  // the weights up, and the assignment maximises score × weight — so a slot two
-  // reviewers had already landed in scored roughly twice a slot holding one,
-  // and outbid it even at strictly worse agreement. With three reviewers, one
-  // of whom recorded fewer entries than the anchor, an exact match could be
-  // pulled into a crowded slot while the identical anchor entry it belonged
-  // with was left alone at agreement 0. Dividing by the member count makes
-  // slots comparable no matter how full they are, which is what "how well does
-  // this entry fit this slot" was always supposed to mean.
-  //
-  // Only two reviewers means every slot holds exactly one member, so the bias
-  // cancels and nothing about the two-reviewer case changes.
+  // Divide by member count: `combine` sums weights, so a fuller slot would
+  // otherwise outbid an emptier one on weight alone, even at worse agreement,
+  // pulling entries into crowded slots instead of their real match. With only
+  // two reviewers every slot holds one member, so this is a no-op there.
   const n = parts.length
   return n > 1 ? { ...merged, weight: merged.weight / n } : merged
 }
@@ -240,34 +194,21 @@ function newSlot(): AlignedSlot {
 /**
  * Build the slots for one repeatable node across every reviewer.
  *
- * Matching N reviewers at once is the multi-dimensional assignment problem,
- * which is NP-hard and would be absurd for the sizes involved. Instead the
- * reviewer with the most entries anchors the slots — they are the one who
- * seeds the first ones — and everyone else is matched onto those slots in
- * turn. Later reviewers are matched against *all* members already in a slot,
- * not just the anchor, so a slot's identity firms up as reviewers agree on it.
+ * Matching N reviewers at once is NP-hard, so instead the reviewer with the
+ * most entries anchors the slots and everyone else is folded in against those
+ * slots in turn, matched against *all* members already in a slot (not just
+ * the anchor) so a slot's identity firms up as reviewers agree on it.
  *
- * An entry a reviewer records that genuinely matches none of the slots seen so
- * far (no evidence of overlap with any of them) opens a new slot of its own
- * instead of being forced into whichever existing one the assignment problem
- * has left over — see `NEW_SLOT_WEIGHT`. Reviewer A recording three findings
- * and Reviewer B recording two, one of which A never wrote down, ends up with
- * four slots, not three: A's third finding and B's unmatched one both stand on
- * their own, ready for the consolidator to verify or discard, rather than
- * silently smeared into "disagreement" on some unrelated slot. A later
- * reviewer can still land in a slot a previous one opened this way — new
- * slots join the same array everyone after them matches against.
+ * An entry matching none of the slots seen so far opens a new slot rather
+ * than being forced into a leftover one (see `NEW_SLOT_WEIGHT`) — so an
+ * unmatched finding stands on its own for the consolidator, instead of being
+ * smeared into "disagreement" on an unrelated slot. Later reviewers can still
+ * land in a slot opened this way.
  *
- * The order reviewers are folded in is fixed (most entries first, then by id) so
- * the same input always produces the same alignment. An alignment that shifted
- * between runs would reorder saved data for no reason.
- *
- * Slot order is otherwise the anchor's own list order, with newly-opened slots
- * appended after it — never reshuffled by how well a slot matches. Position N
- * naming the same entry for everyone across a save and reload (see
- * `applyAlignment`'s doc comment) depends on that order being stable; a
- * "matched first" resort would change which index a reviewer's own entries
- * land on for reasons having nothing to do with what they recorded.
+ * Fold-in order is fixed (most entries first, then by id) for reproducible
+ * output. Slot order is the anchor's list order plus new slots appended after
+ * — never reshuffled by match quality, since position N must keep naming the
+ * same entry across save/reload (see `applyAlignment`).
  */
 function alignList(
   def: ResolvedDef,
@@ -306,10 +247,8 @@ function alignList(
         // Nothing comparable either way: no grounds to pair them and none to
         // separate them, so fall back to the order the reviewers already used.
         if (sim.weight === 0) return i === s ? ORDER_TIE_BREAK : 0
-        // Compared, and they are not the same entry — see `MIN_MATCH_SCORE`.
-        // Scoring 0 (not the real mass) is what lets the new-slot column below
-        // win instead, which is the whole point: a weak-but-nonzero mass would
-        // still outbid it.
+        // Not the same entry (see `MIN_MATCH_SCORE`) — score 0, not the real
+        // mass, so the new-slot column below can win instead.
         if (sim.score <= MIN_MATCH_SCORE) return 0
         return agreementMass(sim)
       })
@@ -379,9 +318,8 @@ function mapMembers<T>(
 /**
  * Align every node at one level of the schema.
  *
- * Non-repeatable nodes still appear when they have children: they hold no
- * choice of their own, but a repeatable node may be nested below one, and it
- * has to be reachable.
+ * Non-repeatable nodes with children still appear: a repeatable node may be
+ * nested below one, and it has to stay reachable.
  */
 function alignLevel(
   defs: ResolvedDef[],
@@ -434,26 +372,18 @@ function compareReviewerIds(x: string, y: string): number {
  * without moving anyone who does.
  *
  * `alignConsolidationNode` (store.ts) refuses to recompute a node once the
- * consolidator has committed an answer under it, for good reason: slot N
- * means a particular thing to them by then, and a fresh `alignList` run is
- * free to reshuffle it (see that function's own comment). But the freeze was
- * written assuming every reviewer already had *some* mapping. A reviewer
- * added to the project after the freeze — or one who simply had not started
- * this paper yet — has no key in any slot's `members` at all, and the freeze
- * gave them no way to ever get one: their real answers sat in their own tree
- * forever, never placed into a consolidated slot, and dropped out of
- * unanimity checks and agreement stats.
+ * consolidator has committed under it, since a fresh `alignList` run could
+ * reshuffle slot N's meaning. But that freeze assumed every reviewer already
+ * had some mapping — a reviewer added later has no key anywhere and, without
+ * this, would never get one placed into a consolidated slot.
  *
- * This runs the same per-reviewer folding `alignList`'s main loop does for a
- * newly-added voice, seeded from the existing frozen slots instead of fresh
- * ones — an existing reviewer's `members[r]` is never read or written, only
- * entries for reviewers absent from every slot. Recurses into each touched
- * slot's children the same way, so a newcomer's nested repeatable entries
- * (Evidence within a Finding, say) get placed too, without moving whatever
- * nested matching earlier reviewers were already frozen into.
+ * Runs the same per-reviewer folding as `alignList`, seeded from the frozen
+ * slots instead of fresh ones; existing reviewers' `members[r]` is never
+ * touched. Recurses into touched slots' children so nested repeatable entries
+ * get placed too, without disturbing already-frozen nested matching.
  *
- * Operates directly on the stored (persisted) shape rather than `TreeAlignment`
- * — there is no live `agreement`/`evidence` to maintain here, only membership.
+ * Operates on the stored (persisted) shape, not `TreeAlignment` — there's no
+ * live `agreement`/`evidence` to maintain here, only membership.
  */
 export function widenAlignment(
   defs: ResolvedDef[],
@@ -507,13 +437,9 @@ export function widenAlignment(
 }
 
 /**
- * `widenAlignment`'s repeatable-node case: fold every reviewer absent from
- * `existingSlots` into them, one reviewer at a time, mirroring `alignList`'s
- * `rest` loop exactly — matched against the slots' current members by the same
- * similarity, or opened into a new slot when nothing fits (see
- * `NEW_SLOT_WEIGHT`/`MIN_MATCH_SCORE` there for why). The only difference is
- * where the slots being folded into came from: a frozen, previously-computed
- * set instead of a fresh anchor.
+ * `widenAlignment`'s repeatable-node case: folds reviewers absent from
+ * `existingSlots` in one at a time, using `alignList`'s same matching and
+ * new-slot rules — just folding into frozen slots instead of a fresh anchor.
  */
 function widenList(
   def: ResolvedDef,
@@ -538,9 +464,8 @@ function widenList(
     return { slots: [{ members }], changed: true }
   }
 
-  // Plain member-bag copies to fold into — `simAgainstSlot` only reads
-  // `.members`, and `children` is carried through untouched until a slot is
-  // actually widened below.
+  // Plain member-bag copies — `simAgainstSlot` only reads `.members`;
+  // `children` passes through untouched until a slot is actually widened below.
   const slots: StoredSlot[] = existingSlots.map((s) => {
     const slot: StoredSlot = { members: { ...s.members } }
     if (s.children) slot.children = s.children
@@ -578,10 +503,8 @@ function widenList(
     })
   }
 
-  // Recurse into the children of every slot a newcomer actually landed in —
-  // never the others, which is what keeps this a *widening* update: a slot
-  // nobody new joined has nothing here to place, and its frozen nested
-  // matching is left exactly as it was.
+  // Only recurse into slots a newcomer actually landed in — keeps this a pure
+  // widening: untouched slots' frozen nested matching is left as-is.
   if (def.children.length > 0) {
     for (const slot of slots) {
       const touchedByNewcomer = Object.keys(slot.members).some((r) => newcomers.includes(r))
@@ -602,16 +525,12 @@ function widenList(
 }
 
 /**
- * Align one top-level node, returning an alignment shaped like a whole-paper
- * one but holding only that node — `applyAlignment` skips what it does not find,
- * so a partial result applies as-is.
+ * Align one top-level node; the result is shaped like a whole-paper alignment
+ * but holds only that node, since `applyAlignment` skips what it doesn't find.
  *
- * `reviews` is keyed by reviewer id and must *exclude* the consolidated tree:
- * consolidation is the thing being built from this, not a voice in it.
- *
- * The unit the scheduler works in. A node is independent of its siblings, so
- * doing them one at a time is what lets the work be spread across frames and
- * the node the reviewer is actually looking at be pulled to the front.
+ * `reviews` must *exclude* the consolidated tree — it's being built from this,
+ * not a voice in it. This is also the unit the scheduler works in: nodes are
+ * independent, so aligning one at a time lets work spread across frames.
  */
 export function alignNode(
   schema: ResolvedDef[],

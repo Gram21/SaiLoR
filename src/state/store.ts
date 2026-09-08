@@ -105,15 +105,10 @@ export interface PathSeg {
 }
 
 /**
- * Key of one field instance's "the AI wrote this" mark. Scoped by paper, because
- * the same canonical path exists on every paper — and, for a multi-reviewer
- * project, also scoped by reviewer, because the same path exists once per
- * reviewer's own tree too. `reviewer` is the literal `currentReviewer` value
- * (a numbered reviewer, `"consolidation"`, or `null`); passing `null` (the
- * default, and always correct for a single-reviewer project) reproduces the
- * original two-part key exactly, so nothing about a single-reviewer project's
- * marks changes. The path part is `formatPath`'s canonical form, so a mark set
- * from an LLM suggestion and one looked up by the UI meet on the same string.
+ * Key of one field instance's "the AI wrote this" mark. Scoped by paper, and by
+ * reviewer when `reviewer` is non-null — `null` (the single-reviewer default)
+ * reproduces the original two-part key exactly. Uses `formatPath`'s canonical
+ * form, so an LLM suggestion and a UI lookup meet on the same string.
  */
 export function aiMarkKey(
   paperId: string,
@@ -135,12 +130,10 @@ export function fieldPath(path: PathSeg[], name: string, index: number): string 
 
 /**
  * Rewrite a canonical path after the instance at `path/name[index]` was
- * removed from a repeatable list. Every sibling after the removed index
- * shifts down by one, so any path/key naming it (mark links, AI marks,
- * `paper.equal`, deferred consolidations) has to shift with it or it keeps
- * pointing at whichever entry inherited the old slot. Returns `null` when
- * `canonical` named the removed instance itself (or something inside it) —
- * the caller drops those. Defensive-parse convention: an unparseable or
+ * removed: siblings after it shift down by one, so anything naming them (mark
+ * links, AI marks, `paper.equal`, deferred consolidations) stays valid instead
+ * of pointing at whoever inherited the old slot. Returns `null` for the
+ * removed instance itself (or something inside it); an unparseable or
  * unrelated path comes back unchanged rather than throwing.
  */
 export function shiftCanonicalPath(
@@ -170,22 +163,12 @@ export function shiftCanonicalPath(
 
 /**
  * Descend into `alignment` along `path` to find the slots for node `name`,
- * the same way `containerAt` descends the annotation tree — except a step
- * here does not mean "index `seg.index` of this array", it means "whichever
- * slot the caller's notion of `seg.index` belongs to", because `alignment`'s
- * levels are keyed by node name and addressed by slot position, not by any
- * one reviewer's array index directly.
- *
- * `resolveIndex` is what tells the two callers of `removeInstance`'s
- * alignment fixup apart: a reviewer's own edit names *their* array index at
- * each level, so it has to search `members` for it; a consolidator's edit
- * names the consolidated array's own index, which (by `growConsolidated`'s
- * invariant that the consolidated array is never reordered, only grown) is
- * the slot's position directly.
- *
- * Returns `undefined` wherever the path does not resolve — an unaligned node,
- * or a segment `resolveIndex` cannot place — so the caller can simply skip
- * the fixup rather than fabricate a slot list that was never computed.
+ * like `containerAt` but addressed by slot position, not array index.
+ * `resolveIndex` resolves a caller's index to a slot: search `members` for a
+ * reviewer's own edit; use the index directly for consolidation, since
+ * `growConsolidated` never reorders it, only grows it. Returns `undefined`
+ * where the path doesn't resolve, so the caller can skip the fixup rather
+ * than fabricate a slot list that was never computed.
  */
 function alignmentSlotsAt(
   alignment: StoredAlignment,
@@ -204,9 +187,8 @@ function alignmentSlotsAt(
   return level[name]
 }
 
-/** The reviewer scope a mark key should use right now: `null` for a
- *  single-reviewer project (so its keys stay byte-for-byte the old format),
- *  otherwise the current selection. */
+/** The reviewer scope for a mark key: `null` for a single-reviewer project
+ *  (keeps keys byte-for-byte the old format), otherwise the current selection. */
 function markReviewerScope(project: Project | null, currentReviewer: string | null): string | null {
   return project && project.reviewers > 1 ? currentReviewer : null
 }
@@ -219,16 +201,10 @@ const REVIEWER_KEY_PREFIX = 'slr.currentReviewer.'
 
 /**
  * Stable per-project key for persisting the reviewer selection: the save
- * handle's path doubles as one (an absolute Electron path, or the id of a
- * retained FSAPI handle — see `SaveHandle`). A project with neither a path
- * nor a handle at all (server mode, or a browser download-only save) has no
- * way to be told apart from a same-named one on the next launch, so the
- * selection simply isn't persisted for it rather than risk showing up under
- * the wrong project.
- *
- * This is deliberately per-machine, `localStorage`, keyed by clone path: it
- * is a local convenience so reopening the file does not ask again and is
- * never written into the shared project JSON.
+ * handle's path doubles as the key (see `SaveHandle`). A project with no path
+ * (server mode, browser download-only) can't be told apart from another on
+ * the next launch, so the selection simply isn't persisted for it. Deliberately
+ * `localStorage`, per-machine — a local convenience, never written to the JSON.
  */
 function reviewerStorageKey(handle: SaveHandle | null): string | null {
   return handle?.path ? `${REVIEWER_KEY_PREFIX}${handle.path}` : null
@@ -256,10 +232,7 @@ function saveCurrentReviewer(handle: SaveHandle | null, reviewer: string | null)
 const READING_POSITION_KEY_PREFIX = 'slr.readingPosition.'
 
 /** Same per-machine, `localStorage`, keyed-by-path convention as
- *  `reviewerStorageKey` — see its own doc comment. Reopening the file should
- *  land back on the paper and PDF page a reviewer was last looking at,
- *  purely as a local convenience; it has no business in the shared project
- *  JSON, where it would just be diff noise every time someone opens the file. */
+ *  `reviewerStorageKey` — a local convenience, never written to the shared JSON. */
 function readingPositionKey(handle: SaveHandle | null): string | null {
   return handle?.path ? `${READING_POSITION_KEY_PREFIX}${handle.path}` : null
 }
@@ -267,20 +240,14 @@ function readingPositionKey(handle: SaveHandle | null): string | null {
 interface StoredReadingPosition {
   paperId: string
   page: number
-  /** How far scrolled into `page`, as a fraction of that page's own rendered
-   *  height (0 = its very top, close to 1 = near its bottom) — the same
-   *  "fraction of the page" convention `MarkRect` already uses, chosen for
-   *  the same reason: resolution/zoom-independent, so it still lands in
-   *  roughly the right spot even if the page renders at a different size
-   *  than it did when this was captured. Optional so an older stored value
-   *  (page only) still loads — treated as 0 (page top) when absent. */
+  /** Fraction of `page`'s rendered height scrolled into (0 = top), the same
+   *  resolution-independent convention as `MarkRect`. Missing (older stored
+   *  values) treated as 0. */
   offsetFraction: number
 }
 
-/** The persisted reading position for this project, or null when there is
- *  none, the project has no stable key, or the stored value is malformed. Not
- *  checked against the project's own paper list here — `loadFromText` does
- *  that, since only it knows the freshly loaded papers. */
+/** The persisted reading position for this project, or null if none/malformed.
+ *  Not checked against the paper list here — `loadFromText` does that. */
 function loadReadingPosition(handle: SaveHandle | null): StoredReadingPosition | null {
   const key = readingPositionKey(handle)
   if (!key) return null
@@ -321,11 +288,9 @@ export interface LoadError {
 const CORRUPT_LIST_LIMIT = 10
 
 /**
- * The warning shown when a project opened with annotation files that could not
- * be parsed (`OpenedProject.corruptFiles`). Those files load as absent — a
- * seat looks unannotated — so saying nothing would let a reviewer redo or
- * overwrite work that is still on disk. The files themselves are never
- * deleted (see `writeProjectFiles` in `electron/main.ts`).
+ * Warning for annotation files that failed to parse (`OpenedProject.corruptFiles`):
+ * they load as absent, so silence would let a reviewer overwrite work still on disk.
+ * Files themselves are never deleted (see `writeProjectFiles` in `electron/main.ts`).
  */
 function corruptFilesWarning(paths: string[]): LoadError {
   const listed = paths.slice(0, CORRUPT_LIST_LIMIT)
@@ -369,17 +334,10 @@ const roundZoom = (z: number) => Math.round(z * 100) / 100
 let lastFieldKey: string | null = null
 
 /**
- * Bumped whenever the open project is *replaced or closed* — never for an
- * ordinary edit. A background read that outlives its project (see
- * `extractScreeningAbstract`) compares this to decide whether its result still
- * belongs anywhere.
- *
- * Reference equality on `project` cannot answer that question, even though
- * `loadFromText`'s auto-save uses it for its own narrower one: immer hands back
- * a **new** `project` object on every edit, so `get().project !== captured`
- * is true the moment the reviewer decides a single paper — which during
- * screening is constantly, and exactly while a PDF is being read. Guarding on
- * that would throw away a perfectly good abstract because someone pressed `I`.
+ * Bumped only when the open project is *replaced or closed*, never for an
+ * ordinary edit — lets `extractScreeningAbstract`'s background read tell if its
+ * result still belongs, since immer gives `project` a new reference on every
+ * edit (reference equality would look stale mid-read, discarding a good abstract).
  */
 let projectGeneration = 0
 
@@ -417,83 +375,50 @@ interface AppState {
   agreementOpen: boolean
   /** Whether the "export PDF with annotations" dialog is open. Session-only, like `validationOpen`. */
   exportPdfOpen: boolean
-  /** Whether the schema-info dialog is open. Auto-set true by `loadFromText`
-   *  when the opened project has a `schemaInfo` comment; otherwise toggled by
-   *  the annotation panel's ⓘ button. Session-only, like `validationOpen`. */
+  /** Whether the schema-info dialog is open — auto-set true by `loadFromText`
+   *  when the project has a `schemaInfo` comment, else toggled manually. Session-only. */
   schemaInfoOpen: boolean
-  /** A mark id `PdfViewer` should scroll to and flash, requested from
-   *  elsewhere (the field-link popover's "jump to this mark" — clicking a
-   *  candidate to see it in context before linking it). `PdfViewer` clears
-   *  this itself once it has acted on it. Session-only. */
+  /** A mark id `PdfViewer` should scroll to and flash — requested from the
+   *  field-link popover's "jump to this mark". `PdfViewer` clears it once acted on. */
   pendingMarkJump: string | null
   /**
-   * The paper/page a just-opened project's landing paper should scroll to on
-   * its very first render, restored from `loadReadingPosition` — a reviewer
-   * reopening a project lands back where they left off instead of wherever
-   * `firstUnfinishedPaperId` would otherwise put them. `PdfViewer` consumes
-   * this itself once its pages are actually mounted and clears it, the same
-   * single-shot shape as `pendingMarkJump`. `paperId` guards against a
-   * reviewer navigating to a different paper before the landing paper's PDF
-   * finishes loading — `PdfViewer` also drops it outright the moment the
-   * open paper no longer matches, so it can never misapply to a paper opened
-   * later by hand. Session-only.
+   * Paper/page a just-opened project's landing paper scrolls to on first render
+   * (from `loadReadingPosition`), so reopening returns where the reviewer left
+   * off. `PdfViewer` consumes+clears it once mounted, and drops it if the
+   * reviewer navigates away before the landing PDF loads. Session-only.
    */
   initialPdfPosition: { paperId: string; page: number; offsetFraction: number } | null
   /** Canonical field path whose link popover is open, or null. Session-only, like `validationOpen`. */
   openLinkPopoverField: string | null
-  /** The mark `PdfViewer` most recently created (a highlight or note, not an
-   *  edit to an existing one) and nobody has linked to a field yet — offered
-   *  to the next field-link popover to open, auto-linking it there instead of
-   *  making the reviewer find and click it in the list, since finishing a
-   *  highlight and immediately going to link it is the whole point of having
-   *  just made it.
-   *
-   *  Only stays valid through two kinds of "next thing" — see
-   *  `lastCreatedMarkAllowedField` — anything else in between (editing a
-   *  different field, adding/removing an instance, undo, touching another
-   *  mark, ...) drops it back to `null` via `clearPendingMarkLink`, so a
-   *  popover opened later offers nothing and the reviewer picks by hand.
-   *  Cleared outright the moment a popover does consume it, so it is only
-   *  ever offered once. Session-only, like `pendingMarkJump`. */
+  /** The mark `PdfViewer` most recently created and not yet linked to a field —
+   *  offered to the next field-link popover to open, auto-linking it there
+   *  instead of making the reviewer find it in the list. Stays valid only
+   *  through the "next thing" rules in `lastCreatedMarkAllowedField`; any other
+   *  action (`clearPendingMarkLink`) or a popover consuming it clears this.
+   *  Session-only, like `pendingMarkJump`. */
   lastCreatedMarkId: string | null
   /**
-   * Narrows what `lastCreatedMarkId` may still be auto-linked to.
-   *
-   * `null` while nothing has happened yet since the mark was made — any
-   * field's popover may still claim it (case (a): highlight, then link).
-   * Set to a canonical field path the first time that field is edited —
-   * from then on, only *that* field's popover may claim it (case (b):
-   * highlight, type the value into the field it belongs to, then link) —
-   * editing a *different* field invalidates the pending mark entirely
-   * rather than re-narrowing, since a second field's answer is no longer
-   * "the very next thing" after making the mark.
+   * Narrows what `lastCreatedMarkId` may still be auto-linked to: `null` until
+   * a field is edited (any field's popover may claim it), then set to that
+   * field's path so only it may claim it — editing a *different* field
+   * invalidates the pending mark rather than re-narrowing.
    */
   lastCreatedMarkAllowedField: string | null
   /**
-   * Every mark id `addHighlight` has produced since the app was opened —
-   * across every paper and reviewer seat, never pruned or reset by anything
-   * short of quitting.
-   *
-   * Powers `orderMarksForLinking`'s "pin what you just made" section in the
-   * field-link popover: it needs to tell "this highlight is from a minute
-   * ago" from "this highlight has sat in the file since last week" apart,
-   * and a mark's own `createdAt` alone cannot — a project opened for the
-   * first time today has old marks with old timestamps, but nothing about
-   * them is *recent* to this sitting. Not session-only in the sense the rest
-   * of this section's fields are (those are cleared on project close); this
-   * one is deliberately not, since "how long has this app been open"
-   * doesn't reset just because the reviewer switched papers.
+   * Every mark id `addHighlight` has produced this session, across papers and
+   * reviewers, never pruned. Lets `orderMarksForLinking`'s "pin what you just
+   * made" section tell "made a minute ago" from "existed since last week" —
+   * `createdAt` alone can't, since marks in a freshly opened project have old
+   * timestamps too. Deliberately not cleared on project close, unlike the rest
+   * of this section's fields.
    */
   sessionCreatedMarkIds: string[]
-  /** A canonical field path `AnnotationPanel` should scroll to and flash,
-   *  requested from elsewhere (Validation's "jump to this field", clicking
-   *  an issue rather than only the paper it's on). `AnnotationPanel` clears
-   *  this itself once it has acted on it — same one-shot-request shape as
-   *  `pendingMarkJump`. */
+  /** A canonical field path `AnnotationPanel` should scroll to and flash —
+   *  requested from Validation's "jump to this field". Cleared by
+   *  `AnnotationPanel` once acted on, same one-shot shape as `pendingMarkJump`. */
   pendingFieldJump: string | null
-  /** The field currently pulsing after a jump — see `pendingFieldJump`.
-   *  Set alongside clearing `pendingFieldJump`, cleared again after the
-   *  flash animation's own duration. */
+  /** The field currently pulsing after a jump — see `pendingFieldJump`. Set when
+   *  that's cleared; cleared again after the flash animation's duration. */
   flashFieldPath: string | null
   /** Restore the Consolidation overview when its Agreement dialog closes. */
   agreementReturnToOverview: boolean
@@ -512,23 +437,17 @@ interface AppState {
    */
   unanimousRun: UnanimousRun | null
   /**
-   * Bumped whenever a different project is loaded or the current one closed.
-   *
-   * Components hold local UI state that is *about* the open project — a search
-   * query, a filter — and `project` itself is not usable as a change signal
-   * because immer swaps it on every keystroke. Without this, PaperList's search
-   * survived a project switch and hid every paper in the newly opened one
-   * behind a query typed against the last.
+   * Bumped when a different project is loaded or the current one closed, so
+   * components can reset UI state that's *about* the project (search, filters) —
+   * `project` itself changes on every keystroke (immer) so isn't a usable signal.
+   * Without this, PaperList's search survived a project switch.
    */
   projectGeneration: number
   /** Shown when discarding an open project's unsaved changes. */
   closePromptOpen: boolean
-  /**
-   * What to do once the unsaved-changes prompt is answered. Closing is not the
-   * only way to lose the open project — opening another one (or a recent)
-   * replaces it just as completely — so the prompt has to carry the action it
-   * is guarding rather than assume "close".
-   */
+  /** What to do once the unsaved-changes prompt is answered — carries the
+   *  action it's guarding rather than assuming "close", since opening another
+   *  project (or a recent) replaces the open one just as completely. */
   pendingAfterPrompt: { kind: 'close' } | { kind: 'open' } | { kind: 'openRecent'; id: string } | null
   /** The running version, injected from package.json at build time. */
   appVersion: string
@@ -544,38 +463,28 @@ interface AppState {
   past: HistoryEntry[]
   future: HistoryEntry[]
   /**
-   * Fields *the app* filled and the reviewer has not yet looked at, keyed by
-   * `aiMarkKey`. Two things produce them, and the border means the same in both
-   * cases — "you did not type this; check it": an applied AI suggestion, and
-   * Consolidation adopting a value every reviewer gave (`adoptUnanimousValues`).
-   * The name predates the second.
-   *
-   * Session-only *by construction*: it lives beside the project rather than
-   * inside it, so `serializeProject` cannot see it and a mark can never reach
-   * the file on disk. A plain record (not a Set) keeps immer happy.
+   * Fields *the app* filled and the reviewer hasn't looked at yet, keyed by
+   * `aiMarkKey` — produced by an applied AI suggestion or by Consolidation
+   * adopting a unanimous value (`adoptUnanimousValues`; name predates that case).
+   * Lives beside the project (not inside it) so it's session-only by
+   * construction: `serializeProject` can't see it. Plain record, not a Set, to
+   * keep immer happy.
    */
   aiMarks: Record<string, true>
   /** Fields waiting for Consolidation to enter a value other than a reviewer's answer. */
   deferredConsolidations: Record<string, true>
   /**
-   * AI-assisted annotation ships in the app but is off by default for every
-   * project, regardless of what its `config.ai` says — a project can still
-   * *forbid* it (`config.ai: false` always wins), but it can no longer turn it
-   * on by itself. It is unlocked only by the hidden gesture wired up in
-   * `Toolbar.tsx`, and only for the running session: this is never persisted
-   * and never set from anywhere else, so it is back to locked on every reload.
+   * AI-assisted annotation is off by default regardless of `config.ai` (which
+   * can still *forbid* it, never enable it) — unlocked only by the hidden
+   * gesture in `Toolbar.tsx`, for the running session only. Never persisted.
    */
   aiUnlocked: boolean
   /**
-   * Which reviewer's work is currently shown/edited: `"1"`.."N" for a numbered
-   * reviewer, `"consolidation"` for the built-in role that reconciles them, or
-   * `null`. A single-reviewer project (`project.reviewers <= 1`) never leaves
-   * `null` — see `currentTree`. A *multi*-reviewer project also starts `null`
-   * on load (nobody has picked yet): defaulting to Reviewer 1 would let an
-   * edit land unattributed, which is worse than making the reviewer pick
-   * first. Selecting is a view switch, not an edit: it is not an undo step and
-   * does not set `dirty`, and it is persisted per project (see
-   * `saveCurrentReviewer`) so reopening the same file returns to the same seat.
+   * Which reviewer's work is shown/edited: `"1"`.."N", `"consolidation"`, or
+   * `null` (single-reviewer projects stay `null`; multi-reviewer projects also
+   * start `null` so an edit is never attributed by default). Selecting is a
+   * view switch, not an edit — no undo step, no `dirty` — and persists per
+   * project (see `saveCurrentReviewer`).
    */
   currentReviewer: string | null
   /** The field a Consolidation-mode "compare" click is showing, or null when
@@ -583,39 +492,28 @@ interface AppState {
   consolidationTarget: { path: PathSeg[]; name: string; index: number } | null
   /** Which decisions the screening paper list shows. Session-only, like the search box's mode. */
   screeningFilter: ScreeningStatus | 'all'
-  /** Which annotation state the (non-screening) paper list shows, and which
-   *  one its "finished: 5/100" counter reports. Session-only, like
-   *  `screeningFilter` — a filter is a way of looking at the project right
-   *  now, not a property of it worth writing to the file. */
+  /** Which annotation state the paper list shows and its "finished: 5/100"
+   *  counter reports. Session-only — a filter, not a property worth saving. */
   annotationFilter: AnnotationFilter
   /** Screening reads title + abstract by default; the PDF is the escalation path. Session-only. */
   screeningShowPdf: boolean
   /** Whether the screening progress/PRISMA summary modal is open. Session-only. */
   screeningSummaryOpen: boolean
   /**
-   * Per paper id, what `extractScreeningAbstract` has done about its PDF this
-   * session: `'reading'` while the read is in flight (the record view shows a
-   * notice), `'none'` once a read finished having found nothing — which is what
-   * stops a PDF with no recognisable abstract from being re-fetched and
-   * re-parsed on every single re-selection of that paper.
-   *
-   * A *successful* read deliberately leaves no entry: the abstract it wrote is
-   * its own record, and `paper.abstract` is the guard that keeps it from
-   * running again. That matters because an undo can restore a snapshot taken
-   * before the abstract landed — leaving a marker here would then make the loss
-   * permanent for the session, where instead re-selecting the paper simply
-   * extracts again. Session-only, like `screeningShowPdf`.
+   * Per paper id, what `extractScreeningAbstract` has done this session:
+   * `'reading'` while in flight, `'none'` once a read found nothing (stops a
+   * PDF with no recognisable abstract from being re-fetched on every reselect).
+   * A successful read leaves no entry — `paper.abstract` itself is the guard,
+   * so an undo that removes the abstract lets re-selecting extract again
+   * rather than permanently losing it. Session-only.
    */
   screeningAbstractReads: Record<string, 'reading' | 'none'>
 
   openProject: () => Promise<void>
   openRecent: (id: string) => Promise<void>
-  /**
-   * Open another project, prompting to save first when the current one is
-   * dirty. Every entry point a *user* can reach must go through these rather
-   * than `openProject`/`openRecent` directly: replacing the open project
-   * discards unsaved work exactly as closing it does, and used not to ask.
-   */
+  /** Open another project, prompting to save first if dirty. User-reachable
+   *  entry points must go through these, not `openProject`/`openRecent` directly —
+   *  replacing the open project discards unsaved work just as closing does. */
   requestOpenProject: () => void
   requestOpenRecent: (id: string) => void
   /** Drop a project from the recents list. */
@@ -629,15 +527,11 @@ interface AppState {
   /** Discard the open project and return to the start screen. */
   closeProject: () => void
   loadFromText: (text: string, handle: SaveHandle | null, name: string) => void
-  /** Re-reads the open project from disk in place, after a field-level git
-   *  commit/discard rewrote the working file underneath it — see
-   *  `gitStore.ts`'s `runCommit`/`runDiscard`. Unlike `loadFromText`, this is
-   *  not "a project was opened": the reviewer's view (selected paper,
-   *  filters, the schema-info dialog) is left exactly as it was, only the
-   *  project data itself is refreshed. Undo/redo history is cleared, same as
-   *  `loadFromText` — those snapshots branch off the project as it stood
-   *  before this read, so keeping them would let a later Ctrl+Z silently
-   *  resurrect exactly what the resync just discarded. */
+  /** Re-reads the open project from disk after a git commit/discard rewrote the
+   *  working file (see `gitStore.ts`'s `runCommit`/`runDiscard`). Unlike
+   *  `loadFromText`, view state (selected paper, filters) is left alone — only
+   *  project data refreshes. Undo/redo history is cleared, since old snapshots
+   *  would let Ctrl+Z resurrect what the resync just discarded. */
   resyncProjectFromDisk: () => Promise<void>
   save: () => Promise<boolean>
   saveAs: () => Promise<boolean>
@@ -670,15 +564,10 @@ interface AppState {
    *  `initialPdfPosition` — see its own doc comment. */
   clearInitialPdfPosition: () => void
   /**
-   * Persists `page` as `paperId`'s reading position, for the next time this
-   * project is opened — see `saveReadingPosition`. Takes `paperId` explicitly
-   * rather than reading `currentPaperId` off the store: the call is debounced
-   * from `PdfViewer`, and by the time it actually fires the reviewer may
-   * already have switched to a different paper — writing whichever paper is
-   * *current by then* would attribute an old page number to the wrong paper.
-   * A no-op with no stable save location (server mode, a browser
-   * download-only save): the same case `saveCurrentReviewer` already
-   * quietly skips.
+   * Persists `page` as `paperId`'s reading position (see `saveReadingPosition`).
+   * Takes `paperId` explicitly rather than reading `currentPaperId`: the call is
+   * debounced, and by the time it fires the reviewer may have switched papers.
+   * No-op with no stable save location, same as `saveCurrentReviewer`.
    */
   noteReadingPosition: (paperId: string, page: number, offsetFraction: number) => void
   /** Open/close a field's link popover, closing any other field's — see `openLinkPopoverField`. */
@@ -716,43 +605,29 @@ interface AppState {
   setFieldValue: (path: PathSeg[], name: string, index: number, value: FieldValue) => void
   addInstance: (path: PathSeg[], def: ResolvedDef) => void
   removeInstance: (path: PathSeg[], name: string, index: number) => void
-  /** Tick/untick "annotation finished" for the current paper and seat — the
-   *  checkbox in the annotation panel, and the only thing that turns the
-   *  paper list's dot green (see `Paper.finished`). Pushes no history entry
-   *  of its own — it is a declaration about the work, not an edit to it, and
-   *  a reviewer reaching for undo means "take back what I typed". It still
-   *  rides along inside the project snapshots undo/redo restore, exactly like
-   *  PDF marks do, so undoing the edit that completed the paper takes the
-   *  declaration back with it — which is the coherent outcome, since that
-   *  state was neither complete nor declared. */
+  /** Tick/untick "annotation finished" for the current paper/seat (see
+   *  `Paper.finished`). Pushes no history entry of its own — it's a declaration,
+   *  not an edit — but still rides along inside project undo/redo snapshots, so
+   *  undoing the completing edit takes the declaration back with it. */
   setAnnotationFinished: (finished: boolean) => void
   undo: () => void
   redo: () => void
 
-  /** Every mark (highlight, optionally with a comment) on the current paper's
-   *  PDF, for whoever is currently reviewing — see `currentMarks`. Empty
-   *  outside a paper, or before a reviewer seat is picked on a multi-reviewer
-   *  project. */
+  /** Every mark on the current paper's PDF for whoever is reviewing — see
+   *  `currentMarks`. Empty outside a paper or before a seat is picked. */
   currentPdfMarks: () => PdfMark[]
-  /** Highlights the selection described by `page`/`rects`, in the color
-   *  given (or the first of `MARK_COLORS`) — the standard "select text,
-   *  highlight it" a PDF viewer offers. `kind: 'note'` instead pins a sticky
-   *  note at `rects[0]`'s point (no text selected) — same storage, same
-   *  merge rules, just a different marker in the overlay. Returns the new
-   *  mark's id so the caller can open its comment popover right away. Not
-   *  part of the annotation undo stack (see `pdfMarks.ts`'s own doc comment
-   *  on why marks are a separate, lower-stakes concern from an annotation
-   *  answer). */
+  /** Highlights `page`/`rects` in the given color (default first of
+   *  `MARK_COLORS`); `kind: 'note'` instead pins a sticky note at `rects[0]`'s
+   *  point. Returns the new mark id so the caller can open its comment popover.
+   *  Not part of the annotation undo stack — see `pdfMarks.ts`'s own doc comment. */
   addHighlight: (
     page: number,
     rects: MarkRect[],
     color?: string,
     kind?: PdfMark['kind'],
     text?: string,
-    /** Set only when this mark is one page-fragment of a highlight that
-     *  spans a page boundary — every fragment sharing a `groupId` is kept
-     *  in sync (comment/color/links) by the mutating actions below, so a
-     *  reviewer sees one logical highlight rendered on multiple pages. */
+    /** Set only for one page-fragment of a highlight spanning a page boundary —
+     *  fragments sharing a `groupId` are kept in sync (comment/color/links). */
     groupId?: string,
   ) => string | null
   /** Replaces a mark's comment text (`''` clears it back to a plain highlight
@@ -789,43 +664,30 @@ interface AppState {
   /** Mark a field for a different, manually entered Consolidation value. */
   deferConsolidationValue: (path: PathSeg[], name: string, index: number) => void
   /**
-   * Match the reviewers' repeated entries under one top-level node, and write
-   * the result into the paper: every reviewer's entries reordered so position
-   * means the same entry for all of them, and the consolidated tree grown to
-   * one entry per match. Returns whether anything actually moved.
-   *
-   * Driven by `useConsolidationAlignment`, a node at a time. `coalesce` folds
-   * this node into the undo entry an earlier node of the same run pushed, so
-   * lining a paper up is one undo press rather than one per node.
+   * Matches reviewers' repeated entries under one top-level node so position
+   * means the same entry for all of them, growing the consolidated tree to one
+   * entry per match. Returns whether anything moved. `coalesce` folds this node
+   * into an earlier node's undo entry from the same run (one undo press, not
+   * one per node) — driven by `useConsolidationAlignment`, a node at a time.
    */
   alignConsolidationNode: (paperId: string, nodeName: string, coalesce: boolean) => boolean
   /**
-   * Fill the consolidated tree's still-unanswered fields with the values every
-   * reviewer gave, marking each one the way an AI fill is marked. Returns how
-   * many were filled.
-   *
-   * Runs after `alignConsolidationNode` for the whole paper, and must: it reads
-   * every reviewer at the same index, which only means anything once matching
-   * has lined their entries up.
+   * Fills consolidated fields still unanswered with the value every reviewer
+   * gave (marked like an AI fill). Returns how many. Must run after
+   * `alignConsolidationNode` for the whole paper — it reads every reviewer at
+   * the same index, which only means anything once entries are aligned.
    */
   adoptUnanimousValues: (paperId: string, coalesce: boolean) => number
   /** Toggle "the reviewers' answers at this field mean the same thing". */
   toggleFieldEquality: (paperId: string, canonical: string) => void
 
   /**
-   * Record (or clear) the current paper's screening decision for the active
-   * seat, optionally writing the exclusion reason in the *same* undo step
-   * (used by the `1`-`9` keyboard shortcuts, which exclude-with-reason in one
-   * press — see `useKeybindings.ts`).
-   *
-   * Changing away from `Exclude` clears the reason as part of the same
-   * mutation: a reason without an exclusion is a state the reviewer never
-   * chose, and undoing it in two presses would misrepresent what they did.
-   *
-   * Advances to the next undecided paper only when this seat's decision went
-   * from undecided to decided — re-deciding a paper you came back to fix must
-   * not jump away from it. That rule lives here, not in the keyboard/button
-   * handlers, so they cannot drift apart on it.
+   * Record/clear the screening decision for the active seat, optionally writing
+   * the exclusion reason in the same undo step (used by the `1`-`9` shortcuts —
+   * see `useKeybindings.ts`). Changing away from `Exclude` clears the reason in
+   * the same mutation, since a reason without an exclusion was never chosen.
+   * Advances to the next undecided paper only when the decision went from
+   * undecided to decided, so re-deciding a paper never jumps away from it.
    */
   setScreeningDecision: (decision: string | null, reason?: string | null) => void
   /** Record the exclusion reason. No-op unless the seat's current decision is Exclude. */
@@ -838,39 +700,31 @@ interface AppState {
   /**
    * Best-effort: read `paperId`'s PDF and fill its `abstract` from
    * `pdfMeta.ts`'s heuristic when it has a PDF but no abstract yet. Fired by
-   * `selectPaper` and by `loadFromText` for the paper it opens on — screening
-   * is decided from the abstract, so the record view must simply *have* one,
-   * without the reviewer opening the PDF to trigger it.
-   *
-   * Never awaited by its callers: selecting a paper is instant, and a slow or
-   * failed read only means the abstract stays empty, exactly as before this
-   * existed. Marks what it writes `abstractFromPdf`, so it is shown as the
-   * guess it is.
+   * `selectPaper`/`loadFromText` so screening never needs the PDF opened by
+   * hand. Never awaited — a slow/failed read just leaves the abstract empty.
+   * Marks what it writes `abstractFromPdf`, so it's shown as the guess it is.
    */
   extractScreeningAbstract: (paperId: string) => Promise<void>
   /**
    * Adopt every paper's unanimous screening decision into the consolidated
    * tree, in one undo step. Returns how many papers were filled.
    *
-   * Screening-only, and that is a correctness constraint, not just scope:
-   * `adoptUnanimousValues` reads every reviewer at a fixed index, which only
-   * means anything once `applyAlignment` has lined their entries up. A
-   * screening schema has no repeatable node (`alignableNodes` returns `[]`),
-   * so there is nothing to line up and the read is meaningful for every paper
-   * at once — for an ordinary schema it would not be, which is why the
-   * per-paper scheduler (`useConsolidationAlignment`) exists at all.
+   * Screening-only as a correctness constraint, not just scope:
+   * `adoptUnanimousValues` reads every reviewer at a fixed index, which is only
+   * meaningful once entries are aligned — a screening schema has no repeatable
+   * node to align, so every paper is safe to read at once, unlike an ordinary
+   * schema (hence the per-paper scheduler, `useConsolidationAlignment`).
    */
   adoptAllUnanimousScreening: () => number
   /**
    * Same idea as `adoptAllUnanimousScreening`, for an ordinary (non-screening)
-   * schema: align every paper's reviewers, then adopt what they unanimously
-   * agree on, across the whole project. Unlike screening, this schema *can*
-   * have repeatable nodes, so — unlike screening — each paper must be aligned
-   * immediately before it is read; see `adoptAllUnanimousAnnotations`'s
-   * implementation for why the two cannot share one driver.
+   * schema: align every paper's reviewers, then adopt their unanimous answers,
+   * across the whole project. Unlike screening, this schema can have
+   * repeatable nodes, so each paper must be aligned right before it's read —
+   * why the two cases can't share one driver.
    *
-   * Async and yields between papers (see `UnanimousRun`), because matching a
-   * hundred papers in one blocking pass would freeze the window; progress is
+   * Async and yields between papers (see `UnanimousRun`): matching a hundred
+   * papers in one blocking pass would freeze the window. Progress is
    * published to `unanimousRun` rather than returned.
    */
   adoptAllUnanimousAnnotations: () => Promise<void>
@@ -898,38 +752,22 @@ export interface UnanimousRun {
   /** Papers left alone because alignment could not vouch for their order. */
   skipped: number
   running: boolean
-  /** True when an undo or redo stopped the run part-way, so the summary can
-   *  say the totals describe what was adopted before it stopped rather than
-   *  the whole project. */
+  /** True when undo/redo stopped the run part-way, so the summary can say the
+   *  totals describe what was adopted before it stopped, not the whole project. */
   interrupted?: boolean
 }
 
 /**
- * Route to the tree the app should read/write right now for `paper`, given
- * the project's reviewer count and the current selection:
+ * Route to the tree the app should read/write right now for `paper`:
+ * single-reviewer or Consolidation → `paper.annotations`; a numbered reviewer
+ * → `paper.reviews[N]`; multi-reviewer with nobody selected → `null` (callers
+ * must treat that as "nothing to read/write", never fall back to consolidated).
  *
- *  - single-reviewer (`project.reviewers <= 1`) → `paper.annotations`,
- *    unchanged from single-reviewer behavior before this feature existed.
- *  - Consolidation → `paper.annotations`: the final, shipped result.
- *  - a numbered reviewer → `paper.reviews[N]`.
- *  - multi-reviewer, nobody selected yet → `null`. An unattributed edit must
- *    never land in the shipped consolidated tree, so callers must treat a
- *    `null` result as "nothing to read or write", never silently fall back
- *    to the consolidated tree.
- *
- * `create` controls what happens for a numbered reviewer whose tree doesn't
- * exist on `paper` yet: with `create: true` (only safe inside an immer
- * `set()` producer, since it mutates `paper`) it is lazily initialised and
- * normalized against the schema, and the *live* reference is returned so
- * writes persist. With `create: false` (the default — safe to call from a
- * plain selector or a read-only computation) nothing is mutated and a fresh
- * schema-shaped empty tree is returned instead, purely for display/validation
- * — a reviewer who hasn't written anything yet still sees a well-formed set
- * of empty fields, exactly as `paper.annotations` would on a brand-new paper.
- *
- * Rationale for routing everything through this: if you are Reviewer 2, the
- * app shows and validates *your* work; the Consolidation reviewer sees and
- * validates the final result that actually ships.
+ * `create: true` (only safe inside an immer `set()` producer) lazily
+ * initialises and normalizes a numbered reviewer's missing tree and returns
+ * the live reference so writes persist; `create: false` (default, safe from a
+ * read-only selector) returns a fresh empty schema-shaped tree without
+ * mutating anything.
  */
 export function currentTree(
   project: Project,
@@ -948,19 +786,13 @@ export function currentTree(
 }
 
 /**
- * PDF-marks counterpart to `currentTree`: which reviewer's own highlights and
- * comments are shown/edited right now, following the exact same routing —
- * `paper.marks` for a single-reviewer project or the Consolidation seat,
- * `paper.reviewMarks[currentReviewer]` otherwise. Unlike `currentTree`,
- * there's no schema-driven skeleton to normalize into: a reviewer with no
- * marks yet has an empty array, not a missing key, so `create` only ever
- * needs to initialize that key the first time a mark is actually added.
+ * PDF-marks counterpart to `currentTree`, same routing. Unlike `currentTree`,
+ * there's no schema skeleton to normalize into — a reviewer with no marks yet
+ * gets an empty array, so `create` only initializes that key on first mark.
  */
-/** Stable empty-array identity for "no marks yet" — returning a fresh `[]`
- *  literal from a Zustand selector makes every snapshot look like a change,
- *  which sends `useSyncExternalStore` into an infinite re-render loop (React:
- *  "Maximum update depth exceeded" / "getSnapshot should be cached"). See
- *  `currentPdfMarks` and `currentMarks` below, the two places this matters. */
+/** Stable empty-array identity for "no marks yet" — a fresh `[]` literal from
+ *  a Zustand selector makes every snapshot look like a change, sending
+ *  `useSyncExternalStore` into an infinite re-render loop. */
 const EMPTY_MARKS: PdfMark[] = []
 
 export function currentMarks(
@@ -980,13 +812,9 @@ export function currentMarks(
 }
 
 /**
- * `currentTree`'s counterpart for the "finished" declaration: whose checkbox
- * is being shown/toggled right now, following the exact same seat routing —
- * `paper.finished` for a single-reviewer project or the Consolidation seat,
- * `paper.reviewsFinished[currentReviewer]` otherwise, and `null` when nobody
- * has picked a seat (an unattributed declaration is as meaningless as an
- * unattributed edit). Read-only: there is no `create` variant, since the flag
- * has no skeleton to initialise — an absent key already means `false`.
+ * `currentTree`'s counterpart for the "finished" checkbox, same seat routing,
+ * `null` when nobody has picked a seat. Read-only — no `create` variant,
+ * since an absent key already means `false`.
  */
 export function currentFinished(
   project: Project,
@@ -1000,29 +828,13 @@ export function currentFinished(
 }
 
 /**
- * Which paper a project opens on: the first one this seat has *not* finished,
- * rather than simply the first in the list.
- *
- * Reopening a review in progress should land where the work is. The first
- * paper is only the right answer on a brand-new project — on any project that
- * has been worked through, it is a paper the reviewer already signed off, and
- * landing on it invites re-reading (or re-editing) settled work before
- * getting to what is left.
- *
- * "Not finished" is the dot's own `finished` state (see `annotationState`), so
- * the app lands on the first paper whose dot is not green — including a
- * `flagged` one, which is precisely a paper still needing attention. Falls
- * back to the first paper when every paper is finished (nothing is left to
- * land on, and an empty selection would show "Select a paper to annotate" on
- * a completed review) and wherever the state does not apply at all: a
- * screening project, or a multi-reviewer project with no seat picked yet,
- * where nothing can be attributed and the list opens as it always did.
- *
- * The Consolidation seat is included, having a sign-off of its own
- * (`completenessApplies`): reopening a project as the consolidator lands on the
- * first paper *they* have not signed off, for exactly the reason a reviewer's
- * seat does. `loadCurrentReviewer` restores the seat before this runs, so that
- * happens on the very first render rather than after a seat switch.
+ * Which paper a project opens on: the first one this seat has *not* finished
+ * (its dot not green, including `flagged`), not simply the first in the list —
+ * so reopening a review in progress lands on unfinished work, not settled work
+ * already signed off. Falls back to the first paper once everything is
+ * finished, or wherever completeness doesn't apply (screening, or a
+ * multi-reviewer project with no seat picked). Includes the Consolidation
+ * seat, which has its own sign-off (`completenessApplies`).
  */
 function firstUnfinishedPaperId(project: Project, currentReviewer: string | null): string | null {
   const fallback = project.papers[0]?.id ?? null
@@ -1158,9 +970,8 @@ export const useStore = create<AppState>()(
           s.recents = checked
         })
       } catch {
-        // Called fire-and-forget (startup, after an editor save). A failure to
-        // re-read titles must never surface as an unhandled rejection — the
-        // list simply keeps what it had.
+        // Fire-and-forget (startup, after an editor save) — must not surface
+        // as an unhandled rejection; the list simply keeps what it had.
       }
     },
 
@@ -1210,9 +1021,7 @@ export const useStore = create<AppState>()(
         return
       }
       if (choice === 'save' && !(await get().save())) {
-        // The save failed or was cancelled — keep the project open, and drop
-        // the pending action with it: the reviewer asked to save first, and
-        // that did not happen.
+        // Save failed/cancelled — keep the project open and drop the pending action.
         set((s) => {
           s.closePromptOpen = false
           s.pendingAfterPrompt = null
@@ -1223,9 +1032,8 @@ export const useStore = create<AppState>()(
         s.closePromptOpen = false
         s.pendingAfterPrompt = null
       })
-      // `openProject`/`openRecent` replace the open project wholesale
-      // (`loadFromText` resets every per-project field), so there is nothing to
-      // close first.
+      // `openProject`/`openRecent` replace the project wholesale
+      // (`loadFromText` resets every per-project field) — nothing to close first.
       if (pending?.kind === 'open') {
         void get().openProject()
         return
@@ -1324,17 +1132,13 @@ export const useStore = create<AppState>()(
     loadFromText: (text, handle, name) => {
       try {
         const project = loadProject(text)
-        // The seat has to be resolved before the landing paper, since which
-        // papers count as finished is per-seat. Same value the `set` below
-        // stores; computed once here so the two cannot disagree.
+        // Seat must be resolved before the landing paper, since "finished" is
+        // per-seat. Computed once here so this and the `set` below can't disagree.
         const reviewer = project.reviewers > 1 ? loadCurrentReviewer(handle, project.reviewers) : null
-        // A remembered reading position always wins over the "first
-        // unfinished paper" heuristic — that heuristic exists for when there
-        // is nothing better to go on (a fresh machine, a project just pulled
-        // from git), not to override where the reviewer actually left off.
-        // Ignored if the paper it names no longer exists (deleted since, or
-        // this is a different project that happens to reuse the same file
-        // path — vanishingly rare, but cheap to guard).
+        // A remembered reading position wins over "first unfinished paper" —
+        // that heuristic is only for when there's nothing better to go on.
+        // Ignored if the paper no longer exists (deleted, or a different
+        // project reusing the same file path).
         const savedPosition = loadReadingPosition(handle)
         const savedPaperStillExists =
           !!savedPosition && project.papers.some((p) => p.id === savedPosition.paperId)
@@ -1370,11 +1174,9 @@ export const useStore = create<AppState>()(
           s.validationUnannotated = null
           s.validationOpen = false
           s.agreementOpen = false
-          // Opened once per project load, so a reviewer sees it before
-          // annotating; dismissible from there via the ⓘ button or the
-          // dialog's own close/Okay buttons. Reset (not carried over) here
-          // too, unlike `exportPdfOpen`, so switching projects never leaves a
-          // stale dialog open or skips a schema comment the new file has.
+          // Opened once per project load so a reviewer sees it before annotating.
+          // Reset here (unlike `exportPdfOpen`) so switching projects never
+          // leaves a stale dialog open or skips a schema comment the new file has.
           s.schemaInfoOpen = !!project.schemaInfo
           s.agreementReturnToOverview = false
           s.consolidationOverviewOpen = false
@@ -2081,33 +1883,22 @@ export const useStore = create<AppState>()(
             }
           }
 
-          // `paper.alignment` records which reviewer's own array index sits in
-          // which consolidated slot. The splice above just shifted every
-          // survivor's real index down by one, and nothing above has told
-          // `alignment` that happened — left alone, every slot at or above the
-          // removed one keeps pointing at the entry that used to live there.
-          // A reviewer's later edit then gets attributed to the wrong slot in
-          // every compare popup, or — for the consolidator's own deletion of a
-          // consolidated entry — a later "adopt this answer" click can
-          // overwrite one finding's text with a different finding's, and a
-          // shifted `paper.equal` index marks the wrong pairing "equivalent".
-          // Single-reviewer projects never populate `alignment` at all (see
-          // its own doc comment), so there is nothing to fix there.
+          // `paper.alignment` also records array indices per slot; the splice
+          // above shifted survivors' indices, so left unfixed every slot at or
+          // above the removed one still points at the old entry — misattributing
+          // a later edit, or (for consolidation) letting "adopt this answer"
+          // overwrite the wrong finding. Single-reviewer projects never
+          // populate `alignment` (see its own doc comment), so nothing to fix.
           if (s.project!.reviewers > 1 && s.currentReviewer !== null) {
             if (s.currentReviewer === 'consolidation') {
-              // The consolidated array is only ever grown in slot order
-              // (`growConsolidated`), never reordered, so the removed
-              // consolidated index *is* the slot position at every level —
-              // dropping that slot keeps the rest tracking the shrunk array,
-              // exactly like the splice above did for the array itself.
+              // Consolidated array is only ever grown in slot order
+              // (`growConsolidated`), never reordered, so the removed index
+              // *is* the slot position — drop it to track the shrunk array.
               const slots = alignmentSlotsAt(paper.alignment, path, name, (_slots, seg) => seg.index)
               if (slots && index >= 0 && index < slots.length) slots.splice(index, 1)
             } else {
-              // A reviewer removed one of their own entries. `members[reviewer]`
-              // is their array index, so the same rule `paper.equal`'s indices
-              // follow above applies per reviewer instead of per canonical path:
-              // drop the entry that named the removed index, decrement every
-              // one above it.
+              // `members[reviewer]` is this reviewer's own array index: drop the
+              // entry naming the removed index, decrement every one above it.
               const reviewer = s.currentReviewer
               const slots = alignmentSlotsAt(paper.alignment, path, name, (levelSlots, seg) =>
                 levelSlots.findIndex((slot) => slot.members[reviewer] === seg.index),
@@ -2129,10 +1920,9 @@ export const useStore = create<AppState>()(
     setAnnotationFinished: (finished) => {
       const prev = get()
       if (!prev.project) return
-      // The project decides "done" from the data, so there is no declaration
-      // to make (`config.finishCheckbox: false`). The panel hides the
-      // checkbox too; this guards the action itself, so a stale click or a
-      // future caller cannot write a flag the project has said it ignores.
+      // No declaration to make when the project derives "done" from the data
+      // (`config.finishCheckbox: false`) — guards the action itself against a
+      // stale click, not just the panel hiding the checkbox.
       if (!prev.project.finishCheckbox) return
       // Multi-reviewer, nobody picked yet: nothing to attribute the
       // declaration to — the same guard every editing action uses.
@@ -2171,9 +1961,8 @@ export const useStore = create<AppState>()(
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) return null
       const id = crypto.randomUUID()
       const now = new Date().toISOString()
-      // Its own undo step, like every other mark mutation below — without
-      // this, Ctrl+Z right after drawing a highlight had no snapshot to pop
-      // and silently undid whatever *earlier* edit was last recorded instead.
+      // Its own undo step, like every mark mutation below — without it, Ctrl+Z
+      // right after drawing a highlight would undo an earlier edit instead.
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
       lastFieldKey = null
       set((s) => {
@@ -2204,12 +1993,9 @@ export const useStore = create<AppState>()(
       const prev = get()
       if (!prev.project) return
       // Typed character by character, like a field value — collapse a run of
-      // keystrokes into the mark's own single undo step rather than one per
-      // character. Sharing `lastFieldKey` (keyed distinctly, `mark-comment:id`)
-      // means every other coalescable edit already resets it correctly:
-      // moving to a different field, a different mark, or any other mark
-      // mutation below all break the run, same as they already do for
-      // `setFieldValue`'s own coalescing.
+      // keystrokes into one undo step. Keying `lastFieldKey` distinctly
+      // (`mark-comment:id`) means any other coalescable edit already breaks
+      // the run, same as `setFieldValue`'s own coalescing.
       const key = `mark-comment:${id}`
       const coalesce = key === lastFieldKey
       lastFieldKey = key
@@ -2287,10 +2073,9 @@ export const useStore = create<AppState>()(
       })
     },
 
-    // Also how the field-link popover's own auto-link offer (see
-    // `lastCreatedMarkId`) is fulfilled — that call lands here like any
-    // other, and `clearPendingMarkLink` below consuming the offer as a side
-    // effect is exactly the "offered once" behavior it is supposed to have.
+    // Also how the field-link popover's auto-link offer (`lastCreatedMarkId`)
+    // is fulfilled — `clearPendingMarkLink` below consuming it is the "offered
+    // once" behavior.
     linkMarkToField: (markId, path, name, index) => {
       const prev = get()
       if (!prev.project) return
@@ -2351,36 +2136,25 @@ export const useStore = create<AppState>()(
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) {
         return { filled: 0, skipped: suggestions.length }
       }
-      // Consolidation reconciles what the reviewers said; a model's answer is
-      // not one of the things being reconciled, and this tree is the one that
-      // ships. `AnnotationPanel` hides the button here, so the only way in is to
-      // open the dialog as a reviewer and then switch seats — refuse that too,
-      // rather than trust the UI to be the whole guard.
+      // Consolidation reconciles what the reviewers said; a model's answer isn't
+      // one of the things being reconciled, and this tree is the one that ships.
+      // No AI button here, but the dialog could be opened as a reviewer and the
+      // seat switched after — refuse rather than trust the UI as the only guard.
       if (prev.currentReviewer === 'consolidation') {
         return { filled: 0, skipped: suggestions.length }
       }
-      // Screening decides the review's corpus. A model's include/exclude pass
-      // is the difference between a systematic review and a generated one —
-      // and the screening panel renders no AI button at all, so the only way
-      // here is to open the dialog on another project and switch. Refuse that
-      // too, rather than trust the UI to be the whole guard (same reasoning
-      // as the Consolidation refusal above).
+      // Screening decides the review's corpus, so a model's include/exclude
+      // pass is refused here too, for the same reason as Consolidation above.
       if (prev.project.screening !== null) {
         return { filled: 0, skipped: suggestions.length }
       }
       const schema = prev.project.schema
-      // The paper and seat the model was *asked about*, not whichever is
-      // selected now. The dialog stays open and the paper list and seat picker
-      // stay usable while a call is in flight, so those can differ — and
-      // writing a reply about paper A onto paper B is fabricated data on a
-      // paper nobody read, complete with an `aiUsage` record vouching for it.
-      // Refuse rather than guess: the reviewer still has the reply on screen
-      // and can go back to the right paper.
-      // Refuse on any mismatch rather than quietly retargeting. Writing to the
-      // run's paper while the reviewer looks at a different one would be
-      // correct attribution but invisible work — they would see "applied" and
-      // no change. Refusing keeps the reply on screen so they can go back to
-      // the right paper and apply it there.
+      // Check against the paper/seat the model was *asked about*, not whichever
+      // is selected now — the dialog and seat picker stay usable mid-call, so
+      // they can differ. Refuse on mismatch rather than retarget: writing to
+      // the run's paper while the reviewer looks elsewhere would be correct
+      // attribution but invisible work, and fabricates an `aiUsage` record for
+      // a paper nobody read. Refusing keeps the reply on screen to apply later.
       if (target.paperId !== prev.currentPaperId) {
         return { filled: 0, skipped: suggestions.length }
       }
@@ -2394,10 +2168,9 @@ export const useStore = create<AppState>()(
       const readTree = currentTree(prev.project, target.reviewer, paperNow)
       if (!readTree) return { filled: 0, skipped: suggestions.length }
 
-      // Decide what to write *before* touching anything, so a run that turns out to
-      // change nothing leaves no empty entry on the undo stack. A suggestion is
-      // dropped if its path no longer resolves, or if the field has since been
-      // answered — the reviewer's own work is never overwritten.
+      // Decide what to write before touching anything, so a no-op run leaves no
+      // empty undo entry. Drops a suggestion whose path no longer resolves, or
+      // whose field has since been answered — never overwrites the reviewer.
       const accepted = suggestions.flatMap((sug) => {
         const at = resolvePath(schema, sug.path, { maxUnboundedIndex: MAX_UNBOUNDED_INDEX })
         if (!at) return []
@@ -2415,18 +2188,16 @@ export const useStore = create<AppState>()(
       const reviewerScope = markReviewerScope(prev.project, target.reviewer)
       let filled = 0
       set((s) => {
-        // Resolved by id, and against the run's seat — the same target the
-        // read above checked. Re-deriving either from "what is current" here
-        // would reopen the gap the check exists to close.
+        // Resolved by id, against the run's seat — re-deriving from "what is
+        // current" here would reopen the gap the check above exists to close.
         const paper = s.project?.papers.find((p) => p.id === paperId)
         if (!paper) return
         const writeTree = currentTree(s.project!, target.reviewer, paper, true)
         if (!writeTree) return
         pushPast(s, snap)
         for (const { at, value } of accepted) {
-          // The model may address an entry of a repeatable node that does not exist
-          // yet — that is how it records a further Finding. Create the instances it
-          // named, along the whole path.
+          // The model may address a not-yet-existing entry of a repeatable node
+          // (how it records a further Finding) — create instances along the path.
           let level: ResolvedDef[] = s.project!.schema
           let cursor: AnnotationValueTree | null = writeTree
           for (const seg of at.path) {
@@ -2448,9 +2219,8 @@ export const useStore = create<AppState>()(
           s.aiMarks[aiMarkKey(paperId, at.canonical, reviewerScope)] = true
           filled++
         }
-        // A disclosure record, not a UI hint: only added when this pass actually
-        // changed something, and — unlike the mark above — it is meant to reach
-        // the saved file and outlive this session. See `AiUsageRecord`.
+        // A disclosure record, not a UI hint — added only when something actually
+        // changed, and meant to reach the saved file, unlike the mark above.
         if (filled > 0) {
           paper.aiUsage.push({
             provider: usage.provider,
@@ -2485,22 +2255,18 @@ export const useStore = create<AppState>()(
     },
 
     selectReviewer: (reviewer) => {
-      // A view switch, not an edit: no undo step, no dirty flag — only the
-      // persisted local selection and the visible state change.
+      // A view switch, not an edit: no undo step, no dirty flag.
       //
-      // Break undo-coalescing across the seat change, exactly as `selectPaper`
-      // and every mutator do. The coalescing key is field-path only (no seat),
-      // so without this an edit to the same field as the new reviewer would
-      // glue onto the previous reviewer's undo step — one Undo would then wipe
-      // both reviewers' answers, and a subsequent edit clears `future`, losing
-      // the first reviewer's value for good.
+      // Breaks undo-coalescing across the seat change, like `selectPaper` does:
+      // the coalescing key is field-path only (no seat), so without this an
+      // edit to the same field under the new reviewer would glue onto the
+      // previous reviewer's undo step, and one Undo would wipe both answers.
       lastFieldKey = null
       saveCurrentReviewer(get().saveHandle, reviewer)
       set((s) => {
         s.currentReviewer = reviewer
-        // Marks are per-seat too (`reviewMarks`) — a mark just made under one
-        // reviewer isn't even visible under another's, so there is nothing
-        // for a later popover to auto-link.
+        // Marks are per-seat too (`reviewMarks`) — invisible under another
+        // reviewer, so nothing for a later popover to auto-link.
         s.lastCreatedMarkId = null
         s.lastCreatedMarkAllowedField = null
       })
@@ -2535,12 +2301,8 @@ export const useStore = create<AppState>()(
         pushPast(s, snap)
         inst.value = value
         noteFieldTouchForPendingMarkLink(s, canonical)
-        // Picking a reviewer's answer settles the field — it is the normal,
-        // routine act of consolidating — but it does not mean the reviewers
-        // agreed. Only the explicit "these answers mean the same thing"
-        // checkbox (`toggleFieldEquality`) may set `equal`; folding every
-        // resolved disagreement into it here silently inflated every
-        // agreement statistic the feature exists to report honestly.
+        // Settling a field this way doesn't mean the reviewers agreed — only
+        // `toggleFieldEquality` may set `equal`, or agreement stats would be inflated.
         delete s.deferredConsolidations[deferredConsolidationKey(draft.id, canonical)]
         s.dirty = true
       })
@@ -2568,29 +2330,19 @@ export const useStore = create<AppState>()(
       const def = project.schema.find((d) => d.name === nodeName)
       if (!def) return false
 
-      // Once the consolidator has committed an answer under this node, its
-      // entry N means a particular thing to them, and re-matching could quietly
-      // move a different entry into slot N — their recorded answer would then
-      // describe something it was never about. Matching is a service offered
-      // before the work starts, not a thing done underneath it.
-      //
-      // That freeze must protect *existing* pairings, not lock out a reviewer
-      // who simply has no assignment yet — one added to the project after the
-      // freeze, or one who had not started this paper when it happened. Their
-      // real answers exist in their own tree but, with no way to widen a frozen
-      // node, never got placed into any consolidated slot, and dropped out of
-      // unanimity checks and agreement stats. So a frozen node still runs
-      // `widenAlignment` below instead of returning outright — it only ever
-      // adds a reviewer absent from every slot's `members`, never moves one
-      // already there.
+      // Once the consolidator has committed an answer under this node, entry N
+      // means something specific to them, so re-matching could quietly move a
+      // different entry into slot N. That freeze must not lock out a reviewer
+      // with no assignment yet (added after the freeze, or hadn't started this
+      // paper) — so a frozen node still runs `widenAlignment` below instead of
+      // returning outright: it only adds a reviewer absent from every slot's
+      // `members`, never moves one already there.
       const frozen = consolidatorHasAnswered(def, paper.annotations)
 
-      // Only the numbered reviewers get a vote, and only the ones who have
-      // actually written something. The consolidated tree is what is being
-      // built out of them, so letting it match against itself would be
-      // circular — and every reviewer now has a tree from the moment the
-      // project is loaded (see `normalizeReviews`), empty or not, so presence
-      // alone no longer distinguishes "has an opinion" from "has not started".
+      // Only numbered reviewers who've actually written something vote — the
+      // consolidated tree being built from them can't match against itself,
+      // and every reviewer has a tree since load (`normalizeReviews`), so
+      // presence alone can't distinguish "has an opinion" from "hasn't started".
       const reviews: Record<string, AnnotationValueTree> = {}
       for (let i = 1; i <= project.reviewers; i++) {
         const tree = paper.reviews[String(i)]
@@ -2598,8 +2350,8 @@ export const useStore = create<AppState>()(
       }
       if (Object.keys(reviews).length < 2) return false
 
-      // Computed against the current (frozen) state before opening a draft: this
-      // is the expensive part, and immer drafts are not worth proxying it through.
+      // Computed before opening a draft: this is the expensive part, not worth
+      // proxying through an immer draft.
       let nodeStored: StoredSlot[]
       let treeForGrow: TreeAlignment
       if (frozen) {
@@ -2619,12 +2371,9 @@ export const useStore = create<AppState>()(
         const draft = s.project!.papers.find((p) => p.id === paperId)
         if (!draft) return
 
-        // Nothing here touches `draft.reviews`. Recording who matched whom no
-        // longer means rewriting the reviewers' own entries into slot order,
-        // so a reviewer's list stays exactly as they left it — which is also
-        // why the linked-mark and AI-mark canonical paths that used to be
-        // re-pointed here need no fixing up at all any more: they still name
-        // the index they always named.
+        // Nothing here touches `draft.reviews` — recording who matched whom
+        // doesn't rewrite reviewers' own entries into slot order, so their
+        // canonical paths (marks, AI marks) still name the index they always did.
         const mappingChanged = !deepEqualJson(draft.alignment[nodeName], nodeStored)
         const grew = growConsolidated(s.project!.schema, treeForGrow, draft.annotations)
         changed = mappingChanged || grew
@@ -2632,10 +2381,8 @@ export const useStore = create<AppState>()(
 
         if (mappingChanged) draft.alignment[nodeName] = nodeStored
 
-        // One undo step for the whole paper, not one per node: the reviewer sees
-        // a single "the entries were lined up" event and undoes it in one press.
-        // `coalesce` is the scheduler saying this is a later node of a run whose
-        // first node already took the snapshot.
+        // One undo step for the whole paper, not one per node — `coalesce` is
+        // the scheduler saying a run's first node already took the snapshot.
         if (!coalesce) pushPast(s, snap)
         s.dirty = true
       })
@@ -2652,16 +2399,13 @@ export const useStore = create<AppState>()(
       if (!paper) return 0
 
       // Every numbered reviewer, by number — `unanimousFills` decides "answered"
-      // per field via `isUnanswered`, not by whether a tree exists at all, so an
-      // all-empty (never-touched) tree and a genuinely absent one read the same
-      // to it either way.
+      // per field via `isUnanswered`, so an all-empty tree and an absent one
+      // read the same either way.
       const reviews: Record<string, AnnotationValueTree | undefined> = {}
       for (let i = 1; i <= project.reviewers; i++) reviews[String(i)] = paper.reviews[String(i)]
 
       // Through the mapping, not raw: `unanimousFills` reads every reviewer at
-      // one index, which only means "the same entry" in slot space. Before the
-      // reviewers' arrays stopped being permuted this was true of the stored
-      // data itself; now the lined-up view has to be asked for explicitly.
+      // one index, which only means "the same entry" in slot space.
       const fills = unanimousFills(
         project.schema,
         alignedReviews(project.schema, paper.alignment, reviews),
@@ -2679,9 +2423,9 @@ export const useStore = create<AppState>()(
           const inst = container[fill.name]?.[fill.index]
           if (!inst) continue
           inst.value = fill.value
-          // The same mark the AI's fills get: the value is the app's doing until
-          // the consolidator has looked at it, and it says so on screen. Scoped
-          // to Consolidation, which is the only seat that can produce these.
+          // Same mark an AI fill gets — the value is the app's doing until the
+          // consolidator looks at it. Scoped to Consolidation, the only seat
+          // that can produce these.
           s.aiMarks[aiMarkKey(paperId, fill.canonical, 'consolidation')] = true
         }
         s.dirty = true
@@ -2717,8 +2461,7 @@ export const useStore = create<AppState>()(
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) return
       const paper = currentPaper(prev)
       if (!paper) return
-      // Read *before* mutating: whether this seat had no decision yet is what
-      // decides whether to auto-advance below, and it must reflect the state
+      // Read before mutating: whether to auto-advance below depends on the state
       // the reviewer actually saw, not the one this call is about to write.
       const readTree = currentTree(prev.project, prev.currentReviewer, paper)
       const wasUndecided = screeningStatus(readTree) === 'undecided'
@@ -2735,12 +2478,9 @@ export const useStore = create<AppState>()(
         if (!decisionInst) return
         pushPast(s, snap)
         decisionInst.value = decision
-        // A reason without an exclusion is a state the reviewer never chose —
-        // clear it in the same mutation, so undoing the decision also undoes
-        // the reason it stops making sense to keep. When excluding with a
-        // reason supplied (the `1`-`9` shortcuts), write both here rather than
-        // as a second call: a second call would land on whatever paper
-        // auto-advance just moved to, not this one.
+        // Clear the reason in the same mutation (a reason without an exclusion
+        // was never chosen). Write both here for the `1`-`9` shortcuts too — a
+        // second call would land on whatever paper auto-advance just moved to.
         const reasonInst = tree[SCREENING_REASON]?.[0]
         if (reasonInst) {
           if (decision !== DECISION_EXCLUDE) reasonInst.value = null
@@ -2811,9 +2551,7 @@ export const useStore = create<AppState>()(
       })
       try {
         // Same source the viewer itself renders — works unchanged in both
-        // runtimes (slr-file:// in Electron, blob:/http in the browser). See
-        // aiStore.ts's `run()` for the identical pattern reading PDF bytes
-        // outside of PdfViewer's own rendering.
+        // runtimes. See aiStore.ts's `run()` for the identical pattern.
         const src = await getPlatform().getPdfSource(paper.pdf, get().saveHandle ?? { kind: 'download' })
         let bytes: ArrayBuffer
         try {
@@ -2824,32 +2562,22 @@ export const useStore = create<AppState>()(
         const meta = await extractPdfMeta(bytes)
         if (!meta.abstract) return
 
-        // Staleness is only about the project being *gone*, not about the
-        // selection or any edit since: this abstract belongs to `paperId`
-        // whether or not the reviewer has moved on or decided something
-        // meanwhile, so a late result is still written rather than wasted.
-        // See `projectGeneration` for why this is not a reference check.
+        // Staleness is only about the project being gone, not about selection
+        // or edits since — this abstract belongs to `paperId` regardless, so a
+        // late result is still written. See `projectGeneration`.
         if (projectGeneration !== generation) return
         set((s) => {
-          // The read *did* find an abstract, so this PDF must never end up
-          // marked `'none'` — that means "there is nothing in this PDF to
-          // find", and would wrongly block a later retry. Cleared before the
-          // write below, which may still decline.
+          // Found an abstract, so must never end up marked `'none'` (which
+          // means "nothing to find" and would block a later retry).
           delete s.screeningAbstractReads[paperId]
           const target = s.project?.papers.find((p) => p.id === paperId)
-          // Re-checked inside the producer: something else may have supplied an
-          // abstract — a hand edit — while this read was in flight.
+          // Re-checked: a hand edit may have supplied an abstract meanwhile.
           if (!target || target.abstract) return
           target.abstract = meta.abstract
           target.abstractFromPdf = true
-          // No undo entry, deliberately. This is a passive background fill the
-          // reviewer never asked for, triggered merely by looking at a paper —
-          // pushing it onto the undo stack would mean `Ctrl+Z` after a decision
-          // silently removes an abstract instead of undoing that decision. It
-          // follows the editor's own background title/author fill
-          // (`addPickedPdfs`), which likewise patches rows without an undo step
-          // of its own. `dirty` still gets set, so the ordinary unsaved-changes
-          // path persists it.
+          // No undo entry, deliberately — a passive background fill; pushing it
+          // would mean Ctrl+Z after a decision silently removes the abstract
+          // instead of undoing that decision. `dirty` still persists it normally.
           s.dirty = true
         })
       } catch {
@@ -2882,9 +2610,8 @@ export const useStore = create<AppState>()(
 
     adoptAllUnanimousAnnotations: async () => {
       const project = get().project
-      // Screening has its own button (`adoptAllUnanimousScreening`): its
-      // schema has no repeatable node, so it needs none of the lining-up
-      // below and stays synchronous.
+      // Screening has its own button (`adoptAllUnanimousScreening`) and stays
+      // synchronous — its schema has no repeatable node to line up.
       if (!project || project.screening !== null || project.reviewers <= 1) return
       // A second run would interleave two coalesce chains and split the batch
       // across two undo entries.
@@ -2899,15 +2626,11 @@ export const useStore = create<AppState>()(
         s.unanimousRun = { done: 0, total: paperIds.length, filled: 0, skipped: 0, running: true }
       })
 
-      // One undo press for the whole batch, the way lining a single paper up
-      // already is (see `alignConsolidationNode`): `coalesce` turns true only
-      // once something has actually changed, so the one entry that does get
-      // pushed holds the project as it was before the first write. A keystroke
-      // typed by the consolidator mid-run pushes its own entry and splits the
-      // chain — the data stays correct (every write here is idempotent, so a
-      // rerun repairs it), only the undo granularity degrades. Accepted rather
-      // than guarded against: blocking the form for a background fill would be
-      // worse than that.
+      // One undo press for the whole batch, like `alignConsolidationNode`:
+      // `coalesce` turns true only once something changed, so the one pushed
+      // entry holds the pre-run project. A keystroke mid-run splits the chain
+      // (accepted — every write here is idempotent, so a rerun repairs it;
+      // blocking the form would be worse).
       let coalesce = false
       let filled = 0
       let skipped = 0
@@ -2917,27 +2640,16 @@ export const useStore = create<AppState>()(
         // what stops a run whose papers are no longer the ones on screen.
         if (!get().unanimousRun?.running) return
 
-        // Re-read every iteration: immer swaps in a new `project` object on
-        // every write, so a `paper` captured before the loop started would be
-        // stale by the second iteration.
+        // Re-read every iteration: immer swaps in a new `project` on every
+        // write, so a `paper` captured before the loop would go stale.
         const paper = get().project?.papers.find((p) => p.id === paperId)
         if (paper) {
-          // Alignment declines to re-match a node the consolidator has
-          // answered, and says so by changing nothing — which is
-          // indistinguishable from "already lined up". So the question is
-          // asked here instead: if any alignable node is in that state, this
-          // paper's entries are in an order nothing has vouched for, and
-          // reading across them at a fixed index would invent agreement
-          // rather than find it.
-          //
-          // The paper is left alone whole rather than adopted in part: a
-          // paper whose node the consolidator has answered is one they have
-          // already opened, and opening it is what ran this exact fill
-          // interactively. Recovering the rest would mean asking whether the
-          // data happens to already sit in aligned order — a real question,
-          // but one that costs a full match per blocked node to answer and
-          // buys back only papers that were already filled when they were
-          // opened.
+          // Alignment declines to re-match a node the consolidator has answered,
+          // changing nothing — indistinguishable from "already lined up". So
+          // checked here instead: if any alignable node is in that state, this
+          // paper's order is unvouched, and reading across it would invent
+          // agreement. Skipped whole rather than partially adopted — recovering
+          // the rest would cost a full match per blocked node for little gain.
           const blocked = alignableDefs.some((def) => consolidatorHasAnswered(def, paper.annotations))
           if (blocked) {
             skipped++
@@ -2958,11 +2670,8 @@ export const useStore = create<AppState>()(
           s.unanimousRun.filled = filled
           s.unanimousRun.skipped = skipped
         })
-        // Matching one large paper measures in the hundreds of milliseconds
-        // (see `useConsolidationAlignment`), so a hundred of them in one pass
-        // would freeze the window. A paper is the smallest unit that can be
-        // yielded between and still be correct: all of its nodes must be
-        // lined up before any of its values are read across.
+        // Yields per paper, the smallest unit that's still correct — all of a
+        // paper's nodes must be lined up before its values are read across.
         await yieldToBrowser()
       }
 
@@ -2978,20 +2687,12 @@ export const useStore = create<AppState>()(
     },
 
     /**
-     * Stop a batch adopt-unanimous run, if one is in flight.
-     *
-     * Called from undo and redo. The run writes one paper per macrotask and
-     * coalesces them all into the single history entry its first paper pushed,
-     * so a history move landing in the middle of it leaves no coherent state:
-     * the undo reverts the papers written so far, the run carries on writing
-     * more *without* pushing a snapshot (coalesce skips it) and so never
-     * invalidates `future`, and the redo the reviewer naturally reaches for
-     * then restores the pre-undo papers while discarding everything written
-     * after it. Measured on a six-paper run: no undo/redo position existed
-     * that held all six.
-     *
-     * Stopping the run makes the undo mean what it says — revert what was
-     * adopted — and the loop's own `running` check does the rest.
+     * Stop a batch adopt-unanimous run, if one is in flight. Called from undo
+     * and redo: the run writes one paper per macrotask, coalesced into one
+     * history entry, so a history move mid-run leaves no coherent state — the
+     * run would keep writing past the undo without pushing a new snapshot,
+     * and a redo would restore pre-undo papers while discarding later writes.
+     * Stopping makes undo mean what it says; the loop's `running` check does the rest.
      */
     stopUnanimousRun: () => {
       set((s) => {
@@ -3016,11 +2717,8 @@ export const useStore = create<AppState>()(
         s.project = entry.project
         s.currentPaperId = entry.paperId ?? s.currentPaperId
         s.dirty = true
-        // The values a mark points at may have just been taken away (undoing an
-        // AI run empties exactly those fields), and a blue border on an empty
-        // field is a lie. Marks are not part of the history, so the only honest
-        // and simple answer is to drop them all — the reviewer keeps the values,
-        // just not the "look here" hints.
+        // Undoing an AI run may empty exactly the fields a mark points at, and
+        // marks aren't part of history — simplest honest answer is to drop them all.
         s.aiMarks = {}
         clearPendingMarkLink(s)
       })
@@ -3086,9 +2784,8 @@ function ensureInstance(
   // up to `index`, so an unbounded node still needs a ceiling.
   if (index >= (def.max === null ? MAX_UNBOUNDED_INDEX : def.max)) return null
 
-  // The JSON is hand-editable, so this key may hold something that is not a list
-  // of instances at all. Replace it rather than crash — the AI is filling an empty
-  // field, and a malformed node has no answer to preserve.
+  // The JSON is hand-editable, so this key may not hold a list at all — replace
+  // rather than crash; a malformed node has no answer worth preserving.
   let list = tree[name]
   if (!Array.isArray(list)) {
     list = []
@@ -3106,15 +2803,10 @@ function pushPast(s: AppState, snap: HistoryEntry): void {
 }
 
 /**
- * Drop a pending "just created this mark" offer outright — the reviewer did
- * something that isn't one of the two moves `lastCreatedMarkId` stays alive
- * through (see its own doc comment): edited a field other than the one the
- * mark turns out to belong to, added/removed an instance, touched another
- * mark, undid something, ... Called at the start of every such action, on
- * the same draft the action is about to mutate.
- *
- * A no-op whenever nothing is pending, so every caller can call it
- * unconditionally rather than checking first.
+ * Drop a pending "just created this mark" offer — called whenever the
+ * reviewer does something other than the two moves `lastCreatedMarkId` stays
+ * alive through (see its own doc comment). No-op when nothing is pending, so
+ * every caller can call it unconditionally.
  */
 function clearPendingMarkLink(s: AppState): void {
   s.lastCreatedMarkId = null
@@ -3122,17 +2814,11 @@ function clearPendingMarkLink(s: AppState): void {
 }
 
 /**
- * Record that `canonical` is the field just edited, on the draft a field
- * edit is about to apply to — called from `setFieldValue` before it writes
- * the new value.
- *
- * The first field touched after a mark is created narrows the pending offer
- * to that field alone (case (b): highlight, type the value in, then link —
- * still auto-links). Touching a *second*, different field means the
- * reviewer has moved on to something else, so the offer is withdrawn
- * entirely rather than re-narrowed to the new field — by then it is no
- * longer "the very next thing" after making the mark. Editing the same
- * field again (typing further into it) changes nothing.
+ * Record that `canonical` is the field just edited, called from `setFieldValue`
+ * before it writes. The first field touched after a mark is created narrows
+ * the pending offer to that field alone; touching a *different* field withdraws
+ * the offer entirely rather than re-narrowing, since it's no longer "the very
+ * next thing" after making the mark.
  */
 function noteFieldTouchForPendingMarkLink(s: AppState, canonical: string): void {
   if (!s.lastCreatedMarkId) return
@@ -3176,15 +2862,10 @@ export function useAiMark(path: PathSeg[], name: string, index: number): [boolea
 }
 
 /**
- * How many PDF marks (highlights/notes) are linked to this field instance —
- * for the field's link badge. Returns a plain number rather than a `PdfMark[]`
- * deliberately: a selector returning a freshly-filtered array every call has
- * the same stale-reference hazard `EMPTY_MARKS` exists to avoid (see its own
- * doc comment — a fresh `[]`/array literal every call breaks
- * `useSyncExternalStore`). A number compares correctly with Zustand's default
- * `Object.is`, sidestepping the problem instead of reproducing it. The full
- * list (for the popover) is read directly from `currentPdfMarks()` where it's
- * needed instead, since that already returns a stable reference.
+ * How many PDF marks are linked to this field instance, for the link badge.
+ * Returns a plain number, not `PdfMark[]`: a freshly-filtered array every call
+ * has the same stale-reference hazard `EMPTY_MARKS` avoids, breaking
+ * `useSyncExternalStore`. A number compares correctly with `Object.is` instead.
  */
 export function useLinkedMarkCount(path: PathSeg[], name: string, index: number): number {
   const canonical = fieldPath(path, name, index)

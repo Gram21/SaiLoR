@@ -1,41 +1,30 @@
 import { z } from 'zod'
 
 /**
- * The annotation schema is a nested taxonomy. Each node ("AnnotationDef") has a
- * display name and may be:
- *  - a leaf field (has a `type`: string | number | boolean | year),
- *  - a group (has `children` but no `type`, i.e. a name-only sub-tree),
- *  - or both (a field that also owns a sub-tree).
+ * The annotation schema is a nested taxonomy. Each node may be a leaf field
+ * (has `type`), a group (has `children`, no `type`), or both.
  *
- * Cardinality is expressed with `min` (default 1) and `max` (default 1;
- * `null` means unbounded). It applies to group nodes too, allowing several
- * parallel sub-trees.
+ * Cardinality: `min` (default 1) and `max` (default 1, `null` = unbounded),
+ * also valid on group nodes for repeated sub-trees.
  */
 
 /**
- * `year` rides the same on-disk shape as `number` (a JSON number) — it is not
- * a new value shape, only a bounded, purpose-named one, so it needs no new
- * member on `FieldValue` and no changes to `annotations.ts`'s tree machinery.
- * What it buys over a plain `number` is real validation (`YEAR_MIN`..`YEAR_MAX`
- * in `model/year.ts`) and a control that reads as "a year" rather than an
- * unconstrained number — see `docs/annotation-schema.md` §3.1 for why a full
- * `date` type was rejected as the wrong size for what an SLR actually needs.
+ * `year` shares `number`'s on-disk shape (a JSON number), needing no new
+ * `FieldValue` member or changes to `annotations.ts`. It adds real bounds
+ * checking (`YEAR_MIN`/`YEAR_MAX` in `model/year.ts`) — see
+ * `docs/annotation-schema.md` §3.1 for why a full `date` type was rejected.
  */
 export type FieldType = 'string' | 'number' | 'boolean' | 'year'
 
 /**
- * One clause of a visibility gate. `field` names the watched field: a bare
- * name for a same-level sibling or a field on the direct ancestor chain, or a
- * slash-joined absolute path from the schema root (`"Findings/Claim"`) for
- * anything else — see {@link AnnotationDef.visibleIf}.
+ * One clause of a visibility gate. `field` is a sibling name, an ancestor-chain
+ * name, or a slash-joined absolute path (`"Findings/Claim"`) — see
+ * {@link AnnotationDef.visibleIf}.
  *
- * `equals` narrows the clause from "has any answer" to "holds one of these
- * values", which only a field with a *closed* set of answers can support: a
- * boolean (`true`/`false`) or a `string` field with `options`. On a free-text,
- * number or year field there is no set to pick from, so an `equals` is dropped
- * at resolve time and the clause degrades to plain "answered" — the same
- * defensive-degrade convention the rest of this schema uses. An empty or
- * absent `equals` always means "any answer counts".
+ * `equals` narrows "has any answer" to "holds one of these values"; only
+ * booleans and `string` fields with `options` have a closed set to match, so
+ * on any other field type `equals` is dropped at resolve time and the clause
+ * degrades to plain "answered".
  */
 export interface VisibleCondition {
   field: string
@@ -44,14 +33,12 @@ export interface VisibleCondition {
 }
 
 /**
- * A visibility gate: one or more entries combined with AND (`all`) or OR
- * (`any`). A single entry behaves identically under either mode.
+ * A visibility gate: entries combined with AND (`all`) or OR (`any`); a
+ * single entry behaves the same under either mode.
  *
- * An entry is either a {@link VisibleCondition} or another spec, which is what
- * makes a mixed rule like "Relevant is Yes AND (Study Type is RCT OR Survey)"
- * expressible: the inner group carries its own `mode`. Nesting is arbitrarily
- * deep; a group left with no entries at resolve time is dropped, exactly as a
- * single unusable condition is.
+ * An entry may be another spec (its own `mode`), enabling mixed rules like
+ * "A is Yes AND (B is RCT OR Survey)". Nesting is arbitrary depth; an empty
+ * group is dropped at resolve time, same as an unusable condition.
  */
 export interface VisibleIfSpec {
   mode: 'all' | 'any'
@@ -78,37 +65,14 @@ export interface AnnotationDef {
   /** The reviewer must fill this field in. Defaults to false. */
   required?: boolean
   /**
-   * Gates this node's visibility. Either a bare field name (shorthand for
-   * "hidden until that field has an answer" — a positive answer for a
-   * boolean, any non-empty value otherwise) or a {@link VisibleIfSpec}, which
-   * can watch several fields at once (AND/OR) and match specific values.
-   *
-   * Every condition's `field` may name any answerable field in the schema
-   * except this node itself and the fields inside its own subtree — gating on
-   * a descendant could never open, since a field under a hidden node can
-   * never be answered. It is written in one of two forms, resolved in this
-   * order (see `resolveSpec`):
-   *  1. a bare name, meaning a sibling (in this same `children` array, or the
-   *     same root-level list),
-   *  2. failing that, a bare name meaning a field along this node's direct
-   *     ancestor chain — the parent, the parent's parent, and so on — so a
-   *     field nested under "Field A" can gate on "Field A" itself,
-   *  3. failing that, a slash-joined absolute path from the schema root
-   *     (`"Findings/Claim"`, the same shape {@link ResolvedDef.id} uses),
-   *     which is how a cousin, an unrelated branch, or a root-level field
-   *     seen from inside a group is named.
-   *
-   * The first two routes are exactly what a bare name has always meant, so
-   * every file written before paths existed resolves unchanged — and keeps
-   * the per-instance semantics that only a node's own lineage has (see
-   * `isFieldVisible`). An invalid reference — self, a descendant, a group
-   * with no `type`, or a name/path that resolves to nothing — is silently
-   * dropped at resolve time rather than rejected, the same "degrade
-   * defensively on hand-edited data" convention used elsewhere here. In
-   * particular, a stale reference left behind by renaming/removing the
-   * target field in the editor is *not* tracked or warned about — it just
-   * quietly stops gating anything next time the project loads. A spec whose
-   * every condition is dropped that way stops gating altogether.
+   * Gates this node's visibility: a bare field name (shorthand for "hidden
+   * until that field has an answer") or a {@link VisibleIfSpec} for AND/OR
+   * and value matching. A bare name resolves as sibling, then ancestor-chain
+   * field, then absolute path (see `resolveSpec`) — this order keeps files
+   * written before paths existed resolving unchanged. A reference cannot
+   * target this node or its own subtree (a hidden descendant can never be
+   * answered). An invalid or stale reference is silently dropped at resolve
+   * time rather than rejected; a spec left with no conditions gates nothing.
    */
   visibleIf?: string | VisibleIfSpec
   children?: AnnotationDef[]
@@ -212,55 +176,37 @@ export const paperSchema = z
     title: z.string().min(1),
     authors: z.array(z.string()).default([]),
     doi: z.string().optional(),
-    /**
-     * Publication year. `"year": "2021"` is a very plausible hand-edit, and a
-     * file containing it loads today (via `.passthrough()` into `extra`), so
-     * tightening this to `z.number().optional()` would break a file that
-     * currently opens fine. Loosely typed here for the same reason
-     * `annotations`/`reviews` are: repaired-or-dropped structurally in
-     * `project.ts` (`parseYear`), not enforced at the zod layer.
-     */
+    /** Loosely typed: `"year": "2021"` is a plausible hand-edit and loads fine
+     *  today via `.passthrough()`, so tightening to `z.number()` would break
+     *  it. Repaired-or-dropped structurally in `project.ts` (`parseYear`). */
     year: z.unknown().optional(),
-    /** Journal, conference/proceedings, or publisher — whichever the source
-     *  called "where this appeared". One free-text field rather than
-     *  separate journal/proceedings fields: no import format (BibTeX
-     *  journal/booktitle/publisher, RIS JF/JO/T2, CSL container-title)
-     *  reliably distinguishes them, and a screener just needs to read
-     *  "TSE" or "ICSE 2024". */
+    /** Journal, conference/proceedings, or publisher. One free-text field
+     *  because no import format (BibTeX, RIS, CSL) reliably distinguishes
+     *  them, and a screener just needs to read "TSE" or "ICSE 2024". */
     venue: z.string().optional(),
-    /** The paper's abstract, when the source had one. Screening reads this when
-     *  there is no PDF — see `Project.screening`. */
+    /** The paper's abstract. Screening reads this when there is no PDF. */
     abstract: z.string().optional(),
-    /** True when `abstract` was produced by the PDF-text heuristic in
-     *  `pdfMeta.ts` rather than authored, imported from a reference file, or
-     *  typed — see `Paper.abstractFromPdf`. Meaningless (and dropped) without
-     *  a non-empty `abstract`, so left loosely typed here; normalized structurally
-     *  in `project.ts`, same rule as `annotations`/`reviews`. */
+    /** True when `abstract` came from the PDF-text heuristic in `pdfMeta.ts`
+     *  rather than being authored/imported/typed. Loosely typed and
+     *  normalized structurally in `project.ts`, same as `annotations`/`reviews`. */
     abstractFromPdf: z.boolean().optional(),
-    // The "pdf required" rule moves to `projectSchema`'s `superRefine`, which
-    // can see whether this is a screening project (where PDFs are usually
-    // absent entirely — see `src/screening/schema.ts`).
+    // "pdf required" is enforced in `projectSchema`'s `superRefine` instead,
+    // which knows whether this is a screening project (PDFs usually absent).
     pdf: z.string().default(''),
-    // Loosely typed here; validated/normalized structurally in project.ts.
+    // Loosely typed; validated/normalized structurally in project.ts so a
+    // malformed entry is dropped rather than failing the whole file to load.
     annotations: z.record(z.unknown()).optional(),
-    // Ditto — a malformed entry (or the whole field being the wrong shape)
-    // should be dropped, not fail the whole file to load.
     aiUsage: z.unknown().optional(),
-    // Ditto — each reviewer's tree is validated/normalized structurally in
-    // project.ts, same as `annotations`.
     reviews: z.unknown().optional(),
-    // Ditto — a list of canonical field paths, deduped and validated
-    // structurally in project.ts, same as `reviews`.
+    // Ditto — canonical field paths, deduped/validated in project.ts.
     equal: z.unknown().optional(),
   })
   .passthrough()
 
 /**
- * A screening project's one authorable setting: the exclusion reasons, fixed up
- * front the way a pre-registered SLR protocol fixes them. `config.screening`'s
- * presence is what makes a project a screening project; its `reasons` are the
- * only thing about the schema an author chooses, since the rest of it is derived
- * (see `src/screening/schema.ts`).
+ * A screening project's one authorable setting: the exclusion reasons.
+ * `config.screening`'s presence is what makes a project a screening project;
+ * the rest of its schema is derived (see `src/screening/schema.ts`).
  */
 export interface ScreeningConfig {
   /** Non-empty, trimmed, deduped by `project.ts`. Order is the order reported. */
@@ -290,11 +236,9 @@ export const projectSchema = z
     // loosely typed here and parsed in `parseSchemaInfo`.
     schemaInfo: z.unknown().optional(),
     config: z.object({
-      // Optional-and-unbounded here: a screening project's schema is derived,
-      // not authored (see `screeningConfigSchema` above), so it may be absent
-      // from the file entirely. Every other project still needs a real one —
-      // enforced below, in `superRefine`, where the presence of `screening`
-      // can be taken into account.
+      // Optional here because a screening project's schema is derived, not
+      // authored; every other project still needs one, enforced below in
+      // `superRefine` where `screening`'s presence can be taken into account.
       schema: z.array(annotationDefSchema).optional(),
       /** When false, the provider of this file has disabled AI-assisted annotation. */
       ai: z.boolean().optional(),
@@ -309,8 +253,8 @@ export const projectSchema = z
   })
   .passthrough()
   .superRefine((raw, ctx) => {
-    // A screening project's schema is derived, not authored — see
-    // `src/screening/schema.ts`. Everyone else still must supply one.
+    // A screening project's schema is derived, not authored; everyone else
+    // still must supply one.
     if (!raw.config.screening && (!raw.config.schema || raw.config.schema.length === 0)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -318,9 +262,8 @@ export const projectSchema = z
         message: 'config.schema must have at least one node',
       })
     }
-    // Screening is normally done on title + abstract, from a reference-manager
-    // export that has no PDFs at all. Requiring one there would rule out the
-    // whole workflow; requiring one everywhere else is unchanged.
+    // Screening is normally done on title + abstract from a reference-manager
+    // export with no PDFs at all, so this rule is skipped there.
     if (!raw.config.screening) {
       raw.papers.forEach((p, i) => {
         if (!p.pdf) {
@@ -345,11 +288,9 @@ export class SchemaError extends Error {}
 
 /**
  * Normalize `def.visibleIf` into a {@link VisibleIfSpec}, dropping what cannot
- * be honored: a self-reference, a field inside this node's own subtree, a
- * name/path that resolves to nothing answerable, and an `equals` on a field
- * with no closed set of answers (see {@link VisibleCondition}). A spec left
- * with no conditions gates nothing, so it becomes `undefined` — same outcome
- * the lone bad name had before this took several.
+ * be honored (self/subtree references, unresolvable names, `equals` on a
+ * field with no closed set of answers). A spec left with no conditions
+ * becomes `undefined`.
  */
 function resolveVisibleIf(
   def: AnnotationDef,
@@ -383,11 +324,8 @@ function resolveSpec(
       continue
     }
     if (entry.field === def.name) continue
-    // Sibling, then ancestor chain, then absolute path — the order the doc
-    // comment on `AnnotationDef.visibleIf` spells out, and the reason a bare
-    // name that resolved locally before still does. Neither a sibling nor an
-    // ancestor can sit inside this node's subtree, so only the path route has
-    // to rule that out.
+    // Sibling, then ancestor chain, then absolute path (see `AnnotationDef.visibleIf`).
+    // Only the path route needs a subtree check — a sibling/ancestor can't be in it.
     const target =
       siblings.find((sib) => sib.name === entry.field && sib.type !== undefined) ??
       ancestorFields.find((anc) => anc.name === entry.field) ??
@@ -402,11 +340,9 @@ function resolveSpec(
 
 /**
  * Walk a slash-joined absolute path (`"Findings/Claim"`, the shape
- * {@link ResolvedDef.id} uses) from the schema root. Returns nothing — so the
- * condition is dropped — when the path names the gated node itself or
- * anything in its subtree (`selfId` and everything under `selfId/`: a field
- * below a hidden node can never be answered, so the gate could never open),
- * when a segment does not exist, or when it lands on a group with no `type`.
+ * {@link ResolvedDef.id} uses) from the schema root. Returns nothing when the
+ * path targets the gated node's own subtree (unanswerable, so the gate could
+ * never open), a segment doesn't exist, or it lands on a group with no `type`.
  */
 function resolveFieldPath(
   root: AnnotationDef[],
@@ -464,41 +400,24 @@ export function compactVisibleIf(spec: VisibleIfSpec): string | VisibleIfSpec {
 function resolveDefs(
   defs: AnnotationDef[],
   parentPath: string,
-  // The whole schema, unchanged all the way down: a `visibleIf` condition may
-  // also name its target by absolute path from here (see `resolveFieldPath`),
-  // which is what lets a gate reach a cousin or an unrelated branch.
+  // Unchanged all the way down: a `visibleIf` may name its target by absolute
+  // path from here (see `resolveFieldPath`), reaching a cousin or unrelated branch.
   root: AnnotationDef[],
-  // Fields along this array's direct lineage — the parent, its parent, and so
-  // on — that `visibleIf` may also reference, alongside a same-level sibling.
-  // Only a straight ancestor chain, never an ancestor's own siblings (a cousin
-  // field is not "the same lineage"). Whole defs, not just names, because a
-  // value condition has to be checked against the target's type/options.
+  // This node's direct ancestor chain only (never an ancestor's siblings),
+  // that `visibleIf` may also reference. Whole defs, not names, since a value
+  // condition must check the target's type/options.
   ancestorFields: AnnotationDef[] = [],
 ): ResolvedDef[] {
   const seen = new Set<string>()
   return defs.map((def) => {
-    // Deliberately NOT trimmed. `normalizeTree` looks answers up by the
-    // resolved def name, so renaming `"Claim "` to `"Claim"` on load makes the
-    // lookup miss the stored `"Claim "` key and replaces a real answer with an
-    // empty instance, which the next save then makes permanent — silent data
-    // loss on open, for a file that previously worked.
-    //
-    // An earlier version of this comment claimed the padding affected only path
-    // resolution and put no answer at risk. That was wrong, and the correction
-    // is worth keeping: a canonical segment *is* trimmed by `parsePath`, so with
-    // two siblings named `"Claim"` and `"Claim "` the padded one's canonical
-    // resolved to the *other* def — and `git/changes.ts` writes through
-    // `container[resolved.name]`, so a committed answer landed in the wrong
-    // field. That ambiguity is now refused below, where it can still be caught;
-    // a *lone* padded name is fine and resolves through a trimmed fallback in
-    // `resolvePath`.
-    // Annotation trees are plain objects keyed by field name, so a field called
-    // `__proto__` would hit `Object.prototype`'s setter instead of creating an
-    // own property: the field reads and edits normally (values come back
-    // through the prototype) but `Object.keys` skips it and `JSON.stringify`
-    // drops it, so a reviewer's answers for it vanish on save with no error.
-    // Rejected rather than silently renamed — this can only come from a
-    // hand-edited file, and quietly changing someone's schema is worse.
+    // Deliberately NOT trimmed: `normalizeTree` looks answers up by the
+    // resolved def name, so trimming here would miss a stored `"Claim "` key
+    // and silently replace a real answer with an empty instance on load.
+    // A field called `__proto__` would hit `Object.prototype`'s setter instead
+    // of becoming an own property: it reads/edits fine but `Object.keys`/
+    // `JSON.stringify` skip it, so answers vanish on save with no error.
+    // Rejected rather than silently renamed, since this can only come from a
+    // hand-edited file.
     if (def.name === '__proto__') {
       throw new SchemaError(
         `Annotation name "__proto__" is not allowed${
@@ -513,14 +432,9 @@ function resolveDefs(
         }. Sibling names must be unique.`,
       )
     }
-    // Siblings that differ only by surrounding whitespace are rejected too,
-    // because the canonical path format cannot tell them apart. `parsePath`
-    // trims a segment (so "Findings [1]" reads as "Findings"), which means the
-    // canonical for "Claim " resolves to the def named "Claim" — and
-    // `git/changes.ts` writes with `container[resolved.name]`, so a reviewer's
-    // committed answer would land in the *other* field. Refusing the schema is
-    // the only place that ambiguity can be caught: once both names exist, no
-    // path can name one of them unambiguously.
+    // Siblings differing only by whitespace are rejected too: `parsePath`
+    // trims a segment, so "Claim " and "Claim" would resolve to the same
+    // canonical path and a committed answer could land in the wrong field.
     const clash = [...seen].find((n) => n.trim() === def.name.trim())
     if (clash !== undefined) {
       throw new SchemaError(
@@ -543,17 +457,11 @@ function resolveDefs(
       max,
       description: def.description,
       options: def.options,
-      // Dropped for a boolean, silently: a checkbox is never "empty" (an
-      // unticked box is a real `false`, see `isEmptyValue` in validate.ts), so
-      // `required` on one can never fire — it is a no-op the editor no longer
-      // offers, and an existing file's stray flag is cleared here rather than
-      // rejected, so a file that currently loads keeps loading.
+      // Dropped for a boolean: an unticked box is a real `false`, never
+      // "empty" (see `isEmptyValue` in validate.ts), so `required` can never
+      // fire there — cleared silently so a file with a stray flag still loads.
       required: def.type === 'boolean' ? false : (def.required ?? false),
-      // Kept only where it points at a real, answerable field that is neither
-      // this node nor anything in its subtree — reached as a sibling in this
-      // same array, a field in this node's direct ancestor chain, or an
-      // absolute path from the schema root. See the doc comment on
-      // `AnnotationDef.visibleIf`. Dropped silently otherwise.
+      // See `AnnotationDef.visibleIf`; invalid references are dropped silently.
       visibleIf: resolveVisibleIf(def, defs, ancestorFields, root, id),
       children: def.children
         ? resolveDefs(
@@ -576,27 +484,17 @@ export function resolveSchema(defs: AnnotationDef[]): ResolvedDef[] {
 
 /**
  * The most instances an empty project may materialize. Generous next to any
- * real schema — a normal one has `min` 0 or 1 nearly everywhere, so it starts
- * at roughly one instance per field.
+ * real schema, which has `min` 0 or 1 nearly everywhere.
  */
 const MAX_INITIAL_INSTANCES = 100_000
 
 /**
- * Refuse a schema whose empty tree would be enormous.
- *
- * `min` is a lower bound on instance count, and `initTree`/`normalizeTree`
- * *materialize* `max(min, 1)` instances per node, recursively, at load — before
- * the reviewer has entered anything. Nested groups multiply, so the cost is the
- * product down each branch and the file describing it stays tiny: seven levels
- * each with `min: 7` is about 400 bytes and 820 000 instances, and ten levels
- * of ten is ~500 bytes and 10^10 — an out-of-memory kill of the whole process
- * during load, with no error dialog and no chance to close the file. A flat
- * `min: 1000000000` does the same in 139 bytes.
- *
- * Checked on the resolved schema rather than bounding `min` per node, because
- * a per-node cap cannot stop the nested case: any ceiling above 1 still
- * multiplies. The product is what has to be bounded, so the product is what is
- * measured.
+ * Refuse a schema whose empty tree would be enormous. `initTree`/`normalizeTree`
+ * materialize `max(min, 1)` instances per node recursively at load, and nested
+ * groups multiply the cost down each branch — a tiny file (ten levels of
+ * `min: 10`) can describe 10^10 instances and OOM-kill the process on load.
+ * Checked on the resolved schema, not per-node, because any per-node cap above
+ * 1 still multiplies arbitrarily deep; only the product can be bounded.
  */
 function assertInstanceBudget(defs: ResolvedDef[]): void {
   const total = countInstances(defs, MAX_INITIAL_INSTANCES)
