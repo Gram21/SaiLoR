@@ -2,16 +2,13 @@ import type { LlmConfig, LlmHttpRequest, Provider } from './types'
 import { API_KEY_SENTINEL } from './types'
 
 /**
- * Everything that differs between the LLM vendors, in one place: where to POST,
- * how to authenticate, how to shape the body, how to read the answer back out.
+ * Everything that differs between the LLM vendors: where to POST, how to
+ * authenticate, how to shape the body, how to read the answer back out.
  *
- * Two rules hold for every provider here:
- *  - **No API key.** Requests are built in the renderer, so the key cannot pass
- *    through this module; headers carry `API_KEY_SENTINEL` and the main process
- *    substitutes the real key just before sending (see `types.ts`).
- *  - **No throwing on a bad response.** Providers fail in creative ways and the
- *    body is whatever the server felt like sending, so `extractText` degrades to
- *    `''` and `extractError` always yields something a reviewer can read.
+ * Two rules hold for every provider here: no API key (headers carry
+ * `API_KEY_SENTINEL`, substituted by the main process, see `types.ts`), and
+ * no throwing on a bad response (`extractText` degrades to `''`, `extractError`
+ * always yields something readable).
  */
 
 export interface ProviderInfo {
@@ -23,31 +20,17 @@ export interface ProviderInfo {
   /** Whether this provider can accept a PDF natively (the fallback path). */
   supportsPdf: boolean
   /**
-   * Whether `fetchModels` may query this provider's list-models endpoint at
-   * all. False only for `openai-compatible`: unlike the named providers,
-   * there is no single endpoint/auth/response shape it is safe to assume for
-   * an arbitrary self-hosted server (llama.cpp, vLLM, LM Studio, a gateway…)
-   * — a request built against one server's dialect can 404, hang, or return
-   * something `parseModelsResponse` misreads as a working answer. Rather than
-   * guess, this app never tries: the reviewer types the model name their
-   * server expects, and the field is never validated or marked invalid for
-   * this provider (`ModelPicker` only ever flags a mismatch against a list it
-   * actually fetched).
+   * False only for `openai-compatible`: an arbitrary self-hosted server has no
+   * safe-to-assume list-models endpoint/shape, so this app never queries it —
+   * the reviewer types the model name and it's never validated for this provider.
    */
   supportsModelListing: boolean
   /**
-   * The output-length parameter an OpenAI-shaped body should carry. Ignored for
-   * `anthropic` and `google`, which have their own dedicated request shapes with
-   * their own field for this (`max_tokens`, `generationConfig.maxOutputTokens`).
-   *
-   * This is *not* one-size-fits-all across "OpenAI-compatible" APIs, which is
-   * exactly the bug this field exists to prevent: OpenAI itself now rejects
-   * `max_tokens` on its newer models ("Unsupported parameter: 'max_tokens' is
-   * not supported with this model. Use 'max_completion_tokens' instead."), and
-   * xAI/Groq have followed the same rename — but OpenRouter, Mistral, DeepSeek,
-   * and self-hosted OpenAI-compatible servers (llama.cpp, LM Studio, vLLM) all
-   * document `max_tokens` as current and do not confirm support for the newer
-   * name. Verified against each provider's own docs; see providers.test.ts.
+   * Output-length param for an OpenAI-shaped body (ignored by `anthropic`/`google`,
+   * which have their own fields). Not uniform across "OpenAI-compatible" APIs:
+   * OpenAI's newer models and xAI/Groq reject `max_tokens` in favor of
+   * `max_completion_tokens`, while OpenRouter/Mistral/DeepSeek/self-hosted
+   * servers still expect `max_tokens`. Verified per-provider in providers.test.ts.
    */
   tokenParam: 'max_tokens' | 'max_completion_tokens'
 }
@@ -69,10 +52,8 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     editableBaseUrl: false,
     supportsPdf: true,
     supportsModelListing: true,
-    // OpenAI's own error, verbatim: "'max_tokens' is not supported with this
-    // model. Use 'max_completion_tokens' instead." — required for the o-series
-    // and current GPT models; still accepted-but-deprecated on older ones, so
-    // the newer name is the only one safe to send unconditionally.
+    // Required by o-series/current GPT models (OpenAI rejects `max_tokens` on
+    // them); still accepted on older models, so this name is safe to send always.
     tokenParam: 'max_completion_tokens',
   },
   google: {
@@ -91,9 +72,8 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     editableBaseUrl: false,
     supportsPdf: true,
     supportsModelListing: true,
-    // OpenRouter fronts many backends (including OpenAI's) behind one contract;
-    // its own reference documents `max_tokens`, not `max_completion_tokens` — it
-    // is the one doing the per-backend translation, not the caller.
+    // OpenRouter fronts many backends behind one contract and documents
+    // `max_tokens`; it does the per-backend translation, not the caller.
     tokenParam: 'max_tokens',
   },
   groq: {
@@ -111,9 +91,8 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     label: 'Mistral',
     defaultBaseUrl: 'https://api.mistral.ai',
     editableBaseUrl: false,
-    // Mistral's chat completions take a PDF only via `document_url` (a fetchable
-    // URL); there is no inline-base64 variant, and a paper on the reviewer's
-    // disk has no URL to give it.
+    // Mistral only accepts a PDF via `document_url` (a fetchable URL); no
+    // inline-base64 variant, and a local file has no URL to give it.
     supportsPdf: false,
     supportsModelListing: true,
     tokenParam: 'max_tokens',
@@ -132,9 +111,8 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     label: 'xAI (Grok)',
     defaultBaseUrl: 'https://api.x.ai',
     editableBaseUrl: false,
-    // Grok takes files only by uploading first and referencing the resulting id
-    // (or a URL) in a second call — a different flow than the single-request
-    // inline attachment this app sends, so it stays on the text path.
+    // Grok requires uploading a file first and referencing its id in a second
+    // call; this app only sends single-request inline attachments.
     supportsPdf: false,
     supportsModelListing: true,
     tokenParam: 'max_completion_tokens',
@@ -144,14 +122,11 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     label: 'OpenAI-compatible',
     defaultBaseUrl: '',
     editableBaseUrl: true,
-    // A self-hosted server (llama.cpp, LM Studio, vLLM…) almost never takes a PDF,
-    // so the UI must keep such a target on the extracted-text path.
+    // A self-hosted server (llama.cpp, LM Studio, vLLM…) almost never takes a PDF.
     supportsPdf: false,
-    // See the field comment on `supportsModelListing` above: no endpoint/shape
-    // is safe to assume for an arbitrary server, so this app never tries.
     supportsModelListing: false,
-    // The de facto standard these servers implement; `max_completion_tokens` is
-    // an OpenAI-specific rename with no confirmed support here.
+    // The de facto standard these servers implement; no confirmed support for
+    // the OpenAI-specific `max_completion_tokens` rename.
     tokenParam: 'max_tokens',
   },
 }
@@ -174,37 +149,24 @@ export type PaperPart =
   | { kind: 'pdf'; base64: string; filename: string }
 
 /**
- * On a reasoning-capable model (OpenAI's o-series and GPT-5.x, Grok, some Groq
- * and DeepSeek models…), the output-length budget is shared between hidden
- * reasoning tokens and the visible answer — reasoning that runs long can
- * exhaust the whole budget before a single visible token is written, which
- * surfaces as a "finish_reason: length" / "stop_reason: max_tokens" response
- * with **no** usable text, not as an error the caller can react to in advance.
- * There is no reliable, cross-provider way to switch reasoning off (OpenAI's
- * own `reasoning_effort` has been unreliable together with a token cap on
- * Chat Completions), so the only robust mitigation is headroom: the model
- * still stops as soon as it is done, so a generous ceiling costs nothing extra
- * on ordinary models and only matters for the ones that actually need it.
+ * On reasoning-capable models, hidden reasoning tokens share the output budget
+ * with the visible answer, so long reasoning can exhaust it before any visible
+ * text is written (a silent "cut off with no text", not an error). There's no
+ * reliable cross-provider way to disable reasoning, so generous headroom is
+ * the mitigation — costs nothing on ordinary models since they stop early anyway.
  */
 const DEFAULT_MAX_TOKENS = 8192
 
-/**
- * The user turn that accompanies an attached PDF. The instructions live in the
- * system prompt, but both APIs want the attachment to sit next to *some* text —
- * an attachment-only turn is at best undefined behaviour on OpenAI-compatible
- * servers.
- */
+/** Accompanies an attached PDF: both APIs want the attachment next to some
+ * text, and an attachment-only turn is undefined behaviour on some servers. */
 const PDF_USER_TEXT = 'The paper is attached as a PDF. Annotate it as instructed.'
 
 const CHAT_PATH = '/v1/chat/completions'
 
 /**
- * Append `path` to `base` without duplicating what the user already typed.
- *
- * Only `openai-compatible` has a user-supplied base, and people reasonably enter
- * any of `http://host:1234`, `…/v1` or the full `…/v1/chat/completions` — all
- * three are "the endpoint" as far as they are concerned. So we look for the
- * longest prefix of `path` that `base` already ends with and add only the rest.
+ * Append `path` to `base` without duplicating what the user already typed —
+ * a user-supplied `openai-compatible` base may already include `/v1` or the
+ * full `/v1/chat/completions`, so we add only whatever suffix of `path` is missing.
  */
 export function join(base: string, path: string): string {
   const b = base.trim().replace(/\/+$/, '')
@@ -239,8 +201,8 @@ function anthropicContent(user: PaperPart): unknown[] {
 }
 
 function openaiContent(user: PaperPart): unknown {
-  // A plain string keeps the common (text) path portable: every OpenAI-compatible
-  // server accepts it, while the parts array is a newer addition some do not know.
+  // A plain string keeps the text path portable: some OpenAI-compatible servers
+  // don't know the newer parts-array form.
   if (user.kind === 'text') return user.text
   return [
     {
@@ -264,19 +226,15 @@ function googleParts(user: PaperPart): unknown[] {
 }
 
 /**
- * Whether a Gemini model takes `thinkingLevel` (named, Gemini 3.x) or
- * `thinkingBudget` (a token count, Gemini 2.5.x) — the two are mutually
- * exclusive on a single request, and sending both is an error.
+ * Gemini 3.x takes named `thinkingLevel`, 2.5.x takes numeric `thinkingBudget`
+ * — mutually exclusive; sending both is an error.
  */
 export function googleThinkingMechanism(id: string): 'level' | 'budget' {
   return /^gemini-3/.test(id) ? 'level' : 'budget'
 }
 
-/**
- * Token budgets standing in for "low/medium/high" on the Gemini 2.5-era
- * models, which take a number rather than a named level. Comfortably inside
- * the documented range for every 2.5-series model (128–32768 on 2.5 Pro).
- */
+/** Token counts standing in for "low/medium/high" on 2.5-era models; within
+ * the documented range for every 2.5-series model (128–32768 on 2.5 Pro). */
 export const GOOGLE_BUDGET_BY_LEVEL: Record<string, number> = { low: 2000, medium: 8000, high: 24000 }
 
 export function buildRequest(
@@ -313,12 +271,10 @@ export function buildRequest(
   }
 
   if (cfg.provider === 'google') {
-    // The model lives in the URL path, not the body — a genuinely different
-    // shape from the OpenAI family, not a variant of it. Auth is a header
-    // (`x-goog-api-key`), which Google documents as the alternative to a `?key=`
-    // query param specifically so the key never has to sit in a URL (matches
-    // this app's header-only sentinel-substitution; a query-param key would
-    // also need the main-process origin check to parse query strings).
+    // Model lives in the URL path, not the body — a genuinely different shape
+    // than the OpenAI family. Auth uses the `x-goog-api-key` header (Google's
+    // documented alternative to `?key=`) so the key never sits in a URL, matching
+    // this app's header-only sentinel-substitution.
     const thinkingConfig = effort
       ? googleThinkingMechanism(cfg.model) === 'level'
         ? { thinkingLevel: effort }
@@ -372,7 +328,6 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null
 }
 
-/** Join the `.text` of every part in an OpenAI-style content array. */
 function textOfParts(parts: unknown[]): string {
   return parts
     .map((p) => (isRecord(p) && typeof p.text === 'string' ? p.text : ''))
@@ -420,12 +375,8 @@ export function extractText(provider: Provider, json: unknown): string {
 
 /**
  * True when a (2xx) response was cut off by the token budget rather than the
- * model finishing on its own — the shape a reasoning model produces when
- * `DEFAULT_MAX_TOKENS`'s headroom still was not enough. `extractText` alone
- * cannot tell "the model had nothing to say" apart from "the model was cut off
- * before it could say anything"; this is what lets a caller tell them apart
- * and say something more useful than "the provider answered, but the reply
- * was empty."
+ * model finishing on its own. Lets a caller distinguish "nothing to say" from
+ * "cut off before it could say anything" (which `extractText` alone can't).
  */
 export function wasTruncated(provider: Provider, json: unknown): boolean {
   if (!isRecord(json)) return false
@@ -451,7 +402,6 @@ function truncate(s: string, max = 200): string {
   return flat.length <= max ? flat : `${flat.slice(0, max)}…`
 }
 
-/** Human-readable error from a failed response body, for the UI. */
 export function extractError(provider: Provider, status: number, body: string): string {
   const label = PROVIDERS[provider]?.label ?? provider
   const fallback = body.trim()

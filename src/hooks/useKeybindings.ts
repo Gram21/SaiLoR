@@ -19,12 +19,11 @@ import { DECISION_EXCLUDE, DECISION_INCLUDE } from '../screening/schema'
  *                          projects only, not while typing)
  *  - 1..9                → screening: exclude with the Nth configured reason
  *
- * While the project editor is open, save and undo/redo drive the *draft* rather
- * than the annotation project, and the project-specific bindings (open, paper
- * navigation, PDF zoom) are inert — there is no project on screen to act on.
+ * While the project editor is open, save/undo/redo act on the draft, not the
+ * project, and project-only bindings (open, paper nav, PDF zoom) are inert.
  *
- * Copy/cut/paste are left to the browser (and, in Electron, the Edit menu), so
- * they work natively inside inputs and the PDF text layer.
+ * Copy/cut/paste are left to the browser/Electron Edit menu so they still work
+ * natively in inputs and the PDF text layer.
  */
 export function useKeybindings() {
   useEffect(() => {
@@ -34,14 +33,9 @@ export function useKeybindings() {
 
       if (mod && (e.key === 's' || e.key === 'S')) {
         e.preventDefault()
-        // The field-rename confirm-before-you-lose-answers guard (schema field
-        // name, screening reason label) hangs on `blur`, and a keyboard save
-        // never moves focus on its own. `editorStore`'s `save`/`saveAs` commit
-        // the focused edit themselves before doing anything else — see
-        // `commitFocusedEdit` there — so every way to save the project editor
-        // (this shortcut, the toolbar Save button, and the native quit
-        // dialog's Save) shares the one guard instead of each needing its own
-        // copy of this comment.
+        // A keyboard save never blurs the field, but the unsaved-edit confirm
+        // guard hangs on `blur` — so `editorStore.save`/`saveAs` commit the
+        // focused edit themselves first (see `commitFocusedEdit`).
         const editor = useEditorStore.getState()
         if (editing) {
           if (e.shiftKey) void editor.saveAs()
@@ -76,26 +70,17 @@ export function useKeybindings() {
 
       if (e.key === 'F1') {
         e.preventDefault()
-        // Not while another dialog is up. Every dialog listens for Escape on
-        // `document` and none stops propagation, so with Help stacked on top a
-        // single Escape closes both — and closing the AI dialog discards a
-        // reviewed set of proposals, which costs the reviewer the API call as
-        // well as the reading. Help is also mounted before the AI dialog and
-        // shares its z-index, so it would render *behind* it and look like F1
-        // did nothing at all. ReviewerPrompt is excluded from this guard (see
-        // BLOCKING_SURFACES_FOR_HELP below): it has no Escape handler and
-        // unmounts outright once Help opens rather than stacking with it, so
-        // neither risk above applies to it — and it is the one dialog whose
-        // documented escape hatch *is* F1.
+        // Blocked while another dialog is up: Escape closes both stacked dialogs
+        // (losing reviewed AI proposals), and Help would render behind it anyway.
+        // ReviewerPrompt is exempt (see BLOCKING_SURFACES_FOR_HELP) — it unmounts
+        // instead of stacking, and F1 is its documented escape hatch.
         if (document.querySelector(BLOCKING_SURFACES_FOR_HELP)) return
         useStore.getState().setHelpOpen(true)
         return
       }
 
-      // Zoom: Ctrl/Cmd +/-/0 zooms the PDF; add Shift to scale the app font.
-      // Detect the +/-/0 keys by character (which varies with Shift and layout,
-      // e.g. '+' vs '=' vs '*', '-' vs '_') and by numpad code; detect reset by
-      // the digit-0 code (Shift-independent, avoids the German Shift+0 → '=' clash).
+      // +/-/0 vary by Shift and keyboard layout, so match char or numpad code;
+      // reset uses the digit-0 code (avoids e.g. German Shift+0 → '=').
       if (mod) {
         const reset = e.code === 'Digit0' || e.code === 'Numpad0'
         const inc =
@@ -105,12 +90,11 @@ export function useKeybindings() {
           e.preventDefault()
           const st = useStore.getState()
           if (e.shiftKey) {
-            // App font size: Ctrl/Cmd+Shift +/-/0
             if (inc) st.increaseFont()
             else if (dec) st.decreaseFont()
             else st.resetFont()
           } else if (!editing) {
-            // PDF zoom: Ctrl/Cmd +/-/0 (no PDF on screen while editing).
+            // No PDF on screen while editing.
             if (inc) st.zoomInPdf()
             else if (dec) st.zoomOutPdf()
             else st.resetPdfZoom()
@@ -119,26 +103,15 @@ export function useKeybindings() {
         }
       }
 
-      // Paper navigation. Skip when typing in a field unless Alt is held.
       if (editing) return
-      // ...and skip everything below while a modal is open. These bindings act
-      // on the paper *behind* the dialog: pressing `3` while reading the Help
-      // dialog's shortcut table excluded the hidden paper with the third reason
-      // and auto-advanced the selection, with nothing visibly happening. Every
-      // dialog in the app renders `.modal-overlay` (and a `role="dialog"`), so
-      // one DOM check covers them all and cannot drift out of sync with a
-      // hand-maintained list of open-flags. Scoped to the bare-key bindings
-      // below (screening decisions and paper navigation), which are the ones
-      // that fire from a single unmodified keystroke and act on hidden content;
-      // the modifier combos above stay reachable on purpose.
+      // Skip bare-key bindings below while a modal is open — they'd otherwise
+      // act invisibly on the paper behind the dialog (e.g. `3` excluding a
+      // hidden paper while reading Help's shortcut table).
       if (aModalIsOpen()) return
       const inField = isEditable(e.target)
 
-      // Screening is hundreds of papers at seconds each, so the decision is a
-      // keystroke. Bare letters only (a modifier means something else here)
-      // and never while typing — the same rule `[`/`]` already follow below.
-      // The store owns the auto-advance, so these and the panel's own buttons
-      // cannot drift apart on it.
+      // Screening hundreds of papers is faster as a keystroke than a click;
+      // never while typing, same rule as `[`/`]` below.
       const st = useStore.getState()
       if (st.project?.screening && !inField && !mod && !e.altKey) {
         if (e.key === 'i' || e.key === 'I') {
@@ -156,10 +129,7 @@ export function useKeybindings() {
           st.setScreeningDecision(null)
           return
         }
-        // 1..9 pick the Nth configured exclusion reason and exclude in one
-        // press — the exclusion and its reason are one decision, so they are
-        // one keystroke and (via `setScreeningDecision`'s second argument)
-        // one undo step.
+        // Exclusion + reason is one decision, so one keystroke and one undo step.
         const n = Number(e.key)
         if (Number.isInteger(n) && n >= 1 && n <= 9) {
           const reason = st.project.screening.reasons[n - 1]
@@ -175,13 +145,10 @@ export function useKeybindings() {
         e.preventDefault()
         stepPaper(dir)
       }
-      // PaperList's onListKeyDown already handles this exact combo when a
-      // paper row has DOM focus, moving selection and focus together by one
-      // row and calling preventDefault. Re-running nav() here double-advances
-      // the selection while the focus ring lags a row behind, so defer to it
-      // via e.defaultPrevented. Deliberate trade: this is the one case where
-      // Alt+Arrow does not work "even while typing in a field" — ComboBox/
-      // ModelPicker preventDefault on arrows while their input is focused.
+      // PaperList's onListKeyDown already handles this combo (and calls
+      // preventDefault) when a row has DOM focus; re-running nav() here would
+      // double-advance, so defer via e.defaultPrevented. Side effect: Alt+Arrow
+      // is swallowed when ComboBox/ModelPicker's input has focus.
       if (e.altKey && e.key === 'ArrowDown' && !e.defaultPrevented) return nav(1)
       if (e.altKey && e.key === 'ArrowUp' && !e.defaultPrevented) return nav(-1)
       if (!inField && e.key === ']') return nav(1)
@@ -197,12 +164,9 @@ function stepPaper(dir: 1 | -1) {
   const { project, currentPaperId, selectPaper } = useStore.getState()
   if (!project) return
 
-  // Step through whatever the paper list is actually showing right now —
-  // its rows carry `data-paper-id` in filtered/search order (see
-  // `PaperList.tsx`) — rather than the project's raw paper order, so a
-  // search filter and [ / ] / Alt+Arrow never disagree about "next". The
-  // list's own local `query`/`mode` state isn't in the store, so the DOM is
-  // the one place both agree on what's currently visible.
+  // Step through the DOM rows (filtered/search order), not the project's raw
+  // order, so a search filter and [ / ] / Alt+Arrow agree on "next" — the
+  // list's filter state lives locally, not in the store.
   const rows = document.querySelectorAll<HTMLElement>('.paper-list [role="option"][data-paper-id]')
   if (rows.length > 0) {
     const ids = Array.from(rows, (r) => r.dataset.paperId!)
@@ -228,31 +192,15 @@ function isEditable(target: EventTarget | null): boolean {
 }
 
 /**
- * Is a modal dialog on screen? Every dialog in the app renders a
- * `.modal-overlay` wrapper (and marks itself `role="dialog"`), so this one
- * query covers all of them — including any added later — without a list of
- * per-dialog open-flags to keep in sync.
- */
-/**
- * Is anything blocking-shaped on screen? Bare-key bindings act on the paper
- * *behind* it, invisibly, so they must not fire.
- *
- * This started as a `.modal-overlay` check on the claim that every dialog in
- * the app renders one. That was wrong twice over: `ErrorPanel` renders
- * `.error-overlay` (a full-viewport dimming backdrop — a failed save covers the
- * workspace, and `e` behind it silently excluded the hidden paper), and an open
- * `Dropdown` renders `.menu`, so typing the first letter of the project you are
- * hunting for in the Open menu excluded the current paper. Listing the surfaces
- * beats naming an invariant no one enforces.
+ * Anything blocking-shaped on screen? Bare-key bindings act invisibly on the
+ * paper *behind* it. Covers `.modal-overlay` dialogs plus `ErrorPanel`'s
+ * `.error-overlay` and an open `Dropdown`'s `.menu` — both missed by an
+ * earlier `.modal-overlay`-only check.
  */
 const BLOCKING_SURFACES = '.modal-overlay, .error-overlay, .menu'
 
-// Same as BLOCKING_SURFACES, but F1's own branch uses this instead: it excludes
-// ReviewerPrompt's overlay (opted out via its marker attribute) so F1 can
-// still open Help while that prompt is up. Still blocks correctly if the
-// prompt is ever stacked with ErrorPanel, ClosePrompt, or an open Dropdown —
-// which a naive `!document.querySelector('.reviewer-prompt')` shortcut would
-// not.
+// Same, but excludes ReviewerPrompt's overlay (opted out via its marker
+// attribute) so F1 can open Help while that prompt is up.
 const BLOCKING_SURFACES_FOR_HELP =
   '.modal-overlay:not([data-yields-to-help]), .error-overlay, .menu'
 

@@ -7,25 +7,17 @@ import type { Disposition, FieldChange, PaperChange } from '../git/changes'
 import type { FieldValue } from '../model/annotations'
 import '../styles/git.css'
 
-/** The branch switcher's own sentinel value for "New branch…" — never a real
- *  branch name git itself would produce, so it can share the `<select>`
- *  with `branches` without colliding. */
+/** Sentinel for "New branch…" in the branch `<select>` — never a real branch name. */
 const NEW_BRANCH_OPTION = '__sailor_new_branch__'
 
-/** The branch switcher's sentinel for "- Delete branch…" — same trick as
- *  `NEW_BRANCH_OPTION`, never a real branch name git itself would produce. */
+/** Sentinel for "- Delete branch…" — same trick as `NEW_BRANCH_OPTION`. */
 const DELETE_BRANCH_OPTION = '__sailor_delete_branch__'
 
 /**
- * The confirm text `runPrimaryAction` must show before committing when a
- * Discard row is mixed in among Use rows — `composeContents` (git/changes.ts)
- * builds `workingOut` by reverting every Discard field to its last-committed
- * value, and `runCommit` writes that back to the file on disk unconditionally.
- * `discardOnlyMode` already has its own, separately-worded confirm for the
- * case where *every* row is Discard (nothing to commit at all); this is for
- * the mixed case, which previously reverted the field with no warning.
- * `null` means proceed without asking — no Discard row, or it's the
- * discard-only path instead.
+ * Confirm text for committing while a Discard row is mixed in among Use rows —
+ * `composeContents` reverts every Discard field and `runCommit` writes that to
+ * disk unconditionally, previously with no warning. `null` means proceed
+ * without asking (no Discard row, or the discard-only path handles it instead).
  */
 export function mixedDiscardConfirmMessage(
   discardOnlyMode: boolean,
@@ -36,9 +28,7 @@ export function mixedDiscardConfirmMessage(
 ): string | null {
   if (discardOnlyMode || !hasDiscardRow) return null
 
-  // Field-only wording, kept byte-for-byte from before `paperDiscardCount`
-  // existed — the common case (nobody added/removed a paper this session)
-  // must read exactly as it always has.
+  // Field-only wording, kept byte-for-byte from before `paperDiscardCount` existed.
   if (paperDiscardCount === 0) {
     const n = fieldDiscardCount
     return (
@@ -48,12 +38,9 @@ export function mixedDiscardConfirmMessage(
     )
   }
 
-  // A `PaperChange` marked Discard is not "a field": `composeContents` drops
-  // the paper from `committed` entirely, and `writeProjectFiles` then deletes
-  // its `consolidated.json`, every `reviewer-<n>.json`, and every
-  // `marks-*.json`. Calling that "1 field" (the old, shared count did) badly
-  // undersells what is about to be lost — so a paper row gets its own,
-  // explicit sentence naming exactly that.
+  // A `PaperChange` marked Discard deletes the paper and all its annotation
+  // files, not just "a field" — worth its own sentence rather than folding
+  // into the old shared count.
   const p = paperDiscardCount
   const paperPart =
     `${p} paper${p === 1 ? '' : 's'} marked Discard will be deleted entirely, along with ` +
@@ -70,20 +57,13 @@ export function mixedDiscardConfirmMessage(
 }
 
 /**
- * Is `path` the open project's own tracked file, or does it live under its
- * `annotations/` folder? Deliberately independent of whether field review
- * (`panel.fieldReview`) is currently available — review is routinely
- * unavailable (a schema edit, a reviewer-count change, a project-title/
- * protocol/provenance edit, an unparseable/uncommitted project, or simply no
- * field/paper-meta change at all, which is exactly what a marks-only edit —
- * adding PDF highlights — produces, since `detectFieldChanges` never diffs
- * `marks`/`reviewMarks`) and the project's own rows fall back to the plain
- * whole-file checkbox in that case (see this file's own doc comment). The
- * per-file ↺ must never apply to these regardless: there is no committed
- * copy of an untracked `annotations/<paperId>/*.json` to recover from.
- * Exported so `GitDialog.test.ts` can assert this without rendering the
- * component. The real enforcement is server-side — `git:discardFile` takes
- * `projectRelPath` and refuses the same paths itself.
+ * Is `path` the open project's own tracked file, or under its `annotations/`
+ * folder? Independent of whether field review is currently available (review
+ * is routinely absent, e.g. a marks-only edit); those rows then fall back to
+ * the plain whole-file checkbox instead, but never get the per-file ↺ — there
+ * is no committed copy of an untracked annotation file to recover from.
+ * Exported for `GitDialog.test.ts`; real enforcement is server-side in
+ * `git:discardFile`.
  */
 export function isProjectOwnPath(path: string, relPath: string): boolean {
   const dir = annotationsRelDir(relPath)
@@ -92,14 +72,11 @@ export function isProjectOwnPath(path: string, relPath: string): boolean {
 
 /**
  * Git — changes, a diff, a commit message, Pull, Push. Shown for the open
- * project's own repository (`useGitStore().repo`), which the Toolbar's
- * **Git** button gates on.
+ * project's own repository (`useGitStore().repo`).
  *
- * The open project's own file gets field-level review (`panel.fieldReview`)
- * whenever it can — see `refreshFieldReview` in `gitStore.ts` for exactly
- * when that is. Every other changed file, and the project file itself when
- * it can't be reviewed field by field, keeps the plain whole-file checkbox
- * this dialog has always had.
+ * The project's own file gets field-level review (`panel.fieldReview`)
+ * whenever `refreshFieldReview` (gitStore.ts) makes one available; otherwise
+ * it keeps the plain whole-file checkbox, like every other changed file.
  */
 export function GitDialog() {
   const panel = useGitStore((s) => s.panel)
@@ -128,10 +105,8 @@ export function GitDialog() {
   const save = useStore((s) => s.save)
 
   useEffect(() => {
-    // Any nested overlay (merge dialog, branch-switch prompt, new-branch
-    // prompt, merge-branch prompt, delete-branch prompt, history) owns Escape
-    // while it is open — this listener would otherwise also fire and
-    // closePanel() away the commit message and dispositions.
+    // A nested overlay owns Escape while open — otherwise this listener would
+    // also fire and closePanel() away the commit message and dispositions.
     if (
       !panel ||
       panel.merge ||
@@ -158,13 +133,8 @@ export function GitDialog() {
 
   const working = panel.phase === 'working'
   const review = panel.fieldReview
-  // The project's own rows — `project.json` and everything under
-  // `annotations/` — live in the field-review list below instead, whenever
-  // there is one to show them there. When there isn't (see
-  // `isProjectOwnPath`'s own comment for why that's routine, not rare), they
-  // fall back to the plain checkbox below instead of vanishing — but never
-  // get the per-file ↺, which `isProjectOwnPath` alone (not gated on
-  // `review`) is what withholds.
+  // The project's own rows live in the field-review list below when there is
+  // one; otherwise they fall back to the plain checkbox (see `isProjectOwnPath`).
   const changes = (panel.status?.changes ?? []).filter((c) => !review || !isProjectOwnPath(c.path, repo.relPath))
   // The switcher only ever offers local branches — checking out a
   // remote-tracking ref would detach HEAD. The merge picker takes both.
@@ -174,30 +144,22 @@ export function GitDialog() {
   const hasUntracked = changes.some((c) => c.code === '??')
   const reviewRowCount = review ? review.changes.fields.length + review.changes.papers.length : 0
 
-  // What the review's rows actually resolve to (absent means 'use', the same
-  // default `composeContents` itself applies) — what decides whether the
-  // primary button below has anything to *commit* at all.
+  // What the review's rows resolve to (absent means 'use', same default as `composeContents`).
   const reviewDispositions = review
     ? [...review.changes.papers, ...review.changes.fields].map((r) => review.decisions[r.id] ?? 'use')
     : []
   const hasUseRow = reviewDispositions.includes('use')
   const hasDiscardRow = reviewDispositions.includes('discard')
-  // Separate counts for the mixed-discard confirm (`mixedDiscardConfirmMessage`)
-  // — a `PaperChange` marked Discard is not "a field" (see that function's
-  // own comment for why the old shared count badly undersold what it does).
+  // Separate counts for `mixedDiscardConfirmMessage` — a discarded paper isn't "a field".
   const paperDiscardCount = review
     ? review.changes.papers.filter((p) => (review.decisions[p.id] ?? 'use') === 'discard').length
     : 0
   const fieldDiscardCount = review
     ? review.changes.fields.filter((f) => (review.decisions[f.id] ?? 'use') === 'discard').length
     : 0
-  // No other file is selected, and nothing in the review would end up
-  // committed — every row is Ignore or Discard. Committing would write
-  // nothing new, so the button's only honest job left is discarding.
+  // Nothing else selected and every review row is Ignore or Discard — nothing to commit.
   const discardOnlyMode = !!review && selectedCount === 0 && !hasUseRow && hasDiscardRow
-  // The same state, minus a row actually marked Discard — every reviewed row
-  // is Ignore, and nothing else is selected. There is genuinely nothing to
-  // do: not a commit (nothing changed), not a discard (nothing marked).
+  // Same, but no row is even marked Discard — genuinely nothing pending either way.
   const nothingPending = !!review && selectedCount === 0 && !hasUseRow && !hasDiscardRow
 
   const requestClose = () => closePanel()
@@ -218,10 +180,7 @@ export function GitDialog() {
       return
     }
     const n = reviewDispositions.filter((d) => d === 'discard').length
-    // Same undercount `mixedDiscardConfirmMessage` fixes, for the same
-    // reason: a discarded paper here means deleting it and every one of its
-    // annotation files, not just "reverting" a value — worth its own clause
-    // rather than folding silently into the generic "N changes" count.
+    // Same reasoning as `mixedDiscardConfirmMessage`: a discarded paper deletes files, not just reverts a value.
     const msg =
       paperDiscardCount > 0
         ? `Discard ${n} change${n === 1 ? '' : 's'} in ${repo.relPath}, including ${paperDiscardCount} ` +
@@ -412,20 +371,11 @@ export function GitDialog() {
           ) : (
             <ul className="git-changes">
               {changes.map((c) => {
-                // The project's own file/`annotations/` tree must never get
-                // this button, review or no review (see `isProjectOwnPath`'s
-                // own comment) — there is no committed copy of an untracked
-                // annotation file to recover from. `git:discardFile` refuses
-                // the same paths server-side; this is the (non-authoritative)
-                // renderer half of that guard.
+                // Own project files never get this button (see `isProjectOwnPath`); `git:discardFile` enforces it server-side too.
                 const isOwn = isProjectOwnPath(c.path, repo.relPath)
-                // `git status --porcelain` collapses a wholly-untracked
-                // directory into one record like `?? exports/` — trailing
-                // slash preserved. Reverting a rename correctly needs more
-                // than one `checkout`, and an unresolved conflict has no
-                // single well-defined "discard" — refuse rather than guess,
-                // same as elsewhere.
+                // `git status --porcelain` reports an untracked dir as one record, e.g. `?? exports/`.
                 const isDir = c.path.endsWith('/')
+                // A rename needs more than one `checkout` to undo, and an unresolved conflict has no single well-defined "discard".
                 const discardable = !isOwn && !c.from && !c.unmerged
                 const untracked = c.code.startsWith('?')
                 const discard = () => {
@@ -516,15 +466,12 @@ export function GitDialog() {
   )
 }
 
-/** Capped at the same height `Field.tsx`'s `StringField` uses for an annotation
- *  text field — a commit message deserves the identical collapsed-until-focus
- *  feel, not a different number that happens to also look reasonable. */
+/** Matches `Field.tsx`'s `StringField` cap, for the same collapsed-until-focus feel. */
 const MAX_MESSAGE_HEIGHT = 240
 
-/** Single-line when idle, grows downward (capped) while focused — same pattern
- *  as an annotation text field, and, unlike the plain `<input>` this replaces,
- *  wide enough to actually use the dialog's own width (see `.git-commit-message`
- *  in git.css: a bare `.field-input` has no width outside a flex row). */
+/** Single-line when idle, grows downward (capped) while focused — same pattern as
+ *  an annotation text field. Unlike the plain `<input>` it replaces, needs
+ *  `.git-commit-message` in git.css since `.field-input` alone has no width outside a flex row. */
 function CommitMessageField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const [expanded, setExpanded] = useState(false)
@@ -561,12 +508,8 @@ function CommitMessageField({ value, onChange }: { value: string; onChange: (v: 
   )
 }
 
-/** Matching `GitMergeDialog.tsx`'s own `formatValue` — not shared from there
- *  on purpose (see that file's comment): this dialog stays free to diverge
- *  in how it renders a value without one quietly depending on the other's
- *  private helper. */
-/** Exported for `GitHistoryDialog`'s read-only rows — same "Was/Now" text for
- *  the same field values, no reason to duplicate it. */
+/** Deliberately not shared with `GitMergeDialog.tsx`'s own `formatValue` (see that
+ *  file's comment), so the two stay free to diverge. Exported for `GitHistoryDialog`. */
 export function formatValue(value: FieldValue): string {
   if (value === undefined || value === null) return '— empty —'
   if (typeof value === 'boolean') return value ? 'Yes' : 'No'
@@ -580,11 +523,9 @@ interface DispositionButtonsProps {
 }
 
 /**
- * Use/Ignore grouped on the left, Discard alone on the right — a discard is a
- * different kind of decision from the other two (it reverts a local edit
- * rather than choosing what to do with it), and `.git-field-row-actions`'
- * `justify-content: space-between` is what pushes it there: two flex
- * children, the group and the lone button, pinned to opposite ends of the row.
+ * Use/Ignore grouped on the left, Discard alone on the right — Discard is a
+ * different kind of decision (it reverts an edit rather than choosing what to
+ * do with it); `.git-field-row-actions`'s `space-between` pins the two groups apart.
  */
 function DispositionButtons({ disposition, onSet }: DispositionButtonsProps) {
   return (

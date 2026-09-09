@@ -22,14 +22,10 @@ import type { Paper, Project } from '../model/project'
 type SearchMode = 'metadata' | 'annotations'
 
 /**
- * The sentence each state's dot leads its tooltip/`aria-label` with, before
- * the raw numbers. Spelled out rather than reusing the dropdown's terse option
- * labels: this is the only place the color's *meaning* is stated, and it is the
- * sole route to it for a screen reader.
- *
- * `finishBox` is what the panel's sign-off checkbox is called in the current
- * seat (`finishCheckboxLabel`), which `complete` — the one state that tells the
- * reader to go and tick it — names outright.
+ * The sentence each state's dot leads its tooltip/`aria-label` with. This is
+ * the only place the color's meaning is stated, and the sole route to it for
+ * a screen reader; `finishBox` is the seat's sign-off checkbox label, named
+ * outright in the `complete` case.
  */
 function dotStateLabel(state: AnnotationState, finishBox: string): string {
   switch (state) {
@@ -53,20 +49,17 @@ interface IndexedPaper {
   annotationHaystack: string
   /** `null` when the fill does not apply to this seat — see `completenessApplies`. */
   completeness: Completeness | null
-  /** `null` in the seats where completeness does not apply — the same seats
-   *  `completeness` above is null for. */
+  /** `null` in the same seats `completeness` is null for. */
   state: AnnotationState | null
-  /** Whether this seat has recorded at least one annotation entry for the
-   *  paper — what the `in-progress` filter narrows `open` by (`matchesFilter`).
-   *  Independent of `state`: a paper touched only through a Yes/No answer is
-   *  `touched` while its dot stays `untouched` (completeness ignores booleans). */
+  /** Whether this seat recorded at least one annotation entry — independent of
+   *  `state`: a paper touched only via a Yes/No answer is `touched` but stays
+   *  `untouched` (completeness ignores booleans). */
   touched: boolean
 }
 
 /**
  * The completeness numbers behind a paper's dot fill, or `null` where it does
- * not apply — see `completenessApplies`. Exported standalone (mirroring
- * `paperIsMarkedDone`) so the gating logic has one home and is directly
+ * not apply — see `completenessApplies`. Exported standalone so it is
  * unit-testable without rendering the list.
  */
 export function paperCompleteness(
@@ -81,16 +74,11 @@ export function paperCompleteness(
 /**
  * A paper's annotation state for the active seat — the dot's color, what the
  * filter dropdown matches, and what the counter counts. `null` where
- * completeness does not apply (a screening project); see `annotationState` for
- * the states themselves, and `completenessApplies` for why the Consolidation
- * seat is not an exception to them.
+ * completeness does not apply (a screening project).
  *
  * Always derived, never stored: only the reviewer's tick is persisted, so
- * emptying a field on a finished paper re-evaluates the mark by itself (it
- * becomes `flagged`), and refilling it restores `finished` — no separate
- * invalidation step exists that could be missed. Exported standalone
- * (mirroring `paperCompleteness` / `paperIsMarkedDone`) so this is directly
- * unit-testable without rendering the list.
+ * emptying a field on a finished paper re-evaluates the mark by itself
+ * (becomes `flagged`), and refilling it restores `finished`.
  */
 export function paperAnnotationState(
   project: Project,
@@ -106,9 +94,8 @@ export function paperAnnotationState(
   )
 }
 
-/** Shorthand for "green in the list": declared finished *and* still complete.
- *  Both halves are required — a full form is nobody's sign-off, and a
- *  sign-off does not survive the data it was about going away. */
+/** Shorthand for "green in the list": declared finished *and* still complete
+ *  — a sign-off does not survive the data it was about going away. */
 export function paperIsFinished(
   project: Project,
   paper: Paper,
@@ -118,24 +105,14 @@ export function paperIsFinished(
 }
 
 /**
- * Whether a paper reads as "done" for a seat, per seat:
- *
- *  - single-reviewer, a numbered reviewer, or multi-reviewer-nobody-picked:
- *    exactly `hasAnnotations` over the active seat's own tree (`currentTree`),
- *    so it answers "did *this* seat record anything". Only the degenerate dot
- *    (a boolean-only schema, where no fraction can be formed) is left reading
- *    this directly; everywhere else the fill and color say more.
- *  - Consolidation: `readyToConsolidate` — every numbered reviewer has recorded
- *    something. `currentTree` for this seat is `paper.annotations`, which
- *    `adoptUnanimousValues` fills just from opening the paper, so "has the
- *    consolidated tree got content" would answer a question nobody asked.
- *    Readiness is well-defined independent of that auto-adoption and tells the
- *    consolidator which papers are actually workable — the same rule that
- *    decides whether a field's compare popup will open (see `Field.tsx`), so
- *    the list and the popups cannot disagree about which papers are ready.
- *    Since that seat's dot now carries its own progress and sign-off like every
- *    other (`completenessApplies`), this is what its tooltip and the sidebar's
- *    "N/M ready" counter report rather than what colors it.
+ * Whether a paper reads as "done" for a seat:
+ *  - single/numbered reviewer or multi-reviewer-nobody-picked: `hasAnnotations`
+ *    over the seat's own tree.
+ *  - Consolidation: `readyToConsolidate` (every reviewer has recorded
+ *    something), not "has the consolidated tree got content" — that tree gets
+ *    auto-filled by `adoptUnanimousValues` just from opening the paper, so it
+ *    can't answer readiness. Same rule `Field.tsx` uses to gate the compare
+ *    popup, so list and popup can't disagree on which papers are ready.
  */
 export function paperIsMarkedDone(
   project: Project,
@@ -150,17 +127,11 @@ export function paperIsMarkedDone(
 }
 
 /**
- * The screening marker's state for a paper, per seat: `currentTree`'s
- * routing, so a numbered reviewer tracks their own decisions and
- * Consolidation tracks the result that ships.
- *
- * This deliberately replaces `paperIsMarkedDone`'s Consolidation meaning
- * (`readyToConsolidate`) for a screening project: with one decision per
- * paper, "the final decision so far" is the more useful thing for the marker
- * to say, and readiness has not been lost — it is in the marker's `title`
- * tooltip (see below), and the ⇄ compare button's readiness gate
- * (`Field.tsx`) is unchanged, which is the rule that actually protects the
- * consolidator from deciding on an absent reviewer.
+ * The screening marker's state for a paper: a numbered reviewer's own
+ * decision, or Consolidation's shipped result. Deliberately not
+ * `paperIsMarkedDone`'s readiness meaning here — with one decision per paper,
+ * "the final decision so far" is more useful; readiness still shows up in the
+ * marker's tooltip below.
  */
 export function paperScreeningStatus(
   project: Project,
@@ -171,18 +142,11 @@ export function paperScreeningStatus(
 }
 
 /**
- * The lowercased text a metadata-mode query word is matched against.
- * Exported standalone (mirroring `paperCompleteness` / `paperIsMarkedDone`)
- * so it is directly unit-testable without rendering the list, and so the
- * list and its tests share one definition of "what counts as searchable".
- *
- * `pdf` is the project-relative path (e.g. "pdfs/smith-2021.pdf"); the whole
- * string is indexed. The basename is not indexed separately: matching is a
- * substring test over whitespace-split words, so a "smith-2021.pdf" (or
- * "pdfs/smith") query already hits the full path — a bare-basename entry
- * would only duplicate characters already present. `id` and `pdf` are
- * always present (non-optional on Paper), so unlike `doi`/`abstract` they
- * need no empty-string fallback.
+ * The text a metadata-mode query word is matched against: title, authors,
+ * DOI, abstract, PDF path and id. The PDF path is indexed whole, not just its
+ * basename — a substring query like "smith-2021.pdf" already hits the full
+ * path. `id`/`pdf` are non-optional on `Paper`, unlike `doi`/`abstract`, so
+ * they need no empty-string fallback.
  */
 function paperMetadataRaw(paper: Paper): string {
   return `${paper.title} ${paper.authors.join(' ')} ${paper.doi ?? ''} ${paper.abstract ?? ''} ${paper.pdf} ${paper.id}`
@@ -193,16 +157,11 @@ export function paperMetadataHaystack(paper: Paper): string {
 }
 
 /**
- * One row of the list. `React.memo`'d because immer's structural sharing
- * means a field edit (`setFieldValue` in `state/store.ts`) replaces only the
- * one paper object it touches — every other paper keeps its old identity — so
- * a memoized row re-renders only for the paper actually being edited, instead
- * of all of them on every keystroke. That only holds if every prop here is a
- * primitive or an identity-stable reference: an inline object or arrow
- * function passed in from the caller would look "new" every render and
- * silently defeat the memo without any test failing, so the dot's fill is
- * passed as a plain number, not the `Completeness` object, and `onSelect` is
- * the store's own stable action, not a per-row closure.
+ * One row of the list. `React.memo`'d because immer replaces only the edited
+ * paper object on a field edit, so a memoized row skips re-rendering the
+ * rest on every keystroke — but only as long as every prop stays a primitive
+ * or identity-stable reference (hence a plain fill number, not `Completeness`,
+ * and the store's stable `onSelect` action rather than a per-row closure).
  */
 const PaperRow = memo(function PaperRow({
   paper,
@@ -258,21 +217,17 @@ export function PaperList() {
   const schema = project?.schema ?? []
   const isScreening = project?.screening != null
   const isConsolidationSeat = (project?.reviewers ?? 1) > 1 && currentReviewer === 'consolidation'
-  // Whether the dot's fill (where it applies at all) is a fraction of
-  // *required* fields or of every field — see `completeness.ts`. Derived from
-  // the schema alone, so it is the same for every row; computed once here
-  // rather than per row.
+  // Whether the dot's fill is a fraction of required fields or of every
+  // field — see `completeness.ts`. Same for every row, so computed once here.
   const requiredMode = useMemo(() => hasRequiredFields(schema), [schema])
 
   const [query, setQuery] = useState('')
   const [mode, setMode] = useState<SearchMode>('metadata')
   const [caseSensitive, setCaseSensitive] = useState(false)
 
-  // Clear the search when a different project is opened. This component never
-  // unmounts across a project change, so a query typed against the last project
-  // stayed in the box and hid every paper in the new one behind "No matching
-  // papers" — recoverable, since the query is visible, but it reads as an empty
-  // project. Keyed on `projectGeneration` rather than on `project`, which immer
+  // Clear the search when a different project is opened — this component never
+  // unmounts across a project change, so a stale query would hide every paper
+  // in the new one. Keyed on `projectGeneration`, not `project`, which immer
   // replaces on every keystroke and would clear the box as you type.
   const generation = useStore((s) => s.projectGeneration)
   useEffect(() => {
@@ -281,53 +236,29 @@ export function PaperList() {
     setCaseSensitive(false)
   }, [generation])
 
-  // Build the search index once per project: one lowercased haystack per
-  // paper, per mode. Annotation content changes as the reviewer types into a
-  // field, not just when papers are added/removed — but the store's immer
-  // `set` produces a new paper object (and therefore a new `papers` array)
-  // on every such edit, so keying on `papers` already invalidates this memo
-  // whenever annotation content actually changes. `schema` is included too:
-  // it is what `annotationText` walks, even though it does not change here.
-  // `currentReviewer` likewise: switching seats changes which tree is read.
+  // Build the search index once per project: one haystack per paper, per
+  // mode. Keying on `papers` already invalidates this whenever annotation
+  // content changes, since immer's `set` replaces the edited paper object.
   const papers = project?.papers
   const index = useMemo<IndexedPaper[]>(() => {
     if (!papers || !project) return []
     const applies = completenessApplies(project)
-    // Schema-wide, so it is hoisted out of the per-paper loop — the same
-    // value `requiredMode` holds for the dot's denominator, recomputed here
-    // rather than added to this memo's deps (it is derived from `schema`,
-    // which is already a dep).
     const required = hasRequiredFields(schema)
     return papers.map((paper) => {
-      // The active reviewer's own tree, so the sidebar answers "which papers
-      // did *I* record this in" — the same tree the form and validation show.
-      // Null (multi-reviewer, nobody picked yet) has no annotations to search
-      // or count. Computed once and shared with `completeness` below rather
-      // than looked up twice — `currentTree` builds a fresh normalized tree
-      // when a numbered reviewer has never opened this paper, which is not
-      // free to repeat over a large paper list.
+      // The active reviewer's own tree, so the sidebar answers "did *I*
+      // record this". Computed once and shared with `completeness` below —
+      // `currentTree` is not free to build fresh per lookup over a large list.
       const tree = currentTree(project, currentReviewer, paper)
       const c = applies ? completeness(schema, tree) : null
-      // Computed once and shared: it is both the `touched` argument to
-      // `annotationState` below and the field the `in-progress` filter reads.
       const touched = !!tree && hasAnnotations(schema, tree)
       return {
         paper,
-        // Searchable metadata: title, authors, DOI, abstract, PDF path and
-        // id. Abstract is here because screening is decided on title +
-        // abstract; the PDF path and id let a reviewer find a paper by the
-        // file they remember or by its identifier. See `paperMetadataHaystack`.
-        // Kept in original case (not lowercased like the exported
-        // `paperMetadataHaystack`/default `annotationText`) so the
-        // case-sensitive toggle below can match against it directly; the
-        // case-insensitive path lowercases it at match time instead.
+        // Kept in original case (unlike the exported `paperMetadataHaystack`)
+        // so the case-sensitive toggle below can match it directly.
         metadataHaystack: paperMetadataRaw(paper),
         annotationHaystack: annotationText(schema, tree ?? {}, true),
         completeness: c,
         touched,
-        // Same inputs `paperAnnotationState` uses, off the tree and
-        // completeness already computed here rather than walking them again
-        // per row — a large paper list re-derives this on every keystroke.
         state: annotationState(
           c,
           currentFinished(project, currentReviewer, paper) === true,
@@ -340,9 +271,7 @@ export function PaperList() {
   }, [papers, project, schema, currentReviewer])
 
   // Corpus-wide progress, over every paper regardless of the current search —
-  // "how far through this review am I", which nothing else in the app answers
-  // (each row's own dot only reports itself). Mirrors the "done" meaning each
-  // row already renders per mode, so it can never disagree with the dots.
+  // "how far through this review am I", which no single row's dot answers.
   const progress = useMemo(() => {
     if (!project) return null
     const total = project.papers.length
@@ -352,22 +281,16 @@ export function PaperList() {
       ).length
       return { total, text: `${done} of ${total} screened` }
     }
-    // Counts whichever bucket the filter dropdown is showing, so "finished:
-    // 5/100" answers the question the reviewer just asked the list. With no
-    // filter set it counts `finished` — the headline number of an annotation
-    // project, and what this row said before the filter existed; counting
-    // "all papers" there would only restate the total next to it. Either way
-    // it counts by the same rule the rows are filtered by, over every paper
-    // regardless of the search box, so the two can never disagree.
+    // Counts whichever bucket the filter dropdown is showing; with no filter
+    // set it defaults to `finished`, the headline number of an annotation
+    // project. Counted over every paper regardless of the search box, so it
+    // can never disagree with the rows it's filtering.
     const bucket: AnnotationFilter = annotationFilter === 'all' ? 'finished' : annotationFilter
     const done = index.filter((e) => matchesFilter(e.state, bucket, e.touched)).length
     const text = `${ANNOTATION_FILTER_LABELS[bucket]}: ${done}/${total}`
     if (!isConsolidationSeat) return { total, text }
-    // Consolidation gets both numbers. Its own sign-off is now the bucket
-    // count above, like any other seat, but readiness is the fact that decides
-    // whether a paper is even workable yet (`paperIsMarkedDone`) — it used to
-    // be this row's whole text, and dropping it would leave the consolidator
-    // with no project-wide answer to "how much can I even start on".
+    // Consolidation also gets a readiness count (`paperIsMarkedDone`) — the
+    // project-wide answer to "how much can I even start on".
     const ready = project.papers.filter((p) => paperIsMarkedDone(project, p, currentReviewer)).length
     return { total, text: `${text} · ${ready}/${total} ready` }
   }, [project, isScreening, isConsolidationSeat, currentReviewer, index, annotationFilter])
@@ -413,29 +336,22 @@ export function PaperList() {
     words.length > 0 || (isScreening ? screeningFilter !== 'all' : annotationFilter !== 'all')
   const countText = isFiltered ? `${filtered.length} of ${total}` : `${total}`
 
-  // The list's one roving tab stop (standard listbox keyboard pattern: Tab
-  // enters/exits the whole list in one stop, Arrow keys move within it). The
-  // open paper when it's still in view, else the first visible row — so a
-  // query that scrolls the open paper out of the filtered list doesn't leave
-  // the list with no tab stop at all.
+  // The list's one roving tab stop (standard listbox keyboard pattern). The
+  // open paper when still in view, else the first visible row, so a query
+  // that scrolls it out of the filtered list doesn't leave no tab stop.
   const rovingId = filtered.some((e) => e.paper.id === currentPaperId)
     ? currentPaperId
     : (filtered[0]?.paper.id ?? null)
 
-  // Arrow Up/Down moves selection *and* focus together to the next/previous
-  // visible row — "select follows focus", the same model a native `<select>`
-  // uses, and simpler than tracking a separate unselected "focused" row when
-  // every row already opens on click. Delegated to the list rather than
-  // handled per-row so it costs nothing in the per-row memoization that keeps
-  // large paper lists cheap to re-render (see `PaperRow`'s comment).
+  // Arrow Up/Down moves selection *and* focus together — "select follows
+  // focus", like a native `<select>`. Delegated to the list, not per-row, so
+  // it doesn't defeat `PaperRow`'s memoization.
   const onListKeyDown = (e: React.KeyboardEvent<HTMLUListElement>) => {
     const row = (e.target as HTMLElement).closest<HTMLElement>('[role="option"]')
     if (!row) return
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      // This branch deliberately covers Alt+Arrow too (the global
-      // next/previous-paper shortcut): useKeybindings.ts defers to us via
-      // e.defaultPrevented, since a modifier guard here would let the window
-      // handler step the paper without moving DOM focus.
+      // Deliberately also covers Alt+Arrow (the global next/previous-paper
+      // shortcut): useKeybindings.ts defers to us via e.defaultPrevented.
       e.preventDefault()
       const sib = (e.key === 'ArrowDown' ? row.nextElementSibling : row.previousElementSibling) as
         | HTMLElement
@@ -468,11 +384,9 @@ export function PaperList() {
             type="text"
             placeholder={mode === 'annotations' ? 'Search annotations…' : 'Search papers…'}
             aria-label={mode === 'annotations' ? 'Search annotations' : 'Search papers'}
-            // The field's own explanation, so what it is filtering is
-            // discoverable without first noticing the small trigger inside it.
-            // The trigger is named by where it is rather than by its label:
-            // that label reports the *current* mode, so "click TAGS to search
-            // annotations" would read as backwards while it says META.
+            // The trigger button is named by where it is, not its label: the
+            // label reports the *current* mode, so "click TAGS to search
+            // annotations" would read backwards while it says META.
             title={
               mode === 'annotations'
                 ? 'Filters the list to papers whose recorded annotation values match — every word must match somewhere. Use the trigger inside this field to search titles, authors and DOIs instead.'
@@ -514,12 +428,7 @@ export function PaperList() {
           </button>
         </div>
         {/* A dropdown rather than the segmented row screening uses: five
-            states with prose labels do not fit across the sidebar's width,
-            and unlike screening's three decisions these are read far less
-            often than they are glanced at in the dots. Offered in the
-            Consolidation seat too: its papers now carry the same five states
-            as any other seat's (`completenessApplies`), and "which papers have
-            I not signed off" is the same question there as anywhere. */}
+            states with prose labels don't fit across the sidebar's width. */}
         {!isScreening && (
           <select
             className={`annotation-filter${annotationFilter === 'all' ? '' : ' active'}`}
@@ -568,9 +477,8 @@ export function PaperList() {
 
             if (isScreening) {
               const status = paperScreeningStatus(project, p, currentReviewer)
-              // Readiness has not been dropped for the consolidator here — it
-              // moves into the tooltip, since the marker itself now reports
-              // "the final decision so far" instead (see `paperScreeningStatus`).
+              // Readiness moves into the tooltip here, since the marker itself
+              // reports "the final decision so far" (see `paperScreeningStatus`).
               const readiness = isConsolidation
                 ? readyToConsolidate(project.schema, p, project.reviewers)
                   ? ' — ready to consolidate'
@@ -596,52 +504,28 @@ export function PaperList() {
               )
             }
 
-            // The partial-fill dot, for every seat of a non-screening project
-            // — Consolidation included, its progress being its own work on the
-            // consolidated tree (see `completenessApplies`). `entry.completeness`
-            // is never null here in practice — reaching this line already means
-            // the screening branch above did not return, which is exactly
-            // `completenessApplies`'s negation — but the type is
-            // `Completeness | null` regardless (the index computes it
-            // independently of this render's control flow), so an empty
-            // fallback keeps this branch type-safe rather than relying on an
-            // assertion. `pct === null` below covers the remaining degenerate
-            // cases — a boolean-only schema, or no tree at all (multi-reviewer,
-            // nobody picked) — by falling back to the old binary dot rather
-            // than showing a meaningless 0%.
+            // `entry.completeness` is never null here in practice (this line
+            // means the screening branch above didn't return), but the type is
+            // `Completeness | null` regardless, so fall back rather than assert.
             const c = entry.completeness ?? { filled: 0, total: 0 }
             const pct = completenessPercent(c)
             const state = entry.state ?? 'untouched'
-            // The dot keeps showing *progress* exactly as before — the same
-            // pie-slice fill over the same numbers — and the state only
-            // decides its color: amber while the paper is still the
-            // reviewer's to finish, green once they tick the box, red when
-            // the tick and the data disagree. So the fill answers "how far",
-            // the color answers "whose move is it", and neither has to be
-            // read out of the other.
+            // The fill answers "how far" (the same pie-slice progress as
+            // before); the state only decides color: amber = still to finish,
+            // green = signed off, red = tick and data disagree.
             //
-            // `pct === null` is the degenerate case a fraction cannot
-            // describe (a boolean-only schema, or no tree at all in a
-            // multi-reviewer project with nobody picked): there the dot falls
-            // back to a fill-less marker, the same as before.
-            //
-            // `entry.touched` rather than `paperIsMarkedDone` in that fallback:
-            // the two are the same `hasAnnotations` call for every seat but
-            // Consolidation, where the latter answers readiness instead — which
-            // is a different sentence, and is appended below in its own words.
+            // `pct === null` is the degenerate case a fraction can't describe
+            // (boolean-only schema, or no tree in a multi-reviewer project with
+            // nobody picked): falls back to the old fill-less marker.
             const fieldsLabel =
               pct === null
                 ? entry.touched
                   ? 'Has annotations'
                   : 'Not annotated yet'
                 : `${c.filled} of ${c.total} ${requiredMode ? 'required ' : ''}fields filled`
-            // Readiness has not been dropped for the consolidator — it moves
-            // into the tooltip, the same trade the screening branch above
-            // makes, now that the dot itself reports this seat's own progress
-            // and sign-off (`completenessApplies`). Green here therefore means
-            // "I have signed this off", not "everyone has answered it"; the two
-            // are stated separately because they can legitimately disagree — a
-            // consolidator can finish a paper one reviewer never reached.
+            // Readiness moves into the tooltip here too. Green means "I have
+            // signed this off", not "everyone has answered it" — a consolidator
+            // can finish a paper one reviewer never reached.
             const readiness = isConsolidation
               ? paperIsMarkedDone(project, p, currentReviewer)
                 ? ' — every reviewer has annotated this paper'

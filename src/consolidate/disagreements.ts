@@ -8,11 +8,9 @@ import { comparable } from './unanimous'
 import type { PathSeg } from '../state/store'
 
 /**
- * Turns the reviewers' own trees into the per-field verdicts an agreement
- * statistic (or a "show me the disagreements" view) actually consumes: who
- * answered, what category their answer falls in, and whether that amounts to
- * agreement. Pure and read-only — the reconciling itself still happens by hand
- * in Consolidation mode; this only describes where it's needed.
+ * Turns reviewers' trees into per-field verdicts for agreement stats and
+ * disagreement views. Pure/read-only — reconciling still happens by hand in
+ * Consolidation mode.
  */
 
 /** What the reviewers said about one field of one paper, and whether they agree. */
@@ -34,31 +32,16 @@ export interface FieldVerdict {
   /** True when every answering reviewer gave the same category. */
   agree: boolean
   /**
-   * This field sits in a repeated entry that some reviewers recorded and
-   * others did not — one reviewer listed a finding the other simply does not
-   * have.
-   *
-   * A disagreement, and one worth showing, but *not* one `agree` can express:
-   * `agree` is an inter-rater statistic's input, and a unit only one rater
-   * touched carries no agreement information at all (see `agreement.ts`, which
-   * gates on `answeredBy.length >= 2` for exactly that reason). Folding this
-   * into `agree` would let one reviewer's silence count as a rated
-   * disagreement and corrupt every κ in the project. So it travels beside it,
-   * for the UI to colour and the disagreement lists to count.
-   *
-   * Only ever true when at least two reviewers have worked the paper — with a
-   * single opinion recorded, every entry is trivially "one-sided" and the
-   * flag would mean nothing.
+   * True if one reviewer recorded this repeated entry and another did not.
+   * Kept separate from `agree` because a unit only one rater touched carries
+   * no agreement information (see `agreement.ts`'s `answeredBy.length >= 2`
+   * gate) — folding it in would corrupt every κ. Only meaningful with 2+
+   * participants; otherwise every entry is trivially one-sided.
    */
   oneSided: boolean
   /**
-   * How many reviewers have annotated *anything* on this paper — the number
-   * `answeredBy` has to reach for a field to be settled.
-   *
-   * Deliberately not `project.reviewers`: a reviewer who has not started the
-   * paper is not withholding an answer, and measuring against the configured
-   * count would report every field the others filled as contested until the
-   * last seat opens the paper.
+   * Reviewers who annotated anything on this paper — not `project.reviewers`,
+   * since a reviewer who hasn't opened the paper isn't withholding an answer.
    */
   participantCount: number
   /**
@@ -70,11 +53,9 @@ export interface FieldVerdict {
 }
 
 /**
- * Category every answering reviewer shares once the consolidator has marked a
- * field's answers equivalent. Deliberately not a value any real answer could
- * normalise to: `comparable` always trims its output, so no genuine category
- * can start with whitespace, and this one does — it can never coincide with
- * an actual agreement by accident.
+ * Shared category for fields the consolidator marked equivalent. Starts with
+ * whitespace so it can never collide with a real category (`comparable` always
+ * trims its output).
  */
 const MARKED_EQUAL_CATEGORY = ' marked-equal'
 
@@ -83,46 +64,29 @@ export function paperVerdicts(schema: ResolvedDef[], paper: Paper, reviewerCount
   const reviewerIds = Array.from({ length: reviewerCount }, (_, i) => String(i + 1))
   const stored: Record<string, AnnotationValueTree | undefined> = {}
   for (const r of reviewerIds) stored[r] = paper.reviews[r]
-  // Through the recorded matching, so `walk`'s fixed-index reads below mean
-  // "the same entry" — a throwaway lined-up view, never written back. On a
-  // paper Consolidation has not matched yet, `paper.alignment` is empty and
-  // this is the identity, which is the known limitation described below.
+  // Reindexes via the recorded matching so `walk`'s fixed-index reads mean
+  // "the same entry" across reviewers; identity if `paper.alignment` is empty.
   const reviews = alignedReviews(schema, paper.alignment, stored)
 
-  // NOTE (known limitation): the projection above is only as good as
-  // `paper.alignment`, and Consolidation records that lazily — one paper at a
-  // time, while it is open. So the Agreement (⚖) and Disagreements (⚠) views,
-  // which compute over the *whole* project, still compare mismatched entries
-  // on a paper nobody has consolidated yet: two reviewers who listed the same
-  // findings in a different order read as total disagreement, and Cohen's κ
-  // can come out as low as −1. `needsAlignment` (readiness.ts) is what warns
-  // about this, and the banner in `AgreementDialog` renders off it.
-  //
-  // Computing a fresh alignment here instead would fix that but is NOT a valid
-  // fix on its own, and was reverted once: the verdicts would carry slot-space
-  // `canonical`/`index` values from an alignment the consolidated tree was
-  // never grown against, while `paper.equal` and `DisagreementOverview`'s
-  // click-to-jump both resolve against the consolidated tree's own order. The
-  // two diverge exactly on the papers this was meant to help — mis-attributing
-  // a marked-equal field in the very statistic it set out to make honest.
-  //
-  // The remaining fix is to record the matching for every paper rather than
-  // only the opened one; the mapping is now a stored thing, so that is a
-  // scheduling change rather than a redesign.
-  // Whether each reviewer has annotated *anything* on this paper at all —
-  // paper-level, not per-field, matching `readyToConsolidate`'s rule. Used
-  // below to keep a boolean `false` from counting as an answer on a paper a
-  // reviewer never opened (see the boolean branch in `walk`). `hasAnnotations`
-  // itself assumes a well-shaped tree (array-of-instances per field), unlike
-  // the rest of this module which reads raw hand-editable data defensively —
-  // so route through `normalizeTree` first, same as every on-disk load does.
+  // NOTE (known limitation): `paper.alignment` is recorded lazily by
+  // Consolidation, one paper at a time. On a paper nobody has consolidated
+  // yet, the Agreement/Disagreements views (which run over the whole project)
+  // compare mismatched entries — reordered findings can read as total
+  // disagreement and Cohen's κ can hit −1. `needsAlignment` (readiness.ts)
+  // warns about this. Computing a fresh alignment here was tried and reverted:
+  // it produces `canonical`/`index` values the consolidated tree (which
+  // `paper.equal` and click-to-jump resolve against) was never grown against.
+  // Proper fix: record the matching for every paper, not just the opened one.
+
+  // Per-paper (not per-field) annotation presence, matching
+  // `readyToConsolidate`'s rule — needed so a bare `false` on an unopened
+  // paper isn't counted as an answer. `hasAnnotations` assumes a normalized
+  // tree, so route through `normalizeTree` first.
   const touchedBy: Record<string, boolean> = {}
   for (const r of reviewerIds) touchedBy[r] = hasAnnotations(schema, normalizeTree(schema, reviews[r]))
 
-  // Who is actually in the conversation. `oneSided` compares slot membership
-  // against these rather than against every configured reviewer, so a paper
-  // only one person has started does not read as "they disagree with the
-  // reviewer who has not begun".
+  // `oneSided` compares against these, not all configured reviewers, so an
+  // unopened paper doesn't read as "disagreement" with the absent reviewer.
   const participants = reviewerIds.filter((r) => touchedBy[r])
 
   const out: FieldVerdict[] = []
@@ -145,17 +109,14 @@ function walk(
   touchedBy: Record<string, boolean>,
   alignment: StoredAlignment,
   participants: string[],
-  /** The entry this level sits inside was recorded by only some participants,
-   *  which makes everything under it one-sided too — a field of a finding only
-   *  one reviewer wrote down is not a field the others declined to answer. */
+  /** True if an ancestor entry was one-sided — propagates down since a field
+   *  of a finding only one reviewer recorded is one-sided too. */
   parentOneSided: boolean,
 ): void {
   for (const def of defs) {
-    // Post-alignment, index N means the same entry for every reviewer, so the
-    // walk needs as many indices as the most prolific reviewer recorded — the
-    // same "the file is hand-editable" defensiveness as `unanimous.ts`, plus a
-    // floor of 1 so a field nobody has touched at all still gets a verdict
-    // (all-unanswered, not absent).
+    // Post-alignment, index N is the same entry for every reviewer, so walk as
+    // many indices as the most prolific reviewer recorded; floor of 1 so an
+    // untouched field still gets an (all-unanswered) verdict.
     const counts = reviewerIds.map((r) => {
       const raw = reviews[r]?.[def.name]
       return Array.isArray(raw) ? raw.length : 0
@@ -168,11 +129,7 @@ function walk(
       const segs = [...prefix, { name: def.name, index }]
       const canonical = formatPath(segs)
 
-      // An entry some participants contributed to and others did not. Before
-      // the matcher was allowed to leave an entry unpaired, this could not
-      // happen — every entry was forced into a shared slot — so nothing had to
-      // describe it. Now it is the ordinary shape of "you found a finding I
-      // did not", and it is exactly what the consolidator has to decide about.
+      // An entry some participants contributed to and others did not.
       const slot = slots?.[index]
       const oneSided =
         parentOneSided ||
@@ -182,15 +139,9 @@ function walk(
         const values: Record<string, FieldValue | undefined> = {}
         for (const r of reviewerIds) values[r] = reviews[r]?.[def.name]?.[index]?.value
 
-        // Boolean fields have no blank state within a paper a reviewer has
-        // actually worked: `false` is a real answer there, not an absence.
-        // But `normalizeReviews` writes a full skeleton tree of `false`s for
-        // every reviewer on every paper, including ones nobody has opened —
-        // so a bare present `false` only counts as an answer from a reviewer
-        // who has annotated *something* on this paper (`touchedBy`, checked
-        // at paper granularity, not per-field, matching
-        // `readyToConsolidate`'s rule — don't "fix" this into a per-field
-        // check).
+        // `false` is a real answer on a paper the reviewer has worked, but
+        // `normalizeReviews` also writes `false` skeletons for unopened
+        // papers — so gate on `touchedBy` (paper-level, not per-field).
         const answeredBy = reviewerIds.filter((r) =>
           def.type === 'boolean'
             ? touchedBy[r] && values[r] !== undefined && values[r] !== null
@@ -201,12 +152,9 @@ function walk(
         const categories: Record<string, string> = {}
         for (const r of answeredBy) categories[r] = markedEqual ? MARKED_EQUAL_CATEGORY : comparable(values[r])
 
-        // A field fewer than two reviewers answered carries no agreement
-        // information — there is nothing to disagree with. `agree` still comes
-        // out `true` here (0 or 1 distinct category), which is the sensible
-        // default, but callers computing a statistic must gate on
-        // `answeredBy.length >= 2` rather than trust `agree` alone; that is
-        // exactly what the field is for.
+        // Fewer than 2 answers carries no agreement info; `agree` defaults
+        // `true` here, so statistic callers must gate on
+        // `answeredBy.length >= 2` rather than trust `agree` alone.
         const agree = new Set(answeredBy.map((r) => categories[r])).size <= 1
 
         out.push({
@@ -247,10 +195,8 @@ function walk(
   }
 }
 
-/** Human-readable rendering of one reviewer's raw value, type-aware — shared
- *  by every place a `FieldVerdict`'s values reach a reviewer's eyes:
- *  `DisagreementOverview`'s rows, `ConsolidationDialog`'s compare popup, and
- *  the disagreement export. */
+/** Human-readable, type-aware rendering of one reviewer's raw value; shared by
+ *  `DisagreementOverview`, `ConsolidationDialog`'s compare popup, and export. */
 export function formatValue(def: ResolvedDef, value: FieldValue | undefined): string {
   if (value === undefined || value === null) return '— left empty —'
   if (def.type === 'boolean') return value ? 'Yes' : 'No'

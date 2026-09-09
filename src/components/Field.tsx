@@ -47,16 +47,11 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
   const verdict = useConsolidationFieldStatus(canonical)
   const verdictClass = verdict ? ` consolidation-${verdict}` : ''
 
-  // Only Consolidation gets the compare popup — everyone else has one tree to
-  // work with and nothing to reconcile.
+  // Only Consolidation gets the compare popup — everyone else has one tree to reconcile.
   const isConsolidation = useStore((s) => s.currentReviewer === 'consolidation')
   const openConsolidation = useStore((s) => s.openConsolidation)
-  // ...and only once every reviewer has actually had their say on this paper.
-  // A reviewer who has not reached it yet would show as an empty column, which
-  // reads as "they found nothing" rather than "they have not looked" — the
-  // compare popup would be inviting a decision on evidence that does not exist.
-  // Same rule as the paper list's dot, so the two cannot disagree about which
-  // papers are ready.
+  // ...and only once every reviewer has had their say — an unreached reviewer would
+  // show as "found nothing" instead of "hasn't looked". Same rule as the paper list's dot.
   const ready = useStore((s) =>
     s.project && s.currentReviewer === 'consolidation'
       ? (() => {
@@ -81,9 +76,8 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
     </button>
   )
 
-  // "Why did I pick this value" — link a PDF highlight/note as evidence.
-  // Applies to every field type, not just the ones `canGrab` covers below: a
-  // checkbox or dropdown choice deserves a reason just as much as free text.
+  // "Why did I pick this value" — link a PDF highlight/note as evidence. Applies to
+  // every field type, not just `canGrab` ones: a checkbox deserves a reason too.
   const linkCount = useLinkedMarkCount(path, def.name, index)
   const linkBtnRef = useRef<HTMLButtonElement>(null)
   const linkBtn = (
@@ -121,10 +115,8 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
       const n = parseNumber(sel)
       if (n !== null) set(n)
     } else if (def.type === 'year') {
-      // Not `parseNumber`: that grabs the first numeric token in the
-      // selection regardless of size, so a selection like "Vol. 12, 2021"
-      // would read as `12`. `parseYear` looks specifically for a plausible
-      // four-digit year instead.
+      // Not `parseNumber`: "Vol. 12, 2021" would read as `12`. `parseYear` looks
+      // specifically for a plausible four-digit year instead.
       const y = parseYear(sel)
       if (y !== undefined) set(y)
     } else {
@@ -162,10 +154,8 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
           className={`field-input${markClass}${deferredClass}${verdictClass}`}
           value={value === null || value === undefined ? '' : String(value)}
           aria-label={ariaLabel}
-          // A bounded, whole-number control for `year` — the same reason the
-          // validator gives it its own message: "a number" invites a decimal
-          // or a magnitude that is not a plausible year, and this catches the
-          // slip before it is ever saved rather than only reporting it later.
+          // Bounded, whole-number control for `year` — catches an implausible value
+          // or decimal before it's saved, rather than only reporting it later.
           {...(def.type === 'year' ? { min: YEAR_MIN, max: YEAR_MAX, step: 1 } : {})}
           onFocus={confirm}
           onClick={confirm}
@@ -215,10 +205,8 @@ interface FieldLinkPopoverProps {
   onClose: () => void
 }
 
-/** Shows which of the paper's PDF marks are already linked to this field
- *  instance, plus a fold-out picker (search included) to link more. The only
- *  entry point for creating a link — the mark's own popover (`PdfViewer.tsx`)
- *  only shows/unlinks, never adds. */
+/** Shows marks already linked to this field, plus a fold-out picker to link more.
+ *  The only entry point for creating a link — `PdfViewer.tsx`'s popover only shows/unlinks. */
 function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkPopoverProps) {
   const marks = dedupeMarkGroups(useStore((s) => s.currentPdfMarks()))
   const linkMark = useStore((s) => s.linkMarkToField)
@@ -227,62 +215,39 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
   const lastCreatedMarkId = useStore((s) => s.lastCreatedMarkId)
   const lastCreatedMarkAllowedField = useStore((s) => s.lastCreatedMarkAllowedField)
   const setLastCreatedMarkId = useStore((s) => s.setLastCreatedMarkId)
-  // A `Set` for `orderMarksForLinking`'s `.has` checks — rebuilt each render
-  // from the store's array, which is cheap at the sizes a paper's marks ever
-  // reach and avoids a second piece of state to keep in sync.
+  // Rebuilt each render from the store's array — cheap at these sizes, avoids
+  // a second piece of state to keep in sync.
   const sessionCreatedMarkIds = new Set(useStore((s) => s.sessionCreatedMarkIds))
   const canonical = fieldPath(path, name, index)
   const isLinkedNow = (m: (typeof marks)[number]) => m.linkedFields?.some((l) => l.path === canonical) ?? false
 
-  // Whether the mark the reviewer just made (if any) belongs to *this*
-  // field's popover — see `lastCreatedMarkAllowedField`'s own doc comment for
-  // the two cases this allows. Read once, synchronously, from the values the
-  // store already has as this component first renders — before the effect
-  // below has had a chance to act on them — so it doubles as this popover's
-  // initial `pickerOpen` state (below): if a link is about to appear in the
-  // picker, the picker should already be open to show it.
+  // Whether the mark the reviewer just made (if any) belongs to *this* field's
+  // popover — see `lastCreatedMarkAllowedField`. Read once at first render, before
+  // the effect below acts on it, so it also seeds this popover's `pickerOpen` below.
   const [willAutoLink] = useState(
     () => !!lastCreatedMarkId && (lastCreatedMarkAllowedField === null || lastCreatedMarkAllowedField === canonical),
   )
 
-  // Which marks were already linked to this field *before* this popover
-  // opened — the top list only ever shows these, so a mark linked during
-  // this session (by hand, or by the auto-link below) does not jump up into
-  // it; it stays in the picker below, its own button flipped to "×", until
-  // the reviewer closes and reopens. Computed once, from `marks` as they
-  // stood on the very first render — deliberately *before* the auto-link
-  // effect has run, so a mark it is about to link is excluded here too.
+  // Marks already linked before this popover opened. The top list only shows these,
+  // so a mark linked this session stays in the picker (button flipped to "×") until
+  // reopened. Computed once, before the auto-link effect runs, so it's excluded too.
   const [initiallyLinkedIds] = useState(() => new Set(marks.filter(isLinkedNow).map((m) => m.id)))
 
   const [pickerOpen, setPickerOpen] = useState(willAutoLink)
   const [search, setSearch] = useState('')
 
-  // Auto-link the highlight/note the reviewer just made, once — see
-  // `lastCreatedMarkId`'s own doc comment. Finishing a mark and immediately
-  // opening a field to link it (or typing the value in first) is meant to
-  // need no search or click at all — but see `willAutoLink` above for why it
-  // still doesn't jump to the top list this time around.
-  // `linkMarkToField` already no-ops on an unknown id or an existing link,
-  // so nothing here needs to check either case first.
+  // Auto-link the mark the reviewer just made, once — see `lastCreatedMarkId`.
+  // `linkMarkToField` already no-ops on an unknown id or existing link.
   useEffect(() => {
     if (willAutoLink) linkMark(lastCreatedMarkId!, path, name, index)
     setLastCreatedMarkId(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Horizontally centered on the annotation panel — not the trigger button —
-  // at 95% of the panel's width; vertically, directly under the button that
-  // opened it (its bottom edge + 1px). Both seeded once at open, not kept in
-  // sync afterward, so a manual resize via the CSS `resize: horizontal`
-  // isn't fought on the next render. `position: fixed` plus a
-  // `translateX(-50%)` in the CSS is what turns the seeded `left` into the
-  // popover's horizontal center rather than its corner.
-  //
-  // Because it is `fixed`, anything hanging below the viewport is simply
-  // unreachable — the page behind it scrolls, the popover doesn't. So for a
-  // field near the bottom of the window we flip it above the button, and
-  // either way cap its height to the room actually available; the popover's
-  // own `overflow: auto` then makes the overflow scrollable.
+  // Centered on the annotation panel (not the trigger button), under the button that
+  // opened it. Seeded once at open so a manual CSS resize isn't fought on rerender.
+  // Flips above the button when there isn't room below; height capped either way,
+  // with overflow scrollable via the popover's own `overflow: auto`.
   const [placement] = useState<React.CSSProperties | undefined>(() => {
     const panel = document.querySelector('.panel.annotations')
     const button = triggerRef.current
@@ -302,18 +267,12 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
     return { left, width, top: buttonRect.bottom + 1, maxHeight: below }
   })
 
-  // Dismiss on Escape or an outside mousedown — same ancestry-checked pattern
-  // `PdfViewer.tsx`'s popovers use, since `mousedown` fires before `click` and
-  // a `stopPropagation` on click alone wouldn't beat it.
+  // Dismiss on Escape or an outside mousedown — `mousedown` fires before `click`,
+  // so a `stopPropagation` on click alone wouldn't beat it (same pattern as PdfViewer.tsx).
   useEffect(() => {
     const dismiss = (e?: MouseEvent) => {
-      // `.link-btn` here is what stops a field's own trigger from reopening
-      // the popover it just closed: mousedown closes it, React flushes
-      // before the `click` fires, and the render-captured `linkPopoverOpen`
-      // used by that `onClick` handler is then already false. A sibling
-      // field's popover opening and this one closing is now handled by the
-      // shared `openLinkPopoverField` id making this Field's selector go
-      // false and unmount — not by this dismisser.
+      // `.link-btn` stops the trigger from reopening the popover it just closed via
+      // this same mousedown, before its own `onClick` can fire.
       if (e && (e.target as HTMLElement | null)?.closest('.field-link-popover, .link-btn')) return
       onClose()
     }
@@ -329,29 +288,19 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // The top list only ever shows a mark that was *both* linked before this
-  // popover opened *and* is still linked now — unlinking one still drops it
-  // immediately (that direction was never the problem); only newly-linked
-  // marks are held back from appearing here, by `initiallyLinkedIds`.
+  // Only marks both initially-linked and still linked now — unlinking still drops
+  // immediately; only newly-linked marks are held back by `initiallyLinkedIds`.
   const topList = marks.filter((m) => initiallyLinkedIds.has(m.id) && isLinkedNow(m))
-  // Everything else, in the picker: whatever wasn't linked when this popover
-  // opened, whether or not it has been linked since — see `topList` above.
-  // Recently-added first (a reviewer who just made a mark is almost always
-  // about to link it), then everything else in page order — see
-  // `orderMarksForLinking`. Fixed regardless of link state, so linking or
-  // unlinking one during this session never reshuffles the picker either:
-  // only its own Link/× button changes.
+  // Everything not initially linked, recently-added first then page order (see
+  // `orderMarksForLinking`) — fixed regardless of link state, so linking/unlinking
+  // during this session never reshuffles the picker.
   const candidates = orderMarksForLinking(
     marks.filter((m) => !initiallyLinkedIds.has(m.id)),
     sessionCreatedMarkIds,
   )
-  // Not just "the first 3 of `candidates`" — with fewer than 3 session marks,
-  // that would misclassify however many page-ordered marks fill the rest of
-  // the first 3 slots as pinned too. `orderMarksForLinking` puts every pinned
-  // mark before every page-ordered one, so filtering down to this session's
-  // own marks and taking the first 3 of *those* recovers exactly the pinned
-  // set, however many (0–3) of them there are, even when this session made
-  // more than 3 marks in total and the rest ended up in the page-ordered tail.
+  // Not just "the first 3 of `candidates`": with fewer than 3 session marks that would
+  // misclassify page-ordered marks as pinned too. Filtering to session marks first
+  // recovers exactly the pinned set regardless of how many `orderMarksForLinking` pinned.
   const recentIds = new Set(
     candidates.filter((m) => sessionCreatedMarkIds.has(m.id)).slice(0, 3).map((m) => m.id),
   )
@@ -360,16 +309,14 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
     ? candidates.filter((m) => (m.comment || m.text || '').toLowerCase().includes(needle))
     : candidates
 
-  // The row where the "recently added" group gives way to the page-ordered
-  // rest, so a little extra space can mark the seam — only meaningful when
-  // both groups actually survive the search filter.
+  // Where "recently added" gives way to page-ordered rest, for a visual seam —
+  // only meaningful when both groups survive the search filter.
   const gapBeforeIndex = filteredCandidates.findIndex(
     (m, i) => i > 0 && recentIds.has(filteredCandidates[i - 1].id) && !recentIds.has(m.id),
   )
 
-  // Clicking a mark's own text jumps to it in the PDF (`PdfViewer` scrolls to
-  // and briefly flashes it) without linking/unlinking or closing this popover
-  // — a way to see which mark is which before committing to one.
+  // Clicking a mark's text jumps to it in the PDF without linking/unlinking or
+  // closing the popover — a way to see which mark is which before committing.
   const snippetOf = (m: (typeof marks)[number]) => (
     <button
       type="button"
@@ -472,7 +419,6 @@ function StringField({ value, onChange, className = '', onInteract, ariaLabel }:
   const ref = useRef<HTMLTextAreaElement>(null)
   const [expanded, setExpanded] = useState(false)
 
-  // Grow to fit content (capped) while focused; stay collapsed otherwise.
   const resize = () => {
     const el = ref.current
     if (!el) return
@@ -485,7 +431,6 @@ function StringField({ value, onChange, className = '', onInteract, ariaLabel }:
     el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`
   }
 
-  // Recompute when focus state or the external value changes.
   useEffect(resize, [expanded, value])
 
   return (

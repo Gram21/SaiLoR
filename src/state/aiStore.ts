@@ -11,38 +11,24 @@ import type { LlmAnswer, LlmConfig, ModelInfo, Suggestion } from '../llm/types'
 import { extractPdfText } from '../model/pdfText'
 
 /**
- * State for the AI-assisted annotation flow.
- *
- * It is kept out of the main store for the same reason the project editor is:
- * this is a self-contained mode with its own lifecycle, and nothing in the
- * annotation path should have to know it exists. The one place the two meet is
- * `apply()`, which hands the reviewer-approved values to `applyAiSuggestions` —
- * the main store's single-undo-step batch write.
+ * State for the AI-assisted annotation flow, kept out of the main store as
+ * its own self-contained mode. `apply()` is the one bridge: it hands
+ * reviewer-approved values to `applyAiSuggestions`, the main store's
+ * single-undo-step batch write.
  */
 
 const SELECTED_KEY = 'slr.llm.selected'
 
-/**
- * The output-length budget for "Verify setup"'s one-word test request. Well
- * above what a trivial prompt should need even with reasoning overhead (a
- * reported real-world failure spent ~100 tokens reasoning before running out),
- * comfortably below `DEFAULT_MAX_TOKENS` (the real run's budget) since this is
- * only a connectivity smoke test. See the comment on `verifyConfig` below.
- */
+/** Output budget for the "Verify setup" smoke test — high enough to survive
+ * reasoning-model overhead, still well below `DEFAULT_MAX_TOKENS`. */
 const VERIFY_MAX_TOKENS = 2048
 
-/**
- * How long a fetched model list is trusted before `fetchModels` goes back to
- * the provider on its own. A provider's catalog changes on the order of
- * weeks, not minutes, so this exists only to make reopening the settings
- * dialog instant, not to track new releases promptly — an explicit refresh
- * (`opts.force`) always bypasses it.
- */
+/** How long a fetched model list is trusted before `fetchModels` refetches.
+ * Just to make reopening settings instant, not to catch new releases quickly
+ * — `opts.force` bypasses it. */
 const MODELS_TTL_MS = 60 * 60 * 1000
 
-/** How many list-models pages `fetchModels` will walk before giving up. Every
- * provider's real catalog fits well within this; it exists only as a backstop
- * against a provider that never sets `nextCursor` to undefined. */
+/** Backstop page limit for `fetchModels`, in case a provider never clears `nextCursor`. */
 const MAX_MODEL_PAGES = 10
 
 export type AiPhase =
@@ -75,14 +61,9 @@ interface AiState {
 
   phase: AiPhase
   /**
-   * What the in-flight (or just-finished) run was *for*: the paper, the
-   * reviewer seat, and the target that answered.
-   *
-   * Recorded when the run starts because every one of them can change while it
-   * is in flight — the dialog stays open, and the paper list, the seat picker
-   * and the target picker all stay usable. Applying reads these rather than
-   * "whatever is selected now", so a reply about paper A can never be written
-   * onto paper B.
+   * What the in-flight (or just-finished) run was *for*. Recorded at run
+   * start because the paper/reviewer/target pickers stay usable while a run
+   * is in flight — applying must read this, not "whatever is selected now".
    */
   runFor: { paperId: string; reviewer: string | null; provider: string; model: string } | null
   error: string | null
@@ -106,18 +87,12 @@ interface AiState {
   saveConfig: (config: LlmConfig, apiKey?: string) => Promise<void>
   deleteConfig: (id: string) => Promise<void>
   verifyConfig: (config: LlmConfig, apiKey?: string) => Promise<string>
-  /**
-   * "Ask the API yourself which models are available": saves `config` (like
-   * `verifyConfig`, a key has to be stored before anything can use it), then
-   * walks every page of the provider's list-models endpoint. Cached per
-   * config id for `MODELS_TTL_MS`; pass `force: true` to bypass that.
-   */
+  /** Saves `config` (a key must be stored before it can be used) then walks
+   * the provider's list-models endpoint. Cached per config id for
+   * `MODELS_TTL_MS`; pass `force: true` to bypass. */
   fetchModels: (config: LlmConfig, apiKey?: string, opts?: { force?: boolean }) => Promise<void>
-  /**
-   * Drop a target's cached model list. A target's id is stable across edits
-   * to its provider or base URL, but the list a previous fetch found is not —
-   * it belongs to whichever endpoint was configured *then*.
-   */
+  /** Drop a target's cached model list — it belongs to whichever endpoint was
+   * configured when it was fetched, not the id's current provider/URL. */
   clearModels: (id: string) => void
 
   run: () => Promise<void>
@@ -160,16 +135,10 @@ export const useAiStore = create<AiState>()(
       const app = useStore.getState()
       const paper = app.project?.papers.find((p) => p.id === app.currentPaperId)
       if (!app.project || !paper) return
-      // The AI button is already disabled unless this holds; re-checking here
-      // is a second line of defense, not the primary gate — see `aiUnlocked` in
-      // store.ts and the hidden gesture in Toolbar.tsx.
+      // Second line of defense; the AI button is already disabled unless this holds (see `aiUnlocked` in store.ts).
       if (!app.aiUnlocked || !app.project.aiEnabled) return
-      // Multi-reviewer, nobody picked yet: there is no active tree to propose
-      // values into (the button is disabled in this state too, see AnnotationPanel).
+      // Multi-reviewer with nobody picked: no active tree to propose values into.
       if (app.project.reviewers > 1 && app.currentReviewer === null) return
-      // Whichever reviewer is active is who the AI proposes values *for* —
-      // their own empty fields, not the consolidated result's, unless they
-      // are Consolidation (see `currentTree`).
       const tree = currentTree(app.project, app.currentReviewer, paper)
       if (!tree) return
 
@@ -231,17 +200,10 @@ export const useAiStore = create<AiState>()(
     },
 
     /**
-     * Send the smallest request that still reliably gets an answer, so the user
-     * finds out the key, model name or URL is wrong *here* rather than after
-     * waiting on a full paper. Returns the model's reply; throws with the
-     * provider's own message.
-     *
-     * "Smallest" is not `max_tokens: 1` or similar: on a reasoning-capable model
-     * the budget covers hidden reasoning tokens too, and a very tight cap can be
-     * spent entirely on reasoning before the model ever writes "OK" — the model
-     * comes back with no usable text and a truncation flag, not an error. See
-     * `DEFAULT_MAX_TOKENS` in providers.ts. `VERIFY_MAX_TOKENS` only needs to
-     * clear that bar, not match the real run's budget, so it stays well below it.
+     * Send a minimal request so a bad key/model/URL surfaces here rather than
+     * after a full paper run. `max_tokens` can't be tiny: on a reasoning model
+     * a too-tight cap gets spent entirely on hidden reasoning before the reply
+     * ("OK") is ever written, coming back truncated rather than erroring.
      */
     verifyConfig: async (config, apiKey) => {
       // The key must be stored before it can be used: the renderer never holds it.
@@ -282,8 +244,7 @@ export const useAiStore = create<AiState>()(
         s.modelsError[id] = null
       })
       try {
-        // Same requirement as verifyConfig: the key has to be stored before
-        // the platform will use it for anything.
+        // Same requirement as verifyConfig: key must be stored before use.
         await get().saveConfig(config, apiKey)
         const saved = get().configs.find((c) => c.id === id) ?? config
 
@@ -291,9 +252,7 @@ export const useAiStore = create<AiState>()(
         let cursor: string | undefined
         for (let page = 0; page < MAX_MODEL_PAGES; page++) {
           const req = buildModelsRequest(saved, cursor)
-          // Null means the provider handed back a pagination cursor pointing
-          // off its own origin; keep the pages already fetched rather than
-          // follow it with the API key attached.
+          // Null: cursor points off-origin — don't follow it with the API key attached.
           if (!req) break
           const res = await getPlatform().callLlm(req)
           if (!res.ok) throw new Error(extractError(saved.provider, res.status, res.body))
@@ -346,14 +305,9 @@ export const useAiStore = create<AiState>()(
         }
       })
 
-      // Held in a local as well as the module slot, so this run can tell
-      // whether *it* was the one aborted and whether it is still the current
-      // run when it finishes. Reading the module slot alone got both wrong:
-      // `cancel` nulled it before the rejection arrived, so the abort check
-      // below saw `undefined` and reported "AbortError: aborted" as a failure
-      // instead of returning quietly to setup — and the `finally` cleared
-      // whatever was in the slot, including a *newer* run's controller, which
-      // left that run uncancellable.
+      // Kept in a local too: reading only the module slot broke both the abort
+      // check (cancel nulls it before rejection arrives) and cleanup (finally
+      // could clear a newer run's controller instead of this one's).
       const myController = new AbortController()
       controller = myController
       const started = Date.now()
@@ -369,9 +323,7 @@ export const useAiStore = create<AiState>()(
           s.elapsed = 0
         })
 
-        // The paper's bytes come from the same URL the viewer renders, so this
-        // works unchanged in both runtimes (slr-file:// in Electron, blob:/http
-        // in the browser).
+        // Same URL the viewer renders, so this works unchanged in both runtimes.
         const src = await getPlatform().getPdfSource(paper.pdf, app.saveHandle ?? { kind: 'download' })
         let bytes: ArrayBuffer
         try {
@@ -404,9 +356,8 @@ export const useAiStore = create<AiState>()(
           paperText = (await extractPdfText(bytes)).text
         }
 
-        // The system prompt differs by delivery: with extracted text the model must
-        // be warned the extraction is lossy, or it will confidently reconstruct a
-        // mangled table.
+        // With extracted text the model must be warned extraction is lossy, or
+        // it will confidently reconstruct a mangled table.
         const system = buildSystemPrompt(app.project.schema, get().targets, delivery)
         const req =
           delivery === 'text'
@@ -417,9 +368,8 @@ export const useAiStore = create<AiState>()(
                 filename: paper.pdf.split('/').pop() ?? 'paper.pdf',
               })
 
-        // A stale run (superseded by a newer one) still runs to completion so its
-        // in-flight request can be discarded cleanly, but it must not visibly move
-        // `phase` backwards over the newer run's, nor stop the newer run's ticker.
+        // A superseded run still completes (for clean discard) but must not move
+        // `phase` backwards over the newer run's, nor touch its ticker.
         if (controller === myController) set((s) => { s.phase = 'calling' })
         const res = await getPlatform().callLlm(req, myController.signal)
         if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
@@ -427,10 +377,8 @@ export const useAiStore = create<AiState>()(
         if (controller === myController) set((s) => { s.phase = 'parsing' })
         const json = safeJson(res.body)
         const text = extractText(config.provider, json)
-        // A truncated, empty answer would otherwise read as "the model proposed
-        // nothing" (a legitimate outcome parseAnswer also produces) rather than
-        // "the model ran out of budget before answering" — a very different
-        // problem with a very different fix. See DEFAULT_MAX_TOKENS in providers.ts.
+        // Distinguish "model proposed nothing" from "ran out of budget before
+        // answering" — same empty text, different problem and fix.
         if (!text.trim() && wasTruncated(config.provider, json)) {
           throw new Error(
             `${PROVIDERS[config.provider].label} used its whole reply budget on internal ` +
@@ -441,17 +389,13 @@ export const useAiStore = create<AiState>()(
         const answer = parseAnswer(app.project.schema, text)
 
         if (controller === myController) stopTicker()
-        // A superseded run must not publish its answer. `runFor` already points
-        // at the newer run, so these rows would be reviewed and applied against
-        // *its* paper — the wrong-paper fabrication that `runFor` exists to
-        // prevent, reached through a different door. Discard silently: the run
-        // the reviewer is watching is still going.
+        // A superseded run must not publish: `runFor` already points at the
+        // newer run, so these rows would apply to the wrong paper. Discard silently.
         if (controller !== myController) return
         set((s) => {
           s.answer = answer
-          // Everything is pre-ticked: the reviewer's job is to *remove* what is
-          // wrong, which is the direction that makes a careless click safe-ish —
-          // and nothing is written until they press Apply.
+          // Pre-ticked: reviewer removes what's wrong rather than adding what's
+          // right, and nothing is written until Apply.
           s.rows = answer.fields.map((suggestion) => ({ suggestion, checked: true }))
           s.phase = 'review'
         })
@@ -472,9 +416,8 @@ export const useAiStore = create<AiState>()(
     },
 
     cancel: () => {
-      // Abort only. Clearing the slot here is what made the run's own catch
-      // unable to tell an abort from a failure; the run clears it itself when
-      // it settles, if it is still the current one.
+      // Abort only — clearing the slot here would stop the run's own catch
+      // from telling an abort from a failure. The run clears it itself.
       controller?.abort()
       stopTicker()
       set((s) => {
@@ -498,12 +441,8 @@ export const useAiStore = create<AiState>()(
       const chosen = get().rows.filter((r) => r.checked).map((r) => r.suggestion)
       const runFor = get().runFor
       if (!runFor) return
-      // The target that actually answered, not whichever is selected in the
-      // picker now — switching it between the reply and Apply used to record
-      // the wrong provider and model in `aiUsage`, and deleting it recorded
-      // "unknown". That field is the paper's disclosure of how it was
-      // annotated, so a wrong value there is a research-integrity problem, not
-      // a cosmetic one.
+      // Target that actually answered, not whichever is selected now — this
+      // feeds `aiUsage`, the paper's disclosure of how it was annotated.
       const usage = { provider: runFor.provider, model: runFor.model }
       const result = useStore.getState().applyAiSuggestions(chosen, usage, {
         paperId: runFor.paperId,

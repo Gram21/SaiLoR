@@ -7,24 +7,20 @@ import { conflictId, type MergeTree } from './merge'
 import { parseYear } from '../model/year'
 
 /**
- * Field-level review of what changed **locally**, for the commit panel — a
- * genuinely different question from `merge.ts`'s three-way reconciliation of
- * two *divergent* copies. Here there is one side that changed (the working
- * tree) and one side that did not (HEAD), so every difference is something
- * the reviewer decides about, not something that might already resolve
- * itself. `merge.ts` is still the right model to borrow the *shape* of
- * (canonical paths, per-tree identity, a paper-metadata field list) — just
- * not its `merge3` rule, which has no "which side changed" question to
- * answer when only one side ever does.
+ * Field-level review of what changed **locally**, for the commit panel —
+ * unlike `merge.ts`'s three-way reconciliation of two divergent copies, only
+ * one side here ever changes (working vs HEAD), so every difference is a
+ * reviewer decision, not something that might resolve itself. Borrows
+ * `merge.ts`'s shape (canonical paths, per-tree identity) but not its
+ * `merge3` rule.
  */
 
 export type Disposition = 'use' | 'ignore' | 'discard'
 
 /** One field whose value differs between HEAD and the working tree. */
 export interface FieldChange {
-  /** Stable identity — the decision map's key and the row's React key. Same
-   *  `conflictId` shape `merge.ts` uses, so the two are never accidentally
-   *  comparable but are recognisably siblings. */
+  /** Decision-map key and React row key. Uses `merge.ts`'s `conflictId`
+   *  shape so the two are recognisably siblings but never comparable. */
   id: string
   paperId: string
   paperTitle: string
@@ -38,17 +34,16 @@ export interface FieldChange {
   options?: string[]
   headValue: FieldValue
   workingValue: FieldValue
-  /** Other canonical paths, under the same paper and tree, whose value
-   *  follows this row's disposition instead of getting a row of its own —
-   *  see `PAPER_META_BUNDLES`. Empty for every ordinary field. */
+  /** Other canonical paths, same paper and tree, that follow this row's
+   *  disposition instead of getting a row of their own — see
+   *  `PAPER_META_BUNDLES`. Empty for every ordinary field. */
   bundled: string[]
 }
 
 export type PaperChangeKind = 'added' | 'removed'
 
-/** A whole paper present on only one side — reviewed as one unit, the same
- *  way `merge.ts` treats a paper `mergePapers` cannot line up field by field
- *  because the other side has nothing to compare it against. */
+/** A whole paper present on only one side, reviewed as one unit since
+ *  there's nothing on the other side to line it up field by field against. */
 export interface PaperChange {
   id: string
   paperId: string
@@ -62,17 +57,14 @@ export interface DetectedChanges {
 }
 
 /**
- * A paper-level field whose *meaning* is entirely owned by another field, so
- * it never gets a row of its own: `abstractFromPdf` is a disclosure about
- * `abstract` ("this text is a guess"), not an independent fact a reviewer
- * chooses among. Its own value simply follows whatever disposition the
- * primary field gets. Keyed by the primary's canonical.
+ * Paper-level fields whose *meaning* is owned by another field, so they never
+ * get a row of their own: `abstractFromPdf` is a disclosure about `abstract`,
+ * not an independent fact a reviewer picks. Its value just follows whatever
+ * disposition the primary field gets. Keyed by the primary's canonical.
  *
- * If the primary's value happens not to have changed while a bundled one
- * did (in practice, only `abstractFromPdf` flipping on its own — an edit path
- * this codebase doesn't have, but a hand-edited file could still produce),
- * `detectFieldChanges` gives the bundled field a row of its own instead of
- * silently dropping it — see the fallback there.
+ * If the primary hasn't changed but a bundled field has (only possible via a
+ * hand-edited file), `detectFieldChanges` gives the bundled field its own row
+ * instead of dropping it — see the fallback there.
  */
 const PAPER_META_BUNDLES: Record<string, string[]> = {
   abstract: ['abstractFromPdf'],
@@ -83,13 +75,10 @@ function abstractFromPdfLabel(value: FieldValue): FieldValue {
 }
 
 /** Paper-level fields eligible for field-level review, in display order.
- *  `id` is identity, not a field; `annotations`/`reviews`/`aiUsage`/`equal`/
- *  `finished`/`reviewsFinished`/`extra` are handled separately below
- *  (`aiUsage` and `equal` are system bookkeeping, and `finished` is a
- *  statement about a whole paper rather than a value a reviewer picks among
- *  two candidates, so none of them are split out as their own rows — they
- *  simply carry over with whichever disposition the paper they belong to ends
- *  up with as a whole, via the bookkeeping loop in `composeContents`). */
+ *  `id`, `annotations`/`reviews`, and bookkeeping fields (`aiUsage`, `equal`,
+ *  `finished`, `reviewsFinished`, `extra`) are excluded — they carry over with
+ *  whichever disposition the whole paper ends up with, via the bookkeeping
+ *  loop in `composeContents`. */
 const PAPER_META_FIELDS: {
   canonical: string
   label: string
@@ -111,12 +100,10 @@ const PAPER_META_FIELDS: {
   { canonical: 'pdf', label: 'PDF path', type: 'string', get: (p) => p.pdf },
 ]
 
-/** One rendered value at one revision, `emptyValue`-normalized — the same
- *  "absent reads as empty" rule `merge.ts`'s `valueAt` applies, for the same
- *  reason: an instance that is not there and one that is there holding the
- *  schema's own empty value must compare equal, or a field the working tree
- *  never reached would look like a change against one HEAD explicitly wrote
- *  as empty. */
+/** One rendered value at one revision, `emptyValue`-normalized (same rule as
+ *  `merge.ts`'s `valueAt`): a missing instance must compare equal to one
+ *  holding the schema's empty value, or an untouched field would look changed
+ *  against HEAD's explicit empty write. */
 function valueAt(def: ResolvedDef, inst: InstanceNode | undefined): FieldValue {
   return inst && 'value' in inst ? (inst.value ?? emptyValue(def.type)) : emptyValue(def.type)
 }
@@ -141,10 +128,8 @@ function diffTree(
   for (const def of defs) {
     const hArr = arrOf(headTree, def.name)
     const wArr = arrOf(workingTree, def.name)
-    // The working tree's own instance count drives the walk — an instance
-    // only HEAD has (the working tree pruned a trailing one away) still needs
-    // a comparison, so this takes whichever side has more, the same way
-    // `merge.ts`'s three-way walk does.
+    // Take whichever side has more instances, so a trailing one pruned only on
+    // the working side still gets compared (same as merge.ts's three-way walk).
     const count = Math.max(hArr.length, wArr.length, Math.max(def.min, 1))
     for (let i = 0; i < count; i++) {
       const segs: RawSeg[] = [...prefix, { name: def.name, index: i }]
@@ -206,15 +191,12 @@ function diffPaperMeta(head: Paper, working: Paper, out: FieldChange[]): void {
       const hiddenChange = byCanonical.get(h)
       if (!hiddenChange) continue // that field didn't change — nothing to fold in
       if (primaryChange) {
-        // The common case: fold the hidden field into the primary's row and
-        // drop the hidden field's own row from the output entirely.
+        // Fold the hidden field into the primary's row, dropping its own row.
         primaryChange.bundled.push(h)
         byCanonical.delete(h)
       }
-      // No primary row to fold into (the primary's value happens not to have
-      // changed) — leave the hidden field's own row in place. See
-      // PAPER_META_BUNDLES's doc comment: this path exists for a hand-edited
-      // file, not anything the app's own code produces.
+      // else: no primary row to fold into — leave the hidden field's own row
+      // (see PAPER_META_BUNDLES doc comment).
     }
   }
 
@@ -226,15 +208,12 @@ function diffPaperMeta(head: Paper, working: Paper, out: FieldChange[]): void {
  * panel's review UI. Returns `null` when `head` and `working` disagree on
  * anything that reshapes the file (`config.schema`, `config.reviewers`,
  * `config.ai`, `config.screening`, `version`, `title`, `schemaInfo`,
- * `provenance`, `protocol`, or a root `extra` key): once the schema itself is
- * different, "which fields changed" is not a question with a field-level
- * answer any more than it is for `merge.ts`'s three-way merge, which refuses
- * the same differences for the same reason. `provenance` and `protocol` are
- * here for a different reason than the rest — each is a nested record no
- * `FieldConflict` shape can express, not something that reshapes the file. The
- * caller falls back to the plain file-level commit for a project file in that
- * state.
- *
+ * `provenance`, `protocol`, or root `extra`): once the schema differs,
+ * "which fields changed" has no field-level answer, same as `merge.ts`'s
+ * three-way merge refusing for the same reason. `provenance`/`protocol` are
+ * excluded for a different reason — each is a nested record no
+ * `FieldConflict` shape can express. The caller falls back to a plain
+ * file-level commit in that state.
  */
 export function detectFieldChanges(head: Project, working: Project): DetectedChanges | null {
   const structural =
@@ -278,11 +257,8 @@ export function detectFieldChanges(head: Project, working: Project): DetectedCha
     }
   }
 
-  // Field-level diffing only makes sense for a paper present on both sides —
-  // one only one side has is already fully covered by the paper-level rows
-  // above, and paper-level `extra` is intentionally not field-diffed (the
-  // same scope line PAPER_META_FIELDS draws: it rides along with the paper,
-  // via the bookkeeping loop in `composeContents`).
+  // Only papers present on both sides get field-level diffing; one-sided
+  // papers are already covered by the paper-level rows above.
   for (const p of working.papers) {
     const h = headById.get(p.id)
     if (!h) continue
@@ -327,28 +303,16 @@ function containerAt(root: AnnotationValueTree, path: RawSeg[]): AnnotationValue
 }
 
 /**
- * Grow `target` so every repeatable node has at least as many instances as the
- * matching node in `source`, padding with empty `makeInstance` skeletons and
- * recursing into children. `committed` starts from HEAD (`normalizeTree` sized
- * each list to the schema minimum), so a reviewer-added instance — one the
- * working tree has but HEAD does not — has no slot for its "use" value to land
- * in; `writeAnnotationValue` would silently no-op and the added answer would
- * be dropped from the commit *and* left permanently uncommittable (the next
- * scan re-detects it, so "use" no-ops again forever). Growing to the working
- * shape first gives every used value a home.
- *
- * Padding never fabricates a *value* — a padded slot is an empty skeleton. A
- * padded slot that ends up unused is usually trailing and prunes away on
- * serialize, but not always: choosing "use" on `Findings[2]` while ignoring
- * `Findings[1]` leaves slot 1 empty and *interior*, and `pruneTree` keeps
- * interior gaps on purpose (position is meaningful — see its doc comment). The
- * committed file then shows a blank "Finding #2", which is the honest reading
- * of "commit the third finding, not the second" on a positional list; the
- * alternative, sliding #3 up, would silently re-point an answer.
- *
- * `max` is respected, so a working tree that somehow exceeds the schema bound
- * (a hand-edit, or a `max` lowered under existing data) cannot grow the
- * committed tree past it.
+ * Grow `target` so every repeatable node has at least as many instances as
+ * `source`, padding with empty `makeInstance` skeletons. `committed` starts
+ * from HEAD (sized to schema minimum), so a reviewer-added instance has no
+ * slot to write "use" into without this — `writeAnnotationValue` would
+ * silently no-op and the value would be dropped and permanently
+ * uncommittable. Padding never fabricates a value: an unused padded slot that
+ * ends up interior (e.g. using Findings[2] but ignoring [1]) is left as a
+ * deliberate blank rather than sliding later entries up and re-pointing an
+ * answer — see `pruneTree`. `max` is respected so an over-`max` working tree
+ * can't grow the committed one past the bound.
  */
 function growTreeToSource(
   defs: ResolvedDef[],
@@ -421,10 +385,8 @@ function writePaperMeta(draft: Project, paperId: string, canonical: string, valu
       break
     }
     case 'abstractFromPdf':
-      // Never written directly — always riding along with `abstract`'s own
-      // disposition (PAPER_META_BUNDLES), so `applyField` below writes it via
-      // the *paper's* raw boolean, not this row's own display string value
-      // (`abstractFromPdfLabel`'s prose is for showing, not round-tripping).
+      // Never written directly — rides along with `abstract`'s disposition
+      // (PAPER_META_BUNDLES); the row's display string isn't round-tripped.
       break
     case 'pdf':
       paper.pdf = value === null ? '' : String(value)
@@ -432,10 +394,9 @@ function writePaperMeta(draft: Project, paperId: string, canonical: string, valu
   }
 }
 
-/** Writes `fc`'s own value from `source` ('head' or 'working') into `draft` —
- *  not its bundled fields, which need the *source* `Project` itself
- *  (`abstractFromPdf`'s real boolean is never on `FieldChange`, only its
- *  display string is) and are handled by the caller, `applyFieldWithBundle`. */
+/** Writes `fc`'s own value from `source` into `draft` — not its bundled
+ *  fields, which need the source `Project` itself and are handled by the
+ *  caller, `applyFieldWithBundle`. */
 function applyField(draft: Project, fc: FieldChange, source: 'head' | 'working'): void {
   const value = source === 'head' ? fc.headValue : fc.workingValue
   if (fc.tree.kind === 'paper') {
@@ -446,27 +407,20 @@ function applyField(draft: Project, fc: FieldChange, source: 'head' | 'working')
 }
 
 /**
- * The two outputs the commit panel needs: the content that gets committed,
- * and the content the working-tree file ends up holding afterward. Built
- * from `head` and `working` (never from `applyField` writing into a half-built
- * draft alone), because the paper-level bundle for `abstract` needs the raw
- * `abstractFromPdf` boolean, which only the source `Project`s actually have.
+ * The two outputs the commit panel needs: the committed content, and what the
+ * working-tree file holds afterward. Built from `head`/`working` directly
+ * (not from a half-built draft) because the `abstract` bundle needs the raw
+ * `abstractFromPdf` boolean, which only the source `Project`s have.
  *
- * The rule per disposition, applied uniformly across a field's value, a
- * paper added locally, or a paper removed locally:
- *  - **use**: the committed content gets the new value/paper; the working
- *    file is unaffected (it already has it).
- *  - **ignore**: the committed content keeps HEAD's value/paper (an added
- *    paper is left out, a removed paper's deletion is not committed); the
- *    working file is unaffected — the change stays there, uncommitted, to be
- *    offered again next time.
- *  - **discard**: the committed content keeps HEAD's value/paper, *and* the
- *    working file is rewritten to match — an added paper is deleted from it,
- *    a removed paper is restored to it, a changed field's local edit is
- *    erased. This is why discarding is a real write to the file on disk, not
- *    merely "leave it out of this commit" — the caller only performs it once
- *    the reviewer presses Commit, never as a side effect of picking it in the
- *    list (see GitDialog.tsx).
+ * Disposition rules, applied uniformly to a field value or an added/removed
+ * paper:
+ *  - **use**: committed gets the new value/paper; working is unaffected.
+ *  - **ignore**: committed keeps HEAD's value/paper; working is unaffected
+ *    (change stays there, offered again next time).
+ *  - **discard**: committed keeps HEAD's value/paper, and working is
+ *    rewritten to match (local edit erased). Only performed when the
+ *    reviewer presses Commit, not as a side effect of picking it in the list
+ *    (see GitDialog.tsx).
  */
 export function composeContents(
   head: Project,
@@ -489,12 +443,9 @@ export function composeContents(
     )
     if (removeIds.size > 0) draft.papers = draft.papers.filter((p) => !removeIds.has(p.id))
 
-    // Paper-level bookkeeping (finished flags, PDF marks, equality marks, AI
-    // usage, extra) has no field-review row of its own — see PAPER_META_FIELDS'
-    // doc comment — so it never goes through `applyField`. It rides along with
-    // whichever disposition the paper as a whole ends up with: for a paper
-    // present on both sides that's always working's own bookkeeping, since
-    // `committed` otherwise stays HEAD's copy of these fields.
+    // Bookkeeping fields have no field-review row (see PAPER_META_FIELDS), so
+    // they never go through `applyField` — for a paper on both sides they
+    // just take working's copy, since `committed` otherwise stays HEAD's.
     const workingById = new Map(working.papers.map((p) => [p.id, p]))
     for (const draftPaper of draft.papers) {
       const w = workingById.get(draftPaper.id)
@@ -509,11 +460,9 @@ export function composeContents(
       draftPaper.extra = w.extra
     }
 
-    // Before writing any "use" value, grow each committed tree that will
-    // receive one to the working tree's shape, so a reviewer-added repeatable
-    // instance actually has a slot to be committed into (see
-    // `growTreeToSource`). Only annotation-tree writes need this — paper-meta
-    // fields (title, year, …) are scalar. Done once per (paper, tree) touched.
+    // Grow each committed tree to the working shape before writing any "use"
+    // value (see `growTreeToSource`). Only annotation trees need this — paper
+    // meta is scalar. Done once per (paper, tree) touched.
     const grown = new Set<string>()
     for (const fc of changes.fields) {
       if (disposition(fc.id) !== 'use' || fc.tree.kind === 'paper') continue
@@ -558,9 +507,8 @@ export function composeContents(
   return { committed, workingOut }
 }
 
-/** `applyField` plus the one thing it cannot do on its own: write
- *  `abstractFromPdf`'s real boolean (not its display string) alongside
- *  `abstract`, read directly from whichever source `Project` actually has it. */
+/** `applyField` plus writing `abstractFromPdf`'s real boolean (not its
+ *  display string) alongside `abstract`, read from the source `Project`. */
 function applyFieldWithBundle(draft: Project, fc: FieldChange, source: 'head' | 'working', sourceProject: Project): void {
   applyField(draft, fc, source)
   if (fc.tree.kind === 'paper' && fc.canonical === 'abstract' && fc.bundled.includes('abstractFromPdf')) {

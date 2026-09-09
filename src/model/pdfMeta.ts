@@ -1,27 +1,17 @@
 import { pdfjs } from '../platform/pdfjs'
 
 /**
- * Best-effort extraction of a paper's title, authors, and abstract from its
- * PDF, used to pre-fill the project editor and (for the abstract alone) a
- * screening paper opened with none recorded yet — see `extractScreeningAbstract`
- * in `state/store.ts`. Title/authors come from two sources, in order:
+ * Best-effort extraction of a paper's title, authors, and abstract from its PDF
+ * (used to pre-fill the project editor, and via `extractScreeningAbstract` in
+ * `state/store.ts` for screening). Title/authors prefer embedded metadata
+ * (`Title`/`Author`), validated since it's often blank or junk, falling back to
+ * a layout heuristic over page 1. The abstract has no metadata field, so it's
+ * always the layout heuristic — see `abstractFromLines`.
  *
- *  1. The PDF's embedded metadata (`Title` / `Author`). Cheap and exact when
- *     present — but plenty of publisher toolchains leave it blank or fill it
- *     with junk ("Microsoft Word - paper_final_v3.doc"), so it is validated.
- *  2. A layout heuristic over page 1: the largest text near the top is the
- *     title, and the lines just under it are the authors.
- *
- * The abstract has no metadata source (PDFs carry no standard "Abstract"
- * field), so it is always the layout heuristic: find a line starting with the
- * word "Abstract" below the title/author block, and capture what follows
- * until the next section starts — see `abstractFromLines`.
- *
- * Everything here is a guess, so it only ever *pre-fills* a field the user can
- * correct, and every extracted abstract is flagged (`Paper.abstractFromPdf`)
- * for a durable "unverified" warning wherever it is shown — see
- * `ScreeningRecord.tsx`. When unsure, this returns nothing rather than
- * something wrong.
+ * Everything here is a guess: it only pre-fills fields the user can correct,
+ * every extracted abstract is flagged `Paper.abstractFromPdf` for an
+ * "unverified" warning (see `ScreeningRecord.tsx`), and when unsure this
+ * returns nothing rather than something wrong.
  */
 
 export interface PdfMeta {
@@ -40,15 +30,13 @@ export function isPlausibleTitle(raw: string): boolean {
   if (JUNK_TITLE.test(s)) return false
   // A bare filename ("smith2024.pdf", "paper_final.docx") is not a title.
   if (/\.(pdf|docx?|tex)$/i.test(s)) return false
-  // Needs at least two words.
   if (s.split(/\s+/).length < 2) return false
   return true
 }
 
 export function cleanTitle(raw: string): string {
-  // NFC: the PDF's own embedded metadata is a separate source from the text
-  // layer (see `toLines`'s `clean`) and can carry the same decomposed-accent
-  // artefact independently, depending on how the producing tool wrote it.
+  // NFC: metadata is a separate source from the text layer (see `toLines`'s
+  // `clean`) and can carry the same decomposed-accent artefact independently.
   return raw.normalize('NFC').replace(/\s+/g, ' ').trim()
 }
 
@@ -62,29 +50,26 @@ const PARTICLE = /^(van|von|de|der|den|di|da|del|della|la|le|dos|bin|ibn|of)$/i
 
 /**
  * Does this look like a person's name rather than a sentence? Used only for the
- * layout heuristic, where we're *guessing* which line holds the authors and a
- * stray body line would otherwise be accepted. Names are short and their tokens
- * are capitalised ("Jane Doe", "A. Author"); prose is neither.
+ * layout heuristic, to reject a stray body line that would otherwise pass for
+ * an author line.
  */
 function looksLikeName(s: string): boolean {
   const tokens = s.split(/\s+/)
   if (tokens.length < 2 || tokens.length > 5) return false
-  // `\p{Lu}`/`\p{Lt}` (Unicode upper-/title-case), not ASCII `[A-Z]`: a name
-  // like "Łukasz Kaiser" or "Ángel Cuadra" starts with an upper-case letter
-  // that isn't in A–Z, and the ASCII test dropped it — and if every author on
-  // the line was non-ASCII, the whole line was mistaken for prose and the
-  // authors missed entirely.
+  // `\p{Lu}`/`\p{Lt}` (Unicode upper/title-case), not ASCII `[A-Z]`: names like
+  // "Łukasz Kaiser" start with a capital outside A–Z, and an ASCII test would
+  // mistake an all-non-ASCII author line for prose and drop it entirely.
   return tokens.every((t) => PARTICLE.test(t) || /^[\p{Lu}\p{Lt}]/u.test(t))
 }
 
 /**
- * Split an author line/field into individual names. Handles the usual
- * separators ("A, B and C"; "A; B") and strips the affiliation markers that
- * cling to names in a PDF's text layer (superscripts, footnote daggers, emails).
+ * Split an author line/field into individual names, handling the usual
+ * separators and stripping affiliation markers that cling to names in a PDF's
+ * text layer.
  *
- * `strict` additionally requires each entry to look like a person's name. Pass
- * it for the layout heuristic (a guess); leave it off for the PDF's `Author`
- * metadata field, which is explicitly authors and may use forms like "Doe, Jane".
+ * `strict` additionally requires each entry to look like a person's name: pass
+ * it for the layout heuristic (a guess), leave it off for the PDF's `Author`
+ * metadata field, which may use forms like "Doe, Jane".
  */
 export function parseAuthorList(raw: string, strict = false): string[] {
   return raw
@@ -94,23 +79,17 @@ export function parseAuthorList(raw: string, strict = false): string[] {
     .split(/[,;]/)
     .map((name) =>
       name
-        // NFC first: metadata's Author field is a separate source from the
-        // text layer and can carry the same decomposed-accent artefact
-        // independently — same reasoning as `cleanTitle`.
+        // NFC: same decomposed-accent risk as `cleanTitle`, separate source.
         .normalize('NFC')
         // Superscript affiliation markers and footnote symbols.
         .replace(/[¹²³⁰-₟*†‡§¶#]/g, '')
         .replace(/\s+/g, ' ')
         .trim()
-        // Trailing/leading digits used as affiliation keys ("Jane Doe 1").
-        //
-        // Deliberately *after* the whitespace collapse, not before. As
-        // `(^\s*\d+\s*)|(\s*\d+\s*$)` against raw text, the trailing branch
-        // retried at every offset of a whitespace run, which is quadratic: an
-        // /Author of "a" + 256k spaces + "b" — entirely under the PDF's
-        // control, and parsed for every file in a folder import — froze the
-        // main thread for 36 seconds. Once runs are collapsed to one space,
-        // `\s*` can match at most one character and the same intent is linear.
+        // Trailing/leading affiliation-key digits ("Jane Doe 1"). Must run
+        // *after* the whitespace collapse: against raw text the trailing
+        // branch retried at every offset of a run of spaces, which is
+        // quadratic — an attacker-sized run of spaces in one /Author field
+        // froze the main thread for 36s. Collapsed runs make it linear.
         .replace(/^\d+\s?|\s?\d+$/g, '')
         .trim(),
     )
@@ -125,12 +104,8 @@ export function parseAuthorList(raw: string, strict = false): string[] {
 
 /** One run of text on a line, and where it starts. */
 export interface Segment {
-  /**
-   * Left edge in PDF user space. This is what makes a *column* identifiable
-   * across lines: every line of a given column shares (near enough) one `x`,
-   * which is the only way to follow one column down a two-column page — see
-   * `abstractFromLines`.
-   */
+  /** Left edge in PDF user space — shared (near enough) by every line of one
+   *  column, which is how `abstractFromLines` follows a column down the page. */
   x: number
   text: string
 }
@@ -140,27 +115,20 @@ export interface Line {
   y: number
   size: number
   text: string
-  /**
-   * The line's text split at column gaps. A two-column author block puts each
-   * author on the *same baseline*, so they arrive as one `Line` — but they are
-   * separate items, not one run of prose, and only the gap says so.
-   */
+  /** Text split at column gaps: a two-column author block puts each author on
+   *  the same baseline, so they arrive as one `Line` but are separate items. */
   segments: Segment[]
 }
 
-/**
- * A horizontal gap this many times the font size starts a new segment. A word
- * space is a fraction of the font size even in justified text, while a column
- * gutter is several times it, so anything in between is a safe place to cut.
- */
+/** A horizontal gap this many times the font size starts a new segment — safely
+ *  between a justified word space and a column gutter. */
 const COLUMN_GAP_RATIO = 1.5
 
 /**
- * Two segments belong to the same column when their left edges are within this
- * many points. Generous enough for the sub-point x jitter a justified column
- * shows line to line, far tighter than any real gutter (a two-column letter
- * page puts its columns ~260pt apart). Used to follow one column down the page
- * — by `abstractFromLines`, and by the author-list continuation below.
+ * Segments within this many points of left edge belong to the same column —
+ * generous for justified-text jitter, tighter than any real gutter (~260pt).
+ * Used to follow a column down the page, by `abstractFromLines` and the
+ * author-list continuation below.
  */
 const COLUMN_X_TOLERANCE = 12
 
@@ -179,15 +147,10 @@ export function toLines(items: { str: string; transform: number[]; width?: numbe
     if (!item.str.trim()) continue
     const size = Math.abs(item.transform[3])
     const y = Math.round(item.transform[5])
-    // Merge items whose baselines are within a couple of points (same line).
-    //
-    // Via a window index rather than a scan over every baseline seen so far.
-    // The scan was O(items x distinct baselines) — 80 000 items measured at
-    // ~20 s, and the page count is file-controlled, so this ran per page. The
-    // tolerance is +/-2 integer points, so registering that window once per new
-    // baseline answers the same question by lookup. Registering only where
-    // nothing is registered yet preserves the scan's "earliest matching
-    // baseline wins" behaviour, which insertion order gave it for free.
+    // Merge items whose baselines are within a couple of points (same line),
+    // via a window index rather than an O(items x distinct baselines) scan —
+    // the scan measured ~20s at 80k items. Registering the +/-2pt window only
+    // where unset preserves "earliest matching baseline wins".
     let key = keyForY.get(y)
     if (key === undefined) {
       key = y
@@ -197,10 +160,8 @@ export function toLines(items: { str: string; transform: number[]; width?: numbe
     }
     const line = byY.get(key) ?? { size: 0, parts: [] }
     line.size = Math.max(line.size, size)
-    // `width` is pdf.js's own measurement of the run. Without it there is no
-    // way to know where a run ends, so a missing/zero width simply never
-    // starts a new segment (NaN fails the comparison below) — the old
-    // glued-together behaviour, rather than a guess that could cut mid-phrase.
+    // Missing/zero width never starts a new segment (NaN fails the comparison
+    // below) — glues the run together rather than guessing where it ends.
     line.parts.push({
       x: item.transform[4],
       width: typeof item.width === 'number' && item.width > 0 ? item.width : NaN,
@@ -216,9 +177,8 @@ export function toLines(items: { str: string; transform: number[]; width?: numbe
       let currentX = NaN
       let prevEnd = NaN
       for (const p of parts) {
-        // Adjacent runs are joined bare: pdf.js splits a single phrase into
-        // several runs on a font or kerning change, and any separator here
-        // would land mid-word.
+        // Adjacent runs join bare: pdf.js splits one phrase into several runs
+        // on a font/kerning change, and any separator here would land mid-word.
         if (current !== '' && p.x - prevEnd > l.size * COLUMN_GAP_RATIO) {
           segments.push({ x: currentX, text: current })
           current = ''
@@ -228,18 +188,14 @@ export function toLines(items: { str: string; transform: number[]; width?: numbe
         prevEnd = p.x + p.width
       }
       if (current !== '') segments.push({ x: currentX, text: current })
-      // NFC: some fonts' ToUnicode maps give pdf.js an accented letter as a
-      // base character and a combining mark in separate adjacent items
-      // ("e" + U+0301) rather than one precomposed one ("é") — normalizing
-      // after the joins above (not per-item) is what recomposes a pair that
-      // straddled an item boundary. Covers title/author/abstract alike, since
-      // all three read from this function's output.
+      // NFC after joining (not per-item): some fonts' ToUnicode maps split an
+      // accented letter into base + combining mark across adjacent items, and
+      // only a post-join normalize recomposes a pair that straddled the join.
       const clean = (s: string) => s.normalize('NFC').replace(/\s+/g, ' ').trim()
       return {
         y,
         size: l.size,
-        // Joined with a space, not bare: whatever separated two columns, it was
-        // not nothing.
+        // Joined with a space: whatever separated two columns wasn't nothing.
         text: clean(segments.map((s) => s.text).join(' ')),
         segments: segments
           .map((s) => ({ x: s.x, text: clean(s.text) }))
@@ -255,10 +211,8 @@ const BODY_START = /^(abstract|introduction|keywords|index terms|ccs concepts|a\
 
 /**
  * A line this much smaller than the author line is superscript affiliation
- * keys, not more authors. They sit on their own raised baseline, so `toLines`
- * reports them as a line of their own ("1 1") *between* the two halves of a
- * wrapped author list — skipping rather than stopping at them is what lets the
- * halves find each other.
+ * keys, not more authors — they land on their own baseline between the two
+ * halves of a wrapped list, so they must be skipped, not treated as a stop.
  */
 const SUPERSCRIPT_SIZE_RATIO = 0.85
 
@@ -270,15 +224,10 @@ const AUTHOR_CONTINUATION_LINES = 3
  * column: each of the first line's segments is joined with the segment at the
  * same `x` on every later line, and only then split into names.
  *
- * Joining before parsing is the whole point. A name broken across a line break
- * ("… Niklas Ewald, Tobias" / "Thirolf, and Anne Koziolek") cannot be repaired
- * afterwards — parse the lines separately and "Tobias" is a lone token that
- * strict mode correctly rejects, so the author is simply gone, and "Thirolf"
- * has lost its first name. Joined, it is an ordinary comma-separated list.
- *
- * Per column, for the same reason `titleAndAuthorsFromLines` already parsed a
- * single line per segment: a two-column author block puts each author on the
- * same baseline with only the gutter between them.
+ * Joining before parsing is the whole point: a name broken across a line break
+ * ("… Niklas Ewald, Tobias" / "Thirolf, and Anne Koziolek") can't be repaired
+ * after separate parsing — "Tobias" is a lone token strict mode rejects, and
+ * "Thirolf" loses its first name. Joined, it's an ordinary comma-separated list.
  */
 function namesFromAuthorBlock(block: Line[]): string[] {
   const [first, ...rest] = block
@@ -325,16 +274,9 @@ export function titleAndAuthorsFromLines(lines: Line[], pageHeight: number): Pdf
     if (best.length === 0) continue // not the author line — a superscript row, or prose
 
     // The list may wrap. Grow the block a line at a time, keeping a line only
-    // when it produces *more* names than the block without it.
-    //
-    // That comparison is the safety rail, and it is what makes growing safe at
-    // all: the line under the authors is far more often an affiliation or an
-    // email row than the rest of the list. Absorbing one of those does not add
-    // names — it destroys them, because the last author and the affiliation
-    // fuse into a single entry ("John Smith Karlsruhe Institute of Technology")
-    // that `parseAuthorList` then drops as an affiliation. So a join that helps
-    // is kept and a join that hurts is rejected on its own evidence, with no
-    // need to recognise an affiliation up front.
+    // when it produces *more* names than the block without it — the line below
+    // is often an affiliation/email row, and absorbing one fuses the last
+    // author with it into one entry that `parseAuthorList` then drops.
     for (let k = j + 1; k < top.length && k <= j + AUTHOR_CONTINUATION_LINES; k++) {
       const next = top[k]
       if (BODY_START.test(next.text)) break
@@ -369,32 +311,24 @@ const MAX_ABSTRACT_LINES = 40
 
 /**
  * The abstract from a page's lines: the text under the "Abstract" heading, in
- * the **column that heading sits in**, up to that column's next section heading.
+ * the column that heading sits in, up to that column's next section heading.
  *
- * **Following the column is the whole problem, and it is why `Segment` carries an
- * `x`.** On a two-column paper — the overwhelmingly common case — pdf.js reports
- * the left column's "Abstract" heading and the right column's "1 Introduction"
- * on the *same baseline*, so they arrive as one `Line` reading
- * `"Abstract 1Introduction"`, and every body line below is likewise one `Line`
- * holding a strip of each column. Reading `line.text` there interleaves two
- * unrelated columns of prose; an earlier version instead *stopped* at the first
- * multi-segment line, which on a real paper is the line immediately after the
- * heading — so it extracted nothing at all from exactly the documents this
- * exists for (verified against a real ICSE paper, which is what caught it).
+ * On a two-column paper, pdf.js reports the left column's "Abstract" heading
+ * and the right column's "1 Introduction" on the same baseline, so they and
+ * every body line below arrive as one `Line` holding a strip of each column.
+ * Reading `line.text` there interleaves two unrelated columns; stopping at the
+ * first multi-segment line instead (an earlier version) extracted nothing at
+ * all from two-column papers. So: find the *segment* matching "Abstract", take
+ * its `x` as the column, and walk down taking only each line's segment at that
+ * `x` — a line with nothing in that column is skipped, not a stop; the next
+ * section heading in *this* column is the stop. A single-column paper is the
+ * degenerate case (one segment per line, all at the same `x`).
  *
- * So: find the *segment* matching "Abstract", take its `x` as the column, and
- * walk down taking only each line's segment at that same `x`. A line with
- * nothing in that column (the left column ends while the right runs on) is
- * skipped, not a stop — the next section heading in *this* column is the stop.
- * A single-column paper is the degenerate case of the same rule: one segment
- * per line, all at the same `x`.
- *
- * The start line must also not be the page's largest text: a title is virtually
- * always set in the biggest font and an "Abstract" heading never is, so this
- * rejects a title that genuinely begins with the word ("Abstract Interpretation
- * of…", a real if uncommon pattern). An earlier version used a vertical cutoff
- * for that instead — wrong, because a real abstract routinely starts well above
- * a page's midpoint when the title block is short.
+ * The start line must also not be the page's largest text, since a title is
+ * virtually always the biggest font and an "Abstract" heading never is — this
+ * rejects a title that genuinely begins with the word. A vertical cutoff
+ * (an earlier version) is wrong here since a short title block can leave a
+ * real abstract starting well above the page's midpoint.
  */
 export function abstractFromLines(lines: Line[]): string | undefined {
   if (lines.length === 0) return undefined
@@ -432,18 +366,13 @@ export function abstractFromLines(lines: Line[]): string | undefined {
 }
 
 /**
- * Join lines of a wrapped paragraph, healing the hyphens justified text breaks
- * words across lines with ("archi-" + "tectural" → "architectural"). Without
- * this the extracted abstract reads visibly broken, which matters here because
- * unlike the title/author guesses this text is displayed to be *read* — it is
- * what a screening decision gets made on.
+ * Join lines of a wrapped paragraph, healing hyphens justified text breaks
+ * words across lines with ("archi-" + "tectural" → "architectural") — unlike
+ * the title/author guesses, this text is displayed to be *read* for screening.
  *
- * A line-final hyphen is joined only when the next line starts lower-case,
- * which is what a mid-word syllable break looks like. The cost is a genuine
- * line-final compound hyphen ("state-" / "of-the-art") losing its hyphen; that
- * is rare, cosmetic, and lands in a field already labelled as machine-extracted
- * and unverified — whereas leaving every syllable break in place is neither
- * rare nor cosmetic.
+ * Joined only when the next line starts lower-case (a mid-word break). Cost: a
+ * genuine line-final compound hyphen ("state-of-the-art") loses its hyphen,
+ * which is rare/cosmetic versus leaving every syllable break unhealed.
  */
 function joinWrappedLines(parts: string[]): string {
   let out = ''

@@ -1,27 +1,21 @@
 import { normalizeText, stringSimilarity } from '../consolidate/similarity'
 
 /**
- * Flag probable duplicate papers at import time, reusing `consolidate/similarity`'s
- * lexical matcher rather than inventing a second one (see that module for the
- * shared scoring primitives, and its own documented ceiling: this is lexical
- * matching, so "RCT" and "randomised controlled trial" still score low — fine
- * for titles, which is what this compares).
+ * Flags probable duplicate papers at import time, reusing `consolidate/similarity`'s
+ * lexical matcher (same known ceiling: "RCT" vs "randomised controlled trial" scores low).
  *
- * Pure and store-free by design: it knows nothing of `EditorPaper`, the DOM, or
- * React. The caller (`editorStore.ts`) adapts its own paper/reference shapes
- * into `DupRecord` and turns a `DupVerdict` into an actual store mutation.
+ * Pure and store-free: knows nothing of `EditorPaper`/DOM/React. `editorStore.ts`
+ * adapts its own shapes into `DupRecord` and turns a `DupVerdict` into a mutation.
  */
 
-/** The minimal bibliographic shape this module reasons about. Deliberately not
- *  `EditorPaper` or `RefEntry` — this module must not know either exists. */
+/** Minimal bibliographic shape this module reasons about — deliberately not
+ *  `EditorPaper` or `RefEntry`, which it must not know exist. */
 export interface DupRecord {
   title: string
   authors: string[]
   doi?: string
-  /** Optional because a real bibliographic record often has no year at all (a
-   *  reference export that omitted it, a paper added by PDF alone). A record
-   *  missing it never blocks a match on that account — see `YEAR_GAP_VETO` —
-   *  it just can't corroborate or veto one either. */
+  /** Often absent in real records; never blocks a match (see `YEAR_GAP_VETO`),
+   *  just can't corroborate or veto one either. */
   year?: number
 }
 
@@ -41,11 +35,9 @@ export type DupVerdict =
 // Exact matching (today's behaviour, widened slightly and given a name)
 // ---------------------------------------------------------------------------
 
-/** Lowercased, whitespace-collapsed, punctuation-stripped — for matching titles
- *  across sources that differ only in casing/spacing/punctuation. Strips *all*
- *  punctuation (not just a fixed list), so an em-dash vs a hyphen, or a colon vs
- *  none, already collapse to the same string here — this is why those pairs
- *  reach the exact/certain path below rather than needing the fuzzy one. */
+/** Lowercased, whitespace-collapsed, all punctuation stripped — so titles differing
+ *  only in casing/spacing/punctuation (em-dash vs hyphen, colon vs none) collapse
+ *  to the same string and reach the exact/certain path rather than the fuzzy one. */
 export function normalizeTitleForMatch(title: string): string {
   return title
     .toLowerCase()
@@ -54,9 +46,9 @@ export function normalizeTitleForMatch(title: string): string {
     .trim()
 }
 
-/** Lowercased and trimmed, with a leading `https://doi.org/`, `http://dx.doi.org/`,
- *  or `doi:` stripped — CSL-JSON routinely carries the URL form, and comparing
- *  it raw against a bare DOI would miss an identical record. */
+/** Lowercased/trimmed with a leading `https://doi.org/`, `http://dx.doi.org/`, or
+ *  `doi:` stripped — CSL-JSON often carries the URL form, which would otherwise
+ *  miss a match against a bare DOI. */
 export function normalizeDoi(doi: string | undefined): string {
   if (!doi) return ''
   return doi
@@ -71,62 +63,36 @@ export function normalizeDoi(doi: string | undefined): string {
 // ---------------------------------------------------------------------------
 
 /**
- * How alike two *whole* titles (or two subtitle-stripped *base* titles) must
- * score, via `stringSimilarity`, to count as a probable duplicate.
+ * Similarity (`stringSimilarity`) two whole titles (or subtitle-stripped base
+ * titles) must reach to count as a probable duplicate.
  *
- * Measured against real title pairs (see `duplicates.test.ts` for the exact
- * strings), whole-title similarity alone cannot be separated by a single
- * threshold — the different-paper and same-paper classes interleave:
- *
- * | pair | sim | truth |
- * |---|---|---|
- * | "...Part I" / "...Part II" | 0.978 | different |
- * | British/American spelling | 0.952 | same |
- * | "...for Java" / "...for Python" | 0.878 | different |
- * | same-domain surveys (different domains) | 0.857 | different |
- * | a typo | 0.973 | same |
- *
- * 0.90 sits above every measured different-paper pair except the "Part I/II"
- * one, and below every measured same-paper pair whose *whole* title actually
- * differs (a present/absent subtitle scores lower still — 0.667–0.80 in the
- * same measurements — which is why the base-title/author rule below exists
- * separately rather than by lowering this number). Lowering it to catch
- * "Part I/II" would also catch "for Java"/"for Python" and the same-domain
- * surveys — trading one rare false positive for two common ones. "Part I/II"
- * is accepted as a known false positive: it costs one click in the review
- * dialog, pinned by a test so a future change to this number is a conscious one.
+ * Measured against real pairs (see `duplicates.test.ts`), no single threshold
+ * cleanly separates different-paper from same-paper pairs. 0.90 sits above every
+ * measured different-paper pair except "...Part I" vs "...Part II" (0.978,
+ * accepted as a known false positive — one extra review-dialog click), and below
+ * every same-paper pair whose whole title differs. Lowering it would also catch
+ * "for Java"/"for Python"-style false positives, trading one rare miss for
+ * several common ones.
  */
 const TITLE_SIM_THRESHOLD = 0.9
 
 /**
- * How alike two papers' *surname sets* (Dice coefficient) must score to
- * corroborate a base-title match — see `classifyPair`'s base-title rule.
+ * Author-surname Dice score needed to corroborate a base-title match (see
+ * `classifyPair`). Base-title equality alone isn't enough — "...: A Survey" vs
+ * "...: An Introduction" share one but are different papers.
  *
- * Base-title equality alone is not enough: "Software Testing: A Survey" and
- * "Software Testing: An Introduction" share a base title and are two different
- * papers. Requiring some author overlap catches that, but reference-manager
- * exports routinely truncate author lists ("et al."), so the bar has to
- * tolerate a large recorded list matching a short one. Measured: a 3-author
- * list against a 1-author list that shares exactly one name scores exactly
- * 0.50 — set deliberately at that bar, not above it, so a truncated-but-real
- * match still counts. A pair sharing only one of three names *each* (no
- * truncation, genuinely mostly-different author lists) scores 0.33 and stays
- * below it.
+ * 0.50 is deliberate: a truncated ("et al.") 1-author list sharing one name with
+ * a real 3-author list scores exactly 0.50 and must still count, while two
+ * genuinely mostly-different 3-author lists sharing one name score 0.33.
  */
 const AUTHOR_SIM_THRESHOLD = 0.5
 
 /**
- * A year gap this large or larger, on an otherwise title-matching pair, means
- * "different artifact" (a workshop paper and its journal extension share a
- * title and are both worth citing separately in an SLR) rather than "database
- * disagreement" — so it downgrades what would otherwise be a certain or
- * probable match all the way to `new`.
- *
- * Not `!==`: databases disagree by one year constantly (online-first vs. issue
- * date), and treating that routine noise as a different paper would be a much
- * more common false negative than the workshop/journal case is a false
- * positive. Never applied to a DOI match — an identical DOI is the same
- * record whatever year two databases happen to claim for it.
+ * Year gap this large on an otherwise title-matching pair means "different
+ * artifact" (e.g. workshop paper vs. its journal extension), downgrading a would-be
+ * match all the way to `new`. Not `!==`: databases routinely disagree by one year
+ * (online-first vs. issue date). Never applied to a DOI match — same DOI is the
+ * same record regardless of year.
  */
 const YEAR_GAP_VETO = 2
 
@@ -134,22 +100,18 @@ const YEAR_GAP_VETO = 2
 // Author surnames
 // ---------------------------------------------------------------------------
 
-/** Diacritic-fold: "José" and "Jose" must land on the same surname, or an
- *  accented name typed two different ways would abstain instead of matching. */
+/** Diacritic-fold so "José" and "Jose" land on the same surname. */
 function foldDiacritics(s: string): string {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 }
 
 /**
- * The surname of one author's recorded name, folded for comparison.
+ * Surname of one author's recorded name, folded for comparison.
  *
- * Handles "Last, First" *before* stripping punctuation — stripping first and
- * splitting on whitespace second leaves the comma glued to the surname
- * ("Doe, Jane" → "doe,"), which then fails to equal "doe" from "Jane Doe" and
- * silently scores a genuinely matching pair 0 (found by measurement, not
- * theorized). `references.ts`'s BibTeX/RIS parsing already normalizes to
- * "First Last" (`normalizeAuthorName`), so this mostly matters for CSL-JSON
- * and hand-edited author fields — but it costs nothing to handle either way.
+ * Must split on the comma before stripping punctuation, or "Doe, Jane" leaves a
+ * comma glued to the surname ("doe,") and fails to match "doe" from "Jane Doe".
+ * `references.ts` already normalizes BibTeX/RIS to "First Last", so this mainly
+ * matters for CSL-JSON and hand-edited fields.
  */
 function surnameOf(name: string): string {
   const trimmed = name.trim()
@@ -161,16 +123,14 @@ function surnameOf(name: string): string {
     .replace(/[^a-z\s-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-  // "Last, First": the head *is* the surname already (which may itself be
-  // several words — "van der Berg, Jan"). No comma: the surname is assumed to
-  // be the final token of a "First [Middle] Last" name.
+  // "Last, First": head is already the surname (may be multi-word). No comma:
+  // assume surname is the final token of "First [Middle] Last".
   if (comma !== -1) return folded
   const tokens = folded.split(' ').filter(Boolean)
   return tokens.length > 0 ? tokens[tokens.length - 1] : ''
 }
 
-/** The Dice coefficient over two sets of tokens (title words, or author
- *  surnames — the same measure, reused rather than written twice). */
+/** Dice coefficient over two sets of tokens (title words or author surnames). */
 function diceOfSets(a: Set<string>, b: Set<string>): number {
   if (a.size === 0 || b.size === 0) return 0
   let shared = 0
@@ -181,28 +141,22 @@ function diceOfSets(a: Set<string>, b: Set<string>): number {
 // ---------------------------------------------------------------------------
 // Cost guards
 //
-// Detection is O(existing × incoming): a realistic 2000-paper project against
-// a 1000-entry `.bib` file is 2,000,000 title pairs, run synchronously inside
-// the store's `set`. Calling `stringSimilarity` (which computes a full
-// Levenshtein matrix) on every pair measures at over 40 seconds of hard UI
-// freeze — a shipped non-feature. The guards below bring the same, *provably
-// identical* result down to well under a second, by proving most pairs cannot
-// reach the threshold before ever computing an edit distance.
+// Detection is O(existing x incoming): 2000 papers against a 1000-entry .bib
+// is 2M pairs, run synchronously — full Levenshtein on every pair measures
+// over 40s of UI freeze. The guards below prove most pairs can't reach the
+// threshold before computing an edit distance, giving an identical result
+// well under a second.
 //
-// Two independent, sound upper bounds on Levenshtein's ratio:
+// Two sound lower bounds on Levenshtein distance (hence upper bounds on the
+// similarity ratio), either sufficient to rule a pair out without ever
+// wrongly ruling a genuine match out:
 //  - length:    lev(a,b) >= |len(a) - len(b)|
-//  - histogram: lev(a,b) >= (sum of |countA(c) - countB(c)| over every
-//               character c) / 2 — each single edit (insert/delete/substitute)
-//               can reduce that sum by at most 2, so no sequence of edits
-//               shorter than half the sum can equalize the two histograms.
-// Either bound alone is enough to prove `levenshteinRatio` cannot reach the
-// threshold; neither can ever wrongly rule a genuine match out, because both
-// are lower bounds on the true edit distance, hence upper bounds on the ratio.
+//  - histogram: lev(a,b) >= (sum of |countA(c) - countB(c)| over every char) / 2
+//               (each edit changes that sum by at most 2)
 // ---------------------------------------------------------------------------
 
 /** Mirrors `similarity.ts`'s own `LEV_MAX_LEN`: past this length,
- *  `stringSimilarity` itself never computes Levenshtein, so neither does this —
- *  matching its behaviour exactly rather than approximating it. */
+ *  `stringSimilarity` never computes Levenshtein either, so this matches. */
 const LEV_MAX_LEN = 256
 
 interface Prepared {
@@ -230,22 +184,14 @@ function halfSumAbsDiff(a: Map<string, number>, b: Map<string, number>): number 
 }
 
 /**
- * `stringSimilarity`'s score, but only computed (and only ever returned) when
- * it is at least `threshold` — otherwise `null`, having proved that cheaply.
+ * `stringSimilarity`'s score, but only computed (and only returned) when it's
+ * at least `threshold` — otherwise `null`.
  *
- * The ordering is load-bearing, cheapest first: token Dice can pass where the
- * length bound would have skipped (short titles, heavily reordered/padded),
- * so it must run *before* any skip, not after. Whenever Dice alone already
- * clears the bar, the reported score is Dice itself rather than the (possibly
- * higher) true `stringSimilarity` — the whole point of this function is
- * avoiding a Levenshtein computation once the verdict is already decided; a
- * slightly conservative score for that one case costs nothing, since only the
- * >= threshold verdict, not the exact number, decides `certain`/`probable`/`new`.
- *
- * When neither cheap bound rules a pair out, this calls the real, shared
- * `stringSimilarity` for the exact answer rather than recomputing its formula
- * here from `levenshtein` directly — one implementation of "how alike are
- * these two strings", never two that can silently drift apart.
+ * Order is load-bearing, cheapest first: token Dice can pass where the length
+ * bound would skip (short/reordered/padded titles), so it must run before any
+ * skip. When Dice alone clears the bar, the returned score is Dice itself (not
+ * the possibly-higher true similarity) — good enough since only the >=threshold
+ * verdict, not the exact number, matters downstream.
  */
 function fuzzyScoreAtLeast(a: Prepared, b: Prepared, threshold: number): number | null {
   const dice = diceOfSets(a.tokens, b.tokens)
@@ -271,15 +217,10 @@ interface PreparedRecord {
   doi: string
   exactTitle: string
   full: Prepared
-  /** The title up to (not including) its first colon, prepared the same way as
-   *  `full` — or `full` itself again when there is no colon, so a title with
-   *  no subtitle of its own still compares correctly against one that has a
-   *  subtitle on the *other* side ("Deep Learning" vs "Deep Learning: A
-   *  Review" — the first has nothing to strip, so its own full title stands
-   *  in for its base title). */
+  /** Title up to its first colon (or the whole title if none), so "Deep
+   *  Learning" still compares correctly against "Deep Learning: A Review". */
   base: Prepared
-  /** Surnames only, already folded and deduped — computed once per record
-   *  rather than once per pair, same reasoning as `full`/`base` above. */
+  /** Folded, deduped surnames — computed once per record, not once per pair. */
   authorSurnames: Set<string>
   year?: number
 }
@@ -302,15 +243,12 @@ interface PairMatch {
 }
 
 /**
- * How alike one candidate pair is, evaluated in a fixed priority order — DOI,
- * then exact title, then fuzzy title, then base-title-plus-authors — each
- * strictly stronger evidence than the next, so the first rule that fires wins.
+ * Evaluated in fixed priority order — DOI, exact title, fuzzy title,
+ * base-title-plus-authors — each strictly stronger evidence than the next.
  *
- * Exact-normalized-title stays `certain` (silent) whenever nothing actively
- * contradicts it, by design: demoting every exact-title match to a prompt
- * would ask the reviewer to confirm *every paper* on a routine re-import of
- * the same `.bib` to refresh it. Only the two cases with actual contradicting
- * evidence — two different known DOIs, or a large year gap — demote it.
+ * Exact-title matches stay `certain` (silent) unless something actively
+ * contradicts them (conflicting DOI or a large year gap) — otherwise a routine
+ * re-import of the same `.bib` would prompt the reviewer on every paper.
  */
 function classifyPair(a: PreparedRecord, b: PreparedRecord): PairMatch | null {
   if (a.doi && b.doi && a.doi === b.doi) return { kind: 'certain', reason: { via: 'doi' } }
@@ -323,18 +261,12 @@ function classifyPair(a: PreparedRecord, b: PreparedRecord): PairMatch | null {
   if (a.exactTitle === b.exactTitle) {
     if (yearVeto) return null
     if (doiConflict) return { kind: 'probable', reason: { via: 'title', score: 1 } }
-    // Identical titles and *not one author in common* is not a duplicate we
-    // should merge without asking. Titles like "Introduction", "Editorial" or
-    // "Discussion" are shared by unrelated papers all over a proceedings-heavy
-    // corpus, and `certain` merges silently: `fillFromRef` then writes one
-    // paper's DOI, year and venue onto the other, which is a wrong record
-    // rather than a missing one.
-    //
-    // Complete disjointness only, not the similarity threshold used below. A
-    // shortened author list ("et al.") or initials-vs-full-names still shares a
-    // surname and stays `certain`, so ordinary matches are unaffected — and an
-    // empty author list on either side abstains rather than voting against,
-    // the same rule as the base-title tier.
+    // Identical title but zero shared authors shouldn't silently merge: generic
+    // titles ("Introduction", "Editorial") recur across unrelated papers in a
+    // proceedings-heavy corpus, and `certain` would let `fillFromRef` overwrite
+    // one paper's DOI/year/venue with another's. Requires complete disjointness
+    // (not the fuzzy threshold), so "et al." truncation still stays `certain`;
+    // an empty author list on either side abstains rather than voting against.
     const bothHaveAuthors = a.authorSurnames.size > 0 && b.authorSurnames.size > 0
     if (bothHaveAuthors && diceOfSets(a.authorSurnames, b.authorSurnames) === 0) {
       return { kind: 'probable', reason: { via: 'title', score: 1 } }
@@ -350,8 +282,7 @@ function classifyPair(a: PreparedRecord, b: PreparedRecord): PairMatch | null {
 
   const baseScore = fuzzyScoreAtLeast(a.base, b.base, TITLE_SIM_THRESHOLD)
   if (baseScore !== null && a.authorSurnames.size > 0 && b.authorSurnames.size > 0) {
-    // Neither side blank: an author field abstains rather than voting
-    // against, same rule as `similarity.ts`'s `Sim`/`NO_EVIDENCE` — a base-title
+    // Neither side blank: same NO_EVIDENCE rule as similarity.ts — a base-title
     // match with no author evidence on one side stays `new`, not `probable`.
     const authScore = diceOfSets(a.authorSurnames, b.authorSurnames)
     if (authScore >= AUTHOR_SIM_THRESHOLD) {
@@ -363,10 +294,8 @@ function classifyPair(a: PreparedRecord, b: PreparedRecord): PairMatch | null {
   return null
 }
 
-/** How much a match is worth, for picking the best candidate: a DOI-certain
- *  match beats a title-certain match beats any probable match, and probable
- *  matches are ranked by score — all comfortably below the certain tiers,
- *  since every `Sim` score here is 0..1. */
+/** Ranks candidates: DOI-certain > title-certain > probable-by-score (all
+ *  scores are 0..1, comfortably below the certain tiers). */
 function rank(m: PairMatch): number {
   if (m.kind === 'certain') return m.reason.via === 'doi' ? 1000 : 999
   return (m.reason as { score: number }).score
@@ -375,14 +304,11 @@ function rank(m: PairMatch): number {
 /**
  * One verdict per incoming record, index-aligned with `incoming`.
  *
- * Each entry is compared against every `existing` record *and* every earlier
- * entry in `incoming` — one `.bib` can list the same paper twice. This is why
- * a `{ where: 'batch', index }` target is always lower than the entry's own
- * index: entry N only ever sees entries 0..N-1, never a later one. That
- * ordering is load-bearing for the caller — see `editorStore.ts`'s
- * `commitImport`, which resolves a batch target's *actual* landing spot by
- * walking entries in the same index order and is guaranteed the target
- * already has one by the time it gets there.
+ * Each entry is compared against every `existing` record and every earlier
+ * `incoming` entry (one `.bib` can list the same paper twice) — so a
+ * `{ where: 'batch', index }` target is always lower than the entry's own
+ * index. `editorStore.ts`'s `commitImport` relies on this ordering to resolve
+ * a batch target's landing spot by walking entries in the same order.
  */
 export function classifyImport(existing: DupRecord[], incoming: DupRecord[]): DupVerdict[] {
   const existingPrepared = existing.map(prepareRecord)

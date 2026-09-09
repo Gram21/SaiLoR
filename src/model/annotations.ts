@@ -8,10 +8,8 @@ import type {
 import { isConditionGroup, isField } from './schema'
 
 /**
- * Annotation data mirrors the schema. At each level it is a map keyed by node
- * name; every key holds an array of instances (its length is bounded by the
- * node's min/max). Each instance may carry a `value` (if the node is a field)
- * and/or `children` (a nested tree).
+ * Annotation data mirrors the schema: a map keyed by node name, each key
+ * holding an array of instances (length bounded by the node's min/max).
  */
 
 export type FieldValue = string | number | boolean | null
@@ -25,7 +23,6 @@ export interface AnnotationValueTree {
   [nodeName: string]: InstanceNode[]
 }
 
-/** Default empty value for a field type. */
 export function emptyValue(type: FieldType | undefined): FieldValue {
   switch (type) {
     case 'boolean':
@@ -38,7 +35,7 @@ export function emptyValue(type: FieldType | undefined): FieldValue {
   }
 }
 
-/** Build a single fresh instance for a node (recursively initialising children to their `min`). */
+/** Build a fresh instance, recursively initialising children to their `min`. */
 export function makeInstance(def: ResolvedDef): InstanceNode {
   const instance: InstanceNode = {}
   if (isField(def)) {
@@ -50,7 +47,7 @@ export function makeInstance(def: ResolvedDef): InstanceNode {
   return instance
 }
 
-/** Initialise a value tree for a list of sibling defs, each with `min` instances (at least 1 to bind to). */
+/** Initialise a value tree with each def's `min` instances (at least 1, so there's always one to bind to). */
 export function initTree(defs: ResolvedDef[]): AnnotationValueTree {
   const tree: AnnotationValueTree = {}
   for (const def of defs) {
@@ -61,11 +58,9 @@ export function initTree(defs: ResolvedDef[]): AnnotationValueTree {
 }
 
 /**
- * Reconcile an existing (possibly partial/loaded) value tree against the schema:
- *  - drop keys not in the schema,
- *  - coerce each present instance's structure to the def,
- *  - pad up to `min` (and at least 1) instances,
- *  - clamp down to `max` if exceeded.
+ * Reconcile a loaded (possibly partial) value tree against the schema: drop
+ * unknown keys, coerce each instance to the def's shape, and pad/clamp to
+ * min (at least 1) / max.
  */
 export function normalizeTree(
   defs: ResolvedDef[],
@@ -74,17 +69,10 @@ export function normalizeTree(
   const tree: AnnotationValueTree = {}
   for (const def of defs) {
     const raw = existing?.[def.name]
-    // A hand-edited file may hold a single entry where the format wants a list
-    // (`"Study Type": "RCT"`, or `{"value": "RCT"}`, instead of `["RCT"]`).
-    // Adopt it as that one entry rather than dropping it: this walk is the one
-    // that rewrites the file, so discarding the value opens the project
-    // cleanly and lets the next ordinary save write `null` over a real answer.
-    // That is exactly the reasoning `normalizeInstance` already spells out for
-    // a bare primitive *inside* the list — the same hazard one level up, which
-    // it simply never covered.
-    //
-    // `null`/`undefined` still yield no instances: that is an absent answer,
-    // not a value written in the wrong shape.
+    // A hand-edited file may hold a single entry instead of a list (e.g.
+    // `"Study Type": "RCT"`). Adopt it as that one entry rather than dropping
+    // it, since this walk rewrites the file and discarding would silently
+    // lose the answer on the next save. `null`/`undefined` stay absent.
     const list = Array.isArray(raw) ? raw : raw == null ? [] : [raw as InstanceNode]
     let instances: InstanceNode[] = list.map((inst) => normalizeInstance(def, inst))
 
@@ -101,20 +89,11 @@ export function normalizeTree(
 function normalizeInstance(def: ResolvedDef, inst: InstanceNode | undefined): InstanceNode {
   const out: InstanceNode = {}
   if (isField(def)) {
-    // The value tree is hand-editable, so an instance array element may be a
-    // bare primitive (`"Study Type": ["RCT"]` instead of `[{value:"RCT"}]`)
-    // rather than the `{value}` object shape. `'value' in inst` throws a raw
-    // TypeError on a primitive — escaping `loadProject`'s contract to only ever
-    // raise a friendly ProjectLoadError, and aborting a git pull-merge that
-    // loads such a revision.
-    //
-    // The primitive is *adopted as the value*, not discarded: this walk is the
-    // one that rewrites the file (unlike the read-only `collectAnnotationText`
-    // / `isEmptyInstance`, where skipping merely displays nothing). Normalizing
-    // the shorthand to an empty value would open the file cleanly and then let
-    // the next ordinary save — or `finishPull`'s write-back — overwrite a real
-    // answer with null, turning a loud crash into silent data loss. `false` for
-    // a boolean is the same loss with the value flipped.
+    // An instance array element may be a bare primitive (`["RCT"]`) instead of
+    // `[{value:"RCT"}]` in hand-edited data; `'value' in inst` would throw on
+    // it. Adopt the primitive as the value rather than discarding it — this
+    // walk rewrites the file, so dropping it would overwrite a real answer
+    // with null/false on the next save.
     const raw =
       inst && typeof inst === 'object'
         ? 'value' in inst
@@ -129,28 +108,21 @@ function normalizeInstance(def: ResolvedDef, inst: InstanceNode | undefined): In
   return out
 }
 
-/** Whether another instance may be added (respecting `max`). */
 export function canAdd(def: ResolvedDef, current: number): boolean {
   return def.max === null || current < def.max
 }
 
-/** Whether an instance may be removed (respecting `min`, minimum 1). */
+/** Blocks removal below `min`, floored at 1. */
 export function canRemove(def: ResolvedDef, current: number): boolean {
   return current > Math.max(def.min, 1)
 }
 
 /**
- * Prune a value tree for serialization: drop the empty instances trailing the
- * end of each list, so saved files stay tidy. Required instances (up to `min`,
- * at least 1) are always kept.
- *
- * Only *trailing* empties go. An empty instance with a filled one after it is a
- * gap on purpose and is kept, because position carries meaning: consolidation
- * records which of each reviewer's entries are the same entry by lining their
- * lists up (see `consolidate/apply.ts`), and a reviewer with no entry for the
- * second slot holds an empty one there. Closing that gap would slide every
- * later entry down a slot and silently re-point the alignment at the wrong
- * entries on the next load.
+ * Prune trailing empty instances from each list before serialization (down to
+ * `min`, at least 1). Only *trailing* empties are dropped — an empty slot
+ * before a filled one is kept because consolidation aligns reviewers' entries
+ * by list position (see `consolidate/apply.ts`); closing the gap would
+ * silently shift later entries out of alignment.
  */
 export function pruneTree(
   defs: ResolvedDef[],
@@ -174,7 +146,6 @@ function pruneInstance(def: ResolvedDef, inst: InstanceNode): InstanceNode {
   return out
 }
 
-/** True if any field anywhere in the tree has been filled in. */
 export function hasAnnotations(defs: ResolvedDef[], tree: AnnotationValueTree): boolean {
   for (const def of defs) {
     const instances = tree[def.name] ?? []
@@ -184,34 +155,20 @@ export function hasAnnotations(defs: ResolvedDef[], tree: AnnotationValueTree): 
 }
 
 /**
- * Whether `def` should be shown, given the current answers in `container` (the
- * same-level value tree `def` is a sibling within) and `ancestors` (the
- * answers of every field along `def`'s direct ancestor chain, keyed by name —
- * see `AnnotationNode`'s `ancestorValues`/`validateTree`'s `gateAncestors` for
- * how callers build this up as they descend the tree). A field with no
- * `visibleIf` is always visible. Otherwise `container` is checked first (a
- * same-level sibling), then `ancestors` (an ancestor field), then — if the
- * caller passed `root`, the paper's whole value tree — the condition's name
- * is walked as a slash-joined absolute path from the schema root, which is
- * how a gate on a cousin or an unrelated branch is evaluated (see
- * `AnnotationDef.visibleIf` for the matching resolution order).
+ * Whether `def` should be shown, given the sibling answers in `container` and
+ * the ancestor-chain answers in `ancestors` (keyed by name). A gate's field
+ * name resolves against `container`, then `ancestors`, then — if `root` (the
+ * whole value tree) is passed — as a slash-joined absolute path from the
+ * schema root, for gates on a cousin or unrelated branch.
  *
- * It is visible exactly when whichever one matches has been "answered":
- * `true` for a boolean, or non-null/non-empty for anything else —
- * deliberately generic, not type-aware, since a boolean's own default
- * (`false`) already reads as "not answered" under this same rule. Fails open
- * (visible) if `visibleIf` names something found in none of the three places
- * — malformed/stale hand-edited data should never make a field un-showable,
- * and a caller that passes no `root` therefore fails open on every non-local
- * condition.
+ * "Answered" means `true` for a boolean, non-null/non-empty otherwise
+ * (deliberately not type-aware, since a boolean defaults to `false` which
+ * already reads as unanswered). Fails open (visible) if the name resolves
+ * nowhere, so malformed/stale data never hides a field.
  *
- * The path walk takes **instance 0** at every level, the same convention
- * `container[field]?.[0]` already uses for a same-level sibling. So a gate
- * reaching across into a repeatable group reads that group's *first* entry,
- * deliberately: outside its own lineage there is no "current" instance to
- * speak of. Only a bare name resolved through `container`/`ancestors` gets
- * the per-instance answer, which is exactly why the bare-name form is kept
- * as its own route rather than rewritten into a path.
+ * A path walk always reads instance 0 of a repeatable group — outside its own
+ * lineage there's no "current" instance — unlike a bare name via
+ * `container`/`ancestors`, which gets the actual per-instance answer.
  */
 export function isFieldVisible(
   def: ResolvedDef,
@@ -239,11 +196,9 @@ function specHolds(
 }
 
 /**
- * One clause of a gate. Without `equals` this is the original "is it answered"
- * test; with it, the answer must be one of the listed values — which is why a
- * value condition only exists on a boolean or an enum string (see
- * `VisibleCondition`). Fails open, per clause, for a field found in none of
- * `container`, `ancestors` and `root`.
+ * One clause of a gate: without `equals`, the "is it answered" test; with it,
+ * the answer must be one of the listed values. Fails open per clause if the
+ * field is found in none of `container`, `ancestors`, `root`.
  */
 function conditionHolds(
   cond: VisibleCondition,
@@ -266,8 +221,7 @@ function conditionHolds(
   return v !== null && v !== undefined && v !== '' && v !== false
 }
 
-/** Instance 0 at every level along a slash-joined absolute path — see
- *  `isFieldVisible` for why the first instance, and nothing else, is read. */
+/** Instance 0 at every level along a slash-joined absolute path (see `isFieldVisible`). */
 function instanceAtPath(
   root: AnnotationValueTree,
   path: string,
@@ -283,17 +237,10 @@ function instanceAtPath(
 }
 
 /**
- * Flatten every filled-in field value under the tree into one lowercased,
- * space-joined string, for "search by annotation content" mode. Mirrors
- * `hasAnnotations`'s walk shape rather than a fresh traversal.
- *
- * Booleans are skipped: every paper has one for each boolean field (they
- * default to `false`, never absent), so including "true"/"false" would make
- * a query like "no" match nearly every paper regardless of what was actually
- * recorded — the opposite of a useful search.
- *
- * Defensive like the rest of this module's tree walks: the project JSON is
- * hand-editable, so a value tree may not match the schema's shape at runtime.
+ * Flatten every filled-in field value into one lowercased, space-joined
+ * string for "search by annotation content" mode. Booleans are skipped:
+ * every paper has one (never absent, defaults `false`), so including
+ * "true"/"false" would make a query like "no" match almost everything.
  */
 export function annotationText(defs: ResolvedDef[], tree: AnnotationValueTree, caseSensitive = false): string {
   const parts: string[] = []

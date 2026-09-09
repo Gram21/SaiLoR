@@ -4,66 +4,43 @@ import type { ResolvedDef } from './schema'
 import type { Project } from './project'
 
 /**
- * Where a paper stands for one reviewer seat — the single vocabulary behind
- * the paper list's dot, its state filter, and its "finished: 5/100" counter,
- * so those three can never tell different stories about the same paper.
+ * Where a paper stands for one reviewer seat — single vocabulary behind the
+ * paper list's dot, state filter, and "finished: 5/100" counter.
  *
- * The two inputs are deliberately independent: how full the form is
- * (`Completeness`) is a fact about the data, and whether it is finished is a
- * reviewer's declaration (`Paper.finished`). Neither is derived from the
- * other; this function is the one place they are combined.
+ * Completeness (fact about the data) and `finished` (reviewer's declaration)
+ * are independent; this is the one place they combine.
  *
  *  - `untouched` — nothing filled in, nothing declared.
  *  - `partial`   — some fields filled, still incomplete.
- *  - `complete`  — every field the dot counts is filled, but nobody has
- *                  ticked "Annotation finished" yet. Not a finished paper:
- *                  a full form has not been vouched for by anyone.
+ *  - `complete`  — form is full but not yet signed off.
  *  - `finished`  — complete *and* declared finished. The only green state.
  *  - `flagged`   — declared finished while a **required** field is empty.
- *                  Reachable by ticking the box early, and by emptying such a
- *                  field on a paper that was already finished; the mark is
- *                  re-evaluated from the current data on every read, so it
- *                  flips to and from `finished` on its own as fields are
- *                  emptied and refilled — nothing has to be saved, and no
- *                  separate invalidation step exists to be missed. It reads
- *                  as an error rather than as progress, because a declaration
- *                  that contradicts the data is exactly that until a human
- *                  resolves it — by filling the field or by unticking the
- *                  box. Only reachable in a schema that marks something
- *                  required; see `hasRequired` below.
+ *                  Recomputed from current data on every read (no stored
+ *                  invalidation step), so it flips to/from `finished` on its
+ *                  own as fields are emptied/refilled. Only reachable when
+ *                  the schema marks something required; see `hasRequired`.
  */
 export type AnnotationState = 'untouched' | 'partial' | 'complete' | 'finished' | 'flagged'
 
 /**
- * `null` where completeness itself does not apply — a screening project (see
- * `completenessApplies` below). Screening has its own dot meaning and no
- * finished checkbox, so it has no state in this vocabulary at all, rather than
- * a misleading one.
+ * `null` where completeness doesn't apply — a screening project (see
+ * `completenessApplies`), which has its own dot meaning and no finished
+ * checkbox.
  *
- * `hasRequired` is what makes `flagged` mean something. Red says "you called
- * this finished while a field that *had* to be filled is empty" — so it can
- * only ever fire in a schema that actually says which fields those are
- * (`required`). Where nothing is required, no empty field contradicts the
- * declaration: an unanswered question can be exactly the right record of a
- * paper that does not address it, and a reviewer who ticks the box has said
- * as much. Such a project simply never goes red, and its dots run empty →
- * amber → green.
+ * `hasRequired` gates `flagged`: red only makes sense where the schema says
+ * which fields must be filled. With nothing required, an empty field is a
+ * valid answer, not a hole, so such a project never goes red.
  *
- * This is the same rule `validate.ts` enforces and `completeness.ts` counts by
- * ("not finished" = a required field left empty), so a red dot and the
- * Validate dialog can never disagree about the same paper — when anything is
- * required, `c` is already a fraction of required fields only, which makes
- * `filled === total` exactly "no required field is empty".
+ * `c` already counts required fields only (matching `validate.ts` /
+ * `completeness.ts`), so `filled === total` means exactly "no required field
+ * empty" — keeping the dot and the Validate dialog in agreement.
  *
- * Booleans are excluded from `c` entirely (see `completeness.ts`), so a Yes/No
- * field is never a hole: unticking one records "no", which is an answer, and
- * cannot turn a finished paper red — even when the schema marks it required.
+ * Booleans are excluded from `c` (see `completeness.ts`): unticking one is an
+ * answer ("no"), never a hole, even if required.
  *
- * `touched` only matters for a schema with nothing countable in it (a
- * boolean-only schema): there, `filled`/`total` cannot distinguish anything,
- * so `hasAnnotations` stands in for "has this been worked on", and there is
- * nothing that could be left unfilled — so such a paper is never `flagged`,
- * only `finished` once declared.
+ * `touched` only matters for a boolean-only schema, where `filled`/`total`
+ * can't distinguish anything; `hasAnnotations` stands in, and such a paper is
+ * never `flagged`, only `finished` once declared.
  */
 export function annotationState(
   c: Completeness | null,
@@ -73,14 +50,10 @@ export function annotationState(
   requireTick = true,
 ): AnnotationState | null {
   if (c === null) return null
-  // `config.finishCheckbox: false` — nobody signs anything off, so a
-  // fulfilled schema *is* finished (see `Project.finishCheckbox`). The stored
-  // tick is not read at all: it may hold a declaration from before the option
-  // was turned off, and honoring half of it would make two papers with
-  // identical data show different colors for a reason the project has
-  // declared irrelevant. `complete` and `flagged` are both unreachable here —
-  // the first because a fulfilled schema goes straight to green, the second
-  // because there is no declaration left for the data to contradict.
+  // `config.finishCheckbox: false` — nobody signs off, so a fulfilled schema
+  // *is* finished; the stored tick is ignored so it can't leak a stale
+  // declaration from before the option was turned off. `complete`/`flagged`
+  // are unreachable here.
   if (!requireTick) {
     if (c.total === 0) return touched ? 'finished' : 'untouched'
     return c.filled === c.total ? 'finished' : c.filled === 0 ? 'untouched' : 'partial'
@@ -93,59 +66,34 @@ export function annotationState(
 }
 
 /**
- * Whether this vocabulary applies to a project at all — the one gate behind
- * the dot's color, the finished checkbox, and the filter dropdown, so a seat
- * can never have two of the three.
+ * Whether this vocabulary applies to a project — gates the dot's color, the
+ * finished checkbox, and the filter dropdown together.
  *
- * Only a screening project is excluded. It already has its own tri-state
- * included/excluded/undecided marker; the derived screening schema marks
- * nothing required, so a fill would count both of its fields (Decision,
- * Reason) — meaning an "Include" decision, which needs no Reason, would read
- * as half done for a paper that is actually settled.
+ * Only screening is excluded: its derived schema marks nothing required, so
+ * counting both fields (Decision, Reason) would make an "Include" decision
+ * (which needs no Reason) read as half done.
  *
- * **Consolidation is included**, which is why this needs no seat argument at
- * all. The consolidated tree is the record that actually ships, making it the
- * one tree in the project most in need of a sign-off — and the storage is
- * already there for it: `currentFinished`/`setAnnotationFinished` (store.ts)
- * route that seat's tick to `Paper.finished`, the same field the lone reviewer
- * of a single-reviewer project ticks. So the Consolidation dot reports the
- * consolidator's own progress and sign-off like any other seat's, and readiness
- * ("has every reviewer answered this paper") moves into the dot's tooltip — the
- * same trade `paperScreeningStatus` makes for this seat. Readiness keeps its
- * teeth where they matter: the compare popup's own gate (`Field.tsx`) is
- * untouched by this.
- *
- * What that fill deliberately does *not* claim is that a human filled it:
- * `adoptUnanimousValues` copies every unanimous answer into the consolidated
- * tree just from opening the paper. That is exactly why the tick still decides
- * the color rather than the data — an auto-filled paper reads as `complete`
- * ("ready to finish"), never as `finished`, until the consolidator says so.
+ * Consolidation is included, using the same `Paper.finished` field a
+ * single-reviewer seat ticks (see `currentFinished`/`setAnnotationFinished`
+ * in store.ts). Note `adoptUnanimousValues` auto-fills unanimous answers into
+ * the consolidated tree on open — the tick still decides the color, so an
+ * auto-filled paper reads as `complete`, never `finished`, until a human says so.
  */
 export function completenessApplies(project: Project): boolean {
   return project.screening == null
 }
 
 /**
- * What the annotation panel's sign-off checkbox is called in a seat — one
- * definition, because the paper list's `complete` tooltip sends the reader to
- * that control *by name* ("tick X in the panel"), and a tooltip naming a box
- * the seat does not have would send them hunting for it.
- *
- * Consolidation signs off the reconciled record rather than its own
- * extraction; the rule behind the box is identical either way (see
- * `completenessApplies`), only the noun changes to say which pass it ends.
+ * Label for the sign-off checkbox — one definition, since the paper list's
+ * `complete` tooltip names this control by label ("tick X in the panel").
  */
 export function finishCheckboxLabel(isConsolidation: boolean): string {
   return isConsolidation ? 'Consolidation finished' : 'Annotation finished'
 }
 
 /**
- * `annotationState` from a seat's raw tree — the convenience entry point for
- * callers that have a tree rather than a precomputed `Completeness` (the
- * store's landing-paper pick, the annotation panel). The paper list keeps
- * calling `annotationState` directly with the `Completeness` it already
- * computed for the dot's fill; both funnel into that one rule, so there is
- * still only one definition of what each state means.
+ * `annotationState` from a seat's raw tree, for callers without a
+ * precomputed `Completeness` (store's landing-paper pick, annotation panel).
  */
 export function annotationStateFor(
   schema: ResolvedDef[],
@@ -165,50 +113,29 @@ export function annotationStateFor(
 }
 
 /**
- * What the paper list's filter dropdown offers — four buckets over the five
- * states, plus "all".
+ * Paper list's filter dropdown — four coarser buckets over the five states.
  *
- * The states exist to color a single dot precisely; a filter answers a
- * coarser question ("what still needs work?"). So:
- *
- *  - `open` — every paper whose "Annotation finished" box is not ticked:
- *    untouched, part-filled, and filled-but-not-signed-off alike. Undoing
- *    annotations lands a paper back here, whether the values were cleared
- *    (`untouched` / `partial`) or the tick was removed (`complete`) — it is
- *    again an open paper, and no separate "was finished once" bucket survives
- *    to hide it from the list a reviewer works from.
- *  - `in-progress` — the started subset of `open`: papers with at least one
- *    annotation entry recorded, still not signed off. This is `open` minus the
- *    papers nobody has touched yet, so it answers "what have I actually begun
- *    and not finished". A paper touched only through a Yes/No answer counts as
- *    started even though its dot stays `untouched` (completeness ignores
- *    booleans), so this is decided from `touched`, not from the state — see
- *    `matchesFilter`.
+ *  - `open` — box not ticked: untouched, partial, or complete-unsigned alike.
+ *  - `in-progress` — the started subset of `open` (at least one entry
+ *    recorded). Decided from `touched`, not from state, since a paper touched
+ *    only via a Yes/No answer stays `untouched` (completeness ignores
+ *    booleans) — see `matchesFilter`.
  *  - `finished` — signed off and still holding.
- *  - `issues` — signed off while a required field is empty (`flagged`), the
- *    only state that is neither done nor merely unstarted.
- *
- * The dot keeps all five colors: within `open` the fill and its shade still
- * separate untouched from part-filled from ready-to-finish.
+ *  - `issues` — signed off while a required field is empty (`flagged`).
  */
 export type AnnotationFilter = 'all' | 'open' | 'in-progress' | 'finished' | 'issues'
 
-/** Order shown in the dropdown: everything, then the natural progression —
- *  `open` (all unfinished) narrowing to `in-progress` (only the started ones),
- *  then the two ticked buckets. */
+/** Dropdown order: all, then `open` narrowing to `in-progress`, then the two ticked buckets. */
 export const ANNOTATION_FILTERS: AnnotationFilter[] = ['all', 'open', 'in-progress', 'finished', 'issues']
 
-/** The dropdown's options for a project, dropping `issues` where no paper can
- *  ever be in that state (`config.finishCheckbox: false` — see
- *  `annotationState`). An option that always selects nothing is worse than no
- *  option: it reads as "no problems found" rather than "not applicable". */
+/** Drops `issues` where no paper can ever reach it (`config.finishCheckbox: false`
+ *  — see `annotationState`); an always-empty option would misread as "no problems". */
 export function annotationFiltersFor(requireTick: boolean): AnnotationFilter[] {
   return requireTick ? ANNOTATION_FILTERS : ANNOTATION_FILTERS.filter((f) => f !== 'issues')
 }
 
-/** The dropdown's option text, and the word the counter under it uses
- *  ("finished: 5/100"). Lowercase so it reads as a sentence in the counter;
- *  the dropdown capitalizes the first letter itself. */
+/** Dropdown option text and the counter's word ("finished: 5/100"). Lowercase
+ *  so it fits the counter sentence; the dropdown capitalizes itself. */
 export const ANNOTATION_FILTER_LABELS: Record<AnnotationFilter, string> = {
   all: 'all papers',
   open: 'open',
@@ -218,24 +145,17 @@ export const ANNOTATION_FILTER_LABELS: Record<AnnotationFilter, string> = {
 }
 
 /**
- * Does a paper belong under `filter`? The single mapping from the five dot
- * states (plus `touched`) to the buckets, so the list's rows and the counter
- * above them cannot disagree about what each bucket contains.
+ * Does a paper belong under `filter`? Single mapping from the five dot
+ * states (plus `touched`) to the buckets.
  *
- * `touched` — whether this seat has recorded at least one annotation entry for
- * the paper — is read only by `in-progress`, the started subset of `open`. It
- * is a separate input rather than something derived from `state` because the
- * two can legitimately disagree: a paper touched only through a Yes/No answer
- * is `touched` while its dot state is still `untouched` (completeness ignores
- * booleans; see `annotationState`). It defaults to `false`, which the other
- * buckets never consult, so a caller asking about any of them may omit it.
+ * `touched` is a separate input (not derived from `state`) because a paper
+ * touched only via a Yes/No answer is `touched` while its state stays
+ * `untouched` (completeness ignores booleans; see `annotationState`). Only
+ * `in-progress` reads it, so other callers may omit it.
  *
- * `null` — no annotation state at all, which is now only a screening project
- * (`completenessApplies`) — matches only "all", so a filter carried over from
- * an annotation project cannot silently empty a screening list. Callers must
- * still decide for themselves whether the current seat is filterable at all
- * before applying `annotationFilter`; PaperList does this by offering the
- * screening filter instead.
+ * `null` (screening; see `completenessApplies`) matches only "all", so a
+ * filter carried over from an annotation project can't silently empty a
+ * screening list.
  */
 export function matchesFilter(
   state: AnnotationState | null,
@@ -246,13 +166,8 @@ export function matchesFilter(
   if (state === null) return false
   if (filter === 'finished') return state === 'finished'
   if (filter === 'issues') return state === 'flagged'
-  // `open` and `in-progress` both exclude the two ticked states: `finished`
-  // and `flagged` are the papers whose box *is* ticked (they differ only in
-  // whether the data still backs it), so everything else is a paper nobody has
-  // called done.
+  // `finished`/`flagged` are the ticked states; everything else is "not done".
   const unfinished = state !== 'finished' && state !== 'flagged'
-  // `in-progress` narrows that to the papers actually started; an untouched
-  // paper is `open` but not yet in progress.
   if (filter === 'in-progress') return unfinished && touched
   return unfinished // `open`
 }

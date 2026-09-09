@@ -1,9 +1,7 @@
 /**
- * Parse reference-manager exports (BibTeX / RIS / CSL-JSON) into a flat list of
- * entries for the project editor's "Import references…" flow. These files are
- * hand-edited far more often than any other input this app reads, so every
- * parser here is total: a malformed entry is skipped, and `parseReferences`
- * itself never throws — a bad file just yields fewer (or zero) entries.
+ * Parse reference-manager exports (BibTeX / RIS / CSL-JSON) for the "Import
+ * references…" flow. These files are hand-edited often, so every parser here
+ * is total: a malformed entry is skipped, `parseReferences` never throws.
  */
 
 import { parseYear } from './year'
@@ -13,14 +11,13 @@ export interface RefEntry {
   authors: string[]
   doi?: string
   year?: number
-  /** Journal, conference/proceedings, or publisher — see `Paper.venue`. One
-   *  free-text field: BibTeX journal/booktitle/publisher, RIS JF/JO/T2, and
-   *  CSL container-title/publisher all collapse to "where it appeared", and
-   *  no source format reliably distinguishes journal from proceedings. */
+  /** Journal, conference/proceedings, or publisher — see `Paper.venue`. No
+   *  source format reliably distinguishes journal from proceedings, so this
+   *  collapses BibTeX journal/booktitle/publisher, RIS JF/JO/T2, and CSL
+   *  container-title/publisher into one free-text field. */
   venue?: string
-  /** The abstract, when the source carried one. Screening is usually decided
-   *  on title + abstract before a PDF is ever attached, so this is worth
-   *  bringing in even though nothing before this feature read it. */
+  /** The abstract, when the source carried one — screening is usually
+   *  decided on title + abstract before a PDF is attached. */
   abstract?: string
   /** A PDF path/filename the reference file mentioned (BibTeX `file`, RIS `L1`/`UR`), if any. */
   pdfHint?: string
@@ -43,8 +40,7 @@ export function parseReferences(text: string, filename: string): RefEntry[] {
         return parseCslJson(stripped)
     }
   } catch {
-    // Whatever went wrong, an import screen is not the place to throw — the
-    // user just sees "no references found" and can inspect the file.
+    // An import screen shouldn't throw — just yield no references.
     return []
   }
 }
@@ -92,25 +88,17 @@ function collapseSpace(s: string): string {
 // ---------------------------------------------------------------------------
 // LaTeX escapes → UTF-8
 //
-// BibTeX exports routinely spell non-ASCII author/title letters as LaTeX
-// escapes: an accent command applied to a base letter (`\"o`, `\'e`, `\c{c}`)
-// or a handful of standalone letters that are not "a letter plus an accent"
-// at all (`\ss`, `\o`, `\ae`, ...). Both the accent commands and the
-// standalone letters may additionally sit inside a `{...}` pair used only to
-// protect capitalization (`{\"o}`), and the accent commands may brace their
-// own argument (`\"{o}`) or not (`\"o`) — three shapes, same meaning. This
-// function only ever looks at backslash-led sequences, so it is applied
-// *before* the generic `{}`-stripping step in `cleanBibValue`: braces are
-// irrelevant to it either way (they're just inert characters it steps over),
-// which is what makes all three shapes fall out of one pass instead of
-// needing special-casing per shape.
+// BibTeX spells non-ASCII letters as accent commands (`\"o`, `\c{c}`) or
+// standalone letter commands (`\ss`, `\o`, `\ae`...), either possibly wrapped
+// in a capitalization-protecting `{...}` and/or bracing their own argument
+// (`\"{o}` vs `\"o`) — three shapes, same meaning. This only looks at
+// backslash-led sequences and runs *before* `cleanBibValue`'s brace-stripping,
+// since braces are just inert characters it steps over — one pass handles
+// all three shapes with no special-casing.
 // ---------------------------------------------------------------------------
 
-// Accent-command marker → base letter → accented letter. Covers the accents
-// that actually show up in European author names (German/Nordic umlauts,
-// Romance acutes/graves/circumflexes, Baltic macrons, Polish/Lithuanian dot-
-// and ogonek-marks, Czech/Slovak carons, Turkish/Romanian breves and
-// cedillas, Hungarian double acutes, Scandinavian rings).
+// Accent-command marker → base letter → accented letter (covers the accents
+// used in European author names).
 const LATEX_ACCENTS: Record<string, Record<string, string>> = {
   '"': { a: 'ä', e: 'ë', i: 'ï', o: 'ö', u: 'ü', y: 'ÿ',
          A: 'Ä', E: 'Ë', I: 'Ï', O: 'Ö', U: 'Ü', Y: 'Ÿ' },
@@ -135,8 +123,8 @@ const LATEX_ACCENTS: Record<string, Record<string, string>> = {
   k: { a: 'ą', e: 'ę', A: 'Ą', E: 'Ę' },
 }
 
-// Letters that are not "base letter + accent" but distinct characters with
-// their own command name.
+// Letters that are distinct characters with their own command name, not
+// "base letter + accent".
 const LATEX_LETTERS: Record<string, string> = {
   ss: 'ß',
   o: 'ø', O: 'Ø',
@@ -156,35 +144,27 @@ function unescapeLatex(s: string): string {
     (m, marker: string, braced: string | undefined, bare: string) =>
       LATEX_ACCENTS[marker]?.[braced ?? bare] ?? m,
   )
-  // `\c{c}`, `\v{s}`, ... — letter-named accent commands. Real exports only
-  // ever brace the argument here (unlike the symbol markers above); requiring
-  // the brace also means these can never collide with the standalone letters
-  // below, none of which start with c/v/u/H/r/k.
+  // `\c{c}`, `\v{s}`, ... — letter-named accent commands. Real exports always
+  // brace the argument; requiring it also keeps these from colliding with the
+  // standalone letters below (none start with c/v/u/H/r/k).
   out = out.replace(
     /\\([cvuHrk])\{([A-Za-z])\}/g,
     (m, marker: string, letter: string) => LATEX_ACCENTS[marker]?.[letter] ?? m,
   )
-  // Standalone letters. Three shapes: an explicit `{}` terminator (`\o{}re` is
-  // "øre"), bare followed by the single space that terminates it (`S\o ren` is
-  // "Søren" — TeX consumes the space that ends a control word, it is not part
-  // of the text), or bare followed by anything else. The negative lookahead
-  // keeps `\o` from eating into a longer command it happens to prefix (e.g.
-  // `\onlinecite`).
-  //
-  // Consuming that space is only safe because the author list is split on
-  // " and " *before* this runs (see `parseBibEntry`), which is also the order
-  // BibTeX itself works in: it separates names on the raw field, then each
-  // name is expanded. Unescape first and the space in `Wei\ss and Hans` would
-  // be eaten as `\ss`'s terminator, glueing the separator into "Weißand".
+  // Standalone letters: `{}`-terminated, bare + the single space TeX consumes
+  // as the control word's terminator (`S\o ren` → "Søren"), or bare + anything
+  // else. Negative lookahead stops `\o` from eating into `\onlinecite` etc.
+  // Consuming that space is only safe because the author list is already
+  // split on " and " before this runs (see `parseBibEntry`) — unescaping
+  // first would let `Wei\ss and Hans` eat the separator's space as `\ss`'s
+  // terminator, glueing it into "Weißand".
   out = out.replace(
     /\\(ss|ae|AE|oe|OE|aa|AA|o|O|l|L|i|j)(?:\{\}| |(?![A-Za-z]))/g,
     (m, name: string) => LATEX_LETTERS[name] ?? m,
   )
-  // Anything left with a backslash — a plain-punctuation escape (`\&`, `\%`,
-  // `\_`, `\#`, `\$`), an escaped space (`\ ` → a space), or a command this
-  // table doesn't know. Dropping just the backslash keeps the text readable
-  // and never leaves a stray backslash behind, which matters more here than
-  // perfectly resolving an escape we've never seen.
+  // Anything left with a backslash (plain-punctuation escapes, `\ ` → space,
+  // or an unknown command) — just drop the backslash rather than try to
+  // resolve an escape we've never seen.
   out = out.replace(/\\(.)/g, '$1')
   return out
 }
@@ -192,31 +172,24 @@ function unescapeLatex(s: string): string {
 // ---------------------------------------------------------------------------
 // Repairing author names merged by a lost " and " separator
 //
-// This is a heuristic, not a parser: BibTeX gives no structural signal for
-// where one author's name ends and the next begins once the separator is
-// gone, only capitalization. A wrong split silently corrupts a real name
-// (a data-quality bug a reviewer may never notice), while a missed split
-// just leaves two names glued together (ugly, but visible and easy to fix
-// by hand). So every check below is a *veto*, not a trigger: we only commit
-// to a split when the result looks unambiguously like two people, and
-// otherwise leave the text alone.
+// Heuristic, not a parser: BibTeX gives no structural signal for where one
+// name ends and the next begins once the separator is gone, only
+// capitalization. A wrong split silently corrupts a name, while a missed
+// split just leaves two names glued together (visible, easy to fix by hand).
+// So every check below is a *veto*: only commit to a split when it
+// unambiguously looks like two people.
 // ---------------------------------------------------------------------------
 
 // Prefixes where an internal capital is part of the surname itself, not a
-// lost separator: McDonald, MacLeod, MacArthur, DeSilva, DiCaprio, LaSalle,
-// VanDyke, DuBois. Checked against the fragment immediately before the
-// lowercase→uppercase seam.
+// lost separator (McDonald, MacLeod, DeSilva, DiCaprio, LaSalle, VanDyke,
+// DuBois), checked against the fragment before the lowercase→uppercase seam.
 const NAME_PREFIX_ALLOWLIST = ['Mc', 'Mac', 'De', 'Di', 'La', 'Van', 'Du']
 
 /**
  * Find a lowercase→uppercase seam inside one token that looks like two
- * merged names ("KeimAngelika") rather than a legitimate internal capital.
- * Names with an apostrophe or hyphen at the capital (O'Brien, D'Angelo,
- * Smith-Jones) never reach this at all: the seam requires the uppercase
- * letter to be *immediately* preceded by a lowercase one, and an apostrophe
- * or hyphen breaks that adjacency. All-caps surnames have no lowercase
- * letter to seam off of. That leaves only the Mc/Mac/De/... family as
- * genuine false positives, which the allowlist above covers explicitly.
+ * merged names ("KeimAngelika") rather than a legitimate internal capital
+ * (O'Brien, Smith-Jones, and ALL-CAPS never match; Mc/Mac/... is vetoed via
+ * the allowlist above).
  */
 function findMergeSeam(token: string): [string, string] | null {
   const m = /^(.*?[a-z])([A-Z].*)$/.exec(token)
@@ -228,13 +201,10 @@ function findMergeSeam(token: string): [string, string] | null {
 }
 
 /**
- * A token ending in a bare "and" is either a real name (Roland, Armand,
- * Bertrand, Durand, Ferdinand...) or "someone" + a separator "and" that lost
- * its leading space — nothing in the token itself can tell them apart. The
- * caller (`repairMergedAuthorNames`) resolves that ambiguity the same way it
- * resolves the no-"and"-at-all case: only commit if the surrounding split
- * yields two multi-token names, which a genuine single name essentially
- * never does (a lone "Roland" leaves only a one-token remainder after it).
+ * A token ending in a bare "and" is either a real name (Roland, Armand...)
+ * or a name + separator "and" that lost its leading space — nothing in the
+ * token itself can tell them apart. The caller only commits to the split if
+ * it yields two multi-token names, which a genuine single name won't.
  */
 function endsInBareAnd(token: string): string | null {
   const m = /^([A-Z][A-Za-z'-]*)and$/.exec(token)
@@ -242,11 +212,10 @@ function endsInBareAnd(token: string): string | null {
 }
 
 /**
- * One "and"-split chunk that should be exactly one author. Detects the two
- * ways a lost separator can still be hiding in it — a token merely missing
- * the separator's leading space ("Keimand Angelika"), or a full merge with
- * no separator left at all ("KeimAngelika") — and splits into two only when
- * doing so produces two plausible "First Last"-shaped names on both sides.
+ * One "and"-split chunk that should be exactly one author. Detects a lost
+ * separator hiding as a missing leading space ("Keimand Angelika") or a full
+ * merge ("KeimAngelika"), splitting only when both sides look like plausible
+ * "First Last" names.
  */
 function repairMergedAuthorNames(chunk: string): string[] {
   const tokens = chunk.split(/\s+/).filter(Boolean)
@@ -278,9 +247,8 @@ function repairMergedAuthorNames(chunk: string): string[] {
 /** Split a BibTeX author field into individual author strings, repairing a
  *  lost/mangled " and " separator before and after the ordinary split. */
 function splitAuthorList(raw: string): string[] {
-  // "andAngelika" — the separator kept its word but lost its trailing space.
-  // Unconditionally safe: a capital letter directly glued onto "and" with no
-  // space never occurs in real prose or names, only in this exact bug.
+  // "andAngelika" — separator kept its word but lost its trailing space; safe
+  // since a capital glued directly onto "and" never occurs otherwise.
   const spaced = raw.replace(/\band([A-Z])/g, 'and $1')
   return spaced.split(/\s+and\s+/i).flatMap(repairMergedAuthorNames)
 }
@@ -320,19 +288,13 @@ function splitBibEntries(text: string): string[] {
       k++
     }
 
-    // Ran to the end without closing: this entry has an unbalanced brace. One
-    // stray `{` — a hand-edit, a LaTeX-heavy abstract — used to consume the
-    // rest of the file, so a 500-entry export whose third entry was malformed
-    // silently imported three papers. That directly contradicts this module's
-    // contract that a malformed entry is *skipped*, and the failure is
-    // invisible: no error, just a short list.
-    //
-    // Resync instead: give up on this entry and resume from the next `@` that
-    // starts a line, which is where a well-formed file puts them.
+    // Unbalanced brace: one stray `{` used to silently consume the rest of
+    // the file, swallowing later entries instead of just skipping this one.
+    // Resync from the next `@` that starts a line instead.
     if (depth > 0) {
       const resync = text.slice(at + 1).search(/(?:^|\n)[ \t]*@/)
       if (resync === -1) break
-      // `search` is relative to at+1, and its match may include the newline.
+      // Relative to at+1, and the match may include the newline.
       const abs = at + 1 + resync
       i = text[abs] === '@' ? abs : abs + 1
       continue
@@ -379,10 +341,9 @@ function unwrapBibValue(raw: string): string {
 }
 
 /** Clean a BibTeX text value (title, author list, doi, year): unescape LaTeX
- *  *before* dropping braces — `{\"o}` and `\"{o}` both rely on the braces
- *  still being there when `unescapeLatex` runs, and are gone by the time the
- *  generic `[{}]` strip below runs (which still exists for capitalization
- *  braces that don't wrap an escape at all, e.g. `{DNA}`). */
+ *  *before* dropping braces — `{\"o}`/`\"{o}` need the braces still present
+ *  when `unescapeLatex` runs. The `[{}]` strip after still handles plain
+ *  capitalization braces like `{DNA}`. */
 function cleanBibValue(raw: string): string {
   return unescapeLatex(unwrapBibValue(raw))
     .replace(/[{}]/g, '')
@@ -391,12 +352,9 @@ function cleanBibValue(raw: string): string {
     .trim()
 }
 
-/** Clean a BibTeX value that is a filesystem path/URL rather than text, e.g.
- *  the `file` field. Deliberately *not* `cleanBibValue`: a Windows path like
- *  `C:\Users\name\file.pdf` is full of backslashes that `unescapeLatex`'s
- *  catch-all fallback would strip as "unknown escapes", mangling the path.
- *  Keeps only the narrow punctuation/space unescaping paths can legitimately
- *  contain. */
+/** Clean a BibTeX path/URL value (e.g. `file`). Not `cleanBibValue`: a
+ *  Windows path like `C:\Users\name\file.pdf` would have its backslashes
+ *  mangled by `unescapeLatex`'s catch-all fallback. */
 function cleanBibPathSegment(raw: string): string {
   return unwrapBibValue(raw)
     .replace(/[{}]/g, '')
@@ -435,8 +393,7 @@ function parseBibEntry(raw: string): RefEntry | null {
   const head = raw.match(/^@([A-Za-z]+)\s*[{(]/)
   if (!head) return null
   const body = raw.slice(head[0].length, -1) // drop the matching closing brace/paren
-  // The first top-level comma separates the citation key from its fields; an
-  // entry with none (broken/empty) simply has no fields to find.
+  // First top-level comma separates the citation key from its fields.
   const parts = splitTopLevel(body, ',')
   const fieldsStr = parts.length > 1 ? body.slice(parts[0].length + 1) : ''
   const fields = parseBibFields(fieldsStr)
@@ -446,10 +403,8 @@ function parseBibEntry(raw: string): RefEntry | null {
 
   const entry: RefEntry = { title, authors: [] }
   if (fields.has('author')) {
-    // Split the *raw* list on " and " before cleaning each name, which is the
-    // order BibTeX itself works in — the separator is a property of the field,
-    // not of any one name. Cleaning first would let a name-final control word
-    // (`Wei\ss and Hans`) swallow the separator's space; see `unescapeLatex`.
+    // Split raw list on " and " before cleaning each name — cleaning first
+    // could let a name-final control word swallow the separator's space.
     entry.authors = splitAuthorList(unwrapBibValue(fields.get('author')!))
       .map((name) => normalizeAuthorName(cleanBibValue(name)))
       .filter(Boolean)
@@ -461,11 +416,8 @@ function parseBibEntry(raw: string): RefEntry | null {
   if (fields.has('year')) {
     entry.year = parseYear(cleanBibValue(fields.get('year')!))
   }
-  // journal (article) / journaltitle (biblatex's own name for the same thing)
-  // / booktitle (a chapter or a conference paper) / publisher (last resort,
-  // e.g. a standalone report) — first non-empty wins. Not a merge: a BibTeX
-  // entry realistically only ever has one of these, so there is no tag-order
-  // question here the way there is for RIS's JF/JO/T2 below.
+  // journal / journaltitle (biblatex) / booktitle (chapter or conference) /
+  // publisher (last resort) — first non-empty wins.
   for (const key of ['journal', 'journaltitle', 'booktitle', 'publisher']) {
     if (!fields.has(key)) continue
     const venue = cleanBibValue(fields.get(key)!)
@@ -507,20 +459,17 @@ interface RisDraft {
   authors: string[]
   doi?: string
   year?: number
-  /** From `N2` — kept separately from `abstractAB` so a later `AB` can still
-   *  win regardless of tag order (see `finalizeRis`). */
+  /** From `N2` — kept separate from `abstractAB` so tag order can't decide
+   *  which wins (see `finalizeRis`). */
   abstract?: string
   /** From `AB`, the primary abstract tag. */
   abstractAB?: string
-  /** From `JF` (journal, full title) — RIS's primary venue tag. Draft fields
-   *  kept separately per tag, same as the abstract pair above, so the
-   *  precedence in `finalizeRis` is independent of which tag the exporter
-   *  happened to write first. */
+  /** From `JF` (journal, full title), RIS's primary venue tag — kept
+   *  per-tag like the abstract pair so precedence is order-independent. */
   venueJF?: string
   /** From `JO` (journal, abbreviated). */
   venueJO?: string
-  /** From `T2` (secondary title — journal for an article, or the
-   *  proceedings/book title for a conference paper or chapter). */
+  /** From `T2` (secondary title — journal, or proceedings/book title). */
   venueT2?: string
   pdfHint?: string
 }
@@ -533,32 +482,22 @@ function finalizeRis(cur: RisDraft): RefEntry | null {
     authors: cur.authors,
     doi: cur.doi,
     year: cur.year,
-    // AB is RIS's primary abstract tag; N2 is a widely-used alternate some
-    // exporters use instead (or, less often, alongside it). Prefer AB over
-    // N2 rather than concatenating — they are read as alternates in the
-    // wild, and concatenating would risk a duplicated abstract.
+    // AB and N2 are read as alternates in the wild; prefer AB over N2 rather
+    // than concatenating (risks a duplicated abstract).
     abstract: cur.abstractAB ?? cur.abstract,
-    // JF (full journal title) is the most specific and most common; JO is a
-    // same-meaning abbreviation some exporters use instead; T2 is the
-    // catch-all "secondary title" RIS reuses for a conference/book title when
-    // there is no journal at all. First non-empty of that priority wins,
-    // computed here rather than by an `if (!cur.x)` first-wins guard while
-    // scanning — a guard like that would let tag order decide the winner
-    // instead of the tag's own meaning, exactly the bug the abstract pair
-    // above is already written to avoid.
+    // JF (full title) > JO (abbreviation) > T2 (catch-all secondary title).
+    // Priority decided here, not via an `if (!cur.x)` guard while scanning,
+    // so tag order in the file can't override it.
     venue: cur.venueJF ?? cur.venueJO ?? cur.venueT2,
     pdfHint: cur.pdfHint,
   }
 }
 
 /**
- * Append a wrapped continuation line to the value it continues.
- *
- * Only the prose fields wrap in practice, and only they are safe to join: an
- * identifier or a path (DO, L1, UR) that appeared to wrap would more likely be
- * a malformed file than a long value, and gluing a stray line onto a DOI would
- * quietly corrupt it. Authors are excluded too — RIS gives one author per line,
- * so a line following AU is a new name, not a continuation of the last one.
+ * Append a wrapped continuation line to the value it continues. Only prose
+ * fields (title, abstracts) join; identifiers/paths (DO, L1, UR) and authors
+ * (one per line) are excluded since a continuation there means a malformed
+ * file, not a long value.
  */
 function appendRis(cur: RisDraft, tag: string, cont: string): void {
   const text = collapseSpace(unescapeLatex(cont))
@@ -573,10 +512,8 @@ function parseRis(text: string): RefEntry[] {
   const records: RefEntry[] = []
   let cur: RisDraft | null = null
 
-  // The tag whose value a continuation line belongs to. RIS wraps long values
-  // onto following lines with no tag of their own, and dropping them truncated
-  // a wrapped title mid-sentence — which then also changed how duplicate
-  // detection scored it.
+  // Tag whose value a continuation line belongs to (RIS wraps long values
+  // onto untagged following lines).
   let lastTag: string | null = null
 
   for (const rawLine of lines) {
@@ -591,13 +528,9 @@ function parseRis(text: string): RefEntry[] {
     lastTag = tag
 
     if (tag === 'TY') {
-      // A new record starts here, so whatever was in progress ends here —
-      // finalize it rather than dropping it on the floor. Files with no `ER`
-      // lines exist (hand-edited, truncated, or written by a sloppy exporter),
-      // and overwriting `cur` meant every record but the *last* vanished with
-      // no error: three records in, one out. The trailing-record rescue at the
-      // bottom of this function already recognised the same problem; this is
-      // the same rescue for the records before it.
+      // Finalize whatever was in progress rather than overwriting `cur` and
+      // losing it — files missing `ER` lines exist, and every record but the
+      // last would otherwise silently vanish.
       if (cur) {
         const prev = finalizeRis(cur)
         if (prev) records.push(prev)
@@ -613,10 +546,9 @@ function parseRis(text: string): RefEntry[] {
       continue
     }
     switch (tag) {
-      // RIS is plain text like BibTeX and can carry the same LaTeX escapes
-      // (a common source is a .bib file round-tripped through a converter),
-      // so title/author get the same unescape — but not DO/L1/UR below,
-      // which are identifiers and paths, not prose.
+      // RIS can carry the same LaTeX escapes as BibTeX (e.g. round-tripped
+      // via a converter), so title/author get the same unescape — but not
+      // DO/L1/UR below, which are identifiers/paths, not prose.
       case 'TI':
       case 'T1':
         if (!cur.title && value) cur.title = collapseSpace(unescapeLatex(value))
@@ -663,8 +595,7 @@ function parseRis(text: string): RefEntry[] {
         break
     }
   }
-  // A record with no trailing `ER  -` (a truncated/hand-edited file) is still
-  // worth keeping rather than silently dropping the last entry.
+  // No trailing `ER  -`: still keep the last record rather than dropping it.
   if (cur) {
     const entry = finalizeRis(cur)
     if (entry) records.push(entry)

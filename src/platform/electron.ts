@@ -55,17 +55,11 @@ export interface SlrBridge {
   pickReferenceFile(): Promise<{ text: string; name: string } | null>
   /** Raw bytes of a PDF by absolute path (for reading its title/authors). */
   readPdf(path: string): Promise<Uint8Array>
-  /** Whether `rel` (relative to the project's directory) is safe and
-   *  reachable to read via slr-file:// — the same traversal/symlink guard
-   *  `registerPdfProtocol` enforces when actually serving it, checked first
-   *  so a blocked or missing PDF gets an honest reason instead of pdf.js's
-   *  own opaque failure for an HTTP status it never explains. */
+  /** Same traversal/symlink guard `registerPdfProtocol` enforces when serving the file,
+   *  checked first so a blocked/missing PDF gets an honest reason instead of pdf.js's opaque failure. */
   checkPdfPath(rel: string): Promise<{ ok: true } | { ok: false; reason: 'no-project' | 'escapes' | 'not-found' }>
-  /** Asks the reviewer (via a native dialog in the main process) whether to
-   *  open `rel` even though it points outside the project's own folder, and
-   *  records the approval for the rest of this session if they say yes — see
-   *  `pdf:allowPath` and `allowedEscapes` in electron/main.ts. Resolves to
-   *  whether the reviewer approved. */
+  /** Asks the reviewer (native dialog in main process) whether to open `rel` despite it
+   *  pointing outside the project folder; approval is remembered for the session — see `allowedEscapes` in electron/main.ts. */
   allowPdfPath(rel: string): Promise<boolean>
   /** Burn `marks` into the PDF at `pdfAbsPath` as real annotation objects. */
   embedPdfMarks(
@@ -193,9 +187,7 @@ export class ElectronAdapter implements PlatformAdapter {
       return {
         ...e,
         available: p?.exists ?? false,
-        // Re-read from the file: the stored title goes stale the moment the
-        // project is renamed elsewhere (e.g. in the project editor).
-        // `undefined` means the file sets no title, so the name is used again.
+        // Re-read from the file: the stored title goes stale once the project is renamed elsewhere.
         title: p?.exists ? p.title : e.title,
       }
     })
@@ -218,8 +210,7 @@ export class ElectronAdapter implements PlatformAdapter {
 
   async openRecent(id: string): Promise<OpenedProject | null> {
     const res = await bridge().openPath(id)
-    // The file is gone. Keep the entry — the drive may come back — the caller
-    // marks it unavailable instead of forgetting it.
+    // Keep the entry even if the file is gone — the drive may come back — caller marks it unavailable instead.
     if (!res) return null
     await bridge().setProjectDir(res.path)
     pushRecent(RECENTS_KEY, { id: res.path, name: baseName(res.path), path: res.path })
@@ -233,11 +224,8 @@ export class ElectronAdapter implements PlatformAdapter {
 
   async saveProject(text: string, handle: SaveHandle): Promise<SaveHandle> {
     if (!handle.path) throw new Error('No file path; use "Save as".')
-    // `text` is the logical whole-project JSON (`serializeProject`'s shape) —
-    // the contract every platform shares, and what git-diff/tests deal in.
-    // On disk this build splits it into `project.json` (meta only) plus an
-    // `annotations/<paperId>/…` file per reviewer/consolidated tree; see
-    // `splitProjectFiles`'s own doc comment for why.
+    // `text` is the shared whole-project JSON contract; on disk this build splits it into
+    // `project.json` (meta) plus per-tree `annotations/<paperId>/…` files — see `splitProjectFiles`.
     const { meta, files } = splitProjectFiles(loadProject(text))
     await bridge().saveProject(handle.path, JSON.stringify(meta, null, 2), files)
     return handle
@@ -249,50 +237,32 @@ export class ElectronAdapter implements PlatformAdapter {
   }
 
   async getPdfSource(pdfPath: string, projectHandle: SaveHandle): Promise<PdfSource> {
-    // Re-assert the base directory from the handle of the project we're actually
-    // rendering. The project editor repoints it when picking a new location, so
-    // trusting whatever was set last would resolve PDFs against the wrong dir.
+    // Re-assert the dir from this project's handle: the editor repoints it when picking a
+    // new location, so trusting whatever was set last could resolve PDFs against the wrong dir.
     if (projectHandle?.path) await bridge().setProjectDir(projectHandle.path)
-    // Ask before constructing the URL: the protocol handler enforces the same
-    // check when actually serving the file, but a 403/404 from a custom
-    // protocol reaches the reviewer as pdf.js's own generic load-failure
-    // message, which says nothing about *why*. This surfaces the real reason
-    // as a normal thrown Error instead — the load effect in PdfViewer.tsx
-    // already renders whatever this throws.
+    // Check first so a bad path surfaces its real reason as a thrown Error, instead of
+    // pdf.js's opaque generic failure for a 403/404 from the protocol handler.
     const check = await bridge().checkPdfPath(pdfPath)
     if (!check.ok) {
       if (check.reason === 'escapes') {
-        // Not a hard refusal: the reviewer is trusted to know whether they
-        // trust *this* project enough to let it read a file outside its own
-        // folder — see `allowedEscapes` in electron/main.ts for the whole
-        // reasoning. The confirmation dialog itself runs in the main process
-        // (`pdf:allowPath`), not here: a renderer that could approve its own
-        // escape by simply calling the bridge method would make this check
-        // no check at all.
+        // Not a hard refusal — the reviewer may trust this project enough to read outside its
+        // folder (see `allowedEscapes` in electron/main.ts). The confirm dialog runs in the main
+        // process so a renderer can't just approve its own escape.
         const approved = await bridge().allowPdfPath(pdfPath)
         if (!approved) {
           throw new Error(
             `PDF "${pdfPath}" was not opened — it points outside the project's own folder, and you chose not to open it.`,
           )
         }
-        // Falls through to the URL below: the reviewer just approved this
-        // exact path, so there's nothing left to re-check before using it.
       } else if (check.reason === 'not-found') {
         throw new Error(`PDF "${pdfPath}" was not found relative to the project's own folder.`)
       } else {
         throw new Error('No project is open.')
       }
     }
-    // The main process serves files from the project dir via slr-file://.
-    // Carried as a query param, not the URL's path: a `..` segment sitting
-    // in the *path* is a dot-segment by the URL Standard's own definition,
-    // which Chromium's URL parser collapses (per spec, before this string
-    // even reaches `registerPdfProtocol` — before `net.fetch`/`getDocument`
-    // ever issues the request) the exact same way it would for a normal
-    // http(s) link, silently eating every ".." a `pdf` value climbed with
-    // and requesting something else entirely. A query value is never
-    // subject to that normalization, at any parsing layer, so it round-trips
-    // exactly as written.
+    // Carried as a query param, not the URL path: Chromium's URL parser collapses ".."
+    // path segments per spec before the request is even made, so a path-based value would
+    // silently climb to the wrong file. Query values aren't subject to that normalization.
     return { url: `slr-file://project/pdf?path=${encodeURIComponent(pdfPath)}` }
   }
 
@@ -411,13 +381,9 @@ export class ElectronAdapter implements PlatformAdapter {
     }
   }
 
-  // Git: thin pass-throughs to the bridge, except `status`, where the raw
-  // porcelain/diff text crosses IPC on purpose so the tested parsers
-  // (`src/git/output.ts`) turn it into data on this side.
-  //
-  // A `private readonly` field, not a fresh object literal per call: getPlatform()
-  // is a singleton, and a new object every time `getGit()` is called would make
-  // every `useGitStore` selector see a "different" platform and churn.
+  // Git: thin pass-throughs, except `status`, where raw porcelain/diff text crosses IPC so the
+  // tested parsers (`src/git/output.ts`) handle it here. A field, not a fresh object per call,
+  // so `useGitStore` selectors don't see a "different" platform and churn.
   private readonly git: GitPlatform = {
     probe: () => bridge().gitProbe(),
     pickCloneDir: () => bridge().gitPickCloneDir(),

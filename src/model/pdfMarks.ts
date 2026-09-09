@@ -1,27 +1,17 @@
 /**
- * A reviewer's highlights and comments on a paper's PDF — the standard
- * "select text, highlight it, optionally attach a note" most PDF viewers
- * offer, reimplemented as an overlay SaiLoR renders on top of react-pdf's
- * canvas rather than written into the PDF file itself. Keeping the PDF
- * binary untouched is what lets it stay a plain relative-path reference,
- * shared and diffed by git like everything else in a project — writing real
- * PDF annotation objects into the file would make every reviewer's mark a
- * binary edit to a file every reviewer references, with no way to tell whose
- * mark is whose. See `Paper.marks`/`Paper.reviewMarks` (`project.ts`) for
- * where these live per reviewer, and `splitProjectFiles` for the on-disk
- * `marks-<n>.json` / `marks-consolidated.json` files.
+ * A reviewer's highlights/notes on a paper's PDF, rendered as an overlay
+ * rather than written into the PDF file — keeps the PDF binary untouched so
+ * it stays a plain, git-diffable reference shared by all reviewers. See
+ * `Paper.marks`/`Paper.reviewMarks` (`project.ts`) and `splitProjectFiles`
+ * for the on-disk `marks-<n>.json` / `marks-consolidated.json` files.
  */
 
 /**
- * One highlighted region, as a **fraction of the page's own rendered
- * size** (0..1, from the top-left) — not a pixel or PDF-point coordinate.
- * A page's aspect ratio is fixed regardless of zoom or window width, so a
- * fraction stays correct at any zoom level or container width without any
- * pdf.js viewport math; the renderer just multiplies by the page element's
- * current bounding box. A highlighted selection spanning a line wrap
- * produces one `MarkRect` per line (the same shape `Range.getClientRects()`
- * already returns), not one bounding box, so the highlight follows the
- * text's actual shape instead of covering the whole line width.
+ * One highlighted region, as a **fraction of the page's own rendered size**
+ * (0..1, top-left origin), not a pixel/PDF-point coordinate, so it stays
+ * correct at any zoom/container width. A selection spanning a line wrap
+ * produces one `MarkRect` per line (matching `Range.getClientRects()`)
+ * rather than one bounding box, so the highlight follows the text's shape.
  */
 export interface MarkRect {
   x: number
@@ -34,68 +24,46 @@ export interface PdfMark {
   id: string
   /** 1-indexed, matching react-pdf/pdf.js page numbering. */
   page: number
-  /** A text highlight's rects trace the selection (one per wrapped line). A
-   *  sticky note has exactly one rect, its `x`/`y` the pinned point — its
-   *  `width`/`height` are unused (icon size is fixed in CSS) but kept
-   *  non-zero so `isMarkRect` and every existing rect-consumer stay
-   *  unchanged. */
+  /** A note has exactly one rect (its pinned point); `width`/`height` are
+   *  unused but kept non-zero so `isMarkRect` stays happy. */
   rects: MarkRect[]
-  /** A CSS color (this app only ever writes one of `MARK_COLORS`, but a
-   *  hand-edited file's value is passed through rather than rejected). */
+  /** A CSS color; only ever one of `MARK_COLORS` in practice, but a
+   *  hand-edited file's value is passed through rather than rejected. */
   color: string
-  /** Empty string means "just a highlight, no note attached yet" — never
-   *  empty in practice for a `note`, but not enforced, same as everything
-   *  else in a hand-editable file. */
+  /** Empty string means "no note attached yet"; not enforced otherwise. */
   comment: string
-  /** The raw text selected at the moment a `'highlight'` mark was created —
-   *  captured once, never edited afterward. Always `undefined` for a
-   *  `'note'` (no selection is involved in making one) and for any mark
-   *  predating this field. Used only as a fallback display label — e.g. the
-   *  field-link popover shows this when `comment` is empty — the same "user
-   *  note first, else something to tell marks apart by" role `comment`
-   *  plays elsewhere. */
+  /** Text selected when a `'highlight'` mark was created, captured once.
+   *  `undefined` for a `'note'` or any mark predating this field. Fallback
+   *  display label (e.g. field-link popover) when `comment` is empty. */
   text?: string
   createdAt: string
   updatedAt: string
-  /** `'highlight'` (default, and every mark before this field existed) traces
-   *  selected text. `'note'` pins a sticky note at a point — no text is
-   *  selected to make one. */
+  /** `'highlight'` is the default (and every pre-existing mark); `'note'`
+   *  pins a sticky note at a point with no text selection. */
   kind: 'highlight' | 'note'
-  /** Fields this mark has been linked to as supporting evidence ("why I
-   *  picked this value"). Undefined on every mark before this feature
-   *  existed, and rewritten back to undefined (never `[]`) once the last
-   *  link is removed — same legacy-default precedent `kind` set. */
+  /** Fields linked to this mark as supporting evidence. `undefined` (never
+   *  `[]`) when there are none, including for marks predating this field. */
   linkedFields?: LinkedField[]
-  /** Present only on a mark that's one page-fragment of a highlight that
-   *  spans a page boundary — every fragment sharing a `groupId` is one
-   *  logical highlight rendered as disjoint regions on different pages.
-   *  Absent (undefined) for every ordinary single-page mark, including
-   *  every mark that existed before this feature. Store actions
-   *  (`setMarkComment`, `setMarkColor`, `linkMarkToField`,
-   *  `unlinkMarkFromField`, `removeMark`) keep all fragments sharing a
-   *  `groupId` in sync, so from a reviewer's perspective they behave as one
-   *  highlight that happens to render on two pages. */
+  /** Set only when a highlight spans a page boundary: every fragment
+   *  sharing a `groupId` is one logical highlight split across pages. Store
+   *  actions keep all fragments sharing a `groupId` in sync so they behave
+   *  as one highlight to the reviewer. */
   groupId?: string
 }
 
 /**
- * One field a mark is linked to. `path` is `fieldPath`'s canonical form at
- * link time (e.g. `Findings[1]/Metric`) — the source of truth for lookups.
- * `label` is `displayPath`'s human-readable form at link time, denormalized
- * so a mark's popover still shows something meaningful if the field is later
- * renamed or removed out from under the link — canonical paths are name/path
- * derived (see `src/llm/paths.ts`) and are NOT stable across a schema rename,
- * move, or an earlier repeatable instance being added/removed (which shifts
- * every later index with no reconciliation — the same known limitation
- * `aiMarks`/`deferredConsolidations` in `store.ts` already have).
+ * One field a mark is linked to. `path` is the canonical `fieldPath` at link
+ * time, used for lookups. `label` is the human-readable `displayPath` at
+ * link time, denormalized so the popover still shows something meaningful if
+ * the field is later renamed/removed — canonical paths aren't stable across
+ * a schema rename/move or a repeatable-instance index shift (same known
+ * limitation as `aiMarks`/`deferredConsolidations` in `store.ts`).
  */
 export interface LinkedField {
   path: string
   label: string
 }
 
-/** The palette offered when creating or recoloring a highlight — the same
- *  handful of colors most PDF viewers default to. */
 export const MARK_COLORS = ['#ffe066', '#a5f3a5', '#a5d8ff', '#ffb3c1', '#d0bfff']
 
 function isMarkRect(v: unknown): v is MarkRect {
@@ -110,22 +78,17 @@ function isLinkedField(v: unknown): v is LinkedField {
   return typeof r.path === 'string' && !!r.path && typeof r.label === 'string'
 }
 
-/** Defensive parse, same "drop the malformed entry, never throw" rule as
- *  everything else here. `undefined` (not `[]`) for "no links" so a mark
- *  with none round-trips byte-identical to one from before this field
- *  existed, and `marks-*.json` doesn't grow a `"linkedFields": []` on every
- *  mark that has never been linked to anything. */
+/** Drops malformed entries rather than throwing. Returns `undefined` (not
+ *  `[]`) for "no links" so an unlinked mark round-trips byte-identical and
+ *  `marks-*.json` doesn't grow a `"linkedFields": []` on every mark. */
 function parseLinkedFields(raw: unknown): LinkedField[] | undefined {
   if (!Array.isArray(raw)) return undefined
   const out = raw.filter(isLinkedField)
   return out.length > 0 ? out : undefined
 }
 
-/**
- * Parse a `PdfMark[]` defensively, the same rule every other hand-editable
- * array in this file format follows (see `parseAiUsage` in `project.ts`): a
- * malformed entry is dropped, never thrown over.
- */
+/** Parse a `PdfMark[]` defensively (see `parseAiUsage` in `project.ts`): a
+ *  malformed entry is dropped, never thrown over. */
 export function parseMarks(raw: unknown): PdfMark[] {
   if (!Array.isArray(raw)) return []
   const out: PdfMark[] = []
@@ -154,16 +117,11 @@ export function parseMarks(raw: unknown): PdfMark[] {
 }
 
 /**
- * Union two sides' marks by id — every mark either side has survives; a
- * mark both sides have (same id) but edited differently keeps whichever was
- * touched more recently (`updatedAt`, falling back to "ours" on a tie or
- * missing timestamp). Deliberately not a field-level conflict the reviewer
- * is asked about, unlike an annotation answer: a highlight is a personal
- * reading note, not the record a review reports, so never losing one matters
- * more than which exact wording of an edited comment wins. Used for both a
- * pull merge and carrying marks across a branch switch — the same "reconcile
- * two sides that may have each changed things independently" shape either
- * way.
+ * Union two sides' marks by id — every mark from either side survives; a
+ * mark both sides have keeps whichever was edited more recently
+ * (`updatedAt`, falling back to "ours" on a tie/missing timestamp). No
+ * field-level conflict prompt: a highlight is a personal reading note, not a
+ * review record, so never losing one matters more than which edit wins.
  */
 export function mergeMarksList(ours: PdfMark[], theirs: PdfMark[]): PdfMark[] {
   const byId = new Map<string, PdfMark>()
@@ -179,40 +137,23 @@ export function mergeMarksList(ours: PdfMark[], theirs: PdfMark[]): PdfMark[] {
   return [...byId.values()]
 }
 
-/** The x fraction (0..1 of the page width) splitting a two-column layout's
- *  left half from its right half — see `columnOf`. Body text rarely starts
- *  past the page's own midpoint even when indented, so a plain left/right
- *  split at 0.5 is enough to tell "this reviewer's left column" from "this
- *  reviewer's right column" without any real layout analysis. */
+/** Midpoint splitting a two-column layout's left/right halves — good enough
+ *  since body text rarely starts past the page's own midpoint. */
 const COLUMN_SPLIT_X = 0.5
 
-/** Which half of the page a rect's left edge falls in — 0 for the left
- *  column, 1 for the right. See `sortMarksForCycling`. */
+/** Which half of the page a rect's left edge falls in: 0 left, 1 right. */
 function columnOf(rect: MarkRect): number {
   return rect.x < COLUMN_SPLIT_X ? 0 : 1
 }
 
 /**
- * Stable reading order for cycling through every mark on a PDF (the "next/
- * previous annotation" toolbar in `PdfViewer`, and the page-ordered tail of
- * the field-link popover's list): by page, then by column (`columnOf` — left
- * half before right half), then by the first rect's `y` within that column.
- *
- * Neither "just `y`" nor "just `x`, then `y`" is actually reading order.
- * Plain `y` interleaves a two-column paper's columns by absolute vertical
- * position — a highlight near the top of the right column would sort before
- * one halfway down the left column, which is not the order a reader
- * encounters them in. Plain `x` overcorrects: two highlights in the *same*
- * column rarely share an identical left edge (indentation, where a
- * selection happens to start mid-line), so sorting on raw `x` before `y`
- * can reorder two highlights on the very same column by that jitter alone.
- * Bucketing into a column first and only comparing `y` inside it gets both
- * right: unaffected by micro-differences in `x` within one column, but still
- * finishes the left column before starting the right one.
- *
- * A cross-page highlight's fragments are deduped down to one (its
- * earliest-page fragment, since that sorts first) so cycling lands on it
- * once, not once per page it touches.
+ * Stable reading order for cycling through marks: by page, then column
+ * (`columnOf`, left before right), then the first rect's `y` within that
+ * column. Plain `y` would interleave a two-column paper's columns by
+ * absolute vertical position; plain `x`-then-`y` would reorder highlights
+ * within the same column due to indentation jitter. Bucketing by column
+ * first avoids both. Cross-page highlight fragments are deduped to one
+ * (earliest page) so cycling lands on each once, not per page touched.
  */
 export function sortMarksForCycling(marks: PdfMark[]): PdfMark[] {
   const sorted = [...marks].sort(
@@ -225,12 +166,10 @@ export function sortMarksForCycling(marks: PdfMark[]): PdfMark[] {
 }
 
 /**
- * Collapse a mark list down to one representative per logical mark — every
- * fragment sharing a `groupId` becomes one entry (the first one in the
- * input order survives). A mark with no `groupId` is its own group of one.
- * The single place every "list/count marks" consumer (cycling, the
- * field-link popover, the linked-mark count badge) routes through, so they
- * can never disagree about what counts as "one mark".
+ * Collapse a mark list to one representative per logical mark: fragments
+ * sharing a `groupId` become one entry (first in input order survives). The
+ * single place every "list/count marks" consumer routes through, so they
+ * agree on what counts as "one mark".
  */
 export function dedupeMarkGroups(marks: PdfMark[]): PdfMark[] {
   const seen = new Set<string>()
@@ -245,27 +184,17 @@ export function dedupeMarkGroups(marks: PdfMark[]): PdfMark[] {
 }
 
 /** How many of this session's own marks pin to the top of the field-link
- *  popover's list, ahead of the page-ordered rest — see
- *  `orderMarksForLinking`. */
+ *  popover, ahead of the page-ordered rest. */
 const RECENT_LINK_CANDIDATES = 3
 
 /**
  * Order marks for the field-link popover: up to `RECENT_LINK_CANDIDATES` of
- * *this session's own* marks, most recently made first, then everything else
- * in `sortMarksForCycling`'s page-then-position reading order.
- *
- * A reviewer who just highlighted or noted something is almost always about
- * to go link it — burying that highlight on page 40 of a page-ordered list
- * would defeat the point of having just made it. Scoped to `sessionMarkIds`
- * (marks created since the app was opened, tracked by `addHighlight` in
- * store.ts) rather than every mark's `createdAt`, so reopening a paper with
- * old highlights doesn't pin three of them at random — there is nothing
- * "recent" about a mark from a previous sitting. Fewer than three (including
- * zero) session marks means fewer than three pinned; this never pads with
- * marks that don't qualify.
- *
- * Each mark appears exactly once: a mark pinned to the top is filtered back
- * out of the page-ordered tail rather than repeated.
+ * *this session's own* marks (most recent first), then the rest in
+ * `sortMarksForCycling` order. Scoped to `sessionMarkIds` (marks created
+ * since the app opened, tracked by `addHighlight` in store.ts) rather than
+ * `createdAt`, so reopening a paper with old highlights doesn't pin random
+ * ones — nothing from a previous sitting counts as "recent". Each mark
+ * appears exactly once (pinned ones are filtered out of the tail).
  */
 export function orderMarksForLinking(marks: PdfMark[], sessionMarkIds: ReadonlySet<string>): PdfMark[] {
   const sessionMarks = marks.filter((m) => sessionMarkIds.has(m.id))
@@ -275,10 +204,8 @@ export function orderMarksForLinking(marks: PdfMark[], sessionMarkIds: ReadonlyS
   return [...recent, ...rest]
 }
 
-/**
- * Parse `paper.reviewMarks` defensively — same rule `parseReviews` follows
- * in `project.ts` (only a key that looks like a reviewer number survives).
- */
+/** Parse `paper.reviewMarks` defensively (see `parseReviews` in
+ *  `project.ts`): only a key that looks like a reviewer number survives. */
 export function parseReviewMarks(raw: unknown): Record<string, PdfMark[]> {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return {}
   const out: Record<string, PdfMark[]> = {}
