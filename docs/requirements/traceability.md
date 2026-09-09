@@ -143,7 +143,7 @@ inspection only.
 | REQ-PDF-160 | Export marks into a PDF | Functional · Functional Suitability | `src/model/pdfExport.ts:27-61`<br>`src/components/ExportPdfDialog.tsx:32-166` | `src/components/ExportPdfDialog.test.tsx:55-123` | commit `e22c157` | `openwiki/workflows/pdf-viewing.md` §Mark export |
 | REQ-PDF-170 | Extract PDF metadata heuristically | Functional · Functional Suitability | `src/model/pdfMeta.ts:1-120` | `src/model/pdfMeta.test.ts` | — | `openwiki/workflows/pdf-viewing.md` §PDF metadata extraction / §PDF text extraction |
 | REQ-PDF-180 | Extract page-ordered PDF text | Functional · Functional Suitability | `src/model/pdfText.ts:22-152` | `src/model/pdfText.test.ts:48-139` | — | `openwiki/workflows/pdf-viewing.md` §PDF metadata extraction / §PDF text extraction |
-| REQ-UI-10 | Global keyboard shortcuts | Functional · Functional Suitability | `src/hooks/useKeybindings.ts:8-261`<br>`src/components/HelpDialog.tsx:10-62` | — | — | `user-guide/getting-started.md` §Keyboard shortcuts |
+| REQ-UI-10 | Global keyboard shortcuts | Functional · Functional Suitability | `src/hooks/useKeybindings.ts:8-261`<br>`src/components/HelpDialog.tsx:10-62` | `src/hooks/useKeybindings.test.tsx:45-99` | — | `user-guide/getting-started.md` §Keyboard shortcuts |
 | REQ-UI-20 | Toolbar project controls | Functional · Functional Suitability | `src/components/Toolbar.tsx:99-468` | `src/components/Toolbar.test.tsx:92-160` | — | `openwiki/architecture.md` §Component Tree |
 | REQ-UI-30 | Seat switcher in toolbar | Functional · Functional Suitability | `src/components/Toolbar.tsx:26-32,341-398`<br>`src/components/AnnotationPanel.tsx:204-212` | `src/components/Toolbar.test.tsx:65-90` | — | `openwiki/architecture.md` §Component Tree |
 | REQ-UI-40 | Resizable panes | Functional · Functional Suitability | `src/components/Splitter.tsx:11-44`<br>`src/state/settings.ts` | `src/components/Splitter.test.tsx:16-36` | — | `openwiki/architecture.md` §Component Tree |
@@ -167,7 +167,7 @@ inspection only.
 | REQ-SCR-110 | Auto-advance after deciding | Functional · Functional Suitability | — | `src/state/store.screening.test.ts` ("advances to the next undecided paper", "stops at the last paper rather than wrapping") | — | `openwiki/workflows/screening.md`<br>`user-guide/screening.md` §Excluding, with a reason / §The fast keyboard flow |
 | REQ-SCR-120 | Toggle decision back to undecided | Functional · Functional Suitability | `src/components/ScreeningPanel.tsx` (`decide()`) | `src/state/store.screening.test.ts:148-163` | — | `openwiki/workflows/screening.md`<br>`user-guide/screening.md` §Excluding, with a reason / §The fast keyboard flow |
 | REQ-SCR-130 | Restrict reason entry to excluded papers | Functional · Functional Suitability | `src/components/ScreeningPanel.tsx` (`disabled={status !== 'excluded'}`) | `src/state/store.screening.test.ts` (`setScreeningReason` describe block) | — | `openwiki/workflows/screening.md`<br>`user-guide/screening.md` §Excluding, with a reason / §The fast keyboard flow |
-| REQ-SCR-140 | Screening keyboard shortcuts | Functional · Functional Suitability | `src/hooks/useKeybindings.ts` | — | — | `openwiki/workflows/screening.md` ("Decision writes and auto-advance")<br>`user-guide/screening.md` §Excluding, with a reason / §The fast keyboard flow |
+| REQ-SCR-140 | Screening keyboard shortcuts | Functional · Functional Suitability | `src/hooks/useKeybindings.ts` | `src/hooks/useKeybindings.test.tsx:101-137` | — | `openwiki/workflows/screening.md` ("Decision writes and auto-advance")<br>`user-guide/screening.md` §Excluding, with a reason / §The fast keyboard flow |
 | REQ-SCR-150 | Reject AI suggestions in screening projects | Functional · Functional Suitability | — | `src/state/store.screening.test.ts` ("refuses and fills nothing") | — | `openwiki/workflows/screening.md`<br>`user-guide/screening.md` §Excluding, with a reason / §The fast keyboard flow |
 | REQ-SCR-160 | Adopt unanimous screening values | Functional · Functional Suitability | — | `src/state/store.screening.test.ts` (`adoptAllUnanimousScreening` describe block) | — | `openwiki/workflows/screening.md`<br>`user-guide/screening.md` §Several reviewers / §The summary |
 | REQ-SCR-170 | Pending-unanimous notice | Functional · Functional Suitability | `src/components/ScreeningPanel.tsx:118-128`<br>`src/screening/counts.ts:97-121` | `src/screening/counts.test.ts:115-224` | — | `openwiki/workflows/screening.md`<br>`user-guide/screening.md` §Several reviewers / §The summary |
@@ -365,8 +365,8 @@ inspection only.
 | Metric | Count | Share |
 |---|---|---|
 | Requirements traced | 277 | 100% |
-| With at least one verifying test | 232 | 84% |
-| Without an automated check (source inspection only) | 45 | 16% |
+| With at least one verifying test | 234 | 84% |
+| Without an automated check (source inspection only) | 43 | 16% |
 | With an introducing/pinning commit | 61 | 22% |
 | With a documentation link | 277 | 100% |
 

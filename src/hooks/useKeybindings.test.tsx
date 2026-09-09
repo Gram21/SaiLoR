@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { render, fireEvent, screen } from '@testing-library/react'
+import { render, fireEvent, screen, act } from '@testing-library/react'
 import { useStore } from '../state/store'
 import { useEditorStore } from '../state/editorStore'
 import { useKeybindings } from './useKeybindings'
@@ -31,6 +31,109 @@ function Host() {
 beforeEach(() => {
   useStore.setState({ project: null, currentPaperId: null })
   useEditorStore.setState({ open: false })
+})
+
+function screeningProjectJson() {
+  return JSON.stringify({
+    version: 1,
+    title: 'My Review',
+    config: { schema: [{ name: 'Relevant', type: 'boolean' }], screening: { reasons: ['Off topic', 'Duplicate'] } },
+    papers: [{ id: 'p1', title: 'Alpha', authors: [], pdf: 'a.pdf', annotations: {} }],
+  })
+}
+
+describe('useKeybindings: global shortcuts (REQ-UI-10)', () => {
+  it('Ctrl/Cmd+S saves the project (Shift+S saves as)', () => {
+    render(<Host />)
+    act(() => st().loadFromText(projectJson(), null, 'test.json'))
+    let saved = 0
+    let savedAs = 0
+    useStore.setState({ save: async () => void saved++, saveAs: async () => void savedAs++ })
+
+    fireEvent.keyDown(window, { key: 's', ctrlKey: true })
+    expect(saved).toBe(1)
+
+    fireEvent.keyDown(window, { key: 'S', ctrlKey: true, shiftKey: true })
+    expect(savedAs).toBe(1)
+  })
+
+  it('Ctrl/Cmd+O opens a project, but not while the editor is open', () => {
+    render(<Host />)
+    let opened = 0
+    useStore.setState({ requestOpenProject: () => void opened++ })
+
+    useEditorStore.setState({ open: true })
+    fireEvent.keyDown(window, { key: 'o', ctrlKey: true })
+    expect(opened).toBe(0)
+
+    useEditorStore.setState({ open: false })
+    fireEvent.keyDown(window, { key: 'o', ctrlKey: true })
+    expect(opened).toBe(1)
+  })
+
+  it('Ctrl/Cmd+Z undoes, Ctrl/Cmd+Shift+Z redoes', () => {
+    render(<Host />)
+    let undone = 0
+    let redone = 0
+    useStore.setState({ undo: () => void undone++, redo: () => void redone++ })
+
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
+    expect(undone).toBe(1)
+
+    fireEvent.keyDown(window, { key: 'Z', ctrlKey: true, shiftKey: true })
+    expect(redone).toBe(1)
+  })
+
+  it('Ctrl/Cmd+= zooms the PDF in; Ctrl/Cmd+Shift+= increases the font size instead', () => {
+    render(<Host />)
+    act(() => st().loadFromText(projectJson(), null, 'test.json'))
+    const zoomBefore = st().pdfZoom
+    fireEvent.keyDown(window, { key: '=', ctrlKey: true })
+    expect(st().pdfZoom).toBeGreaterThan(zoomBefore)
+
+    let fontIncreased = 0
+    useStore.setState({ increaseFont: () => void fontIncreased++ })
+    fireEvent.keyDown(window, { key: '=', ctrlKey: true, shiftKey: true })
+    expect(fontIncreased).toBe(1)
+  })
+})
+
+describe('useKeybindings: screening shortcuts (REQ-SCR-140)', () => {
+  beforeEach(() => {
+    act(() => {
+      st().loadFromText(screeningProjectJson(), null, 'test.json')
+      st().selectPaper('p1')
+    })
+  })
+
+  it('I/E/U include, exclude, and un-decide the current paper', () => {
+    render(<Host />)
+    fireEvent.keyDown(window, { key: 'e' })
+    expect(st().project!.papers[0].annotations.Decision[0].value).toBe('Exclude')
+
+    fireEvent.keyDown(window, { key: 'i' })
+    expect(st().project!.papers[0].annotations.Decision[0].value).toBe('Include')
+
+    fireEvent.keyDown(window, { key: 'u' })
+    expect(st().project!.papers[0].annotations.Decision[0].value).toBeNull()
+  })
+
+  it('a digit key excludes with the Nth configured reason', () => {
+    render(<Host />)
+    fireEvent.keyDown(window, { key: '2' })
+    expect(st().project!.papers[0].annotations.Decision[0].value).toBe('Exclude')
+    expect(st().project!.papers[0].annotations.Reason[0].value).toBe('Duplicate')
+  })
+
+  it('does nothing while typing in a field', () => {
+    render(<Host />)
+    const input = document.createElement('input')
+    document.body.appendChild(input)
+    input.focus()
+    fireEvent.keyDown(input, { key: 'e' })
+    expect(st().project!.papers[0].annotations.Decision[0].value).toBeNull()
+    input.remove()
+  })
 })
 
 describe('useKeybindings: paper navigation (REQ-LST-50)', () => {
