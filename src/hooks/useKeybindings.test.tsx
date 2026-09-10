@@ -48,7 +48,7 @@ describe('useKeybindings: global shortcuts (REQ-UI-10)', () => {
     act(() => st().loadFromText(projectJson(), null, 'test.json'))
     let saved = 0
     let savedAs = 0
-    useStore.setState({ save: async () => void saved++, saveAs: async () => void savedAs++ })
+    useStore.setState({ save: async () => (saved++, true), saveAs: async () => (savedAs++, true) })
 
     fireEvent.keyDown(window, { key: 's', ctrlKey: true })
     expect(saved).toBe(1)
