@@ -75,6 +75,13 @@ describe('detectEntryBox', () => {
     expect(detectEntryBox(line(100, 50, ['Lone', 'caption']), 50, 98, PAGE_H)).toBeNull()
   })
 
+  it('returns null for a figure destination whose only nearby text is a label far to the right', () => {
+    // hyperref's figure anchor: top-left of a figure; the diagram's "KB"
+    // label is the only text in range, ~270 units right of destX.
+    const items = [...referenceList(), ...line(400, 320, ['KB'], 15)]
+    expect(detectEntryBox(items, 54, 390, PAGE_H)).toBeNull()
+  })
+
   it('returns null when the destination points at empty space', () => {
     expect(detectEntryBox(referenceList(), 50, 400, PAGE_H)).toBeNull()
   })
