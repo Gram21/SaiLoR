@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useStore, currentTree, currentFinished } from '../state/store'
 import { hasAnnotations, annotationText } from '../model/annotations'
 import { completeness, completenessPercent, hasRequiredFields, type Completeness } from '../model/completeness'
@@ -222,6 +222,7 @@ export function PaperList() {
   const requiredMode = useMemo(() => hasRequiredFields(schema), [schema])
 
   const [query, setQuery] = useState('')
+  const searchInput = useRef<HTMLInputElement>(null)
   const [mode, setMode] = useState<SearchMode>('metadata')
   const [caseSensitive, setCaseSensitive] = useState(false)
 
@@ -380,6 +381,7 @@ export function PaperList() {
         {progress && progress.total > 0 && <div className="paper-list-progress">{progress.text}</div>}
         <div className="paper-search">
           <input
+            ref={searchInput}
             className="paper-search-input"
             type="text"
             placeholder={mode === 'annotations' ? 'Search annotations…' : 'Search papers…'}
@@ -395,6 +397,22 @@ export function PaperList() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+          {query && (
+            <button
+              type="button"
+              className="paper-search-clear"
+              title="Clear search"
+              aria-label="Clear search"
+              onClick={() => {
+                setQuery('')
+                // The button unmounts once the query is empty, which would drop
+                // focus to <body>; keep it in the field for the next query.
+                searchInput.current?.focus()
+              }}
+            >
+              ×
+            </button>
+          )}
           <button
             type="button"
             className={`paper-search-case${caseSensitive ? ' active' : ''}`}
