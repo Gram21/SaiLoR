@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { detectEntryBox, type PreviewTextItem } from './refPreview'
+import { detectEntryBox, detectNumericCitation, findNumericReference, type PreviewTextItem } from './refPreview'
 
 /** One text line as pdf.js would deliver it: a handful of items laid out
  *  left-to-right from `x`, each ~10 units tall. */
@@ -88,5 +88,47 @@ describe('detectEntryBox', () => {
     const box = detectEntryBox(items, 50, 98, PAGE_H)
     expect(box).not.toBeNull()
     expect(box!.h).toBeLessThanOrEqual(PAGE_H * 0.25 + 20)
+  })
+})
+
+describe('detectNumericCitation', () => {
+  const s = 'approaches [7], [8], [2], making it'
+  it('reads the number under the cursor', () => {
+    expect(detectNumericCitation(s, s.indexOf('7'))).toBe(7)
+    expect(detectNumericCitation(s, s.indexOf('[8'))).toBe(8)
+    expect(detectNumericCitation(s, s.indexOf('2]') + 1)).toBe(2) // on "]"
+  })
+  it('picks the nearest token in a list or range', () => {
+    const t = 'see [3-5, 12] here'
+    expect(detectNumericCitation(t, t.indexOf('3'))).toBe(3)
+    expect(detectNumericCitation(t, t.indexOf('5'))).toBe(5)
+    expect(detectNumericCitation(t, t.indexOf('12') + 1)).toBe(12)
+  })
+  it('ignores text outside brackets and non-numeric brackets', () => {
+    expect(detectNumericCitation(s, s.indexOf('making'))).toBeNull()
+    expect(detectNumericCitation(s, s.indexOf(' [8'))).toBeNull() // the space between citations
+    const t = 'array [i] access'
+    expect(detectNumericCitation(t, t.indexOf('i]'))).toBeNull()
+  })
+})
+
+describe('findNumericReference', () => {
+  it('finds a label at the column edge, not body text starting a line', () => {
+    const items = [
+      ...line(100, 50, ['[4].', 'Yet', 'these']), // body text wrapping to a line start
+      ...line(300, 50, ['[3]']),
+      ...line(300, 72, ['A.', 'Author,', 'Title']),
+      ...line(320, 50, ['[4]']),
+      ...line(320, 72, ['B.', 'Writer,', 'Other']),
+    ]
+    expect(findNumericReference(items, 4)).toEqual({ x: 50, y: 320 })
+    expect(findNumericReference(items, 5)).toBeNull()
+  })
+  it('rejects a label with text right before it on its line', () => {
+    const items = [...line(100, 50, ['as', 'shown', 'in']), { str: '[4]', x: 152, y: 100, w: 15, h: 10 }]
+    expect(findNumericReference(items, 4)).toBeNull()
+  })
+  it('does not match [1] inside [12]', () => {
+    expect(findNumericReference(line(100, 50, ['[12]']), 1)).toBeNull()
   })
 })

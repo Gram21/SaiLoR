@@ -22,7 +22,7 @@ export type EntryBox = { x: number; y: number; w: number; h: number }
 /** Items within this Δy belong to the same text line. */
 const LINE_BAND = 3
 /** A horizontal gap wider than this is a column gutter, not word spacing. */
-const COLUMN_GAP = 20
+const COLUMN_GAP = 12
 /** How close to the entry's left edge counts as "back at the margin". */
 const MARGIN_TOL = 3
 /** A continuation line at least this far right of the margin marks the entry
@@ -149,4 +149,72 @@ export function detectEntryBox(
     }
   }
   return { x: minX - PAD, y: minY - PAD, w: maxX - minX + 2 * PAD, h: maxY - minY + 2 * PAD }
+}
+
+/**
+ * The reference number of a numeric citation ("[3]", "[1, 2]", "[3-5]") that
+ * `offset` sits inside in `text`, or `null` — for PDFs without link
+ * annotations (publisher-stamped IEEE Xplore downloads drop hyperref's links,
+ * leaving the blue "[3]" as plain text). Port of SumatraPDF's
+ * DetectNumericCitationInPageText: a list or range yields the number token
+ * nearest the cursor. Works on one pdf.js text item, which holds a whole
+ * line, so a citation is never split across items.
+ */
+export function detectNumericCitation(text: string, offset: number): number | null {
+  const isListChar = (c: string) => /[\d\s,\-–]/.test(c)
+  let open = -1
+  for (let i = Math.min(offset, text.length - 1); i >= 0; i--) {
+    if (text[i] === '[') {
+      open = i
+      break
+    }
+    if (text[i] === ']' && i === offset) continue // cursor on the closing bracket
+    if (!isListChar(text[i])) break
+  }
+  if (open < 0) return null
+  const close = text.slice(open + 1).search(/[^\d\s,\-–]/) + open + 1
+  if (close <= open + 1 || text[close] !== ']') return null
+
+  let best: number | null = null
+  let bestDist = Infinity
+  for (const m of text.slice(open + 1, close).matchAll(/\d+/g)) {
+    const start = open + 1 + m.index
+    const end = start + m[0].length - 1
+    const dist = offset < start ? start - offset : offset > end ? offset - end : 0
+    const n = Number(m[0])
+    if (n >= 1 && dist < bestDist) {
+      bestDist = dist
+      best = n
+    }
+  }
+  return best
+}
+
+/** Wider than word spacing, narrower than a column gutter or hanging indent. */
+const LABEL_LEFT_GAP = 12
+
+/**
+ * Where reference `num`'s entry starts on a page: an item beginning with a
+ * standalone "[num]" label that has clear space to its left (the margin, or a
+ * two-column list's gutter), or `null`. Port of SumatraPDF's
+ * FindNumericReferenceInPageText, stricter in one point: the label must be
+ * followed by whitespace or nothing, so body text wrapping to a line start
+ * ("[4]. Yet", "[2], [6]") is not mistaken for the entry.
+ */
+export function findNumericReference(items: PreviewTextItem[], num: number): { x: number; y: number } | null {
+  const label = new RegExp(`^\\s*\\[${num}\\](\\s|$)`)
+  for (const it of items) {
+    if (!label.test(it.str)) continue
+    const tol = Math.max(it.h, 8)
+    const crowded = items.some(
+      (o) =>
+        o !== it &&
+        o.str.trim() !== '' &&
+        Math.abs(o.y - it.y) <= tol &&
+        o.x < it.x &&
+        o.x + o.w > it.x - LABEL_LEFT_GAP,
+    )
+    if (!crowded) return { x: it.x, y: it.y }
+  }
+  return null
 }
