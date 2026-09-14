@@ -961,6 +961,11 @@ button.paper-search-case:hover {
   gap: 12px;
   background: var(--bg);
 }
+/* Single-page view: neighbouring pages are pushed a full pane away so only
+   the current one is visible (see `singlePage` in PdfViewer). */
+.pdf-scroll.single-page .react-pdf__Page {
+  margin-bottom: 100vh;
+}
 .pdf-scroll.placing-note {
   cursor: crosshair;
 }

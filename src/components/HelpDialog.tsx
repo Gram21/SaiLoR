@@ -264,6 +264,7 @@ function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
               <strong>Read the PDF</strong> in the middle pane; its text is selectable. Use{' '}
               <strong>{MOD}+F</strong> to search within it. After following an internal link (e.g. a
               reference), the <em>↩ / ↪</em> buttons jump back to where you were and forward again.
+              The <em>▯</em> button switches to a single-page view, where the mouse wheel flips pages.
             </li>
             <li>
               <strong>Annotate</strong> on the right. Repeatable entries show <em>+ Add</em> and a
