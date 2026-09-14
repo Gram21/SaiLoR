@@ -148,7 +148,15 @@ export function detectEntryBox(
       maxY = Math.max(maxY, it.y + it.h)
     }
   }
-  return { x: minX - PAD, y: minY - PAD, w: maxX - minX + 2 * PAD, h: maxY - minY + 2 * PAD }
+  // Tightly set lists (IEEE: ~1.5pt between entries) leave less than PAD
+  // above the entry, so the top padding would show the previous entry's
+  // descenders; stop halfway into that gap instead.
+  let top = minY - PAD
+  for (const it of glyphs) {
+    const bottom = it.y + it.h
+    if (bottom <= minY && bottom > top && it.x < maxX && it.x + it.w > minX) top = (bottom + minY) / 2
+  }
+  return { x: minX - PAD, y: top, w: maxX - minX + 2 * PAD, h: maxY - top + PAD }
 }
 
 /**

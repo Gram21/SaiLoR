@@ -36,6 +36,15 @@ describe('detectEntryBox', () => {
     expect(box!.y).toBeGreaterThan(110)
   })
 
+  it('does not pad up into the previous entry of a tightly set list', () => {
+    // Entry 13's first line starts 2 units below entry 12's last line.
+    const items = [...line(100, 50, ['12.', 'Author,', 'A.:', 'Earlier', 'work']), ...line(112, 50, ['13.', 'Stacy,', 'W.:', 'Bias'])]
+    const box = detectEntryBox(items, 50, 111, PAGE_H)
+    expect(box).not.toBeNull()
+    expect(box!.y).toBeGreaterThanOrEqual(110) // below entry 12's bottom (y=110)
+    expect(box!.y + box!.h).toBeGreaterThanOrEqual(122) // still covers entry 13
+  })
+
   it('recovers the entry start when destX lands mid-line', () => {
     // A poorly-authored link whose destX points at the middle of the line.
     const box = detectEntryBox(referenceList(), 150, 128, PAGE_H)
