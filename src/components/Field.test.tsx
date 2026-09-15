@@ -98,6 +98,9 @@ describe('Field: link popover header', () => {
     await userEvent.click(screen.getAllByTitle('Link a PDF highlight or note as evidence')[0])
     expect(screen.getByText('0 links')).toBeInTheDocument()
 
+    await userEvent.click(screen.getByRole('button', { name: '+ Link a highlight or note' }))
+    expect(screen.getByPlaceholderText('Search highlights/notes…')).toHaveFocus()
+
     await userEvent.click(screen.getByRole('button', { name: 'Close' }))
     expect(screen.queryByText('0 links')).not.toBeInTheDocument()
   })

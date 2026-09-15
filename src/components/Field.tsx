@@ -402,6 +402,8 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
             <input
               type="text"
               className="field-link-search"
+              // The picker opens to search, so put the caret there right away.
+              autoFocus
               placeholder="Search highlights/notes…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
