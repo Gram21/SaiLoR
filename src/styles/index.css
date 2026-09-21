@@ -1655,7 +1655,7 @@ button.paper-search-case:hover {
   resize: horizontal;
   overflow: hidden;
 }
-.field-link-head {
+.field-link-popover .field-link-head {
   padding: 0 0 6px;
 }
 .field-link-body {
