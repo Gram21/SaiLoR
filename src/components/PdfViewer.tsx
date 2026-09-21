@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Document, Page } from 'react-pdf'
-import type { PDFDocumentProxy } from 'pdfjs-dist'
+import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import { useStore, selectCurrentPaper, PDF_ZOOM_MIN, PDF_ZOOM_MAX } from '../state/store'
 import { MARK_COLORS, sortMarksForCycling, type MarkRect, type PdfMark } from '../model/pdfMarks'
-import { detectEntryBox } from '../model/refPreview'
+import { detectEntryBox, detectNumericCitation, findNumericReference, type PreviewTextItem } from '../model/refPreview'
 import { getPlatform } from '../platform'
 // Side-effect import: configures the pdf.js worker.
 import '../platform/pdfjs'
@@ -185,6 +185,8 @@ export function destinationPoint(dest: unknown[]): { x: number | null; y: number
  *  is scaled down, never clipped, so a wide reference entry stays whole. */
 const LINK_PREVIEW_MAX_W = 560
 const LINK_PREVIEW_MAX_H = 240
+
+type LinkPreviewImage = { img: string; width: number; height: number }
 
 /** The subset of a mouse event `onOpen` needs — not `React.MouseEvent`,
  *  since `handleMarkMouseDown` also calls it from a plain native
@@ -380,6 +382,12 @@ export function PdfViewer() {
   // page is mounted) so no extra pdf.js render is needed.
   const pdfDocRef = useRef<PDFDocumentProxy | null>(null)
   const linkHoverTokenRef = useRef(0)
+  // Plain-text "[N]" citations (PDFs without link annotations): the hovered
+  // citation's identity, so mousemove only re-resolves when it changes, and
+  // each reference number's resolved entry location (null = not found) for
+  // the current document.
+  const citeHoverRef = useRef<string | null>(null)
+  const citeLookupRef = useRef<{ doc: PDFDocumentProxy; found: Map<number, { page: number; x: number; y: number } | null> } | null>(null)
   const [linkPreview, setLinkPreview] = useState<{
     left: number
     top?: number
@@ -390,6 +398,7 @@ export function PdfViewer() {
   } | null>(null)
   const hideLinkPreview = () => {
     linkHoverTokenRef.current++ // invalidates any in-flight resolution too
+    citeHoverRef.current = null
     setLinkPreview(null)
   }
 
@@ -973,16 +982,25 @@ export function PdfViewer() {
     if (root) recordJumpIfMoved(root.scrollTop)
   }
 
+  /** A page's text items in scale-1 viewport coordinates (`PreviewTextItem`). */
+  const pageTextItems = async (page: PDFPageProxy): Promise<PreviewTextItem[]> => {
+    const vp = page.getViewport({ scale: 1 })
+    const textContent = await page.getTextContent()
+    return textContent.items.flatMap((it) => {
+      if (!('str' in it)) return [] // TextMarkedContent — no geometry
+      const [ix, iy] = vp.convertToViewportPoint(it.transform[4], it.transform[5])
+      return [{ str: it.str, x: ix, y: iy - it.height, w: it.width, h: it.height }]
+    })
+  }
+
   /** Build the hover preview for an internal-link annotation: resolve its
-   *  destination, fit a crop box to the destination's entry (`detectEntryBox`,
-   *  SumatraPDF-style; falls back to a page-wide window), then copy that crop
-   *  from the destination page's rendered canvas. Returns `null` for external
-   *  links, dangling destinations, or an unrendered destination page. */
+   *  destination, then crop it via `renderPreview`. Returns `null` for
+   *  external links or dangling destinations. */
   const resolveLinkPreview = async (
     doc: PDFDocumentProxy,
     pageNum: number,
     annotationId: string,
-  ): Promise<{ img: string; width: number; height: number } | null> => {
+  ): Promise<LinkPreviewImage | null> => {
     const srcPage = await doc.getPage(pageNum)
     const annots: { id: string; url?: string; dest?: string | unknown[] }[] = await srcPage.getAnnotations()
     const annot = annots.find((a) => a.id === annotationId)
@@ -992,25 +1010,55 @@ export function PdfViewer() {
     // The explicit destination's page: usually a Ref, but some producers
     // (and remote-destination edge cases) put a plain page index there.
     const targetIndex = typeof dest[0] === 'number' ? dest[0] : await doc.getPageIndex(dest[0])
-    const canvas = pageRefs.current[targetIndex]?.querySelector('canvas')
-    if (!canvas || canvas.width === 0) return null
     const targetPage = await doc.getPage(targetIndex + 1)
     const { x, y } = destinationPoint(dest)
     const vp = targetPage.getViewport({ scale: 1 })
     const view = targetPage.view // [x0, y0, x1, y1] in PDF user space
     const [vx, vy] = vp.convertToViewportPoint(x ?? view[0], y ?? view[3])
+    return renderPreview(targetPage, targetIndex, x !== null ? vx : null, vy)
+  }
+
+  /** Preview for plain-text citation `[num]` hovered on page `pageNum`: the
+   *  reference list is searched from the last page back to the citing page
+   *  (the list sits after its citations), like SumatraPDF does. */
+  const resolveCitationPreview = async (
+    doc: PDFDocumentProxy,
+    pageNum: number,
+    num: number,
+  ): Promise<LinkPreviewImage | null> => {
+    if (citeLookupRef.current?.doc !== doc) citeLookupRef.current = { doc, found: new Map() }
+    const found = citeLookupRef.current.found
+    if (!found.has(num)) {
+      let hit: { page: number; x: number; y: number } | null = null
+      for (let p = pageRefs.current.length; p >= pageNum && !hit; p--) {
+        const at = findNumericReference(await pageTextItems(await doc.getPage(p)), num)
+        if (at) hit = { page: p, ...at }
+      }
+      found.set(num, hit)
+    }
+    const hit = found.get(num)
+    if (!hit) return null
+    return renderPreview(await doc.getPage(hit.page), hit.page - 1, hit.x, hit.y)
+  }
+
+  /** Copy the preview for a destination point (scale-1 viewport coordinates;
+   *  `vx` null when the destination has no x) from page `targetIndex`'s
+   *  already-rendered canvas: fit the crop to the destination's entry
+   *  (`detectEntryBox`, SumatraPDF-style), falling back to a page-wide window.
+   *  Returns `null` for an unrendered page or a destination at its very edge. */
+  const renderPreview = async (
+    targetPage: PDFPageProxy,
+    targetIndex: number,
+    vx: number | null,
+    vy: number,
+  ): Promise<LinkPreviewImage | null> => {
+    const canvas = pageRefs.current[targetIndex]?.querySelector('canvas')
+    if (!canvas || canvas.width === 0) return null
+    const vp = targetPage.getViewport({ scale: 1 })
     const rect = canvas.getBoundingClientRect()
     if (rect.width === 0 || rect.height === 0) return null
 
-    // Fit the crop to the destination's entry (bibliography item, glossary
-    // entry, …), in the same scale-1 viewport coordinates as vx/vy.
-    const textContent = await targetPage.getTextContent()
-    const textItems = textContent.items.flatMap((it) => {
-      if (!('str' in it)) return [] // TextMarkedContent — no geometry
-      const [ix, iy] = vp.convertToViewportPoint(it.transform[4], it.transform[5])
-      return [{ str: it.str, x: ix, y: iy - it.height, w: it.width, h: it.height }]
-    })
-    const entry = detectEntryBox(textItems, x !== null ? vx : null, vy, vp.height)
+    const entry = detectEntryBox(await pageTextItems(targetPage), vx, vy, vp.height)
 
     // Crop in CSS px on the rendered page. Fallback (no entry to fit — a
     // figure/table/section target): a page-wide window below the destination.
@@ -1020,7 +1068,7 @@ export function PdfViewer() {
     if (entry) {
       crop = { x: entry.x * k, y: entry.y * k, w: entry.w * k, h: entry.h * k }
     } else {
-      const cx = Math.max(0, Math.min(1, vx / vp.width) * rect.width - pad)
+      const cx = Math.max(0, Math.min(1, (vx ?? 0) / vp.width) * rect.width - pad)
       const cy = Math.max(0, Math.min(1, vy / vp.height) * rect.height - pad)
       const cw = rect.width - cx
       crop = { x: cx, y: cy, w: cw, h: cw * (LINK_PREVIEW_MAX_H / LINK_PREVIEW_MAX_W) }
@@ -1044,6 +1092,25 @@ export function PdfViewer() {
     return { img: out.toDataURL(), width: Math.round(crop.w * fit), height: Math.round(crop.h * fit) }
   }
 
+  /** Show a resolved preview next to `anchor` (captured before the async
+   *  resolution) unless a newer hover superseded it (`token`). */
+  const showPreview = (pending: Promise<LinkPreviewImage | null>, anchor: DOMRect, token: number) => {
+    pending
+      .then((p) => {
+        if (!p || token !== linkHoverTokenRef.current) return
+        // Same flip-up-when-cramped placement as `markTooltipCoords`, with the
+        // preview's real height (known only now) instead of its fixed guess.
+        const spaceBelow = window.innerHeight - anchor.bottom
+        const openUp = spaceBelow < p.height + 12 && anchor.top > spaceBelow
+        setLinkPreview({
+          left: Math.max(8, Math.min(anchor.left, window.innerWidth - p.width - 16)),
+          ...(openUp ? { bottom: window.innerHeight - anchor.top + 6 } : { top: anchor.bottom + 6 }),
+          ...p,
+        })
+      })
+      .catch(() => {}) // a malformed destination just means no preview
+  }
+
   // Hover handlers for pdf.js's annotation-layer links, delegated from the
   // scroll container (the `<a>`s are pdf.js DOM, not React's). `relatedTarget`
   // checks keep the preview stable as mouseover/mouseout re-fire between a
@@ -1059,22 +1126,8 @@ export function PdfViewer() {
     const doc = pdfDocRef.current
     const pageNum = pageNumberForNode(a)
     if (!annotationId || !doc || pageNum === null) return
-    const anchor = a.getBoundingClientRect() // captured now — resolution is async
-    const token = ++linkHoverTokenRef.current
-    resolveLinkPreview(doc, pageNum, annotationId)
-      .then((p) => {
-        if (!p || token !== linkHoverTokenRef.current) return
-        // Same flip-up-when-cramped placement as `markTooltipCoords`, with the
-        // preview's real height (known only now) instead of its fixed guess.
-        const spaceBelow = window.innerHeight - anchor.bottom
-        const openUp = spaceBelow < p.height + 12 && anchor.top > spaceBelow
-        setLinkPreview({
-          left: Math.max(8, Math.min(anchor.left, window.innerWidth - p.width - 16)),
-          ...(openUp ? { bottom: window.innerHeight - anchor.top + 6 } : { top: anchor.bottom + 6 }),
-          ...p,
-        })
-      })
-      .catch(() => {}) // a malformed destination just means no preview
+    citeHoverRef.current = null
+    showPreview(resolveLinkPreview(doc, pageNum, annotationId), a.getBoundingClientRect(), ++linkHoverTokenRef.current)
   }
   const onPdfMouseOut = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement | null
@@ -1083,6 +1136,35 @@ export function PdfViewer() {
     const to = e.relatedTarget instanceof Node ? e.relatedTarget : null
     if (to && a.contains(to)) return
     hideLinkPreview()
+  }
+
+  // Plain-text "[N]" citations: mousemove rather than mouseover, since one
+  // text-layer span holds a whole line and so several citations.
+  const onPdfMouseMove = (e: React.MouseEvent) => {
+    if (e.buttons !== 0) return // selecting text
+    const target = e.target as HTMLElement | null
+    if (target?.closest('.react-pdf__Page__annotations a')) return // real link — handled by onPdfMouseOver
+    let num: number | null = null
+    let key: string | null = null
+    let span: Element | null = null
+    const caret = target?.closest('.react-pdf__Page__textContent')
+      ? document.caretRangeFromPoint?.(e.clientX, e.clientY)
+      : null
+    const node = caret?.startContainer
+    if (node instanceof Text && node.parentElement) {
+      num = detectNumericCitation(node.data, caret!.startOffset)
+      span = node.parentElement
+      if (num !== null) key = `${num}:${node.data}`
+    }
+    if (key === citeHoverRef.current) return
+    if (citeHoverRef.current !== null) hideLinkPreview()
+    const doc = pdfDocRef.current
+    const pageNum = span ? pageNumberForNode(span) : null
+    if (num === null || !span || !doc || pageNum === null) return
+    citeHoverRef.current = key
+    const token = ++linkHoverTokenRef.current
+    const line = span.getBoundingClientRect() // the span is one line; the cursor marks the citation's x
+    showPreview(resolveCitationPreview(doc, pageNum, num), new DOMRect(e.clientX, line.top, 0, line.height), token)
   }
 
   const jumpBack = () => {
@@ -1604,6 +1686,7 @@ export function PdfViewer() {
         onClick={placeNote}
         onMouseOver={onPdfMouseOver}
         onMouseOut={onPdfMouseOut}
+        onMouseMove={onPdfMouseMove}
       >
         {error ? (
           <div className="pdf-error">Could not load PDF: {error}</div>
