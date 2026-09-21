@@ -23,7 +23,7 @@ import { MARK_COLORS, type MarkRect, type PdfMark, dedupeMarkGroups } from '../m
 import { alignNode, alignableNodes, widenAlignment, type TreeAlignment } from '../consolidate/align'
 import { growConsolidated, toStoredAlignment, storedAsTreeAlignment } from '../consolidate/apply'
 import { unanimousFills } from '../consolidate/unanimous'
-import { consolidatorHasAnswered } from '../consolidate/readiness'
+import { consolidatorHasAnswered, consolidationMark } from '../consolidate/readiness'
 import { validateProject, type UnannotatedPaper, type ValidationIssue } from '../model/validate'
 import { formatPath, displayPath, resolvePath, parsePath, MAX_UNBOUNDED_INDEX } from '../llm/paths'
 import { isUnanswered } from '../llm/fields'
@@ -490,6 +490,22 @@ interface AppState {
   /** The field a Consolidation-mode "compare" click is showing, or null when
    *  the compare popup is closed. Session-only, like `validationOpen`. */
   consolidationTarget: { path: PathSeg[]; name: string; index: number } | null
+  /**
+   * The paper whose reviewers have changed since Consolidation last ran on it,
+   * while the consolidated tree already holds answers — so re-running the
+   * automatic steps would write over work the consolidator has done. Holds the
+   * paper id while the prompt asking what to do is open; null otherwise.
+   * Session-only: the question is only worth asking with the seat open, and
+   * `consolidationSync` on the paper is what remembers the answer.
+   */
+  consolidationUpdatePrompt: string | null
+  /**
+   * The paper the consolidator answered that prompt with "update" for.
+   * Session-only, and cleared as soon as the run it authorises has recorded
+   * its new `consolidationSync` — it exists only to let the scheduler's effect
+   * see that it may now proceed.
+   */
+  consolidationUpdateApproved: string | null
   /** Which decisions the screening paper list shows. Session-only, like the search box's mode. */
   screeningFilter: ScreeningStatus | 'all'
   /** Which annotation state the paper list shows and its "finished: 5/100"
@@ -678,6 +694,19 @@ interface AppState {
    * the same index, which only means anything once entries are aligned.
    */
   adoptUnanimousValues: (paperId: string, coalesce: boolean) => number
+  /**
+   * Record that Consolidation's automatic steps have now run against the
+   * reviewers' current answers, so re-opening the seat leaves the paper alone
+   * until a reviewer actually changes something. No undo entry: it describes
+   * when the run happened, not what it wrote.
+   */
+  markConsolidationSynced: (paperId: string) => void
+  /** Ask whether to fold changed reviewer answers into an already-answered
+   *  consolidated tree. */
+  openConsolidationUpdatePrompt: (paperId: string) => void
+  /** Answer that prompt: `true` re-runs the automatic steps, `false` keeps the
+   *  consolidated tree as it is and stops asking until reviewers change again. */
+  resolveConsolidationUpdate: (update: boolean) => void
   /** Toggle "the reviewers' answers at this field mean the same thing". */
   toggleFieldEquality: (paperId: string, canonical: string) => void
 
@@ -920,6 +949,8 @@ export const useStore = create<AppState>()(
     aiUnlocked: false,
     currentReviewer: null,
     consolidationTarget: null,
+    consolidationUpdatePrompt: null,
+    consolidationUpdateApproved: null,
     screeningFilter: 'all',
     annotationFilter: 'all',
     screeningShowPdf: false,
@@ -1085,6 +1116,8 @@ export const useStore = create<AppState>()(
         s.pendingAfterPrompt = null
         s.currentReviewer = null
         s.consolidationTarget = null
+        s.consolidationUpdatePrompt = null
+        s.consolidationUpdateApproved = null
         s.screeningFilter = 'all'
         s.annotationFilter = 'all'
         s.screeningShowPdf = false
@@ -1186,6 +1219,8 @@ export const useStore = create<AppState>()(
           // Also the run's bail-out — see `closeProject`.
           s.unanimousRun = null
           s.consolidationTarget = null
+          s.consolidationUpdatePrompt = null
+          s.consolidationUpdateApproved = null
           s.screeningFilter = 'all'
           s.annotationFilter = 'all'
           s.screeningShowPdf = false
@@ -2432,6 +2467,46 @@ export const useStore = create<AppState>()(
       })
       lastFieldKey = null
       return fills.length
+    },
+
+    markConsolidationSynced: (paperId) => {
+      const project = get().project
+      if (!project) return
+      const paper = project.papers.find((p) => p.id === paperId)
+      if (!paper) return
+      const mark = consolidationMark(project.schema, paper)
+      if (paper.consolidationSync === mark && get().consolidationUpdateApproved !== paperId) return
+      set((s) => {
+        const draft = s.project!.papers.find((p) => p.id === paperId)
+        if (!draft) return
+        if (s.consolidationUpdateApproved === paperId) s.consolidationUpdateApproved = null
+        if (draft.consolidationSync === mark) return
+        // No `pushPast`: this is a record of *when* the automatic steps last
+        // ran, not one of their writes. Folding it into their undo entry would
+        // be wrong too — undoing the writes should also undo the claim that
+        // they happened, and immer's snapshot of the whole project already
+        // does that for free.
+        draft.consolidationSync = mark
+        s.dirty = true
+      })
+    },
+
+    openConsolidationUpdatePrompt: (paperId) =>
+      set((s) => {
+        s.consolidationUpdatePrompt = paperId
+      }),
+
+    resolveConsolidationUpdate: (update) => {
+      const paperId = get().consolidationUpdatePrompt
+      if (!paperId) return
+      set((s) => {
+        s.consolidationUpdatePrompt = null
+        // Approving lets the scheduler's effect run; declining records the
+        // reviewers' current answers as seen, which is what stops the same
+        // question being asked on every visit.
+        s.consolidationUpdateApproved = update ? paperId : null
+      })
+      if (!update) get().markConsolidationSynced(paperId)
     },
 
     toggleFieldEquality: (paperId, canonical) => {

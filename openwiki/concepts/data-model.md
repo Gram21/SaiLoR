@@ -57,14 +57,14 @@ The serialized project is split into two layers:
   `finishCheckbox`, `reviewers`, `screening`), and a `papers` array carrying
   *paper metadata* (`id`, `title`, `authors`, `year`, `venue`, `doi`,
   `abstract`, `abstractFromPdf`, `pdf`) plus any preserved `extra` keys. No
-  `annotations`, `reviews`, `aiUsage`, `equal`, `alignment`, `marks`, or
-  `finished` ever appear here.
+  `annotations`, `reviews`, `aiUsage`, `equal`, `alignment`,
+  `consolidationSync`, `marks`, or `finished` ever appear here.
 - **`annotations/<paperId>/…`** — one folder per paper, holding the
   per-paper-per-reviewer annotation files:
 
 | File                                                         | Holds                                                                                                       | When it exists                       |
 | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| `consolidated.json`                                          | the consolidated/`annotations` tree, plus `aiUsage`, `equal`, `alignment`, `finished`                      | when any of those is non-empty       |
+| `consolidated.json`                                          | the consolidated/`annotations` tree, plus `aiUsage`, `equal`, `alignment`, `consolidationSync`, `finished`  | when any of those is non-empty       |
 | `reviewer-<n>.json`                                          | reviewer `n`'s own `annotations` tree and `finished` flag                                                  | when that tree has answers or the flag is set |
 | `marks-consolidated.json`                                    | the consolidated/Consolidation seat's `marks`                                                               | when `marks` is non-empty            |
 | `marks-<n>.json`                                             | reviewer `n`'s own `reviewMarks`                                                                            | when that list is non-empty          |
@@ -147,6 +147,7 @@ interface Paper {
   aiUsage: AiUsageRecord[]
   equal: string[]                        // canonical field paths marked "same answer"
   alignment: StoredAlignment             // Consolidation's entry-matching record
+  consolidationSync?: string             // what its automatic steps last ran against
   marks: PdfMark[]                       // consolidated seat's PDF highlights
   reviewMarks: Record<string, PdfMark[]> // per-reviewer highlights
   finished: boolean                      // consolidated seat's sign-off
@@ -192,6 +193,11 @@ recursively initializing children to their `min` (at least 1).
 interface StoredSlot { members: Record<string, number>; children?: StoredAlignment }
 type StoredAlignment = Record<string, StoredSlot[]>
 ```
+
+`consolidationSync` is Consolidation's other bookkeeping field: two digests
+(reviewers' trees, consolidated tree) recorded after its automatic steps run on
+a paper, so opening the seat again does not repeat them and undo the
+consolidator's edits. See [[workflows/consolidation]].
 
 `alignment` records which of each reviewer's repeated entries are *the same
 entry*, as an explicit mapping rather than by physically reordering the
@@ -402,7 +408,8 @@ Per-paper-per-reviewer files are written **only when the tree holds answers**
   would unlink the only copy of, say, a reviewer tree committed with git
   conflict markers in it.
 - `consolidated.json` — written when any of the consolidated `annotations`,
-  `aiUsage`, `equal`, `alignment`, or `finished` is non-empty; otherwise
+  `aiUsage`, `equal`, `alignment`, `consolidationSync`, or `finished` is
+  non-empty; otherwise
   `null`.
 - `marks-<n>.json` / `marks-consolidated.json` — written when the mark list is
   non-empty; otherwise `null`.

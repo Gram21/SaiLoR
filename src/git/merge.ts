@@ -565,6 +565,11 @@ function mergePaper(
     aiUsage: mergeAiUsage(ours.aiUsage, theirs.aiUsage),
     equal: mergeEqual(base?.equal, ours.equal, theirs.equal),
     alignment: mergeAlignment(base?.alignment, ours.alignment, theirs.alignment),
+    // Not merged: it records what *this* checkout's Consolidation seat last
+    // ran against. Keeping ours means a merge that brought in reviewer edits
+    // reads as stale and prompts, which is the right outcome; taking theirs
+    // could mark work this side never saw as already consolidated.
+    consolidationSync: ours.consolidationSync,
     marks: mergeMarksList(ours.marks, theirs.marks),
     reviewMarks: mergeReviewMarks(ours.reviewMarks, theirs.reviewMarks),
     // Plain 3-way merge, falling back to `true` on genuine divergence (same

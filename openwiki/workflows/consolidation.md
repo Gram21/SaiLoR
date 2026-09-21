@@ -252,6 +252,38 @@ to the front. Once the queue is drained, "reviewer 2's entry N" means the same
 entry as reviewer 1's, which is the point at which reading across at a fixed
 index is meaningful — so `adoptUnanimousValues` runs at the end of the queue.
 
+#### When the automatic steps are allowed to run
+
+Both steps look repeat-safe and are not. Matching freezes once an answer hangs
+off a node, and adoption only fills fields the consolidated tree has left
+*unanswered* — but "unanswered" includes a field the consolidator cleared on
+purpose, so leaving the seat and coming back put the reviewers' value straight
+back, silently undoing the decision.
+
+`Paper.consolidationSync` is what closes that. It holds a `consolidationMark`
+(`src/consolidate/readiness.ts`): two djb2 digests joined by a dot — one of the
+reviewers' pruned trees, one of the consolidated tree — recorded after each
+run and saved in the project file, so a reload does not re-run anything either.
+On opening the seat:
+
+- **Mark unchanged** — nothing has moved. Run nothing.
+- **Only the consolidated half moved** — the consolidator edited their own
+  tree, and the reviewers' work is what drives the steps. Re-record the mark,
+  run nothing.
+- **Reviewers' half moved, consolidated half unchanged** — nothing of the
+  consolidator's is at risk. Run.
+- **Both moved** — the reviewers changed something *and* the consolidator has
+  edited since. Ask (`ConsolidationUpdatePrompt`): *Update* re-runs, *Keep My
+  Version* records the new mark and changes nothing. Either answer stops the
+  question recurring until reviewers move again.
+- **No mark at all** — never consolidated, or a file saved before this was
+  tracked. Not a conflict; run.
+
+The digests are over `pruneTree` output, so a cosmetic normalisation does not
+read as somebody changing their mind. `git/merge.ts` keeps *ours* rather than
+merging the mark: a merge that pulls in a teammate's reviewer edits should read
+as stale and prompt.
+
 ## Comparison: agreement and disagreement
 
 `src/consolidate/disagreements.ts` turns the reviewers' own trees (projected

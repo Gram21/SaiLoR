@@ -1,4 +1,4 @@
-import { hasAnnotations, type AnnotationValueTree } from '../model/annotations'
+import { hasAnnotations, pruneTree, type AnnotationValueTree } from '../model/annotations'
 import type { Paper } from '../model/project'
 import type { ResolvedDef } from '../model/schema'
 import { alignableNodes } from './align'
@@ -97,4 +97,51 @@ export function needsAlignment(schema: ResolvedDef[], paper: Paper, reviewerCoun
 /** How many of a project's papers `needsAlignment` — for a warning banner. */
 export function needsAlignmentCount(schema: ResolvedDef[], papers: Paper[], reviewerCount: number): number {
   return papers.filter((p) => needsAlignment(schema, p, reviewerCount)).length
+}
+
+/**
+ * What Consolidation's automatic steps last ran against: a digest of the
+ * reviewers' answers, and one of the consolidated tree as those steps left it.
+ *
+ * Both halves are needed, and for different questions. The reviewers' half
+ * answers *should the steps run again* — they are driven by the reviewers'
+ * work, so repeating them when that work is unchanged can only undo the
+ * consolidator's own edits. `adoptUnanimousValues` fills fields the
+ * consolidated tree has left unanswered, which includes one the consolidator
+ * cleared on purpose: leaving and re-entering the seat put the reviewers'
+ * value straight back.
+ *
+ * The consolidated half answers *is there anything to protect* — whether the
+ * consolidator has changed the tree since. "Has an answer in it" cannot
+ * answer that: the edit worth protecting is often a deletion, which leaves
+ * less in the tree rather than more, and that is exactly the case the
+ * re-adoption above used to reverse.
+ *
+ * Trees are pruned first, so a purely cosmetic reshape (an empty instance
+ * normalisation adds, say) does not read as somebody changing their mind.
+ * Hashed rather than stored whole — this lives in the saved project file, and
+ * a copy of every review would double it.
+ *
+ * ponytail: djb2, 32 bits per half. A collision means one skipped run on one
+ * paper, recoverable by the batch adopt action; upgrade to a real hash only if
+ * that ever proves to matter.
+ */
+export function consolidationMark(schema: ResolvedDef[], paper: Paper): string {
+  const reviews = Object.keys(paper.reviews)
+    .sort((a, b) => Number(a) - Number(b))
+    .map((k) => [k, pruneTree(schema, paper.reviews[k])])
+  return `${digest(reviews)}.${digest(pruneTree(schema, paper.annotations))}`
+}
+
+/** The two halves of a `consolidationMark`, for comparing one at a time. */
+export function markParts(mark: string): { reviews: string; consolidated: string } {
+  const [reviews = '', consolidated = ''] = mark.split('.')
+  return { reviews, consolidated }
+}
+
+function digest(value: unknown): string {
+  const text = JSON.stringify(value)
+  let h = 5381
+  for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0
+  return h.toString(36)
 }

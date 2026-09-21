@@ -47,6 +47,14 @@ or analysis would actually read.
   three that only one of you has, for you to confirm or delete. Two entries are only ever paired when
   they are genuinely more alike than not; entries with nothing in common each keep their own group
   rather than being forced together and reported as a disagreement they were never about.
+- **Your edits stay put when you switch away and back.** The two automatic steps above — lining entries
+  up and filling in agreed answers — only run when a reviewer's answers have actually changed since the
+  last time you looked at that paper. Clearing a field a reviewer filled in, or deleting a group you
+  decided doesn't belong, used to come back the next time you re-entered the seat; it no longer does.
+- **If a reviewer edits a paper you've already consolidated, you get asked.** Their change means there
+  may be new agreement to fill in, but re-running the automatic steps could write over what you decided.
+  So a dialog offers **Update** (fold their new answers in) or **Keep My Version** (change nothing).
+  Escape and clicking outside both mean Keep. You're only asked once per change they make.
 - **Your own answers are never rearranged.** Lining the entries up is bookkeeping Consolidation keeps to
   itself: in your own reviewer seat your groups stay exactly as you typed them, in your order, with no
   blank entries inserted to match somebody else's count.

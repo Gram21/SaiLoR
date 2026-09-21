@@ -82,6 +82,17 @@ export interface Paper {
    *  Consolidation's matcher. Empty until the Consolidation seat runs; see
    *  `model/alignment.ts` for why this is recorded rather than derived. */
   alignment: StoredAlignment
+  /**
+   * `reviewsFingerprint` of the reviews as of the last time Consolidation's
+   * automatic steps ran on this paper. Undefined means they never have, or
+   * the paper predates this field.
+   *
+   * Persisted so re-opening the project does not re-run them: those steps are
+   * only safe to repeat while the reviewers' work is unchanged, and one of
+   * them (adopting unanimous answers) would otherwise put back a value the
+   * consolidator deliberately cleared. See `consolidate/readiness.ts`.
+   */
+  consolidationSync?: string
   /** PDF highlights/comments for the single/consolidated tree. Same
    *  single-tree-vs-per-reviewer split as `annotations`/`reviews`. */
   marks: PdfMark[]
@@ -227,6 +238,7 @@ const KNOWN_PAPER_KEYS = new Set([
   'aiUsage',
   'equal',
   'alignment',
+  'consolidationSync',
   'marks',
   'reviewMarks',
   'finished',
@@ -606,6 +618,10 @@ export function loadProject(input: string | unknown): Project {
     aiUsage: parseAiUsage(p.aiUsage),
     equal: parseEqual(p.equal),
     alignment: parseAlignment((p as { alignment?: unknown }).alignment),
+    consolidationSync:
+      typeof (p as { consolidationSync?: unknown }).consolidationSync === 'string'
+        ? ((p as { consolidationSync?: string }).consolidationSync as string)
+        : undefined,
     marks: parseMarks((p as { marks?: unknown }).marks),
     reviewMarks: parseReviewMarks((p as { reviewMarks?: unknown }).reviewMarks),
     // Only a literal `true` declares anything — see `parseReviewsFinished`.
@@ -695,6 +711,8 @@ export function serializeProject(project: Project): string {
       // Same rule: an unmatched paper stays exactly as clean as before this
       // field existed.
       if (Object.keys(p.alignment).length > 0) paper.alignment = p.alignment
+      // Same rule again: a paper Consolidation has never run on stays clean.
+      if (p.consolidationSync) paper.consolidationSync = p.consolidationSync
       // Only written when non-empty, so a paper nobody has highlighted stays clean.
       if (p.marks.length > 0) paper.marks = p.marks
       const reviewMarkKeys = Object.keys(p.reviewMarks).filter((k) => p.reviewMarks[k].length > 0)
@@ -821,6 +839,8 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     // Consolidation's own bookkeeping about all reviewers' entries — belongs
     // in the consolidated file since it can't be split into per-reviewer pieces.
     if (Object.keys(p.alignment).length > 0) consolidated.alignment = p.alignment
+    // Same reason: it describes every reviewer's work at once.
+    if (p.consolidationSync) consolidated.consolidationSync = p.consolidationSync
     if (p.finished) consolidated.finished = true
     files.push({
       relPath: `${p.id}/${consolidatedName}.json`,
@@ -918,6 +938,7 @@ export function assembleLegacyProjectJson(
         aiUsage?: unknown
         equal?: unknown
         alignment?: unknown
+        consolidationSync?: unknown
         finished?: unknown
       }
       const reviews: Record<string, unknown> = {}
@@ -940,6 +961,9 @@ export function assembleLegacyProjectJson(
         ...(consolidated.aiUsage !== undefined ? { aiUsage: consolidated.aiUsage } : {}),
         ...(consolidated.equal !== undefined ? { equal: consolidated.equal } : {}),
         ...(consolidated.alignment !== undefined ? { alignment: consolidated.alignment } : {}),
+        ...(consolidated.consolidationSync !== undefined
+          ? { consolidationSync: consolidated.consolidationSync }
+          : {}),
         ...(marksConsolidated.marks !== undefined ? { marks: marksConsolidated.marks } : {}),
         ...(Object.keys(reviewMarks).length > 0 ? { reviewMarks } : {}),
         ...(consolidated.finished !== undefined ? { finished: consolidated.finished } : {}),

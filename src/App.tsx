@@ -26,6 +26,7 @@ import { AgreementDialog } from './components/AgreementDialog'
 import { DisagreementOverview } from './components/DisagreementOverview'
 import { ConsolidationOverview } from './components/ConsolidationOverview'
 import { ClosePrompt } from './components/ClosePrompt'
+import { ConsolidationUpdatePrompt } from './components/ConsolidationUpdatePrompt'
 import { AiDialog } from './components/AiDialog'
 import { LlmSettingsDialog } from './components/LlmSettingsDialog'
 import { GitCloneDialog } from './components/GitCloneDialog'
@@ -379,6 +380,7 @@ export function App() {
       <ConsolidationOverview />
       <DisagreementOverview />
       <ClosePrompt />
+      <ConsolidationUpdatePrompt />
       <AiDialog />
       <LlmSettingsDialog />
       <ScreeningSummary />

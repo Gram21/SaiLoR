@@ -162,6 +162,18 @@ for the glossary.
 - **Evidence:** `src/consolidate/unanimous.ts:15-18`, `src/state/store.batch-unanimous.test.ts:297`
 - **Status:** Implemented
 
+### REQ-CON-255 — Run the automatic steps only once per state of the reviews
+- **Description:** When the Consolidation seat is opened on a paper, the system shall run entry matching and unanimous adoption only if the reviewers' answers or the consolidated tree have changed since those steps last ran on that paper, and shall record that state in the project file so it survives a reload.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/consolidate/readiness.ts:102-147` (`consolidationMark`), `src/hooks/useConsolidationAlignment.ts:66-83`, `src/state/store.ts:2472-2493`, `src/hooks/useConsolidationAlignment.test.tsx:62-91`
+- **Status:** Implemented
+
+### REQ-CON-257 — Ask before rewriting an edited consolidation
+- **Description:** When the reviewers' answers have changed and the consolidator has edited the consolidated tree since the automatic steps last ran, the system shall ask whether to update or keep the consolidated version, shall change nothing until answered, and shall not ask again for the same state of the reviews once answered.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/ConsolidationUpdatePrompt.tsx`, `src/state/store.ts:2494-2511`, `src/hooks/useConsolidationAlignment.test.tsx:93-173`
+- **Status:** Implemented
+
 ### REQ-CON-260 — Batch unanimous adoption
 - **Description:** When "Adopt all unanimous" is triggered, the system shall process the whole project paper by paper, aligning then adopting per paper, skipping papers whose alignable nodes the consolidator already answered, recording the whole run as one undo entry, reporting live progress, refusing a second concurrent run, and stopping on project close or undo.
 - **Type:** Functional (ISO 25010: Functional Suitability)

@@ -218,6 +218,7 @@ describe('assembleLegacyProjectJson + splitProjectFiles round-trip', () => {
             aiUsage: [{ provider: 'openai', model: 'gpt-5', appliedAt: '2026-01-01T00:00:00.000Z' }],
             equal: ['Relevant'],
             alignment: { Relevant: [{ members: { '1': 0, '2': 0 } }] },
+            consolidationSync: 'abc.def',
           },
         ],
       }),
@@ -251,6 +252,9 @@ describe('assembleLegacyProjectJson + splitProjectFiles round-trip', () => {
     // lost mapping would re-point every cross-reviewer comparison on the paper.
     expect(roundTripped.papers[0].alignment).toEqual(project.papers[0].alignment)
     expect(roundTripped.papers[0].alignment).toEqual({ Relevant: [{ members: { '1': 0, '2': 0 } }] })
+    // Same file, same reason: losing it would re-run Consolidation's automatic
+    // steps on reopen and undo whatever the consolidator had decided since.
+    expect(roundTripped.papers[0].consolidationSync).toBe('abc.def')
   })
 
   it('gives an empty tree for a paper with no files on disk yet', () => {
