@@ -219,6 +219,21 @@ describe('REQ-LST-20: two-mode search', () => {
     expect(screen.queryByText('Alpha Quantum Computing')).not.toBeInTheDocument()
   })
 
+  it('clears the query with the × button and refocuses the field', async () => {
+    const user = userEvent.setup()
+    st().loadFromText(twoModeProject(), null, 'test.json')
+    render(<PaperList />)
+
+    const input = screen.getByRole('textbox', { name: 'Search papers' })
+    expect(screen.queryByRole('button', { name: 'Clear search' })).not.toBeInTheDocument()
+    await user.type(input, 'wombat')
+    await user.click(screen.getByRole('button', { name: 'Clear search' }))
+    expect(input).toHaveValue('')
+    expect(input).toHaveFocus()
+    expect(screen.getByText('Alpha Quantum Computing')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Clear search' })).not.toBeInTheDocument()
+  })
+
   it('finds nothing by metadata search for a term that only lives in annotations', async () => {
     const user = userEvent.setup()
     st().loadFromText(twoModeProject(), null, 'test.json')

@@ -366,8 +366,8 @@ body.resizing * {
   width: 100%;
   min-width: 0;
   padding: 5px 9px;
-  /* Reserve room for the case and mode triggers so typed text can never run under them. */
-  padding-right: 84px;
+  /* Reserve room for the clear, case and mode triggers so typed text can never run under them. */
+  padding-right: 106px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg);
@@ -445,6 +445,25 @@ button.paper-search-case:hover {
   background: var(--accent-weak);
   color: var(--accent);
   font-weight: 700;
+}
+.paper-search-clear {
+  position: absolute;
+  top: 50%;
+  right: 78px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+}
+button.paper-search-clear:hover {
+  color: var(--text);
+  border-color: var(--border);
 }
 .paper-list-empty {
   padding: 16px 12px;
