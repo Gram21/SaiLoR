@@ -1,18 +1,14 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:09d59efdbf3da8d130b01ed40c1c93a5c5d4948b2f3ed2b935a265b7a03e3698",
+  "pageVersion": "sha256:38b1e5dfaee5aac9971e0557b8d349ca7de0276ec2a78818f7460d3826e76bc0",
   "claims": [
     {
       "id": "claim_1f931ed340c24e66ac3b3f8333417062",
       "statement": "A hand-authored annotation schema is an array of AnnotationDef nodes under config.schema; resolveSchema(defs) validates and resolves them into ResolvedDef[] with defaults applied (min/max to 1/1-or-null, required forced false on booleans, visibleIf dropped unless it names a real answerable sibling or a straight ancestor), an id assigned from the slash-joined name path, and children recursively resolved.",
       "evidence": [
         {
-          "resource": "repo://src/model/schema.ts#L24-L73",
-          "version": "repo-lines-v1:sha256:865ad4857753fdf33b0509cd040bf8c431c3ede0fb046de362a2f8e8ed0eadef:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM4MjMyYmM3NWJkMzBmYjMyODg2ZTI4M2M1MzNlYzU5YjI5MGIxMzlkYWU1MDZhMTUxODBlODdiZGVkYTdkMDgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIxOGJlNzQ5ZWJmZmZjN2U1MzZlYmFjODI5YmRlZmMxNGMyYzA4NjliMDgwMzJkNDJjZDkzMGNkZTdmODUxOWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJiZmY4M2MzZWFkNTBkNzk3YjVmM2FkYmFjM2Y4MTllYjNhZjgxZWNlODIwNGVkOGVmZDg5YjI1ZTI5YTRiNTUifQ"
-        },
-        {
-          "resource": "repo://src/model/schema.ts#L263-L373",
-          "version": "repo-lines-v1:sha256:b692e6c8a42d30285b9b14ef4b645fe26910c625fcd0436a743f8076b445bcd2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTExLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIyZTZhYTZmNzI3OTdjNzY5YWY5MTc0YWI2MzczNTAzY2YyZTI1NTRlZTg2NmRhMzdkYmZmYmU2M2FmZDQzYzk1IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIwNWViNGM4YzE2YjJiNzYzOGM5ZGQwYzIzN2Q5ODg0OGM3NDliZTIyZjQ0ZWVmMTIxOGFmZGQ3M2MwZTczZTIzIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI3NGY1ODI2M2M4OTUyYTdhMWYzODM4YzM4NTc1ZTJhNjZiZjZkOWE0Y2I4NjVhYzQ0ODQ4MWU0YmMxNjQxNDFmIn0"
+          "resource": "repo://src/model/schema.ts#L400-L483",
+          "version": "repo-lines-v1:sha256:48c593347082e1537d17a0ce171e433f75ea824c69f77eb02a3cd6802f2d9132:eyJzZWxlY3RlZExpbmVDb3VudCI6ODQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJlNmFhNmY3Mjc5N2M3NjlhZjkxNzRhYjYzNzM1MDNjZjJlMjU1NGVlODY2ZGEzN2RiZmZiZTYzYWZkNDNjOTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkzNDNiODUwNTc0OTYxM2NkMjk1ODdmZWQxYWVkMTEzYzZiZTY1ODcxYTA1YzMwMTE0YmE3ZGE0NDM5YTRkNGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc0ZjU4MjYzYzg5NTJhN2ExZjM4MzhjMzg1NzVlMmE2NmJmNmQ5YTRjYjg2NWFjNDQ4NDgxZTRiYzE2NDE0MWYifQ"
         }
       ]
     },
@@ -21,12 +17,8 @@
       "statement": "resolveSchema enforces structural rules at every level: sibling names must be unique (they key the saved data), siblings differing only by surrounding whitespace are rejected because the canonical path cannot tell them apart, and a field named __proto__ is refused because Object.prototype's setter would silently drop its answers on save.",
       "evidence": [
         {
-          "resource": "repo://src/model/schema.ts#L289-L327",
-          "version": "repo-lines-v1:sha256:2f2a62d2b24ee0d38563ac4b4bb8b333f709ceca8d019a829f5da7680324fc9f:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc3Zjk5ZjYzNjEyNWRlMmUwYjJjYTFkNTY4NTY2NThhNmVjNzFjZTY1NjEwY2NkMTAwYzQwYWM4MmM5OTk5YWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjViMGRkNzY5ZTJkMDlmMGYyYzExOWVlMzEwODU4NDkzYmJhODE4NTgxMjI4ZDZmZDEzNzZiNTExYzcyMTdhZTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM5NTAyZTk0YjUzZDliNzI3MDYyZWNiYTI4NGM4MmYwZGNkNzY0ZjJkYzc4YWRmYzFhMTNkZGRjNmU1OGY3MDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNlZGZlZGJiNjhlNjg0ZTViNjQzYjYyMzhhY2RjZmRiNmIwNGYyYThlM2FjMjA0ZDhkNzA4MTZjZDhjMGE2MTQifQ"
-        },
-        {
-          "resource": "repo://src/model/schema.ts#L368-L373",
-          "version": "repo-lines-v1:sha256:ed9f9380faa4ee5eff1e47d90884b456addb3c68384910577e1e83b2d13e731f:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTY1NWE2YzI2MzVlOWVkMTg2NDM3ZjY0YjNiZDBmYmFmYTBkZjJkNGRkNjZmZjEzNmU5YTc0ZDY0ODMxYjFkMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZGNmOTVmMmEyZmY0NTQ0MmUxMzVkMDRmNjZmYjI1NGJhNzAxMGVlMzJiZThiM2FjYTAwMjczZTE3N2QwOWYyMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzRmNTgyNjNjODk1MmE3YTFmMzgzOGMzODU3NWUyYTY2YmY2ZDlhNGNiODY1YWM0NDg0ODFlNGJjMTY0MTQxZiJ9"
+          "resource": "repo://src/model/schema.ts#L411-L447",
+          "version": "repo-lines-v1:sha256:6d706b1d61a433a83554aa73fc21a09950eac05630840ba01c2097ced7f0ca0a:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdmODQxNDFlZjkwMDNmNzkyMTllOTViYjAwZmZmZDg2NTczZGY2ZjRjODUyNjU5OGQxN2YyODcxZmVlNjFjOGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjViMGRkNzY5ZTJkMDlmMGYyYzExOWVlMzEwODU4NDkzYmJhODE4NTgxMjI4ZDZmZDEzNzZiNTExYzcyMTdhZTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU4ZTI4NGZlM2Y5MDQxMmNiNzk1OThlMTY5ZjZiOTRhNzNmNjg3ZWVjMzA1YWZiMWZhOGU1YTY2ZjYzYWE4Y2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNlZGZlZGJiNjhlNjg0ZTViNjQzYjYyMzhhY2RjZmRiNmIwNGYyYThlM2FjMjA0ZDhkNzA4MTZjZDhjMGE2MTQifQ"
         }
       ]
     },
@@ -35,8 +27,8 @@
       "statement": "resolveSchema refuses a schema whose empty tree would materialize more than 100000 instances before any input, because min is a lower bound and initTree/normalizeTree materialize max(min,1) instances per node recursively at load; nested groups multiply, so a per-node min cap cannot stop the nested case and the product down each branch is bounded directly.",
       "evidence": [
         {
-          "resource": "repo://src/model/schema.ts#L375-L420",
-          "version": "repo-lines-v1:sha256:9df2c292e87959d685c8945b4e0a9c28f8d49058345d3527343c2a93147a1600:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU0ODI0MzYzY2Y4MGYxYTQwNGIxOGJkYTQ5YTg4MGIwZTdjYTdhM2RhN2U3N2ViNDliNzE1MjI2ZjE0ODQ2YjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI5YzViYjNkYjgxMWE5MWNjMjdjZjhiYzJiODk0YmJkNDMyNmJkZDA3NWFmMjA1YjkxMDQ3MjVjZmU3OTExYmMifQ"
+          "resource": "repo://src/model/schema.ts#L485-L520",
+          "version": "repo-lines-v1:sha256:0be264bb5a74d3b487475f1a1b364d27ac5c437c7f103e05f0d3903773bca9b0:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU0ODI0MzYzY2Y4MGYxYTQwNGIxOGJkYTQ5YTg4MGIwZTdjYTdhM2RhN2U3N2ViNDliNzE1MjI2ZjE0ODQ2YjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI5YzViYjNkYjgxMWE5MWNjMjdjZjhiYzJiODk0YmJkNDMyNmJkZDA3NWFmMjA1YjkxMDQ3MjVjZmU3OTExYmMifQ"
         }
       ]
     },
@@ -45,8 +37,8 @@
       "statement": "FieldType is 'string' | 'number' | 'boolean' | 'year'; 'year' rides the same on-disk shape as 'number' (a JSON number) but is range-validated against the static YEAR_MIN..YEAR_MAX (1000-2100), and validating type against a fixed enum means a 'year' field fails to load in an older SaiLoR that predates the type.",
       "evidence": [
         {
-          "resource": "repo://src/model/schema.ts#L15-L24",
-          "version": "repo-lines-v1:sha256:6fe42f818311fb9b507f3f0251756c876d90ac6e2f27af08efa40380637fe938:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM4MjMyYmM3NWJkMzBmYjMyODg2ZTI4M2M1MzNlYzU5YjI5MGIxMzlkYWU1MDZhMTUxODBlODdiZGVkYTdkMDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMxZGY5NWVlY2RjZjZmOGIyOGFjNzVmYjQwYzkwY2VjMWEyZWVkNDUwYzhjZDliMjk4YjJiOTE0OTA5ZDE5YmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZkZDQyZjhlNzgyMjAxMWQxYzE4ZDJkNGFjNzI3ZjlkYWM3YzAzZGZhYjcyM2QzOWFkZWM2MDY0NDhhYzczMDQifQ"
+          "resource": "repo://src/model/schema.ts#L11-L17",
+          "version": "repo-lines-v1:sha256:e44e38ce2fb00fe2cde14b7a03631f6fd9d5ef789f2193d9c2773937947393ae:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzgyMzJiYzc1YmQzMGZiMzI4ODZlMjgzYzUzM2VjNTliMjkwYjEzOWRhZTUwNmExNTE4MGU4N2JkZWRhN2QwOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDMxODc3ZDM0Y2M4NjBkMjQ2YjZlNjQxNGEwMWY4MGJlOTY1YmNhYWNiZjI0MmE5MDk4MGFlODMzMDk5OGYyNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTkyMThlMzEyNzViYzVkYjA0ZmFmNjVlOTJlMzgxMTQ4YTQ4OTkyOWI0MzBjYjA2YzU1NzZjNmRhYjhiNzA4NiJ9"
         },
         {
           "resource": "repo://src/model/year.ts#L18-L24",
@@ -59,15 +51,15 @@
       "statement": "Cardinality uses min (default 1) and max (default 1, null = unbounded); isRepeatable is max===null || max>1; cardinality applies to groups too (a repeatable group produces parallel copies of its whole sub-tree), and the annotation value tree mirrors this as an object keyed by node name holding an array of instances bounded by min/max.",
       "evidence": [
         {
-          "resource": "repo://src/model/annotations.ts#L4-L20",
-          "version": "repo-lines-v1:sha256:ead98f2b6c5a37d0d28eb83082a108a9cd19001efd041467e90464ab13a8923b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFhNDhlYjE3NTQxMmRhODZmNDVjZmMxZTFmYThhY2E2ZDNlYjAxMjhkZmUzZjJlMzYwNzg5ZjlhOWZmODY4NTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJjNjE4MzUzNDIyN2FhN2NmOTZkOWUyZmQzM2I4ZjBjNmJhZDA1MzQ3ZTYyNzQ1MTU1OWM5ZWI2YWJjYzUwY2MifQ"
+          "resource": "repo://src/model/annotations.ts#L10-L24",
+          "version": "repo-lines-v1:sha256:bba03c091cbe17a95a7b656fdecac8a791fc336a95aa6542498276e6ada453fd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI1MzViZDEzYzkwOTk3OWQyMjc3N2YzZTg4Y2E1NjAxN2M4ODRiMTExZmYwOWIyOGZlNGQyN2IyN2I0N2ZlZjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU0NWEyMTMwOGFiN2FiMTllYjk2NzRmZTdjMzkyNThlM2JjNjk5NmM0Yjk1NDAzYWQxMTNjMzU3NTBiY2ZiMGYifQ"
         },
         {
-          "resource": "repo://src/model/schema.ts#L3-L13",
-          "version": "repo-lines-v1:sha256:437741d74f9d1c3836bc0358899b0440b87034597a115cdb4c059d07ad305d4a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjoyLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhYTM0NTgxYjNjYzQ2MjljNTIwOGUzNmQxOGFiNmY4NjI2MTNhNzA4MzExMzVkMTUyYmQzNGNiMDg4MGYyNTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY0Y2Y5MDUwOTZiOTIyYjk5Nzc4YmExMTlmOTRkMGNiYzExMWIzN2E4ODRlMTY1ZGY2YTczMWQ5YjY0MWNhNzQifQ"
+          "resource": "repo://src/model/schema.ts#L449-L451",
+          "version": "repo-lines-v1:sha256:7efcc3a7f428cc77d1a7355977bc876d9feff3e24c1b651ca760ddc72b28a2cc:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTYwZjgyYTk2MmEzMDkwMmY2MWJlMTE3MjVkODVlMTUzYjA4ZDMxNzAzODY0NzkwN2Y3YTJhYmRkNmM4OWVkOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmNlOWJhOWI4MDVjNWU4ZDg0YmUwOTcxZDcwN2I0MjA0MjI2ZmI2MTE3NmVjMmQyMzkwYTlhYzlmMmRhYjQ0OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzQ3YmUzMmZmNjMxMmYzZmY2OTY1ZTExYjliM2IzZTg3YjA4YjQwYWY5Mjc1ZDhjZTBkZmIyZGY4Y2IwYzU4YSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDE5OTg4ODA4MmUwNTU3MGEwN2JiN2IxYjdjYjY0YTY2MDVkZDNlNjQ1YTQxMTM0M2VhYmYyNjIyOTEzM2I4NyJ9"
         },
         {
-          "resource": "repo://src/model/schema.ts#L422-L425",
+          "resource": "repo://src/model/schema.ts#L522-L525",
           "version": "repo-lines-v1:sha256:c75b1b522e6b7ae69c10bc0f15b6d3e007f2750e0c7959dfab7702b7a242ea96:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGQ2YTg1M2M1ZDZhY2FkN2Q0NmFkYzA2ZjBhNTRmOGFmZTczMzEzM2U5OGFhYWNiMDRlOWQ4MTQ3NzhkNWJkNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTE4MTc1ZGRmZWZiN2FmMmEwZmY1NzU0Mjk5NTI5MDU3YTcxNmQxNDdmYTE0MjdjNjA5YzIxYzk0NzI5NjhiZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWExYzJkMmU0YjY3YzFmMDdkYzBlMDgxZDRmMjE1NDJlZTIzMzg5N2FiZTY0MWNiZTdmYzcxMTAyYjFjMGZmYiJ9"
         }
       ]
@@ -77,12 +69,8 @@
       "statement": "The annotation tree machinery in annotations.ts enforces cardinality: initTree materializes max(min,1) instances per node, normalizeTree reconciles a loaded tree (drops unknown keys, pads up to min and clamps to max, and adopts a bare primitive/single-object written where a list was expected rather than discarding a real answer), pruneTree drops only trailing empty instances keeping required ones, and canAdd/canRemove gate the form controls against max/min.",
       "evidence": [
         {
-          "resource": "repo://src/model/annotations.ts#L149-L162",
-          "version": "repo-lines-v1:sha256:719f00caf8349a06b8cbbac59aa3139d9c78ee80af2b7fef87b89c8c22f35887:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmZDgwMmUxZmQxZTc0NjI1ZTU0MzM4NDRkNGUzNzZkODc5MzA0MjMyMTkwMjEwMWZlNWRjMWNlNTRlOTIzNzciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMyNjJhZDQ0ZTRhMDEzYzI5ZTc0MmNjOGNiM2IxMjI0MWQ0NjgxYjg0NzZmNGM2ODU2YzRhNzk0N2M3NmE1ZjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUyODUxMWYwNmM5MThhNGZjYzM3ZTY2YzU5NTQzZDE0YjA3OTllMWQwYThlYjM4MWE1MTQ5MTQyMGZkZTRlZjkifQ"
-        },
-        {
-          "resource": "repo://src/model/annotations.ts#L47-L134",
-          "version": "repo-lines-v1:sha256:3b42b7b2422480c64101c0cb4089f3ac0f6bba9a9f2e804ac80ef943137e212c:eyJzZWxlY3RlZExpbmVDb3VudCI6ODgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI5N2M0NjgzOTJkNGZjZTA4OTdlMjE4YmIxOGJlOGI5OTE2MDBiMTEwZjljZjY1ZjZmYzc4NTRmYzRlMDNhYWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlhMmQ4ZGEyOGRiY2Q3MDNmOGIyMjEyYzc0NmIzMDc1ZDBjYTUyZGIzOTBmZDViODZkMTk2NjQ2NGU1YTBhMWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjczZWU3MzU5YzczZDc0YzAzOTUxZDQ2YThjMjM3YWMzZGNhMTljMmYyMDExYjRlMTcyNmU2YjQwM2M3Y2ZmMTIifQ"
+          "resource": "repo://src/model/annotations.ts#L51-L146",
+          "version": "repo-lines-v1:sha256:c505f0993d635e1e387b5f341c5762d439316b0e4fe6c81a5b3d0e36c6438944:eyJzZWxlY3RlZExpbmVDb3VudCI6OTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIwYjVjNzViYmYyNTJhNDk2YjdiNTQ2Zjg4YjRmMjQ2MTVhZTRiOGRkZTYwMjkxMmMxOGM3MDBmNmM1ZjlhNTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZmUwY2M3YTRmYmVkNGRiMzJlODU5YWU1MDI4ZWJiMGZjN2Y1NGE2Y2RhNDE2NDFkNzAzOTViNTljNmE0MGEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYyMjIyMzAyYzhiNmQ3MGQ4ZjExNjMzOTdmNTU0ZDYwODcyMTE4OGNkNGQ1MjQwYTgyZjg5OTk0MzIyMDYxYTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYyNzA1NzA3MTQ4NzA4ZjU0Y2Q4MGYxMGQ4NDRmOTc1ZGIzNDkyYWJkOTEyMTM1NWYzNWVkZTBkMTEyZjc5MTgifQ"
         }
       ]
     },
@@ -91,12 +79,12 @@
       "statement": "The zod annotationDefSchema is a recursive strict object whose superRefine enforces cross-field rules: max>=min, a node must have a type or non-empty children, options only on a string field, and required only on a field; projectSchema's superRefine requires a non-empty config.schema and a non-empty pdf on every paper, both relaxed when config.screening is present.",
       "evidence": [
         {
-          "resource": "repo://src/model/schema.ts#L195-L252",
-          "version": "repo-lines-v1:sha256:e8abdf359d04249635ab369d9a29059cd243786d5b5296bcd4f1648ff722fe6c:eyJzZWxlY3RlZExpbmVDb3VudCI6NTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhmNmViN2RlOWQ4OGM4M2FlZjcyM2VkNDIzMzM3NjgxMTRkOTZkYjk2NTgyMDZkOWUzMGRhM2UzMjllMDgxZmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBmMGU2ZTczNzJiNTJiZWE0MDJmNDI5NWQ1ZGNkZGM3OWE0ZTQyOTlmNjRhZjY3N2NlZmQxMTJjZDc3YTE3ZTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFmOGIzNjUyYzhjNjZkNzdhODllMDVkMGIwOGFhODFkNTkwYWE4MzAyZjYyZmExM2E0OTkzODkzYzQ5OTU4YjgifQ"
+          "resource": "repo://src/model/schema.ts#L129-L171",
+          "version": "repo-lines-v1:sha256:c3c217906d44f69de96ce452362b1ec95fe6c4577e417ab42563837b166b6a88:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY1NmViMTA1NzJiY2VkYTExMmQ2YmY1NmQ4ZWM3NDAxMGMzNTdkNDgzM2YzYjM4YzdjZmVlMGFiMDQwMTU5ZjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhZmJhMDUyN2MzOTUzYzRiNmUwZTViNTczOWJhODM2MTJmODA1M2JjZGM5NDY2NzMwMTkzY2QxZDU5MGI0MDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjExOGM4NjI0MjI1Zjk0NzNmMjhiMzQwNzA1ZGNmYzRmZjk5Yjc1NzRlNGE0NzM5Mzk1NzI2ZGQ4Mjk5NTA5MDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc1NjhhM2U2ZWU5MDQxNWFkMWUwMGQ4MDk3Mjk5YWY3MGNiMzJiOTJkZjA1MDNhMTM1NWQ0YzRjYWRkYzliZWEifQ"
         },
         {
-          "resource": "repo://src/model/schema.ts#L79-L124",
-          "version": "repo-lines-v1:sha256:2490a9e4c26c6bf095f2e6fc501a425d144c398e5887e0b217bd6166ba39a93f:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk2Yjc3ZWEwMWY0MjU1Y2M3MWE0ZDFiOThmYmY5NmJmYmY0NTlmNjA2ZGRkNmU2YWVhYjYzOTMyYTk1ZDZhZDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhZmJhMDUyN2MzOTUzYzRiNmUwZTViNTczOWJhODM2MTJmODA1M2JjZGM5NDY2NzMwMTkzY2QxZDU5MGI0MDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM5NTA5NDk1ZDdhMjM5M2MwMGVmOWI1YmFlZjUzNDRhZGNhMGMwNjZjOTlhNDdjZmJmMDdmN2YzNjQzYTU4ZGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc1NjhhM2U2ZWU5MDQxNWFkMWUwMGQ4MDk3Mjk5YWY3MGNiMzJiOTJkZjA1MDNhMTM1NWQ0YzRjYWRkYzliZWEifQ"
+          "resource": "repo://src/model/schema.ts#L255-L278",
+          "version": "repo-lines-v1:sha256:bf2615e412eb07dfca67a687bff7311fdb963b89de368c949aba15ba7c6eb435:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhYmM1MzA3ZWY4ZWM0N2QyNmU5NTYxOTc3MjJmY2ZkOGRjZTZhYTQ0MzMzMzRhOTUwOWE1ZDQ1NDIxMTk3MTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRlODEzNGYzODQ0Njg0ZDE3OGYxMzA5ZWJiOTRiNGNhZjQyN2YwOWRiYzM5OGUyZTcxNmY0OGI4MDdlODdmMjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFmOGIzNjUyYzhjNjZkNzdhODllMDVkMGIwOGFhODFkNTkwYWE4MzAyZjYyZmExM2E0OTkzODkzYzQ5OTU4YjgifQ"
         }
       ]
     },
@@ -105,26 +93,16 @@
       "statement": "ScreeningConfig is the one authorable screening setting (reasons: string[], non-empty, trimmed/deduped by project.ts); its presence under config makes a project a screening project, config.schema is then ignored on load and rewritten on save as the derived screeningSchemaDefs projection — a fixed two-field schema of Decision (Include/Exclude enum) and Reason (enum of the reasons).",
       "evidence": [
         {
-          "resource": "repo://src/model/project.ts#L710-L726",
-          "version": "repo-lines-v1:sha256:667e191935ecb055831690825cb02d1aa7a19883ba90dccfda71771fcc70a813:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4N2NjY2FiMThiMDJhNzMyMzU4YjI3ZmIyN2MxYzhkNWVjMWZmNzgxYzYyYzNhMGVlNjA5ZmZkYWE0Yzk2ZDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM2MTZlNGZmNWFlMGFlYjdjMTBkNTJmNjk0MmQ0OWRjYjhkYTNhZjczN2Y0Nzg0NmRhYTE4OTU4NTMwNDE4MzkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4MWZjNGJmYjc1ODZjMjQzMDA5MzNmN2RiYmYxMzM0ZTI2NWNhZjM4NDlhNWIyZGE1YTg2N2U0ZjExZjRmOWYifQ"
+          "resource": "repo://src/model/project.ts#L567-L580",
+          "version": "repo-lines-v1:sha256:a52bec82caf746f7f6a872f89fc449d50507df36c2eb21c396ec0e787be71165:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU3OTA0MmQ4M2IwMzFmZTVjMTU1MWM2ZTdlMTczY2E4Y2UwYzUxODgwOTUyYmE3NGU5MzcyOWM4OWE0MWI0YzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM2MTZlNGZmNWFlMGFlYjdjMTBkNTJmNjk0MmQ0OWRjYjhkYTNhZjczN2Y0Nzg0NmRhYTE4OTU4NTMwNDE4MzkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4MWZjNGJmYjc1ODZjMjQzMDA5MzNmN2RiYmYxMzM0ZTI2NWNhZjM4NDlhNWIyZGE1YTg2N2U0ZjExZjRmOWYifQ"
         },
         {
-          "resource": "repo://src/model/schema.ts#L175-L194",
-          "version": "repo-lines-v1:sha256:102e89505a8c079b7d7cfce7d4013b0ccc9cd729837668529468e004e15798bf:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc2MWI2NWRlOWI0NjU1MGFjNTY2YmZkYzgwZjAyYTIyMjhjOGI4MzYyMjliMmU3MmU2YWMwZWYxNDU0MzUwODciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUyMzEyYjlkZTg4NWY5YjcwMGEwNmRmZGMyNzgxODE4NjIzNjI4NzljZjdkMGI1YTdjMDFlZjJhZWVjNDUzMGUifQ"
+          "resource": "repo://src/model/schema.ts#L211-L222",
+          "version": "repo-lines-v1:sha256:44db1065550d68ccab5828ecdc9ba934504b113de26946889f041c46b82cfd02:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc5ZWE1ZjA2YWExMWJiNmM5MzllMTc1NDMzYjhlMmQ4NWY4OTA4MmZmNWVjNDc0ODljODg2ZTE3ZWE3ZDVmYjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAzMzlkYjI1ZTNjZmFlMzAxNDQzMjg4ODc4ODNmMDQ0NDdkYTljOWQyOGVjMmJmNDVjMTk1ZGIzMmRjYjY0OGUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZjYjgzYjkwMTY5OWI1ODM2ODA2NGQwNzIyNTY1NGM0ZDU5ZTU4Y2Y0Yjk5N2M0ZThmNmIyNDYyMzlhYzdhZjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM1MzM2NDQ1N2EyZGM5NTE5NGE1MDc4YTE2NTU3Y2UxN2M4ODgxOGJiY2EzMDU5NzY1MTQ2ZGFiMmUwMWYxYTYifQ"
         },
         {
           "resource": "repo://src/screening/schema.ts#L26-L67",
           "version": "repo-lines-v1:sha256:2a56b878ffe6df57cfe3041fcf6dd3f960c379f244b1558e364063baacc8e474:eyJzZWxlY3RlZExpbmVDb3VudCI6NDIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgwNDJiY2MwYzEwYjYyNmM0NGMzNmQ3Y2I3YzNjYTk1ZjU1ZGUyYzU3ZGM5Y2U5OGU0ZTgzZmY4Mjg3ODI0MzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI3MzA1YjdiZWU3MTBkMDQ0MTZmYWRkZGIwN2UzMzdmNjJmYjU3YTE0ZGFiZTUzNjgyN2ZiYzI5ZTk0NmRmZTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRhMWQ2MGI3NjY0MjFmZmY2ZWNlYzM0MzhlMGIzYTA3NmQ4YTQ4MWIxNmM1OTg4ODg4ZTJhYjM2YTExM2NjM2QifQ"
-        }
-      ]
-    },
-    {
-      "id": "claim_2b5b9d3dcbbc453a93aca995cdce5266",
-      "statement": "The screening schema uses a two-option Include/Exclude enum for Decision rather than a boolean because a checkbox cannot distinguish 'decided to include' from 'not looked at yet', and that distinction is the screening output that hasAnnotations, readiness, unanimousFills, and kappa all depend on.",
-      "evidence": [
-        {
-          "resource": "repo://src/screening/schema.ts#L8-L25",
-          "version": "repo-lines-v1:sha256:10411da63a4383d479b40d5ac2424f36f03fcf121936b5b159104dd67f5af0c0:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg4MjNlOGVmYzNjZDFkYmIwOTQ3OWYzYTMyMzhkNGUyNTE3MzhlNjBjY2JlODFkYjgwNzEyMGUzYWU4MDAzYjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk1MmVhMzE2YzJkODAxMTM4NjViOTlkNGEyMjE0OTM5YzcwOGY4ODQyZGQzNTc3NGJhZDlkZDY3ZTJhNDVjN2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlmYTRlNDY0MDM0OWM5ZWVjYzNhNTY4MjlmMDdiZTNkMGU0NTAyNGVlOWFiNTQ1NjA5ODcwZTMwN2ZiNTZhYzEifQ"
         }
       ]
     },
@@ -141,50 +119,22 @@
           "version": "repo-lines-v1:sha256:6768fb236b7a8c16e34aa6d329d6242a9b1df20207c3bca499e1f162075c729b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ2ODY2MDBkNDI1ZWYyY2IxNzNlMmE5OTU4OGVlZmM1ZDg5ZmFhZDMwNmUwMmY4NjJmZjEzOGEwMjJhMzAxNTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc1NjgyYjMzYjM4ZjhlYWFhMzJhODkzYjk2YzQwNDE3YjI5MDBkNzMyN2RlNTgyNGEwYTA4NDA5M2Q3YmZiZTgifQ"
         },
         {
-          "resource": "repo://src/model/validate.ts#L282-L298",
-          "version": "repo-lines-v1:sha256:a39a8b90ba83a44ab2b37de0c18ab314f1088f486d4ee19981af94098d038d87:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkyYjE4NGY4YTVhZWY1YjdjMzQ5NDRjYmFjOTA1MmM5ZDBlNWI1NDY2ZjJmNDQ0ZjEyMmZiNTdiYzE2ZDljMzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQyZmJlYzAzODUzNDEzZmYyNzZlZGIwMTBiZjk2ZmZjOTgyNmYzY2JiOTM3NTIzMjA4MjgzMjI5MGQ1NDQ5ZWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk0NDA0ZDZiYzdlNTQ5ODRjZGEyOWIxMzY2ZDcxZWQ1OWJhNzRkNWFmYTA3NzJlYzYxZGQ2YWZiMzlhMDJjYzIifQ"
-        }
-      ]
-    },
-    {
-      "id": "claim_678921842a8141798805c78b4c192010",
-      "statement": "isEmptyValue defines 'not answered': a boolean is never empty (an unticked box is a real false, so a required boolean can never be reported missing), 0 is a real number answer (only null/undefined is empty), and whitespace-only string counts as empty; typeMismatch treats null/undefined as 'not answered' (the required check's job) and a year out of [1000,2100] is reported as a type issue.",
-      "evidence": [
-        {
-          "resource": "repo://src/model/validate.ts#L144-L173",
-          "version": "repo-lines-v1:sha256:3ead4e9a9d09c178a3535bebafb14af1fb2242044515c2bcae62988e6cc1b0a8:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMxMzhjYjdjMjNkODVhYzZhYjI5MWViYTdlYzI0NWEyYzNjYzNmYTYzY2ZmMTk1YzFiNTM1MDk5YjRjZmNkYzUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE4NGMzYTNjZDUzMjlmM2U5MWZiYzAxZGU2NDc0ZDJiZGJjYWNlMzMxZDljZDM4ZjA1MjE3MDc0OWVlZWVkYjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU2ZjM4MWQyYTE2ZGFmYmQ4MWQ0MWNlNThkOGI3NjI0ZTIxZGI0YjNkNjMyZjBjMDc5NDZlZTQ2ZWVjMzcxZTEifQ"
-        },
-        {
-          "resource": "repo://src/model/validate.ts#L64-L80",
-          "version": "repo-lines-v1:sha256:94d13c6139d5e59df3a77e23fd32f901480cd01bf1ec5d6db8d8b5adbd2f7746:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFhODkwMmQyNzVkYWQxZGM4ZGMxZjEwMmYxMTc2YzQ2NzNkMTllOGExMzhjMmZlODFiMGM1OWY4ODY0ODczN2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJlNWI0ODQ5M2ExNGExOWE1NzYyZjY0YThiZWU1MTM2MTk3MTJjYjVjN2ZlNjQwZjVkNDE5ODVjZjY2ODMzZGMifQ"
-        }
-      ]
-    },
-    {
-      "id": "claim_07b6242408794890b1e8967eebfb75f4",
-      "statement": "validateProject skips papers with no annotations at all (they would fail every required field for the single reason they haven't been started) and returns them separately as unannotated, so 'not started' is never silently indistinguishable from 'actually valid'; if the walker throws on a surprise in a hand-edited file the paper gets a single type issue rather than taking the app down.",
-      "evidence": [
-        {
-          "resource": "repo://src/model/validate.ts#L300-L340",
-          "version": "repo-lines-v1:sha256:0dfb0e1a523399927f422c01b1b359768f41280ca3ead6fb6856e9913a431d4d:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg3Njc5YjhjNWQ4ODczNGUxNjA0ZDQ1Y2ZkMmY3OGJjYzg1ZjVhOWU3NmM3NzAxMmZhZDBkNWNhYTQyMGNhNTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/model/validate.ts#L293-L303",
+          "version": "repo-lines-v1:sha256:187f2a02f540beaa983edb9405601bb4136852841d135b011d06d33c69115915:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkyYjE4NGY4YTVhZWY1YjdjMzQ5NDRjYmFjOTA1MmM5ZDBlNWI1NDY2ZjJmNDQ0ZjEyMmZiNTdiYzE2ZDljMzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0NzVlOTRhOTA0YWM0OWIzMTU0ZDQ2NzJhNjZlODYyOWI4NmRhYzc0ZTNlMjkzN2JlNjkyN2FlM2RhMTFjNTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQyZmJlYzAzODUzNDEzZmYyNzZlZGIwMTBiZjk2ZmZjOTgyNmYzY2JiOTM3NTIzMjA4MjgzMjI5MGQ1NDQ5ZWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZkNzhmZmJlNzk0YzA4ODRlMjQ4YTA5ZTViN2ZiZTdiODExMzZlZDBhYzlkODc2NDgwMjMxYTBmZGFhOGJhMjUifQ"
         }
       ]
     },
     {
       "id": "claim_1ebc5cd1b7b941b7b341406f87d03f0e",
-      "statement": "ValidationDialog.tsx surfaces validation results grouped by paper in walk order, with each issue clickable to jump to the paper and scroll the annotation panel to the named field via canonicalPath, unannotated papers listed below as a not-started checklist, and notes that yes/no fields always count as answered.",
+      "statement": "ValidationDialog.tsx splits results into three sections — Current paper (always expanded), Other papers, and Not started yet (the latter two collapsed by default and independently expandable, each with its own case-sensitive paper-title filter) — rather than one flat list; a paper's jump control selects it without closing the dialog and is recorded on a browser-style back/forward history stack, while clicking an issue itself jumps to the field and closes the dialog.",
       "evidence": [
         {
-          "resource": "repo://src/components/ValidationDialog.tsx#L5-L11",
-          "version": "repo-lines-v1:sha256:de97bf10436315c30d421d0693e681db4ba2669f05107db92996d83375f11649:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTAzMTE1MjI0NTQxYjBmZDk5NmFjM2MwZGRiYzU5NDU4YjUwZWRlY2E0NmFjYWRiODUwZDA2YmE0YTgxNmMzMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTJiOGJjOTlhNTRlM2E5MzY2ZmY1YTM3YzAxYWRkMjQ3ODFhMjZkYzRjODY5YzFiNDBkOTYxMWU2MzdmNmVlYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjVhZGYyMGNjMTIxOTZmZDg0MGJkNjVkYmE0NWVkZDQyMGViMDkzZjYxMDkyMTJmNzJlNjI1MWQ4YmFkZjQ2MiJ9"
+          "resource": "repo://src/components/ValidationDialog.tsx#L152-L242",
+          "version": "repo-lines-v1:sha256:0a170b56920f9c4db30c6201bafa9b3f1830a6dc2bce321b813d7d1b992a5ce4:eyJzZWxlY3RlZExpbmVDb3VudCI6OTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFmYmVmYTE5YjkxN2FhZGE4MjYzODYxZjM2YTEwNWI4YzQ3YjlmN2IzMzFhYzI1ZWViYTEzYjY4Y2Q4OTliMjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAxOWE2NzE1MjFjYTM4NjYzMTUxZTJlMDY3YTM1YjA2YjVjYmU0YjAzOGMzZjdiMGUyZGFiYjQ3ODAyMWY4OTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI2NjllZTk1NWZiZDdjZDRkM2M4MmVhYjBmMDA1MjhkZThlNmEzN2E3YmIyNWFiMGEzNzU2OGVhYmVkOTA1ZDMifQ"
         },
         {
-          "resource": "repo://src/components/ValidationDialog.tsx#L51-L64",
-          "version": "repo-lines-v1:sha256:75236ff43d127674b972d8272f880660055cc8ac0702bd25a8a4969bd2a4145e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3OGRjZTEyMzc2NDI4MmZhYTE3OTc5OGY1YmNlNTA5Y2Q3NGQxZjE1Y2E4MDI3YTg4YzIzMjg3MGYyZTA2YzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBiYmJkYWQ5Y2YwMmZiZjQxZDQxYTZiMGJiNDRhODE5OTE3NjM2OTNiNjRkZTRmYTgyZWY4NzdmZWQ0NGUxZDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk5MDk4M2NiMDI1MTMwZmFjMjI0NmM1ZDEyNjQ3MDlkMTQ4ZDVjMWJiZmRkMDEzODI1MzcxZmZiMTYwM2UyYTkifQ"
-        },
-        {
-          "resource": "repo://src/components/ValidationDialog.tsx#L93-L105",
-          "version": "repo-lines-v1:sha256:51bc6cfada7a915a3432b90620865df5b26c3a55851146c440c6775293eb778c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhlMmVmZDBjMjMxZTUyZThiNGNjNWIzYzdmZjg5MmY0ZWNhZGJhYzY4NGQ1MjQ2ZmE3MjZmMTFkNGY5Yjk4YTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxNWZmZWUzMDE0NjQ3MmEyY2ViNDIzMjg1MDkwZjdmY2Q0YzlmYjZiOGRhZWRhNGU5MTdiZTdkMTg4MjUxM2YiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNjOGYzOTJmNzJiYjVhNjgxNWZjOTI5ODhhNGNkZTU5MmU3NTNhNWRjODU2MDgyYzYwZWY0MGQ1MzlkNGUxM2MiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImViZGM2Y2Q3YzNkM2M3YTQxYzEzMmUxYjMxYmVkMTRjZmE5YWE4ZDZmNTkwN2M0MjQ4ZmY2NzAzZjE0MWIwMDMifQ"
+          "resource": "repo://src/components/ValidationDialog.tsx#L339-L450",
+          "version": "repo-lines-v1:sha256:733a933e6b80d7dda34f3e9ba68b01503722bf9d95ee3234639611da5857fb65:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIzNzM4NjNiYzFiNGMwYjEzMjNiZWI5NDkzZDg2ZTg3MDExODlkN2I3MjJlY2U1M2MxYTgwOTRhZmMwOTI2MGFkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0Y2RmY2YwYjRlMWYxMWQ2NTc5NmVkODU1NTA4NjkzZjZiMmI1OGMwNTAyNTczZWM2ZDg4MDBkNjAyNWUyZDQ2IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlYWUzNWY3NWQzMWZjMGI0ZDM5M2IwMTY4MTc4Mzc4ZmE2MTYzYTY2NGE2YjZmZTVmYjgyOWExZTQzZWNkZTgyIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlNDY1MzdiMTc5Mjk4MWE5M2IwNTgyZDMyZDlmNmNiZmRmMTMyN2E5ZmUyOTNiOTE0Yzk3YTNkMjFhODY5YjgzIn0"
         }
       ]
     },
@@ -207,26 +157,12 @@
       "statement": "completeness(defs, tree) computes filled/total for the paper-list dot: the denominator is required fields only when the schema marks anything required (so the dot and the Validate dialog never disagree), otherwise every field; booleans are excluded from both sides; repeatable nodes are counted per instance actually present in the tree; and visibleIf-hidden fields are skipped entirely exactly as validate.ts skips them.",
       "evidence": [
         {
-          "resource": "repo://src/model/completeness.ts#L18-L21",
-          "version": "repo-lines-v1:sha256:adbc10765b5edbeb1cbbbf9b5124fdcdb49c31782c2e9adee1b9797277af54e7:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiM2Q1NzJiOTdlOTkzYzIyMzc3ZTVjMzVmNDU1MDJmZGZmMDI4OGVmODYzNTkyMThlYjE1ZDc0ZWRiMWY1Njc4NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzE1OGZjMzVhOTVkYWNmYzQ1OTJkYTI1YWRmOTU2M2UxMjEwZDc1NDMyMjVkMjk2YjMzMzRiYzBhYTYwNWZiNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmM4MzgzZTY3ZDUxZDQyODYzMjQxNDc1NjRkZDE1ZmI5ZGM4ZDhiOWJmNjc5YjMxMzI3YWY5ZTQ4MzI3OWVkZiJ9"
+          "resource": "repo://src/model/completeness.ts#L61-L71",
+          "version": "repo-lines-v1:sha256:6980d4f3c80ed294a9216f2b5bfd3ad2760cf1205d3c8abf796df45c11da315e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE5OGY1Yjg1MDJjYTY5ZDRmZjJiNWM4MjRkMzdmNGZmMjk0OGU3YWRmNTkwNjc1OGM3YTA0NjdhN2UwOWVjN2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU3ZjMxOWI1ZmJhMGJkY2M1Yjg1MWQzOTdlMjI1NTM4MGVlZDJiNDcyY2Y5YmY5MDU3ZjE1NGY5ZWMxNTIyMzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ0NzA0YzM3YzMwMzU0ZjhhZDNlZmQxNjk0MWM3NDAyMjQyYjM3YTU0OTZkYjIxYjIxZjhmMjAzOGQ0NDVmZTkifQ"
         },
         {
-          "resource": "repo://src/model/completeness.ts#L23-L68",
-          "version": "repo-lines-v1:sha256:8dae5bbf7b6a5ed2b199175727576848f84f39668bc62d476542a8e73912b60a:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE1MjBlZTNlMGNmYmQ1MDg0OWNjY2Y1NTBiMzMwMzhjMzQ3ZDQyNWRhNjNjM2RiYmZlN2Y0NDZjNGU2ZDIyZjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ0NzA0YzM3YzMwMzU0ZjhhZDNlZmQxNjk0MWM3NDAyMjQyYjM3YTU0OTZkYjIxYjIxZjhmMjAzOGQ0NDVmZTkifQ"
-        },
-        {
-          "resource": "repo://src/model/completeness.ts#L83-L109",
-          "version": "repo-lines-v1:sha256:9fa1ae9bab63d8955c8cba23e54d339917bd5d44f8d48179379391e12039b642:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdkZWE2YmRhNWU1Mzc0MmRkZmU4NWMwOWRhZTBmYTgzNjhlMTFjYmRmZDlmMzE2ZjIyYjZiN2QwMWM0Zjc2NDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQyYTVmOGM5NTQ3NDBkNzQwMDNmNDk4YzI2ZWMzODhlNTJiMmYzNzc2ZmVkMjM5ODQ4NTFjYzUxN2FiNmU5ZDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVhYzczZmUwYWVmNzMzNzc0NzlmYmUxOTVhNTBjNjQ0MTU5OTA1N2M4OTE3MTRjOTMwYWQ5YmRjNzViNTVhODAifQ"
-        }
-      ]
-    },
-    {
-      "id": "claim_f00dfb2a61ab418c9f9f48351a222715",
-      "statement": "completenessPercent returns null when total===0 (boolean-only schema, absent tree), exact 0/100 at the endpoints, and clamps the interior to [5,99] so 199/200 does not look complete and 1/200 does not look untouched, preserving the dot's pre-existing 'touched vs not' meaning now that it also shows degree.",
-      "evidence": [
-        {
-          "resource": "repo://src/model/completeness.ts#L111-L129",
-          "version": "repo-lines-v1:sha256:54999d3f704ab566ac68b728370f940569ac6cc63c4b2283510df32da8be4f0f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiNTgwZTk2NGY4M2E0NzNmNDNkNDQzODQ2Mjk0OWQ2OGI1NjAwZmRhNzg3ZjE2Mzc0NWQwMGRlODljYmYzNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/model/completeness.ts#L76-L109",
+          "version": "repo-lines-v1:sha256:27d7c043e0253eaedef86af08776cb55b53166b458bb77d191e1046648ea303f:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdmZjVmZDk5MWUzYWY5MjFlMjM5MWQ1YWU4Y2Q3MTlkYjExMWVlMzM0ZDNjYmY2N2Q2YjgxOGFhZTc3ODY0OGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlmMWRiZDdiMTNkNTUzZmU3ZThlZTA3NDJlMTNhNWFkYWY1MWRiYTM5YTlkMjg4OTJhZTU5MmU3MTMxYzEwNGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU0MjgyYmFjOTJlZmRkZjM5NzQ2OWMwNzI1ODM5OTE0ZGYyYTgwZmIxNWQwNjE0MGU3ZGI4NmMxNzBjZDEwZTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRjM2JlZjUxZDRhOTcyODBlNTI4YzUzZWNkZWEzNzI4MzVmYWQxNmE1MGM2MDM4YWJkZDQzMzA4ODQ3OGY0ZDQifQ"
         }
       ]
     },
@@ -235,12 +171,12 @@
       "statement": "annotationState combines Completeness (a fact about the data) and Paper.finished (a reviewer's declaration) into one dot vocabulary (untouched/partial/complete/finished/flagged); 'flagged' (red) is 'declared finished while a required field is empty', reachable only in a schema that marks something required and re-evaluated from current data on every read, and completenessApplies excludes only screening projects.",
       "evidence": [
         {
-          "resource": "repo://src/model/annotationState.ts#L6-L93",
-          "version": "repo-lines-v1:sha256:5a18eab5a88b6fe86b920ecd22c1e5eeef945c7900db8c8cfba8d9e3c4da6dc2:eyJzZWxlY3RlZExpbmVDb3VudCI6ODgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA4NmY2NjBiOTIwNGUwNDdhYjdlMTJhOTQ2NjA4YjBiYzRiOTZiMDY5YjQ5ZjIzMmNjNzc3MmRhOGQ4YzhhZjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc0MTAwMzc4ZmU2NDA0ZDViMDI2ODYzOGNjNzhhYTFhMWM1NjExNTE0ODA0MzQ1YjA2NGRkNTUzZmVkMjBhNzUifQ"
+          "resource": "repo://src/model/annotationState.ts#L45-L66",
+          "version": "repo-lines-v1:sha256:64cd3652f3a6255600c6a288c05da242f3049b6a57646aff6f239b116cd532e5:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlkZmQzM2U5MjljN2UzNDVjYmIwNTVlNzljYmUyMDE4ZjVhOWY4MWZmZDU4Mjg4ZDQ5ZTYzM2I1Y2Q3MDdkODgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdjMjI4ODI4OGU1MWVkNDRhNGY0MDZiNjIxZjQ5MDI0ZmYzZjhiMmQ2ZDcyMjlhYzQ2OTUwNDM2MzUwNjBmYWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRhY2I0NzE1NDBlZjhkY2EzNzY4NDQxNGU1OTBlN2QyN2QyMWU3OWI1MjNkN2Y0OWQ2YWRiMmM1Yzg2MDU1NGUifQ"
         },
         {
-          "resource": "repo://src/model/annotationState.ts#L95-L126",
-          "version": "repo-lines-v1:sha256:0c2faafc9d6c4c848c386c1d16cb980d745f721999e4db3bc65c93e0b263ec76:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIzNjg2MWNkMzNjZmZhYjY1M2ZjNDA4MjY2YmZlMTBmNDgwZGVhM2ZhNmI1MWIxN2QyYzg4MjgwYTE4MWJiZmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM4MGJjYzMyNzU2MGIwNTQ4NjdmMGVmY2ExMjQ5ZmQzNDBkYTEwOWY1Mjc1NTQ4YzliNzNlOThjOWY3YTRhYjUifQ"
+          "resource": "repo://src/model/annotationState.ts#L68-L84",
+          "version": "repo-lines-v1:sha256:a7c72772e89dd04c11fa489467a6374a3f84c7fffbb218c52b5045ee67bb7808:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIzNjg2MWNkMzNjZmZhYjY1M2ZjNDA4MjY2YmZlMTBmNDgwZGVhM2ZhNmI1MWIxN2QyYzg4MjgwYTE4MWJiZmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc1ZmM2MDY0ODcxMTdjNmFmZDU4Y2QwNWQ5YWEyMjIxYWMyNGIyNTk5NDY5M2NlY2RjZDQwNDA1NDY2MDNmMDIifQ"
         }
       ]
     },
@@ -249,8 +185,8 @@
       "statement": "PaperList.tsx calls completeness for the dot's fill (progress) and annotationState for its color (whose move it is), keeping the two independent so a full-but-unsigned-off paper reads as 'complete' never 'finished' until a human ticks the box; the consolidator's green dot means 'I have signed this off' not 'every reviewer has answered', stated separately in the tooltip.",
       "evidence": [
         {
-          "resource": "repo://src/components/PaperList.tsx#L585-L635",
-          "version": "repo-lines-v1:sha256:2450317a81667006abb1d1fc6a0b98090baef5ad476738dc724f5527c0d7387e:eyJzZWxlY3RlZExpbmVDb3VudCI6NTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE3ZWQ0ZmVkMTBhYjc1M2Y1ZjBmMDVlNmQ2MjlhZGFjMjc0YjkyOTM0N2Q0ODczYTc4NjdjOTkwYWNhYzFiYmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkyYmRlM2JiYTVmNzVkMzcxMTE1ZDY0MTE0MjNmOGMyNjRlNDBjZjg1NTg2NWE0NWZhMGFjNzhiOTRkY2Q0MzEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE5NmM2OWExMTVhY2ZiMjMwOWM4YWUzMTA3NWJhMzVkYmYyMTYxZGI4YmM2YzNjZjQ1NTBkMzUyZWM1NWU3NDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg4NjI0MzgyZDRhYWEwYjdkMDFhMDIwNDhlZWJhN2QwZmUxOTYzZTJhYWFmNTBkYTNmYTIzYTliYWZiMTUyYzEifQ"
+          "resource": "repo://src/components/PaperList.tsx#L65-L96",
+          "version": "repo-lines-v1:sha256:28589dc9552ee0131f4fd5dfaeaa4e099d0d83a02057527a4fb28b727c198122:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhlYTg0NTExZWZiYzI3MTgyNzQ0MmRlZTE3NzY1NTI2M2U4YWIyYTcxNGZiMmYzYWY3NzM5NTVmZjNmMzlkOGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjljMzlhZTk1ZGM1Y2Q3NmY4YTkxZTlmYmE4ZTVlNzAzMzU0ODM0ZTI4MzA2OTE5NWVkMTU5MmExY2U2ZTJjOGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZhODkzNTI5MDAwYWZmMTFkM2ZkMTdiNDI0MWJhYzNhMDc1ZTI4YjExNmNhNDU3Mzg2N2I5YjkxYmJkMDEzOWIifQ"
         }
       ]
     },
@@ -259,16 +195,12 @@
       "statement": "countPapersUsingField(papers, path) counts how many papers record a real answer at exactly a field's root-down path across the consolidated tree and every reviewer's own, matching by path (not bare name, to avoid crying wolf on a half-typed field) and using isAnswer which mirrors the shared emptiness rule (an unticked boolean and a blank string are not answers); SchemaTreeEditor.tsx uses it to warn before a rename/remove/move that would orphan answers.",
       "evidence": [
         {
-          "resource": "repo://src/components/SchemaTreeEditor.tsx#L11-L12",
-          "version": "repo-lines-v1:sha256:463b6a84cbacf9fcc68be6edcca690eedc4a05eada6357f460d58f7e7d477741:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWRjNDEyZDhhZTNkZjk2NzU5MGQxNzAxMjZkYzAyNWZlN2JmNjFlNjgwMWYyMWM2M2YxNTU3MmYwYThiMDk0ZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzlmYzU1ODk5ZjViNzM3MGYwMzAzYzQyOTA4NmYwODIyZjAxODFhZTJlYzEzZGNjNGE0NTE3NGJmZDdhZjM4OSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTI2YzE3Mzk2Njg1NmFmOWEyNTI4ODBkNjM3Yjk5MzBiYWFmODQ5OWZkY2NjMjAwZDU1OTg4OTljNDlmOWJjYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjYxNTNiNWYxNGZjZWY1NjE4ZTBiMDFiYTNkMDQxZWRiY2FjNzQ3YTdjZTg2ZmRmZThhZGEyMGE3NmMzN2JiOCJ9"
+          "resource": "repo://src/components/SchemaTreeEditor.tsx#L11-L11",
+          "version": "repo-lines-v1:sha256:5dc412d8ae3df967590d170126dc025fe7bf61e6801f21c63f15572f0a8b094d:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWRjNDEyZDhhZTNkZjk2NzU5MGQxNzAxMjZkYzAyNWZlN2JmNjFlNjgwMWYyMWM2M2YxNTU3MmYwYThiMDk0ZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWRjNDEyZDhhZTNkZjk2NzU5MGQxNzAxMjZkYzAyNWZlN2JmNjFlNjgwMWYyMWM2M2YxNTU3MmYwYThiMDk0ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTI2YzE3Mzk2Njg1NmFmOWEyNTI4ODBkNjM3Yjk5MzBiYWFmODQ5OWZkY2NjMjAwZDU1OTg4OTljNDlmOWJjYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWIyNzZiMjI2NGVmNWU4NDBlOGMyYzhhOTlmNGMyNDM5ZDNlZDkxODZiNDM5OTlmNzJiNDU0ZjlhYTYxNTE3MCJ9"
         },
         {
-          "resource": "repo://src/components/SchemaTreeEditor.tsx#L144-L144",
-          "version": "repo-lines-v1:sha256:d61ed48222021e3a90f2a09a4ab0d6ff7457b086446c4adcf0f24d805ad4f3a5:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDYxZWQ0ODIyMjAyMWUzYTkwZjJhMDlhNGFiMGQ2ZmY3NDU3YjA4NjQ0NmM0YWRjZjBmMjRkODA1YWQ0ZjNhNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDYxZWQ0ODIyMjAyMWUzYTkwZjJhMDlhNGFiMGQ2ZmY3NDU3YjA4NjQ0NmM0YWRjZjBmMjRkODA1YWQ0ZjNhNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODFlNWNiMDVhY2E4YmNhY2JlNWE1ZmRhZjAyNDBhYjc0MzQ2ODY2MTJkM2U2YWM3MmE5MWQ4ODFkOTkzOGMzNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2MyMjdiMWQ3ODY1MzRiZThjMGVhMjNmMGZiMTI4OWMxZDViNGVhZjRmOWE3MGVhNDZkMjQ3Y2Q3ZmJkMDdlZSJ9"
-        },
-        {
-          "resource": "repo://src/components/SchemaTreeEditor.tsx#L261-L261",
-          "version": "repo-lines-v1:sha256:3aa5d59063686ac904a5a1d3aaa37728b7d420ca36d96529a6fa4e4fd2b9d30f:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiM2FhNWQ1OTA2MzY4NmFjOTA0YTVhMWQzYWFhMzc3MjhiN2Q0MjBjYTM2ZDk2NTI5YTZmYTRlNGZkMmI5ZDMwZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiM2FhNWQ1OTA2MzY4NmFjOTA0YTVhMWQzYWFhMzc3MjhiN2Q0MjBjYTM2ZDk2NTI5YTZmYTRlNGZkMmI5ZDMwZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTBmMzVjNjcxY2U2YWEwZmI4NjI2NGM5NWE5ZDU2MDIyYzcxMWY2MDFjY2E0Yjg5MDk2ODEzNDcxYjE4ZGE5ZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzcxYWFlODEwYzFjMGU4OWQxM2JhYzU0MDU0NjA4ZGUxY2YxNjZiNjYzNzQ5ZDhjOWIwODhlZjQ2MzViNTJiNyJ9"
+          "resource": "repo://src/components/SchemaTreeEditor.tsx#L145-L146",
+          "version": "repo-lines-v1:sha256:e068b99fdf73e0c3381ccc0f01b8d649a98a1a2fc76443c2c475927ce04343eb:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDYxZWQ0ODIyMjAyMWUzYTkwZjJhMDlhNGFiMGQ2ZmY3NDU3YjA4NjQ0NmM0YWRjZjBmMjRkODA1YWQ0ZjNhNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWQ1Yzc0ZDM3MGI5MzdiODJiNGIxNWJhNWIwZTA3Y2ZhZWZiNzU1ODUxYjgwNGIzNjFjNzhiMmIwOWE0MjFjMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODFlNWNiMDVhY2E4YmNhY2JlNWE1ZmRhZjAyNDBhYjc0MzQ2ODY2MTJkM2U2YWM3MmE5MWQ4ODFkOTkzOGMzNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjFmYjU4MDA4ZjViYmZkZGI4NTI2MjdkZTU4MjZhNzAxMGJhNDFlYzVhZDhjYzIwYjdhYzUzOTc1NjM5YTA1ZCJ9"
         },
         {
           "resource": "repo://src/model/fieldUsage.ts#L1-L102",
@@ -291,8 +223,8 @@
       "statement": "classifyImport(existing, incoming) returns one DupVerdict per incoming record by comparing each against every existing record and every earlier incoming entry, picking the best candidate by rank (DOI-certain > title-certain > probable-by-score); a DOI-certain match short-circuits the search because nothing beats it.",
       "evidence": [
         {
-          "resource": "repo://src/model/duplicates.ts#L366-L414",
-          "version": "repo-lines-v1:sha256:5af0a3ab06a5b3bacab9004b792ebc0b3a7e791a0dad6ecc978c276f3ab7dcdd:eyJzZWxlY3RlZExpbmVDb3VudCI6NDksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE1Nzk3MGUzNWNkNTk3MzRiMTRhNjY1YjAzMzQ1NTI3YWYzYjllNmEwNmQzMzBlYWVkMzM5ZDZjODE0ZWExMGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ4MDAzMmZkZGViNzBmMTg0NjBlM2JiZGEyMDRmYjg3ZmVkMmU4ZTQ1N2FkZGFkOGFmZDc2NTA1NGY2NGRhODMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/model/duplicates.ts#L304-L338",
+          "version": "repo-lines-v1:sha256:0a21b3d00d4abbabf4b70d3d8ba151fb60fadf432d01fda30633e9ff44b3f074:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk3ZmU1NDU5YzZiZGM0YmZkY2FlZDU3MTgwZjNkNTM1YWFjYmFlYzY2NzI0NGIzMjVhZjY2MDY2OWMxZjNjZDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAwMDExNmQ5MjdmOTI2ZGFmYzI3M2NjMmFkNmE4ZDA5YjdhNDkyM2YxYTllZWQ3YWFlZmNkNzdmYmMzY2ZhMmYifQ"
         }
       ]
     },
@@ -301,12 +233,12 @@
       "statement": "classifyPair evaluates a candidate pair in fixed priority order each strictly stronger than the next: identical normalized DOI is certain (year veto never applies), exact normalized title is certain unless downgraded by a large year gap / DOI conflict / no shared authors, fuzzy whole-title above 0.90 is probable, and base-title-plus-authors (title before first colon, fuzzy + author-surname Dice >= 0.50) is probable.",
       "evidence": [
         {
-          "resource": "repo://src/model/duplicates.ts#L304-L364",
-          "version": "repo-lines-v1:sha256:bfae5555f2552a585cfc5e27012aa09cc6718ecb617cb0efb9433d82b1064b8e:eyJzZWxlY3RlZExpbmVDb3VudCI6NjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY2YTlkNWZmYTFkMjFiOGJlNTBjOWRiYTM1YTU0YTI3YWNkYjcxZjQzM2U3OTNiZjk4NGUwNGUwNmU3ZTZlNGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYyNWM5MGE4ZDgyNmExYTg1ZTdiYmI3M2QyYWM1MGE3NzViNWU1NzYzY2Y5Nzk3Mjc3MjE2YTExM2NkMDVjNDIifQ"
+          "resource": "repo://src/model/duplicates.ts#L228-L238",
+          "version": "repo-lines-v1:sha256:be6da636877379011de299ca9d27e12c9725b9ecefef1a020a8ac93612bdac4d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5MGI1YzY0OTkwMDA5YzFhNjQyMTkyNTg1YWU4NDRkNGNlNGI2MjU0MTg1ZGI3MjdjNDY1NDg3MDczODc2ODciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdiOTY3OGQ0ZjM0ODcwNDkwN2M0NTZiNGI0YjNiNjE1YWJhNDk5NzJlZmJjODNlNWVjOGYxZGNjZjIyZDI2ODAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFiM2EwZjQwZjllZjg1MTQwZTg2OThlYWU0NjA2YmJkMjJkOTQxMjI4MmY2NjU5OGMzODFiN2FlMjQwZTExOGYifQ"
         },
         {
-          "resource": "repo://src/model/duplicates.ts#L99-L131",
-          "version": "repo-lines-v1:sha256:ac7d36b3394ebaf44318853acfa7d33e7eec371d903154dd2e2623f9db8c8a8f:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU0M2M4OGFhOTBiMGVlODIyMWI5NDY4MjJiZTIxZmQ4MzZlMWIyMjRhOWUwYWUxNjNiZjljYWZjMTY1Y2U5MWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUxM2YxMDUxYjQ5MWZkOTExMzM4ZWUwNDE2NWIyMTYyNGExN2Q3MGZjY2FmMTYxM2FlMzgxODBmYjY1N2MxNjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlmYTFjMmQ3Y2M4NzdiZTdjZmNiN2EwNjcyZGEyNGExNTQ1YjUzYWVjNjBjN2IyYTY5MzY1YmQzMjU4ODUwNTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYxZTA0NDU4YWZjYzZiNmMzYzU1YTZiMGU5NzgxNjI3NjI0NjU3NTRiMzc1MmZjNWFlYmY3ZjM0MGIzMTk4OGIifQ"
+          "resource": "repo://src/model/duplicates.ts#L245-L294",
+          "version": "repo-lines-v1:sha256:d39145189a90335b61c1dff6940f43765247b8606514115adf178c6e28edc057:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwNGIyMzk1YjNjOTVmOTE5MWFkMDBiMDAxYzAxNWQ2MTQ4N2FkYmExNTc1MTBmZGIzNDYyNjI3YzcwMzU4ODMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY2YTlkNWZmYTFkMjFiOGJlNTBjOWRiYTM1YTU0YTI3YWNkYjcxZjQzM2U3OTNiZjk4NGUwNGUwNmU3ZTZlNGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI3OTI2NzhhZDcyY2Y1YmM4ZDY5YjY4MzZjNWRkN2RiMWI3OGE2MGM5Y2VhM2VjODY5Y2ZmZGU4ZmIzZThiMDcifQ"
         }
       ]
     },
@@ -315,12 +247,12 @@
       "statement": "A year gap >= 2 (YEAR_GAP_VETO) on an otherwise title-matching pair downgrades the match to 'new' (a workshop paper and its journal extension share a title and are both worth citing); it is >= not !== because databases disagree by one year constantly (online-first vs issue date), which is far more common routine noise than the workshop/journal false positive.",
       "evidence": [
         {
-          "resource": "repo://src/model/duplicates.ts#L118-L131",
-          "version": "repo-lines-v1:sha256:db966e4483aec050005c3abb36aee87f9ed275fac7fdf855527632f190930e04:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUxM2YxMDUxYjQ5MWZkOTExMzM4ZWUwNDE2NWIyMTYyNGExN2Q3MGZjY2FmMTYxM2FlMzgxODBmYjY1N2MxNjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhhMGVlMzE2YjY4YjMxZmE4NTFjYjNkNjQ0ZmZhY2M4MWZlNDA5MGE4MDNiNWJkNzA1MjcxNGUzNjBhY2JiMTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYxZTA0NDU4YWZjYzZiNmMzYzU1YTZiMGU5NzgxNjI3NjI0NjU3NTRiMzc1MmZjNWFlYmY3ZjM0MGIzMTk4OGIifQ"
+          "resource": "repo://src/model/duplicates.ts#L258-L263",
+          "version": "repo-lines-v1:sha256:9cca09f8d3c5ae47dcb1e1ada412973af95a9106ae61ad45b97d9acb0f3fb5df:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODVhOGYzMTNhZjQ4NDM4YTA1NTlkZGU2YzYxZTVhY2E1MjliMDAyMTc4MTcyYjdjZjc5MTg1ZGYwNDIzOWQxOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiY2U3ZjYxNjI2MDZhNWRiYzI4YWRiM2MwMzMzNjYxNTBhOTc3ZjAzZWZlMGI5NDE0ODg4YTMwYzJmNWE5YmRhNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDRmYzIyNDJiOGY4NGU3OWY5N2FjYTc1ODUxZTY0M2RkNWJhMWQxNmNjOTM0MWYxMzcxMDdjYmI2NmM4YTg0MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjdlYjAzYjVkY2M5NDRlZDNmODdmNGY4NjI4ZWE3MmUzYWQwODMyMGI1YTNlNDhmNGE1MGViOWM1MjA1OTAwMSJ9"
         },
         {
-          "resource": "repo://src/model/duplicates.ts#L321-L348",
-          "version": "repo-lines-v1:sha256:ac0a5f9d0c7b24be76b5b9cac643b6428fd49a70c8801fe27440480183a50218:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1OTNhMzcyOWVmNjZmMzQ1MmVlMDdmYzJiNGUwNDI4ZjUxOGM4ZTkxYmVhNGQ0NjdmM2EwNmZlNjVhM2UyNGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFjMGEyZGMzZGU1Njk4NTE1OGQwY2ZmZWJkNWU2ZjQyMDAyZTUxNTliMDY1ZjZlZjEwZTU0NjJhOTlmY2E5MGUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhNTU1YjFiMGFlZjQyMTVjZTIzOTE3YjQyMGM5YjI4ODI2MjJkMWRhNjQ5MDA2YTBlNmVhNGEyN2E1NjQzOTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYyMzMzYzc1NDY2NGVkMThkOGQzMzBmOTg0MzEyNzM1MWFjOGQyMGJhODE2MzM5ZmNhNjI3ZjRkZjQ0ODQ1MjAifQ"
+          "resource": "repo://src/model/duplicates.ts#L97-L97",
+          "version": "repo-lines-v1:sha256:e13f1051b491fd911338ee04165b21624a17d70fccaf1613ae38180fb657c166:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTEzZjEwNTFiNDkxZmQ5MTEzMzhlZTA0MTY1YjIxNjI0YTE3ZDcwZmNjYWYxNjEzYWUzODE4MGZiNjU3YzE2NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTEzZjEwNTFiNDkxZmQ5MTEzMzhlZTA0MTY1YjIxNjI0YTE3ZDcwZmNjYWYxNjEzYWUzODE4MGZiNjU3YzE2NiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDUwM2UwYWRjOWZhMDk5OGJkZjZiMDM3ZGM3N2NhMjA1YTM3NTQxMmFhMzM3YzdmOGI5ZTMwNWJkMjhlMmMwYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjFlMDQ0NThhZmNjNmI2YzNjNTVhNmIwZTk3ODE2Mjc2MjQ2NTc1NGIzNzUyZmM1YWViZjdmMzQwYjMxOTg4YiJ9"
         }
       ]
     },
@@ -329,8 +261,8 @@
       "statement": "Duplicate detection is O(existing x incoming) and runs synchronously in the store's set; fuzzyScoreAtLeast brings the provably-identical result from over 40s of UI freeze to under a second by proving most pairs cannot reach the threshold before computing Levenshtein, using sound lower bounds (length bound and histogram bound, cheapest first) and only calling the shared stringSimilarity when neither rules the pair out.",
       "evidence": [
         {
-          "resource": "repo://src/model/duplicates.ts#L181-L264",
-          "version": "repo-lines-v1:sha256:5430a2a0e2c5a26e8dfaf84286763b0fc76915abcede824804b5623f5b3d131a:eyJzZWxlY3RlZExpbmVDb3VudCI6ODQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY2YmEyYjU5OTY3MzJlNzEzOTBkM2UwY2M1YjliZmRmZTU4YWUzZDZkMzgzY2VhYTMyNzRiMzc1OTY1NWRlYmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU5YTdiM2RmYWJiMzg5ZWFlNjA2OGMyMWMxNjFmM2ExZDZjOTFiYjJjNWY2OWUyMGQwYTdiNDk5ZjEyNGVhNDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU5ODYzZGJkZTdjMzE1MGI2OWU5NWVmNzBkYmU3OTYwZjBmOTk1MDdhMmM1MDJiYTkwNDFjNmQ5YzA1YzNiYWQifQ"
+          "resource": "repo://src/model/duplicates.ts#L141-L210",
+          "version": "repo-lines-v1:sha256:9e8b54f28ac56321bfb3f9c2e6ae0c9c666140b9317ad09d228ab9ed945917fe:eyJzZWxlY3RlZExpbmVDb3VudCI6NzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY2YmEyYjU5OTY3MzJlNzEzOTBkM2UwY2M1YjliZmRmZTU4YWUzZDZkMzgzY2VhYTMyNzRiMzc1OTY1NWRlYmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU5YTdiM2RmYWJiMzg5ZWFlNjA2OGMyMWMxNjFmM2ExZDZjOTFiYjJjNWY2OWUyMGQwYTdiNDk5ZjEyNGVhNDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU5ODYzZGJkZTdjMzE1MGI2OWU5NWVmNzBkYmU3OTYwZjBmOTk1MDdhMmM1MDJiYTkwNDFjNmQ5YzA1YzNiYWQifQ"
         }
       ]
     },
@@ -339,14 +271,18 @@
       "statement": "loadProject wraps any SchemaError from resolveSchema into a friendly ProjectLoadError('The annotation schema is invalid.'), derives a screening project's schema from config.screening.reasons via screeningSchemaDefs rather than reading config.schema, and validates/normalizes each paper's annotation tree with normalizeTree against that resolved schema.",
       "evidence": [
         {
-          "resource": "repo://src/model/project.ts#L710-L760",
-          "version": "repo-lines-v1:sha256:6e02087565c53c02c6216e04007c7314d3d4284cf63accb933192e1341f216ad:eyJzZWxlY3RlZExpbmVDb3VudCI6NTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4N2NjY2FiMThiMDJhNzMyMzU4YjI3ZmIyN2MxYzhkNWVjMWZmNzgxYzYyYzNhMGVlNjA5ZmZkYWE0Yzk2ZDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2OGEyOTY5NDliY2M2Nzk0OTJhMTZiM2MwOTI1MTU4N2U0YTdmZGRhODliYzI1OWFkMTQ1Y2Q4NzFlYjc1ZmEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM2MTZlNGZmNWFlMGFlYjdjMTBkNTJmNjk0MmQ0OWRjYjhkYTNhZjczN2Y0Nzg0NmRhYTE4OTU4NTMwNDE4MzkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY3YjZhMWRiODMyMzBjYWI1N2UxMDljNmU5MzhlZDI3Y2I2OTVhMzFhMDIxYzNlMTg3NjQ4MTcyOGIyMTI5MTAifQ"
+          "resource": "repo://src/model/project.ts#L526-L580",
+          "version": "repo-lines-v1:sha256:b88ad2162f8535965bcb28cf52c841581ee3ccd8b9d25632f9721bdc4c10c265:eyJzZWxlY3RlZExpbmVDb3VudCI6NTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkZTQ4ZDhhOTAzM2Y4MTk2MTU1MWY0NTI2MjYzZWM1NTMyNWFhNGVlOTk4MDJiMGY0ZDlhY2M2OWM4ZjdhZDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZhMWJiMGMxZmE0NTAzNDllNjE2MTg2OTBiZmZlMTUwMjkwZWJhNWFjN2YxYzhkODNmN2ZiMjI1NDlkMjI0NTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4MWZjNGJmYjc1ODZjMjQzMDA5MzNmN2RiYmYxMzM0ZTI2NWNhZjM4NDlhNWIyZGE1YTg2N2U0ZjExZjRmOWYifQ"
+        },
+        {
+          "resource": "repo://src/model/project.ts#L604-L604",
+          "version": "repo-lines-v1:sha256:dec3b810f778b4bf1eaa643c506bd9ffb49547acb90a9aa5d8fd9eaf8742dd0b:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGVjM2I4MTBmNzc4YjRiZjFlYWE2NDNjNTA2YmQ5ZmZiNDk1NDdhY2I5MGE5YWE1ZDhmZDllYWY4NzQyZGQwYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZGVjM2I4MTBmNzc4YjRiZjFlYWE2NDNjNTA2YmQ5ZmZiNDk1NDdhY2I5MGE5YWE1ZDhmZDllYWY4NzQyZGQwYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWQ3ZDNjYTNkMGFhOGZhOThlOTcwODUyNjY5NjQ3Yjg0YzA0OWFlNzkxNTY4YWFjOTU5ZTFiMDFhMDI1NzQ3ZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjhjNjc2ZTJmZTgyODZhODBmYjc5YTg0ZjNiYjBmMmQ4ODY4OTZhZWFjNjNjZWVkMTFiNDMwYjQ1NTliMTc2MSJ9"
         }
       ]
     }
   ],
   "verification": {
-    "by": "openwiki/0.5.0",
-    "at": "2026-09-01T19:42:14.192Z"
+    "by": "openwiki/0.4.0",
+    "at": "2026-09-21T20:12:55.536Z"
   }
 }

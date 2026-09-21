@@ -3,9 +3,6 @@ type: operations/runtime-shell
 title: Electron Main Process and IPC
 description: The Electron desktop shell — the main process that owns all filesystem/git/LLM access, the preload `window.slr` bridge, the CORS-enabled path-traversal-guarded `slr-file://` protocol, IPC handler groups, the self-update pipeline, and quit/unsaved-changes coordination.
 tags: [electron, ipc, main-process, preload, security, self-update, git, llm]
-verified:
-  - by: openwiki/0.4.0
-    at: 2026-08-26T09:23:05.972Z
 sources:
   - id: openwiki-source-8d6b6eb5e58f91e157e37bde
     resource: repo://electron/main.ts
@@ -26,6 +23,9 @@ sources:
   - id: openwiki-source-769f5f5c1e3631cf9ab273bc
     resource: repo://src/platform/electron.ts
 generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
+verified:
+  - by: openwiki/0.4.0
+    at: 2026-09-21T20:12:55.536Z
 ---
 
 # Electron Main Process and IPC

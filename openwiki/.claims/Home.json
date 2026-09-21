@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:c81f4f8e59f30fe944d9c990b24a2a45770b3684ee09e0e41d42153897f97593",
+  "pageVersion": "sha256:fde18f22c89f12ac68d4a8dffbac2fec1e34d9f40d83c4a0f20fb4d59214e728",
   "claims": [
     {
       "id": "claim_b007bc47337e4255a24a9724101a405c",
@@ -58,7 +58,7 @@
         },
         {
           "resource": "repo://docs/annotation-schema.md",
-          "version": "repo-file-v1:sha256:024ea7a551c12b9cbf263cb3b3a52ce0a8f460548dd08b201860639c476bfad3"
+          "version": "repo-file-v1:sha256:ae9b47a6c32e5653ce9a35e52f32ba56fd26a97a5b87152f9140ad915eb24c12"
         }
       ]
     },
@@ -116,7 +116,7 @@
     }
   ],
   "verification": {
-    "by": "openwiki/0.5.0",
-    "at": "2026-09-01T19:42:14.192Z"
+    "by": "openwiki/0.4.0",
+    "at": "2026-09-21T20:12:55.536Z"
   }
 }

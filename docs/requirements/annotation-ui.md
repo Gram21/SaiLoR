@@ -57,7 +57,7 @@ export. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-ANN-90 — Jump to field
-- **Description:** When a field jump is requested from the Validation dialog, the system shall scroll the target field into center view and flash it for 1.5 seconds.
+- **Description:** When a field jump is requested from the Validation dialog, the system shall scroll the target field into center view and flash it for 4 seconds.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/AnnotationPanel.tsx:76-90`, commit `c0a8b15`
 - **Status:** Implemented
@@ -78,6 +78,36 @@ export. See the [index](index.md) for the glossary.
 - **Description:** When a repeatable instance is removed, the system shall shift linked-field paths and AI marks of the surviving instances, drop links belonging to the removed instance, and scope the change to the acting seat.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/store.reindex.test.ts:58-170`, commit `b9afb02`
+- **Status:** Implemented
+
+### REQ-ANN-130 — Three-section validation view
+- **Description:** The system shall split the Validation dialog into "Current paper" (always expanded, showing that paper's issues or "No problems"), "Other papers" (collapsed by default, header showing the combined problem count across those papers), and "Not started yet" (collapsed by default), each of the latter two independently expandable by clicking its header.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/ValidationDialog.tsx:339-450`
+- **Status:** Implemented
+
+### REQ-ANN-140 — Filter papers within a validation section
+- **Description:** The system shall provide, for the "Other papers" and "Not started yet" sections, a text filter matching against paper title with a clear button and a case-sensitivity toggle, matching the paper list's own search controls.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/ValidationDialog.tsx:13-17,67-117,366-372,427-433`
+- **Status:** Implemented
+
+### REQ-ANN-150 — Per-paper issue collapse in "Other papers"
+- **Description:** The system shall list each paper in "Other papers" collapsed to its title and problem count, expanding to show its issues when the paper row is clicked.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/ValidationDialog.tsx:254-261,376-405`
+- **Status:** Implemented
+
+### REQ-ANN-160 — Jump to paper without closing Validation
+- **Description:** When a paper is jumped to via a paper row's jump control (Validation dialog or the "back"/"forward" navigation described in REQ-ANN-170), the system shall select that paper without closing the dialog; when an issue itself is clicked, the system shall additionally close the dialog.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/ValidationDialog.tsx:220-252`
+- **Status:** Implemented
+
+### REQ-ANN-170 — Back/forward paper history in Validation
+- **Description:** The system shall record, in the Validation dialog, every paper jumped to as a browser-style history stack, provide back and forward controls (each disabled — but still hoverable with a tooltip naming why — when nothing lies in that direction) to step through it, and truncate any forward entries when a fresh jump is made from a position earlier than the end of the stack.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/ValidationDialog.tsx:185-242,296-321`
 - **Status:** Implemented
 
 ## Paper list

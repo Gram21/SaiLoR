@@ -77,6 +77,16 @@ button:disabled {
   opacity: 0.45;
   cursor: default;
 }
+/* Same look as `:disabled`, but kept hoverable (`aria-disabled`, not the
+   native attribute) so its `title` tooltip still shows on hover — see
+   `.validation-nav` in ValidationDialog. */
+button.disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+button.disabled:hover {
+  border-color: var(--border);
+}
 button.primary {
   background: var(--accent);
   color: #fff;
@@ -1921,19 +1931,6 @@ button.paper-search-clear:hover {
 
 /* "Not annotated yet" — a plain checklist, not issues, so it gets no kind
    badge or message column: just the paper, to jump to it. */
-.validation-unannotated .validation-section-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 0 0 4px;
-  font-weight: 600;
-}
-.validation-unannotated .validation-section-title .count {
-  color: var(--muted);
-  font-weight: 400;
-  white-space: nowrap;
-}
 .validation-unannotated-list {
   margin: 8px 0 0;
   padding: 0;
@@ -1948,6 +1945,148 @@ button.paper-search-clear:hover {
 .validation-unannotated-list .validation-paper {
   padding: 6px 0;
   font-weight: 400;
+}
+
+.validation-section-title-plain {
+  margin: 0 0 4px;
+  font-size: 1em;
+}
+.validation-empty {
+  color: var(--muted);
+  font-style: italic;
+  margin: 4px 0 0;
+}
+
+/* "Other papers" / "Not started yet" — collapsed by default, click the
+   header (or a paper row inside) to expand. */
+.validation-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 0;
+  text-align: left;
+  font-weight: 600;
+}
+.validation-section-header .count {
+  margin-left: auto;
+  color: var(--muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+.validation-caret {
+  display: inline-block;
+  width: 1em;
+  color: var(--muted);
+}
+.validation-section-body {
+  margin-top: 8px;
+}
+.validation-paper-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.validation-paper.clickable {
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+.validation-paper.clickable:hover {
+  background: var(--accent-weak);
+}
+.validation-jump {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+}
+button.validation-jump:hover {
+  color: var(--text);
+  border-color: var(--border);
+  background: var(--accent-weak);
+}
+.validation-search {
+  position: relative;
+  display: flex;
+  margin-bottom: 10px;
+}
+.validation-search-input {
+  width: 100%;
+  min-width: 0;
+  /* Reserve room for the clear and case triggers so typed text can't run under them. */
+  padding: 5px 62px 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 400;
+}
+.validation-search-input:focus {
+  outline: 2px solid var(--accent-weak);
+  border-color: var(--accent);
+}
+.validation-search-clear {
+  position: absolute;
+  top: 50%;
+  right: 34px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+}
+button.validation-search-clear:hover {
+  color: var(--text);
+  border-color: var(--border);
+}
+/* Toggles whether the filter matches exact case. Same visual language as
+   `.paper-search-case` in the main paper list. */
+.validation-search-case {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-align: center;
+}
+button.validation-search-case:hover {
+  color: var(--text);
+  border-color: var(--border);
+}
+.validation-search-case.active {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.validation-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Mode badge in the help dialog's title ("Annotating" / "Editing the …"). */

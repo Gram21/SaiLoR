@@ -3,9 +3,6 @@ type: concept
 title: Annotation Schema and Validation
 description: How a hand-authored schema in project.json becomes a typed, validated annotation form — AnnotationDef/ResolvedDef types, zod validation, field types, cardinality, required/enum/type/cardinality checks, completeness, and duplicate detection.
 tags: [annotation-schema, validation, schema, completeness, duplicates, zod]
-verified:
-  - by: openwiki/0.5.0
-    at: 2026-09-01T19:42:14.192Z
 sources:
   - id: openwiki-source-4599b619fa759e59c83c5e95
     resource: repo://src/components/PaperList.tsx
@@ -35,7 +32,10 @@ sources:
     resource: repo://src/screening/schema.ts
   - id: openwiki-source-fa765b0e395ba25b6016d05a
     resource: repo://src/screening/validate.ts
-generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
+generated: {by: "claude-code", at: "2026-09-21T20:12:55.536Z"}
+verified:
+  - by: openwiki/0.4.0
+    at: 2026-09-21T20:12:55.536Z
 ---
 
 # Annotation Schema and Validation
@@ -298,12 +298,22 @@ walker itself throws on a surprise in a hand-edited file, the paper gets a singl
 `type` issue (`"Could not validate this paper's annotations: …"`) rather than
 taking the app down — a validation run must never crash over a hand-edited file.
 
-`ValidationDialog.tsx` surfaces the result: issues grouped by paper (in the
-order `validateProject` walked), each clickable to jump to the paper and — when
-the issue names a field — scroll the annotation panel to that field and flash it
-via `canonicalPath`. Unannotated papers are listed below as a plain "not started
-yet" checklist. A paper with no issues shows "No problems", and the dialog notes
-that yes/no fields always count as answered.
+`ValidationDialog.tsx` splits the result into three sections rather than one
+flat list, because the flat list made it hard to find the open paper's own
+issues among every other paper's. **Current paper** is always expanded and
+shows the open paper's issues (or "No problems"); **Other papers** and **Not
+started yet** default to collapsed, each independently expandable by clicking
+its header, with "Other papers" naming the combined problem count across those
+papers. Both of the latter two carry their own paper-title filter (with a
+case-sensitive toggle, mirroring the paper list's own search) and, inside
+"Other papers", each paper is itself collapsed to its title and problem count
+until clicked. Clicking a paper's jump control selects it without closing the
+dialog — every paper jumped to this way is recorded in a browser-style history
+stack with back/forward controls — while clicking an issue itself selects the
+paper, scrolls the annotation panel to that field and flashes it via
+`canonicalPath` (now for 4 seconds, up from the original 1.5), and closes the
+dialog. A paper with no issues shows "No problems", and the dialog notes that
+yes/no fields always count as answered.
 
 ### Emptiness
 

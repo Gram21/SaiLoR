@@ -3,9 +3,6 @@ type: guide
 title: SaiLoR Quickstart
 description: Introduction to SaiLoR, an Electron-desktop-only tool for conducting Systematic Literature Reviews (SLRs). Covers what SaiLoR is, the split project.json + annotations/ storage format, the full tech stack (React 19, Electron 43, Vite 6, Zustand+immer, Zod, react-pdf), quick-start commands, the repository layout, and a task-routing map to the right wiki page for common change areas.
 tags: [quickstart, setup, tech-stack, commands, electron-only, task-routing]
-verified:
-  - by: openwiki/0.5.0
-    at: 2026-09-01T19:42:14.192Z
 sources:
   - id: openwiki-source-4d1d392666be6dfdd7a91a2e
     resource: repo://.github/workflows/release.yml
@@ -23,8 +20,6 @@ sources:
     resource: repo://scripts/build-electron.sh
   - id: openwiki-source-0744bbc5adcd6bd563690bde
     resource: repo://scripts/ci.sh
-  - id: openwiki-source-1d3476a6e83c1e73809d1a15
-    resource: repo://scripts/sign-release.cjs
   - id: openwiki-source-54631e6ebf1d3b815c4a5eed
     resource: repo://src/App.tsx
   - id: openwiki-source-0e14c9aaf12eaa87038c7351
@@ -33,26 +28,14 @@ sources:
     resource: repo://src/consolidate/apply.ts
   - id: openwiki-source-645237ab18a1b0effda09b72
     resource: repo://src/git/merge.ts
-  - id: openwiki-source-d2e79df56d937d834ecbd575
-    resource: repo://src/git/ref.ts
-  - id: openwiki-source-edb4606d45ab1f4b8b69cb80
-    resource: repo://src/git/relpath.ts
-  - id: openwiki-source-45eebe3ca36ab988bd9323a9
-    resource: repo://src/git/url.ts
   - id: openwiki-source-ded932c19c04aac08bb5edf2
     resource: repo://src/model/annotations.ts
   - id: openwiki-source-68e9e61da0efb614946dda70
     resource: repo://src/model/project.ts
-  - id: openwiki-source-a0459bce65b7490683280544
-    resource: repo://src/model/schema.ts
   - id: openwiki-source-d550d6b8b447fac29ab966c2
     resource: repo://src/model/updateSignature.ts
-  - id: openwiki-source-ff5f46fa2216a7ebb3226632
-    resource: repo://src/model/validate.ts
   - id: openwiki-source-24c09c3b54387889db23d752
     resource: repo://src/platform/adapter.ts
-  - id: openwiki-source-769f5f5c1e3631cf9ab273bc
-    resource: repo://src/platform/electron.ts
   - id: openwiki-source-776dd28cc442c205e0a91460
     resource: repo://src/platform/index.ts
   - id: openwiki-source-9b49ad2f97827d5ed9890232
@@ -61,10 +44,6 @@ sources:
     resource: repo://src/screening/counts.ts
   - id: openwiki-source-c0a5a9016440eaf62ed2a380
     resource: repo://src/screening/schema.ts
-  - id: openwiki-source-479c74ae5cbf30b0a06174a1
-    resource: repo://src/screening/status.ts
-  - id: openwiki-source-fa765b0e395ba25b6016d05a
-    resource: repo://src/screening/validate.ts
   - id: openwiki-source-c1ab92e18d72fec6435ab66e
     resource: repo://src/state/aiStore.ts
   - id: openwiki-source-89409d7a9c0280067e058c1a
@@ -73,7 +52,10 @@ sources:
     resource: repo://vite.config.ts
   - id: openwiki-source-9b13c737ac155b0b0c8d76b9
     resource: repo://vitest.integration.config.ts
-generated: { by: "openwiki/0.5.0", at: "2026-09-01T19:42:14.192Z" }
+generated: {by: "openwiki/0.5.0", at: "2026-09-01T19:42:14.192Z"}
+verified:
+  - by: openwiki/0.4.0
+    at: 2026-09-21T20:12:55.536Z
 ---
 
 # SaiLoR — Quickstart

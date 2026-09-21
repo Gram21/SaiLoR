@@ -3,9 +3,6 @@ type: workflow
 title: Screening Mode
 description: The screening workflow — a fast Include/Exclude decision per paper before annotation begins — covering the derived two-node schema, the tri-state status read, PRISMA-style counts, cross-field validation, the screening UI panels, the on-disk screening-* filename prefix, and importing a screening project into an annotation project.
 tags: [screening, workflow, prisma, schema, validation, multi-reviewer]
-verified:
-  - by: openwiki/0.4.0
-    at: 2026-08-26T09:23:05.972Z
 sources:
   - id: openwiki-source-54631e6ebf1d3b815c4a5eed
     resource: repo://src/App.tsx
@@ -44,6 +41,9 @@ sources:
   - id: openwiki-source-89409d7a9c0280067e058c1a
     resource: repo://src/state/store.ts
 generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
+verified:
+  - by: openwiki/0.4.0
+    at: 2026-09-21T20:12:55.536Z
 ---
 
 # Screening Mode

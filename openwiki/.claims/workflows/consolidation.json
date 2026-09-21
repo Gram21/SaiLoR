@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:e156a96b5c3091f76bdbe743055c88d3e3e263fef4f4f48654d3af8aa4aa0035",
+  "pageVersion": "sha256:92860c994f25d6e0b85e15e2f58f152c31fb3c5b5ce28416e74d262dcb2edd2d",
   "claims": [
     {
       "id": "claim_ab1fe5303e484c8b909906a80d750159",
       "statement": "Consolidation recovers the cross-reviewer correspondence of repeated entries before comparing them, because two reviewers annotating the same paper record repeatable entries in different orders and slot-by-slot comparison would otherwise report disagreement everywhere.",
       "evidence": [
         {
-          "resource": "repo://src/consolidate/align.ts#L15-L37",
-          "version": "repo-lines-v1:sha256:1e9678b3889dfbaa3fc82a84865b4961cdf20f60450c9b61fcdb80d6c9e8064b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM4MWU1NTdjMjVmYzcxYmI4MTI3MzFmNzFhZDUwNTg3Yjk1MmFiZDUzMDU0Yjg1N2Y1OTYxYTJhMjVhZDEwMjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNjODQzY2RlMTRmODFjMDNlYjFlZDAyNzFmMjVhZGIyNWE5ZWUxNmU5YWY2OGNlZjM4NWZjMmI0NGZkNjBmZDIifQ"
+          "resource": "repo://src/consolidate/align.ts#L14-L20",
+          "version": "repo-lines-v1:sha256:fc41f4d69c5016716e0bbff4e123bb9c5ef835ad536cfffb6f35fdd5b704b3d7:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjIzY2I0YzEzZDY3NzU5ZDU0Zjc2NzFkNDQwMzQ5NzJkMDkwM2EzOWQwOGFmYWU3M2JiOTgxZWI5YWIwZGNmMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGMyYmVjYjc3OTVjNWEwODk2NmQ0MzU2MmVkNjUwY2E5YWRkZDNiMDczZDZiNzA0MzdhYmNjNDRhOTRjMTc2NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWRiMzM3ODIzNDcyY2QzYTU1MDY0MjAwOTM0YTVmNTQ3NGE3YjFkOTI1ZTg0YjY3MGE0YjhhODc2YTkxNjMyMCJ9"
         }
       ]
     },
@@ -17,12 +17,12 @@
       "statement": "Entry matching is optimal rather than greedy: each node's entries are paired by maxWeightAssignment, a Hungarian-algorithm implementation that maximises total agreement over the whole set, because greedy matching can lock in an early good local pairing that forces worse later pairings it cannot trade against.",
       "evidence": [
         {
-          "resource": "repo://src/consolidate/align.ts#L27-L31",
-          "version": "repo-lines-v1:sha256:dc742892d08689b62be1e8d04b6e924e4aa864c182381c7cab17472fe9ccafe1:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjIzY2I0YzEzZDY3NzU5ZDU0Zjc2NzFkNDQwMzQ5NzJkMDkwM2EzOWQwOGFmYWU3M2JiOTgxZWI5YWIwZGNmMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjIzY2I0YzEzZDY3NzU5ZDU0Zjc2NzFkNDQwMzQ5NzJkMDkwM2EzOWQwOGFmYWU3M2JiOTgxZWI5YWIwZGNmMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOWZlNDAzMmFmNzI5ZDQ2ODNlZWEyNTA4Mzg0MDc3YmZjOGY3YjRlY2Q0ODY0NGZmMTVmMzFmYmQyMzJjOTI3ZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMmFjOGE4OWU3ZjEzM2MxMWVjZDdkYTY3MWE3Y2FkY2Q4MjI3NWRkMGZiZDRmMWY1MmYxZmQzYTAzNjNhMzY2MiJ9"
+          "resource": "repo://src/consolidate/align.ts#L21-L31",
+          "version": "repo-lines-v1:sha256:dce0ce824c279142e137aa89f86797d46effb3f519e178f70d78280e761ab61f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIwMmZkYmYwOGUyYTJjY2JmNDVjN2NkZDY4YmFmNWFmNmI1MWE2ZDNhNGM5NGMzNGI2YzRmMmZiMDYzMzY2MTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZjMDY4OTVjOTAzMTFhODM3ZWEzMGVhOTA5OGIyODY0NmJkYWVhNjc2ZjkxYmMzM2RlYjM4Zjc2OWJlNGVlMTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNmZGQ5ZjJhNDE3MjBkNWYzMDhkMTc5NGQ0ODhmOGI1NWQyODE5OWE3YzdjYmQzM2U5YTAwMDJkMzgxOGIwMDMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE1MDkwNGY1Y2QxZTliYmY4NmQ4OTljMThkMWNjMjg2Yzg3ODk5YmM5ZDI1ZGQzMGJhOWY0YTY4ODg1NzZjNGIifQ"
         },
         {
-          "resource": "repo://src/consolidate/assign.ts#L1-L15",
-          "version": "repo-lines-v1:sha256:7d5d87d8c472ef30fa076dec34e0c2947a90508ac985be0dcc1c7928f3308873:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY0NjYyMDZiOTZlM2MyYTk4ZWQwYThmNzhmNDhjM2ZhZjU2MDA4OTgwNDNmMjA3ODhkMGJhMDM1N2NiNGY5N2EifQ"
+          "resource": "repo://src/consolidate/assign.ts#L24-L24",
+          "version": "repo-lines-v1:sha256:5ecb0c4eb442d38faf180fb62e21fd0a42a34033a29190c336c5242b005437bd:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWVjYjBjNGViNDQyZDM4ZmFmMTgwZmI2MmUyMWZkMGE0MmEzNDAzM2EyOTE5MGMzMzZjNTI0MmIwMDU0MzdiZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWVjYjBjNGViNDQyZDM4ZmFmMTgwZmI2MmUyMWZkMGE0MmEzNDAzM2EyOTE5MGMzMzZjNTI0MmIwMDU0MzdiZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMmM3OWUzNDNiYTQyMTZmZjk5ZmExMjQ0ZjIzODZiYmMzN2ZjODg1YzAyMTE2MDY3YzZiZGU4ZWQ3NDczZTIxZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNmEwMmUwMjczYmE5N2JmYzhmOWMwNjRlNWFhZTQ5NGFjOTI5ZWNhYTYwNjhmZGY2MWQzOTIyZjBjNzU0MWIwNiJ9"
         }
       ]
     },
@@ -31,12 +31,8 @@
       "statement": "Matching is hierarchical and therefore cannot cross: a group's sub-entries are only ever matched inside an already-matched pair of parents, because the recursion never offers candidates outside the matched parent.",
       "evidence": [
         {
-          "resource": "repo://src/consolidate/align.ts#L302-L312",
-          "version": "repo-lines-v1:sha256:ca458c3319af530168d6715ba6ee9ef6551cbd2ddaa8319fea6bb3c640ca0528:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgwZTFiMGI2ZjAwMmM4MmE3MDI4NDRkMzRlN2YxMzJiYjIzNGQ3ZDQ3Yjk0ZmQxZmI2M2JkMjkyZjVlNmYzMTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjljNzlmNjZkZTFhMGY2NmIwZWU2MzVhNDc5OTI2MTJhMzZkMjA2YWEyMzcxODY0M2E4ZTFjMDQxYzM5YTNkZTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYyODM2Y2NkMTlhNThlZGVhY2E3YmNiMjQ4ODcxZTcxNGMyZjNkZGQ2NWEyOTBiNzdhNTQzNzdiZWZlNmMyM2UifQ"
-        },
-        {
-          "resource": "repo://src/consolidate/align.ts#L32-L37",
-          "version": "repo-lines-v1:sha256:ce27dfcc78be12503768fcf906233ec54583392528590bf6506c77f6b5e7dd46:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDgyY2U5MTMwMTM1Y2FkMDM0YzhmNmQ5YmVjNzQyZTNkMmJlNjUzYjBlYzJhZDcwYzdkNjViMjhhZWMyNzgyNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzM3ZWY3MDkyOWE4MzhjZjMxNzMwYTEzMDFjZTlkMTU2N2U3MzY5MTc2NWJiYTE1N2Q0OGU4ZTJjZDNhNDNiMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2M4NDNjZGUxNGY4MWMwM2ViMWVkMDI3MWYyNWFkYjI1YTllZTE2ZTlhZjY4Y2VmMzg1ZmMyYjQ0ZmQ2MGZkMiJ9"
+          "resource": "repo://src/consolidate/align.ts#L324-L356",
+          "version": "repo-lines-v1:sha256:059ff58e220d11e7d4afc74173006f3ac5b63a8faa575c533bddf6f92a74eb55:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzZDk5ZDdlNmU0NzkzZWE5YWI0ZGRlNTI3MmU3MzYyMzRlYTQ1OTEwMWYyZjliYmRiYzI0MTM4ZDU0ZDg0NDYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBhNmJlMzkwNzFlMjI5MzNjYWZjZDRjYjJlZjViNGZjNjUzOGZlNjIzMjIyMmUxNzdlNGQxM2UwZWY4YjczZmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZmMDI5YmYxZDVmZGQzYjE3YzI5ZGU2NTViMTQ0YzhlNzgxOTg0ZThjN2JlYmIyZTc5NWU1OGFjZmYzYzAzNzAifQ"
         }
       ]
     },
@@ -45,8 +41,8 @@
       "statement": "alignNode is the scheduler's unit of work, aligning one top-level schema node independently of its siblings; alignableNodes lists the nodes worth aligning (repeatable, or containing a repeatable node beneath them).",
       "evidence": [
         {
-          "resource": "repo://src/consolidate/align.ts#L565-L598",
-          "version": "repo-lines-v1:sha256:37e1921e3443836549c5a7c95b5d2554db6110986f36d5cf663c1e4a79590ede:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVkNGQ5MDcyY2I3ZTE1MzIwYmI5YjMwN2QwY2RjODU4MDBmNTk0ZGMxYmUxOTliZmQ1OWYwMjlhNWIxMDJiNzMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/consolidate/align.ts#L535-L556",
+          "version": "repo-lines-v1:sha256:1935680688a51f28355032e5b1607b3bd1e2335ad94edf7e99b5baa16665a7da:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAzOTEzYzdlZTQxMTUzYzJjZmJhODZlMjExOGRhM2I2YTQ5MjBjNDkwZjk2MjY0ZjZlZjJkYWViNTE2NmEyMTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNkOTc5NzQ2ZTM1NTE3ZjFmZDdkMWFkMTkwNTBkMjFkZTYxM2YwYTFlNTBjY2ZiNWU4YzllN2E1YmZlMzQ5OTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
@@ -55,8 +51,8 @@
       "statement": "alignList anchors slots with the reviewer who has the most entries and folds other reviewers in one at a time (most entries first, then by numeric id), matching each against all members already in a slot so slot identity firms up as reviewers agree; the fixed fold order makes the same input always produce the same alignment.",
       "evidence": [
         {
-          "resource": "repo://src/consolidate/align.ts#L216-L267",
-          "version": "repo-lines-v1:sha256:1f82197809145eb0d91bb7ff4be4692767614aa6c51a95b608ee6e9edfed31d0:eyJzZWxlY3RlZExpbmVDb3VudCI6NTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ0NTNkZjVjMThkYzJkMWQyOTgwMDkyMjRiMGQxYjRiNTQxZDUzN2RiMDZjNzFkN2UyNjhjMDAzMWM5ZjM1YzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI0Zjk4Mjg0ZDEyZDMzZWJjZTMwYzBhMTg4YTIxZTJhYjNjMDkxOGYxNmFjY2ZjYWU5ZTZkZTI3OGMzOTJjN2UifQ"
+          "resource": "repo://src/consolidate/align.ts#L213-L269",
+          "version": "repo-lines-v1:sha256:ed82503075db2b2548b75d39abad5338915a748b9bf7f71e5f68e7f4582e88f2:eyJzZWxlY3RlZExpbmVDb3VudCI6NTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwNTlhMTRmYzJiNzFkOGJmOTc2Njg1YTg2YTY5OTU3YTViMTk0Y2RjYjU1NGUyYmYwNGIwY2EzMzNjNWRjZWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0NzVlOTRhOTA0YWM0OWIzMTU0ZDQ2NzJhNjZlODYyOWI4NmRhYzc0ZTNlMjkzN2JlNjkyN2FlM2RhMTFjNTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ0ZGJiMjk2NmIxYzFkZjVhNjNkNTFkZjEzNzY5M2FiZmZiNDQyOWNmNTI5NzgwOTk0OTZkZDAwYjg1NTcxMDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc4MDVlNmNkZGE1ZjY2MjRkYTVhYjhjZjIyMjNjNmQ1OTZiYTFiNjk5MGY2MDc0NWE1NmMyZDcxYTg1MzJkZjYifQ"
         }
       ]
     },
@@ -65,12 +61,8 @@
       "statement": "MIN_MATCH_SCORE = 0.5 requires entries to be strictly more alike than different to be paired; below the floor a pair scores 0 so a new-slot column wins, which avoids silently marrying an unmatched entry to a leftover one (an invisible false merge), erring toward the visible, fixable split.",
       "evidence": [
         {
-          "resource": "repo://src/consolidate/align.ts#L276-L299",
-          "version": "repo-lines-v1:sha256:46bddcb8067d20f62552aa0c62cbee444c2b0b5dfc2ef78b586fa9da10a2f48d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc2NmZkNTg2OWQ1ZTQ3YWYyOWI5NGVhZDBiNDcxNWZmNzk4ZTVhMTVhMWJmYjk5MjUzYzBjMmM0Mjk3MGMwOWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0NzVlOTRhOTA0YWM0OWIzMTU0ZDQ2NzJhNjZlODYyOWI4NmRhYzc0ZTNlMjkzN2JlNjkyN2FlM2RhMTFjNTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg0ZGVjNzUxYzBlYzE2MjcxYWJjZGFjNWYxOTVlMmUwMjUxNzViZTAyNzRlYjliZTZmNDk4MzBmOTc4ZGQ3NTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc4MDVlNmNkZGE1ZjY2MjRkYTVhYjhjZjIyMjNjNmQ1OTZiYTFiNjk5MGY2MDc0NWE1NmMyZDcxYTg1MzJkZjYifQ"
-        },
-        {
-          "resource": "repo://src/consolidate/align.ts#L82-L111",
-          "version": "repo-lines-v1:sha256:e0e48dbb239b8c9c1918f316214db42a968bff2bf832c4a242798c2bc5811941:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2MmFhYTdiYTAwNDM3MDY1ZTBkNDgzNGZlNmVhNDVhYmEwMmUxNzgzYWMwZjk1NWU2YWIxOGU3NzhjMGIwODkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAzZThkZWI4MWI0MWM5OTJkYzg3OGNkNTUxMjAwMjEyOGIyMzM3Y2NmMmIyNjBiODMwYzEwNjJiZTVhMTk2ZTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk5MDFlYTFhMTBkYmFjMzJjMWVlYjdmODU5Zjc4NGM4MWQ3ZjFkOGZjNDFhMmVlOGRmZGRmZDZlNjQ3ZmE2MzMifQ"
+          "resource": "repo://src/consolidate/align.ts#L65-L88",
+          "version": "repo-lines-v1:sha256:d1914e6a8810687dd00b407644c67ba2005d31f98154815afdefc2d23981bd1c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZiMjM0ZWVmZTRlNmNmOGVhNTgxZWY0ODYyNDVmMjgwYjJkOTE3ZmI0MmQ4NWQzNGQzZGU4Y2VjZGMwMGM5NzciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2MmFhYTdiYTAwNDM3MDY1ZTBkNDgzNGZlNmVhNDVhYmEwMmUxNzgzYWMwZjk1NWU2YWIxOGU3NzhjMGIwODkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJiYmY5MmVlOWQwN2VjMjUyNzA3Nzc2NWViYmU0OTg5ZjBkMzgwNWZjMjU5ZmE1NmE1MmRkYWVjOGQzY2FkNzMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY1NzYyZWYyZjkyZDU2NjVmMjJhOTE1NzU5OGFlZTFjNDZhNzg5MmU4Yzc3Mzk5ZmEzNDVhZDlmOWEyM2ZhODMifQ"
         }
       ]
     },
@@ -79,12 +71,12 @@
       "statement": "An entry that matches no existing slot opens a new slot via NEW_SLOT_WEIGHT rather than being forced into a leftover one, so a finding one reviewer recorded that nobody else did stands on its own for the consolidator to verify or discard.",
       "evidence": [
         {
-          "resource": "repo://src/consolidate/align.ts#L226-L247",
-          "version": "repo-lines-v1:sha256:4ef552e3eb3a5463252d75bbcc51e2efd7fa6507479a28d03ec84fe68afed48b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA5MWUxYTQ5ODdmNDI4YWUyMDFlYjkxNDdhYWQ3MTIxM2IzOWEwZDAzMjdlZTQxOTAyYjA3OTNhMTVmNmYzMWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY4ZGE4Zjg3MzY2YThhZWE0ZWRmYzc4NjU4MzkyMTc3OTc3OTIyMzA2ZGNjNTAzZTk2MzQ0YmVlNzhkYzdlNzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJiM2RlYTM3NGZhNGMyMjlmZmRhMzk0ZjVlMWZmMTBkMjExM2NhZjgzYzk2NTk5MjY5MzQwMTkzMjMzZmQyZjEifQ"
+          "resource": "repo://src/consolidate/align.ts#L255-L257",
+          "version": "repo-lines-v1:sha256:5882bc984d7afad9d1a564dacd3a2798a6cbbb2b0593a1b97350bd206a0a1b70:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTcyZGQyYzIxNjczNGZhMTJjMmE3Nzk1MjRmY2NlOGRhNmEwYzVjNThiZDIzZTVhMjQ5MWEzMTdjMmM4NTFjZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzM4NzZmYWU3ODAwZWE0MzYxNzVhNjA5YTk2Mjk3MGEwZDVhYjdjNmY0MDhhMjE0ODM1MTU3NDczMGRkNWZmNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjVjYzc4NWViYjI5ODJkN2ZhYjNiOTE5MzMyZjAxMjcxNTU0YjUyN2JhNzFiMGQxNzJlNzNhYWQxYjBlMWYzNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiY2I1NWNhZmZhOTU0ZWNiOWE0ZGZlY2EyZDU1OGE1MWRkODVmYzA1ZDdkYmVmZTI3ZjkzNTFhMzg3ZDhkYmYzOSJ9"
         },
         {
-          "resource": "repo://src/consolidate/align.ts#L72-L80",
-          "version": "repo-lines-v1:sha256:26157a41d42c2a0355d0c880f1c7e37be3cf5d3d733563e87c9ab7d68ce4e555:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmIyMzRlZWZlNGU2Y2Y4ZWE1ODFlZjQ4NjI0NWYyODBiMmQ5MTdmYjQyZDg1ZDM0ZDNkZThjZWNkYzAwYzk3NyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzMxMzY3Y2Q2MTNlMTFlNDkzZDJkZTAzN2UxNjhkMjZlNTg2NWZhODU1NDA5YWY1MzFiZmRjMjUwNGU1ZmZhNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZWQ1YjIyZTUzNGJlNDkzNDY5MGE5OWI0NDU5M2I0ODA0MmU1YjkzN2ZkOWYyM2JkZjljZGI0MzIxOWJkZmQyZSJ9"
+          "resource": "repo://src/consolidate/align.ts#L59-L65",
+          "version": "repo-lines-v1:sha256:7dd05f6a8eb67c3a218098dfbc1ef23d9b55a8edc51dc6305d77c7072e0af197:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmIyMzRlZWZlNGU2Y2Y4ZWE1ODFlZjQ4NjI0NWYyODBiMmQ5MTdmYjQyZDg1ZDM0ZDNkZThjZWNkYzAwYzk3NyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzMxMzY3Y2Q2MTNlMTFlNDkzZDJkZTAzN2UxNjhkMjZlNTg2NWZhODU1NDA5YWY1MzFiZmRjMjUwNGU1ZmZhNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGQ1MzRjMzk1YTdhNWE3ZTc2MDRhZDg0MGQ3NmU3OGM1NWFlNmJkOTk2ZmM5ZjdlNzAzMDU4ZDEwYzBkNjE3NSJ9"
         }
       ]
     },
@@ -94,11 +86,7 @@
       "evidence": [
         {
           "resource": "repo://src/consolidate/similarity.ts#L4-L21",
-          "version": "repo-lines-v1:sha256:c94da49a7c6bbb61fe578a76f49cc7f5a06d398aa865c17b3e3c99ae24ddde87:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE1YzVjY2ZhYWVkZmFiYzg2M2EyYmZlMGE3N2ZkNjU1ODA2YzJiNmNjZTdhODg5M2U0MGVhN2FjOGE4YzhmOWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIxNDQzYjRjMzMzNTVhNzVmYWQ2Mjk3OGYxZDZjYmE3YTU3NjEwZmNmNDZlZDJlMjEyNzliYzUzZGViMzBkMmIifQ"
-        },
-        {
-          "resource": "repo://src/consolidate/similarity.ts#L42-L53",
-          "version": "repo-lines-v1:sha256:78884d89cefcad6d838ee08e5f0cf0b6e85c6637f3c86a55624972f70ea69254:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJhOGI2ZjE1NDM4NDk0YmIzM2M5MjRmMjAyNGM0ODUzNzNlNWQ1ZTY0NDM0YjhmODJjYzc4Y2ZlMTM4YTQyNjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBlY2MzYzRlYjQwZDMzYTY0MDc5MDk0M2JjNGU2ZWQ2NDhkZGQ3NTAxZWQ4ZTc3MDBjMTQ1YTdlZTlkMWYyOWYifQ"
+          "version": "repo-lines-v1:sha256:0bb3179f70857290ea2dd89813abdcbe4a2d726055546c3838b50da915687ac3:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNkNzEyMTc3MDg2ZmViMTdlZDQ5NDU3YWNkOGZjNDIzMzJkOTgyZmM1YjNiMDk0NjRlYWE5OTA0Y2M5MjFlNmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE1YzVjY2ZhYWVkZmFiYzg2M2EyYmZlMGE3N2ZkNjU1ODA2YzJiNmNjZTdhODg5M2U0MGVhN2FjOGE4YzhmOWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyZWVkYTJmNjAzZjdiODk3ZDZhZTVmODEzYTVhNmQzZmJmNzljMjE1MGM5NTRiZDU4OWJhZTAwZDA0ZGNiZTMifQ"
         }
       ]
     },
@@ -107,8 +95,8 @@
       "statement": "valueSimilarity is type-aware: booleans count only when at least one side is ticked, enums compare by label not text, years are identity not magnitude, numbers score by relative closeness, and free text takes the more forgiving of Levenshtein ratio and token Dice coefficient.",
       "evidence": [
         {
-          "resource": "repo://src/consolidate/similarity.ts#L208-L264",
-          "version": "repo-lines-v1:sha256:9e969fbce5bf892c8132c74aa22557ebd980a0a64ca42bd600898292f4eba296:eyJzZWxlY3RlZExpbmVDb3VudCI6NTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIwNTJiOWM0OTczMjIxYmYwNGQyOTc1OWViY2QxYjNhYjNjM2E3OTcyOTlkMDg4NzRmNTUyOGUxZWI5M2U0NDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/consolidate/similarity.ts#L183-L216",
+          "version": "repo-lines-v1:sha256:1994e6c29a93287c301868439eb685df376b4e703c98e53c7eb8d80b1325911a:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1MWYwYWExMTVmZjlhNTdkMDE4N2YzOGU3ZjU5MjQ1MDUwNjEyZDE3YzUxMTIxNTRjMWQyZmRlNTVhYmFiMWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdjOTZlM2ExYWE1ZWI3OTBmZDdlZTU1YzYzZDA3ZWY1YmQ2ODVhMGRkM2E0YzlmZjg1ZjllNWY2MGU5NDMzOTkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRlYWI4MDc4YTM5OTQ3ZmNmOWIwNTUxMjE5MzVhMDJkMjY0MmMzYTZmNTM3Zjc3NGNkYjM4NGM5NzkxNGM3YWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
         }
       ]
     },
@@ -117,8 +105,8 @@
       "statement": "TextSimCache memoises text comparisons on the value pair (with a length-prefixed unambiguous key) because nearly all matcher time goes there; on a deliberately punishing paper it reduces runtime from ~2.3s to ~270ms.",
       "evidence": [
         {
-          "resource": "repo://src/consolidate/similarity.ts#L118-L186",
-          "version": "repo-lines-v1:sha256:71f4fdbd809efc9561b148d70e73f1c20b942e38aa4b814cdf3087193a876656:eyJzZWxlY3RlZExpbmVDb3VudCI6NjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIwN2Y0YzQ5ZDFiOWQ5YTg5OTdjNTI3Y2ZkZmRiYTc2Yjc3ZTU3ODYwZWJlNmJmNWYwYmFkMDg2YjE5ZDc5NGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgwNzMzZjk5NTFjMmRlN2Q2ZmI3OGVmNmU5ZjI2MmI0MWNkMTg4NTU1ZDFiYmY0ZGFiYWVjNDI1MTRkYTllYjAifQ"
+          "resource": "repo://src/consolidate/similarity.ts#L118-L182",
+          "version": "repo-lines-v1:sha256:b099dd886c885473a38f5aa91938d071c979d81139fb946b61e282e33bcf0250:eyJzZWxlY3RlZExpbmVDb3VudCI6NjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk3NjRiMGQwOWVjMWNjMDZjZjQxMGUxZjczY2MzYjY0MjI5MzdhMjYxZGIwM2YxNjg3ODMwMmUzYjdjZWE0Y2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRkM2U1MjJhMDY3MWUwOGZmNzFlOTVmY2I3ZTMyYjExYzY1MzM1Y2RmNTNmMTExZDUwNDZiMWQ1Y2Y0MDY4NDgifQ"
         }
       ]
     },
@@ -131,8 +119,8 @@
           "version": "repo-lines-v1:sha256:d621954efa51881d2223c7a5012fecca843ee83b8d42877d675a9dc50f34a4f8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU3NDFkOTNlNTVmNmZiOGRmMmVhOTNiMzY0OTdjNzhhZDJhYTIzZGNkNzliOTg1NTkzNTcwNzBiOTIzYzVmNzkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdjNzcxZjdiMTBhMThmZTRhZjRjZDRkNTk5YjE3Zjc5MWUzMTZmYTcxZTEyOWUxMjI0MTY3NjE4ODk0M2JmMWMifQ"
         },
         {
-          "resource": "repo://src/model/alignment.ts#L4-L31",
-          "version": "repo-lines-v1:sha256:f11bcab0cc86b67a6a50216c1062a500947395442aaa9a8f2e32012925adb613:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYzNWM5MmRkZmY5ZDA1ODUwNDYxOTU2YjkxMmU5NWU5YzJhYWM5NTllZmMzOWQ2ODczYmJkNjYxMzdhYmJiNjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQzZmUzM2RmZmM3MDg0ZTliZDY4MTcxODc0YTk5NWQ1NmQwZTQ5NWY5ZGRlY2IxNTI1NWUyZTlkNzMyZWQ1YWUifQ"
+          "resource": "repo://src/model/alignment.ts#L4-L20",
+          "version": "repo-lines-v1:sha256:d29d7c6e5d8a86506936cf402cf0577de4f396c9143d264bafa373f7d8c047c8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA1ZmUwMDI2NDNlYmMzZmU5MDljYTk3NzhlZTI0NTYxNGU0ODNkZWM2ZGVkMDdkMzNhN2Q5NGJhMzg3ODJlMWEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYzNWM5MmRkZmY5ZDA1ODUwNDYxOTU2YjkxMmU5NWU5YzJhYWM5NTllZmMzOWQ2ODczYmJkNjYxMzdhYmJiNjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFmNjAxZjBiOWIzZmUwMGY2OTZiYjUxNGM1MmRlOTYxYWI2MjkyYzE1M2RkODEwZGQwZDg0YmZjOTU4YWE2MmQifQ"
         }
       ]
     },
@@ -141,8 +129,8 @@
       "statement": "Until v1.7 the correspondence was stored as the physical ordering of reviewers' arrays; now the mapping is its own record and reviewers' own arrays are never touched by consolidation, so their completeness dots and validation are no longer corrupted by consolidation bookkeeping.",
       "evidence": [
         {
-          "resource": "repo://src/model/alignment.ts#L4-L31",
-          "version": "repo-lines-v1:sha256:f11bcab0cc86b67a6a50216c1062a500947395442aaa9a8f2e32012925adb613:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYzNWM5MmRkZmY5ZDA1ODUwNDYxOTU2YjkxMmU5NWU5YzJhYWM5NTllZmMzOWQ2ODczYmJkNjYxMzdhYmJiNjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQzZmUzM2RmZmM3MDg0ZTliZDY4MTcxODc0YTk5NWQ1NmQwZTQ5NWY5ZGRlY2IxNTI1NWUyZTlkNzMyZWQ1YWUifQ"
+          "resource": "repo://src/model/alignment.ts#L21-L31",
+          "version": "repo-lines-v1:sha256:422c56cf311263822bae2100ce9eab23fb5d7f1a0ed8dc162a2cee119ec3465f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZhYWEyMmUwNDE3MjlmNjE0ZjAxNGM0NTI1NjAyNGU0Mzc1MDBkMTFhZjU0Y2FmNDA0Y2IyNmIwY2Q5MWE2NDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZmZTc2NjgxYTJiYzBkMDIwOTMzZmMxY2JiMjRlMjM3OTg4OWYzYTgxY2Q5Zjk1YTFjZTBhMTIyZTllNmE3NTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQzZmUzM2RmZmM3MDg0ZTliZDY4MTcxODc0YTk5NWQ1NmQwZTQ5NWY5ZGRlY2IxNTI1NWUyZTlkNzMyZWQ1YWUifQ"
         }
       ]
     },
@@ -151,8 +139,8 @@
       "statement": "alignedReviews projects each reviewer's tree through the stored mapping into a throwaway lined-up view where index N is the same entry for every reviewer; slots no reviewer filled become empty instances, entries the mapping has no slot for are appended rather than dropped, and callers must not write through it because the reviewers' stored trees are the authority.",
       "evidence": [
         {
-          "resource": "repo://src/model/alignment.ts#L84-L161",
-          "version": "repo-lines-v1:sha256:6e3663e6f615074e94719f18a336b927e4fcc6c393c74d5603256349e7497c71:eyJzZWxlY3RlZExpbmVDb3VudCI6NzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk4NDZjODFlMjlhOGJiMjUxNWQ2YWJkODhhODcxYTFlYmQ4ZjViOTlmN2JiNDBmYTc2OTU4MTBlYmYyYTAwMDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/model/alignment.ts#L84-L120",
+          "version": "repo-lines-v1:sha256:0688f1593c8333f82fbb7bc8c7a360d22b8099861a2a1d99424ac63bf2bc3c33:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZjYzJiYmRjNjJmY2M1ZWIzNGU4MmVkNDk3OThkNTg0OGU2ZGRhZDU2YTI5NTNjYjU4OGFmNjVjMDljZmNhZjEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk4NDZjODFlMjlhOGJiMjUxNWQ2YWJkODhhODcxYTFlYmQ4ZjViOTlmN2JiNDBmYTc2OTU4MTBlYmYyYTAwMDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM5MTY3MWM0M2FiM2M1NzFkZTczMWUyNTlhMDk1MDBlMGQzNzc0OTAxMGRjY2JmYzUxYTI4NTE0M2NlZGMyN2IifQ"
         }
       ]
     },
@@ -181,12 +169,12 @@
       "statement": "Once the consolidator has committed an answer under a node, alignConsolidationNode freezes that node and runs widenAlignment instead of re-matching, which only adds reviewers absent from every slot's members (never moves an existing one) and recurses only into slots a newcomer actually landed in.",
       "evidence": [
         {
-          "resource": "repo://src/consolidate/align.ts#L401-L432",
-          "version": "repo-lines-v1:sha256:5c4cafdb97b469ba26bdc3c9a6064d1d1cd24aa3847914de63be334a1e2b2ffe:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRlMmIyZGZjNGRiMTIzYWYwMWNiNzcyOTljYzkzZWUzOGQ3YzVmYzQ0NGVjOWYwZDAwZDgwOTRkNTJjMGEyNTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY2MDcwYTZhZWJjZWVkNjE2NTViZWQxZDA4M2IxMTE5ZmRhMTVlYjhmMTI0ZDdhYjM1ZTA4YTNiMDA2YWQ3MjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE4Yzg1MzgxNmZiMTViYmRkNDM3Y2I1ZTc2MWQ2M2U1ZjVkZmI4NWFhM2Q1ZDdmNDZmYjhlNWRjODVmMjAwMTUifQ"
+          "resource": "repo://src/consolidate/align.ts#L388-L432",
+          "version": "repo-lines-v1:sha256:f58f4daf3ed8df2970bcb7560a2740544e6afcd9c3c5357bf12080f7281f78c8:eyJzZWxlY3RlZExpbmVDb3VudCI6NDUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE2MjA4NzhjZGVkNWFhZThhNmZlYWEzYmE5YzM2ZDc4MjM5OTlhZDYyYTE4MTg4MTlkYjFlMGQ5NDA2MjE1NzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEwOGM0NWU0NGE5ZDZiYTZlYWRjNDkzMzdhNjJiZWExZWI0Y2NjMzQwYTZjZThkM2NmNDkyNTgxN2JkZDAyZTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJlNTk0NjllZjA0ZGEyNTQyOWIxZGU2YWZmOTA0OGE3OWMwZTE5MjdiNmE0MzNhNDkyYWFlNjgzZjllNDIzODIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY3YzAwMDA2MDc5NzJkYjU0YmRlMWRmZjA4NjljMWNiOWUwZjMyY2QzZjVmM2YyZTk2ZGQ5YTgwOTU1YmRkNWQifQ"
         },
         {
-          "resource": "repo://src/state/store.ts#L2538-L2581",
-          "version": "repo-lines-v1:sha256:e9c6f03166d40501e78a1fdc9ffdb3998027fd09ee6de5fbcf5ceca28c775c12:eyJzZWxlY3RlZExpbmVDb3VudCI6NDQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2YjczNDE0MDgxNGQyMzIxYmUxNzA0NDMzNzRjMmQxNjJiMDRkZDJjZDFmYTJlZWQyYWFmOGNlY2RmYzkzNmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliNjJmNjBkODU5MGE1NzljZjQ2ZjhkNjczNzhjNGM1NzJiOTYyY2VjY2RiOTBjN2E1ZjdiNDJiOTYwNzgyYTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY5MGYwNjFiOTE4OWZkNDBmMzRkYWE5YzFkMWVhODRlODkxNzIwYTZjYzE1MWExNDhhMzkzNzI1NDVhMDQ3NmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUwZjMwMjY2ODE2MTA0NTZmNjhkNzYwMjM3YzI4NTc2NGZjNjA1YTk1MzcxOTlmM2FjYzljMTU1MWNmMTdlNzAifQ"
+          "resource": "repo://src/state/store.ts#L2324-L2358",
+          "version": "repo-lines-v1:sha256:1139d76b682b93f652fc1b130d845a1da27352c46969e9296b722f98297e838f:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRhMGI0MTI2MGJkZTNlMmRjMjIzMWMzMzc0YTUyZDE2ODczZjZlMDUyOWY3YWJkY2VjMGE3NDdjMjMxZWIzNjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE2ZGJmZTU1ODQyZWQxZTQxYzk4NTNkYzY1NzA4ODljZjRhMjk5NmQyZDJhYjE5YTAwZjhiNTIxZTQ2MDY2ODkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJkMjU0NGE4YzVkN2UzMTU5NmU5NDRhOWEzZDQxZWE5NzliN2Q5YmU2MmQwYjQ2NDI2NWQ1YjJjZjllYWI3NmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIzYzM1NDQyMmMzZTYyNjE4ZGU3ZDk5NmNiYmZiNmQ1ZGU4ZmI4NmU5MzUwYWNmZjU1NmE5NTcyZTc0M2FlMjQifQ"
         }
       ]
     },
@@ -205,8 +193,8 @@
       "statement": "disagreements.ts produces per-field FieldVerdicts from the aligned view: answeredBy, values, categories, agree, and oneSided, describing where reconciliation is needed without performing it.",
       "evidence": [
         {
-          "resource": "repo://src/consolidate/disagreements.ts#L10-L70",
-          "version": "repo-lines-v1:sha256:c440781efd818f131b90415a7564ce12506b224db6de6f6be364b97d7a4ba2a9:eyJzZWxlY3RlZExpbmVDb3VudCI6NjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU0NTgzYzUyZGUyNmIyZmQ0OTE0Y2M0YWRmNDcwZGNkM2QxMDU1ZDIzNWNkNzE1YmM4ZTM5Mzk0ZWY5ZmMzZjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE5ODI1ZmJkMDU5NjA5ZjAxNGUyYzA4Mjk1Y2Y3ZDRlZDA2YmQwY2RjNjQ5ZjNjN2Y0ZWM1MzkxZGYwYzgwYjQifQ"
+          "resource": "repo://src/consolidate/disagreements.ts#L16-L53",
+          "version": "repo-lines-v1:sha256:493c187aca2b81623ef1fe39c6441d8c4e6623511f9b4ad78811edb3a9e69d28:eyJzZWxlY3RlZExpbmVDb3VudCI6MzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYxODkwYTM5NTZhZDYyZTg1ZjAyOGRkZTAxN2NhODU1YzlhOGU2ZGE3NmUxZGVmN2NiZGQyODkwZGM2OGI3NjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJhZWFjYmRmNTVlN2IxNDY3MDc3MmMyNzEwZGRjZDAzN2NkZDEwYTcxMzczNWRjNzJkN2VlNTY5NDczYjQ1NGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk5YmNmOTNlMTQ3NzMzMGM3YzdlYTc4NjUzOGZjMzk3Y2VhMTEyMzlkYTEzZGM1NGZmYWNkYzNkYTRmNTYwNzAifQ"
         }
       ]
     },
@@ -215,12 +203,12 @@
       "statement": "agree is true when every answering reviewer gave the same category, with a consolidator's equivalence mark overriding to a synthetic MARKED_EQUAL_CATEGORY that can never coincide with an actual agreement because it starts with whitespace that comparable trims.",
       "evidence": [
         {
-          "resource": "repo://src/consolidate/disagreements.ts#L201-L210",
-          "version": "repo-lines-v1:sha256:73326fa40d29acac5d995906f0052aa337593c0e3abce649be2855128316656f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMxYTc2MTBmMTkyMGUyNGZkYzUzNjM0ZTY3ODRiMmY3NmM4NTZiNjIzNTllNGIwOGIwMzU2YmNhNTYzZWY2ZWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMzZTFkMTZhM2VlOWEwMWM4NzZkZmY1N2RkN2ZhNTQyYzZhMmQyNTI1YWE2OGQ3YjE3NWY2NDNiMGJkNWI1ZjAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImViODlhMDhmY2UzOWRmZDU1NzNkYzE1YmM2MWU5OTdjNzA4YWY4YjE1N2NmOTdmNTVjOTA2ZTEzOTE5MjFmZDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkwMDQ4ODgwYjZjOGJlZmE2M2ZjM2ZiOTI3MGU4YzI5N2FjYzczOTU2YmNjMTU5YTYxMjZlNzYwNGViN2FmZjYifQ"
+          "resource": "repo://src/consolidate/disagreements.ts#L150-L158",
+          "version": "repo-lines-v1:sha256:c17fd04c3240867a5fd837de2e75e0760752c4a8893e9b766dbff56e08bc5680:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDI3YTI0ODU1MDEyYmQ3NjI3MTk0Y2RhMTQyYjY4MDE5OGQ3MWY5N2Y2YjU0MzgzOGEzYjIxM2U2NGJkM2VjYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzNlMWQxNmEzZWU5YTAxYzg3NmRmZjU3ZGQ3ZmE1NDJjNmEyZDI1MjVhYTY4ZDdiMTc1ZjY0M2IwYmQ1YjVmMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGUzNzIwYzlmYTZkMWVhZDI2ZWUxZGFjZjk2Nzg5YTJkMDFlMzZjODFlMjEwODA4MDU0NTBlNjBjOTlmOWIyMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTAwNDg4ODBiNmM4YmVmYTYzZmMzZmI5MjcwZThjMjk3YWNjNzM5NTZiY2MxNTlhNjEyNmU3NjA0ZWI3YWZmNiJ9"
         },
         {
-          "resource": "repo://src/consolidate/disagreements.ts#L72-L79",
-          "version": "repo-lines-v1:sha256:aa9427cb79704d385b3b3b712261ee263429635c38df398eee6c6715d782985e:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzg3NzJhZDU5MWI4NGM1Yzc0NjVhMWE2MjNjYWFkZTRhOTAwMWNjZTg4NTlhNmUyNWVjZjNmM2NmNDYwNjRiMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiM2Y0NTg5NGI0NGQ4MDI5Njc2NmY4OWI1YWQ4NjZhMjNlZjEzMjdhMzI5YzQ4NDhhN2QzY2FjMGM5OGEzMjhmOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTYzMzBlMzBkYWQ5ODk3ZDdhNjI2OWUwODM2YzZiOGRiNjk0Y2NlMjNhODUzMDU4MzY2YTM3NmE1YzI3NTNkZCJ9"
+          "resource": "repo://src/consolidate/disagreements.ts#L55-L60",
+          "version": "repo-lines-v1:sha256:06e433e5870b42f17763b1f3b93c212a64e3287693d685bf2dddac0427079404:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzg3NzJhZDU5MWI4NGM1Yzc0NjVhMWE2MjNjYWFkZTRhOTAwMWNjZTg4NTlhNmUyNWVjZjNmM2NmNDYwNjRiMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiM2Y0NTg5NGI0NGQ4MDI5Njc2NmY4OWI1YWQ4NjZhMjNlZjEzMjdhMzI5YzQ4NDhhN2QzY2FjMGM5OGEzMjhmOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTYzMzBlMzBkYWQ5ODk3ZDdhNjI2OWUwODM2YzZiOGRiNjk0Y2NlMjNhODUzMDU4MzY2YTM3NmE1YzI3NTNkZCJ9"
         }
       ]
     },
@@ -229,12 +217,8 @@
       "statement": "oneSided flags a field in a repeated entry only some reviewers recorded; it is a disagreement worth showing but cannot be expressed by agree because agree feeds inter-rater statistics where a unit only one rater touched carries no agreement information, so oneSided travels beside agree for the UI and lists, and is only ever true when at least two reviewers have worked the paper.",
       "evidence": [
         {
-          "resource": "repo://src/consolidate/disagreements.ts#L170-L179",
-          "version": "repo-lines-v1:sha256:7365a4b20e2bb561db772c484e93da7267145476a4893d4c4bc95b1e56c53c8f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIxOTRhMDVjYmMyNDUxNmM3ZGNkMjFhODQ2NmQ1NTYwNmQ0NmNmYTg5OWRjZWFmNjAyODVlMTk3MDgxZDZlMzQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFkYzE5NTM4ODE4Y2QzMWEzMzdlYTY2ODQ2ZGNiZTk1MmZjYWQyNmM1NmJhZjk5MzQzOTE0ZmU5NWYxOWFiOGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZhYTJlYTQ4MzdlMGNhMTBmNjBhOGQ0MzNlYjFkZjQ1NmU0ZWIyYWY5ZWQwODAyOTI1NTFhZDFmNTFhMWQ4YzYifQ"
-        },
-        {
-          "resource": "repo://src/consolidate/disagreements.ts#L38-L53",
-          "version": "repo-lines-v1:sha256:1b22cf64006d03f3adf4683ab6e4006638fc0837a731b4e9596780f4f3039b6e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI4OGZhZDFjYjk0NDQ3ZGQ4ZjkxMzVhY2FiNWQzMDU3MjA2YThmYzZhMDI5OTRkM2EwZjY2ZWM2MzJjYjNlYjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmNDJjYjY4MjlkYzhlMTJjZTdlZWNlNjdjODVhMDYxMTg0MGM1MzY1NjdiMGExYmRjODYxZWU4MzYzNmZlZDUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQzOTgxMDUzNmQ4YTc3ZGEzNDEyYTc3ZGQzMWYzMGM0N2M0MGQ0YzAyOWM2Yjg1ODY3ODIxZTIzMDMxZWJjNmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY5YWJiODQ5NmRhZmM2MjQ5YTI0ZmJlMzVjYWZkZTg5Y2UyMzliODk1YzJiZTg3YTc2NmQ1NTMzZWZiZTBlZDcifQ"
+          "resource": "repo://src/consolidate/disagreements.ts#L34-L41",
+          "version": "repo-lines-v1:sha256:4b0d3eec9f82c89068af5eda41a85fede4d7060e492ede6abf25485ad68276a0:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGYyYTJmOTk2ZjA4ZTY4MGJkMjkyMTM1YTZmYTQ5NzhiZGEyNmU2MDJkODRmMzNjYjFkNTk0Nzc1ZDQzMDRiNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWY0MmNiNjgyOWRjOGUxMmNlN2VlY2U2N2M4NWEwNjExODQwYzUzNjU2N2IwYTFiZGM4NjFlZTgzNjM2ZmVkNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZGQ4ZWJiYTdiNjY4NmY4ZjY0ZTUxYmRlNjY4YmNhMjUzMjUwOTczN2MxNWY1MWQxODg0YTAzNTMzYzczM2UyOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTRkNzI1Y2E0MmM3NjFlZjliNzQyNjA2MjNiNDQxZjhhYWI4Yzg5MjJkZjY5YTU4NzgyNzRlOWUyY2ZkYzMzMiJ9"
         }
       ]
     },
@@ -243,12 +227,12 @@
       "statement": "participantCount is how many reviewers have annotated anything on the paper (not the configured project.reviewers), so a reviewer who has not started the paper is not counted as withholding an answer; answeredBy.length must be >= 2 for a statistic, not trust agree alone which is vacuously true for zero or one answers.",
       "evidence": [
         {
-          "resource": "repo://src/consolidate/disagreements.ts#L204-L209",
-          "version": "repo-lines-v1:sha256:b3ca505d2421cdb3b50cb248fdcb985891a32a6b80c78635f81a7ad2704eff4f:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjU3MGY2ZjQyYjEyZmYzMGI1NzQzNTg0Yjc5NzM0OWZlNmQ0ZjY5ZmY2YWU0YTM3NjBlNTA1MGU2ZWNhODE0MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWJjMjliN2JkYjFiYjdiMTJkOWIyMzdiNWM0MjA0OWQwNTYwODhiNDA0ZGJjZjYwY2YxOTk3YmU4NDE4YzM3ZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjY1NTIyNjViNGI1MzZkOGU3MmE3YmU2YmE2NzE1YzU4MGJhOTFiZDVkZTE0MzNiOWJmMzhkOTc1ZGNkMGFlMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGRiYTBmYmMwMGU0NjA0NDg4YzdhOGMyMWI3Yjg0MDY4YWE5ZGUxNzkzOTcxOTFjYzYwYzkwYTc5OGM1YzU1ZiJ9"
+          "resource": "repo://src/consolidate/disagreements.ts#L160-L175",
+          "version": "repo-lines-v1:sha256:67384edbd394cfa28f278a98f81705bb6c9f53c6cf0fd857a494b2fac5dc523c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEwMzcwNGUwNzBjNDhlOTYzMzQ4MzYyMjhhM2Q1Njc4YWQxYTJhMGU3YmJmMDc4MmQ5ZWIzMzhlOWFmNTlmMGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5YjE5ODJlOGRkNzQ4MTE4MTQ2YjM5YTJkMDA2MmY0MDgxZTM0Nzc5Yjg2NzVjMjM0YzRmYjEyNGRjMzkzOTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdhOTljODY0MTlmYzRhZTgwNzZhZjJmN2Y5OTcyM2Q5OTgxMzgwNzYwNzdmMjM2OTJkNmJmN2I5YmNkZjQ1YjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZjNmEyOGRmNDUxYmFkOTc0NmNlNGE1OTgzYzNhZWE1N2RkODg5NzI1OWQ4MzVlNDBmNTUyOWY1OTg1NzhiZTQifQ"
         },
         {
-          "resource": "repo://src/consolidate/disagreements.ts#L54-L63",
-          "version": "repo-lines-v1:sha256:cc655ebaf8b423ef5a61718dd93fbb3bb1420cfb7030d42570291644ffdbc45b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmMmEyZjk5NmYwOGU2ODBiZDI5MjEzNWE2ZmE0OTc4YmRhMjZlNjAyZDg0ZjMzY2IxZDU5NDc3NWQ0MzA0YjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMyY2UzZjkwN2YzYzNmZTYxMTQ2NmNjNWM5MDI1YjBhZmE4YjlkYWRkZmFkNGIwYTBiZjUwMTI3OTBkZjU1ODMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY1YzdiMGIyMzM4ZjJjZTc2MTk3MTc4ODlmNzQyNzgyNDIwZDRiYjVkNjM3OGZhZTY3ZTk5NjU1ZTIwZjU3ZTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYyNDg5NTMwZDViNzdmMDJhZTNjNGUzNzUwNmQ0N2E5NjdiZTIyZDUyZWMwMWM5MGZjZjcxZDY0NDJlYjE0MzAifQ"
+          "resource": "repo://src/consolidate/disagreements.ts#L42-L46",
+          "version": "repo-lines-v1:sha256:e31ddfb8bfc91faf81093a2b6fee6fa5fcebc0d3b548f1e3af286532a81bfaa2:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGYyYTJmOTk2ZjA4ZTY4MGJkMjkyMTM1YTZmYTQ5NzhiZGEyNmU2MDJkODRmMzNjYjFkNTk0Nzc1ZDQzMDRiNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzJjZTNmOTA3ZjNjM2ZlNjExNDY2Y2M1YzkwMjViMGFmYThiOWRhZGRmYWQ0YjBhMGJmNTAxMjc5MGRmNTU4MyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTQ2NjA0YWE5YWIxZjg5YjQwMmM4YTAwMTZmNjBmNWRjYzYxOWI5NjIxYjkzNzViYmI0NTBmYmVhZGM5NjUwYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjI0ODk1MzBkNWI3N2YwMmFlM2M0ZTM3NTA2ZDQ3YTk2N2JlMjJkNTJlYzAxYzkwZmNmNzFkNjQ0MmViMTQzMCJ9"
         }
       ]
     },
@@ -257,8 +241,8 @@
       "statement": "The project-wide Agreement and Disagreements views compare mismatched entries on papers nobody has consolidated yet because paper.alignment is recorded lazily one paper at a time, so Cohen's κ can read as low as -1; needsAlignment warns about this and computing a fresh alignment inside the verdicts was reverted because it would mis-attribute marked-equal fields against an alignment the consolidated tree was never grown against.",
       "evidence": [
         {
-          "resource": "repo://src/consolidate/disagreements.ts#L88-L111",
-          "version": "repo-lines-v1:sha256:0e2149bda9f95e68cad3970b3a227bec0fbc539144184e79b88a083622f7203d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE4MGVlNGIxNDMxZmZkNDcwZDAyOTU0YWE1MmNlZTdhOGY0Zjg3ZTQxMzliZWNhNDhlZGM2YmU4ZWNmYmVjNTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJhYTQ4YWU3YmIzZTQyOTQzY2U4MGE1MDc4YmM0NDA2ZWFkY2NmZjY3YTkwYzUxMTIxNGU1MjIyYjAyMGRmYTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNiOGViYjRhNzgzMjI0YzJjMDJhOTYxNjA2N2M3YjFiMjQzYmE5ODViYjFkY2JhNGEyZGRjNDVlOWE0N2JhMTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVhNGQ3MDBlZTdkYzZjODUyNDEzMDk2M2U0M2I1ZmI1NWY1NGQ0YjhjZTVmNjAzNmVjNWM5OTk5ZWRmMjczYjgifQ"
+          "resource": "repo://src/consolidate/disagreements.ts#L71-L79",
+          "version": "repo-lines-v1:sha256:8e1bf3d61fbc1b822878383e879dc37e76d1f340c4207799671e8a1d570a1aa6:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiM2I0YTE3MjZlYTc4NDkxYmJkNDVlOTE1ODFjMTA2OWEyN2ZhYzQ2ZGY0NjUwMjcxZWFiODJjNjUwOTkxMDFiMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZGI1Njg5OTEzNmVhZDVhNDQ4OWQ4ZTg5MDAwMzg1YzQzYmZiYTllMmIzNGY3ZDY4ZjlhYjdiMjAxZTUzYTk1ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTc0NDBiYjgyZjM3NDI3ZDE5MDgyNjhhMzZmNmVmZTczODVjODM0ZGU5YTQ1MGZiYTAyMjgyOTM0ZTM0YTQ0YyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTUxN2FmZDIxZGIxM2M3MmQ0ZmFhZmY2NGZkYTJmMjQxYTQ2MDUyOTBhY2Y3ZmRhZDk3MWNmNmExMmMyMGYxNCJ9"
         }
       ]
     },
@@ -363,10 +347,6 @@
         {
           "resource": "repo://src/consolidate/unanimous.ts#L88-L108",
           "version": "repo-lines-v1:sha256:6a221dd1f512a4166929a5afb59e666501bf7f87d87c03bd7ebc02f66f5e8621:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYwMTRmNjBiMmQ2MGMxZDY3MDZiNWRkYzUwZGE0NjFhODZmYTZmNjg1MjYzN2YxOGM4NTYzYTQ3NThlZWYzZTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA2MzE4Y2E0ZmI4MWU0NGJlMDk2MTU2ZTI0ODIwMDVhNDVlNWVmNGNkYjE0YzI4OWIyZGEzODk0NjA3MWZkOGEifQ"
-        },
-        {
-          "resource": "repo://src/state/store.ts#L2614-L2657",
-          "version": "repo-lines-v1:sha256:a2d3a3101b209e78efe4d6d4c497541119c843f032e37087bb31113d1db71722:eyJzZWxlY3RlZExpbmVDb3VudCI6NDQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwNGUxNzQ5ZWM0ZDM1M2UzMjEzYTMyMGYyYjRlOTkwNzM3MTgzZDViZTY4NWZhOTVkMDZlOTIxM2M0ZGNmM2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYyOTJhMTk4NmVmZDk5NWJkZGQ4Y2ZiNjhiMDM1ZDcwNzc4YWFlZDkxYjE4MWY2NGEwMzcyYWEyMTUwYThkNzQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhZDgzYjg3NGJiODcwMGI3M2Y1NmE2MTI3MTZkNjYxMzE1MjU1OGUxMTBlODRjY2FlY2E2MzMyMDE5NjZjOTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVmMGU4NTliMzFmMmJmMTUwZTNjNmE0MTVkZDJiN2NlMWE2MjU1ZjBiNTI1ZDg5NTcwYjg4OTJiODcyNTVmMDIifQ"
         }
       ]
     },
@@ -375,8 +355,8 @@
       "statement": "adoptAllUnanimousAnnotations runs the whole project as one batch paper by paper, yielding to the browser between papers, as one undo entry (coalesce turns true only once something changed); it skips whole any paper whose alignable node the consolidator has already answered, because alignment declines to re-match an answered node and reading its unaligned entries at a fixed index would invent agreement.",
       "evidence": [
         {
-          "resource": "repo://src/state/store.ts#L2850-L2934",
-          "version": "repo-lines-v1:sha256:508dceb98e406a2257d9be6251f7d04d2da404d642ec0bcf9a88fb54ba6cfc15:eyJzZWxlY3RlZExpbmVDb3VudCI6ODUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM2YjNjMDMzZDEwZTNjYjA4YmMxNDMxYzgyYjg3ZjRlMjYwNTRhNzM1NTI3NjNjYjgwNGY1ZDU5NzRmNzQ1NzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliNjJmNjBkODU5MGE1NzljZjQ2ZjhkNjczNzhjNGM1NzJiOTYyY2VjY2RiOTBjN2E1ZjdiNDJiOTYwNzgyYTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRiYWQ2NjYzYzI3NmNiYTg2MzM5NmEwN2MzZjRiMThmMWM2ZWMzODgxZmUxOGM3OTgwYTcxNjQ2MGI0NWNmMzUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE1NTQ4OTczZWRiNjI5ZjAyZmUyNmNkZjNmZmQzMWFmMzlkZjRiYTc0YjE5ZjlmNDdiZjIxMmMzZjUzODQ1YzUifQ"
+          "resource": "repo://src/state/store.ts#L2611-L2680",
+          "version": "repo-lines-v1:sha256:c1c939a73c563e020c83c56326c9a70373fcc5bad470060538841e4401da6714:eyJzZWxlY3RlZExpbmVDb3VudCI6NzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM2YjNjMDMzZDEwZTNjYjA4YmMxNDMxYzgyYjg3ZjRlMjYwNTRhNzM1NTI3NjNjYjgwNGY1ZDU5NzRmNzQ1NzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE4MzU1MmFiNTcxNDk0YjM5OWIxODE5OTYyMmRiZTNiMzgyNmViNjFmY2QxZjc0Y2ZiMTJhYmNmODhlNGY3MjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRiYWQ2NjYzYzI3NmNiYTg2MzM5NmEwN2MzZjRiMThmMWM2ZWMzODgxZmUxOGM3OTgwYTcxNjQ2MGI0NWNmMzUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjllMmY3MTQyZTJhODczMjgwNDc1M2E1NTJlYTg0NjY2MTAzZDI5ZmJlODJkMDhlZTk3ZWNlNGJhMjJiMTZlYzUifQ"
         }
       ]
     },
@@ -415,20 +395,16 @@
       "statement": "metrics.ts implements three nominal-scale coefficients knowing nothing about papers, schemas, fields, or reviewers: Cohen's κ (exactly two raters, pe from marginals restricted to co-rated units), Fleiss' κ (any number of raters but every unit must be rated by every reviewer), and Krippendorff's α (tolerates gaps, any number of raters, units with fewer than two ratings contribute nothing).",
       "evidence": [
         {
-          "resource": "repo://src/consolidate/metrics.ts#L1-L21",
-          "version": "repo-lines-v1:sha256:97b5d88204655b406eba91f907c578c7d210287f623f798717330827a4650ada:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjczMTZhMGYzZTc2ZTQ0MTdjNmJkZjMyMjQwZWM4NzY3MGUxZTAxM2YwM2NiM2YzNTkwY2M3YjE0OTIxYzBlYWYifQ"
+          "resource": "repo://src/consolidate/metrics.ts#L143-L232",
+          "version": "repo-lines-v1:sha256:660c05eda93d61948401fb5cf24d3b592c66dc6ab3ebb08446b1f4da3ee2a601:eyJzZWxlY3RlZExpbmVDb3VudCI6OTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdiYjU0MTBkNjk2NmZhNTNhYzY2MDJiNmZiODQ5NzgwNjFiNGY0ZTk4MmNkOTNkZTllZTRiMTdlOTdhZTgyNGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhmMjkzZGVjNDkxZWEzMTFlNTUwNzg1NDg0OWRjYmUwZTUwNDBjOTIwN2YzNjY3NDkxNzNhMTAwNjQwYjYyMzEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU4YzliYmViYzE3ZTk4YTIxNGRhNmJmODAyMDNkM2ViZWQ2Yjk5NWFkNTVlMTAwMzQ3YzZmYTdhZTY5ODEwOWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImViODY4ODc3ZDNjMGU4YjRmMmI0MDQ4N2YyOWI2NGE1ODc0OTBiNjIxZGUwNTlhMGI3NzZiYjFkY2MwY2M2NzgifQ"
         },
         {
-          "resource": "repo://src/consolidate/metrics.ts#L169-L269",
-          "version": "repo-lines-v1:sha256:9c718313178e95e4738160e7355f55ec17dff6b4cfa8ee5ec81baa8155b77f2e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlYWYyMmNmMDczMjU5MmMyNDcxNDFjYmU2MWVmYTExMDEyNjEyZjVhMzEyMmI5YWY5YmJhZjUyZjU3MjRkMTk0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI4MTAzOTE3Zjg5MjAyODM5ZjdlMDYzMDAwMDc2MTcwMTRhY2ZlMTk3ZmY3MmZlYTUwNjdlZGJmYWY5MDE4ZmZmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJkOTM0MjNlNDMxMmExODE3Mzg2OGZiNWRhYzJhODNkODY3OWJmYTMzMGVhMDc1NWEzMTE5NjU3MTBhYjhkZTA0In0"
+          "resource": "repo://src/consolidate/metrics.ts#L234-L330",
+          "version": "repo-lines-v1:sha256:5a34306b3a191e62b759f931ef76c1e679ac4ed581b36987cc24fa0a0bea8f75:eyJzZWxlY3RlZExpbmVDb3VudCI6OTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4YTYxMGY4NDJhYTRiYzAzOGFlYzNkMmYwYjdjMmIwMjA4ZGM0ZjYwYTE5NGRjYTJmYTJhMzQ0NWY2MjZlMWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIwYWM1Yzg0N2JjODM1N2Q5NzdlNDM0MWVkZmYyNzhjZDE1N2ZhNTI5OWE4ZTgzM2I5NzBlY2I1MzFiZTA5OGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
-          "resource": "repo://src/consolidate/metrics.ts#L275-L388",
-          "version": "repo-lines-v1:sha256:1b218f4d89f00dd5a2deb477bc8a2ee35d10dde21d28f097507e477ba8a81ffe:eyJzZWxlY3RlZExpbmVDb3VudCI6MTE0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlYWYyMmNmMDczMjU5MmMyNDcxNDFjYmU2MWVmYTExMDEyNjEyZjVhMzEyMmI5YWY5YmJhZjUyZjU3MjRkMTk0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlZGViNDhiYzcyNWM2YzczMmQ1NGVlMTYyYWNkOTQ2NGU4MjYzZmU5MzlmZDU4ODVkNjc5NDNjNzE2OTA3ZjZiIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
-        },
-        {
-          "resource": "repo://src/consolidate/metrics.ts#L89-L163",
-          "version": "repo-lines-v1:sha256:591d6b1ddbf035e6dce3c5291c4362e5d26f0f602c669a183d7c4bc343d4845d:eyJzZWxlY3RlZExpbmVDb3VudCI6NzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU1MzFiZGRiNWJjMzE2YjU4ZGRiNjRlNDQ3NzYxNzdhN2JlYjlkZmI2ZDA4OWRlMGI1OTI4MGQ4M2RlYjVjNDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI3OGNkYmExYTZiNTBhNjhjNTE2MmM2MjUwZDc4ZWZhOWI4ODA1ZTU2ZmFkOWJmMDc2NDM5MzMyNjdlM2ExZmIifQ"
+          "resource": "repo://src/consolidate/metrics.ts#L61-L141",
+          "version": "repo-lines-v1:sha256:acdc1aa902a8b44b815f2867f41d971953640cc5d40a1051151dec5dff45da67:eyJzZWxlY3RlZExpbmVDb3VudCI6ODEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY2YmEyYjU5OTY3MzJlNzEzOTBkM2UwY2M1YjliZmRmZTU4YWUzZDZkMzgzY2VhYTMyNzRiMzc1OTY1NWRlYmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY2NWY2ZDMxODg4YmNmMGQ1ZTY3NjljZWQ0MDIxNGJiNjNhYmFhZjViYzMzNzEwOWUzNWQyYzdlNzgwNWZlMzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM0MGM1ZDNkYzNhNzczMDc5M2M4OTI3OTQ4YjU1OTY2NDIwN2Y3OWJhODc3NzNjMjE1MDA0NDMxOTYyZmQ0ODgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ0ZDUzY2VjMTFjMzA3M2EwNTNjYmYxOGQ3ZGI4OTY0ZDdmMTJmMjQ0MGVlMjdhMTQzMTkyYzJjZDRjM2VjN2QifQ"
         }
       ]
     },
@@ -437,16 +413,8 @@
       "statement": "All three coefficients detect the pe = 1 / De = 0 trap structurally — when every rating was the same single category, observed and chance agreement are both total, a true 0/0 — and return null with a user-facing note rather than reporting 0 or 1, which would both be dishonest.",
       "evidence": [
         {
-          "resource": "repo://src/consolidate/metrics.ts#L148-L154",
-          "version": "repo-lines-v1:sha256:d2d71f0c47e1d2c08dd49288ce09686b4c3fe0048aaa7c41dffa04091cef5844:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYmUwYmExZjg2ODNiNmI0YzU3ZTQwNGI4MmM4MGU1ZmI5ODFkYmQzMzllMTQyNWMwNWFhNTJhMWMwY2M0MWQ3ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDY3ZGFiMWU2NjdlOGNjMGZhMzMzYzlhZTU3NmZiMWY1ZGVmZDVmODA2YmRhOWE2NzYwYjdjODYyYTUwNDRlNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzRjZjQwMjRiMzBjMDc2OTdmNDM2ZDNhY2MwMGI2OWEyMjkwNTc1YjBlMDI1OTNhZDI2Njc5NWQwOGNjODFkYyJ9"
-        },
-        {
-          "resource": "repo://src/consolidate/metrics.ts#L369-L373",
-          "version": "repo-lines-v1:sha256:22497957d6651dfd182be40ccf0ac652de8a30365297ca4d92a2b989f1f068a1:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjIyOTdkZDE5NmY4MDM3MGZkMmUxOTY2MDM5OTZiNWM5ZDcwYjQ0MzU2ZTdhZjg0ZTI5MzdhNmZlZmFkMTA1ZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTdkODYzMmU1NGU5Mjk4YWJiOTU4NzI3ZTJkNTE0MDhhYmFmMTM2NjAzNTM3OTEwMTQwYWJmNjViMzBhYjYxMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2E1MjJiNzE0ZjU1YTQyMjU0NDZhNmVmODY1ZmNkMzE5ZmEwYWQ3Y2E5YjdlMGJiZjE5Zjk2Y2I0YjZhMmE4MSJ9"
-        },
-        {
-          "resource": "repo://src/consolidate/metrics.ts#L62-L83",
-          "version": "repo-lines-v1:sha256:f4c070ebbd4cf7b2b52ced0107fe3de915a0fde2e88180e309ebb462be1775b0:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImExYzczYjBiYzA2YWYzMTNhZGNkM2VmYjc2YzUzZGExN2RkNzMzOTkzMmE2MjBjNjA1OThhMmY2MmNkYjM3YTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI2MDYxYmZiZTc1MTI5NmNiOTlmMDdhMzE3ODQ4NjVjZTVmMGZmODdjZDU0YzhmNjZhZTlhNzVjNGRiODE0NmIifQ"
+          "resource": "repo://src/consolidate/metrics.ts#L47-L58",
+          "version": "repo-lines-v1:sha256:3870b27abde9eaf2683047b244769a8f26cfe58488f0ef7ba8fff6f1d29e0ffd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBiMTNiMzU5OTgyNTc4NTcxNzQ3NTg5NjNkMDdhMjc0ZWE5ZjIxMTNjZWY3MzcxMjhhNmFjMzY0N2Y4NGIwYTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2MjY3OTM1ZmM2MzM0NjVkODQ4YjQwYTRlZDY5NjdlN2I3YTMyM2Y4MWNkNTNjMTEwYWUyMTAyOTY4N2FhMTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM3OTI5ZTkxZTBmOTljM2U4MjVkZTY5YjQzNWZiNjQ4NGQxYjBhMWRmMmY0NjU2MWFiZjFhMjlmMDQxODhiODgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJhMmJmNDgwMjU1M2ZmYmU2ZTNjZDlhOTgxYTdkY2Y0MjM2ODE1NzZlNTNlNzY1MDBjMTgxN2U4MmZlZDMzMGUifQ"
         }
       ]
     },
@@ -477,6 +445,6 @@
   ],
   "verification": {
     "by": "openwiki/0.4.0",
-    "at": "2026-08-26T09:23:05.972Z"
+    "at": "2026-09-21T20:12:55.536Z"
   }
 }

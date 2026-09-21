@@ -3,9 +3,6 @@ type: workflow
 title: PDF Viewer and Marks
 description: The PdfViewer component (react-pdf/pdf.js), zoom/navigation/search, text-selection capture for field-grabbing, internal-link hover previews, PDF marks (highlights/comments with undoable mutations), field-linking marks to annotation fields, mark export (burning marks into real PDF annotations), reading-position persistence, and PDF metadata/text extraction.
 tags: [pdf, pdf-viewer, pdf-marks, react-pdf, pdfjs, undo-redo, reading-position, pdf-export, metadata-extraction, text-extraction]
-verified:
-  - by: openwiki/0.4.0
-    at: 2026-08-26T09:23:05.972Z
 sources:
   - id: openwiki-source-8d6b6eb5e58f91e157e37bde
     resource: repo://electron/main.ts
@@ -27,13 +24,14 @@ sources:
     resource: repo://src/model/pdfText.ts
   - id: openwiki-source-ee9ca2ad478832d4c42ce686
     resource: repo://src/model/refPreview.ts
-  - id: openwiki-source-769f5f5c1e3631cf9ab273bc
-    resource: repo://src/platform/electron.ts
   - id: openwiki-source-f1fdcd7ce204bd96db1ea2d7
     resource: repo://src/platform/pdfjs.ts
   - id: openwiki-source-89409d7a9c0280067e058c1a
     resource: repo://src/state/store.ts
 generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
+verified:
+  - by: openwiki/0.4.0
+    at: 2026-09-21T20:12:55.536Z
 ---
 
 # PDF Viewer and Marks

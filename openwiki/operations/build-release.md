@@ -36,7 +36,7 @@ sources:
     resource: repo://src/model/updateSignature.ts
   - id: openwiki-source-5e1b077422a94ae165e88e4e
     resource: repo://vite.config.ts
-generated: { by: "openwiki/0.5.0", at: "2026-09-01T19:42:14.192Z" }
+generated: {by: "openwiki/0.5.0", at: "2026-09-01T19:42:14.192Z"}
 verified:
   - by: openwiki/0.5.0
     at: 2026-09-01T19:42:14.192Z

@@ -85,7 +85,7 @@ export function AnnotationPanel() {
   // `flashFieldPath` is always the one thing that starts (and restarts) it.
   useEffect(() => {
     if (!flashFieldPath) return
-    const t = window.setTimeout(() => setFlashFieldPath(null), 1500)
+    const t = window.setTimeout(() => setFlashFieldPath(null), 4000)
     return () => window.clearTimeout(t)
   }, [flashFieldPath, setFlashFieldPath])
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:288bd888599838b24c88ee4bf6f3f64340cbdcde39835070f3e706f9f49b24f4",
+  "pageVersion": "sha256:97c7a8086a0c55d638e8201f8ffeca3bca6eec80d8b3d68a175de763e13cc033",
   "claims": [
     {
       "id": "claim_a861526a7b204e6f8aa8abf90e74c4fb",
@@ -66,11 +66,11 @@
     },
     {
       "id": "claim_c60680b918f74fa9b7d8432c308571cb",
-      "statement": "Integration tests mock getPlatform() to inject a fake PlatformAdapter at that single seam, which makes the whole app run under jsdom without a real Electron environment (the same interface that lets the app run in Electron and in a plain browser).",
+      "statement": "Integration tests mock getPlatform() to inject a fake PlatformAdapter at that single seam, the same interface ElectronAdapter and the inert createUnsupportedAdapter implement, which makes the whole app run under jsdom without a real Electron environment.",
       "evidence": [
         {
-          "resource": "repo://src/platform/adapter.ts#L59-L95",
-          "version": "repo-lines-v1:sha256:2ea8df1804f5ca819a79554ca4ee583a3e0e8a983ea9f7295b880523da2d7970:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmOTEzOWJhOTM1YzkzY2IzMGQ2MjZmZGRiZDFlYTU5MWI3MDJjYjM4YTUzMjQyYzdhYTcyMTI3MTAyMzkzYWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImExNDI4Zjg2ZTNlZjI4MmM0Yzk4ODdlNDljNjNhMDVmMWJjZWM5MDY2NTljZDEyYTZlNTUwMmFkMmRhOGFmMGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdmN2E3ZThlNTIyMzU2MzM0YzJiODMyNjg4MTNmYTdhNmZmMmU0ODNkNDFmODc0YTA0MWJiMWQzZTMxZmNjYTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBkY2MyMzgwNjUyNDMxOTc4YjU0YmYxNTNhMGQzNWQzMmQxN2VkYWUxZTk5MDQ0MzcyOTYyYjM1ZjA0OTEwNWMifQ"
+          "resource": "repo://src/platform/adapter.ts#L65-L95",
+          "version": "repo-lines-v1:sha256:ba274e2354b81a4f44a8905f917e05b4da08827f9a57be8b73d1606db5d55a95:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmOTEzOWJhOTM1YzkzY2IzMGQ2MjZmZGRiZDFlYTU5MWI3MDJjYjM4YTUzMjQyYzdhYTcyMTI3MTAyMzkzYWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYyMzkzYjkxNjYxYWM2NTgzMjNkNjgyNjdkYTQyOWM0MDUyYjQ2ZmJkMjg2ZGY4NGExM2Y3M2UzMjQ5NDU1MjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdmN2E3ZThlNTIyMzU2MzM0YzJiODMyNjg4MTNmYTdhNmZmMmU0ODNkNDFmODc0YTA0MWJiMWQzZTMxZmNjYTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBlZDY1ZTE1YzlkZGYyMDk0YzlmZTI5YzJkYzA1ZDZhOWY4YjFjZTY4Mzk5MGM1ZjIwYmFmM2QwZTllY2E0NTIifQ"
         },
         {
           "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L159-L189",
@@ -270,7 +270,7 @@
       "evidence": [
         {
           "resource": "repo://src/model/model.test.ts#L1-L120",
-          "version": "repo-lines-v1:sha256:ae101a3b0ce9869d0c3c5acf68601222f9998b3e842a94ae8439a1d20225d1b5:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJhMjg0MmNlNzY2NDZlMzU2YmIwYmI1MDRkZmE1YTFlZmYyODdmNzI5MmNkMjI0NmE5MDNlYmFhNDc4YmQzNWJkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzMGMxZjE4OGYxNDJlZDdhODI0NjgwYjIwNzE3MmM1NTE5YmM2MTRhNDhmZGE3Y2YxNjdlZGI4ZGRmNzk5NTZjIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJhNDZmMTc0NzQyZGI5YmRlNzJmNGQyZmQ4ZDk1ZDdkYWMzNTQ4YTBjMzQ0YmIwOTVmNzAzZTJlMWUxYWE5ZmQxIn0"
+          "version": "repo-lines-v1:sha256:3daa1e5b3533a3dfd6c09c06e9892aa3096ec5bb97dd3e673708666140985dce:eyJzZWxlY3RlZExpbmVDb3VudCI6MTI2LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJhMjg0MmNlNzY2NDZlMzU2YmIwYmI1MDRkZmE1YTFlZmYyODdmNzI5MmNkMjI0NmE5MDNlYmFhNDc4YmQzNWJkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzMGMxZjE4OGYxNDJlZDdhODI0NjgwYjIwNzE3MmM1NTE5YmM2MTRhNDhmZGE3Y2YxNjdlZGI4ZGRmNzk5NTZjIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJhNDZmMTc0NzQyZGI5YmRlNzJmNGQyZmQ4ZDk1ZDdkYWMzNTQ4YTBjMzQ0YmIwOTVmNzAzZTJlMWUxYWE5ZmQxIn0"
         }
       ]
     },
@@ -372,17 +372,17 @@
     },
     {
       "id": "claim_857b0eb8dd2845aebe6c742fcabfa30f",
-      "statement": "PlatformAdapter (src/platform/adapter.ts) is the platform abstraction for file I/O and PDF loading that the React app talks only to, so the same code runs inside Electron (native dialogs + fs) and in a plain browser (File System Access API / downloads / fetch); it exposes openProject/saveProject/rebasePdfPaths/getPdfSource/needsPdfFolderGrant/grantPdfFolderAccess plus getGit(), and is the single seam integration tests mock.",
+      "statement": "PlatformAdapter (src/platform/adapter.ts) is the platform abstraction for file I/O and PDF loading; ElectronAdapter is its only live implementation (native dialogs + fs), while createUnsupportedAdapter is an inert stand-in that refuses every action now that the browser/web build is discontinued. It exposes openProject/saveProject/rebasePdfPaths/getPdfSource/needsPdfFolderGrant/grantPdfFolderAccess plus getGit(), and is the single seam integration tests mock with a fake implementation.",
       "evidence": [
         {
-          "resource": "repo://src/platform/adapter.ts#L1-L135",
-          "version": "repo-lines-v1:sha256:c03df8d88c2f6e75acd0ef3f16b18d2b1417c6a3406b207e286b8676db70b83d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTM1LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlYWYyMmNmMDczMjU5MmMyNDcxNDFjYmU2MWVmYTExMDEyNjEyZjVhMzEyMmI5YWY5YmJhZjUyZjU3MjRkMTk0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI3MzM1YzFjMDE3NTVlMzEwZDNhYjYzZWE5NmMzZDY2OTlmY2YzMDUwZTVmODhmMDdjN2I1OGFhMzYxNjdlMTNiIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI4OTVlYjIzZjgzN2Q4MTAzNDA4ZDdjY2U2YmEzNWEzZTFjZDEwY2JjZGJlNWEwOWY5MzFjNWFlN2EzMGUwNjJjIn0"
+          "resource": "repo://src/platform/adapter.ts#L65-L135",
+          "version": "repo-lines-v1:sha256:7d18a48b92ed8c5714af6ca7747708a3a1b1d0b1ef4e35cc0700c0325a9247b4:eyJzZWxlY3RlZExpbmVDb3VudCI6NzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmOTEzOWJhOTM1YzkzY2IzMGQ2MjZmZGRiZDFlYTU5MWI3MDJjYjM4YTUzMjQyYzdhYTcyMTI3MTAyMzkzYWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjczZmI3ZDRjM2JlY2E2Y2M0OGNhNjk5ZjdiYmU1MThkMzQxMmFjZmM1OTIwZDgzNjljNThlODM1OGFjMDQ4MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdmN2E3ZThlNTIyMzU2MzM0YzJiODMyNjg4MTNmYTdhNmZmMmU0ODNkNDFmODc0YTA0MWJiMWQzZTMxZmNjYTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc2NmVmOGVjOTA1ZWMwYzZiMDI4MjJiNmZiYTgyNTYxY2NjOGVmYjIzNDkwNmM4ZjNjMjZlZjE1OGUzNDA0Y2MifQ"
         }
       ]
     }
   ],
   "verification": {
-    "by": "openwiki/0.5.0",
-    "at": "2026-09-01T19:42:14.192Z"
+    "by": "openwiki/0.4.0",
+    "at": "2026-09-21T20:12:55.536Z"
   }
 }

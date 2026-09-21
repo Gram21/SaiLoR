@@ -3,9 +3,6 @@ type: workflow
 title: AI-Assisted Annotation
 description: How a reviewer invokes an LLM to pre-fill annotation fields from a paper — the provider abstraction, model discovery, prompt construction, response parsing, the aiStore flow, and the security invariant that an API key never lives in the renderer.
 tags: [ai-annotation, llm, security, electron, state-management, providers]
-verified:
-  - by: openwiki/0.4.0
-    at: 2026-08-26T09:23:05.972Z
 sources:
   - id: openwiki-source-8d6b6eb5e58f91e157e37bde
     resource: repo://electron/main.ts
@@ -35,15 +32,14 @@ sources:
     resource: repo://src/model/pdfText.ts
   - id: openwiki-source-68e9e61da0efb614946dda70
     resource: repo://src/model/project.ts
-  - id: openwiki-source-769f5f5c1e3631cf9ab273bc
-    resource: repo://src/platform/electron.ts
   - id: openwiki-source-c1ab92e18d72fec6435ab66e
     resource: repo://src/state/aiStore.ts
-  - id: openwiki-source-fe32e46a358a2106c141c8f8
-    resource: repo://src/state/store.ai.test.ts
   - id: openwiki-source-89409d7a9c0280067e058c1a
     resource: repo://src/state/store.ts
 generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
+verified:
+  - by: openwiki/0.4.0
+    at: 2026-09-21T20:12:55.536Z
 ---
 
 # AI-Assisted Annotation

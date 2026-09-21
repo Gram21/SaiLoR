@@ -135,9 +135,9 @@ the project editor. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-DAT-210 — Separate unannotated papers
-- **Description:** When validating, the system shall list papers with zero annotations in a separate "not annotated yet" section instead of reporting their fields as missing.
+- **Description:** When validating, the system shall list papers with zero annotations in a separate "Not started yet" section instead of reporting their fields as missing.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/validate.ts:300-340`, `src/components/ValidationDialog.tsx:146-169`
+- **Evidence:** `src/model/validate.ts:300-340`, `src/components/ValidationDialog.tsx:411-450`
 - **Status:** Implemented
 
 ## Completeness & finished state

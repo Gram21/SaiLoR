@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:fbd78697dd09ae9541c88b3a40c5a2c7de2eb9f92e7eb29d038a18769dbc7462",
+  "pageVersion": "sha256:50e1a21e820d208ef7f96e41f9f68cb8239a3b239004a6499a78ced4d56aab98",
   "claims": [
     {
       "id": "claim_77c235236a4f499f9da38bd07202a799",
@@ -25,8 +25,8 @@
           "version": "repo-lines-v1:sha256:00ae16d8ea551f134f924baa80f1b9ec61ae4c5033ce7491abf12b964505d4b3:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY3YzA3MDRlZjFiZDljMjM3MmJmNDk2NDkzMzM1NWE3ZTMxNGRiZGQ4YTdkM2EzOWY2ZDFlNjRiMTE3OGI1MGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhlYWMyNTg2MzA4NjA4NGUzNzIxMTk5ZDIzMzYzOWZiYzVlNzdmM2FiYmYxMDhkMDk0M2Y0MGVkZWU4ZWQxM2YifQ"
         },
         {
-          "resource": "repo://src/state/gitStore.ts#L30-L40",
-          "version": "repo-lines-v1:sha256:a2d695b9bd623d511684215a32fdee57dec17fc1499ab29cfadb525047afde35:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg5MDg0Y2M1MGM5MjljOTE1ZmYwMDEzZGRkYjI3ZWQwMTU1NjY5ZmVkNGEyYjg5MGU2MTY1ZDFlNGJkNjA1YWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU4NjZiODk5Njc2ZWFhYmM0YzJhZTc1NDI0MDU1MmYyYjg2NGY4NjdiNDhlZjM1MmZkYzQ0ZjRhZTZlNGQ2MGQifQ"
+          "resource": "repo://src/state/gitStore.ts#L1-L40",
+          "version": "repo-lines-v1:sha256:0b6220707fe6d92b480dbcff706fbdc0ddc9ead29f7259601f96aa6eaf00005d:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkYzZlMzg3OThjYTUyZTdlMDA4NWY5ODY5MTUxYjg1M2QwOGVlY2NjZTM5OWVhZTM3NzhlZDY4NmNjYjM5NjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMzYTA1ZjQyMWYwZTg2ZTliODMzNDIwM2ZjN2ZlZDA5MTg4YTk4YWI0YWU1OTkwZTFmNzU1OTdjY2Q2ZWRmZmMifQ"
         }
       ]
     },
@@ -73,12 +73,12 @@
       "statement": "ElectronAdapter delegates file operations to window.slr IPC handlers and serves PDFs via the custom slr-file://project/pdf protocol, resolving paths relative to a project directory set via setProjectDir on open/save-as; saveProject re-parses the logical whole-project text via loadProject, splits it with splitProjectFiles, and sends {metaText, files} over the project:save IPC.",
       "evidence": [
         {
-          "resource": "repo://src/platform/electron.ts#L232-L240",
-          "version": "repo-lines-v1:sha256:ac040c426f6f08d301fcc266145711e1d5d3357d42254ea5cab9eacd21752771:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjRjNmY2OWJlZDI1ZDFhODM1MjY1NTlhNDQ3NWM5ZmU3NDM2MWQwYmNlODdhYzJkYjI3NWQ2MzQ5ZjVlOTNmMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGE5YTVlNTQ0ZGMwZDk5OGVmYmQ4ZDgyMjhiYWFkMjU0M2E3YzgyN2M5MzI3ZDRiMmZlMGJiZTc1YzBjMTZlOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTdkODYzMmU1NGU5Mjk4YWJiOTU4NzI3ZTJkNTE0MDhhYmFmMTM2NjAzNTM3OTEwMTQwYWJmNjViMzBhYjYxMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDg1MjU4NGQwNzNhNGJlZGIwOWQyYzJkMmVhMDYzODhkNjllYzYyOTI4MDAyMWFlM2Y4NDc5MDhjYzUyYzFlYyJ9"
+          "resource": "repo://src/platform/electron.ts#L225-L232",
+          "version": "repo-lines-v1:sha256:7df94d3d29c3ae0e460c7cc91d1a17e7700331bf43c4d0a2aab1bade017261a2:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjRjNmY2OWJlZDI1ZDFhODM1MjY1NTlhNDQ3NWM5ZmU3NDM2MWQwYmNlODdhYzJkYjI3NWQ2MzQ5ZjVlOTNmMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTdkODYzMmU1NGU5Mjk4YWJiOTU4NzI3ZTJkNTE0MDhhYmFmMTM2NjAzNTM3OTEwMTQwYWJmNjViMzBhYjYxMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWMwZDcxNzFmNjc3MWYyMDY5NjRlMjBiMTdiMGIxOWFjMjM2Y2UxMDU0ZTJhNzBhZTc1MDY2Yzg1YzI2OWJiMiJ9"
         },
         {
-          "resource": "repo://src/platform/electron.ts#L284-L294",
-          "version": "repo-lines-v1:sha256:795d5eca74298db2c43643cede82e11ea3e4ca1e4504b951d464df8213a6e295:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZkYjMwNDk3OTE0ZmMzZTVmZTY4MjUzYzcwOTI3MmQxNGFkOGEzYjAxNDljY2ViNDJlNGYwYzAyOTk3MTI1NzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAzN2M0ZTQ2MTE3ZTE0N2VjMDI0YjA4NDU2NzA5N2VhNjQ2NzNlYmVmZDJkZWRiMTk0OWUwNmM5MDRkYTRkYTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYzNGZkYjI2Zjc5NzJiNDRlZWIyMjVkNGQ2ZmViOTE0ZDI3MGEyNTg0NGFhNDFmZGYyMzkwMTQwY2JmYjM4YjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM3Y2MzYjRiYmFkODBhZDg4N2NjZTFhNGE1ZGU2MWRiNzJmMDc4NWU0YmU1ZWM3ZDJhNmVkY2M5ZWU5NzkzYmYifQ"
+          "resource": "repo://src/platform/electron.ts#L266-L266",
+          "version": "repo-lines-v1:sha256:037c4e46117e147ec024b084567097ea64673ebefd2dedb1949e06c904da4da2:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDM3YzRlNDYxMTdlMTQ3ZWMwMjRiMDg0NTY3MDk3ZWE2NDY3M2ViZWZkMmRlZGIxOTQ5ZTA2YzkwNGRhNGRhMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDM3YzRlNDYxMTdlMTQ3ZWMwMjRiMDg0NTY3MDk3ZWE2NDY3M2ViZWZkMmRlZGIxOTQ5ZTA2YzkwNGRhNGRhMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmU4M2Q3ZWNhZmY2YTcxYmUwNmZiZjU5YTJhMzM1NTJmMzk5YzdjNjJlZTY0NDExMjNmNmZiZmQzMGNjNjM0MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzdjYzNiNGJiYWQ4MGFkODg3Y2NlMWE0YTVkZTYxZGI3MmYwNzg1ZTRiZTVlYzdkMmE2ZWRjYzllZTk3OTNiZiJ9"
         }
       ]
     },
@@ -88,11 +88,7 @@
       "evidence": [
         {
           "resource": "repo://src/platform/adapter.ts#L253-L253",
-          "version": "repo-lines-v1:sha256:43cf3fe404a63d90db094610d1109b2c6cf3d58f6292ed4eae67a3176a8d74cd:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDNjZjNmZTQwNGE2M2Q5MGRiMDk0NjEwZDExMDliMmM2Y2YzZDU4ZjYyOTJlZDRlYWU2N2EzMTc2YThkNzRjZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDNjZjNmZTQwNGE2M2Q5MGRiMDk0NjEwZDExMDliMmM2Y2YzZDU4ZjYyOTJlZDRlYWU2N2EzMTc2YThkNzRjZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzAzNjBmOTBkNmRlNTE0MTFlZjdiNzcxNTlhODNjOWVhYWU0ZGQ0MzcyY2M2OWRkMTY1OTdhN2ViMWU2NzljYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTllZDgzZDhiNjk3N2NkNjU5MmRjODhmMzkwMmFlNzc2YWFiZDRkY2QxZTk3OGUwZTg3ZGExMDE4MGJkNmFhNiJ9"
-        },
-        {
-          "resource": "repo://src/platform/electron.ts#L454-L454",
-          "version": "repo-lines-v1:sha256:4cf4d6057317fd09234decb7dc2841cd0fc1449e41e3aa47e02effbfde1446a7:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGNmNGQ2MDU3MzE3ZmQwOTIzNGRlY2I3ZGMyODQxY2QwZmMxNDQ5ZTQxZTNhYTQ3ZTAyZWZmYmZkZTE0NDZhNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGNmNGQ2MDU3MzE3ZmQwOTIzNGRlY2I3ZGMyODQxY2QwZmMxNDQ5ZTQxZTNhYTQ3ZTAyZWZmYmZkZTE0NDZhNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjM3NDBjZjI1N2QwMGIzOWJkYzkyOTA0OTI3ODcyMzg0ZjYzZmViNzBhN2NjOTY4YzYwZTI1OTE3YTEzZDAyMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTcwY2VjMDk2OTE4ZjRmNzc2Nzc5MzM3ZjBhY2ZiMzQwODY0MjE3Y2UwNGZjNDhiZDZjZTljZmE5OGYyNzc1OCJ9"
+          "version": "repo-lines-v1:sha256:e40d0c7bc31c969b8cb09cc3a499dd64706c444580e03fc5774e8bbb5edddb9e:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTQwZDBjN2JjMzFjOTY5YjhjYjA5Y2MzYTQ5OWRkNjQ3MDZjNDQ0NTgwZTAzZmM1Nzc0ZThiYmI1ZWRkZGI5ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTQwZDBjN2JjMzFjOTY5YjhjYjA5Y2MzYTQ5OWRkNjQ3MDZjNDQ0NTgwZTAzZmM1Nzc0ZThiYmI1ZWRkZGI5ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDc3YWE0ODBhZGNiMDMzMWQ3NzhkZjJhMTZkNjFhMmQ3NjdhYTk3ZjRlZjkwNzBjYjY2NWRiOTBjMzg0OWZhOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTUxMjBmYWQ4ZjM5ZDhhMGQ1YzdhYzA0MWFhZjhiYmY1YjhlNGUyMTIzMjYzMThhMDU0ZTYzMTNkODI2YmVmMiJ9"
         }
       ]
     },
@@ -105,8 +101,8 @@
           "version": "repo-lines-v1:sha256:97745e95e9e7d697ab5b043723f614b4a37dc31d0dba0595051853036b118941:eyJzZWxlY3RlZExpbmVDb3VudCI6NjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM0NzUwODdhMzk2OWI5Yzc2ZmEwMmZmNWIwMDlkYTAwMDdlZGUzZjA3ODllYzA0YjlhNDA2MWE5YmQyOGI0Y2UifQ"
         },
         {
-          "resource": "repo://src/state/store.ts#L101-L118",
-          "version": "repo-lines-v1:sha256:2e1074995ef8637ae197c26152c2257802c90d55f4a61231313aecbeeac483ef:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRkMmVkYTMxZmU5ZWQyNGE1ZGVkNjM0YjJlZjNhNWM3Y2ZhNjRmNjFlNGI2NjdhNjE5M2E3Yjk0ZGMyMWFkYzciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI0NjdmMThjZGViMmUyN2I5MGQzNDc2YjI2ZWJlYjdkZTk5YWE3NTFmYzFiMDBhMTcwNTU2OGQ5ZjExZWQ4YzAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiNTgwZTk2NGY4M2E0NzNmNDNkNDQzODQ2Mjk0OWQ2OGI1NjAwZmRhNzg3ZjE2Mzc0NWQwMGRlODljYmYzNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY0Yjc2Y2NkYzI1OWYxZGQyNzMxNGM2NjAxMWZjMDJmYTM4YjJhYzYzMThiYTU0YjU1NTVlNDBlYmJiOWIwZmMifQ"
+          "resource": "repo://src/state/store.ts#L860-L905",
+          "version": "repo-lines-v1:sha256:ed3baf1ae7ec6d8d97d788cd69afd7e1d29bb345ee054fd2d1041150c04f4b76:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYwYzdhYTZlNTYzZWRlNmY3YWU1MzliYjEzNTEyOTA0ZjEzM2ZkNThmMGYxYzNlOTU1YTVhYmQ5MmViZjlhZmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU5M2JiYzA1ODdkYzFmY2ZlZGFiNTgzMGFkMGRkNjg2MTIwMWE1MGEzMGY3MWUzMjhhYWY0NjViMTdmZmM1YTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjExZDRjMGI2N2I2Njc4NjRkZTUwZjljYjliZWZkMzcwNjI2MmI0Yjk0MThlYzhkNTVhYWRmY2Q1ZWM3YTc0MzAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJlYjcyNTc3NGEwNjNmNjY2OWY2YmZhZDBkNTNiM2YyMzBiOGY3MDNjODEyMWQ1YmI0NGYwZDM2ZWM5YjZkZjEifQ"
         }
       ]
     },
@@ -115,8 +111,8 @@
       "statement": "Undo/redo stores whole-project snapshots in past/future HistoryEntry[] (capped at 100, session-only). Each entry is {project, paperId}; consecutive edits to the same field coalesce into one undo step via a module-level lastFieldKey, while add/remove/paper-switch reset it. PDF mark mutations each push their own snapshot, and history is cleared on project load.",
       "evidence": [
         {
-          "resource": "repo://src/state/store.ts",
-          "version": "repo-file-v1:sha256:9a8700164d0130851923506c94814726ae97271f1ca0ccea87998313f7c35d8d"
+          "resource": "repo://src/state/store.ts#L1700-L1820",
+          "version": "repo-lines-v1:sha256:6b6de6c16d8d3872a3faf97c7135ac3cda32575eb431b3bb1838f034871fa1ee:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiMjlmMDllNjYxMDhlZmVlZDIzMzQxN2NlOTFhMmRkYTQzNDQ3MmY4YmNmZDUzMzAwMjNiNTBlODRkNmE1NGVjIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwNWI5MjNjMDAzZDU0OWFiMjhjNjVkNjI2ODFmY2E4OWE2NjViMzNjMmQ2ODBkMDFlZTg1ZGE2NGViN2M2ZGRmIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJmMmQzZjYzYTcxMWY5MTk5Y2NjNTgxNzgxMWNlNmVjOGU1YTQzNjRiM2IyZmZlZTUyNTFkZmRmMzZmODM1YjllIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0YjFhOGJjOTEzYjM2MjIwMmY2ODFlYzBiZTBkY2VlZTgwZTgyODRkOWUxMjg1ZjEyYTZhNjJkYTIyOWM5MDIxIn0"
         }
       ]
     },
@@ -125,8 +121,8 @@
       "statement": "editorStore.ts (src/state/editorStore.ts) is a separate Zustand+immer store holding the project editor draft, working on the raw JSON shape rather than the loaded Project so editing the schema never prunes existing annotation data; on save it writes the JSON and hands it to the main store via loadFromText. It has its own undo/redo history and commits the focused edit before saving.",
       "evidence": [
         {
-          "resource": "repo://src/state/editorStore.ts#L33-L60",
-          "version": "repo-lines-v1:sha256:7cb7ea11729a3755d190c0fa94f1b543c5792becdbe017b78003389d4bbc7fd7:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI4OTJmNjRmYzE3ZDFlZTdlNzIwMDMxNzM5ZTc3ZTAzMGJlNzAwMjYyMzQzYjZhNjZiZGY5MTQyYzY5YjQxNzQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFjMTRiZTg3N2RkODk2MDliMDE0ZjY4YmIwM2I5ZWE2NzcwOWVhZmRhOTg0NTlmYzk3YjQzYTRlZWUzMzQ2OTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdlMDA3MjEwZTA4MjJhM2U2MDYzMTBhODgyZmNjNTViODRiNmNmY2ViNzVhZDRkNTc5ZjNjNjcyYjE1YWIyZGYifQ"
+          "resource": "repo://src/state/editorStore.ts#L1-L60",
+          "version": "repo-lines-v1:sha256:1f266ba6a9b4b8ad2a52efa9187f21d90a1785653102fcfe772d6d10b3d08b9b:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJmMmNlOTJiZDE0OTRhYzFiMzE4YjQxOWNjOTUzYmY0MzFjNzRiNzE5Y2Q3M2Y5Y2U0MDU3OTI4Yjk3ZDZlOTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRhNTM0YWQ5NzYzMTE3YTQwYjhlODM5OThjOTU2M2U4NGVkMDBiZTQ4MzExZGFjMWQ2OWFmNzcxNjJkNmU4OGYifQ"
         }
       ]
     },
@@ -139,8 +135,8 @@
           "version": "repo-lines-v1:sha256:f0890b248ab50b3ec8ff5bd4a14f1c5c8700100ddb12d7cb3b9b7d412d332cc0:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE2MzI1ZDIxMDRhOGU3Yjk5NDhlMjkyYTA3YWUzZDFkZWUzMTlkZjkzNDAxYzEyYWRiZTBlYzAxMzA4YzUxMzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIyOWQ4MzQxMDA0NjVkYWZjZmUzOWUxNDVjNjc2M2M5YTZkMjU5ODAzMWI4OTMxZjQ1MTZjM2E2MjliNTZmNGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU0MDJmOTljMTJmYjM2Yzc2ODRjMWNmNDEyMzIxYWUzZDUwOTI2Nzk5MDVlMjQ5MDQzOWU4NmRjYmRlNWI0N2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM2YTllNDUyMjZjMjc1NWRkMTNkNjZjZTcwYzM2NTBlODNkZjBiZTI4NzM5MmYzMWE1ZDNmZGMzMmMzNzM2MDMifQ"
         },
         {
-          "resource": "repo://src/state/gitStore.ts#L30-L40",
-          "version": "repo-lines-v1:sha256:a2d695b9bd623d511684215a32fdee57dec17fc1499ab29cfadb525047afde35:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg5MDg0Y2M1MGM5MjljOTE1ZmYwMDEzZGRkYjI3ZWQwMTU1NjY5ZmVkNGEyYjg5MGU2MTY1ZDFlNGJkNjA1YWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU4NjZiODk5Njc2ZWFhYmM0YzJhZTc1NDI0MDU1MmYyYjg2NGY4NjdiNDhlZjM1MmZkYzQ0ZjRhZTZlNGQ2MGQifQ"
+          "resource": "repo://src/state/gitStore.ts#L1-L40",
+          "version": "repo-lines-v1:sha256:0b6220707fe6d92b480dbcff706fbdc0ddc9ead29f7259601f96aa6eaf00005d:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkYzZlMzg3OThjYTUyZTdlMDA4NWY5ODY5MTUxYjg1M2QwOGVlY2NjZTM5OWVhZTM3NzhlZDY4NmNjYjM5NjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMzYTA1ZjQyMWYwZTg2ZTliODMzNDIwM2ZjN2ZlZDA5MTg4YTk4YWI0YWU1OTkwZTFmNzU1OTdjY2Q2ZWRmZmMifQ"
         }
       ]
     },
@@ -150,7 +146,7 @@
       "evidence": [
         {
           "resource": "repo://src/state/aiStore.ts#L1-L21",
-          "version": "repo-lines-v1:sha256:3535dd0c98390e16a01af5c2b57fbe448228e6f3fee58429083339b77920f53b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYxNDk5MWVjZmU0NGJjNjhjOTVhN2ZjMzBlY2ZmMGQyNmRkZWY3N2IyNDczMTFjNTljYjRhMjg5YWE1MTA1NDgifQ"
+          "version": "repo-lines-v1:sha256:d226942a3229ee0e6e3e758abce7947c0ef0bc2f451f91d5bf30727707558fad:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYxNDk5MWVjZmU0NGJjNjhjOTVhN2ZjMzBlY2ZmMGQyNmRkZWY3N2IyNDczMTFjNTljYjRhMjg5YWE1MTA1NDgifQ"
         }
       ]
     },
@@ -211,8 +207,8 @@
       "statement": "On disk, a project stores only schema and paper metadata in project.json; every reviewer's and the consolidated annotation answers live in a sibling annotations/<paperId>/ folder, one file per reviewer plus a consolidated file. The split was introduced to avoid git-merge conflicts between reviewers editing the same all-in-one file; the model layer keeps the logical whole-project shape and ElectronAdapter.saveProject does the split, while the read side reassembles a split project back into that logical text before handing it to the renderer.",
       "evidence": [
         {
-          "resource": "repo://src/platform/electron.ts#L232-L240",
-          "version": "repo-lines-v1:sha256:ac040c426f6f08d301fcc266145711e1d5d3357d42254ea5cab9eacd21752771:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjRjNmY2OWJlZDI1ZDFhODM1MjY1NTlhNDQ3NWM5ZmU3NDM2MWQwYmNlODdhYzJkYjI3NWQ2MzQ5ZjVlOTNmMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGE5YTVlNTQ0ZGMwZDk5OGVmYmQ4ZDgyMjhiYWFkMjU0M2E3YzgyN2M5MzI3ZDRiMmZlMGJiZTc1YzBjMTZlOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTdkODYzMmU1NGU5Mjk4YWJiOTU4NzI3ZTJkNTE0MDhhYmFmMTM2NjAzNTM3OTEwMTQwYWJmNjViMzBhYjYxMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDg1MjU4NGQwNzNhNGJlZGIwOWQyYzJkMmVhMDYzODhkNjllYzYyOTI4MDAyMWFlM2Y4NDc5MDhjYzUyYzFlYyJ9"
+          "resource": "repo://src/platform/electron.ts#L225-L232",
+          "version": "repo-lines-v1:sha256:7df94d3d29c3ae0e460c7cc91d1a17e7700331bf43c4d0a2aab1bade017261a2:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjRjNmY2OWJlZDI1ZDFhODM1MjY1NTlhNDQ3NWM5ZmU3NDM2MWQwYmNlODdhYzJkYjI3NWQ2MzQ5ZjVlOTNmMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTdkODYzMmU1NGU5Mjk4YWJiOTU4NzI3ZTJkNTE0MDhhYmFmMTM2NjAzNTM3OTEwMTQwYWJmNjViMzBhYjYxMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWMwZDcxNzFmNjc3MWYyMDY5NjRlMjBiMTdiMGIxOWFjMjM2Y2UxMDU0ZTJhNzBhZTc1MDY2Yzg1YzI2OWJiMiJ9"
         }
       ]
     },
@@ -221,8 +217,8 @@
       "statement": "currentTree(project, currentReviewer, paper, create?) is the single routing decision every mutating action and reader goes through: single-reviewer → paper.annotations; Consolidation → paper.annotations (the tree that ships); a numbered reviewer → paper.reviews[N]; nobody picked on a multi-reviewer project → null. Mutating actions pass create=true (safe inside immer set) while read-only computations pass nothing.",
       "evidence": [
         {
-          "resource": "repo://src/state/store.ts",
-          "version": "repo-file-v1:sha256:9a8700164d0130851923506c94814726ae97271f1ca0ccea87998313f7c35d8d"
+          "resource": "repo://src/state/store.ts#L2830-L2860",
+          "version": "repo-lines-v1:sha256:f63e5f5c1f923d9ee490efcac43e988c17bc7c09704d99930305590b3a73e733:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQyYWQxYTE5ZmFiYzUxNTljY2U4ZjBmZmJmZjMwNjM0NjFiMTRlMTY4ZWY1NDM1NDJmYzk4MmRjOGM2ZTM3NTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBkOTAxZTdlMDM1ZTk2NDUxNjJhMWQ4MGZiZDE0OWUzYzMxYjc5ZmE4YTVmYjg2YTQ1NGM3MzVjZGJkNDRhNGYifQ"
         }
       ]
     },
@@ -242,7 +238,7 @@
     }
   ],
   "verification": {
-    "by": "openwiki/0.5.0",
-    "at": "2026-09-01T19:42:14.192Z"
+    "by": "openwiki/0.4.0",
+    "at": "2026-09-21T20:12:55.536Z"
   }
 }

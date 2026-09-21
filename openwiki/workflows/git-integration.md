@@ -3,9 +3,6 @@ type: workflow
 title: Git Integration
 description: The git workflow end to end — clone-to-import, the commit/pull/push/branch-switch panel, merge-branch, the field-level three-way merge at the heart of conflict resolution, the changes parser, the security gates, concurrent revision reads, the gitStore state machine, and the Electron main-process IPC plumbing that owns the only path to git.
 tags: [git, merge, three-way-merge, electron, ipc, security, state-machine, commit, pull, push, branch-switch, concurrent-reads]
-verified:
-  - by: openwiki/0.4.0
-    at: 2026-08-26T09:23:05.972Z
 sources:
   - id: openwiki-source-8d6b6eb5e58f91e157e37bde
     resource: repo://electron/main.ts
@@ -37,11 +34,12 @@ sources:
     resource: repo://src/git/types.ts
   - id: openwiki-source-45eebe3ca36ab988bd9323a9
     resource: repo://src/git/url.ts
-  - id: openwiki-source-769f5f5c1e3631cf9ab273bc
-    resource: repo://src/platform/electron.ts
   - id: openwiki-source-abd876b19e1ac7ba524a3f34
     resource: repo://src/state/gitStore.ts
 generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
+verified:
+  - by: openwiki/0.4.0
+    at: 2026-09-21T20:12:55.536Z
 ---
 
 # Git Integration

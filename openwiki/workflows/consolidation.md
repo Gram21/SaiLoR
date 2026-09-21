@@ -3,9 +3,6 @@ type: workflow
 title: Multi-Reviewer Consolidation
 description: How multiple reviewers' independent annotation trees are aligned by optimal entry matching, compared field by field, and reconciled into a single consolidated tree — covering the alignment pipeline, agreement/disagreement detection, inter-rater statistics, batch unanimous adoption, and the consolidation UI.
 tags: [consolidation, alignment, agreement, disagreement, inter-rater, kappa, review]
-verified:
-  - by: openwiki/0.4.0
-    at: 2026-08-26T09:23:05.972Z
 sources:
   - id: openwiki-source-9c47bc2d5a88a325778add4b
     resource: repo://src/components/AgreementDialog.tsx
@@ -46,6 +43,9 @@ sources:
   - id: openwiki-source-89409d7a9c0280067e058c1a
     resource: repo://src/state/store.ts
 generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
+verified:
+  - by: openwiki/0.4.0
+    at: 2026-09-21T20:12:55.536Z
 ---
 
 # Multi-Reviewer Consolidation

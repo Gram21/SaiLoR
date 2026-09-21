@@ -4,8 +4,8 @@ title: SaiLoR Developer Documentation
 description: Home page for SaiLoR developer documentation. SaiLoR is an Electron desktop tool for conducting Systematic Literature Reviews (SLRs), storing the annotation schema and paper metadata in project.json and each reviewer's/consolidation's annotation data in a sibling annotations/ folder. Links to quickstart, architecture, data model, and operations pages.
 tags: [home, overview, documentation]
 verified:
-  - by: openwiki/0.5.0
-    at: 2026-09-01T19:42:14.192Z
+  - by: openwiki/0.4.0
+    at: 2026-09-21T20:12:55.536Z
 sources:
   - id: openwiki-source-6d3ac2bdfb0e76882a670989
     resource: repo://.github/workflows/openwiki.yml
@@ -23,7 +23,7 @@ sources:
     resource: repo://src/platform/index.ts
   - id: openwiki-source-9b49ad2f97827d5ed9890232
     resource: repo://src/platform/unsupported.ts
-generated: { by: "openwiki/0.5.0", at: "2026-09-01T19:42:14.192Z" }
+generated: {by: "openwiki/0.5.0", at: "2026-09-01T19:42:14.192Z"}
 ---
 
 # SaiLoR — Developer Documentation

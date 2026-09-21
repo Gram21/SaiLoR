@@ -3,9 +3,6 @@ type: architecture
 title: SaiLoR Architecture
 description: Deep dive into SaiLoR's architecture — why the web SPA runtime was discontinued (Electron-desktop-only now), the split project.json + annotations/ on-disk storage format, the PlatformAdapter seam, the Zustand store with undo/redo (incl. PDF marks), reading-position persistence, PDF internal-link hover previews, the component tree, PDF marks and field-linking, multi-reviewer consolidation with stored alignment, annotation state/finished flags (Consolidation included), git integration (concurrent reads), the Electron main process, and build wiring.
 tags: [architecture, platform-adapter, state-management, electron, git, electron-only, split-storage]
-verified:
-  - by: openwiki/0.5.0
-    at: 2026-09-01T19:42:14.192Z
 sources:
   - id: openwiki-source-54631e6ebf1d3b815c4a5eed
     resource: repo://src/App.tsx
@@ -38,6 +35,9 @@ sources:
   - id: openwiki-source-5e1b077422a94ae165e88e4e
     resource: repo://vite.config.ts
 generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
+verified:
+  - by: openwiki/0.4.0
+    at: 2026-09-21T20:12:55.536Z
 ---
 
 # Architecture
