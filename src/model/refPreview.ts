@@ -90,15 +90,17 @@ export function detectEntryBox(
     else lines.push({ y: it.y, items: [it] })
   }
 
-  // 2. Anchor line: nearest to destY within [-5, +30], with text at or right
-  // of the destination's column (a small left tolerance, so a "[1]" starting
-  // a few units left of an imprecise destX still matches).
+  // 2. Anchor line: nearest to destY within [-5, +30], with text at the
+  // destination's x (a small left tolerance, so a "[1]" starting a few units
+  // left of an imprecise destX still matches). Text only further right — a
+  // label inside a figure the destination sits above — is not an entry.
   const colLeft = destX !== null ? destX - 15 : -Infinity
+  const colStart = destX !== null ? destX + COLUMN_GAP : Infinity
   let anchor: Line | null = null
   let bestDist = Infinity
   for (const line of lines) {
     if (line.y < destY - 5 || line.y > destY + 30) continue
-    if (!line.items.some((it) => it.x + it.w > colLeft)) continue
+    if (!line.items.some((it) => it.x + it.w > colLeft && it.x <= colStart)) continue
     const d = Math.abs(line.y - destY)
     if (d < bestDist) {
       bestDist = d
