@@ -291,6 +291,8 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
   // Only marks both initially-linked and still linked now — unlinking still drops
   // immediately; only newly-linked marks are held back by `initiallyLinkedIds`.
   const topList = marks.filter((m) => initiallyLinkedIds.has(m.id) && isLinkedNow(m))
+  // Header count reflects the live state, unlike `topList` which hides links made this session.
+  const linkedCount = marks.filter(isLinkedNow).length
   // Everything not initially linked, recently-added first then page order (see
   // `orderMarksForLinking`) — fixed regardless of link state, so linking/unlinking
   // during this session never reshuffles the picker.
@@ -330,75 +332,85 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
 
   return (
     <div className="field-link-popover" style={placement} onClick={(e) => e.stopPropagation()}>
-      {topList.length === 0 ? (
-        <p className="field-link-empty">No links yet.</p>
-      ) : (
-        <ul className="field-link-list">
-          {topList.map((m) => (
-            <li key={m.id}>
-              <span className="pdf-color-swatch" style={{ background: m.color }} aria-hidden="true" />
-              {snippetOf(m)}
-              <button
-                type="button"
-                className="field-link-action field-link-unlink"
-                title="Unlink"
-                onClick={() => unlinkMark(m.id, canonical)}
-              >
-                ×
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <button type="button" className="field-link-toggle" onClick={() => setPickerOpen((v) => !v)}>
-        {pickerOpen ? 'Cancel' : '+ Link a highlight or note'}
-      </button>
-      {pickerOpen && (
-        <div className="field-link-picker">
-          <ul className="field-link-list field-link-picker-list">
-            {filteredCandidates.length === 0 ? (
-              <li className="field-link-empty">
-                {candidates.length === 0 ? 'No highlights or notes on this paper yet.' : 'No matches.'}
+      <div className="modal-head field-link-head">
+        <strong>{linkedCount === 1 ? '1 link' : `${linkedCount} links`}</strong>
+        <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
+          ×
+        </button>
+      </div>
+      <div className="field-link-body">
+        {topList.length === 0 ? (
+          <p className="field-link-empty">No links yet.</p>
+        ) : (
+          <ul className="field-link-list">
+            {topList.map((m) => (
+              <li key={m.id}>
+                <span className="pdf-color-swatch" style={{ background: m.color }} aria-hidden="true" />
+                {snippetOf(m)}
+                <button
+                  type="button"
+                  className="field-link-action field-link-unlink"
+                  title="Unlink"
+                  onClick={() => unlinkMark(m.id, canonical)}
+                >
+                  ×
+                </button>
               </li>
-            ) : (
-              filteredCandidates.map((m, i) => {
-                const linked = isLinkedNow(m)
-                return (
-                  <li key={m.id} className={i === gapBeforeIndex ? 'field-link-gap' : undefined}>
-                    <span className="pdf-color-swatch" style={{ background: m.color }} aria-hidden="true" />
-                    {snippetOf(m)}
-                    {linked ? (
-                      <button
-                        type="button"
-                        className="field-link-action field-link-unlink"
-                        title="Unlink"
-                        onClick={() => unlinkMark(m.id, canonical)}
-                      >
-                        ×
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="field-link-action"
-                        onClick={() => linkMark(m.id, path, name, index)}
-                      >
-                        Link
-                      </button>
-                    )}
-                  </li>
-                )
-              })
-            )}
+            ))}
           </ul>
-          <input
-            type="text"
-            className="field-link-search"
-            placeholder="Search highlights/notes…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-      )}
+        )}
+        <button type="button" className="field-link-toggle" onClick={() => setPickerOpen((v) => !v)}>
+          {pickerOpen ? 'Cancel' : '+ Link a highlight or note'}
+        </button>
+        {pickerOpen && (
+          <div className="field-link-picker">
+            <ul className="field-link-list field-link-picker-list">
+              {filteredCandidates.length === 0 ? (
+                <li className="field-link-empty">
+                  {candidates.length === 0 ? 'No highlights or notes on this paper yet.' : 'No matches.'}
+                </li>
+              ) : (
+                filteredCandidates.map((m, i) => {
+                  const linked = isLinkedNow(m)
+                  return (
+                    <li key={m.id} className={i === gapBeforeIndex ? 'field-link-gap' : undefined}>
+                      <span className="pdf-color-swatch" style={{ background: m.color }} aria-hidden="true" />
+                      {snippetOf(m)}
+                      {linked ? (
+                        <button
+                          type="button"
+                          className="field-link-action field-link-unlink"
+                          title="Unlink"
+                          onClick={() => unlinkMark(m.id, canonical)}
+                        >
+                          ×
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="field-link-action"
+                          onClick={() => linkMark(m.id, path, name, index)}
+                        >
+                          Link
+                        </button>
+                      )}
+                    </li>
+                  )
+                })
+              )}
+            </ul>
+            <input
+              type="text"
+              className="field-link-search"
+              // The picker opens to search, so put the caret there right away.
+              autoFocus
+              placeholder="Search highlights/notes…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        )}
+      </div>
       <button type="button" className="primary" onClick={onClose}>
         Done
       </button>
