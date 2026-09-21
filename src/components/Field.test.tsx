@@ -88,3 +88,20 @@ describe('Field: grab value from PDF selection', () => {
     expect(st().project!.papers[0].annotations['Pub Year']?.[0].value).toBe(2021)
   })
 })
+
+describe('Field: link popover header', () => {
+  it('shows the live link count and a Close button that dismisses without unlinking', async () => {
+    st().loadFromText(projectJson(), null, 'test.json')
+    st().selectPaper('p1')
+    render(<AnnotationPanel />)
+
+    await userEvent.click(screen.getAllByTitle('Link a PDF highlight or note as evidence')[0])
+    expect(screen.getByText('0 links')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: '+ Link a highlight or note' }))
+    expect(screen.getByPlaceholderText('Search highlights/notes…')).toHaveFocus()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+    expect(screen.queryByText('0 links')).not.toBeInTheDocument()
+  })
+})

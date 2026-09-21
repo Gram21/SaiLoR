@@ -264,6 +264,8 @@ function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
               <strong>Read the PDF</strong> in the middle pane; its text is selectable. Use{' '}
               <strong>{MOD}+F</strong> to search within it. After following an internal link (e.g. a
               reference), the <em>↩ / ↪</em> buttons jump back to where you were and forward again.
+              Hovering an internal link or a numbered citation such as <em>[3]</em> previews its
+              target, also in PDFs whose citations are not clickable.
               The <em>▯</em> button switches to a single-page view, where the mouse wheel flips pages.
             </li>
             <li>
