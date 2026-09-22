@@ -99,6 +99,43 @@ describe('PapersEditor: duplicate id flagging (REQ-EDT-20)', () => {
   })
 })
 
+describe('PapersEditor: unsafe id flagging', () => {
+  it('flags an id that is unsafe as a folder name, live as the reviewer types', async () => {
+    const paper = makePaperFromPdf('a.pdf', 'a.pdf', undefined, new Set())
+    paper.id = 'one'
+    useEditorStore.setState({ papers: [paper] })
+    render(<PapersEditor />)
+
+    const idInput = screen.getByDisplayValue('one')
+    expect(idInput.getAttribute('aria-invalid')).toBe('false')
+
+    // ':' and '?' are legal on macOS/Linux but unrepresentable on Windows.
+    await userEvent.clear(idInput)
+    await userEvent.type(idInput, 'Smith 2020: A Study?')
+
+    expect(idInput.getAttribute('aria-invalid')).toBe('true')
+    expect(screen.getByText('— invalid character')).toBeInTheDocument()
+  })
+
+  it('normalises a manually typed id to NFC once it is committed on blur', async () => {
+    const paper = makePaperFromPdf('a.pdf', 'a.pdf', undefined, new Set())
+    paper.id = 'one'
+    useEditorStore.setState({ papers: [paper] })
+    render(<PapersEditor />)
+
+    const idInput = screen.getByDisplayValue('one')
+    // "Müller" spelled with a combining diaeresis (NFD) — the same rendered
+    // text as the precomposed (NFC) form, but different code points, which
+    // would name two different directories depending which platform typed it.
+    const nfd = 'Müller'
+    await userEvent.clear(idInput)
+    await userEvent.type(idInput, nfd)
+    fireEvent.blur(idInput)
+
+    await waitFor(() => expect(useEditorStore.getState().papers[0].id).toBe(nfd.normalize('NFC')))
+  })
+})
+
 describe('PapersEditor: confirm removal of annotated papers (REQ-EDT-50)', () => {
   it('asks before removing a paper with recorded annotations, and keeps it on Cancel', async () => {
     const paper = makePaperFromPdf('a.pdf', 'a.pdf', undefined, new Set())

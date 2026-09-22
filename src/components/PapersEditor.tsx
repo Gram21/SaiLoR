@@ -1,7 +1,44 @@
 import { useMemo, useRef, useState, type DragEvent } from 'react'
 import { useEditorStore, type EditorPaper } from '../state/editorStore'
 import { getPlatform } from '../platform'
+import { paperIdProblem, type PaperIdIssue } from '../model/paperId'
 import '../styles/papers-editor.css'
+
+/** A short label for `idProblem.reason`, for the same spot the duplicate flag
+ *  uses — `idProblem.detail` (the full explanation) goes in the `title` instead. */
+function idProblemLabel(reason: PaperIdIssue['reason']): string {
+  switch (reason) {
+    case 'illegal-char':
+    case 'control-char':
+      return 'invalid character'
+    case 'reserved-name':
+      return 'reserved name'
+    case 'trailing-dot-or-space':
+      return 'trailing space/dot'
+    case 'dot':
+    case 'empty':
+      return 'invalid id'
+  }
+}
+
+/**
+ * Ids that are unsafe as a directory name — mirrors `validateDraft`'s
+ * (`src/state/editorStore.ts`) own check exactly, via the same
+ * `paperIdProblem` (`src/model/paperId.ts`). A row flagged here is guaranteed
+ * to be one `validateDraft` would also reject at save time — this only
+ * exists to surface it earlier, live, as the reviewer types.
+ */
+export function unsafePaperIds(papers: { id: string }[]): Map<string, PaperIdIssue> {
+  const problems = new Map<string, PaperIdIssue>()
+  for (const p of papers) {
+    const id = p.id.trim()
+    // Empty ids already get their own "missing id" error; not this one.
+    if (!id) continue
+    const problem = paperIdProblem(id)
+    if (problem) problems.set(id, problem)
+  }
+  return problems
+}
 
 /**
  * Ids sharing a trimmed value with another paper's — mirrors `validateDraft`'s
@@ -52,6 +89,7 @@ export function PapersEditor() {
   // Live here so a reviewer sees an id collision the moment they cause it,
   // not only after clicking Save.
   const duplicateIds = useMemo(() => duplicatePaperIds(papers), [papers])
+  const idProblems = useMemo(() => unsafePaperIds(papers), [papers])
 
   const clearDrag = () => {
     setDragUid(null)
@@ -222,6 +260,7 @@ export function PapersEditor() {
               <PaperFields
                 paper={paper}
                 duplicateId={duplicateIds.has(paper.id.trim())}
+                idProblem={idProblems.get(paper.id.trim())}
                 onRemove={() => confirmRemove(paper)}
                 onInteract={() => confirmAdded(paper.uid)}
                 onIdChange={(from) => confirmIdChange(paper, from)}
@@ -254,6 +293,10 @@ interface PaperFieldsProps {
   /** This paper's id collides with another paper's — see `duplicateIds` in
    *  `PapersEditor`. */
   duplicateId: boolean
+  /** This paper's id is unsafe as a directory name — see `idProblems` in
+   *  `PapersEditor`. Checked separately from `duplicateId`: an id can be
+   *  unique and still unsafe (e.g. it contains a `?`). */
+  idProblem: PaperIdIssue | undefined
   onRemove: () => void
   /** Asks whether an id may change from `from`; false puts the old one back. */
   onIdChange: (from: string) => boolean
@@ -262,7 +305,7 @@ interface PaperFieldsProps {
 }
 
 /** The editable fields of one paper. */
-function PaperFields({ paper, duplicateId, onRemove, onInteract, onIdChange }: PaperFieldsProps) {
+function PaperFields({ paper, duplicateId, idProblem, onRemove, onInteract, onIdChange }: PaperFieldsProps) {
   // Confirmed on blur, not per keystroke — the same "ask once the new name is
   // settled" shape `SchemaTreeEditor`'s rename guard uses.
   const idOnFocus = useRef<string | null>(null)
@@ -298,13 +341,22 @@ function PaperFields({ paper, duplicateId, onRemove, onInteract, onIdChange }: P
           <span className="papers-label">
             id <span className="papers-note">unique</span>
             {duplicateId && <span className="papers-field-warning"> — duplicate</span>}
+            {!duplicateId && idProblem && (
+              <span className="papers-field-warning"> — {idProblemLabel(idProblem.reason)}</span>
+            )}
           </span>
           <input
             type="text"
-            className={`papers-input mono small${duplicateId ? ' papers-input-invalid' : ''}`}
+            className={`papers-input mono small${duplicateId || idProblem ? ' papers-input-invalid' : ''}`}
             value={paper.id}
-            aria-invalid={duplicateId}
-            title={duplicateId ? 'Another paper already uses this id — ids must be unique.' : undefined}
+            aria-invalid={duplicateId || Boolean(idProblem)}
+            title={
+              duplicateId
+                ? 'Another paper already uses this id — ids must be unique.'
+                : idProblem
+                  ? `This id can't be used as a folder name — ${idProblem.detail}.`
+                  : undefined
+            }
             onFocus={() => {
               idOnFocus.current = paper.id
               onInteract()
@@ -313,7 +365,17 @@ function PaperFields({ paper, duplicateId, onRemove, onInteract, onIdChange }: P
               const from = idOnFocus.current
               idOnFocus.current = null
               if (from === null || from.trim() === paper.id.trim()) return
-              if (!onIdChange(from)) patch({ id: from })
+              if (!onIdChange(from)) {
+                patch({ id: from })
+                return
+              }
+              // Normalise on commit, not per keystroke: a manually typed accented
+              // id otherwise keeps whatever Unicode normalisation the OS handed
+              // back (macOS's filesystem hands back NFD, everywhere else NFC),
+              // so the same characters would name two different directories
+              // depending which platform the id was typed on.
+              const normalized = paper.id.normalize('NFC')
+              if (normalized !== paper.id) patch({ id: normalized })
             }}
             onChange={(e) => patch({ id: e.target.value })}
           />

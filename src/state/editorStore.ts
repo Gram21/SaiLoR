@@ -27,6 +27,7 @@ import {
   type ProjectProtocol,
 } from '../model/project'
 import { classifyImport, type DupRecord, type DupVerdict } from '../model/duplicates'
+import { paperIdProblem, paperIdsCollide } from '../model/paperId'
 import { parseYear } from '../model/year'
 import { getPlatform, type OpenedProject, type PickedPdf, type ProjectLocation, type SaveHandle } from '../platform'
 import { DEFAULT_SCREENING_REASONS, screeningSchemaDefs } from '../screening/schema'
@@ -649,15 +650,30 @@ export function validateDraft(state: {
   }
 
   state.papers.forEach((p, i) => {
-    if (!p.id.trim()) errors.push(`Paper ${i + 1}: missing id.`)
+    const id = p.id.trim()
+    if (!id) {
+      errors.push(`Paper ${i + 1}: missing id.`)
+    } else {
+      // The id becomes a directory name verbatim (`splitProjectFiles` in
+      // `src/model/project.ts`) — reject anything that would break, or
+      // silently mismatch, on some teammate's checkout.
+      const problem = paperIdProblem(id)
+      if (problem) errors.push(`Paper ${i + 1}: id "${id}" cannot be a folder name — ${problem.detail}.`)
+    }
     if (!p.title.trim()) errors.push(`Paper ${i + 1}: missing title.`)
     // Screening runs on title + abstract from a reference-manager export with
     // no PDFs at all, so a PDF is only required outside of screening.
     if (!p.pdf.trim() && !screening) errors.push(`Paper ${i + 1} has no PDF attached.`)
   })
   const ids = state.papers.map((p) => p.id.trim()).filter(Boolean)
-  const dupes = ids.filter((id, i) => ids.indexOf(id) !== i)
-  if (dupes.length > 0) errors.push(`Duplicate paper id(s): ${[...new Set(dupes)].join(', ')}.`)
+  // Not just an exact string match: a case-only or Unicode-normalisation-only
+  // difference collapses to the same directory on a case-insensitive
+  // checkout, or across macOS's NFD-normalising filesystem — see `paperIdsCollide`.
+  const collidingIds = new Set<string>()
+  ids.forEach((id, i) => {
+    if (ids.some((other, j) => j !== i && paperIdsCollide(id, other))) collidingIds.add(id)
+  })
+  if (collidingIds.size > 0) errors.push(`Duplicate paper id(s): ${[...collidingIds].join(', ')}.`)
 
   // Only run the structural validators once the basics hold, so their messages
   // don't pile on top of the friendlier ones above.
