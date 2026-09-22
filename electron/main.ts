@@ -2243,6 +2243,8 @@ ipcMain.handle(
   ) => {
     assertRelPath(relPath)
     otherPaths.forEach(assertRelPath)
+    const detached = await detachedHeadRefusal(root)
+    if (detached) return detached
     const fullPath = path.join(root, relPath)
     // Reported as a failed run rather than left to reject the IPC call:
     // `runCommit` in `gitStore.ts` only recovers from an `{ok: false}` result,
@@ -2370,6 +2372,36 @@ ipcMain.handle('git:discardFile', async (_e, root: string, relPath: string, proj
   }
 })
 
+/**
+ * Refuse to commit when HEAD is not on a branch.
+ *
+ * A commit made on a detached HEAD belongs to no branch: it succeeds, the
+ * panel says "Committed.", and the moment the reviewer checks out a branch
+ * again the work vanishes from the tree and from every list — recoverable only
+ * from the reflog, by somebody who knows it exists. The branch-switch flow
+ * already refuses to run from a detached HEAD for the same reason; the commit
+ * path never checked.
+ *
+ * Reachable only by checking out a commit or a remote-tracking ref outside the
+ * app (SaiLoR's own switcher offers local branches only), which is exactly the
+ * sort of thing somebody does once, in a terminal, and then forgets.
+ */
+async function detachedHeadRefusal(root: string): Promise<GitRun | null> {
+  const branch = await runGit(['symbolic-ref', '--short', '-q', 'HEAD'], root)
+  if (branch.ok && gitOut(branch)) return null
+  // An unborn HEAD — a repository with no commits yet — is not detached:
+  // `symbolic-ref` still resolves, so this only fires on a real detachment.
+  return {
+    ok: false,
+    code: null,
+    stdout: '',
+    stderr:
+      'HEAD is not on a branch (detached HEAD), so a commit made now would belong to no branch ' +
+      'and would disappear from view the next time you check one out.\n\n' +
+      'Check out a branch first — `git checkout <branch>` — and commit again.',
+  }
+}
+
 ipcMain.handle(
   'git:commit',
   async (_e, root: string, paths: string[], message: string, amend: boolean) => {
@@ -2377,6 +2409,8 @@ ipcMain.handle(
     if (paths.length === 0) {
       return { ok: false, code: null, stdout: '', stderr: 'Nothing selected to commit.' }
     }
+    const detached = await detachedHeadRefusal(root)
+    if (detached) return detached
     // `add` then a pathspec-limited commit: `add` handles an untracked or
     // deleted path uniformly, and the pathspec means the user's own separately
     // staged work elsewhere in the repo is neither committed nor disturbed.
