@@ -11,6 +11,7 @@ import {
   hasAnnotations,
   normalizeTree,
   pruneTree,
+  orphanedNodes,
   type AnnotationValueTree,
 } from './annotations'
 import { screeningSchemaDefs } from '../screening/schema'
@@ -710,7 +711,17 @@ export function serializeProject(project: Project): string {
 /** Empty normalized trees exist in memory to bind the form to the schema, but
  * do not belong in a project file until a reviewer has recorded an answer. */
 function serializedTree(schema: ResolvedDef[], tree: AnnotationValueTree): AnnotationValueTree {
-  return hasAnnotations(schema, tree) ? pruneTree(schema, tree) : {}
+  // Orphans survive even when nothing in the current schema is answered —
+  // otherwise removing the one field a reviewer had filled in would still be
+  // what deletes their work. See `orphanedNodes`.
+  return hasAnnotations(schema, tree) ? pruneTree(schema, tree) : orphanedNodes(schema, tree)
+}
+
+/** Does this tree hold anything worth a file on disk — a real answer, or
+ *  answers orphaned by a schema edit? `hasAnnotations` alone would drop the
+ *  file, and with it the orphans. */
+function hasContent(schema: ResolvedDef[], tree: AnnotationValueTree): boolean {
+  return hasAnnotations(schema, tree) || Object.keys(orphanedNodes(schema, tree)).length > 0
 }
 
 /**
@@ -773,7 +784,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     if (reviewerSlots.size > 0) {
       for (const k of [...reviewerSlots].sort((a, b) => a - b)) {
         const tree = p.reviews[String(k)]
-        const has = tree !== undefined && hasAnnotations(project.schema, tree)
+        const has = tree !== undefined && hasContent(project.schema, tree)
         // Rides in the same per-reviewer file as that reviewer's tree, so it
         // never collides with another reviewer's save; it can also keep the
         // file alive alone — ticking the box then clearing a field still said
@@ -802,7 +813,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     }
 
     const consolidated: Record<string, unknown> = {}
-    const hasConsolidatedAnnotations = hasAnnotations(project.schema, p.annotations)
+    const hasConsolidatedAnnotations = hasContent(project.schema, p.annotations)
     if (hasConsolidatedAnnotations) consolidated.annotations = serializedTree(project.schema, p.annotations)
     if (p.aiUsage.length > 0) consolidated.aiUsage = p.aiUsage
     if (p.equal.length > 0) consolidated.equal = p.equal

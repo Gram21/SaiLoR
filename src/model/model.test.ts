@@ -1050,10 +1050,10 @@ describe('normalize', () => {
     expect(tree['Relevant'][0].value).toBe(false)
   })
 
-  it('drops keys not in the schema', () => {
+  it('keeps keys the schema no longer has, so a removed field does not destroy answers', () => {
     const resolved = resolveSchema(sampleSchema)
     const tree = normalizeTree(resolved, { Bogus: [{ value: 'x' }] } as never)
-    expect(tree['Bogus']).toBeUndefined()
+    expect(tree['Bogus']).toEqual([{ value: 'x' }])
   })
 })
 

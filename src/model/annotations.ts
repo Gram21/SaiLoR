@@ -58,9 +58,69 @@ export function initTree(defs: ResolvedDef[]): AnnotationValueTree {
 }
 
 /**
- * Reconcile a loaded (possibly partial) value tree against the schema: drop
- * unknown keys, coerce each instance to the def's shape, and pad/clamp to
- * min (at least 1) / max.
+ * The parts of `tree` the current schema has no def for — answers left behind
+ * when a field was removed or renamed.
+ *
+ * They are carried verbatim through load and save rather than dropped.
+ * Renaming a field is one person's edit to `project.json`, but the answers
+ * under the old name may be several other reviewers' work that has not been
+ * pulled yet; pruning them on the next load made that one edit destroy data
+ * nobody could get back. Kept, the rename is reversible — restore the name, or
+ * let git bring the newer schema in, and the answers are still there.
+ *
+ * This level only: a def that merely lost some of its children keeps them
+ * through `normalizeTree`'s own recursion.
+ */
+export function orphanedNodes(
+  defs: ResolvedDef[],
+  tree: AnnotationValueTree | undefined,
+): AnnotationValueTree {
+  if (!tree) return {}
+  const known = new Set(defs.map((d) => d.name))
+  const out: AnnotationValueTree = {}
+  for (const [name, value] of Object.entries(tree)) {
+    // Only nodes somebody actually answered. `normalizeTree` materializes an
+    // empty instance for every def, so a field the schema had a moment ago
+    // leaves a placeholder behind — carrying those would resurrect files full
+    // of nothing and make every schema edit look like a data change.
+    if (!known.has(name) && Array.isArray(value) && value.some(instanceHoldsAnswer)) out[name] = value
+  }
+  return out
+}
+
+/**
+ * Is this a real recorded answer? An unticked checkbox is not evidence of
+ * anything (every boolean reads `false` whether or not anyone looked), and a
+ * blank or whitespace-only string is not an answer either.
+ */
+export function isRecordedAnswer(value: unknown): boolean {
+  if (value === null || value === undefined) return false
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'string') return value.trim() !== ''
+  if (typeof value === 'number') return Number.isFinite(value)
+  return false
+}
+
+/** Does this instance, or anything nested beneath it, hold a recorded answer?
+ *  Def-free on purpose — it also has to judge data the schema no longer
+ *  describes (see `orphanedNodes`). */
+export function instanceHoldsAnswer(inst: unknown): boolean {
+  if (!inst || typeof inst !== 'object') return false
+  const node = inst as InstanceNode
+  if (isRecordedAnswer(node.value)) return true
+  const children = node.children
+  if (!children || typeof children !== 'object' || Array.isArray(children)) return false
+  for (const list of Object.values(children)) {
+    if (Array.isArray(list) && list.some(instanceHoldsAnswer)) return true
+  }
+  return false
+}
+
+/**
+ * Reconcile a loaded (possibly partial) value tree against the schema: coerce
+ * each instance to the def's shape, pad/clamp to min (at least 1) / max, and
+ * carry anything the schema no longer knows about through untouched (see
+ * `orphanedNodes`).
  */
 export function normalizeTree(
   defs: ResolvedDef[],
@@ -83,7 +143,7 @@ export function normalizeTree(
     }
     tree[def.name] = instances
   }
-  return tree
+  return Object.assign(tree, orphanedNodes(defs, existing))
 }
 
 function normalizeInstance(def: ResolvedDef, inst: InstanceNode | undefined): InstanceNode {
@@ -136,7 +196,7 @@ export function pruneTree(
     while (last >= 0 && isEmptyInstance(def, pruned[last])) last--
     out[def.name] = pruned.slice(0, Math.max(Math.max(def.min, 1), last + 1))
   }
-  return out
+  return Object.assign(out, orphanedNodes(defs, tree))
 }
 
 function pruneInstance(def: ResolvedDef, inst: InstanceNode): InstanceNode {

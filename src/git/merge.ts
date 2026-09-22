@@ -2,6 +2,7 @@ import { produce } from 'immer'
 import { isField, type FieldType, type ResolvedDef } from '../model/schema'
 import {
   emptyValue,
+  orphanedNodes,
   pruneTree,
   type AnnotationValueTree,
   type FieldValue,
@@ -324,6 +325,12 @@ function makeTreeMerger(
 
       out[def.name] = def.max !== null ? instances.slice(0, def.max) : instances
     }
+    // Answers under names this schema no longer has (see `orphanedNodes`):
+    // carried through rather than dropped, or a merge would be what makes a
+    // field removal permanent — exactly what load/save now refuses to do.
+    // Ours wins where both sides have one, the same side an unresolved
+    // `merge3` conflict keeps.
+    Object.assign(out, orphanedNodes(defs, theirs), orphanedNodes(defs, ours))
     return out
   }
   return mergeTree

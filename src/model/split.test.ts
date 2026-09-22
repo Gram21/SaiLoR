@@ -351,3 +351,67 @@ describe('isDeletableAnnotationText', () => {
     expect(isDeletableAnnotationText('{"annotations":')).toBe(false)
   })
 })
+
+describe('a schema field removed while others still have answers under it', () => {
+  const withSchema = (schema: AnnotationDef[]) =>
+    JSON.stringify({
+      version: 1,
+      config: { schema },
+      papers: [
+        {
+          id: 'p1',
+          title: 'Paper One',
+          authors: [],
+          pdf: 'p1.pdf',
+          annotations: { Relevant: [{ value: true }], Notes: [{ value: 'why I said yes' }] },
+        },
+      ],
+    })
+
+  const MINUS_NOTES: AnnotationDef[] = [{ name: 'Relevant', type: 'boolean' }]
+  const WITH_NOTES: AnnotationDef[] = [...MINUS_NOTES, { name: 'Notes', type: 'string' }]
+
+  it('keeps the answers on disk and hands them back when the field returns', () => {
+    // One person removing a field from project.json must not be what deletes
+    // everyone else's answers under it — theirs may not even be pulled yet.
+    const { files } = splitProjectFiles(loadProject(withSchema(MINUS_NOTES)))
+    const written = files.find((f) => f.relPath === 'p1/consolidated.json')!
+    expect(JSON.parse(written.text!).annotations.Notes).toEqual([{ value: 'why I said yes' }])
+
+    const restored = loadProject(withSchema(WITH_NOTES))
+    expect(restored.papers[0].annotations.Notes[0].value).toBe('why I said yes')
+  })
+
+  it('keeps the file alive when the removed field held the only answer', () => {
+    const onlyNotes = JSON.stringify({
+      version: 1,
+      config: { schema: MINUS_NOTES },
+      papers: [
+        { id: 'p1', title: 'Paper One', authors: [], pdf: 'p1.pdf', annotations: { Notes: [{ value: 'kept' }] } },
+      ],
+    })
+    const { files } = splitProjectFiles(loadProject(onlyNotes))
+    const written = files.find((f) => f.relPath === 'p1/consolidated.json')!
+    expect(written.text).not.toBeNull()
+    expect(JSON.parse(written.text!).annotations.Notes).toEqual([{ value: 'kept' }])
+  })
+
+  it('does not keep an unanswered placeholder, so a schema edit alone changes nothing', () => {
+    const unanswered = JSON.stringify({
+      version: 1,
+      config: { schema: MINUS_NOTES },
+      papers: [
+        {
+          id: 'p1',
+          title: 'Paper One',
+          authors: [],
+          pdf: 'p1.pdf',
+          annotations: { Relevant: [{ value: true }], Notes: [{ value: null }] },
+        },
+      ],
+    })
+    const { files } = splitProjectFiles(loadProject(unanswered))
+    const written = files.find((f) => f.relPath === 'p1/consolidated.json')!
+    expect(JSON.parse(written.text!).annotations).not.toHaveProperty('Notes')
+  })
+})
