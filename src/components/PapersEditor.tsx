@@ -1,4 +1,4 @@
-import { useMemo, useState, type DragEvent } from 'react'
+import { useMemo, useRef, useState, type DragEvent } from 'react'
 import { useEditorStore, type EditorPaper } from '../state/editorStore'
 import { getPlatform } from '../platform'
 import '../styles/papers-editor.css'
@@ -99,6 +99,24 @@ export function PapersEditor() {
       if (!ok) return
     }
     removePaper(paper.uid)
+  }
+
+  // A paper's annotation files live in `annotations/<id>/`, so the id is the
+  // only thing tying them to the paper. Renaming it carries this checkout's
+  // own answers along (the editor holds them and writes them under the new
+  // id), but it cannot carry what is not here yet: a reviewer whose work has
+  // not been pulled is still recording under the old id, and after the rename
+  // lands nothing points at it. The old folder is also left on disk.
+  const confirmIdChange = (paper: EditorPaper, from: string): boolean => {
+    const a = paper.annotations
+    const hasAnswers = !!a && typeof a === 'object' && Object.keys(a).length > 0
+    if (!hasAnswers) return true
+    return window.confirm(
+      `"${from}" already has recorded annotations, which are stored in a folder named after the id. ` +
+        'Renaming it moves this copy of them, but leaves the old folder behind, and any reviewer whose ' +
+        'answers you have not pulled yet is still writing under the old id — theirs will not follow.' +
+        '\n\nRename it anyway?',
+    )
   }
 
   const actionButtons = (
@@ -206,6 +224,7 @@ export function PapersEditor() {
                 duplicateId={duplicateIds.has(paper.id.trim())}
                 onRemove={() => confirmRemove(paper)}
                 onInteract={() => confirmAdded(paper.uid)}
+                onIdChange={(from) => confirmIdChange(paper, from)}
               />
             </li>
           ))}
@@ -236,12 +255,17 @@ interface PaperFieldsProps {
    *  `PapersEditor`. */
   duplicateId: boolean
   onRemove: () => void
+  /** Asks whether an id may change from `from`; false puts the old one back. */
+  onIdChange: (from: string) => boolean
   /** The reviewer reached this row — drop its "just added" highlight. */
   onInteract: () => void
 }
 
 /** The editable fields of one paper. */
-function PaperFields({ paper, duplicateId, onRemove, onInteract }: PaperFieldsProps) {
+function PaperFields({ paper, duplicateId, onRemove, onInteract, onIdChange }: PaperFieldsProps) {
+  // Confirmed on blur, not per keystroke — the same "ask once the new name is
+  // settled" shape `SchemaTreeEditor`'s rename guard uses.
+  const idOnFocus = useRef<string | null>(null)
   const updatePaper = useEditorStore((s) => s.updatePaper)
   const patch = (p: Partial<EditorPaper>) => updatePaper(paper.uid, p)
 
@@ -281,7 +305,16 @@ function PaperFields({ paper, duplicateId, onRemove, onInteract }: PaperFieldsPr
             value={paper.id}
             aria-invalid={duplicateId}
             title={duplicateId ? 'Another paper already uses this id — ids must be unique.' : undefined}
-            onFocus={onInteract}
+            onFocus={() => {
+              idOnFocus.current = paper.id
+              onInteract()
+            }}
+            onBlur={() => {
+              const from = idOnFocus.current
+              idOnFocus.current = null
+              if (from === null || from.trim() === paper.id.trim()) return
+              if (!onIdChange(from)) patch({ id: from })
+            }}
             onChange={(e) => patch({ id: e.target.value })}
           />
         </label>

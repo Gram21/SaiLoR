@@ -141,6 +141,63 @@ describe('PapersEditor: confirm removal of annotated papers (REQ-EDT-50)', () =>
   })
 })
 
+describe('PapersEditor: confirm renaming the id of an annotated paper', () => {
+  /** A paper's answers live in `annotations/<id>/`, so the id is what ties
+   *  them to the paper — including answers other reviewers have not pushed. */
+  const annotated = () => {
+    const paper = makePaperFromPdf('a.pdf', 'a.pdf', undefined, new Set())
+    paper.id = 'old-id'
+    paper.annotations = { Relevant: [{ value: true }] }
+    return paper
+  }
+
+  it('puts the old id back when the reviewer cancels', async () => {
+    useEditorStore.setState({ papers: [annotated()] })
+    render(<PapersEditor />)
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    const idInput = screen.getByDisplayValue('old-id')
+    await userEvent.clear(idInput)
+    await userEvent.type(idInput, 'new-id')
+    await userEvent.tab()
+
+    expect(confirmSpy).toHaveBeenCalled()
+    expect(useEditorStore.getState().papers[0].id).toBe('old-id')
+    confirmSpy.mockRestore()
+  })
+
+  it('keeps the new id once the reviewer confirms', async () => {
+    useEditorStore.setState({ papers: [annotated()] })
+    render(<PapersEditor />)
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+    const idInput = screen.getByDisplayValue('old-id')
+    await userEvent.clear(idInput)
+    await userEvent.type(idInput, 'new-id')
+    await userEvent.tab()
+
+    expect(useEditorStore.getState().papers[0].id).toBe('new-id')
+    confirmSpy.mockRestore()
+  })
+
+  it('does not ask for a paper with no recorded annotations', async () => {
+    const paper = makePaperFromPdf('a.pdf', 'a.pdf', undefined, new Set())
+    paper.id = 'old-id'
+    useEditorStore.setState({ papers: [paper] })
+    render(<PapersEditor />)
+    const confirmSpy = vi.spyOn(window, 'confirm')
+
+    const idInput = screen.getByDisplayValue('old-id')
+    await userEvent.clear(idInput)
+    await userEvent.type(idInput, 'new-id')
+    await userEvent.tab()
+
+    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(useEditorStore.getState().papers[0].id).toBe('new-id')
+    confirmSpy.mockRestore()
+  })
+})
+
 /**
  * jsdom has no native DragEvent, so `fireEvent.dragOver`'s event carries no
  * real `clientY` — `createEvent` builds a plain `Event`, which doesn't even

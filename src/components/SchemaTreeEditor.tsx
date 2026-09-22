@@ -126,10 +126,12 @@ function SchemaNodeRow({
 
   /**
    * Answers are keyed by field name, and nothing migrates them: renaming or
-   * removing a field orphans every answer recorded under it, and the next save
-   * makes that permanent. Warn before it happens — the screening reasons
-   * editor has guarded the identical hazard from the start; the schema editor
-   * never did.
+   * removing a field orphans every answer recorded under it. The files keep
+   * those answers (see `orphanedNodes` in `model/annotations.ts`) and hand
+   * them back if the name returns, so this is no longer the permanent loss it
+   * once was — but nothing shows or exports them in the meantime, which is
+   * still worth being asked about. The screening reasons editor has guarded
+   * the identical hazard from the start; the schema editor never did.
    */
   const confirmDestructive = (what: 'rename' | 'remove', ...names: (string | null)[]): boolean => {
     // Several candidate names, because a rename may be typed but not yet
@@ -158,8 +160,10 @@ function SchemaNodeRow({
       )
     }
     return window.confirm(
-      `${parts.join(', and ')} under "${worst.name}". ${verb} it will discard that — including every ` +
-        `reviewer's own — the next time the project is saved, and it cannot be undone afterwards.\n\nContinue?`,
+      `${parts.join(', and ')} under "${worst.name}". ${verb} it hides that — including every ` +
+        `reviewer's own — from every screen and export. The answers stay in the files and come back ` +
+        `if the name does.\n\nThis count covers only the papers in this copy of the project; ` +
+        `reviewers whose work you have not pulled yet may have recorded more.\n\nContinue?`,
     )
   }
 
@@ -275,8 +279,10 @@ function SchemaNodeRow({
     }
     return window.confirm(
       `${parts.join(', and ')} under "${path.join(' / ')}". Moving it changes where that belongs, so ` +
-        `it will be discarded — including every reviewer's own — the next time the project is saved, ` +
-        `and it cannot be undone afterwards.\n\nContinue?`,
+        `it is hidden — including every reviewer's own — from every screen and export. The answers ` +
+        `stay in the files and come back if the node returns to where it was.\n\nThis count covers ` +
+        `only the papers in this copy of the project; reviewers whose work you have not pulled yet ` +
+        `may have recorded more.\n\nContinue?`,
     )
   }
 
