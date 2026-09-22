@@ -209,23 +209,90 @@ function reviewerStorageKey(handle: SaveHandle | null): string | null {
   return handle?.path ? `${REVIEWER_KEY_PREFIX}${handle.path}` : null
 }
 
-/** The persisted reviewer selection for this project, or null when there is
- *  none, the project has no stable key, or the stored value no longer fits
- *  (e.g. the reviewer count shrank since it was saved). */
-function loadCurrentReviewer(handle: SaveHandle | null, reviewerCount: number): string | null {
-  const key = reviewerStorageKey(handle)
-  if (!key) return null
-  const stored = safeGet(key)
-  if (stored === 'consolidation') return stored
-  const n = stored === null ? NaN : Number(stored)
-  return Number.isInteger(n) && n >= 1 && n <= reviewerCount ? stored : null
+/** How many paper ids a remembered seat carries to recognise its project by. */
+const REVIEWER_FINGERPRINT_SAMPLE = 8
+
+/**
+ * Paper ids identifying the project a seat was picked in.
+ *
+ * The key is the file's path, and a path is not an identity: save a different
+ * project over it, or delete and recreate one there, and the old seat was
+ * silently inherited — the picker never appeared and every edit landed in
+ * whichever seat the *previous* project's reviewer had chosen. (The reading
+ * position next door already guards this; the seat never did.)
+ *
+ * Sorted and capped so the value stays small, and matched by *overlap* rather
+ * than equality: papers get added and removed all the time in a live review,
+ * and a fingerprint that changed then would re-ask for the seat constantly —
+ * which is how a guard turns into something reviewers click through. A
+ * genuinely different project shares none of these ids.
+ */
+function reviewerFingerprint(project: Project): string[] {
+  return project.papers
+    .map((p) => p.id)
+    .sort()
+    .slice(0, REVIEWER_FINGERPRINT_SAMPLE)
 }
 
-function saveCurrentReviewer(handle: SaveHandle | null, reviewer: string | null): void {
+/** The stored shape. A bare string is the pre-fingerprint format — see
+ *  `loadCurrentReviewer` for why it is still honoured. */
+interface StoredReviewer {
+  reviewer: string
+  papers: string[]
+}
+
+function parseStoredReviewer(raw: string): StoredReviewer | 'legacy' | null {
+  if (!raw.startsWith('{')) return raw ? 'legacy' : null
+  try {
+    const parsed = JSON.parse(raw) as Partial<StoredReviewer>
+    if (typeof parsed.reviewer !== 'string' || !Array.isArray(parsed.papers)) return null
+    return { reviewer: parsed.reviewer, papers: parsed.papers.filter((p) => typeof p === 'string') }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The persisted reviewer selection for this project, or null when there is
+ * none, the project has no stable key, the stored value no longer fits (the
+ * reviewer count shrank since it was saved), or the project at this path is
+ * not the one the seat was picked in (see `reviewerFingerprint`).
+ *
+ * A value written before fingerprints existed is honoured rather than thrown
+ * away — re-asking every existing reviewer for a seat they already picked
+ * would be a worse first impression than the narrow case it protects — and
+ * `loadFromText` rewrites it with a fingerprint immediately, so each project
+ * upgrades itself the first time it is opened.
+ */
+function loadCurrentReviewer(handle: SaveHandle | null, project: Project): string | null {
+  const key = reviewerStorageKey(handle)
+  if (!key) return null
+  const raw = safeGet(key)
+  if (raw === null) return null
+  const stored = parseStoredReviewer(raw)
+  if (stored === null) return null
+
+  if (stored !== 'legacy') {
+    const ids = new Set(project.papers.map((p) => p.id))
+    // An empty remembered list can only come from a project that had no papers
+    // at all, which identifies nothing — treat it as not knowing.
+    if (stored.papers.length === 0 || !stored.papers.some((id) => ids.has(id))) return null
+  }
+  const reviewer = stored === 'legacy' ? raw : stored.reviewer
+  if (reviewer === 'consolidation') return reviewer
+  const n = Number(reviewer)
+  return Number.isInteger(n) && n >= 1 && n <= project.reviewers ? reviewer : null
+}
+
+function saveCurrentReviewer(
+  handle: SaveHandle | null,
+  reviewer: string | null,
+  project: Project | null,
+): void {
   const key = reviewerStorageKey(handle)
   if (!key) return
-  if (reviewer === null) safeRemove(key)
-  else safeSet(key, reviewer)
+  if (reviewer === null || !project) safeRemove(key)
+  else safeSet(key, JSON.stringify({ reviewer, papers: reviewerFingerprint(project) }))
 }
 
 const READING_POSITION_KEY_PREFIX = 'slr.readingPosition.'
@@ -1187,7 +1254,11 @@ export const useStore = create<AppState>()(
         const project = loadProject(text)
         // Seat must be resolved before the landing paper, since "finished" is
         // per-seat. Computed once here so this and the `set` below can't disagree.
-        const reviewer = project.reviewers > 1 ? loadCurrentReviewer(handle, project.reviewers) : null
+        const reviewer = project.reviewers > 1 ? loadCurrentReviewer(handle, project) : null
+        // Rewrite in the current format — which upgrades a value written
+        // before fingerprints existed, and drops one this project did not
+        // match so it cannot linger and be inherited again later.
+        if (project.reviewers > 1) saveCurrentReviewer(handle, reviewer, project)
         // A remembered reading position wins over "first unfinished paper" —
         // that heuristic is only for when there's nothing better to go on.
         // Ignored if the paper no longer exists (deleted, or a different
@@ -1403,7 +1474,7 @@ export const useStore = create<AppState>()(
         const handle = await platform.saveProject(text, location.handle)
         // Carry the reviewer selection over to the new location's own key, or
         // it would silently look unselected the next time this file is opened.
-        saveCurrentReviewer(handle, get().currentReviewer)
+        saveCurrentReviewer(handle, get().currentReviewer, get().project)
         // Same carry-over for the reading position, or reopening the file at
         // its new location would land on the "first unfinished paper" default
         // instead of wherever the reviewer actually was.
@@ -2275,7 +2346,7 @@ export const useStore = create<AppState>()(
       // edit to the same field under the new reviewer would glue onto the
       // previous reviewer's undo step, and one Undo would wipe both answers.
       lastFieldKey = null
-      saveCurrentReviewer(get().saveHandle, reviewer)
+      saveCurrentReviewer(get().saveHandle, reviewer, get().project)
       set((s) => {
         s.currentReviewer = reviewer
         // Marks are per-seat too (`reviewMarks`) — invisible under another
