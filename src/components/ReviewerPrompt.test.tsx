@@ -10,12 +10,6 @@ import type { SeatOwners } from '../git/types'
  * impossible to do without noticing: a seat somebody else has been committing
  * says so, and taking it needs a second click.
  */
-let seatOwners: SeatOwners = { me: null, seats: {} }
-
-const mockGit = {
-  seatOwners: async () => seatOwners,
-}
-
 const mockPlatform = {
   kind: 'electron' as const,
   getRecents: () => [],
@@ -23,13 +17,18 @@ const mockPlatform = {
   forgetRecent: () => [],
   checkRecents: async (e: unknown[]) => e,
   getOsInfo: () => null,
-  getGit: () => mockGit,
+  getGit: () => null,
 }
 vi.mock('../platform', () => ({ getPlatform: () => mockPlatform }))
 
 const { useStore } = await import('../state/store')
 const { useGitStore } = await import('../state/gitStore')
 const { ReviewerPrompt } = await import('./ReviewerPrompt')
+
+/** `gitStore.refreshSeatOwners` is what fills this in the real app. */
+function seatsHeldBy(seats: SeatOwners['seats'], me: SeatOwners['me']) {
+  useGitStore.setState({ seatOwners: { me, seats } })
+}
 
 const PROJECT = JSON.stringify({
   version: 1,
@@ -41,11 +40,11 @@ const ANNA = { name: 'Anna Schmidt', email: 'anna@example.org' }
 const AXEL = { name: 'Axel Braun', email: 'axel@example.org' }
 
 beforeEach(() => {
-  seatOwners = { me: null, seats: {} }
   useStore.getState().loadFromText(PROJECT, { kind: 'electron', path: '/x.json' }, 'x.json')
   useStore.setState({ currentReviewer: null })
   useGitStore.setState({
     repo: { root: '/repo', relPath: 'x.json', branch: 'main', upstream: null, hasHead: true },
+    seatOwners: null,
   })
 })
 
@@ -57,7 +56,7 @@ describe('ReviewerPrompt seat claims', () => {
   })
 
   it('takes one click for a seat that is already yours', async () => {
-    seatOwners = { me: ANNA, seats: { '1': ANNA, '2': null, consolidation: null } }
+    seatsHeldBy({ '1': ANNA, '2': null, consolidation: null }, ANNA)
     render(<ReviewerPrompt />)
     await screen.findByText('last committed by you')
 
@@ -66,7 +65,7 @@ describe('ReviewerPrompt seat claims', () => {
   })
 
   it('needs a second click to take a seat somebody else has been committing', async () => {
-    seatOwners = { me: ANNA, seats: { '1': AXEL, '2': null, consolidation: null } }
+    seatsHeldBy({ '1': AXEL, '2': null, consolidation: null }, ANNA)
     render(<ReviewerPrompt />)
     await screen.findByText('last committed by Axel Braun')
 
@@ -80,7 +79,7 @@ describe('ReviewerPrompt seat claims', () => {
   })
 
   it('does not ask twice for a free seat sitting next to a taken one', async () => {
-    seatOwners = { me: ANNA, seats: { '1': AXEL, '2': null, consolidation: null } }
+    seatsHeldBy({ '1': AXEL, '2': null, consolidation: null }, ANNA)
     render(<ReviewerPrompt />)
     await screen.findByText('last committed by Axel Braun')
 
@@ -89,7 +88,7 @@ describe('ReviewerPrompt seat claims', () => {
   })
 
   it('guards the Consolidation seat the same way', async () => {
-    seatOwners = { me: ANNA, seats: { '1': null, '2': null, consolidation: AXEL } }
+    seatsHeldBy({ '1': null, '2': null, consolidation: AXEL }, ANNA)
     render(<ReviewerPrompt />)
     await screen.findByText('last committed by Axel Braun')
 

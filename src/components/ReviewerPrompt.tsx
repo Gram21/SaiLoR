@@ -1,10 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useStore } from '../state/store'
 import { useGitStore } from '../state/gitStore'
-import { getPlatform } from '../platform'
 import { readyCount } from '../consolidate/readiness'
-import { sameIdentity, ownerLabel, CONSOLIDATION_SEAT } from '../git/seatOwner'
-import type { SeatOwners } from '../git/types'
+import { heldByOther, ownerLabel, CONSOLIDATION_SEAT } from '../git/seatOwner'
 
 /**
  * Shown when a multi-reviewer project is opened and nobody has picked a seat —
@@ -33,37 +31,12 @@ export function ReviewerPrompt() {
   const currentReviewer = useStore((s) => s.currentReviewer)
   const selectReviewer = useStore((s) => s.selectReviewer)
   const helpOpen = useStore((s) => s.helpOpen)
-  const repo = useGitStore((s) => s.repo)
-  const [owners, setOwners] = useState<SeatOwners | null>(null)
+  // Loaded once per repository by `gitStore.refreshSeatOwners`, so this and
+  // the toolbar's switcher never disagree about who holds what.
+  const owners = useGitStore((s) => s.seatOwners)
   // The seat a second click would take from its current holder — reset by
   // every other interaction, so the confirmation can't be answered by accident.
   const [confirming, setConfirming] = useState<string | null>(null)
-
-  const reviewers = project?.reviewers ?? 0
-  const screening = !!project?.screening
-  useEffect(() => {
-    const git = getPlatform().getGit()
-    if (!git || !repo || reviewers <= 1) {
-      setOwners(null)
-      return
-    }
-    let live = true
-    const seats = [...Array.from({ length: reviewers }, (_, i) => String(i + 1)), CONSOLIDATION_SEAT]
-    // Best-effort: a repository this can't read tells us nothing about who
-    // holds a seat, which is the same state as a project outside git — say
-    // nothing rather than block the only screen that can be reached here.
-    void git
-      .seatOwners(repo.root, repo.relPath, seats, screening)
-      .then((r) => {
-        if (live) setOwners(r)
-      })
-      .catch(() => {
-        if (live) setOwners(null)
-      })
-    return () => {
-      live = false
-    }
-  }, [repo, reviewers, screening])
 
   if (!project || project.reviewers <= 1) return null
   // Yield to Help. Nothing else can be reached while this is up, so F1 is the
@@ -77,21 +50,13 @@ export function ReviewerPrompt() {
   const ready = readyCount(project.schema, project.papers, project.reviewers)
   const total = project.papers.length
 
-  /** Who holds `seat`, and whether that is somebody other than this machine.
-   *  A seat nobody has committed is unclaimed, not contested. */
-  const holderOf = (seat: string) => {
-    const owner = owners?.seats[seat] ?? null
-    if (!owner) return null
-    return { owner, isMine: sameIdentity(owner, owners?.me ?? null) }
-  }
   // Nothing rendered at all until some seat has a claim, so a fresh project —
   // or one outside git — looks exactly as it did before any of this existed.
-  const hasClaims = reviewerIds.concat(CONSOLIDATION_SEAT).some((s) => holderOf(s) !== null)
+  const hasClaims = reviewerIds.concat(CONSOLIDATION_SEAT).some((s) => (owners?.seats[s] ?? null) !== null)
 
   /** One click for a free seat or your own; two for taking somebody else's. */
   const choose = (seat: string) => {
-    const held = holderOf(seat)
-    if (held && !held.isMine && confirming !== seat) {
+    if (heldByOther(owners, seat) && confirming !== seat) {
       setConfirming(seat)
       return
     }
@@ -99,15 +64,19 @@ export function ReviewerPrompt() {
   }
 
   const holderNote = (seat: string) => {
-    const held = holderOf(seat)
     if (!hasClaims) return null
-    if (!held) return <span className="reviewer-prompt-holder">not yet committed by anyone</span>
-    if (held.isMine) return <span className="reviewer-prompt-holder">last committed by you</span>
+    const other = heldByOther(owners, seat)
+    if (other) {
+      return (
+        <span className="reviewer-prompt-holder">
+          {confirming === seat ? `Take it from ${ownerLabel(other)}?` : `last committed by ${ownerLabel(other)}`}
+        </span>
+      )
+    }
+    const mine = owners?.seats[seat] ?? null
     return (
       <span className="reviewer-prompt-holder">
-        {confirming === seat
-          ? `Take it from ${ownerLabel(held.owner)}?`
-          : `last committed by ${ownerLabel(held.owner)}`}
+        {mine ? 'last committed by you' : 'not yet committed by anyone'}
       </span>
     )
   }

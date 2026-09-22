@@ -19,6 +19,14 @@
  * reasoning as `deriveGitInfo`/`ownAnnotationPath`.
  */
 
+export interface SeatOwners {
+  /** This machine's git identity, or null when none is configured. */
+  me: GitIdentity | null
+  /** Last author of each requested seat's files; null for a seat no commit
+   *  has ever touched. */
+  seats: Record<string, GitIdentity | null>
+}
+
 export interface GitIdentity {
   name: string
   email: string
@@ -67,4 +75,20 @@ export function sameIdentity(a: GitIdentity | null, b: GitIdentity | null): bool
  *  repository configured with `user.email` but no `user.name`. */
 export function ownerLabel(id: GitIdentity): string {
   return id.name.trim() || id.email.trim() || 'someone else'
+}
+
+/**
+ * Is `seat` one somebody other than this machine has been committing? The
+ * question both places that let a reviewer take a seat have to ask — the
+ * opening picker and the toolbar's switcher — so the rule lives here rather
+ * than in whichever of them happened to grow it first.
+ *
+ * Returns the other person, or null when the seat is free to take: an
+ * unclaimed seat, a project outside git, and a machine with no identity
+ * configured all read as uncontested, so nothing gets in the way.
+ */
+export function heldByOther(owners: SeatOwners | null, seat: string): GitIdentity | null {
+  const owner = owners?.seats[seat] ?? null
+  if (!owner) return null
+  return sameIdentity(owner, owners?.me ?? null) ? null : owner
 }

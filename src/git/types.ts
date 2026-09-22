@@ -4,7 +4,8 @@
  * `src/git/merge.ts` for the same rule applied to the merge itself.
  */
 
-import type { GitIdentity } from './seatOwner'
+import type { SeatOwners } from './seatOwner'
+export type { SeatOwners }
 import type { ProjectFileEntry } from '../model/project'
 
 /** The split-file form of a project (`splitProjectFiles`'s output): `project.json`
@@ -61,14 +62,6 @@ export interface GitRepoInfo {
   /** `"origin/main"` form, or `null` when the branch has no upstream. */
   upstream: string | null
   hasHead: boolean
-}
-
-/** `seatOwners`' result: `me` is this machine's git identity (null when it
- *  has none configured), `seats` the last author of each requested seat's
- *  files (null for a seat no commit has ever touched). */
-export interface SeatOwners {
-  me: GitIdentity | null
-  seats: Record<string, GitIdentity | null>
 }
 
 export type CloneOutcome = { ok: true; dest: string } | { ok: false; error: string }

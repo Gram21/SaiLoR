@@ -15,6 +15,7 @@ import {
 import { detectFieldChanges, composeContents, type DetectedChanges, type Disposition } from '../git/changes'
 import { repoNameFromUrl } from '../git/url'
 import { annotationsRelDir } from '../git/relpath'
+import { CONSOLIDATION_SEAT } from '../git/seatOwner'
 import { gitErrorText } from '../git/output'
 import type {
   GitProbe,
@@ -24,6 +25,7 @@ import type {
   GitBranch,
   MergeStart,
   CommitRecord,
+  SeatOwners,
 } from '../git/types'
 import { useStore } from './store'
 
@@ -178,6 +180,13 @@ interface GitState {
   /** Where the open project sits git-wise; null when it is not in a repository,
    *  there is no project, or git is unavailable. */
   repo: GitRepoInfo | null
+  /**
+   * Who has been committing each reviewer seat — read once per repository so
+   * both places that hand out a seat (the opening `ReviewerPrompt` and the
+   * toolbar's switcher) answer from the same data instead of each running
+   * their own `git log`. Null outside a repository, or before it has loaded.
+   */
+  seatOwners: SeatOwners | null
   clone: CloneState | null
   panel: PanelState | null
   /** Local branches, refreshed whenever the panel opens/refreshes — for the
@@ -190,6 +199,9 @@ interface GitState {
   refreshBranches: () => Promise<void>
   /** Called from App.tsx whenever the open project's save handle changes. */
   refreshRepo: (handle: SaveHandle | null) => Promise<void>
+  /** Re-read `seatOwners` for the open project. Called by `refreshRepo`; also
+   *  worth calling after a commit, which can change who last wrote a seat. */
+  refreshSeatOwners: () => Promise<void>
 
   openClone: () => void
   closeClone: () => void
@@ -619,6 +631,7 @@ export const useGitStore = create<GitState>()(
     const storeApi: GitState = {
       probe: null,
       repo: null,
+      seatOwners: null,
       clone: null,
       panel: null,
       branches: [],
@@ -637,6 +650,7 @@ export const useGitStore = create<GitState>()(
         // stale "Git" button doesn't linger while the real answer loads.
         set((s) => {
           s.repo = null
+          s.seatOwners = null
         })
         const git = getPlatform().getGit()
         if (!git || !handle?.path) return
@@ -646,6 +660,37 @@ export const useGitStore = create<GitState>()(
         set((s) => {
           s.repo = info
         })
+        await get().refreshSeatOwners()
+      },
+
+      refreshSeatOwners: async () => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        const project = useStore.getState().project
+        if (!git || !repo || !project || project.reviewers <= 1) {
+          set((s) => {
+            s.seatOwners = null
+          })
+          return
+        }
+        const seats = [
+          ...Array.from({ length: project.reviewers }, (_, i) => String(i + 1)),
+          CONSOLIDATION_SEAT,
+        ]
+        // Best-effort: a repository this can't read says nothing about who
+        // holds a seat, which is the same state as a project outside git.
+        // Never a blocking error — the seat picker is the only screen
+        // reachable at that point.
+        try {
+          const owners = await git.seatOwners(repo.root, repo.relPath, seats, !!project.screening)
+          if (get().repo === repo) set((s) => {
+            s.seatOwners = owners
+          })
+        } catch {
+          set((s) => {
+            s.seatOwners = null
+          })
+        }
       },
 
       openClone: () => {
@@ -912,6 +957,9 @@ export const useGitStore = create<GitState>()(
           }
         })
         await get().refreshStatus()
+        // A commit can change who last wrote a seat — most obviously the first
+        // one, which turns an unclaimed seat into yours.
+        await get().refreshSeatOwners()
       },
 
       runDiscard: async () => {
