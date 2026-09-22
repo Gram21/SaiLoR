@@ -75,6 +75,7 @@ export type MergeNoteKind =
   | 'reviewers-remote'
   | 'screening-remote'
   | 'repeatable-additions-kept'
+  | 'orphans-kept-ours'
 
 export interface MergeNote {
   kind: MergeNoteKind
@@ -178,7 +179,10 @@ function snapshotInstance(def: ResolvedDef, inst: InstanceNode | undefined): unk
 function snapshotTree(defs: ResolvedDef[], tree: AnnotationValueTree | undefined): unknown {
   const out: Record<string, unknown> = {}
   for (const d of defs) out[d.name] = arrOf(tree, d.name).map((inst) => snapshotInstance(d, inst))
-  return out
+  // Answers under names this schema no longer has are carried through the
+  // merge (see `mergeTree`), so leaving them out here would let "did this
+  // instance change" answer no about a subtree that did.
+  return Object.assign(out, orphanedNodes(defs, tree))
 }
 
 /**
@@ -329,8 +333,23 @@ function makeTreeMerger(
     // carried through rather than dropped, or a merge would be what makes a
     // field removal permanent — exactly what load/save now refuses to do.
     // Ours wins where both sides have one, the same side an unresolved
-    // `merge3` conflict keeps.
-    Object.assign(out, orphanedNodes(defs, theirs), orphanedNodes(defs, ours))
+    // `merge3` conflict keeps. No conflict row: there is no schema left to
+    // render one from, and no canonical path to key it by — but losing the
+    // other side's copy silently is not acceptable either, so it is said out
+    // loud instead.
+    const ourOrphans = orphanedNodes(defs, ours)
+    const theirOrphans = orphanedNodes(defs, theirs)
+    for (const name of Object.keys(ourOrphans)) {
+      if (name in theirOrphans && !deepEqualJson(ourOrphans[name], theirOrphans[name])) {
+        notes.push({
+          kind: 'orphans-kept-ours',
+          message:
+            `"${name}" on "${paperTitle}" holds answers the schema no longer describes, and both ` +
+            `sides had different ones; yours were kept. Put the field back in the schema to see them.`,
+        })
+      }
+    }
+    Object.assign(out, theirOrphans, ourOrphans)
     return out
   }
   return mergeTree

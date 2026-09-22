@@ -357,16 +357,32 @@ function holdsOrphans(def: ResolvedDef, inst: InstanceNode): boolean {
  * orphans live in.
  */
 export function treeHoldsOrphans(defs: ResolvedDef[], tree: AnnotationValueTree): boolean {
-  if (Object.keys(orphanedNodes(defs, tree)).length > 0) return true
+  return orphanedNodePaths(defs, tree).length > 0
+}
+
+/**
+ * Where those orphans are, as readable paths ("Findings › Notes"). Nothing in
+ * the app renders an orphan — no form field, no export, no agreement figure —
+ * so this is the only way a reviewer can be told the data is there at all.
+ * Capped by the caller, not here.
+ */
+export function orphanedNodePaths(
+  defs: ResolvedDef[],
+  tree: AnnotationValueTree,
+  prefix: string[] = [],
+): string[] {
+  const out = Object.keys(orphanedNodes(defs, tree)).map((name) => [...prefix, name].join(' › '))
   for (const def of defs) {
     for (const inst of tree[def.name] ?? []) {
-      if (holdsOrphans(def, inst)) return true
-      if (def.children.length > 0 && inst?.children && treeHoldsOrphans(def.children, inst.children)) {
-        return true
-      }
+      if (!inst?.children) continue
+      const here = [...prefix, def.name]
+      // A node that lost every child keeps them under itself, with no defs
+      // left to recurse into — `orphanedNodes` with an empty list names them.
+      out.push(...Object.keys(orphanedNodes(def.children, inst.children)).map((n) => [...here, n].join(' › ')))
+      if (def.children.length > 0) out.push(...orphanedNodePaths(def.children, inst.children, here))
     }
   }
-  return false
+  return [...new Set(out)]
 }
 
 function isEmptyInstance(def: ResolvedDef, inst: InstanceNode): boolean {

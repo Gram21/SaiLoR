@@ -1139,3 +1139,48 @@ describe('round-trip and shape invariants', () => {
     expect(tree).toEqual(normalizeTree(outcome.merged.schema, tree))
   })
 })
+
+describe('mergeProjects — answers under a field the schema no longer has', () => {
+  // Orphans are carried through a merge so that removing a field is not made
+  // permanent by the next pull. Both sides having *different* ones is the case
+  // with nowhere to render a conflict row: there is no schema left to build it
+  // from, and no canonical path to key it by.
+  const NO_NOTES: AnnotationDef[] = [{ name: 'Study Type', type: 'string' }]
+  const orphaned = (value: string) => ({
+    'Study Type': [{ value: 'RCT' }],
+    Notes: [{ value }],
+  })
+
+  it('keeps ours and says so when both sides hold different ones', () => {
+    const base = project({ schema: NO_NOTES, papers: [paper('a')] })
+    const ours = project({ schema: NO_NOTES, papers: [paper('a', { annotations: orphaned('mine') })] })
+    const theirs = project({ schema: NO_NOTES, papers: [paper('a', { annotations: orphaned('theirs') })] })
+
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.papers[0].annotations.Notes).toEqual([{ value: 'mine' }])
+    const note = outcome.notes.find((n) => n.kind === 'orphans-kept-ours')
+    expect(note?.message).toMatch(/Notes/)
+  })
+
+  it('says nothing when only one side has them — nothing was lost', () => {
+    const base = project({ schema: NO_NOTES, papers: [paper('a')] })
+    const ours = project({ schema: NO_NOTES, papers: [paper('a', { annotations: orphaned('mine') })] })
+    const theirs = project({ schema: NO_NOTES, papers: [paper('a')] })
+
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.papers[0].annotations.Notes).toEqual([{ value: 'mine' }])
+    expect(outcome.notes.some((n) => n.kind === 'orphans-kept-ours')).toBe(false)
+  })
+
+  it('says nothing when both sides hold the same ones', () => {
+    const base = project({ schema: NO_NOTES, papers: [paper('a')] })
+    const ours = project({ schema: NO_NOTES, papers: [paper('a', { annotations: orphaned('same') })] })
+    const theirs = project({ schema: NO_NOTES, papers: [paper('a', { annotations: orphaned('same') })] })
+
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.notes.some((n) => n.kind === 'orphans-kept-ours')).toBe(false)
+  })
+})

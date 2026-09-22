@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { gateOn, type ResolvedDef } from './schema'
 import type { AnnotationValueTree } from './annotations'
-import type { Paper, Project } from './project'
+import { loadProject, type Paper, type Project } from './project'
 import { validatePaper, validateProject, type UnannotatedPaper, type ValidationIssue } from './validate'
 
 // ---------------------------------------------------------------------------
@@ -621,5 +621,39 @@ describe('validateProject', () => {
       expect(issues).toEqual([])
       expect(unannotated).toEqual([{ paperId: 'p1', paperTitle: 'Broken' }])
     })
+  })
+})
+
+describe('answers hidden by a schema change are reported', () => {
+  const schema = [{ name: 'Study Type', type: 'string' as const }]
+
+  const projectWith = (annotations: Record<string, unknown>) =>
+    loadProject(
+      JSON.stringify({
+        version: 1,
+        config: { schema },
+        papers: [{ id: 'p1', title: 'Paper One', authors: [], pdf: 'a.pdf', annotations }],
+      }),
+    )
+
+  it('names the node, so the only trace of the data is not invisible', () => {
+    const result = validateProject(projectWith({ 'Study Type': [{ value: 'RCT' }], Notes: [{ value: 'kept' }] }))
+    const issue = result.issues.find((i) => i.kind === 'orphaned')
+    expect(issue?.message).toContain('"Notes"')
+    expect(issue?.paperId).toBe('p1')
+  })
+
+  it('does not file an orphan-only paper as "not started"', () => {
+    // Nothing the current schema can see, so `hasAnnotations` says no — and
+    // telling somebody their colleague has not started, while the work sits
+    // right there in the file, is the worst available answer.
+    const result = validateProject(projectWith({ Notes: [{ value: 'kept' }] }))
+    expect(result.issues.some((i) => i.kind === 'orphaned')).toBe(true)
+    expect(result.unannotated.map((u) => u.paperId)).toEqual(['p1'])
+  })
+
+  it('stays quiet for a project whose schema describes everything', () => {
+    const result = validateProject(projectWith({ 'Study Type': [{ value: 'RCT' }] }))
+    expect(result.issues.some((i) => i.kind === 'orphaned')).toBe(false)
   })
 })
