@@ -171,6 +171,8 @@ const fakeGit: GitPlatform = {
     return logDiffResult
   },
   annotationAuthors: async () => ({ me: null, files: {} }),
+  repoSetupStatus: async () => ({ upToDate: true, needsConsent: false, paths: [] }),
+  applyRepoSetup: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
   branches: async () => branchesResult,
   createBranch: async (root, name) => {
     createBranchCalls.push({ root, name })

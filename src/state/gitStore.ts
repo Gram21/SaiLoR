@@ -186,6 +186,18 @@ interface GitState {
    * loaded. See `src/git/seatOwner.ts` for why this is per paper.
    */
   annotationAuthors: AnnotationAuthors | null
+  /**
+   * Set when this project's repository needs SaiLoR's git rules *and* already
+   * holds rules of somebody's own, so the change has to be asked about rather
+   * than simply made. Null otherwise — including while it is being made, which
+   * happens without a prompt when there is nothing of anyone else's to
+   * overwrite. See `src/git/repoSetup.ts`.
+   */
+  repoSetupPrompt: { paths: string[] } | null
+  /** What the last automatic or accepted setup did, for a one-line notice —
+   *  the files land in a commit the reviewer did not type, so it should not
+   *  happen invisibly. Cleared when dismissed. */
+  repoSetupNotice: string | null
   clone: CloneState | null
   panel: PanelState | null
   /** Local branches, refreshed whenever the panel opens/refreshes — for the
@@ -202,6 +214,16 @@ interface GitState {
    *  `refreshRepo`, and after a commit — which is exactly what changes who
    *  last wrote a reading. */
   refreshSeatOwners: () => Promise<void>
+  /**
+   * Bring the project's `.gitattributes`/`.gitignore` up to what SaiLoR needs.
+   * Applies silently when there is nothing of the user's to overwrite, and
+   * otherwise raises `repoSetupPrompt` and waits. Called once per repository
+   * on open; safe to call again, since an up-to-date repository is a no-op.
+   */
+  ensureRepoSetup: () => Promise<void>
+  /** Answer `repoSetupPrompt`. */
+  resolveRepoSetup: (accept: boolean) => Promise<void>
+  dismissRepoSetupNotice: () => void
 
   openClone: () => void
   closeClone: () => void
@@ -632,6 +654,8 @@ export const useGitStore = create<GitState>()(
       probe: null,
       repo: null,
       annotationAuthors: null,
+      repoSetupPrompt: null,
+      repoSetupNotice: null,
       clone: null,
       panel: null,
       branches: [],
@@ -651,6 +675,7 @@ export const useGitStore = create<GitState>()(
         set((s) => {
           s.repo = null
           s.annotationAuthors = null
+          s.repoSetupPrompt = null
         })
         const git = getPlatform().getGit()
         if (!git || !handle?.path) return
@@ -661,6 +686,52 @@ export const useGitStore = create<GitState>()(
           s.repo = info
         })
         await get().refreshSeatOwners()
+        await get().ensureRepoSetup()
+      },
+
+      ensureRepoSetup: async () => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo) return
+        try {
+          const status = await git.repoSetupStatus(repo.root, repo.relPath)
+          if (status.upToDate) return
+          if (status.needsConsent) {
+            set((s) => {
+              s.repoSetupPrompt = { paths: status.paths }
+            })
+            return
+          }
+          await get().resolveRepoSetup(true)
+        } catch {
+          // Configuring the repository is a convenience, never the reason a
+          // reviewer opened the project. A repository that cannot be read
+          // just goes unconfigured.
+        }
+      },
+
+      resolveRepoSetup: async (accept) => {
+        set((s) => {
+          s.repoSetupPrompt = null
+        })
+        if (!accept) return
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo) return
+        const r = await git.applyRepoSetup(repo.root, repo.relPath)
+        set((s) => {
+          s.repoSetupNotice = r.ok
+            ? 'Added SaiLoR\'s git rules for this project and committed them.'
+            : `SaiLoR could not configure this repository: ${gitErrorText(r)}`
+        })
+        // The commit changed HEAD and the working tree.
+        await get().refreshStatus()
+      },
+
+      dismissRepoSetupNotice: () => {
+        set((s) => {
+          s.repoSetupNotice = null
+        })
       },
 
       refreshSeatOwners: async () => {

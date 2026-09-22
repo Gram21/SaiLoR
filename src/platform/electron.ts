@@ -24,6 +24,7 @@ import type {
   LogBeginResult,
   LogRevisionFetch,
   AnnotationAuthors,
+  RepoSetupStatus,
 } from '../git/types'
 import { parsePorcelain, capDiff } from '../git/output'
 import { loadProject, splitProjectFiles, type ProjectFileEntry } from '../model/project'
@@ -184,6 +185,8 @@ export interface SlrBridge {
   gitWriteWorking(root: string, relPath: string, working: SplitProject): Promise<GitRun>
   gitDiscardFile(root: string, relPath: string, projectRelPath: string): Promise<GitRun>
   gitAnnotationAuthors(root: string, relPath: string): Promise<AnnotationAuthors>
+  gitRepoSetupStatus(root: string, relPath: string): Promise<RepoSetupStatus>
+  gitApplyRepoSetup(root: string, relPath: string): Promise<GitRun>
   gitBranches(root: string): Promise<GitBranch[]>
   gitBranchCreate(root: string, name: string): Promise<GitRun>
   gitBranchDelete(root: string, branch: string): Promise<GitRun>
@@ -497,6 +500,8 @@ export class ElectronAdapter implements PlatformAdapter {
     discardFile: (root, relPath, projectRelPath) =>
       withBaselineDropped(() => bridge().gitDiscardFile(root, relPath, projectRelPath)),
     annotationAuthors: (root, relPath) => bridge().gitAnnotationAuthors(root, relPath),
+    repoSetupStatus: (root, relPath) => bridge().gitRepoSetupStatus(root, relPath),
+    applyRepoSetup: (root, relPath) => withBaselineDropped(() => bridge().gitApplyRepoSetup(root, relPath)),
     branches: (root) => bridge().gitBranches(root),
     createBranch: (root, name) => bridge().gitBranchCreate(root, name),
     deleteBranch: (root, branch) => bridge().gitBranchDelete(root, branch),

@@ -115,6 +115,8 @@ const fakeGit: GitPlatform = {
     }
   },
   annotationAuthors: async () => ({ me: null, files: {} }),
+  repoSetupStatus: async () => ({ upToDate: true, needsConsent: false, paths: [] }),
+  applyRepoSetup: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
   branches: async () => [],
   createBranch: async () => ({ ok: false, code: null, stdout: '', stderr: 'not supported in this test' }),
   deleteBranch: async () => ({ ok: false, code: null, stdout: '', stderr: 'not supported in this test' }),

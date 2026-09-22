@@ -22,6 +22,7 @@ import { ValidationDialog } from './components/ValidationDialog'
 import { ExportPdfDialog } from './components/ExportPdfDialog'
 import { ConsolidationDialog } from './components/ConsolidationDialog'
 import { ReviewerPrompt } from './components/ReviewerPrompt'
+import { RepoSetupPrompt } from './components/RepoSetupPrompt'
 import { AgreementDialog } from './components/AgreementDialog'
 import { DisagreementOverview } from './components/DisagreementOverview'
 import { ConsolidationOverview } from './components/ConsolidationOverview'
@@ -399,6 +400,7 @@ export function App() {
       <ExportPdfDialog />
       <ConsolidationDialog />
       <ReviewerPrompt />
+      <RepoSetupPrompt />
       <AgreementDialog />
       <ConsolidationOverview />
       <DisagreementOverview />

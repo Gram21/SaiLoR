@@ -61,7 +61,7 @@ beforeEach(() => {
     recents: [],
     currentReviewer: null,
   })
-  useGitStore.setState({ annotationAuthors: null })
+  useGitStore.setState({ annotationAuthors: null, repo: null, repoSetupNotice: null })
 })
 
 describe('REQ-UI-30: seat switcher in toolbar', () => {
@@ -178,5 +178,41 @@ describe('REQ-UI-20: toolbar project controls', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Toggle theme' }))
     expect(st().theme).not.toBe(before)
     expect(screen.getByRole('group', { name: 'Font size' })).toBeInTheDocument()
+  })
+})
+
+describe('unpulled work and repository setup are visible in the toolbar', () => {
+  const repo = (behind: number | null) => ({
+    root: '/repo',
+    relPath: 'x.json',
+    branch: 'main',
+    upstream: 'origin/main',
+    hasHead: true,
+    behind,
+  })
+
+  it('offers to pull when the repository already knows work is waiting', async () => {
+    st().loadFromText(projectJson(), null, 'test.json')
+    useGitStore.setState({ repo: repo(3) })
+    render(<Toolbar />)
+    expect(screen.getByRole('button', { name: /3 to pull/ })).toBeInTheDocument()
+  })
+
+  it('says nothing at zero — "behind" is only ever as fresh as the last fetch', async () => {
+    // Silence must not read as "you are up to date"; only a fetch could say
+    // that, and opening a project does not do one.
+    st().loadFromText(projectJson(), null, 'test.json')
+    useGitStore.setState({ repo: repo(0) })
+    render(<Toolbar />)
+    expect(screen.queryByRole('button', { name: /to pull/ })).not.toBeInTheDocument()
+  })
+
+  it('reports a commit SaiLoR made on its own, and lets it be dismissed', async () => {
+    st().loadFromText(projectJson(), null, 'test.json')
+    useGitStore.setState({ repo: repo(null), repoSetupNotice: 'Added rules and committed them.' })
+    render(<Toolbar />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Added rules/ }))
+    expect(useGitStore.getState().repoSetupNotice).toBeNull()
   })
 })

@@ -67,6 +67,13 @@ export interface GitRepoInfo {
   behind: number | null
 }
 
+export interface RepoSetupStatus {
+  upToDate: boolean
+  needsConsent: boolean
+  /** Repo-relative paths that would be written, for the consent prompt. */
+  paths: string[]
+}
+
 export type CloneOutcome = { ok: true; dest: string } | { ok: false; error: string }
 
 /** One branch, from `git for-each-ref` over `refs/heads` and `refs/remotes`. */
@@ -212,6 +219,13 @@ export interface GitPlatform {
    *  in front of them in the seat they are sitting in. See
    *  `src/git/seatOwner.ts` for why this is per paper rather than per seat. */
   annotationAuthors(root: string, relPath: string): Promise<AnnotationAuthors>
+
+  /** What configuring this repository for SaiLoR would change — see
+   *  `src/git/repoSetup.ts`. `needsConsent` means the files already hold rules
+   *  of somebody's own, so this must be asked about rather than just done. */
+  repoSetupStatus(root: string, relPath: string): Promise<RepoSetupStatus>
+  /** Write the rules and commit them, authored as SaiLoR. */
+  applyRepoSetup(root: string, relPath: string): Promise<GitRun>
 
   /** Local branches and remote-tracking ones — the switcher takes the locals,
    *  the merge picker takes both (see `GitBranch.remote`). */

@@ -138,6 +138,9 @@ export function Toolbar() {
   const git = getPlatform().getGit()
   const gitProbe = useGitStore((s) => s.probe)
   const gitRepo = useGitStore((s) => s.repo)
+  const behind = useGitStore((s) => s.repo?.behind ?? null)
+  const repoSetupNotice = useGitStore((s) => s.repoSetupNotice)
+  const dismissRepoSetupNotice = useGitStore((s) => s.dismissRepoSetupNotice)
   const openClone = useGitStore((s) => s.openClone)
   const openGitPanel = useGitStore((s) => s.openPanel)
   const gitBtn = gitButtonState(!!git, gitProbe, !!project, gitRepo, busy, editorOpen, GIT_BROWSER_DISABLED_HINT)
@@ -330,6 +333,33 @@ export function Toolbar() {
           >
             Validate
           </button>
+          {/* The rules landed in a commit the reviewer never typed — see
+              `ensureRepoSetup`. Saying so once is the least this owes them. */}
+          {repoSetupNotice && (
+            <button
+              type="button"
+              className="toolbar-notice"
+              title="Dismiss"
+              onClick={dismissRepoSetupNotice}
+            >
+              {repoSetupNotice} ✕
+            </button>
+          )}
+          {/* The repository already knows this, and until now only said so
+              inside one confirm dialog in the schema editor. "Behind" is as of
+              the last fetch, so it can report work waiting but never that
+              there is none — hence no "up to date" counterpart. */}
+          {behind !== null && behind > 0 && !editorOpen && (
+            <button
+              type="button"
+              className="toolbar-warning"
+              title="Someone has pushed work you have not pulled yet — open Git to pull it"
+              onClick={() => void openGitPanel()}
+              disabled={gitBtn.disabled}
+            >
+              ↓ {behind} to pull
+            </button>
+          )}
           {/* Stays for as long as the project is open. The load-time banner is
               dismissible, and a reviewer who clicks it away otherwise has no
               way left to learn the project is still missing somebody's work —

@@ -29,6 +29,7 @@ import { refProblem } from '../src/git/ref'
 import { gitErrorText, parsePorcelain, parseGitLog } from '../src/git/output'
 import { ownAnnotationPathMatcher, ownAnnotationPathsIn } from '../src/git/ownAnnotationPath'
 import { parseAnnotationAuthors } from '../src/git/seatOwner'
+import { planRepoSetup, SETUP_AUTHOR, SETUP_COMMIT_MESSAGE } from '../src/git/repoSetup'
 import { readAllConcurrently } from '../src/git/concurrentRead'
 import { deriveGitInfo } from '../src/git/deriveGitInfo'
 import type { GitRun, MergeStart, AnnotationAuthors } from '../src/git/types'
@@ -2618,6 +2619,81 @@ ipcMain.handle('git:annotationAuthors', async (_e, root: string, relPath: string
     files: log.ok ? parseAnnotationAuthors(log.stdout, dir) : {},
   }
   return out
+})
+
+/**
+ * What configuring this project's repository for SaiLoR would change, and
+ * doing it. See `src/git/repoSetup.ts` for which rules and why.
+ *
+ * The files go next to the project rather than at the repository root, so a
+ * repository holding more than this review keeps its own rules intact.
+ */
+async function readIfPresent(absPath: string): Promise<string | null> {
+  try {
+    return await readFile(absPath, 'utf-8')
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw err
+  }
+}
+
+function setupPaths(relPath: string): { dir: string; attributes: string; ignore: string } {
+  const dir = path.posix.dirname(relPath.split(path.sep).join('/'))
+  const prefix = dir === '.' ? '' : `${dir}/`
+  return {
+    dir,
+    attributes: `${prefix}.gitattributes`,
+    ignore: `${prefix}.gitignore`,
+  }
+}
+
+ipcMain.handle('git:repoSetupStatus', async (_e, root: string, relPath: string) => {
+  assertRelPath(relPath)
+  const rel = setupPaths(relPath)
+  const plan = planRepoSetup(
+    await readIfPresent(path.join(root, rel.attributes)),
+    await readIfPresent(path.join(root, rel.ignore)),
+  )
+  return { upToDate: plan.upToDate, needsConsent: plan.needsConsent, paths: [rel.attributes, rel.ignore] }
+})
+
+ipcMain.handle('git:applyRepoSetup', async (_e, root: string, relPath: string) => {
+  assertRelPath(relPath)
+  // Same refusal as any other commit: a commit on a detached HEAD would be
+  // lost the moment a branch is checked out, and silently configuring a
+  // repository into a commit nobody can find is worse than not doing it.
+  const detached = await detachedHeadRefusal(root)
+  if (detached) return detached
+
+  const rel = setupPaths(relPath)
+  const absAttributes = path.join(root, rel.attributes)
+  const absIgnore = path.join(root, rel.ignore)
+  const plan = planRepoSetup(await readIfPresent(absAttributes), await readIfPresent(absIgnore))
+  if (plan.upToDate) return { ok: true, code: 0, stdout: '', stderr: '' }
+
+  const written: string[] = []
+  if (plan.attributes.changed) {
+    await assertInsideRoot(root, absAttributes)
+    await assertNotSymlink(absAttributes)
+    await writeFile(absAttributes, plan.attributes.text, 'utf-8')
+    written.push(rel.attributes)
+  }
+  if (plan.ignore.changed) {
+    await assertInsideRoot(root, absIgnore)
+    await assertNotSymlink(absIgnore)
+    await writeFile(absIgnore, plan.ignore.text, 'utf-8')
+    written.push(rel.ignore)
+  }
+
+  const add = await runGit(['add', '--', ...written], root)
+  if (!add.ok) return add
+  // `--author` records SaiLoR as who wrote these rules; the committer stays
+  // whoever ran it, which git does not let an application forge and which is
+  // honest anyway — this is their repository and they did run the command.
+  return runGit(
+    ['commit', '--author', SETUP_AUTHOR, '-m', SETUP_COMMIT_MESSAGE, '--', ...written],
+    root,
+  )
 })
 
 /** True when `ref` names something under `refs/remotes/` — checked against git

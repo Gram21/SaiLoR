@@ -3081,3 +3081,29 @@ kbd {
   font-size: 0.85em;
   line-height: 1.45;
 }
+
+/* "Configure this repository for SaiLoR?" — see RepoSetupPrompt.tsx. */
+.repo-setup-prompt {
+  max-width: 560px;
+}
+.repo-setup-prompt .modal-body p {
+  margin: 0 0 10px;
+  line-height: 1.5;
+  font-size: 0.92em;
+}
+.repo-setup-paths {
+  margin: 0 0 10px;
+  padding-left: 20px;
+  font-size: 0.9em;
+}
+.repo-setup-note {
+  color: var(--muted);
+  font-size: 0.85em !important;
+}
+
+/* A neutral, dismissible statement of something SaiLoR did on its own —
+   distinct from .toolbar-warning, which reports a problem. */
+.toolbar-notice {
+  border-color: var(--accent);
+  color: var(--accent);
+}
