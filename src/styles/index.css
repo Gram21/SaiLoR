@@ -3059,3 +3059,12 @@ kbd {
   font-size: 0.75em;
   color: var(--muted);
 }
+
+/* The open project is missing annotation files that would not parse — see
+   `corruptFiles` in state/store.ts. Deliberately not a quiet, muted note:
+   this says a reviewer's work is absent from everything on screen, and it
+   stays until the project is closed. */
+.toolbar-warning {
+  border-color: var(--danger);
+  color: var(--danger);
+}

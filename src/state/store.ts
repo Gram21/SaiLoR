@@ -348,6 +348,17 @@ interface AppState {
   /** The project's own title from its JSON; empty when it doesn't set one. */
   projectTitle: string
   dirty: boolean
+  /**
+   * Annotation files that would not parse when the project was opened — a
+   * leftover git merge conflict is the usual cause. They load as *absent*, so
+   * the reviewer they belong to reads as having done nothing, everywhere.
+   *
+   * Kept for the session rather than only raised once as a `loadError`: that
+   * banner is dismissible, and a reviewer who clicks it away has no way left
+   * to find out the project is still missing somebody's work. Paths are
+   * relative to `annotations/`.
+   */
+  corruptFiles: string[]
   /** `Date.now()` of the last successful save — drives the toolbar's transient
    *  "Saved" confirmation. `null` before any save this session. */
   lastSavedAt: number | null
@@ -564,6 +575,9 @@ interface AppState {
   zoomOutPdf: () => void
   resetPdfZoom: () => void
   setHelpOpen: (open: boolean) => void
+  /** Re-raise the "some annotation files could not be read" warning — see
+   *  `corruptFiles`. */
+  showCorruptFiles: () => void
   /** Check every paper's annotations against the schema and show the result. */
   runValidation: () => void
   setValidationOpen: (open: boolean) => void
@@ -902,6 +916,7 @@ export const useStore = create<AppState>()(
     projectName: '',
     projectTitle: '',
     dirty: false,
+    corruptFiles: [],
     loadError: null,
     busy: false,
     sidebarCollapsed: false,
@@ -972,9 +987,10 @@ export const useStore = create<AppState>()(
         get().loadFromText(opened.text, opened.handle, opened.name)
         set((s) => {
           s.recents = platform.getRecents()
-          // After `loadFromText`, which clears `loadError` on success.
-          if (!s.loadError && opened.corruptFiles && opened.corruptFiles.length > 0) {
-            s.loadError = corruptFilesWarning(opened.corruptFiles)
+          // After `loadFromText`, which resets both on success.
+          s.corruptFiles = opened.corruptFiles ?? []
+          if (!s.loadError && s.corruptFiles.length > 0) {
+            s.loadError = corruptFilesWarning(s.corruptFiles)
           }
         })
       } catch (err) {
@@ -1086,6 +1102,7 @@ export const useStore = create<AppState>()(
         s.projectName = ''
         s.projectTitle = ''
         s.dirty = false
+        s.corruptFiles = []
         s.pdfSelection = ''
         s.past = []
         s.future = []
@@ -1122,6 +1139,9 @@ export const useStore = create<AppState>()(
         s.screeningShowPdf = false
         s.screeningSummaryOpen = false
         s.screeningAbstractReads = {}
+        // Refilled by whichever open path called this, once it knows (see
+        // `corruptFiles`); a project loaded from text alone has none.
+        s.corruptFiles = []
       })
       void get().refreshRecents()
     },
@@ -1149,8 +1169,9 @@ export const useStore = create<AppState>()(
         get().loadFromText(opened.text, opened.handle, opened.name)
         set((s) => {
           s.recents = platform.getRecents()
-          if (!s.loadError && opened.corruptFiles && opened.corruptFiles.length > 0) {
-            s.loadError = corruptFilesWarning(opened.corruptFiles)
+          s.corruptFiles = opened.corruptFiles ?? []
+          if (!s.loadError && s.corruptFiles.length > 0) {
+            s.loadError = corruptFilesWarning(s.corruptFiles)
           }
         })
       } catch (err) {
@@ -1529,6 +1550,14 @@ export const useStore = create<AppState>()(
       set((s) => {
         s.helpOpen = open
       }),
+
+    showCorruptFiles: () => {
+      const paths = get().corruptFiles
+      if (paths.length === 0) return
+      set((s) => {
+        s.loadError = corruptFilesWarning(paths)
+      })
+    },
 
     runValidation: () => {
       const { project, currentReviewer } = get()

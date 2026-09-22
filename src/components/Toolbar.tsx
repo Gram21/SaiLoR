@@ -126,6 +126,8 @@ export function Toolbar() {
   const unlockAi = useStore((s) => s.unlockAi)
   const currentReviewer = useStore((s) => s.currentReviewer)
   const selectReviewer = useStore((s) => s.selectReviewer)
+  const corruptFiles = useStore((s) => s.corruptFiles)
+  const showCorruptFiles = useStore((s) => s.showCorruptFiles)
 
   // Git support is Electron-only: `getGit()` is null in the browser (no local
   // git to reach at all). The entry points stay visible there too, disabled
@@ -347,6 +349,20 @@ export function Toolbar() {
           >
             Validate
           </button>
+          {/* Stays for as long as the project is open. The load-time banner is
+              dismissible, and a reviewer who clicks it away otherwise has no
+              way left to learn the project is still missing somebody's work —
+              which reads on every screen as that reviewer having done none. */}
+          {corruptFiles.length > 0 && !editorOpen && (
+            <button
+              type="button"
+              className="toolbar-warning"
+              title={`${corruptFiles.length === 1 ? 'One annotation file' : `${corruptFiles.length} annotation files`} could not be read — click for the list`}
+              onClick={showCorruptFiles}
+            >
+              ⚠ {corruptFiles.length} unreadable
+            </button>
+          )}
           <button
             type="button"
             title="Close this project and return to the start screen"
