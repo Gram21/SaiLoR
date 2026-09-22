@@ -90,7 +90,7 @@ export function ProjectEditor() {
           {dirty && <span className="editor-dirty" title="Unsaved changes">●</span>}
         </div>
         <div className="editor-actions">
-          <button type="button" onClick={onClose} disabled={busy}>
+          <button type="button" onClick={onClose} disabled={busy} title="Discard changes and close this editor">
             Cancel
           </button>
           <button type="button" onClick={() => void save()} disabled={busy} title={`Save (${MOD}+S)`}>
@@ -101,6 +101,7 @@ export function ProjectEditor() {
             className="primary"
             onClick={() => void saveAndAnnotate()}
             disabled={busy}
+            title="Save this project JSON and start annotating"
           >
             Save JSON &amp; Begin Annotating
           </button>
@@ -112,7 +113,7 @@ export function ProjectEditor() {
         <code className="editor-location-path" title={locationLabel}>
           {locationLabel}
         </code>
-        <button type="button" onClick={() => void changeLocation()} disabled={busy}>
+        <button type="button" onClick={() => void changeLocation()} disabled={busy} title="Change where this project JSON is saved">
           Change…
         </button>
       </div>
@@ -242,7 +243,7 @@ export function ProjectEditor() {
         <div className="editor-error" role="alert">
           <div className="editor-error-head">
             <strong>{error.message}</strong>
-            <button type="button" className="icon-btn" onClick={clearError} aria-label="Dismiss">
+            <button type="button" className="icon-btn" onClick={clearError} aria-label="Dismiss" title="Dismiss this error">
               ×
             </button>
           </div>
@@ -269,6 +270,7 @@ export function ProjectEditor() {
                       type="button"
                       className="editor-issue-jump"
                       onClick={() => jumpToPaper(Number(m[1]) - 1)}
+                      title="Jump to this paper in the list below"
                     >
                       {issue}
                     </button>
@@ -363,7 +365,7 @@ export function ProjectEditor() {
           {notice && (
             <div className="editor-notice">
               <span>{notice}</span>
-              <button type="button" className="icon-btn" onClick={clearNotice} aria-label="Dismiss">
+              <button type="button" className="icon-btn" onClick={clearNotice} aria-label="Dismiss" title="Dismiss this notice">
                 ×
               </button>
             </div>

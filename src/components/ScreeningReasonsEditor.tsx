@@ -144,7 +144,7 @@ export function ScreeningReasonsEditor() {
           </li>
         ))}
       </ul>
-      <button type="button" onClick={add}>
+      <button type="button" onClick={add} title="Add a new exclusion reason">
         + Add reason
       </button>
     </div>

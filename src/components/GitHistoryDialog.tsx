@@ -41,7 +41,7 @@ export function GitHistoryDialog() {
       >
         <div className="modal-head">
           <strong>History</strong>
-          <button type="button" className="icon-btn" onClick={closeHistory} aria-label="Close">
+          <button type="button" className="icon-btn" onClick={closeHistory} aria-label="Close" title="Close">
             ×
           </button>
         </div>
@@ -59,6 +59,7 @@ export function GitHistoryDialog() {
                   className="git-history-row-head"
                   aria-expanded={!!expanded[c.hash]}
                   onClick={() => toggle(c.hash)}
+                  title={expanded[c.hash] ? 'Hide field-level diff for this commit' : 'Show field-level diff for this commit'}
                 >
                   <span className={`git-merge-group-chevron${expanded[c.hash] ? '' : ' is-collapsed'}`} aria-hidden="true">
                     ▾

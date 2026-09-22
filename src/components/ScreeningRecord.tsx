@@ -36,7 +36,7 @@ export function ScreeningRecord() {
           )}
         </div>
         {paper.pdf !== '' && (
-          <button type="button" onClick={toggleScreeningPdf}>
+          <button type="button" onClick={toggleScreeningPdf} title="Show the PDF for this paper">
             Read the PDF
           </button>
         )}

@@ -115,7 +115,11 @@ export function ScreeningPanel() {
               {pending} paper{pending === 1 ? '' : 's'} every reviewer decided the same way{' '}
               {pending === 1 ? 'has' : 'have'} not been consolidated yet.
             </span>
-            <button type="button" onClick={() => adoptAllUnanimousScreening()}>
+            <button
+              type="button"
+              onClick={() => adoptAllUnanimousScreening()}
+              title="Adopt the decision every reviewer agreed on for these papers"
+            >
               Adopt all
             </button>
           </div>

@@ -154,6 +154,7 @@ inspection only.
 | REQ-UI-40 | Resizable panes | Functional · Functional Suitability | `src/components/Splitter.tsx:11-44`<br>`src/state/settings.ts` | `src/components/Splitter.test.tsx:16-36` | — | `openwiki/architecture.md` §Component Tree |
 | REQ-UI-50 | Clipboard fallback | Functional · Functional Suitability | `src/clipboard.ts:9-30` | `src/clipboard.test.ts:9-38` | — | `openwiki/architecture.md` §Component Tree |
 | REQ-UI-60 | Surface load and save errors | Functional · Functional Suitability | `src/components/ErrorPanel.tsx:4-28` | `src/components/ErrorPanel.test.tsx:12-53` | — | `openwiki/architecture.md` §Component Tree |
+| REQ-UI-70 | Button tooltips | Non-functional · Usability | `src/components/Toolbar.tsx`, `src/App.tsx`, every dialog/prompt under `src/components/` | — | — | `openwiki/architecture.md` §Component Tree |
 
 ## Screening ([screening.md](screening.md))
 
@@ -371,9 +372,9 @@ inspection only.
 
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 277 | 100% |
+| Requirements traced | 278 | 100% |
 | With at least one verifying test | 234 | 84% |
-| Without an automated check (source inspection only) | 43 | 16% |
+| Without an automated check (source inspection only) | 44 | 16% |
 | With an introducing/pinning commit | 61 | 22% |
-| With a documentation link | 277 | 100% |
+| With a documentation link | 278 | 100% |
 

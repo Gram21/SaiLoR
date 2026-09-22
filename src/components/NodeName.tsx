@@ -236,7 +236,7 @@ function DescriptionPopover({
     >
       <div className="desc-popover-head">
         <span className="desc-popover-title">{name}</span>
-        <button type="button" className="desc-popover-close" aria-label="Close" onClick={onClose}>
+        <button type="button" className="desc-popover-close" aria-label="Close" title="Close" onClick={onClose}>
           ×
         </button>
       </div>

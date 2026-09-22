@@ -64,10 +64,16 @@ export function DeleteBranchPrompt() {
           </p>
         </div>
         <div className="close-prompt-actions">
-          <button type="button" onClick={close} disabled={busy}>
+          <button type="button" onClick={close} disabled={busy} title="Cancel and keep the branch">
             Cancel
           </button>
-          <button type="button" className="primary danger" onClick={() => void confirm()} disabled={busy}>
+          <button
+            type="button"
+            className="primary danger"
+            onClick={() => void confirm()}
+            disabled={busy}
+            title="Delete this branch"
+          >
             {busy ? 'Deleting…' : 'Delete'}
           </button>
         </div>

@@ -50,7 +50,7 @@ export function SchemaTreeEditor() {
       <div className="schema-editor">
         <div className="schema-empty">
           <p>No fields yet — add one to describe what you want to record per paper.</p>
-          <button type="button" className="add-btn" onClick={() => addNode(null)}>
+          <button type="button" className="add-btn" onClick={() => addNode(null)} title="Add a new top-level field">
             + Add field
           </button>
         </div>
@@ -76,7 +76,7 @@ export function SchemaTreeEditor() {
           />
         ))}
       </div>
-      <button type="button" className="add-btn schema-add-root" onClick={() => addNode(null)}>
+      <button type="button" className="add-btn schema-add-root" onClick={() => addNode(null)} title="Add a new top-level field">
         + Add field
       </button>
     </div>
@@ -500,6 +500,7 @@ function SchemaNodeRow({
             <button
               type="button"
               className="add-btn"
+              title="Add another option to this field"
               onClick={() => updateNode(node.uid, { options: [...node.options, ''] })}
             >
               + Add option

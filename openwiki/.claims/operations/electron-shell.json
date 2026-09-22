@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:1b0525d59fcd5ccb66928aa86125afd88a559f9a3cb3f89ad4fae1a66c761557",
+  "pageVersion": "sha256:6e88cced4913db55c3b69ad17c85a9273f440018d18361dd0edf94a21178d42e",
   "claims": [
     {
       "id": "claim_b7a37ca8823d4b1c91f976ad86ff6df8",
@@ -392,11 +392,11 @@
     },
     {
       "id": "claim_088cb9293cd847768af533eeef0f85ec",
-      "statement": "ClosePrompt.tsx is the in-app analogue for closing a project (not the app) with unsaved changes, mirroring the native Electron quit dialog's three choices and wording, resolved through useStore.resolveClosePrompt so closing a project and quitting behave alike.",
+      "statement": "ClosePrompt.tsx is the in-app analogue for closing a project (not the app) with unsaved changes, mirroring the native Electron quit dialog's three choices and wording, resolved through useStore.resolveClosePrompt so closing a project and quitting behave alike. Each of its three buttons (Cancel/Don't Save/Save) carries a tooltip spelling out the choice.",
       "evidence": [
         {
-          "resource": "repo://src/components/ClosePrompt.tsx#L1-L59",
-          "version": "repo-lines-v1:sha256:0707293fcbd993026fddfaa907c5c0095c31571a8716f6230168385400b6a1da:eyJzZWxlY3RlZExpbmVDb3VudCI6NTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVkYjEwNDk5ZmU1OTEyNmYyNDA4MmJhYWU5YzY0NjhmYTg1Yzg5NmE0YmYwMzBjMTliYTc3ZWJkYTkzNWFiNDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/components/ClosePrompt.tsx#L1-L70",
+          "version": "repo-lines-v1:sha256:9ae13d353a7f2fb9ef2546dfda8ebd810aeae8493d6475e0d4e13f1e4fa24d4c:eyJzZWxlY3RlZExpbmVDb3VudCI6NzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVkYjEwNDk5ZmU1OTEyNmYyNDA4MmJhYWU5YzY0NjhmYTg1Yzg5NmE0YmYwMzBjMTliYTc3ZWJkYTkzNWFiNDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
@@ -413,6 +413,6 @@
   ],
   "verification": {
     "by": "openwiki/0.4.0",
-    "at": "2026-09-21T20:12:55.536Z"
+    "at": "2026-09-22T07:19:01.173Z"
   }
 }

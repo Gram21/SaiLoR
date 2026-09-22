@@ -334,7 +334,7 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
     <div className="field-link-popover" style={placement} onClick={(e) => e.stopPropagation()}>
       <div className="modal-head field-link-head">
         <strong>{linkedCount === 1 ? '1 link' : `${linkedCount} links`}</strong>
-        <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
+        <button type="button" className="icon-btn" title="Close" onClick={onClose} aria-label="Close">
           ×
         </button>
       </div>
@@ -359,7 +359,12 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
             ))}
           </ul>
         )}
-        <button type="button" className="field-link-toggle" onClick={() => setPickerOpen((v) => !v)}>
+        <button
+          type="button"
+          className="field-link-toggle"
+          title={pickerOpen ? 'Cancel linking a highlight or note' : 'Link a highlight or note as evidence'}
+          onClick={() => setPickerOpen((v) => !v)}
+        >
           {pickerOpen ? 'Cancel' : '+ Link a highlight or note'}
         </button>
         {pickerOpen && (
@@ -389,6 +394,7 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
                         <button
                           type="button"
                           className="field-link-action"
+                          title="Link this highlight or note to this field"
                           onClick={() => linkMark(m.id, path, name, index)}
                         >
                           Link
@@ -411,7 +417,7 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
           </div>
         )}
       </div>
-      <button type="button" className="primary" onClick={onClose}>
+      <button type="button" className="primary" title="Close this list of links" onClick={onClose}>
         Done
       </button>
     </div>

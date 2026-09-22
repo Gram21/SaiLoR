@@ -6,6 +6,8 @@ tags: [architecture, platform-adapter, state-management, electron, git, electron
 sources:
   - id: openwiki-source-54631e6ebf1d3b815c4a5eed
     resource: repo://src/App.tsx
+  - id: openwiki-source-e9545c0696c205b4aba178dd
+    resource: repo://src/components/ConsolidationUpdatePrompt.tsx
   - id: openwiki-source-95bfccfd0c712f6e72040e0d
     resource: repo://src/main.tsx
   - id: openwiki-source-24c09c3b54387889db23d752
@@ -34,10 +36,10 @@ sources:
     resource: repo://tsconfig.node.json
   - id: openwiki-source-5e1b077422a94ae165e88e4e
     resource: repo://vite.config.ts
-generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
+generated: {by: "claude-code", at: "2026-09-22T07:19:01.173Z"}
 verified:
   - by: openwiki/0.4.0
-    at: 2026-09-21T20:12:55.536Z
+    at: 2026-09-22T07:19:01.173Z
 ---
 
 # Architecture
@@ -334,6 +336,8 @@ The entire app state lives in a single Zustand store with immer middleware:
 | `updateError` | `string \| null` | The native self-update's download/check failed; cleared on the next attempt. Win/Linux only; session-only |
 | `currentReviewer` | `string \| null` | Which reviewer's tree is shown/edited — `"1".."N"`, `"consolidation"`, or `null`. Always `null` for a single-reviewer project; also starts `null` for a multi-reviewer one until picked (see "Multiple reviewers & Consolidation" below). Persisted per project in `localStorage`; not an undo step, does not set `dirty` |
 | `consolidationTarget` | `{ path, name, index } \| null` | The field the Consolidation "compare" popup (`ConsolidationDialog`) is showing, or `null` when closed. Session-only |
+| `consolidationUpdatePrompt` | `string \| null` | The paper id `ConsolidationUpdatePrompt` is asking about — the reviewers changed something since Consolidation's automatic steps last ran and the consolidated tree already holds answers, so the scheduler cannot proceed silently. Session-only |
+| `consolidationUpdateApproved` | `string \| null` | Set to a paper id when the consolidator answers that prompt with "update", letting `useConsolidationAlignment`'s effect proceed once more; cleared as soon as the run records its new `consolidationSync`. Session-only |
 | `consolidationOverviewOpen` | `boolean` | Whether the project-wide `ConsolidationOverview` modal is open. Session-only |
 | `deferredConsolidations` | `Record<string, true>` | Fields where the consolidator chose "Enter a different value" — waiting for a manually entered value. Keyed by `deferredConsolidationKey(paperId, canonicalPath)`. Session-only; cleared on project close/load |
 | `annotationFilter` | `AnnotationFilter` | Which papers the annotation paper list shows (`'all'` / `'open'` / `'in-progress'` / `'finished'` / `'issues'`). Non-screening seats (Consolidation included now); session-only, resets on project close/load |
@@ -416,6 +420,8 @@ App (src/App.tsx)
 │     Modal overlay reachable only from Consolidation mode's ⇄ button: every reviewer's answer for one field, side by side; picking one calls `resolveConsolidationValue` (writes value + marks equal + clears deferral), or "Enter a different value" defers for manual entry
 ├── ConsolidationOverview (src/components/ConsolidationOverview.tsx)
 │     Project-wide modal for Consolidation's batch actions: lists all papers with ≥1 disagreement, houses "Adopt all unanimous" (with run progress), and opens Agreement / per-paper DisagreementOverview via return-to-flag navigation
+├── ConsolidationUpdatePrompt (src/components/ConsolidationUpdatePrompt.tsx)
+│     Asked when `useConsolidationAlignment` finds the reviewers changed something since Consolidation's automatic steps last ran *and* the consolidated tree already holds answers: "Keep My Version" declines and records the reviewers' current state as seen (via `resolveConsolidationUpdate(false)`), "Update" re-runs matching/adoption (`resolveConsolidationUpdate(true)`). See "Multiple reviewers & Consolidation" below
 ├── ScreeningSummary (src/components/ScreeningSummary.tsx)
 │     Modal: progress + PRISMA-style include/exclude/reason counts for a screening project
 ├── ScreeningImportDialog (src/components/ScreeningImportDialog.tsx)

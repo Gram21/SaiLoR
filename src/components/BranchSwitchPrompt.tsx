@@ -42,15 +42,26 @@ export function BranchSwitchPrompt() {
           </p>
         </div>
         <div className="close-prompt-actions">
-          <button type="button" onClick={() => void resolve('cancel')} disabled={busy}>
+          <button
+            type="button"
+            title="Cancel — stay on the current branch"
+            onClick={() => void resolve('cancel')}
+            disabled={busy}
+          >
             Cancel
           </button>
-          <button type="button" onClick={() => void resolve('commitFirst')} disabled={busy}>
+          <button
+            type="button"
+            title="Cancel the switch so you can commit your changes first"
+            onClick={() => void resolve('commitFirst')}
+            disabled={busy}
+          >
             Commit first
           </button>
           <button
             type="button"
             className="primary"
+            title={`Switch to "${prompt.branch}", merging your uncommitted changes in`}
             onClick={() => void resolve('carryOver')}
             disabled={busy}
             autoFocus

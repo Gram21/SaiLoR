@@ -324,6 +324,7 @@ export function ValidationDialog() {
               className="icon-btn"
               onClick={() => setOpen(false)}
               aria-label="Close"
+              title="Close"
             >
               ×
             </button>

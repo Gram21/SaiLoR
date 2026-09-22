@@ -37,15 +37,26 @@ export function ClosePrompt() {
           <p>Your changes will be lost if you don't save them.</p>
         </div>
         <div className="close-prompt-actions">
-          <button type="button" onClick={() => void resolve('cancel')} disabled={busy}>
+          <button
+            type="button"
+            title="Cancel — go back without closing the project"
+            onClick={() => void resolve('cancel')}
+            disabled={busy}
+          >
             Cancel
           </button>
-          <button type="button" onClick={() => void resolve('discard')} disabled={busy}>
+          <button
+            type="button"
+            title="Close the project and discard the unsaved changes"
+            onClick={() => void resolve('discard')}
+            disabled={busy}
+          >
             Don't Save
           </button>
           <button
             type="button"
             className="primary"
+            title="Save the changes, then close the project"
             onClick={() => void resolve('save')}
             disabled={busy}
             autoFocus

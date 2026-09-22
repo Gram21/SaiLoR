@@ -81,6 +81,7 @@ export function AnnotationNode({
             className="add-btn"
             disabled={!canAdd(def, instances.length)}
             onClick={() => addInstance(path, def)}
+            title={`Add another ${def.name}`}
           >
             + Add
           </button>

@@ -224,17 +224,30 @@ export function App() {
             />
             <h1>SaiLoR</h1>
             <p>Open a project JSON file to begin annotating, or set one up.</p>
-            <button type="button" className="primary" onClick={() => void openProject()}>
+            <button
+              type="button"
+              className="primary"
+              onClick={() => void openProject()}
+              title="Open an existing project JSON file"
+            >
               Open project…
             </button>
             <div className="welcome-create">
-              <button type="button" onClick={() => void startNew()}>
+              <button type="button" onClick={() => void startNew()} title="Create a new annotation schema from scratch">
                 New annotation JSON…
               </button>
-              <button type="button" onClick={() => void startEdit()}>
+              <button
+                type="button"
+                onClick={() => void startEdit()}
+                title="Open an existing project JSON to edit its annotation schema"
+              >
                 Edit annotation JSON…
               </button>
-              <button type="button" onClick={() => void startFromScreening()}>
+              <button
+                type="button"
+                onClick={() => void startFromScreening()}
+                title="Create a new annotation project from a finished screening"
+              >
                 New from screening…
               </button>
               {/* Absent in the browser build entirely — see GitCloneDialog's
@@ -319,13 +332,23 @@ export function App() {
                       // no reliable unsigned auto-update path, so it keeps the plain
                       // download link below instead.
                       updateReady ? (
-                        <button type="button" className="update-download" onClick={() => void installUpdate()}>
+                        <button
+                          type="button"
+                          className="update-download"
+                          onClick={() => void installUpdate()}
+                          title="Restart the app to install the downloaded update"
+                        >
                           Restart to update
                         </button>
                       ) : updateProgress != null ? (
                         <span>Downloading update… {Math.round(updateProgress)}%</span>
                       ) : (
-                        <button type="button" className="update-download" onClick={() => void downloadUpdate()}>
+                        <button
+                          type="button"
+                          className="update-download"
+                          onClick={() => void downloadUpdate()}
+                          title="Download the latest update"
+                        >
                           Download update
                         </button>
                       )

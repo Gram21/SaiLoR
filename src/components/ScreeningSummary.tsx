@@ -46,7 +46,13 @@ export function ScreeningSummary() {
       >
         <div className="modal-head">
           <strong>Screening summary</strong>
-          <button type="button" className="icon-btn" onClick={() => setOpen(false)} aria-label="Close">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => setOpen(false)}
+            aria-label="Close"
+            title="Close"
+          >
             ×
           </button>
         </div>

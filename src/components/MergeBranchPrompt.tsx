@@ -69,10 +69,16 @@ export function MergeBranchPrompt() {
           </p>
         </div>
         <div className="close-prompt-actions">
-          <button type="button" onClick={close} disabled={busy}>
+          <button type="button" onClick={close} disabled={busy} title="Cancel without merging">
             Cancel
           </button>
-          <button type="button" className="primary" onClick={() => void confirm()} disabled={busy}>
+          <button
+            type="button"
+            className="primary"
+            onClick={() => void confirm()}
+            disabled={busy}
+            title="Merge the selected branch into the current branch"
+          >
             {busy ? 'Merging…' : 'OK'}
           </button>
         </div>

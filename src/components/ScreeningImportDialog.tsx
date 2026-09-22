@@ -34,6 +34,7 @@ export function ScreeningImportDialog() {
           <button
             type="button"
             className="icon-btn"
+            title="Cancel this import"
             onClick={() => resolveScreeningImport('cancel')}
             aria-label="Close"
           >
@@ -103,11 +104,17 @@ export function ScreeningImportDialog() {
             </fieldset>
           )}
           <div className="screening-import-actions">
-            <button type="button" disabled={busy} onClick={() => resolveScreeningImport('cancel')}>
+            <button
+              type="button"
+              title="Cancel this import"
+              disabled={busy}
+              onClick={() => resolveScreeningImport('cancel')}
+            >
               Cancel
             </button>
             <button
               type="button"
+              title="Import only the included papers, leaving not-yet-screened papers out"
               disabled={busy}
               onClick={() => void resolveScreeningImport('skip-undecided')}
             >
@@ -117,6 +124,7 @@ export function ScreeningImportDialog() {
             <button
               type="button"
               className="primary"
+              title="Import the included papers together with the not-yet-screened ones"
               disabled={busy}
               onClick={() => void resolveScreeningImport('include-undecided')}
             >

@@ -65,7 +65,7 @@ export function GitCloneDialog() {
         <div className="modal-head">
           <strong>Import from remote git</strong>
           {clone.phase !== 'cloning' && (
-            <button type="button" className="icon-btn" onClick={requestClose} aria-label="Close">
+            <button type="button" className="icon-btn" onClick={requestClose} aria-label="Close" title="Close this dialog">
               ×
             </button>
           )}
@@ -88,7 +88,7 @@ export function GitCloneDialog() {
               />
 
               <div className="git-clone-dest">
-                <button type="button" onClick={() => void pickCloneParent()}>
+                <button type="button" onClick={() => void pickCloneParent()} title="Choose the folder to clone the repository into">
                   Choose folder…
                 </button>
                 {clone.parent ? (
@@ -109,10 +109,16 @@ export function GitCloneDialog() {
               )}
 
               <div className="git-clone-actions">
-                <button type="button" onClick={closeClone}>
+                <button type="button" onClick={closeClone} title="Cancel and close this dialog">
                   Cancel
                 </button>
-                <button type="button" className="primary" disabled={!canClone} onClick={() => void runClone()}>
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={!canClone}
+                  onClick={() => void runClone()}
+                  title={canClone ? 'Clone the repository' : 'Enter a repository URL and choose a folder first'}
+                >
                   Clone
                 </button>
               </div>
@@ -133,7 +139,7 @@ export function GitCloneDialog() {
               <p>Git reported an error:</p>
               <pre className="git-error">{clone.error}</pre>
               <div className="git-clone-actions">
-                <button type="button" className="primary" onClick={backToCloneSetup}>
+                <button type="button" className="primary" onClick={backToCloneSetup} title="Go back and try again">
                   Back
                 </button>
               </div>
@@ -145,10 +151,10 @@ export function GitCloneDialog() {
               <p>Cloned into {clone.dest}.</p>
               <p>Now choose the project JSON to open — the file picker will start there.</p>
               <div className="git-clone-actions">
-                <button type="button" onClick={closeClone}>
+                <button type="button" onClick={closeClone} title="Close without opening a project">
                   Cancel
                 </button>
-                <button type="button" className="primary" onClick={() => void openClonedProject()}>
+                <button type="button" className="primary" onClick={() => void openClonedProject()} title="Choose the project JSON to open from the cloned repository">
                   OK
                 </button>
               </div>

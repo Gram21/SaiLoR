@@ -471,6 +471,7 @@ export function PaperList() {
                 className={`screening-filter-btn${screeningFilter === f ? ' active' : ''}`}
                 aria-pressed={screeningFilter === f}
                 onClick={() => setScreeningFilter(f)}
+                title={f === 'all' ? 'Show every paper' : `Show only ${f} papers`}
               >
                 {f === 'all' ? 'All' : f[0].toUpperCase() + f.slice(1)}
               </button>

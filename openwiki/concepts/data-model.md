@@ -4,6 +4,8 @@ title: Project Data Model
 description: The on-disk split-file project format and the in-memory TypeScript types behind it — the load → normalize → edit → prune → serialize lifecycle, the per-paper-per-reviewer annotation file layout, legacy single-file migration, and the five-state annotation vocabulary.
 tags: [data-model, project-format, annotations, persistence, migration, annotation-state]
 sources:
+  - id: openwiki-source-138e8b203cbd3e8b566b4f40
+    resource: repo://src/consolidate/readiness.ts
   - id: openwiki-source-e757c5a5c207c012e0ba6957
     resource: repo://src/model/alignment.ts
   - id: openwiki-source-ded932c19c04aac08bb5edf2
@@ -23,7 +25,7 @@ sources:
 generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
 verified:
   - by: openwiki/0.4.0
-    at: 2026-09-21T20:55:32.833Z
+    at: 2026-09-22T07:19:01.173Z
 ---
 
 # Project Data Model

@@ -103,13 +103,29 @@ export function PapersEditor() {
 
   const actionButtons = (
     <div className="papers-actions">
-      <button type="button" className="primary" disabled={busy} onClick={() => void addPdfs()}>
+      <button
+        type="button"
+        className="primary"
+        title="Pick one or more PDFs to add to this project"
+        disabled={busy}
+        onClick={() => void addPdfs()}
+      >
         + Add PDFs…
       </button>
-      <button type="button" disabled={busy} onClick={() => void addPdfFolder()}>
+      <button
+        type="button"
+        title="Add every PDF in a folder, including sub-folders"
+        disabled={busy}
+        onClick={() => void addPdfFolder()}
+      >
         + Add folder…
       </button>
-      <button type="button" disabled={busy} onClick={() => void importReferences()}>
+      <button
+        type="button"
+        title="Import titles, authors and DOIs from a BibTeX, RIS or CSL-JSON reference export"
+        disabled={busy}
+        onClick={() => void importReferences()}
+      >
         Import references…
       </button>
       {/* In-place import into an open screening project stays blocked — not
@@ -119,7 +135,12 @@ export function PapersEditor() {
           a *separate*, independently reasoned screening project instead — see
           `importFromScreening` in editorStore.ts. */}
       {!screening && (
-        <button type="button" disabled={busy} onClick={() => void importFromScreening()}>
+        <button
+          type="button"
+          title="Open a screening project and carry its included (and not-yet-screened) papers into a new project"
+          disabled={busy}
+          onClick={() => void importFromScreening()}
+        >
           Import from screening…
         </button>
       )}

@@ -60,7 +60,13 @@ export function DuplicateReviewDialog() {
               {decidedCount} of {rows.length} decided
             </span>
           </strong>
-          <button type="button" className="icon-btn" onClick={() => resolveDuplicateReview('cancel')} aria-label="Close">
+          <button
+            type="button"
+            className="icon-btn"
+            title="Cancel the import"
+            onClick={() => resolveDuplicateReview('cancel')}
+            aria-label="Close"
+          >
             ×
           </button>
         </div>
@@ -74,10 +80,18 @@ export function DuplicateReviewDialog() {
           </p>
 
           <div className="dup-review-bulk">
-            <button type="button" onClick={() => setAllDuplicateDecisions('merge')}>
+            <button
+              type="button"
+              title="Mark every possible duplicate below to be merged into its match"
+              onClick={() => setAllDuplicateDecisions('merge')}
+            >
               Mark all as duplicates
             </button>
-            <button type="button" onClick={() => setAllDuplicateDecisions('separate')}>
+            <button
+              type="button"
+              title="Mark every possible duplicate below to be added as its own paper"
+              onClick={() => setAllDuplicateDecisions('separate')}
+            >
               Mark all as different papers
             </button>
           </div>
@@ -97,13 +111,18 @@ export function DuplicateReviewDialog() {
         </div>
 
         <div className="dup-review-footer">
-          <button type="button" onClick={() => resolveDuplicateReview('cancel')}>
+          <button
+            type="button"
+            title="Discard this import; nothing gets added"
+            onClick={() => resolveDuplicateReview('cancel')}
+          >
             Cancel import
           </button>
           <button
             type="button"
             className="primary"
             disabled={!allDecided}
+            title={allDecided ? 'Import these references with the decisions above' : 'Decide every possible duplicate above before importing'}
             onClick={() => resolveDuplicateReview('apply')}
           >
             Import {draft.entries.length} reference{draft.entries.length === 1 ? '' : 's'}

@@ -817,6 +817,7 @@ export function HelpDialog() {
             <button
               type="button"
               className="icon-btn"
+              title="Close help"
               onClick={() => setHelpOpen(false)}
               aria-label="Close"
             >
@@ -833,7 +834,12 @@ export function HelpDialog() {
             <ul>
               {sections.map((s) => (
                 <li key={s.id}>
-                  <button type="button" className="help-toc-link" onClick={() => jumpTo(s.id)}>
+                  <button
+                    type="button"
+                    className="help-toc-link"
+                    title={`Jump to “${s.title}”`}
+                    onClick={() => jumpTo(s.id)}
+                  >
                     {s.title}
                   </button>
                 </li>
@@ -848,7 +854,12 @@ export function HelpDialog() {
               {/* Every section is a plausible place to have finished reading,
                   and the contents are only at the top. */}
               <div className="help-top-row">
-                <button type="button" className="help-top-link" onClick={jumpToTop}>
+                <button
+                  type="button"
+                  className="help-top-link"
+                  title="Scroll back to the contents at the top"
+                  onClick={jumpToTop}
+                >
                   ↑ Back to top
                 </button>
               </div>

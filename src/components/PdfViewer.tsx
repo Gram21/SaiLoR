@@ -1394,7 +1394,7 @@ export function PdfViewer() {
           {screening && (
             <>
               {' '}
-              <button type="button" onClick={toggleScreeningPdf}>
+              <button type="button" onClick={toggleScreeningPdf} title="Return to this paper's screening record">
                 Back to the record
               </button>
             </>
@@ -1418,7 +1418,7 @@ export function PdfViewer() {
         </div>
         <div className="pdf-tools">
           {screening && (
-            <button type="button" onClick={toggleScreeningPdf}>
+            <button type="button" onClick={toggleScreeningPdf} title="Return to this paper's screening record">
               Back to the record
             </button>
           )}
@@ -1699,6 +1699,7 @@ export function PdfViewer() {
             <button
               type="button"
               className="primary"
+              title={grantingFolder ? 'Waiting for the folder picker to close' : "Grant access to the folder containing this project's PDFs"}
               onClick={grantFolderAccess}
               disabled={grantingFolder}
             >
@@ -1813,6 +1814,7 @@ export function PdfViewer() {
                 <button
                   type="button"
                   className="pdf-mark-delete"
+                  title="Delete this highlight"
                   onClick={() => {
                     const links = mark.linkedFields ?? []
                     if (links.length > 0) {
@@ -1828,7 +1830,7 @@ export function PdfViewer() {
                 >
                   Delete
                 </button>
-                <button type="button" className="primary" onClick={() => setActiveMark(null)}>
+                <button type="button" className="primary" title="Close this popover" onClick={() => setActiveMark(null)}>
                   Done
                 </button>
               </div>

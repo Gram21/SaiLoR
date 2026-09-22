@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:ac094505bcaf3e10212f28ec3d9d9fb48bd59a93434467b78a4ab4ecb41f1a2b",
+  "pageVersion": "sha256:5abcbcd24efa5be9442a8048f272f1425614a3616430801f440ffe9cefe6df38",
   "claims": [
     {
       "id": "claim_0bfba0ad57324c858d4748e034707d01",
@@ -159,8 +159,8 @@
       "statement": "ScreeningRecord is the default middle-pane surface shown instead of PdfViewer because screening is normally a title+abstract decision and the PDF is often absent; it shows title/authors/venue/DOI/abstract, flags abstractFromPdf extractions as possibly incomplete, and exposes an untouched PdfViewer via a 'Read the PDF' button that flips screeningShowPdf.",
       "evidence": [
         {
-          "resource": "repo://src/components/ScreeningRecord.tsx#L1-L61",
-          "version": "repo-lines-v1:sha256:2fa25219ba3beca9bb4a9f4e55b534652fb47becef329abda8d56a92c118fb94:eyJzZWxlY3RlZExpbmVDb3VudCI6NjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1ZWVhNjZmMWNkNTIyMjJiZDgxOGY2N2M4OGY2MzM5NzkzYjNkOGUxMjQ5ZTZkM2IzNzBlMWVlZDBjNTVhMGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2MjY3OTM1ZmM2MzM0NjVkODQ4YjQwYTRlZDY5NjdlN2I3YTMyM2Y4MWNkNTNjMTEwYWUyMTAyOTY4N2FhMTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+          "resource": "repo://src/components/ScreeningRecord.tsx#L1-L62",
+          "version": "repo-lines-v1:sha256:3667d69d4888da44cf8674a7269bd7f9322150be9eb2b396431d4cb7c5649248:eyJzZWxlY3RlZExpbmVDb3VudCI6NjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1ZWVhNjZmMWNkNTIyMjJiZDgxOGY2N2M4OGY2MzM5NzkzYjNkOGUxMjQ5ZTZkM2IzNzBlMWVlZDBjNTVhMGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
@@ -169,8 +169,8 @@
       "statement": "ScreeningPanel is the right-pane decision control replacing AnnotationPanel: two buttons (Include via I, Exclude via E; pressing the active one clears it), a Reason ComboBox disabled unless excluded, a Summary button (plus Consolidation-only Agreement and Disagreements buttons), a Consolidation-only pending-unanimous notice with Adopt all, and a progress line; it withholds the form when no reviewer is picked in a multi-reviewer project.",
       "evidence": [
         {
-          "resource": "repo://src/components/ScreeningPanel.tsx#L1-L179",
-          "version": "repo-lines-v1:sha256:96ed2ae5ac139011cdac3ba1605e7994ab5a5a59c38f4a6bd24fe9685fbd9b48:eyJzZWxlY3RlZExpbmVDb3VudCI6MTc5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIyNjFhYTNjMDIyNWNkNDg1M2M4YjBhZTkwODA0ZTE1MWExZDcyMjFkMjc5OTgzZjRlMTU5NzYwZDg2YTA1Yzg3IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI1NjI2NzkzNWZjNjMzNDY1ZDg0OGI0MGE0ZWQ2OTY3ZTdiN2EzMjNmODFjZDUzYzExMGFlMjEwMjk2ODdhYTEzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MSwiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIn0"
+          "resource": "repo://src/components/ScreeningPanel.tsx#L1-L184",
+          "version": "repo-lines-v1:sha256:c81478d0e0a7b0a271b7fa775c685217f158ed60a7dac0072cfc944d90833383:eyJzZWxlY3RlZExpbmVDb3VudCI6MTg0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIyNjFhYTNjMDIyNWNkNDg1M2M4YjBhZTkwODA0ZTE1MWExZDcyMjFkMjc5OTgzZjRlMTU5NzYwZDg2YTA1Yzg3IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
@@ -199,8 +199,8 @@
       "statement": "ScreeningSummary is a PRISMA-counts modal (ValidationDialog pattern, Escape/backdrop close) showing total/included/excluded/undecided plus a per-reason table for every configured reason and an excludedWithoutReason row when non-zero, labeled by which seat it counts.",
       "evidence": [
         {
-          "resource": "repo://src/components/ScreeningSummary.tsx#L1-L98",
-          "version": "repo-lines-v1:sha256:da7fe903ef327ebfe3af59b4a54fee0f30b68d5db0ca211a2aacc85d5f71b976:eyJzZWxlY3RlZExpbmVDb3VudCI6OTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVkYjEwNDk5ZmU1OTEyNmYyNDA4MmJhYWU5YzY0NjhmYTg1Yzg5NmE0YmYwMzBjMTliYTc3ZWJkYTkzNWFiNDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2MjY3OTM1ZmM2MzM0NjVkODQ4YjQwYTRlZDY5NjdlN2I3YTMyM2Y4MWNkNTNjMTEwYWUyMTAyOTY4N2FhMTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+          "resource": "repo://src/components/ScreeningSummary.tsx#L1-L105",
+          "version": "repo-lines-v1:sha256:5f899726cc776b51f6d3a2c5f04df8ded45337af6a8f4c5026ddcb73c583e7ff:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA1LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI1ZGIxMDQ5OWZlNTkxMjZmMjQwODJiYWFlOWM2NDY4ZmE4NWM4OTZhNGJmMDMwYzE5YmE3N2ViZGE5MzVhYjQwIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
@@ -209,8 +209,8 @@
       "statement": "ScreeningImportDialog is a pre-commit summary shown before writing: included papers are always carried, excluded never carried (with per-reason breakdown), undecided carried by default with an explicit 'leave them out' escape hatch; for target:'start' a radio chooses annotation vs second-screening project; when reviewers>1 and pendingUnanimousCount>0 it advises opening as Consolidation and using Adopt all first.",
       "evidence": [
         {
-          "resource": "repo://src/components/ScreeningImportDialog.tsx#L1-L130",
-          "version": "repo-lines-v1:sha256:fe91733cec600c601fcd56e6983a1c56745f1ba6a18247fe07969a2c392968db:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI1ZGExZTc1MjZjMTEzOGI0YWJmYjJiNmM5YWZjMTdiYjk3OWNjMmJhYTI2ODA4ZTZiYzJjNzlmZDM1NDFkNDE4IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI1NjI2NzkzNWZjNjMzNDY1ZDg0OGI0MGE0ZWQ2OTY3ZTdiN2EzMjNmODFjZDUzYzExMGFlMjEwMjk2ODdhYTEzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MSwiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIn0"
+          "resource": "repo://src/components/ScreeningImportDialog.tsx#L1-L139",
+          "version": "repo-lines-v1:sha256:2d261df775923e47b35b2e40752c53539408041c15a8b084f9b3ebf981a3abca:eyJzZWxlY3RlZExpbmVDb3VudCI6MTM5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI1ZGExZTc1MjZjMTEzOGI0YWJmYjJiNmM5YWZjMTdiYjk3OWNjMmJhYTI2ODA4ZTZiYzJjNzlmZDM1NDFkNDE4IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
@@ -219,8 +219,8 @@
       "statement": "ScreeningReasonsEditor replaces SchemaTreeEditor for screening drafts and manages the ordered exclusion-reason list (order drives the 1-9 key shortcuts); on a committed rename it offers via confirm to migrate papers recording the old label (migrateScreeningReason), and on a remove it warns the same way since there is no new label to migrate to.",
       "evidence": [
         {
-          "resource": "repo://src/components/ScreeningReasonsEditor.tsx#L1-L151",
-          "version": "repo-lines-v1:sha256:60812f4d715f755dc5f6bc55fc50eb63603c4875ab1ae95c61a79694578e47dc:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI1YmFiMDQzYzA1MjUwYzdmZWNkNTljYTA0YjMyNmJlY2JiNTlmOTRhZjViMmY1Y2MzYzAwZTM4ZWQxZGU2NjgwIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI1NjI2NzkzNWZjNjMzNDY1ZDg0OGI0MGE0ZWQ2OTY3ZTdiN2EzMjNmODFjZDUzYzExMGFlMjEwMjk2ODdhYTEzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MSwiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIn0"
+          "resource": "repo://src/components/ScreeningReasonsEditor.tsx#L1-L152",
+          "version": "repo-lines-v1:sha256:0cd8f96fc16ab145b6d2736b21abd155d91497ca94ad4c0f259ca914af3e4231:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI1YmFiMDQzYzA1MjUwYzdmZWNkNTljYTA0YjMyNmJlY2JiNTlmOTRhZjViMmY1Y2MzYzAwZTM4ZWQxZGU2NjgwIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
@@ -243,7 +243,7 @@
           "version": "repo-lines-v1:sha256:302526a7259c81ede20dae10c291cfe9e85d442ce3d5913fdf0bb7b1092fab34:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJmYzZjZWU3YzBiYWU0Yzk0MDM1NGU4YWQyMTc3ZWFkOTk0YjM4ZmRhOWVlODQ2YzAyYTAwZWQyNWI4MmQ3MzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk0MDBiZjUwNjkyN2Q3NmEzNjA4YjMyNzVjMWIyZjIxYjlhYjBmOWFiYTVmZTNjZGRlOGM1ZjBmMTlmMDUxYjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
         },
         {
-          "resource": "repo://src/model/project.ts#L764-L765",
+          "resource": "repo://src/model/project.ts#L782-L783",
           "version": "repo-lines-v1:sha256:d1d78729244d320ef00dfdbc5cf3ec34f978d75a40cace56cdc37ddb3cfc29cb:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMGM0OTEzMzg0OTM0MDY0NTNiZWUyMTAyMDcyMTQ2ZjcwMzI1ZTZhMTVkN2FiNTQ5NGRjMTJjMjk3MzdiNGFmNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTMxNTVhZjkwOTVlNmZlNTQ3MjkwNDFlYzdlMWM3MTM2OGRmYjAxZTcwMDM5YTNhZWNhYWI2YmY1YjNmNzk1ZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiM2U2MzgyNjZkNThlOTBhOTc1ZjRhN2JiNWVlOTk3YmFkZjE0ZGQ1NDRjYTcxN2Y3ODJhZmMxYWUzZDlkZGExZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZGI3MzBmNjg4MmUxN2JiNzI2NmU4ZjQzODYwZWI5ZmE1NjYxOTkxODk4ZmM4MTRjMDk4ZWEzOTVmOWM3MDEzNiJ9"
         }
       ]
@@ -301,6 +301,6 @@
   ],
   "verification": {
     "by": "openwiki/0.4.0",
-    "at": "2026-09-21T20:12:55.536Z"
+    "at": "2026-09-22T07:19:01.173Z"
   }
 }

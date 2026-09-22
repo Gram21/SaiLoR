@@ -344,7 +344,12 @@ export function LlmSettingsDialog() {
                           </div>
                         )}
                       </div>
-                      <button type="button" onClick={() => startEdit(config)} disabled={busy}>
+                      <button
+                        type="button"
+                        onClick={() => startEdit(config)}
+                        disabled={busy}
+                        title={`Edit "${config.name}"`}
+                      >
                         Edit
                       </button>
                       <button
@@ -366,7 +371,13 @@ export function LlmSettingsDialog() {
               )}
 
               <div className="llm-add">
-                <button type="button" className="primary" onClick={startAdd} disabled={busy}>
+                <button
+                  type="button"
+                  className="primary"
+                  onClick={startAdd}
+                  disabled={busy}
+                  title="Add a new LLM target"
+                >
                   + Add target
                 </button>
               </div>
@@ -562,7 +573,12 @@ export function LlmSettingsDialog() {
 
               <div className="llm-verify">
                 <div className="llm-verify-row">
-                  <button type="button" onClick={() => void onVerify()} disabled={verifying || busy}>
+                  <button
+                    type="button"
+                    onClick={() => void onVerify()}
+                    disabled={verifying || busy}
+                    title="Save this target and send a test request to verify it works"
+                  >
                     {verifying ? 'Checking…' : 'Verify setup'}
                   </button>
                   <span className="llm-verify-hint">
@@ -588,10 +604,20 @@ export function LlmSettingsDialog() {
               </div>
 
               <div className="llm-actions">
-                <button type="button" onClick={backToList} disabled={busy || verifying}>
+                <button
+                  type="button"
+                  onClick={backToList}
+                  disabled={busy || verifying}
+                  title="Discard changes and return to the list"
+                >
                   Cancel
                 </button>
-                <button type="submit" className="primary" disabled={busy || verifying}>
+                <button
+                  type="submit"
+                  className="primary"
+                  disabled={busy || verifying}
+                  title="Save this target"
+                >
                   {busy ? 'Saving…' : 'Save'}
                 </button>
               </div>

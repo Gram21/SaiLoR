@@ -251,7 +251,7 @@ export function GitDialog() {
             >
               History…
             </button>
-            <button type="button" className="icon-btn" onClick={requestClose} aria-label="Close">
+            <button type="button" className="icon-btn" onClick={requestClose} title="Close" aria-label="Close">
               ×
             </button>
           </div>
@@ -261,7 +261,11 @@ export function GitDialog() {
           {dirty && (
             <div className="git-dirty-banner">
               You have unsaved annotations. Commit and pull work on the file on disk, so save first.
-              <button type="button" onClick={() => void save()}>
+              <button
+                type="button"
+                onClick={() => void save()}
+                title="Save the project so commit, pull and push can work on the file on disk"
+              >
                 Save project
               </button>
             </div>
@@ -298,10 +302,20 @@ export function GitDialog() {
               {discardOnlyMode ? 'Discard all' : panel.amend ? 'Amend' : 'Commit'}
             </button>
             <div className="git-panel-actions-right">
-              <button type="button" disabled={working || dirty || !repo.upstream} onClick={() => void runPull()}>
+              <button
+                type="button"
+                disabled={working || dirty || !repo.upstream}
+                onClick={() => void runPull()}
+                title="Pull the latest changes from the remote"
+              >
                 Pull
               </button>
-              <button type="button" disabled={working} onClick={() => void runPush()}>
+              <button
+                type="button"
+                disabled={working}
+                onClick={() => void runPush()}
+                title="Push local commits to the remote"
+              >
                 Push
               </button>
             </div>
@@ -322,13 +336,25 @@ export function GitDialog() {
                 left is Ignore or Discard.
               </p>
               <div className="git-field-review-bulk">
-                <button type="button" onClick={() => setAllFieldDispositions('use')}>
+                <button
+                  type="button"
+                  onClick={() => setAllFieldDispositions('use')}
+                  title="Mark every reviewed field as Use"
+                >
                   Use all
                 </button>
-                <button type="button" onClick={() => setAllFieldDispositions('ignore')}>
+                <button
+                  type="button"
+                  onClick={() => setAllFieldDispositions('ignore')}
+                  title="Mark every reviewed field as Ignore"
+                >
                   Ignore all
                 </button>
-                <button type="button" onClick={() => setAllFieldDispositions('discard')}>
+                <button
+                  type="button"
+                  onClick={() => setAllFieldDispositions('discard')}
+                  title="Mark every reviewed field as Discard"
+                >
                   Discard all
                 </button>
               </div>
@@ -455,7 +481,13 @@ export function GitDialog() {
           {(panel.error || panel.notice) && (
             <div className={panel.error ? 'git-message git-message-error' : 'git-message git-message-notice'}>
               <pre className="git-message-text">{panel.error ?? panel.notice}</pre>
-              <button type="button" className="icon-btn" onClick={dismissPanelMessage} aria-label="Dismiss">
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={dismissPanelMessage}
+                title="Dismiss this message"
+                aria-label="Dismiss"
+              >
                 ×
               </button>
             </div>

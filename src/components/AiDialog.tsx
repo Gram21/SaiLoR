@@ -133,7 +133,12 @@ export function AiDialog() {
               {configs.length === 0 ? (
                 <div className="ai-empty-configs">
                   <p>No LLM target is set up yet.</p>
-                  <button type="button" className="primary" onClick={() => setSettingsOpen(true)}>
+                  <button
+                    type="button"
+                    className="primary"
+                    onClick={() => setSettingsOpen(true)}
+                    title="Open LLM settings to add a target"
+                  >
                     Set up an LLM…
                   </button>
                 </div>
@@ -202,7 +207,7 @@ export function AiDialog() {
               )}
 
               <div className="ai-foot">
-                <button type="button" onClick={() => closeDialog()}>
+                <button type="button" onClick={() => closeDialog()} title="Cancel without sending anything">
                   Cancel
                 </button>
                 <button
@@ -210,6 +215,7 @@ export function AiDialog() {
                   className="primary"
                   onClick={() => void run()}
                   disabled={!selected || targets.length === 0}
+                  title="Send the paper to the selected LLM target"
                 >
                   Start
                 </button>
@@ -232,7 +238,7 @@ export function AiDialog() {
                 This can take a minute on a long paper. You can cancel at any time.
               </p>
               <div className="ai-foot">
-                <button type="button" onClick={() => cancel()}>
+                <button type="button" onClick={() => cancel()} title="Cancel the request in progress">
                   Cancel
                 </button>
               </div>
@@ -246,7 +252,7 @@ export function AiDialog() {
                   <p>The model proposed no values.</p>
                   <ReviewNotes answer={answer} />
                   <div className="ai-foot">
-                    <button type="button" className="primary" onClick={() => closeDialog()}>
+                    <button type="button" className="primary" onClick={() => closeDialog()} title="Close this dialog">
                       Close
                     </button>
                   </div>
@@ -255,10 +261,10 @@ export function AiDialog() {
                 <>
                   <div className="ai-review-head">
                     <div className="ai-select-all">
-                      <button type="button" onClick={() => setAllRows(true)}>
+                      <button type="button" onClick={() => setAllRows(true)} title="Select all proposed rows">
                         Select all
                       </button>
-                      <button type="button" onClick={() => setAllRows(false)}>
+                      <button type="button" onClick={() => setAllRows(false)} title="Deselect all proposed rows">
                         Select none
                       </button>
                     </div>
@@ -321,7 +327,7 @@ export function AiDialog() {
                   <ReviewNotes answer={answer} />
 
                   <div className="ai-foot">
-                    <button type="button" onClick={() => closeDialog()}>
+                    <button type="button" onClick={() => closeDialog()} title="Discard all proposals without applying them">
                       Discard
                     </button>
                     <button
@@ -329,6 +335,11 @@ export function AiDialog() {
                       className="primary"
                       onClick={() => apply()}
                       disabled={checkedCount === 0}
+                      title={
+                        checkedCount === 0
+                          ? 'Select at least one proposal to apply'
+                          : `Apply ${checkedCount} selected proposal${checkedCount === 1 ? '' : 's'}`
+                      }
                     >
                       Apply {checkedCount}
                     </button>
@@ -355,7 +366,7 @@ export function AiDialog() {
                 <kbd>Z</kbd> undoes the whole fill in one step.
               </p>
               <div className="ai-foot">
-                <button type="button" className="primary" onClick={() => closeDialog()}>
+                <button type="button" className="primary" onClick={() => closeDialog()} title="Close this dialog">
                   Close
                 </button>
               </div>
@@ -372,7 +383,7 @@ export function AiDialog() {
               <div className="ai-foot">
                 {gearButton}
                 <span className="ai-foot-gap" />
-                <button type="button" onClick={() => closeDialog()}>
+                <button type="button" onClick={() => closeDialog()} title="Close this dialog">
                   Close
                 </button>
                 {!scanned && (
@@ -381,6 +392,7 @@ export function AiDialog() {
                     className="primary"
                     onClick={() => void run()}
                     disabled={!selected || targets.length === 0}
+                    title="Retry sending the paper to the selected LLM target"
                   >
                     Try again
                   </button>

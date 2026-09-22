@@ -193,7 +193,7 @@ export function ConsolidationDialog() {
               </span>
             )}
           </strong>
-          <button type="button" className="icon-btn" onClick={requestClose} aria-label="Close">
+          <button type="button" className="icon-btn" title="Close" onClick={requestClose} aria-label="Close">
             ×
           </button>
         </div>
@@ -223,7 +223,12 @@ export function ConsolidationDialog() {
               )
             })}
           </ul>
-          <button type="button" className="consolidation-defer" onClick={defer}>
+          <button
+            type="button"
+            className="consolidation-defer"
+            title="Discard the answers above and type in a value yourself"
+            onClick={defer}
+          >
             Enter a different value
           </button>
           {canDeclareEqual && (
@@ -257,10 +262,19 @@ export function ConsolidationDialog() {
                 disagreement list again either.
               </p>
               <div className="consolidation-warning-actions">
-                <button type="button" className="primary" onClick={() => setConfirmingClose(false)}>
+                <button
+                  type="button"
+                  className="primary"
+                  title="Go back and choose one of the reviewers' answers above"
+                  onClick={() => setConfirmingClose(false)}
+                >
                   Pick a value
                 </button>
-                <button type="button" onClick={discardAndClose}>
+                <button
+                  type="button"
+                  title="Close without recording a value, and undo marking the answers as equivalent"
+                  onClick={discardAndClose}
+                >
                   Close and un-mark them
                 </button>
               </div>

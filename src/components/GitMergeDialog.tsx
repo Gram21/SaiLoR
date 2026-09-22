@@ -116,10 +116,18 @@ export function GitMergeDialog() {
           </p>
 
           <div className="git-merge-bulk">
-            <button type="button" onClick={() => takeAll('ours', bulkEligibleIds)}>
+            <button
+              type="button"
+              title="Use your value for every undecided field below, except another reviewer's own answers"
+              onClick={() => takeAll('ours', bulkEligibleIds)}
+            >
               Use all mine
             </button>
-            <button type="button" onClick={() => takeAll('theirs', bulkEligibleIds)}>
+            <button
+              type="button"
+              title="Use the remote value for every undecided field below, except another reviewer's own answers"
+              onClick={() => takeAll('theirs', bulkEligibleIds)}
+            >
               Use all remote
             </button>
           </div>
@@ -150,6 +158,7 @@ export function GitMergeDialog() {
                     type="button"
                     className="git-merge-group-head"
                     aria-expanded={!isCollapsed}
+                    title={isCollapsed ? 'Expand this paper’s conflicts' : 'Collapse this paper’s conflicts'}
                     onClick={() => toggleGroup(g.paperId)}
                   >
                     <span className={`git-merge-group-chevron${isCollapsed ? ' is-collapsed' : ''}`} aria-hidden="true">
@@ -193,6 +202,7 @@ export function GitMergeDialog() {
             <button
               type="button"
               className="icon-btn"
+              title="Dismiss this error"
               onClick={dismissPanelMessage}
               aria-label="Dismiss"
             >
@@ -202,10 +212,20 @@ export function GitMergeDialog() {
         )}
 
         <div className="git-merge-footer">
-          <button type="button" onClick={() => void cancelMerge()}>
+          <button
+            type="button"
+            title="Abort the merge and discard all conflict resolutions"
+            onClick={() => void cancelMerge()}
+          >
             Cancel merge
           </button>
-          <button type="button" className="primary" disabled={!allDecided} onClick={() => void finishMerge()}>
+          <button
+            type="button"
+            className="primary"
+            disabled={!allDecided}
+            title={allDecided ? 'Commit the merge with the resolutions chosen above' : 'Decide every conflict above before finishing the merge'}
+            onClick={() => void finishMerge()}
+          >
             Finish merge
           </button>
         </div>

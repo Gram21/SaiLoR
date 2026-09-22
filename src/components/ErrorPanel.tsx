@@ -11,7 +11,7 @@ export function ErrorPanel() {
       <div className="error-box" onClick={(e) => e.stopPropagation()}>
         <div className="error-head">
           <strong>{error.message}</strong>
-          <button type="button" className="icon-btn" onClick={clearError}>
+          <button type="button" className="icon-btn" onClick={clearError} title="Close">
             ×
           </button>
         </div>

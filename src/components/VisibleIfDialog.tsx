@@ -869,7 +869,7 @@ export function VisibleIfDialog({
       >
         <div className="modal-head">
           <strong>When to show "{node.name || 'this field'}"</strong>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close" title="Close without saving">
             ×
           </button>
         </div>
@@ -909,7 +909,12 @@ export function VisibleIfDialog({
           {/* Left of Cancel/Save: a separate outcome, not a step towards one —
               and it throws work away, so it states what it removes. */}
           <div className="visible-if-clear">
-            <button type="button" onClick={() => setDraft(null)} disabled={draft === null}>
+            <button
+              type="button"
+              onClick={() => setDraft(null)}
+              disabled={draft === null}
+              title="Remove every condition — this field/group is then always shown"
+            >
               Always visible
             </button>
             <span className="schema-hint">
@@ -918,10 +923,10 @@ export function VisibleIfDialog({
                 : 'Removes every condition above — the field/group is then always shown.'}
             </span>
           </div>
-          <button type="button" onClick={onClose}>
+          <button type="button" onClick={onClose} title="Discard changes and close without saving">
             Cancel
           </button>
-          <button type="button" className="primary" onClick={save}>
+          <button type="button" className="primary" onClick={save} title="Save this visibility gate">
             Save
           </button>
         </div>

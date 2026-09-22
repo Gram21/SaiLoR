@@ -70,6 +70,7 @@ export function ReviewerPrompt() {
                   type="button"
                   className="reviewer-prompt-choice"
                   onClick={() => selectReviewer(id)}
+                  title={`Review independently as Reviewer ${id}`}
                 >
                   Reviewer {id}
                 </button>

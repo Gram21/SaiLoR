@@ -105,7 +105,7 @@ export function ConsolidationOverview() {
       >
         <div className="modal-head">
           <strong>Consolidation overview</strong>
-          <button type="button" className="icon-btn" onClick={() => setOpen(false)} aria-label="Close">
+          <button type="button" className="icon-btn" onClick={() => setOpen(false)} aria-label="Close" title="Close this dialog">
             ×
           </button>
         </div>
@@ -114,6 +114,11 @@ export function ConsolidationOverview() {
             <button
               type="button"
               className="primary"
+              title={
+                unanimousRun?.running
+                  ? `Adopting unanimous values… ${unanimousRun.done}/${unanimousRun.total}`
+                  : 'Adopt every field where all reviewers agree, across every paper'
+              }
               disabled={unanimousRun?.running}
               onClick={() => void adoptAllUnanimousAnnotations()}
             >
@@ -121,7 +126,7 @@ export function ConsolidationOverview() {
                 ? `Adopting… ${unanimousRun.done}/${unanimousRun.total}`
                 : 'Adopt all unanimous'}
             </button>
-            <button type="button" onClick={openAgreementFromOverview}>
+            <button type="button" onClick={openAgreementFromOverview} title="Open the reviewer agreement overview">
               Agreement
             </button>
             <Dropdown label="Export" title="Export every paper's disagreements" items={exportMenu.items} />
@@ -136,7 +141,7 @@ export function ConsolidationOverview() {
                 Adopted unanimous values on {unanimousRun.filled} paper{unanimousRun.filled === 1 ? '' : 's'}.
                 {unanimousRun.skipped > 0 && ` ${unanimousRun.skipped} left unchanged.`}
               </span>
-              <button type="button" onClick={dismissUnanimousRun}>
+              <button type="button" onClick={dismissUnanimousRun} title="Dismiss this notice">
                 Dismiss
               </button>
             </div>

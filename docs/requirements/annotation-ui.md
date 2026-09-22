@@ -313,3 +313,9 @@ export. See the [index](index.md) for the glossary.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/ErrorPanel.tsx:4-28`
 - **Status:** Implemented
+
+### REQ-UI-70 — Button tooltips
+- **Description:** The system shall give every button throughout the application (toolbar, dialogs, prompts, and inline controls) a descriptive mouse-over tooltip stating the action it performs; where a button's state or availability is dynamic, the tooltip shall reflect that state, and a disabled button shall state the reason it is disabled.
+- **Type:** Non-functional (ISO 25010: Usability)
+- **Evidence:** `src/components/Toolbar.tsx`, `src/App.tsx`, and every dialog/prompt component under `src/components/`
+- **Status:** Implemented

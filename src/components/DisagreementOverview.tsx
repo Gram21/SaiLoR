@@ -104,10 +104,16 @@ export function DisagreementOverview() {
           <div className="modal-head-actions">
             {exportMenu.status && <span className="export-status">{exportMenu.status}</span>}
             <Dropdown label="Export" title="Export these disagreements" items={exportMenu.items} align="right" />
-            <button type="button" onClick={openOverview}>
+            <button type="button" title="Show disagreements across the whole project" onClick={openOverview}>
               Overview
             </button>
-            <button type="button" className="icon-btn" onClick={closeDisagreements} aria-label="Close">
+            <button
+              type="button"
+              className="icon-btn"
+              title="Close"
+              onClick={closeDisagreements}
+              aria-label="Close"
+            >
               ×
             </button>
           </div>

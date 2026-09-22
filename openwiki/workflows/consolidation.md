@@ -12,6 +12,8 @@ sources:
     resource: repo://src/components/ConsolidationDialog.tsx
   - id: openwiki-source-bedc404df7a2a28611e56372
     resource: repo://src/components/ConsolidationOverview.tsx
+  - id: openwiki-source-e9545c0696c205b4aba178dd
+    resource: repo://src/components/ConsolidationUpdatePrompt.tsx
   - id: openwiki-source-db3ca9c9b8f8269a0dbc151f
     resource: repo://src/components/ConsolidationVerdicts.ts
   - id: openwiki-source-68f078890cce490fe8d3e3a8
@@ -36,6 +38,8 @@ sources:
     resource: repo://src/consolidate/similarity.ts
   - id: openwiki-source-2e4cee0e79365b1e9129226b
     resource: repo://src/consolidate/unanimous.ts
+  - id: openwiki-source-645237ab18a1b0effda09b72
+    resource: repo://src/git/merge.ts
   - id: openwiki-source-9690eeed46b73e2993bd2582
     resource: repo://src/hooks/useConsolidationAlignment.ts
   - id: openwiki-source-e757c5a5c207c012e0ba6957
@@ -45,7 +49,7 @@ sources:
 generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
 verified:
   - by: openwiki/0.4.0
-    at: 2026-09-21T20:12:55.536Z
+    at: 2026-09-22T07:19:01.173Z
 ---
 
 # Multi-Reviewer Consolidation

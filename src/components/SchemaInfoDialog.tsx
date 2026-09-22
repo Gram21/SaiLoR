@@ -38,7 +38,13 @@ export function SchemaInfoDialog() {
       >
         <div className="modal-head">
           <strong>About this schema</strong>
-          <button type="button" className="icon-btn" onClick={() => setOpen(false)} aria-label="Close">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => setOpen(false)}
+            aria-label="Close"
+            title="Close"
+          >
             ×
           </button>
         </div>
@@ -56,7 +62,7 @@ export function SchemaInfoDialog() {
           </p>
         </div>
         <div className="schema-info-actions">
-          <button type="button" className="primary" onClick={() => setOpen(false)}>
+          <button type="button" className="primary" onClick={() => setOpen(false)} title="Close this dialog">
             Okay
           </button>
         </div>

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:1724fd5336fd623a96ed7f10a581d2932ef47ebe74dbe56a3c8f264e8900fa14",
+  "pageVersion": "sha256:242471251c72a392e5f3e405c9e4b7a29e903d3bd2af5b5ad9b38103ae9a1919",
   "claims": [
     {
       "id": "claim_d5e38331aa914354bb82097894fe1f00",
@@ -14,11 +14,11 @@
     },
     {
       "id": "claim_fdece1b2649a465e9b6cc9eba645d7da",
-      "statement": "The on-disk project format is split: project.json holds only meta (schema/protocol/paper metadata, no annotations/reviews/aiUsage/equal), while annotations/<paperId>/ holds consolidated.json, reviewer-<n>.json, marks-consolidated.json, and marks-<n>.json. Screening projects use screening-<n>.json / screening-consolidated.json prefixes instead of reviewer-/consolidated.",
+      "statement": "The on-disk project format is split: project.json holds only meta (schema/protocol/paper metadata, no annotations/reviews/aiUsage/equal/consolidationSync), while annotations/<paperId>/ holds consolidated.json, reviewer-<n>.json, marks-consolidated.json, and marks-<n>.json. Screening projects use screening-<n>.json / screening-consolidated.json prefixes instead of reviewer-/consolidated.",
       "evidence": [
         {
-          "resource": "repo://src/model/project.ts#L762-L856",
-          "version": "repo-lines-v1:sha256:6a1c64e03979c8a594d3d4691e64ac23c691926ddcb33fda01c17cbb47305dc1:eyJzZWxlY3RlZExpbmVDb3VudCI6OTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEyNzU3NDczZWMzNDc2NjVlZGVkZTM1YTAwOTQ5MzU1ZjQzNmE3M2YzYjkzMDkwNmJiNDhhOGJiYmUzYTlmZWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc3OWJhODYwODdmZTlkMWZmOTllYTUyYzkzMzIyNDQ5ZThiMjIwOWE4N2FlMzIyZmQ5YTQ2MGFiYTMwNjQwNTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjViMTg4MzgwNWU1YmJmZWJkYTBiNWJhMWRkZmU1ZDZlZjU0MzJhMDhmNWFhZTliMTM0ZDA4MzAwMDk2ZDkyNDAifQ"
+          "resource": "repo://src/model/project.ts#L780-L876",
+          "version": "repo-lines-v1:sha256:6cd1a7321d6e18f5273bea6e141dde18c617c5c56825df59de5f4fb0318aed53:eyJzZWxlY3RlZExpbmVDb3VudCI6OTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEyNzU3NDczZWMzNDc2NjVlZGVkZTM1YTAwOTQ5MzU1ZjQzNmE3M2YzYjkzMDkwNmJiNDhhOGJiYmUzYTlmZWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc3OWJhODYwODdmZTlkMWZmOTllYTUyYzkzMzIyNDQ5ZThiMjIwOWE4N2FlMzIyZmQ5YTQ2MGFiYTMwNjQwNTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjViMTg4MzgwNWU1YmJmZWJkYTBiNWJhMWRkZmU1ZDZlZjU0MzJhMDhmNWFhZTliMTM0ZDA4MzAwMDk2ZDkyNDAifQ"
         }
       ]
     },
@@ -27,8 +27,8 @@
       "statement": "splitProjectFiles is a pure side-effect-free function returning {meta, files} where each ProjectFileEntry has relPath and a text of null meaning the file should not exist (caller deletes it if present on disk). electron.ts and gitStore.ts perform the actual fs writes/deletes.",
       "evidence": [
         {
-          "resource": "repo://src/model/project.ts#L746-L856",
-          "version": "repo-lines-v1:sha256:f09a6e87fdf202d6ead6967201f7ad9bad3e2f83d8e23c9512a63a2e389155a6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTExLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJhOTc5ODhiMThmMDA3YmEzNGY4OTEyNWM4YzJjM2I4Mzc4MWY5ZWIzNGNkYWVmNTZmOWQ4NTdiNWQ4N2RiMjBhIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIyOTEwNzUzZWE2OWEwNzVlOWFmMjEyNjk5NDZmYzQwZjg1YTI2N2I5NDljZTNlNWUzYWUxNTI0ZDJhN2FkZjM3IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI1YjE4ODM4MDVlNWJiZmViZGEwYjViYTFkZGZlNWQ2ZWY1NDMyYTA4ZjVhYWU5YjEzNGQwODMwMDA5NmQ5MjQwIn0"
+          "resource": "repo://src/model/project.ts#L780-L876",
+          "version": "repo-lines-v1:sha256:6cd1a7321d6e18f5273bea6e141dde18c617c5c56825df59de5f4fb0318aed53:eyJzZWxlY3RlZExpbmVDb3VudCI6OTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEyNzU3NDczZWMzNDc2NjVlZGVkZTM1YTAwOTQ5MzU1ZjQzNmE3M2YzYjkzMDkwNmJiNDhhOGJiYmUzYTlmZWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc3OWJhODYwODdmZTlkMWZmOTllYTUyYzkzMzIyNDQ5ZThiMjIwOWE4N2FlMzIyZmQ5YTQ2MGFiYTMwNjQwNTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjViMTg4MzgwNWU1YmJmZWJkYTBiNWJhMWRkZmU1ZDZlZjU0MzJhMDhmNWFhZTliMTM0ZDA4MzAwMDk2ZDkyNDAifQ"
         },
         {
           "resource": "repo://src/platform/electron.ts#L225-L232",
@@ -38,11 +38,11 @@
     },
     {
       "id": "claim_8d03b6c476554f16ba2070e5ac7ea54a",
-      "statement": "aiUsage and equal are not split per reviewer even in a multi-reviewer project; aiUsage is one array for the whole paper and equal is a consolidation-time concept, so both ride in the consolidated.json file regardless of which tree they describe.",
+      "statement": "aiUsage, equal, and consolidationSync are not split per reviewer even in a multi-reviewer project; aiUsage is one array for the whole paper, equal is a consolidation-time concept, and consolidationSync describes Consolidation's own automatic steps, so all three ride in the consolidated.json file regardless of which tree they describe.",
       "evidence": [
         {
-          "resource": "repo://src/model/project.ts#L816-L828",
-          "version": "repo-lines-v1:sha256:163cbbe2f698344c77d1e2fb754c66039b79d3f52002ab85eef7c0677154fddd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBlYzI5MDllNjlmNDg3YmFmYmQ0OTdiMjM1YzJhM2VmMDExY2I5NjI2MzMxYTJjMWY1MzZlNDhhNDJmOGUxYTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0NzVlOTRhOTA0YWM0OWIzMTU0ZDQ2NzJhNjZlODYyOWI4NmRhYzc0ZTNlMjkzN2JlNjkyN2FlM2RhMTFjNTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA0YjlhMGIxNmI5OTEwYmFhNWQwYTRkY2FmZjhhNjBjNDI5NjMzYmYyYWUzY2JhY2M4MjAyOTA3NTgwZDEwY2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ4ZTFiNzE4ZmIyZWM4NDRkNjM2MTliM2IyOTgzOWVmMmQxYjBiODVhMzIzYTE5YmQ2YmU0OWI0MzIxYzRjMzQifQ"
+          "resource": "repo://src/model/project.ts#L834-L849",
+          "version": "repo-lines-v1:sha256:05f22aa73590f70f135c5f7ab468386d23d593e5374463d0bc1e1ce81b97add2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBlYzI5MDllNjlmNDg3YmFmYmQ0OTdiMjM1YzJhM2VmMDExY2I5NjI2MzMxYTJjMWY1MzZlNDhhNDJmOGUxYTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk0YTg0ZDIxZjFmZGIyYTI2OTAxMzM3ZGQxNTNjMTc1MzlkYzBhOWIxMTEzNzQ4MmQ2YTMzOWQ5NTkyNTBiZmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA0YjlhMGIxNmI5OTEwYmFhNWQwYTRkY2FmZjhhNjBjNDI5NjMzYmYyYWUzY2JhY2M4MjAyOTA3NTgwZDEwY2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMzNTFhMTBhNzFkODNjMWM3NjUzMTA2NjA0MDVkY2IxMWRiODgwYzc2MWY1MmQ1NTA4MjJjNjk4MDRiYzQ2YzUifQ"
         }
       ]
     },
@@ -51,8 +51,8 @@
       "statement": "The in-memory Project type carries version, title, provenance, protocol, schemaInfo, schema (ResolvedDef[]), aiEnabled, finishCheckbox, reviewers, papers, screening, and extra. provenance/protocol/schemaInfo are required-not-optional (T | null) so constructing a Project without deciding what to do with them is a type error, not a silent drop, which matters at mergeProjects.",
       "evidence": [
         {
-          "resource": "repo://src/model/project.ts#L153-L244",
-          "version": "repo-lines-v1:sha256:739315aad2cdb0757eb5ff7e9b1ce7c6464628c75ee3b51702a103e03ee70f82:eyJzZWxlY3RlZExpbmVDb3VudCI6OTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUzM2ZkMDI2Mzk4ZTQ3OTA0NmVjMzA5NzE2M2Y2YTAwZDIxYmVjNzIwOWU1NjJmNDViMmJiZTJhYzNjZjEwNWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxNTM3OTUxYWQyMzdmM2M3ZTE1MWQ4YTQyY2IzZDkwOWQxNThmYzBiMGEzNGVkODQwOGNkYWRkNWEwNWRjYmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFiNzc0ZmY3ZmQxYTcwN2NjMTk2NjcyOGZmZTU2NTY2ZDFkZTEzMzZhOTEyYmFkYjUzMDE3OGY1MmZjMjcwYjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI2ODBkMGUxNWY2NWI1OTVlZDI5NjdmZDY2MGI3NGExNzQ5MTMzODBmYTI3M2QwNmU0NmM2OTVlZmM3OGJlY2MifQ"
+          "resource": "repo://src/model/project.ts#L164-L216",
+          "version": "repo-lines-v1:sha256:2787b04266c5a92762a7115d82b79f42b143b0b70d1f4aaedcfcb4771fcd6b68:eyJzZWxlY3RlZExpbmVDb3VudCI6NTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUzM2ZkMDI2Mzk4ZTQ3OTA0NmVjMzA5NzE2M2Y2YTAwZDIxYmVjNzIwOWU1NjJmNDViMmJiZTJhYzNjZjEwNWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFiNzc0ZmY3ZmQxYTcwN2NjMTk2NjcyOGZmZTU2NTY2ZDFkZTEzMzZhOTEyYmFkYjUzMDE3OGY1MmZjMjcwYjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc1NmFmZmQxZWNmMmNjMjMyODg3MGZhYmMxM2QwZTdlOTcwMWEzYTFiYTVjZjYzMDI4MWZmOGJjYjFhNTRiMzYifQ"
         }
       ]
     },
@@ -93,8 +93,8 @@
       "statement": "Paper repeats the single-tree-vs-per-reviewer split four times (annotations/reviews, marks/reviewMarks, finished/reviewsFinished) because each reviewer owns their own reading independently and the consolidated seat owns the reconciled record that ships. In a single-reviewer project the per-reviewer maps stay empty.",
       "evidence": [
         {
-          "resource": "repo://src/model/project.ts#L37-L129",
-          "version": "repo-lines-v1:sha256:7578b375f9b048d5387ff996eed8752d30bb5fce8fcfa0cc630e6007d204d23f:eyJzZWxlY3RlZExpbmVDb3VudCI6OTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzZWM1NWUyN2Q2YTljZWM0ZTM3MzA1MTU5N2ViN2Q1NTdmYjg0ODNmMDY0MzkxZTRiMDhlZTE0MzRlZjBjZWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIyZWM2NGNhMjdhMjFjMzAyOTc5MmNmMzAwMzM5NjJjNjNjZGI5OTAzZmY2ZWJiZDM1YzlhZTY0YWFiZDllMTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM2NWM4ZjQ0ZmMyOTc1YzQyM2E2MTUyYjQ3MjE3Zjk4MjNjMjBmNWUyOGI0MWQ1OWRmODE5YzlkMTQzNjE4NjgifQ"
+          "resource": "repo://src/model/project.ts#L35-L116",
+          "version": "repo-lines-v1:sha256:699cd2f000c834ea6d53ed99445fe3340c4569b12d40f198caec755853e50c10:eyJzZWxlY3RlZExpbmVDb3VudCI6ODIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg5Y2RlNDVhZjg0YWVmYzIzZjA0MGE1MzRkNjJiNDE1YTIzM2MzMzg0Njc3MTEzYWIyMTE5Y2E0ZTc2MmE1ZmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE0MjJkZWEwYjkyMTJkN2RmMWMzMTUxN2IxNmNjMWEwNzc0N2Q4NTI5NmEwZTgwMTJlODhhZDE4ODZkNzhjMGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdkYTc3OWYxNDA1YWEwOTg3YTRmYWZmYzc5ODZjOTJmZTEyZTAxMTY1MzI3NmExOTNkNDI1ZWI3Yjg3ZmI3YjAifQ"
         }
       ]
     },
@@ -103,8 +103,8 @@
       "statement": "Paper.finished is stored, not derived from the data: a full tree is a fact about the form, not a judgement that the extraction is right. It is not re-derived on load, so a later edit that empties a field leaves the flag standing while the dot stops being green (the paper list requires both) — nothing silently un-declares a reviewer's declaration.",
       "evidence": [
         {
-          "resource": "repo://src/model/project.ts#L37-L129",
-          "version": "repo-lines-v1:sha256:7578b375f9b048d5387ff996eed8752d30bb5fce8fcfa0cc630e6007d204d23f:eyJzZWxlY3RlZExpbmVDb3VudCI6OTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzZWM1NWUyN2Q2YTljZWM0ZTM3MzA1MTU5N2ViN2Q1NTdmYjg0ODNmMDY0MzkxZTRiMDhlZTE0MzRlZjBjZWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIyZWM2NGNhMjdhMjFjMzAyOTc5MmNmMzAwMzM5NjJjNjNjZGI5OTAzZmY2ZWJiZDM1YzlhZTY0YWFiZDllMTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM2NWM4ZjQ0ZmMyOTc1YzQyM2E2MTUyYjQ3MjE3Zjk4MjNjMjBmNWUyOGI0MWQ1OWRmODE5YzlkMTQzNjE4NjgifQ"
+          "resource": "repo://src/model/project.ts#L35-L116",
+          "version": "repo-lines-v1:sha256:699cd2f000c834ea6d53ed99445fe3340c4569b12d40f198caec755853e50c10:eyJzZWxlY3RlZExpbmVDb3VudCI6ODIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg5Y2RlNDVhZjg0YWVmYzIzZjA0MGE1MzRkNjJiNDE1YTIzM2MzMzg0Njc3MTEzYWIyMTE5Y2E0ZTc2MmE1ZmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE0MjJkZWEwYjkyMTJkN2RmMWMzMTUxN2IxNmNjMWEwNzc0N2Q4NTI5NmEwZTgwMTJlODhhZDE4ODZkNzhjMGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdkYTc3OWYxNDA1YWEwOTg3YTRmYWZmYzc5ODZjOTJmZTEyZTAxMTY1MzI3NmExOTNkNDI1ZWI3Yjg3ZmI3YjAifQ"
         }
       ]
     },
@@ -123,8 +123,8 @@
       "statement": "loadProject is the single load entry point: it depth-guards first (MAX_JSON_DEPTH 200, before any recursive walker), parses with zod (ZodError/RangeError become friendly ProjectLoadError), resolves the schema, checks duplicate paper ids, and builds each Paper with defensive parse helpers that drop malformed entries rather than throwing.",
       "evidence": [
         {
-          "resource": "repo://src/model/project.ts#L526-L604",
-          "version": "repo-lines-v1:sha256:7d503f48cf6fe0095eaf2343de49dffc8dc7a494a08b60943189da488cf0b7cd:eyJzZWxlY3RlZExpbmVDb3VudCI6NzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkZTQ4ZDhhOTAzM2Y4MTk2MTU1MWY0NTI2MjYzZWM1NTMyNWFhNGVlOTk4MDJiMGY0ZDlhY2M2OWM4ZjdhZDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRlYzNiODEwZjc3OGI0YmYxZWFhNjQzYzUwNmJkOWZmYjQ5NTQ3YWNiOTBhOWFhNWQ4ZmQ5ZWFmODc0MmRkMGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZhMWJiMGMxZmE0NTAzNDllNjE2MTg2OTBiZmZlMTUwMjkwZWJhNWFjN2YxYzhkODNmN2ZiMjI1NDlkMjI0NTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4YzY3NmUyZmU4Mjg2YTgwZmI3OWE4NGYzYmIwZjJkODg2ODk2YWVhYzYzY2VlZDExYjQzMGI0NTU5YjE3NjEifQ"
+          "resource": "repo://src/model/project.ts#L538-L604",
+          "version": "repo-lines-v1:sha256:8b662be37ff88e1d7333768bac905a3113beaf801aa94308dd6d761ff74f1b6e:eyJzZWxlY3RlZExpbmVDb3VudCI6NjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkZTQ4ZDhhOTAzM2Y4MTk2MTU1MWY0NTI2MjYzZWM1NTMyNWFhNGVlOTk4MDJiMGY0ZDlhY2M2OWM4ZjdhZDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5OGY3ZDYxY2RhOGVjYTcyZTlmYmY2MjJkNGQyZGY4Y2JhYTY1YTcwN2QxMmUwMzMxOWFhYzdkZDU3MmNkMDkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZhMWJiMGMxZmE0NTAzNDllNjE2MTg2OTBiZmZlMTUwMjkwZWJhNWFjN2YxYzhkODNmN2ZiMjI1NDlkMjI0NTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAwNmIxNDQ4ODMxMGRjMzAyMDkxMGU2MGRjODBjY2RiYjJkOWU1ZDAxNDVmNTM1ZGRjMTk2YTEzMDUxY2I1MjMifQ"
         }
       ]
     },
@@ -235,12 +235,12 @@
       "statement": "isLegacyProjectShape detects whether a parsed project.json uses the old single-file shape (any paper carries annotations or reviews inline). assembleLegacyProjectJson reassembles a meta-only body plus per-paper files back into the legacy whole-project shape loadProject already parses, so the read path reuses loadProject unchanged.",
       "evidence": [
         {
-          "resource": "repo://src/model/project.ts#L880-L887",
-          "version": "repo-lines-v1:sha256:ddf1b7b3085f8ada426a565febe3cb2c2ba1ec3166f4a19911b2c988c1567372:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGFhOGMwMzE4Mjc2NDQ0MWJhNjk0YWFhMGZlMmY2ZDQxOTQwYmE2YmRlMDA3OWFkZjdlMmJiYTczNjQ5ODAxMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZmFjN2RjNWFmMmQ3ZWNhZTJlNzI1NDBlNjkzYjJmZWVmMDE2Y2NiMmFjZTk3MGFmNGJiMTNkNWVjYmJlYjIyMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjlmNjA2NDBkNTU0MDQ1YzAyYzI4Yjg5NmIyYWMxOWIwNjYwOGUwNjFiODc5ODNjOTk1ZDk3MTdlNjAwZTM5ZCJ9"
+          "resource": "repo://src/model/project.ts#L900-L906",
+          "version": "repo-lines-v1:sha256:98cb23f3a2d353e4063c7d93deaa06c4b929a12d983a5ffe156e67b6e9af51ae:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGFhOGMwMzE4Mjc2NDQ0MWJhNjk0YWFhMGZlMmY2ZDQxOTQwYmE2YmRlMDA3OWFkZjdlMmJiYTczNjQ5ODAxMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTYyNjc5MzVmYzYzMzQ2NWQ4NDhiNDBhNGVkNjk2N2U3YjdhMzIzZjgxY2Q1M2MxMTBhZTIxMDI5Njg3YWExMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZmFjN2RjNWFmMmQ3ZWNhZTJlNzI1NDBlNjkzYjJmZWVmMDE2Y2NiMmFjZTk3MGFmNGJiMTNkNWVjYmJlYjIyMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzc5MjllOTFlMGY5OWMzZTgyNWRlNjliNDM1ZmI2NDg0ZDFiMGExZGYyZjQ2NTYxYWJmMWEyOWYwNDE4OGI4OCJ9"
         },
         {
-          "resource": "repo://src/model/project.ts#L889-L950",
-          "version": "repo-lines-v1:sha256:48636c596ab9963e6c410ca0c6ec711b7197cc8392828276e6b4f71ba1852cff:eyJzZWxlY3RlZExpbmVDb3VudCI6NjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM0MGM1ZDNkYzNhNzczMDc5M2M4OTI3OTQ4YjU1OTY2NDIwN2Y3OWJhODc3NzNjMjE1MDA0NDMxOTYyZmQ0ODgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZlNTc5NGMxZTFiYWFhYzI5MDg4MzNlYjY2ZmU2ZTEzZmFlZmZiMDY0NWRmODhkOGIzZWJmNjZlY2U5M2U0NTEifQ"
+          "resource": "repo://src/model/project.ts#L916-L975",
+          "version": "repo-lines-v1:sha256:eff899c4fdd9bfc5aa04b65aeef5e54d6d0f1605bac22390d8c1b47f71c40391:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNjMDE5NjlhMGIzNmRlN2I3NmE4ZDIzNWZmYWNiZDAxMWFkMDE5NDFlZWNlZmI1NTFjMTI5NzcyYTU0YmEyNWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzNjI3ZGYxMDM5M2ZjNWNmNDFlNjJhMGVlN2QwMGEzNzdkMjEzYjQ0OTI0OTk4YzNhOWJlNDc1ZDVmNDQ3OTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk2YjZjMTJhMTJkNzYzZjM1MjYyYmQxN2UwZWFmYzlmODNhOGQzNTM0NjZiYWM2NGRlOGFhOGVhOGZjN2Q0MmMifQ"
         }
       ]
     },
@@ -249,8 +249,8 @@
       "statement": "Per-paper-per-reviewer files are written only when the tree holds answers (hasAnnotations) or the reviewer's finished flag is set, and deleted (text: null) when empty. marks files are written when the mark list is non-empty. A null text is the delete signal: splitProjectFiles is pure, so the caller deletes any on-disk file whose entry is null.",
       "evidence": [
         {
-          "resource": "repo://src/model/project.ts#L785-L834",
-          "version": "repo-lines-v1:sha256:f295fabfa47637c6a903ab43e0507866c3503853d0465aca9194d203da2e2c4e:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNkNTllYzhlMDVjY2U4NDIzNTE2MWU4NmM3OTI1NGE5MmQ5NTg2NTAzYzkyN2UyNzM0NWE0NjU3YTAyMDA3YjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0NzVlOTRhOTA0YWM0OWIzMTU0ZDQ2NzJhNjZlODYyOWI4NmRhYzc0ZTNlMjkzN2JlNjkyN2FlM2RhMTFjNTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYyN2Q2ZmYyYzQ0ZjMyODNlNzBkM2VjOGU4YjkwMDZmOWM4NzhkNDI0YjcxN2NmODQzZjI2ZDJhYTA4ZTdmMjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFmMTk1NmNiYzJlOWFlODBjMDkxMGE5MTg1YWFkN2U4NjRiMjZkMmE5YmNmMmM3MWIxOGUzMTAyNmMzNTg0NWEifQ"
+          "resource": "repo://src/model/project.ts#L795-L855",
+          "version": "repo-lines-v1:sha256:f57abd76643d36698b1eb6a486f3e6e858d83c2eceed1f963e66bca7b21a41de:eyJzZWxlY3RlZExpbmVDb3VudCI6NjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBhNWQwMjU2YTQ2NGZhMDY5NTlhYWQxNzhhZTllZDY2MGMwMGZiZGQ5NjM3Y2EzN2U1NDM4OTE1ODg4YzNlNmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY3NTQyMjY0YWIwYTQyOTQ3MTk3YWM5Y2ZlNGQ1NjlmODgxNWUwZjI1YjIwOTQ2ODQ5Y2VlNzI2NTlkYjc1ZDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc5OTMyZTBiMzk3YmI1OTQ2MjRhOTlkYWUyOGU1ODNlM2FjODJlY2FhYzRmNzgyN2MyYzgzYzk0ZjllNWVjYmUifQ"
         }
       ]
     },
@@ -259,8 +259,8 @@
       "statement": "splitProjectFiles emits reviewer slots as the union of 1..reviewers and every reviewer number parseReviews/parseReviewsFinished kept (including ones above the current count), so lowering config.reviewers does not delete that reviewer's tree and it reappears if the count is raised back — the same contract normalizeReviews makes for the in-memory shape.",
       "evidence": [
         {
-          "resource": "repo://src/model/project.ts#L775-L814",
-          "version": "repo-lines-v1:sha256:6079c99114a5072002e3fd8ffda44c2e49dadcb0229f1bd0dc16c50bc67a54d7:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY3MzAwZDJkZWYxMWViNjVjZDdmZDA0OTNkOTNiNWEyOTBkY2ZjYTg0ZGQ3OWRkMzhjNjM3ZWEzMGU0NDYzOTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ5ZDZmZjllMzA0NWM5Y2EzNTgyOTJhOTkyYzM5NDliMDMwYzUxOTU1NWQ5ZGZjM2VkMWUzMTAyOTVhNWQxNjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU4NWI0MjBiZjU2NDYyNWMzYzk4OTlmNjg4MTJmODc2ZDU1MWRmYWU2ZWU2YzAxOTQyMzNhZDBmM2MxZThjZTkifQ"
+          "resource": "repo://src/model/project.ts#L793-L829",
+          "version": "repo-lines-v1:sha256:07581becb13e15202b5db7a508893c73f0d2587a19d81aa7ef059ecc210cec9f:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY3MzAwZDJkZWYxMWViNjVjZDdmZDA0OTNkOTNiNWEyOTBkY2ZjYTg0ZGQ3OWRkMzhjNjM3ZWEzMGU0NDYzOTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM0MjNjODQxZGMxYzNiYmJmMWRmYjY4NjA4YWMwYTE3MjkwZDM1ZGMwNmY1ZjY5YjYzMGE4MDM2NTQxNDcyODIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ5ZDZmZjllMzA0NWM5Y2EzNTgyOTJhOTkyYzM5NDliMDMwYzUxOTU1NWQ5ZGZjM2VkMWUzMTAyOTVhNWQxNjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRmNjY4NjZmMjJhZWEwODEwZjIxZjBmY2FjYWVkMzUxNzc1NWVhNDVhZTI3ZjNkNDNiMzE1M2NjOTkwYTM4NDYifQ"
         }
       ]
     },
@@ -326,15 +326,15 @@
     },
     {
       "id": "claim_c3f4b669c3ab4d838c94412aacc8d244",
-      "statement": "loadProject uses a uniform defensive-parse convention for hand-editable fields (reviews, aiUsage, equal, alignment, marks, provenance, protocol, schemaInfo): malformed entries are dropped, never thrown over. The one exception is parseScreening, whose reasons are the schema's enum and cannot be degraded past — an empty result is a load error, not an empty list.",
+      "statement": "loadProject uses a uniform defensive-parse convention for hand-editable fields (reviews, aiUsage, equal, alignment, consolidationSync, marks, provenance, protocol, schemaInfo): malformed entries are dropped, never thrown over. The one exception is parseScreening, whose reasons are the schema's enum and cannot be degraded past — an empty result is a load error, not an empty list.",
       "evidence": [
         {
           "resource": "repo://src/model/project.ts#L338-L391",
-          "version": "repo-lines-v1:sha256:4b72d3828fce0d12ed2b919d730aec5fd954cb5f43e3ae7f1741ee87646c682a:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg3MjM5ZDhmNDRkNjVkOGM3YzA4NjVhZDczODBmMGQ5MjlkNTVjODJlYjZmYjk0YWMwZTJkM2QxYjUzMGY4NTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjZTFlMTU3YjNiZTE0MTBjYzcwZGQyZTc3NzAxMDVjNzViOGE3Yjk4MjZkYTU3YmUzNGUzMTE0ZmJkMTg5YTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYzMWE5NzY4Y2QwMzRlZjE2NWM0OGQ0MTYwNDJhNzYyZWY0ZGU4MjAxM2M2NWVmNDBmNWVjY2JjY2E1NTdjOWYifQ"
+          "version": "repo-lines-v1:sha256:40dadc64b8a8d2f44cde90fcae022a9e147578005376a1b42eccfdabe0abd686:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYyM2NiNGMxM2Q2Nzc1OWQ1NGY3NjcxZDQ0MDM0OTcyZDA5MDNhMzlkMDhhZmFlNzNiYjk4MWViOWFiMGRjZjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI5MmVjN2ZiOGNkNTY5YmNiODExYjhhN2E2OGM1ZGIzNjQ3NDZlNTIyMjE2NDBhNzY5NTRmOWZmMzQ4NjdlNTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY0NzA2ZGMyNDkzZGYyMWNkZTAzYzQ5ZTdhZGFlYTNkZjI3ZTljNmY0Y2NjYmY1NmUyOGY4OWUzMmRjMDhiNmQifQ"
         },
         {
-          "resource": "repo://src/model/project.ts#L351-L371",
-          "version": "repo-lines-v1:sha256:fcd7a566a120e8cf35a577be8fd35ee19faca6b6230741beb23d6757721f2ba1:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2NjQzZDM3OTNhOTYxZDY2OTc5NjY5YmEyNmU4NWFlNWIxYTUyZmM5ZDdjMGE3ZmRhOGYwY2NlMWMwMDdlMmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNmMzM1N2EwZDUwMzNhNTU1ZjUzMjFkNzg5NzhkMDJkMTE3ODVkN2MxYTk2MzM4NzhmOTM4M2U1NmFlODY1MWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY5OGNjODU1ZWI4ZTUyZjNhMDM1N2FjNWY4NTU5YmQ3ZGYxMTQ5MjE3YWQ0YzhjYzcxZjU3ZjM2MGI5Mzg0MTAifQ"
+          "resource": "repo://src/model/project.ts#L618-L624",
+          "version": "repo-lines-v1:sha256:42079d8f0f36f81e3f3b90710389a845854bafee7d77cca3b124c821c7bc8be0:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzk2MDM2MTQ0MTg4MzQ4NmEwMmVjNjU0OGRmMzkxMWJkZmM0OTllZDhmYjNiNDdlMjM2NjUyMDM2OTQwMjU4ZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTg4ZmNlODlkMmMzNzU4MzA4YjgwMWQ3YzVhNmFmNTU1MDkxNGRmYmYxZTI4M2Y5OTRmNzEwMjllZjY4ZTQzMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDU3MjUxZTdhZGMxZDFmOWFhOTMzMjBjZGE5ZjNlMzNmODZlNTMxYzIxNzJmOTNmMWU2YzA4ZWM4YTgxOTg1NyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjBkZjIyYTkzNWFhZWU1YzJmOWMyMWJiZmY3YzJmM2YxNTAwYThlYjEyYjA3ZTVhMGQyOGY3ZjE4NDAwNThlYiJ9"
         }
       ]
     },
@@ -353,7 +353,7 @@
       "statement": "For a screening project splitProjectFiles names per-reviewer files screening-<n>.json and the consolidated file screening-consolidated.json instead of reviewer-/consolidated — same layout, a different prefix so screening decisions and full annotations are distinguishable in the folder. marks-* files keep the same name in both modes.",
       "evidence": [
         {
-          "resource": "repo://src/model/project.ts#L764-L765",
+          "resource": "repo://src/model/project.ts#L782-L783",
           "version": "repo-lines-v1:sha256:d1d78729244d320ef00dfdbc5cf3ec34f978d75a40cace56cdc37ddb3cfc29cb:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMGM0OTEzMzg0OTM0MDY0NTNiZWUyMTAyMDcyMTQ2ZjcwMzI1ZTZhMTVkN2FiNTQ5NGRjMTJjMjk3MzdiNGFmNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTMxNTVhZjkwOTVlNmZlNTQ3MjkwNDFlYzdlMWM3MTM2OGRmYjAxZTcwMDM5YTNhZWNhYWI2YmY1YjNmNzk1ZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiM2U2MzgyNjZkNThlOTBhOTc1ZjRhN2JiNWVlOTk3YmFkZjE0ZGQ1NDRjYTcxN2Y3ODJhZmMxYWUzZDlkZGExZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZGI3MzBmNjg4MmUxN2JiNzI2NmU4ZjQzODYwZWI5ZmE1NjYxOTkxODk4ZmM4MTRjMDk4ZWEzOTVmOWM3MDEzNiJ9"
         }
       ]
@@ -367,10 +367,24 @@
           "version": "repo-lines-v1:sha256:788a9ca817b24585dea1a97aac91242fc16f683b2a26e2020ac9ce2689a6c68a:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM4OTUzNTI0MGNhMDMyZDE4ZjMwYjQ1YzY3OWUyN2M3NGRmNzRkODRkOTkxMTI4NzIxNzZlYzJhNjZjMDRiMDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUwY2JlNWU1YzQ5M2ZjMTljYjI3ODEzY2YzYmQ1ODg4N2QyZWU4ZWQ1MzQ2MjQ3MzU1MjA0NzBhMTM0OTcwN2UifQ"
         }
       ]
+    },
+    {
+      "id": "claim_89d0516283254f0784e135c72107637c",
+      "statement": "Paper.consolidationSync is an optional digest pair (djb2 hash of each reviewer's pruned tree, joined with a digest of the pruned consolidated tree) recorded by consolidationMark(schema, paper) after Consolidation's automatic matching/adoption steps run on a paper; it is compared on re-entering the seat so unchanged reviewer answers never re-trigger those steps and overwrite a consolidator's deliberate edit.",
+      "evidence": [
+        {
+          "resource": "repo://src/consolidate/readiness.ts#L100-L147",
+          "version": "repo-lines-v1:sha256:f704105494fac5a3e354584e35f12331aec50053b52be7d922458567246cfa05:eyJzZWxlY3RlZExpbmVDb3VudCI6NDgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAyMTcyODZkOGU5NjM2NGE5ZmEwZjRiNzFkNTI4ODUxMmMzYjEyYWVjNWI5NjUzMjg5NWRhMzRhY2ZiOWQ2OTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/model/project.ts#L85-L95",
+          "version": "repo-lines-v1:sha256:7647cd73f58d18924ee68643ff3a408576c733159c2de29d78692517e2d62638:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmMmEyZjk5NmYwOGU2ODBiZDI5MjEzNWE2ZmE0OTc4YmRhMjZlNjAyZDg0ZjMzY2IxZDU5NDc3NWQ0MzA0YjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIxMjhmZThlYzIyZTQyZDY2ODdiZGI3NzI1Mzk1ZGI3OTdjNjI5NzhiZTI1M2VmZjgxOTI5ODZjNzI1YWNjNWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM1YTdmYTllM2NkNmEzYWM2MmFlYjcwZmEyYWVhYzJlZjZlMzA5MzAyOTgyYjkxNGE4NDVkMmZlNTkzNTQ5NWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE2NzY0YTJhODdkMjgzZDhhMWE4MjE2ZGNkNzA4MjI1ZjA1MWU5MmZmYzhhNWJmNjViZjk3NDA4OTQ0OThiMzcifQ"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.4.0",
-    "at": "2026-09-21T20:55:32.833Z"
+    "at": "2026-09-22T07:19:01.173Z"
   }
 }

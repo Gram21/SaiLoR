@@ -101,7 +101,7 @@ export function ExportPdfDialog() {
       <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-head">
           <strong>Export PDF with annotations</strong>
-          <button type="button" className="icon-btn" onClick={close} aria-label="Close">
+          <button type="button" className="icon-btn" title="Close" onClick={close} aria-label="Close">
             ×
           </button>
         </div>
@@ -152,12 +152,13 @@ export function ExportPdfDialog() {
               )}
               {exportError && <p className="ai-error">{exportError}</p>}
               <div className="screening-import-actions">
-                <button type="button" disabled={busy} onClick={close}>
+                <button type="button" title="Cancel without exporting" disabled={busy} onClick={close}>
                   Cancel
                 </button>
                 <button
                   type="button"
                   className="primary"
+                  title="Write the highlights and notes into the PDF"
                   disabled={busy || resolving || !absPath}
                   onClick={() => void runExport()}
                 >

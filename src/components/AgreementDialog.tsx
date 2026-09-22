@@ -135,7 +135,7 @@ export function AgreementDialog() {
       >
         <div className="modal-head">
           <strong>Inter-rater agreement</strong>
-          <button type="button" className="icon-btn" onClick={closeAgreement} aria-label="Close">
+          <button type="button" className="icon-btn" onClick={closeAgreement} aria-label="Close" title="Close">
             ×
           </button>
         </div>
@@ -258,7 +258,7 @@ function PerFieldTable({
     <div className="agreement-perfield">
       <div className="agreement-perfield-head">
         <h3 className="agreement-perfield-title">Per field</h3>
-        <button type="button" onClick={onCopy}>
+        <button type="button" onClick={onCopy} title="Copy the per-field table to the clipboard as TSV">
           {copied ? 'Copied' : 'Copy as TSV'}
         </button>
       </div>

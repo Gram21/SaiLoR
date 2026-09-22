@@ -58,7 +58,7 @@ export function NewBranchPrompt() {
           {prompt.error && <p className="git-message-text git-message-error">{prompt.error}</p>}
         </div>
         <div className="close-prompt-actions">
-          <button type="button" onClick={close} disabled={busy}>
+          <button type="button" onClick={close} disabled={busy} title="Cancel without creating a branch">
             Cancel
           </button>
           <button
@@ -67,6 +67,7 @@ export function NewBranchPrompt() {
             onClick={submit}
             disabled={busy || !prompt.name.trim()}
             autoFocus
+            title="Create this branch and switch to it"
           >
             {busy ? 'Creating…' : 'Create and switch'}
           </button>

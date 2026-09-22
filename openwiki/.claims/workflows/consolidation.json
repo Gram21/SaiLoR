@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:92860c994f25d6e0b85e15e2f58f152c31fb3c5b5ce28416e74d262dcb2edd2d",
+  "pageVersion": "sha256:5e1614d14de75f83717eb630673ffbc517dbc11fd2605856d972f231f0bf1650",
   "claims": [
     {
       "id": "claim_ab1fe5303e484c8b909906a80d750159",
@@ -180,11 +180,11 @@
     },
     {
       "id": "claim_7211521808c54add8f7dcecf3937b94b",
-      "statement": "useConsolidationAlignment runs alignment one schema node per frame via setTimeout whenever Consolidation is the active seat, pulling the node the reviewer just asked about to the front of the queue, then runs adoptUnanimousValues once the queue drains because reading across at a fixed index is only meaningful then.",
+      "statement": "useConsolidationAlignment runs alignment one schema node per frame via setTimeout whenever Consolidation is the active seat, pulling the node the reviewer just asked about to the front of the queue, then runs adoptUnanimousValues once the queue drains because reading across at a fixed index is only meaningful then — but only after checking Paper.consolidationSync (via consolidationMark) against the reviewers' and consolidated trees, since a run is skipped, recorded-only, or gated behind ConsolidationUpdatePrompt depending on which half changed.",
       "evidence": [
         {
-          "resource": "repo://src/hooks/useConsolidationAlignment.ts#L19-L84",
-          "version": "repo-lines-v1:sha256:a0d92f39a88999f1fa3431752821777fa854d4baf443dc2f090b95a68b4ae4ee:eyJzZWxlY3RlZExpbmVDb3VudCI6NjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUyNWFhZTc3NzNhMjA1Y2M5ZWIxNGZiMzNjODNlZjIyNGI5YTc5OWJiOTQyNzQ0ZDIwNjI2Y2RiMWZkNTEwNGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVmYTZhMWJjZTBkYWVmNDhiMjZhMDIxNzgyOTcyYThjMjQ5ZjUwOGNlNmZkNzJkMGNhMjgzYmEwZjQ5MzEwOGEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ2MWJlZjBkMzBjMGRhN2ZjM2UxNTlkNzMyOGNmYjUyMGRiOWM0Yzc3MzVkNWI3YzJlYjc0ODM0MDFmN2ZhM2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+          "resource": "repo://src/hooks/useConsolidationAlignment.ts#L33-L140",
+          "version": "repo-lines-v1:sha256:dc500ea5bc910ffa287c9351f7922465e963b506cb5682182606ddf86c8d0649:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA4LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI1MjVhYWU3NzczYTIwNWNjOWViMTRmYjMzYzgzZWYyMjRiOWE3OTliYjk0Mjc0NGQyMDYyNmNkYjFmZDUxMDRmIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJjMzg1MTFlM2Q4OWI3NDcyYzQ5NTgzZmJkOTEwNzY0MTM4NzBiYzk5ZDdjOWYyMzkwZWJhODFlZmM1Y2NmM2IxIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
@@ -311,8 +311,8 @@
           "version": "repo-lines-v1:sha256:7712084fbb975e562e7227f34b93c58451f3d5666335f1dfa79c650c822d0a30:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFlMzRkNzJmYjE0Y2IwOGUxM2E5ZDliZDBlZTJjMDhjNDNkYzAxNmQ4YTNjNzg3OWIyNzliMjgwMjBmNWMzYmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBhMTAwZjQ2NjEyMzM5NjA4YjEwZGMxMGY1NmZjZTc5YjMyM2M5MTRkMDM2NjNkYmYwOTdlZTQ3ZmE1Mjc4N2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM5ZTM1ZWE2MDc2OGMzMTY1NzZhMjJjZGE0YTEzNjM2ZjVhZTJiOGExMTAyNzIwMWQ4Y2VjMWY2NzM0NjJmMGIifQ"
         },
         {
-          "resource": "repo://src/components/ConsolidationDialog.tsx#L229-L268",
-          "version": "repo-lines-v1:sha256:0ba8ef3c91353770a71a4e3fd6a0c60ac953f9afb87e559f34b4e63ad3ce4cf9:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRlNjE3OGYzMzM3MjM1Zjg3Nzg1NTJlMGVlM2I3OTU2ZDVmOTZiN2QzNWMwZDQ0OTQyZWUwMmY0YWU5ZDFkNjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA4ODNlODNhNjM2NzFlMjhjOTVmZmVmZjA2NTA3ODE3MzU1Mzk3OTBlNTU4MTU1YTk1ZGZiYzJlYjA0ZTQ2NTkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVlYWJhNTdmMWUxYmIwYWEwNGVjMDUzNDJiZTMzNzc2NTEyZGZjNTEzMjlkMjBmODNiMjgxMTBhMjM1MmM3NzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU0NjUzN2IxNzkyOTgxYTkzYjA1ODJkMzJkOWY2Y2JmZGYxMzI3YTlmZTI5M2I5MTRjOTdhM2QyMWE4NjliODMifQ"
+          "resource": "repo://src/components/ConsolidationDialog.tsx#L248-L281",
+          "version": "repo-lines-v1:sha256:9b00abfc7ee8fb9faf72e1f3c2e1fc51cc8e42adda40bcb34bc2c15434832388:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0MzE1MjlmM2RmZTc1YjFiNTgyYzIyODEyZGYyNmYyZDVmYWMyM2JkZmJmNGY0YmEzMDQxOWIzYWEzNWY3NjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ5OTAwNTlmNDhjYTU2ZjZiNTBmZGM2OWExNWM3YjdlNjMzY2MxZTEzNjA4ZGFhNTBlZDkyM2JlYjBmNjM2ZmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU1YjVlMWUxMDE4NGY4M2ViZjgyY2RjNDQ0MmIyNmViMDA3NDI3YzRkZGUzYjMzOGViYWRjNTYxNjUzZmZiMDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM1ZmEzOTBjZTIzMWVmMTI5NzI1MGMxMzJmOTM0ZDZjOWYyNjNiYWRhYTUyNTAxNGU3OTM4MTMxNWI2YjMzZDgifQ"
         }
       ]
     },
@@ -441,10 +441,38 @@
           "version": "repo-lines-v1:sha256:88eb747d7e81571eed8cd0d5a867be8f43d7da986917ab315510fb1b251c1150:eyJzZWxlY3RlZExpbmVDb3VudCI6NTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRlY2NkMjRiMWM5N2I0NGVlMzlhYzFlMGM4MGQzNmY4NGI0ZWIxM2RhYTgxOTQ2NzAwNjhlY2VjMjZjOGU0YzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
+    },
+    {
+      "id": "claim_150139ba80aa40a0a6c624046a26484e",
+      "statement": "Paper.consolidationSync gates whether useConsolidationAlignment's automatic steps re-run on re-entering the seat: consolidationMark(schema, paper) hashes the reviewers' pruned trees and the pruned consolidated tree (djb2, joined by a dot); an unchanged mark runs nothing, only the consolidated half changing re-records the mark and runs nothing, only the reviewers' half changing runs, both changing opens ConsolidationUpdatePrompt (Update re-runs, Keep My Version records and stops), and no mark at all (never consolidated, or pre-dates the field) runs unconditionally.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ConsolidationUpdatePrompt.tsx",
+          "version": "repo-file-v1:sha256:417525d9916a3fa8312cf3fdb539585677e66ebd6dc8ae3f0086bf2bc63e89f1"
+        },
+        {
+          "resource": "repo://src/consolidate/readiness.ts#L129-L147",
+          "version": "repo-lines-v1:sha256:983f2e7e0d4bd36729c62af241aff228a7d68a486b6da3da476abf6ffcdaf0e4:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkNWFhY2RlNjM3NTM0ZjhkMzlhNTg4NjBlNTk0OGIwYzlhOTQ5YjI3MzI3YzZmNThkOWRhYWI1ZmFjYTJiNWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc5N2Q4NDRmZTExNWZmNDI1NjFjOGI4MmYwYjU0ZGViYWViYTUwNzBhYTk0YjZiM2FkODczZTE0OWNjODYzMTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/hooks/useConsolidationAlignment.ts#L57-L88",
+          "version": "repo-lines-v1:sha256:e32f7caea15a0f94991ffbe3d7e97db4f8820158d620ad5f94be8eb1140018f6:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM0MTQ5N2NmMGI4MWRhNDJlNzhiYzZmMjQ5OGI4MTBiYWU5ZWUxNmQwZWI5OGNlNzJiNGYzMzg1ZTA3YzZjOTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhhMDliZjE5NDE2MjhjYWYzNjc3NTBhZmVhOWVmNzIzOWUzZTg1NjUyYTg0ODI1MWYyMTNmNWI3NTQ3OGQ2YzAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRjNzg2Njk1YjdmOWM5YjgzNmU5MWVjZWY2OTAyNjllMjIzOTQ3ODA1YThmODhjNDNlYTI1OGIwZTNjNWY4NzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg0ZWUwNWY2YzY2MWUwYWNkMTcwMjQzNDhlMThmOWQwMzAzZGZiZWEwOTlhMTdiNGIzYWZiNGVkNTE4YjM0NmUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a271d7cd68a44f6c8b0a2e881e1f3931",
+      "statement": "git/merge.ts keeps ours rather than three-way-merging Paper.consolidationSync, because it records what this checkout's Consolidation seat last ran against; taking theirs could mark reviewer work this side never saw as already consolidated, while keeping ours means a merge that brings in reviewer edits correctly reads as stale and prompts.",
+      "evidence": [
+        {
+          "resource": "repo://src/git/merge.ts#L565-L575",
+          "version": "repo-lines-v1:sha256:09cf546e0a458f3c8c67a46f874eb10adb5b99681af873b1bc78f429ed674143:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUyZmYwNjU0OTZjNmNmNmU1ZjFlM2VlZTc2NTgyOTU0NmVkNzhmY2EwMWJlMzZhOTZiMGJiYjhmYzJjNWUwMDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5MzE3ZjI4MDE2NzVhMGM4MWM0YmM4MTg0NTEzNjA5ZjRkN2FlMDEzYTVkZmFjNjNiODJhNGM5NjI1M2ExZDIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRhMDc3NDdkZGJhODk2ZTEzYjNmYjc1YmZkYzM5NGZkZTQ1NjQ4MjQxOTdhMDZjMzcwMDkyOTMwMzc3Y2FlNjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNhZGJjOWFkNGFjN2M1ZDA0MWM1ZTc1NGVhNDkyOWI3ZmM2NzAxNzU4MTRhMjkxNzNkNWMwZGIwYjJmNmU0ZmUifQ"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.4.0",
-    "at": "2026-09-21T20:12:55.536Z"
+    "at": "2026-09-22T07:19:01.173Z"
   }
 }

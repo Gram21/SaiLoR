@@ -45,10 +45,20 @@ export function ConsolidationUpdatePrompt() {
           </p>
         </div>
         <div className="close-prompt-actions">
-          <button type="button" className="primary" onClick={() => resolve(false)} autoFocus>
+          <button
+            type="button"
+            className="primary"
+            onClick={() => resolve(false)}
+            autoFocus
+            title="Keep your consolidated answers as they are"
+          >
             Keep My Version
           </button>
-          <button type="button" onClick={() => resolve(true)}>
+          <button
+            type="button"
+            onClick={() => resolve(true)}
+            title="Re-match reviewer answers and fill in unanswered fields"
+          >
             Update
           </button>
         </div>

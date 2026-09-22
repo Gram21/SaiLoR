@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:6012809b1091db13f037a24f201b528cb9adfd89cd1496331897bf272f097fb3",
+  "pageVersion": "sha256:6d3ce1477cfa4530e71931c41853dbac7983a6bf10859513d18bd220c0a39492",
   "claims": [
     {
       "id": "claim_b410c03b2c5e4183ab4744569122404e",
@@ -91,8 +91,12 @@
       "statement": "PdfViewer mounts one react-pdf Page element per page with no virtualization, each with its own canvas/text/annotation layer and pageRefs entry. onLoadSuccess caps the mounted count at MAX_PDF_PAGES (5000) and records overflow in truncatedPages, because a hostile 2.4 KB PDF whose page tree is a DAG can claim 16 million pages and crash the renderer. Page elements are memoized and the onRenderTextLayerSuccess callback is a stable useCallback so unrelated re-renders keep pdf.js text layers intact.",
       "evidence": [
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L1363-L1414",
-          "version": "repo-lines-v1:sha256:9082770134b3cee213bd23df257cb37044be0e8bcf4590665cc197d5e841a97d:eyJzZWxlY3RlZExpbmVDb3VudCI6NTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJmZDE3NDA5ZmIzOTYxM2E3OWU1ODYyZjA0NTI2NjY1MTkwNzEzNzVmMWUzNGU0NWQ2MWM0ODBhNDY5NzExYjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNmNWM3ZTAyMjk1NGI0OWU1MGZiZGE3NWFlN2Y2MDgyZjM1NzRiNDZjOTYyY2JmZjk1ODkyOGZlNTZjZWE3NDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk5NTFlY2FiZGMyYjM2YWM2YWRjOTNiZTc3NDYyN2E2MzhjNmI2YWFiY2JjZGUwNDQ0NGYzYjE5OTY5NWY5YjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ5MjQ5N2QyMjA4NzA2NjRhNzc4YWIyOGZkYmU0YWRkMGRiNGE1OTMxMDQyNzcwZTBhNTJlM2JiOTlhZjg4YzQifQ"
+          "resource": "repo://src/components/PdfViewer.tsx#L1333-L1333",
+          "version": "repo-lines-v1:sha256:89fb6751d62f20ea53e0ce4473a38138cda56788cfc3ee4c9678d765cbe0121e:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODlmYjY3NTFkNjJmMjBlYTUzZTBjZTQ0NzNhMzgxMzhjZGE1Njc4OGNmYzNlZTRjOTY3OGQ3NjVjYmUwMTIxZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODlmYjY3NTFkNjJmMjBlYTUzZTBjZTQ0NzNhMzgxMzhjZGE1Njc4OGNmYzNlZTRjOTY3OGQ3NjVjYmUwMTIxZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGRkMjZlNDIxZDI3YWRmMGJiMzU0N2EyOWI4ZjRiODlmZTMyYTZkNzE2YjhkNzg0MzQ2Yjc3ZWIwYzcyZTFiMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWVhOWUxMzFiYjgzNzQ5ZTljNWYwMWNhNzUyMTg4N2ViYzRhNzdlZTRmNWFmY2FkY2VhOWE3ZTVlOTMzY2IwYSJ9"
+        },
+        {
+          "resource": "repo://src/components/PdfViewer.tsx#L1712-L1720",
+          "version": "repo-lines-v1:sha256:aa9996876574b7dafae87c049a7a990e4a39344073e13bd43207ce7aa5dfb0d0:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGUwMGIxN2QyYmFjMWY5NmUzNTZlODk0Y2JmZjE5YjE0ZWY4YzkxMWQ3OTA4NDFmOTJlZTQ3MmM5ODczNzlmMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDUwMTAwYzljYTVjZmQ5Yjg4MWVjMzE0MDg5NjQ2MGRhZTI3NmRmOGE4ODAxZmRiYTQ2ZjQ4NGFlZDhhYjNmMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjk1ZjY4ODc1Y2M3Zjg0OWRkZjE0ZTI1MjViOTg2YmUyOWRhZDg2NzE2NDQyNWQyMTFjYTM1Y2I4YjFjZDQ4NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDMwYTU0YzNlYjJjMmIyY2JkMDVmNTUyOTEzMmRjNGJjZGY0MDllODhkOTAwNzgwNjcyZWUxNDVhNDI2Yzc2NyJ9"
         }
       ]
     },
@@ -283,6 +287,6 @@
   ],
   "verification": {
     "by": "openwiki/0.4.0",
-    "at": "2026-09-21T20:12:55.536Z"
+    "at": "2026-09-22T07:19:01.173Z"
   }
 }
