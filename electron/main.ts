@@ -27,7 +27,7 @@ import { validateGitUrl, validateClonePath } from '../src/git/url'
 import { relPathProblem, annotationsRelDir } from '../src/git/relpath'
 import { refProblem } from '../src/git/ref'
 import { gitErrorText, parsePorcelain, parseGitLog } from '../src/git/output'
-import { ownAnnotationPathMatcher } from '../src/git/ownAnnotationPath'
+import { ownAnnotationPathMatcher, ownAnnotationPathsIn } from '../src/git/ownAnnotationPath'
 import { readAllConcurrently } from '../src/git/concurrentRead'
 import { deriveGitInfo } from '../src/git/deriveGitInfo'
 import type { GitRun, MergeStart } from '../src/git/types'
@@ -2035,6 +2035,38 @@ ipcMain.handle('git:logDiff', async (_e, root: string, relPath: string, rev: str
 })
 
 /**
+ * The paths git currently sees as changed under this project's `annotations/`
+ * folder that actually belong to *this* project.
+ *
+ * Staging used to be `git add -- <dir>`: the whole folder in one pathspec.
+ * That is only correct while the folder holds nothing else, which SaiLoR
+ * itself breaks — "Start full-text screening" deliberately writes a second
+ * project beside the first, and a Save As into a populated folder does the
+ * same by hand (see `ownAnnotationPathMatcher`). The sibling's modified or
+ * untracked files then rode into this project's commit, under a message the
+ * reviewer wrote for something else, with nothing in the commit UI having
+ * shown them. `beginMergeInto` and `git:branchSwitchBegin` already scope
+ * themselves with the same matcher; this brings the two staging paths
+ * (`git:commitPartial`, `git:pullFinish`) in line with them.
+ *
+ * Discovered from `status` rather than from the `files` list just written,
+ * because a `text: null` entry for a file that never existed is not a path
+ * `git add` accepts. A rename contributes its "from" path too, or the
+ * deletion of the old name is left unstaged — the same rule `runCommit`
+ * applies to the user's own selections.
+ *
+ * Throws if `metaText` won't parse, rather than falling back to the folder:
+ * `splitProjectFiles` produced it moments earlier, so a failure here means
+ * something is wrong enough that sweeping the folder is not the safe guess.
+ */
+async function ownChangedAnnotationPaths(root: string, relPath: string, metaText: string): Promise<string[]> {
+  const raw: unknown = JSON.parse(metaText)
+  const st = await runGit(['status', '--porcelain=v1', '-z'], root)
+  if (!st.ok) throw new Error(gitErrorText(st))
+  return ownAnnotationPathsIn(parsePorcelain(st.stdout), annotationsRelDir(relPath), raw)
+}
+
+/**
  * Commits `committed` (`{metaText, files}`, from `splitProjectFiles`) as
  * `relPath` + `annotations/`'s content — which is not necessarily what the
  * working tree holds, or ends up holding. This is what makes committing
@@ -2050,10 +2082,10 @@ ipcMain.handle('git:logDiff', async (_e, root: string, relPath: string, rev: str
  * tree must still end up holding `working`, never stuck mid-swap holding
  * content that was never actually staged as anything.
  *
- * `git add -- relPath annotationsDir` stages every add/modify/delete under
- * the whole folder in one call — simpler than listing exactly which files
- * changed, and correct either way since `writeProjectFiles` always reconciles
- * the folder to match the state it's writing.
+ * Staging is scoped to this project's own files — `relPath`, whatever the
+ * reviewer selected, and the changed annotation paths
+ * `ownChangedAnnotationPaths` vouches for — never the whole `annotations/`
+ * folder, which may hold a sibling project's work too.
  */
 ipcMain.handle(
   'git:commitPartial',
@@ -2070,27 +2102,27 @@ ipcMain.handle(
     assertRelPath(relPath)
     otherPaths.forEach(assertRelPath)
     const fullPath = path.join(root, relPath)
-    const dir = annotationsRelDir(relPath)
-    const paths = [relPath, dir, ...otherPaths]
+    // Reported as a failed run rather than left to reject the IPC call:
+    // `runCommit` in `gitStore.ts` only recovers from an `{ok: false}` result,
+    // so a rejection strands the panel in its 'working' phase with no error
+    // shown. Same reasoning as `git:pullFinish`'s own catch.
     try {
-      await assertInsideRoot(root, fullPath)
-      await writeProjectFiles(fullPath, committed.metaText, committed.files)
-      const add = await runGit(['add', '--', ...paths], root)
-      if (!add.ok) return add
-      // `add` tolerates a directory pathspec that matches nothing; `commit` does
-      // not ("pathspec 'annotations' did not match any file(s) known to git").
-      // A project with no annotations at all leaves the folder existing and
-      // empty, so only restrict the commit by `dir` when something is staged
-      // under it (an add, a modify, or a delete — `diff --cached` still reports
-      // a staged deletion, `ls-files` does not).
-      const staged = await runGit(['diff', '--cached', '--name-only', '--', dir], root)
-      const commitPaths = !staged.ok || gitOut(staged) ? paths : paths.filter((p) => p !== dir)
-      const args = ['commit', '-m', message]
-      if (amend) args.push('--amend')
-      return await runGit([...args, '--', ...commitPaths], root)
-    } finally {
-      await assertInsideRoot(root, fullPath)
-      await writeProjectFiles(fullPath, working.metaText, working.files)
+      try {
+        await assertInsideRoot(root, fullPath)
+        await writeProjectFiles(fullPath, committed.metaText, committed.files)
+        // After the write, so `status` reports the content actually being staged.
+        const paths = [relPath, ...(await ownChangedAnnotationPaths(root, relPath, committed.metaText)), ...otherPaths]
+        const add = await runGit(['add', '--', ...paths], root)
+        if (!add.ok) return add
+        const args = ['commit', '-m', message]
+        if (amend) args.push('--amend')
+        return await runGit([...args, '--', ...paths], root)
+      } finally {
+        await assertInsideRoot(root, fullPath)
+        await writeProjectFiles(fullPath, working.metaText, working.files)
+      }
+    } catch (err) {
+      return { ok: false, code: null, stdout: '', stderr: err instanceof Error ? err.message : String(err) }
     }
   },
 )
@@ -2414,7 +2446,11 @@ ipcMain.handle(
       const fullPath = path.join(root, relPath)
       await assertInsideRoot(root, fullPath)
       await writeProjectFiles(fullPath, working.metaText, working.files)
-      const add = await runGit(['add', '--', relPath, annotationsRelDir(relPath)], root)
+      // This project's own files only — a sibling project sharing the folder
+      // must not be folded into a merge commit nobody reviewed. See
+      // `ownChangedAnnotationPaths`.
+      const own = await ownChangedAnnotationPaths(root, relPath, working.metaText)
+      const add = await runGit(['add', '--', relPath, ...own], root)
       if (!add.ok) return add
       // `git commit` after a merge with MERGE_HEAD set records both parents and
       // allows an empty tree change, which is why the merge commit is made this

@@ -62,3 +62,29 @@ export function ownAnnotationPathMatcher(raw: unknown): (relUnderDir: string) =>
     return !!m && paperIds.has(m[1])
   }
 }
+
+/**
+ * The repo-relative paths in `changes` (rows from a parsed `git status`) that
+ * belong to this project's own `annotations/` folder — what a commit or a
+ * merge commit may stage, as opposed to everything the folder happens to
+ * contain.
+ *
+ * `dir` is the folder's repo-relative path (`annotationsRelDir`), `raw` the
+ * same duck-typed project meta `ownAnnotationPathMatcher` takes. A rename
+ * contributes its `from` path too, or the deletion of the old name is left
+ * unstaged.
+ */
+export function ownAnnotationPathsIn(
+  changes: Array<{ path: string; from?: string }>,
+  dir: string,
+  raw: unknown,
+): string[] {
+  const matches = ownAnnotationPathMatcher(raw)
+  const isOwn = (p: string) => p.startsWith(`${dir}/`) && matches(p.slice(dir.length + 1))
+  const out = new Set<string>()
+  for (const change of changes) {
+    if (isOwn(change.path)) out.add(change.path)
+    if (change.from && isOwn(change.from)) out.add(change.from)
+  }
+  return [...out]
+}

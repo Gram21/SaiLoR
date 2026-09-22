@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ownAnnotationPathMatcher } from './ownAnnotationPath'
+import { ownAnnotationPathMatcher, ownAnnotationPathsIn } from './ownAnnotationPath'
 
 const project = (papers: string[], screening = false) => ({
   config: { screening: screening ? { reasons: ['x'] } : undefined },
@@ -66,5 +66,36 @@ describe('ownAnnotationPathMatcher', () => {
     expect(ownAnnotationPathMatcher({})('p1/consolidated.json')).toBe(false)
     expect(ownAnnotationPathMatcher({ papers: 'not-an-array' })('p1/consolidated.json')).toBe(false)
     expect(ownAnnotationPathMatcher({ papers: [{ id: 42 }] })('p1/consolidated.json')).toBe(false)
+  })
+})
+
+describe('ownAnnotationPathsIn', () => {
+  const changes = [
+    { path: 'annotations/p1/consolidated.json' },
+    { path: 'annotations/p1/reviewer-2.json' },
+    // A sibling project sharing the folder — the whole reason this exists.
+    { path: 'annotations/q9/consolidated.json' },
+    // Not the family's naming, and not under the folder at all.
+    { path: 'annotations/p1/notes.txt' },
+    { path: 'papers/p1.pdf' },
+  ]
+
+  it('takes this project\'s own changed files and leaves a sibling\'s alone', () => {
+    expect(ownAnnotationPathsIn(changes, 'annotations', project(['p1']))).toEqual([
+      'annotations/p1/consolidated.json',
+      'annotations/p1/reviewer-2.json',
+    ])
+  })
+
+  it('stages both halves of a rename, or the old name is left behind', () => {
+    const renamed = [{ path: 'annotations/p1/reviewer-2.json', from: 'annotations/p1/reviewer-1.json' }]
+    expect(ownAnnotationPathsIn(renamed, 'annotations', project(['p1']))).toEqual([
+      'annotations/p1/reviewer-2.json',
+      'annotations/p1/reviewer-1.json',
+    ])
+  })
+
+  it('returns nothing when the project owns none of the changed paths', () => {
+    expect(ownAnnotationPathsIn(changes, 'annotations', project(['zz']))).toEqual([])
   })
 })
