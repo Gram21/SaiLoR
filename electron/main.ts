@@ -13,7 +13,7 @@ import {
   shell,
 } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { readFile, writeFile, access, readdir, lstat, realpath, unlink, rmdir, mkdir, rm } from 'node:fs/promises'
+import { readFile, writeFile, access, readdir, lstat, realpath, stat, unlink, rmdir, mkdir, rm } from 'node:fs/promises'
 import { constants, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import path from 'node:path'
@@ -33,6 +33,7 @@ import { readAllConcurrently } from '../src/git/concurrentRead'
 import { deriveGitInfo } from '../src/git/deriveGitInfo'
 import type { GitRun, MergeStart, AnnotationAuthors } from '../src/git/types'
 import { isLegacyProjectShape, assembleLegacyProjectJson, isDeletableAnnotationText } from '../src/model/project'
+import { staleSaveError } from '../src/model/fileStamps'
 import { parseMarks, type PdfMark } from '../src/model/pdfMarks'
 import { rectToPdfPoints, rectToQuadPoints } from '../src/model/pdfExport'
 import { verifyReleaseSignature, RELEASE_PUBLIC_KEY_B64 } from '../src/model/updateSignature'
@@ -660,7 +661,90 @@ async function readProjectText(filePath: string, corruptOut?: string[]): Promise
     if (typeof id === 'string') ids.push(id)
   }
   const paperFiles = await readAllConcurrently(ids, (id) => loadPaperFiles(annotationsDir, id, screening, corruptOut))
+  // Everything this project is made of, as it stands right now — the baseline
+  // a later save checks against before it overwrites anything. See
+  // `projectFileStamps`. Recorded from a fresh read of the directory rather
+  // than from `ids`, so a file that exists for a paper we could not parse is
+  // still accounted for.
+  projectFileStamps.delete(path.resolve(filePath))
+  await rememberStamp(filePath, filePath)
+  for (const id of ids) {
+    let entries: string[]
+    try {
+      entries = await readdir(path.join(annotationsDir, id))
+    } catch {
+      continue // no folder for this paper yet
+    }
+    for (const name of entries) await rememberStamp(filePath, path.join(annotationsDir, id, name))
+  }
   return JSON.stringify(assembleLegacyProjectJson(raw, paperFiles))
+}
+
+/**
+ * What every file of the open project looked like when this app last read or
+ * wrote it — `mtimeMs:size`, per absolute path, per project.
+ *
+ * The save path knows what *it* last wrote (the renderer's baseline in
+ * `src/platform/electron.ts`), which is enough to write only what the reviewer
+ * changed. It says nothing about the file on disk having changed underneath
+ * in the meantime — and it does: a teammate's `git pull` run from a terminal,
+ * a `git checkout`, an editor, a sync client. A save then overwrote whatever
+ * had arrived with no conflict, no warning and no trace, which in a shared
+ * repository means somebody else's pulled-but-unseen answers simply vanish.
+ *
+ * `mtimeMs:size` rather than a hash: this runs over every annotation file on
+ * every save, a hash would mean reading the whole corpus each time, and the
+ * pair catches everything short of a deliberate mtime-preserving rewrite —
+ * which no ordinary git or editor operation does.
+ */
+const projectFileStamps = new Map<string, Map<string, string>>()
+
+async function fileStamp(absPath: string): Promise<string | null> {
+  try {
+    const st = await stat(absPath)
+    return `${st.mtimeMs}:${st.size}`
+  } catch {
+    return null // absent is a state too — see `assertUnchangedSince`
+  }
+}
+
+/** Remember `absPath` as it is right now, for the project rooted at `projectPath`. */
+async function rememberStamp(projectPath: string, absPath: string): Promise<void> {
+  const key = path.resolve(projectPath)
+  let stamps = projectFileStamps.get(key)
+  if (!stamps) {
+    stamps = new Map()
+    projectFileStamps.set(key, stamps)
+  }
+  const stamp = await fileStamp(absPath)
+  if (stamp === null) stamps.delete(path.resolve(absPath))
+  else stamps.set(path.resolve(absPath), stamp)
+}
+
+/**
+ * Refuse a save when any file it would touch has changed on disk since this
+ * app last read or wrote it. The decision and the wording live in
+ * `src/model/fileStamps.ts`, where they are testable; this half only gathers
+ * the `stat` results.
+ *
+ * Only enforced for a project this session actually read — a fresh Save As has
+ * no stamps by definition, and every file it writes is legitimately new.
+ */
+async function assertUnchangedSince(
+  projectPath: string,
+  targets: { absPath: string; rel: string }[],
+): Promise<void> {
+  const stamps = projectFileStamps.get(path.resolve(projectPath))
+  if (!stamps) return
+  const stamped = await Promise.all(
+    targets.map(async ({ absPath, rel }) => ({
+      rel,
+      known: stamps.get(path.resolve(absPath)),
+      now: await fileStamp(absPath),
+    })),
+  )
+  const message = staleSaveError(stamped)
+  if (message) throw new Error(message)
 }
 
 /** Absolute project-file paths `project:save` will actually write to — every
@@ -782,6 +866,9 @@ async function writeProjectFiles(
   if (metaText !== null) {
     await assertNotSymlink(filePath)
     await writeFile(filePath, metaText, 'utf-8')
+    // Re-stamp everything this writes, or the next save would see its own
+    // work as somebody else's change. See `projectFileStamps`.
+    await rememberStamp(filePath, filePath)
   }
 
   const annotationsDir = path.join(path.dirname(filePath), 'annotations')
@@ -811,6 +898,7 @@ async function writeProjectFiles(
       } catch (err) {
         if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
       }
+      await rememberStamp(filePath, target)
       // A paper's folder emptied by that unlink is clutter — git does not
       // track directories, so it would never show up as something to clean.
       // `rmdir` without `recursive` removes it only when nothing is left, so
@@ -836,6 +924,7 @@ async function writeProjectFiles(
     }
     await assertNotSymlink(target)
     await writeFile(target, file.text, 'utf-8')
+    await rememberStamp(filePath, target)
   }
 }
 
@@ -845,6 +934,18 @@ ipcMain.handle(
     if (!knownProjectPaths.has(path.resolve(filePath))) {
       throw new Error(`Refusing to save to "${filePath}": it was not opened or chosen via a dialog this session.`)
     }
+    // Deliberately only here, not inside `writeProjectFiles`: the git flows
+    // share that function and rewrite the tree on purpose, having just decided
+    // what it should contain. This is the ordinary save, the one that has no
+    // idea anything else happened.
+    const annotationsDir = path.join(path.dirname(filePath), 'annotations')
+    await assertUnchangedSince(filePath, [
+      ...(metaText === null ? [] : [{ absPath: filePath, rel: path.basename(filePath) }]),
+      ...files.map((f) => ({
+        absPath: path.resolve(annotationsDir, f.relPath),
+        rel: `annotations/${f.relPath}`,
+      })),
+    ])
     await writeProjectFiles(filePath, metaText, files)
   },
 )
@@ -1422,6 +1523,30 @@ ipcMain.on('app:saveComplete', (_e, ok: boolean) => {
     isQuitting = false
   }
 })
+
+/**
+ * Refuse to start a second copy of SaiLoR, handing the existing window focus
+ * instead.
+ *
+ * Two instances can hold the same project, and nothing reconciles them: each
+ * keeps the whole project in memory and writes it back on save, so whichever
+ * saves second silently replaces the other's work — no conflict, no warning,
+ * and no trace that a second copy of the answers ever existed. That is the
+ * same lost-update hazard `assertUnchangedSince` guards against for edits made
+ * outside the app, arriving through a door the app itself opens.
+ *
+ * Refused before `whenReady`, as Electron requires: a second process must
+ * learn it has lost the lock and quit before it builds a window.
+ */
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (!mainWindow) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+  })
+}
 
 app.whenReady().then(() => {
   // macOS shows the dock icon from the running app; set it explicitly so it

@@ -345,6 +345,23 @@ function saveReadingPosition(
   safeSet(key, JSON.stringify({ paperId, page, offsetFraction }))
 }
 
+/**
+ * A save failure, as something a reviewer can read.
+ *
+ * `ErrorPanel` renders `details` one line per entry, so a multi-line message
+ * has to be split to survive — and the messages worth reading are multi-line:
+ * the refusal to overwrite files that changed on disk names the files and then
+ * what to do about them (see `staleSaveError`). Collapsed into a single
+ * paragraph it reads as a wall of text at exactly the moment somebody needs to
+ * act on it.
+ */
+function saveFailure(err: unknown): LoadError {
+  const text = err instanceof Error ? err.message : String(err)
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
+  const [headline, ...rest] = lines
+  return { message: headline ?? 'Failed to save.', details: rest }
+}
+
 export interface LoadError {
   message: string
   details: string[]
@@ -1401,7 +1418,7 @@ export const useStore = create<AppState>()(
       } catch (err) {
         set((s) => {
           s.busy = false
-          s.loadError = { message: 'Failed to save.', details: [String(err)] }
+          s.loadError = saveFailure(err)
         })
         return false
       }
@@ -1521,7 +1538,7 @@ export const useStore = create<AppState>()(
       } catch (err) {
         set((s) => {
           s.busy = false
-          s.loadError = { message: 'Failed to save.', details: [String(err)] }
+          s.loadError = saveFailure(err)
         })
         return false
       }
