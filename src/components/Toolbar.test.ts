@@ -63,7 +63,7 @@ describe('nextTitleClickState (the hidden AI-unlock gesture)', () => {
   })
 })
 
-const REPO: GitRepoInfo = { root: '/r', relPath: 'p.slr.json', branch: 'main', upstream: 'origin/main', hasHead: true }
+const REPO: GitRepoInfo = { root: '/r', relPath: 'p.slr.json', branch: 'main', upstream: 'origin/main', hasHead: true, behind: null }
 const AVAILABLE: GitProbe = { available: true, version: 'git version 2.43.0', error: '' }
 const HINT = 'BROWSER_HINT'
 

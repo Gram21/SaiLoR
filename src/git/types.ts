@@ -62,6 +62,9 @@ export interface GitRepoInfo {
   /** `"origin/main"` form, or `null` when the branch has no upstream. */
   upstream: string | null
   hasHead: boolean
+  /** Commits the upstream is ahead by, as of the last fetch — see
+   *  `deriveGitInfo`. Null when unknown or there is no upstream. */
+  behind: number | null
 }
 
 export type CloneOutcome = { ok: true; dest: string } | { ok: false; error: string }

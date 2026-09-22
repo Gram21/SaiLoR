@@ -22,6 +22,7 @@ vi.mock('../platform', () => ({ getPlatform: () => mockPlatform }))
 
 const { useEditorStore, makeNode } = await import('../state/editorStore')
 const { SchemaTreeEditor } = await import('./SchemaTreeEditor')
+const { useGitStore } = await import('../state/gitStore')
 
 function reset() {
   const field = { ...makeNode(), name: 'Study Type', kind: 'string' as const }
@@ -50,7 +51,10 @@ function reset() {
   })
 }
 
-beforeEach(reset)
+beforeEach(() => {
+  reset()
+  useGitStore.setState({ repo: null })
+})
 
 describe('SchemaTreeEditor: warns before destroying answers', () => {
   it('asks for confirmation when removing a field a paper has answered', async () => {
@@ -114,5 +118,43 @@ describe('SchemaTreeEditor: warns before destroying answers', () => {
     expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('1 paper records an answer'))
     expect(useEditorStore.getState().nodes[0].name).toBe('Study Type')
     confirmSpy.mockRestore()
+  })
+})
+
+describe('SchemaTreeEditor: known-unpulled work sharpens the warning', () => {
+  const repo = (behind: number | null) => ({
+    root: '/repo',
+    relPath: 'x.json',
+    branch: 'main',
+    upstream: 'origin/main',
+    hasHead: true,
+    behind,
+  })
+
+  it('says how far behind the branch is when the repository already knows', async () => {
+    useGitStore.setState({ repo: repo(4) })
+    render(<SchemaTreeEditor />)
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    await userEvent.click(screen.getByTitle('Remove this field and its children'))
+
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('4 commits behind its upstream'))
+    confirmSpy.mockRestore()
+  })
+
+  it('adds nothing when nothing is known — silence is not "you are up to date"', async () => {
+    // `behind` comes from refs alone, with no fetch, so zero and unknown both
+    // mean "we cannot say", and the warning must not imply otherwise.
+    for (const value of [0, null]) {
+      useGitStore.setState({ repo: repo(value) })
+      const view = render(<SchemaTreeEditor />)
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+      await userEvent.click(screen.getAllByTitle('Remove this field and its children')[0])
+
+      expect(confirmSpy).toHaveBeenCalledWith(expect.not.stringContaining('behind its upstream'))
+      confirmSpy.mockRestore()
+      view.unmount()
+    }
   })
 })

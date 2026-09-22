@@ -106,7 +106,7 @@ const fakeGit: GitPlatform = {
     relPath: 'project.json',
     branch: git(['branch', '--show-current']).trim() || null,
     upstream: null,
-    hasHead: true,
+    hasHead: true, behind: null,
   }),
   status: async (root): Promise<GitStatus> => {
     const { parsePorcelain, capDiff } = await import('../../git/output')

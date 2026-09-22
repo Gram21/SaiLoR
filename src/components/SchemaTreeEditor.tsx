@@ -9,6 +9,7 @@ import {
   type EditorNodeKind,
 } from '../state/editorStore'
 import { countPapersUsingField, countLinksUsingField } from '../model/fieldUsage'
+import { useGitStore } from '../state/gitStore'
 import { VisibleIfDialog, describeVisibleIf, describeVisibleIfFull } from './VisibleIfDialog'
 import '../styles/schema-editor.css'
 
@@ -117,6 +118,21 @@ function SchemaNodeRow({
   const moveNode = useEditorStore((s) => s.moveNode)
   const toggleCollapsed = useEditorStore((s) => s.toggleCollapsed)
   const papers = useEditorStore((s) => s.papers)
+  const behind = useGitStore((s) => s.repo?.behind ?? null)
+
+  /**
+   * The "…may have recorded more" caveat, sharpened when the repository
+   * already knows there is more. Deliberately only ever an addition: the count
+   * comes from `git rev-list HEAD..@{u}` with no fetch (see
+   * `GitInfoResult.behind`), so it can say "there is known to be work waiting"
+   * but never "you are up to date" — and silence here means "nothing known",
+   * not "nothing there".
+   */
+  const unpulledNote = (): string =>
+    behind && behind > 0
+      ? ` In fact this branch is ${behind} commit${behind === 1 ? '' : 's'} behind its upstream ` +
+        `as of your last fetch — pull first and the count above may well be higher.`
+      : ''
 
   // The field's name when the input gained focus, so a *committed* rename (on
   // blur) can be checked against what papers actually record — rather than
@@ -163,7 +179,8 @@ function SchemaNodeRow({
       `${parts.join(', and ')} under "${worst.name}". ${verb} it hides that — including every ` +
         `reviewer's own — from every screen and export. The answers stay in the files and come back ` +
         `if the name does.\n\nThis count covers only the papers in this copy of the project; ` +
-        `reviewers whose work you have not pulled yet may have recorded more.\n\nContinue?`,
+        `reviewers whose work you have not pulled yet may have recorded more.${unpulledNote()}` +
+        `\n\nContinue?`,
     )
   }
 
@@ -282,7 +299,7 @@ function SchemaNodeRow({
         `it is hidden — including every reviewer's own — from every screen and export. The answers ` +
         `stay in the files and come back if the node returns to where it was.\n\nThis count covers ` +
         `only the papers in this copy of the project; reviewers whose work you have not pulled yet ` +
-        `may have recorded more.\n\nContinue?`,
+        `may have recorded more.${unpulledNote()}\n\nContinue?`,
     )
   }
 

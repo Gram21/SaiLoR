@@ -43,7 +43,7 @@ beforeEach(() => {
   useStore.getState().loadFromText(PROJECT, { kind: 'electron', path: '/x.json' }, 'x.json')
   useStore.setState({ currentReviewer: null })
   useGitStore.setState({
-    repo: { root: '/repo', relPath: 'x.json', branch: 'main', upstream: null, hasHead: true },
+    repo: { root: '/repo', relPath: 'x.json', branch: 'main', upstream: null, hasHead: true, behind: null },
     seatOwners: null,
   })
 })

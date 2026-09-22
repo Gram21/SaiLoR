@@ -1851,14 +1851,17 @@ ipcMain.handle('git:info', async (_e, projectPath: string) => {
   // /private/tmp), so `path.relative(root, projectPath)` would compute a `..`
   // escape that points nowhere. `--show-prefix` is git's own answer to "where
   // in the work tree is my cwd", which is exactly what's needed here.
-  const [top, prefix, head, branch, upstream] = await Promise.all([
+  const [top, prefix, head, branch, upstream, behind] = await Promise.all([
     runGit(['rev-parse', '--show-toplevel'], dir),
     runGit(['rev-parse', '--show-prefix'], dir),
     runGit(['rev-parse', '--verify', '-q', 'HEAD'], dir),
     runGit(['symbolic-ref', '--short', '-q', 'HEAD'], dir),
     runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], dir),
+    // Reads refs only — no fetch. See `GitInfoResult.behind` for why a stale
+    // answer is the right trade here.
+    runGit(['rev-list', '--count', 'HEAD..@{u}'], dir),
   ])
-  const info = deriveGitInfo(path.basename(projectPath), { top, prefix, head, branch, upstream })
+  const info = deriveGitInfo(path.basename(projectPath), { top, prefix, head, branch, upstream, behind })
   if (info.root) knownGitRoots.add(path.resolve(info.root))
   return info
 })

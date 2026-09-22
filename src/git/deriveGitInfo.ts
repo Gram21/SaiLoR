@@ -6,6 +6,7 @@ export interface GitInfoInputs {
   head: GitRun
   branch: GitRun
   upstream: GitRun
+  behind: GitRun
 }
 
 export interface GitInfoResult {
@@ -14,6 +15,19 @@ export interface GitInfoResult {
   branch: string | null
   upstream: string | null
   hasHead: boolean
+  /**
+   * Commits the upstream has that this branch does not — `rev-list --count
+   * HEAD..@{u}`, so **as of the last fetch**, never a live answer. Null when
+   * there is no upstream or the count could not be read.
+   *
+   * Enough for the one thing it is used for: warning, before a destructive
+   * schema edit, that somebody else's work is already known to be waiting.
+   * A truthful "are you up to date" would have to fetch, and making a network
+   * call out of opening a project — or out of renaming a field — is not worth
+   * it for a warning that only ever needs to say "there is known to be more".
+   * A zero therefore means "nothing known", not "nothing there".
+   */
+  behind: number | null
 }
 
 const out = (r: GitRun): string => r.stdout.trim()
@@ -37,5 +51,7 @@ export function deriveGitInfo(projectBaseName: string, inputs: GitInfoInputs): G
   const hasHead = inputs.head.ok
   const branch = inputs.branch.ok ? out(inputs.branch) || null : null
   const upstream = inputs.upstream.ok ? out(inputs.upstream) || null : null
-  return { root, relPath, branch, upstream, hasHead }
+  const behindCount = inputs.behind.ok ? Number(out(inputs.behind)) : NaN
+  const behind = upstream && Number.isInteger(behindCount) && behindCount >= 0 ? behindCount : null
+  return { root, relPath, branch, upstream, hasHead, behind }
 }

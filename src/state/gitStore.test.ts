@@ -199,7 +199,7 @@ const fakeGit: GitPlatform = {
   },
 }
 
-const REPO = { root: '/repo', relPath: 'review.json', branch: 'main', upstream: 'origin/main', hasHead: true }
+const REPO = { root: '/repo', relPath: 'review.json', branch: 'main', upstream: 'origin/main', hasHead: true, behind: null }
 
 const mockPlatform = {
   kind: 'electron' as const,
