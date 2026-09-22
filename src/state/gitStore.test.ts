@@ -170,6 +170,7 @@ const fakeGit: GitPlatform = {
     logDiffCalls.push(rev)
     return logDiffResult
   },
+  seatOwners: async () => ({ me: null, seats: {} }),
   branches: async () => branchesResult,
   createBranch: async (root, name) => {
     createBranchCalls.push({ root, name })

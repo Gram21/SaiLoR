@@ -23,6 +23,7 @@ import type {
   BranchSwitchStart,
   LogBeginResult,
   LogRevisionFetch,
+  SeatOwners,
 } from '../git/types'
 import { parsePorcelain, capDiff } from '../git/output'
 import { loadProject, splitProjectFiles, type ProjectFileEntry } from '../model/project'
@@ -165,6 +166,7 @@ export interface SlrBridge {
   ): Promise<GitRun>
   gitWriteWorking(root: string, relPath: string, working: SplitProject): Promise<GitRun>
   gitDiscardFile(root: string, relPath: string, projectRelPath: string): Promise<GitRun>
+  gitSeatOwners(root: string, relPath: string, seats: string[], screening: boolean): Promise<SeatOwners>
   gitBranches(root: string): Promise<GitBranch[]>
   gitBranchCreate(root: string, name: string): Promise<GitRun>
   gitBranchDelete(root: string, branch: string): Promise<GitRun>
@@ -456,6 +458,7 @@ export class ElectronAdapter implements PlatformAdapter {
       bridge().gitCommitPartial(root, relPath, committed, working, otherPaths, message, amend),
     writeWorking: (root, relPath, working) => bridge().gitWriteWorking(root, relPath, working),
     discardFile: (root, relPath, projectRelPath) => bridge().gitDiscardFile(root, relPath, projectRelPath),
+    seatOwners: (root, relPath, seats, screening) => bridge().gitSeatOwners(root, relPath, seats, screening),
     branches: (root) => bridge().gitBranches(root),
     createBranch: (root, name) => bridge().gitBranchCreate(root, name),
     deleteBranch: (root, branch) => bridge().gitBranchDelete(root, branch),

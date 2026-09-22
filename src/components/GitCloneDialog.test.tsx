@@ -34,6 +34,7 @@ const fakeGit: GitPlatform = {
   workingContent: async () => null,
   commitPartial: async () => ({ ok: false, code: null, stdout: '', stderr: 'unused' }),
   writeWorking: async () => ({ ok: false, code: null, stdout: '', stderr: 'unused' }),
+  seatOwners: async () => ({ me: null, seats: {} }),
   branches: async () => [],
   createBranch: async () => ({ ok: false, code: null, stdout: '', stderr: 'unused' }),
   deleteBranch: async () => ({ ok: false, code: null, stdout: '', stderr: 'unused' }),

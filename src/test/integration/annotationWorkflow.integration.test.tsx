@@ -146,6 +146,7 @@ const fakeGit: GitPlatform = {
   workingContent: async () => null,
   commitPartial: async () => ({ ok: false, code: null, stdout: '', stderr: 'not exercised — see headContent' }),
   writeWorking: async () => ({ ok: false, code: null, stdout: '', stderr: 'not supported in this test' }),
+  seatOwners: async () => ({ me: null, seats: {} }),
   branches: async () => [],
   createBranch: async () => ({ ok: false, code: null, stdout: '', stderr: 'not supported in this test' }),
   deleteBranch: async () => ({ ok: false, code: null, stdout: '', stderr: 'not supported in this test' }),

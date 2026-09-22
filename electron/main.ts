@@ -28,9 +28,10 @@ import { relPathProblem, annotationsRelDir } from '../src/git/relpath'
 import { refProblem } from '../src/git/ref'
 import { gitErrorText, parsePorcelain, parseGitLog } from '../src/git/output'
 import { ownAnnotationPathMatcher, ownAnnotationPathsIn } from '../src/git/ownAnnotationPath'
+import { seatPathspec, parseSeatAuthor } from '../src/git/seatOwner'
 import { readAllConcurrently } from '../src/git/concurrentRead'
 import { deriveGitInfo } from '../src/git/deriveGitInfo'
-import type { GitRun, MergeStart } from '../src/git/types'
+import type { GitRun, MergeStart, SeatOwners } from '../src/git/types'
 import { isLegacyProjectShape, assembleLegacyProjectJson, isDeletableAnnotationText } from '../src/model/project'
 import { parseMarks, type PdfMark } from '../src/model/pdfMarks'
 import { rectToPdfPoints, rectToQuadPoints } from '../src/model/pdfExport'
@@ -2410,6 +2411,46 @@ ipcMain.handle('git:mergeBegin', async (_e, root: string, relPath: string, ref: 
 
   return beginMergeInto(root, relPath, ref)
 })
+
+/**
+ * Who has been writing each reviewer seat, and who this machine commits as.
+ *
+ * A seat is a local choice nothing records in the project (see
+ * `src/git/seatOwner.ts`), so two people could both pick "Reviewer 1" and
+ * silently overwrite each other. The repository already knows better: the last
+ * author of a seat's files is a claim on that seat. One `log -1` per seat,
+ * scoped by a glob pathspec, is cheap enough to run when the picker opens.
+ *
+ * A seat nobody has committed yet, or a machine with no `user.email`/`user.name`
+ * configured, simply reports `null` — the picker then says nothing rather than
+ * guessing.
+ */
+ipcMain.handle(
+  'git:seatOwners',
+  async (_e, root: string, relPath: string, seats: string[], screening: boolean) => {
+    assertRelPath(relPath)
+    const dir = annotationsRelDir(relPath)
+    const [nameRun, emailRun] = await Promise.all([
+      runGit(['config', '--get', 'user.name'], root),
+      runGit(['config', '--get', 'user.email'], root),
+    ])
+    const myName = nameRun.ok ? gitOut(nameRun) : ''
+    const myEmail = emailRun.ok ? gitOut(emailRun) : ''
+    const authors = await Promise.all(
+      seats.map((seat) =>
+        runGit(['log', '-1', '--format=%an%x00%ae', '--', seatPathspec(dir, seat, screening)], root),
+      ),
+    )
+    const out: SeatOwners = {
+      me: myName || myEmail ? { name: myName, email: myEmail } : null,
+      seats: {},
+    }
+    seats.forEach((seat, i) => {
+      out.seats[seat] = authors[i].ok ? parseSeatAuthor(authors[i].stdout) : null
+    })
+    return out
+  },
+)
 
 /** True when `ref` names something under `refs/remotes/` — checked against git
  *  rather than guessed from the "origin/" prefix, since a local branch may

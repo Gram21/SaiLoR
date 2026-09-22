@@ -4,6 +4,7 @@
  * `src/git/merge.ts` for the same rule applied to the merge itself.
  */
 
+import type { GitIdentity } from './seatOwner'
 import type { ProjectFileEntry } from '../model/project'
 
 /** The split-file form of a project (`splitProjectFiles`'s output): `project.json`
@@ -60,6 +61,14 @@ export interface GitRepoInfo {
   /** `"origin/main"` form, or `null` when the branch has no upstream. */
   upstream: string | null
   hasHead: boolean
+}
+
+/** `seatOwners`' result: `me` is this machine's git identity (null when it
+ *  has none configured), `seats` the last author of each requested seat's
+ *  files (null for a seat no commit has ever touched). */
+export interface SeatOwners {
+  me: GitIdentity | null
+  seats: Record<string, GitIdentity | null>
 }
 
 export type CloneOutcome = { ok: true; dest: string } | { ok: false; error: string }
@@ -201,6 +210,11 @@ export interface GitPlatform {
   /** Writes `working` to the project without staging/committing — the write-counterpart
    *  to `workingContent`, for reverting local edits without a commit. */
   writeWorking(root: string, relPath: string, working: SplitProject): Promise<GitRun>
+
+  /** Who has been writing each of `seats` in this repository's history, and
+   *  who this machine commits as — so the seat picker can say a seat is
+   *  already somebody else's. See `src/git/seatOwner.ts`. */
+  seatOwners(root: string, relPath: string, seats: string[], screening: boolean): Promise<SeatOwners>
 
   /** Local branches and remote-tracking ones — the switcher takes the locals,
    *  the merge picker takes both (see `GitBranch.remote`). */
