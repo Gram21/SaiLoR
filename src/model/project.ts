@@ -11,7 +11,7 @@ import {
   hasAnnotations,
   normalizeTree,
   pruneTree,
-  orphanedNodes,
+  treeHoldsOrphans,
   type AnnotationValueTree,
 } from './annotations'
 import { screeningSchemaDefs } from '../screening/schema'
@@ -714,14 +714,14 @@ function serializedTree(schema: ResolvedDef[], tree: AnnotationValueTree): Annot
   // Orphans survive even when nothing in the current schema is answered —
   // otherwise removing the one field a reviewer had filled in would still be
   // what deletes their work. See `orphanedNodes`.
-  return hasAnnotations(schema, tree) ? pruneTree(schema, tree) : orphanedNodes(schema, tree)
+  return hasContent(schema, tree) ? pruneTree(schema, tree) : {}
 }
 
 /** Does this tree hold anything worth a file on disk — a real answer, or
- *  answers orphaned by a schema edit? `hasAnnotations` alone would drop the
- *  file, and with it the orphans. */
+ *  answers orphaned by a schema edit at any depth? `hasAnnotations` alone
+ *  would drop the file, and with it the orphans. */
 function hasContent(schema: ResolvedDef[], tree: AnnotationValueTree): boolean {
-  return hasAnnotations(schema, tree) || Object.keys(orphanedNodes(schema, tree)).length > 0
+  return hasAnnotations(schema, tree) || treeHoldsOrphans(schema, tree)
 }
 
 /**

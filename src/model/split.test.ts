@@ -415,3 +415,61 @@ describe('a schema field removed while others still have answers under it', () =
     expect(JSON.parse(written.text!).annotations).not.toHaveProperty('Notes')
   })
 })
+
+describe('a schema node that loses every child', () => {
+  const projectWith = (schema: AnnotationDef[]) =>
+    JSON.stringify({
+      version: 1,
+      config: { schema },
+      papers: [
+        {
+          id: 'p1',
+          title: 'Paper One',
+          authors: [],
+          pdf: 'p1.pdf',
+          annotations: {
+            Findings: [
+              { children: { Claim: [{ value: 'first' }] } },
+              { children: { Claim: [{ value: 'second' }] } },
+            ],
+          },
+        },
+      ],
+    })
+
+  const WITH_CLAIM: AnnotationDef[] = [
+    { name: 'Findings', max: null, children: [{ name: 'Claim', type: 'string' }] },
+  ]
+  // The group turned into a plain field and its children deleted, so nothing
+  // under `Findings` is described any more. (A group with no children at all
+  // is not a valid schema — it has to become a typed field.)
+  const NO_CHILDREN: AnnotationDef[] = [{ name: 'Findings', type: 'string', max: null }]
+
+  it('keeps the answers beneath it, including in trailing entries', () => {
+    // Losing *some* children is covered by normalizeTree's own recursion;
+    // losing all of them left the node with no defs to recurse into at all,
+    // and the trailing-empty prune then deleted the entries outright.
+    const { files } = splitProjectFiles(loadProject(projectWith(NO_CHILDREN)))
+    const written = files.find((f) => f.relPath === 'p1/consolidated.json')!
+    const findings = JSON.parse(written.text!).annotations.Findings
+    expect(findings).toHaveLength(2)
+    expect(findings[0].children.Claim).toEqual([{ value: 'first' }])
+    expect(findings[1].children.Claim).toEqual([{ value: 'second' }])
+  })
+
+  it('hands them back when the child returns to the schema', () => {
+    const restored = loadProject(projectWith(WITH_CLAIM))
+    expect(restored.papers[0].annotations.Findings[1].children!.Claim[0].value).toBe('second')
+  })
+
+  it('gives an ordinary leaf field no empty children key', () => {
+    const plain = JSON.stringify({
+      version: 1,
+      config: { schema: [{ name: 'Relevant', type: 'boolean' }] },
+      papers: [{ id: 'p1', title: 'One', authors: [], pdf: 'p1.pdf', annotations: { Relevant: [{ value: true }] } }],
+    })
+    const { files } = splitProjectFiles(loadProject(plain))
+    const written = files.find((f) => f.relPath === 'p1/consolidated.json')!
+    expect(JSON.parse(written.text!).annotations.Relevant[0]).toEqual({ value: true })
+  })
+})
