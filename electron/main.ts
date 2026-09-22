@@ -775,11 +775,13 @@ async function assertInsideRoot(root: string, filePath: string): Promise<void> {
  */
 async function writeProjectFiles(
   filePath: string,
-  metaText: string,
+  metaText: string | null,
   files: Array<{ relPath: string; text: string | null }>,
 ): Promise<void> {
-  await assertNotSymlink(filePath)
-  await writeFile(filePath, metaText, 'utf-8')
+  if (metaText !== null) {
+    await assertNotSymlink(filePath)
+    await writeFile(filePath, metaText, 'utf-8')
+  }
 
   const annotationsDir = path.join(path.dirname(filePath), 'annotations')
   await mkdir(annotationsDir, { recursive: true })
@@ -825,7 +827,7 @@ async function writeProjectFiles(
 
 ipcMain.handle(
   'project:save',
-  async (_e, filePath: string, metaText: string, files: Array<{ relPath: string; text: string | null }>) => {
+  async (_e, filePath: string, metaText: string | null, files: Array<{ relPath: string; text: string | null }>) => {
     if (!knownProjectPaths.has(path.resolve(filePath))) {
       throw new Error(`Refusing to save to "${filePath}": it was not opened or chosen via a dialog this session.`)
     }

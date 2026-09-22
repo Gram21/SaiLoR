@@ -25,10 +25,46 @@ import type {
   LogRevisionFetch,
 } from '../git/types'
 import { parsePorcelain, capDiff } from '../git/output'
-import { loadProject, splitProjectFiles } from '../model/project'
+import { loadProject, splitProjectFiles, type ProjectFileEntry } from '../model/project'
 import type { PdfMark } from '../model/pdfMarks'
 
 const RECENTS_KEY = 'slr.recents.electron'
+
+/**
+ * How the open project's files last stood on disk — `project.json`'s text plus
+ * every `annotations/…` entry, keyed by relative path. A save writes only what
+ * differs from this.
+ *
+ * Without it, every save rewrites every paper's file for every reviewer, so
+ * adding a field to the schema (which `pruneTree` materializes as an empty
+ * entry in every tree) turns one reviewer's edit into a diff across the whole
+ * `annotations/` folder — files nobody touched, in a repository several people
+ * share. Comparing against the serialization the project was *loaded* with
+ * isolates exactly the papers edited since, without the store having to track
+ * that per paper: `splitProjectFiles` is pure, so an untouched paper serializes
+ * identically both times.
+ *
+ * Refreshed by every open (including the reloads git flows do after they
+ * rewrite the working tree) and every save; a project at a different path
+ * doesn't match, and writes everything.
+ */
+let lastWritten: { path: string; meta: string; files: Map<string, string | null> } | null = null
+
+function noteWritten(path: string, meta: string, files: ProjectFileEntry[]): void {
+  lastWritten = { path, meta, files: new Map(files.map((f) => [f.relPath, f.text])) }
+}
+
+/** Record how `text` — a project just read from `path` — serializes, so the
+ *  next save can tell edits apart from normalization. Unparseable text leaves
+ *  no baseline, so that save writes everything, exactly as before. */
+function noteOpened(path: string, text: string): void {
+  try {
+    const { meta, files } = splitProjectFiles(loadProject(text))
+    noteWritten(path, JSON.stringify(meta, null, 2), files)
+  } catch {
+    lastWritten = null
+  }
+}
 
 /** Shape of the API exposed by electron/preload.ts on `window.slr`. */
 export interface SlrBridge {
@@ -37,7 +73,8 @@ export interface SlrBridge {
   openProject(): Promise<{ path: string; text: string; corrupt: string[] } | null>
   /** Read a specific file by absolute path (for recent files). Null if missing. */
   openPath(path: string): Promise<{ path: string; text: string; corrupt: string[] } | null>
-  saveProject(path: string, metaText: string, files: Array<{ relPath: string; text: string | null }>): Promise<void>
+  /** `metaText` is null when `project.json` itself is unchanged — see `lastWritten`. */
+  saveProject(path: string, metaText: string | null, files: Array<{ relPath: string; text: string | null }>): Promise<void>
   /** Register the project's base directory so slr-file:// can resolve PDFs. */
   setProjectDir(path: string): Promise<void>
   /** Pick a location for a project JSON without writing it. Null if cancelled. */
@@ -199,6 +236,7 @@ export class ElectronAdapter implements PlatformAdapter {
     const res = await bridge().openProject()
     if (!res) return null
     await bridge().setProjectDir(res.path)
+    noteOpened(res.path, res.text)
     pushRecent(RECENTS_KEY, { id: res.path, name: baseName(res.path), path: res.path })
     return {
       text: res.text,
@@ -213,6 +251,7 @@ export class ElectronAdapter implements PlatformAdapter {
     // Keep the entry even if the file is gone — the drive may come back — caller marks it unavailable instead.
     if (!res) return null
     await bridge().setProjectDir(res.path)
+    noteOpened(res.path, res.text)
     pushRecent(RECENTS_KEY, { id: res.path, name: baseName(res.path), path: res.path })
     return {
       text: res.text,
@@ -227,7 +266,14 @@ export class ElectronAdapter implements PlatformAdapter {
     // `text` is the shared whole-project JSON contract; on disk this build splits it into
     // `project.json` (meta) plus per-tree `annotations/<paperId>/…` files — see `splitProjectFiles`.
     const { meta, files } = splitProjectFiles(loadProject(text))
-    await bridge().saveProject(handle.path, JSON.stringify(meta, null, 2), files)
+    const metaText = JSON.stringify(meta, null, 2)
+    // Only what actually changed — see `lastWritten`.
+    const base = lastWritten?.path === handle.path ? lastWritten : null
+    const changed = base
+      ? files.filter((f) => !base.files.has(f.relPath) || base.files.get(f.relPath) !== f.text)
+      : files
+    await bridge().saveProject(handle.path, base?.meta === metaText ? null : metaText, changed)
+    noteWritten(handle.path, metaText, files)
     return handle
   }
 

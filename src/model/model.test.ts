@@ -17,7 +17,7 @@ import {
   isFieldVisible,
   type AnnotationValueTree,
 } from './annotations'
-import { loadProject, serializeProject, ProjectLoadError, needsShapeMigration } from './project'
+import { loadProject, serializeProject, ProjectLoadError } from './project'
 
 const sampleSchema: AnnotationDef[] = [
   { name: 'Relevant', type: 'boolean' },
@@ -665,57 +665,6 @@ describe('loadProject: input validation', () => {
       expect(err).toBeInstanceOf(ProjectLoadError)
       expect((err as ProjectLoadError).details.join(' ')).toMatch(/"p1" appears more than once/)
     }
-  })
-})
-
-describe('needsShapeMigration', () => {
-  const schema = resolveSchema([{ name: 'Claim', type: 'string' }])
-  const basePaper = (annotations: AnnotationValueTree) => ({
-    id: 'p1',
-    title: 'T',
-    authors: [],
-    pdf: 'a.pdf',
-    annotations,
-    reviews: {},
-    aiUsage: [],
-    equal: [],
-    alignment: {},
-    marks: [],
-    reviewMarks: {},
-    finished: false,
-    reviewsFinished: {},
-    extra: {},
-  })
-  const baseProject = (papers: ReturnType<typeof basePaper>[]) => ({
-    version: 1,
-    provenance: null,
-    protocol: null,
-    schemaInfo: null,
-    schema,
-    aiEnabled: true,
-    finishCheckbox: true,
-    reviewers: 1,
-    papers,
-    screening: null,
-    extra: {},
-  })
-
-  it('flags a legacy scaffolded-but-empty tree written on disk as needing migration', () => {
-    const project = baseProject([basePaper({ Claim: [{ value: null }] })])
-    const raw = { papers: [{ annotations: { Claim: [{ value: null }] } }] }
-    expect(needsShapeMigration(project as never, raw)).toBe(true)
-  })
-
-  it('does not flag a file already written in the canonical pruned shape', () => {
-    const project = baseProject([basePaper({ Claim: [{ value: null }] })])
-    const raw = { papers: [{ annotations: {} }] }
-    expect(needsShapeMigration(project as never, raw)).toBe(false)
-  })
-
-  it('does not flag a filled-in tree that already matches the canonical shape', () => {
-    const project = baseProject([basePaper({ Claim: [{ value: 'x' }] })])
-    const raw = { papers: [{ annotations: { Claim: [{ value: 'x' }] } }] }
-    expect(needsShapeMigration(project as never, raw)).toBe(false)
   })
 })
 

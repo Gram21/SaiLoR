@@ -462,10 +462,6 @@ export function parseProvenance(raw: unknown): ProjectProvenance | null {
 /**
  * Structural equality for plain JSON: object keys are order-independent,
  * array elements are order-sensitive (reordering genuinely changes meaning).
- * Deliberately not a text comparison — `needsShapeMigration` relies on that so
- * reformatting alone (which `serializeProject` does on every save) never
- * looks like a reason to migrate.
- *
  * Exported for `src/git/merge.ts`, which needs the identical notion for
  * three-way merges — a second implementation would be a bug waiting to happen.
  */
@@ -482,32 +478,6 @@ export function deepEqualJson(a: unknown, b: unknown): boolean {
   return ak.every(
     (k) => k in (b as Record<string, unknown>) && deepEqualJson((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]),
   )
-}
-
-/**
- * Whether `project`'s `annotations`/`reviews` still need the canonical
- * serialized shape (hand-edited file, or written by an older app version).
- * Compares structurally (`deepEqualJson`) against what saving `project` would
- * write now, scoped to just those two fields, so unrelated formatting
- * differences never falsely trigger a migration.
- *
- * `rawData` must be the same already-parsed value passed to `loadProject` to
- * produce `project` — call this right after `loadProject`, not independently.
- */
-export function needsShapeMigration(project: Project, rawData: unknown): boolean {
-  const data = rawData as { papers?: unknown[] }
-  const rawPapers = Array.isArray(data.papers) ? data.papers : []
-  return project.papers.some((paper, i) => {
-    const rawPaper = (rawPapers[i] ?? {}) as Record<string, unknown>
-    const rawAnnotations = rawPaper.annotations ?? {}
-    if (!deepEqualJson(serializedTree(project.schema, paper.annotations), rawAnnotations)) return true
-    if (project.reviewers <= 1) return false
-    const canonicalReviews = Object.fromEntries(
-      Object.entries(paper.reviews).map(([k, v]) => [k, serializedTree(project.schema, v)]),
-    )
-    const rawReviews = rawPaper.reviews ?? {}
-    return !deepEqualJson(canonicalReviews, rawReviews)
-  })
 }
 
 /**

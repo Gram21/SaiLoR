@@ -11,7 +11,7 @@ contextBridge.exposeInMainWorld('slr', {
 
   openProject: () => ipcRenderer.invoke('project:open'),
   openPath: (filePath: string) => ipcRenderer.invoke('project:openPath', filePath),
-  saveProject: (filePath: string, metaText: string, files: Array<{ relPath: string; text: string | null }>) =>
+  saveProject: (filePath: string, metaText: string | null, files: Array<{ relPath: string; text: string | null }>) =>
     ipcRenderer.invoke('project:save', filePath, metaText, files),
   setProjectDir: (filePath: string) => ipcRenderer.invoke('project:setDir', filePath),
 

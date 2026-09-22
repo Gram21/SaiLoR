@@ -119,3 +119,26 @@ describe('resyncProjectFromDisk clears undo/redo history', () => {
     expect(useStore.getState().project!.papers[0].annotations.Relevant?.[0]?.value).toBe(false)
   })
 })
+
+describe('opening a project never writes to disk by itself', () => {
+  it('does not resave a file whose trees predate a schema field added later', async () => {
+    // The file was written before "Notes" existed, so the loaded project and
+    // the file no longer have the same shape. Resaving that difference (as the
+    // old shape-migration did) rewrote every paper's file for every reviewer —
+    // a whole-folder diff in a shared repository, from a user who only looked.
+    written = null
+    useStore.getState().loadFromText(
+      JSON.stringify({
+        version: 1,
+        config: { schema: [{ name: 'Relevant', type: 'boolean' }, { name: 'Notes', type: 'string' }] },
+        papers: [{ id: 'a', title: 'Paper A', authors: [], pdf: 'a.pdf', annotations: { Relevant: [{ value: true }] } }],
+      }),
+      { kind: 'electron', path: '/x.json' },
+      'x.json',
+    )
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(written).toBeNull()
+    expect(useStore.getState().dirty).toBe(false)
+  })
+})

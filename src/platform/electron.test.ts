@@ -42,6 +42,32 @@ describe('ElectronAdapter.saveProject', () => {
     expect(p2.text).toBeNull()
   })
 
+  it('writes only the papers edited since the project was opened', async () => {
+    // The whole point of the baseline: opening a project whose schema grew must
+    // not rewrite every untouched paper's file into a shared git repository.
+    const text = makeProjectText()
+    const openPath = vi.fn().mockResolvedValue({ path: '/other/project.json', text, corrupt: [] })
+    const setProjectDir = vi.fn().mockResolvedValue(undefined)
+    ;(window as unknown as { slr: unknown }).slr = { saveProject, openPath, setProjectDir }
+
+    const adapter = new ElectronAdapter()
+    await adapter.openRecent('/other/project.json')
+    const handle = { kind: 'electron' as const, path: '/other/project.json' }
+
+    // Nothing edited: nothing written, not even project.json.
+    await adapter.saveProject(text, handle)
+    expect(saveProject.mock.calls[0][1]).toBeNull()
+    expect(saveProject.mock.calls[0][2]).toEqual([])
+
+    // Edit p2 only: p1's files stay untouched.
+    const project = loadProject(text)
+    project.papers[1].annotations = { Relevant: [{ value: true }] }
+    await adapter.saveProject(serializeProject(project), handle)
+    const files = saveProject.mock.calls[1][2] as { relPath: string }[]
+    expect(files.map((f) => f.relPath)).toEqual(['p2/consolidated.json'])
+    expect(saveProject.mock.calls[1][1]).toBeNull()
+  })
+
   it('throws when the handle has no path', async () => {
     const adapter = new ElectronAdapter()
     await expect(adapter.saveProject(makeProjectText(), { kind: 'electron' })).rejects.toThrow('Save as')
