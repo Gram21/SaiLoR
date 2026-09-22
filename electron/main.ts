@@ -13,7 +13,7 @@ import {
   shell,
 } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { readFile, writeFile, access, readdir, lstat, realpath, unlink, mkdir, rm } from 'node:fs/promises'
+import { readFile, writeFile, access, readdir, lstat, realpath, unlink, rmdir, mkdir, rm } from 'node:fs/promises'
 import { constants, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import path from 'node:path'
@@ -810,6 +810,19 @@ async function writeProjectFiles(
         await unlink(target)
       } catch (err) {
         if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
+      }
+      // A paper's folder emptied by that unlink is clutter — git does not
+      // track directories, so it would never show up as something to clean.
+      // `rmdir` without `recursive` removes it only when nothing is left, so
+      // a folder still holding anything (a file this project does not own, a
+      // reviewer file kept back as unparseable) survives untouched.
+      const parent = path.dirname(target)
+      if (parent !== base) {
+        try {
+          await rmdir(parent)
+        } catch {
+          /* not empty, already gone, or not ours to remove — all fine */
+        }
       }
       continue
     }

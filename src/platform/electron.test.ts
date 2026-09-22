@@ -68,6 +68,48 @@ describe('ElectronAdapter.saveProject', () => {
     expect(saveProject.mock.calls[1][1]).toBeNull()
   })
 
+  it('deletes the files of a paper removed since the project was opened', async () => {
+    // Nothing else ever revisits `annotations/<gone>/`: git does not notice it,
+    // and a paper later given the same id would silently inherit its answers.
+    const text = makeProjectText()
+    const openPath = vi.fn().mockResolvedValue({ path: '/gone/project.json', text, corrupt: [] })
+    const setProjectDir = vi.fn().mockResolvedValue(undefined)
+    ;(window as unknown as { slr: unknown }).slr = { saveProject, openPath, setProjectDir }
+
+    const adapter = new ElectronAdapter()
+    await adapter.openRecent('/gone/project.json')
+
+    const project = loadProject(text)
+    project.papers = project.papers.filter((p) => p.id !== 'p1')
+    await adapter.saveProject(serializeProject(project), { kind: 'electron', path: '/gone/project.json' })
+
+    const files = saveProject.mock.calls[0][2] as { relPath: string; text: string | null }[]
+    const p1 = files.filter((f) => f.relPath.startsWith('p1/'))
+    expect(p1.length).toBeGreaterThan(0)
+    expect(p1.every((f) => f.text === null)).toBe(true)
+    // p2 stays in the project and was not edited — still untouched.
+    expect(files.some((f) => f.relPath.startsWith('p2/'))).toBe(false)
+  })
+
+  it('moves a paper\'s files when its id is renamed, leaving nothing behind', async () => {
+    const text = makeProjectText()
+    const openPath = vi.fn().mockResolvedValue({ path: '/renamed/project.json', text, corrupt: [] })
+    const setProjectDir = vi.fn().mockResolvedValue(undefined)
+    ;(window as unknown as { slr: unknown }).slr = { saveProject, openPath, setProjectDir }
+
+    const adapter = new ElectronAdapter()
+    await adapter.openRecent('/renamed/project.json')
+
+    const project = loadProject(text)
+    project.papers[0].id = 'p1-renamed'
+    await adapter.saveProject(serializeProject(project), { kind: 'electron', path: '/renamed/project.json' })
+
+    const files = saveProject.mock.calls[0][2] as { relPath: string; text: string | null }[]
+    const written = files.find((f) => f.relPath === 'p1-renamed/consolidated.json')
+    expect(written?.text).toContain('Relevant')
+    expect(files.find((f) => f.relPath === 'p1/consolidated.json')?.text).toBeNull()
+  })
+
   it('throws when the handle has no path', async () => {
     const adapter = new ElectronAdapter()
     await expect(adapter.saveProject(makeProjectText(), { kind: 'electron' })).rejects.toThrow('Save as')

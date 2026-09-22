@@ -274,7 +274,24 @@ export class ElectronAdapter implements PlatformAdapter {
     const changed = base
       ? files.filter((f) => !base.files.has(f.relPath) || base.files.get(f.relPath) !== f.text)
       : files
-    await bridge().saveProject(handle.path, base?.meta === metaText ? null : metaText, changed)
+    // Paths the project used to write and no longer does: a paper removed from
+    // the project, or one whose id was renamed (its files simply move to the
+    // new id's folder). `splitProjectFiles` can't ask for their deletion — it
+    // only describes the papers that still exist — and nothing else ever
+    // revisited them, so `annotations/<gone>/` stayed on disk forever, got
+    // committed, and silently re-attached itself to any paper later given the
+    // same id.
+    //
+    // The baseline is what makes this safe to do at all. Scanning the folder
+    // instead could not tell a removed paper of ours from a sibling project's
+    // paper (see `ownAnnotationPathMatcher`) — both are "an id this project
+    // doesn't have". The baseline only ever holds paths this project itself
+    // read or wrote, so everything in it is ours by construction.
+    const present = new Set(files.map((f) => f.relPath))
+    const removed = base
+      ? [...base.files.keys()].filter((p) => !present.has(p)).map((relPath) => ({ relPath, text: null }))
+      : []
+    await bridge().saveProject(handle.path, base?.meta === metaText ? null : metaText, [...changed, ...removed])
     noteWritten(handle.path, metaText, files)
     return handle
   }
