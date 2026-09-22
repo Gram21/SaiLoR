@@ -53,3 +53,25 @@ export function annotationsRelDir(relPath: string): string {
   const dir = relPath.split(/[\\/]/).slice(0, -1).join('/')
   return dir === '' ? 'annotations' : `${dir}/annotations`
 }
+
+/**
+ * Of a parsed `git status`, the paths that must not be left lying around when
+ * a merge starts: every tracked modification, plus untracked files sitting
+ * inside the project's own `annotations/` folder.
+ *
+ * Untracked files used to be waved through wholesale, on the reasoning that
+ * git never touches them. It does once a merge commit is recorded: the merge
+ * stages the folder and an untracked annotation file goes in with it, credited
+ * to whoever ran Pull and never shown in the merge review. Untracked files
+ * *elsewhere* in the repository — scratch notes, a PDF nobody has added yet —
+ * still block nothing, because a guard that fires on those is one reviewers
+ * learn to work around.
+ */
+export function mergeBlockingPaths(
+  changes: { path: string; code: string }[],
+  annotationsDir: string,
+): string[] {
+  return changes
+    .filter((c) => c.code !== '??' || c.path.startsWith(`${annotationsDir}/`))
+    .map((c) => c.path)
+}

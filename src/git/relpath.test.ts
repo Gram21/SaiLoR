@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { relPathProblem, annotationsRelDir } from './relpath'
+import { relPathProblem, annotationsRelDir, mergeBlockingPaths } from './relpath'
 
 /**
  * This gate stands in front of file writes into a git repository, and the
@@ -70,5 +70,42 @@ describe('annotationsRelDir', () => {
 
   it('normalizes a Windows-separated relPath to git-style forward slashes', () => {
     expect(annotationsRelDir('reviews\\project.json')).toBe('reviews/annotations')
+  })
+})
+
+describe('mergeBlockingPaths', () => {
+  const dir = 'annotations'
+
+  it('blocks tracked changes anywhere, as it always did', () => {
+    const changes = [
+      { path: 'project.json', code: ' M' },
+      { path: 'papers/a.pdf', code: 'M ' },
+    ]
+    expect(mergeBlockingPaths(changes, dir)).toEqual(['project.json', 'papers/a.pdf'])
+  })
+
+  it("blocks an untracked file inside the project's annotations folder", () => {
+    // A merge commit stages that folder, so this would ride in unreviewed.
+    const changes = [{ path: 'annotations/p5/reviewer-2.json', code: '??' }]
+    expect(mergeBlockingPaths(changes, dir)).toEqual(['annotations/p5/reviewer-2.json'])
+  })
+
+  it('leaves untracked files elsewhere alone', () => {
+    // A guard that fires on scratch notes is one reviewers learn to work around.
+    const changes = [
+      { path: 'notes.md', code: '??' },
+      { path: 'papers/new.pdf', code: '??' },
+    ]
+    expect(mergeBlockingPaths(changes, dir)).toEqual([])
+  })
+
+  it('scopes to this project when the folder is nested', () => {
+    const changes = [
+      { path: 'sub/annotations/p1/consolidated.json', code: '??' },
+      { path: 'other/annotations/p1/consolidated.json', code: '??' },
+    ]
+    expect(mergeBlockingPaths(changes, 'sub/annotations')).toEqual([
+      'sub/annotations/p1/consolidated.json',
+    ])
   })
 })

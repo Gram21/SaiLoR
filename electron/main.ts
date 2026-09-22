@@ -24,7 +24,7 @@ import os from 'node:os'
 // so they typecheck identically under this file's tsconfig (node types) and
 // the renderer's (DOM types).
 import { validateGitUrl, validateClonePath } from '../src/git/url'
-import { relPathProblem, annotationsRelDir } from '../src/git/relpath'
+import { relPathProblem, annotationsRelDir, mergeBlockingPaths } from '../src/git/relpath'
 import { refProblem } from '../src/git/ref'
 import { gitErrorText, parsePorcelain, parseGitLog } from '../src/git/output'
 import { ownAnnotationPathMatcher, ownAnnotationPathsIn } from '../src/git/ownAnnotationPath'
@@ -2276,16 +2276,14 @@ ipcMain.handle('git:push', async (_e, root: string) => {
 })
 
 /**
- * Are there uncommitted tracked changes that would block a merge? Shared by
- * every flow that merges, since a merge started over a dirty tree is a merge
- * whose abort cannot cleanly put things back.
+ * Is anything lying around that would block a merge? Shared by every flow that
+ * merges, since a merge started over a dirty tree is a merge whose abort cannot
+ * cleanly put things back. See `mergeBlockingPaths` for which untracked files
+ * count and why.
  */
-async function mergeBlockingDirtyPaths(root: string): Promise<string[]> {
+async function mergeBlockingDirtyPaths(root: string, relPath: string): Promise<string[]> {
   const st = await runGit(['status', '--porcelain=v1', '-z'], root)
-  // Untracked files ('??') never block a merge, so they are not "dirty" here.
-  return parsePorcelain(st.stdout)
-    .filter((c) => c.code !== '??')
-    .map((c) => c.path)
+  return mergeBlockingPaths(parsePorcelain(st.stdout), annotationsRelDir(relPath))
 }
 
 /**
@@ -2379,7 +2377,7 @@ async function beginMergeInto(root: string, relPath: string, ref: string): Promi
 ipcMain.handle('git:pullBegin', async (_e, root: string, relPath: string) => {
   assertRelPath(relPath)
 
-  const dirty = await mergeBlockingDirtyPaths(root)
+  const dirty = await mergeBlockingDirtyPaths(root, relPath)
   if (dirty.length > 0) return { kind: 'dirty', paths: dirty }
 
   const up = await runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], root)
@@ -2405,7 +2403,7 @@ ipcMain.handle('git:mergeBegin', async (_e, root: string, relPath: string, ref: 
   assertRelPath(relPath)
   assertRef(ref)
 
-  const dirty = await mergeBlockingDirtyPaths(root)
+  const dirty = await mergeBlockingDirtyPaths(root, relPath)
   if (dirty.length > 0) return { kind: 'dirty', paths: dirty }
 
   // A remote-tracking ref is only as fresh as the last fetch, and the branch
