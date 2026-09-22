@@ -110,6 +110,28 @@ describe('ElectronAdapter.saveProject', () => {
     expect(files.find((f) => f.relPath === 'p1/consolidated.json')?.text).toBeNull()
   })
 
+  it('forgets the baseline when a git call rewrites the working tree', async () => {
+    // The baseline describes disk. A flow that rewrites the tree and then
+    // forgets to reload would otherwise leave it describing a past that no
+    // longer exists, and the next save would skip files it should have
+    // written — so the seam drops it rather than trusting every caller.
+    const text = makeProjectText()
+    const openPath = vi.fn().mockResolvedValue({ path: '/gitty/project.json', text, corrupt: [] })
+    const setProjectDir = vi.fn().mockResolvedValue(undefined)
+    const gitPullAbort = vi.fn().mockResolvedValue({ ok: true, code: 0, stdout: '', stderr: '' })
+    ;(window as unknown as { slr: unknown }).slr = { saveProject, openPath, setProjectDir, gitPullAbort }
+
+    const adapter = new ElectronAdapter()
+    await adapter.openRecent('/gitty/project.json')
+    await adapter.getGit()!.abortPull('/gitty')
+
+    // Same unedited project: without the drop this would write nothing.
+    await adapter.saveProject(text, { kind: 'electron', path: '/gitty/project.json' })
+    const [, metaText, files] = saveProject.mock.calls[0]
+    expect(metaText).not.toBeNull()
+    expect((files as unknown[]).length).toBeGreaterThan(0)
+  })
+
   it('throws when the handle has no path', async () => {
     const adapter = new ElectronAdapter()
     await expect(adapter.saveProject(makeProjectText(), { kind: 'electron' })).rejects.toThrow('Save as')

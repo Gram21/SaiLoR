@@ -55,6 +55,23 @@ function noteWritten(path: string, meta: string, files: ProjectFileEntry[]): voi
   lastWritten = { path, meta, files: new Map(files.map((f) => [f.relPath, f.text])) }
 }
 
+/**
+ * Run a call that may rewrite the working tree, forgetting the baseline first
+ * so the next save writes every file rather than only what differs from it.
+ *
+ * The baseline describes what is on disk, and every git flow that rewrites the
+ * working tree makes it a claim about a past that no longer exists. Those
+ * flows do all reload the project afterwards, which sets a fresh one — but
+ * that is an invariant a future flow can quietly break, and the failure would
+ * be a save that skips a file it should have written. Dropping it at the seam
+ * the writes actually pass through makes the safe outcome the automatic one:
+ * a lost baseline costs one whole-tree write, a stale one costs data.
+ */
+function withBaselineDropped<T>(call: () => Promise<T>): Promise<T> {
+  lastWritten = null
+  return call()
+}
+
 /** Record how `text` — a project just read from `path` — serializes, so the
  *  next save can tell edits apart from normalization. Unparseable text leaves
  *  no baseline, so that save writes everything, exactly as before. */
@@ -463,26 +480,33 @@ export class ElectronAdapter implements PlatformAdapter {
     commit: (root, paths, message, amend) => bridge().gitCommit(root, paths, message, amend),
     lastCommitMessage: (root) => bridge().gitLastCommitMessage(root),
     push: (root) => bridge().gitPush(root),
-    beginPull: (root, relPath) => bridge().gitPullBegin(root, relPath),
-    finishPull: (root, relPath, working) => bridge().gitPullFinish(root, relPath, working),
-    abortPull: (root) => bridge().gitPullAbort(root),
-    beginMerge: (root, relPath, ref) => bridge().gitMergeBegin(root, relPath, ref),
+    // Every call below this comment can rewrite the working tree — a merge
+    // that stops mid-way still wrote files, an abort restores them, a stash
+    // takes them away. See `withBaselineDropped`.
+    beginPull: (root, relPath) => withBaselineDropped(() => bridge().gitPullBegin(root, relPath)),
+    finishPull: (root, relPath, working) => withBaselineDropped(() => bridge().gitPullFinish(root, relPath, working)),
+    abortPull: (root) => withBaselineDropped(() => bridge().gitPullAbort(root)),
+    beginMerge: (root, relPath, ref) => withBaselineDropped(() => bridge().gitMergeBegin(root, relPath, ref)),
     logBegin: (root, relPath) => bridge().gitLogBegin(root, relPath),
     logDiff: (root, relPath, rev) => bridge().gitLogDiff(root, relPath, rev),
     headContent: (root, relPath) => bridge().gitHeadContent(root, relPath),
     workingContent: (root, relPath) => bridge().gitWorkingContent(root, relPath),
     commitPartial: (root, relPath, committed, working, otherPaths, message, amend) =>
-      bridge().gitCommitPartial(root, relPath, committed, working, otherPaths, message, amend),
-    writeWorking: (root, relPath, working) => bridge().gitWriteWorking(root, relPath, working),
-    discardFile: (root, relPath, projectRelPath) => bridge().gitDiscardFile(root, relPath, projectRelPath),
+      withBaselineDropped(() => bridge().gitCommitPartial(root, relPath, committed, working, otherPaths, message, amend)),
+    writeWorking: (root, relPath, working) => withBaselineDropped(() => bridge().gitWriteWorking(root, relPath, working)),
+    discardFile: (root, relPath, projectRelPath) =>
+      withBaselineDropped(() => bridge().gitDiscardFile(root, relPath, projectRelPath)),
     seatOwners: (root, relPath, seats, screening) => bridge().gitSeatOwners(root, relPath, seats, screening),
     branches: (root) => bridge().gitBranches(root),
     createBranch: (root, name) => bridge().gitBranchCreate(root, name),
     deleteBranch: (root, branch) => bridge().gitBranchDelete(root, branch),
-    checkoutBranch: (root, branch) => bridge().gitCheckout(root, branch),
-    beginBranchSwitch: (root, relPath, branch) => bridge().gitBranchSwitchBegin(root, relPath, branch),
-    finishBranchSwitch: (root, relPath, resolved) => bridge().gitBranchSwitchFinish(root, relPath, resolved),
-    abortBranchSwitch: (root, sourceBranch) => bridge().gitBranchSwitchAbort(root, sourceBranch),
+    checkoutBranch: (root, branch) => withBaselineDropped(() => bridge().gitCheckout(root, branch)),
+    beginBranchSwitch: (root, relPath, branch) =>
+      withBaselineDropped(() => bridge().gitBranchSwitchBegin(root, relPath, branch)),
+    finishBranchSwitch: (root, relPath, resolved) =>
+      withBaselineDropped(() => bridge().gitBranchSwitchFinish(root, relPath, resolved)),
+    abortBranchSwitch: (root, sourceBranch) =>
+      withBaselineDropped(() => bridge().gitBranchSwitchAbort(root, sourceBranch)),
   }
 
   getGit(): GitPlatform {
