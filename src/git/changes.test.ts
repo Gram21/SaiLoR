@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { loadProject, serializeProject, type Project } from '../model/project'
 import type { AnnotationDef } from '../model/schema'
-import { detectFieldChanges, composeContents, type Disposition } from './changes'
+import {
+  detectFieldChanges,
+  composeContents,
+  papersWithBookkeepingChanges,
+  type Disposition,
+} from './changes'
 
 /**
  * Fixtures are built through `loadProject`, the same rule `merge.test.ts`
@@ -585,5 +590,43 @@ describe('composeContents — round-trip and shape invariants', () => {
       const text = serializeProject(p)
       expect(serializeProject(loadProject(text))).toBe(text)
     }
+  })
+})
+
+describe('papersWithBookkeepingChanges', () => {
+  const SIMPLE_SCHEMA: AnnotationDef[] = [{ name: 'Relevant', type: 'boolean' }]
+
+  it('names the papers whose carried-along fields changed, and no others', () => {
+    const head = project({ schema: SIMPLE_SCHEMA, papers: [paper('a'), paper('b')] })
+    const working = project({
+      schema: SIMPLE_SCHEMA,
+      papers: [paper('a', { finished: true }), paper('b')],
+    })
+    expect(papersWithBookkeepingChanges(head, working)).toEqual(['a'])
+  })
+
+  it('stays quiet when only reviewed fields changed — the common case', () => {
+    const head = project({ schema: SIMPLE_SCHEMA, papers: [paper('a')] })
+    const working = project({ schema: SIMPLE_SCHEMA, papers: [paper('a', { title: 'Renamed' })] })
+    expect(papersWithBookkeepingChanges(head, working)).toEqual([])
+  })
+
+  it('agrees with what composeContents actually carries', () => {
+    // The point of the shared BOOKKEEPING_FIELDS list: what the dialog
+    // announces and what the commit carries cannot drift apart.
+    const head = project({ schema: SIMPLE_SCHEMA, papers: [paper('a')] })
+    const working = project({
+      schema: SIMPLE_SCHEMA,
+      papers: [paper('a', { finished: true, aiUsage: [{ provider: 'x', model: 'y', appliedAt: 'z' }] })],
+    })
+    expect(papersWithBookkeepingChanges(head, working)).toEqual(['a'])
+
+    const changes = detectFieldChanges(head, working)!
+    // Every reviewable row refused — the bookkeeping still rides along.
+    const decisions: Record<string, Disposition> = {}
+    for (const f of changes.fields) decisions[f.id] = 'ignore'
+    const { committed } = composeContents(head, working, changes, decisions)
+    expect(committed.papers[0].finished).toBe(true)
+    expect(committed.papers[0].aiUsage).toHaveLength(1)
   })
 })

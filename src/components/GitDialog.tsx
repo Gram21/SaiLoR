@@ -3,6 +3,7 @@ import { useGitStore } from '../state/gitStore'
 import { useStore } from '../state/store'
 import { diffLines } from '../git/output'
 import { annotationsRelDir } from '../git/relpath'
+import { papersWithBookkeepingChanges } from '../git/changes'
 import type { Disposition, FieldChange, PaperChange } from '../git/changes'
 import type { FieldValue } from '../model/annotations'
 import '../styles/git.css'
@@ -143,6 +144,7 @@ export function GitDialog() {
   const selectedCount = Object.keys(panel.selected).length
   const hasUntracked = changes.some((c) => c.code === '??')
   const reviewRowCount = review ? review.changes.fields.length + review.changes.papers.length : 0
+  const bookkeepingPapers = review ? papersWithBookkeepingChanges(review.head, review.working) : []
 
   // What the review's rows resolve to (absent means 'use', same default as `composeContents`).
   const reviewDispositions = review
@@ -335,6 +337,16 @@ export function GitDialog() {
                 button below — Commit if anything is still marked Use, or Discard all if everything
                 left is Ignore or Discard.
               </p>
+              {/* These have no row of their own and are carried regardless of
+                  what is decided above (see `BOOKKEEPING_FIELDS`), so the one
+                  thing this list must not be is invisible. */}
+              {bookkeepingPapers.length > 0 && (
+                <p className="git-muted">
+                  Reading notes, finished marks, AI-usage records and entry matching also changed for{' '}
+                  {bookkeepingPapers.length === 1 ? '1 paper' : `${bookkeepingPapers.length} papers`}. Those
+                  are not values anyone typed, so they have no row above — they are committed either way.
+                </p>
+              )}
               <div className="git-field-review-bulk">
                 <button
                   type="button"

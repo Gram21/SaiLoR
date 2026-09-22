@@ -57,6 +57,43 @@ export interface DetectedChanges {
 }
 
 /**
+ * Paper fields the commit carries whatever the reviewer decided elsewhere.
+ *
+ * None of them is a value somebody typed into a field: they are reading notes
+ * (`marks`), declarations (`finished`), a disclosure record that is
+ * append-only by design (`aiUsage`), derived matching (`alignment`, `equal`),
+ * and whatever a hand-edited file carried (`extra`). Giving each a Use/Ignore
+ * row would mean inventing what "revert half of a derived matching" means, so
+ * instead they ride along — and `papersWithBookkeepingChanges` exists so the
+ * dialog can say that out loud rather than let it be a surprise.
+ *
+ * Shared by the carrying loop in `composeContents` and that detector, so the
+ * two can never drift apart about what "bookkeeping" covers.
+ */
+const BOOKKEEPING_FIELDS = [
+  'finished',
+  'reviewsFinished',
+  'marks',
+  'reviewMarks',
+  'equal',
+  'alignment',
+  'aiUsage',
+  'extra',
+] as const satisfies readonly (keyof Paper)[]
+
+/** Papers whose bookkeeping differs between the two revisions — the ones a
+ *  commit carries with no row of their own. Empty is the common case. */
+export function papersWithBookkeepingChanges(head: Project, working: Project): string[] {
+  const headById = new Map(head.papers.map((p) => [p.id, p]))
+  return working.papers
+    .filter((w) => {
+      const h = headById.get(w.id)
+      return !!h && BOOKKEEPING_FIELDS.some((key) => !deepEqualJson(h[key], w[key]))
+    })
+    .map((w) => w.id)
+}
+
+/**
  * Paper-level fields whose *meaning* is owned by another field, so they never
  * get a row of their own: `abstractFromPdf` is a disclosure about `abstract`,
  * not an independent fact a reviewer picks. Its value just follows whatever
@@ -450,14 +487,9 @@ export function composeContents(
     for (const draftPaper of draft.papers) {
       const w = workingById.get(draftPaper.id)
       if (!w) continue
-      draftPaper.finished = w.finished
-      draftPaper.reviewsFinished = w.reviewsFinished
-      draftPaper.marks = w.marks
-      draftPaper.reviewMarks = w.reviewMarks
-      draftPaper.equal = w.equal
-      draftPaper.alignment = w.alignment
-      draftPaper.aiUsage = w.aiUsage
-      draftPaper.extra = w.extra
+      for (const key of BOOKKEEPING_FIELDS) {
+        ;(draftPaper as Record<string, unknown>)[key] = w[key]
+      }
     }
 
     // Grow each committed tree to the working shape before writing any "use"
