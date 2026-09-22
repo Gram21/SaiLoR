@@ -4,8 +4,8 @@
  * `src/git/merge.ts` for the same rule applied to the merge itself.
  */
 
-import type { SeatOwners } from './seatOwner'
-export type { SeatOwners }
+import type { AnnotationAuthors } from './seatOwner'
+export type { AnnotationAuthors }
 import type { ProjectFileEntry } from '../model/project'
 
 /** The split-file form of a project (`splitProjectFiles`'s output): `project.json`
@@ -207,10 +207,11 @@ export interface GitPlatform {
    *  to `workingContent`, for reverting local edits without a commit. */
   writeWorking(root: string, relPath: string, working: SplitProject): Promise<GitRun>
 
-  /** Who has been writing each of `seats` in this repository's history, and
-   *  who this machine commits as — so the seat picker can say a seat is
-   *  already somebody else's. See `src/git/seatOwner.ts`. */
-  seatOwners(root: string, relPath: string, seats: string[], screening: boolean): Promise<SeatOwners>
+  /** Who last committed each annotation file, and who this machine commits
+   *  as — so a reviewer can be told that somebody has already read the paper
+   *  in front of them in the seat they are sitting in. See
+   *  `src/git/seatOwner.ts` for why this is per paper rather than per seat. */
+  annotationAuthors(root: string, relPath: string): Promise<AnnotationAuthors>
 
   /** Local branches and remote-tracking ones — the switcher takes the locals,
    *  the merge picker takes both (see `GitBranch.remote`). */

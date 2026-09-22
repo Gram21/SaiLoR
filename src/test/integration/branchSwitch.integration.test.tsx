@@ -70,7 +70,7 @@ const fakeGit: GitPlatform = {
   workingContent: async () => null,
   commitPartial: async () => ({ ok: false, code: null, stdout: '', stderr: 'not exercised — see headContent' }),
   writeWorking: async () => ({ ok: false, code: null, stdout: '', stderr: 'not supported in this test' }),
-  seatOwners: async () => ({ me: null, seats: {} }),
+  annotationAuthors: async () => ({ me: null, files: {} }),
   branches: async (root): Promise<GitBranch[]> => {
     const out = execFileSync('git', ['for-each-ref', '--format=%(refname:short)|%(HEAD)', 'refs/heads'], {
       cwd: root,

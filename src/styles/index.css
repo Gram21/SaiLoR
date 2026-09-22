@@ -3068,3 +3068,16 @@ kbd {
   border-color: var(--danger);
   color: var(--danger);
 }
+
+/* "Somebody else already read this paper in your seat" — see
+   SeatConflictNotice.tsx. Sits above the form rather than inside it: it is
+   about which paper you should be on at all, not about any one field. */
+.seat-conflict-notice {
+  margin: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--danger);
+  background: var(--accent-weak);
+  color: var(--text);
+  font-size: 0.85em;
+  line-height: 1.45;
+}

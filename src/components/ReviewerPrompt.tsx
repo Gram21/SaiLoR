@@ -1,8 +1,6 @@
-import { useState } from 'react'
 import { useStore } from '../state/store'
-import { useGitStore } from '../state/gitStore'
 import { readyCount } from '../consolidate/readiness'
-import { heldByOther, ownerLabel, CONSOLIDATION_SEAT } from '../git/seatOwner'
+import { CONSOLIDATION_SEAT } from '../git/seatOwner'
 
 /**
  * Shown when a multi-reviewer project is opened and nobody has picked a seat —
@@ -20,24 +18,17 @@ import { heldByOther, ownerLabel, CONSOLIDATION_SEAT } from '../git/seatOwner'
  * in which nothing can be done. The choice is free, reversible from the
  * toolbar, and costs nothing to change later.
  *
- * Free, but not free of consequence once somebody else is already in the seat:
- * two people who both pick "Reviewer 1" write the same files, and whoever
- * merges last silently erases the other's answers. So when the project sits in
- * a git repository, each seat also says who has been committing it (see
- * `src/git/seatOwner.ts`) and taking somebody else's asks a second time.
+ * Deliberately says nothing about who "owns" a seat. A seat is not a person:
+ * a large review divides its papers among many more people than it has seats,
+ * so seat 1 is legitimately held by a different reviewer on every paper. The
+ * collision that matters — somebody has already read *this* paper in *this*
+ * seat — is caught where the paper is, not here (see `SeatConflictNotice`).
  */
 export function ReviewerPrompt() {
   const project = useStore((s) => s.project)
   const currentReviewer = useStore((s) => s.currentReviewer)
   const selectReviewer = useStore((s) => s.selectReviewer)
   const helpOpen = useStore((s) => s.helpOpen)
-  // Loaded once per repository by `gitStore.refreshSeatOwners`, so this and
-  // the toolbar's switcher never disagree about who holds what.
-  const owners = useGitStore((s) => s.seatOwners)
-  // The seat a second click would take from its current holder — reset by
-  // every other interaction, so the confirmation can't be answered by accident.
-  const [confirming, setConfirming] = useState<string | null>(null)
-
   if (!project || project.reviewers <= 1) return null
   // Yield to Help. Nothing else can be reached while this is up, so F1 is the
   // one way to go and read more before committing to a seat — and it would be
@@ -49,37 +40,6 @@ export function ReviewerPrompt() {
   const reviewerIds = Array.from({ length: project.reviewers }, (_, i) => String(i + 1))
   const ready = readyCount(project.schema, project.papers, project.reviewers)
   const total = project.papers.length
-
-  // Nothing rendered at all until some seat has a claim, so a fresh project —
-  // or one outside git — looks exactly as it did before any of this existed.
-  const hasClaims = reviewerIds.concat(CONSOLIDATION_SEAT).some((s) => (owners?.seats[s] ?? null) !== null)
-
-  /** One click for a free seat or your own; two for taking somebody else's. */
-  const choose = (seat: string) => {
-    if (heldByOther(owners, seat) && confirming !== seat) {
-      setConfirming(seat)
-      return
-    }
-    selectReviewer(seat)
-  }
-
-  const holderNote = (seat: string) => {
-    if (!hasClaims) return null
-    const other = heldByOther(owners, seat)
-    if (other) {
-      return (
-        <span className="reviewer-prompt-holder">
-          {confirming === seat ? `Take it from ${ownerLabel(other)}?` : `last committed by ${ownerLabel(other)}`}
-        </span>
-      )
-    }
-    const mine = owners?.seats[seat] ?? null
-    return (
-      <span className="reviewer-prompt-holder">
-        {mine ? 'last committed by you' : 'not yet committed by anyone'}
-      </span>
-    )
-  }
 
   return (
     // Opt-out marker excludes this overlay from useKeybindings.ts's F1 guard,
@@ -115,22 +75,17 @@ export function ReviewerPrompt() {
                   key={id}
                   type="button"
                   className="reviewer-prompt-choice"
-                  onClick={() => choose(id)}
-                  title={
-                    confirming === id
-                      ? `Click again to annotate as Reviewer ${id} anyway`
-                      : `Review independently as Reviewer ${id}`
-                  }
+                  onClick={() => selectReviewer(id)}
+                  title={`Review independently as Reviewer ${id}`}
                 >
                   Reviewer {id}
-                  {holderNote(id)}
                 </button>
               )
             })}
             <button
               type="button"
               className="reviewer-prompt-choice is-consolidation"
-              onClick={() => choose(CONSOLIDATION_SEAT)}
+              onClick={() => selectReviewer(CONSOLIDATION_SEAT)}
               title={
                 total > 0 && ready === total
                   ? 'Every paper has been annotated by all reviewers'
@@ -150,7 +105,6 @@ export function ReviewerPrompt() {
                     ? 'no papers ready yet'
                     : `${ready} of ${total} papers ready`}
               </span>
-              {holderNote(CONSOLIDATION_SEAT)}
             </button>
           </div>
           <p className="reviewer-prompt-note">

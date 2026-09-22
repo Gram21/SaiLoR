@@ -61,7 +61,7 @@ beforeEach(() => {
     recents: [],
     currentReviewer: null,
   })
-  useGitStore.setState({ seatOwners: null })
+  useGitStore.setState({ annotationAuthors: null })
 })
 
 describe('REQ-UI-30: seat switcher in toolbar', () => {
@@ -90,47 +90,6 @@ describe('REQ-UI-30: seat switcher in toolbar', () => {
     expect(within(group).getByRole('button', { name: '1' })).not.toHaveClass('active')
   })
 
-  // Switching here skips the opening ReviewerPrompt, where the "somebody else
-  // is in this seat" warning lives — the same question has to be asked.
-  it('asks before taking a seat somebody else has been committing, and keeps the current one on Cancel', async () => {
-    st().loadFromText(projectJson({ reviewers: 2 }), null, 'test.json')
-    useGitStore.setState({
-      seatOwners: {
-        me: { name: 'Anna Schmidt', email: 'anna@example.org' },
-        seats: { '1': { name: 'Axel Braun', email: 'axel@example.org' }, '2': null, consolidation: null },
-      },
-    })
-    render(<Toolbar />)
-    const group = screen.getByRole('group', { name: 'Reviewer' })
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
-
-    await userEvent.click(within(group).getByRole('button', { name: '1' }))
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('Axel Braun'))
-    expect(st().currentReviewer).toBeNull()
-
-    confirmSpy.mockReturnValue(true)
-    await userEvent.click(within(group).getByRole('button', { name: '1' }))
-    expect(st().currentReviewer).toBe('1')
-    confirmSpy.mockRestore()
-  })
-
-  it('does not ask for a seat nobody else has committed', async () => {
-    st().loadFromText(projectJson({ reviewers: 2 }), null, 'test.json')
-    useGitStore.setState({
-      seatOwners: {
-        me: { name: 'Anna Schmidt', email: 'anna@example.org' },
-        seats: { '1': { name: 'Axel Braun', email: 'axel@example.org' }, '2': null, consolidation: null },
-      },
-    })
-    render(<Toolbar />)
-    const group = screen.getByRole('group', { name: 'Reviewer' })
-    const confirmSpy = vi.spyOn(window, 'confirm')
-
-    await userEvent.click(within(group).getByRole('button', { name: '2' }))
-    expect(confirmSpy).not.toHaveBeenCalled()
-    expect(st().currentReviewer).toBe('2')
-    confirmSpy.mockRestore()
-  })
 })
 
 describe('unreadable annotation files stay visible for the whole session', () => {

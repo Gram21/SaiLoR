@@ -114,7 +114,7 @@ const fakeGit: GitPlatform = {
       return { ok: false, code: null, stdout: '', stderr: String(err) }
     }
   },
-  seatOwners: async () => ({ me: null, seats: {} }),
+  annotationAuthors: async () => ({ me: null, files: {} }),
   branches: async () => [],
   createBranch: async () => ({ ok: false, code: null, stdout: '', stderr: 'not supported in this test' }),
   deleteBranch: async () => ({ ok: false, code: null, stdout: '', stderr: 'not supported in this test' }),

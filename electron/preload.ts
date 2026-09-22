@@ -89,8 +89,8 @@ contextBridge.exposeInMainWorld('slr', {
   gitLogBegin: (root: string, relPath: string) => ipcRenderer.invoke('git:logBegin', root, relPath),
   gitLogDiff: (root: string, relPath: string, rev: string) =>
     ipcRenderer.invoke('git:logDiff', root, relPath, rev),
-  gitSeatOwners: (root: string, relPath: string, seats: string[], screening: boolean) =>
-    ipcRenderer.invoke('git:seatOwners', root, relPath, seats, screening),
+  gitAnnotationAuthors: (root: string, relPath: string) =>
+    ipcRenderer.invoke('git:annotationAuthors', root, relPath),
   gitBranches: (root: string) => ipcRenderer.invoke('git:branches', root),
   gitBranchCreate: (root: string, name: string) => ipcRenderer.invoke('git:branchCreate', root, name),
   gitBranchDelete: (root: string, branch: string) => ipcRenderer.invoke('git:branchDelete', root, branch),

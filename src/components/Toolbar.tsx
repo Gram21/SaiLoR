@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../state/store'
 import { useEditorStore } from '../state/editorStore'
 import { useGitStore } from '../state/gitStore'
-import { heldByOther, ownerLabel, CONSOLIDATION_SEAT } from '../git/seatOwner'
+import { CONSOLIDATION_SEAT } from '../git/seatOwner'
 import { getPlatform } from '../platform'
 import { Dropdown, type MenuItem } from './Dropdown'
 import { SidebarToggle } from './SidebarToggle'
@@ -138,7 +138,6 @@ export function Toolbar() {
   const git = getPlatform().getGit()
   const gitProbe = useGitStore((s) => s.probe)
   const gitRepo = useGitStore((s) => s.repo)
-  const seatOwners = useGitStore((s) => s.seatOwners)
   const openClone = useGitStore((s) => s.openClone)
   const openGitPanel = useGitStore((s) => s.openPanel)
   const gitBtn = gitButtonState(!!git, gitProbe, !!project, gitRepo, busy, editorOpen, GIT_BROWSER_DISABLED_HINT)
@@ -182,24 +181,6 @@ export function Toolbar() {
       ? 'Consolidation'
       : `Reviewer ${currentReviewer}`
 
-  // Switching seats here bypasses the opening `ReviewerPrompt`, which is where
-  // the "somebody else is already in this seat" warning lives — so ask the
-  // same question, in the form a menu can carry. Two people in one seat write
-  // the same files, and whoever merges last erases the other's answers.
-  const takeSeat = (seat: string) => {
-    const other = heldByOther(seatOwners, seat)
-    if (other) {
-      const name = seat === CONSOLIDATION_SEAT ? 'Consolidation' : `Reviewer ${seat}`
-      const ok = window.confirm(
-        `${ownerLabel(other)} has been committing ${name}. Two people in one seat write the same ` +
-          'files, and whoever merges last replaces the other\'s answers.\n\n' +
-          `Annotate as ${name} anyway?`,
-      )
-      if (!ok) return
-    }
-    selectReviewer(seat)
-  }
-
   const reviewerMenuItems: MenuItem[] = [
     ...reviewerIds.map<MenuItem>((rid) => ({
       type: 'item',
@@ -212,7 +193,7 @@ export function Toolbar() {
       ),
       hint: `Reviewer ${rid} — annotate independently; only you see this until Consolidation`,
       disabled: busy,
-      onSelect: () => takeSeat(rid),
+      onSelect: () => selectReviewer(rid),
     })),
     { type: 'separator' },
     {
@@ -230,7 +211,7 @@ export function Toolbar() {
       ),
       hint: "Consolidation — compare every reviewer's answers and record the final, agreed result. This is what the project's saved output actually contains.",
       disabled: busy,
-      onSelect: () => takeSeat(CONSOLIDATION_SEAT),
+      onSelect: () => selectReviewer(CONSOLIDATION_SEAT),
     },
   ]
 
@@ -414,7 +395,7 @@ export function Toolbar() {
                   className={`reviewer-btn${currentReviewer === rid ? ' active' : ''}`}
                   title={`Reviewer ${rid} — annotate independently; only you see this until Consolidation`}
                   disabled={busy}
-                  onClick={() => takeSeat(rid)}
+                  onClick={() => selectReviewer(rid)}
                 >
                   {rid}
                 </button>
@@ -426,7 +407,7 @@ export function Toolbar() {
                 }`}
                 title="Consolidation — compare every reviewer's answers and record the final, agreed result. This is what the project's saved output actually contains."
                 disabled={busy}
-                onClick={() => takeSeat(CONSOLIDATION_SEAT)}
+                onClick={() => selectReviewer(CONSOLIDATION_SEAT)}
               >
                 Consolidation
               </button>

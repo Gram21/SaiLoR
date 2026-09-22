@@ -6,6 +6,7 @@ import { finishCheckboxLabel } from '../model/annotationState'
 import { paperCompleteness, paperAnnotationState } from './PaperList'
 import { paperVerdicts } from '../consolidate/disagreements'
 import { AnnotationNode } from './AnnotationNode'
+import { SeatConflictNotice } from './SeatConflictNotice'
 import {
   consolidationFieldStatus,
   ConsolidationVerdictsContext,
@@ -172,6 +173,7 @@ export function AnnotationPanel() {
 
   return (
     <div className="panel annotations">
+      <SeatConflictNotice />
       <div className="annotations-head">
         <div className="annotations-head-row">
           <h2>Annotations</h2>
