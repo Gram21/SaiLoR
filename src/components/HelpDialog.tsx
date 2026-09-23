@@ -109,11 +109,14 @@ function commonFaqs(): ReactNode {
       </Faq>
       <Faq q="Can two people review the same project at once?">
         <p>
-          Not on the same file at the same time — the app has no locking, so two people saving the
-          same JSON will overwrite each other. What it does support is{' '}
+          Not on the same copy at the same time — the app has no locking. It refuses to save over
+          files that changed on disk since you opened the project and lists them, so reopen to pick
+          up what arrived; but copies passed around by email or a folder that hasn't synced yet can
+          still diverge. What it does support is{' '}
           <strong>multiple reviewers within one file</strong>: set the reviewer count when you build
           the schema, and each reviewer's answers are kept separately (see{' '}
-          <em>Working with several reviewers</em>). Pass the file along, or take turns.
+          <em>Working with several reviewers</em>). Give each person their own git clone, or take
+          turns.
         </p>
       </Faq>
       <Faq q="I moved the JSON and now the PDFs don't load.">
@@ -379,8 +382,11 @@ function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
             </p>
             <p>
               Opening such a project asks who you are before showing you anything — an answer that
-              isn't attributable to a reviewer is worse than no answer. It asks once and remembers;
-              the toolbar switch changes it whenever you like.
+              isn't attributable to a reviewer is worse than no answer. It asks once, and each paper
+              then remembers the seat you last read it in, so you can be Reviewer 1 on some papers
+              and Reviewer 2 on others; the toolbar switch changes it whenever you like. With git, a
+              notice warns you when someone else has already committed your seat on the paper you're
+              on.
             </p>
             <p>
               You don't have to wait for everyone to finish before consolidating: the seat is always
@@ -423,8 +429,8 @@ function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
             <Faq q="Can I change the schema after people have annotated?">
               <p>
                 Yes — <em>Edit annotation JSON…</em> on the start screen. Existing answers are
-                preserved. Renaming or removing a field drops the answers stored under it, so treat
-                that as destructive.
+                preserved. Renaming or removing a field hides the answers stored under it from every
+                screen and export; they stay in the files and come back if the name does.
               </p>
             </Faq>
             {commonFaqs()}
@@ -690,9 +696,10 @@ function editorHelp(): { lead: ReactNode; sections: HelpSection[] } {
             </Faq>
             <Faq q="What happens to answers if I rename a field?">
               <p>
-                Answers are stored under the field's <em>name</em>, so renaming one orphans what was
-                recorded under the old name and it is dropped on save. Decide names before people
-                start annotating where you can.
+                Answers are stored under the field's <em>name</em>, so renaming one hides what was
+                recorded under the old name. It is not deleted: it stays in the files, comes back if
+                the name does, and <em>Validate</em> lists it as hidden by a schema change. Decide
+                names before people start annotating where you can.
               </p>
             </Faq>
             {commonFaqs()}
