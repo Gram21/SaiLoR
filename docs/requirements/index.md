@@ -87,7 +87,12 @@ per category so requirements can be inserted without renumbering.
   symbols in the source rather than transcribed, and every cited test name was checked to
   exist. The coverage table above was recounted from the requirement files; it had fallen
   behind before this update (it read 277 while the files held 285).
-- **Pending:** the `openwiki/` pages do not yet describe the behavior added on 2026-09-23,
-  so the requirements added then have no *Docs* link in the traceability matrix (see its
-  coverage statistics), and the *Docs* links of revised requirements point at sections
-  that still describe the previous behavior until the wiki is refreshed.
+- **Docs links after the wiki refresh (`a6f883f`).** 14 of the requirements added on
+  2026-09-23 now link the `openwiki/` sections describing them. Eight have no *Docs* link
+  because the wiki does not describe that behavior: REQ-EDT-21, REQ-EDT-45, REQ-CON-35,
+  REQ-GIT-470, REQ-GIT-490, REQ-GIT-500, REQ-PLT-11 and REQ-PLT-135. Two more, REQ-GIT-410
+  and REQ-GIT-425, are unlinked because they are described inaccurately in `openwiki/architecture.md` §Electron Main
+  Process: it says the `.gitignore` rules ignore annotation working copies, and it calls
+  the background fetch throttled rather than refused for repositories whose own config
+  names fetch-time commands. The *Docs* links of the revised requirements point at
+  sections that still exist; `user-guide/` was not updated by this work.
