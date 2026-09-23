@@ -234,65 +234,126 @@ function reviewerFingerprint(project: Project): string[] {
     .slice(0, REVIEWER_FINGERPRINT_SAMPLE)
 }
 
-/** The stored shape. A bare string is the pre-fingerprint format — see
- *  `loadCurrentReviewer` for why it is still honoured. */
+/**
+ * The seats remembered for one project on this machine.
+ *
+ * A seat is a role per paper, not a person: when a review divides its papers
+ * among more reviewers than it has seats, the same person reads some papers
+ * as Reviewer 1 and others as Reviewer 2. One remembered seat per project
+ * made them switch by hand every time they moved between those papers, and
+ * the price of forgetting was writing a reading into the wrong seat. So each
+ * paper remembers the seat it was last read in, and arriving at it restores
+ * that seat. `last` is the seat in use most recently — what a paper with no
+ * seat of its own is opened in, so a reviewer who only ever takes one seat
+ * never notices any of this.
+ */
+interface RememberedSeats {
+  last: string | null
+  perPaper: Record<string, string>
+}
+
+const NO_SEATS: RememberedSeats = { last: null, perPaper: {} }
+
+/** The stored shape. A bare string is the pre-fingerprint format, and a value
+ *  without `perPaper` predates per-paper seats — see `loadRememberedSeats`. */
 interface StoredReviewer {
-  reviewer: string
+  reviewer: string | null
   papers: string[]
+  perPaper?: Record<string, string>
 }
 
 function parseStoredReviewer(raw: string): StoredReviewer | 'legacy' | null {
   if (!raw.startsWith('{')) return raw ? 'legacy' : null
   try {
     const parsed = JSON.parse(raw) as Partial<StoredReviewer>
-    if (typeof parsed.reviewer !== 'string' || !Array.isArray(parsed.papers)) return null
-    return { reviewer: parsed.reviewer, papers: parsed.papers.filter((p) => typeof p === 'string') }
+    const reviewer = typeof parsed.reviewer === 'string' ? parsed.reviewer : null
+    if (!Array.isArray(parsed.papers)) return null
+    const perPaper: Record<string, string> = {}
+    if (parsed.perPaper && typeof parsed.perPaper === 'object') {
+      for (const [id, seat] of Object.entries(parsed.perPaper)) {
+        if (typeof seat === 'string') perPaper[id] = seat
+      }
+    }
+    return { reviewer, papers: parsed.papers.filter((p) => typeof p === 'string'), perPaper }
   } catch {
     return null
   }
 }
 
+/** Is `seat` one this project still has? A seat beyond a reviewer count that
+ *  has since shrunk is not. */
+function seatFits(seat: string | null | undefined, project: Project): seat is string {
+  if (!seat) return false
+  if (seat === 'consolidation') return true
+  const n = Number(seat)
+  return Number.isInteger(n) && n >= 1 && n <= project.reviewers
+}
+
 /**
- * The persisted reviewer selection for this project, or null when there is
- * none, the project has no stable key, the stored value no longer fits (the
- * reviewer count shrank since it was saved), or the project at this path is
- * not the one the seat was picked in (see `reviewerFingerprint`).
+ * The seats remembered for this project, dropping anything that no longer
+ * fits: the whole record when the project at this path is not the one the
+ * seats were picked in (see `reviewerFingerprint`), and single entries for a
+ * paper that is gone or a seat the reviewer count no longer has.
  *
  * A value written before fingerprints existed is honoured rather than thrown
  * away — re-asking every existing reviewer for a seat they already picked
  * would be a worse first impression than the narrow case it protects — and
- * `loadFromText` rewrites it with a fingerprint immediately, so each project
- * upgrades itself the first time it is opened.
+ * `loadFromText` rewrites it in the current format immediately, so each
+ * project upgrades itself the first time it is opened.
  */
-function loadCurrentReviewer(handle: SaveHandle | null, project: Project): string | null {
+function loadRememberedSeats(handle: SaveHandle | null, project: Project): RememberedSeats {
   const key = reviewerStorageKey(handle)
-  if (!key) return null
+  if (!key) return NO_SEATS
   const raw = safeGet(key)
-  if (raw === null) return null
+  if (raw === null) return NO_SEATS
   const stored = parseStoredReviewer(raw)
-  if (stored === null) return null
+  if (stored === null) return NO_SEATS
+  if (stored === 'legacy') return { last: seatFits(raw, project) ? raw : null, perPaper: {} }
 
-  if (stored !== 'legacy') {
-    const ids = new Set(project.papers.map((p) => p.id))
-    // An empty remembered list can only come from a project that had no papers
-    // at all, which identifies nothing — treat it as not knowing.
-    if (stored.papers.length === 0 || !stored.papers.some((id) => ids.has(id))) return null
+  const ids = new Set(project.papers.map((p) => p.id))
+  // An empty remembered list can only come from a project that had no papers
+  // at all, which identifies nothing — treat it as not knowing.
+  if (stored.papers.length === 0 || !stored.papers.some((id) => ids.has(id))) return NO_SEATS
+  const perPaper: Record<string, string> = {}
+  for (const [id, seat] of Object.entries(stored.perPaper ?? {})) {
+    if (ids.has(id) && seatFits(seat, project)) perPaper[id] = seat
   }
-  const reviewer = stored === 'legacy' ? raw : stored.reviewer
-  if (reviewer === 'consolidation') return reviewer
-  const n = Number(reviewer)
-  return Number.isInteger(n) && n >= 1 && n <= project.reviewers ? reviewer : null
+  return { last: seatFits(stored.reviewer, project) ? stored.reviewer : null, perPaper }
 }
 
-function saveCurrentReviewer(
-  handle: SaveHandle | null,
-  reviewer: string | null,
-  project: Project | null,
-): void {
+function saveRememberedSeats(handle: SaveHandle | null, seats: RememberedSeats, project: Project | null): void {
   const key = reviewerStorageKey(handle)
   if (!key) return
-  if (reviewer === null || !project) safeRemove(key)
-  else safeSet(key, JSON.stringify({ reviewer, papers: reviewerFingerprint(project) }))
+  if (!project || (seats.last === null && Object.keys(seats.perPaper).length === 0)) {
+    safeRemove(key)
+    return
+  }
+  const stored: StoredReviewer = { reviewer: seats.last, papers: reviewerFingerprint(project), perPaper: seats.perPaper }
+  safeSet(key, JSON.stringify(stored))
+}
+
+/**
+ * Record `seat` as the one in use, and as `paperId`'s own. Called whenever the
+ * reviewer picks a seat, and whenever arriving at a paper switched to one.
+ */
+function rememberSeat(handle: SaveHandle | null, project: Project | null, paperId: string | null, seat: string | null): void {
+  if (!project || project.reviewers <= 1) return
+  const seats = loadRememberedSeats(handle, project)
+  const next: RememberedSeats = { last: seat, perPaper: { ...seats.perPaper } }
+  if (paperId && seat) next.perPaper[paperId] = seat
+  saveRememberedSeats(handle, next, project)
+}
+
+/**
+ * The seat to switch to on arriving at `paperId`: the one it was last read in,
+ * when that differs from the seat in use and still fits the project. Null
+ * means stay — including for a paper that has never been read here, which
+ * keeps whatever seat the reviewer is in.
+ */
+function seatOnArrival(handle: SaveHandle | null, project: Project | null, paperId: string, current: string | null): string | null {
+  if (!project || project.reviewers <= 1) return null
+  const seat = loadRememberedSeats(handle, project).perPaper[paperId]
+  return seatFits(seat, project) && seat !== current ? seat : null
 }
 
 const READING_POSITION_KEY_PREFIX = 'slr.readingPosition.'
@@ -1269,13 +1330,14 @@ export const useStore = create<AppState>()(
     loadFromText: (text, handle, name) => {
       try {
         const project = loadProject(text)
-        // Seat must be resolved before the landing paper, since "finished" is
-        // per-seat. Computed once here so this and the `set` below can't disagree.
-        const reviewer = project.reviewers > 1 ? loadCurrentReviewer(handle, project) : null
+        // The seat last in use decides where "first unfinished" is, since
+        // finished is per seat; the landing paper's own seat, when it has one,
+        // then wins for the paper actually opened.
+        const seats = project.reviewers > 1 ? loadRememberedSeats(handle, project) : NO_SEATS
         // Rewrite in the current format — which upgrades a value written
-        // before fingerprints existed, and drops one this project did not
-        // match so it cannot linger and be inherited again later.
-        if (project.reviewers > 1) saveCurrentReviewer(handle, reviewer, project)
+        // before fingerprints or per-paper seats existed, and drops one this
+        // project did not match so it cannot linger and be inherited later.
+        if (project.reviewers > 1) saveRememberedSeats(handle, seats, project)
         // A remembered reading position wins over "first unfinished paper" —
         // that heuristic is only for when there's nothing better to go on.
         // Ignored if the paper no longer exists (deleted, or a different
@@ -1285,7 +1347,9 @@ export const useStore = create<AppState>()(
           !!savedPosition && project.papers.some((p) => p.id === savedPosition.paperId)
         const landingPaperId = savedPaperStillExists
           ? savedPosition!.paperId
-          : firstUnfinishedPaperId(project, reviewer)
+          : firstUnfinishedPaperId(project, seats.last)
+        const reviewer =
+          project.reviewers > 1 ? ((landingPaperId && seats.perPaper[landingPaperId]) || seats.last) : null
         // The title only becomes known once the JSON is parsed, so the recents
         // entry is enriched here rather than in the adapter's open path.
         if (handle) getPlatform().rememberProject(handle, name, project.title)
@@ -1489,9 +1553,10 @@ export const useStore = create<AppState>()(
 
         const text = serializeProject(toWrite)
         const handle = await platform.saveProject(text, location.handle)
-        // Carry the reviewer selection over to the new location's own key, or
-        // it would silently look unselected the next time this file is opened.
-        saveCurrentReviewer(handle, get().currentReviewer, get().project)
+        // Carry the remembered seats over to the new location's own key, or
+        // they would silently look unselected the next time this file is opened.
+        const carried = get().project
+        if (carried && carried.reviewers > 1) saveRememberedSeats(handle, loadRememberedSeats(saveHandle, carried), carried)
         // Same carry-over for the reading position, or reopening the file at
         // its new location would land on the "first unfinished paper" default
         // instead of wherever the reviewer actually was.
@@ -1546,8 +1611,14 @@ export const useStore = create<AppState>()(
 
     selectPaper: (id) => {
       lastFieldKey = null
+      const { saveHandle, project, currentReviewer } = get()
+      // The seat this paper was last read in — see `RememberedSeats`. A
+      // paper never read here keeps the current seat.
+      const seat = seatOnArrival(saveHandle, project, id, currentReviewer)
+      if (seat) rememberSeat(saveHandle, project, id, seat)
       set((s) => {
         s.currentPaperId = id
+        if (seat) s.currentReviewer = seat
         s.pdfSelection = ''
         // Belongs to the paper it was made on — carrying it to a different
         // one risks auto-linking a much later click to a mark the reviewer
@@ -2363,7 +2434,7 @@ export const useStore = create<AppState>()(
       // edit to the same field under the new reviewer would glue onto the
       // previous reviewer's undo step, and one Undo would wipe both answers.
       lastFieldKey = null
-      saveCurrentReviewer(get().saveHandle, reviewer, get().project)
+      rememberSeat(get().saveHandle, get().project, get().currentPaperId, reviewer)
       set((s) => {
         s.currentReviewer = reviewer
         // Marks are per-seat too (`reviewMarks`) — invisible under another
@@ -2850,6 +2921,12 @@ export const useStore = create<AppState>()(
       if (st.past.length === 0 || !st.project) return
       lastFieldKey = null
       const entry = st.past[st.past.length - 1]
+      // Landing on another paper takes that paper's seat, as selecting it would.
+      const arrivalSeat =
+        entry.paperId && entry.paperId !== st.currentPaperId
+          ? seatOnArrival(st.saveHandle, st.project, entry.paperId, st.currentReviewer)
+          : null
+      if (arrivalSeat) rememberSeat(st.saveHandle, st.project, entry.paperId, arrivalSeat)
       const current: HistoryEntry = { project: st.project, paperId: st.currentPaperId }
       set((s) => {
         s.past.pop()
@@ -2857,6 +2934,7 @@ export const useStore = create<AppState>()(
         if (s.future.length > HISTORY_LIMIT) s.future.pop()
         s.project = entry.project
         s.currentPaperId = entry.paperId ?? s.currentPaperId
+        if (arrivalSeat) s.currentReviewer = arrivalSeat
         s.dirty = true
         // Undoing an AI run may empty exactly the fields a mark points at, and
         // marks aren't part of history — simplest honest answer is to drop them all.
@@ -2871,6 +2949,12 @@ export const useStore = create<AppState>()(
       if (st.future.length === 0 || !st.project) return
       lastFieldKey = null
       const entry = st.future[0]
+      // Landing on another paper takes that paper's seat, as selecting it would.
+      const arrivalSeat =
+        entry.paperId && entry.paperId !== st.currentPaperId
+          ? seatOnArrival(st.saveHandle, st.project, entry.paperId, st.currentReviewer)
+          : null
+      if (arrivalSeat) rememberSeat(st.saveHandle, st.project, entry.paperId, arrivalSeat)
       const current: HistoryEntry = { project: st.project, paperId: st.currentPaperId }
       set((s) => {
         s.future.shift()
@@ -2878,6 +2962,7 @@ export const useStore = create<AppState>()(
         if (s.past.length > HISTORY_LIMIT) s.past.shift()
         s.project = entry.project
         s.currentPaperId = entry.paperId ?? s.currentPaperId
+        if (arrivalSeat) s.currentReviewer = arrivalSeat
         s.dirty = true
         // Symmetric with undo: the history restores values, not marks, and a redo
         // cannot know which of the restored values came from the model.

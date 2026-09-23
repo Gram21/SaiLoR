@@ -108,8 +108,10 @@ export function ReviewerPrompt() {
             </button>
           </div>
           <p className="reviewer-prompt-note">
-            Remembered for this project — you can switch from the toolbar whenever you like. Press
-            F1 to read Help before choosing.
+            Switch seats from the toolbar whenever you like. Each paper remembers the seat you last
+            read it in and switches back to it when you return, so if you are Reviewer 1 on some
+            papers and Reviewer 2 on others, you only choose once per paper. Press F1 to read Help
+            before choosing.
           </p>
         </div>
       </div>
