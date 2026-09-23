@@ -37,16 +37,22 @@ want to record something SaiLoR doesn't have a field for, two places are actuall
 If you're not sure whether something you're adding is top-level or nested under `config`, put it at
 the top level.
 
-## No file locking, so two people saving at once overwrite each other
+## No file locking between people sharing one folder
 
 ⚠️ A project is a `project.json` file plus a sibling `annotations/` folder (one file per paper per
 reviewer, so different reviewers' or different papers' answers live in different files — see
 [Setting up a project](project-editor.md) for why). That split means two reviewers working on
 *different* papers, or different reviewer slots of the same paper, no longer touch the same file at
-all when saving. It does **not** give you file locking, though: if two people have the *same* file
-open — including `project.json` itself, or the same reviewer's answers for the same paper — and both
-save (over email, a shared drive, a synced folder), the second save wins completely; the first
-person's changes are gone with no warning.
+all when saving, and a save only rewrites the files whose content actually changed. It does **not**
+give you file locking, though. What SaiLoR does instead is refuse a save when a file it would
+overwrite has changed on disk since you opened the project — a teammate's save on a shared or synced
+folder, a git pull run in a terminal — and list those files, so you reopen the project rather than
+silently replace someone else's work. Your unsaved edits are not in those files yet, so copy out
+anything that matters before reopening. (Only one SaiLoR window runs at a time on a machine; starting
+it again brings the open one to the front.)
+
+That refusal only sees what has reached your disk. Copies passed around by email, or a synced folder
+that hasn't synced yet, can still diverge, and whoever's copy is used last wins.
 
 Two ways people actually handle this:
 
@@ -75,20 +81,25 @@ hand the whole thing to someone else and have it just work. But it means:
 ⚠️ Each reviewer's answers live in their own file (`annotations/<paper>/reviewer-1.json`,
 `reviewer-2.json`, …). If two *different people* — on two different clones of the same project — both
 pick "Reviewer 1", their answers will merge into one chimeric tree the next time the project is pulled
-together via git, with **no warning**, unless the project already records who holds each seat.
+together via git, and whoever merges last replaces the other's answers.
 
-When you're using git, SaiLoR records your git identity (name/email) the first time you claim a seat,
-and warns you if you try to take a seat someone else already claimed. That protection only exists
-when git is available and the seat has actually been claimed once with it on — agree out of band (a
-message, a spreadsheet, whatever) who is Reviewer 1 and who is Reviewer 2 regardless. See
-[Reviewer-seat identity](multi-reviewer.md#reviewer-seat-identity).
+This is per paper: when papers are divided among more people than there are seats, the same seat is
+legitimately held by different people on different papers. What must not happen is two people in the
+same seat *on the same paper*. When you're using git, SaiLoR shows a notice when the paper you're on
+was already committed in your seat by someone else — but only once their work is committed and
+pulled, so agree out of band (a message, a spreadsheet, whatever) who reads which paper in which seat
+regardless. See [Reviewer-seat identity](multi-reviewer.md#reviewer-seat-identity).
 
-## Renaming or removing a schema field drops its answers
+## Renaming or removing a schema field hides its answers
 
 ⚠️ Answers are stored keyed by the field's *name*. If you rename "Study Type" to "Design Type" in
-the schema editor, every answer anyone recorded under "Study Type" is orphaned and dropped the next
-time the file is saved — there's no automatic migration. Settle field names before people start
-annotating, where you can; if you must rename one later, do it while nobody has annotated with it yet.
+the schema editor, every answer anyone recorded under "Study Type" disappears from every screen,
+export, and agreement figure — there's no automatic migration. The answers are not deleted: they stay
+in the files, and come back if the name does. The schema editor asks before renaming, removing, or
+moving a field that has answers, and **Validate** lists papers holding such answers under "Hidden by a
+schema change". The editor can only count the papers in your copy, though: reviewers whose work you
+haven't pulled may have recorded more. Settle field names before people start annotating, where you
+can; if you must rename one later, do it while nobody has annotated with it yet.
 
 (Screening's exclusion reasons are the one place this *is* handled automatically: renaming a reason
 that's already in use prompts SaiLoR to offer moving existing decisions to the new name. See

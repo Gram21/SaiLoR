@@ -22,6 +22,35 @@ The toolbar's **Git** button appears whenever the open project's folder sits ins
 disabled, with a reason on hover, when it doesn't (no project open, or the project isn't in a
 repository).
 
+Next to it, the toolbar tells you what's waiting:
+
+- **↓ N to pull** — someone has pushed commits you haven't pulled yet. SaiLoR fetches in the
+  background to keep this current: when the project opens, whenever you open the Git panel, and every
+  two minutes. That fetch only updates git's knowledge of the remote; it never touches your files.
+- **N stashed** — changes of this project are parked in a stash (see [Stashing changes](#stashing-changes)).
+- **⚠ N unreadable** — annotation files that aren't valid JSON (typically left with git conflict
+  markers in them) and were skipped when the project opened. Click it for the list. SaiLoR never
+  deletes them, but it can't show what's in them, and annotating that paper in that seat writes a new
+  file over it — fix them first.
+
+### Repository setup
+
+When a project in a repository opens, SaiLoR checks that the repository's `.gitattributes`
+and `.gitignore` (next to the project file) hold the rules it relies on:
+
+- JSON files get LF line endings on every platform, so a reviewer on Windows doesn't turn every save
+  into a whole-file diff, and git's line-by-line merge is turned off for them — it can combine two
+  reviewers' answers into valid JSON neither of them wrote. SaiLoR does its own
+  [field-by-field merge](#pull) instead.
+- Operating-system clutter (`.DS_Store`, `Thumbs.db`, `desktop.ini`, editor swap files) is ignored,
+  because one of those sitting untracked in the `annotations/` folder would block every pull. PDFs are
+  not ignored; whether to commit them is up to your team.
+
+The rules go in a clearly marked block, and nothing outside it is changed. If neither file has rules of
+its own, SaiLoR adds the block without asking; otherwise it asks first, and asks again later if you
+said no. The change is committed right
+away with SaiLoR as author and you as committer, and a small popup confirms it.
+
 ## Switching branches
 
 The panel's header shows the current branch as a dropdown of every local branch — pick a different
@@ -67,6 +96,10 @@ once. If, after your choices, nothing is left marked *Use* — either because yo
 discarded everything — the **Commit** button relabels itself to **Discard all** and turns red,
 because committing at that point would write nothing new; pressing it just performs the discards
 directly, with no message needed.
+
+Some changes have no row of their own because nobody typed them: reading notes, finished marks,
+AI-usage records, and how Consolidation matched up entries. The review says how many papers they
+changed for, and they are committed whatever you pick above.
 
 Any change to a file *other* than the open project's own — a PDF you added, say — still shows as a
 plain whole-file checkbox underneath, exactly as before field-level review existed. Each of those
@@ -116,8 +149,12 @@ anything fetched. Merging never moves you off your branch — that's what
 [Switching branches](#switching-branches) is for.
 
 Both Merge and Pull work on the **file on disk**, so both are greyed out while you have unsaved
-annotations, and both refuse outright if anything else in the repository is uncommitted — commit or
-stash that first.
+annotations, and both refuse outright while any tracked file in the repository has uncommitted
+changes, or an untracked file sits in the project's `annotations/` folder — commit or
+[stash](#stashing-changes) those first. Untracked files elsewhere (a PDF you haven't added yet, say) don't
+block anything.
+
+Pull, Merge, and Push wait for a background fetch that is still running rather than race it.
 
 ## Commit history
 
@@ -144,11 +181,30 @@ go through the same merge:
   piece.
 - **A conflict outside the project** (a PDF, a `.gitignore`, anything else git couldn't merge on
   its own) — resolve it with git directly, then try again.
-- **Two different people claiming the same reviewer seat**, with different git identities — see
-  [Reviewer-seat identity](multi-reviewer.md#reviewer-seat-identity).
 
 None of these leave anything half-done: the git merge itself is aborted, so the repository ends up
 exactly where it started.
+
+## Stashing changes
+
+**Stashed changes**, a collapsible section in the Git panel, parks this project's uncommitted changes
+and gives you back a clean copy — for example to pull, or to switch branches without carrying your
+work along. Only what's on disk is stashed, so save first. Add an optional note and press **Stash my
+changes**; new annotation files are included, and other projects' files in the same folder are left
+alone.
+
+Each stash in the list offers:
+
+- **Restore** — puts the changes back into your files and removes the stash. It's all or nothing: if
+  the stash conflicts with what's there now, nothing is changed and you're told so.
+- **Restore on a new branch** — puts the changes back on a new branch made at the commit where the
+  stash was taken, which can never conflict. Use this when Restore refuses.
+- **×** — deletes the stash after asking. Its changes are in no file or commit, so they're gone for
+  good.
+
+If a branch switch that was carrying your changes can't put them back, they stay in a stash rather
+than being lost, and show up here as "Saved by SaiLoR while switching branches, and not put back
+afterwards".
 
 ## What it won't do
 
@@ -161,10 +217,19 @@ exactly where it started.
 - Switch branches while you have **unsaved annotation edits** — a clean `git status` doesn't see
   those, only what's on disk, so the switch is refused with an error telling you to save first
   (**Ctrl/Cmd+S**) rather than silently reloading the project and losing them.
-- Show live clone progress with a cancel button, or offer history browsing — out of scope for this
-  feature.
+- Commit while no branch is checked out (a "detached HEAD", after checking out a commit in a
+  terminal) — such a commit would belong to no branch and vanish from view at the next checkout.
+  Check out a branch first.
+- Show live clone progress with a cancel button — out of scope for this feature.
 
 ## Credentials
 
 SaiLoR never asks for your password and never stores one. Every git operation runs through your own
 credential helper and SSH agent, exactly as a terminal `git` command would.
+
+The background fetch behind **↓ N to pull** never prompts: if it can't sign in without asking, it
+fails quietly and tries again later, and your next Pull asks as usual. It is also skipped for a
+repository whose own `.git/config` names a program for git to run during a fetch (an ssh command, a
+credential helper, an included config file). A project folder that arrived by zip or shared drive
+brings that config along, and SaiLoR runs those programs only on a Pull you pressed. Settings in your
+own global git config don't count, so ordinary setups are unaffected.

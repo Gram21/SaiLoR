@@ -95,8 +95,8 @@ is modeled as a repeatable Text field with fixed options (**max: ∞**) rather t
 there's no built-in way to prevent the same option being picked twice in that list, so treat it as a
 convention to watch for during review, not something the tool enforces for you.
 
-**Renaming or removing a field is destructive** — see
-[Things to know](things-to-know.md#renaming-or-removing-a-schema-field-drops-its-answers).
+**Renaming or removing a field hides its answers** — see
+[Things to know](things-to-know.md#renaming-or-removing-a-schema-field-hides-its-answers).
 
 ## Setting up several reviewers
 
@@ -200,7 +200,14 @@ Every paper has its own `id`, auto-generated from the PDF's file name or title a
 so you can hand-edit it — it's what git and any hand-editing keys off, so it must stay **unique**
 within the project. Typing an id that collides with another paper's is flagged right there — a red
 outline on the field and a "duplicate" note next to the label — before you ever get to Save; Save
-itself refuses with the same complaint if a collision is still unresolved.
+itself refuses with the same complaint if a collision is still unresolved. Ids that differ only in
+upper/lower case count as a collision too, since macOS and Windows treat them as the same folder.
+
+An id also names a folder under `annotations/`, so it must work as a folder name on every reviewer's
+machine: no characters Windows forbids in file names (such as `:` `?` `*` `/`), no trailing dot or
+space, and not a reserved Windows name like `CON` or `NUL`. Renaming the id of a paper that already has
+annotations asks first — this copy of its answers moves to the new folder, but a reviewer whose work
+you haven't pulled yet keeps writing under the old id.
 
 ## Saving
 
