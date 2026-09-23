@@ -25,6 +25,8 @@ import type {
   LogRevisionFetch,
   AnnotationAuthors,
   RepoSetupStatus,
+  StashEntry,
+  StashRestoreResult,
 } from '../git/types'
 import { parsePorcelain, capDiff } from '../git/output'
 import { loadProject, splitProjectFiles, type ProjectFileEntry } from '../model/project'
@@ -187,6 +189,11 @@ export interface SlrBridge {
   gitAnnotationAuthors(root: string, relPath: string): Promise<AnnotationAuthors>
   gitRepoSetupStatus(root: string, relPath: string): Promise<RepoSetupStatus>
   gitApplyRepoSetup(root: string, relPath: string): Promise<GitRun>
+  gitStashList(root: string): Promise<StashEntry[]>
+  gitStashPush(root: string, relPath: string, message: string): Promise<GitRun>
+  gitStashRestore(root: string, relPath: string, sha: string): Promise<StashRestoreResult>
+  gitStashDrop(root: string, sha: string): Promise<GitRun>
+  gitStashBranch(root: string, relPath: string, sha: string, branch: string): Promise<GitRun>
   gitBranches(root: string): Promise<GitBranch[]>
   gitBranchCreate(root: string, name: string): Promise<GitRun>
   gitBranchDelete(root: string, branch: string): Promise<GitRun>
@@ -502,6 +509,14 @@ export class ElectronAdapter implements PlatformAdapter {
     annotationAuthors: (root, relPath) => bridge().gitAnnotationAuthors(root, relPath),
     repoSetupStatus: (root, relPath) => bridge().gitRepoSetupStatus(root, relPath),
     applyRepoSetup: (root, relPath) => withBaselineDropped(() => bridge().gitApplyRepoSetup(root, relPath)),
+    stashList: (root) => bridge().gitStashList(root),
+    // Push, restore and branch all rewrite the working tree; dropping only
+    // forgets a stash and leaves the tree alone.
+    stashPush: (root, relPath, message) => withBaselineDropped(() => bridge().gitStashPush(root, relPath, message)),
+    stashRestore: (root, relPath, sha) => withBaselineDropped(() => bridge().gitStashRestore(root, relPath, sha)),
+    stashDrop: (root, sha) => bridge().gitStashDrop(root, sha),
+    stashBranch: (root, relPath, sha, branch) =>
+      withBaselineDropped(() => bridge().gitStashBranch(root, relPath, sha, branch)),
     branches: (root) => bridge().gitBranches(root),
     createBranch: (root, name) => bridge().gitBranchCreate(root, name),
     deleteBranch: (root, branch) => bridge().gitBranchDelete(root, branch),

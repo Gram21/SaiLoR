@@ -5,7 +5,9 @@
  */
 
 import type { AnnotationAuthors } from './seatOwner'
-export type { AnnotationAuthors }
+import type { StashEntry } from './stash'
+import type { StashRestoreResult } from './stashOps'
+export type { AnnotationAuthors, StashEntry, StashRestoreResult }
 import type { ProjectFileEntry } from '../model/project'
 
 /** The split-file form of a project (`splitProjectFiles`'s output): `project.json`
@@ -226,6 +228,16 @@ export interface GitPlatform {
   repoSetupStatus(root: string, relPath: string): Promise<RepoSetupStatus>
   /** Write the rules and commit them, authored as SaiLoR. */
   applyRepoSetup(root: string, relPath: string): Promise<GitRun>
+
+  /** Every stash in the repository, newest first. See `src/git/stash.ts`. */
+  stashList(root: string): Promise<StashEntry[]>
+  /** Stash this project's own uncommitted changes, untracked ones included. */
+  stashPush(root: string, relPath: string, message: string): Promise<GitRun>
+  /** Put a stash back and remove it — all or nothing. See `restoreStash`. */
+  stashRestore(root: string, relPath: string, sha: string): Promise<StashRestoreResult>
+  stashDrop(root: string, sha: string): Promise<GitRun>
+  /** Restore a stash onto a new branch at the commit it was taken from. */
+  stashBranch(root: string, relPath: string, sha: string, branch: string): Promise<GitRun>
 
   /** Local branches and remote-tracking ones — the switcher takes the locals,
    *  the merge picker takes both (see `GitBranch.remote`). */

@@ -653,3 +653,50 @@
 .git-history-diff {
   padding: 0 10px 10px 34px; /* clears the chevron column above */
 }
+
+/* Stashed changes — see GitStashSection.tsx. */
+.git-stashes {
+  margin-top: 12px;
+}
+.git-stashes > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.git-stash-push {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 6px 0 8px;
+}
+.git-stash-push .field-input {
+  flex: 1 1 auto;
+}
+.git-stash-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.git-stash-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+/* Left behind by a branch switch that could not put it back: somebody's
+   uncommitted readings, which they may not know are here. */
+.git-stash-row.is-stranded .git-stash-desc {
+  color: var(--danger);
+}
+.git-stash-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.git-stash-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}

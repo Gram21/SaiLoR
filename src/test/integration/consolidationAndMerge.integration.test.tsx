@@ -135,6 +135,11 @@ const fakeGit: GitPlatform = {
   annotationAuthors: async () => ({ me: null, files: {} }),
   repoSetupStatus: async () => ({ upToDate: true, needsConsent: false, paths: [] }),
   applyRepoSetup: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
+  stashList: async () => [],
+  stashPush: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
+  stashRestore: async () => ({ kind: 'restored' as const }),
+  stashDrop: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
+  stashBranch: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
   branches: async (root): Promise<GitBranch[]> => {
     const out = execFileSync('git', ['for-each-ref', '--format=%(refname:short)|%(HEAD)', 'refs/heads'], {
       cwd: root,

@@ -95,6 +95,14 @@ contextBridge.exposeInMainWorld('slr', {
     ipcRenderer.invoke('git:repoSetupStatus', root, relPath),
   gitApplyRepoSetup: (root: string, relPath: string) =>
     ipcRenderer.invoke('git:applyRepoSetup', root, relPath),
+  gitStashList: (root: string) => ipcRenderer.invoke('git:stashList', root),
+  gitStashPush: (root: string, relPath: string, message: string) =>
+    ipcRenderer.invoke('git:stashPush', root, relPath, message),
+  gitStashRestore: (root: string, relPath: string, sha: string) =>
+    ipcRenderer.invoke('git:stashRestore', root, relPath, sha),
+  gitStashDrop: (root: string, sha: string) => ipcRenderer.invoke('git:stashDrop', root, sha),
+  gitStashBranch: (root: string, relPath: string, sha: string, branch: string) =>
+    ipcRenderer.invoke('git:stashBranch', root, relPath, sha, branch),
   gitBranches: (root: string) => ipcRenderer.invoke('git:branches', root),
   gitBranchCreate: (root: string, name: string) => ipcRenderer.invoke('git:branchCreate', root, name),
   gitBranchDelete: (root: string, branch: string) => ipcRenderer.invoke('git:branchDelete', root, branch),

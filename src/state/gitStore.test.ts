@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import type { RecentEntry, SaveHandle } from '../platform/adapter'
 import type {
   GitPlatform,
@@ -173,6 +173,11 @@ const fakeGit: GitPlatform = {
   annotationAuthors: async () => ({ me: null, files: {} }),
   repoSetupStatus: async () => ({ upToDate: true, needsConsent: false, paths: [] }),
   applyRepoSetup: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
+  stashList: async () => [],
+  stashPush: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
+  stashRestore: async () => ({ kind: 'restored' as const }),
+  stashDrop: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
+  stashBranch: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
   branches: async () => branchesResult,
   createBranch: async (root, name) => {
     createBranchCalls.push({ root, name })
@@ -1346,5 +1351,65 @@ describe('runDiscardFile', () => {
 
     expect(useGitStore.getState().panel?.phase).toBe('idle')
     expect(useGitStore.getState().panel?.error).toMatch(/EISDIR/)
+  })
+})
+
+describe('stashed changes', () => {
+  // These tests swap single methods on the shared fake; put them back so no
+  // later test inherits a stub it did not ask for.
+  const original = { ...fakeGit }
+  afterEach(() => {
+    Object.assign(fakeGit, original)
+  })
+
+  const entry = {
+    sha: 'a'.repeat(40),
+    ref: 'stash@{0}',
+    date: '2026-09-23T10:00:00Z',
+    branch: 'main',
+    message: 'sailor stash: wip',
+    origin: 'sailor' as const,
+  }
+
+  it('will not stash with unsaved edits — the reload afterwards would drop them', async () => {
+    let pushed = false
+    fakeGit.stashPush = async () => {
+      pushed = true
+      return ok()
+    }
+    useStore.setState({ dirty: true })
+    await useGitStore.getState().runStashPush('wip')
+    expect(pushed).toBe(false)
+    expect(useGitStore.getState().panel?.error).toMatch(/Save the project first/)
+  })
+
+  it('explains a restore that no longer fits and points at the way through', async () => {
+    fakeGit.stashRestore = async () => ({ kind: 'conflict' })
+    useGitStore.setState({ stashes: [entry] })
+    await useGitStore.getState().runStashRestore(entry.sha)
+    const error = useGitStore.getState().panel?.error ?? ''
+    expect(error).toMatch(/Nothing was changed/)
+    expect(error).toMatch(/Restore on a new branch/)
+  })
+
+  it('names what is in the way of a restore onto uncommitted work', async () => {
+    fakeGit.stashRestore = async () => ({ kind: 'dirty', paths: ['annotations/p1/reviewer-1.json'] })
+    await useGitStore.getState().runStashRestore(entry.sha)
+    expect(useGitStore.getState().panel?.error).toMatch(/annotations\/p1\/reviewer-1\.json/)
+  })
+
+  it('restores onto a branch that does not already exist', async () => {
+    const calls: string[] = []
+    fakeGit.stashBranch = async (_root, _rel, _sha, branch) => {
+      calls.push(branch)
+      return ok()
+    }
+    useGitStore.setState({
+      stashes: [entry],
+      branches: [{ name: 'restored-stash-2026-09-23', current: false, remote: false }],
+    })
+    await useGitStore.getState().runStashBranch(entry.sha)
+    expect(calls).toEqual(['restored-stash-2026-09-23-2'])
+    expect(useGitStore.getState().panel?.notice).toMatch(/restored-stash-2026-09-23-2/)
   })
 })

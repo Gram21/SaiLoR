@@ -6,6 +6,7 @@ import { annotationsRelDir } from '../git/relpath'
 import { papersWithBookkeepingChanges } from '../git/changes'
 import type { Disposition, FieldChange, PaperChange } from '../git/changes'
 import type { FieldValue } from '../model/annotations'
+import { GitStashSection } from './GitStashSection'
 import '../styles/git.css'
 
 /** Sentinel for "New branch…" in the branch `<select>` — never a real branch name. */
@@ -489,6 +490,8 @@ export function GitDialog() {
           )}
           {panel.status?.diffTruncated && <p className="git-muted">Diff truncated.</p>}
           {hasUntracked && <p className="git-muted">Untracked files have no diff yet.</p>}
+
+          <GitStashSection disabled={working || !!panel.merge} />
 
           {(panel.error || panel.notice) && (
             <div className={panel.error ? 'git-message git-message-error' : 'git-message git-message-notice'}>

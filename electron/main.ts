@@ -30,6 +30,17 @@ import { gitErrorText, parsePorcelain, parseGitLog } from '../src/git/output'
 import { ownAnnotationPathMatcher, ownAnnotationPathsIn } from '../src/git/ownAnnotationPath'
 import { parseAnnotationAuthors } from '../src/git/seatOwner'
 import { planRepoSetup, SETUP_AUTHOR, SETUP_COMMIT_MESSAGE } from '../src/git/repoSetup'
+import { BRANCH_SWITCH_STASH_MESSAGE } from '../src/git/stash'
+import {
+  listStashes,
+  pushStash,
+  restoreStash,
+  dropStash,
+  branchFromStash,
+  popCarryOverStash,
+  dropCarryOverStash,
+  type RunGit,
+} from '../src/git/stashOps'
 import { readAllConcurrently } from '../src/git/concurrentRead'
 import { deriveGitInfo } from '../src/git/deriveGitInfo'
 import type { GitRun, MergeStart, AnnotationAuthors } from '../src/git/types'
@@ -2905,7 +2916,7 @@ ipcMain.handle('git:branchSwitchBegin', async (_e, root: string, relPath: string
   }
 
   const stash = await runGit(
-    ['stash', 'push', '-u', '-m', 'sailor: switching branch', '--', relPath, dir],
+    ['stash', 'push', '-u', '-m', BRANCH_SWITCH_STASH_MESSAGE, '--', relPath, dir],
     root,
   )
   if (!stash.ok) return { kind: 'error', message: gitErrorText(stash) }
@@ -2913,9 +2924,15 @@ ipcMain.handle('git:branchSwitchBegin', async (_e, root: string, relPath: string
   const checkout = await runGit(['checkout', branch, '--'], root)
   if (!checkout.ok) {
     // Put things back exactly as they were — nothing about this attempt
-    // should be visible if the checkout itself failed.
-    await runGit(['stash', 'pop'], root)
-    return { kind: 'error', message: gitErrorText(checkout) }
+    // should be visible if the checkout itself failed. If even that fails,
+    // the changes are not lost, only parked, and the reviewer must be told
+    // where: a silent failure here is how uncommitted readings used to end up
+    // in a stash nobody knew existed.
+    const restore = await popCarryOverStash(gitRunner(root))
+    return {
+      kind: 'error',
+      message: restore.ok ? gitErrorText(checkout) : `${gitErrorText(checkout)}\n\n${CARRY_OVER_STRANDED}`,
+    }
   }
 
   return { kind: 'merge', sourceBranch, base, ours, theirs }
@@ -2946,7 +2963,7 @@ ipcMain.handle(
       const fullPath = path.join(root, relPath)
       await assertInsideRoot(root, fullPath)
       await writeProjectFiles(fullPath, resolved.metaText, resolved.files)
-      return await runGit(['stash', 'drop'], root)
+      return await dropCarryOverStash(gitRunner(root))
     } catch (err) {
       return { ok: false, code: null, stdout: '', stderr: err instanceof Error ? err.message : String(err) }
     }
@@ -2963,7 +2980,62 @@ ipcMain.handle('git:branchSwitchAbort', async (_e, root: string, sourceBranch: s
   assertRef(sourceBranch)
   const checkout = await runGit(['checkout', sourceBranch, '--'], root)
   if (!checkout.ok) return checkout
-  return runGit(['stash', 'pop'], root)
+  const pop = await popCarryOverStash(gitRunner(root))
+  return pop.ok ? pop : { ...pop, stderr: `${gitErrorText(pop)}\n\n${CARRY_OVER_STRANDED}` }
+})
+
+/** What to tell a reviewer whose carried-over changes could not be put back. */
+const CARRY_OVER_STRANDED =
+  'Your uncommitted changes were not lost — they are kept as a stash. Open Git and ' +
+  'use "Stashed changes" to restore them.'
+
+// ---- Stashed changes (the Git panel's list). See src/git/stashOps.ts. ----
+
+function gitRunner(root: string): RunGit {
+  return (args) => runGit(args, root)
+}
+
+/** A stash is named by commit sha across IPC — see src/git/stash.ts. */
+function assertSha(sha: string): void {
+  if (!/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(sha)) throw new Error('Not a valid stash id.')
+}
+
+ipcMain.handle('git:stashList', async (_e, root: string) => {
+  assertRoot(root)
+  return listStashes(gitRunner(root))
+})
+
+ipcMain.handle('git:stashPush', async (_e, root: string, relPath: string, message: string) => {
+  assertRoot(root)
+  assertRelPath(relPath)
+  let raw: unknown
+  try {
+    raw = JSON.parse(await readFile(path.join(root, relPath), 'utf-8'))
+  } catch (err) {
+    return { ok: false, code: null, stdout: '', stderr: `The project file could not be read: ${String(err)}` }
+  }
+  return pushStash(gitRunner(root), relPath, raw, String(message ?? ''))
+})
+
+ipcMain.handle('git:stashRestore', async (_e, root: string, relPath: string, sha: string) => {
+  assertRoot(root)
+  assertRelPath(relPath)
+  assertSha(sha)
+  return restoreStash(gitRunner(root), relPath, sha)
+})
+
+ipcMain.handle('git:stashDrop', async (_e, root: string, sha: string) => {
+  assertRoot(root)
+  assertSha(sha)
+  return dropStash(gitRunner(root), sha)
+})
+
+ipcMain.handle('git:stashBranch', async (_e, root: string, relPath: string, sha: string, branch: string) => {
+  assertRoot(root)
+  assertRelPath(relPath)
+  assertSha(sha)
+  assertRef(branch)
+  return branchFromStash(gitRunner(root), relPath, sha, branch)
 })
 
 // Remember that a quit is in progress so the close guard can, after the user

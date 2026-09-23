@@ -139,6 +139,7 @@ export function Toolbar() {
   const gitProbe = useGitStore((s) => s.probe)
   const gitRepo = useGitStore((s) => s.repo)
   const behind = useGitStore((s) => s.repo?.behind ?? null)
+  const ownStashes = useGitStore((s) => s.stashes.filter((e) => e.origin !== 'other').length)
   const repoSetupNotice = useGitStore((s) => s.repoSetupNotice)
   const dismissRepoSetupNotice = useGitStore((s) => s.dismissRepoSetupNotice)
   const openClone = useGitStore((s) => s.openClone)
@@ -343,6 +344,21 @@ export function Toolbar() {
               onClick={dismissRepoSetupNotice}
             >
               {repoSetupNotice} ✕
+            </button>
+          )}
+          {/* Parked work nobody remembers is lost work. Only SaiLoR's own
+              stashes count here — a carry-over that did not come back, or one
+              made from the Git panel — since a stash somebody made in a
+              terminal is their own git business and would only nag. */}
+          {ownStashes > 0 && !editorOpen && (
+            <button
+              type="button"
+              className="toolbar-notice"
+              title="Changes parked in a stash — open Git to restore or delete them"
+              onClick={() => void openGitPanel()}
+              disabled={gitBtn.disabled}
+            >
+              {ownStashes} stashed
             </button>
           )}
           {/* The repository already knows this, and until now only said so

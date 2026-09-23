@@ -15,6 +15,7 @@ import {
 import { detectFieldChanges, composeContents, type DetectedChanges, type Disposition } from '../git/changes'
 import { repoNameFromUrl } from '../git/url'
 import { annotationsRelDir } from '../git/relpath'
+import { stashBranchName } from '../git/stash'
 import { gitErrorText } from '../git/output'
 import type {
   GitProbe,
@@ -25,6 +26,7 @@ import type {
   MergeStart,
   CommitRecord,
   AnnotationAuthors,
+  StashEntry,
 } from '../git/types'
 import { useStore } from './store'
 
@@ -198,6 +200,10 @@ interface GitState {
    *  the files land in a commit the reviewer did not type, so it should not
    *  happen invisibly. Cleared when dismissed. */
   repoSetupNotice: string | null
+  /** Every stash in the repository, newest first — see `src/git/stash.ts`.
+   *  Kept outside `panel` so the toolbar can mention SaiLoR's own stashes
+   *  while the panel is closed: parked work nobody remembers is lost work. */
+  stashes: StashEntry[]
   clone: CloneState | null
   panel: PanelState | null
   /** Local branches, refreshed whenever the panel opens/refreshes — for the
@@ -224,6 +230,15 @@ interface GitState {
   /** Answer `repoSetupPrompt`. */
   resolveRepoSetup: (accept: boolean) => Promise<void>
   dismissRepoSetupNotice: () => void
+
+  refreshStashes: () => Promise<void>
+  /** Stash this project's uncommitted changes. */
+  runStashPush: (message: string) => Promise<void>
+  /** Put a stash back — all or nothing; see `restoreStash`. */
+  runStashRestore: (sha: string) => Promise<void>
+  /** Restore a stash onto a new branch where it cannot conflict. */
+  runStashBranch: (sha: string) => Promise<void>
+  runStashDrop: (sha: string) => Promise<void>
 
   openClone: () => void
   closeClone: () => void
@@ -417,6 +432,37 @@ export const useGitStore = create<GitState>()(
      * a fast-forward/finished merge reloads from disk, which would silently
      * discard unsaved work without this check. `verb` reads into the message.
      */
+    function setPanelWorking(): void {
+      set((s) => {
+        if (s.panel) {
+          s.panel.phase = 'working'
+          s.panel.error = null
+          s.panel.notice = null
+        }
+      })
+    }
+
+    function finishPanelWork(notice: string | null, error: string | null): void {
+      set((s) => {
+        if (s.panel) {
+          s.panel.phase = 'idle'
+          s.panel.notice = notice
+          s.panel.error = error
+        }
+      })
+    }
+
+    /** A stash operation that rewrites the working tree: run it, then reload
+     *  the open project from disk, since what it holds in memory no longer
+     *  matches the files. */
+    async function runStashOperation(op: () => Promise<GitRun>, successNotice: string): Promise<void> {
+      setPanelWorking()
+      const r = await op()
+      if (r.ok) await useStore.getState().resyncProjectFromDisk()
+      finishPanelWork(r.ok ? successNotice : null, r.ok ? null : gitErrorText(r))
+      await get().refreshStatus()
+    }
+
     function guardDirtyForMerge(verb: string): boolean {
       if (!useStore.getState().dirty) return true
       set((s) => {
@@ -656,6 +702,7 @@ export const useGitStore = create<GitState>()(
       annotationAuthors: null,
       repoSetupPrompt: null,
       repoSetupNotice: null,
+      stashes: [],
       clone: null,
       panel: null,
       branches: [],
@@ -676,6 +723,7 @@ export const useGitStore = create<GitState>()(
           s.repo = null
           s.annotationAuthors = null
           s.repoSetupPrompt = null
+          s.stashes = []
         })
         const git = getPlatform().getGit()
         if (!git || !handle?.path) return
@@ -687,6 +735,7 @@ export const useGitStore = create<GitState>()(
         })
         await get().refreshSeatOwners()
         await get().ensureRepoSetup()
+        await get().refreshStashes()
       },
 
       ensureRepoSetup: async () => {
@@ -732,6 +781,100 @@ export const useGitStore = create<GitState>()(
         set((s) => {
           s.repoSetupNotice = null
         })
+      },
+
+      refreshStashes: async () => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo) return
+        try {
+          const stashes = await git.stashList(repo.root)
+          if (get().repo === repo) set((s) => {
+            s.stashes = stashes
+          })
+        } catch {
+          // A list that cannot be read is shown as empty rather than as an
+          // error: nothing else in the panel depends on it.
+        }
+      },
+
+      runStashPush: async (message) => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo || !get().panel) return
+        // The stash takes what is on disk; unsaved edits exist only in memory
+        // and the reload afterwards would silently drop them.
+        if (!guardDirtyForMerge('stashing')) return
+        await runStashOperation(
+          () => git.stashPush(repo.root, repo.relPath, message),
+          'Stashed. Your changes to this project are parked below until you restore them.',
+        )
+      },
+
+      runStashRestore: async (sha) => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo || !get().panel) return
+        if (!guardDirtyForMerge('restoring a stash')) return
+        setPanelWorking()
+        const r = await git.stashRestore(repo.root, repo.relPath, sha)
+        if (r.kind === 'restored' || r.kind === 'restored-kept') {
+          await useStore.getState().resyncProjectFromDisk()
+          finishPanelWork(
+            r.kind === 'restored'
+              ? 'Restored.'
+              : `Restored, but the stash could not be removed afterwards (${r.message}). It now repeats ` +
+                  'what is already in your files, so deleting it is safe.',
+            null,
+          )
+        } else if (r.kind === 'dirty') {
+          finishPanelWork(
+            null,
+            `Commit or stash these first — restoring onto uncommitted work would mix two sets of edits: ` +
+              `${r.paths.join(', ')}. Nothing was changed.`,
+          )
+        } else if (r.kind === 'conflict') {
+          finishPanelWork(
+            null,
+            'This stash no longer fits the current commit — the same files changed since it was made. ' +
+              'Nothing was changed and the stash is kept. Use "Restore on a new branch" to put it back ' +
+              'where it cannot conflict, then commit there and bring it over with Merge branch…, which ' +
+              'resolves any overlap field by field.',
+          )
+        } else if (r.kind === 'gone') {
+          finishPanelWork(null, 'That stash no longer exists.')
+        } else {
+          finishPanelWork(null, r.message)
+        }
+        await get().refreshStatus()
+      },
+
+      runStashBranch: async (sha) => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo || !get().panel) return
+        if (!guardDirtyForMerge('restoring a stash')) return
+        const entry = get().stashes.find((e) => e.sha === sha)
+        if (!entry) return
+        const branch = stashBranchName(entry, get().branches.map((b) => b.name))
+        await runStashOperation(
+          () => git.stashBranch(repo.root, repo.relPath, sha, branch),
+          `Restored onto the new branch "${branch}", which you are now on. Commit there, switch back, ` +
+            'and use Merge branch… to bring the changes over.',
+        )
+        // A new branch, and HEAD moved onto it.
+        await get().refreshRepo(useStore.getState().saveHandle)
+        await get().refreshBranches()
+      },
+
+      runStashDrop: async (sha) => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo || !get().panel) return
+        setPanelWorking()
+        const r = await git.stashDrop(repo.root, sha)
+        finishPanelWork(r.ok ? 'Stash deleted.' : null, r.ok ? null : gitErrorText(r))
+        await get().refreshStashes()
       },
 
       refreshSeatOwners: async () => {
@@ -896,6 +1039,7 @@ export const useGitStore = create<GitState>()(
             }
           })
           await refreshFieldReview(repo, status)
+          await get().refreshStashes()
         } catch (err) {
           set((s) => {
             if (!s.panel) return
