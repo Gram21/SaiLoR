@@ -173,6 +173,7 @@ const fakeGit: GitPlatform = {
   annotationAuthors: async () => ({ me: null, files: {} }),
   repoSetupStatus: async () => ({ upToDate: true, needsConsent: false, paths: [] }),
   applyRepoSetup: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
+  backgroundFetch: async () => ({ fetched: false, refused: false }),
   stashList: async () => [],
   stashPush: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
   stashRestore: async () => ({ kind: 'restored' as const }),
@@ -1456,5 +1457,110 @@ describe('stashed changes', () => {
     await useGitStore.getState().runStashBranch(entry.sha)
     expect(calls).toEqual(['restored-stash-2026-09-23-2'])
     expect(useGitStore.getState().panel?.notice).toMatch(/restored-stash-2026-09-23-2/)
+  })
+})
+
+describe('keeping the unpulled count fresh', () => {
+  const original = { ...fakeGit }
+  afterEach(() => {
+    Object.assign(fakeGit, original)
+  })
+
+  it('fetches, then recounts from what the fetch brought in', async () => {
+    const calls: string[] = []
+    fakeGit.backgroundFetch = async () => {
+      calls.push('fetch')
+      return { fetched: true, refused: false }
+    }
+    fakeGit.info = async () => {
+      calls.push('info')
+      return { ...REPO, behind: 2 }
+    }
+    await useGitStore.getState().refreshUpstream()
+    expect(calls).toEqual(['fetch', 'info'])
+    expect(useGitStore.getState().behind).toBe(2)
+  })
+
+  it('still recounts from local refs when the repository refuses a background fetch', async () => {
+    fakeGit.backgroundFetch = async () => ({ fetched: false, refused: true })
+    fakeGit.info = async () => ({ ...REPO, behind: 1 })
+    await useGitStore.getState().refreshUpstream()
+    expect(useGitStore.getState().behind).toBe(1)
+  })
+
+  it('stays out of the way of a git operation the reviewer started', async () => {
+    let fetched = false
+    fakeGit.backgroundFetch = async () => {
+      fetched = true
+      return { fetched: true, refused: false }
+    }
+    useGitStore.setState((s) => {
+      if (s.panel) s.panel.phase = 'working'
+    })
+    await useGitStore.getState().refreshUpstream()
+    expect(fetched).toBe(false)
+  })
+
+  it('never runs two at once', async () => {
+    let running = 0
+    let peak = 0
+    let release!: () => void
+    const gate = new Promise<void>((r) => (release = r))
+    fakeGit.backgroundFetch = async () => {
+      running++
+      peak = Math.max(peak, running)
+      await gate
+      running--
+      return { fetched: true, refused: false }
+    }
+    const first = useGitStore.getState().refreshUpstream()
+    const second = useGitStore.getState().refreshUpstream()
+    release()
+    await Promise.all([first, second])
+    expect(peak).toBe(1)
+  })
+
+  it("makes the reviewer's pull wait for a background fetch rather than race it", async () => {
+    const order: string[] = []
+    let release!: () => void
+    const gate = new Promise<void>((r) => (release = r))
+    fakeGit.backgroundFetch = async () => {
+      await gate
+      order.push('background fetch done')
+      return { fetched: true, refused: false }
+    }
+    const original = fakeGit.beginPull
+    fakeGit.beginPull = async (...args) => {
+      order.push('pull started')
+      return original(...args)
+    }
+    const bg = useGitStore.getState().refreshUpstream()
+    const pull = useGitStore.getState().runPull()
+    await Promise.resolve()
+    release()
+    await Promise.all([bg, pull])
+    expect(order.slice(0, 2)).toEqual(['background fetch done', 'pull started'])
+  })
+
+  it('refreshes when the Git panel opens', async () => {
+    let fetched = false
+    fakeGit.backgroundFetch = async () => {
+      fetched = true
+      return { fetched: true, refused: false }
+    }
+    await useGitStore.getState().openPanel()
+    await Promise.resolve()
+    expect(fetched).toBe(true)
+  })
+
+  it('does nothing without an upstream to be behind', async () => {
+    let fetched = false
+    fakeGit.backgroundFetch = async () => {
+      fetched = true
+      return { fetched: true, refused: false }
+    }
+    useGitStore.setState({ repo: { ...REPO, upstream: null } })
+    await useGitStore.getState().refreshUpstream()
+    expect(fetched).toBe(false)
   })
 })

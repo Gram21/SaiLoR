@@ -118,7 +118,7 @@ function SchemaNodeRow({
   const moveNode = useEditorStore((s) => s.moveNode)
   const toggleCollapsed = useEditorStore((s) => s.toggleCollapsed)
   const papers = useEditorStore((s) => s.papers)
-  const behind = useGitStore((s) => s.repo?.behind ?? null)
+  const behind = useGitStore((s) => s.behind)
 
   /**
    * The "…may have recorded more" caveat, sharpened when the repository

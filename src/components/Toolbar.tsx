@@ -138,7 +138,7 @@ export function Toolbar() {
   const git = getPlatform().getGit()
   const gitProbe = useGitStore((s) => s.probe)
   const gitRepo = useGitStore((s) => s.repo)
-  const behind = useGitStore((s) => s.repo?.behind ?? null)
+  const behind = useGitStore((s) => s.behind)
   const ownStashes = useGitStore((s) => s.stashes.filter((e) => e.origin !== 'other').length)
   const openClone = useGitStore((s) => s.openClone)
   const openGitPanel = useGitStore((s) => s.openPanel)

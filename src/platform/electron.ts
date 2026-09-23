@@ -189,6 +189,7 @@ export interface SlrBridge {
   gitAnnotationAuthors(root: string, relPath: string): Promise<AnnotationAuthors>
   gitRepoSetupStatus(root: string, relPath: string): Promise<RepoSetupStatus>
   gitApplyRepoSetup(root: string, relPath: string): Promise<GitRun>
+  gitBackgroundFetch(root: string): Promise<{ fetched: boolean; refused: boolean }>
   gitStashList(root: string): Promise<StashEntry[]>
   gitStashPush(root: string, relPath: string, message: string): Promise<GitRun>
   gitStashRestore(root: string, relPath: string, sha: string): Promise<StashRestoreResult>
@@ -509,6 +510,9 @@ export class ElectronAdapter implements PlatformAdapter {
     annotationAuthors: (root, relPath) => bridge().gitAnnotationAuthors(root, relPath),
     repoSetupStatus: (root, relPath) => bridge().gitRepoSetupStatus(root, relPath),
     applyRepoSetup: (root, relPath) => withBaselineDropped(() => bridge().gitApplyRepoSetup(root, relPath)),
+    // Rewrites remote-tracking refs only, never the working tree, so the save
+    // baseline stays valid.
+    backgroundFetch: (root) => bridge().gitBackgroundFetch(root),
     stashList: (root) => bridge().gitStashList(root),
     // Push, restore and branch all rewrite the working tree; dropping only
     // forgets a stash and leaves the tree alone.

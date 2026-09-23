@@ -189,6 +189,15 @@ interface GitState {
    */
   annotationAuthors: AnnotationAuthors | null
   /**
+   * Commits the upstream is ahead by, as of the last fetch — the toolbar's
+   * "↓ N to pull". Kept out of `repo` on purpose: it changes every couple of
+   * minutes, and replacing `repo` that often would make every in-flight
+   * operation that checks `get().repo === repo` think the repository changed
+   * under it and throw its result away. Null when unknown or there is no
+   * upstream. See `refreshUpstream`.
+   */
+  behind: number | null
+  /**
    * Set when this project's repository needs SaiLoR's git rules *and* already
    * holds rules of somebody's own, so the change has to be asked about rather
    * than simply made. Null otherwise — including while it is being made, which
@@ -220,6 +229,13 @@ interface GitState {
    *  `refreshRepo`, and after a commit — which is exactly what changes who
    *  last wrote a reading. */
   refreshSeatOwners: () => Promise<void>
+  /**
+   * Fetch in the background and recount the unpulled commits. Runs after a
+   * repository is detected, whenever the Git panel opens, and on a timer (see
+   * `useUpstreamPolling`). Skipped while the reviewer's own git operation is
+   * running, and never runs twice at once. See `src/git/fetchPolicy.ts`.
+   */
+  refreshUpstream: () => Promise<void>
   /**
    * Bring the project's `.gitattributes`/`.gitignore` up to what SaiLoR needs.
    * Applies silently when there is nothing of the user's to overwrite, and
@@ -432,6 +448,16 @@ export const useGitStore = create<GitState>()(
      * a fast-forward/finished merge reloads from disk, which would silently
      * discard unsaved work without this check. `verb` reads into the message.
      */
+    /** The background fetch in progress, if any — see `refreshUpstream`. */
+    let backgroundFetch: Promise<void> | null = null
+
+    /** Let a background fetch finish before an operation that fetches or
+     *  pushes itself, rather than racing it for the same refs — which fails
+     *  with a "cannot lock ref" error that means nothing to a reviewer. */
+    async function afterBackgroundFetch(): Promise<void> {
+      if (backgroundFetch) await backgroundFetch
+    }
+
     function setPanelWorking(): void {
       set((s) => {
         if (s.panel) {
@@ -700,6 +726,7 @@ export const useGitStore = create<GitState>()(
       probe: null,
       repo: null,
       annotationAuthors: null,
+      behind: null,
       repoSetupPrompt: null,
       repoSetupNotice: null,
       stashes: [],
@@ -721,6 +748,7 @@ export const useGitStore = create<GitState>()(
         // stale "Git" button doesn't linger while the real answer loads.
         set((s) => {
           s.repo = null
+          s.behind = null
           s.annotationAuthors = null
           s.repoSetupPrompt = null
           s.stashes = []
@@ -732,7 +760,11 @@ export const useGitStore = create<GitState>()(
         if (useStore.getState().saveHandle?.path !== handle.path) return
         set((s) => {
           s.repo = info
+          s.behind = info?.behind ?? null
         })
+        // Not awaited: it goes to the network, and nothing about opening a
+        // project should wait on that.
+        void get().refreshUpstream()
         await get().refreshSeatOwners()
         await get().ensureRepoSetup()
         await get().refreshStashes()
@@ -877,6 +909,33 @@ export const useGitStore = create<GitState>()(
         await get().refreshStashes()
       },
 
+      refreshUpstream: async () => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        const path = useStore.getState().saveHandle?.path
+        if (!git || !repo || !path || !repo.upstream || backgroundFetch) return
+        // The reviewer's own pull or merge fetches too, and two fetches racing
+        // for the same refs fail — theirs is the one that matters.
+        const panel = get().panel
+        if (panel && (panel.phase === 'working' || panel.merge)) return
+        backgroundFetch = (async () => {
+          try {
+            // Refused or failed fetches still leave the local refs to count
+            // against, so the recount below runs either way.
+            await git.backgroundFetch(repo.root)
+            const info = await git.info(path)
+            if (get().repo?.root === repo.root) set((s) => {
+              s.behind = info?.behind ?? null
+            })
+          } catch {
+            // Keep the last known count; the next cycle tries again.
+          } finally {
+            backgroundFetch = null
+          }
+        })()
+        await backgroundFetch
+      },
+
       refreshSeatOwners: async () => {
         const git = getPlatform().getGit()
         const repo = get().repo
@@ -1001,6 +1060,8 @@ export const useGitStore = create<GitState>()(
             history: null,
           }
         })
+        // "↓ N to pull" should be true the moment somebody looks at git.
+        void get().refreshUpstream()
         await get().refreshStatus()
         await get().refreshBranches()
         // Default tick: only the open project's own file (when not already
@@ -1228,6 +1289,7 @@ export const useGitStore = create<GitState>()(
         const git = getPlatform().getGit()
         const repo = get().repo
         if (!git || !repo) return
+        await afterBackgroundFetch()
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'working'
@@ -1248,6 +1310,7 @@ export const useGitStore = create<GitState>()(
         const git = getPlatform().getGit()
         const repo = get().repo
         if (!git || !repo) return
+        await afterBackgroundFetch()
 
         if (!guardDirtyForMerge('pulling')) return
 
@@ -1276,6 +1339,7 @@ export const useGitStore = create<GitState>()(
         const git = getPlatform().getGit()
         const repo = get().repo
         if (!git || !repo || ref === repo.branch) return
+        await afterBackgroundFetch()
 
         if (!guardDirtyForMerge('merging')) return
 

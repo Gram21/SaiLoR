@@ -53,7 +53,7 @@ function reset() {
 
 beforeEach(() => {
   reset()
-  useGitStore.setState({ repo: null })
+  useGitStore.setState({ repo: null, behind: null })
 })
 
 describe('SchemaTreeEditor: warns before destroying answers', () => {
@@ -132,7 +132,7 @@ describe('SchemaTreeEditor: known-unpulled work sharpens the warning', () => {
   })
 
   it('says how far behind the branch is when the repository already knows', async () => {
-    useGitStore.setState({ repo: repo(4) })
+    useGitStore.setState({ repo: repo(4), behind: 4 })
     render(<SchemaTreeEditor />)
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
 
@@ -146,7 +146,7 @@ describe('SchemaTreeEditor: known-unpulled work sharpens the warning', () => {
     // `behind` comes from refs alone, with no fetch, so zero and unknown both
     // mean "we cannot say", and the warning must not imply otherwise.
     for (const value of [0, null]) {
-      useGitStore.setState({ repo: repo(value) })
+      useGitStore.setState({ repo: repo(value), behind: value })
       const view = render(<SchemaTreeEditor />)
       const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
 

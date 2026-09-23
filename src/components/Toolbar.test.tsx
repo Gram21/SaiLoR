@@ -61,7 +61,7 @@ beforeEach(() => {
     recents: [],
     currentReviewer: null,
   })
-  useGitStore.setState({ annotationAuthors: null, repo: null, repoSetupNotice: null })
+  useGitStore.setState({ annotationAuthors: null, repo: null, behind: null, repoSetupNotice: null })
 })
 
 describe('REQ-UI-30: seat switcher in toolbar', () => {
@@ -193,7 +193,7 @@ describe('unpulled work and repository setup are visible in the toolbar', () => 
 
   it('offers to pull when the repository already knows work is waiting', async () => {
     st().loadFromText(projectJson(), null, 'test.json')
-    useGitStore.setState({ repo: repo(3) })
+    useGitStore.setState({ repo: repo(3), behind: 3 })
     render(<Toolbar />)
     expect(screen.getByRole('button', { name: /3 to pull/ })).toBeInTheDocument()
   })
@@ -202,7 +202,7 @@ describe('unpulled work and repository setup are visible in the toolbar', () => 
     // Silence must not read as "you are up to date"; only a fetch could say
     // that, and opening a project does not do one.
     st().loadFromText(projectJson(), null, 'test.json')
-    useGitStore.setState({ repo: repo(0) })
+    useGitStore.setState({ repo: repo(0), behind: 0 })
     render(<Toolbar />)
     expect(screen.queryByRole('button', { name: /to pull/ })).not.toBeInTheDocument()
   })

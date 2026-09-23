@@ -229,6 +229,11 @@ export interface GitPlatform {
   /** Write the rules and commit them, authored as SaiLoR. */
   applyRepoSetup(root: string, relPath: string): Promise<GitRun>
 
+  /** A fetch SaiLoR runs on its own, to keep the unpulled count fresh — see
+   *  `src/git/fetchPolicy.ts`. `refused` when the repository's own config
+   *  names a command a fetch would run. Never throws, never prompts. */
+  backgroundFetch(root: string): Promise<{ fetched: boolean; refused: boolean }>
+
   /** Every stash in the repository, newest first. See `src/git/stash.ts`. */
   stashList(root: string): Promise<StashEntry[]>
   /** Stash this project's own uncommitted changes, untracked ones included. */

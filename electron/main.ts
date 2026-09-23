@@ -32,6 +32,12 @@ import { parseAnnotationAuthors } from '../src/git/seatOwner'
 import { planRepoSetup, SETUP_AUTHOR, SETUP_COMMIT_MESSAGE } from '../src/git/repoSetup'
 import { BRANCH_SWITCH_STASH_MESSAGE } from '../src/git/stash'
 import {
+  FETCH_COMMAND_KEYS,
+  BACKGROUND_FETCH_TIMEOUT_MS,
+  NON_INTERACTIVE_ENV,
+  backgroundFetchAllowed,
+} from '../src/git/fetchPolicy'
+import {
   listStashes,
   pushStash,
   restoreStash,
@@ -1869,12 +1875,17 @@ const GIT_SAFE_CONFIG = [
 // which is one click from opening the project, exactly like the `core.fsmonitor`
 // case above.
 
-function runGit(args: string[], cwd?: string, timeout = GIT_TIMEOUT_MS): Promise<GitRun> {
+function runGit(
+  args: string[],
+  cwd?: string,
+  timeout = GIT_TIMEOUT_MS,
+  extraEnv: NodeJS.ProcessEnv = {},
+): Promise<GitRun> {
   return new Promise((resolve) => {
     execFile(
       'git',
       [...GIT_SAFE_CONFIG, ...args],
-      { cwd, env: gitEnv(), timeout, maxBuffer: GIT_MAX_BUFFER, windowsHide: true },
+      { cwd, env: { ...gitEnv(), ...extraEnv }, timeout, maxBuffer: GIT_MAX_BUFFER, windowsHide: true },
       (err, stdout, stderr) => {
         const e = err as (Error & { code?: number | string; killed?: boolean }) | null
         if (!e) {
@@ -2711,6 +2722,24 @@ ipcMain.handle('git:applyRepoSetup', async (_e, root: string, relPath: string) =
     ['commit', '--author', SETUP_AUTHOR, '-m', SETUP_COMMIT_MESSAGE, '--', ...written],
     root,
   )
+})
+
+/**
+ * The fetch SaiLoR runs on its own to keep "↓ N to pull" honest — never one
+ * the reviewer asked for. See `src/git/fetchPolicy.ts` for why it is refused
+ * for a repository whose own config names a command, and why it must fail
+ * rather than ask for a password.
+ *
+ * Returns only whether it fetched: a background fetch that fails is retried
+ * next cycle, and has nothing to tell a reviewer who did not start it.
+ */
+ipcMain.handle('git:backgroundFetch', async (_e, root: string) => {
+  assertRoot(root)
+  const risky = await runGit(['config', '--local', '--name-only', '--get-regexp', FETCH_COMMAND_KEYS], root)
+  // Exit 1 is "no such key", the ordinary answer; anything printed is a match.
+  if (!backgroundFetchAllowed(risky.ok ? risky.stdout : '')) return { fetched: false, refused: true }
+  const r = await runGit(['fetch', '--quiet'], root, BACKGROUND_FETCH_TIMEOUT_MS, NON_INTERACTIVE_ENV)
+  return { fetched: r.ok, refused: false }
 })
 
 /** True when `ref` names something under `refs/remotes/` — checked against git

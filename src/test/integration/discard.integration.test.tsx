@@ -117,6 +117,7 @@ const fakeGit: GitPlatform = {
   annotationAuthors: async () => ({ me: null, files: {} }),
   repoSetupStatus: async () => ({ upToDate: true, needsConsent: false, paths: [] }),
   applyRepoSetup: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
+  backgroundFetch: async () => ({ fetched: false, refused: false }),
   stashList: async () => [],
   stashPush: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
   stashRestore: async () => ({ kind: 'restored' as const }),

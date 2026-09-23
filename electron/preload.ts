@@ -95,6 +95,7 @@ contextBridge.exposeInMainWorld('slr', {
     ipcRenderer.invoke('git:repoSetupStatus', root, relPath),
   gitApplyRepoSetup: (root: string, relPath: string) =>
     ipcRenderer.invoke('git:applyRepoSetup', root, relPath),
+  gitBackgroundFetch: (root: string) => ipcRenderer.invoke('git:backgroundFetch', root),
   gitStashList: (root: string) => ipcRenderer.invoke('git:stashList', root),
   gitStashPush: (root: string, relPath: string, message: string) =>
     ipcRenderer.invoke('git:stashPush', root, relPath, message),

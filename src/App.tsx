@@ -46,6 +46,7 @@ import { useDirtyGuard } from './hooks/useDirtyGuard'
 import { useElectronCloseGuard } from './hooks/useElectronCloseGuard'
 import { useConsolidationAlignment } from './hooks/useConsolidationAlignment'
 import { useAutosave } from './hooks/useAutosave'
+import { useUpstreamPolling } from './hooks/useUpstreamPolling'
 import {
   loadPaneWidths,
   savePaneWidths,
@@ -61,6 +62,7 @@ export function App() {
   useElectronCloseGuard()
   useConsolidationAlignment()
   useAutosave()
+  useUpstreamPolling()
 
   const project = useStore((s) => s.project)
   const sidebarCollapsed = useStore((s) => s.sidebarCollapsed)
