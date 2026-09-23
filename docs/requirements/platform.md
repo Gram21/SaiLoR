@@ -50,6 +50,13 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Verified by:** `src/platform/electron.test.ts` (`deletes the files of a paper removed since the project was opened`, `moves a paper's files when its id is renamed`)
 - **Status:** Implemented
 
+### REQ-PLT-43 — Do not rewrite files a schema version only migrated
+- **Description:** When a save introduces a new schema version, the system shall compare each annotation file against its previous content as read under the new version, writing only files whose content changed beyond that migration.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/platform/electron.ts:87`, commit `40e0668`
+- **Verified by:** `src/platform/electron.test.ts` (`writes only project.json when a new schema version renames a field nobody edited since`)
+- **Status:** Implemented
+
 ### REQ-PLT-50 — Migrate single-file projects
 - **Description:** When a pre-split single-file project is opened, the system shall load it unchanged and shall write the split layout on the next save.
 - **Type:** Functional (ISO 25010: Functional Suitability)

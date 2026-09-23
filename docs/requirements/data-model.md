@@ -116,6 +116,27 @@ the project editor. See the [index](index.md) for the glossary.
 - **Verified by:** `src/model/split.test.ts` (`a schema field removed while others still have answers under it`, `a schema node that loses every child`), `src/model/model.test.ts` (`normalize` describe block)
 - **Status:** Implemented
 
+### REQ-DAT-166 — Schema version
+- **Description:** The system shall give every saved schema change a schema version identifier recorded in the project file together with a history of versions, each naming the version(s) it replaced, its time, and the renames and moves it made; and shall record in every annotation and mark file the schema version it was written under.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/schemaVersion.ts:80-92`, `src/model/project.ts:595,680,848,1048`, commit `40e0668`
+- **Verified by:** `src/model/schemaVersion.test.ts` (`stamps every file it writes, and reading its own text back moves nothing again`)
+- **Status:** Implemented
+
+### REQ-DAT-167 — Carry answers across renames and moves
+- **Description:** When reading an annotation or mark file written under an older schema version, or under none, the system shall apply the renames and moves recorded since that version to its answers and field links; a move that would pass through a repeated entry, or land on answers already there, shall leave the answers where they were.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/schemaVersion.ts:138-155,201-245`, commit `40e0668`
+- **Verified by:** `src/model/schemaVersion.test.ts` (`moveInTree`, `pendingMoves`, `carries the answers across the renames made since`)
+- **Status:** Implemented
+
+### REQ-DAT-168 — Report files of an unknown schema version
+- **Description:** When an annotation or mark file names a schema version the project history does not contain, the system shall read it without migration and report it in validation as written under an unknown schema version.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/schemaVersion.ts:138-155`, `src/model/validate.ts:378`, commit `40e0668`
+- **Verified by:** `src/model/schemaVersion.test.ts` (`leaves a file of an unknown version alone, and says so`)
+- **Status:** Implemented
+
 ### REQ-DAT-170 — Prune only trailing empties on save
 - **Description:** When serializing an annotation tree, the system shall drop only trailing empty instances of a repeatable node, keeping gaps before filled instances because position carries alignment meaning, and shall serialize trees with no filled field as empty objects.
 - **Type:** Functional (ISO 25010: Functional Suitability)
@@ -298,10 +319,24 @@ the project editor. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-EDT-40 — Warn before hiding answers
-- **Description:** When a schema field that papers record answers under (or that mark links point at) is renamed, removed, or re-parented, the system shall request confirmation naming the number of affected papers in the local copy, stating that the answers are kept but hidden until the field returns and that unpulled work is not counted, and — when the branch is known to be behind its upstream — how many commits behind it is; sibling reordering shall proceed without warning.
+- **Description:** When a schema field that papers record answers under (or that mark links point at) is removed, or renamed or re-parented without its answers able to follow (REQ-EDT-41), the system shall request confirmation naming the number of affected papers in the local copy, stating that the answers are kept but hidden until the field returns and that unpulled work is not counted, and — when the branch is known to be behind its upstream — how many commits behind it is; sibling reordering shall proceed without warning.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/SchemaTreeEditor.tsx:131,152`, `src/model/fieldUsage.ts:71-74,108-112`, commits `a0034e9`, `638e1b5`, `fa30150`, `a068166`
 - **Verified by:** `src/components/SchemaTreeEditor.test.tsx`
+- **Status:** Implemented
+
+### REQ-EDT-41 — Move answers with a renamed or moved field
+- **Description:** When a schema field that papers record answers under is renamed or moved to another group, the system shall state under the field how many papers are affected and that their answers will move with it on save, and shall offer to keep them hidden instead; when the answers cannot follow because the move passes through a repeated group, it shall say so.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/editorStore.ts:368`, `src/components/SchemaTreeEditor.tsx:131,511`, commit `40e0668`
+- **Verified by:** `src/state/editorStore.schemaVersion.test.ts` (`pendingSchemaMoves`, `records no move when the reviewer chose to keep the answers hidden`)
+- **Status:** Implemented
+
+### REQ-EDT-42 — Fold unpublished schema changes into one version
+- **Description:** When the schema is saved with changes while the current schema version is not yet in the repository HEAD — or, outside a repository, was created less than six minutes ago — the system shall fold the changes into that version under a new identifier that records the folded one, instead of adding a history entry; otherwise it shall add a new version descending from the current one.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/schemaVersion.ts:109-127`, `src/state/editorStore.ts:636-668`, commit `40e0668`
+- **Verified by:** `src/state/editorStore.schemaVersion.test.ts` (`without git, folds an edit made within minutes into the same version`, `in a repository, starts a new version once the current one is committed`), `src/model/schemaVersion.test.ts` (`gives a file stamped with a folded-in version only the moves it has not seen`)
 - **Status:** Implemented
 
 ### REQ-EDT-45 — Confirm renaming an annotated paper's identifier

@@ -95,8 +95,8 @@ is modeled as a repeatable Text field with fixed options (**max: ∞**) rather t
 there's no built-in way to prevent the same option being picked twice in that list, so treat it as a
 convention to watch for during review, not something the tool enforces for you.
 
-**Renaming or removing a field hides its answers** — see
-[Things to know](things-to-know.md#renaming-or-removing-a-schema-field-hides-its-answers).
+**Renaming or moving a field takes its answers along; removing one hides them** — see
+[Things to know](things-to-know.md#renaming-moving-or-removing-a-schema-field).
 
 ## Setting up several reviewers
 

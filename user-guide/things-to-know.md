@@ -100,16 +100,30 @@ was already committed in your seat by someone else — but only once their work 
 pulled, so agree out of band (a message, a spreadsheet, whatever) who reads which paper in which seat
 regardless. See [Reviewer-seat identity](multi-reviewer.md#reviewer-seat-identity).
 
-## Renaming or removing a schema field hides its answers
+## Renaming, moving, or removing a schema field
 
-⚠️ Answers are stored keyed by the field's *name*. If you rename "Study Type" to "Design Type" in
-the schema editor, every answer anyone recorded under "Study Type" disappears from every screen,
-export, and agreement figure — there's no automatic migration. The answers are not deleted: they stay
-in the files, and come back if the name does. The schema editor asks before renaming, removing, or
-moving a field that has answers, and **Validate** lists papers holding such answers under "Hidden by a
-schema change". The editor can only count the papers in your copy, though: reviewers whose work you
-haven't pulled may have recorded more. Settle field names before people start annotating, where you
-can; if you must rename one later, do it while nobody has annotated with it yet.
+Answers are stored under the field's *name*, in the group it sits in. When you **rename** a field or
+**move** it to another group in the schema editor, SaiLoR moves its answers along when you save: a
+note under the field says how many papers are affected, with **Keep them hidden instead** if you'd
+rather not. Answers other reviewers recorded under the old name follow too, even ones not yet pulled:
+the project file records each schema change as a new *schema version*, every annotation file records
+the version it was written under, and a file written before a rename is read under the new name.
+A file is only rewritten when someone next edits that paper, so a rename doesn't touch everybody's
+files at once.
+
+⚠️ Two cases still hide answers instead of moving them:
+
+- **Removing** a field, or keeping its answers hidden on purpose. The answers stay in the files and
+  come back if the field does; **Validate** lists them under "Hidden by a schema change".
+- A move **out of or into a repeated group** (a field that can have several entries): nobody can say
+  which entry an answer would belong to. The note under the field says so before you save.
+
+Renames typed straight into the JSON aren't recorded as renames and hide the old answers the same way.
+A file written under a schema version the project doesn't know — from another branch, or edited by
+hand — is read as it is, and **Validate** lists it under "Unknown schema version".
+
+Each save of a changed schema doesn't add a version of its own: while the current version hasn't been
+committed (or, without git, is less than six minutes old), further changes are folded into it.
 
 (Screening's exclusion reasons are the one place this *is* handled automatically: renaming a reason
 that's already in use prompts SaiLoR to offer moving existing decisions to the new name. See

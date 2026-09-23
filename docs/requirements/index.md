@@ -51,14 +51,14 @@ per category so requirements can be inserted without renumbering.
 
 | Category | Requirements |
 |---|---|
-| Data model & editor (DAT/EDT) | 51 |
+| Data model & editor (DAT/EDT) | 56 |
 | Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 51 |
 | Screening (SCR) | 38 |
 | Consolidation (CON) | 44 |
-| Git integration (GIT) | 55 |
+| Git integration (GIT) | 56 |
 | LLM annotation (LLM) | 31 |
-| Platform & shell (PLT) | 41 |
-| **Total** | **311** |
+| Platform & shell (PLT) | 42 |
+| **Total** | **318** |
 
 ## Method & evidence notes
 
@@ -97,3 +97,5 @@ per category so requirements can be inserted without renumbering.
 - **Project-file merge (source at `543cb13`).** REQ-GIT-250 and REQ-GIT-260 rewritten (project
   settings and removed schema fields no longer refuse a merge) and REQ-GIT-255 added for the
   node-by-node schema merge.
+- **Schema versions (source at `40e0668`).** REQ-DAT-166–168, REQ-EDT-41–42, REQ-PLT-43 and
+  REQ-GIT-256 added; REQ-EDT-40 narrowed to the changes whose answers cannot follow.

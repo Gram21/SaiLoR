@@ -174,6 +174,13 @@ See the [index](index.md) for the glossary.
 - **Verified by:** `src/git/merge.test.ts` (`mergeProjects — schema, node by node`, `mergeResultProblem`, `combines a schema both sides extended, node by node`), `src/state/gitStore.test.ts` (`a schema both sides extended merges node by node instead of aborting`)
 - **Status:** Implemented
 
+### REQ-GIT-256 — Merge across schema versions
+- **Description:** When merging, the system shall combine both sides' schema histories and apply to each side the renames and moves it has not seen before merging, so an edit under a field's old name merges into the field the other side renamed; the merged schema version shall be the side's version that already includes the other's, or a new version descending from both.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/git/merge.ts:1379,1397`, commit `40e0668`
+- **Verified by:** `src/git/merge.test.ts` (`merges an edit made under the old name into the field the other side renamed`, `gives a merge of two new versions a version descending from both`)
+- **Status:** Implemented
+
 ### REQ-GIT-260 — Keep answers under removed schema fields
 - **Description:** When a merge removes a schema field that holds recorded answers on either side, the system shall keep those answers as hidden answers (REQ-DAT-165) and add a merge note naming the field and the answer count.
 - **Type:** Functional (ISO 25010: Functional Suitability)

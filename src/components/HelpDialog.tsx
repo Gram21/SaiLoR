@@ -429,8 +429,9 @@ function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
             <Faq q="Can I change the schema after people have annotated?">
               <p>
                 Yes — <em>Edit annotation JSON…</em> on the start screen. Existing answers are
-                preserved. Renaming or removing a field hides the answers stored under it from every
-                screen and export; they stay in the files and come back if the name does.
+                preserved. Renaming or moving a field takes its answers along when you save, unless you
+                choose to keep them hidden; removing one hides them from every screen and export, and
+                they come back if the field does.
               </p>
             </Faq>
             {commonFaqs()}
@@ -696,10 +697,10 @@ function editorHelp(): { lead: ReactNode; sections: HelpSection[] } {
             </Faq>
             <Faq q="What happens to answers if I rename a field?">
               <p>
-                Answers are stored under the field's <em>name</em>, so renaming one hides what was
-                recorded under the old name. It is not deleted: it stays in the files, comes back if
-                the name does, and <em>Validate</em> lists it as hidden by a schema change. Decide
-                names before people start annotating where you can.
+                The answers move to the new name when you save — including other reviewers' once their
+                work arrives, since every file records the schema version it was written under. A note
+                under the field lets you keep them hidden instead. Answers can&apos;t follow a field out
+                of or into a repeated group; those stay hidden, and <em>Validate</em> lists them.
               </p>
             </Faq>
             {commonFaqs()}
