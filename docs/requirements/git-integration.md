@@ -70,7 +70,7 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-110 — Detect repository context on open
 - **Description:** When a project is opened, the system shall determine whether the project lies in a git work tree and derive the repository root, the project's repository-relative path, the current branch, the upstream branch, and — without fetching — the number of commits the upstream is ahead as of the last fetch.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:1982`, `src/git/deriveGitInfo.ts:47-57`, commit `a068166`
+- **Evidence:** `electron/main.ts:1993`, `src/git/deriveGitInfo.ts:47-57`, commit `a068166`
 - **Verified by:** `src/git/deriveGitInfo.test.ts`
 - **Status:** Implemented
 
@@ -107,7 +107,7 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-170 — Stage only the project's own files
 - **Description:** When committing a field-level review or completing a merge, the system shall stage and commit only the project file, the paths the user selected, and the changed files under the annotations directory that belong to the project — listing untracked files individually so that a paper's first annotation file is included — and shall never stage a sibling project's files; commits shall be pathspec-limited so separately staged work is not disturbed.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:2216-2227,2251,2739`, `src/git/ownAnnotationPath.ts:82-95`, commits `2d0d9e0`, `52ce0b7`
+- **Evidence:** `electron/main.ts:2227-2238,2262,2768`, `src/git/ownAnnotationPath.ts:82-95`, commits `2d0d9e0`, `52ce0b7`
 - **Verified by:** `src/git/ownAnnotationPath.test.ts` (`ownAnnotationPathsIn`, `ownAnnotationPathsIn needs files, not collapsed folders`)
 - **Status:** Implemented
 
@@ -138,7 +138,7 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-215 — Block merges over uncommitted annotation files
 - **Description:** When a pull or merge is started while tracked files have uncommitted changes, or while an untracked file exists in the project's annotations directory, the system shall refuse it and name the files; untracked files elsewhere in the repository shall not block it.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/git/relpath.ts:70-77`, `electron/main.ts:2464-2467`, commit `ae0e23c`
+- **Evidence:** `src/git/relpath.ts:70-77`, `electron/main.ts:2475-2478`, commit `ae0e23c`
 - **Verified by:** `src/git/relpath.test.ts` (`mergeBlockingPaths`)
 - **Status:** Implemented
 
@@ -223,7 +223,7 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-350 — Carry uncommitted changes across branch switch
 - **Description:** When switching branches with uncommitted project changes, the system shall offer carrying the changes over, committing first, or cancelling; a carry-over shall stash only the project's own files — a paper's first annotation file included — refuse when unrelated files are dirty, and resolve differences via the three-way merge flow, restoring the source branch and stash on cancel. The carry-over stash shall be located by its message rather than its position, and when it cannot be restored the system shall report that the changes are kept as a stash and where to restore them.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:2870,2978,2988`, `src/git/stashOps.ts:167-169,172-176,180-184`, `src/state/gitStore.ts:1702`, commits `8eb8ed8`, `52ce0b7`, `e6444c1`, `e23ab84`
+- **Evidence:** `electron/main.ts:2899,3007,3017`, `src/git/stashOps.ts:167-169,172-176,180-184`, `src/state/gitStore.ts:1766`, commits `8eb8ed8`, `52ce0b7`, `e6444c1`, `e23ab84`
 - **Verified by:** `gitStore.test.ts:829-951`, `src/state/gitStore.test.ts` (`a carry-over that cannot be put back is never silent`), `src/test/integration/stashOps.integration.test.tsx` (`the branch-switch carry-over is found by name, not by position`)
 - **Status:** Implemented
 
@@ -254,28 +254,35 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-400 — Refuse commits on a detached HEAD
 - **Description:** When a commit is requested while HEAD is not on a branch, the system shall refuse it with an explanation of how to check out a branch and shall create no commit; a repository with no commits yet shall not be treated as detached.
 - **Type:** Non-functional (ISO 25010: Reliability)
-- **Evidence:** `electron/main.ts:2407-2421,2424`, commit `39fcad1`
+- **Evidence:** `electron/main.ts:2418-2432,2435`, commit `39fcad1`
 - **Status:** Implemented
 
 ### REQ-GIT-410 — Git rules for annotation data
 - **Description:** When a project lies in a git repository, the system shall maintain, in the `.gitattributes` and `.gitignore` next to the project file, a delimited block that normalizes JSON line endings to LF, disables git's line merge for JSON, and ignores operating-system metadata files, preserving all content outside the block and never ignoring PDF files.
 - **Type:** Non-functional (ISO 25010: Compatibility — Interoperability)
-- **Evidence:** `src/git/repoSetup.ts:40-52,55-64,83-105`, `electron/main.ts:2657-2665,2667`, commit `b5cfee0`
+- **Evidence:** `src/git/repoSetup.ts:40-52,55-64,83-105`, `electron/main.ts:2668-2676,2678`, commit `b5cfee0`
 - **Verified by:** `src/git/repoSetup.test.ts`
 - **Status:** Implemented
 
 ### REQ-GIT-411 — Consent and commit for repository rules
 - **Description:** When the repository rules of REQ-GIT-410 are missing, the system shall add them without asking if neither file has content of its own and otherwise only after the user consents, shall commit the change with SaiLoR as author and the user as committer, and shall announce the commit in a transient notice that dismisses itself on success and remains until closed on failure.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/git/repoSetup.ts:118-130,135`, `src/state/gitStore.ts:741,762`, `electron/main.ts:2677`, `src/components/RepoSetupPrompt.tsx`, `src/components/RepoSetupToast.tsx`, commits `b5cfee0`, `0c92b1a`
+- **Evidence:** `src/git/repoSetup.ts:118-130,135`, `src/state/gitStore.ts:773,794`, `electron/main.ts:2688`, `src/components/RepoSetupPrompt.tsx`, `src/components/RepoSetupToast.tsx`, commits `b5cfee0`, `0c92b1a`
 - **Verified by:** `src/git/repoSetup.test.ts` (`planRepoSetup`), `src/components/RepoSetupToast.test.tsx`
 - **Status:** Implemented
 
 ### REQ-GIT-420 — Show unpulled work
-- **Description:** When the current branch is known, as of the last fetch, to be behind its upstream, the system shall show the number of commits to pull in the toolbar and open the Git panel when it is activated, and shall show nothing when the count is zero or unknown.
+- **Description:** When the current branch is known, as of the last fetch, to be behind its upstream, the system shall show the number of commits to pull in the toolbar and open the Git panel when it is activated, and shall show nothing when the count is zero or unknown; the count shall be refreshed after each background fetch (REQ-GIT-425).
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/components/Toolbar.tsx:354`, commit `b5cfee0`
+- **Evidence:** `src/components/Toolbar.tsx:354`, `src/state/gitStore.ts:199`, commits `b5cfee0`, `51a424d`
 - **Verified by:** `src/components/Toolbar.test.tsx` (`unpulled work and repository setup are visible in the toolbar`)
+- **Status:** Implemented
+
+### REQ-GIT-425 — Background fetch
+- **Description:** While a project in a repository with an upstream is open, the system shall fetch when the repository is detected, whenever the Git panel opens, and every two minutes, without prompting for credentials and abandoning a fetch after 60 seconds; it shall not start one while a git operation the user began is running or another background fetch is in progress, shall make pull, merge, and push wait for a running background fetch, and shall not fetch in the background at all when the repository's own configuration names a command a fetch would run or includes another configuration file.
+- **Type:** Non-functional (ISO 25010: Security)
+- **Evidence:** `src/git/fetchPolicy.ts:26,31,47,53-55,63-68`, `electron/main.ts:2736`, `src/state/gitStore.ts:457,912`, `src/hooks/useUpstreamPolling.ts:19-29`, commit `51a424d`
+- **Verified by:** `src/test/integration/fetchPolicy.integration.test.tsx`, `src/state/gitStore.test.ts` (`keeping the unpulled count fresh`), `src/hooks/useUpstreamPolling.test.tsx`
 - **Status:** Implemented
 
 ### REQ-GIT-430 — List stashed changes
@@ -288,21 +295,21 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-440 — Stash the project's own changes
 - **Description:** When the user stashes changes, the system shall stash only the project file and the project's own annotation files, untracked files included, shall refuse while the in-memory project has unsaved changes, and shall reload the project from disk afterwards.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/git/stashOps.ts:51-62`, `src/state/gitStore.ts:801`, `electron/main.ts:3008`, commit `e6444c1`
+- **Evidence:** `src/git/stashOps.ts:51-62`, `src/state/gitStore.ts:833`, `electron/main.ts:3037`, commit `e6444c1`
 - **Verified by:** `src/test/integration/stashOps.integration.test.tsx` (`pushStash`), `src/state/gitStore.test.ts` (`stashed changes`)
 - **Status:** Implemented
 
 ### REQ-GIT-450 — All-or-nothing stash restore
 - **Description:** When a stash is restored, the system shall apply it only onto a tree without uncommitted tracked changes or untracked annotation files, shall remove the stash on success, and — when it does not apply cleanly — shall return every file to its state before the attempt, keep the stash, and report that nothing was changed.
 - **Type:** Non-functional (ISO 25010: Reliability — Recoverability)
-- **Evidence:** `src/git/stashOps.ts:85-109,122-128`, `src/state/gitStore.ts:814`, commit `e6444c1`
+- **Evidence:** `src/git/stashOps.ts:85-109,122-128`, `src/state/gitStore.ts:846`, commit `e6444c1`
 - **Verified by:** `src/test/integration/stashOps.integration.test.tsx` (`restoreStash`, incl. `rolls a conflicting restore all the way back, keeping the stash`)
 - **Status:** Implemented
 
 ### REQ-GIT-460 — Restore a stash on a new branch
 - **Description:** When the user restores a stash on a new branch, the system shall create a uniquely named branch at the commit the stash was taken from, apply the stash there, and remove it, refusing under the same conditions as REQ-GIT-450.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/git/stashOps.ts:147-157`, `src/git/stash.ts:93-102`, `src/state/gitStore.ts:852`, commit `e6444c1`
+- **Evidence:** `src/git/stashOps.ts:147-157`, `src/git/stash.ts:93-102`, `src/state/gitStore.ts:884`, commit `e6444c1`
 - **Verified by:** `src/test/integration/stashOps.integration.test.tsx` (`branchFromStash`), `src/state/gitStore.test.ts` (`restores onto a branch that does not already exist`)
 - **Status:** Implemented
 
@@ -316,7 +323,7 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-480 — Identify stashes by commit
 - **Description:** The system shall identify a stash across the user-interface boundary by its commit identifier and resolve it to its current reflog position at the moment of each operation.
 - **Type:** Non-functional (ISO 25010: Reliability)
-- **Evidence:** `src/git/stashOps.ts:35-37`, `electron/main.ts:2999-3001`, commit `e6444c1`
+- **Evidence:** `src/git/stashOps.ts:35-37`, `electron/main.ts:3028-3030`, commit `e6444c1`
 - **Verified by:** `src/test/integration/stashOps.integration.test.tsx` (`finds the right stash by sha after others have been pushed on top`)
 - **Status:** Implemented
 
@@ -337,7 +344,7 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-510 — Warn about a paper already read in the same seat
 - **Description:** When the active seat's file for the current paper was last committed, outside merge commits, by a git identity other than the local one, the system shall show a non-blocking notice naming that person; it shall say nothing for other seats, other papers, the user's own earlier commits, or when no local identity is configured.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:2622`, `src/git/seatOwner.ts:71-94,120-133`, `src/components/SeatConflictNotice.tsx`, commit `c83daba`
+- **Evidence:** `electron/main.ts:2633`, `src/git/seatOwner.ts:71-94,120-133`, `src/components/SeatConflictNotice.tsx`, commit `c83daba`
 - **Verified by:** `src/git/seatOwner.test.ts`, `src/components/SeatConflictNotice.test.tsx`
 - **Status:** Implemented
 

@@ -15,7 +15,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-11 — Single application instance
 - **Description:** When the application is launched while another instance is running, the system shall not start a second instance and shall bring the existing window to the front.
 - **Type:** Non-functional (ISO 25010: Reliability)
-- **Evidence:** `electron/main.ts:1553`, commit `0bc6c9c`
+- **Evidence:** `electron/main.ts:1559`, commit `0bc6c9c`
 - **Status:** Implemented
 
 ### REQ-PLT-20 — Open projects via native dialog
@@ -39,14 +39,14 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-41 — Write only changed files
 - **Description:** When saving to the location a project was last opened from or saved to, the system shall write only the project file and the annotation files whose serialized content differs from what that open or save produced, leaving every other file byte-identical; after any git operation that can rewrite the working tree, the next save shall write every file.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/platform/electron.ts:55,57-59,73-76,81-88,293`, commits `27bf461`, `4abaebb`
+- **Evidence:** `src/platform/electron.ts:55,57-59,73-76,81-88,294`, commits `27bf461`, `4abaebb`
 - **Verified by:** `src/platform/electron.test.ts` (`writes only the papers edited since the project was opened`, `forgets the baseline when a git call rewrites the working tree`)
 - **Status:** Implemented
 
 ### REQ-PLT-42 — Remove files of removed or renamed papers
 - **Description:** When saving to the same location, the system shall delete the annotation files the project previously wrote for a paper that has since been removed or whose identifier changed, subject to REQ-PLT-61, and shall remove a paper folder that deletion leaves empty; a folder still holding any other file shall be kept.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/platform/electron.ts:318`, `electron/main.ts:922`, commit `fc8aa26`
+- **Evidence:** `src/platform/electron.ts:319`, `electron/main.ts:928`, commit `fc8aa26`
 - **Verified by:** `src/platform/electron.test.ts` (`deletes the files of a paper removed since the project was opened`, `moves a paper's files when its id is renamed`)
 - **Status:** Implemented
 
@@ -72,7 +72,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-62 — Report unparseable annotation files on open
 - **Description:** When a project opens with one or more annotation files that could not be parsed, the system shall keep the project loaded, shall surface a load error naming the affected files (capped at ten, with a count of any remainder) instead of silently treating them as unannotated, and shall keep a warning visible for as long as the project is open that displays the list again.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/store.ts:378-392,445,1642`, `src/components/Toolbar.tsx:369`, `src/platform/adapter.ts`, commit `7e82c96`
+- **Evidence:** `src/state/store.ts:439-453,506,1713`, `src/components/Toolbar.tsx:369`, `src/platform/adapter.ts`, commit `7e82c96`
 - **Verified by:** `src/state/store.corruptFiles.test.ts`, `src/components/Toolbar.test.tsx` (`unreadable annotation files stay visible for the whole session`)
 - **Status:** Implemented
 
@@ -121,7 +121,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-135 — Refuse saving over externally changed files
 - **Description:** When a save would write or delete a file that has changed on disk, or has appeared, since the application last read or wrote it, the system shall refuse the save, name the changed files (up to ten, with a count of any remainder) on separate lines, and write nothing; files rewritten by the application's own git operations shall not count as changed.
 - **Type:** Non-functional (ISO 25010: Reliability)
-- **Evidence:** `electron/main.ts:712,714-721,724-734,745-760,954`, `src/model/fileStamps.ts:44-48,57-70`, `src/state/store.ts:358-363`, commit `0bc6c9c`
+- **Evidence:** `electron/main.ts:718,720-727,730-740,751-766,960`, `src/model/fileStamps.ts:44-48,57-70`, `src/state/store.ts:419-424`, commit `0bc6c9c`
 - **Verified by:** `src/model/fileStamps.test.ts`
 - **Status:** Implemented
 

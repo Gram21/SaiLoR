@@ -2,7 +2,7 @@
 
 Requirements reverse-engineered from the implemented codebase (source, tests, docs, and
 commit history) as of 2026-08-27 (v1.8.1), with incremental updates through 2026-09-07
-(main at `8b93cbe`) and 2026-09-23 (source at `0c92b1a`, the git-hardening work) for
+(main at `8b93cbe`) and 2026-09-23 (source at `51a424d`, the git-hardening work) for
 behavior changed since. Every requirement documents behavior that
 is actually implemented; each entry cites its evidence. IDs are numbered in steps of ten
 per category so requirements can be inserted without renumbering.
@@ -54,11 +54,11 @@ per category so requirements can be inserted without renumbering.
 | Data model & editor (DAT/EDT) | 51 |
 | Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 51 |
 | Screening (SCR) | 38 |
-| Consolidation (CON) | 43 |
-| Git integration (GIT) | 53 |
+| Consolidation (CON) | 44 |
+| Git integration (GIT) | 54 |
 | LLM annotation (LLM) | 31 |
 | Platform & shell (PLT) | 40 |
-| **Total** | **307** |
+| **Total** | **309** |
 
 ## Method & evidence notes
 
@@ -78,13 +78,13 @@ per category so requirements can be inserted without renumbering.
 - One known, documented limitation is captured inside the consolidation evidence rather
   than as a requirement: project-wide agreement statistics can misread unaligned papers;
   the implemented mitigation is the REQ-CON-330 warning.
-- **Update of 2026-09-23 (git hardening).** 22 requirements added and 11 revised to match
+- **Update of 2026-09-23 (git hardening).** 24 requirements added and 11 revised to match
   behavior changed on the `fix/dont-rewrite-untouched-annotations` branch. Revised
   requirements keep their IDs and are rewritten in place where their behavior changed:
   REQ-DAT-160 (unknown tree keys are now kept rather than dropped), REQ-DAT-300 (a project
   is no longer rewritten when opened), REQ-EDT-10/20/40, REQ-CON-30/40, REQ-PLT-62, and
   REQ-GIT-110/170/350. Evidence line ranges for these entries were resolved from the source
-  symbols at `0c92b1a` rather than transcribed, and every cited test name was checked to
+  symbols in the source rather than transcribed, and every cited test name was checked to
   exist. The coverage table above was recounted from the requirement files; it had fallen
   behind before this update (it read 277 while the files held 285).
 - **Pending:** the `openwiki/` pages do not yet describe the behavior added on 2026-09-23,

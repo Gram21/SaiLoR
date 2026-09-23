@@ -19,16 +19,23 @@ for the glossary.
 - **Status:** Implemented
 
 ### REQ-CON-30 — Persist seat choice locally
-- **Description:** The system shall persist the selected reviewer seat per project on the local machine, keyed by the project's file path and recorded together with a sample of up to eight of the project's paper identifiers, and shall not store the seat choice in the project file.
+- **Description:** The system shall persist, per project on the local machine, the seat last in use and the seat each paper was last read in, keyed by the project's file path and recorded together with a sample of up to eight of the project's paper identifiers, and shall not store seat choices in the project file.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/store.ts:208-210,230-235,287-296`, commit `d6c5177`
-- **Verified by:** `src/state/store.reviewers.test.ts` (`reviewer selection is persisted per project`)
+- **Evidence:** `src/state/store.ts:208-210,230-235,250-253,324-333,339-345`, commits `d6c5177`, `2c2724c`
+- **Verified by:** `src/state/store.reviewers.test.ts` (`reviewer selection is persisted per project`, `the seat follows the paper`)
+- **Status:** Implemented
+
+### REQ-CON-35 — Seat follows the paper
+- **Description:** When the reviewer arrives at a paper — by selecting it, on opening the project, or through an undo or redo that lands on it — the system shall switch to the seat that paper was last read in, and shall keep the current seat for a paper not yet read on this machine; the disagreements view of the Consolidation seat shall not switch seats.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/store.ts:353-357,1352,1612`, commit `2c2724c`
+- **Verified by:** `src/state/store.reviewers.test.ts` (`the seat follows the paper`)
 - **Status:** Implemented
 
 ### REQ-CON-40 — Discard stale seat choices
 - **Description:** When a stored seat number exceeds the project's current reviewer count, or when the project at the stored path shares none of the paper identifiers recorded with the seat, the system shall discard the stored choice and prompt for a new seat selection; a choice stored before identifiers were recorded shall be honored and rewritten with them.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/store.ts:244-253,267-285,1278`, commit `d6c5177`
+- **Evidence:** `src/state/store.ts:265-281,285-290,304-322,1340`, commit `d6c5177`
 - **Verified by:** `src/state/store.reviewers.test.ts` (`reviewer selection is persisted per project`, `a remembered seat belongs to a project, not to a path`)
 - **Status:** Implemented
 

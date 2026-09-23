@@ -212,7 +212,7 @@ the project editor. See the [index](index.md) for the glossary.
 ### REQ-DAT-300 — No writes on open
 - **Description:** When a project is opened, the system shall not write to any of its files, even when the stored shape of its annotation trees differs from what saving would write; the normalized shape shall be held in memory and reach disk only through a save.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/store.ts:1269`, commit `27bf461`
+- **Evidence:** `src/state/store.ts:1330`, commit `27bf461`
 - **Verified by:** `src/state/store.save.test.ts` (`opening a project never writes to disk by itself`)
 - **Status:** Implemented
 
@@ -307,7 +307,7 @@ the project editor. See the [index](index.md) for the glossary.
 ### REQ-EDT-45 — Confirm renaming an annotated paper's identifier
 - **Description:** When the identifier of a paper with recorded annotations is changed and the edit is committed, the system shall request confirmation stating that the paper's annotation folder is named after the identifier and that other reviewers' unpulled work under the old identifier will not follow, and shall restore the previous identifier when declined.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/components/PapersEditor.tsx:148`, commit `fa30150`
+- **Evidence:** `src/components/PapersEditor.tsx:149`, commit `fa30150`
 - **Verified by:** `src/components/PapersEditor.test.tsx` (`confirm renaming the id of an annotated paper`)
 - **Status:** Implemented
 
