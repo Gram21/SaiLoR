@@ -140,8 +140,6 @@ export function Toolbar() {
   const gitRepo = useGitStore((s) => s.repo)
   const behind = useGitStore((s) => s.repo?.behind ?? null)
   const ownStashes = useGitStore((s) => s.stashes.filter((e) => e.origin !== 'other').length)
-  const repoSetupNotice = useGitStore((s) => s.repoSetupNotice)
-  const dismissRepoSetupNotice = useGitStore((s) => s.dismissRepoSetupNotice)
   const openClone = useGitStore((s) => s.openClone)
   const openGitPanel = useGitStore((s) => s.openPanel)
   const gitBtn = gitButtonState(!!git, gitProbe, !!project, gitRepo, busy, editorOpen, GIT_BROWSER_DISABLED_HINT)
@@ -334,18 +332,6 @@ export function Toolbar() {
           >
             Validate
           </button>
-          {/* The rules landed in a commit the reviewer never typed — see
-              `ensureRepoSetup`. Saying so once is the least this owes them. */}
-          {repoSetupNotice && (
-            <button
-              type="button"
-              className="toolbar-notice"
-              title="Dismiss"
-              onClick={dismissRepoSetupNotice}
-            >
-              {repoSetupNotice} ✕
-            </button>
-          )}
           {/* Parked work nobody remembers is lost work. Only SaiLoR's own
               stashes count here — a carry-over that did not come back, or one
               made from the Git panel — since a stash somebody made in a

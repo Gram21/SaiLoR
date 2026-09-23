@@ -23,6 +23,7 @@ import { ExportPdfDialog } from './components/ExportPdfDialog'
 import { ConsolidationDialog } from './components/ConsolidationDialog'
 import { ReviewerPrompt } from './components/ReviewerPrompt'
 import { RepoSetupPrompt } from './components/RepoSetupPrompt'
+import { RepoSetupToast } from './components/RepoSetupToast'
 import { AgreementDialog } from './components/AgreementDialog'
 import { DisagreementOverview } from './components/DisagreementOverview'
 import { ConsolidationOverview } from './components/ConsolidationOverview'
@@ -401,6 +402,7 @@ export function App() {
       <ConsolidationDialog />
       <ReviewerPrompt />
       <RepoSetupPrompt />
+      <RepoSetupToast />
       <AgreementDialog />
       <ConsolidationOverview />
       <DisagreementOverview />

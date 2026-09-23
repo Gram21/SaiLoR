@@ -3107,3 +3107,32 @@ kbd {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* A small corner popup for something SaiLoR did on its own — see
+   RepoSetupToast.tsx. Out of the way of the form and the PDF, and never
+   modal: nothing about it needs an answer. */
+.toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 250;
+  max-width: 360px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  color: var(--text);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+.toast-error {
+  border-left-color: var(--danger);
+}
+.toast-text {
+  flex: 1 1 auto;
+}

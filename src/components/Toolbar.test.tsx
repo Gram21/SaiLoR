@@ -207,12 +207,4 @@ describe('unpulled work and repository setup are visible in the toolbar', () => 
     expect(screen.queryByRole('button', { name: /to pull/ })).not.toBeInTheDocument()
   })
 
-  it('reports a commit SaiLoR made on its own, and lets it be dismissed', async () => {
-    st().loadFromText(projectJson(), null, 'test.json')
-    useGitStore.setState({ repo: repo(null), repoSetupNotice: 'Added rules and committed them.' })
-    render(<Toolbar />)
-
-    await userEvent.click(screen.getByRole('button', { name: /Added rules/ }))
-    expect(useGitStore.getState().repoSetupNotice).toBeNull()
-  })
 })

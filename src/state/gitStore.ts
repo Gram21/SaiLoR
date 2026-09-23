@@ -196,10 +196,10 @@ interface GitState {
    * overwrite. See `src/git/repoSetup.ts`.
    */
   repoSetupPrompt: { paths: string[] } | null
-  /** What the last automatic or accepted setup did, for a one-line notice —
-   *  the files land in a commit the reviewer did not type, so it should not
-   *  happen invisibly. Cleared when dismissed. */
-  repoSetupNotice: string | null
+  /** What the last automatic or accepted setup did, for a small popup — the
+   *  files land in a commit the reviewer did not type, so it should not happen
+   *  invisibly. Cleared when dismissed. See `RepoSetupToast`. */
+  repoSetupNotice: { kind: 'ok' | 'error'; text: string } | null
   /** Every stash in the repository, newest first — see `src/git/stash.ts`.
    *  Kept outside `panel` so the toolbar can mention SaiLoR's own stashes
    *  while the panel is closed: parked work nobody remembers is lost work. */
@@ -770,8 +770,8 @@ export const useGitStore = create<GitState>()(
         const r = await git.applyRepoSetup(repo.root, repo.relPath)
         set((s) => {
           s.repoSetupNotice = r.ok
-            ? 'Added SaiLoR\'s git rules for this project and committed them.'
-            : `SaiLoR could not configure this repository: ${gitErrorText(r)}`
+            ? { kind: 'ok', text: "Added SaiLoR's git rules for this project (.gitattributes, .gitignore) and committed them." }
+            : { kind: 'error', text: `SaiLoR could not configure this repository: ${gitErrorText(r)}` }
         })
         // The commit changed HEAD and the working tree.
         await get().refreshStatus()
