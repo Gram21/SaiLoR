@@ -2342,12 +2342,9 @@ it from the code side.
   side's instance count dropped below base's while the other side changed an instance at or beyond
   the position the drop would have removed) and pushes a `verbatim:` refusal naming the paper and the
   node, rather than producing a half-empty ghost or destroying the correction.
-- **A schema removal that would discard answers refuses.** `mergeProjects` picks the winning schema
-  correctly but then walks only that schema, so a field the winning side removed is never visited —
-  silently extending that schema vote to answers nobody agreed to discard. `schemaRemovalRefusal`
-  now counts real (non-empty) answers under anything the schema removal would drop, across every
-  paper and every reviewer/consolidation tree, and refuses (naming the field(s) and the count) when
-  that is nonzero; a removal with nothing under it still merges exactly as before.
+- **A schema removal never discards answers.** The schema is merged node by node and the trees are
+  walked against every node still in doubt; answers under a node that ends up removed are carried as
+  hidden answers, and `schemaRemovalNote` names the field(s) and the count.
 - **A conflicted field holds *our* value in `merged` until it is resolved.** If the resolution dialog
   is ever bypassed, the file still holds the local reviewer's own work — the safe side. It is not a
   decision on the merge's part: `GitMergeDialog` marks every conflicted row undecided regardless, and
@@ -2543,7 +2540,7 @@ annotations) — amend, like commit, operates on the file on disk.
 repeatable-node growth (both-sides-append keeps both entries, not a conflict; the base-aligned range
 still conflicts per-field), the interior-gap and instance-removal
 invariants, the `shrunkAndEdited` refusal (a deletion on one side stranding an edit on the other),
-the `schemaRemovalRefusal` (a schema removal with answers under it), the multi-reviewer headline case (disjoint edits by two reviewers, zero conflicts), the
+the node-by-node schema merge and `mergeResultProblem`, the multi-reviewer headline case (disjoint edits by two reviewers, zero conflicts), the
 paper add/remove asymmetry, every refusal, the `aiUsage` union, the `Paper.equal` boolean-set merge,
 the `abstract`/`abstractFromPdf` merge (including the documented resolve-order gap above),
 `applyResolutions`, and a full round-trip through `serializeProject`/`loadProject`.

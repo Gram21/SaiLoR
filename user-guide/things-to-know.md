@@ -53,8 +53,9 @@ synced folder, a git pull run in a terminal. Nothing is written until you choose
   unsaved edits to them are thrown away. Your edits to other files are still saved.
 - **Combine both** — merged field by field, the same way [Pull](git.md#pull) merges: a field only one
   of you changed keeps that change, and where you both changed the same field you pick the value.
-  Changes that can't be merged field by field (the schema or reviewer count changed on both sides)
-  are explained, and you choose one of the other two.
+  The project's settings and schema are merged part by part too (see
+  [How the project's own settings are merged](git.md#how-the-projects-own-settings-are-merged)).
+  The rare change that can't be merged at all is explained, and you choose one of the other two.
 
 Either way, files you didn't edit keep whatever is on disk now. **Not now** saves nothing and asks
 again at your next save. (Only one SaiLoR window runs at a time on a machine; starting it again brings

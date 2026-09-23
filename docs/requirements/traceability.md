@@ -281,8 +281,9 @@ inspection only.
 | REQ-GIT-220 | Pull as classified upstream merge | Functional · Functional Suitability | `electron/main.ts:2331-2356`<br>`src/git/types.ts:111-136`<br>`src/state/gitStore.ts:1086-1112` | — | — | `openwiki/workflows/git-integration.md` §The field-level three-way merge / §conflict-resolution flow<br>`user-guide/git.md` §Pull / §Merging another branch |
 | REQ-GIT-230 | Abort merges touching foreign files | Functional · Functional Suitability | `electron/main.ts` (`beginMergeInto`)<br>`src/git/ownAnnotationPath.ts:47-64` | `gitStore.test.ts:1032` | — | `openwiki/workflows/git-integration.md` §The field-level three-way merge / §conflict-resolution flow<br>`user-guide/git.md` §Pull / §Merging another branch |
 | REQ-GIT-240 | Field-level three-way merge | Functional · Functional Suitability | `src/git/merge.ts:109,982` | `src/git/merge.test.ts` | — | `openwiki/workflows/git-integration.md` §The field-level three-way merge / §conflict-resolution flow<br>`user-guide/git.md` §Pull / §Merging another branch |
-| REQ-GIT-250 | Refuse structure-reshaping merges | Functional · Functional Suitability | `src/git/merge.ts:833-843,982-989` | `gitStore.test.ts:340` | — | `openwiki/workflows/git-integration.md` §The field-level three-way merge / §conflict-resolution flow<br>`user-guide/git.md` §Pull / §Merging another branch |
-| REQ-GIT-260 | Refuse merges dropping answered fields | Functional · Functional Suitability | `src/git/merge.ts:942` (`schemaRemovalRefusal`) | `src/git/merge.test.ts:501-513` | — | `openwiki/workflows/git-integration.md` §The field-level three-way merge / §conflict-resolution flow<br>`user-guide/git.md` §Pull / §Merging another branch |
+| REQ-GIT-250 | Merge project settings part by part | Functional · Functional Suitability | `src/git/merge.ts:423-448,1183-1352,1409-1516` | `src/git/merge.test.ts` (`asks for the reviewer count when both sides changed it, differently`, `asks per protocol entry when both sides edited it differently — never half-drops an authored one`) | commit `543cb13` | `openwiki/workflows/git-integration.md` §The field-level three-way merge<br>`user-guide/git.md` §How the project's own settings are merged |
+| REQ-GIT-255 | Merge the schema node by node | Functional · Functional Suitability | `src/git/merge.ts:878-896,905-1005,1009-1014,1027-1061,1370-1377`<br>`src/state/gitStore.ts:408`<br>`src/state/store.ts:1654` | `src/git/merge.test.ts` (`mergeProjects — schema, node by node`, `mergeResultProblem`, `combines a schema both sides extended, node by node`)<br>`src/state/gitStore.test.ts` (`a schema both sides extended merges node by node instead of aborting`) | commit `543cb13` | `openwiki/workflows/git-integration.md` §The field-level three-way merge<br>`user-guide/git.md` §How the project's own settings are merged |
+| REQ-GIT-260 | Keep answers under removed schema fields | Functional · Functional Suitability | `src/git/merge.ts:1144-1176` | `src/git/merge.test.ts` (`keeps answers under a field the remote removed, hidden, and says so`) | commit `543cb13` | `openwiki/workflows/git-integration.md` §The field-level three-way merge<br>`user-guide/git.md` §How the project's own settings are merged |
 | REQ-GIT-270 | Preserve repeatable entries in merges | Functional · Functional Suitability | `src/git/merge.ts:207, 279,352` | `src/git/merge.test.ts:241-366` | commit `7130d4c` | `openwiki/workflows/git-integration.md` §The field-level three-way merge / §conflict-resolution flow<br>`user-guide/git.md` §Pull / §Merging another branch |
 | REQ-GIT-280 | Keep changed papers over deletion | Functional · Functional Suitability | `src/git/merge.ts:77, 794,813` | `src/git/merge.test.ts:456-469` | — | `openwiki/workflows/git-integration.md` §The field-level three-way merge / §conflict-resolution flow<br>`user-guide/git.md` §Pull / §Merging another branch |
 | REQ-GIT-290 | Auto-finish conflict-free merges | Functional · Functional Suitability | `src/state/gitStore.ts:376,548` | `gitStore.test.ts:308,325` | — | `openwiki/workflows/git-integration.md` §The field-level three-way merge / §conflict-resolution flow<br>`user-guide/git.md` §Pull / §Merging another branch |
@@ -397,9 +398,9 @@ inspection only.
 
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 310 | 100% |
-| With at least one verifying test | 261 | 84% |
+| Requirements traced | 311 | 100% |
+| With at least one verifying test | 262 | 84% |
 | Without an automated check (source inspection only) | 49 | 16% |
-| With an introducing/pinning commit | 92 | 30% |
-| With a documentation link | 309 | 99.7% |
+| With an introducing/pinning commit | 95 | 31% |
+| With a documentation link | 310 | 99.7% |
 

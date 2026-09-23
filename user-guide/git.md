@@ -167,18 +167,40 @@ the schema/protocol/etc. having changed instead of a diff if that commit isn't o
 can make sense of. The list is capped at the latest 250 commits; past that it says so rather than
 cutting off silently.
 
+### How the project's own settings are merged
+
+Pull, Merge branch…, carrying changes into a branch switch, and combining a save with changes on disk
+all merge the project's settings part by part, with the same rule as for answers: a part only one
+side changed takes that change, and only a part both changed differently becomes a row in the
+conflict dialog.
+
+- **The schema is merged node by node.** Fields either side added are all kept, a field one side
+  removed is removed, and a field one side renamed is renamed. Where both changed the *same* field,
+  each property is its own row: its description, required flag, minimum and maximum entries, and
+  fixed choices (one per line, so you can type a combined list) take mine, theirs, or your own
+  value; its kind of answer and when it is shown are mine or theirs. A field one side removed and
+  the other changed asks whether to keep or remove it. Answers under a field that ends up removed
+  are not deleted: they stay in the files, hidden, and come back if the field does.
+- **Reviewer count** takes mine, theirs, or a number you type; the **AI** and **finished checkbox**
+  switches take either value.
+- **The review protocol** is merged entry by entry — research questions, search strings, databases,
+  search date, notes — each with mine, theirs, or your own text.
+- **The screening setup** (reasons for exclusion), **where the papers were imported from**, and
+  settings SaiLoR doesn't know are mine or theirs as a whole.
+
+If the combined settings would make a project SaiLoR can't open — say, a group left with no fields —
+**Finish** says why and writes nothing, so you can decide differently.
+
 ### What Pull, Merge, and carrying changes into a new branch refuse to guess at
 
-A few kinds of disagreement can't be expressed as a field-level conflict, so instead of guessing,
-SaiLoR aborts cleanly — nothing changes — and tells you what to reconcile first. This applies equally
-to Pull, to Merge branch…, and to carrying uncommitted changes into a branch switch, since all three
-go through the same merge:
+A few kinds of disagreement can't be expressed as a conflict row, so instead of guessing, SaiLoR
+aborts cleanly — nothing changes — and tells you what to reconcile first. This applies equally to
+Pull, to Merge branch…, and to carrying uncommitted changes into a branch switch, since all three go
+through the same merge:
 
-- The **annotation schema** was changed on both sides, differently — it decides the shape of every
-  tree, so there's no per-field answer to offer.
-- The **review protocol**, or **where the project was imported from**, was edited on both sides,
-  differently — each is a single nested record, not something a conflict row can represent piece by
-  piece.
+- **A repeated entry shortened on one side and edited on the other** — SaiLoR can't tell which
+  entry the edit belongs to.
+- **The file format version** differs on both sides.
 - **A conflict outside the project** (a PDF, a `.gitignore`, anything else git couldn't merge on
   its own) — resolve it with git directly, then try again.
 

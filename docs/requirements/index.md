@@ -55,10 +55,10 @@ per category so requirements can be inserted without renumbering.
 | Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 51 |
 | Screening (SCR) | 38 |
 | Consolidation (CON) | 44 |
-| Git integration (GIT) | 54 |
+| Git integration (GIT) | 55 |
 | LLM annotation (LLM) | 31 |
 | Platform & shell (PLT) | 41 |
-| **Total** | **310** |
+| **Total** | **311** |
 
 ## Method & evidence notes
 
@@ -94,3 +94,6 @@ per category so requirements can be inserted without renumbering.
   their OpenWiki claim files were not regenerated.
 - **Save conflicts (2026-09-23, source at `5e2abb4`).** REQ-PLT-135 revised (a stopped save
   now asks instead of failing) and REQ-PLT-136 added for the three ways to resolve it.
+- **Project-file merge (source at `543cb13`).** REQ-GIT-250 and REQ-GIT-260 rewritten (project
+  settings and removed schema fields no longer refuse a merge) and REQ-GIT-255 added for the
+  node-by-node schema merge.

@@ -160,16 +160,25 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `src/git/merge.ts:109,982`, `src/git/merge.test.ts`
 - **Status:** Implemented
 
-### REQ-GIT-250 — Refuse structure-reshaping merges
-- **Description:** When the two sides of a merge differ in schema, reviewer count, screening configuration, version, provenance, protocol, or root-level extra keys, the system shall refuse the merge with a per-key reason.
+### REQ-GIT-250 — Merge project settings part by part
+- **Description:** When the two sides of a merge both changed a project-level setting differently, the system shall present it as a conflict row instead of refusing: the reviewer count as an editable number, the AI and finished-checkbox switches as booleans, each review-protocol entry as editable text, and the screening setup, provenance, and unknown root or paper keys as a choice between the two sides, a screening choice carrying its derived schema; only a differing file format version shall refuse the merge.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/git/merge.ts:833-843,982-989`, `gitStore.test.ts:340`
+- **Evidence:** `src/git/merge.ts:423-448,1183-1352,1409-1516`, commit `543cb13`
+- **Verified by:** `src/git/merge.test.ts` (`asks for the reviewer count when both sides changed it, differently`, `asks per protocol entry when both sides edited it differently — never half-drops an authored one`)
 - **Status:** Implemented
 
-### REQ-GIT-260 — Refuse merges dropping answered fields
-- **Description:** When a merge side removes a schema field that carries recorded answers on the other side, the system shall refuse the merge naming the field and the answer count.
+### REQ-GIT-255 — Merge the schema node by node
+- **Description:** When merging, the system shall combine the annotation schemas node by node, identifying a node by its name within its parent: nodes one side added shall be kept, nodes one side removed while the other left them unchanged shall be removed, a node removed on one side and changed on the other shall be offered as keep-or-remove, and each property both sides changed differently shall be a conflict row (description, required, minimum, maximum, and fixed choices editable; kind of answer and visibility condition chosen by side); before writing a resolved merge the system shall verify that the result loads and otherwise write nothing and say why.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/git/merge.ts:942` (`schemaRemovalRefusal`)
+- **Evidence:** `src/git/merge.ts:878-896,905-1005,1009-1014,1027-1061,1370-1377`, `src/state/gitStore.ts:408`, `src/state/store.ts:1654`, commit `543cb13`
+- **Verified by:** `src/git/merge.test.ts` (`mergeProjects — schema, node by node`, `mergeResultProblem`, `combines a schema both sides extended, node by node`), `src/state/gitStore.test.ts` (`a schema both sides extended merges node by node instead of aborting`)
+- **Status:** Implemented
+
+### REQ-GIT-260 — Keep answers under removed schema fields
+- **Description:** When a merge removes a schema field that holds recorded answers on either side, the system shall keep those answers as hidden answers (REQ-DAT-165) and add a merge note naming the field and the answer count.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/git/merge.ts:1144-1176`, commit `543cb13`
+- **Verified by:** `src/git/merge.test.ts` (`keeps answers under a field the remote removed, hidden, and says so`)
 - **Status:** Implemented
 
 ### REQ-GIT-270 — Preserve repeatable entries in merges

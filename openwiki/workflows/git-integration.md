@@ -386,28 +386,35 @@ flowchart TD
 The diagram shows the merge lifecycle; the layers below are how `mergeProjects`
 reaches each branch.
 
-**Reshaping fields refuse, not guess.** A difference in `version`, `schema`,
-`aiEnabled`, `finishCheckbox`, `reviewers`, `screening`, `provenance`,
-`protocol`, or a root `extra` key changes the *shape* of every tree in the file,
-so there is no field-level answer — `mergeProjects` refuses and names it
-(`refusalDetail` produces a per-key human sentence, e.g. "The annotation schema
-was changed on both sides… reconcile the schema first"). `title` and
-`schemaInfo` are deliberately *not* in that list: each is one string a conflict
-row expresses perfectly, and refusing an entire merge because two people renamed
-the review would be absurd.
+**Project settings become rows, not refusals.** Only a two-sided `version`
+difference still refuses. `aiEnabled`, `finishCheckbox` (boolean rows) and
+`reviewers` (number row, clamped to 1–10 on apply) are ordinary conflicts; each
+`protocol` entry is a string row (lists one per line); `screening`,
+`provenance` and unknown root or paper `extra` keys are `type: 'choice'` rows
+whose `payload` holds each side's value and whose resolution is `'ours'` or
+`'theirs'`. A screening project's schema is derived from its reasons, so the
+`screening` choice carries the schema with it.
 
-**Schema-removal refusal.** Every tree below is walked against the winning
-schema, so a field the losing side removed is simply never visited — silently
-extending that schema vote to answers nobody agreed to discard.
-`schemaRemovalRefusal` refuses (naming the field and how many answers are at
-stake) exactly when there is something real to lose; a removal nobody had
-answered under proceeds as before.
+**The schema is merged node by node** (`mergeSchemaDefs`). Identity is the name
+within the parent, so a rename is a one-sided removal plus addition. Nodes only
+one side has are kept when added, dropped when the other side left them
+untouched, and become a keep-or-remove `presence` row when the other side
+changed them. For nodes both have, each property goes through `merge3`:
+`description`, `required`, `min`, `max` and `options` (one per line) are
+editable rows, `type` and `visibleIf` are choice rows, and children recurse.
+The merged schema keeps every node still in doubt, because the annotation trees
+are walked against it; answers under a node that ends up removed ride along as
+hidden answers (`orphanedNodes`) and `schemaRemovalNote` says so. Ids are
+re-derived from the name path afterwards (`withPathIds`). Because a combined
+schema can be something neither side had, `mergeResultProblem` round-trips the
+resolved project through `serializeProject`/`loadProject` before anything is
+written, in `gitStore`'s `doFinish` and in the save-conflict flow.
 
 **Paper-level metadata** (`mergePaper`) runs a `merge3` per field — `title`,
 `pdf`, `doi`, `authors` (as a `deepEqualJson` array), `year` (rendered as a
 bounded numeric control via `type:'year'`), `venue`, `abstract`, and
 `abstractFromPdf` — pushing a `FieldConflict` on genuine disagreement. `extra`
-keys per paper refuse via the paper-refusal sink. Annotation trees and each
+keys per paper become choice rows. Annotation trees and each
 numbered reviewer's tree are merged by `makeTreeMerger`'s `mergeTree`.
 
 **Annotation-tree merge** walks the merged schema with `count` = the union of
