@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { loadProject, serializeProject, type Project } from '../model/project'
 import { normalizeTree } from '../model/annotations'
+import { moveInTree, pendingMoves } from '../model/schemaVersion'
 import type { AnnotationDef } from '../model/schema'
 import {
   merge3,
@@ -1349,5 +1350,63 @@ describe('mergeProjects — schema versions', () => {
     expect(outcome.merged.schemaVersion).toBe(last.id)
     expect(last.parents).toEqual(['a', 'b'])
     expect(outcome.merged.schemaHistory.map((e) => e.id).slice(0, 3)).toEqual(['v0', 'a', 'b'])
+  })
+})
+
+describe('mergeProjects — a field renamed differently on each side', () => {
+  const H = (id: string, parents: string[], moves: { from: string[]; to: string[] }[] = []) => ({ id, parents, at: '', moves })
+  const v0 = [H('v0', [])]
+  const mk = (name: string, v: string, hist: ReturnType<typeof H>[], value?: string) => {
+    const p = project({ schema: [{ name, type: 'string' }], papers: [paper('a', value ? { annotations: { [name]: [{ value }] } } : {})] })
+    p.schemaVersion = v
+    p.schemaHistory = hist
+    return p
+  }
+  const merge = (oursValue?: string, theirsValue?: string) => {
+    const outcome = mergeProjects(
+      mk('A', 'v0', v0, 'base'),
+      mk('B', 'o', [...v0, H('o', ['v0'], [{ from: ['A'], to: ['B'] }])], oursValue ?? 'base'),
+      mk('C', 't', [...v0, H('t', ['v0'], [{ from: ['A'], to: ['C'] }])], theirsValue ?? 'base'),
+    )
+    expectMerged(outcome)
+    return outcome
+  }
+  const renameRow = (o: { conflicts: FieldConflict[] }) => o.conflicts.find((c) => c.label.includes('renamed differently'))!
+
+  it('asks which name to keep, and merges both sides\' answers under it', () => {
+    const o = merge('base', 'theirs edit')
+    expect(renameRow(o)).toMatchObject({ oursText: 'Call it “B”', theirsText: 'Call it “C”' })
+    expect(o.merged.schema.map((d) => d.name)).toEqual(['B'])
+    // Only theirs changed the answer, so it merges without a row of its own.
+    expect(o.merged.papers[0].annotations.B).toEqual([{ value: 'theirs edit' }])
+    expect(o.notes.filter((n) => n.kind === 'schema-removed-answers')).toEqual([])
+  })
+
+  it("taking theirs moves the field, its answers, and the merge version's recorded move", () => {
+    const o = merge('ours edit', 'base')
+    const row = renameRow(o)
+    const resolved = applyResolutions(o.merged, o.conflicts, { [row.id]: 'theirs' })
+    expect(resolved.schema.map((d) => d.name)).toEqual(['C'])
+    expect(resolved.papers[0].annotations.C).toEqual([{ value: 'ours edit' }])
+    expect(resolved.schemaHistory.at(-1)!.moves).toEqual([{ from: ['B'], to: ['C'] }])
+    expect(o.merged.schemaHistory.at(-1)!.moves).toEqual([{ from: ['C'], to: ['B'] }])
+  })
+
+  it('brings a file that arrives later from either branch to the chosen name', () => {
+    const o = merge()
+    const later = (stamp: string, tree: Record<string, unknown>) => {
+      const moves = pendingMoves(o.merged.schemaHistory, stamp, o.merged.schemaVersion)
+      if (moves === 'unknown') throw new Error('unknown')
+      return moves.reduce(moveInTree, tree as never)
+    }
+    expect(later('t', { C: [{ value: 'late' }] })).toEqual({ B: [{ value: 'late' }] })
+    expect(later('o', { B: [{ value: 'late' }] })).toEqual({ B: [{ value: 'late' }] })
+  })
+
+  it('applies an answer row under the field before renaming it', () => {
+    const o = merge('ours edit', 'theirs edit')
+    const answer = o.conflicts.find((c) => c.tree.kind === 'annotations')!
+    const resolved = applyResolutions(o.merged, o.conflicts, { [renameRow(o).id]: 'theirs', [answer.id]: 'agreed' })
+    expect(resolved.papers[0].annotations.C).toEqual([{ value: 'agreed' }])
   })
 })

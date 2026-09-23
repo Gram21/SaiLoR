@@ -32,6 +32,7 @@ import {
   newSchemaVersionId,
   pendingMoves,
   type SchemaHistoryEntry,
+  type SchemaMove,
 } from '../model/schemaVersion'
 
 /**
@@ -1041,6 +1042,22 @@ function applySchemaRow(draft: Project, conflict: FieldConflict, value: FieldVal
   if (!at) return
   const def = at.list[at.index]
   switch (parsed.part) {
+    case 'rename': {
+      // Ours is already in place; theirs moves the field and every answer and
+      // link under it, and becomes the move the merge's version records.
+      const move = chosen as SchemaMove | null
+      if (!move) break
+      const moved = withMoves(draft, [move])
+      draft.schema = moved.schema
+      draft.papers = moved.papers
+      const back = { from: move.to, to: move.from }
+      draft.schemaHistory = draft.schemaHistory.map((e) =>
+        e.id === draft.schemaVersion
+          ? { ...e, moves: e.moves.map((m) => (samePath(m.from, back.from) && samePath(m.to, back.to) ? move : m)) }
+          : e,
+      )
+      break
+    }
     case 'presence':
       if (chosen === 'remove') at.list.splice(at.index, 1)
       break
@@ -1197,15 +1214,44 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
     mergeHistories(oursIn.schemaHistory, theirsIn.schemaHistory),
     base?.schemaHistory ?? [],
   )
+  // A field both sides renamed differently starts out under our name, with
+  // the other side's answers brought to it, so its answers merge field by
+  // field; the reviewer then decides which name it keeps.
+  const clashes = renameClashes(history, base, oursIn, theirsIn)
+  const toOurs = clashes.map((c) => ({ from: c.theirs, to: c.ours }))
   const ours = atHistory(oursIn, history)
-  const theirs = atHistory(theirsIn, history)
-  base = base && atHistory(base, history)
+  const theirs = withMoves(atHistory(theirsIn, history), toOurs)
+  base = base && withMoves(atHistory(base, history), toOurs)
   const version = mergedSchemaVersion(history, ours.schemaVersion, theirs.schemaVersion)
+  // Recorded in the merge's own version, so a file arriving later from the
+  // other branch lands under the same name.
+  const mergeEntry = version.history.find((e) => e.id === version.id && e.parents.length === 2)
+  if (mergeEntry && toOurs.length > 0) {
+    version.history = version.history.map((e) => (e === mergeEntry ? { ...e, moves: [...e.moves, ...toOurs] } : e))
+  }
 
   const eqNum = (a: number | undefined, b: number | undefined) => a === b
   const eqBool = (a: boolean | undefined, b: boolean | undefined) => a === b
   const conflicts: FieldConflict[] = []
   const notes: MergeNote[] = []
+  for (const c of clashes) {
+    const canonical = schemaCanonical(c.ours, 'rename')
+    conflicts.push({
+      id: conflictId('', { kind: 'schema' }, canonical),
+      paperId: '',
+      paperTitle: '',
+      tree: { kind: 'schema' },
+      canonical,
+      label: `${c.base.join(' › ')} — renamed differently on each side`,
+      type: 'choice',
+      base: null,
+      ours: 'ours',
+      theirs: 'theirs',
+      oursText: `Call it “${c.ours.join(' › ')}”`,
+      theirsText: `Call it “${c.theirs.join(' › ')}”`,
+      payload: { ours: null, theirs: { from: c.ours, to: c.theirs } },
+    })
+  }
 
   // The one thing with no answer at all: the file format itself.
   const versionM = merge3<number | undefined>(base?.version, ours.version, theirs.version, eqNum)
@@ -1378,7 +1424,12 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
  *  to its schema, answers and field links. */
 function atHistory(project: Project, history: SchemaHistoryEntry[]): Project {
   const pending = pendingMoves(history, project.schemaVersion, '')
-  if (pending === 'unknown' || pending.length === 0) return project
+  return pending === 'unknown' ? project : withMoves(project, pending)
+}
+
+/** `project` with `moves` applied to its schema, answers and field links. */
+function withMoves(project: Project, pending: SchemaMove[]): Project {
+  if (pending.length === 0) return project
   return {
     ...project,
     schema: pending.reduce(moveInDefs, project.schema),
@@ -1390,6 +1441,63 @@ function atHistory(project: Project, history: SchemaHistoryEntry[]): Project {
       reviewMarks: Object.fromEntries(Object.entries(p.reviewMarks).map(([k, v]) => [k, pending.reduce(moveInMarks, v)])),
     })),
   }
+}
+
+/** A field both sides renamed or moved since the base, to different places. */
+interface RenameClash {
+  base: string[]
+  ours: string[]
+  theirs: string[]
+}
+
+const samePath = (a: string[], b: string[]) => a.length === b.length && a.every((n, i) => n === b[i])
+const underPath = (path: string[], prefix: string[]) =>
+  prefix.length <= path.length && prefix.every((n, i) => path[i] === n)
+
+/** The moves `side` has made since `base`, in history order. */
+function movesSince(history: SchemaHistoryEntry[], side: string | null, base: string | null): SchemaMove[] {
+  if (!side) return []
+  const mine = ancestorsOf(history, side)
+  const shared = base ? ancestorsOf(history, base) : new Set<string>()
+  return history.filter((e) => mine.has(e.id) && !shared.has(e.id)).flatMap((e) => e.moves)
+}
+
+function followMoves(path: string[], moves: SchemaMove[]): string[] {
+  return moves.reduce((p, m) => (underPath(p, m.from) ? [...m.to, ...p.slice(m.from.length)] : p), path)
+}
+
+/**
+ * Nodes of the base schema that both sides moved, to different places. Applying
+ * both sides' moves one after the other would let whichever comes first in the
+ * history win and leave the other side's answers hidden under a name nobody
+ * has any more — this is a decision for the reviewer. Only the topmost node of
+ * a clash is reported: its children move with it.
+ */
+function renameClashes(
+  history: SchemaHistoryEntry[],
+  base: Project | null,
+  ours: Project,
+  theirs: Project,
+): RenameClash[] {
+  if (!base) return []
+  const oursMoves = movesSince(history, ours.schemaVersion, base.schemaVersion)
+  const theirsMoves = movesSince(history, theirs.schemaVersion, base.schemaVersion)
+  if (oursMoves.length === 0 || theirsMoves.length === 0) return []
+  const out: RenameClash[] = []
+  const walk = (defs: ResolvedDef[], prefix: string[]) => {
+    for (const d of defs) {
+      const path = [...prefix, d.name]
+      const o = followMoves(path, oursMoves)
+      const t = followMoves(path, theirsMoves)
+      if (!samePath(o, path) && !samePath(t, path) && !samePath(o, t)) {
+        out.push({ base: path, ours: o, theirs: t })
+        continue
+      }
+      walk(d.children, path)
+    }
+  }
+  walk(base.schema, [])
+  return out
 }
 
 /** The merged schema's version: either side's when it already includes the
@@ -1587,8 +1695,15 @@ export function applyResolutions(
   resolutions: Resolutions,
 ): Project {
   const byId = new Map(conflicts.map((c) => [c.id, c]))
+  // A field's rename last: every other row addresses it by the name it has
+  // in `merged`.
+  const isRename = (id: string) => {
+    const c = byId.get(id)
+    return c?.tree.kind === 'schema' && parseSchemaCanonical(c.canonical)?.part === 'rename'
+  }
+  const ordered = Object.entries(resolutions).sort(([a], [b]) => Number(isRename(a)) - Number(isRename(b)))
   const resolved = produce(merged, (draft) => {
-    for (const [id, value] of Object.entries(resolutions)) {
+    for (const [id, value] of ordered) {
       const conflict = byId.get(id)
       if (conflict) applyOne(draft as Project, conflict, value)
     }
