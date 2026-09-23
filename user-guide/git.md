@@ -180,7 +180,10 @@ conflict dialog.
   fixed choices (one per line, so you can type a combined list) take mine, theirs, or your own
   value; its kind of answer and when it is shown are mine or theirs. A field one side removed and
   the other changed asks whether to keep or remove it. Answers under a field that ends up removed
-  are not deleted: they stay in the files, hidden, and come back if the field does.
+  are not deleted: they stay in the files, hidden, and come back if the field does. A field renamed
+  or moved on one side follows that rename on the other side too, so answers recorded there under the
+  old name merge into it. If **both** sides renamed the same field differently, one row asks which
+  name it keeps; both sides' answers are merged under it either way.
 - **Reviewer count** takes mine, theirs, or a number you type; the **AI** and **finished checkbox**
   switches take either value.
 - **The review protocol** is merged entry by entry — research questions, search strings, databases,

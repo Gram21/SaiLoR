@@ -181,6 +181,13 @@ See the [index](index.md) for the glossary.
 - **Verified by:** `src/git/merge.test.ts` (`merges an edit made under the old name into the field the other side renamed`, `gives a merge of two new versions a version descending from both`)
 - **Status:** Implemented
 
+### REQ-GIT-257 — Ask about conflicting renames
+- **Description:** When both sides of a merge renamed or moved the same schema node to different places since the merge base, the system shall present one conflict row offering either side's name, merge both sides' answers under the chosen name, and record the chosen move in the merged schema version so that files later arriving from either branch are read under that name.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/git/merge.ts:1476-1501,1045`, commit `c9c982f`
+- **Verified by:** `src/git/merge.test.ts` (`mergeProjects — a field renamed differently on each side`)
+- **Status:** Implemented
+
 ### REQ-GIT-260 — Keep answers under removed schema fields
 - **Description:** When a merge removes a schema field that holds recorded answers on either side, the system shall keep those answers as hidden answers (REQ-DAT-165) and add a merge note naming the field and the answer count.
 - **Type:** Functional (ISO 25010: Functional Suitability)

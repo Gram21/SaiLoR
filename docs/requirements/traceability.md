@@ -289,6 +289,7 @@ inspection only.
 | REQ-GIT-250 | Merge project settings part by part | Functional · Functional Suitability | `src/git/merge.ts:423-448,1183-1352,1409-1516` | `src/git/merge.test.ts` (`asks for the reviewer count when both sides changed it, differently`, `asks per protocol entry when both sides edited it differently — never half-drops an authored one`) | commit `543cb13` | `openwiki/workflows/git-integration.md` §The field-level three-way merge<br>`user-guide/git.md` §How the project's own settings are merged |
 | REQ-GIT-255 | Merge the schema node by node | Functional · Functional Suitability | `src/git/merge.ts:878-896,905-1005,1009-1014,1027-1061,1370-1377`<br>`src/state/gitStore.ts:408`<br>`src/state/store.ts:1654` | `src/git/merge.test.ts` (`mergeProjects — schema, node by node`, `mergeResultProblem`, `combines a schema both sides extended, node by node`)<br>`src/state/gitStore.test.ts` (`a schema both sides extended merges node by node instead of aborting`) | commit `543cb13` | `openwiki/workflows/git-integration.md` §The field-level three-way merge<br>`user-guide/git.md` §How the project's own settings are merged |
 | REQ-GIT-256 | Merge across schema versions | Functional · Functional Suitability | `src/git/merge.ts:1379,1397` | `src/git/merge.test.ts` (`merges an edit made under the old name into the field the other side renamed`, `gives a merge of two new versions a version descending from both`) | commit `40e0668` | `user-guide/git.md` §How the project's own settings are merged |
+| REQ-GIT-257 | Ask about conflicting renames | Functional · Functional Suitability | `src/git/merge.ts:1476-1501,1045` | `src/git/merge.test.ts` (`mergeProjects — a field renamed differently on each side`) | commit `c9c982f` | `user-guide/git.md` §How the project's own settings are merged |
 | REQ-GIT-260 | Keep answers under removed schema fields | Functional · Functional Suitability | `src/git/merge.ts:1144-1176` | `src/git/merge.test.ts` (`keeps answers under a field the remote removed, hidden, and says so`) | commit `543cb13` | `openwiki/workflows/git-integration.md` §The field-level three-way merge<br>`user-guide/git.md` §How the project's own settings are merged |
 | REQ-GIT-270 | Preserve repeatable entries in merges | Functional · Functional Suitability | `src/git/merge.ts:207, 279,352` | `src/git/merge.test.ts:241-366` | commit `7130d4c` | `openwiki/workflows/git-integration.md` §The field-level three-way merge / §conflict-resolution flow<br>`user-guide/git.md` §Pull / §Merging another branch |
 | REQ-GIT-280 | Keep changed papers over deletion | Functional · Functional Suitability | `src/git/merge.ts:77, 794,813` | `src/git/merge.test.ts:456-469` | — | `openwiki/workflows/git-integration.md` §The field-level three-way merge / §conflict-resolution flow<br>`user-guide/git.md` §Pull / §Merging another branch |
@@ -405,9 +406,9 @@ inspection only.
 
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 318 | 100% |
-| With at least one verifying test | 269 | 85% |
+| Requirements traced | 319 | 100% |
+| With at least one verifying test | 270 | 85% |
 | Without an automated check (source inspection only) | 49 | 15% |
-| With an introducing/pinning commit | 102 | 32% |
-| With a documentation link | 317 | 99.7% |
+| With an introducing/pinning commit | 103 | 32% |
+| With a documentation link | 318 | 99.7% |
 
