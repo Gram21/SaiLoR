@@ -2,7 +2,8 @@
 
 Requirements reverse-engineered from the implemented codebase (source, tests, docs, and
 commit history) as of 2026-08-27 (v1.8.1), with incremental updates through 2026-09-07
-(main at `8b93cbe`) for behavior changed since. Every requirement documents behavior that
+(main at `8b93cbe`) and 2026-09-23 (source at `0c92b1a`, the git-hardening work) for
+behavior changed since. Every requirement documents behavior that
 is actually implemented; each entry cites its evidence. IDs are numbered in steps of ten
 per category so requirements can be inserted without renumbering.
 
@@ -14,7 +15,7 @@ per category so requirements can be inserted without renumbering.
 | [annotation-ui.md](annotation-ui.md) | REQ-ANN, REQ-LST, REQ-PDF, REQ-UI | Annotation form, paper list, PDF viewer, highlights/notes, evidence linking, reading position, PDF export, workspace shell |
 | [screening.md](screening.md) | REQ-SCR | Title/abstract and full-text screening: decisions, exclusion reasons, counts, import hand-off |
 | [consolidation.md](consolidation.md) | REQ-CON | Reviewer seats, alignment of repeated entries, disagreement detection, unanimous adoption, agreement metrics, disagreement export |
-| [git-integration.md](git-integration.md) | REQ-GIT | Clone, status/commit, pull/merge, branches, history, git security gates |
+| [git-integration.md](git-integration.md) | REQ-GIT | Clone, status/commit, pull/merge, branches, stashes, history, repository setup, seat-collision warnings, git security gates |
 | [llm-annotation.md](llm-annotation.md) | REQ-LLM | LLM providers, key handling, prompt/response validation, suggestion review, AI-usage disclosure |
 | [platform.md](platform.md) | REQ-PLT | Desktop shell, open/save, unsaved-changes protection, recents, settings, PDF access control, self-update, build targets |
 | [traceability.md](traceability.md) | — | Requirements-to-code traceability matrix with link-recovery method and coverage statistics |
@@ -28,7 +29,7 @@ per category so requirements can be inserted without renumbering.
 | **Node / field** | A schema entry; a *field* is a node with a value type (string, number, boolean, year); a *group* has only children. |
 | **Repeatable node** | A node whose `max` is null or greater than 1; each occurrence is an *instance* (or *entry*). |
 | **Annotation tree** | The nested value structure mirroring the schema in which one seat's answers for one paper are stored. |
-| **Seat** | The acting identity in a session: a numbered reviewer (1..N) or Consolidation. |
+| **Seat** | The acting identity in a session: a numbered reviewer (1..N) or Consolidation. A seat is a role per paper, not a person: when papers are divided among more reviewers than there are seats, different people hold the same seat on different papers. |
 | **Consolidated tree** | The tree the Consolidation seat writes; the project's shipping answers. |
 | **Consolidator** | The person acting in the Consolidation seat. |
 | **Alignment** | The stored matching of different reviewers' repeatable entries into shared slots. |
@@ -41,19 +42,23 @@ per category so requirements can be inserted without renumbering.
 | **Target (LLM)** | A saved LLM configuration: name, provider, base URL, model, attachment mode, optional reasoning effort, and a stored key. |
 | **Project's own files** | `project.json` plus the files under its `annotations/` folder matching the project's paper identifiers and file-name family. |
 | **Family (project kind)** | Screening versus annotation projects, distinguished by their annotation file-name prefixes. |
+| **Hidden answer** | A recorded answer stored under a schema node the current schema no longer describes (after a field was removed, renamed, or lost its children). Kept in the files and shown again when the node returns; see REQ-DAT-165. |
+| **Stash** | Uncommitted changes that git has parked outside the working tree. |
+| **Carry-over** | The stash SaiLoR creates to move uncommitted project changes across a branch switch. |
+| **Managed block** | The delimited section of a `.gitattributes` or `.gitignore` that SaiLoR maintains; content outside it belongs to the user and is never changed. |
 
 ## Coverage summary
 
 | Category | Requirements |
 |---|---|
-| Data model & editor (DAT/EDT) | 47 |
-| Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 46 |
+| Data model & editor (DAT/EDT) | 51 |
+| Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 51 |
 | Screening (SCR) | 38 |
-| Consolidation (CON) | 40 |
-| Git integration (GIT) | 39 |
+| Consolidation (CON) | 43 |
+| Git integration (GIT) | 53 |
 | LLM annotation (LLM) | 31 |
-| Platform & shell (PLT) | 36 |
-| **Total** | **277** |
+| Platform & shell (PLT) | 40 |
+| **Total** | **307** |
 
 ## Method & evidence notes
 
@@ -73,3 +78,16 @@ per category so requirements can be inserted without renumbering.
 - One known, documented limitation is captured inside the consolidation evidence rather
   than as a requirement: project-wide agreement statistics can misread unaligned papers;
   the implemented mitigation is the REQ-CON-330 warning.
+- **Update of 2026-09-23 (git hardening).** 22 requirements added and 11 revised to match
+  behavior changed on the `fix/dont-rewrite-untouched-annotations` branch. Revised
+  requirements keep their IDs and are rewritten in place where their behavior changed:
+  REQ-DAT-160 (unknown tree keys are now kept rather than dropped), REQ-DAT-300 (a project
+  is no longer rewritten when opened), REQ-EDT-10/20/40, REQ-CON-30/40, REQ-PLT-62, and
+  REQ-GIT-110/170/350. Evidence line ranges for these entries were resolved from the source
+  symbols at `0c92b1a` rather than transcribed, and every cited test name was checked to
+  exist. The coverage table above was recounted from the requirement files; it had fallen
+  behind before this update (it read 277 while the files held 285).
+- **Pending:** the `openwiki/` pages do not yet describe the behavior added on 2026-09-23,
+  so the requirements added then have no *Docs* link in the traceability matrix (see its
+  coverage statistics), and the *Docs* links of revised requirements point at sections
+  that still describe the previous behavior until the wiki is refreshed.

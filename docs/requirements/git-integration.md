@@ -1,7 +1,8 @@
 # Requirements — Git Integration
 
 Requirements for sharing projects between reviewers via git: clone, status/commit,
-pull/merge, branches, history, and the security gates around git execution.
+pull/merge, branches, stashes, history, repository setup, and the security gates around
+git execution.
 See the [index](index.md) for the glossary.
 
 ---
@@ -67,9 +68,10 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-GIT-110 — Detect repository context on open
-- **Description:** When a project is opened, the system shall determine whether the project lies in a git work tree and derive the repository root, the project's repository-relative path, the current branch, and the upstream branch.
+- **Description:** When a project is opened, the system shall determine whether the project lies in a git work tree and derive the repository root, the project's repository-relative path, the current branch, the upstream branch, and — without fetching — the number of commits the upstream is ahead as of the last fetch.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:1802-1819`, `src/git/deriveGitInfo.ts:33`
+- **Evidence:** `electron/main.ts:1982`, `src/git/deriveGitInfo.ts:47-57`, commit `a068166`
+- **Verified by:** `src/git/deriveGitInfo.test.ts`
 - **Status:** Implemented
 
 ### REQ-GIT-120 — Show working-tree status and diff
@@ -102,10 +104,11 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `src/components/GitDialog.test.ts:4-55`, commit `6285ce4`
 - **Status:** Implemented
 
-### REQ-GIT-170 — Pathspec-limited commits
-- **Description:** When committing, the system shall limit the commit to the files under review so that separately staged work is not disturbed.
+### REQ-GIT-170 — Stage only the project's own files
+- **Description:** When committing a field-level review or completing a merge, the system shall stage and commit only the project file, the paths the user selected, and the changed files under the annotations directory that belong to the project — listing untracked files individually so that a paper's first annotation file is included — and shall never stage a sibling project's files; commits shall be pathspec-limited so separately staged work is not disturbed.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:2170-2189`
+- **Evidence:** `electron/main.ts:2216-2227,2251,2739`, `src/git/ownAnnotationPath.ts:82-95`, commits `2d0d9e0`, `52ce0b7`
+- **Verified by:** `src/git/ownAnnotationPath.test.ts` (`ownAnnotationPathsIn`, `ownAnnotationPathsIn needs files, not collapsed folders`)
 - **Status:** Implemented
 
 ### REQ-GIT-180 — Amend previous commit
@@ -130,6 +133,13 @@ See the [index](index.md) for the glossary.
 - **Description:** When the in-memory project has unsaved annotation changes, the system shall refuse pull, merge, and branch-switch operations.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/gitStore.ts:439`, `gitStore.test.ts:368,815,954`, commit `909f674`
+- **Status:** Implemented
+
+### REQ-GIT-215 — Block merges over uncommitted annotation files
+- **Description:** When a pull or merge is started while tracked files have uncommitted changes, or while an untracked file exists in the project's annotations directory, the system shall refuse it and name the files; untracked files elsewhere in the repository shall not block it.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/git/relpath.ts:70-77`, `electron/main.ts:2464-2467`, commit `ae0e23c`
+- **Verified by:** `src/git/relpath.test.ts` (`mergeBlockingPaths`)
 - **Status:** Implemented
 
 ### REQ-GIT-220 — Pull as classified upstream merge
@@ -211,9 +221,10 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-GIT-350 — Carry uncommitted changes across branch switch
-- **Description:** When switching branches with uncommitted project changes, the system shall offer carrying the changes over, committing first, or cancelling; a carry-over shall stash only the project's own files, refuse when unrelated files are dirty, and resolve differences via the three-way merge flow, restoring the source branch and stash on cancel.
+- **Description:** When switching branches with uncommitted project changes, the system shall offer carrying the changes over, committing first, or cancelling; a carry-over shall stash only the project's own files — a paper's first annotation file included — refuse when unrelated files are dirty, and resolve differences via the three-way merge flow, restoring the source branch and stash on cancel. The carry-over stash shall be located by its message rather than its position, and when it cannot be restored the system shall report that the changes are kept as a stash and where to restore them.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:2503-2604`, `gitStore.test.ts:829-951`, commit `8eb8ed8`
+- **Evidence:** `electron/main.ts:2870,2978,2988`, `src/git/stashOps.ts:167-169,172-176,180-184`, `src/state/gitStore.ts:1702`, commits `8eb8ed8`, `52ce0b7`, `e6444c1`, `e23ab84`
+- **Verified by:** `gitStore.test.ts:829-951`, `src/state/gitStore.test.ts` (`a carry-over that cannot be put back is never silent`), `src/test/integration/stashOps.integration.test.tsx` (`the branch-switch carry-over is found by name, not by position`)
 - **Status:** Implemented
 
 ### REQ-GIT-360 — Safe branch deletion
@@ -239,3 +250,94 @@ See the [index](index.md) for the glossary.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/git/types.ts:20-26`, `src/git/output.ts:138`
 - **Status:** Implemented
+
+### REQ-GIT-400 — Refuse commits on a detached HEAD
+- **Description:** When a commit is requested while HEAD is not on a branch, the system shall refuse it with an explanation of how to check out a branch and shall create no commit; a repository with no commits yet shall not be treated as detached.
+- **Type:** Non-functional (ISO 25010: Reliability)
+- **Evidence:** `electron/main.ts:2407-2421,2424`, commit `39fcad1`
+- **Status:** Implemented
+
+### REQ-GIT-410 — Git rules for annotation data
+- **Description:** When a project lies in a git repository, the system shall maintain, in the `.gitattributes` and `.gitignore` next to the project file, a delimited block that normalizes JSON line endings to LF, disables git's line merge for JSON, and ignores operating-system metadata files, preserving all content outside the block and never ignoring PDF files.
+- **Type:** Non-functional (ISO 25010: Compatibility — Interoperability)
+- **Evidence:** `src/git/repoSetup.ts:40-52,55-64,83-105`, `electron/main.ts:2657-2665,2667`, commit `b5cfee0`
+- **Verified by:** `src/git/repoSetup.test.ts`
+- **Status:** Implemented
+
+### REQ-GIT-411 — Consent and commit for repository rules
+- **Description:** When the repository rules of REQ-GIT-410 are missing, the system shall add them without asking if neither file has content of its own and otherwise only after the user consents, shall commit the change with SaiLoR as author and the user as committer, and shall announce the commit in a transient notice that dismisses itself on success and remains until closed on failure.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/git/repoSetup.ts:118-130,135`, `src/state/gitStore.ts:741,762`, `electron/main.ts:2677`, `src/components/RepoSetupPrompt.tsx`, `src/components/RepoSetupToast.tsx`, commits `b5cfee0`, `0c92b1a`
+- **Verified by:** `src/git/repoSetup.test.ts` (`planRepoSetup`), `src/components/RepoSetupToast.test.tsx`
+- **Status:** Implemented
+
+### REQ-GIT-420 — Show unpulled work
+- **Description:** When the current branch is known, as of the last fetch, to be behind its upstream, the system shall show the number of commits to pull in the toolbar and open the Git panel when it is activated, and shall show nothing when the count is zero or unknown.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/Toolbar.tsx:354`, commit `b5cfee0`
+- **Verified by:** `src/components/Toolbar.test.tsx` (`unpulled work and repository setup are visible in the toolbar`)
+- **Status:** Implemented
+
+### REQ-GIT-430 — List stashed changes
+- **Description:** The system shall list every stash in the repository in the Git panel, newest first, with its origin (a branch-switch carry-over, the Git panel, or elsewhere), branch, and date, expanding the list whenever it is non-empty, and shall show in the toolbar the number of stashes the application created while any exist.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/git/stash.ts:60-80,84-90`, `src/components/GitStashSection.tsx`, `src/components/Toolbar.tsx:339`, commit `e6444c1`
+- **Verified by:** `src/git/stash.test.ts`, `src/components/GitStashSection.test.tsx`
+- **Status:** Implemented
+
+### REQ-GIT-440 — Stash the project's own changes
+- **Description:** When the user stashes changes, the system shall stash only the project file and the project's own annotation files, untracked files included, shall refuse while the in-memory project has unsaved changes, and shall reload the project from disk afterwards.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/git/stashOps.ts:51-62`, `src/state/gitStore.ts:801`, `electron/main.ts:3008`, commit `e6444c1`
+- **Verified by:** `src/test/integration/stashOps.integration.test.tsx` (`pushStash`), `src/state/gitStore.test.ts` (`stashed changes`)
+- **Status:** Implemented
+
+### REQ-GIT-450 — All-or-nothing stash restore
+- **Description:** When a stash is restored, the system shall apply it only onto a tree without uncommitted tracked changes or untracked annotation files, shall remove the stash on success, and — when it does not apply cleanly — shall return every file to its state before the attempt, keep the stash, and report that nothing was changed.
+- **Type:** Non-functional (ISO 25010: Reliability — Recoverability)
+- **Evidence:** `src/git/stashOps.ts:85-109,122-128`, `src/state/gitStore.ts:814`, commit `e6444c1`
+- **Verified by:** `src/test/integration/stashOps.integration.test.tsx` (`restoreStash`, incl. `rolls a conflicting restore all the way back, keeping the stash`)
+- **Status:** Implemented
+
+### REQ-GIT-460 — Restore a stash on a new branch
+- **Description:** When the user restores a stash on a new branch, the system shall create a uniquely named branch at the commit the stash was taken from, apply the stash there, and remove it, refusing under the same conditions as REQ-GIT-450.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/git/stashOps.ts:147-157`, `src/git/stash.ts:93-102`, `src/state/gitStore.ts:852`, commit `e6444c1`
+- **Verified by:** `src/test/integration/stashOps.integration.test.tsx` (`branchFromStash`), `src/state/gitStore.test.ts` (`restores onto a branch that does not already exist`)
+- **Status:** Implemented
+
+### REQ-GIT-470 — Confirm stash deletion
+- **Description:** When a stash is deleted, the system shall request confirmation stating that its changes will be lost for good, and shall keep the stash when declined.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/GitStashSection.tsx:38`, `src/git/stashOps.ts:131-135`, commit `e6444c1`
+- **Verified by:** `src/components/GitStashSection.test.tsx`
+- **Status:** Implemented
+
+### REQ-GIT-480 — Identify stashes by commit
+- **Description:** The system shall identify a stash across the user-interface boundary by its commit identifier and resolve it to its current reflog position at the moment of each operation.
+- **Type:** Non-functional (ISO 25010: Reliability)
+- **Evidence:** `src/git/stashOps.ts:35-37`, `electron/main.ts:2999-3001`, commit `e6444c1`
+- **Verified by:** `src/test/integration/stashOps.integration.test.tsx` (`finds the right stash by sha after others have been pushed on top`)
+- **Status:** Implemented
+
+### REQ-GIT-490 — Disclose changes committed without a review row
+- **Description:** When a field-level review contains papers whose finished flags, PDF marks, entry matching, AI-usage records, or unrecognized keys changed, the system shall state in the review how many papers are affected and that those changes are committed regardless of the per-row dispositions.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/git/changes.ts:73-82,86-94`, `src/components/GitDialog.tsx:344`, commit `9187091`
+- **Verified by:** `src/git/changes.test.ts` (`papersWithBookkeepingChanges`)
+- **Status:** Implemented
+
+### REQ-GIT-500 — Carry hidden answers through merges
+- **Description:** When merging, the system shall carry answers held under nodes the schema no longer describes (REQ-DAT-165) through to the result, keep the local side where both sides hold different ones under the same node, and add a merge note naming the node and paper in that case.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/git/merge.ts:179-186,340`, commits `0e185f2`, `264d6b0`
+- **Verified by:** `src/git/merge.test.ts` (`mergeProjects — answers under a field the schema no longer has`)
+- **Status:** Implemented
+
+### REQ-GIT-510 — Warn about a paper already read in the same seat
+- **Description:** When the active seat's file for the current paper was last committed, outside merge commits, by a git identity other than the local one, the system shall show a non-blocking notice naming that person; it shall say nothing for other seats, other papers, the user's own earlier commits, or when no local identity is configured.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `electron/main.ts:2622`, `src/git/seatOwner.ts:71-94,120-133`, `src/components/SeatConflictNotice.tsx`, commit `c83daba`
+- **Verified by:** `src/git/seatOwner.test.ts`, `src/components/SeatConflictNotice.test.tsx`
+- **Status:** Implemented
+

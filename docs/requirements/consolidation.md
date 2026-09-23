@@ -19,15 +19,17 @@ for the glossary.
 - **Status:** Implemented
 
 ### REQ-CON-30 — Persist seat choice locally
-- **Description:** The system shall persist the selected reviewer seat per project on the local machine, keyed by the project's file path, and shall not store the seat choice in the project file.
+- **Description:** The system shall persist the selected reviewer seat per project on the local machine, keyed by the project's file path and recorded together with a sample of up to eight of the project's paper identifiers, and shall not store the seat choice in the project file.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/store.reviewers.test.ts:410-457`, `src/components/ReviewerPrompt.tsx:56-58`
+- **Evidence:** `src/state/store.ts:208-210,230-235,287-296`, commit `d6c5177`
+- **Verified by:** `src/state/store.reviewers.test.ts` (`reviewer selection is persisted per project`)
 - **Status:** Implemented
 
 ### REQ-CON-40 — Discard stale seat choices
-- **Description:** When a stored seat number exceeds the project's current reviewer count, the system shall ignore the stored choice and prompt for a new seat selection.
+- **Description:** When a stored seat number exceeds the project's current reviewer count, or when the project at the stored path shares none of the paper identifiers recorded with the seat, the system shall discard the stored choice and prompt for a new seat selection; a choice stored before identifiers were recorded shall be honored and rewritten with them.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/store.reviewers.test.ts:410-457`
+- **Evidence:** `src/state/store.ts:244-253,267-285,1278`, commit `d6c5177`
+- **Verified by:** `src/state/store.reviewers.test.ts` (`reviewer selection is persisted per project`, `a remembered seat belongs to a project, not to a path`)
 - **Status:** Implemented
 
 ### REQ-CON-50 — Seat switch outside undo history
