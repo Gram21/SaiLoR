@@ -1354,6 +1354,51 @@ describe('runDiscardFile', () => {
   })
 })
 
+describe('a carry-over that cannot be put back is never silent', () => {
+  // The original bug: when the automatic abort's stash pop failed, the panel
+  // refreshed and looked clean while the reviewer's uncommitted readings sat
+  // in a stash nobody was told about.
+  it("appends why the changes did not come back to the abort's own error", async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    await useGitStore.getState().refreshStatus()
+    useGitStore.getState().requestSwitchBranch('feature')
+    beginBranchSwitchResult = {
+      kind: 'merge',
+      sourceBranch: 'main',
+      base: projectText(null),
+      ours: projectText('mine'),
+      theirs: '{ not a project', // forces the automatic abort
+    }
+    branchSwitchAbortResult = {
+      ok: false,
+      code: 1,
+      stdout: '',
+      stderr: 'error: could not restore untracked files from stash\n\nYour uncommitted changes were not lost',
+    }
+    await useGitStore.getState().resolveBranchSwitchPrompt('carryOver')
+
+    const error = useGitStore.getState().panel?.error ?? ''
+    expect(branchSwitchAbortCalls).toHaveLength(1)
+    expect(error).toMatch(/could not restore untracked files/)
+    expect(error).toMatch(/not lost/)
+  })
+
+  it('adds nothing when the changes did come back', async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    await useGitStore.getState().refreshStatus()
+    useGitStore.getState().requestSwitchBranch('feature')
+    beginBranchSwitchResult = {
+      kind: 'merge',
+      sourceBranch: 'main',
+      base: projectText(null),
+      ours: projectText('mine'),
+      theirs: '{ not a project',
+    }
+    await useGitStore.getState().resolveBranchSwitchPrompt('carryOver')
+    expect(useGitStore.getState().panel?.error ?? '').not.toMatch(/stash/)
+  })
+})
+
 describe('stashed changes', () => {
   // These tests swap single methods on the shared fake; put them back so no
   // later test inherits a stub it did not ask for.

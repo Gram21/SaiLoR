@@ -1694,21 +1694,27 @@ export const useGitStore = create<GitState>()(
       // start.kind === 'merge': stash + checkout already happened — parse each
       // revision independently so a failure names which one, aborting back
       // to `start.sourceBranch` like `runPull` aborts its in-progress merge.
-      const abort = async () => {
-        await git.abortBranchSwitch(repo.root, start.sourceBranch)
+      // Returns what to append to the caller's own error: nothing when the
+      // changes came back, and otherwise git's reason plus where they went.
+      // Each caller then writes its error, so a failure reported any other way
+      // would be overwritten — which is exactly how a stranded carry-over used
+      // to go unmentioned while the panel looked clean.
+      const abort = async (): Promise<string> => {
+        const r = await git.abortBranchSwitch(repo.root, start.sourceBranch)
         await get().refreshRepo(useStore.getState().saveHandle)
         await get().refreshBranches()
         await get().refreshStatus()
+        return r.ok ? '' : `\n\n${gitErrorText(r)}`
       }
       let base: Project | null
       try {
         base = start.base === null ? null : loadProject(start.base)
       } catch (err) {
-        await abort()
+        const stranded = await abort()
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'idle'
-            s.panel.error = mergeParseError(`${start.sourceBranch} (before switching)`, err)
+            s.panel.error = mergeParseError(`${start.sourceBranch} (before switching)`, err) + stranded
           }
         })
         return
@@ -1717,11 +1723,11 @@ export const useGitStore = create<GitState>()(
       try {
         ours = loadProject(start.ours)
       } catch (err) {
-        await abort()
+        const stranded = await abort()
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'idle'
-            s.panel.error = mergeParseError('your uncommitted changes', err)
+            s.panel.error = mergeParseError('your uncommitted changes', err) + stranded
           }
         })
         return
@@ -1730,11 +1736,11 @@ export const useGitStore = create<GitState>()(
       try {
         theirs = loadProject(start.theirs)
       } catch (err) {
-        await abort()
+        const stranded = await abort()
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'idle'
-            s.panel.error = mergeParseError(branch, err)
+            s.panel.error = mergeParseError(branch, err) + stranded
           }
         })
         return
@@ -1742,11 +1748,11 @@ export const useGitStore = create<GitState>()(
 
       const outcome = mergeProjects(base, ours, theirs)
       if (outcome.kind === 'refused') {
-        await abort()
+        const stranded = await abort()
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'idle'
-            s.panel.error = [outcome.reason, ...outcome.details].join('\n')
+            s.panel.error = [outcome.reason, ...outcome.details].join('\n') + stranded
           }
         })
         return
