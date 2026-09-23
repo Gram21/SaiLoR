@@ -4,6 +4,7 @@ import { normalizeTree } from '../model/annotations'
 import type { AnnotationDef } from '../model/schema'
 import {
   merge3,
+  mergeResultProblem,
   mergeProjects,
   applyResolutions,
   conflictId,
@@ -498,10 +499,11 @@ describe('mergeProjects — schema changes', () => {
     expect(outcome.notes.some((n) => n.kind === 'schema-remote')).toBe(true)
   })
 
-  it('refuses when the remote removes a schema field that a reviewer answered', () => {
-    // Bug 3: `merge3` correctly picks theirs' schema (only theirs changed
-    // it), but walking only the winning schema means `Relevant` — which
-    // ours answered and theirs never touched — is silently never visited.
+  it('keeps answers under a field the remote removed, hidden, and says so', () => {
+    // The merged tree is walked against every node either side kept, and an
+    // answer under a node the schema no longer has rides along as a hidden
+    // answer — so removing a field on one side never discards the other
+    // side's answers under it.
     const base = project({ schema: SIMPLE, papers: [paper('a')] })
     const ours = project({
       schema: SIMPLE,
@@ -509,8 +511,10 @@ describe('mergeProjects — schema changes', () => {
     })
     const theirs = project({ schema: MINUS_RELEVANT, papers: [paper('a')] })
     const outcome = mergeProjects(base, ours, theirs)
-    expectRefused(outcome)
-    expect(outcome.details.some((d) => /Relevant/.test(d) && /\b1\b/.test(d))).toBe(true)
+    expectMerged(outcome)
+    expect(outcome.merged.schema.map((d) => d.name)).toEqual(['Study Type', 'Year'])
+    expect(outcome.merged.papers[0].annotations.Relevant).toEqual([{ value: true }])
+    expect(outcome.notes.some((n) => n.kind === 'schema-removed-answers' && /Relevant/.test(n.message))).toBe(true)
   })
 
   it('still merges cleanly when a remote schema removal has no answers under it', () => {
@@ -526,21 +530,25 @@ describe('mergeProjects — schema changes', () => {
     expect(outcome.notes.some((n) => n.kind === 'schema-remote')).toBe(true)
   })
 
-  it('refuses when the schema was changed on both sides, differently', () => {
+  it('combines a schema both sides extended, node by node', () => {
     const base = project({ schema: SIMPLE, papers: [] })
     const ours = project({ schema: PLUS_X, papers: [] })
     const theirs = project({ schema: PLUS_Y, papers: [] })
     const outcome = mergeProjects(base, ours, theirs)
-    expectRefused(outcome)
-    expect(outcome.details.some((d) => /schema/i.test(d))).toBe(true)
+    expectMerged(outcome)
+    expect(outcome.merged.schema.map((d) => d.name)).toEqual(['Study Type', 'Year', 'Relevant', 'Extra X', 'Extra Y'])
+    expect(outcome.conflicts).toEqual([])
   })
 
-  it('refuses when config.reviewers was changed on both sides, differently', () => {
+  it('asks for the reviewer count when both sides changed it, differently', () => {
     const base = project({ reviewers: 1, papers: [] })
     const ours = project({ reviewers: 2, papers: [] })
     const theirs = project({ reviewers: 3, papers: [] })
     const outcome = mergeProjects(base, ours, theirs)
-    expectRefused(outcome)
+    expectMerged(outcome)
+    const row = outcome.conflicts.find((c) => c.canonical === 'reviewers')!
+    expect(row).toMatchObject({ type: 'number', ours: 2, theirs: 3 })
+    expect(applyResolutions(outcome.merged, outcome.conflicts, { [row.id]: 4 }).reviewers).toBe(4)
   })
 
   it('carries a non-screening project\'s screening field through as null', () => {
@@ -566,13 +574,18 @@ describe('mergeProjects — schema changes', () => {
     expect(outcome.notes.some((n) => n.kind === 'screening-remote')).toBe(true)
   })
 
-  it('refuses when config.screening was changed on both sides, differently', () => {
+  it('asks whose screening setup to keep when both sides changed it, differently', () => {
     const base = project({ screening: { reasons: ['Wrong topic'] }, papers: [] })
     const ours = project({ screening: { reasons: ['Duplicate'] }, papers: [] })
     const theirs = project({ screening: { reasons: ['Not in English'] }, papers: [] })
     const outcome = mergeProjects(base, ours, theirs)
-    expectRefused(outcome)
-    expect(outcome.details.some((d) => /screening/i.test(d))).toBe(true)
+    expectMerged(outcome)
+    const row = outcome.conflicts.find((c) => c.canonical === 'screening')!
+    expect(row.type).toBe('choice')
+    expect(row.theirsText).toMatch(/Not in English/)
+    const resolved = applyResolutions(outcome.merged, outcome.conflicts, { [row.id]: 'theirs' })
+    expect(resolved.screening).toEqual({ reasons: ['Not in English'] })
+    expect(resolved.schema.find((d) => d.name === 'Reason')?.options).toContain('Not in English')
   })
 
   it('takes the remote turning screening off, when only the remote changed it', () => {
@@ -585,22 +598,26 @@ describe('mergeProjects — schema changes', () => {
     expect(outcome.merged.schema.map((d) => d.name)).toEqual(SIMPLE.map((d) => d.name))
   })
 
-  it('refuses when a root extra key was changed on both sides, differently', () => {
+  it('asks whose value to keep for a root extra key both sides changed', () => {
     const base = project({ extra: { source: 'a' } })
     const ours = project({ extra: { source: 'b' } })
     const theirs = project({ extra: { source: 'c' } })
     const outcome = mergeProjects(base, ours, theirs)
-    expectRefused(outcome)
-    expect(outcome.details.some((d) => d.includes('source'))).toBe(true)
+    expectMerged(outcome)
+    const row = outcome.conflicts.find((c) => c.canonical === 'extra.source')!
+    expect(outcome.merged.extra.source).toBe('b')
+    expect(applyResolutions(outcome.merged, outcome.conflicts, { [row.id]: 'theirs' }).extra.source).toBe('c')
   })
 
-  it('refuses when a paper extra key was changed on both sides, differently', () => {
+  it('asks whose value to keep for a paper extra key both sides changed', () => {
     const base = project({ papers: [paper('a', { extra: { note: 'base' } })] })
     const ours = project({ papers: [paper('a', { extra: { note: 'ours' } })] })
     const theirs = project({ papers: [paper('a', { extra: { note: 'theirs' } })] })
     const outcome = mergeProjects(base, ours, theirs)
-    expectRefused(outcome)
-    expect(outcome.details.some((d) => d.includes('note'))).toBe(true)
+    expectMerged(outcome)
+    const row = outcome.conflicts.find((c) => c.canonical === 'extra.note')!
+    expect(row.paperId).toBe('a')
+    expect(applyResolutions(outcome.merged, outcome.conflicts, { [row.id]: 'theirs' }).papers[0].extra.note).toBe('theirs')
   })
 })
 
@@ -650,13 +667,15 @@ describe('mergeProjects — provenance', () => {
     expect(outcome.merged.provenance).toEqual(PROV_A)
   })
 
-  it('refuses when both sides set a different provenance', () => {
+  it('asks whose provenance to keep when both sides set a different one', () => {
     const base = project({ papers: [] })
     const ours = project({ provenance: PROV_A, papers: [] })
     const theirs = project({ provenance: PROV_B, papers: [] })
     const outcome = mergeProjects(base, ours, theirs)
-    expectRefused(outcome)
-    expect(outcome.details.some((d) => /imported from/i.test(d))).toBe(true)
+    expectMerged(outcome)
+    const row = outcome.conflicts.find((c) => c.canonical === 'provenance')!
+    expect(row.theirsText).toMatch(/other-screening\.json/)
+    expect(applyResolutions(outcome.merged, outcome.conflicts, { [row.id]: 'theirs' }).provenance).toEqual(PROV_B)
   })
 
   it('merges cleanly when both sides independently set the identical provenance', () => {
@@ -697,13 +716,20 @@ describe('mergeProjects — protocol', () => {
     expect(outcome.merged.protocol).toEqual(PROTO_A)
   })
 
-  it('refuses when both sides edited the protocol differently — never half-drops an authored one', () => {
+  it('asks per protocol entry when both sides edited it differently — never half-drops an authored one', () => {
     const base = project({ protocol: PROTO_A, papers: [] })
     const ours = project({ protocol: PROTO_B, papers: [] })
     const theirs = project({ protocol: { researchQuestions: ['A third RQ'] }, papers: [] })
     const outcome = mergeProjects(base, ours, theirs)
-    expectRefused(outcome)
-    expect(outcome.details.some((d) => /protocol/i.test(d))).toBe(true)
+    expectMerged(outcome)
+    const rq = outcome.conflicts.find((c) => c.canonical === 'protocol.researchQuestions')!
+    const db = outcome.conflicts.find((c) => c.canonical === 'protocol.databases')!
+    expect(rq).toMatchObject({ ours: 'A different RQ', theirs: 'A third RQ' })
+    const resolved = applyResolutions(outcome.merged, outcome.conflicts, {
+      [rq.id]: 'A different RQ\nA third RQ',
+      [db.id]: 'IEEE',
+    })
+    expect(resolved.protocol).toEqual({ researchQuestions: ['A different RQ', 'A third RQ'], databases: ['IEEE'] })
   })
 
   it('merges cleanly when both sides independently authored the identical protocol', () => {
@@ -1182,5 +1208,99 @@ describe('mergeProjects — answers under a field the schema no longer has', () 
     const outcome = mergeProjects(base, ours, theirs)
     expectMerged(outcome)
     expect(outcome.notes.some((n) => n.kind === 'orphans-kept-ours')).toBe(false)
+  })
+})
+
+describe('mergeProjects — schema, node by node', () => {
+  const merged = (base: AnnotationDef[], ours: AnnotationDef[], theirs: AnnotationDef[], papers = [paper('a')]) => {
+    const outcome = mergeProjects(project({ schema: base, papers }), project({ schema: ours, papers }), project({ schema: theirs, papers }))
+    expectMerged(outcome)
+    return outcome
+  }
+  const row = (o: { conflicts: FieldConflict[] }, part: string) => o.conflicts.find((c) => JSON.parse(c.canonical)[1] === part)!
+
+  it('merges edits to different properties of one node without asking', () => {
+    const base: AnnotationDef[] = [{ name: 'Kind', type: 'string' }]
+    const o = merged(base, [{ name: 'Kind', type: 'string', description: 'What kind' }], [
+      { name: 'Kind', type: 'string', options: ['A', 'B'] },
+    ])
+    expect(o.conflicts).toEqual([])
+    expect(o.merged.schema[0]).toMatchObject({ description: 'What kind', options: ['A', 'B'] })
+  })
+
+  it('asks where both sides changed the same property, and accepts a combined third version', () => {
+    const base: AnnotationDef[] = [{ name: 'Kind', type: 'string', options: ['A'] }]
+    const o = merged(base, [{ name: 'Kind', type: 'string', options: ['A', 'B'] }], [
+      { name: 'Kind', type: 'string', options: ['A', 'C'] },
+    ])
+    const options = row(o, 'options')
+    expect(options).toMatchObject({ type: 'string', ours: 'A\nB', theirs: 'A\nC' })
+    const resolved = applyResolutions(o.merged, o.conflicts, { [options.id]: 'A\nB\nC' })
+    expect(resolved.schema[0].options).toEqual(['A', 'B', 'C'])
+  })
+
+  it('merges children of a group both sides changed', () => {
+    const base: AnnotationDef[] = [{ name: 'G', children: [{ name: 'a', type: 'string' }] }]
+    const o = merged(
+      base,
+      [{ name: 'G', children: [{ name: 'a', type: 'string' }, { name: 'b', type: 'string' }] }],
+      [{ name: 'G', children: [{ name: 'a', type: 'string', required: true }, { name: 'c', type: 'string' }] }],
+    )
+    expect(o.conflicts).toEqual([])
+    const g = o.merged.schema[0]
+    expect(g.children.map((d) => [d.id, d.required])).toEqual([
+      ['G/a', true],
+      ['G/b', false],
+      ['G/c', false],
+    ])
+  })
+
+  it('asks to keep or remove a node one side removed and the other changed', () => {
+    const base: AnnotationDef[] = [{ name: 'Keep', type: 'string' }, { name: 'X', type: 'string' }]
+    const o = merged(base, [{ name: 'Keep', type: 'string' }], [
+      { name: 'Keep', type: 'string' },
+      { name: 'X', type: 'string', description: 'now described' },
+    ])
+    const presence = row(o, 'presence')
+    expect(presence).toMatchObject({ type: 'choice', payload: { ours: 'remove', theirs: 'keep' } })
+    // Held in the merge until decided, so the trees are merged against it.
+    expect(o.merged.schema.map((d) => d.name)).toEqual(['Keep', 'X'])
+    expect(applyResolutions(o.merged, o.conflicts, { [presence.id]: 'ours' }).schema.map((d) => d.name)).toEqual(['Keep'])
+    expect(applyResolutions(o.merged, o.conflicts, { [presence.id]: 'theirs' }).schema.map((d) => d.name)).toEqual(['Keep', 'X'])
+  })
+
+  it('offers a type change as a choice, and keeps the answers under a node chosen away', () => {
+    const base: AnnotationDef[] = [{ name: 'N', type: 'string' }]
+    const answered = [paper('a', { annotations: { N: [{ value: 'seven' }] } })]
+    const o = merged(base, [{ name: 'N', type: 'number' }], [{ name: 'N', type: 'year' }], answered)
+    const type = row(o, 'type')
+    expect(type).toMatchObject({ type: 'choice', oursText: 'Number', theirsText: 'Year' })
+    expect(applyResolutions(o.merged, o.conflicts, { [type.id]: 'theirs' }).schema[0].type).toBe('year')
+    expect(o.merged.papers[0].annotations.N).toEqual([{ value: 'seven' }])
+  })
+
+  it('treats a rename as a removal plus an addition, merging without asking', () => {
+    const base: AnnotationDef[] = [{ name: 'Old', type: 'string' }, { name: 'Other', type: 'string' }]
+    const o = merged(base, [{ name: 'New', type: 'string' }, { name: 'Other', type: 'string' }], [
+      { name: 'Old', type: 'string' },
+      { name: 'Other', type: 'string', required: true },
+    ])
+    expect(o.conflicts).toEqual([])
+    expect(o.merged.schema.map((d) => d.name)).toEqual(['New', 'Other'])
+  })
+})
+
+describe('mergeResultProblem', () => {
+  it('names a combined schema the loader would refuse', () => {
+    // Each side removed a different one of G's children, leaving it with none.
+    const two = [{ name: 'G', children: [{ name: 'a', type: 'string' }, { name: 'b', type: 'string' }] }] as AnnotationDef[]
+    const b = project({ schema: two, papers: [] })
+    const o = project({ schema: [{ name: 'G', children: [{ name: 'b', type: 'string' }] }], papers: [] })
+    const t = project({ schema: [{ name: 'G', children: [{ name: 'a', type: 'string' }] }], papers: [] })
+    const outcome = mergeProjects(b, o, t)
+    expectMerged(outcome)
+    expect(outcome.merged.schema[0].children).toEqual([])
+    expect(mergeResultProblem(outcome.merged)).toBeTruthy()
+    expect(mergeResultProblem(b)).toBeNull()
   })
 })

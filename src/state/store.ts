@@ -52,6 +52,7 @@ import { resolveClash } from '../model/staleSave'
 import {
   applyResolutions,
   mergeProjects,
+  mergeResultProblem,
   type FieldConflict,
   type MergeNote,
   type Resolutions,
@@ -1601,6 +1602,13 @@ export const useStore = create<AppState>()(
         return
       }
       if (outcome.conflicts.length === 0) {
+        const problem = mergeResultProblem(outcome.merged)
+        if (problem) {
+          set((s) => {
+            if (s.staleSave) s.staleSave.refusal = `The combined project would not open again: ${problem}`
+          })
+          return
+        }
         await adoptAndSave(outcome.merged)
         return
       }
@@ -1642,7 +1650,15 @@ export const useStore = create<AppState>()(
     finishStaleCombine: async () => {
       const merge = get().staleSave?.merge
       if (!merge) return
-      await adoptAndSave(applyResolutions(merge.merged, merge.conflicts, merge.resolutions))
+      const resolved = applyResolutions(merge.merged, merge.conflicts, merge.resolutions)
+      const problem = mergeResultProblem(resolved)
+      if (problem) {
+        set((s) => {
+          if (s.staleSave) s.staleSave.error = `The combined project would not open again, so nothing was saved: ${problem}`
+        })
+        return
+      }
+      await adoptAndSave(resolved)
     },
 
     backToStaleChoice: () => {

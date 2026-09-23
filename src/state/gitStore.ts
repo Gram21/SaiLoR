@@ -7,6 +7,7 @@ import type { SplitProject } from '../git/types'
 import type { FieldValue } from '../model/annotations'
 import {
   mergeProjects,
+  mergeResultProblem,
   applyResolutions,
   type FieldConflict,
   type MergeNote,
@@ -404,6 +405,16 @@ export const useGitStore = create<GitState>()(
       const repo = get().repo
       if (!git || !repo) return
       const resolved = applyResolutions(merged, conflicts, resolutions)
+      const problem = mergeResultProblem(resolved)
+      if (problem) {
+        set((s) => {
+          if (s.panel) {
+            s.panel.error = `The merged project would not open again, so nothing was written: ${problem}`
+            if (!s.panel.merge) s.panel.merge = { source, ref, merged, conflicts, resolutions, decided: {}, notes }
+          }
+        })
+        return
+      }
       const r =
         source.kind === 'branch-switch'
           ? await git.finishBranchSwitch(repo.root, repo.relPath, toSplitProject(resolved))

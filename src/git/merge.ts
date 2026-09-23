@@ -10,6 +10,8 @@ import {
 } from '../model/annotations'
 import {
   deepEqualJson,
+  loadProject,
+  serializeProject,
   type AiUsageRecord,
   type Paper,
   type Project,
@@ -42,6 +44,7 @@ export type MergeTree =
   | { kind: 'paper' } // one paper's metadata (title, pdf, doi, authors, year, venue, abstract, abstractFromPdf)
   | { kind: 'annotations' } // the single / consolidated tree
   | { kind: 'review'; reviewer: string } // one numbered reviewer's own tree
+  | { kind: 'schema' } // one node of the annotation schema
 
 export interface FieldConflict {
   /** Stable identity — the resolution map's key and the row's React key. */
@@ -56,13 +59,20 @@ export interface FieldConflict {
   /** What the row shows: "Findings #2 › Claim", "Title", "Authors". */
   label: string
   /** How the middle control renders. Everything outside an annotation tree
-   *  (title, pdf, doi, authors) is rendered as a plain string. */
-  type: FieldType
+   *  (title, pdf, doi, authors) is rendered as a plain string. `'choice'` is a
+   *  value no row can edit (a reasons list, a condition, a whole record): the
+   *  reviewer picks a side, `ours`/`theirs` hold `'ours'`/`'theirs'`, and
+   *  `payload` the values themselves. */
+  type: FieldType | 'choice'
   options?: string[]
   base: FieldValue
   /** The local value. Also what `merged` holds until the conflict is resolved. */
   ours: FieldValue
   theirs: FieldValue
+  /** For `'choice'`: what each side's value is, in words. */
+  oursText?: string
+  theirsText?: string
+  payload?: { ours: unknown; theirs: unknown }
 }
 
 export type MergeNoteKind =
@@ -76,6 +86,7 @@ export type MergeNoteKind =
   | 'screening-remote'
   | 'repeatable-additions-kept'
   | 'orphans-kept-ours'
+  | 'schema-removed-answers'
 
 export interface MergeNote {
   kind: MergeNoteKind
@@ -134,6 +145,8 @@ export function treeLabel(tree: MergeTree, reviewers: number): string {
   switch (tree.kind) {
     case 'project':
       return 'Project'
+    case 'schema':
+      return 'Schema'
     case 'paper':
       return 'Paper details'
     case 'annotations':
@@ -405,6 +418,35 @@ function mergeEqual(base: string[] | undefined, ours: string[], theirs: string[]
   return out
 }
 
+/** A key SaiLoR does not know, changed on both sides: kept verbatim, so the
+ *  reviewer picks whose. */
+function extraChoice(
+  paperId: string,
+  paperTitle: string,
+  tree: MergeTree,
+  key: string,
+  ours: unknown,
+  theirs: unknown,
+): FieldConflict {
+  const describe = (v: unknown) => (v === undefined ? '— not set —' : JSON.stringify(v))
+  const canonical = `extra.${key}`
+  return {
+    id: conflictId(paperId, tree, canonical),
+    paperId,
+    paperTitle,
+    tree,
+    canonical,
+    label: `"${key}"`,
+    type: 'choice',
+    base: null,
+    ours: 'ours',
+    theirs: 'theirs',
+    oursText: describe(ours),
+    theirsText: describe(theirs),
+    payload: { ours, theirs },
+  }
+}
+
 function mergePaper(
   schema: ResolvedDef[],
   base: Paper | undefined,
@@ -535,7 +577,8 @@ function mergePaper(
   for (const k of extraKeys) {
     const m = merge3<unknown>(base?.extra[k], ours.extra[k], theirs.extra[k], deepEqualJson)
     if (!m) {
-      refusals.push(`papers[${ours.id}].${k}`)
+      conflicts.push(extraChoice(ours.id, ours.title, { kind: 'paper' }, k, ours.extra[k], theirs.extra[k]))
+      if (ours.extra[k] !== undefined) extra[k] = ours.extra[k]
       continue
     }
     if (m.value !== undefined) extra[k] = m.value
@@ -789,6 +832,235 @@ function mergePapers(
 }
 
 // ---------------------------------------------------------------------------
+// Schema merge
+// ---------------------------------------------------------------------------
+
+/** A schema row's `canonical`: the node's name path plus which part of it. */
+function schemaCanonical(path: string[], part: string): string {
+  return JSON.stringify([path, part])
+}
+
+function parseSchemaCanonical(canonical: string): { path: string[]; part: string } | null {
+  try {
+    const [path, part] = JSON.parse(canonical) as [string[], string]
+    return Array.isArray(path) && typeof part === 'string' ? { path, part } : null
+  } catch {
+    return null
+  }
+}
+
+const TYPE_WORDS: Record<string, string> = {
+  string: 'Text',
+  number: 'Number',
+  boolean: 'Yes/No',
+  year: 'Year',
+}
+
+function describeType(t: FieldType | undefined): string {
+  return t ? TYPE_WORDS[t] : 'Group (no value of its own)'
+}
+
+function describeVisibleIf(v: ResolvedDef['visibleIf']): string {
+  if (!v) return 'Always shown'
+  return JSON.stringify(v)
+}
+
+/** Node identity is its name within its parent, so a rename reads as a
+ *  removal plus an addition — each one-sided, and so merged without asking. */
+function withoutIds(d: ResolvedDef | undefined): unknown {
+  if (!d) return undefined
+  const { id: _id, children, ...rest } = d
+  return { ...rest, children: children.map(withoutIds) }
+}
+
+/** Ours' order, with each node only theirs has placed after the sibling it
+ *  follows there. */
+function mergedOrder(ours: ResolvedDef[], theirs: ResolvedDef[]): string[] {
+  const order = ours.map((d) => d.name)
+  const theirNames = new Set(theirs.map((d) => d.name))
+  theirs.forEach((d, i) => {
+    if (order.includes(d.name)) return
+    let at = 0
+    for (let j = i - 1; j >= 0; j--) {
+      const k = order.indexOf(theirs[j].name)
+      if (k >= 0) {
+        at = k + 1
+        break
+      }
+    }
+    // After any nodes only ours added there, so each side's additions stay together.
+    while (at < order.length && !theirNames.has(order[at])) at++
+    order.splice(at, 0, d.name)
+  })
+  return order
+}
+
+/**
+ * Merge the schema node by node. The result keeps every node either side
+ * still has — a node removed on one side and changed on the other becomes a
+ * keep-or-remove row rather than a guess — because the annotation trees are
+ * walked against it, and a node missing here would let its answers slip out
+ * of the merge. Property rows hold ours until the reviewer decides.
+ */
+function mergeSchemaDefs(
+  base: ResolvedDef[] | undefined,
+  ours: ResolvedDef[],
+  theirs: ResolvedDef[],
+  path: string[],
+  conflicts: FieldConflict[],
+): ResolvedDef[] {
+  const byName = (defs: ResolvedDef[] | undefined) => new Map((defs ?? []).map((d) => [d.name, d]))
+  const b = byName(base)
+  const o = byName(ours)
+  const tm = byName(theirs)
+  const label = (name: string, what: string) => `${[...path, name].join(' › ')} — ${what}`
+  const out: ResolvedDef[] = []
+
+  for (const name of mergedOrder(ours, theirs)) {
+    const bd = b.get(name)
+    const od = o.get(name)
+    const td = tm.get(name)
+    const push = (conflict: Omit<FieldConflict, 'id' | 'paperId' | 'paperTitle' | 'tree'>) =>
+      conflicts.push({
+        id: conflictId('', { kind: 'schema' }, conflict.canonical),
+        paperId: '',
+        paperTitle: '',
+        tree: { kind: 'schema' },
+        ...conflict,
+      })
+
+    if (!od || !td) {
+      const present = (od ?? td)!
+      if (bd && deepEqualJson(withoutIds(bd), withoutIds(present))) continue // removed on the other side
+      if (bd) {
+        const word = (has: boolean) => (has ? 'Keep it (changed on this side)' : 'Remove it (removed on this side)')
+        push({
+          canonical: schemaCanonical([...path, name], 'presence'),
+          label: label(name, 'removed on one side, changed on the other'),
+          type: 'choice',
+          base: null,
+          ours: 'ours',
+          theirs: 'theirs',
+          oursText: word(!!od),
+          theirsText: word(!!td),
+          payload: { ours: od ? 'keep' : 'remove', theirs: td ? 'keep' : 'remove' },
+        })
+      }
+      out.push(present)
+      continue
+    }
+
+    const node: ResolvedDef = { ...od }
+    const nodePath = [...path, name]
+    const part = <K extends keyof ResolvedDef>(
+      key: K,
+      what: string,
+      row: (bv: ResolvedDef[K] | undefined, ov: ResolvedDef[K], tv: ResolvedDef[K]) => Omit<
+        FieldConflict,
+        'id' | 'paperId' | 'paperTitle' | 'tree' | 'canonical' | 'label'
+      >,
+    ) => {
+      const m = merge3<ResolvedDef[K] | undefined>(bd?.[key], od[key], td[key], deepEqualJson)
+      if (m) {
+        ;(node as unknown as Record<string, unknown>)[key] = m.value
+        return
+      }
+      push({ canonical: schemaCanonical(nodePath, key), label: label(name, what), ...row(bd?.[key], od[key], td[key]) })
+    }
+    const choice = <T,>(describe: (v: T) => string) => (_b: unknown, ov: T, tv: T) => ({
+      type: 'choice' as const,
+      base: null,
+      ours: 'ours',
+      theirs: 'theirs',
+      oursText: describe(ov),
+      theirsText: describe(tv),
+      payload: { ours: ov, theirs: tv },
+    })
+    part('type', 'kind of answer', choice(describeType))
+    part('min', 'minimum entries', (bv, ov, tv) => ({ type: 'number', base: bv ?? null, ours: ov, theirs: tv }))
+    part('max', 'maximum entries (empty = unlimited)', (bv, ov, tv) => ({
+      type: 'number',
+      base: bv ?? null,
+      ours: ov,
+      theirs: tv,
+    }))
+    part('required', 'required', (bv, ov, tv) => ({ type: 'boolean', base: bv ?? false, ours: ov, theirs: tv }))
+    part('description', 'description', (bv, ov, tv) => ({
+      type: 'string',
+      base: sOrNull(bv),
+      ours: sOrNull(ov),
+      theirs: sOrNull(tv),
+    }))
+    part('options', 'fixed choices, one per line', (bv, ov, tv) => ({
+      type: 'string',
+      base: (bv ?? []).join('\n'),
+      ours: (ov ?? []).join('\n'),
+      theirs: (tv ?? []).join('\n'),
+    }))
+    part('visibleIf', 'when it is shown', choice(describeVisibleIf))
+    node.children = mergeSchemaDefs(bd?.children, od.children, td.children, nodePath, conflicts)
+    out.push(node)
+  }
+  return out
+}
+
+/** Ids are derived from the name path (see `resolveDefs`), so recompute them
+ *  once the merge has settled which nodes exist where. */
+function withPathIds(defs: ResolvedDef[], parent = ''): ResolvedDef[] {
+  return defs.map((d) => {
+    const id = parent ? `${parent}/${d.name}` : d.name
+    return { ...d, id, children: withPathIds(d.children, id) }
+  })
+}
+
+function defsAt(schema: ResolvedDef[], path: string[]): { list: ResolvedDef[]; index: number } | null {
+  let list = schema
+  for (let i = 0; i < path.length; i++) {
+    const index = list.findIndex((d) => d.name === path[i])
+    if (index < 0) return null
+    if (i === path.length - 1) return { list, index }
+    list = list[index].children
+  }
+  return null
+}
+
+function applySchemaRow(draft: Project, conflict: FieldConflict, value: FieldValue, chosen: unknown): void {
+  const parsed = parseSchemaCanonical(conflict.canonical)
+  if (!parsed) return
+  const at = defsAt(draft.schema, parsed.path)
+  if (!at) return
+  const def = at.list[at.index]
+  switch (parsed.part) {
+    case 'presence':
+      if (chosen === 'remove') at.list.splice(at.index, 1)
+      break
+    case 'type':
+    case 'visibleIf':
+      ;(def as unknown as Record<string, unknown>)[parsed.part] = chosen
+      break
+    case 'min':
+      def.min = typeof value === 'number' && value >= 0 ? Math.floor(value) : def.min
+      break
+    case 'max':
+      def.max = typeof value === 'number' && value >= 1 ? Math.floor(value) : null
+      break
+    case 'required':
+      def.required = value === true
+      break
+    case 'description': {
+      const s = valueToString(value).trim()
+      def.description = s || undefined
+      break
+    }
+    case 'options': {
+      const lines = [...new Set(valueToString(value).split('\n').map((l) => l.trim()).filter(Boolean))]
+      def.options = lines.length > 0 ? lines : undefined
+      break
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Project merge
 // ---------------------------------------------------------------------------
 
@@ -801,36 +1073,11 @@ function refused(refusals: string[]): MergeOutcome {
 }
 
 function refusalDetail(key: string): string {
-  // A few refusals (a stranded repeatable-node edit, a schema removal
-  // discarding answers) name specifics the generic message below would
-  // garble, so they push their finished sentence here instead of a key.
+  // A stranded repeatable-node edit names specifics a generic message would
+  // garble, so it pushes its finished sentence instead of a key.
   if (key.startsWith('verbatim:')) return key.slice('verbatim:'.length)
-  switch (key) {
-    case 'version':
-      return 'The file format version was changed on both sides.'
-    case 'config.schema':
-      return (
-        'The annotation schema was changed on both sides. The schema decides the shape of every ' +
-        'annotation tree, so there is no field-level answer here — reconcile the schema first ' +
-        '(pull into a copy, or agree on one side), then merge the annotations.'
-      )
-    case 'config.ai':
-      return 'Whether AI-assisted annotation is enabled was changed on both sides.'
-    case 'config.reviewers':
-      return 'The number of reviewers was changed on both sides.'
-    case 'config.screening':
-      return (
-        'The screening configuration was changed on both sides — whether this project screens at ' +
-        'all, or its exclusion reasons, decides the shape of every annotation tree the same way ' +
-        'the schema does. Reconcile it first, then merge.'
-      )
-    case 'provenance':
-      return 'Where this project was imported from was recorded differently on both sides.'
-    case 'protocol':
-      return 'The review protocol (research questions, search, criteria) was edited on both sides.'
-    default:
-      return `"${key}" was changed on both sides and is not an annotation field, so it cannot be merged automatically.`
-  }
+  if (key === 'version') return 'The file format version was changed on both sides.'
+  return `"${key}" was changed on both sides and cannot be merged automatically.`
 }
 
 /** True when `side` differs from `base` — used only to decide whether a note
@@ -889,28 +1136,26 @@ function countAtPath(path: string[], def: ResolvedDef, tree: AnnotationValueTree
 }
 
 /**
- * Bug 3: every tree is walked against only the winning schema, so a field the
- * losing side removed is never visited, silently extending that schema vote
- * to answers nobody agreed to discard. Refuses (naming the field and answer
- * count) only when there's something real to lose.
+ * Schema nodes the merge removed that still hold answers. Nothing is lost —
+ * the trees are merged against every node either side kept, and answers under
+ * a node the schema no longer has are carried as hidden answers (see
+ * `orphanedNodes`) — but the reviewer should hear that they went out of view.
  */
-function schemaRemovalRefusal(
+function schemaRemovalNote(
   base: Project | null,
   mergedSchema: ResolvedDef[],
   ours: Project,
   theirs: Project,
-): string | null {
-  if (!base) return null // nothing existed at the base to have answers removed from.
+): MergeNote | null {
+  if (!base) return null
   const removed = collectRemovedDefs(base.schema, mergedSchema)
   if (removed.length === 0) return null
-
   const trees = [
     ...ours.papers.map((p) => p.annotations),
     ...theirs.papers.map((p) => p.annotations),
     ...ours.papers.flatMap((p) => Object.values(p.reviews)),
     ...theirs.papers.flatMap((p) => Object.values(p.reviews)),
   ]
-
   let total = 0
   const names: string[] = []
   for (const { path, def } of removed) {
@@ -921,12 +1166,13 @@ function schemaRemovalRefusal(
     }
   }
   if (total === 0) return null
-
-  return (
-    `verbatim:The schema change removes ${names.map((n) => `"${n}"`).join(', ')}, which ` +
-    `${total === 1 ? 'holds 1 answer' : `holds ${total} answers`} across your reviewers. ` +
-    `Export or push what you have before retrying, then reconcile the schema so it doesn't drop them.`
-  )
+  return {
+    kind: 'schema-removed-answers',
+    message:
+      `The merged schema no longer has ${names.map((n) => `"${n}"`).join(', ')}, which ` +
+      `${total === 1 ? 'holds 1 answer' : `holds ${total} answers`}. They are kept in the files, ` +
+      'hidden, and come back if the field does.',
+  }
 }
 
 /**
@@ -937,149 +1183,142 @@ function schemaRemovalRefusal(
 export function mergeProjects(base: Project | null, ours: Project, theirs: Project): MergeOutcome {
   const eqNum = (a: number | undefined, b: number | undefined) => a === b
   const eqBool = (a: boolean | undefined, b: boolean | undefined) => a === b
-  const rootRefusals: string[] = []
+  const conflicts: FieldConflict[] = []
+  const notes: MergeNote[] = []
 
-  // Re-shaping decisions: a difference here changes the shape of every tree
-  // in the file, so there's no field-level answer — refuse rather than guess.
+  // The one thing with no answer at all: the file format itself.
   const versionM = merge3<number | undefined>(base?.version, ours.version, theirs.version, eqNum)
-  if (!versionM) rootRefusals.push('version')
+  if (!versionM) return refused(['version'])
 
-  const schemaM = merge3<ResolvedDef[] | undefined>(base?.schema, ours.schema, theirs.schema, deepEqualJson)
-  if (!schemaM) rootRefusals.push('config.schema')
+  const projectRow = (canonical: string, label: string, row: Pick<FieldConflict, 'type' | 'base' | 'ours' | 'theirs'>) =>
+    conflicts.push({
+      id: conflictId('', { kind: 'project' }, canonical),
+      paperId: '',
+      paperTitle: '',
+      tree: { kind: 'project' },
+      canonical,
+      label,
+      ...row,
+    })
+  const projectChoice = <T,>(canonical: string, label: string, ov: T, tv: T, describe: (v: T) => string) =>
+    conflicts.push({
+      id: conflictId('', { kind: 'project' }, canonical),
+      paperId: '',
+      paperTitle: '',
+      tree: { kind: 'project' },
+      canonical,
+      label,
+      type: 'choice',
+      base: null,
+      ours: 'ours',
+      theirs: 'theirs',
+      oursText: describe(ov),
+      theirsText: describe(tv),
+      payload: { ours: ov, theirs: tv },
+    })
 
   const aiM = merge3<boolean | undefined>(base?.aiEnabled, ours.aiEnabled, theirs.aiEnabled, eqBool)
-  if (!aiM) rootRefusals.push('config.ai')
+  if (!aiM) projectRow('aiEnabled', 'AI-assisted annotation enabled', { type: 'boolean', base: base?.aiEnabled ?? null, ours: ours.aiEnabled, theirs: theirs.aiEnabled })
 
-  // Refused on two-sided disagreement: this decides what every green dot in
-  // the file means (see `Project.finishCheckbox`), so guessing would silently
-  // redefine both reviewers' progress reports.
-  const finishM = merge3<boolean | undefined>(
-    base?.finishCheckbox,
-    ours.finishCheckbox,
-    theirs.finishCheckbox,
-    eqBool,
-  )
-  if (!finishM) rootRefusals.push('config.finishCheckbox')
+  const finishM = merge3<boolean | undefined>(base?.finishCheckbox, ours.finishCheckbox, theirs.finishCheckbox, eqBool)
+  if (!finishM) {
+    projectRow('finishCheckbox', 'Show the "finished" checkbox', {
+      type: 'boolean',
+      base: base?.finishCheckbox ?? null,
+      ours: ours.finishCheckbox,
+      theirs: theirs.finishCheckbox,
+    })
+  }
 
   const reviewersM = merge3<number | undefined>(base?.reviewers, ours.reviewers, theirs.reviewers, eqNum)
-  if (!reviewersM) rootRefusals.push('config.reviewers')
+  if (!reviewersM) {
+    projectRow('reviewers', 'Number of reviewers', { type: 'number', base: base?.reviewers ?? null, ours: ours.reviewers, theirs: theirs.reviewers })
+  }
 
-  // Reshaping like `schema`: whether a project screens, and its reasons,
-  // decides `config.schema` via `screeningSchemaDefs` (see data-model.md's
-  // "Screening" section) — too much for one conflict row to express.
-  const screeningM = merge3<ScreeningConfig | null | undefined>(
-    base?.screening,
-    ours.screening,
-    theirs.screening,
-    deepEqualJson,
-  )
-  if (!screeningM) rootRefusals.push('config.screening')
+  // A screening project's schema is derived from its reasons, so the two are
+  // one decision; a node-by-node merge would only restate the reasons list.
+  const screening = ours.screening !== null || theirs.screening !== null || (base?.screening ?? null) !== null
+  let screeningValue: ScreeningConfig | null = ours.screening
+  let schema: ResolvedDef[]
+  if (screening) {
+    const screeningM = merge3<ScreeningConfig | null>(base?.screening ?? null, ours.screening, theirs.screening, deepEqualJson)
+    const describe = (v: { screening: ScreeningConfig | null }) =>
+      v.screening ? `Screening, reasons: ${v.screening.reasons.join(', ')}` : 'Not a screening project'
+    if (screeningM) {
+      screeningValue = screeningM.value
+      schema = deepEqualJson(screeningM.value, ours.screening) ? ours.schema : theirs.schema
+    } else {
+      projectChoice(
+        'screening',
+        'Screening setup',
+        { screening: ours.screening, schema: ours.schema },
+        { screening: theirs.screening, schema: theirs.schema },
+        describe,
+      )
+      schema = ours.schema
+    }
+  } else {
+    schema = mergeSchemaDefs(base?.schema, ours.schema, theirs.schema, [], conflicts)
+  }
 
-  // Doesn't reshape any tree, but is a nested record `FieldConflict.type`
-  // can't express as a conflict row, so genuine two-sided disagreement must
-  // refuse; the common one-side-sets-it case merges cleanly via `merge3`.
-  const provenanceM = merge3<ProjectProvenance | null | undefined>(
-    base?.provenance,
-    ours.provenance,
-    theirs.provenance,
-    deepEqualJson,
-  )
-  if (!provenanceM) rootRefusals.push('provenance')
+  const provenanceM = merge3<ProjectProvenance | null>(base?.provenance ?? null, ours.provenance, theirs.provenance, deepEqualJson)
+  if (!provenanceM) {
+    projectChoice('provenance', 'Where the papers were imported from', ours.provenance, theirs.provenance, (v) =>
+      v ? `${v.source.title ?? v.source.file}, imported ${v.importedAt.slice(0, 10)}` : 'Not recorded',
+    )
+  }
 
-  // Same reasoning as `provenance` above: two-sided disagreement refuses so a
-  // reviewer's authored protocol is never silently half-dropped.
-  const protocolM = merge3<ProjectProtocol | null | undefined>(
-    base?.protocol,
-    ours.protocol,
-    theirs.protocol,
-    deepEqualJson,
-  )
-  if (!protocolM) rootRefusals.push('protocol')
+  // Per protocol entry: each is text a reviewer wrote, so a combined third
+  // version is as natural here as for an annotation field.
+  const protocol: ProjectProtocol = {}
+  for (const key of PROTOCOL_KEYS) {
+    const pick = (p: ProjectProtocol | null | undefined) => p?.[key]
+    const m = merge3<unknown>(pick(base?.protocol), pick(ours.protocol), pick(theirs.protocol), deepEqualJson)
+    const text = (v: unknown) => (Array.isArray(v) ? v.join('\n') : typeof v === 'string' ? v : '')
+    const value = m ? m.value : pick(ours.protocol)
+    if (value !== undefined) (protocol as Record<string, unknown>)[key] = value
+    if (!m) {
+      projectRow(`protocol.${key}`, PROTOCOL_LABELS[key], {
+        type: 'string',
+        base: text(pick(base?.protocol)),
+        ours: text(pick(ours.protocol)),
+        theirs: text(pick(theirs.protocol)),
+      })
+    }
+  }
 
-  const rootExtraKeys = new Set([
-    ...Object.keys(base?.extra ?? {}),
-    ...Object.keys(ours.extra),
-    ...Object.keys(theirs.extra),
-  ])
+  const rootExtraKeys = new Set([...Object.keys(base?.extra ?? {}), ...Object.keys(ours.extra), ...Object.keys(theirs.extra)])
   const mergedRootExtra: Record<string, unknown> = {}
   for (const k of rootExtraKeys) {
     const m = merge3<unknown>(base?.extra[k], ours.extra[k], theirs.extra[k], deepEqualJson)
-    if (!m) {
-      rootRefusals.push(k)
-      continue
-    }
-    if (m.value !== undefined) mergedRootExtra[k] = m.value
+    if (!m) conflicts.push(extraChoice('', '', { kind: 'project' }, k, ours.extra[k], theirs.extra[k]))
+    const value = m ? m.value : ours.extra[k]
+    if (value !== undefined) mergedRootExtra[k] = value
   }
 
-  if (rootRefusals.length > 0) return refused(rootRefusals)
-
-  // Every tree below is walked against the winning schema, so a field it
-  // removed is simply never visited — same as `normalizeTree` would drop it
-  // on the next ordinary load. Safe because `schemaRemovalRefusal` already
-  // refused if that would discard an answer.
-  const mergedSchema = schemaM!.value!
-
-  const schemaRemoval = schemaRemovalRefusal(base, mergedSchema, ours, theirs)
-  if (schemaRemoval) return refused([schemaRemoval])
-
-  const notes: MergeNote[] = []
+  const removalNote = schemaRemovalNote(base, schema, ours, theirs)
+  if (removalNote) notes.push(removalNote)
   if (!changedFromBase(base?.schema, ours.schema) && changedFromBase(base?.schema, theirs.schema)) {
-    notes.push({
-      kind: 'schema-remote',
-      message: "The remote changed the annotation schema; that schema was used.",
-    })
+    notes.push({ kind: 'schema-remote', message: 'The other side changed the annotation schema; that schema was used.' })
   }
-  if (!changedFromBase(base?.reviewers, ours.reviewers) && changedFromBase(base?.reviewers, theirs.reviewers)) {
-    notes.push({
-      kind: 'reviewers-remote',
-      message: 'The remote changed the number of reviewers; that value was used.',
-    })
+  if (reviewersM && !changedFromBase(base?.reviewers, ours.reviewers) && changedFromBase(base?.reviewers, theirs.reviewers)) {
+    notes.push({ kind: 'reviewers-remote', message: 'The other side changed the number of reviewers; that value was used.' })
   }
-  if (!changedFromBase(base?.screening, ours.screening) && changedFromBase(base?.screening, theirs.screening)) {
-    notes.push({
-      kind: 'screening-remote',
-      message: 'The remote changed the screening configuration; that value was used.',
-    })
+  if (screening && !changedFromBase(base?.screening, ours.screening) && changedFromBase(base?.screening, theirs.screening)) {
+    notes.push({ kind: 'screening-remote', message: 'The other side changed the screening configuration; that value was used.' })
   }
 
-  const conflicts: FieldConflict[] = []
-
-  // Not in the refusal list above: one string, a conflict row expresses it
-  // fine — refusing the whole merge over a renamed review would be absurd.
+  // One string, so a conflict row expresses it fine.
   const titleM = merge3<string | undefined>(base?.title, ours.title, theirs.title, (a, b) => a === b)
   const title = titleM ? titleM.value : ours.title
   if (!titleM) {
-    conflicts.push({
-      id: conflictId('', { kind: 'project' }, 'title'),
-      paperId: '',
-      paperTitle: '',
-      tree: { kind: 'project' },
-      canonical: 'title',
-      label: 'Project title',
-      type: 'string',
-      base: sOrNull(base?.title),
-      ours: sOrNull(ours.title),
-      theirs: sOrNull(theirs.title),
-    })
+    projectRow('title', 'Project title', { type: 'string', base: sOrNull(base?.title), ours: sOrNull(ours.title), theirs: sOrNull(theirs.title) })
   }
 
-  // Same as `title` above: one string, so a conflict row works here, unlike
-  // `provenance`/`protocol`'s nested-record refusal.
-  const schemaInfoM = merge3<string | null>(
-    base?.schemaInfo ?? null,
-    ours.schemaInfo,
-    theirs.schemaInfo,
-    (a, b) => a === b,
-  )
+  const schemaInfoM = merge3<string | null>(base?.schemaInfo ?? null, ours.schemaInfo, theirs.schemaInfo, (a, b) => a === b)
   const schemaInfo = schemaInfoM ? schemaInfoM.value : ours.schemaInfo
   if (!schemaInfoM) {
-    conflicts.push({
-      id: conflictId('', { kind: 'project' }, 'schemaInfo'),
-      paperId: '',
-      paperTitle: '',
-      tree: { kind: 'project' },
-      canonical: 'schemaInfo',
-      label: 'Schema info',
+    projectRow('schemaInfo', 'Schema info', {
       type: 'string',
       base: sOrNull(base?.schemaInfo ?? undefined),
       ours: sOrNull(ours.schemaInfo ?? undefined),
@@ -1088,21 +1327,21 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
   }
 
   const paperRefusals: string[] = []
-  const papers = mergePapers(mergedSchema, base, ours, theirs, conflicts, notes, paperRefusals)
+  const papers = mergePapers(schema, base, ours, theirs, conflicts, notes, paperRefusals)
   if (paperRefusals.length > 0) return refused(paperRefusals)
 
   return {
     kind: 'merged',
     merged: {
-      version: versionM!.value!,
+      version: versionM.value!,
       title,
-      schema: mergedSchema,
-      aiEnabled: aiM!.value!,
-      finishCheckbox: finishM!.value!,
-      reviewers: reviewersM!.value!,
-      screening: screeningM!.value ?? null,
-      provenance: provenanceM!.value ?? null,
-      protocol: protocolM!.value ?? null,
+      schema: withPathIds(schema),
+      aiEnabled: aiM ? aiM.value! : ours.aiEnabled,
+      finishCheckbox: finishM ? finishM.value! : ours.finishCheckbox,
+      reviewers: reviewersM ? reviewersM.value! : ours.reviewers,
+      screening: screeningValue,
+      provenance: provenanceM ? provenanceM.value : ours.provenance,
+      protocol: Object.keys(protocol).length > 0 ? protocol : null,
       schemaInfo,
       papers,
       extra: mergedRootExtra,
@@ -1112,9 +1351,37 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
   }
 }
 
+const PROTOCOL_KEYS = ['researchQuestions', 'searchStrings', 'databases', 'searchDate', 'notes'] as const
+const PROTOCOL_LABELS: Record<(typeof PROTOCOL_KEYS)[number], string> = {
+  researchQuestions: 'Research questions, one per line',
+  searchStrings: 'Search strings, one per line',
+  databases: 'Databases, one per line',
+  searchDate: 'Search date',
+  notes: 'Protocol notes and criteria',
+}
+
+/**
+ * Why a resolved merge could not be saved, or `null`. A schema combined node
+ * by node can come out as something neither side had and the loader refuses —
+ * a group left with no children, fixed choices on a number — and saving that
+ * would leave a project nobody can open. Checked by the same round trip a
+ * save and reopen would make.
+ */
+export function mergeResultProblem(project: Project): string | null {
+  try {
+    loadProject(serializeProject(project))
+    return null
+  } catch (err) {
+    return err instanceof Error ? err.message : String(err)
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Applying resolutions
 // ---------------------------------------------------------------------------
+
+/** `config.reviewers`' own limit (see `projectSchema`). */
+const MAX_REVIEWERS = 10
 
 function valueToString(v: FieldValue): string {
   return v === null || v === undefined ? '' : String(v)
@@ -1140,20 +1407,63 @@ function containerAt(
 }
 
 function applyOne(draft: Project, conflict: FieldConflict, value: FieldValue): void {
+  // A choice row's value names a side; what that side had is in `payload`.
+  const chosen = conflict.payload ? conflict.payload[value === 'theirs' ? 'theirs' : 'ours'] : undefined
+  if (conflict.tree.kind === 'schema') {
+    applySchemaRow(draft, conflict, value, chosen)
+    return
+  }
   if (conflict.tree.kind === 'project') {
-    if (conflict.canonical === 'title') {
+    const c = conflict.canonical
+    if (c === 'title') {
       const s = valueToString(value).trim()
       draft.title = s || undefined
-    }
-    if (conflict.canonical === 'schemaInfo') {
+    } else if (c === 'schemaInfo') {
       const s = valueToString(value).trim()
       draft.schemaInfo = s || null
+    } else if (c === 'aiEnabled') {
+      draft.aiEnabled = value === true
+    } else if (c === 'finishCheckbox') {
+      draft.finishCheckbox = value === true
+    } else if (c === 'reviewers') {
+      if (typeof value === 'number') draft.reviewers = Math.min(MAX_REVIEWERS, Math.max(1, Math.round(value)))
+    } else if (c === 'screening') {
+      const side = chosen as { screening: ScreeningConfig | null; schema: ResolvedDef[] }
+      draft.screening = side.screening
+      draft.schema = side.schema
+    } else if (c === 'provenance') {
+      draft.provenance = (chosen as ProjectProvenance | null) ?? null
+    } else if (c.startsWith('protocol.')) {
+      const key = c.slice('protocol.'.length) as (typeof PROTOCOL_KEYS)[number]
+      const text = valueToString(value)
+      const next: ProjectProtocol = { ...(draft.protocol ?? {}) }
+      if (key === 'searchDate' || key === 'notes') {
+        const s = text.trim()
+        if (s) next[key] = s
+        else delete next[key]
+      } else {
+        const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
+        if (lines.length > 0) next[key] = lines
+        else delete next[key]
+      }
+      draft.protocol = Object.keys(next).length > 0 ? next : null
+    } else if (c.startsWith('extra.')) {
+      const key = c.slice('extra.'.length)
+      if (chosen === undefined) delete draft.extra[key]
+      else draft.extra[key] = chosen
     }
     return
   }
 
   const paper = draft.papers.find((p) => p.id === conflict.paperId)
   if (!paper) return
+
+  if (conflict.tree.kind === 'paper' && conflict.canonical.startsWith('extra.')) {
+    const key = conflict.canonical.slice('extra.'.length)
+    if (chosen === undefined) delete paper.extra[key]
+    else paper.extra[key] = chosen
+    return
+  }
 
   if (conflict.tree.kind === 'paper') {
     switch (conflict.canonical) {
@@ -1221,10 +1531,11 @@ export function applyResolutions(
   resolutions: Resolutions,
 ): Project {
   const byId = new Map(conflicts.map((c) => [c.id, c]))
-  return produce(merged, (draft) => {
+  const resolved = produce(merged, (draft) => {
     for (const [id, value] of Object.entries(resolutions)) {
       const conflict = byId.get(id)
       if (conflict) applyOne(draft as Project, conflict, value)
     }
   })
+  return { ...resolved, schema: withPathIds(resolved.schema) }
 }

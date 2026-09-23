@@ -136,17 +136,43 @@ describe('a save that meets files changed on disk', () => {
     expect(written).toEqual([])
   })
 
-  it('combine refused (schema changed on both sides) explains why and leaves the other two choices', async () => {
+  it('combine: a schema both sides extended is combined, not refused', async () => {
+    const withField = (name: string) => [{ name: 'Note', type: 'string' }, { name, type: 'string' }]
     useStore.setState((s) => {
-      s.project!.schema = loadProject(text({}, [{ name: 'Note', type: 'string' }, { name: 'Mine', type: 'string' }])).schema
+      s.project!.schema = loadProject(text({}, withField('Mine'))).schema
     })
-    await saveIntoClash(text({ a1: 'theirs a' }, [{ name: 'Note', type: 'string' }, { name: 'Theirs', type: 'string' }]))
+    await saveIntoClash(text({ a1: 'theirs a' }, withField('Theirs')))
     await useStore.getState().resolveStaleSave('combine')
-    expect(useStore.getState().staleSave?.refusal).toMatch(/schema/)
+    const merge = useStore.getState().staleSave!.merge!
+    useStore.getState().takeAllStaleConflicts('ours', merge.conflicts.map((c) => c.id))
+    await useStore.getState().finishStaleCombine()
+    expect(lastSaved().schema.map((d) => d.name)).toEqual(['Note', 'Mine', 'Theirs'])
+  })
+
+  it('combine refused explains why and leaves the other two choices', async () => {
+    // One side shortened a repeatable list the other edited past the cut:
+    // no field-level answer says which entry the edit belongs to.
+    const F = [{ name: 'F', max: null, children: [{ name: 'C', type: 'string' }] }]
+    const withEntries = (...cs: string[]) =>
+      JSON.stringify({
+        version: 1,
+        config: { reviewers: 2, schema: F },
+        papers: [{ id: 'a', title: 'A', authors: [], pdf: 'a.pdf', annotations: {}, reviews: {
+          1: { F: cs.map((c) => ({ children: { C: [{ value: c }] } })) },
+        } }],
+      })
+    useStore.getState().loadFromText(withEntries('x', 'y'), { kind: 'electron', path: '/x.json' }, 'x.json')
+    useStore.setState((s) => {
+      s.project!.papers[0].reviews['1'].F.splice(1, 1)
+      s.dirty = true
+    })
+    await saveIntoClash(withEntries('x', 'y edited'))
+    await useStore.getState().resolveStaleSave('combine')
+    expect(useStore.getState().staleSave?.refusal).toMatch(/shortened on one side/)
     expect(written).toEqual([])
 
     await useStore.getState().resolveStaleSave('discard')
-    expect(note(lastSaved(), 'a', '1')).toBe('theirs a')
+    expect(written).toHaveLength(1)
   })
 
   it('"Not now" writes nothing, and the next save asks again instead of writing', async () => {

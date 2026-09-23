@@ -346,7 +346,7 @@ describe('runPull', () => {
     expect(finishCalls).toHaveLength(0)
   })
 
-  it('mergeProjects refusing a re-shaping change aborts the merge and names it', async () => {
+  it('a schema both sides extended merges node by node instead of aborting', async () => {
     beginPullResult = {
       kind: 'merge',
       ref: 'origin/main',
@@ -355,9 +355,11 @@ describe('runPull', () => {
       theirs: projectTextWithSchema([...SCHEMA, { name: 'Extra Y', type: 'string' }]),
     }
     await useGitStore.getState().runPull()
-    expect(abortCalls).toBe(1)
-    expect(useGitStore.getState().panel?.error).toMatch(/schema/i)
-    expect(finishCalls).toHaveLength(0)
+    expect(abortCalls).toBe(0)
+    expect(finishCalls).toHaveLength(1)
+    const written = JSON.stringify(finishCalls[0])
+    expect(written).toContain('Extra X')
+    expect(written).toContain('Extra Y')
   })
 
   it('an unparseable revision aborts the merge and writes nothing', async () => {

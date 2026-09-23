@@ -276,6 +276,7 @@ export function isForeignReview(tree: MergeTree, currentReviewer: string | null)
  *  diverge if the two dialogs' needs ever do, without one file quietly
  *  depending on the other's private helper). */
 function formatValue(type: FieldConflict['type'], value: FieldValue): string {
+  if (type === 'choice') return value === 'theirs' ? 'Theirs' : 'Mine'
   if (value === undefined || value === null) return '— empty —'
   if (type === 'boolean') return value ? 'Yes' : 'No'
   if (typeof value === 'string' && value.trim() === '') return '— empty —'
@@ -318,7 +319,7 @@ function ConflictRow({ conflict, reviewers, decided, foreign, value, theirsValue
       </div>
       <div className="git-merge-row-body">
         <div className="git-merge-side" title="Your value">
-          {formatValue(conflict.type, conflict.ours)}
+          {conflict.type === 'choice' ? conflict.oursText : formatValue(conflict.type, conflict.ours)}
         </div>
         <button
           type="button"
@@ -340,7 +341,7 @@ function ConflictRow({ conflict, reviewers, decided, foreign, value, theirsValue
           ▶
         </button>
         <div className="git-merge-side" title={theirsValue.charAt(0).toUpperCase() + theirsValue.slice(1)}>
-          {formatValue(conflict.type, conflict.theirs)}
+          {conflict.type === 'choice' ? conflict.theirsText : formatValue(conflict.type, conflict.theirs)}
         </div>
       </div>
     </li>
@@ -356,6 +357,10 @@ function MiddleControl({
   value: FieldValue
   onChange: (value: FieldValue) => void
 }) {
+  // Nothing to type for a choice: the ◀/▶ buttons pick a side.
+  if (conflict.type === 'choice') {
+    return <span className="git-merge-choice">{value === 'theirs' ? conflict.theirsText : conflict.oursText}</span>
+  }
   if (conflict.type === 'boolean') {
     return (
       <input
