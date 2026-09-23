@@ -51,7 +51,7 @@ import { readAllConcurrently } from '../src/git/concurrentRead'
 import { deriveGitInfo } from '../src/git/deriveGitInfo'
 import type { GitRun, MergeStart, AnnotationAuthors } from '../src/git/types'
 import { isLegacyProjectShape, assembleLegacyProjectJson, isDeletableAnnotationText } from '../src/model/project'
-import { staleSaveError } from '../src/model/fileStamps'
+import { changedTargets } from '../src/model/fileStamps'
 import { parseMarks, type PdfMark } from '../src/model/pdfMarks'
 import { rectToPdfPoints, rectToQuadPoints } from '../src/model/pdfExport'
 import { verifyReleaseSignature, RELEASE_PUBLIC_KEY_B64 } from '../src/model/updateSignature'
@@ -722,7 +722,7 @@ async function fileStamp(absPath: string): Promise<string | null> {
     const st = await stat(absPath)
     return `${st.mtimeMs}:${st.size}`
   } catch {
-    return null // absent is a state too — see `assertUnchangedSince`
+    return null // absent is a state too — see `changedSince`
   }
 }
 
@@ -740,20 +740,17 @@ async function rememberStamp(projectPath: string, absPath: string): Promise<void
 }
 
 /**
- * Refuse a save when any file it would touch has changed on disk since this
- * app last read or wrote it. The decision and the wording live in
- * `src/model/fileStamps.ts`, where they are testable; this half only gathers
- * the `stat` results.
+ * The files among `targets` that changed on disk since this app last read or
+ * wrote them — a save must not overwrite those unasked. The decision lives in
+ * `src/model/fileStamps.ts`, where it is testable; this half only gathers the
+ * `stat` results.
  *
  * Only enforced for a project this session actually read — a fresh Save As has
  * no stamps by definition, and every file it writes is legitimately new.
  */
-async function assertUnchangedSince(
-  projectPath: string,
-  targets: { absPath: string; rel: string }[],
-): Promise<void> {
+async function changedSince(projectPath: string, targets: { absPath: string; rel: string }[]): Promise<string[]> {
   const stamps = projectFileStamps.get(path.resolve(projectPath))
-  if (!stamps) return
+  if (!stamps) return []
   const stamped = await Promise.all(
     targets.map(async ({ absPath, rel }) => ({
       rel,
@@ -761,8 +758,7 @@ async function assertUnchangedSince(
       now: await fileStamp(absPath),
     })),
   )
-  const message = staleSaveError(stamped)
-  if (message) throw new Error(message)
+  return changedTargets(stamped)
 }
 
 /** Absolute project-file paths `project:save` will actually write to — every
@@ -956,15 +952,19 @@ ipcMain.handle(
     // share that function and rewrite the tree on purpose, having just decided
     // what it should contain. This is the ordinary save, the one that has no
     // idea anything else happened.
+    // Nothing is written when anything clashes: the renderer asks the
+    // reviewer what to do and comes back with a fresh save.
     const annotationsDir = path.join(path.dirname(filePath), 'annotations')
-    await assertUnchangedSince(filePath, [
+    const stale = await changedSince(filePath, [
       ...(metaText === null ? [] : [{ absPath: filePath, rel: path.basename(filePath) }]),
       ...files.map((f) => ({
         absPath: path.resolve(annotationsDir, f.relPath),
         rel: `annotations/${f.relPath}`,
       })),
     ])
+    if (stale.length > 0) return { stale }
     await writeProjectFiles(filePath, metaText, files)
+    return { stale: [] }
   },
 )
 
@@ -1550,7 +1550,7 @@ ipcMain.on('app:saveComplete', (_e, ok: boolean) => {
  * keeps the whole project in memory and writes it back on save, so whichever
  * saves second silently replaces the other's work — no conflict, no warning,
  * and no trace that a second copy of the answers ever existed. That is the
- * same lost-update hazard `assertUnchangedSince` guards against for edits made
+ * same lost-update hazard `changedSince` guards against for edits made
  * outside the app, arriving through a door the app itself opens.
  *
  * Refused before `whenReady`, as Electron requires: a second process must

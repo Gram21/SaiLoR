@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { changedTargets, staleSaveError } from './fileStamps'
+import { changedTargets } from './fileStamps'
 
 /**
  * The lost update this guards against: a teammate's `git pull` lands answers
@@ -42,24 +42,5 @@ describe('changedTargets', () => {
         { rel: 'c.json', known: undefined, now: '9:9' },
       ]),
     ).toEqual(['b.json', 'c.json'])
-  })
-})
-
-describe('staleSaveError', () => {
-  it('is null when nothing changed, so an ordinary save is never interrupted', () => {
-    expect(staleSaveError([{ rel: 'a.json', known: '1:1', now: '1:1' }])).toBeNull()
-  })
-
-  it('names the files and what to do about them', () => {
-    const message = staleSaveError([{ rel: 'annotations/p1/reviewer-2.json', known: '1:1', now: '2:2' }])
-    expect(message).toContain('annotations/p1/reviewer-2.json')
-    expect(message).toMatch(/reopen the project/i)
-  })
-
-  it('caps the list rather than printing a whole corpus', () => {
-    const many = Array.from({ length: 25 }, (_, i) => ({ rel: `f${i}.json`, known: '1:1', now: '2:2' }))
-    const message = staleSaveError(many)!
-    expect(message).toContain('…and 15 more')
-    expect(message).not.toContain('f20.json')
   })
 })

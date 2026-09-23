@@ -47,6 +47,15 @@ import {
   type UpdateInfo,
 } from '../model/version'
 import { getPlatform, type SaveHandle } from '../platform'
+import { StaleSaveError } from '../platform/adapter'
+import { resolveClash } from '../model/staleSave'
+import {
+  applyResolutions,
+  mergeProjects,
+  type FieldConflict,
+  type MergeNote,
+  type Resolutions,
+} from '../git/merge'
 import type { RecentEntry } from '../platform/recents'
 import {
   type Theme,
@@ -410,17 +419,32 @@ function saveReadingPosition(
  * A save failure, as something a reviewer can read.
  *
  * `ErrorPanel` renders `details` one line per entry, so a multi-line message
- * has to be split to survive — and the messages worth reading are multi-line:
- * the refusal to overwrite files that changed on disk names the files and then
- * what to do about them (see `staleSaveError`). Collapsed into a single
- * paragraph it reads as a wall of text at exactly the moment somebody needs to
- * act on it.
+ * has to be split to survive, or it reads as a wall of text at exactly the
+ * moment somebody needs to act on it.
  */
 function saveFailure(err: unknown): LoadError {
   const text = err instanceof Error ? err.message : String(err)
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
   const [headline, ...rest] = lines
   return { message: headline ?? 'Failed to save.', details: rest }
+}
+
+export interface StaleSave {
+  /** The clashing files, relative to the project's folder. */
+  paths: string[]
+  /** Why combining is not possible, once the reviewer tried. */
+  refusal: string | null
+  /** Field conflicts left after combining, for the reviewer to decide. */
+  merge: {
+    merged: Project
+    conflicts: FieldConflict[]
+    resolutions: Resolutions
+    decided: Record<string, true>
+    notes: MergeNote[]
+  } | null
+  error: string | null
+  /** Closed without deciding; the next save asks again rather than writing. */
+  dismissed: boolean
 }
 
 export interface LoadError {
@@ -477,6 +501,10 @@ const roundZoom = (z: number) => Math.round(z * 100) / 100
  */
 let lastFieldKey: string | null = null
 
+/** The project as it was last read from or written to disk — the common
+ *  ancestor when a save finds that someone else changed the files since. */
+let diskProject: Project | null = null
+
 /**
  * Bumped only when the open project is *replaced or closed*, never for an
  * ordinary edit — lets `extractScreeningAbstract`'s background read tell if its
@@ -511,6 +539,9 @@ interface AppState {
    *  without waiting for Ctrl+S. See `useAutosave`. */
   autosaveEnabled: boolean
   loadError: LoadError | null
+  /** A save that found its files changed on disk and is waiting for the
+   *  reviewer to decide — see `resolveStaleSave`. */
+  staleSave: StaleSave | null
   busy: boolean
   sidebarCollapsed: boolean
   /** Latest text selected inside the PDF viewer (for "grab from PDF"). */
@@ -705,6 +736,16 @@ interface AppState {
    *  would let Ctrl+Z resurrect what the resync just discarded. */
   resyncProjectFromDisk: () => Promise<void>
   save: () => Promise<boolean>
+  /** Answer a `staleSave`: overwrite the clashing files with mine, keep the
+   *  disk's version of them, or combine both field by field. */
+  resolveStaleSave: (choice: 'overwrite' | 'discard' | 'combine') => Promise<void>
+  resolveStaleConflict: (id: string, value: FieldValue) => void
+  takeAllStaleConflicts: (side: 'ours' | 'theirs', ids: string[]) => void
+  finishStaleCombine: () => Promise<void>
+  /** Leave the conflict list and choose again. */
+  backToStaleChoice: () => void
+  dismissStaleSave: () => void
+  dismissStaleSaveError: () => void
   saveAs: () => Promise<boolean>
   setAutosaveEnabled: (enabled: boolean) => void
   selectPaper: (id: string) => void
@@ -1053,6 +1094,24 @@ function containerAt(root: AnnotationValueTree, path: PathSeg[]): AnnotationValu
   return tree
 }
 
+/**
+ * Replace the open project with how a clash was resolved and save it. Undo
+ * history goes with it, as on any reload: its snapshots branch off a project
+ * that no longer matches the files.
+ */
+async function adoptAndSave(result: Project): Promise<void> {
+  lastFieldKey = null
+  useStore.setState((s) => {
+    s.project = result
+    s.dirty = true
+    s.staleSave = null
+    s.past = []
+    s.future = []
+    if (!result.papers.some((p) => p.id === s.currentPaperId)) s.currentPaperId = result.papers[0]?.id ?? null
+  })
+  await useStore.getState().save()
+}
+
 export const useStore = create<AppState>()(
   immer((set, get) => ({
     project: null,
@@ -1063,6 +1122,7 @@ export const useStore = create<AppState>()(
     dirty: false,
     corruptFiles: [],
     loadError: null,
+    staleSave: null,
     busy: false,
     sidebarCollapsed: false,
     pdfSelection: '',
@@ -1238,10 +1298,12 @@ export const useStore = create<AppState>()(
 
     closeProject: () => {
       lastFieldKey = null
+      diskProject = null
       projectGeneration++
       set((s) => {
         s.projectGeneration = projectGeneration
         s.project = null
+        s.staleSave = null
         s.currentPaperId = null
         s.saveHandle = null
         s.projectName = ''
@@ -1354,6 +1416,7 @@ export const useStore = create<AppState>()(
         // entry is enriched here rather than in the adapter's open path.
         if (handle) getPlatform().rememberProject(handle, name, project.title)
         projectGeneration++
+        diskProject = project
         set((s) => {
           s.projectGeneration = projectGeneration
           s.project = project
@@ -1368,6 +1431,7 @@ export const useStore = create<AppState>()(
               : null
           s.dirty = false
           s.loadError = null
+          s.staleSave = null
           s.busy = false
           s.pdfSelection = ''
           s.past = []
@@ -1429,6 +1493,7 @@ export const useStore = create<AppState>()(
       if (!opened) return
       try {
         const project = loadProject(opened.text)
+        diskProject = project
         set((s) => {
           s.project = project
           s.saveHandle = opened.handle
@@ -1455,6 +1520,13 @@ export const useStore = create<AppState>()(
       const { project, saveHandle } = get()
       if (!project) return false
       if (!saveHandle) return get().saveAs()
+      // Undecided from an earlier attempt: writing now would skip the question.
+      if (get().staleSave) {
+        set((s) => {
+          if (s.staleSave) s.staleSave.dismissed = false
+        })
+        return false
+      }
       const platform = getPlatform()
       set((s) => {
         s.busy = true
@@ -1462,6 +1534,7 @@ export const useStore = create<AppState>()(
       try {
         const text = serializeProject(project)
         const handle = await platform.saveProject(text, saveHandle)
+        diskProject = project
         // Nothing blocks input while the write above is in flight (Field.tsx
         // writes every keystroke straight to the store, and screening's I/E/U
         // keys aren't gated on `busy` either), so a reviewer can type a new
@@ -1482,10 +1555,115 @@ export const useStore = create<AppState>()(
       } catch (err) {
         set((s) => {
           s.busy = false
-          s.loadError = saveFailure(err)
+          if (err instanceof StaleSaveError) {
+            s.staleSave = { paths: err.paths, refusal: null, merge: null, error: null, dismissed: false }
+          } else {
+            s.loadError = saveFailure(err)
+          }
         })
         return false
       }
+    },
+
+    resolveStaleSave: async (choice) => {
+      const { project, saveHandle, staleSave } = get()
+      if (!project || !saveHandle?.path || !staleSave) return
+      set((s) => {
+        s.busy = true
+      })
+      // Read afresh: the files may have moved on again since the save that
+      // clashed. Reading also makes this the version the next save checks
+      // against, so what is written below is judged against what was read here.
+      let disk: Project
+      try {
+        const opened = await getPlatform().openRecent(saveHandle.path)
+        if (!opened) throw new Error('The project file could not be read.')
+        disk = loadProject(opened.text)
+      } catch (err) {
+        set((s) => {
+          s.busy = false
+          if (s.staleSave) s.staleSave.error = err instanceof Error ? err.message : String(err)
+        })
+        return
+      }
+      set((s) => {
+        s.busy = false
+      })
+      if (choice !== 'combine') {
+        await adoptAndSave(resolveClash(diskProject, project, disk, staleSave.paths, choice === 'overwrite' ? 'mine' : 'disk'))
+        return
+      }
+      const outcome = mergeProjects(diskProject, project, disk)
+      if (outcome.kind === 'refused') {
+        set((s) => {
+          if (s.staleSave) s.staleSave.refusal = outcome.details.join(' ')
+        })
+        return
+      }
+      if (outcome.conflicts.length === 0) {
+        await adoptAndSave(outcome.merged)
+        return
+      }
+      set((s) => {
+        if (s.staleSave) {
+          s.staleSave.merge = {
+            merged: outcome.merged,
+            conflicts: outcome.conflicts,
+            resolutions: {},
+            decided: {},
+            notes: outcome.notes,
+          }
+        }
+      })
+    },
+
+    resolveStaleConflict: (id, value) => {
+      set((s) => {
+        const merge = s.staleSave?.merge
+        if (!merge) return
+        merge.resolutions[id] = value
+        merge.decided[id] = true
+      })
+    },
+
+    takeAllStaleConflicts: (side, ids) => {
+      const scope = new Set(ids)
+      set((s) => {
+        const merge = s.staleSave?.merge
+        if (!merge) return
+        for (const c of merge.conflicts) {
+          if (!scope.has(c.id)) continue
+          merge.resolutions[c.id] = side === 'ours' ? c.ours : c.theirs
+          merge.decided[c.id] = true
+        }
+      })
+    },
+
+    finishStaleCombine: async () => {
+      const merge = get().staleSave?.merge
+      if (!merge) return
+      await adoptAndSave(applyResolutions(merge.merged, merge.conflicts, merge.resolutions))
+    },
+
+    backToStaleChoice: () => {
+      set((s) => {
+        if (s.staleSave) s.staleSave.merge = null
+      })
+    },
+
+    dismissStaleSave: () => {
+      set((s) => {
+        if (s.staleSave) {
+          s.staleSave.merge = null
+          s.staleSave.dismissed = true
+        }
+      })
+    },
+
+    dismissStaleSaveError: () => {
+      set((s) => {
+        if (s.staleSave) s.staleSave.error = null
+      })
     },
 
     saveAs: async () => {
@@ -1584,6 +1762,7 @@ export const useStore = create<AppState>()(
         // already in the store is the one with the edit, and it genuinely
         // has not been saved anywhere yet.
         const stillCurrent = get().project === project
+        diskProject = toWrite
         set((s) => {
           s.saveHandle = handle
           s.projectName = location.name

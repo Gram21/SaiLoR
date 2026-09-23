@@ -95,7 +95,9 @@ export interface PlatformAdapter {
   /** Show an open dialog / picker and return the chosen project's text + a save handle. */
   openProject(): Promise<OpenedProject | null>
 
-  /** Write text back to the handle's location. Returns the (possibly updated) handle. */
+  /** Write text back to the handle's location. Returns the (possibly updated) handle.
+   *  Throws `StaleSaveError`, writing nothing, when a file it would overwrite
+   *  changed on disk since the project was last read or written. */
   saveProject(text: string, handle: SaveHandle): Promise<SaveHandle>
 
   /**
@@ -280,4 +282,14 @@ export interface PlatformAdapter {
 /** True when running inside the Electron shell (preload exposed `window.slr`). */
 export function isElectron(): boolean {
   return typeof window !== 'undefined' && Boolean((window as unknown as { slr?: unknown }).slr)
+}
+
+/** A save that wrote nothing because these files changed on disk since the
+ *  project was last read or written. Paths are relative to the project's
+ *  folder (`annotations/p1/reviewer-2.json`, or the project file's own name). */
+export class StaleSaveError extends Error {
+  constructor(readonly paths: string[]) {
+    super(`These files changed on disk since this project was opened: ${paths.join(', ')}`)
+    this.name = 'StaleSaveError'
+  }
 }

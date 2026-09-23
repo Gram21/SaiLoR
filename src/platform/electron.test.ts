@@ -21,7 +21,7 @@ describe('ElectronAdapter.saveProject', () => {
   let saveProject: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
-    saveProject = vi.fn().mockResolvedValue(undefined)
+    saveProject = vi.fn().mockResolvedValue({ stale: [] })
     ;(window as unknown as { slr: unknown }).slr = { saveProject }
   })
 

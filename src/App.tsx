@@ -34,6 +34,7 @@ import { LlmSettingsDialog } from './components/LlmSettingsDialog'
 import { GitCloneDialog } from './components/GitCloneDialog'
 import { GitDialog } from './components/GitDialog'
 import { GitMergeDialog } from './components/GitMergeDialog'
+import { StaleSaveDialog } from './components/StaleSaveDialog'
 import { BranchSwitchPrompt } from './components/BranchSwitchPrompt'
 import { NewBranchPrompt } from './components/NewBranchPrompt'
 import { MergeBranchPrompt } from './components/MergeBranchPrompt'
@@ -418,6 +419,7 @@ export function App() {
       <GitCloneDialog />
       <GitDialog />
       <GitMergeDialog />
+      <StaleSaveDialog />
       <BranchSwitchPrompt />
       <NewBranchPrompt />
       <MergeBranchPrompt />

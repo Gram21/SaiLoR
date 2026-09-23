@@ -7,6 +7,7 @@ import type {
   ProjectLocation,
   SaveHandle,
 } from './adapter'
+import { StaleSaveError } from './adapter'
 import { readRecents, pushRecent, removeRecent, replaceRecents, type RecentEntry } from './recents'
 import type { LlmConfig, LlmHttpRequest, LlmHttpResponse } from '../llm/types'
 import type {
@@ -94,8 +95,13 @@ export interface SlrBridge {
   openProject(): Promise<{ path: string; text: string; corrupt: string[] } | null>
   /** Read a specific file by absolute path (for recent files). Null if missing. */
   openPath(path: string): Promise<{ path: string; text: string; corrupt: string[] } | null>
-  /** `metaText` is null when `project.json` itself is unchanged — see `lastWritten`. */
-  saveProject(path: string, metaText: string | null, files: Array<{ relPath: string; text: string | null }>): Promise<void>
+  /** `metaText` is null when `project.json` itself is unchanged — see `lastWritten`.
+   *  Writes nothing and names the files when any changed on disk since last read or written. */
+  saveProject(
+    path: string,
+    metaText: string | null,
+    files: Array<{ relPath: string; text: string | null }>,
+  ): Promise<{ stale: string[] }>
   /** Register the project's base directory so slr-file:// can resolve PDFs. */
   setProjectDir(path: string): Promise<void>
   /** Pick a location for a project JSON without writing it. Null if cancelled. */
@@ -319,7 +325,8 @@ export class ElectronAdapter implements PlatformAdapter {
     const removed = base
       ? [...base.files.keys()].filter((p) => !present.has(p)).map((relPath) => ({ relPath, text: null }))
       : []
-    await bridge().saveProject(handle.path, base?.meta === metaText ? null : metaText, [...changed, ...removed])
+    const { stale } = await bridge().saveProject(handle.path, base?.meta === metaText ? null : metaText, [...changed, ...removed])
+    if (stale.length > 0) throw new StaleSaveError(stale)
     noteWritten(handle.path, metaText, files)
     return handle
   }
