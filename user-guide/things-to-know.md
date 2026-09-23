@@ -44,12 +44,21 @@ reviewer, so different reviewers' or different papers' answers live in different
 [Setting up a project](project-editor.md) for why). That split means two reviewers working on
 *different* papers, or different reviewer slots of the same paper, no longer touch the same file at
 all when saving, and a save only rewrites the files whose content actually changed. It does **not**
-give you file locking, though. What SaiLoR does instead is refuse a save when a file it would
-overwrite has changed on disk since you opened the project — a teammate's save on a shared or synced
-folder, a git pull run in a terminal — and list those files, so you reopen the project rather than
-silently replace someone else's work. Your unsaved edits are not in those files yet, so copy out
-anything that matters before reopening. (Only one SaiLoR window runs at a time on a machine; starting
-it again brings the open one to the front.)
+give you file locking, though. What SaiLoR does instead is stop a save when a file it would overwrite
+has changed on disk since you opened or last saved the project — a teammate's save on a shared or
+synced folder, a git pull run in a terminal. Nothing is written until you choose, for the files listed:
+
+- **Overwrite with my version** — yours replaces theirs in those files; what they changed there is lost.
+- **Keep theirs, drop my changes to these files** — those files stay as they are on disk and your
+  unsaved edits to them are thrown away. Your edits to other files are still saved.
+- **Combine both** — merged field by field, the same way [Pull](git.md#pull) merges: a field only one
+  of you changed keeps that change, and where you both changed the same field you pick the value.
+  Changes that can't be merged field by field (the schema or reviewer count changed on both sides)
+  are explained, and you choose one of the other two.
+
+Either way, files you didn't edit keep whatever is on disk now. **Not now** saves nothing and asks
+again at your next save. (Only one SaiLoR window runs at a time on a machine; starting it again brings
+the open one to the front.)
 
 That refusal only sees what has reached your disk. Copies passed around by email, or a synced folder
 that hasn't synced yet, can still diverge, and whoever's copy is used last wins.

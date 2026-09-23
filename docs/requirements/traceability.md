@@ -369,7 +369,8 @@ inspection only.
 | REQ-PLT-110 | Keep project open on failed save | Functional · Functional Suitability | — | `src/state/store.close.test.ts:59-252` | — | `openwiki/operations/electron-shell.md` §Quit / unsaved-changes coordination |
 | REQ-PLT-120 | Guard reload shortcuts | Functional · Functional Suitability | `electron/main.ts:338-353,474-491` | — | — | `openwiki/operations/electron-shell.md` §Quit / unsaved-changes coordination |
 | REQ-PLT-130 | Preserve newer changes during save | Functional · Functional Suitability | — | `src/state/store.save.test.ts:52-86` | commit `7f96e40` | `openwiki/operations/electron-shell.md` §Quit / unsaved-changes coordination |
-| REQ-PLT-135 | Refuse saving over externally changed files | Non-functional · Reliability | `electron/main.ts:718,720-727,730-740,751-766,960`<br>`src/model/fileStamps.ts:44-48,57-70`<br>`src/state/store.ts:419-424` | `src/model/fileStamps.test.ts` | commit `0bc6c9c` | `user-guide/things-to-know.md` §No file locking between people sharing one folder |
+| REQ-PLT-135 | Stop saving over externally changed files | Non-functional · Reliability | `electron/main.ts:718,720-727,730-740,751-762,965`<br>`src/model/fileStamps.ts:41-45`<br>`src/platform/electron.ts:329`<br>`src/state/store.ts:1558`<br>`src/components/StaleSaveDialog.tsx:10-25` | `src/model/fileStamps.test.ts`<br>`src/state/store.staleSave.test.ts` (`writes nothing and asks, instead of raising an error`) | commit `0bc6c9c`<br>commit `5e2abb4` | `user-guide/things-to-know.md` §No file locking between people sharing one folder |
+| REQ-PLT-136 | Resolve a save that met changed files | Functional · Functional Suitability | `src/model/staleSave.ts:33-86`<br>`src/state/store.ts:1102-1113,1524,1568-1669`<br>`src/components/StaleSaveDialog.tsx:33-140`<br>`src/components/ConflictResolutionDialog.tsx` | `src/model/staleSave.test.ts`<br>`src/state/store.staleSave.test.ts` | commit `5e2abb4` | `user-guide/things-to-know.md` §No file locking between people sharing one folder |
 | REQ-PLT-140 | Recent projects list | Functional · Functional Suitability | `src/platform/recents.ts:7-69` | `src/platform/recents.test.ts` | — | `openwiki/operations/electron-shell.md` §Window, menu, and window-state persistence |
 | REQ-PLT-150 | Re-check recents on display | Functional · Functional Suitability | `electron/main.ts:983-1002`<br>`src/platform/recents.ts:16-20` | `src/state/store.close.test.ts:137-175` | — | `openwiki/operations/electron-shell.md` §Window, menu, and window-state persistence |
 | REQ-PLT-160 | Persist window state | Functional · Functional Suitability | `electron/main.ts:138-203,269-282` | — | — | `openwiki/operations/electron-shell.md` §Window, menu, and window-state persistence |
@@ -396,9 +397,9 @@ inspection only.
 
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 309 | 100% |
-| With at least one verifying test | 260 | 84% |
+| Requirements traced | 310 | 100% |
+| With at least one verifying test | 261 | 84% |
 | Without an automated check (source inspection only) | 49 | 16% |
-| With an introducing/pinning commit | 91 | 29% |
-| With a documentation link | 308 | 99.7% |
+| With an introducing/pinning commit | 92 | 30% |
+| With a documentation link | 309 | 99.7% |
 

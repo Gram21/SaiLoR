@@ -109,10 +109,10 @@ function commonFaqs(): ReactNode {
       </Faq>
       <Faq q="Can two people review the same project at once?">
         <p>
-          Not on the same copy at the same time — the app has no locking. It refuses to save over
-          files that changed on disk since you opened the project and lists them, so reopen to pick
-          up what arrived; but copies passed around by email or a folder that hasn't synced yet can
-          still diverge. What it does support is{' '}
+          Not on the same copy at the same time — the app has no locking. When a save finds files
+          that changed on disk since you opened the project, it stops and asks: keep your version,
+          keep theirs, or combine the two field by field. Copies passed around by email or a folder
+          that hasn't synced yet can still diverge. What it does support is{' '}
           <strong>multiple reviewers within one file</strong>: set the reviewer count when you build
           the schema, and each reviewer's answers are kept separately (see{' '}
           <em>Working with several reviewers</em>). Give each person their own git clone, or take

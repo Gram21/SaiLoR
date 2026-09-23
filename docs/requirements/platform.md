@@ -118,11 +118,18 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Evidence:** `src/state/store.save.test.ts:52-86`, commit `7f96e40`
 - **Status:** Implemented
 
-### REQ-PLT-135 — Refuse saving over externally changed files
-- **Description:** When a save would write or delete a file that has changed on disk, or has appeared, since the application last read or wrote it, the system shall refuse the save, name the changed files (up to ten, with a count of any remainder) on separate lines, and write nothing; files rewritten by the application's own git operations shall not count as changed.
+### REQ-PLT-135 — Stop saving over externally changed files
+- **Description:** When a save would write or delete a file that has changed on disk, or has appeared, since the application last read or wrote it, the system shall write nothing and ask the user how to proceed (REQ-PLT-136), naming the changed files by paper and seat (up to ten, with a count of any remainder); files rewritten by the application's own git operations shall not count as changed.
 - **Type:** Non-functional (ISO 25010: Reliability)
-- **Evidence:** `electron/main.ts:718,720-727,730-740,751-766,960`, `src/model/fileStamps.ts:44-48,57-70`, `src/state/store.ts:419-424`, commit `0bc6c9c`
-- **Verified by:** `src/model/fileStamps.test.ts`
+- **Evidence:** `electron/main.ts:718,720-727,730-740,751-762,965`, `src/model/fileStamps.ts:41-45`, `src/platform/electron.ts:329`, `src/state/store.ts:1558`, `src/components/StaleSaveDialog.tsx:10-25`, commits `0bc6c9c`, `5e2abb4`
+- **Verified by:** `src/model/fileStamps.test.ts`, `src/state/store.staleSave.test.ts` (`writes nothing and asks, instead of raising an error`)
+- **Status:** Implemented
+
+### REQ-PLT-136 — Resolve a save that met changed files
+- **Description:** When a save has been stopped under REQ-PLT-135, the system shall offer to overwrite the changed files with the user's version, to keep the on-disk version of those files while saving the user's other edits, or to combine both versions with the field-level three-way merge of REQ-GIT-240 against the project as last read or written, letting the user decide each field both sides changed; files the user did not edit shall keep their on-disk content in every case. When the versions cannot be combined, the system shall say why and offer the other two choices; when the user postpones the decision, the next save shall ask again rather than write.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/staleSave.ts:33-86`, `src/state/store.ts:1102-1113,1524,1568-1669`, `src/components/StaleSaveDialog.tsx:33-140`, `src/components/ConflictResolutionDialog.tsx`, commit `5e2abb4`
+- **Verified by:** `src/model/staleSave.test.ts`, `src/state/store.staleSave.test.ts`
 - **Status:** Implemented
 
 ### REQ-PLT-140 — Recent projects list

@@ -57,8 +57,8 @@ per category so requirements can be inserted without renumbering.
 | Consolidation (CON) | 44 |
 | Git integration (GIT) | 54 |
 | LLM annotation (LLM) | 31 |
-| Platform & shell (PLT) | 40 |
-| **Total** | **309** |
+| Platform & shell (PLT) | 41 |
+| **Total** | **310** |
 
 ## Method & evidence notes
 
@@ -92,3 +92,5 @@ per category so requirements can be inserted without renumbering.
   (merging hidden answers), which neither describes. The wiki pages' prose was corrected by
   hand where it contradicted the source (repository setup, background fetch, seat memory);
   their OpenWiki claim files were not regenerated.
+- **Save conflicts (2026-09-23, source at `5e2abb4`).** REQ-PLT-135 revised (a stopped save
+  now asks instead of failing) and REQ-PLT-136 added for the three ways to resolve it.
