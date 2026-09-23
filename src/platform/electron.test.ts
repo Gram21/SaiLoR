@@ -68,6 +68,28 @@ describe('ElectronAdapter.saveProject', () => {
     expect(saveProject.mock.calls[1][1]).toBeNull()
   })
 
+  it('writes only project.json when a new schema version renames a field nobody edited since', async () => {
+    // The rename moves every file's answers on load; that alone must not make
+    // each of those files count as edited, or one rename rewrites every
+    // reviewer's file in a shared repository.
+    const text = makeProjectText()
+    const openPath = vi.fn().mockResolvedValue({ path: '/ren/project.json', text, corrupt: [] })
+    const setProjectDir = vi.fn().mockResolvedValue(undefined)
+    ;(window as unknown as { slr: unknown }).slr = { saveProject, openPath, setProjectDir }
+    const adapter = new ElectronAdapter()
+    await adapter.openRecent('/ren/project.json')
+
+    const renamed = JSON.parse(text)
+    renamed.config.schema = [{ name: 'Include', type: 'boolean' }]
+    renamed.schemaVersion = 'v1'
+    renamed.schemaHistory = [{ id: 'v1', parents: [], at: '2026-09-23T10:00:00.000Z', moves: [{ from: ['Relevant'], to: ['Include'] }] }]
+    await adapter.saveProject(JSON.stringify(renamed), { kind: 'electron', path: '/ren/project.json' })
+
+    const [, metaText, files] = saveProject.mock.calls[0]
+    expect(JSON.parse(metaText).schemaVersion).toBe('v1')
+    expect(files).toEqual([])
+  })
+
   it('deletes the files of a paper removed since the project was opened', async () => {
     // Nothing else ever revisits `annotations/<gone>/`: git does not notice it,
     // and a paper later given the same id would silently inherit its answers.

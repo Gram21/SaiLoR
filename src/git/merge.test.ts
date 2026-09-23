@@ -1304,3 +1304,50 @@ describe('mergeResultProblem', () => {
     expect(mergeResultProblem(b)).toBeNull()
   })
 })
+
+describe('mergeProjects — schema versions', () => {
+  const H = (id: string, parents: string[], moves: { from: string[]; to: string[] }[] = []) => ({ id, parents, at: '', moves })
+
+  it('merges an edit made under the old name into the field the other side renamed', () => {
+    const v0 = [H('v0', [])]
+    const base = project({ schema: SIMPLE, papers: [paper('a')], extra: {} })
+    base.schemaVersion = 'v0'
+    base.schemaHistory = v0
+    const ours = project({
+      schema: [{ name: 'Design', type: 'string' }, ...SIMPLE.slice(1)],
+      papers: [paper('a')],
+    })
+    ours.schemaVersion = 'v1'
+    ours.schemaHistory = [...v0, H('v1', ['v0'], [{ from: ['Study Type'], to: ['Design'] }])]
+    const theirs = project({ schema: SIMPLE, papers: [paper('a', { annotations: { 'Study Type': [{ value: 'RCT' }] } })] })
+    theirs.schemaVersion = 'v0'
+    theirs.schemaHistory = v0
+
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.conflicts).toEqual([])
+    expect(outcome.merged.schema.map((d) => d.name)).toEqual(['Design', 'Year', 'Relevant'])
+    expect(outcome.merged.papers[0].annotations.Design).toEqual([{ value: 'RCT' }])
+    expect(outcome.merged.schemaVersion).toBe('v1')
+  })
+
+  it('gives a merge of two new versions a version descending from both', () => {
+    const v0 = [H('v0', [])]
+    const mk = (schema: AnnotationDef[], v: string, h: ReturnType<typeof H>[]) => {
+      const p = project({ schema, papers: [] })
+      p.schemaVersion = v
+      p.schemaHistory = h
+      return p
+    }
+    const outcome = mergeProjects(
+      mk(SIMPLE, 'v0', v0),
+      mk([...SIMPLE, { name: 'X', type: 'string' }], 'a', [...v0, H('a', ['v0'])]),
+      mk([...SIMPLE, { name: 'Y', type: 'string' }], 'b', [...v0, H('b', ['v0'])]),
+    )
+    expectMerged(outcome)
+    const last = outcome.merged.schemaHistory.at(-1)!
+    expect(outcome.merged.schemaVersion).toBe(last.id)
+    expect(last.parents).toEqual(['a', 'b'])
+    expect(outcome.merged.schemaHistory.map((e) => e.id).slice(0, 3)).toEqual(['v0', 'a', 'b'])
+  })
+})

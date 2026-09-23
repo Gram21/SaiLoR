@@ -43,6 +43,8 @@ function project(overrides: Partial<Project> = {}): Project {
     provenance: null,
     protocol: null,
     schemaInfo: null,
+    schemaVersion: null,
+    schemaHistory: [],
     schema: SCHEMA,
     aiEnabled: true,
     finishCheckbox: true,

@@ -40,6 +40,8 @@ function project(papers: Paper[]): Project {
     provenance: null,
     protocol: null,
     schemaInfo: null,
+    schemaVersion: null,
+    schemaHistory: [],
     schema: SCHEMA,
     aiEnabled: true,
     finishCheckbox: true,

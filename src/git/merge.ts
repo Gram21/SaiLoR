@@ -23,6 +23,16 @@ import { formatPath, displayPath, resolvePath, type RawSeg } from '../llm/paths'
 import { parseYear } from '../model/year'
 import { mergeMarksList, type PdfMark } from '../model/pdfMarks'
 import type { StoredAlignment } from '../model/alignment'
+import {
+  ancestorsOf,
+  mergeHistories,
+  moveInDefs,
+  moveInMarks,
+  moveInTree,
+  newSchemaVersionId,
+  pendingMoves,
+  type SchemaHistoryEntry,
+} from '../model/schemaVersion'
 
 /**
  * Field-level three-way merge for git support. Takes a parsed `Project` at the
@@ -1180,7 +1190,18 @@ function schemaRemovalNote(
  * merge base (added on both branches independently); every base value then
  * reads as absent/empty.
  */
-export function mergeProjects(base: Project | null, ours: Project, theirs: Project): MergeOutcome {
+export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: Project): MergeOutcome {
+  // One history for all three, and every side brought up to it: a field one
+  // side renamed and the other edited is then the same field on both sides.
+  const history = mergeHistories(
+    mergeHistories(oursIn.schemaHistory, theirsIn.schemaHistory),
+    base?.schemaHistory ?? [],
+  )
+  const ours = atHistory(oursIn, history)
+  const theirs = atHistory(theirsIn, history)
+  base = base && atHistory(base, history)
+  const version = mergedSchemaVersion(history, ours.schemaVersion, theirs.schemaVersion)
+
   const eqNum = (a: number | undefined, b: number | undefined) => a === b
   const eqBool = (a: boolean | undefined, b: boolean | undefined) => a === b
   const conflicts: FieldConflict[] = []
@@ -1336,6 +1357,8 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
       version: versionM.value!,
       title,
       schema: withPathIds(schema),
+      schemaVersion: version.id,
+      schemaHistory: version.history,
       aiEnabled: aiM ? aiM.value! : ours.aiEnabled,
       finishCheckbox: finishM ? finishM.value! : ours.finishCheckbox,
       reviewers: reviewersM ? reviewersM.value! : ours.reviewers,
@@ -1349,6 +1372,39 @@ export function mergeProjects(base: Project | null, ours: Project, theirs: Proje
     conflicts,
     notes,
   }
+}
+
+/** `project` with the renames and moves of `history` it has not seen applied
+ *  to its schema, answers and field links. */
+function atHistory(project: Project, history: SchemaHistoryEntry[]): Project {
+  const pending = pendingMoves(history, project.schemaVersion, '')
+  if (pending === 'unknown' || pending.length === 0) return project
+  return {
+    ...project,
+    schema: pending.reduce(moveInDefs, project.schema),
+    papers: project.papers.map((p) => ({
+      ...p,
+      annotations: pending.reduce(moveInTree, p.annotations)!,
+      reviews: Object.fromEntries(Object.entries(p.reviews).map(([k, v]) => [k, pending.reduce(moveInTree, v)!])),
+      marks: pending.reduce(moveInMarks, p.marks),
+      reviewMarks: Object.fromEntries(Object.entries(p.reviewMarks).map(([k, v]) => [k, pending.reduce(moveInMarks, v)])),
+    })),
+  }
+}
+
+/** The merged schema's version: either side's when it already includes the
+ *  other's, otherwise a new one descending from both. */
+function mergedSchemaVersion(
+  history: SchemaHistoryEntry[],
+  ours: string | null,
+  theirs: string | null,
+): { id: string | null; history: SchemaHistoryEntry[] } {
+  if (ours === theirs || theirs === null) return { id: ours, history }
+  if (ours === null) return { id: theirs, history }
+  if (ancestorsOf(history, ours).has(theirs)) return { id: ours, history }
+  if (ancestorsOf(history, theirs).has(ours)) return { id: theirs, history }
+  const id = newSchemaVersionId()
+  return { id, history: [...history, { id, parents: [ours, theirs], at: new Date().toISOString(), moves: [] }] }
 }
 
 const PROTOCOL_KEYS = ['researchQuestions', 'searchStrings', 'databases', 'searchDate', 'notes'] as const

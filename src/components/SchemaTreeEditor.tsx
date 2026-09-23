@@ -3,6 +3,8 @@ import {
   useEditorStore,
   nodePathNames,
   parentUidOf,
+  pendingSchemaMoves,
+  moveNodeIn,
   findNode,
   type DropPosition,
   type EditorNode,
@@ -119,6 +121,27 @@ function SchemaNodeRow({
   const toggleCollapsed = useEditorStore((s) => s.toggleCollapsed)
   const papers = useEditorStore((s) => s.papers)
   const behind = useGitStore((s) => s.behind)
+  const savedNodes = useEditorStore((s) => s.savedNodes)
+  const liveNodes = useEditorStore((s) => s.nodes)
+  const keepHidden = useEditorStore((s) => s.keepHidden)
+  const setKeepHidden = useEditorStore((s) => s.setKeepHidden)
+
+  /** This node's rename or move since the last save, if its answers are
+   *  affected — see `pendingSchemaMoves`. */
+  const pendingMove = useMemo(() => {
+    const move = pendingSchemaMoves(savedNodes, liveNodes, keepHidden).find((m) => m.uid === node.uid)
+    if (!move) return null
+    const count = countPapersUsingField(papers, move.from) + countLinksUsingField(papers, move.from)
+    return count > 0 ? { ...move, count } : null
+  }, [savedNodes, liveNodes, keepHidden, papers, node.uid])
+
+  /** Would the answers follow this node to where it now is? Then nothing is
+   *  hidden, and the note under the row says so instead of a confirm. */
+  const answersFollow = (nodes: typeof liveNodes, uid: string): boolean => {
+    const st = useEditorStore.getState()
+    const move = pendingSchemaMoves(st.savedNodes, nodes, st.keepHidden).find((m) => m.uid === uid)
+    return !!move && move.carried && !move.kept
+  }
 
   /**
    * The "…may have recorded more" caveat, sharpened when the repository
@@ -188,6 +211,7 @@ function SchemaNodeRow({
     const from = nameOnFocus.current
     nameOnFocus.current = null
     if (from === null || from === node.name) return
+    if (answersFollow(useEditorStore.getState().nodes, node.uid)) return
     if (!confirmDestructive('rename', from)) {
       // Put the old name back — the reviewer declined to lose the answers.
       updateNode(node.uid, { name: from })
@@ -281,6 +305,8 @@ function SchemaNodeRow({
     const newParent = pos === 'inside' ? targetUid : parentUidOf(nodes, targetUid)
     if (oldParent === undefined || newParent === undefined) return true
     if (oldParent === newParent) return true // a reorder: nothing moves
+    const after = structuredClone(nodes)
+    if (moveNodeIn(after, dragUid_, targetUid, pos) && answersFollow(after, dragUid_)) return true
 
     const path = nodePathNames(nodes, dragUid_)
     if (!path) return true
@@ -481,6 +507,35 @@ function SchemaNodeRow({
           ×
         </button>
       </div>
+
+      {pendingMove && (
+        <p className="schema-move-note" role="status">
+          {pendingMove.carried && !pendingMove.kept ? (
+            <>
+              {pendingMove.count === 1 ? '1 paper has' : `${pendingMove.count} papers have`} answers under “
+              {pendingMove.from.join(' › ')}”. They move here when you save, and answers other reviewers
+              recorded there follow once their work arrives.{' '}
+              <button type="button" className="schema-move-toggle" onClick={() => setKeepHidden(node.uid, true)}>
+                Keep them hidden instead
+              </button>
+            </>
+          ) : pendingMove.kept ? (
+            <>
+              Answers under “{pendingMove.from.join(' › ')}” will stay hidden; they come back if the field
+              returns there.{' '}
+              <button type="button" className="schema-move-toggle" onClick={() => setKeepHidden(node.uid, false)}>
+                Move them here after all
+              </button>
+            </>
+          ) : (
+            <>
+              {pendingMove.count === 1 ? '1 paper has' : `${pendingMove.count} papers have`} answers under “
+              {pendingMove.from.join(' › ')}”. They can&apos;t follow through a repeated group — which entry
+              would they belong to? — so they will be hidden.
+            </>
+          )}
+        </p>
+      )}
 
       {gateOpen && (
         <VisibleIfDialog

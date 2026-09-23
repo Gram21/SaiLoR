@@ -30,7 +30,7 @@ import type {
   StashRestoreResult,
 } from '../git/types'
 import { parsePorcelain, capDiff } from '../git/output'
-import { loadProject, splitProjectFiles, type ProjectFileEntry } from '../model/project'
+import { loadProject, projectFromFiles, splitProjectFiles, type ProjectFileEntry } from '../model/project'
 import type { PdfMark } from '../model/pdfMarks'
 
 const RECENTS_KEY = 'slr.recents.electron'
@@ -74,6 +74,27 @@ function noteWritten(path: string, meta: string, files: ProjectFileEntry[]): voi
 function withBaselineDropped<T>(call: () => Promise<T>): Promise<T> {
   lastWritten = null
   return call()
+}
+
+/**
+ * The baseline as it reads under `meta`'s schema version. A save that brings
+ * a new version (the editor recorded a rename) carries every file's answers
+ * to the new names on load; comparing against the old baseline would count
+ * each of those files as edited and rewrite files nobody touched. Re-reading
+ * the baseline under the new version makes a file differ only when its
+ * content really changed — it is written under the new version then.
+ */
+function rebaselined(base: typeof lastWritten, meta: unknown): typeof lastWritten {
+  if (!base) return base
+  const versionOf = (m: unknown) => (m as { schemaVersion?: unknown } | null)?.schemaVersion
+  try {
+    if (versionOf(JSON.parse(base.meta)) === versionOf(meta)) return base
+    const files = [...base.files].filter((e): e is [string, string] => e[1] !== null)
+    const { files: moved } = splitProjectFiles(projectFromFiles(meta, files))
+    return { ...base, files: new Map(moved.map((f) => [f.relPath, f.text])) }
+  } catch {
+    return null
+  }
 }
 
 /** Record how `text` — a project just read from `path` — serializes, so the
@@ -304,7 +325,7 @@ export class ElectronAdapter implements PlatformAdapter {
     const { meta, files } = splitProjectFiles(loadProject(text))
     const metaText = JSON.stringify(meta, null, 2)
     // Only what actually changed — see `lastWritten`.
-    const base = lastWritten?.path === handle.path ? lastWritten : null
+    const base = rebaselined(lastWritten?.path === handle.path ? lastWritten : null, meta)
     const changed = base
       ? files.filter((f) => !base.files.has(f.relPath) || base.files.get(f.relPath) !== f.text)
       : files

@@ -54,6 +54,8 @@ describe('isScreening', () => {
     provenance: null,
     protocol: null,
     schemaInfo: null,
+    schemaVersion: null,
+    schemaHistory: [],
     schema: [],
     aiEnabled: true,
     finishCheckbox: true,

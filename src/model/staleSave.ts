@@ -1,4 +1,4 @@
-import { assembleLegacyProjectJson, loadProject, splitProjectFiles, type Project } from './project'
+import { projectFromFiles, splitProjectFiles, type Project } from './project'
 
 /**
  * What a save does when files it would overwrite changed on disk since the
@@ -26,34 +26,12 @@ function clashKey(path: string): string {
   return path.startsWith('annotations/') ? path.slice('annotations/'.length) : META
 }
 
-const REVIEWER_FILE = /^(?:reviewer|screening)-(\d+)\.json$/
-const MARKS_FILE = /^marks-(\d+)\.json$/
-
-/** The reverse of `splitProjectFiles`, parsed the way opening the project from disk would. */
+/** The reverse of `filesOf`. */
 function projectOf(files: FileSet): Project {
-  const papers = new Map<
-    string,
-    { consolidated?: unknown; reviewers: Map<string, unknown>; marksConsolidated?: unknown; reviewMarks: Map<string, unknown> }
-  >()
-  for (const [relPath, text] of files) {
-    if (relPath === META) continue
-    const slash = relPath.lastIndexOf('/')
-    const id = relPath.slice(0, slash)
-    const name = relPath.slice(slash + 1)
-    let entry = papers.get(id)
-    if (!entry) {
-      entry = { reviewers: new Map(), reviewMarks: new Map() }
-      papers.set(id, entry)
-    }
-    const value: unknown = JSON.parse(text)
-    const reviewer = REVIEWER_FILE.exec(name)
-    const marks = MARKS_FILE.exec(name)
-    if (reviewer) entry.reviewers.set(reviewer[1], value)
-    else if (marks) entry.reviewMarks.set(marks[1], value)
-    else if (name === 'marks-consolidated.json') entry.marksConsolidated = value
-    else entry.consolidated = value
-  }
-  return loadProject(JSON.stringify(assembleLegacyProjectJson(JSON.parse(files.get(META)!), papers)))
+  return projectFromFiles(
+    JSON.parse(files.get(META)!),
+    [...files].filter(([relPath]) => relPath !== META),
+  )
 }
 
 /**
