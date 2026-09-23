@@ -22,10 +22,10 @@ sources:
     resource: repo://src/model/version.ts
   - id: openwiki-source-769f5f5c1e3631cf9ab273bc
     resource: repo://src/platform/electron.ts
-generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
+generated: { by: "openwiki/0.5.2", at: "2026-09-23T12:49:55.013Z" }
 verified:
-  - by: openwiki/0.4.0
-    at: 2026-09-22T07:19:01.173Z
+  - by: openwiki/0.5.2
+    at: 2026-09-23T12:49:55.013Z
 ---
 
 # Electron Main Process and IPC
@@ -182,6 +182,14 @@ The whole git feature lives in the main process rather than a library because th
 
 `assertRoot` guards every root-taking handler against `knownGitRoots`; `assertRelPath` / `assertRef` re-check renderer-supplied paths and refs. See `/openwiki/workflows/git-integration.md` for the merge/pull/branch-switch state machines built on these handlers.
 
+## Detached-HEAD commit refusal (`detachedHeadRefusal`)
+
+A commit made on a detached HEAD belongs to no branch: it succeeds, the panel says "Committed.", and the moment the reviewer checks out a branch again the work vanishes from the tree and from every list — recoverable only from the reflog, by somebody who knows it exists. The branch-switch flow already refuses to run from a detached HEAD for the same reason; the commit path used not to check.
+
+`detachedHeadRefusal(root)` runs `git symbolic-ref --short -q HEAD` and returns a failing `GitRun` (with a human-readable "check out a branch first" message) when it resolves to nothing. An unborn HEAD (a repository with no commits yet) is *not* detached — `symbolic-ref` still resolves — so the refusal only fires on a real detachment, the sort reached by checking out a commit or a remote-tracking ref outside the app (SaiLoR's own switcher offers local branches only).
+
+Three commit-shaped handlers call it before doing anything: `git:commit` (the ordinary staged commit), `git:commitPartial` (its write→add→commit→restore swap, used to commit one reviewer's tree without disturbing others), and `git:applyRepoSetup` (which writes a `.gitattributes`/`.gitignore` and commits it — silently configuring a repository into a commit nobody can find is worse than not doing it). `git:branchSwitchBegin` makes the same check directly: a detached HEAD is reported as `{ kind: 'error', message: 'Cannot switch branches from a detached HEAD.' }`, so the switcher never offers the stash-and-checkout flow from one.
+
 ## Self-update (`update:*`)
 
 Native self-update is **Windows/Linux only**. macOS is excluded because electron-updater's Squirrel.Mac path needs the downloaded update to pass Gatekeeper, which needs a real Apple Developer ID signature *and* notarization — this project only ad-hoc-signs on mac (`scripts/afterPack.cjs` runs `codesign --force --deep --sign -` when no `CSC_LINK`/`CSC_NAME` is configured, downgrading the "damaged and can't be opened" dead end to an ordinary "unidentified developer" prompt). A real auto-installed mac update would show up as "damaged." Mac keeps the check-only banner (see below) untouched.
@@ -222,4 +230,4 @@ A clean quit is coordinated across the process boundary so the user is prompted 
 
 ## Shared pure logic imported from `src/`
 
-`electron/main.ts` is the only file under `electron/` that imports from `src/`, and it imports only shared pure logic that must not exist twice: the git URL/path/ref/output/ownAnnotationPath/concurrentRead/deriveGitInfo modules, the `model/project` legacy-shape helpers, `model/pdfMarks` / `model/pdfExport`, and `model/updateSignature`. All of these import nothing DOM-specific themselves, so they typecheck identically under the main process's tsconfig (node types) and the renderer's (DOM types) — the same arrangement that lets the vitest suite reach the security rules in `src/git/*`.
+`electron/main.ts` is the only file under `electron/` that imports from `src/`, and it imports only shared pure logic that must not exist twice: the git URL/path/ref/output/ownAnnotationPath/seatOwner/repoSetup/stash/fetchPolicy/stashOps/concurrentRead/deriveGitInfo modules, the `model/project` legacy-shape helpers, `model/fileStamps`, `model/pdfMarks` / `model/pdfExport`, and `model/updateSignature`. All of these import nothing DOM-specific themselves, so they typecheck identically under the main process's tsconfig (node types) and the renderer's (DOM types) — the same arrangement that lets the vitest suite reach the security rules in `src/git/*`.

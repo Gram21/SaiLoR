@@ -4,8 +4,12 @@ title: Project Data Model
 description: The on-disk split-file project format and the in-memory TypeScript types behind it — the load → normalize → edit → prune → serialize lifecycle, the per-paper-per-reviewer annotation file layout, legacy single-file migration, and the five-state annotation vocabulary.
 tags: [data-model, project-format, annotations, persistence, migration, annotation-state]
 sources:
+  - id: openwiki-source-8d6b6eb5e58f91e157e37bde
+    resource: repo://electron/main.ts
   - id: openwiki-source-138e8b203cbd3e8b566b4f40
     resource: repo://src/consolidate/readiness.ts
+  - id: openwiki-source-f5fa667876f0603a89a9c779
+    resource: repo://src/git/changes.ts
   - id: openwiki-source-e757c5a5c207c012e0ba6957
     resource: repo://src/model/alignment.ts
   - id: openwiki-source-ded932c19c04aac08bb5edf2
@@ -20,12 +24,16 @@ sources:
     resource: repo://src/platform/electron.ts
   - id: openwiki-source-c0a5a9016440eaf62ed2a380
     resource: repo://src/screening/schema.ts
+  - id: openwiki-source-abd876b19e1ac7ba524a3f34
+    resource: repo://src/state/gitStore.ts
+  - id: openwiki-source-f659ecb7722eea1b1900b400
+    resource: repo://src/state/store.save.test.ts
   - id: openwiki-source-89409d7a9c0280067e058c1a
     resource: repo://src/state/store.ts
-generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
+generated: { by: "openwiki/0.5.2", at: "2026-09-23T12:49:55.013Z" }
 verified:
-  - by: openwiki/0.4.0
-    at: 2026-09-22T07:19:01.173Z
+  - by: openwiki/0.5.2
+    at: 2026-09-23T12:49:55.013Z
 ---
 
 # Project Data Model
@@ -66,8 +74,8 @@ The serialized project is split into two layers:
 
 | File                                                         | Holds                                                                                                       | When it exists                       |
 | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| `consolidated.json`                                          | the consolidated/`annotations` tree, plus `aiUsage`, `equal`, `alignment`, `consolidationSync`, `finished`  | when any of those is non-empty       |
-| `reviewer-<n>.json`                                          | reviewer `n`'s own `annotations` tree and `finished` flag                                                  | when that tree has answers or the flag is set |
+| `consolidated.json`                                          | the consolidated/`annotations` tree, plus `aiUsage`, `equal`, `alignment`, `consolidationSync`, `finished`  | when the annotations tree has content or any of the others is non-empty |
+| `reviewer-<n>.json`                                          | reviewer `n`'s own `annotations` tree and `finished` flag                                                  | when that tree has content or the flag is set |
 | `marks-consolidated.json`                                    | the consolidated/Consolidation seat's `marks`                                                               | when `marks` is non-empty            |
 | `marks-<n>.json`                                             | reviewer `n`'s own `reviewMarks`                                                                            | when that list is non-empty          |
 
@@ -80,10 +88,11 @@ PDF highlights are reading notes rather than screening/annotation data.
 The split exists to keep two reviewers — or two reviewers of the same paper's
 different slots — from ever editing the same file, which is what makes a git
 merge of a multi-reviewer project survive without per-field conflicts.
-`aiUsage` and `equal` are not split per reviewer even in a multi-reviewer
-project: `aiUsage` is one array for the whole paper, `equal` is inherently a
-consolidation-time concept, and both are small, low-conflict records that ride
-in the consolidated file.
+`aiUsage`, `equal`, and `consolidationSync` are not split per reviewer even in
+a multi-reviewer project: `aiUsage` is one array for the whole paper, `equal` is
+inherently a consolidation-time concept, and `consolidationSync` describes
+Consolidation's own automatic steps (which span every reviewer at once), so all
+three ride in the consolidated file regardless of which tree they describe.
 
 `splitProjectFiles` is the pure function that produces this split: given a
 `Project`, it returns `{ meta, files }` where `files` is a list of
@@ -244,7 +253,7 @@ flowchart TD
   F --> G["in-memory Project"]
   G --> H["edit: setFieldValue / addInstance / removeInstance"]
   H --> I["serializeProject (single-file) OR splitProjectFiles (on-disk split)"]
-  I --> J["serializedTree: hasAnnotations ? pruneTree : {}"]
+  I --> J["serializedTree: hasContent ? pruneTree : {}"]
 ```
 
 *The lifecycle from raw JSON through normalized in-memory `Project` to the
@@ -283,14 +292,17 @@ result is a load error, not an empty list).
 ### Normalize: `normalizeTree`
 
 `normalizeTree(defs, existing)` reconciles a (possibly partial, possibly
-hand-edited) value tree against the resolved schema: drops keys not in the
-schema, coerces each present instance's structure to the def, pads up to `min`
-(and at least 1) instances, and clamps down to `max`. It also adopts shorthand
-shapes a hand-editor might write — a bare primitive (`"Study Type": ["RCT"]`
-instead of `[{value:"RCT"}]`) or a single entry where the format wants a list
-(`"Study Type": "RCT"`) — *as the value* rather than dropping it, because this
-walk is the one that rewrites the file and discarding it would let the next
-save overwrite a real answer with `null`.
+hand-edited) value tree against the resolved schema: coerces each present
+instance's structure to the def, pads up to `min` (and at least 1) instances,
+and clamps down to `max`. It also adopts shorthand shapes a hand-editor might
+write — a bare primitive (`"Study Type": ["RCT"]` instead of `[{value:"RCT"}]`)
+or a single entry where the format wants a list (`"Study Type": "RCT"`) — *as
+the value* rather than dropping it, because this walk is the one that rewrites
+the file and discarding it would let the next save overwrite a real answer with
+`null`. Keys the schema no longer knows about are **not** dropped: `orphanedNodes`
+carries them through verbatim (when they hold a real answer), so renaming a
+field in `project.json` does not destroy the answers other reviewers recorded
+under the old name — restore the name, and they reappear.
 
 `normalizeReviews` additionally backfills a skeleton tree for every reviewer
 `1..reviewerCount` who has no tree of their own. A reviewer who has not started
@@ -336,7 +348,11 @@ saved files stay tidy; required instances (up to `min`, at least 1) are always
 kept. Only trailing empties go — an empty instance with a filled one after it
 is a gap on purpose and is kept, because position carries meaning
 (Consolidation lines reviewers' lists up by index, and closing a gap would
-silently re-point the alignment at the wrong entries on the next load).
+silently re-point the alignment at the wrong entries on the next load). A
+trailing instance is also kept when it holds **orphaned** answers under child
+names the schema no longer knows about (`holdsOrphans`): without that second
+test, dropping trailing empties would delete the very answers a node losing its
+children was meant to preserve (see `orphanedNodes`).
 
 ### Serialize: `serializeProject` and `splitProjectFiles`
 
@@ -348,9 +364,16 @@ deal in; papers are sorted by plain case-sensitive string comparison on `id`
 (deterministic, locale-independent).
 
 `serializedTree(schema, tree)` is the per-tree serialization rule used by both
-serializers: `hasAnnotations(schema, tree) ? pruneTree(schema, tree) : {}`. An
+serializers: `hasContent(schema, tree) ? pruneTree(schema, tree) : {}`. An
 empty normalized tree (which exists in memory to bind the form to the schema)
-does not belong in a file until a reviewer has recorded an answer.
+does not belong in a file until a reviewer has recorded an answer — or until a
+schema edit has orphaned one. `hasContent` is `hasAnnotations(schema, tree) ||
+treeHoldsOrphans(schema, tree)`: a real answer keeps the file, but so do
+answers that sit under a node name the current schema no longer knows about
+(see `orphanedNodes`). Without the orphan half, removing the one field a
+reviewer had filled in would still be what deletes their work — the very case
+`orphanedNodes` exists to prevent. This rule is shared by `serializeProject`
+and `splitProjectFiles`.
 
 `splitProjectFiles(project)` produces the **on-disk split** (`{ meta, files }`)
 described above. The platform layer (`electron.ts`) re-parses
@@ -363,11 +386,13 @@ same via `toSplitProject` for merge finishes.
 `deepEqualJson(a, b)` is structural equality for plain JSON values:
 order-independent for object keys, order-sensitive for arrays, exactly JSON's
 notion of equality otherwise. It is deliberately not a text/string comparison
-— `needsShapeMigration` uses it so that whitespace, indentation, and stray key
-order (which `serializeProject` freely rewrites on every save) never look like a
-reason to migrate a file that is already semantically fine. It is also shared
-with `git/merge.ts`'s three-way field-change decision, so a second
-implementation would be a bug waiting.
+— `serializeProject` freely rewrites whitespace, indentation, and key order on
+every save, and a structural comparison is what keeps those cosmetic rewrites
+from looking like a semantic change. It is shared across the codebase for that
+reason: `git/merge.ts`'s three-way field-change decisions and
+`git/changes.ts`'s bookkeeping-field and schema/provenance/protocol diff checks
+both use it, so a second implementation of the same notion would be a bug
+waiting to happen.
 
 ## Legacy single-file migration
 
@@ -376,8 +401,9 @@ inline under each paper (the "legacy single-file shape"). Two functions handle
 the transition:
 
 - **`isLegacyProjectShape(raw)`** — true when any paper in the parsed
-  `project.json` has an `annotations` or `reviews` key. Used to decide whether
-  a project needs migrating to the split layout on open.
+  `project.json` has an `annotations` or `reviews` key. The Electron main
+  process uses it in `readProjectText` to decide whether a file needs
+  reassembly at all.
 - **`assembleLegacyProjectJson(meta, paperFiles)`** — reassembles a meta-only
   `project.json` body plus its per-paper annotation files back into the legacy
   whole-project shape `loadProject` already knows how to parse, so the read
@@ -385,23 +411,31 @@ the transition:
   validation/defaulting logic. `paperFiles` holds each per-paper file already
   `JSON.parse`d; a paper with no files on disk gets an empty entry.
 
-Migration is **silent and automatic on next save**: `needsShapeMigration`
-checks (structurally, via `deepEqualJson`) whether the file's
-`annotations`/`reviews` already match the canonical serialized shape, scoped to
-exactly those fields. If not, and the project has a stable write handle, the
-store re-serializes and saves in place — never a download, never a prompt. A
-project with nowhere stable to write (a `?project=` URL, or a browser pick
-with no in-place handle) keeps the better shape in memory and converges again
-next open. The migration write is deferred one tick so the UI paints first;
-its only consequence is deciding whether to kick off the fire-and-forget
-resave.
+The read path is the split-aware half. `readProjectText` reads `project.json`,
+and if it is **not** legacy-shaped, walks the sibling `annotations/` folder,
+splices each paper's per-reviewer/consolidated/marks files back into its
+`papers[i]`, and hands the renderer one JSON text in the single-blob shape
+`loadProject` already parses. A pre-split file is passed through untouched — it
+already *is* that shape.
+
+Migration to the split layout is **silent and automatic on the next save**:
+`project:save` (and the git layer's `toSplitProject`) always write through
+`splitProjectFiles`, which produces the split layout regardless of the shape the
+file was read in. Opening a project **never writes to disk by itself** — the old
+shape-migration that re-serialized and resaved on open was removed, because a
+schema field added after the file was written made every paper's file look
+"changed" and produced a whole-folder diff in a shared repository from a
+reviewer who only looked. A project with no stable write handle (a `?project=`
+URL, or a browser pick with no in-place handle) keeps the better shape in memory
+and converges on the next explicit save.
 
 ## Lazy file creation and deletion
 
-Per-paper-per-reviewer files are written **only when the tree holds answers**
-(`hasAnnotations`), and deleted when empty:
+Per-paper-per-reviewer files are written **only when the tree holds content**
+(`hasContent` — a real answer *or* orphaned answers under a removed schema node),
+and deleted when empty:
 
-- `reviewer-<n>.json` — written when reviewer `n`'s tree has answers (`has`)
+- `reviewer-<n>.json` — written when reviewer `n`'s tree has content (`has`)
   *or* their `finished` flag is set (a reviewer who ticked the box and then
   cleared a field still said something; dropping the file would silently
   un-say it). Otherwise `text: null` → delete if present, unless the file on
@@ -409,10 +443,9 @@ Per-paper-per-reviewer files are written **only when the tree holds answers**
   an unparseable annotation file to "absent", so reconciling that slot away
   would unlink the only copy of, say, a reviewer tree committed with git
   conflict markers in it.
-- `consolidated.json` — written when any of the consolidated `annotations`,
-  `aiUsage`, `equal`, `alignment`, `consolidationSync`, or `finished` is
-  non-empty; otherwise
-  `null`.
+- `consolidated.json` — written when any of the consolidated `annotations`
+  (has content), `aiUsage`, `equal`, `alignment`, `consolidationSync`, or
+  `finished` is non-empty; otherwise `null`.
 - `marks-<n>.json` / `marks-consolidated.json` — written when the mark list is
   non-empty; otherwise `null`.
 

@@ -1,8 +1,8 @@
 ---
 type: concept
 title: Annotation Schema and Validation
-description: How a hand-authored schema in project.json becomes a typed, validated annotation form — AnnotationDef/ResolvedDef types, zod validation, field types, cardinality, required/enum/type/cardinality checks, completeness, and duplicate detection.
-tags: [annotation-schema, validation, schema, completeness, duplicates, zod]
+description: How a hand-authored schema in project.json becomes a typed, validated annotation form — AnnotationDef/ResolvedDef types, zod validation, field types, cardinality, required/enum/type/cardinality checks, orphaned-answer recovery, completeness, and duplicate detection.
+tags: [annotation-schema, validation, schema, completeness, duplicates, zod, orphaned-answers]
 sources:
   - id: openwiki-source-4599b619fa759e59c83c5e95
     resource: repo://src/components/PaperList.tsx
@@ -32,10 +32,10 @@ sources:
     resource: repo://src/screening/schema.ts
   - id: openwiki-source-fa765b0e395ba25b6016d05a
     resource: repo://src/screening/validate.ts
-generated: {by: "claude-code", at: "2026-09-21T20:12:55.536Z"}
+generated: { by: "openwiki/0.5.2", at: "2026-09-23T12:49:55.013Z" }
 verified:
-  - by: openwiki/0.4.0
-    at: 2026-09-21T20:12:55.536Z
+  - by: openwiki/0.5.2
+    at: 2026-09-23T12:49:55.013Z
 ---
 
 # Annotation Schema and Validation
@@ -47,9 +47,10 @@ schema is authored as plain JSON, then *resolved* into an in-memory
 duplicate detector all consume. This page covers the whole path: the authoring
 types, the zod validation of the raw JSON, the resolution step that applies
 defaults and enforces structural rules, the field/cardinality model, the
-validation walk, the completeness computation behind the paper-list dot, the
-field-usage guard that warns before a schema rename orphans answers, and the
-duplicate detection run at import time.
+validation walk (including how answers orphaned by a schema rename are carried
+through rather than lost), the completeness computation behind the paper-list
+dot, the field-usage guard that warns before a schema rename orphans answers,
+and the duplicate detection run at import time.
 
 The user-facing authoring guide, with copy-paste examples and the full format
 table, lives in `docs/annotation-schema.md`; this page is the implementation
@@ -69,7 +70,7 @@ the file:
 | `max`        | `number \| null`                       | `1`     | Maximum instances; `null` = unbounded.                                   |
 | `options`    | `string[]`                             | —       | Enum dropdown, only on a `string` field.                                 |
 | `required`   | `boolean`                              | `false` | Field the reviewer must fill; ignored on a `boolean` (see below).        |
-| `visibleIf`  | `string`                               | —       | Name of a sibling or ancestor field that gates this node's visibility.    |
+| `visibleIf`  | `string \| VisibleIfSpec`              | —       | Gates this node's visibility: a bare name ("answered") or an AND/OR spec with optional `equals` value matching. |
 | `description`| `string`                               | —       | Help note shown on hover.                                                |
 
 `ResolvedDef` is the same shape with defaults filled in and an `id` assigned:
@@ -84,12 +85,17 @@ the file:
   "Emptiness" below). A stray flag on a boolean in a hand-edited file is
   silently cleared here rather than rejected, so a file that currently loads
   keeps loading.
-- `visibleIf` — kept only when it names a real, answerable sibling in the same
-  `children` array or a field along this node's direct ancestor chain, and is
-  not a self-reference. A reference to a group (a node with no `type`), to a
-  cousin (an ancestor's sibling), to a non-existent name, or to the node
-  itself is **dropped silently** at resolve time — the same "degrade
-  defensively on hand-edited data" convention used elsewhere in this schema.
+- `visibleIf` — a bare field name (shorthand for "hidden until that field has
+  any answer") or a full `VisibleIfSpec` (`{ mode: 'all'|'any', conditions: […] }`
+  combining AND/OR and, per clause, an optional `equals` value list. The bare
+  name resolves as sibling, then ancestor-chain field, then a slash-joined
+  absolute path (`"Findings/Claim"`) reaching a cousin or unrelated branch. It
+  is kept only when every clause resolves to a real, answerable field and the
+  spec targets neither this node nor its own subtree; a reference to a group
+  (no `type`), an unresolvable name, a self/subtree reference, or an `equals`
+  the target's type cannot hold is **dropped silently** at resolve time, and a
+  spec left with no conditions gates nothing — the same "degrade defensively
+  on hand-edited data" convention used elsewhere in this schema.
 - `children` — recursively resolved.
 
 `resolveSchema(defs)` is the public entry point: it runs `resolveDefs` over the
@@ -143,18 +149,22 @@ read/normalize/save:
   recursively — the editor always shows at least one instance of every node, so
   the effective minimum is 1 even when `min` is 0.
 - `normalizeTree(defs, existing)` reconciles a loaded (possibly partial,
-  possibly hand-edited) tree: drops keys not in the schema, pads each list up to
-  `min` (and at least 1), and clamps down to `max` if exceeded. It also adopts a
-  bare primitive or single object written where a list was expected
-  (`"Study Type": "RCT"` or `{...}` instead of `["RCT"]`) as that one entry
-  rather than discarding a real answer — this walk is the one that rewrites the
-  file, so discarding would open the project cleanly and let the next save
-  overwrite a real answer with `null`, silent data loss.
+  possibly hand-edited) tree: pads each list up to `min` (and at least 1),
+  clamps down to `max` if exceeded, and adopts a bare primitive or single object
+  written where a list was expected (`"Study Type": "RCT"` or `{...}` instead of
+  `["RCT"]`) as that one entry rather than discarding a real answer — this walk
+  rewrites the file, so discarding would let the next save overwrite a real
+  answer with `null`, silent data loss. Keys the schema no longer has are **not**
+  dropped: `orphanedNodes` carries them through verbatim (see "Orphaned
+  answers" below), so a rename is reversible rather than destructive.
 - `pruneTree(defs, tree)` (serialization) drops only **trailing** empty
   instances, keeping required instances (up to `min`, at least one). An empty
   instance with a filled one after it is a deliberate gap and is kept, because
   position carries meaning for consolidation's reviewer alignment (see
-  `data-model.md`).
+  `data-model.md`). Trailing-empty pruning also refuses to drop an instance that
+  *holds orphans* under its old child names (`holdsOrphans`), since the current
+  schema sees that subtree as nothing and dropping it would delete exactly the
+  answers losing a field's children is meant to keep.
 - `canAdd`/`canRemove` gate the form's `+ Add` / `×` controls against `max` and
   `min` respectively.
 
@@ -258,8 +268,13 @@ The walk produces four issue kinds:
 A fifth kind, **`screening`**, is never emitted by this module's own walk; it
 is emitted by `src/screening/validate.ts` for the two cross-field rules the
 schema language cannot express (excluded with no reason; reason recorded but
-not excluded). It lives in the shared `IssueKind` union because `ValidationIssue`
-and everything that renders one (notably `ValidationDialog.tsx`) is shared.
+not excluded). A sixth, **`orphaned`**, *is* emitted by this module — but by
+`validateProject`, not the field walk. It names the answers a paper still holds
+under field names the schema no longer describes (see "Orphaned answers"
+below), so a colleague's work sitting there is not silently filed as "not
+started". Both live in the shared `IssueKind` union because `ValidationIssue`
+and everything that renders one (notably `ValidationDialog.tsx`, which labels
+`orphaned` "Hidden by a schema change") is shared.
 
 ```mermaid
 flowchart TD
@@ -272,7 +287,7 @@ flowchart TD
     Normalize --> Tree["AnnotationValueTree"]
     Tree --> Validate["validateProject / validatePaper"]
     Resolved --> Validate
-    Validate --> Issues["ValidationIssue[]<br/>required / type / enum / cardinality"]
+    Validate --> Issues["ValidationIssue[]<br/>required / type / enum / cardinality / orphaned"]
     Tree --> Complete["completeness(schema, tree)"]
     Resolved --> Complete
     Complete --> Dot["paper-list dot + annotationState"]
@@ -293,10 +308,15 @@ every required field for the single reason it hasn't been started, which says
 nothing a reviewer doesn't already know from the paper list's own "not annotated
 yet" dot; validating it would produce a wall of "missing" issues. Skipped
 papers are returned separately as `unannotated: UnannotatedPaper[]`, so "not
-started" is never silently indistinguishable from "actually valid". If the
-walker itself throws on a surprise in a hand-edited file, the paper gets a single
-`type` issue (`"Could not validate this paper's annotations: …"`) rather than
-taking the app down — a validation run must never crash over a hand-edited file.
+started" is never silently indistinguishable from "actually valid". The
+orphaned check runs *before* that skip: a paper whose only answers sit under
+removed field names has none the current schema can see and would otherwise be
+filed as "not started" — the wrong thing to tell somebody whose colleague's
+work is sitting there — so it instead gets an `orphaned` issue naming the
+hidden paths. If the walker itself throws on a surprise in a hand-edited file,
+the paper gets a single `type` issue (`"Could not validate this paper's
+annotations: …"`) rather than taking the app down — a validation run must
+never crash over a hand-edited file.
 
 `ValidationDialog.tsx` splits the result into three sections rather than one
 flat list, because the flat list made it hard to find the open paper's own
@@ -326,6 +346,44 @@ and completeness:
   oversight.
 - `number`: `0` is a real answer; only `null`/`undefined` is empty.
 - `string`: whitespace-only counts as empty (it is invisible in the UI).
+
+### Orphaned answers
+
+A rename or remove in the schema editor orphans every answer recorded under the
+old field name. That used to destroy the data — the next load pruned it and the
+next save made that permanent — which made a one-line schema edit by one person
+wipe out several other reviewers' un-pulled work with no way back. The orphan
+machinery in `src/model/annotations.ts` reverses that decision: orphans are
+**carried through load and save verbatim**, not pruned, so restoring the name
+(or letting git bring the newer schema in) brings the answers back.
+
+`orphanedNodes(defs, tree)` returns the keys `tree` holds that no `def` names —
+but only those that actually hold a recorded answer (`instanceHoldsAnswer`),
+because `normalizeTree` materializes an empty instance for every def and a field
+the schema had a moment ago leaves a placeholder behind; carrying empty
+placeholders would resurrect files full of nothing and make every schema edit
+look like a data change. `instanceHoldsAnswer` is def-free on purpose — it has
+to judge data the schema no longer describes — and `isRecordedAnswer` is the
+shared emptiness rule it builds on (an unticked boolean and a blank string are
+not answers, matching `isEmptyValue`).
+
+`normalizeTree` and `pruneTree` both fold `orphanedNodes` back into their
+output, and recurse so a node that merely *lost some children* keeps the answers
+beneath the names it used to have (`normalizeTree` with no defs returns just the
+orphans, so one rule covers both losing a top-level field and losing a child).
+`pruneTree`'s trailing-empty drop is guarded by `holdsOrphans` so it does not
+delete the answers a node losing its children is meant to keep. On save,
+`serializeProject` keeps a paper's annotation file alive whenever it holds
+either a real answer *or* an orphan (`hasContent`/`treeHoldsOrphans`), so
+removing the one field a reviewer had filled in is not what deletes their work.
+
+Nothing in the app renders an orphan — no form field, no export, no agreement
+figure — so `orphanedNodePaths` (readable paths like "Findings › Notes") is the
+*only* way a reviewer can be told the data is there at all. `validateProject`
+emits one `orphaned` issue per paper that holds any, naming the hidden paths
+and capping the list; the `ValidationDialog` labels it "Hidden by a schema
+change". The schema editor's rename/remove/move guard (below) is the
+*pre-emptive* half of the same concern — it asks before the orphan is created.
 
 ## Completeness and the paper-list dot
 
@@ -396,30 +454,37 @@ a given field.
 
 Answers are stored keyed by the schema field's *name*, so renaming a field (or
 removing one) orphans every answer recorded under the old name. Nothing
-migrates them: `normalizeTree` builds its output by iterating the schema's defs
-and drops any key the schema no longer has, so the next load quietly prunes them
-and the next save makes that permanent. `countPapersUsingField(papers, path)`
-counts, across each paper's consolidated tree *and* every reviewer's own tree
-(kept verbatim under `extra.reviews`), how many hold a real recorded answer at
-exactly `path` — the field's names from the schema root down to it.
+migrates them, and nothing shows or exports them in the meantime — but they are
+no longer destroyed by the rename: `normalizeTree`/`pruneTree` carry the
+orphaned keys through verbatim (`orphanedNodes`), the file stays alive for them
+(`hasContent`/`treeHoldsOrphans` in `serializeProject`), and they come back the
+moment the name does. The guard still fires because *hidden* data is still worth
+being asked about; the warning's text now says "hides that … from every screen
+and export" rather than claiming the answers are lost. `countPapersUsingField(
+papers, path)` counts, across each paper's consolidated tree *and* every
+reviewer's own tree (kept verbatim under `extra.reviews`), how many hold a real
+recorded answer at exactly `path` — the field's names from the schema root
+down to it.
 
 Matching is by the field's **path** from the root, not by its bare name anywhere
 in the tree. Matching on the bare name over-warned in the most common editor
 action — add a field, type a name another field already uses, change your mind,
 delete it — and a guard that cries wolf on a node holding nothing is a guard
-users learn to click through. `isAnswer` mirrors the app's shared emptiness
-rule: an unticked checkbox is not evidence (every boolean reads `false` whether
-or not anyone looked), and a blank/whitespace-only string is not an answer, so
-neither makes a rename look destructive when it is not.
+users learn to click through. `instanceHoldsAnswer` mirrors the app's shared
+emptiness rule (via `isRecordedAnswer`): an unticked checkbox is not evidence
+(every boolean reads `false` whether or not anyone looked), and a
+blank/whitespace-only string is not an answer, so neither makes a rename look
+destructive when it is not.
 
 `countLinksUsingField(papers, path)` is the counterpart for a PDF-mark link — a
-"why I picked this value" link pointing at `path`. Unlike an ordinary answer
-(which the next load prunes silently), an orphaned link leaves the *mark* still
-showing a label for a field that no longer resolves, with no way for a reviewer
-to discover or clean it up short of opening every mark's popover — worth
-warning about for that reason. The linked-field canonical path is parsed via
-`parsePath` rather than string-prefix-matched, since a name containing `/` or
-`[` is escaped in the canonical form.
+"why I picked this value" link pointing at `path`. An orphaned link is a
+distinct hazard from an orphaned answer: the answer is carried through and
+returns with the name, but the *mark* keeps showing a label for a field that no
+longer resolves, with no way for a reviewer to discover or clean it up short of
+opening every mark's popover — worth warning about for that reason. The
+linked-field canonical path is parsed via `parsePath` rather than
+string-prefix-matched, since a name containing `/` or `[` is escaped in the
+canonical form.
 
 `SchemaTreeEditor.tsx` is the consumer: it calls `countPapersUsingField` /
 `countLinksUsingField` and warns before a rename/remove/move that would orphan
