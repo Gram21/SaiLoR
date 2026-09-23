@@ -81,3 +81,10 @@ describe('paperIdsCollide', () => {
     expect(paperIdsCollide('smith-2020', 'jones-2021')).toBe(false)
   })
 })
+
+describe('paperIdKey', () => {
+  it('folds case and normalisation together, as a case-insensitive macOS checkout does', () => {
+    // Differs in both at once — neither check alone would call these equal.
+    expect(paperIdsCollide('Caf\u00e9', 'cafe\u0301')).toBe(true)
+  })
+})

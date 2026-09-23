@@ -79,5 +79,19 @@ export function paperIdProblem(id: string): PaperIdIssue | null {
  * one platform and one on another.
  */
 export function paperIdsCollide(a: string, b: string): boolean {
-  return a.toLowerCase() === b.toLowerCase() || a.normalize('NFC') === b.normalize('NFC')
+  return paperIdKey(a) === paperIdKey(b)
+}
+
+/**
+ * The folder an id ends up as once the filesystem decides — the one value the
+ * save gate and the editor's live warning both compare, so they cannot
+ * disagree about what counts as a duplicate.
+ *
+ * Normalised *and* case-folded together, not either-or: an id differing from
+ * another in both case and normalisation form ("Café" typed on one machine,
+ * "cafe\u0301" arriving from a macOS checkout) still lands in one directory on
+ * a default macOS or Windows checkout.
+ */
+export function paperIdKey(id: string): string {
+  return id.normalize('NFC').toLowerCase()
 }

@@ -136,6 +136,22 @@ describe('PapersEditor: unsafe id flagging', () => {
   })
 })
 
+describe('PapersEditor: ids that differ only in case are duplicates while typing', () => {
+  it('flags P1 next to p1 live, not only when Save refuses them', async () => {
+    // They collapse into one folder on a case-insensitive checkout. The save
+    // gate already refused them; the live warning used to compare exactly and
+    // stay quiet until then.
+    const a = makePaperFromPdf('a.pdf', 'a.pdf', undefined, new Set())
+    const b = makePaperFromPdf('b.pdf', 'b.pdf', undefined, new Set())
+    a.id = 'P1'
+    b.id = 'p1'
+    useEditorStore.setState({ papers: [a, b] })
+    render(<PapersEditor />)
+    expect(screen.getByDisplayValue('P1')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByDisplayValue('p1')).toHaveAttribute('aria-invalid', 'true')
+  })
+})
+
 describe('PapersEditor: confirm removal of annotated papers (REQ-EDT-50)', () => {
   it('asks before removing a paper with recorded annotations, and keeps it on Cancel', async () => {
     const paper = makePaperFromPdf('a.pdf', 'a.pdf', undefined, new Set())

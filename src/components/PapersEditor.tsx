@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type DragEvent } from 'react'
 import { useEditorStore, type EditorPaper } from '../state/editorStore'
 import { getPlatform } from '../platform'
-import { paperIdProblem, type PaperIdIssue } from '../model/paperId'
+import { paperIdProblem, paperIdKey, type PaperIdIssue } from '../model/paperId'
 import '../styles/papers-editor.css'
 
 /** A short label for `idProblem.reason`, for the same spot the duplicate flag
@@ -41,18 +41,19 @@ export function unsafePaperIds(papers: { id: string }[]): Map<string, PaperIdIss
 }
 
 /**
- * Ids sharing a trimmed value with another paper's — mirrors `validateDraft`'s
- * (`src/state/editorStore.ts`) own dedup exactly: same trim, same "empty
- * doesn't count" rule (an empty id already gets its own "missing id" error
- * there). A row flagged here is guaranteed to be one `validateDraft` would
- * also reject at save time — this only exists to surface it earlier, live,
- * as the reviewer types, rather than only after they click Save.
+ * Ids that would share a folder with another paper's — the same comparison
+ * `validateDraft` (`src/state/editorStore.ts`) makes at save time, via the one
+ * shared `paperIdKey`: same trim, same "empty doesn't count" rule (an empty id
+ * already gets its own "missing id" error there), and the same case- and
+ * normalisation-insensitivity, so `P1` next to `p1` is flagged while it is
+ * typed rather than only once Save refuses it. Returns the trimmed ids as
+ * written, which is what each row looks itself up by.
  */
 export function duplicatePaperIds(papers: { id: string }[]): Set<string> {
   const trimmed = papers.map((p) => p.id.trim()).filter(Boolean)
   const counts = new Map<string, number>()
-  for (const id of trimmed) counts.set(id, (counts.get(id) ?? 0) + 1)
-  return new Set([...counts].filter(([, n]) => n > 1).map(([id]) => id))
+  for (const id of trimmed) counts.set(paperIdKey(id), (counts.get(paperIdKey(id)) ?? 0) + 1)
+  return new Set(trimmed.filter((id) => (counts.get(paperIdKey(id)) ?? 0) > 1))
 }
 
 type DropPosition = 'before' | 'after'

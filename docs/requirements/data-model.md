@@ -273,21 +273,21 @@ the project editor. See the [index](index.md) for the glossary.
 ### REQ-EDT-10 — Validate drafts before save
 - **Description:** When saving a project draft, the system shall require at least one named schema node (non-screening) or at least one non-blank exclusion reason (screening), a trimmed identifier and title per paper, a PDF path per paper except in screening drafts, every identifier safe as a folder name (REQ-EDT-21), and no two identifiers equal after trimming, case folding, or Unicode normalization, reporting each violation as a clickable issue capped at 12 displayed lines.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/editorStore.ts:625-636`, `src/model/paperId.ts:43-70,81-83`, `src/components/ProjectEditor.tsx`, commit `fe92a6e`
+- **Evidence:** `src/state/editorStore.ts:625-636`, `src/model/paperId.ts:43-70,81-83,95-97`, `src/components/ProjectEditor.tsx`, commit `fe92a6e`
 - **Verified by:** `src/state/editorStore.test.ts` (duplicate and unsafe identifier cases)
 - **Status:** Implemented
 
 ### REQ-EDT-20 — Flag duplicate and unsafe identifiers while typing
 - **Description:** When two paper rows carry identifiers equal after trimming, case folding, or Unicode normalization, or a row carries an identifier that is unsafe as a folder name, the system shall mark the offending inputs live during editing, stating the reason for an unsafe identifier.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/components/PapersEditor.tsx:31-41,51-56`, commits `5ac5112`, `fe92a6e`
+- **Evidence:** `src/components/PapersEditor.tsx:31-41,52-57`, `src/model/paperId.ts:95-97`, commits `5ac5112`, `fe92a6e`
 - **Verified by:** `src/components/PapersEditor.test.tsx`
 - **Status:** Implemented
 
 ### REQ-EDT-21 — Portable paper identifiers
 - **Description:** The system shall treat a paper identifier as unsafe when it is empty, contains a control character or any of `< > : " / \ | ? *`, is `.` or `..`, ends in a dot or a space, or is a Windows reserved device name (`CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`, case-insensitively, with or without an extension), and shall store an edited identifier in Unicode NFC form.
 - **Type:** Non-functional (ISO 25010: Portability — Adaptability)
-- **Evidence:** `src/model/paperId.ts:36,40,43-70,81-83`, `src/components/PapersEditor.tsx:377`, commit `fe92a6e`
+- **Evidence:** `src/model/paperId.ts:36,40,43-70,81-83,95-97`, `src/components/PapersEditor.tsx:378`, commit `fe92a6e`
 - **Verified by:** `src/model/paperId.test.ts`, `src/components/PapersEditor.test.tsx`
 - **Status:** Implemented
 
