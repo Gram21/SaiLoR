@@ -73,6 +73,11 @@ export function ownAnnotationPathMatcher(raw: unknown): (relUnderDir: string) =>
  * same duck-typed project meta `ownAnnotationPathMatcher` takes. A rename
  * contributes its `from` path too, or the deletion of the old name is left
  * unstaged.
+ *
+ * `changes` must come from `git status -uall`. Without it, a folder with
+ * nothing tracked in it yet — every paper's first reading — arrives as one
+ * collapsed `?? annotations/<id>/` entry that names no file, matches nothing
+ * here, and is silently left out of the commit.
  */
 export function ownAnnotationPathsIn(
   changes: Array<{ path: string; from?: string }>,

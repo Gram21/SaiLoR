@@ -99,3 +99,19 @@ describe('ownAnnotationPathsIn', () => {
     expect(ownAnnotationPathsIn(changes, 'annotations', project(['zz']))).toEqual([])
   })
 })
+
+describe('ownAnnotationPathsIn needs files, not collapsed folders', () => {
+  it('does not recognise a collapsed untracked folder — which is why callers pass -uall', () => {
+    // Plain `git status` reports a paper folder with nothing tracked in it as
+    // `?? annotations/p2/`. It names no file, so it cannot be matched, and a
+    // paper's first reading would be left out of the commit. Pinned here so
+    // the reason the main process asks for -uall is not lost.
+    const collapsed = [{ path: 'annotations/p2/' }]
+    expect(ownAnnotationPathsIn(collapsed, 'annotations', project(['p2']))).toEqual([])
+
+    const expanded = [{ path: 'annotations/p2/reviewer-1.json' }]
+    expect(ownAnnotationPathsIn(expanded, 'annotations', project(['p2']))).toEqual([
+      'annotations/p2/reviewer-1.json',
+    ])
+  })
+})

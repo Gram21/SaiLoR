@@ -2204,7 +2204,13 @@ ipcMain.handle('git:logDiff', async (_e, root: string, relPath: string, rev: str
  */
 async function ownChangedAnnotationPaths(root: string, relPath: string, metaText: string): Promise<string[]> {
   const raw: unknown = JSON.parse(metaText)
-  const st = await runGit(['status', '--porcelain=v1', '-z'], root)
+  // `-uall`, or a paper's *first* reading is lost: its folder is new, so plain
+  // porcelain collapses it to one `?? annotations/<id>/` line that names no
+  // file, and the per-file match below cannot recognise it. Staging the folder
+  // wholesale instead would re-open the sibling-project hole this function
+  // exists to close — a screening sibling keeps its own files in the same
+  // paper folder.
+  const st = await runGit(['status', '--porcelain=v1', '-z', '-uall'], root)
   if (!st.ok) throw new Error(gitErrorText(st))
   return ownAnnotationPathsIn(parsePorcelain(st.stdout), annotationsRelDir(relPath), raw)
 }
@@ -2856,12 +2862,13 @@ ipcMain.handle('git:branchSwitchBegin', async (_e, root: string, relPath: string
   assertRef(branch)
   const dir = annotationsRelDir(relPath)
   // Read the *working tree's* current project.json, not HEAD — an
-  // uncommitted new paper must still count as this project's own. A
-  // directory that collapses to one opaque `?? annotations/` porcelain
-  // record (nothing under it tracked anywhere yet) can't be resolved to
-  // individual files at all; `matchesOwn` returning `false` for everything
-  // in that case is what makes it fail toward a clean `other-files-dirty`
-  // refusal instead of guessing that an unreadable blob is ours.
+  // uncommitted new paper must still count as this project's own. Status runs
+  // with `-uall` below so a brand-new paper folder is listed file by file:
+  // collapsed to one opaque `?? annotations/<id>/` record it could not be
+  // matched, and a reviewer's first reading of a paper was refused as
+  // "other files dirty". If the project file itself cannot be read,
+  // `matchesOwn` returning `false` for everything still fails toward that
+  // clean refusal instead of guessing that an unreadable blob is ours.
   let matchesOwn: (rel: string) => boolean
   try {
     matchesOwn = ownAnnotationPathMatcher(JSON.parse(await readProjectText(path.join(root, relPath))))
@@ -2871,7 +2878,7 @@ ipcMain.handle('git:branchSwitchBegin', async (_e, root: string, relPath: string
   const inProjectScope = (p: string) =>
     p === relPath || (p.startsWith(`${dir}/`) && matchesOwn(p.slice(dir.length + 1)))
 
-  const st = await runGit(['status', '--porcelain=v1', '-z'], root)
+  const st = await runGit(['status', '--porcelain=v1', '-z', '-uall'], root)
   const changes = parsePorcelain(st.stdout)
   const otherPaths = changes.filter((c) => !inProjectScope(c.path)).map((c) => c.path)
   if (otherPaths.length > 0) return { kind: 'other-files-dirty', paths: otherPaths }
