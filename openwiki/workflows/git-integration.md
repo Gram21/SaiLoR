@@ -199,9 +199,10 @@ ordinary project-open path so opening a project doesn't exist twice.
 `--show-toplevel`/`--show-prefix`/HEAD-verify/`symbolic-ref`/`@{u}`/
 `rev-list --count HEAD..@{u}` calls and feeds them to `deriveGitInfo`. The
 sixth (`behind`) counts commits the upstream has that this branch does not
-— as of the last fetch only, never a live answer, since a network call out of
-opening a project (or out of renaming a field) is not worth it for a warning
-that only ever says "there is known to be more". `deriveGitInfo` is
+— as of the last fetch. `git:info` itself never touches the network; the
+count is kept fresh by `git:backgroundFetch`, which `refreshUpstream` runs when
+the repository is detected, whenever the Git panel opens, and every two
+minutes (`useUpstreamPolling`). `deriveGitInfo` is
 extracted into a pure function for testability to pin down exactly which
 input feeds which field — a `Promise.all` array destructured into
 differently-named variables is exactly the place a copy-paste reordering

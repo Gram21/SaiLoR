@@ -1061,8 +1061,14 @@ than removed: if it were ever reached, asking on **every** load is the honest re
 genuinely cannot tell who you are), rather than silently restoring a seat under the wrong project.
 
 Seat selection is a local view switch, not project data: it is persisted per project in
-`localStorage` only, never written to the project file, and never compared against anyone else's
-claim — so the copy explains that the selection is remembered only on this machine for this project.
+`localStorage` only and never written to the project file — so the copy explains that the selection
+is remembered only on this machine for this project. It is remembered **per paper**: the stored
+record holds the last seat plus a `perPaper` map, and `selectPaper` (and an undo/redo that lands on
+another paper) switches to that paper's remembered seat via `seatOnArrival`, falling back to the
+current seat for a paper not yet opened. A seat is a role per paper, not a person — a large review
+divides its papers among more people than it has seats — so the prompt says nothing about who owns
+a seat. The collision that matters, someone else having already committed *this* seat on *this*
+paper, is flagged per paper by `SeatConflictNotice` from `git:annotationAuthors`.
 
 ### Readiness: what Consolidation can act on (`readiness.ts`)
 
@@ -1940,8 +1946,11 @@ Two deliberate exclusions, and both are the interesting part:
 
 - **`core.sshCommand`, `credential.helper` and `gpg.program` are left alone.** Because `-c` outranks
   the *global* config too, overriding them would break the ordinary setups the section above is
-  careful not to touch. They also only run on an explicit network action the user asked for — never
-  on merely opening a folder, which is the boundary that actually matters here.
+  careful not to touch. Set in the *repository's own* config, they only run on an explicit network
+  action the user asked for — never on merely opening a folder, which is the boundary that actually
+  matters here. The background fetch (`git:backgroundFetch`) is the one network call nobody asked
+  for, so it is refused outright for a repository whose own config sets any of these keys (see
+  `FETCH_COMMAND_KEYS` in `src/git/fetchPolicy.ts`).
 - **`diff.external` is not in the list, and this is not an oversight.** Setting it empty does not
   mean "no external diff": git tries to exec the empty string and the diff dies with `cannot run :`.
   Swapping an attacker's differ for a guaranteed failure is not a fix — it silently emptied the Git
@@ -2689,8 +2698,8 @@ every caller fail toward a clean refusal rather than guessing an unreadable blob
   - `git:logDiff` — the two revisions a history row's field-level diff needs (`<rev>` and `<rev>^`), as raw text via `readProjectAtRevision`. Returns raw text rather than parsing it here, the same boundary every other IPC call keeps: this process only ever fetches; the renderer (`loadProject`/`detectFieldChanges`, called from `loadCommitDiff` in `gitStore.ts`) parses and diffs. `{kind:'initial'}` when the commit has no parent (the first commit to touch this file); `{kind:'error'}` when the revision can't be read
   - `git:discardFile` — reverts (tracked, `git checkout -- <path>`) or deletes (untracked, `rm -r` for a directory, `unlink` for a file) a single changed file *other* than the project's own tracked file/`annotations/`; the whole-file counterpart to the project's field-level Discard. Takes the open project's own `projectRelPath` and refuses whenever `relPath` is it or falls under its `annotationsRelDir(...)`, so the renderer's own `isProjectOwnPath` withhold is not the only guard. Re-derives the file's own status here rather than trusting a cached code, and refuses a rename (`change.from`) or an unresolved merge conflict (`change.unmerged`) rather than guessing. Wrapped in `try`/`catch` so every failure comes back as `{ok: false}` data. See "Whole-file discard" above
   - `git:annotationAuthors` — one `git log` per repository (not per paper), parsed by `parseAnnotationAuthors` (`src/git/seatOwner.ts`) into who last committed each annotation file, so the per-paper "somebody has already read this" check costs nothing at the point of use. Read once on repository detection and after every commit
-  - `git:repoSetupStatus` / `git:applyRepoSetup` — bring the project's `.gitattributes`/`.gitignore` up to what SaiLoR needs (annotation-file line-ending/merge rules, ignoring the `annotations/` working copies the editor writes). `planRepoSetup` (`src/git/repoSetup.ts`) computes the diff; applying is silent when there is nothing of the user's to overwrite, otherwise the store raises `repoSetupPrompt` and waits for `resolveRepoSetup`. The landed files go into a commit the reviewer did not type, surfaced as `repoSetupNotice` (`RepoSetupToast`)
-  - `git:backgroundFetch` — a fetch that never touches the working tree, used by `refreshUpstream` to recount the unpulled commits behind the upstream. Throttled/debounced by `src/git/fetchPolicy.ts` and skipped while the reviewer's own git operation is running, so two concurrent fetches never race
+  - `git:repoSetupStatus` / `git:applyRepoSetup` — bring the project's `.gitattributes`/`.gitignore` up to what SaiLoR needs (`*.json text eol=lf -merge`, and ignoring operating-system junk files such as `.DS_Store`/`Thumbs.db` whose untracked presence in `annotations/` would block every merge; annotation files and PDFs are never ignored). The rules live in a delimited managed block; content outside it is left untouched. `planRepoSetup` (`src/git/repoSetup.ts`) computes the diff; applying is silent when there is nothing of the user's to overwrite, otherwise the store raises `repoSetupPrompt` and waits for `resolveRepoSetup`. The landed files go into a commit the reviewer did not type, surfaced as `repoSetupNotice` (`RepoSetupToast`)
+  - `git:backgroundFetch` — a fetch that never touches the working tree, used by `refreshUpstream` to recount the unpulled commits behind the upstream. Refused (`refused: true`) when the repository's own config names a command a fetch would run or includes another config file (`FETCH_COMMAND_KEYS`/`backgroundFetchAllowed` in `src/git/fetchPolicy.ts`), run non-interactively (`NON_INTERACTIVE_ENV`) with a 60 s timeout. The store never runs two at once, skips it while the reviewer's own git operation is running, and makes pull, merge-branch and push wait for one in flight, so two fetches never race
   - `git:stashList` / `git:stashPush` / `git:stashRestore` / `git:stashDrop` / `git:stashBranch` — the stashed-changes surface in the Git panel (`src/git/stashOps.ts`). `stashPush` is project-scoped (`relPath` + `annotationsRelDir`), so it never sweeps a sibling project's file; `stashRestore` is all-or-nothing and refuses on a conflict (`StashRestoreResult`). `stashBranch` restores onto a new branch where it cannot conflict. A stash is named by commit sha across IPC, validated against a hex pattern
   - `update:check` / `update:download` / `update:install` — the native self-update surface, Windows/Linux only (see "In-app self-update" above). All three no-op on macOS. `update:check` primes `electron-updater` against the GitHub feed configured in `package.json`'s `build.publish` block but starts no download; the `update-available` / `download-progress` / `update-downloaded` / `error` events are pushed back to the renderer via `webContents.send('update:*')` and surface through the `onNativeUpdate*` preload subscriptions.
 - **Menu**: custom template with File, Edit, View, Window menus.
