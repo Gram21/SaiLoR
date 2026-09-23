@@ -1,0 +1,13 @@
+# >>> SaiLoR (managed) >>>
+# Annotation data is JSON that SaiLoR rewrites in full on every save.
+#
+# eol=lf: git's Windows default (core.autocrlf) would rewrite every line on
+# checkout and back on commit, turning one reviewer on Windows into a source
+# of whole-file diffs and phantom conflicts for the whole team.
+#
+# -merge: git's line merge can combine two reviewers' answers into something
+# clean and wrong — valid JSON neither of them wrote. SaiLoR re-derives a
+# merge from the committed revisions instead, so it never reads that result;
+# this makes git conflict honestly for anyone merging outside the app.
+*.json text eol=lf -merge
+# <<< SaiLoR (managed) <<<
