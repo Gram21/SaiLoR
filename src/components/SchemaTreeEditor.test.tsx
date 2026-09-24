@@ -128,6 +128,7 @@ describe('SchemaTreeEditor: known-unpulled work sharpens the warning', () => {
     branch: 'main',
     upstream: 'origin/main',
     hasHead: true,
+    annotationsDir: 'annotations',
     behind,
   })
 

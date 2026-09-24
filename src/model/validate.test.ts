@@ -471,6 +471,7 @@ describe('validateProject', () => {
       schemaInfo: null,
       schemaVersion: null,
       schemaHistory: [],
+      annotationsDir: null,
       schema: sampleSchema,
       aiEnabled: true,
       finishCheckbox: true,

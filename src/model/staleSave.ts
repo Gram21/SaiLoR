@@ -1,4 +1,5 @@
 import { projectFromFiles, splitProjectFiles, type Project } from './project'
+import { DEFAULT_ANNOTATIONS_DIR } from './annotationsDir'
 
 /**
  * What a save does when files it would overwrite changed on disk since the
@@ -22,8 +23,8 @@ function filesOf(project: Project): FileSet {
 
 /** A clash as `project:save` names it (`annotations/p1/reviewer-2.json`, or
  *  the project file's own name) in `filesOf`'s terms. */
-function clashKey(path: string): string {
-  return path.startsWith('annotations/') ? path.slice('annotations/'.length) : META
+function clashKey(path: string, folder: string): string {
+  return path.startsWith(`${folder}/`) ? path.slice(folder.length + 1) : META
 }
 
 /** The reverse of `filesOf`. */
@@ -52,7 +53,8 @@ export function resolveClash(
   const baseFiles = base ? filesOf(base) : new Map<string, string>()
   const mineFiles = filesOf(mine)
   const diskFiles = filesOf(disk)
-  const clashing = new Set(clashes.map(clashKey))
+  const folder = mine.annotationsDir ?? DEFAULT_ANNOTATIONS_DIR
+  const clashing = new Set(clashes.map((c) => clashKey(c, folder)))
   const out: FileSet = new Map()
   for (const path of new Set([...mineFiles.keys(), ...diskFiles.keys(), ...baseFiles.keys()])) {
     const edited = mineFiles.get(path) !== baseFiles.get(path)

@@ -35,6 +35,7 @@ import { GitCloneDialog } from './components/GitCloneDialog'
 import { GitDialog } from './components/GitDialog'
 import { GitMergeDialog } from './components/GitMergeDialog'
 import { StaleSaveDialog } from './components/StaleSaveDialog'
+import { SplitAnnotationsDialog } from './components/SplitAnnotationsDialog'
 import { BranchSwitchPrompt } from './components/BranchSwitchPrompt'
 import { NewBranchPrompt } from './components/NewBranchPrompt'
 import { MergeBranchPrompt } from './components/MergeBranchPrompt'
@@ -420,6 +421,7 @@ export function App() {
       <GitDialog />
       <GitMergeDialog />
       <StaleSaveDialog />
+      <SplitAnnotationsDialog />
       <BranchSwitchPrompt />
       <NewBranchPrompt />
       <MergeBranchPrompt />

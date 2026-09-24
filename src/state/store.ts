@@ -49,6 +49,8 @@ import {
 import { getPlatform, type SaveHandle } from '../platform'
 import { StaleSaveError } from '../platform/adapter'
 import { resolveClash } from '../model/staleSave'
+import { DEFAULT_ANNOTATIONS_DIR, defaultSplitDirName } from '../model/annotationsDir'
+import { planSplit, type SplitRow } from '../model/annotationSplit'
 import {
   applyResolutions,
   mergeProjects,
@@ -430,6 +432,16 @@ function saveFailure(err: unknown): LoadError {
   return { message: headline ?? 'Failed to save.', details: rest }
 }
 
+export interface AnnotationsSplit {
+  /** The shared folder's name. */
+  shared: string
+  /** Every project file using it (the open one first) and its proposed own folder. */
+  projects: { path: string; name: string; folder: string }[]
+  rows: SplitRow[]
+  error: string | null
+  working: boolean
+}
+
 export interface StaleSave {
   /** The clashing files, relative to the project's folder. */
   paths: string[]
@@ -543,6 +555,9 @@ interface AppState {
   /** A save that found its files changed on disk and is waiting for the
    *  reviewer to decide — see `resolveStaleSave`. */
   staleSave: StaleSave | null
+  /** The open project's annotations folder is shared with other project files
+   *  next to it, and this is the proposed split — see `SplitAnnotationsDialog`. */
+  annotationsSplit: AnnotationsSplit | null
   busy: boolean
   sidebarCollapsed: boolean
   /** Latest text selected inside the PDF viewer (for "grab from PDF"). */
@@ -747,6 +762,14 @@ interface AppState {
   backToStaleChoice: () => void
   dismissStaleSave: () => void
   dismissStaleSaveError: () => void
+  /** Look for other project files sharing this project's annotations folder,
+   *  and propose a split if there are. */
+  checkSharedAnnotations: () => Promise<void>
+  setSplitFolder: (projectPath: string, folder: string) => void
+  setSplitTargets: (relPath: string, targets: string[]) => void
+  runSplit: () => Promise<void>
+  /** Not now: asked again the next time the project is opened. */
+  dismissSplit: () => void
   saveAs: () => Promise<boolean>
   setAutosaveEnabled: (enabled: boolean) => void
   selectPaper: (id: string) => void
@@ -1124,6 +1147,7 @@ export const useStore = create<AppState>()(
     corruptFiles: [],
     loadError: null,
     staleSave: null,
+    annotationsSplit: null,
     busy: false,
     sidebarCollapsed: false,
     pdfSelection: '',
@@ -1198,7 +1222,17 @@ export const useStore = create<AppState>()(
           if (!s.loadError && s.corruptFiles.length > 0) {
             s.loadError = corruptFilesWarning(s.corruptFiles)
           }
+          if (!s.loadError && s.project?.refusedAnnotationsDir !== undefined) {
+            s.loadError = {
+              message: `This project names "${s.project.refusedAnnotationsDir}" as its annotations folder, which is not allowed.`,
+              details: [
+                'An annotations folder must be a plain folder name directly next to the project file. ' +
+                  `SaiLoR uses "${DEFAULT_ANNOTATIONS_DIR}/" instead.`,
+              ],
+            }
+          }
         })
+        void get().checkSharedAnnotations()
       } catch (err) {
         set((s) => {
           s.busy = false
@@ -1305,6 +1339,7 @@ export const useStore = create<AppState>()(
         s.projectGeneration = projectGeneration
         s.project = null
         s.staleSave = null
+        s.annotationsSplit = null
         s.currentPaperId = null
         s.saveHandle = null
         s.projectName = ''
@@ -1381,7 +1416,17 @@ export const useStore = create<AppState>()(
           if (!s.loadError && s.corruptFiles.length > 0) {
             s.loadError = corruptFilesWarning(s.corruptFiles)
           }
+          if (!s.loadError && s.project?.refusedAnnotationsDir !== undefined) {
+            s.loadError = {
+              message: `This project names "${s.project.refusedAnnotationsDir}" as its annotations folder, which is not allowed.`,
+              details: [
+                'An annotations folder must be a plain folder name directly next to the project file. ' +
+                  `SaiLoR uses "${DEFAULT_ANNOTATIONS_DIR}/" instead.`,
+              ],
+            }
+          }
         })
+        void get().checkSharedAnnotations()
       } catch (err) {
         set((s) => {
           s.busy = false
@@ -1433,6 +1478,7 @@ export const useStore = create<AppState>()(
           s.dirty = false
           s.loadError = null
           s.staleSave = null
+          s.annotationsSplit = null
           s.busy = false
           s.pdfSelection = ''
           s.past = []
@@ -1682,6 +1728,102 @@ export const useStore = create<AppState>()(
       })
     },
 
+    checkSharedAnnotations: async () => {
+      const handle = get().saveHandle
+      if (!handle?.path) return
+      let shared
+      try {
+        shared = await getPlatform().sharedAnnotations(handle.path)
+      } catch {
+        shared = null // a folder that cannot be inspected is not split
+      }
+      if (!shared || get().saveHandle?.path !== handle.path) return
+      const projects = shared.projects.map((p) => {
+        let meta: unknown = null
+        try {
+          meta = JSON.parse(p.text)
+        } catch {
+          // listed by the main process as a project file; unreadable now means no ids to match
+        }
+        return { path: p.path, name: p.name, meta }
+      })
+      const taken = new Set<string>()
+      const folderFor = (name: string) => {
+        let folder = defaultSplitDirName(name)
+        for (let i = 2; taken.has(folder.toLowerCase()); i++) folder = `${defaultSplitDirName(name)}-${i}`
+        taken.add(folder.toLowerCase())
+        return folder
+      }
+      const split: AnnotationsSplit = {
+        shared: shared.folder,
+        projects: projects.map((p) => ({ path: p.path, name: p.name, folder: folderFor(p.name) })),
+        rows: planSplit(projects, shared.files),
+        error: null,
+        working: false,
+      }
+      set((s) => {
+        s.annotationsSplit = split
+      })
+    },
+
+    setSplitFolder: (projectPath, folder) => {
+      set((s) => {
+        const p = s.annotationsSplit?.projects.find((x) => x.path === projectPath)
+        if (p) p.folder = folder
+      })
+    },
+
+    setSplitTargets: (relPath, targets) => {
+      set((s) => {
+        const row = s.annotationsSplit?.rows.find((r) => r.relPath === relPath)
+        if (row) row.targets = targets
+      })
+    },
+
+    dismissSplit: () => {
+      set((s) => {
+        s.annotationsSplit = null
+      })
+    },
+
+    runSplit: async () => {
+      const { annotationsSplit: split, saveHandle, dirty } = get()
+      if (!split || !saveHandle?.path) return
+      if (dirty) {
+        set((s) => {
+          if (s.annotationsSplit) s.annotationsSplit.error = 'Save the project first — the split rewrites its files.'
+        })
+        return
+      }
+      set((s) => {
+        if (s.annotationsSplit) {
+          s.annotationsSplit.working = true
+          s.annotationsSplit.error = null
+        }
+      })
+      try {
+        await getPlatform().splitAnnotations(saveHandle.path, {
+          folders: Object.fromEntries(split.projects.map((p) => [p.path, p.folder])),
+          rows: split.rows.map((r) => ({ relPath: r.relPath, targets: r.targets })),
+        })
+        set((s) => {
+          s.annotationsSplit = null
+        })
+        await get().openRecent(saveHandle.path)
+      } catch (err) {
+        set((s) => {
+          if (s.annotationsSplit) {
+            s.annotationsSplit.working = false
+            // Electron prefixes errors thrown by a handler with the channel name.
+            s.annotationsSplit.error = (err instanceof Error ? err.message : String(err)).replace(
+              /^Error invoking remote method '[^']+': (Error: )?/,
+              '',
+            )
+          }
+        })
+      }
+    },
+
     saveAs: async () => {
       const { project, projectName, saveHandle } = get()
       if (!project) return false
@@ -1702,37 +1844,34 @@ export const useStore = create<AppState>()(
           return false
         }
 
-        // Refuse rather than silently start sharing an `annotations/` folder
-        // with another project already in that directory — this is the only
-        // moment such a sharing relationship gets created, so it's the only
-        // moment it can be caught. `location.path` is Electron-only (the
-        // browser build never reaches this at all); no path means nothing to
-        // check against.
+        // A folder of annotations belongs to one project. If another project
+        // file in the destination directory already uses this project's
+        // folder name, take one named after this file instead; refuse only if
+        // that is taken too. `location.path` is Electron-only; no path means
+        // nothing to check against.
+        let target = project
         if (location.path) {
-          const collision = await platform.checkSiblingCollision(
-            location.path,
-            project.papers.map((p) => p.id),
-            project.screening !== null,
-          )
-          if (collision) {
-            set((s) => {
-              s.busy = false
-              const noun = collision.overlappingIds.length === 1 ? 'a paper' : 'papers'
-              s.loadError = {
-                message:
-                  `Can't save here — "${collision.siblingName}" in this folder already shares ${noun} ` +
-                  "with this project and uses the same annotation files, so saving here would let the " +
-                  "two projects silently overwrite each other's answers. Choose a different folder.",
-                details: [
-                  `Shared paper id${collision.overlappingIds.length === 1 ? '' : 's'}: ${collision.overlappingIds.join(', ')}`,
-                ],
-              }
-            })
-            return false
+          const folder = project.annotationsDir ?? DEFAULT_ANNOTATIONS_DIR
+          const users = await platform.annotationsDirUsers(location.path, folder)
+          if (users.length > 0) {
+            const own = defaultSplitDirName(location.name)
+            if ((await platform.annotationsDirUsers(location.path, own)).length > 0) {
+              set((s) => {
+                s.busy = false
+                s.loadError = {
+                  message:
+                    `Can't save here — "${users[0]}" in this folder already keeps its annotations in "${folder}/", ` +
+                    `and "${own}/" is taken too. Choose a different folder or file name.`,
+                  details: [],
+                }
+              })
+              return false
+            }
+            target = { ...project, annotationsDir: own }
           }
         }
 
-        let toWrite = project
+        let toWrite = target
         if (saveHandle) {
           const rebased = await platform.rebasePdfPaths(
             project.papers.map((p) => p.pdf),
@@ -1740,7 +1879,7 @@ export const useStore = create<AppState>()(
             location.handle,
           )
           toWrite = {
-            ...project,
+            ...target,
             papers: project.papers.map((p, i) => ({ ...p, pdf: rebased[i] ?? p.pdf })),
           }
         }

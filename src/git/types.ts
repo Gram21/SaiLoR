@@ -67,6 +67,8 @@ export interface GitRepoInfo {
   /** Commits the upstream is ahead by, as of the last fetch — see
    *  `deriveGitInfo`. Null when unknown or there is no upstream. */
   behind: number | null
+  /** The project's annotations folder, repo-relative (see `model/annotationsDir.ts`). */
+  annotationsDir: string
 }
 
 export interface RepoSetupStatus {

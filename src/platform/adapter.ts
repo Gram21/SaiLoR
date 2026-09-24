@@ -133,17 +133,23 @@ export interface PlatformAdapter {
    */
   pickProjectLocation(suggestedName: string): Promise<ProjectLocation | null>
 
-  /**
-   * Would writing to `destPath` start sharing an `annotations/` folder with a
-   * *different* project already there? Null if no collision (or not
-   * implemented on this platform). Checked between `pickProjectLocation` and
-   * the write in `saveAs()`, the only moment a new sharing relationship forms.
-   */
-  checkSiblingCollision(
-    destPath: string,
-    paperIds: string[],
-    screening: boolean,
-  ): Promise<{ siblingName: string; overlappingIds: string[] } | null>
+  /** File names of the other project files next to `projectPath` whose
+   *  annotations folder is `folder` — a folder must belong to one project. */
+  annotationsDirUsers(projectPath: string, folder: string): Promise<string[]>
+
+  /** Rename the project's annotations folder and record the new name in its project file. */
+  moveAnnotationsDir(projectPath: string, folder: string): Promise<void>
+
+  /** The open project's annotations folder with everything needed to split it,
+   *  when other project files next to it use it too; `null` otherwise. */
+  sharedAnnotations(projectPath: string): Promise<SharedAnnotations | null>
+
+  /** Split the folder `sharedAnnotations` listed: each project gets its own
+   *  folder, and each file goes where `plan` says. */
+  splitAnnotations(
+    projectPath: string,
+    plan: { folders: Record<string, string>; rows: { relPath: string; targets: string[] }[] },
+  ): Promise<void>
 
   /** Pick one or more PDFs to reference. Returns [] if cancelled. */
   pickPdfs(): Promise<PickedPdf[]>
@@ -292,4 +298,14 @@ export class StaleSaveError extends Error {
     super(`These files changed on disk since this project was opened: ${paths.join(', ')}`)
     this.name = 'StaleSaveError'
   }
+}
+
+/** See `PlatformAdapter.sharedAnnotations`. */
+export interface SharedAnnotations {
+  /** The shared folder's name. */
+  folder: string
+  /** Every project file using it, the open one first. */
+  projects: { path: string; name: string; text: string }[]
+  /** Every file in it, relative to it. */
+  files: { relPath: string; text: string }[]
 }

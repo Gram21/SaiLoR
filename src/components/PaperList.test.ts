@@ -37,6 +37,7 @@ function makeProject(reviewers: number): Project {
     schemaInfo: null,
     schemaVersion: null,
     schemaHistory: [],
+    annotationsDir: null,
     schema,
     aiEnabled: true,
     finishCheckbox: true,

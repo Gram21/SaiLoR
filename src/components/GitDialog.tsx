@@ -67,8 +67,7 @@ export function mixedDiscardConfirmMessage(
  * Exported for `GitDialog.test.ts`; real enforcement is server-side in
  * `git:discardFile`.
  */
-export function isProjectOwnPath(path: string, relPath: string): boolean {
-  const dir = annotationsRelDir(relPath)
+export function isProjectOwnPath(path: string, relPath: string, dir: string = annotationsRelDir(relPath)): boolean {
   return path === relPath || path === dir || path.startsWith(`${dir}/`)
 }
 
@@ -137,7 +136,7 @@ export function GitDialog() {
   const review = panel.fieldReview
   // The project's own rows live in the field-review list below when there is
   // one; otherwise they fall back to the plain checkbox (see `isProjectOwnPath`).
-  const changes = (panel.status?.changes ?? []).filter((c) => !review || !isProjectOwnPath(c.path, repo.relPath))
+  const changes = (panel.status?.changes ?? []).filter((c) => !review || !isProjectOwnPath(c.path, repo.relPath, repo.annotationsDir))
   // The switcher only ever offers local branches — checking out a
   // remote-tracking ref would detach HEAD. The merge picker takes both.
   const localBranches = branches.filter((b) => !b.remote)
@@ -411,7 +410,7 @@ export function GitDialog() {
             <ul className="git-changes">
               {changes.map((c) => {
                 // Own project files never get this button (see `isProjectOwnPath`); `git:discardFile` enforces it server-side too.
-                const isOwn = isProjectOwnPath(c.path, repo.relPath)
+                const isOwn = isProjectOwnPath(c.path, repo.relPath, repo.annotationsDir)
                 // `git status --porcelain` reports an untracked dir as one record, e.g. `?? exports/`.
                 const isDir = c.path.endsWith('/')
                 // A rename needs more than one `checkout` to undo, and an unresolved conflict has no single well-defined "discard".

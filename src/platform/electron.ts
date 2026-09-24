@@ -7,7 +7,7 @@ import type {
   ProjectLocation,
   SaveHandle,
 } from './adapter'
-import { StaleSaveError } from './adapter'
+import { StaleSaveError, type SharedAnnotations } from './adapter'
 import { readRecents, pushRecent, removeRecent, replaceRecents, type RecentEntry } from './recents'
 import type { LlmConfig, LlmHttpRequest, LlmHttpResponse } from '../llm/types'
 import type {
@@ -127,11 +127,13 @@ export interface SlrBridge {
   setProjectDir(path: string): Promise<void>
   /** Pick a location for a project JSON without writing it. Null if cancelled. */
   pickSavePath(suggestedName: string): Promise<{ path: string } | null>
-  checkSiblingCollision(
-    destPath: string,
-    paperIds: string[],
-    screening: boolean,
-  ): Promise<{ siblingName: string; overlappingIds: string[] } | null>
+  annotationsDirUsers(projectPath: string, folder: string): Promise<string[]>
+  sharedAnnotations(projectPath: string): Promise<SharedAnnotations | null>
+  moveAnnotationsDir(projectPath: string, folder: string): Promise<void>
+  splitAnnotations(
+    projectPath: string,
+    plan: { folders: Record<string, string>; rows: { relPath: string; targets: string[] }[] },
+  ): Promise<void>
   /** Pick PDFs to reference. Returns their absolute paths, [] if cancelled. */
   pickPdfs(): Promise<string[]>
   /** Pick a folder; returns the absolute paths of every PDF inside it (recursively). [] if cancelled. */
@@ -408,12 +410,25 @@ export class ElectronAdapter implements PlatformAdapter {
     }
   }
 
-  async checkSiblingCollision(
-    destPath: string,
-    paperIds: string[],
-    screening: boolean,
-  ): Promise<{ siblingName: string; overlappingIds: string[] } | null> {
-    return bridge().checkSiblingCollision(destPath, paperIds, screening)
+  annotationsDirUsers(projectPath: string, folder: string): Promise<string[]> {
+    return bridge().annotationsDirUsers(projectPath, folder)
+  }
+
+  sharedAnnotations(projectPath: string): Promise<SharedAnnotations | null> {
+    return bridge().sharedAnnotations(projectPath)
+  }
+
+  moveAnnotationsDir(projectPath: string, folder: string): Promise<void> {
+    return bridge().moveAnnotationsDir(projectPath, folder)
+  }
+
+  // Rewrites project files and moves annotation files, so what was last
+  // written describes nothing any more.
+  splitAnnotations(
+    projectPath: string,
+    plan: { folders: Record<string, string>; rows: { relPath: string; targets: string[] }[] },
+  ): Promise<void> {
+    return withBaselineDropped(() => bridge().splitAnnotations(projectPath, plan))
   }
 
   async pickPdfs(): Promise<PickedPdf[]> {

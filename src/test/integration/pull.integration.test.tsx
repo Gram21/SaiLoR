@@ -50,7 +50,7 @@ const fakeGit: GitPlatform = {
       relPath: 'project.json',
       branch: git(['branch', '--show-current']).trim() || null,
       upstream,
-      hasHead: true, behind: null,
+      hasHead: true, behind: null, annotationsDir: 'annotations',
     }
   },
   status: async (root): Promise<GitStatus> => {

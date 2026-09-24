@@ -34,6 +34,7 @@ import { DEFAULT_SCREENING_REASONS, screeningSchemaDefs } from '../screening/sch
 import { screeningReason, screeningStatus } from '../screening/status'
 import { pendingUnanimousDecisions } from '../screening/counts'
 import { renameReasonInPapers } from '../screening/reasonUsage'
+import { annotationsDirProblem, DEFAULT_ANNOTATIONS_DIR } from '../model/annotationsDir'
 import {
   amendVersion,
   newSchemaVersionId,
@@ -708,6 +709,8 @@ export function buildProjectJson(state: {
   /** Optional for the same reason; see `model/schemaVersion.ts`. */
   schemaVersion?: string | null
   schemaHistory?: SchemaHistoryEntry[]
+  /** Optional for the same reason; empty/absent means the default folder. */
+  annotationsDir?: string
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
@@ -722,6 +725,7 @@ export function buildProjectJson(state: {
     ...(state.provenance ? { provenance: state.provenance } : {}),
     ...(state.protocol ? { protocol: state.protocol } : {}),
     ...(state.schemaInfo ? { schemaInfo: state.schemaInfo } : {}),
+    ...(state.annotationsDir?.trim() ? { annotationsDir: state.annotationsDir.trim() } : {}),
     ...(state.schemaVersion ? { schemaVersion: state.schemaVersion } : {}),
     ...(state.schemaHistory && state.schemaHistory.length > 0 ? { schemaHistory: state.schemaHistory } : {}),
     // `ai` is only written when disabled, and `reviewers` only when it says
@@ -1016,6 +1020,10 @@ interface EditorState {
   savedSchemaJson: string
   /** Nodes whose answers the reviewer chose to leave hidden rather than move. */
   keepHidden: Record<string, true>
+  /** The annotations folder's name as typed; empty means the default. */
+  annotationsDir: string
+  /** The folder's name as last saved, to tell a rename that must move it. */
+  savedAnnotationsDir: string
   nodes: EditorNode[]
   papers: EditorPaper[]
   dirty: boolean
@@ -1115,6 +1123,7 @@ interface EditorState {
   save: () => Promise<boolean>
   /** Leave the answers of a renamed or moved node hidden, or move them after all. */
   setKeepHidden: (uid: string, keep: boolean) => void
+  setAnnotationsDir: (name: string) => void
   /** Pick a new location, then write there. */
   saveAs: () => Promise<boolean>
   /** Write the JSON, then open it in the annotation view. */
@@ -1180,6 +1189,7 @@ interface OpenedEditorState {
   schemaInfo: string | null
   schemaVersion: string | null
   schemaHistory: SchemaHistoryEntry[]
+  annotationsDir: string
   nodes: EditorNode[]
   papers: EditorPaper[]
 }
@@ -1257,6 +1267,7 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
     schemaInfo: parseSchemaInfo(data.schemaInfo),
     schemaVersion: parseSchemaVersion(data.schemaVersion),
     schemaHistory: parseSchemaHistory(data.schemaHistory),
+    annotationsDir: typeof data.annotationsDir === 'string' ? data.annotationsDir : '',
     // A screening project's schema is derived, not authored, so there is
     // nothing for the schema-builder tree to hold — see `ProjectEditor.tsx`.
     nodes: screening ? [] : fromAnnotationDefs(parsed.config.schema ?? []),
@@ -1298,6 +1309,8 @@ function openEditorSession(s: EditorState, st: OpenedEditorState): void {
   s.savedNodes = st.nodes
   s.savedSchemaJson = savedSchemaJsonOf(st)
   s.keepHidden = {}
+  s.annotationsDir = st.annotationsDir
+  s.savedAnnotationsDir = st.annotationsDir
   s.nodes = st.nodes
   s.papers = st.papers
   s.dirty = false
@@ -1436,6 +1449,8 @@ export const useEditorStore = create<EditorState>()(
     savedNodes: [],
     savedSchemaJson: '',
     keepHidden: {},
+    annotationsDir: '',
+    savedAnnotationsDir: '',
     nodes: [],
     papers: [],
     dirty: false,
@@ -1476,6 +1491,8 @@ export const useEditorStore = create<EditorState>()(
         s.savedNodes = []
         s.savedSchemaJson = ''
         s.keepHidden = {}
+        s.annotationsDir = ''
+        s.savedAnnotationsDir = ''
         s.nodes = [makeNode()]
         s.papers = []
         s.dirty = false
@@ -2122,6 +2139,8 @@ export const useEditorStore = create<EditorState>()(
           s.savedNodes = []
           s.savedSchemaJson = ''
           s.keepHidden = {}
+          s.annotationsDir = ''
+          s.savedAnnotationsDir = ''
           s.provenance = {
             kind: 'screening-import',
             source: {
@@ -2273,6 +2292,15 @@ export const useEditorStore = create<EditorState>()(
         return false
       }
       const issues = validateDraft(st)
+      const folder = st.annotationsDir.trim() || DEFAULT_ANNOTATIONS_DIR
+      const folderProblem = st.annotationsDir.trim() ? annotationsDirProblem(folder) : null
+      if (folderProblem) issues.push(`Annotations folder "${folder}": ${folderProblem}.`)
+      else if (st.location.path) {
+        const users = await getPlatform().annotationsDirUsers?.(st.location.path, folder).catch(() => []) ?? []
+        if (users.length > 0) {
+          issues.push(`Annotations folder "${folder}" is already used by ${users.join(', ')} next to this file; choose another name.`)
+        }
+      }
       if (issues.length > 0) {
         set((s) => {
           s.issues = issues
@@ -2290,6 +2318,14 @@ export const useEditorStore = create<EditorState>()(
         // failed save does not leave a version behind that no file has.
         const schemaJson = savedSchemaJsonOf(st)
         const versioned = schemaJson === st.savedSchemaJson ? st : { ...st, ...(await nextSchemaVersion(st)) }
+        // An existing project's folder moves before the project file says so;
+        // the move records the new name itself, and is refused rather than
+        // half-done.
+        const savedFolder = st.savedAnnotationsDir.trim() || DEFAULT_ANNOTATIONS_DIR
+        // (`savedSchemaJson` is set once the file exists: opened, or saved before.)
+        if (st.savedSchemaJson !== '' && st.location.path && folder !== savedFolder) {
+          await getPlatform().moveAnnotationsDir(st.location.path, folder)
+        }
         const text = JSON.stringify(buildProjectJson(versioned), null, 2)
         const handle = await getPlatform().saveProject(text, st.location.handle)
         set((s) => {
@@ -2298,6 +2334,7 @@ export const useEditorStore = create<EditorState>()(
           s.savedNodes = st.nodes
           s.savedSchemaJson = schemaJson
           s.keepHidden = {}
+          s.savedAnnotationsDir = st.annotationsDir
           s.busy = false
           s.dirty = false
           if (s.location) s.location.handle = handle
@@ -2316,6 +2353,13 @@ export const useEditorStore = create<EditorState>()(
         })
         return false
       }
+    },
+
+    setAnnotationsDir: (name) => {
+      set((s) => {
+        s.annotationsDir = name
+        s.dirty = true
+      })
     },
 
     setKeepHidden: (uid, keep) => {

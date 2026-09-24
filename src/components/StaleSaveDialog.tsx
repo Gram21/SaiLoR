@@ -1,5 +1,6 @@
 import { useStore } from '../state/store'
 import type { Project } from '../model/project'
+import { DEFAULT_ANNOTATIONS_DIR } from '../model/annotationsDir'
 import { ConflictResolutionDialog } from './ConflictResolutionDialog'
 
 /** How many clashing files the dialog names before it stops counting. */
@@ -8,7 +9,8 @@ const MAX_LISTED = 10
 /** A clashing file (`annotations/p1/reviewer-2.json`, or the project file's own
  *  name) as the reviewer knows it: which paper, and whose part of it. */
 export function describeClash(path: string, project: Project | null): string {
-  const m = /^annotations\/(.+)\/([^/]+)\.json$/.exec(path)
+  const folder = `${project?.annotationsDir ?? DEFAULT_ANNOTATIONS_DIR}/`
+  const m = path.startsWith(folder) ? /^(.+)\/([^/]+)\.json$/.exec(path.slice(folder.length)) : null
   if (!m) return 'The project file (schema, settings, and the list of papers)'
   const [, id, name] = m
   const paper = project?.papers.find((p) => p.id === id)?.title || id

@@ -18,6 +18,7 @@ import { screeningSchemaDefs } from '../screening/schema'
 import { parseYear } from './year'
 import { parseMarks, parseReviewMarks, type PdfMark } from './pdfMarks'
 import { parseAlignment, type StoredAlignment } from './alignment'
+import { annotationsDirProblem } from './annotationsDir'
 import {
   moveInMarks,
   moveInTree,
@@ -196,6 +197,13 @@ export interface Project {
   schemaVersion: string | null
   /** Every schema version so far, oldest first, with its renames and moves. */
   schemaHistory: SchemaHistoryEntry[]
+  /** The project's annotations folder, one folder directly inside the project
+   *  file's directory; null means the default `annotations`. See
+   *  `model/annotationsDir.ts`. */
+  annotationsDir: string | null
+  /** A folder name the file gave that is not allowed, and so was ignored in
+   *  favour of the default. Not written back. */
+  refusedAnnotationsDir?: string
   /** Whether AI-assisted annotation is available. Defaults to true; opt out
    *  with `config.ai: false`. */
   aiEnabled: boolean
@@ -274,6 +282,7 @@ export const KNOWN_ROOT_KEYS = new Set([
   'schemaInfo',
   'schemaVersion',
   'schemaHistory',
+  'annotationsDir',
   'config',
   'papers',
 ])
@@ -594,6 +603,9 @@ export function loadProject(input: string | unknown): Project {
 
   const schemaVersion = parseSchemaVersion((data as { schemaVersion?: unknown }).schemaVersion)
   const schemaHistory = parseSchemaHistory((data as { schemaHistory?: unknown }).schemaHistory)
+  const rawAnnotationsDir = (data as { annotationsDir?: unknown }).annotationsDir
+  const annotationsDir =
+    typeof rawAnnotationsDir === 'string' && annotationsDirProblem(rawAnnotationsDir) === null ? rawAnnotationsDir : null
 
   const papers: Paper[] = raw.papers.map((p) => {
     // Carry each file's answers across the renames and moves made since it
@@ -663,6 +675,10 @@ export function loadProject(input: string | unknown): Project {
     schema,
     schemaVersion,
     schemaHistory,
+    annotationsDir,
+    ...(rawAnnotationsDir !== undefined && annotationsDir === null
+      ? { refusedAnnotationsDir: String(rawAnnotationsDir) }
+      : {}),
     // Absent means enabled; only an explicit `false` opts out.
     aiEnabled: raw.config.ai !== false,
     // Absent means enabled, same rule as `ai` above; only an explicit `false`
@@ -679,6 +695,7 @@ export function loadProject(input: string | unknown): Project {
 /** The root keys naming the schema version, written once there is one. */
 function schemaVersionKeys(project: Project): Record<string, unknown> {
   return {
+    ...(project.annotationsDir ? { annotationsDir: project.annotationsDir } : {}),
     ...(project.schemaVersion ? { schemaVersion: project.schemaVersion } : {}),
     ...(project.schemaHistory.length > 0 ? { schemaHistory: project.schemaHistory } : {}),
   }

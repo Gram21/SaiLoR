@@ -18,6 +18,7 @@ describe('useUpstreamPolling', () => {
     branch: 'main',
     upstream,
     hasHead: true,
+    annotationsDir: 'annotations',
     behind: null,
   })
 

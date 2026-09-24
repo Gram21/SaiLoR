@@ -1328,6 +1328,14 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
     schema = mergeSchemaDefs(base?.schema, ours.schema, theirs.schema, [], conflicts)
   }
 
+  // Where the answers live on disk: moving the folder is one side's choice
+  // or, when both moved it differently, the reviewer's.
+  const annotationsDirM = merge3<string | null>(base?.annotationsDir ?? null, ours.annotationsDir, theirs.annotationsDir, (a, b) => a === b)
+  const annotationsDirValue = annotationsDirM ? annotationsDirM.value : ours.annotationsDir
+  if (!annotationsDirM) {
+    projectChoice('annotationsDir', 'Annotations folder', ours.annotationsDir, theirs.annotationsDir, (v) => `${v ?? 'annotations'}/`)
+  }
+
   const provenanceM = merge3<ProjectProvenance | null>(base?.provenance ?? null, ours.provenance, theirs.provenance, deepEqualJson)
   if (!provenanceM) {
     projectChoice('provenance', 'Where the papers were imported from', ours.provenance, theirs.provenance, (v) =>
@@ -1405,6 +1413,7 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
       schema: withPathIds(schema),
       schemaVersion: version.id,
       schemaHistory: version.history,
+      annotationsDir: annotationsDirValue,
       aiEnabled: aiM ? aiM.value! : ours.aiEnabled,
       finishCheckbox: finishM ? finishM.value! : ours.finishCheckbox,
       reviewers: reviewersM ? reviewersM.value! : ours.reviewers,
@@ -1595,6 +1604,8 @@ function applyOne(draft: Project, conflict: FieldConflict, value: FieldValue): v
       const side = chosen as { screening: ScreeningConfig | null; schema: ResolvedDef[] }
       draft.screening = side.screening
       draft.schema = side.schema
+    } else if (c === 'annotationsDir') {
+      draft.annotationsDir = (chosen as string | null) ?? null
     } else if (c === 'provenance') {
       draft.provenance = (chosen as ProjectProvenance | null) ?? null
     } else if (c.startsWith('protocol.')) {

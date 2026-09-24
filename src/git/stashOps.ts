@@ -2,6 +2,7 @@ import type { GitRun } from './types'
 import { parsePorcelain, gitErrorText } from './output'
 import { ownAnnotationPathsIn } from './ownAnnotationPath'
 import { annotationsRelDir, mergeBlockingPaths } from './relpath'
+import { annotationsDirOf } from '../model/annotationsDir'
 import { parseStashList, STASH_LIST_FORMAT, MANUAL_STASH_PREFIX, type StashEntry } from './stash'
 
 /**
@@ -54,7 +55,7 @@ export async function pushStash(run: RunGit, relPath: string, raw: unknown, mess
   const changes = parsePorcelain(st.stdout)
   const paths = [
     ...changes.filter((c) => c.path === relPath).map((c) => c.path),
-    ...ownAnnotationPathsIn(changes, annotationsRelDir(relPath), raw),
+    ...ownAnnotationPathsIn(changes, annotationsRelDir(relPath, annotationsDirOf(raw)), raw),
   ]
   if (paths.length === 0) return failed('There are no uncommitted changes to this project to stash.')
   const note = message.trim() || 'stashed from SaiLoR'
@@ -82,13 +83,20 @@ export type StashRestoreResult =
  * tree to begin with, anything tracked that differs after a failed apply is
  * the apply's own doing, and undoing it cannot touch anybody's edits.
  */
-export async function restoreStash(run: RunGit, relPath: string, sha: string): Promise<StashRestoreResult> {
+/** `annotationsDir` is the project's annotations folder, repo-relative; the
+ *  default folder when omitted. */
+export async function restoreStash(
+  run: RunGit,
+  relPath: string,
+  sha: string,
+  annotationsDir: string = annotationsRelDir(relPath),
+): Promise<StashRestoreResult> {
   const ref = await resolveStashRef(run, sha)
   if (!ref) return { kind: 'gone' }
 
   const st = await run(['status', '--porcelain=v1', '-z', '-uall'])
   if (!st.ok) return { kind: 'error', message: gitErrorText(st) }
-  const blocking = mergeBlockingPaths(parsePorcelain(st.stdout), annotationsRelDir(relPath))
+  const blocking = mergeBlockingPaths(parsePorcelain(st.stdout), annotationsDir)
   if (blocking.length > 0) return { kind: 'dirty', paths: blocking }
 
   const apply = await run(['stash', 'apply', ref])
@@ -144,12 +152,18 @@ export async function dropStash(run: RunGit, sha: string): Promise<GitRun> {
  * Same cleanliness rule as {@link restoreStash}: this checks out another
  * commit, and would refuse anyway over uncommitted tracked changes.
  */
-export async function branchFromStash(run: RunGit, relPath: string, sha: string, branch: string): Promise<GitRun> {
+export async function branchFromStash(
+  run: RunGit,
+  relPath: string,
+  sha: string,
+  branch: string,
+  annotationsDir: string = annotationsRelDir(relPath),
+): Promise<GitRun> {
   const ref = await resolveStashRef(run, sha)
   if (!ref) return failed('That stash no longer exists.')
   const st = await run(['status', '--porcelain=v1', '-z', '-uall'])
   if (!st.ok) return st
-  const blocking = mergeBlockingPaths(parsePorcelain(st.stdout), annotationsRelDir(relPath))
+  const blocking = mergeBlockingPaths(parsePorcelain(st.stdout), annotationsDir)
   if (blocking.length > 0) {
     return failed(`Commit or stash these first, so the switch cannot mix two sets of edits:\n${blocking.join('\n')}`)
   }

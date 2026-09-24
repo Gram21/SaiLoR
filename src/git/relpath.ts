@@ -1,3 +1,4 @@
+import { annotationsDirProblem, DEFAULT_ANNOTATIONS_DIR } from '../model/annotationsDir'
 /**
  * Is this string safe to use as a path *relative to a repository root*?
  *
@@ -49,9 +50,12 @@ export function relPathProblem(p: string): RelPathProblem | null {
  *  the derivation has one implementation, shared by the main process (which
  *  reads/writes it) and the renderer (which only needs to recognise it in a
  *  `git status` listing). */
-export function annotationsRelDir(relPath: string): string {
+export function annotationsRelDir(relPath: string, name: string = DEFAULT_ANNOTATIONS_DIR): string {
+  // Always one folder directly inside the project file's directory — a name
+  // that could reach anywhere else is replaced by the default.
+  const folder = annotationsDirProblem(name) === null ? name : DEFAULT_ANNOTATIONS_DIR
   const dir = relPath.split(/[\\/]/).slice(0, -1).join('/')
-  return dir === '' ? 'annotations' : `${dir}/annotations`
+  return dir === '' ? folder : `${dir}/${folder}`
 }
 
 /**

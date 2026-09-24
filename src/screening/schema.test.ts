@@ -56,6 +56,7 @@ describe('isScreening', () => {
     schemaInfo: null,
     schemaVersion: null,
     schemaHistory: [],
+    annotationsDir: null,
     schema: [],
     aiEnabled: true,
     finishCheckbox: true,

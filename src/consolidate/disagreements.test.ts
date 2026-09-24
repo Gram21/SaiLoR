@@ -262,6 +262,7 @@ describe('projectVerdicts', () => {
       schemaInfo: null,
       schemaVersion: null,
       schemaHistory: [],
+      annotationsDir: null,
       schema: SCHEMA,
       aiEnabled: true,
       finishCheckbox: true,

@@ -15,7 +15,6 @@ import {
 } from '../git/merge'
 import { detectFieldChanges, composeContents, type DetectedChanges, type Disposition } from '../git/changes'
 import { repoNameFromUrl } from '../git/url'
-import { annotationsRelDir } from '../git/relpath'
 import { stashBranchName } from '../git/stash'
 import { gitErrorText } from '../git/output'
 import type {
@@ -645,7 +644,7 @@ export const useGitStore = create<GitState>()(
       // `project.json` stays clean — the routine case field review exists
       // for. `relPath` itself untracked means never committed, so there's
       // nothing to diff against — that case is still skipped.
-      const dir = annotationsRelDir(repo.relPath)
+      const dir = repo.annotationsDir
       const inAnnotationsDir = (p: string) => p === dir || p.startsWith(`${dir}/`)
       const inStatus = status.changes.some(
         (c) => (c.path === repo.relPath && c.code !== '??') || inAnnotationsDir(c.path),

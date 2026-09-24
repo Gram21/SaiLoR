@@ -14,7 +14,7 @@ import { GitDialog } from './GitDialog'
 beforeEach(() => {
   useStore.setState({ dirty: false })
   useGitStore.setState({
-    repo: { root: '/repo', relPath: 'review.json', branch: 'main', upstream: null, hasHead: true, behind: null },
+    repo: { root: '/repo', relPath: 'review.json', branch: 'main', upstream: null, hasHead: true, behind: null, annotationsDir: 'annotations' },
     panel: {
       phase: 'idle',
       status: {

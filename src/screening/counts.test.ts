@@ -45,6 +45,7 @@ function project(overrides: Partial<Project> = {}): Project {
     schemaInfo: null,
     schemaVersion: null,
     schemaHistory: [],
+    annotationsDir: null,
     schema: SCHEMA,
     aiEnabled: true,
     finishCheckbox: true,
