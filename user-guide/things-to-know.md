@@ -100,6 +100,22 @@ was already committed in your seat by someone else — but only once their work 
 pulled, so agree out of band (a message, a spreadsheet, whatever) who reads which paper in which seat
 regardless. See [Reviewer-seat identity](multi-reviewer.md#reviewer-seat-identity).
 
+## Two project files in one folder need two annotations folders
+
+⚠️ Each project keeps its answers in a folder next to its JSON file — `annotations/` unless the
+project editor names another. Two project files in the same folder used to share `annotations/`,
+and two projects of the same kind that share a paper then wrote the very same files, overwriting each
+other's answers.
+
+SaiLoR now keeps them apart. Save As into a folder whose `annotations/` another project already uses
+gives the new file a folder named after it (`backup.json` → `backup-annotations/`). Opening a project
+whose folder is shared offers to **split** it: every project file sharing the folder gets its own,
+recorded in its JSON file, and each annotation file goes to the project it belongs to — by paper and
+kind of file, and where two projects could own it, by the schema version it was written under or by
+which project's fields its answers fit. Those unclear files are listed for you to confirm; one
+nothing tells apart is copied to each rather than guessed. In a git repository the move shows up in
+the Git panel for you to commit. **Not now** asks again next time.
+
 ## Renaming, moving, or removing a schema field
 
 Answers are stored under the field's *name*, in the group it sits in. When you **rename** a field or

@@ -72,6 +72,7 @@ inspection only.
 | REQ-DAT-166 | Schema version | Functional · Functional Suitability | `src/model/schemaVersion.ts:80-92`<br>`src/model/project.ts:595,680,848,1048` | `src/model/schemaVersion.test.ts` (`stamps every file it writes, and reading its own text back moves nothing again`) | commit `40e0668` | `user-guide/things-to-know.md` §Renaming, moving, or removing a schema field |
 | REQ-DAT-167 | Carry answers across renames and moves | Functional · Functional Suitability | `src/model/schemaVersion.ts:138-155,201-245` | `src/model/schemaVersion.test.ts` (`moveInTree`, `pendingMoves`, `carries the answers across the renames made since`) | commit `40e0668` | `user-guide/things-to-know.md` §Renaming, moving, or removing a schema field |
 | REQ-DAT-168 | Report files of an unknown schema version | Functional · Functional Suitability | `src/model/schemaVersion.ts:138-155`<br>`src/model/validate.ts:378` | `src/model/schemaVersion.test.ts` (`leaves a file of an unknown version alone, and says so`) | commit `40e0668` | `user-guide/things-to-know.md` §Renaming, moving, or removing a schema field |
+| REQ-DAT-169 | Annotations folder confined to the project directory | Non-functional · Security | `src/model/annotationsDir.ts`<br>`electron/main.ts:673`<br>`src/git/relpath.ts` | `src/model/annotationsDir.test.ts`<br>`src/state/editorStore.annotationsDir.test.ts` | commit `c1b40ec` | `user-guide/project-editor.md` §Where the JSON lives |
 | REQ-DAT-170 | Prune only trailing empties on save | Functional · Functional Suitability | `src/model/annotations.ts:136-162`<br>`src/model/project.ts:877-879` | `src/model/model.test.ts:401,678` | — | `openwiki/concepts/data-model.md` §load → normalize → edit → prune → serialize |
 | REQ-DAT-180 | Total, non-throwing validation | Functional · Functional Suitability | `src/model/validate.ts:14-40,318-337` | `src/model/validate.test.ts:440-463,516-520` | — | `openwiki/concepts/annotation-schema.md` §Validation: the schema walk<br>`docs/annotation-schema.md` §8 |
 | REQ-DAT-190 | Required, type, enum, and cardinality checks | Functional · Functional Suitability | `src/model/validate.ts:57-243` | `src/model/validate.test.ts:116-128` | — | `openwiki/concepts/annotation-schema.md` §Validation: the schema walk<br>`docs/annotation-schema.md` §8 |
@@ -373,7 +374,9 @@ inspection only.
 | REQ-PLT-62 | Report unparseable annotation files on open | Functional · Functional Suitability | `src/state/store.ts:439-453,506,1713`<br>`src/components/Toolbar.tsx:369`<br>`src/platform/adapter.ts` | `src/state/store.corruptFiles.test.ts`<br>`src/components/Toolbar.test.tsx` (`unreadable annotation files stay visible for the whole session`) | commit `7e82c96` | `openwiki/concepts/data-model.md` §On-disk layout |
 | REQ-PLT-70 | Refuse symlinked and escaping write targets | Non-functional · Security | `electron/main.ts:696-723,788-791,817-821` | — | — | `openwiki/operations/electron-shell.md` §Project file model and the `project:*` handlers<br>`openwiki/concepts/data-model.md` §On-disk layout |
 | REQ-PLT-80 | Save As with path rebasing | Functional · Functional Suitability | `electron/main.ts:849-858,1359-1366` | `src/state/store.saveas.test.ts:79-133` | — | `openwiki/operations/electron-shell.md` §Project file model and the `project:*` handlers<br>`openwiki/concepts/data-model.md` §On-disk layout |
-| REQ-PLT-90 | Refuse sibling-project collisions | Functional · Functional Suitability | `electron/main.ts:877-910` | `src/state/store.saveas.test.ts:134-152` | commit `a7c5153` | `openwiki/operations/electron-shell.md` §Project file model and the `project:*` handlers<br>`openwiki/concepts/data-model.md` §On-disk layout |
+| REQ-PLT-90 | Keep one annotations folder per project | Functional · Functional Suitability | `electron/main.ts:1081`<br>`src/state/store.ts` | `src/state/store.saveas.test.ts` (`takes a folder named after the file when the destination already uses the default one`)<br>`src/state/editorStore.annotationsDir.test.ts` | commit `c1b40ec` | `user-guide/things-to-know.md` §Two project files in one folder need two annotations folders |
+| REQ-PLT-95 | Split a shared annotations folder | Functional · Functional Suitability | `src/model/annotationSplit.ts`<br>`electron/main.ts:1135,1179`<br>`src/components/SplitAnnotationsDialog.tsx` | `src/model/annotationSplit.test.ts`<br>`src/state/store.annotationsSplit.test.ts`<br>`src/test/integration/annotationSplit.integration.test.tsx` | commit `c1b40ec` | `user-guide/things-to-know.md` §Two project files in one folder need two annotations folders |
+| REQ-PLT-96 | Move the annotations folder on rename | Functional · Functional Suitability | `electron/main.ts:1091`<br>`src/state/editorStore.ts` | `src/state/editorStore.annotationsDir.test.ts` (`moves the folder of an existing project before saving the new name`) | commit `c1b40ec` | `user-guide/project-editor.md` §Where the JSON lives |
 | REQ-PLT-100 | Prompt on close with unsaved changes | Functional · Functional Suitability | `electron/main.ts:290-326,1399-1408` | `src/state/store.close.test.ts:59-135` | — | `openwiki/operations/electron-shell.md` §Quit / unsaved-changes coordination |
 | REQ-PLT-110 | Keep project open on failed save | Functional · Functional Suitability | — | `src/state/store.close.test.ts:59-252` | — | `openwiki/operations/electron-shell.md` §Quit / unsaved-changes coordination |
 | REQ-PLT-120 | Guard reload shortcuts | Functional · Functional Suitability | `electron/main.ts:338-353,474-491` | — | — | `openwiki/operations/electron-shell.md` §Quit / unsaved-changes coordination |
@@ -406,9 +409,9 @@ inspection only.
 
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 319 | 100% |
-| With at least one verifying test | 270 | 85% |
+| Requirements traced | 322 | 100% |
+| With at least one verifying test | 273 | 85% |
 | Without an automated check (source inspection only) | 49 | 15% |
-| With an introducing/pinning commit | 103 | 32% |
-| With a documentation link | 318 | 99.7% |
+| With an introducing/pinning commit | 106 | 33% |
+| With a documentation link | 321 | 99.7% |
 

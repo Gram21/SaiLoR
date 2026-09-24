@@ -51,14 +51,14 @@ per category so requirements can be inserted without renumbering.
 
 | Category | Requirements |
 |---|---|
-| Data model & editor (DAT/EDT) | 56 |
+| Data model & editor (DAT/EDT) | 57 |
 | Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 51 |
 | Screening (SCR) | 38 |
 | Consolidation (CON) | 44 |
 | Git integration (GIT) | 57 |
 | LLM annotation (LLM) | 31 |
-| Platform & shell (PLT) | 42 |
-| **Total** | **319** |
+| Platform & shell (PLT) | 44 |
+| **Total** | **322** |
 
 ## Method & evidence notes
 
@@ -100,3 +100,5 @@ per category so requirements can be inserted without renumbering.
 - **Schema versions (source at `40e0668`).** REQ-DAT-166–168, REQ-EDT-41–42, REQ-PLT-43 and
   REQ-GIT-256 added; REQ-EDT-40 narrowed to the changes whose answers cannot follow. REQ-GIT-257
   added for conflicting renames (source at `c9c982f`).
+- **Annotations folders (source at `c1b40ec`).** REQ-DAT-169, REQ-PLT-95 and REQ-PLT-96 added; REQ-PLT-90
+  rewritten (a shared folder is avoided or split rather than only refused at Save As).

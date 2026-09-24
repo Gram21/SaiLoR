@@ -137,6 +137,13 @@ the project editor. See the [index](index.md) for the glossary.
 - **Verified by:** `src/model/schemaVersion.test.ts` (`leaves a file of an unknown version alone, and says so`)
 - **Status:** Implemented
 
+### REQ-DAT-169 — Annotations folder confined to the project directory
+- **Description:** The system shall keep a project's annotation files in the folder its project file names as `annotationsDir`, defaulting to `annotations`, and shall accept only a plain folder name directly inside the project file's directory: names containing a separator, `..`, a drive or device designation, a leading dot, or characters not allowed in Windows file names shall be refused and the default used, and a folder that is a symbolic link or resolves outside the project directory shall not be read or written.
+- **Type:** Non-functional (ISO 25010: Security)
+- **Evidence:** `src/model/annotationsDir.ts`, `electron/main.ts:673`, `src/git/relpath.ts`, commit `c1b40ec`
+- **Verified by:** `src/model/annotationsDir.test.ts`, `src/state/editorStore.annotationsDir.test.ts`
+- **Status:** Implemented
+
 ### REQ-DAT-170 — Prune only trailing empties on save
 - **Description:** When serializing an annotation tree, the system shall drop only trailing empty instances of a repeatable node, keeping gaps before filled instances because position carries alignment meaning, and shall serialize trees with no filled field as empty objects.
 - **Type:** Functional (ISO 25010: Functional Suitability)
