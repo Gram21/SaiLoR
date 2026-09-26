@@ -127,7 +127,7 @@ export interface SlrBridge {
   setProjectDir(path: string): Promise<void>
   /** Pick a location for a project JSON without writing it. Null if cancelled. */
   pickSavePath(suggestedName: string): Promise<{ path: string } | null>
-  annotationsDirUsers(projectPath: string, folder: string, paperIds: string[]): Promise<string[]>
+  annotationsDirUsers(projectPath: string, folder: string, paperIds: string[], screening: boolean): Promise<string[]>
   sharedAnnotations(projectPath: string): Promise<SharedAnnotations | null>
   moveAnnotationsDir(projectPath: string, folder: string): Promise<void>
   splitAnnotations(
@@ -410,8 +410,8 @@ export class ElectronAdapter implements PlatformAdapter {
     }
   }
 
-  annotationsDirUsers(projectPath: string, folder: string, paperIds: string[]): Promise<string[]> {
-    return bridge().annotationsDirUsers(projectPath, folder, paperIds)
+  annotationsDirUsers(projectPath: string, folder: string, paperIds: string[], screening: boolean): Promise<string[]> {
+    return bridge().annotationsDirUsers(projectPath, folder, paperIds, screening)
   }
 
   sharedAnnotations(projectPath: string): Promise<SharedAnnotations | null> {

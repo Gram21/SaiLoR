@@ -15,12 +15,12 @@ export function describeClash(path: string, project: Project | null): string {
   const [, id, name] = m
   const paper = project?.papers.find((p) => p.id === id)?.title || id
   const seat = /^(?:reviewer|screening)-(\d+)$/.exec(name)
-  const marks = /^marks-(\d+)$/.exec(name)
+  const marks = /^(?:screening-)?marks-(\d+)$/.exec(name)
   const part = seat
     ? `Reviewer ${seat[1]}'s answers`
     : marks
       ? `Reviewer ${marks[1]}'s PDF highlights and notes`
-      : name === 'marks-consolidated'
+      : /^(?:screening-)?marks-consolidated$/.test(name)
         ? "Consolidation's PDF highlights and notes"
         : "Consolidation's answers"
   return `${paper} — ${part}`

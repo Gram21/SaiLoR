@@ -43,7 +43,11 @@ describe('ownAnnotationPathMatcher', () => {
     const nonScreening = ownAnnotationPathMatcher(project(['p1'], false))
     expect(nonScreening('p1/screening-1.json')).toBe(false)
     const screening = ownAnnotationPathMatcher(project(['p1'], true))
-    expect(screening('p1/marks-1.json')).toBe(true) // marks are shared by both kinds
+    expect(screening('p1/screening-marks-1.json')).toBe(true)
+    // Highlight files are named by kind too: an annotation project's are not a screening project's.
+    expect(screening('p1/marks-1.json')).toBe(false)
+    expect(nonScreening('p1/marks-1.json')).toBe(true)
+    expect(nonScreening('p1/screening-marks-1.json')).toBe(false)
   })
 
   it('is exactly what lets a legitimate screening-to-full-text sibling relationship keep working', () => {

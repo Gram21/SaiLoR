@@ -910,7 +910,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
         })
         const marks = p.reviewMarks[String(k)] ?? []
         files.push({
-          relPath: `${p.id}/marks-${k}.json`,
+          relPath: `${p.id}/${marksFileName(project.screening !== null, String(k))}`,
           text: marks.length > 0 ? JSON.stringify({ ...stamp, marks }, null, 2) : null,
         })
       }
@@ -934,7 +934,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     // Marks are reading notes, not screening/reviewer decisions, so they get
     // their own file family regardless of screening vs. annotation mode.
     files.push({
-      relPath: `${p.id}/marks-consolidated.json`,
+      relPath: `${p.id}/${marksFileName(project.screening !== null, 'consolidated')}`,
       text: p.marks.length > 0 ? JSON.stringify({ ...stamp, marks: p.marks }, null, 2) : null,
     })
 
@@ -993,7 +993,29 @@ export function isLegacyProjectShape(raw: unknown): boolean {
 }
 
 const REVIEWER_FILE = /^(?:reviewer|screening)-(\d+)\.json$/
-const MARKS_FILE = /^marks-(\d+)\.json$/
+
+/**
+ * A PDF-highlight file's name. Screening projects have their own
+ * (`screening-marks-*`), like their decision files: a screening project and an
+ * annotation project over the same papers can then share a folder without
+ * ever writing the same file. `seat` is a reviewer number or `consolidated`.
+ */
+export function marksFileName(screening: boolean, seat: string): string {
+  return `${screening ? 'screening-marks' : 'marks'}-${seat}.json`
+}
+
+/**
+ * The seat a highlight file holds for a project of this kind, or `null` when
+ * it is not one. A screening project's highlight file from before they had
+ * their own name (`marks-*`) is recognised as `legacy`: whether it really is
+ * the screening project's is the caller's decision.
+ */
+export function parseMarksFileName(name: string, screening: boolean): { seat: string; legacy: boolean } | null {
+  const own = (screening ? /^screening-marks-(\d+|consolidated)\.json$/ : /^marks-(\d+|consolidated)\.json$/).exec(name)
+  if (own) return { seat: own[1], legacy: false }
+  const old = screening ? /^marks-(\d+|consolidated)\.json$/.exec(name) : null
+  return old ? { seat: old[1], legacy: true } : null
+}
 
 /**
  * The reverse of `splitProjectFiles`: `meta` plus the files it wrote
@@ -1005,10 +1027,15 @@ export function projectFromFiles(meta: unknown, files: Iterable<[string, string]
     string,
     { consolidated?: unknown; reviewers: Map<string, unknown>; marksConsolidated?: unknown; reviewMarks: Map<string, unknown> }
   >()
-  for (const [relPath, text] of files) {
+  const screening = Boolean((meta as { config?: { screening?: unknown } } | null)?.config?.screening)
+  const named = [...files].map(([relPath, text]) => {
     const slash = relPath.lastIndexOf('/')
-    const id = relPath.slice(0, slash)
     const name = relPath.slice(slash + 1)
+    return { id: relPath.slice(0, slash), name, text, marks: parseMarksFileName(name, screening) }
+  })
+  // Old-style highlight files first, so a file under the kind's own name wins.
+  named.sort((a, b) => Number(!a.marks?.legacy) - Number(!b.marks?.legacy))
+  for (const { id, name, text, marks } of named) {
     let entry = papers.get(id)
     if (!entry) {
       entry = { reviewers: new Map(), reviewMarks: new Map() }
@@ -1016,10 +1043,10 @@ export function projectFromFiles(meta: unknown, files: Iterable<[string, string]
     }
     const value: unknown = JSON.parse(text)
     const reviewer = REVIEWER_FILE.exec(name)
-    const marks = MARKS_FILE.exec(name)
-    if (reviewer) entry.reviewers.set(reviewer[1], value)
-    else if (marks) entry.reviewMarks.set(marks[1], value)
-    else if (name === 'marks-consolidated.json') entry.marksConsolidated = value
+    if (marks) {
+      if (marks.seat === 'consolidated') entry.marksConsolidated = value
+      else entry.reviewMarks.set(marks.seat, value)
+    } else if (reviewer) entry.reviewers.set(reviewer[1], value)
     else entry.consolidated = value
   }
   return loadProject(assembleLegacyProjectJson(meta, papers))

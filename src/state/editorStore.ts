@@ -2162,10 +2162,10 @@ export const useEditorStore = create<EditorState>()(
           // import, and a paper already present (by DOI, then normalized
           // title — same rule `importReferences` uses) is skipped, not duplicated.
           const existingIds = new Set(s.papers.map((p) => p.id))
-          // Same-directory import: marks-*.json filenames are identical
-          // between screening/annotation, so an id matching one in the
-          // source's `annotations/` folder would overwrite its PDF marks,
-          // even for a non-duplicate paper.
+          // Same-directory import: a screening project's highlight files from
+          // before they had their own name are `marks-*.json`, like an
+          // annotation project's, so an id matching one in the source's
+          // folder could still overwrite its PDF marks.
           for (const id of draft.sourceIds) existingIds.add(id)
           const toAdd: EditorPaper[] = []
           let skipped = 0
@@ -2299,11 +2299,12 @@ export const useEditorStore = create<EditorState>()(
       if (folderProblem) issues.push(`Annotations folder "${folder}": ${folderProblem}.`)
       else if (st.location.path) {
         const ids = st.papers.map((p) => p.id.trim())
-        const users = (await getPlatform().annotationsDirUsers?.(st.location.path, folder, ids).catch(() => [])) ?? []
+        const users = (await getPlatform().annotationsDirUsers?.(st.location.path, folder, ids, st.screening !== null).catch(() => [])) ?? []
         if (users.length > 0) {
           issues.push(
-            `Annotations folder "${folder}" is also used by ${users.join(', ')} next to this file, which lists some of ` +
-              'the same papers — the two would write the same files there. Choose another folder name.',
+            `Annotations folder "${folder}" is also used by ${users.join(', ')} next to this file, a project of the ` +
+              'same kind that lists some of the same papers — the two would write the same files there. ' +
+              'Choose another folder name.',
           )
         }
       }

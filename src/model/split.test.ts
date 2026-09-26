@@ -160,9 +160,17 @@ describe('splitProjectFiles', () => {
     expect(
       files
         .map((f) => f.relPath)
-        .filter((p) => !p.includes('/marks-'))
         .sort(),
-    ).toEqual(['p1/screening-1.json', 'p1/screening-2.json', 'p1/screening-consolidated.json'])
+    ).toEqual([
+      'p1/screening-1.json',
+      'p1/screening-2.json',
+      'p1/screening-consolidated.json',
+      // Highlights too get the screening kind's own names, so they never meet
+      // an annotation project's `marks-*.json` in a shared folder.
+      'p1/screening-marks-1.json',
+      'p1/screening-marks-2.json',
+      'p1/screening-marks-consolidated.json',
+    ])
     const r1 = files.find((f) => f.relPath === 'p1/screening-1.json')
     expect(r1?.text).toContain(DECISION_INCLUDE)
     const consolidated = files.find((f) => f.relPath === 'p1/screening-consolidated.json')

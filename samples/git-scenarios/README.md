@@ -159,12 +159,12 @@ Open `anna/review.json`.
 
 ### `screening-beside-annotation`
 
-A screening project and the annotation project built from it share annotations/ but no paper.
+A screening project and an annotation project over the same papers share annotations/.
 
 Open `anna/review.json`.
 
-- Opening either project asks nothing: the two write different files, since the import renames any paper id the screening project already uses.
-- Open screening.json too — both keep their answers in annotations/ side by side.
+- Opening either project asks nothing: the two kinds write differently named files, highlights included.
+- Open screening.json too and highlight something in smith2021 — it lands in screening-marks-1.json, next to the annotation project's files.
 
 ### `schema-versions`
 

@@ -134,9 +134,9 @@ export interface PlatformAdapter {
   pickProjectLocation(suggestedName: string): Promise<ProjectLocation | null>
 
   /** File names of the other project files next to `projectPath` whose
-   *  annotations folder is `folder` and that list one of `paperIds` — the ones
-   *  a project with those papers would write the same files as. */
-  annotationsDirUsers(projectPath: string, folder: string, paperIds: string[]): Promise<string[]>
+   *  annotations folder is `folder` and whose files a project of this kind
+   *  with these papers would collide with — see `filesCollide`. */
+  annotationsDirUsers(projectPath: string, folder: string, paperIds: string[], screening: boolean): Promise<string[]>
 
   /** Rename the project's annotations folder and record the new name in its project file. */
   moveAnnotationsDir(projectPath: string, folder: string): Promise<void>

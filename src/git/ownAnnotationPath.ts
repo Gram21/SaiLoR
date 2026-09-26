@@ -54,8 +54,9 @@ export function ownAnnotationPathMatcher(raw: unknown): (relUnderDir: string) =>
   const screening = Boolean((raw as { config?: { screening?: unknown } } | null)?.config?.screening)
   const consolidatedName = screening ? 'screening-consolidated' : 'consolidated'
   const reviewerPrefix = screening ? 'screening' : 'reviewer'
+  const marksPrefix = screening ? 'screening-marks' : 'marks'
   const re = new RegExp(
-    `^([^/]+)\\/(?:${consolidatedName}|${reviewerPrefix}-\\d+|marks-consolidated|marks-\\d+)\\.json$`,
+    `^([^/]+)\\/(?:${consolidatedName}|${reviewerPrefix}-\\d+|${marksPrefix}-consolidated|${marksPrefix}-\\d+)\\.json$`,
   )
   return (relUnderDir: string) => {
     const m = re.exec(relUnderDir)

@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { SaveHandle, OpenedProject, ProjectLocation } from '../../platform/adapter'
-import { annotationsDirOf, sharesPaper } from '../../model/annotationsDir'
+import { annotationsDirOf, filesCollide } from '../../model/annotationsDir'
 
 /**
  * A fourth integration test, same real-components style as the others in
@@ -64,7 +64,7 @@ const fakePlatform = {
   // folder is taken only by a project listing one of the same papers.
   annotationsDirUsers: async (_path: string, folder: string, paperIds: string[]) => {
     const raw: unknown = JSON.parse(readFileSync(projectJsonPath, 'utf-8'))
-    return annotationsDirOf(raw) === folder && sharesPaper(paperIds, raw) ? ['screening.json'] : []
+    return annotationsDirOf(raw) === folder && filesCollide(paperIds, false, raw) ? ['screening.json'] : []
   },
   sharedAnnotations: async () => null,
   moveAnnotationsDir: async (_path: string, folder: string) => {

@@ -45,15 +45,20 @@ export function defaultSplitDirName(projectFileName: string): string {
 }
 
 /**
- * Can a project with these paper ids write the same files as the parsed
- * project file `raw`, were the two to share a folder? Only through a paper both
- * list: every file is named after its paper. (Same-kind projects then write
- * the very same answer files; a screening and an annotation project still both
- * write `marks-*.json`.) Two projects with no paper in common — a screening
- * project and the annotation project imported from it, whose clashing ids the
- * import renames — can share a folder safely. Compared the way a
- * case-insensitive disk would (see `paperIdKey`).
+ * Would a project with these paper ids, of this kind (`screening`), write the
+ * same files as the parsed project file `raw` if the two shared a folder?
+ * Every file is named after its paper and, since screening projects name their
+ * highlight files apart too, after the kind of project — so only a project of
+ * the same kind that lists one of the same papers. A screening project and an
+ * annotation project, even over the same papers, can share a folder. Ids are
+ * compared the way a case-insensitive disk would (see `paperIdKey`).
  */
+export function filesCollide(paperIds: Iterable<string>, screening: boolean, raw: unknown): boolean {
+  if (Boolean((raw as { config?: { screening?: unknown } } | null)?.config?.screening) !== screening) return false
+  return sharesPaper(paperIds, raw)
+}
+
+/** Does the parsed project file `raw` list one of `paperIds`? */
 export function sharesPaper(paperIds: Iterable<string>, raw: unknown): boolean {
   const mine = new Set([...paperIds].map(paperIdKey))
   const papers = (raw as { papers?: unknown } | null)?.papers

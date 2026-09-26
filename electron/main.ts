@@ -25,7 +25,7 @@ import os from 'node:os'
 // the renderer's (DOM types).
 import { validateGitUrl, validateClonePath } from '../src/git/url'
 import { relPathProblem, annotationsRelDir, mergeBlockingPaths } from '../src/git/relpath'
-import { annotationsDirOf, annotationsDirProblem, sharesPaper } from '../src/model/annotationsDir'
+import { annotationsDirOf, annotationsDirProblem, filesCollide, sharesPaper } from '../src/model/annotationsDir'
 import { applySplit } from '../src/model/annotationSplit'
 import { refProblem } from '../src/git/ref'
 import { gitErrorText, parsePorcelain, parseGitLog } from '../src/git/output'
@@ -52,7 +52,7 @@ import {
 import { readAllConcurrently } from '../src/git/concurrentRead'
 import { deriveGitInfo } from '../src/git/deriveGitInfo'
 import type { GitRun, MergeStart, AnnotationAuthors } from '../src/git/types'
-import { isLegacyProjectShape, assembleLegacyProjectJson, isDeletableAnnotationText } from '../src/model/project'
+import { isLegacyProjectShape, assembleLegacyProjectJson, isDeletableAnnotationText, parseMarksFileName } from '../src/model/project'
 import { changedTargets } from '../src/model/fileStamps'
 import { parseMarks, type PdfMark } from '../src/model/pdfMarks'
 import { rectToPdfPoints, rectToQuadPoints } from '../src/model/pdfExport'
@@ -585,12 +585,6 @@ const REVIEWER_FILE_RE = /^reviewer-(\d+)\.json$/
  *  ordinary project uses a different prefix). Group 1 is the reviewer number. */
 const SCREENING_FILE_RE = /^screening-(\d+)\.json$/
 
-/** Matches a per-reviewer PDF-marks file's name — `marks-<n>.json`, the same
- *  regardless of screening vs. annotation mode (see `splitProjectFiles`'s
- *  doc comment for why marks don't share the reviewer/screening split).
- *  Group 1 is the reviewer number. */
-const MARKS_FILE_RE = /^marks-(\d+)\.json$/
-
 type PaperFiles = {
   consolidated?: unknown
   reviewers: Map<string, unknown>
@@ -609,6 +603,10 @@ async function loadPaperFiles(
   paperId: string,
   screening: boolean,
   corruptOut?: string[],
+  /** Read a screening project's highlight files from before they had their
+   *  own name (see `parseMarksFileName`) — only when no annotation project
+   *  sharing the folder lists this paper, whose they could equally be. */
+  legacyMarks = false,
 ): Promise<PaperFiles> {
   const reviewers = new Map<string, unknown>()
   const reviewMarks = new Map<string, unknown>()
@@ -626,14 +624,6 @@ async function loadPaperFiles(
       corruptOut?.push(`${paperId}/${consolidatedName}`)
     }
   }
-  const marksConsolidatedText = await safeReadAnnotationFile(annotationsDir, `${paperId}/marks-consolidated.json`)
-  if (marksConsolidatedText !== null) {
-    try {
-      marksConsolidated = JSON.parse(marksConsolidatedText)
-    } catch {
-      corruptOut?.push(`${paperId}/marks-consolidated.json`)
-    }
-  }
   const paperDirResolved = path.resolve(annotationsDir, paperId)
   const base = path.resolve(annotationsDir)
   let entries: Array<{ name: string; isFile(): boolean }> = []
@@ -644,16 +634,22 @@ async function loadPaperFiles(
       entries = []
     }
   }
-  for (const entry of entries) {
+  // Old-style highlight files first, so one under the kind's own name wins.
+  const ordered = [...entries].sort(
+    (a, b) => Number(!parseMarksFileName(a.name, screening)?.legacy) - Number(!parseMarksFileName(b.name, screening)?.legacy),
+  )
+  for (const entry of ordered) {
     if (!entry.isFile()) continue
     const reviewerMatch = (screening ? SCREENING_FILE_RE : REVIEWER_FILE_RE).exec(entry.name)
-    const marksMatch = MARKS_FILE_RE.exec(entry.name)
+    const marksMatch = parseMarksFileName(entry.name, screening)
+    if (marksMatch?.legacy && !legacyMarks) continue
     if (!reviewerMatch && !marksMatch) continue
     const text = await safeReadAnnotationFile(annotationsDir, `${paperId}/${entry.name}`)
     if (text === null) continue
     try {
       if (reviewerMatch) reviewers.set(reviewerMatch[1], JSON.parse(text))
-      else reviewMarks.set(marksMatch![1], JSON.parse(text))
+      else if (marksMatch!.seat === 'consolidated') marksConsolidated = JSON.parse(text)
+      else reviewMarks.set(marksMatch!.seat, JSON.parse(text))
     } catch {
       // corrupt file — skip this reviewer's tree
       corruptOut?.push(`${paperId}/${entry.name}`)
@@ -723,7 +719,17 @@ async function readProjectText(filePath: string, corruptOut?: string[]): Promise
     const id = (p as { id?: unknown })?.id
     if (typeof id === 'string') ids.push(id)
   }
-  const paperFiles = await readAllConcurrently(ids, (id) => loadPaperFiles(annotationsDir, id, screening, corruptOut))
+  // A screening project's highlight files from before they had their own
+  // name are its own only where no annotation project sharing the folder
+  // lists the same paper.
+  const annotationSiblings = screening
+    ? await projectsUsingFolder(filePath, annotationsDirOf(raw), (other) => !isScreening(other))
+    : []
+  const legacyMarks = (id: string) =>
+    screening && !annotationSiblings.some((s) => sharesPaper([id], JSON.parse(s.text)))
+  const paperFiles = await readAllConcurrently(ids, (id) =>
+    loadPaperFiles(annotationsDir, id, screening, corruptOut, legacyMarks(id)),
+  )
   // Everything this project is made of, as it stands right now — the baseline
   // a later save checks against before it overwrites anything. See
   // `projectFileStamps`. Recorded from a fresh read of the directory rather
@@ -1044,15 +1050,12 @@ ipcMain.handle('project:pickSavePath', async (_e, suggestedName: string) => {
   return { path: res.filePath }
 })
 
-/**
- * Other project files in `projectPath`'s directory whose annotations folder is
- * `folder` and that list one of `paperIds` — the ones whose files could collide
- * with this project's there (see `sharesPaper`).
- */
+/** Other project files in `projectPath`'s directory whose annotations folder
+ *  is `folder` and that `keep` accepts. */
 async function projectsUsingFolder(
   projectPath: string,
   folder: string,
-  paperIds: string[],
+  keep: (raw: unknown) => boolean,
 ): Promise<{ path: string; name: string; text: string }[]> {
   const dir = path.dirname(path.resolve(projectPath))
   const own = path.basename(projectPath)
@@ -1076,9 +1079,13 @@ async function projectsUsingFolder(
       continue // not a project file, or not readable — not ours to judge
     }
     if (!Array.isArray((raw as { papers?: unknown } | null)?.papers)) continue
-    if (annotationsDirOf(raw) === folder && sharesPaper(paperIds, raw)) out.push({ path: file, name, text })
+    if (annotationsDirOf(raw) === folder && keep(raw)) out.push({ path: file, name, text })
   }
   return out
+}
+
+function isScreening(raw: unknown): boolean {
+  return Boolean((raw as { config?: { screening?: unknown } } | null)?.config?.screening)
 }
 
 /** A parsed project file's paper ids. */
@@ -1091,10 +1098,14 @@ function paperIdsOf(raw: unknown): string[] {
 
 /** Which other project files next to `projectPath` use `folder` and list one
  *  of `paperIds`, so the two would write the same files there. */
-ipcMain.handle('project:annotationsDirUsers', async (_e, projectPath: string, folder: string, paperIds: string[]) => {
-  const ids = Array.isArray(paperIds) ? paperIds.map(String) : []
-  return (await projectsUsingFolder(String(projectPath), String(folder), ids)).map((p) => p.name)
-})
+ipcMain.handle(
+  'project:annotationsDirUsers',
+  async (_e, projectPath: string, folder: string, paperIds: string[], screening: boolean) => {
+    const ids = Array.isArray(paperIds) ? paperIds.map(String) : []
+    const users = await projectsUsingFolder(String(projectPath), String(folder), (raw) => filesCollide(ids, screening === true, raw))
+    return users.map((p) => p.name)
+  },
+)
 
 /**
  * Rename an open project's annotations folder to `folder` and record the new
@@ -1111,7 +1122,7 @@ ipcMain.handle('project:moveAnnotationsDir', async (_e, projectPath: string, fol
   const from = await annotationsDirFor(key, raw)
   const to = await annotationsDirFor(key, { annotationsDir: folder })
   if (from === to) return
-  if ((await projectsUsingFolder(key, String(folder), paperIdsOf(raw))).length > 0) {
+  if ((await projectsUsingFolder(key, String(folder), (other) => filesCollide(paperIdsOf(raw), isScreening(raw), other))).length > 0) {
     throw new Error(`Another project file here already uses "${folder}".`)
   }
   if ((await readdir(to).catch(() => [])).length > 0) throw new Error(`The folder "${folder}" already exists and is not empty.`)
@@ -1152,7 +1163,7 @@ ipcMain.handle('project:sharedAnnotations', async (_e, projectPath: string) => {
   const ownText = await readFile(key, 'utf-8')
   const ownRaw: unknown = JSON.parse(ownText)
   const folder = annotationsDirOf(ownRaw)
-  const others = await projectsUsingFolder(key, folder, paperIdsOf(ownRaw))
+  const others = await projectsUsingFolder(key, folder, (raw) => filesCollide(paperIdsOf(ownRaw), isScreening(ownRaw), raw))
   if (others.length === 0) return null
   const annotationsDir = await annotationsDirFor(key, ownRaw)
   const files: { relPath: string; text: string }[] = []
@@ -2272,7 +2283,10 @@ async function readProjectAtRevision(root: string, relPath: string, rev: string)
   }
   const consolidatedName = screening ? 'screening-consolidated' : 'consolidated'
   const reviewerPrefix = screening ? 'screening' : 'reviewer'
-  const re = new RegExp(`^([^/]+)\\/(?:(${consolidatedName})|${reviewerPrefix}-(\\d+)|(marks-consolidated)|marks-(\\d+))\\.json$`)
+  const marksPrefix = screening ? 'screening-marks' : 'marks'
+  const re = new RegExp(
+    `^([^/]+)\\/(?:(${consolidatedName})|${reviewerPrefix}-(\\d+)|(${marksPrefix}-consolidated)|${marksPrefix}-(\\d+))\\.json$`,
+  )
   // Filtered first, purely so the (independent, one-per-file) `git show`
   // calls below can run concurrently rather than one at a time — the same
   // fix as `readProjectText`'s own per-paper loop, one hop further out. This
@@ -2292,8 +2306,10 @@ async function readProjectAtRevision(root: string, relPath: string, rev: string)
     // screening, whichever this revision's `config.screening` says); group 3
     // catches the reviewer number for this project's own reviewer-file prefix
     // (see `splitProjectFiles`'s doc comment for why a screening project uses
-    // a different prefix); group 4 catches marks-consolidated; group 5 the
-    // reviewer number for a marks-<n> file (marks don't split by screening).
+    // a different prefix); group 4 catches the consolidated highlight file;
+    // group 5 the reviewer number for a per-reviewer one (see `marksFileName`).
+    // A screening project's highlight files from before they had their own
+    // name are not read back from history.
     // A file belonging to the other project kind simply doesn't match.
     const m = re.exec(rel)
     if (!m) continue

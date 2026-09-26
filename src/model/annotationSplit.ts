@@ -42,6 +42,7 @@ export interface SplitRow {
 const SCREENING_FILE = /^screening-(\d+|consolidated)\.json$/
 const REVIEW_FILE = /^(reviewer-\d+|consolidated)\.json$/
 const MARKS_FILE = /^marks-(\d+|consolidated)\.json$/
+const SCREENING_MARKS_FILE = /^screening-marks-(\d+|consolidated)\.json$/
 
 interface Known {
   path: string
@@ -116,8 +117,8 @@ function linkFit(defs: ResolvedDef[], marks: unknown): number {
  * Which project each file in the shared folder belongs to.
  *
  * By paper id and file kind first: a screening project owns `screening-*`
- * files, an annotation project `reviewer-*`/`consolidated`, either may own
- * `marks-*`. Where that leaves more than one project — the same paper in two
+ * files (its highlights included), an annotation project `reviewer-*`/
+ * `consolidated`, and `marks-*` may be either's. Where that leaves more than one project — the same paper in two
  * projects of the same kind — the schema version the file was written under
  * decides, then which project's schema describes more of its answers; a tie is
  * copied to each, since losing a file is worse than a duplicate.
@@ -128,7 +129,15 @@ export function planSplit(projects: SplitProject[], files: SplitFile[]): SplitRo
     const slash = f.relPath.lastIndexOf('/')
     const id = f.relPath.slice(0, slash)
     const name = f.relPath.slice(slash + 1)
-    const kind = SCREENING_FILE.test(name) ? 'screening' : REVIEW_FILE.test(name) ? 'review' : MARKS_FILE.test(name) ? 'marks' : null
+    // An annotation project's highlight files share their name with a screening
+    // project's from before those had their own, so they could be either's.
+    const kind = SCREENING_FILE.test(name) || SCREENING_MARKS_FILE.test(name)
+      ? 'screening'
+      : REVIEW_FILE.test(name)
+        ? 'review'
+        : MARKS_FILE.test(name)
+          ? 'marks'
+          : null
     const candidates = all
       .filter((p) => p.ids.has(id))
       .filter((p) => kind === 'marks' || (kind === 'screening' ? p.screening : kind === 'review' && !p.screening))

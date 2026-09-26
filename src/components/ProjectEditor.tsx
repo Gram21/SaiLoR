@@ -130,7 +130,7 @@ export function ProjectEditor() {
           value={annotationsDir}
           onChange={(e) => setAnnotationsDir(e.target.value)}
           placeholder={`${DEFAULT_ANNOTATIONS_DIR} — a folder next to the JSON file`}
-          title="Where this project's answers are kept: one folder directly next to the JSON file, not shared with another project that lists the same papers"
+          title="Where this project's answers are kept: one folder directly next to the JSON file, not shared with another project of the same kind that lists the same papers"
           disabled={busy}
           aria-invalid={annotationsDirIssue !== null}
         />
