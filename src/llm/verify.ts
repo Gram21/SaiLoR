@@ -20,7 +20,7 @@ export interface CheckFailure {
 /** One word- or NFKC-level normalization, so a quote copied verbatim from the
  *  paper still matches after PDF-extraction noise: curly quotes, ligatures, a
  *  word hyphenated across a line break, and incidental case/whitespace. */
-function normalize(s: string): string {
+export function normalize(s: string): string {
   return s
     .normalize('NFKC')
     .replace(/[‘’]/g, "'")

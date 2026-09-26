@@ -137,3 +137,80 @@ describe('renamed fields disclosure (REQ-LLM per the fields being sent, not "the
     ).toBeInTheDocument()
   })
 })
+
+describe('jump from an evidence quote to the PDF (REQ-LLM-460)', () => {
+  it('makes a paper-sourced quote a button that switches paper, requests a PDF find, and peeks at the PDF', async () => {
+    useAiStore.setState({
+      phase: 'review',
+      rows: [
+        {
+          paperId: 'p2',
+          paperTitle: 'Paper Two',
+          reviewer: null,
+          checked: true,
+          suggestion: { path: 'Summary', value: 'x', evidence: 'the quoted passage', confidence: null },
+        },
+      ],
+      notes: [],
+    })
+    render(<AiDialog />)
+
+    const evidenceButton = screen.getByRole('button', { name: /the quoted passage/ })
+    await userEvent.click(evidenceButton)
+
+    expect(st().currentPaperId).toBe('p2')
+    expect(st().pdfFindRequest).toEqual({ paperId: 'p2', text: 'the quoted passage', nonce: 1 })
+    expect(useAiStore.getState().minimized).toBe(true)
+  })
+
+  it('leaves a URL-sourced quote as plain text, not a button', () => {
+    useAiStore.setState({
+      phase: 'review',
+      rows: [
+        {
+          paperId: 'p1',
+          paperTitle: 'Paper One',
+          reviewer: null,
+          checked: true,
+          suggestion: {
+            path: 'Summary',
+            value: 'x',
+            evidence: 'from the web',
+            confidence: null,
+            source: 'https://example.com/paper',
+          },
+        },
+      ],
+      notes: [],
+    })
+    render(<AiDialog />)
+
+    expect(screen.queryByRole('button', { name: /from the web/ })).not.toBeInTheDocument()
+    expect(screen.getByText('from the web')).toBeInTheDocument()
+  })
+
+  it('peeking shows a "Back to AI review" button that restores the review table', async () => {
+    useAiStore.setState({
+      phase: 'review',
+      rows: [
+        {
+          paperId: 'p1',
+          paperTitle: 'Paper One',
+          reviewer: null,
+          checked: true,
+          suggestion: { path: 'Summary', value: 'x', evidence: 'the quoted passage', confidence: null },
+        },
+      ],
+      notes: [],
+    })
+    render(<AiDialog />)
+
+    await userEvent.click(screen.getByRole('button', { name: /the quoted passage/ }))
+    const backButton = screen.getByRole('button', { name: /Back to AI review/ })
+    expect(screen.queryByRole('dialog', { name: 'Annotate with AI' })).not.toBeInTheDocument()
+
+    await userEvent.click(backButton)
+    expect(screen.getByRole('dialog', { name: 'Annotate with AI' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /the quoted passage/ })).toBeInTheDocument()
+  })
+})

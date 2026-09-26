@@ -628,6 +628,11 @@ interface AppState {
   /** The field currently pulsing after a jump — see `pendingFieldJump`. Set when
    *  that's cleared; cleared again after the flash animation's duration. */
   flashFieldPath: string | null
+  /** A quote to locate and highlight in the PDF, requested from the AI review
+   *  table's evidence column. `nonce` lets the same paper/quote pair be
+   *  requested again (e.g. clicking the same row twice in a row). `PdfViewer`
+   *  consumes and clears it once handled, found or not. */
+  pdfFindRequest: { paperId: string; text: string; nonce: number } | null
   /** Restore the Consolidation overview when its Agreement dialog closes. */
   agreementReturnToOverview: boolean
   /** Whether the overall Consolidation overview is open. Session-only, like `validationOpen`. */
@@ -820,6 +825,10 @@ interface AppState {
   setPendingFieldJump: (canonical: string | null) => void
   /** Set/clear the field currently pulsing — see `flashFieldPath`. */
   setFlashFieldPath: (canonical: string | null) => void
+  /** Request `PdfViewer` locate+highlight `text` in `paperId`'s PDF — see `pdfFindRequest`. */
+  requestPdfFind: (paperId: string, text: string) => void
+  /** Clear a pending/handled `pdfFindRequest`. */
+  clearPdfFindRequest: () => void
   /** Replace the Consolidation overview with Agreement, then restore it on close. */
   openAgreementFromOverview: () => void
   closeAgreement: () => void
@@ -1197,6 +1206,7 @@ export const useStore = create<AppState>()(
     sessionCreatedMarkIds: [],
     pendingFieldJump: null,
     flashFieldPath: null,
+    pdfFindRequest: null,
     agreementReturnToOverview: false,
     consolidationOverviewOpen: false,
     disagreementsOpen: false,
@@ -1389,6 +1399,7 @@ export const useStore = create<AppState>()(
         s.lastCreatedMarkAllowedField = null
         s.pendingFieldJump = null
         s.flashFieldPath = null
+        s.pdfFindRequest = null
         s.agreementReturnToOverview = false
         s.consolidationOverviewOpen = false
         s.disagreementsOpen = false
@@ -2186,6 +2197,16 @@ export const useStore = create<AppState>()(
     setFlashFieldPath: (canonical) =>
       set((s) => {
         s.flashFieldPath = canonical
+      }),
+
+    requestPdfFind: (paperId, text) =>
+      set((s) => {
+        s.pdfFindRequest = { paperId, text, nonce: (s.pdfFindRequest?.nonce ?? 0) + 1 }
+      }),
+
+    clearPdfFindRequest: () =>
+      set((s) => {
+        s.pdfFindRequest = null
       }),
 
     openAgreementFromOverview: () =>

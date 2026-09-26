@@ -82,6 +82,7 @@ function allPapersWarning(mode: AiMode, count: number): string {
 
 export function AiDialog() {
   const open = useAiStore((s) => s.open)
+  const minimized = useAiStore((s) => s.minimized)
   const configs = useAiStore((s) => s.configs)
   const selectedId = useAiStore((s) => s.selectedId)
   const mode = useAiStore((s) => s.mode)
@@ -105,6 +106,7 @@ export function AiDialog() {
   const usage = useAiStore((s) => s.usage)
 
   const closeDialog = useAiStore((s) => s.closeDialog)
+  const setMinimized = useAiStore((s) => s.setMinimized)
   const setSettingsOpen = useAiStore((s) => s.setSettingsOpen)
   const selectConfig = useAiStore((s) => s.selectConfig)
   const setMode = useAiStore((s) => s.setMode)
@@ -116,6 +118,17 @@ export function AiDialog() {
   const apply = useAiStore((s) => s.apply)
 
   const currentPaper = useStore((s) => s.project?.papers.find((p) => p.id === s.currentPaperId))
+  const currentPaperId = useStore((s) => s.currentPaperId)
+  const selectPaper = useStore((s) => s.selectPaper)
+  const requestPdfFind = useStore((s) => s.requestPdfFind)
+
+  /** Clicking a paper-sourced evidence quote: switch to that paper if needed,
+   *  ask `PdfViewer` to find+highlight it, and peek at the PDF (see `minimized`). */
+  const jumpToEvidence = (row: ReviewRow) => {
+    if (row.paperId !== currentPaperId) selectPaper(row.paperId)
+    requestPdfFind(row.paperId, row.suggestion.evidence)
+    setMinimized(true)
+  }
 
   // The one-time consequences warning is local UI state: it is shown between
   // ticking the toggle and confirming, and never persisted.
@@ -135,6 +148,19 @@ export function AiDialog() {
   }, [open, settingsOpen, closeDialog])
 
   if (!open) return null
+
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="ai-peek-back"
+        onClick={() => setMinimized(false)}
+        title="Reopen the AI review table"
+      >
+        ← Back to AI review
+      </button>
+    )
+  }
 
   const selected = configs.find((c) => c.id === selectedId) ?? null
   const checkedCount = rows.filter((r) => r.checked).length
@@ -431,7 +457,13 @@ export function AiDialog() {
 
                   <RunErrors errors={runErrors} />
 
-                  <ReviewTable rows={rows} grouped={grouped} mode={mode} onToggle={toggleRow} />
+                  <ReviewTable
+                    rows={rows}
+                    grouped={grouped}
+                    mode={mode}
+                    onToggle={toggleRow}
+                    onEvidenceClick={jumpToEvidence}
+                  />
 
                   {notes.map((n) => (
                     <ReviewNotes key={n.paperId} notes={n} />
@@ -556,16 +588,25 @@ function JudgeCell({ row }: { row: ReviewRow }) {
   )
 }
 
+/** A row's evidence quote is clickable when it names a passage in the paper
+ *  itself — prompt mode always (no `source`), agent mode only when it didn't
+ *  hand back a web URL instead. */
+function isPaperEvidence(row: ReviewRow): boolean {
+  return !row.suggestion.source || row.suggestion.source === 'paper'
+}
+
 function ReviewTable({
   rows,
   grouped,
   mode,
   onToggle,
+  onEvidenceClick,
 }: {
   rows: ReviewRow[]
   grouped: boolean
   mode: AiMode
   onToggle: (index: number, checked: boolean) => void
+  onEvidenceClick: (row: ReviewRow) => void
 }) {
   // Group rows by paper, preserving first-seen order — the run processes
   // papers in that order, so this reads the same as the progress line did.
@@ -625,7 +666,18 @@ function ReviewTable({
                       </td>
                       <td className="ai-evidence">
                         {row.suggestion.evidence ? (
-                          <q>{row.suggestion.evidence}</q>
+                          isPaperEvidence(row) ? (
+                            <button
+                              type="button"
+                              className="ai-evidence-link"
+                              onClick={() => onEvidenceClick(row)}
+                              title="Show this passage in the PDF"
+                            >
+                              <q>{row.suggestion.evidence}</q>
+                            </button>
+                          ) : (
+                            <q>{row.suggestion.evidence}</q>
+                          )
                         ) : (
                           <span className="ai-dash">no quote given</span>
                         )}

@@ -576,3 +576,35 @@
     }
   }
 }
+
+/* An evidence quote sourced from the paper doubles as a button that jumps to
+   it in the PDF (see AiDialog's `jumpToEvidence`) — looks like the plain <q>
+   it replaces, just with a hover cue. */
+.ai-evidence-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ai-evidence-link:hover q {
+  text-decoration: underline;
+}
+
+/* Shown instead of the AI dialog while it's "peeking" at the PDF — see
+   `minimized` in aiStore. */
+.ai-peek-back {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 250;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  color: var(--text);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+}
