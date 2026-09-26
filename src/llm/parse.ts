@@ -248,19 +248,19 @@ function asArray(raw: unknown): unknown[] {
 }
 
 /**
- * Validate one raw answer against the schema.
+ * Validate an already-parsed answer object against the schema — the same
+ * checks `parseAnswer` runs, factored out so agent mode (which gets its
+ * fields from a tool call's args, not a JSON-in-text reply) can reuse them
+ * without round-tripping through `JSON.stringify`/`extractObject`.
  *
  * Never throws. An answer we cannot make sense of at all yields an empty result;
  * an answer we can read but do not accept yields entries in `rejected`.
  */
-export function parseAnswer(schema: ResolvedDef[], raw: string): LlmAnswer {
+export function validateAnswerObject(schema: ResolvedDef[], root: Record<string, unknown>): LlmAnswer {
   const fields: Suggestion[] = []
   const skipped: SkippedField[] = []
   const rejected: RejectedSuggestion[] = []
   const answer: LlmAnswer = { fields, skipped, rejected }
-
-  const root = extractObject(raw)
-  if (!root) return answer
 
   const defs = Array.isArray(schema) ? schema : []
   // Keyed by canonical path, so "Year" and "Year[0]" count as the same field.
@@ -321,4 +321,17 @@ export function parseAnswer(schema: ResolvedDef[], raw: string): LlmAnswer {
   }
 
   return answer
+}
+
+/**
+ * Validate one raw model reply (JSON, possibly wrapped in prose or fences)
+ * against the schema.
+ *
+ * Never throws. An answer we cannot make sense of at all yields an empty result;
+ * an answer we can read but do not accept yields entries in `rejected`.
+ */
+export function parseAnswer(schema: ResolvedDef[], raw: string): LlmAnswer {
+  const root = extractObject(raw)
+  if (!root) return { fields: [], skipped: [], rejected: [] }
+  return validateAnswerObject(schema, root)
 }

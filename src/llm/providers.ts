@@ -189,7 +189,7 @@ export function baseOf(cfg: LlmConfig): string {
   return configured || PROVIDERS[cfg.provider].defaultBaseUrl
 }
 
-function anthropicContent(user: PaperPart): unknown[] {
+export function anthropicContent(user: PaperPart): unknown[] {
   if (user.kind === 'text') return [{ type: 'text', text: user.text }]
   return [
     {
@@ -200,7 +200,7 @@ function anthropicContent(user: PaperPart): unknown[] {
   ]
 }
 
-function openaiContent(user: PaperPart): unknown {
+export function openaiContent(user: PaperPart): unknown {
   // A plain string keeps the text path portable: some OpenAI-compatible servers
   // don't know the newer parts-array form.
   if (user.kind === 'text') return user.text
@@ -217,7 +217,7 @@ function openaiContent(user: PaperPart): unknown {
 }
 
 /** Gemini's `Part[]` shape: a plain string user turn becomes one text part. */
-function googleParts(user: PaperPart): unknown[] {
+export function googleParts(user: PaperPart): unknown[] {
   if (user.kind === 'text') return [{ text: user.text }]
   return [
     { inline_data: { mime_type: 'application/pdf', data: user.base64 } },
@@ -236,6 +236,28 @@ export function googleThinkingMechanism(id: string): 'level' | 'budget' {
 /** Token counts standing in for "low/medium/high" on 2.5-era models; within
  * the documented range for every 2.5-series model (128–32768 on 2.5 Pro). */
 export const GOOGLE_BUDGET_BY_LEVEL: Record<string, number> = { low: 2000, medium: 8000, high: 24000 }
+
+/** Anthropic's reasoning-effort fields: adaptive thinking must be turned on for
+ *  `output_config.effort` to have anything to apply to. `{}` when no effort is set. */
+export function anthropicThinkingFields(effort?: string): Record<string, unknown> {
+  return effort ? { thinking: { type: 'adaptive' }, output_config: { effort } } : {}
+}
+
+/** Gemini's `thinkingConfig`, or null when no effort is set — the two shapes
+ *  (`thinkingLevel` vs `thinkingBudget`) are mutually exclusive on one request. */
+export function googleThinkingConfig(model: string, effort?: string): Record<string, unknown> | null {
+  if (!effort) return null
+  return googleThinkingMechanism(model) === 'level'
+    ? { thinkingLevel: effort }
+    : { thinkingBudget: GOOGLE_BUDGET_BY_LEVEL[effort] ?? GOOGLE_BUDGET_BY_LEVEL.medium }
+}
+
+/** The OpenAI-family reasoning-effort field: OpenRouter nests its own dial,
+ *  every other provider in this family takes a flat field. `{}` when unset. */
+export function openaiReasoningFields(provider: Provider, effort?: string): Record<string, unknown> {
+  if (!effort) return {}
+  return provider === 'openrouter' ? { reasoning: { effort } } : { reasoning_effort: effort }
+}
 
 export function buildRequest(
   cfg: LlmConfig,
@@ -261,11 +283,7 @@ export function buildRequest(
         max_tokens: maxTokens,
         system,
         messages: [{ role: 'user', content: anthropicContent(user) }],
-        // `output_config.effort` is the current, model-agnostic dial; it needs
-        // adaptive thinking turned on to have anything to apply effort to.
-        ...(effort
-          ? { thinking: { type: 'adaptive' }, output_config: { effort } }
-          : {}),
+        ...anthropicThinkingFields(effort),
       }),
     }
   }
@@ -275,11 +293,7 @@ export function buildRequest(
     // than the OpenAI family. Auth uses the `x-goog-api-key` header (Google's
     // documented alternative to `?key=`) so the key never sits in a URL, matching
     // this app's header-only sentinel-substitution.
-    const thinkingConfig = effort
-      ? googleThinkingMechanism(cfg.model) === 'level'
-        ? { thinkingLevel: effort }
-        : { thinkingBudget: GOOGLE_BUDGET_BY_LEVEL[effort] ?? GOOGLE_BUDGET_BY_LEVEL.medium }
-      : null
+    const thinkingConfig = googleThinkingConfig(cfg.model, effort)
     return {
       configId: cfg.id,
       url: join(base, `/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`),
@@ -313,13 +327,7 @@ export function buildRequest(
         { role: 'system', content: system },
         { role: 'user', content: openaiContent(user) },
       ],
-      // OpenRouter's dial is its own nested object; every other OpenAI-shaped
-      // provider here (OpenAI, Groq, Mistral, xAI) takes the same flat field.
-      ...(effort
-        ? cfg.provider === 'openrouter'
-          ? { reasoning: { effort } }
-          : { reasoning_effort: effort }
-        : {}),
+      ...openaiReasoningFields(cfg.provider, effort),
     }),
   }
 }

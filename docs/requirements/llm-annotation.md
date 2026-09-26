@@ -1,7 +1,8 @@
 # Requirements — LLM-Assisted Annotation
 
-Requirements for the optional AI feature that proposes annotation values from a paper's
-content. See the [index](index.md) for the glossary.
+Requirements for the AI-assisted annotation feature, a core feature that proposes
+annotation values from a paper's content and that projects can individually opt out of.
+See the [index](index.md) for the glossary.
 
 ---
 
@@ -50,7 +51,7 @@ content. See the [index](index.md) for the glossary.
 ### REQ-LLM-80 — Honor project-level AI opt-out
 - **Description:** When a project's configuration sets `ai` to false, the system shall not offer the AI feature for that project.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/project.ts:771`, `src/components/AnnotationPanel.tsx:23-25,161`, `src/state/aiStore.ts:164-166`
+- **Evidence:** `src/model/project.ts:683`, `src/components/Toolbar.tsx:96-112,188`, `src/state/aiStore.ts:139`
 - **Status:** Implemented
 
 ### REQ-LLM-90 — Restrict AI to numbered reviewer seats
@@ -189,4 +190,46 @@ content. See the [index](index.md) for the glossary.
 - **Description:** When a reply is empty and the provider reports a token-limit finish reason, the system shall report that the model spent its budget on internal reasoning, distinct from the model proposing nothing.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/llm/providers.ts:421-446`, `src/state/aiStore.ts:260-268,431-437`
+- **Status:** Implemented
+
+### REQ-LLM-320 — AI entry point in the toolbar
+- **Description:** The system shall offer the AI-assisted annotation feature as an always-rendered toolbar button, disabled with an honest reason when no project is open, the project is busy, the project editor is open, the project is a screening project, the Consolidation seat is selected, a multi-reviewer project has no reviewer picked, or the project's configuration turns AI off.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/Toolbar.tsx:91-114,354-360`, `src/components/Toolbar.test.ts`
+- **Status:** Implemented
+
+### REQ-LLM-330 — Agent-mode tool set
+- **Description:** The system shall let the agent-mode model call tools to search the paper's extracted text, read a page range of it, search OpenAlex and Crossref for bibliographic metadata, and fetch a public web page as readable text, validating each tool's arguments and returning an error string instead of throwing on malformed input.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/llm/tools.ts:1-350`, `src/llm/chat.ts:1-330`
+- **Status:** Implemented
+
+### REQ-LLM-340 — Verify agent-mode evidence before the judge sees it
+- **Description:** Before an agent-mode submission reaches the judge, the system shall validate every value against the schema and, for a paper-sourced value, verify that its evidence quote is found in the extracted paper text (tolerating case, whitespace, hyphenation, ligatures and quote-mark differences), and shall reject a web-sourced value whose declared source URL was not fetched during the run.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/llm/verify.ts:1-140`
+- **Status:** Implemented
+
+### REQ-LLM-350 — Bounded judge review loop
+- **Description:** In agent mode, the system shall submit new or changed proposed values to a separate judge call that returns an accept/revise/reject verdict with feedback per value plus any target fields the paper answers but the agent left empty, feed that feedback back to the agent for another round, and stop after the judge accepts everything and nothing is missing, after the agent's submission stops changing, or after a bounded number of rounds, whichever comes first.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/llm/agent.ts:1-360`, `src/llm/judge.ts:1-210`
+- **Status:** Implemented
+
+### REQ-LLM-360 — Treat fetched web content as untrusted data
+- **Description:** When the agent-mode `fetch_url` tool returns a fetched page's text, the system shall wrap it in a clear untrusted-content delimiter and instruct the model, in the system prompt, to treat it only as data to extract from and never as instructions to follow.
+- **Type:** Non-functional (ISO 25010: Security)
+- **Evidence:** `src/llm/tools.ts` (`fetchUrl`), `src/llm/prompt.ts` (`buildAgentSystemPrompt`)
+- **Status:** Implemented
+
+### REQ-LLM-370 — Per-run token and call accounting
+- **Description:** The system shall accumulate, across every agent- and judge-model call of one agent-mode run, the total input tokens, output tokens, and number of calls, and report them alongside the number of rounds run.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/llm/agent.ts` (`AgentResult.usage`)
+- **Status:** Implemented
+
+### REQ-LLM-400 — Restrict agent web access to public hosts
+- **Description:** When the AI agent fetches a URL, the system shall allow only `http`/`https` URLs without embedded credentials, resolve the hostname (or literal IP) and refuse the request if any resolved address is loopback, private, link-local, CGNAT, unique-local, multicast, or otherwise non-public, re-check the same rules on each of up to 5 manually-followed redirects, send no cookies or credentials, enforce a 20-second timeout and a 2 MB response body cap, and accept only textual content types.
+- **Type:** Non-functional (ISO 25010: Security)
+- **Evidence:** `electron/webFetch.ts:1-83`, `electron/main.ts` (`web:fetch`/`web:abort` handlers), `electron/webFetch.test.ts`
 - **Status:** Implemented
