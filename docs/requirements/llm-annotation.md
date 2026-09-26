@@ -145,9 +145,9 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-240 — Record durable AI-usage disclosure
-- **Description:** When an apply changes at least one field, the system shall append a record of provider, model, and timestamp to the paper's AI-usage list in the project file, using the provider and model of the run that produced the answer.
+- **Description:** When an apply changes at least one field, the system shall append a record of provider, model, and timestamp to the paper's AI-usage list in the project file, using the provider and model of the run that produced the answer, together with whichever of the run's mode (prompt/agent), judge provider/model, round count, applied-verdict counts, few-shot example count, and target reviewer seat are known, omitting any that are not; on load the system shall keep the base record and drop only a malformed optional field.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/store.ts:2419-2427`, `src/model/project.ts:416-436`, `src/state/store.ai.test.ts:364-429`
+- **Evidence:** `src/state/store.ts:2419-2427`, `src/model/project.ts:37-58,416-467`, `src/state/store.ai.test.ts:364-429`
 - **Status:** Implemented
 
 ### REQ-LLM-250 — List provider models
@@ -280,4 +280,10 @@ See the [index](index.md) for the glossary.
 - **Description:** In the AI review table, an evidence quote sourced from the paper itself (no `source`, or `source === 'paper'`) shall be clickable; a quote whose `source` is a URL shall not. Clicking it shall switch to that row's paper if it isn't already current, ask the PDF viewer to locate and highlight the quote, and hide the AI dialog (without discarding its review state) behind a "Back to AI review" button that restores it. The PDF viewer shall try the quote verbatim, then a lightly normalized form (straight quotes, no line-break hyphenation), then progressively shorter leading word sequences, retrying as pages finish rendering their text layer; if nothing matches within a few seconds it shall show a brief, dismissible notice instead of failing silently.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/store.ts` (`pdfFindRequest`, `requestPdfFind`, `clearPdfFindRequest`), `src/state/aiStore.ts` (`minimized`, `setMinimized`), `src/components/AiDialog.tsx` (`jumpToEvidence`, `isPaperEvidence`), `src/components/PdfViewer.tsx` (`findQuoteRanges`), `src/llm/verify.ts` (`normalize`)
+- **Status:** Implemented
+
+### REQ-LLM-470 — AI reviewer seat
+- **Description:** In a multi-reviewer project with AI-assisted annotation allowed, the system shall offer a project setting dedicating the last configured reviewer seat to the AI, effective only while at least two reviewers are configured, AI is allowed, and the project is not a screening project; applied suggestions written to that seat shall be recorded and compared against the other reviewers exactly like any other seat, and shall never mark the seat's "finished" flag on their own. The system shall label that seat distinctly (e.g. "AI (Reviewer N)") everywhere a reviewer seat is named, and shall let a human reviewer select it to inspect or correct its answers, noting in the annotation panel that its values come from AI runs.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/project.ts:265-289`, `src/state/editorStore.ts`, `src/components/ProjectEditor.tsx`, `src/components/AnnotationPanel.tsx`, `src/components/Toolbar.tsx`, `src/git/changes.ts`, `src/git/merge.ts`
 - **Status:** Implemented

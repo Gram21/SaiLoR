@@ -7,6 +7,8 @@ import {
   ProjectLoadError,
   type Project,
   type Paper,
+  type AiUsageRecord,
+  aiSeatId,
 } from '../model/project'
 import { alignedReviews, type StoredAlignment, type StoredSlot } from '../model/alignment'
 import {
@@ -895,7 +897,13 @@ interface AppState {
   /** Write the reviewer-approved AI suggestions into the current paper (one undo step). */
   applyAiSuggestions: (
     suggestions: Suggestion[],
-    usage: { provider: string; model: string },
+    /** `provider`/`model` plus the disclosure record's optional extra fields
+     *  (mode, judge, rounds, verdicts, fewShot) — see `AiUsageRecord`.
+     *  `appliedAt`/`reviewer` are filled in by the store itself, never by the
+     *  caller: `appliedAt` is the moment of this call, and `reviewer` is the
+     *  seat actually written (`target.reviewer`, `'consolidation'` never
+     *  reaches here — see the refusal below). */
+    usage: Omit<AiUsageRecord, 'appliedAt' | 'reviewer'>,
     /** The paper and seat the run was made for — see `AiState.runFor`. */
     target: { paperId: string; reviewer: string | null },
   ) => AiApplyResult
@@ -910,7 +918,7 @@ interface AppState {
       paperId: string
       reviewer: string | null
       suggestions: Suggestion[]
-      usage: { provider: string; model: string }
+      usage: Omit<AiUsageRecord, 'appliedAt' | 'reviewer'>
     }[],
   ) => AiBatchApplyResult
   /** The reviewer looked at an AI-filled field — drop its mark. */
@@ -2710,6 +2718,11 @@ export const useStore = create<AppState>()(
       })
     },
 
+    // Writes into whichever seat `target.reviewer` names, including the AI's
+    // own seat (`aiSeatId` in model/project.ts) when the dialog is driving it
+    // — nothing here treats that seat specially, and in particular this never
+    // ticks `finished`/`reviewsFinished` on its own: a human still has to sign
+    // the seat off by hand, same as any other reviewer's.
     applyAiSuggestions: (suggestions, usage, target) => {
       const prev = get()
       if (!prev.project) return { filled: 0, skipped: suggestions.length }
@@ -2759,13 +2772,15 @@ export const useStore = create<AppState>()(
       interface Planned {
         paperId: string
         reviewer: string | null
-        usage: { provider: string; model: string }
+        usage: Omit<AiUsageRecord, 'appliedAt' | 'reviewer'>
         accepted: { at: ResolvedPath; value: FieldValue }[]
       }
       const planned: Planned[] = []
       let skipped = 0
+      // The AI's own seat may be written from any seat: that is where AI runs go.
+      const aiSeat = aiSeatId(prev.project)
       for (const item of items) {
-        if (item.reviewer !== prev.currentReviewer) {
+        if (item.reviewer !== prev.currentReviewer && (aiSeat === null || item.reviewer !== aiSeat)) {
           skipped += item.suggestions.length
           continue
         }
@@ -2840,9 +2855,10 @@ export const useStore = create<AppState>()(
           // changed on this paper, and meant to reach the saved file, unlike the mark above.
           if (paperFilled > 0) {
             paper.aiUsage.push({
-              provider: p.usage.provider,
-              model: p.usage.model,
+              ...p.usage,
               appliedAt: new Date().toISOString(),
+              // The seat actually written; single-reviewer projects have none to name.
+              ...(s.project!.reviewers > 1 && p.reviewer ? { reviewer: p.reviewer } : {}),
             })
             papersWritten++
           }

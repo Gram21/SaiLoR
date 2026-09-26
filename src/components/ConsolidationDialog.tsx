@@ -7,6 +7,7 @@ import { isEmptyValue } from '../model/validate'
 import { comparable } from '../consolidate/unanimous'
 import { formatValue } from '../consolidate/disagreements'
 import { SCREENING_DECISION } from '../screening/schema'
+import { seatLabel } from '../model/project'
 import type { ResolvedDef } from '../model/schema'
 
 /**
@@ -214,9 +215,11 @@ export function ConsolidationDialog() {
                     type="button"
                     className={`consolidation-row${isCurrent ? ' is-current' : ''}`}
                     onClick={() => take(r.value)}
-                    title={`Take Reviewer ${r.reviewer}'s answer into the consolidated result`}
+                    title={`Take ${project ? seatLabel(project, r.reviewer) : `Reviewer ${r.reviewer}`}'s answer into the consolidated result`}
                   >
-                    <span className="consolidation-reviewer">Reviewer {r.reviewer}</span>
+                    <span className="consolidation-reviewer">
+                      {project ? seatLabel(project, r.reviewer) : `Reviewer ${r.reviewer}`}
+                    </span>
                     <span className="consolidation-value">{formatValue(def, r.value)}</span>
                   </button>
                 </li>

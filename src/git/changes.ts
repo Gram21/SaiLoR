@@ -244,7 +244,7 @@ function diffPaperMeta(head: Paper, working: Paper, out: FieldChange[]): void {
  * What changed locally, field by field — the data source for the commit
  * panel's review UI. Returns `null` when `head` and `working` disagree on
  * anything that reshapes the file (`config.schema`, `config.reviewers`,
- * `config.ai`, `config.screening`, `version`, `title`, `schemaInfo`,
+ * `config.ai`, `config.aiSeat`, `config.screening`, `version`, `title`, `schemaInfo`,
  * `provenance`, `protocol`, or root `extra`): once the schema differs,
  * "which fields changed" has no field-level answer, same as `merge.ts`'s
  * three-way merge refusing for the same reason. `provenance`/`protocol` are
@@ -257,6 +257,7 @@ export function detectFieldChanges(head: Project, working: Project): DetectedCha
     !deepEqualJson(head.schema, working.schema) ||
     head.reviewers !== working.reviewers ||
     head.aiEnabled !== working.aiEnabled ||
+    head.aiSeat !== working.aiSeat ||
     head.finishCheckbox !== working.finishCheckbox ||
     !deepEqualJson(head.screening, working.screening) ||
     head.version !== working.version ||

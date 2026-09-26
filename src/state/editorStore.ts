@@ -127,6 +127,7 @@ interface EditorSnapshot {
   aiEnabled: boolean
   finishCheckbox: boolean
   reviewers: number
+  aiSeat: boolean
   screening: ScreeningConfig | null
   extra: Record<string, unknown>
   provenance: ProjectProvenance | null
@@ -696,6 +697,9 @@ export function buildProjectJson(state: {
    *  enabled, matching `Project.finishCheckbox`'s default. */
   finishCheckbox?: boolean
   reviewers: number
+  /** Optional so callers predating this option keep compiling; absent means
+   *  no AI seat, matching `Project.aiSeat`'s default. */
+  aiSeat?: boolean
   /** Optional so existing test fixtures (and any other caller predating this
    *  feature) keep compiling unchanged — absent means "not a screening draft". */
   screening?: ScreeningConfig | null
@@ -737,6 +741,7 @@ export function buildProjectJson(state: {
       ...(state.aiEnabled ? {} : { ai: false }),
       ...(state.finishCheckbox === false ? { finishCheckbox: false } : {}),
       ...(state.reviewers > 1 ? { reviewers: state.reviewers } : {}),
+      ...(state.aiSeat ? { aiSeat: true } : {}),
       ...(screening ? { screening: { reasons: screening.reasons } } : {}),
     },
     papers: state.papers.map((p) => {
@@ -994,6 +999,11 @@ interface EditorState {
   finishCheckbox: boolean
   /** Independent reviewers before Consolidation reconciles them; 1 = single-reviewer. */
   reviewers: number
+  /** Whether the last reviewer seat is dedicated to the AI — see
+   *  `Project.aiSeat`/`aiSeatId`. Stored as authored even when currently
+   *  ineffective (AI off, or fewer than 2 reviewers); only `aiSeatId` decides
+   *  whether it actually applies. */
+  aiSeat: boolean
   /** Set when this draft is a screening project: its schema is derived from
    *  these reasons (`src/screening/schema.ts`) and `nodes` is unused —
    *  `ProjectEditor` renders `ScreeningReasonsEditor` instead of
@@ -1065,6 +1075,9 @@ interface EditorState {
   /** Toggle hand sign-off for this project — see `Project.finishCheckbox`.
    *  Its own undo step, like `setScreening`. */
   setFinishCheckbox: (on: boolean) => void
+  /** Toggle whether the AI takes one reviewer seat — see `Project.aiSeat`.
+   *  Its own undo step, same shape as `setFinishCheckbox`. */
+  setAiSeat: (on: boolean) => void
   /** Turn screening on (seeding `DEFAULT_SCREENING_REASONS`) or off. Its own undo step. */
   setScreening: (on: boolean) => void
   setScreeningReasons: (reasons: string[]) => void
@@ -1143,6 +1156,7 @@ function snapshotOf(s: EditorState): EditorSnapshot {
     aiEnabled: s.aiEnabled,
     finishCheckbox: s.finishCheckbox,
     reviewers: s.reviewers,
+    aiSeat: s.aiSeat,
     screening: s.screening,
     extra: s.extra,
     provenance: s.provenance,
@@ -1160,6 +1174,7 @@ function applySnapshot(s: EditorState, snap: EditorSnapshot): void {
   s.aiEnabled = snap.aiEnabled
   s.finishCheckbox = snap.finishCheckbox
   s.reviewers = snap.reviewers
+  s.aiSeat = snap.aiSeat
   s.screening = snap.screening
   s.extra = snap.extra
   s.provenance = snap.provenance
@@ -1182,6 +1197,7 @@ interface OpenedEditorState {
   aiEnabled: boolean
   finishCheckbox: boolean
   reviewers: number
+  aiSeat: boolean
   screening: ScreeningConfig | null
   extra: Record<string, unknown>
   provenance: ProjectProvenance | null
@@ -1260,6 +1276,8 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
     finishCheckbox: (parsed.config as { finishCheckbox?: unknown }).finishCheckbox !== false,
     // Absent or 1 means single-reviewer, same default as project.ts's loader.
     reviewers: parsed.config.reviewers ?? 1,
+    // Absent means no AI seat, same rule as `aiEnabled` above.
+    aiSeat: (parsed.config as { aiSeat?: unknown }).aiSeat === true,
     screening,
     extra: rootExtra,
     provenance: parseProvenance(data.provenance),
@@ -1299,6 +1317,7 @@ function openEditorSession(s: EditorState, st: OpenedEditorState): void {
   s.aiEnabled = st.aiEnabled
   s.finishCheckbox = st.finishCheckbox
   s.reviewers = st.reviewers
+  s.aiSeat = st.aiSeat
   s.screening = st.screening
   s.extra = st.extra
   s.provenance = st.provenance
@@ -1438,6 +1457,7 @@ export const useEditorStore = create<EditorState>()(
     // project's behavior unless its author opts out.
     finishCheckbox: true,
     reviewers: 1,
+    aiSeat: false,
     screening: null,
     extra: {},
     provenance: null,
@@ -1479,6 +1499,7 @@ export const useEditorStore = create<EditorState>()(
         s.aiEnabled = true
         s.finishCheckbox = true
         s.reviewers = 1
+        s.aiSeat = false
         s.screening = null
         s.extra = {}
         s.provenance = null
@@ -1709,6 +1730,21 @@ export const useEditorStore = create<EditorState>()(
       set((s) => {
         pushPast(s, snap)
         s.finishCheckbox = on
+        s.dirty = true
+      })
+    },
+
+    setAiSeat: (on) => {
+      // A single toggle, so it is its own undo step (no coalescing) — same
+      // shape as `setFinishCheckbox`. The stored value is kept even when AI
+      // is off or reviewers drop below 2 — `aiSeatId` alone decides whether
+      // it is effective, so re-enabling either restores the choice rather
+      // than losing it.
+      lastEditKey = null
+      const snap = snapshotOf(get())
+      set((s) => {
+        pushPast(s, snap)
+        s.aiSeat = on
         s.dirty = true
       })
     },
@@ -2106,6 +2142,8 @@ export const useEditorStore = create<EditorState>()(
           // 1 — that would silently turn dual-screening into single. The
           // annotation target has its own independent staffing default.
           s.reviewers = screeningTarget ? draft.reviewers : 1
+          // Same reasoning as `aiEnabled` just above.
+          s.aiSeat = false
           // Seeded from the source's own reasons, not DEFAULT_SCREENING_REASONS:
           // they're the pre-registered protocol's vocabulary, and PRISMA
           // reports exclusions per reason across both passes — a disjoint

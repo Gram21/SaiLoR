@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useStore, selectCurrentPaper, currentTree, currentFinished } from '../state/store'
 import { normalizeTree, isFieldVisible } from '../model/annotations'
 import { finishCheckboxLabel } from '../model/annotationState'
+import { aiSeatId, seatLabel } from '../model/project'
 import { paperCompleteness, paperAnnotationState } from './PaperList'
 import { paperVerdicts } from '../consolidate/disagreements'
 import { AnnotationNode } from './AnnotationNode'
@@ -155,9 +156,18 @@ export function AnnotationPanel() {
   const finishedMismatch = finishedState === 'flagged'
   const showFinished = finishCheckboxEnabled && finishedCompleteness !== null
 
+  // Humans may still select the AI's seat to look at or correct its work — no
+  // hard lock, just a heads-up about whose answers are sitting there.
+  const isAiSeat = !!project && currentReviewer === aiSeatId(project)
+
   return (
     <div className="panel annotations">
       <SeatConflictNotice />
+      {isAiSeat && (
+        <p className="ai-seat-notice" role="status">
+          This is the AI's seat — values here come from AI runs.
+        </p>
+      )}
       <div className="annotations-head">
         <div className="annotations-head-row">
           <h2>Annotations</h2>
@@ -180,7 +190,7 @@ export function AnnotationPanel() {
               what makes a multi-reviewer file trustworthy. */}
           {!noReviewerPicked && (project?.reviewers ?? 1) > 1 && (
             <span className="reviewer-badge">
-              {currentReviewer === 'consolidation' ? 'Consolidation' : `Reviewer ${currentReviewer}`}
+              {project && currentReviewer ? seatLabel(project, currentReviewer) : `Reviewer ${currentReviewer}`}
             </span>
           )}
         </div>

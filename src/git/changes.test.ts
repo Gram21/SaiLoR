@@ -83,6 +83,7 @@ function rawMark(id: string): Record<string, unknown> {
 interface ProjectOpts {
   schema?: AnnotationDef[]
   reviewers?: number
+  aiSeat?: boolean
   papers?: Record<string, unknown>[]
   provenance?: unknown
   protocol?: unknown
@@ -93,6 +94,7 @@ interface ProjectOpts {
 function project(opts: ProjectOpts = {}): Project {
   const config: Record<string, unknown> = { schema: opts.schema ?? SIMPLE }
   if (opts.reviewers !== undefined) config.reviewers = opts.reviewers
+  if (opts.aiSeat !== undefined) config.aiSeat = opts.aiSeat
   return loadProject({
     version: 1,
     ...(opts.title !== undefined ? { title: opts.title } : {}),
@@ -118,6 +120,12 @@ describe('detectFieldChanges — structural changes refuse field-level review', 
   it('returns null when config.reviewers differs', () => {
     const head = project({ reviewers: 1 })
     const working = project({ reviewers: 2 })
+    expect(detectFieldChanges(head, working)).toBeNull()
+  })
+
+  it('returns null when config.aiSeat differs', () => {
+    const head = project({ reviewers: 2, aiSeat: false })
+    const working = project({ reviewers: 2, aiSeat: true })
     expect(detectFieldChanges(head, working)).toBeNull()
   })
 

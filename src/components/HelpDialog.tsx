@@ -625,6 +625,20 @@ function editorHelp(): { lead: ReactNode; sections: HelpSection[] } {
         ),
       },
       {
+        id: 'ai-seat',
+        title: 'Giving the AI a reviewer seat',
+        body: (
+          <p>
+            With at least 2 reviewers and AI-assisted annotation allowed, one project setting
+            dedicates the <strong>last</strong> reviewer seat to the AI. Its answers are written into
+            that seat like any human reviewer's, and compared against the others in Consolidation the
+            same way — nothing about Consolidation changes to accommodate it. A human can still open
+            that seat to look at or correct the AI's work; the annotation panel notes when you're
+            looking at it.
+          </p>
+        ),
+      },
+      {
         id: 'papers',
         title: 'Adding papers',
         body: (

@@ -3059,6 +3059,18 @@ kbd {
   line-height: 1.45;
 }
 
+/* "You are looking at the AI's seat" — see AnnotationPanel.tsx. Same shape as
+   .seat-conflict-notice but not an alarm, so a neutral border instead of danger. */
+.ai-seat-notice {
+  margin: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--accent-weak);
+  color: var(--text);
+  font-size: 0.85em;
+  line-height: 1.45;
+}
+
 /* "Configure this repository for SaiLoR?" — see RepoSetupPrompt.tsx. */
 .repo-setup-prompt {
   max-width: 560px;

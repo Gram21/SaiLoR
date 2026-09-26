@@ -41,6 +41,21 @@ export interface AiUsageRecord {
   model: string
   /** ISO 8601 timestamp of the Apply click. */
   appliedAt: string
+  /** "prompt" for a single suggest-and-apply pass, "agent" for the
+   *  tool-using agent with a judge review loop. Absent for a record predating
+   *  this distinction. */
+  mode?: 'prompt' | 'agent'
+  /** The judge model that reviewed the agent's answers, agent mode only. */
+  judge?: { provider: string; model: string }
+  /** How many agent rounds ran. Agent mode only. */
+  rounds?: number
+  /** The judge's verdicts on the values that were actually applied — not
+   *  every value the agent proposed. */
+  verdicts?: { accept: number; revise: number; reject: number }
+  /** How many example papers were shown as few-shot context. */
+  fewShot?: number
+  /** The seat the values were written into ("1".."N" or "consolidation"). */
+  reviewer?: string
 }
 
 export interface Paper {
@@ -230,6 +245,15 @@ export interface Project {
    * into `Paper.annotations`.
    */
   reviewers: number
+  /**
+   * Whether one reviewer seat is dedicated to the AI, so its answers are
+   * compared against the human reviewers' like any other seat. Defaults to
+   * false; opt in with `config.aiSeat: true`. Only *effective* when
+   * `aiEnabled && reviewers >= 2 && !screening` — see `aiSeatId`. Stored as
+   * authored even when ineffective (e.g. AI turned off, or reviewers dropped
+   * below 2), so re-enabling either restores it rather than losing the choice.
+   */
+  aiSeat: boolean
   papers: Paper[]
   /**
    * The screening configuration when this is a screening project, else null.
@@ -240,6 +264,31 @@ export interface Project {
   screening: ScreeningConfig | null
   /** Additional top-level fields preserved verbatim on save. */
   extra: Record<string, unknown>
+}
+
+/**
+ * The seat id the AI writes into, or `null` when there is none. Always the
+ * last configured seat (`String(project.reviewers)`) — never a separately
+ * stored id — so there is nothing to merge-conflict over which number it is.
+ *
+ * Effective only when AI is actually usable on this project: `aiEnabled` and
+ * `aiSeat` both on, at least 2 reviewers configured, and not a screening
+ * project (screening decides the review's corpus, not a field a model fills).
+ */
+export function aiSeatId(project: Pick<Project, 'aiSeat' | 'aiEnabled' | 'reviewers' | 'screening'>): string | null {
+  if (!project.aiSeat || !project.aiEnabled || project.reviewers < 2 || project.screening !== null) return null
+  return String(project.reviewers)
+}
+
+/**
+ * The display label for a reviewer seat: "Consolidation" for that seat, "AI
+ * (Reviewer N)" for the seat `aiSeatId` names, else the plain "Reviewer N".
+ * The one place every "Reviewer N" label in the UI goes through, so the AI
+ * seat is never accidentally shown as an ordinary human reviewer.
+ */
+export function seatLabel(project: Pick<Project, 'aiSeat' | 'aiEnabled' | 'reviewers' | 'screening'>, seatId: string): string {
+  if (seatId === 'consolidation') return 'Consolidation'
+  return seatId === aiSeatId(project) ? `AI (Reviewer ${seatId})` : `Reviewer ${seatId}`
 }
 
 export class ProjectLoadError extends Error {
@@ -350,6 +399,24 @@ function parseReviewsFinished(raw: unknown): Record<string, boolean> {
  * Parse `aiUsage` defensively: the file is hand-editable, so a malformed entry
  * must be dropped, never thrown over — the same rule `annotations` follows.
  */
+/** Parse the judge sub-record, dropping it (not the whole entry) if malformed. */
+function parseAiUsageJudge(raw: unknown): { provider: string; model: string } | undefined {
+  if (typeof raw !== 'object' || raw === null) return undefined
+  const r = raw as Record<string, unknown>
+  return typeof r.provider === 'string' && typeof r.model === 'string'
+    ? { provider: r.provider, model: r.model }
+    : undefined
+}
+
+/** Parse the verdicts sub-record, same drop-not-discard rule as `parseAiUsageJudge`. */
+function parseAiUsageVerdicts(raw: unknown): { accept: number; revise: number; reject: number } | undefined {
+  if (typeof raw !== 'object' || raw === null) return undefined
+  const r = raw as Record<string, unknown>
+  const keys = ['accept', 'revise', 'reject'] as const
+  if (!keys.every((k) => typeof r[k] === 'number' && Number.isFinite(r[k]))) return undefined
+  return { accept: r.accept as number, revise: r.revise as number, reject: r.reject as number }
+}
+
 function parseAiUsage(raw: unknown): AiUsageRecord[] {
   if (!Array.isArray(raw)) return []
   const out: AiUsageRecord[] = []
@@ -361,8 +428,24 @@ function parseAiUsage(raw: unknown): AiUsageRecord[] {
       typeof (entry as Record<string, unknown>).model === 'string' &&
       typeof (entry as Record<string, unknown>).appliedAt === 'string'
     ) {
-      const e = entry as Record<string, string>
-      out.push({ provider: e.provider, model: e.model, appliedAt: e.appliedAt })
+      const e = entry as Record<string, unknown>
+      const record: AiUsageRecord = {
+        provider: e.provider as string,
+        model: e.model as string,
+        appliedAt: e.appliedAt as string,
+      }
+      // Each optional field is dropped on its own if malformed — the base
+      // record above is never discarded for a bad extra, same rule as the
+      // rest of this file's hand-editable sub-records.
+      if (e.mode === 'prompt' || e.mode === 'agent') record.mode = e.mode
+      const judge = parseAiUsageJudge(e.judge)
+      if (judge) record.judge = judge
+      if (typeof e.rounds === 'number' && Number.isFinite(e.rounds)) record.rounds = e.rounds
+      const verdicts = parseAiUsageVerdicts(e.verdicts)
+      if (verdicts) record.verdicts = verdicts
+      if (typeof e.fewShot === 'number' && Number.isFinite(e.fewShot)) record.fewShot = e.fewShot
+      if (typeof e.reviewer === 'string') record.reviewer = e.reviewer
+      out.push(record)
     }
   }
   return out
@@ -686,6 +769,8 @@ export function loadProject(input: string | unknown): Project {
     finishCheckbox: (raw.config as { finishCheckbox?: unknown }).finishCheckbox !== false,
     // Absent or 1 means single-reviewer; zod already bounds a present value to [1, 10].
     reviewers: raw.config.reviewers ?? 1,
+    // Absent means no AI seat; only an explicit `true` opts in.
+    aiSeat: (raw.config as { aiSeat?: unknown }).aiSeat === true,
     papers,
     screening,
     extra: extractExtra(raw, KNOWN_ROOT_KEYS),
@@ -737,6 +822,7 @@ export function serializeProject(project: Project): string {
       ...(project.aiEnabled ? {} : { ai: false }),
       ...(project.finishCheckbox ? {} : { finishCheckbox: false }),
       ...(project.reviewers > 1 ? { reviewers: project.reviewers } : {}),
+      ...(project.aiSeat ? { aiSeat: true } : {}),
       ...(project.screening ? { screening: { reasons: project.screening.reasons } } : {}),
     },
     papers: [...project.papers].sort(comparePapers).map((p) => {
@@ -953,6 +1039,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
       ...(project.aiEnabled ? {} : { ai: false }),
       ...(project.finishCheckbox ? {} : { finishCheckbox: false }),
       ...(project.reviewers > 1 ? { reviewers: project.reviewers } : {}),
+      ...(project.aiSeat ? { aiSeat: true } : {}),
       ...(project.screening ? { screening: { reasons: project.screening.reasons } } : {}),
     },
     papers: metaPapers,

@@ -265,6 +265,7 @@ describe('projectVerdicts', () => {
       annotationsDir: null,
       schema: SCHEMA,
       aiEnabled: true,
+      aiSeat: false,
       finishCheckbox: true,
       reviewers: 2,
       extra: {},
