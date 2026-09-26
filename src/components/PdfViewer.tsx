@@ -9,6 +9,7 @@ import { MARK_COLORS, sortMarksForCycling, type MarkRect, type PdfMark } from '.
 import { screeningSeatLabel } from '../model/screeningMarks'
 import { detectEntryBox, detectNumericCitation, findNumericReference, type PreviewTextItem } from '../model/refPreview'
 import { getPlatform } from '../platform'
+import { safeGet, safeSet } from '../state/settings'
 // Side-effect import: configures the pdf.js worker.
 import '../platform/pdfjs'
 
@@ -184,6 +185,8 @@ export function destinationPoint(dest: unknown[]): { x: number | null; y: number
 
 /** On-screen size cap (CSS px) for the internal-link hover preview. The crop
  *  is scaled down, never clipped, so a wide reference entry stays whole. */
+const SINGLE_PAGE_KEY = 'slr.pdf.singlePage'
+
 const LINK_PREVIEW_MAX_W = 560
 const LINK_PREVIEW_MAX_H = 240
 
@@ -359,6 +362,13 @@ export function PdfViewer() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInput, setPageInput] = useState('1')
   const [width, setWidth] = useState(600)
+  const [height, setHeight] = useState(800)
+  // Single-page view: the page is fitted to the pane and the wheel flips
+  // pages, like a reader's "fit page" mode. Pages stay mounted (search, marks
+  // and link jumps keep working); a large gap just keeps neighbours out of view.
+  const [singlePage, setSinglePage] = useState(() => safeGet(SINGLE_PAGE_KEY) === '1')
+  /** Width/height of page 1, for fitting a whole page into the pane. */
+  const [pageAspect, setPageAspect] = useState(1 / Math.SQRT2)
   const containerRef = useRef<HTMLDivElement>(null)
   const pageRefs = useRef<(HTMLDivElement | null)[]>([])
   const pageInputRef = useRef<HTMLInputElement>(null)
@@ -427,7 +437,7 @@ export function PdfViewer() {
   const zoomOut = useStore((s) => s.zoomOutPdf)
   const resetZoom = useStore((s) => s.resetPdfZoom)
   // The page renders at the fit-to-width base size scaled by the zoom factor.
-  const renderWidth = Math.round(width * zoom)
+  const renderWidth = Math.round((singlePage ? Math.min(width, height * pageAspect) : width) * zoom)
 
   // Resolve the PDF source only when the paper identity or its pdf path changes.
   useEffect(() => {
@@ -529,6 +539,7 @@ export function PdfViewer() {
     const ro = new ResizeObserver((entries) => {
       const w = entries[0]?.contentRect.width ?? 600
       setWidth(Math.max(240, Math.floor(w - 24)))
+      setHeight(Math.max(240, Math.floor((entries[0]?.contentRect.height ?? 800) - 8)))
     })
     ro.observe(el)
     return () => ro.disconnect()
@@ -590,7 +601,24 @@ export function PdfViewer() {
     if (count === 0) return
     const clamped = Math.min(Math.max(1, n), count)
     setCurrentPage(clamped)
-    pageRefs.current[clamped - 1]?.scrollIntoView({ block: 'start' })
+    const pageEl = pageRefs.current[clamped - 1]
+    const fits = pageEl && containerRef.current && pageEl.offsetHeight <= containerRef.current.clientHeight
+    pageEl?.scrollIntoView({ block: singlePage && fits ? 'center' : 'start' })
+  }
+
+  const currentPageRef = useRef(currentPage)
+  currentPageRef.current = currentPage
+  const scrollToPageRef = useRef(scrollToPage)
+  scrollToPageRef.current = scrollToPage
+
+  const toggleSinglePage = () => {
+    const page = currentPage
+    setSinglePage((on) => {
+      safeSet(SINGLE_PAGE_KEY, on ? '0' : '1')
+      return !on
+    })
+    // The layout changes size; land back on the page being read once it has.
+    requestAnimationFrame(() => requestAnimationFrame(() => scrollToPageRef.current(page)))
   }
 
   // Jump to the remembered page/offset once this paper's pages mount, and
@@ -1249,15 +1277,36 @@ export function PdfViewer() {
   useEffect(() => {
     const root = containerRef.current
     if (!root) return
+    let lastWheel = 0
     const onWheel = (e: WheelEvent) => {
-      if (!e.ctrlKey && !e.metaKey) return
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault()
+        if (e.deltaY < 0) zoomIn()
+        else if (e.deltaY > 0) zoomOut()
+        return
+      }
+      if (!singlePage || e.deltaY === 0) return
+      // A page taller than the pane (zoomed in) scrolls natively until its
+      // edge is reached; only then does the wheel flip.
+      const pageEl = pageRefs.current[currentPageRef.current - 1]
+      if (pageEl) {
+        const page = pageEl.getBoundingClientRect()
+        const view = root.getBoundingClientRect()
+        if (e.deltaY > 0 ? page.bottom > view.bottom + 1 : page.top < view.top - 1) return
+      }
       e.preventDefault()
-      if (e.deltaY < 0) zoomIn()
-      else if (e.deltaY > 0) zoomOut()
+      // A mouse wheel notch is one large delta: one flip each. A trackpad
+      // gesture (inertia included) is a stream of small deltas: one flip per
+      // gesture, which ends after a short pause.
+      const notch = e.deltaMode !== WheelEvent.DOM_DELTA_PIXEL || Math.abs(e.deltaY) >= 50
+      const quiet = e.timeStamp - lastWheel > (notch ? 80 : 200)
+      lastWheel = e.timeStamp
+      if (!quiet) return
+      scrollToPageRef.current(currentPageRef.current + Math.sign(e.deltaY))
     }
     root.addEventListener('wheel', onWheel, { passive: false })
     return () => root.removeEventListener('wheel', onWheel)
-  }, [zoomIn, zoomOut])
+  }, [zoomIn, zoomOut, singlePage])
 
   // Clear highlights when the viewer unmounts.
   useEffect(() => clearHighlights, [])
@@ -1584,6 +1633,16 @@ export function PdfViewer() {
               +
             </button>
           </div>
+          <button
+            type="button"
+            className={`icon-btn${singlePage ? ' active' : ''}`}
+            title="Single-page view: fit the page, mouse wheel flips pages"
+            aria-label="Single-page view"
+            aria-pressed={singlePage}
+            onClick={toggleSinglePage}
+          >
+            ▯
+          </button>
         </div>
       </div>
       {searchOpen && (
@@ -1707,7 +1766,7 @@ export function PdfViewer() {
         </div>
       )}
       <div
-        className={`pdf-scroll${placingNote ? ' placing-note' : ''}${markDragActive ? ' pdf-marks-dragging' : ''}`}
+        className={`pdf-scroll${placingNote ? ' placing-note' : ''}${markDragActive ? ' pdf-marks-dragging' : ''}${singlePage ? ' single-page' : ''}`}
         ref={containerRef}
         onMouseUp={captureSelection}
         onKeyUp={captureSelection}
@@ -1747,6 +1806,13 @@ export function PdfViewer() {
               setNumPages(Math.min(doc.numPages, MAX_PDF_PAGES))
               setTruncatedPages(doc.numPages > MAX_PDF_PAGES ? doc.numPages : 0)
               pdfDocRef.current = doc // for resolving link destinations on hover
+              Promise.resolve()
+                .then(() => doc.getPage(1))
+                .then((p) => {
+                  const vp = p.getViewport({ scale: 1 })
+                  setPageAspect(vp.width / vp.height)
+                })
+                .catch(() => {}) // keep the A4 default
             }}
             onLoadError={(err) => setError(String(err?.message ?? err))}
             loading={<div className="pdf-loading">Loading PDF…</div>}

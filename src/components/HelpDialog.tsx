@@ -269,6 +269,7 @@ function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
               reference), the <em>↩ / ↪</em> buttons jump back to where you were and forward again.
               Hovering an internal link or a numbered citation such as <em>[3]</em> previews its
               target, also in PDFs whose citations are not clickable.
+              The <em>▯</em> button switches to a single-page view, where the mouse wheel flips pages.
             </li>
             <li>
               <strong>Annotate</strong> on the right. Repeatable entries show <em>+ Add</em> and a
