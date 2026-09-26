@@ -1,4 +1,8 @@
-annotations
+# Local answers stay local — except the screening example's PDF highlights,
+# which ship so "Show markings from screening" has something to show.
+annotations/**
+!annotations/*/
+!annotations/*/screening-marks-*.json
 pdfs/*.pdf
 
 # >>> SaiLoR (managed) >>>

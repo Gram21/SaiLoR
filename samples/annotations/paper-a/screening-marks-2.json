@@ -1,0 +1,21 @@
+{
+  "marks": [
+    {
+      "id": "screen-a-2",
+      "page": 1,
+      "rects": [
+        {
+          "x": 0.8,
+          "y": 0.12,
+          "width": 0.02,
+          "height": 0.02
+        }
+      ],
+      "color": "#ffe066",
+      "comment": "Check whether the sample size is reported.",
+      "createdAt": "2026-01-12T10:00:00.000Z",
+      "updatedAt": "2026-01-12T10:00:00.000Z",
+      "kind": "note"
+    }
+  ]
+}

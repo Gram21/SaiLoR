@@ -4,7 +4,7 @@ Example material for trying SaiLoR, and for its tests.
 
 | Path | What it is |
 |---|---|
-| `project.example.json` | An annotation project: two reviewers, a schema with nested and repeated fields, five papers. |
+| `project.example.json` | An annotation project: two reviewers, a schema with nested and repeated fields, five papers. It records that it was started from the screening example. |
 | `screening.example.json` | A screening project over the same papers and more. |
 | `pdfs/` | The PDFs both projects point at. |
 | `git-scenarios/` | Git situations built on demand into real repositories — see [its README](git-scenarios/README.md). |
@@ -25,7 +25,11 @@ shared one in the editor and on Save As, and offers to split it when it finds
 one (see *Things to know* in the user guide).
 
 The `annotations/` folder is not committed (`.gitignore`): what you record while
-trying the examples stays on your machine.
+trying the examples stays on your machine. The one exception is the screening
+example's PDF highlights (`annotations/*/screening-marks-*.json`): they ship, so
+opening `project.example.json` shows **Show markings from screening** on
+*Deep Learning for Code Search* (a highlight and a note) and on *From Scattered
+to Structured* (a note).
 
 The `.gitattributes` and `.gitignore` here carry SaiLoR's own git rules (the
 marked blocks), the same ones SaiLoR adds to a repository it opens a project in.
