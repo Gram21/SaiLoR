@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('slr', {
   annotationsDirUsers: (projectPath: string, folder: string, paperIds: string[], screening: boolean) =>
     ipcRenderer.invoke('project:annotationsDirUsers', projectPath, folder, paperIds, screening),
   sharedAnnotations: (projectPath: string) => ipcRenderer.invoke('project:sharedAnnotations', projectPath),
+  screeningSource: (projectPath: string) => ipcRenderer.invoke('project:screeningSource', projectPath),
   moveAnnotationsDir: (projectPath: string, folder: string) =>
     ipcRenderer.invoke('project:moveAnnotationsDir', projectPath, folder),
   splitAnnotations: (projectPath: string, plan: unknown) =>

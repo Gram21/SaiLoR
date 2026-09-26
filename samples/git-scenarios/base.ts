@@ -58,6 +58,7 @@ export interface ReviewOptions {
   schemaHistory?: object[]
   annotationsDir?: string
   title?: string
+  provenance?: object
 }
 
 /** The whole-project shape `loadProject` reads, for `Stage.writeProject`. */
@@ -69,6 +70,7 @@ export function review(opts: ReviewOptions = {}): object {
     schemaVersion: opts.schemaVersion ?? V0,
     schemaHistory: opts.schemaHistory ?? [{ id: V0, parents: [], at: '2026-01-05T09:00:00.000Z', moves: [] }],
     ...(opts.protocol ? { protocol: opts.protocol } : {}),
+    ...(opts.provenance ? { provenance: opts.provenance } : {}),
     config: { reviewers: opts.reviewers ?? 2, schema: opts.schema ?? SCHEMA },
     papers: PAPERS.map((id) => {
       const a = opts.answers?.[id] ?? {}

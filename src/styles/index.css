@@ -3206,3 +3206,32 @@ kbd {
   font-size: 0.85em;
   flex-basis: 100%;
 }
+
+/* Another project's highlights (the screening a project came from), shown
+   read-only: fainter, outlined, and not clickable — only their tooltip. */
+.pdf-mark-rect.is-foreign {
+  opacity: 0.25;
+  outline: 1px dashed var(--muted);
+  cursor: default;
+}
+.pdf-mark-rect.is-foreign:hover {
+  opacity: 0.35;
+}
+.pdf-mark-note.is-foreign {
+  opacity: 0.6;
+  cursor: default;
+}
+.pdf-mark-tooltip-from {
+  margin: 0 0 4px;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+.screening-marks-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0;
+  font-size: 0.85em;
+  color: var(--muted);
+  cursor: pointer;
+}

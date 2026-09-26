@@ -77,3 +77,22 @@ describe('AnnotationPanel: jump to field', () => {
     expect(el).toHaveClass('field-flash')
   })
 })
+
+describe('AnnotationPanel: markings from screening', () => {
+  const mark = { id: 'm', page: 1, kind: 'highlight' as const, rects: [{ x: 0, y: 0, width: 0.1, height: 0.1 }], color: '#ffe066', comment: '', createdAt: '', updatedAt: '' }
+
+  it('offers the box only on a paper the screening marked', async () => {
+    st().loadFromText(projectJson(), null, 'test.json')
+    useStore.setState({ screeningMarks: { p1: [{ seat: '1', mark }] }, showScreeningMarks: false })
+    st().selectPaper('p1')
+    const { unmount } = render(<AnnotationPanel />)
+    const box = screen.getByLabelText(/Show markings from screening \(1\)/)
+    await userEvent.click(box)
+    expect(st().showScreeningMarks).toBe(true)
+    unmount()
+
+    act(() => st().selectPaper('p2'))
+    render(<AnnotationPanel />)
+    expect(screen.queryByLabelText(/Show markings from screening/)).not.toBeInTheDocument()
+  })
+})

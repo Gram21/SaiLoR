@@ -16,6 +16,9 @@ import {
 /** Right-hand pane: renders the schema recursively for the current paper. */
 export function AnnotationPanel() {
   const paper = useStore(selectCurrentPaper)
+  const screeningMarkCount = useStore((s) => (paper ? (s.screeningMarks?.[paper.id]?.length ?? 0) : 0))
+  const showScreeningMarks = useStore((s) => s.showScreeningMarks)
+  const setShowScreeningMarks = useStore((s) => s.setShowScreeningMarks)
   const project = useStore((s) => s.project)
   const currentReviewer = useStore((s) => s.currentReviewer)
   const schema = project?.schema ?? []
@@ -212,6 +215,21 @@ export function AnnotationPanel() {
             </span>
           )}
         </div>
+        {/* Only where the screening project this one came from marked this
+            paper: an option with nothing behind it would only puzzle. */}
+        {screeningMarkCount > 0 && (
+          <label
+            className="screening-marks-toggle"
+            title="Show, read-only, the highlights and notes the screeners made in this paper's PDF"
+          >
+            <input
+              type="checkbox"
+              checked={showScreeningMarks}
+              onChange={(e) => setShowScreeningMarks(e.target.checked)}
+            />
+            Show markings from screening ({screeningMarkCount})
+          </label>
+        )}
         {/* The project-wide actions live in the overview, while this row keeps
             navigation close to the paper being reconciled. */}
         {isConsolidation && (

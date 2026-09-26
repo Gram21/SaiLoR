@@ -51,6 +51,7 @@ import { StaleSaveError } from '../platform/adapter'
 import { resolveClash } from '../model/staleSave'
 import { DEFAULT_ANNOTATIONS_DIR, defaultSplitDirName } from '../model/annotationsDir'
 import { planSplit, type SplitRow } from '../model/annotationSplit'
+import { screeningMarksByPaper, type ScreeningMark } from '../model/screeningMarks'
 import {
   applyResolutions,
   mergeProjects,
@@ -558,6 +559,11 @@ interface AppState {
   /** The open project's annotations folder is shared with other project files
    *  next to it, and this is the proposed split — see `SplitAnnotationsDialog`. */
   annotationsSplit: AnnotationsSplit | null
+  /** PDF highlights from the screening project this one was started from, by
+   *  this project's paper id; `null` when there is no such project. */
+  screeningMarks: Record<string, ScreeningMark[]> | null
+  /** Whether they are shown over the PDF. */
+  showScreeningMarks: boolean
   busy: boolean
   sidebarCollapsed: boolean
   /** Latest text selected inside the PDF viewer (for "grab from PDF"). */
@@ -765,6 +771,9 @@ interface AppState {
   /** Look for other project files sharing this project's annotations folder,
    *  and propose a split if there are. */
   checkSharedAnnotations: () => Promise<void>
+  /** Read the screening project this one was started from, for its highlights. */
+  loadScreeningMarks: () => Promise<void>
+  setShowScreeningMarks: (show: boolean) => void
   setSplitFolder: (projectPath: string, folder: string) => void
   setSplitTargets: (relPath: string, targets: string[]) => void
   runSplit: () => Promise<void>
@@ -1148,6 +1157,8 @@ export const useStore = create<AppState>()(
     loadError: null,
     staleSave: null,
     annotationsSplit: null,
+    screeningMarks: null,
+    showScreeningMarks: false,
     busy: false,
     sidebarCollapsed: false,
     pdfSelection: '',
@@ -1233,6 +1244,7 @@ export const useStore = create<AppState>()(
           }
         })
         void get().checkSharedAnnotations()
+        void get().loadScreeningMarks()
       } catch (err) {
         set((s) => {
           s.busy = false
@@ -1340,6 +1352,7 @@ export const useStore = create<AppState>()(
         s.project = null
         s.staleSave = null
         s.annotationsSplit = null
+        s.screeningMarks = null
         s.currentPaperId = null
         s.saveHandle = null
         s.projectName = ''
@@ -1427,6 +1440,7 @@ export const useStore = create<AppState>()(
           }
         })
         void get().checkSharedAnnotations()
+        void get().loadScreeningMarks()
       } catch (err) {
         set((s) => {
           s.busy = false
@@ -1479,6 +1493,7 @@ export const useStore = create<AppState>()(
           s.loadError = null
           s.staleSave = null
           s.annotationsSplit = null
+          s.screeningMarks = null
           s.busy = false
           s.pdfSelection = ''
           s.past = []
@@ -1763,6 +1778,29 @@ export const useStore = create<AppState>()(
       }
       set((s) => {
         s.annotationsSplit = split
+      })
+    },
+
+    loadScreeningMarks: async () => {
+      const { project, saveHandle } = get()
+      if (!project || project.screening !== null || project.provenance?.kind !== 'screening-import' || !saveHandle?.path) return
+      let marks: Record<string, ScreeningMark[]> | null = null
+      try {
+        const source = await getPlatform().screeningSource?.(saveHandle.path)
+        const screening = source ? loadProject(source.text) : null
+        if (screening?.screening) marks = screeningMarksByPaper(project, screening)
+      } catch {
+        // an unreadable screening project just has nothing to show
+      }
+      if (get().saveHandle?.path !== saveHandle.path) return
+      set((s) => {
+        s.screeningMarks = marks
+      })
+    },
+
+    setShowScreeningMarks: (show) => {
+      set((s) => {
+        s.showScreeningMarks = show
       })
     },
 

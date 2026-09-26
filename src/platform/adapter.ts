@@ -138,6 +138,10 @@ export interface PlatformAdapter {
    *  with these papers would collide with — see `filesCollide`. */
   annotationsDirUsers(projectPath: string, folder: string, paperIds: string[], screening: boolean): Promise<string[]>
 
+  /** The screening project the open project was started from, as its text,
+   *  when it is still next to it; `null` otherwise. */
+  screeningSource(projectPath: string): Promise<{ name: string; text: string } | null>
+
   /** Rename the project's annotations folder and record the new name in its project file. */
   moveAnnotationsDir(projectPath: string, folder: string): Promise<void>
 

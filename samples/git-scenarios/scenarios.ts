@@ -4,6 +4,7 @@ import { BRANCH_SWITCH_STASH_MESSAGE, MANUAL_STASH_PREFIX, parseStashList, STASH
 import { parseAnnotationAuthors } from '../../src/git/seatOwner'
 import { backgroundFetchAllowed, FETCH_COMMAND_KEYS } from '../../src/git/fetchPolicy'
 import { planSplit } from '../../src/model/annotationSplit'
+import { screeningMarksByPaper } from '../../src/model/screeningMarks'
 import { annotationsDirOf, filesCollide, sharesPaper } from '../../src/model/annotationsDir'
 import { ANNA, BEN, type Scenario, type Stage } from './builder'
 import { answers, assert, PROJECT, pullOutcome, review, SCHEMA, start, V0, version } from './base'
@@ -340,6 +341,58 @@ export const SCENARIOS: Scenario[] = [
       assert(annotationsDirOf(review) === annotationsDirOf(screening), 'both use the same folder')
       assert(sharesPaper(ids(review), screening), 'they list some of the same papers')
       assert(!filesCollide(ids(review), false, screening), 'and still write no file in common')
+    },
+  },
+  {
+    name: 'screening-highlights',
+    summary: 'An annotation project started from a screening project whose screeners highlighted smith2021.',
+    open: 'anna/review.json',
+    check: [
+      'Open smith2021: the annotation panel offers "Show markings from screening (2)"; other papers do not.',
+      'Tick it: the screeners\' highlight and note appear on page 1, faint and outlined; hovering one says whose it is.',
+    ],
+    build(s) {
+      const screeningMark = (id: string, kind: 'highlight' | 'note', comment: string) => ({
+        id,
+        page: 1,
+        kind,
+        rects: [{ x: 0.12, y: 0.2, width: kind === 'note' ? 0.02 : 0.5, height: 0.03 }],
+        color: '#ffe066',
+        comment,
+        createdAt: '2026-01-05T09:00:00.000Z',
+        updatedAt: '2026-01-05T09:00:00.000Z',
+      })
+      start(s, {
+        base: {
+          provenance: {
+            kind: 'screening-import',
+            source: { file: 'screening.json', title: 'Title and abstract screening' },
+            importedAt: '2026-01-05T09:00:00.000Z',
+            counts: { included: 2, undecided: 0, excluded: 1, carried: 2 },
+          },
+        },
+      })
+      s.writeProject(ANNA, 'screening.json', {
+        version: 1,
+        title: 'Title and abstract screening',
+        config: { reviewers: 2, screening: { reasons: ['Off topic'] } },
+        papers: ['smith2021', 'lee2022', 'wong2020'].map((id) => ({
+          id,
+          title: `Candidate ${id}`,
+          authors: [],
+          pdf: `pdfs/${id}.pdf`,
+          annotations: {},
+          ...(id === 'smith2021'
+            ? { reviewMarks: { 1: [screeningMark('sm1', 'highlight', 'Why I included it')], 2: [screeningMark('sm2', 'note', 'Check the sample')] } }
+            : {}),
+        })),
+      })
+      s.commit(ANNA, 'Screening with highlights, and the annotation project built from it')
+      s.push(ANNA)
+    },
+    verify(s) {
+      const marks = screeningMarksByPaper(s.project(ANNA, PROJECT), s.project(ANNA, 'screening.json'))
+      assert(marks.smith2021?.length === 2 && !marks.lee2022, 'smith2021 has the two screening highlights, lee2022 none')
     },
   },
   {

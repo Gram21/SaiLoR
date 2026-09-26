@@ -26,6 +26,7 @@ import os from 'node:os'
 import { validateGitUrl, validateClonePath } from '../src/git/url'
 import { relPathProblem, annotationsRelDir, mergeBlockingPaths } from '../src/git/relpath'
 import { annotationsDirOf, annotationsDirProblem, filesCollide, sharesPaper } from '../src/model/annotationsDir'
+import { paperIdProblem } from '../src/model/paperId'
 import { applySplit } from '../src/model/annotationSplit'
 import { refProblem } from '../src/git/ref'
 import { gitErrorText, parsePorcelain, parseGitLog } from '../src/git/output'
@@ -1145,6 +1146,29 @@ ipcMain.handle('project:moveAnnotationsDir', async (_e, projectPath: string, fol
         await rememberStamp(key, path.join(to, id, name))
       }
     }
+  }
+})
+
+/**
+ * The screening project an open project was started from (its provenance
+ * names it), read the way opening it would read it — for showing its PDF
+ * highlights. Only a plain file name in the open project's own directory:
+ * the name comes from a file that may have arrived from anyone, so it must
+ * not lead anywhere else. `null` when there is none, or it is not there.
+ */
+ipcMain.handle('project:screeningSource', async (_e, projectPath: string) => {
+  const key = path.resolve(String(projectPath))
+  if (!knownProjectPaths.has(key)) throw new Error('Refusing to inspect a project that was not opened this session.')
+  const raw = (await readProjectMeta(key)) as { provenance?: { kind?: unknown; source?: { file?: unknown } } } | null
+  const name = raw?.provenance?.kind === 'screening-import' ? raw.provenance.source?.file : undefined
+  if (typeof name !== 'string' || !/^[^/\\]+\.json$/i.test(name) || name.startsWith('.') || paperIdProblem(name)) return null
+  const file = path.join(path.dirname(key), name)
+  if (file === key) return null
+  try {
+    if ((await lstat(file)).isSymbolicLink()) return null
+    return { name, text: await readProjectText(file) }
+  } catch {
+    return null // moved, renamed, or unreadable: nothing to show
   }
 })
 

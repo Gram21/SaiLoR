@@ -130,6 +130,7 @@ export interface SlrBridge {
   annotationsDirUsers(projectPath: string, folder: string, paperIds: string[], screening: boolean): Promise<string[]>
   sharedAnnotations(projectPath: string): Promise<SharedAnnotations | null>
   moveAnnotationsDir(projectPath: string, folder: string): Promise<void>
+  screeningSource(projectPath: string): Promise<{ name: string; text: string } | null>
   splitAnnotations(
     projectPath: string,
     plan: { folders: Record<string, string>; rows: { relPath: string; targets: string[] }[] },
@@ -420,6 +421,10 @@ export class ElectronAdapter implements PlatformAdapter {
 
   moveAnnotationsDir(projectPath: string, folder: string): Promise<void> {
     return bridge().moveAnnotationsDir(projectPath, folder)
+  }
+
+  screeningSource(projectPath: string): Promise<{ name: string; text: string } | null> {
+    return bridge().screeningSource(projectPath)
   }
 
   // Rewrites project files and moves annotation files, so what was last

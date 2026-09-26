@@ -166,6 +166,15 @@ Open `anna/review.json`.
 - Opening either project asks nothing: the two kinds write differently named files, highlights included.
 - Open screening.json too and highlight something in smith2021 — it lands in screening-marks-1.json, next to the annotation project's files.
 
+### `screening-highlights`
+
+An annotation project started from a screening project whose screeners highlighted smith2021.
+
+Open `anna/review.json`.
+
+- Open smith2021: the annotation panel offers "Show markings from screening (2)"; other papers do not.
+- Tick it: the screeners' highlight and note appear on page 1, faint and outlined; hovering one says whose it is.
+
 ### `schema-versions`
 
 One file predates schema versions (answer under the old name "Kind"), one names a version the project does not know.
