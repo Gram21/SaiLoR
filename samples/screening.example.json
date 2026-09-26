@@ -1,7 +1,6 @@
 {
   "version": 1,
   "title": "Example Screening: Code Search and Program Repair",
-  "annotationsDir": "screening-annotations",
   "config": {
     "schema": [
       {

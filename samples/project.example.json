@@ -1,7 +1,6 @@
 {
   "version": 1,
   "title": "Example SLR: Code Search and Program Repair",
-  "annotationsDir": "project-annotations",
   "config": {
     "schema": [
       {
