@@ -673,6 +673,11 @@ export function PdfViewer() {
    */
   const handleMarkMouseDown = (e: React.MouseEvent<HTMLElement>, onOpen: (e: MarkOpenEvent) => void) => {
     if (e.button !== 0) return // left button only — never hijack a right-click
+    // Browser's own mousedown handling would reset the selection set below.
+    e.preventDefault()
+    // Applied synchronously too: the state only lands after a re-render, and
+    // `caretRangeFromPoint` below must already see through the mark.
+    containerRef.current?.classList.add('pdf-marks-dragging')
     setMarkDragActive(true)
 
     const startX = e.clientX
@@ -697,6 +702,7 @@ export function PdfViewer() {
     const onUp = (ev: MouseEvent) => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
+      containerRef.current?.classList.remove('pdf-marks-dragging')
       setMarkDragActive(false)
       // Not a drag: restore click-to-open, which native `onClick` can no
       // longer provide (see this function's doc comment).

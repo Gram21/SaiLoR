@@ -265,4 +265,25 @@ describe('PdfViewer: selection can drag through a mark (REQ-PDF-140)', () => {
     expect(screen.queryByPlaceholderText('Add a comment…')).not.toBeInTheDocument()
     expect(scroll.className).not.toContain('pdf-marks-dragging')
   })
+
+  it('anchors the selection with marks already click-through and suppresses the native mousedown', async () => {
+    render(<PdfViewer />)
+    await screen.findByTestId('pdf-document')
+    act(() => {
+      st().addHighlight(1, [rect])
+    })
+    const markRect = screen.getByTestId('pdf-page-1').querySelector('.pdf-mark-rect') as HTMLElement
+    const scroll = document.querySelector('.pdf-scroll') as HTMLElement
+
+    let draggingAtAnchor = false
+    vi.mocked(document.caretRangeFromPoint).mockImplementationOnce(() => {
+      draggingAtAnchor = scroll.classList.contains('pdf-marks-dragging')
+      return null
+    })
+    const notCancelled = fireEvent.mouseDown(markRect, { button: 0, clientX: 10, clientY: 10 })
+    fireEvent.mouseUp(document, { clientX: 10, clientY: 10 })
+
+    expect(draggingAtAnchor).toBe(true)
+    expect(notCancelled).toBe(false)
+  })
 })
