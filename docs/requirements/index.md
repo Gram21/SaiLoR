@@ -52,13 +52,13 @@ per category so requirements can be inserted without renumbering.
 | Category | Requirements |
 |---|---|
 | Data model & editor (DAT/EDT) | 59 |
-| Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 51 |
+| Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 52 |
 | Screening (SCR) | 38 |
 | Consolidation (CON) | 44 |
 | Git integration (GIT) | 58 |
 | LLM annotation (LLM) | 31 |
 | Platform & shell (PLT) | 44 |
-| **Total** | **325** |
+| **Total** | **326** |
 
 ## Method & evidence notes
 
@@ -108,3 +108,4 @@ per category so requirements can be inserted without renumbering.
   identifier; REQ-EDT-46 added for the folder a project started from screening gets.
 - **Highlight file names (source at `6eb9027`).** REQ-DAT-172 added; REQ-PLT-90 and REQ-PLT-95 narrowed
   to projects of the same kind.
+- **Screening highlights (source at `780f1d1`).** REQ-PDF-185 added.

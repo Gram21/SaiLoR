@@ -160,6 +160,7 @@ inspection only.
 | REQ-PDF-160 | Export marks into a PDF | Functional · Functional Suitability | `src/model/pdfExport.ts:27-61`<br>`src/components/ExportPdfDialog.tsx:32-166` | `src/components/ExportPdfDialog.test.tsx:55-123` | commit `e22c157` | `openwiki/workflows/pdf-viewing.md` §Mark export |
 | REQ-PDF-170 | Extract PDF metadata heuristically | Functional · Functional Suitability | `src/model/pdfMeta.ts:1-120` | `src/model/pdfMeta.test.ts` | — | `openwiki/workflows/pdf-viewing.md` §PDF metadata extraction / §PDF text extraction |
 | REQ-PDF-180 | Extract page-ordered PDF text | Functional · Functional Suitability | `src/model/pdfText.ts:22-152` | `src/model/pdfText.test.ts:48-139` | — | `openwiki/workflows/pdf-viewing.md` §PDF metadata extraction / §PDF text extraction |
+| REQ-PDF-185 | Show the screeners' highlights | Functional · Functional Suitability | `src/model/screeningMarks.ts`<br>`electron/main.ts`<br>`src/state/store.ts`<br>`src/components/AnnotationPanel.tsx`<br>`src/components/PdfViewer.tsx` | `src/model/screeningMarks.test.ts`<br>`src/state/store.screeningMarks.test.ts`<br>`src/components/AnnotationPanel.test.tsx`<br>`e2e/gitScenarios.spec.ts` | commit `780f1d1` | `user-guide/screening.md` §Starting the next phase from a screening project |
 | REQ-UI-10 | Global keyboard shortcuts | Functional · Functional Suitability | `src/hooks/useKeybindings.ts:8-261`<br>`src/components/HelpDialog.tsx:10-62` | `src/hooks/useKeybindings.test.tsx:45-99` | — | `user-guide/getting-started.md` §Keyboard shortcuts |
 | REQ-UI-20 | Toolbar project controls | Functional · Functional Suitability | `src/components/Toolbar.tsx:99-468` | `src/components/Toolbar.test.tsx:92-160` | — | `openwiki/architecture.md` §Component Tree |
 | REQ-UI-30 | Seat switcher in toolbar | Functional · Functional Suitability | `src/components/Toolbar.tsx:26-32,341-398`<br>`src/components/AnnotationPanel.tsx:204-212` | `src/components/Toolbar.test.tsx:65-90` | — | `openwiki/architecture.md` §Component Tree |
@@ -412,9 +413,9 @@ inspection only.
 
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 325 | 100% |
-| With at least one verifying test | 276 | 85% |
+| Requirements traced | 326 | 100% |
+| With at least one verifying test | 277 | 85% |
 | Without an automated check (source inspection only) | 49 | 15% |
-| With an introducing/pinning commit | 109 | 34% |
-| With a documentation link | 324 | 99.7% |
+| With an introducing/pinning commit | 110 | 34% |
+| With a documentation link | 325 | 99.7% |
 
