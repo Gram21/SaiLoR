@@ -55,6 +55,8 @@ contextBridge.exposeInMainWorld('slr', {
   callLlm: (requestId: string, request: unknown) =>
     ipcRenderer.invoke('llm:call', requestId, request),
   abortLlm: (requestId: string) => ipcRenderer.send('llm:abort', requestId),
+  fetchWeb: (requestId: string, url: string) => ipcRenderer.invoke('web:fetch', requestId, url),
+  abortWeb: (requestId: string) => ipcRenderer.send('web:abort', requestId),
 
   // Unsaved-changes coordination for a clean quit.
   setDirty: (dirty: boolean) => ipcRenderer.send('app:setDirty', dirty),

@@ -9,7 +9,7 @@ import type {
 } from './adapter'
 import { StaleSaveError, type SharedAnnotations } from './adapter'
 import { readRecents, pushRecent, removeRecent, replaceRecents, type RecentEntry } from './recents'
-import type { LlmConfig, LlmHttpRequest, LlmHttpResponse } from '../llm/types'
+import type { LlmConfig, LlmHttpRequest, LlmHttpResponse, WebFetchResult } from '../llm/types'
 import type {
   GitPlatform,
   GitProbe,
@@ -177,6 +177,8 @@ export interface SlrBridge {
   deleteLlmConfig(id: string): Promise<LlmConfig[]>
   callLlm(requestId: string, request: LlmHttpRequest): Promise<LlmHttpResponse>
   abortLlm(requestId: string): void
+  fetchWeb(requestId: string, url: string): Promise<WebFetchResult>
+  abortWeb(requestId: string): void
   /** Unsaved-changes coordination for a clean quit. */
   setDirty(dirty: boolean): void
   onRequestSave(cb: () => void): void
@@ -517,6 +519,17 @@ export class ElectronAdapter implements PlatformAdapter {
     signal?.addEventListener('abort', onAbort, { once: true })
     try {
       return await bridge().callLlm(requestId, request)
+    } finally {
+      signal?.removeEventListener('abort', onAbort)
+    }
+  }
+
+  async fetchWeb(url: string, signal?: AbortSignal): Promise<WebFetchResult> {
+    const requestId = crypto.randomUUID()
+    const onAbort = () => bridge().abortWeb(requestId)
+    signal?.addEventListener('abort', onAbort, { once: true })
+    try {
+      return await bridge().fetchWeb(requestId, url)
     } finally {
       signal?.removeEventListener('abort', onAbort)
     }

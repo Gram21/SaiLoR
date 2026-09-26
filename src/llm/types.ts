@@ -112,6 +112,30 @@ export interface Suggestion {
   evidence: string
   /** 0..1, as reported by the model. Null when it gave none or gave nonsense. */
   confidence: number | null
+  /** Agent mode only: where the value came from — "paper", or the URL of a web source. */
+  source?: string
+  /** Agent mode only: the judge's last verdict on this value. */
+  judge?: JudgeVerdict
+}
+
+/** The judge's assessment of one proposed value (agent mode). */
+export interface JudgeVerdict {
+  verdict: 'accept' | 'revise' | 'reject'
+  feedback: string
+}
+
+/** Result of fetching a public web page for the agent's `fetch_url` tool. No API key is ever attached. */
+export interface WebFetchResult {
+  ok: boolean
+  status: number
+  /** Final URL after any (re-checked) redirects. */
+  url: string
+  contentType: string
+  /** Response body as text, capped in size by the main process. */
+  body: string
+  truncated: boolean
+  /** Why the fetch was refused or failed (blocked host, timeout, unsupported type…). */
+  error?: string
 }
 
 /** A field the model deliberately left empty, and why. Shown to the reviewer, never applied. */

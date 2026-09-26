@@ -1,5 +1,6 @@
 import type { PlatformAdapter } from './adapter'
 import type { RecentEntry } from './recents'
+import type { WebFetchResult } from '../llm/types'
 
 const UNSUPPORTED = 'SaiLoR for the web is discontinued — use the desktop app.'
 
@@ -16,6 +17,16 @@ export function createUnsupportedAdapter(): PlatformAdapter {
   const real = {
     kind: 'browser' as const,
     getRecents: (): RecentEntry[] => [],
+    fetchWeb: (url: string): Promise<WebFetchResult> =>
+      Promise.resolve({
+        ok: false,
+        status: 0,
+        url,
+        contentType: '',
+        body: '',
+        truncated: false,
+        error: 'Web access is only available in the desktop app.',
+      }),
   }
   return new Proxy(real as unknown as PlatformAdapter, {
     get(target, prop, receiver) {

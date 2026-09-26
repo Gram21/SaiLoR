@@ -6,7 +6,7 @@
 
 import type { RecentEntry } from './recents'
 import type { OsInfo } from '../model/version'
-import type { LlmConfig, LlmHttpRequest, LlmHttpResponse } from '../llm/types'
+import type { LlmConfig, LlmHttpRequest, LlmHttpResponse, WebFetchResult } from '../llm/types'
 import type { GitPlatform } from '../git/types'
 import type { PdfMark } from '../model/pdfMarks'
 
@@ -219,6 +219,12 @@ export interface PlatformAdapter {
    * which some providers will refuse.
    */
   callLlm(request: LlmHttpRequest, signal?: AbortSignal): Promise<LlmHttpResponse>
+
+  /**
+   * GET a public web page for the AI agent's `fetch_url` tool. Never carries an
+   * API key or cookies; the main process refuses private/loopback hosts.
+   */
+  fetchWeb(url: string, signal?: AbortSignal): Promise<WebFetchResult>
 
   /**
    * Git operations against **the user's own git installation**, or `null`
