@@ -371,3 +371,9 @@ See the [index](index.md) for the glossary.
 - **Verified by:** `src/git/seatOwner.test.ts`, `src/components/SeatConflictNotice.test.tsx`
 - **Status:** Implemented
 
+### REQ-GIT-520 — Reproducible git scenarios
+- **Description:** The repository shall provide git test scenarios as definitions that build, on demand and deterministically (fixed identities, dates and branch, independent of the machine's git configuration), a shared remote and one clone per person outside any git working tree, each scenario stating what to open and what to expect; an automated test shall build every scenario and check what it sets up, and keep the scenario list in its README in step with the definitions.
+- **Type:** Non-functional (ISO 25010: Maintainability — Testability)
+- **Evidence:** `samples/git-scenarios/builder.ts`, `samples/git-scenarios/scenarios.ts`, `samples/git-scenarios/cli.ts`, commit `47fb3f9`
+- **Verified by:** `src/test/integration/gitScenarios.integration.test.tsx`, `e2e/gitScenarios.spec.ts`
+- **Status:** Implemented

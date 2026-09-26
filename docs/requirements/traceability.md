@@ -319,6 +319,7 @@ inspection only.
 | REQ-GIT-490 | Disclose changes committed without a review row | Functional · Functional Suitability | `src/git/changes.ts:73-82,86-94`<br>`src/components/GitDialog.tsx:344` | `src/git/changes.test.ts` (`papersWithBookkeepingChanges`) | commit `9187091` | `user-guide/git.md` §Field-level commit review |
 | REQ-GIT-500 | Carry hidden answers through merges | Functional · Functional Suitability | `src/git/merge.ts:179-186,340` | `src/git/merge.test.ts` (`mergeProjects — answers under a field the schema no longer has`) | commit `0e185f2`<br>commit `264d6b0` | — |
 | REQ-GIT-510 | Warn about a paper already read in the same seat | Functional · Functional Suitability | `electron/main.ts:2633`<br>`src/git/seatOwner.ts:71-94,120-133`<br>`src/components/SeatConflictNotice.tsx` | `src/git/seatOwner.test.ts`<br>`src/components/SeatConflictNotice.test.tsx` | commit `c83daba` | `openwiki/architecture.md` §Electron Main Process<br>`user-guide/multi-reviewer.md` §Reviewer-seat identity |
+| REQ-GIT-520 | Reproducible git scenarios | Non-functional · Maintainability | `samples/git-scenarios/builder.ts`<br>`samples/git-scenarios/scenarios.ts`<br>`samples/git-scenarios/cli.ts` | `src/test/integration/gitScenarios.integration.test.tsx`<br>`e2e/gitScenarios.spec.ts` | commit `47fb3f9` | `samples/git-scenarios/README.md`<br>`user-guide/git.md` §Trying it out |
 
 ## LLM-assisted annotation ([llm-annotation.md](llm-annotation.md))
 
@@ -409,9 +410,9 @@ inspection only.
 
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 322 | 100% |
-| With at least one verifying test | 273 | 85% |
+| Requirements traced | 323 | 100% |
+| With at least one verifying test | 274 | 85% |
 | Without an automated check (source inspection only) | 49 | 15% |
-| With an introducing/pinning commit | 106 | 33% |
-| With a documentation link | 321 | 99.7% |
+| With an introducing/pinning commit | 107 | 33% |
+| With a documentation link | 322 | 99.7% |
 

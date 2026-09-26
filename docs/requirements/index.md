@@ -55,10 +55,10 @@ per category so requirements can be inserted without renumbering.
 | Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 51 |
 | Screening (SCR) | 38 |
 | Consolidation (CON) | 44 |
-| Git integration (GIT) | 57 |
+| Git integration (GIT) | 58 |
 | LLM annotation (LLM) | 31 |
 | Platform & shell (PLT) | 44 |
-| **Total** | **322** |
+| **Total** | **323** |
 
 ## Method & evidence notes
 
@@ -102,3 +102,5 @@ per category so requirements can be inserted without renumbering.
   added for conflicting renames (source at `c9c982f`).
 - **Annotations folders (source at `c1b40ec`).** REQ-DAT-169, REQ-PLT-95 and REQ-PLT-96 added; REQ-PLT-90
   rewritten (a shared folder is avoided or split rather than only refused at Save As).
+- **Git scenarios (source at `47fb3f9`).** REQ-GIT-520 added for the reproducible scenarios in
+  `samples/git-scenarios/`.

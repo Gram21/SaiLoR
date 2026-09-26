@@ -247,6 +247,14 @@ afterwards".
   Check out a branch first.
 - Show live clone progress with a cancel button — out of scope for this feature.
 
+## Trying it out
+
+`samples/git-scenarios/` in the SaiLoR repository builds ready-made situations — two reviewers and a
+shared remote, with a clean pull, a conflict, a renamed field, stashes, a shared annotations folder and
+more — into real repositories on your machine: `npm run scenario -- list`, then
+`npm run scenario -- <name>`. Each prints which project file to open and what you should see. See
+[its README](../samples/git-scenarios/README.md).
+
 ## Credentials
 
 SaiLoR never asks for your password and never stores one. Every git operation runs through your own
