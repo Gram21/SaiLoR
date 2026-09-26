@@ -18,7 +18,8 @@
     "test:e2e": "cross-env ELECTRON=1 npm run build && playwright test",
     "typecheck": "tsc -b --noEmit",
     "icon": "electron scripts/make-icon.cjs",
-    "check:wiki": "node scripts/check-wiki-links.js"
+    "check:wiki": "node scripts/check-wiki-links.js",
+    "scenario": "vite-node samples/git-scenarios/cli.ts"
   },
   "dependencies": {
     "electron-updater": "^6.3.9",
