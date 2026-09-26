@@ -123,6 +123,15 @@ answers into one final result via a built-in **Consolidation** role. See
 greater than 1, so a normal single-reviewer file never carries the key. The project editor exposes
 it as a checkbox + a reviewer-count field next to the AI opt-out.
 
+**`config.aiSeat` — dedicate one reviewer seat to the AI.** Optional, defaults to `false`. Set it to
+`true` to have the AI's own answers occupy the *last* reviewer seat (`config.reviewers`) rather than
+being applied by a human on their own seat — the same tree, compared in Consolidation like any other
+reviewer's. Only *effective* when `config.ai` is not `false`, `config.reviewers` is at least `2`, and
+this is not a screening project; the value is still kept as authored outside that window (AI turned
+off, or reviewers dropped below 2), so re-enabling either restores the choice rather than losing it.
+Written out only when `true`. A human may still open the AI's seat to look at or correct its work —
+the annotation panel notes when you are.
+
 **`protocol` — the review's own protocol.** Optional. A record of the research questions, the
 search that ran, and the criteria behind the review — kept *inside* the project file so a
 pre-registered protocol travels with the data it produced. Every part is optional:

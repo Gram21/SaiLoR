@@ -247,6 +247,8 @@ export const projectSchema = z
       finishCheckbox: z.boolean().optional(),
       /** Number of independent reviewers. Absent or 1 = single-reviewer (the default). */
       reviewers: z.number().int().min(1).max(10).optional(),
+      /** When true, the last reviewer seat is dedicated to the AI. See `Project.aiSeat`. */
+      aiSeat: z.boolean().optional(),
       screening: screeningConfigSchema.optional(),
     }),
     papers: z.array(paperSchema),

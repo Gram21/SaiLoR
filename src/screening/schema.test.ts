@@ -59,6 +59,7 @@ describe('isScreening', () => {
     annotationsDir: null,
     schema: [],
     aiEnabled: true,
+    aiSeat: false,
     finishCheckbox: true,
     reviewers: 1,
     papers: [],

@@ -236,6 +236,12 @@ the project editor. See the [index](index.md) for the glossary.
 - **Evidence:** `src/model/project.ts:369-373,936-951`, `src/model/split.test.ts:97`
 - **Status:** Implemented
 
+### REQ-DAT-285 — AI reviewer seat is the last configured seat
+- **Description:** The system shall accept an optional `config.aiSeat` boolean (default false, written only when true) naming that the AI occupies the last configured reviewer seat (`config.reviewers`), computing this seat's id rather than storing it separately, and shall treat it as effective only when AI-assisted annotation is allowed, at least two reviewers are configured, and the project is not a screening project; the value shall be kept verbatim outside that window rather than cleared. The system shall include it in git change detection and three-way merge, mirroring how `config.ai` is handled, with its own conflict row on disagreement.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/project.ts:225-289`, `src/model/schema.ts`, `src/git/changes.ts:259`, `src/git/merge.ts:1287-1298,1417-1418,1597-1601`
+- **Status:** Implemented
+
 ## Serialization
 
 ### REQ-DAT-290 — Deterministic serialization

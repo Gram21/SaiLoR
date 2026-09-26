@@ -1287,6 +1287,16 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
   const aiM = merge3<boolean | undefined>(base?.aiEnabled, ours.aiEnabled, theirs.aiEnabled, eqBool)
   if (!aiM) projectRow('aiEnabled', 'AI-assisted annotation enabled', { type: 'boolean', base: base?.aiEnabled ?? null, ours: ours.aiEnabled, theirs: theirs.aiEnabled })
 
+  const aiSeatM = merge3<boolean | undefined>(base?.aiSeat, ours.aiSeat, theirs.aiSeat, eqBool)
+  if (!aiSeatM) {
+    projectRow('aiSeat', 'AI takes one reviewer seat', {
+      type: 'boolean',
+      base: base?.aiSeat ?? null,
+      ours: ours.aiSeat,
+      theirs: theirs.aiSeat,
+    })
+  }
+
   const finishM = merge3<boolean | undefined>(base?.finishCheckbox, ours.finishCheckbox, theirs.finishCheckbox, eqBool)
   if (!finishM) {
     projectRow('finishCheckbox', 'Show the "finished" checkbox', {
@@ -1415,6 +1425,7 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
       schemaHistory: version.history,
       annotationsDir: annotationsDirValue,
       aiEnabled: aiM ? aiM.value! : ours.aiEnabled,
+      aiSeat: aiSeatM ? aiSeatM.value! : ours.aiSeat,
       finishCheckbox: finishM ? finishM.value! : ours.finishCheckbox,
       reviewers: reviewersM ? reviewersM.value! : ours.reviewers,
       screening: screeningValue,
@@ -1596,6 +1607,8 @@ function applyOne(draft: Project, conflict: FieldConflict, value: FieldValue): v
       draft.schemaInfo = s || null
     } else if (c === 'aiEnabled') {
       draft.aiEnabled = value === true
+    } else if (c === 'aiSeat') {
+      draft.aiSeat = value === true
     } else if (c === 'finishCheckbox') {
       draft.finishCheckbox = value === true
     } else if (c === 'reviewers') {

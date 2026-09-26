@@ -190,3 +190,9 @@ content. See the [index](index.md) for the glossary.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/llm/providers.ts:421-446`, `src/state/aiStore.ts:260-268,431-437`
 - **Status:** Implemented
+
+### REQ-LLM-470 — AI reviewer seat
+- **Description:** In a multi-reviewer project with AI-assisted annotation allowed, the system shall offer a project setting dedicating the last configured reviewer seat to the AI, effective only while at least two reviewers are configured, AI is allowed, and the project is not a screening project; applied suggestions written to that seat shall be recorded and compared against the other reviewers exactly like any other seat, and shall never mark the seat's "finished" flag on their own. The system shall label that seat distinctly (e.g. "AI (Reviewer N)") everywhere a reviewer seat is named, and shall let a human reviewer select it to inspect or correct its answers, noting in the annotation panel that its values come from AI runs.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/project.ts:265-289`, `src/state/editorStore.ts`, `src/components/ProjectEditor.tsx`, `src/components/AnnotationPanel.tsx`, `src/components/Toolbar.tsx`, `src/git/changes.ts`, `src/git/merge.ts`
+- **Status:** Implemented

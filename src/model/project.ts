@@ -230,6 +230,15 @@ export interface Project {
    * into `Paper.annotations`.
    */
   reviewers: number
+  /**
+   * Whether one reviewer seat is dedicated to the AI, so its answers are
+   * compared against the human reviewers' like any other seat. Defaults to
+   * false; opt in with `config.aiSeat: true`. Only *effective* when
+   * `aiEnabled && reviewers >= 2 && !screening` — see `aiSeatId`. Stored as
+   * authored even when ineffective (e.g. AI turned off, or reviewers dropped
+   * below 2), so re-enabling either restores it rather than losing the choice.
+   */
+  aiSeat: boolean
   papers: Paper[]
   /**
    * The screening configuration when this is a screening project, else null.
@@ -240,6 +249,31 @@ export interface Project {
   screening: ScreeningConfig | null
   /** Additional top-level fields preserved verbatim on save. */
   extra: Record<string, unknown>
+}
+
+/**
+ * The seat id the AI writes into, or `null` when there is none. Always the
+ * last configured seat (`String(project.reviewers)`) — never a separately
+ * stored id — so there is nothing to merge-conflict over which number it is.
+ *
+ * Effective only when AI is actually usable on this project: `aiEnabled` and
+ * `aiSeat` both on, at least 2 reviewers configured, and not a screening
+ * project (screening decides the review's corpus, not a field a model fills).
+ */
+export function aiSeatId(project: Pick<Project, 'aiSeat' | 'aiEnabled' | 'reviewers' | 'screening'>): string | null {
+  if (!project.aiSeat || !project.aiEnabled || project.reviewers < 2 || project.screening !== null) return null
+  return String(project.reviewers)
+}
+
+/**
+ * The display label for a reviewer seat: "Consolidation" for that seat, "AI
+ * (Reviewer N)" for the seat `aiSeatId` names, else the plain "Reviewer N".
+ * The one place every "Reviewer N" label in the UI goes through, so the AI
+ * seat is never accidentally shown as an ordinary human reviewer.
+ */
+export function seatLabel(project: Pick<Project, 'aiSeat' | 'aiEnabled' | 'reviewers' | 'screening'>, seatId: string): string {
+  if (seatId === 'consolidation') return 'Consolidation'
+  return seatId === aiSeatId(project) ? `AI (Reviewer ${seatId})` : `Reviewer ${seatId}`
 }
 
 export class ProjectLoadError extends Error {
@@ -686,6 +720,8 @@ export function loadProject(input: string | unknown): Project {
     finishCheckbox: (raw.config as { finishCheckbox?: unknown }).finishCheckbox !== false,
     // Absent or 1 means single-reviewer; zod already bounds a present value to [1, 10].
     reviewers: raw.config.reviewers ?? 1,
+    // Absent means no AI seat; only an explicit `true` opts in.
+    aiSeat: (raw.config as { aiSeat?: unknown }).aiSeat === true,
     papers,
     screening,
     extra: extractExtra(raw, KNOWN_ROOT_KEYS),
@@ -737,6 +773,7 @@ export function serializeProject(project: Project): string {
       ...(project.aiEnabled ? {} : { ai: false }),
       ...(project.finishCheckbox ? {} : { finishCheckbox: false }),
       ...(project.reviewers > 1 ? { reviewers: project.reviewers } : {}),
+      ...(project.aiSeat ? { aiSeat: true } : {}),
       ...(project.screening ? { screening: { reasons: project.screening.reasons } } : {}),
     },
     papers: [...project.papers].sort(comparePapers).map((p) => {
@@ -953,6 +990,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
       ...(project.aiEnabled ? {} : { ai: false }),
       ...(project.finishCheckbox ? {} : { finishCheckbox: false }),
       ...(project.reviewers > 1 ? { reviewers: project.reviewers } : {}),
+      ...(project.aiSeat ? { aiSeat: true } : {}),
       ...(project.screening ? { screening: { reasons: project.screening.reasons } } : {}),
     },
     papers: metaPapers,

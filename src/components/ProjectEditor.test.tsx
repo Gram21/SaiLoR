@@ -149,3 +149,33 @@ describe('ProjectEditor: validates the draft before saving', () => {
     expect(saved).toBe(0)
   })
 })
+
+describe('ProjectEditor: AI seat toggle enabling rules', () => {
+  it('is disabled when AI-assisted annotation is not allowed, even with 2+ reviewers', () => {
+    useEditorStore.setState({ aiEnabled: false, reviewers: 2 })
+    render(<ProjectEditor />)
+    expect(screen.getByRole('checkbox', { name: /AI takes one reviewer seat/ })).toBeDisabled()
+  })
+
+  it('is disabled with fewer than 2 reviewers, even with AI allowed', () => {
+    useEditorStore.setState({ aiEnabled: true, reviewers: 1 })
+    render(<ProjectEditor />)
+    expect(screen.getByRole('checkbox', { name: /AI takes one reviewer seat/ })).toBeDisabled()
+  })
+
+  it('is enabled once AI is allowed and there are 2+ reviewers', () => {
+    useEditorStore.setState({ aiEnabled: true, reviewers: 2 })
+    render(<ProjectEditor />)
+    expect(screen.getByRole('checkbox', { name: /AI takes one reviewer seat/ })).toBeEnabled()
+  })
+
+  it('toggling it calls setAiSeat and checks the box', async () => {
+    useEditorStore.setState({ aiEnabled: true, reviewers: 3 })
+    render(<ProjectEditor />)
+    const checkbox = screen.getByRole('checkbox', { name: /AI takes one reviewer seat \(Reviewer 3\)/ })
+    expect(checkbox).not.toBeChecked()
+    await userEvent.click(checkbox)
+    expect(checkbox).toBeChecked()
+    expect(useEditorStore.getState().aiSeat).toBe(true)
+  })
+})

@@ -7,6 +7,7 @@ import { getPlatform } from '../platform'
 import { Dropdown, type MenuItem } from './Dropdown'
 import { SidebarToggle } from './SidebarToggle'
 import type { GitProbe, GitRepoInfo } from '../git/types'
+import { seatLabel } from '../model/project'
 
 /** Shown on every git entry point in the browser build, where `getGit()` is
  *  always `null` (see `PlatformAdapter.getGit()` and architecture.md's "Git"
@@ -181,7 +182,9 @@ export function Toolbar() {
     ? 'Pick a reviewer'
     : currentReviewer === 'consolidation'
       ? 'Consolidation'
-      : `Reviewer ${currentReviewer}`
+      : project
+        ? seatLabel(project, currentReviewer!)
+        : `Reviewer ${currentReviewer}`
 
   const reviewerMenuItems: MenuItem[] = [
     ...reviewerIds.map<MenuItem>((rid) => ({
@@ -190,10 +193,11 @@ export function Toolbar() {
         <span
           className={`reviewer-menu-label${currentReviewer === rid ? ' is-current' : ''}`}
         >
-          {currentReviewer === rid ? '✓ ' : ''}Reviewer {rid}
+          {currentReviewer === rid ? '✓ ' : ''}
+          {project ? seatLabel(project, rid) : `Reviewer ${rid}`}
         </span>
       ),
-      hint: `Reviewer ${rid} — annotate independently; only you see this until Consolidation`,
+      hint: `${project ? seatLabel(project, rid) : `Reviewer ${rid}`} — annotate independently; only you see this until Consolidation`,
       disabled: busy,
       onSelect: () => selectReviewer(rid),
     })),
@@ -425,7 +429,7 @@ export function Toolbar() {
                   key={rid}
                   type="button"
                   className={`reviewer-btn${currentReviewer === rid ? ' active' : ''}`}
-                  title={`Reviewer ${rid} — annotate independently; only you see this until Consolidation`}
+                  title={`${project ? seatLabel(project, rid) : `Reviewer ${rid}`} — annotate independently; only you see this until Consolidation`}
                   disabled={busy}
                   onClick={() => selectReviewer(rid)}
                 >

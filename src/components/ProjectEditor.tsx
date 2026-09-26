@@ -44,6 +44,9 @@ export function ProjectEditor() {
   const setReviewers = useEditorStore((s) => s.setReviewers)
   const finishCheckbox = useEditorStore((s) => s.finishCheckbox)
   const setFinishCheckbox = useEditorStore((s) => s.setFinishCheckbox)
+  const aiEnabled = useEditorStore((s) => s.aiEnabled)
+  const aiSeat = useEditorStore((s) => s.aiSeat)
+  const setAiSeat = useEditorStore((s) => s.setAiSeat)
   const screening = useEditorStore((s) => s.screening)
   const setScreening = useEditorStore((s) => s.setScreening)
   const provenance = useEditorStore((s) => s.provenance)
@@ -209,6 +212,38 @@ export function ProjectEditor() {
           consolidated result is what the project's saved output actually contains.
         </p>
       )}
+
+      {/* Only meaningful with AI use allowed and at least one other, human,
+          reviewer to compare it against — disabled-with-a-reason otherwise
+          rather than hidden, so turning either on reveals a control that
+          already exists rather than a surprise new one. */}
+      <div className="editor-location">
+        <span className="editor-location-label">AI seat</span>
+        <label
+          className="editor-ai-toggle"
+          title={
+            !aiEnabled
+              ? 'Requires AI-assisted annotation to be allowed for this project'
+              : !multiReviewer
+                ? 'Requires at least 2 reviewers'
+                : `The AI annotates as reviewer ${reviewers} — its own independent seat, compared against the others in Consolidation like any other reviewer.`
+          }
+        >
+          <input
+            type="checkbox"
+            checked={aiSeat}
+            onChange={(e) => setAiSeat(e.target.checked)}
+            disabled={busy || !aiEnabled || !multiReviewer}
+          />
+          <span>AI takes one reviewer seat (Reviewer {reviewers})</span>
+        </label>
+        {aiSeat && aiEnabled && multiReviewer && (
+          <p className="editor-hint editor-reviewers-hint">
+            The AI's answers are recorded into Reviewer {reviewers}'s seat and compared with the
+            human reviewers' in Consolidation like any other reviewer.
+          </p>
+        )}
+      </div>
 
       {/* Hidden for a screening draft: one include/exclude decision already
           settles a paper there, so the annotation panel shows no checkbox and
