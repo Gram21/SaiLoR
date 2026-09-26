@@ -1852,10 +1852,11 @@ export const useStore = create<AppState>()(
         let target = project
         if (location.path) {
           const folder = project.annotationsDir ?? DEFAULT_ANNOTATIONS_DIR
-          const users = await platform.annotationsDirUsers(location.path, folder)
+          const ids = project.papers.map((p) => p.id)
+          const users = await platform.annotationsDirUsers(location.path, folder, ids)
           if (users.length > 0) {
             const own = defaultSplitDirName(location.name)
-            if ((await platform.annotationsDirUsers(location.path, own)).length > 0) {
+            if ((await platform.annotationsDirUsers(location.path, own, ids)).length > 0) {
               set((s) => {
                 s.busy = false
                 s.loadError = {

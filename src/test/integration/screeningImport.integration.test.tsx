@@ -6,6 +6,7 @@ import { mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { SaveHandle, OpenedProject, ProjectLocation } from '../../platform/adapter'
+import { annotationsDirOf, sharesPaper } from '../../model/annotationsDir'
 
 /**
  * A fourth integration test, same real-components style as the others in
@@ -59,7 +60,18 @@ const fakePlatform = {
   deleteLlmConfig: async () => [],
   callLlm: async () => ({ ok: true, status: 200, body: '{}' }),
   getGit: () => null,
+  // The main process's rule, over the real screening file next to it: a
+  // folder is taken only by a project listing one of the same papers.
+  annotationsDirUsers: async (_path: string, folder: string, paperIds: string[]) => {
+    const raw: unknown = JSON.parse(readFileSync(projectJsonPath, 'utf-8'))
+    return annotationsDirOf(raw) === folder && sharesPaper(paperIds, raw) ? ['screening.json'] : []
+  },
+  sharedAnnotations: async () => null,
+  moveAnnotationsDir: async (_path: string, folder: string) => {
+    moves.push(folder)
+  },
 }
+const moves: string[] = []
 
 vi.mock('../../platform', () => ({ getPlatform: () => fakePlatform }))
 
@@ -152,5 +164,28 @@ describe('screening decisions and conversion to a full annotation project', () =
     })
     expect(useEditorStore.getState().screening).toBeNull() // "annotation" kind was the default choice
     expect(useEditorStore.getState().location?.path).toBe(join(repoDir, 'screening-annotation.json'))
+    // Its own annotations folder next to the screening project's, so the two
+    // never need a split.
+    expect(useEditorStore.getState().annotationsDir).toBe('screening-annotations')
+
+    // ---- And it saves: next to the screening project, which it shares no paper with.
+    // (A schema field and PDFs first — a draft needs them before it saves at all.)
+    useEditorStore.setState((s) => {
+      s.nodes[0].name = 'Relevant'
+      for (const p of s.papers) p.pdf = `${p.id}.pdf`
+    })
+    const ok = await useEditorStore.getState().save()
+    expect([useEditorStore.getState().issues, useEditorStore.getState().error]).toEqual([[], null])
+    expect(ok).toBe(true)
+    const saved = JSON.parse(readFileSync(join(repoDir, 'screening-annotation.json'), 'utf-8'))
+    expect(saved.annotationsDir).toBe('screening-annotations')
+    expect(saved.provenance.kind).toBe('screening-import')
+  })
+
+  it('may even share the screening project\'s folder, as projects imported before had to', async () => {
+    useEditorStore.getState().setAnnotationsDir('')
+    expect(await useEditorStore.getState().save()).toBe(true)
+    expect(moves).toEqual(['annotations']) // the saved project's folder is moved, not left behind
+    expect(JSON.parse(readFileSync(join(repoDir, 'screening-annotation.json'), 'utf-8')).annotationsDir).toBeUndefined()
   })
 })

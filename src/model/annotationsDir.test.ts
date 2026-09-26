@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { annotationsDirOf, annotationsDirProblem, defaultSplitDirName, DEFAULT_ANNOTATIONS_DIR } from './annotationsDir'
+import { annotationsDirOf, annotationsDirProblem, defaultSplitDirName, DEFAULT_ANNOTATIONS_DIR, sharesPaper } from './annotationsDir'
 import { annotationsRelDir } from '../git/relpath'
 import { loadProject, serializeProject, splitProjectFiles } from './project'
 
@@ -27,6 +27,7 @@ describe('annotations folder names', () => {
 
   it('suggests a folder named after the project file', () => {
     expect(defaultSplitDirName('review.json')).toBe('review-annotations')
+    expect(defaultSplitDirName('screening-annotation.json')).toBe('screening-annotations')
     expect(defaultSplitDirName('a:b.json')).toBe('project-annotations')
   })
 })
@@ -56,5 +57,14 @@ describe('the annotationsDir key in a project file', () => {
     expect(p.annotationsDir).toBeNull()
     expect(p.refusedAnnotationsDir).toBe('../other')
     expect(JSON.parse(serializeProject(p)).annotationsDir).toBeUndefined()
+  })
+})
+
+describe('sharesPaper', () => {
+  const raw = { papers: [{ id: 'p1' }, { id: 'Smith2021' }] }
+  it('is true only for a paper both list, compared as a case-insensitive disk would', () => {
+    expect(sharesPaper(['p1-2', 'p3-2'], raw)).toBe(false)
+    expect(sharesPaper(['smith2021'], raw)).toBe(true)
+    expect(sharesPaper(['p1'], { papers: 'nope' })).toBe(false)
   })
 })

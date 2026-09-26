@@ -25,7 +25,7 @@ import os from 'node:os'
 // the renderer's (DOM types).
 import { validateGitUrl, validateClonePath } from '../src/git/url'
 import { relPathProblem, annotationsRelDir, mergeBlockingPaths } from '../src/git/relpath'
-import { annotationsDirOf, annotationsDirProblem } from '../src/model/annotationsDir'
+import { annotationsDirOf, annotationsDirProblem, sharesPaper } from '../src/model/annotationsDir'
 import { applySplit } from '../src/model/annotationSplit'
 import { refProblem } from '../src/git/ref'
 import { gitErrorText, parsePorcelain, parseGitLog } from '../src/git/output'
@@ -1044,10 +1044,15 @@ ipcMain.handle('project:pickSavePath', async (_e, suggestedName: string) => {
   return { path: res.filePath }
 })
 
-/** Other project files in `projectPath`'s directory whose annotations folder is `folder`. */
+/**
+ * Other project files in `projectPath`'s directory whose annotations folder is
+ * `folder` and that list one of `paperIds` — the ones whose files could collide
+ * with this project's there (see `sharesPaper`).
+ */
 async function projectsUsingFolder(
   projectPath: string,
   folder: string,
+  paperIds: string[],
 ): Promise<{ path: string; name: string; text: string }[]> {
   const dir = path.dirname(path.resolve(projectPath))
   const own = path.basename(projectPath)
@@ -1071,15 +1076,24 @@ async function projectsUsingFolder(
       continue // not a project file, or not readable — not ours to judge
     }
     if (!Array.isArray((raw as { papers?: unknown } | null)?.papers)) continue
-    if (annotationsDirOf(raw) === folder) out.push({ path: file, name, text })
+    if (annotationsDirOf(raw) === folder && sharesPaper(paperIds, raw)) out.push({ path: file, name, text })
   }
   return out
 }
 
-/** Which other project files next to `projectPath` already use `folder` — a
- *  folder name must belong to one project only. */
-ipcMain.handle('project:annotationsDirUsers', async (_e, projectPath: string, folder: string) => {
-  return (await projectsUsingFolder(String(projectPath), String(folder))).map((p) => p.name)
+/** A parsed project file's paper ids. */
+function paperIdsOf(raw: unknown): string[] {
+  const papers = (raw as { papers?: unknown } | null)?.papers
+  return (Array.isArray(papers) ? papers : [])
+    .map((p) => (p as { id?: unknown } | null)?.id)
+    .filter((id): id is string => typeof id === 'string')
+}
+
+/** Which other project files next to `projectPath` use `folder` and list one
+ *  of `paperIds`, so the two would write the same files there. */
+ipcMain.handle('project:annotationsDirUsers', async (_e, projectPath: string, folder: string, paperIds: string[]) => {
+  const ids = Array.isArray(paperIds) ? paperIds.map(String) : []
+  return (await projectsUsingFolder(String(projectPath), String(folder), ids)).map((p) => p.name)
 })
 
 /**
@@ -1097,7 +1111,7 @@ ipcMain.handle('project:moveAnnotationsDir', async (_e, projectPath: string, fol
   const from = await annotationsDirFor(key, raw)
   const to = await annotationsDirFor(key, { annotationsDir: folder })
   if (from === to) return
-  if ((await projectsUsingFolder(key, String(folder))).length > 0) {
+  if ((await projectsUsingFolder(key, String(folder), paperIdsOf(raw))).length > 0) {
     throw new Error(`Another project file here already uses "${folder}".`)
   }
   if ((await readdir(to).catch(() => [])).length > 0) throw new Error(`The folder "${folder}" already exists and is not empty.`)
@@ -1138,7 +1152,7 @@ ipcMain.handle('project:sharedAnnotations', async (_e, projectPath: string) => {
   const ownText = await readFile(key, 'utf-8')
   const ownRaw: unknown = JSON.parse(ownText)
   const folder = annotationsDirOf(ownRaw)
-  const others = await projectsUsingFolder(key, folder)
+  const others = await projectsUsingFolder(key, folder, paperIdsOf(ownRaw))
   if (others.length === 0) return null
   const annotationsDir = await annotationsDirFor(key, ownRaw)
   const files: { relPath: string; text: string }[] = []

@@ -34,7 +34,7 @@ import { DEFAULT_SCREENING_REASONS, screeningSchemaDefs } from '../screening/sch
 import { screeningReason, screeningStatus } from '../screening/status'
 import { pendingUnanimousDecisions } from '../screening/counts'
 import { renameReasonInPapers } from '../screening/reasonUsage'
-import { annotationsDirProblem, DEFAULT_ANNOTATIONS_DIR } from '../model/annotationsDir'
+import { annotationsDirProblem, DEFAULT_ANNOTATIONS_DIR, defaultSplitDirName } from '../model/annotationsDir'
 import {
   amendVersion,
   newSchemaVersionId,
@@ -2139,7 +2139,9 @@ export const useEditorStore = create<EditorState>()(
           s.savedNodes = []
           s.savedSchemaJson = ''
           s.keepHidden = {}
-          s.annotationsDir = ''
+          // A folder of its own next to the source's, so the two never need
+          // telling apart even if a paper id they share is added later.
+          s.annotationsDir = defaultSplitDirName(location.name)
           s.savedAnnotationsDir = ''
           s.provenance = {
             kind: 'screening-import',
@@ -2296,9 +2298,13 @@ export const useEditorStore = create<EditorState>()(
       const folderProblem = st.annotationsDir.trim() ? annotationsDirProblem(folder) : null
       if (folderProblem) issues.push(`Annotations folder "${folder}": ${folderProblem}.`)
       else if (st.location.path) {
-        const users = await getPlatform().annotationsDirUsers?.(st.location.path, folder).catch(() => []) ?? []
+        const ids = st.papers.map((p) => p.id.trim())
+        const users = (await getPlatform().annotationsDirUsers?.(st.location.path, folder, ids).catch(() => [])) ?? []
         if (users.length > 0) {
-          issues.push(`Annotations folder "${folder}" is already used by ${users.join(', ')} next to this file; choose another name.`)
+          issues.push(
+            `Annotations folder "${folder}" is also used by ${users.join(', ')} next to this file, which lists some of ` +
+              'the same papers — the two would write the same files there. Choose another folder name.',
+          )
         }
       }
       if (issues.length > 0) {

@@ -157,6 +157,15 @@ Open `anna/review.json`.
 - On opening, "Give each project its own annotations folder" lists review.json and review-copy.json.
 - The files of the papers both list are marked for you to confirm. Split, then look at `git status` in anna/: renames.
 
+### `screening-beside-annotation`
+
+A screening project and the annotation project built from it share annotations/ but no paper.
+
+Open `anna/review.json`.
+
+- Opening either project asks nothing: the two write different files, since the import renames any paper id the screening project already uses.
+- Open screening.json too — both keep their answers in annotations/ side by side.
+
 ### `schema-versions`
 
 One file predates schema versions (answer under the old name "Kind"), one names a version the project does not know.

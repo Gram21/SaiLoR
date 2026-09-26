@@ -1,4 +1,4 @@
-import { paperIdProblem } from './paperId'
+import { paperIdKey, paperIdProblem } from './paperId'
 
 /**
  * Where a project keeps its annotation files: always one folder directly inside
@@ -35,9 +35,33 @@ export function annotationsDirOf(raw: unknown): string {
   return typeof name === 'string' && annotationsDirProblem(name) === null ? name : DEFAULT_ANNOTATIONS_DIR
 }
 
-/** A folder name for `projectFileName`'s own annotations: `review.json` → `review-annotations`. */
+/** A folder name for `projectFileName`'s own annotations: `review.json` →
+ *  `review-annotations`, and `review-annotation.json` too rather than
+ *  `review-annotation-annotations`. */
 export function defaultSplitDirName(projectFileName: string): string {
-  const stem = projectFileName.replace(/\.json$/i, '')
+  const stem = projectFileName.replace(/\.json$/i, '').replace(/-annotations?$/i, '')
   const name = `${stem}-annotations`
   return annotationsDirProblem(name) === null ? name : 'project-annotations'
+}
+
+/**
+ * Can a project with these paper ids write the same files as the parsed
+ * project file `raw`, were the two to share a folder? Only through a paper both
+ * list: every file is named after its paper. (Same-kind projects then write
+ * the very same answer files; a screening and an annotation project still both
+ * write `marks-*.json`.) Two projects with no paper in common — a screening
+ * project and the annotation project imported from it, whose clashing ids the
+ * import renames — can share a folder safely. Compared the way a
+ * case-insensitive disk would (see `paperIdKey`).
+ */
+export function sharesPaper(paperIds: Iterable<string>, raw: unknown): boolean {
+  const mine = new Set([...paperIds].map(paperIdKey))
+  const papers = (raw as { papers?: unknown } | null)?.papers
+  return (
+    Array.isArray(papers) &&
+    papers.some((p) => {
+      const id = (p as { id?: unknown } | null)?.id
+      return typeof id === 'string' && mine.has(paperIdKey(id))
+    })
+  )
 }

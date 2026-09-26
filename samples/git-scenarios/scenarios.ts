@@ -4,6 +4,7 @@ import { BRANCH_SWITCH_STASH_MESSAGE, MANUAL_STASH_PREFIX, parseStashList, STASH
 import { parseAnnotationAuthors } from '../../src/git/seatOwner'
 import { backgroundFetchAllowed, FETCH_COMMAND_KEYS } from '../../src/git/fetchPolicy'
 import { planSplit } from '../../src/model/annotationSplit'
+import { annotationsDirOf, sharesPaper } from '../../src/model/annotationsDir'
 import { ANNA, BEN, type Scenario, type Stage } from './builder'
 import { answers, assert, PROJECT, pullOutcome, review, SCHEMA, start, V0, version } from './base'
 
@@ -304,6 +305,40 @@ export const SCENARIOS: Scenario[] = [
         .filter(Boolean)
         .map((p) => ({ relPath: p.slice('annotations/'.length), text: s.read(ANNA, p) }))
       assert(planSplit(projects, files).some((r) => r.ambiguous), 'some files could belong to either project')
+    },
+  },
+  {
+    name: 'screening-beside-annotation',
+    summary: 'A screening project and the annotation project built from it share annotations/ but no paper.',
+    open: 'anna/review.json',
+    check: [
+      'Opening either project asks nothing: the two write different files, since the import renames any paper id the screening project already uses.',
+      'Open screening.json too — both keep their answers in annotations/ side by side.',
+    ],
+    build(s) {
+      start(s, { base: { answers: { smith2021: { r1: answers({ Design: 'RCT' }) } } } })
+      s.writeProject(ANNA, 'screening.json', {
+        version: 1,
+        title: 'Title and abstract screening',
+        config: { reviewers: 2, screening: { reasons: ['Off topic', 'Not peer reviewed'] } },
+        papers: ['wong2020', 'patel2019'].map((id) => ({
+          id,
+          title: `Candidate ${id}`,
+          authors: [],
+          pdf: `pdfs/${id}.pdf`,
+          annotations: {},
+          reviews: { 1: { Decision: [{ value: 'include' }] } },
+        })),
+      })
+      s.commit(ANNA, 'Keep the screening next to the annotation project')
+      s.push(ANNA)
+    },
+    verify(s) {
+      const review = JSON.parse(s.read(ANNA, PROJECT))
+      const screening = JSON.parse(s.read(ANNA, 'screening.json'))
+      const ids = (raw: { papers: { id: string }[] }) => raw.papers.map((p) => p.id)
+      assert(annotationsDirOf(review) === annotationsDirOf(screening), 'both use the same folder')
+      assert(!sharesPaper(ids(review), screening), 'they share no paper, so no file')
     },
   },
   {

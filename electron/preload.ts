@@ -17,8 +17,8 @@ contextBridge.exposeInMainWorld('slr', {
 
   // Project editor: pick a location / PDFs, and relativize the PDF references.
   pickSavePath: (suggestedName: string) => ipcRenderer.invoke('project:pickSavePath', suggestedName),
-  annotationsDirUsers: (projectPath: string, folder: string) =>
-    ipcRenderer.invoke('project:annotationsDirUsers', projectPath, folder),
+  annotationsDirUsers: (projectPath: string, folder: string, paperIds: string[]) =>
+    ipcRenderer.invoke('project:annotationsDirUsers', projectPath, folder, paperIds),
   sharedAnnotations: (projectPath: string) => ipcRenderer.invoke('project:sharedAnnotations', projectPath),
   moveAnnotationsDir: (projectPath: string, folder: string) =>
     ipcRenderer.invoke('project:moveAnnotationsDir', projectPath, folder),
