@@ -1,6 +1,5 @@
 import { useEffect, useMemo } from 'react'
 import { useStore, selectCurrentPaper, currentTree, currentFinished } from '../state/store'
-import { useAiStore } from '../state/aiStore'
 import { normalizeTree, isFieldVisible } from '../model/annotations'
 import { finishCheckboxLabel } from '../model/annotationState'
 import { paperCompleteness, paperAnnotationState } from './PaperList'
@@ -22,12 +21,6 @@ export function AnnotationPanel() {
   const project = useStore((s) => s.project)
   const currentReviewer = useStore((s) => s.currentReviewer)
   const schema = project?.schema ?? []
-  const busy = useStore((s) => s.busy)
-  // config.ai can still forbid AI use, but can no longer turn it on by itself —
-  // it also needs the hidden per-session unlock. See `aiUnlocked` in store.ts.
-  const aiEnabled = useStore((s) => s.project?.aiEnabled ?? true)
-  const aiUnlocked = useStore((s) => s.aiUnlocked)
-  const openAi = useAiStore((s) => s.openDialog)
   const setConsolidationOverviewOpen = useStore((s) => s.setConsolidationOverviewOpen)
   const setDisagreementsOpen = useStore((s) => s.setDisagreementsOpen)
   const setSchemaInfoOpen = useStore((s) => s.setSchemaInfoOpen)
@@ -162,18 +155,6 @@ export function AnnotationPanel() {
   const finishedMismatch = finishedState === 'flagged'
   const showFinished = finishCheckboxEnabled && finishedCompleteness !== null
 
-  const aiDisabled = busy || !paper.pdf || !aiEnabled || !aiUnlocked
-  // Not unlocked this session at all (the hidden click gesture never
-  // happened): the button doesn't just disable, it has no visible presence —
-  // nothing should hint an AI feature exists to find. Once unlocked, a
-  // project that explicitly turns AI off (config.ai: false) still shows the
-  // button, visibly disabled — useful information once you already know the
-  // feature is there, unlike the pre-unlock state.
-  const aiHidden = !aiUnlocked
-  // Deliberately uninformative: the button looks like any other disabled
-  // control rather than one hinting that it can be unlocked.
-  const aiTitle = aiDisabled ? 'Coming soon' : 'Ask an LLM to propose values for the fields that are still empty'
-
   return (
     <div className="panel annotations">
       <SeatConflictNotice />
@@ -189,18 +170,6 @@ export function AnnotationPanel() {
               onClick={() => setSchemaInfoOpen(true)}
             >
               ⓘ
-            </button>
-          )}
-          {!isConsolidation && (
-            <button
-              type="button"
-              className={`ai-btn${aiHidden ? ' ai-btn-hidden' : ''}`}
-              title={aiHidden ? undefined : aiTitle}
-              disabled={aiDisabled}
-              aria-hidden={aiHidden || undefined}
-              onClick={() => void openAi()}
-            >
-              ✦ AI
             </button>
           )}
         </div>

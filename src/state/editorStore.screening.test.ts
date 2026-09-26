@@ -541,11 +541,11 @@ describe('startFromScreening / resolveScreeningImport', () => {
   })
 })
 
-// A new project should not silently claim a feature nobody can currently
-// reach — see the doc comments on the initial state / startNew / the
-// screening-import target:'start' branch in editorStore.ts, and
-// ProjectEditor.tsx's own comment on why there is no UI to change this.
-describe('a new project defaults to aiEnabled: false', () => {
+// A new project starts with AI-assisted annotation on, like every other core
+// feature, unless its author opts out — see the doc comments on the initial
+// state / startNew / the screening-import target:'start' branch in
+// editorStore.ts.
+describe('a new project defaults to aiEnabled: true', () => {
   it('startNew()', async () => {
     pickResult = {
       handle: { kind: 'electron', path: '/reviews/project.json' },
@@ -553,8 +553,8 @@ describe('a new project defaults to aiEnabled: false', () => {
       path: '/reviews/project.json',
     }
     await useEditorStore.getState().startNew()
-    expect(useEditorStore.getState().aiEnabled).toBe(false)
-    expect(JSON.parse(JSON.stringify(buildProjectJson(useEditorStore.getState()))).config.ai).toBe(false)
+    expect(useEditorStore.getState().aiEnabled).toBe(true)
+    expect(JSON.parse(JSON.stringify(buildProjectJson(useEditorStore.getState()))).config.ai).toBeUndefined()
   })
 
   it('startFromScreening() → resolveScreeningImport (target: start)', async () => {
@@ -574,19 +574,19 @@ describe('a new project defaults to aiEnabled: false', () => {
     }
     await useEditorStore.getState().startFromScreening()
     await useEditorStore.getState().resolveScreeningImport('include-undecided')
-    expect(useEditorStore.getState().aiEnabled).toBe(false)
+    expect(useEditorStore.getState().aiEnabled).toBe(true)
   })
 
   it('does not touch an existing file\'s own aiEnabled — only new-project defaults changed', () => {
     const opened = editorStateFromOpened({
       text: JSON.stringify({
         version: 1,
-        config: { schema: [{ name: 'X', type: 'string' }] }, // no "ai" key — enabled by default
+        config: { schema: [{ name: 'X', type: 'string' }], ai: false },
         papers: [],
       }),
       handle: { kind: 'electron', path: '/reviews/existing.json' },
       name: 'existing.json',
     })
-    expect(opened.aiEnabled).toBe(true)
+    expect(opened.aiEnabled).toBe(false)
   })
 })

@@ -135,8 +135,8 @@ export const useAiStore = create<AiState>()(
       const app = useStore.getState()
       const paper = app.project?.papers.find((p) => p.id === app.currentPaperId)
       if (!app.project || !paper) return
-      // Second line of defense; the AI button is already disabled unless this holds (see `aiUnlocked` in store.ts).
-      if (!app.aiUnlocked || !app.project.aiEnabled) return
+      // Second line of defense; the toolbar AI button is already disabled for an opted-out project.
+      if (!app.project.aiEnabled) return
       // Multi-reviewer with nobody picked: no active tree to propose values into.
       if (app.project.reviewers > 1 && app.currentReviewer === null) return
       const tree = currentTree(app.project, app.currentReviewer, paper)

@@ -26,13 +26,11 @@ const ISSUE_DISPLAY_LIMIT = 12
  * annotation schema, and attach the PDFs to annotate. Shown instead of the
  * annotation workspace while `open` is true.
  *
- * No AI-annotation toggle here on purpose: with no reachable entry point for
- * the feature itself (see `aiUnlocked` in store.ts), offering a control that
- * configures it would promise something the app doesn't currently deliver.
- * `EditorState.aiEnabled` still exists and defaults to `false` for a new
- * project (see the initial state / `startNew` in editorStore.ts), and an
- * existing file's own `config.ai` is still read and preserved on save —
- * there just isn't a way to change it from here right now.
+ * The "Allow AI-assisted annotation" toggle below binds `EditorState.aiEnabled`,
+ * which defaults to `true` for a new project (see the initial state /
+ * `startNew` in editorStore.ts) — off is an explicit opt-out, not the default.
+ * Hidden for a screening draft, which has no annotation panel for the AI
+ * button to appear in.
  */
 export function ProjectEditor() {
   const open = useEditorStore((s) => s.open)
@@ -44,6 +42,8 @@ export function ProjectEditor() {
   const setReviewers = useEditorStore((s) => s.setReviewers)
   const finishCheckbox = useEditorStore((s) => s.finishCheckbox)
   const setFinishCheckbox = useEditorStore((s) => s.setFinishCheckbox)
+  const aiEnabled = useEditorStore((s) => s.aiEnabled)
+  const setAiEnabled = useEditorStore((s) => s.setAiEnabled)
   const screening = useEditorStore((s) => s.screening)
   const setScreening = useEditorStore((s) => s.setScreening)
   const provenance = useEditorStore((s) => s.provenance)
@@ -208,6 +208,27 @@ export function ProjectEditor() {
           reviewer, who compares everyone's answers and records the final, agreed result — that
           consolidated result is what the project's saved output actually contains.
         </p>
+      )}
+
+      {/* Hidden for a screening draft: it has no annotation panel for the AI
+          button to appear in, and no reviewer-picked seat for a suggestion to
+          write into. */}
+      {!screening && (
+        <div className="editor-location">
+          <span className="editor-location-label">AI</span>
+          <label
+            className="editor-ai-toggle"
+            title="Lets reviewers ask an LLM to propose values for a paper's still-empty fields, for review before anything is written."
+          >
+            <input
+              type="checkbox"
+              checked={aiEnabled}
+              onChange={(e) => setAiEnabled(e.target.checked)}
+              disabled={busy}
+            />
+            <span>Allow AI-assisted annotation</span>
+          </label>
+        </div>
       )}
 
       {/* Hidden for a screening draft: one include/exclude decision already

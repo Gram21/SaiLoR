@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '../state/store'
+import { useAiStore } from '../state/aiStore'
 import { useEditorStore } from '../state/editorStore'
 import { useGitStore } from '../state/gitStore'
 import { CONSOLIDATION_SEAT } from '../git/seatOwner'
@@ -23,39 +24,10 @@ const GIT_NO_PROJECT_HINT = 'Open a project in a git repository to use Git.'
  *  there is nothing to commit, pull or push. */
 const GIT_NO_REPO_HINT = "This project isn't in a git repository — there's nothing to commit, pull or push."
 
-/** Clicks this close together count as the same run; a pause starts over. */
-export const UNLOCK_CLICK_WINDOW_MS = 2500
-/** How many clicks on the app title unlock AI use for the session. */
-export const UNLOCK_CLICK_COUNT = 12
 /** Above this many reviewers the pill row would crowd the toolbar, so the
  * switch becomes a dropdown instead. At or below it, pills stay — a row of
  * up to 5 numbers plus Consolidation is still scannable at a glance. */
 export const REVIEWER_DROPDOWN_THRESHOLD = 5
-
-/** A run of clicks, tracked as a plain object so the logic below stays pure. */
-export interface TitleClickState {
-  count: number
-  last: number
-}
-
-/**
- * The pure core of the hidden AI-unlock gesture: click `UNLOCK_CLICK_COUNT`
- * times on the app title within `UNLOCK_CLICK_WINDOW_MS` of each other. Kept
- * free of React/`Date.now()` so the "N clicks within a window" rule is testable
- * on its own — the component only supplies `now` and holds the running state.
- */
-export function nextTitleClickState(
-  prev: TitleClickState,
-  now: number,
-  windowMs: number = UNLOCK_CLICK_WINDOW_MS,
-  threshold: number = UNLOCK_CLICK_COUNT,
-): { state: TitleClickState; unlocked: boolean } {
-  const count = now - prev.last <= windowMs ? prev.count + 1 : 1
-  if (count >= threshold) {
-    return { state: { count: 0, last: now }, unlocked: true }
-  }
-  return { state: { count, last: now }, unlocked: false }
-}
 
 export interface GitButtonState {
   disabled: boolean
@@ -63,11 +35,11 @@ export interface GitButtonState {
 }
 
 /**
- * The Git toolbar button's disabled state and tooltip. Pulled out for the same
- * reason `nextTitleClickState` is: the precedence of *why it's off* is a rule
- * worth testing without a DOM. The button is always rendered (like Validate and
- * Close beside it, and like every git entry point in the browser), so this only
- * ever decides usable-or-not, mirroring the "Import from remote git…" item's own
+ * The Git toolbar button's disabled state and tooltip. Pulled out on its own
+ * so the precedence of *why it's off* is a rule worth testing without a DOM.
+ * The button is always rendered (like Validate and Close beside it, and like
+ * every git entry point in the browser), so this only ever decides
+ * usable-or-not, mirroring the "Import from remote git…" item's own
  * precedence — the sibling entry point — so the two can't drift.
  */
 export function gitButtonState(
@@ -93,6 +65,51 @@ export function gitButtonState(
           ? GIT_NO_REPO_HINT
           : `Commit, pull and push this project — ${repo.branch ?? 'detached HEAD'}`
   const disabled = !git || probeUnavailable || !project || !repo || busy || editorOpen
+  return { disabled, title }
+}
+
+export interface AiButtonState {
+  disabled: boolean
+  title: string
+}
+
+const AI_NO_PROJECT_HINT = 'Open a project to annotate with AI.'
+const AI_SCREENING_HINT = "AI-assisted annotation isn't available in screening projects."
+const AI_CONSOLIDATION_HINT =
+  'AI has no place in Consolidation — it reconciles what the reviewers already said, not a fresh opinion.'
+const AI_REVIEWER_UNSET_HINT = 'Pick a reviewer first — there is nothing to annotate as "the reviewer" yet'
+const AI_PROJECT_DISABLED_HINT = 'AI is turned off for this project in its settings.'
+const AI_ENABLED_HINT = 'Annotate papers with AI'
+
+/**
+ * The toolbar AI button's disabled state and tooltip — same shape and same
+ * reasoning as `gitButtonState`: always rendered, disabled-with-a-reason
+ * rather than hidden. Structural reasons (no project, screening, Consolidation,
+ * no reviewer picked, project opted out) pick the tooltip; `busy`/`editorOpen`
+ * only disable, matching Validate/Close.
+ */
+export function aiButtonState(
+  project: boolean,
+  screening: boolean,
+  isConsolidation: boolean,
+  reviewerUnset: boolean,
+  aiEnabled: boolean,
+  busy: boolean,
+  editorOpen: boolean,
+): AiButtonState {
+  const title = !project
+    ? AI_NO_PROJECT_HINT
+    : screening
+      ? AI_SCREENING_HINT
+      : isConsolidation
+        ? AI_CONSOLIDATION_HINT
+        : reviewerUnset
+          ? AI_REVIEWER_UNSET_HINT
+          : !aiEnabled
+            ? AI_PROJECT_DISABLED_HINT
+            : AI_ENABLED_HINT
+  const disabled =
+    !project || screening || isConsolidation || reviewerUnset || !aiEnabled || busy || editorOpen
   return { disabled, title }
 }
 
@@ -123,11 +140,11 @@ export function Toolbar() {
   const projectTitle = useStore((s) => s.projectTitle)
   const saveHandle = useStore((s) => s.saveHandle)
   const setHelpOpen = useStore((s) => s.setHelpOpen)
-  const unlockAi = useStore((s) => s.unlockAi)
   const currentReviewer = useStore((s) => s.currentReviewer)
   const selectReviewer = useStore((s) => s.selectReviewer)
   const corruptFiles = useStore((s) => s.corruptFiles)
   const showCorruptFiles = useStore((s) => s.showCorruptFiles)
+  const openAiDialog = useAiStore((s) => s.openDialog)
 
   // Git support is Electron-only: `getGit()` is null in the browser (no local
   // git to reach at all). The entry points stay visible there too, disabled
@@ -143,17 +160,6 @@ export function Toolbar() {
   const openClone = useGitStore((s) => s.openClone)
   const openGitPanel = useGitStore((s) => s.openPanel)
   const gitBtn = gitButtonState(!!git, gitProbe, !!project, gitRepo, busy, editorOpen, GIT_BROWSER_DISABLED_HINT)
-
-  // A ref, not state: counting must not trigger a render, or the title (and
-  // anything watching it) would visibly react to being clicked before the
-  // gesture is even complete. See the title span below — it stays exactly
-  // as plain as it looks for click 1 through `UNLOCK_CLICK_COUNT`.
-  const titleClicks = useRef<TitleClickState>({ count: 0, last: 0 })
-  const onTitleClick = () => {
-    const { state, unlocked } = nextTitleClickState(titleClicks.current, Date.now())
-    titleClicks.current = state
-    if (unlocked) unlockAi()
-  }
 
   // A transient "Saved" confirmation, shown a few seconds after every
   // successful save (manual or autosaved) and then hidden again — `dirty`
@@ -174,6 +180,15 @@ export function Toolbar() {
   const reviewerUnset = showReviewerSwitch && currentReviewer === null
   const reviewerIds = Array.from({ length: reviewerCount }, (_, i) => String(i + 1))
   const useReviewerDropdown = reviewerCount > REVIEWER_DROPDOWN_THRESHOLD
+  const aiBtn = aiButtonState(
+    !!project,
+    !!project?.screening,
+    currentReviewer === CONSOLIDATION_SEAT,
+    reviewerUnset,
+    project?.aiEnabled ?? true,
+    busy,
+    editorOpen,
+  )
 
   // The closed dropdown must still read "you are Reviewer 3" — a caret alone
   // would defeat the point of showing the active seat at all.
@@ -292,7 +307,7 @@ export function Toolbar() {
           <SidebarToggle />
         </span>
 
-        <span className="app-title" onClick={onTitleClick}>
+        <span className="app-title">
           SaiLoR
         </span>
 
@@ -331,6 +346,18 @@ export function Toolbar() {
             disabled={!project || busy || editorOpen || reviewerUnset}
           >
             Validate
+          </button>
+          {/* Same call as Validate/Git/Close: always rendered, disabled with an
+              honest reason rather than hidden. `aiButtonState` owns the
+              precedence; a paper with no PDF is not one of those reasons —
+              the dialog itself handles that case once opened. */}
+          <button
+            type="button"
+            title={aiBtn.title}
+            onClick={() => void openAiDialog()}
+            disabled={aiBtn.disabled}
+          >
+            ✦ AI
           </button>
           {/* Parked work nobody remembers is lost work. Only SaiLoR's own
               stashes count here — a carry-over that did not come back, or one

@@ -1280,35 +1280,12 @@ button.paper-search-clear:hover {
   accent-color: var(--danger);
 }
 
-/* Title on the left, the AI button on the right. */
+/* Title on the left, the schema-info button on the right. */
 .annotations-head-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-}
-.ai-btn {
-  padding: 3px 10px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: 6px;
-  background: transparent;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.ai-btn:hover:not(:disabled) {
-  background: var(--accent-weak);
-}
-.ai-btn:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-/* Not unlocked this session: no visible affordance at all, not just a dimmed
-   control — see the comment on `aiHidden` in AnnotationPanel.tsx. */
-.ai-btn:disabled.ai-btn-hidden {
-  opacity: 0;
 }
 .schema-info-btn {
   padding: 2px 7px;
@@ -2753,7 +2730,7 @@ kbd {
   justify-content: flex-end;
 }
 
-/* Consolidation's extra tools: same footprint, same button look as `.ai-btn`,
+/* Consolidation's extra tools: same footprint as a plain toolbar button,
    just laid out side by side since there's more than one. */
 .consolidation-tools {
   display: flex;

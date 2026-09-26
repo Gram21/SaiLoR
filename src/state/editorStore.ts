@@ -1431,10 +1431,9 @@ export const useEditorStore = create<EditorState>()(
     location: null,
     version: 1,
     title: '',
-    // Off by default: AI-assisted annotation has no reachable entry point
-    // (see `aiUnlocked` in store.ts) and no UI here to re-enable it, so a new
-    // project shouldn't silently claim a feature nobody can use.
-    aiEnabled: false,
+    // On by default: AI-assisted annotation is a core feature every new
+    // project gets unless its author opts out (see `setAiEnabled`).
+    aiEnabled: true,
     // Enabled by default, unlike `aiEnabled`: hand sign-off is every
     // project's behavior unless its author opts out.
     finishCheckbox: true,
@@ -1476,9 +1475,8 @@ export const useEditorStore = create<EditorState>()(
         s.location = location
         s.version = 1
         s.title = ''
-        // See the initial-state comment above: no reachable feature, no UI to
-        // turn it back on, so a new project starts opted out.
-        s.aiEnabled = false
+        // See the initial-state comment above: on by default.
+        s.aiEnabled = true
         s.finishCheckbox = true
         s.reviewers = 1
         s.screening = null
@@ -2100,9 +2098,8 @@ export const useEditorStore = create<EditorState>()(
           s.location = location
           s.version = 1
           s.title = ''
-          // Same reasoning as the initial-state comment above: no reachable
-          // AI feature, so a fresh project starts opted out even here.
-          s.aiEnabled = false
+          // Same reasoning as the initial-state comment above: on by default.
+          s.aiEnabled = true
           s.finishCheckbox = true
           // A second screening pass keeps the same team, so its seat count
           // (a PRISMA-reportable design property) is inherited, not reset to

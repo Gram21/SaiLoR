@@ -50,6 +50,18 @@ function projectJson(opts: { reviewers?: number } = {}) {
   })
 }
 
+// Non-screening, since the AI button is unavailable there — see `aiButtonState`.
+function annotationProjectJson(opts: { reviewers?: number } = {}) {
+  return JSON.stringify({
+    version: 1,
+    config: {
+      schema: [{ name: 'Field', type: 'string' }],
+      ...(opts.reviewers ? { reviewers: opts.reviewers } : {}),
+    },
+    papers: [{ id: 'p1', title: 'Paper One', authors: [], pdf: 'p1.pdf', annotations: {} }],
+  })
+}
+
 beforeEach(() => {
   useStore.setState({
     project: null,
@@ -90,6 +102,21 @@ describe('REQ-UI-30: seat switcher in toolbar', () => {
     expect(within(group).getByRole('button', { name: '1' })).not.toHaveClass('active')
   })
 
+})
+
+describe('the AI button in the toolbar', () => {
+  it('is enabled for a normal, single-reviewer annotation project', () => {
+    st().loadFromText(annotationProjectJson(), null, 'test.json')
+    render(<Toolbar />)
+    expect(screen.getByRole('button', { name: '✦ AI' })).not.toBeDisabled()
+  })
+
+  it('is disabled for the Consolidation seat', () => {
+    st().loadFromText(annotationProjectJson({ reviewers: 2 }), null, 'test.json')
+    act(() => st().selectReviewer('consolidation'))
+    render(<Toolbar />)
+    expect(screen.getByRole('button', { name: '✦ AI' })).toBeDisabled()
+  })
 })
 
 describe('unreadable annotation files stay visible for the whole session', () => {

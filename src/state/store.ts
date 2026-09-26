@@ -682,12 +682,6 @@ interface AppState {
   /** Fields waiting for Consolidation to enter a value other than a reviewer's answer. */
   deferredConsolidations: Record<string, true>
   /**
-   * AI-assisted annotation is off by default regardless of `config.ai` (which
-   * can still *forbid* it, never enable it) — unlocked only by the hidden
-   * gesture in `Toolbar.tsx`, for the running session only. Never persisted.
-   */
-  aiUnlocked: boolean
-  /**
    * Which reviewer's work is shown/edited: `"1"`.."N", `"consolidation"`, or
    * `null` (single-reviewer projects stay `null`; multi-reviewer projects also
    * start `null` so an edit is never attributed by default). Selecting is a
@@ -898,8 +892,6 @@ interface AppState {
   ) => AiApplyResult
   /** The reviewer looked at an AI-filled field — drop its mark. */
   confirmAiMark: (paperId: string, canonicalPath: string) => void
-  /** The hidden gesture landed — allow AI use for the rest of this session. */
-  unlockAi: () => void
 
   /** Switch which reviewer's tree is shown/edited. This is a local view
    * switch, not an edit: no undo step, no `dirty`, and never any JSON write. */
@@ -1201,7 +1193,6 @@ export const useStore = create<AppState>()(
     future: [],
     aiMarks: {},
     deferredConsolidations: {},
-    aiUnlocked: false,
     currentReviewer: null,
     consolidationTarget: null,
     consolidationUpdatePrompt: null,
@@ -2790,13 +2781,6 @@ export const useStore = create<AppState>()(
       if (!get().aiMarks[key]) return
       set((s) => {
         delete s.aiMarks[key]
-      })
-    },
-
-    unlockAi: () => {
-      if (get().aiUnlocked) return // already unlocked — no re-render needed
-      set((s) => {
-        s.aiUnlocked = true
       })
     },
 
