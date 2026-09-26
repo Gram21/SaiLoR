@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:6e88cced4913db55c3b69ad17c85a9273f440018d18361dd0edf94a21178d42e",
+  "pageVersion": "sha256:29ba94584400fcc7854a6439e4c86ffeb4862d90c072a1966a391a6427303808",
   "claims": [
     {
       "id": "claim_b7a37ca8823d4b1c91f976ad86ff6df8",
@@ -47,16 +47,20 @@
       "statement": "knownProjectPaths is populated by project:open/project:openPath on successful read and by project:pickSavePath/paths:sibling, and project:save refuses any path not in that set.",
       "evidence": [
         {
-          "resource": "repo://electron/main.ts#L665-L694",
-          "version": "repo-lines-v1:sha256:6ff320456d64be98aa3f4884ff4c5b9bca936bbdd46a7c325a00f120eeacbb53:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJlYTQzMGFjOTdjNmEyZDA3MDZjYThhMzQyN2EzZTY5ZmUyNTNhMTE5OWY2MzQ3YmY3NGQwYzI2NmVlNDMwM2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNjNmNjOTI4MmZlNzMyMzRhNDY3YmJiZDA4ZjA4ODc3Y2Y4NTdkMGZlMzg1ZGQxZTJiZDRjN2U2YzIxMTM5MzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVkNWI3YzU5MjQ1ZWFhMGMzZDRmY2M3MzJmOTM5YTVhNmNkZDBkYjhlYjBjNDhhMTE4YjNhMzgwYmNmZjU0NTcifQ"
+          "resource": "repo://electron/main.ts#L1517-L1528",
+          "version": "repo-lines-v1:sha256:0bdc23059b303d051727e803b7050ee11ee4c8a87776fd68aadc521825a26f08:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjczNGRkNjFjODgzYjQ4MjkyYTE4NTg5ZDA3MGIzZjBhMzhhYzNkMmRiYjhmN2E2YTNlYTM5MGE4OWI1ODVlNTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJiZTNkYjA0NDRiYjgyNTcxM2RlYTgyMWExZTYyODM3YTI2NDg4OGY2ODAxM2MwNWQ3OTdhYzUzMDVkOGM2ZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY2NmQ3Y2FkOTBmODU5NTE3OWY4ODA0MDg3ZTFkZjE0M2JkZDc3M2RiZThiOGQwMTVjZjY5OTUxNGFkYzM2NTcifQ"
         },
         {
-          "resource": "repo://electron/main.ts#L825-L831",
-          "version": "repo-lines-v1:sha256:74ba010dabbb271a3824111dfd024ccf2180e508bc75576aa16c9b83bfcf6f11:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDg5M2Y0MGUzNzgxZWI4OTZjODJkMDQ2YTA4MDY3YTExZTM1Y2RmMmYxZGZhZjI2ZmVhOTBiOGRiNjY3NjQxMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjJlZTczZDg3N2I2NjBkMzFhMWZjMGU2YjE4MGNhOTdiZmJiMDYwNWI1MjMwOTVhYTI0NDJkNDZlNzRhODYwNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzhiNjQ5MDhkZmU0MzdjMTdmN2Y2N2FlYjIwMjU2NGFjMTI0YzkwYTFjZWM5YzUyOTY3OTU2YWI3Y2JhMjhlNyJ9"
+          "resource": "repo://electron/main.ts#L774-L797",
+          "version": "repo-lines-v1:sha256:2c63704021c6a5badedf116617b92e2449505868eb4f038f8f92198ec18ac793:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBmZTcxMDFhN2UyYjMwZmQ1ODIyMzFlNjZjNzUyZTM5YzMwNTRlYjM0NmZiNTgxODFmMjQ0MmJiM2MwNzRkNjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImEzYjI0OWQxOGFhMzliYTliODJkOGM4ZjU0OGE5OTY0Mzk0MWFhYThmZjU1NTU4OTI0YjBlNGZhMGFkZmIxNzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVkNWI3YzU5MjQ1ZWFhMGMzZDRmY2M3MzJmOTM5YTVhNmNkZDBkYjhlYjBjNDhhMTE4YjNhMzgwYmNmZjU0NTcifQ"
         },
         {
-          "resource": "repo://electron/main.ts#L849-L857",
-          "version": "repo-lines-v1:sha256:d61f9c44f67768dcee4d8ea59ff89f3b0d7598678397213491f02dff22c350b0:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMGU4N2FiMTA0YTJlOTYxNjNmMTg2MDQyYWU1OTgwNWFiNDkzNzdjYjA5OWE4ZDRkY2VmMWUzN2M1NWI4YmI4MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjE1YmQ4YjczYmQwODkyZDcxYmIxNmM4MjIyNzNmMGExYmMyZGNjOWViMzYyNjBlMzg2ZjM1ZmVlZjlmOGE2OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZGJmMDFjZDM1ZTk4NzJiNzQzNGI2MjBjMzA3MDIxZWJmMzBiODczODgxMGJkMzE0MjY2NmZjNjBkNGQwYjk3MSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjU2NTcyYTAyNWVhNjVjOTM2MzBiY2ZkYWMyMmIwZDZlZDkzODZjNmFlYzQwMTEyYjcwNTFmMmRlYzVjYWI4MiJ9"
+          "resource": "repo://electron/main.ts#L949-L954",
+          "version": "repo-lines-v1:sha256:be4674ed02cd4da08084956ff52092bebaae36839fdae6376f00522645e1d1f9:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGYyNWNjMzM4ZDY1ZDdkZDlmZTI2NzJhZjM3NWE4NTk2YzE3M2Q1YjhiNjc4NzdjY2RkNzg5NTY1OTlhMzdjMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDg5M2Y0MGUzNzgxZWI4OTZjODJkMDQ2YTA4MDY3YTExZTM1Y2RmMmYxZGZhZjI2ZmVhOTBiOGRiNjY3NjQxMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZmI1ODBlOTY0ZjgzYTQ3M2Y0M2Q0NDM4NDYyOTQ5ZDY4YjU2MDBmZGE3ODdmMTYzNzQ1ZDAwZGU4OWNiZjM2YSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDQ0ZWY5MzRiNWVmYjFiY2M0NGRlOTJkZTZlZTJlODNjNzhjZjk0ODdjZjljZTlhNmUyMzAwODdhMTdkMTI3NyJ9"
+        },
+        {
+          "resource": "repo://electron/main.ts#L984-L993",
+          "version": "repo-lines-v1:sha256:3c2f061da42504626c3a93097586400f5dd8a66db182016cbdf4e246d89ceb30:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBlODdhYjEwNGEyZTk2MTYzZjE4NjA0MmFlNTk4MDVhYjQ5Mzc3Y2IwOTlhOGQ0ZGNlZjFlMzdjNTViOGJiODAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRiZjAxY2QzNWU5ODcyYjc0MzRiNjIwYzMwNzAyMWViZjMwYjg3Mzg4MTBiZDMxNDI2NjZmYzYwZDRkMGI5NzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZjNjc2MzgyY2RmZDEwNWU5MzEyYzJhMDU0Yzk1ZGM2MjA1ZGU1YzQ4MDU5OWI4NzdmZmQ3ODg0YWZjMmIyM2IifQ"
         }
       ]
     },
@@ -197,12 +201,12 @@
       "statement": "Since v1.3 project annotations live in annotations/<paperId>/reviewer-<n>.json (or screening-<n>.json) plus consolidated/marks files; readProjectText reassembles the split layout into the legacy single-blob shape loadProject accepts, passing legacy single-file projects through untouched.",
       "evidence": [
         {
-          "resource": "repo://electron/main.ts#L504-L524",
-          "version": "repo-lines-v1:sha256:f94558bed142a0136c75c0fe5faf9beba4134d6536995c11fc7da9756d08c0b9:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA0OWE1YzdmZDRhYjNiMGM3ZGVkNDBlZDY0ZDRmZDY0Y2RiNDE1NjFlY2JlNGRlMDQzZWQzYzI4Yjg1ZjgzY2MiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRkN2YyM2NkMWFiM2Q3ZWJjMDRiM2UyODVkZTIzNmUxNGY0ZmZiYTljZGMzNDM2ZmUwZWE5MDRlMDA0OTQyZTIifQ"
+          "resource": "repo://electron/main.ts#L524-L543",
+          "version": "repo-lines-v1:sha256:350a9b76d9c4b1189681b2c1e45b847b7081f2ad8058caab0b31c3c912b38e48:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4NTVhYjcxYzQ4OTkyMTI3NWVmYjhiMDdmMzE4YmYzNDBjYTdlZGI3ZDdlNTYzZDU1ZjI1NGE5Y2ZiYjEwZjAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA0OWE1YzdmZDRhYjNiMGM3ZGVkNDBlZDY0ZDRmZDY0Y2RiNDE1NjFlY2JlNGRlMDQzZWQzYzI4Yjg1ZjgzY2MiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFjZTBhNTAxYzlmM2Q0MjYwMjIzYjk4MDRiNjZmM2QwM2M5NjM0Y2Q2ZDNlMTkwZjc1NzFkZjE0Y2VjNDFlOTUifQ"
         },
         {
-          "resource": "repo://electron/main.ts#L649-L663",
-          "version": "repo-lines-v1:sha256:2939e105742d9ef5438ee890a8ddf69a72dc3aee3abfa309d6881fd54ad112d1:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNlYjg0OTcxN2E1ZWVmZmUwM2VlNWVjZTZjM2Y2NzI3NGRjZGJhMmEwNWNhMGY1ZDg3ZmQ5ZmQ2NGU5NmE5M2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY0ODYyMjJmMjdhNzI0NzZjN2U0MjcwNmM2MWExZDAyZGM5YmRjMmJhZjM3ZGZjNGE1MTM3NDZiY2IzYzhlYTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA0ODNiNzhiYjg4Mzc5ZTBlNGNhY2IyOTkwMjNjZmQyMGRlM2RkNGRkMGE4OGY3YmJlMmFjNjdhY2M5MjMwNWMifQ"
+          "resource": "repo://electron/main.ts#L663-L698",
+          "version": "repo-lines-v1:sha256:3bec452c29ab54178623ac6dd2fbbcfa0e9acbf299e646add912f282cfe61a12:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY1MTcxZTUyMDNjOTZhMjZjOGQyZDRiNmY5ZTJlN2EyMWQ1NmJlZTc2MmZhNjBhYzdjMTEwZTQwMDljOGIyMmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVlN2EwM2UwNWI1NTZlMmFlOWRhMGE4MWQ2ZDI0OThhOTBlZjlkNjAwOTFiOTQxMjQzNDNlYzgwYTEzMWNlZjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNhNzgwYjE4NTgzY2MzNGIzZTYwYzNlMzQ0YWJhMWM1NTA1NDZiOTczYTc3YWM3NGI2YzhlOGI5OTNiNjEyZDMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM3OTI5ZTkxZTBmOTljM2U4MjVkZTY5YjQzNWZiNjQ4NGQxYjBhMWRmMmY0NjU2MWFiZjFhMjlmMDQxODhiODgifQ"
         }
       ]
     },
@@ -221,8 +225,8 @@
       "statement": "writeProjectFiles is the single implementation of how a split project is written, shared by project:save and the git handlers (git:commitPartial, git:pullFinish); it reconciles the whole annotations/ folder to the files list, containment-checks each target twice (string and real-path), and assertNotSymlink refuses to write through a symlink.",
       "evidence": [
         {
-          "resource": "repo://electron/main.ts#L776-L831",
-          "version": "repo-lines-v1:sha256:60790a1fb1592dcf551a1b388fbea9a919c05c12107284af1aa89d4d5e3e878a:eyJzZWxlY3RlZExpbmVDb3VudCI6NTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEyNTZiNGEzZThiOTFhOTk4N2I3MjUyZWMyZWZkMDQzODg0MTYzNGFiYjNjNDllYjI1MDc2M2Y1MWNjYmZiYzUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNjNTQ1NDRkZGUyNGJlMjhkZGZhYjc5OGMyOTVlODVkNWM0MzEwNjhhY2ZlN2U5Yjc0ZTAzMDZhYmZiNTYyMDQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM4YjY0OTA4ZGZlNDM3YzE3ZjdmNjdhZWIyMDI1NjRhYzEyNGM5MGExY2VjOWM1Mjk2Nzk1NmFiN2NiYTI4ZTcifQ"
+          "resource": "repo://electron/main.ts#L860-L947",
+          "version": "repo-lines-v1:sha256:275995b7749f54965c1f824d0835864d63cf941a1e3c94ff21ae2e7c0ae1d97f:eyJzZWxlY3RlZExpbmVDb3VudCI6ODgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiNTgwZTk2NGY4M2E0NzNmNDNkNDQzODQ2Mjk0OWQ2OGI1NjAwZmRhNzg3ZjE2Mzc0NWQwMGRlODljYmYzNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdlNzNiNGEzMjg5NDZkMmYyNWIwZmUzZDBjOTI4OGRiN2Q4NzIwM2UxNmU1Y2Q4NDhjN2FkYTBjMDBhYTNlZmMifQ"
         }
       ]
     },
@@ -275,8 +279,12 @@
       "statement": "Every git invocation uses execFile with an argument array and '--' before user-supplied paths/URLs, never a shell string, and never lets the renderer name argv; GIT_SAFE_CONFIG hard-overrides dangerous config keys (core.fsmonitor, core.hooksPath, protocol.ext, etc.) because a received project folder brings its own .git/.",
       "evidence": [
         {
-          "resource": "repo://electron/main.ts#L1575-L1722",
-          "version": "repo-lines-v1:sha256:680b61281081f4e3cc89aceb886402866c197a29071fc86e980d639098bb9e81:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQ4LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJmOGY0MDllYTU0YzdiYzMyOGE1ZTEzNDA2YjQ3MDNiMTlmYThlMWY3MGMxODE4OTkwZWU0NWQ5MmI3ZWVlMWIzIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI2OWQ5MDg4MGM1MjcwODdmNjJlYTM1Zjc1NzgwM2YyMTYzMzc4ZjUwMGNhNTRlMzc2MGZiMDFlZjk0NjRkMTFhIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIwY2QxNDg4YmNlYjYxMmUwYWE3NDM0ODJmNjQ4NzJkMDViMjM3OTIzNmYxZjQ4ODgyOTQyOWYyZDZmMDc0MmU1In0"
+          "resource": "repo://electron/main.ts#L1761-L1778",
+          "version": "repo-lines-v1:sha256:b3affd1c308545184688cdabc0116d4f167326aeaf2ce1f2d5e25f0a05e69e2e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY4ZjQwOWVhNTRjN2JjMzI4YTVlMTM0MDZiNDcwM2IxOWZhOGUxZjcwYzE4MTg5OTBlZTQ1ZDkyYjdlZWUxYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQwM2Q2NTM0NTc2NTk4NDgyNDk2Y2QxMDUzNzA1ZDE4MzlhYWMzMzA5MDA2ZTA0YmE4YmNhNmFiYmUyZTc5YTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY5ZDkwODgwYzUyNzA4N2Y2MmVhMzVmNzU3ODAzZjIxNjMzNzhmNTAwY2E1NGUzNzYwZmIwMWVmOTQ2NGQxMWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVkNmExYzQxYzY3YzI2MTg2ZjljMmVlZDY3NjJjOWE5NmUyZmZjYjNmMzY1NmE5MmQyMjU2ZDA5YjQwZDk1YmIifQ"
+        },
+        {
+          "resource": "repo://electron/main.ts#L1830-L1877",
+          "version": "repo-lines-v1:sha256:09b5c440900c44d640829847b095f1b3de5e1d23bcbf0d12d7390ce41b5adfbd:eyJzZWxlY3RlZExpbmVDb3VudCI6NDgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYxZTZjZDM1MWZlYjlhNWZkMGI5ZWRlY2YyMDlmN2VlN2YzM2UxODgyYjE4M2E3YzVmYjI5YjEzNDVmMDQ0MjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhiMzIyZGQxYjZkZTNlOTE3MWYyNTBmZDQ0Yzc0MjFiZjZkZGE2YzdmNmI3ZGZkZDYzZDRhMTExZTkxYzM2ZDIifQ"
         }
       ]
     },
@@ -285,8 +293,8 @@
       "statement": "runGit strips inherited GIT_DIR/GIT_WORK_TREE/etc., sets GIT_TERMINAL_PROMPT=0 and GIT_EDITOR=true (no tty; credential helpers and SSH agents are left untouched), treats non-zero exit as data not an exception, and uses 30s/900s timeouts with a 32MB maxBuffer.",
       "evidence": [
         {
-          "resource": "repo://electron/main.ts#L1595-L1722",
-          "version": "repo-lines-v1:sha256:f3f39f4ac837b10b192f8daf7c670715e4bfe79d43717e8404207ba7ba111264:eyJzZWxlY3RlZExpbmVDb3VudCI6MTI4LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI0MzI4ZDI4ZDRmZjM1NDUwNjUyMjU3ZjEzOGJjNjRlZjg2OWI3YjU1ZmYwY2JiOTNkMWMxMjQzZTU2MjhkOTU2IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJhZDFlNTViMTBiMjFmNTI5NjQ0MTRmOGQyNTJhYThkOTY5MjMyOTZhMGQ3YjEwYjMwN2I4MGY2N2Y5MzE0MTY5IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIwY2QxNDg4YmNlYjYxMmUwYWE3NDM0ODJmNjQ4NzJkMDViMjM3OTIzNmYxZjQ4ODgyOTQyOWYyZDZmMDc0MmU1In0"
+          "resource": "repo://electron/main.ts#L1787-L1913",
+          "version": "repo-lines-v1:sha256:d69b50bbe8f39fce4090d92a93959c4e37fb8a7b62a2458fb7fb60d7526c8b6c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTI3LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlYWYyMmNmMDczMjU5MmMyNDcxNDFjYmU2MWVmYTExMDEyNjEyZjVhMzEyMmI5YWY5YmJhZjUyZjU3MjRkMTk0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJjY2U5ZGQ2NDJmMzZhMmViYWI0MzI0MWVmMWI4MzBhZjUwOWYxMWJkMzg5ZTM1NGRlOWE5OGU5YTY1M2U5ODkwIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIwY2QxNDg4YmNlYjYxMmUwYWE3NDM0ODJmNjQ4NzJkMDViMjM3OTIzNmYxZjQ4ODgyOTQyOWYyZDZmMDc0MmU1In0"
         }
       ]
     },
@@ -353,12 +361,12 @@
       "statement": "The preload bridge exposes the SlrBridge interface mirrored in src/platform/electron.ts (ElectronAdapter implements PlatformAdapter over it); it includes os info, project/pdf/text/paths operations, the full git surface, self-update, and deliberately no way to read an LLM API key back.",
       "evidence": [
         {
-          "resource": "repo://electron/preload.ts#L1-L139",
-          "version": "repo-lines-v1:sha256:6b6ddec422d27db8c69950c3d8b47705188653150d94c002a700dc9c54487239:eyJzZWxlY3RlZExpbmVDb3VudCI6MTM5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJkNzEzZjY5NGExYmU1MDQxOGNiY2FiZDQyNDI3N2YzODM5MzkyNTgwYWQ1ZjdjY2E5NGVhN2RkZTY3NWJmMTk4IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI4NTgwYjc2NTE4ZGFlOTc5ZmFlYmQwMjM2N2EyOTI5MmE1MGQ5NzYwOTIyNTFhMzhhNmNlMzA4ODBiYTQyODI1IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+          "resource": "repo://electron/preload.ts#L1-L154",
+          "version": "repo-lines-v1:sha256:85380402f81b5f17eaa1c70c562ee568b7f37625783057da7bf3cdf741801127:eyJzZWxlY3RlZExpbmVDb3VudCI6MTU0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJkNzEzZjY5NGExYmU1MDQxOGNiY2FiZDQyNDI3N2YzODM5MzkyNTgwYWQ1ZjdjY2E5NGVhN2RkZTY3NWJmMTk4IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI4NTgwYjc2NTE4ZGFlOTc5ZmFlYmQwMjM2N2EyOTI5MmE1MGQ5NzYwOTIyNTFhMzhhNmNlMzA4ODBiYTQyODI1IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         },
         {
-          "resource": "repo://src/platform/electron.ts#L1-L60",
-          "version": "repo-lines-v1:sha256:26bdfea8562f162b3fa12a09abed84d18a1b9e4b77601eb623e72aac8de15d2e:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMxYjdmOTA3OGU5ZTRlMWE0OWRiZDk4MmZiZmIxYWU5ZmVlMzU5NDlhNjhhNTdiN2FiNWE4NGE5ZDcyZTA1MmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRhMGY1YTIzNmI3M2U5OTQxZDEyY2JhZDRhNWE0YjI3ZWM2NThhY2E0YzI5NjE0ZGQyNDA5NTk0YzI0ZWRjYTUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIzZDI0NzBkYmYwNjQyZWE3NWU2Y2Q3NzllZmZjY2JkYmE1NmU3NTEzMzg5ZTBhODI0ODdmNDE2MWU0ODYwYWEifQ"
+          "resource": "repo://src/platform/electron.ts#L90-L140",
+          "version": "repo-lines-v1:sha256:061ac7c97e702668933d37e121fde2a8fd9fd0e15cc43de4da4321cdcfadfa42:eyJzZWxlY3RlZExpbmVDb3VudCI6NTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRjYmE5MWI1OGUwYWViZTI0ODBlNTY1NTE5MTRmYWZlMzZlYzdlNTE5MTg4ZWI0MjZmNzNjNjY5MDA1NTNkY2UiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFlNTViNWMwYzQ4OTNmODMxNjAyODI5NmUyNGU4MzQzMWFmYjc4Yjk3MmVmNDM0MzgyYTRjMTNlZDg5MTFjNTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiNTgwZTk2NGY4M2E0NzNmNDNkNDQzODQ2Mjk0OWQ2OGI1NjAwZmRhNzg3ZjE2Mzc0NWQwMGRlODljYmYzNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU1NDU3OTk5NjA5ZjI4MGM4YWU1MDMxNWQyZGMwOGM5ZTZlMGRmODdkNTA1YzEzMGQxNDFhNGY3NjA3N2UwNmEifQ"
         }
       ]
     },
@@ -402,17 +410,43 @@
     },
     {
       "id": "claim_445002e533cf42a7b6a40b679203b925",
-      "statement": "electron/main.ts imports only shared pure logic from src/ (git url/path/ref/output modules, model project/pdfMarks/pdfExport/updateSignature) which import nothing DOM-specific, so they typecheck under both the main process's node types and the renderer's DOM types and remain reachable by the vitest suite.",
+      "statement": "electron/main.ts imports only shared pure logic from src/ (git url/path/ref/output/ownAnnotationPath/seatOwner/repoSetup/stash/fetchPolicy/stashOps/concurrentRead/deriveGitInfo modules, model project/fileStamps/pdfMarks/pdfExport/updateSignature) which import nothing DOM-specific, so they typecheck under both the main process's node types and the renderer's DOM types and remain reachable by the vitest suite.",
       "evidence": [
         {
-          "resource": "repo://electron/main.ts#L21-L38",
-          "version": "repo-lines-v1:sha256:1d79ae6fada796f7a309363b53f02798c9035e11a2c4a4637a665f5cdec8e703:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRjYzU5OTA1MDA2ZTViNGYyOThiM2UzZDRjZGZkNDg0ODYyZTk3Y2M0OGYxNjk1NzI5YzAzOTM1OWExZTIyYTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA5MzZmMGEwZGNlNzdkZjc0OWQ5YWY0Y2NjNjFiZTc3OTQyNDEyNzE5MjYxNmE5YjhlNTE1MWE5YTdhMDUxYzEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdjNmM0MDAxNTM0MThhMDc0OWU2Y2M4MmU1YWI0YTliYzliY2RmYjc4NTJhMDBlYThkNjY2OGRkNTgzNmJkMDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhlNWE4ZjJmY2Q0Nzk2MmM0OWRjOTI2ODYxMjZkODhkZDIzNTBkNTg3ZmZlMmMwMTAzYWY0NDg1ZDQ0OThiZDYifQ"
+          "resource": "repo://electron/main.ts#L21-L58",
+          "version": "repo-lines-v1:sha256:01237c90f34bac144d3cb75117b4772fe46ec4d85c44b05f0a0a48e7547caaaa:eyJzZWxlY3RlZExpbmVDb3VudCI6MzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRjYzU5OTA1MDA2ZTViNGYyOThiM2UzZDRjZGZkNDg0ODYyZTk3Y2M0OGYxNjk1NzI5YzAzOTM1OWExZTIyYTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA5MzZmMGEwZGNlNzdkZjc0OWQ5YWY0Y2NjNjFiZTc3OTQyNDEyNzE5MjYxNmE5YjhlNTE1MWE5YTdhMDUxYzEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdjNmM0MDAxNTM0MThhMDc0OWU2Y2M4MmU1YWI0YTliYzliY2RmYjc4NTJhMDBlYThkNjY2OGRkNTgzNmJkMDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhlNWE4ZjJmY2Q0Nzk2MmM0OWRjOTI2ODYxMjZkODhkZDIzNTBkNTg3ZmZlMmMwMTAzYWY0NDg1ZDQ0OThiZDYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_25e05ed93dbf485b87de7a4854e5a637",
+      "statement": "detachedHeadRefusal runs `git symbolic-ref --short -q HEAD` and returns a failing GitRun (with a 'check out a branch first' message) when HEAD is detached, but treats an unborn HEAD (empty repo) as not detached since symbolic-ref still resolves; it is called by git:commit, git:commitPartial, and git:applyRepoSetup before any write, and git:branchSwitchBegin reports the same detached-HEAD condition as a kind:'error' result.",
+      "evidence": [
+        {
+          "resource": "repo://electron/main.ts#L2265-L2301",
+          "version": "repo-lines-v1:sha256:16ce73a15b363aea38f9d927a55fb1e6ff27d6f47db7de4377012de8966bd80c:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNlN2RjZjI4MGNmMmFiYzAzNTdmYWYwMDAwNTM0MTc2N2UwNzcxOTZkZWYwZDU3YmUyYjhmMjU2ZTJlMzVmODIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhZmJhMDUyN2MzOTUzYzRiNmUwZTViNTczOWJhODM2MTJmODA1M2JjZGM5NDY2NzMwMTkzY2QxZDU5MGI0MDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNiYTA4MTM2NWQ4MzRkZDhlNDkyOTg3YTMzNDA1MWY3YmE4NjIzYjk3MGRlYjkyNThlM2U0YjA4YWM0NTNkN2MiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI1YmM5MzM1NTY5OTMwZjM3ODdmN2RkNDdmMjE1NzQwYTdmZTdkYjI4ZTQ0NDViZWNiOGQ0YWI3NjYxMjU2MWYifQ"
+        },
+        {
+          "resource": "repo://electron/main.ts#L2404-L2432",
+          "version": "repo-lines-v1:sha256:63dc927777e5ba4a1ff11dc274521719760b8a7437eea631274bda739826f52c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZiYjFiN2FiYTljOTNjMTZhNTI3YTcyOWFmMzZmMzdjMjc3YTk2Yzg5ZjBiZWMzMzgxZWQ3YTg1ZGViNzQ4ZGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIzM2IyYjAyN2FiNTdiNjhiNmFmMjdjM2E3MTU4ZTMwMDEwYTQyN2UzYzU0MjQ0Zjg3MWU0MjE0OThmYzMxZTQifQ"
+        },
+        {
+          "resource": "repo://electron/main.ts#L2434-L2455",
+          "version": "repo-lines-v1:sha256:96f18a14ab6f30e0da9409ecdbb915c30f6802c2dfabcda42aeaf1ebb23b4f59:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmMjVjYzMzOGQ2NWQ3ZGQ5ZmUyNjcyYWYzNzVhODU5NmMxNzNkNWI4YjY3ODc3Y2NkZDc4OTU2NTk5YTM3YzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhZmJhMDUyN2MzOTUzYzRiNmUwZTViNTczOWJhODM2MTJmODA1M2JjZGM5NDY2NzMwMTkzY2QxZDU5MGI0MDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiNTgwZTk2NGY4M2E0NzNmNDNkNDQzODQ2Mjk0OWQ2OGI1NjAwZmRhNzg3ZjE2Mzc0NWQwMGRlODljYmYzNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjliZGE2M2MwMjBkODUxNmRkZTk3YTMxNTA0YjM1NDllNDZjZDBjMTkyNzIwOTQyMGM3YjQxOGRhNmI4ZmRmM2QifQ"
+        },
+        {
+          "resource": "repo://electron/main.ts#L2688-L2695",
+          "version": "repo-lines-v1:sha256:5627e339b1f5ad148f18660e37d9177524a5ce7ab9455f44019993f4e3b9ab0a:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjNlNGI0MmY0NWVkNGYxYmU0MjVmM2RmYWRkODhlM2JjNzFjYTUzODE4OTUyMTI5MjkxZTAzOGRkNGIxYWQzZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2ZjMmExYWFiNjkyN2ZkNmU4Y2Q5ZDk5NDc1NWU2ODNkMmQ1NTk2OTYxZjNhNjY0NjJjZDJiNTBiN2E2M2ZmMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZWUwMTJkODBhMjZkMTAxZDdmYzY3MTNkNGU4YWVkZWNkNzNmYzliYTdhNjNmZWRiMjQwMzkxZWIxYzM1MGY0ZSJ9"
+        },
+        {
+          "resource": "repo://electron/main.ts#L2899-L2929",
+          "version": "repo-lines-v1:sha256:5e9f3cdd0ba45b77b14259c14cbf7bcd229983539ec391ebebd7862b6c17909f:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJiYTkxOTBlNDMzYWZlMzQ1ZTFhODIyOTYxZjczY2ZlYWRhMDZhMzdjNGRhNmMzZDBkNzlmYjRiYzJmYzBkNzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJkNGYzNWI0YzM0MjdhMTk1YzdlOWI5Y2ZjNDZjZWEwYzk1NDdmYzk3Mjk5YjgwYmExNmUzYTY1NWI5YTEyZDMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc3OGUyYzhkOGYwNWI4ZDliNTVmNDM4Y2ZiNTU1N2JjM2ViYjMyOTQwZThiZWRmM2NlYWY0YTg0NTVlMDhkOGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRlODgxMWUwZmM1ZWZhNDczMzlmNGZkZjMwMTAzZTYyNmM1M2Y2YTUwMzZjNGQ1ZWFhMmQ3NzU5MmI3MDhjMGUifQ"
         }
       ]
     }
   ],
   "verification": {
-    "by": "openwiki/0.4.0",
-    "at": "2026-09-22T07:19:01.173Z"
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T12:49:55.013Z"
   }
 }

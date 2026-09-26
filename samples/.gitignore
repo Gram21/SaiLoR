@@ -1,2 +1,17 @@
-annotations
+# Local answers stay local — except the screening example's PDF highlights,
+# which ship so "Show markings from screening" has something to show.
+annotations/**
+!annotations/*/
+!annotations/*/screening-marks-*.json
 pdfs/*.pdf
+
+# >>> SaiLoR (managed) >>>
+# Not just tidiness: SaiLoR refuses to merge while an untracked file sits in
+# the annotations/ folder, so one of these dropped there by the Finder or
+# Explorer blocks every pull until somebody deletes it by hand.
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
+.*.swp
+# <<< SaiLoR (managed) <<<

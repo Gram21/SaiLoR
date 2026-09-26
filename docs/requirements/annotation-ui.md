@@ -278,6 +278,13 @@ export. See the [index](index.md) for the glossary.
 
 ## Workspace shell
 
+### REQ-PDF-185 — Show the screeners' highlights
+- **Description:** When a project was started from a screening project that still sits next to it, and the screening project holds PDF highlights or notes for the current paper (matched by paper identifier, by the identifier the import assigned, or by DOI or title), the annotation panel shall offer a "Show markings from screening" checkbox with their count, and only then; when ticked, the viewer shall draw every screening seat's highlights and notes read-only and visually distinct from the user's own, naming on hover the seat that made each. Only a plain file name in the project's own directory shall be read as the screening project.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/screeningMarks.ts`, `electron/main.ts` (`project:screeningSource`), `src/state/store.ts` (`loadScreeningMarks`), `src/components/AnnotationPanel.tsx`, `src/components/PdfViewer.tsx`, commit `780f1d1`
+- **Verified by:** `src/model/screeningMarks.test.ts`, `src/state/store.screeningMarks.test.ts`, `src/components/AnnotationPanel.test.tsx` (`offers the box only on a paper the screening marked`), `e2e/gitScenarios.spec.ts` (`screening-highlights`)
+- **Status:** Implemented
+
 ### REQ-UI-10 — Global keyboard shortcuts
 - **Description:** The system shall provide keyboard shortcuts for save (Ctrl/Cmd+S), save-as (Ctrl/Cmd+Shift+S), open (Ctrl/Cmd+O), undo/redo, help (F1), PDF zoom, and application font size, suppressing bare-key shortcuts while typing or while a modal is open, and shall document all shortcuts in a Help dialog with mode-specific tables.
 - **Type:** Functional (ISO 25010: Functional Suitability)

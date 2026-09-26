@@ -22,6 +22,35 @@ The toolbar's **Git** button appears whenever the open project's folder sits ins
 disabled, with a reason on hover, when it doesn't (no project open, or the project isn't in a
 repository).
 
+Next to it, the toolbar tells you what's waiting:
+
+- **↓ N to pull** — someone has pushed commits you haven't pulled yet. SaiLoR fetches in the
+  background to keep this current: when the project opens, whenever you open the Git panel, and every
+  two minutes. That fetch only updates git's knowledge of the remote; it never touches your files.
+- **N stashed** — changes of this project are parked in a stash (see [Stashing changes](#stashing-changes)).
+- **⚠ N unreadable** — annotation files that aren't valid JSON (typically left with git conflict
+  markers in them) and were skipped when the project opened. Click it for the list. SaiLoR never
+  deletes them, but it can't show what's in them, and annotating that paper in that seat writes a new
+  file over it — fix them first.
+
+### Repository setup
+
+When a project in a repository opens, SaiLoR checks that the repository's `.gitattributes`
+and `.gitignore` (next to the project file) hold the rules it relies on:
+
+- JSON files get LF line endings on every platform, so a reviewer on Windows doesn't turn every save
+  into a whole-file diff, and git's line-by-line merge is turned off for them — it can combine two
+  reviewers' answers into valid JSON neither of them wrote. SaiLoR does its own
+  [field-by-field merge](#pull) instead.
+- Operating-system clutter (`.DS_Store`, `Thumbs.db`, `desktop.ini`, editor swap files) is ignored,
+  because one of those sitting untracked in the `annotations/` folder would block every pull. PDFs are
+  not ignored; whether to commit them is up to your team.
+
+The rules go in a clearly marked block, and nothing outside it is changed. If neither file has rules of
+its own, SaiLoR adds the block without asking; otherwise it asks first, and asks again later if you
+said no. The change is committed right
+away with SaiLoR as author and you as committer, and a small popup confirms it.
+
 ## Switching branches
 
 The panel's header shows the current branch as a dropdown of every local branch — pick a different
@@ -67,6 +96,10 @@ once. If, after your choices, nothing is left marked *Use* — either because yo
 discarded everything — the **Commit** button relabels itself to **Discard all** and turns red,
 because committing at that point would write nothing new; pressing it just performs the discards
 directly, with no message needed.
+
+Some changes have no row of their own because nobody typed them: reading notes, finished marks,
+AI-usage records, and how Consolidation matched up entries. The review says how many papers they
+changed for, and they are committed whatever you pick above.
 
 Any change to a file *other* than the open project's own — a PDF you added, say — still shows as a
 plain whole-file checkbox underneath, exactly as before field-level review existed. Each of those
@@ -116,8 +149,12 @@ anything fetched. Merging never moves you off your branch — that's what
 [Switching branches](#switching-branches) is for.
 
 Both Merge and Pull work on the **file on disk**, so both are greyed out while you have unsaved
-annotations, and both refuse outright if anything else in the repository is uncommitted — commit or
-stash that first.
+annotations, and both refuse outright while any tracked file in the repository has uncommitted
+changes, or an untracked file sits in the project's `annotations/` folder — commit or
+[stash](#stashing-changes) those first. Untracked files elsewhere (a PDF you haven't added yet, say) don't
+block anything.
+
+Pull, Merge, and Push wait for a background fetch that is still running rather than race it.
 
 ## Commit history
 
@@ -130,25 +167,69 @@ the schema/protocol/etc. having changed instead of a diff if that commit isn't o
 can make sense of. The list is capped at the latest 250 commits; past that it says so rather than
 cutting off silently.
 
+### How the project's own settings are merged
+
+Pull, Merge branch…, carrying changes into a branch switch, and combining a save with changes on disk
+all merge the project's settings part by part, with the same rule as for answers: a part only one
+side changed takes that change, and only a part both changed differently becomes a row in the
+conflict dialog.
+
+- **The schema is merged node by node.** Fields either side added are all kept, a field one side
+  removed is removed, and a field one side renamed is renamed. Where both changed the *same* field,
+  each property is its own row: its description, required flag, minimum and maximum entries, and
+  fixed choices (one per line, so you can type a combined list) take mine, theirs, or your own
+  value; its kind of answer and when it is shown are mine or theirs. A field one side removed and
+  the other changed asks whether to keep or remove it. Answers under a field that ends up removed
+  are not deleted: they stay in the files, hidden, and come back if the field does. A field renamed
+  or moved on one side follows that rename on the other side too, so answers recorded there under the
+  old name merge into it. If **both** sides renamed the same field differently, one row asks which
+  name it keeps; both sides' answers are merged under it either way.
+- **Reviewer count** takes mine, theirs, or a number you type; the **AI** and **finished checkbox**
+  switches take either value.
+- **The review protocol** is merged entry by entry — research questions, search strings, databases,
+  search date, notes — each with mine, theirs, or your own text.
+- **The screening setup** (reasons for exclusion), **where the papers were imported from**, and
+  settings SaiLoR doesn't know are mine or theirs as a whole.
+
+If the combined settings would make a project SaiLoR can't open — say, a group left with no fields —
+**Finish** says why and writes nothing, so you can decide differently.
+
 ### What Pull, Merge, and carrying changes into a new branch refuse to guess at
 
-A few kinds of disagreement can't be expressed as a field-level conflict, so instead of guessing,
-SaiLoR aborts cleanly — nothing changes — and tells you what to reconcile first. This applies equally
-to Pull, to Merge branch…, and to carrying uncommitted changes into a branch switch, since all three
-go through the same merge:
+A few kinds of disagreement can't be expressed as a conflict row, so instead of guessing, SaiLoR
+aborts cleanly — nothing changes — and tells you what to reconcile first. This applies equally to
+Pull, to Merge branch…, and to carrying uncommitted changes into a branch switch, since all three go
+through the same merge:
 
-- The **annotation schema** was changed on both sides, differently — it decides the shape of every
-  tree, so there's no per-field answer to offer.
-- The **review protocol**, or **where the project was imported from**, was edited on both sides,
-  differently — each is a single nested record, not something a conflict row can represent piece by
-  piece.
+- **A repeated entry shortened on one side and edited on the other** — SaiLoR can't tell which
+  entry the edit belongs to.
+- **The file format version** differs on both sides.
 - **A conflict outside the project** (a PDF, a `.gitignore`, anything else git couldn't merge on
   its own) — resolve it with git directly, then try again.
-- **Two different people claiming the same reviewer seat**, with different git identities — see
-  [Reviewer-seat identity](multi-reviewer.md#reviewer-seat-identity).
 
 None of these leave anything half-done: the git merge itself is aborted, so the repository ends up
 exactly where it started.
+
+## Stashing changes
+
+**Stashed changes**, a collapsible section in the Git panel, parks this project's uncommitted changes
+and gives you back a clean copy — for example to pull, or to switch branches without carrying your
+work along. Only what's on disk is stashed, so save first. Add an optional note and press **Stash my
+changes**; new annotation files are included, and other projects' files in the same folder are left
+alone.
+
+Each stash in the list offers:
+
+- **Restore** — puts the changes back into your files and removes the stash. It's all or nothing: if
+  the stash conflicts with what's there now, nothing is changed and you're told so.
+- **Restore on a new branch** — puts the changes back on a new branch made at the commit where the
+  stash was taken, which can never conflict. Use this when Restore refuses.
+- **×** — deletes the stash after asking. Its changes are in no file or commit, so they're gone for
+  good.
+
+If a branch switch that was carrying your changes can't put them back, they stay in a stash rather
+than being lost, and show up here as "Saved by SaiLoR while switching branches, and not put back
+afterwards".
 
 ## What it won't do
 
@@ -161,10 +242,27 @@ exactly where it started.
 - Switch branches while you have **unsaved annotation edits** — a clean `git status` doesn't see
   those, only what's on disk, so the switch is refused with an error telling you to save first
   (**Ctrl/Cmd+S**) rather than silently reloading the project and losing them.
-- Show live clone progress with a cancel button, or offer history browsing — out of scope for this
-  feature.
+- Commit while no branch is checked out (a "detached HEAD", after checking out a commit in a
+  terminal) — such a commit would belong to no branch and vanish from view at the next checkout.
+  Check out a branch first.
+- Show live clone progress with a cancel button — out of scope for this feature.
+
+## Trying it out
+
+`samples/git-scenarios/` in the SaiLoR repository builds ready-made situations — two reviewers and a
+shared remote, with a clean pull, a conflict, a renamed field, stashes, a shared annotations folder and
+more — into real repositories on your machine: `npm run scenario -- list`, then
+`npm run scenario -- <name>`. Each prints which project file to open and what you should see. See
+[its README](../samples/git-scenarios/README.md).
 
 ## Credentials
 
 SaiLoR never asks for your password and never stores one. Every git operation runs through your own
 credential helper and SSH agent, exactly as a terminal `git` command would.
+
+The background fetch behind **↓ N to pull** never prompts: if it can't sign in without asking, it
+fails quietly and tries again later, and your next Pull asks as usual. It is also skipped for a
+repository whose own `.git/config` names a program for git to run during a fetch (an ssh command, a
+credential helper, an included config file). A project folder that arrived by zip or shared drive
+brings that config along, and SaiLoR runs those programs only on a Pull you pressed. Settings in your
+own global git config don't count, so ordinary setups are unaffected.

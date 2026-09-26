@@ -1,21 +1,59 @@
-import { useMemo, useState, type DragEvent } from 'react'
+import { useMemo, useRef, useState, type DragEvent } from 'react'
 import { useEditorStore, type EditorPaper } from '../state/editorStore'
 import { getPlatform } from '../platform'
+import { paperIdProblem, paperIdKey, type PaperIdIssue } from '../model/paperId'
 import '../styles/papers-editor.css'
 
+/** A short label for `idProblem.reason`, for the same spot the duplicate flag
+ *  uses — `idProblem.detail` (the full explanation) goes in the `title` instead. */
+function idProblemLabel(reason: PaperIdIssue['reason']): string {
+  switch (reason) {
+    case 'illegal-char':
+    case 'control-char':
+      return 'invalid character'
+    case 'reserved-name':
+      return 'reserved name'
+    case 'trailing-dot-or-space':
+      return 'trailing space/dot'
+    case 'dot':
+    case 'empty':
+      return 'invalid id'
+  }
+}
+
 /**
- * Ids sharing a trimmed value with another paper's — mirrors `validateDraft`'s
- * (`src/state/editorStore.ts`) own dedup exactly: same trim, same "empty
- * doesn't count" rule (an empty id already gets its own "missing id" error
- * there). A row flagged here is guaranteed to be one `validateDraft` would
- * also reject at save time — this only exists to surface it earlier, live,
- * as the reviewer types, rather than only after they click Save.
+ * Ids that are unsafe as a directory name — mirrors `validateDraft`'s
+ * (`src/state/editorStore.ts`) own check exactly, via the same
+ * `paperIdProblem` (`src/model/paperId.ts`). A row flagged here is guaranteed
+ * to be one `validateDraft` would also reject at save time — this only
+ * exists to surface it earlier, live, as the reviewer types.
+ */
+export function unsafePaperIds(papers: { id: string }[]): Map<string, PaperIdIssue> {
+  const problems = new Map<string, PaperIdIssue>()
+  for (const p of papers) {
+    const id = p.id.trim()
+    // Empty ids already get their own "missing id" error; not this one.
+    if (!id) continue
+    const problem = paperIdProblem(id)
+    if (problem) problems.set(id, problem)
+  }
+  return problems
+}
+
+/**
+ * Ids that would share a folder with another paper's — the same comparison
+ * `validateDraft` (`src/state/editorStore.ts`) makes at save time, via the one
+ * shared `paperIdKey`: same trim, same "empty doesn't count" rule (an empty id
+ * already gets its own "missing id" error there), and the same case- and
+ * normalisation-insensitivity, so `P1` next to `p1` is flagged while it is
+ * typed rather than only once Save refuses it. Returns the trimmed ids as
+ * written, which is what each row looks itself up by.
  */
 export function duplicatePaperIds(papers: { id: string }[]): Set<string> {
   const trimmed = papers.map((p) => p.id.trim()).filter(Boolean)
   const counts = new Map<string, number>()
-  for (const id of trimmed) counts.set(id, (counts.get(id) ?? 0) + 1)
-  return new Set([...counts].filter(([, n]) => n > 1).map(([id]) => id))
+  for (const id of trimmed) counts.set(paperIdKey(id), (counts.get(paperIdKey(id)) ?? 0) + 1)
+  return new Set(trimmed.filter((id) => (counts.get(paperIdKey(id)) ?? 0) > 1))
 }
 
 type DropPosition = 'before' | 'after'
@@ -52,6 +90,7 @@ export function PapersEditor() {
   // Live here so a reviewer sees an id collision the moment they cause it,
   // not only after clicking Save.
   const duplicateIds = useMemo(() => duplicatePaperIds(papers), [papers])
+  const idProblems = useMemo(() => unsafePaperIds(papers), [papers])
 
   const clearDrag = () => {
     setDragUid(null)
@@ -99,6 +138,24 @@ export function PapersEditor() {
       if (!ok) return
     }
     removePaper(paper.uid)
+  }
+
+  // A paper's annotation files live in `annotations/<id>/`, so the id is the
+  // only thing tying them to the paper. Renaming it carries this checkout's
+  // own answers along (the editor holds them and writes them under the new
+  // id), but it cannot carry what is not here yet: a reviewer whose work has
+  // not been pulled is still recording under the old id, and after the rename
+  // lands nothing points at it. The old folder is also left on disk.
+  const confirmIdChange = (paper: EditorPaper, from: string): boolean => {
+    const a = paper.annotations
+    const hasAnswers = !!a && typeof a === 'object' && Object.keys(a).length > 0
+    if (!hasAnswers) return true
+    return window.confirm(
+      `"${from}" already has recorded annotations, which are stored in a folder named after the id. ` +
+        'Renaming it moves this copy of them, but leaves the old folder behind, and any reviewer whose ' +
+        'answers you have not pulled yet is still writing under the old id — theirs will not follow.' +
+        '\n\nRename it anyway?',
+    )
   }
 
   const actionButtons = (
@@ -204,8 +261,10 @@ export function PapersEditor() {
               <PaperFields
                 paper={paper}
                 duplicateId={duplicateIds.has(paper.id.trim())}
+                idProblem={idProblems.get(paper.id.trim())}
                 onRemove={() => confirmRemove(paper)}
                 onInteract={() => confirmAdded(paper.uid)}
+                onIdChange={(from) => confirmIdChange(paper, from)}
               />
             </li>
           ))}
@@ -235,13 +294,22 @@ interface PaperFieldsProps {
   /** This paper's id collides with another paper's — see `duplicateIds` in
    *  `PapersEditor`. */
   duplicateId: boolean
+  /** This paper's id is unsafe as a directory name — see `idProblems` in
+   *  `PapersEditor`. Checked separately from `duplicateId`: an id can be
+   *  unique and still unsafe (e.g. it contains a `?`). */
+  idProblem: PaperIdIssue | undefined
   onRemove: () => void
+  /** Asks whether an id may change from `from`; false puts the old one back. */
+  onIdChange: (from: string) => boolean
   /** The reviewer reached this row — drop its "just added" highlight. */
   onInteract: () => void
 }
 
 /** The editable fields of one paper. */
-function PaperFields({ paper, duplicateId, onRemove, onInteract }: PaperFieldsProps) {
+function PaperFields({ paper, duplicateId, idProblem, onRemove, onInteract, onIdChange }: PaperFieldsProps) {
+  // Confirmed on blur, not per keystroke — the same "ask once the new name is
+  // settled" shape `SchemaTreeEditor`'s rename guard uses.
+  const idOnFocus = useRef<string | null>(null)
   const updatePaper = useEditorStore((s) => s.updatePaper)
   const patch = (p: Partial<EditorPaper>) => updatePaper(paper.uid, p)
 
@@ -274,14 +342,42 @@ function PaperFields({ paper, duplicateId, onRemove, onInteract }: PaperFieldsPr
           <span className="papers-label">
             id <span className="papers-note">unique</span>
             {duplicateId && <span className="papers-field-warning"> — duplicate</span>}
+            {!duplicateId && idProblem && (
+              <span className="papers-field-warning"> — {idProblemLabel(idProblem.reason)}</span>
+            )}
           </span>
           <input
             type="text"
-            className={`papers-input mono small${duplicateId ? ' papers-input-invalid' : ''}`}
+            className={`papers-input mono small${duplicateId || idProblem ? ' papers-input-invalid' : ''}`}
             value={paper.id}
-            aria-invalid={duplicateId}
-            title={duplicateId ? 'Another paper already uses this id — ids must be unique.' : undefined}
-            onFocus={onInteract}
+            aria-invalid={duplicateId || Boolean(idProblem)}
+            title={
+              duplicateId
+                ? 'Another paper already uses this id — ids must be unique.'
+                : idProblem
+                  ? `This id can't be used as a folder name — ${idProblem.detail}.`
+                  : undefined
+            }
+            onFocus={() => {
+              idOnFocus.current = paper.id
+              onInteract()
+            }}
+            onBlur={() => {
+              const from = idOnFocus.current
+              idOnFocus.current = null
+              if (from === null || from.trim() === paper.id.trim()) return
+              if (!onIdChange(from)) {
+                patch({ id: from })
+                return
+              }
+              // Normalise on commit, not per keystroke: a manually typed accented
+              // id otherwise keeps whatever Unicode normalisation the OS handed
+              // back (macOS's filesystem hands back NFD, everywhere else NFC),
+              // so the same characters would name two different directories
+              // depending which platform the id was typed on.
+              const normalized = paper.id.normalize('NFC')
+              if (normalized !== paper.id) patch({ id: normalized })
+            }}
             onChange={(e) => patch({ id: e.target.value })}
           />
         </label>

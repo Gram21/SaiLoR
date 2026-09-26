@@ -48,18 +48,22 @@ sources:
     resource: repo://src/test/integration/branchSwitch.integration.test.tsx
   - id: openwiki-source-53ef7107c19ecc162c30a798
     resource: repo://src/test/integration/discard.integration.test.tsx
+  - id: openwiki-source-ad522d5bd954cffe8c9b3c21
+    resource: repo://src/test/integration/fetchPolicy.integration.test.tsx
   - id: openwiki-source-9a55020f0c1b47e4d7e69432
     resource: repo://src/test/integration/pull.integration.test.tsx
   - id: openwiki-source-ec5d94faab1290fa27f62da5
     resource: repo://src/test/integration/screeningImport.integration.test.tsx
+  - id: openwiki-source-3bb48bcdee793d7c98d5d0b3
+    resource: repo://src/test/integration/stashOps.integration.test.tsx
   - id: openwiki-source-5e1b077422a94ae165e88e4e
     resource: repo://vite.config.ts
   - id: openwiki-source-9b13c737ac155b0b0c8d76b9
     resource: repo://vitest.integration.config.ts
-generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
+generated: { by: "openwiki/0.5.2", at: "2026-09-23T12:49:55.013Z" }
 verified:
-  - by: openwiki/0.4.0
-    at: 2026-09-21T20:12:55.536Z
+  - by: openwiki/0.5.2
+    at: 2026-09-23T12:49:55.013Z
 ---
 
 # Testing Strategy
@@ -196,6 +200,8 @@ The integration tests in `src/test/integration/`:
 | `discard.integration.test.tsx` | Discarding an uncommitted field-level change back to its last-committed value (`writeWorking`, not `commit`) |
 | `pdfReadingPosition.integration.test.tsx` | "Continue where you left off" — reopening lands on the same paper/page |
 | `screeningImport.integration.test.tsx` | Screening include/exclude decisions → "New from screening…" import flow |
+| `fetchPolicy.integration.test.tsx` | Background-fetch safety guard against a repo whose own config names a fetch command (`core.sshCommand`, `credential.helper`, `include.path`, …) — tested against real `git config --get-regexp` |
+| `stashOps.integration.test.tsx` | `pushStash`/`restoreStash`/`dropStash`/`branchFromStash` and the branch-switch carry-over against real git — a stash that no longer fits rolls all the way back, never leaving conflict markers |
 
 ### Tier 3 — Playwright / Electron e2e
 
@@ -333,9 +339,18 @@ Pure-logic tests of the data model. Fixtures are built through the real load
 path (`loadProject` / `serializeProject`), not hand-assembled `Project` objects,
 so every input is exactly as schema-normalized as a real file would be. Cover:
 schema resolution (defaults, path ids, duplicate sibling names, enum options,
-`max < min` rejection, `required` defaults), `normalizeTree` / `pruneTree` /
-`canAdd` / `canRemove`, round-trip (`loadProject` → `serializeProject`),
-validation (`ProjectLoadError`), and PDF-mark/metadata/text helpers.
+`max < min` rejection, `required` defaults, `visibleIf` conditional-visibility
+resolution — bare-name, absolute-path, nested `all`/`any` groups, equals
+filtering, cross-branch/ancestor reads), `isFieldVisible` (fail-open semantics,
+per-instance repeatable reads), `normalizeTree` / `pruneTree` / `canAdd` /
+`canRemove`, `loadProject` input validation (`ProjectLoadError`), `loadProject` →
+`serializeProject` round-trip, `Paper.finished` (a human declaration, not
+derived), `Paper.aiUsage` (AI-use disclosure), `config.ai` (AI opt-out),
+`config.reviewers` / `Paper.reviews` (multi-reviewer skeleton, per-reviewer
+normalization, deterministic serialization), `Paper.equal`, screening,
+`Project.provenance` / `Project.protocol` / `Project.schemaInfo` (degrade
+field-by-field rather than all-or-nothing), and a regression for hand-edited
+primitive instances the loader must not crash on.
 
 ```ts
 // src/model/model.test.ts — representative schema-resolution + round-trip test
@@ -410,8 +425,9 @@ files cover the nontrivial decision logic the components export:
   not "1 field") and `isProjectOwnPath`.
 - `PdfViewer.test.ts` — `destinationPoint` (XYZ/FitH/FitV/FitR destination
   parsing), `markVerticallyVisible`, `dedupeOverlappingRects`.
-- `PapersEditor.test.ts` — `duplicatePaperIds` (trimmed, case-sensitive, empty
-  ids not flagged).
+- `PapersEditor.test.ts` — `duplicatePaperIds` (trimmed, case-insensitive, empty
+  ids not flagged; case-insensitive because both land in one folder on a
+  case-insensitive checkout and `validateDraft` refuses them at save time).
 - Plus `ConsolidationDialog`, `ConsolidationVerdicts`, `GitMergeDialog`,
   `AgreementDialog`, `NodeName`, `Toolbar`, and `PaperList` performance /
   completeness / finished variants.

@@ -18,6 +18,7 @@ describe('deriveGitInfo', () => {
       head: ok(''),
       branch: ok('feature-x'),
       upstream: ok('origin/feature-x'),
+      behind: fail,
     })
     expect(result).toEqual({
       root: '/repo/root',
@@ -25,6 +26,7 @@ describe('deriveGitInfo', () => {
       branch: 'feature-x',
       upstream: 'origin/feature-x',
       hasHead: true,
+      behind: null,
     })
   })
 
@@ -35,6 +37,7 @@ describe('deriveGitInfo', () => {
       head: ok(''),
       branch: ok('main'),
       upstream: fail,
+      behind: fail,
     })
     expect(result.relPath).toBe('review.json')
   })
@@ -46,6 +49,7 @@ describe('deriveGitInfo', () => {
       head: ok(''),
       branch: fail,
       upstream: fail,
+      behind: fail,
     })
     expect(result.branch).toBeNull()
     expect(result.upstream).toBeNull()
@@ -58,6 +62,7 @@ describe('deriveGitInfo', () => {
       head: ok(''),
       branch: ok('main'),
       upstream: fail,
+      behind: fail,
     })
     expect(result.branch).toBe('main')
     expect(result.upstream).toBeNull()
@@ -70,6 +75,7 @@ describe('deriveGitInfo', () => {
       head: fail,
       branch: fail,
       upstream: fail,
+      behind: fail,
     })
     expect(result.hasHead).toBe(false)
   })
@@ -81,9 +87,50 @@ describe('deriveGitInfo', () => {
       head: ok(''),
       branch: ok('main\n'),
       upstream: ok('origin/main\n'),
+      behind: fail,
     })
     expect(result.root).toBe('/repo')
     expect(result.branch).toBe('main')
     expect(result.upstream).toBe('origin/main')
+  })
+})
+
+describe('deriveGitInfo: behind', () => {
+  it('reports what the last fetch knows the upstream is ahead by', () => {
+    const result = deriveGitInfo('review.json', {
+      top: ok('/repo'),
+      prefix: ok(''),
+      head: ok(''),
+      branch: ok('main'),
+      upstream: ok('origin/main'),
+      behind: ok('3'),
+    })
+    expect(result.behind).toBe(3)
+  })
+
+  it('is null without an upstream, whatever rev-list printed', () => {
+    // `HEAD..@{u}` cannot mean anything there, so a count would be noise.
+    const result = deriveGitInfo('review.json', {
+      top: ok('/repo'),
+      prefix: ok(''),
+      head: ok(''),
+      branch: ok('main'),
+      upstream: fail,
+      behind: ok('3'),
+    })
+    expect(result.behind).toBeNull()
+  })
+
+  it('is null rather than 0 when the count could not be read', () => {
+    // "Nothing known" and "nothing there" must not look the same.
+    const result = deriveGitInfo('review.json', {
+      top: ok('/repo'),
+      prefix: ok(''),
+      head: ok(''),
+      branch: ok('main'),
+      upstream: ok('origin/main'),
+      behind: fail,
+    })
+    expect(result.behind).toBeNull()
   })
 })

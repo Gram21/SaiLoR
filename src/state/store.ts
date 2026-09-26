@@ -3,7 +3,6 @@ import { immer } from 'zustand/middleware/immer'
 import {
   loadProject,
   serializeProject,
-  needsShapeMigration,
   deepEqualJson,
   ProjectLoadError,
   type Project,
@@ -48,6 +47,19 @@ import {
   type UpdateInfo,
 } from '../model/version'
 import { getPlatform, type SaveHandle } from '../platform'
+import { StaleSaveError } from '../platform/adapter'
+import { resolveClash } from '../model/staleSave'
+import { DEFAULT_ANNOTATIONS_DIR, defaultSplitDirName } from '../model/annotationsDir'
+import { planSplit, type SplitRow } from '../model/annotationSplit'
+import { screeningMarksByPaper, type ScreeningMark } from '../model/screeningMarks'
+import {
+  applyResolutions,
+  mergeProjects,
+  mergeResultProblem,
+  type FieldConflict,
+  type MergeNote,
+  type Resolutions,
+} from '../git/merge'
 import type { RecentEntry } from '../platform/recents'
 import {
   type Theme,
@@ -210,23 +222,151 @@ function reviewerStorageKey(handle: SaveHandle | null): string | null {
   return handle?.path ? `${REVIEWER_KEY_PREFIX}${handle.path}` : null
 }
 
-/** The persisted reviewer selection for this project, or null when there is
- *  none, the project has no stable key, or the stored value no longer fits
- *  (e.g. the reviewer count shrank since it was saved). */
-function loadCurrentReviewer(handle: SaveHandle | null, reviewerCount: number): string | null {
-  const key = reviewerStorageKey(handle)
-  if (!key) return null
-  const stored = safeGet(key)
-  if (stored === 'consolidation') return stored
-  const n = stored === null ? NaN : Number(stored)
-  return Number.isInteger(n) && n >= 1 && n <= reviewerCount ? stored : null
+/** How many paper ids a remembered seat carries to recognise its project by. */
+const REVIEWER_FINGERPRINT_SAMPLE = 8
+
+/**
+ * Paper ids identifying the project a seat was picked in.
+ *
+ * The key is the file's path, and a path is not an identity: save a different
+ * project over it, or delete and recreate one there, and the old seat was
+ * silently inherited — the picker never appeared and every edit landed in
+ * whichever seat the *previous* project's reviewer had chosen. (The reading
+ * position next door already guards this; the seat never did.)
+ *
+ * Sorted and capped so the value stays small, and matched by *overlap* rather
+ * than equality: papers get added and removed all the time in a live review,
+ * and a fingerprint that changed then would re-ask for the seat constantly —
+ * which is how a guard turns into something reviewers click through. A
+ * genuinely different project shares none of these ids.
+ */
+function reviewerFingerprint(project: Project): string[] {
+  return project.papers
+    .map((p) => p.id)
+    .sort()
+    .slice(0, REVIEWER_FINGERPRINT_SAMPLE)
 }
 
-function saveCurrentReviewer(handle: SaveHandle | null, reviewer: string | null): void {
+/**
+ * The seats remembered for one project on this machine.
+ *
+ * A seat is a role per paper, not a person: when a review divides its papers
+ * among more reviewers than it has seats, the same person reads some papers
+ * as Reviewer 1 and others as Reviewer 2. One remembered seat per project
+ * made them switch by hand every time they moved between those papers, and
+ * the price of forgetting was writing a reading into the wrong seat. So each
+ * paper remembers the seat it was last read in, and arriving at it restores
+ * that seat. `last` is the seat in use most recently — what a paper with no
+ * seat of its own is opened in, so a reviewer who only ever takes one seat
+ * never notices any of this.
+ */
+interface RememberedSeats {
+  last: string | null
+  perPaper: Record<string, string>
+}
+
+const NO_SEATS: RememberedSeats = { last: null, perPaper: {} }
+
+/** The stored shape. A bare string is the pre-fingerprint format, and a value
+ *  without `perPaper` predates per-paper seats — see `loadRememberedSeats`. */
+interface StoredReviewer {
+  reviewer: string | null
+  papers: string[]
+  perPaper?: Record<string, string>
+}
+
+function parseStoredReviewer(raw: string): StoredReviewer | 'legacy' | null {
+  if (!raw.startsWith('{')) return raw ? 'legacy' : null
+  try {
+    const parsed = JSON.parse(raw) as Partial<StoredReviewer>
+    const reviewer = typeof parsed.reviewer === 'string' ? parsed.reviewer : null
+    if (!Array.isArray(parsed.papers)) return null
+    const perPaper: Record<string, string> = {}
+    if (parsed.perPaper && typeof parsed.perPaper === 'object') {
+      for (const [id, seat] of Object.entries(parsed.perPaper)) {
+        if (typeof seat === 'string') perPaper[id] = seat
+      }
+    }
+    return { reviewer, papers: parsed.papers.filter((p) => typeof p === 'string'), perPaper }
+  } catch {
+    return null
+  }
+}
+
+/** Is `seat` one this project still has? A seat beyond a reviewer count that
+ *  has since shrunk is not. */
+function seatFits(seat: string | null | undefined, project: Project): seat is string {
+  if (!seat) return false
+  if (seat === 'consolidation') return true
+  const n = Number(seat)
+  return Number.isInteger(n) && n >= 1 && n <= project.reviewers
+}
+
+/**
+ * The seats remembered for this project, dropping anything that no longer
+ * fits: the whole record when the project at this path is not the one the
+ * seats were picked in (see `reviewerFingerprint`), and single entries for a
+ * paper that is gone or a seat the reviewer count no longer has.
+ *
+ * A value written before fingerprints existed is honoured rather than thrown
+ * away — re-asking every existing reviewer for a seat they already picked
+ * would be a worse first impression than the narrow case it protects — and
+ * `loadFromText` rewrites it in the current format immediately, so each
+ * project upgrades itself the first time it is opened.
+ */
+function loadRememberedSeats(handle: SaveHandle | null, project: Project): RememberedSeats {
+  const key = reviewerStorageKey(handle)
+  if (!key) return NO_SEATS
+  const raw = safeGet(key)
+  if (raw === null) return NO_SEATS
+  const stored = parseStoredReviewer(raw)
+  if (stored === null) return NO_SEATS
+  if (stored === 'legacy') return { last: seatFits(raw, project) ? raw : null, perPaper: {} }
+
+  const ids = new Set(project.papers.map((p) => p.id))
+  // An empty remembered list can only come from a project that had no papers
+  // at all, which identifies nothing — treat it as not knowing.
+  if (stored.papers.length === 0 || !stored.papers.some((id) => ids.has(id))) return NO_SEATS
+  const perPaper: Record<string, string> = {}
+  for (const [id, seat] of Object.entries(stored.perPaper ?? {})) {
+    if (ids.has(id) && seatFits(seat, project)) perPaper[id] = seat
+  }
+  return { last: seatFits(stored.reviewer, project) ? stored.reviewer : null, perPaper }
+}
+
+function saveRememberedSeats(handle: SaveHandle | null, seats: RememberedSeats, project: Project | null): void {
   const key = reviewerStorageKey(handle)
   if (!key) return
-  if (reviewer === null) safeRemove(key)
-  else safeSet(key, reviewer)
+  if (!project || (seats.last === null && Object.keys(seats.perPaper).length === 0)) {
+    safeRemove(key)
+    return
+  }
+  const stored: StoredReviewer = { reviewer: seats.last, papers: reviewerFingerprint(project), perPaper: seats.perPaper }
+  safeSet(key, JSON.stringify(stored))
+}
+
+/**
+ * Record `seat` as the one in use, and as `paperId`'s own. Called whenever the
+ * reviewer picks a seat, and whenever arriving at a paper switched to one.
+ */
+function rememberSeat(handle: SaveHandle | null, project: Project | null, paperId: string | null, seat: string | null): void {
+  if (!project || project.reviewers <= 1) return
+  const seats = loadRememberedSeats(handle, project)
+  const next: RememberedSeats = { last: seat, perPaper: { ...seats.perPaper } }
+  if (paperId && seat) next.perPaper[paperId] = seat
+  saveRememberedSeats(handle, next, project)
+}
+
+/**
+ * The seat to switch to on arriving at `paperId`: the one it was last read in,
+ * when that differs from the seat in use and still fits the project. Null
+ * means stay — including for a paper that has never been read here, which
+ * keeps whatever seat the reviewer is in.
+ */
+function seatOnArrival(handle: SaveHandle | null, project: Project | null, paperId: string, current: string | null): string | null {
+  if (!project || project.reviewers <= 1) return null
+  const seat = loadRememberedSeats(handle, project).perPaper[paperId]
+  return seatFits(seat, project) && seat !== current ? seat : null
 }
 
 const READING_POSITION_KEY_PREFIX = 'slr.readingPosition.'
@@ -277,6 +417,48 @@ function saveReadingPosition(
   const key = readingPositionKey(handle)
   if (!key || !paperId) return
   safeSet(key, JSON.stringify({ paperId, page, offsetFraction }))
+}
+
+/**
+ * A save failure, as something a reviewer can read.
+ *
+ * `ErrorPanel` renders `details` one line per entry, so a multi-line message
+ * has to be split to survive, or it reads as a wall of text at exactly the
+ * moment somebody needs to act on it.
+ */
+function saveFailure(err: unknown): LoadError {
+  const text = err instanceof Error ? err.message : String(err)
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
+  const [headline, ...rest] = lines
+  return { message: headline ?? 'Failed to save.', details: rest }
+}
+
+export interface AnnotationsSplit {
+  /** The shared folder's name. */
+  shared: string
+  /** Every project file using it (the open one first) and its proposed own folder. */
+  projects: { path: string; name: string; folder: string }[]
+  rows: SplitRow[]
+  error: string | null
+  working: boolean
+}
+
+export interface StaleSave {
+  /** The clashing files, relative to the project's folder. */
+  paths: string[]
+  /** Why combining is not possible, once the reviewer tried. */
+  refusal: string | null
+  /** Field conflicts left after combining, for the reviewer to decide. */
+  merge: {
+    merged: Project
+    conflicts: FieldConflict[]
+    resolutions: Resolutions
+    decided: Record<string, true>
+    notes: MergeNote[]
+  } | null
+  error: string | null
+  /** Closed without deciding; the next save asks again rather than writing. */
+  dismissed: boolean
 }
 
 export interface LoadError {
@@ -333,6 +515,10 @@ const roundZoom = (z: number) => Math.round(z * 100) / 100
  */
 let lastFieldKey: string | null = null
 
+/** The project as it was last read from or written to disk — the common
+ *  ancestor when a save finds that someone else changed the files since. */
+let diskProject: Project | null = null
+
 /**
  * Bumped only when the open project is *replaced or closed*, never for an
  * ordinary edit — lets `extractScreeningAbstract`'s background read tell if its
@@ -349,6 +535,17 @@ interface AppState {
   /** The project's own title from its JSON; empty when it doesn't set one. */
   projectTitle: string
   dirty: boolean
+  /**
+   * Annotation files that would not parse when the project was opened — a
+   * leftover git merge conflict is the usual cause. They load as *absent*, so
+   * the reviewer they belong to reads as having done nothing, everywhere.
+   *
+   * Kept for the session rather than only raised once as a `loadError`: that
+   * banner is dismissible, and a reviewer who clicks it away has no way left
+   * to find out the project is still missing somebody's work. Paths are
+   * relative to `annotations/`.
+   */
+  corruptFiles: string[]
   /** `Date.now()` of the last successful save — drives the toolbar's transient
    *  "Saved" confirmation. `null` before any save this session. */
   lastSavedAt: number | null
@@ -356,6 +553,17 @@ interface AppState {
    *  without waiting for Ctrl+S. See `useAutosave`. */
   autosaveEnabled: boolean
   loadError: LoadError | null
+  /** A save that found its files changed on disk and is waiting for the
+   *  reviewer to decide — see `resolveStaleSave`. */
+  staleSave: StaleSave | null
+  /** The open project's annotations folder is shared with other project files
+   *  next to it, and this is the proposed split — see `SplitAnnotationsDialog`. */
+  annotationsSplit: AnnotationsSplit | null
+  /** PDF highlights from the screening project this one was started from, by
+   *  this project's paper id; `null` when there is no such project. */
+  screeningMarks: Record<string, ScreeningMark[]> | null
+  /** Whether they are shown over the PDF. */
+  showScreeningMarks: boolean
   busy: boolean
   sidebarCollapsed: boolean
   /** Latest text selected inside the PDF viewer (for "grab from PDF"). */
@@ -550,6 +758,27 @@ interface AppState {
    *  would let Ctrl+Z resurrect what the resync just discarded. */
   resyncProjectFromDisk: () => Promise<void>
   save: () => Promise<boolean>
+  /** Answer a `staleSave`: overwrite the clashing files with mine, keep the
+   *  disk's version of them, or combine both field by field. */
+  resolveStaleSave: (choice: 'overwrite' | 'discard' | 'combine') => Promise<void>
+  resolveStaleConflict: (id: string, value: FieldValue) => void
+  takeAllStaleConflicts: (side: 'ours' | 'theirs', ids: string[]) => void
+  finishStaleCombine: () => Promise<void>
+  /** Leave the conflict list and choose again. */
+  backToStaleChoice: () => void
+  dismissStaleSave: () => void
+  dismissStaleSaveError: () => void
+  /** Look for other project files sharing this project's annotations folder,
+   *  and propose a split if there are. */
+  checkSharedAnnotations: () => Promise<void>
+  /** Read the screening project this one was started from, for its highlights. */
+  loadScreeningMarks: () => Promise<void>
+  setShowScreeningMarks: (show: boolean) => void
+  setSplitFolder: (projectPath: string, folder: string) => void
+  setSplitTargets: (relPath: string, targets: string[]) => void
+  runSplit: () => Promise<void>
+  /** Not now: asked again the next time the project is opened. */
+  dismissSplit: () => void
   saveAs: () => Promise<boolean>
   setAutosaveEnabled: (enabled: boolean) => void
   selectPaper: (id: string) => void
@@ -565,6 +794,9 @@ interface AppState {
   zoomOutPdf: () => void
   resetPdfZoom: () => void
   setHelpOpen: (open: boolean) => void
+  /** Re-raise the "some annotation files could not be read" warning — see
+   *  `corruptFiles`. */
+  showCorruptFiles: () => void
   /** Check every paper's annotations against the schema and show the result. */
   runValidation: () => void
   setValidationOpen: (open: boolean) => void
@@ -895,6 +1127,24 @@ function containerAt(root: AnnotationValueTree, path: PathSeg[]): AnnotationValu
   return tree
 }
 
+/**
+ * Replace the open project with how a clash was resolved and save it. Undo
+ * history goes with it, as on any reload: its snapshots branch off a project
+ * that no longer matches the files.
+ */
+async function adoptAndSave(result: Project): Promise<void> {
+  lastFieldKey = null
+  useStore.setState((s) => {
+    s.project = result
+    s.dirty = true
+    s.staleSave = null
+    s.past = []
+    s.future = []
+    if (!result.papers.some((p) => p.id === s.currentPaperId)) s.currentPaperId = result.papers[0]?.id ?? null
+  })
+  await useStore.getState().save()
+}
+
 export const useStore = create<AppState>()(
   immer((set, get) => ({
     project: null,
@@ -903,7 +1153,12 @@ export const useStore = create<AppState>()(
     projectName: '',
     projectTitle: '',
     dirty: false,
+    corruptFiles: [],
     loadError: null,
+    staleSave: null,
+    annotationsSplit: null,
+    screeningMarks: null,
+    showScreeningMarks: false,
     busy: false,
     sidebarCollapsed: false,
     pdfSelection: '',
@@ -973,11 +1228,23 @@ export const useStore = create<AppState>()(
         get().loadFromText(opened.text, opened.handle, opened.name)
         set((s) => {
           s.recents = platform.getRecents()
-          // After `loadFromText`, which clears `loadError` on success.
-          if (!s.loadError && opened.corruptFiles && opened.corruptFiles.length > 0) {
-            s.loadError = corruptFilesWarning(opened.corruptFiles)
+          // After `loadFromText`, which resets both on success.
+          s.corruptFiles = opened.corruptFiles ?? []
+          if (!s.loadError && s.corruptFiles.length > 0) {
+            s.loadError = corruptFilesWarning(s.corruptFiles)
+          }
+          if (!s.loadError && s.project?.refusedAnnotationsDir !== undefined) {
+            s.loadError = {
+              message: `This project names "${s.project.refusedAnnotationsDir}" as its annotations folder, which is not allowed.`,
+              details: [
+                'An annotations folder must be a plain folder name directly next to the project file. ' +
+                  `SaiLoR uses "${DEFAULT_ANNOTATIONS_DIR}/" instead.`,
+              ],
+            }
           }
         })
+        void get().checkSharedAnnotations()
+        void get().loadScreeningMarks()
       } catch (err) {
         set((s) => {
           s.busy = false
@@ -1078,15 +1345,20 @@ export const useStore = create<AppState>()(
 
     closeProject: () => {
       lastFieldKey = null
+      diskProject = null
       projectGeneration++
       set((s) => {
         s.projectGeneration = projectGeneration
         s.project = null
+        s.staleSave = null
+        s.annotationsSplit = null
+        s.screeningMarks = null
         s.currentPaperId = null
         s.saveHandle = null
         s.projectName = ''
         s.projectTitle = ''
         s.dirty = false
+        s.corruptFiles = []
         s.pdfSelection = ''
         s.past = []
         s.future = []
@@ -1123,6 +1395,9 @@ export const useStore = create<AppState>()(
         s.screeningShowPdf = false
         s.screeningSummaryOpen = false
         s.screeningAbstractReads = {}
+        // Refilled by whichever open path called this, once it knows (see
+        // `corruptFiles`); a project loaded from text alone has none.
+        s.corruptFiles = []
       })
       void get().refreshRecents()
     },
@@ -1150,10 +1425,22 @@ export const useStore = create<AppState>()(
         get().loadFromText(opened.text, opened.handle, opened.name)
         set((s) => {
           s.recents = platform.getRecents()
-          if (!s.loadError && opened.corruptFiles && opened.corruptFiles.length > 0) {
-            s.loadError = corruptFilesWarning(opened.corruptFiles)
+          s.corruptFiles = opened.corruptFiles ?? []
+          if (!s.loadError && s.corruptFiles.length > 0) {
+            s.loadError = corruptFilesWarning(s.corruptFiles)
+          }
+          if (!s.loadError && s.project?.refusedAnnotationsDir !== undefined) {
+            s.loadError = {
+              message: `This project names "${s.project.refusedAnnotationsDir}" as its annotations folder, which is not allowed.`,
+              details: [
+                'An annotations folder must be a plain folder name directly next to the project file. ' +
+                  `SaiLoR uses "${DEFAULT_ANNOTATIONS_DIR}/" instead.`,
+              ],
+            }
           }
         })
+        void get().checkSharedAnnotations()
+        void get().loadScreeningMarks()
       } catch (err) {
         set((s) => {
           s.busy = false
@@ -1165,9 +1452,14 @@ export const useStore = create<AppState>()(
     loadFromText: (text, handle, name) => {
       try {
         const project = loadProject(text)
-        // Seat must be resolved before the landing paper, since "finished" is
-        // per-seat. Computed once here so this and the `set` below can't disagree.
-        const reviewer = project.reviewers > 1 ? loadCurrentReviewer(handle, project.reviewers) : null
+        // The seat last in use decides where "first unfinished" is, since
+        // finished is per seat; the landing paper's own seat, when it has one,
+        // then wins for the paper actually opened.
+        const seats = project.reviewers > 1 ? loadRememberedSeats(handle, project) : NO_SEATS
+        // Rewrite in the current format — which upgrades a value written
+        // before fingerprints or per-paper seats existed, and drops one this
+        // project did not match so it cannot linger and be inherited later.
+        if (project.reviewers > 1) saveRememberedSeats(handle, seats, project)
         // A remembered reading position wins over "first unfinished paper" —
         // that heuristic is only for when there's nothing better to go on.
         // Ignored if the paper no longer exists (deleted, or a different
@@ -1177,11 +1469,14 @@ export const useStore = create<AppState>()(
           !!savedPosition && project.papers.some((p) => p.id === savedPosition.paperId)
         const landingPaperId = savedPaperStillExists
           ? savedPosition!.paperId
-          : firstUnfinishedPaperId(project, reviewer)
+          : firstUnfinishedPaperId(project, seats.last)
+        const reviewer =
+          project.reviewers > 1 ? ((landingPaperId && seats.perPaper[landingPaperId]) || seats.last) : null
         // The title only becomes known once the JSON is parsed, so the recents
         // entry is enriched here rather than in the adapter's open path.
         if (handle) getPlatform().rememberProject(handle, name, project.title)
         projectGeneration++
+        diskProject = project
         set((s) => {
           s.projectGeneration = projectGeneration
           s.project = project
@@ -1196,6 +1491,9 @@ export const useStore = create<AppState>()(
               : null
           s.dirty = false
           s.loadError = null
+          s.staleSave = null
+          s.annotationsSplit = null
+          s.screeningMarks = null
           s.busy = false
           s.pdfSelection = ''
           s.past = []
@@ -1238,56 +1536,6 @@ export const useStore = create<AppState>()(
         // gives every one after it — the reviewer never selected this one by
         // hand, so nothing else would ever fire for it.
         if (landingPaperId) void get().extractScreeningAbstract(landingPaperId)
-        // Deferred one tick (same `setTimeout(…, 0)` precedent as
-        // `yieldToBrowser` below) so the `set` above gets to paint the newly
-        // opened project before this runs: `needsShapeMigration` walks every
-        // paper's (and, for multi-reviewer, every reviewer's) annotation tree,
-        // which is real work on a large file, and its only consequence is
-        // deciding whether to kick off the already-fire-and-forget resave
-        // below — nothing here needs to happen before the UI shows the project.
-        setTimeout(() => {
-          const rawData = JSON.parse(text) as unknown
-          // `loadProject` already normalizes every paper's `annotations` and
-          // (for a multi-reviewer project) backfills a skeleton for every
-          // reviewer who has not written anything — see `normalizeReviews`.
-          // `needsShapeMigration` asks, structurally, whether the file on disk
-          // already had that shape — deliberately *not* a text comparison
-          // against the canonical re-serialization, which would also trip on
-          // nothing more than whitespace or key order and resave files that
-          // were already perfectly fine.
-          const needsMigration = needsShapeMigration(project, rawData)
-          // Write the migrated shape back in place — never a download, and never
-          // a "where should this go" prompt, just because a file's shape needed
-          // updating. A project with nowhere stable to write (a `?project=` URL,
-          // or a browser pick with no in-place handle) simply keeps the better
-          // shape in memory; it converges again, harmlessly, next time it opens.
-          if (needsMigration && handle && handle.kind !== 'download') {
-            getPlatform()
-              .saveProject(serializeProject(project), handle)
-              .then((newHandle) => {
-                // A second load may have already replaced this project (the user
-                // opened something else before this write landed) — in which
-                // case the result belongs to a project nobody is looking at
-                // anymore, and applying it would resurrect a stale handle.
-                if (get().project === project) {
-                  set((s) => {
-                    s.saveHandle = newHandle
-                  })
-                }
-              })
-              .catch(() => {
-                // No alarming banner for a fix the reviewer never asked for and
-                // has no different action to take — the ordinary unsaved-changes
-                // guard already exists for exactly "memory doesn't match disk",
-                // and will ask about it the same way any other edit would.
-                if (get().project === project) {
-                  set((s) => {
-                    s.dirty = true
-                  })
-                }
-              })
-          }
-        }, 0)
       } catch (err) {
         const le: LoadError =
           err instanceof ProjectLoadError
@@ -1307,6 +1555,7 @@ export const useStore = create<AppState>()(
       if (!opened) return
       try {
         const project = loadProject(opened.text)
+        diskProject = project
         set((s) => {
           s.project = project
           s.saveHandle = opened.handle
@@ -1333,6 +1582,13 @@ export const useStore = create<AppState>()(
       const { project, saveHandle } = get()
       if (!project) return false
       if (!saveHandle) return get().saveAs()
+      // Undecided from an earlier attempt: writing now would skip the question.
+      if (get().staleSave) {
+        set((s) => {
+          if (s.staleSave) s.staleSave.dismissed = false
+        })
+        return false
+      }
       const platform = getPlatform()
       set((s) => {
         s.busy = true
@@ -1340,6 +1596,7 @@ export const useStore = create<AppState>()(
       try {
         const text = serializeProject(project)
         const handle = await platform.saveProject(text, saveHandle)
+        diskProject = project
         // Nothing blocks input while the write above is in flight (Field.tsx
         // writes every keystroke straight to the store, and screening's I/E/U
         // keys aren't gated on `busy` either), so a reviewer can type a new
@@ -1360,9 +1617,248 @@ export const useStore = create<AppState>()(
       } catch (err) {
         set((s) => {
           s.busy = false
-          s.loadError = { message: 'Failed to save.', details: [String(err)] }
+          if (err instanceof StaleSaveError) {
+            s.staleSave = { paths: err.paths, refusal: null, merge: null, error: null, dismissed: false }
+          } else {
+            s.loadError = saveFailure(err)
+          }
         })
         return false
+      }
+    },
+
+    resolveStaleSave: async (choice) => {
+      const { project, saveHandle, staleSave } = get()
+      if (!project || !saveHandle?.path || !staleSave) return
+      set((s) => {
+        s.busy = true
+      })
+      // Read afresh: the files may have moved on again since the save that
+      // clashed. Reading also makes this the version the next save checks
+      // against, so what is written below is judged against what was read here.
+      let disk: Project
+      try {
+        const opened = await getPlatform().openRecent(saveHandle.path)
+        if (!opened) throw new Error('The project file could not be read.')
+        disk = loadProject(opened.text)
+      } catch (err) {
+        set((s) => {
+          s.busy = false
+          if (s.staleSave) s.staleSave.error = err instanceof Error ? err.message : String(err)
+        })
+        return
+      }
+      set((s) => {
+        s.busy = false
+      })
+      if (choice !== 'combine') {
+        await adoptAndSave(resolveClash(diskProject, project, disk, staleSave.paths, choice === 'overwrite' ? 'mine' : 'disk'))
+        return
+      }
+      const outcome = mergeProjects(diskProject, project, disk)
+      if (outcome.kind === 'refused') {
+        set((s) => {
+          if (s.staleSave) s.staleSave.refusal = outcome.details.join(' ')
+        })
+        return
+      }
+      if (outcome.conflicts.length === 0) {
+        const problem = mergeResultProblem(outcome.merged)
+        if (problem) {
+          set((s) => {
+            if (s.staleSave) s.staleSave.refusal = `The combined project would not open again: ${problem}`
+          })
+          return
+        }
+        await adoptAndSave(outcome.merged)
+        return
+      }
+      set((s) => {
+        if (s.staleSave) {
+          s.staleSave.merge = {
+            merged: outcome.merged,
+            conflicts: outcome.conflicts,
+            resolutions: {},
+            decided: {},
+            notes: outcome.notes,
+          }
+        }
+      })
+    },
+
+    resolveStaleConflict: (id, value) => {
+      set((s) => {
+        const merge = s.staleSave?.merge
+        if (!merge) return
+        merge.resolutions[id] = value
+        merge.decided[id] = true
+      })
+    },
+
+    takeAllStaleConflicts: (side, ids) => {
+      const scope = new Set(ids)
+      set((s) => {
+        const merge = s.staleSave?.merge
+        if (!merge) return
+        for (const c of merge.conflicts) {
+          if (!scope.has(c.id)) continue
+          merge.resolutions[c.id] = side === 'ours' ? c.ours : c.theirs
+          merge.decided[c.id] = true
+        }
+      })
+    },
+
+    finishStaleCombine: async () => {
+      const merge = get().staleSave?.merge
+      if (!merge) return
+      const resolved = applyResolutions(merge.merged, merge.conflicts, merge.resolutions)
+      const problem = mergeResultProblem(resolved)
+      if (problem) {
+        set((s) => {
+          if (s.staleSave) s.staleSave.error = `The combined project would not open again, so nothing was saved: ${problem}`
+        })
+        return
+      }
+      await adoptAndSave(resolved)
+    },
+
+    backToStaleChoice: () => {
+      set((s) => {
+        if (s.staleSave) s.staleSave.merge = null
+      })
+    },
+
+    dismissStaleSave: () => {
+      set((s) => {
+        if (s.staleSave) {
+          s.staleSave.merge = null
+          s.staleSave.dismissed = true
+        }
+      })
+    },
+
+    dismissStaleSaveError: () => {
+      set((s) => {
+        if (s.staleSave) s.staleSave.error = null
+      })
+    },
+
+    checkSharedAnnotations: async () => {
+      const handle = get().saveHandle
+      if (!handle?.path) return
+      let shared
+      try {
+        shared = await getPlatform().sharedAnnotations(handle.path)
+      } catch {
+        shared = null // a folder that cannot be inspected is not split
+      }
+      if (!shared || get().saveHandle?.path !== handle.path) return
+      const projects = shared.projects.map((p) => {
+        let meta: unknown = null
+        try {
+          meta = JSON.parse(p.text)
+        } catch {
+          // listed by the main process as a project file; unreadable now means no ids to match
+        }
+        return { path: p.path, name: p.name, meta }
+      })
+      const taken = new Set<string>()
+      const folderFor = (name: string) => {
+        let folder = defaultSplitDirName(name)
+        for (let i = 2; taken.has(folder.toLowerCase()); i++) folder = `${defaultSplitDirName(name)}-${i}`
+        taken.add(folder.toLowerCase())
+        return folder
+      }
+      const split: AnnotationsSplit = {
+        shared: shared.folder,
+        projects: projects.map((p) => ({ path: p.path, name: p.name, folder: folderFor(p.name) })),
+        rows: planSplit(projects, shared.files),
+        error: null,
+        working: false,
+      }
+      set((s) => {
+        s.annotationsSplit = split
+      })
+    },
+
+    loadScreeningMarks: async () => {
+      const { project, saveHandle } = get()
+      if (!project || project.screening !== null || project.provenance?.kind !== 'screening-import' || !saveHandle?.path) return
+      let marks: Record<string, ScreeningMark[]> | null = null
+      try {
+        const source = await getPlatform().screeningSource?.(saveHandle.path)
+        const screening = source ? loadProject(source.text) : null
+        if (screening?.screening) marks = screeningMarksByPaper(project, screening)
+      } catch {
+        // an unreadable screening project just has nothing to show
+      }
+      if (get().saveHandle?.path !== saveHandle.path) return
+      set((s) => {
+        s.screeningMarks = marks
+      })
+    },
+
+    setShowScreeningMarks: (show) => {
+      set((s) => {
+        s.showScreeningMarks = show
+      })
+    },
+
+    setSplitFolder: (projectPath, folder) => {
+      set((s) => {
+        const p = s.annotationsSplit?.projects.find((x) => x.path === projectPath)
+        if (p) p.folder = folder
+      })
+    },
+
+    setSplitTargets: (relPath, targets) => {
+      set((s) => {
+        const row = s.annotationsSplit?.rows.find((r) => r.relPath === relPath)
+        if (row) row.targets = targets
+      })
+    },
+
+    dismissSplit: () => {
+      set((s) => {
+        s.annotationsSplit = null
+      })
+    },
+
+    runSplit: async () => {
+      const { annotationsSplit: split, saveHandle, dirty } = get()
+      if (!split || !saveHandle?.path) return
+      if (dirty) {
+        set((s) => {
+          if (s.annotationsSplit) s.annotationsSplit.error = 'Save the project first — the split rewrites its files.'
+        })
+        return
+      }
+      set((s) => {
+        if (s.annotationsSplit) {
+          s.annotationsSplit.working = true
+          s.annotationsSplit.error = null
+        }
+      })
+      try {
+        await getPlatform().splitAnnotations(saveHandle.path, {
+          folders: Object.fromEntries(split.projects.map((p) => [p.path, p.folder])),
+          rows: split.rows.map((r) => ({ relPath: r.relPath, targets: r.targets })),
+        })
+        set((s) => {
+          s.annotationsSplit = null
+        })
+        await get().openRecent(saveHandle.path)
+      } catch (err) {
+        set((s) => {
+          if (s.annotationsSplit) {
+            s.annotationsSplit.working = false
+            // Electron prefixes errors thrown by a handler with the channel name.
+            s.annotationsSplit.error = (err instanceof Error ? err.message : String(err)).replace(
+              /^Error invoking remote method '[^']+': (Error: )?/,
+              '',
+            )
+          }
+        })
       }
     },
 
@@ -1386,37 +1882,36 @@ export const useStore = create<AppState>()(
           return false
         }
 
-        // Refuse rather than silently start sharing an `annotations/` folder
-        // with another project already in that directory — this is the only
-        // moment such a sharing relationship gets created, so it's the only
-        // moment it can be caught. `location.path` is Electron-only (the
-        // browser build never reaches this at all); no path means nothing to
-        // check against.
+        // A folder of annotations belongs to one project. If another project
+        // file in the destination directory already uses this project's
+        // folder name, take one named after this file instead; refuse only if
+        // that is taken too. `location.path` is Electron-only; no path means
+        // nothing to check against.
+        let target = project
         if (location.path) {
-          const collision = await platform.checkSiblingCollision(
-            location.path,
-            project.papers.map((p) => p.id),
-            project.screening !== null,
-          )
-          if (collision) {
-            set((s) => {
-              s.busy = false
-              const noun = collision.overlappingIds.length === 1 ? 'a paper' : 'papers'
-              s.loadError = {
-                message:
-                  `Can't save here — "${collision.siblingName}" in this folder already shares ${noun} ` +
-                  "with this project and uses the same annotation files, so saving here would let the " +
-                  "two projects silently overwrite each other's answers. Choose a different folder.",
-                details: [
-                  `Shared paper id${collision.overlappingIds.length === 1 ? '' : 's'}: ${collision.overlappingIds.join(', ')}`,
-                ],
-              }
-            })
-            return false
+          const folder = project.annotationsDir ?? DEFAULT_ANNOTATIONS_DIR
+          const ids = project.papers.map((p) => p.id)
+          const kind = project.screening !== null
+          const users = await platform.annotationsDirUsers(location.path, folder, ids, kind)
+          if (users.length > 0) {
+            const own = defaultSplitDirName(location.name)
+            if ((await platform.annotationsDirUsers(location.path, own, ids, kind)).length > 0) {
+              set((s) => {
+                s.busy = false
+                s.loadError = {
+                  message:
+                    `Can't save here — "${users[0]}" in this folder already keeps its annotations in "${folder}/", ` +
+                    `and "${own}/" is taken too. Choose a different folder or file name.`,
+                  details: [],
+                }
+              })
+              return false
+            }
+            target = { ...project, annotationsDir: own }
           }
         }
 
-        let toWrite = project
+        let toWrite = target
         if (saveHandle) {
           const rebased = await platform.rebasePdfPaths(
             project.papers.map((p) => p.pdf),
@@ -1424,16 +1919,17 @@ export const useStore = create<AppState>()(
             location.handle,
           )
           toWrite = {
-            ...project,
+            ...target,
             papers: project.papers.map((p, i) => ({ ...p, pdf: rebased[i] ?? p.pdf })),
           }
         }
 
         const text = serializeProject(toWrite)
         const handle = await platform.saveProject(text, location.handle)
-        // Carry the reviewer selection over to the new location's own key, or
-        // it would silently look unselected the next time this file is opened.
-        saveCurrentReviewer(handle, get().currentReviewer)
+        // Carry the remembered seats over to the new location's own key, or
+        // they would silently look unselected the next time this file is opened.
+        const carried = get().project
+        if (carried && carried.reviewers > 1) saveRememberedSeats(handle, loadRememberedSeats(saveHandle, carried), carried)
         // Same carry-over for the reading position, or reopening the file at
         // its new location would land on the "first unfinished paper" default
         // instead of wherever the reviewer actually was.
@@ -1461,6 +1957,7 @@ export const useStore = create<AppState>()(
         // already in the store is the one with the edit, and it genuinely
         // has not been saved anywhere yet.
         const stillCurrent = get().project === project
+        diskProject = toWrite
         set((s) => {
           s.saveHandle = handle
           s.projectName = location.name
@@ -1480,7 +1977,7 @@ export const useStore = create<AppState>()(
       } catch (err) {
         set((s) => {
           s.busy = false
-          s.loadError = { message: 'Failed to save.', details: [String(err)] }
+          s.loadError = saveFailure(err)
         })
         return false
       }
@@ -1488,8 +1985,14 @@ export const useStore = create<AppState>()(
 
     selectPaper: (id) => {
       lastFieldKey = null
+      const { saveHandle, project, currentReviewer } = get()
+      // The seat this paper was last read in — see `RememberedSeats`. A
+      // paper never read here keeps the current seat.
+      const seat = seatOnArrival(saveHandle, project, id, currentReviewer)
+      if (seat) rememberSeat(saveHandle, project, id, seat)
       set((s) => {
         s.currentPaperId = id
+        if (seat) s.currentReviewer = seat
         s.pdfSelection = ''
         // Belongs to the paper it was made on — carrying it to a different
         // one risks auto-linking a much later click to a mark the reviewer
@@ -1580,6 +2083,14 @@ export const useStore = create<AppState>()(
       set((s) => {
         s.helpOpen = open
       }),
+
+    showCorruptFiles: () => {
+      const paths = get().corruptFiles
+      if (paths.length === 0) return
+      set((s) => {
+        s.loadError = corruptFilesWarning(paths)
+      })
+    },
 
     runValidation: () => {
       const { project, currentReviewer } = get()
@@ -2297,7 +2808,7 @@ export const useStore = create<AppState>()(
       // edit to the same field under the new reviewer would glue onto the
       // previous reviewer's undo step, and one Undo would wipe both answers.
       lastFieldKey = null
-      saveCurrentReviewer(get().saveHandle, reviewer)
+      rememberSeat(get().saveHandle, get().project, get().currentPaperId, reviewer)
       set((s) => {
         s.currentReviewer = reviewer
         // Marks are per-seat too (`reviewMarks`) — invisible under another
@@ -2784,6 +3295,12 @@ export const useStore = create<AppState>()(
       if (st.past.length === 0 || !st.project) return
       lastFieldKey = null
       const entry = st.past[st.past.length - 1]
+      // Landing on another paper takes that paper's seat, as selecting it would.
+      const arrivalSeat =
+        entry.paperId && entry.paperId !== st.currentPaperId
+          ? seatOnArrival(st.saveHandle, st.project, entry.paperId, st.currentReviewer)
+          : null
+      if (arrivalSeat) rememberSeat(st.saveHandle, st.project, entry.paperId, arrivalSeat)
       const current: HistoryEntry = { project: st.project, paperId: st.currentPaperId }
       set((s) => {
         s.past.pop()
@@ -2791,6 +3308,7 @@ export const useStore = create<AppState>()(
         if (s.future.length > HISTORY_LIMIT) s.future.pop()
         s.project = entry.project
         s.currentPaperId = entry.paperId ?? s.currentPaperId
+        if (arrivalSeat) s.currentReviewer = arrivalSeat
         s.dirty = true
         // Undoing an AI run may empty exactly the fields a mark points at, and
         // marks aren't part of history — simplest honest answer is to drop them all.
@@ -2805,6 +3323,12 @@ export const useStore = create<AppState>()(
       if (st.future.length === 0 || !st.project) return
       lastFieldKey = null
       const entry = st.future[0]
+      // Landing on another paper takes that paper's seat, as selecting it would.
+      const arrivalSeat =
+        entry.paperId && entry.paperId !== st.currentPaperId
+          ? seatOnArrival(st.saveHandle, st.project, entry.paperId, st.currentReviewer)
+          : null
+      if (arrivalSeat) rememberSeat(st.saveHandle, st.project, entry.paperId, arrivalSeat)
       const current: HistoryEntry = { project: st.project, paperId: st.currentPaperId }
       set((s) => {
         s.future.shift()
@@ -2812,6 +3336,7 @@ export const useStore = create<AppState>()(
         if (s.past.length > HISTORY_LIMIT) s.past.shift()
         s.project = entry.project
         s.currentPaperId = entry.paperId ?? s.currentPaperId
+        if (arrivalSeat) s.currentReviewer = arrivalSeat
         s.dirty = true
         // Symmetric with undo: the history restores values, not marks, and a redo
         // cannot know which of the restored values came from the model.

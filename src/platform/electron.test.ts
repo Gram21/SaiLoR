@@ -21,7 +21,7 @@ describe('ElectronAdapter.saveProject', () => {
   let saveProject: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
-    saveProject = vi.fn().mockResolvedValue(undefined)
+    saveProject = vi.fn().mockResolvedValue({ stale: [] })
     ;(window as unknown as { slr: unknown }).slr = { saveProject }
   })
 
@@ -40,6 +40,118 @@ describe('ElectronAdapter.saveProject', () => {
     expect(p1.text).toContain('Relevant')
     const p2 = files.find((f: { relPath: string }) => f.relPath === 'p2/consolidated.json')
     expect(p2.text).toBeNull()
+  })
+
+  it('writes only the papers edited since the project was opened', async () => {
+    // The whole point of the baseline: opening a project whose schema grew must
+    // not rewrite every untouched paper's file into a shared git repository.
+    const text = makeProjectText()
+    const openPath = vi.fn().mockResolvedValue({ path: '/other/project.json', text, corrupt: [] })
+    const setProjectDir = vi.fn().mockResolvedValue(undefined)
+    ;(window as unknown as { slr: unknown }).slr = { saveProject, openPath, setProjectDir }
+
+    const adapter = new ElectronAdapter()
+    await adapter.openRecent('/other/project.json')
+    const handle = { kind: 'electron' as const, path: '/other/project.json' }
+
+    // Nothing edited: nothing written, not even project.json.
+    await adapter.saveProject(text, handle)
+    expect(saveProject.mock.calls[0][1]).toBeNull()
+    expect(saveProject.mock.calls[0][2]).toEqual([])
+
+    // Edit p2 only: p1's files stay untouched.
+    const project = loadProject(text)
+    project.papers[1].annotations = { Relevant: [{ value: true }] }
+    await adapter.saveProject(serializeProject(project), handle)
+    const files = saveProject.mock.calls[1][2] as { relPath: string }[]
+    expect(files.map((f) => f.relPath)).toEqual(['p2/consolidated.json'])
+    expect(saveProject.mock.calls[1][1]).toBeNull()
+  })
+
+  it('writes only project.json when a new schema version renames a field nobody edited since', async () => {
+    // The rename moves every file's answers on load; that alone must not make
+    // each of those files count as edited, or one rename rewrites every
+    // reviewer's file in a shared repository.
+    const text = makeProjectText()
+    const openPath = vi.fn().mockResolvedValue({ path: '/ren/project.json', text, corrupt: [] })
+    const setProjectDir = vi.fn().mockResolvedValue(undefined)
+    ;(window as unknown as { slr: unknown }).slr = { saveProject, openPath, setProjectDir }
+    const adapter = new ElectronAdapter()
+    await adapter.openRecent('/ren/project.json')
+
+    const renamed = JSON.parse(text)
+    renamed.config.schema = [{ name: 'Include', type: 'boolean' }]
+    renamed.schemaVersion = 'v1'
+    renamed.schemaHistory = [{ id: 'v1', parents: [], at: '2026-09-23T10:00:00.000Z', moves: [{ from: ['Relevant'], to: ['Include'] }] }]
+    await adapter.saveProject(JSON.stringify(renamed), { kind: 'electron', path: '/ren/project.json' })
+
+    const [, metaText, files] = saveProject.mock.calls[0]
+    expect(JSON.parse(metaText).schemaVersion).toBe('v1')
+    expect(files).toEqual([])
+  })
+
+  it('deletes the files of a paper removed since the project was opened', async () => {
+    // Nothing else ever revisits `annotations/<gone>/`: git does not notice it,
+    // and a paper later given the same id would silently inherit its answers.
+    const text = makeProjectText()
+    const openPath = vi.fn().mockResolvedValue({ path: '/gone/project.json', text, corrupt: [] })
+    const setProjectDir = vi.fn().mockResolvedValue(undefined)
+    ;(window as unknown as { slr: unknown }).slr = { saveProject, openPath, setProjectDir }
+
+    const adapter = new ElectronAdapter()
+    await adapter.openRecent('/gone/project.json')
+
+    const project = loadProject(text)
+    project.papers = project.papers.filter((p) => p.id !== 'p1')
+    await adapter.saveProject(serializeProject(project), { kind: 'electron', path: '/gone/project.json' })
+
+    const files = saveProject.mock.calls[0][2] as { relPath: string; text: string | null }[]
+    const p1 = files.filter((f) => f.relPath.startsWith('p1/'))
+    expect(p1.length).toBeGreaterThan(0)
+    expect(p1.every((f) => f.text === null)).toBe(true)
+    // p2 stays in the project and was not edited — still untouched.
+    expect(files.some((f) => f.relPath.startsWith('p2/'))).toBe(false)
+  })
+
+  it('moves a paper\'s files when its id is renamed, leaving nothing behind', async () => {
+    const text = makeProjectText()
+    const openPath = vi.fn().mockResolvedValue({ path: '/renamed/project.json', text, corrupt: [] })
+    const setProjectDir = vi.fn().mockResolvedValue(undefined)
+    ;(window as unknown as { slr: unknown }).slr = { saveProject, openPath, setProjectDir }
+
+    const adapter = new ElectronAdapter()
+    await adapter.openRecent('/renamed/project.json')
+
+    const project = loadProject(text)
+    project.papers[0].id = 'p1-renamed'
+    await adapter.saveProject(serializeProject(project), { kind: 'electron', path: '/renamed/project.json' })
+
+    const files = saveProject.mock.calls[0][2] as { relPath: string; text: string | null }[]
+    const written = files.find((f) => f.relPath === 'p1-renamed/consolidated.json')
+    expect(written?.text).toContain('Relevant')
+    expect(files.find((f) => f.relPath === 'p1/consolidated.json')?.text).toBeNull()
+  })
+
+  it('forgets the baseline when a git call rewrites the working tree', async () => {
+    // The baseline describes disk. A flow that rewrites the tree and then
+    // forgets to reload would otherwise leave it describing a past that no
+    // longer exists, and the next save would skip files it should have
+    // written — so the seam drops it rather than trusting every caller.
+    const text = makeProjectText()
+    const openPath = vi.fn().mockResolvedValue({ path: '/gitty/project.json', text, corrupt: [] })
+    const setProjectDir = vi.fn().mockResolvedValue(undefined)
+    const gitPullAbort = vi.fn().mockResolvedValue({ ok: true, code: 0, stdout: '', stderr: '' })
+    ;(window as unknown as { slr: unknown }).slr = { saveProject, openPath, setProjectDir, gitPullAbort }
+
+    const adapter = new ElectronAdapter()
+    await adapter.openRecent('/gitty/project.json')
+    await adapter.getGit()!.abortPull('/gitty')
+
+    // Same unedited project: without the drop this would write nothing.
+    await adapter.saveProject(text, { kind: 'electron', path: '/gitty/project.json' })
+    const [, metaText, files] = saveProject.mock.calls[0]
+    expect(metaText).not.toBeNull()
+    expect((files as unknown[]).length).toBeGreaterThan(0)
   })
 
   it('throws when the handle has no path', async () => {

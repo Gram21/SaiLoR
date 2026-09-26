@@ -4,6 +4,8 @@ title: Git Integration
 description: The git workflow end to end — clone-to-import, the commit/pull/push/branch-switch panel, merge-branch, the field-level three-way merge at the heart of conflict resolution, the changes parser, the security gates, concurrent revision reads, the gitStore state machine, and the Electron main-process IPC plumbing that owns the only path to git.
 tags: [git, merge, three-way-merge, electron, ipc, security, state-machine, commit, pull, push, branch-switch, concurrent-reads]
 sources:
+  - id: openwiki-source-5c59216b8218fe8745f9ce38
+    resource: repo://e2e/openSaveProject.spec.ts
   - id: openwiki-source-8d6b6eb5e58f91e157e37bde
     resource: repo://electron/main.ts
   - id: openwiki-source-ac30624c90c990189fe932d0
@@ -36,10 +38,10 @@ sources:
     resource: repo://src/git/url.ts
   - id: openwiki-source-abd876b19e1ac7ba524a3f34
     resource: repo://src/state/gitStore.ts
-generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
+generated: { by: "openwiki/0.5.2", at: "2026-09-23T12:49:55.013Z" }
 verified:
-  - by: openwiki/0.4.0
-    at: 2026-09-21T20:12:55.536Z
+  - by: openwiki/0.5.2
+    at: 2026-09-23T12:49:55.013Z
 ---
 
 # Git Integration
@@ -65,11 +67,10 @@ every input before it reaches a spawned `git`, the **IPC plumbing** in
 state machine plus its UI components that drive the whole thing from the
 renderer.
 
-<!-- openwiki: mermaid parse failed and this diagram was converted to a text fence so it does not break rendering. Fix the diagram source and restore the mermaid fence. Parser error: Parse error on line 3: ... GS ->|getPlatform().getGit()| GP["Git Expecting 'SQE', 'DOUBLECIRCLEEND', 'PE', '-)', 'STADIUMEND', 'SUBROUTINEEND', 'PIPE', 'CYLINDEREND', 'DIAMOND_STOP', 'TAGEND', 'TRAPEND', 'INVTRAPEND', 'UNICODE_TEXT', 'TEXT', 'TAGSTART', got 'PS' -->
-```text
+```mermaid
 flowchart TD
   UI["UI components<br/>GitCloneDialog / GitDialog / GitMergeDialog<br/>GitHistoryDialog / MergeBranchPrompt / DeleteBranchPrompt"] --> GS["useGitStore state machine<br/>src/state/gitStore.ts"]
-  GS -->|getPlatform().getGit()| GP["GitPlatform seam<br/>src/platform/electron.ts"]
+  GS -->|getGit| GP["GitPlatform seam<br/>src/platform/electron.ts"]
   GP -->|window.slr bridge| IPC["Electron main IPC handlers<br/>git:* in electron/main.ts"]
   IPC --> SEC["Security gates first<br/>assertRelPath / assertRef / assertRoot<br/>validateGitUrl / validateClonePath"]
   SEC --> RG["runGit<br/>execFile + GIT_SAFE_CONFIG + gitEnv"]
@@ -96,10 +97,12 @@ has a sibling `*.test.ts`.
 `.git/config` from a folder received by zip/USB cannot run code on a mere
 "open project":
 
-- `gitEnv()` strips inherited `GIT_DIR`/`GIT_WORK_TREE`/`GIT_*` variables (a
-  shell sitting inside another repo would otherwise point every command at it)
-  and sets `GIT_TERMINAL_PROMPT=0` and `GIT_EDITOR=true` so git fails fast with
-  its own message instead of blocking on a tty that does not exist — while
+- `gitEnv()` strips inherited `GIT_DIR`/`GIT_WORK_TREE`/`GIT_INDEX_FILE`/
+  `GIT_OBJECT_DIRECTORY`/`GIT_ALTERNATE_OBJECT_DIRECTORIES`/`GIT_CONFIG`/
+  `GIT_CONFIG_GLOBAL` variables (a shell sitting inside another repo would
+  otherwise point every command at it) and sets `GIT_TERMINAL_PROMPT=0`,
+  `GIT_EDITOR=true`, and `GIT_SEQUENCE_EDITOR=true` so git fails fast with its
+  own message instead of blocking on a tty that does not exist — while
   credential helpers, askpass programs and SSH agents are deliberately untouched.
 - `GIT_SAFE_CONFIG` is a hard `-c` override prepended to every invocation:
   `core.fsmonitor=false`, a non-existent `core.hooksPath` under the OS temp dir
@@ -192,49 +195,71 @@ on success adds the destination to `knownGitRoots`. `git:pickProjectIn` opens a
 project-file picker *inside* the freshly cloned dir; the caller reuses the
 ordinary project-open path so opening a project doesn't exist twice.
 `git:info` resolves where the open project sits git-wise: it runs
-`--is-inside-work-tree`, then concurrently (`Promise.all`)
-`--show-toplevel`/`--show-prefix`/HEAD-verify/`symbolic-ref`/`@{u}` and feeds
-them to `deriveGitInfo`. It deliberately uses `--show-prefix` (not
-`--show-toplevel` alone) because `--show-toplevel` resolves symlinks (on macOS
-`/tmp` realpaths under `/private/tmp`) and a `path.relative` against it would
-compute a `..` escape pointing nowhere.
+`--is-inside-work-tree`, then concurrently (`Promise.all`) six independent
+`--show-toplevel`/`--show-prefix`/HEAD-verify/`symbolic-ref`/`@{u}`/
+`rev-list --count HEAD..@{u}` calls and feeds them to `deriveGitInfo`. The
+sixth (`behind`) counts commits the upstream has that this branch does not
+— as of the last fetch. `git:info` itself never touches the network; the
+count is kept fresh by `git:backgroundFetch`, which `refreshUpstream` runs when
+the repository is detected, whenever the Git panel opens, and every two
+minutes (`useUpstreamPolling`). `deriveGitInfo` is
+extracted into a pure function for testability to pin down exactly which
+input feeds which field — a `Promise.all` array destructured into
+differently-named variables is exactly the place a copy-paste reordering
+could silently swap two fields with no type error. `git:info` deliberately
+uses `--show-prefix` (not `--show-toplevel` alone) because `--show-toplevel`
+resolves symlinks (on macOS `/tmp` realpaths under `/private/tmp`) and a
+`path.relative` against it would compute a `..` escape pointing nowhere.
 
 **Status / content / history.**
-`git:status` runs `status --porcelain=v1 -z` plus a `--no-pager --no-color
---no-ext-diff --no-textconv diff HEAD --` (only when HEAD exists), returning
-raw porcelain + diff; the renderer's `GitPlatform.status` parses the porcelain
-via `parsePorcelain` and caps the diff via `capDiff`. `git:headContent` and
-`git:workingContent` reassemble the project at HEAD vs the working tree:
-`headContent` reads through `git show` (`readProjectAtRevision`), while
-`workingContent` reads straight from disk via `readProjectText` — deliberately
-not `git show :relPath` (the index's copy), so the commit panel reviews what's
-really on disk, not what's staged. `git:logBegin` runs `git log` scoped to the
-project's own file *and* its `annotations/` dir (capped at `LOG_MAX_COMMITS` =
-250, `truncated` when it hits the cap); `git:logDiff` fetches the two revisions
+`git:status` runs `status --porcelain=v1 -z` and `rev-parse --verify HEAD`
+concurrently (`Promise.all`), then `--no-pager --no-color --no-ext-diff
+--no-textconv diff HEAD --` only when HEAD exists, returning raw porcelain +
+diff; the renderer's `GitPlatform.status` parses the porcelain via
+`parsePorcelain` and caps the diff via `capDiff`. `--no-color` stops a user
+with `color.diff=always` from leaking ANSI escapes into the `<pre>` as literal
+text. `git:headContent` and `git:workingContent` reassemble the project at
+HEAD vs the working tree: `headContent` reads through `git show`
+(`readProjectAtRevision`), while `workingContent` reads straight from disk via
+`readProjectText` — deliberately not `git show :relPath` (the index's copy), so
+the commit panel reviews what's really on disk, not what's staged.
+`git:logBegin` runs `git log` scoped to the project's own file *and* its
+`annotations/` dir (capped at `LOG_MAX_COMMITS` = 250, `truncated` when it hits
+the cap); `git:logDiff` fetches the two revisions
 a history row needs (`rev` and `rev^`) and returns raw text, with `'initial'`
 when there is no parent.
 
 **Commit / discard.**
-`git:commit` is the plain pathspec-limited commit for non-project files: `add`
-then `commit -m message -- paths` (with `--amend` when requested), never
-disturbing separately-staged work elsewhere. `git:commitPartial` is what makes
-committing *some* of a project's field-level changes possible at all: git has no
-native concept of staging part of a file, but nothing requires the content `add`
-stages to be what's on disk. Its sequence is **write → add → commit → (always)
-write again**: `committed` goes onto disk just long enough to be staged, then
-`working` — the state the working tree should hold afterward, composed by
-`composeContents` from the reviewer's Use/Ignore/Discard choices — replaces it.
-The `finally` is load-bearing: if `add` or `commit` fails partway, the working
-tree must still end up holding `working`, never stuck mid-swap. `git:writeWorking`
-writes `working` *without* staging or committing — the "throw away these local
-edits" counterpart, for a reviewer who only wants to revert and shouldn't have to
-invent a commit. `git:discardFile` is the whole-file counterpart to the project
-file's field-level Discard: it re-derives the file's status (the tree can have
-changed since the panel refreshed), deletes untracked files (via `rm` for a
-directory, `unlink` for a file — the EISDIR bug that used to wedge the panel),
-reverts tracked modified/deleted files via `checkout --`, and refuses a rename
-or an unresolved conflict. It also refuses the project's own file or anything
-under its `annotationsRelDir` — `GitDialog`'s `isProjectOwnPath` withholds the
+Both `git:commit` and `git:commitPartial` start with a `detachedHeadRefusal`:
+a commit made on a detached HEAD belongs to no branch — it succeeds, the
+panel says "Committed.", and the work vanishes from the tree the moment the
+reviewer checks out a branch again, recoverable only from the reflog. The
+branch-switch flow already refused this; the commit path did not. An unborn
+HEAD (no commits yet) is not detached — `symbolic-ref` still resolves — so
+only a real detachment is refused. `git:commit` is the plain pathspec-limited
+commit for non-project files: `add` then `commit -m message -- paths` (with
+`--amend` when requested), never disturbing separately-staged work elsewhere.
+`git:commitPartial` is what makes committing *some* of a project's field-level
+changes possible at all: git has no native concept of staging part of a file,
+but nothing requires the content `add` stages to be what's on disk. Its
+sequence is **write → add → commit → (always) write again**: `committed` goes
+onto disk just long enough to be staged, then `working` — the state the
+working tree should hold afterward, composed by `composeContents` from the
+reviewer's Use/Ignore/Discard choices — replaces it. Staging is scoped to this
+project's own files (`relPath`, the reviewer's selections, and
+`ownChangedAnnotationPaths` — never the whole `annotations/` folder, which may
+hold a sibling project's work). The `finally` is load-bearing: if `add` or
+`commit` fails partway, the working tree must still end up holding `working`,
+never stuck mid-swap. `git:writeWorking` writes `working` *without* staging or
+committing — the "throw away these local edits" counterpart, for a reviewer who
+only wants to revert and shouldn't have to invent a commit. `git:discardFile`
+is the whole-file counterpart to the project file's field-level Discard: it
+re-derives the file's status (the tree can have changed since the panel
+refreshed), deletes untracked files (via `rm` for a directory, `unlink` for a
+file — the EISDIR bug that used to wedge the panel), reverts tracked
+modified/deleted files via `checkout --`, and refuses a rename or an
+unresolved conflict. It also refuses the project's own file or anything under
+its `annotationsRelDir` — `GitDialog`'s `isProjectOwnPath` withholds the
 button, but that's UI not enforcement, and the renderer must not be the only
 thing standing between a stray click and data with no committed copy to recover.
 
@@ -255,11 +280,13 @@ PDF or a `.gitignore`. `git:pullBegin` adds the pull-only cases: resolves `@{u}`
 fetches (network timeout), reports `'no-upstream'` when there isn't one.
 `git:mergeBegin` fetches when the chosen ref is genuinely remote-tracking
 (checked against git, not the `origin/` prefix), and `^{commit}`-verifies the ref
-exists. `git:pullFinish` writes the resolved project, `add`s the project file +
-`annotations/`, and `commit --no-edit` (MERGE_HEAD set → a two-parent merge
-commit). `git:pullAbort` is `merge --abort`. Both are wrapped in `try`/`catch`
-because a throw here would reject past `gitStore`'s recovery and leave the repo
-mid-merge with the panel showing no error.
+exists. `git:pullFinish` writes the resolved project, `add`s the project file and the
+project's own changed annotation paths (via `ownChangedAnnotationPaths`, never
+the whole `annotations/` folder — a sibling project's uncommitted work must not
+be folded into a merge commit nobody reviewed), and `commit --no-edit`
+(MERGE_HEAD set → a two-parent merge commit). `git:pullAbort` is `merge --abort`.
+Both are wrapped in `try`/`catch` because a throw here would reject past
+`gitStore`'s recovery and leave the repo mid-merge with the panel showing no error.
 
 **Branches / switch.**
 `git:branches` lists local + remote-tracking refs via `for-each-ref`, dropping
@@ -359,28 +386,35 @@ flowchart TD
 The diagram shows the merge lifecycle; the layers below are how `mergeProjects`
 reaches each branch.
 
-**Reshaping fields refuse, not guess.** A difference in `version`, `schema`,
-`aiEnabled`, `finishCheckbox`, `reviewers`, `screening`, `provenance`,
-`protocol`, or a root `extra` key changes the *shape* of every tree in the file,
-so there is no field-level answer — `mergeProjects` refuses and names it
-(`refusalDetail` produces a per-key human sentence, e.g. "The annotation schema
-was changed on both sides… reconcile the schema first"). `title` and
-`schemaInfo` are deliberately *not* in that list: each is one string a conflict
-row expresses perfectly, and refusing an entire merge because two people renamed
-the review would be absurd.
+**Project settings become rows, not refusals.** Only a two-sided `version`
+difference still refuses. `aiEnabled`, `finishCheckbox` (boolean rows) and
+`reviewers` (number row, clamped to 1–10 on apply) are ordinary conflicts; each
+`protocol` entry is a string row (lists one per line); `screening`,
+`provenance` and unknown root or paper `extra` keys are `type: 'choice'` rows
+whose `payload` holds each side's value and whose resolution is `'ours'` or
+`'theirs'`. A screening project's schema is derived from its reasons, so the
+`screening` choice carries the schema with it.
 
-**Schema-removal refusal.** Every tree below is walked against the winning
-schema, so a field the losing side removed is simply never visited — silently
-extending that schema vote to answers nobody agreed to discard.
-`schemaRemovalRefusal` refuses (naming the field and how many answers are at
-stake) exactly when there is something real to lose; a removal nobody had
-answered under proceeds as before.
+**The schema is merged node by node** (`mergeSchemaDefs`). Identity is the name
+within the parent, so a rename is a one-sided removal plus addition. Nodes only
+one side has are kept when added, dropped when the other side left them
+untouched, and become a keep-or-remove `presence` row when the other side
+changed them. For nodes both have, each property goes through `merge3`:
+`description`, `required`, `min`, `max` and `options` (one per line) are
+editable rows, `type` and `visibleIf` are choice rows, and children recurse.
+The merged schema keeps every node still in doubt, because the annotation trees
+are walked against it; answers under a node that ends up removed ride along as
+hidden answers (`orphanedNodes`) and `schemaRemovalNote` says so. Ids are
+re-derived from the name path afterwards (`withPathIds`). Because a combined
+schema can be something neither side had, `mergeResultProblem` round-trips the
+resolved project through `serializeProject`/`loadProject` before anything is
+written, in `gitStore`'s `doFinish` and in the save-conflict flow.
 
 **Paper-level metadata** (`mergePaper`) runs a `merge3` per field — `title`,
 `pdf`, `doi`, `authors` (as a `deepEqualJson` array), `year` (rendered as a
 bounded numeric control via `type:'year'`), `venue`, `abstract`, and
 `abstractFromPdf` — pushing a `FieldConflict` on genuine disagreement. `extra`
-keys per paper refuse via the paper-refusal sink. Annotation trees and each
+keys per paper become choice rows. Annotation trees and each
 numbered reviewer's tree are merged by `makeTreeMerger`'s `mergeTree`.
 
 **Annotation-tree merge** walks the merged schema with `count` = the union of
@@ -442,15 +476,19 @@ the paper-metadata field list, the `conflictId` key shape) but not its `merge3`
 rule, which has no "which side changed" question to answer when only one side
 ever does.
 
-`detectFieldChanges(head, working)` returns `null` (a structural refusal, the
-same differences `merge.ts` refuses for the same reason — schema, reviewers,
-screening, version, title, provenance, protocol, root `extra`) or a
+`detectFieldChanges(head, working)` returns `null` (a structural refusal when
+`head` and `working` disagree on anything that reshapes the file — `schema`,
+`reviewers`, `aiEnabled`, `finishCheckbox`, `screening`, `version`, `title`,
+`schemaInfo`, root `extra`, `provenance`, or `protocol`) or a
 `{fields, papers}`: a `FieldChange` per leaf whose value differs (with `headValue`
 /`workingValue`), plus `PaperChange`s for added/removed papers reviewed as one
-unit. `PAPER_META_BUNDLES` folds `abstractFromPdf` into the `abstract` row
-(its meaning is owned by `abstract` — "this text is a guess" — so it never gets
-a row of its own), with a fallback giving the bundled field its own row if the
-primary didn't change but the bundled one did.
+unit. `provenance`/`protocol` are excluded for a different reason from the
+others — each is a nested record no `FieldConflict` shape can express. The
+caller falls back to a plain file-level commit in that state. `PAPER_META_BUNDLES`
+folds `abstractFromPdf` into the `abstract` row (its meaning is owned by
+`abstract` — "this text is a guess" — so it never gets a row of its own), with a
+fallback giving the bundled field its own row if the primary didn't change but
+the bundled one did.
 
 `composeContents(head, working, changes, decisions)` produces the two outputs the
 commit panel needs. The disposition rule, applied uniformly across a field
@@ -478,10 +516,11 @@ answer would be permanently uncommittable. Padding never fabricates a *value*
 A self-contained Zustand store (with the immer middleware) that owns the git
 flows: importing from a repository (`CloneState`), the commit/pull/push panel
 (`PanelState`), the merge-branch and delete-branch prompts, the new-branch
-prompt, and the commit-history panel. It is kept out of the main `store.ts`
-for the same reason `aiStore` and the project editor are — a self-contained
-mode with its own lifecycle the ordinary annotation path never needs to know
-about. **Dependency direction is one-way: `gitStore` reads and drives `useStore`
+prompt, the commit-history panel, the stash list, the per-paper seat owners,
+and the repo-setup prompt. It is kept out of the main `store.ts` for the same
+reason `aiStore` and the project editor are — a self-contained mode with its
+own lifecycle the ordinary annotation path never needs to know about.
+**Dependency direction is one-way: `gitStore` reads and drives `useStore`
 (`useStore.getState()`), but `store.ts` never imports it.** Refreshing `repo`
 when the open project changes is therefore an `App.tsx` effect, not a call from
 inside `store.ts`.
@@ -651,12 +690,15 @@ exactly as schema-normalized as a file the caller would actually hand it),
 `relpath.test.ts`, `ownAnnotationPath.test.ts`, `concurrentRead.test.ts`
 (controls completion order with real short delays to test the *ordering*
 property, not timing precision), and `deriveGitInfo.test.ts`. The renderer-side
-state machine and its end-to-end flows are covered by integration tests under
-`src/test/integration/` (`pull.integration.test.tsx`,
-`branchSwitch.integration.test.tsx`, `discard.integration.test.tsx`,
-`consolidationAndMerge.integration.test.tsx`,
-`annotationWorkflow.integration.test.tsx`), each stubbing `getGit()` with a fake
-git so the store runs against canned `GitRun`s. The `electron/main.ts` handlers
+state machine is covered by `gitStore.test.ts` (which stubs `getGit()` with a
+fake git so the store runs against canned `GitRun`s and exercises the
+commit/field-review, pull, branch-switch, and stash flows directly) and by
+end-to-end integration tests under `src/test/integration/`
+(`pull.integration.test.tsx`, `branchSwitch.integration.test.tsx`,
+`discard.integration.test.tsx`, `consolidationAndMerge.integration.test.tsx`,
+`annotationWorkflow.integration.test.tsx`). The `electron/main.ts` handlers
 themselves are not unit-tested (outside vitest's include), which is exactly why
 every gate and parser that matters lives in importable `src/git/` modules
-instead.
+instead — and why `e2e/openSaveProject.spec.ts` reaches the real `runGit`/`gitEnv`/
+`GIT_SAFE_CONFIG` chain as the one test that exercises the main-process
+plumbing against a real git binary.

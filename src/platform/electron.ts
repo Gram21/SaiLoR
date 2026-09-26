@@ -7,6 +7,7 @@ import type {
   ProjectLocation,
   SaveHandle,
 } from './adapter'
+import { StaleSaveError, type SharedAnnotations } from './adapter'
 import { readRecents, pushRecent, removeRecent, replaceRecents, type RecentEntry } from './recents'
 import type { LlmConfig, LlmHttpRequest, LlmHttpResponse } from '../llm/types'
 import type {
@@ -23,12 +24,90 @@ import type {
   BranchSwitchStart,
   LogBeginResult,
   LogRevisionFetch,
+  AnnotationAuthors,
+  RepoSetupStatus,
+  StashEntry,
+  StashRestoreResult,
 } from '../git/types'
 import { parsePorcelain, capDiff } from '../git/output'
-import { loadProject, splitProjectFiles } from '../model/project'
+import { loadProject, projectFromFiles, splitProjectFiles, type ProjectFileEntry } from '../model/project'
 import type { PdfMark } from '../model/pdfMarks'
 
 const RECENTS_KEY = 'slr.recents.electron'
+
+/**
+ * How the open project's files last stood on disk — `project.json`'s text plus
+ * every `annotations/…` entry, keyed by relative path. A save writes only what
+ * differs from this.
+ *
+ * Without it, every save rewrites every paper's file for every reviewer, so
+ * adding a field to the schema (which `pruneTree` materializes as an empty
+ * entry in every tree) turns one reviewer's edit into a diff across the whole
+ * `annotations/` folder — files nobody touched, in a repository several people
+ * share. Comparing against the serialization the project was *loaded* with
+ * isolates exactly the papers edited since, without the store having to track
+ * that per paper: `splitProjectFiles` is pure, so an untouched paper serializes
+ * identically both times.
+ *
+ * Refreshed by every open (including the reloads git flows do after they
+ * rewrite the working tree) and every save; a project at a different path
+ * doesn't match, and writes everything.
+ */
+let lastWritten: { path: string; meta: string; files: Map<string, string | null> } | null = null
+
+function noteWritten(path: string, meta: string, files: ProjectFileEntry[]): void {
+  lastWritten = { path, meta, files: new Map(files.map((f) => [f.relPath, f.text])) }
+}
+
+/**
+ * Run a call that may rewrite the working tree, forgetting the baseline first
+ * so the next save writes every file rather than only what differs from it.
+ *
+ * The baseline describes what is on disk, and every git flow that rewrites the
+ * working tree makes it a claim about a past that no longer exists. Those
+ * flows do all reload the project afterwards, which sets a fresh one — but
+ * that is an invariant a future flow can quietly break, and the failure would
+ * be a save that skips a file it should have written. Dropping it at the seam
+ * the writes actually pass through makes the safe outcome the automatic one:
+ * a lost baseline costs one whole-tree write, a stale one costs data.
+ */
+function withBaselineDropped<T>(call: () => Promise<T>): Promise<T> {
+  lastWritten = null
+  return call()
+}
+
+/**
+ * The baseline as it reads under `meta`'s schema version. A save that brings
+ * a new version (the editor recorded a rename) carries every file's answers
+ * to the new names on load; comparing against the old baseline would count
+ * each of those files as edited and rewrite files nobody touched. Re-reading
+ * the baseline under the new version makes a file differ only when its
+ * content really changed — it is written under the new version then.
+ */
+function rebaselined(base: typeof lastWritten, meta: unknown): typeof lastWritten {
+  if (!base) return base
+  const versionOf = (m: unknown) => (m as { schemaVersion?: unknown } | null)?.schemaVersion
+  try {
+    if (versionOf(JSON.parse(base.meta)) === versionOf(meta)) return base
+    const files = [...base.files].filter((e): e is [string, string] => e[1] !== null)
+    const { files: moved } = splitProjectFiles(projectFromFiles(meta, files))
+    return { ...base, files: new Map(moved.map((f) => [f.relPath, f.text])) }
+  } catch {
+    return null
+  }
+}
+
+/** Record how `text` — a project just read from `path` — serializes, so the
+ *  next save can tell edits apart from normalization. Unparseable text leaves
+ *  no baseline, so that save writes everything, exactly as before. */
+function noteOpened(path: string, text: string): void {
+  try {
+    const { meta, files } = splitProjectFiles(loadProject(text))
+    noteWritten(path, JSON.stringify(meta, null, 2), files)
+  } catch {
+    lastWritten = null
+  }
+}
 
 /** Shape of the API exposed by electron/preload.ts on `window.slr`. */
 export interface SlrBridge {
@@ -37,16 +116,25 @@ export interface SlrBridge {
   openProject(): Promise<{ path: string; text: string; corrupt: string[] } | null>
   /** Read a specific file by absolute path (for recent files). Null if missing. */
   openPath(path: string): Promise<{ path: string; text: string; corrupt: string[] } | null>
-  saveProject(path: string, metaText: string, files: Array<{ relPath: string; text: string | null }>): Promise<void>
+  /** `metaText` is null when `project.json` itself is unchanged — see `lastWritten`.
+   *  Writes nothing and names the files when any changed on disk since last read or written. */
+  saveProject(
+    path: string,
+    metaText: string | null,
+    files: Array<{ relPath: string; text: string | null }>,
+  ): Promise<{ stale: string[] }>
   /** Register the project's base directory so slr-file:// can resolve PDFs. */
   setProjectDir(path: string): Promise<void>
   /** Pick a location for a project JSON without writing it. Null if cancelled. */
   pickSavePath(suggestedName: string): Promise<{ path: string } | null>
-  checkSiblingCollision(
-    destPath: string,
-    paperIds: string[],
-    screening: boolean,
-  ): Promise<{ siblingName: string; overlappingIds: string[] } | null>
+  annotationsDirUsers(projectPath: string, folder: string, paperIds: string[], screening: boolean): Promise<string[]>
+  sharedAnnotations(projectPath: string): Promise<SharedAnnotations | null>
+  moveAnnotationsDir(projectPath: string, folder: string): Promise<void>
+  screeningSource(projectPath: string): Promise<{ name: string; text: string } | null>
+  splitAnnotations(
+    projectPath: string,
+    plan: { folders: Record<string, string>; rows: { relPath: string; targets: string[] }[] },
+  ): Promise<void>
   /** Pick PDFs to reference. Returns their absolute paths, [] if cancelled. */
   pickPdfs(): Promise<string[]>
   /** Pick a folder; returns the absolute paths of every PDF inside it (recursively). [] if cancelled. */
@@ -128,6 +216,15 @@ export interface SlrBridge {
   ): Promise<GitRun>
   gitWriteWorking(root: string, relPath: string, working: SplitProject): Promise<GitRun>
   gitDiscardFile(root: string, relPath: string, projectRelPath: string): Promise<GitRun>
+  gitAnnotationAuthors(root: string, relPath: string): Promise<AnnotationAuthors>
+  gitRepoSetupStatus(root: string, relPath: string): Promise<RepoSetupStatus>
+  gitApplyRepoSetup(root: string, relPath: string): Promise<GitRun>
+  gitBackgroundFetch(root: string): Promise<{ fetched: boolean; refused: boolean }>
+  gitStashList(root: string): Promise<StashEntry[]>
+  gitStashPush(root: string, relPath: string, message: string): Promise<GitRun>
+  gitStashRestore(root: string, relPath: string, sha: string): Promise<StashRestoreResult>
+  gitStashDrop(root: string, sha: string): Promise<GitRun>
+  gitStashBranch(root: string, relPath: string, sha: string, branch: string): Promise<GitRun>
   gitBranches(root: string): Promise<GitBranch[]>
   gitBranchCreate(root: string, name: string): Promise<GitRun>
   gitBranchDelete(root: string, branch: string): Promise<GitRun>
@@ -199,6 +296,7 @@ export class ElectronAdapter implements PlatformAdapter {
     const res = await bridge().openProject()
     if (!res) return null
     await bridge().setProjectDir(res.path)
+    noteOpened(res.path, res.text)
     pushRecent(RECENTS_KEY, { id: res.path, name: baseName(res.path), path: res.path })
     return {
       text: res.text,
@@ -213,6 +311,7 @@ export class ElectronAdapter implements PlatformAdapter {
     // Keep the entry even if the file is gone — the drive may come back — caller marks it unavailable instead.
     if (!res) return null
     await bridge().setProjectDir(res.path)
+    noteOpened(res.path, res.text)
     pushRecent(RECENTS_KEY, { id: res.path, name: baseName(res.path), path: res.path })
     return {
       text: res.text,
@@ -227,7 +326,32 @@ export class ElectronAdapter implements PlatformAdapter {
     // `text` is the shared whole-project JSON contract; on disk this build splits it into
     // `project.json` (meta) plus per-tree `annotations/<paperId>/…` files — see `splitProjectFiles`.
     const { meta, files } = splitProjectFiles(loadProject(text))
-    await bridge().saveProject(handle.path, JSON.stringify(meta, null, 2), files)
+    const metaText = JSON.stringify(meta, null, 2)
+    // Only what actually changed — see `lastWritten`.
+    const base = rebaselined(lastWritten?.path === handle.path ? lastWritten : null, meta)
+    const changed = base
+      ? files.filter((f) => !base.files.has(f.relPath) || base.files.get(f.relPath) !== f.text)
+      : files
+    // Paths the project used to write and no longer does: a paper removed from
+    // the project, or one whose id was renamed (its files simply move to the
+    // new id's folder). `splitProjectFiles` can't ask for their deletion — it
+    // only describes the papers that still exist — and nothing else ever
+    // revisited them, so `annotations/<gone>/` stayed on disk forever, got
+    // committed, and silently re-attached itself to any paper later given the
+    // same id.
+    //
+    // The baseline is what makes this safe to do at all. Scanning the folder
+    // instead could not tell a removed paper of ours from a sibling project's
+    // paper (see `ownAnnotationPathMatcher`) — both are "an id this project
+    // doesn't have". The baseline only ever holds paths this project itself
+    // read or wrote, so everything in it is ours by construction.
+    const present = new Set(files.map((f) => f.relPath))
+    const removed = base
+      ? [...base.files.keys()].filter((p) => !present.has(p)).map((relPath) => ({ relPath, text: null }))
+      : []
+    const { stale } = await bridge().saveProject(handle.path, base?.meta === metaText ? null : metaText, [...changed, ...removed])
+    if (stale.length > 0) throw new StaleSaveError(stale)
+    noteWritten(handle.path, metaText, files)
     return handle
   }
 
@@ -287,12 +411,29 @@ export class ElectronAdapter implements PlatformAdapter {
     }
   }
 
-  async checkSiblingCollision(
-    destPath: string,
-    paperIds: string[],
-    screening: boolean,
-  ): Promise<{ siblingName: string; overlappingIds: string[] } | null> {
-    return bridge().checkSiblingCollision(destPath, paperIds, screening)
+  annotationsDirUsers(projectPath: string, folder: string, paperIds: string[], screening: boolean): Promise<string[]> {
+    return bridge().annotationsDirUsers(projectPath, folder, paperIds, screening)
+  }
+
+  sharedAnnotations(projectPath: string): Promise<SharedAnnotations | null> {
+    return bridge().sharedAnnotations(projectPath)
+  }
+
+  moveAnnotationsDir(projectPath: string, folder: string): Promise<void> {
+    return bridge().moveAnnotationsDir(projectPath, folder)
+  }
+
+  screeningSource(projectPath: string): Promise<{ name: string; text: string } | null> {
+    return bridge().screeningSource(projectPath)
+  }
+
+  // Rewrites project files and moves annotation files, so what was last
+  // written describes nothing any more.
+  splitAnnotations(
+    projectPath: string,
+    plan: { folders: Record<string, string>; rows: { relPath: string; targets: string[] }[] },
+  ): Promise<void> {
+    return withBaselineDropped(() => bridge().splitAnnotations(projectPath, plan))
   }
 
   async pickPdfs(): Promise<PickedPdf[]> {
@@ -398,25 +539,46 @@ export class ElectronAdapter implements PlatformAdapter {
     commit: (root, paths, message, amend) => bridge().gitCommit(root, paths, message, amend),
     lastCommitMessage: (root) => bridge().gitLastCommitMessage(root),
     push: (root) => bridge().gitPush(root),
-    beginPull: (root, relPath) => bridge().gitPullBegin(root, relPath),
-    finishPull: (root, relPath, working) => bridge().gitPullFinish(root, relPath, working),
-    abortPull: (root) => bridge().gitPullAbort(root),
-    beginMerge: (root, relPath, ref) => bridge().gitMergeBegin(root, relPath, ref),
+    // Every call below this comment can rewrite the working tree — a merge
+    // that stops mid-way still wrote files, an abort restores them, a stash
+    // takes them away. See `withBaselineDropped`.
+    beginPull: (root, relPath) => withBaselineDropped(() => bridge().gitPullBegin(root, relPath)),
+    finishPull: (root, relPath, working) => withBaselineDropped(() => bridge().gitPullFinish(root, relPath, working)),
+    abortPull: (root) => withBaselineDropped(() => bridge().gitPullAbort(root)),
+    beginMerge: (root, relPath, ref) => withBaselineDropped(() => bridge().gitMergeBegin(root, relPath, ref)),
     logBegin: (root, relPath) => bridge().gitLogBegin(root, relPath),
     logDiff: (root, relPath, rev) => bridge().gitLogDiff(root, relPath, rev),
     headContent: (root, relPath) => bridge().gitHeadContent(root, relPath),
     workingContent: (root, relPath) => bridge().gitWorkingContent(root, relPath),
     commitPartial: (root, relPath, committed, working, otherPaths, message, amend) =>
-      bridge().gitCommitPartial(root, relPath, committed, working, otherPaths, message, amend),
-    writeWorking: (root, relPath, working) => bridge().gitWriteWorking(root, relPath, working),
-    discardFile: (root, relPath, projectRelPath) => bridge().gitDiscardFile(root, relPath, projectRelPath),
+      withBaselineDropped(() => bridge().gitCommitPartial(root, relPath, committed, working, otherPaths, message, amend)),
+    writeWorking: (root, relPath, working) => withBaselineDropped(() => bridge().gitWriteWorking(root, relPath, working)),
+    discardFile: (root, relPath, projectRelPath) =>
+      withBaselineDropped(() => bridge().gitDiscardFile(root, relPath, projectRelPath)),
+    annotationAuthors: (root, relPath) => bridge().gitAnnotationAuthors(root, relPath),
+    repoSetupStatus: (root, relPath) => bridge().gitRepoSetupStatus(root, relPath),
+    applyRepoSetup: (root, relPath) => withBaselineDropped(() => bridge().gitApplyRepoSetup(root, relPath)),
+    // Rewrites remote-tracking refs only, never the working tree, so the save
+    // baseline stays valid.
+    backgroundFetch: (root) => bridge().gitBackgroundFetch(root),
+    stashList: (root) => bridge().gitStashList(root),
+    // Push, restore and branch all rewrite the working tree; dropping only
+    // forgets a stash and leaves the tree alone.
+    stashPush: (root, relPath, message) => withBaselineDropped(() => bridge().gitStashPush(root, relPath, message)),
+    stashRestore: (root, relPath, sha) => withBaselineDropped(() => bridge().gitStashRestore(root, relPath, sha)),
+    stashDrop: (root, sha) => bridge().gitStashDrop(root, sha),
+    stashBranch: (root, relPath, sha, branch) =>
+      withBaselineDropped(() => bridge().gitStashBranch(root, relPath, sha, branch)),
     branches: (root) => bridge().gitBranches(root),
     createBranch: (root, name) => bridge().gitBranchCreate(root, name),
     deleteBranch: (root, branch) => bridge().gitBranchDelete(root, branch),
-    checkoutBranch: (root, branch) => bridge().gitCheckout(root, branch),
-    beginBranchSwitch: (root, relPath, branch) => bridge().gitBranchSwitchBegin(root, relPath, branch),
-    finishBranchSwitch: (root, relPath, resolved) => bridge().gitBranchSwitchFinish(root, relPath, resolved),
-    abortBranchSwitch: (root, sourceBranch) => bridge().gitBranchSwitchAbort(root, sourceBranch),
+    checkoutBranch: (root, branch) => withBaselineDropped(() => bridge().gitCheckout(root, branch)),
+    beginBranchSwitch: (root, relPath, branch) =>
+      withBaselineDropped(() => bridge().gitBranchSwitchBegin(root, relPath, branch)),
+    finishBranchSwitch: (root, relPath, resolved) =>
+      withBaselineDropped(() => bridge().gitBranchSwitchFinish(root, relPath, resolved)),
+    abortBranchSwitch: (root, sourceBranch) =>
+      withBaselineDropped(() => bridge().gitBranchSwitchAbort(root, sourceBranch)),
   }
 
   getGit(): GitPlatform {

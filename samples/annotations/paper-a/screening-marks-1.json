@@ -1,0 +1,22 @@
+{
+  "marks": [
+    {
+      "id": "screen-a-1",
+      "page": 1,
+      "rects": [
+        {
+          "x": 0.12,
+          "y": 0.2,
+          "width": 0.5,
+          "height": 0.03
+        }
+      ],
+      "color": "#ffe066",
+      "comment": "Included: reports a concrete latency result.",
+      "createdAt": "2026-01-12T10:00:00.000Z",
+      "updatedAt": "2026-01-12T10:00:00.000Z",
+      "kind": "highlight",
+      "text": "Finding 2: Latency increases by 30ms on average."
+    }
+  ]
+}

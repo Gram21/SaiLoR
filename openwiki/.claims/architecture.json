@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:d3be40dc9486c9198e1b5fe469eb402df76eead0cde2fe9b337abb6f24a6e88b",
+  "pageVersion": "sha256:4739daa0d7b1d1e8b3b2c9d6e0693d6fa488898a7732d1863a414b38a02baad1",
   "claims": [
     {
       "id": "claim_77c235236a4f499f9da38bd07202a799",
@@ -22,11 +22,11 @@
       "evidence": [
         {
           "resource": "repo://src/App.tsx#L1-L54",
-          "version": "repo-lines-v1:sha256:576584f26d16df6d7965fc93364eea701c2a975f81ab5df00dd25ed6691d39c8:eyJzZWxlY3RlZExpbmVDb3VudCI6NTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY3YzA3MDRlZjFiZDljMjM3MmJmNDk2NDkzMzM1NWE3ZTMxNGRiZGQ4YTdkM2EzOWY2ZDFlNjRiMTE3OGI1MGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhlYWMyNTg2MzA4NjA4NGUzNzIxMTk5ZDIzMzYzOWZiYzVlNzdmM2FiYmYxMDhkMDk0M2Y0MGVkZWU4ZWQxM2YifQ"
+          "version": "repo-lines-v1:sha256:a022b2f82c9d3ea36583885121794fad797359314210a8034eb60cb999fc483b:eyJzZWxlY3RlZExpbmVDb3VudCI6NTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY3YzA3MDRlZjFiZDljMjM3MmJmNDk2NDkzMzM1NWE3ZTMxNGRiZGQ4YTdkM2EzOWY2ZDFlNjRiMTE3OGI1MGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhlYWMyNTg2MzA4NjA4NGUzNzIxMTk5ZDIzMzYzOWZiYzVlNzdmM2FiYmYxMDhkMDk0M2Y0MGVkZWU4ZWQxM2YifQ"
         },
         {
           "resource": "repo://src/state/gitStore.ts#L1-L40",
-          "version": "repo-lines-v1:sha256:0b6220707fe6d92b480dbcff706fbdc0ddc9ead29f7259601f96aa6eaf00005d:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkYzZlMzg3OThjYTUyZTdlMDA4NWY5ODY5MTUxYjg1M2QwOGVlY2NjZTM5OWVhZTM3NzhlZDY4NmNjYjM5NjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMzYTA1ZjQyMWYwZTg2ZTliODMzNDIwM2ZjN2ZlZDA5MTg4YTk4YWI0YWU1OTkwZTFmNzU1OTdjY2Q2ZWRmZmMifQ"
+          "version": "repo-lines-v1:sha256:a5fea878138133365742581697f3d6650b8a37cee84cc1f04f8ee7d43f669c70:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkYzZlMzg3OThjYTUyZTdlMDA4NWY5ODY5MTUxYjg1M2QwOGVlY2NjZTM5OWVhZTM3NzhlZDY4NmNjYjM5NjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMzYTA1ZjQyMWYwZTg2ZTliODMzNDIwM2ZjN2ZlZDA5MTg4YTk4YWI0YWU1OTkwZTFmNzU1OTdjY2Q2ZWRmZmMifQ"
         }
       ]
     },
@@ -70,15 +70,19 @@
     },
     {
       "id": "claim_5c22bf9f238243fba2f6a129e6eabd29",
-      "statement": "ElectronAdapter delegates file operations to window.slr IPC handlers and serves PDFs via the custom slr-file://project/pdf protocol, resolving paths relative to a project directory set via setProjectDir on open/save-as; saveProject re-parses the logical whole-project text via loadProject, splits it with splitProjectFiles, and sends {metaText, files} over the project:save IPC.",
+      "statement": "ElectronAdapter delegates file operations to window.slr IPC handlers and serves PDFs via the custom slr-file://project/pdf?path= protocol (the path as a query param, since Chromium collapses '..' path segments), resolving paths relative to a project directory set via setProjectDir on open/save-as and re-asserted from the handle in getPdfSource. The bridge() helper (src/platform/electron.ts) returns the preload-exposed window.slr object. getOsInfo() returns bridge().os ?? null — on Electron the preload always supplies {platform, arch}, so it yields a value, never null; outside Electron the unsupported adapter's Proxy throws instead, so null is the type-level nullable-capability shape rather than a value this adapter returns. saveProject re-parses the logical whole-project text via loadProject, splits it with splitProjectFiles, and sends only the changed/removed file entries (plus null metaText when project.json is unchanged) over the project:save IPC — a baseline (lastWritten) of how the project last serialized keeps one reviewer's edit from diffing across every other paper's file.",
       "evidence": [
         {
-          "resource": "repo://src/platform/electron.ts#L225-L232",
-          "version": "repo-lines-v1:sha256:7df94d3d29c3ae0e460c7cc91d1a17e7700331bf43c4d0a2aab1bade017261a2:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjRjNmY2OWJlZDI1ZDFhODM1MjY1NTlhNDQ3NWM5ZmU3NDM2MWQwYmNlODdhYzJkYjI3NWQ2MzQ5ZjVlOTNmMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTdkODYzMmU1NGU5Mjk4YWJiOTU4NzI3ZTJkNTE0MDhhYmFmMTM2NjAzNTM3OTEwMTQwYWJmNjViMzBhYjYxMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWMwZDcxNzFmNjc3MWYyMDY5NjRlMjBiMTdiMGIxOWFjMjM2Y2UxMDU0ZTJhNzBhZTc1MDY2Yzg1YzI2OWJiMiJ9"
+          "resource": "repo://src/platform/electron.ts#L217-L227",
+          "version": "repo-lines-v1:sha256:053fc47b56e1501a862667adfc725f9241faf679d946c98424b16a908416c7dc:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlkODNjZGQ5OTk0ZGE1YzhhMWMyZmE0ZWUyMWE4MTI4M2EwZjlkNWI4NDhjNmRlNjAyZmM1Y2E5ZjdkZDc2NWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ2NDYwNDhiMDlkZjNjOGY1YmIxNjJiZWJlMGY1YzczMDhkM2FmZTA3OGNmOTY4M2NhMWFlZTQ0ZTZjMzVlMDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc2MTg5YjJkNTY1MjA3ODQyNWViMzhjYTJkMzAxZWFiMDI3ZmU4ZTVkNTM3YmFkMmQ0ZTRjNGFkM2I2NzFhY2EifQ"
         },
         {
-          "resource": "repo://src/platform/electron.ts#L266-L266",
-          "version": "repo-lines-v1:sha256:037c4e46117e147ec024b084567097ea64673ebefd2dedb1949e06c904da4da2:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDM3YzRlNDYxMTdlMTQ3ZWMwMjRiMDg0NTY3MDk3ZWE2NDY3M2ViZWZkMmRlZGIxOTQ5ZTA2YzkwNGRhNGRhMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDM3YzRlNDYxMTdlMTQ3ZWMwMjRiMDg0NTY3MDk3ZWE2NDY3M2ViZWZkMmRlZGIxOTQ5ZTA2YzkwNGRhNGRhMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmU4M2Q3ZWNhZmY2YTcxYmUwNmZiZjU5YTJhMzM1NTJmMzk5YzdjNjJlZTY0NDExMjNmNmZiZmQzMGNjNjM0MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzdjYzNiNGJiYWQ4MGFkODg3Y2NlMWE0YTVkZTYxZGI3MmYwNzg1ZTRiZTVlYzdkMmE2ZWRjYzllZTk3OTNiZiJ9"
+          "resource": "repo://src/platform/electron.ts#L294-L325",
+          "version": "repo-lines-v1:sha256:51cbb643ef2691f6b97ca4e4a17e09274fa8be1035fde227fd3dd0c4ec34a725:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0YzZmNjliZWQyNWQxYTgzNTI2NTU5YTQ0NzVjOWZlNzQzNjFkMGJjZTg3YWMyZGIyNzVkNjM0OWY1ZTkzZjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk3ZDg2MzJlNTRlOTI5OGFiYjk1ODcyN2UyZDUxNDA4YWJhZjEzNjYwMzUzNzkxMDE0MGFiZjY1YjMwYWI2MTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFjMGQ3MTcxZjY3NzFmMjA2OTY0ZTIwYjE3YjBiMTlhYzIzNmNlMTA1NGUyYTcwYWU3NTA2NmM4NWMyNjliYjIifQ"
+        },
+        {
+          "resource": "repo://src/platform/electron.ts#L332-L360",
+          "version": "repo-lines-v1:sha256:611da9fe5ef190d8f35424c54d5c10f52d1ee1a9a05241157f4051623725426d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwMTdiNWFiNmZiYTEwOTQ1NzMxOWNiY2UzZTk4N2Y0YWY4NjYyM2Y5ODMwM2Y2YmE2MmUzMWZmYjVkY2MzZjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ5NjkyNWE2NWJhOTMxYzFhMzkzY2FhNzI0YjM1NTU5ZjgyMDI3YTM1ZmI2N2I0NmM5Y2IwZTVkNzRhMzg1ZTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBiMDcwNDMyY2Y1OTVmODlmZmVhNmM4YWViYzVlODYyZjJkYmU5OTdhODk4ODc0MjhmYTJjNmJjYjQ3Mjk4MTgifQ"
         }
       ]
     },
@@ -98,7 +102,7 @@
       "evidence": [
         {
           "resource": "repo://src/state/store.ts#L1-L66",
-          "version": "repo-lines-v1:sha256:20180ca745ca4fc07edeff9f84f7faed4e23a2908d9cbb938a6f253ed5d4f475:eyJzZWxlY3RlZExpbmVDb3VudCI6NjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM0NzUwODdhMzk2OWI5Yzc2ZmEwMmZmNWIwMDlkYTAwMDdlZGUzZjA3ODllYzA0YjlhNDA2MWE5YmQyOGI0Y2UifQ"
+          "version": "repo-lines-v1:sha256:7dba3430442fe56a614dc261ef6e58620ad413e25d26697c07666da00e8e9053:eyJzZWxlY3RlZExpbmVDb3VudCI6NjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM0NzUwODdhMzk2OWI5Yzc2ZmEwMmZmNWIwMDlkYTAwMDdlZGUzZjA3ODllYzA0YjlhNDA2MWE5YmQyOGI0Y2UifQ"
         },
         {
           "resource": "repo://src/state/store.ts#L949-L953",
@@ -122,7 +126,7 @@
       "evidence": [
         {
           "resource": "repo://src/state/editorStore.ts#L1-L60",
-          "version": "repo-lines-v1:sha256:1f266ba6a9b4b8ad2a52efa9187f21d90a1785653102fcfe772d6d10b3d08b9b:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJmMmNlOTJiZDE0OTRhYzFiMzE4YjQxOWNjOTUzYmY0MzFjNzRiNzE5Y2Q3M2Y5Y2U0MDU3OTI4Yjk3ZDZlOTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRhNTM0YWQ5NzYzMTE3YTQwYjhlODM5OThjOTU2M2U4NGVkMDBiZTQ4MzExZGFjMWQ2OWFmNzcxNjJkNmU4OGYifQ"
+          "version": "repo-lines-v1:sha256:cf59bce5df177e3de7c618632fa77ca2d3761c97d22b2d5eeb4eaf63184173c9:eyJzZWxlY3RlZExpbmVDb3VudCI6NjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJmMmNlOTJiZDE0OTRhYzFiMzE4YjQxOWNjOTUzYmY0MzFjNzRiNzE5Y2Q3M2Y5Y2U0MDU3OTI4Yjk3ZDZlOTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRhNTM0YWQ5NzYzMTE3YTQwYjhlODM5OThjOTU2M2U4NGVkMDBiZTQ4MzExZGFjMWQ2OWFmNzcxNjJkNmU4OGYifQ"
         }
       ]
     },
@@ -136,7 +140,7 @@
         },
         {
           "resource": "repo://src/state/gitStore.ts#L1-L40",
-          "version": "repo-lines-v1:sha256:0b6220707fe6d92b480dbcff706fbdc0ddc9ead29f7259601f96aa6eaf00005d:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkYzZlMzg3OThjYTUyZTdlMDA4NWY5ODY5MTUxYjg1M2QwOGVlY2NjZTM5OWVhZTM3NzhlZDY4NmNjYjM5NjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMzYTA1ZjQyMWYwZTg2ZTliODMzNDIwM2ZjN2ZlZDA5MTg4YTk4YWI0YWU1OTkwZTFmNzU1OTdjY2Q2ZWRmZmMifQ"
+          "version": "repo-lines-v1:sha256:a5fea878138133365742581697f3d6650b8a37cee84cc1f04f8ee7d43f669c70:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkYzZlMzg3OThjYTUyZTdlMDA4NWY5ODY5MTUxYjg1M2QwOGVlY2NjZTM5OWVhZTM3NzhlZDY4NmNjYjM5NjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMzYTA1ZjQyMWYwZTg2ZTliODMzNDIwM2ZjN2ZlZDA5MTg4YTk4YWI0YWU1OTkwZTFmNzU1OTdjY2Q2ZWRmZmMifQ"
         }
       ]
     },
@@ -204,11 +208,15 @@
     },
     {
       "id": "claim_922dbe3ab48e46469c8a35be949aef5a",
-      "statement": "On disk, a project stores only schema and paper metadata in project.json; every reviewer's and the consolidated annotation answers live in a sibling annotations/<paperId>/ folder, one file per reviewer plus a consolidated file. The split was introduced to avoid git-merge conflicts between reviewers editing the same all-in-one file; the model layer keeps the logical whole-project shape and ElectronAdapter.saveProject does the split, while the read side reassembles a split project back into that logical text before handing it to the renderer.",
+      "statement": "On disk, a project stores only schema and paper metadata in project.json; every reviewer's and the consolidated annotation answers live in a sibling annotations/<paperId>/ folder, one file per reviewer plus a consolidated file. The split was introduced to avoid git-merge conflicts between reviewers editing the same all-in-one file; the model layer keeps the logical whole-project shape and ElectronAdapter.saveProject does the split (re-parsing with loadProject, splitting via splitProjectFiles, sending {metaText, files} over project:save), while the read side (openProject/openRecent via readProjectText) reassembles a split project back into that logical text before handing it to the renderer.",
       "evidence": [
         {
-          "resource": "repo://src/platform/electron.ts#L225-L232",
-          "version": "repo-lines-v1:sha256:7df94d3d29c3ae0e460c7cc91d1a17e7700331bf43c4d0a2aab1bade017261a2:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjRjNmY2OWJlZDI1ZDFhODM1MjY1NTlhNDQ3NWM5ZmU3NDM2MWQwYmNlODdhYzJkYjI3NWQ2MzQ5ZjVlOTNmMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTdkODYzMmU1NGU5Mjk4YWJiOTU4NzI3ZTJkNTE0MDhhYmFmMTM2NjAzNTM3OTEwMTQwYWJmNjViMzBhYjYxMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWMwZDcxNzFmNjc3MWYyMDY5NjRlMjBiMTdiMGIxOWFjMjM2Y2UxMDU0ZTJhNzBhZTc1MDY2Yzg1YzI2OWJiMiJ9"
+          "resource": "repo://src/platform/electron.ts#L265-L292",
+          "version": "repo-lines-v1:sha256:79849f971c8e6667b5d2df5e34d1bac1324c44cac43d6184c1ea2c7a07efed33:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4MzBhMmI3OWMzYmI2MTIxN2FkYjgwMjUzMzdjOTc4OGVkODRjNDYwNmEwMTI5NGRjOGViZDIzYjRmMzcyMzYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRhMGIwMjkwNmU0YWJiZjdjNDFlN2M1ZDY1ZTE4NGFmMWQ3ODc1ZGQ3OTlhZDI0YWZlMmIwN2Y3MzU3NmJmYjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZhMGIzZjEwY2M1MGJiYjcyZjU5MThlZWNmYzNjOGFhZjg1ODZmZTAyNzkyZjU0MmY3ZjlkZjI1N2ExMjJlYmEifQ"
+        },
+        {
+          "resource": "repo://src/platform/electron.ts#L294-L325",
+          "version": "repo-lines-v1:sha256:51cbb643ef2691f6b97ca4e4a17e09274fa8be1035fde227fd3dd0c4ec34a725:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0YzZmNjliZWQyNWQxYTgzNTI2NTU5YTQ0NzVjOWZlNzQzNjFkMGJjZTg3YWMyZGIyNzVkNjM0OWY1ZTkzZjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk3ZDg2MzJlNTRlOTI5OGFiYjk1ODcyN2UyZDUxNDA4YWJhZjEzNjYwMzUzNzkxMDE0MGFiZjY1YjMwYWI2MTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFjMGQ3MTcxZjY3NzFmMjA2OTY0ZTIwYjE3YjBiMTlhYzIzNmNlMTA1NGUyYTcwYWU3NTA2NmM4NWMyNjliYjIifQ"
         }
       ]
     },
@@ -249,10 +257,42 @@
           "version": "repo-lines-v1:sha256:7bdb738cc649760aa2e509c3edd62496ea8671dbce3633b30a87c398d50a7d8d:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE4MzU1MmFiNTcxNDk0YjM5OWIxODE5OTYyMmRiZTNiMzgyNmViNjFmY2QxZjc0Y2ZiMTJhYmNmODhlNGY3MjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE4MzU1MmFiNTcxNDk0YjM5OWIxODE5OTYyMmRiZTNiMzgyNmViNjFmY2QxZjc0Y2ZiMTJhYmNmODhlNGY3MjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdkMWU2MjhhODhkNTRkYTJlYWI3MDNiZjEyNThjYmY4ODkxYjYzMDM2MjVjZGE4MmJhZWQ0YzljNjY1MWM3NzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJmZjhkZTk5MWJjYmM4YWUyNzlkMzBjOWEzMjI3ZTNiMDU0NTcxY2NhY2Q5MDUwZWEwZDhhNmJmZjQ5ZTU1ODcifQ"
         }
       ]
+    },
+    {
+      "id": "claim_b4eb2fba58734ddda934b9c8756a2a35",
+      "statement": "useUpstreamPolling (src/hooks/useUpstreamPolling.ts) keeps the toolbar's unpulled-commit count fresh while a project in a repository with an upstream is open, by background-fetching every BACKGROUND_FETCH_INTERVAL_MS (120 000) via gitStore.refreshUpstream; it is keyed on the repository root and upstream rather than the repo object (which is replaced on every reload) so the two-minute timer is not restarted each time. App.tsx calls it at the top level alongside the other hooks.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.tsx#L49-L65",
+          "version": "repo-lines-v1:sha256:91aee8a829d026fe311e63a32bb78fb12fb9233ca803fe6a40348e18f51cbe04:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliMTg2OTViYWQ1ZmM5YmM0Y2Q4NTg5N2NiZDRjNWFiZTdkMzU0Y2UzZDRmMTZiMjE2MmZhMjM1NDE4NDFlNTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4ZjQ5NDZhYmQzYTFhZjhiZmI2ZDUwZjM4NWE5NzU5MjJlYTZlZTczOTkxNjdkYjg4MGYzNzBhNDE4MTUxNWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjViNzZhNTE2N2U4YzRmMzQyNGQ4NTkwYWIzZjJhZDdkZDk4MzdlZTQ3NzFiNDk3M2Q5M2MxNTk5OTg0ZDIxMzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE3NWQ2NWM0NTAxNWRiZDRhN2NjMmRlNTQ5ZWEyOTNmMjk3NWU1Yjc3ZTViYmQxMDNmODBkNmFiODNmMTA1OWIifQ"
+        },
+        {
+          "resource": "repo://src/git/fetchPolicy.ts#L26-L26",
+          "version": "repo-lines-v1:sha256:62669952137085f748ee9f864191baddadcdb4094750ce6947025991de028a80:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjI2Njk5NTIxMzcwODVmNzQ4ZWU5Zjg2NDE5MWJhZGRhZGNkYjQwOTQ3NTBjZTY5NDcwMjU5OTFkZTAyOGE4MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjI2Njk5NTIxMzcwODVmNzQ4ZWU5Zjg2NDE5MWJhZGRhZGNkYjQwOTQ3NTBjZTY5NDcwMjU5OTFkZTAyOGE4MCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTliY2ViZWFmMWQxYjFiOWE2Y2FiZDE5YTE1NTYxNjlkMzJkZDIzNmQ1N2Y5YTM3MmZmZmQ5ZTRhNjM0MjNhMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzE3ZGE0OWFiYWIxNzI4MTEzMzEwMWY5OGQ0Mjc5ODRkODNiNzMyODA4ZDQzNGI5MjVkNTg3MGM5OGE3YzQyNiJ9"
+        },
+        {
+          "resource": "repo://src/hooks/useUpstreamPolling.ts#L1-L29",
+          "version": "repo-lines-v1:sha256:a83f52d74e1c46f5a0c507c189416fa93a26773432c1fa259dd1859288f83cda:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVkYjEwNDk5ZmU1OTEyNmYyNDA4MmJhYWU5YzY0NjhmYTg1Yzg5NmE0YmYwMzBjMTliYTc3ZWJkYTkzNWFiNDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b311becbcd744743813d23a3fede9634",
+      "statement": "gitStore.ts now also owns the stash list/push/restore/branch/drop actions (src/git/stash.ts, stashPush is project-scoped so it never sweeps a sibling's file), the upstream-ahead count (behind, kept out of repo so its frequent changes don't invalidate in-flight repo-identity checks), the per-paper annotation-author lookup (annotationAuthors from src/git/seatOwner.ts, one git log per repository), and the repository-setup prompt/notice (.gitattributes/.gitignore reconcile via src/git/repoSetup.ts). The one-way dependency is unchanged: gitStore reads useStore.getState(), store.ts never imports gitStore.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/gitStore.ts#L178-L258",
+          "version": "repo-lines-v1:sha256:c9431d873dd6b693eaa3413fcab58e719a2d6c9f91c344b6231b3e901cf010f0:eyJzZWxlY3RlZExpbmVDb3VudCI6ODEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNmMTdhMTJjNDU3ZmZiNzZmMWYwMjY2N2RlN2FjZjk2MWUyZDU3NzBlYTVhODM4MjE5NTQ2ZDFkZDgyYjcxYzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJlMzVlMDQyZWRlZDI5ZDgxOWQxNWUzZGZkOTQxYzM3ZjRjMTAzMzZlNTJiNDBkOTA5YjFmNDEwZmVhYTZiMmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI4MTgwMjIyNGFhNzY3MWIzNWMzNWE3ZDJjNTFjNTZiNDhkZGQ4MDQ5NTEzNjU2MGEzN2YzMjI5OTdlYmI4NzAifQ"
+        },
+        {
+          "resource": "repo://src/state/gitStore.ts#L33-L38",
+          "version": "repo-lines-v1:sha256:364ca1bcf957f30684290155d148df542b1408dccefabb31714385659bd625d9:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjg1YmVmNmQ0YWRkZTU3ZGQxM2JjODM2NTcxZDc5NjNlZWY2YTFmOGE1Yzg5N2Q5NzE2MDQyNTcxY2RiMDJmMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODkwODRjYzUwYzkyOWM5MTVmZjAwMTNkZGRiMjdlZDAxNTU2NjlmZWQ0YTJiODkwZTYxNjVkMWU0YmQ2MDVhYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjM1YzZhZjk3ZTVmMmYwZjU2NTI5N2Q3OTMyMWI2OTcwODU2YzhhNTkwZWQ3ZjJlNGE1YmMyNjhlNDk3Yzc3YiJ9"
+        }
+      ]
     }
   ],
   "verification": {
-    "by": "openwiki/0.4.0",
-    "at": "2026-09-22T07:19:01.173Z"
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T12:49:55.013Z"
   }
 }

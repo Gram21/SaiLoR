@@ -3,6 +3,7 @@ import { isField } from './schema'
 import {
   hasAnnotations,
   isFieldVisible,
+  orphanedNodePaths,
   type AnnotationValueTree,
   type FieldValue,
   type InstanceNode,
@@ -22,7 +23,7 @@ import { formatPath, type RawSeg } from '../llm/paths'
 // `src/screening/validate.ts` for the two cross-field rules a plain schema
 // walk cannot express. It lives in this union because `ValidationIssue` (and
 // everything that renders one, like `ValidationDialog.tsx`) is shared.
-export type IssueKind = 'required' | 'type' | 'enum' | 'cardinality' | 'screening'
+export type IssueKind = 'required' | 'type' | 'enum' | 'cardinality' | 'screening' | 'orphaned' | 'schema-version'
 
 export interface ValidationIssue {
   paperId: string
@@ -55,6 +56,8 @@ export interface ProjectValidation {
 const PATH_SEP = ' › '
 /** Long enum lists would drown the message; show a head and count the rest. */
 const MAX_LISTED_OPTIONS = 8
+/** Same reasoning for a paper carrying many orphaned nodes. */
+const MAX_LISTED_ORPHANS = 5
 const MAX_PREVIEW_CHARS = 40
 
 // ---------------------------------------------------------------------------
@@ -323,6 +326,16 @@ export function validatePaper(schema: ResolvedDef[], paper: Paper): ValidationIs
  * `unannotated` still says which papers those are, so "not started" is never
  * silently indistinguishable from "actually valid".
  */
+/** A per-file key from `Paper.unknownSchemaFiles`, in words. */
+function describeFileKey(key: string): string {
+  const review = /^review-(\d+)$/.exec(key)
+  const marks = /^marks-(\d+)$/.exec(key)
+  if (review) return `Reviewer ${review[1]}'s answers`
+  if (marks) return `Reviewer ${marks[1]}'s PDF highlights`
+  if (key === 'marks-consolidated') return 'The PDF highlights'
+  return 'The consolidated answers'
+}
+
 export function validateProject(project: Project): ProjectValidation {
   const papers = Array.isArray(project?.papers) ? project.papers : []
   const schema = Array.isArray(project?.schema) ? project.schema : []
@@ -332,6 +345,43 @@ export function validateProject(project: Project): ProjectValidation {
   for (const paper of papers) {
     try {
       const tree = isPlainObject(paper?.annotations) ? (paper.annotations as AnnotationValueTree) : {}
+      // Checked before the skip below, and for every tree: a paper whose only
+      // answers sit under a removed field has none the current schema can see,
+      // so it would otherwise be filed as "not started" — which is exactly the
+      // wrong thing to tell somebody whose colleague's work is sitting there.
+      const orphans = orphanedNodePaths(schema, tree)
+      if (orphans.length > 0) {
+        const listed = orphans.slice(0, MAX_LISTED_ORPHANS)
+        const rest = orphans.length - listed.length
+        issues.push({
+          paperId: paper?.id ?? '',
+          paperTitle: paper?.title ?? '',
+          path: '',
+          canonicalPath: '',
+          kind: 'orphaned',
+          message:
+            `Holds answers under ${listed.map((p) => `"${p}"`).join(', ')}${rest > 0 ? `, and ${rest} more` : ''}, ` +
+            'which the schema no longer describes. They are kept in the file and shown nowhere; ' +
+            'put the field back in the schema to see them again.',
+        })
+      }
+      // A file written under a schema version this project's history does not
+      // know was read as it is: renames since then could not be applied, so
+      // some of its answers may sit under old names.
+      const unknownFiles = Array.isArray(paper?.unknownSchemaFiles) ? paper.unknownSchemaFiles : []
+      if (unknownFiles.length > 0) {
+        issues.push({
+          paperId: paper?.id ?? '',
+          paperTitle: paper?.title ?? '',
+          path: '',
+          canonicalPath: '',
+          kind: 'schema-version',
+          message:
+            `${unknownFiles.map(describeFileKey).join(', ')} ${unknownFiles.length === 1 ? 'was' : 'were'} written ` +
+            "under a schema version this project doesn't know — from another branch, or edited by hand — so " +
+            'fields renamed or moved since could not be carried over. Answers under old names are hidden.',
+        })
+      }
       if (!hasAnnotations(schema, tree)) {
         unannotated.push({ paperId: paper?.id ?? '', paperTitle: paper?.title ?? '' })
         continue

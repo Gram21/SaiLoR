@@ -22,10 +22,10 @@ sources:
     resource: repo://src/model/version.ts
   - id: openwiki-source-769f5f5c1e3631cf9ab273bc
     resource: repo://src/platform/electron.ts
-generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
+generated: { by: "openwiki/0.5.2", at: "2026-09-23T12:49:55.013Z" }
 verified:
-  - by: openwiki/0.4.0
-    at: 2026-09-22T07:19:01.173Z
+  - by: openwiki/0.5.2
+    at: 2026-09-23T12:49:55.013Z
 ---
 
 # Electron Main Process and IPC
@@ -176,11 +176,19 @@ The whole git feature lives in the main process rather than a library because th
 
 - uses `execFile` with an **argument array**, never a shell string, and `--` before any user-supplied path or URL (a repository URL is user input reaching a spawned process; without both, a URL of `--upload-pack=…` would be read as an option).
 - never lets the renderer name an argv — it picks one of the operations and supplies data; the main process decides what git is asked to do. A general `git <args>` channel would be arbitrary code execution (git has `--exec-path`, aliases, and the `ext::` transport).
-- injects `GIT_SAFE_CONFIG` (a hard `-c` override that beats every config file) disabling `core.fsmonitor`, `core.hooksPath` (pointed at a non-existent tmp dir), `core.pager`, `core.editor`, `core.alternateRefsCommand`, `uploadpack.packObjectsHook`, and `protocol.ext.allow=never`. The threat model is a received project folder that brings its own `.git/` by zip/USB/shared drive: a hostile `core.fsmonitor` runs on `git status` (one click from opening the project), and `git:info` fires automatically on project open. `diff.external` is deliberately not in the list (setting it empty makes git run the empty string); `--no-ext-diff` and `--no-textconv` are passed where a diff is run instead. Keys a user may legitimately set globally (`core.sshCommand`, `credential.helper`, `gpg.program`) are left alone — they run only on an explicit network action, not on merely opening a folder.
+- injects `GIT_SAFE_CONFIG` (a hard `-c` override that beats every config file) disabling `core.fsmonitor`, `core.hooksPath` (pointed at a non-existent tmp dir), `core.pager`, `core.editor`, `core.alternateRefsCommand`, `uploadpack.packObjectsHook`, and `protocol.ext.allow=never`. The threat model is a received project folder that brings its own `.git/` by zip/USB/shared drive: a hostile `core.fsmonitor` runs on `git status` (one click from opening the project), and `git:info` fires automatically on project open. `diff.external` is deliberately not in the list (setting it empty makes git run the empty string); `--no-ext-diff` and `--no-textconv` are passed where a diff is run instead. Keys a user may legitimately set globally (`core.sshCommand`, `credential.helper`, `gpg.program`) are left alone — set in the repository's own config, they run only on an explicit network action, not on merely opening a folder. `git:backgroundFetch`, the one network call nobody asked for, is refused for a repository whose own config sets such a key (`FETCH_COMMAND_KEYS` in `src/git/fetchPolicy.ts`).
 - strips inherited `GIT_DIR` / `GIT_WORK_TREE` / etc. (SaiLoR may have been launched from inside another repository) and sets `GIT_TERMINAL_PROMPT=0` / `GIT_EDITOR=true` / `GIT_SEQUENCE_EDITOR=true` — this process has no tty, so a git that asks for input would block forever; credential helpers, askpass, and SSH agents are untouched because none is a terminal prompt.
 - treats a non-zero exit as **data, not an exception** (a merge that conflicts exits 1, and that is the normal path here); only a failure to launch git at all is signalled with `code: null`. Timeouts: 30 s for plumbing, 900 s for network (clone/fetch/push); `maxBuffer` raised to 32 MB for large project-JSON diffs.
 
 `assertRoot` guards every root-taking handler against `knownGitRoots`; `assertRelPath` / `assertRef` re-check renderer-supplied paths and refs. See `/openwiki/workflows/git-integration.md` for the merge/pull/branch-switch state machines built on these handlers.
+
+## Detached-HEAD commit refusal (`detachedHeadRefusal`)
+
+A commit made on a detached HEAD belongs to no branch: it succeeds, the panel says "Committed.", and the moment the reviewer checks out a branch again the work vanishes from the tree and from every list — recoverable only from the reflog, by somebody who knows it exists. The branch-switch flow already refuses to run from a detached HEAD for the same reason; the commit path used not to check.
+
+`detachedHeadRefusal(root)` runs `git symbolic-ref --short -q HEAD` and returns a failing `GitRun` (with a human-readable "check out a branch first" message) when it resolves to nothing. An unborn HEAD (a repository with no commits yet) is *not* detached — `symbolic-ref` still resolves — so the refusal only fires on a real detachment, the sort reached by checking out a commit or a remote-tracking ref outside the app (SaiLoR's own switcher offers local branches only).
+
+Three commit-shaped handlers call it before doing anything: `git:commit` (the ordinary staged commit), `git:commitPartial` (its write→add→commit→restore swap, used to commit one reviewer's tree without disturbing others), and `git:applyRepoSetup` (which writes a `.gitattributes`/`.gitignore` and commits it — silently configuring a repository into a commit nobody can find is worse than not doing it). `git:branchSwitchBegin` makes the same check directly: a detached HEAD is reported as `{ kind: 'error', message: 'Cannot switch branches from a detached HEAD.' }`, so the switcher never offers the stash-and-checkout flow from one.
 
 ## Self-update (`update:*`)
 
@@ -222,4 +230,4 @@ A clean quit is coordinated across the process boundary so the user is prompted 
 
 ## Shared pure logic imported from `src/`
 
-`electron/main.ts` is the only file under `electron/` that imports from `src/`, and it imports only shared pure logic that must not exist twice: the git URL/path/ref/output/ownAnnotationPath/concurrentRead/deriveGitInfo modules, the `model/project` legacy-shape helpers, `model/pdfMarks` / `model/pdfExport`, and `model/updateSignature`. All of these import nothing DOM-specific themselves, so they typecheck identically under the main process's tsconfig (node types) and the renderer's (DOM types) — the same arrangement that lets the vitest suite reach the security rules in `src/git/*`.
+`electron/main.ts` is the only file under `electron/` that imports from `src/`, and it imports only shared pure logic that must not exist twice: the git URL/path/ref/output/ownAnnotationPath/seatOwner/repoSetup/stash/fetchPolicy/stashOps/concurrentRead/deriveGitInfo modules, the `model/project` legacy-shape helpers, `model/fileStamps`, `model/pdfMarks` / `model/pdfExport`, and `model/updateSignature`. All of these import nothing DOM-specific themselves, so they typecheck identically under the main process's tsconfig (node types) and the renderer's (DOM types) — the same arrangement that lets the vitest suite reach the security rules in `src/git/*`.

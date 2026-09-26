@@ -11,12 +11,23 @@ import {
   hasAnnotations,
   normalizeTree,
   pruneTree,
+  treeHoldsOrphans,
   type AnnotationValueTree,
 } from './annotations'
 import { screeningSchemaDefs } from '../screening/schema'
 import { parseYear } from './year'
 import { parseMarks, parseReviewMarks, type PdfMark } from './pdfMarks'
 import { parseAlignment, type StoredAlignment } from './alignment'
+import { annotationsDirProblem } from './annotationsDir'
+import {
+  moveInMarks,
+  moveInTree,
+  parseSchemaHistory,
+  parseSchemaVersion,
+  pendingMoves,
+  type SchemaHistoryEntry,
+  type SchemaMove,
+} from './schemaVersion'
 
 /**
  * One AI-assisted-annotation pass applied to a paper. A permanent disclosure
@@ -113,6 +124,10 @@ export interface Paper {
   reviewsFinished: Record<string, boolean>
   /** Any additional fields present in the source file are preserved on save. */
   extra: Record<string, unknown>
+  /** Files of this paper written under a schema version the project's
+   *  history does not know, and so left as they were: `consolidated`,
+   *  `review-<n>`, `marks-consolidated`, `marks-<n>`. Absent when none. */
+  unknownSchemaFiles?: string[]
 }
 
 /**
@@ -177,6 +192,18 @@ export interface Project {
    *  `protocol` is. */
   schemaInfo: string | null
   schema: ResolvedDef[]
+  /** Id of this schema version (see `model/schemaVersion.ts`); null for a
+   *  project whose schema has not been edited since versions existed. */
+  schemaVersion: string | null
+  /** Every schema version so far, oldest first, with its renames and moves. */
+  schemaHistory: SchemaHistoryEntry[]
+  /** The project's annotations folder, one folder directly inside the project
+   *  file's directory; null means the default `annotations`. See
+   *  `model/annotationsDir.ts`. */
+  annotationsDir: string | null
+  /** A folder name the file gave that is not allowed, and so was ignored in
+   *  favour of the default. Not written back. */
+  refusedAnnotationsDir?: string
   /** Whether AI-assisted annotation is available. Defaults to true; opt out
    *  with `config.ai: false`. */
   aiEnabled: boolean
@@ -243,6 +270,7 @@ const KNOWN_PAPER_KEYS = new Set([
   'reviewMarks',
   'finished',
   'reviewsFinished',
+  'schemaVersions',
 ])
 /** Exported so `editorStore.ts`'s root-extra split reuses this exact list
  *  rather than a second hand-maintained copy. */
@@ -252,6 +280,9 @@ export const KNOWN_ROOT_KEYS = new Set([
   'provenance',
   'protocol',
   'schemaInfo',
+  'schemaVersion',
+  'schemaHistory',
+  'annotationsDir',
   'config',
   'papers',
 ])
@@ -462,10 +493,6 @@ export function parseProvenance(raw: unknown): ProjectProvenance | null {
 /**
  * Structural equality for plain JSON: object keys are order-independent,
  * array elements are order-sensitive (reordering genuinely changes meaning).
- * Deliberately not a text comparison — `needsShapeMigration` relies on that so
- * reformatting alone (which `serializeProject` does on every save) never
- * looks like a reason to migrate.
- *
  * Exported for `src/git/merge.ts`, which needs the identical notion for
  * three-way merges — a second implementation would be a bug waiting to happen.
  */
@@ -482,32 +509,6 @@ export function deepEqualJson(a: unknown, b: unknown): boolean {
   return ak.every(
     (k) => k in (b as Record<string, unknown>) && deepEqualJson((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]),
   )
-}
-
-/**
- * Whether `project`'s `annotations`/`reviews` still need the canonical
- * serialized shape (hand-edited file, or written by an older app version).
- * Compares structurally (`deepEqualJson`) against what saving `project` would
- * write now, scoped to just those two fields, so unrelated formatting
- * differences never falsely trigger a migration.
- *
- * `rawData` must be the same already-parsed value passed to `loadProject` to
- * produce `project` — call this right after `loadProject`, not independently.
- */
-export function needsShapeMigration(project: Project, rawData: unknown): boolean {
-  const data = rawData as { papers?: unknown[] }
-  const rawPapers = Array.isArray(data.papers) ? data.papers : []
-  return project.papers.some((paper, i) => {
-    const rawPaper = (rawPapers[i] ?? {}) as Record<string, unknown>
-    const rawAnnotations = rawPaper.annotations ?? {}
-    if (!deepEqualJson(serializedTree(project.schema, paper.annotations), rawAnnotations)) return true
-    if (project.reviewers <= 1) return false
-    const canonicalReviews = Object.fromEntries(
-      Object.entries(paper.reviews).map(([k, v]) => [k, serializedTree(project.schema, v)]),
-    )
-    const rawReviews = rawPaper.reviews ?? {}
-    return !deepEqualJson(canonicalReviews, rawReviews)
-  })
 }
 
 /**
@@ -600,7 +601,40 @@ export function loadProject(input: string | unknown): Project {
     ids.add(p.id)
   }
 
-  const papers: Paper[] = raw.papers.map((p) => ({
+  const schemaVersion = parseSchemaVersion((data as { schemaVersion?: unknown }).schemaVersion)
+  const schemaHistory = parseSchemaHistory((data as { schemaHistory?: unknown }).schemaHistory)
+  const rawAnnotationsDir = (data as { annotationsDir?: unknown }).annotationsDir
+  const annotationsDir =
+    typeof rawAnnotationsDir === 'string' && annotationsDirProblem(rawAnnotationsDir) === null ? rawAnnotationsDir : null
+
+  const papers: Paper[] = raw.papers.map((p) => {
+    // Carry each file's answers across the renames and moves made since it
+    // was written — see `model/schemaVersion.ts`. A file with no version
+    // predates versioning, so every recorded move is newer than it.
+    const versions = parseFileVersions((p as { schemaVersions?: unknown }).schemaVersions)
+    const unknownSchemaFiles: string[] = []
+    const migrate = <T,>(key: string, value: T, apply: (v: T, m: SchemaMove) => T): T => {
+      const pending = pendingMoves(schemaHistory, versions[key] ?? null, schemaVersion)
+      if (pending === 'unknown') {
+        unknownSchemaFiles.push(key)
+        return value
+      }
+      return pending.reduce(apply, value)
+    }
+    const tree = (key: string, v: unknown) =>
+      migrate(key, v as AnnotationValueTree | undefined, moveInTree)
+    const rawReviews = (p as { reviews?: unknown }).reviews
+    const reviews =
+      typeof rawReviews === 'object' && rawReviews !== null && !Array.isArray(rawReviews)
+        ? Object.fromEntries(Object.entries(rawReviews).map(([k, v]) => [k, tree(`review-${k}`, v)]))
+        : rawReviews
+    const reviewMarks = Object.fromEntries(
+      Object.entries(parseReviewMarks((p as { reviewMarks?: unknown }).reviewMarks)).map(([k, v]) => [
+        k,
+        migrate(`marks-${k}`, v, moveInMarks),
+      ]),
+    )
+    return {
     id: p.id,
     title: p.title,
     authors: p.authors ?? [],
@@ -613,8 +647,8 @@ export function loadProject(input: string | unknown): Project {
     // trusted whenever `abstract` itself is empty.
     abstractFromPdf: p.abstract && p.abstractFromPdf === true ? true : undefined,
     pdf: p.pdf,
-    annotations: normalizeTree(schema, p.annotations as AnnotationValueTree | undefined),
-    reviews: normalizeReviews((p as { reviews?: unknown }).reviews, schema, raw.config.reviewers ?? 1),
+    annotations: normalizeTree(schema, tree('consolidated', p.annotations)),
+    reviews: normalizeReviews(reviews, schema, raw.config.reviewers ?? 1),
     aiUsage: parseAiUsage(p.aiUsage),
     equal: parseEqual(p.equal),
     alignment: parseAlignment((p as { alignment?: unknown }).alignment),
@@ -622,13 +656,15 @@ export function loadProject(input: string | unknown): Project {
       typeof (p as { consolidationSync?: unknown }).consolidationSync === 'string'
         ? ((p as { consolidationSync?: string }).consolidationSync as string)
         : undefined,
-    marks: parseMarks((p as { marks?: unknown }).marks),
-    reviewMarks: parseReviewMarks((p as { reviewMarks?: unknown }).reviewMarks),
+    marks: migrate('marks-consolidated', parseMarks((p as { marks?: unknown }).marks), moveInMarks),
+    reviewMarks,
     // Only a literal `true` declares anything — see `parseReviewsFinished`.
     finished: (p as { finished?: unknown }).finished === true,
     reviewsFinished: parseReviewsFinished((p as { reviewsFinished?: unknown }).reviewsFinished),
     extra: extractExtra(p, KNOWN_PAPER_KEYS),
-  }))
+    ...(unknownSchemaFiles.length > 0 ? { unknownSchemaFiles } : {}),
+    }
+  })
 
   return {
     version: raw.version ?? 1,
@@ -637,6 +673,12 @@ export function loadProject(input: string | unknown): Project {
     protocol: parseProtocol(raw.protocol),
     schemaInfo: parseSchemaInfo(raw.schemaInfo),
     schema,
+    schemaVersion,
+    schemaHistory,
+    annotationsDir,
+    ...(rawAnnotationsDir !== undefined && annotationsDir === null
+      ? { refusedAnnotationsDir: String(rawAnnotationsDir) }
+      : {}),
     // Absent means enabled; only an explicit `false` opts out.
     aiEnabled: raw.config.ai !== false,
     // Absent means enabled, same rule as `ai` above; only an explicit `false`
@@ -648,6 +690,24 @@ export function loadProject(input: string | unknown): Project {
     screening,
     extra: extractExtra(raw, KNOWN_ROOT_KEYS),
   }
+}
+
+/** The root keys naming the schema version, written once there is one. */
+function schemaVersionKeys(project: Project): Record<string, unknown> {
+  return {
+    ...(project.annotationsDir ? { annotationsDir: project.annotationsDir } : {}),
+    ...(project.schemaVersion ? { schemaVersion: project.schemaVersion } : {}),
+    ...(project.schemaHistory.length > 0 ? { schemaHistory: project.schemaHistory } : {}),
+  }
+}
+
+/** A paper's per-file schema versions (see `assembleLegacyProjectJson`);
+ *  `null` for a file that predates versioning. */
+function parseFileVersions(raw: unknown): Record<string, string | null> {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return {}
+  const out: Record<string, string | null> = {}
+  for (const [k, v] of Object.entries(raw)) out[k] = typeof v === 'string' && v !== '' ? v : null
+  return out
 }
 
 /**
@@ -666,6 +726,7 @@ export function serializeProject(project: Project): string {
     ...(project.protocol ? { protocol: project.protocol } : {}),
     // Likewise only written when a schema comment was actually authored.
     ...(project.schemaInfo ? { schemaInfo: project.schemaInfo } : {}),
+    ...schemaVersionKeys(project),
     // `ai`/`reviewers` are only written when they differ from the default, so
     // an ordinary or single-reviewer file stays exactly as clean as before.
     config: {
@@ -730,6 +791,17 @@ export function serializeProject(project: Project): string {
           finishedKeys.sort((a, b) => Number(a) - Number(b)).map((k) => [k, true]),
         )
       }
+      // Every tree held here is at the project's version — it was carried
+      // there on load — so reading this text back must not move it again.
+      if (project.schemaVersion) {
+        const v = project.schemaVersion
+        paper.schemaVersions = {
+          consolidated: v,
+          'marks-consolidated': v,
+          ...Object.fromEntries(Object.keys(p.reviews).map((k) => [`review-${k}`, v])),
+          ...Object.fromEntries(Object.keys(p.reviewMarks).map((k) => [`marks-${k}`, v])),
+        }
+      }
       return { ...paper, ...p.extra }
     }),
     ...project.extra,
@@ -740,7 +812,17 @@ export function serializeProject(project: Project): string {
 /** Empty normalized trees exist in memory to bind the form to the schema, but
  * do not belong in a project file until a reviewer has recorded an answer. */
 function serializedTree(schema: ResolvedDef[], tree: AnnotationValueTree): AnnotationValueTree {
-  return hasAnnotations(schema, tree) ? pruneTree(schema, tree) : {}
+  // Orphans survive even when nothing in the current schema is answered —
+  // otherwise removing the one field a reviewer had filled in would still be
+  // what deletes their work. See `orphanedNodes`.
+  return hasContent(schema, tree) ? pruneTree(schema, tree) : {}
+}
+
+/** Does this tree hold anything worth a file on disk — a real answer, or
+ *  answers orphaned by a schema edit at any depth? `hasAnnotations` alone
+ *  would drop the file, and with it the orphans. */
+function hasContent(schema: ResolvedDef[], tree: AnnotationValueTree): boolean {
+  return hasAnnotations(schema, tree) || treeHoldsOrphans(schema, tree)
 }
 
 /**
@@ -779,6 +861,8 @@ export interface ProjectFileEntry {
  */
 export function splitProjectFiles(project: Project): { meta: unknown; files: ProjectFileEntry[] } {
   const files: ProjectFileEntry[] = []
+  // Each file says which schema version its answers are written against.
+  const stamp = project.schemaVersion ? { schemaVersion: project.schemaVersion } : {}
   const reviewerName = project.screening ? 'screening' : 'reviewer'
   const consolidatedName = project.screening ? 'screening-consolidated' : 'consolidated'
   const metaPapers = [...project.papers].sort(comparePapers).map((p) => {
@@ -803,7 +887,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     if (reviewerSlots.size > 0) {
       for (const k of [...reviewerSlots].sort((a, b) => a - b)) {
         const tree = p.reviews[String(k)]
-        const has = tree !== undefined && hasAnnotations(project.schema, tree)
+        const has = tree !== undefined && hasContent(project.schema, tree)
         // Rides in the same per-reviewer file as that reviewer's tree, so it
         // never collides with another reviewer's save; it can also keep the
         // file alive alone — ticking the box then clearing a field still said
@@ -815,6 +899,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
             has || finished
               ? JSON.stringify(
                   {
+                    ...stamp,
                     ...(has ? { annotations: serializedTree(project.schema, tree!) } : {}),
                     ...(finished ? { finished: true } : {}),
                   },
@@ -825,14 +910,14 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
         })
         const marks = p.reviewMarks[String(k)] ?? []
         files.push({
-          relPath: `${p.id}/marks-${k}.json`,
-          text: marks.length > 0 ? JSON.stringify({ marks }, null, 2) : null,
+          relPath: `${p.id}/${marksFileName(project.screening !== null, String(k))}`,
+          text: marks.length > 0 ? JSON.stringify({ ...stamp, marks }, null, 2) : null,
         })
       }
     }
 
     const consolidated: Record<string, unknown> = {}
-    const hasConsolidatedAnnotations = hasAnnotations(project.schema, p.annotations)
+    const hasConsolidatedAnnotations = hasContent(project.schema, p.annotations)
     if (hasConsolidatedAnnotations) consolidated.annotations = serializedTree(project.schema, p.annotations)
     if (p.aiUsage.length > 0) consolidated.aiUsage = p.aiUsage
     if (p.equal.length > 0) consolidated.equal = p.equal
@@ -844,13 +929,13 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     if (p.finished) consolidated.finished = true
     files.push({
       relPath: `${p.id}/${consolidatedName}.json`,
-      text: Object.keys(consolidated).length > 0 ? JSON.stringify(consolidated, null, 2) : null,
+      text: Object.keys(consolidated).length > 0 ? JSON.stringify({ ...stamp, ...consolidated }, null, 2) : null,
     })
     // Marks are reading notes, not screening/reviewer decisions, so they get
     // their own file family regardless of screening vs. annotation mode.
     files.push({
-      relPath: `${p.id}/marks-consolidated.json`,
-      text: p.marks.length > 0 ? JSON.stringify({ marks: p.marks }, null, 2) : null,
+      relPath: `${p.id}/${marksFileName(project.screening !== null, 'consolidated')}`,
+      text: p.marks.length > 0 ? JSON.stringify({ ...stamp, marks: p.marks }, null, 2) : null,
     })
 
     return { ...paper, ...p.extra }
@@ -862,6 +947,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     ...(project.provenance ? { provenance: project.provenance } : {}),
     ...(project.protocol ? { protocol: project.protocol } : {}),
     ...(project.schemaInfo ? { schemaInfo: project.schemaInfo } : {}),
+    ...schemaVersionKeys(project),
     config: {
       schema: dehydrateSchema(project.schema),
       ...(project.aiEnabled ? {} : { ai: false }),
@@ -906,6 +992,66 @@ export function isLegacyProjectShape(raw: unknown): boolean {
   )
 }
 
+const REVIEWER_FILE = /^(?:reviewer|screening)-(\d+)\.json$/
+
+/**
+ * A PDF-highlight file's name. Screening projects have their own
+ * (`screening-marks-*`), like their decision files: a screening project and an
+ * annotation project over the same papers can then share a folder without
+ * ever writing the same file. `seat` is a reviewer number or `consolidated`.
+ */
+export function marksFileName(screening: boolean, seat: string): string {
+  return `${screening ? 'screening-marks' : 'marks'}-${seat}.json`
+}
+
+/**
+ * The seat a highlight file holds for a project of this kind, or `null` when
+ * it is not one. A screening project's highlight file from before they had
+ * their own name (`marks-*`) is recognised as `legacy`: whether it really is
+ * the screening project's is the caller's decision.
+ */
+export function parseMarksFileName(name: string, screening: boolean): { seat: string; legacy: boolean } | null {
+  const own = (screening ? /^screening-marks-(\d+|consolidated)\.json$/ : /^marks-(\d+|consolidated)\.json$/).exec(name)
+  if (own) return { seat: own[1], legacy: false }
+  const old = screening ? /^marks-(\d+|consolidated)\.json$/.exec(name) : null
+  return old ? { seat: old[1], legacy: true } : null
+}
+
+/**
+ * The reverse of `splitProjectFiles`: `meta` plus the files it wrote
+ * (`annotations/`-relative path and text), parsed the way opening the project
+ * from disk would parse them.
+ */
+export function projectFromFiles(meta: unknown, files: Iterable<[string, string]>): Project {
+  const papers = new Map<
+    string,
+    { consolidated?: unknown; reviewers: Map<string, unknown>; marksConsolidated?: unknown; reviewMarks: Map<string, unknown> }
+  >()
+  const screening = Boolean((meta as { config?: { screening?: unknown } } | null)?.config?.screening)
+  const named = [...files].map(([relPath, text]) => {
+    const slash = relPath.lastIndexOf('/')
+    const name = relPath.slice(slash + 1)
+    return { id: relPath.slice(0, slash), name, text, marks: parseMarksFileName(name, screening) }
+  })
+  // Old-style highlight files first, so a file under the kind's own name wins.
+  named.sort((a, b) => Number(!a.marks?.legacy) - Number(!b.marks?.legacy))
+  for (const { id, name, text, marks } of named) {
+    let entry = papers.get(id)
+    if (!entry) {
+      entry = { reviewers: new Map(), reviewMarks: new Map() }
+      papers.set(id, entry)
+    }
+    const value: unknown = JSON.parse(text)
+    const reviewer = REVIEWER_FILE.exec(name)
+    if (marks) {
+      if (marks.seat === 'consolidated') entry.marksConsolidated = value
+      else entry.reviewMarks.set(marks.seat, value)
+    } else if (reviewer) entry.reviewers.set(reviewer[1], value)
+    else entry.consolidated = value
+  }
+  return loadProject(assembleLegacyProjectJson(meta, papers))
+}
+
 /**
  * Reassemble a meta-only `project.json` plus its per-paper annotation files
  * into the legacy whole-project shape `loadProject` already parses — so the
@@ -941,6 +1087,14 @@ export function assembleLegacyProjectJson(
         consolidationSync?: unknown
         finished?: unknown
       }
+      // Which schema version each file was written under, so the loader can
+      // carry its answers across renames made since.
+      const versionOf = (file: unknown) => (file as { schemaVersion?: unknown } | undefined)?.schemaVersion ?? null
+      const schemaVersions: Record<string, unknown> = {}
+      if (entry?.consolidated !== undefined) schemaVersions.consolidated = versionOf(entry.consolidated)
+      if (entry?.marksConsolidated !== undefined) schemaVersions['marks-consolidated'] = versionOf(entry.marksConsolidated)
+      for (const [k, v] of entry?.reviewers ?? []) schemaVersions[`review-${k}`] = versionOf(v)
+      for (const [k, v] of entry?.reviewMarks ?? []) schemaVersions[`marks-${k}`] = versionOf(v)
       const reviews: Record<string, unknown> = {}
       const reviewsFinished: Record<string, unknown> = {}
       for (const [k, v] of entry?.reviewers ?? []) {
@@ -968,6 +1122,7 @@ export function assembleLegacyProjectJson(
         ...(Object.keys(reviewMarks).length > 0 ? { reviewMarks } : {}),
         ...(consolidated.finished !== undefined ? { finished: consolidated.finished } : {}),
         ...(Object.keys(reviewsFinished).length > 0 ? { reviewsFinished } : {}),
+        ...(Object.keys(schemaVersions).length > 0 ? { schemaVersions } : {}),
       }
     }),
   }

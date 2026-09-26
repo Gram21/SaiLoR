@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:e248912dd365f32735896a168745295b532e5e3a458205c1f5d599194eae5425",
+  "pageVersion": "sha256:f2cc35321058e8af0f36da39d61d4f0bdff4c6792e304ae1d4f2dffa02f12da5",
   "claims": [
     {
       "id": "claim_06b4bbb00bd9439896054b8161b11dd8",
@@ -22,7 +22,7 @@
       "evidence": [
         {
           "resource": "repo://src/state/gitStore.ts#L1-L40",
-          "version": "repo-lines-v1:sha256:0b6220707fe6d92b480dbcff706fbdc0ddc9ead29f7259601f96aa6eaf00005d:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkYzZlMzg3OThjYTUyZTdlMDA4NWY5ODY5MTUxYjg1M2QwOGVlY2NjZTM5OWVhZTM3NzhlZDY4NmNjYjM5NjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMzYTA1ZjQyMWYwZTg2ZTliODMzNDIwM2ZjN2ZlZDA5MTg4YTk4YWI0YWU1OTkwZTFmNzU1OTdjY2Q2ZWRmZmMifQ"
+          "version": "repo-lines-v1:sha256:a5fea878138133365742581697f3d6650b8a37cee84cc1f04f8ee7d43f669c70:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkYzZlMzg3OThjYTUyZTdlMDA4NWY5ODY5MTUxYjg1M2QwOGVlY2NjZTM5OWVhZTM3NzhlZDY4NmNjYjM5NjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMzYTA1ZjQyMWYwZTg2ZTliODMzNDIwM2ZjN2ZlZDA5MTg4YTk4YWI0YWU1OTkwZTFmNzU1OTdjY2Q2ZWRmZmMifQ"
         }
       ]
     },
@@ -31,18 +31,18 @@
       "statement": "runGit treats a non-zero git exit as data, not an exception: it resolves a GitRun with ok:false and the exact stdout/stderr, because half of git's useful output (a conflicting merge exits 1, the normal path here) arrives on a failing exit code. Only a failure to launch git at all is signalled with code:null.",
       "evidence": [
         {
-          "resource": "repo://electron/main.ts#L1637-L1722",
-          "version": "repo-lines-v1:sha256:303464536dd74a1ebd4f42f848aafb016deaf97774a249595d255248b2536844:eyJzZWxlY3RlZExpbmVDb3VudCI6ODYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRmZDI1NjljZmZlMjVlNzc1ODcwZWMxMmI3ZGQyZjQ2OTU3YTJjNzg3YzQyYzMxMGQyYzZjNjk4ZjRkMzQxMjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBjZDE0ODhiY2ViNjEyZTBhYTc0MzQ4MmY2NDg3MmQwNWIyMzc5MjM2ZjFmNDg4ODI5NDI5ZjJkNmYwNzQyZTUifQ"
+          "resource": "repo://electron/main.ts#L1878-L1913",
+          "version": "repo-lines-v1:sha256:24ee7e6945ef6c93855d83b333519e5106263c360f4ad57952b3b30c009bbe02:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA3Y2IyNDY0NjY1NzZkZGFmNzliMDhjZWU0MDk3NmMxMzdiOTg0Zjg3YWE5OGMwZGU2NmIyYzIxOWVlYjg0MDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAyM2M3MzYxNGM5OWI5ZTE4MGJjNGQzYWJkNjk1ODljZmVkMzMxZTc2ZGU4NmQ3NWMzMDE5YzVkNWEwNjRlNjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBjZDE0ODhiY2ViNjEyZTBhYTc0MzQ4MmY2NDg3MmQwNWIyMzc5MjM2ZjFmNDg4ODI5NDI5ZjJkNmYwNzQyZTUifQ"
         }
       ]
     },
     {
       "id": "claim_1960734fb9f94d02a9d1f8c4bcb6d051",
-      "statement": "runGit hardens the environment against a hostile .git/config from a folder received by zip/USB: gitEnv strips inherited GIT_DIR/GIT_WORK_TREE/GIT_* variables and sets GIT_TERMINAL_PROMPT=0 and GIT_EDITOR=true, while GIT_SAFE_CONFIG is a hard -c override (core.fsmonitor=false, a non-existent core.hooksPath under the OS temp dir, core.pager=cat, protocol.ext.allow=never, etc.) prepended to every invocation so a copied .git/ cannot run code on a mere project open. Credential helpers, askpass programs and SSH agents are deliberately untouched.",
+      "statement": "runGit hardens the environment against a hostile .git/config from a folder received by zip/USB: gitEnv strips inherited GIT_DIR/GIT_WORK_TREE/GIT_INDEX_FILE/GIT_OBJECT_DIRECTORY/GIT_ALTERNATE_OBJECT_DIRECTORIES/GIT_CONFIG/GIT_CONFIG_GLOBAL variables and sets GIT_TERMINAL_PROMPT=0, GIT_EDITOR=true, and GIT_SEQUENCE_EDITOR=true, while GIT_SAFE_CONFIG is a hard -c override (core.fsmonitor=false, a non-existent core.hooksPath under the OS temp dir, core.pager=cat, core.editor=false, core.alternateRefsCommand=, uploadpack.packObjectsHook=, protocol.ext.allow=never) prepended to every invocation so a copied .git/ cannot run code on a mere project open. Credential helpers, askpass programs and SSH agents are deliberately untouched; diff.external is not overridden (setting it empty makes git try to run the empty string) so --no-ext-diff/--no-textconv are passed on the diff itself.",
       "evidence": [
         {
-          "resource": "repo://electron/main.ts#L1601-L1676",
-          "version": "repo-lines-v1:sha256:5176683e4f3066fcee3395efaab38107dbab737cd6f5b591b72933a31a196257:eyJzZWxlY3RlZExpbmVDb3VudCI6NzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5NDE2ZTA5Zjc4YmEzMTZjMDMyNTY4MjEzYjg1NWVlNzU2ZTQxNTY1ZDkxOGYwOTUxOWM4MWZkNjIwZjQwNjAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNjZTlkZDY0MmYzNmEyZWJhYjQzMjQxZWYxYjgzMGFmNTA5ZjExYmQzODllMzU0ZGU5YTk4ZTlhNjUzZTk4OTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZjZWNlM2E1Zjg4ZTUwMjE2YmQzMGU4YzkwYTQxZTIxMmFhNTY1ZWNkMTM4OWNlYTNiMTkzYjQ1OGE0OGIzYzEifQ"
+          "resource": "repo://electron/main.ts#L1791-L1877",
+          "version": "repo-lines-v1:sha256:45a42672067e8a4385461c0e3dd10bae1f52375e17a28c0157366fd76391e0a4:eyJzZWxlY3RlZExpbmVDb3VudCI6ODcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMxMzc4MmEzODMzNmFiZmNhNDIxZWFhZGJkZjRjZjRhNGRmYmRkNGMzMjljZGIxZGMxNjdhMGFhZTRhZTI5YTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZjNzUxMjMyZGI4ZjE3YzlmNmI2MzgxYjU2ZTMwMmQ1N2MxMWNmMGRkNzE0OWUxODMxYzIwM2ExYzU2YTg2ZTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhiMzIyZGQxYjZkZTNlOTE3MWYyNTBmZDQ0Yzc0MjFiZjZkZGE2YzdmNmI3ZGZkZDYzZDRhMTExZTkxYzM2ZDIifQ"
         }
       ]
     },
@@ -198,11 +198,11 @@
     },
     {
       "id": "claim_35752200f26c43cda941c267181cdb5c",
-      "statement": "detectFieldChanges is a genuinely different question from merge.ts: one side changed (the working tree) and one did not (HEAD), so every difference is something the reviewer decides about. It borrows merge.ts's shape (canonical paths, per-tree identity, the paper-metadata field list, the conflictId key) but not its merge3 rule. It returns null (a structural refusal on schema/reviewers/screening/version/title/provenance/protocol/root extra) or {fields, papers}; the caller falls back to the plain file-level commit for a project file in that state.",
+      "statement": "detectFieldChanges is a genuinely different question from merge.ts: one side changed (the working tree) and one did not (HEAD), so every difference is something the reviewer decides about. It borrows merge.ts's shape (canonical paths, per-tree identity, the paper-metadata field list, the conflictId key) but not its merge3 rule. It returns null (a structural refusal on schema/reviewers/aiEnabled/finishCheckbox/screening/version/title/schemaInfo/provenance/protocol/root extra — provenance and protocol excluded because each is a nested record no FieldConflict shape can express) or {fields, papers}; the caller falls back to the plain file-level commit for a project file in that state.",
       "evidence": [
         {
-          "resource": "repo://src/git/changes.ts#L224-L313",
-          "version": "repo-lines-v1:sha256:3374baba33721414c799050a812ab9ba426bd821d28b6f4475a8cdfd97598822:eyJzZWxlY3RlZExpbmVDb3VudCI6OTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMzYmIxMzBhNDQ0ZGM1MzIzYWE3ODBkM2I5MWRiMzBiYTVlMzViNWY4NThmM2UzYTI5N2Q3ZDYzZDEwYTI3OTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMyZDdmY2I0YzgxNGMyZTg3Mzk3MjAzYTdjNTFmZmY2ZTE0ZmZmMmNiNmM4NTJkMjMzMDU3MWYyOWMwOTUwYWEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdmMGNhMDE0YTM2NWQ1YzAxNDUyY2M0YjY0YTI3MWQxOGMyYmI3M2Q5NzZmOWY5NTliMjBlZDk2NzMwOWE3ZDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ1YjA3ZWEzNzMzNWUwY2EwMTBjNzBkMWRiNWFiYmNkNDc4N2EwMmMxYTRiOGI5YjU4ZDFkYTdhMTQ3NTM3YjIifQ"
+          "resource": "repo://src/git/changes.ts#L243-L326",
+          "version": "repo-lines-v1:sha256:7541a13652671f7874e3c402062118d7e25f36bbd5bb24551a3a1ff139b7de1a:eyJzZWxlY3RlZExpbmVDb3VudCI6ODQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZjZDk5MTg0OTVjN2ZkMzdjNDkxOTM5ZThlOTVkZDA1ZDQxODdlMmUzZTNiZTAyNmMzODA5ZGI0ZjY2ZDIyYWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFiZGY3OWMxZWEwNWE5ZjRiMmIwZmUzZDVjOTRmMzc3M2UzNDJjZDFjZWU3MzVlODllOTZmYTU5NmU0YjkzZWEifQ"
         }
       ]
     },
@@ -211,12 +211,12 @@
       "statement": "composeContents produces the two outputs the commit panel needs — committed and workingOut — from the dispositions use/ignore/discard. 'discard' is a real write to the working file (an added paper deleted from it, a removed paper restored, a changed field's edit erased), performed only when the reviewer presses Commit, never as a side effect of picking it in the list. growTreeToSource grows committed trees to the working shape first so a reviewer-added repeatable instance has a slot to land in.",
       "evidence": [
         {
-          "resource": "repo://src/git/changes.ts#L317-L334",
-          "version": "repo-lines-v1:sha256:1e940dff0eb545a886f68734a61a8a1890779a7c98d492ac06ecaafef04fc38c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAyNGQ0MGRlY2Y1OTMyZjVlM2FmMzI0ZWNkYTJmOGVmNmQ5MGY4YmU2OTI1ZmQ1MDM5OWVlMGI2NTcwYjlkNzUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFlMGZhYWM3YTQ5OTAyYjgwZmYzNGRjMzM0NjY3YTE4OTI1MmQzMGNmZjEyZGY0MGRlODg3YzE1YWRiMTM0ZjkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ1YjA3ZWEzNzMzNWUwY2EwMTBjNzBkMWRiNWFiYmNkNDc4N2EwMmMxYTRiOGI5YjU4ZDFkYTdhMTQ3NTM3YjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFjMDhjYjdiODU0OTI2NGYxNWIyNGMyM2EzOTJiOTQ2YjM0ODM1ZTMyMDg1NGUwYWM1YTA1MzNjNTZjOWMzNmQifQ"
+          "resource": "repo://src/git/changes.ts#L342-L370",
+          "version": "repo-lines-v1:sha256:7373e6c377a836e57e5a031369f0f1eec42b9858500ab916dc9bcf37143f04c2:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNjODdkNjg5MjQ4ODkzZTQ2ZTdmNzkzMTYzMTA5YTMxZGEwNWQwYjJiYTk2ZDBjYTk3OTY0OGI4ZWMxNDk1YmEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU3MDliYjU2ZTZiOWRhZTkwMDhmMzg0MWNmZmFiZGIzOWI3M2I2NmI0Yzg1NTIwZjBkMzU3MGQyYTI2MDg4YWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkzNGUzNmQ0NjA3YWNhZTI4ODI4NjgwZWNlYTZmZGE3NmNiZTBmZTVmYzgxMjEyOWJiZDIxMzRlNThkNGRhNWEifQ"
         },
         {
-          "resource": "repo://src/git/changes.ts#L425-L519",
-          "version": "repo-lines-v1:sha256:ed6e90f8ecb15376a6241ca035d4653c504203b7cb9bbffb3ead1c1951992cc7:eyJzZWxlY3RlZExpbmVDb3VudCI6OTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMyNzA1YjM3MTMwNTEyMWMyNGViNzRmOWVmZWI2YmRlNzZjZjk0MGI4NmQ2YmRjMzU2MTNhMzU0ZGQxODMyYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdhN2MyYTliOWFmZjdhZWRjMWY4YTc5NTc0Njg5MTJlMzJiNDIzNmJiZGYzODA3ZTEyYWU0OGNhODY5OTY4NzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/git/changes.ts#L462-L540",
+          "version": "repo-lines-v1:sha256:8325dac76476e849975e22de0a0d1eeb60f94a21775e76fc2a44807a977ad77c:eyJzZWxlY3RlZExpbmVDb3VudCI6NzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMyNzA1YjM3MTMwNTEyMWMyNGViNzRmOWVmZWI2YmRlNzZjZjk0MGI4NmQ2YmRjMzU2MTNhMzU0ZGQxODMyYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdhN2MyYTliOWFmZjdhZWRjMWY4YTc5NTc0Njg5MTJlMzJiNDIzNmJiZGYzODA3ZTEyYWU0OGNhODY5OTY4NzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAyMGI4N2ViYzkxNzQ5ZGExNmMzN2M4MmZhODRhN2VlNjlhNDNhNWQ5NGQzMDA5NzhiNTdiOGYwMWI2YWNiZWYifQ"
         }
       ]
     },
@@ -225,18 +225,22 @@
       "statement": "git:commitPartial makes committing some of a project's field-level changes possible at all: git has no native concept of staging part of a file, but nothing requires the content 'add' stages to be what's on disk. Its sequence is write→add→commit→(always) write again: 'committed' goes onto disk just long enough to be staged, then 'working' (composed from the reviewer's choices) replaces it. The finally is load-bearing: if add or commit fails partway, the working tree must still end up holding 'working'.",
       "evidence": [
         {
-          "resource": "repo://electron/main.ts#L2008-L2067",
-          "version": "repo-lines-v1:sha256:a21e703527208014864fa4297416d28d42322c3e934fa54a2ab1e4c3536c7cba:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhZmJhMDUyN2MzOTUzYzRiNmUwZTViNTczOWJhODM2MTJmODA1M2JjZGM5NDY2NzMwMTkzY2QxZDU5MGI0MDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdmNmI0YzM5YTY2Y2M1MDVkZDE1Y2NhYWM2ZjBkNjdiZTQ3NDQ1M2Y3NmYyMDIxYzI2ZTk0NGNiOWMwYzc5MDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI1YmM5MzM1NTY5OTMwZjM3ODdmN2RkNDdmMjE1NzQwYTdmZTdkYjI4ZTQ0NDViZWNiOGQ0YWI3NjYxMjU2MWYifQ"
+          "resource": "repo://electron/main.ts#L2261-L2301",
+          "version": "repo-lines-v1:sha256:65f7bf23c308a70683d1f85bb2654b7d2c824aa2bbec50e76018f75ec1b0dc95:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmMjVjYzMzOGQ2NWQ3ZGQ5ZmUyNjcyYWYzNzVhODU5NmMxNzNkNWI4YjY3ODc3Y2NkZDc4OTU2NTk5YTM3YzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhZmJhMDUyN2MzOTUzYzRiNmUwZTViNTczOWJhODM2MTJmODA1M2JjZGM5NDY2NzMwMTkzY2QxZDU5MGI0MDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVlMWMyODhmZmZmOTQwZDliMDBiNjE3MWU2MjZkMDI0NDRjZWJhY2Q3OWUwMzlkNzNiMjQ3N2M2Y2E0YmI2ZTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI1YmM5MzM1NTY5OTMwZjM3ODdmN2RkNDdmMjE1NzQwYTdmZTdkYjI4ZTQ0NDViZWNiOGQ0YWI3NjYxMjU2MWYifQ"
         }
       ]
     },
     {
       "id": "claim_d5d58a08576c41cb9e42d46c19f1d4cd",
-      "statement": "git:writeWorking writes the working state WITHOUT staging or committing — the 'throw away these local edits' counterpart to committing them, for a reviewer who only wants to revert and shouldn't have to invent a commit. git:discardFile is the whole-file counterpart to the project file's field-level Discard: it re-derives the file's status, deletes untracked files (rm for a directory, unlink for a file), reverts tracked modified/deleted files via checkout --, and refuses a rename, an unresolved conflict, or the project's own file/annotations paths.",
+      "statement": "git:writeWorking writes the working state WITHOUT staging or committing — the 'throw away these local edits' counterpart to committing them, for a reviewer who only wants to revert and shouldn't have to invent a commit. git:discardFile is the whole-file counterpart to the project file's field-level Discard: it re-derives the file's status, deletes untracked files (rm for a directory, unlink for a file), reverts tracked modified/deleted files via checkout --, and refuses a rename, an unresolved conflict, or the project's own file/annotations paths. Its whole body is wrapped in try/catch so an uncaught rejection never leaves panel.phase stuck at 'working' (the EISDIR bug that used to wedge the panel).",
       "evidence": [
         {
-          "resource": "repo://electron/main.ts#L2069-L2168",
-          "version": "repo-lines-v1:sha256:8eb0ed948f9b441e0ca970052ca0c0ff90262e958a13c77c87494e8b93344ba2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlYWYyMmNmMDczMjU5MmMyNDcxNDFjYmU2MWVmYTExMDEyNjEyZjVhMzEyMmI5YWY5YmJhZjUyZjU3MjRkMTk0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI4NTgwYjc2NTE4ZGFlOTc5ZmFlYmQwMjM2N2EyOTI5MmE1MGQ5NzYwOTIyNTFhMzhhNmNlMzA4ODBiYTQyODI1IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI2OWQ5MDg4MGM1MjcwODdmNjJlYTM1Zjc1NzgwM2YyMTYzMzc4ZjUwMGNhNTRlMzc2MGZiMDFlZjk0NjRkMTFhIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJiMzNiMmIwMjdhYjU3YjY4YjZhZjI3YzNhNzE1OGUzMDAxMGE0MjdlM2M1NDI0NGY4NzFlNDIxNDk4ZmMzMWU0In0"
+          "resource": "repo://electron/main.ts#L2314-L2331",
+          "version": "repo-lines-v1:sha256:76bdd7130b4d606d3c2373fae1533e99fa8a38733e92ceb31c9296cfa35dd4ae:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmMjVjYzMzOGQ2NWQ3ZGQ5ZmUyNjcyYWYzNzVhODU5NmMxNzNkNWI4YjY3ODc3Y2NkZDc4OTU2NTk5YTM3YzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhZmJhMDUyN2MzOTUzYzRiNmUwZTViNTczOWJhODM2MTJmODA1M2JjZGM5NDY2NzMwMTkzY2QxZDU5MGI0MDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRiOTM3NDY1N2FkOWEwYWUzMWMxMmM3YmU5YmRiZTZmYzNhMjYzM2Q1YmMxMmU5NjhhMGYyYzZmMTI3MGQ5MDgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUyZTcyZjY3NWUzNDUxNWM2YzQwNmVmYTNhMWY4YzQyN2MwODEyNjFhZjg1MmM5ZDBiOWFiZjI4Mjk5MjY3ODcifQ"
+        },
+        {
+          "resource": "repo://electron/main.ts#L2363-L2402",
+          "version": "repo-lines-v1:sha256:2ceee71c0615f286affd64ff46c3daf54b312bf906b6913c5c28a5dfbd929da0:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMxMzI2MDNhODEyMWJjMTZiYzkxODliNTllYjMyNWM3MmY5NDRlYjM4MzhhOTA3ZTExMWU4NjQzMzU2NDczZDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQyNjdjZTE4NWZiMzIzZWMxMWExMjk0ZWFjOTQ4NjQ4OTdlNGRjYjY3NmFmZTgwZTc1MzNmZjFmN2Q3OTg1NjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMGFmYTY4NGQxNWQyMGU5N2MzY2EzOTkyOTM5MTMyOTYzYzY5YTkwNDBlZWNkYTAxOGU2M2EwZTJlMzJkMmIifQ"
         }
       ]
     },
@@ -245,7 +249,7 @@
       "statement": "beginMergeInto (shared by git:pullBegin and git:mergeBegin) classifies a merge and returns a discriminated MergeStart computed before mutating anything except the 'merge' case: up-to-date, fast-forwarded (--ff-only), or divergent. For divergent it reads base/ours/theirs BEFORE touching the work tree, runs merge --no-commit --no-ff, checks MERGE_HEAD to distinguish a merge that failed to start from a real in-progress merge, and filters unmerged paths down to the project's own family via the UNION of ours' and theirs' ownAnnotationPathMatchers (using only ours would misclassify a remote-added paper as conflict-elsewhere). Anything unmerged outside that family aborts cleanly.",
       "evidence": [
         {
-          "resource": "repo://electron/main.ts#L2227-L2300",
+          "resource": "repo://electron/main.ts#L2491-L2564",
           "version": "repo-lines-v1:sha256:cb0a3b9dd6cb278641779154968246fbbc9ec0beaa3ec58c9a933d383d5af96c:eyJzZWxlY3RlZExpbmVDb3VudCI6NzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY3MGE1YTZlYjU1OGY0OGEwYTBiYmQ0OTNiODYzZjY0NDk3ODA4OWVlNzk3ZDk1ZjMxZjU4MzQ1MmE2NDMyNjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU1ZjI2ZGU4NTBmOGZmOGM1YmI4YzgwMTI1N2Y4NGFkMjlhNTBlNGM5YTQyZDA2YjlhZmFjOGQwNjIxMzE2YmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE1MzAzMDFiOGY3YjYxM2UyMzdlOWRmYjMyNDA4MDRlMTVjMmRlNGNlMjgzNjJlNzFjZTc3MTEwZGEyNmFiNzgifQ"
         }
       ]
@@ -255,8 +259,12 @@
       "statement": "git:branchSwitchBegin narrows 'project's own files' via ownAnnotationPathMatcher (reading the working-tree project.json, not HEAD, so an uncommitted new paper counts), refuses 'other-files-dirty' if anything outside that is dirty, returns 'no-changes' if nothing is, and otherwise captures base/ours/theirs THEN stashes the project's own dirty files and checks out the target atomically — so nothing can change the tree between read and stash. git:branchSwitchAbort checks back out to sourceBranch and stash pops (it undoes an already-completed checkout, unlike pullAbort which stops an in-flight merge).",
       "evidence": [
         {
-          "resource": "repo://electron/main.ts#L2503-L2565",
-          "version": "repo-lines-v1:sha256:f04797b8d1e29ee8c7400725b6188d1368b6fb0df2a2da4d28113a81dda8f0fd:eyJzZWxlY3RlZExpbmVDb3VudCI6NjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2NWIwY2M1MjFlNGZiNWMyNjAyYzVjYWExNmFhZWFhMTE2OTRjODFiOTFjYzJiODkwZTk5NzUyODUzNGI4ZTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM5ZDViNTFmZmZiODQ2M2E4MjJhN2RkODBjNDljNzIzNjA4MTA1OGUyNDVkNTA0ZGFjYWYxODI4MzY1OWI2NDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY3Yzc3M2I4NjY0M2RmMDA3Y2I1ZDU1NDhiZTk2ZWZlMTEzZDNhMWU0ZjY0ZTE5MGMyMzA4MGYyNmQ2OTQzZTUifQ"
+          "resource": "repo://electron/main.ts#L2899-L2968",
+          "version": "repo-lines-v1:sha256:d1eabeba82bbca651f29bf69adbd6149f62ae40cf065cc144774bb0badc62688:eyJzZWxlY3RlZExpbmVDb3VudCI6NzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJiYTkxOTBlNDMzYWZlMzQ1ZTFhODIyOTYxZjczY2ZlYWRhMDZhMzdjNGRhNmMzZDBkNzlmYjRiYzJmYzBkNzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc3OGUyYzhkOGYwNWI4ZDliNTVmNDM4Y2ZiNTU1N2JjM2ViYjMyOTQwZThiZWRmM2NlYWY0YTg0NTVlMDhkOGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA0MzAxOWEwNDk2Yzc0ZDZmOWVhNzZiNjJmZTg3ZGRhOGNiY2RhNjM1ZmUyNWIxNTBlZjgyYTdjZmI4ZWUxZTgifQ"
+        },
+        {
+          "resource": "repo://electron/main.ts#L3007-L3014",
+          "version": "repo-lines-v1:sha256:238d9c633f67073a7d6578cc3a12c8a40a2822aabf7ef60d0221e2e7e6ea7616:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTYyNDc5MmVlMmUxZGQwMDc3OWNhZjM1YjJiOWYxNTVkZmMxZDY0MmFiNjgwNGE0MTEzZjUyZGQ5YTI0YmI0NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODU4MGI3NjUxOGRhZTk3OWZhZWJkMDIzNjdhMjkyOTJhNTBkOTc2MDkyMjUxYTM4YTZjZTMwODgwYmE0MjgyNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDk4Y2RkNGNhMjAwZmE1Mzc2ZWIwZDkwN2U2YWZhMTRlOGNjMjM1OTc4ODBlODIyNTlkZDk1MDkxZTU0ODRjNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWEyZjRkOTJiYjBmMGMwNTA3ZTIzNzdiMWNjOGRmZDU3NTFmYTZiZGFiMjI2NzMzNmNjNzE5N2ZlZDYzOGEwZCJ9"
         }
       ]
     },
@@ -275,8 +283,8 @@
       "statement": "doFinish is the single finisher shared by the zero-conflict fast path and the merge dialog's finishMerge: it applyResolutions, calls finishPull or finishBranchSwitch, and only touches panel once it knows whether it succeeded. On failure the repository is genuinely still mid-merge (or mid-branch-switch), so panel.merge is left in place — Cancel merge must stay reachable; the zero-conflict fast path back-fills it here rather than wedge a repo with a failed finish and no in-app way to abort.",
       "evidence": [
         {
-          "resource": "repo://src/state/gitStore.ts#L330-L374",
-          "version": "repo-lines-v1:sha256:be6362e35ff3b75e66d56ba0cd455b3d53ffc29fdc9776bb2701fdbc1d40a6a7:eyJzZWxlY3RlZExpbmVDb3VudCI6NDUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFmNzBhNzcwYmZkYjA4ZTIzM2M4YTA1NDI2NWMxMDExZGVkZWY1OGE1Yzk1ZTFkYTJjNjY5MjllYzFkMzJlYTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFjOTk3ZDIzZjE0OWFkOTU4Mjk1MzE0MmRlMjcyZjg1NzNiYmYxMDY1YjhmNWU0NWRmNmZjNzU1YTRiZTRhZTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRkM2Q5MGJiODE1N2YzMTBlZjIyNTZhZTA1MWMzMDllMGI3YTg0ZWM0ZTI0OWNmYmY2YTk5MmY3N2VmMTA5NzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI5ODI2MWQxYjUzZTU5NDk0NjAwZDMxMjM3OTIzZDgzYWY5NjIwODc2MzY5NGY3NDE2ZjM1NWFkZmJmYWI5MTEifQ"
+          "resource": "repo://src/state/gitStore.ts#L395-L431",
+          "version": "repo-lines-v1:sha256:91aa1d2c527165f2b3a0906d728ceb3ffd358c778a45b6458b1e7bf4520c27c5:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFmNzBhNzcwYmZkYjA4ZTIzM2M4YTA1NDI2NWMxMDExZGVkZWY1OGE1Yzk1ZTFkYTJjNjY5MjllYzFkMzJlYTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJmZDRjNWU4ZjQ2ODc1MGViNzBlOWNkNGY0MmFhMGQyZjQ1YjExNjUwOTI0ZjUyYTM3MGIyYmRmOTA4NjM1ZDAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRkM2Q5MGJiODE1N2YzMTBlZjIyNTZhZTA1MWMzMDllMGI3YTg0ZWM0ZTI0OWNmYmY2YTk5MmY3N2VmMTA5NzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgyZjBiYWQ0YjRjMzA3MTFiYjYzZDBiYWJkYTk0YzhlNWE4YmJiOTg4Y2UwYWNiMTRiZDM3NTA3NTEwZTM0YzgifQ"
         }
       ]
     },
@@ -315,8 +323,8 @@
       "statement": "git:branches lists local and remote-tracking refs via for-each-ref over refs/heads and refs/remotes, and drops refs/remotes/origin/HEAD (a symref pointing at the remote's default branch, not a branch of its own — merging it would silently mean origin/main under another name, matched on the full refname because its short form is bare 'origin'). Remote-tracking refs can be merged but never switched to (checking one out detaches HEAD), so the switcher filters them out and only the merge picker offers them.",
       "evidence": [
         {
-          "resource": "repo://electron/main.ts#L2407-L2434",
-          "version": "repo-lines-v1:sha256:507838536cda4aa9a72afd35839d024c4caf64838fd004d6ec203ad64b8e151e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYxODRlNTBlN2EwZjI1NjkxYzg3MTM4OWYwMjE1NzIyNmM1OTM4MjVkM2RkNGZhYmQxMzU4ZDkzNDQyNTY5NjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU2NTMwY2VhZWI5ZDczNDEyNjNjMGI2NmEzYzdlZGExOGZiMzliN2RlY2I3ZWUwYTY4YmYxODE3NzI1ODdkOGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ0MmZhNGY5MzFlOGI1OThkODVjMDhlMzg1YzRkMTgzN2VlNWZhNDgyNmQ3YzAyZWI1YjMzOTc3NGZhYmQ4YmIifQ"
+          "resource": "repo://electron/main.ts#L2810-L2830",
+          "version": "repo-lines-v1:sha256:582fe9855807348375e9ed2a498d25b34a4e559113a58dbd716e7ef53b5090c6:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIzZTFjY2NkYTYxMjYxZDRmMWY1OGM5ZDUyOTdlMjE3OTlmZmI0ZWUxYWVkNzFhMzI5ZjIwZDJjYjAzZjdiMzMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg4ZjJiMWI4MDdkYTczY2UxZjRlMDFhOTQwMGFjODUwZDE1NjllOWM3ZTNiMGIxN2FjNTY2ODlmYTZlNzMxMDQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY1YzRhYTc5MTlkNTE1NTM1YTZiZjM1ZWZlZDQ3NDRlMzZjNjllNDY0YTQ0NjYxMTM2YjE1N2M1MDMyNjg4MjEifQ"
         }
       ]
     },
@@ -346,22 +354,26 @@
     },
     {
       "id": "claim_a43921a1cd8546fba022bbf9ea92abdf",
-      "statement": "deriveGitInfo derives git:info's result fields from the outputs of its five concurrent git calls (--show-toplevel/--show-prefix/HEAD-verify/current-branch/upstream), extracted into a pure function for testability to pin down exactly which input feeds which field — a Promise.all array destructured into five differently-named variables is exactly the place a copy-paste reordering could silently swap two fields with no type error. git:info uses --show-prefix (not --show-toplevel alone) because --show-toplevel resolves symlinks and a path.relative against it would compute a .. escape pointing nowhere.",
+      "statement": "deriveGitInfo derives git:info's result fields from the outputs of its six concurrent git calls (--show-toplevel/--show-prefix/HEAD-verify/current-branch/upstream/behind-count), extracted into a pure function for testability to pin down exactly which input feeds which field — a Promise.all array destructured into differently-named variables is exactly the place a copy-paste reordering could silently swap two fields with no type error. git:info uses --show-prefix (not --show-toplevel alone) because --show-toplevel resolves symlinks and a path.relative against it would compute a .. escape pointing nowhere. The behind count is read-only (rev-list --count, no fetch) and stale-by-design, enough for a pre-destructive-edit warning but never a live answer.",
       "evidence": [
         {
-          "resource": "repo://electron/main.ts#L1802-L1821",
-          "version": "repo-lines-v1:sha256:896993047678cc71b1cac2563cf4842c7d0a07a1335d22c205f3178c3d47e8a4:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM1OTAyNjY4ZDI0Y2M5ZGRjYWJlMmVkOGY3MWM1ZmYxNmMyYWYwN2YzOWYzMzkzNTQ0YzI5ZGEzMjhkOGEwMjIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE0MTY3ZmYzMzJkY2NlYjZjOGMyYmU5YmRlYjdmZmFjZDdjNjM3MjI3ZmQ0YzVmOGM1ODJkOWU5MGE5MDI4ODciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhjMGRhOWEzZmRlMGUwOTMyYWEyNDJmMTI0YzlkY2YyZDBiZDA2YTU0MmUwZGNhMzExNzcxMzJlOWZiMzY0MTYifQ"
+          "resource": "repo://electron/main.ts#L1993-L2015",
+          "version": "repo-lines-v1:sha256:1043fbd600a88841be2570bcf4352b5dffbcfacad1a84d95e41b98a0e50b2b4c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM1OTAyNjY4ZDI0Y2M5ZGRjYWJlMmVkOGY3MWM1ZmYxNmMyYWYwN2YzOWYzMzkzNTQ0YzI5ZGEzMjhkOGEwMjIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE0MTY3ZmYzMzJkY2NlYjZjOGMyYmU5YmRlYjdmZmFjZDdjNjM3MjI3ZmQ0YzVmOGM1ODJkOWU5MGE5MDI4ODciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhjMGRhOWEzZmRlMGUwOTMyYWEyNDJmMTI0YzlkY2YyZDBiZDA2YTU0MmUwZGNhMzExNzcxMzJlOWZiMzY0MTYifQ"
         },
         {
-          "resource": "repo://src/git/deriveGitInfo.ts#L21-L41",
-          "version": "repo-lines-v1:sha256:886eff9d788c9995534710fbe291c94fb331ec49cf61579298def9f298b89950:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQwMTE4MmIyZjI4ODYxY2JiYzRmZjJiNjI3MzM5MDdjODZjZTY5NDA0ZWYxZWQ0OWNhNDZkMjk4NzMwZDk2ZGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/git/deriveGitInfo.ts#L1-L57",
+          "version": "repo-lines-v1:sha256:8922bacb6f1d2d2ef78ebeee7d8b9cff206228ce85b4bd5ec352e1909bacb328:eyJzZWxlY3RlZExpbmVDb3VudCI6NTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFmNjczOWU1MjgxNzU0YTY4YWVkZWZiZTA0YTAzYTk5ODQ2NTQzMGMyYjJhZDcwMDgxZjczODZmN2NmNTIwYzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
     {
       "id": "claim_52543e754d3442dbaa2b4fcc9eab88d7",
-      "statement": "The pure logic under src/git/ carries the load-bearing correctness and each module has a sibling test file (merge.test.ts builds fixtures through the real loadProject so every base/ours/theirs is exactly as schema-normalized as a file the caller would hand it; concurrentRead.test.ts controls completion order with real short delays to test the ordering property). The renderer state machine and end-to-end flows are covered by integration tests under src/test/integration/ (pull, branchSwitch, discard, consolidationAndMerge, annotationWorkflow), each stubbing getGit() with a fake git. The electron/main.ts handlers themselves are not unit-tested (outside vitest's include), which is exactly why every gate and parser that matters lives in importable src/git/ modules instead.",
+      "statement": "The pure logic under src/git/ carries the load-bearing correctness and each module has a sibling test file (merge.test.ts builds fixtures through the real loadProject so every base/ours/theirs is exactly as schema-normalized as a file the caller would hand it; concurrentRead.test.ts controls completion order with real short delays to test the ordering property). The renderer state machine is covered by gitStore.test.ts (stubbing getGit() with a fake git) and by integration tests under src/test/integration/ (pull, branchSwitch, discard, consolidationAndMerge, annotationWorkflow). The electron/main.ts handlers themselves are not unit-tested (outside vitest's include), which is exactly why every gate and parser that matters lives in importable src/git/ modules instead; e2e/openSaveProject.spec.ts is the one test that reaches the real runGit/gitEnv/GIT_SAFE_CONFIG chain.",
       "evidence": [
+        {
+          "resource": "repo://e2e/openSaveProject.spec.ts#L99-L99",
+          "version": "repo-lines-v1:sha256:c855eea5e170370419ecd00ea2d821cb5e9e270163d7532e8f44a67b77c20608:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzg1NWVlYTVlMTcwMzcwNDE5ZWNkMDBlYTJkODIxY2I1ZTllMjcwMTYzZDc1MzJlOGY0NGE2N2I3N2MyMDYwOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzg1NWVlYTVlMTcwMzcwNDE5ZWNkMDBlYTJkODIxY2I1ZTllMjcwMTYzZDc1MzJlOGY0NGE2N2I3N2MyMDYwOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzcwOTg4NzAwMTM1NTY5NWZjZWZmNjgzNjAwYjkyMzA4MzFkOTdhMjlhNmIxNDdhYzUyZDkxYjI2YjM3ZDVlNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjYxN2ViZDliYWNlZWRlZjc1ZTRjZjNjMGIzOTZmNTBkNGEyOWRjYTBmMGYzODJkZGVhMzAwOGZjZTJkMmU3YiJ9"
+        },
         {
           "resource": "repo://src/git/concurrentRead.test.ts#L11-L62",
           "version": "repo-lines-v1:sha256:40a50b6b4a1a18ee96599e4a1947cada59e1beae0568f3c0a1b73c78aa854bbb:eyJzZWxlY3RlZExpbmVDb3VudCI6NTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRlNzU1MDI3ZmQ3MmQ5OTMwYjczNTczODMwNTlhNzQ1MjI3NTdmYTFjMjczYTAzZjEzMWNjMWRmYWU5MDQ1OGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE2NjQ2N2YyMWQ3ZDVjYzliZDUxMWQ2NWYxZjNmYjcyOTUzNWZmYTRjNTE0OWU4Y2ZmZTlhOTc0N2MzNGU5YzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUifQ"
@@ -374,7 +386,7 @@
     }
   ],
   "verification": {
-    "by": "openwiki/0.4.0",
-    "at": "2026-09-21T20:12:55.536Z"
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T12:49:55.013Z"
   }
 }

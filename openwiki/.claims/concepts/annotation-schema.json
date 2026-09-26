@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:38b1e5dfaee5aac9971e0557b8d349ca7de0276ec2a78818f7460d3826e76bc0",
+  "pageVersion": "sha256:8a3dd049225058da9eee81740b370da3a3a4d2cc5ac6a5976040ca3dd92ec02a",
   "claims": [
     {
       "id": "claim_1f931ed340c24e66ac3b3f8333417062",
@@ -66,11 +66,27 @@
     },
     {
       "id": "claim_fedb3978cb9242f0b48f81a013e21d15",
-      "statement": "The annotation tree machinery in annotations.ts enforces cardinality: initTree materializes max(min,1) instances per node, normalizeTree reconciles a loaded tree (drops unknown keys, pads up to min and clamps to max, and adopts a bare primitive/single-object written where a list was expected rather than discarding a real answer), pruneTree drops only trailing empty instances keeping required ones, and canAdd/canRemove gate the form controls against max/min.",
+      "statement": "The annotation tree machinery in annotations.ts enforces cardinality and preserves orphaned answers: initTree materializes max(min,1) instances per node, normalizeTree reconciles a loaded tree (pads up to min and clamps to max, adopts a bare primitive/single-object written where a list was expected rather than discarding a real answer, and carries keys the schema no longer has through verbatim via orphanedNodes instead of dropping them), pruneTree drops only trailing empty instances keeping required ones and refuses to drop an instance holding orphans (holdsOrphans), and canAdd/canRemove gate the form controls against max/min.",
       "evidence": [
         {
-          "resource": "repo://src/model/annotations.ts#L51-L146",
-          "version": "repo-lines-v1:sha256:c505f0993d635e1e387b5f341c5762d439316b0e4fe6c81a5b3d0e36c6438944:eyJzZWxlY3RlZExpbmVDb3VudCI6OTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIwYjVjNzViYmYyNTJhNDk2YjdiNTQ2Zjg4YjRmMjQ2MTVhZTRiOGRkZTYwMjkxMmMxOGM3MDBmNmM1ZjlhNTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZmUwY2M3YTRmYmVkNGRiMzJlODU5YWU1MDI4ZWJiMGZjN2Y1NGE2Y2RhNDE2NDFkNzAzOTViNTljNmE0MGEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYyMjIyMzAyYzhiNmQ3MGQ4ZjExNjMzOTdmNTU0ZDYwODcyMTE4OGNkNGQ1MjQwYTgyZjg5OTk0MzIyMDYxYTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYyNzA1NzA3MTQ4NzA4ZjU0Y2Q4MGYxMGQ4NDRmOTc1ZGIzNDkyYWJkOTEyMTM1NWYzNWVkZTBkMTEyZjc5MTgifQ"
+          "resource": "repo://src/model/annotations.ts#L125-L147",
+          "version": "repo-lines-v1:sha256:409449d930d048870ddd796808532090bb8870c6df0654e1294eba8a3efd4a6c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFiMzAzZWUyMjZkOWY0N2EwNjY3NzYyN2Q4NjMwYzlmZTM5ZDQ2MzA3NzMzNjYyOGQ0NDMzYWQyNzQyYmJiZGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjMDJiOGE1N2E3MGYwYTg0OWMzMzcxNDJmZGE1YjFmNjA2M2NjZmU3ZWQzYjQyMjE0MDUxNzhlOGQ2NWI4MmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU4NmM2Y2E3MDUyMmU2NzBiYTYwMDliNGI5ZGUyMzlhMWYwNDlmYWQyYmY3ZjhlMGYwNzNmZmI3OTA0YTE3ODgifQ"
+        },
+        {
+          "resource": "repo://src/model/annotations.ts#L192-L211",
+          "version": "repo-lines-v1:sha256:3827a68f97e0821e1e208ffd89e5eb85244027a285ac9696b5ebd0fa09dd9c20:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmZDgwMmUxZmQxZTc0NjI1ZTU0MzM4NDRkNGUzNzZkODc5MzA0MjMyMTkwMjEwMWZlNWRjMWNlNTRlOTIzNzciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM1MjdlMTRhNTFlNzhjZmNhNjhhMDI0ZDY1M2ZhNjMyODViZDYzYjVkM2Q5MjJmMTZhNzk0ZGYwNDQzYjEzOGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUyODUxMWYwNmM5MThhNGZjYzM3ZTY2YzU5NTQzZDE0YjA3OTllMWQwYThlYjM4MWE1MTQ5MTQyMGZkZTRlZjkifQ"
+        },
+        {
+          "resource": "repo://src/model/annotations.ts#L346-L348",
+          "version": "repo-lines-v1:sha256:dd093808b53099ffa53cbf72d6e927e62d10b82e4c248459533f1e9925362dbc:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNmI2ODNkN2YxMDdlZmIzZTUzMTUzY2ZhYWU0MWUxZTlkNzkzNTFkYWRjYzc0OThkMTNlNWNlMzhlOWVkOTAyZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTU1NmM1MDA3OGVjN2I2ZTI0ZTk3MGZkZWUwYmM2ZDhhZDMzNmU1MzQzNzc2MTI0NGIxY2NhYzVhYjBjN2U3YyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjkzZGQ2ZjRhMWQyMmMxZWUxN2YwNDEzNGY5M2ViNTY2ZTU1Yzg5MTZkMzFiM2JiZTRlNzc5OWZkZjJlOTAyMiJ9"
+        },
+        {
+          "resource": "repo://src/model/annotations.ts#L51-L58",
+          "version": "repo-lines-v1:sha256:12713412f741f4a03264d7079afca46a77751475a377aae4d27063c054af3e4b:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjBiNWM3NWJiZjI1MmE0OTZiN2I1NDZmODhiNGYyNDYxNWFlNGI4ZGRlNjAyOTEyYzE4YzcwMGY2YzVmOWE1NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjIyMjIzMDJjOGI2ZDcwZDhmMTE2MzM5N2Y1NTRkNjA4NzIxMTg4Y2Q0ZDUyNDBhODJmODk5OTQzMjIwNjFhNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMmMzNWYyODRlOWExZjI1ZWQ0MDgzNzhjOWJiODM5MDMyOWFiYzQ3ZjVlZTVjYThlY2JjNzE0YzYxMDkwOWRlMCJ9"
+        },
+        {
+          "resource": "repo://src/model/annotations.ts#L74-L117",
+          "version": "repo-lines-v1:sha256:8ac482db32a07585aec73f6b3e93d98fb687f0fd2d6079596aaf7143c51568a5:eyJzZWxlY3RlZExpbmVDb3VudCI6NDQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIzNTQwMmI3YWM2ZmNjM2M0ZTRiOWU3YTlhMDEyOTc3YjZkM2ZlZDAwOWJkMjEzOTQ0NzI0MDQ3ZDJiZmMyNDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA3MmFkMjgyMWJmMTg2YTk3ODRiZDQwM2Y5YjUyODY0YmE0YzRiZWVmNjg2YjhjMjFmYjFhN2U2YjUzMzc3YWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhmMTJiMzZhNzk1NjI5OWE0ZmEzNjRmN2FkYzY0NTZmNzgwMjg5YTkxOTlkZjc5YTA0MzUwMmRjOGFlZjBkYjUifQ"
         }
       ]
     },
@@ -140,11 +156,19 @@
     },
     {
       "id": "claim_932e87e44de04efcba90b67d4d3b35fc",
-      "statement": "The 'screening' issue kind is emitted by src/screening/validate.ts for the two cross-field rules the schema language cannot express (excluded with no reason; reason recorded but not excluded), not by validate.ts's own walk, and lives in the shared IssueKind union because ValidationIssue and ValidationDialog are shared.",
+      "statement": "IssueKind is the shared union 'required' | 'type' | 'enum' | 'cardinality' | 'screening' | 'orphaned'. The 'screening' kind is emitted by src/screening/validate.ts (not validate.ts's own walk) for the two cross-field rules the schema language cannot express (excluded with no reason; reason recorded but not excluded). The 'orphaned' kind IS emitted by validate.ts - by validateProject, not the field walk - naming answers a paper still holds under field names the schema no longer describes. Both non-walk kinds live in the shared union because ValidationIssue and everything that renders one (ValidationDialog.tsx, which labels orphaned 'Hidden by a schema change') is shared across annotation and screening projects.",
       "evidence": [
         {
-          "resource": "repo://src/model/validate.ts#L21-L25",
-          "version": "repo-lines-v1:sha256:84d7d2d274bf185f823b099da0ec747877926e27234f907c7c913b237600d062:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTFjYTQ1NjAxMDljNjljMzY4ZTg4OWEzYmMxZWE3ZWI1YjU0ZGQyMWRiMWEyYjE2YzIzZjgxOTZjMmVlNjYyOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjMzMDNlMDhiYzUxNDNiNWU4ODYzOWI5M2RkY2MxYWY1MzI5OGViOTQ5MTYyOGM3Nzc0ZTUzZWI0MTc4Mzc4OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNWNiNTQwNWFjYWY2NDhjYjRkMTMyODcxMWM3YzczOWVjNzdjYjc3MTUzNGM5MGQyZWU4ZjUxMmYwZDlmMGQ1ZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZThiMTdhZTllOGUwOTQ1YzYwNWNmNDJjZTc2YWYxZWE1MzRjMTk0ZWYxODlkNGViZmViODMwODIxN2UwMTI0ZiJ9"
+          "resource": "repo://src/components/ValidationDialog.tsx#L5-L12",
+          "version": "repo-lines-v1:sha256:109b08929b011a5b0bb5bf3370f7b1990e102b0567fd0cfbf98322a9548cea6f:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTAzMTE1MjI0NTQxYjBmZDk5NmFjM2MwZGRiYzU5NDU4YjUwZWRlY2E0NmFjYWRiODUwZDA2YmE0YTgxNmMzMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTJiOGJjOTlhNTRlM2E5MzY2ZmY1YTM3YzAxYWRkMjQ3ODFhMjZkYzRjODY5YzFiNDBkOTYxMWU2MzdmNmVlYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmRlZGM3MDg2NjA4ODhkNjg1YmVjNWVjMDU5ZjBjNWRmMjc2NmM0ZWMzNDY0NDgzYmViZjhjMTk2MGU0NDBhZCJ9"
+        },
+        {
+          "resource": "repo://src/model/validate.ts#L21-L26",
+          "version": "repo-lines-v1:sha256:157958465982b287db020242d4fa309347b6cf77544fa9702a407a885c5ee287:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODc5ZGY2ZTlmYTUxYjNkOWMwY2QwMTRjYzkzNmY2MDQwMDkyNjhlNGRmNTA0MGUwYzhjM2ZiMWJjMTFjYzQ0YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTllODdiMjY0ZjgxOGZlMWY2YTk3MTU1OTJiNzE5MzFmNGIxNDkxYzYyZjFkMjQ5ZGRjMjBhNDQwNWJhODBkNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZThiMTdhZTllOGUwOTQ1YzYwNWNmNDJjZTc2YWYxZWE1MzRjMTk0ZWYxODlkNGViZmViODMwODIxN2UwMTI0ZiJ9"
+        },
+        {
+          "resource": "repo://src/model/validate.ts#L342-L357",
+          "version": "repo-lines-v1:sha256:3d0fc305243598bba4b358e06820b6619ed2b8358a24c9bfda5b1bb1fb94d43b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRlNDc4ZmQxM2I5MjBiMWZiYTdkMTY5ZWMzY2M3MDRmODFkMGY1ZGI2Mzc5NDE5MDAxN2VlYThmYzc5MzlhMzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliNjJmNjBkODU5MGE1NzljZjQ2ZjhkNjczNzhjNGM1NzJiOTYyY2VjY2RiOTBjN2E1ZjdiNDJiOTYwNzgyYTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQzMWUyNzBmZGM5MzQ3Mjc2M2VmNGZhZjQwZTE2ZmQxMDc3NjQ1MzZlNjQ2MDRmNGI3ZWU0ZDViOGI5YzAzNjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJlNGUwYzBkNWQ3MzQyNzQzNWYyNjUxMjY3ZTI2ZGE4NWZhNGI0OTkxZmU5Mzc2MTliZGYxMGNiMjU4YjM2YjIifQ"
         },
         {
           "resource": "repo://src/screening/validate.ts#L20-L61",
@@ -192,29 +216,41 @@
     },
     {
       "id": "claim_5b48e135682746249932c6f85ca86981",
-      "statement": "countPapersUsingField(papers, path) counts how many papers record a real answer at exactly a field's root-down path across the consolidated tree and every reviewer's own, matching by path (not bare name, to avoid crying wolf on a half-typed field) and using isAnswer which mirrors the shared emptiness rule (an unticked boolean and a blank string are not answers); SchemaTreeEditor.tsx uses it to warn before a rename/remove/move that would orphan answers.",
+      "statement": "countPapersUsingField(papers, path) counts how many papers record a real answer at exactly a field's root-down path across the consolidated tree and every reviewer's own (gathered by treesOf from annotations and extra.reviews), matching by path (not bare name, to avoid crying wolf on a half-typed field - an empty path or one with a blank segment matches nothing) and using instanceHoldsAnswer/isRecordedAnswer which mirror the shared emptiness rule (an unticked boolean and a blank/whitespace-only string are not answers); SchemaTreeEditor.tsx uses it to warn before a rename/remove/move that would orphan answers.",
       "evidence": [
         {
           "resource": "repo://src/components/SchemaTreeEditor.tsx#L11-L11",
-          "version": "repo-lines-v1:sha256:5dc412d8ae3df967590d170126dc025fe7bf61e6801f21c63f15572f0a8b094d:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWRjNDEyZDhhZTNkZjk2NzU5MGQxNzAxMjZkYzAyNWZlN2JmNjFlNjgwMWYyMWM2M2YxNTU3MmYwYThiMDk0ZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWRjNDEyZDhhZTNkZjk2NzU5MGQxNzAxMjZkYzAyNWZlN2JmNjFlNjgwMWYyMWM2M2YxNTU3MmYwYThiMDk0ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTI2YzE3Mzk2Njg1NmFmOWEyNTI4ODBkNjM3Yjk5MzBiYWFmODQ5OWZkY2NjMjAwZDU1OTg4OTljNDlmOWJjYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWIyNzZiMjI2NGVmNWU4NDBlOGMyYzhhOTlmNGMyNDM5ZDNlZDkxODZiNDM5OTlmNzJiNDU0ZjlhYTYxNTE3MCJ9"
+          "version": "repo-lines-v1:sha256:5dc412d8ae3df967590d170126dc025fe7bf61e6801f21c63f15572f0a8b094d:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWRjNDEyZDhhZTNkZjk2NzU5MGQxNzAxMjZkYzAyNWZlN2JmNjFlNjgwMWYyMWM2M2YxNTU3MmYwYThiMDk0ZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWRjNDEyZDhhZTNkZjk2NzU5MGQxNzAxMjZkYzAyNWZlN2JmNjFlNjgwMWYyMWM2M2YxNTU3MmYwYThiMDk0ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTI2YzE3Mzk2Njg1NmFmOWEyNTI4ODBkNjM3Yjk5MzBiYWFmODQ5OWZkY2NjMjAwZDU1OTg4OTljNDlmOWJjYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjZmM2Y3ZGM0Mjk2ODEwYzc0ODE2MGEwYTY1NzEyYjYwYTZiYjY5NTM4NzI2OTJmM2UwNjdmMmNlYjQ3Zjc3NSJ9"
         },
         {
-          "resource": "repo://src/components/SchemaTreeEditor.tsx#L145-L146",
-          "version": "repo-lines-v1:sha256:e068b99fdf73e0c3381ccc0f01b8d649a98a1a2fc76443c2c475927ce04343eb:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDYxZWQ0ODIyMjAyMWUzYTkwZjJhMDlhNGFiMGQ2ZmY3NDU3YjA4NjQ0NmM0YWRjZjBmMjRkODA1YWQ0ZjNhNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWQ1Yzc0ZDM3MGI5MzdiODJiNGIxNWJhNWIwZTA3Y2ZhZWZiNzU1ODUxYjgwNGIzNjFjNzhiMmIwOWE0MjFjMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODFlNWNiMDVhY2E4YmNhY2JlNWE1ZmRhZjAyNDBhYjc0MzQ2ODY2MTJkM2U2YWM3MmE5MWQ4ODFkOTkzOGMzNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjFmYjU4MDA4ZjViYmZkZGI4NTI2MjdkZTU4MjZhNzAxMGJhNDFlYzVhZDhjYzIwYjdhYzUzOTc1NjM5YTA1ZCJ9"
+          "resource": "repo://src/components/SchemaTreeEditor.tsx#L152-L185",
+          "version": "repo-lines-v1:sha256:da444ffcc9a89a8863d9a6fed90a7cf943ce9b0a3150d1e8d31c8b14a242bf09:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE2NTc2OTk1ZDAzMWZmNTU1NTM0ZjIxMDgwNzUxYWZmNjMwZGEzMWIxNzgyMGNlMjI3OTM5OTdjYzgwN2YwYjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAxZjRlNTgxNjU3ZDBhMzNiODk3NDJlODU5N2RiNjUwYWQxNWQ2YzdjMWViMzVhOTlhOGYyNzMyYzJkMThjYWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVmMTIwZmI4YzQxNTIyNTg0MDVmMmZkZmE0ZWM5MTgyNmMzMmEzMjEzYmI2ZGMxZDdlYmE1Y2IwMzJiNGM0ZmEifQ"
         },
         {
-          "resource": "repo://src/model/fieldUsage.ts#L1-L102",
-          "version": "repo-lines-v1:sha256:83c7d1766c3df476e713748bb1320a2e24907d1b6fbbfef040b7c8d03a01d25d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI0MzYyZTQxMTVjN2Q1NDc0ZTVkZjZlNjkzNjQ1MTc4ZTYwNzQ3NGE2OGQ4MTgwNDZmNjRkNDQ4Mjc3NjJjNWE1IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJjZTBmZDVhZjQ0MjJhNzZmZDllY2Q1MjdjNWFkYWRhZjcyN2MwMzI0MTllYmI0ODIyYTYyMzIyNDg2OTJhZDViIn0"
+          "resource": "repo://src/components/SchemaTreeEditor.tsx#L278-L304",
+          "version": "repo-lines-v1:sha256:506399dd27ab0704b8b4c497df333d6aa94c88eabb69d0548177c9e19cc964d3:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0YTE1YzIzMGUwZTI3NDNmNjQ1NDA3MzYzNzQ4NmJhYzE3OGJiMDA3MGExYTQ5NzM4ZDAzODQxNDY0ZDQxNDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQwOWEzMzI3NDdjMmNkNzk1OWFiMDA3YThjMmI2ZDc0NDE0OWE5NDQ5NmQ1YWRkODJjZmMyYmRlZjAwMGY5YTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVjOGM2OGY3ZmExYjI5ODdkNGU1MDI3OTQ0Mzc2MGE4MTE0NjU4OTZlYzhmYzJjMWY2MTNkOTIxY2Q3NzFlYWYifQ"
+        },
+        {
+          "resource": "repo://src/model/annotations.ts#L96-L117",
+          "version": "repo-lines-v1:sha256:06e5dbc4d99473613f5a53330f8cbc2d8f65b4400c1a3c28a8ed2986173427fe:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmZTdlOTkzZTY1ZDZhYTZiMjY1MTg3ODE0YzA5NzViZmNmN2Y2OGE1ZDJhNjdmYTExNjQwZmU2YWIyZjAzOWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhhZmQwZjk2OGE1ODVmOTA4NmVkNjcxNGM2ODM2MmRlYjc5MTljMDI3M2U1MmRkMGU3MDEzZGVhNDUxMGY0OTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhmMTJiMzZhNzk1NjI5OWE0ZmEzNjRmN2FkYzY0NTZmNzgwMjg5YTkxOTlkZjc5YTA0MzUwMmRjOGFlZjBkYjUifQ"
+        },
+        {
+          "resource": "repo://src/model/fieldUsage.ts#L25-L74",
+          "version": "repo-lines-v1:sha256:072d5dd59a7872893bf61dfc626cf81e562524a8c566cce000c583a0541cca32:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUxNWFiMDhmZTY3OThmY2Q0NWNkZjgyZWVjYjA1OWE0YjBjODg1OWViOTdlNzEwYTYzYzc1ZGY4ZTlkYzEzMGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlkMjAwYjc4OGJiOTljYTcyYzdjNjYzNDY5MjIxMjNlMmEwMzJjYWRiNmRlY2U5YTVlOTkzYzlmNmEwNzhhZjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNlMGZkNWFmNDQyMmE3NmZkOWVjZDUyN2M1YWRhZGFmNzI3YzAzMjQxOWViYjQ4MjJhNjIzMjI0ODY5MmFkNWIifQ"
         }
       ]
     },
     {
       "id": "claim_e7fe6f742cbb4c37989301b67b07b21a",
-      "statement": "countLinksUsingField is the counterpart of countPapersUsingField for a PDF-mark 'why I picked this value' link; unlike an ordinary answer (pruned silently on the next load), an orphaned link leaves the mark still showing a label for a field that no longer resolves with no way for a reviewer to discover it, so it is worth warning about; the linked-field canonical path is parsed via parsePath rather than string-prefix-matched because names containing / or [ are escaped.",
+      "statement": "countLinksUsingField is the counterpart of countPapersUsingField for a PDF-mark 'why I picked this value' link. An orphaned answer is carried through load/save verbatim and returns when the name does, but an orphaned link leaves the mark still showing a label for a field that no longer resolves with no way for a reviewer to discover or clean it up short of opening every mark's popover, so it is worth warning about as a distinct hazard; the linked-field canonical path is parsed via parsePath (linkMatchesPath) rather than string-prefix-matched because names containing / or [ are escaped in the canonical form.",
       "evidence": [
         {
-          "resource": "repo://src/model/fieldUsage.ts#L104-L140",
-          "version": "repo-lines-v1:sha256:7c50778d73bad7f39b8f1cf76e7138d6fc7df7f5c61dbaf1971e7c1569566ee2:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBhZTVjZWFjZTQyMmY4ZjZlNWQ3YjYyOGIwNmM2NDgwYjE1NDI4MWU2YjhlN2I4NTI5MWJlNzYyMTM2YmM1YjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/model/annotations.ts#L60-L89",
+          "version": "repo-lines-v1:sha256:7e6e28b20dae2a16daa5f04d5afb27628e1e7852e8bbe135e2093501152000f0:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRjOWUzM2UxYTA3NmJjYzZmYmM0OWNkNzM5OTFjZWQ5MjhiNjVlOWEzYzI5MDcyNjBmMTJlNWNkMDA3MmUwYzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE2MTQ0ZmZmNTRlMDc0NDU5YTRjYTZhYjUzNWNmM2ZlYjEzMTUxOWE2ZWNkNjE1NDgwMWNmNDAzMmZkZDY1NmYifQ"
+        },
+        {
+          "resource": "repo://src/model/fieldUsage.ts#L76-L112",
+          "version": "repo-lines-v1:sha256:e12afac01d3b35217a9e83ca485dfd1c5a9c322e1d703b856c63de294935deed:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBhZTVjZWFjZTQyMmY4ZjZlNWQ3YjYyOGIwNmM2NDgwYjE1NDI4MWU2YjhlN2I4NTI5MWJlNzYyMTM2YmM1YjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
@@ -282,7 +318,7 @@
     }
   ],
   "verification": {
-    "by": "openwiki/0.4.0",
-    "at": "2026-09-21T20:12:55.536Z"
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T12:49:55.013Z"
   }
 }

@@ -13,7 +13,7 @@ import {
   shell,
 } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { readFile, writeFile, access, readdir, lstat, realpath, unlink, mkdir, rm } from 'node:fs/promises'
+import { readFile, writeFile, access, readdir, lstat, realpath, stat, unlink, rmdir, mkdir, rm, rename } from 'node:fs/promises'
 import { constants, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import path from 'node:path'
@@ -24,14 +24,37 @@ import os from 'node:os'
 // so they typecheck identically under this file's tsconfig (node types) and
 // the renderer's (DOM types).
 import { validateGitUrl, validateClonePath } from '../src/git/url'
-import { relPathProblem, annotationsRelDir } from '../src/git/relpath'
+import { relPathProblem, annotationsRelDir, mergeBlockingPaths } from '../src/git/relpath'
+import { annotationsDirOf, annotationsDirProblem, filesCollide, sharesPaper } from '../src/model/annotationsDir'
+import { paperIdProblem } from '../src/model/paperId'
+import { applySplit } from '../src/model/annotationSplit'
 import { refProblem } from '../src/git/ref'
 import { gitErrorText, parsePorcelain, parseGitLog } from '../src/git/output'
-import { ownAnnotationPathMatcher } from '../src/git/ownAnnotationPath'
+import { ownAnnotationPathMatcher, ownAnnotationPathsIn } from '../src/git/ownAnnotationPath'
+import { parseAnnotationAuthors } from '../src/git/seatOwner'
+import { planRepoSetup, SETUP_AUTHOR, SETUP_COMMIT_MESSAGE } from '../src/git/repoSetup'
+import { BRANCH_SWITCH_STASH_MESSAGE } from '../src/git/stash'
+import {
+  FETCH_COMMAND_KEYS,
+  BACKGROUND_FETCH_TIMEOUT_MS,
+  NON_INTERACTIVE_ENV,
+  backgroundFetchAllowed,
+} from '../src/git/fetchPolicy'
+import {
+  listStashes,
+  pushStash,
+  restoreStash,
+  dropStash,
+  branchFromStash,
+  popCarryOverStash,
+  dropCarryOverStash,
+  type RunGit,
+} from '../src/git/stashOps'
 import { readAllConcurrently } from '../src/git/concurrentRead'
 import { deriveGitInfo } from '../src/git/deriveGitInfo'
-import type { GitRun, MergeStart } from '../src/git/types'
-import { isLegacyProjectShape, assembleLegacyProjectJson, isDeletableAnnotationText } from '../src/model/project'
+import type { GitRun, MergeStart, AnnotationAuthors } from '../src/git/types'
+import { isLegacyProjectShape, assembleLegacyProjectJson, isDeletableAnnotationText, parseMarksFileName } from '../src/model/project'
+import { changedTargets } from '../src/model/fileStamps'
 import { parseMarks, type PdfMark } from '../src/model/pdfMarks'
 import { rectToPdfPoints, rectToQuadPoints } from '../src/model/pdfExport'
 import { verifyReleaseSignature, RELEASE_PUBLIC_KEY_B64 } from '../src/model/updateSignature'
@@ -563,12 +586,6 @@ const REVIEWER_FILE_RE = /^reviewer-(\d+)\.json$/
  *  ordinary project uses a different prefix). Group 1 is the reviewer number. */
 const SCREENING_FILE_RE = /^screening-(\d+)\.json$/
 
-/** Matches a per-reviewer PDF-marks file's name — `marks-<n>.json`, the same
- *  regardless of screening vs. annotation mode (see `splitProjectFiles`'s
- *  doc comment for why marks don't share the reviewer/screening split).
- *  Group 1 is the reviewer number. */
-const MARKS_FILE_RE = /^marks-(\d+)\.json$/
-
 type PaperFiles = {
   consolidated?: unknown
   reviewers: Map<string, unknown>
@@ -587,6 +604,10 @@ async function loadPaperFiles(
   paperId: string,
   screening: boolean,
   corruptOut?: string[],
+  /** Read a screening project's highlight files from before they had their
+   *  own name (see `parseMarksFileName`) — only when no annotation project
+   *  sharing the folder lists this paper, whose they could equally be. */
+  legacyMarks = false,
 ): Promise<PaperFiles> {
   const reviewers = new Map<string, unknown>()
   const reviewMarks = new Map<string, unknown>()
@@ -604,14 +625,6 @@ async function loadPaperFiles(
       corruptOut?.push(`${paperId}/${consolidatedName}`)
     }
   }
-  const marksConsolidatedText = await safeReadAnnotationFile(annotationsDir, `${paperId}/marks-consolidated.json`)
-  if (marksConsolidatedText !== null) {
-    try {
-      marksConsolidated = JSON.parse(marksConsolidatedText)
-    } catch {
-      corruptOut?.push(`${paperId}/marks-consolidated.json`)
-    }
-  }
   const paperDirResolved = path.resolve(annotationsDir, paperId)
   const base = path.resolve(annotationsDir)
   let entries: Array<{ name: string; isFile(): boolean }> = []
@@ -622,22 +635,71 @@ async function loadPaperFiles(
       entries = []
     }
   }
-  for (const entry of entries) {
+  // Old-style highlight files first, so one under the kind's own name wins.
+  const ordered = [...entries].sort(
+    (a, b) => Number(!parseMarksFileName(a.name, screening)?.legacy) - Number(!parseMarksFileName(b.name, screening)?.legacy),
+  )
+  for (const entry of ordered) {
     if (!entry.isFile()) continue
     const reviewerMatch = (screening ? SCREENING_FILE_RE : REVIEWER_FILE_RE).exec(entry.name)
-    const marksMatch = MARKS_FILE_RE.exec(entry.name)
+    const marksMatch = parseMarksFileName(entry.name, screening)
+    if (marksMatch?.legacy && !legacyMarks) continue
     if (!reviewerMatch && !marksMatch) continue
     const text = await safeReadAnnotationFile(annotationsDir, `${paperId}/${entry.name}`)
     if (text === null) continue
     try {
       if (reviewerMatch) reviewers.set(reviewerMatch[1], JSON.parse(text))
-      else reviewMarks.set(marksMatch![1], JSON.parse(text))
+      else if (marksMatch!.seat === 'consolidated') marksConsolidated = JSON.parse(text)
+      else reviewMarks.set(marksMatch!.seat, JSON.parse(text))
     } catch {
       // corrupt file — skip this reviewer's tree
       corruptOut?.push(`${paperId}/${entry.name}`)
     }
   }
   return { consolidated, reviewers, marksConsolidated, reviewMarks }
+}
+
+/**
+ * The project's annotations folder, absolute: always one folder directly inside
+ * the project file's own directory, named by the file's `annotationsDir`
+ * (`annotationsDirOf` has already refused any name that is not a plain folder
+ * name). Checked again here, on the resolved path and — when the folder exists
+ * — on its real path, so neither a crafted name nor a symlink planted in a
+ * received project folder can point reads or writes anywhere else.
+ */
+async function annotationsDirFor(filePath: string, raw: unknown): Promise<string> {
+  const projectDir = path.dirname(path.resolve(filePath))
+  const dir = path.join(projectDir, annotationsDirOf(raw))
+  if (path.dirname(dir) !== projectDir) {
+    throw new Error(`Refusing an annotations folder outside the project's own directory: "${dir}"`)
+  }
+  let st
+  try {
+    st = await lstat(dir)
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return dir
+    throw err
+  }
+  if (st.isSymbolicLink()) throw new Error(`Refusing an annotations folder that is a symbolic link: "${dir}"`)
+  const [realDir, realProjectDir] = await Promise.all([realpath(dir), realpath(projectDir)])
+  if (path.dirname(realDir) !== realProjectDir) {
+    throw new Error(`Refusing an annotations folder outside the project's own directory: "${dir}"`)
+  }
+  return dir
+}
+
+/** The project file at `filePath`, parsed — or `null` when missing or unreadable. */
+async function readProjectMeta(filePath: string): Promise<unknown> {
+  try {
+    return JSON.parse(await readFile(filePath, 'utf-8'))
+  } catch {
+    return null
+  }
+}
+
+/** `relPath`'s annotations folder, repo-relative, as the working tree's project file names it. */
+async function projectAnnotationsRelDir(root: string, relPath: string): Promise<string> {
+  return annotationsRelDir(relPath, annotationsDirOf(await readProjectMeta(path.join(root, relPath))))
 }
 
 /** Read `filePath`'s `project.json` and, if it's the split (post-v1.3) shape,
@@ -651,15 +713,104 @@ async function readProjectText(filePath: string, corruptOut?: string[]): Promise
   const raw: unknown = JSON.parse(text)
   if (isLegacyProjectShape(raw)) return text
   const papers = (raw as { papers?: unknown[] }).papers
-  const annotationsDir = path.join(path.dirname(filePath), 'annotations')
+  const annotationsDir = await annotationsDirFor(filePath, raw)
   const screening = Boolean((raw as { config?: { screening?: unknown } })?.config?.screening)
   const ids: string[] = []
   for (const p of Array.isArray(papers) ? papers : []) {
     const id = (p as { id?: unknown })?.id
     if (typeof id === 'string') ids.push(id)
   }
-  const paperFiles = await readAllConcurrently(ids, (id) => loadPaperFiles(annotationsDir, id, screening, corruptOut))
+  // A screening project's highlight files from before they had their own
+  // name are its own only where no annotation project sharing the folder
+  // lists the same paper.
+  const annotationSiblings = screening
+    ? await projectsUsingFolder(filePath, annotationsDirOf(raw), (other) => !isScreening(other))
+    : []
+  const legacyMarks = (id: string) =>
+    screening && !annotationSiblings.some((s) => sharesPaper([id], JSON.parse(s.text)))
+  const paperFiles = await readAllConcurrently(ids, (id) =>
+    loadPaperFiles(annotationsDir, id, screening, corruptOut, legacyMarks(id)),
+  )
+  // Everything this project is made of, as it stands right now — the baseline
+  // a later save checks against before it overwrites anything. See
+  // `projectFileStamps`. Recorded from a fresh read of the directory rather
+  // than from `ids`, so a file that exists for a paper we could not parse is
+  // still accounted for.
+  projectFileStamps.delete(path.resolve(filePath))
+  await rememberStamp(filePath, filePath)
+  for (const id of ids) {
+    let entries: string[]
+    try {
+      entries = await readdir(path.join(annotationsDir, id))
+    } catch {
+      continue // no folder for this paper yet
+    }
+    for (const name of entries) await rememberStamp(filePath, path.join(annotationsDir, id, name))
+  }
   return JSON.stringify(assembleLegacyProjectJson(raw, paperFiles))
+}
+
+/**
+ * What every file of the open project looked like when this app last read or
+ * wrote it — `mtimeMs:size`, per absolute path, per project.
+ *
+ * The save path knows what *it* last wrote (the renderer's baseline in
+ * `src/platform/electron.ts`), which is enough to write only what the reviewer
+ * changed. It says nothing about the file on disk having changed underneath
+ * in the meantime — and it does: a teammate's `git pull` run from a terminal,
+ * a `git checkout`, an editor, a sync client. A save then overwrote whatever
+ * had arrived with no conflict, no warning and no trace, which in a shared
+ * repository means somebody else's pulled-but-unseen answers simply vanish.
+ *
+ * `mtimeMs:size` rather than a hash: this runs over every annotation file on
+ * every save, a hash would mean reading the whole corpus each time, and the
+ * pair catches everything short of a deliberate mtime-preserving rewrite —
+ * which no ordinary git or editor operation does.
+ */
+const projectFileStamps = new Map<string, Map<string, string>>()
+
+async function fileStamp(absPath: string): Promise<string | null> {
+  try {
+    const st = await stat(absPath)
+    return `${st.mtimeMs}:${st.size}`
+  } catch {
+    return null // absent is a state too — see `changedSince`
+  }
+}
+
+/** Remember `absPath` as it is right now, for the project rooted at `projectPath`. */
+async function rememberStamp(projectPath: string, absPath: string): Promise<void> {
+  const key = path.resolve(projectPath)
+  let stamps = projectFileStamps.get(key)
+  if (!stamps) {
+    stamps = new Map()
+    projectFileStamps.set(key, stamps)
+  }
+  const stamp = await fileStamp(absPath)
+  if (stamp === null) stamps.delete(path.resolve(absPath))
+  else stamps.set(path.resolve(absPath), stamp)
+}
+
+/**
+ * The files among `targets` that changed on disk since this app last read or
+ * wrote them — a save must not overwrite those unasked. The decision lives in
+ * `src/model/fileStamps.ts`, where it is testable; this half only gathers the
+ * `stat` results.
+ *
+ * Only enforced for a project this session actually read — a fresh Save As has
+ * no stamps by definition, and every file it writes is legitimately new.
+ */
+async function changedSince(projectPath: string, targets: { absPath: string; rel: string }[]): Promise<string[]> {
+  const stamps = projectFileStamps.get(path.resolve(projectPath))
+  if (!stamps) return []
+  const stamped = await Promise.all(
+    targets.map(async ({ absPath, rel }) => ({
+      rel,
+      known: stamps.get(path.resolve(absPath)),
+      now: await fileStamp(absPath),
+    })),
+  )
+  return changedTargets(stamped)
 }
 
 /** Absolute project-file paths `project:save` will actually write to — every
@@ -775,13 +926,21 @@ async function assertInsideRoot(root: string, filePath: string): Promise<void> {
  */
 async function writeProjectFiles(
   filePath: string,
-  metaText: string,
+  metaText: string | null,
   files: Array<{ relPath: string; text: string | null }>,
 ): Promise<void> {
-  await assertNotSymlink(filePath)
-  await writeFile(filePath, metaText, 'utf-8')
+  if (metaText !== null) {
+    await assertNotSymlink(filePath)
+    await writeFile(filePath, metaText, 'utf-8')
+    // Re-stamp everything this writes, or the next save would see its own
+    // work as somebody else's change. See `projectFileStamps`.
+    await rememberStamp(filePath, filePath)
+  }
 
-  const annotationsDir = path.join(path.dirname(filePath), 'annotations')
+  const annotationsDir = await annotationsDirFor(
+    filePath,
+    metaText !== null ? JSON.parse(metaText) : await readProjectMeta(filePath),
+  )
   await mkdir(annotationsDir, { recursive: true })
   const realAnnotationsDir = await realpath(annotationsDir)
   for (const file of files) {
@@ -808,6 +967,20 @@ async function writeProjectFiles(
       } catch (err) {
         if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
       }
+      await rememberStamp(filePath, target)
+      // A paper's folder emptied by that unlink is clutter — git does not
+      // track directories, so it would never show up as something to clean.
+      // `rmdir` without `recursive` removes it only when nothing is left, so
+      // a folder still holding anything (a file this project does not own, a
+      // reviewer file kept back as unparseable) survives untouched.
+      const parent = path.dirname(target)
+      if (parent !== base) {
+        try {
+          await rmdir(parent)
+        } catch {
+          /* not empty, already gone, or not ours to remove — all fine */
+        }
+      }
       continue
     }
     await mkdir(path.dirname(target), { recursive: true })
@@ -820,16 +993,37 @@ async function writeProjectFiles(
     }
     await assertNotSymlink(target)
     await writeFile(target, file.text, 'utf-8')
+    await rememberStamp(filePath, target)
   }
 }
 
 ipcMain.handle(
   'project:save',
-  async (_e, filePath: string, metaText: string, files: Array<{ relPath: string; text: string | null }>) => {
+  async (_e, filePath: string, metaText: string | null, files: Array<{ relPath: string; text: string | null }>) => {
     if (!knownProjectPaths.has(path.resolve(filePath))) {
       throw new Error(`Refusing to save to "${filePath}": it was not opened or chosen via a dialog this session.`)
     }
+    // Deliberately only here, not inside `writeProjectFiles`: the git flows
+    // share that function and rewrite the tree on purpose, having just decided
+    // what it should contain. This is the ordinary save, the one that has no
+    // idea anything else happened.
+    // Nothing is written when anything clashes: the renderer asks the
+    // reviewer what to do and comes back with a fresh save.
+    const annotationsDir = await annotationsDirFor(
+      filePath,
+      metaText !== null ? JSON.parse(metaText) : await readProjectMeta(filePath),
+    )
+    const folder = path.basename(annotationsDir)
+    const stale = await changedSince(filePath, [
+      ...(metaText === null ? [] : [{ absPath: filePath, rel: path.basename(filePath) }]),
+      ...files.map((f) => ({
+        absPath: path.resolve(annotationsDir, f.relPath),
+        rel: `${folder}/${f.relPath}`,
+      })),
+    ])
+    if (stale.length > 0) return { stale }
     await writeProjectFiles(filePath, metaText, files)
+    return { stale: [] }
   },
 )
 
@@ -857,55 +1051,245 @@ ipcMain.handle('project:pickSavePath', async (_e, suggestedName: string) => {
   return { path: res.filePath }
 })
 
+/** Other project files in `projectPath`'s directory whose annotations folder
+ *  is `folder` and that `keep` accepts. */
+async function projectsUsingFolder(
+  projectPath: string,
+  folder: string,
+  keep: (raw: unknown) => boolean,
+): Promise<{ path: string; name: string; text: string }[]> {
+  const dir = path.dirname(path.resolve(projectPath))
+  const own = path.basename(projectPath)
+  let entries: string[]
+  try {
+    entries = await readdir(dir)
+  } catch {
+    return []
+  }
+  const out: { path: string; name: string; text: string }[] = []
+  for (const name of entries.sort()) {
+    if (name === own || !name.toLowerCase().endsWith('.json')) continue
+    const file = path.join(dir, name)
+    let text: string
+    let raw: unknown
+    try {
+      if ((await lstat(file)).isSymbolicLink()) continue
+      text = await readFile(file, 'utf-8')
+      raw = JSON.parse(text)
+    } catch {
+      continue // not a project file, or not readable — not ours to judge
+    }
+    if (!Array.isArray((raw as { papers?: unknown } | null)?.papers)) continue
+    if (annotationsDirOf(raw) === folder && keep(raw)) out.push({ path: file, name, text })
+  }
+  return out
+}
+
+function isScreening(raw: unknown): boolean {
+  return Boolean((raw as { config?: { screening?: unknown } } | null)?.config?.screening)
+}
+
+/** A parsed project file's paper ids. */
+function paperIdsOf(raw: unknown): string[] {
+  const papers = (raw as { papers?: unknown } | null)?.papers
+  return (Array.isArray(papers) ? papers : [])
+    .map((p) => (p as { id?: unknown } | null)?.id)
+    .filter((id): id is string => typeof id === 'string')
+}
+
+/** Which other project files next to `projectPath` use `folder` and list one
+ *  of `paperIds`, so the two would write the same files there. */
+ipcMain.handle(
+  'project:annotationsDirUsers',
+  async (_e, projectPath: string, folder: string, paperIds: string[], screening: boolean) => {
+    const ids = Array.isArray(paperIds) ? paperIds.map(String) : []
+    const users = await projectsUsingFolder(String(projectPath), String(folder), (raw) => filesCollide(ids, screening === true, raw))
+    return users.map((p) => p.name)
+  },
+)
+
 /**
- * Would writing a project to `destPath` start sharing an `annotations/`
- * folder with another, unrelated project already sitting in that directory?
- * Two *different* project kinds sharing paper ids on purpose (SaiLoR's own
- * "Start full-text screening" flow) never actually collide on a filename —
- * one writes `screening-N.json`, the other `reviewer-N.json`, for the same
- * paper id — so this only flags a **same-family** overlap: another project
- * file, of the same screening/non-screening kind, that shares at least one
- * paper id. Called from `saveAs()` right after the destination is picked and
- * before anything is written — the only moment a new sharing relationship
- * can be created; it cannot retroactively protect a folder two projects
- * already share from an earlier, unguarded Save As.
- *
- * Not git-specific — Save As works with no repository at all — so this
- * lives in the plain `project:*` namespace like `pickSavePath` above it,
- * not alongside the `git:*` handlers.
+ * Rename an open project's annotations folder to `folder` and record the new
+ * name in its project file. The folder is renamed first and put back if the
+ * project file cannot be written, so the two never disagree; the moved files
+ * are re-stamped, since a later save must not take them for someone else's.
+ */
+ipcMain.handle('project:moveAnnotationsDir', async (_e, projectPath: string, folder: string) => {
+  const key = path.resolve(String(projectPath))
+  if (!knownProjectPaths.has(key)) throw new Error('Refusing to change a project that was not opened this session.')
+  const problem = annotationsDirProblem(String(folder))
+  if (problem) throw new Error(`"${folder}" cannot be an annotations folder: ${problem}.`)
+  const raw = JSON.parse(await readFile(key, 'utf-8')) as Record<string, unknown>
+  const from = await annotationsDirFor(key, raw)
+  const to = await annotationsDirFor(key, { annotationsDir: folder })
+  if (from === to) return
+  if ((await projectsUsingFolder(key, String(folder), (other) => filesCollide(paperIdsOf(raw), isScreening(raw), other))).length > 0) {
+    throw new Error(`Another project file here already uses "${folder}".`)
+  }
+  if ((await readdir(to).catch(() => [])).length > 0) throw new Error(`The folder "${folder}" already exists and is not empty.`)
+  const moved = await stat(from).then(() => true, () => false)
+  if (moved) {
+    await rm(to, { recursive: true, force: true }) // an empty leftover only, checked above
+    await rename(from, to)
+  }
+  try {
+    await assertNotSymlink(key)
+    await writeFile(key, JSON.stringify({ ...raw, annotationsDir: folder }, null, 2), 'utf-8')
+  } catch (err) {
+    if (moved) await rename(to, from)
+    throw err
+  }
+  await rememberStamp(key, key)
+  if (moved) {
+    for (const id of await readdir(to).catch(() => [] as string[])) {
+      for (const name of await readdir(path.join(to, id)).catch(() => [] as string[])) {
+        await rememberStamp(key, path.join(to, id, name))
+      }
+    }
+  }
+})
+
+/**
+ * The screening project an open project was started from (its provenance
+ * names it), read the way opening it would read it — for showing its PDF
+ * highlights. Only a plain file name in the open project's own directory:
+ * the name comes from a file that may have arrived from anyone, so it must
+ * not lead anywhere else. `null` when there is none, or it is not there.
+ */
+ipcMain.handle('project:screeningSource', async (_e, projectPath: string) => {
+  const key = path.resolve(String(projectPath))
+  if (!knownProjectPaths.has(key)) throw new Error('Refusing to inspect a project that was not opened this session.')
+  const raw = (await readProjectMeta(key)) as { provenance?: { kind?: unknown; source?: { file?: unknown } } } | null
+  const name = raw?.provenance?.kind === 'screening-import' ? raw.provenance.source?.file : undefined
+  if (typeof name !== 'string' || !/^[^/\\]+\.json$/i.test(name) || name.startsWith('.') || paperIdProblem(name)) return null
+  const file = path.join(path.dirname(key), name)
+  if (file === key) return null
+  try {
+    if ((await lstat(file)).isSymbolicLink()) return null
+    return { name, text: await readProjectText(file) }
+  } catch {
+    return null // moved, renamed, or unreadable: nothing to show
+  }
+})
+
+/** What `project:sharedAnnotations` listed, so the split that follows acts on
+ *  exactly those files and refuses if any project file changed since. */
+const listedSplits = new Map<string, { folder: string; projects: Map<string, string | null>; files: Set<string> }>()
+
+/**
+ * The open project's annotations folder, if other project files next to it use
+ * it too: every such project file, and every file in the folder, for
+ * `planSplit`. `null` when the folder is this project's alone.
+ */
+ipcMain.handle('project:sharedAnnotations', async (_e, projectPath: string) => {
+  const key = path.resolve(String(projectPath))
+  if (!knownProjectPaths.has(key)) throw new Error('Refusing to inspect a project that was not opened this session.')
+  const ownText = await readFile(key, 'utf-8')
+  const ownRaw: unknown = JSON.parse(ownText)
+  const folder = annotationsDirOf(ownRaw)
+  const others = await projectsUsingFolder(key, folder, (raw) => filesCollide(paperIdsOf(ownRaw), isScreening(ownRaw), raw))
+  if (others.length === 0) return null
+  const annotationsDir = await annotationsDirFor(key, ownRaw)
+  const files: { relPath: string; text: string }[] = []
+  let paperDirs: string[] = []
+  try {
+    paperDirs = await readdir(annotationsDir)
+  } catch {
+    // no folder yet — nothing to split but the setting
+  }
+  for (const id of paperDirs.sort()) {
+    let names: string[]
+    try {
+      names = await readdir(path.join(annotationsDir, id))
+    } catch {
+      continue // a stray file at the top of the folder, not a paper
+    }
+    for (const name of names.sort()) {
+      if (!name.endsWith('.json')) continue
+      const text = await safeReadAnnotationFile(annotationsDir, `${id}/${name}`)
+      if (text !== null) files.push({ relPath: `${id}/${name}`, text })
+    }
+  }
+  const projects = [{ path: key, name: path.basename(key), text: ownText }, ...others]
+  listedSplits.set(key, {
+    folder,
+    projects: new Map(await Promise.all(projects.map(async (p) => [p.path, await fileStamp(p.path)] as const))),
+    files: new Set(files.map((f) => f.relPath)),
+  })
+  return { folder, projects, files }
+})
+
+/**
+ * Split the folder `project:sharedAnnotations` listed: every file goes to the
+ * folder of the project(s) the reviewer confirmed, and every project file is
+ * pointed at its own folder. All checks run before anything is touched.
  */
 ipcMain.handle(
-  'project:checkSiblingCollision',
-  async (_e, destPath: string, paperIds: string[], screening: boolean) => {
-    const destDir = path.dirname(destPath)
-    const destName = path.basename(destPath)
-    let entries: string[]
-    try {
-      entries = await readdir(destDir)
-    } catch {
-      return null // destination directory doesn't exist yet — nothing to collide with
+  'project:splitAnnotations',
+  async (
+    _e,
+    projectPath: string,
+    plan: { folders: Record<string, string>; rows: { relPath: string; targets: string[] }[] },
+  ) => {
+    const key = path.resolve(String(projectPath))
+    const listed = listedSplits.get(key)
+    if (!listed) throw new Error('List the shared folder first.')
+    const dir = path.dirname(key)
+    const folders = Object.entries(plan?.folders ?? {})
+    if (folders.length !== listed.projects.size || folders.some(([p]) => !listed.projects.has(p))) {
+      throw new Error('The split must give every listed project its own folder.')
     }
-    const ownIds = new Set(paperIds)
-    for (const name of entries) {
-      if (name === destName || !name.endsWith('.json')) continue
-      let raw: unknown
-      try {
-        raw = JSON.parse(await readFile(path.join(destDir, name), 'utf-8'))
-      } catch {
-        continue // not a project file (or not readable) — not our concern
-      }
-      const candidatePapers = (raw as { papers?: unknown[] } | null)?.papers
-      if (!Array.isArray(candidatePapers)) continue
-      const candidateScreening = Boolean((raw as { config?: { screening?: unknown } })?.config?.screening)
-      if (candidateScreening !== screening) continue // different family — filenames can't collide
-      const overlapping: string[] = []
-      for (const p of candidatePapers) {
-        const id = (p as { id?: unknown } | null)?.id
-        if (typeof id === 'string' && ownIds.has(id)) overlapping.push(id)
-      }
-      if (overlapping.length > 0) return { siblingName: name, overlappingIds: overlapping }
+    const names = folders.map(([, f]) => String(f))
+    for (const f of names) {
+      const problem = annotationsDirProblem(f)
+      if (problem) throw new Error(`"${f}" cannot be an annotations folder: ${problem}.`)
+      if (f === listed.folder) throw new Error(`Each project needs a folder other than "${f}".`)
+      await annotationsDirFor(key, { annotationsDir: f }) // containment and symlink checks
+      const existing = await readdir(path.join(dir, f)).catch(() => [])
+      if (existing.length > 0) throw new Error(`The folder "${f}" already exists and is not empty.`)
     }
-    return null
+    if (new Set(names.map((n) => n.toLowerCase())).size !== names.length) {
+      throw new Error('Two projects cannot share one folder.')
+    }
+    for (const [p, stamp] of listed.projects) {
+      if ((await fileStamp(p)) !== stamp) throw new Error(`${path.basename(p)} changed since the folder was listed. Try again.`)
+    }
+    const rows = (plan?.rows ?? []).map((r) => ({ relPath: String(r.relPath), targets: (r.targets ?? []).map(String) }))
+    for (const r of rows) {
+      if (!listed.files.has(r.relPath)) throw new Error(`"${r.relPath}" was not in the listed folder.`)
+      if (r.targets.some((t) => !listed.projects.has(t))) throw new Error(`"${r.relPath}" names an unknown project.`)
+    }
+
+    const within = async (rel: string): Promise<string> => {
+      const target = path.resolve(dir, rel)
+      if (!target.startsWith(dir + path.sep)) throw new Error(`Refusing a path outside the project directory: "${rel}"`)
+      await assertNotSymlink(target)
+      return target
+    }
+    await applySplit(
+      {
+        shared: listed.folder,
+        projects: folders.map(([p, f]) => ({ file: path.basename(p), folder: f })),
+        rows: rows.map((r) => ({ relPath: r.relPath, targets: r.targets.map((t) => path.basename(t)) })),
+      },
+      {
+        copy: async (from, to) => {
+          const text = await safeReadAnnotationFile(path.join(dir, listed.folder), from.slice(listed.folder.length + 1))
+          if (text === null) throw new Error(`Could not read "${from}".`)
+          const dest = await within(to)
+          await mkdir(path.dirname(dest), { recursive: true })
+          await writeFile(dest, text, 'utf-8')
+        },
+        readText: async (file) => readFile(await within(file), 'utf-8'),
+        writeText: async (file, text) => writeFile(await within(file), text, 'utf-8'),
+        remove: async (file) => unlink(await within(file)),
+        removeDirIfEmpty: async (d) => {
+          const target = await within(d)
+          if ((await readdir(target).catch(() => ['?'])).length === 0) await rmdir(target)
+        },
+      },
+    )
+    listedSplits.delete(key)
   },
 )
 
@@ -1407,6 +1791,30 @@ ipcMain.on('app:saveComplete', (_e, ok: boolean) => {
   }
 })
 
+/**
+ * Refuse to start a second copy of SaiLoR, handing the existing window focus
+ * instead.
+ *
+ * Two instances can hold the same project, and nothing reconciles them: each
+ * keeps the whole project in memory and writes it back on save, so whichever
+ * saves second silently replaces the other's work — no conflict, no warning,
+ * and no trace that a second copy of the answers ever existed. That is the
+ * same lost-update hazard `changedSince` guards against for edits made
+ * outside the app, arriving through a door the app itself opens.
+ *
+ * Refused before `whenReady`, as Electron requires: a second process must
+ * learn it has lost the lock and quit before it builds a window.
+ */
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (!mainWindow) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+  })
+}
+
 app.whenReady().then(() => {
   // macOS shows the dock icon from the running app; set it explicitly so it
   // appears in development too (not just in the packaged .app bundle).
@@ -1716,12 +2124,17 @@ const GIT_SAFE_CONFIG = [
 // which is one click from opening the project, exactly like the `core.fsmonitor`
 // case above.
 
-function runGit(args: string[], cwd?: string, timeout = GIT_TIMEOUT_MS): Promise<GitRun> {
+function runGit(
+  args: string[],
+  cwd?: string,
+  timeout = GIT_TIMEOUT_MS,
+  extraEnv: NodeJS.ProcessEnv = {},
+): Promise<GitRun> {
   return new Promise((resolve) => {
     execFile(
       'git',
       [...GIT_SAFE_CONFIG, ...args],
-      { cwd, env: gitEnv(), timeout, maxBuffer: GIT_MAX_BUFFER, windowsHide: true },
+      { cwd, env: { ...gitEnv(), ...extraEnv }, timeout, maxBuffer: GIT_MAX_BUFFER, windowsHide: true },
       (err, stdout, stderr) => {
         const e = err as (Error & { code?: number | string; killed?: boolean }) | null
         if (!e) {
@@ -1835,16 +2248,19 @@ ipcMain.handle('git:info', async (_e, projectPath: string) => {
   // /private/tmp), so `path.relative(root, projectPath)` would compute a `..`
   // escape that points nowhere. `--show-prefix` is git's own answer to "where
   // in the work tree is my cwd", which is exactly what's needed here.
-  const [top, prefix, head, branch, upstream] = await Promise.all([
+  const [top, prefix, head, branch, upstream, behind] = await Promise.all([
     runGit(['rev-parse', '--show-toplevel'], dir),
     runGit(['rev-parse', '--show-prefix'], dir),
     runGit(['rev-parse', '--verify', '-q', 'HEAD'], dir),
     runGit(['symbolic-ref', '--short', '-q', 'HEAD'], dir),
     runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], dir),
+    // Reads refs only — no fetch. See `GitInfoResult.behind` for why a stale
+    // answer is the right trade here.
+    runGit(['rev-list', '--count', 'HEAD..@{u}'], dir),
   ])
-  const info = deriveGitInfo(path.basename(projectPath), { top, prefix, head, branch, upstream })
+  const info = deriveGitInfo(path.basename(projectPath), { top, prefix, head, branch, upstream, behind })
   if (info.root) knownGitRoots.add(path.resolve(info.root))
-  return info
+  return { ...info, annotationsDir: annotationsRelDir(info.relPath, annotationsDirOf(await readProjectMeta(projectPath))) }
 })
 
 ipcMain.handle('git:status', async (_e, root: string) => {
@@ -1877,7 +2293,8 @@ async function readProjectAtRevision(root: string, relPath: string, rev: string)
   const raw: unknown = JSON.parse(text)
   if (isLegacyProjectShape(raw)) return text
 
-  const dir = annotationsRelDir(relPath)
+  // The folder that revision's own project file names.
+  const dir = annotationsRelDir(relPath, annotationsDirOf(raw))
   const lsTree = await runGit(['ls-tree', '-r', '--name-only', rev, '--', dir], root)
   const paths = lsTree.ok ? lsTree.stdout.split('\n').filter(Boolean) : []
 
@@ -1890,7 +2307,10 @@ async function readProjectAtRevision(root: string, relPath: string, rev: string)
   }
   const consolidatedName = screening ? 'screening-consolidated' : 'consolidated'
   const reviewerPrefix = screening ? 'screening' : 'reviewer'
-  const re = new RegExp(`^([^/]+)\\/(?:(${consolidatedName})|${reviewerPrefix}-(\\d+)|(marks-consolidated)|marks-(\\d+))\\.json$`)
+  const marksPrefix = screening ? 'screening-marks' : 'marks'
+  const re = new RegExp(
+    `^([^/]+)\\/(?:(${consolidatedName})|${reviewerPrefix}-(\\d+)|(${marksPrefix}-consolidated)|${marksPrefix}-(\\d+))\\.json$`,
+  )
   // Filtered first, purely so the (independent, one-per-file) `git show`
   // calls below can run concurrently rather than one at a time — the same
   // fix as `readProjectText`'s own per-paper loop, one hop further out. This
@@ -1910,8 +2330,10 @@ async function readProjectAtRevision(root: string, relPath: string, rev: string)
     // screening, whichever this revision's `config.screening` says); group 3
     // catches the reviewer number for this project's own reviewer-file prefix
     // (see `splitProjectFiles`'s doc comment for why a screening project uses
-    // a different prefix); group 4 catches marks-consolidated; group 5 the
-    // reviewer number for a marks-<n> file (marks don't split by screening).
+    // a different prefix); group 4 catches the consolidated highlight file;
+    // group 5 the reviewer number for a per-reviewer one (see `marksFileName`).
+    // A screening project's highlight files from before they had their own
+    // name are not read back from history.
     // A file belonging to the other project kind simply doesn't match.
     const m = re.exec(rel)
     if (!m) continue
@@ -1982,7 +2404,7 @@ const LOG_MAX_COMMITS = 250
 
 ipcMain.handle('git:logBegin', async (_e, root: string, relPath: string) => {
   assertRelPath(relPath)
-  const dir = annotationsRelDir(relPath)
+  const dir = await projectAnnotationsRelDir(root, relPath)
   const r = await runGit(
     [
       'log',
@@ -2033,6 +2455,44 @@ ipcMain.handle('git:logDiff', async (_e, root: string, relPath: string, rev: str
 })
 
 /**
+ * The paths git currently sees as changed under this project's `annotations/`
+ * folder that actually belong to *this* project.
+ *
+ * Staging used to be `git add -- <dir>`: the whole folder in one pathspec.
+ * That is only correct while the folder holds nothing else, which SaiLoR
+ * itself breaks — "Start full-text screening" deliberately writes a second
+ * project beside the first, and a Save As into a populated folder does the
+ * same by hand (see `ownAnnotationPathMatcher`). The sibling's modified or
+ * untracked files then rode into this project's commit, under a message the
+ * reviewer wrote for something else, with nothing in the commit UI having
+ * shown them. `beginMergeInto` and `git:branchSwitchBegin` already scope
+ * themselves with the same matcher; this brings the two staging paths
+ * (`git:commitPartial`, `git:pullFinish`) in line with them.
+ *
+ * Discovered from `status` rather than from the `files` list just written,
+ * because a `text: null` entry for a file that never existed is not a path
+ * `git add` accepts. A rename contributes its "from" path too, or the
+ * deletion of the old name is left unstaged — the same rule `runCommit`
+ * applies to the user's own selections.
+ *
+ * Throws if `metaText` won't parse, rather than falling back to the folder:
+ * `splitProjectFiles` produced it moments earlier, so a failure here means
+ * something is wrong enough that sweeping the folder is not the safe guess.
+ */
+async function ownChangedAnnotationPaths(root: string, relPath: string, metaText: string): Promise<string[]> {
+  const raw: unknown = JSON.parse(metaText)
+  // `-uall`, or a paper's *first* reading is lost: its folder is new, so plain
+  // porcelain collapses it to one `?? annotations/<id>/` line that names no
+  // file, and the per-file match below cannot recognise it. Staging the folder
+  // wholesale instead would re-open the sibling-project hole this function
+  // exists to close — a screening sibling keeps its own files in the same
+  // paper folder.
+  const st = await runGit(['status', '--porcelain=v1', '-z', '-uall'], root)
+  if (!st.ok) throw new Error(gitErrorText(st))
+  return ownAnnotationPathsIn(parsePorcelain(st.stdout), annotationsRelDir(relPath, annotationsDirOf(raw)), raw)
+}
+
+/**
  * Commits `committed` (`{metaText, files}`, from `splitProjectFiles`) as
  * `relPath` + `annotations/`'s content — which is not necessarily what the
  * working tree holds, or ends up holding. This is what makes committing
@@ -2048,10 +2508,10 @@ ipcMain.handle('git:logDiff', async (_e, root: string, relPath: string, rev: str
  * tree must still end up holding `working`, never stuck mid-swap holding
  * content that was never actually staged as anything.
  *
- * `git add -- relPath annotationsDir` stages every add/modify/delete under
- * the whole folder in one call — simpler than listing exactly which files
- * changed, and correct either way since `writeProjectFiles` always reconciles
- * the folder to match the state it's writing.
+ * Staging is scoped to this project's own files — `relPath`, whatever the
+ * reviewer selected, and the changed annotation paths
+ * `ownChangedAnnotationPaths` vouches for — never the whole `annotations/`
+ * folder, which may hold a sibling project's work too.
  */
 ipcMain.handle(
   'git:commitPartial',
@@ -2067,28 +2527,30 @@ ipcMain.handle(
   ) => {
     assertRelPath(relPath)
     otherPaths.forEach(assertRelPath)
+    const detached = await detachedHeadRefusal(root)
+    if (detached) return detached
     const fullPath = path.join(root, relPath)
-    const dir = annotationsRelDir(relPath)
-    const paths = [relPath, dir, ...otherPaths]
+    // Reported as a failed run rather than left to reject the IPC call:
+    // `runCommit` in `gitStore.ts` only recovers from an `{ok: false}` result,
+    // so a rejection strands the panel in its 'working' phase with no error
+    // shown. Same reasoning as `git:pullFinish`'s own catch.
     try {
-      await assertInsideRoot(root, fullPath)
-      await writeProjectFiles(fullPath, committed.metaText, committed.files)
-      const add = await runGit(['add', '--', ...paths], root)
-      if (!add.ok) return add
-      // `add` tolerates a directory pathspec that matches nothing; `commit` does
-      // not ("pathspec 'annotations' did not match any file(s) known to git").
-      // A project with no annotations at all leaves the folder existing and
-      // empty, so only restrict the commit by `dir` when something is staged
-      // under it (an add, a modify, or a delete — `diff --cached` still reports
-      // a staged deletion, `ls-files` does not).
-      const staged = await runGit(['diff', '--cached', '--name-only', '--', dir], root)
-      const commitPaths = !staged.ok || gitOut(staged) ? paths : paths.filter((p) => p !== dir)
-      const args = ['commit', '-m', message]
-      if (amend) args.push('--amend')
-      return await runGit([...args, '--', ...commitPaths], root)
-    } finally {
-      await assertInsideRoot(root, fullPath)
-      await writeProjectFiles(fullPath, working.metaText, working.files)
+      try {
+        await assertInsideRoot(root, fullPath)
+        await writeProjectFiles(fullPath, committed.metaText, committed.files)
+        // After the write, so `status` reports the content actually being staged.
+        const paths = [relPath, ...(await ownChangedAnnotationPaths(root, relPath, committed.metaText)), ...otherPaths]
+        const add = await runGit(['add', '--', ...paths], root)
+        if (!add.ok) return add
+        const args = ['commit', '-m', message]
+        if (amend) args.push('--amend')
+        return await runGit([...args, '--', ...paths], root)
+      } finally {
+        await assertInsideRoot(root, fullPath)
+        await writeProjectFiles(fullPath, working.metaText, working.files)
+      }
+    } catch (err) {
+      return { ok: false, code: null, stdout: '', stderr: err instanceof Error ? err.message : String(err) }
     }
   },
 )
@@ -2156,7 +2618,8 @@ ipcMain.handle(
 ipcMain.handle('git:discardFile', async (_e, root: string, relPath: string, projectRelPath: string) => {
   try {
     assertRelPath(relPath)
-    const projectDir = annotationsRelDir(projectRelPath)
+    assertRelPath(projectRelPath)
+    const projectDir = await projectAnnotationsRelDir(root, projectRelPath)
     if (relPath === projectRelPath || relPath === projectDir || relPath.startsWith(`${projectDir}/`)) {
       return {
         ok: false,
@@ -2194,6 +2657,36 @@ ipcMain.handle('git:discardFile', async (_e, root: string, relPath: string, proj
   }
 })
 
+/**
+ * Refuse to commit when HEAD is not on a branch.
+ *
+ * A commit made on a detached HEAD belongs to no branch: it succeeds, the
+ * panel says "Committed.", and the moment the reviewer checks out a branch
+ * again the work vanishes from the tree and from every list — recoverable only
+ * from the reflog, by somebody who knows it exists. The branch-switch flow
+ * already refuses to run from a detached HEAD for the same reason; the commit
+ * path never checked.
+ *
+ * Reachable only by checking out a commit or a remote-tracking ref outside the
+ * app (SaiLoR's own switcher offers local branches only), which is exactly the
+ * sort of thing somebody does once, in a terminal, and then forgets.
+ */
+async function detachedHeadRefusal(root: string): Promise<GitRun | null> {
+  const branch = await runGit(['symbolic-ref', '--short', '-q', 'HEAD'], root)
+  if (branch.ok && gitOut(branch)) return null
+  // An unborn HEAD — a repository with no commits yet — is not detached:
+  // `symbolic-ref` still resolves, so this only fires on a real detachment.
+  return {
+    ok: false,
+    code: null,
+    stdout: '',
+    stderr:
+      'HEAD is not on a branch (detached HEAD), so a commit made now would belong to no branch ' +
+      'and would disappear from view the next time you check one out.\n\n' +
+      'Check out a branch first — `git checkout <branch>` — and commit again.',
+  }
+}
+
 ipcMain.handle(
   'git:commit',
   async (_e, root: string, paths: string[], message: string, amend: boolean) => {
@@ -2201,6 +2694,8 @@ ipcMain.handle(
     if (paths.length === 0) {
       return { ok: false, code: null, stdout: '', stderr: 'Nothing selected to commit.' }
     }
+    const detached = await detachedHeadRefusal(root)
+    if (detached) return detached
     // `add` then a pathspec-limited commit: `add` handles an untracked or
     // deleted path uniformly, and the pathspec means the user's own separately
     // staged work elsewhere in the repo is neither committed nor disturbed.
@@ -2228,16 +2723,14 @@ ipcMain.handle('git:push', async (_e, root: string) => {
 })
 
 /**
- * Are there uncommitted tracked changes that would block a merge? Shared by
- * every flow that merges, since a merge started over a dirty tree is a merge
- * whose abort cannot cleanly put things back.
+ * Is anything lying around that would block a merge? Shared by every flow that
+ * merges, since a merge started over a dirty tree is a merge whose abort cannot
+ * cleanly put things back. See `mergeBlockingPaths` for which untracked files
+ * count and why.
  */
-async function mergeBlockingDirtyPaths(root: string): Promise<string[]> {
+async function mergeBlockingDirtyPaths(root: string, relPath: string): Promise<string[]> {
   const st = await runGit(['status', '--porcelain=v1', '-z'], root)
-  // Untracked files ('??') never block a merge, so they are not "dirty" here.
-  return parsePorcelain(st.stdout)
-    .filter((c) => c.code !== '??')
-    .map((c) => c.path)
+  return mergeBlockingPaths(parsePorcelain(st.stdout), await projectAnnotationsRelDir(root, relPath))
 }
 
 /**
@@ -2284,7 +2777,7 @@ async function beginMergeInto(root: string, relPath: string, ref: string): Promi
     return { kind: 'error', message: gitErrorText(merge) }
   }
 
-  const dir = annotationsRelDir(relPath)
+  const dir = await projectAnnotationsRelDir(root, relPath)
   const st2 = await runGit(['status', '--porcelain=v1', '-z'], root)
   const unmerged = parsePorcelain(st2.stdout)
     .filter((c) => c.unmerged)
@@ -2331,7 +2824,7 @@ async function beginMergeInto(root: string, relPath: string, ref: string): Promi
 ipcMain.handle('git:pullBegin', async (_e, root: string, relPath: string) => {
   assertRelPath(relPath)
 
-  const dirty = await mergeBlockingDirtyPaths(root)
+  const dirty = await mergeBlockingDirtyPaths(root, relPath)
   if (dirty.length > 0) return { kind: 'dirty', paths: dirty }
 
   const up = await runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], root)
@@ -2357,7 +2850,7 @@ ipcMain.handle('git:mergeBegin', async (_e, root: string, relPath: string, ref: 
   assertRelPath(relPath)
   assertRef(ref)
 
-  const dirty = await mergeBlockingDirtyPaths(root)
+  const dirty = await mergeBlockingDirtyPaths(root, relPath)
   if (dirty.length > 0) return { kind: 'dirty', paths: dirty }
 
   // A remote-tracking ref is only as fresh as the last fetch, and the branch
@@ -2375,6 +2868,134 @@ ipcMain.handle('git:mergeBegin', async (_e, root: string, relPath: string, ref: 
   }
 
   return beginMergeInto(root, relPath, ref)
+})
+
+/**
+ * Who last committed each annotation file, and who this machine commits as.
+ *
+ * A seat is a local choice nothing records in the project (see
+ * `src/git/seatOwner.ts`), so two people can both read the same paper in seat
+ * 1 and silently overwrite each other. The repository already knows better:
+ * the last author of a paper's seat file is a claim on that reading.
+ *
+ * One `git log` for the whole folder, not one per seat: a seat is not a
+ * person — large reviews divide the papers among many more people than there
+ * are seats — so the answer has to be per paper, and per-paper queries would
+ * be one subprocess per paper.
+ *
+ * A machine with no `user.email`/`user.name` configured reports `me: null`,
+ * and the caller then says nothing rather than guessing.
+ */
+ipcMain.handle('git:annotationAuthors', async (_e, root: string, relPath: string) => {
+  assertRelPath(relPath)
+  const dir = await projectAnnotationsRelDir(root, relPath)
+  const [nameRun, emailRun, log] = await Promise.all([
+    runGit(['config', '--get', 'user.name'], root),
+    runGit(['config', '--get', 'user.email'], root),
+    // `--no-merges`: a merge commit's author is whoever ran the merge, which
+    // says nothing about who wrote the reading it carried across.
+    runGit(['log', '--no-merges', '--format=%x00%an%x09%ae', '--name-only', '--', dir], root),
+  ])
+  const myName = nameRun.ok ? gitOut(nameRun) : ''
+  const myEmail = emailRun.ok ? gitOut(emailRun) : ''
+  const out: AnnotationAuthors = {
+    me: myName || myEmail ? { name: myName, email: myEmail } : null,
+    files: log.ok ? parseAnnotationAuthors(log.stdout, dir) : {},
+  }
+  return out
+})
+
+/**
+ * What configuring this project's repository for SaiLoR would change, and
+ * doing it. See `src/git/repoSetup.ts` for which rules and why.
+ *
+ * The files go next to the project rather than at the repository root, so a
+ * repository holding more than this review keeps its own rules intact.
+ */
+async function readIfPresent(absPath: string): Promise<string | null> {
+  try {
+    return await readFile(absPath, 'utf-8')
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw err
+  }
+}
+
+function setupPaths(relPath: string): { dir: string; attributes: string; ignore: string } {
+  const dir = path.posix.dirname(relPath.split(path.sep).join('/'))
+  const prefix = dir === '.' ? '' : `${dir}/`
+  return {
+    dir,
+    attributes: `${prefix}.gitattributes`,
+    ignore: `${prefix}.gitignore`,
+  }
+}
+
+ipcMain.handle('git:repoSetupStatus', async (_e, root: string, relPath: string) => {
+  assertRelPath(relPath)
+  const rel = setupPaths(relPath)
+  const plan = planRepoSetup(
+    await readIfPresent(path.join(root, rel.attributes)),
+    await readIfPresent(path.join(root, rel.ignore)),
+  )
+  return { upToDate: plan.upToDate, needsConsent: plan.needsConsent, paths: [rel.attributes, rel.ignore] }
+})
+
+ipcMain.handle('git:applyRepoSetup', async (_e, root: string, relPath: string) => {
+  assertRelPath(relPath)
+  // Same refusal as any other commit: a commit on a detached HEAD would be
+  // lost the moment a branch is checked out, and silently configuring a
+  // repository into a commit nobody can find is worse than not doing it.
+  const detached = await detachedHeadRefusal(root)
+  if (detached) return detached
+
+  const rel = setupPaths(relPath)
+  const absAttributes = path.join(root, rel.attributes)
+  const absIgnore = path.join(root, rel.ignore)
+  const plan = planRepoSetup(await readIfPresent(absAttributes), await readIfPresent(absIgnore))
+  if (plan.upToDate) return { ok: true, code: 0, stdout: '', stderr: '' }
+
+  const written: string[] = []
+  if (plan.attributes.changed) {
+    await assertInsideRoot(root, absAttributes)
+    await assertNotSymlink(absAttributes)
+    await writeFile(absAttributes, plan.attributes.text, 'utf-8')
+    written.push(rel.attributes)
+  }
+  if (plan.ignore.changed) {
+    await assertInsideRoot(root, absIgnore)
+    await assertNotSymlink(absIgnore)
+    await writeFile(absIgnore, plan.ignore.text, 'utf-8')
+    written.push(rel.ignore)
+  }
+
+  const add = await runGit(['add', '--', ...written], root)
+  if (!add.ok) return add
+  // `--author` records SaiLoR as who wrote these rules; the committer stays
+  // whoever ran it, which git does not let an application forge and which is
+  // honest anyway — this is their repository and they did run the command.
+  return runGit(
+    ['commit', '--author', SETUP_AUTHOR, '-m', SETUP_COMMIT_MESSAGE, '--', ...written],
+    root,
+  )
+})
+
+/**
+ * The fetch SaiLoR runs on its own to keep "↓ N to pull" honest — never one
+ * the reviewer asked for. See `src/git/fetchPolicy.ts` for why it is refused
+ * for a repository whose own config names a command, and why it must fail
+ * rather than ask for a password.
+ *
+ * Returns only whether it fetched: a background fetch that fails is retried
+ * next cycle, and has nothing to tell a reviewer who did not start it.
+ */
+ipcMain.handle('git:backgroundFetch', async (_e, root: string) => {
+  assertRoot(root)
+  const risky = await runGit(['config', '--local', '--name-only', '--get-regexp', FETCH_COMMAND_KEYS], root)
+  // Exit 1 is "no such key", the ordinary answer; anything printed is a match.
+  if (!backgroundFetchAllowed(risky.ok ? risky.stdout : '')) return { fetched: false, refused: true }
+  const r = await runGit(['fetch', '--quiet'], root, BACKGROUND_FETCH_TIMEOUT_MS, NON_INTERACTIVE_ENV)
+  return { fetched: r.ok, refused: false }
 })
 
 /** True when `ref` names something under `refs/remotes/` — checked against git
@@ -2412,7 +3033,11 @@ ipcMain.handle(
       const fullPath = path.join(root, relPath)
       await assertInsideRoot(root, fullPath)
       await writeProjectFiles(fullPath, working.metaText, working.files)
-      const add = await runGit(['add', '--', relPath, annotationsRelDir(relPath)], root)
+      // This project's own files only — a sibling project sharing the folder
+      // must not be folded into a merge commit nobody reviewed. See
+      // `ownChangedAnnotationPaths`.
+      const own = await ownChangedAnnotationPaths(root, relPath, working.metaText)
+      const add = await runGit(['add', '--', relPath, ...own], root)
       if (!add.ok) return add
       // `git commit` after a merge with MERGE_HEAD set records both parents and
       // allows an empty tree change, which is why the merge commit is made this
@@ -2531,14 +3156,15 @@ ipcMain.handle('git:branchSwitchBegin', async (_e, root: string, relPath: string
   assertRoot(root)
   assertRelPath(relPath)
   assertRef(branch)
-  const dir = annotationsRelDir(relPath)
+  const dir = await projectAnnotationsRelDir(root, relPath)
   // Read the *working tree's* current project.json, not HEAD — an
-  // uncommitted new paper must still count as this project's own. A
-  // directory that collapses to one opaque `?? annotations/` porcelain
-  // record (nothing under it tracked anywhere yet) can't be resolved to
-  // individual files at all; `matchesOwn` returning `false` for everything
-  // in that case is what makes it fail toward a clean `other-files-dirty`
-  // refusal instead of guessing that an unreadable blob is ours.
+  // uncommitted new paper must still count as this project's own. Status runs
+  // with `-uall` below so a brand-new paper folder is listed file by file:
+  // collapsed to one opaque `?? annotations/<id>/` record it could not be
+  // matched, and a reviewer's first reading of a paper was refused as
+  // "other files dirty". If the project file itself cannot be read,
+  // `matchesOwn` returning `false` for everything still fails toward that
+  // clean refusal instead of guessing that an unreadable blob is ours.
   let matchesOwn: (rel: string) => boolean
   try {
     matchesOwn = ownAnnotationPathMatcher(JSON.parse(await readProjectText(path.join(root, relPath))))
@@ -2548,7 +3174,7 @@ ipcMain.handle('git:branchSwitchBegin', async (_e, root: string, relPath: string
   const inProjectScope = (p: string) =>
     p === relPath || (p.startsWith(`${dir}/`) && matchesOwn(p.slice(dir.length + 1)))
 
-  const st = await runGit(['status', '--porcelain=v1', '-z'], root)
+  const st = await runGit(['status', '--porcelain=v1', '-z', '-uall'], root)
   const changes = parsePorcelain(st.stdout)
   const otherPaths = changes.filter((c) => !inProjectScope(c.path)).map((c) => c.path)
   if (otherPaths.length > 0) return { kind: 'other-files-dirty', paths: otherPaths }
@@ -2575,7 +3201,7 @@ ipcMain.handle('git:branchSwitchBegin', async (_e, root: string, relPath: string
   }
 
   const stash = await runGit(
-    ['stash', 'push', '-u', '-m', 'sailor: switching branch', '--', relPath, dir],
+    ['stash', 'push', '-u', '-m', BRANCH_SWITCH_STASH_MESSAGE, '--', relPath, dir],
     root,
   )
   if (!stash.ok) return { kind: 'error', message: gitErrorText(stash) }
@@ -2583,9 +3209,15 @@ ipcMain.handle('git:branchSwitchBegin', async (_e, root: string, relPath: string
   const checkout = await runGit(['checkout', branch, '--'], root)
   if (!checkout.ok) {
     // Put things back exactly as they were — nothing about this attempt
-    // should be visible if the checkout itself failed.
-    await runGit(['stash', 'pop'], root)
-    return { kind: 'error', message: gitErrorText(checkout) }
+    // should be visible if the checkout itself failed. If even that fails,
+    // the changes are not lost, only parked, and the reviewer must be told
+    // where: a silent failure here is how uncommitted readings used to end up
+    // in a stash nobody knew existed.
+    const restore = await popCarryOverStash(gitRunner(root))
+    return {
+      kind: 'error',
+      message: restore.ok ? gitErrorText(checkout) : `${gitErrorText(checkout)}\n\n${CARRY_OVER_STRANDED}`,
+    }
   }
 
   return { kind: 'merge', sourceBranch, base, ours, theirs }
@@ -2616,7 +3248,7 @@ ipcMain.handle(
       const fullPath = path.join(root, relPath)
       await assertInsideRoot(root, fullPath)
       await writeProjectFiles(fullPath, resolved.metaText, resolved.files)
-      return await runGit(['stash', 'drop'], root)
+      return await dropCarryOverStash(gitRunner(root))
     } catch (err) {
       return { ok: false, code: null, stdout: '', stderr: err instanceof Error ? err.message : String(err) }
     }
@@ -2633,7 +3265,62 @@ ipcMain.handle('git:branchSwitchAbort', async (_e, root: string, sourceBranch: s
   assertRef(sourceBranch)
   const checkout = await runGit(['checkout', sourceBranch, '--'], root)
   if (!checkout.ok) return checkout
-  return runGit(['stash', 'pop'], root)
+  const pop = await popCarryOverStash(gitRunner(root))
+  return pop.ok ? pop : { ...pop, stderr: `${gitErrorText(pop)}\n\n${CARRY_OVER_STRANDED}` }
+})
+
+/** What to tell a reviewer whose carried-over changes could not be put back. */
+const CARRY_OVER_STRANDED =
+  'Your uncommitted changes were not lost — they are kept as a stash. Open Git and ' +
+  'use "Stashed changes" to restore them.'
+
+// ---- Stashed changes (the Git panel's list). See src/git/stashOps.ts. ----
+
+function gitRunner(root: string): RunGit {
+  return (args) => runGit(args, root)
+}
+
+/** A stash is named by commit sha across IPC — see src/git/stash.ts. */
+function assertSha(sha: string): void {
+  if (!/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(sha)) throw new Error('Not a valid stash id.')
+}
+
+ipcMain.handle('git:stashList', async (_e, root: string) => {
+  assertRoot(root)
+  return listStashes(gitRunner(root))
+})
+
+ipcMain.handle('git:stashPush', async (_e, root: string, relPath: string, message: string) => {
+  assertRoot(root)
+  assertRelPath(relPath)
+  let raw: unknown
+  try {
+    raw = JSON.parse(await readFile(path.join(root, relPath), 'utf-8'))
+  } catch (err) {
+    return { ok: false, code: null, stdout: '', stderr: `The project file could not be read: ${String(err)}` }
+  }
+  return pushStash(gitRunner(root), relPath, raw, String(message ?? ''))
+})
+
+ipcMain.handle('git:stashRestore', async (_e, root: string, relPath: string, sha: string) => {
+  assertRoot(root)
+  assertRelPath(relPath)
+  assertSha(sha)
+  return restoreStash(gitRunner(root), relPath, sha, await projectAnnotationsRelDir(root, relPath))
+})
+
+ipcMain.handle('git:stashDrop', async (_e, root: string, sha: string) => {
+  assertRoot(root)
+  assertSha(sha)
+  return dropStash(gitRunner(root), sha)
+})
+
+ipcMain.handle('git:stashBranch', async (_e, root: string, relPath: string, sha: string, branch: string) => {
+  assertRoot(root)
+  assertRelPath(relPath)
+  assertSha(sha)
+  assertRef(branch)
+  return branchFromStash(gitRunner(root), relPath, sha, branch, await projectAnnotationsRelDir(root, relPath))
 })
 
 // Remember that a quit is in progress so the close guard can, after the user

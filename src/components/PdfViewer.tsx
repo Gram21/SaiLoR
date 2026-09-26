@@ -6,6 +6,7 @@ import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import { useStore, selectCurrentPaper, PDF_ZOOM_MIN, PDF_ZOOM_MAX } from '../state/store'
 import { MARK_COLORS, sortMarksForCycling, type MarkRect, type PdfMark } from '../model/pdfMarks'
+import { screeningSeatLabel } from '../model/screeningMarks'
 import { detectEntryBox, detectNumericCitation, findNumericReference, type PreviewTextItem } from '../model/refPreview'
 import { getPlatform } from '../platform'
 // Side-effect import: configures the pdf.js worker.
@@ -201,6 +202,7 @@ function MarkOverlayItem({
   flash,
   onOpen,
   onMarkMouseDown,
+  from,
 }: {
   mark: PdfMark
   flash: string
@@ -208,9 +210,12 @@ function MarkOverlayItem({
   /** See `handleMarkMouseDown` — replaces plain `onClick` so a drag starting
    *  here can anchor a real text selection instead of grabbing the overlay div. */
   onMarkMouseDown: (e: React.MouseEvent<HTMLElement>, onOpen: (e: MarkOpenEvent) => void) => void
+  /** Another project's highlight, shown read-only: who made it. */
+  from?: string
 }) {
   const [coords, setCoords] = useState<{ x: number; top?: number; bottom?: number } | null>(null)
-  const hasInfo = !!(mark.comment || mark.text || (mark.linkedFields && mark.linkedFields.length > 0))
+  const hasInfo = !!(from || mark.comment || mark.text || (mark.linkedFields && mark.linkedFields.length > 0))
+  const extra = from ? ' is-foreign' : ''
   const show = (e: React.MouseEvent<HTMLElement>) => {
     if (hasInfo) setCoords(markTooltipCoords(e.currentTarget))
   }
@@ -225,6 +230,7 @@ function MarkOverlayItem({
         ...(coords.top !== undefined ? { top: coords.top } : { bottom: coords.bottom }),
       }}
     >
+      {from && <p className="pdf-mark-tooltip-from">{from}</p>}
       {(mark.comment || mark.text) && <p className="pdf-mark-tooltip-text">{mark.comment || mark.text}</p>}
       {mark.linkedFields && mark.linkedFields.length > 0 && (
         <ul className="pdf-mark-tooltip-links">
@@ -240,7 +246,7 @@ function MarkOverlayItem({
     return (
       <>
         <div
-          className={`pdf-mark-note${flash}`}
+          className={`pdf-mark-note${flash}${extra}`}
           style={{
             left: `${mark.rects[0].x * 100}%`,
             top: `${mark.rects[0].y * 100}%`,
@@ -260,7 +266,7 @@ function MarkOverlayItem({
       {mark.rects.map((r, ri) => (
         <div
           key={ri}
-          className={`pdf-mark-rect${flash}`}
+          className={`pdf-mark-rect${flash}${extra}`}
           style={{
             left: `${r.x * 100}%`,
             top: `${r.y * 100}%`,
@@ -309,6 +315,8 @@ export function PdfViewer() {
   // PDF highlights/comments. See `pdfMarks.ts` for why these are SaiLoR's
   // own overlay data rather than real PDF annotation objects.
   const marks = useStore((s) => s.currentPdfMarks())
+  // The screeners' highlights, read-only, when asked for — see `ScreeningMark`.
+  const screeningMarks = useStore((s) => (s.showScreeningMarks && paperId ? s.screeningMarks?.[paperId] : undefined))
   const addHighlight = useStore((s) => s.addHighlight)
   const setMarkComment = useStore((s) => s.setMarkComment)
   const setMarkColor = useStore((s) => s.setMarkColor)
@@ -673,6 +681,11 @@ export function PdfViewer() {
    */
   const handleMarkMouseDown = (e: React.MouseEvent<HTMLElement>, onOpen: (e: MarkOpenEvent) => void) => {
     if (e.button !== 0) return // left button only — never hijack a right-click
+    // Browser's own mousedown handling would reset the selection set below.
+    e.preventDefault()
+    // Applied synchronously too: the state only lands after a re-render, and
+    // `caretRangeFromPoint` below must already see through the mark.
+    containerRef.current?.classList.add('pdf-marks-dragging')
     setMarkDragActive(true)
 
     const startX = e.clientX
@@ -697,6 +710,7 @@ export function PdfViewer() {
     const onUp = (ev: MouseEvent) => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
+      containerRef.current?.classList.remove('pdf-marks-dragging')
       setMarkDragActive(false)
       // Not a drag: restore click-to-open, which native `onClick` can no
       // longer provide (see this function's doc comment).
@@ -1320,6 +1334,7 @@ export function PdfViewer() {
       Array.from({ length: numPages }, (_, i) => {
         const pageNumber = i + 1
         const pageMarks = marks.filter((m) => m.page === pageNumber)
+        const pageScreeningMarks = (screeningMarks ?? []).filter((m) => m.mark.page === pageNumber)
         return (
           <Page
             key={i}
@@ -1332,6 +1347,21 @@ export function PdfViewer() {
             renderAnnotationLayer
             onRenderTextLayerSuccess={onTextLayerRendered}
           >
+            {pageScreeningMarks.length > 0 && (
+              <div className="pdf-marks-overlay">
+                {pageScreeningMarks.map(({ seat, mark }) => (
+                  <MarkOverlayItem
+                    key={`screening:${seat}:${mark.id}`}
+                    mark={mark}
+                    flash=""
+                    from={screeningSeatLabel(seat)}
+                    // Read-only: nothing to open, but a drag across it still selects text.
+                    onOpen={() => {}}
+                    onMarkMouseDown={handleMarkMouseDown}
+                  />
+                ))}
+              </div>
+            )}
             {pageMarks.length > 0 && (
               <div className="pdf-marks-overlay">
                 {pageMarks.map((mark) => (
@@ -1352,7 +1382,7 @@ export function PdfViewer() {
           </Page>
         )
       }),
-    [numPages, renderWidth, onTextLayerRendered, marks, flashMarkId],
+    [numPages, renderWidth, onTextLayerRendered, marks, screeningMarks, flashMarkId],
   )
 
   // Paint the highlights and scroll the active match into view.

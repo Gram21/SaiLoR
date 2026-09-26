@@ -12,6 +12,12 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Evidence:** `src/platform/unsupported.ts:4-28`, `src/platform/index.ts:10-23`, commit `7fbaa84`
 - **Status:** Implemented
 
+### REQ-PLT-11 — Single application instance
+- **Description:** When the application is launched while another instance is running, the system shall not start a second instance and shall bring the existing window to the front.
+- **Type:** Non-functional (ISO 25010: Reliability)
+- **Evidence:** `electron/main.ts:1559`, commit `0bc6c9c`
+- **Status:** Implemented
+
 ### REQ-PLT-20 — Open projects via native dialog
 - **Description:** When "Open project" is triggered, the system shall present a native file-open dialog filtered to `.json` files and shall treat dialog cancellation as a no-op.
 - **Type:** Functional (ISO 25010: Functional Suitability)
@@ -28,6 +34,27 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Description:** The system shall store a project as a metadata-only `project.json` plus one annotation file per paper per reviewer seat under a sibling `annotations/` folder, and shall reassemble these into one logical project on open.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `electron/main.ts:504-651,761-797`, `src/model/project.ts:881-1029`, `e2e/openSaveProject.spec.ts:129`, commit `7fbaa84`
+- **Status:** Implemented
+
+### REQ-PLT-41 — Write only changed files
+- **Description:** When saving to the location a project was last opened from or saved to, the system shall write only the project file and the annotation files whose serialized content differs from what that open or save produced, leaving every other file byte-identical; after any git operation that can rewrite the working tree, the next save shall write every file.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/platform/electron.ts:55,57-59,73-76,81-88,294`, commits `27bf461`, `4abaebb`
+- **Verified by:** `src/platform/electron.test.ts` (`writes only the papers edited since the project was opened`, `forgets the baseline when a git call rewrites the working tree`)
+- **Status:** Implemented
+
+### REQ-PLT-42 — Remove files of removed or renamed papers
+- **Description:** When saving to the same location, the system shall delete the annotation files the project previously wrote for a paper that has since been removed or whose identifier changed, subject to REQ-PLT-61, and shall remove a paper folder that deletion leaves empty; a folder still holding any other file shall be kept.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/platform/electron.ts:319`, `electron/main.ts:928`, commit `fc8aa26`
+- **Verified by:** `src/platform/electron.test.ts` (`deletes the files of a paper removed since the project was opened`, `moves a paper's files when its id is renamed`)
+- **Status:** Implemented
+
+### REQ-PLT-43 — Do not rewrite files a schema version only migrated
+- **Description:** When a save introduces a new schema version, the system shall compare each annotation file against its previous content as read under the new version, writing only files whose content changed beyond that migration.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/platform/electron.ts:87`, commit `40e0668`
+- **Verified by:** `src/platform/electron.test.ts` (`writes only project.json when a new schema version renames a field nobody edited since`)
 - **Status:** Implemented
 
 ### REQ-PLT-50 — Migrate single-file projects
@@ -50,10 +77,10 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-62 — Report unparseable annotation files on open
-- **Description:** When a project opens with one or more annotation files that could not be parsed, the system shall keep the project loaded and shall surface a load error naming the affected files (capped at ten, with a count of any remainder) instead of silently treating them as unannotated.
+- **Description:** When a project opens with one or more annotation files that could not be parsed, the system shall keep the project loaded, shall surface a load error naming the affected files (capped at ten, with a count of any remainder) instead of silently treating them as unannotated, and shall keep a warning visible for as long as the project is open that displays the list again.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/store.ts:320-343,1133-1136,1312-1315`, `src/platform/adapter.ts:20-27`
-- **Verified by:** `src/state/store.corruptFiles.test.ts`
+- **Evidence:** `src/state/store.ts:439-453,506,1713`, `src/components/Toolbar.tsx:369`, `src/platform/adapter.ts`, commit `7e82c96`
+- **Verified by:** `src/state/store.corruptFiles.test.ts`, `src/components/Toolbar.test.tsx` (`unreadable annotation files stay visible for the whole session`)
 - **Status:** Implemented
 
 ### REQ-PLT-70 — Refuse symlinked and escaping write targets
@@ -68,10 +95,25 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Evidence:** `electron/main.ts:822-831,1332-1339`, `src/state/store.saveas.test.ts:79-133`
 - **Status:** Implemented
 
-### REQ-PLT-90 — Refuse sibling-project collisions
-- **Description:** When saving to a directory that contains another project of the same family sharing at least one paper identifier, the system shall refuse the save.
+### REQ-PLT-90 — Keep one annotations folder per project
+- **Description:** When a project is saved to a directory where another project file of the same kind (screening or annotation) listing at least one of the same paper identifiers already uses its annotations folder, the system shall save it with a folder named after the file instead, and refuse the save when that name is taken too; the project editor shall refuse a folder name another project file next to it uses while the two are of the same kind and share a paper identifier; other projects may share a folder.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:850-883`, `src/state/store.saveas.test.ts:134-152`, commit `a7c5153`
+- **Evidence:** `electron/main.ts:1081`, `src/state/store.ts`, commit `c1b40ec`
+- **Verified by:** `src/state/store.saveas.test.ts` (`takes a folder named after the file when the destination already uses the default one`), `src/state/editorStore.annotationsDir.test.ts`
+- **Status:** Implemented
+
+### REQ-PLT-95 — Split a shared annotations folder
+- **Description:** When a project is opened whose annotations folder other project files in the same directory also use while being of the same kind and listing at least one of the same paper identifiers, the system shall propose giving each of them its own folder, assigning each annotation file by paper identifier and file kind and, where several projects could own it, by the schema version it records or by which project's schema its answers fit, listing those files for confirmation and copying undecidable ones to each; on confirmation it shall copy the files, record each project's folder in its project file, and only then remove the originals, refusing while the open project has unsaved changes, a target folder is not empty, or a listed project file changed.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/annotationSplit.ts`, `electron/main.ts:1135,1179`, `src/components/SplitAnnotationsDialog.tsx`, commit `c1b40ec`
+- **Verified by:** `src/model/annotationSplit.test.ts`, `src/state/store.annotationsSplit.test.ts`, `src/test/integration/annotationSplit.integration.test.tsx`
+- **Status:** Implemented
+
+### REQ-PLT-96 — Move the annotations folder on rename
+- **Description:** When the annotations folder of a saved project is renamed in the project editor, the system shall rename the folder on disk and record the new name in the project file together, restoring the folder if the project file cannot be written.
+- **Type:** Functional (ISO 25010: Reliability)
+- **Evidence:** `electron/main.ts:1091`, `src/state/editorStore.ts`, commit `c1b40ec`
+- **Verified by:** `src/state/editorStore.annotationsDir.test.ts` (`moves the folder of an existing project before saving the new name`)
 - **Status:** Implemented
 
 ### REQ-PLT-100 — Prompt on close with unsaved changes
@@ -96,6 +138,20 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Description:** When the project changes while a save is being written, the system shall keep the project marked dirty and retain the newer in-memory value.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/store.save.test.ts:52-86`, commit `7f96e40`
+- **Status:** Implemented
+
+### REQ-PLT-135 — Stop saving over externally changed files
+- **Description:** When a save would write or delete a file that has changed on disk, or has appeared, since the application last read or wrote it, the system shall write nothing and ask the user how to proceed (REQ-PLT-136), naming the changed files by paper and seat (up to ten, with a count of any remainder); files rewritten by the application's own git operations shall not count as changed.
+- **Type:** Non-functional (ISO 25010: Reliability)
+- **Evidence:** `electron/main.ts:718,720-727,730-740,751-762,965`, `src/model/fileStamps.ts:41-45`, `src/platform/electron.ts:329`, `src/state/store.ts:1558`, `src/components/StaleSaveDialog.tsx:10-25`, commits `0bc6c9c`, `5e2abb4`
+- **Verified by:** `src/model/fileStamps.test.ts`, `src/state/store.staleSave.test.ts` (`writes nothing and asks, instead of raising an error`)
+- **Status:** Implemented
+
+### REQ-PLT-136 — Resolve a save that met changed files
+- **Description:** When a save has been stopped under REQ-PLT-135, the system shall offer to overwrite the changed files with the user's version, to keep the on-disk version of those files while saving the user's other edits, or to combine both versions with the field-level three-way merge of REQ-GIT-240 against the project as last read or written, letting the user decide each field both sides changed; files the user did not edit shall keep their on-disk content in every case. When the versions cannot be combined, the system shall say why and offer the other two choices; when the user postpones the decision, the next save shall ask again rather than write.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/staleSave.ts:33-86`, `src/state/store.ts:1102-1113,1524,1568-1669`, `src/components/StaleSaveDialog.tsx:33-140`, `src/components/ConflictResolutionDialog.tsx`, commit `5e2abb4`
+- **Verified by:** `src/model/staleSave.test.ts`, `src/state/store.staleSave.test.ts`
 - **Status:** Implemented
 
 ### REQ-PLT-140 — Recent projects list

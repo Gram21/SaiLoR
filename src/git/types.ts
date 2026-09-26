@@ -4,6 +4,10 @@
  * `src/git/merge.ts` for the same rule applied to the merge itself.
  */
 
+import type { AnnotationAuthors } from './seatOwner'
+import type { StashEntry } from './stash'
+import type { StashRestoreResult } from './stashOps'
+export type { AnnotationAuthors, StashEntry, StashRestoreResult }
 import type { ProjectFileEntry } from '../model/project'
 
 /** The split-file form of a project (`splitProjectFiles`'s output): `project.json`
@@ -60,6 +64,18 @@ export interface GitRepoInfo {
   /** `"origin/main"` form, or `null` when the branch has no upstream. */
   upstream: string | null
   hasHead: boolean
+  /** Commits the upstream is ahead by, as of the last fetch — see
+   *  `deriveGitInfo`. Null when unknown or there is no upstream. */
+  behind: number | null
+  /** The project's annotations folder, repo-relative (see `model/annotationsDir.ts`). */
+  annotationsDir: string
+}
+
+export interface RepoSetupStatus {
+  upToDate: boolean
+  needsConsent: boolean
+  /** Repo-relative paths that would be written, for the consent prompt. */
+  paths: string[]
 }
 
 export type CloneOutcome = { ok: true; dest: string } | { ok: false; error: string }
@@ -201,6 +217,34 @@ export interface GitPlatform {
   /** Writes `working` to the project without staging/committing — the write-counterpart
    *  to `workingContent`, for reverting local edits without a commit. */
   writeWorking(root: string, relPath: string, working: SplitProject): Promise<GitRun>
+
+  /** Who last committed each annotation file, and who this machine commits
+   *  as — so a reviewer can be told that somebody has already read the paper
+   *  in front of them in the seat they are sitting in. See
+   *  `src/git/seatOwner.ts` for why this is per paper rather than per seat. */
+  annotationAuthors(root: string, relPath: string): Promise<AnnotationAuthors>
+
+  /** What configuring this repository for SaiLoR would change — see
+   *  `src/git/repoSetup.ts`. `needsConsent` means the files already hold rules
+   *  of somebody's own, so this must be asked about rather than just done. */
+  repoSetupStatus(root: string, relPath: string): Promise<RepoSetupStatus>
+  /** Write the rules and commit them, authored as SaiLoR. */
+  applyRepoSetup(root: string, relPath: string): Promise<GitRun>
+
+  /** A fetch SaiLoR runs on its own, to keep the unpulled count fresh — see
+   *  `src/git/fetchPolicy.ts`. `refused` when the repository's own config
+   *  names a command a fetch would run. Never throws, never prompts. */
+  backgroundFetch(root: string): Promise<{ fetched: boolean; refused: boolean }>
+
+  /** Every stash in the repository, newest first. See `src/git/stash.ts`. */
+  stashList(root: string): Promise<StashEntry[]>
+  /** Stash this project's own uncommitted changes, untracked ones included. */
+  stashPush(root: string, relPath: string, message: string): Promise<GitRun>
+  /** Put a stash back and remove it — all or nothing. See `restoreStash`. */
+  stashRestore(root: string, relPath: string, sha: string): Promise<StashRestoreResult>
+  stashDrop(root: string, sha: string): Promise<GitRun>
+  /** Restore a stash onto a new branch at the commit it was taken from. */
+  stashBranch(root: string, relPath: string, sha: string, branch: string): Promise<GitRun>
 
   /** Local branches and remote-tracking ones — the switcher takes the locals,
    *  the merge picker takes both (see `GitBranch.remote`). */

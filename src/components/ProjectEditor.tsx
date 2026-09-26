@@ -1,4 +1,5 @@
 import { useEditorStore } from '../state/editorStore'
+import { annotationsDirProblem, DEFAULT_ANNOTATIONS_DIR } from '../model/annotationsDir'
 import { getPlatform } from '../platform'
 import { SchemaTreeEditor } from './SchemaTreeEditor'
 import { ScreeningReasonsEditor } from './ScreeningReasonsEditor'
@@ -56,6 +57,9 @@ export function ProjectEditor() {
   const notice = useEditorStore((s) => s.notice)
   const extracting = useEditorStore((s) => s.extracting)
   const changeLocation = useEditorStore((s) => s.changeLocation)
+  const annotationsDir = useEditorStore((s) => s.annotationsDir)
+  const setAnnotationsDir = useEditorStore((s) => s.setAnnotationsDir)
+  const annotationsDirIssue = annotationsDir.trim() ? annotationsDirProblem(annotationsDir.trim()) : null
   const save = useEditorStore((s) => s.save)
   const saveAndAnnotate = useEditorStore((s) => s.saveAndAnnotate)
   const close = useEditorStore((s) => s.close)
@@ -117,6 +121,21 @@ export function ProjectEditor() {
           Change…
         </button>
       </div>
+
+      <div className="editor-location">
+        <span className="editor-location-label">Annotations folder</span>
+        <input
+          className="editor-title-input"
+          type="text"
+          value={annotationsDir}
+          onChange={(e) => setAnnotationsDir(e.target.value)}
+          placeholder={`${DEFAULT_ANNOTATIONS_DIR} — a folder next to the JSON file`}
+          title="Where this project's answers are kept: one folder directly next to the JSON file, not shared with another project of the same kind that lists the same papers"
+          disabled={busy}
+          aria-invalid={annotationsDirIssue !== null}
+        />
+      </div>
+      {annotationsDirIssue && <p className="editor-field-problem">{annotationsDirIssue}</p>}
 
       {provenance && <ProvenanceNote provenance={provenance} />}
 

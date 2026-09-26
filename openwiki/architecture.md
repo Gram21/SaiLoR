@@ -8,6 +8,10 @@ sources:
     resource: repo://src/App.tsx
   - id: openwiki-source-e9545c0696c205b4aba178dd
     resource: repo://src/components/ConsolidationUpdatePrompt.tsx
+  - id: openwiki-source-9df9b7428d5782efa091aa62
+    resource: repo://src/git/fetchPolicy.ts
+  - id: openwiki-source-0ceabf617af8f1528c762ea3
+    resource: repo://src/hooks/useUpstreamPolling.ts
   - id: openwiki-source-95bfccfd0c712f6e72040e0d
     resource: repo://src/main.tsx
   - id: openwiki-source-24c09c3b54387889db23d752
@@ -36,10 +40,10 @@ sources:
     resource: repo://tsconfig.node.json
   - id: openwiki-source-5e1b077422a94ae165e88e4e
     resource: repo://vite.config.ts
-generated: {by: "claude-code", at: "2026-09-22T07:19:01.173Z"}
+generated: { by: "openwiki/0.5.2", at: "2026-09-23T12:49:55.013Z" }
 verified:
-  - by: openwiki/0.4.0
-    at: 2026-09-22T07:19:01.173Z
+  - by: openwiki/0.5.2
+    at: 2026-09-23T12:49:55.013Z
 ---
 
 # Architecture
@@ -257,14 +261,21 @@ checks for the preload-bridged `window.slr` object.
 
 ### ElectronAdapter (`src/platform/electron.ts`)
 
-Delegates to `window.slr` (the preload bridge). File operations use IPC to the main process. PDFs are served via the custom `slr-file://project/<encoded-path>` protocol — the main process resolves paths relative to the project directory. `setProjectDir` is called on open/save-as so the protocol knows the base directory. On open and save-as, the adapter pushes an entry to the recents list (`slr.recents.electron` localStorage key). `openRecent(id)` calls `bridge().openPath(id)` to read a file by absolute path; if the file no longer exists the entry is pruned from recents.
+Delegates to `window.slr` (the preload bridge). File operations use IPC to the main process. PDFs are served via the custom `slr-file://project/pdf?path=<encoded-path>` protocol (the path travels as a query param, not a URL path segment, because Chromium's URL parser collapses `..` segments before the request is even made) — the main process resolves paths relative to the project directory. `setProjectDir` is called on open/save-as (and re-asserted from the current project's handle in `getPdfSource`) so the protocol knows the base directory. On open and save-as, the adapter pushes an entry to the recents list (`slr.recents.electron` localStorage key). `openRecent(id)` calls `bridge().openPath(id)` to read a file by absolute path; if the file no longer exists the store marks the entry unavailable (greyed out, kept rather than pruned — see "A recent whose file has gone is kept" below) rather than removing it.
 
 **`saveProject(text, handle)` is where the on-disk split happens.** `text` is the logical
 whole-project JSON `serializeProject()` produced (the same shape as before this feature — the model
 layer never learned the split shape, see [Data Model](concepts/data-model.md)'s "Assembling and splitting on
 disk"). `ElectronAdapter.saveProject` re-parses it with `loadProject`, calls `splitProjectFiles()` to
 get `{ meta, files }`, and sends both over the `project:save` IPC, which `electron/main.ts` writes as
-`project.json` plus a reconciled `annotations/` folder. `openProject`/`openRecent` are symmetric on
+`project.json` plus a reconciled `annotations/` folder. The adapter does not send every file every
+time: it keeps a baseline of how the project last serialized on disk (`lastWritten`, refreshed on
+every open and save) and sends only the `files` entries that differ from it, plus `null` entries for
+paths the project used to write and no longer does (a removed paper's `annotations/<id>/` folder). The
+`metaText` argument itself is sent as `null` when `project.json` is unchanged, so the main process can
+skip rewriting it — which is what keeps one reviewer's edit from showing up as a diff across every
+other paper's file in a shared repository (a schema change that `pruneTree` materializes as an empty
+entry in every tree would otherwise do exactly that). `openProject`/`openRecent` are symmetric on
 the read side: the IPC handler (`readProjectText`) reassembles a split project back into that same
 logical text before handing it to the renderer, or passes an old single-file project through
 untouched. See "Assembling and splitting a project on disk" below for the full mechanics.
@@ -1050,8 +1061,14 @@ than removed: if it were ever reached, asking on **every** load is the honest re
 genuinely cannot tell who you are), rather than silently restoring a seat under the wrong project.
 
 Seat selection is a local view switch, not project data: it is persisted per project in
-`localStorage` only, never written to the project file, and never compared against anyone else's
-claim — so the copy explains that the selection is remembered only on this machine for this project.
+`localStorage` only and never written to the project file — so the copy explains that the selection
+is remembered only on this machine for this project. It is remembered **per paper**: the stored
+record holds the last seat plus a `perPaper` map, and `selectPaper` (and an undo/redo that lands on
+another paper) switches to that paper's remembered seat via `seatOnArrival`, falling back to the
+current seat for a paper not yet opened. A seat is a role per paper, not a person — a large review
+divides its papers among more people than it has seats — so the prompt says nothing about who owns
+a seat. The collision that matters, someone else having already committed *this* seat on *this*
+paper, is flagged per paper by `SeatConflictNotice` from `git:annotationAuthors`.
 
 ### Readiness: what Consolidation can act on (`readiness.ts`)
 
@@ -1858,7 +1875,9 @@ Every git operation the renderer can ask for is one of the enumerated IPC handle
 `git:commit`, `git:push`, `git:pullBegin`, `git:pullFinish`, `git:pullAbort`, `git:writeWorking`,
 `git:branches`, `git:branchCreate`, `git:branchDelete`, `git:checkout`, `git:branchSwitchBegin`,
 `git:branchSwitchFinish`, `git:branchSwitchAbort`, `git:mergeBegin`, `git:logBegin`, `git:logDiff`,
-`git:discardFile`, `git:lastCommitMessage`) — never a general `git <args>` channel. Git has `--exec-path`, aliases, and the `ext::` remote-helper
+`git:discardFile`, `git:lastCommitMessage`, `git:annotationAuthors`, `git:repoSetupStatus`,
+`git:applyRepoSetup`, `git:backgroundFetch`, `git:stashList`, `git:stashPush`, `git:stashRestore`,
+`git:stashDrop`, `git:stashBranch`) — never a general `git <args>` channel. Git has `--exec-path`, aliases, and the `ext::` remote-helper
 transport; a channel that let the renderer choose the argv would be handing it arbitrary code
 execution wearing a "just run git" label. Main decides what git is actually asked to do; the
 renderer only supplies data (a URL, a path, a commit message, a resolved text).
@@ -1927,8 +1946,11 @@ Two deliberate exclusions, and both are the interesting part:
 
 - **`core.sshCommand`, `credential.helper` and `gpg.program` are left alone.** Because `-c` outranks
   the *global* config too, overriding them would break the ordinary setups the section above is
-  careful not to touch. They also only run on an explicit network action the user asked for — never
-  on merely opening a folder, which is the boundary that actually matters here.
+  careful not to touch. Set in the *repository's own* config, they only run on an explicit network
+  action the user asked for — never on merely opening a folder, which is the boundary that actually
+  matters here. The background fetch (`git:backgroundFetch`) is the one network call nobody asked
+  for, so it is refused outright for a repository whose own config sets any of these keys (see
+  `FETCH_COMMAND_KEYS` in `src/git/fetchPolicy.ts`).
 - **`diff.external` is not in the list, and this is not an oversight.** Setting it empty does not
   mean "no external diff": git tries to exec the empty string and the diff dies with `cannot run :`.
   Swapping an attacker's differ for a guaranteed failure is not a fix — it silently emptied the Git
@@ -2016,7 +2038,7 @@ elsewhere.
 
 | Module | Purpose |
 | --- | --- |
-| `src/git/types.ts` | Shared shapes crossing the platform seam: `GitRun`, `GitProbe`, `GitFileChange`, `GitStatus`, `GitRepoInfo`, `CloneOutcome`, `PullStart` (and `MergeStart` — the merge cases shared by pull and an explicit merge-branch), `CommitRecord`/`LogBeginResult`/`LogRevisionFetch` (the commit-history panel's data), `GitBranch` (now carrying a `remote` flag), and the `GitPlatform` interface itself. |
+| `src/git/types.ts` | Shared shapes crossing the platform seam: `GitRun`, `GitProbe`, `GitFileChange`, `GitStatus`, `GitRepoInfo`, `CloneOutcome`, `PullStart` (and `MergeStart` — the merge cases shared by pull and an explicit merge-branch), `CommitRecord`/`LogBeginResult`/`LogRevisionFetch` (the commit-history panel's data), `GitBranch` (now carrying a `remote` flag), `BranchSwitchStart`, `SplitProject` (the `{ metaText, files }` shape every split write/merge carries), `AnnotationAuthors` (per-paper last-committer lookup), `RepoSetupStatus`/`StashEntry`/`StashRestoreResult`, and the `GitPlatform` interface itself. |
 | `src/git/url.ts` | Pure. `validateGitUrl`, `validateClonePath`, `repoNameFromUrl` — the security gate, imported by `electron/main.ts` (see above). |
 | `src/git/ref.ts` | Pure. `refProblem`/`isSafeRef` — the security gate for ref names the renderer hands to git (a branch to merge, a revision to diff), imported by `electron/main.ts` (`assertRef`). Same reason `url.ts`/`relpath.ts` live here: `electron/` is outside vitest's include, so a gate no test can reach is one nobody can change safely. |
 | `src/git/relpath.ts` | Pure. `relPathProblem`/`isSafeRelPath`/`annotationsRelDir` — the security gate for paths written under a project's `annotations/` folder, and the derivation of that folder's name from the project file's own directory. `annotationsRelDir` is what every git flow (stash, add, merge's conflict-elsewhere check, branch-switch's in-scope check) uses to name the folder; it says nothing about whether that folder holds only this project's files (see `ownAnnotationPath.ts` for that). |
@@ -2024,7 +2046,7 @@ elsewhere.
 | `src/git/output.ts` | Pure. `parsePorcelain` (turns `git status --porcelain=v1 -z` into `GitFileChange[]`), `parseGitLog` (turns `git log --format=%x00%H%x09%aI%x09%s` into `CommitRecord[]`, splitting on only the first two tabs so a tab inside a subject does not desync the fields), `capDiff` (caps a diff for the DOM), `diffLines` (splits a unified diff into per-line `add`/`remove`/`context` for the coloured view — see below), `gitErrorText` (what to show when a git command failed) — also imported by `electron/main.ts`, so the "what does a failed run's message say" logic exists once. |
 | `src/git/merge.ts` | Pure. The field-level three-way merge — see below. Knows nothing about git or the DOM, the same shape `src/consolidate/` follows. |
 | `src/git/changes.ts` | Pure. Field-level *local* change detection and composition for the commit panel — see "Field-level commit review" below. Reuses `merge.ts`'s `conflictId`/`MergeTree` for row identity, but not its three-way `merge3` rule (only one side, the working tree, has changed here). Also drives the read-only commit-history diff (see "Commit history" below). |
-| `src/state/gitStore.ts` | The clone flow and the commit/pull/push panel (including the Amend toggle); owns the pull/merge-branch orchestration (shared `applyMergeStart`), the field-review state, the branch switcher, the merge-branch and delete-branch prompts, the commit-history panel, and the whole-file discard action. |
+| `src/state/gitStore.ts` | The clone flow and the commit/pull/push panel (including the Amend toggle); owns the pull/merge-branch orchestration (shared `applyMergeStart`), the field-review state, the branch switcher, the merge-branch and delete-branch prompts, the commit-history panel, the whole-file discard action, the upstream-ahead count (`behind`, refreshed by `refreshUpstream` and `useUpstreamPolling`), the per-paper annotation-author lookup (`annotationAuthors`, from `src/git/seatOwner.ts`), the repository-setup prompt/notice (`.gitattributes`/`.gitignore` reconcile, `src/git/repoSetup.ts`), and the stash list/push/restore/branch/drop actions (`src/git/stash.ts`). |
 | `src/components/GitCloneDialog.tsx`, `GitDialog.tsx`, `GitMergeDialog.tsx`, `GitHistoryDialog.tsx`, `MergeBranchPrompt.tsx`, `DeleteBranchPrompt.tsx` | Views over `gitStore`. |
 
 **Each dialog's width class is `.modal.git-*-dialog`, not bare `.git-*-dialog`** — a single-class
@@ -2320,12 +2342,9 @@ it from the code side.
   side's instance count dropped below base's while the other side changed an instance at or beyond
   the position the drop would have removed) and pushes a `verbatim:` refusal naming the paper and the
   node, rather than producing a half-empty ghost or destroying the correction.
-- **A schema removal that would discard answers refuses.** `mergeProjects` picks the winning schema
-  correctly but then walks only that schema, so a field the winning side removed is never visited —
-  silently extending that schema vote to answers nobody agreed to discard. `schemaRemovalRefusal`
-  now counts real (non-empty) answers under anything the schema removal would drop, across every
-  paper and every reviewer/consolidation tree, and refuses (naming the field(s) and the count) when
-  that is nonzero; a removal with nothing under it still merges exactly as before.
+- **A schema removal never discards answers.** The schema is merged node by node and the trees are
+  walked against every node still in doubt; answers under a node that ends up removed are carried as
+  hidden answers, and `schemaRemovalNote` names the field(s) and the count.
 - **A conflicted field holds *our* value in `merged` until it is resolved.** If the resolution dialog
   is ever bypassed, the file still holds the local reviewer's own work — the safe side. It is not a
   decision on the merge's part: `GitMergeDialog` marks every conflicted row undecided regardless, and
@@ -2521,7 +2540,7 @@ annotations) — amend, like commit, operates on the file on disk.
 repeatable-node growth (both-sides-append keeps both entries, not a conflict; the base-aligned range
 still conflicts per-field), the interior-gap and instance-removal
 invariants, the `shrunkAndEdited` refusal (a deletion on one side stranding an edit on the other),
-the `schemaRemovalRefusal` (a schema removal with answers under it), the multi-reviewer headline case (disjoint edits by two reviewers, zero conflicts), the
+the node-by-node schema merge and `mergeResultProblem`, the multi-reviewer headline case (disjoint edits by two reviewers, zero conflicts), the
 paper add/remove asymmetry, every refusal, the `aiUsage` union, the `Paper.equal` boolean-set merge,
 the `abstract`/`abstractFromPdf` merge (including the documented resolve-order gap above),
 `applyResolutions`, and a full round-trip through `serializeProject`/`loadProject`.
@@ -2675,13 +2694,17 @@ every caller fail toward a clean refusal rather than guessing an unreadable blob
   - `git:logBegin` — `git log` scoped to `relPath` and its `annotations/` dir (not the whole repo), capped at `LOG_MAX_COMMITS` (250) rather than paginated; `truncated` says so. `--date=iso-strict` and `--format=%x00%H%x09%aI%x09%s` produce NUL-terminated records parsed by `parseGitLog` (`src/git/output.ts`). For the commit-history panel
   - `git:logDiff` — the two revisions a history row's field-level diff needs (`<rev>` and `<rev>^`), as raw text via `readProjectAtRevision`. Returns raw text rather than parsing it here, the same boundary every other IPC call keeps: this process only ever fetches; the renderer (`loadProject`/`detectFieldChanges`, called from `loadCommitDiff` in `gitStore.ts`) parses and diffs. `{kind:'initial'}` when the commit has no parent (the first commit to touch this file); `{kind:'error'}` when the revision can't be read
   - `git:discardFile` — reverts (tracked, `git checkout -- <path>`) or deletes (untracked, `rm -r` for a directory, `unlink` for a file) a single changed file *other* than the project's own tracked file/`annotations/`; the whole-file counterpart to the project's field-level Discard. Takes the open project's own `projectRelPath` and refuses whenever `relPath` is it or falls under its `annotationsRelDir(...)`, so the renderer's own `isProjectOwnPath` withhold is not the only guard. Re-derives the file's own status here rather than trusting a cached code, and refuses a rename (`change.from`) or an unresolved merge conflict (`change.unmerged`) rather than guessing. Wrapped in `try`/`catch` so every failure comes back as `{ok: false}` data. See "Whole-file discard" above
+  - `git:annotationAuthors` — one `git log` per repository (not per paper), parsed by `parseAnnotationAuthors` (`src/git/seatOwner.ts`) into who last committed each annotation file, so the per-paper "somebody has already read this" check costs nothing at the point of use. Read once on repository detection and after every commit
+  - `git:repoSetupStatus` / `git:applyRepoSetup` — bring the project's `.gitattributes`/`.gitignore` up to what SaiLoR needs (`*.json text eol=lf -merge`, and ignoring operating-system junk files such as `.DS_Store`/`Thumbs.db` whose untracked presence in `annotations/` would block every merge; annotation files and PDFs are never ignored). The rules live in a delimited managed block; content outside it is left untouched. `planRepoSetup` (`src/git/repoSetup.ts`) computes the diff; applying is silent when there is nothing of the user's to overwrite, otherwise the store raises `repoSetupPrompt` and waits for `resolveRepoSetup`. The landed files go into a commit the reviewer did not type, surfaced as `repoSetupNotice` (`RepoSetupToast`)
+  - `git:backgroundFetch` — a fetch that never touches the working tree, used by `refreshUpstream` to recount the unpulled commits behind the upstream. Refused (`refused: true`) when the repository's own config names a command a fetch would run or includes another config file (`FETCH_COMMAND_KEYS`/`backgroundFetchAllowed` in `src/git/fetchPolicy.ts`), run non-interactively (`NON_INTERACTIVE_ENV`) with a 60 s timeout. The store never runs two at once, skips it while the reviewer's own git operation is running, and makes pull, merge-branch and push wait for one in flight, so two fetches never race
+  - `git:stashList` / `git:stashPush` / `git:stashRestore` / `git:stashDrop` / `git:stashBranch` — the stashed-changes surface in the Git panel (`src/git/stashOps.ts`). `stashPush` is project-scoped (`relPath` + `annotationsRelDir`), so it never sweeps a sibling project's file; `stashRestore` is all-or-nothing and refuses on a conflict (`StashRestoreResult`). `stashBranch` restores onto a new branch where it cannot conflict. A stash is named by commit sha across IPC, validated against a hex pattern
   - `update:check` / `update:download` / `update:install` — the native self-update surface, Windows/Linux only (see "In-app self-update" above). All three no-op on macOS. `update:check` primes `electron-updater` against the GitHub feed configured in `package.json`'s `build.publish` block but starts no download; the `update-available` / `download-progress` / `update-downloaded` / `error` events are pushed back to the renderer via `webContents.send('update:*')` and surface through the `onNativeUpdate*` preload subscriptions.
 - **Menu**: custom template with File, Edit, View, Window menus.
   - The **Edit** menu is hand-built: **Undo/Redo** send `app:undo` / `app:redo` to the renderer (routing to the store's history) rather than the native text-undo role, so undo works app-wide; cut/copy/paste/selectAll keep their native roles.
   - The **View** menu is hand-built (not the default `{ role: 'viewMenu' }`) and deliberately omits zoom roles so that `Ctrl +/-/0` reach the renderer for PDF zoom (and `Ctrl+Shift +/-/0` for app font scaling) instead of triggering native browser/Electron zoom.
 - **Unsaved-changes quit flow**: a window `close` handler (`promptUnsavedChanges`) intercepts the close/quit when `isDirty` is set, and shows a native **Save / Don't Save / Cancel** dialog. "Save" asks the renderer to save (`app:requestSave`) and closes once it reports back; "Don't Save" closes discarding changes. A `before-quit` flag lets the guard resume `app.quit()` after confirmation (so Cmd+Q fully quits on macOS, where destroying the window alone would not).
 
-**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods: `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, `pickSavePath`, `checkSiblingCollision`, plus the quit/menu coordination — `setDirty`, `onRequestSave`, `saveComplete`, `onUndo`, `onRedo` — the `git*` methods (`gitProbe`, `gitPickCloneDir`, `gitClone`, `gitPickProjectIn`, `gitInfo`, `gitStatus`, `gitHeadContent`, `gitWorkingContent`, `gitCommitPartial`, `gitCommit`, `gitPush`, `gitPullBegin`, `gitPullFinish`, `gitPullAbort`, `gitMergeBegin`, `gitLogBegin`, `gitLogDiff`, `gitWriteWorking`, `gitDiscardFile`, `gitBranches`, `gitBranchCreate`, `gitBranchDelete`, `gitCheckout`, `gitBranchSwitchBegin`, `gitBranchSwitchFinish`, `gitBranchSwitchAbort`, `gitLastCommitMessage`) mirroring the `git:*` IPC handlers one for one, and the native self-update surface — `checkForNativeUpdate`, `downloadNativeUpdate`, `installNativeUpdate`, plus the `onNativeUpdate*` event subscriptions (`onNativeUpdateAvailable`, `onNativeUpdateProgress`, `onNativeUpdateDownloaded`, `onNativeUpdateError`) mirroring the `update:*` handlers in `electron/main.ts` (win/linux only; no-ops on macOS). This `window.slr` object is the detection signal for `isElectron()`.
+**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods: `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, `pickSavePath`, `checkSiblingCollision`, plus the quit/menu coordination — `setDirty`, `onRequestSave`, `saveComplete`, `onUndo`, `onRedo` — the `git*` methods (`gitProbe`, `gitPickCloneDir`, `gitClone`, `gitPickProjectIn`, `gitInfo`, `gitStatus`, `gitHeadContent`, `gitWorkingContent`, `gitCommitPartial`, `gitCommit`, `gitPush`, `gitPullBegin`, `gitPullFinish`, `gitPullAbort`, `gitMergeBegin`, `gitLogBegin`, `gitLogDiff`, `gitWriteWorking`, `gitDiscardFile`, `gitBranches`, `gitBranchCreate`, `gitBranchDelete`, `gitCheckout`, `gitBranchSwitchBegin`, `gitBranchSwitchFinish`, `gitBranchSwitchAbort`, `gitLastCommitMessage`, `gitAnnotationAuthors`, `gitRepoSetupStatus`, `gitApplyRepoSetup`, `gitBackgroundFetch`, `gitStashList`, `gitStashPush`, `gitStashRestore`, `gitStashDrop`, `gitStashBranch`) mirroring the `git:*` IPC handlers one for one, and the native self-update surface — `checkForNativeUpdate`, `downloadNativeUpdate`, `installNativeUpdate`, plus the `onNativeUpdate*` event subscriptions (`onNativeUpdateAvailable`, `onNativeUpdateProgress`, `onNativeUpdateDownloaded`, `onNativeUpdateError`) mirroring the `update:*` handlers in `electron/main.ts` (win/linux only; no-ops on macOS). This `window.slr` object is the detection signal for `isElectron()`.
 
 ## Hooks
 
@@ -2714,6 +2737,8 @@ every caller fail toward a clean refusal rather than guessing an unreadable blob
 
 - **`useElectronCloseGuard`** (`src/hooks/useElectronCloseGuard.ts`): **Electron only.** Wires the renderer to the main process for a clean quit and for the Edit menu: it pushes the current `dirty` state to main (`slr.setDirty`), runs a save when main asks after the user picks "Save" in the native close dialog (`slr.onRequestSave` → `save()` → `slr.saveComplete(ok)`), and routes the Edit-menu Undo/Redo (`slr.onUndo` / `slr.onRedo`) to the store's `undo()` / `redo()`. It also subscribes to the native self-update events (`onNativeUpdateProgress` / `onNativeUpdateDownloaded` / `onNativeUpdateError`) and forwards them into the store's `noteUpdate*` actions (see "In-app self-update" above); a no-op on macOS and in the browser, where the bridge callbacks are empty.
 
+- **`useUpstreamPolling`** (`src/hooks/useUpstreamPolling.ts`): keeps the toolbar's "↓ N to pull" count fresh while a project in a repository with an upstream is open, by background-fetching every two minutes (`BACKGROUND_FETCH_INTERVAL_MS`, 120 000 ms, in `src/git/fetchPolicy.ts`) via `gitStore.refreshUpstream`. Without it the count was only as fresh as the last time the project was opened, so a reviewer could work for an hour against a remote that had moved on and find out only when their pull conflicted. Keyed on the repository root and upstream (not the `repo` object, which is replaced on every reload — restarting the timer each time would also restart the two-minute wait). `refreshUpstream` also runs once when the repository is detected and whenever the Git panel opens; this hook is only the periodic refresh on top of those event-driven reads.
+
 ## Settings & Theming (`src/state/settings.ts`)
 
 App appearance is controlled by a settings module that persists to `localStorage`:
@@ -2727,7 +2752,7 @@ App appearance is controlled by a settings module that persists to `localStorage
 
 ## App Initialization (`src/App.tsx`)
 
-1. Every hook (`useKeybindings()`, `useDirtyGuard()`, `useElectronCloseGuard()`, `useConsolidationAlignment()`, `useAutosave()`) and every store selector is called at the top level, unconditionally — React's rules of hooks require this even though most of them are meaningless outside Electron.
+1. Every hook (`useKeybindings()`, `useDirtyGuard()`, `useElectronCloseGuard()`, `useConsolidationAlignment()`, `useAutosave()`, `useUpstreamPolling()`) and every store selector is called at the top level, unconditionally — React's rules of hooks require this even though most of them are meaningless outside Electron.
 2. **The discontinuation gate**: `if (!isElectron()) return <the "use the desktop app" welcome screen>` — checked *after* the hooks above but *before* any project-opening UI (`Toolbar`, the workspace, the welcome screen's "Open project…" button, drag-and-drop) is reached. See the Overview's "SaiLoR is Electron-desktop-only". There is no `?project=<url>` auto-load any more — that loader (`loadFromUrl`) was deleted along with the rest of the browser build.
 3. Past the gate (Electron only): renders `Toolbar` always. If a project is loaded, renders the three-pane workspace; otherwise shows a welcome screen with an "Open project…" button and, if there are recent projects, a clickable list of them wired to `openRecent(id)`.
 4. `ErrorPanel` is always rendered (renders null when no error).

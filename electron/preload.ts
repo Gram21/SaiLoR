@@ -11,14 +11,20 @@ contextBridge.exposeInMainWorld('slr', {
 
   openProject: () => ipcRenderer.invoke('project:open'),
   openPath: (filePath: string) => ipcRenderer.invoke('project:openPath', filePath),
-  saveProject: (filePath: string, metaText: string, files: Array<{ relPath: string; text: string | null }>) =>
+  saveProject: (filePath: string, metaText: string | null, files: Array<{ relPath: string; text: string | null }>) =>
     ipcRenderer.invoke('project:save', filePath, metaText, files),
   setProjectDir: (filePath: string) => ipcRenderer.invoke('project:setDir', filePath),
 
   // Project editor: pick a location / PDFs, and relativize the PDF references.
   pickSavePath: (suggestedName: string) => ipcRenderer.invoke('project:pickSavePath', suggestedName),
-  checkSiblingCollision: (destPath: string, paperIds: string[], screening: boolean) =>
-    ipcRenderer.invoke('project:checkSiblingCollision', destPath, paperIds, screening),
+  annotationsDirUsers: (projectPath: string, folder: string, paperIds: string[], screening: boolean) =>
+    ipcRenderer.invoke('project:annotationsDirUsers', projectPath, folder, paperIds, screening),
+  sharedAnnotations: (projectPath: string) => ipcRenderer.invoke('project:sharedAnnotations', projectPath),
+  screeningSource: (projectPath: string) => ipcRenderer.invoke('project:screeningSource', projectPath),
+  moveAnnotationsDir: (projectPath: string, folder: string) =>
+    ipcRenderer.invoke('project:moveAnnotationsDir', projectPath, folder),
+  splitAnnotations: (projectPath: string, plan: unknown) =>
+    ipcRenderer.invoke('project:splitAnnotations', projectPath, plan),
   pickPdfs: () => ipcRenderer.invoke('pdf:pick'),
   pickPdfFolder: () => ipcRenderer.invoke('pdf:pickFolder'),
   pickReferenceFile: () => ipcRenderer.invoke('reference:pick'),
@@ -89,6 +95,21 @@ contextBridge.exposeInMainWorld('slr', {
   gitLogBegin: (root: string, relPath: string) => ipcRenderer.invoke('git:logBegin', root, relPath),
   gitLogDiff: (root: string, relPath: string, rev: string) =>
     ipcRenderer.invoke('git:logDiff', root, relPath, rev),
+  gitAnnotationAuthors: (root: string, relPath: string) =>
+    ipcRenderer.invoke('git:annotationAuthors', root, relPath),
+  gitRepoSetupStatus: (root: string, relPath: string) =>
+    ipcRenderer.invoke('git:repoSetupStatus', root, relPath),
+  gitApplyRepoSetup: (root: string, relPath: string) =>
+    ipcRenderer.invoke('git:applyRepoSetup', root, relPath),
+  gitBackgroundFetch: (root: string) => ipcRenderer.invoke('git:backgroundFetch', root),
+  gitStashList: (root: string) => ipcRenderer.invoke('git:stashList', root),
+  gitStashPush: (root: string, relPath: string, message: string) =>
+    ipcRenderer.invoke('git:stashPush', root, relPath, message),
+  gitStashRestore: (root: string, relPath: string, sha: string) =>
+    ipcRenderer.invoke('git:stashRestore', root, relPath, sha),
+  gitStashDrop: (root: string, sha: string) => ipcRenderer.invoke('git:stashDrop', root, sha),
+  gitStashBranch: (root: string, relPath: string, sha: string, branch: string) =>
+    ipcRenderer.invoke('git:stashBranch', root, relPath, sha, branch),
   gitBranches: (root: string) => ipcRenderer.invoke('git:branches', root),
   gitBranchCreate: (root: string, name: string) => ipcRenderer.invoke('git:branchCreate', root, name),
   gitBranchDelete: (root: string, branch: string) => ipcRenderer.invoke('git:branchDelete', root, branch),

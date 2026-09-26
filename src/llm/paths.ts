@@ -1,6 +1,5 @@
 import type { ResolvedDef } from '../model/schema'
 import { isField } from '../model/schema'
-import type { PathSeg } from '../state/store'
 
 /**
  * Field paths, as used in the LLM contract: node names joined with "/", each
@@ -15,6 +14,11 @@ export interface RawSeg {
   name: string
   index: number
 }
+
+/** Same shape as the store's `PathSeg`; declared here so this module (and the
+ *  model code using it, which the Electron main process also loads) does not
+ *  depend on the store. */
+type PathSeg = RawSeg
 
 /** A path that has been checked against the schema and points at a real field. */
 export interface ResolvedPath {

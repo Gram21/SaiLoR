@@ -35,6 +35,7 @@ vi.mock('../platform', () => ({ getPlatform: () => mockPlatform }))
 
 const { useStore } = await import('../state/store')
 const { Toolbar } = await import('./Toolbar')
+const { useGitStore } = await import('../state/gitStore')
 
 const st = () => useStore.getState()
 
@@ -60,6 +61,7 @@ beforeEach(() => {
     recents: [],
     currentReviewer: null,
   })
+  useGitStore.setState({ annotationAuthors: null, repo: null, behind: null, repoSetupNotice: null })
 })
 
 describe('REQ-UI-30: seat switcher in toolbar', () => {
@@ -86,6 +88,26 @@ describe('REQ-UI-30: seat switcher in toolbar', () => {
     expect(st().currentReviewer).toBe('2')
     expect(within(group).getByRole('button', { name: '2' })).toHaveClass('active')
     expect(within(group).getByRole('button', { name: '1' })).not.toHaveClass('active')
+  })
+
+})
+
+describe('unreadable annotation files stay visible for the whole session', () => {
+  it('shows a warning that re-opens the list, and none when every file parsed', async () => {
+    st().loadFromText(projectJson({ reviewers: 2 }), null, 'test.json')
+    const { rerender } = render(<Toolbar />)
+    expect(screen.queryByRole('button', { name: /unreadable/ })).not.toBeInTheDocument()
+
+    // What the open path sets when `loadPaperFiles` could not parse a file.
+    act(() => {
+      useStore.setState({ corruptFiles: ['a/reviewer-2.json'] })
+    })
+    rerender(<Toolbar />)
+
+    // The load-time banner is dismissible; this is the way back to it.
+    expect(st().loadError).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: /unreadable/ }))
+    expect(st().loadError?.details.join(' ')).toContain('annotations/a/reviewer-2.json')
   })
 })
 
@@ -157,4 +179,32 @@ describe('REQ-UI-20: toolbar project controls', () => {
     expect(st().theme).not.toBe(before)
     expect(screen.getByRole('group', { name: 'Font size' })).toBeInTheDocument()
   })
+})
+
+describe('unpulled work and repository setup are visible in the toolbar', () => {
+  const repo = (behind: number | null) => ({
+    root: '/repo',
+    relPath: 'x.json',
+    branch: 'main',
+    upstream: 'origin/main',
+    hasHead: true,
+    behind,
+  })
+
+  it('offers to pull when the repository already knows work is waiting', async () => {
+    st().loadFromText(projectJson(), null, 'test.json')
+    useGitStore.setState({ repo: repo(3), behind: 3 })
+    render(<Toolbar />)
+    expect(screen.getByRole('button', { name: /3 to pull/ })).toBeInTheDocument()
+  })
+
+  it('says nothing at zero — "behind" is only ever as fresh as the last fetch', async () => {
+    // Silence must not read as "you are up to date"; only a fetch could say
+    // that, and opening a project does not do one.
+    st().loadFromText(projectJson(), null, 'test.json')
+    useGitStore.setState({ repo: repo(0), behind: 0 })
+    render(<Toolbar />)
+    expect(screen.queryByRole('button', { name: /to pull/ })).not.toBeInTheDocument()
+  })
+
 })

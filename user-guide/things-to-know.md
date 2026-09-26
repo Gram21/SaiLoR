@@ -37,16 +37,32 @@ want to record something SaiLoR doesn't have a field for, two places are actuall
 If you're not sure whether something you're adding is top-level or nested under `config`, put it at
 the top level.
 
-## No file locking, so two people saving at once overwrite each other
+## No file locking between people sharing one folder
 
 ⚠️ A project is a `project.json` file plus a sibling `annotations/` folder (one file per paper per
 reviewer, so different reviewers' or different papers' answers live in different files — see
 [Setting up a project](project-editor.md) for why). That split means two reviewers working on
 *different* papers, or different reviewer slots of the same paper, no longer touch the same file at
-all when saving. It does **not** give you file locking, though: if two people have the *same* file
-open — including `project.json` itself, or the same reviewer's answers for the same paper — and both
-save (over email, a shared drive, a synced folder), the second save wins completely; the first
-person's changes are gone with no warning.
+all when saving, and a save only rewrites the files whose content actually changed. It does **not**
+give you file locking, though. What SaiLoR does instead is stop a save when a file it would overwrite
+has changed on disk since you opened or last saved the project — a teammate's save on a shared or
+synced folder, a git pull run in a terminal. Nothing is written until you choose, for the files listed:
+
+- **Overwrite with my version** — yours replaces theirs in those files; what they changed there is lost.
+- **Keep theirs, drop my changes to these files** — those files stay as they are on disk and your
+  unsaved edits to them are thrown away. Your edits to other files are still saved.
+- **Combine both** — merged field by field, the same way [Pull](git.md#pull) merges: a field only one
+  of you changed keeps that change, and where you both changed the same field you pick the value.
+  The project's settings and schema are merged part by part too (see
+  [How the project's own settings are merged](git.md#how-the-projects-own-settings-are-merged)).
+  The rare change that can't be merged at all is explained, and you choose one of the other two.
+
+Either way, files you didn't edit keep whatever is on disk now. **Not now** saves nothing and asks
+again at your next save. (Only one SaiLoR window runs at a time on a machine; starting it again brings
+the open one to the front.)
+
+That refusal only sees what has reached your disk. Copies passed around by email, or a synced folder
+that hasn't synced yet, can still diverge, and whoever's copy is used last wins.
 
 Two ways people actually handle this:
 
@@ -75,20 +91,58 @@ hand the whole thing to someone else and have it just work. But it means:
 ⚠️ Each reviewer's answers live in their own file (`annotations/<paper>/reviewer-1.json`,
 `reviewer-2.json`, …). If two *different people* — on two different clones of the same project — both
 pick "Reviewer 1", their answers will merge into one chimeric tree the next time the project is pulled
-together via git, with **no warning**, unless the project already records who holds each seat.
+together via git, and whoever merges last replaces the other's answers.
 
-When you're using git, SaiLoR records your git identity (name/email) the first time you claim a seat,
-and warns you if you try to take a seat someone else already claimed. That protection only exists
-when git is available and the seat has actually been claimed once with it on — agree out of band (a
-message, a spreadsheet, whatever) who is Reviewer 1 and who is Reviewer 2 regardless. See
-[Reviewer-seat identity](multi-reviewer.md#reviewer-seat-identity).
+This is per paper: when papers are divided among more people than there are seats, the same seat is
+legitimately held by different people on different papers. What must not happen is two people in the
+same seat *on the same paper*. When you're using git, SaiLoR shows a notice when the paper you're on
+was already committed in your seat by someone else — but only once their work is committed and
+pulled, so agree out of band (a message, a spreadsheet, whatever) who reads which paper in which seat
+regardless. See [Reviewer-seat identity](multi-reviewer.md#reviewer-seat-identity).
 
-## Renaming or removing a schema field drops its answers
+## Two projects of the same kind sharing papers need two annotations folders
 
-⚠️ Answers are stored keyed by the field's *name*. If you rename "Study Type" to "Design Type" in
-the schema editor, every answer anyone recorded under "Study Type" is orphaned and dropped the next
-time the file is saved — there's no automatic migration. Settle field names before people start
-annotating, where you can; if you must rename one later, do it while nobody has annotated with it yet.
+⚠️ Each project keeps its answers in a folder next to its JSON file — `annotations/` unless the
+project editor names another. Every file there is named after its paper and after the kind of
+project: `reviewer-*`, `consolidated` and `marks-*` for an annotation project, `screening-*` and
+`screening-marks-*` for a screening project. So a screening project and an annotation project can
+always share a folder — that is how a screening and the project started from it with **New from
+screening…** sit together — but two projects of the *same* kind that list the same paper write the
+same files and overwrite each other.
+
+Where that happens, SaiLoR keeps the projects apart. Save As into a folder whose `annotations/` such a
+project uses gives the new file a folder named after it (`backup.json` →
+`backup-annotations/`). Opening a project whose folder is shared that way offers to **split** it: every project file sharing the folder gets its own,
+recorded in its JSON file, and each annotation file goes to the project it belongs to — by paper and
+kind of file, and where two projects could own it, by the schema version it was written under or by
+which project's fields its answers fit. Those unclear files are listed for you to confirm; one
+nothing tells apart is copied to each rather than guessed. In a git repository the move shows up in
+the Git panel for you to commit. **Not now** asks again next time.
+
+## Renaming, moving, or removing a schema field
+
+Answers are stored under the field's *name*, in the group it sits in. When you **rename** a field or
+**move** it to another group in the schema editor, SaiLoR moves its answers along when you save: a
+note under the field says how many papers are affected, with **Keep them hidden instead** if you'd
+rather not. Answers other reviewers recorded under the old name follow too, even ones not yet pulled:
+the project file records each schema change as a new *schema version*, every annotation file records
+the version it was written under, and a file written before a rename is read under the new name.
+A file is only rewritten when someone next edits that paper, so a rename doesn't touch everybody's
+files at once.
+
+⚠️ Two cases still hide answers instead of moving them:
+
+- **Removing** a field, or keeping its answers hidden on purpose. The answers stay in the files and
+  come back if the field does; **Validate** lists them under "Hidden by a schema change".
+- A move **out of or into a repeated group** (a field that can have several entries): nobody can say
+  which entry an answer would belong to. The note under the field says so before you save.
+
+Renames typed straight into the JSON aren't recorded as renames and hide the old answers the same way.
+A file written under a schema version the project doesn't know — from another branch, or edited by
+hand — is read as it is, and **Validate** lists it under "Unknown schema version".
+
+Each save of a changed schema doesn't add a version of its own: while the current version hasn't been
+committed (or, without git, is less than six minutes old), further changes are folded into it.
 
 (Screening's exclusion reasons are the one place this *is* handled automatically: renaming a reason
 that's already in use prompts SaiLoR to offer moving existing decisions to the new name. See

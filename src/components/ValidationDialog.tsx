@@ -8,6 +8,8 @@ const KIND_LABEL: Record<IssueKind, string> = {
   enum: 'Not an allowed value',
   cardinality: 'Wrong number of entries',
   screening: 'Screening',
+  orphaned: 'Hidden by a schema change',
+  'schema-version': 'Unknown schema version',
 }
 
 function matchesQuery(title: string, query: string, caseSensitive: boolean) {

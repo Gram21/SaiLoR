@@ -3,8 +3,10 @@ import { useGitStore } from '../state/gitStore'
 import { useStore } from '../state/store'
 import { diffLines } from '../git/output'
 import { annotationsRelDir } from '../git/relpath'
+import { papersWithBookkeepingChanges } from '../git/changes'
 import type { Disposition, FieldChange, PaperChange } from '../git/changes'
 import type { FieldValue } from '../model/annotations'
+import { GitStashSection } from './GitStashSection'
 import '../styles/git.css'
 
 /** Sentinel for "New branch…" in the branch `<select>` — never a real branch name. */
@@ -65,8 +67,7 @@ export function mixedDiscardConfirmMessage(
  * Exported for `GitDialog.test.ts`; real enforcement is server-side in
  * `git:discardFile`.
  */
-export function isProjectOwnPath(path: string, relPath: string): boolean {
-  const dir = annotationsRelDir(relPath)
+export function isProjectOwnPath(path: string, relPath: string, dir: string = annotationsRelDir(relPath)): boolean {
   return path === relPath || path === dir || path.startsWith(`${dir}/`)
 }
 
@@ -135,7 +136,7 @@ export function GitDialog() {
   const review = panel.fieldReview
   // The project's own rows live in the field-review list below when there is
   // one; otherwise they fall back to the plain checkbox (see `isProjectOwnPath`).
-  const changes = (panel.status?.changes ?? []).filter((c) => !review || !isProjectOwnPath(c.path, repo.relPath))
+  const changes = (panel.status?.changes ?? []).filter((c) => !review || !isProjectOwnPath(c.path, repo.relPath, repo.annotationsDir))
   // The switcher only ever offers local branches — checking out a
   // remote-tracking ref would detach HEAD. The merge picker takes both.
   const localBranches = branches.filter((b) => !b.remote)
@@ -143,6 +144,7 @@ export function GitDialog() {
   const selectedCount = Object.keys(panel.selected).length
   const hasUntracked = changes.some((c) => c.code === '??')
   const reviewRowCount = review ? review.changes.fields.length + review.changes.papers.length : 0
+  const bookkeepingPapers = review ? papersWithBookkeepingChanges(review.head, review.working) : []
 
   // What the review's rows resolve to (absent means 'use', same default as `composeContents`).
   const reviewDispositions = review
@@ -335,6 +337,16 @@ export function GitDialog() {
                 button below — Commit if anything is still marked Use, or Discard all if everything
                 left is Ignore or Discard.
               </p>
+              {/* These have no row of their own and are carried regardless of
+                  what is decided above (see `BOOKKEEPING_FIELDS`), so the one
+                  thing this list must not be is invisible. */}
+              {bookkeepingPapers.length > 0 && (
+                <p className="git-muted">
+                  Reading notes, finished marks, AI-usage records and entry matching also changed for{' '}
+                  {bookkeepingPapers.length === 1 ? '1 paper' : `${bookkeepingPapers.length} papers`}. Those
+                  are not values anyone typed, so they have no row above — they are committed either way.
+                </p>
+              )}
               <div className="git-field-review-bulk">
                 <button
                   type="button"
@@ -398,7 +410,7 @@ export function GitDialog() {
             <ul className="git-changes">
               {changes.map((c) => {
                 // Own project files never get this button (see `isProjectOwnPath`); `git:discardFile` enforces it server-side too.
-                const isOwn = isProjectOwnPath(c.path, repo.relPath)
+                const isOwn = isProjectOwnPath(c.path, repo.relPath, repo.annotationsDir)
                 // `git status --porcelain` reports an untracked dir as one record, e.g. `?? exports/`.
                 const isDir = c.path.endsWith('/')
                 // A rename needs more than one `checkout` to undo, and an unresolved conflict has no single well-defined "discard".
@@ -477,6 +489,8 @@ export function GitDialog() {
           )}
           {panel.status?.diffTruncated && <p className="git-muted">Diff truncated.</p>}
           {hasUntracked && <p className="git-muted">Untracked files have no diff yet.</p>}
+
+          <GitStashSection disabled={working || !!panel.merge} />
 
           {(panel.error || panel.notice) && (
             <div className={panel.error ? 'git-message git-message-error' : 'git-message git-message-notice'}>

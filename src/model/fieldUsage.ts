@@ -1,13 +1,13 @@
-import type { AnnotationValueTree, InstanceNode } from './annotations'
+import { instanceHoldsAnswer, type AnnotationValueTree, type InstanceNode } from './annotations'
 import { parseMarks, parseReviewMarks, type PdfMark } from './pdfMarks'
 import { parsePath } from '../llm/paths'
 
 /**
  * Answers are stored keyed by the schema field's *name*, so renaming a field in
  * the project editor — or removing one — orphans every answer recorded under
- * the old name. Nothing migrates them: `normalizeTree` builds its output by
- * iterating the schema's defs and drops any key the schema no longer has, so
- * the next load quietly prunes them and the next save makes that permanent.
+ * the old name. Nothing migrates them: they are carried through load and save
+ * verbatim (`orphanedNodes`), which keeps them recoverable, but no screen shows
+ * them and no export includes them until the name comes back.
  *
  * This module answers the one question the schema editor needs in order to warn
  * first: how many papers still record an answer under a given field name. It is
@@ -49,40 +49,12 @@ function treesOf(paper: AnswerBearingPaper): AnnotationValueTree[] {
   return trees
 }
 
-/**
- * Is this a real recorded answer? Mirrors the rule the rest of the app uses:
- * an unticked checkbox is not evidence of anything (every boolean reads `false`
- * whether or not anyone looked), and a blank or whitespace-only string is not
- * an answer either — so neither should make a rename look destructive when it
- * is not.
- */
-function isAnswer(value: unknown): boolean {
-  if (value === null || value === undefined) return false
-  if (typeof value === 'boolean') return value
-  if (typeof value === 'string') return value.trim() !== ''
-  if (typeof value === 'number') return Number.isFinite(value)
-  return false
-}
-
-/** Does this instance, or anything nested beneath it, hold a recorded answer? */
-function instanceHasAnswer(inst: unknown): boolean {
-  if (!inst || typeof inst !== 'object') return false
-  const node = inst as InstanceNode
-  if (isAnswer(node.value)) return true
-  const children = asTree(node.children)
-  if (!children) return false
-  for (const list of Object.values(children)) {
-    if (Array.isArray(list) && list.some(instanceHasAnswer)) return true
-  }
-  return false
-}
-
 /** Does `tree` hold an answer at exactly `path` (names from this level down)? */
 function treeUsesPath(tree: AnnotationValueTree, path: string[]): boolean {
   const [head, ...rest] = path
   const list = tree[head]
   if (!Array.isArray(list)) return false
-  if (rest.length === 0) return list.some(instanceHasAnswer)
+  if (rest.length === 0) return list.some(instanceHoldsAnswer)
   return list.some((inst) => {
     if (!inst || typeof inst !== 'object') return false
     const children = asTree((inst as InstanceNode).children)
@@ -127,8 +99,8 @@ function linkMatchesPath(linkPath: string, path: string[]): boolean {
  * How many of these papers carry a PDF-mark link ("why I picked this value")
  * pointing at `path`. The counterpart of `countPapersUsingField` for a field
  * link rather than an answer — used by the schema editor to warn before a
- * rename/remove/move orphans one. Unlike an ordinary answer (which the next
- * load silently prunes and the next save makes permanent), an orphaned link
+ * rename/remove/move orphans one. Unlike an ordinary answer (which survives
+ * verbatim and comes back when the name does), an orphaned link
  * leaves the *mark* still showing a label for a field that no longer
  * resolves, with no way for a reviewer to discover or clean it up short of
  * opening every mark's popover — worth warning about for that reason.

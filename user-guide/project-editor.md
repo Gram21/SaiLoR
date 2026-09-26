@@ -17,6 +17,15 @@ The location is chosen up front and shown at the top; use **Change…** to move 
 re-derives every PDF reference for the new location automatically (see
 [Things to know](things-to-know.md#pdf-paths-are-relative-to-the-json-file)).
 
+**Annotations folder** names the folder next to the JSON file where the project's answers are kept —
+`annotations` when left empty. It is always a plain folder name directly next to the JSON file: a
+name that would lead anywhere else (`..`, `a/b`, a drive letter, an absolute path) is refused. Save
+is refused while another project file of the same kind (screening or annotation) next to it uses
+the same folder *and* lists one of the same papers, since the two would then write the same files. A
+screening project and an annotation project may always share a folder: their files are named
+differently. Renaming it for a project that already has answers moves the folder along when you
+save.
+
 ## Building the schema
 
 Each row is one field or group:
@@ -95,8 +104,8 @@ is modeled as a repeatable Text field with fixed options (**max: ∞**) rather t
 there's no built-in way to prevent the same option being picked twice in that list, so treat it as a
 convention to watch for during review, not something the tool enforces for you.
 
-**Renaming or removing a field is destructive** — see
-[Things to know](things-to-know.md#renaming-or-removing-a-schema-field-drops-its-answers).
+**Renaming or moving a field takes its answers along; removing one hides them** — see
+[Things to know](things-to-know.md#renaming-moving-or-removing-a-schema-field).
 
 ## Setting up several reviewers
 
@@ -200,7 +209,14 @@ Every paper has its own `id`, auto-generated from the PDF's file name or title a
 so you can hand-edit it — it's what git and any hand-editing keys off, so it must stay **unique**
 within the project. Typing an id that collides with another paper's is flagged right there — a red
 outline on the field and a "duplicate" note next to the label — before you ever get to Save; Save
-itself refuses with the same complaint if a collision is still unresolved.
+itself refuses with the same complaint if a collision is still unresolved. Ids that differ only in
+upper/lower case count as a collision too, since macOS and Windows treat them as the same folder.
+
+An id also names a folder under `annotations/`, so it must work as a folder name on every reviewer's
+machine: no characters Windows forbids in file names (such as `:` `?` `*` `/`), no trailing dot or
+space, and not a reserved Windows name like `CON` or `NUL`. Renaming the id of a paper that already has
+annotations asks first — this copy of its answers moves to the new folder, but a reviewer whose work
+you haven't pulled yet keeps writing under the old id.
 
 ## Saving
 

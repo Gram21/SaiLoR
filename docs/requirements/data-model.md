@@ -103,9 +103,52 @@ the project editor. See the [index](index.md) for the glossary.
 ## Annotation value trees
 
 ### REQ-DAT-160 — Normalize trees on load
-- **Description:** When loading an annotation tree, the system shall drop keys not in the schema, pad each node up to the larger of its minimum and one instance, clamp instances above the maximum, and adopt a bare primitive or single object where a list is expected as one entry.
+- **Description:** When loading an annotation tree, the system shall carry keys the schema does not describe through unchanged as hidden answers (see REQ-DAT-165), pad each node up to the larger of its minimum and one instance, clamp instances above the maximum, and adopt a bare primitive or single object where a list is expected as one entry.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/annotations.ts:64-124`, `src/model/model.test.ts:1221`, commit `b12f654`
+- **Evidence:** `src/model/annotations.ts:125-147,149-174`, commits `b12f654`, `0e185f2`
+- **Verified by:** `src/model/model.test.ts` (`normalize` describe block)
+- **Status:** Implemented
+
+### REQ-DAT-165 — Preserve answers hidden by schema changes
+- **Description:** When an annotation tree holds recorded answers under a node the current schema no longer describes — at any level, including beneath a node that lost some or all of its children — the system shall keep those answers verbatim through load, save, and merge, shall keep the file holding them even when no current-schema field is answered, and shall present them again once a node of that name returns to the schema; unanswered placeholder instances shall not be kept as hidden answers.
+- **Type:** Non-functional (ISO 25010: Reliability — Recoverability)
+- **Evidence:** `src/model/annotations.ts:74-89,192-211,346-348,359-361,369-386`, `src/model/project.ts:713-718,723-725`, commits `0e185f2`, `edeae38`
+- **Verified by:** `src/model/split.test.ts` (`a schema field removed while others still have answers under it`, `a schema node that loses every child`), `src/model/model.test.ts` (`normalize` describe block)
+- **Status:** Implemented
+
+### REQ-DAT-166 — Schema version
+- **Description:** The system shall give every saved schema change a schema version identifier recorded in the project file together with a history of versions, each naming the version(s) it replaced, its time, and the renames and moves it made; and shall record in every annotation and mark file the schema version it was written under.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/schemaVersion.ts:80-92`, `src/model/project.ts:595,680,848,1048`, commit `40e0668`
+- **Verified by:** `src/model/schemaVersion.test.ts` (`stamps every file it writes, and reading its own text back moves nothing again`)
+- **Status:** Implemented
+
+### REQ-DAT-167 — Carry answers across renames and moves
+- **Description:** When reading an annotation or mark file written under an older schema version, or under none, the system shall apply the renames and moves recorded since that version to its answers and field links; a move that would pass through a repeated entry, or land on answers already there, shall leave the answers where they were.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/schemaVersion.ts:138-155,201-245`, commit `40e0668`
+- **Verified by:** `src/model/schemaVersion.test.ts` (`moveInTree`, `pendingMoves`, `carries the answers across the renames made since`)
+- **Status:** Implemented
+
+### REQ-DAT-168 — Report files of an unknown schema version
+- **Description:** When an annotation or mark file names a schema version the project history does not contain, the system shall read it without migration and report it in validation as written under an unknown schema version.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/schemaVersion.ts:138-155`, `src/model/validate.ts:378`, commit `40e0668`
+- **Verified by:** `src/model/schemaVersion.test.ts` (`leaves a file of an unknown version alone, and says so`)
+- **Status:** Implemented
+
+### REQ-DAT-169 — Annotations folder confined to the project directory
+- **Description:** The system shall keep a project's annotation files in the folder its project file names as `annotationsDir`, defaulting to `annotations`, and shall accept only a plain folder name directly inside the project file's directory: names containing a separator, `..`, a drive or device designation, a leading dot, or characters not allowed in Windows file names shall be refused and the default used, and a folder that is a symbolic link or resolves outside the project directory shall not be read or written.
+- **Type:** Non-functional (ISO 25010: Security)
+- **Evidence:** `src/model/annotationsDir.ts`, `electron/main.ts:673`, `src/git/relpath.ts`, commit `c1b40ec`
+- **Verified by:** `src/model/annotationsDir.test.ts`, `src/state/editorStore.annotationsDir.test.ts`
+- **Status:** Implemented
+
+### REQ-DAT-172 — Highlight file names by project kind
+- **Description:** The system shall store a screening project's PDF highlights as `screening-marks-<n>.json` and `screening-marks-consolidated.json`, and an annotation project's as `marks-<n>.json` and `marks-consolidated.json`, so that a screening project and an annotation project never write a file of the same name; a screening project's highlight files written under the older `marks-*` names shall be read only when no file under the new name exists for that seat and no annotation project sharing its annotations folder lists that paper.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/project.ts` (`marksFileName`, `parseMarksFileName`), `electron/main.ts` (`loadPaperFiles`, `readProjectText`), `src/model/annotationsDir.ts` (`filesCollide`), commit `6eb9027`
+- **Verified by:** `src/model/annotationsDir.test.ts` (`highlight file names`, `filesCollide`), `src/model/split.test.ts`, `src/git/ownAnnotationPath.test.ts`
 - **Status:** Implemented
 
 ### REQ-DAT-170 — Prune only trailing empties on save
@@ -138,6 +181,13 @@ the project editor. See the [index](index.md) for the glossary.
 - **Description:** When validating, the system shall list papers with zero annotations in a separate "Not started yet" section instead of reporting their fields as missing.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/validate.ts:300-340`, `src/components/ValidationDialog.tsx:411-450`
+- **Status:** Implemented
+
+### REQ-DAT-215 — Report hidden answers in validation
+- **Description:** When validating a project, the system shall report each paper that holds answers under nodes the schema no longer describes, naming the nodes (up to five, with a count of any remainder), including papers with no answer the current schema can see.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/validate.ts:342`, `src/model/annotations.ts:369-386`, `src/components/ValidationDialog.tsx:11`, commit `264d6b0`
+- **Verified by:** `src/model/validate.test.ts` (`answers hidden by a schema change are reported`)
 - **Status:** Implemented
 
 ## Completeness & finished state
@@ -194,10 +244,11 @@ the project editor. See the [index](index.md) for the glossary.
 - **Evidence:** `src/model/project.ts:788-829,1111-1140`, commits `c50f28a`, `1382386`
 - **Status:** Implemented
 
-### REQ-DAT-300 — Silent shape migration
-- **Description:** When an opened file's stored annotation shape differs structurally from what saving would write and a writable file handle exists, the system shall rewrite the file in place without user interaction, and shall not rewrite for key-order or whitespace differences.
+### REQ-DAT-300 — No writes on open
+- **Description:** When a project is opened, the system shall not write to any of its files, even when the stored shape of its annotation trees differs from what saving would write; the normalized shape shall be held in memory and reach disk only through a save.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/project.ts:590-636`, `src/state/store.ts:1378-1414`
+- **Evidence:** `src/state/store.ts:1330`, commit `27bf461`
+- **Verified by:** `src/state/store.save.test.ts` (`opening a project never writes to disk by itself`)
 - **Status:** Implemented
 
 ## Duplicate detection
@@ -255,15 +306,24 @@ the project editor. See the [index](index.md) for the glossary.
 ## Project editor
 
 ### REQ-EDT-10 — Validate drafts before save
-- **Description:** When saving a project draft, the system shall require at least one named schema node (non-screening) or at least one non-blank exclusion reason (screening), a trimmed identifier and title per paper, a PDF path per paper except in screening drafts, and no duplicate identifiers, reporting each violation as a clickable issue capped at 12 displayed lines.
+- **Description:** When saving a project draft, the system shall require at least one named schema node (non-screening) or at least one non-blank exclusion reason (screening), a trimmed identifier and title per paper, a PDF path per paper except in screening drafts, every identifier safe as a folder name (REQ-EDT-21), and no two identifiers equal after trimming, case folding, or Unicode normalization, reporting each violation as a clickable issue capped at 12 displayed lines.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/editorStore.ts:614-675`, `src/components/ProjectEditor.tsx:17-21,74-79,259-285`
+- **Evidence:** `src/state/editorStore.ts:625-636`, `src/model/paperId.ts:43-70,81-83,95-97`, `src/components/ProjectEditor.tsx`, commit `fe92a6e`
+- **Verified by:** `src/state/editorStore.test.ts` (duplicate and unsafe identifier cases)
 - **Status:** Implemented
 
-### REQ-EDT-20 — Flag duplicate identifiers while typing
-- **Description:** When two paper rows carry the same trimmed identifier, the system shall mark the offending inputs live during editing.
+### REQ-EDT-20 — Flag duplicate and unsafe identifiers while typing
+- **Description:** When two paper rows carry identifiers equal after trimming, case folding, or Unicode normalization, or a row carries an identifier that is unsafe as a folder name, the system shall mark the offending inputs live during editing, stating the reason for an unsafe identifier.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/components/PapersEditor.tsx:14-19,54,255-265`, commit `5ac5112`
+- **Evidence:** `src/components/PapersEditor.tsx:31-41,52-57`, `src/model/paperId.ts:95-97`, commits `5ac5112`, `fe92a6e`
+- **Verified by:** `src/components/PapersEditor.test.tsx`
+- **Status:** Implemented
+
+### REQ-EDT-21 — Portable paper identifiers
+- **Description:** The system shall treat a paper identifier as unsafe when it is empty, contains a control character or any of `< > : " / \ | ? *`, is `.` or `..`, ends in a dot or a space, or is a Windows reserved device name (`CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`, case-insensitively, with or without an extension), and shall store an edited identifier in Unicode NFC form.
+- **Type:** Non-functional (ISO 25010: Portability — Adaptability)
+- **Evidence:** `src/model/paperId.ts:36,40,43-70,81-83,95-97`, `src/components/PapersEditor.tsx:378`, commit `fe92a6e`
+- **Verified by:** `src/model/paperId.test.ts`, `src/components/PapersEditor.test.tsx`
 - **Status:** Implemented
 
 ### REQ-EDT-30 — Create papers from PDFs
@@ -272,10 +332,39 @@ the project editor. See the [index](index.md) for the glossary.
 - **Evidence:** `src/state/editorStore.ts:300-350,1213-1237`
 - **Status:** Implemented
 
-### REQ-EDT-40 — Warn before destroying answers
-- **Description:** When a schema field that papers record answers under (or that mark links point at) is renamed, removed, or re-parented, the system shall request confirmation naming the number of affected papers; sibling reordering shall proceed without warning.
+### REQ-EDT-40 — Warn before hiding answers
+- **Description:** When a schema field that papers record answers under (or that mark links point at) is removed, or renamed or re-parented without its answers able to follow (REQ-EDT-41), the system shall request confirmation naming the number of affected papers in the local copy, stating that the answers are kept but hidden until the field returns and that unpulled work is not counted, and — when the branch is known to be behind its upstream — how many commits behind it is; sibling reordering shall proceed without warning.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/components/SchemaTreeEditor.tsx:124-276`, `src/model/fieldUsage.ts:59-140`, commits `a0034e9`, `638e1b5`
+- **Evidence:** `src/components/SchemaTreeEditor.tsx:131,152`, `src/model/fieldUsage.ts:71-74,108-112`, commits `a0034e9`, `638e1b5`, `fa30150`, `a068166`
+- **Verified by:** `src/components/SchemaTreeEditor.test.tsx`
+- **Status:** Implemented
+
+### REQ-EDT-41 — Move answers with a renamed or moved field
+- **Description:** When a schema field that papers record answers under is renamed or moved to another group, the system shall state under the field how many papers are affected and that their answers will move with it on save, and shall offer to keep them hidden instead; when the answers cannot follow because the move passes through a repeated group, it shall say so.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/editorStore.ts:368`, `src/components/SchemaTreeEditor.tsx:131,511`, commit `40e0668`
+- **Verified by:** `src/state/editorStore.schemaVersion.test.ts` (`pendingSchemaMoves`, `records no move when the reviewer chose to keep the answers hidden`)
+- **Status:** Implemented
+
+### REQ-EDT-42 — Fold unpublished schema changes into one version
+- **Description:** When the schema is saved with changes while the current schema version is not yet in the repository HEAD — or, outside a repository, was created less than six minutes ago — the system shall fold the changes into that version under a new identifier that records the folded one, instead of adding a history entry; otherwise it shall add a new version descending from the current one.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/schemaVersion.ts:109-127`, `src/state/editorStore.ts:636-668`, commit `40e0668`
+- **Verified by:** `src/state/editorStore.schemaVersion.test.ts` (`without git, folds an edit made within minutes into the same version`, `in a repository, starts a new version once the current one is committed`), `src/model/schemaVersion.test.ts` (`gives a file stamped with a folded-in version only the moves it has not seen`)
+- **Status:** Implemented
+
+### REQ-EDT-45 — Confirm renaming an annotated paper's identifier
+- **Description:** When the identifier of a paper with recorded annotations is changed and the edit is committed, the system shall request confirmation stating that the paper's annotation folder is named after the identifier and that other reviewers' unpulled work under the old identifier will not follow, and shall restore the previous identifier when declined.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/PapersEditor.tsx:149`, commit `fa30150`
+- **Verified by:** `src/components/PapersEditor.test.tsx` (`confirm renaming the id of an annotated paper`)
+- **Status:** Implemented
+
+### REQ-EDT-46 — Own annotations folder for a project started from screening
+- **Description:** When a new project is started from a screening project and saved next to it, the system shall rename carried paper identifiers that the screening project already uses and give the new project an annotations folder named after its file, so the two projects never write the same files.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/editorStore.ts` (`resolveScreeningImport`), `src/model/annotationsDir.ts` (`defaultSplitDirName`, `sharesPaper`), commit `4e3fa4e`
+- **Verified by:** `src/test/integration/screeningImport.integration.test.tsx`
 - **Status:** Implemented
 
 ### REQ-EDT-50 — Confirm removal of annotated papers

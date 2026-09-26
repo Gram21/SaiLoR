@@ -54,11 +54,43 @@ export function ownAnnotationPathMatcher(raw: unknown): (relUnderDir: string) =>
   const screening = Boolean((raw as { config?: { screening?: unknown } } | null)?.config?.screening)
   const consolidatedName = screening ? 'screening-consolidated' : 'consolidated'
   const reviewerPrefix = screening ? 'screening' : 'reviewer'
+  const marksPrefix = screening ? 'screening-marks' : 'marks'
   const re = new RegExp(
-    `^([^/]+)\\/(?:${consolidatedName}|${reviewerPrefix}-\\d+|marks-consolidated|marks-\\d+)\\.json$`,
+    `^([^/]+)\\/(?:${consolidatedName}|${reviewerPrefix}-\\d+|${marksPrefix}-consolidated|${marksPrefix}-\\d+)\\.json$`,
   )
   return (relUnderDir: string) => {
     const m = re.exec(relUnderDir)
     return !!m && paperIds.has(m[1])
   }
+}
+
+/**
+ * The repo-relative paths in `changes` (rows from a parsed `git status`) that
+ * belong to this project's own `annotations/` folder — what a commit or a
+ * merge commit may stage, as opposed to everything the folder happens to
+ * contain.
+ *
+ * `dir` is the folder's repo-relative path (`annotationsRelDir`), `raw` the
+ * same duck-typed project meta `ownAnnotationPathMatcher` takes. A rename
+ * contributes its `from` path too, or the deletion of the old name is left
+ * unstaged.
+ *
+ * `changes` must come from `git status -uall`. Without it, a folder with
+ * nothing tracked in it yet — every paper's first reading — arrives as one
+ * collapsed `?? annotations/<id>/` entry that names no file, matches nothing
+ * here, and is silently left out of the commit.
+ */
+export function ownAnnotationPathsIn(
+  changes: Array<{ path: string; from?: string }>,
+  dir: string,
+  raw: unknown,
+): string[] {
+  const matches = ownAnnotationPathMatcher(raw)
+  const isOwn = (p: string) => p.startsWith(`${dir}/`) && matches(p.slice(dir.length + 1))
+  const out = new Set<string>()
+  for (const change of changes) {
+    if (isOwn(change.path)) out.add(change.path)
+    if (change.from && isOwn(change.from)) out.add(change.from)
+  }
+  return [...out]
 }

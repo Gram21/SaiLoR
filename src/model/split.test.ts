@@ -160,9 +160,17 @@ describe('splitProjectFiles', () => {
     expect(
       files
         .map((f) => f.relPath)
-        .filter((p) => !p.includes('/marks-'))
         .sort(),
-    ).toEqual(['p1/screening-1.json', 'p1/screening-2.json', 'p1/screening-consolidated.json'])
+    ).toEqual([
+      'p1/screening-1.json',
+      'p1/screening-2.json',
+      'p1/screening-consolidated.json',
+      // Highlights too get the screening kind's own names, so they never meet
+      // an annotation project's `marks-*.json` in a shared folder.
+      'p1/screening-marks-1.json',
+      'p1/screening-marks-2.json',
+      'p1/screening-marks-consolidated.json',
+    ])
     const r1 = files.find((f) => f.relPath === 'p1/screening-1.json')
     expect(r1?.text).toContain(DECISION_INCLUDE)
     const consolidated = files.find((f) => f.relPath === 'p1/screening-consolidated.json')
@@ -349,5 +357,127 @@ describe('isDeletableAnnotationText', () => {
     ].join('\n')
     expect(isDeletableAnnotationText(conflicted)).toBe(false)
     expect(isDeletableAnnotationText('{"annotations":')).toBe(false)
+  })
+})
+
+describe('a schema field removed while others still have answers under it', () => {
+  const withSchema = (schema: AnnotationDef[]) =>
+    JSON.stringify({
+      version: 1,
+      config: { schema },
+      papers: [
+        {
+          id: 'p1',
+          title: 'Paper One',
+          authors: [],
+          pdf: 'p1.pdf',
+          annotations: { Relevant: [{ value: true }], Notes: [{ value: 'why I said yes' }] },
+        },
+      ],
+    })
+
+  const MINUS_NOTES: AnnotationDef[] = [{ name: 'Relevant', type: 'boolean' }]
+  const WITH_NOTES: AnnotationDef[] = [...MINUS_NOTES, { name: 'Notes', type: 'string' }]
+
+  it('keeps the answers on disk and hands them back when the field returns', () => {
+    // One person removing a field from project.json must not be what deletes
+    // everyone else's answers under it — theirs may not even be pulled yet.
+    const { files } = splitProjectFiles(loadProject(withSchema(MINUS_NOTES)))
+    const written = files.find((f) => f.relPath === 'p1/consolidated.json')!
+    expect(JSON.parse(written.text!).annotations.Notes).toEqual([{ value: 'why I said yes' }])
+
+    const restored = loadProject(withSchema(WITH_NOTES))
+    expect(restored.papers[0].annotations.Notes[0].value).toBe('why I said yes')
+  })
+
+  it('keeps the file alive when the removed field held the only answer', () => {
+    const onlyNotes = JSON.stringify({
+      version: 1,
+      config: { schema: MINUS_NOTES },
+      papers: [
+        { id: 'p1', title: 'Paper One', authors: [], pdf: 'p1.pdf', annotations: { Notes: [{ value: 'kept' }] } },
+      ],
+    })
+    const { files } = splitProjectFiles(loadProject(onlyNotes))
+    const written = files.find((f) => f.relPath === 'p1/consolidated.json')!
+    expect(written.text).not.toBeNull()
+    expect(JSON.parse(written.text!).annotations.Notes).toEqual([{ value: 'kept' }])
+  })
+
+  it('does not keep an unanswered placeholder, so a schema edit alone changes nothing', () => {
+    const unanswered = JSON.stringify({
+      version: 1,
+      config: { schema: MINUS_NOTES },
+      papers: [
+        {
+          id: 'p1',
+          title: 'Paper One',
+          authors: [],
+          pdf: 'p1.pdf',
+          annotations: { Relevant: [{ value: true }], Notes: [{ value: null }] },
+        },
+      ],
+    })
+    const { files } = splitProjectFiles(loadProject(unanswered))
+    const written = files.find((f) => f.relPath === 'p1/consolidated.json')!
+    expect(JSON.parse(written.text!).annotations).not.toHaveProperty('Notes')
+  })
+})
+
+describe('a schema node that loses every child', () => {
+  const projectWith = (schema: AnnotationDef[]) =>
+    JSON.stringify({
+      version: 1,
+      config: { schema },
+      papers: [
+        {
+          id: 'p1',
+          title: 'Paper One',
+          authors: [],
+          pdf: 'p1.pdf',
+          annotations: {
+            Findings: [
+              { children: { Claim: [{ value: 'first' }] } },
+              { children: { Claim: [{ value: 'second' }] } },
+            ],
+          },
+        },
+      ],
+    })
+
+  const WITH_CLAIM: AnnotationDef[] = [
+    { name: 'Findings', max: null, children: [{ name: 'Claim', type: 'string' }] },
+  ]
+  // The group turned into a plain field and its children deleted, so nothing
+  // under `Findings` is described any more. (A group with no children at all
+  // is not a valid schema — it has to become a typed field.)
+  const NO_CHILDREN: AnnotationDef[] = [{ name: 'Findings', type: 'string', max: null }]
+
+  it('keeps the answers beneath it, including in trailing entries', () => {
+    // Losing *some* children is covered by normalizeTree's own recursion;
+    // losing all of them left the node with no defs to recurse into at all,
+    // and the trailing-empty prune then deleted the entries outright.
+    const { files } = splitProjectFiles(loadProject(projectWith(NO_CHILDREN)))
+    const written = files.find((f) => f.relPath === 'p1/consolidated.json')!
+    const findings = JSON.parse(written.text!).annotations.Findings
+    expect(findings).toHaveLength(2)
+    expect(findings[0].children.Claim).toEqual([{ value: 'first' }])
+    expect(findings[1].children.Claim).toEqual([{ value: 'second' }])
+  })
+
+  it('hands them back when the child returns to the schema', () => {
+    const restored = loadProject(projectWith(WITH_CLAIM))
+    expect(restored.papers[0].annotations.Findings[1].children!.Claim[0].value).toBe('second')
+  })
+
+  it('gives an ordinary leaf field no empty children key', () => {
+    const plain = JSON.stringify({
+      version: 1,
+      config: { schema: [{ name: 'Relevant', type: 'boolean' }] },
+      papers: [{ id: 'p1', title: 'One', authors: [], pdf: 'p1.pdf', annotations: { Relevant: [{ value: true }] } }],
+    })
+    const { files } = splitProjectFiles(loadProject(plain))
+    const written = files.find((f) => f.relPath === 'p1/consolidated.json')!
+    expect(JSON.parse(written.text!).annotations.Relevant[0]).toEqual({ value: true })
   })
 })

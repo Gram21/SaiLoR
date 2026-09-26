@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import type { RecentEntry, SaveHandle } from '../platform/adapter'
 import type {
   GitPlatform,
@@ -170,6 +170,15 @@ const fakeGit: GitPlatform = {
     logDiffCalls.push(rev)
     return logDiffResult
   },
+  annotationAuthors: async () => ({ me: null, files: {} }),
+  repoSetupStatus: async () => ({ upToDate: true, needsConsent: false, paths: [] }),
+  applyRepoSetup: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
+  backgroundFetch: async () => ({ fetched: false, refused: false }),
+  stashList: async () => [],
+  stashPush: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
+  stashRestore: async () => ({ kind: 'restored' as const }),
+  stashDrop: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
+  stashBranch: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
   branches: async () => branchesResult,
   createBranch: async (root, name) => {
     createBranchCalls.push({ root, name })
@@ -198,7 +207,7 @@ const fakeGit: GitPlatform = {
   },
 }
 
-const REPO = { root: '/repo', relPath: 'review.json', branch: 'main', upstream: 'origin/main', hasHead: true }
+const REPO = { root: '/repo', relPath: 'review.json', branch: 'main', upstream: 'origin/main', hasHead: true, behind: null, annotationsDir: 'annotations' }
 
 const mockPlatform = {
   kind: 'electron' as const,
@@ -337,7 +346,7 @@ describe('runPull', () => {
     expect(finishCalls).toHaveLength(0)
   })
 
-  it('mergeProjects refusing a re-shaping change aborts the merge and names it', async () => {
+  it('a schema both sides extended merges node by node instead of aborting', async () => {
     beginPullResult = {
       kind: 'merge',
       ref: 'origin/main',
@@ -346,9 +355,11 @@ describe('runPull', () => {
       theirs: projectTextWithSchema([...SCHEMA, { name: 'Extra Y', type: 'string' }]),
     }
     await useGitStore.getState().runPull()
-    expect(abortCalls).toBe(1)
-    expect(useGitStore.getState().panel?.error).toMatch(/schema/i)
-    expect(finishCalls).toHaveLength(0)
+    expect(abortCalls).toBe(0)
+    expect(finishCalls).toHaveLength(1)
+    const written = JSON.stringify(finishCalls[0])
+    expect(written).toContain('Extra X')
+    expect(written).toContain('Extra Y')
   })
 
   it('an unparseable revision aborts the merge and writes nothing', async () => {
@@ -1343,5 +1354,215 @@ describe('runDiscardFile', () => {
 
     expect(useGitStore.getState().panel?.phase).toBe('idle')
     expect(useGitStore.getState().panel?.error).toMatch(/EISDIR/)
+  })
+})
+
+describe('a carry-over that cannot be put back is never silent', () => {
+  // The original bug: when the automatic abort's stash pop failed, the panel
+  // refreshed and looked clean while the reviewer's uncommitted readings sat
+  // in a stash nobody was told about.
+  it("appends why the changes did not come back to the abort's own error", async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    await useGitStore.getState().refreshStatus()
+    useGitStore.getState().requestSwitchBranch('feature')
+    beginBranchSwitchResult = {
+      kind: 'merge',
+      sourceBranch: 'main',
+      base: projectText(null),
+      ours: projectText('mine'),
+      theirs: '{ not a project', // forces the automatic abort
+    }
+    branchSwitchAbortResult = {
+      ok: false,
+      code: 1,
+      stdout: '',
+      stderr: 'error: could not restore untracked files from stash\n\nYour uncommitted changes were not lost',
+    }
+    await useGitStore.getState().resolveBranchSwitchPrompt('carryOver')
+
+    const error = useGitStore.getState().panel?.error ?? ''
+    expect(branchSwitchAbortCalls).toHaveLength(1)
+    expect(error).toMatch(/could not restore untracked files/)
+    expect(error).toMatch(/not lost/)
+  })
+
+  it('adds nothing when the changes did come back', async () => {
+    statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
+    await useGitStore.getState().refreshStatus()
+    useGitStore.getState().requestSwitchBranch('feature')
+    beginBranchSwitchResult = {
+      kind: 'merge',
+      sourceBranch: 'main',
+      base: projectText(null),
+      ours: projectText('mine'),
+      theirs: '{ not a project',
+    }
+    await useGitStore.getState().resolveBranchSwitchPrompt('carryOver')
+    expect(useGitStore.getState().panel?.error ?? '').not.toMatch(/stash/)
+  })
+})
+
+describe('stashed changes', () => {
+  // These tests swap single methods on the shared fake; put them back so no
+  // later test inherits a stub it did not ask for.
+  const original = { ...fakeGit }
+  afterEach(() => {
+    Object.assign(fakeGit, original)
+  })
+
+  const entry = {
+    sha: 'a'.repeat(40),
+    ref: 'stash@{0}',
+    date: '2026-09-23T10:00:00Z',
+    branch: 'main',
+    message: 'sailor stash: wip',
+    origin: 'sailor' as const,
+  }
+
+  it('will not stash with unsaved edits — the reload afterwards would drop them', async () => {
+    let pushed = false
+    fakeGit.stashPush = async () => {
+      pushed = true
+      return ok()
+    }
+    useStore.setState({ dirty: true })
+    await useGitStore.getState().runStashPush('wip')
+    expect(pushed).toBe(false)
+    expect(useGitStore.getState().panel?.error).toMatch(/Save the project first/)
+  })
+
+  it('explains a restore that no longer fits and points at the way through', async () => {
+    fakeGit.stashRestore = async () => ({ kind: 'conflict' })
+    useGitStore.setState({ stashes: [entry] })
+    await useGitStore.getState().runStashRestore(entry.sha)
+    const error = useGitStore.getState().panel?.error ?? ''
+    expect(error).toMatch(/Nothing was changed/)
+    expect(error).toMatch(/Restore on a new branch/)
+  })
+
+  it('names what is in the way of a restore onto uncommitted work', async () => {
+    fakeGit.stashRestore = async () => ({ kind: 'dirty', paths: ['annotations/p1/reviewer-1.json'] })
+    await useGitStore.getState().runStashRestore(entry.sha)
+    expect(useGitStore.getState().panel?.error).toMatch(/annotations\/p1\/reviewer-1\.json/)
+  })
+
+  it('restores onto a branch that does not already exist', async () => {
+    const calls: string[] = []
+    fakeGit.stashBranch = async (_root, _rel, _sha, branch) => {
+      calls.push(branch)
+      return ok()
+    }
+    useGitStore.setState({
+      stashes: [entry],
+      branches: [{ name: 'restored-stash-2026-09-23', current: false, remote: false }],
+    })
+    await useGitStore.getState().runStashBranch(entry.sha)
+    expect(calls).toEqual(['restored-stash-2026-09-23-2'])
+    expect(useGitStore.getState().panel?.notice).toMatch(/restored-stash-2026-09-23-2/)
+  })
+})
+
+describe('keeping the unpulled count fresh', () => {
+  const original = { ...fakeGit }
+  afterEach(() => {
+    Object.assign(fakeGit, original)
+  })
+
+  it('fetches, then recounts from what the fetch brought in', async () => {
+    const calls: string[] = []
+    fakeGit.backgroundFetch = async () => {
+      calls.push('fetch')
+      return { fetched: true, refused: false }
+    }
+    fakeGit.info = async () => {
+      calls.push('info')
+      return { ...REPO, behind: 2 }
+    }
+    await useGitStore.getState().refreshUpstream()
+    expect(calls).toEqual(['fetch', 'info'])
+    expect(useGitStore.getState().behind).toBe(2)
+  })
+
+  it('still recounts from local refs when the repository refuses a background fetch', async () => {
+    fakeGit.backgroundFetch = async () => ({ fetched: false, refused: true })
+    fakeGit.info = async () => ({ ...REPO, behind: 1 })
+    await useGitStore.getState().refreshUpstream()
+    expect(useGitStore.getState().behind).toBe(1)
+  })
+
+  it('stays out of the way of a git operation the reviewer started', async () => {
+    let fetched = false
+    fakeGit.backgroundFetch = async () => {
+      fetched = true
+      return { fetched: true, refused: false }
+    }
+    useGitStore.setState((s) => {
+      if (s.panel) s.panel.phase = 'working'
+    })
+    await useGitStore.getState().refreshUpstream()
+    expect(fetched).toBe(false)
+  })
+
+  it('never runs two at once', async () => {
+    let running = 0
+    let peak = 0
+    let release!: () => void
+    const gate = new Promise<void>((r) => (release = r))
+    fakeGit.backgroundFetch = async () => {
+      running++
+      peak = Math.max(peak, running)
+      await gate
+      running--
+      return { fetched: true, refused: false }
+    }
+    const first = useGitStore.getState().refreshUpstream()
+    const second = useGitStore.getState().refreshUpstream()
+    release()
+    await Promise.all([first, second])
+    expect(peak).toBe(1)
+  })
+
+  it("makes the reviewer's pull wait for a background fetch rather than race it", async () => {
+    const order: string[] = []
+    let release!: () => void
+    const gate = new Promise<void>((r) => (release = r))
+    fakeGit.backgroundFetch = async () => {
+      await gate
+      order.push('background fetch done')
+      return { fetched: true, refused: false }
+    }
+    const original = fakeGit.beginPull
+    fakeGit.beginPull = async (...args) => {
+      order.push('pull started')
+      return original(...args)
+    }
+    const bg = useGitStore.getState().refreshUpstream()
+    const pull = useGitStore.getState().runPull()
+    await Promise.resolve()
+    release()
+    await Promise.all([bg, pull])
+    expect(order.slice(0, 2)).toEqual(['background fetch done', 'pull started'])
+  })
+
+  it('refreshes when the Git panel opens', async () => {
+    let fetched = false
+    fakeGit.backgroundFetch = async () => {
+      fetched = true
+      return { fetched: true, refused: false }
+    }
+    await useGitStore.getState().openPanel()
+    await Promise.resolve()
+    expect(fetched).toBe(true)
+  })
+
+  it('does nothing without an upstream to be behind', async () => {
+    let fetched = false
+    fakeGit.backgroundFetch = async () => {
+      fetched = true
+      return { fetched: true, refused: false }
+    }
+    useGitStore.setState({ repo: { ...REPO, upstream: null } })
+    await useGitStore.getState().refreshUpstream()
+    expect(fetched).toBe(false)
   })
 })

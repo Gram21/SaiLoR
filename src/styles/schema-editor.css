@@ -423,3 +423,18 @@
   border-left: 2px solid var(--accent);
   font-style: italic;
 }
+
+.schema-move-note {
+  margin: 2px 0 6px 28px;
+  font-size: 0.85em;
+  color: var(--muted);
+}
+.schema-move-toggle {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}

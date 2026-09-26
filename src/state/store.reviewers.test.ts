@@ -456,6 +456,77 @@ describe('reviewer selection is persisted per project', () => {
   })
 })
 
+describe('a remembered seat belongs to a project, not to a path', () => {
+  const otherPapers = JSON.stringify({
+    version: 1,
+    config: { schema, reviewers: 3 },
+    papers: [{ id: 'zz9', title: 'Different', authors: [], pdf: 'z.pdf', annotations: {} }],
+  })
+
+  it('does not inherit a seat when a different project is saved over the same path', () => {
+    // The key is the file's path, and a path is not an identity: deleting and
+    // recreating a project there used to silently skip the picker and route
+    // every edit into the previous project's reviewer's seat.
+    st().loadFromText(multiReviewerProject, handleAt('/reviews/x.json'), 'x.json')
+    st().selectReviewer('2')
+
+    st().closeProject()
+    st().loadFromText(otherPapers, handleAt('/reviews/x.json'), 'x.json')
+    expect(st().currentReviewer).toBeNull()
+  })
+
+  it('keeps the seat when the same project merely gained and lost papers', () => {
+    // Matched by overlap, not equality — a fingerprint that changed whenever
+    // the paper list did would re-ask for the seat constantly.
+    st().loadFromText(multiReviewerProject, handleAt('/reviews/x.json'), 'x.json')
+    st().selectReviewer('2')
+
+    const grown = JSON.stringify({
+      version: 1,
+      config: { schema, reviewers: 3 },
+      papers: [
+        { id: 'p1', title: 'T', authors: [], pdf: 'a.pdf', annotations: {} },
+        { id: 'p2', title: 'Added later', authors: [], pdf: 'b.pdf', annotations: {} },
+      ],
+    })
+    st().closeProject()
+    st().loadFromText(grown, handleAt('/reviews/x.json'), 'x.json')
+    expect(st().currentReviewer).toBe('2')
+  })
+
+  it('drops a stale entry rather than leaving it to be inherited later', () => {
+    st().loadFromText(multiReviewerProject, handleAt('/reviews/x.json'), 'x.json')
+    st().selectReviewer('2')
+    st().closeProject()
+
+    // Opening the unrelated project clears the mismatched seat...
+    st().loadFromText(otherPapers, handleAt('/reviews/x.json'), 'x.json')
+    expect(st().currentReviewer).toBeNull()
+
+    // ...so reopening the original does not find it waiting either.
+    st().closeProject()
+    st().loadFromText(multiReviewerProject, handleAt('/reviews/x.json'), 'x.json')
+    expect(st().currentReviewer).toBeNull()
+  })
+
+  it('honours a value written before fingerprints existed, then upgrades it', () => {
+    // Re-asking every existing reviewer for a seat they already picked would
+    // be a worse first impression than the narrow case this protects.
+    localStorage.setItem('slr.currentReviewer./reviews/x.json', '2')
+    st().loadFromText(multiReviewerProject, handleAt('/reviews/x.json'), 'x.json')
+    expect(st().currentReviewer).toBe('2')
+
+    const stored = JSON.parse(localStorage.getItem('slr.currentReviewer./reviews/x.json')!)
+    expect(stored).toEqual({ reviewer: '2', papers: ['p1'], perPaper: {} })
+  })
+
+  it('ignores a stored value that is not readable at all', () => {
+    localStorage.setItem('slr.currentReviewer./reviews/x.json', '{not json')
+    st().loadFromText(multiReviewerProject, handleAt('/reviews/x.json'), 'x.json')
+    expect(st().currentReviewer).toBeNull()
+  })
+})
+
 describe('closeProject resets the reviewer view', () => {
   it('clears currentReviewer and any open compare popup', () => {
     st().loadFromText(multiReviewerProject, null, 'test.json')
@@ -591,5 +662,96 @@ describe('switching reviewer breaks undo-coalescing (no cross-reviewer data loss
 
     expect(st().project!.papers[1].annotations['Study Type'][0].value).toBeNull()
     expect(st().project!.papers[0].annotations['Study Type'][0].value).toBe('A')
+  })
+})
+
+describe('the seat follows the paper', () => {
+  // Six reviewers over sixty papers, two readings each: the same person is
+  // Reviewer 1 on some papers and Reviewer 2 on others. One remembered seat
+  // per project meant switching by hand on every such move — and writing a
+  // reading into the wrong seat whenever they forgot.
+  const twoSeats = JSON.stringify({
+    version: 1,
+    config: { schema, reviewers: 2 },
+    papers: ['p1', 'p2', 'p3'].map((id) => ({ id, title: id, authors: [], pdf: `${id}.pdf`, annotations: {} })),
+  })
+  const open = () => st().loadFromText(twoSeats, handleAt('/reviews/split.json'), 'split.json')
+
+  it('returns to the seat a paper was last read in', () => {
+    open()
+    st().selectPaper('p1')
+    st().selectReviewer('1')
+    st().selectPaper('p2')
+    st().selectReviewer('2')
+
+    st().selectPaper('p1')
+    expect(st().currentReviewer).toBe('1')
+    st().selectPaper('p2')
+    expect(st().currentReviewer).toBe('2')
+  })
+
+  it('keeps the current seat on a paper never read here', () => {
+    // So somebody who only ever takes one seat never notices any of this.
+    open()
+    st().selectPaper('p1')
+    st().selectReviewer('2')
+    st().selectPaper('p3')
+    expect(st().currentReviewer).toBe('2')
+  })
+
+  it('remembers across reopening, landing in the paper\'s own seat', () => {
+    open()
+    st().selectPaper('p1')
+    st().selectReviewer('1')
+    st().selectPaper('p2')
+    st().selectReviewer('2')
+    st().selectPaper('p1') // back in seat 1, and the last seat in use is 1
+    st().closeProject()
+
+    open()
+    st().selectPaper('p2')
+    expect(st().currentReviewer).toBe('2')
+  })
+
+  it('drops a remembered seat the reviewer count no longer has', () => {
+    const three = twoSeats.replace('"reviewers":2', '"reviewers":3')
+    st().loadFromText(three, handleAt('/reviews/split.json'), 'split.json')
+    st().selectPaper('p1')
+    st().selectReviewer('3')
+    st().selectPaper('p2')
+    st().selectReviewer('1')
+    st().closeProject()
+
+    open() // back to two seats: seat 3 on p1 no longer exists
+    st().selectPaper('p1')
+    expect(st().currentReviewer).toBe('1')
+  })
+
+  it('forgets every paper\'s seat when a different project takes over the path', () => {
+    open()
+    st().selectPaper('p1')
+    st().selectReviewer('2')
+    st().closeProject()
+
+    const other = JSON.stringify({
+      version: 1,
+      config: { schema, reviewers: 2 },
+      papers: [{ id: 'p1-other', title: 'x', authors: [], pdf: 'x.pdf', annotations: {} }],
+    })
+    st().loadFromText(other, handleAt('/reviews/split.json'), 'split.json')
+    expect(st().currentReviewer).toBeNull()
+  })
+
+  it('follows an undo that lands on another paper', () => {
+    open()
+    st().selectPaper('p1')
+    st().selectReviewer('1')
+    st().setFieldValue([], 'Study Type', 0, 'RCT') // an undo step on p1
+    st().selectPaper('p2')
+    st().selectReviewer('2')
+
+    st().undo()
+    expect(st().currentPaperId).toBe('p1')
+    expect(st().currentReviewer).toBe('1')
   })
 })

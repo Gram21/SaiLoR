@@ -2,7 +2,8 @@
 
 Requirements reverse-engineered from the implemented codebase (source, tests, docs, and
 commit history) as of 2026-08-27 (v1.8.1), with incremental updates through 2026-09-07
-(main at `8b93cbe`) for behavior changed since. Every requirement documents behavior that
+(main at `8b93cbe`) and 2026-09-23 (source at `51a424d`, the git-hardening work) for
+behavior changed since. Every requirement documents behavior that
 is actually implemented; each entry cites its evidence. IDs are numbered in steps of ten
 per category so requirements can be inserted without renumbering.
 
@@ -14,7 +15,7 @@ per category so requirements can be inserted without renumbering.
 | [annotation-ui.md](annotation-ui.md) | REQ-ANN, REQ-LST, REQ-PDF, REQ-UI | Annotation form, paper list, PDF viewer, highlights/notes, evidence linking, reading position, PDF export, workspace shell |
 | [screening.md](screening.md) | REQ-SCR | Title/abstract and full-text screening: decisions, exclusion reasons, counts, import hand-off |
 | [consolidation.md](consolidation.md) | REQ-CON | Reviewer seats, alignment of repeated entries, disagreement detection, unanimous adoption, agreement metrics, disagreement export |
-| [git-integration.md](git-integration.md) | REQ-GIT | Clone, status/commit, pull/merge, branches, history, git security gates |
+| [git-integration.md](git-integration.md) | REQ-GIT | Clone, status/commit, pull/merge, branches, stashes, history, repository setup, seat-collision warnings, git security gates |
 | [llm-annotation.md](llm-annotation.md) | REQ-LLM | LLM providers, key handling, prompt/response validation, suggestion review, AI-usage disclosure |
 | [platform.md](platform.md) | REQ-PLT | Desktop shell, open/save, unsaved-changes protection, recents, settings, PDF access control, self-update, build targets |
 | [traceability.md](traceability.md) | — | Requirements-to-code traceability matrix with link-recovery method and coverage statistics |
@@ -28,7 +29,7 @@ per category so requirements can be inserted without renumbering.
 | **Node / field** | A schema entry; a *field* is a node with a value type (string, number, boolean, year); a *group* has only children. |
 | **Repeatable node** | A node whose `max` is null or greater than 1; each occurrence is an *instance* (or *entry*). |
 | **Annotation tree** | The nested value structure mirroring the schema in which one seat's answers for one paper are stored. |
-| **Seat** | The acting identity in a session: a numbered reviewer (1..N) or Consolidation. |
+| **Seat** | The acting identity in a session: a numbered reviewer (1..N) or Consolidation. A seat is a role per paper, not a person: when papers are divided among more reviewers than there are seats, different people hold the same seat on different papers. |
 | **Consolidated tree** | The tree the Consolidation seat writes; the project's shipping answers. |
 | **Consolidator** | The person acting in the Consolidation seat. |
 | **Alignment** | The stored matching of different reviewers' repeatable entries into shared slots. |
@@ -41,19 +42,23 @@ per category so requirements can be inserted without renumbering.
 | **Target (LLM)** | A saved LLM configuration: name, provider, base URL, model, attachment mode, optional reasoning effort, and a stored key. |
 | **Project's own files** | `project.json` plus the files under its `annotations/` folder matching the project's paper identifiers and file-name family. |
 | **Family (project kind)** | Screening versus annotation projects, distinguished by their annotation file-name prefixes. |
+| **Hidden answer** | A recorded answer stored under a schema node the current schema no longer describes (after a field was removed, renamed, or lost its children). Kept in the files and shown again when the node returns; see REQ-DAT-165. |
+| **Stash** | Uncommitted changes that git has parked outside the working tree. |
+| **Carry-over** | The stash SaiLoR creates to move uncommitted project changes across a branch switch. |
+| **Managed block** | The delimited section of a `.gitattributes` or `.gitignore` that SaiLoR maintains; content outside it belongs to the user and is never changed. |
 
 ## Coverage summary
 
 | Category | Requirements |
 |---|---|
-| Data model & editor (DAT/EDT) | 47 |
-| Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 46 |
+| Data model & editor (DAT/EDT) | 59 |
+| Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 52 |
 | Screening (SCR) | 38 |
-| Consolidation (CON) | 40 |
-| Git integration (GIT) | 39 |
+| Consolidation (CON) | 44 |
+| Git integration (GIT) | 58 |
 | LLM annotation (LLM) | 31 |
-| Platform & shell (PLT) | 36 |
-| **Total** | **277** |
+| Platform & shell (PLT) | 44 |
+| **Total** | **326** |
 
 ## Method & evidence notes
 
@@ -73,3 +78,34 @@ per category so requirements can be inserted without renumbering.
 - One known, documented limitation is captured inside the consolidation evidence rather
   than as a requirement: project-wide agreement statistics can misread unaligned papers;
   the implemented mitigation is the REQ-CON-330 warning.
+- **Update of 2026-09-23 (git hardening).** 24 requirements added and 11 revised to match
+  behavior changed on the `fix/dont-rewrite-untouched-annotations` branch. Revised
+  requirements keep their IDs and are rewritten in place where their behavior changed:
+  REQ-DAT-160 (unknown tree keys are now kept rather than dropped), REQ-DAT-300 (a project
+  is no longer rewritten when opened), REQ-EDT-10/20/40, REQ-CON-30/40, REQ-PLT-62, and
+  REQ-GIT-110/170/350. Evidence line ranges for these entries were resolved from the source
+  symbols in the source rather than transcribed, and every cited test name was checked to
+  exist. The coverage table above was recounted from the requirement files; it had fallen
+  behind before this update (it read 277 while the files held 285).
+- **Docs links after the wiki refresh (`a6f883f`).** The requirements added on 2026-09-23
+  link the `openwiki/` and `user-guide/` sections describing them, all except REQ-GIT-500
+  (merging hidden answers), which neither describes. The wiki pages' prose was corrected by
+  hand where it contradicted the source (repository setup, background fetch, seat memory);
+  their OpenWiki claim files were not regenerated.
+- **Save conflicts (2026-09-23, source at `5e2abb4`).** REQ-PLT-135 revised (a stopped save
+  now asks instead of failing) and REQ-PLT-136 added for the three ways to resolve it.
+- **Project-file merge (source at `543cb13`).** REQ-GIT-250 and REQ-GIT-260 rewritten (project
+  settings and removed schema fields no longer refuse a merge) and REQ-GIT-255 added for the
+  node-by-node schema merge.
+- **Schema versions (source at `40e0668`).** REQ-DAT-166–168, REQ-EDT-41–42, REQ-PLT-43 and
+  REQ-GIT-256 added; REQ-EDT-40 narrowed to the changes whose answers cannot follow. REQ-GIT-257
+  added for conflicting renames (source at `c9c982f`).
+- **Annotations folders (source at `c1b40ec`).** REQ-DAT-169, REQ-PLT-95 and REQ-PLT-96 added; REQ-PLT-90
+  rewritten (a shared folder is avoided or split rather than only refused at Save As).
+- **Git scenarios (source at `47fb3f9`).** REQ-GIT-520 added for the reproducible scenarios in
+  `samples/git-scenarios/`.
+- **Screening beside annotation.** REQ-PLT-90 and REQ-PLT-95 narrowed to projects that share a paper
+  identifier; REQ-EDT-46 added for the folder a project started from screening gets.
+- **Highlight file names (source at `6eb9027`).** REQ-DAT-172 added; REQ-PLT-90 and REQ-PLT-95 narrowed
+  to projects of the same kind.
+- **Screening highlights (source at `780f1d1`).** REQ-PDF-185 added.

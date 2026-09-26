@@ -1,5 +1,6 @@
 import { useStore } from '../state/store'
 import { readyCount } from '../consolidate/readiness'
+import { CONSOLIDATION_SEAT } from '../git/seatOwner'
 
 /**
  * Shown when a multi-reviewer project is opened and nobody has picked a seat —
@@ -16,13 +17,18 @@ import { readyCount } from '../consolidate/readiness'
  * the form without a seat anyway, so a dismiss button would only offer a state
  * in which nothing can be done. The choice is free, reversible from the
  * toolbar, and costs nothing to change later.
+ *
+ * Deliberately says nothing about who "owns" a seat. A seat is not a person:
+ * a large review divides its papers among many more people than it has seats,
+ * so seat 1 is legitimately held by a different reviewer on every paper. The
+ * collision that matters — somebody has already read *this* paper in *this*
+ * seat — is caught where the paper is, not here (see `SeatConflictNotice`).
  */
 export function ReviewerPrompt() {
   const project = useStore((s) => s.project)
   const currentReviewer = useStore((s) => s.currentReviewer)
   const selectReviewer = useStore((s) => s.selectReviewer)
   const helpOpen = useStore((s) => s.helpOpen)
-
   if (!project || project.reviewers <= 1) return null
   // Yield to Help. Nothing else can be reached while this is up, so F1 is the
   // one way to go and read more before committing to a seat — and it would be
@@ -79,7 +85,7 @@ export function ReviewerPrompt() {
             <button
               type="button"
               className="reviewer-prompt-choice is-consolidation"
-              onClick={() => selectReviewer('consolidation')}
+              onClick={() => selectReviewer(CONSOLIDATION_SEAT)}
               title={
                 total > 0 && ready === total
                   ? 'Every paper has been annotated by all reviewers'
@@ -102,8 +108,10 @@ export function ReviewerPrompt() {
             </button>
           </div>
           <p className="reviewer-prompt-note">
-            Remembered for this project — you can switch from the toolbar whenever you like. Press
-            F1 to read Help before choosing.
+            Switch seats from the toolbar whenever you like. Each paper remembers the seat you last
+            read it in and switches back to it when you return, so if you are Reviewer 1 on some
+            papers and Reviewer 2 on others, you only choose once per paper. Press F1 to read Help
+            before choosing.
           </p>
         </div>
       </div>

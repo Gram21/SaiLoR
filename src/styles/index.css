@@ -3059,3 +3059,179 @@ kbd {
   font-size: 0.75em;
   color: var(--muted);
 }
+
+/* The open project is missing annotation files that would not parse — see
+   `corruptFiles` in state/store.ts. Deliberately not a quiet, muted note:
+   this says a reviewer's work is absent from everything on screen, and it
+   stays until the project is closed. */
+.toolbar-warning {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* "Somebody else already read this paper in your seat" — see
+   SeatConflictNotice.tsx. Sits above the form rather than inside it: it is
+   about which paper you should be on at all, not about any one field. */
+.seat-conflict-notice {
+  margin: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--danger);
+  background: var(--accent-weak);
+  color: var(--text);
+  font-size: 0.85em;
+  line-height: 1.45;
+}
+
+/* "Configure this repository for SaiLoR?" — see RepoSetupPrompt.tsx. */
+.repo-setup-prompt {
+  max-width: 560px;
+}
+.repo-setup-prompt .modal-body p {
+  margin: 0 0 10px;
+  line-height: 1.5;
+  font-size: 0.92em;
+}
+.repo-setup-paths {
+  margin: 0 0 10px;
+  padding-left: 20px;
+  font-size: 0.9em;
+}
+.repo-setup-note {
+  color: var(--muted);
+  font-size: 0.85em !important;
+}
+
+/* A neutral, dismissible statement of something SaiLoR did on its own —
+   distinct from .toolbar-warning, which reports a problem. */
+.toolbar-notice {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* A small corner popup for something SaiLoR did on its own — see
+   RepoSetupToast.tsx. Out of the way of the form and the PDF, and never
+   modal: nothing about it needs an answer. */
+.toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 250;
+  max-width: 360px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  color: var(--text);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+.toast-error {
+  border-left-color: var(--danger);
+}
+.toast-text {
+  flex: 1 1 auto;
+}
+
+.stale-save-dialog {
+  max-width: 580px;
+}
+.stale-save-dialog .modal-body p {
+  margin: 0 0 10px;
+  line-height: 1.5;
+  font-size: 0.92em;
+}
+.stale-save-files {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  font-size: 0.9em;
+}
+.stale-save-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.stale-save-choices button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 14px;
+  text-align: left;
+  border-radius: 6px;
+}
+.stale-save-choices button span {
+  font-size: 0.85em;
+  opacity: 0.85;
+}
+.stale-save-refusal {
+  color: var(--danger);
+}
+
+.split-annotations-dialog {
+  max-width: 640px;
+}
+.split-annotations-dialog .modal-body p {
+  margin: 0 0 10px;
+  line-height: 1.5;
+  font-size: 0.92em;
+}
+.split-projects,
+.split-rows {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9em;
+}
+.split-projects li,
+.split-rows li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.split-project-name {
+  font-weight: 600;
+}
+.split-problem {
+  color: var(--danger);
+  font-size: 0.85em;
+  flex-basis: 100%;
+}
+
+/* Another project's highlights (the screening a project came from), shown
+   read-only: fainter, outlined, and not clickable — only their tooltip. */
+.pdf-mark-rect.is-foreign {
+  opacity: 0.25;
+  outline: 1px dashed var(--muted);
+  cursor: default;
+}
+.pdf-mark-rect.is-foreign:hover {
+  opacity: 0.35;
+}
+.pdf-mark-note.is-foreign {
+  opacity: 0.6;
+  cursor: default;
+}
+.pdf-mark-tooltip-from {
+  margin: 0 0 4px;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+.screening-marks-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0;
+  font-size: 0.85em;
+  color: var(--muted);
+  cursor: pointer;
+}

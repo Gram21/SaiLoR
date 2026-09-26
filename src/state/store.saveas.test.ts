@@ -10,8 +10,9 @@ import type { SaveHandle, ProjectLocation } from '../platform/adapter'
  */
 let written: { text: string; handle: SaveHandle } | null = null
 let destination: ProjectLocation | null = null
-let collisionResult: { siblingName: string; overlappingIds: string[] } | null = null
-let collisionCalls: { destPath: string; paperIds: string[]; screening: boolean }[] = []
+/** Folder name → project files already using it at the destination. */
+let folderUsers: Record<string, string[]> = {}
+let collisionCalls: { destPath: string; folder: string }[] = []
 
 const mockPlatform = {
   kind: 'electron' as const,
@@ -22,9 +23,9 @@ const mockPlatform = {
   checkRecents: async (e: unknown[]) => e,
   getOsInfo: () => null,
   pickProjectLocation: async () => destination,
-  checkSiblingCollision: async (destPath: string, paperIds: string[], screening: boolean) => {
-    collisionCalls.push({ destPath, paperIds, screening })
-    return collisionResult
+  annotationsDirUsers: async (destPath: string, folder: string) => {
+    collisionCalls.push({ destPath, folder })
+    return folderUsers[folder] ?? []
   },
   saveProject: async (text: string, handle: SaveHandle) => {
     written = { text, handle }
@@ -71,7 +72,7 @@ function writtenPdfs(): string[] {
 describe('saveAs re-derives the PDF paths for the new location', () => {
   beforeEach(() => {
     written = null
-    collisionResult = null
+    folderUsers = {}
     collisionCalls = []
     useStore.getState().loadFromText(PROJECT, { kind: 'electron', path: '/reviews/x.json' }, 'x.json')
   })
@@ -131,24 +132,29 @@ describe('saveAs re-derives the PDF paths for the new location', () => {
     expect(useStore.getState().project!.papers[0].pdf).toBe(rebased)
   })
 
-  it('refuses when the destination already holds a sibling sharing a paper id and family', async () => {
+  it('takes a folder named after the file when the destination already uses the default one', async () => {
     destination = at('/shared/backup.json')
-    collisionResult = { siblingName: 'other.json', overlappingIds: ['a'] }
+    folderUsers = { annotations: ['other.json'] }
+    expect(await useStore.getState().saveAs()).toBe(true)
+    expect(collisionCalls.map((c) => c.folder)).toEqual(['annotations', 'backup-annotations'])
+    expect(JSON.parse(written!.text).annotationsDir).toBe('backup-annotations')
+    expect(useStore.getState().project!.annotationsDir).toBe('backup-annotations')
+  })
+
+  it('refuses when the folder named after the file is taken too', async () => {
+    destination = at('/shared/backup.json')
+    folderUsers = { annotations: ['other.json'], 'backup-annotations': ['third.json'] }
     expect(await useStore.getState().saveAs()).toBe(false)
     expect(written).toBeNull()
-    expect(collisionCalls).toEqual([{ destPath: '/shared/backup.json', paperIds: ['a', 'b'], screening: false }])
-    const err = useStore.getState().loadError
-    expect(err?.message).toMatch(/other\.json/)
-    expect(err?.message).toMatch(/shares a paper/)
-    expect(err?.details?.[0]).toMatch(/\ba\b/)
+    expect(useStore.getState().loadError?.message).toMatch(/other\.json/)
     expect(useStore.getState().busy).toBe(false)
   })
 
-  it('proceeds normally when there is no collision', async () => {
+  it('proceeds normally when no other project uses the folder', async () => {
     destination = at('/other/y.json')
-    collisionResult = null
     expect(await useStore.getState().saveAs()).toBe(true)
     expect(written).not.toBeNull()
+    expect(JSON.parse(written!.text).annotationsDir).toBeUndefined()
     expect(collisionCalls).toHaveLength(1)
   })
 })

@@ -22,6 +22,8 @@ import { ValidationDialog } from './components/ValidationDialog'
 import { ExportPdfDialog } from './components/ExportPdfDialog'
 import { ConsolidationDialog } from './components/ConsolidationDialog'
 import { ReviewerPrompt } from './components/ReviewerPrompt'
+import { RepoSetupPrompt } from './components/RepoSetupPrompt'
+import { RepoSetupToast } from './components/RepoSetupToast'
 import { AgreementDialog } from './components/AgreementDialog'
 import { DisagreementOverview } from './components/DisagreementOverview'
 import { ConsolidationOverview } from './components/ConsolidationOverview'
@@ -32,6 +34,8 @@ import { LlmSettingsDialog } from './components/LlmSettingsDialog'
 import { GitCloneDialog } from './components/GitCloneDialog'
 import { GitDialog } from './components/GitDialog'
 import { GitMergeDialog } from './components/GitMergeDialog'
+import { StaleSaveDialog } from './components/StaleSaveDialog'
+import { SplitAnnotationsDialog } from './components/SplitAnnotationsDialog'
 import { BranchSwitchPrompt } from './components/BranchSwitchPrompt'
 import { NewBranchPrompt } from './components/NewBranchPrompt'
 import { MergeBranchPrompt } from './components/MergeBranchPrompt'
@@ -44,6 +48,7 @@ import { useDirtyGuard } from './hooks/useDirtyGuard'
 import { useElectronCloseGuard } from './hooks/useElectronCloseGuard'
 import { useConsolidationAlignment } from './hooks/useConsolidationAlignment'
 import { useAutosave } from './hooks/useAutosave'
+import { useUpstreamPolling } from './hooks/useUpstreamPolling'
 import {
   loadPaneWidths,
   savePaneWidths,
@@ -59,6 +64,7 @@ export function App() {
   useElectronCloseGuard()
   useConsolidationAlignment()
   useAutosave()
+  useUpstreamPolling()
 
   const project = useStore((s) => s.project)
   const sidebarCollapsed = useStore((s) => s.sidebarCollapsed)
@@ -399,6 +405,8 @@ export function App() {
       <ExportPdfDialog />
       <ConsolidationDialog />
       <ReviewerPrompt />
+      <RepoSetupPrompt />
+      <RepoSetupToast />
       <AgreementDialog />
       <ConsolidationOverview />
       <DisagreementOverview />
@@ -412,6 +420,8 @@ export function App() {
       <GitCloneDialog />
       <GitDialog />
       <GitMergeDialog />
+      <StaleSaveDialog />
+      <SplitAnnotationsDialog />
       <BranchSwitchPrompt />
       <NewBranchPrompt />
       <MergeBranchPrompt />

@@ -262,6 +262,27 @@ describe('validateDraft', () => {
     expect(issues.join(' ')).toMatch(/duplicate paper id/i)
   })
 
+  it('reports a case-only id collision as a duplicate, not two distinct ids', () => {
+    // Both pass a naive exact-match check; both collapse into one directory
+    // on a case-insensitive checkout (Windows, default macOS).
+    const a = makePaperFromPdf('a.pdf', 'a.pdf', undefined, new Set())
+    const b = makePaperFromPdf('b.pdf', 'b.pdf', undefined, new Set())
+    a.id = 'P1'
+    b.id = 'p1'
+    const issues = validateDraft(draft([node('X', { kind: 'string' })], [a, b]))
+    expect(issues.join(' ')).toMatch(/duplicate paper id/i)
+  })
+
+  it('blocks save on an id that is unsafe as a folder name, naming the paper and the reason', () => {
+    const paper = makePaperFromPdf('a.pdf', 'a.pdf', undefined, new Set())
+    paper.id = 'Smith 2020: A Study?'
+    const issues = validateDraft(draft([node('X', { kind: 'string' })], [paper]))
+    expect(issues).toContain(
+      'Paper 1: id "Smith 2020: A Study?" cannot be a folder name — ' +
+        '":" and "?" are not allowed in file names on Windows.',
+    )
+  })
+
   it('reports a paper with no PDF attached as a clear per-paper issue, not a schema error', () => {
     // A reference-import row before the user has attached a PDF: everything
     // else is filled in, only `pdf` is empty — the draft must tolerate that

@@ -13,8 +13,10 @@ attributable to a specific reviewer is worse than no answer at all.
   <img src="screenshots/reviewer-prompt.png" alt="The reviewer prompt: explains independent review and asks which reviewer seat you are, or Consolidation" width="820">
 </p>
 
-It's asked once and remembered for that project; switch seats any time from the toolbar's reviewer
-switcher at the top.
+It's asked once per project; switch seats any time from the toolbar's reviewer switcher at the top.
+Each paper remembers the seat you last read it in and switches back to it when you return, so if you
+are Reviewer 1 on some papers and Reviewer 2 on others, you only choose once per paper. A paper you
+haven't opened yet keeps the seat you're in.
 
 Each numbered reviewer sees and edits **only their own answers** — nobody is influenced by what anyone
 else already wrote. There's always one extra role beyond the numbered reviewers: **Consolidation**.
@@ -116,20 +118,18 @@ already partly consolidated is left alone.
 
 ## Reviewer-seat identity
 
-The seat you pick (see above) is remembered **on your own machine**, keyed to that project file. If
-you're using [Git support](git.md), the first time you claim a seat SaiLoR also records your git
-identity (name/email) *inside the project file itself* — this is what closes a real hazard: two
-different people, on two different clones, both picking "Reviewer 1" would otherwise merge into one
-chimeric answer tree with no warning at all the next time the file is pulled together.
+A seat is a role on a paper, not a person. A large review often divides its papers among more people
+than it has seats — six reviewers, sixty papers, each paper read by two of them — so "Reviewer 1" is
+a different person on different papers. The seats you pick (see above) are remembered **on your own
+machine only**, keyed to that project file; nothing about who you are is written into the project.
 
-Once a seat's identity is recorded, picking it from a *different* git identity warns you before you
-can proceed:
+What must not happen is two people reading the *same paper* in the *same seat*: both write the same
+file, and whoever merges last replaces the other's answers. If you're using [Git support](git.md),
+SaiLoR checks for exactly that. When the paper you're on was last committed in your current seat by
+someone else, a notice above the form names them. It doesn't block you — a legitimate handover looks
+the same — but if it wasn't meant to be you, switch seats or pick another paper. It says nothing about
+other papers, other seats, or your own earlier commits, and it only knows what has been committed and
+pulled.
 
-- You'll see a mismatch dialog explaining whose seat it already is, with the option to take it anyway
-  (if you're sure — a legitimate handover) or pick a different seat.
-- The toolbar's reviewer switcher shows who holds each seat on hover, so you can check before you even
-  try.
-
-This protection only exists once git is available and a seat has actually been claimed with it on —
-see [Things to know](things-to-know.md#two-people-must-not-pick-the-same-reviewer-seat)
-for what to do otherwise.
+Without git there is no such check — see
+[Things to know](things-to-know.md#two-people-must-not-pick-the-same-reviewer-seat).

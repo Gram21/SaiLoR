@@ -7,6 +7,7 @@ import type { SplitProject } from '../git/types'
 import type { FieldValue } from '../model/annotations'
 import {
   mergeProjects,
+  mergeResultProblem,
   applyResolutions,
   type FieldConflict,
   type MergeNote,
@@ -14,7 +15,7 @@ import {
 } from '../git/merge'
 import { detectFieldChanges, composeContents, type DetectedChanges, type Disposition } from '../git/changes'
 import { repoNameFromUrl } from '../git/url'
-import { annotationsRelDir } from '../git/relpath'
+import { stashBranchName } from '../git/stash'
 import { gitErrorText } from '../git/output'
 import type {
   GitProbe,
@@ -24,6 +25,8 @@ import type {
   GitBranch,
   MergeStart,
   CommitRecord,
+  AnnotationAuthors,
+  StashEntry,
 } from '../git/types'
 import { useStore } from './store'
 
@@ -178,6 +181,38 @@ interface GitState {
   /** Where the open project sits git-wise; null when it is not in a repository,
    *  there is no project, or git is unavailable. */
   repo: GitRepoInfo | null
+  /**
+   * Who last committed each annotation file — one `git log` per repository,
+   * read once, so the per-paper "somebody has already read this" check costs
+   * nothing at the point of use. Null outside a repository, or before it has
+   * loaded. See `src/git/seatOwner.ts` for why this is per paper.
+   */
+  annotationAuthors: AnnotationAuthors | null
+  /**
+   * Commits the upstream is ahead by, as of the last fetch — the toolbar's
+   * "↓ N to pull". Kept out of `repo` on purpose: it changes every couple of
+   * minutes, and replacing `repo` that often would make every in-flight
+   * operation that checks `get().repo === repo` think the repository changed
+   * under it and throw its result away. Null when unknown or there is no
+   * upstream. See `refreshUpstream`.
+   */
+  behind: number | null
+  /**
+   * Set when this project's repository needs SaiLoR's git rules *and* already
+   * holds rules of somebody's own, so the change has to be asked about rather
+   * than simply made. Null otherwise — including while it is being made, which
+   * happens without a prompt when there is nothing of anyone else's to
+   * overwrite. See `src/git/repoSetup.ts`.
+   */
+  repoSetupPrompt: { paths: string[] } | null
+  /** What the last automatic or accepted setup did, for a small popup — the
+   *  files land in a commit the reviewer did not type, so it should not happen
+   *  invisibly. Cleared when dismissed. See `RepoSetupToast`. */
+  repoSetupNotice: { kind: 'ok' | 'error'; text: string } | null
+  /** Every stash in the repository, newest first — see `src/git/stash.ts`.
+   *  Kept outside `panel` so the toolbar can mention SaiLoR's own stashes
+   *  while the panel is closed: parked work nobody remembers is lost work. */
+  stashes: StashEntry[]
   clone: CloneState | null
   panel: PanelState | null
   /** Local branches, refreshed whenever the panel opens/refreshes — for the
@@ -190,6 +225,36 @@ interface GitState {
   refreshBranches: () => Promise<void>
   /** Called from App.tsx whenever the open project's save handle changes. */
   refreshRepo: (handle: SaveHandle | null) => Promise<void>
+  /** Re-read `annotationAuthors` for the open project. Called by
+   *  `refreshRepo`, and after a commit — which is exactly what changes who
+   *  last wrote a reading. */
+  refreshSeatOwners: () => Promise<void>
+  /**
+   * Fetch in the background and recount the unpulled commits. Runs after a
+   * repository is detected, whenever the Git panel opens, and on a timer (see
+   * `useUpstreamPolling`). Skipped while the reviewer's own git operation is
+   * running, and never runs twice at once. See `src/git/fetchPolicy.ts`.
+   */
+  refreshUpstream: () => Promise<void>
+  /**
+   * Bring the project's `.gitattributes`/`.gitignore` up to what SaiLoR needs.
+   * Applies silently when there is nothing of the user's to overwrite, and
+   * otherwise raises `repoSetupPrompt` and waits. Called once per repository
+   * on open; safe to call again, since an up-to-date repository is a no-op.
+   */
+  ensureRepoSetup: () => Promise<void>
+  /** Answer `repoSetupPrompt`. */
+  resolveRepoSetup: (accept: boolean) => Promise<void>
+  dismissRepoSetupNotice: () => void
+
+  refreshStashes: () => Promise<void>
+  /** Stash this project's uncommitted changes. */
+  runStashPush: (message: string) => Promise<void>
+  /** Put a stash back — all or nothing; see `restoreStash`. */
+  runStashRestore: (sha: string) => Promise<void>
+  /** Restore a stash onto a new branch where it cannot conflict. */
+  runStashBranch: (sha: string) => Promise<void>
+  runStashDrop: (sha: string) => Promise<void>
 
   openClone: () => void
   closeClone: () => void
@@ -339,6 +404,16 @@ export const useGitStore = create<GitState>()(
       const repo = get().repo
       if (!git || !repo) return
       const resolved = applyResolutions(merged, conflicts, resolutions)
+      const problem = mergeResultProblem(resolved)
+      if (problem) {
+        set((s) => {
+          if (s.panel) {
+            s.panel.error = `The merged project would not open again, so nothing was written: ${problem}`
+            if (!s.panel.merge) s.panel.merge = { source, ref, merged, conflicts, resolutions, decided: {}, notes }
+          }
+        })
+        return
+      }
       const r =
         source.kind === 'branch-switch'
           ? await git.finishBranchSwitch(repo.root, repo.relPath, toSplitProject(resolved))
@@ -383,6 +458,47 @@ export const useGitStore = create<GitState>()(
      * a fast-forward/finished merge reloads from disk, which would silently
      * discard unsaved work without this check. `verb` reads into the message.
      */
+    /** The background fetch in progress, if any — see `refreshUpstream`. */
+    let backgroundFetch: Promise<void> | null = null
+
+    /** Let a background fetch finish before an operation that fetches or
+     *  pushes itself, rather than racing it for the same refs — which fails
+     *  with a "cannot lock ref" error that means nothing to a reviewer. */
+    async function afterBackgroundFetch(): Promise<void> {
+      if (backgroundFetch) await backgroundFetch
+    }
+
+    function setPanelWorking(): void {
+      set((s) => {
+        if (s.panel) {
+          s.panel.phase = 'working'
+          s.panel.error = null
+          s.panel.notice = null
+        }
+      })
+    }
+
+    function finishPanelWork(notice: string | null, error: string | null): void {
+      set((s) => {
+        if (s.panel) {
+          s.panel.phase = 'idle'
+          s.panel.notice = notice
+          s.panel.error = error
+        }
+      })
+    }
+
+    /** A stash operation that rewrites the working tree: run it, then reload
+     *  the open project from disk, since what it holds in memory no longer
+     *  matches the files. */
+    async function runStashOperation(op: () => Promise<GitRun>, successNotice: string): Promise<void> {
+      setPanelWorking()
+      const r = await op()
+      if (r.ok) await useStore.getState().resyncProjectFromDisk()
+      finishPanelWork(r.ok ? successNotice : null, r.ok ? null : gitErrorText(r))
+      await get().refreshStatus()
+    }
+
     function guardDirtyForMerge(verb: string): boolean {
       if (!useStore.getState().dirty) return true
       set((s) => {
@@ -528,7 +644,7 @@ export const useGitStore = create<GitState>()(
       // `project.json` stays clean — the routine case field review exists
       // for. `relPath` itself untracked means never committed, so there's
       // nothing to diff against — that case is still skipped.
-      const dir = annotationsRelDir(repo.relPath)
+      const dir = repo.annotationsDir
       const inAnnotationsDir = (p: string) => p === dir || p.startsWith(`${dir}/`)
       const inStatus = status.changes.some(
         (c) => (c.path === repo.relPath && c.code !== '??') || inAnnotationsDir(c.path),
@@ -619,6 +735,11 @@ export const useGitStore = create<GitState>()(
     const storeApi: GitState = {
       probe: null,
       repo: null,
+      annotationAuthors: null,
+      behind: null,
+      repoSetupPrompt: null,
+      repoSetupNotice: null,
+      stashes: [],
       clone: null,
       panel: null,
       branches: [],
@@ -637,6 +758,10 @@ export const useGitStore = create<GitState>()(
         // stale "Git" button doesn't linger while the real answer loads.
         set((s) => {
           s.repo = null
+          s.behind = null
+          s.annotationAuthors = null
+          s.repoSetupPrompt = null
+          s.stashes = []
         })
         const git = getPlatform().getGit()
         if (!git || !handle?.path) return
@@ -645,7 +770,206 @@ export const useGitStore = create<GitState>()(
         if (useStore.getState().saveHandle?.path !== handle.path) return
         set((s) => {
           s.repo = info
+          s.behind = info?.behind ?? null
         })
+        // Not awaited: it goes to the network, and nothing about opening a
+        // project should wait on that.
+        void get().refreshUpstream()
+        await get().refreshSeatOwners()
+        await get().ensureRepoSetup()
+        await get().refreshStashes()
+      },
+
+      ensureRepoSetup: async () => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo) return
+        try {
+          const status = await git.repoSetupStatus(repo.root, repo.relPath)
+          if (status.upToDate) return
+          if (status.needsConsent) {
+            set((s) => {
+              s.repoSetupPrompt = { paths: status.paths }
+            })
+            return
+          }
+          await get().resolveRepoSetup(true)
+        } catch {
+          // Configuring the repository is a convenience, never the reason a
+          // reviewer opened the project. A repository that cannot be read
+          // just goes unconfigured.
+        }
+      },
+
+      resolveRepoSetup: async (accept) => {
+        set((s) => {
+          s.repoSetupPrompt = null
+        })
+        if (!accept) return
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo) return
+        const r = await git.applyRepoSetup(repo.root, repo.relPath)
+        set((s) => {
+          s.repoSetupNotice = r.ok
+            ? { kind: 'ok', text: "Added SaiLoR's git rules for this project (.gitattributes, .gitignore) and committed them." }
+            : { kind: 'error', text: `SaiLoR could not configure this repository: ${gitErrorText(r)}` }
+        })
+        // The commit changed HEAD and the working tree.
+        await get().refreshStatus()
+      },
+
+      dismissRepoSetupNotice: () => {
+        set((s) => {
+          s.repoSetupNotice = null
+        })
+      },
+
+      refreshStashes: async () => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo) return
+        try {
+          const stashes = await git.stashList(repo.root)
+          if (get().repo === repo) set((s) => {
+            s.stashes = stashes
+          })
+        } catch {
+          // A list that cannot be read is shown as empty rather than as an
+          // error: nothing else in the panel depends on it.
+        }
+      },
+
+      runStashPush: async (message) => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo || !get().panel) return
+        // The stash takes what is on disk; unsaved edits exist only in memory
+        // and the reload afterwards would silently drop them.
+        if (!guardDirtyForMerge('stashing')) return
+        await runStashOperation(
+          () => git.stashPush(repo.root, repo.relPath, message),
+          'Stashed. Your changes to this project are parked below until you restore them.',
+        )
+      },
+
+      runStashRestore: async (sha) => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo || !get().panel) return
+        if (!guardDirtyForMerge('restoring a stash')) return
+        setPanelWorking()
+        const r = await git.stashRestore(repo.root, repo.relPath, sha)
+        if (r.kind === 'restored' || r.kind === 'restored-kept') {
+          await useStore.getState().resyncProjectFromDisk()
+          finishPanelWork(
+            r.kind === 'restored'
+              ? 'Restored.'
+              : `Restored, but the stash could not be removed afterwards (${r.message}). It now repeats ` +
+                  'what is already in your files, so deleting it is safe.',
+            null,
+          )
+        } else if (r.kind === 'dirty') {
+          finishPanelWork(
+            null,
+            `Commit or stash these first — restoring onto uncommitted work would mix two sets of edits: ` +
+              `${r.paths.join(', ')}. Nothing was changed.`,
+          )
+        } else if (r.kind === 'conflict') {
+          finishPanelWork(
+            null,
+            'This stash no longer fits the current commit — the same files changed since it was made. ' +
+              'Nothing was changed and the stash is kept. Use "Restore on a new branch" to put it back ' +
+              'where it cannot conflict, then commit there and bring it over with Merge branch…, which ' +
+              'resolves any overlap field by field.',
+          )
+        } else if (r.kind === 'gone') {
+          finishPanelWork(null, 'That stash no longer exists.')
+        } else {
+          finishPanelWork(null, r.message)
+        }
+        await get().refreshStatus()
+      },
+
+      runStashBranch: async (sha) => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo || !get().panel) return
+        if (!guardDirtyForMerge('restoring a stash')) return
+        const entry = get().stashes.find((e) => e.sha === sha)
+        if (!entry) return
+        const branch = stashBranchName(entry, get().branches.map((b) => b.name))
+        await runStashOperation(
+          () => git.stashBranch(repo.root, repo.relPath, sha, branch),
+          `Restored onto the new branch "${branch}", which you are now on. Commit there, switch back, ` +
+            'and use Merge branch… to bring the changes over.',
+        )
+        // A new branch, and HEAD moved onto it.
+        await get().refreshRepo(useStore.getState().saveHandle)
+        await get().refreshBranches()
+      },
+
+      runStashDrop: async (sha) => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo || !get().panel) return
+        setPanelWorking()
+        const r = await git.stashDrop(repo.root, sha)
+        finishPanelWork(r.ok ? 'Stash deleted.' : null, r.ok ? null : gitErrorText(r))
+        await get().refreshStashes()
+      },
+
+      refreshUpstream: async () => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        const path = useStore.getState().saveHandle?.path
+        if (!git || !repo || !path || !repo.upstream || backgroundFetch) return
+        // The reviewer's own pull or merge fetches too, and two fetches racing
+        // for the same refs fail — theirs is the one that matters.
+        const panel = get().panel
+        if (panel && (panel.phase === 'working' || panel.merge)) return
+        backgroundFetch = (async () => {
+          try {
+            // Refused or failed fetches still leave the local refs to count
+            // against, so the recount below runs either way.
+            await git.backgroundFetch(repo.root)
+            const info = await git.info(path)
+            if (get().repo?.root === repo.root) set((s) => {
+              s.behind = info?.behind ?? null
+            })
+          } catch {
+            // Keep the last known count; the next cycle tries again.
+          } finally {
+            backgroundFetch = null
+          }
+        })()
+        await backgroundFetch
+      },
+
+      refreshSeatOwners: async () => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        const project = useStore.getState().project
+        if (!git || !repo || !project || project.reviewers <= 1) {
+          set((s) => {
+            s.annotationAuthors = null
+          })
+          return
+        }
+        // Best-effort: a repository this can't read says nothing about who
+        // has read what, which is the same state as a project outside git.
+        // Never a blocking error — nothing here is worth interrupting a
+        // reviewer over.
+        try {
+          const authors = await git.annotationAuthors(repo.root, repo.relPath)
+          if (get().repo === repo) set((s) => {
+            s.annotationAuthors = authors
+          })
+        } catch {
+          set((s) => {
+            s.annotationAuthors = null
+          })
+        }
       },
 
       openClone: () => {
@@ -746,6 +1070,8 @@ export const useGitStore = create<GitState>()(
             history: null,
           }
         })
+        // "↓ N to pull" should be true the moment somebody looks at git.
+        void get().refreshUpstream()
         await get().refreshStatus()
         await get().refreshBranches()
         // Default tick: only the open project's own file (when not already
@@ -784,6 +1110,7 @@ export const useGitStore = create<GitState>()(
             }
           })
           await refreshFieldReview(repo, status)
+          await get().refreshStashes()
         } catch (err) {
           set((s) => {
             if (!s.panel) return
@@ -912,6 +1239,9 @@ export const useGitStore = create<GitState>()(
           }
         })
         await get().refreshStatus()
+        // A commit can change who last wrote a seat — most obviously the first
+        // one, which turns an unclaimed seat into yours.
+        await get().refreshSeatOwners()
       },
 
       runDiscard: async () => {
@@ -969,6 +1299,7 @@ export const useGitStore = create<GitState>()(
         const git = getPlatform().getGit()
         const repo = get().repo
         if (!git || !repo) return
+        await afterBackgroundFetch()
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'working'
@@ -989,6 +1320,7 @@ export const useGitStore = create<GitState>()(
         const git = getPlatform().getGit()
         const repo = get().repo
         if (!git || !repo) return
+        await afterBackgroundFetch()
 
         if (!guardDirtyForMerge('pulling')) return
 
@@ -1017,6 +1349,7 @@ export const useGitStore = create<GitState>()(
         const git = getPlatform().getGit()
         const repo = get().repo
         if (!git || !repo || ref === repo.branch) return
+        await afterBackgroundFetch()
 
         if (!guardDirtyForMerge('merging')) return
 
@@ -1435,21 +1768,27 @@ export const useGitStore = create<GitState>()(
       // start.kind === 'merge': stash + checkout already happened — parse each
       // revision independently so a failure names which one, aborting back
       // to `start.sourceBranch` like `runPull` aborts its in-progress merge.
-      const abort = async () => {
-        await git.abortBranchSwitch(repo.root, start.sourceBranch)
+      // Returns what to append to the caller's own error: nothing when the
+      // changes came back, and otherwise git's reason plus where they went.
+      // Each caller then writes its error, so a failure reported any other way
+      // would be overwritten — which is exactly how a stranded carry-over used
+      // to go unmentioned while the panel looked clean.
+      const abort = async (): Promise<string> => {
+        const r = await git.abortBranchSwitch(repo.root, start.sourceBranch)
         await get().refreshRepo(useStore.getState().saveHandle)
         await get().refreshBranches()
         await get().refreshStatus()
+        return r.ok ? '' : `\n\n${gitErrorText(r)}`
       }
       let base: Project | null
       try {
         base = start.base === null ? null : loadProject(start.base)
       } catch (err) {
-        await abort()
+        const stranded = await abort()
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'idle'
-            s.panel.error = mergeParseError(`${start.sourceBranch} (before switching)`, err)
+            s.panel.error = mergeParseError(`${start.sourceBranch} (before switching)`, err) + stranded
           }
         })
         return
@@ -1458,11 +1797,11 @@ export const useGitStore = create<GitState>()(
       try {
         ours = loadProject(start.ours)
       } catch (err) {
-        await abort()
+        const stranded = await abort()
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'idle'
-            s.panel.error = mergeParseError('your uncommitted changes', err)
+            s.panel.error = mergeParseError('your uncommitted changes', err) + stranded
           }
         })
         return
@@ -1471,11 +1810,11 @@ export const useGitStore = create<GitState>()(
       try {
         theirs = loadProject(start.theirs)
       } catch (err) {
-        await abort()
+        const stranded = await abort()
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'idle'
-            s.panel.error = mergeParseError(branch, err)
+            s.panel.error = mergeParseError(branch, err) + stranded
           }
         })
         return
@@ -1483,11 +1822,11 @@ export const useGitStore = create<GitState>()(
 
       const outcome = mergeProjects(base, ours, theirs)
       if (outcome.kind === 'refused') {
-        await abort()
+        const stranded = await abort()
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'idle'
-            s.panel.error = [outcome.reason, ...outcome.details].join('\n')
+            s.panel.error = [outcome.reason, ...outcome.details].join('\n') + stranded
           }
         })
         return

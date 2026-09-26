@@ -23,7 +23,9 @@ describe('duplicatePaperIds', () => {
     expect(duplicatePaperIds([{ id: '' }, { id: '  ' }, { id: '' }])).toEqual(new Set())
   })
 
-  it('is case-sensitive, matching validateDraft', () => {
-    expect(duplicatePaperIds([{ id: 'Paper-A' }, { id: 'paper-a' }])).toEqual(new Set())
+  it('is case-insensitive, matching validateDraft', () => {
+    // Both land in one folder on a case-insensitive checkout, and validateDraft
+    // refuses them at save time — the live warning must agree, and flag both.
+    expect(duplicatePaperIds([{ id: 'Paper-A' }, { id: 'paper-a' }])).toEqual(new Set(['Paper-A', 'paper-a']))
   })
 })

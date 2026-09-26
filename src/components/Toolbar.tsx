@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../state/store'
 import { useEditorStore } from '../state/editorStore'
 import { useGitStore } from '../state/gitStore'
+import { CONSOLIDATION_SEAT } from '../git/seatOwner'
 import { getPlatform } from '../platform'
 import { Dropdown, type MenuItem } from './Dropdown'
 import { SidebarToggle } from './SidebarToggle'
@@ -125,6 +126,8 @@ export function Toolbar() {
   const unlockAi = useStore((s) => s.unlockAi)
   const currentReviewer = useStore((s) => s.currentReviewer)
   const selectReviewer = useStore((s) => s.selectReviewer)
+  const corruptFiles = useStore((s) => s.corruptFiles)
+  const showCorruptFiles = useStore((s) => s.showCorruptFiles)
 
   // Git support is Electron-only: `getGit()` is null in the browser (no local
   // git to reach at all). The entry points stay visible there too, disabled
@@ -135,6 +138,8 @@ export function Toolbar() {
   const git = getPlatform().getGit()
   const gitProbe = useGitStore((s) => s.probe)
   const gitRepo = useGitStore((s) => s.repo)
+  const behind = useGitStore((s) => s.behind)
+  const ownStashes = useGitStore((s) => s.stashes.filter((e) => e.origin !== 'other').length)
   const openClone = useGitStore((s) => s.openClone)
   const openGitPanel = useGitStore((s) => s.openPanel)
   const gitBtn = gitButtonState(!!git, gitProbe, !!project, gitRepo, busy, editorOpen, GIT_BROWSER_DISABLED_HINT)
@@ -208,7 +213,7 @@ export function Toolbar() {
       ),
       hint: "Consolidation — compare every reviewer's answers and record the final, agreed result. This is what the project's saved output actually contains.",
       disabled: busy,
-      onSelect: () => selectReviewer('consolidation'),
+      onSelect: () => selectReviewer(CONSOLIDATION_SEAT),
     },
   ]
 
@@ -327,6 +332,50 @@ export function Toolbar() {
           >
             Validate
           </button>
+          {/* Parked work nobody remembers is lost work. Only SaiLoR's own
+              stashes count here — a carry-over that did not come back, or one
+              made from the Git panel — since a stash somebody made in a
+              terminal is their own git business and would only nag. */}
+          {ownStashes > 0 && !editorOpen && (
+            <button
+              type="button"
+              className="toolbar-notice"
+              title="Changes parked in a stash — open Git to restore or delete them"
+              onClick={() => void openGitPanel()}
+              disabled={gitBtn.disabled}
+            >
+              {ownStashes} stashed
+            </button>
+          )}
+          {/* The repository already knows this, and until now only said so
+              inside one confirm dialog in the schema editor. "Behind" is as of
+              the last fetch, so it can report work waiting but never that
+              there is none — hence no "up to date" counterpart. */}
+          {behind !== null && behind > 0 && !editorOpen && (
+            <button
+              type="button"
+              className="toolbar-warning"
+              title="Someone has pushed work you have not pulled yet — open Git to pull it"
+              onClick={() => void openGitPanel()}
+              disabled={gitBtn.disabled}
+            >
+              ↓ {behind} to pull
+            </button>
+          )}
+          {/* Stays for as long as the project is open. The load-time banner is
+              dismissible, and a reviewer who clicks it away otherwise has no
+              way left to learn the project is still missing somebody's work —
+              which reads on every screen as that reviewer having done none. */}
+          {corruptFiles.length > 0 && !editorOpen && (
+            <button
+              type="button"
+              className="toolbar-warning"
+              title={`${corruptFiles.length === 1 ? 'One annotation file' : `${corruptFiles.length} annotation files`} could not be read — click for the list`}
+              onClick={showCorruptFiles}
+            >
+              ⚠ {corruptFiles.length} unreadable
+            </button>
+          )}
           <button
             type="button"
             title="Close this project and return to the start screen"
@@ -390,7 +439,7 @@ export function Toolbar() {
                 }`}
                 title="Consolidation — compare every reviewer's answers and record the final, agreed result. This is what the project's saved output actually contains."
                 disabled={busy}
-                onClick={() => selectReviewer('consolidation')}
+                onClick={() => selectReviewer(CONSOLIDATION_SEAT)}
               >
                 Consolidation
               </button>

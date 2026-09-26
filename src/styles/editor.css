@@ -305,3 +305,9 @@
   outline: 2px solid var(--accent-weak);
   border-color: var(--accent);
 }
+
+.editor-field-problem {
+  margin: -4px 0 8px;
+  color: var(--danger);
+  font-size: 0.85em;
+}

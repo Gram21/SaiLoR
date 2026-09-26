@@ -3,12 +3,15 @@ import {
   useEditorStore,
   nodePathNames,
   parentUidOf,
+  pendingSchemaMoves,
+  moveNodeIn,
   findNode,
   type DropPosition,
   type EditorNode,
   type EditorNodeKind,
 } from '../state/editorStore'
 import { countPapersUsingField, countLinksUsingField } from '../model/fieldUsage'
+import { useGitStore } from '../state/gitStore'
 import { VisibleIfDialog, describeVisibleIf, describeVisibleIfFull } from './VisibleIfDialog'
 import '../styles/schema-editor.css'
 
@@ -117,6 +120,42 @@ function SchemaNodeRow({
   const moveNode = useEditorStore((s) => s.moveNode)
   const toggleCollapsed = useEditorStore((s) => s.toggleCollapsed)
   const papers = useEditorStore((s) => s.papers)
+  const behind = useGitStore((s) => s.behind)
+  const savedNodes = useEditorStore((s) => s.savedNodes)
+  const liveNodes = useEditorStore((s) => s.nodes)
+  const keepHidden = useEditorStore((s) => s.keepHidden)
+  const setKeepHidden = useEditorStore((s) => s.setKeepHidden)
+
+  /** This node's rename or move since the last save, if its answers are
+   *  affected — see `pendingSchemaMoves`. */
+  const pendingMove = useMemo(() => {
+    const move = pendingSchemaMoves(savedNodes, liveNodes, keepHidden).find((m) => m.uid === node.uid)
+    if (!move) return null
+    const count = countPapersUsingField(papers, move.from) + countLinksUsingField(papers, move.from)
+    return count > 0 ? { ...move, count } : null
+  }, [savedNodes, liveNodes, keepHidden, papers, node.uid])
+
+  /** Would the answers follow this node to where it now is? Then nothing is
+   *  hidden, and the note under the row says so instead of a confirm. */
+  const answersFollow = (nodes: typeof liveNodes, uid: string): boolean => {
+    const st = useEditorStore.getState()
+    const move = pendingSchemaMoves(st.savedNodes, nodes, st.keepHidden).find((m) => m.uid === uid)
+    return !!move && move.carried && !move.kept
+  }
+
+  /**
+   * The "…may have recorded more" caveat, sharpened when the repository
+   * already knows there is more. Deliberately only ever an addition: the count
+   * comes from `git rev-list HEAD..@{u}` with no fetch (see
+   * `GitInfoResult.behind`), so it can say "there is known to be work waiting"
+   * but never "you are up to date" — and silence here means "nothing known",
+   * not "nothing there".
+   */
+  const unpulledNote = (): string =>
+    behind && behind > 0
+      ? ` In fact this branch is ${behind} commit${behind === 1 ? '' : 's'} behind its upstream ` +
+        `as of your last fetch — pull first and the count above may well be higher.`
+      : ''
 
   // The field's name when the input gained focus, so a *committed* rename (on
   // blur) can be checked against what papers actually record — rather than
@@ -126,10 +165,12 @@ function SchemaNodeRow({
 
   /**
    * Answers are keyed by field name, and nothing migrates them: renaming or
-   * removing a field orphans every answer recorded under it, and the next save
-   * makes that permanent. Warn before it happens — the screening reasons
-   * editor has guarded the identical hazard from the start; the schema editor
-   * never did.
+   * removing a field orphans every answer recorded under it. The files keep
+   * those answers (see `orphanedNodes` in `model/annotations.ts`) and hand
+   * them back if the name returns, so this is no longer the permanent loss it
+   * once was — but nothing shows or exports them in the meantime, which is
+   * still worth being asked about. The screening reasons editor has guarded
+   * the identical hazard from the start; the schema editor never did.
    */
   const confirmDestructive = (what: 'rename' | 'remove', ...names: (string | null)[]): boolean => {
     // Several candidate names, because a rename may be typed but not yet
@@ -158,8 +199,11 @@ function SchemaNodeRow({
       )
     }
     return window.confirm(
-      `${parts.join(', and ')} under "${worst.name}". ${verb} it will discard that — including every ` +
-        `reviewer's own — the next time the project is saved, and it cannot be undone afterwards.\n\nContinue?`,
+      `${parts.join(', and ')} under "${worst.name}". ${verb} it hides that — including every ` +
+        `reviewer's own — from every screen and export. The answers stay in the files and come back ` +
+        `if the name does.\n\nThis count covers only the papers in this copy of the project; ` +
+        `reviewers whose work you have not pulled yet may have recorded more.${unpulledNote()}` +
+        `\n\nContinue?`,
     )
   }
 
@@ -167,6 +211,7 @@ function SchemaNodeRow({
     const from = nameOnFocus.current
     nameOnFocus.current = null
     if (from === null || from === node.name) return
+    if (answersFollow(useEditorStore.getState().nodes, node.uid)) return
     if (!confirmDestructive('rename', from)) {
       // Put the old name back — the reviewer declined to lose the answers.
       updateNode(node.uid, { name: from })
@@ -260,6 +305,8 @@ function SchemaNodeRow({
     const newParent = pos === 'inside' ? targetUid : parentUidOf(nodes, targetUid)
     if (oldParent === undefined || newParent === undefined) return true
     if (oldParent === newParent) return true // a reorder: nothing moves
+    const after = structuredClone(nodes)
+    if (moveNodeIn(after, dragUid_, targetUid, pos) && answersFollow(after, dragUid_)) return true
 
     const path = nodePathNames(nodes, dragUid_)
     if (!path) return true
@@ -275,8 +322,10 @@ function SchemaNodeRow({
     }
     return window.confirm(
       `${parts.join(', and ')} under "${path.join(' / ')}". Moving it changes where that belongs, so ` +
-        `it will be discarded — including every reviewer's own — the next time the project is saved, ` +
-        `and it cannot be undone afterwards.\n\nContinue?`,
+        `it is hidden — including every reviewer's own — from every screen and export. The answers ` +
+        `stay in the files and come back if the node returns to where it was.\n\nThis count covers ` +
+        `only the papers in this copy of the project; reviewers whose work you have not pulled yet ` +
+        `may have recorded more.${unpulledNote()}\n\nContinue?`,
     )
   }
 
@@ -458,6 +507,35 @@ function SchemaNodeRow({
           ×
         </button>
       </div>
+
+      {pendingMove && (
+        <p className="schema-move-note" role="status">
+          {pendingMove.carried && !pendingMove.kept ? (
+            <>
+              {pendingMove.count === 1 ? '1 paper has' : `${pendingMove.count} papers have`} answers under “
+              {pendingMove.from.join(' › ')}”. They move here when you save, and answers other reviewers
+              recorded there follow once their work arrives.{' '}
+              <button type="button" className="schema-move-toggle" onClick={() => setKeepHidden(node.uid, true)}>
+                Keep them hidden instead
+              </button>
+            </>
+          ) : pendingMove.kept ? (
+            <>
+              Answers under “{pendingMove.from.join(' › ')}” will stay hidden; they come back if the field
+              returns there.{' '}
+              <button type="button" className="schema-move-toggle" onClick={() => setKeepHidden(node.uid, false)}>
+                Move them here after all
+              </button>
+            </>
+          ) : (
+            <>
+              {pendingMove.count === 1 ? '1 paper has' : `${pendingMove.count} papers have`} answers under “
+              {pendingMove.from.join(' › ')}”. They can&apos;t follow through a repeated group — which entry
+              would they belong to? — so they will be hidden.
+            </>
+          )}
+        </p>
+      )}
 
       {gateOpen && (
         <VisibleIfDialog

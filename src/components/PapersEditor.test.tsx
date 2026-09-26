@@ -99,6 +99,59 @@ describe('PapersEditor: duplicate id flagging (REQ-EDT-20)', () => {
   })
 })
 
+describe('PapersEditor: unsafe id flagging', () => {
+  it('flags an id that is unsafe as a folder name, live as the reviewer types', async () => {
+    const paper = makePaperFromPdf('a.pdf', 'a.pdf', undefined, new Set())
+    paper.id = 'one'
+    useEditorStore.setState({ papers: [paper] })
+    render(<PapersEditor />)
+
+    const idInput = screen.getByDisplayValue('one')
+    expect(idInput.getAttribute('aria-invalid')).toBe('false')
+
+    // ':' and '?' are legal on macOS/Linux but unrepresentable on Windows.
+    await userEvent.clear(idInput)
+    await userEvent.type(idInput, 'Smith 2020: A Study?')
+
+    expect(idInput.getAttribute('aria-invalid')).toBe('true')
+    expect(screen.getByText('— invalid character')).toBeInTheDocument()
+  })
+
+  it('normalises a manually typed id to NFC once it is committed on blur', async () => {
+    const paper = makePaperFromPdf('a.pdf', 'a.pdf', undefined, new Set())
+    paper.id = 'one'
+    useEditorStore.setState({ papers: [paper] })
+    render(<PapersEditor />)
+
+    const idInput = screen.getByDisplayValue('one')
+    // "Müller" spelled with a combining diaeresis (NFD) — the same rendered
+    // text as the precomposed (NFC) form, but different code points, which
+    // would name two different directories depending which platform typed it.
+    const nfd = 'Müller'
+    await userEvent.clear(idInput)
+    await userEvent.type(idInput, nfd)
+    fireEvent.blur(idInput)
+
+    await waitFor(() => expect(useEditorStore.getState().papers[0].id).toBe(nfd.normalize('NFC')))
+  })
+})
+
+describe('PapersEditor: ids that differ only in case are duplicates while typing', () => {
+  it('flags P1 next to p1 live, not only when Save refuses them', async () => {
+    // They collapse into one folder on a case-insensitive checkout. The save
+    // gate already refused them; the live warning used to compare exactly and
+    // stay quiet until then.
+    const a = makePaperFromPdf('a.pdf', 'a.pdf', undefined, new Set())
+    const b = makePaperFromPdf('b.pdf', 'b.pdf', undefined, new Set())
+    a.id = 'P1'
+    b.id = 'p1'
+    useEditorStore.setState({ papers: [a, b] })
+    render(<PapersEditor />)
+    expect(screen.getByDisplayValue('P1')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByDisplayValue('p1')).toHaveAttribute('aria-invalid', 'true')
+  })
+})
+
 describe('PapersEditor: confirm removal of annotated papers (REQ-EDT-50)', () => {
   it('asks before removing a paper with recorded annotations, and keeps it on Cancel', async () => {
     const paper = makePaperFromPdf('a.pdf', 'a.pdf', undefined, new Set())
@@ -137,6 +190,63 @@ describe('PapersEditor: confirm removal of annotated papers (REQ-EDT-50)', () =>
 
     expect(confirmSpy).not.toHaveBeenCalled()
     expect(useEditorStore.getState().papers).toHaveLength(0)
+    confirmSpy.mockRestore()
+  })
+})
+
+describe('PapersEditor: confirm renaming the id of an annotated paper', () => {
+  /** A paper's answers live in `annotations/<id>/`, so the id is what ties
+   *  them to the paper — including answers other reviewers have not pushed. */
+  const annotated = () => {
+    const paper = makePaperFromPdf('a.pdf', 'a.pdf', undefined, new Set())
+    paper.id = 'old-id'
+    paper.annotations = { Relevant: [{ value: true }] }
+    return paper
+  }
+
+  it('puts the old id back when the reviewer cancels', async () => {
+    useEditorStore.setState({ papers: [annotated()] })
+    render(<PapersEditor />)
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    const idInput = screen.getByDisplayValue('old-id')
+    await userEvent.clear(idInput)
+    await userEvent.type(idInput, 'new-id')
+    await userEvent.tab()
+
+    expect(confirmSpy).toHaveBeenCalled()
+    expect(useEditorStore.getState().papers[0].id).toBe('old-id')
+    confirmSpy.mockRestore()
+  })
+
+  it('keeps the new id once the reviewer confirms', async () => {
+    useEditorStore.setState({ papers: [annotated()] })
+    render(<PapersEditor />)
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+    const idInput = screen.getByDisplayValue('old-id')
+    await userEvent.clear(idInput)
+    await userEvent.type(idInput, 'new-id')
+    await userEvent.tab()
+
+    expect(useEditorStore.getState().papers[0].id).toBe('new-id')
+    confirmSpy.mockRestore()
+  })
+
+  it('does not ask for a paper with no recorded annotations', async () => {
+    const paper = makePaperFromPdf('a.pdf', 'a.pdf', undefined, new Set())
+    paper.id = 'old-id'
+    useEditorStore.setState({ papers: [paper] })
+    render(<PapersEditor />)
+    const confirmSpy = vi.spyOn(window, 'confirm')
+
+    const idInput = screen.getByDisplayValue('old-id')
+    await userEvent.clear(idInput)
+    await userEvent.type(idInput, 'new-id')
+    await userEvent.tab()
+
+    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(useEditorStore.getState().papers[0].id).toBe('new-id')
     confirmSpy.mockRestore()
   })
 })

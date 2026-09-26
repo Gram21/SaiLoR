@@ -39,7 +39,7 @@ const fakeGit: GitPlatform = {
     relPath: 'project.json',
     branch: git(['branch', '--show-current']).trim() || null,
     upstream: null,
-    hasHead: true,
+    hasHead: true, behind: null, annotationsDir: 'annotations',
   }),
   status: async (root): Promise<GitStatus> => {
     const { parsePorcelain, capDiff } = await import('../../git/output')
@@ -114,6 +114,15 @@ const fakeGit: GitPlatform = {
       return { ok: false, code: null, stdout: '', stderr: String(err) }
     }
   },
+  annotationAuthors: async () => ({ me: null, files: {} }),
+  repoSetupStatus: async () => ({ upToDate: true, needsConsent: false, paths: [] }),
+  applyRepoSetup: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
+  backgroundFetch: async () => ({ fetched: false, refused: false }),
+  stashList: async () => [],
+  stashPush: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
+  stashRestore: async () => ({ kind: 'restored' as const }),
+  stashDrop: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
+  stashBranch: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
   branches: async () => [],
   createBranch: async () => ({ ok: false, code: null, stdout: '', stderr: 'not supported in this test' }),
   deleteBranch: async () => ({ ok: false, code: null, stdout: '', stderr: 'not supported in this test' }),

@@ -90,3 +90,10 @@ The new project's location defaults to right next to the screening JSON, so ever
 path keeps resolving unchanged. Its project editor also shows an **Imported from** note recording
 which screening project it came from, when, and how many papers were carried over versus left behind
 — see [Setting up a project](project-editor.md#provenance).
+
+**The screeners' PDF highlights come along to look at.** In a project started this way, a paper the
+screeners highlighted or annotated in its PDF gets a **Show markings from screening (N)** box in the
+annotation panel; papers without any don't show it. Tick it and every screening reviewer's highlights
+and notes (and the consolidated ones) appear on the PDF, faint and outlined, read-only — hover one to
+see whose it is and what they wrote. They are read from the screening project's own files each time the
+project opens, so the screening JSON has to stay next to the new project.
