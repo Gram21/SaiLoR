@@ -144,6 +144,13 @@ the project editor. See the [index](index.md) for the glossary.
 - **Verified by:** `src/model/annotationsDir.test.ts`, `src/state/editorStore.annotationsDir.test.ts`
 - **Status:** Implemented
 
+### REQ-DAT-172 — Highlight file names by project kind
+- **Description:** The system shall store a screening project's PDF highlights as `screening-marks-<n>.json` and `screening-marks-consolidated.json`, and an annotation project's as `marks-<n>.json` and `marks-consolidated.json`, so that a screening project and an annotation project never write a file of the same name; a screening project's highlight files written under the older `marks-*` names shall be read only when no file under the new name exists for that seat and no annotation project sharing its annotations folder lists that paper.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/project.ts` (`marksFileName`, `parseMarksFileName`), `electron/main.ts` (`loadPaperFiles`, `readProjectText`), `src/model/annotationsDir.ts` (`filesCollide`), commit `6eb9027`
+- **Verified by:** `src/model/annotationsDir.test.ts` (`highlight file names`, `filesCollide`), `src/model/split.test.ts`, `src/git/ownAnnotationPath.test.ts`
+- **Status:** Implemented
+
 ### REQ-DAT-170 — Prune only trailing empties on save
 - **Description:** When serializing an annotation tree, the system shall drop only trailing empty instances of a repeatable node, keeping gaps before filled instances because position carries alignment meaning, and shall serialize trees with no filled field as empty objects.
 - **Type:** Functional (ISO 25010: Functional Suitability)

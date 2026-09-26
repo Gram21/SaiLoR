@@ -100,19 +100,18 @@ was already committed in your seat by someone else — but only once their work 
 pulled, so agree out of band (a message, a spreadsheet, whatever) who reads which paper in which seat
 regardless. See [Reviewer-seat identity](multi-reviewer.md#reviewer-seat-identity).
 
-## Two projects sharing papers need two annotations folders
+## Two projects of the same kind sharing papers need two annotations folders
 
 ⚠️ Each project keeps its answers in a folder next to its JSON file — `annotations/` unless the
-project editor names another. Every file there is named after its paper, so two project files in the
-same folder that share `annotations/` *and* list the same paper write the same files — the answers of
-two projects of the same kind, or the PDF highlights of any two — and overwrite each other.
+project editor names another. Every file there is named after its paper and after the kind of
+project: `reviewer-*`, `consolidated` and `marks-*` for an annotation project, `screening-*` and
+`screening-marks-*` for a screening project. So a screening project and an annotation project can
+always share a folder — that is how a screening and the project started from it with **New from
+screening…** sit together — but two projects of the *same* kind that list the same paper write the
+same files and overwrite each other.
 
-Projects with no paper in common can share the folder, and that is the usual case for a screening
-project and the annotation project started from it with **New from screening…**: the import renames
-any paper id the screening project already uses, and gives the new project a folder of its own anyway.
-
-Where papers are shared, SaiLoR keeps the projects apart. Save As into a folder whose `annotations/`
-such a project uses gives the new file a folder named after it (`backup.json` →
+Where that happens, SaiLoR keeps the projects apart. Save As into a folder whose `annotations/` such a
+project uses gives the new file a folder named after it (`backup.json` →
 `backup-annotations/`). Opening a project whose folder is shared that way offers to **split** it: every project file sharing the folder gets its own,
 recorded in its JSON file, and each annotation file goes to the project it belongs to — by paper and
 kind of file, and where two projects could own it, by the schema version it was written under or by

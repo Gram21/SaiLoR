@@ -51,14 +51,14 @@ per category so requirements can be inserted without renumbering.
 
 | Category | Requirements |
 |---|---|
-| Data model & editor (DAT/EDT) | 58 |
+| Data model & editor (DAT/EDT) | 59 |
 | Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 51 |
 | Screening (SCR) | 38 |
 | Consolidation (CON) | 44 |
 | Git integration (GIT) | 58 |
 | LLM annotation (LLM) | 31 |
 | Platform & shell (PLT) | 44 |
-| **Total** | **324** |
+| **Total** | **325** |
 
 ## Method & evidence notes
 
@@ -106,3 +106,5 @@ per category so requirements can be inserted without renumbering.
   `samples/git-scenarios/`.
 - **Screening beside annotation.** REQ-PLT-90 and REQ-PLT-95 narrowed to projects that share a paper
   identifier; REQ-EDT-46 added for the folder a project started from screening gets.
+- **Highlight file names (source at `6eb9027`).** REQ-DAT-172 added; REQ-PLT-90 and REQ-PLT-95 narrowed
+  to projects of the same kind.
