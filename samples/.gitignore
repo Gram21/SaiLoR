@@ -1,4 +1,6 @@
 annotations
+project-annotations
+screening-annotations
 pdfs/*.pdf
 
 # >>> SaiLoR (managed) >>>
