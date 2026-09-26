@@ -230,10 +230,22 @@ function parseOpenRouterModels(json: unknown): ModelsPage {
   const models = json.data.flatMap((m): ModelInfo[] => {
     if (!isRecord(m) || typeof m.id !== 'string') return []
     const label = typeof m.name === 'string' && m.name ? m.name : m.id
-    return [{ id: m.id, label, reasoning: openrouterReasoning(m.reasoning) }]
+    return [
+      { id: m.id, label, reasoning: openrouterReasoning(m.reasoning), pricing: openrouterPricing(m.pricing) },
+    ]
   })
   const nextCursor = isRecord(json.links) && typeof json.links.next === 'string' ? json.links.next : undefined
   return { models, nextCursor }
+}
+
+// OpenRouter states its own per-model price as USD per token, as decimal
+// strings (e.g. "0.000003") — this app shows/stores USD per 1M tokens.
+function openrouterPricing(raw: unknown): { input: number; output: number } | undefined {
+  if (!isRecord(raw)) return undefined
+  const input = Number(raw.prompt)
+  const output = Number(raw.completion)
+  if (!Number.isFinite(input) || !Number.isFinite(output)) return undefined
+  return { input: input * 1e6, output: output * 1e6 }
 }
 
 // OpenRouter's own per-model metadata: { supported_efforts: string[], ... }.

@@ -257,3 +257,21 @@ See the [index](index.md) for the glossary.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/aiStore.ts` (`usage`, `runOnePaperPrompt`, `runOnePaperAgent`), `src/components/AiDialog.tsx` (`ai-usage`)
 - **Status:** Implemented
+
+### REQ-LLM-430 — Cost estimate from user-entered prices
+- **Description:** The system shall let the reviewer enter an input and output price (USD per 1M tokens) on an LLM target, with no built-in provider price table, and shall estimate a run's token usage and cost range (low/high) from the number of papers, pages per paper, fields to fill, and mode (prompt or agent, agent accounting for repeated tool-calling requests plus judge calls), reporting no cost when a target has no price entered.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/llm/cost.ts` (`costOf`, `estimateRun`, `estimateCost`), `src/llm/types.ts` (`LlmConfig.inputPrice`/`outputPrice`, `ModelInfo.pricing`), `src/llm/models.ts` (`parseOpenRouterModels`)
+- **Status:** Partially implemented — UI pending
+
+### REQ-LLM-440 — Retry with backoff on rate limits/overload
+- **Description:** When a model call fails with HTTP 429, 408, 500, 502, 503, 504, or 529, the system shall retry it with exponential backoff and jitter (capped, bounded number of retries), honoring the provider's `Retry-After` header when present, and shall not retry any other 4xx status; a pending retry wait shall abort immediately when the caller's signal aborts.
+- **Type:** Non-functional (ISO 25010: Reliability)
+- **Evidence:** `src/llm/retry.ts` (`withRetry`, `parseRetryAfter`, `runPool`)
+- **Status:** Implemented
+
+### REQ-LLM-450 — Few-shot examples from finished papers
+- **Description:** The system shall let the reviewer's already-finished papers be shown to the model as worked examples of the review's conventions (granularity, wording, enum choices): each example's title, truncated abstract, and answered fields as path/value lines, explicitly marked as illustration only — not evidence, and not to be copied into the current paper — placed in the prompt after the schema/field sections and before the rules, truncated by dropping whole trailing examples/fields rather than mid-line, and included in the agent's own system prompt only, never the judge's.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/llm/fewshot.ts` (`buildFewShotBlock`, `pickFewShotExamples`), `src/llm/prompt.ts` (`buildSystemPrompt`, `buildAgentSystemPrompt`), `src/llm/agent.ts` (`AgentInput.examples`)
+- **Status:** Partially implemented — UI pending

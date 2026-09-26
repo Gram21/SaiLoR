@@ -117,6 +117,7 @@ export function buildSystemPrompt(
   schema: ResolvedDef[],
   targets: FieldTarget[],
   delivery: Delivery,
+  examples?: string,
 ): string {
   // Show the schema exactly as it appears on disk (defaults omitted) — that is the
   // form the format description above documents.
@@ -146,7 +147,7 @@ ${PATHS_DOC}
 ## Fields to fill
 These fields are still empty. Fill only these:
 ${fieldLines(targets)}
-
+${examples ? `\n${examples}\n` : ''}
 ## Rules
 1. Ground every value in the paper. Use only what the paper itself states - no outside knowledge,
    no inference beyond what is written, no guessing.
@@ -197,6 +198,7 @@ export function buildAgentSystemPrompt(
   schema: ResolvedDef[],
   targets: FieldTarget[],
   delivery: Delivery,
+  examples?: string,
 ): string {
   const schemaJson = JSON.stringify(dehydrateSchema(schema), null, 2)
 
@@ -217,7 +219,7 @@ ${PATHS_DOC}
 ## Fields to fill
 These fields are still empty. Fill only these:
 ${fieldLines(targets)}
-
+${examples ? `\n${examples}\n` : ''}
 ## Rules
 1. The paper is your primary source. Use \`search_paper\`/\`read_pages\` to find and re-read the
    relevant passages; page numbers help you cite evidence precisely.

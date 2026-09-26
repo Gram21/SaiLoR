@@ -61,6 +61,9 @@ export interface AgentInput {
   maxToolCallsPerRound?: number
   signal?: AbortSignal
   onEvent?: (e: AgentEvent) => void
+  /** Pre-built few-shot block (see fewshot.ts). Goes into the agent's own
+   *  system prompt only — the judge must not see the reviewer's examples. */
+  examples?: string
 }
 
 export interface AgentResult {
@@ -152,7 +155,7 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
   }
 
   const textAvailable = delivery === 'text' ? paperText.trim().length > 0 : true
-  const system = buildAgentSystemPrompt(schema, targets, delivery)
+  const system = buildAgentSystemPrompt(schema, targets, delivery, input.examples)
 
   const authors = paper.authors.length > 0 ? paper.authors.join(', ') : 'unknown authors'
   const caption = `Paper: "${paper.title}" by ${authors}.\n\nExtract the annotations for the fields listed in the schema. Use your tools to search and read the paper, and end each round by calling submit_annotations.`

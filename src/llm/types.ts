@@ -43,6 +43,14 @@ export interface LlmConfig {
    * hasn't picked a model yet.
    */
   reasoningEffort?: string
+  /**
+   * User-entered price for this target, USD per 1M tokens. No built-in price
+   * table: provider prices go stale faster than this codebase gets updated,
+   * so the reviewer types what their contract actually charges. Absent means
+   * "unknown" — cost estimates degrade to null rather than guessing.
+   */
+  inputPrice?: number
+  outputPrice?: number
 }
 
 /**
@@ -56,6 +64,9 @@ export interface ModelInfo {
   /** Shown in the picker; falls back to `id` when the provider names nothing else. */
   label: string
   reasoning: ReasoningProfile | null
+  /** USD per 1M tokens, when the provider's list-models reply states its own
+   *  price (e.g. OpenRouter). Absent — never guessed — otherwise. */
+  pricing?: { input: number; output: number }
 }
 
 /**
@@ -101,6 +112,13 @@ export interface LlmHttpResponse {
   status: number
   /** Raw response body; the caller parses it with the provider's `extractText`. */
   body: string
+  /**
+   * Milliseconds to wait before retrying, when the platform's HTTP layer read
+   * a `Retry-After` header off a 429/503 (see `retry.ts`'s `parseRetryAfter`,
+   * which the Electron main process uses to fill this). Absent when the
+   * response carried no such header, or on a platform that doesn't parse it.
+   */
+  retryAfterMs?: number
 }
 
 /** One value the model proposes for one field, after validation against the schema. */
