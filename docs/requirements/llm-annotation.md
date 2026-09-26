@@ -144,9 +144,9 @@ content. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-240 — Record durable AI-usage disclosure
-- **Description:** When an apply changes at least one field, the system shall append a record of provider, model, and timestamp to the paper's AI-usage list in the project file, using the provider and model of the run that produced the answer.
+- **Description:** When an apply changes at least one field, the system shall append a record of provider, model, and timestamp to the paper's AI-usage list in the project file, using the provider and model of the run that produced the answer, together with whichever of the run's mode (prompt/agent), judge provider/model, round count, applied-verdict counts, few-shot example count, and target reviewer seat are known, omitting any that are not; on load the system shall keep the base record and drop only a malformed optional field.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/store.ts:2419-2427`, `src/model/project.ts:416-436`, `src/state/store.ai.test.ts:364-429`
+- **Evidence:** `src/state/store.ts:2419-2427`, `src/model/project.ts:37-58,416-467`, `src/state/store.ai.test.ts:364-429`
 - **Status:** Implemented
 
 ### REQ-LLM-250 — List provider models

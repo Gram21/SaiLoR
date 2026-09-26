@@ -426,6 +426,49 @@ describe('applyAiSuggestions: usage disclosure', () => {
     st().redo()
     expect(usage()).toHaveLength(1)
   })
+
+  it('persists the optional disclosure fields (mode, judge, rounds, verdicts, fewShot) when given', () => {
+    st().applyAiSuggestions(
+      [sug('Summary', 'Uses X to do Y.')],
+      {
+        provider: 'openai',
+        model: 'gpt-5.5',
+        mode: 'agent',
+        judge: { provider: 'anthropic', model: 'claude-opus-4-8' },
+        rounds: 3,
+        verdicts: { accept: 4, revise: 1, reject: 0 },
+        fewShot: 2,
+      },
+      { paperId: st().currentPaperId!, reviewer: st().currentReviewer },
+    )
+
+    expect(usage()[0]).toMatchObject({
+      provider: 'openai',
+      model: 'gpt-5.5',
+      mode: 'agent',
+      judge: { provider: 'anthropic', model: 'claude-opus-4-8' },
+      rounds: 3,
+      verdicts: { accept: 4, revise: 1, reject: 0 },
+      fewShot: 2,
+    })
+  })
+
+  it('does not record a reviewer seat in a single-reviewer project', () => {
+    apply([sug('Summary', 'Uses X to do Y.')])
+    expect(usage()[0].reviewer).toBeUndefined()
+  })
+
+  it('records the seat actually written in a multi-reviewer project', () => {
+    const multi = JSON.parse(PROJECT)
+    multi.config.reviewers = 2
+    st().loadFromText(JSON.stringify(multi), null, 'multi.json')
+    st().selectPaper('p1')
+    st().selectReviewer('2')
+
+    apply([sug('Summary', 'Uses X to do Y.')])
+
+    expect(usage()[0].reviewer).toBe('2')
+  })
 })
 
 describe('a reply is only ever applied to what it was asked about', () => {

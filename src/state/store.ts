@@ -7,6 +7,7 @@ import {
   ProjectLoadError,
   type Project,
   type Paper,
+  type AiUsageRecord,
 } from '../model/project'
 import { alignedReviews, type StoredAlignment, type StoredSlot } from '../model/alignment'
 import {
@@ -892,7 +893,13 @@ interface AppState {
   /** Write the reviewer-approved AI suggestions into the current paper (one undo step). */
   applyAiSuggestions: (
     suggestions: Suggestion[],
-    usage: { provider: string; model: string },
+    /** `provider`/`model` plus the disclosure record's optional extra fields
+     *  (mode, judge, rounds, verdicts, fewShot) — see `AiUsageRecord`.
+     *  `appliedAt`/`reviewer` are filled in by the store itself, never by the
+     *  caller: `appliedAt` is the moment of this call, and `reviewer` is the
+     *  seat actually written (`target.reviewer`, `'consolidation'` never
+     *  reaches here — see the refusal below). */
+    usage: Omit<AiUsageRecord, 'appliedAt' | 'reviewer'>,
     /** The paper and seat the run was made for — see `AiState.runFor`. */
     target: { paperId: string; reviewer: string | null },
   ) => AiApplyResult
@@ -2676,6 +2683,11 @@ export const useStore = create<AppState>()(
       })
     },
 
+    // Writes into whichever seat `target.reviewer` names, including the AI's
+    // own seat (`aiSeatId` in model/project.ts) when the dialog is driving it
+    // — nothing here treats that seat specially, and in particular this never
+    // ticks `finished`/`reviewsFinished` on its own: a human still has to sign
+    // the seat off by hand, same as any other reviewer's.
     applyAiSuggestions: (suggestions, usage, target) => {
       const prev = get()
       if (!prev.project) return { filled: 0, skipped: suggestions.length }
@@ -2769,9 +2781,14 @@ export const useStore = create<AppState>()(
         // changed, and meant to reach the saved file, unlike the mark above.
         if (filled > 0) {
           paper.aiUsage.push({
-            provider: usage.provider,
-            model: usage.model,
+            ...usage,
             appliedAt: new Date().toISOString(),
+            // The seat actually written, not just for display — a future
+            // reviewer reading this disclosure should not have to guess which
+            // seat's answers it describes. Single-reviewer projects have no
+            // seat to name (`target.reviewer` is always null there — see
+            // `currentTree`), so the field is left off rather than guessed.
+            ...(s.project!.reviewers > 1 && target.reviewer ? { reviewer: target.reviewer } : {}),
           })
         }
         // A bulk write across however many fields the model addressed, not the

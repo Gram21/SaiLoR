@@ -1266,6 +1266,35 @@ describe('Paper.aiUsage (AI-use disclosure)', () => {
     const once = serializeProject(loadProject(withUsage([record])))
     expect(loadProject(once).papers[0].aiUsage).toEqual([record])
   })
+
+  it('loads and round-trips the optional disclosure fields (mode, judge, rounds, verdicts, fewShot, reviewer)', () => {
+    const record = {
+      provider: 'openai',
+      model: 'gpt-5.5',
+      appliedAt: '2026-07-15T10:00:00.000Z',
+      mode: 'agent' as const,
+      judge: { provider: 'anthropic', model: 'claude-opus-4-8' },
+      rounds: 2,
+      verdicts: { accept: 5, revise: 1, reject: 0 },
+      fewShot: 3,
+      reviewer: '2',
+    }
+    expect(loadProject(withUsage([record])).papers[0].aiUsage).toEqual([record])
+    const once = serializeProject(loadProject(withUsage([record])))
+    expect(loadProject(once).papers[0].aiUsage).toEqual([record])
+  })
+
+  it('drops a malformed optional field but keeps the base record', () => {
+    const base = { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-07-15T10:00:00.000Z' }
+    expect(loadProject(withUsage([{ ...base, mode: 'bogus' }])).papers[0].aiUsage).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, judge: { provider: 'anthropic' } }])).papers[0].aiUsage).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, rounds: 'two' }])).papers[0].aiUsage).toEqual([base])
+    expect(
+      loadProject(withUsage([{ ...base, verdicts: { accept: 1, revise: 1 } }])).papers[0].aiUsage,
+    ).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, fewShot: '3' }])).papers[0].aiUsage).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, reviewer: 42 }])).papers[0].aiUsage).toEqual([base])
+  })
 })
 
 describe('config.aiSeat (AI reviewer seat)', () => {

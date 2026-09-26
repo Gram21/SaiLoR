@@ -41,6 +41,21 @@ export interface AiUsageRecord {
   model: string
   /** ISO 8601 timestamp of the Apply click. */
   appliedAt: string
+  /** "prompt" for a single suggest-and-apply pass, "agent" for the
+   *  tool-using agent with a judge review loop. Absent for a record predating
+   *  this distinction. */
+  mode?: 'prompt' | 'agent'
+  /** The judge model that reviewed the agent's answers, agent mode only. */
+  judge?: { provider: string; model: string }
+  /** How many agent rounds ran. Agent mode only. */
+  rounds?: number
+  /** The judge's verdicts on the values that were actually applied — not
+   *  every value the agent proposed. */
+  verdicts?: { accept: number; revise: number; reject: number }
+  /** How many example papers were shown as few-shot context. */
+  fewShot?: number
+  /** The seat the values were written into ("1".."N" or "consolidation"). */
+  reviewer?: string
 }
 
 export interface Paper {
@@ -384,6 +399,24 @@ function parseReviewsFinished(raw: unknown): Record<string, boolean> {
  * Parse `aiUsage` defensively: the file is hand-editable, so a malformed entry
  * must be dropped, never thrown over — the same rule `annotations` follows.
  */
+/** Parse the judge sub-record, dropping it (not the whole entry) if malformed. */
+function parseAiUsageJudge(raw: unknown): { provider: string; model: string } | undefined {
+  if (typeof raw !== 'object' || raw === null) return undefined
+  const r = raw as Record<string, unknown>
+  return typeof r.provider === 'string' && typeof r.model === 'string'
+    ? { provider: r.provider, model: r.model }
+    : undefined
+}
+
+/** Parse the verdicts sub-record, same drop-not-discard rule as `parseAiUsageJudge`. */
+function parseAiUsageVerdicts(raw: unknown): { accept: number; revise: number; reject: number } | undefined {
+  if (typeof raw !== 'object' || raw === null) return undefined
+  const r = raw as Record<string, unknown>
+  const keys = ['accept', 'revise', 'reject'] as const
+  if (!keys.every((k) => typeof r[k] === 'number' && Number.isFinite(r[k]))) return undefined
+  return { accept: r.accept as number, revise: r.revise as number, reject: r.reject as number }
+}
+
 function parseAiUsage(raw: unknown): AiUsageRecord[] {
   if (!Array.isArray(raw)) return []
   const out: AiUsageRecord[] = []
@@ -395,8 +428,24 @@ function parseAiUsage(raw: unknown): AiUsageRecord[] {
       typeof (entry as Record<string, unknown>).model === 'string' &&
       typeof (entry as Record<string, unknown>).appliedAt === 'string'
     ) {
-      const e = entry as Record<string, string>
-      out.push({ provider: e.provider, model: e.model, appliedAt: e.appliedAt })
+      const e = entry as Record<string, unknown>
+      const record: AiUsageRecord = {
+        provider: e.provider as string,
+        model: e.model as string,
+        appliedAt: e.appliedAt as string,
+      }
+      // Each optional field is dropped on its own if malformed — the base
+      // record above is never discarded for a bad extra, same rule as the
+      // rest of this file's hand-editable sub-records.
+      if (e.mode === 'prompt' || e.mode === 'agent') record.mode = e.mode
+      const judge = parseAiUsageJudge(e.judge)
+      if (judge) record.judge = judge
+      if (typeof e.rounds === 'number' && Number.isFinite(e.rounds)) record.rounds = e.rounds
+      const verdicts = parseAiUsageVerdicts(e.verdicts)
+      if (verdicts) record.verdicts = verdicts
+      if (typeof e.fewShot === 'number' && Number.isFinite(e.fewShot)) record.fewShot = e.fewShot
+      if (typeof e.reviewer === 'string') record.reviewer = e.reviewer
+      out.push(record)
     }
   }
   return out
