@@ -466,3 +466,75 @@ describe('a reply is only ever applied to what it was asked about', () => {
     expect(paperById('p1').annotations['Summary']?.[0]?.value ?? null).toBeNull()
   })
 })
+
+describe('applyAiSuggestionsBatch: writing across more than one paper', () => {
+  it('writes every paper in a single undo step, with per-paper aiUsage', () => {
+    const before = st().past.length
+
+    const result = st().applyAiSuggestionsBatch([
+      { paperId: 'p1', reviewer: st().currentReviewer, suggestions: [sug('Summary', 'about one')], usage: TEST_USAGE },
+      {
+        paperId: 'p2',
+        reviewer: st().currentReviewer,
+        suggestions: [sug('Summary', 'about two'), sug('Year', 2020)],
+        usage: { provider: 'anthropic', model: 'claude-5' },
+      },
+    ])
+
+    expect(result).toEqual({ filled: 3, skipped: 0, papers: 2 })
+    expect(paperById('p1').annotations['Summary'][0].value).toBe('about one')
+    expect(paperById('p2').annotations['Summary'][0].value).toBe('about two')
+    expect(paperById('p2').annotations['Year'][0].value).toBe(2020)
+
+    // One undo step for both papers together.
+    expect(st().past.length).toBe(before + 1)
+    st().undo()
+    expect(paperById('p1').annotations['Summary'][0].value).toBeNull()
+    expect(paperById('p2').annotations['Summary'][0].value).toBeNull()
+
+    st().redo()
+    // Each paper discloses only the target it was actually run against.
+    expect(paperById('p1').aiUsage).toMatchObject([{ provider: 'openai', model: 'gpt-5.5' }])
+    expect(paperById('p2').aiUsage).toMatchObject([{ provider: 'anthropic', model: 'claude-5' }])
+  })
+
+  it('records aiUsage only for a paper that actually changed', () => {
+    st().setFieldValue([], 'Summary', 0, 'already answered by hand')
+
+    const result = st().applyAiSuggestionsBatch([
+      { paperId: 'p1', reviewer: st().currentReviewer, suggestions: [sug('Summary', 'model value')], usage: TEST_USAGE },
+      { paperId: 'p2', reviewer: st().currentReviewer, suggestions: [sug('Summary', 'about two')], usage: TEST_USAGE },
+    ])
+
+    expect(result).toEqual({ filled: 1, skipped: 1, papers: 1 })
+    expect(paperById('p1').aiUsage).toEqual([])
+    expect(paperById('p2').aiUsage).toHaveLength(1)
+  })
+
+  it('refuses an item whose reviewer seat does not match the current one', () => {
+    const result = st().applyAiSuggestionsBatch([
+      { paperId: 'p1', reviewer: '1', suggestions: [sug('Summary', 'x')], usage: TEST_USAGE },
+    ])
+
+    expect(result).toEqual({ filled: 0, skipped: 1, papers: 0 })
+    expect(paperById('p1').annotations['Summary'][0].value).toBeNull()
+  })
+
+  it('does not require the paper to be the one currently on screen — unlike the single-paper apply', () => {
+    st().selectPaper('p2') // looking at p2, but the batch also names p1
+
+    const result = st().applyAiSuggestionsBatch([
+      { paperId: 'p1', reviewer: st().currentReviewer, suggestions: [sug('Summary', 'written while elsewhere')], usage: TEST_USAGE },
+    ])
+
+    expect(result).toEqual({ filled: 1, skipped: 0, papers: 1 })
+    expect(paperById('p1').annotations['Summary'][0].value).toBe('written while elsewhere')
+  })
+
+  it('records no history when every item writes nothing', () => {
+    const before = st().past.length
+    const result = st().applyAiSuggestionsBatch([])
+    expect(result).toEqual({ filled: 0, skipped: 0, papers: 0 })
+    expect(st().past.length).toBe(before)
+  })
+})

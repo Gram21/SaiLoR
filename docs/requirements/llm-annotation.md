@@ -61,9 +61,9 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-100 — Ask only about unanswered fields
-- **Description:** When an AI run starts, the system shall request values only for the currently unanswered fields of the current paper, where a boolean field counts as unanswered unless it is true.
+- **Description:** When an AI run starts, the system shall request values only for the currently unanswered fields of each paper it annotates (the current paper alone, or every candidate paper in all-papers mode, each asked only about its own unanswered fields), where a boolean field counts as unanswered unless it is true.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/llm/fields.ts:21-75`, `src/state/aiStore.ts:185`
+- **Evidence:** `src/llm/fields.ts:21-75`, `src/state/aiStore.ts` (`run`, `batchCandidates`)
 - **Status:** Implemented
 
 ### REQ-LLM-110 — Deliver the paper as text or PDF
@@ -127,15 +127,15 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-210 — Human review before applying
-- **Description:** The system shall present accepted suggestions in a review table showing field, value, supporting quote, and confidence, with per-row checkboxes and select-all/none, and shall write values only when the user applies the selection.
+- **Description:** The system shall present accepted suggestions in a review table showing field, value, supporting quote, and confidence — grouped by paper with a header row when more than one paper is being reviewed — with per-row checkboxes and select-all/none, and shall write values only when the user applies the selection.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/components/AiDialog.tsx:14-18,242-336`, `src/state/aiStore.ts:447-454`
+- **Evidence:** `src/components/AiDialog.tsx` (`ReviewTable`), `src/state/aiStore.ts` (`toggleRow`, `setAllRows`, `apply`)
 - **Status:** Implemented
 
 ### REQ-LLM-220 — Apply as one undo step without overwriting
-- **Description:** When applying checked suggestions, the system shall write them as a single undo step, skipping any field the reviewer answered in the meantime and any path that no longer resolves, and shall record no undo entry when nothing was written.
+- **Description:** When applying checked suggestions, the system shall write them as a single undo step across however many papers the run touched, skipping any field the reviewer answered in the meantime and any path that no longer resolves, and shall record no undo entry when nothing was written.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/store.ts:2364-2432`, `src/state/store.ai.test.ts:142-251`
+- **Evidence:** `src/state/store.ts` (`applyAiSuggestions`, `applyAiSuggestionsBatch`), `src/state/store.ai.test.ts:142-251`
 - **Status:** Implemented
 
 ### REQ-LLM-230 — Mark AI-written fields until confirmed
@@ -181,9 +181,9 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-300 — Report run progress
-- **Description:** During an AI run, the system shall display the current phase (setup, reading, calling, parsing, review, applied, or error) with a live elapsed-time counter and a cancel action.
+- **Description:** During an AI run, the system shall display the current phase (setup, reading, calling, parsing, review, applied, or error) with a live elapsed-time counter and a cancel action; when annotating more than one paper it shall also show which paper of how many is in progress and its title, and in agent mode the most recent progress messages for that paper.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/aiStore.ts:48-56,361-363`, `src/components/AiDialog.tsx:220-240`
+- **Evidence:** `src/state/aiStore.ts` (`AiPhase`, `run`), `src/components/AiDialog.tsx` (running-phase block)
 - **Status:** Implemented
 
 ### REQ-LLM-310 — Distinguish truncation from empty answers
@@ -232,4 +232,28 @@ See the [index](index.md) for the glossary.
 - **Description:** When the AI agent fetches a URL, the system shall allow only `http`/`https` URLs without embedded credentials, resolve the hostname (or literal IP) and refuse the request if any resolved address is loopback, private, link-local, CGNAT, unique-local, multicast, or otherwise non-public, re-check the same rules on each of up to 5 manually-followed redirects, send no cookies or credentials, enforce a 20-second timeout and a 2 MB response body cap, and accept only textual content types.
 - **Type:** Non-functional (ISO 25010: Security)
 - **Evidence:** `electron/webFetch.ts:1-83`, `electron/main.ts` (`web:fetch`/`web:abort` handlers), `electron/webFetch.test.ts`
+- **Status:** Implemented
+
+### REQ-LLM-380 — Switch between prompt and agent mode
+- **Description:** The setup screen shall let the user choose between "Prompt" (one request per paper) and "Agent" (tool-using, judge-reviewed) mode, persist the choice like the selected target, and show, next to the switch, an explanation of each mode's behavior and a statement that agent mode takes considerably longer and costs considerably more (typically 5–15 model requests per paper instead of one). In agent mode the system shall extract the paper's text even when the target's delivery setting sends the PDF itself, since the tools and evidence check need it; a scanned PDF under text delivery shall fail with the same error prompt mode gives.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/aiStore.ts` (`AiMode`, `setMode`, `runOnePaperAgent`), `src/components/AiDialog.tsx` (`MODE_INFO`)
+- **Status:** Implemented
+
+### REQ-LLM-390 — Annotate all papers only after a consequences warning
+- **Description:** The setup screen shall state that only the current paper is annotated by default, and shall offer a switch to annotate every eligible paper instead — one with a PDF, not finished for the current seat, and with at least one unanswered field. Turning the switch on shall first show, inline, the number of papers that will be sent, that each paper is a separate request (many per paper in agent mode), that the provider charges the user's API key per request and cost scales with the paper count (higher still in agent mode), a rough time estimate, that every paper's content leaves the machine, and that the run can be cancelled at any time keeping whatever finished; the switch shall take effect only once this is confirmed, and the warning shall stay accurate across a later mode switch.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/aiStore.ts` (`batchCandidates`, `setAllPapers`), `src/components/AiDialog.tsx` (`allPapersWarning`)
+- **Status:** Implemented
+
+### REQ-LLM-410 — Show judge verdicts and default flagged rows unticked
+- **Description:** In agent-mode review, the system shall show each row's judge verdict (accepted, needs revision, or rejected) with its feedback text, and the source URL for a web-sourced value. A row whose verdict is not "accept" shall be unticked by default; every prompt-mode row, and every accepted agent-mode row, shall be ticked by default.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/aiStore.ts` (`run`, row `checked` initialization), `src/components/AiDialog.tsx` (`JudgeCell`)
+- **Status:** Implemented
+
+### REQ-LLM-420 — Report token usage after a run
+- **Description:** After a run finishes, the system shall report the total number of model requests and the summed input/output tokens across every paper and every model call of the run (agent and judge calls alike), and shall omit the line when every count is zero.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/aiStore.ts` (`usage`, `runOnePaperPrompt`, `runOnePaperAgent`), `src/components/AiDialog.tsx` (`ai-usage`)
 - **Status:** Implemented

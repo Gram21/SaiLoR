@@ -112,8 +112,8 @@ beforeEach(() => {
     error: null,
     elapsed: 0,
     targets: [],
-    answer: null,
     rows: [],
+    notes: [],
     scanned: false,
   })
 })
@@ -218,7 +218,8 @@ describe('run: distinguishing truncation from a genuinely empty answer', () => {
 
     expect(ai().phase).toBe('review')
     expect(ai().error).toBeNull()
-    expect(ai().answer).toEqual({ fields: [], skipped: [], rejected: [] })
+    expect(ai().rows).toEqual([])
+    expect(ai().notes).toEqual([])
   })
 })
 
@@ -268,7 +269,7 @@ describe('run: a superseded run is discarded', () => {
     deferreds[1].resolve(anthropicOk([{ path: 'Summary', value: 'from run two', evidence: 'e', confidence: 0.9 }]))
     await second
     expect(ai().phase).toBe('review')
-    expect(ai().answer?.fields[0]?.value).toBe('from run two')
+    expect(ai().rows[0]?.suggestion.value).toBe('from run two')
 
     // The stale first run now resolves. Its own answer must never reach the
     // review rows the reviewer is looking at — see the `runFor` comment and the
@@ -276,7 +277,6 @@ describe('run: a superseded run is discarded', () => {
     deferreds[0].resolve(anthropicOk([{ path: 'Summary', value: 'from run one', evidence: 'e', confidence: 0.9 }]))
     await first
 
-    expect(ai().answer?.fields[0]?.value).toBe('from run two')
     expect(ai().rows[0]?.suggestion.value).toBe('from run two')
     // The stale run's own phase transitions ('calling'/'parsing') must also be
     // silenced, not just its answer — otherwise it visibly knocks the UI back

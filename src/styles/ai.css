@@ -68,6 +68,69 @@
   margin: 12px 0;
 }
 
+.ai-mode-row {
+  display: flex;
+  gap: 16px;
+  margin: 4px 0;
+}
+.ai-mode-row label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-scope {
+  margin: 10px 0 4px;
+}
+
+.ai-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+}
+
+.ai-confirm {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--danger);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.ai-confirm .ai-foot {
+  border-top: 0;
+  padding-top: 0;
+  margin-top: 8px;
+}
+
+.ai-group-head th {
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.ai-judge-accept {
+  color: var(--ok);
+  font-weight: 600;
+}
+.ai-judge-revise {
+  color: var(--accent);
+  font-weight: 600;
+}
+.ai-judge-reject {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.ai-agent-events {
+  max-height: 120px;
+}
+
+.ai-usage {
+  text-align: right;
+}
+
 .ai-note {
   margin: 8px 0;
   color: var(--muted);
