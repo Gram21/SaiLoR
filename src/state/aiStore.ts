@@ -83,6 +83,10 @@ export interface PaperNotes {
 
 interface AiState {
   open: boolean
+  /** True while the dialog is hidden ("peeking" at the PDF) but not discarded —
+   *  see `requestPdfFind` in the store and the review table's evidence links.
+   *  A floating "Back to AI review" button clears it. */
+  minimized: boolean
   settingsOpen: boolean
   configs: LlmConfig[]
   selectedId: string | null
@@ -135,6 +139,8 @@ interface AiState {
 
   openDialog: () => Promise<void>
   closeDialog: () => void
+  /** Set/clear the "peek at the PDF" state — see `minimized`. */
+  setMinimized: (minimized: boolean) => void
   setSettingsOpen: (open: boolean) => void
   selectConfig: (id: string) => void
   setMode: (mode: AiMode) => void
@@ -190,6 +196,7 @@ export function batchCandidates(project: Project, currentReviewer: string | null
 export const useAiStore = create<AiState>()(
   immer((set, get) => ({
     open: false,
+    minimized: false,
     settingsOpen: false,
     configs: [],
     selectedId: readSelected(),
@@ -230,6 +237,7 @@ export const useAiStore = create<AiState>()(
 
       set((s) => {
         s.open = true
+        s.minimized = false
         s.phase = 'setup'
         s.error = null
         s.rows = []
@@ -252,9 +260,12 @@ export const useAiStore = create<AiState>()(
       get().cancel()
       set((s) => {
         s.open = false
+        s.minimized = false
         s.settingsOpen = false
       })
     },
+
+    setMinimized: (minimized) => set((s) => { s.minimized = minimized }),
 
     setSettingsOpen: (open) => set((s) => { s.settingsOpen = open }),
 

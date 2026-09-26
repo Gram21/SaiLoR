@@ -257,3 +257,9 @@ See the [index](index.md) for the glossary.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/aiStore.ts` (`usage`, `runOnePaperPrompt`, `runOnePaperAgent`), `src/components/AiDialog.tsx` (`ai-usage`)
 - **Status:** Implemented
+
+### REQ-LLM-460 — Jump from evidence to the PDF
+- **Description:** In the AI review table, an evidence quote sourced from the paper itself (no `source`, or `source === 'paper'`) shall be clickable; a quote whose `source` is a URL shall not. Clicking it shall switch to that row's paper if it isn't already current, ask the PDF viewer to locate and highlight the quote, and hide the AI dialog (without discarding its review state) behind a "Back to AI review" button that restores it. The PDF viewer shall try the quote verbatim, then a lightly normalized form (straight quotes, no line-break hyphenation), then progressively shorter leading word sequences, retrying as pages finish rendering their text layer; if nothing matches within a few seconds it shall show a brief, dismissible notice instead of failing silently.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/store.ts` (`pdfFindRequest`, `requestPdfFind`, `clearPdfFindRequest`), `src/state/aiStore.ts` (`minimized`, `setMinimized`), `src/components/AiDialog.tsx` (`jumpToEvidence`, `isPaperEvidence`), `src/components/PdfViewer.tsx` (`findQuoteRanges`), `src/llm/verify.ts` (`normalize`)
+- **Status:** Implemented
