@@ -353,6 +353,13 @@ the project editor. See the [index](index.md) for the glossary.
 - **Verified by:** `src/components/PapersEditor.test.tsx` (`confirm renaming the id of an annotated paper`)
 - **Status:** Implemented
 
+### REQ-EDT-46 — Own annotations folder for a project started from screening
+- **Description:** When a new project is started from a screening project and saved next to it, the system shall rename carried paper identifiers that the screening project already uses and give the new project an annotations folder named after its file, so the two projects never write the same files.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/editorStore.ts` (`resolveScreeningImport`), `src/model/annotationsDir.ts` (`defaultSplitDirName`, `sharesPaper`), commit `4e3fa4e`
+- **Verified by:** `src/test/integration/screeningImport.integration.test.tsx`
+- **Status:** Implemented
+
 ### REQ-EDT-50 — Confirm removal of annotated papers
 - **Description:** When a paper with recorded annotations is removed in the editor, the system shall request confirmation stating that all reviewers' annotations will be discarded on the next save.
 - **Type:** Functional (ISO 25010: Functional Suitability)

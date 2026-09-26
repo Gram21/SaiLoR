@@ -19,9 +19,10 @@ re-derives every PDF reference for the new location automatically (see
 
 **Annotations folder** names the folder next to the JSON file where the project's answers are kept —
 `annotations` when left empty. It is always a plain folder name directly next to the JSON file: a
-name that would lead anywhere else (`..`, `a/b`, a drive letter, an absolute path) is refused. It
-must also belong to this project alone — Save is refused while another project file next to it uses
-the same folder. Renaming it for a project that already has answers moves the folder along when you
+name that would lead anywhere else (`..`, `a/b`, a drive letter, an absolute path) is refused. Save
+is refused while another project file next to it uses the same folder *and* lists one of the same
+papers, since the two would then write the same files; a screening project and the annotation
+project built from it share no paper and may share the folder. Renaming it for a project that already has answers moves the folder along when you
 save.
 
 ## Building the schema

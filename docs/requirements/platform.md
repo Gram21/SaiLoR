@@ -96,14 +96,14 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-90 — Keep one annotations folder per project
-- **Description:** When a project is saved to a directory where another project file already uses its annotations folder, the system shall save it with a folder named after the file instead, and refuse the save when that name is taken too; the project editor shall refuse a folder name another project file next to it uses.
+- **Description:** When a project is saved to a directory where another project file listing at least one of the same paper identifiers already uses its annotations folder, the system shall save it with a folder named after the file instead, and refuse the save when that name is taken too; the project editor shall refuse a folder name another project file next to it uses while the two share a paper identifier; projects sharing no paper identifier may share a folder.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `electron/main.ts:1081`, `src/state/store.ts`, commit `c1b40ec`
 - **Verified by:** `src/state/store.saveas.test.ts` (`takes a folder named after the file when the destination already uses the default one`), `src/state/editorStore.annotationsDir.test.ts`
 - **Status:** Implemented
 
 ### REQ-PLT-95 — Split a shared annotations folder
-- **Description:** When a project is opened whose annotations folder other project files in the same directory also use, the system shall propose giving each of them its own folder, assigning each annotation file by paper identifier and file kind and, where several projects could own it, by the schema version it records or by which project's schema its answers fit, listing those files for confirmation and copying undecidable ones to each; on confirmation it shall copy the files, record each project's folder in its project file, and only then remove the originals, refusing while the open project has unsaved changes, a target folder is not empty, or a listed project file changed.
+- **Description:** When a project is opened whose annotations folder other project files in the same directory also use while listing at least one of the same paper identifiers, the system shall propose giving each of them its own folder, assigning each annotation file by paper identifier and file kind and, where several projects could own it, by the schema version it records or by which project's schema its answers fit, listing those files for confirmation and copying undecidable ones to each; on confirmation it shall copy the files, record each project's folder in its project file, and only then remove the originals, refusing while the open project has unsaved changes, a target folder is not empty, or a listed project file changed.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/annotationSplit.ts`, `electron/main.ts:1135,1179`, `src/components/SplitAnnotationsDialog.tsx`, commit `c1b40ec`
 - **Verified by:** `src/model/annotationSplit.test.ts`, `src/state/store.annotationsSplit.test.ts`, `src/test/integration/annotationSplit.integration.test.tsx`

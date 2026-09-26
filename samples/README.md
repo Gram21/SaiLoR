@@ -15,9 +15,11 @@ Every project keeps its answers in a folder next to its JSON file, named by the
 file's `annotationsDir` (`annotations/` when it names none). The two example
 projects sit in the same folder, so each names its own:
 `"annotationsDir": "project-annotations"` and `"annotationsDir": "screening-annotations"`.
-Two projects must never use the same folder — SaiLoR refuses it in the project
-editor and on Save As, and offers to split a folder it finds shared (see
-*Things to know* in the user guide).
+The examples list some of the same papers, and two projects that share a paper
+must not share a folder: both would write that paper's files there. SaiLoR
+refuses that in the project editor and on Save As, and offers to split such a
+folder when it finds one (see *Things to know* in the user guide). Projects with
+no paper in common may share a folder.
 
 The annotation folders are not committed (`.gitignore`): what you record while
 trying the examples stays on your machine. An `annotations/` folder left over from

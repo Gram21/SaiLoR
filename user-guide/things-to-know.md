@@ -100,16 +100,20 @@ was already committed in your seat by someone else — but only once their work 
 pulled, so agree out of band (a message, a spreadsheet, whatever) who reads which paper in which seat
 regardless. See [Reviewer-seat identity](multi-reviewer.md#reviewer-seat-identity).
 
-## Two project files in one folder need two annotations folders
+## Two projects sharing papers need two annotations folders
 
 ⚠️ Each project keeps its answers in a folder next to its JSON file — `annotations/` unless the
-project editor names another. Two project files in the same folder used to share `annotations/`,
-and two projects of the same kind that share a paper then wrote the very same files, overwriting each
-other's answers.
+project editor names another. Every file there is named after its paper, so two project files in the
+same folder that share `annotations/` *and* list the same paper write the same files — the answers of
+two projects of the same kind, or the PDF highlights of any two — and overwrite each other.
 
-SaiLoR now keeps them apart. Save As into a folder whose `annotations/` another project already uses
-gives the new file a folder named after it (`backup.json` → `backup-annotations/`). Opening a project
-whose folder is shared offers to **split** it: every project file sharing the folder gets its own,
+Projects with no paper in common can share the folder, and that is the usual case for a screening
+project and the annotation project started from it with **New from screening…**: the import renames
+any paper id the screening project already uses, and gives the new project a folder of its own anyway.
+
+Where papers are shared, SaiLoR keeps the projects apart. Save As into a folder whose `annotations/`
+such a project uses gives the new file a folder named after it (`backup.json` →
+`backup-annotations/`). Opening a project whose folder is shared that way offers to **split** it: every project file sharing the folder gets its own,
 recorded in its JSON file, and each annotation file goes to the project it belongs to — by paper and
 kind of file, and where two projects could own it, by the schema version it was written under or by
 which project's fields its answers fit. Those unclear files are listed for you to confirm; one
