@@ -8,7 +8,7 @@ import { getPlatform } from '../platform'
 import { Dropdown, type MenuItem } from './Dropdown'
 import { SidebarToggle } from './SidebarToggle'
 import type { GitProbe, GitRepoInfo } from '../git/types'
-import { seatLabel } from '../model/project'
+import { aiSeatId, seatLabel } from '../model/project'
 
 /** Shown on every git entry point in the browser build, where `getGit()` is
  *  always `null` (see `PlatformAdapter.getGit()` and architecture.md's "Git"
@@ -88,6 +88,10 @@ const AI_ENABLED_HINT = 'Annotate papers with AI'
  * rather than hidden. Structural reasons (no project, screening, Consolidation,
  * no reviewer picked, project opted out) pick the tooltip; `busy`/`editorOpen`
  * only disable, matching Validate/Close.
+ *
+ * With an AI seat (REQ-LLM-470), a run never writes into whichever seat is
+ * currently selected — it always writes into the AI's own seat instead — so
+ * neither "no reviewer picked" nor "on the Consolidation seat" blocks it.
  */
 export function aiButtonState(
   project: boolean,
@@ -97,20 +101,23 @@ export function aiButtonState(
   aiEnabled: boolean,
   busy: boolean,
   editorOpen: boolean,
+  hasAiSeat: boolean,
 ): AiButtonState {
+  const blockConsolidation = isConsolidation && !hasAiSeat
+  const blockReviewerUnset = reviewerUnset && !hasAiSeat
   const title = !project
     ? AI_NO_PROJECT_HINT
     : screening
       ? AI_SCREENING_HINT
-      : isConsolidation
+      : blockConsolidation
         ? AI_CONSOLIDATION_HINT
-        : reviewerUnset
+        : blockReviewerUnset
           ? AI_REVIEWER_UNSET_HINT
           : !aiEnabled
             ? AI_PROJECT_DISABLED_HINT
             : AI_ENABLED_HINT
   const disabled =
-    !project || screening || isConsolidation || reviewerUnset || !aiEnabled || busy || editorOpen
+    !project || screening || blockConsolidation || blockReviewerUnset || !aiEnabled || busy || editorOpen
   return { disabled, title }
 }
 
@@ -189,6 +196,7 @@ export function Toolbar() {
     project?.aiEnabled ?? true,
     busy,
     editorOpen,
+    !!project && aiSeatId(project) !== null,
   )
 
   // The closed dropdown must still read "you are Reviewer 3" — a caret alone

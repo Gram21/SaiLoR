@@ -581,3 +581,54 @@ describe('applyAiSuggestionsBatch: writing across more than one paper', () => {
     expect(st().past.length).toBe(before)
   })
 })
+
+describe('applyAiSuggestionsBatch: routing into the AI seat (REQ-LLM-470)', () => {
+  function loadAiSeatProject() {
+    const multi = JSON.parse(PROJECT)
+    multi.config.reviewers = 2
+    multi.config.aiSeat = true
+    st().loadFromText(JSON.stringify(multi), null, 'ai-seat.json')
+    st().selectPaper('p1')
+  }
+
+  it('writes into the AI seat even with nobody selected in a multi-reviewer project', () => {
+    loadAiSeatProject()
+    expect(st().currentReviewer).toBeNull()
+
+    const result = st().applyAiSuggestionsBatch([
+      { paperId: 'p1', reviewer: '2', suggestions: [sug('Summary', 'from the AI')], usage: TEST_USAGE },
+    ])
+
+    expect(result).toEqual({ filled: 1, skipped: 0, papers: 1 })
+    expect(paperById('p1').reviews['2']!['Summary'][0].value).toBe('from the AI')
+  })
+
+  it('writes into the AI seat while Consolidation is selected', () => {
+    loadAiSeatProject()
+    st().selectReviewer('consolidation')
+
+    const result = st().applyAiSuggestionsBatch([
+      { paperId: 'p1', reviewer: '2', suggestions: [sug('Summary', 'from the AI')], usage: TEST_USAGE },
+    ])
+
+    expect(result).toEqual({ filled: 1, skipped: 0, papers: 1 })
+    expect(paperById('p1').reviews['2']!['Summary'][0].value).toBe('from the AI')
+    // Consolidation's own tree (paper.annotations) is untouched.
+    expect(paperById('p1').annotations['Summary']?.[0]?.value ?? null).toBeNull()
+  })
+
+  it('the AI-seat pass does not extend to a seat that is neither current nor the AI seat', () => {
+    loadAiSeatProject()
+    st().selectReviewer('1')
+
+    const result = st().applyAiSuggestionsBatch([
+      { paperId: 'p1', reviewer: '2', suggestions: [sug('Summary', 'from the AI')], usage: TEST_USAGE },
+      // Reviewer 3 doesn't exist and isn't the AI seat (that's '2' here) or
+      // the current one ('1') — still refused per item.
+      { paperId: 'p1', reviewer: '3', suggestions: [sug('Year', 2021)], usage: TEST_USAGE },
+    ])
+
+    expect(result).toEqual({ filled: 1, skipped: 1, papers: 1 })
+    expect(paperById('p1').reviews['2']!['Summary'][0].value).toBe('from the AI')
+  })
+})

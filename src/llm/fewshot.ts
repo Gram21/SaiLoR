@@ -46,6 +46,12 @@ function answeredLines(defs: ResolvedDef[], tree: AnnotationValueTree | undefine
   return out
 }
 
+/** How many fields `tree` has answered — used to order few-shot candidates
+ *  "most complete first" (see the store's `fewShotCandidates`). */
+export function countAnsweredFields(schema: ResolvedDef[], tree: AnnotationValueTree | undefined): number {
+  return answeredLines(schema, tree, []).length
+}
+
 /** One example's lines: title, optional abstract, then its answered fields.
  *  Kept as an array (not a joined string) so truncation can drop trailing
  *  lines without ever cutting one in half. */

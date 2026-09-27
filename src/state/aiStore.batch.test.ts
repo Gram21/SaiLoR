@@ -167,6 +167,33 @@ describe('batchCandidates: who "annotate all papers" picks up', () => {
   })
 })
 
+describe('batchCandidates: routing into the AI seat (REQ-LLM-470)', () => {
+  it('checks the AI seat, not the passed-in seat, when the project has one', () => {
+    useStore.setState((s) => {
+      s.project!.reviewers = 2
+      s.project!.aiSeat = true
+    })
+    // Nobody selected ('null') would normally have nothing to check against —
+    // the AI seat is checked instead.
+    const withNobodySelected = batchCandidates(st().project!, null).map((c) => c.id)
+    expect(withNobodySelected).toEqual(['p1', 'p2'])
+
+    st().selectReviewer('2') // the AI seat itself
+    st().setFieldValue([], 'Summary', 0, 'in the AI seat')
+    const afterAiSeatAnswered = batchCandidates(st().project!, null).map((c) => c.id)
+    expect(afterAiSeatAnswered).toEqual(['p2'])
+  })
+
+  it('allows Consolidation as the passed-in seat when the project has an AI seat', () => {
+    useStore.setState((s) => {
+      s.project!.reviewers = 2
+      s.project!.aiSeat = true
+    })
+    const ids = batchCandidates(st().project!, 'consolidation').map((c) => c.id)
+    expect(ids).toEqual(['p1', 'p2'])
+  })
+})
+
 describe('run: batch continues past a failing paper', () => {
   it('records the failure and keeps going, ending in review with what succeeded', async () => {
     const c = cfg({ attach: 'text' })
@@ -207,7 +234,8 @@ describe('run: cancel mid-batch keeps what already finished', () => {
 
     const runPromise = ai().run()
     await flush()
-    expect(ai().batchIndex).toBe(2) // first paper done, second in flight
+    expect(ai().batchDone).toBe(1) // first paper done
+    expect(ai().inFlightTitles).toEqual(['Paper Two']) // second in flight
 
     ai().cancel()
     held.resolve?.(anthropicOk([]))

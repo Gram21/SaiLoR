@@ -56,42 +56,64 @@ describe('gitButtonState (the toolbar Git button, always shown, disabled with a 
 
 describe('aiButtonState (the toolbar AI button, always shown, disabled with a reason)', () => {
   it('is enabled when everything lines up', () => {
-    const r = aiButtonState(true, false, false, false, true, false, false)
+    const r = aiButtonState(true, false, false, false, true, false, false, false)
     expect(r.disabled).toBe(false)
     expect(r.title).toBe('Annotate papers with AI')
   })
 
   it('is disabled for the Consolidation seat', () => {
-    const r = aiButtonState(true, false, true, false, true, false, false)
+    const r = aiButtonState(true, false, true, false, true, false, false, false)
     expect(r.disabled).toBe(true)
     expect(r.title).toContain('Consolidation')
   })
 
   it('is disabled for a screening project', () => {
-    const r = aiButtonState(true, true, false, false, true, false, false)
+    const r = aiButtonState(true, true, false, false, true, false, false, false)
     expect(r.disabled).toBe(true)
     expect(r.title).toContain('screening')
   })
 
   it('is disabled with no reviewer picked in a multi-reviewer project', () => {
-    const r = aiButtonState(true, false, false, true, true, false, false)
+    const r = aiButtonState(true, false, false, true, true, false, false, false)
     expect(r.disabled).toBe(true)
     expect(r.title).toContain('Pick a reviewer')
   })
 
   it("is disabled with the project's own opt-out reason when config.ai is false", () => {
-    const r = aiButtonState(true, false, false, false, false, false, false)
+    const r = aiButtonState(true, false, false, false, false, false, false, false)
     expect(r.disabled).toBe(true)
     expect(r.title).toBe('AI is turned off for this project in its settings.')
   })
 
   it('busy or an open editor disables without rewriting an otherwise-usable tooltip', () => {
-    const busy = aiButtonState(true, false, false, false, true, true, false)
+    const busy = aiButtonState(true, false, false, false, true, true, false, false)
     expect(busy.disabled).toBe(true)
     expect(busy.title).toBe('Annotate papers with AI')
 
-    const editorOpen = aiButtonState(true, false, false, false, true, false, true)
+    const editorOpen = aiButtonState(true, false, false, false, true, false, true, false)
     expect(editorOpen.disabled).toBe(true)
     expect(editorOpen.title).toBe('Annotate papers with AI')
+  })
+
+  describe('with an AI seat (REQ-LLM-470): a run writes into the AI seat, not the selected one', () => {
+    it('is not disabled for the Consolidation seat', () => {
+      const r = aiButtonState(true, false, true, false, true, false, false, true)
+      expect(r.disabled).toBe(false)
+      expect(r.title).toBe('Annotate papers with AI')
+    })
+
+    it('is not disabled with no reviewer picked', () => {
+      const r = aiButtonState(true, false, false, true, true, false, false, true)
+      expect(r.disabled).toBe(false)
+      expect(r.title).toBe('Annotate papers with AI')
+    })
+
+    it('is still disabled for a screening project or the project opt-out', () => {
+      const screening = aiButtonState(true, true, false, false, true, false, false, true)
+      expect(screening.disabled).toBe(true)
+
+      const optedOut = aiButtonState(true, false, false, false, false, false, false, true)
+      expect(optedOut.disabled).toBe(true)
+    })
   })
 })

@@ -228,6 +228,7 @@ describe('run: spending cap stops an all-papers batch', () => {
       allPapers: true,
       candidates: [{ id: 'p1', title: 'Paper One' }, { id: 'p2', title: 'Paper Two' }],
       spendCap: 0.001, // Blown through by the very first paper's usage.
+      concurrency: 1, // deterministic: paper 2 must not start before paper 1's cost is known
     })
     runAgentMock.mockResolvedValue(fakeAgentResult({ usage: { inputTokens: 100_000, outputTokens: 40_000, calls: 2 } }))
 

@@ -2748,18 +2748,25 @@ export const useStore = create<AppState>()(
       const prev = get()
       const totalSuggestions = items.reduce((n, it) => n + it.suggestions.length, 0)
       if (!prev.project) return { filled: 0, skipped: totalSuggestions, papers: 0 }
-      if (prev.project.reviewers > 1 && prev.currentReviewer === null) {
+      // The AI's own seat (REQ-LLM-470) may be written from any seat, including
+      // Consolidation or nobody selected — a run targeting only that seat skips
+      // the two seat-selection refusals below, which exist to protect whichever
+      // seat is *currently selected*, not the AI's own.
+      const aiSeat = aiSeatId(prev.project)
+      const targetsAiSeatOnly = aiSeat !== null && items.every((it) => it.reviewer === aiSeat)
+      if (!targetsAiSeatOnly && prev.project.reviewers > 1 && prev.currentReviewer === null) {
         return { filled: 0, skipped: totalSuggestions, papers: 0 }
       }
       // Consolidation reconciles what the reviewers said; a model's answer isn't
       // one of the things being reconciled, and this tree is the one that ships.
       // No AI button here, but the dialog could be opened as a reviewer and the
       // seat switched after — refuse rather than trust the UI as the only guard.
-      if (prev.currentReviewer === 'consolidation') {
+      if (!targetsAiSeatOnly && prev.currentReviewer === 'consolidation') {
         return { filled: 0, skipped: totalSuggestions, papers: 0 }
       }
       // Screening decides the review's corpus, so a model's include/exclude
-      // pass is refused here too, for the same reason as Consolidation above.
+      // pass is refused here too, for the same reason as Consolidation above —
+      // there is no AI seat in a screening project either way (see `aiSeatId`).
       if (prev.project.screening !== null) {
         return { filled: 0, skipped: totalSuggestions, papers: 0 }
       }
@@ -2777,8 +2784,6 @@ export const useStore = create<AppState>()(
       }
       const planned: Planned[] = []
       let skipped = 0
-      // The AI's own seat may be written from any seat: that is where AI runs go.
-      const aiSeat = aiSeatId(prev.project)
       for (const item of items) {
         if (item.reviewer !== prev.currentReviewer && (aiSeat === null || item.reviewer !== aiSeat)) {
           skipped += item.suggestions.length

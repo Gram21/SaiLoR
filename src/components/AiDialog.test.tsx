@@ -5,6 +5,19 @@ import userEvent from '@testing-library/user-event'
 import type { RecentEntry, SaveHandle } from '../platform/adapter'
 import type { LlmConfig } from '../llm/types'
 
+if (typeof globalThis.localStorage === 'undefined') {
+  const backing = new Map<string, string>()
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: {
+      getItem: (k: string) => backing.get(k) ?? null,
+      setItem: (k: string, v: string) => void backing.set(k, String(v)),
+      removeItem: (k: string) => void backing.delete(k),
+      clear: () => backing.clear(),
+    },
+    configurable: true,
+  })
+}
+
 /**
  * Component-level coverage for the setup screen's new controls: the
  * prompt/agent mode switch and its cost/time info text (REQ-LLM-380), and the
@@ -250,5 +263,87 @@ describe('jump from an evidence quote to the PDF (REQ-LLM-460)', () => {
     await userEvent.click(backButton)
     expect(screen.getByRole('dialog', { name: 'Annotate with AI' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /the quoted passage/ })).toBeInTheDocument()
+  })
+})
+
+describe('AI seat routing (REQ-LLM-470): setup screen says where answers go', () => {
+  it('shows nothing extra in a single-reviewer project', () => {
+    render(<AiDialog />)
+    expect(screen.queryByText(/AI's own seat/)).not.toBeInTheDocument()
+  })
+
+  it("names the AI's own seat when the project has one, even with no reviewer picked", async () => {
+    const withAiSeat = JSON.parse(PROJECT)
+    withAiSeat.config.reviewers = 2
+    withAiSeat.config.aiSeat = true
+    st().loadFromText(JSON.stringify(withAiSeat), null, 'ai-seat.json')
+    st().selectPaper('p1')
+    expect(st().currentReviewer).toBeNull()
+    await useAiStore.getState().openDialog()
+
+    render(<AiDialog />)
+    expect(screen.getByText(/AI's own seat/)).toBeInTheDocument()
+    expect(screen.getByText('AI (Reviewer 2)')).toBeInTheDocument()
+    expect(useAiStore.getState().targetSeat).toBe('2')
+  })
+})
+
+describe('few-shot examples (REQ-LLM-450): setup screen toggle', () => {
+  it('is disabled with no finished papers available', () => {
+    render(<AiDialog />)
+    const toggle = screen.getByRole('checkbox', { name: /finished papers as examples/ })
+    expect(toggle).toBeDisabled()
+    expect(screen.getByText(/No finished papers are available/)).toBeInTheDocument()
+  })
+
+  it('enables once a finished paper exists, and the consent line names the count', async () => {
+    useStore.setState((s) => {
+      s.project!.papers[1].finished = true
+      s.project!.papers[1].annotations = { Summary: [{ value: 'x' }] }
+    })
+    await useAiStore.getState().openDialog()
+    render(<AiDialog />)
+
+    const toggle = screen.getByRole('checkbox', { name: /finished papers as examples/ })
+    expect(toggle).not.toBeDisabled()
+    expect(screen.getByText('1 finished paper available.')).toBeInTheDocument()
+
+    await userEvent.click(toggle)
+    expect(useAiStore.getState().fewShot).toBe(true)
+    expect(screen.getByText(/plus the annotations \(and abstracts\) of 1 of your finished papers/)).toBeInTheDocument()
+  })
+})
+
+describe('parallel batch (REQ-LLM-500/510): setup screen controls', () => {
+  it('shows the concurrency select only in all-papers mode', async () => {
+    render(<AiDialog />)
+    expect(screen.queryByLabelText('Papers at once')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('checkbox', { name: /Annotate all papers/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Annotate all/ }))
+
+    expect(screen.getByLabelText('Papers at once')).toBeInTheDocument()
+  })
+
+  it('shows a resume banner when a saved batch exists for this project', async () => {
+    localStorage.setItem(
+      `slr.llm.batch.${st().project!.title}.`,
+      JSON.stringify({
+        version: 1,
+        mode: 'prompt',
+        configId: 'c1',
+        judgeId: null,
+        allPaperIds: ['p1', 'p2'],
+        doneIds: ['p1'],
+        usage: { calls: 1, inputTokens: 10, outputTokens: 5 },
+        spent: 0,
+        startedAt: new Date().toISOString(),
+      }),
+    )
+    await useAiStore.getState().openDialog()
+    render(<AiDialog />)
+
+    expect(screen.getByText(/stopped after 1 of 2 papers/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument()
   })
 })

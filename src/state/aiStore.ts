@@ -9,10 +9,13 @@ import { buildModelsRequest, parseModelsResponse } from '../llm/models'
 import { parseAnswer } from '../llm/parse'
 import { parseChatResponse } from '../llm/chat'
 import { runAgent } from '../llm/agent'
-import { withRetry, type CallLlm } from '../llm/retry'
+import { withRetry, runPool, type CallLlm } from '../llm/retry'
 import { costOf } from '../llm/cost'
+import { buildFewShotBlock, countAnsweredFields, pickFewShotExamples, type FewShotExample } from '../llm/fewshot'
 import type { LlmAnswer, LlmConfig, ModelInfo, Suggestion } from '../llm/types'
+import { aiSeatId } from '../model/project'
 import type { Paper, Project } from '../model/project'
+import type { AnnotationValueTree } from '../model/annotations'
 import { extractPdfText, countPdfPages } from '../model/pdfText'
 
 /**
@@ -25,6 +28,15 @@ import { extractPdfText, countPdfPages } from '../model/pdfText'
 const SELECTED_KEY = 'slr.llm.selected'
 const MODE_KEY = 'slr.llm.mode'
 const JUDGE_KEY = 'slr.llm.judge'
+const FEW_SHOT_KEY = 'slr.llm.fewshot'
+const DEFAULT_FEW_SHOT_COUNT = 2
+const CONCURRENCY_KEY = 'slr.llm.concurrency'
+const DEFAULT_CONCURRENCY = 2
+const MAX_CONCURRENCY = 4
+
+/** Above this serialized size, a persisted batch drops its rows/notes/errors —
+ *  see `PersistedBatch.rowsOmitted`. */
+const PERSIST_SIZE_CAP = 2_000_000
 
 /** Output budget for the "Verify setup" smoke test — high enough to survive
  * reasoning-model overhead, still well below `DEFAULT_MAX_TOKENS`. */
@@ -118,6 +130,16 @@ interface AiState {
   /** "Rate-limited, retrying in Ns…", cleared as soon as the retry lands. */
   retryNotice: string | null
 
+  /** Show the reviewer's finished papers to the model as worked examples
+   *  (REQ-LLM-450). Off by default, persisted like `mode`. */
+  fewShot: boolean
+  /** How many worked examples to offer at most (1-5). Persisted alongside `fewShot`. */
+  fewShotCount: number
+  /** How many finished papers are available as examples for the current
+   *  paper right now — drives the setup screen's "N finished papers
+   *  available" line and disables the toggle when it's zero. */
+  fewShotAvailable: number
+
   /** Page counts for the cost estimate, keyed by paper id — fetched lazily and
    *  cached for the session; see `ensurePageCounts`. */
   pageCounts: Record<string, number>
@@ -128,6 +150,11 @@ interface AiState {
   /** Seconds the current call has been running, for the progress line. */
   elapsed: number
 
+  /** The seat this run writes into — the AI's own seat (REQ-LLM-470) when the
+   *  project has one, else whichever seat was selected when the dialog opened.
+   *  Fixed for the run's whole lifetime, unaffected by the reviewer switching
+   *  seats mid-run, same as `targets` below. */
+  targetSeat: string | null
   /** The fields the AI is being asked about for the current paper — computed
    *  when the dialog opens, used as the disclosure example in all-papers mode too. */
   targets: FieldTarget[]
@@ -136,11 +163,26 @@ interface AiState {
   /** Batch candidates, recomputed whenever `allPapers` is toggled on or the dialog opens. */
   candidates: AiCandidate[]
 
-  /** 1-based index of the paper currently being processed, and how many total. */
-  batchIndex: number
+  /** How many papers this batch has settled (succeeded or failed) so far, and
+   *  how many it covers in total — `batchTotal - batchDone` is how many a
+   *  `resumeBatch()` would still have to do. */
+  batchDone: number
   batchTotal: number
-  batchTitle: string
-  /** Agent mode only: the last few progress messages for the paper in flight. */
+  /** Titles of the papers currently in flight — as many as `concurrency`
+   *  allows at once. Empty between papers and once the batch is done. */
+  inFlightTitles: string[]
+  /** All-papers mode only: how many papers `runPool` works on at once (1-4),
+   *  persisted like `mode`. */
+  concurrency: number
+  /** A saved unfinished batch for this project + seat, offered as "Resume"
+   *  on the setup screen — see `openDialog` and `resumeBatch`. */
+  resumeAvailable: PersistedBatch | null
+  /** When the current (or resumed) batch started — carried through a resume
+   *  so the persisted record's timestamp reflects the original run, not the
+   *  most recent resume. */
+  batchStartedAt: string | null
+  /** Agent mode only: the last few progress messages, tagged with which
+   *  paper they're about — several can be in flight together. */
   agentEvents: string[]
   /** Per-paper failures a batch run continues past. */
   errors: PaperRunError[]
@@ -154,6 +196,10 @@ interface AiState {
   /** Agent mode only: how many agent rounds each paper took — `apply()`'s
    *  per-paper disclosure reads this by paper id. */
   roundsByPaper: Record<string, number>
+  /** How many few-shot examples were actually included for each paper — only
+   *  set when at least one was, so `apply()`'s disclosure can tell "not
+   *  offered" from "offered zero" the same way `roundsByPaper` does. */
+  fewShotByPaper: Record<string, number>
 
   rows: ReviewRow[]
   /** Per-paper "left empty"/"rejected" lists, same content the old single-paper
@@ -176,6 +222,10 @@ interface AiState {
   /** `null` means "same as agent". */
   selectJudge: (id: string | null) => void
   setSpendCap: (cap: number | null) => void
+  setFewShot: (on: boolean) => void
+  setFewShotCount: (count: number) => void
+  /** Clamped to 1-4. */
+  setConcurrency: (n: number) => void
   /** Fetch and cache each paper's page count, for the setup screen's cost
    *  estimate. Best-effort: a paper whose PDF can't be read is left uncached
    *  rather than failing the whole batch. Never awaited by the caller in a
@@ -195,10 +245,21 @@ interface AiState {
   clearModels: (id: string) => void
 
   run: () => Promise<void>
+  /** Continues a saved unfinished all-papers batch — the setup screen's
+   *  banner, or the review screen's "Continue with the remaining N papers"
+   *  after a cancel or a spending-cap stop. No-op if nothing is saved for
+   *  this project + seat, or its target no longer exists. */
+  resumeBatch: () => Promise<void>
   cancel: () => void
   toggleRow: (index: number, checked: boolean) => void
   setAllRows: (checked: boolean) => void
   apply: () => void
+  /** The review screen's Discard: clears any saved batch progress, then closes. */
+  discardBatch: () => void
+  /** Dismisses the setup screen's resume banner and discards the saved batch
+   *  it offers, without closing the dialog — the reviewer stays on setup to
+   *  start a fresh run instead. */
+  dismissResume: () => void
 }
 
 // Not in the store: it is not serializable and nothing renders from it.
@@ -211,15 +272,21 @@ function stopTicker() {
 }
 
 /** Papers eligible for "annotate all papers": have a PDF, aren't finished for
- *  this seat, and have at least one unanswered field. */
+ *  the target seat, and have at least one unanswered field. The target seat is
+ *  the AI's own seat when the project has one (REQ-LLM-470), else whichever
+ *  seat the human reviewer currently has selected. */
 export function batchCandidates(project: Project, currentReviewer: string | null): AiCandidate[] {
   const out: AiCandidate[] = []
-  // Same seats `applyAiSuggestionsBatch` refuses — don't pay for a batch that can't be applied.
-  if (currentReviewer === 'consolidation' || project.screening) return out
+  if (project.screening) return out
+  const targetSeat = aiSeatId(project) ?? currentReviewer
+  // Same seat `applyAiSuggestionsBatch` refuses — don't pay for a batch that
+  // can't be applied. Unreachable when an AI seat exists: `targetSeat` is then
+  // the AI seat, never 'consolidation'.
+  if (targetSeat === 'consolidation') return out
   for (const paper of project.papers) {
     if (!paper.pdf) continue
-    if (currentFinished(project, currentReviewer, paper) === true) continue
-    const tree = currentTree(project, currentReviewer, paper)
+    if (currentFinished(project, targetSeat, paper) === true) continue
+    const tree = currentTree(project, targetSeat, paper)
     if (!tree) continue
     if (unansweredFields(project.schema, tree).length === 0) continue
     out.push({ id: paper.id, title: paper.title })
@@ -227,8 +294,389 @@ export function batchCandidates(project: Project, currentReviewer: string | null
   return out
 }
 
+/** One finished paper usable as a few-shot worked example. */
+export interface FewShotCandidate {
+  paperId: string
+  title: string
+  abstract?: string
+  tree: AnnotationValueTree
+  answered: number
+}
+
+/**
+ * The seat whose finished papers serve as worked examples (REQ-LLM-450): the
+ * Consolidation seat when this is a multi-reviewer project with anything
+ * finished there, else whichever seat the human reviewer currently has
+ * selected — never the AI's own seat, even if that happens to be selected.
+ */
+function fewShotSourceSeat(project: Project, currentReviewer: string | null): string | null {
+  if (project.reviewers > 1 && project.papers.some((p) => p.finished === true)) return 'consolidation'
+  const aiSeat = aiSeatId(project)
+  return currentReviewer === aiSeat ? null : currentReviewer
+}
+
+/** Finished papers for the few-shot source seat, most-answered-fields-first
+ *  (ties keep project order — `Array.prototype.sort` is stable). */
+export function fewShotCandidates(project: Project, currentReviewer: string | null): FewShotCandidate[] {
+  const seat = fewShotSourceSeat(project, currentReviewer)
+  const out: FewShotCandidate[] = []
+  for (const paper of project.papers) {
+    if (currentFinished(project, seat, paper) !== true) continue
+    const tree = currentTree(project, seat, paper)
+    if (!tree) continue
+    out.push({
+      paperId: paper.id,
+      title: paper.title,
+      abstract: paper.abstract,
+      tree,
+      answered: countAnsweredFields(project.schema, tree),
+    })
+  }
+  out.sort((a, b) => b.answered - a.answered)
+  return out
+}
+
+/** The few-shot prompt block for one paper, and how many examples it actually
+ *  carries after `buildFewShotBlock`'s truncation — `''`/`0` when nothing was
+ *  picked (empty candidate list, or every candidate excluded/truncated away). */
+export function buildFewShotForPaper(
+  schema: Project['schema'],
+  candidates: FewShotCandidate[],
+  count: number,
+  paperId: string,
+): { block: string; included: number } {
+  const picked = pickFewShotExamples(candidates, count, paperId, (c) => c.paperId)
+  if (picked.length === 0) return { block: '', included: 0 }
+  const examples: FewShotExample[] = picked.map((c) => ({ title: c.title, abstract: c.abstract, tree: c.tree }))
+  const block = buildFewShotBlock(schema, examples)
+  const included = block ? (block.match(/^### /gm) ?? []).length : 0
+  return { block, included }
+}
+
+// ---------------------------------------------------------------------------
+// All-papers batch persistence — resuming a run stopped mid-way (REQ-LLM-510).
+// ---------------------------------------------------------------------------
+
+/** What an interrupted all-papers run needs to pick back up where it left
+ *  off. Keyed by project identity + target seat (see `batchStorageKey`), one
+ *  entry per project — a newer run overwrites an older one outright. */
+export interface PersistedBatch {
+  version: 1
+  mode: AiMode
+  configId: string
+  judgeId: string | null
+  allPaperIds: string[]
+  doneIds: string[]
+  usage: { calls: number; inputTokens: number; outputTokens: number }
+  spent: number
+  startedAt: string
+  /** Absent when the record was too big to keep (see `PERSIST_SIZE_CAP`) —
+   *  resume then re-runs every paper in `allPaperIds`, not just the ones
+   *  missing from `doneIds`, since their results were never kept. */
+  rows?: ReviewRow[]
+  notes?: PaperNotes[]
+  errors?: PaperRunError[]
+  roundsByPaper?: Record<string, number>
+  fewShotByPaper?: Record<string, number>
+}
+
+/** Project identity for the storage key: the save path when there is one
+ *  (works across renames of the in-memory title), else the title. */
+function projectIdentityKey(): string {
+  const app = useStore.getState()
+  return app.saveHandle?.path ?? app.project?.title ?? ''
+}
+
+function batchStorageKey(seat: string | null): string {
+  return `slr.llm.batch.${projectIdentityKey()}.${seat ?? ''}`
+}
+
+function persistBatch(seat: string | null, data: PersistedBatch): void {
+  try {
+    const full = JSON.stringify(data)
+    const toWrite = full.length > PERSIST_SIZE_CAP
+      ? JSON.stringify({ ...data, rows: undefined, notes: undefined, errors: undefined })
+      : full
+    localStorage?.setItem(batchStorageKey(seat), toWrite)
+  } catch {
+    /* ignore (private mode / disabled storage / quota) */
+  }
+}
+
+function readPersistedBatch(seat: string | null): PersistedBatch | null {
+  try {
+    const raw = localStorage?.getItem(batchStorageKey(seat))
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as PersistedBatch
+    return parsed.version === 1 ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+function clearPersistedBatch(seat: string | null): void {
+  try {
+    localStorage?.removeItem(batchStorageKey(seat))
+  } catch {
+    /* ignore */
+  }
+}
+
 export const useAiStore = create<AiState>()(
-  immer((set, get) => ({
+  immer((set, get) => {
+    /**
+     * Runs `papers` through `runPool` at the configured concurrency (1 outside
+     * all-papers mode), shared by a fresh `run()` and a `resumeBatch()`
+     * continuation alike — both just prepare state differently (reset vs.
+     * restore) and hand off here. `allPaperIds`/`doneIdsSoFar` are the
+     * persisted-batch bookkeeping: the full original scope and what was
+     * already settled before this call, so progress and the resume record
+     * stay correct across a resume of a resume.
+     */
+    const executeBatch = async (
+      papers: Paper[],
+      allPaperIds: string[],
+      doneIdsSoFar: string[],
+      config: LlmConfig,
+      judgeCfg: LlmConfig | undefined,
+      mode: AiMode,
+      callLlm: CallLlm,
+      cap: number | null,
+      fewShotOn: boolean,
+      fewShotCandidatesList: FewShotCandidate[],
+      fewShotCount: number,
+    ): Promise<void> => {
+      const app = useStore.getState()
+      const targetSeat = get().targetSeat
+      // Persistence/resume only makes sense for an all-papers batch — a
+      // single-paper run has nothing left to "resume" once it ends. `null` is
+      // a legitimate seat (single-reviewer, or nobody picked), so this can't
+      // be folded into the seat value itself the way `persistBatch`'s other
+      // callers do.
+      const persistEnabled = get().allPapers
+      const doneIds = [...doneIdsSoFar]
+
+      set((s) => {
+        s.batchTotal = allPaperIds.length
+        s.batchDone = doneIdsSoFar.length
+        s.inFlightTitles = []
+      })
+
+      const myController = new AbortController()
+      controller = myController
+      const started = Date.now()
+      stopTicker()
+      ticker = setInterval(() => {
+        set((s) => { s.elapsed = Math.round((Date.now() - started) / 1000) })
+      }, 1000)
+
+      const setPhase = (p: AiPhase) => { if (controller === myController) set((s) => { s.phase = p }) }
+
+      const persist = () => {
+        if (!persistEnabled) return
+        persistBatch(targetSeat, {
+          version: 1,
+          mode,
+          configId: config.id,
+          judgeId: judgeCfg?.id ?? null,
+          allPaperIds,
+          doneIds: [...doneIds],
+          usage: get().usage,
+          spent: get().spentSoFar,
+          startedAt: get().batchStartedAt ?? new Date().toISOString(),
+          rows: get().rows,
+          notes: get().notes,
+          errors: get().errors,
+          roundsByPaper: get().roundsByPaper,
+          fewShotByPaper: get().fewShotByPaper,
+        })
+      }
+
+      // ponytail: `runPool`'s cursor already claims a slot for a paper before
+      // this worker gets to look at the spend cap, so a cap-triggered stop
+      // still "starts" up to `concurrency - 1` extra workers that immediately
+      // no-op — negligible over/spend, not worth a second scheduling layer.
+      const concurrency = get().allPapers ? Math.min(Math.max(1, get().concurrency), MAX_CONCURRENCY) : 1
+
+      try {
+        await runPool(
+          papers,
+          concurrency,
+          async (paper) => {
+            if (controller !== myController) return // superseded — discard silently
+            try {
+              if (cap !== null && get().spentSoFar > cap) {
+                set((s) => { s.spendCapHit = true })
+                return // stop starting new papers; this one stays a resume candidate
+              }
+
+              set((s) => { s.inFlightTitles.push(paper.title) })
+
+              const tree = currentTree(app.project!, targetSeat, paper)
+              const targets = get().allPapers
+                ? unansweredFields(app.project!.schema, tree ?? undefined)
+                : get().targets
+              if (get().allPapers && targets.length === 0) return
+
+              const fewShotForPaper = fewShotOn
+                ? buildFewShotForPaper(app.project!.schema, fewShotCandidatesList, fewShotCount, paper.id)
+                : { block: '', included: 0 }
+
+              if (mode === 'agent') {
+                const result = await runOnePaperAgent(
+                  app.project!,
+                  paper,
+                  targets,
+                  config,
+                  judgeCfg,
+                  callLlm,
+                  myController.signal,
+                  (msg) => {
+                    if (controller !== myController) return
+                    set((s) => {
+                      // Tagged with the paper's title: several papers can be
+                      // in flight together, so a bare message no longer says
+                      // which one it's about.
+                      s.agentEvents.push(`${paper.title}: ${msg}`)
+                      if (s.agentEvents.length > MAX_AGENT_EVENTS) s.agentEvents.shift()
+                    })
+                  },
+                  setPhase,
+                  fewShotForPaper.block,
+                )
+                if (controller !== myController) return
+                // Agent + judge share one combined `usage`; the judge's own
+                // portion (`judgeUsage`) is priced against the judge target,
+                // the remainder against the agent's — see `estimateCostSplit`'s
+                // sibling logic in cost.ts for the same split, done ahead of time.
+                const agentPortion = {
+                  inputTokens: result.usage.inputTokens - result.judgeUsage.inputTokens,
+                  outputTokens: result.usage.outputTokens - result.judgeUsage.outputTokens,
+                }
+                const paperCost =
+                  (costOf(agentPortion, config) ?? 0) + (costOf(result.judgeUsage, judgeCfg ?? config) ?? 0)
+                set((s) => {
+                  for (const sug of result.answer.fields) {
+                    s.rows.push({
+                      paperId: paper.id,
+                      paperTitle: paper.title,
+                      reviewer: get().targetSeat,
+                      suggestion: sug,
+                      checked: sug.judge?.verdict === 'accept',
+                    })
+                  }
+                  s.usage.calls += result.usage.calls
+                  s.usage.inputTokens += result.usage.inputTokens
+                  s.usage.outputTokens += result.usage.outputTokens
+                  s.spentSoFar += paperCost
+                  s.roundsByPaper[paper.id] = result.rounds
+                  if (fewShotForPaper.included > 0) s.fewShotByPaper[paper.id] = fewShotForPaper.included
+                  if (result.answer.skipped.length > 0 || result.answer.rejected.length > 0) {
+                    s.notes.push({
+                      paperId: paper.id,
+                      paperTitle: paper.title,
+                      skipped: result.answer.skipped,
+                      rejected: result.answer.rejected,
+                    })
+                  }
+                })
+              } else {
+                const result = await runOnePaperPrompt(
+                  app.project!,
+                  paper,
+                  targets,
+                  config,
+                  callLlm,
+                  myController.signal,
+                  setPhase,
+                  fewShotForPaper.block,
+                )
+                if (controller !== myController) return
+                const paperCost = costOf(result.usage, config) ?? 0
+                set((s) => {
+                  for (const sug of result.answer.fields) {
+                    s.rows.push({
+                      paperId: paper.id,
+                      paperTitle: paper.title,
+                      reviewer: get().targetSeat,
+                      suggestion: sug,
+                      checked: true,
+                    })
+                  }
+                  s.usage.calls += 1
+                  s.usage.inputTokens += result.usage.inputTokens
+                  s.usage.outputTokens += result.usage.outputTokens
+                  s.spentSoFar += paperCost
+                  if (fewShotForPaper.included > 0) s.fewShotByPaper[paper.id] = fewShotForPaper.included
+                  if (result.answer.skipped.length > 0 || result.answer.rejected.length > 0) {
+                    s.notes.push({
+                      paperId: paper.id,
+                      paperTitle: paper.title,
+                      skipped: result.answer.skipped,
+                      rejected: result.answer.rejected,
+                    })
+                  }
+                })
+              }
+              if (controller === myController) {
+                doneIds.push(paper.id)
+                set((s) => { s.batchDone++ })
+              }
+            } catch (err) {
+              if (controller !== myController) return // superseded mid-call — discard silently
+              if (myController.signal.aborted) return // cancelled — stays a resume candidate, not an error
+              set((s) => {
+                s.errors.push({
+                  paperId: paper.id,
+                  paperTitle: paper.title,
+                  message: err instanceof Error ? err.message : String(err),
+                })
+                if (err instanceof Error && (err as Error & { scanned?: boolean }).scanned) s.scanned = true
+              })
+              // A paper that failed this run isn't retried by resuming the
+              // same batch — it stays recorded in `errors` instead. Starting a
+              // fresh "annotate all papers" run picks it up again if it's
+              // still a candidate.
+              doneIds.push(paper.id)
+              set((s) => { s.batchDone++ })
+            } finally {
+              if (controller === myController) {
+                set((s) => { s.inFlightTitles = s.inFlightTitles.filter((t) => t !== paper.title) })
+                persist()
+              }
+            }
+          },
+          myController.signal,
+        )
+      } finally {
+        if (controller === myController) {
+          stopTicker()
+          controller = null
+        }
+      }
+
+      // Reached only by the run that owns this attempt (every supersede/abort
+      // branch above returns before this point).
+      const rows = get().rows
+      const errors = get().errors
+      const aborted = myController.signal.aborted
+      if (aborted && rows.length === 0) {
+        set((s) => { s.phase = 'setup'; s.error = null })
+        return
+      }
+      if (rows.length === 0 && errors.length > 0 && !get().allPapers) {
+        // Single-paper mode: keep the classic one-error screen rather than a
+        // review screen with nothing to review.
+        set((s) => {
+          s.phase = 'error'
+          s.error = errors[0].message
+        })
+        return
+      }
+      set((s) => { s.phase = 'review' })
+    }
+
+    return {
     open: false,
     minimized: false,
     settingsOpen: false,
@@ -245,23 +693,31 @@ export const useAiStore = create<AiState>()(
     spentSoFar: 0,
     spendCapHit: false,
     retryNotice: null,
+    fewShot: readFewShot(),
+    fewShotCount: readFewShotCount(),
+    fewShotAvailable: 0,
     pageCounts: {},
     pageCountsLoading: {},
     phase: 'setup',
     error: null,
     elapsed: 0,
+    targetSeat: null,
     targets: [],
     currentPaperHasPdf: true,
     candidates: [],
-    batchIndex: 0,
+    batchDone: 0,
     batchTotal: 0,
-    batchTitle: '',
+    inFlightTitles: [],
+    concurrency: readConcurrency(),
+    resumeAvailable: null,
+    batchStartedAt: null,
     agentEvents: [],
     errors: [],
     usage: { calls: 0, inputTokens: 0, outputTokens: 0 },
     runUsage: null,
     runJudge: null,
     roundsByPaper: {},
+    fewShotByPaper: {},
     rows: [],
     notes: [],
     applied: null,
@@ -273,9 +729,13 @@ export const useAiStore = create<AiState>()(
       if (!app.project || !paper) return
       // Second line of defense; the toolbar AI button is already disabled for an opted-out project.
       if (!app.project.aiEnabled) return
-      // Multi-reviewer with nobody picked: no active tree to propose values into.
-      if (app.project.reviewers > 1 && app.currentReviewer === null) return
-      const tree = currentTree(app.project, app.currentReviewer, paper)
+      // The AI's own seat (REQ-LLM-470) is always the target when the project
+      // has one, whichever human seat is currently selected — an AI run never
+      // writes into the reviewer's own seat by accident.
+      const targetSeat = aiSeatId(app.project) ?? app.currentReviewer
+      // Multi-reviewer with nobody picked and no AI seat: no active tree to propose values into.
+      if (app.project.reviewers > 1 && targetSeat === null) return
+      const tree = currentTree(app.project, targetSeat, paper)
       if (!tree) return
 
       set((s) => {
@@ -294,15 +754,33 @@ export const useAiStore = create<AiState>()(
         s.runUsage = null
         s.runJudge = null
         s.roundsByPaper = {}
+        s.fewShotByPaper = {}
         s.spendCap = null
         s.spentSoFar = 0
         s.spendCapHit = false
         s.retryNotice = null
+        s.batchDone = 0
+        s.batchTotal = 0
+        s.inFlightTitles = []
+        s.batchStartedAt = null
+        s.targetSeat = targetSeat
         s.targets = unansweredFields(app.project!.schema, tree)
         s.currentPaperHasPdf = !!paper.pdf
         s.candidates = batchCandidates(app.project!, app.currentReviewer)
+        s.fewShotAvailable = fewShotCandidates(app.project!, app.currentReviewer).filter(
+          (c) => c.paperId !== paper.id,
+        ).length
+        // A saved batch is only offered once its target still exists —
+        // otherwise there is nothing to resume with.
+        const saved = readPersistedBatch(targetSeat)
+        s.resumeAvailable = saved && s.configs.some((c) => c.id === saved.configId) ? saved : null
       })
       await get().refreshConfigs()
+      // `configs` may have just been (re)loaded — re-check now that it's current.
+      set((s) => {
+        const saved = readPersistedBatch(targetSeat)
+        s.resumeAvailable = saved && s.configs.some((c) => c.id === saved.configId) ? saved : null
+      })
     },
 
     closeDialog: () => {
@@ -342,6 +820,16 @@ export const useAiStore = create<AiState>()(
     },
 
     setSpendCap: (cap) => set((s) => { s.spendCap = cap }),
+
+    setFewShot: (on) => {
+      writeFewShot(on, get().fewShotCount)
+      set((s) => { s.fewShot = on })
+    },
+
+    setFewShotCount: (count) => {
+      writeFewShot(get().fewShot, count)
+      set((s) => { s.fewShotCount = count })
+    },
 
     ensurePageCounts: async (paperIds) => {
       const app = useStore.getState()
@@ -536,17 +1024,28 @@ export const useAiStore = create<AiState>()(
       // listing intentionally call the platform directly, unwrapped.
       const callLlm: CallLlm = withRetry(getPlatform().callLlm, {
         onRetry: (info) => {
-          if (controller !== myController) return
           set((s) => {
             s.retryNotice = `Rate-limited, retrying in ${Math.ceil(info.delayMs / 1000)}s…`
           })
         },
       })
 
+      // Computed once per run, not per paper: the source seat and "most
+      // answered first" ordering don't change paper to paper, only which
+      // candidate gets excluded as "the current one" does — see `pickFewShotExamples`.
+      const fewShotOn = get().fewShot
+      const fewShotCandidatesList = fewShotOn ? fewShotCandidates(app.project, app.currentReviewer) : []
+      const fewShotCount = get().fewShotCount
+
+      // Starting fresh supersedes any earlier saved progress for this seat —
+      // `executeBatch` will start re-persisting from scratch as it goes.
+      if (get().allPapers) clearPersistedBatch(get().targetSeat)
+
       set((s) => {
         s.runUsage = { provider: config.provider, model: config.model }
         s.runJudge = mode === 'agent' ? { provider: (judgeCfg ?? config).provider, model: (judgeCfg ?? config).model } : null
         s.roundsByPaper = {}
+        s.fewShotByPaper = {}
         s.rows = []
         s.notes = []
         s.errors = []
@@ -554,177 +1053,112 @@ export const useAiStore = create<AiState>()(
         s.spentSoFar = 0
         s.spendCapHit = false
         s.retryNotice = null
-        s.batchTotal = papers.length
-        s.batchIndex = 0
-        s.batchTitle = ''
         s.agentEvents = []
         s.applied = null
         s.error = null
         s.elapsed = 0
+        s.batchStartedAt = new Date().toISOString()
       })
 
-      // Kept in a local too: reading only the module slot broke both the abort
-      // check (cancel nulls it before rejection arrives) and cleanup (finally
-      // could clear a newer run's controller instead of this one's).
-      const myController = new AbortController()
-      controller = myController
-      const started = Date.now()
-      stopTicker()
-      ticker = setInterval(() => {
-        set((s) => { s.elapsed = Math.round((Date.now() - started) / 1000) })
-      }, 1000)
+      await executeBatch(
+        papers,
+        papers.map((p) => p.id),
+        [],
+        config,
+        judgeCfg,
+        mode,
+        callLlm,
+        cap,
+        fewShotOn,
+        fewShotCandidatesList,
+        fewShotCount,
+      )
+    },
 
-      // A superseded run must not narrate over the one that replaced it — every
-      // phase/event write below is guarded the same way the single-paper flow was.
-      const setPhase = (p: AiPhase) => { if (controller === myController) set((s) => { s.phase = p }) }
+    resumeBatch: async () => {
+      const app = useStore.getState()
+      if (!app.project) return
+      const persisted = readPersistedBatch(get().targetSeat)
+      if (!persisted) return
+      const config = get().configs.find((c) => c.id === persisted.configId)
+      if (!config) return // the saved target no longer exists — nothing to resume with
+      const judgeCfg = persisted.judgeId ? get().configs.find((c) => c.id === persisted.judgeId) : undefined
 
-      try {
-        for (let i = 0; i < papers.length; i++) {
-          if (controller !== myController) return // superseded — discard silently
-          if (cap !== null && get().spentSoFar > cap) {
-            set((s) => { s.spendCapHit = true })
-            break // keep whatever finished; don't start another paper
-          }
-          const paper = papers[i]
+      set((s) => {
+        s.mode = persisted.mode
+        s.selectedId = persisted.configId
+        s.judgeSelectedId = persisted.judgeId
+        s.allPapers = true
+        s.rows = persisted.rows ?? []
+        s.notes = persisted.notes ?? []
+        s.errors = persisted.errors ?? []
+        s.usage = persisted.usage
+        s.spentSoFar = persisted.spent
+        s.spendCapHit = false
+        s.retryNotice = null
+        s.roundsByPaper = persisted.roundsByPaper ?? {}
+        s.fewShotByPaper = persisted.fewShotByPaper ?? {}
+        s.runUsage = { provider: config.provider, model: config.model }
+        s.runJudge =
+          persisted.mode === 'agent'
+            ? { provider: (judgeCfg ?? config).provider, model: (judgeCfg ?? config).model }
+            : null
+        s.agentEvents = []
+        s.applied = null
+        s.error = null
+        s.elapsed = 0
+        s.batchStartedAt = persisted.startedAt
+        s.resumeAvailable = null
+        s.candidates = batchCandidates(app.project!, app.currentReviewer)
+      })
+
+      // Rows were dropped for size — their papers' results aren't recoverable,
+      // so resume re-runs the whole original scope rather than just the tail.
+      const remainingIds =
+        persisted.rows === undefined
+          ? persisted.allPaperIds
+          : persisted.allPaperIds.filter((id) => !persisted.doneIds.includes(id))
+      const stillCandidates = new Set(batchCandidates(app.project, app.currentReviewer).map((c) => c.id))
+      const papers = remainingIds
+        .map((id) => app.project!.papers.find((p) => p.id === id))
+        .filter((p): p is Paper => !!p && stillCandidates.has(p.id))
+
+      if (papers.length === 0) {
+        set((s) => { s.phase = 'review' })
+        return
+      }
+
+      const cap = get().spendCap
+      const callLlm: CallLlm = withRetry(getPlatform().callLlm, {
+        onRetry: (info) => {
           set((s) => {
-            s.batchIndex = i + 1
-            s.batchTitle = paper.title
-            s.agentEvents = []
-            s.retryNotice = null
+            s.retryNotice = `Rate-limited, retrying in ${Math.ceil(info.delayMs / 1000)}s…`
           })
+        },
+      })
+      const fewShotOn = get().fewShot
+      const fewShotCandidatesList = fewShotOn ? fewShotCandidates(app.project, app.currentReviewer) : []
+      const fewShotCount = get().fewShotCount
 
-          // Single-paper mode always sends `targets` as computed when the dialog
-          // opened, even if by now it's empty (Start would already be disabled —
-          // this mirrors that rather than adding a second source of truth).
-          // Batch mode recomputes per paper and skips one that turned out to
-          // have nothing left unanswered since the candidate list was built.
-          const tree = currentTree(app.project!, app.currentReviewer, paper)
-          const targets = get().allPapers
-            ? unansweredFields(app.project!.schema, tree ?? undefined)
-            : get().targets
-          if (get().allPapers && targets.length === 0) continue
+      await executeBatch(
+        papers,
+        persisted.allPaperIds,
+        persisted.doneIds,
+        config,
+        judgeCfg,
+        persisted.mode,
+        callLlm,
+        cap,
+        fewShotOn,
+        fewShotCandidatesList,
+        fewShotCount,
+      )
+    },
 
-          try {
-            if (mode === 'agent') {
-              const result = await runOnePaperAgent(
-                app.project!,
-                paper,
-                targets,
-                config,
-                judgeCfg,
-                callLlm,
-                myController.signal,
-                (msg) => {
-                  if (controller !== myController) return
-                  set((s) => {
-                    s.agentEvents.push(msg)
-                    if (s.agentEvents.length > MAX_AGENT_EVENTS) s.agentEvents.shift()
-                  })
-                },
-                setPhase,
-              )
-              if (controller !== myController) return
-              // Agent + judge share one combined `usage`; the judge's own
-              // portion (`judgeUsage`) is priced against the judge target,
-              // the remainder against the agent's — see `estimateCostSplit`'s
-              // sibling logic in cost.ts for the same split, done ahead of time.
-              const agentPortion = {
-                inputTokens: result.usage.inputTokens - result.judgeUsage.inputTokens,
-                outputTokens: result.usage.outputTokens - result.judgeUsage.outputTokens,
-              }
-              const paperCost =
-                (costOf(agentPortion, config) ?? 0) + (costOf(result.judgeUsage, judgeCfg ?? config) ?? 0)
-              set((s) => {
-                for (const sug of result.answer.fields) {
-                  s.rows.push({
-                    paperId: paper.id,
-                    paperTitle: paper.title,
-                    reviewer: app.currentReviewer,
-                    suggestion: sug,
-                    checked: sug.judge?.verdict === 'accept',
-                  })
-                }
-                s.usage.calls += result.usage.calls
-                s.usage.inputTokens += result.usage.inputTokens
-                s.usage.outputTokens += result.usage.outputTokens
-                s.spentSoFar += paperCost
-                s.roundsByPaper[paper.id] = result.rounds
-                if (result.answer.skipped.length > 0 || result.answer.rejected.length > 0) {
-                  s.notes.push({
-                    paperId: paper.id,
-                    paperTitle: paper.title,
-                    skipped: result.answer.skipped,
-                    rejected: result.answer.rejected,
-                  })
-                }
-              })
-            } else {
-              const result = await runOnePaperPrompt(app.project!, paper, targets, config, callLlm, myController.signal, setPhase)
-              if (controller !== myController) return
-              const paperCost = costOf(result.usage, config) ?? 0
-              set((s) => {
-                for (const sug of result.answer.fields) {
-                  s.rows.push({
-                    paperId: paper.id,
-                    paperTitle: paper.title,
-                    reviewer: app.currentReviewer,
-                    suggestion: sug,
-                    checked: true,
-                  })
-                }
-                s.usage.calls += 1
-                s.usage.inputTokens += result.usage.inputTokens
-                s.usage.outputTokens += result.usage.outputTokens
-                s.spentSoFar += paperCost
-                if (result.answer.skipped.length > 0 || result.answer.rejected.length > 0) {
-                  s.notes.push({
-                    paperId: paper.id,
-                    paperTitle: paper.title,
-                    skipped: result.answer.skipped,
-                    rejected: result.answer.rejected,
-                  })
-                }
-              })
-            }
-          } catch (err) {
-            if (controller !== myController) return // superseded mid-call — discard silently
-            if (myController.signal.aborted) break // cancelled — stop the batch, keep what finished
-            set((s) => {
-              s.errors.push({
-                paperId: paper.id,
-                paperTitle: paper.title,
-                message: err instanceof Error ? err.message : String(err),
-              })
-              if (err instanceof Error && (err as Error & { scanned?: boolean }).scanned) s.scanned = true
-            })
-          }
-        }
-      } finally {
-        if (controller === myController) {
-          stopTicker()
-          controller = null
-        }
-      }
-
-      // Reached only by the run that owns this attempt (every supersede/abort
-      // branch above returns before this point).
-      const rows = get().rows
-      const errors = get().errors
-      const aborted = myController.signal.aborted
-      if (aborted && rows.length === 0) {
-        set((s) => { s.phase = 'setup'; s.error = null })
-        return
-      }
-      if (rows.length === 0 && errors.length > 0 && !get().allPapers) {
-        // Single-paper mode: keep the classic one-error screen rather than a
-        // review screen with nothing to review.
-        set((s) => {
-          s.phase = 'error'
-          s.error = errors[0].message
-        })
-        return
-      }
-      set((s) => { s.phase = 'review' })
+    setConcurrency: (n) => {
+      const clamped = Math.min(Math.max(1, Math.round(n)), MAX_CONCURRENCY)
+      writeConcurrency(clamped)
+      set((s) => { s.concurrency = clamped })
     },
 
     cancel: () => {
@@ -755,6 +1189,7 @@ export const useAiStore = create<AiState>()(
       const mode = get().mode
       const runJudge = get().runJudge
       const roundsByPaper = get().roundsByPaper
+      const fewShotByPaper = get().fewShotByPaper
       const checked = get().rows.filter((r) => r.checked)
 
       // One item per (paper, reviewer) pair — batch apply writes every paper in
@@ -793,18 +1228,31 @@ export const useAiStore = create<AiState>()(
             ? { rounds: roundsByPaper[entry.paperId] }
             : {}),
           ...(mode === 'agent' ? { verdicts: entry.verdicts } : {}),
+          ...(fewShotByPaper[entry.paperId] !== undefined ? { fewShot: fewShotByPaper[entry.paperId] } : {}),
         },
       }))
       const result = useStore.getState().applyAiSuggestionsBatch(items)
       // Unchecked rows are never applied, so they count as skipped alongside
       // whatever the store itself refused (already-answered fields, dead paths).
       const uncheckedCount = get().rows.length - checked.length
+      if (get().allPapers) clearPersistedBatch(get().targetSeat)
       set((s) => {
         s.applied = { filled: result.filled, skipped: result.skipped + uncheckedCount, papers: result.papers }
         s.phase = 'applied'
       })
     },
-  })),
+
+    discardBatch: () => {
+      if (get().allPapers) clearPersistedBatch(get().targetSeat)
+      get().closeDialog()
+    },
+
+    dismissResume: () => {
+      clearPersistedBatch(get().targetSeat)
+      set((s) => { s.resumeAvailable = null })
+    },
+    }
+  }),
 )
 
 // ---------------------------------------------------------------------------
@@ -819,6 +1267,8 @@ async function runOnePaperPrompt(
   callLlm: CallLlm,
   signal: AbortSignal,
   setPhase: (p: AiPhase) => void,
+  /** Pre-built few-shot block (see fewshot.ts), or `''` when the feature is off. */
+  fewShotBlock = '',
 ): Promise<{ answer: LlmAnswer; usage: { inputTokens: number; outputTokens: number } }> {
   setPhase('reading')
   const app = useStore.getState()
@@ -848,7 +1298,7 @@ async function runOnePaperPrompt(
 
   // With extracted text the model must be warned extraction is lossy, or it
   // will confidently reconstruct a mangled table.
-  const system = buildSystemPrompt(project.schema, targets, delivery)
+  const system = buildSystemPrompt(project.schema, targets, delivery, fewShotBlock || undefined)
   const req =
     delivery === 'text'
       ? buildRequest(config, system, { kind: 'text', text: buildUserText(paper, paperText) })
@@ -889,6 +1339,8 @@ async function runOnePaperAgent(
   signal: AbortSignal,
   onEvent: (message: string) => void,
   setPhase: (p: AiPhase) => void,
+  /** Pre-built few-shot block (see fewshot.ts), or `''` when the feature is off. */
+  fewShotBlock = '',
 ): Promise<{
   answer: LlmAnswer
   usage: { inputTokens: number; outputTokens: number; calls: number }
@@ -927,6 +1379,7 @@ async function runOnePaperAgent(
       pdfFilename: delivery === 'pdf' ? (paper.pdf.split('/').pop() ?? 'paper.pdf') : undefined,
       signal,
       onEvent: (e) => onEvent(e.message),
+      examples: fewShotBlock || undefined,
     },
     {
       callLlm,
@@ -1010,6 +1463,51 @@ function writeJudge(id: string | null): void {
   try {
     if (id) localStorage?.setItem(JUDGE_KEY, id)
     else localStorage?.removeItem(JUDGE_KEY)
+  } catch {
+    /* ignore (private mode / disabled storage) */
+  }
+}
+
+/** Both the toggle and the count live in one key — nothing else needs them separately. */
+function readFewShot(): boolean {
+  try {
+    const raw = localStorage?.getItem(FEW_SHOT_KEY)
+    return raw ? (JSON.parse(raw).on ?? false) : false
+  } catch {
+    return false
+  }
+}
+
+function readFewShotCount(): number {
+  try {
+    const raw = localStorage?.getItem(FEW_SHOT_KEY)
+    const count = raw ? JSON.parse(raw).count : undefined
+    return typeof count === 'number' && count >= 1 && count <= 5 ? count : DEFAULT_FEW_SHOT_COUNT
+  } catch {
+    return DEFAULT_FEW_SHOT_COUNT
+  }
+}
+
+function writeFewShot(on: boolean, count: number): void {
+  try {
+    localStorage?.setItem(FEW_SHOT_KEY, JSON.stringify({ on, count }))
+  } catch {
+    /* ignore (private mode / disabled storage) */
+  }
+}
+
+function readConcurrency(): number {
+  try {
+    const raw = Number(localStorage?.getItem(CONCURRENCY_KEY))
+    return Number.isInteger(raw) && raw >= 1 && raw <= MAX_CONCURRENCY ? raw : DEFAULT_CONCURRENCY
+  } catch {
+    return DEFAULT_CONCURRENCY
+  }
+}
+
+function writeConcurrency(n: number): void {
+  try {
+    localStorage?.setItem(CONCURRENCY_KEY, String(n))
   } catch {
     /* ignore (private mode / disabled storage) */
   }

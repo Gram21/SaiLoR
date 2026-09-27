@@ -1,6 +1,14 @@
 import { Fragment, useEffect, useState } from 'react'
-import { useAiStore, type AiMode, type PaperNotes, type ReviewRow } from '../state/aiStore'
+import {
+  useAiStore,
+  buildFewShotForPaper,
+  fewShotCandidates,
+  type AiMode,
+  type PaperNotes,
+  type ReviewRow,
+} from '../state/aiStore'
 import { useStore } from '../state/store'
+import { aiSeatId, seatLabel } from '../model/project'
 import { PROVIDERS } from '../llm/providers'
 import { displayPath, parsePath } from '../llm/paths'
 import { estimateRun, estimateCost, estimateCostSplit } from '../llm/cost'
@@ -61,12 +69,14 @@ function estimateLine(
   judgeCfg: LlmConfig | null,
   pages: number[],
   fields: number,
+  fewShotTokens: number,
 ): string {
   const est = estimateRun({
     papers: pages.map((p) => ({ pages: p })),
     fieldsPerPaper: fields,
     mode,
     delivery: deliveryOf(selected),
+    fewShotTokens,
   })
   const cost =
     mode === 'agent' && judgeCfg ? estimateCostSplit(est, selected, judgeCfg) : estimateCost(est, selected)
@@ -121,6 +131,9 @@ export function AiDialog() {
   const spentSoFar = useAiStore((s) => s.spentSoFar)
   const spendCapHit = useAiStore((s) => s.spendCapHit)
   const retryNotice = useAiStore((s) => s.retryNotice)
+  const fewShot = useAiStore((s) => s.fewShot)
+  const fewShotCount = useAiStore((s) => s.fewShotCount)
+  const fewShotAvailable = useAiStore((s) => s.fewShotAvailable)
   const pageCounts = useAiStore((s) => s.pageCounts)
   const pageCountsLoading = useAiStore((s) => s.pageCountsLoading)
   const currentPaperHasPdf = useAiStore((s) => s.currentPaperHasPdf)
@@ -133,9 +146,11 @@ export function AiDialog() {
   const applied = useAiStore((s) => s.applied)
   const scanned = useAiStore((s) => s.scanned)
   const settingsOpen = useAiStore((s) => s.settingsOpen)
-  const batchIndex = useAiStore((s) => s.batchIndex)
+  const batchDone = useAiStore((s) => s.batchDone)
   const batchTotal = useAiStore((s) => s.batchTotal)
-  const batchTitle = useAiStore((s) => s.batchTitle)
+  const inFlightTitles = useAiStore((s) => s.inFlightTitles)
+  const concurrency = useAiStore((s) => s.concurrency)
+  const resumeAvailable = useAiStore((s) => s.resumeAvailable)
   const agentEvents = useAiStore((s) => s.agentEvents)
   const runErrors = useAiStore((s) => s.errors)
   const usage = useAiStore((s) => s.usage)
@@ -148,15 +163,23 @@ export function AiDialog() {
   const setAllPapers = useAiStore((s) => s.setAllPapers)
   const selectJudge = useAiStore((s) => s.selectJudge)
   const setSpendCap = useAiStore((s) => s.setSpendCap)
+  const setFewShot = useAiStore((s) => s.setFewShot)
+  const setFewShotCount = useAiStore((s) => s.setFewShotCount)
   const ensurePageCounts = useAiStore((s) => s.ensurePageCounts)
   const run = useAiStore((s) => s.run)
+  const resumeBatch = useAiStore((s) => s.resumeBatch)
+  const setConcurrency = useAiStore((s) => s.setConcurrency)
+  const discardBatch = useAiStore((s) => s.discardBatch)
+  const dismissResume = useAiStore((s) => s.dismissResume)
   const cancel = useAiStore((s) => s.cancel)
   const toggleRow = useAiStore((s) => s.toggleRow)
   const setAllRows = useAiStore((s) => s.setAllRows)
   const apply = useAiStore((s) => s.apply)
 
+  const project = useStore((s) => s.project)
   const currentPaper = useStore((s) => s.project?.papers.find((p) => p.id === s.currentPaperId))
   const currentPaperId = useStore((s) => s.currentPaperId)
+  const currentReviewer = useStore((s) => s.currentReviewer)
   const selectPaper = useStore((s) => s.selectPaper)
   const requestPdfFind = useStore((s) => s.requestPdfFind)
 
@@ -223,11 +246,26 @@ export function AiDialog() {
   const canStartAll = candidates.length > 0
   const canStart = allPapers ? canStartAll : canStartSingle
 
+  // Representative estimate only (the current paper's block, like `targets`
+  // above) — every paper in all-papers mode gets its own, similarly sized one.
+  const fewShotBlock =
+    fewShot && project && currentPaperId
+      ? buildFewShotForPaper(project.schema, fewShotCandidates(project, currentReviewer), fewShotCount, currentPaperId)
+      : null
+  const fewShotTokens = fewShotBlock ? Math.ceil(fewShotBlock.block.length / 4) : 0
+
   const pagesKnown = scopePaperIds.length > 0 && scopePaperIds.every((id) => pageCounts[id] !== undefined)
   const estimateText = !selected
     ? null
     : pagesKnown
-      ? estimateLine(mode, selected, judgeCfg, scopePaperIds.map((id) => pageCounts[id]), targets.length)
+      ? estimateLine(
+          mode,
+          selected,
+          judgeCfg,
+          scopePaperIds.map((id) => pageCounts[id]),
+          targets.length,
+          fewShotTokens,
+        )
       : scopePaperIds.some((id) => pageCountsLoading[id])
         ? 'Estimating…'
         : null
@@ -244,6 +282,8 @@ export function AiDialog() {
   const paperOrder: string[] = []
   for (const r of rows) if (!paperOrder.includes(r.paperId)) paperOrder.push(r.paperId)
   const grouped = paperOrder.length > 1
+
+  const aiSeat = project ? aiSeatId(project) : null
 
   const gearButton = (
     <button
@@ -290,6 +330,33 @@ export function AiDialog() {
         <div className="modal-body">
           {phase === 'setup' && (
             <>
+              {resumeAvailable && (
+                <div className="ai-confirm">
+                  <p className="ai-note">
+                    An all-papers run stopped after {resumeAvailable.doneIds.length} of{' '}
+                    {resumeAvailable.allPaperIds.length} papers (
+                    {new Date(resumeAvailable.startedAt).toLocaleString()}).
+                  </p>
+                  <div className="ai-foot">
+                    <button
+                      type="button"
+                      onClick={() => dismissResume()}
+                      title="Discard the saved progress and start over"
+                    >
+                      Discard
+                    </button>
+                    <button
+                      type="button"
+                      className="primary"
+                      onClick={() => void resumeBatch()}
+                      title="Continue the saved run where it left off"
+                    >
+                      Resume
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {configs.length === 0 ? (
                 <div className="ai-empty-configs">
                   <p>No LLM target is set up yet.</p>
@@ -377,6 +444,12 @@ export function AiDialog() {
                 </>
               )}
 
+              {aiSeat && project && (
+                <p className="ai-note">
+                  Answers go into the AI's own seat: <strong>{seatLabel(project, aiSeat)}</strong>.
+                </p>
+              )}
+
               <p className="ai-scope">
                 {allPapers ? (
                   <>
@@ -425,6 +498,37 @@ export function AiDialog() {
               )}
               {allPapers && <p className="ai-note">{allPapersWarning(mode, candidates.length)}</p>}
 
+              <label className="ai-toggle-row">
+                <input
+                  type="checkbox"
+                  checked={fewShot}
+                  disabled={fewShotAvailable === 0}
+                  onChange={(e) => setFewShot(e.target.checked)}
+                />
+                Show the AI my finished papers as examples
+              </label>
+              <p className="ai-note">
+                {fewShotAvailable === 0
+                  ? 'No finished papers are available yet as examples.'
+                  : `${fewShotAvailable} finished paper${fewShotAvailable === 1 ? '' : 's'} available.`}
+              </p>
+              {fewShot && fewShotAvailable > 0 && (
+                <div className="ai-target-row">
+                  <label htmlFor="ai-fewshot-count">Show up to</label>
+                  <select
+                    id="ai-fewshot-count"
+                    value={fewShotCount}
+                    onChange={(e) => setFewShotCount(Number(e.target.value))}
+                  >
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <p className="ai-consent">
                 {selected ? (
                   <>
@@ -439,6 +543,9 @@ export function AiDialog() {
                       judgeCfg &&
                       judgeCfg.provider !== selected.provider &&
                       ` The judge's review is sent to ${PROVIDERS[judgeCfg.provider].label} (${judgeCfg.model}) as well — it also sees the paper.`}
+                    {fewShot &&
+                      fewShotAvailable > 0 &&
+                      ` …plus the annotations (and abstracts) of ${Math.min(fewShotCount, fewShotAvailable)} of your finished papers as examples.`}
                   </>
                 ) : (
                   'Nothing is sent until you choose a target and press Start.'
@@ -452,6 +559,24 @@ export function AiDialog() {
               </p>
 
               {estimateText && <p className="ai-note ai-estimate">{estimateText}</p>}
+
+              {allPapers && (
+                <div className="ai-target-row">
+                  <label htmlFor="ai-concurrency">Papers at once</label>
+                  <select
+                    id="ai-concurrency"
+                    value={concurrency}
+                    onChange={(e) => setConcurrency(Number(e.target.value))}
+                    title="More at once is faster, but hits your provider's rate limits sooner — retries back off automatically."
+                  >
+                    {[1, 2, 3, 4].map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {allPapers && (
                 <div className="ai-target-row">
@@ -529,7 +654,8 @@ export function AiDialog() {
               </div>
               {batchTotal > 1 && (
                 <p className="ai-note">
-                  Paper {batchIndex} of {batchTotal} — {batchTitle}
+                  {batchDone} of {batchTotal} papers done
+                  {inFlightTitles.length > 0 && ` — in progress: ${inFlightTitles.join(', ')}`}
                   {capKnown && ` · $${spentSoFar.toFixed(2)} spent so far`}
                 </p>
               )}
@@ -555,6 +681,19 @@ export function AiDialog() {
 
           {phase === 'review' && (
             <>
+              {allPapers && batchTotal > 0 && batchDone < batchTotal && (
+                <p className="ai-note">
+                  <button
+                    type="button"
+                    onClick={() => void resumeBatch()}
+                    title="Continue this run — the papers already done are kept"
+                  >
+                    Continue with the remaining {batchTotal - batchDone} paper
+                    {batchTotal - batchDone === 1 ? '' : 's'}
+                  </button>
+                </p>
+              )}
+
               {rows.length === 0 ? (
                 <>
                   <p>The model proposed no values.</p>
@@ -613,7 +752,7 @@ export function AiDialog() {
                   )}
 
                   <div className="ai-foot">
-                    <button type="button" onClick={() => closeDialog()} title="Discard all proposals without applying them">
+                    <button type="button" onClick={() => discardBatch()} title="Discard all proposals without applying them">
                       Discard
                     </button>
                     <button

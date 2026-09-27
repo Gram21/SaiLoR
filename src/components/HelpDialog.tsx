@@ -625,6 +625,23 @@ function editorHelp(): { lead: ReactNode; sections: HelpSection[] } {
         ),
       },
       {
+        id: 'ai-assisted-annotation',
+        title: 'AI-assisted annotation',
+        body: (
+          <p>
+            The AI toolbar button sends a paper's content to a configured LLM target and proposes
+            values for its still-empty fields — nothing is written until you review and press Apply.{' '}
+            <strong>Prompt</strong> mode is one request per paper; <strong>Agent</strong> mode lets the
+            model search and re-read the paper with tools and adds a second-pass judge review, at
+            considerably more cost and time. Turning on "annotate all papers" runs every eligible
+            paper instead of just the current one — several at once (configurable), with a spending
+            cap and the option to resume a run that was cancelled or stopped partway. A setup-screen
+            toggle can also show the model your own already-finished papers as worked examples of the
+            review's conventions.
+          </p>
+        ),
+      },
+      {
         id: 'ai-seat',
         title: 'Giving the AI a reviewer seat',
         body: (
