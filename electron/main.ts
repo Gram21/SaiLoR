@@ -62,7 +62,7 @@ import { parseMarks, type PdfMark } from '../src/model/pdfMarks'
 import { rectToPdfPoints, rectToQuadPoints } from '../src/model/pdfExport'
 import { verifyReleaseSignature, RELEASE_PUBLIC_KEY_B64 } from '../src/model/updateSignature'
 import { isBlockedAddress, validateFetchUrl } from './webFetch'
-import { validPrice } from './llmConfig'
+import { validPrice, buildCallHeaders } from './llmConfig'
 import { parseRetryAfter } from '../src/llm/retry'
 import type { WebFetchResult } from '../src/llm/types'
 import { PDFDocument, PDFHexString, PDFString, type PDFContext, type PDFDict } from 'pdf-lib'
@@ -1865,6 +1865,8 @@ interface StoredLlmConfig {
   baseUrl: string
   model: string
   attach: string
+  /** True when this target's server needs no API key (e.g. a local Ollama/LM Studio/vLLM). */
+  noKey?: boolean
   reasoningEffort?: string
   /** USD per 1M tokens, user-entered. Absent when the user has not set one. */
   inputPrice?: number
@@ -1921,6 +1923,7 @@ ipcMain.handle('llm:saveConfig', (_e, config: StoredLlmConfig, apiKey?: string) 
     ...config,
     inputPrice: validPrice(config.inputPrice),
     outputPrice: validPrice(config.outputPrice),
+    noKey: Boolean(config.noKey),
     ...(key ? { key } : {}),
   }
   const merged = existing
@@ -1965,7 +1968,7 @@ ipcMain.handle(
   ) => {
     const config = readLlmConfigs().find((c) => c.id === request.configId)
     if (!config) throw new Error('That LLM target no longer exists.')
-    if (!config.key) throw new Error('No API key is stored for this target.')
+    if (!config.key && !config.noKey) throw new Error('No API key is stored for this target.')
 
     // The renderer names the URL, so check it before handing over the key: a
     // compromised renderer must not be able to post the key to a host of its
@@ -1984,10 +1987,10 @@ ipcMain.handle(
       throw new Error(`Refusing to send the API key to ${target.origin}.`)
     }
 
-    const apiKey = decryptKey(config.key)
-    const headers = Object.fromEntries(
-      Object.entries(request.headers).map(([k, v]) => [k, v.split(API_KEY_SENTINEL).join(apiKey)]),
-    )
+    const headers = buildCallHeaders(request.headers, API_KEY_SENTINEL, {
+      apiKey: config.key ? decryptKey(config.key) : undefined,
+      noKey: config.noKey,
+    })
 
     const controller = new AbortController()
     inFlight.set(requestId, controller)

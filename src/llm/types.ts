@@ -35,6 +35,8 @@ export interface LlmConfig {
   attach: Attach
   /** True when an API key is stored for this target. The key itself is never sent here. */
   hasKey: boolean
+  /** True when this target's server needs no API key (e.g. a local Ollama/LM Studio/vLLM). */
+  noKey?: boolean
   /**
    * The reasoning-effort level to send with every call on this target, e.g.
    * "medium". Only meaningful when `model` is one `fetchModels` reported as
@@ -51,6 +53,11 @@ export interface LlmConfig {
    */
   inputPrice?: number
   outputPrice?: number
+}
+
+/** Whether a target has what it needs to be called: a stored key, or none required. */
+export function isUsable(config: Pick<LlmConfig, 'hasKey' | 'noKey'>): boolean {
+  return config.hasKey || Boolean(config.noKey)
 }
 
 /**

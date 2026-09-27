@@ -374,6 +374,7 @@ inspection only.
 | REQ-LLM-490 | Spending cap for all-papers runs | Functional · Functional Suitability | `src/state/aiStore.ts` (`spendCap`, `spentSoFar`, `spendCapHit`)<br>`src/components/AiDialog.tsx` (spend-cap input, `ai-cap-hit`) | `src/state/aiStore.judge.test.ts` | — | — |
 | REQ-LLM-500 | Parallel all-papers runs | Functional · Functional Suitability / Performance Efficiency | `src/llm/retry.ts` (`runPool`)<br>`src/state/aiStore.ts` (`concurrency`, `setConcurrency`, `executeBatch`, `inFlightTitles`, `batchDone`)<br>`src/components/AiDialog.tsx` ("Papers at once" select) | `src/state/aiStore.resume.test.ts`<br>`src/state/aiStore.batch.test.ts`<br>`src/llm/retry.test.ts` | — | — |
 | REQ-LLM-510 | Resume an interrupted all-papers run | Functional · Reliability | `src/state/aiStore.ts` (`PersistedBatch`, `persistBatch`, `readPersistedBatch`, `clearPersistedBatch`, `resumeBatch`, `resumeAvailable`, `discardBatch`, `dismissResume`)<br>`src/components/AiDialog.tsx` (resume banner, "Continue with the remaining N papers") | `src/state/aiStore.resume.test.ts`<br>`src/components/AiDialog.test.tsx` | — | — |
+| REQ-LLM-530 | Keyless local targets | Functional · Functional Suitability | `src/llm/types.ts` (`LlmConfig.noKey`, `isUsable`)<br>`src/components/LlmSettingsDialog.tsx` (no-key checkbox)<br>`electron/main.ts` (`llm:call`, `StoredLlmConfig.noKey`)<br>`electron/llmConfig.ts` (`buildCallHeaders`) | `electron/llmConfig.test.ts`<br>`src/components/LlmSettingsDialog.test.tsx` | — | — |
 
 ## Platform & desktop shell ([platform.md](platform.md))
 

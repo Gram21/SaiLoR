@@ -320,3 +320,17 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `src/state/aiStore.ts` (`PersistedBatch`, `persistBatch`, `readPersistedBatch`, `clearPersistedBatch`, `resumeBatch`, `resumeAvailable`, `discardBatch`, `dismissResume`), `src/components/AiDialog.tsx` (resume banner, "Continue with the remaining N papers")
 - **Status:** Implemented
 - **Tests:** `src/state/aiStore.resume.test.ts`, `src/components/AiDialog.test.tsx`
+
+### REQ-LLM-520 — System One decision models for choice and yes/no fields
+- **Description:** For a boolean field or a single-valued enum field (2-255 options), the system shall be able to ask a "System 1" decision model (TypeSafe Jev, or a Jev-compatible local `laya-serve` server) for a typed, calibrated answer instead of a free-text extraction: a boolean question maps to a `noul` (P(true)) answer, an enum question maps to a `choice` answer with per-option probabilities and a confidence. The paper state sent to the model shall be truncated to a bounded size (derived from the target's configured context budget, marked when truncated), and only fields eligible in this way shall be asked. A returned answer below a minimum confidence, or a choice outside the field's options, shall be treated as unanswered rather than applied. The system shall also support cross-checking a generative model's proposed value for a field against System One's own answer for that field (boolean exact match, enum case-insensitive match).
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/llm/systemone.ts` (`systemOneEligible`, `buildSystemOneRequest`, `parseSystemOneResponse`, `compareWithSystemOne`)
+- **Status:** Partially implemented — UI pending
+- **Tests:** `src/llm/systemone.test.ts`
+
+### REQ-LLM-530 — Keyless local targets
+- **Description:** For an OpenAI-compatible target (or any future custom-base-URL provider), the system shall let the reviewer mark it as needing no API key. Such a target shall be usable — for a run, for "Verify setup", and as a judge — with no key stored, and the outbound request shall have any header built to carry a key (still containing the unsubstituted key placeholder) dropped rather than sent literally. A target with a stored key shall behave exactly as before regardless of this flag.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/llm/types.ts` (`LlmConfig.noKey`, `isUsable`), `src/components/LlmSettingsDialog.tsx` (no-key checkbox), `electron/main.ts` (`llm:call`, `StoredLlmConfig.noKey`), `electron/llmConfig.ts` (`buildCallHeaders`)
+- **Status:** Implemented
+- **Tests:** `electron/llmConfig.test.ts`, `src/components/LlmSettingsDialog.test.tsx`

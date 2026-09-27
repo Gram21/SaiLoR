@@ -223,7 +223,7 @@ export function LlmSettingsDialog() {
       return 'Enter the base URL of your OpenAI-compatible server, e.g. http://localhost:1234.'
     }
     // A stored key is invisible here, so "blank" only means "missing" when none is stored.
-    if (!d.hasKey && !apiKey.trim()) return 'Enter the API key for this provider.'
+    if (!d.hasKey && !d.noKey && !apiKey.trim()) return 'Enter the API key for this provider.'
     return null
   }
 
@@ -353,7 +353,7 @@ export function LlmSettingsDialog() {
                           {PROVIDERS[config.provider].label} · {config.model} ·{' '}
                           {config.attach === 'pdf' ? 'sends the PDF' : 'sends extracted text'}
                         </div>
-                        {!config.hasKey && (
+                        {!config.hasKey && !config.noKey && (
                           <div className="llm-nokey">
                             No API key stored — this target cannot be used until you add one.
                           </div>
@@ -565,6 +565,23 @@ export function LlmSettingsDialog() {
                 page for the current rate.
               </p>
 
+              {urlEditable && (
+                <div className="llm-row">
+                  <label htmlFor="llm-nokey" className="llm-label">
+                    No API key
+                  </label>
+                  <input
+                    id="llm-nokey"
+                    type="checkbox"
+                    checked={draft.noKey ?? false}
+                    onChange={(e) => patch({ noKey: e.target.checked })}
+                  />
+                </div>
+              )}
+              {urlEditable && (
+                <p className="llm-hint">This server needs no API key.</p>
+              )}
+
               <div className="llm-row">
                 <label htmlFor="llm-key" className="llm-label">
                   API key
@@ -576,9 +593,14 @@ export function LlmSettingsDialog() {
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   placeholder={
-                    draft.hasKey ? 'Key stored — leave blank to keep it' : 'Paste the provider key'
+                    draft.hasKey
+                      ? 'Key stored — leave blank to keep it'
+                      : draft.noKey
+                        ? 'Not needed — this server needs no key'
+                        : 'Paste the provider key'
                   }
-                  required={!draft.hasKey}
+                  disabled={draft.noKey && !draft.hasKey}
+                  required={!draft.hasKey && !draft.noKey}
                 />
               </div>
               <p className="llm-hint">

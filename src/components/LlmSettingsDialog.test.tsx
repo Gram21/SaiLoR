@@ -129,3 +129,34 @@ describe('price fields', () => {
     expect(screen.getByLabelText('Price per 1M output tokens (USD)')).toHaveValue(15)
   })
 })
+
+describe('no-key toggle', () => {
+  function ocCfg(): LlmConfig {
+    return {
+      id: 'c2',
+      name: 'Local server',
+      provider: 'openai-compatible',
+      baseUrl: 'http://localhost:1234',
+      model: 'local-model',
+      attach: 'text',
+      hasKey: false,
+    }
+  }
+
+  it('is offered for openai-compatible and lets the target save without a key', async () => {
+    useAiStore.setState({ configs: [ocCfg()] })
+    await openEdit()
+
+    await userEvent.click(screen.getByLabelText('No API key'))
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(saveLlmConfig).toHaveBeenCalledWith(expect.objectContaining({ noKey: true }))
+  })
+
+  it('is not offered for a fixed-URL provider like OpenRouter', async () => {
+    useAiStore.setState({ configs: [cfg()] })
+    await openEdit()
+
+    expect(screen.queryByLabelText('No API key')).not.toBeInTheDocument()
+  })
+})
