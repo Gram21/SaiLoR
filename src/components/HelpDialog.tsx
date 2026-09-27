@@ -643,9 +643,12 @@ function editorHelp(): { lead: ReactNode; sections: HelpSection[] } {
             <strong> Cross-check</strong> in Prompt/Agent mode: it answers the same eligible fields
             independently, and a confident disagreement starts that row unticked for a closer look.
             Turning on "annotate all papers" runs every eligible paper instead of just the current
-            one — several at once (configurable), with a spending cap and the option to resume a run
-            that was cancelled or stopped partway. A setup-screen toggle can also show the model your
-            own already-finished papers as worked examples of the review's conventions.
+            one — several at once (configurable), with a spending cap, a Skip action per in-flight
+            paper, and the option to resume a run that was cancelled, skipped, or stopped partway. A
+            setup-screen toggle can also show the model your own already-finished papers as worked
+            examples of the review's conventions. In the review table, Edit lets you correct a
+            proposed value yourself before applying it — it's still recorded as AI-assisted, just with
+            your value instead of the model's.
           </p>
         ),
       },

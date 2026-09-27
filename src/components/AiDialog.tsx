@@ -5,16 +5,18 @@ import {
   fewShotCandidates,
   type AiMode,
   type PaperNotes,
+  type PaperSkip,
   type ReviewRow,
 } from '../state/aiStore'
 import { useStore } from '../state/store'
 import { aiSeatId, seatLabel } from '../model/project'
 import { PROVIDERS } from '../llm/providers'
-import { displayPath, parsePath } from '../llm/paths'
+import { displayPath, parsePath, resolvePath } from '../llm/paths'
 import { estimateRun, estimateCost, estimateCostSplit } from '../llm/cost'
 import { systemOneEligible } from '../llm/systemone'
 import type { LlmConfig } from '../llm/types'
 import type { FieldValue } from '../model/annotations'
+import type { ResolvedDef } from '../model/schema'
 import { ComboBox } from './ComboBox'
 import { Spinner } from './Spinner'
 import '../styles/ai.css'
@@ -46,6 +48,63 @@ function ValueCell({ value }: { value: FieldValue }) {
   }
   if (value === null || value === '') return <span className="ai-dash">—</span>
   return <>{String(value)}</>
+}
+
+/**
+ * The control shown while editing a review row's value — one control per
+ * field type, matching `Field.tsx`'s per-type choice (checkbox / enum
+ * dropdown / number input / free text) without pulling in that component's
+ * PDF-linking/marking machinery, which has no meaning for a not-yet-applied
+ * proposal. `def` may be missing (the schema changed since the run started);
+ * a plain text box is the fallback.
+ */
+function EditControl({
+  def,
+  value,
+  onChange,
+}: {
+  def: ResolvedDef | undefined
+  value: FieldValue
+  onChange: (v: FieldValue) => void
+}) {
+  if (def?.type === 'boolean') {
+    return (
+      <input
+        type="checkbox"
+        checked={value === true}
+        onChange={(e) => onChange(e.target.checked)}
+        aria-label="Edited value"
+      />
+    )
+  }
+  if (def?.type === 'string' && def.options && def.options.length > 0) {
+    return (
+      <ComboBox
+        value={typeof value === 'string' ? value : null}
+        options={def.options}
+        onChange={(v) => onChange(v)}
+        ariaLabel="Edited value"
+      />
+    )
+  }
+  if (def?.type === 'number' || def?.type === 'year') {
+    return (
+      <input
+        type="number"
+        value={value === null || value === undefined ? '' : String(value)}
+        onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
+        aria-label="Edited value"
+      />
+    )
+  }
+  return (
+    <input
+      type="text"
+      value={value === null || value === undefined ? '' : String(value)}
+      onChange={(e) => onChange(e.target.value)}
+      aria-label="Edited value"
+    />
+  )
 }
 
 function confidenceLabel(confidence: number | null): string {
@@ -164,7 +223,8 @@ export function AiDialog() {
   const settingsOpen = useAiStore((s) => s.settingsOpen)
   const batchDone = useAiStore((s) => s.batchDone)
   const batchTotal = useAiStore((s) => s.batchTotal)
-  const inFlightTitles = useAiStore((s) => s.inFlightTitles)
+  const inFlightPapers = useAiStore((s) => s.inFlightPapers)
+  const skippedPapers = useAiStore((s) => s.skippedPapers)
   const concurrency = useAiStore((s) => s.concurrency)
   const resumeAvailable = useAiStore((s) => s.resumeAvailable)
   const agentEvents = useAiStore((s) => s.agentEvents)
@@ -190,8 +250,10 @@ export function AiDialog() {
   const discardBatch = useAiStore((s) => s.discardBatch)
   const dismissResume = useAiStore((s) => s.dismissResume)
   const cancel = useAiStore((s) => s.cancel)
+  const skipPaper = useAiStore((s) => s.skipPaper)
   const toggleRow = useAiStore((s) => s.toggleRow)
   const setAllRows = useAiStore((s) => s.setAllRows)
+  const editRow = useAiStore((s) => s.editRow)
   const apply = useAiStore((s) => s.apply)
 
   const project = useStore((s) => s.project)
@@ -212,6 +274,13 @@ export function AiDialog() {
   // The one-time consequences warning is local UI state: it is shown between
   // ticking the toggle and confirming, and never persisted.
   const [pendingAllPapers, setPendingAllPapers] = useState(false)
+
+  // "Show only rows that need attention" — local UI state, reset per run like
+  // the review table itself would be (never persisted, never sent anywhere).
+  const [attentionOnly, setAttentionOnly] = useState(false)
+  useEffect(() => {
+    if (phase !== 'review') setAttentionOnly(false)
+  }, [phase])
 
   useEffect(() => {
     if (phase !== 'setup') setPendingAllPapers(false)
@@ -263,6 +332,10 @@ export function AiDialog() {
   const chatConfigs = configs.filter((c) => c.provider !== 'systemone')
   const annotatorConfigs = mode === 'classify' ? systemOneConfigs : chatConfigs
   const checkedCount = rows.filter((r) => r.checked).length
+  // "Needs attention": still unticked, or flagged when it started that way
+  // and the reviewer re-ticked it (REQ-LLM-580) — feeds both the header note
+  // and the attention-only filter.
+  const attentionRows = rows.filter((r) => r.flagged || !r.checked)
   const running = phase === 'reading' || phase === 'calling' || phase === 'parsing'
   const canStartSingle = !!currentPaper && currentPaperHasPdf && targets.length > 0
   const canStartAll = candidates.length > 0
@@ -755,11 +828,28 @@ export function AiDialog() {
                 <span className="ai-elapsed">{elapsed}s</span>
               </div>
               {batchTotal > 1 && (
-                <p className="ai-note">
-                  {batchDone} of {batchTotal} papers done
-                  {inFlightTitles.length > 0 && ` — in progress: ${inFlightTitles.join(', ')}`}
-                  {capKnown && ` · $${spentSoFar.toFixed(2)} spent so far`}
-                </p>
+                <>
+                  <p className="ai-note">
+                    {batchDone} of {batchTotal} papers done
+                    {capKnown && ` · $${spentSoFar.toFixed(2)} spent so far`}
+                  </p>
+                  {inFlightPapers.length > 0 && (
+                    <ul className="ai-note-list ai-inflight-list">
+                      {inFlightPapers.map((p) => (
+                        <li key={p.id}>
+                          {p.title}
+                          <button
+                            type="button"
+                            onClick={() => skipPaper(p.id)}
+                            title="Skip this paper only — the rest of the batch keeps going, and this one stays eligible to run later"
+                          >
+                            Skip
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
               )}
               {retryNotice && <p className="ai-note ai-retry">{retryNotice}</p>}
               {mode === 'agent' && agentEvents.length > 0 && (
@@ -795,6 +885,8 @@ export function AiDialog() {
                   </button>
                 </p>
               )}
+
+              <SkippedPapers papers={skippedPapers} />
 
               {rows.length === 0 ? (
                 <>
@@ -833,12 +925,32 @@ export function AiDialog() {
                     </p>
                   )}
 
+                  {attentionRows.length > 0 && (
+                    <p className="ai-note">
+                      {attentionRows.length} row{attentionRows.length === 1 ? '' : 's'} start
+                      {attentionRows.length === 1 ? 's' : ''} unticked: low confidence, flagged by
+                      the judge, or the cross-check disagrees.
+                    </p>
+                  )}
+                  <label className="ai-toggle-row">
+                    <input
+                      type="checkbox"
+                      checked={attentionOnly}
+                      disabled={attentionRows.length === 0}
+                      onChange={(e) => setAttentionOnly(e.target.checked)}
+                    />
+                    Show only rows that need attention
+                  </label>
+
                   <ReviewTable
                     rows={rows}
                     grouped={grouped}
                     mode={mode}
+                    schema={project?.schema ?? []}
+                    attentionOnly={attentionOnly}
                     onToggle={toggleRow}
                     onEvidenceClick={jumpToEvidence}
+                    onEdit={editRow}
                   />
 
                   {notes.map((n) => (
@@ -953,6 +1065,18 @@ function RunErrors({ errors }: { errors: { paperId: string; paperTitle: string; 
   )
 }
 
+/** Papers the reviewer skipped mid-batch (REQ-LLM-590) — not a failure, just
+ *  a note that they're still eligible for a later run/resume. */
+function SkippedPapers({ papers }: { papers: PaperSkip[] }) {
+  if (papers.length === 0) return null
+  return (
+    <p className="ai-note">
+      {papers.length} paper{papers.length === 1 ? '' : 's'} skipped — eligible to run again with
+      "annotate all papers" or Resume.
+    </p>
+  )
+}
+
 function JudgeCell({ row }: { row: ReviewRow }) {
   const judge = row.suggestion.judge
   if (!judge) return <span className="ai-dash">—</span>
@@ -976,14 +1100,23 @@ function ReviewTable({
   rows,
   grouped,
   mode,
+  schema,
+  attentionOnly,
   onToggle,
   onEvidenceClick,
+  onEdit,
 }: {
   rows: ReviewRow[]
   grouped: boolean
   mode: AiMode
+  /** Resolved against a row's `suggestion.path` to know what kind of edit
+   *  control to show — same schema the run itself was asked about. */
+  schema: ResolvedDef[]
+  /** REQ-LLM-580: when on, only unticked/flagged rows render. */
+  attentionOnly: boolean
   onToggle: (index: number, checked: boolean) => void
   onEvidenceClick: (row: ReviewRow) => void
+  onEdit: (index: number, raw: unknown) => string | null
 }) {
   // Group rows by paper, preserving first-seen order — the run processes
   // papers in that order, so this reads the same as the progress line did.
@@ -991,6 +1124,33 @@ function ReviewTable({
   for (const r of rows) if (!order.includes(r.paperId)) order.push(r.paperId)
   const hasCrossCheck = rows.some((r) => r.crossCheck)
   const columnCount = 5 + (mode === 'agent' ? 2 : 0) + (hasCrossCheck ? 1 : 0)
+
+  // Which row (by its index in the full `rows` array) is being edited right
+  // now, plus its in-progress draft and any validation error — local to this
+  // table, reset whenever the edit is saved, cancelled, or another row's Edit
+  // is clicked.
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [draft, setDraft] = useState<FieldValue>(null)
+  const [editError, setEditError] = useState<string | null>(null)
+
+  const startEdit = (index: number, row: ReviewRow) => {
+    setEditingIndex(index)
+    setDraft(row.edited && row.editedValue !== undefined ? row.editedValue : row.suggestion.value)
+    setEditError(null)
+  }
+  const cancelEdit = () => {
+    setEditingIndex(null)
+    setEditError(null)
+  }
+  const saveEdit = (index: number) => {
+    const err = onEdit(index, draft)
+    if (err) {
+      setEditError(err)
+      return
+    }
+    setEditingIndex(null)
+    setEditError(null)
+  }
 
   return (
     <div className="ai-table-wrap">
@@ -1013,10 +1173,14 @@ function ReviewTable({
         </thead>
         <tbody>
           {order.map((paperId) => {
-            const groupRows = rows
+            const allGroupRows = rows
               .map((r, i) => ({ r, i }))
               .filter(({ r }) => r.paperId === paperId)
-            const title = groupRows[0]?.r.paperTitle ?? ''
+            const groupRows = attentionOnly
+              ? allGroupRows.filter(({ r }) => r.flagged || !r.checked)
+              : allGroupRows
+            if (groupRows.length === 0) return null
+            const title = allGroupRows[0]?.r.paperTitle ?? ''
             return (
               <Fragment key={paperId}>
                 {grouped && (
@@ -1042,7 +1206,41 @@ function ReviewTable({
                         {label}
                       </th>
                       <td className="ai-value">
-                        <ValueCell value={row.suggestion.value} />
+                        {editingIndex === i ? (
+                          <div className="ai-edit">
+                            <EditControl
+                              def={resolvePath(schema, row.suggestion.path)?.def}
+                              value={draft}
+                              onChange={setDraft}
+                            />
+                            <div className="ai-edit-actions">
+                              <button type="button" onClick={() => saveEdit(i)} title="Save this edited value">
+                                Save
+                              </button>
+                              <button type="button" onClick={cancelEdit} title="Discard this edit">
+                                Cancel
+                              </button>
+                            </div>
+                            {editError && <div className="ai-note-reason ai-edit-error">{editError}</div>}
+                          </div>
+                        ) : (
+                          <>
+                            <ValueCell value={row.edited && row.editedValue !== undefined ? row.editedValue : row.suggestion.value} />
+                            {row.edited && (
+                              <div className="ai-note-reason">
+                                edited · AI proposed: <ValueCell value={row.suggestion.value} />
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              className="ai-edit-btn"
+                              onClick={() => startEdit(i, row)}
+                              title="Edit this proposed value before applying"
+                            >
+                              Edit
+                            </button>
+                          </>
+                        )}
                       </td>
                       <td className="ai-evidence">
                         {row.suggestion.evidence ? (

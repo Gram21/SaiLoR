@@ -54,6 +54,10 @@ export interface AiUsageRecord {
   verdicts?: { accept: number; revise: number; reject: number }
   /** How many example papers were shown as few-shot context. */
   fewShot?: number
+  /** How many of the applied rows the reviewer edited before applying, out of
+   *  however many this record covers. The field still counts as AI-assisted
+   *  regardless — editing a proposal doesn't erase that it started as one. */
+  edited?: number
   /** The seat the values were written into ("1".."N" or "consolidation"). */
   reviewer?: string
 }
@@ -444,6 +448,7 @@ function parseAiUsage(raw: unknown): AiUsageRecord[] {
       const verdicts = parseAiUsageVerdicts(e.verdicts)
       if (verdicts) record.verdicts = verdicts
       if (typeof e.fewShot === 'number' && Number.isFinite(e.fewShot)) record.fewShot = e.fewShot
+      if (typeof e.edited === 'number' && Number.isFinite(e.edited)) record.edited = e.edited
       if (typeof e.reviewer === 'string') record.reviewer = e.reviewer
       out.push(record)
     }

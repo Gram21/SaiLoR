@@ -119,7 +119,7 @@ function extractObject(raw: unknown): Record<string, unknown> | null {
 // Value coercion
 // ---------------------------------------------------------------------------
 
-type Coerced = { ok: true; value: FieldValue } | { ok: false; reason: string }
+export type Coerced = { ok: true; value: FieldValue } | { ok: false; reason: string }
 
 function toNumber(raw: unknown): Coerced {
   if (typeof raw === 'number') {
@@ -192,7 +192,10 @@ function toYear(raw: unknown): Coerced {
   return isPlausibleYear(n.value) ? n : { ok: false, reason: 'not a plausible publication year' }
 }
 
-function coerce(def: ResolvedDef, raw: unknown): Coerced {
+/** Same coercion `parseAnswer` applies to a model's answer, exported so a
+ *  reviewer's hand-typed edit to a proposal (AiDialog's Edit affordance) is
+ *  held to the identical rules rather than a second, drifting copy of them. */
+export function coerce(def: ResolvedDef, raw: unknown): Coerced {
   switch (def.type) {
     case 'string':
       return toString(raw, def)

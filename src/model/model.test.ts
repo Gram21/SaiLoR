@@ -1267,7 +1267,7 @@ describe('Paper.aiUsage (AI-use disclosure)', () => {
     expect(loadProject(once).papers[0].aiUsage).toEqual([record])
   })
 
-  it('loads and round-trips the optional disclosure fields (mode, judge, rounds, verdicts, fewShot, reviewer)', () => {
+  it('loads and round-trips the optional disclosure fields (mode, judge, rounds, verdicts, fewShot, edited, reviewer)', () => {
     const record = {
       provider: 'openai',
       model: 'gpt-5.5',
@@ -1277,6 +1277,7 @@ describe('Paper.aiUsage (AI-use disclosure)', () => {
       rounds: 2,
       verdicts: { accept: 5, revise: 1, reject: 0 },
       fewShot: 3,
+      edited: 3,
       reviewer: '2',
     }
     expect(loadProject(withUsage([record])).papers[0].aiUsage).toEqual([record])
@@ -1293,6 +1294,7 @@ describe('Paper.aiUsage (AI-use disclosure)', () => {
       loadProject(withUsage([{ ...base, verdicts: { accept: 1, revise: 1 } }])).papers[0].aiUsage,
     ).toEqual([base])
     expect(loadProject(withUsage([{ ...base, fewShot: '3' }])).papers[0].aiUsage).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, edited: '3' }])).papers[0].aiUsage).toEqual([base])
     expect(loadProject(withUsage([{ ...base, reviewer: 42 }])).papers[0].aiUsage).toEqual([base])
   })
 })

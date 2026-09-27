@@ -241,9 +241,12 @@ describe('cross-check role', () => {
       crossCheckId: crossCheck.id,
       confidenceThreshold: 0.8,
     })
+    // Confidence kept at/above the threshold so this test isolates cross-check
+    // agreement — REQ-LLM-580 would otherwise also untick a lower-confidence
+    // prompt-mode row on its own.
     mockPlatform.callLlm.mockImplementation(async (req: LlmHttpRequest) => {
       if (req.url.includes('/v1/systemone')) return s1Response(0.95)
-      return chatOk([{ path: 'Relevant', value: true, evidence: 'quote', confidence: 0.7 }])
+      return chatOk([{ path: 'Relevant', value: true, evidence: 'quote', confidence: 0.9 }])
     })
 
     await ai().run()
@@ -260,16 +263,18 @@ describe('cross-check role', () => {
       selectedId: annotator.id,
       crossCheckId: crossCheck.id,
     })
+    // Confidence kept at/above the (default) threshold — see the previous
+    // test's note on isolating cross-check behavior from REQ-LLM-580.
     mockPlatform.callLlm.mockImplementation(async (req: LlmHttpRequest) => {
       if (req.url.includes('/v1/systemone')) return { ok: false, status: 400, body: 'boom' }
-      return chatOk([{ path: 'Relevant', value: true, evidence: 'quote', confidence: 0.7 }])
+      return chatOk([{ path: 'Relevant', value: true, evidence: 'quote', confidence: 0.9 }])
     })
 
     await ai().run()
 
     expect(ai().phase).toBe('review')
     expect(ai().rows).toHaveLength(1)
-    expect(ai().rows[0].checked).toBe(true) // prompt-mode default, cross-check failure doesn't touch it
+    expect(ai().rows[0].checked).toBe(true) // above threshold, cross-check failure doesn't touch it
     expect(ai().notes[0].skipped.some((s) => s.path === '(cross-check)')).toBe(true)
   })
 

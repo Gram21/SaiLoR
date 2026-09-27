@@ -6,7 +6,8 @@ import { unansweredFields, type FieldTarget } from '../llm/fields'
 import { buildSystemPrompt, buildUserText, buildUserPdfCaption, type Delivery } from '../llm/prompt'
 import { buildRequest, extractText, extractError, wasTruncated, PROVIDERS } from '../llm/providers'
 import { buildModelsRequest, parseModelsResponse } from '../llm/models'
-import { parseAnswer } from '../llm/parse'
+import { parseAnswer, coerce } from '../llm/parse'
+import { resolvePath, MAX_UNBOUNDED_INDEX } from '../llm/paths'
 import { parseChatResponse } from '../llm/chat'
 import { runAgent } from '../llm/agent'
 import { withRetry, runPool, type CallLlm } from '../llm/retry'
@@ -25,7 +26,7 @@ import {
 } from '../llm/systemone'
 import { aiSeatId } from '../model/project'
 import type { Paper, Project } from '../model/project'
-import type { AnnotationValueTree } from '../model/annotations'
+import type { AnnotationValueTree, FieldValue } from '../model/annotations'
 import { extractPdfText, countPdfPages } from '../model/pdfText'
 
 /**
@@ -88,6 +89,15 @@ export interface ReviewRow {
    *  One's own answer for the same field. Absent when no cross-check model is
    *  assigned, or the field wasn't eligible/asked. */
   crossCheck?: SystemOneComparison
+  /** True once the reviewer has edited this row's value via `editRow` — the
+   *  original AI-proposed value stays in `suggestion.value` (shown as "AI
+   *  proposed: X"); the edited value lives here instead. */
+  edited?: boolean
+  editedValue?: FieldValue
+  /** True when this row started unticked because of low confidence, a
+   *  non-accept judge verdict, or a cross-check disagreement — kept even if
+   *  the reviewer re-ticks it, so "needs attention" filtering still finds it. */
+  flagged?: boolean
 }
 
 /** A paper a batch run failed on, kept so the run can continue past it. */
@@ -95,6 +105,13 @@ export interface PaperRunError {
   paperId: string
   paperTitle: string
   message: string
+}
+
+/** A paper the reviewer skipped mid-batch (REQ-LLM-590) — not an error, and
+ *  not in `doneIds`, so it stays a resume candidate. */
+export interface PaperSkip {
+  paperId: string
+  paperTitle: string
 }
 
 /** Candidate for "annotate all papers": has a PDF, isn't finished for this
@@ -192,9 +209,14 @@ interface AiState {
    *  `resumeBatch()` would still have to do. */
   batchDone: number
   batchTotal: number
-  /** Titles of the papers currently in flight — as many as `concurrency`
-   *  allows at once. Empty between papers and once the batch is done. */
-  inFlightTitles: string[]
+  /** Papers currently in flight — as many as `concurrency` allows at once.
+   *  Empty between papers and once the batch is done. Carries the id (not
+   *  just the title) so the running view's per-paper Skip button knows which
+   *  one to abort. */
+  inFlightPapers: { id: string; title: string }[]
+  /** Papers the reviewer skipped mid-batch this run (REQ-LLM-590) — distinct
+   *  from `errors`: not a failure, and still a resume candidate. */
+  skippedPapers: PaperSkip[]
   /** All-papers mode only: how many papers `runPool` works on at once (1-4),
    *  persisted like `mode`. */
   concurrency: number
@@ -278,8 +300,17 @@ interface AiState {
    *  this project + seat, or its target no longer exists. */
   resumeBatch: () => Promise<void>
   cancel: () => void
+  /** Abort only this one in-flight paper — the rest of the batch keeps going.
+   *  The paper is recorded in `skippedPapers`, not `errors`, and stays a
+   *  resume candidate (REQ-LLM-590). No-op if the paper isn't in flight. */
+  skipPaper: (paperId: string) => void
   toggleRow: (index: number, checked: boolean) => void
   setAllRows: (checked: boolean) => void
+  /** Validate `raw` against the row's field definition (the same rules
+   *  `parseAnswer` applies) and, on success, record it as the row's edited
+   *  value, tick it, and mark it `edited`. Returns an error message and
+   *  leaves the row untouched on failure. */
+  editRow: (index: number, raw: unknown) => string | null
   apply: () => void
   /** The review screen's Discard: clears any saved batch progress, then closes. */
   discardBatch: () => void
@@ -292,10 +323,30 @@ interface AiState {
 // Not in the store: it is not serializable and nothing renders from it.
 let controller: AbortController | null = null
 let ticker: ReturnType<typeof setInterval> | null = null
+/** One AbortController per paper currently in flight, keyed by paper id —
+ *  lets `skipPaper` abort a single paper's calls without touching the rest of
+ *  the batch. Reset at the top of each `executeBatch` call; safe as a module
+ *  variable since only one batch executes at a time (the `controller`
+ *  supersede pattern above already relies on the same assumption). */
+let paperControllers = new Map<string, AbortController>()
 
 function stopTicker() {
   if (ticker) clearInterval(ticker)
   ticker = null
+}
+
+/** A signal that aborts as soon as either `a` or `b` does. Manual rather than
+ *  `AbortSignal.any` for now — ponytail: swap in once the app's minimum
+ *  Electron/Chromium baseline is confirmed to have it everywhere this runs. */
+function combinedSignal(a: AbortSignal, b: AbortSignal): AbortSignal {
+  const c = new AbortController()
+  if (a.aborted || b.aborted) {
+    c.abort()
+    return c.signal
+  }
+  a.addEventListener('abort', () => c.abort(), { once: true })
+  b.addEventListener('abort', () => c.abort(), { once: true })
+  return c.signal
 }
 
 /** Papers eligible for "annotate all papers": have a PDF, aren't finished for
@@ -528,11 +579,12 @@ export const useAiStore = create<AiState>()(
       set((s) => {
         s.batchTotal = allPaperIds.length
         s.batchDone = doneIdsSoFar.length
-        s.inFlightTitles = []
+        s.inFlightPapers = []
       })
 
       const myController = new AbortController()
       controller = myController
+      paperControllers = new Map()
       const started = Date.now()
       stopTicker()
       ticker = setInterval(() => {
@@ -574,13 +626,22 @@ export const useAiStore = create<AiState>()(
           concurrency,
           async (paper) => {
             if (controller !== myController) return // superseded — discard silently
+            // Declared outside the try so the catch/finally below (a separate
+            // block scope) can still see it.
+            const paperController = new AbortController()
             try {
               if (cap !== null && get().spentSoFar > cap) {
                 set((s) => { s.spendCapHit = true })
                 return // stop starting new papers; this one stays a resume candidate
               }
 
-              set((s) => { s.inFlightTitles.push(paper.title) })
+              set((s) => { s.inFlightPapers.push({ id: paper.id, title: paper.title }) })
+
+              // A per-paper controller, layered on the batch's own — aborting
+              // it (via `skipPaper`) cancels only this paper's calls, leaving
+              // the rest of the batch (and its own `myController`) untouched.
+              paperControllers.set(paper.id, paperController)
+              const paperSignal = combinedSignal(myController.signal, paperController.signal)
 
               const tree = currentTree(app.project!, targetSeat, paper)
               const targets = get().allPapers
@@ -611,7 +672,7 @@ export const useAiStore = create<AiState>()(
                   config,
                   judgeCfg,
                   callLlm,
-                  myController.signal,
+                  paperSignal,
                   (msg) => {
                     if (controller !== myController) return
                     set((s) => {
@@ -642,7 +703,7 @@ export const useAiStore = create<AiState>()(
                 roundsForPaper = result.rounds
                 rowChecked = (sug) => sug.judge?.verdict === 'accept'
               } else if (mode === 'classify') {
-                const result = await runOnePaperClassify(paper, targets, config, callLlm, myController.signal, setPhase)
+                const result = await runOnePaperClassify(paper, targets, config, callLlm, paperSignal, setPhase)
                 if (controller !== myController) return
                 answer = result.answer
                 calls = 1
@@ -656,7 +717,7 @@ export const useAiStore = create<AiState>()(
                   targets,
                   config,
                   callLlm,
-                  myController.signal,
+                  paperSignal,
                   setPhase,
                   fewShotForPaper.block,
                 )
@@ -666,7 +727,10 @@ export const useAiStore = create<AiState>()(
                 calls = 1
                 baseUsage = result.usage
                 paperCost = costOf(result.usage, config) ?? 0
-                rowChecked = () => true
+                // Confidence-aware default (REQ-LLM-580): a row with no
+                // confidence stays ticked, one below the threshold starts
+                // unticked for a closer look, same rule classify mode uses.
+                rowChecked = (sug) => sug.confidence === null || sug.confidence >= confidenceThreshold
               }
 
               // Cross-check (prompt/agent only, optional role): compare each
@@ -681,7 +745,7 @@ export const useAiStore = create<AiState>()(
                       crossCheckCfg,
                       paperText,
                       callLlm,
-                      myController.signal,
+                      paperSignal,
                     )
                   : null
               if (controller !== myController) return
@@ -698,6 +762,9 @@ export const useAiStore = create<AiState>()(
                     suggestion: sug,
                     checked,
                     crossCheck: cmp,
+                    // Mirrors the initial `checked` decision, so it survives
+                    // the reviewer re-ticking the row (REQ-LLM-580).
+                    flagged: !checked,
                   })
                 }
                 s.usage.calls += calls + (crossCheckResult ? 1 : 0)
@@ -726,7 +793,13 @@ export const useAiStore = create<AiState>()(
               }
             } catch (err) {
               if (controller !== myController) return // superseded mid-call — discard silently
-              if (myController.signal.aborted) return // cancelled — stays a resume candidate, not an error
+              if (myController.signal.aborted) return // whole batch cancelled — stays a resume candidate, not an error
+              if (paperController.signal.aborted) {
+                // Skipped, not failed (REQ-LLM-590): not pushed to `doneIds`,
+                // so a resume re-runs it like any other not-yet-done paper.
+                set((s) => { s.skippedPapers.push({ paperId: paper.id, paperTitle: paper.title }) })
+                return
+              }
               set((s) => {
                 s.errors.push({
                   paperId: paper.id,
@@ -742,8 +815,9 @@ export const useAiStore = create<AiState>()(
               doneIds.push(paper.id)
               set((s) => { s.batchDone++ })
             } finally {
+              paperControllers.delete(paper.id)
               if (controller === myController) {
-                set((s) => { s.inFlightTitles = s.inFlightTitles.filter((t) => t !== paper.title) })
+                set((s) => { s.inFlightPapers = s.inFlightPapers.filter((p) => p.id !== paper.id) })
                 persist()
               }
             }
@@ -811,7 +885,8 @@ export const useAiStore = create<AiState>()(
     candidates: [],
     batchDone: 0,
     batchTotal: 0,
-    inFlightTitles: [],
+    inFlightPapers: [],
+    skippedPapers: [],
     concurrency: readConcurrency(),
     resumeAvailable: null,
     batchStartedAt: null,
@@ -854,6 +929,7 @@ export const useAiStore = create<AiState>()(
         s.elapsed = 0
         s.allPapers = false
         s.errors = []
+        s.skippedPapers = []
         s.usage = { calls: 0, inputTokens: 0, outputTokens: 0 }
         s.runUsage = null
         s.runJudge = null
@@ -865,7 +941,7 @@ export const useAiStore = create<AiState>()(
         s.retryNotice = null
         s.batchDone = 0
         s.batchTotal = 0
-        s.inFlightTitles = []
+        s.inFlightPapers = []
         s.batchStartedAt = null
         s.targetSeat = targetSeat
         s.targets = unansweredFields(app.project!.schema, tree)
@@ -1220,6 +1296,7 @@ export const useAiStore = create<AiState>()(
         s.rows = []
         s.notes = []
         s.errors = []
+        s.skippedPapers = []
         s.usage = { calls: 0, inputTokens: 0, outputTokens: 0 }
         s.spentSoFar = 0
         s.spendCapHit = false
@@ -1269,6 +1346,7 @@ export const useAiStore = create<AiState>()(
         s.rows = persisted.rows ?? []
         s.notes = persisted.notes ?? []
         s.errors = persisted.errors ?? []
+        s.skippedPapers = []
         s.usage = persisted.usage
         s.spentSoFar = persisted.spent
         s.spendCapHit = false
@@ -1352,6 +1430,10 @@ export const useAiStore = create<AiState>()(
       })
     },
 
+    skipPaper: (paperId) => {
+      paperControllers.get(paperId)?.abort()
+    },
+
     toggleRow: (index, checked) =>
       set((s) => {
         if (s.rows[index]) s.rows[index].checked = checked
@@ -1361,6 +1443,25 @@ export const useAiStore = create<AiState>()(
       set((s) => {
         s.rows.forEach((r) => { r.checked = checked })
       }),
+
+    editRow: (index, raw) => {
+      const project = useStore.getState().project
+      const row = get().rows[index]
+      if (!project || !row) return 'This proposal is no longer available.'
+      const resolved = resolvePath(project.schema, row.suggestion.path, { maxUnboundedIndex: MAX_UNBOUNDED_INDEX })
+      if (!resolved) return 'This field no longer exists in the schema.'
+      const result = coerce(resolved.def, raw)
+      if (!result.ok) return result.reason
+      set((s) => {
+        const r = s.rows[index]
+        if (!r) return
+        r.editedValue = result.value
+        r.edited = true
+        // Editing is the reviewer taking responsibility for this row — tick it.
+        r.checked = true
+      })
+      return null
+    },
 
     apply: () => {
       const runUsage = get().runUsage
@@ -1380,6 +1481,7 @@ export const useAiStore = create<AiState>()(
         reviewer: string | null
         suggestions: Suggestion[]
         verdicts: { accept: number; revise: number; reject: number }
+        edited: number
       }
       const byPaper = new Map<string, Entry>()
       for (const row of checked) {
@@ -1389,8 +1491,15 @@ export const useAiStore = create<AiState>()(
           reviewer: row.reviewer,
           suggestions: [],
           verdicts: { accept: 0, revise: 0, reject: 0 },
+          edited: 0,
         }
-        entry.suggestions.push(row.suggestion)
+        // An edited row still counts as AI-assisted — it started as the
+        // model's proposal — but writes the reviewer's value, not the
+        // model's (REQ-LLM-580).
+        const suggestion =
+          row.edited && row.editedValue !== undefined ? { ...row.suggestion, value: row.editedValue } : row.suggestion
+        entry.suggestions.push(suggestion)
+        if (row.edited) entry.edited++
         const verdict = row.suggestion.judge?.verdict
         if (verdict) entry.verdicts[verdict]++
         byPaper.set(key, entry)
@@ -1408,6 +1517,7 @@ export const useAiStore = create<AiState>()(
             : {}),
           ...(mode === 'agent' ? { verdicts: entry.verdicts } : {}),
           ...(fewShotByPaper[entry.paperId] !== undefined ? { fewShot: fewShotByPaper[entry.paperId] } : {}),
+          ...(entry.edited > 0 ? { edited: entry.edited } : {}),
         },
       }))
       const result = useStore.getState().applyAiSuggestionsBatch(items)

@@ -41,6 +41,9 @@ export function AiUsageDisclosure({ project, records }: Props) {
             {typeof r.fewShot === 'number' && r.fewShot > 0 && (
               <> — {r.fewShot} example{r.fewShot === 1 ? '' : 's'}</>
             )}
+            {typeof r.edited === 'number' && r.edited > 0 && (
+              <> — {r.edited} edited</>
+            )}
             {r.reviewer && <> — {seatLabel(project, r.reviewer)}</>}
           </li>
         ))}

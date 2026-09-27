@@ -127,13 +127,13 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-210 — Human review before applying
-- **Description:** The system shall present accepted suggestions in a review table showing field, value, supporting quote, and confidence — grouped by paper with a header row when more than one paper is being reviewed — with per-row checkboxes and select-all/none, and shall write values only when the user applies the selection.
+- **Description:** The system shall present accepted suggestions in a review table showing field, value, supporting quote, and confidence — grouped by paper with a header row when more than one paper is being reviewed — with per-row checkboxes and select-all/none, and shall write values only when the user applies the selection. Each row shall also offer an Edit affordance (REQ-LLM-580) and a toggle to show only rows that need attention.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/components/AiDialog.tsx` (`ReviewTable`), `src/state/aiStore.ts` (`toggleRow`, `setAllRows`, `apply`)
+- **Evidence:** `src/components/AiDialog.tsx` (`ReviewTable`), `src/state/aiStore.ts` (`toggleRow`, `setAllRows`, `editRow`, `apply`)
 - **Status:** Implemented
 
 ### REQ-LLM-220 — Apply as one undo step without overwriting
-- **Description:** When applying checked suggestions, the system shall write them as a single undo step across however many papers the run touched, skipping any field the reviewer answered in the meantime and any path that no longer resolves, and shall record no undo entry when nothing was written.
+- **Description:** When applying checked suggestions, the system shall write them as a single undo step across however many papers the run touched, skipping any field the reviewer answered in the meantime and any path that no longer resolves, and shall record no undo entry when nothing was written. A row the reviewer edited (REQ-LLM-580) shall write the edited value, not the model's original proposal.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/store.ts` (`applyAiSuggestions`, `applyAiSuggestionsBatch`), `src/state/store.ai.test.ts:142-251`
 - **Status:** Implemented
@@ -145,9 +145,9 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-240 — Record durable AI-usage disclosure
-- **Description:** When an apply changes at least one field, the system shall append a record of provider, model, and timestamp to the paper's AI-usage list in the project file, using the provider and model of the run that produced the answer, together with whichever of the run's mode (prompt/agent), judge provider/model, round count, applied-verdict counts, few-shot example count, and target reviewer seat are known, omitting any that are not; on load the system shall keep the base record and drop only a malformed optional field. Verdict counts reflect only the suggestions the reviewer actually applied (checked), not every value the agent proposed; `judge`/`rounds` are the judge target/round count actually used for that paper.
+- **Description:** When an apply changes at least one field, the system shall append a record of provider, model, and timestamp to the paper's AI-usage list in the project file, using the provider and model of the run that produced the answer, together with whichever of the run's mode (prompt/agent), judge provider/model, round count, applied-verdict counts, few-shot example count, edited-row count (REQ-LLM-580), and target reviewer seat are known, omitting any that are not; on load the system shall keep the base record and drop only a malformed optional field. Verdict counts reflect only the suggestions the reviewer actually applied (checked), not every value the agent proposed; `judge`/`rounds` are the judge target/round count actually used for that paper. The field is recorded as AI-assisted regardless of whether the reviewer edited its value before applying.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/store.ts:2419-2427`, `src/model/project.ts:37-58,416-467`, `src/state/aiStore.ts` (`apply`, `runJudge`, `roundsByPaper`), `src/state/store.ai.test.ts:364-429`, `src/state/aiStore.judge.test.ts` (disclosure-fields tests)
+- **Evidence:** `src/state/store.ts:2419-2427`, `src/model/project.ts:37-59,420-452` (`AiUsageRecord.edited`, `parseAiUsage`), `src/state/aiStore.ts` (`apply`, `editRow`, `runJudge`, `roundsByPaper`), `src/state/store.ai.test.ts:364-429`, `src/state/aiStore.judge.test.ts` (disclosure-fields tests), `src/state/aiStore.edit.test.ts`, `src/model/model.test.ts` (edited round-trip), `src/components/AiUsageDisclosure.tsx`
 - **Status:** Implemented
 
 ### REQ-LLM-250 — List provider models
@@ -247,10 +247,11 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-410 — Show judge verdicts and default flagged rows unticked
-- **Description:** In agent-mode review, the system shall show each row's judge verdict (accepted, needs revision, or rejected) with its feedback text, and the source URL for a web-sourced value. A row whose verdict is not "accept" shall be unticked by default; every prompt-mode row, and every accepted agent-mode row, shall be ticked by default.
+- **Description:** In agent-mode review, the system shall show each row's judge verdict (accepted, needs revision, or rejected) with its feedback text, and the source URL for a web-sourced value. A row whose verdict is not "accept" shall be unticked by default; every accepted agent-mode row shall be ticked by default. A prompt-mode row is ticked by default unless its reported confidence is below the reviewer-adjustable confidence threshold (REQ-LLM-580), in which case it starts unticked like a classify-mode or cross-check-flagged row; a prompt-mode row with no reported confidence stays ticked.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/aiStore.ts` (`run`, row `checked` initialization), `src/components/AiDialog.tsx` (`JudgeCell`)
+- **Evidence:** `src/state/aiStore.ts` (`run`, row `checked`/`flagged` initialization), `src/components/AiDialog.tsx` (`JudgeCell`)
 - **Status:** Implemented
+- **Tests:** `src/state/aiStore.edit.test.ts`
 
 ### REQ-LLM-420 — Report token usage after a run
 - **Description:** After a run finishes, the system shall report the total number of model requests and the summed input/output tokens across every paper and every model call of the run (agent and judge calls alike), and shall omit the line when every count is zero.
@@ -362,3 +363,18 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `src/components/AiUsageDisclosure.tsx`, `src/components/AnnotationPanel.tsx` (`relevantAiUsage`)
 - **Status:** Implemented
 - **Tests:** `src/components/AiUsageDisclosure.test.tsx`, `src/components/AnnotationPanel.test.tsx`
+
+### REQ-LLM-580 — Edit proposals before applying
+- **Description:** In the review table, each row shall offer an Edit affordance that reveals an input matching the field's type (free text, number, year, boolean checkbox, or an enum dropdown built from the field's options), validated with the same coercion rules `parseAnswer` applies to a model's own answer (`coerce` in `src/llm/parse.ts`, shared rather than duplicated); an invalid edit shows the rejection reason inline and leaves the row unedited. Saving a valid edit ticks the row, marks it `edited`, and keeps the original AI-proposed value visible next to the edited one ("AI proposed: X"); Cancel discards the in-progress edit. Applying an edited row writes the edited value, not the model's, but still records the field as AI-assisted (REQ-LLM-240) and counts it in the usage record's `edited` total.
+  A row whose confidence is below the existing confidence threshold (Options; previously used only for Classify mode and cross-check) shall start unticked in prompt mode too, same as it already does in Classify mode; a row with no reported confidence stays ticked. Whichever reason a row started unticked for (low confidence, a non-accept judge verdict, or a confident cross-check disagreement) is remembered as `flagged`, independent of the reviewer later re-ticking it. The review header states how many rows started unticked and why, and offers a "Show only rows that need attention" toggle that filters the table to rows that are still unticked or were flagged.
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability — Operability)
+- **Evidence:** `src/llm/parse.ts` (`coerce`, exported), `src/state/aiStore.ts` (`ReviewRow.edited`/`editedValue`/`flagged`, `editRow`, `apply`, prompt-mode `rowChecked`), `src/components/AiDialog.tsx` (`EditControl`, `ReviewTable`'s edit UI, attention-only filter and header note), `src/model/project.ts` (`AiUsageRecord.edited`), `src/components/AiUsageDisclosure.tsx`
+- **Status:** Implemented
+- **Tests:** `src/state/aiStore.edit.test.ts`, `src/components/AiDialog.test.tsx`, `src/components/AiUsageDisclosure.test.tsx`, `src/model/model.test.ts`
+
+### REQ-LLM-590 — Skip one paper during an all-papers run
+- **Description:** While an all-papers batch is running, each in-flight paper's title shall be shown with its own Skip action that aborts only that paper's model calls (a per-paper `AbortController` layered on the batch's own, so the rest of the batch — including any other paper already in flight — is unaffected) and records it in a distinct "skipped" list rather than as an error. A skipped paper is not added to the batch's `doneIds`, so it remains a candidate for a later "annotate all papers" run or for resuming the same batch (REQ-LLM-510), same as a paper that was still in flight when the whole batch was cancelled. Skipping one paper never counts as a failure and never aborts the batch's own cancellation signal.
+- **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
+- **Evidence:** `src/state/aiStore.ts` (`skipPaper`, `paperControllers`, `combinedSignal`, `PaperSkip`, `skippedPapers`, `executeBatch`'s per-paper controller and catch-block skip branch), `src/components/AiDialog.tsx` (per-in-flight-paper Skip button, `SkippedPapers`)
+- **Status:** Implemented
+- **Tests:** `src/state/aiStore.edit.test.ts`

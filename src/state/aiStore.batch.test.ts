@@ -235,7 +235,7 @@ describe('run: cancel mid-batch keeps what already finished', () => {
     const runPromise = ai().run()
     await flush()
     expect(ai().batchDone).toBe(1) // first paper done
-    expect(ai().inFlightTitles).toEqual(['Paper Two']) // second in flight
+    expect(ai().inFlightPapers.map((p) => p.title)).toEqual(['Paper Two']) // second in flight
 
     ai().cancel()
     held.resolve?.(anthropicOk([]))

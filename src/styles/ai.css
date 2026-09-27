@@ -297,6 +297,29 @@
   max-width: 18rem;
   overflow-wrap: anywhere;
 }
+.ai-edit-btn {
+  display: block;
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.ai-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ai-edit-actions {
+  display: flex;
+  gap: 6px;
+}
+.ai-edit-error {
+  color: var(--danger);
+}
 
 /* The quote is what makes a row checkable, so it gets real room and wraps. */
 .ai-evidence {

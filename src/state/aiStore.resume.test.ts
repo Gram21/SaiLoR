@@ -163,7 +163,7 @@ describe('concurrency: at most `concurrency` papers run at once', () => {
     const runPromise = ai().run()
     await flush()
     expect(runAgentMock).toHaveBeenCalledTimes(2) // concurrency 2: p1 and p2, not p3 yet
-    expect([...ai().inFlightTitles].sort()).toEqual(['Paper One', 'Paper Two'])
+    expect(ai().inFlightPapers.map((p) => p.title).sort()).toEqual(['Paper One', 'Paper Two'])
 
     deferreds[0]() // let p1 finish
     await flush()

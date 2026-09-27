@@ -30,6 +30,7 @@ describe('AiUsageDisclosure', () => {
         rounds: 2,
         verdicts: { accept: 3, revise: 1, reject: 0 },
         fewShot: 4,
+        edited: 3,
         reviewer: '2',
       },
     ]
@@ -40,7 +41,16 @@ describe('AiUsageDisclosure', () => {
     expect(screen.getByText(/2 rounds/)).toBeInTheDocument()
     expect(screen.getByText(/3 accepted, 1 revised, 0 rejected/)).toBeInTheDocument()
     expect(screen.getByText(/4 examples/)).toBeInTheDocument()
+    expect(screen.getByText(/3 edited/)).toBeInTheDocument()
     expect(screen.getByText(/AI \(Reviewer 2\)/)).toBeInTheDocument()
+  })
+
+  it('omits the edited count when zero or absent', () => {
+    const records: AiUsageRecord[] = [
+      { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-01-01T00:00:00.000Z', edited: 0 },
+    ]
+    render(<AiUsageDisclosure project={project} records={records} />)
+    expect(screen.queryByText(/edited/)).not.toBeInTheDocument()
   })
 
   it('shows a count for multiple records', () => {

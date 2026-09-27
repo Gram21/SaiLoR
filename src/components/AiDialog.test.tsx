@@ -409,3 +409,118 @@ describe('Classify mode and cross-check (Goal B)', () => {
     expect(screen.queryByText('Cross-check (optional)')).not.toBeInTheDocument()
   })
 })
+
+describe('Edit a proposal before applying (REQ-LLM-580)', () => {
+  it('lets the reviewer edit a value: ticks the row and keeps the original AI value visible', async () => {
+    useAiStore.setState({
+      phase: 'review',
+      rows: [
+        {
+          paperId: 'p1',
+          paperTitle: 'Paper One',
+          reviewer: null,
+          checked: false,
+          suggestion: { path: 'Summary', value: 'AI text', evidence: 'e', confidence: 0.5 },
+        },
+      ],
+      notes: [],
+    })
+    render(<AiDialog />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    const input = screen.getByLabelText('Edited value')
+    await userEvent.clear(input)
+    await userEvent.type(input, 'reviewer text')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(screen.getByText('reviewer text')).toBeInTheDocument()
+    expect(screen.getByText((_, el) => el?.textContent === 'edited · AI proposed: AI text')).toBeInTheDocument()
+    expect(useAiStore.getState().rows[0].checked).toBe(true)
+    expect(useAiStore.getState().rows[0].edited).toBe(true)
+  })
+
+  it('shows a validation error and leaves the row unedited on an invalid value', async () => {
+    useAiStore.setState({
+      phase: 'review',
+      rows: [
+        {
+          paperId: 'p1',
+          paperTitle: 'Paper One',
+          reviewer: null,
+          checked: true,
+          suggestion: { path: 'Summary', value: 'AI text', evidence: 'e', confidence: 0.5 },
+        },
+      ],
+      notes: [],
+    })
+    render(<AiDialog />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    const input = screen.getByLabelText('Edited value')
+    await userEvent.clear(input)
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(screen.getByText('empty value')).toBeInTheDocument()
+    expect(useAiStore.getState().rows[0].edited).toBeFalsy()
+  })
+
+  it('Cancel discards the in-progress edit without touching the row', async () => {
+    useAiStore.setState({
+      phase: 'review',
+      rows: [
+        {
+          paperId: 'p1',
+          paperTitle: 'Paper One',
+          reviewer: null,
+          checked: true,
+          suggestion: { path: 'Summary', value: 'AI text', evidence: 'e', confidence: 0.5 },
+        },
+      ],
+      notes: [],
+    })
+    render(<AiDialog />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.getByText('AI text')).toBeInTheDocument()
+    expect(useAiStore.getState().rows[0].edited).toBeFalsy()
+  })
+})
+
+describe('"Show only rows that need attention" filter (REQ-LLM-580)', () => {
+  it('hides ticked, non-flagged rows once toggled on', async () => {
+    useAiStore.setState({
+      phase: 'review',
+      rows: [
+        {
+          paperId: 'p1',
+          paperTitle: 'Paper One',
+          reviewer: null,
+          checked: true,
+          flagged: false,
+          suggestion: { path: 'Summary', value: 'confident value', evidence: 'e', confidence: 0.9 },
+        },
+        {
+          paperId: 'p1',
+          paperTitle: 'Paper One',
+          reviewer: null,
+          checked: false,
+          flagged: true,
+          suggestion: { path: 'Summary', value: 'low confidence value', evidence: 'e', confidence: 0.5 },
+        },
+      ],
+      notes: [],
+    })
+    render(<AiDialog />)
+
+    expect(screen.getByText('confident value')).toBeInTheDocument()
+    expect(screen.getByText('low confidence value')).toBeInTheDocument()
+    expect(screen.getByText(/1 row starts unticked/)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Show only rows that need attention' }))
+
+    expect(screen.queryByText('confident value')).not.toBeInTheDocument()
+    expect(screen.getByText('low confidence value')).toBeInTheDocument()
+  })
+})
