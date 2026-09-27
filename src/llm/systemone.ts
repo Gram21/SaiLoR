@@ -246,6 +246,27 @@ export interface SystemOneComparison {
  * generative model's proposal may differ only in case). Paths System One
  * has no suggestion for are absent from the result.
  */
+/** What "Verify setup" asks and expects back — a single throwaway noul question. */
+export const SYSTEMONE_VERIFY_ASKED: SystemOneAsked[] = [{ id: 'q0', path: 'verify', kind: 'noul' }]
+
+/** The minimal request "Verify setup" sends for a System One target: one tiny
+ *  noul question, so a bad key/model/URL surfaces here rather than mid-run. */
+export function buildSystemOneVerifyRequest(cfg: LlmConfig): LlmHttpRequest {
+  return {
+    configId: cfg.id,
+    url: join(baseOf(cfg), '/v1/systemone'),
+    headers: {
+      'content-type': 'application/json',
+      Authorization: `Bearer ${API_KEY_SENTINEL}`,
+    },
+    body: JSON.stringify({
+      model: cfg.model || 'jev-latest',
+      state: 'This is a connectivity test.',
+      questions: { q0: { type: 'noul', instructions: 'Is this a connectivity test?' } },
+    }),
+  }
+}
+
 export function compareWithSystemOne(
   suggestions: Suggestion[],
   s1: SystemOneResult,
@@ -263,13 +284,15 @@ export function compareWithSystemOne(
 
     if (typeof suggestion.value === 'boolean' && typeof s1Suggestion.value === 'boolean') {
       agrees = suggestion.value === s1Suggestion.value
-      p = probs?.[String(suggestion.value)] ?? (s1Suggestion.confidence ?? 0)
     } else {
       const a = String(suggestion.value).trim().toLowerCase()
       const b = String(s1Suggestion.value).trim().toLowerCase()
       agrees = a === b
-      p = probs?.[String(s1Suggestion.value)] ?? (s1Suggestion.confidence ?? 0)
     }
+    // Always System One's own confidence in *its* answer (`s1Value`), not in
+    // whatever the suggestion claimed — so a caller can read `p` the same way
+    // whether this agrees or not (e.g. "classifier says X, p=0.9").
+    p = probs?.[String(s1Suggestion.value)] ?? (s1Suggestion.confidence ?? 0)
 
     out.set(suggestion.path, { agrees, s1Value: s1Suggestion.value, p })
   }

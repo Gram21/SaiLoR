@@ -12,6 +12,7 @@ import { aiSeatId, seatLabel } from '../model/project'
 import { PROVIDERS } from '../llm/providers'
 import { displayPath, parsePath } from '../llm/paths'
 import { estimateRun, estimateCost, estimateCostSplit } from '../llm/cost'
+import { systemOneEligible } from '../llm/systemone'
 import type { LlmConfig } from '../llm/types'
 import type { FieldValue } from '../model/annotations'
 import { ComboBox } from './ComboBox'
@@ -86,7 +87,7 @@ function estimateLine(
     `${est.requests.low}–${est.requests.high} request${est.requests.high === 1 ? '' : 's'}`
   return cost
     ? `${tokens} (≈ $${cost.low.toFixed(2)}–$${cost.high.toFixed(2)}). Rough estimate, not a quote.`
-    : `${tokens}. Add prices in LLM settings to see a cost estimate. Rough estimate, not a quote.`
+    : `${tokens}. Add prices in AI models settings to see a cost estimate. Rough estimate, not a quote.`
 }
 
 const PHASE_LINE: Record<string, string> = {
@@ -101,6 +102,19 @@ const MODE_INFO: Record<AiMode, string> = {
     '(OpenAlex, Crossref, web pages the paper refers to), and a second AI pass (a judge) checks ' +
     'every value — anything it flags is redone, up to 3 rounds. This takes considerably longer ' +
     'and costs considerably more: typically 5–15 model requests per paper instead of one.',
+  classify:
+    'Fast and very cheap. Only yes/no and single-choice fields; returns a probability per ' +
+    'answer but no quotes from the paper — check each value yourself.',
+}
+
+/** A model with no price entered yet — shown next to a role picker so a blank
+ *  cost estimate has an obvious reason. */
+function priceHint(cfg: LlmConfig | null): boolean {
+  return !!cfg && (cfg.inputPrice === undefined || cfg.outputPrice === undefined)
+}
+
+function modelOption(c: LlmConfig): { id: string; label: string } {
+  return { id: c.id, label: `${c.name} — ${PROVIDERS[c.provider].label} · ${c.model}` }
 }
 
 /** The consequences warning for turning on "annotate all papers", worded to stay
@@ -127,6 +141,8 @@ export function AiDialog() {
   const allPapers = useAiStore((s) => s.allPapers)
   const candidates = useAiStore((s) => s.candidates)
   const judgeSelectedId = useAiStore((s) => s.judgeSelectedId)
+  const crossCheckId = useAiStore((s) => s.crossCheckId)
+  const confidenceThreshold = useAiStore((s) => s.confidenceThreshold)
   const spendCap = useAiStore((s) => s.spendCap)
   const spentSoFar = useAiStore((s) => s.spentSoFar)
   const spendCapHit = useAiStore((s) => s.spendCapHit)
@@ -162,6 +178,8 @@ export function AiDialog() {
   const setMode = useAiStore((s) => s.setMode)
   const setAllPapers = useAiStore((s) => s.setAllPapers)
   const selectJudge = useAiStore((s) => s.selectJudge)
+  const selectCrossCheck = useAiStore((s) => s.selectCrossCheck)
+  const setConfidenceThreshold = useAiStore((s) => s.setConfidenceThreshold)
   const setSpendCap = useAiStore((s) => s.setSpendCap)
   const setFewShot = useAiStore((s) => s.setFewShot)
   const setFewShotCount = useAiStore((s) => s.setFewShotCount)
@@ -240,6 +258,10 @@ export function AiDialog() {
   // those, and callers that care (the consent line, the estimate) already
   // have `mode` to tell them apart.
   const judgeCfg = judgeSelectedId ? configs.find((c) => c.id === judgeSelectedId) ?? null : null
+  const crossCheckCfg = crossCheckId ? configs.find((c) => c.id === crossCheckId) ?? null : null
+  const systemOneConfigs = configs.filter((c) => c.provider === 'systemone')
+  const chatConfigs = configs.filter((c) => c.provider !== 'systemone')
+  const annotatorConfigs = mode === 'classify' ? systemOneConfigs : chatConfigs
   const checkedCount = rows.filter((r) => r.checked).length
   const running = phase === 'reading' || phase === 'calling' || phase === 'parsing'
   const canStartSingle = !!currentPaper && currentPaperHasPdf && targets.length > 0
@@ -275,7 +297,9 @@ export function AiDialog() {
     !!selected &&
     selected.inputPrice !== undefined &&
     selected.outputPrice !== undefined &&
-    (mode === 'prompt' ||
+    // Only agent mode prices a second (judge) target — classify has none,
+    // and cross-check is optional, so neither blocks the cap on its price.
+    (mode !== 'agent' ||
       ((judgeCfg ?? selected).inputPrice !== undefined && (judgeCfg ?? selected).outputPrice !== undefined))
 
   // Grouped only when more than one paper is actually in the review set.
@@ -290,8 +314,8 @@ export function AiDialog() {
       type="button"
       className="icon-btn"
       onClick={() => setSettingsOpen(true)}
-      title="LLM settings"
-      aria-label="LLM settings"
+      title="AI models"
+      aria-label="AI models"
     >
       ⚙
     </button>
@@ -357,99 +381,24 @@ export function AiDialog() {
                 </div>
               )}
 
-              {configs.length === 0 ? (
+              {configs.length === 0 && (
                 <div className="ai-empty-configs">
-                  <p>No LLM target is set up yet.</p>
+                  <p>No AI model is set up yet.</p>
                   <button
                     type="button"
                     className="primary"
                     onClick={() => setSettingsOpen(true)}
-                    title="Open LLM settings to add a target"
+                    title="Open AI models settings to add one"
                   >
-                    Set up an LLM…
+                    Set up a model…
                   </button>
                 </div>
-              ) : (
-                <>
-                  <div className="ai-label" id="ai-target-label">
-                    Send to
-                  </div>
-                  <div className="ai-target-row" role="group" aria-labelledby="ai-target-label">
-                    <ComboBox
-                      value={selectedId}
-                      options={configs.map((c) => ({
-                        id: c.id,
-                        label: `${c.name} — ${PROVIDERS[c.provider].label} · ${c.model}`,
-                      }))}
-                      onChange={(id) => {
-                        if (id) selectConfig(id)
-                      }}
-                    />
-                    {gearButton}
-                  </div>
-                </>
               )}
 
-              <div className="ai-label" id="ai-mode-label">
-                How
+              {/* What: scope (current paper vs. all papers) and which fields will be asked. */}
+              <div className="ai-label" id="ai-what-label">
+                What
               </div>
-              <div className="ai-mode-row" role="radiogroup" aria-labelledby="ai-mode-label">
-                <label>
-                  <input
-                    type="radio"
-                    name="ai-mode"
-                    checked={mode === 'prompt'}
-                    onChange={() => setMode('prompt')}
-                  />
-                  Prompt
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="ai-mode"
-                    checked={mode === 'agent'}
-                    onChange={() => setMode('agent')}
-                  />
-                  Agent
-                </label>
-              </div>
-              <p className="ai-note">{MODE_INFO[mode]}</p>
-
-              {mode === 'agent' && (
-                <>
-                  <div className="ai-label" id="ai-judge-label">
-                    Judge with
-                  </div>
-                  <div className="ai-target-row" role="group" aria-labelledby="ai-judge-label">
-                    <ComboBox
-                      value={judgeSelectedId ?? ''}
-                      options={[
-                        {
-                          id: '',
-                          label: `Same as agent${selected ? ` (${selected.name})` : ''}`,
-                        },
-                        ...configs.map((c) => ({
-                          id: c.id,
-                          label: `${c.name} — ${PROVIDERS[c.provider].label} · ${c.model}`,
-                        })),
-                      ]}
-                      onChange={(id) => selectJudge(id || null)}
-                    />
-                  </div>
-                  <p className="ai-note">
-                    A different model — ideally a different provider or family — catches mistakes the
-                    agent's own model is prone to repeat when it reviews itself. A cheaper model here
-                    keeps judge costs down.
-                  </p>
-                </>
-              )}
-
-              {aiSeat && project && (
-                <p className="ai-note">
-                  Answers go into the AI's own seat: <strong>{seatLabel(project, aiSeat)}</strong>.
-                </p>
-              )}
-
               <p className="ai-scope">
                 {allPapers ? (
                   <>
@@ -498,106 +447,11 @@ export function AiDialog() {
               )}
               {allPapers && <p className="ai-note">{allPapersWarning(mode, candidates.length)}</p>}
 
-              <label className="ai-toggle-row">
-                <input
-                  type="checkbox"
-                  checked={fewShot}
-                  disabled={fewShotAvailable === 0}
-                  onChange={(e) => setFewShot(e.target.checked)}
-                />
-                Show the AI my finished papers as examples
-              </label>
-              <p className="ai-note">
-                {fewShotAvailable === 0
-                  ? 'No finished papers are available yet as examples.'
-                  : `${fewShotAvailable} finished paper${fewShotAvailable === 1 ? '' : 's'} available.`}
-              </p>
-              {fewShot && fewShotAvailable > 0 && (
-                <div className="ai-target-row">
-                  <label htmlFor="ai-fewshot-count">Show up to</label>
-                  <select
-                    id="ai-fewshot-count"
-                    value={fewShotCount}
-                    onChange={(e) => setFewShotCount(Number(e.target.value))}
-                  >
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <p className="ai-consent">
-                {selected ? (
-                  <>
-                    {deliveryOf(selected) === 'pdf'
-                      ? `This paper${allPapers ? "'s" : '’s'} PDF file will be sent to `
-                      : `The text of ${allPapers ? 'each paper' : 'this paper'} will be extracted and sent to `}
-                    <strong>{PROVIDERS[selected.provider].label}</strong> ({selected.model}). It
-                    leaves this machine. Nothing is written into the project until you press Apply.
-                    {mode === 'agent' &&
-                      ' Agent mode may also send search terms or URLs chosen by the model to OpenAlex, Crossref, or other sites; these can contain short phrases from the paper, but never the paper file itself.'}
-                    {mode === 'agent' &&
-                      judgeCfg &&
-                      judgeCfg.provider !== selected.provider &&
-                      ` The judge's review is sent to ${PROVIDERS[judgeCfg.provider].label} (${judgeCfg.model}) as well — it also sees the paper.`}
-                    {fewShot &&
-                      fewShotAvailable > 0 &&
-                      ` …plus the annotations (and abstracts) of ${Math.min(fewShotCount, fewShotAvailable)} of your finished papers as examples.`}
-                  </>
-                ) : (
-                  'Nothing is sent until you choose a target and press Start.'
-                )}
-              </p>
-
               <p className="ai-targets">
                 {targets.length === 0
                   ? 'Every field of this paper is already filled in — there is nothing to propose.'
                   : `${targets.length} empty field${targets.length === 1 ? '' : 's'} will be proposed.`}
               </p>
-
-              {estimateText && <p className="ai-note ai-estimate">{estimateText}</p>}
-
-              {allPapers && (
-                <div className="ai-target-row">
-                  <label htmlFor="ai-concurrency">Papers at once</label>
-                  <select
-                    id="ai-concurrency"
-                    value={concurrency}
-                    onChange={(e) => setConcurrency(Number(e.target.value))}
-                    title="More at once is faster, but hits your provider's rate limits sooner — retries back off automatically."
-                  >
-                    {[1, 2, 3, 4].map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {allPapers && (
-                <div className="ai-target-row">
-                  <label htmlFor="ai-spend-cap">Stop when spent exceeds $</label>
-                  <input
-                    id="ai-spend-cap"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    disabled={!capKnown}
-                    value={spendCap ?? ''}
-                    onChange={(e) => setSpendCap(e.target.value === '' ? null : Number(e.target.value))}
-                    placeholder={capKnown ? 'no limit' : 'set prices to enable'}
-                    title={
-                      capKnown
-                        ? 'Stop starting new papers once the running cost estimate passes this amount.'
-                        : 'Add prices to the target(s) in LLM settings to enable a spending cap.'
-                    }
-                  />
-                </div>
-              )}
 
               {targets.length > 0 && (
                 <details className="ai-prompt">
@@ -618,11 +472,259 @@ export function AiDialog() {
                             one of: {t.def.options.join(' · ')}
                           </span>
                         )}
+                        {mode === 'classify' && !systemOneEligible(t) && (
+                          <span className="ai-note-reason">not handled in Classify mode</span>
+                        )}
                       </li>
                     ))}
                   </ul>
                 </details>
               )}
+
+              {/* How: prompt / agent / classify. */}
+              <div className="ai-label" id="ai-mode-label">
+                How
+              </div>
+              <div className="ai-mode-row" role="radiogroup" aria-labelledby="ai-mode-label">
+                <label>
+                  <input
+                    type="radio"
+                    name="ai-mode"
+                    checked={mode === 'prompt'}
+                    onChange={() => setMode('prompt')}
+                  />
+                  Prompt
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="ai-mode"
+                    checked={mode === 'agent'}
+                    onChange={() => setMode('agent')}
+                  />
+                  Agent
+                </label>
+                <label
+                  title={
+                    systemOneConfigs.length === 0
+                      ? 'Add a System One model in AI models settings to enable Classify mode.'
+                      : undefined
+                  }
+                >
+                  <input
+                    type="radio"
+                    name="ai-mode"
+                    checked={mode === 'classify'}
+                    disabled={systemOneConfigs.length === 0}
+                    onChange={() => setMode('classify')}
+                  />
+                  Classify
+                </label>
+              </div>
+              <p className="ai-note">{MODE_INFO[mode]}</p>
+
+              {/* Models: assign a library model to each role. */}
+              <div className="ai-label" id="ai-models-label">
+                Models
+              </div>
+
+              <div className="ai-label" id="ai-annotator-label">
+                Annotator
+              </div>
+              <div className="ai-target-row" role="group" aria-labelledby="ai-annotator-label">
+                <ComboBox
+                  value={selectedId}
+                  options={annotatorConfigs.map(modelOption)}
+                  onChange={(id) => {
+                    if (id) selectConfig(id)
+                  }}
+                />
+                {gearButton}
+              </div>
+              {priceHint(selected) && <p className="ai-note">no price set</p>}
+
+              {mode === 'agent' && (
+                <>
+                  <div className="ai-label" id="ai-judge-label">
+                    Judge
+                  </div>
+                  <div className="ai-target-row" role="group" aria-labelledby="ai-judge-label">
+                    <ComboBox
+                      value={judgeSelectedId ?? ''}
+                      options={[
+                        {
+                          id: '',
+                          label: `Same as annotator${selected ? ` (${selected.name})` : ''}`,
+                        },
+                        ...chatConfigs.map(modelOption),
+                      ]}
+                      onChange={(id) => selectJudge(id || null)}
+                    />
+                  </div>
+                  <p className="ai-note">
+                    A different model — ideally a different provider or family — catches mistakes the
+                    annotator's own model is prone to repeat when it reviews itself. A cheaper model
+                    here keeps judge costs down.
+                  </p>
+                  {priceHint(judgeCfg) && <p className="ai-note">no price set</p>}
+                </>
+              )}
+
+              {mode !== 'classify' && systemOneConfigs.length > 0 && (
+                <>
+                  <div className="ai-label" id="ai-crosscheck-label">
+                    Cross-check (optional)
+                  </div>
+                  <div className="ai-target-row" role="group" aria-labelledby="ai-crosscheck-label">
+                    <ComboBox
+                      value={crossCheckId ?? ''}
+                      options={[{ id: '', label: 'None' }, ...systemOneConfigs.map(modelOption)]}
+                      onChange={(id) => selectCrossCheck(id || null)}
+                    />
+                  </div>
+                  <p className="ai-note">
+                    Asks this System One model the same yes/no or single-choice fields
+                    independently and flags disagreements for review.
+                  </p>
+                  {priceHint(crossCheckCfg) && <p className="ai-note">no price set</p>}
+                </>
+              )}
+
+              {aiSeat && project && (
+                <p className="ai-note">
+                  Answers go into the AI's own seat: <strong>{seatLabel(project, aiSeat)}</strong>.
+                </p>
+              )}
+
+              <p className="ai-consent">
+                {selected ? (
+                  <>
+                    {mode === 'classify'
+                      ? `The title, abstract and extracted text of ${allPapers ? 'each paper' : 'this paper'} (truncated to fit) will be sent to `
+                      : deliveryOf(selected) === 'pdf'
+                        ? `This paper${allPapers ? "'s" : '’s'} PDF file will be sent to `
+                        : `The text of ${allPapers ? 'each paper' : 'this paper'} will be extracted and sent to `}
+                    <strong>{PROVIDERS[selected.provider].label}</strong> ({selected.model}). It
+                    leaves this machine. Nothing is written into the project until you press Apply.
+                    {mode === 'agent' &&
+                      ' Agent mode may also send search terms or URLs chosen by the model to OpenAlex, Crossref, or other sites; these can contain short phrases from the paper, but never the paper file itself.'}
+                    {mode === 'agent' &&
+                      judgeCfg &&
+                      judgeCfg.provider !== selected.provider &&
+                      ` The judge's review is sent to ${PROVIDERS[judgeCfg.provider].label} (${judgeCfg.model}) as well — it also sees the paper.`}
+                    {mode !== 'classify' &&
+                      crossCheckCfg &&
+                      ` The cross-check fields are sent to ${PROVIDERS[crossCheckCfg.provider].label} (${crossCheckCfg.model}) as well.`}
+                    {mode !== 'classify' &&
+                      fewShot &&
+                      fewShotAvailable > 0 &&
+                      ` …plus the annotations (and abstracts) of ${Math.min(fewShotCount, fewShotAvailable)} of your finished papers as examples.`}
+                  </>
+                ) : (
+                  'Nothing is sent until you choose an annotator model and press Start.'
+                )}
+              </p>
+
+              {estimateText && <p className="ai-note ai-estimate">{estimateText}</p>}
+
+              {/* Options: everything a run doesn't strictly need to choose. */}
+              <details className="ai-prompt">
+                <summary>Options</summary>
+
+                {mode !== 'classify' && (
+                  <>
+                    <label className="ai-toggle-row">
+                      <input
+                        type="checkbox"
+                        checked={fewShot}
+                        disabled={fewShotAvailable === 0}
+                        onChange={(e) => setFewShot(e.target.checked)}
+                      />
+                      Show the AI my finished papers as examples
+                    </label>
+                    <p className="ai-note">
+                      {fewShotAvailable === 0
+                        ? 'No finished papers are available yet as examples.'
+                        : `${fewShotAvailable} finished paper${fewShotAvailable === 1 ? '' : 's'} available.`}
+                    </p>
+                    {fewShot && fewShotAvailable > 0 && (
+                      <div className="ai-target-row">
+                        <label htmlFor="ai-fewshot-count">Show up to</label>
+                        <select
+                          id="ai-fewshot-count"
+                          value={fewShotCount}
+                          onChange={(e) => setFewShotCount(Number(e.target.value))}
+                        >
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <option key={n} value={n}>
+                              {n}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {allPapers && (
+                  <div className="ai-target-row">
+                    <label htmlFor="ai-concurrency">Papers at once</label>
+                    <select
+                      id="ai-concurrency"
+                      value={concurrency}
+                      onChange={(e) => setConcurrency(Number(e.target.value))}
+                      title="More at once is faster, but hits your provider's rate limits sooner — retries back off automatically."
+                    >
+                      {[1, 2, 3, 4].map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {allPapers && (
+                  <div className="ai-target-row">
+                    <label htmlFor="ai-spend-cap">Stop when spent exceeds $</label>
+                    <input
+                      id="ai-spend-cap"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      disabled={!capKnown}
+                      value={spendCap ?? ''}
+                      onChange={(e) => setSpendCap(e.target.value === '' ? null : Number(e.target.value))}
+                      placeholder={capKnown ? 'no limit' : 'set prices to enable'}
+                      title={
+                        capKnown
+                          ? 'Stop starting new papers once the running cost estimate passes this amount.'
+                          : 'Add prices to the model(s) in AI models settings to enable a spending cap.'
+                      }
+                    />
+                  </div>
+                )}
+
+                {(mode === 'classify' || crossCheckCfg) && (
+                  <div className="ai-target-row">
+                    <label htmlFor="ai-threshold">Unticked below confidence</label>
+                    <input
+                      id="ai-threshold"
+                      type="number"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={confidenceThreshold}
+                      onChange={(e) => setConfidenceThreshold(Number(e.target.value))}
+                      title={
+                        mode === 'classify'
+                          ? 'A classify-mode row below this probability starts unticked.'
+                          : 'A cross-check disagreement at or above this probability starts the row unticked.'
+                      }
+                    />
+                  </div>
+                )}
+              </details>
 
               <div className="ai-foot">
                 <button type="button" onClick={() => closeDialog()} title="Cancel without sending anything">
@@ -633,7 +735,7 @@ export function AiDialog() {
                   className="primary"
                   onClick={() => void run()}
                   disabled={!selected || !canStart}
-                  title="Send the paper(s) to the selected LLM target"
+                  title="Send the paper(s) to the selected AI model"
                 >
                   Start
                 </button>
@@ -803,8 +905,8 @@ export function AiDialog() {
             <>
               <p className="ai-error">{error ?? 'Something went wrong.'}</p>
               <p className="ai-note">
-                Nothing was written to the project. If the target’s key, model name or URL is wrong,
-                fix it in the LLM settings and try again.
+                Nothing was written to the project. If the model’s key, model name or URL is wrong,
+                fix it in AI models settings and try again.
               </p>
               <div className="ai-foot">
                 {gearButton}
@@ -818,7 +920,7 @@ export function AiDialog() {
                     className="primary"
                     onClick={() => void run()}
                     disabled={!selected || !canStart}
-                    title="Retry sending the paper to the selected LLM target"
+                    title="Retry sending the paper to the selected AI model"
                   >
                     Try again
                   </button>
@@ -887,6 +989,8 @@ function ReviewTable({
   // papers in that order, so this reads the same as the progress line did.
   const order: string[] = []
   for (const r of rows) if (!order.includes(r.paperId)) order.push(r.paperId)
+  const hasCrossCheck = rows.some((r) => r.crossCheck)
+  const columnCount = 5 + (mode === 'agent' ? 2 : 0) + (hasCrossCheck ? 1 : 0)
 
   return (
     <div className="ai-table-wrap">
@@ -901,6 +1005,7 @@ function ReviewTable({
             <th scope="col">Evidence</th>
             {mode === 'agent' && <th scope="col">Source</th>}
             {mode === 'agent' && <th scope="col">Check</th>}
+            {hasCrossCheck && <th scope="col">Cross-check</th>}
             <th scope="col" className="ai-col-conf">
               Confidence
             </th>
@@ -916,7 +1021,7 @@ function ReviewTable({
               <Fragment key={paperId}>
                 {grouped && (
                   <tr key={`group-${paperId}`} className="ai-group-head">
-                    <th scope="colgroup" colSpan={mode === 'agent' ? 7 : 5}>
+                    <th scope="colgroup" colSpan={columnCount}>
                       {title}
                     </th>
                   </tr>
@@ -954,7 +1059,9 @@ function ReviewTable({
                             <q>{row.suggestion.evidence}</q>
                           )
                         ) : (
-                          <span className="ai-dash">no quote given</span>
+                          <span className="ai-dash">
+                            {row.suggestion.source === 'system-one' ? 'no quote (System One)' : 'no quote given'}
+                          </span>
                         )}
                       </td>
                       {mode === 'agent' && (
@@ -969,6 +1076,23 @@ function ReviewTable({
                       {mode === 'agent' && (
                         <td className="ai-check">
                           <JudgeCell row={row} />
+                        </td>
+                      )}
+                      {hasCrossCheck && (
+                        <td className="ai-check">
+                          {row.crossCheck ? (
+                            row.crossCheck.agrees ? (
+                              <span className="ai-judge-verdict ai-judge-accept">
+                                ✓ {Math.round(row.crossCheck.p * 100)}%
+                              </span>
+                            ) : (
+                              <span className="ai-judge-verdict ai-judge-reject">
+                                classifier says {String(row.crossCheck.s1Value)}, p={row.crossCheck.p.toFixed(2)}
+                              </span>
+                            )
+                          ) : (
+                            <span className="ai-dash">—</span>
+                          )}
                         </td>
                       )}
                       <td className="ai-col-conf">{confidenceLabel(row.suggestion.confidence)}</td>

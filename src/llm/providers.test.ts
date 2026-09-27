@@ -80,13 +80,20 @@ describe('PROVIDERS', () => {
       'deepseek',
       'xai',
       'openai-compatible',
+      'systemone',
     ])
+    // Every provider but System One follows "editable iff no fixed default" —
+    // System One is the one deliberate exception: it has a real hosted default
+    // (api.typesafe.ai) but is still editable, for a local laya-serve.
     for (const info of PROVIDER_LIST) {
+      if (info.id === 'systemone') continue
       expect(info.editableBaseUrl).toBe(info.defaultBaseUrl === '')
     }
     expect(PROVIDERS['openai-compatible'].editableBaseUrl).toBe(true)
     expect(PROVIDERS['openai-compatible'].supportsPdf).toBe(false)
     expect(PROVIDERS.anthropic.supportsPdf).toBe(true)
+    expect(PROVIDERS.systemone.editableBaseUrl).toBe(true)
+    expect(PROVIDERS.systemone.defaultBaseUrl).toBe('https://api.typesafe.ai')
   })
 
   it('only claims inline-PDF support where a single request can actually carry one', () => {
@@ -109,10 +116,11 @@ describe('PROVIDERS', () => {
 
   it('never claims model-listing support for an arbitrary self-hosted server', () => {
     // Every named provider has one endpoint/auth/response shape this app knows;
-    // `openai-compatible` fronts an unbounded variety of servers, so it is the
-    // one deliberate exception — see the field comment in providers.ts.
+    // `openai-compatible` fronts an unbounded variety of servers, and System
+    // One is a closed-form decision model with no listing endpoint at all —
+    // see the field comments in providers.ts.
     for (const p of PROVIDER_LIST) {
-      expect(p.supportsModelListing).toBe(p.id !== 'openai-compatible')
+      expect(p.supportsModelListing).toBe(p.id !== 'openai-compatible' && p.id !== 'systemone')
     }
   })
 

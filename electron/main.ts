@@ -62,7 +62,7 @@ import { parseMarks, type PdfMark } from '../src/model/pdfMarks'
 import { rectToPdfPoints, rectToQuadPoints } from '../src/model/pdfExport'
 import { verifyReleaseSignature, RELEASE_PUBLIC_KEY_B64 } from '../src/model/updateSignature'
 import { isBlockedAddress, validateFetchUrl } from './webFetch'
-import { validPrice, buildCallHeaders } from './llmConfig'
+import { validPrice, validPositiveInt, buildCallHeaders } from './llmConfig'
 import { parseRetryAfter } from '../src/llm/retry'
 import type { WebFetchResult } from '../src/llm/types'
 import { PDFDocument, PDFHexString, PDFString, type PDFContext, type PDFDict } from 'pdf-lib'
@@ -1872,6 +1872,8 @@ interface StoredLlmConfig {
   inputPrice?: number
   /** USD per 1M tokens, user-entered. Absent when the user has not set one. */
   outputPrice?: number
+  /** System One targets only — see `LlmConfig.maxStateTokens`. */
+  maxStateTokens?: number
   /** safeStorage-encrypted key, base64. Absent when the user has not set one. */
   key?: string
 }
@@ -1923,6 +1925,7 @@ ipcMain.handle('llm:saveConfig', (_e, config: StoredLlmConfig, apiKey?: string) 
     ...config,
     inputPrice: validPrice(config.inputPrice),
     outputPrice: validPrice(config.outputPrice),
+    maxStateTokens: validPositiveInt(config.maxStateTokens),
     noKey: Boolean(config.noKey),
     ...(key ? { key } : {}),
   }

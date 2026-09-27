@@ -42,9 +42,9 @@ export interface AiUsageRecord {
   /** ISO 8601 timestamp of the Apply click. */
   appliedAt: string
   /** "prompt" for a single suggest-and-apply pass, "agent" for the
-   *  tool-using agent with a judge review loop. Absent for a record predating
-   *  this distinction. */
-  mode?: 'prompt' | 'agent'
+   *  tool-using agent with a judge review loop, "classify" for a System One
+   *  decision-model pass. Absent for a record predating this distinction. */
+  mode?: 'prompt' | 'agent' | 'classify'
   /** The judge model that reviewed the agent's answers, agent mode only. */
   judge?: { provider: string; model: string }
   /** How many agent rounds ran. Agent mode only. */
@@ -437,7 +437,7 @@ function parseAiUsage(raw: unknown): AiUsageRecord[] {
       // Each optional field is dropped on its own if malformed — the base
       // record above is never discarded for a bad extra, same rule as the
       // rest of this file's hand-editable sub-records.
-      if (e.mode === 'prompt' || e.mode === 'agent') record.mode = e.mode
+      if (e.mode === 'prompt' || e.mode === 'agent' || e.mode === 'classify') record.mode = e.mode
       const judge = parseAiUsageJudge(e.judge)
       if (judge) record.judge = judge
       if (typeof e.rounds === 'number' && Number.isFinite(e.rounds)) record.rounds = e.rounds

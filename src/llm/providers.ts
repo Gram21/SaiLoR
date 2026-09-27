@@ -129,6 +129,22 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     // the OpenAI-specific `max_completion_tokens` rename.
     tokenParam: 'max_tokens',
   },
+  systemone: {
+    id: 'systemone',
+    label: 'System One (Jev-compatible)',
+    // TypeSafe's hosted Jev; a local `laya-serve` (e.g. http://localhost:8000)
+    // is the other documented target — hence editable, unlike the other
+    // fixed-URL providers.
+    defaultBaseUrl: 'https://api.typesafe.ai',
+    editableBaseUrl: true,
+    // A closed-form decision model, not a chat completion — no document input,
+    // no listing endpoint, no reasoning-effort dial. See `systemone.ts`, which
+    // builds and parses this provider's one request shape (`/v1/systemone`)
+    // itself; `buildRequest`/`extractText` below never handle it.
+    supportsPdf: false,
+    supportsModelListing: false,
+    tokenParam: 'max_tokens', // unused — systemone.ts builds its own request body
+  },
 }
 
 export const PROVIDER_LIST: ProviderInfo[] = [
@@ -141,6 +157,7 @@ export const PROVIDER_LIST: ProviderInfo[] = [
   PROVIDERS.deepseek,
   PROVIDERS.xai,
   PROVIDERS['openai-compatible'],
+  PROVIDERS.systemone,
 ]
 
 /** The paper, as handed to the model. */

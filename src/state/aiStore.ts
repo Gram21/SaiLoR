@@ -14,6 +14,15 @@ import { costOf } from '../llm/cost'
 import { buildFewShotBlock, countAnsweredFields, pickFewShotExamples, type FewShotExample } from '../llm/fewshot'
 import type { LlmAnswer, LlmConfig, ModelInfo, Suggestion } from '../llm/types'
 import { isUsable } from '../llm/types'
+import {
+  buildSystemOneRequest,
+  buildSystemOneVerifyRequest,
+  parseSystemOneResponse,
+  compareWithSystemOne,
+  systemOneEligible,
+  SYSTEMONE_VERIFY_ASKED,
+  type SystemOneComparison,
+} from '../llm/systemone'
 import { aiSeatId } from '../model/project'
 import type { Paper, Project } from '../model/project'
 import type { AnnotationValueTree } from '../model/annotations'
@@ -29,6 +38,9 @@ import { extractPdfText, countPdfPages } from '../model/pdfText'
 const SELECTED_KEY = 'slr.llm.selected'
 const MODE_KEY = 'slr.llm.mode'
 const JUDGE_KEY = 'slr.llm.judge'
+const CROSSCHECK_KEY = 'slr.llm.crosscheck'
+const THRESHOLD_KEY = 'slr.llm.threshold'
+const DEFAULT_THRESHOLD = 0.8
 const FEW_SHOT_KEY = 'slr.llm.fewshot'
 const DEFAULT_FEW_SHOT_COUNT = 2
 const CONCURRENCY_KEY = 'slr.llm.concurrency'
@@ -63,7 +75,7 @@ export type AiPhase =
   | 'applied'
   | 'error'
 
-export type AiMode = 'prompt' | 'agent'
+export type AiMode = 'prompt' | 'agent' | 'classify'
 
 /** A suggestion plus the reviewer's decision about it and which paper it belongs to. */
 export interface ReviewRow {
@@ -72,6 +84,10 @@ export interface ReviewRow {
   reviewer: string | null
   suggestion: Suggestion
   checked: boolean
+  /** Cross-check role only: this row's suggestion compared against System
+   *  One's own answer for the same field. Absent when no cross-check model is
+   *  assigned, or the field wasn't eligible/asked. */
+  crossCheck?: SystemOneComparison
 }
 
 /** A paper a batch run failed on, kept so the run can continue past it. */
@@ -121,6 +137,13 @@ interface AiState {
 
   /** Agent mode's judge target — id of a config, or null for "same as agent". */
   judgeSelectedId: string | null
+  /** Optional cross-check role (prompt/agent modes): a System One target whose
+   *  own answer is compared against each eligible proposed value. Null means
+   *  "not assigned". */
+  crossCheckId: string | null
+  /** Below this probability (0-1), a classify-mode row or a cross-check
+   *  disagreement starts unticked rather than pre-approved. */
+  confidenceThreshold: number
   /** All-papers mode only: stop starting new papers once spend exceeds this
    *  (USD), null when the reviewer hasn't set one. Reset every dialog open. */
   spendCap: number | null
@@ -222,6 +245,9 @@ interface AiState {
   setAllPapers: (on: boolean) => void
   /** `null` means "same as agent". */
   selectJudge: (id: string | null) => void
+  /** `null` means "no cross-check model assigned". */
+  selectCrossCheck: (id: string | null) => void
+  setConfidenceThreshold: (n: number) => void
   setSpendCap: (cap: number | null) => void
   setFewShot: (on: boolean) => void
   setFewShotCount: (count: number) => void
@@ -366,6 +392,8 @@ export interface PersistedBatch {
   mode: AiMode
   configId: string
   judgeId: string | null
+  /** Absent on a record saved before cross-check existed. */
+  crossCheckId?: string | null
   allPaperIds: string[]
   doneIds: string[]
   usage: { calls: number; inputTokens: number; outputTokens: number }
@@ -426,6 +454,41 @@ function clearPersistedBatch(seat: string | null): void {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Per-project role assignment (Goal A) — which library model plays which role
+// (annotator/judge/cross-check) is remembered per project, falling back to
+// the last global choice (the plain `slr.llm.*` keys read/written below).
+// ---------------------------------------------------------------------------
+
+interface StoredRoles {
+  annotatorId?: string
+  judgeId?: string | null
+  crossCheckId?: string | null
+}
+
+function rolesStorageKey(): string {
+  return `slr.llm.roles.${projectIdentityKey()}`
+}
+
+function readProjectRoles(): StoredRoles {
+  if (!projectIdentityKey()) return {}
+  try {
+    const raw = localStorage?.getItem(rolesStorageKey())
+    return raw ? (JSON.parse(raw) as StoredRoles) : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeProjectRole(patch: StoredRoles): void {
+  if (!projectIdentityKey()) return
+  try {
+    localStorage?.setItem(rolesStorageKey(), JSON.stringify({ ...readProjectRoles(), ...patch }))
+  } catch {
+    /* ignore (private mode / disabled storage) */
+  }
+}
+
 export const useAiStore = create<AiState>()(
   immer((set, get) => {
     /**
@@ -443,12 +506,14 @@ export const useAiStore = create<AiState>()(
       doneIdsSoFar: string[],
       config: LlmConfig,
       judgeCfg: LlmConfig | undefined,
+      crossCheckCfg: LlmConfig | undefined,
       mode: AiMode,
       callLlm: CallLlm,
       cap: number | null,
       fewShotOn: boolean,
       fewShotCandidatesList: FewShotCandidate[],
       fewShotCount: number,
+      confidenceThreshold: number,
     ): Promise<void> => {
       const app = useStore.getState()
       const targetSeat = get().targetSeat
@@ -483,6 +548,7 @@ export const useAiStore = create<AiState>()(
           mode,
           configId: config.id,
           judgeId: judgeCfg?.id ?? null,
+          crossCheckId: crossCheckCfg?.id ?? null,
           allPaperIds,
           doneIds: [...doneIds],
           usage: get().usage,
@@ -526,6 +592,17 @@ export const useAiStore = create<AiState>()(
                 ? buildFewShotForPaper(app.project!.schema, fewShotCandidatesList, fewShotCount, paper.id)
                 : { block: '', included: 0 }
 
+              // Each mode does its own model call(s), then rows/usage/cost
+              // are recorded uniformly below — cross-check (prompt/agent
+              // only) piggybacks on the same shared block.
+              let answer: LlmAnswer
+              let paperText = ''
+              let calls: number
+              let baseUsage: { inputTokens: number; outputTokens: number }
+              let paperCost: number
+              let roundsForPaper: number | undefined
+              let rowChecked: (sug: Suggestion) => boolean
+
               if (mode === 'agent') {
                 const result = await runOnePaperAgent(
                   app.project!,
@@ -557,33 +634,21 @@ export const useAiStore = create<AiState>()(
                   inputTokens: result.usage.inputTokens - result.judgeUsage.inputTokens,
                   outputTokens: result.usage.outputTokens - result.judgeUsage.outputTokens,
                 }
-                const paperCost =
-                  (costOf(agentPortion, config) ?? 0) + (costOf(result.judgeUsage, judgeCfg ?? config) ?? 0)
-                set((s) => {
-                  for (const sug of result.answer.fields) {
-                    s.rows.push({
-                      paperId: paper.id,
-                      paperTitle: paper.title,
-                      reviewer: get().targetSeat,
-                      suggestion: sug,
-                      checked: sug.judge?.verdict === 'accept',
-                    })
-                  }
-                  s.usage.calls += result.usage.calls
-                  s.usage.inputTokens += result.usage.inputTokens
-                  s.usage.outputTokens += result.usage.outputTokens
-                  s.spentSoFar += paperCost
-                  s.roundsByPaper[paper.id] = result.rounds
-                  if (fewShotForPaper.included > 0) s.fewShotByPaper[paper.id] = fewShotForPaper.included
-                  if (result.answer.skipped.length > 0 || result.answer.rejected.length > 0) {
-                    s.notes.push({
-                      paperId: paper.id,
-                      paperTitle: paper.title,
-                      skipped: result.answer.skipped,
-                      rejected: result.answer.rejected,
-                    })
-                  }
-                })
+                answer = result.answer
+                paperText = result.paperText
+                calls = result.usage.calls
+                baseUsage = { inputTokens: result.usage.inputTokens, outputTokens: result.usage.outputTokens }
+                paperCost = (costOf(agentPortion, config) ?? 0) + (costOf(result.judgeUsage, judgeCfg ?? config) ?? 0)
+                roundsForPaper = result.rounds
+                rowChecked = (sug) => sug.judge?.verdict === 'accept'
+              } else if (mode === 'classify') {
+                const result = await runOnePaperClassify(paper, targets, config, callLlm, myController.signal, setPhase)
+                if (controller !== myController) return
+                answer = result.answer
+                calls = 1
+                baseUsage = result.usage
+                paperCost = costOf(result.usage, config) ?? 0
+                rowChecked = (sug) => (sug.confidence ?? 0) >= confidenceThreshold
               } else {
                 const result = await runOnePaperPrompt(
                   app.project!,
@@ -596,32 +661,65 @@ export const useAiStore = create<AiState>()(
                   fewShotForPaper.block,
                 )
                 if (controller !== myController) return
-                const paperCost = costOf(result.usage, config) ?? 0
-                set((s) => {
-                  for (const sug of result.answer.fields) {
-                    s.rows.push({
-                      paperId: paper.id,
-                      paperTitle: paper.title,
-                      reviewer: get().targetSeat,
-                      suggestion: sug,
-                      checked: true,
-                    })
-                  }
-                  s.usage.calls += 1
-                  s.usage.inputTokens += result.usage.inputTokens
-                  s.usage.outputTokens += result.usage.outputTokens
-                  s.spentSoFar += paperCost
-                  if (fewShotForPaper.included > 0) s.fewShotByPaper[paper.id] = fewShotForPaper.included
-                  if (result.answer.skipped.length > 0 || result.answer.rejected.length > 0) {
-                    s.notes.push({
-                      paperId: paper.id,
-                      paperTitle: paper.title,
-                      skipped: result.answer.skipped,
-                      rejected: result.answer.rejected,
-                    })
-                  }
-                })
+                answer = result.answer
+                paperText = result.paperText
+                calls = 1
+                baseUsage = result.usage
+                paperCost = costOf(result.usage, config) ?? 0
+                rowChecked = () => true
               }
+
+              // Cross-check (prompt/agent only, optional role): compare each
+              // eligible proposed value against System One's own answer.
+              // Never fails the paper — a cross-check error is just a note.
+              const crossCheckResult =
+                crossCheckCfg && mode !== 'classify'
+                  ? await runCrossCheck(
+                      paper,
+                      targets,
+                      answer.fields,
+                      crossCheckCfg,
+                      paperText,
+                      callLlm,
+                      myController.signal,
+                    )
+                  : null
+              if (controller !== myController) return
+
+              set((s) => {
+                for (const sug of answer.fields) {
+                  const cmp = crossCheckResult?.comparisons.get(sug.path)
+                  let checked = rowChecked(sug)
+                  if (cmp && !cmp.agrees && cmp.p >= confidenceThreshold) checked = false
+                  s.rows.push({
+                    paperId: paper.id,
+                    paperTitle: paper.title,
+                    reviewer: get().targetSeat,
+                    suggestion: sug,
+                    checked,
+                    crossCheck: cmp,
+                  })
+                }
+                s.usage.calls += calls + (crossCheckResult ? 1 : 0)
+                s.usage.inputTokens += baseUsage.inputTokens + (crossCheckResult?.usage.inputTokens ?? 0)
+                s.usage.outputTokens += baseUsage.outputTokens + (crossCheckResult?.usage.outputTokens ?? 0)
+                s.spentSoFar +=
+                  paperCost + (crossCheckResult ? (costOf(crossCheckResult.usage, crossCheckCfg!) ?? 0) : 0)
+                if (roundsForPaper !== undefined) s.roundsByPaper[paper.id] = roundsForPaper
+                if (fewShotForPaper.included > 0) s.fewShotByPaper[paper.id] = fewShotForPaper.included
+                const skipped = [
+                  ...answer.skipped,
+                  ...(crossCheckResult?.error ? [{ path: '(cross-check)', reason: crossCheckResult.error }] : []),
+                ]
+                if (skipped.length > 0 || answer.rejected.length > 0) {
+                  s.notes.push({
+                    paperId: paper.id,
+                    paperTitle: paper.title,
+                    skipped,
+                    rejected: answer.rejected,
+                  })
+                }
+              })
               if (controller === myController) {
                 doneIds.push(paper.id)
                 set((s) => { s.batchDone++ })
@@ -693,6 +791,8 @@ export const useAiStore = create<AiState>()(
     mode: readMode(),
     allPapers: false,
     judgeSelectedId: readJudge(),
+    crossCheckId: readCrossCheck(),
+    confidenceThreshold: readThreshold(),
     spendCap: null,
     spentSoFar: 0,
     spendCapHit: false,
@@ -785,6 +885,24 @@ export const useAiStore = create<AiState>()(
         const saved = readPersistedBatch(targetSeat)
         s.resumeAvailable = saved && s.configs.some((c) => c.id === saved.configId) ? saved : null
       })
+      // This project's own remembered role assignment wins over the global
+      // fallback already in `selectedId`/`judgeSelectedId`/`crossCheckId` —
+      // but only for a role whose target still exists.
+      const roles = readProjectRoles()
+      set((s) => {
+        if (roles.annotatorId && s.configs.some((c) => c.id === roles.annotatorId)) {
+          s.selectedId = roles.annotatorId
+        }
+        if (roles.judgeId !== undefined && (roles.judgeId === null || s.configs.some((c) => c.id === roles.judgeId))) {
+          s.judgeSelectedId = roles.judgeId
+        }
+        if (
+          roles.crossCheckId !== undefined &&
+          (roles.crossCheckId === null || s.configs.some((c) => c.id === roles.crossCheckId))
+        ) {
+          s.crossCheckId = roles.crossCheckId
+        }
+      })
     },
 
     closeDialog: () => {
@@ -802,12 +920,23 @@ export const useAiStore = create<AiState>()(
 
     selectConfig: (id) => {
       writeSelected(id)
+      writeProjectRole({ annotatorId: id })
       set((s) => { s.selectedId = id })
     },
 
     setMode: (mode) => {
       writeMode(mode)
-      set((s) => { s.mode = mode })
+      set((s) => {
+        s.mode = mode
+        // A model belongs to one "family" (System One decision model, or a
+        // chat/agent model) — switching between classify and the other modes
+        // can leave the previous annotator invalid for the new one.
+        const wantSystemOne = mode === 'classify'
+        const cfg = s.configs.find((c) => c.id === s.selectedId)
+        if (cfg && (cfg.provider === 'systemone') !== wantSystemOne) {
+          s.selectedId = s.configs.find((c) => (c.provider === 'systemone') === wantSystemOne)?.id ?? null
+        }
+      })
     },
 
     setAllPapers: (on) => {
@@ -820,7 +949,20 @@ export const useAiStore = create<AiState>()(
 
     selectJudge: (id) => {
       writeJudge(id)
+      writeProjectRole({ judgeId: id })
       set((s) => { s.judgeSelectedId = id })
+    },
+
+    selectCrossCheck: (id) => {
+      writeCrossCheck(id)
+      writeProjectRole({ crossCheckId: id })
+      set((s) => { s.crossCheckId = id })
+    },
+
+    setConfidenceThreshold: (n) => {
+      const clamped = Math.min(Math.max(n, 0), 1)
+      writeThreshold(clamped)
+      set((s) => { s.confidenceThreshold = clamped })
     },
 
     setSpendCap: (cap) => set((s) => { s.spendCap = cap }),
@@ -888,6 +1030,10 @@ export const useAiStore = create<AiState>()(
           s.judgeSelectedId = null
           writeJudge(null)
         }
+        if (s.crossCheckId && !configs.some((c) => c.id === s.crossCheckId)) {
+          s.crossCheckId = null
+          writeCrossCheck(null)
+        }
       })
     },
 
@@ -916,6 +1062,17 @@ export const useAiStore = create<AiState>()(
     verifyConfig: async (config, apiKey) => {
       // The key must be stored before it can be used: the renderer never holds it.
       await get().saveConfig(config, apiKey)
+
+      if (config.provider === 'systemone') {
+        const req = buildSystemOneVerifyRequest(config)
+        const res = await getPlatform().callLlm(req)
+        if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
+        const parsed = parseSystemOneResponse(SYSTEMONE_VERIFY_ASKED, safeJson(res.body))
+        const p = parsed.probabilities.verify?.true
+        if (p === undefined) throw new Error('The provider answered, but the reply had no usable answer.')
+        return `P(true) = ${p.toFixed(2)}`
+      }
+
       const req = buildRequest(
         config,
         'You are a connection test. Reply with the single word OK.',
@@ -1013,6 +1170,16 @@ export const useAiStore = create<AiState>()(
         })
         return
       }
+      const crossCheckId = get().crossCheckId
+      const crossCheckCfg =
+        mode !== 'classify' && crossCheckId ? get().configs.find((c) => c.id === crossCheckId) : undefined
+      if (mode !== 'classify' && crossCheckId && (!crossCheckCfg || !isUsable(crossCheckCfg))) {
+        set((s) => {
+          s.phase = 'error'
+          s.error = 'The cross-check model has no API key. Add one in the settings (gear icon).'
+        })
+        return
+      }
       const papers: Paper[] = get().allPapers
         ? get()
             .candidates.map((c) => app.project!.papers.find((p) => p.id === c.id))
@@ -1070,12 +1237,14 @@ export const useAiStore = create<AiState>()(
         [],
         config,
         judgeCfg,
+        crossCheckCfg,
         mode,
         callLlm,
         cap,
         fewShotOn,
         fewShotCandidatesList,
         fewShotCount,
+        get().confidenceThreshold,
       )
     },
 
@@ -1087,11 +1256,15 @@ export const useAiStore = create<AiState>()(
       const config = get().configs.find((c) => c.id === persisted.configId)
       if (!config) return // the saved target no longer exists — nothing to resume with
       const judgeCfg = persisted.judgeId ? get().configs.find((c) => c.id === persisted.judgeId) : undefined
+      const crossCheckCfg = persisted.crossCheckId
+        ? get().configs.find((c) => c.id === persisted.crossCheckId)
+        : undefined
 
       set((s) => {
         s.mode = persisted.mode
         s.selectedId = persisted.configId
         s.judgeSelectedId = persisted.judgeId
+        s.crossCheckId = persisted.crossCheckId ?? null
         s.allPapers = true
         s.rows = persisted.rows ?? []
         s.notes = persisted.notes ?? []
@@ -1150,12 +1323,14 @@ export const useAiStore = create<AiState>()(
         persisted.doneIds,
         config,
         judgeCfg,
+        crossCheckCfg,
         persisted.mode,
         callLlm,
         cap,
         fewShotOn,
         fewShotCandidatesList,
         fewShotCount,
+        get().confidenceThreshold,
       )
     },
 
@@ -1273,7 +1448,7 @@ async function runOnePaperPrompt(
   setPhase: (p: AiPhase) => void,
   /** Pre-built few-shot block (see fewshot.ts), or `''` when the feature is off. */
   fewShotBlock = '',
-): Promise<{ answer: LlmAnswer; usage: { inputTokens: number; outputTokens: number } }> {
+): Promise<{ answer: LlmAnswer; usage: { inputTokens: number; outputTokens: number }; paperText: string }> {
   setPhase('reading')
   const app = useStore.getState()
   // Same URL the viewer renders, so this works unchanged in both runtimes.
@@ -1330,7 +1505,7 @@ async function runOnePaperPrompt(
   }
   const answer = parseAnswer(project.schema, text)
   const usage = parseChatResponse(config.provider, json).usage
-  return { answer, usage }
+  return { answer, usage, paperText }
 }
 
 async function runOnePaperAgent(
@@ -1350,6 +1525,7 @@ async function runOnePaperAgent(
   usage: { inputTokens: number; outputTokens: number; calls: number }
   judgeUsage: { inputTokens: number; outputTokens: number; calls: number }
   rounds: number
+  paperText: string
 }> {
   setPhase('reading')
   const app = useStore.getState()
@@ -1390,7 +1566,110 @@ async function runOnePaperAgent(
       fetchWeb: (url, sig) => getPlatform().fetchWeb(url, sig),
     },
   )
-  return { answer: result.answer, usage: result.usage, judgeUsage: result.judgeUsage, rounds: result.rounds }
+  return {
+    answer: result.answer,
+    usage: result.usage,
+    judgeUsage: result.judgeUsage,
+    rounds: result.rounds,
+    paperText: extracted.text,
+  }
+}
+
+/**
+ * Classify mode's per-paper call: one `/v1/systemone` request for whichever
+ * of `targets` are eligible (booleans and single-valued enums — see
+ * `systemOneEligible`); everything else is reported as skipped so the
+ * setup/review screens can say why, same shape prompt/agent mode's `skipped`
+ * already uses.
+ */
+async function runOnePaperClassify(
+  paper: Paper,
+  targets: FieldTarget[],
+  config: LlmConfig,
+  callLlm: CallLlm,
+  signal: AbortSignal,
+  setPhase: (p: AiPhase) => void,
+): Promise<{ answer: LlmAnswer; usage: { inputTokens: number; outputTokens: number } }> {
+  setPhase('reading')
+  const app = useStore.getState()
+  const src = await getPlatform().getPdfSource(paper.pdf, app.saveHandle ?? { kind: 'download' })
+  let bytes: ArrayBuffer
+  try {
+    bytes = await (await fetch(src.url)).arrayBuffer()
+  } finally {
+    src.revoke?.()
+  }
+  // Unlike prompt/agent mode, no text is not fatal here: for a small-context
+  // model only the title/abstract may fit anyway (see systemone.ts), and a
+  // boolean/choice question can still be meaningfully answered from those alone.
+  const paperText = (await extractPdfText(bytes)).text
+
+  const ineligible = targets.filter((t) => !systemOneEligible(t))
+  const built = buildSystemOneRequest(config, paper, paperText, targets)
+  if (!built) {
+    return {
+      answer: {
+        fields: [],
+        skipped: ineligible.map((t) => ({ path: t.path, reason: 'not handled in Classify mode' })),
+        rejected: [],
+      },
+      usage: { inputTokens: 0, outputTokens: 0 },
+    }
+  }
+
+  setPhase('calling')
+  const res = await callLlm(built.request, signal)
+  if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
+
+  setPhase('parsing')
+  const parsed = parseSystemOneResponse(built.asked, safeJson(res.body))
+  return {
+    answer: {
+      fields: parsed.suggestions,
+      skipped: [
+        ...parsed.skipped,
+        ...ineligible.map((t) => ({ path: t.path, reason: 'not handled in Classify mode' })),
+      ],
+      rejected: [],
+    },
+    usage: parsed.usage,
+  }
+}
+
+/**
+ * Cross-check role: after a paper's suggestions are in hand, ask System One
+ * the same question for whichever of `targets` are both eligible and were
+ * actually proposed, then compare. Never throws — a failure here must not
+ * fail the paper (see the caller), so it comes back as `error` instead.
+ */
+async function runCrossCheck(
+  paper: Paper,
+  targets: FieldTarget[],
+  suggestions: Suggestion[],
+  config: LlmConfig,
+  paperText: string,
+  callLlm: CallLlm,
+  signal: AbortSignal,
+): Promise<{
+  comparisons: Map<string, SystemOneComparison>
+  usage: { inputTokens: number; outputTokens: number }
+  error?: string
+}> {
+  const empty = { comparisons: new Map<string, SystemOneComparison>(), usage: { inputTokens: 0, outputTokens: 0 } }
+  try {
+    const eligible = targets.filter(
+      (t) => systemOneEligible(t) && suggestions.some((s) => s.path === t.path),
+    )
+    if (eligible.length === 0) return empty
+    const built = buildSystemOneRequest(config, paper, paperText, eligible)
+    if (!built) return empty
+    const res = await callLlm(built.request, signal)
+    if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
+    const parsed = parseSystemOneResponse(built.asked, safeJson(res.body))
+    return { comparisons: compareWithSystemOne(suggestions, parsed), usage: parsed.usage }
+  } catch (err) {
+    return { ...empty, error: err instanceof Error ? err.message : String(err) }
+  }
 }
 
 function scannedError(): Error & { scanned: true } {
@@ -1467,6 +1746,41 @@ function writeJudge(id: string | null): void {
   try {
     if (id) localStorage?.setItem(JUDGE_KEY, id)
     else localStorage?.removeItem(JUDGE_KEY)
+  } catch {
+    /* ignore (private mode / disabled storage) */
+  }
+}
+
+/** `null` ("no cross-check model") is stored as no key at all, same rule as `readJudge`. */
+function readCrossCheck(): string | null {
+  try {
+    return localStorage?.getItem(CROSSCHECK_KEY) ?? null
+  } catch {
+    return null
+  }
+}
+
+function writeCrossCheck(id: string | null): void {
+  try {
+    if (id) localStorage?.setItem(CROSSCHECK_KEY, id)
+    else localStorage?.removeItem(CROSSCHECK_KEY)
+  } catch {
+    /* ignore (private mode / disabled storage) */
+  }
+}
+
+function readThreshold(): number {
+  try {
+    const raw = Number(localStorage?.getItem(THRESHOLD_KEY))
+    return Number.isFinite(raw) && raw >= 0 && raw <= 1 ? raw : DEFAULT_THRESHOLD
+  } catch {
+    return DEFAULT_THRESHOLD
+  }
+}
+
+function writeThreshold(n: number): void {
+  try {
+    localStorage?.setItem(THRESHOLD_KEY, String(n))
   } catch {
     /* ignore (private mode / disabled storage) */
   }

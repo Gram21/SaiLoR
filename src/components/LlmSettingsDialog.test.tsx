@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { RecentEntry, SaveHandle } from '../platform/adapter'
 import type { LlmConfig, ModelInfo } from '../llm/types'
@@ -158,5 +158,59 @@ describe('no-key toggle', () => {
     await openEdit()
 
     expect(screen.queryByLabelText('No API key')).not.toBeInTheDocument()
+  })
+})
+
+describe('System One provider fields', () => {
+  function s1Cfg(): LlmConfig {
+    return {
+      id: 'c3',
+      name: 'S1',
+      provider: 'systemone',
+      baseUrl: 'https://api.typesafe.ai',
+      model: 'jev-latest',
+      attach: 'text',
+      hasKey: true,
+      maxStateTokens: 60000,
+    }
+  }
+
+  it('shows an editable base URL, a no-key checkbox, and the max input tokens field', async () => {
+    useAiStore.setState({ configs: [s1Cfg()] })
+    await openEdit()
+
+    expect(screen.getByLabelText('Base URL')).not.toHaveAttribute('readonly')
+    expect(screen.getByLabelText('No API key')).toBeInTheDocument()
+    expect(screen.getByLabelText('Max input tokens')).toHaveValue(60000)
+  })
+
+  it('hides "Send the paper as" — System One never delivers a PDF or chat completion', async () => {
+    useAiStore.setState({ configs: [s1Cfg()] })
+    await openEdit()
+
+    expect(screen.queryByLabelText('Send the paper as')).not.toBeInTheDocument()
+  })
+
+  it('defaults the model and max input tokens when switching provider to System One', async () => {
+    await openEdit() // the top-level `cfg()` fixture (OpenRouter)
+
+    await userEvent.selectOptions(screen.getByLabelText('Provider'), 'System One (Jev-compatible)')
+
+    expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('jev-latest')
+    expect(screen.getByLabelText('Max input tokens')).toHaveValue(60000)
+  })
+
+  it('saves a typed max input tokens value', async () => {
+    useAiStore.setState({ configs: [s1Cfg()] })
+    await openEdit()
+
+    // Unlike the price fields, this one falls back to a default value (not
+    // '') when empty, so typing key-by-key immediately redisplays the
+    // default between keystrokes — set it in one go instead.
+    const maxTokens = screen.getByLabelText('Max input tokens')
+    fireEvent.change(maxTokens, { target: { value: '8192' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(saveLlmConfig).toHaveBeenCalledWith(expect.objectContaining({ maxStateTokens: 8192 }))
   })
 })

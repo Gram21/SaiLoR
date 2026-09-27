@@ -157,15 +157,15 @@ describe('judge picker (REQ-LLM-480)', () => {
     // rely on suite ordering (a sibling test switches to agent mode).
     useAiStore.setState({ mode: 'prompt' })
     render(<AiDialog />)
-    expect(screen.queryByText('Judge with')).not.toBeInTheDocument()
+    expect(screen.queryByText('Judge')).not.toBeInTheDocument()
   })
 
   it('appears in agent mode, with "same as agent" as the default option', async () => {
     render(<AiDialog />)
     await userEvent.click(screen.getByRole('radio', { name: 'Agent' }))
 
-    expect(screen.getByText('Judge with')).toBeInTheDocument()
-    expect(screen.getByDisplayValue(/Same as agent \(Test target\)/)).toBeInTheDocument()
+    expect(screen.getByText('Judge')).toBeInTheDocument()
+    expect(screen.getByDisplayValue(/Same as annotator \(Test target\)/)).toBeInTheDocument()
   })
 })
 
@@ -175,7 +175,7 @@ describe('cost estimate line (REQ-LLM-430)', () => {
     render(<AiDialog />)
 
     expect(screen.getByText(/Estimated: ~/)).toBeInTheDocument()
-    expect(screen.getByText(/Add prices in LLM settings to see a cost estimate/)).toBeInTheDocument()
+    expect(screen.getByText(/Add prices in AI models settings to see a cost estimate/)).toBeInTheDocument()
   })
 
   it('shows a cost range once the selected target has prices', () => {
@@ -345,5 +345,67 @@ describe('parallel batch (REQ-LLM-500/510): setup screen controls', () => {
 
     expect(screen.getByText(/stopped after 1 of 2 papers/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument()
+  })
+})
+
+describe('setup screen sections (Goal A restructure)', () => {
+  it('renders the What/How/Models section labels in order', () => {
+    render(<AiDialog />)
+    const labels = ['What', 'How', 'Models', 'Annotator'].map((t) => screen.getByText(t))
+    const positions = labels.map((el) => Array.from(document.querySelectorAll('.ai-label')).indexOf(el))
+    expect(positions).toEqual([...positions].sort((a, b) => a - b))
+  })
+
+  it('collapses few-shot/concurrency/cap/threshold behind an "Options" details', () => {
+    render(<AiDialog />)
+    expect(screen.getByText('Options').closest('details')).toBeInTheDocument()
+    expect(
+      screen.getByText('Options').closest('details')!.querySelector('.ai-toggle-row'),
+    ).not.toBeNull()
+  })
+
+  it('disables Classify mode when no System One model is configured', () => {
+    render(<AiDialog />)
+    expect(screen.getByRole('radio', { name: 'Classify' })).toBeDisabled()
+  })
+})
+
+describe('Classify mode and cross-check (Goal B)', () => {
+  function systemOneCfg(): LlmConfig {
+    return {
+      id: 's1',
+      name: 'System One',
+      provider: 'systemone',
+      baseUrl: 'https://api.typesafe.ai',
+      model: 'jev-latest',
+      attach: 'text',
+      hasKey: true,
+    }
+  }
+
+  it('enables Classify mode once a System One model exists, and only offers System One models as annotator', async () => {
+    useAiStore.setState({ configs: [cfg(), systemOneCfg()] })
+    render(<AiDialog />)
+
+    const classifyRadio = screen.getByRole('radio', { name: 'Classify' })
+    expect(classifyRadio).not.toBeDisabled()
+    await userEvent.click(classifyRadio)
+
+    expect(screen.getByText(/Only yes\/no and single-choice fields/)).toBeInTheDocument()
+    expect(useAiStore.getState().selectedId).toBe('s1')
+  })
+
+  it('offers a cross-check picker limited to System One models, in prompt/agent mode only', async () => {
+    useAiStore.setState({ configs: [cfg(), systemOneCfg()], mode: 'prompt' })
+    render(<AiDialog />)
+    expect(screen.getByText('Cross-check (optional)')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Classify' }))
+    expect(screen.queryByText('Cross-check (optional)')).not.toBeInTheDocument()
+  })
+
+  it('hides the cross-check picker when no System One model is configured', () => {
+    render(<AiDialog />)
+    expect(screen.queryByText('Cross-check (optional)')).not.toBeInTheDocument()
   })
 })

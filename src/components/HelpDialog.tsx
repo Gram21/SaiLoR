@@ -629,15 +629,23 @@ function editorHelp(): { lead: ReactNode; sections: HelpSection[] } {
         title: 'AI-assisted annotation',
         body: (
           <p>
-            The AI toolbar button sends a paper's content to a configured LLM target and proposes
-            values for its still-empty fields — nothing is written until you review and press Apply.{' '}
+            The AI toolbar button sends a paper's content to a configured AI model and proposes
+            values for its still-empty fields — nothing is written until you review and press Apply.
+            Settings (the gear icon) is your <strong>model library</strong>: configure a provider,
+            model, and key once. The setup screen then just assigns library models to roles —{' '}
+            <strong>Annotator</strong> (required), <strong>Judge</strong> (agent mode) and{' '}
+            <strong>Cross-check</strong> (optional) — remembered per project.{' '}
             <strong>Prompt</strong> mode is one request per paper; <strong>Agent</strong> mode lets the
             model search and re-read the paper with tools and adds a second-pass judge review, at
-            considerably more cost and time. Turning on "annotate all papers" runs every eligible
-            paper instead of just the current one — several at once (configurable), with a spending
-            cap and the option to resume a run that was cancelled or stopped partway. A setup-screen
-            toggle can also show the model your own already-finished papers as worked examples of the
-            review's conventions.
+            considerably more cost and time; <strong>Classify</strong> mode asks a fast, very cheap
+            System One decision model (a calibrated probability, no quotes) for yes/no and
+            single-choice fields only. A System One model can also be assigned as a
+            <strong> Cross-check</strong> in Prompt/Agent mode: it answers the same eligible fields
+            independently, and a confident disagreement starts that row unticked for a closer look.
+            Turning on "annotate all papers" runs every eligible paper instead of just the current
+            one — several at once (configurable), with a spending cap and the option to resume a run
+            that was cancelled or stopped partway. A setup-screen toggle can also show the model your
+            own already-finished papers as worked examples of the review's conventions.
           </p>
         ),
       },

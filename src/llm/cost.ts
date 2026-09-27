@@ -23,7 +23,7 @@ export interface EstimateRunInput {
   /** Answered fields expected per paper — one array entry per paper, or one
    *  number applied to all of them. */
   fieldsPerPaper: number[] | number
-  mode: 'prompt' | 'agent'
+  mode: 'prompt' | 'agent' | 'classify'
   delivery: 'text' | 'pdf'
   /** Tokens added to every request's input for a few-shot block (fewshot.ts). */
   fewShotTokens?: number
@@ -56,6 +56,13 @@ const OUTPUT_TOKENS_PER_FIELD = { low: 60, high: 150 }
 const AGENT_REQUESTS_PER_PAPER = { low: 5, high: 15 }
 const AGENT_ROUND_INCREMENT_TOKENS = 300 // cached case: per extra round, tool-call back-and-forth only
 const JUDGE_REQUESTS = { low: 2, high: 4 } // roughly one per revision round
+
+// Classify mode's request is one flat JSON of questions, not a schema/prompt
+// preamble, and the state is truncated to the target's own small context
+// budget — a fraction of a prompt-mode request either way. The answer is a
+// probability per field, not free text, so output is tiny.
+const CLASSIFY_OVERHEAD_TOKENS = { low: 100, high: 300 }
+const CLASSIFY_OUTPUT_TOKENS_PER_FIELD = { low: 10, high: 25 }
 
 function fieldsFor(fieldsPerPaper: number[] | number, index: number): number {
   return Array.isArray(fieldsPerPaper) ? (fieldsPerPaper[index] ?? 0) : fieldsPerPaper
@@ -90,6 +97,19 @@ export function estimateRun(input: EstimateRunInput): TokenEstimate {
       inputHigh += promptInputHigh
       outputLow += outputPerFieldLow
       outputHigh += outputPerFieldHigh
+      requestsLow += 1
+      requestsHigh += 1
+      return
+    }
+
+    if (input.mode === 'classify') {
+      // Fields are the paper's own text (title/abstract/truncated body), not
+      // page count driven the way a chat-completion request is — pages are
+      // ignored here, unlike the other two modes.
+      inputLow += CLASSIFY_OVERHEAD_TOKENS.low
+      inputHigh += CLASSIFY_OVERHEAD_TOKENS.high
+      outputLow += fields * CLASSIFY_OUTPUT_TOKENS_PER_FIELD.low
+      outputHigh += fields * CLASSIFY_OUTPUT_TOKENS_PER_FIELD.high
       requestsLow += 1
       requestsHigh += 1
       return

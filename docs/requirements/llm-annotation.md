@@ -18,10 +18,10 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `src/llm/providers.ts:22,60,146`, `src/components/LlmSettingsDialog.tsx:423`
 - **Status:** Implemented
 
-### REQ-LLM-30 — Manage multiple named targets
-- **Description:** The system shall store multiple named LLM targets, each consisting of a name, provider, base URL, model, attachment mode, and optional reasoning effort, with create, edit, and delete operations, where delete requires a second confirming activation.
+### REQ-LLM-30 — Manage a library of named models
+- **Description:** The system shall store a library of named LLM models ("AI models"), each consisting of a name, provider, base URL, model, attachment mode, and optional reasoning effort, with create, edit, and delete operations, where delete requires a second confirming activation. This library is configured once (in the "AI models" settings dialog) and is independent of assigning its entries to annotation roles.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/llm/types.ts:27-46`, `src/components/LlmSettingsDialog.tsx:102-106,264-276`
+- **Evidence:** `src/llm/types.ts:27-62`, `src/components/LlmSettingsDialog.tsx:105-110,285-293,378-387`
 - **Status:** Implemented
 
 ### REQ-LLM-40 — Keep API keys out of the user interface layer
@@ -293,10 +293,10 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 - **Tests:** `src/components/Toolbar.test.ts`, `src/state/aiStore.batch.test.ts`, `src/state/store.ai.test.ts`, `src/components/AiDialog.test.tsx`
 
-### REQ-LLM-480 — Separate judge target
-- **Description:** In agent mode's setup screen, the system shall let the reviewer pick a judge target independent of the agent's own target, from the same configured targets, with "Same as agent (<name>)" as the first, default option; the choice shall persist like the selected agent target (validated against the currently configured targets on refresh, falling back to "same as agent" if the stored choice no longer exists) and shall be passed to the agent run as a distinct judge config. The judge target's own API key shall be checked before the run starts, the same way the agent target's is. When the picked judge target's provider differs from the agent's, the run's consent line shall name it too, since the paper's evidence is sent there as well.
+### REQ-LLM-480 — Separate judge model
+- **Description:** In agent mode's Models section, the system shall let the reviewer pick a judge model independent of the annotator's own model, from the same library of configured models, with "Same as annotator (<name>)" as the first, default option; the choice shall persist per project (falling back to the last global choice, validated against the currently configured models on refresh, falling back to "same as annotator" if the stored choice no longer exists) and shall be passed to the agent run as a distinct judge config. The judge model's own API key shall be checked before the run starts, the same way the annotator model's is. When the picked judge model's provider differs from the annotator's, the run's consent line shall name it too, since the paper's evidence is sent there as well.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/aiStore.ts` (`judgeSelectedId`, `selectJudge`, `run`'s judge hasKey check, `runJudge`), `src/components/AiDialog.tsx` (judge `ComboBox`, consent line), `src/llm/agent.ts` (`AgentInput.judgeConfig`)
+- **Evidence:** `src/state/aiStore.ts:950-954` (`selectJudge`), `src/state/aiStore.ts` (`judgeSelectedId`, `run`'s judge hasKey check, `runJudge`), `src/components/AiDialog.tsx:549-570` (judge `ComboBox` and price hint), `src/components/AiDialog.tsx:610-614` (consent line naming the judge), `src/llm/agent.ts` (`AgentInput.judgeConfig`)
 - **Status:** Implemented
 - **Tests:** `src/state/aiStore.judge.test.ts`, `src/components/AiDialog.test.tsx`
 
@@ -322,11 +322,11 @@ See the [index](index.md) for the glossary.
 - **Tests:** `src/state/aiStore.resume.test.ts`, `src/components/AiDialog.test.tsx`
 
 ### REQ-LLM-520 — System One decision models for choice and yes/no fields
-- **Description:** For a boolean field or a single-valued enum field (2-255 options), the system shall be able to ask a "System 1" decision model (TypeSafe Jev, or a Jev-compatible local `laya-serve` server) for a typed, calibrated answer instead of a free-text extraction: a boolean question maps to a `noul` (P(true)) answer, an enum question maps to a `choice` answer with per-option probabilities and a confidence. The paper state sent to the model shall be truncated to a bounded size (derived from the target's configured context budget, marked when truncated), and only fields eligible in this way shall be asked. A returned answer below a minimum confidence, or a choice outside the field's options, shall be treated as unanswered rather than applied. The system shall also support cross-checking a generative model's proposed value for a field against System One's own answer for that field (boolean exact match, enum case-insensitive match).
+- **Description:** For a boolean field or a single-valued enum field (2-255 options), the system shall be able to ask a "System 1" decision model (TypeSafe Jev, or a Jev-compatible local `laya-serve` server) for a typed, calibrated answer instead of a free-text extraction: a boolean question maps to a `noul` (P(true)) answer, an enum question maps to a `choice` answer with per-option probabilities and a confidence. The paper state sent to the model shall be truncated to a bounded size (derived from the model's configured context budget, marked when truncated), and only fields eligible in this way shall be asked. A returned answer below a minimum confidence, or a choice outside the field's options, shall be treated as unanswered rather than applied. The system shall also support cross-checking a generative model's proposed value for a field against System One's own answer for that field (boolean exact match, enum case-insensitive match), where the comparison's confidence always reflects System One's own confidence in its answer regardless of which side it agrees or disagrees with. A "Verify setup" on a System One model shall send one tiny `noul` question and show its `P(true) = 0.xx` reply.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/llm/systemone.ts` (`systemOneEligible`, `buildSystemOneRequest`, `parseSystemOneResponse`, `compareWithSystemOne`)
-- **Status:** Partially implemented — UI pending
-- **Tests:** `src/llm/systemone.test.ts`
+- **Evidence:** `src/llm/systemone.ts:20-27` (`systemOneEligible`), `src/llm/systemone.ts:85-145` (`buildSystemOneRequest`), `src/llm/systemone.ts:146-241` (`parseSystemOneResponse`), `src/llm/systemone.ts:249-268` (`SYSTEMONE_VERIFY_ASKED`, `buildSystemOneVerifyRequest`), `src/llm/systemone.ts:270-301` (`compareWithSystemOne`), `src/llm/providers.ts:132-146` (`PROVIDERS.systemone`), `src/components/LlmSettingsDialog.tsx:574-595` (Max input tokens field), `src/state/aiStore.ts:1585-1637` (`runOnePaperClassify`), `src/state/aiStore.ts:1644-1671` (`runCrossCheck`)
+- **Status:** Implemented
+- **Tests:** `src/llm/systemone.test.ts`, `src/state/aiStore.classify.test.ts`, `src/components/LlmSettingsDialog.test.tsx`
 
 ### REQ-LLM-530 — Keyless local targets
 - **Description:** For an OpenAI-compatible target (or any future custom-base-URL provider), the system shall let the reviewer mark it as needing no API key. Such a target shall be usable — for a run, for "Verify setup", and as a judge — with no key stored, and the outbound request shall have any header built to carry a key (still containing the unsubstituted key placeholder) dropped rather than sent literally. A target with a stored key shall behave exactly as before regardless of this flag.
@@ -334,3 +334,31 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `src/llm/types.ts` (`LlmConfig.noKey`, `isUsable`), `src/components/LlmSettingsDialog.tsx` (no-key checkbox), `electron/main.ts` (`llm:call`, `StoredLlmConfig.noKey`), `electron/llmConfig.ts` (`buildCallHeaders`)
 - **Status:** Implemented
 - **Tests:** `electron/llmConfig.test.ts`, `src/components/LlmSettingsDialog.test.tsx`
+
+### REQ-LLM-540 — Role-based model assignment remembered per project
+- **Description:** The setup screen shall assign library models (REQ-LLM-30) to three roles — Annotator (required), Judge (agent mode only, defaulting to "Same as annotator"), and Cross-check (optional, System-One-only) — rather than picking a single "target" for the whole run. Each role's choice shall be written both to a global fallback key and to a per-project record (keyed by the project's save location or title, and independent for each of these roles); opening the AI dialog shall apply the current project's own remembered role over the global fallback whenever the remembered model still exists among the configured library, and shall fall back to the global choice (or nothing) otherwise. Switching mode to or from Classify shall clear the annotator selection when it belongs to the wrong model family (a System One decision model vs. a chat/agent model), since the two are not interchangeable.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/aiStore.ts:463-487` (`StoredRoles`, `rolesStorageKey`, `readProjectRoles`, `writeProjectRole`), `src/state/aiStore.ts:889-906` (`openDialog` applying remembered roles), `src/state/aiStore.ts:921-926,950-961` (`selectConfig`, `selectJudge`, `selectCrossCheck` writing both keys), `src/state/aiStore.ts:927-939` (`setMode` clearing a wrong-family annotator), `src/components/AiDialog.tsx:526-591` (Models section: Annotator/Judge/Cross-check pickers)
+- **Status:** Implemented
+- **Tests:** `src/state/aiStore.roles.test.ts`, `src/components/AiDialog.test.tsx`
+
+### REQ-LLM-550 — Classify mode
+- **Description:** The setup screen shall offer a third mode, "Classify" (alongside Prompt and Agent), enabled only when at least one System One model is configured. In this mode the system shall send one `/v1/systemone` request per paper covering every unanswered field eligible for a System One answer (REQ-LLM-520); a field ineligible for Classify mode shall be reported as skipped with reason "not handled in Classify mode" rather than asked. Accepted rows shall carry `source: 'system-one'`, a `confidence` equal to the returned probability, and an evidence placeholder ("no quote (System One)") in place of a supporting quote. A row whose confidence is below a reviewer-adjustable threshold (default 0.8) shall start unticked in the review table. Classify mode shall work with all-papers mode, concurrency, the spending cap, resume, and token-usage accounting exactly like the other modes; it shall never also invoke the cross-check role (REQ-LLM-560), since both would ask the same model the same question.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/aiStore.ts:78` (`AiMode` including `'classify'`), `src/state/aiStore.ts:1585-1637` (`runOnePaperClassify`), `src/state/aiStore.ts:644-651` (dispatch to `runOnePaperClassify` and confidence-threshold row-checking), `src/components/AiDialog.tsx:484-520` (How section's Classify radio, disabled without a System One model), `src/model/project.ts:47` (`AiUsageRecord.mode` extended to include `'classify'`)
+- **Status:** Implemented
+- **Tests:** `src/state/aiStore.classify.test.ts`, `src/components/AiDialog.test.tsx`
+
+### REQ-LLM-560 — System One cross-check
+- **Description:** After a prompt- or agent-mode paper's suggestions are in hand, the setup screen shall optionally let the reviewer assign a System One model to a "Cross-check" role; when assigned, the system shall ask that model the same eligible fields the run just proposed values for and compare each via `compareWithSystemOne` (REQ-LLM-520). The review table shall gain a "Cross-check" column showing either agreement (a checkmark with the probability) or disagreement (naming the classifier's own value and its probability); a disagreement at or above the reviewer-adjustable confidence threshold shall start that row unticked. A cross-check call failure shall be recorded as a skipped-reason note tagged "(cross-check)" and shall never fail the paper it was checking. Cross-check's token usage and cost shall be folded into the run's totals. Cross-check is never offered, and never consulted, in Classify mode.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/aiStore.ts:1644-1671` (`runCrossCheck`), `src/state/aiStore.ts:668-694` (dispatch, agreement/disagreement row-checking), `src/components/AiDialog.tsx:571-591` (Cross-check role picker), `src/components/AiDialog.tsx:1008,1078-1090` (review table's "Cross-check" column), `src/llm/systemone.ts:270-301` (`compareWithSystemOne`)
+- **Status:** Implemented
+- **Tests:** `src/state/aiStore.classify.test.ts`, `src/llm/systemone.test.ts`
+
+### REQ-LLM-570 — Show the AI-usage disclosure per paper
+- **Description:** For the current paper, the annotation panel header shall show a compact, unobtrusive disclosure line ("✦ AI-assisted (N×)") whenever `Paper.aiUsage` has at least one record relevant to the current seat — a record with no `reviewer` field, or one whose `reviewer` matches the current seat; the Consolidation seat shall see every record regardless of `reviewer`. The line shall be absent when there is nothing relevant to disclose. It shall expand (native `<details>`) into one line per record: applied-at date/time, mode (rendered as-is for any string, so a future mode value degrades gracefully rather than breaking), provider · model, judge provider · model (agent mode only), rounds, verdict counts, number of few-shot examples used, and the seat (via `seatLabel`) — so a reviewer or consolidator can see how a paper's values were produced. Provider ids shall be rendered through `PROVIDERS`' display labels where the id is recognized, else shown as the raw id.
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability — Operability)
+- **Evidence:** `src/components/AiUsageDisclosure.tsx`, `src/components/AnnotationPanel.tsx` (`relevantAiUsage`)
+- **Status:** Implemented
+- **Tests:** `src/components/AiUsageDisclosure.test.tsx`, `src/components/AnnotationPanel.test.tsx`

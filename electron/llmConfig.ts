@@ -3,6 +3,11 @@ export function validPrice(v: unknown): number | undefined {
   return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : undefined
 }
 
+/** Only a finite positive integer survives — a System One target's `maxStateTokens`. */
+export function validPositiveInt(v: unknown): number | undefined {
+  return typeof v === 'number' && Number.isInteger(v) && v > 0 ? v : undefined
+}
+
 /**
  * Build the headers `llm:call` actually sends, given whether a key is stored.
  *

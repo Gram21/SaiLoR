@@ -19,6 +19,7 @@ export type Provider =
   | 'deepseek'
   | 'xai'
   | 'openai-compatible'
+  | 'systemone'
 
 /** How the paper is handed to the model. Text is the default — see `src/model/pdfText.ts`. */
 export type Attach = 'text' | 'pdf'
@@ -53,6 +54,12 @@ export interface LlmConfig {
    */
   inputPrice?: number
   outputPrice?: number
+  /**
+   * System One targets only: the context budget (tokens) `systemone.ts`
+   * truncates the sent paper state to. Absent falls back to that module's
+   * own default. Meaningless for every other provider.
+   */
+  maxStateTokens?: number
 }
 
 /** Whether a target has what it needs to be called: a stored key, or none required. */

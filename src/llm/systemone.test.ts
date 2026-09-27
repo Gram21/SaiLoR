@@ -5,9 +5,11 @@ import type { LlmConfig } from './types'
 import { API_KEY_SENTINEL } from './types'
 import {
   buildSystemOneRequest,
+  buildSystemOneVerifyRequest,
   compareWithSystemOne,
   parseSystemOneResponse,
   systemOneEligible,
+  SYSTEMONE_VERIFY_ASKED,
 } from './systemone'
 
 const schema: ResolvedDef[] = resolveSchema([
@@ -247,6 +249,16 @@ describe('compareWithSystemOne', () => {
     expect(cmp.get('Relevant')!.agrees).toBe(false)
   })
 
+  it('reports p as System One\'s own confidence in its answer, even when it disagrees', () => {
+    // noul=0.1 means System One is 90% confident the field is false, while the
+    // suggestion claims true — p must read 0.9 (confidence in `s1Value`), not
+    // 0.1 (probability of the suggestion's own claim), so a threshold check
+    // reads a confident disagreement as confident.
+    const s1 = parseSystemOneResponse(asked, { answers: { q0: { noul: 0.1 } } })
+    const cmp = compareWithSystemOne([{ path: 'Relevant', value: true, evidence: '', confidence: null }], s1)
+    expect(cmp.get('Relevant')).toEqual({ agrees: false, s1Value: false, p: 0.9 })
+  })
+
   it('omits paths System One has no answer for', () => {
     const s1 = parseSystemOneResponse(asked, { answers: {} })
     const cmp = compareWithSystemOne(
@@ -254,5 +266,21 @@ describe('compareWithSystemOne', () => {
       s1,
     )
     expect(cmp.size).toBe(0)
+  })
+})
+
+describe('buildSystemOneVerifyRequest', () => {
+  it('builds a minimal one-question request against this target', () => {
+    const req = buildSystemOneVerifyRequest(cfg)
+    expect(req.url).toBe('http://localhost:8080/v1/systemone')
+    expect(req.headers.Authorization).toBe(`Bearer ${API_KEY_SENTINEL}`)
+    const body = JSON.parse(req.body!)
+    expect(body.model).toBe('jev-latest')
+    expect(body.questions.q0.type).toBe('noul')
+  })
+
+  it('parses back with SYSTEMONE_VERIFY_ASKED', () => {
+    const parsed = parseSystemOneResponse(SYSTEMONE_VERIFY_ASKED, { answers: { q0: { noul: 0.75 } } })
+    expect(parsed.probabilities.verify).toEqual({ true: 0.75, false: 0.25 })
   })
 })

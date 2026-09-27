@@ -8,6 +8,10 @@ import '../styles/ai.css'
 
 const NO_MODELS: ModelInfo[] = []
 
+/** Jev's own documented context budget; Laya's is far smaller (English 512
+ *  tokens, multilingual up to 8192) — the reviewer adjusts this per target. */
+const DEFAULT_MAX_STATE_TOKENS = 60_000
+
 /**
  * Manage the LLM targets the AI-annotation feature can call.
  *
@@ -202,9 +206,11 @@ export function LlmSettingsDialog() {
             baseUrl: next.editableBaseUrl ? (next.defaultBaseUrl || '') : next.defaultBaseUrl,
             attach: next.supportsPdf ? d.attach : 'text',
             // A model name (and any reasoning effort chosen for it) belongs to
-            // the old provider's catalog, not the new one.
-            model: '',
+            // the old provider's catalog, not the new one. System One has no
+            // listing to pick from, so it gets a sensible default instead.
+            model: id === 'systemone' ? 'jev-latest' : '',
             reasoningEffort: undefined,
+            maxStateTokens: id === 'systemone' ? (d.maxStateTokens ?? DEFAULT_MAX_STATE_TOKENS) : undefined,
           }
         : d,
     )
@@ -217,7 +223,7 @@ export function LlmSettingsDialog() {
 
   /** What is missing before this target can be saved or verified. */
   const validate = (d: LlmConfig): string | null => {
-    if (!d.name.trim()) return 'Give the target a name — it is what you pick from later.'
+    if (!d.name.trim()) return 'Give the model a name — it is what you pick from later.'
     if (!d.model.trim()) return 'Enter a model name, e.g. claude-opus-4-8 or gpt-4o.'
     if (PROVIDERS[d.provider].editableBaseUrl && !d.baseUrl.trim()) {
       return 'Enter the base URL of your OpenAI-compatible server, e.g. http://localhost:1234.'
@@ -301,7 +307,7 @@ export function LlmSettingsDialog() {
       >
         <div className="modal-head">
           <strong id="llm-settings-title">
-            AI targets{draft ? (configs.some((c) => c.id === draft.id) ? ' — Edit' : ' — Add') : ''}
+            AI models{draft ? (configs.some((c) => c.id === draft.id) ? ' — Edit' : ' — Add') : ''}
           </strong>
           <button
             type="button"
@@ -341,7 +347,7 @@ export function LlmSettingsDialog() {
             <>
               {configs.length === 0 ? (
                 <p className="llm-empty">
-                  No targets yet. Add one — a target is a provider, a model, and the key to reach it.
+                  No models yet. Add one — a model is a provider, a model name, and the key to reach it.
                 </p>
               ) : (
                 <ul className="llm-list">
@@ -355,7 +361,7 @@ export function LlmSettingsDialog() {
                         </div>
                         {!config.hasKey && !config.noKey && (
                           <div className="llm-nokey">
-                            No API key stored — this target cannot be used until you add one.
+                            No API key stored — this model cannot be used until you add one.
                           </div>
                         )}
                       </div>
@@ -391,9 +397,9 @@ export function LlmSettingsDialog() {
                   className="primary"
                   onClick={startAdd}
                   disabled={busy}
-                  title="Add a new LLM target"
+                  title="Add a new AI model"
                 >
-                  + Add target
+                  + Add model…
                 </button>
               </div>
             </>
@@ -565,6 +571,33 @@ export function LlmSettingsDialog() {
                 page for the current rate.
               </p>
 
+              {draft.provider === 'systemone' && (
+                <>
+                  <div className="llm-row">
+                    <label htmlFor="llm-max-state-tokens" className="llm-label">
+                      Max input tokens
+                    </label>
+                    <input
+                      id="llm-max-state-tokens"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={draft.maxStateTokens ?? DEFAULT_MAX_STATE_TOKENS}
+                      onChange={(e) =>
+                        patch({
+                          maxStateTokens: e.target.value === '' ? undefined : Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                  <p className="llm-hint">
+                    The paper state (title, abstract, extracted text) is truncated to fit this budget.
+                    Jev's own context is about 64k tokens; Laya is far smaller (English 512,
+                    multilingual up to 8192) — for those, only the title and abstract will fit.
+                  </p>
+                </>
+              )}
+
               {urlEditable && (
                 <div className="llm-row">
                   <label htmlFor="llm-nokey" className="llm-label">
@@ -608,34 +641,38 @@ export function LlmSettingsDialog() {
                 <em>that</em> one exists. Type a new key to replace it.
               </p>
 
-              <div className="llm-row">
-                <label htmlFor="llm-attach" className="llm-label">
-                  Send the paper as
-                </label>
-                <select
-                  id="llm-attach"
-                  value={draft.attach}
-                  onChange={(e) => patch({ attach: e.target.value as Attach })}
-                >
-                  <option value="text">Extracted text (recommended)</option>
-                  <option
-                    value="pdf"
-                    disabled={!info?.supportsPdf}
-                    title={
-                      info?.supportsPdf
-                        ? 'The provider receives the PDF file itself.'
-                        : 'This provider cannot take a PDF.'
-                    }
-                  >
-                    The PDF itself{info?.supportsPdf ? '' : ' — not supported by this provider'}
-                  </option>
-                </select>
-              </div>
-              <p className="llm-hint">
-                {info?.supportsPdf
-                  ? 'Extracted text is smaller, cheaper and works everywhere; the PDF keeps tables and figures intact but costs far more. Scanned papers yield no text, so only the PDF path can read them.'
-                  : `This provider has no way to take a PDF in a single request — either it has no file input at all, or it needs the file uploaded and referenced separately, which this app does not do. So this target must send extracted text. ${pdfCapableProviders} can take the PDF.`}
-              </p>
+              {draft.provider !== 'systemone' && (
+                <>
+                  <div className="llm-row">
+                    <label htmlFor="llm-attach" className="llm-label">
+                      Send the paper as
+                    </label>
+                    <select
+                      id="llm-attach"
+                      value={draft.attach}
+                      onChange={(e) => patch({ attach: e.target.value as Attach })}
+                    >
+                      <option value="text">Extracted text (recommended)</option>
+                      <option
+                        value="pdf"
+                        disabled={!info?.supportsPdf}
+                        title={
+                          info?.supportsPdf
+                            ? 'The provider receives the PDF file itself.'
+                            : 'This provider cannot take a PDF.'
+                        }
+                      >
+                        The PDF itself{info?.supportsPdf ? '' : ' — not supported by this provider'}
+                      </option>
+                    </select>
+                  </div>
+                  <p className="llm-hint">
+                    {info?.supportsPdf
+                      ? 'Extracted text is smaller, cheaper and works everywhere; the PDF keeps tables and figures intact but costs far more. Scanned papers yield no text, so only the PDF path can read them.'
+                      : `This provider has no way to take a PDF in a single request — either it has no file input at all, or it needs the file uploaded and referenced separately, which this app does not do. So this model must send extracted text. ${pdfCapableProviders} can take the PDF.`}
+                  </p>
+                </>
+              )}
 
               {problem && (
                 <p role="alert" className="llm-problem">
@@ -649,12 +686,12 @@ export function LlmSettingsDialog() {
                     type="button"
                     onClick={() => void onVerify()}
                     disabled={verifying || busy}
-                    title="Save this target and send a test request to verify it works"
+                    title="Save this model and send a test request to verify it works"
                   >
                     {verifying ? 'Checking…' : 'Verify setup'}
                   </button>
                   <span className="llm-verify-hint">
-                    Sends a one-word test request. <strong>This saves the target first</strong> —
+                    Sends a one-word test request. <strong>This saves the model first</strong> —
                     the key has to be stored before anything can use it.
                   </span>
                 </div>
@@ -688,7 +725,7 @@ export function LlmSettingsDialog() {
                   type="submit"
                   className="primary"
                   disabled={busy || verifying}
-                  title="Save this target"
+                  title="Save this model"
                 >
                   {busy ? 'Saving…' : 'Save'}
                 </button>
