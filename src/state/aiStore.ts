@@ -13,6 +13,7 @@ import { withRetry, runPool, type CallLlm } from '../llm/retry'
 import { costOf } from '../llm/cost'
 import { buildFewShotBlock, countAnsweredFields, pickFewShotExamples, type FewShotExample } from '../llm/fewshot'
 import type { LlmAnswer, LlmConfig, ModelInfo, Suggestion } from '../llm/types'
+import { isUsable } from '../llm/types'
 import { aiSeatId } from '../model/project'
 import type { Paper, Project } from '../model/project'
 import type { AnnotationValueTree } from '../model/annotations'
@@ -392,6 +393,8 @@ function batchStorageKey(seat: string | null): string {
 }
 
 function persistBatch(seat: string | null, data: PersistedBatch): void {
+  // No project (closed mid-run) or no identity: a key would collide with others.
+  if (!projectIdentityKey()) return
   try {
     const full = JSON.stringify(data)
     const toWrite = full.length > PERSIST_SIZE_CAP
@@ -404,6 +407,7 @@ function persistBatch(seat: string | null, data: PersistedBatch): void {
 }
 
 function readPersistedBatch(seat: string | null): PersistedBatch | null {
+  if (!projectIdentityKey()) return null
   try {
     const raw = localStorage?.getItem(batchStorageKey(seat))
     if (!raw) return null
@@ -991,7 +995,7 @@ export const useAiStore = create<AiState>()(
       const app = useStore.getState()
       const config = get().configs.find((c) => c.id === get().selectedId)
       if (!app.project || !config) return
-      if (!config.hasKey) {
+      if (!isUsable(config)) {
         set((s) => {
           s.phase = 'error'
           s.error = 'This target has no API key. Add one in the settings (gear icon).'
@@ -1002,7 +1006,7 @@ export const useAiStore = create<AiState>()(
       const mode = get().mode
       const judgeId = get().judgeSelectedId
       const judgeCfg = mode === 'agent' && judgeId ? get().configs.find((c) => c.id === judgeId) : undefined
-      if (mode === 'agent' && judgeId && (!judgeCfg || !judgeCfg.hasKey)) {
+      if (mode === 'agent' && judgeId && (!judgeCfg || !isUsable(judgeCfg))) {
         set((s) => {
           s.phase = 'error'
           s.error = 'The judge target has no API key. Add one in the settings (gear icon).'
@@ -1512,3 +1516,12 @@ function writeConcurrency(n: number): void {
     /* ignore (private mode / disabled storage) */
   }
 }
+
+// A run belongs to the project it started in: closing or replacing that
+// project aborts it, so a batch never keeps spending (or later applies) into
+// whatever project is open next.
+useStore.subscribe((s, prev) => {
+  if (s.projectGeneration !== prev.projectGeneration && useAiStore.getState().open) {
+    useAiStore.getState().closeDialog()
+  }
+})
