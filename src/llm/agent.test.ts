@@ -134,6 +134,17 @@ describe('runAgent', () => {
     const studyType = result.answer.fields.find((f) => f.path === 'Study Type')
     expect(studyType?.judge?.verdict).toBe('accept')
     expect(studyType?.evidence).toBe('a randomized controlled trial conducted')
+
+    // The round-2 agent request must answer every earlier tool call before any other turn.
+    const round2 = JSON.parse((deps.callLlm as ReturnType<typeof vi.fn>).mock.calls[2][0].body)
+    const msgs = round2.messages as { role: string; tool_calls?: { id: string }[]; tool_call_id?: string }[]
+    msgs.forEach((m, i) => {
+      for (const call of m.tool_calls ?? []) {
+        const answered = msgs.slice(i + 1).findIndex((n) => n.role !== 'tool')
+        const results = msgs.slice(i + 1, answered === -1 ? undefined : i + 1 + answered)
+        expect(results.some((n) => n.tool_call_id === call.id)).toBe(true)
+      }
+    })
   })
 
   it('(c) stops at maxRounds and keeps the judge feedback on an unaccepted field', async () => {

@@ -241,7 +241,10 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
             }
           }
         }
-        messages.push({ role: 'assistant', content: parsed.text || undefined, raw: parsed.raw })
+        // Providers reject an empty assistant turn; replay `raw` only when it has blocks.
+        const r = parsed.raw as { content?: unknown; tool_calls?: unknown } | unknown[] | undefined
+        const emptyRaw = Array.isArray(r) ? r.length === 0 : !!r && typeof r === 'object' && !r.content && !r.tool_calls
+        messages.push({ role: 'assistant', content: parsed.text || '(empty reply)', raw: emptyRaw ? undefined : parsed.raw })
         messages.push({
           role: 'user',
           content: 'Call submit_annotations to finish this round — it is required.',
@@ -269,7 +272,12 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
         messages.push({ role: 'tool', toolCallId: call.id, name: call.name, content: result })
       }
 
-      if (submitCall) return parseSubmitArgs(submitCall.args)
+      if (submitCall) {
+        // Every tool call needs a result before the next turn, or a revision
+        // round's request is rejected (Anthropic/OpenAI require the pairing).
+        messages.push({ role: 'tool', toolCallId: submitCall.id, name: submitCall.name, content: 'Submission recorded.' })
+        return parseSubmitArgs(submitCall.args)
+      }
 
       if (toolCallsUsed >= maxToolCallsPerRound) {
         messages.push({

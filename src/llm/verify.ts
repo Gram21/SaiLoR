@@ -23,6 +23,8 @@ export interface CheckFailure {
 export function normalize(s: string): string {
   return s
     .normalize('NFKC')
+    // pdfText's page separators must not break a quote that spans a page turn.
+    .replace(/\[page \d+\]/gi, ' ')
     .replace(/[‘’]/g, "'")
     .replace(/[“”]/g, '"')
     .replace(/ﬁ/g, 'fi')
