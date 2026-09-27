@@ -139,6 +139,21 @@ export function LlmSettingsDialog() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft?.id, draft?.model, modelsById])
 
+  // Prefill price fields from the selected model's fetched pricing, but only
+  // when a field is still empty — a reviewer's own typed price must never be
+  // clobbered by switching models afterward.
+  useEffect(() => {
+    if (!draft) return
+    const models = modelsById[draft.id] ?? NO_MODELS
+    const model = models.find((m) => m.id === draft.model)
+    if (!model?.pricing) return
+    const fill: Partial<LlmConfig> = {}
+    if (draft.inputPrice === undefined) fill.inputPrice = model.pricing.input
+    if (draft.outputPrice === undefined) fill.outputPrice = model.pricing.output
+    if (Object.keys(fill).length > 0) patch(fill)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft?.id, draft?.model, modelsById])
+
   if (!settingsOpen) return null
 
   const close = () => setSettingsOpen(false)
@@ -514,6 +529,41 @@ export function LlmSettingsDialog() {
                   more expensive; "medium" is a reasonable default.
                 </p>
               )}
+
+              <div className="llm-row">
+                <label htmlFor="llm-input-price" className="llm-label">
+                  Price per 1M input tokens (USD)
+                </label>
+                <input
+                  id="llm-input-price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={draft.inputPrice ?? ''}
+                  onChange={(e) =>
+                    patch({ inputPrice: e.target.value === '' ? undefined : Number(e.target.value) })
+                  }
+                />
+              </div>
+              <div className="llm-row">
+                <label htmlFor="llm-output-price" className="llm-label">
+                  Price per 1M output tokens (USD)
+                </label>
+                <input
+                  id="llm-output-price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={draft.outputPrice ?? ''}
+                  onChange={(e) =>
+                    patch({ outputPrice: e.target.value === '' ? undefined : Number(e.target.value) })
+                  }
+                />
+              </div>
+              <p className="llm-hint">
+                Used only for this app's own rough cost estimates — check your provider's pricing
+                page for the current rate.
+              </p>
 
               <div className="llm-row">
                 <label htmlFor="llm-key" className="llm-label">

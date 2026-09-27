@@ -53,6 +53,9 @@ export interface RetryOptions {
   maxRetries?: number
   baseDelayMs?: number
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>
+  /** Called right before each retry's sleep — lets a caller narrate "retrying
+   *  in Ns…" without threading progress state through this module. */
+  onRetry?: (info: { attempt: number; delayMs: number; status: number }) => void
 }
 
 /** The shape every `callLlm` this app passes around has. */
@@ -78,14 +81,16 @@ export function withRetry(callLlm: CallLlm, opts: RetryOptions = {}): CallLlm {
   const maxRetries = opts.maxRetries ?? DEFAULT_MAX_RETRIES
   const baseDelayMs = opts.baseDelayMs ?? DEFAULT_BASE_DELAY_MS
   const sleep = opts.sleep ?? defaultSleep
+  const onRetry = opts.onRetry
 
   return async (req: LlmHttpRequest, signal?: AbortSignal) => {
     for (let attempt = 0; ; attempt++) {
       if (signal?.aborted) throw abortError()
       const res = await callLlm(req, signal)
       if (res.ok || !RETRYABLE_STATUSES.has(res.status) || attempt >= maxRetries) return res
-      const delay = res.retryAfterMs ?? backoffDelay(attempt, baseDelayMs)
-      await sleep(Math.min(delay, MAX_DELAY_MS), signal)
+      const delay = Math.min(res.retryAfterMs ?? backoffDelay(attempt, baseDelayMs), MAX_DELAY_MS)
+      onRetry?.({ attempt, delayMs: delay, status: res.status })
+      await sleep(delay, signal)
     }
   }
 }

@@ -138,6 +138,44 @@ describe('renamed fields disclosure (REQ-LLM per the fields being sent, not "the
   })
 })
 
+describe('judge picker (REQ-LLM-480)', () => {
+  it('is hidden in prompt mode', () => {
+    // `mode` persists across tests like a real setting — pin it rather than
+    // rely on suite ordering (a sibling test switches to agent mode).
+    useAiStore.setState({ mode: 'prompt' })
+    render(<AiDialog />)
+    expect(screen.queryByText('Judge with')).not.toBeInTheDocument()
+  })
+
+  it('appears in agent mode, with "same as agent" as the default option', async () => {
+    render(<AiDialog />)
+    await userEvent.click(screen.getByRole('radio', { name: 'Agent' }))
+
+    expect(screen.getByText('Judge with')).toBeInTheDocument()
+    expect(screen.getByDisplayValue(/Same as agent \(Test target\)/)).toBeInTheDocument()
+  })
+})
+
+describe('cost estimate line (REQ-LLM-430)', () => {
+  it('shows the token/request range with a hint to add prices, when the target has none', () => {
+    useAiStore.setState({ pageCounts: { p1: 10 } })
+    render(<AiDialog />)
+
+    expect(screen.getByText(/Estimated: ~/)).toBeInTheDocument()
+    expect(screen.getByText(/Add prices in LLM settings to see a cost estimate/)).toBeInTheDocument()
+  })
+
+  it('shows a cost range once the selected target has prices', () => {
+    useAiStore.setState({
+      configs: [{ ...cfg(), inputPrice: 3, outputPrice: 15 }],
+      pageCounts: { p1: 10 },
+    })
+    render(<AiDialog />)
+
+    expect(screen.getByText(/≈ \$/)).toBeInTheDocument()
+  })
+})
+
 describe('jump from an evidence quote to the PDF (REQ-LLM-460)', () => {
   it('makes a paper-sourced quote a button that switches paper, requests a PDF find, and peeks at the PDF', async () => {
     useAiStore.setState({

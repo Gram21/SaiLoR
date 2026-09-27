@@ -9,9 +9,11 @@ import { buildModelsRequest, parseModelsResponse } from '../llm/models'
 import { parseAnswer } from '../llm/parse'
 import { parseChatResponse } from '../llm/chat'
 import { runAgent } from '../llm/agent'
+import { withRetry, type CallLlm } from '../llm/retry'
+import { costOf } from '../llm/cost'
 import type { LlmAnswer, LlmConfig, ModelInfo, Suggestion } from '../llm/types'
 import type { Paper, Project } from '../model/project'
-import { extractPdfText } from '../model/pdfText'
+import { extractPdfText, countPdfPages } from '../model/pdfText'
 
 /**
  * State for the AI-assisted annotation flow, kept out of the main store as
@@ -22,6 +24,7 @@ import { extractPdfText } from '../model/pdfText'
 
 const SELECTED_KEY = 'slr.llm.selected'
 const MODE_KEY = 'slr.llm.mode'
+const JUDGE_KEY = 'slr.llm.judge'
 
 /** Output budget for the "Verify setup" smoke test — high enough to survive
  * reasoning-model overhead, still well below `DEFAULT_MAX_TOKENS`. */
@@ -103,6 +106,23 @@ interface AiState {
   /** Off: only the current paper is a candidate. On: every eligible paper is. */
   allPapers: boolean
 
+  /** Agent mode's judge target — id of a config, or null for "same as agent". */
+  judgeSelectedId: string | null
+  /** All-papers mode only: stop starting new papers once spend exceeds this
+   *  (USD), null when the reviewer hasn't set one. Reset every dialog open. */
+  spendCap: number | null
+  /** Running total (USD) of `costOf` across papers finished so far this run. */
+  spentSoFar: number
+  /** True once a run stopped early because `spendCap` was exceeded. */
+  spendCapHit: boolean
+  /** "Rate-limited, retrying in Ns…", cleared as soon as the retry lands. */
+  retryNotice: string | null
+
+  /** Page counts for the cost estimate, keyed by paper id — fetched lazily and
+   *  cached for the session; see `ensurePageCounts`. */
+  pageCounts: Record<string, number>
+  pageCountsLoading: Record<string, boolean>
+
   phase: AiPhase
   error: string | null
   /** Seconds the current call has been running, for the progress line. */
@@ -128,6 +148,12 @@ interface AiState {
   usage: { calls: number; inputTokens: number; outputTokens: number }
   /** The target the finished run actually used — what `apply()` discloses as `aiUsage`. */
   runUsage: { provider: string; model: string } | null
+  /** Agent mode only: the judge target actually used this run (falls back to
+   *  the agent's own target when no separate judge was picked). */
+  runJudge: { provider: string; model: string } | null
+  /** Agent mode only: how many agent rounds each paper took — `apply()`'s
+   *  per-paper disclosure reads this by paper id. */
+  roundsByPaper: Record<string, number>
 
   rows: ReviewRow[]
   /** Per-paper "left empty"/"rejected" lists, same content the old single-paper
@@ -147,6 +173,14 @@ interface AiState {
   /** No confirmation gating here — the dialog shows/owns the consequences
    *  warning and only calls this once the reviewer confirms turning it on. */
   setAllPapers: (on: boolean) => void
+  /** `null` means "same as agent". */
+  selectJudge: (id: string | null) => void
+  setSpendCap: (cap: number | null) => void
+  /** Fetch and cache each paper's page count, for the setup screen's cost
+   *  estimate. Best-effort: a paper whose PDF can't be read is left uncached
+   *  rather than failing the whole batch. Never awaited by the caller in a
+   *  way that blocks Start — it only feeds the estimate line. */
+  ensurePageCounts: (paperIds: string[]) => Promise<void>
 
   refreshConfigs: () => Promise<void>
   saveConfig: (config: LlmConfig, apiKey?: string) => Promise<void>
@@ -206,6 +240,13 @@ export const useAiStore = create<AiState>()(
     modelsFetchedAt: {},
     mode: readMode(),
     allPapers: false,
+    judgeSelectedId: readJudge(),
+    spendCap: null,
+    spentSoFar: 0,
+    spendCapHit: false,
+    retryNotice: null,
+    pageCounts: {},
+    pageCountsLoading: {},
     phase: 'setup',
     error: null,
     elapsed: 0,
@@ -219,6 +260,8 @@ export const useAiStore = create<AiState>()(
     errors: [],
     usage: { calls: 0, inputTokens: 0, outputTokens: 0 },
     runUsage: null,
+    runJudge: null,
+    roundsByPaper: {},
     rows: [],
     notes: [],
     applied: null,
@@ -249,6 +292,12 @@ export const useAiStore = create<AiState>()(
         s.errors = []
         s.usage = { calls: 0, inputTokens: 0, outputTokens: 0 }
         s.runUsage = null
+        s.runJudge = null
+        s.roundsByPaper = {}
+        s.spendCap = null
+        s.spentSoFar = 0
+        s.spendCapHit = false
+        s.retryNotice = null
         s.targets = unansweredFields(app.project!.schema, tree)
         s.currentPaperHasPdf = !!paper.pdf
         s.candidates = batchCandidates(app.project!, app.currentReviewer)
@@ -287,6 +336,51 @@ export const useAiStore = create<AiState>()(
       })
     },
 
+    selectJudge: (id) => {
+      writeJudge(id)
+      set((s) => { s.judgeSelectedId = id })
+    },
+
+    setSpendCap: (cap) => set((s) => { s.spendCap = cap }),
+
+    ensurePageCounts: async (paperIds) => {
+      const app = useStore.getState()
+      const missing = paperIds.filter(
+        (id) => get().pageCounts[id] === undefined && !get().pageCountsLoading[id],
+      )
+      if (missing.length === 0) return
+      set((s) => {
+        for (const id of missing) s.pageCountsLoading[id] = true
+      })
+      await Promise.all(
+        missing.map(async (id) => {
+          const paper = app.project?.papers.find((p) => p.id === id)
+          if (!paper?.pdf) {
+            set((s) => { delete s.pageCountsLoading[id] })
+            return
+          }
+          try {
+            const src = await getPlatform().getPdfSource(paper.pdf, app.saveHandle ?? { kind: 'download' })
+            let bytes: ArrayBuffer
+            try {
+              bytes = await (await fetch(src.url)).arrayBuffer()
+            } finally {
+              src.revoke?.()
+            }
+            const pages = await countPdfPages(bytes)
+            set((s) => {
+              s.pageCounts[id] = pages
+              delete s.pageCountsLoading[id]
+            })
+          } catch {
+            // Best-effort — leave this paper's count uncached rather than
+            // failing the estimate for every other paper.
+            set((s) => { delete s.pageCountsLoading[id] })
+          }
+        }),
+      )
+    },
+
     refreshConfigs: async () => {
       const configs = await getPlatform().listLlmConfigs()
       set((s) => {
@@ -295,6 +389,12 @@ export const useAiStore = create<AiState>()(
         if (!configs.some((c) => c.id === s.selectedId)) {
           s.selectedId = configs[0]?.id ?? null
           if (s.selectedId) writeSelected(s.selectedId)
+        }
+        // Unlike `selectedId`, `null` here is a valid choice ("same as agent"),
+        // not "nothing picked yet" — only a stale target id needs clearing.
+        if (s.judgeSelectedId && !configs.some((c) => c.id === s.judgeSelectedId)) {
+          s.judgeSelectedId = null
+          writeJudge(null)
         }
       })
     },
@@ -412,6 +512,15 @@ export const useAiStore = create<AiState>()(
       }
 
       const mode = get().mode
+      const judgeId = get().judgeSelectedId
+      const judgeCfg = mode === 'agent' && judgeId ? get().configs.find((c) => c.id === judgeId) : undefined
+      if (mode === 'agent' && judgeId && (!judgeCfg || !judgeCfg.hasKey)) {
+        set((s) => {
+          s.phase = 'error'
+          s.error = 'The judge target has no API key. Add one in the settings (gear icon).'
+        })
+        return
+      }
       const papers: Paper[] = get().allPapers
         ? get()
             .candidates.map((c) => app.project!.papers.find((p) => p.id === c.id))
@@ -419,12 +528,32 @@ export const useAiStore = create<AiState>()(
         : app.project.papers.filter((p) => p.id === app.currentPaperId && !!p.pdf)
       if (papers.length === 0) return
 
+      // All-papers mode only — see `spendCap`'s doc comment.
+      const cap = get().allPapers ? get().spendCap : null
+
+      // Rate-limit retries are the same wrapped function for every call this
+      // run makes (agent turns and judge calls alike) — Verify setup and model
+      // listing intentionally call the platform directly, unwrapped.
+      const callLlm: CallLlm = withRetry(getPlatform().callLlm, {
+        onRetry: (info) => {
+          if (controller !== myController) return
+          set((s) => {
+            s.retryNotice = `Rate-limited, retrying in ${Math.ceil(info.delayMs / 1000)}s…`
+          })
+        },
+      })
+
       set((s) => {
         s.runUsage = { provider: config.provider, model: config.model }
+        s.runJudge = mode === 'agent' ? { provider: (judgeCfg ?? config).provider, model: (judgeCfg ?? config).model } : null
+        s.roundsByPaper = {}
         s.rows = []
         s.notes = []
         s.errors = []
         s.usage = { calls: 0, inputTokens: 0, outputTokens: 0 }
+        s.spentSoFar = 0
+        s.spendCapHit = false
+        s.retryNotice = null
         s.batchTotal = papers.length
         s.batchIndex = 0
         s.batchTitle = ''
@@ -452,11 +581,16 @@ export const useAiStore = create<AiState>()(
       try {
         for (let i = 0; i < papers.length; i++) {
           if (controller !== myController) return // superseded — discard silently
+          if (cap !== null && get().spentSoFar > cap) {
+            set((s) => { s.spendCapHit = true })
+            break // keep whatever finished; don't start another paper
+          }
           const paper = papers[i]
           set((s) => {
             s.batchIndex = i + 1
             s.batchTitle = paper.title
             s.agentEvents = []
+            s.retryNotice = null
           })
 
           // Single-paper mode always sends `targets` as computed when the dialog
@@ -477,6 +611,8 @@ export const useAiStore = create<AiState>()(
                 paper,
                 targets,
                 config,
+                judgeCfg,
+                callLlm,
                 myController.signal,
                 (msg) => {
                   if (controller !== myController) return
@@ -488,6 +624,16 @@ export const useAiStore = create<AiState>()(
                 setPhase,
               )
               if (controller !== myController) return
+              // Agent + judge share one combined `usage`; the judge's own
+              // portion (`judgeUsage`) is priced against the judge target,
+              // the remainder against the agent's — see `estimateCostSplit`'s
+              // sibling logic in cost.ts for the same split, done ahead of time.
+              const agentPortion = {
+                inputTokens: result.usage.inputTokens - result.judgeUsage.inputTokens,
+                outputTokens: result.usage.outputTokens - result.judgeUsage.outputTokens,
+              }
+              const paperCost =
+                (costOf(agentPortion, config) ?? 0) + (costOf(result.judgeUsage, judgeCfg ?? config) ?? 0)
               set((s) => {
                 for (const sug of result.answer.fields) {
                   s.rows.push({
@@ -501,6 +647,8 @@ export const useAiStore = create<AiState>()(
                 s.usage.calls += result.usage.calls
                 s.usage.inputTokens += result.usage.inputTokens
                 s.usage.outputTokens += result.usage.outputTokens
+                s.spentSoFar += paperCost
+                s.roundsByPaper[paper.id] = result.rounds
                 if (result.answer.skipped.length > 0 || result.answer.rejected.length > 0) {
                   s.notes.push({
                     paperId: paper.id,
@@ -511,8 +659,9 @@ export const useAiStore = create<AiState>()(
                 }
               })
             } else {
-              const result = await runOnePaperPrompt(app.project!, paper, targets, config, myController.signal, setPhase)
+              const result = await runOnePaperPrompt(app.project!, paper, targets, config, callLlm, myController.signal, setPhase)
               if (controller !== myController) return
+              const paperCost = costOf(result.usage, config) ?? 0
               set((s) => {
                 for (const sug of result.answer.fields) {
                   s.rows.push({
@@ -526,6 +675,7 @@ export const useAiStore = create<AiState>()(
                 s.usage.calls += 1
                 s.usage.inputTokens += result.usage.inputTokens
                 s.usage.outputTokens += result.usage.outputTokens
+                s.spentSoFar += paperCost
                 if (result.answer.skipped.length > 0 || result.answer.rejected.length > 0) {
                   s.notes.push({
                     paperId: paper.id,
@@ -600,20 +750,51 @@ export const useAiStore = create<AiState>()(
       }),
 
     apply: () => {
-      const usage = get().runUsage
-      if (!usage) return
+      const runUsage = get().runUsage
+      if (!runUsage) return
+      const mode = get().mode
+      const runJudge = get().runJudge
+      const roundsByPaper = get().roundsByPaper
       const checked = get().rows.filter((r) => r.checked)
 
       // One item per (paper, reviewer) pair — batch apply writes every paper in
-      // a single undo step, however many papers this run touched.
-      const byPaper = new Map<string, { paperId: string; reviewer: string | null; suggestions: Suggestion[] }>()
+      // a single undo step, however many papers this run touched. Verdict
+      // counts are taken only from the rows actually applied (checked), per
+      // REQ-LLM-240 — not every value the agent proposed.
+      interface Entry {
+        paperId: string
+        reviewer: string | null
+        suggestions: Suggestion[]
+        verdicts: { accept: number; revise: number; reject: number }
+      }
+      const byPaper = new Map<string, Entry>()
       for (const row of checked) {
         const key = `${row.paperId}\u0000${row.reviewer ?? ''}`
-        const entry = byPaper.get(key) ?? { paperId: row.paperId, reviewer: row.reviewer, suggestions: [] }
+        const entry = byPaper.get(key) ?? {
+          paperId: row.paperId,
+          reviewer: row.reviewer,
+          suggestions: [],
+          verdicts: { accept: 0, revise: 0, reject: 0 },
+        }
         entry.suggestions.push(row.suggestion)
+        const verdict = row.suggestion.judge?.verdict
+        if (verdict) entry.verdicts[verdict]++
         byPaper.set(key, entry)
       }
-      const items = [...byPaper.values()].map((entry) => ({ ...entry, usage }))
+      const items = [...byPaper.values()].map((entry) => ({
+        paperId: entry.paperId,
+        reviewer: entry.reviewer,
+        suggestions: entry.suggestions,
+        usage: {
+          ...runUsage,
+          mode,
+          ...(mode === 'agent' && runJudge ? { judge: runJudge } : {}),
+          ...(mode === 'agent' && roundsByPaper[entry.paperId] !== undefined
+            ? { rounds: roundsByPaper[entry.paperId] }
+            : {}),
+          ...(mode === 'agent' ? { verdicts: entry.verdicts } : {}),
+        },
+      }))
       const result = useStore.getState().applyAiSuggestionsBatch(items)
       // Unchecked rows are never applied, so they count as skipped alongside
       // whatever the store itself refused (already-answered fields, dead paths).
@@ -635,6 +816,7 @@ async function runOnePaperPrompt(
   paper: Paper,
   targets: FieldTarget[],
   config: LlmConfig,
+  callLlm: CallLlm,
   signal: AbortSignal,
   setPhase: (p: AiPhase) => void,
 ): Promise<{ answer: LlmAnswer; usage: { inputTokens: number; outputTokens: number } }> {
@@ -677,7 +859,7 @@ async function runOnePaperPrompt(
         })
 
   setPhase('calling')
-  const res = await getPlatform().callLlm(req, signal)
+  const res = await callLlm(req, signal)
   if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
 
   setPhase('parsing')
@@ -702,10 +884,17 @@ async function runOnePaperAgent(
   paper: Paper,
   targets: FieldTarget[],
   config: LlmConfig,
+  judgeConfig: LlmConfig | undefined,
+  callLlm: CallLlm,
   signal: AbortSignal,
   onEvent: (message: string) => void,
   setPhase: (p: AiPhase) => void,
-): Promise<{ answer: LlmAnswer; usage: { inputTokens: number; outputTokens: number; calls: number } }> {
+): Promise<{
+  answer: LlmAnswer
+  usage: { inputTokens: number; outputTokens: number; calls: number }
+  judgeUsage: { inputTokens: number; outputTokens: number; calls: number }
+  rounds: number
+}> {
   setPhase('reading')
   const app = useStore.getState()
   const src = await getPlatform().getPdfSource(paper.pdf, app.saveHandle ?? { kind: 'download' })
@@ -728,6 +917,7 @@ async function runOnePaperAgent(
   const result = await runAgent(
     {
       config,
+      judgeConfig,
       schema: project.schema,
       targets,
       paper,
@@ -739,11 +929,11 @@ async function runOnePaperAgent(
       onEvent: (e) => onEvent(e.message),
     },
     {
-      callLlm: (req, sig) => getPlatform().callLlm(req, sig),
+      callLlm,
       fetchWeb: (url, sig) => getPlatform().fetchWeb(url, sig),
     },
   )
-  return { answer: result.answer, usage: result.usage }
+  return { answer: result.answer, usage: result.usage, judgeUsage: result.judgeUsage, rounds: result.rounds }
 }
 
 function scannedError(): Error & { scanned: true } {
@@ -802,6 +992,24 @@ function readMode(): AiMode {
 function writeMode(mode: AiMode): void {
   try {
     localStorage?.setItem(MODE_KEY, mode)
+  } catch {
+    /* ignore (private mode / disabled storage) */
+  }
+}
+
+/** `null` ("same as agent") is stored as no key at all, not an empty string. */
+function readJudge(): string | null {
+  try {
+    return localStorage?.getItem(JUDGE_KEY) ?? null
+  } catch {
+    return null
+  }
+}
+
+function writeJudge(id: string | null): void {
+  try {
+    if (id) localStorage?.setItem(JUDGE_KEY, id)
+    else localStorage?.removeItem(JUDGE_KEY)
   } catch {
     /* ignore (private mode / disabled storage) */
   }

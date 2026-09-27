@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { costOf, estimateRun, estimateCost } from './cost'
+import { costOf, estimateRun, estimateCost, estimateCostSplit } from './cost'
 import type { LlmConfig } from './types'
 
 function cfg(over: Partial<LlmConfig> = {}): LlmConfig {
@@ -110,5 +110,50 @@ describe('estimateCost', () => {
     const cost = estimateCost(est, cfg({ inputPrice: 3, outputPrice: 15 }))
     expect(cost).not.toBeNull()
     expect(cost!.low).toBeLessThanOrEqual(cost!.high)
+  })
+
+  it('prompt mode has a zero judge share', () => {
+    const est = estimateRun({ papers: [{ pages: 10 }], fieldsPerPaper: 5, mode: 'prompt', delivery: 'text' })
+    expect(est.judge.low).toEqual({ inputTokens: 0, outputTokens: 0 })
+    expect(est.judge.high).toEqual({ inputTokens: 0, outputTokens: 0 })
+  })
+
+  it('agent mode reports a nonzero judge share no larger than the total', () => {
+    const est = estimateRun({ papers: [{ pages: 10 }], fieldsPerPaper: 5, mode: 'agent', delivery: 'text' })
+    expect(est.judge.low.inputTokens).toBeGreaterThan(0)
+    expect(est.judge.low.inputTokens).toBeLessThanOrEqual(est.low.inputTokens)
+    expect(est.judge.high.inputTokens).toBeLessThanOrEqual(est.high.inputTokens)
+  })
+})
+
+describe('estimateCostSplit', () => {
+  it('is null unless both the agent and judge targets have prices', () => {
+    const est = estimateRun({ papers: [{ pages: 10 }], fieldsPerPaper: 5, mode: 'agent', delivery: 'text' })
+    const priced = cfg({ inputPrice: 3, outputPrice: 15 })
+    expect(estimateCostSplit(est, cfg(), priced)).toBeNull()
+    expect(estimateCostSplit(est, priced, cfg())).toBeNull()
+  })
+
+  it('sums agent-portion and judge-portion costs, each priced by its own target', () => {
+    const est = estimateRun({ papers: [{ pages: 10 }], fieldsPerPaper: 5, mode: 'agent', delivery: 'text' })
+    const agentCfg = cfg({ inputPrice: 3, outputPrice: 15 })
+    const judgeCfg = cfg({ inputPrice: 1, outputPrice: 5 })
+    const split = estimateCostSplit(est, agentCfg, judgeCfg)
+    expect(split).not.toBeNull()
+    const wholeAtAgentPrice = estimateCost(est, agentCfg)!
+    // The judge target is cheaper, so pricing its share separately costs less
+    // than pricing everything at the agent's (pricier) rate.
+    expect(split!.low).toBeLessThan(wholeAtAgentPrice.low)
+    expect(split!.high).toBeLessThan(wholeAtAgentPrice.high)
+    expect(split!.low).toBeLessThanOrEqual(split!.high)
+  })
+
+  it('matches estimateCost when the judge target equals the agent target', () => {
+    const est = estimateRun({ papers: [{ pages: 10 }], fieldsPerPaper: 5, mode: 'agent', delivery: 'text' })
+    const c = cfg({ inputPrice: 3, outputPrice: 15 })
+    const split = estimateCostSplit(est, c, c)!
+    const whole = estimateCost(est, c)!
+    expect(split.low).toBeCloseTo(whole.low)
+    expect(split.high).toBeCloseTo(whole.high)
   })
 })

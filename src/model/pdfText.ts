@@ -96,6 +96,20 @@ function collapseWhitespace(text: string): string {
 export const DEFAULT_MAX_PAGES = 2000
 
 /**
+ * Just the page count, for a cost estimate that has no reason to walk every
+ * page's text content — `getDocument` alone parses the page tree, not the
+ * (much heavier) per-page content streams `extractPdfText` reads.
+ */
+export async function countPdfPages(data: ArrayBuffer): Promise<number> {
+  const doc = await pdfjs.getDocument({ data }).promise
+  try {
+    return doc.numPages
+  } finally {
+    await doc.destroy()
+  }
+}
+
+/**
  * Extract the full text of a PDF, one `[page N]` block per page.
  *
  * Only the "document can't be opened at all" failure is allowed to throw —

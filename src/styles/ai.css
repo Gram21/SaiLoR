@@ -123,6 +123,10 @@
   font-weight: 600;
 }
 
+.ai-cap-hit {
+  color: var(--danger);
+}
+
 .ai-agent-events {
   max-height: 120px;
 }

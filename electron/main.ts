@@ -62,6 +62,8 @@ import { parseMarks, type PdfMark } from '../src/model/pdfMarks'
 import { rectToPdfPoints, rectToQuadPoints } from '../src/model/pdfExport'
 import { verifyReleaseSignature, RELEASE_PUBLIC_KEY_B64 } from '../src/model/updateSignature'
 import { isBlockedAddress, validateFetchUrl } from './webFetch'
+import { validPrice } from './llmConfig'
+import { parseRetryAfter } from '../src/llm/retry'
 import type { WebFetchResult } from '../src/llm/types'
 import { PDFDocument, PDFHexString, PDFString, type PDFContext, type PDFDict } from 'pdf-lib'
 import { autoUpdater } from 'electron-updater'
@@ -1864,6 +1866,10 @@ interface StoredLlmConfig {
   model: string
   attach: string
   reasoningEffort?: string
+  /** USD per 1M tokens, user-entered. Absent when the user has not set one. */
+  inputPrice?: number
+  /** USD per 1M tokens, user-entered. Absent when the user has not set one. */
+  outputPrice?: number
   /** safeStorage-encrypted key, base64. Absent when the user has not set one. */
   key?: string
 }
@@ -1911,7 +1917,12 @@ ipcMain.handle('llm:saveConfig', (_e, config: StoredLlmConfig, apiKey?: string) 
   // An edit that leaves the key field blank keeps the stored key: the user cannot
   // read it back to retype it.
   const key = apiKey ? encryptKey(apiKey) : existing?.key
-  const next: StoredLlmConfig = { ...config, ...(key ? { key } : {}) }
+  const next: StoredLlmConfig = {
+    ...config,
+    inputPrice: validPrice(config.inputPrice),
+    outputPrice: validPrice(config.outputPrice),
+    ...(key ? { key } : {}),
+  }
   const merged = existing
     ? configs.map((c) => (c.id === config.id ? next : c))
     : [...configs, next]
@@ -2004,7 +2015,8 @@ ipcMain.handle(
         // following it somewhere else.
         redirect: 'error',
       })
-      return { ok: res.ok, status: res.status, body: await res.text() }
+      const retryAfterMs = parseRetryAfter(res.headers.get('retry-after'), Date.now())
+      return { ok: res.ok, status: res.status, body: await res.text(), ...(retryAfterMs !== undefined ? { retryAfterMs } : {}) }
     } finally {
       clearTimeout(timer)
       inFlight.delete(requestId)

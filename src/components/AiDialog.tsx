@@ -3,6 +3,7 @@ import { useAiStore, type AiMode, type PaperNotes, type ReviewRow } from '../sta
 import { useStore } from '../state/store'
 import { PROVIDERS } from '../llm/providers'
 import { displayPath, parsePath } from '../llm/paths'
+import { estimateRun, estimateCost, estimateCostSplit } from '../llm/cost'
 import type { LlmConfig } from '../llm/types'
 import type { FieldValue } from '../model/annotations'
 import { ComboBox } from './ComboBox'
@@ -51,6 +52,33 @@ function deliveryOf(cfg: LlmConfig): 'text' | 'pdf' {
   return cfg.attach === 'pdf' && PROVIDERS[cfg.provider].supportsPdf ? 'pdf' : 'text'
 }
 
+/** Rough token/request range, plus a cost range when both targets involved
+ *  have prices set — see cost.ts. Never blocks Start: called with whatever
+ *  page counts are cached so far. */
+function estimateLine(
+  mode: AiMode,
+  selected: LlmConfig,
+  judgeCfg: LlmConfig | null,
+  pages: number[],
+  fields: number,
+): string {
+  const est = estimateRun({
+    papers: pages.map((p) => ({ pages: p })),
+    fieldsPerPaper: fields,
+    mode,
+    delivery: deliveryOf(selected),
+  })
+  const cost =
+    mode === 'agent' && judgeCfg ? estimateCostSplit(est, selected, judgeCfg) : estimateCost(est, selected)
+  const tokens =
+    `Estimated: ~${est.low.inputTokens.toLocaleString()}–${est.high.inputTokens.toLocaleString()} input tokens, ` +
+    `~${est.low.outputTokens.toLocaleString()}–${est.high.outputTokens.toLocaleString()} output tokens, ` +
+    `${est.requests.low}–${est.requests.high} request${est.requests.high === 1 ? '' : 's'}`
+  return cost
+    ? `${tokens} (≈ $${cost.low.toFixed(2)}–$${cost.high.toFixed(2)}). Rough estimate, not a quote.`
+    : `${tokens}. Add prices in LLM settings to see a cost estimate. Rough estimate, not a quote.`
+}
+
 const PHASE_LINE: Record<string, string> = {
   reading: 'Reading the PDF…',
   parsing: 'Reading the answer…',
@@ -88,6 +116,13 @@ export function AiDialog() {
   const mode = useAiStore((s) => s.mode)
   const allPapers = useAiStore((s) => s.allPapers)
   const candidates = useAiStore((s) => s.candidates)
+  const judgeSelectedId = useAiStore((s) => s.judgeSelectedId)
+  const spendCap = useAiStore((s) => s.spendCap)
+  const spentSoFar = useAiStore((s) => s.spentSoFar)
+  const spendCapHit = useAiStore((s) => s.spendCapHit)
+  const retryNotice = useAiStore((s) => s.retryNotice)
+  const pageCounts = useAiStore((s) => s.pageCounts)
+  const pageCountsLoading = useAiStore((s) => s.pageCountsLoading)
   const currentPaperHasPdf = useAiStore((s) => s.currentPaperHasPdf)
   const phase = useAiStore((s) => s.phase)
   const error = useAiStore((s) => s.error)
@@ -111,6 +146,9 @@ export function AiDialog() {
   const selectConfig = useAiStore((s) => s.selectConfig)
   const setMode = useAiStore((s) => s.setMode)
   const setAllPapers = useAiStore((s) => s.setAllPapers)
+  const selectJudge = useAiStore((s) => s.selectJudge)
+  const setSpendCap = useAiStore((s) => s.setSpendCap)
+  const ensurePageCounts = useAiStore((s) => s.ensurePageCounts)
   const run = useAiStore((s) => s.run)
   const cancel = useAiStore((s) => s.cancel)
   const toggleRow = useAiStore((s) => s.toggleRow)
@@ -138,6 +176,17 @@ export function AiDialog() {
     if (phase !== 'setup') setPendingAllPapers(false)
   }, [phase])
 
+  // The cost estimate's page counts, fetched lazily and cached by the store —
+  // recomputed whenever the scope (single paper vs. all papers, or which
+  // papers) changes. Never blocks Start: the estimate just says "Estimating…"
+  // until these land.
+  const scopePaperIds = allPapers ? candidates.map((c) => c.id) : currentPaper ? [currentPaper.id] : []
+  useEffect(() => {
+    if (!open || phase !== 'setup' || scopePaperIds.length === 0) return
+    void ensurePageCounts(scopePaperIds)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, phase, allPapers, currentPaper?.id, candidates])
+
   useEffect(() => {
     if (!open || settingsOpen) return
     const onKey = (e: KeyboardEvent) => {
@@ -163,11 +212,33 @@ export function AiDialog() {
   }
 
   const selected = configs.find((c) => c.id === selectedId) ?? null
+  // The judge target actually in play: null both means "not agent mode" and
+  // "same as agent" — `judgeSelectedId` is the only thing that distinguishes
+  // those, and callers that care (the consent line, the estimate) already
+  // have `mode` to tell them apart.
+  const judgeCfg = judgeSelectedId ? configs.find((c) => c.id === judgeSelectedId) ?? null : null
   const checkedCount = rows.filter((r) => r.checked).length
   const running = phase === 'reading' || phase === 'calling' || phase === 'parsing'
   const canStartSingle = !!currentPaper && currentPaperHasPdf && targets.length > 0
   const canStartAll = candidates.length > 0
   const canStart = allPapers ? canStartAll : canStartSingle
+
+  const pagesKnown = scopePaperIds.length > 0 && scopePaperIds.every((id) => pageCounts[id] !== undefined)
+  const estimateText = !selected
+    ? null
+    : pagesKnown
+      ? estimateLine(mode, selected, judgeCfg, scopePaperIds.map((id) => pageCounts[id]), targets.length)
+      : scopePaperIds.some((id) => pageCountsLoading[id])
+        ? 'Estimating…'
+        : null
+  // Both targets priced — costs can be split accurately; the cap only makes
+  // sense once it can be compared to something.
+  const capKnown =
+    !!selected &&
+    selected.inputPrice !== undefined &&
+    selected.outputPrice !== undefined &&
+    (mode === 'prompt' ||
+      ((judgeCfg ?? selected).inputPrice !== undefined && (judgeCfg ?? selected).outputPrice !== undefined))
 
   // Grouped only when more than one paper is actually in the review set.
   const paperOrder: string[] = []
@@ -277,6 +348,35 @@ export function AiDialog() {
               </div>
               <p className="ai-note">{MODE_INFO[mode]}</p>
 
+              {mode === 'agent' && (
+                <>
+                  <div className="ai-label" id="ai-judge-label">
+                    Judge with
+                  </div>
+                  <div className="ai-target-row" role="group" aria-labelledby="ai-judge-label">
+                    <ComboBox
+                      value={judgeSelectedId ?? ''}
+                      options={[
+                        {
+                          id: '',
+                          label: `Same as agent${selected ? ` (${selected.name})` : ''}`,
+                        },
+                        ...configs.map((c) => ({
+                          id: c.id,
+                          label: `${c.name} — ${PROVIDERS[c.provider].label} · ${c.model}`,
+                        })),
+                      ]}
+                      onChange={(id) => selectJudge(id || null)}
+                    />
+                  </div>
+                  <p className="ai-note">
+                    A different model — ideally a different provider or family — catches mistakes the
+                    agent's own model is prone to repeat when it reviews itself. A cheaper model here
+                    keeps judge costs down.
+                  </p>
+                </>
+              )}
+
               <p className="ai-scope">
                 {allPapers ? (
                   <>
@@ -335,6 +435,10 @@ export function AiDialog() {
                     leaves this machine. Nothing is written into the project until you press Apply.
                     {mode === 'agent' &&
                       ' Agent mode may also send search terms or URLs chosen by the model to OpenAlex, Crossref, or other sites; these can contain short phrases from the paper, but never the paper file itself.'}
+                    {mode === 'agent' &&
+                      judgeCfg &&
+                      judgeCfg.provider !== selected.provider &&
+                      ` The judge's review is sent to ${PROVIDERS[judgeCfg.provider].label} (${judgeCfg.model}) as well — it also sees the paper.`}
                   </>
                 ) : (
                   'Nothing is sent until you choose a target and press Start.'
@@ -346,6 +450,29 @@ export function AiDialog() {
                   ? 'Every field of this paper is already filled in — there is nothing to propose.'
                   : `${targets.length} empty field${targets.length === 1 ? '' : 's'} will be proposed.`}
               </p>
+
+              {estimateText && <p className="ai-note ai-estimate">{estimateText}</p>}
+
+              {allPapers && (
+                <div className="ai-target-row">
+                  <label htmlFor="ai-spend-cap">Stop when spent exceeds $</label>
+                  <input
+                    id="ai-spend-cap"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    disabled={!capKnown}
+                    value={spendCap ?? ''}
+                    onChange={(e) => setSpendCap(e.target.value === '' ? null : Number(e.target.value))}
+                    placeholder={capKnown ? 'no limit' : 'set prices to enable'}
+                    title={
+                      capKnown
+                        ? 'Stop starting new papers once the running cost estimate passes this amount.'
+                        : 'Add prices to the target(s) in LLM settings to enable a spending cap.'
+                    }
+                  />
+                </div>
+              )}
 
               {targets.length > 0 && (
                 <details className="ai-prompt">
@@ -403,8 +530,10 @@ export function AiDialog() {
               {batchTotal > 1 && (
                 <p className="ai-note">
                   Paper {batchIndex} of {batchTotal} — {batchTitle}
+                  {capKnown && ` · $${spentSoFar.toFixed(2)} spent so far`}
                 </p>
               )}
+              {retryNotice && <p className="ai-note ai-retry">{retryNotice}</p>}
               {mode === 'agent' && agentEvents.length > 0 && (
                 <ul className="ai-note-list ai-agent-events">
                   {agentEvents.map((m, i) => (
@@ -457,6 +586,12 @@ export function AiDialog() {
 
                   <RunErrors errors={runErrors} />
 
+                  {spendCapHit && (
+                    <p className="ai-note ai-cap-hit">
+                      Stopped at the spending limit (${spentSoFar.toFixed(2)} spent).
+                    </p>
+                  )}
+
                   <ReviewTable
                     rows={rows}
                     grouped={grouped}
@@ -473,6 +608,7 @@ export function AiDialog() {
                     <p className="ai-note ai-usage">
                       {usage.calls} request{usage.calls === 1 ? '' : 's'} · {usage.inputTokens} input
                       / {usage.outputTokens} output tokens
+                      {capKnown && ` · ≈ $${spentSoFar.toFixed(2)}`}
                     </p>
                   )}
 

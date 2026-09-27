@@ -69,7 +69,10 @@ export interface AgentInput {
 export interface AgentResult {
   answer: LlmAnswer
   rounds: number
+  /** Combined agent+judge totals — see `judgeUsage` for the judge-call share
+   *  alone, used to price the two targets separately when they differ. */
   usage: { inputTokens: number; outputTokens: number; calls: number }
+  judgeUsage: { inputTokens: number; outputTokens: number; calls: number }
   log: AgentEvent[]
 }
 
@@ -163,6 +166,7 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
   const messages: ChatMessage[] = [{ role: 'user', content: caption }]
   const log: AgentEvent[] = []
   const usage = { inputTokens: 0, outputTokens: 0, calls: 0 }
+  const judgeUsage = { inputTokens: 0, outputTokens: 0, calls: 0 }
   const emit = (e: AgentEvent) => {
     log.push(e)
     onEvent?.(e)
@@ -334,6 +338,9 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
       usage.inputTokens += jparsed.usage.inputTokens
       usage.outputTokens += jparsed.usage.outputTokens
       usage.calls++
+      judgeUsage.inputTokens += jparsed.usage.inputTokens
+      judgeUsage.outputTokens += jparsed.usage.outputTokens
+      judgeUsage.calls++
       const reply = parseJudgeReply(jparsed.text)
       for (const v of reply.verdicts) {
         verdictByPath.set(v.path, { verdict: v.verdict, feedback: v.feedback })
@@ -411,6 +418,7 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
     answer: { fields: finalFields, skipped: lastAnswer.skipped, rejected: finalRejected },
     rounds: round,
     usage,
+    judgeUsage,
     log,
   }
 }

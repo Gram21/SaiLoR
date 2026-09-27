@@ -145,9 +145,9 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-240 — Record durable AI-usage disclosure
-- **Description:** When an apply changes at least one field, the system shall append a record of provider, model, and timestamp to the paper's AI-usage list in the project file, using the provider and model of the run that produced the answer, together with whichever of the run's mode (prompt/agent), judge provider/model, round count, applied-verdict counts, few-shot example count, and target reviewer seat are known, omitting any that are not; on load the system shall keep the base record and drop only a malformed optional field.
+- **Description:** When an apply changes at least one field, the system shall append a record of provider, model, and timestamp to the paper's AI-usage list in the project file, using the provider and model of the run that produced the answer, together with whichever of the run's mode (prompt/agent), judge provider/model, round count, applied-verdict counts, few-shot example count, and target reviewer seat are known, omitting any that are not; on load the system shall keep the base record and drop only a malformed optional field. Verdict counts reflect only the suggestions the reviewer actually applied (checked), not every value the agent proposed; `judge`/`rounds` are the judge target/round count actually used for that paper.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/store.ts:2419-2427`, `src/model/project.ts:37-58,416-467`, `src/state/store.ai.test.ts:364-429`
+- **Evidence:** `src/state/store.ts:2419-2427`, `src/model/project.ts:37-58,416-467`, `src/state/aiStore.ts` (`apply`, `runJudge`, `roundsByPaper`), `src/state/store.ai.test.ts:364-429`, `src/state/aiStore.judge.test.ts` (disclosure-fields tests)
 - **Status:** Implemented
 
 ### REQ-LLM-250 — List provider models
@@ -259,16 +259,18 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-430 — Cost estimate from user-entered prices
-- **Description:** The system shall let the reviewer enter an input and output price (USD per 1M tokens) on an LLM target, with no built-in provider price table, and shall estimate a run's token usage and cost range (low/high) from the number of papers, pages per paper, fields to fill, and mode (prompt or agent, agent accounting for repeated tool-calling requests plus judge calls), reporting no cost when a target has no price entered.
+- **Description:** The system shall let the reviewer enter an input and output price (USD per 1M tokens) on an LLM target, with no built-in provider price table, prefilled from the picked model's own reported pricing when available (OpenRouter) and the fields are still empty, and shall estimate a run's token usage and cost range (low/high) from the number of papers, pages per paper (fetched lazily via pdf.js and cached per paper for the session), fields to fill, and mode (prompt or agent, agent accounting for repeated tool-calling requests plus judge calls, split between the agent and judge targets when they differ), reporting no cost when a target has no price entered and labeling the figure a rough estimate.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/llm/cost.ts` (`costOf`, `estimateRun`, `estimateCost`), `src/llm/types.ts` (`LlmConfig.inputPrice`/`outputPrice`, `ModelInfo.pricing`), `src/llm/models.ts` (`parseOpenRouterModels`)
-- **Status:** Partially implemented — UI pending
+- **Evidence:** `src/llm/cost.ts` (`costOf`, `estimateRun`, `estimateCost`, `estimateCostSplit`), `src/llm/types.ts` (`LlmConfig.inputPrice`/`outputPrice`, `ModelInfo.pricing`), `src/llm/models.ts` (`parseOpenRouterModels`), `src/model/pdfText.ts` (`countPdfPages`), `src/state/aiStore.ts` (`ensurePageCounts`, `pageCounts`), `src/components/AiDialog.tsx` (`estimateLine`), `src/components/LlmSettingsDialog.tsx` (price fields, pricing prefill), `electron/main.ts` (`StoredLlmConfig.inputPrice`/`outputPrice`), `electron/llmConfig.ts` (`validPrice`)
+- **Status:** Implemented
+- **Tests:** `src/llm/cost.test.ts`, `src/components/LlmSettingsDialog.test.tsx`, `src/components/AiDialog.test.tsx`, `electron/llmConfig.test.ts`
 
 ### REQ-LLM-440 — Retry with backoff on rate limits/overload
-- **Description:** When a model call fails with HTTP 429, 408, 500, 502, 503, 504, or 529, the system shall retry it with exponential backoff and jitter (capped, bounded number of retries), honoring the provider's `Retry-After` header when present, and shall not retry any other 4xx status; a pending retry wait shall abort immediately when the caller's signal aborts.
+- **Description:** When a model call fails with HTTP 429, 408, 500, 502, 503, 504, or 529, the system shall retry it with exponential backoff and jitter (capped, bounded number of retries), honoring the provider's `Retry-After` header when present, and shall not retry any other 4xx status; a pending retry wait shall abort immediately when the caller's signal aborts. Every model call an annotation run makes (prompt mode, agent mode, and judge calls) is wrapped this way; "Verify setup" and model listing are not. The system shall show a "Rate-limited, retrying in Ns…" progress notice while a retry is pending.
 - **Type:** Non-functional (ISO 25010: Reliability)
-- **Evidence:** `src/llm/retry.ts` (`withRetry`, `parseRetryAfter`, `runPool`)
+- **Evidence:** `src/llm/retry.ts` (`withRetry`, `parseRetryAfter`, `runPool`, `RetryOptions.onRetry`), `electron/main.ts` (`llm:call` handler filling `retryAfterMs` via `parseRetryAfter`), `src/state/aiStore.ts` (`run` wrapping `getPlatform().callLlm` with `withRetry`, `retryNotice`), `src/components/AiDialog.tsx` (`ai-retry` notice)
 - **Status:** Implemented
+- **Tests:** `src/llm/retry.test.ts` (including `onRetry`), `src/state/aiStore.batch.test.ts`
 
 ### REQ-LLM-450 — Few-shot examples from finished papers
 - **Description:** The system shall let the reviewer's already-finished papers be shown to the model as worked examples of the review's conventions (granularity, wording, enum choices): each example's title, truncated abstract, and answered fields as path/value lines, explicitly marked as illustration only — not evidence, and not to be copied into the current paper — placed in the prompt after the schema/field sections and before the rules, truncated by dropping whole trailing examples/fields rather than mid-line, and included in the agent's own system prompt only, never the judge's.
@@ -287,3 +289,17 @@ See the [index](index.md) for the glossary.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/project.ts:265-289`, `src/state/editorStore.ts`, `src/components/ProjectEditor.tsx`, `src/components/AnnotationPanel.tsx`, `src/components/Toolbar.tsx`, `src/git/changes.ts`, `src/git/merge.ts`
 - **Status:** Implemented
+
+### REQ-LLM-480 — Separate judge target
+- **Description:** In agent mode's setup screen, the system shall let the reviewer pick a judge target independent of the agent's own target, from the same configured targets, with "Same as agent (<name>)" as the first, default option; the choice shall persist like the selected agent target (validated against the currently configured targets on refresh, falling back to "same as agent" if the stored choice no longer exists) and shall be passed to the agent run as a distinct judge config. The judge target's own API key shall be checked before the run starts, the same way the agent target's is. When the picked judge target's provider differs from the agent's, the run's consent line shall name it too, since the paper's evidence is sent there as well.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/aiStore.ts` (`judgeSelectedId`, `selectJudge`, `run`'s judge hasKey check, `runJudge`), `src/components/AiDialog.tsx` (judge `ComboBox`, consent line), `src/llm/agent.ts` (`AgentInput.judgeConfig`)
+- **Status:** Implemented
+- **Tests:** `src/state/aiStore.judge.test.ts`, `src/components/AiDialog.test.tsx`
+
+### REQ-LLM-490 — Spending cap for all-papers runs
+- **Description:** In all-papers mode, when both the agent target and the judge target (or the agent target alone in prompt mode) have prices set, the system shall let the reviewer set an optional spending cap (USD); after each paper the system shall add that paper's estimated cost (agent-portion priced against the agent target, judge-portion — agent mode only — against the judge target) to a running total, and once the total exceeds the cap it shall stop starting new papers while keeping whatever already finished, showing "Stopped at the spending limit ($X spent)" in the review screen. The running spend, and the run's actual total cost, shall be shown alongside the existing token-usage reporting whenever prices are known.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/aiStore.ts` (`spendCap`, `setSpendCap`, `spentSoFar`, `spendCapHit`, `run`'s cap check), `src/components/AiDialog.tsx` (spend-cap input, `ai-cap-hit`, `ai-usage` cost line), `src/llm/cost.ts` (`costOf`)
+- **Status:** Implemented
+- **Tests:** `src/state/aiStore.judge.test.ts`

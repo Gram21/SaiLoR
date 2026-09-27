@@ -172,8 +172,11 @@ describe('run: batch continues past a failing paper', () => {
     const c = cfg({ attach: 'text' })
     useAiStore.setState({ configs: [c], selectedId: c.id, allPapers: true, candidates: [{ id: 'p1', title: 'Paper One' }, { id: 'p2', title: 'Paper Two' }] })
 
+    // 400, not 500: a run's calls are now wrapped in `withRetry` (retry.ts), which
+    // retries the 5xx family — a non-retryable status keeps this test about the
+    // batch's own "continue past a failing paper" behavior, not retry timing.
     mockPlatform.callLlm
-      .mockResolvedValueOnce({ ok: false, status: 500, body: 'boom' })
+      .mockResolvedValueOnce({ ok: false, status: 400, body: 'boom' })
       .mockResolvedValueOnce(anthropicOk([{ path: 'Summary', value: 'from p2', evidence: 'e', confidence: 0.9 }]))
 
     await ai().run()
@@ -233,6 +236,7 @@ describe('run: agent mode', () => {
       },
       rounds: 1,
       usage: { inputTokens: 100, outputTokens: 40, calls: 3 },
+      judgeUsage: { inputTokens: 0, outputTokens: 0, calls: 0 },
       log: [],
     })
 
@@ -259,6 +263,7 @@ describe('run: agent mode', () => {
       },
       rounds: 1,
       usage: { inputTokens: 10, outputTokens: 5, calls: 1 },
+      judgeUsage: { inputTokens: 0, outputTokens: 0, calls: 0 },
       log: [],
     })
 

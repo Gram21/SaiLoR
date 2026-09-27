@@ -74,6 +74,21 @@ describe('withRetry', () => {
     expect(callLlm).toHaveBeenCalledTimes(3)
   })
 
+  it('calls onRetry with the attempt, delay, and status before each retry sleep', async () => {
+    const { sleep } = fakeSleep()
+    let calls = 0
+    const callLlm = vi.fn(async (): Promise<LlmHttpResponse> => {
+      calls++
+      if (calls < 3) return { ok: false, status: 429, body: '', retryAfterMs: 7 }
+      return { ok: true, status: 200, body: '' }
+    })
+    const onRetry = vi.fn()
+    await withRetry(callLlm, { sleep, baseDelayMs: 10, onRetry })(req)
+    expect(onRetry).toHaveBeenCalledTimes(2)
+    expect(onRetry).toHaveBeenNthCalledWith(1, { attempt: 0, delayMs: 7, status: 429 })
+    expect(onRetry).toHaveBeenNthCalledWith(2, { attempt: 1, delayMs: 7, status: 429 })
+  })
+
   it('rejects with an AbortError when the signal aborts mid-sleep', async () => {
     const { sleep } = fakeSleep()
     const controller = new AbortController()
