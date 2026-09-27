@@ -1765,6 +1765,22 @@ button.paper-search-clear:hover {
   font-weight: 600;
   vertical-align: middle;
 }
+/* The per-paper AI-usage disclosure — see AiUsageDisclosure.tsx. Compact and
+   unobtrusive by default, same size register as .reviewer-badge, expanding
+   via the native <details> toggle rather than a dialog. */
+.ai-usage-disclosure {
+  margin: 2px 0;
+  font-size: 0.8em;
+  color: var(--muted);
+}
+.ai-usage-disclosure summary {
+  cursor: pointer;
+}
+.ai-usage-disclosure ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
 /* Consolidation-only "compare every reviewer's answer" button, next to grab-btn. */
 .compare-btn {
   flex: 0 0 auto;

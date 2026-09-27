@@ -78,6 +78,72 @@ describe('AnnotationPanel: jump to field', () => {
   })
 })
 
+describe('AnnotationPanel: AI-usage disclosure', () => {
+  function projectJsonWithAiUsage(aiUsage: unknown[]) {
+    return JSON.stringify({
+      version: 1,
+      title: 'My Review',
+      config: { schema: [{ name: 'Study Type', type: 'string' }], reviewers: 2 },
+      papers: [
+        { id: 'p1', title: 'A Paper', authors: [], pdf: 'a.pdf', annotations: {}, aiUsage },
+      ],
+    })
+  }
+
+  it('is hidden when the paper has no AI-usage records', () => {
+    st().loadFromText(projectJson(), null, 'test.json')
+    st().selectPaper('p1')
+    useStore.setState({ currentReviewer: '1' })
+    render(<AnnotationPanel />)
+    expect(screen.queryByText(/AI-assisted/)).not.toBeInTheDocument()
+  })
+
+  it('shows a count for records visible to the current seat', () => {
+    st().loadFromText(
+      projectJsonWithAiUsage([
+        { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-01-01T00:00:00.000Z', reviewer: '1' },
+        { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-01-02T00:00:00.000Z' },
+      ]),
+      null,
+      'test.json',
+    )
+    st().selectPaper('p1')
+    useStore.setState({ currentReviewer: '1' })
+    render(<AnnotationPanel />)
+    expect(screen.getByText('✦ AI-assisted (2×)')).toBeInTheDocument()
+  })
+
+  it("filters out another reviewer's own AI-usage record", () => {
+    st().loadFromText(
+      projectJsonWithAiUsage([
+        { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-01-01T00:00:00.000Z', reviewer: '1' },
+        { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-01-02T00:00:00.000Z', reviewer: '2' },
+      ]),
+      null,
+      'test.json',
+    )
+    st().selectPaper('p1')
+    useStore.setState({ currentReviewer: '1' })
+    render(<AnnotationPanel />)
+    expect(screen.getByText('✦ AI-assisted (1×)')).toBeInTheDocument()
+  })
+
+  it('shows every record in Consolidation regardless of seat', () => {
+    st().loadFromText(
+      projectJsonWithAiUsage([
+        { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-01-01T00:00:00.000Z', reviewer: '1' },
+        { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-01-02T00:00:00.000Z', reviewer: '2' },
+      ]),
+      null,
+      'test.json',
+    )
+    st().selectPaper('p1')
+    useStore.setState({ currentReviewer: 'consolidation' })
+    render(<AnnotationPanel />)
+    expect(screen.getByText('✦ AI-assisted (2×)')).toBeInTheDocument()
+  })
+})
+
 describe('AnnotationPanel: markings from screening', () => {
   const mark = { id: 'm', page: 1, kind: 'highlight' as const, rects: [{ x: 0, y: 0, width: 0.1, height: 0.1 }], color: '#ffe066', comment: '', createdAt: '', updatedAt: '' }
 

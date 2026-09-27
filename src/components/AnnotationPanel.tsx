@@ -7,6 +7,7 @@ import { paperCompleteness, paperAnnotationState } from './PaperList'
 import { paperVerdicts } from '../consolidate/disagreements'
 import { AnnotationNode } from './AnnotationNode'
 import { SeatConflictNotice } from './SeatConflictNotice'
+import { AiUsageDisclosure } from './AiUsageDisclosure'
 import {
   consolidationFieldStatus,
   ConsolidationVerdictsContext,
@@ -65,6 +66,16 @@ export function AnnotationPanel() {
     }
     return verdicts
   }, [isConsolidation, paper, project])
+
+  // Which of the current paper's AI-usage records this seat should see:
+  // Consolidation sees every run, a reviewer seat only the runs with no
+  // `reviewer` attribution (predating that field, or genuinely seat-agnostic)
+  // or attributed to itself — never another reviewer's own AI run.
+  const relevantAiUsage = useMemo(() => {
+    if (!paper) return []
+    if (isConsolidation) return paper.aiUsage
+    return paper.aiUsage.filter((r) => !r.reviewer || r.reviewer === currentReviewer)
+  }, [paper, isConsolidation, currentReviewer])
 
   // A field jump requested from elsewhere (Validation's "jump to this
   // field", clicking an issue rather than only the paper it's on) — scroll
@@ -194,6 +205,7 @@ export function AnnotationPanel() {
             </span>
           )}
         </div>
+        {project && <AiUsageDisclosure project={project} records={relevantAiUsage} />}
         {/* Only where the screening project this one came from marked this
             paper: an option with nothing behind it would only puzzle. */}
         {screeningMarkCount > 0 && (
