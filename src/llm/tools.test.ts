@@ -174,6 +174,15 @@ describe('parseSubmitArgs', () => {
     expect(payload.skipped).toEqual([{ path: 'Y', reason: 'r' }])
   })
 
+  it('parses schema_remarks and drops malformed ones', () => {
+    const payload = parseSubmitArgs({
+      fields: [],
+      skipped: [],
+      schema_remarks: [{ path: 'Year', issue: 'vague', suggestion: 'say which' }, { path: 'X' }, 'junk'],
+    })
+    expect(payload.schemaRemarks).toEqual([{ path: 'Year', issue: 'vague', suggestion: 'say which' }])
+  })
+
   it('never throws on completely malformed args', () => {
     expect(parseSubmitArgs(null)).toEqual({ fields: [], skipped: [], notes: undefined })
     expect(parseSubmitArgs('garbage')).toEqual({ fields: [], skipped: [], notes: undefined })

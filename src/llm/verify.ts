@@ -78,16 +78,24 @@ function looksLikeUrl(s: string | undefined): s is string {
   return typeof s === 'string' && /^https?:\/\//i.test(s)
 }
 
+/** Trivial URL normalization for source matching: drop the fragment and trailing slashes. */
+export function normalizeUrl(u: string): string {
+  return u.trim().replace(/#.*$/, '').replace(/\/+$/, '')
+}
+
 /**
  * Validate a submitted batch against the schema and, per field, against its
  * evidence. `fetchedUrls` is every URL the agent actually fetched this run —
  * a web-sourced value whose `source` isn't in that set failed to earn its keep.
+ * `searchResultUrls` are URLs a provider's web search returned: the agent never
+ * saw those pages, so the value is accepted but flagged `webUnverified`.
  */
 export function checkSubmission(
   schema: ResolvedDef[],
   payload: SubmitPayload,
   paperText: string,
   fetchedUrls: ReadonlySet<string>,
+  searchResultUrls: ReadonlySet<string> = new Set(),
 ): { answer: LlmAnswer; failures: CheckFailure[] } {
   const root = {
     fields: payload.fields.map((f) => ({
@@ -108,16 +116,21 @@ export function checkSubmission(
     if (resolved) sourceByPath.set(resolved.canonical, f.source)
   }
 
+  const fetched = new Set([...fetchedUrls].map(normalizeUrl))
+  const searched = new Set([...searchResultUrls].map(normalizeUrl))
   const failures: CheckFailure[] = []
   for (const suggestion of answer.fields) {
     const source = sourceByPath.get(suggestion.path)
     suggestion.source = source
 
     if (looksLikeUrl(source)) {
-      if (!fetchedUrls.has(source)) {
+      const url = normalizeUrl(source)
+      if (fetched.has(url)) continue
+      if (searched.has(url)) suggestion.webUnverified = true
+      else {
         failures.push({
           path: suggestion.path,
-          reason: `Source "${source}" was never fetched during this run.`,
+          reason: `Source "${source}" was never fetched${searched.size ? ' or returned by web search' : ''} during this run.`,
         })
       }
       continue

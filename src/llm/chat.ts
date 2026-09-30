@@ -73,6 +73,12 @@ export interface ChatResponse {
   usage: ChatUsage
   /** The raw assistant turn, for `ChatMessage.raw` on the next request. */
   raw: unknown
+  /** Provider-side web searches run for this response (0 without web search). */
+  webSearches: number
+  /** Every result/citation URL the provider's web search surfaced, deduped. */
+  citations: { url: string; title?: string }[]
+  /** Anthropic `pause_turn`: the server-tool loop paused; send `raw` back to continue. */
+  paused: boolean
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -216,16 +222,25 @@ function openaiMessages(messages: ChatMessage[], paper?: PaperPart): unknown[] {
 
 const DEFAULT_MAX_TOKENS = 8192
 
+/** Cap on provider-side searches per request (cost + prompt-injection surface). */
+const WEB_SEARCH_MAX_USES = 5
+
+// Only these providers can mix built-in web search with our function tools —
+// see `supportsWebSearch` in providers.ts for the per-provider decisions.
+// Anthropic's basic version needs no code-execution sidecar (unlike 20260209+).
+const ANTHROPIC_WEB_SEARCH = { type: 'web_search_20250305', name: 'web_search', max_uses: WEB_SEARCH_MAX_USES }
+
 export function buildChatRequest(
   cfg: LlmConfig,
   system: string,
   messages: ChatMessage[],
   tools: ToolDef[],
-  opts?: { maxTokens?: number; paper?: PaperPart },
+  opts?: { maxTokens?: number; paper?: PaperPart; webSearch?: boolean },
 ): LlmHttpRequest & { body: string } {
   const maxTokens = opts?.maxTokens ?? DEFAULT_MAX_TOKENS
   const base = baseOf(cfg)
   const effort = cfg.reasoningEffort
+  const webSearch = Boolean(opts?.webSearch) && PROVIDERS[cfg.provider].supportsWebSearch
 
   if (cfg.provider === 'anthropic') {
     return {
@@ -243,13 +258,16 @@ export function buildChatRequest(
         // unchanged on every round of the loop, same as the paper.
         system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
         messages: anthropicMessages(messages, opts?.paper),
-        ...(tools.length
+        ...(tools.length || webSearch
           ? {
-              tools: tools.map((t) => ({
-                name: t.name,
-                description: t.description,
-                input_schema: t.parameters,
-              })),
+              tools: [
+                ...tools.map((t) => ({
+                  name: t.name,
+                  description: t.description,
+                  input_schema: t.parameters,
+                })),
+                ...(webSearch ? [ANTHROPIC_WEB_SEARCH] : []),
+              ],
             }
           : {}),
         ...anthropicThinkingFields(effort),
@@ -310,6 +328,7 @@ export function buildChatRequest(
             })),
           }
         : {}),
+      ...(webSearch ? { plugins: [{ id: 'web', max_results: WEB_SEARCH_MAX_USES }] } : {}),
       ...openaiReasoningFields(cfg.provider, effort),
     }),
   }
@@ -338,6 +357,9 @@ export function parseChatResponse(provider: Provider, json: unknown): ChatRespon
     truncated: false,
     usage: { inputTokens: 0, outputTokens: 0 },
     raw: undefined,
+    webSearches: 0,
+    citations: [],
+    paused: false,
   }
   if (!isRecord(json)) return empty
 
@@ -354,6 +376,19 @@ export function parseChatResponse(provider: Provider, json: unknown): ChatRespon
         args: b.input,
       }))
     const usage = isRecord(json.usage) ? json.usage : {}
+    // Server-tool blocks are not ours to execute; we only read result/citation URLs.
+    const citations = uniqueCitations(
+      content.flatMap((b) => {
+        if (!isRecord(b)) return []
+        if (b.type === 'web_search_tool_result' && Array.isArray(b.content)) return b.content
+        if (b.type === 'text' && Array.isArray(b.citations)) return b.citations
+        return []
+      }),
+    )
+    const stu = isRecord(usage.server_tool_use) ? usage.server_tool_use : {}
+    const searchBlocks = content.filter(
+      (b) => isRecord(b) && b.type === 'server_tool_use' && b.name === 'web_search',
+    ).length
     return {
       text,
       toolCalls,
@@ -363,6 +398,9 @@ export function parseChatResponse(provider: Provider, json: unknown): ChatRespon
         outputTokens: typeof usage.output_tokens === 'number' ? usage.output_tokens : 0,
       },
       raw: content,
+      webSearches: typeof stu.web_search_requests === 'number' ? stu.web_search_requests : searchBlocks,
+      citations,
+      paused: json.stop_reason === 'pause_turn',
     }
   }
 
@@ -392,6 +430,9 @@ export function parseChatResponse(provider: Provider, json: unknown): ChatRespon
         outputTokens: typeof usage.candidatesTokenCount === 'number' ? usage.candidatesTokenCount : 0,
       },
       raw: parts,
+      webSearches: 0,
+      citations: [],
+      paused: false,
     }
   }
 
@@ -414,6 +455,12 @@ export function parseChatResponse(provider: Provider, json: unknown): ChatRespon
         })
     : []
   const usage = isRecord(json.usage) ? json.usage : {}
+  // OpenRouter web plugin: url_citation annotations on the message.
+  const citations = uniqueCitations(
+    (Array.isArray(message.annotations) ? message.annotations : [])
+      .filter((a) => isRecord(a) && a.type === 'url_citation')
+      .map((a) => (a as Record<string, unknown>).url_citation),
+  )
   return {
     text,
     toolCalls,
@@ -423,7 +470,21 @@ export function parseChatResponse(provider: Provider, json: unknown): ChatRespon
       outputTokens: typeof usage.completion_tokens === 'number' ? usage.completion_tokens : 0,
     },
     raw: message,
+    // OpenRouter's plugin reports no search count; one search per annotated reply.
+    webSearches: citations.length > 0 ? 1 : 0,
+    citations,
+    paused: false,
   }
+}
+
+/** `{url,title}` from web_search_result / web_search_result_location entries, deduped by URL. */
+function uniqueCitations(items: unknown[]): { url: string; title?: string }[] {
+  const seen = new Map<string, { url: string; title?: string }>()
+  for (const it of items) {
+    if (!isRecord(it) || typeof it.url !== 'string' || !it.url) continue
+    if (!seen.has(it.url)) seen.set(it.url, { url: it.url, ...(typeof it.title === 'string' ? { title: it.title } : {}) })
+  }
+  return [...seen.values()]
 }
 
 function textOfParts(parts: unknown[]): string {

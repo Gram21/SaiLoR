@@ -23,7 +23,7 @@ import {
   parseJudgeReply,
   type JudgeProposal,
 } from './judge'
-import { parseAnswer } from './parse'
+import { parseAnswer, parseSchemaRemarks } from './parse'
 
 /**
  * Agent mode's orchestration loop: a tool-using agent proposes values, a
@@ -64,6 +64,8 @@ export interface AgentInput {
   /** Pre-built few-shot block (see fewshot.ts). Goes into the agent's own
    *  system prompt only — the judge must not see the reviewer's examples. */
   examples?: string
+  /** Enable the annotator provider's built-in web search (see `supportsWebSearch`); default off. */
+  webSearch?: boolean
 }
 
 export interface AgentResult {
@@ -71,7 +73,8 @@ export interface AgentResult {
   rounds: number
   /** Combined agent+judge totals — see `judgeUsage` for the judge-call share
    *  alone, used to price the two targets separately when they differ. */
-  usage: { inputTokens: number; outputTokens: number; calls: number }
+  /** `webSearches` is always set by `runAgent`; optional so hand-built results stay valid. */
+  usage: { inputTokens: number; outputTokens: number; calls: number; webSearches?: number }
   judgeUsage: { inputTokens: number; outputTokens: number; calls: number }
   log: AgentEvent[]
 }
@@ -158,14 +161,14 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
   }
 
   const textAvailable = delivery === 'text' ? paperText.trim().length > 0 : true
-  const system = buildAgentSystemPrompt(schema, targets, delivery, input.examples)
+  const system = buildAgentSystemPrompt(schema, targets, delivery, input.examples, input.webSearch)
 
   const authors = paper.authors.length > 0 ? paper.authors.join(', ') : 'unknown authors'
   const caption = `Paper: "${paper.title}" by ${authors}.\n\nExtract the annotations for the fields listed in the schema. Use your tools to search and read the paper, and end each round by calling submit_annotations.`
 
   const messages: ChatMessage[] = [{ role: 'user', content: caption }]
   const log: AgentEvent[] = []
-  const usage = { inputTokens: 0, outputTokens: 0, calls: 0 }
+  const usage = { inputTokens: 0, outputTokens: 0, calls: 0, webSearches: 0 }
   const judgeUsage = { inputTokens: 0, outputTokens: 0, calls: 0 }
   const emit = (e: AgentEvent) => {
     log.push(e)
@@ -173,6 +176,7 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
   }
 
   const fetchedUrls = new Set<string>()
+  const searchResultUrls = new Set<string>()
   const fetchedExcerpts = new Map<string, string>()
   const verdictByPath = new Map<string, JudgeVerdict>()
   const signatureByPath = new Map<string, string>()
@@ -214,7 +218,10 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
 
     for (let iter = 0; iter < maxIterations; iter++) {
       throwIfAborted(signal)
-      const req = buildChatRequest(config, system, messages, AGENT_TOOLS, { paper: paperPart })
+      const req = buildChatRequest(config, system, messages, AGENT_TOOLS, {
+        paper: paperPart,
+        webSearch: input.webSearch,
+      })
       const res = await deps.callLlm(req, signal)
       if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
       const json = safeJson(res.body)
@@ -222,6 +229,18 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
       usage.inputTokens += parsed.usage.inputTokens
       usage.outputTokens += parsed.usage.outputTokens
       usage.calls++
+      if (parsed.webSearches > 0) {
+        usage.webSearches += parsed.webSearches
+        emit({ round, kind: 'tool', message: 'Searching the web…' })
+      }
+      for (const c of parsed.citations) searchResultUrls.add(c.url)
+
+      // Server-tool loop paused: replay the turn verbatim (incl. encrypted
+      // search content) so the provider continues it; costs an iteration.
+      if (parsed.paused && parsed.toolCalls.length === 0) {
+        messages.push({ role: 'assistant', content: parsed.text || undefined, raw: parsed.raw })
+        continue
+      }
 
       if (parsed.toolCalls.length === 0) {
         // Plain-text fallback: the model answered directly instead of using
@@ -238,6 +257,7 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
                 confidence: f.confidence ?? undefined,
               })),
               skipped: answer.skipped,
+              schemaRemarks: answer.schemaRemarks,
             }
           }
         }
@@ -302,7 +322,7 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
       message: `Submitted ${submission.fields.length} field(s), skipped ${submission.skipped.length}.`,
     })
 
-    const { answer, failures } = checkSubmission(schema, submission, paperText, fetchedUrls)
+    const { answer, failures } = checkSubmission(schema, submission, paperText, fetchedUrls, searchResultUrls)
     lastAnswer = answer
     lastFailures = failures
     emit({
@@ -327,6 +347,7 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
         evidence: s.evidence,
         source: s.source,
         webExcerpt: s.source && fetchedExcerpts.has(s.source) ? fetchedExcerpts.get(s.source) : undefined,
+        webUnverified: s.webUnverified,
       })
       signatureByPath.set(s.path, sig)
     }
@@ -422,8 +443,15 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
     finalFields.push({ ...s, judge: verdictByPath.get(s.path) })
   }
 
+  // prevSubmission is the last round's submission on every exit path.
+  const schemaRemarks = parseSchemaRemarks(schema, prevSubmission?.schemaRemarks)
   return {
-    answer: { fields: finalFields, skipped: lastAnswer.skipped, rejected: finalRejected },
+    answer: {
+      fields: finalFields,
+      skipped: lastAnswer.skipped,
+      rejected: finalRejected,
+      ...(schemaRemarks.length > 0 ? { schemaRemarks } : {}),
+    },
     rounds: round,
     usage,
     judgeUsage,

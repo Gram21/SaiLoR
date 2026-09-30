@@ -20,6 +20,8 @@ export interface JudgeProposal {
   source?: string
   /** For a web-sourced value: the fetched page excerpt the agent quoted from. */
   webExcerpt?: string
+  /** Sourced from a web-search result the agent never read: the quote is unchecked. */
+  webUnverified?: boolean
 }
 
 export interface JudgeReply {
@@ -93,6 +95,11 @@ export function buildJudgeUserMessage(proposals: JudgeProposal[]): string {
       `  source: ${p.source ?? 'paper'}`,
       `  evidence: ${JSON.stringify(oneLine(p.evidence))}`,
     ]
+    if (p.webUnverified) {
+      bits.push(
+        '  note: web-search result; the quote could NOT be checked against the page. Judge plausibility conservatively: "revise" if you cannot corroborate the value from the paper.',
+      )
+    }
     if (p.webExcerpt) bits.push(`  fetched excerpt: ${JSON.stringify(oneLine(p.webExcerpt).slice(0, 1000))}`)
     return bits.join('\n')
   })

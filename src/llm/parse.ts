@@ -1,8 +1,9 @@
 import type { ResolvedDef } from '../model/schema'
 import type { FieldValue } from '../model/annotations'
-import type { LlmAnswer, RejectedSuggestion, SkippedField, Suggestion } from './types'
+import type { LlmAnswer, RejectedSuggestion, SchemaRemark, SkippedField, Suggestion } from './types'
 import { parsePath, resolvePath, MAX_UNBOUNDED_INDEX } from './paths'
 import { isPlausibleYear } from '../model/year'
+import { oneLine } from './prompt'
 
 /**
  * Turning a model's answer into `Suggestion[]` is the trust boundary of the AI
@@ -25,6 +26,8 @@ import { isPlausibleYear } from '../model/year'
 /** Evidence is a quote for the reviewer to eyeball, not a document; keep rows readable. */
 const MAX_EVIDENCE_CHARS = 500
 const MAX_REASON_CHARS = 500
+const MAX_REMARKS = 5
+const MAX_REMARK_CHARS = 300
 /** Prose before the JSON may contain stray braces; try a few starts, then give up. */
 const MAX_BRACE_CANDIDATES = 8
 
@@ -97,7 +100,7 @@ function scanForObject(text: string): Record<string, unknown> | null {
 }
 
 /** Dig the answer object out of whatever the model actually sent. */
-function extractObject(raw: unknown): Record<string, unknown> | null {
+export function extractObject(raw: unknown): Record<string, unknown> | null {
   if (typeof raw !== 'string') return null
   const text = raw.trim()
   if (!text) return null
@@ -250,6 +253,37 @@ function asArray(raw: unknown): unknown[] {
   return Array.isArray(raw) ? raw : []
 }
 
+function schemaNames(defs: ResolvedDef[], out = new Set<string>()): Set<string> {
+  for (const d of defs) {
+    out.add(d.name)
+    schemaNames(d.children, out)
+  }
+  return out
+}
+
+/**
+ * Tolerant read of a `schema_remarks` array: keeps entries whose path resolves
+ * in the schema (or is a plain field name it contains), flattened and capped.
+ * Never throws; junk is dropped because remarks are optional feedback.
+ */
+export function parseSchemaRemarks(schema: ResolvedDef[], raw: unknown): SchemaRemark[] {
+  const defs = Array.isArray(schema) ? schema : []
+  const names = schemaNames(defs)
+  const out: SchemaRemark[] = []
+  for (const e of asArray(raw)) {
+    if (out.length >= MAX_REMARKS) break
+    if (!isPlainObject(e) || typeof e.path !== 'string' || typeof e.issue !== 'string') continue
+    const path = e.path.trim()
+    const issue = oneLine(e.issue).slice(0, MAX_REMARK_CHARS)
+    if (!path || !issue) continue
+    const known = names.has(path) || resolvePath(defs, path, { maxUnboundedIndex: MAX_UNBOUNDED_INDEX })
+    if (!known) continue
+    const suggestion = typeof e.suggestion === 'string' ? oneLine(e.suggestion).slice(0, MAX_REMARK_CHARS) : ''
+    out.push(suggestion ? { path, issue, suggestion } : { path, issue })
+  }
+  return out
+}
+
 /**
  * Validate an already-parsed answer object against the schema — the same
  * checks `parseAnswer` runs, factored out so agent mode (which gets its
@@ -322,6 +356,9 @@ export function validateAnswerObject(schema: ResolvedDef[], root: Record<string,
     if (path === '' || reason === '' || !parsePath(path)) continue
     skipped.push({ path, reason: reason.slice(0, MAX_REASON_CHARS) })
   }
+
+  const remarks = parseSchemaRemarks(defs, root.schema_remarks)
+  if (remarks.length > 0) answer.schemaRemarks = remarks
 
   return answer
 }

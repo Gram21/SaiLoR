@@ -26,6 +26,19 @@ export interface ProviderInfo {
    */
   supportsModelListing: boolean
   /**
+   * Whether agent mode can enable this provider's built-in web search
+   * alongside our function tools (chat.ts `webSearch`). Decisions, checked
+   * against docs 2026-09: anthropic (server tool web_search_20250305,
+   * platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool) and
+   * openrouter (plugin {id:'web'}, openrouter.ai/docs/guides/features/plugins/web-search)
+   * yes. google: google_search + functionDeclarations only for Gemini 3 in the
+   * Interactions API (ai.google.dev/gemini-api/docs/tool-combination), not the
+   * generateContent path used here. openai: full web_search tool is Responses-API
+   * only; Chat Completions has only dedicated search models
+   * (developers.openai.com/api/docs/guides/tools-web-search). Rest: no equivalent.
+   */
+  supportsWebSearch: boolean
+  /**
    * Output-length param for an OpenAI-shaped body (ignored by `anthropic`/`google`,
    * which have their own fields). Not uniform across "OpenAI-compatible" APIs:
    * OpenAI's newer models and xAI/Groq reject `max_tokens` in favor of
@@ -43,6 +56,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     editableBaseUrl: false,
     supportsPdf: true,
     supportsModelListing: true,
+    supportsWebSearch: true,
     tokenParam: 'max_tokens', // unused: Anthropic has its own body shape below
   },
   openai: {
@@ -52,6 +66,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     editableBaseUrl: false,
     supportsPdf: true,
     supportsModelListing: true,
+    supportsWebSearch: false,
     // Required by o-series/current GPT models (OpenAI rejects `max_tokens` on
     // them); still accepted on older models, so this name is safe to send always.
     tokenParam: 'max_completion_tokens',
@@ -63,6 +78,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     editableBaseUrl: false,
     supportsPdf: true,
     supportsModelListing: true,
+    supportsWebSearch: false,
     tokenParam: 'max_tokens', // unused: Gemini has its own body shape below
   },
   openrouter: {
@@ -72,6 +88,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     editableBaseUrl: false,
     supportsPdf: true,
     supportsModelListing: true,
+    supportsWebSearch: true,
     // OpenRouter fronts many backends behind one contract and documents
     // `max_tokens`; it does the per-backend translation, not the caller.
     tokenParam: 'max_tokens',
@@ -84,6 +101,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     // No inline document/file input on chat completions — text only.
     supportsPdf: false,
     supportsModelListing: true,
+    supportsWebSearch: false,
     tokenParam: 'max_completion_tokens',
   },
   mistral: {
@@ -95,6 +113,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     // inline-base64 variant, and a local file has no URL to give it.
     supportsPdf: false,
     supportsModelListing: true,
+    supportsWebSearch: false,
     tokenParam: 'max_tokens',
   },
   deepseek: {
@@ -104,6 +123,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     editableBaseUrl: false,
     supportsPdf: false, // text-only; no file/vision input on any current model
     supportsModelListing: true,
+    supportsWebSearch: false,
     tokenParam: 'max_tokens',
   },
   xai: {
@@ -115,6 +135,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     // call; this app only sends single-request inline attachments.
     supportsPdf: false,
     supportsModelListing: true,
+    supportsWebSearch: false,
     tokenParam: 'max_completion_tokens',
   },
   'openai-compatible': {
@@ -125,6 +146,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     // A self-hosted server (llama.cpp, LM Studio, vLLM…) almost never takes a PDF.
     supportsPdf: false,
     supportsModelListing: false,
+    supportsWebSearch: false,
     // The de facto standard these servers implement; no confirmed support for
     // the OpenAI-specific `max_completion_tokens` rename.
     tokenParam: 'max_tokens',
@@ -143,6 +165,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     // itself; `buildRequest`/`extractText` below never handle it.
     supportsPdf: false,
     supportsModelListing: false,
+    supportsWebSearch: false,
     tokenParam: 'max_tokens', // unused — systemone.ts builds its own request body
   },
 }

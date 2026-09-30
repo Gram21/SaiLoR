@@ -112,6 +112,25 @@ describe('runAgent', () => {
     expect(result.usage.calls).toBe(2)
   })
 
+  it('carries the last submission\'s schema remarks into the answer', async () => {
+    const remarks = [
+      { path: 'Year', issue: 'ambiguous', suggestion: 'publication year' },
+      { path: 'Bogus', issue: 'dropped' },
+    ]
+    const deps = scriptedDeps([
+      toolCallResponse('submit_annotations', { fields: goodFields, skipped: [], schema_remarks: remarks }),
+      judgeResponse([
+        { path: 'Study Type', verdict: 'accept', feedback: '' },
+        { path: 'Year', verdict: 'accept', feedback: '' },
+      ]),
+    ])
+    const result = await runAgent(
+      { config: config(), judgeConfig: config({ id: 'judge' }), schema, targets, paper, paperText: PAPER_TEXT, delivery: 'text' },
+      deps,
+    )
+    expect(result.answer.schemaRemarks).toEqual([remarks[0]])
+  })
+
   it('(b) revises a judge-flagged field and is accepted in round 2', async () => {
     const revisedFields = [
       { path: 'Study Type', value: 'RCT', evidence: 'a randomized controlled trial conducted', source: 'paper' },

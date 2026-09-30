@@ -27,7 +27,19 @@ export interface EstimateRunInput {
   delivery: 'text' | 'pdf'
   /** Tokens added to every request's input for a few-shot block (fewshot.ts). */
   fewShotTokens?: number
+  /** Agent mode with provider web search on: adds the heuristic below. */
+  webSearch?: boolean
 }
+
+/** Shown next to the estimate when web search is on. */
+export const WEB_SEARCH_NOTE =
+  "Provider web search is billed per search on top of tokens (check your provider's pricing)"
+
+// ponytail: guessed, not measured. Search results land in the context
+// (input +10% cached case, +30% uncached ceiling) and a paused server-tool
+// loop costs a few extra requests; recalibrate against real usage.
+const WEB_SEARCH_INPUT_FACTOR = { low: 1.1, high: 1.3 }
+const WEB_SEARCH_EXTRA_REQUESTS = { low: 1, high: 3 }
 
 export interface TokenEstimate {
   low: TokenUsage
@@ -120,13 +132,14 @@ export function estimateRun(input: EstimateRunInput): TokenEstimate {
     const agentHigh = AGENT_REQUESTS_PER_PAPER.high
     // Cached-ish lower bound: the paper prefix billed once, plus a small
     // increment per extra round.
-    inputLow += promptInputLow + (agentLow - 1) * AGENT_ROUND_INCREMENT_TOKENS
     // Uncached upper bound: the whole prefix re-billed on every round.
-    inputHigh += promptInputHigh * agentHigh
+    const ws = input.webSearch
+    inputLow += (promptInputLow + (agentLow - 1) * AGENT_ROUND_INCREMENT_TOKENS) * (ws ? WEB_SEARCH_INPUT_FACTOR.low : 1)
+    inputHigh += promptInputHigh * agentHigh * (ws ? WEB_SEARCH_INPUT_FACTOR.high : 1)
     outputLow += outputPerFieldLow
     outputHigh += outputPerFieldHigh
-    requestsLow += agentLow
-    requestsHigh += agentHigh
+    requestsLow += agentLow + (ws ? WEB_SEARCH_EXTRA_REQUESTS.low : 0)
+    requestsHigh += agentHigh + (ws ? WEB_SEARCH_EXTRA_REQUESTS.high : 0)
 
     // Judge calls: each judge call also reads the paper, but never few-shot
     // examples (the judge must not see them — see fewshot.ts).

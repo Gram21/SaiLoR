@@ -146,6 +146,8 @@ export interface Suggestion {
   confidence: number | null
   /** Agent mode only: where the value came from — "paper", or the URL of a web source. */
   source?: string
+  /** Agent mode only: sourced from a provider web-search result whose page we never saw, so the quote is unchecked. */
+  webUnverified?: boolean
   /** Agent mode only: the judge's last verdict on this value. */
   judge?: JudgeVerdict
 }
@@ -176,9 +178,17 @@ export interface SkippedField {
   reason: string
 }
 
+/** Where a schema's wording got in the model's way; feedback for the schema author, never applied. */
+export interface SchemaRemark {
+  path: string
+  issue: string
+  suggestion?: string
+}
+
 export interface LlmAnswer {
   fields: Suggestion[]
   skipped: SkippedField[]
+  schemaRemarks?: SchemaRemark[]
   /** Suggestions the model returned that we refused (bad path, wrong type, not in options…). */
   rejected: RejectedSuggestion[]
 }

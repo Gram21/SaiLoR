@@ -1,4 +1,4 @@
-import type { WebFetchResult } from './types'
+import type { SchemaRemark, WebFetchResult } from './types'
 
 /**
  * Agent-mode tools: what the model can call, and what running one actually
@@ -112,6 +112,16 @@ export const AGENT_TOOLS: ToolDef[] = [
           },
         },
         notes: { type: 'string' },
+        schema_remarks: {
+          type: 'array',
+          description:
+            'Optional, up to 5: where a field description/option was ambiguous or missing something. Never let this affect your answers.',
+          items: {
+            type: 'object',
+            properties: { path: { type: 'string' }, issue: { type: 'string' }, suggestion: { type: 'string' } },
+            required: ['path', 'issue'],
+          },
+        },
       },
       required: ['fields', 'skipped'],
     },
@@ -139,6 +149,8 @@ export interface SubmitPayload {
   fields: SubmitField[]
   skipped: SubmitSkip[]
   notes?: string
+  /** Unvalidated; agent.ts checks the paths against the schema. */
+  schemaRemarks?: SchemaRemark[]
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -168,7 +180,17 @@ export function parseSubmitArgs(args: unknown): SubmitPayload {
         .map((s) => ({ path: String(s.path), reason: String(s.reason) }))
     : []
   const notes = typeof root.notes === 'string' ? root.notes : undefined
-  return { fields, skipped, notes }
+  const schemaRemarks: SchemaRemark[] = Array.isArray(root.schema_remarks)
+    ? root.schema_remarks
+        .filter(isRecord)
+        .filter((r) => typeof r.path === 'string' && typeof r.issue === 'string')
+        .map((r) => ({
+          path: String(r.path),
+          issue: String(r.issue),
+          ...(typeof r.suggestion === 'string' ? { suggestion: r.suggestion } : {}),
+        }))
+    : []
+  return { fields, skipped, notes, ...(schemaRemarks.length > 0 ? { schemaRemarks } : {}) }
 }
 
 // ---------------------------------------------------------------------------

@@ -394,3 +394,27 @@ describe('coercion does not invent values the model never sent', () => {
     expect(parseAnswer(schema, one('Note', 'x', { confidence: 0 })).fields[0]?.confidence).toBe(0)
   })
 })
+
+describe('schema_remarks', () => {
+  const answer = (remarks: unknown) => parseAnswer(schema, JSON.stringify({ fields: [], schema_remarks: remarks }))
+
+  it('keeps remarks on known paths or field names, flattened and capped', () => {
+    const r = answer([
+      { path: 'Findings[0]/Claim', issue: 'unclear\n  what a claim is', suggestion: 'x'.repeat(400) },
+      { path: 'Year', issue: 'which year?' },
+      { path: 'Nope', issue: 'unknown' },
+      { path: 'Year' },
+      'junk',
+    ]).schemaRemarks
+    expect(r).toHaveLength(2)
+    expect(r?.[0].issue).toBe('unclear what a claim is')
+    expect(r?.[0].suggestion).toHaveLength(300)
+    expect(r?.[1]).toEqual({ path: 'Year', issue: 'which year?' })
+  })
+
+  it('caps at 5 and never fails the parse on a bad shape', () => {
+    const many = Array.from({ length: 9 }, () => ({ path: 'Year', issue: 'i' }))
+    expect(answer(many).schemaRemarks).toHaveLength(5)
+    expect(answer('oops').schemaRemarks).toBeUndefined()
+  })
+})

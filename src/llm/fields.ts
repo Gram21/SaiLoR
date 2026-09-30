@@ -43,8 +43,21 @@ export function unansweredFields(
   schema: ResolvedDef[],
   tree: AnnotationValueTree | undefined,
 ): FieldTarget[] {
+  return fieldTargets(schema, tree, (def, value) => isUnanswered(def, value))
+}
+
+/**
+ * Every field whose existing value satisfies `keep`, in schema order. Shared by
+ * `unansweredFields` and `answeredFields` (recheck.ts) so both see the same
+ * instances.
+ */
+export function fieldTargets(
+  schema: ResolvedDef[],
+  tree: AnnotationValueTree | undefined,
+  keep: (def: ResolvedDef, value: FieldValue | undefined) => boolean,
+): FieldTarget[] {
   const out: FieldTarget[] = []
-  walk(schema, tree, [], out)
+  walk(schema, tree, [], out, keep)
   return out
 }
 
@@ -53,6 +66,7 @@ function walk(
   tree: AnnotationValueTree | undefined,
   prefix: RawSeg[],
   out: FieldTarget[],
+  keep: (def: ResolvedDef, value: FieldValue | undefined) => boolean,
 ): void {
   for (const def of defs) {
     // A normalized tree always has at least one instance per node, but the JSON is
@@ -64,11 +78,11 @@ function walk(
     const instances = Array.isArray(raw) ? raw : [{}]
     instances.forEach((inst, index) => {
       const segs = [...prefix, { name: def.name, index }]
-      if (isField(def) && isUnanswered(def, inst?.value)) {
+      if (isField(def) && keep(def, inst?.value)) {
         out.push({ path: formatPath(segs), def, value: inst?.value })
       }
       if (def.children.length > 0) {
-        walk(def.children, inst?.children, segs, out)
+        walk(def.children, inst?.children, segs, out, keep)
       }
     })
   }
