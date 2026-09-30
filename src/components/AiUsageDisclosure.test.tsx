@@ -78,4 +78,11 @@ describe('AiUsageDisclosure', () => {
     render(<AiUsageDisclosure project={project} records={records} />)
     expect(screen.getByText(/prompt/)).toBeInTheDocument()
   })
+
+  it('shows replaced answers and web searches only when present', () => {
+    const base = { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-01-01T00:00:00.000Z' }
+    render(<AiUsageDisclosure project={project} records={[{ ...base, rechecked: 2, webSearches: 1 }]} />)
+    expect(screen.getByText(/2 replaced/)).toBeInTheDocument()
+    expect(screen.getByText(/1 web search(?!es)/)).toBeInTheDocument()
+  })
 })

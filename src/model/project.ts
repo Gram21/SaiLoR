@@ -43,8 +43,9 @@ export interface AiUsageRecord {
   appliedAt: string
   /** "prompt" for a single suggest-and-apply pass, "agent" for the
    *  tool-using agent with a judge review loop, "classify" for a System One
-   *  decision-model pass. Absent for a record predating this distinction. */
-  mode?: 'prompt' | 'agent' | 'classify'
+   *  decision-model pass, "screening" for an include/exclude proposal pass.
+   *  Absent for a record predating this distinction. */
+  mode?: 'prompt' | 'agent' | 'classify' | 'screening'
   /** The judge model that reviewed the agent's answers, agent mode only. */
   judge?: { provider: string; model: string }
   /** How many agent rounds ran. Agent mode only. */
@@ -58,6 +59,11 @@ export interface AiUsageRecord {
    *  however many this record covers. The field still counts as AI-assisted
    *  regardless — editing a proposal doesn't erase that it started as one. */
   edited?: number
+  /** How many already-answered fields the AI re-check replaced (each was an
+   *  explicit reviewer tick — see REQ-LLM-660). */
+  rechecked?: number
+  /** Provider web searches the agent ran, when web search was on. */
+  webSearches?: number
   /** The seat the values were written into ("1".."N" or "consolidation"). */
   reviewer?: string
 }
@@ -253,7 +259,7 @@ export interface Project {
    * Whether one reviewer seat is dedicated to the AI, so its answers are
    * compared against the human reviewers' like any other seat. Defaults to
    * false; opt in with `config.aiSeat: true`. Only *effective* when
-   * `aiEnabled && reviewers >= 2 && !screening` — see `aiSeatId`. Stored as
+   * `aiEnabled && reviewers >= 2` — see `aiSeatId`. Stored as
    * authored even when ineffective (e.g. AI turned off, or reviewers dropped
    * below 2), so re-enabling either restores it rather than losing the choice.
    */
@@ -276,11 +282,11 @@ export interface Project {
  * stored id — so there is nothing to merge-conflict over which number it is.
  *
  * Effective only when AI is actually usable on this project: `aiEnabled` and
- * `aiSeat` both on, at least 2 reviewers configured, and not a screening
- * project (screening decides the review's corpus, not a field a model fills).
+ * `aiSeat` both on and at least 2 reviewers configured. A screening project
+ * qualifies too: the AI's include/exclude proposals go into that seat.
  */
 export function aiSeatId(project: Pick<Project, 'aiSeat' | 'aiEnabled' | 'reviewers' | 'screening'>): string | null {
-  if (!project.aiSeat || !project.aiEnabled || project.reviewers < 2 || project.screening !== null) return null
+  if (!project.aiSeat || !project.aiEnabled || project.reviewers < 2) return null
   return String(project.reviewers)
 }
 
@@ -441,7 +447,9 @@ function parseAiUsage(raw: unknown): AiUsageRecord[] {
       // Each optional field is dropped on its own if malformed — the base
       // record above is never discarded for a bad extra, same rule as the
       // rest of this file's hand-editable sub-records.
-      if (e.mode === 'prompt' || e.mode === 'agent' || e.mode === 'classify') record.mode = e.mode
+      if (e.mode === 'prompt' || e.mode === 'agent' || e.mode === 'classify' || e.mode === 'screening') {
+        record.mode = e.mode
+      }
       const judge = parseAiUsageJudge(e.judge)
       if (judge) record.judge = judge
       if (typeof e.rounds === 'number' && Number.isFinite(e.rounds)) record.rounds = e.rounds
@@ -449,6 +457,8 @@ function parseAiUsage(raw: unknown): AiUsageRecord[] {
       if (verdicts) record.verdicts = verdicts
       if (typeof e.fewShot === 'number' && Number.isFinite(e.fewShot)) record.fewShot = e.fewShot
       if (typeof e.edited === 'number' && Number.isFinite(e.edited)) record.edited = e.edited
+      if (typeof e.rechecked === 'number' && Number.isFinite(e.rechecked)) record.rechecked = e.rechecked
+      if (typeof e.webSearches === 'number' && Number.isFinite(e.webSearches)) record.webSearches = e.webSearches
       if (typeof e.reviewer === 'string') record.reviewer = e.reviewer
       out.push(record)
     }

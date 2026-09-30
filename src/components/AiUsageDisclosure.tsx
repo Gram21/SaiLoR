@@ -44,6 +44,10 @@ export function AiUsageDisclosure({ project, records }: Props) {
             {typeof r.edited === 'number' && r.edited > 0 && (
               <> — {r.edited} edited</>
             )}
+            {typeof r.rechecked === 'number' && r.rechecked > 0 && <> — {r.rechecked} replaced</>}
+            {typeof r.webSearches === 'number' && r.webSearches > 0 && (
+              <> — {r.webSearches} web search{r.webSearches === 1 ? '' : 'es'}</>
+            )}
             {r.reviewer && <> — {seatLabel(project, r.reviewer)}</>}
           </li>
         ))}

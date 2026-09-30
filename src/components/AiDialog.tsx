@@ -6,13 +6,15 @@ import {
   type AiMode,
   type PaperNotes,
   type PaperSkip,
+  type RecheckRow,
   type ReviewRow,
 } from '../state/aiStore'
 import { useStore } from '../state/store'
+import { getPlatform } from '../platform'
 import { aiSeatId, seatLabel } from '../model/project'
 import { PROVIDERS } from '../llm/providers'
 import { displayPath, parsePath, resolvePath } from '../llm/paths'
-import { estimateRun, estimateCost, estimateCostSplit } from '../llm/cost'
+import { estimateRun, estimateCost, estimateCostSplit, WEB_SEARCH_NOTE, type TokenEstimate } from '../llm/cost'
 import { systemOneEligible } from '../llm/systemone'
 import type { LlmConfig } from '../llm/types'
 import type { FieldValue } from '../model/annotations'
@@ -130,14 +132,30 @@ function estimateLine(
   pages: number[],
   fields: number,
   fewShotTokens: number,
+  webSearch: boolean,
+  /** Answered fields per paper when re-check is on (0 = off): one more prompt-style request per paper. */
+  recheckFields: number,
 ): string {
-  const est = estimateRun({
+  const input = {
     papers: pages.map((p) => ({ pages: p })),
-    fieldsPerPaper: fields,
     mode,
     delivery: deliveryOf(selected),
     fewShotTokens,
-  })
+  }
+  let est = estimateRun({ ...input, fieldsPerPaper: fields, webSearch })
+  if (recheckFields > 0) {
+    const rc = estimateRun({ ...input, fieldsPerPaper: recheckFields })
+    const sum = (a: TokenEstimate['low'], b: TokenEstimate['low']) => ({
+      inputTokens: a.inputTokens + b.inputTokens,
+      outputTokens: a.outputTokens + b.outputTokens,
+    })
+    est = {
+      ...est,
+      low: sum(est.low, rc.low),
+      high: sum(est.high, rc.high),
+      requests: { low: est.requests.low + rc.requests.low, high: est.requests.high + rc.requests.high },
+    }
+  }
   const cost =
     mode === 'agent' && judgeCfg ? estimateCostSplit(est, selected, judgeCfg) : estimateCost(est, selected)
   const tokens =
@@ -179,15 +197,18 @@ function modelOption(c: LlmConfig): { id: string; label: string } {
 /** The consequences warning for turning on "annotate all papers", worded to stay
  *  accurate whichever mode is selected — shown both in the one-time confirmation
  *  and, once confirmed, as a standing reminder under the toggle. */
-function allPapersWarning(mode: AiMode, count: number): string {
+function allPapersWarning(mode: AiMode, count: number, recheck: boolean): string {
   const perPaper = mode === 'agent' ? 'many requests per paper' : 'one request per paper'
   const time = mode === 'agent' ? 'several minutes per paper' : 'about a minute per paper'
   const cost = mode === 'agent' ? ', several times higher than prompt mode' : ''
   return (
     `This sends ${count} paper${count === 1 ? '' : 's'} — ${perPaper}. Your provider charges ` +
     `your API key for every request, so cost scales with the number of papers${cost}. Rough ` +
-    `estimate: ${time}. Every paper's content leaves this machine. You can cancel at any time ` +
-    'and keep whatever has finished so far.'
+    `estimate: ${time}. Every paper's content leaves this machine. ` +
+    (recheck
+      ? "Re-check is on, so this includes papers you marked finished and adds a second request per paper. "
+      : '') +
+    'You can cancel at any time and keep whatever has finished so far.'
   )
 }
 
@@ -230,6 +251,13 @@ export function AiDialog() {
   const agentEvents = useAiStore((s) => s.agentEvents)
   const runErrors = useAiStore((s) => s.errors)
   const usage = useAiStore((s) => s.usage)
+  const recheck = useAiStore((s) => s.recheck)
+  const answeredCount = useAiStore((s) => s.answeredCount)
+  const webSearch = useAiStore((s) => s.webSearch)
+  const saveFeedback = useAiStore((s) => s.saveFeedback)
+  const feedbackResult = useAiStore((s) => s.feedbackResult)
+  const recheckRows = useAiStore((s) => s.recheckRows)
+  const webSearchesByPaper = useAiStore((s) => s.webSearchesByPaper)
 
   const closeDialog = useAiStore((s) => s.closeDialog)
   const setMinimized = useAiStore((s) => s.setMinimized)
@@ -243,6 +271,10 @@ export function AiDialog() {
   const setSpendCap = useAiStore((s) => s.setSpendCap)
   const setFewShot = useAiStore((s) => s.setFewShot)
   const setFewShotCount = useAiStore((s) => s.setFewShotCount)
+  const setRecheck = useAiStore((s) => s.setRecheck)
+  const setWebSearch = useAiStore((s) => s.setWebSearch)
+  const setSaveFeedback = useAiStore((s) => s.setSaveFeedback)
+  const toggleRecheckRow = useAiStore((s) => s.toggleRecheckRow)
   const ensurePageCounts = useAiStore((s) => s.ensurePageCounts)
   const run = useAiStore((s) => s.run)
   const resumeBatch = useAiStore((s) => s.resumeBatch)
@@ -262,12 +294,13 @@ export function AiDialog() {
   const currentReviewer = useStore((s) => s.currentReviewer)
   const selectPaper = useStore((s) => s.selectPaper)
   const requestPdfFind = useStore((s) => s.requestPdfFind)
+  const saveHandle = useStore((s) => s.saveHandle)
 
   /** Clicking a paper-sourced evidence quote: switch to that paper if needed,
    *  ask `PdfViewer` to find+highlight it, and peek at the PDF (see `minimized`). */
-  const jumpToEvidence = (row: ReviewRow) => {
-    if (row.paperId !== currentPaperId) selectPaper(row.paperId)
-    requestPdfFind(row.paperId, row.suggestion.evidence)
+  const jumpToEvidence = (paperId: string, quote: string) => {
+    if (paperId !== currentPaperId) selectPaper(paperId)
+    requestPdfFind(paperId, quote)
     setMinimized(true)
   }
 
@@ -337,7 +370,14 @@ export function AiDialog() {
   // and the attention-only filter.
   const attentionRows = rows.filter((r) => r.flagged || !r.checked)
   const running = phase === 'reading' || phase === 'calling' || phase === 'parsing'
-  const canStartSingle = !!currentPaper && currentPaperHasPdf && targets.length > 0
+  const canStartSingle =
+    !!currentPaper && currentPaperHasPdf && (targets.length > 0 || (recheck && answeredCount > 0))
+  const webSearchSupported = !!selected && PROVIDERS[selected.provider].supportsWebSearch
+  const webSearchOn = mode === 'agent' && webSearch && webSearchSupported
+  const feedbackPossible = getPlatform().kind === 'electron' && !!saveHandle?.path
+  const tickedReplacements = recheckRows.filter((r) => r.outcome.verdict === 'disagree' && r.checked).length
+  const applyCount = checkedCount + tickedReplacements
+  const totalWebSearches = Object.values(webSearchesByPaper).reduce((n, c) => n + c, 0)
   const canStartAll = candidates.length > 0
   const canStart = allPapers ? canStartAll : canStartSingle
 
@@ -360,6 +400,8 @@ export function AiDialog() {
           scopePaperIds.map((id) => pageCounts[id]),
           targets.length,
           fewShotTokens,
+          webSearchOn,
+          recheck ? answeredCount : 0,
         )
       : scopePaperIds.some((id) => pageCountsLoading[id])
         ? 'Estimating…'
@@ -498,7 +540,7 @@ export function AiDialog() {
 
               {pendingAllPapers && !allPapers && (
                 <div className="ai-confirm">
-                  <p className="ai-note">{allPapersWarning(mode, candidates.length)}</p>
+                  <p className="ai-note">{allPapersWarning(mode, candidates.length, recheck)}</p>
                   <div className="ai-foot">
                     <button type="button" onClick={() => setPendingAllPapers(false)} title="Keep annotating only the current paper">
                       Current paper only
@@ -518,11 +560,13 @@ export function AiDialog() {
                   </div>
                 </div>
               )}
-              {allPapers && <p className="ai-note">{allPapersWarning(mode, candidates.length)}</p>}
+              {allPapers && <p className="ai-note">{allPapersWarning(mode, candidates.length, recheck)}</p>}
 
               <p className="ai-targets">
                 {targets.length === 0
-                  ? 'Every field of this paper is already filled in — there is nothing to propose.'
+                  ? recheck && answeredCount > 0
+                    ? 'Every field of this paper is already filled in — only the re-check will run.'
+                    : 'Every field of this paper is already filled in — there is nothing to propose.'
                   : `${targets.length} empty field${targets.length === 1 ? '' : 's'} will be proposed.`}
               </p>
 
@@ -685,6 +729,8 @@ export function AiDialog() {
                       judgeCfg &&
                       judgeCfg.provider !== selected.provider &&
                       ` The judge's review is sent to ${PROVIDERS[judgeCfg.provider].label} (${judgeCfg.model}) as well — it also sees the paper.`}
+                    {webSearchOn &&
+                      ` Search queries chosen by the model are handled by ${PROVIDERS[selected.provider].label}.`}
                     {mode !== 'classify' &&
                       crossCheckCfg &&
                       ` The cross-check fields are sent to ${PROVIDERS[crossCheckCfg.provider].label} (${crossCheckCfg.model}) as well.`}
@@ -738,6 +784,57 @@ export function AiDialog() {
                     )}
                   </>
                 )}
+
+                <label className="ai-toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={recheck}
+                    disabled={mode !== 'prompt'}
+                    onChange={(e) => setRecheck(e.target.checked)}
+                  />
+                  Also re-check fields I've already filled
+                </label>
+                <p className="ai-note">
+                  The AI double-checks values already entered in this seat and flags likely mistakes.
+                  Nothing is changed unless you tick a proposed replacement.
+                  {mode !== 'prompt' && ' Available in Prompt mode only.'}
+                </p>
+
+                {mode === 'agent' && (
+                  <>
+                    <label className="ai-toggle-row">
+                      <input
+                        type="checkbox"
+                        checked={webSearchOn}
+                        disabled={!webSearchSupported}
+                        onChange={(e) => setWebSearch(e.target.checked)}
+                      />
+                      Let the model search the web
+                    </label>
+                    <p className="ai-note">
+                      {webSearchSupported
+                        ? WEB_SEARCH_NOTE
+                        : "The selected model's provider has no built-in web search (supported: Anthropic, OpenRouter)"}
+                    </p>
+                  </>
+                )}
+
+                <label className="ai-toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={saveFeedback && feedbackPossible}
+                    disabled={!feedbackPossible}
+                    onChange={(e) => setSaveFeedback(e.target.checked)}
+                  />
+                  Save feedback about the annotation schema
+                </label>
+                <p className="ai-note">
+                  Saves which fields the AI left empty, got flagged or that you corrected, plus the
+                  model's remarks on unclear field descriptions, to annotations/feedback/ in the
+                  project folder (field values only, no paper text) — useful for improving the schema.
+                  {!feedbackPossible &&
+                    (getPlatform().kind === 'electron' ? ' Save the project first.' : ' Desktop app only.')}
+                </p>
 
                 {allPapers && (
                   <div className="ai-target-row">
@@ -888,7 +985,7 @@ export function AiDialog() {
 
               <SkippedPapers papers={skippedPapers} />
 
-              {rows.length === 0 ? (
+              {rows.length === 0 && recheckRows.length === 0 ? (
                 <>
                   <p>The model proposed no values.</p>
                   <RunErrors errors={runErrors} />
@@ -903,54 +1000,66 @@ export function AiDialog() {
                 </>
               ) : (
                 <>
-                  <div className="ai-review-head">
-                    <div className="ai-select-all">
-                      <button type="button" onClick={() => setAllRows(true)} title="Select all proposed rows">
-                        Select all
-                      </button>
-                      <button type="button" onClick={() => setAllRows(false)} title="Deselect all proposed rows">
-                        Select none
-                      </button>
-                    </div>
-                    <span className="ai-count">
-                      {checkedCount} of {rows.length} selected
-                    </span>
-                  </div>
+                  {rows.length > 0 && (
+                    <>
+                      <div className="ai-review-head">
+                        <div className="ai-select-all">
+                          <button type="button" onClick={() => setAllRows(true)} title="Select all proposed rows">
+                            Select all
+                          </button>
+                          <button type="button" onClick={() => setAllRows(false)} title="Deselect all proposed rows">
+                            Select none
+                          </button>
+                        </div>
+                        <span className="ai-count">
+                          {checkedCount} of {rows.length} selected
+                        </span>
+                      </div>
 
-                  <RunErrors errors={runErrors} />
+                      <RunErrors errors={runErrors} />
 
-                  {spendCapHit && (
-                    <p className="ai-note ai-cap-hit">
-                      Stopped at the spending limit (${spentSoFar.toFixed(2)} spent).
-                    </p>
+                      {spendCapHit && (
+                        <p className="ai-note ai-cap-hit">
+                          Stopped at the spending limit (${spentSoFar.toFixed(2)} spent).
+                        </p>
+                      )}
+
+                      {attentionRows.length > 0 && (
+                        <p className="ai-note">
+                          {attentionRows.length} row{attentionRows.length === 1 ? '' : 's'} start
+                          {attentionRows.length === 1 ? 's' : ''} unticked: low confidence, flagged by
+                          the judge, the cross-check disagrees, or the value came from a web search
+                          whose quote is unchecked.
+                        </p>
+                      )}
+                      <label className="ai-toggle-row">
+                        <input
+                          type="checkbox"
+                          checked={attentionOnly}
+                          disabled={attentionRows.length === 0}
+                          onChange={(e) => setAttentionOnly(e.target.checked)}
+                        />
+                        Show only rows that need attention
+                      </label>
+
+                      <ReviewTable
+                        rows={rows}
+                        grouped={grouped}
+                        mode={mode}
+                        schema={project?.schema ?? []}
+                        attentionOnly={attentionOnly}
+                        onToggle={toggleRow}
+                        onEvidenceClick={(row) => jumpToEvidence(row.paperId, row.suggestion.evidence)}
+                        onEdit={editRow}
+                      />
+                    </>
                   )}
 
-                  {attentionRows.length > 0 && (
-                    <p className="ai-note">
-                      {attentionRows.length} row{attentionRows.length === 1 ? '' : 's'} start
-                      {attentionRows.length === 1 ? 's' : ''} unticked: low confidence, flagged by
-                      the judge, or the cross-check disagrees.
-                    </p>
-                  )}
-                  <label className="ai-toggle-row">
-                    <input
-                      type="checkbox"
-                      checked={attentionOnly}
-                      disabled={attentionRows.length === 0}
-                      onChange={(e) => setAttentionOnly(e.target.checked)}
-                    />
-                    Show only rows that need attention
-                  </label>
-
-                  <ReviewTable
-                    rows={rows}
-                    grouped={grouped}
-                    mode={mode}
-                    schema={project?.schema ?? []}
-                    attentionOnly={attentionOnly}
-                    onToggle={toggleRow}
-                    onEvidenceClick={jumpToEvidence}
-                    onEdit={editRow}
+                  <RunErrors errors={rows.length === 0 ? runErrors : []} />
+                  <RecheckSection
+                    rows={recheckRows}
+                    onToggle={toggleRecheckRow}
+                    onEvidenceClick={(row) => jumpToEvidence(row.paperId, row.outcome.evidence)}
                   />
 
                   {notes.map((n) => (
@@ -961,6 +1070,8 @@ export function AiDialog() {
                     <p className="ai-note ai-usage">
                       {usage.calls} request{usage.calls === 1 ? '' : 's'} · {usage.inputTokens} input
                       / {usage.outputTokens} output tokens
+                      {totalWebSearches > 0 &&
+                        ` · ${totalWebSearches} web search${totalWebSearches === 1 ? '' : 'es'}`}
                       {capKnown && ` · ≈ $${spentSoFar.toFixed(2)}`}
                     </p>
                   )}
@@ -973,14 +1084,14 @@ export function AiDialog() {
                       type="button"
                       className="primary"
                       onClick={() => apply()}
-                      disabled={checkedCount === 0}
+                      disabled={applyCount === 0}
                       title={
-                        checkedCount === 0
+                        applyCount === 0
                           ? 'Select at least one proposal to apply'
-                          : `Apply ${checkedCount} selected proposal${checkedCount === 1 ? '' : 's'}`
+                          : `Apply ${applyCount} selected proposal${applyCount === 1 ? '' : 's'}`
                       }
                     >
-                      Apply {checkedCount}
+                      Apply {applyCount}
                     </button>
                   </div>
                 </>
@@ -991,20 +1102,30 @@ export function AiDialog() {
           {phase === 'applied' && applied && (
             <>
               <p>
-                Filled {applied.filled} field{applied.filled === 1 ? '' : 's'} in {applied.papers}{' '}
-                paper{applied.papers === 1 ? '' : 's'}.
+                Filled {applied.filled - (applied.replaced ?? 0)} field
+                {applied.filled - (applied.replaced ?? 0) === 1 ? '' : 's'}
+                {applied.replaced ? `, replaced ${applied.replaced} answer${applied.replaced === 1 ? '' : 's'}` : ''} in{' '}
+                {applied.papers} paper{applied.papers === 1 ? '' : 's'}.
                 {applied.skipped > 0 && ` ${applied.skipped} were skipped.`}
               </p>
               {applied.skipped > 0 && (
                 <p className="ai-note">
-                  A proposal is skipped when it was left unchecked, the field is no longer empty,
-                  or its path no longer exists in the schema.
+                  A proposal is skipped when it was left unchecked, the field is no longer empty
+                  (or, for a replacement, was changed since the check), or its path no longer
+                  exists in the schema.
                 </p>
               )}
               <p className="ai-note">
                 Everything was written as a single change: <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+
                 <kbd>Z</kbd> undoes the whole fill in one step.
               </p>
+              {feedbackResult && (
+                <p className="ai-note">
+                  {'path' in feedbackResult
+                    ? `Feedback saved to ${feedbackResult.path}`
+                    : `Couldn't save feedback: ${feedbackResult.error}`}
+                </p>
+              )}
               <div className="ai-foot">
                 <button type="button" className="primary" onClick={() => closeDialog()} title="Close this dialog">
                   Close
@@ -1269,6 +1390,11 @@ function ReviewTable({
                           ) : (
                             <span className="ai-dash">paper</span>
                           )}
+                          {row.suggestion.webUnverified && (
+                            <div>
+                              <span className="ai-judge-verdict ai-judge-revise">web · quote unchecked</span>
+                            </div>
+                          )}
                         </td>
                       )}
                       {mode === 'agent' && (
@@ -1303,6 +1429,121 @@ function ReviewTable({
         </tbody>
       </table>
     </div>
+  )
+}
+
+/**
+ * Re-check of values already in the seat. Only disagreements are actionable
+ * and start unticked (a replacement overwrites a human answer); agreements and
+ * "unsure" are listed collapsed for transparency.
+ */
+function RecheckSection({
+  rows,
+  onToggle,
+  onEvidenceClick,
+}: {
+  rows: RecheckRow[]
+  onToggle: (index: number, checked: boolean) => void
+  onEvidenceClick: (row: RecheckRow) => void
+}) {
+  if (rows.length === 0) return null
+  const indexed = rows.map((r, i) => ({ r, i }))
+  const disagree = indexed.filter(({ r }) => r.outcome.verdict === 'disagree')
+  const rest = indexed.filter(({ r }) => r.outcome.verdict !== 'disagree')
+  const agreed = rest.filter(({ r }) => r.outcome.verdict === 'agree').length
+  const papers = new Set(rows.map((r) => r.paperId)).size
+  return (
+    <section className="ai-recheck">
+      <strong>Re-check of existing answers</strong>
+      <p className="ai-note">
+        The AI double-checked values already entered in this seat. Nothing is overwritten unless
+        you tick a proposed replacement — replacements start unticked.
+      </p>
+      {disagree.length === 0 ? (
+        <p className="ai-note">The AI found no answer it disagrees with.</p>
+      ) : (
+        <div className="ai-table-wrap">
+          <table className="ai-table">
+            <thead>
+              <tr>
+                <th scope="col" className="ai-col-check">
+                  <span className="ai-sr-only">Replace</span>
+                </th>
+                {papers > 1 && <th scope="col">Paper</th>}
+                <th scope="col">Field</th>
+                <th scope="col">Current value</th>
+                <th scope="col">AI proposes</th>
+                <th scope="col">Reason</th>
+                <th scope="col">Evidence</th>
+                <th scope="col" className="ai-col-conf">
+                  Confidence
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {disagree.map(({ r, i }) => {
+                const label = pathLabel(r.outcome.path)
+                return (
+                  <tr key={`${r.paperId}-${r.outcome.path}-${i}`}>
+                    <td className="ai-col-check">
+                      <input
+                        type="checkbox"
+                        checked={r.checked}
+                        onChange={(e) => onToggle(i, e.target.checked)}
+                        aria-label={`Replace the current answer for ${label}`}
+                      />
+                    </td>
+                    {papers > 1 && <td>{r.paperTitle}</td>}
+                    <th scope="row" className="ai-field">
+                      {label}
+                    </th>
+                    <td className="ai-value">
+                      <ValueCell value={r.outcome.current} />
+                    </td>
+                    <td className="ai-value">
+                      <ValueCell value={r.outcome.proposed ?? null} />
+                    </td>
+                    <td>{r.outcome.reason || <span className="ai-dash">—</span>}</td>
+                    <td className="ai-evidence">
+                      <button
+                        type="button"
+                        className="ai-evidence-link"
+                        onClick={() => onEvidenceClick(r)}
+                        title="Show this passage in the PDF"
+                      >
+                        <q>{r.outcome.evidence}</q>
+                      </button>
+                    </td>
+                    <td className="ai-col-conf">{confidenceLabel(r.outcome.confidence)}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {rest.length > 0 && (
+        <details className="ai-notes">
+          <summary>
+            {agreed} answer{agreed === 1 ? '' : 's'} confirmed, {rest.length - agreed} unsure
+          </summary>
+          <ul className="ai-note-list">
+            {rest.map(({ r, i }) => (
+              <li key={`${r.paperId}-${r.outcome.path}-${i}`}>
+                <span className="ai-field-path">
+                  {papers > 1 ? `${r.paperTitle}: ` : ''}
+                  {pathLabel(r.outcome.path)}
+                </span>
+                <span className="ai-note-reason">
+                  {r.outcome.verdict === 'agree' ? 'confirmed' : 'unsure'}
+                  {r.outcome.reason ? ` — ${r.outcome.reason}` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </section>
   )
 }
 

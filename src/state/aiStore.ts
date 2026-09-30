@@ -13,7 +13,15 @@ import { runAgent } from '../llm/agent'
 import { withRetry, runPool, type CallLlm } from '../llm/retry'
 import { costOf } from '../llm/cost'
 import { buildFewShotBlock, countAnsweredFields, pickFewShotExamples, type FewShotExample } from '../llm/fewshot'
-import type { LlmAnswer, LlmConfig, ModelInfo, Suggestion } from '../llm/types'
+import {
+  answeredFields,
+  buildRecheckSystemPrompt,
+  parseRecheckReply,
+  type RecheckOutcome,
+  type RecheckTarget,
+} from '../llm/recheck'
+import { buildRunFeedback, feedbackFileName, hasFeedbackWorthSaving, type FeedbackRow } from '../llm/feedback'
+import type { LlmAnswer, LlmConfig, ModelInfo, RejectedSuggestion, SchemaRemark, Suggestion } from '../llm/types'
 import { isUsable } from '../llm/types'
 import {
   buildSystemOneRequest,
@@ -47,6 +55,8 @@ const DEFAULT_FEW_SHOT_COUNT = 2
 const CONCURRENCY_KEY = 'slr.llm.concurrency'
 const DEFAULT_CONCURRENCY = 2
 const MAX_CONCURRENCY = 4
+const WEB_SEARCH_KEY = 'slr.llm.websearch'
+const FEEDBACK_KEY = 'slr.llm.feedback'
 
 /** Above this serialized size, a persisted batch drops its rows/notes/errors —
  *  see `PersistedBatch.rowsOmitted`. */
@@ -98,6 +108,17 @@ export interface ReviewRow {
    *  non-accept judge verdict, or a cross-check disagreement — kept even if
    *  the reviewer re-ticks it, so "needs attention" filtering still finds it. */
   flagged?: boolean
+}
+
+/** The re-check's verdict on one value already in the seat. Only `disagree`
+ *  is actionable; agree/unsure are kept for the compact list and the feedback. */
+export interface RecheckRow {
+  paperId: string
+  paperTitle: string
+  reviewer: string | null
+  outcome: RecheckOutcome
+  /** Disagree only. Starts false: a replacement overwrites a human answer. */
+  checked: boolean
 }
 
 /** A paper a batch run failed on, kept so the run can continue past it. */
@@ -170,6 +191,19 @@ interface AiState {
   spendCapHit: boolean
   /** "Rate-limited, retrying in Ns…", cleared as soon as the retry lands. */
   retryNotice: string | null
+
+  /** Opt-in (REQ-LLM-660): also have the model double-check values already
+   *  in the target seat. Prompt mode only. Deliberately NOT persisted and
+   *  reset to false on every dialog open — it must never become a default. */
+  recheck: boolean
+  /** How many fields of the current paper already hold a value in the target seat. */
+  answeredCount: number
+  /** Agent mode: let the annotator's provider search the web (REQ-LLM-670). Persisted. */
+  webSearch: boolean
+  /** Save aggregate schema feedback to the project's feedback folder (REQ-LLM-680). Persisted. */
+  saveFeedback: boolean
+  /** Outcome of the run's feedback write, for the applied screen. */
+  feedbackResult: { path: string } | { error: string } | null
 
   /** Show the reviewer's finished papers to the model as worked examples
    *  (REQ-LLM-450). Off by default, persisted like `mode`. */
@@ -248,6 +282,12 @@ interface AiState {
   fewShotByPaper: Record<string, number>
 
   rows: ReviewRow[]
+  /** Re-check verdicts, every outcome (see `RecheckRow`). */
+  recheckRows: RecheckRow[]
+  /** The model's remarks on unclear field descriptions, for the feedback file. */
+  remarks: (SchemaRemark & { paperId: string })[]
+  /** Agent mode with web search: searches the provider ran, per paper. */
+  webSearchesByPaper: Record<string, number>
   /** Per-paper "left empty"/"rejected" lists, same content the old single-paper
    *  `answer.skipped`/`answer.rejected` carried. */
   notes: PaperNotes[]
@@ -272,6 +312,9 @@ interface AiState {
   setConfidenceThreshold: (n: number) => void
   setSpendCap: (cap: number | null) => void
   setFewShot: (on: boolean) => void
+  setRecheck: (on: boolean) => void
+  setWebSearch: (on: boolean) => void
+  setSaveFeedback: (on: boolean) => void
   setFewShotCount: (count: number) => void
   /** Clamped to 1-4. */
   setConcurrency: (n: number) => void
@@ -305,6 +348,7 @@ interface AiState {
    *  resume candidate (REQ-LLM-590). No-op if the paper isn't in flight. */
   skipPaper: (paperId: string) => void
   toggleRow: (index: number, checked: boolean) => void
+  toggleRecheckRow: (index: number, checked: boolean) => void
   setAllRows: (checked: boolean) => void
   /** Validate `raw` against the row's field definition (the same rules
    *  `parseAnswer` applies) and, on success, record it as the row's edited
@@ -329,6 +373,9 @@ let ticker: ReturnType<typeof setInterval> | null = null
  *  variable since only one batch executes at a time (the `controller`
  *  supersede pattern above already relies on the same assumption). */
 let paperControllers = new Map<string, AbortController>()
+/** True once the current review's feedback has been written (or deliberately
+ *  skipped), so Apply followed by Close cannot write it twice. */
+let feedbackHandled = false
 
 function stopTicker() {
   if (ticker) clearInterval(ticker)
@@ -350,10 +397,11 @@ function combinedSignal(a: AbortSignal, b: AbortSignal): AbortSignal {
 }
 
 /** Papers eligible for "annotate all papers": have a PDF, aren't finished for
- *  the target seat, and have at least one unanswered field. The target seat is
+ *  the target seat, and have at least one unanswered field. With `recheck`,
+ *  finished papers and papers with only answered fields qualify too. The target seat is
  *  the AI's own seat when the project has one (REQ-LLM-470), else whichever
  *  seat the human reviewer currently has selected. */
-export function batchCandidates(project: Project, currentReviewer: string | null): AiCandidate[] {
+export function batchCandidates(project: Project, currentReviewer: string | null, recheck = false): AiCandidate[] {
   const out: AiCandidate[] = []
   if (project.screening) return out
   const targetSeat = aiSeatId(project) ?? currentReviewer
@@ -363,10 +411,15 @@ export function batchCandidates(project: Project, currentReviewer: string | null
   if (targetSeat === 'consolidation') return out
   for (const paper of project.papers) {
     if (!paper.pdf) continue
-    if (currentFinished(project, targetSeat, paper) === true) continue
+    if (!recheck && currentFinished(project, targetSeat, paper) === true) continue
     const tree = currentTree(project, targetSeat, paper)
     if (!tree) continue
-    if (unansweredFields(project.schema, tree).length === 0) continue
+    if (
+      unansweredFields(project.schema, tree).length === 0 &&
+      !(recheck && answeredFields(project.schema, tree).length > 0)
+    ) {
+      continue
+    }
     out.push({ id: paper.id, title: paper.title })
   }
   return out
@@ -458,6 +511,11 @@ export interface PersistedBatch {
   errors?: PaperRunError[]
   roundsByPaper?: Record<string, number>
   fewShotByPaper?: Record<string, number>
+  recheck?: boolean
+  recheckRows?: RecheckRow[]
+  remarks?: (SchemaRemark & { paperId: string })[]
+  webSearch?: boolean
+  webSearchesByPaper?: Record<string, number>
 }
 
 /** Project identity for the storage key: the save path when there is one
@@ -477,7 +535,7 @@ function persistBatch(seat: string | null, data: PersistedBatch): void {
   try {
     const full = JSON.stringify(data)
     const toWrite = full.length > PERSIST_SIZE_CAP
-      ? JSON.stringify({ ...data, rows: undefined, notes: undefined, errors: undefined })
+      ? JSON.stringify({ ...data, rows: undefined, notes: undefined, errors: undefined, recheckRows: undefined })
       : full
     localStorage?.setItem(batchStorageKey(seat), toWrite)
   } catch {
@@ -575,6 +633,8 @@ export const useAiStore = create<AiState>()(
       // callers do.
       const persistEnabled = get().allPapers
       const doneIds = [...doneIdsSoFar]
+      const recheck = mode === 'prompt' && get().recheck
+      const webSearchOn = mode === 'agent' && get().webSearch && PROVIDERS[config.provider].supportsWebSearch
 
       set((s) => {
         s.batchTotal = allPaperIds.length
@@ -611,6 +671,11 @@ export const useAiStore = create<AiState>()(
           errors: get().errors,
           roundsByPaper: get().roundsByPaper,
           fewShotByPaper: get().fewShotByPaper,
+          recheck,
+          recheckRows: get().recheckRows,
+          remarks: get().remarks,
+          webSearch: webSearchOn,
+          webSearchesByPaper: get().webSearchesByPaper,
         })
       }
 
@@ -644,10 +709,16 @@ export const useAiStore = create<AiState>()(
               const paperSignal = combinedSignal(myController.signal, paperController.signal)
 
               const tree = currentTree(app.project!, targetSeat, paper)
+              // A finished paper is only ever re-checked (it is a candidate
+              // only because re-check is on), never filled.
+              const finished = currentFinished(app.project!, targetSeat, paper) === true
               const targets = get().allPapers
-                ? unansweredFields(app.project!.schema, tree ?? undefined)
+                ? finished
+                  ? []
+                  : unansweredFields(app.project!.schema, tree ?? undefined)
                 : get().targets
-              if (get().allPapers && targets.length === 0) return
+              const recheckTargets = recheck && tree ? answeredFields(app.project!.schema, tree) : []
+              if (get().allPapers && targets.length === 0 && recheckTargets.length === 0) return
 
               const fewShotForPaper = fewShotOn
                 ? buildFewShotForPaper(app.project!.schema, fewShotCandidatesList, fewShotCount, paper.id)
@@ -662,6 +733,8 @@ export const useAiStore = create<AiState>()(
               let baseUsage: { inputTokens: number; outputTokens: number }
               let paperCost: number
               let roundsForPaper: number | undefined
+              let webSearchesForPaper = 0
+              let recheckReply: Awaited<ReturnType<typeof runOnePaperPrompt>>['recheck']
               let rowChecked: (sug: Suggestion) => boolean
 
               if (mode === 'agent') {
@@ -685,8 +758,10 @@ export const useAiStore = create<AiState>()(
                   },
                   setPhase,
                   fewShotForPaper.block,
+                  webSearchOn,
                 )
                 if (controller !== myController) return
+                webSearchesForPaper = result.usage.webSearches ?? 0
                 // Agent + judge share one combined `usage`; the judge's own
                 // portion (`judgeUsage`) is priced against the judge target,
                 // the remainder against the agent's — see `estimateCostSplit`'s
@@ -701,7 +776,8 @@ export const useAiStore = create<AiState>()(
                 baseUsage = { inputTokens: result.usage.inputTokens, outputTokens: result.usage.outputTokens }
                 paperCost = (costOf(agentPortion, config) ?? 0) + (costOf(result.judgeUsage, judgeCfg ?? config) ?? 0)
                 roundsForPaper = result.rounds
-                rowChecked = (sug) => sug.judge?.verdict === 'accept'
+                // Web-sourced values whose page we never saw start unticked too.
+                rowChecked = (sug) => sug.judge?.verdict === 'accept' && !sug.webUnverified
               } else if (mode === 'classify') {
                 const result = await runOnePaperClassify(paper, targets, config, callLlm, paperSignal, setPhase)
                 if (controller !== myController) return
@@ -715,6 +791,7 @@ export const useAiStore = create<AiState>()(
                   app.project!,
                   paper,
                   targets,
+                  recheckTargets,
                   config,
                   callLlm,
                   paperSignal,
@@ -724,7 +801,8 @@ export const useAiStore = create<AiState>()(
                 if (controller !== myController) return
                 answer = result.answer
                 paperText = result.paperText
-                calls = 1
+                recheckReply = result.recheck
+                calls = result.calls
                 baseUsage = result.usage
                 paperCost = costOf(result.usage, config) ?? 0
                 // Confidence-aware default (REQ-LLM-580): a row with no
@@ -773,18 +851,28 @@ export const useAiStore = create<AiState>()(
                 s.spentSoFar +=
                   paperCost + (crossCheckResult ? (costOf(crossCheckResult.usage, crossCheckCfg!) ?? 0) : 0)
                 if (roundsForPaper !== undefined) s.roundsByPaper[paper.id] = roundsForPaper
+                if (webSearchesForPaper > 0) s.webSearchesByPaper[paper.id] = webSearchesForPaper
+                for (const outcome of recheckReply?.outcomes ?? []) {
+                  s.recheckRows.push({
+                    paperId: paper.id,
+                    paperTitle: paper.title,
+                    reviewer: get().targetSeat,
+                    outcome,
+                    checked: false,
+                  })
+                }
+                for (const m of [...(answer.schemaRemarks ?? []), ...(recheckReply?.schemaRemarks ?? [])]) {
+                  s.remarks.push({ ...m, paperId: paper.id })
+                }
                 if (fewShotForPaper.included > 0) s.fewShotByPaper[paper.id] = fewShotForPaper.included
                 const skipped = [
                   ...answer.skipped,
                   ...(crossCheckResult?.error ? [{ path: '(cross-check)', reason: crossCheckResult.error }] : []),
+                  ...(recheckReply?.error ? [{ path: '(re-check)', reason: recheckReply.error }] : []),
                 ]
-                if (skipped.length > 0 || answer.rejected.length > 0) {
-                  s.notes.push({
-                    paperId: paper.id,
-                    paperTitle: paper.title,
-                    skipped,
-                    rejected: answer.rejected,
-                  })
+                const rejected = [...answer.rejected, ...(recheckReply?.rejected ?? [])]
+                if (skipped.length > 0 || rejected.length > 0) {
+                  s.notes.push({ paperId: paper.id, paperTitle: paper.title, skipped, rejected })
                 }
               })
               if (controller === myController) {
@@ -836,11 +924,12 @@ export const useAiStore = create<AiState>()(
       const rows = get().rows
       const errors = get().errors
       const aborted = myController.signal.aborted
-      if (aborted && rows.length === 0) {
+      const nothing = rows.length === 0 && get().recheckRows.length === 0
+      if (aborted && nothing) {
         set((s) => { s.phase = 'setup'; s.error = null })
         return
       }
-      if (rows.length === 0 && errors.length > 0 && !get().allPapers) {
+      if (nothing && errors.length > 0 && !get().allPapers) {
         // Single-paper mode: keep the classic one-error screen rather than a
         // review screen with nothing to review.
         set((s) => {
@@ -850,6 +939,86 @@ export const useAiStore = create<AiState>()(
         return
       }
       set((s) => { s.phase = 'review' })
+    }
+
+    /** Candidates depend on scope + the re-check option, so any of them changing recomputes. */
+    const refreshCandidates = () => {
+      const app = useStore.getState()
+      if (!app.project) return
+      set((s) => {
+        s.candidates = batchCandidates(app.project!, app.currentReviewer, s.recheck && s.mode === 'prompt')
+      })
+    }
+
+    /**
+     * Once per review, when it ends: aggregate what happened to the proposals
+     * into `<annotations>/feedback/` (no paper text, no quotes). Never throws
+     * and never touches `dirty` — a failure only shows as a note.
+     */
+    const writeFeedback = async (applied: boolean): Promise<void> => {
+      if (feedbackHandled) return
+      feedbackHandled = true
+      const st = get()
+      const handle = useStore.getState().saveHandle
+      const project = useStore.getState().project
+      if (!st.saveFeedback || !st.runUsage || !handle || !project) return
+      const fbRows: FeedbackRow[] = []
+      for (const r of st.rows) {
+        const took = applied && r.checked
+        const edited = took && r.edited && r.editedValue !== undefined
+        fbRows.push({
+          paperId: r.paperId,
+          path: r.suggestion.path,
+          outcome: !took ? 'unticked' : edited ? 'edited' : 'applied',
+          aiValue: r.suggestion.value,
+          ...(took ? { finalValue: edited ? r.editedValue : r.suggestion.value } : {}),
+          ...(r.suggestion.judge ? { judge: r.suggestion.judge.verdict } : {}),
+          ...(r.crossCheck ? { crossCheck: r.crossCheck.agrees ? 'agree' : 'disagree' } : {}),
+          confidence: r.suggestion.confidence,
+        } as FeedbackRow)
+      }
+      // Re-check: only disagreements are feedback. A ticked one is a corrected
+      // human answer ('edited', where `aiValue` is the reviewer's earlier value).
+      for (const r of st.recheckRows) {
+        if (r.outcome.verdict !== 'disagree') continue
+        const took = applied && r.checked
+        fbRows.push({
+          paperId: r.paperId,
+          path: r.outcome.path,
+          outcome: took ? 'edited' : 'unticked',
+          aiValue: took ? r.outcome.current : r.outcome.proposed,
+          ...(took ? { finalValue: r.outcome.proposed } : {}),
+          confidence: r.outcome.confidence,
+        })
+      }
+      for (const n of st.notes) {
+        for (const sk of n.skipped) {
+          if (!sk.path.startsWith('(')) fbRows.push({ paperId: n.paperId, path: sk.path, outcome: 'left-empty' })
+        }
+        for (const rj of n.rejected) {
+          if (rj.path) fbRows.push({ paperId: n.paperId, path: rj.path, outcome: 'rejected' })
+        }
+      }
+      const createdAt = new Date().toISOString()
+      const fb = buildRunFeedback({
+        createdAt,
+        mode: st.recheck && st.rows.length === 0 ? 'recheck' : st.mode,
+        annotator: st.runUsage,
+        ...(st.runJudge ? { judge: st.runJudge } : {}),
+        seat: st.targetSeat,
+        schemaVersion: project.schemaVersion,
+        papers: [...new Set(fbRows.map((r) => r.paperId))],
+        rows: fbRows,
+        remarks: st.remarks,
+      })
+      if (!hasFeedbackWorthSaving(fb)) return
+      try {
+        const name = feedbackFileName(createdAt, Math.random().toString(36).slice(2, 8))
+        const path = await getPlatform().writeFeedback(handle, name, JSON.stringify(fb, null, 2))
+        if (path) set((s) => { s.feedbackResult = { path } })
+      } catch (err) {
+        set((s) => { s.feedbackResult = { error: err instanceof Error ? err.message : String(err) } })
+      }
     }
 
     return {
@@ -874,6 +1043,11 @@ export const useAiStore = create<AiState>()(
     fewShot: readFewShot(),
     fewShotCount: readFewShotCount(),
     fewShotAvailable: 0,
+    recheck: false,
+    answeredCount: 0,
+    webSearch: readWebSearch(),
+    saveFeedback: readSaveFeedback(),
+    feedbackResult: null,
     pageCounts: {},
     pageCountsLoading: {},
     phase: 'setup',
@@ -898,6 +1072,9 @@ export const useAiStore = create<AiState>()(
     roundsByPaper: {},
     fewShotByPaper: {},
     rows: [],
+    recheckRows: [],
+    remarks: [],
+    webSearchesByPaper: {},
     notes: [],
     applied: null,
     scanned: false,
@@ -923,6 +1100,11 @@ export const useAiStore = create<AiState>()(
         s.phase = 'setup'
         s.error = null
         s.rows = []
+        s.recheckRows = []
+        s.remarks = []
+        s.webSearchesByPaper = {}
+        s.feedbackResult = null
+        s.recheck = false
         s.notes = []
         s.applied = null
         s.scanned = false
@@ -945,6 +1127,7 @@ export const useAiStore = create<AiState>()(
         s.batchStartedAt = null
         s.targetSeat = targetSeat
         s.targets = unansweredFields(app.project!.schema, tree)
+        s.answeredCount = answeredFields(app.project!.schema, tree).length
         s.currentPaperHasPdf = !!paper.pdf
         s.candidates = batchCandidates(app.project!, app.currentReviewer)
         s.fewShotAvailable = fewShotCandidates(app.project!, app.currentReviewer).filter(
@@ -964,6 +1147,7 @@ export const useAiStore = create<AiState>()(
       // This project's own remembered role assignment wins over the global
       // fallback already in `selectedId`/`judgeSelectedId`/`crossCheckId` —
       // but only for a role whose target still exists.
+      feedbackHandled = false
       const roles = readProjectRoles()
       set((s) => {
         if (roles.annotatorId && s.configs.some((c) => c.id === roles.annotatorId)) {
@@ -982,6 +1166,8 @@ export const useAiStore = create<AiState>()(
     },
 
     closeDialog: () => {
+      // Closing an unapplied review is still worth reporting on (REQ-LLM-680).
+      if (get().phase === 'review') void writeFeedback(false)
       get().cancel()
       set((s) => {
         s.open = false
@@ -1012,15 +1198,15 @@ export const useAiStore = create<AiState>()(
         if (cfg && (cfg.provider === 'systemone') !== wantSystemOne) {
           s.selectedId = s.configs.find((c) => (c.provider === 'systemone') === wantSystemOne)?.id ?? null
         }
+        // ponytail: re-check is prompt-mode only (agent/classify have no re-check call yet).
+        if (mode !== 'prompt') s.recheck = false
       })
+      refreshCandidates()
     },
 
     setAllPapers: (on) => {
-      const app = useStore.getState()
-      set((s) => {
-        s.allPapers = on
-        if (on && app.project) s.candidates = batchCandidates(app.project, app.currentReviewer)
-      })
+      set((s) => { s.allPapers = on })
+      if (on) refreshCandidates()
     },
 
     selectJudge: (id) => {
@@ -1046,6 +1232,21 @@ export const useAiStore = create<AiState>()(
     setFewShot: (on) => {
       writeFewShot(on, get().fewShotCount)
       set((s) => { s.fewShot = on })
+    },
+
+    setRecheck: (on) => {
+      set((s) => { s.recheck = on && s.mode === 'prompt' })
+      if (get().allPapers) refreshCandidates()
+    },
+
+    setWebSearch: (on) => {
+      writeFlag(WEB_SEARCH_KEY, on)
+      set((s) => { s.webSearch = on })
+    },
+
+    setSaveFeedback: (on) => {
+      writeFlag(FEEDBACK_KEY, on)
+      set((s) => { s.saveFeedback = on })
     },
 
     setFewShotCount: (count) => {
@@ -1284,6 +1485,7 @@ export const useAiStore = create<AiState>()(
       const fewShotCandidatesList = fewShotOn ? fewShotCandidates(app.project, app.currentReviewer) : []
       const fewShotCount = get().fewShotCount
 
+      feedbackHandled = false
       // Starting fresh supersedes any earlier saved progress for this seat —
       // `executeBatch` will start re-persisting from scratch as it goes.
       if (get().allPapers) clearPersistedBatch(get().targetSeat)
@@ -1293,7 +1495,11 @@ export const useAiStore = create<AiState>()(
         s.runJudge = mode === 'agent' ? { provider: (judgeCfg ?? config).provider, model: (judgeCfg ?? config).model } : null
         s.roundsByPaper = {}
         s.fewShotByPaper = {}
+        s.webSearchesByPaper = {}
         s.rows = []
+        s.recheckRows = []
+        s.remarks = []
+        s.feedbackResult = null
         s.notes = []
         s.errors = []
         s.skippedPapers = []
@@ -1344,6 +1550,11 @@ export const useAiStore = create<AiState>()(
         s.crossCheckId = persisted.crossCheckId ?? null
         s.allPapers = true
         s.rows = persisted.rows ?? []
+        s.recheck = persisted.recheck ?? false
+        s.recheckRows = persisted.recheckRows ?? []
+        s.remarks = persisted.remarks ?? []
+        s.webSearch = persisted.webSearch ?? false
+        s.webSearchesByPaper = persisted.webSearchesByPaper ?? {}
         s.notes = persisted.notes ?? []
         s.errors = persisted.errors ?? []
         s.skippedPapers = []
@@ -1364,7 +1575,7 @@ export const useAiStore = create<AiState>()(
         s.elapsed = 0
         s.batchStartedAt = persisted.startedAt
         s.resumeAvailable = null
-        s.candidates = batchCandidates(app.project!, app.currentReviewer)
+        s.candidates = batchCandidates(app.project!, app.currentReviewer, s.recheck)
       })
 
       // Rows were dropped for size — their papers' results aren't recoverable,
@@ -1373,7 +1584,9 @@ export const useAiStore = create<AiState>()(
         persisted.rows === undefined
           ? persisted.allPaperIds
           : persisted.allPaperIds.filter((id) => !persisted.doneIds.includes(id))
-      const stillCandidates = new Set(batchCandidates(app.project, app.currentReviewer).map((c) => c.id))
+      const stillCandidates = new Set(
+        batchCandidates(app.project, app.currentReviewer, get().recheck).map((c) => c.id),
+      )
       const papers = remainingIds
         .map((id) => app.project!.papers.find((p) => p.id === id))
         .filter((p): p is Paper => !!p && stillCandidates.has(p.id))
@@ -1425,7 +1638,7 @@ export const useAiStore = create<AiState>()(
       stopTicker()
       set((s) => {
         if (s.phase === 'reading' || s.phase === 'calling' || s.phase === 'parsing') {
-          s.phase = s.rows.length > 0 ? 'review' : 'setup'
+          s.phase = s.rows.length > 0 || s.recheckRows.length > 0 ? 'review' : 'setup'
         }
       })
     },
@@ -1437,6 +1650,11 @@ export const useAiStore = create<AiState>()(
     toggleRow: (index, checked) =>
       set((s) => {
         if (s.rows[index]) s.rows[index].checked = checked
+      }),
+
+    toggleRecheckRow: (index, checked) =>
+      set((s) => {
+        if (s.recheckRows[index]?.outcome.verdict === 'disagree') s.recheckRows[index].checked = checked
       }),
 
     setAllRows: (checked) =>
@@ -1470,7 +1688,10 @@ export const useAiStore = create<AiState>()(
       const runJudge = get().runJudge
       const roundsByPaper = get().roundsByPaper
       const fewShotByPaper = get().fewShotByPaper
+      const webSearchesByPaper = get().webSearchesByPaper
       const checked = get().rows.filter((r) => r.checked)
+      // Only ticked disagreements ever overwrite an existing answer.
+      const replacing = get().recheckRows.filter((r) => r.outcome.verdict === 'disagree' && r.checked)
 
       // One item per (paper, reviewer) pair — batch apply writes every paper in
       // a single undo step, however many papers this run touched. Verdict
@@ -1480,19 +1701,33 @@ export const useAiStore = create<AiState>()(
         paperId: string
         reviewer: string | null
         suggestions: Suggestion[]
+        replacements: { suggestion: Suggestion; expectedCurrent: FieldValue }[]
         verdicts: { accept: number; revise: number; reject: number }
         edited: number
       }
       const byPaper = new Map<string, Entry>()
-      for (const row of checked) {
-        const key = `${row.paperId}\u0000${row.reviewer ?? ''}`
+      const entryFor = (paperId: string, reviewer: string | null): Entry => {
+        const key = `${paperId}\u0000${reviewer ?? ''}`
         const entry = byPaper.get(key) ?? {
-          paperId: row.paperId,
-          reviewer: row.reviewer,
+          paperId,
+          reviewer,
           suggestions: [],
+          replacements: [],
           verdicts: { accept: 0, revise: 0, reject: 0 },
           edited: 0,
         }
+        byPaper.set(key, entry)
+        return entry
+      }
+      for (const r of replacing) {
+        const o = r.outcome
+        entryFor(r.paperId, r.reviewer).replacements.push({
+          suggestion: { path: o.path, value: o.proposed as FieldValue, evidence: o.evidence, confidence: o.confidence },
+          expectedCurrent: o.current,
+        })
+      }
+      for (const row of checked) {
+        const entry = entryFor(row.paperId, row.reviewer)
         // An edited row still counts as AI-assisted — it started as the
         // model's proposal — but writes the reviewer's value, not the
         // model's (REQ-LLM-580).
@@ -1502,12 +1737,12 @@ export const useAiStore = create<AiState>()(
         if (row.edited) entry.edited++
         const verdict = row.suggestion.judge?.verdict
         if (verdict) entry.verdicts[verdict]++
-        byPaper.set(key, entry)
       }
       const items = [...byPaper.values()].map((entry) => ({
         paperId: entry.paperId,
         reviewer: entry.reviewer,
         suggestions: entry.suggestions,
+        replacements: entry.replacements,
         usage: {
           ...runUsage,
           mode,
@@ -1517,18 +1752,26 @@ export const useAiStore = create<AiState>()(
             : {}),
           ...(mode === 'agent' ? { verdicts: entry.verdicts } : {}),
           ...(fewShotByPaper[entry.paperId] !== undefined ? { fewShot: fewShotByPaper[entry.paperId] } : {}),
+          ...(webSearchesByPaper[entry.paperId] ? { webSearches: webSearchesByPaper[entry.paperId] } : {}),
           ...(entry.edited > 0 ? { edited: entry.edited } : {}),
         },
       }))
       const result = useStore.getState().applyAiSuggestionsBatch(items)
       // Unchecked rows are never applied, so they count as skipped alongside
       // whatever the store itself refused (already-answered fields, dead paths).
-      const uncheckedCount = get().rows.length - checked.length
+      const disagreements = get().recheckRows.filter((r) => r.outcome.verdict === 'disagree').length
+      const uncheckedCount = get().rows.length - checked.length + disagreements - replacing.length
       if (get().allPapers) clearPersistedBatch(get().targetSeat)
       set((s) => {
-        s.applied = { filled: result.filled, skipped: result.skipped + uncheckedCount, papers: result.papers }
+        s.applied = {
+          filled: result.filled,
+          skipped: result.skipped + uncheckedCount,
+          papers: result.papers,
+          ...(result.replaced ? { replaced: result.replaced } : {}),
+        }
         s.phase = 'applied'
       })
+      void writeFeedback(true)
     },
 
     discardBatch: () => {
@@ -1552,13 +1795,26 @@ async function runOnePaperPrompt(
   project: Project,
   paper: Paper,
   targets: FieldTarget[],
+  /** Already-answered fields to double-check (empty = no re-check call). */
+  recheckTargets: RecheckTarget[],
   config: LlmConfig,
   callLlm: CallLlm,
   signal: AbortSignal,
   setPhase: (p: AiPhase) => void,
   /** Pre-built few-shot block (see fewshot.ts), or `''` when the feature is off. */
   fewShotBlock = '',
-): Promise<{ answer: LlmAnswer; usage: { inputTokens: number; outputTokens: number }; paperText: string }> {
+): Promise<{
+  answer: LlmAnswer
+  recheck?: {
+    outcomes: RecheckOutcome[]
+    rejected: RejectedSuggestion[]
+    schemaRemarks: SchemaRemark[]
+    error?: string
+  }
+  calls: number
+  usage: { inputTokens: number; outputTokens: number }
+  paperText: string
+}> {
   setPhase('reading')
   const app = useStore.getState()
   // Same URL the viewer renders, so this works unchanged in both runtimes.
@@ -1585,37 +1841,69 @@ async function runOnePaperPrompt(
     paperText = (await extractPdfText(bytes)).text
   }
 
-  // With extracted text the model must be warned extraction is lossy, or it
-  // will confidently reconstruct a mangled table.
-  const system = buildSystemPrompt(project.schema, targets, delivery, fewShotBlock || undefined)
-  const req =
-    delivery === 'text'
-      ? buildRequest(config, system, { kind: 'text', text: buildUserText(paper, paperText) })
-      : buildRequest(config, `${system}\n\n${buildUserPdfCaption(paper)}`, {
-          kind: 'pdf',
-          base64: toBase64(bytes),
-          filename: paper.pdf.split('/').pop() ?? 'paper.pdf',
-        })
+  // One request with this system prompt; the fill and the re-check share the
+  // paper read above.
+  const ask = async (system: string) => {
+    // With extracted text the model must be warned extraction is lossy, or it
+    // will confidently reconstruct a mangled table.
+    const req =
+      delivery === 'text'
+        ? buildRequest(config, system, { kind: 'text', text: buildUserText(paper, paperText) })
+        : buildRequest(config, `${system}\n\n${buildUserPdfCaption(paper)}`, {
+            kind: 'pdf',
+            base64: toBase64(bytes),
+            filename: paper.pdf.split('/').pop() ?? 'paper.pdf',
+          })
 
-  setPhase('calling')
-  const res = await callLlm(req, signal)
-  if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
+    setPhase('calling')
+    const res = await callLlm(req, signal)
+    if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
 
-  setPhase('parsing')
-  const json = safeJson(res.body)
-  const text = extractText(config.provider, json)
-  // Distinguish "model proposed nothing" from "ran out of budget before
-  // answering" — same empty text, different problem and fix.
-  if (!text.trim() && wasTruncated(config.provider, json)) {
-    throw new Error(
-      `${PROVIDERS[config.provider].label} used its whole reply budget on internal ` +
-        'reasoning and never got to an answer for this paper. If this keeps happening, try ' +
-        'a lower reasoning-effort setting for this model, if the provider offers one.',
-    )
+    setPhase('parsing')
+    const json = safeJson(res.body)
+    const text = extractText(config.provider, json)
+    // Distinguish "model proposed nothing" from "ran out of budget before
+    // answering" — same empty text, different problem and fix.
+    if (!text.trim() && wasTruncated(config.provider, json)) {
+      throw new Error(
+        `${PROVIDERS[config.provider].label} used its whole reply budget on internal ` +
+          'reasoning and never got to an answer for this paper. If this keeps happening, try ' +
+          'a lower reasoning-effort setting for this model, if the provider offers one.',
+      )
+    }
+    return { text, usage: parseChatResponse(config.provider, json).usage }
   }
-  const answer = parseAnswer(project.schema, text)
-  const usage = parseChatResponse(config.provider, json).usage
-  return { answer, usage, paperText }
+
+  let answer: LlmAnswer = { fields: [], skipped: [], rejected: [] }
+  let calls = 0
+  const usage = { inputTokens: 0, outputTokens: 0 }
+  const add = (u: { inputTokens: number; outputTokens: number }) => {
+    usage.inputTokens += u.inputTokens
+    usage.outputTokens += u.outputTokens
+    calls++
+  }
+
+  // Nothing to fill is only legitimate for a re-check-only paper.
+  if (targets.length > 0 || recheckTargets.length === 0) {
+    const r = await ask(buildSystemPrompt(project.schema, targets, delivery, fewShotBlock || undefined))
+    answer = parseAnswer(project.schema, r.text)
+    add(r.usage)
+  }
+
+  let recheck: Awaited<ReturnType<typeof runOnePaperPrompt>>['recheck']
+  if (recheckTargets.length > 0) {
+    try {
+      const r = await ask(buildRecheckSystemPrompt(project.schema, recheckTargets, delivery, fewShotBlock || undefined))
+      recheck = parseRecheckReply(project.schema, recheckTargets, r.text)
+      add(r.usage)
+    } catch (err) {
+      // A failed re-check must not throw away a fill that already succeeded;
+      // with nothing else to show for the paper, it fails the paper as usual.
+      if (signal.aborted || calls === 0) throw err
+      recheck = { outcomes: [], rejected: [], schemaRemarks: [], error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+  return { answer, recheck, calls, usage, paperText }
 }
 
 async function runOnePaperAgent(
@@ -1630,9 +1918,10 @@ async function runOnePaperAgent(
   setPhase: (p: AiPhase) => void,
   /** Pre-built few-shot block (see fewshot.ts), or `''` when the feature is off. */
   fewShotBlock = '',
+  webSearch = false,
 ): Promise<{
   answer: LlmAnswer
-  usage: { inputTokens: number; outputTokens: number; calls: number }
+  usage: { inputTokens: number; outputTokens: number; calls: number; webSearches?: number }
   judgeUsage: { inputTokens: number; outputTokens: number; calls: number }
   rounds: number
   paperText: string
@@ -1670,6 +1959,7 @@ async function runOnePaperAgent(
       signal,
       onEvent: (e) => onEvent(e.message),
       examples: fewShotBlock || undefined,
+      webSearch,
     },
     {
       callLlm,
@@ -1924,6 +2214,31 @@ function writeFewShot(on: boolean, count: number): void {
   }
 }
 
+function readWebSearch(): boolean {
+  try {
+    return localStorage?.getItem(WEB_SEARCH_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+/** On unless explicitly switched off. */
+function readSaveFeedback(): boolean {
+  try {
+    return localStorage?.getItem(FEEDBACK_KEY) !== 'false'
+  } catch {
+    return true
+  }
+}
+
+function writeFlag(key: string, on: boolean): void {
+  try {
+    localStorage?.setItem(key, String(on))
+  } catch {
+    /* ignore (private mode / disabled storage) */
+  }
+}
+
 function readConcurrency(): number {
   try {
     const raw = Number(localStorage?.getItem(CONCURRENCY_KEY))
@@ -1946,6 +2261,8 @@ function writeConcurrency(n: number): void {
 // whatever project is open next.
 useStore.subscribe((s, prev) => {
   if (s.projectGeneration !== prev.projectGeneration && useAiStore.getState().open) {
+    // The handle now belongs to the new project — never write feedback into it.
+    feedbackHandled = true
     useAiStore.getState().closeDialog()
   }
 })

@@ -524,3 +524,38 @@ describe('"Show only rows that need attention" filter (REQ-LLM-580)', () => {
     expect(screen.getByText('low confidence value')).toBeInTheDocument()
   })
 })
+
+describe('options: re-check, web search, feedback', () => {
+  beforeEach(() => {
+    useAiStore.setState({ mode: 'prompt', recheck: false })
+  })
+
+  it('re-check starts unticked and is disabled outside prompt mode', async () => {
+    render(<AiDialog />)
+    const box = screen.getByRole('checkbox', { name: /re-check fields I've already filled/ })
+    expect(box).not.toBeChecked()
+    expect(box).toBeEnabled()
+    await userEvent.click(box)
+    expect(useAiStore.getState().recheck).toBe(true)
+    await userEvent.click(screen.getByRole('radio', { name: 'Agent' }))
+    expect(screen.getByRole('checkbox', { name: /re-check fields I've already filled/ })).toBeDisabled()
+    expect(useAiStore.getState().recheck).toBe(false)
+  })
+
+  it('web search shows only in agent mode and is enabled for Anthropic, disabled for OpenAI', async () => {
+    render(<AiDialog />)
+    expect(screen.queryByRole('checkbox', { name: 'Let the model search the web' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('radio', { name: 'Agent' }))
+    expect(screen.getByRole('checkbox', { name: 'Let the model search the web' })).toBeEnabled()
+    expect(screen.getByText(/billed per search/)).toBeInTheDocument()
+
+    useAiStore.setState({ configs: [{ ...cfg(), provider: 'openai' }] })
+    expect(await screen.findByRole('checkbox', { name: 'Let the model search the web' })).toBeDisabled()
+    expect(screen.getByText(/no built-in web search \(supported: Anthropic, OpenRouter\)/)).toBeInTheDocument()
+  })
+
+  it('feedback is disabled without a saved desktop project', () => {
+    render(<AiDialog />)
+    expect(screen.getByRole('checkbox', { name: 'Save feedback about the annotation schema' })).toBeDisabled()
+  })
+})

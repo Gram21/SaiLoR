@@ -635,3 +635,12 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
   cursor: pointer;
 }
+
+/* AI screening review: an Exclude proposal stands out, since it is the risky one. */
+.ai-screen-exclude {
+  color: var(--danger, #b3261e);
+}
+
+.ai-recheck {
+  margin-top: 12px;
+}

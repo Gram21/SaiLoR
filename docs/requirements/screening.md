@@ -232,3 +232,9 @@ Requirements for the title/abstract and full-text screening workflow. See the
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/git/ownAnnotationPath.ts`, commit `c4d8e7d`, `openwiki/workflows/screening.md` ("On-disk layout")
 - **Status:** Implemented
+
+### REQ-SCR-390 — AI-assisted screening
+- **Description:** The system shall let a reviewer (or the project's AI seat) ask an LLM for Include/Exclude proposals with a reason, reviewed and applied by a human, as specified in REQ-LLM-630, REQ-LLM-640 and REQ-LLM-650. Proposals only ever fill undecided papers.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/aiScreeningStore.ts`, `src/components/AiScreeningDialog.tsx`
+- **Status:** Implemented

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '../state/store'
 import { useAiStore } from '../state/aiStore'
+import { useAiScreeningStore } from '../state/aiScreeningStore'
 import { useEditorStore } from '../state/editorStore'
 import { useGitStore } from '../state/gitStore'
 import { CONSOLIDATION_SEAT } from '../git/seatOwner'
@@ -75,18 +76,18 @@ export interface AiButtonState {
 }
 
 const AI_NO_PROJECT_HINT = 'Open a project to annotate with AI.'
-const AI_SCREENING_HINT = "AI-assisted annotation isn't available in screening projects."
 const AI_CONSOLIDATION_HINT =
   'AI has no place in Consolidation — it reconciles what the reviewers already said, not a fresh opinion.'
 const AI_REVIEWER_UNSET_HINT = 'Pick a reviewer first — there is nothing to annotate as "the reviewer" yet'
 const AI_PROJECT_DISABLED_HINT = 'AI is turned off for this project in its settings.'
 const AI_ENABLED_HINT = 'Annotate papers with AI'
+const AI_SCREENING_ENABLED_HINT = 'Propose include/exclude decisions with AI'
 
 /**
  * The toolbar AI button's disabled state and tooltip — same shape and same
  * reasoning as `gitButtonState`: always rendered, disabled-with-a-reason
- * rather than hidden. Structural reasons (no project, screening, Consolidation,
- * no reviewer picked, project opted out) pick the tooltip; `busy`/`editorOpen`
+ * rather than hidden. Structural reasons (no project, Consolidation, no
+ * reviewer picked, project opted out) pick the tooltip; `busy`/`editorOpen`
  * only disable, matching Validate/Close.
  *
  * With an AI seat (REQ-LLM-470), a run never writes into whichever seat is
@@ -107,17 +108,16 @@ export function aiButtonState(
   const blockReviewerUnset = reviewerUnset && !hasAiSeat
   const title = !project
     ? AI_NO_PROJECT_HINT
-    : screening
-      ? AI_SCREENING_HINT
-      : blockConsolidation
-        ? AI_CONSOLIDATION_HINT
-        : blockReviewerUnset
-          ? AI_REVIEWER_UNSET_HINT
-          : !aiEnabled
-            ? AI_PROJECT_DISABLED_HINT
+    : blockConsolidation
+      ? AI_CONSOLIDATION_HINT
+      : blockReviewerUnset
+        ? AI_REVIEWER_UNSET_HINT
+        : !aiEnabled
+          ? AI_PROJECT_DISABLED_HINT
+          : screening
+            ? AI_SCREENING_ENABLED_HINT
             : AI_ENABLED_HINT
-  const disabled =
-    !project || screening || blockConsolidation || blockReviewerUnset || !aiEnabled || busy || editorOpen
+  const disabled = !project || blockConsolidation || blockReviewerUnset || !aiEnabled || busy || editorOpen
   return { disabled, title }
 }
 
@@ -152,7 +152,9 @@ export function Toolbar() {
   const selectReviewer = useStore((s) => s.selectReviewer)
   const corruptFiles = useStore((s) => s.corruptFiles)
   const showCorruptFiles = useStore((s) => s.showCorruptFiles)
-  const openAiDialog = useAiStore((s) => s.openDialog)
+  const openAnnotationAi = useAiStore((s) => s.openDialog)
+  const openScreeningAi = useAiScreeningStore((s) => s.openDialog)
+  const openAiDialog = project?.screening ? openScreeningAi : openAnnotationAi
 
   // Git support is Electron-only: `getGit()` is null in the browser (no local
   // git to reach at all). The entry points stay visible there too, disabled

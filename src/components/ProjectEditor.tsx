@@ -29,8 +29,7 @@ const ISSUE_DISPLAY_LIMIT = 12
  * The "Allow AI-assisted annotation" toggle below binds `EditorState.aiEnabled`,
  * which defaults to `true` for a new project (see the initial state /
  * `startNew` in editorStore.ts) — off is an explicit opt-out, not the default.
- * Hidden for a screening draft, which has no annotation panel for the AI
- * button to appear in.
+ * For a screening draft it reads "Allow AI-assisted screening".
  */
 export function ProjectEditor() {
   const open = useEditorStore((s) => s.open)
@@ -212,26 +211,25 @@ export function ProjectEditor() {
         </p>
       )}
 
-      {/* Hidden for a screening draft: it has no annotation panel for the AI
-          button to appear in, and no reviewer-picked seat for a suggestion to
-          write into. */}
-      {!screening && (
-        <div className="editor-location">
-          <span className="editor-location-label">AI</span>
-          <label
-            className="editor-ai-toggle"
-            title="Lets reviewers ask an LLM to propose values for a paper's still-empty fields, for review before anything is written."
-          >
-            <input
-              type="checkbox"
-              checked={aiEnabled}
-              onChange={(e) => setAiEnabled(e.target.checked)}
-              disabled={busy}
-            />
-            <span>Allow AI-assisted annotation</span>
-          </label>
-        </div>
-      )}
+      <div className="editor-location">
+        <span className="editor-location-label">AI</span>
+        <label
+          className="editor-ai-toggle"
+          title={
+            screening
+              ? 'Lets reviewers ask an LLM to propose include/exclude decisions for undecided papers, for review before anything is written.'
+              : "Lets reviewers ask an LLM to propose values for a paper's still-empty fields, for review before anything is written."
+          }
+        >
+          <input
+            type="checkbox"
+            checked={aiEnabled}
+            onChange={(e) => setAiEnabled(e.target.checked)}
+            disabled={busy}
+          />
+          <span>{screening ? 'Allow AI-assisted screening' : 'Allow AI-assisted annotation'}</span>
+        </label>
+      </div>
       {/* Only meaningful with AI use allowed and at least one other, human,
           reviewer to compare it against — disabled-with-a-reason otherwise
           rather than hidden, so turning either on reveals a control that

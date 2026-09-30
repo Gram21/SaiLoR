@@ -525,6 +525,19 @@ function screeningHelp(): { lead: ReactNode; sections: HelpSection[] } {
         ),
       },
       {
+        id: 'ai',
+        title: 'AI proposals',
+        body: (
+          <p>
+            <strong>✦ AI</strong> can propose Include/Exclude decisions (with a reason and a quote from
+            the abstract) for the current paper or all undecided ones, judged against the project's
+            protocol. Titles and abstracts are sent to your chosen provider. Nothing is written until
+            you tick rows and press Apply; Exclude proposals never start ticked, and papers you have
+            already decided are never overwritten.
+          </p>
+        ),
+      },
+      {
         id: 'summary',
         title: 'The summary and PRISMA',
         body: (
@@ -648,7 +661,12 @@ function editorHelp(): { lead: ReactNode; sections: HelpSection[] } {
             setup-screen toggle can also show the model your own already-finished papers as worked
             examples of the review's conventions. In the review table, Edit lets you correct a
             proposed value yourself before applying it — it's still recorded as AI-assisted, just with
-            your value instead of the model's.
+            your value instead of the model's. Under Options, "re-check fields I've already filled" is
+            optional (off each time) and never overwrites an answer unless you tick the proposed
+            replacement; in Agent mode the model can optionally search the web through Anthropic or
+            OpenRouter; and, in the desktop app, a summary of which fields the AI left empty, got
+            flagged or that you corrected is saved to <code>annotations/feedback/</code> in the
+            project folder (field values only, no paper text) to help improve the schema.
           </p>
         ),
       },

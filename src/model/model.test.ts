@@ -1226,6 +1226,13 @@ describe('Paper.aiUsage (AI-use disclosure)', () => {
     expect(loadProject(withUsage([record])).papers[0].aiUsage).toEqual([record])
   })
 
+  it('round-trips a screening-mode record', () => {
+    const record = { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-07-15T10:00:00.000Z', mode: 'screening' }
+    const loaded = loadProject(withUsage([record]))
+    expect(loaded.papers[0].aiUsage).toEqual([record])
+    expect(loadProject(serializeProject(loaded)).papers[0].aiUsage).toEqual([record])
+  })
+
   it('keeps array order — that order is how "which use came first" is read', () => {
     const a = { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-07-15T10:00:00.000Z' }
     const b = { provider: 'anthropic', model: 'claude-opus-4-8', appliedAt: '2026-07-15T10:05:00.000Z' }
@@ -1278,6 +1285,8 @@ describe('Paper.aiUsage (AI-use disclosure)', () => {
       verdicts: { accept: 5, revise: 1, reject: 0 },
       fewShot: 3,
       edited: 3,
+      rechecked: 2,
+      webSearches: 4,
       reviewer: '2',
     }
     expect(loadProject(withUsage([record])).papers[0].aiUsage).toEqual([record])
@@ -1295,6 +1304,8 @@ describe('Paper.aiUsage (AI-use disclosure)', () => {
     ).toEqual([base])
     expect(loadProject(withUsage([{ ...base, fewShot: '3' }])).papers[0].aiUsage).toEqual([base])
     expect(loadProject(withUsage([{ ...base, edited: '3' }])).papers[0].aiUsage).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, rechecked: '2' }])).papers[0].aiUsage).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, webSearches: null }])).papers[0].aiUsage).toEqual([base])
     expect(loadProject(withUsage([{ ...base, reviewer: 42 }])).papers[0].aiUsage).toEqual([base])
   })
 })
@@ -1341,10 +1352,10 @@ describe('config.aiSeat (AI reviewer seat)', () => {
       expect(aiSeatId(loadProject(withAiSeat({ aiSeat: true })))).toBeNull()
     })
 
-    it('is null for a screening project', () => {
+    it('is the last seat for a screening project too', () => {
       expect(
         aiSeatId(loadProject(withAiSeat({ reviewers: 2, aiSeat: true, screening: { reasons: ['Not relevant'] } }))),
-      ).toBeNull()
+      ).toBe('2')
     })
 
     it('is the last reviewer seat when everything lines up', () => {

@@ -67,10 +67,16 @@ describe('aiButtonState (the toolbar AI button, always shown, disabled with a re
     expect(r.title).toContain('Consolidation')
   })
 
-  it('is disabled for a screening project', () => {
+  it('is enabled for a screening project, with its own tooltip', () => {
     const r = aiButtonState(true, true, false, false, true, false, false, false)
-    expect(r.disabled).toBe(true)
-    expect(r.title).toContain('screening')
+    expect(r.disabled).toBe(false)
+    expect(r.title).toContain('include/exclude')
+  })
+
+  it('still blocks a screening project on Consolidation, no reviewer, or the project opt-out', () => {
+    expect(aiButtonState(true, true, true, false, true, false, false, false).disabled).toBe(true)
+    expect(aiButtonState(true, true, false, true, true, false, false, false).disabled).toBe(true)
+    expect(aiButtonState(true, true, false, false, false, false, false, false).disabled).toBe(true)
   })
 
   it('is disabled with no reviewer picked in a multi-reviewer project', () => {
@@ -108,9 +114,9 @@ describe('aiButtonState (the toolbar AI button, always shown, disabled with a re
       expect(r.title).toBe('Annotate papers with AI')
     })
 
-    it('is still disabled for a screening project or the project opt-out', () => {
-      const screening = aiButtonState(true, true, false, false, true, false, false, true)
-      expect(screening.disabled).toBe(true)
+    it('is enabled for a screening project on the Consolidation seat, but still not for the project opt-out', () => {
+      const screening = aiButtonState(true, true, true, false, true, false, false, true)
+      expect(screening.disabled).toBe(false)
 
       const optedOut = aiButtonState(true, false, false, false, false, false, false, true)
       expect(optedOut.disabled).toBe(true)

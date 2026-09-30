@@ -50,7 +50,6 @@ function projectJson(opts: { reviewers?: number } = {}) {
   })
 }
 
-// Non-screening, since the AI button is unavailable there — see `aiButtonState`.
 function annotationProjectJson(opts: { reviewers?: number } = {}) {
   return JSON.stringify({
     version: 1,

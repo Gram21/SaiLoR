@@ -169,6 +169,13 @@ describe('ProjectEditor: AI seat toggle enabling rules', () => {
     expect(screen.getByRole('checkbox', { name: /AI takes one reviewer seat/ })).toBeEnabled()
   })
 
+  it('is offered in a screening draft too, with its own AI toggle', () => {
+    useEditorStore.setState({ aiEnabled: true, reviewers: 2, screening: { reasons: ['Wrong topic'] } })
+    render(<ProjectEditor />)
+    expect(screen.getByRole('checkbox', { name: /Allow AI-assisted screening/ })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: /AI takes one reviewer seat/ })).toBeEnabled()
+  })
+
   it('toggling it calls setAiSeat and checks the box', async () => {
     useEditorStore.setState({ aiEnabled: true, reviewers: 3 })
     render(<ProjectEditor />)
