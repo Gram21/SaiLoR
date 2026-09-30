@@ -142,6 +142,16 @@ export interface PlatformAdapter {
    *  when it is still next to it; `null` otherwise. */
   screeningSource(projectPath: string): Promise<{ name: string; text: string } | null>
 
+  /**
+   * Write one AI schema-feedback JSON file to `<annotationsDir>/feedback/<fileName>`
+   * (never overwrites; `fileName` must be unique per call). Returns the
+   * project-relative path written, or `null` when unsupported (no saved project path).
+   */
+  writeFeedback(handle: SaveHandle, fileName: string, content: string): Promise<string | null>
+
+  /** The feedback files saved for the project; empty when unsupported. */
+  listFeedback(handle: SaveHandle): Promise<{ name: string; bytes: number }[]>
+
   /** Rename the project's annotations folder and record the new name in its project file. */
   moveAnnotationsDir(projectPath: string, folder: string): Promise<void>
 

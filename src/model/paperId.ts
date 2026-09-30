@@ -30,6 +30,11 @@ export interface PaperIdIssue {
   detail: string
 }
 
+/** Folder inside the annotations folder that holds AI schema-feedback files,
+ *  so no paper may take that name. Lives here (not `annotationsDir.ts`, which
+ *  re-exports it) to keep this module free of import cycles. */
+export const FEEDBACK_DIR = 'feedback'
+
 // Win32's own illegal set. None of these are legal in a POSIX file name
 // either except `/`, but `/` is already excluded because it would create
 // subdirectories instead of one directory named after the id.
@@ -64,6 +69,10 @@ export function paperIdProblem(id: string): PaperIdIssue | null {
   const base = id.split('.')[0]
   if (RESERVED_NAMES.test(base)) {
     return { reason: 'reserved-name', detail: `"${base.toUpperCase()}" is a reserved device name on Windows` }
+  }
+
+  if (paperIdKey(id) === FEEDBACK_DIR) {
+    return { reason: 'reserved-name', detail: `"${FEEDBACK_DIR}" is the folder for AI feedback files inside the annotations folder` }
   }
 
   return null

@@ -23,6 +23,9 @@ contextBridge.exposeInMainWorld('slr', {
   screeningSource: (projectPath: string) => ipcRenderer.invoke('project:screeningSource', projectPath),
   moveAnnotationsDir: (projectPath: string, folder: string) =>
     ipcRenderer.invoke('project:moveAnnotationsDir', projectPath, folder),
+  writeFeedback: (projectPath: string, fileName: string, content: string) =>
+    ipcRenderer.invoke('project:writeFeedback', projectPath, fileName, content),
+  listFeedback: (projectPath: string) => ipcRenderer.invoke('project:listFeedback', projectPath),
   splitAnnotations: (projectPath: string, plan: unknown) =>
     ipcRenderer.invoke('project:splitAnnotations', projectPath, plan),
   pickPdfs: () => ipcRenderer.invoke('pdf:pick'),

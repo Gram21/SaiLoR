@@ -28,7 +28,8 @@ import { TextDecoder } from 'node:util'
 // the renderer's (DOM types).
 import { validateGitUrl, validateClonePath } from '../src/git/url'
 import { relPathProblem, annotationsRelDir, mergeBlockingPaths } from '../src/git/relpath'
-import { annotationsDirOf, annotationsDirProblem, filesCollide, sharesPaper } from '../src/model/annotationsDir'
+import { annotationsDirOf, annotationsDirProblem, FEEDBACK_DIR, filesCollide, isFeedbackPath, sharesPaper } from '../src/model/annotationsDir'
+import { feedbackContentProblem, feedbackDirIn, feedbackFileNameProblem, feedbackTarget } from './feedback'
 import { paperIdProblem } from '../src/model/paperId'
 import { applySplit } from '../src/model/annotationSplit'
 import { refProblem } from '../src/git/ref'
@@ -956,6 +957,10 @@ async function writeProjectFiles(
     if (target !== base && !target.startsWith(base + path.sep)) {
       throw new Error(`Refusing to write annotation file outside the project: "${file.relPath}"`)
     }
+    // A paper named like the feedback folder would write into (or delete from) it.
+    if (isFeedbackPath(file.relPath.replace(/\\/g, '/').toLowerCase())) {
+      throw new Error(`"${FEEDBACK_DIR}" is reserved for AI feedback files and cannot be a paper id.`)
+    }
     if (file.text === null) {
       // Never delete a file we could not read as JSON: `loadPaperFiles` maps
       // an unparseable annotation file to "absent", which arrives back here as
@@ -1157,6 +1162,58 @@ ipcMain.handle('project:moveAnnotationsDir', async (_e, projectPath: string, fol
 })
 
 /**
+ * The open project's feedback folder, created when `create`. Refuses a symlinked
+ * folder or one resolving outside the annotations folder — received material
+ * can ship either. `null` when it does not exist and is not to be created.
+ */
+async function feedbackDirFor(projectPath: unknown, create: boolean): Promise<string | null> {
+  const key = path.resolve(String(projectPath))
+  if (!knownProjectPaths.has(key)) throw new Error('Refusing to use a project that was not opened this session.')
+  const annotationsDir = await annotationsDirFor(key, await readProjectMeta(key))
+  const dir = feedbackDirIn(annotationsDir)
+  if (create) await mkdir(dir, { recursive: true })
+  let st
+  try {
+    st = await lstat(dir)
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw err
+  }
+  if (st.isSymbolicLink() || !st.isDirectory()) throw new Error(`Refusing a feedback folder that is a link or not a folder: "${dir}"`)
+  const [realDir, realBase] = await Promise.all([realpath(dir), realpath(annotationsDir)])
+  if (path.dirname(realDir) !== realBase) throw new Error(`Refusing a feedback folder outside the annotations folder: "${dir}"`)
+  return dir
+}
+
+/** Write one feedback file; never overwrites. Returns the project-relative path. */
+ipcMain.handle('project:writeFeedback', async (_e, projectPath: string, fileName: string, content: string) => {
+  const problem = feedbackFileNameProblem(fileName) ?? feedbackContentProblem(content)
+  if (problem) throw new Error(problem)
+  const dir = (await feedbackDirFor(projectPath, true))!
+  const annotationsDir = path.dirname(dir)
+  const target = feedbackTarget(annotationsDir, fileName)
+  const exists = await lstat(target).then(() => true, () => false)
+  if (exists) throw new Error(`Feedback file "${fileName}" already exists.`)
+  // ponytail: exists-check then rename can race a concurrent writer of the same name; callers use unique names.
+  const tmp = path.join(dir, `.${fileName}.${process.pid}.tmp`)
+  await writeFile(tmp, content, 'utf-8')
+  await rename(tmp, target)
+  const projectDir = path.dirname(path.resolve(String(projectPath)))
+  return path.relative(projectDir, target).split(path.sep).join('/')
+})
+
+ipcMain.handle('project:listFeedback', async (_e, projectPath: string) => {
+  const dir = await feedbackDirFor(projectPath, false)
+  if (!dir) return []
+  const out: { name: string; bytes: number }[] = []
+  for (const e of await readdir(dir, { withFileTypes: true })) {
+    if (!e.isFile() || feedbackFileNameProblem(e.name)) continue
+    out.push({ name: e.name, bytes: (await stat(path.join(dir, e.name))).size })
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name))
+})
+
+/**
  * The screening project an open project was started from (its provenance
  * names it), read the way opening it would read it — for showing its PDF
  * highlights. Only a plain file name in the open project's own directory:
@@ -1205,6 +1262,7 @@ ipcMain.handle('project:sharedAnnotations', async (_e, projectPath: string) => {
     // no folder yet — nothing to split but the setting
   }
   for (const id of paperDirs.sort()) {
+    if (id === FEEDBACK_DIR) continue // reserved, not a paper
     let names: string[]
     try {
       names = await readdir(path.join(annotationsDir, id))
@@ -3339,7 +3397,10 @@ ipcMain.handle('git:branchSwitchBegin', async (_e, root: string, relPath: string
     p === relPath || (p.startsWith(`${dir}/`) && matchesOwn(p.slice(dir.length + 1)))
 
   const st = await runGit(['status', '--porcelain=v1', '-z', '-uall'], root)
-  const changes = parsePorcelain(st.stdout)
+  // Feedback files are neither this project's papers nor "other files": they
+  // stay in the working tree across the switch (stash excludes them below).
+  const feedbackPrefix = `${dir}/${FEEDBACK_DIR}/`
+  const changes = parsePorcelain(st.stdout).filter((c) => !c.path.startsWith(feedbackPrefix))
   const otherPaths = changes.filter((c) => !inProjectScope(c.path)).map((c) => c.path)
   if (otherPaths.length > 0) return { kind: 'other-files-dirty', paths: otherPaths }
   if (!changes.some((c) => inProjectScope(c.path))) return { kind: 'no-changes' }
@@ -3365,7 +3426,7 @@ ipcMain.handle('git:branchSwitchBegin', async (_e, root: string, relPath: string
   }
 
   const stash = await runGit(
-    ['stash', 'push', '-u', '-m', BRANCH_SWITCH_STASH_MESSAGE, '--', relPath, dir],
+    ['stash', 'push', '-u', '-m', BRANCH_SWITCH_STASH_MESSAGE, '--', relPath, dir, `:(exclude)${feedbackPrefix}`],
     root,
   )
   if (!stash.ok) return { kind: 'error', message: gitErrorText(stash) }

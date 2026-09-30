@@ -17,6 +17,8 @@ export function createUnsupportedAdapter(): PlatformAdapter {
   const real = {
     kind: 'browser' as const,
     getRecents: (): RecentEntry[] => [],
+    writeFeedback: (): Promise<string | null> => Promise.resolve(null),
+    listFeedback: (): Promise<{ name: string; bytes: number }[]> => Promise.resolve([]),
     fetchWeb: (url: string): Promise<WebFetchResult> =>
       Promise.resolve({
         ok: false,

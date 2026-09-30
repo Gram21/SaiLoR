@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { annotationsDirOf, annotationsDirProblem, defaultSplitDirName, DEFAULT_ANNOTATIONS_DIR, filesCollide, sharesPaper } from './annotationsDir'
-import { annotationsRelDir } from '../git/relpath'
+import { annotationsDirOf, annotationsDirProblem, defaultSplitDirName, DEFAULT_ANNOTATIONS_DIR, filesCollide, isFeedbackPath, sharesPaper } from './annotationsDir'
+import { paperIdProblem } from './paperId'
+import { annotationsRelDir, mergeBlockingPaths } from '../git/relpath'
 import { loadProject, marksFileName, parseMarksFileName, projectFromFiles, serializeProject, splitProjectFiles } from './project'
 
 describe('annotations folder names', () => {
@@ -100,5 +101,29 @@ describe('highlight file names', () => {
     ])
     expect(p.papers[0].reviewMarks['1']?.map((m) => m.id)).toEqual(['new'])
     expect(p.papers[0].reviewMarks['2']?.map((m) => m.id)).toEqual(['only-old'])
+  })
+})
+
+describe('reserved feedback folder', () => {
+  it('is not a paper id or an annotations folder name, in any case', () => {
+    for (const n of ['feedback', 'Feedback', 'FEEDBACK']) {
+      expect(paperIdProblem(n)?.reason, n).toBe('reserved-name')
+      expect(annotationsDirProblem(n), n).not.toBeNull()
+    }
+    expect(paperIdProblem('feedback-2')).toBeNull()
+  })
+  it('isFeedbackPath matches the folder and its contents only', () => {
+    expect(isFeedbackPath('feedback')).toBe(true)
+    expect(isFeedbackPath('feedback/x.json')).toBe(true)
+    expect(isFeedbackPath('feedback2/x.json')).toBe(false)
+    expect(isFeedbackPath('p1/feedback/x.json')).toBe(false)
+  })
+  it('untracked feedback files do not block a merge; tracked changes still do', () => {
+    const changes = [
+      { path: 'annotations/feedback/x.json', code: '??' },
+      { path: 'annotations/p1/reviewer-1.json', code: '??' },
+      { path: 'annotations/feedback/y.json', code: ' M' },
+    ]
+    expect(mergeBlockingPaths(changes, 'annotations')).toEqual(['annotations/p1/reviewer-1.json', 'annotations/feedback/y.json'])
   })
 })

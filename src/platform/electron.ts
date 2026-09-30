@@ -130,6 +130,8 @@ export interface SlrBridge {
   annotationsDirUsers(projectPath: string, folder: string, paperIds: string[], screening: boolean): Promise<string[]>
   sharedAnnotations(projectPath: string): Promise<SharedAnnotations | null>
   moveAnnotationsDir(projectPath: string, folder: string): Promise<void>
+  writeFeedback(projectPath: string, fileName: string, content: string): Promise<string>
+  listFeedback(projectPath: string): Promise<{ name: string; bytes: number }[]>
   screeningSource(projectPath: string): Promise<{ name: string; text: string } | null>
   splitAnnotations(
     projectPath: string,
@@ -423,6 +425,14 @@ export class ElectronAdapter implements PlatformAdapter {
 
   moveAnnotationsDir(projectPath: string, folder: string): Promise<void> {
     return bridge().moveAnnotationsDir(projectPath, folder)
+  }
+
+  async writeFeedback(handle: SaveHandle, fileName: string, content: string): Promise<string | null> {
+    return handle.kind === 'electron' && handle.path ? bridge().writeFeedback(handle.path, fileName, content) : null
+  }
+
+  async listFeedback(handle: SaveHandle): Promise<{ name: string; bytes: number }[]> {
+    return handle.kind === 'electron' && handle.path ? bridge().listFeedback(handle.path) : []
   }
 
   screeningSource(projectPath: string): Promise<{ name: string; text: string } | null> {
