@@ -29,3 +29,32 @@ export function buildCallHeaders(
   if (!opts.noKey) throw new Error('No API key is stored for this target.')
   return Object.fromEntries(Object.entries(headers).filter(([, v]) => !v.includes(sentinel)))
 }
+
+/** System One wire flavor; anything else is dropped (the default is Jev's route). */
+export function validSystemOneFlavor(v: unknown): 'jev' | 'cloudflare' | undefined {
+  return v === 'jev' || v === 'cloudflare' ? v : undefined
+}
+
+/** A Cloudflare account id: 32 lowercase hex characters. */
+export function validAccountId(v: unknown): string | undefined {
+  return typeof v === 'string' && /^[a-f0-9]{32}$/.test(v) ? v : undefined
+}
+
+/** A managed local model: only a well-formed catalog id survives (it is checked against the catalog when used). */
+export function validManaged(v: unknown): { catalogId: string } | undefined {
+  const id = (v as { catalogId?: unknown } | null)?.catalogId
+  return typeof id === 'string' && /^[a-z0-9._-]{1,64}$/.test(id) ? { catalogId: id } : undefined
+}
+
+/**
+ * Where an `llm:call` for a managed target really goes: the stored placeholder
+ * origin is swapped for the running local server's, keeping path and query.
+ * Only the local server's own `/v1/` API and `/health` are reachable this way.
+ */
+export function managedTargetUrl(requestUrl: string, serverBase: string): string {
+  const u = new URL(requestUrl)
+  if (!(u.pathname.startsWith('/v1/') || u.pathname === '/health')) {
+    throw new Error(`Refusing to call ${u.pathname} on the local model server.`)
+  }
+  return new URL(u.pathname + u.search, serverBase).toString()
+}

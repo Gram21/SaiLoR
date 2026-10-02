@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { validPrice, buildCallHeaders } from './llmConfig'
+import {
+  validPrice, buildCallHeaders, validSystemOneFlavor, validAccountId, validManaged, validPositiveInt, managedTargetUrl,
+} from './llmConfig'
 
 describe('validPrice', () => {
   it('passes through finite non-negative numbers', () => {
@@ -40,5 +42,42 @@ describe('buildCallHeaders', () => {
     expect(() => buildCallHeaders({ Authorization: 'Bearer {{apiKey}}' }, SENTINEL, {})).toThrow(
       'No API key is stored for this target.',
     )
+  })
+})
+
+describe('managed target validators', () => {
+  it('validSystemOneFlavor keeps only the two flavors', () => {
+    expect(validSystemOneFlavor('jev')).toBe('jev')
+    expect(validSystemOneFlavor('cloudflare')).toBe('cloudflare')
+    expect(validSystemOneFlavor('x')).toBeUndefined()
+    expect(validSystemOneFlavor(1)).toBeUndefined()
+  })
+
+  it('validAccountId needs exactly 32 lowercase hex chars', () => {
+    expect(validAccountId('a'.repeat(32))).toBe('a'.repeat(32))
+    for (const v of ['A'.repeat(32), 'a'.repeat(31), 'a'.repeat(33), 'g'.repeat(32), 7, undefined]) {
+      expect(validAccountId(v)).toBeUndefined()
+    }
+  })
+
+  it('validManaged keeps a well-formed catalog id only', () => {
+    expect(validManaged({ catalogId: 'laya-en-q8' })).toEqual({ catalogId: 'laya-en-q8' })
+    for (const v of [{ catalogId: '../x' }, { catalogId: 'A' }, { catalogId: '' }, { catalogId: 'a'.repeat(65) }, null, 'x', {}]) {
+      expect(validManaged(v)).toBeUndefined()
+    }
+  })
+
+  it('validPositiveInt rejects zero, fractions and strings', () => {
+    expect(validPositiveInt(512)).toBe(512)
+    for (const v of [0, -1, 1.5, '512', NaN]) expect(validPositiveInt(v)).toBeUndefined()
+  })
+
+  it('managedTargetUrl swaps the origin and limits paths', () => {
+    expect(managedTargetUrl('http://127.0.0.1/v1/systemone?a=1', 'http://127.0.0.1:5555')).toBe(
+      'http://127.0.0.1:5555/v1/systemone?a=1',
+    )
+    expect(managedTargetUrl('http://127.0.0.1/health', 'http://127.0.0.1:5555')).toBe('http://127.0.0.1:5555/health')
+    expect(() => managedTargetUrl('http://127.0.0.1/props', 'http://127.0.0.1:5555')).toThrow()
+    expect(() => managedTargetUrl('http://127.0.0.1/v1/../props', 'http://127.0.0.1:5555')).toThrow()
   })
 })
