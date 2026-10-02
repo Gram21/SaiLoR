@@ -194,10 +194,11 @@ describe('System One provider fields', () => {
   it('defaults the model and max input tokens when switching provider to System One', async () => {
     await openEdit() // the top-level `cfg()` fixture (OpenRouter)
 
-    await userEvent.selectOptions(screen.getByLabelText('Provider'), 'System One (Jev-compatible)')
+    await userEvent.selectOptions(screen.getByLabelText('Provider'), 'hosted-s1')
+    await userEvent.selectOptions(screen.getByLabelText('Service'), 'jev')
 
     expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('jev-latest')
-    expect(screen.getByLabelText('Max input tokens')).toHaveValue(60000)
+    expect(screen.getByLabelText('Context window (tokens)')).toHaveValue(32000)
   })
 
   it('saves a typed max input tokens value', async () => {

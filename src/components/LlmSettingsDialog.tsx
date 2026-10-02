@@ -4,6 +4,11 @@ import { getPlatform } from '../platform'
 import { PROVIDER_LIST, PROVIDERS } from '../llm/providers'
 import type { Attach, LlmConfig, ModelInfo, Provider } from '../llm/types'
 import { ModelPicker } from './ModelPicker'
+import { ContextFields } from './ContextFields'
+import { HostedSystemOnePanel, hostedPreset } from './HostedSystemOnePanel'
+import { LocalChatPanel } from './LocalChatPanel'
+import { LocalSystemOnePanel } from './LocalSystemOnePanel'
+import { isCloudflareAccountId } from '../llm/localUi'
 import '../styles/ai.css'
 
 const NO_MODELS: ModelInfo[] = []
@@ -37,6 +42,28 @@ const pdfCapableProviders = (() => {
   if (names.length <= 1) return names.join('')
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
 })()
+
+/**
+ * What the Provider select offers: the plain providers, plus three guided
+ * entries that map onto real configs (`ollama`, local or hosted `systemone`).
+ */
+type Kind = Provider | 'local-chat' | 'local-s1' | 'hosted-s1'
+
+const GUIDED: { id: Kind; label: string }[] = [
+  { id: 'local-chat', label: 'Local model — chat (Ollama, LM Studio, llama.cpp, vLLM)' },
+  { id: 'local-s1', label: 'Local model — decision model (System 1)' },
+  { id: 'hosted-s1', label: 'Hosted decision model — Clef (Cloudflare) / Jev' },
+]
+
+const CLOUD_PROVIDERS = PROVIDER_LIST.filter((p) => p.id !== 'systemone' && p.id !== 'ollama')
+
+const isLoopback = (url: string) => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(url)
+
+function kindOf(c: LlmConfig): Kind {
+  if (c.provider === 'ollama') return 'local-chat'
+  if (c.provider !== 'systemone') return c.provider
+  return c.managed || (c.systemOneFlavor !== 'cloudflare' && isLoopback(c.baseUrl)) ? 'local-s1' : 'hosted-s1'
+}
 
 /** A blank target, ready to be filled in. */
 function newDraft(): LlmConfig {
@@ -163,6 +190,10 @@ export function LlmSettingsDialog() {
   const close = () => setSettingsOpen(false)
 
   const info = draft ? PROVIDERS[draft.provider] : null
+  const kind = draft ? kindOf(draft) : null
+  const cloudflare = draft?.systemOneFlavor === 'cloudflare'
+  // The guided panels bring their own URL and model fields.
+  const ownsEndpoint = kind === 'local-chat' || kind === 'local-s1' || cloudflare
   const urlEditable = info?.editableBaseUrl ?? false
   const modelListingSupported = info?.supportsModelListing ?? false
   const providerModels = draft ? (modelsById[draft.id] ?? NO_MODELS) : NO_MODELS
@@ -190,6 +221,31 @@ export function LlmSettingsDialog() {
     setDraft(null)
     setApiKey('')
     setProblem(null)
+    setReply(null)
+    setVerifyError(null)
+  }
+
+  const changeKind = (kind: Kind) => {
+    if (kind !== 'local-chat' && kind !== 'local-s1' && kind !== 'hosted-s1') return changeProvider(kind)
+    setDraft((d) => {
+      if (!d) return d
+      const base: LlmConfig = {
+        ...d,
+        attach: 'text',
+        reasoningEffort: undefined,
+        maxStateTokens: undefined,
+        contextTokens: undefined,
+        optionsBudgetTokens: undefined,
+        systemOneFlavor: undefined,
+        accountId: undefined,
+        managed: undefined,
+        model: '',
+      }
+      if (kind === 'hosted-s1') return hostedPreset(base, 'cloudflare')
+      if (kind === 'local-chat') return { ...base, provider: 'ollama', baseUrl: PROVIDERS.ollama.defaultBaseUrl, noKey: true }
+      return { ...base, provider: 'systemone', baseUrl: 'http://127.0.0.1', noKey: true }
+    })
+    clearModels(draft?.id ?? '')
     setReply(null)
     setVerifyError(null)
   }
@@ -225,6 +281,9 @@ export function LlmSettingsDialog() {
   const validate = (d: LlmConfig): string | null => {
     if (!d.name.trim()) return 'Give the model a name — it is what you pick from later.'
     if (!d.model.trim()) return 'Enter a model name, e.g. claude-opus-4-8 or gpt-4o.'
+    if (d.systemOneFlavor === 'cloudflare' && !isCloudflareAccountId(d.accountId ?? '')) {
+      return 'Enter your Cloudflare account ID: 32 lowercase hex characters, shown in the Cloudflare dashboard.'
+    }
     if (PROVIDERS[d.provider].editableBaseUrl && !d.baseUrl.trim()) {
       return 'Enter the base URL of your OpenAI-compatible server, e.g. http://localhost:1234.'
     }
@@ -432,83 +491,96 @@ export function LlmSettingsDialog() {
                 </label>
                 <select
                   id="llm-provider"
-                  value={draft.provider}
-                  onChange={(e) => changeProvider(e.target.value as Provider)}
+                  value={kind ?? draft.provider}
+                  onChange={(e) => changeKind(e.target.value as Kind)}
                 >
-                  {PROVIDER_LIST.map((p) => (
+                  {CLOUD_PROVIDERS.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.label}
+                    </option>
+                  ))}
+                  {GUIDED.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.label}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="llm-row">
-                <label htmlFor="llm-url" className="llm-label">
-                  Base URL
-                </label>
-                <input
-                  id="llm-url"
-                  type="text"
-                  value={draft.baseUrl}
-                  onChange={(e) => patch({ baseUrl: e.target.value })}
-                  readOnly={!urlEditable}
-                  required={urlEditable}
-                  placeholder={urlEditable ? 'http://localhost:1234' : ''}
-                  title={
-                    urlEditable
-                      ? 'The root of your OpenAI-compatible server, e.g. http://localhost:1234'
-                      : `Fixed for ${info?.label ?? 'this provider'}.`
-                  }
-                />
-              </div>
-              <p className="llm-hint">
-                {urlEditable
-                  ? 'Where your server listens — e.g. LM Studio, llama.cpp or vLLM on http://localhost:1234.'
-                  : 'Fixed for this provider, so there is nothing to type.'}
-              </p>
+              {kind === 'local-chat' && <LocalChatPanel draft={draft} patch={patch} />}
+              {kind === 'local-s1' && <LocalSystemOnePanel draft={draft} patch={patch} />}
+              {kind === 'hosted-s1' && <HostedSystemOnePanel draft={draft} replace={(c) => setDraft(c)} />}
 
-              <div className="llm-row">
-                <label htmlFor="llm-model" className="llm-label">
-                  Model
-                </label>
-                <div className="llm-model-field">
-                  <ModelPicker
-                    id="llm-model"
-                    value={draft.model}
-                    onChange={(v) => patch({ model: v })}
-                    models={modelListingSupported ? providerModels : NO_MODELS}
-                    loading={modelListingSupported && modelsLoading}
-                    providerLabel={info?.label ?? 'This provider'}
-                    placeholder="e.g. claude-opus-4-8, gpt-4o"
+              {!ownsEndpoint && (
+                <>
+                <div className="llm-row">
+                  <label htmlFor="llm-url" className="llm-label">
+                    Base URL
+                  </label>
+                  <input
+                    id="llm-url"
+                    type="text"
+                    value={draft.baseUrl}
+                    onChange={(e) => patch({ baseUrl: e.target.value })}
+                    readOnly={!urlEditable}
+                    required={urlEditable}
+                    placeholder={urlEditable ? 'http://localhost:1234' : ''}
+                    title={
+                      urlEditable
+                        ? 'The root of your OpenAI-compatible server, e.g. http://localhost:1234'
+                        : `Fixed for ${info?.label ?? 'this provider'}.`
+                    }
                   />
-                  {modelListingSupported && (
-                    <button
-                      type="button"
-                      onClick={() => void fetchModels(draft, apiKey.trim() || undefined, { force: true })}
-                      disabled={modelsLoading || (!draft.hasKey && !apiKey.trim())}
-                      title={
-                        !draft.hasKey && !apiKey.trim()
-                          ? 'Enter an API key first — the list has to be fetched with it.'
-                          : `Fetch the current model list from ${info?.label ?? 'the provider'}.`
-                      }
-                    >
-                      {modelsLoading ? 'Loading…' : providerModels.length > 0 ? 'Refresh' : 'Load models'}
-                    </button>
-                  )}
                 </div>
-              </div>
-              <p className="llm-hint">
-                {!modelListingSupported
-                  ? "OpenAI-compatible servers vary too much for the app to reliably list or validate models — type the model name your server expects. Nothing here is checked; that's on you to get right."
-                  : providerModels.length > 0
-                    ? `${providerModels.length} model${providerModels.length === 1 ? '' : 's'} loaded from ${info?.label ?? 'the provider'} — search the list, or type a name it doesn't have.`
-                    : "Type the model name exactly as the provider documents it, or load the current list once a key is set (a red field means the typed name isn't in a loaded list)."}
-              </p>
-              {modelListingSupported && modelsError && (
-                <p role="alert" className="llm-problem">
-                  Couldn't load the model list: {modelsError}
+                <p className="llm-hint">
+                  {urlEditable
+                    ? 'Where your server listens — e.g. LM Studio, llama.cpp or vLLM on http://localhost:1234.'
+                    : 'Fixed for this provider, so there is nothing to type.'}
                 </p>
+
+                <div className="llm-row">
+                  <label htmlFor="llm-model" className="llm-label">
+                    Model
+                  </label>
+                  <div className="llm-model-field">
+                    <ModelPicker
+                      id="llm-model"
+                      value={draft.model}
+                      onChange={(v) => patch({ model: v })}
+                      models={modelListingSupported ? providerModels : NO_MODELS}
+                      loading={modelListingSupported && modelsLoading}
+                      providerLabel={info?.label ?? 'This provider'}
+                      placeholder="e.g. claude-opus-4-8, gpt-4o"
+                    />
+                    {modelListingSupported && (
+                      <button
+                        type="button"
+                        onClick={() => void fetchModels(draft, apiKey.trim() || undefined, { force: true })}
+                        disabled={modelsLoading || (!draft.hasKey && !apiKey.trim())}
+                        title={
+                          !draft.hasKey && !apiKey.trim()
+                            ? 'Enter an API key first — the list has to be fetched with it.'
+                            : `Fetch the current model list from ${info?.label ?? 'the provider'}.`
+                        }
+                      >
+                        {modelsLoading ? 'Loading…' : providerModels.length > 0 ? 'Refresh' : 'Load models'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p className="llm-hint">
+                  {!modelListingSupported
+                    ? "OpenAI-compatible servers vary too much for the app to reliably list or validate models — type the model name your server expects. Nothing here is checked; that's on you to get right."
+                    : providerModels.length > 0
+                      ? `${providerModels.length} model${providerModels.length === 1 ? '' : 's'} loaded from ${info?.label ?? 'the provider'} — search the list, or type a name it doesn't have.`
+                      : "Type the model name exactly as the provider documents it, or load the current list once a key is set (a red field means the typed name isn't in a loaded list)."}
+                </p>
+                {modelListingSupported && modelsError && (
+                  <p role="alert" className="llm-problem">
+                    Couldn't load the model list: {modelsError}
+                  </p>
+                )}
+                </>
               )}
 
               {selectedModel?.reasoning && (
@@ -571,7 +643,13 @@ export function LlmSettingsDialog() {
                 page for the current rate.
               </p>
 
-              {draft.provider === 'systemone' && (
+              {kind !== 'local-chat' &&
+                (draft.provider === 'systemone' || draft.provider === 'openai-compatible' || draft.contextTokens !== undefined) && (
+                  <ContextFields draft={draft} patch={patch} />
+                )}
+
+              {/* Older System One targets stored only this budget; new ones use the context window above. */}
+              {draft.provider === 'systemone' && draft.contextTokens === undefined && (
                 <>
                   <div className="llm-row">
                     <label htmlFor="llm-max-state-tokens" className="llm-label">
@@ -598,7 +676,7 @@ export function LlmSettingsDialog() {
                 </>
               )}
 
-              {urlEditable && (
+              {urlEditable && !draft.managed && !cloudflare && (
                 <div className="llm-row">
                   <label htmlFor="llm-nokey" className="llm-label">
                     No API key
@@ -611,35 +689,39 @@ export function LlmSettingsDialog() {
                   />
                 </div>
               )}
-              {urlEditable && (
+              {urlEditable && !draft.managed && !cloudflare && (
                 <p className="llm-hint">This server needs no API key.</p>
               )}
 
-              <div className="llm-row">
-                <label htmlFor="llm-key" className="llm-label">
-                  API key
-                </label>
-                <input
-                  id="llm-key"
-                  type="password"
-                  autoComplete="off"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={
-                    draft.hasKey
-                      ? 'Key stored — leave blank to keep it'
-                      : draft.noKey
-                        ? 'Not needed — this server needs no key'
-                        : 'Paste the provider key'
-                  }
-                  disabled={draft.noKey && !draft.hasKey}
-                  required={!draft.hasKey && !draft.noKey}
-                />
-              </div>
-              <p className="llm-hint">
-                A stored key is never shown again, not even here — this dialog can only ever be told{' '}
-                <em>that</em> one exists. Type a new key to replace it.
-              </p>
+              {!draft.managed && (
+                <>
+                <div className="llm-row">
+                  <label htmlFor="llm-key" className="llm-label">
+                    {cloudflare ? 'API token' : 'API key'}
+                  </label>
+                  <input
+                    id="llm-key"
+                    type="password"
+                    autoComplete="off"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder={
+                      draft.hasKey
+                        ? 'Key stored — leave blank to keep it'
+                        : draft.noKey
+                          ? 'Not needed — this server needs no key'
+                          : 'Paste the provider key'
+                    }
+                    disabled={draft.noKey && !draft.hasKey}
+                    required={!draft.hasKey && !draft.noKey}
+                  />
+                </div>
+                <p className="llm-hint">
+                  A stored key is never shown again, not even here — this dialog can only ever be told{' '}
+                  <em>that</em> one exists. Type a new key to replace it.
+                </p>
+                </>
+              )}
 
               {draft.provider !== 'systemone' && (
                 <>
