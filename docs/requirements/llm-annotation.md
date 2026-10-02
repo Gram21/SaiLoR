@@ -441,3 +441,80 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `src/state/aiStore.ts` (`saveFeedback`, `writeFeedback`, `feedbackHandled`), `src/llm/feedback.ts`, `src/platform/adapter.ts` (`writeFeedback`), `src/components/AiDialog.tsx`
 - **Status:** Implemented
 - **Tests:** `src/state/aiStore.recheck.test.ts`, `src/llm/feedback.test.ts`, `electron/feedback.test.ts`
+
+### REQ-LLM-710 — Respect each model's input window
+- **Description:** Each System One request shall fit the model's input window. `systemOneProfileFor(cfg)` (`src/llm/modelProfiles.ts`) gives per-family limits (Laya English 512/192, Laya multilingual and typed-decisions 1024/256, Jev 32k for state plus longest question, Clef 65,536 hosted or 16,384 local, otherwise a conservative profile from `contextTokens`/`maxStateTokens`); user-set `contextTokens` and `optionsBudgetTokens` always override. Chat input budgets derive from `contextTokens` through `chatInputBudget`, which is null (send everything) when the window is unknown. Run estimates clamp per-request input to `contextTokens`, and the Classify estimate multiplies by the number of packed requests. Ceiling: Laya `maxQuestions`/`maxOptionsPerChoice` are conservative estimates.
+- **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
+- **Evidence:** `src/llm/modelProfiles.ts`, `src/llm/budget.ts` (`chatInputBudget`, `estimateTokens`), `src/llm/cost.ts` (`estimateRun`)
+- **Status:** Implemented
+- **Tests:** `src/llm/modelProfiles.test.ts`, `src/llm/budget.test.ts`, `src/llm/cost.test.ts`
+
+### REQ-LLM-711 — System One question packing and label budgets
+- **Description:** `planSystemOneRequests` shall send each eligible question in as few requests as `maxQuestions` allows, repeating the state in each. A question with more options than `maxOptionsPerChoice` is reported not handled ("too many options for <model>: use an LLM"); one whose instruction and option labels exceed the options budget is first shortened to the field name, then reported not handled ("labels too long for this model's input window"). The state gets the window minus the head minus a safety margin. For models with an options budget (Laya) the head is the sum of all questions' tokens in the request (about 4 tokens per question for markers) and packing stops when the next question would exceed that budget; for Jev and Clef the longest question counts; below 2000 tokens only title, abstract and metadata are sent, otherwise the paper body is fitted. `state.mode` reports `full`, `abstract+body` or `abstract-only`. `buildSystemOneRequest` returns the first planned request; `mergeSystemOneResults` combines replies. AI screening applies the same checks and drops the reason question, with a note, when the reasons list does not fit.
+- **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
+- **Evidence:** `src/llm/systemone.ts` (`planSystemOne`, `planSystemOneRequests`, `mergeSystemOneResults`), `src/llm/screeningAi.ts` (`buildScreeningSystemOneRequest`)
+- **Status:** Implemented
+- **Tests:** `src/llm/systemone.test.ts`, `src/llm/screeningAi.test.ts`
+
+### REQ-LLM-712 — Page-aware paper fitting for small contexts
+- **Description:** `fitPaperText` shall fit `[page N]`-marked paper text to a token budget: it first drops the reference list (a References/Bibliography/Literaturverzeichnis heading on its own line in the last third), then trailing pages, then cuts inside page 1, adds a note of the omitted pages, and never returns text over budget. Tokens are estimated at 3.2 characters per token. Ceiling: a reference heading merged into a text line is not detected.
+- **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
+- **Evidence:** `src/llm/budget.ts` (`fitPaperText`, `estimateTokens`)
+- **Status:** Implemented
+- **Tests:** `src/llm/budget.test.ts`
+
+### REQ-LLM-713 — Hosted Clef via Cloudflare Workers AI
+- **Description:** A System One target with `systemOneFlavor: 'cloudflare'` shall call `https://api.cloudflare.com/client/v4/accounts/<accountId>/ai/run/@cf/cloudflare/<clef|clef-flash>` with a Bearer key and a `{model, state, questions}` body. The account id must match `^[a-f0-9]{32}$` and the model must be `clef` or `clef-flash` (default `clef-flash`), otherwise planning and Verify setup report a clear error. The parser unwraps the Cloudflare `result` envelope, tolerates extra `score`/`legend` fields and maps usage, and `extractError` reads `{success:false, errors:[{code,message}]}`.
+- **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
+- **Evidence:** `src/llm/systemone.ts` (`systemOneEndpoint`, `parseSystemOneResponse`), `src/llm/providers.ts` (`extractError`)
+- **Status:** Implemented
+- **Tests:** `src/llm/systemone.test.ts`
+
+### REQ-LLM-720 — Ollama native chat with explicit context
+- **Description:** The provider "Ollama (local)" (default `http://localhost:11434`, editable, keyless allowed, no PDF, model listing via `GET /api/tags`) shall call Ollama's native `POST /api/chat`, never `/v1/chat/completions`, because the OpenAI-compatible route cannot set the context window. Every request carries `options.num_ctx` (the target's `contextTokens`, else the request size plus the output reserve rounded up to 1024 and at least 8192), `options.temperature: 0`, `options.num_predict`, `stream: false`, `keep_alive`, and `think` (false unless a reasoning level is configured). Agent mode sends tools as `{type:'function', function}`, replays the assistant message verbatim, and returns tool results as `{role:'tool', tool_name, content}`. Usage comes from `prompt_eval_count`/`eval_count`; `done_reason: 'length'` counts as truncated output. Nothing here was tested against a live Ollama server.
+- **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
+- **Evidence:** `src/llm/providers.ts` (`PROVIDERS.ollama`, `buildRequest`), `src/llm/chat.ts` (`ollamaMessages`, `buildChatRequest`, `parseChatResponse`), `src/llm/ollama.ts` (`ollamaChatBody`, `computeNumCtx`, `ollamaNumCtx`), `src/llm/models.ts`
+- **Status:** Implemented
+- **Tests:** `src/llm/ollama.chat.test.ts`, `src/llm/ollama.test.ts`, `src/llm/providers.test.ts`
+
+### REQ-LLM-721 — Detect silent input truncation
+- **Description:** Ollama silently drops the start of an over-long prompt (the instructions) and still answers 200. After each Ollama call the system shall compare `prompt_eval_count` with the request's `num_ctx` and set `inputTruncated` on the parsed chat response when it is within 64 tokens of the window; `runAgent` (including the judge call) then fails the paper with a message to raise the context size or shorten the paper. Ceiling: prompt-cache reuse can lower `prompt_eval_count`, so a truncation after a cache hit can go unseen. Prompt-mode callers can use `parseChatResponse(...).inputTruncated`; they are not wired yet.
+- **Type:** Functional (ISO 25010: Reliability, Safety)
+- **Evidence:** `src/llm/ollama.ts` (`inputWasTruncated`, `INPUT_TRUNCATED_MESSAGE`), `src/llm/chat.ts` (`ChatResponse.inputTruncated`), `src/llm/agent.ts`
+- **Status:** Implemented (agent mode); prompt mode pending
+- **Tests:** `src/llm/ollama.test.ts`, `src/llm/ollama.chat.test.ts`
+
+### REQ-LLM-722 — Local server discovery and model listing
+- **Description:** The desktop app shall expose Ollama control (`version`, `list`, `show`, `ps`, `pull` with streamed progress, cancel, `delete`, registry `manifestSize`) and `discoverLocalServer(baseUrl)` over IPC. The renderer-supplied base URL must be `http:`/`https:` without credentials and is reduced to its origin; results carry `isLocal` (loopback/private host) so the UI can warn when papers would leave the local network. Model tags are validated (`isValidModelTag`) before use and never taken from model output. Requests use `net.fetch` with timeouts and refuse redirects; a pull stops after 2 minutes without data, and cancelling closes the connection while the server may continue (pulling again resumes). Discovery probes Ollama (`/api/version`, `/api/tags`, `/api/ps`), LM Studio (`/api/v1/models`), llama.cpp (`/props`, `/v1/models`) and vLLM (`/v1/models` with `max_model_len`) and returns `{kind, models:[{id, contextTokens?, sizeBytes?, loaded?}]}`. No API key is sent by these calls.
+- **Type:** Functional (ISO 25010: Functional Suitability, Security)
+- **Evidence:** `electron/ollama.ts` (`registerOllamaHandlers`, `checkBaseUrl`), `src/llm/ollama.ts` (parsers), `src/platform/ollamaApi.ts`, `src/platform/electron.ts`, `src/platform/unsupported.ts`, `electron/preload.ts`
+- **Status:** Implemented (no UI yet)
+- **Tests:** `electron/ollama.test.ts`, `src/llm/ollama.test.ts`
+
+### REQ-LLM-723 — Curated local model shortlist with consent sizes
+- **Description:** The system shall ship `OLLAMA_SHORTLIST`, a curated list of Ollama tags (checked in the Ollama library on 2026-10-02) with label, approximate default-pull size, the model's maximum context, a minimum RAM hint and notes. Phi-4 is excluded (16K context). Annotation quality is not benchmarked. Before a download the size shall be re-read from the registry manifest (`manifestSize`, the sum of layer sizes) so consent shows the current size; a missing tag (404) yields no size and the UI must handle it. GPU/CPU use of a loaded model is derived from `/api/ps` (`gpuStatus`) and KV-cache memory from `/api/show` (`estimateKvBytes`, an over-estimate).
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/llm/ollama.ts` (`OLLAMA_SHORTLIST`, `manifestUrl`, `sumManifestBytes`, `gpuStatus`, `estimateKvBytes`), `electron/ollama.ts` (`ollama:manifestSize`)
+- **Status:** Implemented (no UI yet)
+- **Tests:** `src/llm/ollama.test.ts`, `electron/ollama.test.ts`
+
+### REQ-LLM-700 — Managed local runtime for System One models
+- **Description:** The desktop app shall run System One decision models (Laya first) locally without Python: it finds a `llama-server` (user-set `SAILOR_LLAMA_SERVER`, the managed copy under `userData/local-runtime/llama.cpp/<tag>/`, then `PATH` and common install directories), or installs one from the newest ggml-org/llama.cpp release (the `b<N>` pre-releases; `releases/latest` points at an unrelated tag stream). A server per model is started lazily by `llm:call` for targets with `managed.catalogId`, on a free `127.0.0.1` port with `-c = -b = -ub = contextTokens`, one slot, no web UI and a random per-session `--api-key` that only the main process knows; the stored base URL is a placeholder and the call is re-pinned to the running server's origin (paths limited to `/v1/*` and `/health`, redirects still refused). After start the app self-tests `POST /v1/systemone`; a build without the route (404) or a non-decision model (501) is stopped and reported. Servers stop after 10 idle minutes and on quit; the last 200 log lines are kept. Model files are listed from a fixed catalog (Laya English Q8_0 available; Laya multilingual and typed-decisions planned because the community GGUFs use an architecture llama.cpp cannot load; Clef and Clef Flash planned until llama.cpp supports them). The renderer only names catalog ids. Verified live on macOS arm64 against llama.cpp master 4ebdf2c (no tagged release contains the route yet, newest checked b11349); the installer reports the release's route support via the GitHub compare API and refuses a release known to lack it.
+- **Type:** Functional (ISO 25010: Functional Suitability, Security)
+- **Evidence:** `electron/localRuntime.ts`, `electron/localRuntimeUtil.ts`, `electron/localRuntimeIpc.ts`, `electron/llmConfig.ts` (`managedTargetUrl`, `validManaged`), `electron/main.ts` (`llm:call`), `src/llm/localCatalog.ts`, `src/platform/localRuntime.ts`
+- **Status:** Implemented (no UI yet)
+- **Tests:** `electron/localRuntimeUtil.test.ts`, `electron/llmConfig.test.ts`, `src/llm/localCatalog.test.ts`
+
+### REQ-LLM-701 — Hash-verified downloads with informed consent
+- **Description:** Runtime and model downloads shall start only after a plan (name, size, SHA-256, source, license, destination, free disk space) was produced for the same item in this session, so the UI can obtain consent first. The runtime hash is the release asset's `digest`; the model hash is the Hugging Face LFS oid of the file at a pinned commit; a missing or malformed digest refuses the download. Only `github.com`, `api.github.com`, `*.githubusercontent.com` and `huggingface.co`, `*.huggingface.co`, `*.hf.co` over https (no credentials, default port) are contacted, every redirect hop being re-checked. Downloads resume from a `.partial` file with a `Range` request (a server that does not honour it restarts from zero), report progress, can be cancelled, and are renamed into place only after the size and SHA-256 match; a mismatch deletes the file. The runtime archive is extracted with the system `tar` (bsdtar; `System32\tar.exe` on Windows) and its `llama-server` must run `--version` before it is accepted.
+- **Type:** Functional (ISO 25010: Security, Reliability)
+- **Evidence:** `electron/localRuntime.ts` (`downloadVerified`, `runtimePlan`, `modelPlan`, `runtimeInstall`, `modelInstall`), `electron/localRuntimeUtil.ts` (`parseDigest`, `parseHfFile`, `allowedDownloadUrl`, `resumeOffset`, `contentRangeStartsAt`)
+- **Status:** Implemented (no UI yet)
+- **Tests:** `electron/localRuntimeUtil.test.ts`
+
+### REQ-LLM-702 — GPU when available, CPU otherwise, reported honestly
+- **Description:** The desktop app shall probe the hardware (RAM, free disk, GPUs via `nvidia-smi`, `system_profiler`, PowerShell `Win32_VideoController`, `lspci`; each probe best-effort with a timeout, failures meaning "unknown") and recommend a llama.cpp build (Metal on Apple silicon, Vulkan with a discrete or integrated GPU, else CPU; Windows prefers the Vulkan build over CUDA, which needs a separate cudart bundle). A model server is started with all layers offloaded (`-ngl 99`); the reported backend and layer count are read from the server's startup log, never from what was requested ("using device" alone is not GPU use when 0 layers are offloaded). If the GPU start fails the server is started once more with `-dev none -ngl 0` and the result carries a note; an incompatible build or model is not retried. Observed on an M3 Pro: Metal start 0.37 s and 58 ms for three questions, CPU-only 0.15 s warm (first requests seconds).
+- **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
+- **Evidence:** `electron/hardware.ts` (`probeHardware`, `recommendBackend`), `electron/localRuntimeUtil.ts` (`parseServerLog`, `buildServerArgs`), `electron/localRuntime.ts` (`start`)
+- **Status:** Implemented (no UI yet); CUDA/Vulkan paths untested on real hardware
+- **Tests:** `electron/hardware.test.ts`, `electron/localRuntimeUtil.test.ts`

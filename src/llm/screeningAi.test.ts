@@ -86,6 +86,14 @@ describe('System One', () => {
     expect(asked.map((a) => a.id)).toEqual(['q0', 'q1'])
   })
 
+  it('drops the reason question when the reasons exceed a small model\'s window', () => {
+    const laya = { ...cfg, model: 'laya' } as LlmConfig
+    const many = Array.from({ length: 30 }, (_, i) => `Reason ${i}`)
+    const r = buildScreeningSystemOneRequest(laya, PAPER, { kind: 'abstract', text: 'abs' }, many, null)
+    expect(r.asked.map((a) => a.id)).toEqual(['q0'])
+    expect(r.notes[0]).toContain('too many options')
+  })
+
   const asked = buildScreeningSystemOneRequest(cfg, PAPER, { kind: 'abstract', text: 'a' }, REASONS, null).asked
 
   it('maps an Exclude answer with a reason', () => {

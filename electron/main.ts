@@ -63,8 +63,11 @@ import { parseMarks, type PdfMark } from '../src/model/pdfMarks'
 import { rectToPdfPoints, rectToQuadPoints } from '../src/model/pdfExport'
 import { verifyReleaseSignature, RELEASE_PUBLIC_KEY_B64 } from '../src/model/updateSignature'
 import { isBlockedAddress, validateFetchUrl } from './webFetch'
-import { validPrice, validPositiveInt, buildCallHeaders } from './llmConfig'
+import { validPrice, validPositiveInt, buildCallHeaders, validSystemOneFlavor, validAccountId, validManaged, managedTargetUrl } from './llmConfig'
+import { createLocalRuntime } from './localRuntime'
+import { registerLocalRuntimeIpc } from './localRuntimeIpc'
 import { parseRetryAfter } from '../src/llm/retry'
+import { registerOllamaHandlers } from './ollama'
 import type { WebFetchResult } from '../src/llm/types'
 import { PDFDocument, PDFHexString, PDFString, type PDFContext, type PDFDict } from 'pdf-lib'
 import { autoUpdater } from 'electron-updater'
@@ -1916,6 +1919,13 @@ app.whenReady().then(() => {
 
 const API_KEY_SENTINEL = '{{apiKey}}'
 
+// App-managed llama-server (System One decision models). Server lifetime is tied to the app.
+const localRuntime = createLocalRuntime({
+  dataDir: () => app.getPath('userData'),
+  emit: (p) => mainWindow?.webContents.send('local:progress', p),
+})
+registerLocalRuntimeIpc(ipcMain, localRuntime)
+
 interface StoredLlmConfig {
   id: string
   name: string
@@ -1932,6 +1942,12 @@ interface StoredLlmConfig {
   outputPrice?: number
   /** System One targets only — see `LlmConfig.maxStateTokens`. */
   maxStateTokens?: number
+  contextTokens?: number
+  optionsBudgetTokens?: number
+  systemOneFlavor?: 'jev' | 'cloudflare'
+  accountId?: string
+  /** Set when the app runs this model itself — see `LlmConfig.managed`. */
+  managed?: { catalogId: string }
   /** safeStorage-encrypted key, base64. Absent when the user has not set one. */
   key?: string
 }
@@ -1984,7 +2000,12 @@ ipcMain.handle('llm:saveConfig', (_e, config: StoredLlmConfig, apiKey?: string) 
     inputPrice: validPrice(config.inputPrice),
     outputPrice: validPrice(config.outputPrice),
     maxStateTokens: validPositiveInt(config.maxStateTokens),
-    noKey: Boolean(config.noKey),
+    contextTokens: validPositiveInt(config.contextTokens),
+    optionsBudgetTokens: validPositiveInt(config.optionsBudgetTokens),
+    systemOneFlavor: validSystemOneFlavor(config.systemOneFlavor),
+    accountId: validAccountId(config.accountId),
+    managed: validManaged(config.managed),
+    noKey: Boolean(config.noKey) || Boolean(validManaged(config.managed)), // the local server needs no user-held key
     ...(key ? { key } : {}),
   }
   const merged = existing
@@ -2053,6 +2074,16 @@ ipcMain.handle(
       noKey: config.noKey,
     })
 
+    // Managed local model: the stored base URL is only a placeholder. The checks above
+    // already pinned the request to it; now send it to the server we run (started on
+    // demand), authenticated with that server's per-session key.
+    let callUrl = request.url
+    if (config.managed) {
+      const ep = await localRuntime.endpoint(config.managed.catalogId)
+      callUrl = managedTargetUrl(request.url, ep.baseUrl)
+      headers['Authorization'] = `Bearer ${ep.apiKey}`
+    }
+
     const controller = new AbortController()
     inFlight.set(requestId, controller)
     // An endpoint that accepts the connection and then never answers would
@@ -2063,7 +2094,7 @@ ipcMain.handle(
     // way to reach this, not a hostile one.
     const timer = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS)
     try {
-      const res = await net.fetch(request.url, {
+      const res = await net.fetch(callUrl, {
         method: request.method ?? 'POST',
         headers,
         body: request.method === 'GET' ? undefined : request.body,
@@ -2087,6 +2118,8 @@ ipcMain.handle(
     }
   },
 )
+
+registerOllamaHandlers(ipcMain, { fetch: (u, i) => net.fetch(u, i), send: (c, p) => mainWindow?.webContents.send(c, p) })
 
 // ---- Web access for the AI agent's fetch_url tool ----
 //
@@ -3552,6 +3585,7 @@ ipcMain.handle('git:stashBranch', async (_e, root: string, relPath: string, sha:
 // confirms, resume quitting (rather than merely closing the window on macOS).
 app.on('before-quit', () => {
   isQuitting = true
+  localRuntime.stopAll()
 })
 
 app.on('window-all-closed', () => {

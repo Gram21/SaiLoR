@@ -157,3 +157,19 @@ describe('estimateCostSplit', () => {
     expect(split.high).toBeCloseTo(whole.high)
   })
 })
+
+describe('estimateRun input window', () => {
+  const base = { papers: [{ pages: 30 }], fieldsPerPaper: 3, mode: 'prompt' as const, delivery: 'text' as const }
+
+  it('never estimates more input per request than the window', () => {
+    expect(estimateRun(base).high.inputTokens).toBeGreaterThan(8000)
+    expect(estimateRun({ ...base, contextTokens: 8000 }).high.inputTokens).toBe(8000)
+  })
+
+  it('multiplies Classify requests', () => {
+    const one = estimateRun({ ...base, mode: 'classify' })
+    const three = estimateRun({ ...base, mode: 'classify', systemOneRequests: 3 })
+    expect(three.requests.low).toBe(3 * one.requests.low)
+    expect(three.high.inputTokens).toBe(3 * one.high.inputTokens)
+  })
+})

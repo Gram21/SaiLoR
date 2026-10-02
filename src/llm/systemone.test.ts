@@ -3,7 +3,11 @@ import { resolveSchema, type ResolvedDef } from '../model/schema'
 import type { FieldTarget } from './fields'
 import type { LlmConfig } from './types'
 import { API_KEY_SENTINEL } from './types'
+import { estimateTokens } from './budget'
+import { extractError } from './providers'
 import {
+  mergeSystemOneResults,
+  planSystemOneRequests,
   buildSystemOneRequest,
   buildSystemOneVerifyRequest,
   compareWithSystemOne,
@@ -96,32 +100,151 @@ describe('buildSystemOneRequest', () => {
     expect(body.model).toBe('jev-latest')
   })
 
-  it('truncates the state and marks it', () => {
-    const longText = 'x'.repeat(100)
-    const result = buildSystemOneRequest(
-      cfg,
-      { title: 'T' },
-      longText,
-      [target('Relevant')],
-      { maxStateChars: 20 },
-    )
-    const body = JSON.parse(result!.request.body!)
-    expect(body.state.length).toBeLessThan(longText.length)
-    expect(body.state).toContain('[truncated]')
-  })
-
-  it('derives maxStateChars from maxStateTokens when maxStateChars is not given', () => {
-    const longText = 'y'.repeat(1000)
+  it('caps the state at maxStateTokens', () => {
     const result = buildSystemOneRequest(
       { ...cfg, maxStateTokens: 10 },
-      { title: '' },
-      longText,
+      { title: 'T' },
+      'y'.repeat(1000),
       [target('Relevant')],
     )
     const body = JSON.parse(result!.request.body!)
-    // 10 tokens * 4 chars/token = 40 chars, plus the truncation marker.
-    expect(body.state.length).toBeLessThanOrEqual(40 + '\n[truncated]'.length)
-    expect(body.state).toContain('[truncated]')
+    expect(estimateTokens(body.state)).toBeLessThanOrEqual(10)
+  })
+})
+
+const layaCfg: LlmConfig = { ...cfg, model: 'laya', baseUrl: 'http://localhost:8081' }
+const CF = 'a'.repeat(32)
+const cfCfg: LlmConfig = { ...cfg, model: 'clef-flash', systemOneFlavor: 'cloudflare', accountId: CF }
+const pages = (n: number) => Array.from({ length: n }, (_, i) => `[page ${i + 1}]\n${'word '.repeat(2000)}`).join('\n')
+
+describe('planSystemOneRequests', () => {
+  const paper = { title: 'Title', abstract: 'An abstract.' }
+
+  it('packs questions under maxQuestions and repeats the state per request', () => {
+    const many = Array.from({ length: 40 }, (_, i) => ({ ...target('Relevant'), path: `P${i}` }))
+    const plan = planSystemOneRequests(layaCfg, paper, 'body', many)
+    // Laya shares its 192-token head budget across a request's questions.
+    const sizes = plan.requests.map((r) => r.asked.length)
+    expect(sizes.length).toBeGreaterThan(3)
+    expect(sizes.every((n) => n <= 16)).toBe(true)
+    const ids = plan.requests.flatMap((r) => r.asked.map((a) => a.id))
+    expect(new Set(ids).size).toBe(40)
+    const jev = planSystemOneRequests({ ...cfg, model: 'jev-latest' }, paper, 'body', many)
+    expect(jev.requests.map((r) => r.asked.length)).toEqual([16, 16, 8])
+    expect(plan.requests.every((r) => /^q\d+$/.test(r.asked[0].id))).toBe(true)
+  })
+
+  it('reports too many options and over-long labels as notHandled', () => {
+    const wide = resolveSchema([
+      { name: 'Wide', type: 'string', options: Array.from({ length: 30 }, (_, i) => `opt${i}`) },
+      { name: 'Long', type: 'string', options: ['A', 'B'].map((x) => x + ' very long label'.repeat(80)) },
+    ])
+    const t = wide.map((def) => ({ path: def.name, def, value: undefined as never }))
+    const plan = planSystemOneRequests(layaCfg, paper, '', t)
+    expect(plan.requests).toEqual([])
+    expect(plan.notHandled).toEqual([
+      { path: 'Wide', reason: 'too many options for laya: use an LLM' },
+      { path: 'Long', reason: "labels too long for this model's input window" },
+    ])
+  })
+
+  it('shortens a long instruction to the field name before giving up', () => {
+    const d = resolveSchema([
+      { name: 'Short', type: 'string', description: 'long description '.repeat(40), options: Array.from({ length: 10 }, (_, i) => `option-no-${i}`) },
+    ])[0]
+    const plan = planSystemOneRequests(layaCfg, paper, '', [{ path: 'Short', def: d, value: undefined as never }])
+    expect(plan.notHandled).toEqual([])
+    expect(JSON.parse(plan.requests[0].request.body!).questions.q0.instructions).toBe('Short')
+  })
+
+  it('Laya (512 window) sends title + abstract only, never body', () => {
+    const plan = planSystemOneRequests(layaCfg, paper, pages(20), [target('Relevant')])
+    expect(plan.state.mode).toBe('abstract-only')
+    const state = JSON.parse(plan.requests[0].request.body!).state as string
+    expect(state).toContain('Title')
+    expect(state).not.toContain('word')
+    expect(estimateTokens(state)).toBeLessThanOrEqual(512 - 192 - 1)
+  })
+
+  it('Laya without an abstract takes the leading body text that fits', () => {
+    const plan = planSystemOneRequests(layaCfg, { title: 'Title' }, pages(20), [target('Relevant')])
+    expect(plan.state.mode).toBe('abstract+body')
+    expect(plan.state.truncated).toBe(true)
+  })
+
+  it('Jev (64k) sends body via page-aware fitting', () => {
+    const jev: LlmConfig = { ...cfg, model: 'jev-latest' }
+    const plan = planSystemOneRequests(jev, paper, pages(60), [target('Relevant')])
+    expect(plan.state.mode).toBe('abstract+body')
+    const state = JSON.parse(plan.requests[0].request.body!).state as string
+    expect(state).toContain('[page 1]')
+    expect(state).toContain('pages omitted')
+    expect(estimateTokens(state)).toBeLessThanOrEqual(32_000)
+    expect(planSystemOneRequests(jev, paper, 'short body', [target('Relevant')]).state.mode).toBe('full')
+  })
+
+  it('is deterministic', () => {
+    const a = planSystemOneRequests(layaCfg, paper, pages(3), targetsAll())
+    const b = planSystemOneRequests(layaCfg, paper, pages(3), targetsAll())
+    expect(a).toEqual(b)
+  })
+
+  it('builds the Cloudflare Workers AI request', () => {
+    const plan = planSystemOneRequests(cfCfg, paper, 'body', [target('Relevant')])
+    const { request } = plan.requests[0]
+    expect(request.url).toBe(`https://api.cloudflare.com/client/v4/accounts/${CF}/ai/run/@cf/cloudflare/clef-flash`)
+    expect(request.headers.Authorization).toBe(`Bearer ${API_KEY_SENTINEL}`)
+    expect(Object.keys(JSON.parse(request.body!)).sort()).toEqual(['model', 'questions', 'state'])
+  })
+
+  it('rejects a bad Cloudflare account id with a clear error', () => {
+    const plan = planSystemOneRequests({ ...cfCfg, accountId: 'nope' }, paper, '', [target('Relevant')])
+    expect(plan.requests).toEqual([])
+    expect(plan.error).toMatch(/32/)
+    expect(() => buildSystemOneVerifyRequest({ ...cfCfg, accountId: '' })).toThrow()
+  })
+})
+
+function targetsAll(): FieldTarget[] {
+  return [target('Relevant'), target('Study Type')]
+}
+
+describe('Cloudflare envelope and merging', () => {
+  const asked = [
+    { id: 'q0', path: 'Relevant', kind: 'noul' as const },
+    { id: 'q1', path: 'Study Type', kind: 'choice' as const, options: ['RCT', 'Survey'] },
+  ]
+  const envelope = {
+    result: {
+      model: 'clef-flash',
+      answers: {
+        q0: { type: 'noul', noul: 0.9, score: 7.3, legend: { '1': 'low' } },
+        q1: { type: 'choice', choice: 'RCT', probabilities: { RCT: 0.8, Survey: 0.2 }, score: 1.2 },
+      },
+      usage: { input_tokens: 120, output_tokens: 8 },
+    },
+    success: true,
+    errors: [],
+    messages: [],
+  }
+
+  it('unwraps result and tolerates score/legend extras', () => {
+    const r = parseSystemOneResponse(asked, envelope)
+    expect(r.suggestions.map((s) => s.value)).toEqual([true, 'RCT'])
+    expect(r.usage).toEqual({ inputTokens: 120, outputTokens: 8 })
+  })
+
+  it('merges several results', () => {
+    const a = parseSystemOneResponse([asked[0]], envelope)
+    const b = parseSystemOneResponse([asked[1]], envelope)
+    const m = mergeSystemOneResults([a, b])
+    expect(m.suggestions).toHaveLength(2)
+    expect(m.usage.inputTokens).toBe(240)
+  })
+
+  it('extractError reads the Cloudflare error list', () => {
+    const body = JSON.stringify({ success: false, errors: [{ code: 10000, message: 'Authentication error' }] })
+    expect(extractError('systemone', 403, body)).toContain('Authentication error')
   })
 })
 

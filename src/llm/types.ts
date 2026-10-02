@@ -20,6 +20,7 @@ export type Provider =
   | 'xai'
   | 'openai-compatible'
   | 'systemone'
+  | 'ollama'
 
 /** How the paper is handed to the model. Text is the default — see `src/model/pdfText.ts`. */
 export type Attach = 'text' | 'pdf'
@@ -60,6 +61,25 @@ export interface LlmConfig {
    * own default. Meaningless for every other provider.
    */
   maxStateTokens?: number
+  /**
+   * Total context window (tokens) of this model as it will actually be run —
+   * the server's configured window for local models, not the training ceiling.
+   * Used to budget the prompt and the paper text; absent means "unknown, send
+   * everything" (the cloud providers' windows are large and not tracked here).
+   */
+  contextTokens?: number
+  /** System One: share of `contextTokens` available to questions + answer options. */
+  optionsBudgetTokens?: number
+  /** System One only: which wire flavor — Jev's `/v1/systemone` route (default) or Cloudflare Workers AI. */
+  systemOneFlavor?: 'jev' | 'cloudflare'
+  /** Cloudflare Workers AI account id (public, not a secret); `systemOneFlavor: 'cloudflare'` only. */
+  accountId?: string
+  /**
+   * Set when the app itself runs this model (downloaded model + local runtime).
+   * `catalogId` names an entry of the local-model catalog; the base URL is
+   * resolved from the running server instead of being stored.
+   */
+  managed?: { catalogId: string }
 }
 
 /** Whether a target has what it needs to be called: a stored key, or none required. */
@@ -81,6 +101,8 @@ export interface ModelInfo {
   /** USD per 1M tokens, when the provider's list-models reply states its own
    *  price (e.g. OpenRouter). Absent — never guessed — otherwise. */
   pricing?: { input: number; output: number }
+  /** Context window in tokens, when the provider's list-models reply states it. */
+  contextTokens?: number
 }
 
 /**

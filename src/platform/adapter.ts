@@ -7,6 +7,8 @@
 import type { RecentEntry } from './recents'
 import type { OsInfo } from '../model/version'
 import type { LlmConfig, LlmHttpRequest, LlmHttpResponse, WebFetchResult } from '../llm/types'
+import type { LocalServerResult, OllamaApi } from './ollamaApi'
+import type { LocalRuntimeApi } from './localRuntime'
 import type { GitPlatform } from '../git/types'
 import type { PdfMark } from '../model/pdfMarks'
 
@@ -235,6 +237,15 @@ export interface PlatformAdapter {
    * API key or cookies; the main process refuses private/loopback hosts.
    */
   fetchWeb(url: string, signal?: AbortSignal): Promise<WebFetchResult>
+
+  /** Control of a user-run Ollama server; undefined outside the desktop app. */
+  ollama?: OllamaApi
+
+  /** App-managed llama.cpp runtime and local decision models; null outside the desktop app. */
+  readonly localRuntime: LocalRuntimeApi | null
+
+  /** Probe a URL for Ollama / LM Studio / llama.cpp / vLLM and list its models (desktop app only). */
+  discoverLocalServer?(baseUrl: string): Promise<LocalServerResult>
 
   /**
    * Git operations against **the user's own git installation**, or `null`

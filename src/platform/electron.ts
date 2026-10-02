@@ -10,6 +10,9 @@ import type {
 import { StaleSaveError, type SharedAnnotations } from './adapter'
 import { readRecents, pushRecent, removeRecent, replaceRecents, type RecentEntry } from './recents'
 import type { LlmConfig, LlmHttpRequest, LlmHttpResponse, WebFetchResult } from '../llm/types'
+import type { PullProgress } from '../llm/ollama'
+import type { LocalServerResult, OllamaApi } from './ollamaApi'
+import type { LocalRuntimeApi } from './localRuntime'
 import type {
   GitPlatform,
   GitProbe,
@@ -181,6 +184,19 @@ export interface SlrBridge {
   abortLlm(requestId: string): void
   fetchWeb(requestId: string, url: string): Promise<WebFetchResult>
   abortWeb(requestId: string): void
+  ollama: {
+    version: OllamaApi['version']
+    list: OllamaApi['list']
+    show: OllamaApi['show']
+    ps: OllamaApi['ps']
+    pull(requestId: string, baseUrl: string, model: string): ReturnType<OllamaApi['pull']>
+    cancelPull(requestId: string): void
+    onPullProgress(cb: (p: PullProgress & { requestId: string }) => void): () => void
+    delete: OllamaApi['delete']
+    manifestSize: OllamaApi['manifestSize']
+  }
+  discoverLocalServer(baseUrl: string): Promise<LocalServerResult>
+  local: LocalRuntimeApi
   /** Unsaved-changes coordination for a clean quit. */
   setDirty(dirty: boolean): void
   onRequestSave(cb: () => void): void
@@ -532,6 +548,37 @@ export class ElectronAdapter implements PlatformAdapter {
     } finally {
       signal?.removeEventListener('abort', onAbort)
     }
+  }
+
+  get localRuntime(): LocalRuntimeApi {
+    return bridge().local
+  }
+
+  readonly ollama: OllamaApi = {
+    version: (baseUrl) => bridge().ollama.version(baseUrl),
+    list: (baseUrl) => bridge().ollama.list(baseUrl),
+    show: (baseUrl, model, numCtx) => bridge().ollama.show(baseUrl, model, numCtx),
+    ps: (baseUrl) => bridge().ollama.ps(baseUrl),
+    delete: (baseUrl, model) => bridge().ollama.delete(baseUrl, model),
+    manifestSize: (model) => bridge().ollama.manifestSize(model),
+    async pull(baseUrl, model, onProgress, signal) {
+      const requestId = crypto.randomUUID()
+      const off = bridge().ollama.onPullProgress((p) => {
+        if (p.requestId === requestId) onProgress(p)
+      })
+      const onAbort = () => bridge().ollama.cancelPull(requestId)
+      signal?.addEventListener('abort', onAbort, { once: true })
+      try {
+        return await bridge().ollama.pull(requestId, baseUrl, model)
+      } finally {
+        off()
+        signal?.removeEventListener('abort', onAbort)
+      }
+    },
+  }
+
+  discoverLocalServer(baseUrl: string): Promise<LocalServerResult> {
+    return bridge().discoverLocalServer(baseUrl)
   }
 
   async fetchWeb(url: string, signal?: AbortSignal): Promise<WebFetchResult> {

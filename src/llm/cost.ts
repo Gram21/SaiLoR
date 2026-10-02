@@ -29,6 +29,10 @@ export interface EstimateRunInput {
   fewShotTokens?: number
   /** Agent mode with provider web search on: adds the heuristic below. */
   webSearch?: boolean
+  /** The model's input window: one request's input never exceeds it (the fit step cuts the paper to it). */
+  contextTokens?: number
+  /** Classify mode: requests per paper after question packing (default 1). */
+  systemOneRequests?: number
 }
 
 /** Shown next to the estimate when web search is on. */
@@ -99,8 +103,9 @@ export function estimateRun(input: EstimateRunInput): TokenEstimate {
     const fields = fieldsFor(input.fieldsPerPaper, i)
     const paperLow = paper.pages * perPage.low
     const paperHigh = paper.pages * perPage.high
-    const promptInputLow = OVERHEAD_TOKENS.low + paperLow + fewShot
-    const promptInputHigh = OVERHEAD_TOKENS.high + paperHigh + fewShot
+    const clamp = (n: number) => Math.min(n, input.contextTokens ?? Infinity)
+    const promptInputLow = clamp(OVERHEAD_TOKENS.low + paperLow + fewShot)
+    const promptInputHigh = clamp(OVERHEAD_TOKENS.high + paperHigh + fewShot)
     const outputPerFieldLow = fields * OUTPUT_TOKENS_PER_FIELD.low
     const outputPerFieldHigh = fields * OUTPUT_TOKENS_PER_FIELD.high
 
@@ -118,12 +123,13 @@ export function estimateRun(input: EstimateRunInput): TokenEstimate {
       // Fields are the paper's own text (title/abstract/truncated body), not
       // page count driven the way a chat-completion request is — pages are
       // ignored here, unlike the other two modes.
-      inputLow += CLASSIFY_OVERHEAD_TOKENS.low
-      inputHigh += CLASSIFY_OVERHEAD_TOKENS.high
+      const n = Math.max(1, input.systemOneRequests ?? 1)
+      inputLow += CLASSIFY_OVERHEAD_TOKENS.low * n
+      inputHigh += CLASSIFY_OVERHEAD_TOKENS.high * n
       outputLow += fields * CLASSIFY_OUTPUT_TOKENS_PER_FIELD.low
       outputHigh += fields * CLASSIFY_OUTPUT_TOKENS_PER_FIELD.high
-      requestsLow += 1
-      requestsHigh += 1
+      requestsLow += n
+      requestsHigh += n
       return
     }
 
@@ -143,8 +149,8 @@ export function estimateRun(input: EstimateRunInput): TokenEstimate {
 
     // Judge calls: each judge call also reads the paper, but never few-shot
     // examples (the judge must not see them — see fewshot.ts).
-    const judgeInLow = (OVERHEAD_TOKENS.low + paperLow) * JUDGE_REQUESTS.low
-    const judgeInHigh = (OVERHEAD_TOKENS.high + paperHigh) * JUDGE_REQUESTS.high
+    const judgeInLow = clamp(OVERHEAD_TOKENS.low + paperLow) * JUDGE_REQUESTS.low
+    const judgeInHigh = clamp(OVERHEAD_TOKENS.high + paperHigh) * JUDGE_REQUESTS.high
     const judgeOutLow = JUDGE_REQUESTS.low * 200
     const judgeOutHigh = JUDGE_REQUESTS.high * 400
     inputLow += judgeInLow

@@ -2,10 +2,8 @@ import type { Paper, ProjectProtocol } from '../model/project'
 import { DECISION_EXCLUDE, DECISION_INCLUDE, SCREENING_DECISION, SCREENING_REASON } from '../screening/schema'
 import { extractObject } from './parse'
 import { oneLine } from './prompt'
-import { baseOf, join } from './providers'
-import { parseSystemOneResponse, type SystemOneAsked } from './systemone'
+import { parseSystemOneResponse, planSystemOne, type SystemOneAsked, type SystemOneItem, type SystemOneQuestion } from './systemone'
 import type { LlmConfig, LlmHttpRequest } from './types'
-import { API_KEY_SENTINEL } from './types'
 
 /**
  * AI-assisted screening: one Include/Exclude proposal per paper, decided from
@@ -19,7 +17,6 @@ const MAX_PROTOCOL_CHARS = 4000
 const MAX_EVIDENCE_CHARS = 200
 const MAX_JUSTIFICATION_CHARS = 500
 const MAX_INSTRUCTION_CHARS = 500
-const DEFAULT_MAX_STATE_CHARS = 200_000
 
 export interface ScreeningProposal {
   decision: typeof DECISION_INCLUDE | typeof DECISION_EXCLUDE
@@ -132,7 +129,10 @@ export function parseScreeningAnswer(raw: string, reasons: string[]): ScreeningO
 /**
  * One `/v1/systemone` request with two choice questions: the decision, and the
  * exclusion reason (ignored unless the decision is Exclude). Returns the
- * `asked` list `parseSystemOneResponse` needs.
+ * `asked` list `parseSystemOneResponse` needs. When the model's input window
+ * cannot hold the reasons list, the reason question is dropped and `notes`
+ * says so (an Exclude then fails to parse: the reviewer picks the reason).
+ * Throws when not even the decision fits or the config is unusable.
  */
 export function buildScreeningSystemOneRequest(
   cfg: LlmConfig & { maxStateTokens?: number },
@@ -140,37 +140,48 @@ export function buildScreeningSystemOneRequest(
   src: ScreeningText,
   reasons: string[],
   protocol: ProjectProtocol | null,
-): { request: LlmHttpRequest; asked: SystemOneAsked[] } {
+): { request: LlmHttpRequest; asked: SystemOneAsked[]; notes: string[] } {
   const criteria = protocolBlock(protocol)
-  const ask = (q: string) => oneLine(criteria ? `${q} Review protocol: ${criteria}` : q).slice(0, MAX_INSTRUCTION_CHARS)
-  const asked: SystemOneAsked[] = [
-    { id: 'q0', path: SCREENING_DECISION, kind: 'choice', options: [DECISION_INCLUDE, DECISION_EXCLUDE] },
-    { id: 'q1', path: SCREENING_REASON, kind: 'choice', options: reasons },
+  const ask = (q: string, withProtocol = true) =>
+    oneLine(criteria && withProtocol ? `${q} Review protocol: ${criteria}` : q).slice(0, MAX_INSTRUCTION_CHARS)
+  const choice = (instructions: string, options: Record<string, string>): SystemOneQuestion => ({
+    type: 'choice',
+    instructions,
+    criteria: options,
+  })
+  const decisionQ = 'Should this paper be included in the systematic review? Exclude only if it clearly fails the criteria.'
+  const decisionOptions = {
+    [DECISION_INCLUDE]: 'May be relevant, or cannot be told from the text',
+    [DECISION_EXCLUDE]: 'Clearly fails the review criteria',
+  }
+  const reasonOptions = Object.fromEntries(reasons.map((r) => [r, oneLine(r)]))
+  const items: SystemOneItem[] = [
+    {
+      id: 'q0',
+      path: SCREENING_DECISION,
+      kind: 'choice',
+      options: [DECISION_INCLUDE, DECISION_EXCLUDE],
+      question: choice(ask(decisionQ), decisionOptions),
+      short: choice(ask(decisionQ, false), decisionOptions),
+    },
+    {
+      id: 'q1',
+      path: SCREENING_REASON,
+      kind: 'choice',
+      options: reasons,
+      question: choice(ask('If this paper is excluded, why?'), reasonOptions),
+      short: choice(ask('If excluded, why?', false), reasonOptions),
+    },
   ]
-  const reasonCriteria: Record<string, string> = {}
-  for (const r of reasons) reasonCriteria[r] = oneLine(r)
-  const questions = {
-    q0: {
-      type: 'choice',
-      instructions: ask('Should this paper be included in the systematic review? Exclude only if it clearly fails the criteria.'),
-      criteria: {
-        [DECISION_INCLUDE]: 'May be relevant, or cannot be told from the text',
-        [DECISION_EXCLUDE]: 'Clearly fails the review criteria',
-      },
-    },
-    q1: { type: 'choice', instructions: ask('If this paper is excluded, why?'), criteria: reasonCriteria },
-  }
-  const maxChars = cfg.maxStateTokens ? cfg.maxStateTokens * 4 : DEFAULT_MAX_STATE_CHARS
-  const state = `${paperHeader(paper)}\n\n${src.text.slice(0, MAX_SCREENING_TEXT_CHARS)}`.slice(0, maxChars)
-  return {
-    request: {
-      configId: cfg.id,
-      url: join(baseOf(cfg), '/v1/systemone'),
-      headers: { 'content-type': 'application/json', Authorization: `Bearer ${API_KEY_SENTINEL}` },
-      body: JSON.stringify({ model: cfg.model || 'jev-latest', state, questions }),
-    },
-    asked,
-  }
+  const head = `${paperHeader(paper)}\n\n${src.text.slice(0, MAX_SCREENING_TEXT_CHARS)}`
+  const plan = planSystemOne(cfg, items, { head, hasAbstract: true, body: '' })
+  if (plan.error) throw new Error(plan.error)
+  // The reason question may share a request with the decision, or be left over.
+  const first = plan.requests.find((r) => r.asked.some((a) => a.path === SCREENING_DECISION))
+  if (!first) throw new Error(`Screening decision does not fit this model: ${plan.notHandled[0]?.reason ?? 'no request'}`)
+  // ponytail: a reasons list too large for the window is dropped, not chunked; chunk it if small-window users need Exclude reasons.
+  const notes = plan.notHandled.map((n) => `${n.path}: ${n.reason}`)
+  return { request: first.request, asked: first.asked, notes }
 }
 
 export function parseScreeningSystemOne(
