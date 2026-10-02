@@ -13,6 +13,7 @@ import { PROVIDERS } from '../llm/providers'
 import type { LlmConfig } from '../llm/types'
 import { ComboBox } from './ComboBox'
 import { Spinner } from './Spinner'
+import { AiPreviewNotice } from './AiPreviewNotice'
 import '../styles/ai.css'
 
 /**
@@ -103,6 +104,7 @@ export function AiScreeningDialog() {
         </div>
 
         <div className="modal-body">
+          <AiPreviewNotice />
           {s.phase === 'setup' && (
             <>
               <div className="ai-label">What</div>

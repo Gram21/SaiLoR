@@ -9,6 +9,7 @@ import { HostedSystemOnePanel, hostedPreset } from './HostedSystemOnePanel'
 import { LocalChatPanel } from './LocalChatPanel'
 import { LocalSystemOnePanel } from './LocalSystemOnePanel'
 import { isCloudflareAccountId } from '../llm/localUi'
+import { AiPreviewNotice } from './AiPreviewNotice'
 import '../styles/ai.css'
 
 const NO_MODELS: ModelInfo[] = []
@@ -380,6 +381,7 @@ export function LlmSettingsDialog() {
         </div>
 
         <div className="modal-body">
+          <AiPreviewNotice />
           {/* Where the key ends up is the user's business, and the honest answer
               differs per runtime. Never hide this behind a "learn more". */}
           {browser ? (

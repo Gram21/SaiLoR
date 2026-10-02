@@ -574,3 +574,10 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `src/state/aiStore.ts` (`agentContextReason`, `startBlocker`), `src/components/AiDialog.tsx` (Agent radio)
 - **Status:** Implemented
 - **Tests:** `src/state/aiStore.budget.test.ts`, `src/components/AiDialog.test.tsx`
+
+### REQ-LLM-750 — Mark the AI feature as a preview
+- **Description:** The system shall show a notice at the top of every AI window (annotation, screening, model settings) that AI support is a preview feature that is still in development and may change, and that every proposal must be checked before it is applied.
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/AiPreviewNotice.tsx`, `src/components/AiDialog.tsx`, `src/components/AiScreeningDialog.tsx`, `src/components/LlmSettingsDialog.tsx`
+- **Status:** Implemented
+- **Tests:** `src/components/AiPreviewNotice.test.tsx`

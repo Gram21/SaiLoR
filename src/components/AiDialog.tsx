@@ -26,6 +26,7 @@ import type { FieldValue } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
 import { ComboBox } from './ComboBox'
 import { Spinner } from './Spinner'
+import { AiPreviewNotice } from './AiPreviewNotice'
 import '../styles/ai.css'
 
 /**
@@ -501,6 +502,7 @@ export function AiDialog() {
         </div>
 
         <div className="modal-body">
+          <AiPreviewNotice />
           {phase === 'setup' && (
             <>
               {resumeAvailable && (

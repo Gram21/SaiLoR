@@ -675,3 +675,13 @@
 .ai-recheck {
   margin-top: 12px;
 }
+
+.ai-preview-notice {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
