@@ -10,8 +10,10 @@ import {
   anthropicThinkingFields,
   googleThinkingConfig,
   openaiReasoningFields,
+  OLLAMA_CHAT_PATH,
   type PaperPart,
 } from './providers'
+import { inputWasTruncated, numCtxOfBody, ollamaChatBody } from './ollama'
 
 /**
  * Provider-neutral tool-calling on top of `providers.ts`'s single-shot request
@@ -79,6 +81,8 @@ export interface ChatResponse {
   citations: { url: string; title?: string }[]
   /** Anthropic `pause_turn`: the server-tool loop paused; send `raw` back to continue. */
   paused: boolean
+  /** Ollama only: the server cut the front of the prompt (instructions lost); the answer cannot be trusted. */
+  inputTruncated?: boolean
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -220,6 +224,37 @@ function openaiMessages(messages: ChatMessage[], paper?: PaperPart): unknown[] {
   })
 }
 
+/** Ollama native shape: tool args are objects, results are keyed by tool name. */
+function ollamaMessages(messages: ChatMessage[], paper?: PaperPart): unknown[] {
+  if (paper?.kind === 'pdf') throw new Error('Ollama cannot take a PDF; attach the paper as text.')
+  let firstUser = true
+  return messages.map((m) => {
+    if (m.role === 'tool') return { role: 'tool', tool_name: m.name, content: m.content ?? '' }
+
+    if (m.role === 'assistant') {
+      if (m.raw !== undefined) return m.raw
+      return {
+        role: 'assistant',
+        content: m.content ?? '',
+        ...(m.toolCalls?.length
+          ? {
+              tool_calls: m.toolCalls.map((tc) => ({
+                function: { name: tc.name, arguments: isRecord(tc.args) ? tc.args : {} },
+              })),
+            }
+          : {}),
+      }
+    }
+
+    if (firstUser && paper) {
+      firstUser = false
+      return { role: 'user', content: m.content ? `${paper.text}\n\n${m.content}` : paper.text }
+    }
+    firstUser = false
+    return { role: 'user', content: m.content ?? '' }
+  })
+}
+
 const DEFAULT_MAX_TOKENS = 8192
 
 /** Cap on provider-side searches per request (cost + prompt-injection surface). */
@@ -308,6 +343,23 @@ export function buildChatRequest(
     }
   }
 
+  if (cfg.provider === 'ollama') {
+    return {
+      configId: cfg.id,
+      url: join(base, OLLAMA_CHAT_PATH),
+      headers: { 'content-type': 'application/json', Authorization: `Bearer ${API_KEY_SENTINEL}` },
+      body: ollamaChatBody(
+        cfg,
+        [{ role: 'system', content: system }, ...ollamaMessages(messages, opts?.paper)],
+        tools.map((t) => ({
+          type: 'function',
+          function: { name: t.name, description: t.description, parameters: t.parameters },
+        })),
+        maxTokens,
+      ),
+    }
+  }
+
   const { tokenParam } = PROVIDERS[cfg.provider]
   return {
     configId: cfg.id,
@@ -350,7 +402,8 @@ function safeParseArgs(raw: unknown): unknown {
   }
 }
 
-export function parseChatResponse(provider: Provider, json: unknown): ChatResponse {
+/** `req` is the request that produced `json`; Ollama needs its `num_ctx` to detect input truncation. */
+export function parseChatResponse(provider: Provider, json: unknown, req?: { body?: string }): ChatResponse {
   const empty: ChatResponse = {
     text: '',
     toolCalls: [],
@@ -433,6 +486,30 @@ export function parseChatResponse(provider: Provider, json: unknown): ChatRespon
       webSearches: 0,
       citations: [],
       paused: false,
+    }
+  }
+
+  if (provider === 'ollama') {
+    const message = isRecord(json.message) ? json.message : {}
+    const toolCalls: ToolCall[] = Array.isArray(message.tool_calls)
+      ? message.tool_calls.filter(isRecord).map((tc, i) => {
+          const fn = isRecord(tc.function) ? tc.function : {}
+          return { id: String(tc.id ?? `call_${i}`), name: String(fn.name ?? ''), args: safeParseArgs(fn.arguments) }
+        })
+      : []
+    return {
+      text: typeof message.content === 'string' ? message.content : '',
+      toolCalls,
+      truncated: json.done_reason === 'length',
+      usage: {
+        inputTokens: typeof json.prompt_eval_count === 'number' ? json.prompt_eval_count : 0,
+        outputTokens: typeof json.eval_count === 'number' ? json.eval_count : 0,
+      },
+      raw: message, // replayed verbatim next turn (keeps `thinking` for tool loops)
+      webSearches: 0,
+      citations: [],
+      paused: false,
+      inputTruncated: inputWasTruncated(json, numCtxOfBody(req?.body)),
     }
   }
 

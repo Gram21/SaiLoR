@@ -81,12 +81,14 @@ describe('PROVIDERS', () => {
       'xai',
       'openai-compatible',
       'systemone',
+      'ollama',
     ])
     // Every provider but System One follows "editable iff no fixed default" —
     // System One is the one deliberate exception: it has a real hosted default
-    // (api.typesafe.ai) but is still editable, for a local laya-serve.
+    // (api.typesafe.ai) but is still editable, for a local laya-serve; Ollama
+    // has a localhost default and is editable for a remote/other-port server.
     for (const info of PROVIDER_LIST) {
-      if (info.id === 'systemone') continue
+      if (info.id === 'systemone' || info.id === 'ollama') continue
       expect(info.editableBaseUrl).toBe(info.defaultBaseUrl === '')
     }
     expect(PROVIDERS['openai-compatible'].editableBaseUrl).toBe(true)
@@ -198,7 +200,7 @@ describe('buildRequest: url and auth', () => {
 
   it('carries the sentinel and never a key — the renderer has none to leak', () => {
     for (const p of PROVIDER_LIST) {
-      const req = buildRequest(cfg(p.id, { baseUrl: 'http://x' }), 'system', PDF)
+      const req = buildRequest(cfg(p.id, { baseUrl: 'http://x' }), 'system', p.id === 'ollama' ? TEXT : PDF)
       const serialized = JSON.stringify(req)
       expect(serialized).toContain(API_KEY_SENTINEL)
       expect(serialized).not.toContain(REAL_KEY)

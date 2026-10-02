@@ -1,6 +1,7 @@
 import type { LlmConfig, LlmHttpRequest, ModelInfo, ModelsPage, Provider, ReasoningProfile } from './types'
 import { API_KEY_SENTINEL } from './types'
 import { baseOf, join } from './providers'
+import { parseTags } from './ollama'
 
 /**
  * "Ask the API yourself which models are available" — one GET per provider,
@@ -163,6 +164,16 @@ export function buildModelsRequest(cfg: LlmConfig, cursor?: string): LlmHttpRequ
     }
   }
 
+  if (cfg.provider === 'ollama') {
+    // Bearer is dropped by the main process when the target is keyless.
+    return {
+      configId: cfg.id,
+      url: join(base, '/api/tags'),
+      method: 'GET',
+      headers: { Authorization: `Bearer ${API_KEY_SENTINEL}` },
+    }
+  }
+
   // OpenAI, Groq, Mistral, DeepSeek, xAI, openai-compatible: a flat,
   // unpaginated GET /v1/models with a bearer key.
   return {
@@ -255,7 +266,20 @@ function openrouterReasoning(raw: unknown): ReasoningProfile | null {
   return levels.length > 0 ? reasoningProfile(levels) : null
 }
 
+// /api/tags carries no context length or capabilities (that needs /api/show,
+// see the ollama:show IPC), so only id and label are filled.
+function parseOllamaModels(json: unknown): ModelsPage {
+  return {
+    models: parseTags(json).map((m) => ({
+      id: m.name,
+      label: m.parameterSize ? `${m.name} (${m.parameterSize})` : m.name,
+      reasoning: null,
+    })),
+  }
+}
+
 export function parseModelsResponse(provider: Provider, json: unknown): ModelsPage {
+  if (provider === 'ollama') return parseOllamaModels(json)
   if (provider === 'anthropic') return parseAnthropicModels(json)
   if (provider === 'google') return parseGoogleModels(json)
   if (provider === 'openrouter') return parseOpenRouterModels(json)

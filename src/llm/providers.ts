@@ -1,5 +1,6 @@
 import type { LlmConfig, LlmHttpRequest, Provider } from './types'
 import { API_KEY_SENTINEL } from './types'
+import { ollamaChatBody } from './ollama'
 
 /**
  * Everything that differs between the LLM vendors: where to POST, how to
@@ -168,6 +169,17 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     supportsWebSearch: false,
     tokenParam: 'max_tokens', // unused — systemone.ts builds its own request body
   },
+  ollama: {
+    id: 'ollama',
+    label: 'Ollama (local)',
+    defaultBaseUrl: 'http://localhost:11434',
+    editableBaseUrl: true,
+    supportsPdf: false,
+    supportsModelListing: true,
+    supportsWebSearch: false,
+    // Native /api/chat (see ollama.ts): output length is options.num_predict.
+    tokenParam: 'max_tokens',
+  },
 }
 
 export const PROVIDER_LIST: ProviderInfo[] = [
@@ -181,6 +193,7 @@ export const PROVIDER_LIST: ProviderInfo[] = [
   PROVIDERS.xai,
   PROVIDERS['openai-compatible'],
   PROVIDERS.systemone,
+  PROVIDERS.ollama,
 ]
 
 /** The paper, as handed to the model. */
@@ -202,6 +215,7 @@ const DEFAULT_MAX_TOKENS = 8192
 const PDF_USER_TEXT = 'The paper is attached as a PDF. Annotate it as instructed.'
 
 const CHAT_PATH = '/v1/chat/completions'
+export const OLLAMA_CHAT_PATH = '/api/chat'
 
 /**
  * Append `path` to `base` without duplicating what the user already typed —
@@ -352,6 +366,24 @@ export function buildRequest(
     }
   }
 
+  if (cfg.provider === 'ollama') {
+    if (user.kind === 'pdf') throw new Error('Ollama cannot take a PDF; attach the paper as text.')
+    return {
+      configId: cfg.id,
+      url: join(base, OLLAMA_CHAT_PATH),
+      headers: { 'content-type': 'application/json', Authorization: `Bearer ${API_KEY_SENTINEL}` },
+      body: ollamaChatBody(
+        cfg,
+        [
+          { role: 'system', content: system },
+          { role: 'user', content: user.text },
+        ],
+        undefined,
+        maxTokens,
+      ),
+    }
+  }
+
   const { tokenParam } = PROVIDERS[cfg.provider]
   return {
     configId: cfg.id,
@@ -408,6 +440,10 @@ export function extractText(provider: Provider, json: unknown): string {
     return textOfParts(parts)
   }
 
+  if (provider === 'ollama') {
+    return isRecord(json.message) && typeof json.message.content === 'string' ? json.message.content : ''
+  }
+
   const choices = json.choices
   if (!Array.isArray(choices) || choices.length === 0) return ''
   const first = choices[0]
@@ -437,6 +473,8 @@ export function wasTruncated(provider: Provider, json: unknown): boolean {
     const first = candidates[0]
     return isRecord(first) && first.finishReason === 'MAX_TOKENS'
   }
+
+  if (provider === 'ollama') return json.done_reason === 'length'
 
   const choices = json.choices
   if (!Array.isArray(choices) || choices.length === 0) return false
@@ -470,9 +508,17 @@ export function extractError(provider: Provider, status: number, body: string): 
   if (isRecord(error) && typeof error.message === 'string' && error.message.trim()) {
     return `${label}: ${error.message.trim()}`
   }
-  if (typeof error === 'string' && error.trim()) return `${label}: ${error.trim()}`
+  if (typeof error === 'string' && error.trim()) {
+    const hint = provider === 'ollama' && status === 404 && /not found/i.test(error) ? ' — pull the model first' : ''
+    return `${label}: ${error.trim()}${hint}`
+  }
   if (typeof json.message === 'string' && json.message.trim()) {
     return `${label}: ${json.message.trim()}`
+  }
+  // Cloudflare envelope: { success: false, errors: [{ code, message }] }.
+  const first = Array.isArray(json.errors) ? json.errors[0] : undefined
+  if (isRecord(first) && typeof first.message === 'string' && first.message.trim()) {
+    return `${label}: ${first.message.trim()}${typeof first.code === 'number' ? ` (code ${first.code})` : ''}`
   }
   return fallback
 }

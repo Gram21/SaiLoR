@@ -15,6 +15,7 @@ import type {
 import type { PaperPart } from './providers'
 import { extractError } from './providers'
 import { buildChatRequest, parseChatResponse, type ChatMessage, type ToolCall } from './chat'
+import { INPUT_TRUNCATED_MESSAGE } from './ollama'
 import { AGENT_TOOLS, executeTool, parseSubmitArgs, type SubmitPayload } from './tools'
 import { checkSubmission, type CheckFailure } from './verify'
 import {
@@ -225,7 +226,8 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
       const res = await deps.callLlm(req, signal)
       if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
       const json = safeJson(res.body)
-      const parsed = parseChatResponse(config.provider, json)
+      const parsed = parseChatResponse(config.provider, json, req)
+      if (parsed.inputTruncated) throw new Error(INPUT_TRUNCATED_MESSAGE)
       usage.inputTokens += parsed.usage.inputTokens
       usage.outputTokens += parsed.usage.outputTokens
       usage.calls++
@@ -363,7 +365,8 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
       const jres = await deps.callLlm(jreq, signal)
       if (!jres.ok) throw new Error(extractError(judgeConfig.provider, jres.status, jres.body))
       const jjson = safeJson(jres.body)
-      const jparsed = parseChatResponse(judgeConfig.provider, jjson)
+      const jparsed = parseChatResponse(judgeConfig.provider, jjson, jreq)
+      if (jparsed.inputTruncated) throw new Error(INPUT_TRUNCATED_MESSAGE)
       usage.inputTokens += jparsed.usage.inputTokens
       usage.outputTokens += jparsed.usage.outputTokens
       usage.calls++
