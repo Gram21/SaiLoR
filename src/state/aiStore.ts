@@ -3,13 +3,15 @@ import { immer } from 'zustand/middleware/immer'
 import { getPlatform } from '../platform'
 import { useStore, currentTree, currentFinished, type AiBatchApplyResult } from './store'
 import { unansweredFields, type FieldTarget } from '../llm/fields'
-import { buildSystemPrompt, buildUserText, buildUserPdfCaption, type Delivery } from '../llm/prompt'
-import { buildRequest, extractText, extractError, wasTruncated, PROVIDERS } from '../llm/providers'
+import { buildSystemPrompt, buildAgentSystemPrompt, buildUserText, buildUserPdfCaption, type Delivery } from '../llm/prompt'
+import { buildRequest, extractText, extractError, wasTruncated, baseOf, PROVIDERS } from '../llm/providers'
 import { buildModelsRequest, parseModelsResponse } from '../llm/models'
 import { parseAnswer, coerce } from '../llm/parse'
 import { resolvePath, MAX_UNBOUNDED_INDEX } from '../llm/paths'
 import { parseChatResponse } from '../llm/chat'
 import { runAgent } from '../llm/agent'
+import { chatInputBudget, estimateTokens, fitPaperText } from '../llm/budget'
+import { isLocalHost, systemOneProfileFor } from '../llm/modelProfiles'
 import { withRetry, runPool, type CallLlm } from '../llm/retry'
 import { costOf } from '../llm/cost'
 import { buildFewShotBlock, countAnsweredFields, pickFewShotExamples, type FewShotExample } from '../llm/fewshot'
@@ -24,13 +26,15 @@ import { buildRunFeedback, feedbackFileName, hasFeedbackWorthSaving, type Feedba
 import type { LlmAnswer, LlmConfig, ModelInfo, RejectedSuggestion, SchemaRemark, Suggestion } from '../llm/types'
 import { isUsable } from '../llm/types'
 import {
-  buildSystemOneRequest,
   buildSystemOneVerifyRequest,
+  mergeSystemOneResults,
   parseSystemOneResponse,
+  planSystemOneRequests,
   compareWithSystemOne,
   systemOneEligible,
   SYSTEMONE_VERIFY_ASKED,
   type SystemOneComparison,
+  type SystemOneResult,
 } from '../llm/systemone'
 import { aiSeatId } from '../model/project'
 import type { Paper, Project } from '../model/project'
@@ -80,6 +84,7 @@ const MAX_AGENT_EVENTS = 5
 export type AiPhase =
   | 'setup' // choosing a target, nothing sent yet
   | 'reading' // extracting the PDF's text
+  | 'starting' // the app-managed local model is being started
   | 'calling' // waiting for the model
   | 'parsing'
   | 'review' // suggestions on screen, awaiting the reviewer
@@ -149,6 +154,8 @@ export interface PaperNotes {
   paperTitle: string
   skipped: LlmAnswer['skipped']
   rejected: LlmAnswer['rejected']
+  /** Plain remarks about what the model saw or could not handle (trimmed paper, fields left to the reviewer). */
+  info?: string[]
 }
 
 interface AiState {
@@ -280,6 +287,8 @@ interface AiState {
    *  set when at least one was, so `apply()`'s disclosure can tell "not
    *  offered" from "offered zero" the same way `roundsByPaper` does. */
   fewShotByPaper: Record<string, number>
+  /** Papers that did not fit the annotator's input window, and how much of each was sent (REQ-LLM-740). */
+  fitByPaper: Record<string, PaperFit>
 
   rows: ReviewRow[]
   /** Re-check verdicts, every outcome (see `RecheckRow`). */
@@ -394,6 +403,116 @@ function combinedSignal(a: AbortSignal, b: AbortSignal): AbortSignal {
   a.addEventListener('abort', () => c.abort(), { once: true })
   b.addEventListener('abort', () => c.abort(), { once: true })
   return c.signal
+}
+
+// ---------------------------------------------------------------------------
+// Input-window budgeting, run guards and consent wording
+// ---------------------------------------------------------------------------
+
+/** How much of a paper reached the model after it was cut to fit the window. */
+export interface PaperFit {
+  pagesKept: number
+  pagesTotal: number
+  droppedReferences: boolean
+}
+
+/** Less paper than this makes a read pointless: report the window as too small instead. */
+const MIN_PAPER_TOKENS = 256
+/** Room kept for hidden reasoning when a reasoning effort is configured. */
+const THINK_RESERVE = 4096
+
+export const AGENT_MIN_CONTEXT = 32_000
+const AGENT_CONTEXT_REASON = 'Agent mode needs a model with a context window of at least 32k tokens'
+const OLLAMA_CONTEXT_REASON =
+  "Set 'Context to use' for this model in the model settings (Ollama's default window is often only 4,096 tokens and would silently cut the paper)"
+export const LOCAL_TRUNCATED_MESSAGE =
+  "The local model cut off the start of the prompt because its context window is too small. Raise 'Context to use' in the model settings or use a shorter paper."
+
+/**
+ * Cuts `paperText` to what is left of `cfg`'s window after `fixedText` (system
+ * prompt, few-shot block and the user-message wrapper) and the reply. Unchanged
+ * when the window is unknown. Throws when the fixed parts leave no room.
+ */
+export function fitForChat(cfg: LlmConfig, fixedText: string, paperText: string): { text: string; fit?: PaperFit } {
+  const budget = chatInputBudget(cfg, {
+    systemTokens: estimateTokens(fixedText),
+    thinkReserve: cfg.reasoningEffort ? THINK_RESERVE : 0,
+  })
+  if (budget === null) return { text: paperText }
+  if (budget < MIN_PAPER_TOKENS) {
+    throw new Error(
+      `The model's window (${cfg.contextTokens!.toLocaleString()} tokens) is too small for this schema/prompt; raise the context or use fewer examples.`,
+    )
+  }
+  const f = fitPaperText(paperText, budget)
+  if (!f.truncated) return { text: paperText }
+  return { text: f.text, fit: { pagesKept: f.pagesKept, pagesTotal: f.pagesTotal, droppedReferences: f.droppedReferences } }
+}
+
+/** The review note for a trimmed paper. */
+export function describeFit(model: string, fit: PaperFit): string {
+  const pages = fit.pagesKept <= 1 ? 'page 1' : `pages 1–${fit.pagesKept}`
+  return (
+    `Paper trimmed to fit ${model}'s input window: ${pages} of ${fit.pagesTotal} sent` +
+    (fit.droppedReferences ? ', references dropped' : '')
+  )
+}
+
+/** The more cut-down of two fits (the paper is judged by the least the model saw). */
+function worseFit(a: PaperFit | undefined, b: PaperFit | undefined): PaperFit | undefined {
+  return !a || (b && b.pagesKept < a.pagesKept) ? (b ?? a) : a
+}
+
+/** Why Agent mode cannot use this model, or null. Its tool results pile up in the window. */
+export function agentContextReason(cfg: Pick<LlmConfig, 'contextTokens'>): string | null {
+  return cfg.contextTokens !== undefined && cfg.contextTokens < AGENT_MIN_CONTEXT ? AGENT_CONTEXT_REASON : null
+}
+
+/** Why a run with these models must not start, or null. */
+export function startBlocker(mode: AiMode, annotator: LlmConfig, judge?: LlmConfig | null): string | null {
+  if (annotator.provider === 'ollama' && !annotator.contextTokens) return OLLAMA_CONTEXT_REASON
+  if (mode !== 'agent') return null
+  const own = agentContextReason(annotator)
+  if (own) return own
+  return judge && agentContextReason(judge) ? `${AGENT_CONTEXT_REASON} (the judge model is too small)` : null
+}
+
+/** True when the model runs on this machine (app-managed, or a loopback server). */
+export function isLocalModel(cfg: LlmConfig): boolean {
+  return !!cfg.managed || isLocalHost(baseOf(cfg))
+}
+
+/** Where a paper goes for this model, for the consent line. */
+export function destinationNote(cfg: LlmConfig): string {
+  if (isLocalModel(cfg)) return 'This model runs on your machine; nothing leaves it.'
+  const host = cfg.systemOneFlavor === 'cloudflare' ? 'api.cloudflare.com' : hostOf(baseOf(cfg))
+  return `It leaves this machine and goes over the network to ${host}.`
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host
+  } catch {
+    return url
+  }
+}
+
+/**
+ * An app-managed local model starts on its first call, which can take seconds
+ * and fail; start it here so the run can show that phase and the real error.
+ */
+export async function ensureLocalModel(cfg: LlmConfig, onStarting: () => void): Promise<void> {
+  const rt = cfg.managed ? getPlatform().localRuntime : null
+  if (!cfg.managed || !rt) return
+  const id = cfg.managed.catalogId
+  if ((await rt.status()).some((s) => s.catalogId === id && s.state === 'running')) return
+  onStarting()
+  try {
+    await rt.start(id)
+  } catch (err) {
+    const msg = (err instanceof Error ? err.message : String(err)).replace(/^Error invoking remote method '[^']*': (Error: )?/, '')
+    throw new Error(`Could not start ${cfg.model || 'the local model'}: ${msg}`)
+  }
 }
 
 /** Papers eligible for "annotate all papers": have a PDF, aren't finished for
@@ -511,6 +630,7 @@ export interface PersistedBatch {
   errors?: PaperRunError[]
   roundsByPaper?: Record<string, number>
   fewShotByPaper?: Record<string, number>
+  fitByPaper?: Record<string, PaperFit>
   recheck?: boolean
   recheckRows?: RecheckRow[]
   remarks?: (SchemaRemark & { paperId: string })[]
@@ -671,6 +791,7 @@ export const useAiStore = create<AiState>()(
           errors: get().errors,
           roundsByPaper: get().roundsByPaper,
           fewShotByPaper: get().fewShotByPaper,
+          fitByPaper: get().fitByPaper,
           recheck,
           recheckRows: get().recheckRows,
           remarks: get().remarks,
@@ -734,6 +855,8 @@ export const useAiStore = create<AiState>()(
               let paperCost: number
               let roundsForPaper: number | undefined
               let webSearchesForPaper = 0
+              let fitForPaper: PaperFit | undefined
+              let infoNotes: string[] = []
               let recheckReply: Awaited<ReturnType<typeof runOnePaperPrompt>>['recheck']
               let rowChecked: (sug: Suggestion) => boolean
 
@@ -762,6 +885,7 @@ export const useAiStore = create<AiState>()(
                 )
                 if (controller !== myController) return
                 webSearchesForPaper = result.usage.webSearches ?? 0
+                fitForPaper = result.fit
                 // Agent + judge share one combined `usage`; the judge's own
                 // portion (`judgeUsage`) is priced against the judge target,
                 // the remainder against the agent's — see `estimateCostSplit`'s
@@ -782,7 +906,8 @@ export const useAiStore = create<AiState>()(
                 const result = await runOnePaperClassify(paper, targets, config, callLlm, paperSignal, setPhase)
                 if (controller !== myController) return
                 answer = result.answer
-                calls = 1
+                infoNotes = result.info
+                calls = result.calls
                 baseUsage = result.usage
                 paperCost = costOf(result.usage, config) ?? 0
                 rowChecked = (sug) => (sug.confidence ?? 0) >= confidenceThreshold
@@ -801,6 +926,7 @@ export const useAiStore = create<AiState>()(
                 if (controller !== myController) return
                 answer = result.answer
                 paperText = result.paperText
+                fitForPaper = result.fit
                 recheckReply = result.recheck
                 calls = result.calls
                 baseUsage = result.usage
@@ -824,6 +950,7 @@ export const useAiStore = create<AiState>()(
                       paperText,
                       callLlm,
                       paperSignal,
+                      setPhase,
                     )
                   : null
               if (controller !== myController) return
@@ -845,7 +972,7 @@ export const useAiStore = create<AiState>()(
                     flagged: !checked,
                   })
                 }
-                s.usage.calls += calls + (crossCheckResult ? 1 : 0)
+                s.usage.calls += calls + (crossCheckResult?.calls ?? 0)
                 s.usage.inputTokens += baseUsage.inputTokens + (crossCheckResult?.usage.inputTokens ?? 0)
                 s.usage.outputTokens += baseUsage.outputTokens + (crossCheckResult?.usage.outputTokens ?? 0)
                 s.spentSoFar +=
@@ -865,14 +992,16 @@ export const useAiStore = create<AiState>()(
                   s.remarks.push({ ...m, paperId: paper.id })
                 }
                 if (fewShotForPaper.included > 0) s.fewShotByPaper[paper.id] = fewShotForPaper.included
+                if (fitForPaper) s.fitByPaper[paper.id] = fitForPaper
                 const skipped = [
                   ...answer.skipped,
                   ...(crossCheckResult?.error ? [{ path: '(cross-check)', reason: crossCheckResult.error }] : []),
                   ...(recheckReply?.error ? [{ path: '(re-check)', reason: recheckReply.error }] : []),
                 ]
                 const rejected = [...answer.rejected, ...(recheckReply?.rejected ?? [])]
-                if (skipped.length > 0 || rejected.length > 0) {
-                  s.notes.push({ paperId: paper.id, paperTitle: paper.title, skipped, rejected })
+                const info = [...(fitForPaper ? [describeFit(config.model, fitForPaper)] : []), ...infoNotes]
+                if (skipped.length > 0 || rejected.length > 0 || info.length > 0) {
+                  s.notes.push({ paperId: paper.id, paperTitle: paper.title, skipped, rejected, ...(info.length ? { info } : {}) })
                 }
               })
               if (controller === myController) {
@@ -1071,6 +1200,7 @@ export const useAiStore = create<AiState>()(
     runJudge: null,
     roundsByPaper: {},
     fewShotByPaper: {},
+    fitByPaper: {},
     rows: [],
     recheckRows: [],
     remarks: [],
@@ -1117,6 +1247,7 @@ export const useAiStore = create<AiState>()(
         s.runJudge = null
         s.roundsByPaper = {}
         s.fewShotByPaper = {}
+        s.fitByPaper = {}
         s.spendCap = null
         s.spentSoFar = 0
         s.spendCapHit = false
@@ -1447,6 +1578,14 @@ export const useAiStore = create<AiState>()(
         })
         return
       }
+      const blocked = startBlocker(mode, config, judgeCfg)
+      if (blocked) {
+        set((s) => {
+          s.phase = 'error'
+          s.error = blocked
+        })
+        return
+      }
       const crossCheckId = get().crossCheckId
       const crossCheckCfg =
         mode !== 'classify' && crossCheckId ? get().configs.find((c) => c.id === crossCheckId) : undefined
@@ -1495,6 +1634,7 @@ export const useAiStore = create<AiState>()(
         s.runJudge = mode === 'agent' ? { provider: (judgeCfg ?? config).provider, model: (judgeCfg ?? config).model } : null
         s.roundsByPaper = {}
         s.fewShotByPaper = {}
+        s.fitByPaper = {}
         s.webSearchesByPaper = {}
         s.rows = []
         s.recheckRows = []
@@ -1564,6 +1704,7 @@ export const useAiStore = create<AiState>()(
         s.retryNotice = null
         s.roundsByPaper = persisted.roundsByPaper ?? {}
         s.fewShotByPaper = persisted.fewShotByPaper ?? {}
+        s.fitByPaper = persisted.fitByPaper ?? {}
         s.runUsage = { provider: config.provider, model: config.model }
         s.runJudge =
           persisted.mode === 'agent'
@@ -1637,7 +1778,7 @@ export const useAiStore = create<AiState>()(
       controller?.abort()
       stopTicker()
       set((s) => {
-        if (s.phase === 'reading' || s.phase === 'calling' || s.phase === 'parsing') {
+        if (s.phase === 'reading' || s.phase === 'starting' || s.phase === 'calling' || s.phase === 'parsing') {
           s.phase = s.rows.length > 0 || s.recheckRows.length > 0 ? 'review' : 'setup'
         }
       })
@@ -1814,6 +1955,7 @@ async function runOnePaperPrompt(
   calls: number
   usage: { inputTokens: number; outputTokens: number }
   paperText: string
+  fit?: PaperFit
 }> {
   setPhase('reading')
   const app = useStore.getState()
@@ -1843,12 +1985,20 @@ async function runOnePaperPrompt(
 
   // One request with this system prompt; the fill and the re-check share the
   // paper read above.
+  let fit: PaperFit | undefined
   const ask = async (system: string) => {
     // With extracted text the model must be warned extraction is lossy, or it
     // will confidently reconstruct a mangled table.
+    let text = paperText
+    if (delivery === 'text') {
+      const f = fitForChat(config, system + buildUserText(paper, ''), paperText)
+      text = f.text
+      fit = worseFit(fit, f.fit)
+    }
+    await ensureLocalModel(config, () => setPhase('starting'))
     const req =
       delivery === 'text'
-        ? buildRequest(config, system, { kind: 'text', text: buildUserText(paper, paperText) })
+        ? buildRequest(config, system, { kind: 'text', text: buildUserText(paper, text) })
         : buildRequest(config, `${system}\n\n${buildUserPdfCaption(paper)}`, {
             kind: 'pdf',
             base64: toBase64(bytes),
@@ -1861,17 +2011,20 @@ async function runOnePaperPrompt(
 
     setPhase('parsing')
     const json = safeJson(res.body)
-    const text = extractText(config.provider, json)
+    const extractedText = extractText(config.provider, json)
     // Distinguish "model proposed nothing" from "ran out of budget before
     // answering" — same empty text, different problem and fix.
-    if (!text.trim() && wasTruncated(config.provider, json)) {
+    if (!extractedText.trim() && wasTruncated(config.provider, json)) {
       throw new Error(
         `${PROVIDERS[config.provider].label} used its whole reply budget on internal ` +
           'reasoning and never got to an answer for this paper. If this keeps happening, try ' +
           'a lower reasoning-effort setting for this model, if the provider offers one.',
       )
     }
-    return { text, usage: parseChatResponse(config.provider, json).usage }
+    const parsed = parseChatResponse(config.provider, json, req)
+    // Never use an answer given to a prompt the server cut the front off.
+    if (parsed.inputTruncated) throw new Error(LOCAL_TRUNCATED_MESSAGE)
+    return { text: extractedText, usage: parsed.usage }
   }
 
   let answer: LlmAnswer = { fields: [], skipped: [], rejected: [] }
@@ -1903,7 +2056,7 @@ async function runOnePaperPrompt(
       recheck = { outcomes: [], rejected: [], schemaRemarks: [], error: err instanceof Error ? err.message : String(err) }
     }
   }
-  return { answer, recheck, calls, usage, paperText }
+  return { answer, recheck, calls, usage, paperText, fit }
 }
 
 async function runOnePaperAgent(
@@ -1925,6 +2078,7 @@ async function runOnePaperAgent(
   judgeUsage: { inputTokens: number; outputTokens: number; calls: number }
   rounds: number
   paperText: string
+  fit?: PaperFit
 }> {
   setPhase('reading')
   const app = useStore.getState()
@@ -1944,6 +2098,23 @@ async function runOnePaperAgent(
     throw scannedError()
   }
 
+  // The first message carries the paper; fit it to the smaller of the two windows (the judge reads it too).
+  // ponytail: tool definitions and later tool results are not budgeted; the 32k floor (agentContextReason) leaves the room.
+  let agentText = extracted.text
+  let fit: PaperFit | undefined
+  if (delivery === 'text') {
+    const windows = [config.contextTokens, judgeConfig?.contextTokens].filter((n): n is number => !!n)
+    const system = buildAgentSystemPrompt(project.schema, targets, delivery, fewShotBlock || undefined, webSearch)
+    const f = fitForChat(
+      { ...config, contextTokens: windows.length ? Math.min(...windows) : undefined },
+      system + buildUserText(paper, ''),
+      extracted.text,
+    )
+    // The tools and the evidence check then see exactly what the model was sent.
+    agentText = f.text
+    fit = f.fit
+  }
+
   setPhase('calling')
   const result = await runAgent(
     {
@@ -1952,7 +2123,7 @@ async function runOnePaperAgent(
       schema: project.schema,
       targets,
       paper,
-      paperText: extracted.text,
+      paperText: agentText,
       delivery,
       pdfBase64: delivery === 'pdf' ? toBase64(bytes) : undefined,
       pdfFilename: delivery === 'pdf' ? (paper.pdf.split('/').pop() ?? 'paper.pdf') : undefined,
@@ -1972,12 +2143,41 @@ async function runOnePaperAgent(
     judgeUsage: result.judgeUsage,
     rounds: result.rounds,
     paperText: extracted.text,
+    fit,
   }
 }
 
 /**
- * Classify mode's per-paper call: one `/v1/systemone` request for whichever
- * of `targets` are eligible (booleans and single-valued enums — see
+ * Plans and sends every System One request one paper needs (small-window models
+ * need several), then merges the replies. Throws on a config that cannot form a
+ * request (`plan.error`) or a failed call.
+ */
+async function askSystemOne(
+  config: LlmConfig,
+  paper: Paper,
+  paperText: string,
+  targets: FieldTarget[],
+  callLlm: CallLlm,
+  signal: AbortSignal,
+  setPhase: (p: AiPhase) => void,
+) {
+  const plan = planSystemOneRequests(config, paper, paperText, targets)
+  if (plan.error) throw new Error(plan.error)
+  const results: SystemOneResult[] = []
+  if (plan.requests.length > 0) await ensureLocalModel(config, () => setPhase('starting'))
+  for (const { request, asked } of plan.requests) {
+    setPhase('calling')
+    const res = await callLlm(request, signal)
+    if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
+    setPhase('parsing')
+    results.push(parseSystemOneResponse(asked, safeJson(res.body)))
+  }
+  return { plan, result: mergeSystemOneResults(results) }
+}
+
+/**
+ * Classify mode's per-paper call: the System One requests for whichever of
+ * `targets` are eligible (booleans and single-valued enums — see
  * `systemOneEligible`); everything else is reported as skipped so the
  * setup/review screens can say why, same shape prompt/agent mode's `skipped`
  * already uses.
@@ -1989,7 +2189,12 @@ async function runOnePaperClassify(
   callLlm: CallLlm,
   signal: AbortSignal,
   setPhase: (p: AiPhase) => void,
-): Promise<{ answer: LlmAnswer; usage: { inputTokens: number; outputTokens: number } }> {
+): Promise<{
+  answer: LlmAnswer
+  usage: { inputTokens: number; outputTokens: number }
+  calls: number
+  info: string[]
+}> {
   setPhase('reading')
   const app = useStore.getState()
   const src = await getPlatform().getPdfSource(paper.pdf, app.saveHandle ?? { kind: 'download' })
@@ -2005,34 +2210,29 @@ async function runOnePaperClassify(
   const paperText = (await extractPdfText(bytes)).text
 
   const ineligible = targets.filter((t) => !systemOneEligible(t))
-  const built = buildSystemOneRequest(config, paper, paperText, targets)
-  if (!built) {
-    return {
-      answer: {
-        fields: [],
-        skipped: ineligible.map((t) => ({ path: t.path, reason: 'not handled in Classify mode' })),
-        rejected: [],
-      },
-      usage: { inputTokens: 0, outputTokens: 0 },
-    }
+  const { plan, result } = await askSystemOne(config, paper, paperText, targets, callLlm, signal, setPhase)
+
+  const info = plan.notHandled.map((n) => `left to you: ${n.path} — ${n.reason}`)
+  if (plan.requests.length > 0 && plan.state.mode !== 'full') {
+    const window = systemOneProfileFor(config).contextTokens.toLocaleString()
+    info.push(
+      plan.state.mode === 'abstract-only'
+        ? `${config.model} saw title + abstract only — its input window is ${window} tokens`
+        : `${config.model} saw the title, abstract and the start of the paper text only — its input window is ${window} tokens`,
+    )
   }
-
-  setPhase('calling')
-  const res = await callLlm(built.request, signal)
-  if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
-
-  setPhase('parsing')
-  const parsed = parseSystemOneResponse(built.asked, safeJson(res.body))
   return {
     answer: {
-      fields: parsed.suggestions,
+      fields: result.suggestions,
       skipped: [
-        ...parsed.skipped,
+        ...result.skipped,
         ...ineligible.map((t) => ({ path: t.path, reason: 'not handled in Classify mode' })),
       ],
       rejected: [],
     },
-    usage: parsed.usage,
+    usage: result.usage,
+    calls: plan.requests.length,
+    info,
   }
 }
 
@@ -2050,23 +2250,21 @@ async function runCrossCheck(
   paperText: string,
   callLlm: CallLlm,
   signal: AbortSignal,
+  setPhase: (p: AiPhase) => void,
 ): Promise<{
   comparisons: Map<string, SystemOneComparison>
   usage: { inputTokens: number; outputTokens: number }
+  calls: number
   error?: string
 }> {
-  const empty = { comparisons: new Map<string, SystemOneComparison>(), usage: { inputTokens: 0, outputTokens: 0 } }
+  const empty = { comparisons: new Map<string, SystemOneComparison>(), usage: { inputTokens: 0, outputTokens: 0 }, calls: 0 }
   try {
     const eligible = targets.filter(
       (t) => systemOneEligible(t) && suggestions.some((s) => s.path === t.path),
     )
     if (eligible.length === 0) return empty
-    const built = buildSystemOneRequest(config, paper, paperText, eligible)
-    if (!built) return empty
-    const res = await callLlm(built.request, signal)
-    if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
-    const parsed = parseSystemOneResponse(built.asked, safeJson(res.body))
-    return { comparisons: compareWithSystemOne(suggestions, parsed), usage: parsed.usage }
+    const { plan, result } = await askSystemOne(config, paper, paperText, eligible, callLlm, signal, setPhase)
+    return { comparisons: compareWithSystemOne(suggestions, result), usage: result.usage, calls: plan.requests.length }
   } catch (err) {
     return { ...empty, error: err instanceof Error ? err.message : String(err) }
   }

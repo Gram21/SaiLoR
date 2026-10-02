@@ -6,7 +6,7 @@ import {
   type ScreeningEngine,
   type ScreeningNote,
 } from '../state/aiScreeningStore'
-import { useAiStore } from '../state/aiStore'
+import { useAiStore, destinationNote, isLocalModel, startBlocker } from '../state/aiStore'
 import { useStore } from '../state/store'
 import { seatLabel } from '../model/project'
 import { PROVIDERS } from '../llm/providers'
@@ -31,11 +31,11 @@ function modelOption(c: LlmConfig): { id: string; label: string } {
   return { id: c.id, label: `${c.name} — ${PROVIDERS[c.provider].label} · ${c.model}` }
 }
 
-function allPapersWarning(count: number): string {
+function allPapersWarning(count: number, local: boolean): string {
   return (
     `This sends ${count} paper${count === 1 ? '' : 's'} — one request per paper. Your provider charges ` +
     'your API key for every request, so cost scales with the number of papers. Every paper’s title, ' +
-    'authors and abstract leave this machine. You can cancel at any time and keep whatever has finished so far.'
+    `authors and abstract ${local ? 'stay on your machine' : 'leave this machine'}. You can cancel at any time and keep whatever has finished so far.`
   )
 }
 
@@ -47,8 +47,8 @@ function Notes({ label, items }: { label: string; items: ScreeningNote[] }) {
         {items.length} paper{items.length === 1 ? '' : 's'} {label}
       </summary>
       <ul className="ai-note-list">
-        {items.map((e) => (
-          <li key={e.paperId}>
+        {items.map((e, i) => (
+          <li key={`${e.paperId}-${i}`}>
             <span className="ai-field-path">{e.paperTitle}</span>
             <span className="ai-note-reason">{e.message}</span>
           </li>
@@ -83,6 +83,7 @@ export function AiScreeningDialog() {
   const currentPaper = project.papers.find((p) => p.id === currentPaperId)
   const checked = s.rows.filter((r) => r.checked).length
   const excludeCount = s.rows.filter((r) => r.proposal.decision === 'Exclude').length
+  const blocker = selected && s.engine === 'prompt' ? startBlocker('prompt', selected) : null
   const openSettings = () => useAiStore.getState().setSettingsOpen(true)
 
   return (
@@ -129,7 +130,7 @@ export function AiScreeningDialog() {
               </label>
               {pendingAll && !s.allPapers && (
                 <div className="ai-confirm">
-                  <p className="ai-note">{allPapersWarning(s.candidates.length)}</p>
+                  <p className="ai-note">{allPapersWarning(s.candidates.length, !!selected && isLocalModel(selected))}</p>
                   <div className="ai-foot">
                     <button type="button" onClick={() => setPendingAll(false)}>
                       Current paper only
@@ -148,7 +149,7 @@ export function AiScreeningDialog() {
                   </div>
                 </div>
               )}
-              {s.allPapers && <p className="ai-note">{allPapersWarning(s.candidates.length)}</p>}
+              {s.allPapers && <p className="ai-note">{allPapersWarning(s.candidates.length, !!selected && isLocalModel(selected))}</p>}
               <p className="ai-note">
                 Papers without an abstract are read from the first pages of their PDF; with neither they are skipped.
               </p>
@@ -215,13 +216,15 @@ export function AiScreeningDialog() {
                 {selected ? (
                   <>
                     The title, authors and abstract (or an excerpt of the PDF) of {s.allPapers ? 'each paper' : 'this paper'} will be
-                    sent to <strong>{PROVIDERS[selected.provider].label}</strong> ({selected.model}). It leaves this machine.
+                    sent to <strong>{PROVIDERS[selected.provider].label}</strong> ({selected.model}). {destinationNote(selected)}{' '}
                     Nothing is written into the project until you press Apply.
                   </>
                 ) : (
                   'Nothing is sent until you choose a model and press Start.'
                 )}
               </p>
+
+              {blocker && <p className="ai-note ai-error">{blocker}</p>}
 
               <details className="ai-prompt">
                 <summary>Options</summary>
@@ -266,9 +269,9 @@ export function AiScreeningDialog() {
                 <button
                   type="button"
                   className="primary"
-                  disabled={!selected || scopeCount === 0}
+                  disabled={!selected || scopeCount === 0 || !!blocker}
                   onClick={() => void s.run()}
-                  title={!selected ? 'Choose a model first' : scopeCount === 0 ? 'No undecided paper in scope' : 'Send the request(s)'}
+                  title={blocker ?? (!selected ? 'Choose a model first' : scopeCount === 0 ? 'No undecided paper in scope' : 'Send the request(s)')}
                 >
                   Start
                 </button>
@@ -280,7 +283,7 @@ export function AiScreeningDialog() {
             <>
               <div className="ai-running" role="status">
                 <Spinner />
-                <span className="ai-phase">Screening…</span>
+                <span className="ai-phase">{s.startNotice ?? 'Screening…'}</span>
               </div>
               <p className="ai-note">
                 {s.done} of {s.total} done
@@ -298,6 +301,7 @@ export function AiScreeningDialog() {
             <>
               <Notes label="failed" items={s.errors} />
               <Notes label="skipped" items={s.skipped} />
+              <Notes label="with notes" items={s.infos} />
               {s.rows.length === 0 ? (
                 <>
                   <p>The model proposed no decisions.</p>

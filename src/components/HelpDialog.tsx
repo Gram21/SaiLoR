@@ -666,7 +666,14 @@ function editorHelp(): { lead: ReactNode; sections: HelpSection[] } {
             replacement; in Agent mode the model can optionally search the web through Anthropic or
             OpenRouter; and, in the desktop app, a summary of which fields the AI left empty, got
             flagged or that you corrected is saved to <code>annotations/feedback/</code> in the
-            project folder (field values only, no paper text) to help improve the schema.
+            project folder (field values only, no paper text) to help improve the schema. In the
+            desktop app, Settings can also set up <strong>local models</strong>: chat models served by
+            Ollama, LM Studio, llama.cpp or vLLM, and small System One decision models the app
+            downloads and runs itself. Every download shows its size, source and license and starts
+            only after you confirm; models use the GPU when one is supported and otherwise run on the
+            CPU (slower), and the model's context size is set explicitly so long papers are not
+            silently cut. Papers stay on your machine unless the server is on another host, which
+            the dialog warns about.
           </p>
         ),
       },

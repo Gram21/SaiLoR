@@ -54,11 +54,11 @@ const chatReply = (obj: unknown): LlmHttpResponse => ({
   body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(obj) }], usage: { input_tokens: 5, output_tokens: 3 } }),
 })
 
-function project(opts: { reviewers?: number; aiSeat?: boolean } = {}) {
+function project(opts: { reviewers?: number; aiSeat?: boolean; reasons?: string[] } = {}) {
   return JSON.stringify({
     version: 1,
     config: {
-      screening: { reasons: ['Wrong topic', 'Duplicate'] },
+      screening: { reasons: opts.reasons ?? ['Wrong topic', 'Duplicate'] },
       ...(opts.reviewers ? { reviewers: opts.reviewers } : {}),
       ...(opts.aiSeat ? { aiSeat: true } : {}),
     },
@@ -169,6 +169,56 @@ describe('run', () => {
     await ai().run()
     expect(calls[0].url).toBe('https://s1.example/v1/systemone')
     expect(ai().rows[0]).toMatchObject({ engine: 'classify', checked: true })
+  })
+})
+
+describe('model input windows', () => {
+  const OLLAMA: LlmConfig = { id: 'o1', name: 'Local', provider: 'ollama', baseUrl: 'http://localhost:11434', model: 'qwen3', attach: 'text', hasKey: false, noKey: true }
+
+  async function openOne(selectedId: string, engine: 'prompt' | 'classify' = 'prompt') {
+    st().loadFromText(project({ reasons: Array.from({ length: 30 }, (_, i) => `Reason ${i}`) }), null, 'test.json')
+    st().selectPaper('p1')
+    await ai().openDialog()
+    useAiScreeningStore.setState({ engine, selectedId })
+  }
+
+  it('tells the reviewer when a small model could not be asked for the exclusion reason', async () => {
+    configs = [{ ...S1, id: 's2', model: 'laya', baseUrl: 'http://localhost:8080' }]
+    useAiStore.setState({ configs })
+    replies.Alpha = () => ({ ok: true, status: 200, body: JSON.stringify({ answers: { q0: { choice: 'Include', confidence: 0.9 } } }) })
+    await openOne('s2', 'classify')
+    await ai().run()
+    expect(ai().rows).toHaveLength(1)
+    expect(ai().infos[0].message).toMatch(/^left to you: Reason — too many options/)
+  })
+
+  it('does not start an Ollama model without a context window', async () => {
+    configs = [OLLAMA]
+    useAiStore.setState({ configs })
+    await openOne('o1')
+    await ai().run()
+    expect(calls).toHaveLength(0)
+    expect(ai().phase).toBe('setup')
+  })
+
+  it('fails a paper when the Ollama server cut the prompt, and the window check comes first', async () => {
+    configs = [{ ...OLLAMA, contextTokens: 16384 }]
+    useAiStore.setState({ configs })
+    replies.Alpha = () => ({
+      ok: true,
+      status: 200,
+      body: JSON.stringify({ message: { content: '{"decision":"Include","reason":null}' }, done: true, prompt_eval_count: 16384, eval_count: 3 }),
+    })
+    await openOne('o1')
+    await ai().run()
+    expect(ai().rows).toHaveLength(0)
+    expect(ai().errors[0].message).toMatch(/Context to use/)
+
+    configs = [{ ...OLLAMA, contextTokens: 4200 }]
+    useAiStore.setState({ configs })
+    await openOne('o1')
+    await ai().run()
+    expect(ai().errors[0].message).toMatch(/too small for this schema\/prompt/)
   })
 })
 

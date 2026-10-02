@@ -404,6 +404,10 @@ inspection only.
 | REQ-LLM-700 | Managed local runtime for System One models | Functional · Functional Suitability / Security | `electron/localRuntime.ts`<br>`electron/localRuntimeIpc.ts`<br>`electron/llmConfig.ts` (`managedTargetUrl`)<br>`src/llm/localCatalog.ts` | `electron/localRuntimeUtil.test.ts`<br>`electron/llmConfig.test.ts`<br>`src/llm/localCatalog.test.ts` | — | — |
 | REQ-LLM-701 | Hash-verified downloads with informed consent | Functional · Security / Reliability | `electron/localRuntime.ts` (`downloadVerified`)<br>`electron/localRuntimeUtil.ts` (`allowedDownloadUrl`, `parseDigest`) | `electron/localRuntimeUtil.test.ts` | — | — |
 | REQ-LLM-702 | GPU when available, CPU otherwise, reported honestly | Functional · Functional Suitability / Reliability | `electron/hardware.ts`<br>`electron/localRuntimeUtil.ts` (`parseServerLog`) | `electron/hardware.test.ts`<br>`electron/localRuntimeUtil.test.ts` | — | — |
+| REQ-LLM-730 | Guided setup of local decision models with informed download consent | Functional · Usability / Security | `src/components/LocalSystemOnePanel.tsx`<br>`src/components/LocalBits.tsx`<br>`src/components/LlmSettingsDialog.tsx` | `src/components/LlmSettingsDialog.local.test.tsx`<br>`src/llm/localUi.test.ts` | — | — |
+| REQ-LLM-731 | Guided setup of local chat models (Ollama and OpenAI-compatible servers) | Functional · Usability / Security | `src/components/LocalChatPanel.tsx` | `src/components/LlmSettingsDialog.local.test.tsx` | — | — |
+| REQ-LLM-732 | Explicit context window per model | Functional · Reliability / Usability | `src/components/ContextFields.tsx`<br>`src/components/LocalChatPanel.tsx`<br>`src/llm/localUi.ts` | `src/components/LlmSettingsDialog.local.test.tsx`<br>`src/llm/localUi.test.ts` | — | — |
+| REQ-LLM-733 | Hosted Clef/Jev setup | Functional · Usability / Functional Suitability | `src/components/HostedSystemOnePanel.tsx` | `src/components/LlmSettingsDialog.local.test.tsx` | — | — |
 
 ## Platform & desktop shell ([platform.md](platform.md))
 
@@ -463,4 +467,7 @@ inspection only.
 | Without an automated check (source inspection only) | 48 | 14% |
 | With an introducing/pinning commit | 110 | 32% |
 | With a documentation link | 332 | 96% |
-
+| REQ-LLM-740 | Trim the paper to each model's input window | Functional · Reliability / Functional Suitability | `src/state/aiStore.ts` (`fitForChat`, `describeFit`)<br>`src/state/aiScreeningStore.ts` (`promptOne`)<br>`src/components/AiDialog.tsx` (`trimHint`) | `src/state/aiStore.budget.test.ts`<br>`src/state/aiScreeningStore.test.ts` | — | — |
+| REQ-LLM-741 | Never apply results from truncated input | Functional · Reliability / Safety | `src/state/aiStore.ts` (`startBlocker`, `LOCAL_TRUNCATED_MESSAGE`, `destinationNote`)<br>`src/state/aiScreeningStore.ts` | `src/state/aiStore.budget.test.ts`<br>`src/state/aiScreeningStore.test.ts`<br>`src/components/AiDialog.test.tsx` | — | — |
+| REQ-LLM-742 | Report what the model could not handle (fields, state mode) | Functional · Functional Suitability / Usability | `src/state/aiStore.ts` (`askSystemOne`, `runOnePaperClassify`, `ensureLocalModel`)<br>`src/state/aiScreeningStore.ts` (`classifyOne`)<br>`src/llm/modelProfiles.ts` | `src/state/aiStore.budget.test.ts`<br>`src/state/aiScreeningStore.test.ts`<br>`src/llm/modelProfiles.test.ts` | — | — |
+| REQ-LLM-743 | Agent mode requires a large context window | Functional · Reliability | `src/state/aiStore.ts` (`agentContextReason`, `startBlocker`)<br>`src/components/AiDialog.tsx` | `src/state/aiStore.budget.test.ts`<br>`src/components/AiDialog.test.tsx` | — | — |

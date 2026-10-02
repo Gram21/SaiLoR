@@ -559,3 +559,23 @@ describe('options: re-check, web search, feedback', () => {
     expect(screen.getByRole('checkbox', { name: 'Save feedback about the annotation schema' })).toBeDisabled()
   })
 })
+
+describe('model window limits', () => {
+  const pick = (over: Partial<LlmConfig>) =>
+    useAiStore.setState({ configs: [{ ...cfg(), ...over }], selectedId: 'c1' })
+
+  it('disables Agent for a window under 32k tokens, saying why', () => {
+    pick({ contextTokens: 8192 })
+    render(<AiDialog />)
+    expect(screen.getByRole('radio', { name: 'Agent' })).toBeDisabled()
+    expect(screen.getByTitle(/at least 32k tokens/)).toBeInTheDocument()
+  })
+
+  it('blocks Start for an Ollama model without a context setting', () => {
+    pick({ provider: 'ollama', baseUrl: 'http://localhost:11434', model: 'qwen3', noKey: true })
+    render(<AiDialog />)
+    expect(screen.getByRole('button', { name: 'Start' })).toBeDisabled()
+    expect(screen.getByText(/Set 'Context to use' for this model/)).toBeInTheDocument()
+    expect(screen.getByText(/runs on your machine; nothing leaves it/)).toBeInTheDocument()
+  })
+})

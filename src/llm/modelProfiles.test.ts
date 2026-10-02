@@ -25,6 +25,13 @@ describe('systemOneProfileFor', () => {
     expect(systemOneProfileFor(cfg({ model: 'laya', contextTokens: 2048, optionsBudgetTokens: 300 }))).toMatchObject({ contextTokens: 2048, optionsBudgetTokens: 300 })
   })
 
+  it('uses the catalog window for a managed model, unless the user set one', () => {
+    const managed = { catalogId: 'laya-en-q8' }
+    expect(systemOneProfileFor(cfg({ model: 'laya', managed, baseUrl: '' }))).toMatchObject({ contextTokens: 2048, optionsBudgetTokens: 192 })
+    expect(systemOneProfileFor(cfg({ model: 'laya', managed, baseUrl: '', contextTokens: 4096 })).contextTokens).toBe(4096)
+    expect(systemOneProfileFor(cfg({ model: 'laya' })).contextTokens).toBe(512)
+  })
+
   it('falls back to a conservative unknown profile', () => {
     const p = systemOneProfileFor(cfg({ model: 'mystery', contextTokens: 8000 }))
     expect(p).toMatchObject({ contextTokens: 8000, maxQuestions: 16 })

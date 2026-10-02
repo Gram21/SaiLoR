@@ -61,13 +61,13 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-100 — Ask only about unanswered fields
-- **Description:** When an AI run starts, the system shall request values only for the currently unanswered fields of each paper it annotates (the current paper alone, or every candidate paper in all-papers mode, each asked only about its own unanswered fields), where a boolean field counts as unanswered unless it is true.
+- **Description:** When an AI run starts, the system shall request values only for the currently unanswered fields of each paper it annotates (the current paper alone, or every candidate paper in all-papers mode, each asked only about its own unanswered fields), where a boolean field counts as unanswered unless it is true. A run is blocked with a stated reason when the model's window is unknown but must be known (Ollama without "Context to use") or too small for the mode (REQ-LLM-743).
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/llm/fields.ts:21-75`, `src/state/aiStore.ts` (`run`, `batchCandidates`)
 - **Status:** Implemented
 
 ### REQ-LLM-110 — Deliver the paper as text or PDF
-- **Description:** The system shall deliver the paper to the provider either as text extracted from the PDF or as the PDF file itself for providers that accept documents (Anthropic, OpenAI, Google, OpenRouter), falling back to extracted text when a PDF-configured target's provider cannot accept documents.
+- **Description:** The system shall deliver the paper to the provider either as text extracted from the PDF or as the PDF file itself for providers that accept documents (Anthropic, OpenAI, Google, OpenRouter), falling back to extracted text when a PDF-configured target's provider cannot accept documents. Only text delivery is cut to the model's input window (REQ-LLM-740); a PDF is sent whole.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/llm/providers.ts:61-156,230-264`, `src/state/aiStore.ts:375-418`
 - **Status:** Implemented
@@ -181,7 +181,7 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-300 — Report run progress
-- **Description:** During an AI run, the system shall display the current phase (setup, reading, calling, parsing, review, applied, or error) with a live elapsed-time counter and a cancel action; when annotating more than one paper it shall also show which paper of how many is in progress and its title, and in agent mode the most recent progress messages for that paper.
+- **Description:** During an AI run, the system shall display the current phase (setup, reading, starting the app-managed local model, calling, parsing, review, applied, or error) with a live elapsed-time counter and a cancel action; when annotating more than one paper it shall also show which paper of how many is in progress and its title, and in agent mode the most recent progress messages for that paper.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/aiStore.ts` (`AiPhase`, `run`), `src/components/AiDialog.tsx` (running-phase block)
 - **Status:** Implemented
@@ -344,7 +344,7 @@ See the [index](index.md) for the glossary.
 - **Tests:** `src/state/aiStore.roles.test.ts`, `src/components/AiDialog.test.tsx`
 
 ### REQ-LLM-550 — Classify mode
-- **Description:** The setup screen shall offer a third mode, "Classify" (alongside Prompt and Agent), enabled only when at least one System One model is configured. In this mode the system shall send one `/v1/systemone` request per paper covering every unanswered field eligible for a System One answer (REQ-LLM-520); a field ineligible for Classify mode shall be reported as skipped with reason "not handled in Classify mode" rather than asked. Accepted rows shall carry `source: 'system-one'`, a `confidence` equal to the returned probability, and an evidence placeholder ("no quote (System One)") in place of a supporting quote. A row whose confidence is below a reviewer-adjustable threshold (default 0.8) shall start unticked in the review table. Classify mode shall work with all-papers mode, concurrency, the spending cap, resume, and token-usage accounting exactly like the other modes; it shall never also invoke the cross-check role (REQ-LLM-560), since both would ask the same model the same question.
+- **Description:** The setup screen shall offer a third mode, "Classify" (alongside Prompt and Agent), enabled only when at least one System One model is configured. In this mode the system shall plan the `/v1/systemone` requests per paper (`planSystemOneRequests`: one request when the labels fit the model's budget, several for small-window models), send them sequentially and merge the replies, covering every unanswered field eligible for a System One answer (REQ-LLM-520); a field ineligible for Classify mode shall be reported as skipped with reason "not handled in Classify mode" rather than asked, and a field the model cannot take (too many options, labels too long) shall be listed in the setup field list and left to the reviewer in the review notes (REQ-LLM-742). Accepted rows shall carry `source: 'system-one'`, a `confidence` equal to the returned probability, and an evidence placeholder ("no quote (System One)") in place of a supporting quote. A row whose confidence is below a reviewer-adjustable threshold (default 0.8) shall start unticked in the review table. Classify mode shall work with all-papers mode, concurrency, the spending cap, resume, and token-usage accounting exactly like the other modes; it shall never also invoke the cross-check role (REQ-LLM-560), since both would ask the same model the same question.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/aiStore.ts:78` (`AiMode` including `'classify'`), `src/state/aiStore.ts:1585-1637` (`runOnePaperClassify`), `src/state/aiStore.ts:644-651` (dispatch to `runOnePaperClassify` and confidence-threshold row-checking), `src/components/AiDialog.tsx:484-520` (How section's Classify radio, disabled without a System One model), `src/model/project.ts:47` (`AiUsageRecord.mode` extended to include `'classify'`)
 - **Status:** Implemented
@@ -518,3 +518,59 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `electron/hardware.ts` (`probeHardware`, `recommendBackend`), `electron/localRuntimeUtil.ts` (`parseServerLog`, `buildServerArgs`), `electron/localRuntime.ts` (`start`)
 - **Status:** Implemented (no UI yet); CUDA/Vulkan paths untested on real hardware
 - **Tests:** `electron/hardware.test.ts`, `electron/localRuntimeUtil.test.ts`
+
+### REQ-LLM-730 — Guided setup of local decision models with informed download consent
+- **Description:** The model library's provider select shall offer the guided entry "Local model — decision model (System 1)". Its panel shall show the hardware (RAM, free disk, GPUs) with a plain sentence on GPU or CPU use, the llama.cpp runtime status, and the System One entries of the local catalog with size, license and the input window in plain words (including the question/option budget). Runtime and model downloads shall show their plan (source, size, destination, free disk, SHA-256 verification, license) and start only after an explicit confirmation; progress and cancel are shown. While no llama.cpp release includes the `/v1/systemone` route (`includesSystemOne === false`), the UI shall say so, keep the install disabled and point to "Connect to a server you run yourself" (URL, e.g. laya-serve or own llama-server). Planned catalog entries show their reason and are not installable. "Use this model" saves a managed target (catalog id, window and options budget from the catalog); "Start & test" reports backend, GPU use and offloaded layers or the error. In the browser build the entry shows "Available in the desktop app".
+- **Type:** Functional (ISO 25010: Usability, Security)
+- **Evidence:** `src/components/LocalSystemOnePanel.tsx`, `src/components/LocalBits.tsx` (`ConsentBox`), `src/components/LlmSettingsDialog.tsx`, `src/llm/localUi.ts`
+- **Status:** Implemented; CUDA/Vulkan and a real runtime install unverified
+- **Tests:** `src/components/LlmSettingsDialog.local.test.tsx`, `src/llm/localUi.test.ts`
+
+### REQ-LLM-731 — Guided setup of local chat models (Ollama and OpenAI-compatible servers)
+- **Description:** The provider select shall offer "Local model — chat (Ollama, LM Studio, llama.cpp, vLLM)". The panel offers per-server default URLs, "Check connection" (detected server kind, models with context window and loaded state), and a warning "Papers will be sent over the network to <host>" when the host is not local. Ollama models map to the `ollama` provider, all others to `openai-compatible` without a required key. For Ollama it lists installed models (size, parameters, quantization) with Delete, offers `OLLAMA_SHORTLIST` downloads with a hardware-fit badge, re-reads the exact size from the registry manifest and asks for consent (including that Ollama may keep downloading in the background) before pulling, shows pull progress and errors (including unknown tags), and shows GPU/CPU use of loaded models from `/api/ps`. A note states that models are not benchmarked for annotation quality.
+- **Type:** Functional (ISO 25010: Usability, Security)
+- **Evidence:** `src/components/LocalChatPanel.tsx`, `src/components/LlmSettingsDialog.tsx`
+- **Status:** Implemented; not tried against live Ollama/LM Studio/vLLM servers
+- **Tests:** `src/components/LlmSettingsDialog.local.test.tsx`
+
+### REQ-LLM-732 — Explicit context window per model
+- **Description:** The model form shall let the reviewer set `contextTokens` (and, for System One, `optionsBudgetTokens`) with a plain explanation of tokens. Hosted and self-run System One targets are prefilled from `systemOneProfileFor`, managed ones from the catalog. For local chat models the "Context to use" field defaults to the smaller of the model's maximum and 16k (32k with at least 16 GB RAM), explains that a server default of about 4,096 tokens would silently cut long papers, shows an estimated memory need (model weights plus KV cache) and warns when it exceeds free RAM/VRAM ("part of the model will run on the CPU: slow").
+- **Type:** Functional (ISO 25010: Reliability, Usability)
+- **Evidence:** `src/components/ContextFields.tsx`, `src/components/LocalChatPanel.tsx`, `src/llm/localUi.ts` (`suggestContext`, `memoryCheck`)
+- **Status:** Implemented
+- **Tests:** `src/components/LlmSettingsDialog.local.test.tsx`, `src/llm/localUi.test.ts`
+
+### REQ-LLM-733 — Hosted Clef/Jev setup
+- **Description:** The provider select shall offer "Hosted decision model — Clef (Cloudflare) / Jev". For Clef on Cloudflare Workers AI the form asks for the account ID (validated as 32 lowercase hex characters; it is public), the API token (stored like any key) and the model (`clef-flash` 9B or `clef` 27B), shows the hosted limits (64k context, at most 64 questions per request) and a price hint with a pointer to Cloudflare's pricing page; the context is prefilled with 65,536. For Jev it keeps the editable URL (default `https://api.typesafe.ai`), model `jev-latest` and key, prefilled with a 32,000-token budget. Verify setup uses the existing request path.
+- **Type:** Functional (ISO 25010: Usability, Functional Suitability)
+- **Evidence:** `src/components/HostedSystemOnePanel.tsx`, `src/components/LlmSettingsDialog.tsx`
+- **Status:** Implemented; not verified against live Cloudflare/TypeSafe endpoints
+- **Tests:** `src/components/LlmSettingsDialog.local.test.tsx`
+
+### REQ-LLM-740 — Trim the paper to each model's input window
+- **Description:** When a chat target's `contextTokens` is known, text delivery shall cut the paper to what is left of the window after the system prompt (schema, rules, few-shot block), the user-message wrapper, a reply reserve and, with a reasoning effort set, a thinking reserve (`chatInputBudget`, `fitPaperText`): the reference list first, then trailing pages, keeping the `[page N]` markers. This applies to the prompt-mode call, the re-check call, the agent's first message (to the smaller window of annotator and judge; its tools and evidence check then see exactly what was sent) and the screening prompt. Per paper the system shall record pages kept, pages total and whether references were dropped, and the review shall note it ("Paper trimmed to fit <model>'s input window: pages 1–9 of 14 sent, references dropped"); the setup estimate shall say when the current paper is likely to be trimmed. When even the fixed parts leave no room (under 256 tokens for the paper) the paper shall fail with "The model's window (N tokens) is too small for this schema/prompt; raise the context or use fewer examples" instead of being sent. With an unknown window nothing changes.
+- **Type:** Functional (ISO 25010: Reliability, Functional Suitability)
+- **Evidence:** `src/state/aiStore.ts` (`fitForChat`, `describeFit`, `fitByPaper`, `runOnePaperPrompt`, `runOnePaperAgent`), `src/state/aiScreeningStore.ts` (`promptOne`), `src/components/AiDialog.tsx` (`trimHint`, `ReviewNotes`)
+- **Status:** Implemented; the tokens-per-character heuristic is conservative, not measured per model
+- **Tests:** `src/state/aiStore.budget.test.ts`, `src/state/aiScreeningStore.test.ts`
+
+### REQ-LLM-741 — Never apply results from truncated input
+- **Description:** When a local server reports that it cut the front off the prompt (`inputTruncated`, Ollama), the paper shall fail with a message pointing at "Context to use" in the model settings, and nothing from that reply shall reach the review or the project. Starting a run with an Ollama annotator whose "Context to use" is unset shall be blocked with "Set 'Context to use' for this model in the model settings (Ollama's default window is often only 4,096 tokens and would silently cut the paper)". The consent line shall say that the model runs on this machine when it is app-managed or on a loopback address, and otherwise that the paper goes over the network to the host.
+- **Type:** Functional (ISO 25010: Reliability, Safety)
+- **Evidence:** `src/state/aiStore.ts` (`startBlocker`, `LOCAL_TRUNCATED_MESSAGE`, `destinationNote`, `runOnePaperPrompt`), `src/state/aiScreeningStore.ts` (`promptOne`), `src/components/AiDialog.tsx`, `src/components/AiScreeningDialog.tsx`
+- **Status:** Implemented
+- **Tests:** `src/state/aiStore.budget.test.ts`, `src/state/aiScreeningStore.test.ts`, `src/components/AiDialog.test.tsx`
+
+### REQ-LLM-742 — Report what the model could not handle (fields, state mode)
+- **Description:** System One runs (Classify, cross-check, screening) shall surface what the model's limits cost: a configuration that cannot form a request (e.g. an invalid Cloudflare account id) fails the paper with that message; fields the model cannot take are listed in the Classify setup field list ("not handled by <model>: <reason>") and in the review notes ("left to you: <path> — <reason>"); when the state was cut to title and abstract, or to the start of the text, the review says so ("<model> saw title + abstract only — its input window is N tokens"); a screening run whose exclusion-reason question did not fit says so. An app-managed local model is started before the first call with the phase "Starting local model…", and a failed start is reported with the server's explanation. Token usage and cost sum over all requests of a paper.
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/state/aiStore.ts` (`askSystemOne`, `runOnePaperClassify`, `runCrossCheck`, `ensureLocalModel`), `src/state/aiScreeningStore.ts` (`classifyOne`), `src/components/AiDialog.tsx`, `src/llm/modelProfiles.ts` (`systemOneProfileFor` uses the catalog window for managed models)
+- **Status:** Implemented
+- **Tests:** `src/state/aiStore.budget.test.ts`, `src/state/aiScreeningStore.test.ts`, `src/llm/modelProfiles.test.ts`
+
+### REQ-LLM-743 — Agent mode requires a large context window
+- **Description:** Agent mode accumulates tool results in the conversation, so when an annotator's or judge's `contextTokens` is known and below 32,000 the Agent option shall be disabled with the reason "Agent mode needs a model with a context window of at least 32k tokens", and a run in that mode shall not start. Prompt and Classify modes are unaffected.
+- **Type:** Functional (ISO 25010: Reliability)
+- **Evidence:** `src/state/aiStore.ts` (`agentContextReason`, `startBlocker`), `src/components/AiDialog.tsx` (Agent radio)
+- **Status:** Implemented
+- **Tests:** `src/state/aiStore.budget.test.ts`, `src/components/AiDialog.test.tsx`

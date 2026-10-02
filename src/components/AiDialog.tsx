@@ -3,6 +3,10 @@ import {
   useAiStore,
   buildFewShotForPaper,
   fewShotCandidates,
+  agentContextReason,
+  destinationNote,
+  isLocalModel,
+  startBlocker,
   type AiMode,
   type PaperNotes,
   type PaperSkip,
@@ -15,7 +19,8 @@ import { aiSeatId, seatLabel } from '../model/project'
 import { PROVIDERS } from '../llm/providers'
 import { displayPath, parsePath, resolvePath } from '../llm/paths'
 import { estimateRun, estimateCost, estimateCostSplit, WEB_SEARCH_NOTE, type TokenEstimate } from '../llm/cost'
-import { systemOneEligible } from '../llm/systemone'
+import { chatInputBudget } from '../llm/budget'
+import { planSystemOneRequests, systemOneEligible } from '../llm/systemone'
 import type { LlmConfig } from '../llm/types'
 import type { FieldValue } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
@@ -135,12 +140,16 @@ function estimateLine(
   webSearch: boolean,
   /** Answered fields per paper when re-check is on (0 = off): one more prompt-style request per paper. */
   recheckFields: number,
+  /** Classify: requests the current paper needs; `approx` when it stands in for every paper. */
+  systemOne: { requests: number; approx: boolean } = { requests: 1, approx: false },
 ): string {
   const input = {
     papers: pages.map((p) => ({ pages: p })),
     mode,
     delivery: deliveryOf(selected),
     fewShotTokens,
+    contextTokens: selected.contextTokens,
+    systemOneRequests: systemOne.requests,
   }
   let est = estimateRun({ ...input, fieldsPerPaper: fields, webSearch })
   if (recheckFields > 0) {
@@ -159,7 +168,7 @@ function estimateLine(
   const cost =
     mode === 'agent' && judgeCfg ? estimateCostSplit(est, selected, judgeCfg) : estimateCost(est, selected)
   const tokens =
-    `Estimated: ~${est.low.inputTokens.toLocaleString()}–${est.high.inputTokens.toLocaleString()} input tokens, ` +
+    `Estimated${mode === 'classify' && systemOne.approx ? ' (≈, from the current paper’s fields)' : ''}: ~${est.low.inputTokens.toLocaleString()}–${est.high.inputTokens.toLocaleString()} input tokens, ` +
     `~${est.low.outputTokens.toLocaleString()}–${est.high.outputTokens.toLocaleString()} output tokens, ` +
     `${est.requests.low}–${est.requests.high} request${est.requests.high === 1 ? '' : 's'}`
   return cost
@@ -167,7 +176,21 @@ function estimateLine(
     : `${tokens}. Add prices in AI models settings to see a cost estimate. Rough estimate, not a quote.`
 }
 
+/** Mid-range tokens per extracted page, between cost.ts's low and high guesses. */
+const TOKENS_PER_PAGE = 750
+
+/** Whether the current paper probably exceeds the model's input window, from its page count alone. */
+function trimHint(selected: LlmConfig, mode: AiMode, pages: number | undefined, fewShotTokens: number): string | null {
+  if (mode === 'classify' || deliveryOf(selected) === 'pdf' || pages === undefined) return null
+  // ponytail: 2000 = cost.ts's low system-prompt guess; a large schema trims more than this predicts.
+  const budget = chatInputBudget(selected, { systemTokens: 2000 + fewShotTokens })
+  if (budget === null || pages * TOKENS_PER_PAGE <= budget) return null
+  const fit = Math.max(1, Math.floor(budget / TOKENS_PER_PAGE))
+  return `The current paper (${pages} pages) may be trimmed to fit ${selected.model}'s input window: roughly its first ${fit} pages would be sent.`
+}
+
 const PHASE_LINE: Record<string, string> = {
+  starting: 'Starting local model…',
   reading: 'Reading the PDF…',
   parsing: 'Reading the answer…',
 }
@@ -197,14 +220,14 @@ function modelOption(c: LlmConfig): { id: string; label: string } {
 /** The consequences warning for turning on "annotate all papers", worded to stay
  *  accurate whichever mode is selected — shown both in the one-time confirmation
  *  and, once confirmed, as a standing reminder under the toggle. */
-function allPapersWarning(mode: AiMode, count: number, recheck: boolean): string {
+function allPapersWarning(mode: AiMode, count: number, recheck: boolean, local: boolean): string {
   const perPaper = mode === 'agent' ? 'many requests per paper' : 'one request per paper'
   const time = mode === 'agent' ? 'several minutes per paper' : 'about a minute per paper'
   const cost = mode === 'agent' ? ', several times higher than prompt mode' : ''
   return (
     `This sends ${count} paper${count === 1 ? '' : 's'} — ${perPaper}. Your provider charges ` +
     `your API key for every request, so cost scales with the number of papers${cost}. Rough ` +
-    `estimate: ${time}. Every paper's content leaves this machine. ` +
+    `estimate: ${time}. ${local ? "Every paper's content stays on your machine. " : "Every paper's content leaves this machine. "}` +
     (recheck
       ? "Re-check is on, so this includes papers you marked finished and adds a second request per paper. "
       : '') +
@@ -369,7 +392,7 @@ export function AiDialog() {
   // and the reviewer re-ticked it (REQ-LLM-580) — feeds both the header note
   // and the attention-only filter.
   const attentionRows = rows.filter((r) => r.flagged || !r.checked)
-  const running = phase === 'reading' || phase === 'calling' || phase === 'parsing'
+  const running = phase === 'reading' || phase === 'starting' || phase === 'calling' || phase === 'parsing'
   const canStartSingle =
     !!currentPaper && currentPaperHasPdf && (targets.length > 0 || (recheck && answeredCount > 0))
   const webSearchSupported = !!selected && PROVIDERS[selected.provider].supportsWebSearch
@@ -379,7 +402,15 @@ export function AiDialog() {
   const applyCount = checkedCount + tickedReplacements
   const totalWebSearches = Object.values(webSearchesByPaper).reduce((n, c) => n + c, 0)
   const canStartAll = candidates.length > 0
-  const canStart = allPapers ? canStartAll : canStartSingle
+  // Classify: what the model can take of the current paper's fields (a stand-in for every paper).
+  const s1Plan =
+    mode === 'classify' && selected?.provider === 'systemone' && currentPaper && targets.length > 0
+      ? planSystemOneRequests(selected, currentPaper, '', targets)
+      : null
+  const notHandled = new Map((s1Plan?.notHandled ?? []).map((n) => [n.path, n.reason]))
+  const blocker = selected ? (startBlocker(mode, selected, judgeCfg) ?? s1Plan?.error ?? null) : null
+  const canStart = (allPapers ? canStartAll : canStartSingle) && !blocker
+  const agentReason = selected ? agentContextReason(selected) : null
 
   // Representative estimate only (the current paper's block, like `targets`
   // above) — every paper in all-papers mode gets its own, similarly sized one.
@@ -402,10 +433,13 @@ export function AiDialog() {
           fewShotTokens,
           webSearchOn,
           recheck ? answeredCount : 0,
+          { requests: Math.max(1, s1Plan?.requests.length ?? 1), approx: allPapers },
         )
       : scopePaperIds.some((id) => pageCountsLoading[id])
         ? 'Estimating…'
         : null
+  const trimText =
+    selected && currentPaper ? trimHint(selected, mode, pageCounts[currentPaper.id], fewShotTokens) : null
   // Both targets priced — costs can be split accurately; the cap only makes
   // sense once it can be compared to something.
   const capKnown =
@@ -540,7 +574,7 @@ export function AiDialog() {
 
               {pendingAllPapers && !allPapers && (
                 <div className="ai-confirm">
-                  <p className="ai-note">{allPapersWarning(mode, candidates.length, recheck)}</p>
+                  <p className="ai-note">{allPapersWarning(mode, candidates.length, recheck, !!selected && isLocalModel(selected))}</p>
                   <div className="ai-foot">
                     <button type="button" onClick={() => setPendingAllPapers(false)} title="Keep annotating only the current paper">
                       Current paper only
@@ -560,7 +594,7 @@ export function AiDialog() {
                   </div>
                 </div>
               )}
-              {allPapers && <p className="ai-note">{allPapersWarning(mode, candidates.length, recheck)}</p>}
+              {allPapers && <p className="ai-note">{allPapersWarning(mode, candidates.length, recheck, !!selected && isLocalModel(selected))}</p>}
 
               <p className="ai-targets">
                 {targets.length === 0
@@ -592,6 +626,11 @@ export function AiDialog() {
                         {mode === 'classify' && !systemOneEligible(t) && (
                           <span className="ai-note-reason">not handled in Classify mode</span>
                         )}
+                        {notHandled.has(t.path) && (
+                          <span className="ai-note-reason">
+                            not handled by {selected?.model}: {notHandled.get(t.path)}
+                          </span>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -612,11 +651,12 @@ export function AiDialog() {
                   />
                   Prompt
                 </label>
-                <label>
+                <label title={agentReason ?? undefined}>
                   <input
                     type="radio"
                     name="ai-mode"
                     checked={mode === 'agent'}
+                    disabled={!!agentReason}
                     onChange={() => setMode('agent')}
                   />
                   Agent
@@ -721,8 +761,8 @@ export function AiDialog() {
                       : deliveryOf(selected) === 'pdf'
                         ? `This paper${allPapers ? "'s" : '’s'} PDF file will be sent to `
                         : `The text of ${allPapers ? 'each paper' : 'this paper'} will be extracted and sent to `}
-                    <strong>{PROVIDERS[selected.provider].label}</strong> ({selected.model}). It
-                    leaves this machine. Nothing is written into the project until you press Apply.
+                    <strong>{PROVIDERS[selected.provider].label}</strong> ({selected.model}).{' '}
+                    {destinationNote(selected)} Nothing is written into the project until you press Apply.
                     {mode === 'agent' &&
                       ' Agent mode may also send search terms or URLs chosen by the model to OpenAlex, Crossref, or other sites; these can contain short phrases from the paper, but never the paper file itself.'}
                     {mode === 'agent' &&
@@ -745,6 +785,8 @@ export function AiDialog() {
               </p>
 
               {estimateText && <p className="ai-note ai-estimate">{estimateText}</p>}
+              {trimText && <p className="ai-note">{trimText}</p>}
+              {blocker && <p className="ai-note ai-error">{blocker}</p>}
 
               {/* Options: everything a run doesn't strictly need to choose. */}
               <details className="ai-prompt">
@@ -905,7 +947,7 @@ export function AiDialog() {
                   className="primary"
                   onClick={() => void run()}
                   disabled={!selected || !canStart}
-                  title="Send the paper(s) to the selected AI model"
+                  title={blocker ?? 'Send the paper(s) to the selected AI model'}
                 >
                   Start
                 </button>
@@ -1555,6 +1597,11 @@ function RecheckSection({
 function ReviewNotes({ notes }: { notes: PaperNotes }) {
   return (
     <>
+      {notes.info?.map((m, i) => (
+        <p key={i} className="ai-note">
+          {notes.paperTitle}: {m}
+        </p>
+      ))}
       {notes.skipped.length > 0 && (
         <details className="ai-notes">
           <summary>

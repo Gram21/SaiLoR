@@ -1,3 +1,4 @@
+import { findCatalogEntry } from './localCatalog'
 import type { LlmConfig } from './types'
 
 /**
@@ -37,7 +38,7 @@ const DEFAULT_UNKNOWN_STATE_TOKENS = 50_000 // the old 200k-char default
 const OPTIONS_SHARE = 0.35
 const OPTIONS_CAP = 4096
 
-function isLocalHost(url: string): boolean {
+export function isLocalHost(url: string): boolean {
   try {
     const h = new URL(url).hostname
     return h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h === '::1' || h.endsWith('.localhost')
@@ -69,12 +70,15 @@ function baseProfile(cfg: LlmConfig): SystemOneProfile {
 
 export function systemOneProfileFor(cfg: LlmConfig): SystemOneProfile {
   const p = baseProfile(cfg)
+  // A model the app runs itself is started with the catalog's window, which can differ from the family default
+  // (Laya: 2048 under llama.cpp, 512 under laya-serve).
+  const entry = cfg.managed ? findCatalogEntry(cfg.managed.catalogId) : undefined
+  const catalog = entry && entry.contextTokens > 0 ? entry : undefined
+  const optionsBudget = cfg.optionsBudgetTokens ?? catalog?.optionsBudgetTokens ?? p.optionsBudgetTokens
   return {
     ...p,
-    contextTokens: cfg.contextTokens ?? p.contextTokens,
-    ...(cfg.optionsBudgetTokens !== undefined || p.optionsBudgetTokens !== undefined
-      ? { optionsBudgetTokens: cfg.optionsBudgetTokens ?? p.optionsBudgetTokens }
-      : {}),
+    contextTokens: cfg.contextTokens ?? catalog?.contextTokens ?? p.contextTokens,
+    ...(optionsBudget !== undefined ? { optionsBudgetTokens: optionsBudget } : {}),
   }
 }
 

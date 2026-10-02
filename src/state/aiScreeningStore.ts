@@ -2,7 +2,14 @@ import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import { getPlatform } from '../platform'
 import { useStore, currentTree } from './store'
-import { useAiStore } from './aiStore'
+import {
+  useAiStore,
+  describeFit,
+  ensureLocalModel,
+  fitForChat,
+  startBlocker,
+  LOCAL_TRUNCATED_MESSAGE,
+} from './aiStore'
 import { withRetry, runPool, type CallLlm } from '../llm/retry'
 import { buildRequest, extractText, extractError, wasTruncated } from '../llm/providers'
 import { parseChatResponse } from '../llm/chat'
@@ -82,6 +89,10 @@ interface ScreeningAiState {
   rows: ScreeningRow[]
   errors: ScreeningNote[]
   skipped: ScreeningNote[]
+  /** Per-paper remarks that are neither failures nor skips (trimmed text, a dropped reason question). */
+  infos: ScreeningNote[]
+  /** Set while an app-managed local model is starting. */
+  startNotice: string | null
   done: number
   total: number
   usage: { calls: number; inputTokens: number; outputTokens: number }
@@ -151,6 +162,8 @@ export const useAiScreeningStore = create<ScreeningAiState>()(
     rows: [],
     errors: [],
     skipped: [],
+    infos: [],
+    startNotice: null,
     done: 0,
     total: 0,
     usage: { calls: 0, inputTokens: 0, outputTokens: 0 },
@@ -178,11 +191,13 @@ export const useAiScreeningStore = create<ScreeningAiState>()(
         s.rows = []
         s.errors = []
         s.skipped = []
+        s.infos = []
         s.applied = null
         s.done = 0
         s.total = 0
         s.usage = { calls: 0, inputTokens: 0, outputTokens: 0 }
         s.retryNotice = null
+        s.startNotice = null
         s.runModel = null
         s.cost = null
       })
@@ -232,7 +247,7 @@ export const useAiScreeningStore = create<ScreeningAiState>()(
       const st = get()
       if (!project?.screening || st.phase !== 'setup') return
       const config = effectiveConfig(useAiStore.getState().configs, st.engine, st.selectedId)
-      if (!config || !isUsable(config)) return
+      if (!config || !isUsable(config) || startBlocker('prompt', config)) return
       const wanted = st.allPapers
         ? new Set(st.candidates.map((c) => c.id))
         : new Set(st.currentUndecided && app.currentPaperId ? [app.currentPaperId] : [])
@@ -263,6 +278,7 @@ export const useAiScreeningStore = create<ScreeningAiState>()(
         s.rows = []
         s.errors = []
         s.skipped = []
+        s.infos = []
         s.done = 0
         s.total = papers.length
         s.usage = { calls: 0, inputTokens: 0, outputTokens: 0 }
@@ -283,12 +299,15 @@ export const useAiScreeningStore = create<ScreeningAiState>()(
               set((s) => { s.skipped.push(note(paper, 'no abstract')) })
               return
             }
-            const { outcome, usage } =
+            const onStarting = () => set((s) => { s.startNotice = 'Starting local model…' })
+            const { outcome, usage, notes } =
               engine === 'classify'
-                ? await classifyOne(config, paper, text, reasons, protocol, callLlm, ctrl.signal)
-                : await promptOne(config, paper, text, reasons, protocol, callLlm, ctrl.signal)
+                ? await classifyOne(config, paper, text, reasons, protocol, callLlm, ctrl.signal, onStarting)
+                : await promptOne(config, paper, text, reasons, protocol, callLlm, ctrl.signal, onStarting)
             if (stale() || ctrl.signal.aborted) return
             set((s) => {
+              s.startNotice = null
+              for (const message of notes) s.infos.push(note(paper, message))
               s.usage.calls++
               s.usage.inputTokens += usage.inputTokens
               s.usage.outputTokens += usage.outputTokens
@@ -307,7 +326,10 @@ export const useAiScreeningStore = create<ScreeningAiState>()(
             })
           } catch (e) {
             if (stale() || ctrl.signal.aborted) return
-            set((s) => { s.errors.push(note(paper, e instanceof Error ? e.message : String(e))) })
+            set((s) => {
+              s.startNotice = null
+              s.errors.push(note(paper, e instanceof Error ? e.message : String(e)))
+            })
           } finally {
             if (!stale()) set((s) => { s.done++ })
           }
@@ -319,6 +341,7 @@ export const useAiScreeningStore = create<ScreeningAiState>()(
         s.rows.sort((a, b) => a.order - b.order)
         s.cost = costOf(s.usage, config)
         s.retryNotice = null
+        s.startNotice = null
         s.phase = 'review'
       })
     },
@@ -375,7 +398,7 @@ async function screeningText(paper: Paper): Promise<ScreeningText | null> {
   return { kind: 'excerpt', text: extracted.text.slice(0, MAX_SCREENING_TEXT_CHARS) }
 }
 
-type Answer = { outcome: ScreeningOutcome; usage: { inputTokens: number; outputTokens: number } }
+type Answer = { outcome: ScreeningOutcome; usage: { inputTokens: number; outputTokens: number }; notes: string[] }
 
 function safeJson(body: string): unknown {
   try {
@@ -393,10 +416,14 @@ async function promptOne(
   protocol: Project['protocol'],
   callLlm: CallLlm,
   signal: AbortSignal,
+  onStarting: () => void,
 ): Promise<Answer> {
-  const req = buildRequest(config, buildScreeningSystemPrompt(reasons, protocol), {
+  const system = buildScreeningSystemPrompt(reasons, protocol)
+  const fitted = fitForChat(config, system + buildScreeningUserText(paper, { ...text, text: '' }), text.text)
+  await ensureLocalModel(config, onStarting)
+  const req = buildRequest(config, system, {
     kind: 'text',
-    text: buildScreeningUserText(paper, text),
+    text: buildScreeningUserText(paper, { ...text, text: fitted.text }),
   })
   const res = await callLlm(req, signal)
   if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
@@ -405,7 +432,14 @@ async function promptOne(
   if (!reply.trim()) {
     throw new Error(wasTruncated(config.provider, json) ? 'The model ran out of reply budget before answering.' : 'The model sent an empty reply.')
   }
-  return { outcome: parseScreeningAnswer(reply, reasons), usage: parseChatResponse(config.provider, json).usage }
+  const parsed = parseChatResponse(config.provider, json, req)
+  // Never use an answer given to a prompt the server cut the front off.
+  if (parsed.inputTruncated) throw new Error(LOCAL_TRUNCATED_MESSAGE)
+  return {
+    outcome: parseScreeningAnswer(reply, reasons),
+    usage: parsed.usage,
+    notes: fitted.fit ? [describeFit(config.model, fitted.fit)] : [],
+  }
 }
 
 async function classifyOne(
@@ -416,11 +450,13 @@ async function classifyOne(
   protocol: Project['protocol'],
   callLlm: CallLlm,
   signal: AbortSignal,
+  onStarting: () => void,
 ): Promise<Answer> {
-  const { request, asked } = buildScreeningSystemOneRequest(config, paper, text, reasons, protocol)
+  const { request, asked, notes } = buildScreeningSystemOneRequest(config, paper, text, reasons, protocol)
+  await ensureLocalModel(config, onStarting)
   const res = await callLlm(request, signal)
   if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
-  return parseScreeningSystemOne(asked, safeJson(res.body))
+  return { ...parseScreeningSystemOne(asked, safeJson(res.body)), notes: notes.map((n) => `left to you: ${n.replace(': ', ' — ')}`) }
 }
 
 function readStr(key: string): string | null {
