@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import http from 'node:http'
 import type { AddressInfo } from 'node:net'
+import { closeApp } from './helpers'
 
 /**
  * Real UI, real Electron, real AI-assisted-annotation flow — against a mock
@@ -259,7 +260,7 @@ test.describe('AI-assisted annotation', () => {
       await expect(page.locator('[aria-label="Study Type"]')).toHaveValue('')
       await expect(page.locator('[aria-label="Year"]')).toHaveValue('')
     } finally {
-      await app.close()
+      await closeApp(app)
       rmSync(dir, { recursive: true, force: true })
       rmSync(userData, { recursive: true, force: true })
     }
@@ -297,7 +298,7 @@ test.describe('AI-assisted annotation', () => {
       await expect(page.locator('[aria-label="Study Type"]')).toHaveValue(STUDY_TYPE_VALUE)
       await expect(page.locator('[aria-label="Year"]')).toHaveValue(String(YEAR_VALUE))
     } finally {
-      await app.close()
+      await closeApp(app)
       rmSync(dir, { recursive: true, force: true })
       rmSync(userData, { recursive: true, force: true })
     }

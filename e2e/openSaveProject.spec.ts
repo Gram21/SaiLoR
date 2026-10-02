@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync } from 'no
 import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { closeApp } from './helpers'
 
 /**
  * Electron smoke test: real main process, real `contextBridge`-exposed
@@ -91,7 +92,7 @@ test('opens a project by path and saves it back through real IPC', async () => {
   expect(onDisk.papers[0]?.title).toBe('New Paper')
   expect(existsSync(join(tmpDir, 'annotations'))).toBe(true)
 
-  await app.close()
+  await closeApp(app)
 })
 
 test('real git IPC round-trip: probe and status through the hardened runGit wrapper', async () => {
@@ -123,7 +124,7 @@ test('real git IPC round-trip: probe and status through the hardened runGit wrap
   // against this real directory, through the hardened wrapper, not a stub.
   expect(status.porcelain).toContain('project.json')
 
-  await app.close()
+  await closeApp(app)
 })
 
 test('split-file save/reopen round-trip: real per-paper annotation files on disk', async () => {
@@ -192,6 +193,6 @@ test('split-file save/reopen round-trip: real per-paper annotation files on disk
   const reassembled = JSON.parse(reopened!.text) as { papers: Array<{ annotations?: { 'Study Type'?: Array<{ value: string }> } }> }
   expect(reassembled.papers[0]?.annotations?.['Study Type']?.[0]?.value).toBe('RCT')
 
-  await app.close()
+  await closeApp(app)
   rmSync(dir, { recursive: true, force: true })
 })
