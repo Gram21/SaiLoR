@@ -263,7 +263,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-320 — Build targets
-- **Description:** The system shall build distributable installers for macOS (dmg, arm64 and x64), Windows (NSIS installer, x64), and Linux (AppImage, x64), named `SaiLoR-<version>-<os>-<arch>.<ext>`.
+- **Description:** The system shall build distributable installers for macOS (dmg, arm64 and x64), Windows (NSIS installer, x64), and Linux (AppImage, x64), named `SaiLoR-<version>-<os>-<arch>.<ext>` (Linux omits `<os>`: `SaiLoR-<version>-<arch>.AppImage`, as the AppImage catalog rejects "linux" in names).
 - **Type:** Non-functional, design constraint (ISO 25010: Portability — Adaptability)
 - **Evidence:** `package.json:51-117`, `README.md` (release table)
 - **Status:** Implemented

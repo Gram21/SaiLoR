@@ -33,7 +33,7 @@ Grab the file for your system from the [releases page](https://github.com/Gram21
 | macOS, Apple Silicon (M1–M4) | `SaiLoR-<version>-macos-arm64.dmg` |
 | macOS, Intel | `SaiLoR-<version>-macos-x64.dmg` |
 | Windows | `SaiLoR-<version>-windows-x64.exe` |
-| Linux | `SaiLoR-<version>-linux-x64.AppImage` |
+| Linux | `SaiLoR-<version>-x86_64.AppImage` |
 
 > **The releases are not signed** with an Apple or Microsoft code-signing certificate —
 > paying for one is not worth it for a research tool. Both systems will therefore warn you
@@ -84,8 +84,8 @@ The AppImage is a single self-contained file — no installation needed. Make it
 and run it:
 
 ```bash
-chmod +x "SaiLoR-<version>-linux-x64.AppImage"
-./"SaiLoR-<version>-linux-x64.AppImage"
+chmod +x "SaiLoR-<version>-x86_64.AppImage"
+./"SaiLoR-<version>-x86_64.AppImage"
 ```
 
 If it fails to start, your distribution may be missing FUSE (`sudo apt install libfuse2`
