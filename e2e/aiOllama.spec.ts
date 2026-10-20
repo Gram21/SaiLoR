@@ -103,7 +103,7 @@ async function withApp(fn: (app: ElectronApplication, page: Page) => Promise<voi
     await page.getByRole('menuitem', { name: 'Open file…' }).click()
     await page.getByRole('button', { name: 'Reviewer 1' }).click()
     await page.locator(`[data-paper-id="${paperId}"]`).click()
-    await page.getByRole('button', { name: '✦ AI' }).click()
+    await page.getByRole('group', { name: 'Review tools' }).getByRole('button', { name: 'AI' }).click()
     await fn(app, page)
   } finally {
     await closeApp(app)

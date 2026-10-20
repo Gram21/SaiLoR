@@ -121,7 +121,7 @@ export function aiButtonState(
   return { disabled, title }
 }
 
-/** Top bar: Open / Save menus, appearance controls, help, and the dirty indicator. */
+/** Top bar: file/Git on the left, the reviewer seat in the middle, then project status, review tools (Validate, AI), appearance controls and help. */
 export function Toolbar() {
   const requestOpenProject = useStore((s) => s.requestOpenProject)
   const requestOpenRecent = useStore((s) => s.requestOpenRecent)
@@ -259,6 +259,13 @@ export function Toolbar() {
       disabled: !git || busy || (gitProbe !== null && !gitProbe.available),
       onSelect: () => openClone(),
     },
+    {
+      type: 'item',
+      label: 'Close project',
+      hint: 'Close this project and return to the start screen',
+      disabled: !project || busy || editorOpen,
+      onSelect: requestCloseProject,
+    },
     { type: 'separator' },
     { type: 'header', label: 'Recent projects' },
     ...(recents.length > 0
@@ -328,102 +335,21 @@ export function Toolbar() {
         <div className="toolbar-actions">
           <Dropdown label="Open" title="Open a project" disabled={busy} items={openItems} />
           <Dropdown label="Save" title="Save the project" disabled={busy} items={saveItems} />
-          {/* Right next to Open/Save, not down by Validate/Close: an entry point beside
-              the open/save actions reads as "part of getting a project open", not an
-              afterthought. Always rendered, disabled-with-a-reason when it can't be used
-              — the same call Validate and Close make, and the same call the browser build
-              already makes for every git entry point (see `GIT_BROWSER_DISABLED_HINT`).
-              That means all four "off" states show a disabled button with an honest
-              tooltip rather than a hole in the toolbar: the browser (no local git at all),
-              Electron with no git binary installed, the start screen with no project yet,
-              and a project that simply isn't inside a work tree. Hiding any of these was
-              the old behaviour; it only ever left a reviewer wondering whether they
-              misremembered the button existing. `gitButtonState` owns the precedence. */}
+          <span className="toolbar-sep" aria-hidden="true" />
+          {/* Always rendered, disabled with an honest reason rather than hidden —
+              the browser (no local git at all), Electron with no git binary, the
+              start screen with no project yet, and a project outside a work tree
+              all read as a dimmed button with a tooltip, never a hole in the
+              toolbar. `gitButtonState` owns the precedence. */}
           <button
             type="button"
+            className="tb-btn"
             title={gitBtn.title}
             onClick={() => void openGitPanel()}
             disabled={gitBtn.disabled}
           >
+            <Icon name="git" />
             Git
-          </button>
-          <button
-            type="button"
-            title={
-              reviewerUnset
-                ? 'Pick a reviewer first — there is nothing to validate as "the reviewer" yet'
-                : "Check every paper's annotations against the schema"
-            }
-            onClick={runValidation}
-            // Validation is about the annotations, so it means nothing while the
-            // project editor is open, or before a reviewer has been picked.
-            disabled={!project || busy || editorOpen || reviewerUnset}
-          >
-            Validate
-          </button>
-          {/* Same call as Validate/Git/Close: always rendered, disabled with an
-              honest reason rather than hidden. `aiButtonState` owns the
-              precedence; a paper with no PDF is not one of those reasons —
-              the dialog itself handles that case once opened. */}
-          <button
-            type="button"
-            title={aiBtn.title}
-            onClick={() => void openAiDialog()}
-            disabled={aiBtn.disabled}
-          >
-            ✦ AI
-          </button>
-          {/* Parked work nobody remembers is lost work. Only SaiLoR's own
-              stashes count here — a carry-over that did not come back, or one
-              made from the Git panel — since a stash somebody made in a
-              terminal is their own git business and would only nag. */}
-          {ownStashes > 0 && !editorOpen && (
-            <button
-              type="button"
-              className="toolbar-notice"
-              title="Changes parked in a stash — open Git to restore or delete them"
-              onClick={() => void openGitPanel()}
-              disabled={gitBtn.disabled}
-            >
-              {ownStashes} stashed
-            </button>
-          )}
-          {/* The repository already knows this, and until now only said so
-              inside one confirm dialog in the schema editor. "Behind" is as of
-              the last fetch, so it can report work waiting but never that
-              there is none — hence no "up to date" counterpart. */}
-          {behind !== null && behind > 0 && !editorOpen && (
-            <button
-              type="button"
-              className="toolbar-warning"
-              title="Someone has pushed work you have not pulled yet — open Git to pull it"
-              onClick={() => void openGitPanel()}
-              disabled={gitBtn.disabled}
-            >
-              ↓ {behind} to pull
-            </button>
-          )}
-          {/* Stays for as long as the project is open. The load-time banner is
-              dismissible, and a reviewer who clicks it away otherwise has no
-              way left to learn the project is still missing somebody's work —
-              which reads on every screen as that reviewer having done none. */}
-          {corruptFiles.length > 0 && !editorOpen && (
-            <button
-              type="button"
-              className="toolbar-warning"
-              title={`${corruptFiles.length === 1 ? 'One annotation file' : `${corruptFiles.length} annotation files`} could not be read — click for the list`}
-              onClick={showCorruptFiles}
-            >
-              ⚠ {corruptFiles.length} unreadable
-            </button>
-          )}
-          <button
-            type="button"
-            title="Close this project and return to the start screen"
-            onClick={requestCloseProject}
-            disabled={!project || busy || editorOpen}
-          >
-            Close
           </button>
         </div>
       </div>
@@ -507,6 +433,86 @@ export function Toolbar() {
           </span>
         </div>
 
+        {/* Parked work nobody remembers is lost work. Only SaiLoR's own
+            stashes count here — a carry-over that did not come back, or one
+            made from the Git panel — since a stash somebody made in a
+            terminal is their own git business and would only nag. */}
+        {ownStashes > 0 && !editorOpen && (
+          <button
+            type="button"
+            className="toolbar-notice"
+            title="Changes parked in a stash — open Git to restore or delete them"
+            onClick={() => void openGitPanel()}
+            disabled={gitBtn.disabled}
+          >
+            {ownStashes} stashed
+          </button>
+        )}
+        {/* The repository already knows this, and until now only said so
+            inside one confirm dialog in the schema editor. "Behind" is as of
+            the last fetch, so it can report work waiting but never that
+            there is none — hence no "up to date" counterpart. */}
+        {behind !== null && behind > 0 && !editorOpen && (
+          <button
+            type="button"
+            className="toolbar-warning"
+            title="Someone has pushed work you have not pulled yet — open Git to pull it"
+            onClick={() => void openGitPanel()}
+            disabled={gitBtn.disabled}
+          >
+            ↓ {behind} to pull
+          </button>
+        )}
+        {/* Stays for as long as the project is open. The load-time banner is
+            dismissible, and a reviewer who clicks it away otherwise has no
+            way left to learn the project is still missing somebody's work —
+            which reads on every screen as that reviewer having done none. */}
+        {corruptFiles.length > 0 && !editorOpen && (
+          <button
+            type="button"
+            className="toolbar-warning"
+            title={`${corruptFiles.length === 1 ? 'One annotation file' : `${corruptFiles.length} annotation files`} could not be read — click for the list`}
+            onClick={showCorruptFiles}
+          >
+            ⚠ {corruptFiles.length} unreadable
+          </button>
+        )}
+
+        {/* Review tools: what you do to the annotations, as opposed to the
+            file/Git group on the left that gets a project open and saved.
+            Both are always rendered, disabled with an honest reason rather
+            than hidden; `aiButtonState` owns the AI precedence, and a paper
+            with no PDF is not one of those reasons — the dialog itself
+            handles that case once opened. */}
+        <div className="toolbar-tools" role="group" aria-label="Review tools">
+          <button
+            type="button"
+            className="tb-btn"
+            title={
+              reviewerUnset
+                ? 'Pick a reviewer first — there is nothing to validate as "the reviewer" yet'
+                : "Check every paper's annotations against the schema"
+            }
+            onClick={runValidation}
+            // Validation is about the annotations, so it means nothing while the
+            // project editor is open, or before a reviewer has been picked.
+            disabled={!project || busy || editorOpen || reviewerUnset}
+          >
+            <Icon name="check" />
+            Validate
+          </button>
+          <button
+            type="button"
+            className="tb-btn tb-btn-ai"
+            title={aiBtn.title}
+            onClick={() => void openAiDialog()}
+            disabled={aiBtn.disabled}
+          >
+            <Icon name="spark" />
+            AI
+          </button>
+        </div>
+
         <div className="toolbar-view">
           <div className="font-controls" role="group" aria-label="Font size">
             <button
@@ -555,6 +561,31 @@ export function Toolbar() {
         </div>
       </div>
     </header>
+  )
+}
+
+const ICON_PATHS = {
+  git: 'M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 9a9 9 0 0 1-9 9',
+  check: 'M20 6 9 17l-5-5',
+  spark: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16z',
+}
+
+function Icon({ name }: { name: keyof typeof ICON_PATHS }) {
+  return (
+    <svg
+      className="tb-icon"
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={ICON_PATHS[name]} />
+    </svg>
   )
 }
 

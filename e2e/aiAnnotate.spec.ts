@@ -217,7 +217,7 @@ test.describe('AI-assisted annotation', () => {
       await openProjectViaUi(app, page, projectPath)
 
       await page.locator('[data-paper-id="paper-a"]').click()
-      await page.getByRole('button', { name: '✦ AI' }).click()
+      await page.getByRole('group', { name: 'Review tools' }).getByRole('button', { name: 'AI' }).click()
       await addMockLlmTarget(page, mock.port)
 
       // Prompt is the default mode on a fresh target/run — click it anyway so
@@ -277,7 +277,7 @@ test.describe('AI-assisted annotation', () => {
       await openProjectViaUi(app, page, projectPath)
 
       await page.locator('[data-paper-id="paper-a"]').click()
-      await page.getByRole('button', { name: '✦ AI' }).click()
+      await page.getByRole('group', { name: 'Review tools' }).getByRole('button', { name: 'AI' }).click()
       await addMockLlmTarget(page, mock.port)
 
       await page.getByRole('radio', { name: 'Agent' }).click()

@@ -529,7 +529,7 @@ function screeningHelp(): { lead: ReactNode; sections: HelpSection[] } {
         title: 'AI proposals',
         body: (
           <p>
-            <strong>✦ AI</strong> can propose Include/Exclude decisions (with a reason and a quote from
+            <strong>AI</strong> can propose Include/Exclude decisions (with a reason and a quote from
             the abstract) for the current paper or all undecided ones, judged against the project's
             protocol. Titles and abstracts are sent to your chosen provider. Nothing is written until
             you tick rows and press Apply; Exclude proposals never start ticked, and papers you have
