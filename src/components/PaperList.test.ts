@@ -40,6 +40,7 @@ function makeProject(reviewers: number): Project {
     annotationsDir: null,
     schema,
     aiEnabled: true,
+    aiSeat: false,
     finishCheckbox: true,
     reviewers,
     papers: [],

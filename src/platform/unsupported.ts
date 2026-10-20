@@ -1,5 +1,7 @@
 import type { PlatformAdapter } from './adapter'
 import type { RecentEntry } from './recents'
+import type { WebFetchResult } from '../llm/types'
+import type { LocalServerResult } from './ollamaApi'
 
 const UNSUPPORTED = 'SaiLoR for the web is discontinued — use the desktop app.'
 
@@ -16,6 +18,22 @@ export function createUnsupportedAdapter(): PlatformAdapter {
   const real = {
     kind: 'browser' as const,
     getRecents: (): RecentEntry[] => [],
+    writeFeedback: (): Promise<string | null> => Promise.resolve(null),
+    listFeedback: (): Promise<{ name: string; bytes: number }[]> => Promise.resolve([]),
+    ollama: undefined,
+    localRuntime: null,
+    discoverLocalServer: (): Promise<LocalServerResult> =>
+      Promise.resolve({ ok: false, error: 'Local servers are only available in the desktop app.' }),
+    fetchWeb: (url: string): Promise<WebFetchResult> =>
+      Promise.resolve({
+        ok: false,
+        status: 0,
+        url,
+        contentType: '',
+        body: '',
+        truncated: false,
+        error: 'Web access is only available in the desktop app.',
+      }),
   }
   return new Proxy(real as unknown as PlatformAdapter, {
     get(target, prop, receiver) {

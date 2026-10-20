@@ -59,7 +59,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: ['src/**/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'electron/**/*.test.ts'],
     // The integration suite (src/test/integration/) spins up a real scratch
     // git repo per test and is slow by unit-test standards on purpose — kept
     // out of the default `vitest run` (`npm test`, run on every PR) and run

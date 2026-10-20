@@ -1,12 +1,13 @@
 import { useEffect, useMemo } from 'react'
 import { useStore, selectCurrentPaper, currentTree, currentFinished } from '../state/store'
-import { useAiStore } from '../state/aiStore'
 import { normalizeTree, isFieldVisible } from '../model/annotations'
 import { finishCheckboxLabel } from '../model/annotationState'
+import { aiSeatId, seatLabel } from '../model/project'
 import { paperCompleteness, paperAnnotationState } from './PaperList'
 import { paperVerdicts } from '../consolidate/disagreements'
 import { AnnotationNode } from './AnnotationNode'
 import { SeatConflictNotice } from './SeatConflictNotice'
+import { AiUsageDisclosure } from './AiUsageDisclosure'
 import {
   consolidationFieldStatus,
   ConsolidationVerdictsContext,
@@ -22,12 +23,6 @@ export function AnnotationPanel() {
   const project = useStore((s) => s.project)
   const currentReviewer = useStore((s) => s.currentReviewer)
   const schema = project?.schema ?? []
-  const busy = useStore((s) => s.busy)
-  // config.ai can still forbid AI use, but can no longer turn it on by itself —
-  // it also needs the hidden per-session unlock. See `aiUnlocked` in store.ts.
-  const aiEnabled = useStore((s) => s.project?.aiEnabled ?? true)
-  const aiUnlocked = useStore((s) => s.aiUnlocked)
-  const openAi = useAiStore((s) => s.openDialog)
   const setConsolidationOverviewOpen = useStore((s) => s.setConsolidationOverviewOpen)
   const setDisagreementsOpen = useStore((s) => s.setDisagreementsOpen)
   const setSchemaInfoOpen = useStore((s) => s.setSchemaInfoOpen)
@@ -71,6 +66,16 @@ export function AnnotationPanel() {
     }
     return verdicts
   }, [isConsolidation, paper, project])
+
+  // Which of the current paper's AI-usage records this seat should see:
+  // Consolidation sees every run, a reviewer seat only the runs with no
+  // `reviewer` attribution (predating that field, or genuinely seat-agnostic)
+  // or attributed to itself — never another reviewer's own AI run.
+  const relevantAiUsage = useMemo(() => {
+    if (!paper) return []
+    if (isConsolidation) return paper.aiUsage
+    return paper.aiUsage.filter((r) => !r.reviewer || r.reviewer === currentReviewer)
+  }, [paper, isConsolidation, currentReviewer])
 
   // A field jump requested from elsewhere (Validation's "jump to this
   // field", clicking an issue rather than only the paper it's on) — scroll
@@ -162,21 +167,18 @@ export function AnnotationPanel() {
   const finishedMismatch = finishedState === 'flagged'
   const showFinished = finishCheckboxEnabled && finishedCompleteness !== null
 
-  const aiDisabled = busy || !paper.pdf || !aiEnabled || !aiUnlocked
-  // Not unlocked this session at all (the hidden click gesture never
-  // happened): the button doesn't just disable, it has no visible presence —
-  // nothing should hint an AI feature exists to find. Once unlocked, a
-  // project that explicitly turns AI off (config.ai: false) still shows the
-  // button, visibly disabled — useful information once you already know the
-  // feature is there, unlike the pre-unlock state.
-  const aiHidden = !aiUnlocked
-  // Deliberately uninformative: the button looks like any other disabled
-  // control rather than one hinting that it can be unlocked.
-  const aiTitle = aiDisabled ? 'Coming soon' : 'Ask an LLM to propose values for the fields that are still empty'
+  // Humans may still select the AI's seat to look at or correct its work — no
+  // hard lock, just a heads-up about whose answers are sitting there.
+  const isAiSeat = !!project && currentReviewer === aiSeatId(project)
 
   return (
     <div className="panel annotations">
       <SeatConflictNotice />
+      {isAiSeat && (
+        <p className="ai-seat-notice" role="status">
+          This is the AI's seat — values here come from AI runs.
+        </p>
+      )}
       <div className="annotations-head">
         <div className="annotations-head-row">
           <h2>Annotations</h2>
@@ -191,18 +193,6 @@ export function AnnotationPanel() {
               ⓘ
             </button>
           )}
-          {!isConsolidation && (
-            <button
-              type="button"
-              className={`ai-btn${aiHidden ? ' ai-btn-hidden' : ''}`}
-              title={aiHidden ? undefined : aiTitle}
-              disabled={aiDisabled}
-              aria-hidden={aiHidden || undefined}
-              onClick={() => void openAi()}
-            >
-              ✦ AI
-            </button>
-          )}
         </div>
         <div className="annotations-paper-title">
           {paper.title}
@@ -211,10 +201,11 @@ export function AnnotationPanel() {
               what makes a multi-reviewer file trustworthy. */}
           {!noReviewerPicked && (project?.reviewers ?? 1) > 1 && (
             <span className="reviewer-badge">
-              {currentReviewer === 'consolidation' ? 'Consolidation' : `Reviewer ${currentReviewer}`}
+              {project && currentReviewer ? seatLabel(project, currentReviewer) : `Reviewer ${currentReviewer}`}
             </span>
           )}
         </div>
+        {project && <AiUsageDisclosure project={project} records={relevantAiUsage} />}
         {/* Only where the screening project this one came from marked this
             paper: an option with nothing behind it would only puzzle. */}
         {screeningMarkCount > 0 && (

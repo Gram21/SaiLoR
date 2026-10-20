@@ -426,6 +426,49 @@ describe('applyAiSuggestions: usage disclosure', () => {
     st().redo()
     expect(usage()).toHaveLength(1)
   })
+
+  it('persists the optional disclosure fields (mode, judge, rounds, verdicts, fewShot) when given', () => {
+    st().applyAiSuggestions(
+      [sug('Summary', 'Uses X to do Y.')],
+      {
+        provider: 'openai',
+        model: 'gpt-5.5',
+        mode: 'agent',
+        judge: { provider: 'anthropic', model: 'claude-opus-4-8' },
+        rounds: 3,
+        verdicts: { accept: 4, revise: 1, reject: 0 },
+        fewShot: 2,
+      },
+      { paperId: st().currentPaperId!, reviewer: st().currentReviewer },
+    )
+
+    expect(usage()[0]).toMatchObject({
+      provider: 'openai',
+      model: 'gpt-5.5',
+      mode: 'agent',
+      judge: { provider: 'anthropic', model: 'claude-opus-4-8' },
+      rounds: 3,
+      verdicts: { accept: 4, revise: 1, reject: 0 },
+      fewShot: 2,
+    })
+  })
+
+  it('does not record a reviewer seat in a single-reviewer project', () => {
+    apply([sug('Summary', 'Uses X to do Y.')])
+    expect(usage()[0].reviewer).toBeUndefined()
+  })
+
+  it('records the seat actually written in a multi-reviewer project', () => {
+    const multi = JSON.parse(PROJECT)
+    multi.config.reviewers = 2
+    st().loadFromText(JSON.stringify(multi), null, 'multi.json')
+    st().selectPaper('p1')
+    st().selectReviewer('2')
+
+    apply([sug('Summary', 'Uses X to do Y.')])
+
+    expect(usage()[0].reviewer).toBe('2')
+  })
 })
 
 describe('a reply is only ever applied to what it was asked about', () => {
@@ -464,5 +507,128 @@ describe('a reply is only ever applied to what it was asked about', () => {
 
     expect(res).toEqual({ filled: 0, skipped: 1 })
     expect(paperById('p1').annotations['Summary']?.[0]?.value ?? null).toBeNull()
+  })
+})
+
+describe('applyAiSuggestionsBatch: writing across more than one paper', () => {
+  it('writes every paper in a single undo step, with per-paper aiUsage', () => {
+    const before = st().past.length
+
+    const result = st().applyAiSuggestionsBatch([
+      { paperId: 'p1', reviewer: st().currentReviewer, suggestions: [sug('Summary', 'about one')], usage: TEST_USAGE },
+      {
+        paperId: 'p2',
+        reviewer: st().currentReviewer,
+        suggestions: [sug('Summary', 'about two'), sug('Year', 2020)],
+        usage: { provider: 'anthropic', model: 'claude-5' },
+      },
+    ])
+
+    expect(result).toEqual({ filled: 3, skipped: 0, papers: 2 })
+    expect(paperById('p1').annotations['Summary'][0].value).toBe('about one')
+    expect(paperById('p2').annotations['Summary'][0].value).toBe('about two')
+    expect(paperById('p2').annotations['Year'][0].value).toBe(2020)
+
+    // One undo step for both papers together.
+    expect(st().past.length).toBe(before + 1)
+    st().undo()
+    expect(paperById('p1').annotations['Summary'][0].value).toBeNull()
+    expect(paperById('p2').annotations['Summary'][0].value).toBeNull()
+
+    st().redo()
+    // Each paper discloses only the target it was actually run against.
+    expect(paperById('p1').aiUsage).toMatchObject([{ provider: 'openai', model: 'gpt-5.5' }])
+    expect(paperById('p2').aiUsage).toMatchObject([{ provider: 'anthropic', model: 'claude-5' }])
+  })
+
+  it('records aiUsage only for a paper that actually changed', () => {
+    st().setFieldValue([], 'Summary', 0, 'already answered by hand')
+
+    const result = st().applyAiSuggestionsBatch([
+      { paperId: 'p1', reviewer: st().currentReviewer, suggestions: [sug('Summary', 'model value')], usage: TEST_USAGE },
+      { paperId: 'p2', reviewer: st().currentReviewer, suggestions: [sug('Summary', 'about two')], usage: TEST_USAGE },
+    ])
+
+    expect(result).toEqual({ filled: 1, skipped: 1, papers: 1 })
+    expect(paperById('p1').aiUsage).toEqual([])
+    expect(paperById('p2').aiUsage).toHaveLength(1)
+  })
+
+  it('refuses an item whose reviewer seat does not match the current one', () => {
+    const result = st().applyAiSuggestionsBatch([
+      { paperId: 'p1', reviewer: '1', suggestions: [sug('Summary', 'x')], usage: TEST_USAGE },
+    ])
+
+    expect(result).toEqual({ filled: 0, skipped: 1, papers: 0 })
+    expect(paperById('p1').annotations['Summary'][0].value).toBeNull()
+  })
+
+  it('does not require the paper to be the one currently on screen — unlike the single-paper apply', () => {
+    st().selectPaper('p2') // looking at p2, but the batch also names p1
+
+    const result = st().applyAiSuggestionsBatch([
+      { paperId: 'p1', reviewer: st().currentReviewer, suggestions: [sug('Summary', 'written while elsewhere')], usage: TEST_USAGE },
+    ])
+
+    expect(result).toEqual({ filled: 1, skipped: 0, papers: 1 })
+    expect(paperById('p1').annotations['Summary'][0].value).toBe('written while elsewhere')
+  })
+
+  it('records no history when every item writes nothing', () => {
+    const before = st().past.length
+    const result = st().applyAiSuggestionsBatch([])
+    expect(result).toEqual({ filled: 0, skipped: 0, papers: 0 })
+    expect(st().past.length).toBe(before)
+  })
+})
+
+describe('applyAiSuggestionsBatch: routing into the AI seat (REQ-LLM-470)', () => {
+  function loadAiSeatProject() {
+    const multi = JSON.parse(PROJECT)
+    multi.config.reviewers = 2
+    multi.config.aiSeat = true
+    st().loadFromText(JSON.stringify(multi), null, 'ai-seat.json')
+    st().selectPaper('p1')
+  }
+
+  it('writes into the AI seat even with nobody selected in a multi-reviewer project', () => {
+    loadAiSeatProject()
+    expect(st().currentReviewer).toBeNull()
+
+    const result = st().applyAiSuggestionsBatch([
+      { paperId: 'p1', reviewer: '2', suggestions: [sug('Summary', 'from the AI')], usage: TEST_USAGE },
+    ])
+
+    expect(result).toEqual({ filled: 1, skipped: 0, papers: 1 })
+    expect(paperById('p1').reviews['2']!['Summary'][0].value).toBe('from the AI')
+  })
+
+  it('writes into the AI seat while Consolidation is selected', () => {
+    loadAiSeatProject()
+    st().selectReviewer('consolidation')
+
+    const result = st().applyAiSuggestionsBatch([
+      { paperId: 'p1', reviewer: '2', suggestions: [sug('Summary', 'from the AI')], usage: TEST_USAGE },
+    ])
+
+    expect(result).toEqual({ filled: 1, skipped: 0, papers: 1 })
+    expect(paperById('p1').reviews['2']!['Summary'][0].value).toBe('from the AI')
+    // Consolidation's own tree (paper.annotations) is untouched.
+    expect(paperById('p1').annotations['Summary']?.[0]?.value ?? null).toBeNull()
+  })
+
+  it('the AI-seat pass does not extend to a seat that is neither current nor the AI seat', () => {
+    loadAiSeatProject()
+    st().selectReviewer('1')
+
+    const result = st().applyAiSuggestionsBatch([
+      { paperId: 'p1', reviewer: '2', suggestions: [sug('Summary', 'from the AI')], usage: TEST_USAGE },
+      // Reviewer 3 doesn't exist and isn't the AI seat (that's '2' here) or
+      // the current one ('1') — still refused per item.
+      { paperId: 'p1', reviewer: '3', suggestions: [sug('Year', 2021)], usage: TEST_USAGE },
+    ])
+
+    expect(result).toEqual({ filled: 1, skipped: 1, papers: 1 })
+    expect(paperById('p1').reviews['2']!['Summary'][0].value).toBe('from the AI')
   })
 })

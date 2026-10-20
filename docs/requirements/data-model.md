@@ -236,6 +236,12 @@ the project editor. See the [index](index.md) for the glossary.
 - **Evidence:** `src/model/project.ts:369-373,936-951`, `src/model/split.test.ts:97`
 - **Status:** Implemented
 
+### REQ-DAT-285 — AI reviewer seat is the last configured seat
+- **Description:** The system shall accept an optional `config.aiSeat` boolean (default false, written only when true) naming that the AI occupies the last configured reviewer seat (`config.reviewers`), computing this seat's id rather than storing it separately, and shall treat it as effective only when AI-assisted annotation is allowed, at least two reviewers are configured, and the project is not a screening project; the value shall be kept verbatim outside that window rather than cleared. The system shall include it in git change detection and three-way merge, mirroring how `config.ai` is handled, with its own conflict row on disagreement.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/project.ts:225-289`, `src/model/schema.ts`, `src/git/changes.ts:259`, `src/git/merge.ts:1287-1298,1417-1418,1597-1601`
+- **Status:** Implemented
+
 ## Serialization
 
 ### REQ-DAT-290 — Deterministic serialization
@@ -301,6 +307,13 @@ the project editor. See the [index](index.md) for the glossary.
 - **Description:** When a reference entry carries a file field or a URL ending in `.pdf`, the system shall extract the PDF file name as a placeholder path for the created paper.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/references.ts:426-432,461-484`, `src/state/editorStore.ts:402-419`
+- **Status:** Implemented
+
+### REQ-DAT-390 — Reserved feedback folder in the annotations folder
+- **Description:** The system shall reserve the name `feedback` inside the annotations folder for AI schema-feedback JSON files: it shall never load that folder as a paper, never prune, overwrite or delete it when saving, and move it along with the annotations folder; it shall refuse `feedback` (in any letter case) as a paper identifier or annotations folder name; and it shall write a feedback file only through a dedicated call that accepts a plain `*.json` file name and a JSON-object content of at most 1 MB, refuses a symbolic-linked or escaping folder, and never overwrites an existing file. Git treats the files as ordinary project files (shown and committed as plain changes, never parsed as annotations or offered for field review, and left in place across a branch switch).
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/paperId.ts` (`FEEDBACK_DIR`), `src/model/annotationsDir.ts` (`isFeedbackPath`), `electron/feedback.ts`, `electron/main.ts` (`project:writeFeedback`, `project:listFeedback`, `writeProjectFiles`, `git:branchSwitchBegin`), `src/git/relpath.ts` (`mergeBlockingPaths`)
+- **Verified by:** `electron/feedback.test.ts`, `src/model/annotationsDir.test.ts` (reserved feedback folder)
 - **Status:** Implemented
 
 ## Project editor

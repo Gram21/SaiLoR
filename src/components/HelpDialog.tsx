@@ -525,6 +525,19 @@ function screeningHelp(): { lead: ReactNode; sections: HelpSection[] } {
         ),
       },
       {
+        id: 'ai',
+        title: 'AI proposals',
+        body: (
+          <p>
+            <strong>AI</strong> can propose Include/Exclude decisions (with a reason and a quote from
+            the abstract) for the current paper or all undecided ones, judged against the project's
+            protocol. Titles and abstracts are sent to your chosen provider. Nothing is written until
+            you tick rows and press Apply; Exclude proposals never start ticked, and papers you have
+            already decided are never overwritten.
+          </p>
+        ),
+      },
+      {
         id: 'summary',
         title: 'The summary and PRISMA',
         body: (
@@ -621,6 +634,60 @@ function editorHelp(): { lead: ReactNode; sections: HelpSection[] } {
             by field and records the final, agreed result, which is what the project's output
             actually contains. So "2 reviewers" means two independent passes plus a consolidation
             pass.
+          </p>
+        ),
+      },
+      {
+        id: 'ai-assisted-annotation',
+        title: 'AI-assisted annotation',
+        body: (
+          <p>
+            The AI toolbar button sends a paper's content to a configured AI model and proposes
+            values for its still-empty fields — nothing is written until you review and press Apply.
+            Settings (the gear icon) is your <strong>model library</strong>: configure a provider,
+            model, and key once. The setup screen then just assigns library models to roles —{' '}
+            <strong>Annotator</strong> (required), <strong>Judge</strong> (agent mode) and{' '}
+            <strong>Cross-check</strong> (optional) — remembered per project.{' '}
+            <strong>Prompt</strong> mode is one request per paper; <strong>Agent</strong> mode lets the
+            model search and re-read the paper with tools and adds a second-pass judge review, at
+            considerably more cost and time; <strong>Classify</strong> mode asks a fast, very cheap
+            System One decision model (a calibrated probability, no quotes) for yes/no and
+            single-choice fields only. A System One model can also be assigned as a
+            <strong> Cross-check</strong> in Prompt/Agent mode: it answers the same eligible fields
+            independently, and a confident disagreement starts that row unticked for a closer look.
+            Turning on "annotate all papers" runs every eligible paper instead of just the current
+            one — several at once (configurable), with a spending cap, a Skip action per in-flight
+            paper, and the option to resume a run that was cancelled, skipped, or stopped partway. A
+            setup-screen toggle can also show the model your own already-finished papers as worked
+            examples of the review's conventions. In the review table, Edit lets you correct a
+            proposed value yourself before applying it — it's still recorded as AI-assisted, just with
+            your value instead of the model's. Under Options, "re-check fields I've already filled" is
+            optional (off each time) and never overwrites an answer unless you tick the proposed
+            replacement; in Agent mode the model can optionally search the web through Anthropic or
+            OpenRouter; and, in the desktop app, a summary of which fields the AI left empty, got
+            flagged or that you corrected is saved to <code>annotations/feedback/</code> in the
+            project folder (field values only, no paper text) to help improve the schema. In the
+            desktop app, Settings can also set up <strong>local models</strong>: chat models served by
+            Ollama, LM Studio, llama.cpp or vLLM, and small System One decision models the app
+            downloads and runs itself. Every download shows its size, source and license and starts
+            only after you confirm; models use the GPU when one is supported and otherwise run on the
+            CPU (slower), and the model's context size is set explicitly so long papers are not
+            silently cut. Papers stay on your machine unless the server is on another host, which
+            the dialog warns about.
+          </p>
+        ),
+      },
+      {
+        id: 'ai-seat',
+        title: 'Giving the AI a reviewer seat',
+        body: (
+          <p>
+            With at least 2 reviewers and AI-assisted annotation allowed, one project setting
+            dedicates the <strong>last</strong> reviewer seat to the AI. Its answers are written into
+            that seat like any human reviewer's, and compared against the others in Consolidation the
+            same way — nothing about Consolidation changes to accommodate it. A human can still open
+            that seat to look at or correct the AI's work; the annotation panel notes when you're
+            looking at it.
           </p>
         ),
       },

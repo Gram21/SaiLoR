@@ -26,13 +26,10 @@ const ISSUE_DISPLAY_LIMIT = 12
  * annotation schema, and attach the PDFs to annotate. Shown instead of the
  * annotation workspace while `open` is true.
  *
- * No AI-annotation toggle here on purpose: with no reachable entry point for
- * the feature itself (see `aiUnlocked` in store.ts), offering a control that
- * configures it would promise something the app doesn't currently deliver.
- * `EditorState.aiEnabled` still exists and defaults to `false` for a new
- * project (see the initial state / `startNew` in editorStore.ts), and an
- * existing file's own `config.ai` is still read and preserved on save —
- * there just isn't a way to change it from here right now.
+ * The "Allow AI-assisted annotation" toggle below binds `EditorState.aiEnabled`,
+ * which defaults to `true` for a new project (see the initial state /
+ * `startNew` in editorStore.ts) — off is an explicit opt-out, not the default.
+ * For a screening draft it reads "Allow AI-assisted screening".
  */
 export function ProjectEditor() {
   const open = useEditorStore((s) => s.open)
@@ -44,6 +41,10 @@ export function ProjectEditor() {
   const setReviewers = useEditorStore((s) => s.setReviewers)
   const finishCheckbox = useEditorStore((s) => s.finishCheckbox)
   const setFinishCheckbox = useEditorStore((s) => s.setFinishCheckbox)
+  const aiEnabled = useEditorStore((s) => s.aiEnabled)
+  const setAiEnabled = useEditorStore((s) => s.setAiEnabled)
+  const aiSeat = useEditorStore((s) => s.aiSeat)
+  const setAiSeat = useEditorStore((s) => s.setAiSeat)
   const screening = useEditorStore((s) => s.screening)
   const setScreening = useEditorStore((s) => s.setScreening)
   const provenance = useEditorStore((s) => s.provenance)
@@ -209,6 +210,57 @@ export function ProjectEditor() {
           consolidated result is what the project's saved output actually contains.
         </p>
       )}
+
+      <div className="editor-location">
+        <span className="editor-location-label">AI</span>
+        <label
+          className="editor-ai-toggle"
+          title={
+            screening
+              ? 'Lets reviewers ask an LLM to propose include/exclude decisions for undecided papers, for review before anything is written.'
+              : "Lets reviewers ask an LLM to propose values for a paper's still-empty fields, for review before anything is written."
+          }
+        >
+          <input
+            type="checkbox"
+            checked={aiEnabled}
+            onChange={(e) => setAiEnabled(e.target.checked)}
+            disabled={busy}
+          />
+          <span>{screening ? 'Allow AI-assisted screening' : 'Allow AI-assisted annotation'}</span>
+        </label>
+      </div>
+      {/* Only meaningful with AI use allowed and at least one other, human,
+          reviewer to compare it against — disabled-with-a-reason otherwise
+          rather than hidden, so turning either on reveals a control that
+          already exists rather than a surprise new one. */}
+      <div className="editor-location">
+        <span className="editor-location-label">AI seat</span>
+        <label
+          className="editor-ai-toggle"
+          title={
+            !aiEnabled
+              ? 'Requires AI-assisted annotation to be allowed for this project'
+              : !multiReviewer
+                ? 'Requires at least 2 reviewers'
+                : `The AI annotates as reviewer ${reviewers} — its own independent seat, compared against the others in Consolidation like any other reviewer.`
+          }
+        >
+          <input
+            type="checkbox"
+            checked={aiSeat}
+            onChange={(e) => setAiSeat(e.target.checked)}
+            disabled={busy || !aiEnabled || !multiReviewer}
+          />
+          <span>AI takes one reviewer seat (Reviewer {reviewers})</span>
+        </label>
+        {aiSeat && aiEnabled && multiReviewer && (
+          <p className="editor-hint editor-reviewers-hint">
+            The AI's answers are recorded into Reviewer {reviewers}'s seat and compared with the
+            human reviewers' in Consolidation like any other reviewer.
+          </p>
+        )}
+      </div>
 
       {/* Hidden for a screening draft: one include/exclude decision already
           settles a paper there, so the annotation panel shows no checkbox and

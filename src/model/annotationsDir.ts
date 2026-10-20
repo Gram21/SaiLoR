@@ -1,4 +1,6 @@
-import { paperIdKey, paperIdProblem } from './paperId'
+import { FEEDBACK_DIR, paperIdKey, paperIdProblem } from './paperId'
+
+export { FEEDBACK_DIR }
 
 /**
  * Where a project keeps its annotation files: always one folder directly inside
@@ -14,6 +16,12 @@ import { paperIdKey, paperIdProblem } from './paperId'
  */
 
 export const DEFAULT_ANNOTATIONS_DIR = 'annotations'
+
+/** Is `rel` (relative to the annotations folder) the reserved feedback folder
+ *  or something inside it? Never a paper, never pruned, never field-reviewed. */
+export function isFeedbackPath(rel: string): boolean {
+  return rel === FEEDBACK_DIR || rel.startsWith(`${FEEDBACK_DIR}/`)
+}
 
 /** Why `name` cannot be an annotations folder, or `null` when it can. */
 export function annotationsDirProblem(name: string): string | null {

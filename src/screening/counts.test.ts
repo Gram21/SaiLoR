@@ -48,6 +48,7 @@ function project(overrides: Partial<Project> = {}): Project {
     annotationsDir: null,
     schema: SCHEMA,
     aiEnabled: true,
+    aiSeat: false,
     finishCheckbox: true,
     reviewers: 1,
     papers: [],

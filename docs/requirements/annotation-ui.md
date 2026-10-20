@@ -292,7 +292,7 @@ export. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-UI-20 — Toolbar project controls
-- **Description:** The system shall provide a toolbar with an Open menu (file, remote git clone, recents with removal), a Save menu (save, save-as, autosave toggle), a Git button disabled with a reason-specific tooltip when unavailable, Validate, Close, the project name with a dirty indicator and transient saved status, font-size controls, a theme toggle, and Help.
+- **Description:** The system shall provide a toolbar with, on the left, an Open menu (file, remote git clone, close project, recents with removal), a Save menu (save, save-as, autosave toggle) and a Git button disabled with a reason-specific tooltip when unavailable; on the right, the project name with a dirty indicator and transient saved status, status badges (stashed, behind, unreadable files), a "Review tools" group holding Validate and AI, font-size controls, a theme toggle, and Help. Toolbar buttons shall use a borderless ghost style with a hover tint.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/Toolbar.tsx:99-468`
 - **Status:** Implemented

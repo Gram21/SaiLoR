@@ -1,6 +1,7 @@
 import { useStore, selectCurrentPaper } from '../state/store'
 import { useGitStore } from '../state/gitStore'
 import { seatTakenByOther, ownerLabel } from '../git/seatOwner'
+import { seatLabel } from '../model/project'
 
 /**
  * "Somebody has already read this paper in the seat you are sitting in."
@@ -25,15 +26,16 @@ import { seatTakenByOther, ownerLabel } from '../git/seatOwner'
  */
 export function SeatConflictNotice() {
   const paper = useStore(selectCurrentPaper)
+  const project = useStore((s) => s.project)
   const currentReviewer = useStore((s) => s.currentReviewer)
-  const screening = !!useStore((s) => s.project?.screening)
+  const screening = !!project?.screening
   const authors = useGitStore((s) => s.annotationAuthors)
 
   if (!paper || !currentReviewer) return null
   const other = seatTakenByOther(authors, paper.id, currentReviewer, screening)
   if (!other) return null
 
-  const seat = currentReviewer === 'consolidation' ? 'Consolidation' : `Reviewer ${currentReviewer}`
+  const seat = project ? seatLabel(project, currentReviewer) : `Reviewer ${currentReviewer}`
 
   return (
     <p className="seat-conflict-notice" role="status">

@@ -1,8 +1,9 @@
 import type { ResolvedDef } from '../model/schema'
 import type { FieldValue } from '../model/annotations'
-import type { LlmAnswer, RejectedSuggestion, SkippedField, Suggestion } from './types'
+import type { LlmAnswer, RejectedSuggestion, SchemaRemark, SkippedField, Suggestion } from './types'
 import { parsePath, resolvePath, MAX_UNBOUNDED_INDEX } from './paths'
 import { isPlausibleYear } from '../model/year'
+import { oneLine } from './prompt'
 
 /**
  * Turning a model's answer into `Suggestion[]` is the trust boundary of the AI
@@ -25,6 +26,8 @@ import { isPlausibleYear } from '../model/year'
 /** Evidence is a quote for the reviewer to eyeball, not a document; keep rows readable. */
 const MAX_EVIDENCE_CHARS = 500
 const MAX_REASON_CHARS = 500
+const MAX_REMARKS = 5
+const MAX_REMARK_CHARS = 300
 /** Prose before the JSON may contain stray braces; try a few starts, then give up. */
 const MAX_BRACE_CANDIDATES = 8
 
@@ -97,7 +100,7 @@ function scanForObject(text: string): Record<string, unknown> | null {
 }
 
 /** Dig the answer object out of whatever the model actually sent. */
-function extractObject(raw: unknown): Record<string, unknown> | null {
+export function extractObject(raw: unknown): Record<string, unknown> | null {
   if (typeof raw !== 'string') return null
   const text = raw.trim()
   if (!text) return null
@@ -119,7 +122,7 @@ function extractObject(raw: unknown): Record<string, unknown> | null {
 // Value coercion
 // ---------------------------------------------------------------------------
 
-type Coerced = { ok: true; value: FieldValue } | { ok: false; reason: string }
+export type Coerced = { ok: true; value: FieldValue } | { ok: false; reason: string }
 
 function toNumber(raw: unknown): Coerced {
   if (typeof raw === 'number') {
@@ -192,7 +195,10 @@ function toYear(raw: unknown): Coerced {
   return isPlausibleYear(n.value) ? n : { ok: false, reason: 'not a plausible publication year' }
 }
 
-function coerce(def: ResolvedDef, raw: unknown): Coerced {
+/** Same coercion `parseAnswer` applies to a model's answer, exported so a
+ *  reviewer's hand-typed edit to a proposal (AiDialog's Edit affordance) is
+ *  held to the identical rules rather than a second, drifting copy of them. */
+export function coerce(def: ResolvedDef, raw: unknown): Coerced {
   switch (def.type) {
     case 'string':
       return toString(raw, def)
@@ -247,20 +253,51 @@ function asArray(raw: unknown): unknown[] {
   return Array.isArray(raw) ? raw : []
 }
 
+function schemaNames(defs: ResolvedDef[], out = new Set<string>()): Set<string> {
+  for (const d of defs) {
+    out.add(d.name)
+    schemaNames(d.children, out)
+  }
+  return out
+}
+
 /**
- * Validate one raw answer against the schema.
+ * Tolerant read of a `schema_remarks` array: keeps entries whose path resolves
+ * in the schema (or is a plain field name it contains), flattened and capped.
+ * Never throws; junk is dropped because remarks are optional feedback.
+ */
+export function parseSchemaRemarks(schema: ResolvedDef[], raw: unknown): SchemaRemark[] {
+  const defs = Array.isArray(schema) ? schema : []
+  const names = schemaNames(defs)
+  const out: SchemaRemark[] = []
+  for (const e of asArray(raw)) {
+    if (out.length >= MAX_REMARKS) break
+    if (!isPlainObject(e) || typeof e.path !== 'string' || typeof e.issue !== 'string') continue
+    const path = e.path.trim()
+    const issue = oneLine(e.issue).slice(0, MAX_REMARK_CHARS)
+    if (!path || !issue) continue
+    const known = names.has(path) || resolvePath(defs, path, { maxUnboundedIndex: MAX_UNBOUNDED_INDEX })
+    if (!known) continue
+    const suggestion = typeof e.suggestion === 'string' ? oneLine(e.suggestion).slice(0, MAX_REMARK_CHARS) : ''
+    out.push(suggestion ? { path, issue, suggestion } : { path, issue })
+  }
+  return out
+}
+
+/**
+ * Validate an already-parsed answer object against the schema — the same
+ * checks `parseAnswer` runs, factored out so agent mode (which gets its
+ * fields from a tool call's args, not a JSON-in-text reply) can reuse them
+ * without round-tripping through `JSON.stringify`/`extractObject`.
  *
  * Never throws. An answer we cannot make sense of at all yields an empty result;
  * an answer we can read but do not accept yields entries in `rejected`.
  */
-export function parseAnswer(schema: ResolvedDef[], raw: string): LlmAnswer {
+export function validateAnswerObject(schema: ResolvedDef[], root: Record<string, unknown>): LlmAnswer {
   const fields: Suggestion[] = []
   const skipped: SkippedField[] = []
   const rejected: RejectedSuggestion[] = []
   const answer: LlmAnswer = { fields, skipped, rejected }
-
-  const root = extractObject(raw)
-  if (!root) return answer
 
   const defs = Array.isArray(schema) ? schema : []
   // Keyed by canonical path, so "Year" and "Year[0]" count as the same field.
@@ -320,5 +357,21 @@ export function parseAnswer(schema: ResolvedDef[], raw: string): LlmAnswer {
     skipped.push({ path, reason: reason.slice(0, MAX_REASON_CHARS) })
   }
 
+  const remarks = parseSchemaRemarks(defs, root.schema_remarks)
+  if (remarks.length > 0) answer.schemaRemarks = remarks
+
   return answer
+}
+
+/**
+ * Validate one raw model reply (JSON, possibly wrapped in prose or fences)
+ * against the schema.
+ *
+ * Never throws. An answer we cannot make sense of at all yields an empty result;
+ * an answer we can read but do not accept yields entries in `rejected`.
+ */
+export function parseAnswer(schema: ResolvedDef[], raw: string): LlmAnswer {
+  const root = extractObject(raw)
+  if (!root) return { fields: [], skipped: [], rejected: [] }
+  return validateAnswerObject(schema, root)
 }

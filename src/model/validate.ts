@@ -8,7 +8,7 @@ import {
   type FieldValue,
   type InstanceNode,
 } from './annotations'
-import type { Paper, Project } from './project'
+import { seatLabel, type Paper, type Project } from './project'
 import { YEAR_MIN, YEAR_MAX, isPlausibleYear } from './year'
 import { formatPath, type RawSeg } from '../llm/paths'
 
@@ -327,11 +327,11 @@ export function validatePaper(schema: ResolvedDef[], paper: Paper): ValidationIs
  * silently indistinguishable from "actually valid".
  */
 /** A per-file key from `Paper.unknownSchemaFiles`, in words. */
-function describeFileKey(key: string): string {
+function describeFileKey(key: string, project: Project): string {
   const review = /^review-(\d+)$/.exec(key)
   const marks = /^marks-(\d+)$/.exec(key)
-  if (review) return `Reviewer ${review[1]}'s answers`
-  if (marks) return `Reviewer ${marks[1]}'s PDF highlights`
+  if (review) return `${seatLabel(project, review[1])}'s answers`
+  if (marks) return `${seatLabel(project, marks[1])}'s PDF highlights`
   if (key === 'marks-consolidated') return 'The PDF highlights'
   return 'The consolidated answers'
 }
@@ -377,7 +377,7 @@ export function validateProject(project: Project): ProjectValidation {
           canonicalPath: '',
           kind: 'schema-version',
           message:
-            `${unknownFiles.map(describeFileKey).join(', ')} ${unknownFiles.length === 1 ? 'was' : 'were'} written ` +
+            `${unknownFiles.map((k) => describeFileKey(k, project)).join(', ')} ${unknownFiles.length === 1 ? 'was' : 'were'} written ` +
             "under a schema version this project doesn't know — from another branch, or edited by hand — so " +
             'fields renamed or moved since could not be carried over. Answers under old names are hidden.',
         })

@@ -7,6 +7,8 @@ import {
   ProjectLoadError,
   type Project,
   type Paper,
+  type AiUsageRecord,
+  aiSeatId,
 } from '../model/project'
 import { alignedReviews, type StoredAlignment, type StoredSlot } from '../model/alignment'
 import {
@@ -24,11 +26,12 @@ import { growConsolidated, toStoredAlignment, storedAsTreeAlignment } from '../c
 import { unanimousFills } from '../consolidate/unanimous'
 import { consolidatorHasAnswered, consolidationMark } from '../consolidate/readiness'
 import { validateProject, type UnannotatedPaper, type ValidationIssue } from '../model/validate'
-import { formatPath, displayPath, resolvePath, parsePath, MAX_UNBOUNDED_INDEX } from '../llm/paths'
+import { formatPath, displayPath, resolvePath, parsePath, MAX_UNBOUNDED_INDEX, type ResolvedPath } from '../llm/paths'
 import { isUnanswered } from '../llm/fields'
 import type { Suggestion } from '../llm/types'
 import {
   DECISION_EXCLUDE,
+  DECISION_INCLUDE,
   SCREENING_DECISION,
   SCREENING_REASON,
 } from '../screening/schema'
@@ -628,6 +631,11 @@ interface AppState {
   /** The field currently pulsing after a jump — see `pendingFieldJump`. Set when
    *  that's cleared; cleared again after the flash animation's duration. */
   flashFieldPath: string | null
+  /** A quote to locate and highlight in the PDF, requested from the AI review
+   *  table's evidence column. `nonce` lets the same paper/quote pair be
+   *  requested again (e.g. clicking the same row twice in a row). `PdfViewer`
+   *  consumes and clears it once handled, found or not. */
+  pdfFindRequest: { paperId: string; text: string; nonce: number } | null
   /** Restore the Consolidation overview when its Agreement dialog closes. */
   agreementReturnToOverview: boolean
   /** Whether the overall Consolidation overview is open. Session-only, like `validationOpen`. */
@@ -681,12 +689,6 @@ interface AppState {
   aiMarks: Record<string, true>
   /** Fields waiting for Consolidation to enter a value other than a reviewer's answer. */
   deferredConsolidations: Record<string, true>
-  /**
-   * AI-assisted annotation is off by default regardless of `config.ai` (which
-   * can still *forbid* it, never enable it) — unlocked only by the hidden
-   * gesture in `Toolbar.tsx`, for the running session only. Never persisted.
-   */
-  aiUnlocked: boolean
   /**
    * Which reviewer's work is shown/edited: `"1"`.."N", `"consolidation"`, or
    * `null` (single-reviewer projects stay `null`; multi-reviewer projects also
@@ -826,6 +828,10 @@ interface AppState {
   setPendingFieldJump: (canonical: string | null) => void
   /** Set/clear the field currently pulsing — see `flashFieldPath`. */
   setFlashFieldPath: (canonical: string | null) => void
+  /** Request `PdfViewer` locate+highlight `text` in `paperId`'s PDF — see `pdfFindRequest`. */
+  requestPdfFind: (paperId: string, text: string) => void
+  /** Clear a pending/handled `pdfFindRequest`. */
+  clearPdfFindRequest: () => void
   /** Replace the Consolidation overview with Agreement, then restore it on close. */
   openAgreementFromOverview: () => void
   closeAgreement: () => void
@@ -892,14 +898,47 @@ interface AppState {
   /** Write the reviewer-approved AI suggestions into the current paper (one undo step). */
   applyAiSuggestions: (
     suggestions: Suggestion[],
-    usage: { provider: string; model: string },
+    /** `provider`/`model` plus the disclosure record's optional extra fields
+     *  (mode, judge, rounds, verdicts, fewShot) — see `AiUsageRecord`.
+     *  `appliedAt`/`reviewer` are filled in by the store itself, never by the
+     *  caller: `appliedAt` is the moment of this call, and `reviewer` is the
+     *  seat actually written (`target.reviewer`, `'consolidation'` never
+     *  reaches here — see the refusal below). */
+    usage: Omit<AiUsageRecord, 'appliedAt' | 'reviewer'>,
     /** The paper and seat the run was made for — see `AiState.runFor`. */
     target: { paperId: string; reviewer: string | null },
   ) => AiApplyResult
+  /** Batch counterpart: writes every item's suggestions across however many
+   *  papers in ONE undo step. Unlike `applyAiSuggestions`, a batch item is not
+   *  required to name the currently-viewed paper — that guard exists to stop
+   *  a lone reply from landing on "whatever is on screen"; a batch's paper is
+   *  never inferred, it is named per item. The reviewer seat still must match
+   *  the one active now, same rationale as the single-paper guard. */
+  applyAiSuggestionsBatch: (
+    items: {
+      paperId: string
+      reviewer: string | null
+      suggestions: Suggestion[]
+      /** Re-check replacements of already-answered fields: written only if the
+       *  field still holds `expectedCurrent` (nobody changed it meanwhile). */
+      replacements?: { suggestion: Suggestion; expectedCurrent: FieldValue }[]
+      usage: Omit<AiUsageRecord, 'appliedAt' | 'reviewer'>
+    }[],
+  ) => AiBatchApplyResult
+  /** Writes reviewer-approved AI screening proposals across papers in ONE undo
+   *  step. Only papers still undecided in the item's seat are written — a
+   *  human decision is never overwritten. Never advances the selected paper. */
+  applyAiScreeningBatch: (
+    items: {
+      paperId: string
+      reviewer: string | null
+      decision: string
+      reason: string | null
+      usage: Omit<AiUsageRecord, 'appliedAt' | 'reviewer'>
+    }[],
+  ) => { written: number; skipped: number }
   /** The reviewer looked at an AI-filled field — drop its mark. */
   confirmAiMark: (paperId: string, canonicalPath: string) => void
-  /** The hidden gesture landed — allow AI use for the rest of this session. */
-  unlockAi: () => void
 
   /** Switch which reviewer's tree is shown/edited. This is a local view
    * switch, not an edit: no undo step, no `dirty`, and never any JSON write. */
@@ -1002,6 +1041,17 @@ export interface AiApplyResult {
   filled: number
   /** Suggestions not written: the field is no longer empty, or the path no longer resolves. */
   skipped: number
+}
+
+/** What `applyAiSuggestionsBatch` actually did, across however many papers it touched. */
+export interface AiBatchApplyResult {
+  /** Fields written, replacements included. */
+  filled: number
+  skipped: number
+  /** Papers that got at least one field written. */
+  papers: number
+  /** Of `filled`: already-answered fields replaced by a re-check proposal. */
+  replaced?: number
 }
 
 /** Progress of a running `adoptAllUnanimousAnnotations`. Session-only. */
@@ -1183,6 +1233,7 @@ export const useStore = create<AppState>()(
     sessionCreatedMarkIds: [],
     pendingFieldJump: null,
     flashFieldPath: null,
+    pdfFindRequest: null,
     agreementReturnToOverview: false,
     consolidationOverviewOpen: false,
     disagreementsOpen: false,
@@ -1201,7 +1252,6 @@ export const useStore = create<AppState>()(
     future: [],
     aiMarks: {},
     deferredConsolidations: {},
-    aiUnlocked: false,
     currentReviewer: null,
     consolidationTarget: null,
     consolidationUpdatePrompt: null,
@@ -1376,6 +1426,7 @@ export const useStore = create<AppState>()(
         s.lastCreatedMarkAllowedField = null
         s.pendingFieldJump = null
         s.flashFieldPath = null
+        s.pdfFindRequest = null
         s.agreementReturnToOverview = false
         s.consolidationOverviewOpen = false
         s.disagreementsOpen = false
@@ -2175,6 +2226,16 @@ export const useStore = create<AppState>()(
         s.flashFieldPath = canonical
       }),
 
+    requestPdfFind: (paperId, text) =>
+      set((s) => {
+        s.pdfFindRequest = { paperId, text, nonce: (s.pdfFindRequest?.nonce ?? 0) + 1 }
+      }),
+
+    clearPdfFindRequest: () =>
+      set((s) => {
+        s.pdfFindRequest = null
+      }),
+
     openAgreementFromOverview: () =>
       set((s) => {
         s.consolidationOverviewOpen = false
@@ -2676,110 +2737,228 @@ export const useStore = create<AppState>()(
       })
     },
 
+    // Writes into whichever seat `target.reviewer` names, including the AI's
+    // own seat (`aiSeatId` in model/project.ts) when the dialog is driving it
+    // — nothing here treats that seat specially, and in particular this never
+    // ticks `finished`/`reviewsFinished` on its own: a human still has to sign
+    // the seat off by hand, same as any other reviewer's.
     applyAiSuggestions: (suggestions, usage, target) => {
       const prev = get()
       if (!prev.project) return { filled: 0, skipped: suggestions.length }
-      if (prev.project.reviewers > 1 && prev.currentReviewer === null) {
-        return { filled: 0, skipped: suggestions.length }
-      }
-      // Consolidation reconciles what the reviewers said; a model's answer isn't
-      // one of the things being reconciled, and this tree is the one that ships.
-      // No AI button here, but the dialog could be opened as a reviewer and the
-      // seat switched after — refuse rather than trust the UI as the only guard.
-      if (prev.currentReviewer === 'consolidation') {
-        return { filled: 0, skipped: suggestions.length }
-      }
-      // Screening decides the review's corpus, so a model's include/exclude
-      // pass is refused here too, for the same reason as Consolidation above.
-      if (prev.project.screening !== null) {
-        return { filled: 0, skipped: suggestions.length }
-      }
-      const schema = prev.project.schema
       // Check against the paper/seat the model was *asked about*, not whichever
       // is selected now — the dialog and seat picker stay usable mid-call, so
       // they can differ. Refuse on mismatch rather than retarget: writing to
       // the run's paper while the reviewer looks elsewhere would be correct
       // attribution but invisible work, and fabricates an `aiUsage` record for
       // a paper nobody read. Refusing keeps the reply on screen to apply later.
+      // (This guard is specific to the single-paper path: a batch run names its
+      // paper per item rather than inferring it from what's on screen — see
+      // `applyAiSuggestionsBatch`.)
       if (target.paperId !== prev.currentPaperId) {
         return { filled: 0, skipped: suggestions.length }
       }
-      if (target.reviewer !== prev.currentReviewer) {
-        return { filled: 0, skipped: suggestions.length }
+      const result = get().applyAiSuggestionsBatch([
+        { paperId: target.paperId, reviewer: target.reviewer, suggestions, usage },
+      ])
+      return { filled: result.filled, skipped: result.skipped }
+    },
+
+    applyAiSuggestionsBatch: (items) => {
+      const prev = get()
+      const totalSuggestions = items.reduce((n, it) => n + it.suggestions.length + (it.replacements?.length ?? 0), 0)
+      if (!prev.project) return { filled: 0, skipped: totalSuggestions, papers: 0 }
+      // The AI's own seat (REQ-LLM-470) may be written from any seat, including
+      // Consolidation or nobody selected — a run targeting only that seat skips
+      // the two seat-selection refusals below, which exist to protect whichever
+      // seat is *currently selected*, not the AI's own.
+      const aiSeat = aiSeatId(prev.project)
+      const targetsAiSeatOnly = aiSeat !== null && items.every((it) => it.reviewer === aiSeat)
+      if (!targetsAiSeatOnly && prev.project.reviewers > 1 && prev.currentReviewer === null) {
+        return { filled: 0, skipped: totalSuggestions, papers: 0 }
       }
-      const paperNow = prev.project.papers.find((p) => p.id === target.paperId)
-      if (!paperNow) return { filled: 0, skipped: suggestions.length }
-      // Read-only: the seat the run was made for is who "answered already" is
-      // checked against — see `currentTree`.
-      const readTree = currentTree(prev.project, target.reviewer, paperNow)
-      if (!readTree) return { filled: 0, skipped: suggestions.length }
+      // Consolidation reconciles what the reviewers said; a model's answer isn't
+      // one of the things being reconciled, and this tree is the one that ships.
+      // No AI button here, but the dialog could be opened as a reviewer and the
+      // seat switched after — refuse rather than trust the UI as the only guard.
+      if (!targetsAiSeatOnly && prev.currentReviewer === 'consolidation') {
+        return { filled: 0, skipped: totalSuggestions, papers: 0 }
+      }
+      // Screening proposals go through `applyAiScreeningBatch`; a field-filling
+      // pass has nothing to write into a screening project's fixed schema.
+      if (prev.project.screening !== null) {
+        return { filled: 0, skipped: totalSuggestions, papers: 0 }
+      }
+      const schema = prev.project.schema
 
       // Decide what to write before touching anything, so a no-op run leaves no
-      // empty undo entry. Drops a suggestion whose path no longer resolves, or
+      // empty undo entry. Per item: refuse a seat mismatch or an unknown paper
+      // outright, then drop any suggestion whose path no longer resolves, or
       // whose field has since been answered — never overwrites the reviewer.
-      const accepted = suggestions.flatMap((sug) => {
-        const at = resolvePath(schema, sug.path, { maxUnboundedIndex: MAX_UNBOUNDED_INDEX })
-        if (!at) return []
-        const current = peekValue(readTree, at.path, at.name, at.index)
-        if (!isUnanswered(at.def, current)) return []
-        return [{ at, value: sug.value }]
-      })
-      if (accepted.length === 0) return { filled: 0, skipped: suggestions.length }
+      interface Planned {
+        paperId: string
+        reviewer: string | null
+        usage: Omit<AiUsageRecord, 'appliedAt' | 'reviewer'>
+        accepted: { at: ResolvedPath; value: FieldValue; replace?: boolean }[]
+      }
+      const planned: Planned[] = []
+      let skipped = 0
+      for (const item of items) {
+        const itemCount = item.suggestions.length + (item.replacements?.length ?? 0)
+        if (item.reviewer !== prev.currentReviewer && (aiSeat === null || item.reviewer !== aiSeat)) {
+          skipped += itemCount
+          continue
+        }
+        const paperNow = prev.project.papers.find((p) => p.id === item.paperId)
+        if (!paperNow) {
+          skipped += itemCount
+          continue
+        }
+        // Read-only: the seat the run was made for is who "answered already" is
+        // checked against — see `currentTree`.
+        const readTree = currentTree(prev.project, item.reviewer, paperNow)
+        if (!readTree) {
+          skipped += itemCount
+          continue
+        }
+        const accepted: Planned['accepted'] = item.suggestions.flatMap((sug) => {
+          const at = resolvePath(schema, sug.path, { maxUnboundedIndex: MAX_UNBOUNDED_INDEX })
+          if (!at) return []
+          const current = peekValue(readTree, at.path, at.name, at.index)
+          if (!isUnanswered(at.def, current)) return []
+          return [{ at, value: sug.value }]
+        })
+        // Overwrites a human answer, so only when it is still exactly what the
+        // AI checked (FieldValue is a primitive, `===` is deep equality).
+        for (const { suggestion, expectedCurrent } of item.replacements ?? []) {
+          const at = resolvePath(schema, suggestion.path, { maxUnboundedIndex: MAX_UNBOUNDED_INDEX })
+          if (!at || peekValue(readTree, at.path, at.name, at.index) !== expectedCurrent) continue
+          accepted.push({ at, value: suggestion.value, replace: true })
+        }
+        skipped += itemCount - accepted.length
+        if (accepted.length > 0) {
+          planned.push({ paperId: item.paperId, reviewer: item.reviewer, usage: item.usage, accepted })
+        }
+      }
+      if (planned.length === 0) return { filled: 0, skipped, papers: 0 }
 
       // The whole fill is one undo step: snapshot once, then mutate. Reset the
       // coalescing key, or the reviewer's next keystroke would be folded into it.
       lastFieldKey = null
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
-      const paperId = paperNow.id
-      const reviewerScope = markReviewerScope(prev.project, target.reviewer)
       let filled = 0
+      let replaced = 0
+      let papersWritten = 0
       set((s) => {
-        // Resolved by id, against the run's seat — re-deriving from "what is
-        // current" here would reopen the gap the check above exists to close.
-        const paper = s.project?.papers.find((p) => p.id === paperId)
-        if (!paper) return
-        const writeTree = currentTree(s.project!, target.reviewer, paper, true)
-        if (!writeTree) return
         pushPast(s, snap)
-        for (const { at, value } of accepted) {
-          // The model may address a not-yet-existing entry of a repeatable node
-          // (how it records a further Finding) — create instances along the path.
-          let level: ResolvedDef[] = s.project!.schema
-          let cursor: AnnotationValueTree | null = writeTree
-          for (const seg of at.path) {
-            const step = ensureInstance(level, cursor, seg.name, seg.index)
-            if (!step) {
-              cursor = null
-              break
+        for (const p of planned) {
+          // Resolved by id, against the run's seat — re-deriving from "what is
+          // current" here would reopen the gap the per-item checks above close.
+          const paper = s.project?.papers.find((pp) => pp.id === p.paperId)
+          if (!paper) continue
+          const writeTree = currentTree(s.project!, p.reviewer, paper, true)
+          if (!writeTree) continue
+          const reviewerScope = markReviewerScope(s.project!, p.reviewer)
+          let paperFilled = 0
+          let paperReplaced = 0
+          for (const { at, value, replace } of p.accepted) {
+            // The model may address a not-yet-existing entry of a repeatable node
+            // (how it records a further Finding) — create instances along the path.
+            let level: ResolvedDef[] = s.project!.schema
+            let cursor: AnnotationValueTree | null = writeTree
+            for (const seg of at.path) {
+              const step = ensureInstance(level, cursor, seg.name, seg.index)
+              if (!step) {
+                cursor = null
+                break
+              }
+              if (!step.inst.children) step.inst.children = {}
+              cursor = step.inst.children
+              level = step.def.children
             }
-            if (!step.inst.children) step.inst.children = {}
-            cursor = step.inst.children
-            level = step.def.children
+            if (!cursor) continue
+            const leaf = ensureInstance(level, cursor, at.name, at.index)
+            if (!leaf) continue
+            leaf.inst.value = value
+            // Mark only what was actually written: a skipped suggestion left the
+            // field as the reviewer had it, and must not be flagged as the AI's.
+            s.aiMarks[aiMarkKey(p.paperId, at.canonical, reviewerScope)] = true
+            paperFilled++
+            if (replace) paperReplaced++
           }
-          if (!cursor) continue
-          const leaf = ensureInstance(level, cursor, at.name, at.index)
-          if (!leaf) continue
-          leaf.inst.value = value
-          // Mark only what was actually written: a skipped suggestion left the
-          // field as the reviewer had it, and must not be flagged as the AI's.
-          s.aiMarks[aiMarkKey(paperId, at.canonical, reviewerScope)] = true
-          filled++
-        }
-        // A disclosure record, not a UI hint — added only when something actually
-        // changed, and meant to reach the saved file, unlike the mark above.
-        if (filled > 0) {
-          paper.aiUsage.push({
-            provider: usage.provider,
-            model: usage.model,
-            appliedAt: new Date().toISOString(),
-          })
+          // A disclosure record, not a UI hint — added only when something actually
+          // changed on this paper, and meant to reach the saved file, unlike the mark above.
+          if (paperFilled > 0) {
+            paper.aiUsage.push({
+              ...p.usage,
+              ...(paperReplaced > 0 ? { rechecked: paperReplaced } : {}),
+              appliedAt: new Date().toISOString(),
+              // The seat actually written; single-reviewer projects have none to name.
+              ...(s.project!.reviewers > 1 && p.reviewer ? { reviewer: p.reviewer } : {}),
+            })
+            papersWritten++
+          }
+          filled += paperFilled
+          replaced += paperReplaced
         }
         // A bulk write across however many fields the model addressed, not the
         // one-field edit `lastCreatedMarkId` stays alive through.
         clearPendingMarkLink(s)
         s.dirty = true
       })
-      return { filled, skipped: suggestions.length - filled }
+      return { filled, skipped, papers: papersWritten, ...(replaced > 0 ? { replaced } : {}) }
+    },
+
+    applyAiScreeningBatch: (items) => {
+      const prev = get()
+      const none = { written: 0, skipped: items.length }
+      const project = prev.project
+      if (!project || project.screening === null) return none
+      // Same seat rules as `applyAiSuggestionsBatch`: the AI's own seat may be
+      // written from anywhere; any other seat must be the one selected now.
+      const aiSeat = aiSeatId(project)
+      const aiOnly = aiSeat !== null && items.every((it) => it.reviewer === aiSeat)
+      if (!aiOnly && project.reviewers > 1 && prev.currentReviewer === null) return none
+      if (!aiOnly && prev.currentReviewer === 'consolidation') return none
+
+      const planned = items.filter((it) => {
+        if (it.reviewer !== prev.currentReviewer && (aiSeat === null || it.reviewer !== aiSeat)) return false
+        const paper = project.papers.find((p) => p.id === it.paperId)
+        if (!paper || screeningStatus(currentTree(project, it.reviewer, paper)) !== 'undecided') return false
+        if (it.decision === DECISION_INCLUDE) return true
+        return it.decision === DECISION_EXCLUDE && it.reason !== null && project.screening!.reasons.includes(it.reason)
+      })
+      if (planned.length === 0) return none
+
+      lastFieldKey = null
+      const snap: HistoryEntry = { project, paperId: prev.currentPaperId }
+      let written = 0
+      set((s) => {
+        pushPast(s, snap)
+        for (const it of planned) {
+          const paper = s.project?.papers.find((p) => p.id === it.paperId)
+          if (!paper) continue
+          const tree = currentTree(s.project!, it.reviewer, paper, true)
+          const decisionInst = tree?.[SCREENING_DECISION]?.[0]
+          if (!tree || !decisionInst) continue
+          const scope = markReviewerScope(s.project!, it.reviewer)
+          decisionInst.value = it.decision
+          s.aiMarks[aiMarkKey(it.paperId, fieldPath([], SCREENING_DECISION, 0), scope)] = true
+          const reasonInst = tree[SCREENING_REASON]?.[0]
+          if (reasonInst && it.decision === DECISION_EXCLUDE) {
+            reasonInst.value = it.reason
+            s.aiMarks[aiMarkKey(it.paperId, fieldPath([], SCREENING_REASON, 0), scope)] = true
+          }
+          paper.aiUsage.push({
+            ...it.usage,
+            appliedAt: new Date().toISOString(),
+            ...(s.project!.reviewers > 1 && it.reviewer ? { reviewer: it.reviewer } : {}),
+          })
+          written++
+        }
+        clearPendingMarkLink(s)
+        s.dirty = true
+      })
+      return { written, skipped: items.length - written }
     },
 
     confirmAiMark: (paperId, canonicalPath) => {
@@ -2790,13 +2969,6 @@ export const useStore = create<AppState>()(
       if (!get().aiMarks[key]) return
       set((s) => {
         delete s.aiMarks[key]
-      })
-    },
-
-    unlockAi: () => {
-      if (get().aiUnlocked) return // already unlocked — no re-render needed
-      set((s) => {
-        s.aiUnlocked = true
       })
     },
 

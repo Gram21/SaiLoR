@@ -18,6 +18,9 @@ import { constants, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync }
 import { execFile } from 'node:child_process'
 import path from 'node:path'
 import os from 'node:os'
+import dns from 'node:dns'
+import { isIP } from 'node:net'
+import { TextDecoder } from 'node:util'
 // The only imports of src/ into electron/: shared logic that must not exist
 // twice — see "Git" below for the git URL/path/output modules, and "Self-update"
 // for `updateSignature`. All of these import nothing DOM-specific themselves,
@@ -25,7 +28,8 @@ import os from 'node:os'
 // the renderer's (DOM types).
 import { validateGitUrl, validateClonePath } from '../src/git/url'
 import { relPathProblem, annotationsRelDir, mergeBlockingPaths } from '../src/git/relpath'
-import { annotationsDirOf, annotationsDirProblem, filesCollide, sharesPaper } from '../src/model/annotationsDir'
+import { annotationsDirOf, annotationsDirProblem, FEEDBACK_DIR, filesCollide, isFeedbackPath, sharesPaper } from '../src/model/annotationsDir'
+import { feedbackContentProblem, feedbackDirIn, feedbackFileNameProblem, feedbackTarget } from './feedback'
 import { paperIdProblem } from '../src/model/paperId'
 import { applySplit } from '../src/model/annotationSplit'
 import { refProblem } from '../src/git/ref'
@@ -58,6 +62,13 @@ import { changedTargets } from '../src/model/fileStamps'
 import { parseMarks, type PdfMark } from '../src/model/pdfMarks'
 import { rectToPdfPoints, rectToQuadPoints } from '../src/model/pdfExport'
 import { verifyReleaseSignature, RELEASE_PUBLIC_KEY_B64 } from '../src/model/updateSignature'
+import { isBlockedAddress, validateFetchUrl } from './webFetch'
+import { validPrice, validPositiveInt, buildCallHeaders, validSystemOneFlavor, validAccountId, validManaged, managedTargetUrl } from './llmConfig'
+import { createLocalRuntime } from './localRuntime'
+import { registerLocalRuntimeIpc } from './localRuntimeIpc'
+import { parseRetryAfter } from '../src/llm/retry'
+import { registerOllamaHandlers } from './ollama'
+import type { WebFetchResult } from '../src/llm/types'
 import { PDFDocument, PDFHexString, PDFString, type PDFContext, type PDFDict } from 'pdf-lib'
 import { autoUpdater } from 'electron-updater'
 
@@ -949,6 +960,10 @@ async function writeProjectFiles(
     if (target !== base && !target.startsWith(base + path.sep)) {
       throw new Error(`Refusing to write annotation file outside the project: "${file.relPath}"`)
     }
+    // A paper named like the feedback folder would write into (or delete from) it.
+    if (isFeedbackPath(file.relPath.replace(/\\/g, '/').toLowerCase())) {
+      throw new Error(`"${FEEDBACK_DIR}" is reserved for AI feedback files and cannot be a paper id.`)
+    }
     if (file.text === null) {
       // Never delete a file we could not read as JSON: `loadPaperFiles` maps
       // an unparseable annotation file to "absent", which arrives back here as
@@ -1150,6 +1165,58 @@ ipcMain.handle('project:moveAnnotationsDir', async (_e, projectPath: string, fol
 })
 
 /**
+ * The open project's feedback folder, created when `create`. Refuses a symlinked
+ * folder or one resolving outside the annotations folder — received material
+ * can ship either. `null` when it does not exist and is not to be created.
+ */
+async function feedbackDirFor(projectPath: unknown, create: boolean): Promise<string | null> {
+  const key = path.resolve(String(projectPath))
+  if (!knownProjectPaths.has(key)) throw new Error('Refusing to use a project that was not opened this session.')
+  const annotationsDir = await annotationsDirFor(key, await readProjectMeta(key))
+  const dir = feedbackDirIn(annotationsDir)
+  if (create) await mkdir(dir, { recursive: true })
+  let st
+  try {
+    st = await lstat(dir)
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw err
+  }
+  if (st.isSymbolicLink() || !st.isDirectory()) throw new Error(`Refusing a feedback folder that is a link or not a folder: "${dir}"`)
+  const [realDir, realBase] = await Promise.all([realpath(dir), realpath(annotationsDir)])
+  if (path.dirname(realDir) !== realBase) throw new Error(`Refusing a feedback folder outside the annotations folder: "${dir}"`)
+  return dir
+}
+
+/** Write one feedback file; never overwrites. Returns the project-relative path. */
+ipcMain.handle('project:writeFeedback', async (_e, projectPath: string, fileName: string, content: string) => {
+  const problem = feedbackFileNameProblem(fileName) ?? feedbackContentProblem(content)
+  if (problem) throw new Error(problem)
+  const dir = (await feedbackDirFor(projectPath, true))!
+  const annotationsDir = path.dirname(dir)
+  const target = feedbackTarget(annotationsDir, fileName)
+  const exists = await lstat(target).then(() => true, () => false)
+  if (exists) throw new Error(`Feedback file "${fileName}" already exists.`)
+  // ponytail: exists-check then rename can race a concurrent writer of the same name; callers use unique names.
+  const tmp = path.join(dir, `.${fileName}.${process.pid}.tmp`)
+  await writeFile(tmp, content, 'utf-8')
+  await rename(tmp, target)
+  const projectDir = path.dirname(path.resolve(String(projectPath)))
+  return path.relative(projectDir, target).split(path.sep).join('/')
+})
+
+ipcMain.handle('project:listFeedback', async (_e, projectPath: string) => {
+  const dir = await feedbackDirFor(projectPath, false)
+  if (!dir) return []
+  const out: { name: string; bytes: number }[] = []
+  for (const e of await readdir(dir, { withFileTypes: true })) {
+    if (!e.isFile() || feedbackFileNameProblem(e.name)) continue
+    out.push({ name: e.name, bytes: (await stat(path.join(dir, e.name))).size })
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name))
+})
+
+/**
  * The screening project an open project was started from (its provenance
  * names it), read the way opening it would read it — for showing its PDF
  * highlights. Only a plain file name in the open project's own directory:
@@ -1198,6 +1265,7 @@ ipcMain.handle('project:sharedAnnotations', async (_e, projectPath: string) => {
     // no folder yet — nothing to split but the setting
   }
   for (const id of paperDirs.sort()) {
+    if (id === FEEDBACK_DIR) continue // reserved, not a paper
     let names: string[]
     try {
       names = await readdir(path.join(annotationsDir, id))
@@ -1851,6 +1919,13 @@ app.whenReady().then(() => {
 
 const API_KEY_SENTINEL = '{{apiKey}}'
 
+// App-managed llama-server (System One decision models). Server lifetime is tied to the app.
+const localRuntime = createLocalRuntime({
+  dataDir: () => app.getPath('userData'),
+  emit: (p) => mainWindow?.webContents.send('local:progress', p),
+})
+registerLocalRuntimeIpc(ipcMain, localRuntime)
+
 interface StoredLlmConfig {
   id: string
   name: string
@@ -1858,7 +1933,21 @@ interface StoredLlmConfig {
   baseUrl: string
   model: string
   attach: string
+  /** True when this target's server needs no API key (e.g. a local Ollama/LM Studio/vLLM). */
+  noKey?: boolean
   reasoningEffort?: string
+  /** USD per 1M tokens, user-entered. Absent when the user has not set one. */
+  inputPrice?: number
+  /** USD per 1M tokens, user-entered. Absent when the user has not set one. */
+  outputPrice?: number
+  /** System One targets only — see `LlmConfig.maxStateTokens`. */
+  maxStateTokens?: number
+  contextTokens?: number
+  optionsBudgetTokens?: number
+  systemOneFlavor?: 'jev' | 'cloudflare'
+  accountId?: string
+  /** Set when the app runs this model itself — see `LlmConfig.managed`. */
+  managed?: { catalogId: string }
   /** safeStorage-encrypted key, base64. Absent when the user has not set one. */
   key?: string
 }
@@ -1906,7 +1995,19 @@ ipcMain.handle('llm:saveConfig', (_e, config: StoredLlmConfig, apiKey?: string) 
   // An edit that leaves the key field blank keeps the stored key: the user cannot
   // read it back to retype it.
   const key = apiKey ? encryptKey(apiKey) : existing?.key
-  const next: StoredLlmConfig = { ...config, ...(key ? { key } : {}) }
+  const next: StoredLlmConfig = {
+    ...config,
+    inputPrice: validPrice(config.inputPrice),
+    outputPrice: validPrice(config.outputPrice),
+    maxStateTokens: validPositiveInt(config.maxStateTokens),
+    contextTokens: validPositiveInt(config.contextTokens),
+    optionsBudgetTokens: validPositiveInt(config.optionsBudgetTokens),
+    systemOneFlavor: validSystemOneFlavor(config.systemOneFlavor),
+    accountId: validAccountId(config.accountId),
+    managed: validManaged(config.managed),
+    noKey: Boolean(config.noKey) || Boolean(validManaged(config.managed)), // the local server needs no user-held key
+    ...(key ? { key } : {}),
+  }
   const merged = existing
     ? configs.map((c) => (c.id === config.id ? next : c))
     : [...configs, next]
@@ -1949,7 +2050,7 @@ ipcMain.handle(
   ) => {
     const config = readLlmConfigs().find((c) => c.id === request.configId)
     if (!config) throw new Error('That LLM target no longer exists.')
-    if (!config.key) throw new Error('No API key is stored for this target.')
+    if (!config.key && !config.noKey) throw new Error('No API key is stored for this target.')
 
     // The renderer names the URL, so check it before handing over the key: a
     // compromised renderer must not be able to post the key to a host of its
@@ -1968,10 +2069,20 @@ ipcMain.handle(
       throw new Error(`Refusing to send the API key to ${target.origin}.`)
     }
 
-    const apiKey = decryptKey(config.key)
-    const headers = Object.fromEntries(
-      Object.entries(request.headers).map(([k, v]) => [k, v.split(API_KEY_SENTINEL).join(apiKey)]),
-    )
+    const headers = buildCallHeaders(request.headers, API_KEY_SENTINEL, {
+      apiKey: config.key ? decryptKey(config.key) : undefined,
+      noKey: config.noKey,
+    })
+
+    // Managed local model: the stored base URL is only a placeholder. The checks above
+    // already pinned the request to it; now send it to the server we run (started on
+    // demand), authenticated with that server's per-session key.
+    let callUrl = request.url
+    if (config.managed) {
+      const ep = await localRuntime.endpoint(config.managed.catalogId)
+      callUrl = managedTargetUrl(request.url, ep.baseUrl)
+      headers['Authorization'] = `Bearer ${ep.apiKey}`
+    }
 
     const controller = new AbortController()
     inFlight.set(requestId, controller)
@@ -1983,7 +2094,7 @@ ipcMain.handle(
     // way to reach this, not a hostile one.
     const timer = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS)
     try {
-      const res = await net.fetch(request.url, {
+      const res = await net.fetch(callUrl, {
         method: request.method ?? 'POST',
         headers,
         body: request.method === 'GET' ? undefined : request.body,
@@ -1999,13 +2110,157 @@ ipcMain.handle(
         // following it somewhere else.
         redirect: 'error',
       })
-      return { ok: res.ok, status: res.status, body: await res.text() }
+      const retryAfterMs = parseRetryAfter(res.headers.get('retry-after'), Date.now())
+      return { ok: res.ok, status: res.status, body: await res.text(), ...(retryAfterMs !== undefined ? { retryAfterMs } : {}) }
     } finally {
       clearTimeout(timer)
       inFlight.delete(requestId)
     }
   },
 )
+
+registerOllamaHandlers(ipcMain, { fetch: (u, i) => net.fetch(u, i), send: (c, p) => mainWindow?.webContents.send(c, p) })
+
+// ---- Web access for the AI agent's fetch_url tool ----
+//
+// Unlike llm:call above, the URL here isn't one the user configured — it's
+// whatever the LLM decided to fetch, which may itself have been steered by
+// prompt-injected text on a page it already read. So every hostname/address is
+// checked (electron/webFetch.ts), no cookies/auth/API keys are ever sent, and
+// failures come back as a WebFetchResult rather than a throw, so the agent can
+// read the reason and react instead of the run just dying.
+
+ipcMain.on('web:abort', (_e, requestId: string) => {
+  inFlight.get(requestId)?.abort()
+})
+
+const WEB_FETCH_TIMEOUT_MS = 20_000
+const WEB_FETCH_MAX_BYTES = 2 * 1024 * 1024
+const WEB_FETCH_MAX_REDIRECTS = 5
+const WEB_FETCH_ACCEPTED_TYPES = [
+  /^text\//,
+  /^application\/json/,
+  /^application\/xml/,
+  /^application\/.+\+xml/,
+  /^application\/xhtml\+xml/,
+]
+
+function isTextualContentType(contentType: string): boolean {
+  const type = contentType.split(';')[0].trim().toLowerCase()
+  return WEB_FETCH_ACCEPTED_TYPES.some((re) => re.test(type))
+}
+
+/** Refuse a URL unless every address it (or a literal IP host) names is public. */
+async function checkPublicHost(rawUrl: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const check = validateFetchUrl(rawUrl)
+  if (!check.ok) return { ok: false, error: check.error ?? 'Refusing to fetch that URL.' }
+  const hostname = check.hostname as string
+  if (isIP(hostname)) return { ok: true } // validateFetchUrl already classified the literal address
+  // ponytail: this resolves the host once, up front; `net.fetch` resolves it
+  // again to actually connect, so a DNS answer that changes between the two
+  // (rebinding) slips past this check. Acceptable for a same-process, one-shot
+  // tool call — a resolver that pins the checked address would close it if
+  // that ever matters here.
+  let addresses: string[]
+  try {
+    addresses = (await dns.promises.lookup(hostname, { all: true })).map((a) => a.address)
+  } catch {
+    return { ok: false, error: `Could not resolve host "${hostname}".` }
+  }
+  if (addresses.length === 0 || addresses.some((addr) => isBlockedAddress(addr))) {
+    return { ok: false, error: `Refusing to fetch local/internal host "${hostname}".` }
+  }
+  return { ok: true }
+}
+
+ipcMain.handle('web:fetch', async (_e, requestId: string, rawUrl: string): Promise<WebFetchResult> => {
+  const controller = new AbortController()
+  inFlight.set(requestId, controller)
+  const timer = setTimeout(() => controller.abort(), WEB_FETCH_TIMEOUT_MS)
+  const fail = (url: string, status: number, error: string, contentType = ''): WebFetchResult => ({
+    ok: false,
+    status,
+    url,
+    contentType,
+    body: '',
+    truncated: false,
+    error,
+  })
+  try {
+    let url = rawUrl
+    for (let redirects = 0; ; redirects++) {
+      const hostCheck = await checkPublicHost(url)
+      if (!hostCheck.ok) return fail(url, 0, hostCheck.error)
+
+      let res: Response
+      try {
+        res = await net.fetch(url, {
+          signal: controller.signal,
+          // Redirects are followed by hand below, re-checking the target host
+          // each time — an automatic follow would skip that check on every
+          // hop after the first.
+          redirect: 'manual',
+          headers: {
+            'User-Agent': `SaiLoR/${app.getVersion()} (literature review assistant)`,
+            Accept: 'text/html,text/plain,application/json,application/xml;q=0.9,*/*;q=0.1',
+          },
+        })
+      } catch (err) {
+        return fail(url, 0, err instanceof Error ? err.message : 'Fetch failed.')
+      }
+
+      const location = res.headers.get('location')
+      if (res.status >= 300 && res.status < 400 && location) {
+        if (redirects >= WEB_FETCH_MAX_REDIRECTS) return fail(url, res.status, 'Too many redirects.')
+        try {
+          url = new URL(location, url).toString()
+        } catch {
+          return fail(url, res.status, 'Invalid redirect location.')
+        }
+        continue
+      }
+
+      const contentType = res.headers.get('content-type') ?? ''
+      if (!isTextualContentType(contentType)) {
+        return fail(url, res.status, `Unsupported content type "${contentType}".`, contentType)
+      }
+
+      const charset = contentType.match(/charset=([^;]+)/i)?.[1]?.trim()
+      let decoder: TextDecoder
+      try {
+        decoder = new TextDecoder(charset || 'utf-8')
+      } catch {
+        decoder = new TextDecoder('utf-8')
+      }
+
+      let body = ''
+      let bytes = 0
+      let truncated = false
+      const reader = res.body?.getReader()
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          const remaining = WEB_FETCH_MAX_BYTES - bytes
+          if (value.length > remaining) {
+            body += decoder.decode(value.subarray(0, remaining), { stream: true })
+            truncated = true
+            await reader.cancel()
+            break
+          }
+          bytes += value.length
+          body += decoder.decode(value, { stream: true })
+        }
+      }
+      body += decoder.decode()
+
+      return { ok: res.ok, status: res.status, url, contentType, body, truncated }
+    }
+  } finally {
+    clearTimeout(timer)
+    inFlight.delete(requestId)
+  }
+})
 
 // ---- Git: run the user's own git binary ----
 //
@@ -3175,7 +3430,10 @@ ipcMain.handle('git:branchSwitchBegin', async (_e, root: string, relPath: string
     p === relPath || (p.startsWith(`${dir}/`) && matchesOwn(p.slice(dir.length + 1)))
 
   const st = await runGit(['status', '--porcelain=v1', '-z', '-uall'], root)
-  const changes = parsePorcelain(st.stdout)
+  // Feedback files are neither this project's papers nor "other files": they
+  // stay in the working tree across the switch (stash excludes them below).
+  const feedbackPrefix = `${dir}/${FEEDBACK_DIR}/`
+  const changes = parsePorcelain(st.stdout).filter((c) => !c.path.startsWith(feedbackPrefix))
   const otherPaths = changes.filter((c) => !inProjectScope(c.path)).map((c) => c.path)
   if (otherPaths.length > 0) return { kind: 'other-files-dirty', paths: otherPaths }
   if (!changes.some((c) => inProjectScope(c.path))) return { kind: 'no-changes' }
@@ -3201,7 +3459,7 @@ ipcMain.handle('git:branchSwitchBegin', async (_e, root: string, relPath: string
   }
 
   const stash = await runGit(
-    ['stash', 'push', '-u', '-m', BRANCH_SWITCH_STASH_MESSAGE, '--', relPath, dir],
+    ['stash', 'push', '-u', '-m', BRANCH_SWITCH_STASH_MESSAGE, '--', relPath, dir, `:(exclude)${feedbackPrefix}`],
     root,
   )
   if (!stash.ok) return { kind: 'error', message: gitErrorText(stash) }
@@ -3327,6 +3585,7 @@ ipcMain.handle('git:stashBranch', async (_e, root: string, relPath: string, sha:
 // confirms, resume quitting (rather than merely closing the window on macOS).
 app.on('before-quit', () => {
   isQuitting = true
+  localRuntime.stopAll()
 })
 
 app.on('window-all-closed', () => {

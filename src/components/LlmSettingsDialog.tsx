@@ -4,9 +4,19 @@ import { getPlatform } from '../platform'
 import { PROVIDER_LIST, PROVIDERS } from '../llm/providers'
 import type { Attach, LlmConfig, ModelInfo, Provider } from '../llm/types'
 import { ModelPicker } from './ModelPicker'
+import { ContextFields } from './ContextFields'
+import { HostedSystemOnePanel, hostedPreset } from './HostedSystemOnePanel'
+import { LocalChatPanel } from './LocalChatPanel'
+import { LocalSystemOnePanel } from './LocalSystemOnePanel'
+import { isCloudflareAccountId } from '../llm/localUi'
+import { AiPreviewNotice } from './AiPreviewNotice'
 import '../styles/ai.css'
 
 const NO_MODELS: ModelInfo[] = []
+
+/** Jev's own documented context budget; Laya's is far smaller (English 512
+ *  tokens, multilingual up to 8192) — the reviewer adjusts this per target. */
+const DEFAULT_MAX_STATE_TOKENS = 60_000
 
 /**
  * Manage the LLM targets the AI-annotation feature can call.
@@ -33,6 +43,28 @@ const pdfCapableProviders = (() => {
   if (names.length <= 1) return names.join('')
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
 })()
+
+/**
+ * What the Provider select offers: the plain providers, plus three guided
+ * entries that map onto real configs (`ollama`, local or hosted `systemone`).
+ */
+type Kind = Provider | 'local-chat' | 'local-s1' | 'hosted-s1'
+
+const GUIDED: { id: Kind; label: string }[] = [
+  { id: 'local-chat', label: 'Local model — chat (Ollama, LM Studio, llama.cpp, vLLM)' },
+  { id: 'local-s1', label: 'Local model — decision model (System 1)' },
+  { id: 'hosted-s1', label: 'Hosted decision model — Clef (Cloudflare) / Jev' },
+]
+
+const CLOUD_PROVIDERS = PROVIDER_LIST.filter((p) => p.id !== 'systemone' && p.id !== 'ollama')
+
+const isLoopback = (url: string) => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(url)
+
+function kindOf(c: LlmConfig): Kind {
+  if (c.provider === 'ollama') return 'local-chat'
+  if (c.provider !== 'systemone') return c.provider
+  return c.managed || (c.systemOneFlavor !== 'cloudflare' && isLoopback(c.baseUrl)) ? 'local-s1' : 'hosted-s1'
+}
 
 /** A blank target, ready to be filled in. */
 function newDraft(): LlmConfig {
@@ -139,11 +171,30 @@ export function LlmSettingsDialog() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft?.id, draft?.model, modelsById])
 
+  // Prefill price fields from the selected model's fetched pricing, but only
+  // when a field is still empty — a reviewer's own typed price must never be
+  // clobbered by switching models afterward.
+  useEffect(() => {
+    if (!draft) return
+    const models = modelsById[draft.id] ?? NO_MODELS
+    const model = models.find((m) => m.id === draft.model)
+    if (!model?.pricing) return
+    const fill: Partial<LlmConfig> = {}
+    if (draft.inputPrice === undefined) fill.inputPrice = model.pricing.input
+    if (draft.outputPrice === undefined) fill.outputPrice = model.pricing.output
+    if (Object.keys(fill).length > 0) patch(fill)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft?.id, draft?.model, modelsById])
+
   if (!settingsOpen) return null
 
   const close = () => setSettingsOpen(false)
 
   const info = draft ? PROVIDERS[draft.provider] : null
+  const kind = draft ? kindOf(draft) : null
+  const cloudflare = draft?.systemOneFlavor === 'cloudflare'
+  // The guided panels bring their own URL and model fields.
+  const ownsEndpoint = kind === 'local-chat' || kind === 'local-s1' || cloudflare
   const urlEditable = info?.editableBaseUrl ?? false
   const modelListingSupported = info?.supportsModelListing ?? false
   const providerModels = draft ? (modelsById[draft.id] ?? NO_MODELS) : NO_MODELS
@@ -175,6 +226,31 @@ export function LlmSettingsDialog() {
     setVerifyError(null)
   }
 
+  const changeKind = (kind: Kind) => {
+    if (kind !== 'local-chat' && kind !== 'local-s1' && kind !== 'hosted-s1') return changeProvider(kind)
+    setDraft((d) => {
+      if (!d) return d
+      const base: LlmConfig = {
+        ...d,
+        attach: 'text',
+        reasoningEffort: undefined,
+        maxStateTokens: undefined,
+        contextTokens: undefined,
+        optionsBudgetTokens: undefined,
+        systemOneFlavor: undefined,
+        accountId: undefined,
+        managed: undefined,
+        model: '',
+      }
+      if (kind === 'hosted-s1') return hostedPreset(base, 'cloudflare')
+      if (kind === 'local-chat') return { ...base, provider: 'ollama', baseUrl: PROVIDERS.ollama.defaultBaseUrl, noKey: true }
+      return { ...base, provider: 'systemone', baseUrl: 'http://127.0.0.1', noKey: true }
+    })
+    clearModels(draft?.id ?? '')
+    setReply(null)
+    setVerifyError(null)
+  }
+
   const changeProvider = (id: Provider) => {
     const next = PROVIDERS[id]
     setDraft((d) =>
@@ -187,9 +263,11 @@ export function LlmSettingsDialog() {
             baseUrl: next.editableBaseUrl ? (next.defaultBaseUrl || '') : next.defaultBaseUrl,
             attach: next.supportsPdf ? d.attach : 'text',
             // A model name (and any reasoning effort chosen for it) belongs to
-            // the old provider's catalog, not the new one.
-            model: '',
+            // the old provider's catalog, not the new one. System One has no
+            // listing to pick from, so it gets a sensible default instead.
+            model: id === 'systemone' ? 'jev-latest' : '',
             reasoningEffort: undefined,
+            maxStateTokens: id === 'systemone' ? (d.maxStateTokens ?? DEFAULT_MAX_STATE_TOKENS) : undefined,
           }
         : d,
     )
@@ -202,13 +280,16 @@ export function LlmSettingsDialog() {
 
   /** What is missing before this target can be saved or verified. */
   const validate = (d: LlmConfig): string | null => {
-    if (!d.name.trim()) return 'Give the target a name — it is what you pick from later.'
+    if (!d.name.trim()) return 'Give the model a name — it is what you pick from later.'
     if (!d.model.trim()) return 'Enter a model name, e.g. claude-opus-4-8 or gpt-4o.'
+    if (d.systemOneFlavor === 'cloudflare' && !isCloudflareAccountId(d.accountId ?? '')) {
+      return 'Enter your Cloudflare account ID: 32 lowercase hex characters, shown in the Cloudflare dashboard.'
+    }
     if (PROVIDERS[d.provider].editableBaseUrl && !d.baseUrl.trim()) {
       return 'Enter the base URL of your OpenAI-compatible server, e.g. http://localhost:1234.'
     }
     // A stored key is invisible here, so "blank" only means "missing" when none is stored.
-    if (!d.hasKey && !apiKey.trim()) return 'Enter the API key for this provider.'
+    if (!d.hasKey && !d.noKey && !apiKey.trim()) return 'Enter the API key for this provider.'
     return null
   }
 
@@ -286,7 +367,7 @@ export function LlmSettingsDialog() {
       >
         <div className="modal-head">
           <strong id="llm-settings-title">
-            AI targets{draft ? (configs.some((c) => c.id === draft.id) ? ' — Edit' : ' — Add') : ''}
+            AI models{draft ? (configs.some((c) => c.id === draft.id) ? ' — Edit' : ' — Add') : ''}
           </strong>
           <button
             type="button"
@@ -300,6 +381,7 @@ export function LlmSettingsDialog() {
         </div>
 
         <div className="modal-body">
+          <AiPreviewNotice />
           {/* Where the key ends up is the user's business, and the honest answer
               differs per runtime. Never hide this behind a "learn more". */}
           {browser ? (
@@ -326,7 +408,7 @@ export function LlmSettingsDialog() {
             <>
               {configs.length === 0 ? (
                 <p className="llm-empty">
-                  No targets yet. Add one — a target is a provider, a model, and the key to reach it.
+                  No models yet. Add one — a model is a provider, a model name, and the key to reach it.
                 </p>
               ) : (
                 <ul className="llm-list">
@@ -338,9 +420,9 @@ export function LlmSettingsDialog() {
                           {PROVIDERS[config.provider].label} · {config.model} ·{' '}
                           {config.attach === 'pdf' ? 'sends the PDF' : 'sends extracted text'}
                         </div>
-                        {!config.hasKey && (
+                        {!config.hasKey && !config.noKey && (
                           <div className="llm-nokey">
-                            No API key stored — this target cannot be used until you add one.
+                            No API key stored — this model cannot be used until you add one.
                           </div>
                         )}
                       </div>
@@ -376,9 +458,9 @@ export function LlmSettingsDialog() {
                   className="primary"
                   onClick={startAdd}
                   disabled={busy}
-                  title="Add a new LLM target"
+                  title="Add a new AI model"
                 >
-                  + Add target
+                  + Add model…
                 </button>
               </div>
             </>
@@ -411,83 +493,96 @@ export function LlmSettingsDialog() {
                 </label>
                 <select
                   id="llm-provider"
-                  value={draft.provider}
-                  onChange={(e) => changeProvider(e.target.value as Provider)}
+                  value={kind ?? draft.provider}
+                  onChange={(e) => changeKind(e.target.value as Kind)}
                 >
-                  {PROVIDER_LIST.map((p) => (
+                  {CLOUD_PROVIDERS.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.label}
+                    </option>
+                  ))}
+                  {GUIDED.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.label}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="llm-row">
-                <label htmlFor="llm-url" className="llm-label">
-                  Base URL
-                </label>
-                <input
-                  id="llm-url"
-                  type="text"
-                  value={draft.baseUrl}
-                  onChange={(e) => patch({ baseUrl: e.target.value })}
-                  readOnly={!urlEditable}
-                  required={urlEditable}
-                  placeholder={urlEditable ? 'http://localhost:1234' : ''}
-                  title={
-                    urlEditable
-                      ? 'The root of your OpenAI-compatible server, e.g. http://localhost:1234'
-                      : `Fixed for ${info?.label ?? 'this provider'}.`
-                  }
-                />
-              </div>
-              <p className="llm-hint">
-                {urlEditable
-                  ? 'Where your server listens — e.g. LM Studio, llama.cpp or vLLM on http://localhost:1234.'
-                  : 'Fixed for this provider, so there is nothing to type.'}
-              </p>
+              {kind === 'local-chat' && <LocalChatPanel draft={draft} patch={patch} />}
+              {kind === 'local-s1' && <LocalSystemOnePanel draft={draft} patch={patch} />}
+              {kind === 'hosted-s1' && <HostedSystemOnePanel draft={draft} replace={(c) => setDraft(c)} />}
 
-              <div className="llm-row">
-                <label htmlFor="llm-model" className="llm-label">
-                  Model
-                </label>
-                <div className="llm-model-field">
-                  <ModelPicker
-                    id="llm-model"
-                    value={draft.model}
-                    onChange={(v) => patch({ model: v })}
-                    models={modelListingSupported ? providerModels : NO_MODELS}
-                    loading={modelListingSupported && modelsLoading}
-                    providerLabel={info?.label ?? 'This provider'}
-                    placeholder="e.g. claude-opus-4-8, gpt-4o"
+              {!ownsEndpoint && (
+                <>
+                <div className="llm-row">
+                  <label htmlFor="llm-url" className="llm-label">
+                    Base URL
+                  </label>
+                  <input
+                    id="llm-url"
+                    type="text"
+                    value={draft.baseUrl}
+                    onChange={(e) => patch({ baseUrl: e.target.value })}
+                    readOnly={!urlEditable}
+                    required={urlEditable}
+                    placeholder={urlEditable ? 'http://localhost:1234' : ''}
+                    title={
+                      urlEditable
+                        ? 'The root of your OpenAI-compatible server, e.g. http://localhost:1234'
+                        : `Fixed for ${info?.label ?? 'this provider'}.`
+                    }
                   />
-                  {modelListingSupported && (
-                    <button
-                      type="button"
-                      onClick={() => void fetchModels(draft, apiKey.trim() || undefined, { force: true })}
-                      disabled={modelsLoading || (!draft.hasKey && !apiKey.trim())}
-                      title={
-                        !draft.hasKey && !apiKey.trim()
-                          ? 'Enter an API key first — the list has to be fetched with it.'
-                          : `Fetch the current model list from ${info?.label ?? 'the provider'}.`
-                      }
-                    >
-                      {modelsLoading ? 'Loading…' : providerModels.length > 0 ? 'Refresh' : 'Load models'}
-                    </button>
-                  )}
                 </div>
-              </div>
-              <p className="llm-hint">
-                {!modelListingSupported
-                  ? "OpenAI-compatible servers vary too much for the app to reliably list or validate models — type the model name your server expects. Nothing here is checked; that's on you to get right."
-                  : providerModels.length > 0
-                    ? `${providerModels.length} model${providerModels.length === 1 ? '' : 's'} loaded from ${info?.label ?? 'the provider'} — search the list, or type a name it doesn't have.`
-                    : "Type the model name exactly as the provider documents it, or load the current list once a key is set (a red field means the typed name isn't in a loaded list)."}
-              </p>
-              {modelListingSupported && modelsError && (
-                <p role="alert" className="llm-problem">
-                  Couldn't load the model list: {modelsError}
+                <p className="llm-hint">
+                  {urlEditable
+                    ? 'Where your server listens — e.g. LM Studio, llama.cpp or vLLM on http://localhost:1234.'
+                    : 'Fixed for this provider, so there is nothing to type.'}
                 </p>
+
+                <div className="llm-row">
+                  <label htmlFor="llm-model" className="llm-label">
+                    Model
+                  </label>
+                  <div className="llm-model-field">
+                    <ModelPicker
+                      id="llm-model"
+                      value={draft.model}
+                      onChange={(v) => patch({ model: v })}
+                      models={modelListingSupported ? providerModels : NO_MODELS}
+                      loading={modelListingSupported && modelsLoading}
+                      providerLabel={info?.label ?? 'This provider'}
+                      placeholder="e.g. claude-opus-4-8, gpt-4o"
+                    />
+                    {modelListingSupported && (
+                      <button
+                        type="button"
+                        onClick={() => void fetchModels(draft, apiKey.trim() || undefined, { force: true })}
+                        disabled={modelsLoading || (!draft.hasKey && !apiKey.trim())}
+                        title={
+                          !draft.hasKey && !apiKey.trim()
+                            ? 'Enter an API key first — the list has to be fetched with it.'
+                            : `Fetch the current model list from ${info?.label ?? 'the provider'}.`
+                        }
+                      >
+                        {modelsLoading ? 'Loading…' : providerModels.length > 0 ? 'Refresh' : 'Load models'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p className="llm-hint">
+                  {!modelListingSupported
+                    ? "OpenAI-compatible servers vary too much for the app to reliably list or validate models — type the model name your server expects. Nothing here is checked; that's on you to get right."
+                    : providerModels.length > 0
+                      ? `${providerModels.length} model${providerModels.length === 1 ? '' : 's'} loaded from ${info?.label ?? 'the provider'} — search the list, or type a name it doesn't have.`
+                      : "Type the model name exactly as the provider documents it, or load the current list once a key is set (a red field means the typed name isn't in a loaded list)."}
+                </p>
+                {modelListingSupported && modelsError && (
+                  <p role="alert" className="llm-problem">
+                    Couldn't load the model list: {modelsError}
+                  </p>
+                )}
+                </>
               )}
 
               {selectedModel?.reasoning && (
@@ -516,54 +611,152 @@ export function LlmSettingsDialog() {
               )}
 
               <div className="llm-row">
-                <label htmlFor="llm-key" className="llm-label">
-                  API key
+                <label htmlFor="llm-input-price" className="llm-label">
+                  Price per 1M input tokens (USD)
                 </label>
                 <input
-                  id="llm-key"
-                  type="password"
-                  autoComplete="off"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={
-                    draft.hasKey ? 'Key stored — leave blank to keep it' : 'Paste the provider key'
+                  id="llm-input-price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={draft.inputPrice ?? ''}
+                  onChange={(e) =>
+                    patch({ inputPrice: e.target.value === '' ? undefined : Number(e.target.value) })
                   }
-                  required={!draft.hasKey}
+                />
+              </div>
+              <div className="llm-row">
+                <label htmlFor="llm-output-price" className="llm-label">
+                  Price per 1M output tokens (USD)
+                </label>
+                <input
+                  id="llm-output-price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={draft.outputPrice ?? ''}
+                  onChange={(e) =>
+                    patch({ outputPrice: e.target.value === '' ? undefined : Number(e.target.value) })
+                  }
                 />
               </div>
               <p className="llm-hint">
-                A stored key is never shown again, not even here — this dialog can only ever be told{' '}
-                <em>that</em> one exists. Type a new key to replace it.
+                Used only for this app's own rough cost estimates — check your provider's pricing
+                page for the current rate.
               </p>
 
-              <div className="llm-row">
-                <label htmlFor="llm-attach" className="llm-label">
-                  Send the paper as
-                </label>
-                <select
-                  id="llm-attach"
-                  value={draft.attach}
-                  onChange={(e) => patch({ attach: e.target.value as Attach })}
-                >
-                  <option value="text">Extracted text (recommended)</option>
-                  <option
-                    value="pdf"
-                    disabled={!info?.supportsPdf}
-                    title={
-                      info?.supportsPdf
-                        ? 'The provider receives the PDF file itself.'
-                        : 'This provider cannot take a PDF.'
+              {kind !== 'local-chat' &&
+                (draft.provider === 'systemone' || draft.provider === 'openai-compatible' || draft.contextTokens !== undefined) && (
+                  <ContextFields draft={draft} patch={patch} />
+                )}
+
+              {/* Older System One targets stored only this budget; new ones use the context window above. */}
+              {draft.provider === 'systemone' && draft.contextTokens === undefined && (
+                <>
+                  <div className="llm-row">
+                    <label htmlFor="llm-max-state-tokens" className="llm-label">
+                      Max input tokens
+                    </label>
+                    <input
+                      id="llm-max-state-tokens"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={draft.maxStateTokens ?? DEFAULT_MAX_STATE_TOKENS}
+                      onChange={(e) =>
+                        patch({
+                          maxStateTokens: e.target.value === '' ? undefined : Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                  <p className="llm-hint">
+                    The paper state (title, abstract, extracted text) is truncated to fit this budget.
+                    Jev's own context is about 64k tokens; Laya is far smaller (English 512,
+                    multilingual up to 8192) — for those, only the title and abstract will fit.
+                  </p>
+                </>
+              )}
+
+              {urlEditable && !draft.managed && !cloudflare && (
+                <div className="llm-row">
+                  <label htmlFor="llm-nokey" className="llm-label">
+                    No API key
+                  </label>
+                  <input
+                    id="llm-nokey"
+                    type="checkbox"
+                    checked={draft.noKey ?? false}
+                    onChange={(e) => patch({ noKey: e.target.checked })}
+                  />
+                </div>
+              )}
+              {urlEditable && !draft.managed && !cloudflare && (
+                <p className="llm-hint">This server needs no API key.</p>
+              )}
+
+              {!draft.managed && (
+                <>
+                <div className="llm-row">
+                  <label htmlFor="llm-key" className="llm-label">
+                    {cloudflare ? 'API token' : 'API key'}
+                  </label>
+                  <input
+                    id="llm-key"
+                    type="password"
+                    autoComplete="off"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder={
+                      draft.hasKey
+                        ? 'Key stored — leave blank to keep it'
+                        : draft.noKey
+                          ? 'Not needed — this server needs no key'
+                          : 'Paste the provider key'
                     }
-                  >
-                    The PDF itself{info?.supportsPdf ? '' : ' — not supported by this provider'}
-                  </option>
-                </select>
-              </div>
-              <p className="llm-hint">
-                {info?.supportsPdf
-                  ? 'Extracted text is smaller, cheaper and works everywhere; the PDF keeps tables and figures intact but costs far more. Scanned papers yield no text, so only the PDF path can read them.'
-                  : `This provider has no way to take a PDF in a single request — either it has no file input at all, or it needs the file uploaded and referenced separately, which this app does not do. So this target must send extracted text. ${pdfCapableProviders} can take the PDF.`}
-              </p>
+                    disabled={draft.noKey && !draft.hasKey}
+                    required={!draft.hasKey && !draft.noKey}
+                  />
+                </div>
+                <p className="llm-hint">
+                  A stored key is never shown again, not even here — this dialog can only ever be told{' '}
+                  <em>that</em> one exists. Type a new key to replace it.
+                </p>
+                </>
+              )}
+
+              {draft.provider !== 'systemone' && (
+                <>
+                  <div className="llm-row">
+                    <label htmlFor="llm-attach" className="llm-label">
+                      Send the paper as
+                    </label>
+                    <select
+                      id="llm-attach"
+                      value={draft.attach}
+                      onChange={(e) => patch({ attach: e.target.value as Attach })}
+                    >
+                      <option value="text">Extracted text (recommended)</option>
+                      <option
+                        value="pdf"
+                        disabled={!info?.supportsPdf}
+                        title={
+                          info?.supportsPdf
+                            ? 'The provider receives the PDF file itself.'
+                            : 'This provider cannot take a PDF.'
+                        }
+                      >
+                        The PDF itself{info?.supportsPdf ? '' : ' — not supported by this provider'}
+                      </option>
+                    </select>
+                  </div>
+                  <p className="llm-hint">
+                    {info?.supportsPdf
+                      ? 'Extracted text is smaller, cheaper and works everywhere; the PDF keeps tables and figures intact but costs far more. Scanned papers yield no text, so only the PDF path can read them.'
+                      : `This provider has no way to take a PDF in a single request — either it has no file input at all, or it needs the file uploaded and referenced separately, which this app does not do. So this model must send extracted text. ${pdfCapableProviders} can take the PDF.`}
+                  </p>
+                </>
+              )}
 
               {problem && (
                 <p role="alert" className="llm-problem">
@@ -577,12 +770,12 @@ export function LlmSettingsDialog() {
                     type="button"
                     onClick={() => void onVerify()}
                     disabled={verifying || busy}
-                    title="Save this target and send a test request to verify it works"
+                    title="Save this model and send a test request to verify it works"
                   >
                     {verifying ? 'Checking…' : 'Verify setup'}
                   </button>
                   <span className="llm-verify-hint">
-                    Sends a one-word test request. <strong>This saves the target first</strong> —
+                    Sends a one-word test request. <strong>This saves the model first</strong> —
                     the key has to be stored before anything can use it.
                   </span>
                 </div>
@@ -616,7 +809,7 @@ export function LlmSettingsDialog() {
                   type="submit"
                   className="primary"
                   disabled={busy || verifying}
-                  title="Save this target"
+                  title="Save this model"
                 >
                   {busy ? 'Saving…' : 'Save'}
                 </button>

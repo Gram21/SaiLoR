@@ -1,5 +1,5 @@
 import { useStore } from '../state/store'
-import type { Project } from '../model/project'
+import { seatLabel, type Project } from '../model/project'
 import { DEFAULT_ANNOTATIONS_DIR } from '../model/annotationsDir'
 import { ConflictResolutionDialog } from './ConflictResolutionDialog'
 
@@ -17,9 +17,9 @@ export function describeClash(path: string, project: Project | null): string {
   const seat = /^(?:reviewer|screening)-(\d+)$/.exec(name)
   const marks = /^(?:screening-)?marks-(\d+)$/.exec(name)
   const part = seat
-    ? `Reviewer ${seat[1]}'s answers`
+    ? `${project ? seatLabel(project, seat[1]) : `Reviewer ${seat[1]}`}'s answers`
     : marks
-      ? `Reviewer ${marks[1]}'s PDF highlights and notes`
+      ? `${project ? seatLabel(project, marks[1]) : `Reviewer ${marks[1]}`}'s PDF highlights and notes`
       : /^(?:screening-)?marks-consolidated$/.test(name)
         ? "Consolidation's PDF highlights and notes"
         : "Consolidation's answers"

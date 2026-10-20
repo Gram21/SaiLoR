@@ -1,5 +1,6 @@
 import type { LlmConfig, LlmHttpRequest, Provider } from './types'
 import { API_KEY_SENTINEL } from './types'
+import { ollamaChatBody } from './ollama'
 
 /**
  * Everything that differs between the LLM vendors: where to POST, how to
@@ -26,6 +27,19 @@ export interface ProviderInfo {
    */
   supportsModelListing: boolean
   /**
+   * Whether agent mode can enable this provider's built-in web search
+   * alongside our function tools (chat.ts `webSearch`). Decisions, checked
+   * against docs 2026-09: anthropic (server tool web_search_20250305,
+   * platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool) and
+   * openrouter (plugin {id:'web'}, openrouter.ai/docs/guides/features/plugins/web-search)
+   * yes. google: google_search + functionDeclarations only for Gemini 3 in the
+   * Interactions API (ai.google.dev/gemini-api/docs/tool-combination), not the
+   * generateContent path used here. openai: full web_search tool is Responses-API
+   * only; Chat Completions has only dedicated search models
+   * (developers.openai.com/api/docs/guides/tools-web-search). Rest: no equivalent.
+   */
+  supportsWebSearch: boolean
+  /**
    * Output-length param for an OpenAI-shaped body (ignored by `anthropic`/`google`,
    * which have their own fields). Not uniform across "OpenAI-compatible" APIs:
    * OpenAI's newer models and xAI/Groq reject `max_tokens` in favor of
@@ -43,6 +57,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     editableBaseUrl: false,
     supportsPdf: true,
     supportsModelListing: true,
+    supportsWebSearch: true,
     tokenParam: 'max_tokens', // unused: Anthropic has its own body shape below
   },
   openai: {
@@ -52,6 +67,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     editableBaseUrl: false,
     supportsPdf: true,
     supportsModelListing: true,
+    supportsWebSearch: false,
     // Required by o-series/current GPT models (OpenAI rejects `max_tokens` on
     // them); still accepted on older models, so this name is safe to send always.
     tokenParam: 'max_completion_tokens',
@@ -63,6 +79,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     editableBaseUrl: false,
     supportsPdf: true,
     supportsModelListing: true,
+    supportsWebSearch: false,
     tokenParam: 'max_tokens', // unused: Gemini has its own body shape below
   },
   openrouter: {
@@ -72,6 +89,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     editableBaseUrl: false,
     supportsPdf: true,
     supportsModelListing: true,
+    supportsWebSearch: true,
     // OpenRouter fronts many backends behind one contract and documents
     // `max_tokens`; it does the per-backend translation, not the caller.
     tokenParam: 'max_tokens',
@@ -84,6 +102,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     // No inline document/file input on chat completions — text only.
     supportsPdf: false,
     supportsModelListing: true,
+    supportsWebSearch: false,
     tokenParam: 'max_completion_tokens',
   },
   mistral: {
@@ -95,6 +114,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     // inline-base64 variant, and a local file has no URL to give it.
     supportsPdf: false,
     supportsModelListing: true,
+    supportsWebSearch: false,
     tokenParam: 'max_tokens',
   },
   deepseek: {
@@ -104,6 +124,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     editableBaseUrl: false,
     supportsPdf: false, // text-only; no file/vision input on any current model
     supportsModelListing: true,
+    supportsWebSearch: false,
     tokenParam: 'max_tokens',
   },
   xai: {
@@ -115,6 +136,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     // call; this app only sends single-request inline attachments.
     supportsPdf: false,
     supportsModelListing: true,
+    supportsWebSearch: false,
     tokenParam: 'max_completion_tokens',
   },
   'openai-compatible': {
@@ -125,8 +147,37 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     // A self-hosted server (llama.cpp, LM Studio, vLLM…) almost never takes a PDF.
     supportsPdf: false,
     supportsModelListing: false,
+    supportsWebSearch: false,
     // The de facto standard these servers implement; no confirmed support for
     // the OpenAI-specific `max_completion_tokens` rename.
+    tokenParam: 'max_tokens',
+  },
+  systemone: {
+    id: 'systemone',
+    label: 'System One (Jev-compatible)',
+    // TypeSafe's hosted Jev; a local `laya-serve` (e.g. http://localhost:8000)
+    // is the other documented target — hence editable, unlike the other
+    // fixed-URL providers.
+    defaultBaseUrl: 'https://api.typesafe.ai',
+    editableBaseUrl: true,
+    // A closed-form decision model, not a chat completion — no document input,
+    // no listing endpoint, no reasoning-effort dial. See `systemone.ts`, which
+    // builds and parses this provider's one request shape (`/v1/systemone`)
+    // itself; `buildRequest`/`extractText` below never handle it.
+    supportsPdf: false,
+    supportsModelListing: false,
+    supportsWebSearch: false,
+    tokenParam: 'max_tokens', // unused — systemone.ts builds its own request body
+  },
+  ollama: {
+    id: 'ollama',
+    label: 'Ollama (local)',
+    defaultBaseUrl: 'http://localhost:11434',
+    editableBaseUrl: true,
+    supportsPdf: false,
+    supportsModelListing: true,
+    supportsWebSearch: false,
+    // Native /api/chat (see ollama.ts): output length is options.num_predict.
     tokenParam: 'max_tokens',
   },
 }
@@ -141,6 +192,8 @@ export const PROVIDER_LIST: ProviderInfo[] = [
   PROVIDERS.deepseek,
   PROVIDERS.xai,
   PROVIDERS['openai-compatible'],
+  PROVIDERS.systemone,
+  PROVIDERS.ollama,
 ]
 
 /** The paper, as handed to the model. */
@@ -162,6 +215,7 @@ const DEFAULT_MAX_TOKENS = 8192
 const PDF_USER_TEXT = 'The paper is attached as a PDF. Annotate it as instructed.'
 
 const CHAT_PATH = '/v1/chat/completions'
+export const OLLAMA_CHAT_PATH = '/api/chat'
 
 /**
  * Append `path` to `base` without duplicating what the user already typed —
@@ -189,7 +243,7 @@ export function baseOf(cfg: LlmConfig): string {
   return configured || PROVIDERS[cfg.provider].defaultBaseUrl
 }
 
-function anthropicContent(user: PaperPart): unknown[] {
+export function anthropicContent(user: PaperPart): unknown[] {
   if (user.kind === 'text') return [{ type: 'text', text: user.text }]
   return [
     {
@@ -200,7 +254,7 @@ function anthropicContent(user: PaperPart): unknown[] {
   ]
 }
 
-function openaiContent(user: PaperPart): unknown {
+export function openaiContent(user: PaperPart): unknown {
   // A plain string keeps the text path portable: some OpenAI-compatible servers
   // don't know the newer parts-array form.
   if (user.kind === 'text') return user.text
@@ -217,7 +271,7 @@ function openaiContent(user: PaperPart): unknown {
 }
 
 /** Gemini's `Part[]` shape: a plain string user turn becomes one text part. */
-function googleParts(user: PaperPart): unknown[] {
+export function googleParts(user: PaperPart): unknown[] {
   if (user.kind === 'text') return [{ text: user.text }]
   return [
     { inline_data: { mime_type: 'application/pdf', data: user.base64 } },
@@ -236,6 +290,28 @@ export function googleThinkingMechanism(id: string): 'level' | 'budget' {
 /** Token counts standing in for "low/medium/high" on 2.5-era models; within
  * the documented range for every 2.5-series model (128–32768 on 2.5 Pro). */
 export const GOOGLE_BUDGET_BY_LEVEL: Record<string, number> = { low: 2000, medium: 8000, high: 24000 }
+
+/** Anthropic's reasoning-effort fields: adaptive thinking must be turned on for
+ *  `output_config.effort` to have anything to apply to. `{}` when no effort is set. */
+export function anthropicThinkingFields(effort?: string): Record<string, unknown> {
+  return effort ? { thinking: { type: 'adaptive' }, output_config: { effort } } : {}
+}
+
+/** Gemini's `thinkingConfig`, or null when no effort is set — the two shapes
+ *  (`thinkingLevel` vs `thinkingBudget`) are mutually exclusive on one request. */
+export function googleThinkingConfig(model: string, effort?: string): Record<string, unknown> | null {
+  if (!effort) return null
+  return googleThinkingMechanism(model) === 'level'
+    ? { thinkingLevel: effort }
+    : { thinkingBudget: GOOGLE_BUDGET_BY_LEVEL[effort] ?? GOOGLE_BUDGET_BY_LEVEL.medium }
+}
+
+/** The OpenAI-family reasoning-effort field: OpenRouter nests its own dial,
+ *  every other provider in this family takes a flat field. `{}` when unset. */
+export function openaiReasoningFields(provider: Provider, effort?: string): Record<string, unknown> {
+  if (!effort) return {}
+  return provider === 'openrouter' ? { reasoning: { effort } } : { reasoning_effort: effort }
+}
 
 export function buildRequest(
   cfg: LlmConfig,
@@ -261,11 +337,7 @@ export function buildRequest(
         max_tokens: maxTokens,
         system,
         messages: [{ role: 'user', content: anthropicContent(user) }],
-        // `output_config.effort` is the current, model-agnostic dial; it needs
-        // adaptive thinking turned on to have anything to apply effort to.
-        ...(effort
-          ? { thinking: { type: 'adaptive' }, output_config: { effort } }
-          : {}),
+        ...anthropicThinkingFields(effort),
       }),
     }
   }
@@ -275,11 +347,7 @@ export function buildRequest(
     // than the OpenAI family. Auth uses the `x-goog-api-key` header (Google's
     // documented alternative to `?key=`) so the key never sits in a URL, matching
     // this app's header-only sentinel-substitution.
-    const thinkingConfig = effort
-      ? googleThinkingMechanism(cfg.model) === 'level'
-        ? { thinkingLevel: effort }
-        : { thinkingBudget: GOOGLE_BUDGET_BY_LEVEL[effort] ?? GOOGLE_BUDGET_BY_LEVEL.medium }
-      : null
+    const thinkingConfig = googleThinkingConfig(cfg.model, effort)
     return {
       configId: cfg.id,
       url: join(base, `/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`),
@@ -298,6 +366,24 @@ export function buildRequest(
     }
   }
 
+  if (cfg.provider === 'ollama') {
+    if (user.kind === 'pdf') throw new Error('Ollama cannot take a PDF; attach the paper as text.')
+    return {
+      configId: cfg.id,
+      url: join(base, OLLAMA_CHAT_PATH),
+      headers: { 'content-type': 'application/json', Authorization: `Bearer ${API_KEY_SENTINEL}` },
+      body: ollamaChatBody(
+        cfg,
+        [
+          { role: 'system', content: system },
+          { role: 'user', content: user.text },
+        ],
+        undefined,
+        maxTokens,
+      ),
+    }
+  }
+
   const { tokenParam } = PROVIDERS[cfg.provider]
   return {
     configId: cfg.id,
@@ -313,13 +399,7 @@ export function buildRequest(
         { role: 'system', content: system },
         { role: 'user', content: openaiContent(user) },
       ],
-      // OpenRouter's dial is its own nested object; every other OpenAI-shaped
-      // provider here (OpenAI, Groq, Mistral, xAI) takes the same flat field.
-      ...(effort
-        ? cfg.provider === 'openrouter'
-          ? { reasoning: { effort } }
-          : { reasoning_effort: effort }
-        : {}),
+      ...openaiReasoningFields(cfg.provider, effort),
     }),
   }
 }
@@ -360,6 +440,10 @@ export function extractText(provider: Provider, json: unknown): string {
     return textOfParts(parts)
   }
 
+  if (provider === 'ollama') {
+    return isRecord(json.message) && typeof json.message.content === 'string' ? json.message.content : ''
+  }
+
   const choices = json.choices
   if (!Array.isArray(choices) || choices.length === 0) return ''
   const first = choices[0]
@@ -389,6 +473,8 @@ export function wasTruncated(provider: Provider, json: unknown): boolean {
     const first = candidates[0]
     return isRecord(first) && first.finishReason === 'MAX_TOKENS'
   }
+
+  if (provider === 'ollama') return json.done_reason === 'length'
 
   const choices = json.choices
   if (!Array.isArray(choices) || choices.length === 0) return false
@@ -422,9 +508,17 @@ export function extractError(provider: Provider, status: number, body: string): 
   if (isRecord(error) && typeof error.message === 'string' && error.message.trim()) {
     return `${label}: ${error.message.trim()}`
   }
-  if (typeof error === 'string' && error.trim()) return `${label}: ${error.trim()}`
+  if (typeof error === 'string' && error.trim()) {
+    const hint = provider === 'ollama' && status === 404 && /not found/i.test(error) ? ' — pull the model first' : ''
+    return `${label}: ${error.trim()}${hint}`
+  }
   if (typeof json.message === 'string' && json.message.trim()) {
     return `${label}: ${json.message.trim()}`
+  }
+  // Cloudflare envelope: { success: false, errors: [{ code, message }] }.
+  const first = Array.isArray(json.errors) ? json.errors[0] : undefined
+  if (isRecord(first) && typeof first.message === 'string' && first.message.trim()) {
+    return `${label}: ${first.message.trim()}${typeof first.code === 'number' ? ` (code ${first.code})` : ''}`
   }
   return fallback
 }

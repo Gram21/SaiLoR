@@ -90,6 +90,7 @@ interface ProjectOpts {
   schema?: AnnotationDef[]
   reviewers?: number
   ai?: boolean
+  aiSeat?: boolean
   title?: string
   version?: number
   papers?: Record<string, unknown>[]
@@ -108,6 +109,7 @@ function project(opts: ProjectOpts = {}): Project {
     : { schema: opts.schema ?? SIMPLE }
   if (opts.reviewers !== undefined) config.reviewers = opts.reviewers
   if (opts.ai !== undefined) config.ai = opts.ai
+  if (opts.aiSeat !== undefined) config.aiSeat = opts.aiSeat
   return loadProject({
     version: opts.version ?? 1,
     ...(opts.title !== undefined ? { title: opts.title } : {}),
@@ -550,6 +552,29 @@ describe('mergeProjects — schema changes', () => {
     const row = outcome.conflicts.find((c) => c.canonical === 'reviewers')!
     expect(row).toMatchObject({ type: 'number', ours: 2, theirs: 3 })
     expect(applyResolutions(outcome.merged, outcome.conflicts, { [row.id]: 4 }).reviewers).toBe(4)
+  })
+
+  it('takes ours with no conflict when only one side changed aiSeat', () => {
+    const base = project({ reviewers: 2, aiSeat: false, papers: [] })
+    const ours = project({ reviewers: 2, aiSeat: true, papers: [] })
+    const theirs = project({ reviewers: 2, aiSeat: false, papers: [] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.conflicts).toEqual([])
+    expect(outcome.merged.aiSeat).toBe(true)
+  })
+
+  it('conflicts for aiSeat when the file did not exist at the base and the sides disagree', () => {
+    // A plain boolean can only disagree three-way when the base itself is
+    // absent (`undefined`) — with a real base, one side must match it, same
+    // as the two-existing-value case above.
+    const ours = project({ reviewers: 2, aiSeat: true, papers: [] })
+    const theirs = project({ reviewers: 2, aiSeat: false, papers: [] })
+    const outcome = mergeProjects(null, ours, theirs)
+    expectMerged(outcome)
+    const row = outcome.conflicts.find((c) => c.canonical === 'aiSeat')!
+    expect(row).toMatchObject({ type: 'boolean', ours: true, theirs: false })
+    expect(applyResolutions(outcome.merged, outcome.conflicts, { [row.id]: false }).aiSeat).toBe(false)
   })
 
   it('carries a non-screening project\'s screening field through as null', () => {

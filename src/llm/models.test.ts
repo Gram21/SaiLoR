@@ -286,6 +286,18 @@ describe('parseModelsResponse: OpenRouter', () => {
   it('has no next page when links.next is absent', () => {
     expect(parseModelsResponse('openrouter', { data: [] }).nextCursor).toBeUndefined()
   })
+
+  it('converts pricing.prompt/completion (USD per token) to USD per 1M tokens', () => {
+    const json = {
+      data: [
+        { id: 'x-ai/grok-4.5', name: 'Grok 4.5', pricing: { prompt: '0.000003', completion: '0.000015' } },
+        { id: 'openrouter/auto', name: 'Auto' }, // no pricing at all
+      ],
+    }
+    const { models } = parseModelsResponse('openrouter', json)
+    expect(models[0].pricing).toEqual({ input: 3, output: 15 })
+    expect(models[1].pricing).toBeUndefined()
+  })
 })
 
 describe('parseModelsResponse: Mistral', () => {

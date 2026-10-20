@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { closeApp } from './helpers'
 
 /**
  * Explicit push coverage: `pull.integration.test.tsx` (jsdom) only proves a
@@ -61,7 +62,7 @@ test('git:push lands a real commit on a real remote', async () => {
   )
   expect(result.ok).toBe(true)
 
-  await app.close()
+  await closeApp(app)
 
   // Read the bare repo directly — independent of the app and of the local
   // clone's own idea of what happened.

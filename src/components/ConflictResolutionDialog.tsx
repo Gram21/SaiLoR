@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../state/store'
 import { treeLabel, type FieldConflict, type MergeNote, type MergeTree, type Resolutions } from '../git/merge'
+import { seatLabel, type Project } from '../model/project'
 import type { FieldValue } from '../model/annotations'
 import { YEAR_MIN, YEAR_MAX } from '../model/year'
 import { ComboBox } from './ComboBox'
@@ -63,6 +64,7 @@ export function ConflictResolutionDialog({
 }: Props) {
   const reviewers = useStore((s) => s.project?.reviewers ?? 1)
   const currentReviewer = useStore((s) => s.currentReviewer)
+  const project = useStore((s) => s.project)
 
   // One conflict list per paper (paperId '' is the project's own fields,
   // which belong to no paper), in the order `mergeProjects` produced them —
@@ -202,6 +204,7 @@ export function ConflictResolutionDialog({
                           key={c.id}
                           conflict={c}
                           reviewers={reviewers}
+                          project={project}
                           decided={!!merge.decided[c.id]}
                           foreign={foreignIds.has(c.id)}
                           value={c.id in merge.resolutions ? merge.resolutions[c.id] : c.ours}
@@ -286,6 +289,9 @@ function formatValue(type: FieldConflict['type'], value: FieldValue): string {
 interface ConflictRowProps {
   conflict: FieldConflict
   reviewers: number
+  /** For naming the AI's own seat "AI (Reviewer N)" via `seatLabel` — null
+   *  only when no project is loaded, which the dialog never shows without. */
+  project: Project | null
   decided: boolean
   /** True when this is another reviewer's own tree — see `isForeignReview`. */
   foreign: boolean
@@ -296,11 +302,17 @@ interface ConflictRowProps {
   onChange: (value: FieldValue) => void
 }
 
-function ConflictRow({ conflict, reviewers, decided, foreign, value, theirsValue, onTake, onChange }: ConflictRowProps) {
+function ConflictRow({ conflict, reviewers, project, decided, foreign, value, theirsValue, onTake, onChange }: ConflictRowProps) {
   // The paper is the group header now (see the grouped list above) — this is
   // just which tree within it: "Reviewer 2", "Consolidation", "Paper
-  // details", or nothing for a single-reviewer annotation conflict.
-  const where = treeLabel(conflict.tree, reviewers)
+  // details", or nothing for a single-reviewer annotation conflict. A
+  // `review` tree goes through `seatLabel` instead of the plain `treeLabel`
+  // so the AI's own seat reads "AI (Reviewer N)" here too, not just in the
+  // annotation panel.
+  const where =
+    conflict.tree.kind === 'review' && project
+      ? seatLabel(project, conflict.tree.reviewer)
+      : treeLabel(conflict.tree, reviewers)
 
   return (
     <li className={`git-merge-row${decided ? '' : ' is-undecided'}`}>

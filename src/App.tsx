@@ -30,6 +30,7 @@ import { ConsolidationOverview } from './components/ConsolidationOverview'
 import { ClosePrompt } from './components/ClosePrompt'
 import { ConsolidationUpdatePrompt } from './components/ConsolidationUpdatePrompt'
 import { AiDialog } from './components/AiDialog'
+import { AiScreeningDialog } from './components/AiScreeningDialog'
 import { LlmSettingsDialog } from './components/LlmSettingsDialog'
 import { GitCloneDialog } from './components/GitCloneDialog'
 import { GitDialog } from './components/GitDialog'
@@ -413,6 +414,7 @@ export function App() {
       <ClosePrompt />
       <ConsolidationUpdatePrompt />
       <AiDialog />
+      <AiScreeningDialog />
       <LlmSettingsDialog />
       <ScreeningSummary />
       <ScreeningImportDialog />

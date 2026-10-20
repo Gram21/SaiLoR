@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { buildScenario } from '../samples/git-scenarios/builder'
 import { scenarioNamed } from '../samples/git-scenarios/scenarios'
+import { closeApp } from './helpers'
 
 /**
  * Two of `samples/git-scenarios/` opened in the real app, through the real
@@ -38,7 +39,7 @@ test('shared-annotations: opening offers to split the folder', async () => {
   const page = await app.firstWindow()
   await expect(page.getByText('Give each project its own annotations folder')).toBeVisible()
   await expect(page.getByLabel('Annotations folder for review-copy.json')).toHaveValue('review-copy-annotations')
-  await app.close()
+  await closeApp(app)
 })
 
 test("seat-collision: the seat Ben already committed is flagged on Anna's side", async () => {
@@ -47,7 +48,7 @@ test("seat-collision: the seat Ben already committed is flagged on Anna's side",
   await page.getByRole('button', { name: 'Reviewer 1', exact: true }).click()
   await page.getByText('A study of code review at scale').first().click()
   await expect(page.getByText('has already committed Reviewer 1 for this paper')).toBeVisible()
-  await app.close()
+  await closeApp(app)
 })
 
 test('screening-highlights: the screeners\' highlights can be shown on the PDF', async () => {
@@ -63,5 +64,5 @@ test('screening-highlights: the screeners\' highlights can be shown on the PDF',
   await expect(page.locator('.pdf-mark-note.is-foreign')).toHaveCount(1)
   await page.getByText('Repairing programs from failing tests').first().click()
   await expect(page.getByLabel(/Show markings from screening/)).toHaveCount(0)
-  await app.close()
+  await closeApp(app)
 })

@@ -1,4 +1,4 @@
-import { annotationsDirProblem, DEFAULT_ANNOTATIONS_DIR } from '../model/annotationsDir'
+import { annotationsDirProblem, DEFAULT_ANNOTATIONS_DIR, isFeedbackPath } from '../model/annotationsDir'
 /**
  * Is this string safe to use as a path *relative to a repository root*?
  *
@@ -76,6 +76,12 @@ export function mergeBlockingPaths(
   annotationsDir: string,
 ): string[] {
   return changes
-    .filter((c) => c.code !== '??' || c.path.startsWith(`${annotationsDir}/`))
+    // Untracked feedback files are plain project files: a merge never touches
+    // them (names are unique per run) and the commit panel handles them.
+    .filter(
+      (c) =>
+        c.code !== '??' ||
+        (c.path.startsWith(`${annotationsDir}/`) && !isFeedbackPath(c.path.slice(annotationsDir.length + 1))),
+    )
     .map((c) => c.path)
 }

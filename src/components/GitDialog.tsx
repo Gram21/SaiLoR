@@ -3,6 +3,7 @@ import { useGitStore } from '../state/gitStore'
 import { useStore } from '../state/store'
 import { diffLines } from '../git/output'
 import { annotationsRelDir } from '../git/relpath'
+import { isFeedbackPath } from '../model/annotationsDir'
 import { papersWithBookkeepingChanges } from '../git/changes'
 import type { Disposition, FieldChange, PaperChange } from '../git/changes'
 import type { FieldValue } from '../model/annotations'
@@ -136,7 +137,10 @@ export function GitDialog() {
   const review = panel.fieldReview
   // The project's own rows live in the field-review list below when there is
   // one; otherwise they fall back to the plain checkbox (see `isProjectOwnPath`).
-  const changes = (panel.status?.changes ?? []).filter((c) => !review || !isProjectOwnPath(c.path, repo.relPath, repo.annotationsDir))
+  const changes = (panel.status?.changes ?? []).filter(
+    // Feedback files are plain files: field review never covers them.
+    (c) => !review || !isProjectOwnPath(c.path, repo.relPath, repo.annotationsDir) || isFeedbackPath(c.path.slice(repo.annotationsDir.length + 1)),
+  )
   // The switcher only ever offers local branches — checking out a
   // remote-tracking ref would detach HEAD. The merge picker takes both.
   const localBranches = branches.filter((b) => !b.remote)

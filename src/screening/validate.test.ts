@@ -45,6 +45,7 @@ function project(papers: Paper[]): Project {
     annotationsDir: null,
     schema: SCHEMA,
     aiEnabled: true,
+    aiSeat: false,
     finishCheckbox: true,
     reviewers: 1,
     papers,

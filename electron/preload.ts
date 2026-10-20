@@ -23,6 +23,9 @@ contextBridge.exposeInMainWorld('slr', {
   screeningSource: (projectPath: string) => ipcRenderer.invoke('project:screeningSource', projectPath),
   moveAnnotationsDir: (projectPath: string, folder: string) =>
     ipcRenderer.invoke('project:moveAnnotationsDir', projectPath, folder),
+  writeFeedback: (projectPath: string, fileName: string, content: string) =>
+    ipcRenderer.invoke('project:writeFeedback', projectPath, fileName, content),
+  listFeedback: (projectPath: string) => ipcRenderer.invoke('project:listFeedback', projectPath),
   splitAnnotations: (projectPath: string, plan: unknown) =>
     ipcRenderer.invoke('project:splitAnnotations', projectPath, plan),
   pickPdfs: () => ipcRenderer.invoke('pdf:pick'),
@@ -55,6 +58,48 @@ contextBridge.exposeInMainWorld('slr', {
   callLlm: (requestId: string, request: unknown) =>
     ipcRenderer.invoke('llm:call', requestId, request),
   abortLlm: (requestId: string) => ipcRenderer.send('llm:abort', requestId),
+  fetchWeb: (requestId: string, url: string) => ipcRenderer.invoke('web:fetch', requestId, url),
+  abortWeb: (requestId: string) => ipcRenderer.send('web:abort', requestId),
+
+  // Local servers (Ollama first). The server URL is validated in the main process.
+  ollama: {
+    version: (baseUrl: string) => ipcRenderer.invoke('ollama:version', baseUrl),
+    list: (baseUrl: string) => ipcRenderer.invoke('ollama:list', baseUrl),
+    show: (baseUrl: string, model: string, numCtx?: number) => ipcRenderer.invoke('ollama:show', baseUrl, model, numCtx),
+    ps: (baseUrl: string) => ipcRenderer.invoke('ollama:ps', baseUrl),
+    pull: (requestId: string, baseUrl: string, model: string) => ipcRenderer.invoke('ollama:pull', requestId, baseUrl, model),
+    cancelPull: (requestId: string) => ipcRenderer.send('ollama:cancelPull', requestId),
+    onPullProgress: (cb: (p: unknown) => void) => {
+      const listener = (_e: unknown, p: unknown) => cb(p)
+      ipcRenderer.on('ollama:pullProgress', listener)
+      return () => ipcRenderer.removeListener('ollama:pullProgress', listener)
+    },
+    delete: (baseUrl: string, model: string) => ipcRenderer.invoke('ollama:delete', baseUrl, model),
+    manifestSize: (model: string) => ipcRenderer.invoke('ollama:manifestSize', model),
+  },
+  discoverLocalServer: (baseUrl: string) => ipcRenderer.invoke('localserver:discover', baseUrl),
+
+  // App-managed llama.cpp runtime + local decision models. Only catalog ids cross this bridge.
+  local: {
+    probe: () => ipcRenderer.invoke('local:probe'),
+    runtime: () => ipcRenderer.invoke('local:runtime'),
+    runtimePlan: () => ipcRenderer.invoke('local:runtimePlan'),
+    runtimeInstall: () => ipcRenderer.invoke('local:runtimeInstall'),
+    modelPlan: (id: string) => ipcRenderer.invoke('local:modelPlan', id),
+    modelInstall: (id: string) => ipcRenderer.invoke('local:modelInstall', id),
+    cancel: (id: string) => ipcRenderer.invoke('local:cancel', id),
+    installed: () => ipcRenderer.invoke('local:installed'),
+    remove: (id: string) => ipcRenderer.invoke('local:remove', id),
+    start: (id: string) => ipcRenderer.invoke('local:start', id),
+    stop: (id: string) => ipcRenderer.invoke('local:stop', id),
+    status: () => ipcRenderer.invoke('local:status'),
+    logs: (id: string) => ipcRenderer.invoke('local:logs', id),
+    onProgress: (cb: (p: unknown) => void) => {
+      const listener = (_e: unknown, p: unknown) => cb(p)
+      ipcRenderer.on('local:progress', listener)
+      return () => ipcRenderer.removeListener('local:progress', listener)
+    },
+  },
 
   // Unsaved-changes coordination for a clean quit.
   setDirty: (dirty: boolean) => ipcRenderer.send('app:setDirty', dirty),

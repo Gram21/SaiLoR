@@ -222,3 +222,51 @@ describe('PdfViewer: capture normalized text selection (REQ-PDF-60)', () => {
     // real layout), so that part of the flow can't be driven in jsdom.
   })
 })
+
+describe('PdfViewer: jump from an AI evidence quote (REQ-LLM-460)', () => {
+  it('locates an exact quote and clears the pending request', async () => {
+    render(<PdfViewer />)
+    await screen.findByTestId('pdf-document')
+
+    act(() => {
+      st().requestPdfFind('p1', 'sample text')
+    })
+
+    await waitFor(() => expect(st().pdfFindRequest).toBeNull())
+  })
+
+  it('falls back to a shorter leading word sequence when the full quote is not verbatim in the text layer', async () => {
+    render(<PdfViewer />)
+    await screen.findByTestId('pdf-document')
+
+    // Not present verbatim (extra trailing words), but its first 3 words —
+    // "Page 1 sample" — are, so the progressive fallback should still land it.
+    act(() => {
+      st().requestPdfFind('p1', 'Page 1 sample text nonsense trailing words here')
+    })
+
+    await waitFor(() => expect(st().pdfFindRequest).toBeNull())
+  })
+
+  it('shows a non-blocking notice and drops the request when the quote is nowhere to be found', async () => {
+    render(<PdfViewer />)
+    await screen.findByTestId('pdf-document')
+
+    // Fake timers only from here: the give-up timeout is what's under test,
+    // not the (real-timer) PDF-loading/text-layer setup above.
+    vi.useFakeTimers()
+    try {
+      act(() => {
+        st().requestPdfFind('p1', 'this text is nowhere in the document at all')
+      })
+      act(() => {
+        vi.advanceTimersByTime(3000)
+      })
+
+      expect(screen.getByText("Couldn't locate this quote in the PDF.")).toBeInTheDocument()
+      expect(st().pdfFindRequest).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})

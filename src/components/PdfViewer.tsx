@@ -9,6 +9,7 @@ import { MARK_COLORS, sortMarksForCycling, type MarkRect, type PdfMark } from '.
 import { screeningSeatLabel } from '../model/screeningMarks'
 import { detectEntryBox, detectNumericCitation, findNumericReference, type PreviewTextItem } from '../model/refPreview'
 import { getPlatform } from '../platform'
+import { normalize } from '../llm/verify'
 // Side-effect import: configures the pdf.js worker.
 import '../platform/pdfjs'
 
@@ -125,6 +126,31 @@ function findMatches(root: HTMLElement, query: string, caseSensitive: boolean): 
     }
   })
   return ranges
+}
+
+/**
+ * Ranges matching an AI evidence quote, for the "jump from evidence to PDF"
+ * flow (see `pdfFindRequest`). Extracted text never matches a PDF's text
+ * layer byte-for-byte (curly quotes, ligatures, line-break hyphenation), so
+ * this tries progressively looser queries via `findMatches` and stops at the
+ * first that hits: the quote as-is, then normalized (straight quotes, no
+ * hyphenation), then its first 8/5/3 words — landing near the passage beats
+ * finding nothing.
+ */
+function findQuoteRanges(root: HTMLElement, quote: string): Range[] {
+  const direct = findMatches(root, quote, false)
+  if (direct.length > 0) return direct
+  const normQuote = normalize(quote)
+  if (!normQuote) return []
+  const normed = findMatches(root, normQuote, false)
+  if (normed.length > 0) return normed
+  const words = normQuote.split(' ').filter(Boolean)
+  for (const n of [8, 5, 3]) {
+    if (words.length <= n) continue
+    const found = findMatches(root, words.slice(0, n).join(' '), false)
+    if (found.length > 0) return found
+  }
+  return []
 }
 
 /** Clamps a `position: fixed` popover anchored at a raw click point into the
@@ -947,6 +973,61 @@ export function PdfViewer() {
     setPendingMarkJump(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingMarkJump])
+
+  // A quote to locate requested from the AI review table's evidence column
+  // (REQ-LLM-460). Text layers render page by page after the document loads,
+  // so a request for a paper whose pages aren't all up yet is retried on every
+  // `textRenderTick` rather than given up on immediately; `pdfFindTimeoutRef`
+  // gives up and shows `quoteNotFound` if nothing turns up within a couple of
+  // seconds of the *current* request (a fresh nonce restarts the clock).
+  const pdfFindRequest = useStore((s) => s.pdfFindRequest)
+  const clearPdfFindRequest = useStore((s) => s.clearPdfFindRequest)
+  const [quoteNotFound, setQuoteNotFound] = useState(false)
+  const pdfFindTimeoutRef = useRef<number | undefined>(undefined)
+  const pdfFindNonceRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (!pdfFindRequest || pdfFindRequest.paperId !== paperId) return
+    if (pdfFindNonceRef.current !== pdfFindRequest.nonce) {
+      pdfFindNonceRef.current = pdfFindRequest.nonce
+      setQuoteNotFound(false)
+      if (pdfFindTimeoutRef.current !== undefined) window.clearTimeout(pdfFindTimeoutRef.current)
+      pdfFindTimeoutRef.current = window.setTimeout(() => {
+        setQuoteNotFound(true)
+        clearPdfFindRequest()
+      }, 2500)
+    }
+    const root = containerRef.current
+    if (!root || numPages === 0) return
+    const ranges = findQuoteRanges(root, pdfFindRequest.text)
+    const target = ranges[0]
+    if (!target) return // not rendered yet (or truly absent) — the timeout above settles it
+    if (pdfFindTimeoutRef.current !== undefined) window.clearTimeout(pdfFindTimeoutRef.current)
+    if (canHighlight && HighlightCtor && highlightRegistry) {
+      highlightRegistry.set(HL_NAME_ACTIVE, new HighlightCtor(target))
+      window.setTimeout(() => highlightRegistry.delete(HL_NAME_ACTIVE), 2000)
+    }
+    const page = pageNumberForNode(target.startContainer)
+    if (page) setCurrentPage(page)
+    const rect = target.getBoundingClientRect()
+    const rootRect = root.getBoundingClientRect()
+    if (rect.height > 0) root.scrollTop += rect.top - rootRect.top - root.clientHeight / 2
+    clearPdfFindRequest()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfFindRequest, paperId, numPages, textRenderTick])
+
+  useEffect(
+    () => () => {
+      if (pdfFindTimeoutRef.current !== undefined) window.clearTimeout(pdfFindTimeoutRef.current)
+    },
+    [],
+  )
+
+  // The "couldn't locate this quote" toast dismisses itself.
+  useEffect(() => {
+    if (!quoteNotFound) return
+    const t = window.setTimeout(() => setQuoteNotFound(false), 6000)
+    return () => window.clearTimeout(t)
+  }, [quoteNotFound])
 
   /** While `placingNote` is active, a plain click inside a page drops a
    *  sticky note at that point and opens its comment popover — one shot,
@@ -1881,6 +1962,20 @@ export function PdfViewer() {
           </div>,
           document.body,
         )}
+      {quoteNotFound && (
+        <div className="toast" role="status">
+          <span className="toast-text">Couldn't locate this quote in the PDF.</span>
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => setQuoteNotFound(false)}
+            title="Dismiss"
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
     </div>
   )
 }

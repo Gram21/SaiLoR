@@ -50,6 +50,17 @@ function projectJson(opts: { reviewers?: number } = {}) {
   })
 }
 
+function annotationProjectJson(opts: { reviewers?: number } = {}) {
+  return JSON.stringify({
+    version: 1,
+    config: {
+      schema: [{ name: 'Field', type: 'string' }],
+      ...(opts.reviewers ? { reviewers: opts.reviewers } : {}),
+    },
+    papers: [{ id: 'p1', title: 'Paper One', authors: [], pdf: 'p1.pdf', annotations: {} }],
+  })
+}
+
 beforeEach(() => {
   useStore.setState({
     project: null,
@@ -90,6 +101,21 @@ describe('REQ-UI-30: seat switcher in toolbar', () => {
     expect(within(group).getByRole('button', { name: '1' })).not.toHaveClass('active')
   })
 
+})
+
+describe('the AI button in the toolbar', () => {
+  it('is enabled for a normal, single-reviewer annotation project', () => {
+    st().loadFromText(annotationProjectJson(), null, 'test.json')
+    render(<Toolbar />)
+    expect(screen.getByRole('button', { name: 'AI' })).not.toBeDisabled()
+  })
+
+  it('is disabled for the Consolidation seat', () => {
+    st().loadFromText(annotationProjectJson({ reviewers: 2 }), null, 'test.json')
+    act(() => st().selectReviewer('consolidation'))
+    render(<Toolbar />)
+    expect(screen.getByRole('button', { name: 'AI' })).toBeDisabled()
+  })
 })
 
 describe('unreadable annotation files stay visible for the whole session', () => {
@@ -145,13 +171,25 @@ describe('REQ-UI-20: toolbar project controls', () => {
     expect(st().autosaveEnabled).toBe(true)
   })
 
-  it('Close is disabled with no project open, enabled once one is', () => {
+  it('Close project is disabled with no project open, enabled once one is', async () => {
     const { rerender } = render(<Toolbar />)
-    expect(screen.getByRole('button', { name: 'Close' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: /Open/ }))
+    expect(screen.getByRole('menuitem', { name: 'Close project' })).toBeDisabled()
+    await userEvent.keyboard('{Escape}')
 
     act(() => st().loadFromText(projectJson(), null, 'test.json'))
     rerender(<Toolbar />)
-    expect(screen.getByRole('button', { name: 'Close' })).not.toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: /Open/ }))
+    expect(screen.getByRole('menuitem', { name: 'Close project' })).not.toBeDisabled()
+  })
+
+  it('groups Validate and AI as review tools, apart from the file and Git controls', () => {
+    st().loadFromText(projectJson(), null, 'test.json')
+    render(<Toolbar />)
+    const tools = screen.getByRole('group', { name: 'Review tools' })
+    expect(within(tools).getByRole('button', { name: 'Validate' })).toBeInTheDocument()
+    expect(within(tools).getByRole('button', { name: 'AI' })).toBeInTheDocument()
+    expect(within(tools).queryByRole('button', { name: 'Git' })).not.toBeInTheDocument()
   })
 
   it('the Validate button runs validation for a picked single-reviewer seat', () => {

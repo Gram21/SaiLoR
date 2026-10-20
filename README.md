@@ -138,6 +138,9 @@ something for that paper — and deleted again if it's cleared back to empty. A 
 these `screening-consolidated.json` / `screening-<n>.json` instead, so the two kinds of per-paper
 decision are distinguishable at a glance.
 
+The name `feedback` is reserved inside `annotations/`: `annotations/feedback/*.json` holds AI schema-feedback
+files (not papers, never pruned by a save; commit them like any other file). A paper cannot use `feedback` as its id.
+
 `project.json` itself:
 
 ```jsonc

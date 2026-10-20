@@ -474,6 +474,7 @@ describe('validateProject', () => {
       annotationsDir: null,
       schema: sampleSchema,
       aiEnabled: true,
+      aiSeat: false,
       finishCheckbox: true,
       reviewers: 1,
       papers,

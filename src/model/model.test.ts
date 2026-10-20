@@ -17,7 +17,7 @@ import {
   isFieldVisible,
   type AnnotationValueTree,
 } from './annotations'
-import { loadProject, serializeProject, ProjectLoadError } from './project'
+import { loadProject, serializeProject, ProjectLoadError, aiSeatId, seatLabel } from './project'
 
 const sampleSchema: AnnotationDef[] = [
   { name: 'Relevant', type: 'boolean' },
@@ -1226,6 +1226,13 @@ describe('Paper.aiUsage (AI-use disclosure)', () => {
     expect(loadProject(withUsage([record])).papers[0].aiUsage).toEqual([record])
   })
 
+  it('round-trips a screening-mode record', () => {
+    const record = { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-07-15T10:00:00.000Z', mode: 'screening' }
+    const loaded = loadProject(withUsage([record]))
+    expect(loaded.papers[0].aiUsage).toEqual([record])
+    expect(loadProject(serializeProject(loaded)).papers[0].aiUsage).toEqual([record])
+  })
+
   it('keeps array order — that order is how "which use came first" is read', () => {
     const a = { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-07-15T10:00:00.000Z' }
     const b = { provider: 'anthropic', model: 'claude-opus-4-8', appliedAt: '2026-07-15T10:05:00.000Z' }
@@ -1265,6 +1272,114 @@ describe('Paper.aiUsage (AI-use disclosure)', () => {
     const record = { provider: 'google', model: 'gemini-3.5-flash', appliedAt: '2026-07-15T10:00:00.000Z' }
     const once = serializeProject(loadProject(withUsage([record])))
     expect(loadProject(once).papers[0].aiUsage).toEqual([record])
+  })
+
+  it('loads and round-trips the optional disclosure fields (mode, judge, rounds, verdicts, fewShot, edited, reviewer)', () => {
+    const record = {
+      provider: 'openai',
+      model: 'gpt-5.5',
+      appliedAt: '2026-07-15T10:00:00.000Z',
+      mode: 'agent' as const,
+      judge: { provider: 'anthropic', model: 'claude-opus-4-8' },
+      rounds: 2,
+      verdicts: { accept: 5, revise: 1, reject: 0 },
+      fewShot: 3,
+      edited: 3,
+      rechecked: 2,
+      webSearches: 4,
+      reviewer: '2',
+    }
+    expect(loadProject(withUsage([record])).papers[0].aiUsage).toEqual([record])
+    const once = serializeProject(loadProject(withUsage([record])))
+    expect(loadProject(once).papers[0].aiUsage).toEqual([record])
+  })
+
+  it('drops a malformed optional field but keeps the base record', () => {
+    const base = { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-07-15T10:00:00.000Z' }
+    expect(loadProject(withUsage([{ ...base, mode: 'bogus' }])).papers[0].aiUsage).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, judge: { provider: 'anthropic' } }])).papers[0].aiUsage).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, rounds: 'two' }])).papers[0].aiUsage).toEqual([base])
+    expect(
+      loadProject(withUsage([{ ...base, verdicts: { accept: 1, revise: 1 } }])).papers[0].aiUsage,
+    ).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, fewShot: '3' }])).papers[0].aiUsage).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, edited: '3' }])).papers[0].aiUsage).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, rechecked: '2' }])).papers[0].aiUsage).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, webSearches: null }])).papers[0].aiUsage).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, reviewer: 42 }])).papers[0].aiUsage).toEqual([base])
+  })
+})
+
+describe('config.aiSeat (AI reviewer seat)', () => {
+  const withAiSeat = (config: Record<string, unknown>) =>
+    JSON.stringify({
+      version: 1,
+      config: { schema: sampleSchema, ...config },
+      papers: [],
+    })
+
+  it('defaults to false when config.aiSeat is absent', () => {
+    expect(loadProject(withAiSeat({ reviewers: 2 })).aiSeat).toBe(false)
+  })
+
+  it('is enabled only by an explicit true', () => {
+    expect(loadProject(withAiSeat({ reviewers: 2, aiSeat: false })).aiSeat).toBe(false)
+    expect(loadProject(withAiSeat({ reviewers: 2, aiSeat: true })).aiSeat).toBe(true)
+  })
+
+  it('writes config.aiSeat: true only when enabled, and keeps a normal file clean', () => {
+    const off = JSON.parse(serializeProject(loadProject(withAiSeat({ reviewers: 2 }))))
+    expect('aiSeat' in off.config).toBe(false)
+    const on = JSON.parse(serializeProject(loadProject(withAiSeat({ reviewers: 2, aiSeat: true }))))
+    expect(on.config.aiSeat).toBe(true)
+  })
+
+  it('round-trips through load → serialize → reload', () => {
+    const once = serializeProject(loadProject(withAiSeat({ reviewers: 2, aiSeat: true })))
+    expect(loadProject(once).aiSeat).toBe(true)
+  })
+
+  describe('aiSeatId', () => {
+    it('is null when aiSeat is off', () => {
+      expect(aiSeatId(loadProject(withAiSeat({ reviewers: 2, aiSeat: false })))).toBeNull()
+    })
+
+    it('is null when AI-assisted annotation is disabled', () => {
+      expect(aiSeatId(loadProject(withAiSeat({ reviewers: 2, aiSeat: true, ai: false })))).toBeNull()
+    })
+
+    it('is null with fewer than 2 reviewers', () => {
+      expect(aiSeatId(loadProject(withAiSeat({ aiSeat: true })))).toBeNull()
+    })
+
+    it('is the last seat for a screening project too', () => {
+      expect(
+        aiSeatId(loadProject(withAiSeat({ reviewers: 2, aiSeat: true, screening: { reasons: ['Not relevant'] } }))),
+      ).toBe('2')
+    })
+
+    it('is the last reviewer seat when everything lines up', () => {
+      expect(aiSeatId(loadProject(withAiSeat({ reviewers: 3, aiSeat: true })))).toBe('3')
+    })
+  })
+
+  describe('seatLabel', () => {
+    it('labels Consolidation regardless of aiSeat', () => {
+      const project = loadProject(withAiSeat({ reviewers: 3, aiSeat: true }))
+      expect(seatLabel(project, 'consolidation')).toBe('Consolidation')
+    })
+
+    it('labels the AI seat distinctly, and every other seat as a plain reviewer', () => {
+      const project = loadProject(withAiSeat({ reviewers: 3, aiSeat: true }))
+      expect(seatLabel(project, '3')).toBe('AI (Reviewer 3)')
+      expect(seatLabel(project, '1')).toBe('Reviewer 1')
+      expect(seatLabel(project, '2')).toBe('Reviewer 2')
+    })
+
+    it('never labels a seat as AI when aiSeat is ineffective', () => {
+      const project = loadProject(withAiSeat({ reviewers: 3, aiSeat: false }))
+      expect(seatLabel(project, '3')).toBe('Reviewer 3')
+    })
   })
 })
 

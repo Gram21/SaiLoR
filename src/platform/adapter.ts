@@ -6,7 +6,9 @@
 
 import type { RecentEntry } from './recents'
 import type { OsInfo } from '../model/version'
-import type { LlmConfig, LlmHttpRequest, LlmHttpResponse } from '../llm/types'
+import type { LlmConfig, LlmHttpRequest, LlmHttpResponse, WebFetchResult } from '../llm/types'
+import type { LocalServerResult, OllamaApi } from './ollamaApi'
+import type { LocalRuntimeApi } from './localRuntime'
 import type { GitPlatform } from '../git/types'
 import type { PdfMark } from '../model/pdfMarks'
 
@@ -142,6 +144,16 @@ export interface PlatformAdapter {
    *  when it is still next to it; `null` otherwise. */
   screeningSource(projectPath: string): Promise<{ name: string; text: string } | null>
 
+  /**
+   * Write one AI schema-feedback JSON file to `<annotationsDir>/feedback/<fileName>`
+   * (never overwrites; `fileName` must be unique per call). Returns the
+   * project-relative path written, or `null` when unsupported (no saved project path).
+   */
+  writeFeedback(handle: SaveHandle, fileName: string, content: string): Promise<string | null>
+
+  /** The feedback files saved for the project; empty when unsupported. */
+  listFeedback(handle: SaveHandle): Promise<{ name: string; bytes: number }[]>
+
   /** Rename the project's annotations folder and record the new name in its project file. */
   moveAnnotationsDir(projectPath: string, folder: string): Promise<void>
 
@@ -219,6 +231,21 @@ export interface PlatformAdapter {
    * which some providers will refuse.
    */
   callLlm(request: LlmHttpRequest, signal?: AbortSignal): Promise<LlmHttpResponse>
+
+  /**
+   * GET a public web page for the AI agent's `fetch_url` tool. Never carries an
+   * API key or cookies; the main process refuses private/loopback hosts.
+   */
+  fetchWeb(url: string, signal?: AbortSignal): Promise<WebFetchResult>
+
+  /** Control of a user-run Ollama server; undefined outside the desktop app. */
+  ollama?: OllamaApi
+
+  /** App-managed llama.cpp runtime and local decision models; null outside the desktop app. */
+  readonly localRuntime: LocalRuntimeApi | null
+
+  /** Probe a URL for Ollama / LM Studio / llama.cpp / vLLM and list its models (desktop app only). */
+  discoverLocalServer?(baseUrl: string): Promise<LocalServerResult>
 
   /**
    * Git operations against **the user's own git installation**, or `null`
