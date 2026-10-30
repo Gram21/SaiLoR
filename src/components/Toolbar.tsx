@@ -512,16 +512,18 @@ export function Toolbar() {
             <Icon name="check" />
             Validate
           </button>
-          <button
-            type="button"
-            className="tb-btn tb-btn-ai"
-            title={readOnly ? 'View-only mode — switch it off to run the AI' : aiBtn.title}
-            onClick={() => void openAiDialog()}
-            disabled={aiBtn.disabled || readOnly}
-          >
-            <Icon name="spark" />
-            AI
-          </button>
+          {(project?.aiEnabled ?? true) && (
+            <button
+              type="button"
+              className="tb-btn tb-btn-ai"
+              title={readOnly ? 'View-only mode — switch it off to run the AI' : aiBtn.title}
+              onClick={() => void openAiDialog()}
+              disabled={aiBtn.disabled || readOnly}
+            >
+              <Icon name="spark" />
+              AI
+            </button>
+          )}
         </div>
 
         <div className="toolbar-view">

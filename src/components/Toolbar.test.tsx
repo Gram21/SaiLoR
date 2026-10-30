@@ -50,12 +50,13 @@ function projectJson(opts: { reviewers?: number } = {}) {
   })
 }
 
-function annotationProjectJson(opts: { reviewers?: number } = {}) {
+function annotationProjectJson(opts: { reviewers?: number; ai?: boolean } = {}) {
   return JSON.stringify({
     version: 1,
     config: {
       schema: [{ name: 'Field', type: 'string' }],
       ...(opts.reviewers ? { reviewers: opts.reviewers } : {}),
+      ...(opts.ai === false ? { ai: false } : {}),
     },
     papers: [{ id: 'p1', title: 'Paper One', authors: [], pdf: 'p1.pdf', annotations: {} }],
   })
@@ -115,6 +116,12 @@ describe('the AI button in the toolbar', () => {
     act(() => st().selectReviewer('consolidation'))
     render(<Toolbar />)
     expect(screen.getByRole('button', { name: 'AI' })).toBeDisabled()
+  })
+
+  it('is not rendered when the project turns AI off', () => {
+    st().loadFromText(annotationProjectJson({ ai: false }), null, 'test.json')
+    render(<Toolbar />)
+    expect(screen.queryByRole('button', { name: 'AI' })).not.toBeInTheDocument()
   })
 })
 
