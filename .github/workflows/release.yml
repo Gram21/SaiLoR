@@ -136,7 +136,7 @@ jobs:
             || printf '<p>Release %s</p>' "$TAG")
 
           METADATA=$(jq -n \
-            --arg title "SaiLoR ${RELEASE_NAME:-$TAG}" \
+            --arg title "${RELEASE_NAME:-SaiLoR $TAG}" \
             --arg version "$TAG" \
             --arg description "$DESCRIPTION" \
             --arg url "${{ github.event.release.html_url }}" \
