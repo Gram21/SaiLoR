@@ -100,3 +100,73 @@ jobs:
         with:
           files: ${{ matrix.artifacts }}
           fail_on_unmatched_files: true
+
+  # Archive the published release on Zenodo as a new version of the existing
+  # record (shared concept DOI): source zip plus every release
+  # asset, with the GitHub release notes as description. Runs after all
+  # installers are attached. Publishing on Zenodo is permanent.
+  zenodo:
+    needs: build
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    env:
+      ZENODO_TOKEN: ${{ secrets.ZENODO_TOKEN }}
+      CONCEPT_RECID: "23804729"
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.event.release.tag_name }}
+      RELEASE_NAME: ${{ github.event.release.name }}
+      RELEASE_BODY: ${{ github.event.release.body }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Collect source zip and release assets
+        run: |
+          mkdir upload
+          git archive --format=zip --prefix="sailor-${TAG}/" -o "upload/sailor-${TAG}-source.zip" HEAD
+          gh release download "$TAG" --dir upload
+
+      - name: Create and publish Zenodo record
+        run: |
+          API=https://zenodo.org/api/deposit/depositions
+          AUTH="Authorization: Bearer ${ZENODO_TOKEN}"
+
+          DESCRIPTION=$(printf '%s' "${RELEASE_BODY:-Release ${TAG}}" \
+            | gh api markdown -F text=@- -f mode=gfm 2>/dev/null \
+            || printf '<p>Release %s</p>' "$TAG")
+
+          METADATA=$(jq -n \
+            --arg title "SaiLoR ${RELEASE_NAME:-$TAG}" \
+            --arg version "$TAG" \
+            --arg description "$DESCRIPTION" \
+            --arg url "${{ github.event.release.html_url }}" \
+            '{metadata: {
+              title: $title,
+              upload_type: "software",
+              description: $description,
+              version: $version,
+              license: "GPL-3.0-only",
+              creators: [{name: "Keim, Jan", affiliation: "Karlsruhe Institute of Technology"}],
+              related_identifiers: [{identifier: $url, relation: "isIdenticalTo", scheme: "url"}]
+            }}')
+
+          # Concept record: all SaiLoR versions share this DOI. Its API URL
+          # redirects to the latest published version.
+          LATEST=$(curl -fsSL "https://zenodo.org/api/records/${CONCEPT_RECID}" | jq -r .id)
+          DRAFT_URL=$(curl -fsS -X POST "$API/$LATEST/actions/newversion" -H "$AUTH" | jq -r .links.latest_draft)
+          DEPOSITION=$(curl -fsS "$DRAFT_URL" -H "$AUTH")
+          ID=$(jq -r .id <<<"$DEPOSITION")
+          BUCKET=$(jq -r .links.bucket <<<"$DEPOSITION")
+
+          # A new version starts with the previous version's files.
+          for fid in $(jq -r '.files[].id' <<<"$DEPOSITION"); do
+            curl -fsS -X DELETE "$API/$ID/files/$fid" -H "$AUTH"
+          done
+
+          curl -fsS -X PUT "$API/$ID" -H "$AUTH" -H "Content-Type: application/json" -d "$METADATA" >/dev/null
+
+          for f in upload/*; do
+            curl -fsS --upload-file "$f" -H "$AUTH" "$BUCKET/$(basename "$f")" >/dev/null
+          done
+
+          curl -fsS -X POST "$API/$ID/actions/publish" -H "$AUTH" | jq -r '"Published: " + .links.html + " DOI " + .doi'

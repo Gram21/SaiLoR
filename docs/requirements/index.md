@@ -17,7 +17,7 @@ per category so requirements can be inserted without renumbering.
 | [consolidation.md](consolidation.md) | REQ-CON | Reviewer seats, alignment of repeated entries, disagreement detection, unanimous adoption, agreement metrics, disagreement export |
 | [git-integration.md](git-integration.md) | REQ-GIT | Clone, status/commit, pull/merge, branches, stashes, history, repository setup, seat-collision warnings, git security gates |
 | [llm-annotation.md](llm-annotation.md) | REQ-LLM | LLM providers, key handling, prompt/response validation, suggestion review, AI-usage disclosure |
-| [platform.md](platform.md) | REQ-PLT | Desktop shell, open/save, unsaved-changes protection, recents, settings, PDF access control, self-update, build targets |
+| [platform.md](platform.md) | REQ-PLT | Desktop shell, open/save, unsaved-changes protection, recents, settings, PDF access control, self-update, build targets, Zenodo archiving |
 | [traceability.md](traceability.md) | — | Requirements-to-code traceability matrix with link-recovery method and coverage statistics |
 
 ## Glossary

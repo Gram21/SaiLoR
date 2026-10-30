@@ -279,3 +279,9 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/Toolbar.tsx` (Save menu), `src/state/settings.ts` (`slr.autosave`)
 - **Status:** Implemented
+
+### REQ-PLT-350 — Archive releases on Zenodo
+- **Description:** When a GitHub release is published and the installers are attached, the release workflow shall archive it on Zenodo as a new version of the existing SaiLoR record (concept record 23804729), so that all archived releases share one concept DOI. The Zenodo version shall use the release notes as description, the tag as version, and shall contain a source zip of the tagged commit plus every release asset. Files inherited from the previous Zenodo version shall be removed before upload. The step shall not run for manual workflow runs.
+- **Type:** Non-functional, design constraint (ISO 25010: Portability — Adaptability)
+- **Evidence:** `.github/workflows/release.yml` (job `zenodo`), `README.md` (Zenodo badge)
+- **Status:** Implemented

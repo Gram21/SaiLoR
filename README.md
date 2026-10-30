@@ -4,6 +4,10 @@
 
 <h1 align="center">SaiLoR</h1>
 
+<p align="center">
+  <a href="https://doi.org/10.5281/zenodo.23804729"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.23804729.svg" alt="DOI"></a>
+</p>
+
 A tool to assist reviewers during **Systematic Literature Reviews (SLR)** — the letters are in the
 name: **S**ai**L**o**R**. Open a single JSON "project" file that holds both an annotation schema
 (a nested, cardinality-controlled taxonomy) and the papers to annotate. Read each paper's PDF, fill in typed

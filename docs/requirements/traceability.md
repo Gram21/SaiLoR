@@ -457,6 +457,7 @@ inspection only.
 | REQ-PLT-320 | Build targets | Non-functional, design constraint · Portability — Adaptability | `package.json:51-117` | — | — | `README.md` (release table)<br>`openwiki/operations/build-release.md` §Build pipeline / §electron-builder configuration |
 | REQ-PLT-330 | Ad-hoc sign unsigned macOS builds | Non-functional, design constraint · Usability — Operability | `scripts/afterPack.cjs` | — | commit `3850b55` | `openwiki/operations/build-release.md` §Build pipeline / §electron-builder configuration |
 | REQ-PLT-340 | Optional autosave | Functional · Functional Suitability | `src/components/Toolbar.tsx` (Save menu)<br>`src/state/settings.ts` (`slr.autosave`) | — | — | `openwiki/architecture.md` §State Management |
+| REQ-PLT-350 | Archive releases on Zenodo | Non-functional, design constraint · Portability — Adaptability | `.github/workflows/release.yml` (job `zenodo`) | — | — | `README.md` (Zenodo badge) |
 
 ## Coverage statistics
 
