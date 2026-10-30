@@ -441,7 +441,7 @@ export function fitForChat(cfg: LlmConfig, fixedText: string, paperText: string)
   if (budget === null) return { text: paperText }
   if (budget < MIN_PAPER_TOKENS) {
     throw new Error(
-      `The model's window (${cfg.contextTokens!.toLocaleString()} tokens) is too small for this schema/prompt; raise the context or use fewer examples.`,
+      `The model's window (${cfg.contextTokens!.toLocaleString('en-US')} tokens) is too small for this schema/prompt; raise the context or use fewer examples.`,
     )
   }
   const f = fitPaperText(paperText, budget)
@@ -2214,7 +2214,7 @@ async function runOnePaperClassify(
 
   const info = plan.notHandled.map((n) => `left to you: ${n.path} — ${n.reason}`)
   if (plan.requests.length > 0 && plan.state.mode !== 'full') {
-    const window = systemOneProfileFor(config).contextTokens.toLocaleString()
+    const window = systemOneProfileFor(config).contextTokens.toLocaleString('en-US')
     info.push(
       plan.state.mode === 'abstract-only'
         ? `${config.model} saw title + abstract only — its input window is ${window} tokens`
