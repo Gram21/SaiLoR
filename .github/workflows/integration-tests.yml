@@ -55,3 +55,11 @@ jobs:
 
       - name: Run Electron smoke test
         run: xvfb-run -a npm run test:e2e
+
+      - name: Upload e2e traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: test-results/
+          if-no-files-found: ignore

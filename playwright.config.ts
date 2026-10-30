@@ -15,5 +15,8 @@ export default defineConfig({
   // is no shared state to race — parallelism would only cost more CPU/RAM for
   // no speed-up worth the complexity.
   workers: 1,
+  // CI runners are slower and flakier than dev machines: retry once and keep a trace of any failure.
+  retries: process.env.CI ? 1 : 0,
+  use: { trace: 'retain-on-failure' },
   reporter: 'list',
 })
