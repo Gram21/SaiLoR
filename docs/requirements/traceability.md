@@ -463,13 +463,19 @@ inspection only.
 
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 347 | 100% |
-| With at least one verifying test | 299 | 86% |
-| Without an automated check (source inspection only) | 48 | 14% |
-| With an introducing/pinning commit | 110 | 32% |
-| With a documentation link | 332 | 96% |
+| Requirements traced | 387 | 100% |
+| With at least one verifying test | 338 | 87% |
+| Without an automated check (source inspection only) | 49 | 13% |
+| With an introducing/pinning commit | 111 | 29% |
+| With a documentation link | 334 | 86% |
 | REQ-LLM-740 | Trim the paper to each model's input window | Functional · Reliability / Functional Suitability | `src/state/aiStore.ts` (`fitForChat`, `describeFit`)<br>`src/state/aiScreeningStore.ts` (`promptOne`)<br>`src/components/AiDialog.tsx` (`trimHint`) | `src/state/aiStore.budget.test.ts`<br>`src/state/aiScreeningStore.test.ts` | — | — |
 | REQ-LLM-741 | Never apply results from truncated input | Functional · Reliability / Safety | `src/state/aiStore.ts` (`startBlocker`, `LOCAL_TRUNCATED_MESSAGE`, `destinationNote`)<br>`src/state/aiScreeningStore.ts` | `src/state/aiStore.budget.test.ts`<br>`src/state/aiScreeningStore.test.ts`<br>`src/components/AiDialog.test.tsx` | — | — |
 | REQ-LLM-742 | Report what the model could not handle (fields, state mode) | Functional · Functional Suitability / Usability | `src/state/aiStore.ts` (`askSystemOne`, `runOnePaperClassify`, `ensureLocalModel`)<br>`src/state/aiScreeningStore.ts` (`classifyOne`)<br>`src/llm/modelProfiles.ts` | `src/state/aiStore.budget.test.ts`<br>`src/state/aiScreeningStore.test.ts`<br>`src/llm/modelProfiles.test.ts` | — | — |
 | REQ-LLM-743 | Agent mode requires a large context window | Functional · Reliability | `src/state/aiStore.ts` (`agentContextReason`, `startBlocker`)<br>`src/components/AiDialog.tsx` | `src/state/aiStore.budget.test.ts`<br>`src/components/AiDialog.test.tsx` | — | — |
-| REQ-LLM-750 | Mark the AI feature as a preview | Functional · Usability | `src/components/AiPreviewNotice.tsx`, `src/components/AiDialog.tsx`, `src/components/AiScreeningDialog.tsx`, `src/components/LlmSettingsDialog.tsx` | Implemented |
+| REQ-LLM-330 | Agent-mode tool set | Functional · Functional Suitability | `src/llm/tools.ts`<br>`src/llm/chat.ts` | `src/llm/tools.test.ts`<br>`src/llm/chat.test.ts` | — | — |
+| REQ-LLM-340 | Verify agent-mode evidence before the judge sees it | Functional · Functional Suitability | `src/llm/verify.ts` | `src/llm/verify.test.ts` | — | — |
+| REQ-LLM-350 | Bounded judge review loop | Functional · Functional Suitability | `src/llm/agent.ts`<br>`src/llm/judge.ts` | `src/llm/agent.test.ts`<br>`src/llm/judge.test.ts` | — | — |
+| REQ-LLM-360 | Treat fetched web content as untrusted data | Non-functional · Security | `src/llm/tools.ts` (`fetchUrl`)<br>`src/llm/prompt.ts` (`buildAgentSystemPrompt`) | `src/llm/tools.test.ts` | — | — |
+| REQ-LLM-370 | Per-run token and call accounting | Functional · Functional Suitability | `src/llm/agent.ts` (`AgentResult.usage`) | `src/llm/agent.test.ts` | — | — |
+| REQ-LLM-400 | Restrict agent web access to public hosts | Non-functional · Security | `electron/webFetch.ts`<br>`electron/main.ts` (`web:fetch`/`web:abort`) | `electron/webFetch.test.ts` | — | — |
+| REQ-LLM-750 | Mark the AI feature as a preview | Functional · Usability | `src/components/AiPreviewNotice.tsx`<br>`src/components/AiDialog.tsx`<br>`src/components/AiScreeningDialog.tsx`<br>`src/components/LlmSettingsDialog.tsx` | `src/components/AiPreviewNotice.test.tsx` | commit `3103a27` | — |
