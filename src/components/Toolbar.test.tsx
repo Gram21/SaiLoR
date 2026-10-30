@@ -44,6 +44,7 @@ function projectJson(opts: { reviewers?: number } = {}) {
     version: 1,
     config: {
       screening: { reasons: ['Wrong topic', 'Duplicate'] },
+      ai: true,
       ...(opts.reviewers ? { reviewers: opts.reviewers } : {}),
     },
     papers: [{ id: 'p1', title: 'Paper One', authors: [], pdf: '', annotations: {} }],
@@ -55,6 +56,7 @@ function annotationProjectJson(opts: { reviewers?: number; ai?: boolean } = {}) 
     version: 1,
     config: {
       schema: [{ name: 'Field', type: 'string' }],
+      ai: true,
       ...(opts.reviewers ? { reviewers: opts.reviewers } : {}),
       ...(opts.ai === false ? { ai: false } : {}),
     },
@@ -116,6 +118,17 @@ describe('the AI button in the toolbar', () => {
     act(() => st().selectReviewer('consolidation'))
     render(<Toolbar />)
     expect(screen.getByRole('button', { name: 'AI' })).toBeDisabled()
+  })
+
+  it('is not rendered with no project open', () => {
+    render(<Toolbar />)
+    expect(screen.queryByRole('button', { name: 'AI' })).not.toBeInTheDocument()
+  })
+
+  it('is not rendered when the project does not set config.ai', () => {
+    st().loadFromText(JSON.stringify({ version: 1, config: { schema: [{ name: 'F', type: 'string' }] }, papers: [] }), null, 't.json')
+    render(<Toolbar />)
+    expect(screen.queryByRole('button', { name: 'AI' })).not.toBeInTheDocument()
   })
 
   it('is not rendered when the project turns AI off', () => {

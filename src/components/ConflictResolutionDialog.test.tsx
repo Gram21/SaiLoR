@@ -12,7 +12,7 @@ function projectJson() {
   return JSON.stringify({
     version: 1,
     title: 'My Review',
-    config: { schema: [{ name: 'Finding', type: 'string' }], reviewers: 2, aiSeat: true },
+    config: { ai: true, schema: [{ name: 'Finding', type: 'string' }], reviewers: 2, aiSeat: true },
     papers: [{ id: 'p1', title: 'A Paper', authors: [], pdf: 'a.pdf', annotations: {} }],
   })
 }

@@ -52,6 +52,7 @@ const PROJECT = JSON.stringify({
   version: 1,
   title: 'AI apply',
   config: {
+    ai: true,
     schema: [
       { name: 'Summary', type: 'string', description: 'One sentence.' },
       { name: 'Year', type: 'number' },

@@ -48,8 +48,8 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `electron/main.ts:1488-1500,1549`, commit `98796c1`
 - **Status:** Implemented
 
-### REQ-LLM-80 — Honor project-level AI opt-out
-- **Description:** When a project's configuration sets `ai` to false, the system shall not offer the AI feature for that project, and the toolbar AI button shall not be rendered.
+### REQ-LLM-80 — AI is off unless the project opts in
+- **Description:** The system shall offer the AI feature only for a project whose configuration sets `ai` to true. When `ai` is absent or false, and when no project is open, the system shall not offer the AI feature and the toolbar AI button shall not be rendered. A new project in the editor starts with AI off, and the editor writes `ai: true` only when the author allows it.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/project.ts:683`, `src/components/Toolbar.tsx:96-112,188`, `src/state/aiStore.ts:139`
 - **Status:** Implemented
@@ -193,7 +193,7 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-320 — AI entry point in the toolbar
-- **Description:** The system shall offer the AI-assisted annotation feature as a toolbar button, disabled with an honest reason when no project is open, the project is busy, the project editor is open, the project is a screening project, the Consolidation seat is selected, or a multi-reviewer project has no reviewer picked. The button is not rendered when the project's configuration turns AI off (REQ-LLM-80).
+- **Description:** The system shall offer the AI-assisted annotation feature as a toolbar button, disabled with an honest reason when no project is open, the project is busy, the project editor is open, the project is a screening project, the Consolidation seat is selected, or a multi-reviewer project has no reviewer picked. The button is rendered only when a project is open and its configuration sets `ai: true` (REQ-LLM-80).
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/Toolbar.tsx:91-114,354-360`, `src/components/Toolbar.test.ts`
 - **Status:** Implemented

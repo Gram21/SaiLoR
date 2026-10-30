@@ -69,7 +69,7 @@ function cfg(): LlmConfig {
 const PROJECT = JSON.stringify({
   version: 1,
   title: 'Dialog',
-  config: { schema: [{ name: 'Summary', type: 'string' }] },
+  config: { ai: true, schema: [{ name: 'Summary', type: 'string' }] },
   papers: [
     { id: 'p1', title: 'Paper One', authors: [], pdf: 'p1.pdf', annotations: {} },
     { id: 'p2', title: 'Paper Two', authors: [], pdf: 'p2.pdf', annotations: {} },

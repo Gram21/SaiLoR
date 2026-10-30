@@ -738,7 +738,7 @@ export function buildProjectJson(state: {
       // A screening draft's schema is the derived projection of its reasons,
       // never the (empty) authored node list — see `Project.screening`.
       schema: screening ? screeningSchemaDefs(screening) : toAnnotationDefs(state.nodes),
-      ...(state.aiEnabled ? {} : { ai: false }),
+      ...(state.aiEnabled ? { ai: true } : {}),
       ...(state.finishCheckbox === false ? { finishCheckbox: false } : {}),
       ...(state.reviewers > 1 ? { reviewers: state.reviewers } : {}),
       ...(state.aiSeat ? { aiSeat: true } : {}),
@@ -1270,8 +1270,8 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
     location: { handle: opened.handle, name: opened.name, path: opened.handle.path },
     version: parsed.version ?? 1,
     title: parsed.title ?? '',
-    // Absent means enabled; only an explicit `false` opts out.
-    aiEnabled: parsed.config.ai !== false,
+    // Absent means disabled; only an explicit `true` allows AI.
+    aiEnabled: parsed.config.ai === true,
     // Same rule, same reason — see `Project.finishCheckbox`.
     finishCheckbox: (parsed.config as { finishCheckbox?: unknown }).finishCheckbox !== false,
     // Absent or 1 means single-reviewer, same default as project.ts's loader.
@@ -1450,9 +1450,9 @@ export const useEditorStore = create<EditorState>()(
     location: null,
     version: 1,
     title: '',
-    // On by default: AI-assisted annotation is a core feature every new
-    // project gets unless its author opts out (see `setAiEnabled`).
-    aiEnabled: true,
+    // Off by default: the project's author must explicitly allow AI-assisted
+    // annotation (see `setAiEnabled`).
+    aiEnabled: false,
     // Enabled by default, unlike `aiEnabled`: hand sign-off is every
     // project's behavior unless its author opts out.
     finishCheckbox: true,
@@ -1495,8 +1495,8 @@ export const useEditorStore = create<EditorState>()(
         s.location = location
         s.version = 1
         s.title = ''
-        // See the initial-state comment above: on by default.
-        s.aiEnabled = true
+        // See the initial-state comment above: off by default.
+        s.aiEnabled = false
         s.finishCheckbox = true
         s.reviewers = 1
         s.aiSeat = false
@@ -2134,8 +2134,8 @@ export const useEditorStore = create<EditorState>()(
           s.location = location
           s.version = 1
           s.title = ''
-          // Same reasoning as the initial-state comment above: on by default.
-          s.aiEnabled = true
+          // Same reasoning as the initial-state comment above: off by default.
+          s.aiEnabled = false
           s.finishCheckbox = true
           // A second screening pass keeps the same team, so its seat count
           // (a PRISMA-reportable design property) is inherited, not reset to

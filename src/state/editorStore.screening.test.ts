@@ -545,7 +545,7 @@ describe('startFromScreening / resolveScreeningImport', () => {
 // feature, unless its author opts out — see the doc comments on the initial
 // state / startNew / the screening-import target:'start' branch in
 // editorStore.ts.
-describe('a new project defaults to aiEnabled: true', () => {
+describe('a new project defaults to aiEnabled: false', () => {
   it('startNew()', async () => {
     pickResult = {
       handle: { kind: 'electron', path: '/reviews/project.json' },
@@ -553,7 +553,7 @@ describe('a new project defaults to aiEnabled: true', () => {
       path: '/reviews/project.json',
     }
     await useEditorStore.getState().startNew()
-    expect(useEditorStore.getState().aiEnabled).toBe(true)
+    expect(useEditorStore.getState().aiEnabled).toBe(false)
     expect(JSON.parse(JSON.stringify(buildProjectJson(useEditorStore.getState()))).config.ai).toBeUndefined()
   })
 
@@ -574,19 +574,19 @@ describe('a new project defaults to aiEnabled: true', () => {
     }
     await useEditorStore.getState().startFromScreening()
     await useEditorStore.getState().resolveScreeningImport('include-undecided')
-    expect(useEditorStore.getState().aiEnabled).toBe(true)
+    expect(useEditorStore.getState().aiEnabled).toBe(false)
   })
 
   it('does not touch an existing file\'s own aiEnabled — only new-project defaults changed', () => {
     const opened = editorStateFromOpened({
       text: JSON.stringify({
         version: 1,
-        config: { schema: [{ name: 'X', type: 'string' }], ai: false },
+        config: { schema: [{ name: 'X', type: 'string' }], ai: true },
         papers: [],
       }),
       handle: { kind: 'electron', path: '/reviews/existing.json' },
       name: 'existing.json',
     })
-    expect(opened.aiEnabled).toBe(false)
+    expect(opened.aiEnabled).toBe(true)
   })
 })

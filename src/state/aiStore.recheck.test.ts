@@ -66,7 +66,7 @@ const cfg = (over: Partial<LlmConfig> = {}): LlmConfig => ({
 const PROJECT = JSON.stringify({
   version: 1,
   title: 'Recheck',
-  config: { schema: [{ name: 'Summary', type: 'string' }, { name: 'Year', type: 'number' }] },
+  config: { ai: true, schema: [{ name: 'Summary', type: 'string' }, { name: 'Year', type: 'number' }] },
   papers: [
     { id: 'p1', title: 'Paper One', authors: [], pdf: 'p1.pdf', annotations: {} },
     { id: 'p2', title: 'Paper Two', authors: [], pdf: 'p2.pdf', annotations: {} },

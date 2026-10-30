@@ -53,7 +53,7 @@ function projectJson(title: string, paperId: string) {
   return JSON.stringify({
     version: 1,
     title,
-    config: { schema: [{ name: 'Summary', type: 'string' }] },
+    config: { ai: true, schema: [{ name: 'Summary', type: 'string' }] },
     papers: [{ id: paperId, title: 'Paper', authors: [], pdf: `${paperId}.pdf`, annotations: {} }],
   })
 }

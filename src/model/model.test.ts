@@ -1169,7 +1169,7 @@ describe('annotationText (annotation-mode search haystack)', () => {
   })
 })
 
-describe('config.ai (AI-annotation opt-out)', () => {
+describe('config.ai (AI-annotation opt-in)', () => {
   const withAi = (ai: unknown) =>
     JSON.stringify({
       version: 1,
@@ -1177,26 +1177,26 @@ describe('config.ai (AI-annotation opt-out)', () => {
       papers: [],
     })
 
-  it('defaults to enabled when config.ai is absent', () => {
-    expect(loadProject(withAi(undefined)).aiEnabled).toBe(true)
+  it('defaults to disabled when config.ai is absent', () => {
+    expect(loadProject(withAi(undefined)).aiEnabled).toBe(false)
   })
 
-  it('is disabled only by an explicit false', () => {
+  it('is enabled only by an explicit true', () => {
     expect(loadProject(withAi(false)).aiEnabled).toBe(false)
     expect(loadProject(withAi(true)).aiEnabled).toBe(true)
   })
 
-  it('writes config.ai: false only when disabled, and keeps a normal file clean', () => {
-    const enabled = JSON.parse(serializeProject(loadProject(withAi(undefined))))
-    expect('ai' in enabled.config).toBe(false)
+  it('writes config.ai: true only when enabled, and keeps a normal file clean', () => {
+    const disabled = JSON.parse(serializeProject(loadProject(withAi(undefined))))
+    expect('ai' in disabled.config).toBe(false)
 
-    const disabled = JSON.parse(serializeProject(loadProject(withAi(false))))
-    expect(disabled.config.ai).toBe(false)
+    const enabled = JSON.parse(serializeProject(loadProject(withAi(true))))
+    expect(enabled.config.ai).toBe(true)
   })
 
-  it('round-trips the opt-out through load → serialize → reload', () => {
-    const once = serializeProject(loadProject(withAi(false)))
-    expect(loadProject(once).aiEnabled).toBe(false)
+  it('round-trips the opt-in through load → serialize → reload', () => {
+    const once = serializeProject(loadProject(withAi(true)))
+    expect(loadProject(once).aiEnabled).toBe(true)
   })
 })
 
@@ -1314,7 +1314,7 @@ describe('config.aiSeat (AI reviewer seat)', () => {
   const withAiSeat = (config: Record<string, unknown>) =>
     JSON.stringify({
       version: 1,
-      config: { schema: sampleSchema, ...config },
+      config: { schema: sampleSchema, ai: true, ...config },
       papers: [],
     })
 

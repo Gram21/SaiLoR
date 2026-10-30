@@ -347,16 +347,16 @@ describe('buildProjectJson', () => {
     expect('doi' in out).toBe(false)
   })
 
-  it('writes config.ai only when the editor disabled it', () => {
+  it('writes config.ai only when the editor allowed it', () => {
     const nodes = [node('X', { kind: 'string' })]
-    const on = buildProjectJson(draft(nodes, [], true)).config as Record<string, unknown>
-    expect('ai' in on).toBe(false)
-
     const off = buildProjectJson(draft(nodes, [], false)).config as Record<string, unknown>
-    expect(off.ai).toBe(false)
+    expect('ai' in off).toBe(false)
+
+    const on = buildProjectJson(draft(nodes, [], true)).config as Record<string, unknown>
+    expect(on.ai).toBe(true)
 
     // The loader reads back what the editor wrote.
-    expect(loadProject(JSON.stringify(buildProjectJson(draft(nodes, [], false)))).aiEnabled).toBe(false)
+    expect(loadProject(JSON.stringify(buildProjectJson(draft(nodes, [], true)))).aiEnabled).toBe(true)
   })
 
   it('writes config.reviewers only when the editor set more than one', () => {
@@ -404,8 +404,8 @@ describe('editorStateFromOpened (shared by "Edit annotation JSON…" and the rec
     const st = editorStateFromOpened(opened(projectJson))
     expect(st.version).toBe(2)
     expect(st.title).toBe('My Review')
-    // No config.ai in the file: AI stays enabled by default.
-    expect(st.aiEnabled).toBe(true)
+    // No config.ai in the file: AI stays disabled by default.
+    expect(st.aiEnabled).toBe(false)
     expect(st.extra).toEqual({ reviewers: ['A'] })
     expect(st.location).toMatchObject({ name: 'review.json', path: '/x/review.json' })
     expect(st.nodes.map((n) => n.name)).toEqual(['Relevant', 'Findings'])

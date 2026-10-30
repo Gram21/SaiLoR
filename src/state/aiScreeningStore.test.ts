@@ -58,6 +58,7 @@ function project(opts: { reviewers?: number; aiSeat?: boolean; reasons?: string[
   return JSON.stringify({
     version: 1,
     config: {
+      ai: true,
       screening: { reasons: opts.reasons ?? ['Wrong topic', 'Duplicate'] },
       ...(opts.reviewers ? { reviewers: opts.reviewers } : {}),
       ...(opts.aiSeat ? { aiSeat: true } : {}),

@@ -2,6 +2,7 @@
   "version": 1,
   "title": "Example Screening: Code Search and Program Repair",
   "config": {
+    "ai": true,
     "schema": [
       {
         "name": "Decision",

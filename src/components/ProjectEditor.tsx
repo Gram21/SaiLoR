@@ -27,8 +27,8 @@ const ISSUE_DISPLAY_LIMIT = 12
  * annotation workspace while `open` is true.
  *
  * The "Allow AI-assisted annotation" toggle below binds `EditorState.aiEnabled`,
- * which defaults to `true` for a new project (see the initial state /
- * `startNew` in editorStore.ts) — off is an explicit opt-out, not the default.
+ * which defaults to `false` for a new project (see the initial state /
+ * `startNew` in editorStore.ts) — on is an explicit opt-in.
  * For a screening draft it reads "Allow AI-assisted screening".
  */
 export function ProjectEditor() {

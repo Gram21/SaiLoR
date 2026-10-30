@@ -197,7 +197,7 @@ export function Toolbar() {
     !!project?.screening,
     currentReviewer === CONSOLIDATION_SEAT,
     reviewerUnset,
-    project?.aiEnabled ?? true,
+    project?.aiEnabled ?? false,
     busy,
     editorOpen,
     !!project && aiSeatId(project) !== null,
@@ -512,7 +512,7 @@ export function Toolbar() {
             <Icon name="check" />
             Validate
           </button>
-          {(project?.aiEnabled ?? true) && (
+          {project?.aiEnabled && (
             <button
               type="button"
               className="tb-btn tb-btn-ai"

@@ -229,8 +229,8 @@ export interface Project {
   /** A folder name the file gave that is not allowed, and so was ignored in
    *  favour of the default. Not written back. */
   refusedAnnotationsDir?: string
-  /** Whether AI-assisted annotation is available. Defaults to true; opt out
-   *  with `config.ai: false`. */
+  /** Whether AI-assisted annotation is available. Defaults to false; opt in
+   *  with `config.ai: true`. */
   aiEnabled: boolean
   /**
    * Whether a paper must be signed off by hand ("Annotation finished"
@@ -777,9 +777,9 @@ export function loadProject(input: string | unknown): Project {
     ...(rawAnnotationsDir !== undefined && annotationsDir === null
       ? { refusedAnnotationsDir: String(rawAnnotationsDir) }
       : {}),
-    // Absent means enabled; only an explicit `false` opts out.
-    aiEnabled: raw.config.ai !== false,
-    // Absent means enabled, same rule as `ai` above; only an explicit `false`
+    // Absent means disabled; only an explicit `true` allows AI.
+    aiEnabled: raw.config.ai === true,
+    // Absent means enabled; only an explicit `false`
     // opts out, so a file predating this option behaves exactly as before.
     finishCheckbox: (raw.config as { finishCheckbox?: unknown }).finishCheckbox !== false,
     // Absent or 1 means single-reviewer; zod already bounds a present value to [1, 10].
@@ -834,7 +834,7 @@ export function serializeProject(project: Project): string {
       // project (see `Project.screening`), written so the file stays
       // self-describing.
       schema: dehydrateSchema(project.schema),
-      ...(project.aiEnabled ? {} : { ai: false }),
+      ...(project.aiEnabled ? { ai: true } : {}),
       ...(project.finishCheckbox ? {} : { finishCheckbox: false }),
       ...(project.reviewers > 1 ? { reviewers: project.reviewers } : {}),
       ...(project.aiSeat ? { aiSeat: true } : {}),
@@ -1051,7 +1051,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     ...schemaVersionKeys(project),
     config: {
       schema: dehydrateSchema(project.schema),
-      ...(project.aiEnabled ? {} : { ai: false }),
+      ...(project.aiEnabled ? { ai: true } : {}),
       ...(project.finishCheckbox ? {} : { finishCheckbox: false }),
       ...(project.reviewers > 1 ? { reviewers: project.reviewers } : {}),
       ...(project.aiSeat ? { aiSeat: true } : {}),

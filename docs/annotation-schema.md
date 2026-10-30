@@ -78,10 +78,10 @@ present, in which case `schema` is ignored entirely (see [§10](#10-screening-pr
 omitted from the file. Every other project still needs a non-empty `schema`; an empty (or missing)
 one is rejected.
 
-**`config.ai` — forbid AI-assisted annotation.** Optional, defaults to `true`. Set it to `false` and
-the **✦ AI** button is disabled for anyone who opens the file. Use this when the papers must not be
-sent to a third-party model — an embargoed corpus, or a review whose protocol forbids it. It only
-affects this project file; it is written out only when `false`, so a normal file never carries the
+**`config.ai` — allow AI-assisted annotation.** Optional, defaults to `false`. Set it to `true` and
+the **✦ AI** button appears for anyone who opens the file. Without it the button is hidden, so papers
+are never sent to a third-party model unless the project explicitly allows it. It only affects this
+project file; it is written out only when `true`, so a file that never allows AI never carries the
 key. The project editor exposes it as a checkbox (see §2 of the app's *New / Edit annotation JSON*
 screen).
 
@@ -109,10 +109,10 @@ the protocol. Like `config.ai`, it is written out only when `false`, so a file t
 stays exactly as it was. Ticks recorded while it was on are kept in the per-paper annotation files
 untouched, so turning it back on restores them.
 
-Note that `config.ai` can only ever *restrict* the feature, not guarantee it: `true` (or omitting
-the key) does not by itself mean the button is available to whoever opens the file — the app may
-have its own reasons for keeping AI-assisted annotation off that this setting does not override.
-`false` always wins, in every build.
+Note that `config.ai` can only ever *allow* the feature, not guarantee it: `true` does not by itself
+mean the button is available to whoever opens the file — the app may have its own reasons for
+keeping AI-assisted annotation off that this setting does not override. Omitting the key or
+setting `false` always hides the button, in every build.
 
 **`config.reviewers` — multiple independent reviewers.** Optional, defaults to `1`
 (single-reviewer — the behavior described through the rest of this guide). Set it to a number from
@@ -126,7 +126,7 @@ it as a checkbox + a reviewer-count field next to the AI opt-out.
 **`config.aiSeat` — dedicate one reviewer seat to the AI.** Optional, defaults to `false`. Set it to
 `true` to have the AI's own answers occupy the *last* reviewer seat (`config.reviewers`) rather than
 being applied by a human on their own seat — the same tree, compared in Consolidation like any other
-reviewer's. Only *effective* when `config.ai` is not `false`, `config.reviewers` is at least `2`, and
+reviewer's. Only *effective* when `config.ai` is `true`, `config.reviewers` is at least `2`, and
 this is not a screening project; the value is still kept as authored outside that window (AI turned
 off, or reviewers dropped below 2), so re-enabling either restores the choice rather than losing it.
 Written out only when `true`. A human may still open the AI's seat to look at or correct its work —
