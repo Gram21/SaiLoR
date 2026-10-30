@@ -856,6 +856,11 @@ interface AppState {
   noteUpdateDownloaded: () => void
   noteUpdateError: (message: string) => void
 
+  /** View-only mode: every action that changes annotations, marks or decisions
+   *  becomes a no-op (the form and PDF are locked in the UI too). Session-only. */
+  readOnly: boolean
+  setReadOnly: (readOnly: boolean) => void
+
   setFieldValue: (path: PathSeg[], name: string, index: number, value: FieldValue) => void
   addInstance: (path: PathSeg[], def: ResolvedDef) => void
   removeInstance: (path: PathSeg[], name: string, index: number) => void
@@ -1205,6 +1210,7 @@ export const useStore = create<AppState>()(
     dirty: false,
     corruptFiles: [],
     loadError: null,
+    readOnly: false,
     staleSave: null,
     annotationsSplit: null,
     screeningMarks: null,
@@ -2338,6 +2344,7 @@ export const useStore = create<AppState>()(
       }),
 
     setFieldValue: (path, name, index, value) => {
+      if (get().readOnly) return
       const prev = get()
       if (!prev.project) return
       // Multi-reviewer, nobody picked yet: nothing to attribute this edit to.
@@ -2386,6 +2393,7 @@ export const useStore = create<AppState>()(
     },
 
     addInstance: (path, def) => {
+      if (get().readOnly) return
       const prev = get()
       if (!prev.project) return
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) return
@@ -2408,6 +2416,7 @@ export const useStore = create<AppState>()(
     },
 
     removeInstance: (path, name, index) => {
+      if (get().readOnly) return
       const prev = get()
       if (!prev.project) return
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) return
@@ -2525,6 +2534,7 @@ export const useStore = create<AppState>()(
     },
 
     setAnnotationFinished: (finished) => {
+      if (get().readOnly) return
       const prev = get()
       if (!prev.project) return
       // No declaration to make when the project derives "done" from the data
@@ -2563,6 +2573,7 @@ export const useStore = create<AppState>()(
     },
 
     addHighlight: (page, rects, color, kind, text, groupId) => {
+      if (get().readOnly) return null
       const prev = get()
       if (!prev.project || rects.length === 0) return null
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) return null
@@ -2597,6 +2608,7 @@ export const useStore = create<AppState>()(
     },
 
     setMarkComment: (id, comment) => {
+      if (get().readOnly) return
       const prev = get()
       if (!prev.project) return
       // Typed character by character, like a field value — collapse a run of
@@ -2631,6 +2643,7 @@ export const useStore = create<AppState>()(
     },
 
     setMarkColor: (id, color) => {
+      if (get().readOnly) return
       const prev = get()
       if (!prev.project) return
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
@@ -2659,6 +2672,7 @@ export const useStore = create<AppState>()(
     },
 
     removeMark: (id) => {
+      if (get().readOnly) return
       const prev = get()
       if (!prev.project) return
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
@@ -2684,6 +2698,7 @@ export const useStore = create<AppState>()(
     // is fulfilled — `clearPendingMarkLink` below consuming it is the "offered
     // once" behavior.
     linkMarkToField: (markId, path, name, index) => {
+      if (get().readOnly) return
       const prev = get()
       if (!prev.project) return
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
@@ -2711,6 +2726,7 @@ export const useStore = create<AppState>()(
     },
 
     unlinkMarkFromField: (markId, canonicalPath) => {
+      if (get().readOnly) return
       const prev = get()
       if (!prev.project) return
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
@@ -2743,6 +2759,7 @@ export const useStore = create<AppState>()(
     // ticks `finished`/`reviewsFinished` on its own: a human still has to sign
     // the seat off by hand, same as any other reviewer's.
     applyAiSuggestions: (suggestions, usage, target) => {
+      if (get().readOnly) return { filled: 0, skipped: suggestions.length }
       const prev = get()
       if (!prev.project) return { filled: 0, skipped: suggestions.length }
       // Check against the paper/seat the model was *asked about*, not whichever
@@ -2764,6 +2781,7 @@ export const useStore = create<AppState>()(
     },
 
     applyAiSuggestionsBatch: (items) => {
+      if (get().readOnly) return { filled: 0, skipped: items.reduce((n, it) => n + it.suggestions.length + (it.replacements?.length ?? 0), 0), papers: 0 }
       const prev = get()
       const totalSuggestions = items.reduce((n, it) => n + it.suggestions.length + (it.replacements?.length ?? 0), 0)
       if (!prev.project) return { filled: 0, skipped: totalSuggestions, papers: 0 }
@@ -2909,6 +2927,7 @@ export const useStore = create<AppState>()(
     },
 
     applyAiScreeningBatch: (items) => {
+      if (get().readOnly) return { written: 0, skipped: items.length }
       const prev = get()
       const none = { written: 0, skipped: items.length }
       const project = prev.project
@@ -2962,6 +2981,7 @@ export const useStore = create<AppState>()(
     },
 
     confirmAiMark: (paperId, canonicalPath) => {
+      if (get().readOnly) return
       const { project, currentReviewer } = get()
       const key = aiMarkKey(paperId, canonicalPath, markReviewerScope(project, currentReviewer))
       // Focusing a field the AI never touched is the common case — don't churn
@@ -2971,6 +2991,11 @@ export const useStore = create<AppState>()(
         delete s.aiMarks[key]
       })
     },
+
+    setReadOnly: (readOnly) =>
+      set((s) => {
+        s.readOnly = readOnly
+      }),
 
     selectReviewer: (reviewer) => {
       // A view switch, not an edit: no undo step, no dirty flag.
@@ -2991,7 +3016,7 @@ export const useStore = create<AppState>()(
     },
 
     openConsolidation: (path, name, index, returnToDisagreements = false) =>
-      set((s) => {
+      get().readOnly ? undefined : set((s) => {
         s.consolidationTarget = { path, name, index }
         s.returnToDisagreements = returnToDisagreements
       }),
@@ -3004,6 +3029,7 @@ export const useStore = create<AppState>()(
       }),
 
     resolveConsolidationValue: (path, name, index, value) => {
+      if (get().readOnly) return
       const prev = get()
       const paper = currentPaper(prev)
       if (!prev.project || !paper || prev.currentReviewer !== 'consolidation') return
@@ -3027,6 +3053,7 @@ export const useStore = create<AppState>()(
     },
 
     deferConsolidationValue: (path, name, index) => {
+      if (get().readOnly) return
       const state = get()
       const paper = currentPaper(state)
       if (!paper || state.currentReviewer !== 'consolidation') return
@@ -3040,6 +3067,7 @@ export const useStore = create<AppState>()(
     },
 
     alignConsolidationNode: (paperId, nodeName, coalesce) => {
+      if (get().readOnly) return false
       const prev = get()
       const project = prev.project
       if (!project || project.reviewers <= 1) return false
@@ -3110,6 +3138,7 @@ export const useStore = create<AppState>()(
     },
 
     adoptUnanimousValues: (paperId, coalesce) => {
+      if (get().readOnly) return 0
       const prev = get()
       const project = prev.project
       if (!project || project.reviewers <= 1) return 0
@@ -3153,6 +3182,7 @@ export const useStore = create<AppState>()(
     },
 
     markConsolidationSynced: (paperId) => {
+      if (get().readOnly) return
       const project = get().project
       if (!project) return
       const paper = project.papers.find((p) => p.id === paperId)
@@ -3180,6 +3210,7 @@ export const useStore = create<AppState>()(
       }),
 
     resolveConsolidationUpdate: (update) => {
+      if (get().readOnly) return
       const paperId = get().consolidationUpdatePrompt
       if (!paperId) return
       set((s) => {
@@ -3193,6 +3224,7 @@ export const useStore = create<AppState>()(
     },
 
     toggleFieldEquality: (paperId, canonical) => {
+      if (get().readOnly) return
       const prev = get()
       if (!prev.project) return
       if (!prev.project.papers.some((p) => p.id === paperId)) return
@@ -3214,6 +3246,7 @@ export const useStore = create<AppState>()(
     },
 
     setScreeningDecision: (decision, reason) => {
+      if (get().readOnly) return
       const prev = get()
       if (!prev.project) return
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) return
@@ -3352,6 +3385,7 @@ export const useStore = create<AppState>()(
     },
 
     adoptAllUnanimousScreening: () => {
+      if (get().readOnly) return 0
       const project = get().project
       if (!project || project.screening === null) return 0
       let filledPapers = 0
@@ -3367,6 +3401,7 @@ export const useStore = create<AppState>()(
     },
 
     adoptAllUnanimousAnnotations: async () => {
+      if (get().readOnly) return
       const project = get().project
       // Screening has its own button (`adoptAllUnanimousScreening`) and stays
       // synchronous — its schema has no repeatable node to line up.
@@ -3462,6 +3497,7 @@ export const useStore = create<AppState>()(
     },
 
     undo: () => {
+      if (get().readOnly) return
       get().stopUnanimousRun()
       const st = get()
       if (st.past.length === 0 || !st.project) return
@@ -3490,6 +3526,7 @@ export const useStore = create<AppState>()(
     },
 
     redo: () => {
+      if (get().readOnly) return
       get().stopUnanimousRun()
       const st = get()
       if (st.future.length === 0 || !st.project) return

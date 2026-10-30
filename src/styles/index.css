@@ -156,6 +156,22 @@ button.primary.danger {
 .toolbar-center {
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+.read-only-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.read-only-fieldset {
+  display: contents;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
 }
 .app-title {
   font-weight: 600;

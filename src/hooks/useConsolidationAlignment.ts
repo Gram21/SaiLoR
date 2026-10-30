@@ -40,13 +40,15 @@ export function useConsolidationAlignment(): void {
   const markConsolidationSynced = useStore((s) => s.markConsolidationSynced)
   const openUpdatePrompt = useStore((s) => s.openConsolidationUpdatePrompt)
   const approved = useStore((s) => s.consolidationUpdateApproved)
+  const readOnly = useStore((s) => s.readOnly)
 
   // The queue is a ref, not state: `prioritize` reorders it from a second
   // effect, and a re-render for each node would be pure churn.
   const queue = useRef<string[]>([])
   const running = useRef(false)
 
-  const active = currentReviewer === 'consolidation' && !!project && project.reviewers > 1
+  // View-only mode only shows the stored consolidation: no matching, no adoption, no prompt.
+  const active = !readOnly && currentReviewer === 'consolidation' && !!project && project.reviewers > 1
   const schema = project?.schema
 
   useEffect(() => {

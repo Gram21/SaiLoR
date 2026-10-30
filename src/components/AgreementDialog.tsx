@@ -69,6 +69,7 @@ export function AgreementDialog() {
   const closeAgreement = useStore((s) => s.closeAgreement)
   const project = useStore((s) => s.project)
   const adoptAllUnanimousAnnotations = useStore((s) => s.adoptAllUnanimousAnnotations)
+  const readOnly = useStore((s) => s.readOnly)
   const unanimousRun = useStore((s) => s.unanimousRun)
 
   // Gated on `open`, not just `project`: this component is mounted for the
@@ -153,7 +154,7 @@ export function AgreementDialog() {
               </p>
               <button
                 type="button"
-                disabled={unanimousRun?.running}
+                disabled={unanimousRun?.running || readOnly}
                 title="Lines every paper's reviewer entries up and adopts any answer every reviewer agrees on — the same action as the Adopt all unanimous button in the annotation panel"
                 onClick={() => void adoptAllUnanimousAnnotations()}
               >

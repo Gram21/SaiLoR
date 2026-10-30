@@ -326,3 +326,9 @@ export. See the [index](index.md) for the glossary.
 - **Type:** Non-functional (ISO 25010: Usability)
 - **Evidence:** `src/components/Toolbar.tsx`, `src/App.tsx`, and every dialog/prompt component under `src/components/`
 - **Status:** Implemented
+
+### REQ-UI-80 — View-only mode
+- **Description:** The toolbar shall offer a "View only" checkbox for every open project, independent of the number of reviewers. While it is checked, the system shall ignore every action that changes annotations, marks, finished flags, screening decisions, consolidation results or undo history, whether it comes from the form, the PDF viewer, a keyboard shortcut or an AI run. The annotation form, the screening panel, the PDF highlight, note, recolor, comment, unlink and delete controls, the consolidation resolve dialog and the AI button shall be disabled or hidden. On the Consolidation seat the automatic reviewer comparison (matching, adoption of unanimous values, update prompt) shall not run; only the stored consolidation is shown. Navigation, reading and seat switching shall stay available. The setting applies to the session only and is off after a restart.
+- **Type:** Functional (ISO 25010: Usability / Security — Integrity)
+- **Evidence:** `src/state/store.ts` (`readOnly`, `setReadOnly`), `src/components/Toolbar.tsx`, `src/components/AnnotationPanel.tsx`, `src/components/ScreeningPanel.tsx`, `src/components/PdfViewer.tsx`, `src/hooks/useConsolidationAlignment.ts`, `src/state/store.readOnly.test.ts`
+- **Status:** Implemented

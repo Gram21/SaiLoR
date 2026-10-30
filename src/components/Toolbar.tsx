@@ -150,6 +150,8 @@ export function Toolbar() {
   const setHelpOpen = useStore((s) => s.setHelpOpen)
   const currentReviewer = useStore((s) => s.currentReviewer)
   const selectReviewer = useStore((s) => s.selectReviewer)
+  const readOnly = useStore((s) => s.readOnly)
+  const setReadOnly = useStore((s) => s.setReadOnly)
   const corruptFiles = useStore((s) => s.corruptFiles)
   const showCorruptFiles = useStore((s) => s.showCorruptFiles)
   const openAnnotationAi = useAiStore((s) => s.openDialog)
@@ -412,6 +414,15 @@ export function Toolbar() {
               </button>
             </div>
           ))}
+        {project && !editorOpen && (
+          <label
+            className="read-only-toggle"
+            title="View-only mode: look at the annotations without being able to change anything"
+          >
+            <input type="checkbox" checked={readOnly} onChange={(e) => setReadOnly(e.target.checked)} />
+            View only
+          </label>
+        )}
       </div>
 
       <div className="toolbar-right">
@@ -504,9 +515,9 @@ export function Toolbar() {
           <button
             type="button"
             className="tb-btn tb-btn-ai"
-            title={aiBtn.title}
+            title={readOnly ? 'View-only mode — switch it off to run the AI' : aiBtn.title}
             onClick={() => void openAiDialog()}
-            disabled={aiBtn.disabled}
+            disabled={aiBtn.disabled || readOnly}
           >
             <Icon name="spark" />
             AI

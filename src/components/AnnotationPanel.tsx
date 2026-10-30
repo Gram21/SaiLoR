@@ -22,6 +22,7 @@ export function AnnotationPanel() {
   const setShowScreeningMarks = useStore((s) => s.setShowScreeningMarks)
   const project = useStore((s) => s.project)
   const currentReviewer = useStore((s) => s.currentReviewer)
+  const readOnly = useStore((s) => s.readOnly)
   const schema = project?.schema ?? []
   const setConsolidationOverviewOpen = useStore((s) => s.setConsolidationOverviewOpen)
   const setDisagreementsOpen = useStore((s) => s.setDisagreementsOpen)
@@ -257,6 +258,7 @@ export function AnnotationPanel() {
             <input
               type="checkbox"
               checked={isFinished}
+              disabled={readOnly}
               onChange={(e) => setAnnotationFinished(e.target.checked)}
             />
             <span>
@@ -272,6 +274,7 @@ export function AnnotationPanel() {
         )}
       </div>
       <div className="annotations-body">
+        <fieldset className="read-only-fieldset" disabled={readOnly}>
         <ConsolidationVerdictsContext.Provider value={consolidationVerdicts}>
           {schema
             // `container` is both the top level and the root a cross-branch
@@ -288,6 +291,7 @@ export function AnnotationPanel() {
               />
             ))}
         </ConsolidationVerdictsContext.Provider>
+        </fieldset>
       </div>
     </div>
   )

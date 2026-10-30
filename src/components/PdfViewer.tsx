@@ -347,6 +347,7 @@ export function PdfViewer() {
   const setMarkComment = useStore((s) => s.setMarkComment)
   const setMarkColor = useStore((s) => s.setMarkColor)
   const removeMark = useStore((s) => s.removeMark)
+  const readOnly = useStore((s) => s.readOnly)
   const unlinkMarkFromField = useStore((s) => s.unlinkMarkFromField)
   const setExportPdfOpen = useStore((s) => s.setExportPdfOpen)
   const setLastCreatedMarkId = useStore((s) => s.setLastCreatedMarkId)
@@ -1033,7 +1034,7 @@ export function PdfViewer() {
    *  sticky note at that point and opens its comment popover — one shot,
    *  same as `commitHighlight` does for a selection. */
   const placeNote = (e: React.MouseEvent) => {
-    if (!placingNote) return
+    if (!placingNote || readOnly) return
     const page = pageNumberForNode(e.target as Node)
     if (page === null) return
     const pageEl = pageRefs.current[page - 1]
@@ -1746,6 +1747,7 @@ export function PdfViewer() {
             title="Add sticky note"
             aria-label="Add sticky note"
             aria-pressed={placingNote}
+            disabled={readOnly}
             onClick={() => setPlacingNote((v) => !v)}
           >
             <span className="postit-icon" aria-hidden="true" />
@@ -1843,7 +1845,7 @@ export function PdfViewer() {
           <div className="pdf-loading">Loading PDF…</div>
         )}
       </div>
-      {selectionToolbar && (
+      {selectionToolbar && !readOnly && (
         <div
           ref={toolbarRef}
           className="pdf-highlight-toolbar"
@@ -1891,6 +1893,7 @@ export function PdfViewer() {
                     style={{ background: c }}
                     title="Recolor"
                     aria-label={`Set color ${c}`}
+                    disabled={readOnly}
                     onClick={() => setMarkColor(mark.id, c)}
                   />
                 ))}
@@ -1899,7 +1902,8 @@ export function PdfViewer() {
                 className="field-input field-textarea pdf-mark-comment-input"
                 placeholder="Add a comment…"
                 value={mark.comment}
-                autoFocus
+                autoFocus={!readOnly}
+                readOnly={readOnly}
                 onChange={(e) => setMarkComment(mark.id, e.target.value)}
               />
               {mark.linkedFields && mark.linkedFields.length > 0 && (
@@ -1913,6 +1917,7 @@ export function PdfViewer() {
                         type="button"
                         className="field-link-unlink"
                         title="Unlink"
+                        disabled={readOnly}
                         onClick={() => unlinkMarkFromField(mark.id, l.path)}
                       >
                         ×
@@ -1926,6 +1931,7 @@ export function PdfViewer() {
                   type="button"
                   className="pdf-mark-delete"
                   title="Delete this highlight"
+                  disabled={readOnly}
                   onClick={() => {
                     const links = mark.linkedFields ?? []
                     if (links.length > 0) {

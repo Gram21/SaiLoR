@@ -21,6 +21,7 @@ export function ScreeningPanel() {
   const paper = useStore(selectCurrentPaper)
   const project = useStore((s) => s.project)
   const currentReviewer = useStore((s) => s.currentReviewer)
+  const readOnly = useStore((s) => s.readOnly)
   const setScreeningDecision = useStore((s) => s.setScreeningDecision)
   const setScreeningReason = useStore((s) => s.setScreeningReason)
   const setScreeningSummaryOpen = useStore((s) => s.setScreeningSummaryOpen)
@@ -60,6 +61,7 @@ export function ScreeningPanel() {
 
   return (
     <div className="panel annotations screening-panel">
+      <fieldset className="read-only-fieldset" disabled={readOnly}>
       <div className="annotations-head">
         <div className="annotations-head-row">
           <h2>Screening</h2>
@@ -179,6 +181,7 @@ export function ScreeningPanel() {
           {counts.included} included, {counts.excluded} excluded, {counts.undecided} left
         </p>
       </div>
+      </fieldset>
     </div>
   )
 }

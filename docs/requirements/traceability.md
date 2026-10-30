@@ -170,6 +170,7 @@ inspection only.
 | REQ-UI-50 | Clipboard fallback | Functional · Functional Suitability | `src/clipboard.ts:9-30` | `src/clipboard.test.ts:9-38` | — | `openwiki/architecture.md` §Component Tree |
 | REQ-UI-60 | Surface load and save errors | Functional · Functional Suitability | `src/components/ErrorPanel.tsx:4-28` | `src/components/ErrorPanel.test.tsx:12-53` | — | `openwiki/architecture.md` §Component Tree |
 | REQ-UI-70 | Button tooltips | Non-functional · Usability | `src/components/Toolbar.tsx`, `src/App.tsx`, every dialog/prompt under `src/components/` | — | — | `openwiki/architecture.md` §Component Tree |
+| REQ-UI-80 | View-only mode | Functional · Usability / Security — Integrity | `src/state/store.ts` (`readOnly`, `setReadOnly`)<br>`src/components/Toolbar.tsx`<br>`src/components/AnnotationPanel.tsx`<br>`src/components/ScreeningPanel.tsx`<br>`src/components/PdfViewer.tsx` | `src/state/store.readOnly.test.ts` | — | — |
 
 ## Screening ([screening.md](screening.md))
 
@@ -463,8 +464,8 @@ inspection only.
 
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 387 | 100% |
-| With at least one verifying test | 338 | 87% |
+| Requirements traced | 388 | 100% |
+| With at least one verifying test | 339 | 87% |
 | Without an automated check (source inspection only) | 49 | 13% |
 | With an introducing/pinning commit | 111 | 29% |
 | With a documentation link | 334 | 86% |

@@ -23,6 +23,7 @@ export function ConsolidationOverview() {
   const generation = useStore((s) => s.projectGeneration)
   const openDisagreementsFromOverview = useStore((s) => s.openDisagreementsFromOverview)
   const adoptAllUnanimousAnnotations = useStore((s) => s.adoptAllUnanimousAnnotations)
+  const readOnly = useStore((s) => s.readOnly)
   const unanimousRun = useStore((s) => s.unanimousRun)
   const dismissUnanimousRun = useStore((s) => s.dismissUnanimousRun)
   const [query, setQuery] = useState('')
@@ -119,7 +120,7 @@ export function ConsolidationOverview() {
                   ? `Adopting unanimous values… ${unanimousRun.done}/${unanimousRun.total}`
                   : 'Adopt every field where all reviewers agree, across every paper'
               }
-              disabled={unanimousRun?.running}
+              disabled={unanimousRun?.running || readOnly}
               onClick={() => void adoptAllUnanimousAnnotations()}
             >
               {unanimousRun?.running
