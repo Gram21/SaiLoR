@@ -6,6 +6,12 @@ mod paths;
 mod pdf;
 mod project;
 mod protocol;
+// Phase 4 (AI): LLM targets, local servers, web fetch, hardware.
+mod hardware;
+mod llm;
+mod net;
+mod ollama;
+mod webfetch;
 
 use authz::Session;
 use std::path::PathBuf;
@@ -73,6 +79,23 @@ fn main() {
             paths::paths_rebase,
             paths::paths_absolute,
             paths::paths_sibling,
+            webfetch::web_fetch,
+            webfetch::web_abort,
+            llm::llm_configs,
+            llm::llm_save_config,
+            llm::llm_delete_config,
+            llm::llm_call,
+            llm::llm_abort,
+            ollama::ollama_version,
+            ollama::ollama_list,
+            ollama::ollama_show,
+            ollama::ollama_ps,
+            ollama::ollama_pull,
+            ollama::ollama_cancel_pull,
+            ollama::ollama_delete,
+            ollama::ollama_manifest_size,
+            ollama::localserver_discover,
+            hardware::local_probe,
         ])
         .run(tauri::generate_context!())
         .expect("tauri run failed");
