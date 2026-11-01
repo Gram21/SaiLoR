@@ -19,7 +19,9 @@ The authors plan to publish the report on arXiv when version 2.0.0 is released.
 | `sections/*.tex` | One file per section. Each file holds an outline. |
 | `references.bib` | Bibliography. |
 | `figures/` | Figures. Link screenshots from `../user-guide/screenshots/`. |
-| `Makefile` | `make` builds `main.pdf` with `latexmk`. |
+| `Makefile` | `make` builds `SaiLoR-technical-report.pdf` with `latexmk`. |
+| `.gitignore` | Ignores LaTeX build artifacts. Only `SaiLoR-technical-report.pdf` stays tracked. |
+| `WRITING_STYLE.md` | Local style guide. Never commit this file. Read it before you write text. |
 
 ## Section plan
 

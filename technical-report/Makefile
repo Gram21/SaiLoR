@@ -1,5 +1,7 @@
-main.pdf: main.tex references.bib $(wildcard sections/*.tex)
-	latexmk -pdf main.tex
+NAME = SaiLoR-technical-report
+
+$(NAME).pdf: main.tex references.bib $(wildcard sections/*.tex)
+	latexmk -pdf -jobname=$(NAME) main.tex
 
 clean:
-	latexmk -C
+	latexmk -C -jobname=$(NAME) main.tex
