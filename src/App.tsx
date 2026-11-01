@@ -3,7 +3,7 @@ import { useStore } from './state/store'
 import { useEditorStore } from './state/editorStore'
 import { useGitStore } from './state/gitStore'
 import { getPlatform } from './platform'
-import { isElectron } from './platform/adapter'
+import { isElectron, isTauri } from './platform/adapter'
 import { NEW_ISSUE_URL } from './model/version'
 import { ProjectEditor } from './components/ProjectEditor'
 import { Toolbar } from './components/Toolbar'
@@ -166,7 +166,7 @@ export function App() {
   // enough across browsers. Gate before any project-opening UI ever renders —
   // no file picker, no drag-and-drop, nothing that could start a session this
   // build can't finish.
-  if (!isElectron()) {
+  if (!isElectron() && !isTauri()) {
     return (
       <div className="app">
         <div className="welcome">

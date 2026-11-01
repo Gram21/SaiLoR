@@ -7,9 +7,9 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ---
 
 ### REQ-PLT-10 — Desktop-only operation
-- **Description:** When the application runs outside the Electron desktop shell, the system shall present a notice that the web variant is discontinued and shall reject every project-opening action.
+- **Description:** When the application runs outside a desktop shell (Electron or Tauri), the system shall present a notice that the web variant is discontinued and shall reject every project-opening action.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/platform/unsupported.ts:4-28`, `src/platform/index.ts:10-23`, commit `7fbaa84`
+- **Evidence:** `src/platform/unsupported.ts:4-28`, `src/platform/index.ts:9-24`, commit `7fbaa84`
 - **Status:** Implemented
 
 ### REQ-PLT-11 — Single application instance
@@ -39,21 +39,21 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-41 — Write only changed files
 - **Description:** When saving to the location a project was last opened from or saved to, the system shall write only the project file and the annotation files whose serialized content differs from what that open or save produced, leaving every other file byte-identical; after any git operation that can rewrite the working tree, the next save shall write every file.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/platform/electron.ts:55,57-59,73-76,81-88,294`, commits `27bf461`, `4abaebb`
+- **Evidence:** `src/platform/electron.ts:41,43-45,59-62,88-95,180-182`, commits `27bf461`, `4abaebb`
 - **Verified by:** `src/platform/electron.test.ts` (`writes only the papers edited since the project was opened`, `forgets the baseline when a git call rewrites the working tree`)
 - **Status:** Implemented
 
 ### REQ-PLT-42 — Remove files of removed or renamed papers
 - **Description:** When saving to the same location, the system shall delete the annotation files the project previously wrote for a paper that has since been removed or whose identifier changed, subject to REQ-PLT-61, and shall remove a paper folder that deletion leaves empty; a folder still holding any other file shall be kept.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/platform/electron.ts:319`, `electron/main.ts:928`, commit `fc8aa26`
+- **Evidence:** `src/platform/electron.ts:197-199`, `electron/main.ts:928`, commit `fc8aa26`
 - **Verified by:** `src/platform/electron.test.ts` (`deletes the files of a paper removed since the project was opened`, `moves a paper's files when its id is renamed`)
 - **Status:** Implemented
 
 ### REQ-PLT-43 — Do not rewrite files a schema version only migrated
 - **Description:** When a save introduces a new schema version, the system shall compare each annotation file against its previous content as read under the new version, writing only files whose content changed beyond that migration.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/platform/electron.ts:87`, commit `40e0668`
+- **Evidence:** `src/platform/electron.ts:72-83`, commit `40e0668`
 - **Verified by:** `src/platform/electron.test.ts` (`writes only project.json when a new schema version renames a field nobody edited since`)
 - **Status:** Implemented
 
@@ -143,7 +143,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-135 — Stop saving over externally changed files
 - **Description:** When a save would write or delete a file that has changed on disk, or has appeared, since the application last read or wrote it, the system shall write nothing and ask the user how to proceed (REQ-PLT-136), naming the changed files by paper and seat (up to ten, with a count of any remainder); files rewritten by the application's own git operations shall not count as changed.
 - **Type:** Non-functional (ISO 25010: Reliability)
-- **Evidence:** `electron/main.ts:718,720-727,730-740,751-762,965`, `src/model/fileStamps.ts:41-45`, `src/platform/electron.ts:329`, `src/state/store.ts:1558`, `src/components/StaleSaveDialog.tsx:10-25`, commits `0bc6c9c`, `5e2abb4`
+- **Evidence:** `electron/main.ts:718,720-727,730-740,751-762,965`, `src/model/fileStamps.ts:41-45`, `src/platform/electron.ts:201`, `src/state/store.ts:1558`, `src/components/StaleSaveDialog.tsx:10-25`, commits `0bc6c9c`, `5e2abb4`
 - **Verified by:** `src/model/fileStamps.test.ts`, `src/state/store.staleSave.test.ts` (`writes nothing and asks, instead of raising an error`)
 - **Status:** Implemented
 
@@ -199,7 +199,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-210 — Explain blocked PDF loads
 - **Description:** When a paper's PDF cannot be loaded, the system shall report the specific reason (path escapes the project, file not found, or no project) instead of a generic load failure.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:991-1000`, `src/platform/electron.ts:249-295`, commit `445a6a5`
+- **Evidence:** `electron/main.ts:991-1000`, `src/platform/electron.ts:211-239`, commit `445a6a5`
 - **Status:** Implemented
 
 ### REQ-PLT-220 — Recursive PDF folder import
