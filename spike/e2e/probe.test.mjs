@@ -1,5 +1,5 @@
 // Drives the built spike binary through tauri-driver (WebDriver) with plain fetch.
-// Run: SPIKE_PROJECT=<abs path to project json> node --test spike/e2e/
+// Run: SPIKE_PROJECT=<abs path to project json> node --test spike/e2e/probe.test.mjs
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'

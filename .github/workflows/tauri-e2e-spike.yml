@@ -56,4 +56,4 @@ jobs:
         env:
           SPIKE_PROJECT: ${{ github.workspace }}/samples/project.example.json
         run: |
-          if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a node --test spike/e2e/; else node --test spike/e2e/; fi
+          if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a node --test spike/e2e/probe.test.mjs; else node --test spike/e2e/probe.test.mjs; fi
