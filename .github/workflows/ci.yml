@@ -1,20 +1,18 @@
 name: CI
 
-# Test that the application type-checks, passes its tests, and builds.
-# The actual work lives in scripts/ci.sh so it can be run locally or on any
-# other CI provider (e.g. GitLab) with minimal, provider-specific glue here.
+# One workflow for everything that checks code: the renderer (scripts/ci.sh),
+# the Rust shell (fmt, clippy), the Tauri build matrix on every OS, and the
+# Tauri e2e test. Release and report workflows stay separate.
+# The renderer work lives in scripts/ci.sh so it can run locally or on another CI provider.
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'release/**']
     paths-ignore: ['technical-report/**']
-  # Every pull request, whatever it targets — a PR onto a release branch needs
-  # the same checks as one onto main. Deliberately *not* combined with a
-  # push-on-every-branch trigger: a branch with an open PR would then build
-  # twice for each push, once per trigger, for no extra signal.
+  # Every pull request, whatever it targets. Not combined with a push-on-every-branch
+  # trigger: a branch with an open PR would build twice per push for no extra signal.
   pull_request:
     paths-ignore: ['technical-report/**']
-  # Allow running the workflow manually from the Actions tab.
   workflow_dispatch:
 
 # Only the newest commit on a ref is worth checking; cancel the runs it superseded.
@@ -38,7 +36,7 @@ jobs:
       - name: Run CI script
         run: ./scripts/ci.sh
 
-  # The Tauri shell (src-tauri/, docs/tauri-migration.md).
+  # Lint the Tauri shell (src-tauri/). Tests run per OS in tauri-build.
   rust:
     runs-on: ubuntu-latest
     defaults:
@@ -63,4 +61,139 @@ jobs:
 
       - run: cargo fmt --check
       - run: cargo clippy --all-targets -- -D warnings
-      - run: cargo test
+
+  # Phase 0/5 of docs/tauri-migration.md: Rust tests, installer bundle and a probe run in each system WebView.
+  tauri-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26, windows-latest, ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install Linux dependencies
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev xvfb
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      - name: Rust tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: Build (installer bundle)
+        run: npx tauri build
+
+      - name: Report installer sizes
+        run: |
+          find src-tauri/target/release/bundle -type f \( -name '*.dmg' -o -name '*.msi' -o -name '*.exe' -o -name '*.deb' -o -name '*.AppImage' -o -name '*.rpm' \) -exec ls -l {} \;
+
+      - name: Run probe (open project, traversal check, render PDF)
+        env:
+          SPIKE_PROJECT: ${{ github.workspace }}/samples/project.example.json
+          SPIKE_REPORT: ${{ runner.temp }}/spike-report.txt
+        run: |
+          rm -f "$SPIKE_REPORT"
+          BIN=src-tauri/target/release/sailor-spike
+          [ -f "$BIN.exe" ] && BIN="$BIN.exe"
+          if [[ "${{ matrix.os }}" == ubuntu* ]]; then
+            xvfb-run -a "$BIN" > /dev/null 2>&1 &
+          else
+            "$BIN" > /dev/null 2>&1 &
+          fi
+          PID=$!
+          for i in $(seq 1 60); do
+            grep -qE "RENDER OK|PDF ERROR|RENDER ERROR" "$SPIKE_REPORT" 2>/dev/null && break
+            sleep 1
+          done
+          kill $PID 2>/dev/null || true
+          echo "---- report ----"
+          cat "$SPIKE_REPORT" || true
+          grep -q "RENDER OK" "$SPIKE_REPORT"
+          grep -q -- "-> 403" "$SPIKE_REPORT"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spike-report-${{ matrix.os }}
+          path: ${{ runner.temp }}/spike-report.txt
+          if-no-files-found: ignore
+
+  # tauri-driver has no macOS support, so there is no macOS job.
+  tauri-e2e:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev webkit2gtk-driver xvfb
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: cargo install tauri-driver --locked
+
+      - name: Install msedgedriver matching WebView2
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $client = 'Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+          $version = @("HKLM:\SOFTWARE\WOW6432Node\$client", "HKLM:\SOFTWARE\$client") | ForEach-Object { (Get-ItemProperty -Path $_ -ErrorAction SilentlyContinue).pv } | Where-Object { $_ } | Select-Object -First 1
+          $dir = Join-Path $env:RUNNER_TEMP 'msedgedriver'
+          Invoke-WebRequest "https://msedgedriver.microsoft.com/$version/edgedriver_win64.zip" -OutFile "$env:RUNNER_TEMP\edgedriver.zip"
+          Expand-Archive "$env:RUNNER_TEMP\edgedriver.zip" -DestinationPath $dir -Force
+          Write-Host "WebView2 $version; $(& "$dir\msedgedriver.exe" --version)"
+          $dir >> $env:GITHUB_PATH
+
+      - run: npm ci
+
+      - run: npx tauri build --no-bundle
+
+      - name: Run e2e test (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node --test spike/e2e/probe.test.mjs
+
+      # WebView2 ignores the driver's WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS in an elevated
+      # process, and the runner is elevated. Run at medium integrity, as Tauri's own e2e CI does.
+      - name: Run e2e test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          winget install gerardog.gsudo --accept-source-agreements --accept-package-agreements
+          icacls "$env:GITHUB_WORKSPACE" /grant "Everyone:(OI)(CI)F"
+          sudo --integrity Medium node --test spike/e2e/probe.test.mjs
