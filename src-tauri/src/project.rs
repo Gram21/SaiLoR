@@ -52,7 +52,7 @@ pub fn annotations_dir_of(raw: &Value) -> String {
 }
 
 /// `isLegacyProjectShape`: papers still carry `annotations`/`reviews` inline.
-fn is_legacy_shape(raw: &Value) -> bool {
+pub fn is_legacy_shape(raw: &Value) -> bool {
     raw.get("papers")
         .and_then(Value::as_array)
         .is_some_and(|ps| {

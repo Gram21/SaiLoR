@@ -21,6 +21,8 @@ pub struct Session {
     pub writable_exports: HashSet<PathBuf>,
     /// `mtime:size` per file, per project, as last read or written (`projectFileStamps`).
     pub stamps: HashMap<PathBuf, HashMap<PathBuf, String>>,
+    /// Repository roots resolved by `git:info` or created by `git:clone` (`knownGitRoots`).
+    pub known_git_roots: HashSet<PathBuf>,
 }
 
 impl Session {

@@ -2,6 +2,7 @@
 
 mod authz;
 mod feedback;
+mod git;
 mod paths;
 mod pdf;
 mod project;
@@ -73,6 +74,42 @@ fn main() {
             paths::paths_rebase,
             paths::paths_absolute,
             paths::paths_sibling,
+            git::git_probe,
+            git::git_pick_clone_dir,
+            git::git_clone,
+            git::git_pick_project_in,
+            git::git_info,
+            git::git_status,
+            git::git_commit,
+            git::git_last_commit_message,
+            git::git_push,
+            git::git_pull_begin,
+            git::git_pull_finish,
+            git::git_pull_abort,
+            git::git_merge_begin,
+            git::git_log_begin,
+            git::git_log_diff,
+            git::git_annotation_authors,
+            git::git_repo_setup_status,
+            git::git_apply_repo_setup,
+            git::git_background_fetch,
+            git::git_stash_list,
+            git::git_stash_push,
+            git::git_stash_restore,
+            git::git_stash_drop,
+            git::git_stash_branch,
+            git::git_branches,
+            git::git_branch_create,
+            git::git_branch_delete,
+            git::git_checkout,
+            git::git_branch_switch_begin,
+            git::git_branch_switch_finish,
+            git::git_branch_switch_abort,
+            git::git_head_content,
+            git::git_working_content,
+            git::git_commit_partial,
+            git::git_write_working,
+            git::git_discard_file,
         ])
         .run(tauri::generate_context!())
         .expect("tauri run failed");
