@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { tauriBridge, TauriAdapter } from './tauri'
+import { tauriBridge, TauriAdapter, command } from './tauri'
 import { setBridge } from './bridge'
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
@@ -28,13 +28,13 @@ describe('tauriBridge', () => {
     await tauriBridge.gitCommitPartial('/r', 'p.json', 'c' as never, 'w' as never, ['o'], 'msg', true)
 
     expect(invokeMock.mock.calls).toEqual([
-      ['project:open', {}],
-      ['project:openPath', { filePath: '/r/p.json' }],
-      ['project:save', { filePath: '/r/p.json', metaText: null, files: [{ relPath: 'a', text: 'x' }] }],
-      ['ollama:show', { baseUrl: 'http://h', model: 'm', numCtx: undefined }],
-      ['local:modelInstall', { id: 'qwen' }],
+      ['project_open', {}],
+      ['project_open_path', { filePath: '/r/p.json' }],
+      ['project_save', { filePath: '/r/p.json', metaText: null, files: [{ relPath: 'a', text: 'x' }] }],
+      ['ollama_show', { baseUrl: 'http://h', model: 'm', numCtx: undefined }],
+      ['local_model_install', { id: 'qwen' }],
       [
-        'git:commitPartial',
+        'git_commit_partial',
         { root: '/r', relPath: 'p.json', committed: 'c', working: 'w', otherPaths: ['o'], message: 'msg', amend: true },
       ],
     ])
@@ -44,7 +44,7 @@ describe('tauriBridge', () => {
     invokeMock.mockRejectedValue('command git:status not found')
     await expect(tauriBridge.gitStatus('/r')).rejects.toBe('command git:status not found')
     expect(tauriBridge.abortLlm('id-1')).toBeUndefined()
-    expect(invokeMock).toHaveBeenLastCalledWith('llm:abort', { requestId: 'id-1' })
+    expect(invokeMock).toHaveBeenLastCalledWith('llm_abort', { requestId: 'id-1' })
   })
 
   it('returns PDF bytes as a Uint8Array', async () => {
@@ -52,7 +52,7 @@ describe('tauriBridge', () => {
     const bytes = await tauriBridge.readPdf('/a.pdf')
     expect(bytes).toBeInstanceOf(Uint8Array)
     expect([...bytes]).toEqual([1, 2, 3])
-    expect(invokeMock).toHaveBeenCalledWith('pdf:read', { filePath: '/a.pdf' })
+    expect(invokeMock).toHaveBeenCalledWith('pdf_read', { filePath: '/a.pdf' })
   })
 
   it('delivers event payloads and unsubscribes', async () => {
@@ -90,10 +90,15 @@ describe('tauriBridge', () => {
       }
     }
     walk(tauriBridge)
-    const mapped = new Set([...invokeMock.mock.calls, ...listenMock.mock.calls].map((c) => c[0]))
+    const listened = new Set([...preload.matchAll(/ipcRenderer\.on\(\s*'([^']+)'/g)].map((m) => m[1]))
+    const mapped = new Set([
+      ...invokeMock.mock.calls.map((c) => c[0]),
+      ...listenMock.mock.calls.map((c) => c[0]),
+    ])
 
+    const expectedNames = [...expected].map((c) => (listened.has(c) ? c : command(c)))
     expect(expected.size).toBeGreaterThan(90)
-    expect([...mapped].sort()).toEqual([...expected].sort())
+    expect([...mapped].sort()).toEqual(expectedNames.sort())
   })
 })
 
@@ -101,7 +106,7 @@ describe('TauriAdapter', () => {
   it('routes the shared adapter logic through the Tauri bridge', async () => {
     invokeMock.mockResolvedValue({ porcelain: ' M a.json\n', diff: '' })
     const status = await new TauriAdapter().getGit().status('/r')
-    expect(invokeMock).toHaveBeenCalledWith('git:status', { root: '/r' })
+    expect(invokeMock).toHaveBeenCalledWith('git_status', { root: '/r' })
     expect(status.changes).toHaveLength(1)
   })
 })

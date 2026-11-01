@@ -8,15 +8,18 @@ type Fn = (...args: any[]) => any
 
 const named = (names: string[], args: unknown[]) => Object.fromEntries(names.map((n, i) => [n, args[i]]))
 
+export const command = (channel: string) =>
+  channel.replace(':', '_').replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)
+
 const call =
   (channel: string, ...names: string[]): Fn =>
   (...args) =>
-    invoke(channel, named(names, args))
+    invoke(command(channel), named(names, args))
 
 const send =
   (channel: string, ...names: string[]): Fn =>
   (...args) => {
-    invoke(channel, named(names, args)).catch(() => {})
+    invoke(command(channel), named(names, args)).catch(() => {})
   }
 
 const subscribe =
@@ -57,7 +60,7 @@ export const tauriBridge: SlrBridge = {
   pickPdfFolder: call('pdf:pickFolder'),
   pickReferenceFile: call('reference:pick'),
   // Rust returns bytes as ArrayBuffer (ipc::Response) or number[] (Vec<u8>); callers expect a Uint8Array.
-  readPdf: async (filePath: string) => new Uint8Array(await invoke<ArrayBuffer | number[]>('pdf:read', { filePath })),
+  readPdf: async (filePath: string) => new Uint8Array(await invoke<ArrayBuffer | number[]>('pdf_read', { filePath })),
   checkPdfPath: call('pdf:checkPath', 'rel'),
   allowPdfPath: call('pdf:allowPath', 'rel'),
   embedPdfMarks: call('pdf:embedMarks', 'pdfAbsPath', 'marks', 'target'),
