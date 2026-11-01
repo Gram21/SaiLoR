@@ -10,8 +10,28 @@
     "frontendDist": "../dist-spike"
   },
   "app": {
-    "windows": [{ "title": "SaiLoR spike", "width": 900, "height": 800 }],
-    "security": { "csp": null }
+    "windows": [
+      {
+        "title": "SaiLoR spike",
+        "width": 900,
+        "height": 800
+      }
+    ],
+    "security": {
+      "csp": null
+    }
   },
-  "bundle": { "active": true, "targets": "all", "icon": ["icons/32x32.png","icons/128x128.png","icons/icon.icns","icons/icon.ico"] }
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "14.0"
+    }
+  }
 }

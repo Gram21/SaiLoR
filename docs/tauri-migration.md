@@ -204,8 +204,8 @@ The estimate excludes code-signing setup and a Rust learning curve.
 
 ## 9. Open questions
 
-1. Which minimum OS versions must the app support?
-2. Is Linux a first-class target, or best effort?
+1. ~~Minimum OS versions~~ Decided: see section 12.
+2. ~~Linux packaging~~ Decided: see section 12.
 3. Is the installer size a real user problem, or is the goal the Rust backend?
 4. Will the team maintain Rust long term?
 5. Should this ship as a major version, with a breaking update path?
@@ -271,3 +271,15 @@ Findings:
 - CI cost: about 8 runner minutes per push for both jobs.
 
 Checklist item "One automated e2e test runs on Linux with `tauri-driver`" (section 7): pass. Windows also passes.
+
+## 12. Decisions
+
+| Date | Decision | Consequence |
+| --- | --- | --- |
+| 2026-11-01 | Minimum supported macOS is 14 (Sonoma). | The Tauri bundle sets `minimumSystemVersion` to `14.0`. The spike CI covers `macos-14` and `macos-15`. The "oldest supported macOS" checks in section 7 are met by those runners. Do not claim support for macOS 13 or older. |
+| 2026-11-01 | Ship both AppImage and deb/rpm on Linux. | The release workflow builds `appimage`, `deb` and `rpm`. Only the AppImage auto-updates through `tauri-plugin-updater`. deb and rpm users update by hand or through the system package manager. State this in the README and the release notes. |
+
+Open work from these decisions:
+
+1. Set `bundle.targets` for Linux to `["appimage", "deb", "rpm"]` in the release configuration (Phase 5).
+2. Add the minimum macOS version and the Linux update behavior to `README.md` and `docs/requirements/platform.md` at cutover (Phase 6).
