@@ -144,7 +144,7 @@ function commonFaqs(): ReactNode {
       </Faq>
       <Faq q="Is my work saved automatically?">
         <p>
-          No. A dot next to the project name means unsaved changes — press <strong>{MOD}+S</strong>.
+          No. A dot before the project name in the window title means unsaved changes — press <strong>{MOD}+S</strong>.
           The app asks before you close or quit with unsaved work.
         </p>
       </Faq>

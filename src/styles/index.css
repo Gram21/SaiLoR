@@ -113,20 +113,15 @@ button.primary.danger {
    each other, whatever their content), the center is `auto`-sized around the
    reviewer switch. That's what centers the switch on the *toolbar*, not just
    between its neighbors — a plain `margin: auto` centers between neighbors of
-   whatever width they happen to be, which drifts as the project title
-   (`.toolbar-status`) changes length.
+   whatever width they happen to be, which drifts as `.toolbar-status` changes.
 
    Bare `1fr` tracks (not `minmax(0, 1fr)`) floor each side at its own
    min-content width, so the grid can never squeeze `.toolbar-left`'s buttons
    (or anything else with no truncation of its own) into overlapping the
    center — it can only give them equal *extra* space when there's slack, or
    let the row exceed the viewport when there truly isn't enough room.
-   `.toolbar-right` is the one side that DOES shrink below its content: its
-   `min-width: 0` lets that floor drop to just its (non-shrinking) view
-   buttons, because `.project-name` beneath it is the part designed to give —
-   `overflow: hidden` on that element is what makes its own min-content
-   contribution 0, so the ellipsis truncation kicks in before anything is
-   forced to overlap. Tried `minmax(0, 1fr)` on both sides first; at ~900px
+   `.toolbar-right` has `min-width: 0` so its track floor can drop below its
+   content. Tried `minmax(0, 1fr)` on both sides first; at ~900px
    with a long title it let `.toolbar-left` shrink past its buttons' natural
    width and the reviewer switch/dropdown visibly sat on top of "Close". */
 .toolbar {
@@ -248,19 +243,6 @@ button.primary.danger {
 .toolbar-status {
   min-width: 0;
   color: var(--muted);
-}
-.project-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  /* A long name truncates rather than shoving the view controls off the edge. */
-  max-width: 100%;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.dirty-dot {
-  color: var(--accent);
 }
 .save-status {
   margin-left: 8px;
@@ -1880,17 +1862,6 @@ button.paper-search-clear:hover {
   color: var(--muted);
   margin: 0 0 20px;
 }
-/* The toolbar always reserves the toggle's slot, so showing/hiding the paper
-   list doesn't shift the app title sideways. `visibility` keeps the box in the
-   layout while taking the button out of the tab order. */
-.toolbar-toggle-slot {
-  display: inline-flex;
-  flex: 0 0 auto;
-}
-.toolbar-toggle-slot.is-hidden {
-  visibility: hidden;
-}
-
 /* Paper-list show/hide button (in the list's header, or the toolbar once hidden). */
 .sidebar-toggle {
   display: inline-flex;

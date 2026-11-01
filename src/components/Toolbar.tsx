@@ -121,7 +121,7 @@ export function aiButtonState(
   return { disabled, title }
 }
 
-/** Top bar: file/Git on the left, the reviewer seat in the middle, then project status, review tools (Validate, AI), appearance controls and help. */
+/** Top bar: file/Git on the left, the reviewer seat in the middle, then save status, review tools (Validate, AI), appearance controls and help. */
 export function Toolbar() {
   const requestOpenProject = useStore((s) => s.requestOpenProject)
   const requestOpenRecent = useStore((s) => s.requestOpenRecent)
@@ -135,8 +135,6 @@ export function Toolbar() {
   const requestCloseProject = useStore((s) => s.requestCloseProject)
   const editorOpen = useEditorStore((s) => s.open)
   const project = useStore((s) => s.project)
-  const projectName = useStore((s) => s.projectName)
-  const dirty = useStore((s) => s.dirty)
   const busy = useStore((s) => s.busy)
   const theme = useStore((s) => s.theme)
   const toggleTheme = useStore((s) => s.toggleTheme)
@@ -145,8 +143,6 @@ export function Toolbar() {
   const resetFont = useStore((s) => s.resetFont)
   const recents = useStore((s) => s.recents)
   const forgetRecent = useStore((s) => s.forgetRecent)
-  const projectTitle = useStore((s) => s.projectTitle)
-  const saveHandle = useStore((s) => s.saveHandle)
   const setHelpOpen = useStore((s) => s.setHelpOpen)
   const currentReviewer = useStore((s) => s.currentReviewer)
   const selectReviewer = useStore((s) => s.selectReviewer)
@@ -261,13 +257,6 @@ export function Toolbar() {
       disabled: !git || busy || (gitProbe !== null && !gitProbe.available),
       onSelect: () => openClone(),
     },
-    {
-      type: 'item',
-      label: 'Close project',
-      hint: 'Close this project and return to the start screen',
-      disabled: !project || busy || editorOpen,
-      onSelect: requestCloseProject,
-    },
     { type: 'separator' },
     { type: 'header', label: 'Recent projects' },
     ...(recents.length > 0
@@ -320,15 +309,20 @@ export function Toolbar() {
           grid's column assignment never shifts. */}
       <div className="toolbar-left">
         {/* While the list is open its own header owns the toggle; once collapsed
-            the button has to live out here, or there'd be no way to bring it back.
-            The slot is always in the layout — hiding it rather than removing it
-            keeps the title from shifting sideways as the sidebar is toggled. */}
-        <span
-          className={`toolbar-toggle-slot${sidebarCollapsed ? '' : ' is-hidden'}`}
-          aria-hidden={!sidebarCollapsed}
-        >
-          <SidebarToggle />
-        </span>
+            the button has to live out here, or there'd be no way to bring it back. */}
+        {sidebarCollapsed && <SidebarToggle />}
+        {project && (
+          <button
+            type="button"
+            className="icon-btn"
+            title="Close project"
+            aria-label="Close project"
+            onClick={requestCloseProject}
+            disabled={busy || editorOpen}
+          >
+            <Icon name="close" size={16} />
+          </button>
+        )}
 
         <span className="app-title">
           SaiLoR
@@ -426,19 +420,10 @@ export function Toolbar() {
       </div>
 
       <div className="toolbar-right">
-        {/* The file name sits just left of the view controls; both are pushed
-            to the right edge by `.toolbar-right`'s own flex layout. */}
+        {/* The project name and unsaved state live in the window title (`useWindowTitle`). */}
         <div className="toolbar-status">
-          {project && (
-            // The project's own title when it has one; the path on hover locates it.
-            <span className="project-name" title={saveHandle?.path ?? projectName}>
-              {projectTitle || projectName || 'untitled'}
-              {dirty && <span className="dirty-dot" title="Unsaved changes">●</span>}
-            </span>
-          )}
-          {/* Always in the layout (even empty) so its appearance doesn't shift
-              the project name sideways; `aria-live` carries it to a screen
-              reader the same moment it becomes visible. */}
+          {/* Always in the layout (even empty); `aria-live` carries it to a
+              screen reader the same moment it becomes visible. */}
           <span className="save-status" role="status" aria-live="polite">
             {showSaved ? 'Saved' : ''}
           </span>
@@ -580,16 +565,17 @@ export function Toolbar() {
 const ICON_PATHS = {
   git: 'M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 9a9 9 0 0 1-9 9',
   check: 'M20 6 9 17l-5-5',
+  close: 'M18 6 6 18M6 6l12 12',
   spark: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16z',
 }
 
-function Icon({ name }: { name: keyof typeof ICON_PATHS }) {
+function Icon({ name, size = 14 }: { name: keyof typeof ICON_PATHS; size?: number }) {
   return (
     <svg
       className="tb-icon"
       viewBox="0 0 24 24"
-      width="14"
-      height="14"
+      width={size}
+      height={size}
       fill="none"
       stroke="currentColor"
       strokeWidth="2"

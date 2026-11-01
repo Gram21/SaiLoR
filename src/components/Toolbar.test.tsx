@@ -191,16 +191,26 @@ describe('REQ-UI-20: toolbar project controls', () => {
     expect(st().autosaveEnabled).toBe(true)
   })
 
-  it('Close project is disabled with no project open, enabled once one is', async () => {
+  it('shows the Close project button only while a project is open, and it closes the project', async () => {
     const { rerender } = render(<Toolbar />)
-    await userEvent.click(screen.getByRole('button', { name: /Open/ }))
-    expect(screen.getByRole('menuitem', { name: 'Close project' })).toBeDisabled()
-    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('button', { name: 'Close project' })).not.toBeInTheDocument()
 
     act(() => st().loadFromText(projectJson(), null, 'test.json'))
     rerender(<Toolbar />)
+    const close = screen.getByRole('button', { name: 'Close project' })
+    expect(close).toHaveAttribute('title', 'Close project')
+    await userEvent.click(close)
+    expect(st().project).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Close project' })).not.toBeInTheDocument()
+  })
+
+  it('no longer offers Close project in the Open menu nor shows the project name', async () => {
+    act(() => st().loadFromText(projectJson(), null, 'test.json'))
+    render(<Toolbar />)
+    expect(screen.queryByText('test.json')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /Open/ }))
-    expect(screen.getByRole('menuitem', { name: 'Close project' })).not.toBeDisabled()
+    expect(screen.getByRole('menuitem', { name: /^Open file…/ })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Close project' })).not.toBeInTheDocument()
   })
 
   it('groups Validate and AI as review tools, apart from the file and Git controls', () => {
@@ -217,17 +227,6 @@ describe('REQ-UI-20: toolbar project controls', () => {
     render(<Toolbar />)
     // Single-reviewer projects have an implicit seat (no picker needed).
     expect(screen.getByRole('button', { name: 'Validate' })).not.toBeDisabled()
-  })
-
-  it('shows the dirty indicator only while the project has unsaved changes', () => {
-    st().loadFromText(projectJson(), null, 'test.json')
-    useStore.setState({ dirty: true })
-    const { rerender } = render(<Toolbar />)
-    expect(screen.getByTitle('Unsaved changes')).toBeInTheDocument()
-
-    act(() => useStore.setState({ dirty: false }))
-    rerender(<Toolbar />)
-    expect(screen.queryByTitle('Unsaved changes')).not.toBeInTheDocument()
   })
 
   it('the appearance controls (font size, theme) are present and clickable', async () => {

@@ -739,3 +739,21 @@ The Electron shell had these features. The Tauri shell does not have them yet. `
 - Denial of device permission requests (REQ-PLT-240).
 - Routing of external links and navigation to the system browser (REQ-PLT-250).
 - Edit menu routing of undo and redo (REQ-PLT-310). The renderer key binding handles Ctrl/Cmd+Z.
+
+### 20.7 Window title and Close project button
+
+- The window title shows the project, for example "My review - SaiLoR". With no project open, it shows "SaiLoR" (REQ-UI-25).
+- A "● " prefix marks unsaved changes. The toolbar no longer shows the project name or a dirty dot.
+- `useWindowTitle` calls `PlatformAdapter.setWindowTitle`. The Tauri bridge calls `getCurrentWindow().setTitle()`.
+- `core:default` does not allow `setTitle`. `capabilities/default.json` adds `core:window:allow-set-title`.
+- In the browser, the `unsupported` adapter sets `document.title`.
+- "Close project" is an icon button left of the "SaiLoR" app title. It shows only while a project is open (REQ-UI-20).
+- The Open menu no longer has a "Close project" item. No keyboard shortcut existed for it.
+- The button calls `requestCloseProject`, so unsaved changes still open the close prompt. `src-tauri/src/close.rs` is not changed.
+
+The native title bar stays. An overlay title bar is not used, for these reasons:
+
+- macOS `titleBarStyle: Overlay` hides the native title text. The project name must show in that title.
+- With a visible overlay title, the native title text sits over the web content. It overlaps the centered reviewer switch.
+- Windows and Linux have no overlay style in Tauri. They need `decorations: false` and custom window controls. That removes native snap and the native window menu.
+- Each overlay needs `data-tauri-drag-region` areas. Every toolbar control then needs a check for drag conflicts.
