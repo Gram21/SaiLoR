@@ -22,6 +22,7 @@
     "scenario": "vite-node samples/git-scenarios/cli.ts"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.12.4",
     "electron-updater": "^6.3.9",
     "immer": "^10.1.1",
     "pdf-lib": "^1.17.1",
