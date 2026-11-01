@@ -220,26 +220,29 @@ These points come from general knowledge of Tauri v2, not from running it here. 
 - Updater behavior with NSIS and AppImage in your release flow.
 - Installer size with your assets.
 
-## 11. Phase 0 spike results (2026-11-01, macOS 26.6 arm64 only)
+## 11. Phase 0 spike results (2026-11-01)
 
-Code: `src-tauri/`, `spike/`, `vite.spike.config.ts` on branch `spike/tauri`. The spike does not touch the app source.
+Code: `src-tauri/`, `spike/`, `vite.spike.config.ts`, `.github/workflows/tauri-spike.yml` on branch `spike/tauri`. The spike does not touch the app source.
 
-| Check | Result |
-| --- | --- |
-| Tauri app loads a Vite/React build | Pass |
-| `project_open` command (native dialog, sets project dir) | Built. Dialog not driven automatically. The `SPIKE_PROJECT` env var opens a project without the dialog. |
-| `slr-file` protocol with real-path check | Pass. `../` traversal returns 403. Missing file returns 404. |
-| `react-pdf` 9 / `pdfjs-dist` 4.8 in WKWebView | Pass on macOS 26.6. PDF loads (2 pages) and page 1 renders. |
-| Installer size, macOS arm64 | `.dmg` 2.1 MB, `.app` 3.8 MB. Electron `.dmg` today: 93 MB (arm64). |
-| `pdfjs-dist` on oldest supported macOS | Not tested |
-| Windows (WebView2) and Linux (WebKitGTK) builds | Not tested. Needs CI runners. |
-| `tauri-driver` e2e on Linux | Not tested |
+Local run: macOS 26.6 arm64. CI run: GitHub Actions `Tauri spike` workflow, five runners.
+
+| Runner | WebView engine | Build | pdf.js load + render | Traversal blocked | Installer size |
+| --- | --- | --- | --- | --- | --- |
+| macOS 26.6 (local) | WKWebView | Pass | Pass | 403 | dmg 2.1 MB |
+| macos-14 | WKWebView | Pass | Pass | 403 | dmg 2.2 MB |
+| macos-15 | WKWebView | Pass | Pass | 403 | dmg 2.2 MB |
+| ubuntu-22.04 | WebKitGTK | Pass | Pass | 403 | deb 2.0 MB, rpm 2.0 MB, AppImage 80.6 MB |
+| ubuntu-24.04 | WebKitGTK | Pass | Pass | 403 | deb 2.0 MB, rpm 2.0 MB, AppImage 80.9 MB |
+| windows-latest | WebView2 (Chromium 155) | Pass | Pass | Probe used a Unix path (404). Probe fixed to `Windows/win.ini`. | msi 2.2 MB, NSIS 1.7 MB |
+
+Not tested: macOS older than 14, `tauri-driver` e2e, native open dialog (the probe opens the project through `SPIKE_PROJECT`), Windows without WebView2, Windows traversal after the probe fix.
 
 Findings:
 
-- The spike protocol handler returns the whole file. It ignores `Range` requests. pdf.js falls back to a full download. Large PDFs need `Range` support in the real handler.
-- On Windows the scheme URL differs (`http://slr-file.localhost`). The spike already branches on this. Not run.
-- Spike icons come from `tauri icon build/icon.png`.
-- Size gain is real: about 2% of the Electron installer for the shell alone.
+- pdf.js 4.8 renders on all three engines. The main risk from section 5.2 did not occur on current OS versions.
+- Linux AppImage is 80 MB because it bundles WebKitGTK. The deb and rpm are 2 MB. The size gain on Linux needs deb/rpm, not AppImage.
+- The spike protocol handler returns the whole file and ignores `Range` requests. pdf.js falls back to a full download. The real handler needs `Range` support for large PDFs.
+- On Windows the scheme URL is `http://slr-file.localhost`. The spike branches on the user agent.
+- The size gain for the shell alone is about 2% of the Electron installer (93 MB macOS arm64). The real app adds its own assets.
 
-Go/no-go: partial. Remaining checks need Windows and Linux runners plus an older macOS. Next step: add a CI matrix job that runs `tauri build` on `windows-latest` and `ubuntu-22.04`, and run the spike there.
+Go/no-go: go on the rendering and size checks. Open items: oldest supported macOS, `tauri-driver` e2e on Linux, and the decision on Linux packaging (deb/rpm instead of AppImage).
