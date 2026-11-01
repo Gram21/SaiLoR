@@ -7,6 +7,7 @@ mod paths;
 mod pdf;
 mod project;
 mod protocol;
+mod update;
 // Phase 4 (AI): LLM targets, local servers, web fetch, hardware.
 mod hardware;
 mod llm;
@@ -51,6 +52,8 @@ fn spike_report(line: String) {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(update::State::default())
         .manage(Mutex::new(Session::default()))
         .register_asynchronous_uri_scheme_protocol("slr-file", |ctx, req, responder| {
             let app = ctx.app_handle().clone();
@@ -133,6 +136,9 @@ fn main() {
             git::git_commit_partial,
             git::git_write_working,
             git::git_discard_file,
+            update::update_check,
+            update::update_download,
+            update::update_install,
         ])
         .run(tauri::generate_context!())
         .expect("tauri run failed");

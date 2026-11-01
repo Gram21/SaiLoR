@@ -282,7 +282,7 @@ Checklist item "One automated e2e test runs on Linux with `tauri-driver`" (secti
 
 Open work from these decisions:
 
-1. Set `bundle.targets` for Linux to `["appimage", "deb", "rpm"]` in the release configuration (Phase 5).
+1. Set `bundle.targets` for Linux to `["appimage", "deb", "rpm"]` in the release configuration (Phase 5). Done in `src-tauri/tauri.release.conf.json` (section 16).
 2. Add the minimum macOS version and the Linux update behavior to `README.md` and `docs/requirements/platform.md` at cutover (Phase 6).
 
 ## 13. Phase 2 progress
@@ -356,7 +356,7 @@ Not ported:
 | --- | --- |
 | `local:*` except `local:probe` | `localRuntime` is later work (Phase 4 step 3). |
 | `llm:call` for managed targets | Managed targets need `localRuntime`. The command refuses them with an error. |
-| `update:*` | The updater moves to `tauri-plugin-updater` (Phase 4 step 4). |
+| `update:*` | The updater moves to `tauri-plugin-updater` (Phase 4 step 4). Done in section 16. |
 
 Differences from Electron:
 
@@ -392,3 +392,104 @@ Differences from Electron:
 - There is no 32 MB output cap.
 - `ls-tree` uses `-z`, so paths with non-ASCII characters are not quoted.
 - A git process that a signal stops reports `code: null` and keeps its stderr.
+
+## 16. Phase 4 step 4 and Phase 5 progress (updater, release)
+
+### 16.1 Updater
+
+`src-tauri/src/update.rs` implements the `update:*` channels on `tauri-plugin-updater`. The bridge in `src/platform/tauri.ts` already maps them.
+
+| Command | Behavior |
+| --- | --- |
+| `update_check` | Asks the feed for a newer version. Emits `update:available` `{ version }` or `update:error`. Returns `{ supported: true }`. |
+| `update_download` | Starts the download of the reported update and returns at once. Emits `update:progress` `{ percent }`, then `update:downloaded` or `update:error`. Does nothing if no update was reported. |
+| `update_install` | Installs the downloaded update and restarts the app. On Windows the NSIS installer closes the app. Emits `update:error` on failure. |
+
+Configuration in `src-tauri/tauri.conf.json`:
+
+- `version` reads `../package.json`, so the app version and the feed version use the same source.
+- `plugins.updater.endpoints` is `https://github.com/Gram21/SaiLoR/releases/latest/download/latest.json`.
+- `plugins.updater.pubkey` is the placeholder `REPLACE_WITH_TAURI_SIGNER_PUBLIC_KEY`.
+- `plugins.updater.requireSignedVersion` is `true`. The Tauri CLI 2.12 and later writes the version into the signature. The plugin rejects a feed that pairs a version with a different artifact.
+- The capability file does not grant `updater:default`. The renderer cannot call the plugin directly and cannot supply a URL.
+
+Differences from Electron:
+
+- macOS self-updates. Electron reported `{ supported: false }` on macOS.
+- deb and rpm return `{ supported: false, manual: true }` and do not contact the feed. Unbundled binaries (`cargo run`, `tauri dev`) return the same.
+- The plugin verifies a minisign signature of each artifact. Electron verified an Ed25519 signature of the feed (`latest*.yml`).
+- Caution: The feed URL returns 404 until a Tauri release is the latest published release. Before the cutover, `update_check` emits `update:error` on a supported bundle.
+
+Open items for the TypeScript side:
+
+- `App.tsx` shows the download and install buttons only if `isElectron()` is true. `isElectron()` is false in Tauri, so the in-app update UI is hidden.
+- `useElectronCloseGuard` subscribes to `update:progress`, `update:downloaded` and `update:error` only in Electron.
+- `getOsInfo()` returns `null` in Tauri. `checkForUpdate` and the release-asset match need the OS and architecture.
+
+### 16.2 Release workflow
+
+`.github/workflows/tauri-release.yml` builds the Tauri app and attaches the files to a draft GitHub release.
+
+- Triggers: a pushed tag `tauri-v<version>`, or a manual run. A manual run uses `tauri-v<version>` from `package.json`.
+- The tag must match the `package.json` version.
+- The `release` job stops if the public key is still the placeholder or if `TAURI_SIGNING_PRIVATE_KEY` is not set.
+- The `release` job reuses an existing draft for the tag. It stops if the release is already published.
+- The `build` job runs `tauri-apps/tauri-action@v1` with `src-tauri/tauri.release.conf.json` on these runners:
+
+| Runner | Target | Files |
+| --- | --- | --- |
+| `macos-15` | `aarch64-apple-darwin` | `.dmg`, `.app.tar.gz` and `.sig` |
+| `macos-15` | `x86_64-apple-darwin` | `.dmg`, `.app.tar.gz` and `.sig` |
+| `windows-latest` | `x86_64-pc-windows-msvc` | NSIS `.exe` and `.sig` |
+| `ubuntu-22.04` | `x86_64-unknown-linux-gnu` | `.AppImage`, `.deb`, `.rpm` and `.sig` |
+
+- Each build job merges its platform into `latest.json` on the release.
+- The `check-updater-json` job fails if `latest.json` misses a platform. If this occurs, run the failed build job again.
+- `src-tauri/tauri.release.conf.json` sets `createUpdaterArtifacts`. The base configuration does not, so `tauri-build.yml` and `tauri-e2e.yml` need no signing key.
+
+Electron release separation:
+
+- The Electron `release.yml` runs on every published release. Its `integration-tests` job now skips releases with a `tauri-v` tag. The `build` and `zenodo` jobs depend on it, so they skip too.
+- Electron releases keep the `v<version>` tags.
+- Warning: A published `tauri-v*` release is not archived on Zenodo. Change this at the cutover (Phase 6).
+
+`ci.yml` has a new `rust` job. It runs `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and `cargo test` in `src-tauri`.
+
+### 16.3 Signing key and secrets
+
+Warning: Do not commit the private key. If you lose the private key, installed apps cannot accept new updates. Keep a backup in a password manager.
+
+Create the updater key once:
+
+1. Run `npx tauri signer generate -w ~/.tauri/sailor.key`.
+2. Enter a password, or leave it empty.
+3. Copy the content of `~/.tauri/sailor.key.pub` into `plugins.updater.pubkey` in `src-tauri/tauri.conf.json`.
+4. Commit `tauri.conf.json`.
+5. Set the repository secrets in the next table.
+
+| Secret | Required | Content |
+| --- | --- | --- |
+| `TAURI_SIGNING_PRIVATE_KEY` | Yes | Content of `~/.tauri/sailor.key`. |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | If the key has a password | The key password. |
+| `APPLE_CERTIFICATE` | No | Base64 of the Developer ID Application `.p12`. |
+| `APPLE_CERTIFICATE_PASSWORD` | With `APPLE_CERTIFICATE` | The `.p12` password. |
+| `APPLE_SIGNING_IDENTITY` | With `APPLE_CERTIFICATE` | For example `Developer ID Application: Name (TEAMID)`. If not set, the app is ad-hoc signed (`-`). |
+| `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` | No | Apple ID, app-specific password and team ID for notarization. |
+| `WINDOWS_CERTIFICATE` | No | Base64 of the code-signing `.pfx`. If not set, the installer is unsigned. |
+| `WINDOWS_CERTIFICATE_PASSWORD` | With `WINDOWS_CERTIFICATE` | The `.pfx` password. |
+
+To make a release:
+
+1. Set the version in `package.json`.
+2. Push the tag `tauri-v<version>`, or start "Tauri release" from the Actions tab.
+3. Check the draft release and `latest.json`.
+4. Publish the draft.
+
+Open items for the cutover (Phase 6):
+
+- `productName`, `identifier` and the window title still contain "spike".
+- `build.frontendDist` is still the spike frontend (`dist-spike`).
+- The Rust package name is still `sailor-spike`. The binary name follows it.
+- Electron users install the first Tauri release by hand. electron-updater cannot read `latest.json`.
+
+Verification: `cargo test` tests the bundle gate, the progress percent and the updater configuration. The release workflow was not run. It needs the secrets and a tag.
