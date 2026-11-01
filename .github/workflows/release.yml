@@ -23,6 +23,8 @@ jobs:
   # release. Pulled into its own reusable workflow (integration-tests.yml)
   # so it's also independently triggerable without a full release run.
   integration-tests:
+    # tauri-v* releases come from tauri-release.yml; skipping here also skips build and zenodo.
+    if: ${{ !startsWith(github.event.release.tag_name, 'tauri-v') }}
     uses: ./.github/workflows/integration-tests.yml
 
   build:
