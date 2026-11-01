@@ -19,13 +19,13 @@ pub struct Gpu {
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct HardwareInfo {
-    platform: &'static str,
-    arch: &'static str,
+    pub(crate) platform: &'static str,
+    pub(crate) arch: &'static str,
     total_ram_bytes: u64,
     free_ram_bytes: u64,
     gpus: Vec<Gpu>,
-    disk_free_bytes: i64,
-    recommended_backend: &'static str,
+    pub(crate) disk_free_bytes: i64,
+    pub(crate) recommended_backend: &'static str,
 }
 
 /// `\bword\b` on a lowercased name.
@@ -209,7 +209,7 @@ fn node_names() -> (&'static str, &'static str) {
 }
 
 /// Free space on the volume holding `dir` (the longest matching mount point), or -1.
-fn disk_free(dir: &Path) -> i64 {
+pub(crate) fn disk_free(dir: &Path) -> i64 {
     let disks = sysinfo::Disks::new_with_refreshed_list();
     disks
         .list()
