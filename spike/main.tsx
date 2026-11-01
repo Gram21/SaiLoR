@@ -34,8 +34,7 @@ function App() {
       setPapers(list)
       say(`auto-opened: ${list.length} pdfs`)
       const target = (id: string) => `${base}/pdf?path=${encodeURIComponent(id)}`
-      const up = '../'.repeat(12)
-      for (const rel of [`${up}${navigator.userAgent.includes('Windows') ? 'Windows/win.ini' : 'etc/passwd'}`, 'nope.pdf']) {
+      for (const rel of ['../package.json', 'nope.pdf']) {
         const res = await fetch(target(rel)).catch((e) => ({ status: `ERR ${e}` }))
         say(`probe ${rel} -> ${(res as Response).status}`)
       }
