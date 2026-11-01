@@ -16,7 +16,8 @@ use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::{mpsc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
@@ -28,6 +29,8 @@ const NETWORK_TIMEOUT: Duration = Duration::from_secs(900);
 /// `BACKGROUND_FETCH_TIMEOUT_MS` from src/git/fetchPolicy.ts.
 const BACKGROUND_FETCH_TIMEOUT: Duration = Duration::from_secs(60);
 const LOG_MAX_COMMITS: usize = 250;
+/// `GIT_MAX_BUFFER`: git is killed when stdout or stderr passes this size.
+const MAX_OUTPUT: usize = 32 * 1024 * 1024;
 
 /// Inherited variables that would point git at another repository (`gitEnv`).
 const STRIPPED_ENV: [&str; 7] = [
@@ -139,12 +142,20 @@ fn safe_config() -> Vec<String> {
     .collect()
 }
 
-fn reader<R: Read + Send + 'static>(pipe: Option<R>) -> mpsc::Receiver<String> {
+fn reader<R: Read + Send + 'static>(
+    pipe: Option<R>,
+    cap: usize,
+    over: Arc<AtomicBool>,
+) -> mpsc::Receiver<String> {
     let (tx, rx) = mpsc::channel();
     thread::spawn(move || {
         let mut buf = Vec::new();
-        if let Some(mut p) = pipe {
-            let _ = p.read_to_end(&mut buf);
+        if let Some(p) = pipe {
+            let _ = p.take(cap as u64 + 1).read_to_end(&mut buf);
+        }
+        if buf.len() > cap {
+            over.store(true, Ordering::SeqCst);
+            buf = Vec::new();
         }
         let _ = tx.send(String::from_utf8_lossy(&buf).into_owned());
     });
@@ -152,12 +163,22 @@ fn reader<R: Read + Send + 'static>(pipe: Option<R>) -> mpsc::Receiver<String> {
 }
 
 /// `runGit`: a non-zero exit is data, not an error. `code: None` means git did
-/// not start or was killed at `timeout`.
+/// not start, was killed at `timeout`, or wrote more than `MAX_OUTPUT`.
 pub fn run_git(
     args: &[&str],
     cwd: Option<&Path>,
     timeout: Duration,
     extra_env: &[(&str, &str)],
+) -> GitRun {
+    run_git_capped(args, cwd, timeout, extra_env, MAX_OUTPUT)
+}
+
+fn run_git_capped(
+    args: &[&str],
+    cwd: Option<&Path>,
+    timeout: Duration,
+    extra_env: &[(&str, &str)],
+    cap: usize,
 ) -> GitRun {
     let mut cmd = Command::new("git");
     cmd.args(safe_config())
@@ -186,12 +207,17 @@ pub fn run_git(
         Ok(c) => c,
         Err(e) => return GitRun::failed(e.to_string()),
     };
-    let (out, errs) = (reader(child.stdout.take()), reader(child.stderr.take()));
+    let over = Arc::new(AtomicBool::new(false));
+    let out = reader(child.stdout.take(), cap, over.clone());
+    let errs = reader(child.stderr.take(), cap, over.clone());
+    let overflow = || GitRun::failed(format!("git output exceeded {} MB.", MAX_OUTPUT >> 20));
     let start = Instant::now();
     let status = loop {
         match child.try_wait() {
             Ok(Some(s)) => break Some(s),
-            Ok(None) if start.elapsed() < timeout => thread::sleep(Duration::from_millis(5)),
+            Ok(None) if start.elapsed() < timeout && !over.load(Ordering::SeqCst) => {
+                thread::sleep(Duration::from_millis(5))
+            }
             _ => {
                 let _ = child.kill();
                 let _ = child.wait();
@@ -200,6 +226,9 @@ pub fn run_git(
         }
     };
     let Some(status) = status else {
+        if over.load(Ordering::SeqCst) {
+            return overflow();
+        }
         // A grandchild (ssh, a credential helper) may still hold the pipes open.
         let grace = Duration::from_secs(1);
         return GitRun {
@@ -209,11 +238,18 @@ pub fn run_git(
             stderr: format!("git timed out after {}s.", timeout.as_secs()),
         };
     };
+    let (stdout, stderr) = (
+        out.recv().unwrap_or_default(),
+        errs.recv().unwrap_or_default(),
+    );
+    if over.load(Ordering::SeqCst) {
+        return overflow();
+    }
     GitRun {
         ok: status.success(),
         code: status.code(),
-        stdout: out.recv().unwrap_or_default(),
-        stderr: errs.recv().unwrap_or_default(),
+        stdout,
+        stderr,
     }
 }
 
@@ -2236,6 +2272,17 @@ pub async fn git_discard_file(
 mod tests {
     use super::*;
     use crate::project::tests::tmp;
+
+    #[test]
+    fn output_over_the_cap_fails_without_data() {
+        let r = run_git_capped(&["--version"], None, TIMEOUT, &[], 4);
+        assert!(!r.ok);
+        assert_eq!(r.code, None);
+        assert_eq!(r.stdout, "");
+        assert_eq!(r.stderr, "git output exceeded 32 MB.");
+        let r = run_git_capped(&["--version"], None, TIMEOUT, &[], 4096);
+        assert!(r.ok && r.stdout.starts_with("git version"));
+    }
 
     // ---- Vectors shared with src/git/*.test.ts ----
 
