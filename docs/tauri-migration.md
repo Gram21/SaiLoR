@@ -312,3 +312,29 @@ Differences from Electron:
 
 - The `pdf_allow_path` warning dialog cannot set a default button. The Enter key can select "Open anyway".
 - `paths_sibling` also refuses `.` and `..` as file names.
+
+## 14. Phase 3 progress
+
+Scope: the Rust side of the 36 `git:*` channels. The TypeScript bridge already calls them by name (`src/platform/tauri.ts`). The renderer does not read the new result shapes yet.
+
+| Module | Content |
+| --- | --- |
+| `git.rs` | All `git_*` commands, the git runner, the URL, ref and relative-path validators, and tests against temporary repositories. |
+| `authz.rs` | New `known_git_roots` set (REQ-GIT-90). |
+
+The runner starts `git` with a fixed argument vector and no shell. It uses the Electron environment hardening, `-c` safety options and timeouts (30 s, 900 s for network, 60 s for background fetch). The Rust validators use the same test vectors as `src/git/url.test.ts`, `src/git/ref.test.ts` and `src/git/relpath.test.ts`.
+
+Open items for the TypeScript side:
+
+- Revision content (`git_head_content`, `git_log_diff` texts, `merge` results `base`/`ours`/`theirs`) is a `Snapshot` `{ text, files }`. Assemble it with `src/model/project.ts`.
+- `git_working_content` and the branch-switch `ours` return the `project_open` shape `{ path, text, files, siblings }`. Assemble it the same way.
+- `pullFinish`, `branchSwitchFinish`, `commitPartial` and `writeWorking` take `{ metaText, files }` in the `project_save` file format.
+- Output parsing that Electron left to the renderer stays in TypeScript: `capDiff`, `diffLines`, `repoNameFromUrl` and the field-level merge.
+
+Differences from Electron:
+
+- Every command that takes a root requires a root from `git_info` or `git_clone` in this session. Electron checked this only for background fetch, checkout, branch switch and stash commands. `git_probe`, `git_clone`, `git_info` and the pickers do not take a known root.
+- Commands run on a blocking thread pool. `git show` for revisions runs on at most 8 threads.
+- There is no 32 MB output cap.
+- `ls-tree` uses `-z`, so paths with non-ASCII characters are not quoted.
+- A git process that a signal stops reports `code: null` and keeps its stderr.
