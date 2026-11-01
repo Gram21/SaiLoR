@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { setBridge, type SlrBridge } from './bridge'
 import { DesktopAdapter } from './desktop'
 import { assembleLegacyProjectJson, isLegacyProjectShape, parseMarksFileName } from '../model/project'
@@ -187,6 +188,11 @@ export const tauriBridge: SlrBridge = {
     onProgress: subscribe('local:progress'),
   },
 
+  setWindowTitle: (title: string) => {
+    getCurrentWindow()
+      .setTitle(title)
+      .catch(() => {})
+  },
   setDirty: send('app:setDirty', 'dirty'),
   onRequestSave: replace('app:requestSave'),
   saveComplete: send('app:saveComplete', 'ok'),

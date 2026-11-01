@@ -18,6 +18,9 @@ export function createUnsupportedAdapter(): PlatformAdapter {
   const real = {
     kind: 'browser' as const,
     getRecents: (): RecentEntry[] => [],
+    setWindowTitle: (title: string) => {
+      document.title = title
+    },
     writeFeedback: (): Promise<string | null> => Promise.resolve(null),
     listFeedback: (): Promise<{ name: string; bytes: number }[]> => Promise.resolve([]),
     ollama: undefined,

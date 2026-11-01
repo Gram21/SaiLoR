@@ -74,6 +74,9 @@ export interface PlatformAdapter {
    */
   getOsInfo(): OsInfo | null
 
+  /** Set the native window title (the document title in the browser). */
+  setWindowTitle(title: string): void
+
   /** Recently opened projects (newest first), for the Open menu. */
   getRecents(): RecentEntry[]
 

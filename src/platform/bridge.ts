@@ -106,6 +106,8 @@ export interface SlrBridge {
   }
   discoverLocalServer(baseUrl: string): Promise<LocalServerResult>
   local: LocalRuntimeApi
+  /** Set the native window title. */
+  setWindowTitle(title: string): void
   /** Unsaved-changes coordination for a clean quit. */
   setDirty(dirty: boolean): void
   onRequestSave(cb: () => void): void

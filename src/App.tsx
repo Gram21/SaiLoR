@@ -47,6 +47,7 @@ import { Splitter } from './components/Splitter'
 import { useKeybindings } from './hooks/useKeybindings'
 import { useDirtyGuard } from './hooks/useDirtyGuard'
 import { useCloseGuard } from './hooks/useCloseGuard'
+import { useWindowTitle } from './hooks/useWindowTitle'
 import { useConsolidationAlignment } from './hooks/useConsolidationAlignment'
 import { useAutosave } from './hooks/useAutosave'
 import { useUpstreamPolling } from './hooks/useUpstreamPolling'
@@ -63,6 +64,7 @@ export function App() {
   useKeybindings()
   useDirtyGuard()
   useCloseGuard()
+  useWindowTitle()
   useConsolidationAlignment()
   useAutosave()
   useUpstreamPolling()

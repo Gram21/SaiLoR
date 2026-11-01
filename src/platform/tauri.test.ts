@@ -7,6 +7,8 @@ import { setBridge } from './bridge'
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
 vi.mock('@tauri-apps/api/event', () => ({ listen: vi.fn() }))
+const setTitle = vi.fn(() => Promise.resolve())
+vi.mock('@tauri-apps/api/window', () => ({ getCurrentWindow: () => ({ setTitle }) }))
 
 const invokeMock = vi.mocked(invoke)
 const listenMock = vi.mocked(listen)
@@ -87,6 +89,19 @@ describe('tauriBridge', () => {
     await Promise.resolve()
     expect(first).toHaveBeenCalled()
     expect(listenMock.mock.calls.map((c) => c[0])).toEqual(['app:undo', 'app:undo'])
+  })
+
+  it('sets the window title through the window API and swallows a refusal', async () => {
+    tauriBridge.setWindowTitle('Review - SaiLoR')
+    expect(setTitle).toHaveBeenLastCalledWith('Review - SaiLoR')
+    setTitle.mockReturnValueOnce(Promise.reject(new Error('not allowed')))
+    expect(() => tauriBridge.setWindowTitle('SaiLoR')).not.toThrow()
+    await Promise.resolve()
+  })
+
+  it('allows the window title call in the capability', () => {
+    const capability = JSON.parse(readFileSync('src-tauri/capabilities/default.json', 'utf-8'))
+    expect(capability.permissions).toContain('core:window:allow-set-title')
   })
 
   it('invokes exactly the commands main.rs registers', () => {

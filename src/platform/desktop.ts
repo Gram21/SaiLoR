@@ -104,6 +104,10 @@ export class DesktopAdapter implements PlatformAdapter {
     return bridge().os ?? null
   }
 
+  setWindowTitle(title: string): void {
+    bridge().setWindowTitle(title)
+  }
+
   getRecents(): RecentEntry[] {
     return readRecents(RECENTS_KEY)
   }
