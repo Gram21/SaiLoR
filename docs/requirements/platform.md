@@ -172,10 +172,10 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-160 — Persist window state
-- **Description:** The system shall persist window size, position, and maximized state across runs, defaulting to 1920×1080, and shall reuse a saved position only when it still overlaps a connected display.
+- **Description:** The system shall persist window size, position, and maximized state across runs, defaulting to 1400×900, and shall reuse a saved position only when it still overlaps a connected display.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** commit `6ce60d5` (`electron/main.ts`, removed)
-- **Status:** Not implemented in the Tauri shell (Electron-only until 2.0.0)
+- **Evidence:** `src-tauri/src/main.rs` (`tauri_plugin_window_state`, `StateFlags::SIZE | POSITION | MAXIMIZED`), `src-tauri/tauri.conf.json` (`app.windows`), commit `6ce60d5` (`electron/main.ts`, removed)
+- **Status:** Implemented
 
 ### REQ-PLT-170 — Persist appearance settings
 - **Description:** The system shall persist locally the theme (defaulting to the operating-system preference), the font scale (clamped to 0.7–2.0), the autosave toggle (off by default), and the pane widths.

@@ -77,6 +77,14 @@ fn main() {
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             shell::focus_main(app)
         }))
+        .plugin(
+            tauri_plugin_window_state::Builder::new()
+                .with_state_flags({
+                    use tauri_plugin_window_state::StateFlags as F;
+                    F::SIZE | F::POSITION | F::MAXIMIZED
+                })
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(

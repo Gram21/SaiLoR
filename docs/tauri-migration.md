@@ -732,7 +732,6 @@ Kept on purpose:
 
 The Electron shell had these features. The Tauri shell does not have them yet. `docs/requirements/platform.md` marks the matching requirements.
 
-- Window size and position persistence (REQ-PLT-160). The window opens at 1400x900.
 - Migration of the legacy "SLR Helper" folder (REQ-PLT-180).
 - Reload guard on the menu reload (REQ-PLT-120). Only the renderer `beforeunload` handler exists.
 - Denial of device permission requests (REQ-PLT-240).
@@ -748,13 +747,17 @@ Branch: `feat/tauri-platform-gaps`. This section ports Electron shell features t
 | Requirement | Tauri implementation |
 | --- | --- |
 | Single instance (REQ-PLT-11) | `tauri-plugin-single-instance`. A second start exits. The running app restores, shows and focuses the `main` window. |
+| Window state (REQ-PLT-160) | `tauri-plugin-window-state` saves size, position and the maximized state in `<app config dir>/.window-state.json`. It restores a position only if it is on a connected display. |
 
 ### 21.2 Differences from Electron
 
 - The second start does not forward its arguments. Electron did not forward them either.
+- The default window size is 1400x900. Electron used 1920x1080.
+- The window state file is new. The app does not read the Electron `window-state.json`, so the first start uses the default size.
 
 ### 21.3 Verification and gaps
 
 Verification:
 
 - A manual run on macOS started the debug build twice. The second process exited. The first process kept running.
+- A manual run on macOS moved and resized the window and quit from the menu. The next start used the saved position and size.
