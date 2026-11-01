@@ -621,4 +621,48 @@ Not tested:
 - The updater was not tried against a real feed.
 - `lopdf` was tested only with generated PDFs.
 
-Channels that are still not ported: `project:annotationsDirUsers`, `project:sharedAnnotations`, `project:screeningSource`, `project:moveAnnotationsDir`, `project:splitAnnotations` and `reference:pick`.
+## 19. Remaining project channels
+
+Branch: `feat/tauri-port-remaining-ipc`. This section ports the last six channels of `electron/preload.ts`. Every preload channel now has a Rust command.
+
+| Channel | Command | Module |
+| --- | --- | --- |
+| `project:annotationsDirUsers` | `project_annotations_dir_users` | `annotations.rs` |
+| `project:moveAnnotationsDir` | `project_move_annotations_dir` | `annotations.rs` |
+| `project:sharedAnnotations` | `project_shared_annotations` | `annotations.rs` |
+| `project:splitAnnotations` | `project_split_annotations` | `annotations.rs` |
+| `project:screeningSource` | `project_screening_source` | `project.rs` |
+| `reference:pick` | `reference_pick` | `project.rs` |
+
+### 19.1 Behavior
+
+- `project_annotations_dir_users` returns only the names of the sibling project files that use the folder and share a paper of the same kind. Rust applies the `filesCollide` rule (NFC, case-insensitive ids).
+- `project_move_annotations_dir` renames the folder first. If the project file write fails, it renames the folder back. It stamps the project file and the moved files.
+- `project_shared_annotations` returns the Electron shape `{ folder, projects, files }`. It stores the listed projects, their stamps and the listed files in `Session.listed_splits`.
+- `project_split_annotations` accepts only a plan for the listed projects and files. It refuses the plan if a listed project file changed. All checks run before the first write. The writes keep the `applySplit` order: copy, point each project file at its folder, delete, remove empty folders.
+- `planSplit` stays in TypeScript.
+- `project_screening_source` returns the raw project like `project_open`. The bridge assembles `text` with `assembleProject`.
+- `reference_pick` opens the "Import references" dialog and returns `{ text, name }`.
+
+Project file rewrites keep the key order of the file. For this, `serde_json` uses the `preserve_order` feature.
+
+### 19.2 Differences from Electron
+
+- `project_annotations_dir_users` requires a project that this session opened. Electron did not check this. All renderer callers pass an open project.
+- `project_move_annotations_dir` refuses a project file that is not a JSON object.
+- `project_move_annotations_dir` removes only an empty target folder. Electron used a recursive remove.
+- `project_split_annotations` checks that the real parent of each copy target is inside the project directory.
+- A refused folder name gives no reason. Electron added the `annotationsDirProblem` text.
+- Project file rewrites print numbers in the Rust format. For example, `1.0` stays `1.0` and does not become `1`.
+
+### 19.3 Verification and gaps
+
+Verification:
+
+- `cargo test` tests the collision rule, the known-project checks, the folder move and its restore, the listing, the split and its refusals, the key order and the screening-source name rules.
+- `npx vitest run` tests the channel mapping and the `screeningSource` shape.
+
+Not tested:
+
+- No test runs the Tauri app. The "Import references" dialog was not tried by hand.
+- The restore after a failed project file write is tested only on systems that refuse writes to read-only files.

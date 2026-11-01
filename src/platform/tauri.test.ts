@@ -26,6 +26,11 @@ describe('tauriBridge', () => {
     await tauriBridge.ollama.show('http://h', 'm')
     await tauriBridge.local.modelInstall('qwen')
     await tauriBridge.gitCommitPartial('/r', 'p.json', 'c' as never, 'w' as never, ['o'], 'msg', true)
+    await tauriBridge.annotationsDirUsers('/r/p.json', 'ann', ['p1'], true)
+    await tauriBridge.moveAnnotationsDir('/r/p.json', 'ann')
+    await tauriBridge.sharedAnnotations('/r/p.json')
+    await tauriBridge.splitAnnotations('/r/p.json', { folders: { '/r/p.json': 'a' }, rows: [] })
+    await tauriBridge.pickReferenceFile()
 
     expect(invokeMock.mock.calls).toEqual([
       ['project_open', {}],
@@ -37,6 +42,11 @@ describe('tauriBridge', () => {
         'git_commit_partial',
         { root: '/r', relPath: 'p.json', committed: 'c', working: 'w', otherPaths: ['o'], message: 'msg', amend: true },
       ],
+      ['project_annotations_dir_users', { projectPath: '/r/p.json', folder: 'ann', paperIds: ['p1'], screening: true }],
+      ['project_move_annotations_dir', { projectPath: '/r/p.json', folder: 'ann' }],
+      ['project_shared_annotations', { projectPath: '/r/p.json' }],
+      ['project_split_annotations', { projectPath: '/r/p.json', plan: { folders: { '/r/p.json': 'a' }, rows: [] } }],
+      ['reference_pick', {}],
     ])
   })
 
@@ -168,6 +178,10 @@ describe('project assembly', () => {
     expect(await tauriBridge.gitBranchSwitchBegin('/r', 'p.json', 'b')).toEqual({ kind: 'merge', sourceBranch: 'a', base: whole, ours: whole, theirs: whole })
     invokeMock.mockResolvedValueOnce({ kind: 'dirty', paths: ['x'] })
     expect(await tauriBridge.gitMergeBegin('/r', 'p.json', 'b')).toEqual({ kind: 'dirty', paths: ['x'] })
+    invokeMock.mockResolvedValueOnce({ name: 's.json', path: '/r/s.json', ...raw, siblings: [] })
+    expect(await tauriBridge.screeningSource('/r/p.json')).toEqual({ name: 's.json', text: whole })
+    invokeMock.mockResolvedValueOnce(null)
+    expect(await tauriBridge.screeningSource('/r/p.json')).toBeNull()
   })
 })
 

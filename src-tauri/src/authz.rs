@@ -23,6 +23,17 @@ pub struct Session {
     pub stamps: HashMap<PathBuf, HashMap<PathBuf, String>>,
     /// Repository roots resolved by `git:info` or created by `git:clone` (`knownGitRoots`).
     pub known_git_roots: HashSet<PathBuf>,
+    /// What `project:sharedAnnotations` listed, per open project (`listedSplits`).
+    pub listed_splits: HashMap<PathBuf, ListedSplit>,
+}
+
+#[derive(Clone)]
+pub struct ListedSplit {
+    pub folder: String,
+    /// Each listed project file and its stamp at listing time.
+    pub projects: HashMap<PathBuf, Option<String>>,
+    /// `<paperId>/<name>.json`, relative to `folder`.
+    pub files: HashSet<String>,
 }
 
 impl Session {

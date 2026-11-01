@@ -126,7 +126,9 @@ export const tauriBridge: SlrBridge = {
   pickSavePath: call('project:pickSavePath', 'suggestedName'),
   annotationsDirUsers: call('project:annotationsDirUsers', 'projectPath', 'folder', 'paperIds', 'screening'),
   sharedAnnotations: call('project:sharedAnnotations', 'projectPath'),
-  screeningSource: call('project:screeningSource', 'projectPath'),
+  screeningSource: then(call('project:screeningSource', 'projectPath'), (r: (RawProject & { name: string }) | null) =>
+    r ? { name: r.name, text: assembleProject(r) } : null,
+  ),
   moveAnnotationsDir: call('project:moveAnnotationsDir', 'projectPath', 'folder'),
   writeFeedback: call('project:writeFeedback', 'projectPath', 'fileName', 'content'),
   listFeedback: call('project:listFeedback', 'projectPath'),
