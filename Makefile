@@ -1,11 +1,14 @@
 .DEFAULT_GOAL := help
 CARGO := cargo
 
-.PHONY: help install dev web build build-debug test test-js test-rust test-integration \
+.PHONY: help setup install dev web build build-debug test test-js test-rust test-integration \
         lint fmt typecheck check clean report
 
 help: ## Show this help
 	@awk 'BEGIN{FS=":.*## "} /^[a-zA-Z_-]+:.*## /{printf "  %-18s %s\n",$$1,$$2}' $(MAKEFILE_LIST)
+
+setup: ## Install build prerequisites (Rust, Node, system libraries), asks first
+	@if [ "$$OS" = Windows_NT ]; then powershell -ExecutionPolicy Bypass -File scripts/setup.ps1; else bash scripts/setup.sh; fi
 
 install: ## Install Node dependencies
 	npm ci
