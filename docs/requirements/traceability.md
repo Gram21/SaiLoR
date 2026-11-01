@@ -414,7 +414,7 @@ inspection only.
 
 | ID | Requirement | Kind (ISO/IEC 25010) | Implemented in | Verified by | History | Docs |
 |---|---|---|---|---|---|---|
-| REQ-PLT-10 | Desktop-only operation | Functional · Functional Suitability | `src/platform/unsupported.ts:4-28`<br>`src/platform/index.ts:10-23` | — | commit `7fbaa84` | `openwiki/quickstart.md` §SaiLoR is Electron-desktop-only<br>`openwiki/architecture.md` §createUnsupportedAdapter |
+| REQ-PLT-10 | Desktop-only operation | Functional · Functional Suitability | `src/platform/unsupported.ts:4-28`<br>`src/platform/index.ts:9-24` | — | commit `7fbaa84` | `openwiki/quickstart.md` §SaiLoR is Electron-desktop-only<br>`openwiki/architecture.md` §createUnsupportedAdapter |
 | REQ-PLT-11 | Single application instance | Non-functional · Reliability | `electron/main.ts:1559` | — | commit `0bc6c9c` | `user-guide/things-to-know.md` §No file locking between people sharing one folder |
 | REQ-PLT-20 | Open projects via native dialog | Functional · Functional Suitability | `electron/main.ts:671-683` | — | — | `openwiki/operations/electron-shell.md` §Project file model and the `project:*` handlers<br>`openwiki/concepts/data-model.md` §On-disk layout |
 | REQ-PLT-30 | Restrict saves to session-authorized paths | Non-functional · Security | `electron/main.ts:669-834` | `e2e/openSaveProject.spec.ts:45-95` | — | `openwiki/operations/electron-shell.md` §Project file model and the `project:*` handlers<br>`openwiki/concepts/data-model.md` §On-disk layout |

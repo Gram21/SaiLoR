@@ -322,6 +322,11 @@ export function isElectron(): boolean {
   return typeof window !== 'undefined' && Boolean((window as unknown as { slr?: unknown }).slr)
 }
 
+/** True when running inside the Tauri shell. */
+export function isTauri(): boolean {
+  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+}
+
 /** A save that wrote nothing because these files changed on disk since the
  *  project was last read or written. Paths are relative to the project's
  *  folder (`annotations/p1/reviewer-2.json`, or the project file's own name). */

@@ -1,6 +1,7 @@
 import type { PlatformAdapter } from './adapter'
-import { isElectron } from './adapter'
+import { isElectron, isTauri } from './adapter'
 import { ElectronAdapter } from './electron'
+import { TauriAdapter } from './tauri'
 import { createUnsupportedAdapter } from './unsupported'
 
 let cached: PlatformAdapter | null = null
@@ -17,7 +18,7 @@ let cached: PlatformAdapter | null = null
  */
 export function getPlatform(): PlatformAdapter {
   if (!cached) {
-    cached = isElectron() ? new ElectronAdapter() : createUnsupportedAdapter()
+    cached = isElectron() ? new ElectronAdapter() : isTauri() ? new TauriAdapter() : createUnsupportedAdapter()
   }
   return cached
 }

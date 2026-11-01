@@ -7,9 +7,9 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ---
 
 ### REQ-PLT-10 — Desktop-only operation
-- **Description:** When the application runs outside the Electron desktop shell, the system shall present a notice that the web variant is discontinued and shall reject every project-opening action.
+- **Description:** When the application runs outside a desktop shell (Electron or Tauri), the system shall present a notice that the web variant is discontinued and shall reject every project-opening action.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/platform/unsupported.ts:4-28`, `src/platform/index.ts:10-23`, commit `7fbaa84`
+- **Evidence:** `src/platform/unsupported.ts:4-28`, `src/platform/index.ts:9-24`, commit `7fbaa84`
 - **Status:** Implemented
 
 ### REQ-PLT-11 — Single application instance
