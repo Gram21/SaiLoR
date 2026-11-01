@@ -1,9 +1,11 @@
 name: Tauri spike
 
 # Phase 0 of docs/tauri-migration.md: build the spike on every OS and prove
-# pdf.js renders a PDF in each system WebView. Manual trigger only.
+# pdf.js renders a PDF in each system WebView. Runs on pushes to spike/tauri and manually.
 
 on:
+  push:
+    branches: [spike/tauri]
   workflow_dispatch:
 
 jobs:
