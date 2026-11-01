@@ -41,7 +41,7 @@ export interface ReleaseAsset {
   browser_download_url: string
 }
 
-/** The machine we're running on. Electron reports it; a browser has no arch. */
+/** The machine we're running on. The desktop app reports it; a browser has no arch. */
 export interface OsInfo {
   platform: string
   arch: string

@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { ElectronAdapter } from './electron'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { DesktopAdapter } from './desktop'
+import { setBridge } from './bridge'
 import { loadProject, serializeProject } from '../model/project'
 
 function makeProjectText() {
@@ -17,16 +18,18 @@ function makeProjectText() {
   )
 }
 
-describe('ElectronAdapter.saveProject', () => {
+afterEach(() => setBridge(null))
+
+describe('DesktopAdapter.saveProject', () => {
   let saveProject: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     saveProject = vi.fn().mockResolvedValue({ stale: [] })
-    ;(window as unknown as { slr: unknown }).slr = { saveProject }
+    setBridge({ saveProject } as never)
   })
 
   it('splits the logical project text into a meta-only project.json and per-paper annotation files', async () => {
-    const adapter = new ElectronAdapter()
+    const adapter = new DesktopAdapter()
     await adapter.saveProject(makeProjectText(), { kind: 'electron', path: '/proj/project.json' })
 
     expect(saveProject).toHaveBeenCalledTimes(1)
@@ -48,9 +51,9 @@ describe('ElectronAdapter.saveProject', () => {
     const text = makeProjectText()
     const openPath = vi.fn().mockResolvedValue({ path: '/other/project.json', text, corrupt: [] })
     const setProjectDir = vi.fn().mockResolvedValue(undefined)
-    ;(window as unknown as { slr: unknown }).slr = { saveProject, openPath, setProjectDir }
+    setBridge({ saveProject, openPath, setProjectDir } as never)
 
-    const adapter = new ElectronAdapter()
+    const adapter = new DesktopAdapter()
     await adapter.openRecent('/other/project.json')
     const handle = { kind: 'electron' as const, path: '/other/project.json' }
 
@@ -75,8 +78,8 @@ describe('ElectronAdapter.saveProject', () => {
     const text = makeProjectText()
     const openPath = vi.fn().mockResolvedValue({ path: '/ren/project.json', text, corrupt: [] })
     const setProjectDir = vi.fn().mockResolvedValue(undefined)
-    ;(window as unknown as { slr: unknown }).slr = { saveProject, openPath, setProjectDir }
-    const adapter = new ElectronAdapter()
+    setBridge({ saveProject, openPath, setProjectDir } as never)
+    const adapter = new DesktopAdapter()
     await adapter.openRecent('/ren/project.json')
 
     const renamed = JSON.parse(text)
@@ -96,9 +99,9 @@ describe('ElectronAdapter.saveProject', () => {
     const text = makeProjectText()
     const openPath = vi.fn().mockResolvedValue({ path: '/gone/project.json', text, corrupt: [] })
     const setProjectDir = vi.fn().mockResolvedValue(undefined)
-    ;(window as unknown as { slr: unknown }).slr = { saveProject, openPath, setProjectDir }
+    setBridge({ saveProject, openPath, setProjectDir } as never)
 
-    const adapter = new ElectronAdapter()
+    const adapter = new DesktopAdapter()
     await adapter.openRecent('/gone/project.json')
 
     const project = loadProject(text)
@@ -117,9 +120,9 @@ describe('ElectronAdapter.saveProject', () => {
     const text = makeProjectText()
     const openPath = vi.fn().mockResolvedValue({ path: '/renamed/project.json', text, corrupt: [] })
     const setProjectDir = vi.fn().mockResolvedValue(undefined)
-    ;(window as unknown as { slr: unknown }).slr = { saveProject, openPath, setProjectDir }
+    setBridge({ saveProject, openPath, setProjectDir } as never)
 
-    const adapter = new ElectronAdapter()
+    const adapter = new DesktopAdapter()
     await adapter.openRecent('/renamed/project.json')
 
     const project = loadProject(text)
@@ -141,9 +144,9 @@ describe('ElectronAdapter.saveProject', () => {
     const openPath = vi.fn().mockResolvedValue({ path: '/gitty/project.json', text, corrupt: [] })
     const setProjectDir = vi.fn().mockResolvedValue(undefined)
     const gitPullAbort = vi.fn().mockResolvedValue({ ok: true, code: 0, stdout: '', stderr: '' })
-    ;(window as unknown as { slr: unknown }).slr = { saveProject, openPath, setProjectDir, gitPullAbort }
+    setBridge({ saveProject, openPath, setProjectDir, gitPullAbort } as never)
 
-    const adapter = new ElectronAdapter()
+    const adapter = new DesktopAdapter()
     await adapter.openRecent('/gitty/project.json')
     await adapter.getGit()!.abortPull('/gitty')
 
@@ -155,7 +158,7 @@ describe('ElectronAdapter.saveProject', () => {
   })
 
   it('throws when the handle has no path', async () => {
-    const adapter = new ElectronAdapter()
+    const adapter = new DesktopAdapter()
     await expect(adapter.saveProject(makeProjectText(), { kind: 'electron' })).rejects.toThrow('Save as')
   })
 })

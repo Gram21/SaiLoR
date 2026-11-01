@@ -34,11 +34,11 @@ const out = (r: GitRun): string => r.stdout.trim()
 
 /**
  * Derives `git:info`'s result fields from the outputs of its five
- * independent `git` calls (`electron/main.ts`'s `git:info` handler runs them
+ * independent `git` calls (`src-tauri/src/git.rs`'s `git_info` command runs them
  * concurrently via `Promise.all` rather than one at a time, since none of
  * `--show-toplevel`/`--show-prefix`/HEAD-verify/current-branch/upstream
  * depends on any of the others). Extracted into its own pure function purely
- * for testability — `electron/` sits outside vitest's test scope — and to
+ * for testability — `src-tauri/` sits outside vitest's test scope — and to
  * pin down exactly which input feeds which field: a `Promise.all` array
  * destructured into five differently-named variables is exactly the kind of
  * place a copy-paste reordering could silently swap two fields with no type

@@ -2,7 +2,7 @@ import type { GitFileChange, GitRun } from './types'
 
 /**
  * Turning what git printed into data the UI can render — kept separate from
- * the plumbing that runs git (electron/main.ts) so it can be unit-tested
+ * the plumbing that runs git (src-tauri/src/git.rs) so it can be unit-tested
  * without spawning a process. The raw porcelain/diff text crosses IPC on
  * purpose, precisely so it lands here.
  */

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { tauriBridge, TauriAdapter, command, assembleProject } from './tauri'
+import { tauriBridge, TauriAdapter, assembleProject } from './tauri'
 import { setBridge } from './bridge'
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
@@ -89,9 +89,10 @@ describe('tauriBridge', () => {
     expect(listenMock.mock.calls.map((c) => c[0])).toEqual(['app:undo', 'app:undo'])
   })
 
-  it('covers exactly the channels of electron/preload.ts', () => {
-    const preload = readFileSync('electron/preload.ts', 'utf-8')
-    const expected = new Set([...preload.matchAll(/ipcRenderer\.\w+\(\s*'([^']+)'/g)].map((m) => m[1]))
+  it('invokes exactly the commands main.rs registers', () => {
+    const main = readFileSync('src-tauri/src/main.rs', 'utf-8')
+    const handler = main.slice(main.indexOf('generate_handler!['))
+    const registered = [...handler.slice(0, handler.indexOf('])')).matchAll(/^\s+\w+::(\w+),$/gm)].map((m) => m[1])
 
     const walk = (o: object) => {
       for (const v of Object.values(o)) {
@@ -100,15 +101,10 @@ describe('tauriBridge', () => {
       }
     }
     walk(tauriBridge)
-    const listened = new Set([...preload.matchAll(/ipcRenderer\.on\(\s*'([^']+)'/g)].map((m) => m[1]))
-    const mapped = new Set([
-      ...invokeMock.mock.calls.map((c) => c[0]),
-      ...listenMock.mock.calls.map((c) => c[0]),
-    ])
+    const invoked = new Set(invokeMock.mock.calls.map((c) => c[0]))
 
-    const expectedNames = [...expected].map((c) => (listened.has(c) ? c : command(c)))
-    expect(expected.size).toBeGreaterThan(90)
-    expect([...mapped].sort()).toEqual(expectedNames.sort())
+    expect(registered.length).toBeGreaterThan(90)
+    expect([...invoked].sort()).toEqual([...new Set(registered)].sort())
   })
 })
 
@@ -159,7 +155,7 @@ describe('project assembly', () => {
     expect(p[1].reviewMarks).toBeUndefined()
   })
 
-  it('gives the renderer the Electron shapes', async () => {
+  it('gives the renderer the whole-project shapes', async () => {
     const raw = { text: meta(), files: [f('p1/consolidated.json', { annotations: { q: 1 } })] }
     const whole = assembleProject(raw)
     invokeMock.mockResolvedValueOnce({ path: '/r/p.json', ...raw, files: [...raw.files, { relPath: 'p2/consolidated.json', text: 'x' }], siblings: [] })

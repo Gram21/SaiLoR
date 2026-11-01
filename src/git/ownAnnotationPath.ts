@@ -14,12 +14,12 @@
  * stashed, merged over, or deleted — see the callers of this module for the
  * specific bugs that were.
  *
- * Lives here rather than in `electron/main.ts` for the same reason
- * `relpath.ts`/`ref.ts`/`url.ts` do: `electron/` is outside vitest's
+ * Lives here rather than in `src-tauri/src/git.rs` for the same reason
+ * `relpath.ts`/`ref.ts`/`url.ts` do: `src-tauri/` is outside vitest's
  * include, and a correctness-load-bearing check with no test coverage is one
  * nobody can change safely.
  *
- * `readProjectAtRevision` (`electron/main.ts`) already builds this exact
+ * `readProjectAtRevision` (`src-tauri/src/git.rs`) already builds this exact
  * membership check inline, for a different purpose (reassembling a
  * revision's own annotation files off `git ls-tree` output) — this factors
  * it out for reuse rather than a third copy of the same regex.

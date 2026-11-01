@@ -12,7 +12,7 @@ function App() {
   const [papers, setPapers] = useState<string[]>([])
   const [pdf, setPdf] = useState<string | null>(null)
   const [log, setLog] = useState<string[]>([])
-  const say = (m: string) => { setLog((l) => [...l, m]); void invoke('spike_report', { line: m }) }
+  const say = (m: string) => { setLog((l) => [...l, m]); void invoke('probe_report', { line: m }) }
 
   async function open() {
     try {
@@ -27,7 +27,7 @@ function App() {
 
   useEffect(() => {
     void (async () => {
-      const r = await invoke<Opened | null>('spike_auto')
+      const r = await invoke<Opened | null>('probe_auto')
       if (!r) return
       say(`UA ${navigator.userAgent}`)
       const list: string[] = (JSON.parse(r.text).papers ?? []).map((p: { pdf?: string }) => p.pdf).filter(Boolean)

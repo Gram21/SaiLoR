@@ -8,7 +8,7 @@ import { parseStashList, STASH_LIST_FORMAT, MANUAL_STASH_PREFIX, type StashEntry
 /**
  * The stash operations behind the Git panel, written against an injected git
  * runner so the exact sequence the app runs can be exercised against a real
- * repository in the integration suite — `electron/main.ts` only binds `root`.
+ * repository in the integration suite — `src-tauri/src/git.rs` only binds `root`.
  *
  * Restoring is the operation worth that care. `git stash apply` is not atomic:
  * when the parked changes no longer fit the commit they are applied onto, git

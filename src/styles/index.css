@@ -2434,7 +2434,7 @@ button.validation-search-case:hover {
   white-space: nowrap;
 }
 
-/* Close-project prompt (mirrors Electron's native quit dialog). */
+/* Close-project prompt (mirrors the native quit dialog). */
 .close-prompt {
   max-width: 460px;
 }

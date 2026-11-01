@@ -60,9 +60,10 @@ jobs:
           workspaces: src-tauri
 
       - run: cargo fmt --check
-      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo clippy --all-targets --all-features -- -D warnings
 
-  # Phase 0/5 of docs/tauri-migration.md: Rust tests, installer bundle and a probe run in each system WebView.
+  # Rust tests, installer bundle and a probe run in each system WebView.
+  # The probe is a separate build (e2e/ page, `probe` feature). The release app has no probe commands.
   tauri-build:
     strategy:
       fail-fast: false
@@ -104,13 +105,16 @@ jobs:
         run: |
           find src-tauri/target/release/bundle -type f \( -name '*.dmg' -o -name '*.msi' -o -name '*.exe' -o -name '*.deb' -o -name '*.AppImage' -o -name '*.rpm' \) -exec ls -l {} \;
 
+      - name: Build probe
+        run: npx tauri build --no-bundle --features probe --config src-tauri/tauri.probe.conf.json
+
       - name: Run probe (open project, traversal check, render PDF)
         env:
-          SPIKE_PROJECT: ${{ github.workspace }}/samples/project.example.json
-          SPIKE_REPORT: ${{ runner.temp }}/spike-report.txt
+          SAILOR_PROBE_PROJECT: ${{ github.workspace }}/samples/project.example.json
+          SAILOR_PROBE_REPORT: ${{ runner.temp }}/probe-report.txt
         run: |
-          rm -f "$SPIKE_REPORT"
-          BIN=src-tauri/target/release/sailor-spike
+          rm -f "$SAILOR_PROBE_REPORT"
+          BIN=src-tauri/target/release/sailor
           [ -f "$BIN.exe" ] && BIN="$BIN.exe"
           if [[ "${{ matrix.os }}" == ubuntu* ]]; then
             xvfb-run -a "$BIN" > /dev/null 2>&1 &
@@ -119,21 +123,21 @@ jobs:
           fi
           PID=$!
           for i in $(seq 1 60); do
-            grep -qE "RENDER OK|PDF ERROR|RENDER ERROR" "$SPIKE_REPORT" 2>/dev/null && break
+            grep -qE "RENDER OK|PDF ERROR|RENDER ERROR" "$SAILOR_PROBE_REPORT" 2>/dev/null && break
             sleep 1
           done
           kill $PID 2>/dev/null || true
           echo "---- report ----"
-          cat "$SPIKE_REPORT" || true
-          grep -q "RENDER OK" "$SPIKE_REPORT"
-          grep -q -- "-> 403" "$SPIKE_REPORT"
+          cat "$SAILOR_PROBE_REPORT" || true
+          grep -q "RENDER OK" "$SAILOR_PROBE_REPORT"
+          grep -q -- "-> 403" "$SAILOR_PROBE_REPORT"
 
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: spike-report-${{ matrix.os }}
-          path: ${{ runner.temp }}/spike-report.txt
+          name: probe-report-${{ matrix.os }}
+          path: ${{ runner.temp }}/probe-report.txt
           if-no-files-found: ignore
 
   # tauri-driver has no macOS support, so there is no macOS job.
@@ -182,11 +186,11 @@ jobs:
 
       - run: npm ci
 
-      - run: npx tauri build --no-bundle
+      - run: npx tauri build --no-bundle --features probe --config src-tauri/tauri.probe.conf.json
 
       - name: Run e2e test (Linux)
         if: runner.os == 'Linux'
-        run: xvfb-run -a node --test spike/e2e/probe.test.mjs
+        run: xvfb-run -a node --test e2e/probe.test.mjs
 
       # WebView2 ignores the driver's WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS in an elevated
       # process, and the runner is elevated. Run at medium integrity, as Tauri's own e2e CI does.
@@ -196,4 +200,4 @@ jobs:
         run: |
           winget install gerardog.gsudo --accept-source-agreements --accept-package-agreements
           icacls "$env:GITHUB_WORKSPACE" /grant "Everyone:(OI)(CI)F"
-          sudo --integrity Medium node --test spike/e2e/probe.test.mjs
+          sudo --integrity Medium node --test e2e/probe.test.mjs

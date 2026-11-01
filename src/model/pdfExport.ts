@@ -4,7 +4,7 @@
  * that file's doc comment for why the overlay itself never touches the PDF
  * binary). No pdf-lib dependency here on purpose: constructing the actual
  * annotation dictionaries needs Node `fs` + pdf-lib and lives in
- * electron/main.ts, the only place in this app that touches both; this file
+ * the Rust shell, the only place in this app that touches both; this file
  * stays pure math so it's trivially unit-testable without a real PDF.
  */
 import type { MarkRect } from './pdfMarks'

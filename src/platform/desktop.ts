@@ -96,9 +96,9 @@ function noteOpened(path: string, text: string): void {
 
 const bridge = getBridge
 
-/** Electron adapter: native dialogs + fs via IPC, PDFs via the slr-file:// protocol. */
-export class ElectronAdapter implements PlatformAdapter {
-  readonly kind: 'electron' | 'tauri' = 'electron'
+/** Desktop adapter: native dialogs + fs via the bridge, PDFs via the slr-file:// protocol. */
+export class DesktopAdapter implements PlatformAdapter {
+  readonly kind = 'tauri' as const
 
   getOsInfo(): OsInfo | null {
     return bridge().os ?? null
@@ -125,7 +125,7 @@ export class ElectronAdapter implements PlatformAdapter {
 
   async checkRecents(entries: RecentEntry[]): Promise<RecentEntry[]> {
     if (entries.length === 0) return entries
-    // The id IS the absolute path on Electron.
+    // The id IS the absolute path on the desktop.
     const peeked = await bridge().peekProjects(entries.map((e) => e.id))
     const fresh = entries.map((e, i) => {
       const p = peeked[i]
@@ -218,8 +218,8 @@ export class ElectronAdapter implements PlatformAdapter {
     if (!check.ok) {
       if (check.reason === 'escapes') {
         // Not a hard refusal — the reviewer may trust this project enough to read outside its
-        // folder (see `allowedEscapes` in electron/main.ts). The confirm dialog runs in the main
-        // process so a renderer can't just approve its own escape.
+        // folder (see src-tauri/src/authz.rs). The confirm dialog runs in the Rust
+        // shell so a renderer can't just approve its own escape.
         const approved = await bridge().allowPdfPath(pdfPath)
         if (!approved) {
           throw new Error(
@@ -238,7 +238,7 @@ export class ElectronAdapter implements PlatformAdapter {
     return { url: `slr-file://project/pdf?path=${encodeURIComponent(pdfPath)}` }
   }
 
-  // Electron reads PDFs straight off disk via slr-file:// — there is no
+  // The desktop app reads PDFs straight off disk via slr-file:// — there is no
   // folder-grant prompt to ask for.
   needsPdfFolderGrant(): boolean {
     return false
@@ -349,8 +349,8 @@ export class ElectronAdapter implements PlatformAdapter {
   }
 
   // ---- AI-assisted annotation ----
-  // Everything here is a pass-through to the main process, which owns the API
-  // keys and makes the actual call. See electron/main.ts for why.
+  // Everything here is a pass-through to the Rust shell, which owns the API
+  // keys and makes the actual call. See src-tauri/src/llm.rs for why.
 
   listLlmConfigs(): Promise<LlmConfig[]> {
     return bridge().llmConfigs()

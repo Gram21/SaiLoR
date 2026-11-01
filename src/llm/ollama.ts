@@ -3,7 +3,7 @@ import type { LlmConfig } from './types'
 /**
  * Pure helpers for a local Ollama server (native API) and the other local
  * servers (LM Studio, llama.cpp, vLLM) the app can discover. No I/O here: the
- * main process (electron/ollama.ts) fetches, this file parses and decides.
+ * Rust shell (src-tauri/src/ollama.rs) fetches, this file parses and decides.
  *
  * Why the native `/api/chat` and not Ollama's `/v1/chat/completions`: the
  * OpenAI-compatible route cannot set the context window, and Ollama then

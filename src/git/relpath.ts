@@ -2,10 +2,10 @@ import { annotationsDirProblem, DEFAULT_ANNOTATIONS_DIR, isFeedbackPath } from '
 /**
  * Is this string safe to use as a path *relative to a repository root*?
  *
- * Lives here rather than in `electron/main.ts` for the same reason `url.ts`
+ * Lives here rather than in `src-tauri/src/git.rs` for the same reason `url.ts`
  * does: it is a security gate on input that reaches a file write, so it is
  * written once, imported by the main process, and — unlike anything inside
- * `electron/` — reachable by the test suite.
+ * `src-tauri/` — reachable by the test suite.
  *
  * This is a check on the string alone. It cannot see the filesystem, so it says
  * nothing about symlinks; `assertInsideRoot` in the main process resolves the

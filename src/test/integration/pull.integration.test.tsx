@@ -15,7 +15,7 @@ import type { SaveHandle } from '../../platform/adapter'
  * against a real remote (a bare repo standing in for "origin"), diverged by
  * a genuine push from a second clone — same conflict/resolution UI as an
  * explicit merge (`beginPull` reuses `beginMergeInto` internally in
- * electron/main.ts, against `@{u}` instead of an explicit ref), driven
+ * src-tauri/src/git.rs, against `@{u}` instead of an explicit ref), driven
  * through `GitDialog`'s real "Pull" button.
  */
 
@@ -75,7 +75,7 @@ const fakeGit: GitPlatform = {
   },
   lastCommitMessage: async () => null,
   push: async () => ({ ok: false, code: null, stdout: '', stderr: 'not supported in this test' }),
-  // Mirrors electron/main.ts's real `git:pullBegin` handler: resolve `@{u}`,
+  // Mirrors src-tauri/src/git.rs's real `git_pull_begin` command: resolve `@{u}`,
   // refuse with `no-upstream` if there is none, else a real `git fetch`
   // followed by the same base/ours/theirs read + `merge --no-commit --no-ff`
   // `beginMerge` in the other tests already uses (against `ref` instead of

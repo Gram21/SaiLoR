@@ -19,17 +19,19 @@ mod ollama;
 mod webfetch;
 
 use authz::Session;
-use std::path::PathBuf;
 use std::sync::Mutex;
-use tauri::{Manager, State};
+use tauri::Manager;
 
-/// CI probe: open `$SPIKE_PROJECT` without a dialog.
+/// CI probe: open `$SAILOR_PROBE_PROJECT` without a dialog.
+#[cfg(feature = "probe")]
 #[tauri::command]
-async fn spike_auto(session: State<'_, Mutex<Session>>) -> Result<Option<project::Opened>, String> {
-    let Ok(path) = std::env::var("SPIKE_PROJECT") else {
+async fn probe_auto(
+    session: tauri::State<'_, Mutex<Session>>,
+) -> Result<Option<project::Opened>, String> {
+    let Ok(path) = std::env::var("SAILOR_PROBE_PROJECT") else {
         return Ok(None);
     };
-    let path = PathBuf::from(path);
+    let path = std::path::PathBuf::from(path);
     let opened = project::read_project(&session, &path).ok();
     if opened.is_some() {
         project::set_dir(&session, &path);
@@ -37,10 +39,11 @@ async fn spike_auto(session: State<'_, Mutex<Session>>) -> Result<Option<project
     Ok(opened)
 }
 
-/// CI probe: append a line to `$SPIKE_REPORT`.
+/// CI probe: append a line to `$SAILOR_PROBE_REPORT`.
+#[cfg(feature = "probe")]
 #[tauri::command]
-fn spike_report(line: String) {
-    if let Ok(out) = std::env::var("SPIKE_REPORT") {
+fn probe_report(line: String) {
+    if let Ok(out) = std::env::var("SAILOR_PROBE_REPORT") {
         use std::io::Write;
         if let Ok(mut f) = std::fs::OpenOptions::new()
             .create(true)
@@ -87,8 +90,10 @@ fn main() {
             });
         })
         .invoke_handler(tauri::generate_handler![
-            spike_auto,
-            spike_report,
+            #[cfg(feature = "probe")]
+            probe_auto,
+            #[cfg(feature = "probe")]
+            probe_report,
             project::project_open,
             project::project_open_path,
             project::project_save,

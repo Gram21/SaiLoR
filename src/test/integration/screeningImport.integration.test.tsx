@@ -45,7 +45,7 @@ const fakePlatform = {
   needsPdfFolderGrant: () => false,
   grantPdfFolderAccess: async () => {},
   // A real sibling path next to the screening JSON — no dialog needed, same
-  // as the real Electron adapter's own no-prompt implementation.
+  // as the real desktop adapter's own no-prompt implementation.
   siblingProjectLocation: async (_source: SaveHandle, fileName: string): Promise<ProjectLocation> => ({
     handle: { kind: 'electron', path: join(repoDir, fileName) },
     name: fileName,

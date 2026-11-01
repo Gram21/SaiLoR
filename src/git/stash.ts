@@ -16,7 +16,7 @@
  *
  * Pure, and in `src/git/`, for the same reason as the rest of this folder: it
  * decides what a reviewer is told about their own parked work, and
- * `electron/` is outside vitest's scope.
+ * `src-tauri/` is outside vitest's scope.
  */
 
 /** The message SaiLoR's branch-switch carry-over stashes with — see

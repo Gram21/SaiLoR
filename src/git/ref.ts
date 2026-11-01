@@ -2,10 +2,10 @@
  * Is this string safe to hand to git as a ref (a branch name, local or
  * remote-tracking)?
  *
- * Lives here rather than in `electron/main.ts` for the same reason `url.ts` and
+ * Lives here rather than in `src-tauri/src/git.rs` for the same reason `url.ts` and
  * `relpath.ts` do: it is a security gate on input that reaches a spawned
  * process, so it is written once, imported by the main process, and — unlike
- * anything inside `electron/` — reachable by the test suite.
+ * anything inside `src-tauri/` — reachable by the test suite.
  *
  * The refs the merge picker offers are names `git for-each-ref` itself
  * produced, so in practice this only ever rejects a value that did not come

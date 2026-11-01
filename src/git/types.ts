@@ -1,5 +1,5 @@
 /**
- * Shapes shared between the Electron main process's git plumbing and the
+ * Shapes shared between the Rust shell's git plumbing and the
  * renderer's `GitPlatform` seam. Nothing here talks to git or the DOM — see
  * `src/git/merge.ts` for the same rule applied to the merge itself.
  */
@@ -18,7 +18,7 @@ export interface SplitProject {
 }
 
 /** The outcome of one `git` invocation. A non-zero exit is data, not an
- *  exception — see `runGit`'s doc comment in electron/main.ts. */
+ *  exception — see `run_git`'s doc comment in src-tauri/src/git.rs. */
 export interface GitRun {
   ok: boolean
   /** Exit code; `null` when git itself never started (missing binary, timeout). */
@@ -145,7 +145,7 @@ export interface CommitRecord {
 
 export interface LogBeginResult {
   commits: CommitRecord[]
-  /** True when the log was cut off at the cap (`LOG_MAX_COMMITS` in electron/main.ts) rather than genuinely ending there. */
+  /** True when the log was cut off at the cap (`LOG_MAX_COMMITS` in src-tauri/src/git.rs) rather than genuinely ending there. */
   truncated: boolean
   error: string | null
 }
@@ -160,7 +160,7 @@ export type LogRevisionFetch =
   | { kind: 'texts'; head: string; parent: string }
 
 /**
- * Git operations against the user's own git installation. Electron-only —
+ * Git operations against the user's own git installation. Desktop-only —
  * see `PlatformAdapter.getGit()` for why, and what `null` means there.
  */
 export interface GitPlatform {
@@ -203,7 +203,7 @@ export interface GitPlatform {
   workingContent(root: string, relPath: string): Promise<string | null>
   /**
    * Commits `committed` plus whatever's on disk at `otherPaths`, then writes `working`
-   * back unconditionally afterward — see `git:commitPartial` in electron/main.ts for why.
+   * back unconditionally afterward — see `git_commit_partial` in src-tauri/src/git.rs for why.
    */
   commitPartial(
     root: string,
@@ -260,7 +260,7 @@ export interface GitPlatform {
   checkoutBranch(root: string, branch: string): Promise<GitRun>
   /**
    * Checks whether switching to `branch` is safe, and if so, does the switch (stash,
-   * checkout, read the three revisions) — see the `electron/main.ts` handler for details.
+   * checkout, read the three revisions) — see the `src-tauri/src/git.rs` command for details.
    */
   beginBranchSwitch(root: string, relPath: string, branch: string): Promise<BranchSwitchStart>
   /** Writes the resolved project onto the checked-out target branch and drops the

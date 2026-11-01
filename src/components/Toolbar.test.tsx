@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import type { RecentEntry } from '../platform/recents'
 
 // Toolbar calls `getPlatform().getGit()` directly during render. In jsdom
-// (non-Electron) `getPlatform()` returns the "unsupported" adapter, whose
+// (non-Tauri) `getPlatform()` returns the "unsupported" adapter, whose
 // methods other than `kind`/`getRecents()` throw on call — so every method
 // Toolbar (or the store actions it triggers) reaches for has to be mocked
 // here, the same pattern `store.screening.test.ts` uses for `store.ts`.

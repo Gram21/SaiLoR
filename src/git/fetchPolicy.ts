@@ -6,7 +6,7 @@
  * Git panel opens, and every {@link BACKGROUND_FETCH_INTERVAL_MS} after that.
  *
  * That crosses a boundary the rest of the git integration is built around (see
- * `GIT_SAFE_CONFIG` in `electron/main.ts`): commands a repository's own config
+ * the safe config in `src-tauri/src/git.rs`): commands a repository's own config
  * names — an ssh command, a credential helper — are left enabled only because
  * they run on a network action the reviewer asked for, never merely because a
  * folder was opened. A project folder that arrives by zip, USB or shared drive
@@ -19,7 +19,7 @@
  * helpers and ssh settings in the user's global config, and are unaffected.
  *
  * Pure, and in `src/git/`, for the same reason as the rest of this folder: it
- * is a security decision, and `electron/` is outside vitest's scope.
+ * is a security decision, and `src-tauri/` is outside vitest's scope.
  */
 
 /** How often the background fetch runs while a project in a repository is open. */

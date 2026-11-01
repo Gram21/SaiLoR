@@ -230,16 +230,9 @@ $RECYCLE.BIN/
 # End of https://www.toptal.com/developers/gitignore/api/linux,macos,node,windows
 
 # Custom rules (everything added below won't be overriden by 'Generate .gitignore File' if you use 'Update' option)
-dist-electron/
-release/
 *.tsbuildinfo
 
-# Playwright
-test-results/
-playwright-report/
-
-
-# Tauri spike
+# Tauri
 src-tauri/target
 src-tauri/gen
-dist-spike
+dist-probe

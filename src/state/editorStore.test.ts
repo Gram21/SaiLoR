@@ -517,9 +517,9 @@ describe('editorStateFromOpened (shared by "Edit annotation JSON…" and the rec
 })
 
 describe('closing the editor without saving', () => {
-  // The bug this pins: `close()` used to leave `dirty` set, and Electron's quit
+  // The bug this pins: `close()` used to leave `dirty` set, and the quit
   // guard asks main to prompt when *either* store is dirty
-  // (`useElectronCloseGuard`). So discarding a draft and then quitting still
+  // (`useCloseGuard`). So discarding a draft and then quitting still
   // claimed there were unsaved changes — for a draft the user had already
   // explicitly thrown away, and that no longer existed anywhere.
   it('clears the dirty flag: the discarded draft is not unsaved work', () => {

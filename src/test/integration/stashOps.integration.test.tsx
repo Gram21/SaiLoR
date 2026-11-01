@@ -19,7 +19,7 @@ import { BRANCH_SWITCH_STASH_MESSAGE } from '../../git/stash'
 
 /**
  * The stash operations exactly as the app runs them — `src/git/stashOps.ts`,
- * which `electron/main.ts` only binds to a repository root — against a real
+ * which `src-tauri/src/git.rs` only binds to a repository root — against a real
  * scratch repository rather than a fake.
  *
  * Worth the real thing because the dangerous path is git's own behaviour: a
@@ -34,7 +34,7 @@ function git(...args: string[]): string {
   return execFileSync('git', args, { cwd: repo, encoding: 'utf8' })
 }
 
-/** The same shape `runGit` in electron/main.ts returns: a non-zero exit is data. */
+/** The same shape `run_git` in src-tauri/src/git.rs returns: a non-zero exit is data. */
 const run: RunGit = (args) =>
   new Promise<GitRun>((resolve) => {
     execFile('git', args, { cwd: repo, encoding: 'utf8' }, (err, stdout, stderr) => {

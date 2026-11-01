@@ -5,7 +5,7 @@ import type { SaveHandle, ProjectLocation } from '../platform/adapter'
 /**
  * "Save as" moves the project file, and a paper's `pdf` is stored relative to
  * that file — so the paths have to be re-derived or every PDF breaks at the new
- * location. The platform is stubbed with the same path math the Electron main
+ * location. The platform is stubbed with the same path math the Rust shell
  * process runs, so the store's behaviour can be driven directly.
  */
 let written: { text: string; handle: SaveHandle } | null = null

@@ -1,6 +1,6 @@
 /**
  * Platform abstraction for file I/O and PDF loading, so the same React app
- * runs in Electron (native dialogs + fs) and in a plain browser (File System
+ * runs in the Tauri shell (native dialogs + fs) and in a plain browser (File System
  * Access API / downloads / fetch).
  */
 
@@ -32,7 +32,7 @@ export interface OpenedProject {
 
 export interface SaveHandle {
   kind: 'electron' | 'fsapi' | 'download'
-  /** Electron: absolute path. FSAPI: the id of the retained file handle. */
+  /** Desktop: absolute path. FSAPI: the id of the retained file handle. */
   path?: string
   /** File name, so the download fallback can name what it writes. */
   name?: string
@@ -50,7 +50,7 @@ export interface ProjectLocation {
   handle: SaveHandle
   /** File name, e.g. "review.json". */
   name: string
-  /** Absolute path — Electron only. The browser's File System Access API exposes no paths. */
+  /** Absolute path — desktop only. The browser's File System Access API exposes no paths. */
   path?: string
 }
 
@@ -58,15 +58,15 @@ export interface ProjectLocation {
 export interface PickedPdf {
   /** File name, e.g. "paper.pdf". */
   name: string
-  /** Absolute path — Electron only. */
+  /** Absolute path — desktop only. */
   path?: string
   /** Read the file's bytes, so the editor can pull out the title/authors. */
   read?: () => Promise<ArrayBuffer>
 }
 
 export interface PlatformAdapter {
-  /** The desktop shell (`electron` or `tauri`), or `browser`. */
-  readonly kind: 'electron' | 'tauri' | 'browser'
+  /** The desktop shell (`tauri`), or `browser`. */
+  readonly kind: 'tauri' | 'browser'
 
   /**
    * OS/arch we're running on, so the update notice can offer the matching
@@ -106,7 +106,7 @@ export interface PlatformAdapter {
   /**
    * Re-express `pdfPaths` (relative to `from`'s directory) as paths relative
    * to `to`'s directory — needed because "Save as" moves the project file
-   * while each paper's `pdf` stays relative to it. Electron resolves against
+   * while each paper's `pdf` stays relative to it. The desktop app resolves against
    * the real filesystem; the browser has no paths and returns the input unchanged.
    */
   rebasePdfPaths(pdfPaths: string[], from: SaveHandle, to: SaveHandle): Promise<string[]>
@@ -118,7 +118,7 @@ export interface PlatformAdapter {
    * True when `getPdfSource` would need to prompt for a local folder first and
    * hasn't been granted one this session. Lets a caller trigger that prompt
    * from a visible button instead of `getPdfSource` popping it unannounced.
-   * Always `false` on Electron and for server-mode browser projects.
+   * Always `false` on the desktop and for server-mode browser projects.
    */
   needsPdfFolderGrant(): boolean
 
@@ -180,7 +180,7 @@ export interface PlatformAdapter {
 
   /**
    * The `pdf` values to store for these PDFs, relative to the project JSON's
-   * directory. Electron computes real relative paths; the browser has no
+   * directory. The desktop app computes real relative paths; the browser has no
    * paths and returns the bare file names.
    */
   relativePdfPaths(pdfs: PickedPdf[], location: ProjectLocation | null): Promise<string[]>
@@ -189,7 +189,7 @@ export interface PlatformAdapter {
    * Absolute paths for `pdfPaths` (relative to `from`'s directory) — the
    * inverse of `relativePdfPaths`, needed when a paper imported from a
    * screening project must re-derive its `pdf` if the new JSON moves.
-   * Electron resolves against the real filesystem; the browser returns
+   * The desktop app resolves against the real filesystem; the browser returns
    * `undefined` per entry, which `changeLocation` skips.
    */
   absolutePdfPaths(pdfPaths: string[], from: SaveHandle): Promise<(string | undefined)[]>
@@ -208,7 +208,7 @@ export interface PlatformAdapter {
 
   /**
    * The configured LLM targets. **Never carries the API key** — see `LlmConfig`.
-   * In Electron the keys live in the main process; the renderer only learns
+   * In the desktop app the keys live in the Rust shell; the renderer only learns
    * whether one is set (`hasKey`).
    */
   listLlmConfigs(): Promise<LlmConfig[]>
@@ -226,7 +226,7 @@ export interface PlatformAdapter {
    * `API_KEY_SENTINEL`, not the key — the platform substitutes the real key
    * at the last moment.
    *
-   * Electron sends this from the main process via `net.fetch`, which has no
+   * The desktop app sends this from the Rust shell (src-tauri/src/webfetch.rs), which has no
    * document origin and so isn't subject to CORS (a renderer fetch would be
    * preflighted and blocked). The browser build just calls `fetch` directly,
    * which some providers will refuse.
@@ -252,7 +252,7 @@ export interface PlatformAdapter {
    * Git operations against **the user's own git installation**, or `null`
    * where the runtime can't reach one.
    *
-   * Only Electron can: its main process spawns the real `git` binary, so
+   * Only the desktop app can: its Rust shell spawns the real `git` binary, so
    * ~/.gitconfig, credential helpers and SSH agent all apply. A browser page
    * can't spawn a process or reach any of that, and a pure-JS reimplementation
    * would be a different thing wearing the same name — so it returns `null`
@@ -295,9 +295,8 @@ export interface PlatformAdapter {
   writeTextFile(absPath: string, text: string): Promise<{ ok: true; path: string } | { ok: false; error: string }>
 
   // ---- Self-update ----
-  // Windows/Linux only — macOS has no reliable unsigned/unnotarized
-  // auto-update path (see electron/main.ts), so it stays on the check-only
-  // banner. `supported: false` means don't offer the download/install UI.
+  // Where the bundle can self-update (see src-tauri/src/update.rs); other
+  // bundles stay on the check-only banner. `supported: false` means don't offer the download/install UI.
   //
   // Download and install are explicit, user-triggered calls only.
 
@@ -316,11 +315,6 @@ export interface PlatformAdapter {
   onNativeUpdateProgress(cb: (p: { percent: number }) => void): void
   onNativeUpdateDownloaded(cb: () => void): void
   onNativeUpdateError(cb: (message: string) => void): void
-}
-
-/** True when running inside the Electron shell (preload exposed `window.slr`). */
-export function isElectron(): boolean {
-  return typeof window !== 'undefined' && Boolean((window as unknown as { slr?: unknown }).slr)
 }
 
 /** True when running inside the Tauri shell. */

@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { setBridge, type SlrBridge } from './bridge'
-import { ElectronAdapter } from './electron'
+import { DesktopAdapter } from './desktop'
 import { assembleLegacyProjectJson, isLegacyProjectShape, parseMarksFileName } from '../model/project'
 import { sharesPaper } from '../model/annotationsDir'
 
@@ -21,8 +21,7 @@ type PaperFiles = Parameters<typeof assembleLegacyProjectJson>[1] extends Map<st
 const isScreening = (raw: unknown) => Boolean((raw as { config?: { screening?: unknown } } | null)?.config?.screening)
 
 /**
- * electron/main.ts `readProjectText`/`readProjectAtRevision` over what Rust
- * read: the whole-project text `loadProject` accepts. A file that does not
+ * Turns what Rust read into the whole-project text `loadProject` accepts. A file that does not
  * parse counts as absent and its path goes to `corrupt`.
  */
 export function assembleProject(p: RawProject, corrupt: string[] = []): string {
@@ -109,8 +108,8 @@ const replace =
   }
 
 /**
- * `window.slr` over Tauri IPC: one entry per electron/preload.ts method, same
- * channel names as Tauri command/event names, positional args sent as named
+ * The backend API over Tauri IPC: one entry per `SlrBridge` method, channel
+ * names mapped to Tauri command/event names, positional args sent as named
  * fields. Commands not yet implemented in Rust reject.
  */
 export const tauriBridge: SlrBridge = {
@@ -242,10 +241,8 @@ export const tauriBridge: SlrBridge = {
   onNativeUpdateError: replace('update:error'),
 }
 
-/** The Electron adapter's renderer logic over the Tauri transport. */
-export class TauriAdapter extends ElectronAdapter {
-  override readonly kind = 'tauri' as const
-
+/** The desktop adapter's renderer logic over the Tauri transport. */
+export class TauriAdapter extends DesktopAdapter {
   constructor() {
     super()
     setBridge(tauriBridge)

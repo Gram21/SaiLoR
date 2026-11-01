@@ -364,7 +364,7 @@ function joinPath(parent: string, name: string): string {
 }
 
 /** The open project's JSON changed underneath it on disk — reload it the
- *  ordinary way. `openRecent(path)` is exactly right here: on Electron the
+ *  ordinary way. `openRecent(path)` is exactly right here: on the desktop the
  *  recents id **is** the absolute file path, so this reopens the same file
  *  through the normal load path (parses, normalizes, refreshes recents)
  *  rather than duplicating any of that. */

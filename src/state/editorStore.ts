@@ -95,7 +95,7 @@ export interface EditorPaper {
   abstract: string
   /** The relative path written to the JSON. */
   pdf: string
-  /** Absolute source path (Electron only) so `pdf` can be re-derived if the JSON moves. */
+  /** Absolute source path (desktop only) so `pdf` can be re-derived if the JSON moves. */
   sourcePath?: string
   /** Preserved verbatim when editing an existing file. */
   annotations?: unknown
@@ -423,7 +423,7 @@ export function titleFromName(name: string): string {
 }
 
 /** Identity of a referenced PDF, for duplicate detection: the absolute path
- *  when we have one (Electron), else the stored relative path (browser has none). */
+ *  when we have one (desktop), else the stored relative path (browser has none). */
 export function pdfKeys(paper: Pick<EditorPaper, 'pdf' | 'sourcePath'>): string[] {
   const keys: string[] = []
   if (paper.sourcePath) keys.push(paper.sourcePath)
@@ -1600,7 +1600,7 @@ export const useEditorStore = create<EditorState>()(
         s.issues = []
         s.notice = null
         s.justAdded = {}
-        // Clear dirty: otherwise Electron's quit guard (`useElectronCloseGuard`,
+        // Clear dirty: otherwise the quit guard (`useCloseGuard`,
         // which prompts when either store is dirty) keeps claiming unsaved
         // changes for a draft the user already chose to discard.
         s.dirty = false

@@ -393,7 +393,7 @@ function stopTicker() {
 
 /** A signal that aborts as soon as either `a` or `b` does. Manual rather than
  *  `AbortSignal.any` for now — ponytail: swap in once the app's minimum
- *  Electron/Chromium baseline is confirmed to have it everywhere this runs. */
+ *  system WebView baseline is confirmed to have it everywhere this runs. */
 function combinedSignal(a: AbortSignal, b: AbortSignal): AbortSignal {
   const c = new AbortController()
   if (a.aborted || b.aborted) {

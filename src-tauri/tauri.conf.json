@@ -1,20 +1,20 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "SaiLoR-spike",
+  "productName": "SaiLoR",
   "version": "../package.json",
-  "identifier": "io.github.gram21.sailor.spike",
+  "identifier": "io.github.gram21.sailor",
   "build": {
-    "beforeDevCommand": "npx vite --config vite.spike.config.ts",
-    "devUrl": "http://localhost:5199",
-    "beforeBuildCommand": "npx vite build --config vite.spike.config.ts",
-    "frontendDist": "../dist-spike"
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
   },
   "app": {
     "windows": [
       {
-        "title": "SaiLoR spike",
-        "width": 900,
-        "height": 800
+        "title": "SaiLoR",
+        "width": 1400,
+        "height": 900
       }
     ],
     "security": {

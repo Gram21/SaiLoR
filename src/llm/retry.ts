@@ -35,7 +35,7 @@ function defaultSleep(ms: number, signal?: AbortSignal): Promise<void> {
  * Parse a `Retry-After` header value: either delta-seconds or an HTTP-date
  * (RFC 9110 §10.2.3). Returns milliseconds from `now`, or undefined when the
  * header is absent or unparseable — the caller then falls back to its own
- * backoff schedule. Pure so both the Electron main process (filling
+ * backoff schedule. Pure so both the Rust shell (filling
  * `LlmHttpResponse.retryAfterMs`) and this module's own tests can use it
  * without a real clock.
  */

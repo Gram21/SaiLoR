@@ -8,7 +8,7 @@ import { GitCloneDialog } from './GitCloneDialog'
 
 // REQ-GIT-100: clone a project repository — this exercises GitCloneDialog +
 // gitStore's clone/openClone/pickCloneParent/runClone actions against a
-// mocked GitPlatform, the same seam electron/main.ts sits behind in
+// mocked GitPlatform, the same seam src-tauri/src/git.rs sits behind in
 // production (out of scope here).
 
 const clone = vi.fn<GitPlatform['clone']>()

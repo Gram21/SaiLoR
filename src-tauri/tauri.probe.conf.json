@@ -1,0 +1,8 @@
+{
+  "build": {
+    "beforeDevCommand": "npx vite --config vite.probe.config.ts",
+    "devUrl": "http://localhost:5199",
+    "beforeBuildCommand": "npx vite build --config vite.probe.config.ts",
+    "frontendDist": "../dist-probe"
+  }
+}

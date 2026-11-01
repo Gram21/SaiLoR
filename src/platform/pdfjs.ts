@@ -6,7 +6,7 @@ import { pdfjs } from 'react-pdf'
  * modules would be a silent footgun if they ever disagreed.
  *
  * The worker is loaded from the bundled dependency, so it works offline and
- * inside Electron.
+ * inside the desktop app.
  */
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',

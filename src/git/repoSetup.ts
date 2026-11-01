@@ -26,9 +26,9 @@
  * scopes exactly to one project's tree and cannot stomp rules a root file sets
  * for everything else.
  *
- * Pure, and in `src/git/` rather than `electron/`, for the same reason
+ * Pure, and in `src/git/` rather than `src-tauri/`, for the same reason
  * `ownAnnotationPath` and `relpath` are: it decides what gets written into
- * somebody's repository, and `electron/` is outside vitest's scope.
+ * somebody's repository, and `src-tauri/` is outside vitest's scope.
  */
 
 /** Fences the block SaiLoR owns. Everything between them is replaced wholesale

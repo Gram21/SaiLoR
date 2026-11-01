@@ -16,7 +16,7 @@ export interface RawSeg {
 }
 
 /** Same shape as the store's `PathSeg`; declared here so this module (and the
- *  model code using it, which the Electron main process also loads) does not
+ *  model code using it, which the Rust shell mirrors) does not
  *  depend on the store. */
 type PathSeg = RawSeg
 

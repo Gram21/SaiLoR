@@ -27,7 +27,7 @@ const mockPlatform = {
   checkRecents: async (e: unknown[]) => e,
   getOsInfo: () => null,
   pickPdfs: async () => picked,
-  // Mirrors the Electron adapter: paths relative to the JSON's directory.
+  // Mirrors the desktop adapter: paths relative to the JSON's directory.
   relativePdfPaths: async (pdfs: PickedPdf[], location: ProjectLocation | null) => {
     const dir = location?.path?.replace(/\/[^/]+$/, '') ?? ''
     return pdfs.map((p) => (p.path && dir && p.path.startsWith(dir + '/')

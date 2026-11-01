@@ -7,7 +7,7 @@ const AVAILABLE: GitProbe = { available: true, version: 'git version 2.43.0', er
 const HINT = 'BROWSER_HINT'
 
 describe('gitButtonState (the toolbar Git button, always shown, disabled with a reason)', () => {
-  it('is disabled with the no-project hint on the start screen in Electron', () => {
+  it('is disabled with the no-project hint on the start screen on the desktop', () => {
     const r = gitButtonState(true, AVAILABLE, false, null, false, false, HINT)
     expect(r.disabled).toBe(true)
     expect(r.title).toBe('Open a project in a git repository to use Git.')
@@ -19,7 +19,7 @@ describe('gitButtonState (the toolbar Git button, always shown, disabled with a 
     expect(r.title).toBe(HINT)
   })
 
-  it('is disabled with the probe error when Electron has no git binary, ahead of the no-project hint', () => {
+  it('is disabled with the probe error when the desktop has no git binary, ahead of the no-project hint', () => {
     const r = gitButtonState(true, { available: false, version: '', error: 'git not found' }, false, null, false, false, HINT)
     expect(r.disabled).toBe(true)
     expect(r.title).toBe('git not found')

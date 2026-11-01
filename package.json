@@ -5,25 +5,19 @@
   "author": "",
   "license": "GPL-3.0-only",
   "type": "module",
-  "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "dev:electron": "cross-env ELECTRON=1 vite",
     "build": "tsc -b && vite build",
-    "build:electron": "cross-env ELECTRON=1 npm run build && electron-builder --publish never",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "test:e2e": "cross-env ELECTRON=1 npm run build && playwright test",
     "typecheck": "tsc -b --noEmit",
-    "icon": "electron scripts/make-icon.cjs",
     "check:wiki": "node scripts/check-wiki-links.js",
     "scenario": "vite-node samples/git-scenarios/cli.ts"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.12.4",
-    "electron-updater": "^6.3.9",
     "immer": "^10.1.1",
     "pdf-lib": "^1.17.1",
     "react": "^19.1.0",
@@ -33,7 +27,6 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.1",
     "@tauri-apps/cli": "^2.12.4",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
@@ -42,81 +35,10 @@
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^4.3.4",
-    "cross-env": "^7.0.3",
-    "electron": "^43.1.0",
-    "electron-builder": "^26.15.3",
     "jsdom": "^25.0.1",
     "typescript": "^5.7.3",
     "vite": "^6.0.7",
-    "vite-plugin-electron": "^0.29.0",
     "vitest": "^3.2.4"
-  },
-  "build": {
-    "appId": "io.github.gram21.sailor",
-    "productName": "SaiLoR",
-    "asar": true,
-    "compression": "maximum",
-    "electronLanguages": [
-      "en-US"
-    ],
-    "files": [
-      "dist/**/*",
-      "dist-electron/**/*",
-      "build/icon.png",
-      "!**/*.map",
-      "!node_modules/**/*"
-    ],
-    "directories": {
-      "output": "release",
-      "buildResources": "build"
-    },
-    "afterPack": "scripts/afterPack.cjs",
-    "publish": {
-      "provider": "github",
-      "owner": "Gram21",
-      "repo": "SaiLoR"
-    },
-    "mac": {
-      "target": {
-        "target": "dmg",
-        "arch": [
-          "arm64",
-          "x64"
-        ]
-      },
-      "icon": "build/icon.icns",
-      "artifactName": "${productName}-${version}-macos-${arch}.${ext}"
-    },
-    "dmg": {
-      "window": {
-        "width": 540,
-        "height": 380
-      },
-      "iconSize": 128,
-      "contents": [
-        {
-          "x": 140,
-          "y": 200,
-          "type": "file"
-        },
-        {
-          "x": 400,
-          "y": 200,
-          "type": "link",
-          "path": "/Applications"
-        }
-      ]
-    },
-    "win": {
-      "target": "nsis",
-      "icon": "build/icon.png",
-      "artifactName": "${productName}-${version}-windows-${arch}.${ext}"
-    },
-    "linux": {
-      "target": "AppImage",
-      "icon": "build/icon.png",
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
-    }
   },
   "allowScripts": {
     "esbuild@0.25.12": true

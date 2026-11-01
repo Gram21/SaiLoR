@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 CARGO := cargo
 
-.PHONY: help setup install dev web build build-debug test test-js test-rust test-integration \
+.PHONY: help setup install dev web build build-debug probe test test-js test-rust test-integration \
         lint fmt typecheck check clean report docker-linux
 
 help: ## Show this help
@@ -25,6 +25,9 @@ build: ## Build the release installer for this OS
 build-debug: ## Build a debug app without installer bundles
 	npx tauri build --debug --no-bundle --config src-tauri/tauri.conf.json
 
+probe: ## Build the CI probe app (e2e/ page, probe commands) without bundles
+	npx tauri build --no-bundle --features probe --config src-tauri/tauri.probe.conf.json
+
 test: test-js test-rust ## Run all unit tests
 
 test-js: ## Run renderer unit tests
@@ -38,7 +41,7 @@ test-integration: ## Run integration tests
 
 lint: ## Run clippy and the format check
 	$(CARGO) fmt --manifest-path src-tauri/Cargo.toml --check
-	$(CARGO) clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+	$(CARGO) clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
 
 fmt: ## Format Rust code
 	$(CARGO) fmt --manifest-path src-tauri/Cargo.toml
@@ -49,7 +52,7 @@ typecheck: ## Run the TypeScript type check
 check: typecheck lint test ## Run type check, lint and all unit tests
 
 clean: ## Remove build output
-	rm -rf dist dist-spike
+	rm -rf dist dist-probe
 	$(CARGO) clean --manifest-path src-tauri/Cargo.toml
 
 report: ## Build the technical report PDF

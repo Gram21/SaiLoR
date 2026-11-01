@@ -1,7 +1,11 @@
 [package]
-name = "sailor-spike"
+name = "sailor"
 version = "0.0.0"
 edition = "2021"
+
+[features]
+# CI probe commands (`probe_auto`, `probe_report`). Never in a release build.
+probe = []
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

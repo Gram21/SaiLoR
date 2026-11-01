@@ -1,8 +1,8 @@
 /**
  * Reads every id's associated value concurrently rather than one at a time,
  * preserving the exact id→result association regardless of which read
- * settles first. Extracted from `readProjectText` (`electron/main.ts`) purely
- * for testability — `electron/` sits outside vitest's test scope, so the
+ * settles first. Extracted from `readProjectText` (`src-tauri/src/git.rs`) purely
+ * for testability — `src-tauri/` sits outside vitest's test scope, so the
  * concurrency-orchestration logic that used to live inline there (and is
  * exactly the kind of thing a reordering/off-by-one bug could hide in) lives
  * here instead, where it can actually be exercised with reads that resolve

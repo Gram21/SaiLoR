@@ -151,7 +151,7 @@ export interface LlmHttpResponse {
   /**
    * Milliseconds to wait before retrying, when the platform's HTTP layer read
    * a `Retry-After` header off a 429/503 (see `retry.ts`'s `parseRetryAfter`,
-   * which the Electron main process uses to fill this). Absent when the
+   * which the Rust shell uses to fill this). Absent when the
    * response carried no such header, or on a platform that doesn't parse it.
    */
   retryAfterMs?: number

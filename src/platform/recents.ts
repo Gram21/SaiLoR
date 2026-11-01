@@ -1,6 +1,6 @@
 /**
  * Recent-projects list, persisted in localStorage. Entries are platform-opaque:
- * on Electron `id` is the absolute file path; in the browser it is a key into
+ * on the desktop `id` is the absolute file path; in the browser it is a key into
  * the IndexedDB handle store (see idb.ts). Newest first, capped at MAX_RECENTS.
  */
 
@@ -8,7 +8,7 @@ export interface RecentEntry {
   id: string
   /** File name, e.g. "review.json". */
   name: string
-  /** Full path — Electron only. Shown so same-named projects can be told apart. */
+  /** Full path — desktop only. Shown so same-named projects can be told apart. */
   path?: string
   /** The project's own title, when its JSON sets one. Preferred over `name`. */
   title?: string

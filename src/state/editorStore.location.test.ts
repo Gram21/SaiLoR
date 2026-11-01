@@ -27,7 +27,7 @@ const mockPlatform = {
   openRecent: async () => null,
   saveProject: async (_t: string, h: SaveHandle) => h,
   pickProjectLocation: async () => destination,
-  // Mirrors the Electron adapter: re-anchor a JSON-relative path from one
+  // Mirrors the desktop adapter: re-anchor a JSON-relative path from one
   // project directory to another.
   rebasePdfPaths: async (paths: string[], from: SaveHandle, to: SaveHandle) => {
     if (!from.path || !to.path) return paths

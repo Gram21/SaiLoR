@@ -957,7 +957,7 @@ export interface ProjectFileEntry {
 /**
  * Split a `Project` into the meta-only `project.json` body and the set of
  * per-paper annotation files it should reconcile on disk. Pure and
- * side-effect-free — `electron/main.ts` does the actual fs writes/deletes, so
+ * side-effect-free — `src-tauri/src/project.rs` does the actual fs writes/deletes, so
  * this stays unit-testable without touching a filesystem.
  */
 export function splitProjectFiles(project: Project): { meta: unknown; files: ProjectFileEntry[] } {

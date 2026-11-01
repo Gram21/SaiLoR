@@ -704,7 +704,7 @@ export function PdfViewer() {
    * `caretRangeFromPoint`/`Selection.extend` rather than the browser's own
    * drag-selection continuation, since whether a mousedown starting on a
    * non-text element keeps extending the selection isn't reliable to depend
-   * on (moot here — SaiLoR only runs in Electron/Chromium).
+   * on (moot here — SaiLoR only runs in the system WebView).
    */
   const handleMarkMouseDown = (e: React.MouseEvent<HTMLElement>, onOpen: (e: MarkOpenEvent) => void) => {
     if (e.button !== 0) return // left button only — never hijack a right-click
@@ -1834,7 +1834,7 @@ export function PdfViewer() {
             onLoadError={(err) => setError(String(err?.message ?? err))}
             loading={<div className="pdf-loading">Loading PDF…</div>}
             // External links open in a new tab instead of navigating the app
-            // away; Electron's main process turns this into a system browser
+            // away; the Rust shell turns this into a system browser
             // open. Internal links are unaffected — LinkService just scrolls.
             externalLinkTarget="_blank"
             externalLinkRel="noopener noreferrer"

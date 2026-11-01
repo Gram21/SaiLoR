@@ -1,12 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
-import electron from 'vite-plugin-electron/simple'
-
-// When ELECTRON=1 we additionally build the Electron main/preload processes and
-// launch the desktop shell. Without it, `vite` produces a plain static SPA that
-// can be served from any web server (browser deployment).
-const isElectron = process.env.ELECTRON === '1'
 
 // The app shows its own version and compares it against the latest release, so
 // package.json stays the single source of truth for it.
@@ -18,33 +12,11 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(version),
   },
-  plugins: [
-    react(),
-    ...(isElectron
-      ? [
-          electron({
-            main: {
-              entry: 'electron/main.ts',
-            },
-            preload: {
-              input: 'electron/preload.ts',
-              // Emit CJS with a .cjs extension: preload scripts load as CommonJS,
-              // and the package is type:module so a .js/.mjs would be treated as ESM.
-              vite: {
-                build: {
-                  rollupOptions: {
-                    output: { format: 'cjs', entryFileNames: '[name].cjs' },
-                  },
-                },
-              },
-            },
-            // Renderer stays a normal web build; no Node in the renderer, so we
-            // deliberately omit the `renderer` transform option.
-          }),
-        ]
-      : []),
-  ],
+  plugins: [react()],
   server: {
+    // `tauri dev` loads this fixed URL (devUrl in src-tauri/tauri.conf.json).
+    port: 5173,
+    strictPort: true,
     // Inside Docker (bind-mounted source) file-change events are sometimes not
     // delivered on macOS/Windows hosts; set VITE_USE_POLLING=1 to fall back to
     // polling. No effect on a normal local dev server.
@@ -54,12 +26,12 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    // Tauri embeds every file in dist; source maps would only grow the binary.
   },
   test: {
     environment: 'jsdom',
     globals: true,
-    include: ['src/**/*.test.{ts,tsx}', 'electron/**/*.test.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
     // The integration suite (src/test/integration/) spins up a real scratch
     // git repo per test and is slow by unit-test standards on purpose — kept
     // out of the default `vitest run` (`npm test`, run on every PR) and run

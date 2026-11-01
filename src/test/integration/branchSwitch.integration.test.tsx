@@ -103,7 +103,7 @@ const fakeGit: GitPlatform = {
       return { ok: false, code: e.status ?? null, stdout: '', stderr: e.message }
     }
   },
-  // Mirrors electron/main.ts's real `git:branchSwitchBegin` handler: any
+  // Mirrors src-tauri/src/git.rs's real `git_branch_switch_begin` command: any
   // dirty path outside the project's own file is refused; otherwise reads
   // base/ours/theirs and stashes+checks out for real.
   beginBranchSwitch: async (root, relPath, branch): Promise<BranchSwitchStart> => {

@@ -3,7 +3,7 @@ import { useStore } from './state/store'
 import { useEditorStore } from './state/editorStore'
 import { useGitStore } from './state/gitStore'
 import { getPlatform } from './platform'
-import { isElectron, isTauri } from './platform/adapter'
+import { isTauri } from './platform/adapter'
 import { NEW_ISSUE_URL } from './model/version'
 import { ProjectEditor } from './components/ProjectEditor'
 import { Toolbar } from './components/Toolbar'
@@ -46,7 +46,7 @@ import { shortenPath } from './platform/recents'
 import { Splitter } from './components/Splitter'
 import { useKeybindings } from './hooks/useKeybindings'
 import { useDirtyGuard } from './hooks/useDirtyGuard'
-import { useElectronCloseGuard } from './hooks/useElectronCloseGuard'
+import { useCloseGuard } from './hooks/useCloseGuard'
 import { useConsolidationAlignment } from './hooks/useConsolidationAlignment'
 import { useAutosave } from './hooks/useAutosave'
 import { useUpstreamPolling } from './hooks/useUpstreamPolling'
@@ -62,7 +62,7 @@ import {
 export function App() {
   useKeybindings()
   useDirtyGuard()
-  useElectronCloseGuard()
+  useCloseGuard()
   useConsolidationAlignment()
   useAutosave()
   useUpstreamPolling()
@@ -167,7 +167,7 @@ export function App() {
   // enough across browsers. Gate before any project-opening UI ever renders —
   // no file picker, no drag-and-drop, nothing that could start a session this
   // build can't finish.
-  if (!isElectron() && !isTauri()) {
+  if (!isTauri()) {
     return (
       <div className="app">
         <div className="welcome">
@@ -221,7 +221,7 @@ export function App() {
           <div className="welcome-box">
             {/* `BASE_URL`, not a root-absolute path: `base: './'` (vite.config.ts)
                 is what lets the same build run from a server subpath and from
-                Electron's `file://`, and a hard-coded "/logo.svg" would 404 under
+                the packaged app's asset URL, and a hard-coded "/logo.svg" would 404 under
                 the latter. */}
             <img
               className="welcome-logo"
@@ -337,7 +337,7 @@ export function App() {
                     {nativeUpdate ? (
                       // A real, explicitly user-triggered download + install, never
                       // automatic. Only where the shell reported it can self-update
-                      // (`checkForNativeUpdate`); elsewhere (e.g. Electron on macOS,
+                      // (`checkForNativeUpdate`); elsewhere (e.g. a .deb/.rpm install,
                       // a Tauri .deb) the plain download link below stays.
                       updateReady ? (
                         <button

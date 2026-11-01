@@ -21,7 +21,7 @@ import type {
   StashRestoreResult,
 } from '../git/types'
 
-/** Backend API: `window.slr` from electron/preload.ts, or the Tauri bridge in `./tauri`. */
+/** Backend API: the Tauri bridge in `./tauri`. */
 export interface SlrBridge {
   /** The machine this build is running on (Node names: process.platform / process.arch). */
   os?: { platform: string; arch: string }
@@ -60,8 +60,8 @@ export interface SlrBridge {
   /** Same traversal/symlink guard `registerPdfProtocol` enforces when serving the file,
    *  checked first so a blocked/missing PDF gets an honest reason instead of pdf.js's opaque failure. */
   checkPdfPath(rel: string): Promise<{ ok: true } | { ok: false; reason: 'no-project' | 'escapes' | 'not-found' }>
-  /** Asks the reviewer (native dialog in main process) whether to open `rel` despite it
-   *  pointing outside the project folder; approval is remembered for the session — see `allowedEscapes` in electron/main.ts. */
+  /** Asks the reviewer (native dialog in the Rust shell) whether to open `rel` despite it
+   *  pointing outside the project folder; approval is remembered for the session — see src-tauri/src/authz.rs. */
   allowPdfPath(rel: string): Promise<boolean>
   /** Burn `marks` into the PDF at `pdfAbsPath` as real annotation objects. */
   embedPdfMarks(
@@ -162,8 +162,7 @@ export interface SlrBridge {
   gitBranchSwitchFinish(root: string, relPath: string, resolved: SplitProject): Promise<GitRun>
   gitBranchSwitchAbort(root: string, sourceBranch: string): Promise<GitRun>
 
-  // Self-update. Electron: Windows/Linux only (main.ts is a no-op on darwin).
-  // Tauri: where the bundle can self-update (src-tauri/src/update.rs). Download
+  // Self-update: where the bundle can self-update (src-tauri/src/update.rs). Download
   // and install are only ever triggered by the two calls below, never on their own.
   checkForNativeUpdate(): Promise<{ supported: boolean }>
   downloadNativeUpdate(): Promise<void>
@@ -176,11 +175,12 @@ export interface SlrBridge {
 
 let injected: SlrBridge | null = null
 
-/** Route every bridge call through `bridge` instead of `window.slr`. */
+/** Route every bridge call through `bridge`. */
 export function setBridge(bridge: SlrBridge | null): void {
   injected = bridge
 }
 
 export function getBridge(): SlrBridge {
-  return injected ?? (window as unknown as { slr: SlrBridge }).slr
+  if (!injected) throw new Error('No desktop bridge: SaiLoR runs in the Tauri shell only')
+  return injected
 }

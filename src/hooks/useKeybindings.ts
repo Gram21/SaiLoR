@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { useStore } from '../state/store'
 import { useEditorStore } from '../state/editorStore'
-import { isElectron } from '../platform/adapter'
 import { DECISION_EXCLUDE, DECISION_INCLUDE } from '../screening/schema'
 
 /**
@@ -9,7 +8,7 @@ import { DECISION_EXCLUDE, DECISION_INCLUDE } from '../screening/schema'
  *  - Ctrl/Cmd+S         → Save
  *  - Ctrl/Cmd+Shift+S   → Save as
  *  - Ctrl/Cmd+O         → Open
- *  - Ctrl/Cmd+Z         → Undo   (Electron routes this via its Edit menu)
+ *  - Ctrl/Cmd+Z         → Undo
  *  - Ctrl/Cmd+Shift+Z / Ctrl+Y → Redo
  *  - Ctrl/Cmd +/-/0        → PDF zoom in / out / reset
  *  - Ctrl/Cmd+Shift +/-/0  → App font size in / out / reset
@@ -22,7 +21,7 @@ import { DECISION_EXCLUDE, DECISION_INCLUDE } from '../screening/schema'
  * While the project editor is open, save/undo/redo act on the draft, not the
  * project, and project-only bindings (open, paper nav, PDF zoom) are inert.
  *
- * Copy/cut/paste are left to the browser/Electron Edit menu so they still work
+ * Copy/cut/paste are left to the WebView's native handling so they still work
  * natively in inputs and the PDF text layer.
  */
 export function useKeybindings() {
@@ -52,16 +51,15 @@ export function useKeybindings() {
         return
       }
 
-      // Undo/redo. In Electron the Edit-menu accelerators handle this (routed to
-      // the right store via IPC), so skip it there to avoid double-triggering.
-      if (mod && !isElectron() && (e.key === 'z' || e.key === 'Z')) {
+      // Undo/redo.
+      if (mod && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault()
         const target = editing ? useEditorStore.getState() : useStore.getState()
         if (e.shiftKey) target.redo()
         else target.undo()
         return
       }
-      if (mod && !isElectron() && !e.shiftKey && (e.key === 'y' || e.key === 'Y')) {
+      if (mod && !e.shiftKey && (e.key === 'y' || e.key === 'Y')) {
         e.preventDefault()
         if (editing) useEditorStore.getState().redo()
         else useStore.getState().redo()

@@ -21,10 +21,8 @@
   },
   "include": [
     "vite.config.ts",
+    "vite.probe.config.ts",
     "vitest.integration.config.ts",
-    "playwright.config.ts",
-    "electron/**/*.ts",
-    "e2e/**/*.ts",
     "samples/git-scenarios/**/*.ts"
   ]
 }

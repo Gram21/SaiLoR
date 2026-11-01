@@ -475,7 +475,7 @@ const CORRUPT_LIST_LIMIT = 10
 /**
  * Warning for annotation files that failed to parse (`OpenedProject.corruptFiles`):
  * they load as absent, so silence would let a reviewer overwrite work still on disk.
- * Files themselves are never deleted (see `writeProjectFiles` in `electron/main.ts`).
+ * Files themselves are never deleted (see `write_project_files` in `src-tauri/src/project.rs`).
  */
 function corruptFilesWarning(paths: string[]): LoadError {
   const listed = paths.slice(0, CORRUPT_LIST_LIMIT)
@@ -852,7 +852,7 @@ interface AppState {
   downloadUpdate: () => Promise<void>
   /** Quit and install the update `updateReady` confirmed is downloaded. */
   installUpdate: () => Promise<void>
-  /** Wired by `useElectronCloseGuard` to the bridge's progress/downloaded/error
+  /** Wired by `useCloseGuard` to the bridge's progress/downloaded/error
    *  events — not meant to be called from UI code directly. */
   noteUpdateProgress: (percent: number) => void
   noteUpdateDownloaded: () => void
@@ -1945,7 +1945,7 @@ export const useStore = create<AppState>()(
         // A folder of annotations belongs to one project. If another project
         // file in the destination directory already uses this project's
         // folder name, take one named after this file instead; refuse only if
-        // that is taken too. `location.path` is Electron-only; no path means
+        // that is taken too. `location.path` is desktop-only; no path means
         // nothing to check against.
         let target = project
         if (location.path) {
@@ -2307,15 +2307,14 @@ export const useStore = create<AppState>()(
           s.update = updateFrom(APP_VERSION, release)
         })
       }
-      // Only ask electron-updater's own feed whether it can actually download
+      // Only ask the shell's own updater feed whether it can actually download
       // something once the GitHub-API check above has already confirmed a
       // newer version exists — that check stays the single source of truth
       // for "is there an update"; this one only ever drives the download
-      // mechanics where the shell supports them (Electron: win/linux, see
-      // electron/main.ts; Tauri: per bundle, see src-tauri/src/update.rs).
-      // Never triggers a download by itself.
+      // mechanics where the shell supports them (per bundle, see
+      // src-tauri/src/update.rs). Never triggers a download by itself.
       const platform = getPlatform()
-      if (get().update && (platform.kind === 'tauri' || platform.getOsInfo()?.platform !== 'darwin')) {
+      if (get().update) {
         void platform.checkForNativeUpdate().then(({ supported }) =>
           set((s) => {
             s.nativeUpdate = supported

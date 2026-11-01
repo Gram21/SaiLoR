@@ -6,7 +6,7 @@ import type { LocalServerResult } from './ollamaApi'
 const UNSUPPORTED = 'SaiLoR for the web is discontinued — use the desktop app.'
 
 /**
- * Stands in for the platform outside Electron. `App.tsx` shows a "use the
+ * Stands in for the platform outside the desktop app. `App.tsx` shows a "use the
  * desktop app" notice and blocks every project-opening UI before any of this
  * can be reached from a user action — the only things genuinely read before
  * that gate ever renders are `kind` (`LlmSettingsDialog.tsx`) and

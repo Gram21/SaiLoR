@@ -26,7 +26,7 @@
  * It needs no new data, works on projects that already exist, and is ground
  * truth about who has actually been writing.
  *
- * Pure so it can be tested — `electron/` sits outside vitest's scope, same
+ * Pure so it can be tested — `src-tauri/` sits outside vitest's scope, same
  * reasoning as `deriveGitInfo`/`ownAnnotationPath`.
  */
 

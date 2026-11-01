@@ -83,7 +83,7 @@ export function ProjectEditor() {
     row.querySelector<HTMLInputElement>('input')?.focus()
   }
 
-  // The full path is the useful bit in Electron; in the browser only a name exists.
+  // The full path is the useful bit on the desktop; in the browser only a name exists.
   const locationLabel = location ? (location.path ?? location.name) : 'Not set'
   const multiReviewer = reviewers > 1
 

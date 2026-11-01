@@ -2,17 +2,17 @@
  * "Has this file changed since we last looked at it?" — the rule a save uses
  * to stop before overwriting somebody else's work.
  *
- * The renderer's save baseline (`src/platform/electron.ts`) knows what *this*
+ * The renderer's save baseline (`src/platform/desktop.ts`) knows what *this*
  * app last wrote, which is enough to write only the papers the reviewer
  * actually changed. It says nothing about the files having changed underneath
  * in the meantime, and in a shared repository they do: a teammate's `git pull`
  * run from a terminal, a `git checkout`, a sync client, a second copy of the
  * app. Saving over that loses answers with no conflict and no trace.
  *
- * Lives here rather than in `electron/main.ts` for the same reason
+ * Lives here rather than only in `src-tauri/` for the same reason
  * `relPathProblem` and `ownAnnotationPathMatcher` do: it is a decision about
- * plain values, it decides whether data gets overwritten, and `electron/` sits
- * outside vitest's scope. The main process supplies the `stat` results; this
+ * plain values, it decides whether data gets overwritten, and `src-tauri/` sits
+ * outside vitest's scope. The Rust shell supplies the `stat` results; this
  * decides what they mean.
  */
 

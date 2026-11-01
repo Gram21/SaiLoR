@@ -1,6 +1,6 @@
 /**
  * The repository URL and the clone destination are user input that reach a
- * spawned process, so they are checked here, once, and the Electron main process
+ * spawned process, so they are checked here, once, and the Rust shell
  * imports this module rather than keeping a second copy — see its comment at the
  * import.
  *

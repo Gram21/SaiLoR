@@ -1,11 +1,11 @@
 import { useEffect } from 'react'
 import { useStore } from '../state/store'
 import { useEditorStore } from '../state/editorStore'
-import { isElectron, isTauri } from '../platform/adapter'
+import { isTauri } from '../platform/adapter'
 import { getBridge } from '../platform/bridge'
 
 /**
- * Wires desktop (Electron or Tauri) menu/lifecycle integration:
+ * Wires desktop (Tauri) menu/lifecycle integration:
  *  - keeps the main process informed of the unsaved-changes state,
  *  - runs a save when main asks (after "Save" in the native close dialog), and
  *  - routes the Edit-menu Undo/Redo to the history that is actually on screen.
@@ -13,9 +13,9 @@ import { getBridge } from '../platform/bridge'
  * The project editor has its own draft + history, so while it is open every one
  * of these targets the editor rather than the annotation project.
  */
-export function useElectronCloseGuard() {
+export function useCloseGuard() {
   useEffect(() => {
-    if (!isElectron() && !isTauri()) return
+    if (!isTauri()) return
     const slr = getBridge()
 
     const editing = () => useEditorStore.getState().open

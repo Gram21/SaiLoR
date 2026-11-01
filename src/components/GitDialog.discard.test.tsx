@@ -5,7 +5,7 @@ import { useGitStore } from '../state/gitStore'
 import { useStore } from '../state/store'
 import { GitDialog } from './GitDialog'
 
-// REQ-GIT-190: protect project files from whole-file discard. electron/main.ts's
+// REQ-GIT-190: protect project files from whole-file discard. src-tauri/src/git.rs's
 // server-side refusal is out of scope — this only checks the renderer half:
 // GitDialog withholds the per-file discard control for the project's own
 // tracked path (and its annotations/ tree), via `isProjectOwnPath`, while an

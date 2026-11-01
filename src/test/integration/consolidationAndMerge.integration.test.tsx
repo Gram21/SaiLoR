@@ -62,7 +62,7 @@ const fakeGit: GitPlatform = {
   lastCommitMessage: async () => null,
   push: async () => ({ ok: false, code: null, stdout: '', stderr: 'not supported in this test' }),
   beginPull: async () => ({ kind: 'no-upstream', branch: null }),
-  // Mirrors electron/main.ts's `beginMergeInto`: read base/ours/theirs via
+  // Mirrors src-tauri/src/git.rs's merge begin: read base/ours/theirs via
   // `git show <rev>:<relPath>` (from git's objects, not the conflicted
   // working file), then start a real `git merge --no-commit --no-ff`.
   beginMerge: async (root, relPath, ref): Promise<MergeStart> => {
@@ -328,7 +328,7 @@ describe('multi-reviewer consolidation and a real merge conflict', () => {
     const parents = git(['log', '-1', '--format=%P']).trim().split(' ')
     expect(parents).toHaveLength(2) // a real two-parent merge commit
     // The resolved answer lives in the split per-reviewer annotation file
-    // (`finishPull` writes the split layout, same as a real Electron save),
+    // (`finishPull` writes the split layout, same as a real desktop save),
     // not in `project.json` itself — search the whole committed tree rather
     // than assume its exact path.
     const committedFiles = git(['ls-tree', '-r', '--name-only', 'HEAD'])

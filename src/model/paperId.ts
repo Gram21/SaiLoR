@@ -14,7 +14,7 @@
  * destroying whichever reviewer's folder loses the collision.
  *
  * Lives in `src/model` rather than in `PapersEditor.tsx` for the same reason
- * `relPathProblem` lives in `src/git/relpath.ts` instead of `electron/`: it
+ * `relPathProblem` lives in `src/git/relpath.ts` instead of `src-tauri/`: it
  * is a check on a plain string, so it is testable without a DOM or a
  * filesystem, and both the editor (live, per-keystroke feedback) and
  * `validateDraft` (the save-blocking gate) need to agree on the same answer.

@@ -3,7 +3,7 @@ import { useStore } from '../state/store'
 
 /**
  * Asked when closing a project that has unsaved changes. Mirrors the native
- * dialog Electron shows when quitting the app — same three choices, same
+ * dialog the desktop app shows when quitting the app — same three choices, same
  * wording — so closing a project and quitting behave alike.
  */
 export function ClosePrompt() {

@@ -19,10 +19,10 @@ import { aiSeatId, seatLabel } from '../model/project'
  *  control — a reviewer who reaches for it should learn why it doesn't work
  *  and what to do instead, not wonder whether they misremembered it existing. */
 const GIT_BROWSER_DISABLED_HINT = 'Git support is disabled in the browser version. Use the SaiLoR desktop app if you need it.'
-/** Electron, no project open (the start screen): git acts on the open
+/** Desktop, no project open (the start screen): git acts on the open
  *  project's file, so there is nothing to act on yet. */
 const GIT_NO_PROJECT_HINT = 'Open a project in a git repository to use Git.'
-/** Electron, a project is open but its file is not inside a git work tree:
+/** Desktop, a project is open but its file is not inside a git work tree:
  *  there is nothing to commit, pull or push. */
 const GIT_NO_REPO_HINT = "This project isn't in a git repository — there's nothing to commit, pull or push."
 
@@ -45,8 +45,8 @@ export interface GitButtonState {
  * precedence — the sibling entry point — so the two can't drift.
  */
 export function gitButtonState(
-  git: boolean, // getPlatform().getGit() !== null: Electron has git, the browser never does
-  probe: GitProbe | null, // Electron-only "is a git binary actually here" check
+  git: boolean, // getPlatform().getGit() !== null: the desktop has git, the browser never does
+  probe: GitProbe | null, // desktop-only "is a git binary actually here" check
   project: boolean, // a project is open
   repo: GitRepoInfo | null, // the open project's file sits inside a work tree
   busy: boolean,
@@ -158,11 +158,11 @@ export function Toolbar() {
   const openScreeningAi = useAiScreeningStore((s) => s.openDialog)
   const openAiDialog = project?.screening ? openScreeningAi : openAnnotationAi
 
-  // Git support is Electron-only: `getGit()` is null in the browser (no local
+  // Git support is desktop-only: `getGit()` is null in the browser (no local
   // git to reach at all). The entry points stay visible there too, disabled
   // with `GIT_BROWSER_DISABLED_HINT` rather than hidden — see that constant.
   // `probe` is the separate, narrower case of "this machine has no git
-  // installed" (Electron, but nothing to reach), which dims the control the
+  // installed" (desktop, but nothing to reach), which dims the control the
   // same way with `gitProbe.error` as the hint instead.
   const git = getPlatform().getGit()
   const gitProbe = useGitStore((s) => s.probe)
@@ -339,7 +339,7 @@ export function Toolbar() {
           <Dropdown label="Save" title="Save the project" disabled={busy} items={saveItems} />
           <span className="toolbar-sep" aria-hidden="true" />
           {/* Always rendered, disabled with an honest reason rather than hidden —
-              the browser (no local git at all), Electron with no git binary, the
+              the browser (no local git at all), the desktop with no git binary, the
               start screen with no project yet, and a project outside a work tree
               all read as a dimmed button with a tooltip, never a hole in the
               toolbar. `gitButtonState` owns the precedence. */}
