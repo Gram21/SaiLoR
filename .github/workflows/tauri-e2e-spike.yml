@@ -44,16 +44,28 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          cargo install --git https://github.com/chippers/msedgedriver-tool
-          & "$HOME/.cargo/bin/msedgedriver-tool.exe"
-          "NATIVE_DRIVER=$PWD\msedgedriver.exe" >> $env:GITHUB_ENV
+          $client = 'Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+          $version = @("HKLM:\SOFTWARE\WOW6432Node\$client", "HKLM:\SOFTWARE\$client") | ForEach-Object { (Get-ItemProperty -Path $_ -ErrorAction SilentlyContinue).pv } | Where-Object { $_ } | Select-Object -First 1
+          $dir = Join-Path $env:RUNNER_TEMP 'msedgedriver'
+          Invoke-WebRequest "https://msedgedriver.microsoft.com/$version/edgedriver_win64.zip" -OutFile "$env:RUNNER_TEMP\edgedriver.zip"
+          Expand-Archive "$env:RUNNER_TEMP\edgedriver.zip" -DestinationPath $dir -Force
+          Write-Host "WebView2 $version; $(& "$dir\msedgedriver.exe" --version)"
+          $dir >> $env:GITHUB_PATH
 
       - run: npm ci
 
       - run: npx tauri build --no-bundle
 
-      - name: Run e2e test
-        env:
-          SPIKE_PROJECT: ${{ github.workspace }}/samples/project.example.json
+      - name: Run e2e test (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node --test spike/e2e/probe.test.mjs
+
+      # WebView2 ignores the driver's WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS in an elevated
+      # process, and the runner is elevated. Run at medium integrity, as Tauri's own e2e CI does.
+      - name: Run e2e test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
         run: |
-          if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a node --test spike/e2e/probe.test.mjs; else node --test spike/e2e/probe.test.mjs; fi
+          winget install gerardog.gsudo --accept-source-agreements --accept-package-agreements
+          icacls "$env:GITHUB_WORKSPACE" /grant "Everyone:(OI)(CI)F"
+          sudo --integrity Medium node --test spike/e2e/probe.test.mjs
