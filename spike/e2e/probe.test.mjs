@@ -1,5 +1,5 @@
 // Drives the built spike binary through tauri-driver (WebDriver) with plain fetch.
-// Run: SPIKE_PROJECT=<abs path to project json> node --test spike/e2e/probe.test.mjs
+// Run after `npx tauri build --no-bundle`: node --test spike/e2e/probe.test.mjs
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
@@ -7,7 +7,6 @@ import { resolve } from 'node:path'
 
 const app = resolve(`src-tauri/target/release/sailor-spike${process.platform === 'win32' ? '.exe' : ''}`)
 const url = 'http://127.0.0.1:4444'
-const ELEMENT = 'element-6066-11e4-a4c6-4a5c3c5f5f6c'
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 async function wd(method, path, body) {
@@ -18,8 +17,8 @@ async function wd(method, path, body) {
 }
 
 test('spike renders a PDF and blocks traversal', { timeout: 120_000 }, async () => {
-  const args = process.env.NATIVE_DRIVER ? ['--native-driver', process.env.NATIVE_DRIVER] : []
-  const driver = spawn('tauri-driver', args, { stdio: 'inherit' })
+  const env = { ...process.env, SPIKE_PROJECT: resolve('samples/project.example.json') }
+  const driver = spawn('tauri-driver', [], { stdio: 'inherit', env })
   let session
   try {
     for (let i = 0; ; i++) {
@@ -29,8 +28,7 @@ test('spike renders a PDF and blocks traversal', { timeout: 120_000 }, async () 
     let log = ''
     for (let i = 0; i < 60 && !/RENDER OK|ERROR/.test(log); i++) {
       await sleep(1000)
-      const el = await wd('POST', `/session/${session}/element`, { using: 'css selector', value: '#log' })
-      log = await wd('GET', `/session/${session}/element/${el[ELEMENT]}/text`)
+      log = await wd('POST', `/session/${session}/execute/sync`, { script: "return document.getElementById('log')?.textContent ?? ''", args: [] })
     }
     console.log(log)
     assert.match(log, /RENDER OK/)
