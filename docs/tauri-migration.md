@@ -277,7 +277,7 @@ Checklist item "One automated e2e test runs on Linux with `tauri-driver`" (secti
 | Date | Decision | Consequence |
 | --- | --- | --- |
 | 2026-11-01 | Minimum supported macOS is 14 (Sonoma). Superseded on 2026-11-02. | See the next row. |
-| 2026-11-02 | Minimum supported macOS is 15 (Sequoia). | GitHub retires the `macos-14` runners, so the oldest tested macOS is 15. The Tauri bundle sets `minimumSystemVersion` to `15.0`. CI covers `macos-15`. Do not claim support for macOS 14 or older. |
+| 2026-11-02 | Minimum supported macOS is 15 (Sequoia). | GitHub retires the `macos-14` runners, so the oldest tested macOS is 15. The Tauri bundle sets `minimumSystemVersion` to `15.0`. CI covers `macos-15` (lowest) and `macos-26` (newest). Do not claim support for macOS 14 or older. |
 | 2026-11-01 | Ship both AppImage and deb/rpm on Linux. | The release workflow builds `appimage`, `deb` and `rpm`. Only the AppImage auto-updates through `tauri-plugin-updater`. deb and rpm users update by hand or through the system package manager. State this in the README and the release notes. |
 
 Open work from these decisions:
