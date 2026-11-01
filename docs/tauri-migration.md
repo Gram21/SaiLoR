@@ -365,6 +365,7 @@ Differences from Electron:
 - `local_probe` reports available RAM as `freeRamBytes`. Node reports free RAM, which is lower on macOS.
 
 Verification: `cargo test` runs the ported cases of `ollama.test.ts`, `hardware.test.ts` and the SSRF cases of `webFetch.test.ts` against a local mock server.
+
 ## 15. Phase 3 progress
 
 Scope: the Rust side of the 36 `git:*` channels. The TypeScript bridge already calls them by name (`src/platform/tauri.ts`). The renderer does not read the new result shapes yet.
