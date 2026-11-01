@@ -1,114 +1,182 @@
 name: Release
 
-# Build the Electron desktop app for macOS, Windows, and Linux when a GitHub
-# release is published, and attach the installers to that release.
-#
-# The build itself lives in scripts/build-electron.sh so it can be run locally
-# and on any CI provider; this workflow only supplies the per-OS runners and
-# the GitHub-specific upload of the produced artifacts.
+# A `v*` tag builds the app on every OS and attaches installers, signed
+# updater artifacts and latest.json to a DRAFT release. Publishing that
+# draft archives it on Zenodo (zenodo job).
+# Setup (signing key, secrets): docs/tauri-migration.md section 16.
 
 on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
   release:
     types: [published]
-  # Allow a manual dry run (builds artifacts, uploads nothing to a release).
-  workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GH_REPO: ${{ github.repository }}
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 jobs:
-  # Gates the build below: a broken end-to-end workflow (schema authoring,
-  # PDF annotation, git commit, merge/pull/branch-switch/discard, screening
-  # import — see src/test/integration/ and e2e/) must not reach a packaged
-  # release. Pulled into its own reusable workflow (integration-tests.yml)
-  # so it's also independently triggerable without a full release run.
-  integration-tests:
-    # tauri-v* releases come from tauri-release.yml; skipping here also skips build and zenodo.
-    if: ${{ !startsWith(github.event.release.tag_name, 'tauri-v') }}
-    uses: ./.github/workflows/integration-tests.yml
+  release:
+    if: github.event_name != 'release'
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.draft.outputs.id }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check version, public key and signing key
+        id: tag
+        env:
+          SIGNING_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          VERSION=$(jq -r .version package.json)
+          TAG="v$VERSION"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "$TAG" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version (expected $TAG)"; exit 1
+          fi
+          if jq -e '.plugins.updater.pubkey | startswith("REPLACE_")' src-tauri/tauri.conf.json > /dev/null; then
+            echo "::error::Set plugins.updater.pubkey in src-tauri/tauri.conf.json (see docs/tauri-migration.md section 16)"; exit 1
+          fi
+          if [ -z "$SIGNING_KEY" ]; then
+            echo "::error::Secret TAURI_SIGNING_PRIVATE_KEY is not set"; exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Find or create draft release
+        id: draft
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          if json=$(gh release view "$TAG" --json databaseId,isDraft 2>/dev/null); then
+            if [ "$(jq -r .isDraft <<<"$json")" != true ]; then
+              echo "::error::Release $TAG is already published"; exit 1
+            fi
+          else
+            gh release create "$TAG" --draft --target "$GITHUB_SHA" \
+              --title "SaiLoR $VERSION" \
+              --notes "SaiLoR $VERSION. Requires macOS 15 or later. The AppImage, Windows and macOS builds update in-app. Update the .deb and .rpm packages manually. Users of 1.x install this release once by hand."
+            json=$(gh release view "$TAG" --json databaseId,isDraft)
+          fi
+          echo "id=$(jq -r .databaseId <<<"$json")" >> "$GITHUB_OUTPUT"
 
   build:
-    needs: integration-tests
+    needs: release
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
-            artifacts: release/*.dmg
-            feed: ''
-          # The *installer* itself is unsigned: no Authenticode certificate is
-          # configured (CSC_LINK/CSC_KEY_PASSWORD, or win.certificateSubjectName
-          # + publisherName in package.json). That's a separate concern from
-          # update *authenticity*, which the "Sign update metadata" step below
-          # does cover: it signs `latest.yml`/`latest-linux.yml` with this
-          # project's own Ed25519 release key, and `electron/main.ts` verifies
-          # that signature (see `src/model/updateSignature.ts`) before ever
-          # downloading an update — so a hostile release under this feed is
-          # caught even without a purchased certificate. What a real
-          # certificate would still add: removing Windows SmartScreen's
-          # "unrecognized publisher" warning on the installer itself, which
-          # only builds reputation through an Authenticode identity over time.
+          - os: macos-15
+            target: aarch64-apple-darwin
+          - os: macos-15
+            target: x86_64-apple-darwin
           - os: windows-latest
-            artifacts: |
-              release/*.exe
-              release/*.exe.blockmap
-              release/latest.yml
-              release/latest.yml.sig
-            feed: release/latest.yml
-          - os: ubuntu-latest
-            artifacts: |
-              release/*.AppImage
-              release/latest-linux.yml
-              release/latest-linux.yml.sig
-            feed: release/latest-linux.yml
+            target: x86_64-pc-windows-msvc
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
 
-      - name: Build packaged Electron app
-        shell: bash
-        run: ./scripts/build-electron.sh
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev
 
-      # Windows/Linux only (matrix.feed is empty on mac, which has no
-      # electron-updater feed at all — see the comment above). Signs with
-      # RELEASE_SIGNING_PRIVATE_KEY (an Ed25519 PEM secret); the matching
-      # public key is baked into the app (`src/model/updateSignature.ts`).
-      - name: Sign update metadata
-        if: matrix.feed != ''
-        shell: bash
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.target }}
+
+      - run: npm ci
+
+      # Optional. Without secrets the app is ad-hoc signed (identity "-").
+      # Only non-empty values are exported: an empty APPLE_* variable makes the
+      # Tauri bundler attempt a signing or notarization step and fail.
+      - name: macOS signing and notarization (optional)
+        if: runner.os == 'macOS'
         env:
-          RELEASE_SIGNING_PRIVATE_KEY: ${{ secrets.RELEASE_SIGNING_PRIVATE_KEY }}
-        run: node scripts/sign-release.cjs "${{ matrix.feed }}"
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          echo "APPLE_SIGNING_IDENTITY=${APPLE_SIGNING_IDENTITY:--}" >> "$GITHUB_ENV"
+          for v in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            if [ -n "${!v}" ]; then printf '%s=%s\n' "$v" "$(printf %s "${!v}" | tr -d '\r\n')" >> "$GITHUB_ENV"; fi
+          done
 
-      # Keep a copy on the workflow run so a manual (workflow_dispatch) build is
-      # still downloadable even though there is no release to attach it to.
-      - name: Upload build artifacts to the workflow run
-        uses: actions/upload-artifact@v7
-        with:
-          name: sailor-${{ matrix.os }}
-          path: ${{ matrix.artifacts }}
-          if-no-files-found: error
+      # Optional. Without secrets the NSIS installer is unsigned.
+      - name: Windows code signing (optional)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          if (-not $env:WINDOWS_CERTIFICATE) { exit 0 }
+          $pfx = Join-Path $env:RUNNER_TEMP cert.pfx
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $password = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText
+          $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password
+          Remove-Item $pfx
+          @{ bundle = @{ windows = @{ certificateThumbprint = $cert.Thumbprint; digestAlgorithm = 'sha256'; timestampUrl = 'http://timestamp.digicert.com' } } } |
+            ConvertTo-Json -Depth 4 | Set-Content src-tauri/tauri.windows.conf.json
 
-      - name: Attach installers to the release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          files: ${{ matrix.artifacts }}
-          fail_on_unmatched_files: true
+          releaseId: ${{ needs.release.outputs.id }}
+          tauriScript: npx tauri
+          args: --target ${{ matrix.target }} --config src-tauri/tauri.release.conf.json
+
+  # The build jobs merge their platform into latest.json one after another; a
+  # race can drop one. Re-run the failed build job to add the platform back.
+  check-updater-json:
+    needs: [release, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: latest.json lists every platform
+        env:
+          ID: ${{ needs.release.outputs.id }}
+        run: |
+          asset=$(gh api "repos/$GH_REPO/releases/$ID/assets" --jq '.[] | select(.name == "latest.json") | .id')
+          gh api -H 'Accept: application/octet-stream' "repos/$GH_REPO/releases/assets/$asset" > latest.json
+          jq . latest.json
+          jq -e '.platforms | has("darwin-aarch64") and has("darwin-x86_64") and has("windows-x86_64") and has("linux-x86_64")' latest.json
 
   # Archive the published release on Zenodo as a new version of the existing
   # record (shared concept DOI): source zip plus every release
-  # asset, with the GitHub release notes as description. Runs after all
-  # installers are attached. Publishing on Zenodo is permanent.
+  # asset, with the GitHub release notes as description. Runs when the draft
+  # from the jobs above is published. Publishing on Zenodo is permanent.
   zenodo:
-    needs: build
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     env:

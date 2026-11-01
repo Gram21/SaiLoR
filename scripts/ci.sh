@@ -44,6 +44,9 @@ npm run check:wiki
 step "Running tests (vitest)"
 npm test
 
+step "Running integration tests (src/test/integration/)"
+npm run test:integration
+
 step "Building static SPA (vite build)"
 npm run build
 
