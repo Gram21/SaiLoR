@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod annotations;
 mod authz;
 mod close;
 mod feedback;
@@ -94,6 +95,12 @@ fn main() {
             project::project_set_dir,
             project::project_pick_save_path,
             project::project_peek,
+            project::project_screening_source,
+            project::reference_pick,
+            annotations::project_annotations_dir_users,
+            annotations::project_shared_annotations,
+            annotations::project_move_annotations_dir,
+            annotations::project_split_annotations,
             feedback::project_write_feedback,
             feedback::project_list_feedback,
             pdf::pdf_pick,

@@ -17,7 +17,7 @@ pub const DEFAULT_ANNOTATIONS_DIR: &str = "annotations";
 pub const FEEDBACK_DIR: &str = "feedback";
 
 /// `paperIdProblem(id) === null` from src/model/paperId.ts.
-fn paper_id_ok(id: &str) -> bool {
+pub fn paper_id_ok(id: &str) -> bool {
     const RESERVED: [&str; 4] = ["CON", "PRN", "AUX", "NUL"];
     let base = id.split('.').next().unwrap_or("").to_uppercase();
     let numbered = |p: &str| {
@@ -105,7 +105,7 @@ pub fn read_meta(file: &Path) -> Value {
 }
 
 /// `safeReadAnnotationFile`: `None` when missing or resolving (via any link) outside `base`.
-fn safe_read(base: &Path, rel: &str) -> Option<String> {
+pub fn safe_read(base: &Path, rel: &str) -> Option<String> {
     let resolved = resolve(base, Path::new(rel));
     if !within(&resolved, base) {
         return None;
@@ -117,7 +117,7 @@ fn safe_read(base: &Path, rel: &str) -> Option<String> {
     read_lossy(&real).ok()
 }
 
-fn paper_ids(raw: &Value) -> Vec<String> {
+pub fn paper_ids(raw: &Value) -> Vec<String> {
     let mut seen = HashSet::new();
     raw.get("papers")
         .and_then(Value::as_array)
@@ -529,6 +529,87 @@ pub async fn project_peek(paths: Vec<String>) -> Result<Vec<Peek>, String> {
     Ok(paths.iter().map(|p| peek(p)).collect())
 }
 
+#[derive(Serialize, Debug)]
+pub struct Source {
+    name: String,
+    #[serde(flatten)]
+    opened: Opened,
+}
+
+/// The screening project an open project names in its provenance: a plain file
+/// name next to it, read like `project:open` reads; `None` when absent or refused.
+pub fn screening_source(
+    session: &Mutex<Session>,
+    project_path: &str,
+) -> Result<Option<Source>, String> {
+    let key = normalize(Path::new(project_path));
+    if !lock(session).is_known(&key) {
+        return Err("Refusing to inspect a project that was not opened this session.".into());
+    }
+    let raw = read_meta(&key);
+    if raw.pointer("/provenance/kind").and_then(Value::as_str) != Some("screening-import") {
+        return Ok(None);
+    }
+    let Some(name) = raw
+        .pointer("/provenance/source/file")
+        .and_then(Value::as_str)
+    else {
+        return Ok(None);
+    };
+    let plain = !name.contains(['/', '\\'])
+        && name.len() > 5
+        && name.to_lowercase().ends_with(".json")
+        && !name.starts_with('.')
+        && paper_id_ok(name);
+    let file = dir_of(&key).join(name);
+    if !plain || file == key {
+        return Ok(None);
+    }
+    if fs::symlink_metadata(&file).map_or(true, |m| m.file_type().is_symlink()) {
+        return Ok(None);
+    }
+    Ok(read_project(session, &file).ok().map(|opened| Source {
+        name: name.to_string(),
+        opened,
+    }))
+}
+
+#[tauri::command]
+pub async fn project_screening_source(
+    session: State<'_, Mutex<Session>>,
+    project_path: String,
+) -> Result<Option<Source>, String> {
+    screening_source(&session, &project_path)
+}
+
+#[derive(Serialize)]
+pub struct PickedReference {
+    text: String,
+    name: String,
+}
+
+#[tauri::command]
+pub async fn reference_pick(app: AppHandle) -> Result<Option<PickedReference>, String> {
+    let Some(picked) = app
+        .dialog()
+        .file()
+        .set_title("Import references")
+        .add_filter("Reference files", &["bib", "ris", "json"])
+        .blocking_pick_file()
+    else {
+        return Ok(None);
+    };
+    let p = picked.into_path().map_err(err)?;
+    Ok(Some(PickedReference {
+        text: read_lossy(&p).map_err(err)?,
+        name: p
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .into_owned(),
+    }))
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::*;
@@ -763,5 +844,58 @@ pub mod tests {
                 title: None
             }
         );
+    }
+
+    #[test]
+    fn screening_source_reads_only_a_plain_sibling() {
+        let d = tmp("screening-source");
+        let own = d.join("review.json");
+        let with_source = |file: &str| {
+            fs::write(
+                &own,
+                format!(r#"{{"papers":[],"provenance":{{"kind":"screening-import","source":{{"file":"{file}"}}}}}}"#),
+            )
+            .unwrap();
+        };
+        fs::write(
+            d.join("screen.json"),
+            r#"{"papers":[{"id":"p1"}],"config":{"screening":{}}}"#,
+        )
+        .unwrap();
+        let path = own.display().to_string();
+        with_source("screen.json");
+        assert!(screening_source(&Mutex::new(Session::default()), &path).is_err());
+        let session = Mutex::new(Session::default());
+        lock(&session).known_projects.insert(normalize(&own));
+        let got = screening_source(&session, &path).unwrap().unwrap();
+        assert_eq!(got.name, "screen.json");
+        assert!(got.opened.text.contains("\"p1\""));
+        for bad in [
+            "../screen.json",
+            "sub\\\\x.json",
+            ".hidden.json",
+            "screen.txt",
+            "review.json",
+            "missing.json",
+            "CON.json",
+        ] {
+            with_source(bad);
+            assert!(
+                screening_source(&session, &path).unwrap().is_none(),
+                "{bad}"
+            );
+        }
+        fs::write(
+            &own,
+            r#"{"papers":[],"provenance":{"kind":"other","source":{"file":"screen.json"}}}"#,
+        )
+        .unwrap();
+        assert!(screening_source(&session, &path).unwrap().is_none());
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(d.join("screen.json"), d.join("link.json")).unwrap();
+            with_source("link.json");
+            assert!(screening_source(&session, &path).unwrap().is_none());
+        }
     }
 }
