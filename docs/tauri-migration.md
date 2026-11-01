@@ -246,3 +246,28 @@ Findings:
 - The size gain for the shell alone is about 2% of the Electron installer (93 MB macOS arm64). The real app adds its own assets.
 
 Go/no-go: go on the rendering and size checks. Open items: oldest supported macOS, `tauri-driver` e2e on Linux, and the decision on Linux packaging (deb/rpm instead of AppImage).
+
+### 11.1 tauri-driver e2e spike results (2026-11-01)
+
+Code: `spike/e2e/probe.test.mjs` and `.github/workflows/tauri-e2e-spike.yml` on branch `spike/tauri-e2e`. Green run: <https://github.com/Gram21/SaiLoR/actions/runs/41305362434>.
+
+The test uses `node:test` and plain `fetch` against the WebDriver HTTP API. It adds no npm dependency. It starts `tauri-driver`, opens a session on the release binary (`npx tauri build --no-bundle`), and polls `#log` through `execute/sync`. It asserts `RENDER OK` and a `-> 403` traversal probe.
+
+| Runner | Native driver | Result | Test time | Job time (warm cache) |
+| --- | --- | --- | --- | --- |
+| ubuntu-24.04 | WebKitWebDriver (`webkit2gtk-driver` 2.52.6), `xvfb-run` | Pass | 35 s | 2.5 min |
+| windows-latest | msedgedriver 155.0.4283.62 (matches WebView2 155.0.4283.62) | Pass | 16 s (includes `gsudo` install) | 5.5 min |
+| macOS | None | Not run. `tauri-driver` has no macOS support. | – | – |
+
+Versions: `tauri-driver` 2.1.0, Rust 1.99.1, Node 24.22.1.
+
+Findings:
+
+- Linux works with the documented setup. Session start takes about 30 s under `xvfb`. The app log shows an AT-SPI D-Bus warning in that time.
+- Windows fails with `DevToolsActivePort file doesn't exist` if the test runs elevated. GitHub runners are elevated. WebView2 then ignores `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` from msedgedriver ([wry#1782](https://github.com/tauri-apps/wry/issues/1782)). The fix is `gsudo --integrity Medium`, as in Tauri's own `test-api-e2e.yml`.
+- msedgedriver must match the WebView2 version. The workflow reads the version from the EdgeUpdate registry key and downloads the matching driver.
+- The old Windows traversal probe (`../` x12 + `Windows/win.ini`) returned 404. The workspace is on drive `D:`, so the target did not exist. The probe now uses `../package.json` on all OS. Windows returns 403 for it.
+- Uncached `cargo install tauri-driver` takes about 1 min. On Linux `rust-cache` keeps it. On Windows it compiled again in every run.
+- CI cost: about 8 runner minutes per push for both jobs.
+
+Checklist item "One automated e2e test runs on Linux with `tauri-driver`" (section 7): pass. Windows also passes.
