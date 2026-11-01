@@ -171,7 +171,7 @@ mod tests {
         assert_eq!(rebased, ["../../old/pdfs/a.pdf"]);
         let abs = tauri::async_runtime::block_on(paths_absolute(from, vec!["../x/./a.pdf".into()]))
             .unwrap();
-        assert_eq!(abs, [r.join("x/a.pdf").display().to_string()]);
+        assert_eq!(abs, [r.join("x").join("a.pdf").display().to_string()]);
     }
 
     #[cfg(not(windows))]
