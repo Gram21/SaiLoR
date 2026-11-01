@@ -1,0 +1,21 @@
+# syntax=docker/dockerfile:1
+# Build image for the Linux Tauri bundles (AppImage, deb, rpm).
+# Ubuntu 22.04 matches the release runner, so the AppImage runs on older glibc.
+# The source is bind-mounted at run time. See docker-compose.dev.yml.
+FROM ubuntu:22.04
+ENV DEBIAN_FRONTEND=noninteractive \
+    RUSTUP_HOME=/opt/rustup CARGO_HOME=/opt/cargo \
+    PATH=/opt/cargo/bin:$PATH \
+    APPIMAGE_EXTRACT_AND_RUN=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential ca-certificates curl wget file git pkg-config patchelf rpm \
+      libssl-dev libwebkit2gtk-4.1-dev libxdo-dev libayatana-appindicator3-dev librsvg2-dev \
+ && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+ && apt-get install -y --no-install-recommends nodejs \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+
+WORKDIR /app
+CMD ["bash", "-c", "npm ci && npx tauri build --config src-tauri/tauri.conf.json --bundles appimage,deb,rpm"]

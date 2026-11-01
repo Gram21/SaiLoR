@@ -2,7 +2,7 @@
 CARGO := cargo
 
 .PHONY: help setup install dev web build build-debug test test-js test-rust test-integration \
-        lint fmt typecheck check clean report
+        lint fmt typecheck check clean report docker-linux
 
 help: ## Show this help
 	@awk 'BEGIN{FS=":.*## "} /^[a-zA-Z_-]+:.*## /{printf "  %-18s %s\n",$$1,$$2}' $(MAKEFILE_LIST)
@@ -54,3 +54,6 @@ clean: ## Remove build output
 
 report: ## Build the technical report PDF
 	$(MAKE) -C technical-report
+
+docker-linux: ## Build Linux bundles (AppImage, deb, rpm) in Docker
+	docker compose -f docker-compose.dev.yml run --rm --build tauri-linux

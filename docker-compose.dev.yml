@@ -14,3 +14,18 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+
+  # Tauri build: bundles land in ./src-tauri/target/release/bundle/.
+  #   docker compose -f docker-compose.dev.yml run --rm tauri-linux
+  tauri-linux:
+    build:
+      context: .
+      dockerfile: Dockerfile.tauri-linux
+    image: sailor-tauri-linux:latest
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - tauri-target:/app/src-tauri/target
+
+volumes:
+  tauri-target:
