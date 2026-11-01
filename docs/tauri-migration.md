@@ -283,3 +283,32 @@ Open work from these decisions:
 
 1. Set `bundle.targets` for Linux to `["appimage", "deb", "rpm"]` in the release configuration (Phase 5).
 2. Add the minimum macOS version and the Linux update behavior to `README.md` and `docs/requirements/platform.md` at cutover (Phase 6).
+
+## 13. Phase 2 progress
+
+Branch: `spike/tauri-phase2`. Scope: the Rust side of the file and project commands. The TypeScript bridge does not call these commands yet.
+
+Modules in `src-tauri/src/`:
+
+| Module | Content |
+| --- | --- |
+| `authz.rs` | Session state: project directory, allowed escapes, known projects, readable PDFs, export targets, file stamps (REQ-PLT-30). |
+| `project.rs` | `project_open`, `project_open_path`, `project_save`, `project_set_dir`, `project_pick_save_path`, `project_peek`. |
+| `feedback.rs` | `project_write_feedback`, `project_list_feedback`. |
+| `pdf.rs` | `pdf_pick`, `pdf_pick_folder`, `pdf_read`, `pdf_check_path`, `pdf_allow_path`, `pdf_pick_export_path`, `text_pick_export_path`. |
+| `paths.rs` | `paths_relative`, `paths_rebase`, `paths_absolute`, `paths_sibling`. |
+| `protocol.rs` | `slr-file` scheme with single byte ranges (206, 416) and the correct `Content-Type`. |
+
+Command names are the IPC channel names with `:` changed to `_` and camelCase changed to snake_case. Arguments use the camelCase keys of the Electron preload.
+
+Open items for the TypeScript side:
+
+- Map each bridge channel to its snake_case command name.
+- `project_open` and `project_open_path` return `{ path, text, files, siblings }`. `text` is the stored `project.json`. Assemble the whole project and compute `corrupt` in TypeScript with `src/model/project.ts`.
+- `pdf_read` returns an `ArrayBuffer`.
+- Port `text:write` and `pdf:embedMarks`. They are the consumers of the export targets.
+
+Differences from Electron:
+
+- The `pdf_allow_path` warning dialog cannot set a default button. The Enter key can select "Open anyway".
+- `paths_sibling` also refuses `.` and `..` as file names.
