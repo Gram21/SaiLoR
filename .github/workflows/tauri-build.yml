@@ -6,6 +6,7 @@ name: Tauri build
 on:
   push:
     branches: [release/2.0.0]
+    paths-ignore: ['technical-report/**']
   workflow_dispatch:
 
 jobs:

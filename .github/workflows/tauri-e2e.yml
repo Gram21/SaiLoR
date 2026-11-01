@@ -6,6 +6,7 @@ name: Tauri e2e
 on:
   push:
     branches: [release/2.0.0]
+    paths-ignore: ['technical-report/**']
   workflow_dispatch:
 
 jobs:

@@ -1,0 +1,37 @@
+name: Technical report
+
+on:
+  push:
+    paths:
+      - 'technical-report/**'
+      - 'user-guide/screenshots/**'
+      - '.github/workflows/technical-report.yml'
+  pull_request:
+    paths:
+      - 'technical-report/**'
+      - 'user-guide/screenshots/**'
+      - '.github/workflows/technical-report.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compile report
+        uses: xu-cheng/latex-action@v3
+        with:
+          working_directory: technical-report
+          root_file: main.tex
+          latexmk_use_xelatex: false
+          args: -pdf -file-line-error -halt-on-error -interaction=nonstopmode -jobname=SaiLoR-technical-report
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SaiLoR-technical-report
+          path: technical-report/SaiLoR-technical-report.pdf
