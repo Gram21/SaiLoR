@@ -92,6 +92,7 @@ fn main() {
                 .js_init_script(format!("window.__SLR_OS__={};", os_info()))
                 .build(),
         )
+        .on_permission_request(|_, _| tauri::webview::PermissionResponse::Deny)
         .manage(update::State::default())
         .manage(close::Guard::default())
         .manage(Mutex::new(Session::default()))

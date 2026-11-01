@@ -223,10 +223,10 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-240 — Deny device permissions
-- **Description:** The system shall deny all Chromium permission requests (camera, microphone, geolocation, notifications).
+- **Description:** The system shall deny every permission request of the WebView (camera, microphone, geolocation, notifications, and the other kinds the platform reports).
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** commit `6ce60d5` (`electron/main.ts`, removed)
-- **Status:** Not implemented in the Tauri shell (Electron-only until 2.0.0)
+- **Evidence:** `src-tauri/src/main.rs` (`on_permission_request`), commit `6ce60d5` (`electron/main.ts`, removed)
+- **Status:** Implemented. Platform limit: on macOS, WKWebView reports only camera and microphone requests to the app. macOS itself blocks geolocation and notifications, because the app has no entitlement or usage description for them.
 
 ### REQ-PLT-250 — Route external links to the system browser
 - **Description:** The system shall deny in-app window creation and shall hand navigation away from the application document to the default system browser, restricted to the http, https, and mailto schemes.
