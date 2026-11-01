@@ -27,25 +27,25 @@ See the [index](index.md) for the glossary.
 ### REQ-LLM-40 — Keep API keys out of the user interface layer
 - **Description:** The system shall store API keys only in the main process, expose to the user interface layer only a flag stating whether a key is stored, and substitute the real key for a placeholder immediately before sending a request.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `src/llm/types.ts:4-10,86`, `electron/main.ts:1417,1447-1450,1536-1539`
+- **Evidence:** `src/llm/types.ts:4-10,86`, `src-tauri/src/llm.rs` (`public_configs`, `save_config`, `build_call_headers`)
 - **Status:** Implemented
 
 ### REQ-LLM-50 — Encrypt stored API keys
-- **Description:** The system shall store API keys encrypted with the operating system's secure storage in a configuration file restricted to owner read/write, and shall refuse to save a key when secure storage is unavailable. The Tauri shell shall store the key in the operating system keychain and keep only a `"keyring": true` marker in the configuration file.
+- **Description:** The system shall store API keys in the operating system keychain and shall refuse to save a key when the keychain is unavailable. The configuration file keeps only a `"keyring": true` marker for the key. Only the owner can read and write the configuration file.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `electron/main.ts:1408-1464`, `src-tauri/src/llm.rs`
+- **Evidence:** `src-tauri/src/llm.rs` (`KEYRING_SERVICE`, `save_config`, `write_configs`), `src-tauri/src/llm.rs` (`save_sanitizes_and_keeps_keys_out_of_the_file`)
 - **Status:** Implemented
 
 ### REQ-LLM-60 — Restrict key transmission
 - **Description:** The system shall attach the API key only to requests whose URL uses http or https, matches the configured base URL's protocol and origin, and shall refuse HTTP redirects on key-carrying requests.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `electron/main.ts:1519-1534,1551-1566`, `src-tauri/src/llm.rs`
+- **Evidence:** `src-tauri/src/llm.rs` (`call`, `build_call_headers`), `src-tauri/src/llm.rs` (`call_pins_the_origin_and_splices_the_key`)
 - **Status:** Implemented
 
 ### REQ-LLM-70 — Bound LLM call duration
 - **Description:** The system shall terminate an LLM request that has not completed within 10 minutes and shall allow the user to abort an in-flight request at any time.
 - **Type:** Non-functional (ISO 25010: Reliability)
-- **Evidence:** `electron/main.ts:1488-1500,1549`, commit `98796c1`
+- **Evidence:** `src-tauri/src/llm.rs` (`LLM_TIMEOUT`, `llm_abort`), `src-tauri/src/llm.rs` (`call_can_be_aborted`), commit `98796c1`
 - **Status:** Implemented
 
 ### REQ-LLM-80 — AI is off unless the project opts in
@@ -231,7 +231,7 @@ See the [index](index.md) for the glossary.
 ### REQ-LLM-400 — Restrict agent web access to public hosts
 - **Description:** When the AI agent fetches a URL, the system shall allow only `http`/`https` URLs without embedded credentials, resolve the hostname (or literal IP) and refuse the request if any resolved address is loopback, private, link-local, CGNAT, unique-local, multicast, or otherwise non-public, re-check the same rules on each of up to 5 manually-followed redirects, send no cookies or credentials, enforce a 20-second timeout and a 2 MB response body cap, and accept only textual content types.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `electron/webFetch.ts:1-83`, `electron/main.ts` (`web:fetch`/`web:abort` handlers), `electron/webFetch.test.ts`
+- **Evidence:** `src-tauri/src/webfetch.rs` (`validate_fetch_url`, `is_blocked_ip`, `is_blocked_hostname`, `resolve_public`, `web_fetch`, `web_abort`), `src-tauri/src/webfetch.rs` (`blocked_addresses`, `validate_urls`, `redirects_are_rechecked`, `body_is_capped`, `content_types`)
 - **Status:** Implemented
 
 ### REQ-LLM-380 — Switch between prompt and agent mode
@@ -262,14 +262,14 @@ See the [index](index.md) for the glossary.
 ### REQ-LLM-430 — Cost estimate from user-entered prices
 - **Description:** The system shall let the reviewer enter an input and output price (USD per 1M tokens) on an LLM target, with no built-in provider price table, prefilled from the picked model's own reported pricing when available (OpenRouter) and the fields are still empty, and shall estimate a run's token usage and cost range (low/high) from the number of papers, pages per paper (fetched lazily via pdf.js and cached per paper for the session), fields to fill, and mode (prompt or agent, agent accounting for repeated tool-calling requests plus judge calls, split between the agent and judge targets when they differ), reporting no cost when a target has no price entered and labeling the figure a rough estimate.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/llm/cost.ts` (`costOf`, `estimateRun`, `estimateCost`, `estimateCostSplit`), `src/llm/types.ts` (`LlmConfig.inputPrice`/`outputPrice`, `ModelInfo.pricing`), `src/llm/models.ts` (`parseOpenRouterModels`), `src/model/pdfText.ts` (`countPdfPages`), `src/state/aiStore.ts` (`ensurePageCounts`, `pageCounts`), `src/components/AiDialog.tsx` (`estimateLine`), `src/components/LlmSettingsDialog.tsx` (price fields, pricing prefill), `electron/main.ts` (`StoredLlmConfig.inputPrice`/`outputPrice`), `electron/llmConfig.ts` (`validPrice`)
+- **Evidence:** `src/llm/cost.ts` (`costOf`, `estimateRun`, `estimateCost`, `estimateCostSplit`), `src/llm/types.ts` (`LlmConfig.inputPrice`/`outputPrice`, `ModelInfo.pricing`), `src/llm/models.ts` (`parseOpenRouterModels`), `src/model/pdfText.ts` (`countPdfPages`), `src/state/aiStore.ts` (`ensurePageCounts`, `pageCounts`), `src/components/AiDialog.tsx` (`estimateLine`), `src/components/LlmSettingsDialog.tsx` (price fields, pricing prefill), `src-tauri/src/llm.rs` (`valid_price`, `save_config`)
 - **Status:** Implemented
-- **Tests:** `src/llm/cost.test.ts`, `src/components/LlmSettingsDialog.test.tsx`, `src/components/AiDialog.test.tsx`, `electron/llmConfig.test.ts`
+- **Tests:** `src/llm/cost.test.ts`, `src/components/LlmSettingsDialog.test.tsx`, `src/components/AiDialog.test.tsx`, `src-tauri/src/llm.rs` (`save_sanitizes_and_keeps_keys_out_of_the_file`)
 
 ### REQ-LLM-440 — Retry with backoff on rate limits/overload
 - **Description:** When a model call fails with HTTP 429, 408, 500, 502, 503, 504, or 529, the system shall retry it with exponential backoff and jitter (capped, bounded number of retries), honoring the provider's `Retry-After` header when present, and shall not retry any other 4xx status; a pending retry wait shall abort immediately when the caller's signal aborts. Every model call an annotation run makes (prompt mode, agent mode, and judge calls) is wrapped this way; "Verify setup" and model listing are not. The system shall show a "Rate-limited, retrying in Ns…" progress notice while a retry is pending.
 - **Type:** Non-functional (ISO 25010: Reliability)
-- **Evidence:** `src/llm/retry.ts` (`withRetry`, `parseRetryAfter`, `runPool`, `RetryOptions.onRetry`), `electron/main.ts` (`llm:call` handler filling `retryAfterMs` via `parseRetryAfter`), `src/state/aiStore.ts` (`run` wrapping `getPlatform().callLlm` with `withRetry`, `retryNotice`), `src/components/AiDialog.tsx` (`ai-retry` notice)
+- **Evidence:** `src/llm/retry.ts` (`withRetry`, `parseRetryAfter`, `runPool`, `RetryOptions.onRetry`), `src-tauri/src/llm.rs` (`call`, `parse_retry_after`), `src/state/aiStore.ts` (`run` wrapping `getPlatform().callLlm` with `withRetry`, `retryNotice`), `src/components/AiDialog.tsx` (`ai-retry` notice)
 - **Status:** Implemented
 - **Tests:** `src/llm/retry.test.ts` (including `onRetry`), `src/state/aiStore.batch.test.ts`
 
@@ -332,9 +332,9 @@ See the [index](index.md) for the glossary.
 ### REQ-LLM-530 — Keyless local targets
 - **Description:** For an OpenAI-compatible target (or any future custom-base-URL provider), the system shall let the reviewer mark it as needing no API key. Such a target shall be usable — for a run, for "Verify setup", and as a judge — with no key stored, and the outbound request shall have any header built to carry a key (still containing the unsubstituted key placeholder) dropped rather than sent literally. A target with a stored key shall behave exactly as before regardless of this flag.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/llm/types.ts` (`LlmConfig.noKey`, `isUsable`), `src/components/LlmSettingsDialog.tsx` (no-key checkbox), `electron/main.ts` (`llm:call`, `StoredLlmConfig.noKey`), `electron/llmConfig.ts` (`buildCallHeaders`)
+- **Evidence:** `src/llm/types.ts` (`LlmConfig.noKey`, `isUsable`), `src/components/LlmSettingsDialog.tsx` (no-key checkbox), `src-tauri/src/llm.rs` (`llm_call`, `save_config`, `build_call_headers`)
 - **Status:** Implemented
-- **Tests:** `electron/llmConfig.test.ts`, `src/components/LlmSettingsDialog.test.tsx`
+- **Tests:** `src-tauri/src/llm.rs` (`call_headers`), `src/components/LlmSettingsDialog.test.tsx`
 
 ### REQ-LLM-540 — Role-based model assignment remembered per project
 - **Description:** The setup screen shall assign library models (REQ-LLM-30) to three roles — Annotator (required), Judge (agent mode only, defaulting to "Same as annotator"), and Cross-check (optional, System-One-only) — rather than picking a single "target" for the whole run. Each role's choice shall be written both to a global fallback key and to a per-project record (keyed by the project's save location or title, and independent for each of these roles); opening the AI dialog shall apply the current project's own remembered role over the global fallback whenever the remembered model still exists among the configured library, and shall fall back to the global choice (or nothing) otherwise. Switching mode to or from Classify shall clear the annotator selection when it belongs to the wrong model family (a System One decision model vs. a chat/agent model), since the two are not interchangeable.
@@ -440,7 +440,7 @@ See the [index](index.md) for the glossary.
 - **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
 - **Evidence:** `src/state/aiStore.ts` (`saveFeedback`, `writeFeedback`, `feedbackHandled`), `src/llm/feedback.ts`, `src/platform/adapter.ts` (`writeFeedback`), `src/components/AiDialog.tsx`
 - **Status:** Implemented
-- **Tests:** `src/state/aiStore.recheck.test.ts`, `src/llm/feedback.test.ts`, `electron/feedback.test.ts`
+- **Tests:** `src/state/aiStore.recheck.test.ts`, `src/llm/feedback.test.ts`, `src-tauri/src/feedback.rs` (`name_and_content_rules`, `write_never_overwrites_and_lists_sorted`)
 
 ### REQ-LLM-710 — Respect each model's input window
 - **Description:** Each System One request shall fit the model's input window. `systemOneProfileFor(cfg)` (`src/llm/modelProfiles.ts`) gives per-family limits (Laya English 512/192, Laya multilingual and typed-decisions 1024/256, Jev 32k for state plus longest question, Clef 65,536 hosted or 16,384 local, otherwise a conservative profile from `contextTokens`/`maxStateTokens`); user-set `contextTokens` and `optionsBudgetTokens` always override. Chat input budgets derive from `contextTokens` through `chatInputBudget`, which is null (send everything) when the window is unknown. Run estimates clamp per-request input to `contextTokens`, and the Classify estimate multiplies by the number of packed requests. Ceiling: Laya `maxQuestions`/`maxOptionsPerChoice` are conservative estimates.
@@ -485,39 +485,39 @@ See the [index](index.md) for the glossary.
 - **Tests:** `src/llm/ollama.test.ts`, `src/llm/ollama.chat.test.ts`
 
 ### REQ-LLM-722 — Local server discovery and model listing
-- **Description:** The desktop app shall expose Ollama control (`version`, `list`, `show`, `ps`, `pull` with streamed progress, cancel, `delete`, registry `manifestSize`) and `discoverLocalServer(baseUrl)` over IPC. The renderer-supplied base URL must be `http:`/`https:` without credentials and is reduced to its origin; results carry `isLocal` (loopback/private host) so the UI can warn when papers would leave the local network. Model tags are validated (`isValidModelTag`) before use and never taken from model output. Requests use `net.fetch` with timeouts and refuse redirects; a pull stops after 2 minutes without data, and cancelling closes the connection while the server may continue (pulling again resumes). Discovery probes Ollama (`/api/version`, `/api/tags`, `/api/ps`), LM Studio (`/api/v1/models`), llama.cpp (`/props`, `/v1/models`) and vLLM (`/v1/models` with `max_model_len`) and returns `{kind, models:[{id, contextTokens?, sizeBytes?, loaded?}]}`. No API key is sent by these calls.
+- **Description:** The desktop app shall expose Ollama control (`version`, `list`, `show`, `ps`, `pull` with streamed progress, cancel, `delete`, registry `manifestSize`) and `discoverLocalServer(baseUrl)` over IPC. The renderer-supplied base URL must be `http:`/`https:` without credentials and is reduced to its origin; results carry `isLocal` (loopback/private host) so the UI can warn when papers would leave the local network. Model tags are validated (`isValidModelTag`) before use and never taken from model output. Requests use timeouts and refuse redirects; a pull stops after 2 minutes without data, and cancelling closes the connection while the server may continue (pulling again resumes). Discovery probes Ollama (`/api/version`, `/api/tags`, `/api/ps`), LM Studio (`/api/v1/models`), llama.cpp (`/props`, `/v1/models`) and vLLM (`/v1/models` with `max_model_len`) and returns `{kind, models:[{id, contextTokens?, sizeBytes?, loaded?}]}`. No API key is sent by these calls.
 - **Type:** Functional (ISO 25010: Functional Suitability, Security)
-- **Evidence:** `electron/ollama.ts` (`registerOllamaHandlers`, `checkBaseUrl`), `src/llm/ollama.ts` (parsers), `src/platform/ollamaApi.ts`, `src/platform/electron.ts`, `src/platform/unsupported.ts`, `electron/preload.ts`
+- **Evidence:** `src-tauri/src/ollama.rs` (`check_base_url`, `is_valid_model_tag`, `discover`, `localserver_discover`), `src/llm/ollama.ts` (parsers), `src/platform/ollamaApi.ts`, `src/platform/tauri.ts` (`tauriBridge`), `src/platform/unsupported.ts`
 - **Status:** Implemented (no UI yet)
-- **Tests:** `electron/ollama.test.ts`, `src/llm/ollama.test.ts`
+- **Tests:** `src-tauri/src/ollama.rs` (`base_urls`, `model_tags`, `handlers`, `pulls`, `discovers`), `src/llm/ollama.test.ts`
 
 ### REQ-LLM-723 — Curated local model shortlist with consent sizes
 - **Description:** The system shall ship `OLLAMA_SHORTLIST`, a curated list of Ollama tags (checked in the Ollama library on 2026-10-02) with label, approximate default-pull size, the model's maximum context, a minimum RAM hint and notes. Phi-4 is excluded (16K context). Annotation quality is not benchmarked. Before a download the size shall be re-read from the registry manifest (`manifestSize`, the sum of layer sizes) so consent shows the current size; a missing tag (404) yields no size and the UI must handle it. GPU/CPU use of a loaded model is derived from `/api/ps` (`gpuStatus`) and KV-cache memory from `/api/show` (`estimateKvBytes`, an over-estimate).
 - **Type:** Functional (ISO 25010: Functional Suitability, Usability)
-- **Evidence:** `src/llm/ollama.ts` (`OLLAMA_SHORTLIST`, `manifestUrl`, `sumManifestBytes`, `gpuStatus`, `estimateKvBytes`), `electron/ollama.ts` (`ollama:manifestSize`)
+- **Evidence:** `src/llm/ollama.ts` (`OLLAMA_SHORTLIST`, `manifestUrl`, `sumManifestBytes`, `gpuStatus`, `estimateKvBytes`), `src-tauri/src/ollama.rs` (`ollama_manifest_size`, `manifest_url`, `sum_manifest_bytes`)
 - **Status:** Implemented (no UI yet)
-- **Tests:** `src/llm/ollama.test.ts`, `electron/ollama.test.ts`
+- **Tests:** `src/llm/ollama.test.ts`, `src-tauri/src/ollama.rs` (`parsers`, `handlers`)
 
 ### REQ-LLM-700 — Managed local runtime for System One models
 - **Description:** The desktop app shall run System One decision models (Laya first) locally without Python: it finds a `llama-server` (user-set `SAILOR_LLAMA_SERVER`, the managed copy under `userData/local-runtime/llama.cpp/<tag>/`, then `PATH` and common install directories), or installs one from the newest ggml-org/llama.cpp release (the `b<N>` pre-releases; `releases/latest` points at an unrelated tag stream). A server per model is started lazily by `llm:call` for targets with `managed.catalogId`, on a free `127.0.0.1` port with `-c = -b = -ub = contextTokens`, one slot, no web UI and a random per-session `--api-key` that only the main process knows; the stored base URL is a placeholder and the call is re-pinned to the running server's origin (paths limited to `/v1/*` and `/health`, redirects still refused). After start the app self-tests `POST /v1/systemone`; a build without the route (404) or a non-decision model (501) is stopped and reported. Servers stop after 10 idle minutes and on quit; the last 200 log lines are kept. Model files are listed from a fixed catalog (Laya English Q8_0 available; Laya multilingual and typed-decisions planned because the community GGUFs use an architecture llama.cpp cannot load; Clef and Clef Flash planned until llama.cpp supports them). The renderer only names catalog ids. Verified live on macOS arm64 against llama.cpp master 4ebdf2c (no tagged release contains the route yet, newest checked b11349); the installer reports the release's route support via the GitHub compare API and refuses a release known to lack it.
 - **Type:** Functional (ISO 25010: Functional Suitability, Security)
-- **Evidence:** `electron/localRuntime.ts`, `electron/localRuntimeUtil.ts`, `electron/localRuntimeIpc.ts`, `electron/llmConfig.ts` (`managedTargetUrl`, `validManaged`), `electron/main.ts` (`llm:call`), `src/llm/localCatalog.ts`, `src/platform/localRuntime.ts`, `src-tauri/src/localruntime.rs`, `src-tauri/src/llm.rs` (`managed_target_url`)
+- **Evidence:** `src/llm/localCatalog.ts`, `src/platform/localRuntime.ts`, `src-tauri/src/localruntime.rs`, `src-tauri/src/llm.rs` (`managed_target_url`, `valid_managed`, `llm_call`)
 - **Status:** Implemented (no UI yet)
-- **Tests:** `electron/localRuntimeUtil.test.ts`, `electron/llmConfig.test.ts`, `src/llm/localCatalog.test.ts`, `src-tauri/src/localruntime.rs` (tests), `src-tauri/src/llm.rs` (tests)
+- **Tests:** `src/llm/localCatalog.test.ts`, `src-tauri/src/localruntime.rs` (tests), `src-tauri/src/llm.rs` (`managed_calls_go_to_the_local_server`)
 
 ### REQ-LLM-701 — Hash-verified downloads with informed consent
 - **Description:** Runtime and model downloads shall start only after a plan (name, size, SHA-256, source, license, destination, free disk space) was produced for the same item in this session, so the UI can obtain consent first. The runtime hash is the release asset's `digest`; the model hash is the Hugging Face LFS oid of the file at a pinned commit; a missing or malformed digest refuses the download. Only `github.com`, `api.github.com`, `*.githubusercontent.com` and `huggingface.co`, `*.huggingface.co`, `*.hf.co` over https (no credentials, default port) are contacted, every redirect hop being re-checked. Downloads resume from a `.partial` file with a `Range` request (a server that does not honour it restarts from zero), report progress, can be cancelled, and are renamed into place only after the size and SHA-256 match; a mismatch deletes the file. The runtime archive is extracted with the system `tar` (bsdtar; `System32\tar.exe` on Windows) and its `llama-server` must run `--version` before it is accepted.
 - **Type:** Functional (ISO 25010: Security, Reliability)
-- **Evidence:** `electron/localRuntime.ts` (`downloadVerified`, `runtimePlan`, `modelPlan`, `runtimeInstall`, `modelInstall`), `electron/localRuntimeUtil.ts` (`parseDigest`, `parseHfFile`, `allowedDownloadUrl`, `resumeOffset`, `contentRangeStartsAt`), `src-tauri/src/localruntime.rs` (`download_verified`, `allowed_download_url`)
+- **Evidence:** `src-tauri/src/localruntime.rs` (`download_verified`, `runtime_plan`, `model_plan`, `runtime_install`, `model_install`, `parse_digest`, `parse_hf_file`, `allowed_download_url`, `resume_offset`, `content_range_starts_at`)
 - **Status:** Implemented (no UI yet)
-- **Tests:** `electron/localRuntimeUtil.test.ts`, `src-tauri/src/localruntime.rs` (tests)
+- **Tests:** `src-tauri/src/localruntime.rs` (tests)
 
 ### REQ-LLM-702 — GPU when available, CPU otherwise, reported honestly
 - **Description:** The desktop app shall probe the hardware (RAM, free disk, GPUs via `nvidia-smi`, `system_profiler`, PowerShell `Win32_VideoController`, `lspci`; each probe best-effort with a timeout, failures meaning "unknown") and recommend a llama.cpp build (Metal on Apple silicon, Vulkan with a discrete or integrated GPU, else CPU; Windows prefers the Vulkan build over CUDA, which needs a separate cudart bundle). A model server is started with all layers offloaded (`-ngl 99`); the reported backend and layer count are read from the server's startup log, never from what was requested ("using device" alone is not GPU use when 0 layers are offloaded). If the GPU start fails the server is started once more with `-dev none -ngl 0` and the result carries a note; an incompatible build or model is not retried. Observed on an M3 Pro: Metal start 0.37 s and 58 ms for three questions, CPU-only 0.15 s warm (first requests seconds).
 - **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
-- **Evidence:** `electron/hardware.ts` (`probeHardware`, `recommendBackend`), `electron/localRuntimeUtil.ts` (`parseServerLog`, `buildServerArgs`), `electron/localRuntime.ts` (`start`), `src-tauri/src/hardware.rs`, `src-tauri/src/localruntime.rs` (`parse_server_log`, `start`)
+- **Evidence:** `src-tauri/src/hardware.rs` (`probe`, `recommend_backend`), `src-tauri/src/localruntime.rs` (`build_server_args`, `parse_server_log`, `start`)
 - **Status:** Implemented (no UI yet); CUDA/Vulkan paths untested on real hardware
-- **Tests:** `electron/hardware.test.ts`, `electron/localRuntimeUtil.test.ts`, `src-tauri/src/hardware.rs` (tests), `src-tauri/src/localruntime.rs` (tests)
+- **Tests:** `src-tauri/src/hardware.rs` (`backends`, `parsers`), `src-tauri/src/localruntime.rs` (tests)
 
 ### REQ-LLM-730 — Guided setup of local decision models with informed download consent
 - **Description:** The model library's provider select shall offer the guided entry "Local model — decision model (System 1)". Its panel shall show the hardware (RAM, free disk, GPUs) with a plain sentence on GPU or CPU use, the llama.cpp runtime status, and the System One entries of the local catalog with size, license and the input window in plain words (including the question/option budget). Runtime and model downloads shall show their plan (source, size, destination, free disk, SHA-256 verification, license) and start only after an explicit confirmation; progress and cancel are shown. While no llama.cpp release includes the `/v1/systemone` route (`includesSystemOne === false`), the UI shall say so, keep the install disabled and point to "Connect to a server you run yourself" (URL, e.g. laya-serve or own llama-server). Planned catalog entries show their reason and are not installable. "Use this model" saves a managed target (catalog id, window and options budget from the catalog); "Start & test" reports backend, GPU use and offloaded layers or the error. In the browser build the entry shows "Available in the desktop app".

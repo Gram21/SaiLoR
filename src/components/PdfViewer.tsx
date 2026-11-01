@@ -1834,8 +1834,9 @@ export function PdfViewer() {
             onLoadError={(err) => setError(String(err?.message ?? err))}
             loading={<div className="pdf-loading">Loading PDF…</div>}
             // External links open in a new tab instead of navigating the app
-            // away; the Rust shell turns this into a system browser
-            // open. Internal links are unaffected — LinkService just scrolls.
+            // away; the shell must route it to the system browser
+            // (REQ-PLT-250, not yet ported to Tauri: docs/tauri-migration.md
+            // section 20.6). Internal links are unaffected — LinkService just scrolls.
             externalLinkTarget="_blank"
             externalLinkRel="noopener noreferrer"
           >

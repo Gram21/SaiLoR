@@ -65,6 +65,8 @@ per category so requirements can be inserted without renumbering.
 - Sources analyzed: `README.md`, `docs/annotation-schema.md`, the `openwiki/` developer wiki
   (verified 2026-08-26 against source), the full `src/` tree with its extensive unit tests,
   `electron/`, `e2e/` Playwright specs, integration tests, and 393 commits of history.
+  `electron/` and the `e2e/` Playwright specs were the sources before 2.0.0. Since 2.0.0,
+  the Tauri shell in `src-tauri/` replaces `electron/`. The Playwright specs are removed.
 - Test names and assertions were treated as primary evidence of intended behavior; commit
   hashes are cited where a feature's introduction pins the requirement.
 - Every requirement's **Type** field states Functional/Non-functional plus the ISO/IEC 25010

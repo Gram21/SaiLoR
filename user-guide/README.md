@@ -55,7 +55,7 @@ From the start screen:
 
 ## Desktop app only
 
-SaiLoR is a **desktop app (Electron)** — download and run the installer above. SaiLoR used to also
+SaiLoR is a **desktop app (Tauri)** — download and run the installer above. SaiLoR used to also
 offer a web version that ran in the browser, but that has been discontinued: browser file-system
 limitations made too many features (saving, git) unreliable to support real review work, so the web
 build now just points you back here instead of opening a project. Use the desktop app.

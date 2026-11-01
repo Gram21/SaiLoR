@@ -10,31 +10,31 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-10 — Use the user's installed git
 - **Description:** The system shall execute git operations through the git binary installed on the user's machine, detected at project open via a version probe.
 - **Type:** Functional, design constraint: external git binary (ISO 25010: Compatibility — Interoperability)
-- **Evidence:** `electron/main.ts:1761`, `src/git/types.ts:28-34`
+- **Evidence:** `src-tauri/src/git.rs` (`probe`, `git_probe`), `src/git/types.ts:28-34`
 - **Status:** Implemented
 
 ### REQ-GIT-20 — Confine git execution to the main process
 - **Description:** The system shall execute git and access the repository filesystem only in the desktop application's main process, transferring raw command output to the user interface layer for parsing.
 - **Type:** Non-functional, architecture constraint (ISO 25010: Security)
-- **Evidence:** `src/git/types.ts:1-6,155-166`, `electron/main.ts:1761-2604`
+- **Evidence:** `src/git/types.ts:1-6,155-166`, `src-tauri/src/git.rs` (`run_git`)
 - **Status:** Implemented
 
 ### REQ-GIT-30 — Neutralize hostile repository configuration
 - **Description:** When invoking git, the system shall override repository-local configuration for hooks, filesystem monitor, pager, editor, alternate-refs command, pack-objects hook, and the `ext` protocol so that a received repository's configuration cannot execute code.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `electron/main.ts:1668,1696` (`GIT_SAFE_CONFIG`)
+- **Evidence:** `src-tauri/src/git.rs` (`safe_config`)
 - **Status:** Implemented
 
 ### REQ-GIT-40 — Disable interactive git prompts
 - **Description:** When invoking git, the system shall disable terminal credential prompts and editor invocation, so that authentication flows only through the user's configured credential helpers or SSH agent.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:1618` (`gitEnv`)
+- **Evidence:** `src-tauri/src/git.rs` (`run_git`, `NON_INTERACTIVE_ENV`, `STRIPPED_ENV`)
 - **Status:** Implemented
 
 ### REQ-GIT-50 — Bound git command duration
 - **Description:** The system shall terminate a git command that has not completed within a configured timeout, with network operations (clone, fetch, push, pull) allowed 900 seconds.
 - **Type:** Non-functional (ISO 25010: Performance Efficiency, Reliability)
-- **Evidence:** `electron/main.ts:1597,1692,1782,2200,2317,2340`
+- **Evidence:** `src-tauri/src/git.rs` (`TIMEOUT`, `NETWORK_TIMEOUT`, `run_git_capped`)
 - **Status:** Implemented
 
 ### REQ-GIT-60 — Validate clone URLs
@@ -46,38 +46,38 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-70 — Validate repository-relative paths
 - **Description:** When the user-interface layer supplies a repository-relative path, the system shall reject paths that are empty, absolute, contain parent-directory traversal, contain control characters, or contain a `.git` component.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `src/git/relpath.ts:15-52`, `electron/main.ts:1729`
+- **Evidence:** `src/git/relpath.ts:15-52`, `src-tauri/src/git.rs` (`rel_path_problem`, `assert_rel_path`)
 - **Status:** Implemented
 
 ### REQ-GIT-80 — Validate ref names
 - **Description:** When the user-interface layer supplies a git ref name, the system shall reject names that are empty, begin with a dash, contain control characters, or contain git revision-syntax characters, and shall verify that the ref resolves to a commit before use.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `src/git/ref.ts:21-60`, `electron/main.ts:1742,2331,2345`
+- **Evidence:** `src/git/ref.ts:21-60`, `src-tauri/src/git.rs` (`ref_problem`, `assert_ref`, `merge_begin`)
 - **Status:** Implemented
 
 ### REQ-GIT-90 — Restrict operations to session-known roots
 - **Description:** The system shall execute repository operations only against repository roots that were established in the current session via project open or clone.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `electron/main.ts:1753-1756`
+- **Evidence:** `src-tauri/src/git.rs` (`assert_root`)
 - **Status:** Implemented
 
 ### REQ-GIT-100 — Clone a project repository
 - **Description:** When a valid repository URL and a destination folder are provided, the system shall clone the repository, display elapsed time during the clone, and offer selection of a project file inside the clone for opening.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:1768-1791`, `src/state/gitStore.ts:731-790`, `src/components/GitCloneDialog.tsx`
+- **Evidence:** `src-tauri/src/git.rs` (`clone`, `git_pick_project_in`), `src/state/gitStore.ts:731-790`, `src/components/GitCloneDialog.tsx`
 - **Status:** Implemented
 
 ### REQ-GIT-110 — Detect repository context on open
 - **Description:** When a project is opened, the system shall determine whether the project lies in a git work tree and derive the repository root, the project's repository-relative path, the current branch, the upstream branch, and — without fetching — the number of commits the upstream is ahead as of the last fetch.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:1993`, `src/git/deriveGitInfo.ts:47-57`, commit `a068166`
+- **Evidence:** `src-tauri/src/git.rs` (`info`), `src/git/deriveGitInfo.ts:47-57`, commit `a068166`
 - **Verified by:** `src/git/deriveGitInfo.test.ts`
 - **Status:** Implemented
 
 ### REQ-GIT-120 — Show working-tree status and diff
 - **Description:** When the Git panel is opened, the system shall display the parsed working-tree status and the diff against HEAD, truncating diff text beyond 200,000 characters with a truncation indicator.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:1823`, `src/git/output.ts:12-74`
+- **Evidence:** `src-tauri/src/git.rs` (`status`), `src/git/output.ts:12-74`
 - **Status:** Implemented
 
 ### REQ-GIT-130 — Field-level review of project changes
@@ -95,7 +95,7 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-150 — Commit a subset of field changes
 - **Description:** When a commit is made with a mix of dispositions, the system shall commit exactly the rows marked Use, keep rows marked Ignore in the working tree for later, and remove rows marked Discard from the working file, restoring the working content even when the commit fails.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:2029-2078` (`git:commitPartial`), `gitStore.test.ts:497-587,646-712`
+- **Evidence:** `src-tauri/src/git.rs` (`commit_partial`), `gitStore.test.ts:497-587,646-712`
 - **Status:** Implemented
 
 ### REQ-GIT-160 — Confirm mixed discard commits
@@ -107,20 +107,20 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-170 — Stage only the project's own files
 - **Description:** When committing a field-level review or completing a merge, the system shall stage and commit only the project file, the paths the user selected, and the changed files under the annotations directory that belong to the project — listing untracked files individually so that a paper's first annotation file is included — and shall never stage a sibling project's files; commits shall be pathspec-limited so separately staged work is not disturbed.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:2227-2238,2262,2768`, `src/git/ownAnnotationPath.ts:82-95`, commits `2d0d9e0`, `52ce0b7`
+- **Evidence:** `src-tauri/src/git.rs` (`add_and_commit`, `own_annotation_paths_in`), `src/git/ownAnnotationPath.ts:82-95`, commits `2d0d9e0`, `52ce0b7`
 - **Verified by:** `src/git/ownAnnotationPath.test.ts` (`ownAnnotationPathsIn`, `ownAnnotationPathsIn needs files, not collapsed folders`)
 - **Status:** Implemented
 
 ### REQ-GIT-180 — Amend previous commit
 - **Description:** When the amend option is selected, the system shall amend the previous commit and prefill an empty commit message with the previous commit's message without overwriting typed text.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:2191`, `gitStore.test.ts:589-636`, commit `a7b594f`
+- **Evidence:** `src-tauri/src/git.rs` (`last_commit_message`, `add_and_commit`), `gitStore.test.ts:589-636`, commit `a7b594f`
 - **Status:** Implemented
 
 ### REQ-GIT-190 — Protect project files from whole-file discard
 - **Description:** The system shall reject a whole-file discard targeting the project's own file or any file under its annotations directory, enforced in the main process.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:2129-2168`, `src/components/GitDialog.tsx:416-421`
+- **Evidence:** `src-tauri/src/git.rs` (`discard_file`), `src/components/GitDialog.tsx:416-421`
 - **Status:** Implemented
 
 ### REQ-GIT-200 — Refuse writes on stale snapshots
@@ -138,20 +138,20 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-215 — Block merges over uncommitted annotation files
 - **Description:** When a pull or merge is started while tracked files have uncommitted changes, or while an untracked file exists in the project's annotations directory, the system shall refuse it and name the files; untracked files elsewhere in the repository shall not block it.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/git/relpath.ts:70-77`, `electron/main.ts:2475-2478`, commit `ae0e23c`
+- **Evidence:** `src/git/relpath.ts:70-77`, `src-tauri/src/git.rs` (`merge_blocking_dirty`), commit `ae0e23c`
 - **Verified by:** `src/git/relpath.test.ts` (`mergeBlockingPaths`)
 - **Status:** Implemented
 
 ### REQ-GIT-220 — Pull as classified upstream merge
 - **Description:** When Pull is triggered, the system shall fetch the upstream and classify the result as up-to-date, fast-forwarded, or requiring a merge, and shall report a missing upstream as an error naming the branch.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:2304-2329`, `src/git/types.ts:111-136`, `src/state/gitStore.ts:1086-1112`
+- **Evidence:** `src-tauri/src/git.rs` (`pull_begin`), `src/git/types.ts:111-136`, `src/state/gitStore.ts:1086-1112`
 - **Status:** Implemented
 
 ### REQ-GIT-230 — Abort merges touching foreign files
 - **Description:** When a merge produces an unmerged path outside the project's own file family, the system shall abort the merge and restore the pre-merge state.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts` (`beginMergeInto`), `src/git/ownAnnotationPath.ts:47-64`, `gitStore.test.ts:1032`
+- **Evidence:** `src-tauri/src/git.rs` (`begin_merge_into`), `src/git/ownAnnotationPath.ts:47-64`, `gitStore.test.ts:1032`
 - **Status:** Implemented
 
 ### REQ-GIT-240 — Field-level three-way merge
@@ -228,38 +228,38 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-320 — Manual push only
 - **Description:** The system shall push commits to the remote only when the user triggers Push, and shall never push automatically.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:2196-2200`, `e2e/gitPush.spec.ts`
+- **Evidence:** `src-tauri/src/git.rs` (`push`)
 - **Status:** Implemented
 
 ### REQ-GIT-330 — Merge any branch
 - **Description:** When a local or remote-tracking branch is selected for merging, the system shall merge it into the current branch using the same classification, refusal, and resolution flow as Pull, fetching first only for remote-tracking refs.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:2329-2345`, `gitStore.test.ts:953-1085`, commit `fa15e8b`
+- **Evidence:** `src-tauri/src/git.rs` (`merge_begin`, `is_remote_tracking_ref`), `gitStore.test.ts:953-1085`, commit `fa15e8b`
 - **Status:** Implemented
 
 ### REQ-GIT-340 — Create and switch branches
 - **Description:** The system shall create a new branch at HEAD on request and switch between local branches, treating a switch to the current branch as a no-op.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:2447,2470`, `gitStore.test.ts:795-809,1088-1153`
+- **Evidence:** `src-tauri/src/git.rs` (`branch_create`, `branch_switch_begin`), `gitStore.test.ts:795-809,1088-1153`
 - **Status:** Implemented
 
 ### REQ-GIT-350 — Carry uncommitted changes across branch switch
 - **Description:** When switching branches with uncommitted project changes, the system shall offer carrying the changes over, committing first, or cancelling; a carry-over shall stash only the project's own files — a paper's first annotation file included — refuse when unrelated files are dirty, and resolve differences via the three-way merge flow, restoring the source branch and stash on cancel. The carry-over stash shall be located by its message rather than its position, and when it cannot be restored the system shall report that the changes are kept as a stash and where to restore them.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:2899,3007,3017`, `src/git/stashOps.ts:167-169,172-176,180-184`, `src/state/gitStore.ts:1766`, commits `8eb8ed8`, `52ce0b7`, `e6444c1`, `e23ab84`
+- **Evidence:** `src-tauri/src/git.rs` (`branch_switch_begin`, `carry_over_ref`, `pop_carry_over`), `src/git/stashOps.ts:167-169,172-176,180-184`, `src/state/gitStore.ts:1766`, commits `8eb8ed8`, `52ce0b7`, `e6444c1`, `e23ab84`
 - **Verified by:** `gitStore.test.ts:829-951`, `src/state/gitStore.test.ts` (`a carry-over that cannot be put back is never silent`), `src/test/integration/stashOps.integration.test.tsx` (`the branch-switch carry-over is found by name, not by position`)
 - **Status:** Implemented
 
 ### REQ-GIT-360 — Safe branch deletion
 - **Description:** When a local branch is deleted, the system shall use only the merged-branch deletion mode and surface git's not-fully-merged refusal as an error, and shall not delete remote branches.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:2460`, `gitStore.test.ts:1155-1196`
+- **Evidence:** `src-tauri/src/git.rs` (`branch_delete`), `gitStore.test.ts:1155-1196`
 - **Status:** Implemented
 
 ### REQ-GIT-370 — Project-scoped history
 - **Description:** When the history view is opened, the system shall list commits touching the project file and its annotations directory, capped at 250 commits with a truncation indicator, and shall expand each commit on demand into a field-level read-only diff against its parent.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:1954-1991`, `src/components/GitHistoryDialog.tsx:30-137`, commit `f6af7fe`
+- **Evidence:** `src-tauri/src/git.rs` (`log_begin`, `LOG_MAX_COMMITS`, `log_diff`), `src/components/GitHistoryDialog.tsx:30-137`, commit `f6af7fe`
 - **Status:** Implemented
 
 ### REQ-GIT-380 — Concurrent multi-file project reads
@@ -277,20 +277,20 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-400 — Refuse commits on a detached HEAD
 - **Description:** When a commit is requested while HEAD is not on a branch, the system shall refuse it with an explanation of how to check out a branch and shall create no commit; a repository with no commits yet shall not be treated as detached.
 - **Type:** Non-functional (ISO 25010: Reliability)
-- **Evidence:** `electron/main.ts:2418-2432,2435`, commit `39fcad1`
+- **Evidence:** `src-tauri/src/git.rs` (`detached_refusal`), commit `39fcad1`
 - **Status:** Implemented
 
 ### REQ-GIT-410 — Git rules for annotation data
 - **Description:** When a project lies in a git repository, the system shall maintain, in the `.gitattributes` and `.gitignore` next to the project file, a delimited block that normalizes JSON line endings to LF, disables git's line merge for JSON, and ignores operating-system metadata files, preserving all content outside the block and never ignoring PDF files.
 - **Type:** Non-functional (ISO 25010: Compatibility — Interoperability)
-- **Evidence:** `src/git/repoSetup.ts:40-52,55-64,83-105`, `electron/main.ts:2668-2676,2678`, commit `b5cfee0`
+- **Evidence:** `src/git/repoSetup.ts:40-52,55-64,83-105`, `src-tauri/src/git.rs` (`apply_managed_block`, `plan_repo_setup`), commit `b5cfee0`
 - **Verified by:** `src/git/repoSetup.test.ts`
 - **Status:** Implemented
 
 ### REQ-GIT-411 — Consent and commit for repository rules
 - **Description:** When the repository rules of REQ-GIT-410 are missing, the system shall add them without asking if neither file has content of its own and otherwise only after the user consents, shall commit the change with SaiLoR as author and the user as committer, and shall announce the commit in a transient notice that dismisses itself on success and remains until closed on failure.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/git/repoSetup.ts:118-130,135`, `src/state/gitStore.ts:773,794`, `electron/main.ts:2688`, `src/components/RepoSetupPrompt.tsx`, `src/components/RepoSetupToast.tsx`, commits `b5cfee0`, `0c92b1a`
+- **Evidence:** `src/git/repoSetup.ts:118-130,135`, `src/state/gitStore.ts:773,794`, `src-tauri/src/git.rs` (`apply_repo_setup`, `SETUP_AUTHOR`), `src/components/RepoSetupPrompt.tsx`, `src/components/RepoSetupToast.tsx`, commits `b5cfee0`, `0c92b1a`
 - **Verified by:** `src/git/repoSetup.test.ts` (`planRepoSetup`), `src/components/RepoSetupToast.test.tsx`
 - **Status:** Implemented
 
@@ -304,7 +304,7 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-425 — Background fetch
 - **Description:** While a project in a repository with an upstream is open, the system shall fetch when the repository is detected, whenever the Git panel opens, and every two minutes, without prompting for credentials and abandoning a fetch after 60 seconds; it shall not start one while a git operation the user began is running or another background fetch is in progress, shall make pull, merge, and push wait for a running background fetch, and shall not fetch in the background at all when the repository's own configuration names a command a fetch would run or includes another configuration file.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `src/git/fetchPolicy.ts:26,31,47,53-55,63-68`, `electron/main.ts:2736`, `src/state/gitStore.ts:457,912`, `src/hooks/useUpstreamPolling.ts:19-29`, commit `51a424d`
+- **Evidence:** `src/git/fetchPolicy.ts:26,31,47,53-55,63-68`, `src-tauri/src/git.rs` (`background_fetch`, `FETCH_COMMAND_KEYS`, `BACKGROUND_FETCH_TIMEOUT`), `src/state/gitStore.ts:457,912`, `src/hooks/useUpstreamPolling.ts:19-29`, commit `51a424d`
 - **Verified by:** `src/test/integration/fetchPolicy.integration.test.tsx`, `src/state/gitStore.test.ts` (`keeping the unpulled count fresh`), `src/hooks/useUpstreamPolling.test.tsx`
 - **Status:** Implemented
 
@@ -318,7 +318,7 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-440 — Stash the project's own changes
 - **Description:** When the user stashes changes, the system shall stash only the project file and the project's own annotation files, untracked files included, shall refuse while the in-memory project has unsaved changes, and shall reload the project from disk afterwards.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/git/stashOps.ts:51-62`, `src/state/gitStore.ts:833`, `electron/main.ts:3037`, commit `e6444c1`
+- **Evidence:** `src/git/stashOps.ts:51-62`, `src/state/gitStore.ts:833`, `src-tauri/src/git.rs` (`push_stash`), commit `e6444c1`
 - **Verified by:** `src/test/integration/stashOps.integration.test.tsx` (`pushStash`), `src/state/gitStore.test.ts` (`stashed changes`)
 - **Status:** Implemented
 
@@ -346,7 +346,7 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-480 — Identify stashes by commit
 - **Description:** The system shall identify a stash across the user-interface boundary by its commit identifier and resolve it to its current reflog position at the moment of each operation.
 - **Type:** Non-functional (ISO 25010: Reliability)
-- **Evidence:** `src/git/stashOps.ts:35-37`, `electron/main.ts:3028-3030`, commit `e6444c1`
+- **Evidence:** `src/git/stashOps.ts:35-37`, `src-tauri/src/git.rs` (`resolve_stash_ref`, `assert_sha`), commit `e6444c1`
 - **Verified by:** `src/test/integration/stashOps.integration.test.tsx` (`finds the right stash by sha after others have been pushed on top`)
 - **Status:** Implemented
 
@@ -367,7 +367,7 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-510 — Warn about a paper already read in the same seat
 - **Description:** When the active seat's file for the current paper was last committed, outside merge commits, by a git identity other than the local one, the system shall show a non-blocking notice naming that person; it shall say nothing for other seats, other papers, the user's own earlier commits, or when no local identity is configured.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:2633`, `src/git/seatOwner.ts:71-94,120-133`, `src/components/SeatConflictNotice.tsx`, commit `c83daba`
+- **Evidence:** `src-tauri/src/git.rs` (`annotation_authors`), `src/git/seatOwner.ts:71-94,120-133`, `src/components/SeatConflictNotice.tsx`, commit `c83daba`
 - **Verified by:** `src/git/seatOwner.test.ts`, `src/components/SeatConflictNotice.test.tsx`
 - **Status:** Implemented
 
@@ -375,5 +375,5 @@ See the [index](index.md) for the glossary.
 - **Description:** The repository shall provide git test scenarios as definitions that build, on demand and deterministically (fixed identities, dates and branch, independent of the machine's git configuration), a shared remote and one clone per person outside any git working tree, each scenario stating what to open and what to expect; an automated test shall build every scenario and check what it sets up, and keep the scenario list in its README in step with the definitions.
 - **Type:** Non-functional (ISO 25010: Maintainability — Testability)
 - **Evidence:** `samples/git-scenarios/builder.ts`, `samples/git-scenarios/scenarios.ts`, `samples/git-scenarios/cli.ts`, commit `47fb3f9`
-- **Verified by:** `src/test/integration/gitScenarios.integration.test.tsx`, `e2e/gitScenarios.spec.ts`
+- **Verified by:** `src/test/integration/gitScenarios.integration.test.tsx`
 - **Status:** Implemented

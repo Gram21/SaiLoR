@@ -14,7 +14,7 @@ name: **S**ai**L**o**R**. Open a single JSON "project" file that holds both an a
 annotation fields — optionally grabbing values straight from selected PDF text — and save the
 annotations back into the JSON.
 
-SaiLoR is a **desktop app** (Electron) — fully local, opens local PDF files, native Open/Save
+SaiLoR is a **desktop app** ([Tauri](https://v2.tauri.app/)) — fully local, opens local PDF files, native Open/Save
 dialogs.
 
 <p align="center">
@@ -34,19 +34,25 @@ Grab the file for your system from the [releases page](https://github.com/Gram21
 
 | System | File |
 |---|---|
-| macOS, Apple Silicon (M1–M4) | `SaiLoR-<version>-macos-arm64.dmg` |
-| macOS, Intel | `SaiLoR-<version>-macos-x64.dmg` |
-| Windows | `SaiLoR-<version>-windows-x64.exe` |
-| Linux | `SaiLoR-<version>-x86_64.AppImage` |
+| macOS 15 or later, Apple Silicon | `SaiLoR_<version>_aarch64.dmg` |
+| macOS 15 or later, Intel | `SaiLoR_<version>_x64.dmg` |
+| Windows | `SaiLoR_<version>_x64-setup.exe` |
+| Linux | `SaiLoR_<version>_amd64.AppImage`, `.deb` or `.rpm` |
+
+The app requires macOS 15 (Sequoia) or later.
+
+The macOS, Windows and Linux AppImage builds update in the app. The Linux `.deb` and `.rpm`
+packages do not. Install a new `.deb` or `.rpm` by hand, or through your package manager.
 
 > **The releases are not signed** with an Apple or Microsoft code-signing certificate —
 > paying for one is not worth it for a research tool. Both systems will therefore warn you
 > the first time you open the app. The steps below are how you tell them to go ahead; you
 > only need to do it once.
 
-> **Upgrading from SLR Helper?** The desktop app's settings — recent projects and window size —
-> now live in a `SaiLoR` folder (on macOS, `~/Library/Application Support/SaiLoR`). On first run
-> the app migrates the old "SLR Helper" folder automatically, so nothing is lost.
+> **Upgrading from SaiLoR 1.x?** Version 2 replaces the Electron shell with Tauri. Install it once
+> by hand. The 1.x updater cannot install it. Your project files, AI provider settings and local
+> models stay. Enter your API keys once more. The list of recent projects and the UI settings start
+> empty.
 
 #### macOS
 
@@ -88,8 +94,8 @@ The AppImage is a single self-contained file — no installation needed. Make it
 and run it:
 
 ```bash
-chmod +x "SaiLoR-<version>-x86_64.AppImage"
-./"SaiLoR-<version>-x86_64.AppImage"
+chmod +x "SaiLoR_<version>_amd64.AppImage"
+./"SaiLoR_<version>_amd64.AppImage"
 ```
 
 If it fails to start, your distribution may be missing FUSE (`sudo apt install libfuse2`
@@ -104,11 +110,13 @@ git clone https://github.com/Gram21/SaiLoR.git
 cd SaiLoR
 ```
 
-Then install dependencies and start the app:
+Install the build prerequisites (Node.js, Rust and the system libraries) once. See
+[docs/building.md](docs/building.md). Then start the app:
 
 ```bash
-npm install
-npm run dev:electron
+make setup     # install prerequisites, asks before each installation
+make install   # install Node dependencies
+make dev       # start the desktop app with hot reload
 ```
 
 ## Project file format
@@ -522,16 +530,19 @@ the two start silently overwriting each other.
 
 ## Building & testing
 
+Run `make help` for all targets. The main ones:
+
 ```bash
-npm run build:electron    # desktop installers into release/ (via electron-builder)
-npm test                  # unit tests (model: schema, normalize, round-trip) — run on every PR
-npm run test:integration  # real-component end-to-end scenarios — gated in front of release builds
-npm run test:e2e          # real Electron process smoke tests — gated in front of release builds
-npm run typecheck
+make dev               # start the desktop app (Tauri) with hot reload
+make build             # release installer for this OS into src-tauri/target/release/bundle/
+make test              # renderer (vitest) and Rust unit tests
+make test-integration  # real-component end-to-end scenarios
+make check             # type check, lint and all unit tests
+make probe             # CI probe app (e2e/ page, probe commands)
 ```
 
-`npm run build` (a static SPA into `dist/`) still exists for CI/typechecking purposes, but is no
-longer a supported way to run the app — see "The web/browser build is discontinued" above.
+`npm run build` writes the renderer into `dist/`. The Tauri build embeds it. Opening `dist/` in a
+browser shows the "use the desktop app" notice.
 
 Three layers of tests, by what each one can actually catch:
 
@@ -561,43 +572,36 @@ Three layers of tests, by what each one can actually catch:
   `headContent`/`workingContent` are real rather than stubbed to `null`, since that's what's needed
   to populate field review in the first place
   ([`discard.integration.test.tsx`](src/test/integration/discard.integration.test.tsx)).
-  Slower than the unit suite on purpose (real scratch repos per test), so it's kept out of the PR
-  path and gated in front of release builds instead (`.github/workflows/release.yml`).
-- **`npm run test:e2e`** (`e2e/`, [Playwright](https://playwright.dev/)) — the one thing jsdom
-  structurally can't reach: a real Electron main process, real `contextBridge`-exposed `window.slr`,
-  real `ipcMain` handlers, real filesystem, real git (including a real bare repo standing in for a
-  remote). [`openSaveProject.spec.ts`](e2e/openSaveProject.spec.ts) covers `openPath`/`saveProject`
-  (including the `knownProjectPaths` guard that refuses a save to a path never opened), a
-  `gitProbe`/`gitStatus` round-trip through the hardened `runGit` wrapper, and the split-file
-  save/reopen round-trip — a real save writes `project.json` (meta-only) plus a real per-paper file
-  under `annotations/`, and a real reopen reassembles them back into the single shape the app works
-  with in memory. [`gitPush.spec.ts`](e2e/gitPush.spec.ts) pushes a real commit to a real bare
-  "origin" and confirms it landed there, read back independently of the app. Needs
-  `dist-electron/main.js` built first (`npm run test:e2e` does this itself); on Linux, Electron still
-  opens a real window even for a silent smoke test, so CI wraps it in `xvfb-run`. Also gated in front
-  of release builds, alongside `test:integration`.
+  Slower than the unit suite (real scratch repos per test). It runs in `scripts/ci.sh` on every
+  push.
+- **`e2e/probe.test.mjs`** — the one thing jsdom structurally can't reach: the real Tauri app.
+  `make probe` builds the app with a probe page (`e2e/`) and the `probe` cargo feature. CI starts it
+  on every OS, and drives it with `tauri-driver` (WebDriver) on Linux and Windows. Release builds do
+  not contain the probe commands.
 
 ## Deployment
 
-`npm run build:electron` runs `electron-builder` and produces native installers in `release/`
-(the `build` block in [`package.json`](package.json) targets `dmg` on macOS, `nsis` on Windows,
-`AppImage` on Linux). Build on (or cross-build for) each target OS as needed. The desktop app reads
-local PDF files directly, so no server is involved.
+`make build` runs `tauri build` and writes native installers to `src-tauri/target/release/bundle/`.
+Build each OS on that OS. See [docs/building.md](docs/building.md). The desktop app reads local PDF
+files directly, so no server is involved.
+
+To release, set the version in `package.json` and push the tag `v<version>`. The
+[release workflow](.github/workflows/release.yml) builds every OS and attaches the installers,
+signed updater files and `latest.json` to a draft release. Publish the draft to archive it on
+Zenodo. Setup of the signing key and secrets: [docs/tauri-migration.md](docs/tauri-migration.md),
+section 16.
 
 ## Developing with Docker
 
-If you'd rather not install Node locally, [`docker-compose.dev.yml`](docker-compose.dev.yml) can
-build the Electron app in a container:
+If you'd rather not install Node and Rust locally, build the Linux bundles in a container:
 
 ```bash
-docker compose -f docker-compose.dev.yml run --rm electron
+make docker-linux
 ```
 
-[`Dockerfile.electron`](Dockerfile.electron) is a Debian image that runs `electron-builder`. It
-builds **Linux** installers (AppImage) into `./release/`; macOS/Windows installers must be built on
-their native OS (Windows can be cross-built by basing the image on
-`electronuserland/builder:wine`). Running the Electron GUI inside the container additionally needs
-X11 forwarding — for day-to-day desktop development, run `npm run dev:electron` on the host.
+[`Dockerfile.tauri-linux`](Dockerfile.tauri-linux) is an Ubuntu 22.04 image. It writes the
+AppImage, `.deb` and `.rpm` into `./src-tauri/target/release/bundle/`. The bundles are unsigned and
+have no updater files. macOS and Windows installers must be built on their native OS.
 
 ## Architecture
 
@@ -606,17 +610,17 @@ X11 forwarding — for day-to-day desktop development, run `npm run dev:electron
   helpers (unit-tested).
 - `src/screening/` — the derived screening schema, tri-state decision/reason reading, PRISMA-style
   counts, and the two cross-field validation rules screening needs (unit-tested).
-- `src/platform/` — a `PlatformAdapter` seam; `electron.ts` (IPC + `slr-file://` protocol) is the
-  only real implementation now that the browser build is discontinued — `unsupported.ts` stands in
-  for every other runtime, showing the "use the desktop app" notice.
+- `src/platform/` — a `PlatformAdapter` seam; `desktop.ts` (native dialogs, fs, `slr-file://`
+  protocol) runs on the Tauri bridge in `tauri.ts` and is the only real implementation —
+  `unsupported.ts` stands in for every other runtime, showing the "use the desktop app" notice.
 - `src/git/` — field-level change detection and three-way merge of the project (`changes.ts`,
   `merge.ts`, shared by both a pull and a carry-changes-over branch switch), plus git URL parsing and
-  raw command output handling; the IPC side lives in `electron/main.ts` since only the desktop app
-  can spawn `git`.
+  raw command output handling; the command side lives in `src-tauri/src/git.rs` since only the
+  desktop app can spawn `git`.
 - `src/llm/` — the AI-annotation layer: prompt, provider request/response shapes, field paths, and
   the parser that validates every proposal against the schema before a reviewer ever sees it.
 - `src/state/store.ts` — Zustand + immer store (`src/state/aiStore.ts` for the AI flow,
   `src/state/gitStore.ts` for git).
 - `src/components/` — Toolbar, PaperList, PdfViewer, AnnotationPanel/Node/Field, AiDialog.
-- `electron/` — thin main process (BrowserWindow, Edit-role menu, dialog/fs IPC, PDF protocol) and
-  a context-isolated preload.
+- `src-tauri/` — the Rust shell (Tauri v2): window, menu, dialog/fs commands, path authorization,
+  PDF protocol, git, AI calls with keychain-held keys, local runtime and updater.

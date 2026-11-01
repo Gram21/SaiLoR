@@ -780,7 +780,7 @@ copy‑paste runnable: save it as `project.json`, put the two PDFs under `pdfs/`
 ## 7. Opening a project
 
 **In the app — Open ▾ menu.** Click **Open…** to load a local JSON file, or reopen one of the
-recent projects. SaiLoR is a desktop (Electron) app — see the [README](../README.md#deployment) for
+recent projects. SaiLoR is a desktop (Tauri) app — see the [README](../README.md#deployment) for
 building installers.
 
 ---

@@ -1,6 +1,6 @@
 # Evaluation: Move from Electron to Tauri
 
-Status: proposal. No code changed.
+Status: done. Phase 6 (cutover) removed Electron. See section 20.
 Date: 2026-11-01. Branch: `release/2.0.0`.
 
 ## 1. Summary
@@ -222,7 +222,7 @@ These points come from general knowledge of Tauri v2, not from running it here. 
 
 ## 11. Phase 0 spike results (2026-11-01)
 
-Code: `src-tauri/`, `spike/`, `vite.spike.config.ts`, `.github/workflows/tauri-build.yml` on branch `spike/tauri`. The spike does not touch the app source.
+Code: `src-tauri/`, `spike/`, `vite.spike.config.ts`, `.github/workflows/tauri-build.yml` on branch `spike/tauri`. The workflow is now the `tauri-build` job in `ci.yml`. The spike does not touch the app source.
 
 Local run: macOS 26.6 arm64. CI run: GitHub Actions `Tauri build` workflow, five runners.
 
@@ -249,7 +249,7 @@ Go/no-go: go on the rendering and size checks. Open items: oldest supported macO
 
 ### 11.1 tauri-driver e2e spike results (2026-11-01)
 
-Code: `spike/e2e/probe.test.mjs` and `.github/workflows/tauri-e2e.yml` on branch `spike/tauri-e2e`. Green run: <https://github.com/Gram21/SaiLoR/actions/runs/41305362434>.
+Code: `spike/e2e/probe.test.mjs` and `.github/workflows/tauri-e2e.yml` on branch `spike/tauri-e2e`. The workflow is now the `tauri-e2e` job in `ci.yml`, and the test is `e2e/probe.test.mjs`. Green run: <https://github.com/Gram21/SaiLoR/actions/runs/41305362434>.
 
 The test uses `node:test` and plain `fetch` against the WebDriver HTTP API. It adds no npm dependency. It starts `tauri-driver`, opens a session on the release binary (`npx tauri build --no-bundle`), and polls `#log` through `execute/sync`. It asserts `RENDER OK` and a `-> 403` traversal probe.
 
@@ -283,7 +283,7 @@ Checklist item "One automated e2e test runs on Linux with `tauri-driver`" (secti
 Open work from these decisions:
 
 1. Set `bundle.targets` for Linux to `["appimage", "deb", "rpm"]` in the release configuration (Phase 5). Done in `src-tauri/tauri.release.conf.json` (section 16).
-2. Add the minimum macOS version and the Linux update behavior to `README.md` and `docs/requirements/platform.md` at cutover (Phase 6).
+2. Add the minimum macOS version and the Linux update behavior to `README.md` and `docs/requirements/platform.md` at cutover (Phase 6). Done (section 20).
 
 ## 13. Phase 2 progress
 
@@ -434,9 +434,9 @@ Status: Done. See section 18.
 
 ### 16.2 Release workflow
 
-`.github/workflows/tauri-release.yml` builds the Tauri app and attaches the files to a draft GitHub release.
+`.github/workflows/release.yml` builds the Tauri app and attaches the files to a draft GitHub release. Before Phase 6 this file was `tauri-release.yml` and used `tauri-v*` tags.
 
-- Triggers: a pushed tag `tauri-v<version>`, or a manual run. A manual run uses `tauri-v<version>` from `package.json`.
+- Triggers: a pushed tag `v<version>`, or a manual run. A manual run uses `v<version>` from `package.json`.
 - The tag must match the `package.json` version.
 - The `release` job stops if the public key is still the placeholder or if `TAURI_SIGNING_PRIVATE_KEY` is not set.
 - The `release` job reuses an existing draft for the tag. It stops if the release is already published.
@@ -451,13 +451,13 @@ Status: Done. See section 18.
 
 - Each build job merges its platform into `latest.json` on the release.
 - The `check-updater-json` job fails if `latest.json` misses a platform. If this occurs, run the failed build job again.
-- `src-tauri/tauri.release.conf.json` sets `createUpdaterArtifacts`. The base configuration does not, so `tauri-build.yml` and `tauri-e2e.yml` need no signing key.
+- `src-tauri/tauri.release.conf.json` sets `createUpdaterArtifacts`. The base configuration does not, so the `tauri-build` and `tauri-e2e` jobs in `ci.yml` need no signing key.
 
-Electron release separation:
+Zenodo:
 
-- The Electron `release.yml` runs on every published release. Its `integration-tests` job now skips releases with a `tauri-v` tag. The `build` and `zenodo` jobs depend on it, so they skip too.
-- Electron releases keep the `v<version>` tags.
-- Warning: A published `tauri-v*` release is not archived on Zenodo. Change this at the cutover (Phase 6).
+- The `zenodo` job runs when a release is published. It archives the release as a new version of concept record 23804729.
+- The other jobs do not run on the publish event.
+- Phase 6 moved this job from the Electron `release.yml`. Before Phase 6, `tauri-v*` releases were not archived.
 
 `ci.yml` has a new `rust` job. It runs `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and `cargo test` in `src-tauri`.
 
@@ -487,15 +487,12 @@ Create the updater key once:
 To make a release:
 
 1. Set the version in `package.json`.
-2. Push the tag `tauri-v<version>`, or start "Tauri release" from the Actions tab.
+2. Push the tag `v<version>`, or start "Release" from the Actions tab.
 3. Check the draft release and `latest.json`.
 4. Publish the draft.
 
-Open items for the cutover (Phase 6):
+Open items for the cutover (Phase 6): all done. See section 20.
 
-- `productName`, `identifier` and the window title still contain "spike".
-- `build.frontendDist` is still the spike frontend (`dist-spike`).
-- The Rust package name is still `sailor-spike`. The binary name follows it.
 - Electron users install the first Tauri release by hand. electron-updater cannot read `latest.json`.
 
 Verification: `cargo test` tests the bundle gate, the progress percent and the updater configuration. The release workflow was not run. It needs the secrets and a tag.
@@ -666,3 +663,79 @@ Not tested:
 
 - No test runs the Tauri app. The "Import references" dialog was not tried by hand.
 - The restore after a failed project file write is tested only on systems that refuse writes to read-only files.
+
+## 20. Phase 6 cutover
+
+Branch: `feat/tauri-cutover`. Electron is removed. The Tauri shell builds and ships the real app.
+
+### 20.1 Removed
+
+- `electron/`, the `build` block of `package.json` (electron-builder), `electron`, `electron-builder`, `electron-updater` and `vite-plugin-electron`.
+- The Playwright e2e suite (`e2e/*.spec.ts`), `playwright.config.ts` and `npm run test:e2e`.
+- `npm run dev:electron`, `npm run build:electron`, `scripts/build-electron.sh`, `scripts/afterPack.cjs`, `scripts/sign-release.cjs` and `scripts/make-icon.cjs`.
+- `src/model/updateSignature.ts`. The Tauri updater checks a minisign signature instead.
+- `Dockerfile.electron` and the `electron` service in `docker-compose.dev.yml`.
+- The Electron `release.yml` and `integration-tests.yml` workflows.
+
+### 20.2 App identity
+
+| Setting | Value |
+| --- | --- |
+| `productName` and window title | `SaiLoR` |
+| Cargo package and binary | `sailor` |
+| `identifier` | `io.github.gram21.sailor` |
+| `build.frontendDist` | `../dist` (the real renderer from `npm run build`) |
+
+Effects of the identifier change:
+
+- The WebView storage is new. Recent projects and the UI settings in `localStorage` (`slr.*` keys) start empty.
+- The macOS bundle ID changes. macOS treats the app as a new app.
+- Project files do not change.
+- The LLM configuration, the local runtime and the local models stay in `<config dir>/SaiLoR`. The Rust code builds this path without the identifier.
+- API keys that Electron saved with `safeStorage` cannot be read. Users enter them once more. Tauri saves keys in the keychain (service `SaiLoR`).
+
+### 20.3 Probe build
+
+- `e2e/index.html` and `e2e/main.tsx` hold the probe page (moved from `spike/`). `vite.probe.config.ts` builds it into `dist-probe/`.
+- `make probe` builds the probe app with `src-tauri/tauri.probe.conf.json` and the `probe` cargo feature.
+- Only the `probe` feature registers `probe_auto` and `probe_report`. Release builds do not contain them.
+- The probe binary is `src-tauri/target/release/sailor`, the same path as the app binary. Build the probe after the app build.
+- The `tauri-build` job in `ci.yml` runs the probe on every OS. The `tauri-e2e` job runs `e2e/probe.test.mjs` with `tauri-driver` on Linux and Windows.
+
+### 20.4 Renderer
+
+- `src/platform/electron.ts` is now `src/platform/desktop.ts` (`DesktopAdapter`). `TauriAdapter` extends it and sets the Tauri bridge.
+- `isElectron()` is removed. `PlatformAdapter.kind` is `tauri` or `browser`.
+- `getBridge()` throws if no bridge is set. Only the Tauri shell sets a bridge.
+- `useElectronCloseGuard` is now `useCloseGuard`.
+- The `unsupported` adapter stays for every other runtime.
+- A vitest test checks that the bridge invokes exactly the commands that `main.rs` registers.
+- `vite.config.ts` no longer writes source maps. Tauri embeds every file of `dist/` in the binary.
+
+Kept on purpose:
+
+- `SaveHandle.kind` keeps the value `electron`. It is in memory only and is used in many files.
+- The `localStorage` key `slr.recents.electron` keeps its name.
+
+### 20.5 Workflows
+
+- `release.yml` (was `tauri-release.yml`) runs on `v*` tags and on a manual run. It builds a draft release.
+- The `zenodo` job runs when the draft is published.
+- `npm run test:integration` runs in `scripts/ci.sh`, so it runs in the `build` job of `ci.yml` on every push.
+- The `rust` job runs clippy with `--all-features`, so it also checks the probe commands.
+
+### 20.6 Not done
+
+- `pickInstaller` in `src/model/version.ts` does not know the Tauri file names. The download link opens the release page.
+- A final Electron release with a reinstall notice (Phase 6 step 1) is not part of this branch.
+- `openwiki/` is generated. The scheduled workflow updates it.
+
+The Electron shell had these features. The Tauri shell does not have them yet. `docs/requirements/platform.md` marks the matching requirements.
+
+- Single instance lock (REQ-PLT-11). A second start opens a second window.
+- Window size and position persistence (REQ-PLT-160). The window opens at 1400x900.
+- Migration of the legacy "SLR Helper" folder (REQ-PLT-180).
+- Reload guard on the menu reload (REQ-PLT-120). Only the renderer `beforeunload` handler exists.
+- Denial of device permission requests (REQ-PLT-240).
+- Routing of external links and navigation to the system browser (REQ-PLT-250).
+- Edit menu routing of undo and redo (REQ-PLT-310). The renderer key binding handles Ctrl/Cmd+Z.

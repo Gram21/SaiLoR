@@ -36,7 +36,7 @@ You need no local Node.js or Rust.
 
 Caution: Docker cannot build the macOS bundles. Apple licence terms require Apple hardware.
 Docker cannot reliably build the Windows installer either. Use a native Windows machine or CI.
-The Docker build makes unsigned bundles without updater files. The `tauri-release` workflow builds all platforms on native runners.
+The Docker build makes unsigned bundles without updater files. The `release` workflow builds all platforms on native runners.
 
 ## Common problems
 

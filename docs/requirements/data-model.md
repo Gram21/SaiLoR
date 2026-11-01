@@ -140,14 +140,14 @@ the project editor. See the [index](index.md) for the glossary.
 ### REQ-DAT-169 — Annotations folder confined to the project directory
 - **Description:** The system shall keep a project's annotation files in the folder its project file names as `annotationsDir`, defaulting to `annotations`, and shall accept only a plain folder name directly inside the project file's directory: names containing a separator, `..`, a drive or device designation, a leading dot, or characters not allowed in Windows file names shall be refused and the default used, and a folder that is a symbolic link or resolves outside the project directory shall not be read or written.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `src/model/annotationsDir.ts`, `electron/main.ts:673`, `src/git/relpath.ts`, commit `c1b40ec`
+- **Evidence:** `src/model/annotationsDir.ts`, `src-tauri/src/project.rs` (`annotations_dir_ok`, `annotations_dir_for`), `src/git/relpath.ts`, commit `c1b40ec`
 - **Verified by:** `src/model/annotationsDir.test.ts`, `src/state/editorStore.annotationsDir.test.ts`
 - **Status:** Implemented
 
 ### REQ-DAT-172 — Highlight file names by project kind
 - **Description:** The system shall store a screening project's PDF highlights as `screening-marks-<n>.json` and `screening-marks-consolidated.json`, and an annotation project's as `marks-<n>.json` and `marks-consolidated.json`, so that a screening project and an annotation project never write a file of the same name; a screening project's highlight files written under the older `marks-*` names shall be read only when no file under the new name exists for that seat and no annotation project sharing its annotations folder lists that paper.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/project.ts` (`marksFileName`, `parseMarksFileName`), `electron/main.ts` (`loadPaperFiles`, `readProjectText`), `src/model/annotationsDir.ts` (`filesCollide`), commit `6eb9027`
+- **Evidence:** `src/model/project.ts` (`marksFileName`, `parseMarksFileName`), `src-tauri/src/project.rs` (`read_project`, `safe_read`), `src/platform/tauri.ts` (`assembleProject`), `src/model/annotationsDir.ts` (`filesCollide`), commit `6eb9027`
 - **Verified by:** `src/model/annotationsDir.test.ts` (`highlight file names`, `filesCollide`), `src/model/split.test.ts`, `src/git/ownAnnotationPath.test.ts`
 - **Status:** Implemented
 
@@ -312,8 +312,8 @@ the project editor. See the [index](index.md) for the glossary.
 ### REQ-DAT-390 — Reserved feedback folder in the annotations folder
 - **Description:** The system shall reserve the name `feedback` inside the annotations folder for AI schema-feedback JSON files: it shall never load that folder as a paper, never prune, overwrite or delete it when saving, and move it along with the annotations folder; it shall refuse `feedback` (in any letter case) as a paper identifier or annotations folder name; and it shall write a feedback file only through a dedicated call that accepts a plain `*.json` file name and a JSON-object content of at most 1 MB, refuses a symbolic-linked or escaping folder, and never overwrites an existing file. Git treats the files as ordinary project files (shown and committed as plain changes, never parsed as annotations or offered for field review, and left in place across a branch switch).
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/paperId.ts` (`FEEDBACK_DIR`), `src/model/annotationsDir.ts` (`isFeedbackPath`), `electron/feedback.ts`, `electron/main.ts` (`project:writeFeedback`, `project:listFeedback`, `writeProjectFiles`, `git:branchSwitchBegin`), `src/git/relpath.ts` (`mergeBlockingPaths`)
-- **Verified by:** `electron/feedback.test.ts`, `src/model/annotationsDir.test.ts` (reserved feedback folder)
+- **Evidence:** `src/model/paperId.ts` (`FEEDBACK_DIR`), `src/model/annotationsDir.ts` (`isFeedbackPath`), `src-tauri/src/feedback.rs` (`write_feedback`, `list_feedback`, `project_write_feedback`, `project_list_feedback`), `src-tauri/src/project.rs` (`write_project_files`), `src-tauri/src/git.rs` (`branch_switch_begin`), `src/git/relpath.ts` (`mergeBlockingPaths`)
+- **Verified by:** `src-tauri/src/feedback.rs` (`name_and_content_rules`, `write_never_overwrites_and_lists_sorted`), `src/model/annotationsDir.test.ts` (reserved feedback folder)
 - **Status:** Implemented
 
 ## Project editor

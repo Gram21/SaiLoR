@@ -301,7 +301,7 @@ export interface PlatformAdapter {
   // Download and install are explicit, user-triggered calls only.
 
   /** Ask whether a newer version can be downloaded. `supported: false` on the
-   *  browser build or on macOS, where this flow is disabled. */
+   *  browser build and for bundles that cannot self-update (deb, rpm). */
   checkForNativeUpdate(): Promise<{ supported: boolean }>
 
   /** Start downloading the update found by `checkForNativeUpdate`. Progress

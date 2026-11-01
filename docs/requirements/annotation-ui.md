@@ -281,8 +281,8 @@ export. See the [index](index.md) for the glossary.
 ### REQ-PDF-185 — Show the screeners' highlights
 - **Description:** When a project was started from a screening project that still sits next to it, and the screening project holds PDF highlights or notes for the current paper (matched by paper identifier, by the identifier the import assigned, or by DOI or title), the annotation panel shall offer a "Show markings from screening" checkbox with their count, and only then; when ticked, the viewer shall draw every screening seat's highlights and notes read-only and visually distinct from the user's own, naming on hover the seat that made each. Only a plain file name in the project's own directory shall be read as the screening project.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/screeningMarks.ts`, `electron/main.ts` (`project:screeningSource`), `src-tauri/src/project.rs` (`project_screening_source`), `src/state/store.ts` (`loadScreeningMarks`), `src/components/AnnotationPanel.tsx`, `src/components/PdfViewer.tsx`, commit `780f1d1`
-- **Verified by:** `src/model/screeningMarks.test.ts`, `src/state/store.screeningMarks.test.ts`, `src/components/AnnotationPanel.test.tsx` (`offers the box only on a paper the screening marked`), `e2e/gitScenarios.spec.ts` (`screening-highlights`), `src-tauri/src/project.rs` (tests)
+- **Evidence:** `src/model/screeningMarks.ts`, `src-tauri/src/project.rs` (`project_screening_source`), `src/state/store.ts` (`loadScreeningMarks`), `src/components/AnnotationPanel.tsx`, `src/components/PdfViewer.tsx`, commit `780f1d1`
+- **Verified by:** `src/model/screeningMarks.test.ts`, `src/state/store.screeningMarks.test.ts`, `src/components/AnnotationPanel.test.tsx` (`offers the box only on a paper the screening marked`), `src-tauri/src/project.rs` (`screening_source_reads_only_a_plain_sibling`)
 - **Status:** Implemented
 
 ### REQ-UI-10 — Global keyboard shortcuts
