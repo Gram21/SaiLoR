@@ -40,6 +40,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Rust tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
       - name: Build (installer bundle)
         run: npx tauri build
 
