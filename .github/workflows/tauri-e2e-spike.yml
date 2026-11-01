@@ -1,0 +1,59 @@
+name: Tauri e2e spike
+
+# Section 7 of docs/tauri-migration.md: one WebDriver e2e test through tauri-driver.
+# tauri-driver does not support macOS, so there is no macOS job.
+
+on:
+  push:
+    branches: [spike/tauri-e2e]
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev webkit2gtk-driver xvfb
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: cargo install tauri-driver --locked
+
+      - name: Install msedgedriver matching WebView2
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cargo install --git https://github.com/chippers/msedgedriver-tool
+          & "$HOME/.cargo/bin/msedgedriver-tool.exe"
+          "NATIVE_DRIVER=$PWD\msedgedriver.exe" >> $env:GITHUB_ENV
+
+      - run: npm ci
+
+      - run: npx tauri build --no-bundle
+
+      - name: Run e2e test
+        env:
+          SPIKE_PROJECT: ${{ github.workspace }}/samples/project.example.json
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a node --test spike/e2e/; else node --test spike/e2e/; fi
