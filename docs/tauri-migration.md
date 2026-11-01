@@ -222,9 +222,9 @@ These points come from general knowledge of Tauri v2, not from running it here. 
 
 ## 11. Phase 0 spike results (2026-11-01)
 
-Code: `src-tauri/`, `spike/`, `vite.spike.config.ts`, `.github/workflows/tauri-spike.yml` on branch `spike/tauri`. The spike does not touch the app source.
+Code: `src-tauri/`, `spike/`, `vite.spike.config.ts`, `.github/workflows/tauri-build.yml` on branch `spike/tauri`. The spike does not touch the app source.
 
-Local run: macOS 26.6 arm64. CI run: GitHub Actions `Tauri spike` workflow, five runners.
+Local run: macOS 26.6 arm64. CI run: GitHub Actions `Tauri build` workflow, five runners.
 
 | Runner | WebView engine | Build | pdf.js load + render | Traversal blocked | Installer size |
 | --- | --- | --- | --- | --- | --- |
@@ -249,7 +249,7 @@ Go/no-go: go on the rendering and size checks. Open items: oldest supported macO
 
 ### 11.1 tauri-driver e2e spike results (2026-11-01)
 
-Code: `spike/e2e/probe.test.mjs` and `.github/workflows/tauri-e2e-spike.yml` on branch `spike/tauri-e2e`. Green run: <https://github.com/Gram21/SaiLoR/actions/runs/41305362434>.
+Code: `spike/e2e/probe.test.mjs` and `.github/workflows/tauri-e2e.yml` on branch `spike/tauri-e2e`. Green run: <https://github.com/Gram21/SaiLoR/actions/runs/41305362434>.
 
 The test uses `node:test` and plain `fetch` against the WebDriver HTTP API. It adds no npm dependency. It starts `tauri-driver`, opens a session on the release binary (`npx tauri build --no-bundle`), and polls `#log` through `execute/sync`. It asserts `RENDER OK` and a `-> 403` traversal probe.
 

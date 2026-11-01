@@ -1,11 +1,11 @@
-name: Tauri e2e spike
+name: Tauri e2e
 
 # Section 7 of docs/tauri-migration.md: one WebDriver e2e test through tauri-driver.
 # tauri-driver does not support macOS, so there is no macOS job.
 
 on:
   push:
-    branches: [spike/tauri-e2e]
+    branches: [release/2.0.0]
   workflow_dispatch:
 
 jobs:
