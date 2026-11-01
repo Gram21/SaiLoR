@@ -229,7 +229,7 @@ Local run: macOS 26.6 arm64. CI run: GitHub Actions `Tauri build` workflow, five
 | Runner | WebView engine | Build | pdf.js load + render | Traversal blocked | Installer size |
 | --- | --- | --- | --- | --- | --- |
 | macOS 26.6 (local) | WKWebView | Pass | Pass | 403 | dmg 2.1 MB |
-| macos-14 | WKWebView | Pass | Pass | 403 | dmg 2.2 MB |
+| macos-14 (retired 2026-11-02) | WKWebView | Pass | Pass | 403 | dmg 2.2 MB |
 | macos-15 | WKWebView | Pass | Pass | 403 | dmg 2.2 MB |
 | ubuntu-22.04 | WebKitGTK | Pass | Pass | 403 | deb 2.0 MB, rpm 2.0 MB, AppImage 80.6 MB |
 | ubuntu-24.04 | WebKitGTK | Pass | Pass | 403 | deb 2.0 MB, rpm 2.0 MB, AppImage 80.9 MB |
@@ -276,7 +276,8 @@ Checklist item "One automated e2e test runs on Linux with `tauri-driver`" (secti
 
 | Date | Decision | Consequence |
 | --- | --- | --- |
-| 2026-11-01 | Minimum supported macOS is 14 (Sonoma). | The Tauri bundle sets `minimumSystemVersion` to `14.0`. The spike CI covers `macos-14` and `macos-15`. The "oldest supported macOS" checks in section 7 are met by those runners. Do not claim support for macOS 13 or older. |
+| 2026-11-01 | Minimum supported macOS is 14 (Sonoma). Superseded on 2026-11-02. | See the next row. |
+| 2026-11-02 | Minimum supported macOS is 15 (Sequoia). | GitHub retires the `macos-14` runners, so the oldest tested macOS is 15. The Tauri bundle sets `minimumSystemVersion` to `15.0`. CI covers `macos-15`. Do not claim support for macOS 14 or older. |
 | 2026-11-01 | Ship both AppImage and deb/rpm on Linux. | The release workflow builds `appimage`, `deb` and `rpm`. Only the AppImage auto-updates through `tauri-plugin-updater`. deb and rpm users update by hand or through the system package manager. State this in the README and the release notes. |
 
 Open work from these decisions:
