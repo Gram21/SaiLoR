@@ -309,6 +309,8 @@ Open items for the TypeScript side:
 - `pdf_read` returns an `ArrayBuffer`.
 - Port `text:write` and `pdf:embedMarks`. They are the consumers of the export targets.
 
+Status: Done. See section 18.
+
 Differences from Electron:
 
 - The `pdf_allow_path` warning dialog cannot set a default button. The Enter key can select "Open anyway".
@@ -385,11 +387,13 @@ Open items for the TypeScript side:
 - `pullFinish`, `branchSwitchFinish`, `commitPartial` and `writeWorking` take `{ metaText, files }` in the `project_save` file format.
 - Output parsing that Electron left to the renderer stays in TypeScript: `capDiff`, `diffLines`, `repoNameFromUrl` and the field-level merge.
 
+Status: Done. See section 18.
+
 Differences from Electron:
 
 - Every command that takes a root requires a root from `git_info` or `git_clone` in this session. Electron checked this only for background fetch, checkout, branch switch and stash commands. `git_probe`, `git_clone`, `git_info` and the pickers do not take a known root.
 - Commands run on a blocking thread pool. `git show` for revisions runs on at most 8 threads.
-- There is no 32 MB output cap.
+- The 32 MB output cap is the same as in Electron. See section 18.3.
 - `ls-tree` uses `-z`, so paths with non-ASCII characters are not quoted.
 - A git process that a signal stops reports `code: null` and keeps its stderr.
 
@@ -425,6 +429,8 @@ Open items for the TypeScript side:
 - `App.tsx` shows the download and install buttons only if `isElectron()` is true. `isElectron()` is false in Tauri, so the in-app update UI is hidden.
 - `useElectronCloseGuard` subscribes to `update:progress`, `update:downloaded` and `update:error` only in Electron.
 - `getOsInfo()` returns `null` in Tauri. `checkForUpdate` and the release-asset match need the OS and architecture.
+
+Status: Done. See section 18.
 
 ### 16.2 Release workflow
 
@@ -530,3 +536,89 @@ Differences from Electron:
 - A global lock lets only one server start at a time.
 
 Verification: `cargo test` runs the ported cases of `localRuntimeUtil.test.ts` and the `managedTargetUrl` cases. Download tests use the local mock server: full download, resume with `206`, restart on `200`, hash mismatch, `404`, refused redirect hop, and cancel. No test downloads a real runtime or model. A unix test checks that the process-group kill also stops a grandchild process.
+
+## 18. Port leftovers (renderer, exports, git cap)
+
+Scope: the open items of sections 13, 15 and 16.1. The renderer now runs the same code paths in Tauri and in Electron.
+
+### 18.1 Project and revision assembly
+
+`src/platform/tauri.ts` builds the Electron result shapes from the Rust results.
+
+| Rust result | Bridge calls | Renderer gets |
+| --- | --- | --- |
+| `{ path, text, files, siblings }` | `openProject`, `openPath` | `{ path, text, corrupt }` |
+| `{ text, files }` (`Snapshot`) | `gitHeadContent`, `gitWorkingContent`, `gitLogDiff` (`head`, `parent`) | The whole-project text |
+| `merge` with `base`, `ours`, `theirs` | `gitPullBegin`, `gitMergeBegin`, `gitBranchSwitchBegin` | The same `merge` object with whole-project texts |
+
+`assembleProject` is a port of `readProjectText` and `readProjectAtRevision` in `electron/main.ts`:
+
+- A legacy single-file project text stays unchanged.
+- Only the files of the open project kind go into the project. Screening projects also read old highlight files (`marks-N.json`), unless a non-screening sibling project lists the paper.
+- A file that is not valid JSON goes into `corrupt`. The project opens without it.
+
+### 18.2 Exports
+
+`src-tauri/src/pdf.rs` adds `pdf_embed_marks` and `text_write`.
+
+- `text_write` and `pdf_embed_marks` with `{ newPath }` write only to a path that the export dialog returned in this session (`writableExportPaths`). Both refuse a symlink target.
+- `pdf_embed_marks` uses `lopdf`. It adds one annotation per mark (a highlight, or a note icon for a note mark) and keeps the existing annotations. It refuses an encrypted PDF.
+- New dependencies: `lopdf` (no default features) and `chrono` (`alloc` only) for the annotation date.
+
+Differences from Electron:
+
+- `pdf_embed_marks` reads only a PDF of the open project: a file inside the project folder, or an outside path that the reviewer approved. Electron read any path. This also applies to the target `original`.
+
+### 18.3 Git output cap
+
+`run_git` in `src-tauri/src/git.rs` stops git when stdout or stderr passes 32 MB. The result is `{ ok: false, code: null, stderr: "git output exceeded 32 MB." }` with no stdout. Electron's `maxBuffer` has the same limit.
+
+### 18.4 Desktop shell detection
+
+- `PlatformAdapter.kind` is `tauri` in Tauri. It is not `electron`.
+- Components that need a desktop shell check `kind !== 'browser'`. Examples: the macOS shortcut labels and the AI feedback files.
+- `getOsInfo()` returns the OS and architecture in Tauri. The `slr-os` plugin in `src-tauri/src/main.rs` sets `window.__SLR_OS__` with an init script. The values use the Node names (`darwin`, `win32`, `linux`, `x64`, `arm64`).
+
+### 18.5 Update UI
+
+- `checkForUpdate` stores the `supported` answer of `checkForNativeUpdate` in `nativeUpdate`.
+- `App.tsx` shows the download and install buttons only if `nativeUpdate` is true. If not, it shows the download link.
+- Electron does not call `checkForNativeUpdate` on macOS. Tauri calls it on every OS, because `update.rs` decides by bundle type.
+- `useElectronCloseGuard` uses `getBridge()` in both shells. It receives `update:progress`, `update:downloaded` and `update:error` in Tauri.
+- `pickInstaller` in `src/model/version.ts` does not know the Tauri file names. The download link then opens the release page.
+
+### 18.6 Close guard
+
+`src-tauri/src/close.rs` ports the unsaved-changes dialog (REQ-PLT-100).
+
+| Command or event | Behavior |
+| --- | --- |
+| `app_set_dirty` | Stores the dirty flag that the renderer sends. |
+| `CloseRequested`, `ExitRequested` with `code: None` | If the project is dirty, prevents the close and shows "Save", "Don't Save" and "Cancel". A second close while the dialog is open shows no second dialog. |
+| `app:requestSave` | Emitted after "Save". The renderer saves and calls `app_save_complete`. |
+| `app_save_complete` | Exits the app if the save succeeded. |
+
+- "Don't Save" exits the app.
+- "Cancel" and a failed save keep the window open.
+- `app.exit` and `app.restart` (update install) set `code`, so the guard lets them pass.
+
+Differences from Electron:
+
+- `app_save_complete(true)` closes the app only after a save that the dialog requested. Electron closed on every `saveComplete(true)`.
+- The dialog has no default button.
+
+### 18.7 Verification and gaps
+
+Verification:
+
+- `cargo test` tests the close-guard state, the dialog button mapping, the git cap, the PDF embed and the export authorization.
+- `npx vitest run` tests the project assembly, the bridge shapes and the `nativeUpdate` gate.
+
+Not tested:
+
+- No test runs the Tauri app. The close dialog, Cmd+Q on macOS and the `slr-os` init script were not tried by hand.
+- `beforeunload` (`useDirtyGuard`) still runs in Tauri. Its effect in the webview on reload was not tried.
+- The updater was not tried against a real feed.
+- `lopdf` was tested only with generated PDFs.
+
+Channels that are still not ported: `project:annotationsDirUsers`, `project:sharedAnnotations`, `project:screeningSource`, `project:moveAnnotationsDir`, `project:splitAnnotations` and `reference:pick`.

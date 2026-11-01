@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { tauriBridge, TauriAdapter, command } from './tauri'
+import { tauriBridge, TauriAdapter, command, assembleProject } from './tauri'
 import { setBridge } from './bridge'
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
@@ -99,6 +99,75 @@ describe('tauriBridge', () => {
     const expectedNames = [...expected].map((c) => (listened.has(c) ? c : command(c)))
     expect(expected.size).toBeGreaterThan(90)
     expect([...mapped].sort()).toEqual(expectedNames.sort())
+  })
+})
+
+describe('project assembly', () => {
+  const meta = (screening = false) =>
+    JSON.stringify({ config: { screening }, papers: [{ id: 'p1' }, { id: 'p2' }] })
+  const f = (relPath: string, value: unknown) => ({ relPath, text: JSON.stringify(value) })
+
+  it('returns a legacy project text unchanged', () => {
+    const text = '{"papers":[{"id":"p1","annotations":{}}]}'
+    expect(assembleProject({ text, files: [] })).toBe(text)
+  })
+
+  it('assembles own files, reports corrupt ones and skips foreign ones', () => {
+    const corrupt: string[] = []
+    const text = assembleProject(
+      {
+        text: meta(),
+        files: [
+          f('p1/consolidated.json', { annotations: { q: 1 }, finished: true }),
+          f('p1/reviewer-2.json', { annotations: { q: 2 } }),
+          f('p1/marks-consolidated.json', { marks: ['c'] }),
+          f('p1/marks-2.json', { marks: ['r'] }),
+          f('p1/screening-1.json', { annotations: { q: 9 } }),
+          { relPath: 'p2/reviewer-1.json', text: '{oops' },
+        ],
+      },
+      corrupt,
+    )
+    const p = JSON.parse(text).papers
+    expect(p[0]).toMatchObject({
+      annotations: { q: 1 },
+      finished: true,
+      reviews: { 2: { q: 2 } },
+      marks: ['c'],
+      reviewMarks: { 2: ['r'] },
+    })
+    expect(p[1]).toMatchObject({ annotations: {} })
+    expect(p[1].reviews).toBeUndefined()
+    expect(corrupt).toEqual(['p2/reviewer-1.json'])
+  })
+
+  it("reads a screening project's old highlight files unless an annotation sibling lists the paper", () => {
+    const files = [f('p1/marks-1.json', { marks: ['old'] }), f('p1/screening-marks-1.json', { marks: ['own'] }), f('p2/marks-1.json', { marks: ['old'] })]
+    const sibling = { name: 'a.json', text: JSON.stringify({ papers: [{ id: 'p2' }] }) }
+    const p = JSON.parse(assembleProject({ text: meta(true), files, siblings: [sibling] })).papers
+    expect(p[0].reviewMarks).toEqual({ 1: ['own'] })
+    expect(p[1].reviewMarks).toBeUndefined()
+  })
+
+  it('gives the renderer the Electron shapes', async () => {
+    const raw = { text: meta(), files: [f('p1/consolidated.json', { annotations: { q: 1 } })] }
+    const whole = assembleProject(raw)
+    invokeMock.mockResolvedValueOnce({ path: '/r/p.json', ...raw, files: [...raw.files, { relPath: 'p2/consolidated.json', text: 'x' }], siblings: [] })
+    expect(await tauriBridge.openPath('/r/p.json')).toEqual({ path: '/r/p.json', text: whole, corrupt: ['p2/consolidated.json'] })
+    invokeMock.mockResolvedValueOnce(null)
+    expect(await tauriBridge.openProject()).toBeNull()
+    invokeMock.mockResolvedValueOnce(raw)
+    expect(await tauriBridge.gitHeadContent('/r', 'p.json')).toBe(whole)
+    invokeMock.mockResolvedValueOnce(null)
+    expect(await tauriBridge.gitWorkingContent('/r', 'p.json')).toBeNull()
+    invokeMock.mockResolvedValueOnce({ kind: 'texts', head: raw, parent: raw })
+    expect(await tauriBridge.gitLogDiff('/r', 'p.json', 'abc')).toEqual({ kind: 'texts', head: whole, parent: whole })
+    invokeMock.mockResolvedValueOnce({ kind: 'merge', ref: 'origin/main', base: null, ours: raw, theirs: raw })
+    expect(await tauriBridge.gitPullBegin('/r', 'p.json')).toEqual({ kind: 'merge', ref: 'origin/main', base: null, ours: whole, theirs: whole })
+    invokeMock.mockResolvedValueOnce({ kind: 'merge', sourceBranch: 'a', base: raw, ours: { ...raw, path: '/r/p.json', siblings: [] }, theirs: raw })
+    expect(await tauriBridge.gitBranchSwitchBegin('/r', 'p.json', 'b')).toEqual({ kind: 'merge', sourceBranch: 'a', base: whole, ours: whole, theirs: whole })
+    invokeMock.mockResolvedValueOnce({ kind: 'dirty', paths: ['x'] })
+    expect(await tauriBridge.gitMergeBegin('/r', 'p.json', 'b')).toEqual({ kind: 'dirty', paths: ['x'] })
   })
 })
 

@@ -5,7 +5,7 @@ import { getPlatform } from '../platform'
 import { NEW_ISSUE_URL } from '../model/version'
 
 const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform)
-const MOD = getPlatform().kind === 'electron' && isMac ? '⌘' : 'Ctrl'
+const MOD = getPlatform().kind !== 'browser' && isMac ? '⌘' : 'Ctrl'
 
 /** Shortcuts while annotating a project. */
 const ANNOTATE_KEYS: Array<[string, string]> = [

@@ -398,7 +398,7 @@ export function AiDialog() {
     !!currentPaper && currentPaperHasPdf && (targets.length > 0 || (recheck && answeredCount > 0))
   const webSearchSupported = !!selected && PROVIDERS[selected.provider].supportsWebSearch
   const webSearchOn = mode === 'agent' && webSearch && webSearchSupported
-  const feedbackPossible = getPlatform().kind === 'electron' && !!saveHandle?.path
+  const feedbackPossible = getPlatform().kind !== 'browser' && !!saveHandle?.path
   const tickedReplacements = recheckRows.filter((r) => r.outcome.verdict === 'disagree' && r.checked).length
   const applyCount = checkedCount + tickedReplacements
   const totalWebSearches = Object.values(webSearchesByPaper).reduce((n, c) => n + c, 0)
@@ -877,7 +877,7 @@ export function AiDialog() {
                   model's remarks on unclear field descriptions, to annotations/feedback/ in the
                   project folder (field values only, no paper text) — useful for improving the schema.
                   {!feedbackPossible &&
-                    (getPlatform().kind === 'electron' ? ' Save the project first.' : ' Desktop app only.')}
+                    (getPlatform().kind !== 'browser' ? ' Save the project first.' : ' Desktop app only.')}
                 </p>
 
                 {allPapers && (

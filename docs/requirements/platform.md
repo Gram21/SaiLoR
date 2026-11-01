@@ -117,9 +117,9 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-100 — Prompt on close with unsaved changes
-- **Description:** When the window is closed or the application quits with unsaved changes, the system shall present a three-choice dialog (Save, Don't Save, Cancel) and shall close only after a successful save or an explicit discard.
+- **Description:** When the window is closed or the application quits with unsaved changes, the system shall present a three-choice dialog (Save, Don't Save, Cancel) and shall close only after a successful save or an explicit discard. The Tauri shell shall show the same dialog for a window close and a user quit, and shall close after a save only when the dialog requested that save.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:290-326,1372-1381`, `src/state/store.close.test.ts:59-135`
+- **Evidence:** `electron/main.ts:290-326,1372-1381`, `src/state/store.close.test.ts:59-135`, `src-tauri/src/close.rs`
 - **Status:** Implemented
 
 ### REQ-PLT-110 — Keep project open on failed save
@@ -227,15 +227,15 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-260 — Restrict export writes
-- **Description:** The system shall write text and PDF exports only to destinations picked via an export save dialog in the current session, refusing symlinked targets and reporting failures as results rather than crashes.
+- **Description:** The system shall write text and PDF exports only to destinations picked via an export save dialog in the current session, refusing symlinked targets and reporting failures as results rather than crashes. The Tauri shell shall embed marks only into a PDF of the open project (inside the project folder or an approved outside path), also when it overwrites the original PDF.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `electron/main.ts:1146-1221`
+- **Evidence:** `electron/main.ts:1146-1221`, `src-tauri/src/pdf.rs`
 - **Status:** Implemented
 
 ### REQ-PLT-270 — Self-update on Windows and Linux only
-- **Description:** The system shall offer in-app update download and install on Windows and Linux, and shall report self-update as unsupported on macOS while still offering an update notice. The Tauri shell shall offer in-app update download and install for the AppImage, the Windows installer and the macOS app, and shall report the deb and rpm packages as `{ supported: false, manual: true }` so that their users update through the package manager.
+- **Description:** The system shall offer in-app update download and install on Windows and Linux, and shall report self-update as unsupported on macOS while still offering an update notice. The Tauri shell shall offer in-app update download and install for the AppImage, the Windows installer and the macOS app, and shall report the deb and rpm packages as `{ supported: false, manual: true }` so that their users update through the package manager. In both shells, the update notice shall show the download and install buttons only when the shell reports self-update as supported, and shall otherwise show the download link.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:1223-1321`, `src/platform/adapter.ts:291-316`, commit `9b8eb12`, `src-tauri/src/update.rs`
+- **Evidence:** `electron/main.ts:1223-1321`, `src/platform/adapter.ts:291-316`, commit `9b8eb12`, `src-tauri/src/update.rs`, `src/state/store.update.test.ts`
 - **Status:** Implemented
 
 ### REQ-PLT-280 — No unattended updates

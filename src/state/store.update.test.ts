@@ -18,7 +18,7 @@ if (typeof globalThis.localStorage === 'undefined') {
  * `checkForUpdate`'s native-update gate: `checkForNativeUpdate` (the call that
  * would actually let electron-updater start a download) must only fire once
  * the ordinary GitHub-API check has confirmed a newer version exists, and
- * never on macOS — see the plan's "two sources of truth stay separate" note
+ * never on macOS under Electron — see the plan's "two sources of truth stay separate" note
  * and electron/main.ts's darwin gate. This is the one piece of the self-update
  * feature that's plain logic rather than IPC/electron-updater plumbing, so
  * it's the one piece worth a unit test.
@@ -29,7 +29,7 @@ const checkForNativeUpdate = vi.fn(async () => ({ supported: true }))
 let osInfo: { platform: string; arch: string } | null = { platform: 'win32', arch: 'x64' }
 
 const mockPlatform = {
-  kind: 'electron' as const,
+  kind: 'electron' as 'electron' | 'tauri',
   getOsInfo: () => osInfo,
   getRecents: () => [] as RecentEntry[],
   rememberProject: () => {},
@@ -59,9 +59,11 @@ const { useStore } = await import('./store')
 describe('checkForUpdate: native-update gate', () => {
   beforeEach(() => {
     checkForNativeUpdate.mockClear()
+    checkForNativeUpdate.mockResolvedValue({ supported: true })
     osInfo = { platform: 'win32', arch: 'x64' }
+    mockPlatform.kind = 'electron'
     localStorage.clear()
-    useStore.setState({ update: null })
+    useStore.setState({ update: null, nativeUpdate: false })
   })
 
   it('does not call checkForNativeUpdate when no update is found', async () => {
@@ -82,6 +84,7 @@ describe('checkForUpdate: native-update gate', () => {
     await useStore.getState().checkForUpdate()
     expect(useStore.getState().update).not.toBeNull()
     expect(checkForNativeUpdate).toHaveBeenCalledTimes(1)
+    await vi.waitFor(() => expect(useStore.getState().nativeUpdate).toBe(true))
   })
 
   it('does not call checkForNativeUpdate on macOS even when a newer version is found', async () => {
@@ -93,5 +96,31 @@ describe('checkForUpdate: native-update gate', () => {
     await useStore.getState().checkForUpdate()
     expect(useStore.getState().update).not.toBeNull()
     expect(checkForNativeUpdate).not.toHaveBeenCalled()
+    expect(useStore.getState().nativeUpdate).toBe(false)
+  })
+
+  it('lets the Tauri shell decide on every OS, macOS included', async () => {
+    mockPlatform.kind = 'tauri'
+    osInfo = { platform: 'darwin', arch: 'arm64' }
+    localStorage.setItem(
+      'slr.updateCheck',
+      JSON.stringify({ checkedAt: Date.now(), release: { latest: '99.0.0', url: 'https://example.com' } }),
+    )
+    await useStore.getState().checkForUpdate()
+    expect(checkForNativeUpdate).toHaveBeenCalledTimes(1)
+    await vi.waitFor(() => expect(useStore.getState().nativeUpdate).toBe(true))
+  })
+
+  it('keeps the download link when the shell cannot self-update', async () => {
+    mockPlatform.kind = 'tauri'
+    checkForNativeUpdate.mockResolvedValue({ supported: false })
+    localStorage.setItem(
+      'slr.updateCheck',
+      JSON.stringify({ checkedAt: Date.now(), release: { latest: '99.0.0', url: 'https://example.com' } }),
+    )
+    await useStore.getState().checkForUpdate()
+    await Promise.resolve()
+    expect(checkForNativeUpdate).toHaveBeenCalledTimes(1)
+    expect(useStore.getState().nativeUpdate).toBe(false)
   })
 })

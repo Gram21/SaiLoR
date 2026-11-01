@@ -185,7 +185,7 @@ export function Toolbar() {
     return () => clearTimeout(t)
   }, [lastSavedAt])
 
-  const modKey = getPlatform().kind === 'electron' && isMac() ? '⌘' : 'Ctrl'
+  const modKey = getPlatform().kind !== 'browser' && isMac() ? '⌘' : 'Ctrl'
 
   const reviewerCount = project?.reviewers ?? 1
   const showReviewerSwitch = !!project && reviewerCount > 1

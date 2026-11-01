@@ -21,6 +21,8 @@ encoding_rs = "0.8"
 keyring = "4"
 sysinfo = { version = "0.38", default-features = false, features = ["system", "disk"] }
 ring = "0.17"
+lopdf = { version = "0.46", default-features = false }
+chrono = { version = "0.4.45", default-features = false, features = ["alloc"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

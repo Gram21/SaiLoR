@@ -1,22 +1,11 @@
 import { useEffect } from 'react'
 import { useStore } from '../state/store'
 import { useEditorStore } from '../state/editorStore'
-import { isElectron } from '../platform/adapter'
-
-/** The Electron-only slice of the preload bridge used for menu/close integration. */
-interface IntegrationBridge {
-  setDirty(dirty: boolean): void
-  onRequestSave(cb: () => void): void
-  saveComplete(ok: boolean): void
-  onUndo(cb: () => void): void
-  onRedo(cb: () => void): void
-  onNativeUpdateProgress(cb: (p: { percent: number }) => void): void
-  onNativeUpdateDownloaded(cb: () => void): void
-  onNativeUpdateError(cb: (message: string) => void): void
-}
+import { isElectron, isTauri } from '../platform/adapter'
+import { getBridge } from '../platform/bridge'
 
 /**
- * Wires Electron menu/lifecycle integration:
+ * Wires desktop (Electron or Tauri) menu/lifecycle integration:
  *  - keeps the main process informed of the unsaved-changes state,
  *  - runs a save when main asks (after "Save" in the native close dialog), and
  *  - routes the Edit-menu Undo/Redo to the history that is actually on screen.
@@ -26,8 +15,8 @@ interface IntegrationBridge {
  */
 export function useElectronCloseGuard() {
   useEffect(() => {
-    if (!isElectron()) return
-    const slr = (window as unknown as { slr: IntegrationBridge }).slr
+    if (!isElectron() && !isTauri()) return
+    const slr = getBridge()
 
     const editing = () => useEditorStore.getState().open
 
@@ -43,7 +32,7 @@ export function useElectronCloseGuard() {
     slr.onUndo(() => (editing() ? useEditorStore.getState().undo() : useStore.getState().undo()))
     slr.onRedo(() => (editing() ? useEditorStore.getState().redo() : useStore.getState().redo()))
 
-    // Self-update progress (win/linux only — a no-op on mac, see electron/main.ts).
+    // Self-update progress (see `checkForNativeUpdate` in src/platform/bridge.ts).
     slr.onNativeUpdateProgress((p) => useStore.getState().noteUpdateProgress(p.percent))
     slr.onNativeUpdateDownloaded(() => useStore.getState().noteUpdateDownloaded())
     slr.onNativeUpdateError((message) => useStore.getState().noteUpdateError(message))
