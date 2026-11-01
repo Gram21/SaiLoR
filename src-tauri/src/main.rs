@@ -80,6 +80,8 @@ fn main() {
             pdf::pdf_allow_path,
             pdf::pdf_pick_export_path,
             pdf::text_pick_export_path,
+            pdf::pdf_embed_marks,
+            pdf::text_write,
             paths::paths_relative,
             paths::paths_rebase,
             paths::paths_absolute,
