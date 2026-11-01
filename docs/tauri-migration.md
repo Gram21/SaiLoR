@@ -732,10 +732,29 @@ Kept on purpose:
 
 The Electron shell had these features. The Tauri shell does not have them yet. `docs/requirements/platform.md` marks the matching requirements.
 
-- Single instance lock (REQ-PLT-11). A second start opens a second window.
 - Window size and position persistence (REQ-PLT-160). The window opens at 1400x900.
 - Migration of the legacy "SLR Helper" folder (REQ-PLT-180).
 - Reload guard on the menu reload (REQ-PLT-120). Only the renderer `beforeunload` handler exists.
 - Denial of device permission requests (REQ-PLT-240).
 - Routing of external links and navigation to the system browser (REQ-PLT-250).
 - Edit menu routing of undo and redo (REQ-PLT-310). The renderer key binding handles Ctrl/Cmd+Z.
+
+## 21. Platform gaps
+
+Branch: `feat/tauri-platform-gaps`. This section ports Electron shell features that section 20.6 listed as missing. The code is in `src-tauri/src/shell.rs`.
+
+### 21.1 Behavior
+
+| Requirement | Tauri implementation |
+| --- | --- |
+| Single instance (REQ-PLT-11) | `tauri-plugin-single-instance`. A second start exits. The running app restores, shows and focuses the `main` window. |
+
+### 21.2 Differences from Electron
+
+- The second start does not forward its arguments. Electron did not forward them either.
+
+### 21.3 Verification and gaps
+
+Verification:
+
+- A manual run on macOS started the debug build twice. The second process exited. The first process kept running.

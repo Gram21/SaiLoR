@@ -9,6 +9,7 @@ mod paths;
 mod pdf;
 mod project;
 mod protocol;
+mod shell;
 mod update;
 // Phase 4 (AI): LLM targets, local servers, web fetch, hardware.
 mod hardware;
@@ -73,6 +74,9 @@ fn os_info() -> serde_json::Value {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
+            shell::focus_main(app)
+        }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(

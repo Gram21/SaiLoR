@@ -15,8 +15,8 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-11 — Single application instance
 - **Description:** When the application is launched while another instance is running, the system shall not start a second instance and shall bring the existing window to the front.
 - **Type:** Non-functional (ISO 25010: Reliability)
-- **Evidence:** commit `6ce60d5` (`electron/main.ts`, removed), commit `0bc6c9c`
-- **Status:** Not implemented in the Tauri shell (Electron-only until 2.0.0)
+- **Evidence:** `src-tauri/src/main.rs` (`tauri_plugin_single_instance`), `src-tauri/src/shell.rs` (`focus_main`), commit `6ce60d5` (`electron/main.ts`, removed), commit `0bc6c9c`
+- **Status:** Implemented
 
 ### REQ-PLT-20 — Open projects via native dialog
 - **Description:** When "Open project" is triggered, the system shall present a native file-open dialog filtered to `.json` files and shall treat dialog cancellation as a no-op.
