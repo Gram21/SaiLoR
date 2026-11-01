@@ -233,21 +233,21 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-270 — Self-update on Windows and Linux only
-- **Description:** The system shall offer in-app update download and install on Windows and Linux, and shall report self-update as unsupported on macOS while still offering an update notice.
+- **Description:** The system shall offer in-app update download and install on Windows and Linux, and shall report self-update as unsupported on macOS while still offering an update notice. The Tauri shell shall offer in-app update download and install for the AppImage, the Windows installer and the macOS app, and shall report the deb and rpm packages as `{ supported: false, manual: true }` so that their users update through the package manager.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:1223-1321`, `src/platform/adapter.ts:291-316`, commit `9b8eb12`
+- **Evidence:** `electron/main.ts:1223-1321`, `src/platform/adapter.ts:291-316`, commit `9b8eb12`, `src-tauri/src/update.rs`
 - **Status:** Implemented
 
 ### REQ-PLT-280 — No unattended updates
-- **Description:** The system shall download and install updates only on explicit user actions and shall never update automatically.
+- **Description:** The system shall download and install updates only on explicit user actions and shall never update automatically. The Tauri shell shall take the update feed URL only from `tauri.conf.json` and never from the renderer.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `electron/main.ts:1235-1237`
+- **Evidence:** `electron/main.ts:1235-1237`, `src-tauri/src/update.rs`
 - **Status:** Implemented
 
 ### REQ-PLT-290 — Verify update-feed signatures
-- **Description:** Before downloading any update, the system shall verify an Ed25519 signature on the update feed against a public key embedded at build time, and shall abort the download with an error when verification fails.
+- **Description:** Before downloading any update, the system shall verify an Ed25519 signature on the update feed against a public key embedded at build time, and shall abort the download with an error when verification fails. The Tauri shell shall verify the minisign signature of the downloaded update artifact against the `plugins.updater.pubkey` in `tauri.conf.json`, shall require the signed version to match the announced version (`requireSignedVersion`), and shall report a failed verification as `update:error`.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `electron/main.ts:1254-1316`, `src/model/updateSignature.ts:28-59`, commit `742ad60`
+- **Evidence:** `electron/main.ts:1254-1316`, `src/model/updateSignature.ts:28-59`, commit `742ad60`, `src-tauri/src/update.rs`, `src-tauri/tauri.conf.json`
 - **Status:** Implemented
 
 ### REQ-PLT-300 — Startup update check
@@ -263,15 +263,15 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-320 — Build targets
-- **Description:** The system shall build distributable installers for macOS (dmg, arm64 and x64), Windows (NSIS installer, x64), and Linux (AppImage, x64), named `SaiLoR-<version>-<os>-<arch>.<ext>` (Linux omits `<os>`: `SaiLoR-<version>-<arch>.AppImage`, as the AppImage catalog rejects "linux" in names).
+- **Description:** The system shall build distributable installers for macOS (dmg, arm64 and x64), Windows (NSIS installer, x64), and Linux (AppImage, x64), named `SaiLoR-<version>-<os>-<arch>.<ext>` (Linux omits `<os>`: `SaiLoR-<version>-<arch>.AppImage`, as the AppImage catalog rejects "linux" in names). The Tauri shell shall build the macOS app and dmg (arm64 and x64, macOS 15 or later), the Windows NSIS installer (x64), and the Linux AppImage, deb and rpm packages (x64), each with a signed updater artifact and one `latest.json` feed on a draft release tagged `tauri-v<version>`.
 - **Type:** Non-functional, design constraint (ISO 25010: Portability — Adaptability)
-- **Evidence:** `package.json:51-117`, `README.md` (release table)
+- **Evidence:** `package.json:51-117`, `README.md` (release table), `.github/workflows/tauri-release.yml`, `src-tauri/tauri.release.conf.json`
 - **Status:** Implemented
 
 ### REQ-PLT-330 — Ad-hoc sign unsigned macOS builds
-- **Description:** When no code-signing certificate is configured, the build shall ad-hoc sign the macOS application so that macOS reports it as unidentified rather than damaged.
+- **Description:** When no code-signing certificate is configured, the build shall ad-hoc sign the macOS application so that macOS reports it as unidentified rather than damaged. The Tauri release workflow shall ad-hoc sign the macOS app (`APPLE_SIGNING_IDENTITY=-`) when no Apple signing secrets are set.
 - **Type:** Non-functional, design constraint (ISO 25010: Usability — Operability)
-- **Evidence:** `scripts/afterPack.cjs`, commit `3850b55`
+- **Evidence:** `scripts/afterPack.cjs`, commit `3850b55`, `.github/workflows/tauri-release.yml`
 - **Status:** Implemented
 
 ### REQ-PLT-340 — Optional autosave
@@ -281,7 +281,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-350 — Archive releases on Zenodo
-- **Description:** When a GitHub release is published and the installers are attached, the release workflow shall archive it on Zenodo as a new version of the existing SaiLoR record (concept record 23804729), so that all archived releases share one concept DOI. The Zenodo version shall use the release notes as description, the tag as version, and shall contain a source zip of the tagged commit plus every release asset. Files inherited from the previous Zenodo version shall be removed before upload. The step shall not run for manual workflow runs.
+- **Description:** When a GitHub release is published and the installers are attached, the release workflow shall archive it on Zenodo as a new version of the existing SaiLoR record (concept record 23804729), so that all archived releases share one concept DOI. The Zenodo version shall use the release notes as description, the tag as version, and shall contain a source zip of the tagged commit plus every release asset. Files inherited from the previous Zenodo version shall be removed before upload. The step shall not run for manual workflow runs or for `tauri-v*` releases.
 - **Type:** Non-functional, design constraint (ISO 25010: Portability — Adaptability)
-- **Evidence:** `.github/workflows/release.yml` (job `zenodo`), `README.md` (Zenodo badge)
+- **Evidence:** `.github/workflows/release.yml` (job `zenodo`, `integration-tests` guard), `README.md` (Zenodo badge)
 - **Status:** Implemented
