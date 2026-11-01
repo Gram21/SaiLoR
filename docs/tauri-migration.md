@@ -354,8 +354,8 @@ Not ported:
 
 | Channel | Reason |
 | --- | --- |
-| `local:*` except `local:probe` | `localRuntime` is later work (Phase 4 step 3). |
-| `llm:call` for managed targets | Managed targets need `localRuntime`. The command refuses them with an error. |
+| `local:*` except `local:probe` | Ported later. See section 17. |
+| `llm:call` for managed targets | Ported later. See section 17. |
 | `update:*` | The updater moves to `tauri-plugin-updater` (Phase 4 step 4). |
 
 Differences from Electron:
@@ -392,3 +392,40 @@ Differences from Electron:
 - There is no 32 MB output cap.
 - `ls-tree` uses `-z`, so paths with non-ASCII characters are not quoted.
 - A git process that a signal stops reports `code: null` and keeps its stderr.
+
+## 17. Phase 4 step 3 progress (local runtime)
+
+Scope: the Rust side of the app-managed llama.cpp runtime. This covers all `local:*` channels, the `local:progress` event, and `llm_call` for managed targets. The bridge in `src/platform/tauri.ts` already maps these channels.
+
+| Module | Content |
+| --- | --- |
+| `localruntime.rs` | `local_runtime`, `local_runtime_plan`, `local_runtime_install`, `local_model_plan`, `local_model_install`, `local_cancel`, `local_installed`, `local_remove`, `local_start`, `local_stop`, `local_status`, `local_logs`. It also holds the catalog mirror, verified downloads, the server manager, and `stop_all` for app exit. |
+| `llm.rs` | `llm_call` sends a managed target to the running server with that server's key. Only `/v1/*` and `/health` paths go through. |
+| `main.rs` | Registers the commands. Calls `localruntime::stop_all` on `RunEvent::Exit`. |
+
+New dependencies:
+
+| Crate | Reason |
+| --- | --- |
+| `ring` | SHA-256 for download checks and the random server API key. `rustls` already compiles it, so the build adds no new code. |
+| `libc` (unix only) | `getuid` for the root refusal and `kill(-pgid)` for the process-group kill. It is already in `Cargo.lock`. |
+
+Archives are extracted with the system `tar`, the same as Electron. Windows uses `%SystemRoot%\System32\tar.exe`, which reads zip. No zip or tar crate is added.
+
+Install layout: the layout is the same as Electron. The data dir is `<config dir>/SaiLoR`.
+
+- The runtime goes to `local-runtime/llama.cpp/<tag>/` with `manifest.json`.
+- A partial runtime download goes to `local-runtime/llama.cpp/.downloads/<asset>.partial`.
+- A model goes to `local-models/<id>/<file>`. A partial model download goes to `<file>.partial`.
+- Runtimes and models that Electron installed work in Tauri without a new download.
+
+The catalog in `localruntime.rs` copies `src/llm/localCatalog.ts`. A test fails if the two lists differ.
+
+Differences from Electron:
+
+- Stop and app exit kill the whole process tree. On macOS and Linux the server runs in its own process group, which gets SIGTERM and then SIGKILL after 3 s. On Windows `taskkill /T /F` runs on stop and on exit. Electron killed only the server process on macOS and Linux.
+- If the self-test of `/v1/systemone` fails for any reason, the server stops. Electron stopped it only when the server answered with an error status.
+- Managed `llm_call` requests use a client without proxy and without redirects.
+- A global lock lets only one server start at a time.
+
+Verification: `cargo test` runs the ported cases of `localRuntimeUtil.test.ts` and the `managedTargetUrl` cases. Download tests use the local mock server: full download, resume with `206`, restart on `200`, hash mismatch, `404`, refused redirect hop, and cancel. No test downloads a real runtime or model. A unix test checks that the process-group kill also stops a grandchild process.
