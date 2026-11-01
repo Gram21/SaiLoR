@@ -2,9 +2,80 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { setBridge, type SlrBridge } from './bridge'
 import { ElectronAdapter } from './electron'
+import { assembleLegacyProjectJson, isLegacyProjectShape, parseMarksFileName } from '../model/project'
+import { sharesPaper } from '../model/annotationsDir'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Fn = (...args: any[]) => any
+
+/** What Rust reads for a project: `Opened` (project.rs) or `Snapshot` (git.rs). */
+export interface RawProject {
+  path?: string
+  text: string
+  files: { relPath: string; text: string }[]
+  siblings?: { name: string; text: string }[]
+}
+
+type PaperFiles = Parameters<typeof assembleLegacyProjectJson>[1] extends Map<string, infer V> ? V : never
+
+const isScreening = (raw: unknown) => Boolean((raw as { config?: { screening?: unknown } } | null)?.config?.screening)
+
+/**
+ * electron/main.ts `readProjectText`/`readProjectAtRevision` over what Rust
+ * read: the whole-project text `loadProject` accepts. A file that does not
+ * parse counts as absent and its path goes to `corrupt`.
+ */
+export function assembleProject(p: RawProject, corrupt: string[] = []): string {
+  const raw: unknown = JSON.parse(p.text)
+  if (isLegacyProjectShape(raw)) return p.text
+  const screening = isScreening(raw)
+  const consolidatedName = screening ? 'screening-consolidated.json' : 'consolidated.json'
+  const reviewerRe = screening ? /^screening-(\d+)\.json$/ : /^reviewer-(\d+)\.json$/
+  const annotationSiblings = (p.siblings ?? []).map((s) => JSON.parse(s.text) as unknown).filter((s) => !isScreening(s))
+  const files = p.files.map((f) => {
+    const slash = f.relPath.lastIndexOf('/')
+    const name = f.relPath.slice(slash + 1)
+    return { ...f, id: f.relPath.slice(0, slash), name, marks: parseMarksFileName(name, screening) }
+  })
+  files.sort((a, b) => Number(!a.marks?.legacy) - Number(!b.marks?.legacy))
+  const papers = new Map<string, PaperFiles>()
+  for (const f of files) {
+    const reviewer = reviewerRe.exec(f.name)
+    if (f.name !== consolidatedName && !reviewer && !f.marks) continue
+    if (f.marks?.legacy && annotationSiblings.some((s) => sharesPaper([f.id], s))) continue
+    let value: unknown
+    try {
+      value = JSON.parse(f.text)
+    } catch {
+      corrupt.push(f.relPath)
+      continue
+    }
+    let entry = papers.get(f.id)
+    if (!entry) papers.set(f.id, (entry = { reviewers: new Map(), reviewMarks: new Map() }))
+    if (f.name === consolidatedName) entry.consolidated = value
+    else if (reviewer) entry.reviewers.set(reviewer[1], value)
+    else if (f.marks!.seat === 'consolidated') entry.marksConsolidated = value
+    else entry.reviewMarks.set(f.marks!.seat, value)
+  }
+  return JSON.stringify(assembleLegacyProjectJson(raw, papers))
+}
+
+const opened = (o: RawProject | null) => {
+  if (!o) return null
+  const corrupt: string[] = []
+  const text = assembleProject(o, corrupt)
+  return { path: o.path, text, corrupt }
+}
+
+const snapshot = (s: RawProject | null) => (s ? assembleProject(s) : null)
+
+const merged = (r: { kind: string; base: RawProject | null; ours: RawProject; theirs: RawProject } | undefined) =>
+  r?.kind === 'merge' ? { ...r, base: snapshot(r.base), ours: assembleProject(r.ours), theirs: assembleProject(r.theirs) } : r
+
+const then =
+  (f: Fn, g: Fn): Fn =>
+  async (...args) =>
+    g(await f(...args))
 
 const named = (names: string[], args: unknown[]) => Object.fromEntries(names.map((n, i) => [n, args[i]]))
 
@@ -43,8 +114,8 @@ const replace =
  * fields. Commands not yet implemented in Rust reject.
  */
 export const tauriBridge: SlrBridge = {
-  openProject: call('project:open'),
-  openPath: call('project:openPath', 'filePath'),
+  openProject: then(call('project:open'), opened),
+  openPath: then(call('project:openPath', 'filePath'), opened),
   saveProject: call('project:save', 'filePath', 'metaText', 'files'),
   setProjectDir: call('project:setDir', 'filePath'),
 
@@ -126,12 +197,14 @@ export const tauriBridge: SlrBridge = {
   gitCommit: call('git:commit', 'root', 'paths', 'message', 'amend'),
   gitLastCommitMessage: call('git:lastCommitMessage', 'root'),
   gitPush: call('git:push', 'root'),
-  gitPullBegin: call('git:pullBegin', 'root', 'relPath'),
+  gitPullBegin: then(call('git:pullBegin', 'root', 'relPath'), merged),
   gitPullFinish: call('git:pullFinish', 'root', 'relPath', 'working'),
   gitPullAbort: call('git:pullAbort', 'root'),
-  gitMergeBegin: call('git:mergeBegin', 'root', 'relPath', 'ref'),
+  gitMergeBegin: then(call('git:mergeBegin', 'root', 'relPath', 'ref'), merged),
   gitLogBegin: call('git:logBegin', 'root', 'relPath'),
-  gitLogDiff: call('git:logDiff', 'root', 'relPath', 'rev'),
+  gitLogDiff: then(call('git:logDiff', 'root', 'relPath', 'rev'), (r) =>
+    r?.kind === 'texts' ? { ...r, head: assembleProject(r.head), parent: assembleProject(r.parent) } : r,
+  ),
   gitAnnotationAuthors: call('git:annotationAuthors', 'root', 'relPath'),
   gitRepoSetupStatus: call('git:repoSetupStatus', 'root', 'relPath'),
   gitApplyRepoSetup: call('git:applyRepoSetup', 'root', 'relPath'),
@@ -145,11 +218,11 @@ export const tauriBridge: SlrBridge = {
   gitBranchCreate: call('git:branchCreate', 'root', 'name'),
   gitBranchDelete: call('git:branchDelete', 'root', 'branch'),
   gitCheckout: call('git:checkout', 'root', 'branch'),
-  gitBranchSwitchBegin: call('git:branchSwitchBegin', 'root', 'relPath', 'branch'),
+  gitBranchSwitchBegin: then(call('git:branchSwitchBegin', 'root', 'relPath', 'branch'), merged),
   gitBranchSwitchFinish: call('git:branchSwitchFinish', 'root', 'relPath', 'resolved'),
   gitBranchSwitchAbort: call('git:branchSwitchAbort', 'root', 'sourceBranch'),
-  gitHeadContent: call('git:headContent', 'root', 'relPath'),
-  gitWorkingContent: call('git:workingContent', 'root', 'relPath'),
+  gitHeadContent: then(call('git:headContent', 'root', 'relPath'), snapshot),
+  gitWorkingContent: then(call('git:workingContent', 'root', 'relPath'), snapshot),
   gitCommitPartial: call('git:commitPartial', 'root', 'relPath', 'committed', 'working', 'otherPaths', 'message', 'amend'),
   gitWriteWorking: call('git:writeWorking', 'root', 'relPath', 'working'),
   gitDiscardFile: call('git:discardFile', 'root', 'relPath', 'projectRelPath'),
