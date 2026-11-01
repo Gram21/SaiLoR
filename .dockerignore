@@ -1,7 +1,8 @@
 node_modules
 dist
-dist-electron
-release
+dist-probe
+src-tauri/target
+src-tauri/gen
 .git
 .gitignore
 *.log
@@ -10,3 +11,4 @@ samples
 .DS_Store
 .claude
 .github
+Dockerfile.tauri-linux

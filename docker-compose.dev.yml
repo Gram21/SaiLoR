@@ -1,22 +1,10 @@
 # ---------------------------------------------------------------------------
-# Build the Electron desktop app without installing Node locally. Installers
-# land in ./release/:
+# Build the Linux desktop app without installing Node or Rust locally:
 #
-#   docker compose -f docker-compose.dev.yml run --rm electron
+#   docker compose -f docker-compose.dev.yml run --rm tauri-linux
 # ---------------------------------------------------------------------------
 services:
-  # Electron build: packages the desktop app into ./release/.
-  electron:
-    build:
-      context: .
-      dockerfile: Dockerfile.electron
-    image: sailor-electron:latest
-    volumes:
-      - .:/app
-      - /app/node_modules
-
   # Tauri build: bundles land in ./src-tauri/target/release/bundle/.
-  #   docker compose -f docker-compose.dev.yml run --rm tauri-linux
   tauri-linux:
     build:
       context: .
