@@ -310,6 +310,21 @@ fn origin(u: &Url) -> String {
     u.origin().ascii_serialization()
 }
 
+/// Where a managed call really goes: only the llama-server API paths, on the server we run.
+fn managed_target_url(request: &Url, server_base: &str) -> Result<Url, String> {
+    let p = request.path();
+    if !(p.starts_with("/v1/") || p == "/health") {
+        return Err(format!("Refusing to call {p} on the local model server."));
+    }
+    let tail = match request.query() {
+        Some(q) => format!("{p}?{q}"),
+        None => p.to_string(),
+    };
+    Url::parse(server_base)
+        .and_then(|b| b.join(&tail))
+        .map_err(|_| "Invalid URL".into())
+}
+
 pub async fn call(
     path: &Path,
     keys: &dyn Keys,
@@ -341,15 +356,26 @@ pub async fn call(
             origin(&target)
         ));
     }
-    if truthy(&config["managed"]) {
-        return Err("App-managed local models are not available in this build yet.".into());
-    }
     let api_key = if has_key(&config) {
         keys.get(&request.config_id)?
     } else {
         None
     };
-    let headers = build_call_headers(&request.headers, api_key.as_deref(), no_key)?;
+    let mut headers = build_call_headers(&request.headers, api_key.as_deref(), no_key)?;
+    // Managed local model: the stored base URL is only a placeholder the checks above pinned the
+    // request to; the call goes to the server this app runs, with that server's per-session key.
+    let (call_url, client) = match config["managed"]["catalogId"].as_str() {
+        Some(id) => {
+            let dir = path.parent().ok_or("Invalid URL")?;
+            let (base, key) = crate::localruntime::endpoint(dir, id).await?;
+            headers.insert("Authorization".into(), format!("Bearer {key}"));
+            (
+                managed_target_url(&target, &base)?,
+                &*crate::localruntime::LOOPBACK,
+            )
+        }
+        None => (target.clone(), client),
+    };
     let mut map = HeaderMap::new();
     for (k, v) in &headers {
         map.insert(
@@ -361,7 +387,7 @@ pub async fn call(
     let mut req = client
         .request(
             Method::from_bytes(method.as_bytes()).map_err(err)?,
-            target.as_str(),
+            call_url.as_str(),
         )
         .headers(map);
     if method != "GET" {
@@ -696,6 +722,52 @@ mod tests {
             assert_eq!(call(&path, &keys, &c, "3", req).await, Err(want));
         }
         assert_eq!(s.seen.lock().unwrap().len(), 3);
+    }
+
+    #[tokio::test]
+    async fn managed_calls_go_to_the_local_server() {
+        let base = "http://127.0.0.1:5555";
+        let to = |u: &str| managed_target_url(&Url::parse(u).unwrap(), base).map(String::from);
+        assert_eq!(
+            to("http://127.0.0.1/v1/systemone?a=1").as_deref(),
+            Ok("http://127.0.0.1:5555/v1/systemone?a=1")
+        );
+        assert_eq!(
+            to("http://127.0.0.1/health").as_deref(),
+            Ok("http://127.0.0.1:5555/health")
+        );
+        for u in ["http://127.0.0.1/props", "http://127.0.0.1/v1/../props"] {
+            assert_eq!(
+                to(u),
+                Err("Refusing to call /props on the local model server.".into())
+            );
+        }
+
+        let path = temp_file("managed");
+        let keys = Memory::default();
+        for (id, catalog) in [("m", "qwen-1.5b"), ("l", "laya-en-q8")] {
+            let cfg = json!({ "id": id, "baseUrl": "http://127.0.0.1:1", "managed": { "catalogId": catalog } });
+            save_config(&path, &keys, cfg, None).unwrap();
+        }
+        let c = client();
+        let unknown = call(
+            &path,
+            &keys,
+            &c,
+            "m",
+            request("m", "http://127.0.0.1:1/v1/x"),
+        )
+        .await;
+        assert_eq!(unknown, Err("Unknown local model.".into()));
+        let missing = call(
+            &path,
+            &keys,
+            &c,
+            "l",
+            request("l", "http://127.0.0.1:1/v1/x"),
+        )
+        .await;
+        assert!(missing.is_err_and(|e| e.contains("not downloaded") || e.contains("root")));
     }
 
     #[tokio::test]

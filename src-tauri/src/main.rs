@@ -10,6 +10,7 @@ mod protocol;
 // Phase 4 (AI): LLM targets, local servers, web fetch, hardware.
 mod hardware;
 mod llm;
+mod localruntime;
 mod net;
 mod ollama;
 mod webfetch;
@@ -97,6 +98,18 @@ fn main() {
             ollama::ollama_manifest_size,
             ollama::localserver_discover,
             hardware::local_probe,
+            localruntime::local_runtime,
+            localruntime::local_runtime_plan,
+            localruntime::local_runtime_install,
+            localruntime::local_model_plan,
+            localruntime::local_model_install,
+            localruntime::local_cancel,
+            localruntime::local_installed,
+            localruntime::local_remove,
+            localruntime::local_start,
+            localruntime::local_stop,
+            localruntime::local_status,
+            localruntime::local_logs,
             git::git_probe,
             git::git_pick_clone_dir,
             git::git_clone,
@@ -134,6 +147,11 @@ fn main() {
             git::git_write_working,
             git::git_discard_file,
         ])
-        .run(tauri::generate_context!())
-        .expect("tauri run failed");
+        .build(tauri::generate_context!())
+        .expect("tauri build failed")
+        .run(|_, event| {
+            if let tauri::RunEvent::Exit = event {
+                localruntime::stop_all();
+            }
+        });
 }
