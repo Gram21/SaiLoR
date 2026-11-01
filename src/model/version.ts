@@ -50,9 +50,9 @@ export interface OsInfo {
 /**
  * The installer matching this machine, from a release's assets.
  *
- * Matching is by the OS/arch we put in the artifact names
- * (`SaiLoR-0.3.0-macos-arm64.dmg`), so it stays correct as long as
- * package.json's `artifactName` patterns do. Returns null when nothing matches
+ * Matching is by the OS/arch in the default Tauri artifact names
+ * (`SaiLoR_2.0.0_aarch64.dmg`), so it stays correct as long as the Tauri bundler
+ * naming does. Returns null when nothing matches
  * — the caller then falls back to the release page rather than offering the
  * wrong binary.
  */
@@ -67,13 +67,13 @@ export function pickInstaller(assets: ReleaseAsset[], os: OsInfo | null): Update
   let label = ''
   if (isMac) {
     const arm = os.arch === 'arm64'
-    match = arm ? /macos-arm64\.dmg$/i : /macos-x64\.dmg$/i
+    match = arm ? /_aarch64\.dmg$/i : /_x64\.dmg$/i
     label = arm ? 'macOS (Apple Silicon)' : 'macOS (Intel)'
   } else if (isWin) {
-    match = /windows-.*\.exe$/i
+    match = /_x64-setup\.exe$/i
     label = 'Windows'
   } else if (isLinux) {
-    match = /linux-.*\.AppImage$/i
+    match = /_amd64\.AppImage$/i
     label = 'Linux'
   }
   if (!match) return undefined

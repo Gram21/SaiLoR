@@ -582,7 +582,7 @@ Differences from Electron:
 - `App.tsx` shows the download and install buttons only if `nativeUpdate` is true. If not, it shows the download link.
 - Electron does not call `checkForNativeUpdate` on macOS. Tauri calls it on every OS, because `update.rs` decides by bundle type.
 - `useElectronCloseGuard` uses `getBridge()` in both shells. It receives `update:progress`, `update:downloaded` and `update:error` in Tauri.
-- `pickInstaller` in `src/model/version.ts` does not know the Tauri file names. The download link then opens the release page.
+- The download link picks the Tauri file names (`_aarch64.dmg`, `_x64.dmg`, `_x64-setup.exe`, `_amd64.AppImage`). Fix applied after the cutover.
 
 ### 18.6 Close guard
 
@@ -597,7 +597,7 @@ Differences from Electron:
 
 - "Don't Save" exits the app.
 - "Cancel" and a failed save keep the window open.
-- `app.exit` and `app.restart` (update install) set `code`, so the guard lets them pass.
+- `app.exit` and `app.restart` (update install) set `code`, so the guard lets them pass. `update_install` therefore refuses with an `update:error` event while the project has unsaved changes.
 
 Differences from Electron:
 
@@ -726,7 +726,7 @@ Kept on purpose:
 
 ### 20.6 Not done
 
-- `pickInstaller` in `src/model/version.ts` does not know the Tauri file names. The download link opens the release page.
+- The download link picks the Tauri file names. Fix applied after the cutover.
 - A final Electron release with a reinstall notice (Phase 6 step 1) is not part of this branch.
 - `openwiki/` is generated. The scheduled workflow updates it.
 

@@ -41,6 +41,10 @@ fn choice(result: &MessageDialogResult) -> Choice {
 }
 
 impl Guard {
+    pub fn is_dirty(&self) -> bool {
+        self.dirty.load(SeqCst)
+    }
+
     /// Some(true): show the dialog. Some(false): a dialog is already open.
     /// None: let the close pass.
     fn on_close(&self) -> Option<bool> {

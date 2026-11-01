@@ -82,6 +82,10 @@ pub fn update_download(app: AppHandle) {
 
 #[tauri::command]
 pub async fn update_install(app: AppHandle) {
+    if app.state::<crate::close::Guard>().is_dirty() {
+        error(&app, "Save your project before you install the update.");
+        return;
+    }
     let pending = std::mem::take(&mut *app.state::<State>().lock().unwrap());
     let (Some(update), Some(bytes)) = (pending.update, pending.bytes) else {
         return;
