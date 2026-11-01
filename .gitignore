@@ -238,3 +238,8 @@ release/
 test-results/
 playwright-report/
 
+
+# Tauri spike
+src-tauri/target
+src-tauri/gen
+dist-spike
