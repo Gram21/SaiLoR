@@ -669,7 +669,9 @@ interface AppState {
   appVersion: string
   /** Set only when a *newer* release exists; null while up to date or unknowable. */
   update: UpdateInfo | null
-  /** Download progress (0-100) of the native self-update, once started. Win/linux only. */
+  /** The native self-updater can download and install `update` (see `checkForNativeUpdate`). */
+  nativeUpdate: boolean
+  /** Download progress (0-100) of the native self-update, once started. */
   updateProgress: number | null
   /** The native self-update has finished downloading and can be installed. */
   updateReady: boolean
@@ -845,8 +847,8 @@ interface AppState {
   closeDisagreements: () => void
   /** Look for a newer release (cached; silent when it can't be determined). */
   checkForUpdate: () => Promise<void>
-  /** Start downloading the update found by `checkForUpdate`. Win/linux only —
-   *  a no-op wherever `checkForNativeUpdate` reports unsupported (mac, browser). */
+  /** Start downloading the update found by `checkForUpdate`. Only offered when
+   *  `nativeUpdate` is set; a no-op wherever `checkForNativeUpdate` reports unsupported. */
   downloadUpdate: () => Promise<void>
   /** Quit and install the update `updateReady` confirmed is downloaded. */
   installUpdate: () => Promise<void>
@@ -1251,6 +1253,7 @@ export const useStore = create<AppState>()(
     pendingAfterPrompt: null,
     appVersion: APP_VERSION,
     update: null,
+    nativeUpdate: false,
     updateProgress: null,
     updateReady: false,
     updateError: null,
@@ -2308,10 +2311,16 @@ export const useStore = create<AppState>()(
       // something once the GitHub-API check above has already confirmed a
       // newer version exists — that check stays the single source of truth
       // for "is there an update"; this one only ever drives the download
-      // mechanics on win/linux (mac reports { supported: false }, see
-      // electron/main.ts). Never triggers a download by itself.
-      if (get().update && getPlatform().getOsInfo()?.platform !== 'darwin') {
-        void getPlatform().checkForNativeUpdate()
+      // mechanics where the shell supports them (Electron: win/linux, see
+      // electron/main.ts; Tauri: per bundle, see src-tauri/src/update.rs).
+      // Never triggers a download by itself.
+      const platform = getPlatform()
+      if (get().update && (platform.kind === 'tauri' || platform.getOsInfo()?.platform !== 'darwin')) {
+        void platform.checkForNativeUpdate().then(({ supported }) =>
+          set((s) => {
+            s.nativeUpdate = supported
+          }),
+        )
       }
     },
 

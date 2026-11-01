@@ -5,7 +5,7 @@ import { linkifyText, type LinkifySegment } from '../model/linkify'
 import { getPlatform } from '../platform'
 
 const isMac = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform)
-const MOD = getPlatform().kind === 'electron' && isMac ? '⌘' : 'Ctrl'
+const MOD = getPlatform().kind !== 'browser' && isMac ? '⌘' : 'Ctrl'
 
 /** The one link to jump straight to on modifier-click, or `undefined` when the
  *  description has none or more than one — a multi-link description still

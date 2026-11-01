@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod authz;
+mod close;
 mod feedback;
 mod git;
 mod paths;
@@ -50,11 +51,33 @@ fn spike_report(line: String) {
     }
 }
 
+/// `process.platform` / `process.arch` names, as `SlrBridge.os` documents.
+fn os_info() -> serde_json::Value {
+    let platform = match std::env::consts::OS {
+        "macos" => "darwin",
+        "windows" => "win32",
+        os => os,
+    };
+    let arch = match std::env::consts::ARCH {
+        "x86_64" => "x64",
+        "aarch64" => "arm64",
+        "x86" => "ia32",
+        arch => arch,
+    };
+    serde_json::json!({ "platform": platform, "arch": arch })
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(
+            tauri::plugin::Builder::<tauri::Wry>::new("slr-os")
+                .js_init_script(format!("window.__SLR_OS__={};", os_info()))
+                .build(),
+        )
         .manage(update::State::default())
+        .manage(close::Guard::default())
         .manage(Mutex::new(Session::default()))
         .register_asynchronous_uri_scheme_protocol("slr-file", |ctx, req, responder| {
             let app = ctx.app_handle().clone();
@@ -154,12 +177,21 @@ fn main() {
             update::update_check,
             update::update_download,
             update::update_install,
+            close::app_set_dirty,
+            close::app_save_complete,
         ])
         .build(tauri::generate_context!())
         .expect("tauri build failed")
-        .run(|_, event| {
-            if let tauri::RunEvent::Exit = event {
-                localruntime::stop_all();
-            }
+        .run(|app, event| match event {
+            // `code: None` is a user quit; our own `exit`/`restart` pass.
+            tauri::RunEvent::ExitRequested {
+                code: None, api, ..
+            } if close::intercept(app) => api.prevent_exit(),
+            tauri::RunEvent::WindowEvent {
+                event: tauri::WindowEvent::CloseRequested { api, .. },
+                ..
+            } if close::intercept(app) => api.prevent_close(),
+            tauri::RunEvent::Exit => localruntime::stop_all(),
+            _ => {}
         });
 }

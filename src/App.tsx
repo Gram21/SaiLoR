@@ -84,6 +84,7 @@ export function App() {
   const appVersion = useStore((s) => s.appVersion)
   const update = useStore((s) => s.update)
   const checkForUpdate = useStore((s) => s.checkForUpdate)
+  const nativeUpdate = useStore((s) => s.nativeUpdate)
   const updateProgress = useStore((s) => s.updateProgress)
   const updateReady = useStore((s) => s.updateReady)
   const updateError = useStore((s) => s.updateError)
@@ -333,11 +334,11 @@ export function App() {
                     <strong>Version {update.latest} is available</strong> — you have {appVersion}.
                   </span>
                   <span className="update-links">
-                    {isElectron() && getPlatform().getOsInfo()?.platform !== 'darwin' ? (
-                      // Windows/Linux: a real, explicitly user-triggered download +
-                      // install, never automatic — see electron/main.ts. macOS has
-                      // no reliable unsigned auto-update path, so it keeps the plain
-                      // download link below instead.
+                    {nativeUpdate ? (
+                      // A real, explicitly user-triggered download + install, never
+                      // automatic. Only where the shell reported it can self-update
+                      // (`checkForNativeUpdate`); elsewhere (e.g. Electron on macOS,
+                      // a Tauri .deb) the plain download link below stays.
                       updateReady ? (
                         <button
                           type="button"

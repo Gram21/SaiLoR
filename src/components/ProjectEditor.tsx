@@ -9,7 +9,7 @@ import type { ProjectProvenance } from '../model/project'
 import '../styles/editor.css'
 
 const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform)
-const MOD = getPlatform().kind === 'electron' && isMac ? '⌘' : 'Ctrl'
+const MOD = getPlatform().kind !== 'browser' && isMac ? '⌘' : 'Ctrl'
 
 /** Issues stay a flat string list (`validateDraft` in editorStore.ts) rather
  *  than structured per-paper objects, so a "Paper N: …" line is recognized by

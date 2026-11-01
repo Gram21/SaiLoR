@@ -23,7 +23,7 @@ import type {
 
 /** Backend API: `window.slr` from electron/preload.ts, or the Tauri bridge in `./tauri`. */
 export interface SlrBridge {
-  /** The machine this build is running on (from process.platform / process.arch). Absent on Tauri for now. */
+  /** The machine this build is running on (Node names: process.platform / process.arch). */
   os?: { platform: string; arch: string }
   openProject(): Promise<{ path: string; text: string; corrupt: string[] } | null>
   /** Read a specific file by absolute path (for recent files). Null if missing. */
@@ -162,7 +162,8 @@ export interface SlrBridge {
   gitBranchSwitchFinish(root: string, relPath: string, resolved: SplitProject): Promise<GitRun>
   gitBranchSwitchAbort(root: string, sourceBranch: string): Promise<GitRun>
 
-  // Self-update (Windows/Linux only — main.ts is a no-op on darwin). Download
+  // Self-update. Electron: Windows/Linux only (main.ts is a no-op on darwin).
+  // Tauri: where the bundle can self-update (src-tauri/src/update.rs). Download
   // and install are only ever triggered by the two calls below, never on their own.
   checkForNativeUpdate(): Promise<{ supported: boolean }>
   downloadNativeUpdate(): Promise<void>

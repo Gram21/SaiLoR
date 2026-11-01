@@ -84,7 +84,7 @@ export function PapersEditor() {
   // row swallows text selection inside its own inputs.
   const [armedUid, setArmedUid] = useState<string | null>(null)
 
-  const isBrowser = getPlatform().kind !== 'electron'
+  const isBrowser = getPlatform().kind === 'browser'
   const jsonName = location?.name ?? 'the project JSON'
 
   // Live here so a reviewer sees an id collision the moment they cause it,

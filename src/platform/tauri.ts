@@ -114,6 +114,10 @@ const replace =
  * fields. Commands not yet implemented in Rust reject.
  */
 export const tauriBridge: SlrBridge = {
+  /** Set by the `slr-os` init script in src-tauri/src/main.rs. */
+  get os() {
+    return (globalThis as { __SLR_OS__?: { platform: string; arch: string } }).__SLR_OS__
+  },
   openProject: then(call('project:open'), opened),
   openPath: then(call('project:openPath', 'filePath'), opened),
   saveProject: call('project:save', 'filePath', 'metaText', 'files'),
@@ -238,6 +242,8 @@ export const tauriBridge: SlrBridge = {
 
 /** The Electron adapter's renderer logic over the Tauri transport. */
 export class TauriAdapter extends ElectronAdapter {
+  override readonly kind = 'tauri' as const
+
   constructor() {
     super()
     setBridge(tauriBridge)

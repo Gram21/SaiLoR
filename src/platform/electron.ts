@@ -98,7 +98,7 @@ const bridge = getBridge
 
 /** Electron adapter: native dialogs + fs via IPC, PDFs via the slr-file:// protocol. */
 export class ElectronAdapter implements PlatformAdapter {
-  readonly kind = 'electron' as const
+  readonly kind: 'electron' | 'tauri' = 'electron'
 
   getOsInfo(): OsInfo | null {
     return bridge().os ?? null

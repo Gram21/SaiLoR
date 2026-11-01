@@ -65,7 +65,8 @@ export interface PickedPdf {
 }
 
 export interface PlatformAdapter {
-  readonly kind: 'electron' | 'browser'
+  /** The desktop shell (`electron` or `tauri`), or `browser`. */
+  readonly kind: 'electron' | 'tauri' | 'browser'
 
   /**
    * OS/arch we're running on, so the update notice can offer the matching
