@@ -15,7 +15,7 @@ The authors plan to publish the report on arXiv when version 2.0.0 is released.
 
 | Path | Content |
 |---|---|
-| `main.tex` | Root document. |
+| `main.tex` | Root document. Uses the IEEE template (`IEEEtran`, conference mode). |
 | `sections/*.tex` | One file per section. Each file holds an outline. |
 | `references.bib` | Bibliography. |
 | `figures/` | Figures. Link screenshots from `../user-guide/screenshots/`. |

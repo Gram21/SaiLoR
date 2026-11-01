@@ -1,18 +1,23 @@
-\documentclass[11pt]{article}
+\documentclass[conference]{IEEEtran}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage{graphicx,booktabs,hyperref}
+\usepackage{graphicx,booktabs,cite}
+\usepackage[hidelinks]{hyperref}
 \graphicspath{{figures/}{../user-guide/screenshots/}}
 
 \title{SaiLoR: Systematic Support for Systematic Literature Reviews}
-\author{TODO authors}
-\date{Version 2.0.0}
+\author{\IEEEauthorblockN{TODO Author One, TODO Author Two}
+\IEEEauthorblockA{TODO Affiliation\\TODO email}}
 
 \begin{document}
 \maketitle
 \begin{abstract}
 TODO: Problem, idea, tool, requirements traceability, availability (five to seven sentences).
 \end{abstract}
+
+\begin{IEEEkeywords}
+systematic literature review, tool support, requirements traceability
+\end{IEEEkeywords}
 
 \input{sections/01-introduction}
 \input{sections/02-related-work}
@@ -23,6 +28,6 @@ TODO: Problem, idea, tool, requirements traceability, availability (five to seve
 \input{sections/07-discussion}
 \input{sections/08-conclusion}
 
-\bibliographystyle{plain}
+\bibliographystyle{IEEEtran}
 \bibliography{references}
 \end{document}
