@@ -31,15 +31,15 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-50 — Encrypt stored API keys
-- **Description:** The system shall store API keys encrypted with the operating system's secure storage in a configuration file restricted to owner read/write, and shall refuse to save a key when secure storage is unavailable.
+- **Description:** The system shall store API keys encrypted with the operating system's secure storage in a configuration file restricted to owner read/write, and shall refuse to save a key when secure storage is unavailable. The Tauri shell shall store the key in the operating system keychain and keep only a `"keyring": true` marker in the configuration file.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `electron/main.ts:1408-1464`
+- **Evidence:** `electron/main.ts:1408-1464`, `src-tauri/src/llm.rs`
 - **Status:** Implemented
 
 ### REQ-LLM-60 — Restrict key transmission
 - **Description:** The system shall attach the API key only to requests whose URL uses http or https, matches the configured base URL's protocol and origin, and shall refuse HTTP redirects on key-carrying requests.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `electron/main.ts:1519-1534,1551-1566`
+- **Evidence:** `electron/main.ts:1519-1534,1551-1566`, `src-tauri/src/llm.rs`
 - **Status:** Implemented
 
 ### REQ-LLM-70 — Bound LLM call duration

@@ -312,3 +312,56 @@ Differences from Electron:
 
 - The `pdf_allow_path` warning dialog cannot set a default button. The Enter key can select "Open anyway".
 - `paths_sibling` also refuses `.` and `..` as file names.
+
+## 14. Phase 4 progress (AI)
+
+Scope: the Rust side of the AI channels, without `localRuntime` and without the updater. The bridge in `src/platform/tauri.ts` already maps these channels.
+
+Modules in `src-tauri/src/`:
+
+| Module | Content |
+| --- | --- |
+| `net.rs` | Shared HTTP client setup, the abort registry, and a `TcpListener` mock server for tests. |
+| `llm.rs` | `llm_configs`, `llm_save_config`, `llm_delete_config`, `llm_call`, `llm_abort`. |
+| `ollama.rs` | `ollama_version`, `ollama_list`, `ollama_show`, `ollama_ps`, `ollama_pull`, `ollama_cancel_pull`, `ollama_delete`, `ollama_manifest_size`, `localserver_discover`. |
+| `webfetch.rs` | `web_fetch`, `web_abort`, with the SSRF guard, 5 redirects, 2 MiB and 20 s limits. |
+| `hardware.rs` | `local_probe`. |
+
+New dependencies:
+
+| Crate | Reason |
+| --- | --- |
+| `reqwest` (no default features, `rustls-no-provider`, `system-proxy`) | Streaming HTTP client with a pluggable DNS resolver. Electron used `net.fetch`. The custom resolver is the SSRF guard. |
+| `rustls` (`ring`) | TLS without OpenSSL. `ring` builds without CMake, unlike `aws-lc-rs`. HTTP/2 is off because LLM calls do not need it. |
+| `tokio` | Timeouts, abort signals and child processes. Tauri already depends on it. |
+| `url` | WHATWG URL parsing for origin checks. Tauri already depends on it. |
+| `encoding_rs` | Decodes `web_fetch` bodies by their charset, like `TextDecoder`. |
+| `keyring` | Stores API keys in the macOS Keychain, the Windows Credential Manager, or the Secret Service on Linux. |
+| `sysinfo` (`system`, `disk`) | RAM and free disk space for `local_probe`. |
+
+Config file compatibility:
+
+- The file is `<config dir>/SaiLoR/llm-config.json`, the same path as the packaged Electron app.
+- The format stays a JSON array of targets. Unknown fields are kept.
+- A key saved in Tauri goes to the keychain (service `SaiLoR`, account `llm:<id>`). The entry gets `"keyring": true`.
+- Tauri cannot decrypt the Electron `safeStorage` blob in `key`. The blob stays in the file, but Tauri reports `hasKey: false` for that target.
+- Caution: Users must enter each API key again once after the switch to Tauri. Targets with `noKey` need no action.
+- Electron ignores the keychain. A key saved only in Tauri is not visible to Electron.
+- Tauri sets the file mode to `0600` on every write, not only when it creates the file.
+
+Not ported:
+
+| Channel | Reason |
+| --- | --- |
+| `local:*` except `local:probe` | `localRuntime` is later work (Phase 4 step 3). |
+| `llm:call` for managed targets | Managed targets need `localRuntime`. The command refuses them with an error. |
+| `update:*` | The updater moves to `tauri-plugin-updater` (Phase 4 step 4). |
+
+Differences from Electron:
+
+- `web_fetch` pins DNS: the resolver checks every address and the client connects only to checked addresses. Electron checked the name, then resolved it again for the connection. This closes the DNS-rebinding gap.
+- `llm_call` reports a redirect as `Refusing to follow a redirect from <origin>.`. Electron reported a generic fetch error.
+- `Retry-After` reads delta seconds and IMF-fixdate. The obsolete RFC 850 and asctime date forms give no retry hint.
+- `local_probe` reports available RAM as `freeRamBytes`. Node reports free RAM, which is lower on macOS.
+
+Verification: `cargo test` runs the ported cases of `ollama.test.ts`, `hardware.test.ts` and the SSRF cases of `webFetch.test.ts` against a local mock server.
