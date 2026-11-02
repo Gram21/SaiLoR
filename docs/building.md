@@ -94,6 +94,11 @@ Caution: The container refuses to start with `VNC_LISTEN_ALL=1` and no `VNC_PASS
 - The container uses software rendering. Screen updates can be slow.
 - File dialogs use the GTK dialogs in the virtual display. They show only the container file system.
   Files outside `/data` and `sailor-home` are not visible.
+- The image contains Git and the SSH client. Local Git actions work on projects in `/data`.
+  The image marks every folder as a safe Git directory, so mounted projects work with any owner.
+- The container has no Git credentials. To push or pull over SSH, add `-v "$HOME/.ssh:/home/sailor/.ssh:ro"` to the run command.
+  For HTTPS remotes, push and pull from the host instead.
+- The container stores AI settings in `/home/sailor/.sailor`. The `sailor-home` volume keeps them.
 - The container does not update SaiLoR. Build a new image for a new version.
 - The container has no system keychain. SaiLoR cannot save LLM API keys.
   Targets that need no key still work. Use the desktop builds for API keys.

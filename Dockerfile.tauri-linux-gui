@@ -34,12 +34,13 @@ ENV DEBIAN_FRONTEND=noninteractive LANG=C.UTF-8 \
     SCREEN_RESOLUTION=1440x900
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      ca-certificates tini dbus xvfb openbox x11vnc novnc websockify \
+      ca-certificates git openssh-client tini dbus xvfb openbox x11vnc novnc websockify \
       fonts-dejavu-core fonts-liberation libgl1-mesa-dri libegl1 \
       libwebkit2gtk-4.1-0 libgtk-3-0 \
  && rm -rf /var/lib/apt/lists/*
 
-RUN useradd --create-home --uid 1000 --shell /bin/bash sailor \
+RUN git config --system safe.directory '*' \
+ && useradd --create-home --uid 1000 --shell /bin/bash sailor \
  && install -d -o sailor -g sailor /data
 
 COPY --from=build /out/sailor /opt/sailor/sailor
