@@ -382,3 +382,10 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `samples/git-scenarios/builder.ts`, `samples/git-scenarios/scenarios.ts`, `samples/git-scenarios/cli.ts`, commit `47fb3f9`
 - **Verified by:** `src/test/integration/gitScenarios.integration.test.tsx`
 - **Status:** Implemented
+
+### REQ-GIT-530: Bound git command output
+- **Description:** The system shall terminate a git command that writes more than 32 MB to standard output or standard error, and shall report the command as failed without returning its partial output.
+- **Type:** Non-functional (ISO 25010: Reliability)
+- **Evidence:** `src-tauri/src/git.rs` (`MAX_OUTPUT`, `run_git_capped`), commit `6d6fa44`
+- **Verified by:** `src-tauri/src/git.rs` (`output_over_the_cap_fails_without_data`)
+- **Status:** Implemented

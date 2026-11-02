@@ -328,6 +328,7 @@ inspection only.
 | REQ-GIT-500 | Carry hidden answers through merges | Functional · Functional Suitability | `src/git/merge.ts:179-186,340` | `src/git/merge.test.ts` (`mergeProjects — answers under a field the schema no longer has`) | commit `0e185f2`<br>commit `264d6b0` | — |
 | REQ-GIT-510 | Warn about a paper already read in the same seat | Functional · Functional Suitability | `src-tauri/src/git.rs` (`annotation_authors`)<br>`src/git/seatOwner.ts:71-94,120-133`<br>`src/components/SeatConflictNotice.tsx` | `src/git/seatOwner.test.ts`<br>`src/components/SeatConflictNotice.test.tsx` | commit `c83daba` | `openwiki/architecture.md` §Electron Main Process<br>`user-guide/multi-reviewer.md` §Reviewer-seat identity |
 | REQ-GIT-520 | Reproducible git scenarios | Non-functional · Maintainability | `samples/git-scenarios/builder.ts`<br>`samples/git-scenarios/scenarios.ts`<br>`samples/git-scenarios/cli.ts` | `src/test/integration/gitScenarios.integration.test.tsx` | commit `47fb3f9` | `samples/git-scenarios/README.md`<br>`user-guide/git.md` §Trying it out |
+| REQ-GIT-530 | Bound git command output | Non-functional · Reliability | `src-tauri/src/git.rs` (`MAX_OUTPUT`, `run_git_capped`) | `src-tauri/src/git.rs` (`output_over_the_cap_fails_without_data`) | commit `6d6fa44` | `openwiki/workflows/git-integration.md` §Security gates: input never chooses argv<br>`openwiki/operations/electron-shell.md` §Git handlers (`git:*`) |
 
 ## LLM-assisted annotation ([llm-annotation.md](llm-annotation.md))
 
@@ -471,13 +472,21 @@ inspection only.
 | REQ-PLT-330 | Ad-hoc sign unsigned macOS builds | Non-functional, design constraint · Usability — Operability | `.github/workflows/release.yml` (job `build`, step "macOS signing and notarization (optional)") | — | — | `openwiki/operations/build-release.md` §Build pipeline / §electron-builder configuration |
 | REQ-PLT-340 | Optional autosave | Functional · Functional Suitability | `src/components/Toolbar.tsx` (Save menu)<br>`src/state/settings.ts` (`slr.autosave`) | — | — | `openwiki/architecture.md` §State Management |
 | REQ-PLT-350 | Archive releases on Zenodo | Non-functional, design constraint · Portability — Adaptability | `.github/workflows/release.yml` (job `zenodo`) | — | — | `README.md` (Zenodo badge) |
+| REQ-PLT-360 | Refuse update install with unsaved changes | Functional · Functional Suitability | `src-tauri/src/update.rs` (`update_install`)<br>`src-tauri/src/close.rs` (`Guard`, `is_dirty`) | — | commit `251b64a` | `openwiki/operations/electron-shell.md` §Self-update (`update:*`)<br>`openwiki/operations/build-release.md` §Release signing (Ed25519 feed signature)<br>`openwiki/architecture.md` §In-app self-update |
 
 ## Coverage statistics
 
+Counts come from `python3 technical-report/trace_stats.py` at source revision `96c4ec3`.
+
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 388 | 100% |
-| With at least one verifying test | 352 | 90% |
-| Without an automated check (source inspection only) | 37 | 10% |
-| With an introducing/pinning commit | 116 | 30% |
-| With a documentation link | 335 | 86% |
+| Requirements traced | 391 | 100% |
+| With an implementing source link | 365 | 93% |
+| With at least one verifying test | 360 | 92% |
+| Without an automated check (source inspection only) | 31 | 8% |
+| With an introducing/pinning commit | 118 | 30% |
+| With a documentation link | 337 | 86% |
+| Security-related (ISO 25010 Security) | 32 | 8% |
+| Distinct test files linked | 185 | — |
+| Distinct source files linked | 177 | — |
+| Linked files missing at this revision | 0 | — |

@@ -299,3 +299,9 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Type:** Non-functional, design constraint (ISO 25010: Portability — Adaptability)
 - **Evidence:** `.github/workflows/release.yml` (job `zenodo`), `README.md` (Zenodo badge)
 - **Status:** Implemented
+
+### REQ-PLT-360: Refuse update install with unsaved changes
+- **Description:** When the user asks to install a downloaded update while the project has unsaved changes, the system shall refuse the install and show a message asking the user to save the project first.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src-tauri/src/update.rs` (`update_install`), `src-tauri/src/close.rs` (`Guard`, `is_dirty`), commit `251b64a`
+- **Status:** Implemented. No automated check: the refusal depends on the Tauri command context.
