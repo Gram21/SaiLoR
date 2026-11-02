@@ -1,4 +1,4 @@
-# SaiLoR — Software Requirements
+# SaiLoR: Software Requirements
 
 Requirements reverse-engineered from the implemented codebase (source, tests, docs, and
 commit history) as of 2026-08-27 (v1.8.1), with incremental updates through 2026-09-07
@@ -52,13 +52,13 @@ per category so requirements can be inserted without renumbering.
 | Category | Requirements |
 |---|---|
 | Data model & editor (DAT/EDT) | 61 |
-| Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 53 |
+| Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 54 |
 | Screening (SCR) | 39 |
 | Consolidation (CON) | 44 |
-| Git integration (GIT) | 58 |
+| Git integration (GIT) | 59 |
 | LLM annotation (LLM) | 88 |
-| Platform & shell (PLT) | 45 |
-| **Total** | **388** |
+| Platform & shell (PLT) | 46 |
+| **Total** | **391** |
 
 ## Method & evidence notes
 
@@ -111,3 +111,7 @@ per category so requirements can be inserted without renumbering.
 - **Highlight file names (source at `6eb9027`).** REQ-DAT-172 added; REQ-PLT-90 and REQ-PLT-95 narrowed
   to projects of the same kind.
 - **Screening highlights (source at `780f1d1`).** REQ-PDF-185 added.
+- **Update of 2026-11-02 (release/2.0.0 at `96c4ec3`).** Stale line ranges replaced with symbol names,
+  Electron-era paths removed, and test links added for REQ-LLM-40, REQ-LLM-80, REQ-UI-20, REQ-GIT-90,
+  REQ-GIT-120, REQ-GIT-220, REQ-GIT-380 and REQ-GIT-400. REQ-GIT-530 (git output cap) and REQ-PLT-360
+  (update install refused with unsaved changes) added. Coverage counts recounted with `trace_stats.py`.
