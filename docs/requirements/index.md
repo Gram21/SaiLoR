@@ -76,7 +76,8 @@ per category so requirements can be inserted without renumbering.
   Functional Suitability; design constraints are labeled as such in addition.
 - Thin-evidence areas deliberately not turned into requirements: exact visual styling,
   internal performance optimizations without a tested threshold, and the discontinued
-  browser/Docker deployment (documented only as the REQ-PLT-10 refusal behavior).
+  browser deployment (documented only as the REQ-PLT-10 refusal behavior).
+  The Linux container with a browser view is covered by REQ-PLT-370.
 - One known, documented limitation is captured inside the consolidation evidence rather
   than as a requirement: project-wide agreement statistics can misread unaligned papers;
   the implemented mitigation is the REQ-CON-330 warning.
