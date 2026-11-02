@@ -1,0 +1,51 @@
+# syntax=docker/dockerfile:1
+# Runs SaiLoR in a container and shows its window in a browser through noVNC.
+# Stage "build" compiles the release binary. Stage "runtime" keeps only what the app needs.
+# Build: docker compose -f docker-compose.dev.yml build tauri-linux-gui
+# Run:   see docs/building.md, section "Run the app in a container".
+
+FROM ubuntu:22.04 AS build
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+ENV DEBIAN_FRONTEND=noninteractive \
+    RUSTUP_HOME=/opt/rustup CARGO_HOME=/opt/cargo \
+    PATH=/opt/cargo/bin:$PATH
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential ca-certificates curl file git pkg-config \
+      libssl-dev libwebkit2gtk-4.1-dev libxdo-dev libayatana-appindicator3-dev librsvg2-dev \
+ && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+ && apt-get install -y --no-install-recommends nodejs \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci
+
+COPY . .
+RUN --mount=type=cache,target=/opt/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/app/src-tauri/target,sharing=locked \
+    npx tauri build --no-bundle --config src-tauri/tauri.conf.json \
+ && install -Dm755 src-tauri/target/release/sailor /out/sailor
+
+FROM ubuntu:22.04 AS runtime
+ENV DEBIAN_FRONTEND=noninteractive LANG=C.UTF-8 \
+    SCREEN_RESOLUTION=1440x900
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates tini dbus xvfb openbox x11vnc novnc websockify \
+      fonts-dejavu-core fonts-liberation libgl1-mesa-dri libegl1 \
+      libwebkit2gtk-4.1-0 libgtk-3-0 \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN useradd --create-home --uid 1000 --shell /bin/bash sailor \
+ && install -d -o sailor -g sailor /data
+
+COPY --from=build /out/sailor /opt/sailor/sailor
+COPY --chmod=0755 docker/gui-entrypoint.sh /usr/local/bin/gui-entrypoint.sh
+
+USER 1000:1000
+WORKDIR /data
+EXPOSE 6080
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/gui-entrypoint.sh"]
