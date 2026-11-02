@@ -22,9 +22,9 @@ Still, an independent review of the requirements is open.
 
 % Tauri port
 The move to Tauri is recent.
-Six requirements of the Electron shell are not ported yet: the single application instance, the persisted window state, the migration of the old settings folder, the denial of device permissions, the opening of external links in the system browser, and the undo entry in the application menu.
-The guard against an accidental reload of the window works only in part.
-None of these gaps affects the review data, and we are working on porting them.
+Six features of the Electron shell are now ported to Tauri: the single application instance, the persisted window state, the migration of the old settings folder, the denial of device permissions, the opening of external links in the system browser, and the undo entry in the application menu.
+The guard against reload shortcuts is not ported yet.
+The renderer registers a guard while changes are unsaved, but the Tauri shell has no reload confirmation dialog of its own, and its View menu has no reload item.
 Furthermore, all figures in this report show the user interface of version 1.x.
 % TODO: Retake the screenshots on the 2.0.0 build and remove the previous sentence.
 
