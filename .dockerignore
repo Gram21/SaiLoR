@@ -6,7 +6,6 @@ src-tauri/gen
 .git
 .gitignore
 *.log
-samples
 .vite
 .DS_Store
 .claude

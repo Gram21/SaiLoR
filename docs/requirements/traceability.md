@@ -473,20 +473,21 @@ inspection only.
 | REQ-PLT-340 | Optional autosave | Functional · Functional Suitability | `src/components/Toolbar.tsx` (Save menu)<br>`src/state/settings.ts` (`slr.autosave`) | — | — | `openwiki/architecture.md` §State Management |
 | REQ-PLT-350 | Archive releases on Zenodo | Non-functional, design constraint · Portability: Adaptability | `.github/workflows/release.yml` (job `zenodo`) | — | — | `README.md` (Zenodo badge) |
 | REQ-PLT-360 | Refuse update install with unsaved changes | Functional · Functional Suitability | `src-tauri/src/update.rs` (`update_install`)<br>`src-tauri/src/close.rs` (`Guard`, `is_dirty`) | — | commit `251b64a` | `openwiki/operations/electron-shell.md` §Self-update (`update:*`)<br>`openwiki/operations/build-release.md` §Release signing (Ed25519 feed signature)<br>`openwiki/architecture.md` §In-app self-update |
+| REQ-PLT-370 | Run in a container with a browser view | Non-functional, design constraint · Security: Confidentiality | `Dockerfile.tauri-linux-gui`<br>`docker/gui-entrypoint.sh` (`VNC_LISTEN_ALL`, `-localhost`)<br>`docker-compose.dev.yml` (service `tauri-linux-gui`) | — | — | `docs/building.md` §Run the app in a container (Linux only) |
 
 ## Coverage statistics
 
-Counts come from `python3 technical-report/trace_stats.py` at source revision `96c4ec3`.
+Counts come from `python3 technical-report/trace_stats.py` at the revision that adds REQ-PLT-370.
 
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 391 | 100% |
-| With an implementing source link | 365 | 93% |
+| Requirements traced | 392 | 100% |
+| With an implementing source link | 366 | 93% |
 | With at least one verifying test | 360 | 92% |
-| Without an automated check (source inspection only) | 31 | 8% |
+| Without an automated check (source inspection only) | 32 | 8% |
 | With an introducing/pinning commit | 118 | 30% |
-| With a documentation link | 337 | 86% |
-| Security-related (ISO 25010 Security) | 32 | 8% |
+| With a documentation link | 338 | 86% |
+| Security-related (ISO 25010 Security) | 33 | 8% |
 | Distinct test files linked | 185 | — |
-| Distinct source files linked | 177 | — |
+| Distinct source files linked | 178 | — |
 | Linked files missing at this revision | 0 | — |

@@ -2,7 +2,7 @@
 CARGO := cargo
 
 .PHONY: help setup install dev web build build-debug probe test test-js test-rust test-integration \
-        lint fmt typecheck check clean report docker-linux
+        lint fmt typecheck check clean report docker-linux docker-gui-build docker-gui
 
 help: ## Show this help
 	@awk 'BEGIN{FS=":.*## "} /^[a-zA-Z_-]+:.*## /{printf "  %-18s %s\n",$$1,$$2}' $(MAKEFILE_LIST)
@@ -60,3 +60,10 @@ report: ## Build the technical report PDF
 
 docker-linux: ## Build Linux bundles (AppImage, deb, rpm) in Docker
 	docker compose -f docker-compose.dev.yml run --rm --build tauri-linux
+
+docker-gui-build: ## Build the container image that runs SaiLoR in a browser
+	docker compose -f docker-compose.dev.yml build tauri-linux-gui
+
+docker-gui: ## Run SaiLoR in a container, open http://localhost:6080
+	mkdir -p projects
+	docker compose -f docker-compose.dev.yml up --build tauri-linux-gui

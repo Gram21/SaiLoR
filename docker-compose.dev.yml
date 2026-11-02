@@ -15,5 +15,21 @@ services:
       - /app/node_modules
       - tauri-target:/app/src-tauri/target
 
+  # SaiLoR in a container, shown at http://localhost:6080. See docs/building.md.
+  tauri-linux-gui:
+    build:
+      context: .
+      dockerfile: Dockerfile.tauri-linux-gui
+    image: sailor-gui:latest
+    ports:
+      - "127.0.0.1:6080:6080"
+    environment:
+      SCREEN_RESOLUTION: ${SCREEN_RESOLUTION:-1440x900}
+      VNC_PASSWORD: ${VNC_PASSWORD:-}
+    volumes:
+      - ./projects:/data
+      - sailor-home:/home/sailor
+
 volumes:
   tauri-target:
+  sailor-home:
