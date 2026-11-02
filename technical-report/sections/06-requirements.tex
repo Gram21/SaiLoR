@@ -35,14 +35,14 @@ An empty \emph{Verified by} cell means that we confirmed the requirement only by
 
 \begin{table}[t]
     \centering
-    \caption{Requirements per category and trace links of all 388 requirements}
+    \caption{Requirements per category and trace links of all 389 requirements}
     \label{tab:trace}
     \begin{tabular}{@{}lrr@{}}
         \toprule
         Category                                 & \multicolumn{2}{r}{Requirements} \\
         \midrule
         Data model and project editor            & \multicolumn{2}{r}{61}           \\
-        Annotation view, paper list, and PDF     & \multicolumn{2}{r}{53}           \\
+        Annotation view, paper list, and PDF     & \multicolumn{2}{r}{54}           \\
         Screening                                & \multicolumn{2}{r}{39}           \\
         Consolidation                            & \multicolumn{2}{r}{44}           \\
         Git integration                          & \multicolumn{2}{r}{58}           \\
@@ -51,26 +51,25 @@ An empty \emph{Verified by} cell means that we confirmed the requirement only by
         \midrule
         Trace link                               & Count & Share                    \\
         \midrule
-        Implementing source code                 & 356   & 92\%                     \\
-        At least one verifying test              & 349   & 90\%                     \\
-        Source inspection only                   & 39    & 10\%                     \\
+        Implementing source code                 & 363   & 93\%                     \\
+        At least one verifying test              & 352   & 90\%                     \\
+        Source inspection only                   & 37    & 10\%                     \\
         Introducing or pinning commit            & 116   & 30\%                     \\
-        Documentation section                    & 334   & 86\%                     \\
+        Documentation section                    & 335   & 86\%                     \\
         \bottomrule
     \end{tabular}
 \end{table}
 
 % Numbers
-In total, we documented 388 requirements.
+In total, we documented 389 requirements.
 \autoref{tab:trace} shows how they are distributed over the categories and how many of them are linked to each kind of artifact.
-Of the requirements, 342 are functional and 46 are non-functional, and 32 have the type security.
-At the time of writing, 381 requirements are implemented.
-Six requirements of the desktop shell exist only in the Electron version, and one is implemented in part (cf.~\autoref{sec:discussion}).
-The links point to 175 distinct source files and 181 distinct test files.
-Of all requirements, 92\% link to implementing source code, and 90\% link to at least one verifying test.
-The remaining 39 requirements are confirmed by source inspection only.
-Of these, 17 belong to the desktop shell and 12 to the git integration.
-The seven shell requirements that are not ported to Tauri are among them.
+Of the requirements, 343 are functional and 46 are non-functional, and 32 have the type security.
+At the time of writing, 388 requirements are implemented.
+One requirement is implemented in part: the guard against reload shortcuts (cf.~\autoref{sec:discussion}).
+The links point to 177 distinct source files and 184 distinct test files.
+Of all requirements, 93\% link to implementing source code, and 90\% link to at least one verifying test.
+The remaining 37 requirements are confirmed by source inspection only.
+Of these, 15 belong to the desktop shell and 12 to the git integration.
 Only 30\% link to a commit that introduced or pinned the behavior.
 
 % Statistics script
@@ -82,14 +81,13 @@ The script also checks that every linked file exists.
 
 % Test suites
 \SaiLoR has four test suites.
-The unit suite has 2828 tests in 196 files and runs with Vitest in jsdom, a simulated browser environment.
-The integration suite has 28 tests in 11 files.
+The unit suite has 2834 tests in 197 files and runs with Vitest in jsdom, a simulated browser environment.
+The integration suite has 56 tests in 11 files.
 These tests render the real components and run scenarios such as annotation, consolidation, and merges against scratch git repositories.
-The Rust backend has 100 tests.
+The Rust backend has 104 tests.
 Finally, a probe build of the desktop application opens the sample project, renders a PDF, and checks that a path traversal is refused.
 The \CI runs this probe in the system web view on macOS, Windows, and Linux.
 On Linux and Windows, it also drives the probe through WebDriver.
-% TODO: Update the test counts for the final 2.0.0 release.
 
 % Keeping it current
 To keep the links current, the repository asks every change that affects a requirement to update the matching requirement file in the same change.
