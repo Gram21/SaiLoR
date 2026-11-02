@@ -15,8 +15,8 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-11 — Single application instance
 - **Description:** When the application is launched while another instance is running, the system shall not start a second instance and shall bring the existing window to the front.
 - **Type:** Non-functional (ISO 25010: Reliability)
-- **Evidence:** commit `6ce60d5` (`electron/main.ts`, removed), commit `0bc6c9c`
-- **Status:** Not implemented in the Tauri shell (Electron-only until 2.0.0)
+- **Evidence:** `src-tauri/src/main.rs` (`tauri_plugin_single_instance`), `src-tauri/src/shell.rs` (`focus_main`), commit `6ce60d5` (`electron/main.ts`, removed), commit `0bc6c9c`
+- **Status:** Implemented
 
 ### REQ-PLT-20 — Open projects via native dialog
 - **Description:** When "Open project" is triggered, the system shall present a native file-open dialog filtered to `.json` files and shall treat dialog cancellation as a no-op.
@@ -172,10 +172,10 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-160 — Persist window state
-- **Description:** The system shall persist window size, position, and maximized state across runs, defaulting to 1920×1080, and shall reuse a saved position only when it still overlaps a connected display.
+- **Description:** The system shall persist window size, position, and maximized state across runs, defaulting to 1400×900, and shall reuse a saved position only when it still overlaps a connected display.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** commit `6ce60d5` (`electron/main.ts`, removed)
-- **Status:** Not implemented in the Tauri shell (Electron-only until 2.0.0)
+- **Evidence:** `src-tauri/src/main.rs` (`tauri_plugin_window_state`, `StateFlags::SIZE | POSITION | MAXIMIZED`), `src-tauri/tauri.conf.json` (`app.windows`), commit `6ce60d5` (`electron/main.ts`, removed)
+- **Status:** Implemented
 
 ### REQ-PLT-170 — Persist appearance settings
 - **Description:** The system shall persist locally the theme (defaulting to the operating-system preference), the font scale (clamped to 0.7–2.0), the autosave toggle (off by default), and the pane widths.
@@ -184,10 +184,11 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-180 — Migrate legacy settings folder
-- **Description:** When the application starts with a never-used profile, the system shall copy window state and local storage from a pre-rename "SLR Helper" settings folder if one exists, without overwriting an existing profile and without failing startup on error.
+- **Description:** When the application starts with a never-used `<config dir>/SaiLoR` profile, the system shall copy window state and local storage from a pre-rename "SLR Helper" settings folder if one exists, without overwriting an existing profile and without failing startup on error.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** commit `6ce60d5` (`electron/main.ts`, removed)
-- **Status:** Not implemented in the Tauri shell (Electron-only until 2.0.0)
+- **Evidence:** `src-tauri/src/shell.rs` (`migrate_legacy`, `copy_new`), commit `6ce60d5` (`electron/main.ts`, removed)
+- **Verified by:** `src-tauri/src/shell.rs` (`migrates_legacy_profile_once`, `copy_never_overwrites_and_skips_missing`, `migration_without_legacy_creates_nothing`)
+- **Status:** Implemented. Limit: the Tauri WebView and the window-state plugin do not read the copied files. The copy only keeps the old data in the SaiLoR folder.
 
 ### REQ-PLT-190 — Portable relative PDF paths
 - **Description:** The system shall store each paper's PDF path relative to the project file using forward slashes on all platforms.
@@ -223,16 +224,17 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-240 — Deny device permissions
-- **Description:** The system shall deny all Chromium permission requests (camera, microphone, geolocation, notifications).
+- **Description:** The system shall deny every permission request of the WebView (camera, microphone, geolocation, notifications, and the other kinds the platform reports).
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** commit `6ce60d5` (`electron/main.ts`, removed)
-- **Status:** Not implemented in the Tauri shell (Electron-only until 2.0.0)
+- **Evidence:** `src-tauri/src/main.rs` (`on_permission_request`), commit `6ce60d5` (`electron/main.ts`, removed)
+- **Status:** Implemented. Platform limit: on macOS, WKWebView reports only camera and microphone requests to the app. macOS itself blocks geolocation and notifications, because the app has no entitlement or usage description for them.
 
 ### REQ-PLT-250 — Route external links to the system browser
-- **Description:** The system shall deny in-app window creation and shall hand navigation away from the application document to the default system browser, restricted to the http, https, and mailto schemes.
+- **Description:** The system shall deny in-app window creation and shall hand navigation away from the application document to the default system browser, restricted to the http and https schemes. The system shall cancel navigation to every other scheme.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** commit `6ce60d5` (`electron/main.ts`, removed)
-- **Status:** Not implemented in the Tauri shell (Electron-only until 2.0.0)
+- **Evidence:** `src-tauri/src/shell.rs` (`setup`, `is_app_url`, `is_external`), `src-tauri/tauri.conf.json` (`app.windows[0].create`), commit `6ce60d5` (`electron/main.ts`, removed)
+- **Verified by:** `src-tauri/src/shell.rs` (`only_http_and_https_are_external`, `app_urls_stay_in_the_window`)
+- **Status:** Implemented
 
 ### REQ-PLT-260 — Restrict export writes
 - **Description:** The system shall write text and PDF exports only to destinations picked via an export save dialog in the current session, refusing symlinked targets and reporting failures as results rather than crashes. The system shall embed marks only into a PDF of the open project (inside the project folder or an approved outside path), also when it overwrites the original PDF.
@@ -269,10 +271,10 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-310 — Application undo via menu
-- **Description:** The system shall route the Edit-menu Undo and Redo commands to the application's annotation history rather than native text undo, while keeping cut, copy, paste, and select-all native.
+- **Description:** The system shall route the Edit-menu Undo and Redo commands to the application's annotation history rather than native text undo, while keeping cut, copy, paste, and select-all native. One key press shall run one undo step.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** commit `6ce60d5` (`electron/main.ts`, removed). The renderer still listens for `app:undo` and `app:redo` in `src/hooks/useCloseGuard.ts` (`useCloseGuard`), but the Tauri shell builds no Edit menu. `src/hooks/useKeybindings.ts` (`useKeybindings`) handles Ctrl/Cmd+Z and Ctrl/Cmd+Y.
-- **Status:** Not implemented in the Tauri shell (Electron-only until 2.0.0)
+- **Evidence:** `src-tauri/src/shell.rs` (`edit_menu`) replaces the native Undo and Redo of the macOS default menu with items that emit `app:undo` and `app:redo`. `src/hooks/useCloseGuard.ts` (`useCloseGuard`) routes these events to the editor or the project history. `src/hooks/useKeybindings.ts` (`useKeybindings`) handles Ctrl/Cmd+Z and Ctrl/Cmd+Y and calls `preventDefault`, so WKWebView does not pass the key on to the menu. Commit `6ce60d5` (`electron/main.ts`, removed).
+- **Status:** Implemented on macOS. Windows and Linux have no menu bar. On these platforms the renderer key binding runs undo and redo, and the WebView handles cut, copy, paste, and select-all natively.
 
 ### REQ-PLT-320 — Build targets
 - **Description:** The system shall build the macOS app and dmg (arm64 and x64), the Windows NSIS installer (x64), and the Linux AppImage, deb and rpm packages (x64). The files shall use the Tauri default names, for example `SaiLoR_<version>_aarch64.dmg`, `SaiLoR_<version>_x64-setup.exe` and `SaiLoR_<version>_amd64.AppImage`. The macOS builds shall require macOS 15 or later. Each build shall include a signed updater artifact, and one `latest.json` feed shall list every platform. The release workflow shall attach these files to a draft release tagged `v<version>`. Only the AppImage, Windows and macOS builds shall update in-app. Users shall update the deb and rpm packages by hand.

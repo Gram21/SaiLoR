@@ -13,6 +13,7 @@
     "windows": [
       {
         "title": "SaiLoR",
+        "create": false,
         "width": 1400,
         "height": 900
       }

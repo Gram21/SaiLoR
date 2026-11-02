@@ -732,13 +732,7 @@ Kept on purpose:
 
 The Electron shell had these features. The Tauri shell does not have them yet. `docs/requirements/platform.md` marks the matching requirements.
 
-- Single instance lock (REQ-PLT-11). A second start opens a second window.
-- Window size and position persistence (REQ-PLT-160). The window opens at 1400x900.
-- Migration of the legacy "SLR Helper" folder (REQ-PLT-180).
 - Reload guard on the menu reload (REQ-PLT-120). Only the renderer `beforeunload` handler exists.
-- Denial of device permission requests (REQ-PLT-240).
-- Routing of external links and navigation to the system browser (REQ-PLT-250).
-- Edit menu routing of undo and redo (REQ-PLT-310). The renderer key binding handles Ctrl/Cmd+Z.
 
 ### 20.7 Window title and Close project button
 
@@ -747,7 +741,7 @@ The Electron shell had these features. The Tauri shell does not have them yet. `
 - `useWindowTitle` calls `PlatformAdapter.setWindowTitle`. The Tauri bridge calls `getCurrentWindow().setTitle()`.
 - `core:default` does not allow `setTitle`. `capabilities/default.json` adds `core:window:allow-set-title`.
 - In the browser, the `unsupported` adapter sets `document.title`.
-- "Close project" is an icon button left of the "SaiLoR" app title. It shows only while a project is open (REQ-UI-20).
+- "Close project" is an icon button left of the "SaiLoR" app title. It is always present so the app title keeps its place. Without a project it is hidden and disabled (REQ-UI-20).
 - The Open menu no longer has a "Close project" item. No keyboard shortcut existed for it.
 - The button calls `requestCloseProject`, so unsaved changes still open the close prompt. `src-tauri/src/close.rs` is not changed.
 
@@ -757,3 +751,51 @@ The native title bar stays. An overlay title bar is not used, for these reasons:
 - With a visible overlay title, the native title text sits over the web content. It overlaps the centered reviewer switch.
 - Windows and Linux have no overlay style in Tauri. They need `decorations: false` and custom window controls. That removes native snap and the native window menu.
 - Each overlay needs `data-tauri-drag-region` areas. Every toolbar control then needs a check for drag conflicts.
+
+
+## 21. Platform gaps
+
+Branch: `feat/tauri-platform-gaps`. This section ports Electron shell features that section 20.6 listed as missing. The code is in `src-tauri/src/shell.rs`.
+
+### 21.1 Behavior
+
+| Requirement | Tauri implementation |
+| --- | --- |
+| Single instance (REQ-PLT-11) | `tauri-plugin-single-instance`. A second start exits. The running app restores, shows and focuses the `main` window. |
+| Window state (REQ-PLT-160) | `tauri-plugin-window-state` saves size, position and the maximized state in `<app config dir>/.window-state.json`. It restores a position only if it is on a connected display. |
+| Device permissions (REQ-PLT-240) | `Builder::on_permission_request` answers every request with `Deny`. |
+| External links (REQ-PLT-250) | `tauri.conf.json` sets `create: false` on the `main` window. `shell::setup` builds the window from that config with two hooks. `on_navigation` keeps app URLs in the window and cancels all other URLs. `on_new_window` always denies. Both hooks open http and https URLs in the system browser with `tauri_plugin_opener::open_url`. |
+| Legacy folder (REQ-PLT-180) | `shell::migrate_legacy` runs first in `shell::setup`. If `<config dir>/SaiLoR` has no `window-state.json` and no `Local Storage`, it copies both items from `<config dir>/SLR Helper` or `<config dir>/slr-helper`. The copy skips symlinks and never replaces a file. Errors go to stderr. Startup continues. |
+| Edit menu (REQ-PLT-310) | macOS only. `shell::edit_menu` takes the Tauri default menu and replaces its native Undo and Redo with items `app:undo` (Cmd+Z) and `app:redo` (Cmd+Shift+Z). A menu click emits the event of the same name. The renderer already listens for both events. Cut, copy, paste and select all stay native. |
+
+### 21.2 Differences from Electron
+
+- The second start does not forward its arguments. Electron did not forward them either.
+- The default window size is 1400x900. Electron used 1920x1080.
+- The window state file is new. The app does not read the Electron `window-state.json`, so the first start uses the default size.
+- The permission hook covers less than Electron. Windows (WebView2) and Linux (WebKitGTK) report every request kind. macOS (WKWebView) reports only camera and microphone. On macOS, geolocation and notifications fail without an entitlement, so the page cannot use them either.
+- External links open only for http and https. Electron also allowed `mailto`. The app has no `mailto` links.
+- App URLs are `tauri://localhost`, `http(s)://tauri.localhost` (Windows) and `about:blank`. Debug builds also allow the `devUrl` origin.
+- The opener plugin is not registered. The renderer gets no opener commands, and `capabilities/default.json` does not change.
+- The migrated files are copies only. The Tauri WebView keeps `localStorage` in its own store, and the window-state plugin uses its own file. So the old window size and recent projects do not come back.
+- Windows and Linux get no menu bar. Electron showed File, Edit, View and Window menus there. The renderer key binding runs undo and redo. The WebView handles copy and paste natively.
+- The View menu has no Reload, Force Reload or Toggle DevTools item. The reload guard stays open (REQ-PLT-120).
+- No double undo: WKWebView sends Cmd+Z to the page first. `useKeybindings` calls `preventDefault`, so the menu item does not fire. A click on the menu item runs one undo through the event.
+
+### 21.3 Verification and gaps
+
+Verification:
+
+- A manual run on macOS started the debug build twice. The second process exited. The first process kept running.
+- A manual run on macOS moved and resized the window and quit from the menu. The next start used the saved position and size.
+- `cargo test` tests the scheme check and the app URL check.
+- `cargo test` tests the legacy copy: one copy into an unused profile, no copy into a used profile, no overwrite, and no folder without a legacy profile.
+- A manual run on macOS with a separate `HOME` copied `SLR Helper/window-state.json` into `SaiLoR`.
+- The same run listed the Edit menu as Undo, Redo, separator, Cut, Copy, Paste, Select All, then the macOS items.
+
+Not tested:
+
+- No test asks the WebView for a device permission.
+- No test clicks a link in the running app.
+- Cmd+Z in the running app was not tried by hand. The single undo per key press follows from the WKWebView key order.
+- Windows and Linux were not run by hand.

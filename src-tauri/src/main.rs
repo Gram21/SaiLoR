@@ -9,6 +9,7 @@ mod paths;
 mod pdf;
 mod project;
 mod protocol;
+mod shell;
 mod update;
 // Phase 4 (AI): LLM targets, local servers, web fetch, hardware.
 mod hardware;
@@ -73,6 +74,17 @@ fn os_info() -> serde_json::Value {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
+            shell::focus_main(app)
+        }))
+        .plugin(
+            tauri_plugin_window_state::Builder::new()
+                .with_state_flags({
+                    use tauri_plugin_window_state::StateFlags as F;
+                    F::SIZE | F::POSITION | F::MAXIMIZED
+                })
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
@@ -80,6 +92,8 @@ fn main() {
                 .js_init_script(format!("window.__SLR_OS__={};", os_info()))
                 .build(),
         )
+        .on_permission_request(|_, _| tauri::webview::PermissionResponse::Deny)
+        .setup(shell::setup)
         .manage(update::State::default())
         .manage(close::Guard::default())
         .manage(Mutex::new(Session::default()))
