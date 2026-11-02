@@ -58,8 +58,7 @@ Before \SaiLoR commits or discards selected field changes, it checks that the fi
 % Context
 Up to version 1.x, \SaiLoR was an Electron application~\cite{electron}.
 The Electron main process had about 5,600 lines of TypeScript and 98 \IPC handlers.
-Electron bundles its own Chromium and Node.js runtime.
-As a result, the macOS installer for arm64 had a size of 93~MB, and the main process could use the full Node.js \API.
+Electron bundles its own Chromium and Node.js runtime, and the main process could use the full Node.js \API.
 
 % Decision
 For version 2.0.0, we moved \SaiLoR to Tauri~2~\cite{tauri2}.
