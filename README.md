@@ -546,7 +546,7 @@ browser shows the "use the desktop app" notice.
 
 Three layers of tests, by what each one can actually catch:
 
-- **`npm test`** — plain vitest, no rendering. ~1800 tests of pure logic: schema resolution, project
+- **`npm test`** — plain vitest, no rendering. ~2800 tests of pure logic: schema resolution, project
   load/normalize/serialize, the three-way merge, git output parsing, and so on. Fast, runs on every
   PR via `scripts/ci.sh`.
 - **`npm run test:integration`** (`src/test/integration/`) — jsdom + React Testing Library. Each test

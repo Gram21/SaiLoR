@@ -488,35 +488,35 @@ See the [index](index.md) for the glossary.
 - **Description:** The desktop app shall expose Ollama control (`version`, `list`, `show`, `ps`, `pull` with streamed progress, cancel, `delete`, registry `manifestSize`) and `discoverLocalServer(baseUrl)` over IPC. The renderer-supplied base URL must be `http:`/`https:` without credentials and is reduced to its origin; results carry `isLocal` (loopback/private host) so the UI can warn when papers would leave the local network. Model tags are validated (`isValidModelTag`) before use and never taken from model output. Requests use timeouts and refuse redirects; a pull stops after 2 minutes without data, and cancelling closes the connection while the server may continue (pulling again resumes). Discovery probes Ollama (`/api/version`, `/api/tags`, `/api/ps`), LM Studio (`/api/v1/models`), llama.cpp (`/props`, `/v1/models`) and vLLM (`/v1/models` with `max_model_len`) and returns `{kind, models:[{id, contextTokens?, sizeBytes?, loaded?}]}`. No API key is sent by these calls.
 - **Type:** Functional (ISO 25010: Functional Suitability, Security)
 - **Evidence:** `src-tauri/src/ollama.rs` (`check_base_url`, `is_valid_model_tag`, `discover`, `localserver_discover`), `src/llm/ollama.ts` (parsers), `src/platform/ollamaApi.ts`, `src/platform/tauri.ts` (`tauriBridge`), `src/platform/unsupported.ts`
-- **Status:** Implemented (no UI yet)
+- **Status:** Implemented
 - **Tests:** `src-tauri/src/ollama.rs` (`base_urls`, `model_tags`, `handlers`, `pulls`, `discovers`), `src/llm/ollama.test.ts`
 
 ### REQ-LLM-723 — Curated local model shortlist with consent sizes
 - **Description:** The system shall ship `OLLAMA_SHORTLIST`, a curated list of Ollama tags (checked in the Ollama library on 2026-10-02) with label, approximate default-pull size, the model's maximum context, a minimum RAM hint and notes. Phi-4 is excluded (16K context). Annotation quality is not benchmarked. Before a download the size shall be re-read from the registry manifest (`manifestSize`, the sum of layer sizes) so consent shows the current size; a missing tag (404) yields no size and the UI must handle it. GPU/CPU use of a loaded model is derived from `/api/ps` (`gpuStatus`) and KV-cache memory from `/api/show` (`estimateKvBytes`, an over-estimate).
 - **Type:** Functional (ISO 25010: Functional Suitability, Usability)
 - **Evidence:** `src/llm/ollama.ts` (`OLLAMA_SHORTLIST`, `manifestUrl`, `sumManifestBytes`, `gpuStatus`, `estimateKvBytes`), `src-tauri/src/ollama.rs` (`ollama_manifest_size`, `manifest_url`, `sum_manifest_bytes`)
-- **Status:** Implemented (no UI yet)
+- **Status:** Implemented
 - **Tests:** `src/llm/ollama.test.ts`, `src-tauri/src/ollama.rs` (`parsers`, `handlers`)
 
 ### REQ-LLM-700 — Managed local runtime for System One models
 - **Description:** The desktop app shall run System One decision models (Laya first) locally without Python: it finds a `llama-server` (user-set `SAILOR_LLAMA_SERVER`, the managed copy under `userData/local-runtime/llama.cpp/<tag>/`, then `PATH` and common install directories), or installs one from the newest ggml-org/llama.cpp release (the `b<N>` pre-releases; `releases/latest` points at an unrelated tag stream). A server per model is started lazily by `llm:call` for targets with `managed.catalogId`, on a free `127.0.0.1` port with `-c = -b = -ub = contextTokens`, one slot, no web UI and a random per-session `--api-key` that only the main process knows; the stored base URL is a placeholder and the call is re-pinned to the running server's origin (paths limited to `/v1/*` and `/health`, redirects still refused). After start the app self-tests `POST /v1/systemone`; a build without the route (404) or a non-decision model (501) is stopped and reported. Servers stop after 10 idle minutes and on quit; the last 200 log lines are kept. Model files are listed from a fixed catalog (Laya English Q8_0 available; Laya multilingual and typed-decisions planned because the community GGUFs use an architecture llama.cpp cannot load; Clef and Clef Flash planned until llama.cpp supports them). The renderer only names catalog ids. Verified live on macOS arm64 against llama.cpp master 4ebdf2c (no tagged release contains the route yet, newest checked b11349); the installer reports the release's route support via the GitHub compare API and refuses a release known to lack it.
 - **Type:** Functional (ISO 25010: Functional Suitability, Security)
 - **Evidence:** `src/llm/localCatalog.ts`, `src/platform/localRuntime.ts`, `src-tauri/src/localruntime.rs`, `src-tauri/src/llm.rs` (`managed_target_url`, `valid_managed`, `llm_call`)
-- **Status:** Implemented (no UI yet)
+- **Status:** Implemented
 - **Tests:** `src/llm/localCatalog.test.ts`, `src-tauri/src/localruntime.rs` (tests), `src-tauri/src/llm.rs` (`managed_calls_go_to_the_local_server`)
 
 ### REQ-LLM-701 — Hash-verified downloads with informed consent
 - **Description:** Runtime and model downloads shall start only after a plan (name, size, SHA-256, source, license, destination, free disk space) was produced for the same item in this session, so the UI can obtain consent first. The runtime hash is the release asset's `digest`; the model hash is the Hugging Face LFS oid of the file at a pinned commit; a missing or malformed digest refuses the download. Only `github.com`, `api.github.com`, `*.githubusercontent.com` and `huggingface.co`, `*.huggingface.co`, `*.hf.co` over https (no credentials, default port) are contacted, every redirect hop being re-checked. Downloads resume from a `.partial` file with a `Range` request (a server that does not honour it restarts from zero), report progress, can be cancelled, and are renamed into place only after the size and SHA-256 match; a mismatch deletes the file. The runtime archive is extracted with the system `tar` (bsdtar; `System32\tar.exe` on Windows) and its `llama-server` must run `--version` before it is accepted.
 - **Type:** Functional (ISO 25010: Security, Reliability)
 - **Evidence:** `src-tauri/src/localruntime.rs` (`download_verified`, `runtime_plan`, `model_plan`, `runtime_install`, `model_install`, `parse_digest`, `parse_hf_file`, `allowed_download_url`, `resume_offset`, `content_range_starts_at`)
-- **Status:** Implemented (no UI yet)
+- **Status:** Implemented
 - **Tests:** `src-tauri/src/localruntime.rs` (tests)
 
 ### REQ-LLM-702 — GPU when available, CPU otherwise, reported honestly
 - **Description:** The desktop app shall probe the hardware (RAM, free disk, GPUs via `nvidia-smi`, `system_profiler`, PowerShell `Win32_VideoController`, `lspci`; each probe best-effort with a timeout, failures meaning "unknown") and recommend a llama.cpp build (Metal on Apple silicon, Vulkan with a discrete or integrated GPU, else CPU; Windows prefers the Vulkan build over CUDA, which needs a separate cudart bundle). A model server is started with all layers offloaded (`-ngl 99`); the reported backend and layer count are read from the server's startup log, never from what was requested ("using device" alone is not GPU use when 0 layers are offloaded). If the GPU start fails the server is started once more with `-dev none -ngl 0` and the result carries a note; an incompatible build or model is not retried. Observed on an M3 Pro: Metal start 0.37 s and 58 ms for three questions, CPU-only 0.15 s warm (first requests seconds).
 - **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
 - **Evidence:** `src-tauri/src/hardware.rs` (`probe`, `recommend_backend`), `src-tauri/src/localruntime.rs` (`build_server_args`, `parse_server_log`, `start`)
-- **Status:** Implemented (no UI yet); CUDA/Vulkan paths untested on real hardware
+- **Status:** Implemented; CUDA/Vulkan paths untested on real hardware
 - **Tests:** `src-tauri/src/hardware.rs` (`backends`, `parsers`), `src-tauri/src/localruntime.rs` (tests)
 
 ### REQ-LLM-730 — Guided setup of local decision models with informed download consent
