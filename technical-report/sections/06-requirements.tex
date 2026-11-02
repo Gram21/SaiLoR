@@ -11,7 +11,7 @@ In this section, we describe how we documented the requirements of \SaiLoR and h
 % Reverse engineering
 \SaiLoR grew without a written specification.
 Therefore, we reverse-engineered the requirements from the implementation of version 1.8.1 in August 2026.
-We updated them in September 2026 and for the move to Tauri in version 2.0.0.
+We kept them up to date until November 2026 as the code changed for version 2.0.0.
 Every requirement describes behavior that the code implements, and every link is a recovered link and not one that we created during development.
 
 % Four techniques
@@ -29,20 +29,20 @@ An entry consists of a title, a description in the form \enquote{The system shal
 The type states whether the requirement is functional or non-functional and names its quality characteristic according to ISO/IEC 25010~\cite{iso25010}.
 The requirements are split into seven files by category.
 A separate traceability matrix lists one row per requirement with the columns \emph{Implemented in}, \emph{Verified by}, \emph{History}, and \emph{Docs}.
-An empty \emph{Verified by} cell means that we confirmed the requirement only by inspecting the source code.
+A dash in the \emph{Verified by} column means that we confirmed the requirement only by inspecting the source code.
 
 \subsection{Coverage}\label{sec:requirements-coverage}
 
 \begin{table}[t]
     \centering
-    \caption{Requirements per category and trace links of all 389 requirements}
+    \caption{Requirements per category and trace links of all 391 requirements}
     \label{tab:trace}
     \begin{tabular}{@{}lrr@{}}
         \toprule
         Category                                 & \multicolumn{2}{r}{Requirements} \\
         \midrule
         Data model and project editor            & \multicolumn{2}{r}{61}           \\
-        Annotation view, paper list, and PDF     & \multicolumn{2}{r}{54}           \\
+        Annotation view, paper list, and \PDF     & \multicolumn{2}{r}{54}           \\
         Screening                                & \multicolumn{2}{r}{39}           \\
         Consolidation                            & \multicolumn{2}{r}{44}           \\
         Git integration                          & \multicolumn{2}{r}{59}           \\
@@ -61,21 +61,20 @@ An empty \emph{Verified by} cell means that we confirmed the requirement only by
 \end{table}
 
 % Numbers
-In total, we documented 389 requirements.
+In total, we documented 391 requirements.
 \autoref{tab:trace} shows how they are distributed over the categories and how many of them are linked to each kind of artifact.
-Of the requirements, 343 are functional and 46 are non-functional, and 32 have the type security.
+Of the requirements, 344 are functional and 47 are non-functional, and 32 have the type security.
 At the time of writing, 390 requirements are implemented.
 One requirement is implemented in part: the guard against reload shortcuts (cf.~\autoref{sec:discussion}).
 The links point to 177 distinct source files and 185 distinct test files.
 Of all requirements, 93\% link to implementing source code, and 92\% link to at least one verifying test.
 The remaining 31 requirements are confirmed by source inspection only.
-Of these, 15 belong to the desktop shell and 12 to the git integration.
+Of these, 16 belong to the platform and desktop shell and 7 to the git integration.
 Only 30\% link to a commit that introduced or pinned the behavior.
 
 % Statistics script
 We count these numbers with a small script in the report folder that parses the requirement files and the matrix.
 The script also checks that every linked file exists.
-% TODO: Fix the link to src/components/ProjectEditor.test.ts (the file is .tsx) and the stale coverage table in docs/requirements/traceability.md, then rerun trace_stats.py.
 
 \subsection{Automated Tests}\label{sec:requirements-tests}
 
@@ -85,7 +84,7 @@ The unit suite has 2834 tests in 197 files and runs with Vitest in jsdom, a simu
 The integration suite has 56 tests in 11 files.
 These tests render the real components and run scenarios such as annotation, consolidation, and merges against scratch git repositories.
 The Rust backend has 104 tests.
-Finally, a probe build of the desktop application opens the sample project, renders a PDF, and checks that a path traversal is refused.
+Finally, a probe build of the desktop application opens the sample project, renders a \PDF, and checks that a path traversal is refused.
 The \CI runs this probe in the system web view on macOS, Windows, and Linux.
 On Linux and Windows, it also drives the probe through WebDriver.
 
