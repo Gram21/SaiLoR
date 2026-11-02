@@ -1,4 +1,4 @@
-# Requirements — Project File, Schema & Data Model
+# Requirements: Project File, Schema & Data Model
 
 Requirements for the project JSON format, load/save robustness, the annotation schema
 and value trees, validation, completeness, duplicate detection, reference import, and
@@ -8,61 +8,61 @@ the project editor. See the [index](index.md) for the glossary.
 
 ## Project file loading
 
-### REQ-DAT-10 — Reject invalid JSON with a message
+### REQ-DAT-10: Reject invalid JSON with a message
 - **Description:** When a selected project file is not valid JSON, the system shall reject the load with a message stating the file is not valid JSON plus the parser detail.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/project.ts:663-670`
 - **Status:** Implemented
 
-### REQ-DAT-20 — Bound input nesting depth
+### REQ-DAT-20: Bound input nesting depth
 - **Description:** When a project file contains JSON nested deeper than 200 levels, the system shall reject the load with an explanatory error instead of exhausting the call stack.
 - **Type:** Non-functional (ISO 25010: Reliability, Security)
 - **Evidence:** `src/model/project.ts:646-706`, `src/model/hostile.test.ts:33-50`, commit `07f1244`
 - **Status:** Implemented
 
-### REQ-DAT-30 — Report structural errors per path
+### REQ-DAT-30: Report structural errors per path
 - **Description:** When a project file fails structural validation, the system shall report one detail line per violation in `path: message` form.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/project.ts:693-699`
 - **Status:** Implemented
 
-### REQ-DAT-40 — Preserve unknown keys
+### REQ-DAT-40: Preserve unknown keys
 - **Description:** The system shall preserve unknown root-level and paper-level keys through a load/save round trip.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/schema.ts:195-227`, `src/model/project.ts:304-336,760,868`
 - **Status:** Implemented
 
-### REQ-DAT-50 — Reject duplicate paper identifiers
+### REQ-DAT-50: Reject duplicate paper identifiers
 - **Description:** When two papers in a project file share an identifier, the system shall reject the load naming the duplicated identifier.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/project.ts:729-735`
 - **Status:** Implemented
 
-### REQ-DAT-60 — Require paper identity and PDF
+### REQ-DAT-60: Require paper identity and PDF
 - **Description:** The system shall require each paper to have a non-empty identifier and title and, except in screening projects, a non-empty PDF path.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/schema.ts:126-173,241-251`, `src/model/model.test.ts:854`
 - **Status:** Implemented
 
-### REQ-DAT-70 — Repair year values structurally
+### REQ-DAT-70: Repair year values structurally
 - **Description:** When a paper's year is a number, the system shall accept it only as an integer between 1000 and 2100; when it is a string, the system shall take its first four-digit run subject to the same range; otherwise the system shall treat the year as absent.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/year.ts:18-50`, `src/model/year.test.ts`
 - **Status:** Implemented
 
-### REQ-DAT-80 — Degrade malformed sub-records without failing
+### REQ-DAT-80: Degrade malformed sub-records without failing
 - **Description:** When hand-editable sub-records (AI usage, equality marks, reviews, provenance, protocol, schema info, alignment, marks) are malformed, the system shall drop the malformed parts and load the rest of the project.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/project.ts:347-571`, `src/model/model.test.ts:525,777-789,1015,1117-1146`
 - **Status:** Implemented
 
-### REQ-DAT-90 — Round-trip hostile values safely
+### REQ-DAT-90: Round-trip hostile values safely
 - **Description:** The system shall round-trip values containing JSON metacharacters, `__proto__`, lone surrogates, and other unusual strings byte-exactly, without polluting object prototypes.
 - **Type:** Non-functional (ISO 25010: Reliability, Security)
 - **Evidence:** `src/model/jsonvalues.test.ts:44-83`, commit `6933376`
 - **Status:** Implemented
 
-### REQ-DAT-100 — Mark PDF-extracted abstracts
+### REQ-DAT-100: Mark PDF-extracted abstracts
 - **Description:** The system shall persist the marker that an abstract came from PDF extraction only while a non-empty abstract exists, and shall never attach it to a typed or imported abstract.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/project.ts:745-748,828`, `src/model/model.test.ts:902-940`
@@ -70,31 +70,31 @@ the project editor. See the [index](index.md) for the glossary.
 
 ## Annotation schema
 
-### REQ-DAT-110 — Schema node structure
+### REQ-DAT-110: Schema node structure
 - **Description:** The system shall accept schema nodes with a non-empty name, an optional field type of string, number, boolean, or year, cardinality bounds `min` (integer ≥ 0, default 1) and `max` (integer ≥ 1 or null for unbounded, default 1, at least `min` when finite), optional description, enum options (string fields only), a required flag (typed fields only), a `visibleIf` gate (either a bare field name or an object with a `mode` of `all`/`any` and a non-empty list of entries, each a `{ field, equals? }` condition or a nested group of the same shape), and children, rejecting unknown node keys and nodes with neither a type nor children.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/schema.ts:26-195`, `src/model/model.test.ts:58-144`
 - **Status:** Implemented
 
-### REQ-DAT-120 — Unique sibling names
+### REQ-DAT-120: Unique sibling names
 - **Description:** The system shall reject a schema whose sibling nodes share a name or differ only in surrounding whitespace, and shall reject the node name `__proto__`.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/schema.ts:296-327`, `src/model/model.test.ts:64`
 - **Status:** Implemented
 
-### REQ-DAT-130 — Drop required on booleans
+### REQ-DAT-130: Drop required on booleans
 - **Description:** When a boolean field is marked required, the system shall drop the flag at schema resolution because an unticked checkbox is the answer false.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/schema.ts:340-345`, `src/model/model.test.ts:130`
 - **Status:** Implemented
 
-### REQ-DAT-140 — Restrict visibleIf targets and values
-- **Description:** The system shall normalize every `visibleIf` gate at schema resolution — expanding the bare-name form into a single `all` condition and recursing into nested groups — and shall resolve each condition's `field` as a same-level typed sibling, else a typed field on the direct ancestor chain, else a slash-joined absolute path from the schema root, dropping the condition when it resolves to the gated node itself, to anything in the gated node's own subtree, to a group, or to nothing; then any group left empty, and, once none is left, the whole gate. An `equals` shall be honored only on a boolean field (its `true`/`false`) or a string field with non-empty `options` (values among those options); values the target cannot hold, and any `equals` on a free-text, number, or year field, shall be dropped so that the condition degrades to "is it answered".
+### REQ-DAT-140: Restrict visibleIf targets and values
+- **Description:** The system shall normalize every `visibleIf` gate at schema resolution: expanding the bare-name form into a single `all` condition and recursing into nested groups: and shall resolve each condition's `field` as a same-level typed sibling, else a typed field on the direct ancestor chain, else a slash-joined absolute path from the schema root, dropping the condition when it resolves to the gated node itself, to anything in the gated node's own subtree, to a group, or to nothing; then any group left empty, and, once none is left, the whole gate. An `equals` shall be honored only on a boolean field (its `true`/`false`) or a string field with non-empty `options` (values among those options); values the target cannot hold, and any `equals` on a free-text, number, or year field, shall be dropped so that the condition degrades to "is it answered".
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/schema.ts:346-443`, `src/model/model.test.ts:171-623`
 - **Status:** Implemented
 
-### REQ-DAT-150 — Bound schema instance fan-out
+### REQ-DAT-150: Bound schema instance fan-out
 - **Description:** When a schema's empty tree would materialize more than 100,000 instances, the system shall reject the schema at load.
 - **Type:** Non-functional (ISO 25010: Reliability, Security)
 - **Evidence:** `src/model/schema.ts:376-420`, `src/model/hostile.test.ts:18-67`
@@ -102,56 +102,56 @@ the project editor. See the [index](index.md) for the glossary.
 
 ## Annotation value trees
 
-### REQ-DAT-160 — Normalize trees on load
+### REQ-DAT-160: Normalize trees on load
 - **Description:** When loading an annotation tree, the system shall carry keys the schema does not describe through unchanged as hidden answers (see REQ-DAT-165), pad each node up to the larger of its minimum and one instance, clamp instances above the maximum, and adopt a bare primitive or single object where a list is expected as one entry.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/annotations.ts:125-147,149-174`, commits `b12f654`, `0e185f2`
 - **Verified by:** `src/model/model.test.ts` (`normalize` describe block)
 - **Status:** Implemented
 
-### REQ-DAT-165 — Preserve answers hidden by schema changes
-- **Description:** When an annotation tree holds recorded answers under a node the current schema no longer describes — at any level, including beneath a node that lost some or all of its children — the system shall keep those answers verbatim through load, save, and merge, shall keep the file holding them even when no current-schema field is answered, and shall present them again once a node of that name returns to the schema; unanswered placeholder instances shall not be kept as hidden answers.
-- **Type:** Non-functional (ISO 25010: Reliability — Recoverability)
+### REQ-DAT-165: Preserve answers hidden by schema changes
+- **Description:** When an annotation tree holds recorded answers under a node the current schema no longer describes: at any level, including beneath a node that lost some or all of its children: the system shall keep those answers verbatim through load, save, and merge, shall keep the file holding them even when no current-schema field is answered, and shall present them again once a node of that name returns to the schema; unanswered placeholder instances shall not be kept as hidden answers.
+- **Type:** Non-functional (ISO 25010: Reliability: Recoverability)
 - **Evidence:** `src/model/annotations.ts:74-89,192-211,346-348,359-361,369-386`, `src/model/project.ts:713-718,723-725`, commits `0e185f2`, `edeae38`
 - **Verified by:** `src/model/split.test.ts` (`a schema field removed while others still have answers under it`, `a schema node that loses every child`), `src/model/model.test.ts` (`normalize` describe block)
 - **Status:** Implemented
 
-### REQ-DAT-166 — Schema version
+### REQ-DAT-166: Schema version
 - **Description:** The system shall give every saved schema change a schema version identifier recorded in the project file together with a history of versions, each naming the version(s) it replaced, its time, and the renames and moves it made; and shall record in every annotation and mark file the schema version it was written under.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/schemaVersion.ts:80-92`, `src/model/project.ts:595,680,848,1048`, commit `40e0668`
 - **Verified by:** `src/model/schemaVersion.test.ts` (`stamps every file it writes, and reading its own text back moves nothing again`)
 - **Status:** Implemented
 
-### REQ-DAT-167 — Carry answers across renames and moves
+### REQ-DAT-167: Carry answers across renames and moves
 - **Description:** When reading an annotation or mark file written under an older schema version, or under none, the system shall apply the renames and moves recorded since that version to its answers and field links; a move that would pass through a repeated entry, or land on answers already there, shall leave the answers where they were.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/schemaVersion.ts:138-155,201-245`, commit `40e0668`
 - **Verified by:** `src/model/schemaVersion.test.ts` (`moveInTree`, `pendingMoves`, `carries the answers across the renames made since`)
 - **Status:** Implemented
 
-### REQ-DAT-168 — Report files of an unknown schema version
+### REQ-DAT-168: Report files of an unknown schema version
 - **Description:** When an annotation or mark file names a schema version the project history does not contain, the system shall read it without migration and report it in validation as written under an unknown schema version.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/schemaVersion.ts:138-155`, `src/model/validate.ts:378`, commit `40e0668`
 - **Verified by:** `src/model/schemaVersion.test.ts` (`leaves a file of an unknown version alone, and says so`)
 - **Status:** Implemented
 
-### REQ-DAT-169 — Annotations folder confined to the project directory
+### REQ-DAT-169: Annotations folder confined to the project directory
 - **Description:** The system shall keep a project's annotation files in the folder its project file names as `annotationsDir`, defaulting to `annotations`, and shall accept only a plain folder name directly inside the project file's directory: names containing a separator, `..`, a drive or device designation, a leading dot, or characters not allowed in Windows file names shall be refused and the default used, and a folder that is a symbolic link or resolves outside the project directory shall not be read or written.
 - **Type:** Non-functional (ISO 25010: Security)
 - **Evidence:** `src/model/annotationsDir.ts`, `src-tauri/src/project.rs` (`annotations_dir_ok`, `annotations_dir_for`), `src/git/relpath.ts`, commit `c1b40ec`
 - **Verified by:** `src/model/annotationsDir.test.ts`, `src/state/editorStore.annotationsDir.test.ts`
 - **Status:** Implemented
 
-### REQ-DAT-172 — Highlight file names by project kind
+### REQ-DAT-172: Highlight file names by project kind
 - **Description:** The system shall store a screening project's PDF highlights as `screening-marks-<n>.json` and `screening-marks-consolidated.json`, and an annotation project's as `marks-<n>.json` and `marks-consolidated.json`, so that a screening project and an annotation project never write a file of the same name; a screening project's highlight files written under the older `marks-*` names shall be read only when no file under the new name exists for that seat and no annotation project sharing its annotations folder lists that paper.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/project.ts` (`marksFileName`, `parseMarksFileName`), `src-tauri/src/project.rs` (`read_project`, `safe_read`), `src/platform/tauri.ts` (`assembleProject`), `src/model/annotationsDir.ts` (`filesCollide`), commit `6eb9027`
 - **Verified by:** `src/model/annotationsDir.test.ts` (`highlight file names`, `filesCollide`), `src/model/split.test.ts`, `src/git/ownAnnotationPath.test.ts`
 - **Status:** Implemented
 
-### REQ-DAT-170 — Prune only trailing empties on save
+### REQ-DAT-170: Prune only trailing empties on save
 - **Description:** When serializing an annotation tree, the system shall drop only trailing empty instances of a repeatable node, keeping gaps before filled instances because position carries alignment meaning, and shall serialize trees with no filled field as empty objects.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/annotations.ts:136-162`, `src/model/project.ts:877-879`, `src/model/model.test.ts:401,678`
@@ -159,31 +159,31 @@ the project editor. See the [index](index.md) for the glossary.
 
 ## Validation
 
-### REQ-DAT-180 — Total, non-throwing validation
+### REQ-DAT-180: Total, non-throwing validation
 - **Description:** When validating a project, the system shall report every finding as an issue with paper, human-readable path, and machine path, and shall convert unexpected data shapes into issues instead of failing.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/validate.ts:14-40,318-337`
 - **Status:** Implemented
 
-### REQ-DAT-190 — Required, type, enum, and cardinality checks
+### REQ-DAT-190: Required, type, enum, and cardinality checks
 - **Description:** The system shall report an issue when a required non-boolean field is empty, when a value's type mismatches its field type (including years outside 1000–2100), when a non-empty enum value is not among the defined options, and when a node's instance count violates its cardinality bounds.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/validate.ts:57-243`, `src/model/validate.test.ts:116-128`
 - **Status:** Implemented
 
-### REQ-DAT-200 — Skip hidden fields in validation
-- **Description:** When a field or group is hidden by an unsatisfied `visibleIf` gate — whether the gate asks for any answer or for specific values — the system shall exclude it from validation.
+### REQ-DAT-200: Skip hidden fields in validation
+- **Description:** When a field or group is hidden by an unsatisfied `visibleIf` gate: whether the gate asks for any answer or for specific values: the system shall exclude it from validation.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/validate.ts:206-280`, `src/model/validate.test.ts:137-284`
 - **Status:** Implemented
 
-### REQ-DAT-210 — Separate unannotated papers
+### REQ-DAT-210: Separate unannotated papers
 - **Description:** When validating, the system shall list papers with zero annotations in a separate "Not started yet" section instead of reporting their fields as missing.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/validate.ts:300-340`, `src/components/ValidationDialog.tsx:411-450`
 - **Status:** Implemented
 
-### REQ-DAT-215 — Report hidden answers in validation
+### REQ-DAT-215: Report hidden answers in validation
 - **Description:** When validating a project, the system shall report each paper that holds answers under nodes the schema no longer describes, naming the nodes (up to five, with a count of any remainder), including papers with no answer the current schema can see.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/validate.ts:342`, `src/model/annotations.ts:369-386`, `src/components/ValidationDialog.tsx:11`, commit `264d6b0`
@@ -192,25 +192,25 @@ the project editor. See the [index](index.md) for the glossary.
 
 ## Completeness & finished state
 
-### REQ-DAT-220 — Completeness over the validated field set
+### REQ-DAT-220: Completeness over the validated field set
 - **Description:** The system shall compute a paper's completeness as filled over counted fields, counting only required fields when the schema marks any field required and all fields otherwise, excluding boolean fields and fields hidden by visibility gates, using the same rule as validation.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/completeness.ts:24-59`, `src/model/completeness.test.ts:89-351`
 - **Status:** Implemented
 
-### REQ-DAT-230 — Non-misleading percentage display
+### REQ-DAT-230: Non-misleading percentage display
 - **Description:** When displaying completeness as a percentage, the system shall show exactly 0 and 100 only at the true endpoints and clamp all intermediate ratios to the range 5–99.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/completeness.ts:124-129`, `src/model/completeness.test.ts:300-318`
 - **Status:** Implemented
 
-### REQ-DAT-240 — Finished is a human declaration
+### REQ-DAT-240: Finished is a human declaration
 - **Description:** The system shall store the finished flag as an explicit human declaration, accepting only the literal value true on load, never deriving it from data, and writing it to the file only when set.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/project.ts:135-152,758,861`
 - **Status:** Implemented
 
-### REQ-DAT-250 — Derive finished when the checkbox is disabled
+### REQ-DAT-250: Derive finished when the checkbox is disabled
 - **Description:** When a project sets `finishCheckbox` to false, the system shall treat a fulfilled schema alone as finished, ignore stored ticks while preserving them in the file, and hide the with-issues filter.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/annotationState.ts` (`annotationState`, `annotationStateFor`), `src/components/PaperList.finished.test.ts:207-267`
@@ -218,25 +218,25 @@ the project editor. See the [index](index.md) for the glossary.
 
 ## Multi-reviewer data
 
-### REQ-DAT-260 — Independent reviewer trees
+### REQ-DAT-260: Independent reviewer trees
 - **Description:** The system shall store the consolidated tree under `annotations` and each reviewer's independent tree under `reviews` keyed by reviewer number from 1 to the configured count (an integer from 1 to 10), normalizing each tree against the schema.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/project.ts:347-391,776`, `src/model/schema.ts:222`, `src/model/model.test.ts:589-663`
 - **Status:** Implemented
 
-### REQ-DAT-270 — Pre-create reviewer skeletons
+### REQ-DAT-270: Pre-create reviewer skeletons
 - **Description:** When a multi-reviewer project is saved, the system shall emit a skeleton tree for every configured reviewer so that a first annotation changes an existing file rather than creating one, while single-reviewer projects gain no reviewer trees.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/project.ts:357-391`, `src/model/model.test.ts:656`
 - **Status:** Implemented
 
-### REQ-DAT-280 — Never drop higher-numbered reviewers
+### REQ-DAT-280: Never drop higher-numbered reviewers
 - **Description:** When the configured reviewer count is lowered, the system shall keep and continue saving any higher-numbered reviewer's recorded tree.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/project.ts:369-373,936-951`, `src/model/split.test.ts:97`
 - **Status:** Implemented
 
-### REQ-DAT-285 — AI reviewer seat is the last configured seat
+### REQ-DAT-285: AI reviewer seat is the last configured seat
 - **Description:** The system shall accept an optional `config.aiSeat` boolean (default false, written only when true) naming that the AI occupies the last configured reviewer seat (`config.reviewers`), computing this seat's id rather than storing it separately, and shall treat it as effective only when AI-assisted annotation is allowed, at least two reviewers are configured, and the project is not a screening project; the value shall be kept verbatim outside that window rather than cleared. The system shall include it in git change detection and three-way merge, mirroring how `config.ai` is handled, with its own conflict row on disagreement.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/project.ts:225-289`, `src/model/schema.ts`, `src/git/changes.ts:259`, `src/git/merge.ts:1287-1298,1417-1418,1597-1601`
@@ -244,13 +244,13 @@ the project editor. See the [index](index.md) for the glossary.
 
 ## Serialization
 
-### REQ-DAT-290 — Deterministic serialization
+### REQ-DAT-290: Deterministic serialization
 - **Description:** The system shall serialize projects as two-space-indented JSON with papers in fixed citation-like key order sorted by case-sensitive identifier comparison, writing optional records and non-default configuration values only when present.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/project.ts:788-829,1111-1140`, commits `c50f28a`, `1382386`
 - **Status:** Implemented
 
-### REQ-DAT-300 — No writes on open
+### REQ-DAT-300: No writes on open
 - **Description:** When a project is opened, the system shall not write to any of its files, even when the stored shape of its annotation trees differs from what saving would write; the normalized shape shall be held in memory and reach disk only through a save.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/store.ts:1330`, commit `27bf461`
@@ -259,31 +259,31 @@ the project editor. See the [index](index.md) for the glossary.
 
 ## Duplicate detection
 
-### REQ-DAT-310 — Classify imports in three verdicts
+### REQ-DAT-310: Classify imports in three verdicts
 - **Description:** When importing reference records, the system shall classify each record as new, certain duplicate, or probable duplicate, comparing against all existing papers and all earlier records in the same batch.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/duplicates.ts` (`classifyImport`, `classifyPair`), `src/model/duplicates.test.ts:330`
 - **Status:** Implemented
 
-### REQ-DAT-320 — Duplicate matching rules
-- **Description:** The system shall treat an identical normalized DOI or identical normalized title as a certain duplicate, and a fuzzy whole-title similarity of at least 0.90 — or an equal subtitle-stripped base title with author-surname similarity of at least 0.50 — as a probable duplicate.
+### REQ-DAT-320: Duplicate matching rules
+- **Description:** The system shall treat an identical normalized DOI or identical normalized title as a certain duplicate, and a fuzzy whole-title similarity of at least 0.90: or an equal subtitle-stripped base title with author-surname similarity of at least 0.50: as a probable duplicate.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/duplicates.ts` (`normalizeTitleForMatch`, `normalizeDoi`, `fuzzyScoreAtLeast`)
 - **Status:** Implemented
 
-### REQ-DAT-330 — Demote conflicting matches
+### REQ-DAT-330: Demote conflicting matches
 - **Description:** The system shall demote a non-DOI title match whose years differ by two or more to new, and shall demote an exact-title match with two different DOIs or fully disjoint author sets to probable.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/duplicates.ts` (`classifyPair`, `rank`), `src/model/duplicates.test.ts:73-196,531-560`
 - **Status:** Implemented
 
-### REQ-DAT-340 — Human decision on probable duplicates
+### REQ-DAT-340: Human decision on probable duplicates
 - **Description:** When probable duplicates exist in an import, the system shall present each with the match reason and both sides' title, authors, and DOI, shall block the import until every probable row is decided, and shall write nothing when the dialog is cancelled.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/DuplicateReviewDialog.tsx:36-213`
 - **Status:** Implemented
 
-### REQ-DAT-350 — Merge fills empty fields only
+### REQ-DAT-350: Merge fills empty fields only
 - **Description:** When committing an import, the system shall fill only empty fields of merge targets, with the single exception that a reference-file abstract replaces a PDF-extracted abstract, and shall report counts of updated, unchanged, and added papers.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/editorStore.ts:423-543`, commit `c1830f9`
@@ -291,25 +291,25 @@ the project editor. See the [index](index.md) for the glossary.
 
 ## Reference import
 
-### REQ-DAT-360 — Parse BibTeX, RIS, and CSL-JSON
+### REQ-DAT-360: Parse BibTeX, RIS, and CSL-JSON
 - **Description:** The system shall parse reference files in BibTeX, RIS, and CSL-JSON formats, choosing the format by file extension with content sniffing as fallback, skipping malformed or title-less entries individually, and returning an empty list rather than failing on unparseable input.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/references.ts` (`parseReferences`, `parseBibtex`, `parseRis`, `parseCslJson`), `src/model/references.test.ts`
 - **Status:** Implemented
 
-### REQ-DAT-370 — Convert LaTeX escapes
+### REQ-DAT-370: Convert LaTeX escapes
 - **Description:** When parsing BibTeX prose fields, the system shall convert LaTeX accent and letter escapes to their UTF-8 characters and degrade unknown escapes by dropping the backslash, without mangling Windows file paths in path fields.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/references.ts:93-190,394-408`, `src/model/references.test.ts:166-262`
 - **Status:** Implemented
 
-### REQ-DAT-380 — Extract PDF hints from references
+### REQ-DAT-380: Extract PDF hints from references
 - **Description:** When a reference entry carries a file field or a URL ending in `.pdf`, the system shall extract the PDF file name as a placeholder path for the created paper.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/references.ts:426-432,461-484`, `src/state/editorStore.ts:402-419`
 - **Status:** Implemented
 
-### REQ-DAT-390 — Reserved feedback folder in the annotations folder
+### REQ-DAT-390: Reserved feedback folder in the annotations folder
 - **Description:** The system shall reserve the name `feedback` inside the annotations folder for AI schema-feedback JSON files: it shall never load that folder as a paper, never prune, overwrite or delete it when saving, and move it along with the annotations folder; it shall refuse `feedback` (in any letter case) as a paper identifier or annotations folder name; and it shall write a feedback file only through a dedicated call that accepts a plain `*.json` file name and a JSON-object content of at most 1 MB, refuses a symbolic-linked or escaping folder, and never overwrites an existing file. Git treats the files as ordinary project files (shown and committed as plain changes, never parsed as annotations or offered for field review, and left in place across a branch switch).
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/paperId.ts` (`FEEDBACK_DIR`), `src/model/annotationsDir.ts` (`isFeedbackPath`), `src-tauri/src/feedback.rs` (`write_feedback`, `list_feedback`, `project_write_feedback`, `project_list_feedback`), `src-tauri/src/project.rs` (`write_project_files`), `src-tauri/src/git.rs` (`branch_switch_begin`), `src/git/relpath.ts` (`mergeBlockingPaths`)
@@ -318,93 +318,93 @@ the project editor. See the [index](index.md) for the glossary.
 
 ## Project editor
 
-### REQ-EDT-10 — Validate drafts before save
+### REQ-EDT-10: Validate drafts before save
 - **Description:** When saving a project draft, the system shall require at least one named schema node (non-screening) or at least one non-blank exclusion reason (screening), a trimmed identifier and title per paper, a PDF path per paper except in screening drafts, every identifier safe as a folder name (REQ-EDT-21), and no two identifiers equal after trimming, case folding, or Unicode normalization, reporting each violation as a clickable issue capped at 12 displayed lines.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/editorStore.ts:625-636`, `src/model/paperId.ts:43-70,81-83,95-97`, `src/components/ProjectEditor.tsx`, commit `fe92a6e`
 - **Verified by:** `src/state/editorStore.test.ts` (duplicate and unsafe identifier cases)
 - **Status:** Implemented
 
-### REQ-EDT-20 — Flag duplicate and unsafe identifiers while typing
+### REQ-EDT-20: Flag duplicate and unsafe identifiers while typing
 - **Description:** When two paper rows carry identifiers equal after trimming, case folding, or Unicode normalization, or a row carries an identifier that is unsafe as a folder name, the system shall mark the offending inputs live during editing, stating the reason for an unsafe identifier.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/PapersEditor.tsx:31-41,52-57`, `src/model/paperId.ts:95-97`, commits `5ac5112`, `fe92a6e`
 - **Verified by:** `src/components/PapersEditor.test.tsx`
 - **Status:** Implemented
 
-### REQ-EDT-21 — Portable paper identifiers
+### REQ-EDT-21: Portable paper identifiers
 - **Description:** The system shall treat a paper identifier as unsafe when it is empty, contains a control character or any of `< > : " / \ | ? *`, is `.` or `..`, ends in a dot or a space, or is a Windows reserved device name (`CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`, case-insensitively, with or without an extension), and shall store an edited identifier in Unicode NFC form.
-- **Type:** Non-functional (ISO 25010: Portability — Adaptability)
+- **Type:** Non-functional (ISO 25010: Portability: Adaptability)
 - **Evidence:** `src/model/paperId.ts:36,40,43-70,81-83,95-97`, `src/components/PapersEditor.tsx:378`, commit `fe92a6e`
 - **Verified by:** `src/model/paperId.test.ts`, `src/components/PapersEditor.test.tsx`
 - **Status:** Implemented
 
-### REQ-EDT-30 — Create papers from PDFs
+### REQ-EDT-30: Create papers from PDFs
 - **Description:** When PDF files are added, the system shall create one paper per new file with an identifier slugified from the file name (suffix-deduplicated), a title guessed from the file name or PDF metadata, and a project-relative path, skipping PDFs already in the project with a notice.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/editorStore.ts:300-350,1213-1237`
 - **Status:** Implemented
 
-### REQ-EDT-40 — Warn before hiding answers
-- **Description:** When a schema field that papers record answers under (or that mark links point at) is removed, or renamed or re-parented without its answers able to follow (REQ-EDT-41), the system shall request confirmation naming the number of affected papers in the local copy, stating that the answers are kept but hidden until the field returns and that unpulled work is not counted, and — when the branch is known to be behind its upstream — how many commits behind it is; sibling reordering shall proceed without warning.
+### REQ-EDT-40: Warn before hiding answers
+- **Description:** When a schema field that papers record answers under (or that mark links point at) is removed, or renamed or re-parented without its answers able to follow (REQ-EDT-41), the system shall request confirmation naming the number of affected papers in the local copy, stating that the answers are kept but hidden until the field returns and that unpulled work is not counted, and: when the branch is known to be behind its upstream: how many commits behind it is; sibling reordering shall proceed without warning.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/SchemaTreeEditor.tsx:131,152`, `src/model/fieldUsage.ts:71-74,108-112`, commits `a0034e9`, `638e1b5`, `fa30150`, `a068166`
 - **Verified by:** `src/components/SchemaTreeEditor.test.tsx`
 - **Status:** Implemented
 
-### REQ-EDT-41 — Move answers with a renamed or moved field
+### REQ-EDT-41: Move answers with a renamed or moved field
 - **Description:** When a schema field that papers record answers under is renamed or moved to another group, the system shall state under the field how many papers are affected and that their answers will move with it on save, and shall offer to keep them hidden instead; when the answers cannot follow because the move passes through a repeated group, it shall say so.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/editorStore.ts:368`, `src/components/SchemaTreeEditor.tsx:131,511`, commit `40e0668`
 - **Verified by:** `src/state/editorStore.schemaVersion.test.ts` (`pendingSchemaMoves`, `records no move when the reviewer chose to keep the answers hidden`)
 - **Status:** Implemented
 
-### REQ-EDT-42 — Fold unpublished schema changes into one version
-- **Description:** When the schema is saved with changes while the current schema version is not yet in the repository HEAD — or, outside a repository, was created less than six minutes ago — the system shall fold the changes into that version under a new identifier that records the folded one, instead of adding a history entry; otherwise it shall add a new version descending from the current one.
+### REQ-EDT-42: Fold unpublished schema changes into one version
+- **Description:** When the schema is saved with changes while the current schema version is not yet in the repository HEAD: or, outside a repository, was created less than six minutes ago: the system shall fold the changes into that version under a new identifier that records the folded one, instead of adding a history entry; otherwise it shall add a new version descending from the current one.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/schemaVersion.ts:109-127`, `src/state/editorStore.ts:636-668`, commit `40e0668`
 - **Verified by:** `src/state/editorStore.schemaVersion.test.ts` (`without git, folds an edit made within minutes into the same version`, `in a repository, starts a new version once the current one is committed`), `src/model/schemaVersion.test.ts` (`gives a file stamped with a folded-in version only the moves it has not seen`)
 - **Status:** Implemented
 
-### REQ-EDT-45 — Confirm renaming an annotated paper's identifier
+### REQ-EDT-45: Confirm renaming an annotated paper's identifier
 - **Description:** When the identifier of a paper with recorded annotations is changed and the edit is committed, the system shall request confirmation stating that the paper's annotation folder is named after the identifier and that other reviewers' unpulled work under the old identifier will not follow, and shall restore the previous identifier when declined.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/PapersEditor.tsx:149`, commit `fa30150`
 - **Verified by:** `src/components/PapersEditor.test.tsx` (`confirm renaming the id of an annotated paper`)
 - **Status:** Implemented
 
-### REQ-EDT-46 — Own annotations folder for a project started from screening
+### REQ-EDT-46: Own annotations folder for a project started from screening
 - **Description:** When a new project is started from a screening project and saved next to it, the system shall rename carried paper identifiers that the screening project already uses and give the new project an annotations folder named after its file, so the two projects never write the same files.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/editorStore.ts` (`resolveScreeningImport`), `src/model/annotationsDir.ts` (`defaultSplitDirName`, `sharesPaper`), commit `4e3fa4e`
 - **Verified by:** `src/test/integration/screeningImport.integration.test.tsx`
 - **Status:** Implemented
 
-### REQ-EDT-50 — Confirm removal of annotated papers
+### REQ-EDT-50: Confirm removal of annotated papers
 - **Description:** When a paper with recorded annotations is removed in the editor, the system shall request confirmation stating that all reviewers' annotations will be discarded on the next save.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/PapersEditor.tsx:90-102`
 - **Status:** Implemented
 
-### REQ-EDT-60 — Edit schema tree graphically
+### REQ-EDT-60: Edit schema tree graphically
 - **Description:** The system shall provide a drag-and-drop schema tree editor offering group, text, number, year, and yes/no nodes, inline enum options, cardinality inputs with an unbounded toggle, descriptions, a required checkbox for eligible fields, a visibility-gate button that summarizes the node's `visibleIf` and opens a dialog for editing it (the gated node's tree path and type, conditions restricted to legal targets and labelled with each target's level and value kind, an explicit any-answer/specific-value choice per condition, values offered only for yes/no and option-list fields, arbitrarily nested AND/OR groups that can be extended after creation, targets listed same-level first then ancestors then the rest of the schema in document order, per-entry reordering and removal, and drag-and-drop of a condition or a whole group into another group), and refusal of drops into a node's own subtree.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/SchemaTreeEditor.tsx:20-26,211-240,285-470`, `src/components/VisibleIfDialog.tsx` (`VisibleIfDialog`, `moveEntryTo`), `src/components/VisibleIfDialog.test.ts`
 - **Status:** Implemented
 
-### REQ-EDT-70 — Record the review protocol
+### REQ-EDT-70: Record the review protocol
 - **Description:** The system shall let the user record a review protocol (research questions, search strings, databases, search date, notes) edited one item per line, storing no protocol record when all parts are empty.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/ProtocolEditor.tsx:38-132`, `src/model/project.ts:515-534`
 - **Status:** Implemented
 
-### REQ-EDT-80 — Show schema info once per load
+### REQ-EDT-80: Show schema info once per load
 - **Description:** When a project carries a schema-wide info text, the system shall display it in a dialog automatically once per project load and on demand via an info button, rendering contained URLs as links.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/SchemaInfoDialog.tsx:5-63`, commit `8322d10`
 - **Status:** Implemented
 
-### REQ-EDT-90 — Reorder papers by drag
+### REQ-EDT-90: Reorder papers by drag
 - **Description:** The system shall let the user reorder paper rows by dragging a handle, with drop-position indicators.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/PapersEditor.tsx:43-343`

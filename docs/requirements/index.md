@@ -1,4 +1,4 @@
-# SaiLoR — Software Requirements
+# SaiLoR: Software Requirements
 
 Requirements reverse-engineered from the implemented codebase (source, tests, docs, and
 commit history) as of 2026-08-27 (v1.8.1), with incremental updates through 2026-09-07
