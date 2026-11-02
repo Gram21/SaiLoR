@@ -41,18 +41,19 @@ There, the link between an extracted value and its evidence in the paper can get
 Also, it is hard to reconstruct who decided what and when.
 %% Idea
 To tackle this, we present \SaiLoR, an open-source desktop tool that supports screening, data extraction, and consolidation of a review in one project.
-The project is a set of plain JSON files that a schema describes and that git versions.
+The project is a set of plain \JSON files that a schema describes and that git versions.
 Several reviewers work independently in their own seats, and a consolidator resolves their disagreements with agreement statistics.
 When reviewers synchronize through git, the tool merges concurrent changes field by field.
-Optional large language model support proposes answers with evidence, and a human reviews every proposal.
+Optional large language model support proposes answers with quoted evidence. A human reviews every proposal.
 %% Method
 We describe the tool from the reviewer's view and explain its main architecture decisions, including the move from Electron to Tauri.
 We also report how we keep the tool itself traceable.
+We have not yet evaluated the tool with users.
 %% Results
-We documented 389 requirements and linked them to code, tests, and documentation.
+We documented 391 requirements and linked them to code, tests, and documentation.
 Of these requirements, 93\% link to implementing source code and 92\% link to at least one automated test.
 The test suites hold 2834 unit tests, 56 integration tests, and 104 Rust tests.
-We release \SaiLoR 2.0.0 under the GPL-3.0 license and archive it on Zenodo.
+The source code of \SaiLoR is available on GitHub under the GPL-3.0 license. Its Zenodo concept \DOI points to the latest archived version.
 \end{abstract}
 
 \begin{IEEEkeywords}

@@ -7,7 +7,7 @@ We use the running example from \autoref{sec:approach-example}.
 \begin{figure*}[t]
     \centering
     \screenshot{\shotAnnotate}{0.85\textwidth}
-    \caption{Main view of \SaiLoR with the paper list on the left, the PDF in the middle, and the extraction form of the running example for reviewer seat 1 on the right}
+    \caption{Main view of \SaiLoR with the paper list on the left, the \PDF in the middle, and the extraction form of the running example for reviewer seat 1 on the right}
     \label{fig:annotate}
 \end{figure*}
 
@@ -32,9 +32,9 @@ Reviewers can reorder and nest rows by drag and drop.
 \subsection{Conducting: Import and Screening}\label{sec:tool-screening}
 
 % Import and duplicates
-Reviewers import references from BibTeX, RIS, or CSL-JSON files, and they can import a folder of PDFs including its subfolders.
+Reviewers import references from BibTeX, RIS, or CSL-JSON files, and they can import a folder of \PDFs including its subfolders.
 During import, \SaiLoR sorts each record into one of three classes: new, certain duplicate, or probable duplicate.
-A certain duplicate has the same normalized DOI or title as a paper in the project.
+A certain duplicate has the same normalized \DOI or title as a paper in the project.
 A probable duplicate has a fuzzy title similarity of at least $0.90$, or the same base title and an author similarity of at least $0.50$.
 The reviewer must decide on each probable duplicate.
 If the reviewer merges two records, \SaiLoR only fills fields that are empty in the existing paper.
@@ -42,8 +42,8 @@ If the reviewer merges two records, \SaiLoR only fills fields that are empty in 
 % Screening
 In a screening project, each reviewer decides per paper whether to include it, to exclude it with a reason, or to leave it undecided.
 \autoref{fig:screening} shows the screening view of the running example.
-The view shows the abstract instead of the PDF, because reviewers usually screen titles and abstracts first.
-If the abstract was extracted from the PDF and not imported, \SaiLoR shows a warning, because the extraction can be wrong.
+The view shows the abstract instead of the \PDF, because screening decisions rest on titles and abstracts.
+If the abstract was extracted from the \PDF and not imported, \SaiLoR shows a warning, because the extraction can be wrong.
 Reviewers can screen with the keyboard: \texttt{I} includes, \texttt{E} excludes, \texttt{U} clears the decision, and the number keys exclude with the matching reason.
 After a decision, \SaiLoR moves on to the next paper.
 A progress line shows how many papers the reviewer screened, included, and excluded.
@@ -66,20 +66,20 @@ The new project records where it came from and how many papers were included, ex
 
 % Extraction view
 \autoref{fig:annotate} shows the main view during extraction.
-The left pane lists the papers, the middle pane shows the PDF, and the right pane shows the form that \SaiLoR generates from the schema.
+The left pane lists the papers, the middle pane shows the \PDF, and the right pane shows the form that \SaiLoR generates from the schema.
 Repeatable groups such as \emph{Findings} get buttons to add and remove entries.
 A dot next to each paper shows how complete the paper is for the current seat.
 Reviewers mark a paper as finished explicitly.
 Thus, \enquote{finished} is a decision of the reviewer and not just the absence of empty fields.
 
 % Evidence
-Reviewers can copy selected text from the PDF into a field.
+Reviewers can copy selected text from the \PDF into a field.
 They can also highlight passages in five colors and add notes.
 Each reviewer seat has its own marks.
 A reviewer can link a mark to one or more fields as evidence.
-The link popover of a field lists the linked marks, and a click on a mark jumps to the passage in the PDF.
+The link popover of a field lists the linked marks, and a click on a mark jumps to the passage in the \PDF.
 In this way, the project stores where in the paper an answer comes from.
-Reviewers can export their marks as standard PDF annotations into a new PDF file.
+Reviewers can export their marks as standard \PDF annotations into a new \PDF file.
 
 \subsection{Conducting: Consolidation}\label{sec:tool-consolidation}
 
@@ -91,7 +91,7 @@ The consolidator works in the additional consolidation seat.
 % Alignment
 Before \SaiLoR can compare answers, it must find out which entries of a repeatable group belong together.
 For example, two reviewers can list the findings of a paper in different orders.
-\SaiLoR matches the entries with a maximum-weight assignment over their pairwise similarity, and it keeps entries with a similarity of $0.5$ or lower apart.
+\SaiLoR matches the entries with a maximum-weight assignment over their pairwise similarity, and it does not match entries whose similarity is $0.5$ or lower.
 The alignment is deterministic, so that all reviewers see the same result.
 Before \SaiLoR compares two answers, it trims them, converts them to lowercase, and collapses whitespace.
 If at least two reviewers answered a field and all answers are equal, \SaiLoR fills the consolidated value automatically and marks it as auto-filled.
@@ -121,7 +121,7 @@ In a screening project, the agreement only considers the decision.
 
 % Commit and pull
 \SaiLoR has a built-in git view that uses the git installation of the user.
-Instead of a line diff of JSON files, the view lists each changed field with its previous and current value.
+Instead of a line diff of \JSON files, the view lists each changed field with its previous and current value.
 Reviewers select which field changes they commit.
 A pull fetches the upstream branch and reports whether the project is up to date, can be fast-forwarded, or needs a merge.
 \SaiLoR only pushes when the reviewer asks for it.
@@ -147,7 +147,7 @@ If a merge leaves conflicts in files that do not belong to the project, \SaiLoR 
 
 % Providers and opt-in
 \LLM assistance is off unless the project enables it.
-Reviewers can connect nine provider \APIs, among them Anthropic, OpenAI, Google Gemini, and any OpenAI-compatible server.
+Reviewers can connect nine named provider \APIs, among them Anthropic, OpenAI, and Google Gemini, as well as any OpenAI-compatible server.
 Local models run, for example, in Ollama or a llama.cpp server~\cite{llamacpp}.
 \SaiLoR stores \API keys in the keychain of the operating system.
 Every \LLM window shows a notice that the feature is a preview and that each proposal must be checked.
