@@ -34,7 +34,7 @@ A large group of tools are hosted web applications.
 Covidence~\cite{covidence} is a web platform that covers screening, full-text review, risk of bias, and data extraction.
 Rayyan~\cite{ouzzani2016rayyan} is a web and mobile app that supports screening with semi-automated suggestions.
 CADIMA~\cite{kohl2018cadima} is an open-access online tool by the Julius K\"uhn-Institut for the conduct and reporting of systematic reviews and maps.
-Parsifal~\cite{parsifal} is an online platform for planning, conducting, and reporting \SLRs in \SE with support for collaboration.
+Parsifal~\cite{parsifal} is an online tool that supports researchers in planning, conducting, and reporting \SLRs.
 In all four tools, the review data lives on a server, and collaboration happens through the shared online project.
 \SaiLoR takes the opposite route.
 The review data stays in local files, and reviewers exchange it through git, a hosting service of their choice, or not at all.
@@ -58,9 +58,9 @@ The two tools can complement each other, because \SaiLoR imports BibTeX, RIS, an
 
 % LLM studies
 Recently, many studies evaluate \LLMs for single \SLR activities.
-For selection, Felizardo et al.~\cite{felizardo2024chatgpt} evaluate the accuracy of ChatGPT on \SLRs in \SE, and Syriani et al.~\cite{syriani2024screening} evaluate ChatGPT for screening on several datasets.
-% TODO verify: the conclusion of Felizardo et al. that SE researchers should not outsource the selection activity to ChatGPT.
-Felizardo et al. advise against handing the selection over to ChatGPT.
+For selection, Felizardo et al.~\cite{felizardo2024chatgpt} evaluate the accuracy of ChatGPT on \SLRs in \SE, and Syriani et al.~\cite{syriani2024screening} use ChatGPT to screen articles for systematic reviews.
+Felizardo et al. report 75.3\% and 86.1\% accuracy in the selection activity of two \SLRs.
+They advise against fully outsourcing the selection to ChatGPT, but see it as a support tool.
 For extraction, Felizardo et al.~\cite{felizardo2024dataextraction} and Gartlehner et al.~\cite{gartlehner2024data} report proof-of-concept studies.
 Khraisha et al.~\cite{khraisha2024llm} test GPT-4 for screening and extraction across languages.
 After correcting for chance agreement and dataset imbalance, they find only moderate performance for data extraction.
