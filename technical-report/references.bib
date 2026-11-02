@@ -1,4 +1,4 @@
-% Bibliographic data checked against Crossref and publisher or vendor pages on 2026-11-01.
+% Bibliographic data checked against Crossref, DataCite, publisher pages, and project sites (2026-11-02).
 % BibTeX ignores text outside entries, so TODO notes stand in front of the entry they refer to.
 % Titles keep their original punctuation, including dashes.
 
@@ -6,7 +6,6 @@
 % SLR methodology
 % ---------------------------------------------------------------------------
 
-% TODO verify: report number appears as EBSE-2007-01 and EBSE-2007-001 in different sources. No DOI exists.
 @techreport{kitchenham2007guidelines,
   author      = {Kitchenham, Barbara and Charters, Stuart},
   title       = {Guidelines for performing Systematic Literature Reviews in Software Engineering},
@@ -92,6 +91,7 @@
   title   = {Identification and prioritization of {SLR} search tool requirements: an {SLR} and a survey},
   journal = {Empirical Software Engineering},
   volume  = {24},
+  number  = {1},
   pages   = {139--169},
   year    = {2019},
   doi     = {10.1007/s10664-018-9626-5}
@@ -107,11 +107,11 @@
   doi     = {10.1016/j.infsof.2021.106589}
 }
 
-% TODO verify: book editors (not retrieved).
 @incollection{felizardo2020automating,
   author    = {Felizardo, Katia R. and Carver, Jeffrey C.},
   title     = {Automating Systematic Literature Review},
   booktitle = {Contemporary Empirical Methods in Software Engineering},
+  editor    = {Felderer, Michael and Travassos, Guilherme Horta},
   publisher = {Springer},
   pages     = {327--355},
   year      = {2020},
@@ -156,6 +156,7 @@
   title   = {An open source machine learning framework for efficient and transparent systematic reviews},
   journal = {Nature Machine Intelligence},
   volume  = {3},
+  number  = {2},
   pages   = {125--133},
   year    = {2021},
   doi     = {10.1038/s42256-020-00287-7}
@@ -172,12 +173,11 @@
   doi     = {10.1186/s13750-018-0115-5}
 }
 
-% TODO verify: author (the GitHub repository vitorfs/parsifal is the origin, the site does not name an author). No paper about the tool was found.
 @misc{parsifal,
   author       = {Freitas, Vitor},
   title        = {Parsifal},
-  howpublished = {\url{https://parsif.al}},
-  note         = {Accessed 2026-11-01}
+  howpublished = {Software. \url{https://parsif.al}, source code at \url{https://github.com/vitorfs/parsifal}},
+  note         = {Accessed 2026-11-02}
 }
 
 @article{hernandes2012start,
@@ -226,7 +226,7 @@
 
 @inproceedings{felizardo2024dataextraction,
   author    = {Felizardo, Katia Romero and Steinmacher, Igor and Lima, M{\'a}rcia Sampaio and Deizepe, Anderson and Conte, Tayana U. and Barcellos, Monalessa Perini},
-  title     = {Data extraction for systematic mapping study using a large language model -- a proof-of-concept study in software engineering},
+  title     = {Data extraction for systematic mapping study using a large language model - a proof-of-concept study in software engineering},
   booktitle = {Proceedings of the 18th ACM/IEEE International Symposium on Empirical Software Engineering and Measurement (ESEM)},
   pages     = {407--413},
   year      = {2024},
@@ -270,6 +270,7 @@
   title   = {Data extraction for evidence synthesis using a large language model: A proof-of-concept study},
   journal = {Research Synthesis Methods},
   volume  = {15},
+  number  = {4},
   pages   = {576--589},
   year    = {2024},
   doi     = {10.1002/jrsm.1710}
@@ -365,47 +366,47 @@
   title     = {Content Analysis: An Introduction to Its Methodology},
   edition   = {4th},
   publisher = {SAGE Publications},
-  year      = {2018}
+  year      = {2019},
+  doi       = {10.4135/9781071878781}
 }
 
-% TODO verify: author organization for the web resources below.
 @misc{tauri2,
-  author       = {{Tauri contributors}},
+  author       = {{Tauri Contributors}},
   title        = {Tauri 2.0},
   howpublished = {\url{https://v2.tauri.app/}},
-  note         = {Accessed 2026-11-01}
+  note         = {Accessed 2026-11-02}
 }
 
 @misc{electron,
-  author       = {{Electron contributors}},
+  author       = {{OpenJS Foundation}},
   title        = {Electron: Build cross-platform desktop apps with {JavaScript}, {HTML}, and {CSS}},
   howpublished = {\url{https://www.electronjs.org/}},
-  note         = {Accessed 2026-11-01}
+  note         = {Accessed 2026-11-02}
 }
 
 @misc{llamacpp,
   author       = {{ggml-org}},
   title        = {llama.cpp: {LLM} inference in {C/C++}},
   howpublished = {\url{https://github.com/ggml-org/llama.cpp}},
-  note         = {Accessed 2026-11-01}
+  note         = {Accessed 2026-11-02}
 }
 
 @misc{owasp_ssrf,
   author       = {{OWASP Foundation}},
   title        = {Server Side Request Forgery},
   howpublished = {\url{https://community.owasp.org/attacks/Server_Side_Request_Forgery}},
-  note         = {Accessed 2026-11-01}
+  note         = {Accessed 2026-11-02}
 }
 
 % ---------------------------------------------------------------------------
 % SaiLoR itself
 % ---------------------------------------------------------------------------
 
+% TODO verify: no 2.0.0 release or Zenodo record exists yet (checked 2026-11-02). Latest GitHub release and Zenodo record are v1.9.1. DOI 10.5281/zenodo.23804729 resolves to v1.9.1, so it was removed. Add the 2.0.0 DOI after Zenodo mints it.
 @misc{sailor2026zenodo,
   author       = {Keim, Jan},
   title        = {{SaiLoR} 2.0.0},
-  howpublished = {Zenodo},
+  howpublished = {Software. Source code: \url{https://github.com/Gram21/SaiLoR}},
   year         = {2026},
-  doi          = {10.5281/zenodo.23804729},
-  note         = {Version v2.0.0. Source code: \url{https://github.com/Gram21/SaiLoR}}
+  note         = {Version v2.0.0}
 }
