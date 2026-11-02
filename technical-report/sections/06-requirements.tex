@@ -45,17 +45,17 @@ An empty \emph{Verified by} cell means that we confirmed the requirement only by
         Annotation view, paper list, and PDF     & \multicolumn{2}{r}{54}           \\
         Screening                                & \multicolumn{2}{r}{39}           \\
         Consolidation                            & \multicolumn{2}{r}{44}           \\
-        Git integration                          & \multicolumn{2}{r}{58}           \\
+        Git integration                          & \multicolumn{2}{r}{59}           \\
         \LLM assistance                          & \multicolumn{2}{r}{88}           \\
-        Platform and desktop shell               & \multicolumn{2}{r}{45}           \\
+        Platform and desktop shell               & \multicolumn{2}{r}{46}           \\
         \midrule
         Trace link                               & Count & Share                    \\
         \midrule
-        Implementing source code                 & 363   & 93\%                     \\
-        At least one verifying test              & 352   & 90\%                     \\
-        Source inspection only                   & 37    & 10\%                     \\
-        Introducing or pinning commit            & 116   & 30\%                     \\
-        Documentation section                    & 335   & 86\%                     \\
+        Implementing source code                 & 365   & 93\%                     \\
+        At least one verifying test              & 360   & 92\%                     \\
+        Source inspection only                   & 31    & 8\%                     \\
+        Introducing or pinning commit            & 118   & 30\%                     \\
+        Documentation section                    & 337   & 86\%                     \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -64,11 +64,11 @@ An empty \emph{Verified by} cell means that we confirmed the requirement only by
 In total, we documented 389 requirements.
 \autoref{tab:trace} shows how they are distributed over the categories and how many of them are linked to each kind of artifact.
 Of the requirements, 343 are functional and 46 are non-functional, and 32 have the type security.
-At the time of writing, 388 requirements are implemented.
+At the time of writing, 390 requirements are implemented.
 One requirement is implemented in part: the guard against reload shortcuts (cf.~\autoref{sec:discussion}).
-The links point to 177 distinct source files and 184 distinct test files.
-Of all requirements, 93\% link to implementing source code, and 90\% link to at least one verifying test.
-The remaining 37 requirements are confirmed by source inspection only.
+The links point to 177 distinct source files and 185 distinct test files.
+Of all requirements, 93\% link to implementing source code, and 92\% link to at least one verifying test.
+The remaining 31 requirements are confirmed by source inspection only.
 Of these, 15 belong to the desktop shell and 12 to the git integration.
 Only 30\% link to a commit that introduced or pinned the behavior.
 
