@@ -191,17 +191,22 @@ describe('REQ-UI-20: toolbar project controls', () => {
     expect(st().autosaveEnabled).toBe(true)
   })
 
-  it('shows the Close project button only while a project is open, and it closes the project', async () => {
+  it('always renders Close project to keep the layout stable, hidden and disabled without a project', async () => {
     const { rerender } = render(<Toolbar />)
-    expect(screen.queryByRole('button', { name: 'Close project' })).not.toBeInTheDocument()
+    const hidden = screen.getByTitle('Close project')
+    expect(hidden).toBeDisabled()
+    expect(hidden).toHaveAttribute('aria-hidden', 'true')
+    expect(hidden).toHaveAttribute('tabindex', '-1')
+    expect(hidden).toHaveStyle({ visibility: 'hidden' })
 
     act(() => st().loadFromText(projectJson(), null, 'test.json'))
     rerender(<Toolbar />)
     const close = screen.getByRole('button', { name: 'Close project' })
+    expect(close).toBeEnabled()
     expect(close).toHaveAttribute('title', 'Close project')
     await userEvent.click(close)
     expect(st().project).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Close project' })).not.toBeInTheDocument()
+    expect(screen.getByTitle('Close project')).toBeDisabled()
   })
 
   it('no longer offers Close project in the Open menu nor shows the project name', async () => {

@@ -311,18 +311,19 @@ export function Toolbar() {
         {/* While the list is open its own header owns the toggle; once collapsed
             the button has to live out here, or there'd be no way to bring it back. */}
         {sidebarCollapsed && <SidebarToggle />}
-        {project && (
-          <button
-            type="button"
-            className="icon-btn"
-            title="Close project"
-            aria-label="Close project"
-            onClick={requestCloseProject}
-            disabled={busy || editorOpen}
-          >
-            <Icon name="close" size={16} />
-          </button>
-        )}
+        <button
+          type="button"
+          className="icon-btn"
+          style={project ? undefined : { visibility: 'hidden' }}
+          title="Close project"
+          aria-label="Close project"
+          aria-hidden={!project}
+          tabIndex={project ? undefined : -1}
+          onClick={requestCloseProject}
+          disabled={!project || busy || editorOpen}
+        >
+          <Icon name="close" size={16} />
+        </button>
 
         <span className="app-title">
           SaiLoR
