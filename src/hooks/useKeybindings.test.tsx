@@ -1,10 +1,11 @@
 import '@testing-library/jest-dom/vitest'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, fireEvent, screen, act } from '@testing-library/react'
 import { useStore } from '../state/store'
 import { useEditorStore } from '../state/editorStore'
 import { useKeybindings } from './useKeybindings'
 import { PaperList } from '../components/PaperList'
+import { setBridge, type SlrBridge } from '../platform/bridge'
 
 const st = () => useStore.getState()
 
@@ -218,5 +219,39 @@ describe('useKeybindings: paper navigation (REQ-LST-50)', () => {
     input.focus()
     fireEvent.keyDown(input, { key: 'ArrowDown', altKey: true })
     expect(st().currentPaperId).toBe('p2')
+  })
+})
+
+describe('reload shortcuts', () => {
+  const tauriWindow = window as unknown as { __TAURI_INTERNALS__?: object }
+  const requestReload = vi.fn()
+
+  beforeEach(() => {
+    requestReload.mockClear()
+    setBridge({ requestReload } as unknown as SlrBridge)
+  })
+
+  afterEach(() => {
+    setBridge(null)
+    delete tauriWindow.__TAURI_INTERNALS__
+  })
+
+  it.each([
+    ['Ctrl+R', { key: 'r', ctrlKey: true }],
+    ['Cmd+R', { key: 'R', metaKey: true }],
+    ['Ctrl+Shift+R', { key: 'R', ctrlKey: true, shiftKey: true }],
+    ['F5', { key: 'F5' }],
+  ])('%s asks the guarded reload and cancels the WebView reload', (_name, init) => {
+    tauriWindow.__TAURI_INTERNALS__ = {}
+    render(<Host />)
+    const proceed = fireEvent.keyDown(window, init)
+    expect(requestReload).toHaveBeenCalledOnce()
+    expect(proceed).toBe(false)
+  })
+
+  it('leaves reload to the browser outside the Tauri shell', () => {
+    render(<Host />)
+    expect(fireEvent.keyDown(window, { key: 'F5' })).toBe(true)
+    expect(requestReload).not.toHaveBeenCalled()
   })
 })

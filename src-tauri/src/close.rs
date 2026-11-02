@@ -1,6 +1,6 @@
-//! Unsaved-changes guard for closing the window or quitting the app.
+//! Unsaved-changes guard for closing the window, quitting the app and reloading the page.
 //! Port of the `close` handler, `promptUnsavedChanges` and the `app:setDirty` /
-//! `app:saveComplete` channels in electron/main.ts.
+//! `app:saveComplete` channels in electron/main.ts. The reload path is `guardedReload`.
 
 use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 use tauri::{AppHandle, Emitter, Manager};
@@ -19,6 +19,8 @@ pub struct Guard {
     asking: AtomicBool,
     /// The renderer was asked to save and has not reported back.
     saving: AtomicBool,
+    /// The open dialog or pending save ends in a reload, not a close.
+    reload: AtomicBool,
     /// The close was confirmed; let every further close and exit pass.
     allow: AtomicBool,
 }
@@ -28,6 +30,14 @@ enum Choice {
     Save,
     Discard,
     Cancel,
+}
+
+#[derive(Debug, PartialEq)]
+enum Next {
+    Stay,
+    RequestSave,
+    Quit,
+    Reload,
 }
 
 fn choice(result: &MessageDialogResult) -> Choice {
@@ -54,24 +64,57 @@ impl Guard {
         Some(!self.asking.swap(true, SeqCst))
     }
 
-    /// Records the answer. True when the app may close now.
-    fn answered(&self, choice: &Choice) -> bool {
-        self.asking.store(false, SeqCst);
-        match choice {
-            Choice::Save => self.saving.store(true, SeqCst),
-            Choice::Discard => self.allow.store(true, SeqCst),
-            Choice::Cancel => {}
+    /// Some(true): show the dialog for a reload. Some(false): a dialog or save is pending.
+    /// None: reload now.
+    fn on_reload(&self) -> Option<bool> {
+        if !self.dirty.load(SeqCst) {
+            return None;
         }
-        *choice == Choice::Discard
+        if self.asking.load(SeqCst) || self.saving.load(SeqCst) {
+            return Some(false);
+        }
+        self.asking.store(true, SeqCst);
+        self.reload.store(true, SeqCst);
+        Some(true)
     }
 
-    /// True when a save that the dialog asked for succeeded.
-    fn saved(&self, ok: bool) -> bool {
-        let close = self.saving.swap(false, SeqCst) && ok;
-        if close {
-            self.allow.store(true, SeqCst);
+    /// Records the answer.
+    fn answered(&self, choice: &Choice) -> Next {
+        self.asking.store(false, SeqCst);
+        match choice {
+            Choice::Save => {
+                self.saving.store(true, SeqCst);
+                Next::RequestSave
+            }
+            Choice::Discard => self.finish(),
+            Choice::Cancel => {
+                self.reload.store(false, SeqCst);
+                Next::Stay
+            }
         }
-        close
+    }
+
+    /// Acts on a save the dialog asked for. Only a successful save continues.
+    fn saved(&self, ok: bool) -> Next {
+        if !self.saving.swap(false, SeqCst) {
+            return Next::Stay;
+        }
+        if ok {
+            self.finish()
+        } else {
+            self.reload.store(false, SeqCst);
+            Next::Stay
+        }
+    }
+
+    /// A reload goes ahead. A close goes ahead and lets every later close pass.
+    fn finish(&self) -> Next {
+        if self.reload.swap(false, SeqCst) {
+            Next::Reload
+        } else {
+            self.allow.store(true, SeqCst);
+            Next::Quit
+        }
     }
 }
 
@@ -82,30 +125,56 @@ pub fn intercept(app: &AppHandle) -> bool {
         return false;
     };
     if ask {
-        let mut dialog = app
-            .dialog()
-            .message("Your changes will be lost if you don't save them.")
-            .title("Do you want to save the changes to your project?")
-            .kind(MessageDialogKind::Warning)
-            .buttons(MessageDialogButtons::YesNoCancelCustom(
-                SAVE.into(),
-                DISCARD.into(),
-                CANCEL.into(),
-            ));
-        if let Some(window) = app.get_webview_window("main") {
-            dialog = dialog.parent(&window);
-        }
-        let app = app.clone();
-        dialog.show_with_result(move |result| {
-            let choice = choice(&result);
-            if app.state::<Guard>().answered(&choice) {
-                app.exit(0);
-            } else if choice == Choice::Save {
-                let _ = app.emit("app:requestSave", ());
-            }
-        });
+        ask_user(app);
     }
     true
+}
+
+/// Reloads the page now when nothing is unsaved, otherwise asks first.
+pub fn request_reload(app: &AppHandle) {
+    match app.state::<Guard>().on_reload() {
+        None => reload_main(app),
+        Some(true) => ask_user(app),
+        Some(false) => {}
+    }
+}
+
+fn ask_user(app: &AppHandle) {
+    let mut dialog = app
+        .dialog()
+        .message("Your changes will be lost if you don't save them.")
+        .title("Do you want to save the changes to your project?")
+        .kind(MessageDialogKind::Warning)
+        .buttons(MessageDialogButtons::YesNoCancelCustom(
+            SAVE.into(),
+            DISCARD.into(),
+            CANCEL.into(),
+        ));
+    if let Some(window) = app.get_webview_window("main") {
+        dialog = dialog.parent(&window);
+    }
+    let app = app.clone();
+    dialog.show_with_result(move |result| {
+        let next = app.state::<Guard>().answered(&choice(&result));
+        perform(&app, next);
+    });
+}
+
+fn perform(app: &AppHandle, next: Next) {
+    match next {
+        Next::Stay => {}
+        Next::RequestSave => {
+            let _ = app.emit("app:requestSave", ());
+        }
+        Next::Quit => app.exit(0),
+        Next::Reload => reload_main(app),
+    }
+}
+
+fn reload_main(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.reload();
+    }
 }
 
 #[tauri::command]
@@ -113,12 +182,16 @@ pub fn app_set_dirty(guard: tauri::State<'_, Guard>, dirty: bool) {
     guard.dirty.store(dirty, SeqCst);
 }
 
-/// Only closes after a save this guard asked for, not on any `true`.
+/// Only closes or reloads after a save this guard asked for, not on any `true`.
 #[tauri::command]
 pub fn app_save_complete(app: AppHandle, ok: bool) {
-    if app.state::<Guard>().saved(ok) {
-        app.exit(0);
-    }
+    let next = app.state::<Guard>().saved(ok);
+    perform(&app, next);
+}
+
+#[tauri::command]
+pub fn app_reload(app: AppHandle) {
+    request_reload(&app);
 }
 
 #[cfg(test)]
@@ -160,7 +233,7 @@ mod tests {
         let g = dirty();
         assert_eq!(g.on_close(), Some(true));
         assert_eq!(g.on_close(), Some(false));
-        assert!(!g.answered(&Choice::Cancel));
+        assert_eq!(g.answered(&Choice::Cancel), Next::Stay);
         assert_eq!(g.on_close(), Some(true));
     }
 
@@ -168,20 +241,75 @@ mod tests {
     fn discard_lets_every_later_close_pass() {
         let g = dirty();
         g.on_close();
-        assert!(g.answered(&Choice::Discard));
+        assert_eq!(g.answered(&Choice::Discard), Next::Quit);
         assert_eq!(g.on_close(), None);
     }
 
     #[test]
     fn closes_only_after_a_requested_save_succeeds() {
         let g = dirty();
-        assert!(!g.saved(true), "no save was requested");
+        assert_eq!(g.saved(true), Next::Stay, "no save was requested");
         g.on_close();
-        assert!(!g.answered(&Choice::Save));
-        assert!(!g.saved(false), "failed save keeps the window open");
+        assert_eq!(g.answered(&Choice::Save), Next::RequestSave);
+        assert_eq!(
+            g.saved(false),
+            Next::Stay,
+            "failed save keeps the window open"
+        );
         assert_eq!(g.on_close(), Some(true));
         g.answered(&Choice::Save);
-        assert!(g.saved(true));
+        assert_eq!(g.saved(true), Next::Quit);
         assert_eq!(g.on_close(), None);
+    }
+
+    #[test]
+    fn clean_project_reloads_at_once() {
+        assert_eq!(Guard::default().on_reload(), None);
+    }
+
+    #[test]
+    fn dirty_reload_asks_once_and_cancel_keeps_the_page() {
+        let g = dirty();
+        assert_eq!(g.on_reload(), Some(true));
+        assert_eq!(g.on_reload(), Some(false));
+        assert_eq!(g.answered(&Choice::Cancel), Next::Stay);
+        assert_eq!(g.on_reload(), Some(true));
+    }
+
+    #[test]
+    fn discard_reloads_without_allowing_a_later_close() {
+        let g = dirty();
+        assert_eq!(g.on_reload(), Some(true));
+        assert_eq!(g.answered(&Choice::Discard), Next::Reload);
+        assert_eq!(g.on_close(), Some(true));
+    }
+
+    #[test]
+    fn reload_waits_for_a_requested_save_to_succeed() {
+        let g = dirty();
+        assert_eq!(g.on_reload(), Some(true));
+        assert_eq!(g.answered(&Choice::Save), Next::RequestSave);
+        assert_eq!(g.on_reload(), Some(false), "a save is pending");
+        assert_eq!(g.saved(false), Next::Stay, "failed save keeps the page");
+        assert_eq!(g.on_reload(), Some(true));
+        g.answered(&Choice::Save);
+        assert_eq!(g.saved(true), Next::Reload);
+        assert_eq!(g.on_close(), Some(true), "reload does not allow a close");
+    }
+
+    #[test]
+    fn close_dialog_answer_does_not_reload() {
+        let g = dirty();
+        g.on_close();
+        assert_eq!(g.answered(&Choice::Save), Next::RequestSave);
+        assert_eq!(g.saved(true), Next::Quit);
+    }
+
+    #[test]
+    fn open_close_dialog_blocks_reload() {
+        let g = dirty();
+        assert_eq!(g.on_close(), Some(true));
+        assert_eq!(g.on_reload(), Some(false));
+        assert_eq!(g.answered(&Choice::Discard), Next::Quit);
     }
 }

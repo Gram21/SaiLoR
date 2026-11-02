@@ -2,12 +2,15 @@ import { useEffect } from 'react'
 import { useStore } from '../state/store'
 import { useEditorStore } from '../state/editorStore'
 import { DECISION_EXCLUDE, DECISION_INCLUDE } from '../screening/schema'
+import { isTauri } from '../platform/adapter'
+import { getBridge } from '../platform/bridge'
 
 /**
  * Global keyboard shortcuts:
  *  - Ctrl/Cmd+S         → Save
  *  - Ctrl/Cmd+Shift+S   → Save as
  *  - Ctrl/Cmd+O         → Open
+ *  - Ctrl/Cmd+R, F5     → Reload, through the unsaved-changes guard (Tauri only)
  *  - Ctrl/Cmd+Z         → Undo
  *  - Ctrl/Cmd+Shift+Z / Ctrl+Y → Redo
  *  - Ctrl/Cmd +/-/0        → PDF zoom in / out / reset
@@ -63,6 +66,14 @@ export function useKeybindings() {
         e.preventDefault()
         if (editing) useEditorStore.getState().redo()
         else useStore.getState().redo()
+        return
+      }
+
+      // The WebView would reload at once and skip the unsaved-changes guard.
+      if (e.key === 'F5' || (mod && (e.key === 'r' || e.key === 'R'))) {
+        if (!isTauri()) return
+        e.preventDefault()
+        getBridge().requestReload()
         return
       }
 
