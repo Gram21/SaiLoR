@@ -441,7 +441,7 @@ inspection only.
 | REQ-PLT-150 | Re-check recents on display | Functional · Functional Suitability | `src-tauri/src/project.rs` (`project_peek`, `peek`)<br>`src/platform/desktop.ts` (`checkRecents`)<br>`src/platform/recents.ts:16-20` | `src/state/store.close.test.ts:137-175`<br>`src-tauri/src/project.rs` (`peek_reports_existence_and_title`) | — | `openwiki/operations/electron-shell.md` §Window, menu, and window-state persistence |
 | REQ-PLT-160 | Persist window state | Functional · Functional Suitability | `src-tauri/src/main.rs` (`tauri_plugin_window_state`)<br>`src-tauri/tauri.conf.json` (`app.windows`) | — | commit `6ce60d5` | `openwiki/operations/electron-shell.md` §Window, menu, and window-state persistence |
 | REQ-PLT-170 | Persist appearance settings | Functional · Functional Suitability | `src/state/settings.ts` | `src/state/settings.test.ts:1-131` | — | `openwiki/operations/electron-shell.md` §Window, menu, and window-state persistence |
-| REQ-PLT-180 | Migrate legacy settings folder | Functional · Functional Suitability | — | — | commit `6ce60d5` | `openwiki/operations/electron-shell.md` §Window, menu, and window-state persistence |
+| REQ-PLT-180 | Migrate legacy settings folder | Functional · Functional Suitability | `src-tauri/src/shell.rs` (`migrate_legacy`, `copy_new`) | `src-tauri/src/shell.rs` (`migrates_legacy_profile_once`, `copy_never_overwrites_and_skips_missing`, `migration_without_legacy_creates_nothing`) | commit `6ce60d5` | `openwiki/operations/electron-shell.md` §Window, menu, and window-state persistence |
 | REQ-PLT-190 | Portable relative PDF paths | Functional · Functional Suitability | `src-tauri/src/paths.rs` (`relative`, `slashed`)<br>`src/platform/adapter.ts:169-175` | `src-tauri/src/paths.rs` (`relative_matches_node`, `windows_separators_case_and_drives`) | — | `openwiki/operations/electron-shell.md` §The `slr-file://` protocol / §`pdf:*` handlers<br>`docs/annotation-schema.md` §4 (How the `pdf` path resolves) |
 | REQ-PLT-200 | Confine PDF access to the project folder | Non-functional · Security | `src-tauri/src/protocol.rs` (`serve`)<br>`src-tauri/src/pdf.rs` (`resolve_project_path`, `pdf_allow_path`) | `src-tauri/src/protocol.rs` (`statuses_and_traversal`)<br>`src-tauri/src/pdf.rs` (`project_path_resolution`, `symlink_inside_project_pointing_out_is_an_escape`) | commit `8c52edf` | `openwiki/operations/electron-shell.md` §The `slr-file://` protocol / §`pdf:*` handlers<br>`docs/annotation-schema.md` §4 (How the `pdf` path resolves) |
 | REQ-PLT-210 | Explain blocked PDF loads | Functional · Functional Suitability | `src-tauri/src/pdf.rs` (`pdf_check_path`)<br>`src/platform/desktop.ts` (`getPdfSource`) | — | commit `445a6a5` | `openwiki/operations/electron-shell.md` §The `slr-file://` protocol / §`pdf:*` handlers<br>`docs/annotation-schema.md` §4 (How the `pdf` path resolves) |
@@ -465,8 +465,8 @@ inspection only.
 | Metric | Count | Share |
 |---|---|---|
 | Requirements traced | 388 | 100% |
-| With at least one verifying test | 340 | 88% |
-| Without an automated check (source inspection only) | 48 | 12% |
+| With at least one verifying test | 341 | 88% |
+| Without an automated check (source inspection only) | 47 | 12% |
 | With an introducing/pinning commit | 111 | 29% |
 | With a documentation link | 334 | 86% |
 | REQ-LLM-740 | Trim the paper to each model's input window | Functional · Reliability / Functional Suitability | `src/state/aiStore.ts` (`fitForChat`, `describeFit`)<br>`src/state/aiScreeningStore.ts` (`promptOne`)<br>`src/components/AiDialog.tsx` (`trimHint`) | `src/state/aiStore.budget.test.ts`<br>`src/state/aiScreeningStore.test.ts` | — | — |

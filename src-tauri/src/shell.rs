@@ -1,5 +1,6 @@
 //! Desktop shell behavior of the main window.
 
+use std::path::Path;
 use tauri::webview::NewWindowResponse;
 use tauri::{App, AppHandle, Manager, Url, WebviewWindowBuilder};
 
@@ -32,6 +33,9 @@ fn open_external(url: &Url) {
 
 /// Builds the `main` window from `tauri.conf.json` (`create: false`) with link routing.
 pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
+    if let Ok(dir) = app.path().config_dir() {
+        migrate_legacy(&dir);
+    }
     let cfg = app
         .config()
         .app
@@ -66,6 +70,57 @@ pub fn focus_main(app: &AppHandle) {
         let _ = w.show();
         let _ = w.set_focus();
     }
+}
+
+/// Electron's userData names before the rename to SaiLoR.
+const LEGACY_DIRS: [&str; 2] = ["SLR Helper", "slr-helper"];
+const LEGACY_ITEMS: [&str; 2] = ["window-state.json", "Local Storage"];
+
+fn has_profile(dir: &Path) -> bool {
+    LEGACY_ITEMS.iter().any(|i| dir.join(i).exists())
+}
+
+/// Copies the pre-rename settings into `<config>/SaiLoR` once, only into an unused
+/// profile. Best effort: errors are logged, startup goes on.
+pub fn migrate_legacy(config_dir: &Path) {
+    let target = config_dir.join("SaiLoR");
+    if has_profile(&target) {
+        return;
+    }
+    let Some(legacy) = LEGACY_DIRS
+        .iter()
+        .map(|d| config_dir.join(d))
+        .find(|d| *d != target && has_profile(d))
+    else {
+        return;
+    };
+    for item in LEGACY_ITEMS {
+        if let Err(e) = copy_new(&legacy.join(item), &target.join(item)) {
+            eprintln!("Could not migrate {item} from {}: {e}", legacy.display());
+        }
+    }
+}
+
+/// Recursive copy that skips symlinks and never replaces an existing file.
+fn copy_new(from: &Path, to: &Path) -> std::io::Result<()> {
+    let meta = match std::fs::symlink_metadata(from) {
+        Ok(m) => m,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(e),
+    };
+    if meta.is_dir() {
+        std::fs::create_dir_all(to)?;
+        for entry in std::fs::read_dir(from)? {
+            let entry = entry?;
+            copy_new(&entry.path(), &to.join(entry.file_name()))?;
+        }
+    } else if meta.is_file() && !to.exists() {
+        if let Some(parent) = to.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::copy(from, to)?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -120,4 +175,62 @@ mod tests {
         assert!(!is_app_url(&url("http://localhost:5173/"), None));
     }
 
+    fn tmp(name: &str) -> std::path::PathBuf {
+        let d = std::env::temp_dir().join(format!("sailor-rs-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(&d).unwrap();
+        d
+    }
+
+    #[test]
+    fn migrates_legacy_profile_once() {
+        let root = tmp("migrate");
+        let old = root.join("SLR Helper");
+        std::fs::create_dir_all(old.join("Local Storage/leveldb")).unwrap();
+        std::fs::write(old.join("window-state.json"), "{\"width\":800}").unwrap();
+        std::fs::write(old.join("Local Storage/leveldb/000.log"), "recent").unwrap();
+        std::fs::write(old.join("other.txt"), "skip").unwrap();
+        migrate_legacy(&root);
+        let new = root.join("SaiLoR");
+        assert_eq!(
+            std::fs::read_to_string(new.join("window-state.json")).unwrap(),
+            "{\"width\":800}"
+        );
+        assert_eq!(
+            std::fs::read_to_string(new.join("Local Storage/leveldb/000.log")).unwrap(),
+            "recent"
+        );
+        assert!(!new.join("other.txt").exists());
+
+        // A used profile wins: nothing is copied again or overwritten.
+        std::fs::write(new.join("window-state.json"), "mine").unwrap();
+        std::fs::write(old.join("Local Storage/leveldb/001.log"), "late").unwrap();
+        migrate_legacy(&root);
+        assert_eq!(
+            std::fs::read_to_string(new.join("window-state.json")).unwrap(),
+            "mine"
+        );
+        assert!(!new.join("Local Storage/leveldb/001.log").exists());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn copy_never_overwrites_and_skips_missing() {
+        let root = tmp("copynew");
+        std::fs::write(root.join("a"), "new").unwrap();
+        std::fs::write(root.join("b"), "old").unwrap();
+        copy_new(&root.join("a"), &root.join("b")).unwrap();
+        assert_eq!(std::fs::read_to_string(root.join("b")).unwrap(), "old");
+        copy_new(&root.join("missing"), &root.join("c")).unwrap();
+        assert!(!root.join("c").exists());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn migration_without_legacy_creates_nothing() {
+        let root = tmp("nolegacy");
+        migrate_legacy(&root);
+        assert!(!root.join("SaiLoR").exists());
+        let _ = std::fs::remove_dir_all(&root);
+    }
 }

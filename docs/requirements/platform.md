@@ -184,10 +184,11 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-180 — Migrate legacy settings folder
-- **Description:** When the application starts with a never-used profile, the system shall copy window state and local storage from a pre-rename "SLR Helper" settings folder if one exists, without overwriting an existing profile and without failing startup on error.
+- **Description:** When the application starts with a never-used `<config dir>/SaiLoR` profile, the system shall copy window state and local storage from a pre-rename "SLR Helper" settings folder if one exists, without overwriting an existing profile and without failing startup on error.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** commit `6ce60d5` (`electron/main.ts`, removed)
-- **Status:** Not implemented in the Tauri shell (Electron-only until 2.0.0)
+- **Evidence:** `src-tauri/src/shell.rs` (`migrate_legacy`, `copy_new`), commit `6ce60d5` (`electron/main.ts`, removed)
+- **Verified by:** `src-tauri/src/shell.rs` (`migrates_legacy_profile_once`, `copy_never_overwrites_and_skips_missing`, `migration_without_legacy_creates_nothing`)
+- **Status:** Implemented. Limit: the Tauri WebView and the window-state plugin do not read the copied files. The copy only keeps the old data in the SaiLoR folder.
 
 ### REQ-PLT-190 — Portable relative PDF paths
 - **Description:** The system shall store each paper's PDF path relative to the project file using forward slashes on all platforms.

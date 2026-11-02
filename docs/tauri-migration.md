@@ -612,6 +612,8 @@ Verification:
 - `npx vitest run` tests the project assembly, the bridge shapes and the `nativeUpdate` gate.
 
 - `cargo test` tests the scheme check and the app URL check.
+- `cargo test` tests the legacy copy: one copy into an unused profile, no copy into a used profile, no overwrite, and no folder without a legacy profile.
+- A manual run on macOS with a separate `HOME` copied `SLR Helper/window-state.json` into `SaiLoR`.
 
 Not tested:
 
@@ -735,7 +737,6 @@ Kept on purpose:
 
 The Electron shell had these features. The Tauri shell does not have them yet. `docs/requirements/platform.md` marks the matching requirements.
 
-- Migration of the legacy "SLR Helper" folder (REQ-PLT-180).
 - Reload guard on the menu reload (REQ-PLT-120). Only the renderer `beforeunload` handler exists.
 - Edit menu routing of undo and redo (REQ-PLT-310). The renderer key binding handles Ctrl/Cmd+Z.
 
@@ -751,6 +752,7 @@ Branch: `feat/tauri-platform-gaps`. This section ports Electron shell features t
 | Window state (REQ-PLT-160) | `tauri-plugin-window-state` saves size, position and the maximized state in `<app config dir>/.window-state.json`. It restores a position only if it is on a connected display. |
 | Device permissions (REQ-PLT-240) | `Builder::on_permission_request` answers every request with `Deny`. |
 | External links (REQ-PLT-250) | `tauri.conf.json` sets `create: false` on the `main` window. `shell::setup` builds the window from that config with two hooks. `on_navigation` keeps app URLs in the window and cancels all other URLs. `on_new_window` always denies. Both hooks open http and https URLs in the system browser with `tauri_plugin_opener::open_url`. |
+| Legacy folder (REQ-PLT-180) | `shell::migrate_legacy` runs first in `shell::setup`. If `<config dir>/SaiLoR` has no `window-state.json` and no `Local Storage`, it copies both items from `<config dir>/SLR Helper` or `<config dir>/slr-helper`. The copy skips symlinks and never replaces a file. Errors go to stderr. Startup continues. |
 
 ### 21.2 Differences from Electron
 
@@ -761,6 +763,7 @@ Branch: `feat/tauri-platform-gaps`. This section ports Electron shell features t
 - External links open only for http and https. Electron also allowed `mailto`. The app has no `mailto` links.
 - App URLs are `tauri://localhost`, `http(s)://tauri.localhost` (Windows) and `about:blank`. Debug builds also allow the `devUrl` origin.
 - The opener plugin is not registered. The renderer gets no opener commands, and `capabilities/default.json` does not change.
+- The migrated files are copies only. The Tauri WebView keeps `localStorage` in its own store, and the window-state plugin uses its own file. So the old window size and recent projects do not come back.
 
 ### 21.3 Verification and gaps
 
