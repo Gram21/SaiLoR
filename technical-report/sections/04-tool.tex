@@ -3,11 +3,10 @@
 
 In this section, we walk through \SaiLoR along the activities of an \SLR.
 We use the running example from \autoref{sec:approach-example}.
-% TODO: All figures show the user interface before the move to Tauri (user guide, commit 1c0ec0f). Retake them on the 2.0.0 build, see figures.tex.
 
 \begin{figure*}[t]
     \centering
-    \includegraphics[width=0.85\textwidth]{\shotAnnotate}
+    \screenshot{\shotAnnotate}{0.85\textwidth}
     \caption{Main view of \SaiLoR with the paper list on the left, the PDF in the middle, and the extraction form of the running example for reviewer seat 1 on the right}
     \label{fig:annotate}
 \end{figure*}
@@ -25,7 +24,7 @@ Reviewers can reorder and nest rows by drag and drop.
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\columnwidth]{\shotSchema}
+    \screenshot{\shotSchema}{\columnwidth}
     \caption{Schema editor with field types, counts, options, and visibility conditions}
     \label{fig:schema}
 \end{figure}
@@ -53,7 +52,7 @@ Validation reports excluded papers without a reason.
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\columnwidth]{\shotScreening}
+    \screenshot{\shotScreening}{\columnwidth}
     \caption{Screening view with the abstract, the decision buttons, and the progress line}
     \label{fig:screening}
 \end{figure}
@@ -105,7 +104,7 @@ The disagreements of a paper or of the whole project can be exported as text, fo
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\columnwidth]{\shotCompare}
+    \screenshot{\shotCompare}{\columnwidth}
     \caption{Comparison of two reviewers' answers in the consolidation seat}
     \label{fig:compare}
 \end{figure}
@@ -139,7 +138,7 @@ If a merge leaves conflicts in files that do not belong to the project, \SaiLoR 
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\columnwidth]{\shotMerge}
+    \screenshot{\shotMerge}{\columnwidth}
     \caption{Field-level resolution of merge conflicts after a pull}
     \label{fig:merge}
 \end{figure}
