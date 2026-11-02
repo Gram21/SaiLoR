@@ -611,13 +611,8 @@ Verification:
 - `cargo test` tests the close-guard state, the dialog button mapping, the git cap, the PDF embed and the export authorization.
 - `npx vitest run` tests the project assembly, the bridge shapes and the `nativeUpdate` gate.
 
-- `cargo test` tests the scheme check and the app URL check.
-- `cargo test` tests the legacy copy: one copy into an unused profile, no copy into a used profile, no overwrite, and no folder without a legacy profile.
-- A manual run on macOS with a separate `HOME` copied `SLR Helper/window-state.json` into `SaiLoR`.
-
 Not tested:
 
-- No test clicks a link in the running app.
 - No test runs the Tauri app. The close dialog, Cmd+Q on macOS and the `slr-os` init script were not tried by hand.
 - `beforeunload` (`useDirtyGuard`) still runs in Tauri. Its effect in the webview on reload was not tried.
 - The updater was not tried against a real feed.
@@ -771,7 +766,11 @@ Verification:
 
 - A manual run on macOS started the debug build twice. The second process exited. The first process kept running.
 - A manual run on macOS moved and resized the window and quit from the menu. The next start used the saved position and size.
+- `cargo test` tests the scheme check and the app URL check.
+- `cargo test` tests the legacy copy: one copy into an unused profile, no copy into a used profile, no overwrite, and no folder without a legacy profile.
+- A manual run on macOS with a separate `HOME` copied `SLR Helper/window-state.json` into `SaiLoR`.
 
 Not tested:
 
 - No test asks the WebView for a device permission.
+- No test clicks a link in the running app.
