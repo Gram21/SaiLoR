@@ -1,4 +1,74 @@
-\section{Discussion and Limitations}
-% TODO outline
-% - Threats to validity, scope limits, supported platforms.
-% - Future work.
+% !TeX root = ../main.tex
+\section{Discussion and Limitations}\label{sec:discussion}
+
+In this section, we discuss the limitations of \SaiLoR and of this report.
+For each limitation, we state what it affects and how we mitigate it.
+
+\subsection{Limitations}\label{sec:discussion-limitations}
+
+% No user evaluation
+We have not evaluated \SaiLoR with users.
+This report describes the tool and its design, but it does not show that \SaiLoR makes reviews faster, more accurate, or easier to trace than other tools.
+We derived the design from the guidelines for \SLRs, and it might not match the needs of every research group.
+A user study is needed to assess the benefit (cf.~\autoref{sec:conclusion}).
+
+% Reverse-engineered requirements
+The requirements were reverse-engineered from the code by the developer of the tool.
+Thus, they describe what \SaiLoR does and not what users need.
+If the code has a bug, a requirement can describe the buggy behavior as intended.
+Also, the developer might have overlooked behavior or described it in favor of the implementation.
+We mitigate this threat with the evidence of each requirement, because tests, source lines, and commits can be checked by others.
+Still, an independent review of the requirements is open.
+
+% Tauri port
+The move to Tauri is recent.
+Six requirements of the Electron shell are not ported yet: the single application instance, the persisted window state, the migration of the old settings folder, the denial of device permissions, the opening of external links in the system browser, and the undo entry in the application menu.
+The guard against an accidental reload of the window works only in part.
+None of these gaps affects the review data, and we are working on porting them.
+Furthermore, all figures in this report show the user interface of version 1.x.
+% TODO: Retake the screenshots on the 2.0.0 build and remove the previous sentence.
+
+% Platform tests
+Our tests cover the three operating systems unevenly.
+The probe of the desktop application runs on macOS, Windows, and Linux, but a WebDriver session drives it only on Linux and Windows, because the Tauri driver does not support macOS.
+Most behavior is tested in the unit and integration suites, which run in a simulated browser and not in the web views of the operating systems.
+Differences between WKWebView, WebView2, and WebKitGTK can therefore remain unnoticed.
+We checked the rendering of PDFs on all three web views, but the probe does not yet cover further workflows.
+
+% Unsigned builds
+The installers are not signed with a certificate from Apple or Microsoft.
+macOS and Windows warn users the first time they open \SaiLoR, and users have to confirm the start.
+This step can confuse users and can also train them to ignore such warnings.
+The README explains the steps for each operating system.
+Updates are signed with a key of the project, and \SaiLoR verifies the signature before it installs an update.
+
+% Local LLM runtime
+We verified the managed local runtime for decision models only on macOS on arm64.
+The code paths for \GPUs with CUDA and Vulkan have not run on real hardware.
+In addition, the managed installation stays disabled until llama.cpp releases the route that the decision models need.
+Until then, users who want local decision models have to run a server themselves.
+Hosted providers and local chat servers are not affected by this limitation.
+
+% AI preview
+The \LLM assistance is a preview.
+We have not measured how accurate its proposals are, and studies report errors of \LLMs in screening and extraction~\cite{syriani2024screening,khraisha2024llm}.
+A reviewer who accepts proposals without checking them can bring wrong data into the review.
+\SaiLoR reduces this risk, because it checks the quoted evidence, marks the fields that the model wrote, and records each use for the report.
+It cannot replace the judgment of the reviewer.
+
+% Scope
+\SaiLoR does not cover all activities of an \SLR.
+It records the search strings and databases, but it does not run searches.
+It also does not analyze or synthesize the extracted data.
+The extracted data stays in JSON files, so reviewers need their own scripts or tools for the analysis.
+
+\subsection{Availability}\label{sec:discussion-availability}
+
+% Release
+\SaiLoR is open source under the GPL-3.0 license.
+The source code is available on GitHub.\footnote{\url{https://github.com/Gram21/SaiLoR}}
+Version 2.0.0 provides installers for macOS 15 or later on Apple silicon and Intel, for Windows, and for Linux as AppImage, Debian, and RPM packages.
+The release workflow builds the installers from a version tag and archives each release on Zenodo~\cite{sailor2026zenodo}.
+The repository also contains a sample screening project and a sample extraction project, a user guide, and the requirement files described in \autoref{sec:requirements}.
+% TODO: Add the version DOI of 2.0.0 after the Zenodo job has run, and update sailor2026zenodo in references.bib.
+\todo{version DOI of 2.0.0}

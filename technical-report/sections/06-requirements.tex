@@ -1,6 +1,96 @@
-\section{Requirements and Traceability}
-% TODO outline
-% - Requirement files and ID scheme (docs/requirements/index.md).
-% - Links from requirements to code, tests, history and docs (docs/requirements/traceability.md).
-% - Recovery method and coverage statistics.
-% - How the links stay current (rule: update requirements with code changes).
+% !TeX root = ../main.tex
+\section{Requirements and Traceability}\label{sec:requirements}
+
+\SaiLoR asks reviewers to keep their decisions traceable.
+We think that the tool should meet the same standard for its own behavior.
+Traceability links requirements to the artifacts that realize and verify them~\cite{gotel1994analysis,clelandhuang2014software}.
+In this section, we describe how we documented the requirements of \SaiLoR and how far they are traced.
+
+\subsection{Recovery of the Requirements}\label{sec:requirements-method}
+
+% Reverse engineering
+\SaiLoR grew without a written specification.
+Therefore, we reverse-engineered the requirements from the implementation of version 1.8.1 in August 2026.
+We updated them in September 2026 and for the move to Tauri in version 2.0.0.
+Every requirement describes behavior that the code implements, and every link is a recovered link and not one that we created during development.
+
+% Four techniques
+We used four recovery techniques, in descending order of evidential weight.
+First, we read the names and assertions of tests as executable specifications.
+For example, a store test named \enquote{clears the reason in the same undo step} pins the requirement that a paper loses its exclusion reason in the same undo step when its decision changes from \enquote{exclude} to another state.
+Second, we inspected the source code and recorded the implementing files and lines.
+Third, we searched the commit history for the commits that introduced or pinned a behavior.
+Fourth, we mapped each requirement to the developer wiki, the schema reference, and the user guide.
+
+% Format
+Each requirement has an identifier with a category prefix, for example, \texttt{REQ-CON-80} for consolidation.
+The identifiers advance in steps of ten, so that new requirements fit in without renumbering.
+An entry consists of a title, a description in the form \enquote{The system shall \ldots}, a type, the evidence, a status, and the tests.
+The type states whether the requirement is functional or non-functional and names its quality characteristic according to ISO/IEC 25010~\cite{iso25010}.
+The requirements are split into seven files by category.
+A separate traceability matrix lists one row per requirement with the columns \emph{Implemented in}, \emph{Verified by}, \emph{History}, and \emph{Docs}.
+An empty \emph{Verified by} cell means that we confirmed the requirement only by inspecting the source code.
+
+\subsection{Coverage}\label{sec:requirements-coverage}
+
+\begin{table}[t]
+    \centering
+    \caption{Requirements per category and trace links of all 388 requirements}
+    \label{tab:trace}
+    \begin{tabular}{@{}lrr@{}}
+        \toprule
+        Category                                 & \multicolumn{2}{r}{Requirements} \\
+        \midrule
+        Data model and project editor            & \multicolumn{2}{r}{61}           \\
+        Annotation view, paper list, and PDF     & \multicolumn{2}{r}{53}           \\
+        Screening                                & \multicolumn{2}{r}{39}           \\
+        Consolidation                            & \multicolumn{2}{r}{44}           \\
+        Git integration                          & \multicolumn{2}{r}{58}           \\
+        \LLM assistance                          & \multicolumn{2}{r}{88}           \\
+        Platform and desktop shell               & \multicolumn{2}{r}{45}           \\
+        \midrule
+        Trace link                               & Count & Share                    \\
+        \midrule
+        Implementing source code                 & 356   & 92\%                     \\
+        At least one verifying test              & 349   & 90\%                     \\
+        Source inspection only                   & 39    & 10\%                     \\
+        Introducing or pinning commit            & 116   & 30\%                     \\
+        Documentation section                    & 334   & 86\%                     \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+% Numbers
+In total, we documented 388 requirements.
+\autoref{tab:trace} shows how they are distributed over the categories and how many of them are linked to each kind of artifact.
+Of the requirements, 342 are functional and 46 are non-functional, and 32 have the type security.
+At the time of writing, 381 requirements are implemented.
+Six requirements of the desktop shell exist only in the Electron version, and one is implemented in part (cf.~\autoref{sec:discussion}).
+The links point to 175 distinct source files and 181 distinct test files.
+Of all requirements, 92\% link to implementing source code, and 90\% link to at least one verifying test.
+The remaining 39 requirements are confirmed by source inspection only.
+Of these, 17 belong to the desktop shell and 12 to the git integration.
+The seven shell requirements that are not ported to Tauri are among them.
+Only 30\% link to a commit that introduced or pinned the behavior.
+
+% Statistics script
+We count these numbers with a small script in the report folder that parses the requirement files and the matrix.
+The script also checks that every linked file exists.
+% TODO: Fix the link to src/components/ProjectEditor.test.ts (the file is .tsx) and the stale coverage table in docs/requirements/traceability.md, then rerun trace_stats.py.
+
+\subsection{Automated Tests}\label{sec:requirements-tests}
+
+% Test suites
+\SaiLoR has four test suites.
+The unit suite has 2828 tests in 196 files and runs with Vitest in jsdom, a simulated browser environment.
+The integration suite has 28 tests in 11 files.
+These tests render the real components and run scenarios such as annotation, consolidation, and merges against scratch git repositories.
+The Rust backend has 100 tests.
+Finally, a probe build of the desktop application opens the sample project, renders a PDF, and checks that a path traversal is refused.
+The \CI runs this probe in the system web view on macOS, Windows, and Linux.
+On Linux and Windows, it also drives the probe through WebDriver.
+% TODO: Update the test counts for the final 2.0.0 release.
+
+% Keeping it current
+To keep the links current, the repository asks every change that affects a requirement to update the matching requirement file in the same change.
+This rule is a convention and not a check, so the links can still drift.

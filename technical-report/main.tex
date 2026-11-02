@@ -2,21 +2,62 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{graphicx,booktabs,cite}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{csquotes}
+\usepackage{xspace}
+\usepackage{acronym}
+\usepackage{enumitem}
+\usepackage{url}
 \usepackage[hidelinks]{hyperref}
 \graphicspath{{figures/}{../user-guide/screenshots/}}
 
-\title{SaiLoR: Systematic Support for Systematic Literature Reviews}
-\author{\IEEEauthorblockN{TODO Author One, TODO Author Two}
-\IEEEauthorblockA{TODO Affiliation\\TODO email}}
+\renewcommand{\sectionautorefname}{Section}
+\renewcommand{\subsectionautorefname}{Section}
+\renewcommand{\subsubsectionautorefname}{Section}
+\renewcommand{\figureautorefname}{Figure}
+\renewcommand{\tableautorefname}{Table}
+
+% Draft notes. Remove all uses before submission.
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+
+\input{acronyms}
+\input{figures}
+
+\title{\SaiLoR: Systematic Tool Support\\for Systematic Literature Reviews}
+% TODO: final author list, affiliations and e-mail addresses.
+\author{\IEEEauthorblockN{Jan Keim \todo{co-authors}}
+\IEEEauthorblockA{Karlsruhe Institute of Technology (KIT)\\Karlsruhe, Germany\\\todo{e-mail}}}
 
 \begin{document}
 \maketitle
+
 \begin{abstract}
-TODO: Problem, idea, tool, requirements traceability, availability (five to seven sentences).
+%% Context
+Systematic literature reviews are a common research method in software engineering.
+They follow a protocol so that other researchers can trace and repeat each decision.
+%% Problem
+However, the review data is hard to keep traceable.
+Reviewers record screening decisions and extracted values in spreadsheets, shared documents, or hosted services.
+There, the link between an extracted value and its evidence in the paper can get lost.
+Also, it is hard to reconstruct who decided what and when.
+%% Idea
+To tackle this, we present \SaiLoR, an open-source desktop tool that supports screening, data extraction, and consolidation of a review in one project.
+The project is a set of plain JSON files that a schema describes and that git versions.
+Several reviewers work independently in their own seats, and a consolidator resolves their disagreements with agreement statistics.
+When reviewers synchronize through git, the tool merges concurrent changes field by field.
+Optional large language model support proposes answers with evidence, and a human reviews every proposal.
+%% Method
+We describe the tool from the reviewer's view and explain its main architecture decisions, including the move from Electron to Tauri.
+We also report how we keep the tool itself traceable.
+%% Results
+We documented 388 requirements and linked them to code, tests, and documentation.
+Of these requirements, 92\% link to implementing source code and 90\% link to at least one automated test.
+The test suites hold 2828 unit tests, 28 integration tests, and 100 Rust tests.
+We release \SaiLoR 2.0.0 under the GPL-3.0 license and archive it on Zenodo.
 \end{abstract}
 
 \begin{IEEEkeywords}
-systematic literature review, tool support, requirements traceability
+Systematic Literature Review, Tool Support, Data Extraction, Requirements Traceability, Large Language Models
 \end{IEEEkeywords}
 
 \input{sections/01-introduction}

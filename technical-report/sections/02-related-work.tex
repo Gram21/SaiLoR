@@ -1,6 +1,75 @@
-\section{Background and Related Work}
-% TODO outline
-\nocite{kitchenham2007guidelines}
-% - SLR process (Kitchenham guidelines, PRISMA).
-% - Tool support: reference managers, SLR platforms, qualitative-coding tools, LLM assistants.
-% - Gap: structured annotation, multi-reviewer consolidation, git-based collaboration, local-first.
+% !TeX root = ../main.tex
+\section{Related Work}\label{sec:related-work}
+
+In this section, we give an overview of related work on tool support for \SLRs.
+We first look at the methodology and at studies about \SLR tools.
+Then, we discuss existing tools and, lastly, the use of \LLMs in \SLRs.
+
+\subsection{Methodology and Studies on Tool Support}\label{sec:related-work-studies}
+
+% Methodology
+The \SLR method in \SE goes back to the guidelines by Kitchenham and Charters~\cite{kitchenham2007guidelines} and the book by Kitchenham et al.~\cite{kitchenham2015evidence}.
+Petersen et al.~\cite{petersen2015guidelines} describe systematic mapping studies, and Wohlin~\cite{wohlin2014guidelines} describes snowballing as a search strategy.
+\PRISMA 2020~\cite{page2021prisma} defines what a systematic review reports, including a flow diagram of found, screened, and included studies.
+These guidelines define the activities that \SaiLoR supports.
+\SaiLoR does not add new methodology.
+Instead, it records the data that these guidelines ask for.
+
+% Studies about tools
+Several studies look at tools for \SLRs.
+Marshall and Brereton~\cite{marshall2013tools} map the tools that \SE researchers proposed, and Marshall et al.~\cite{marshall2014tools} compare the features of \SLR tools in \SE.
+Hassler et al.~\cite{hassler2014outcomes} collected barriers to the \SLR process in a community workshop.
+Al-Zubidy and Carver~\cite{alzubidy2019identification} derived requirements for tools that support the search activity.
+Felizardo and Carver~\cite{felizardo2020automating} give an overview of how \SLR activities can be automated, and van Dinter et al.~\cite{vandinter2021automation} review automation approaches in an \SLR of their own.
+Most of the studies that van Dinter et al. found automate the selection of primary studies.
+Outside \SE, Harrison et al.~\cite{harrison2020software} evaluate tools for title and abstract screening in healthcare.
+These studies show that tool support exists for many activities.
+Our work differs in its goal.
+We do not survey or compare tools but describe the design of one tool and how we keep it traceable.
+
+\subsection{Tools for Systematic Literature Reviews}\label{sec:related-work-tools}
+
+% Hosted tools
+A large group of tools are hosted web applications.
+Covidence~\cite{covidence} is a web platform that covers screening, full-text review, risk of bias, and data extraction.
+Rayyan~\cite{ouzzani2016rayyan} is a web and mobile app that supports screening with semi-automated suggestions.
+CADIMA~\cite{kohl2018cadima} is an open-access online tool by the Julius K\"uhn-Institut for the conduct and reporting of systematic reviews and maps.
+Parsifal~\cite{parsifal} is an online platform for planning, conducting, and reporting \SLRs in \SE with support for collaboration.
+In all four tools, the review data lives on a server, and collaboration happens through the shared online project.
+\SaiLoR takes the opposite route.
+The review data stays in local files, and reviewers exchange it through git, a hosting service of their choice, or not at all.
+Therefore, reviewers can inspect, archive, and publish the raw data with standard tools.
+
+% Tools from SE research
+Some tools come from \SE research.
+StArt~\cite{hernandes2012start,fabbri2016start} supports the whole systematic review process, and Hernandes et al.~\cite{hernandes2012start} evaluated it with GQM and TAM.
+SLR-Tool~\cite{fernandezsaez2010slrtool} is a free tool that follows the process by Kitchenham and adds text mining and export to BibTeX and RIS.
+Both tools target the same community as \SaiLoR.
+The publications on these tools do not cover independent extraction by several reviewers with a consolidation step, and they do not cover collaboration through version control.
+
+% Screening-focused tools
+ASReview~\cite{vandeschoot2021asreview} is an open-source framework that uses active learning to rank the records that a reviewer should screen next.
+Like \SaiLoR, ASReview can run locally.
+However, ASReview focuses on screening, while \SaiLoR focuses on extraction and consolidation and offers screening as a preceding step.
+\SaiLoR does not rank records with active learning.
+The two tools can complement each other, because \SaiLoR imports BibTeX, RIS, and CSL-JSON files.
+
+\subsection{Large Language Models in Systematic Literature Reviews}\label{sec:related-work-llm}
+
+% LLM studies
+Recently, many studies evaluate \LLMs for single \SLR activities.
+For selection, Felizardo et al.~\cite{felizardo2024chatgpt} evaluate the accuracy of ChatGPT on \SLRs in \SE, and Syriani et al.~\cite{syriani2024screening} evaluate ChatGPT for screening on several datasets.
+% TODO verify: the conclusion of Felizardo et al. that SE researchers should not outsource the selection activity to ChatGPT.
+Felizardo et al. advise against handing the selection over to ChatGPT.
+For extraction, Felizardo et al.~\cite{felizardo2024dataextraction} and Gartlehner et al.~\cite{gartlehner2024data} report proof-of-concept studies.
+% TODO verify: summary of the Khraisha et al. results.
+Khraisha et al.~\cite{khraisha2024llm} test GPT-4 for screening and extraction across languages and find mixed results.
+Other work uses ChatGPT to formulate Boolean search queries~\cite{wang2023chatgpt} or across several stages of a review~\cite{alshami2023harnessing}.
+These studies evaluate the models.
+They do not address how a tool should present model output so that the reviewer stays in control and the use of the model stays visible in the report.
+\SaiLoR addresses this second question.
+Every proposal is a suggestion that a reviewer must apply, the model can act as an additional reviewer whose answers go through the same consolidation, and the project records each use of the model.
+
+% Gap
+Overall, existing tools either keep the review data on a server or focus on a single activity.
+To the best of our knowledge, no tool yet combines local, versioned review data, schema-driven extraction with evidence links, consolidation of independent reviewers, and controlled \LLM assistance.
