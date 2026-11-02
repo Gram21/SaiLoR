@@ -1,56 +1,58 @@
 ---
 type: concept
 title: Annotation Schema and Validation
-description: How a hand-authored schema in project.json becomes a typed, validated annotation form — AnnotationDef/ResolvedDef types, zod validation, field types, cardinality, required/enum/type/cardinality checks, orphaned-answer recovery, completeness, and duplicate detection.
-tags: [annotation-schema, validation, schema, completeness, duplicates, zod, orphaned-answers]
+description: How a hand-authored schema in project.json becomes a typed, validated annotation form — AnnotationDef/ResolvedDef types, zod validation, field types, cardinality, visibleIf gates, the schema editor's draft lifecycle, required/enum/type/cardinality checks, orphaned-answer recovery, schema-version moves, completeness, and duplicate detection.
+tags: [annotation-schema, validation, schema, completeness, duplicates, zod, orphaned-answers, visibleif]
 sources:
-  - id: openwiki-source-4599b619fa759e59c83c5e95
-    resource: repo://src/components/PaperList.tsx
-  - id: openwiki-source-6dcdb38541424370473bc2db
+  - id: openwiki-source-9ba90f76bfe4d97ca0da5f57b0d2b9c4
     resource: repo://src/components/SchemaTreeEditor.tsx
-  - id: openwiki-source-ef51b2e3b1037894541eaa97
+  - id: openwiki-source-56cd0e91b13f421e8f10dbfc51ea39c3
     resource: repo://src/components/ValidationDialog.tsx
-  - id: openwiki-source-ded932c19c04aac08bb5edf2
+  - id: openwiki-source-c9a0923d5e3d4c41b0dc20f6df0a7f2f
+    resource: repo://src/components/VisibleIfDialog.tsx
+  - id: openwiki-source-e7bb2ea1b5c44d2ab6ff60831cd47a86
     resource: repo://src/model/annotations.ts
-  - id: openwiki-source-8cea3d31e78ed048bd98459e
+  - id: openwiki-source-46e6c4d06d0e4ecb8b58a2ba8750a55c
     resource: repo://src/model/annotationState.ts
-  - id: openwiki-source-10f28c6eb0d085b63a96d626
+  - id: openwiki-source-4b0d2b7f7d5d4bfab5a2f9cb0b41a6f5
     resource: repo://src/model/completeness.ts
-  - id: openwiki-source-71d9c0c25913dcadf68162e8
+  - id: openwiki-source-fb5f4c3da3c14aefa3c06cbcd9be11bd
     resource: repo://src/model/duplicates.ts
-  - id: openwiki-source-e9e2373841f50ccebfc6fbe2
+  - id: openwiki-source-80d612cb1bc44a0b8edbc1a49eb5b8f2
     resource: repo://src/model/fieldUsage.ts
   - id: openwiki-source-68e9e61da0efb614946dda70
     resource: repo://src/model/project.ts
   - id: openwiki-source-a0459bce65b7490683280544
     resource: repo://src/model/schema.ts
+  - id: openwiki-source-73cb314c1db540c1a0302e6b58c9dcbf
+    resource: repo://src/model/schemaVersion.ts
   - id: openwiki-source-ff5f46fa2216a7ebb3226632
     resource: repo://src/model/validate.ts
-  - id: openwiki-source-f7e2548450f906ff26910c43
-    resource: repo://src/model/year.ts
-  - id: openwiki-source-c0a5a9016440eaf62ed2a380
-    resource: repo://src/screening/schema.ts
   - id: openwiki-source-fa765b0e395ba25b6016d05a
     resource: repo://src/screening/validate.ts
-generated: { by: "openwiki/0.5.2", at: "2026-09-23T12:49:55.013Z" }
+  - id: openwiki-source-f222dc1d70cd27df6524150a
+    resource: repo://src/state/editorStore.ts
+  - id: openwiki-source-89409d7a9c0280067e058c1a
+    resource: repo://src/state/store.ts
 verified:
-  - by: openwiki/0.5.2
-    at: 2026-09-23T12:49:55.013Z
+  - by: openwiki/0.7.3
+    at: 2026-11-02T08:58:22.323Z
 ---
 
 # Annotation Schema and Validation
 
 A SaiLoR project carries its **annotation schema** under `config.schema`: a tree of
 nodes describing the taxonomy of fields a reviewer fills in for each paper. The
-schema is authored as plain JSON, then *resolved* into an in-memory
-`ResolvedDef[]` that the form, the validator, the completeness dot, and the
-duplicate detector all consume. This page covers the whole path: the authoring
-types, the zod validation of the raw JSON, the resolution step that applies
-defaults and enforces structural rules, the field/cardinality model, the
-validation walk (including how answers orphaned by a schema rename are carried
-through rather than lost), the completeness computation behind the paper-list
-dot, the field-usage guard that warns before a schema rename orphans answers,
-and the duplicate detection run at import time.
+schema is authored as plain JSON (or built in the schema editor), then *resolved*
+into an in-memory `ResolvedDef[]` that the form, the validator, the completeness
+dot, and the duplicate detector all consume. This page covers the whole path: the
+authoring types, the zod validation of the raw JSON, the resolution step that
+applies defaults and enforces structural rules, the field/cardinality model, the
+`visibleIf` gate language, the schema editor's draft lifecycle and its
+rename/move machinery, the validation walk (including how answers orphaned by a
+schema rename are carried through rather than lost), the completeness computation
+behind the paper-list dot, the field-usage guard that warns before a schema
+rename orphans answers, and the duplicate detection run at import time.
 
 The user-facing authoring guide, with copy-paste examples and the full format
 table, lives in `docs/annotation-schema.md`; this page is the implementation
@@ -70,7 +72,7 @@ the file:
 | `max`        | `number \| null`                       | `1`     | Maximum instances; `null` = unbounded.                                   |
 | `options`    | `string[]`                             | —       | Enum dropdown, only on a `string` field.                                 |
 | `required`   | `boolean`                              | `false` | Field the reviewer must fill; ignored on a `boolean` (see below).        |
-| `visibleIf`  | `string \| VisibleIfSpec`              | —       | Gates this node's visibility: a bare name ("answered") or an AND/OR spec with optional `equals` value matching. |
+| `visibleIf`  | `string \| VisibleIfSpec`              | —       | Gates this node's visibility (see [Visibility gates](#visibility-gates-visibleif)). |
 | `description`| `string`                               | —       | Help note shown on hover.                                                |
 
 `ResolvedDef` is the same shape with defaults filled in and an `id` assigned:
@@ -85,17 +87,8 @@ the file:
   "Emptiness" below). A stray flag on a boolean in a hand-edited file is
   silently cleared here rather than rejected, so a file that currently loads
   keeps loading.
-- `visibleIf` — a bare field name (shorthand for "hidden until that field has
-  any answer") or a full `VisibleIfSpec` (`{ mode: 'all'|'any', conditions: […] }`
-  combining AND/OR and, per clause, an optional `equals` value list. The bare
-  name resolves as sibling, then ancestor-chain field, then a slash-joined
-  absolute path (`"Findings/Claim"`) reaching a cousin or unrelated branch. It
-  is kept only when every clause resolves to a real, answerable field and the
-  spec targets neither this node nor its own subtree; a reference to a group
-  (no `type`), an unresolvable name, a self/subtree reference, or an `equals`
-  the target's type cannot hold is **dropped silently** at resolve time, and a
-  spec left with no conditions gates nothing — the same "degrade defensively
-  on hand-edited data" convention used elsewhere in this schema.
+- `visibleIf` — normalized into the expanded `VisibleIfSpec` form, with every
+  clause that cannot be honored dropped (see below).
 - `children` — recursively resolved.
 
 `resolveSchema(defs)` is the public entry point: it runs `resolveDefs` over the
@@ -238,6 +231,185 @@ repaired-or-dropped structurally in `project.ts` rather than enforced at the
 zod layer, so a hand-edited file with a plausible shape (e.g. `"year": "2021"`)
 that currently loads keeps loading.
 
+## Visibility gates (`visibleIf`)
+
+A node can be hidden until another field is answered, in one of two on-disk
+forms: a **bare field name** (the shorthand for "hidden until that field has any
+answer") or a full **`VisibleIfSpec`** — `{ mode: 'all' | 'any', conditions:
+[…] }`, where each entry is either a leaf `VisibleCondition` (`{ field, equals?
+}`) or another nested spec, to arbitrary depth. `equals` narrows "has any
+answer" to "holds one of these values", and only booleans and `string` fields
+with `options` have a closed set to match.
+
+### How a reference resolves
+
+`resolveVisibleIf`/`resolveSpec` expand the shorthand, then resolve every
+clause's `field` against three ranks in order — a **sibling** in the same
+children list, then a **direct ancestor** (the parent chain only, never an
+ancestor's sibling), then an **absolute slash-joined path** (`"Findings/Claim"`,
+the `ResolvedDef.id` shape) that can reach a cousin or unrelated branch. This
+order keeps files written before paths existed resolving unchanged.
+
+A reference is **dropped silently** at resolve time when it:
+
+- names the gated node itself or anything in its own subtree (a hidden
+  descendant can never be answered, so the gate could never open),
+- is unresolvable at all three ranks, or
+- carries an `equals` list the target's type cannot hold (a free-text or
+  `year` field has no closed set).
+
+A spec left with no conditions gates nothing — the same "degrade defensively on
+hand-edited data" convention used elsewhere in this schema. On the read side,
+`isFieldVisible` (`src/model/annotations.ts`) applies the same ranks against the
+value tree: sibling via the instance's own container, ancestor via a threaded
+`gateAncestors` record, absolute path via `instanceAtPath`, which always reads
+instance 0 of a repeatable group (outside its own lineage there is no "current"
+instance). A clause fails **open** (the field stays visible) if its target
+resolves nowhere, so malformed or stale data never hides a field.
+
+`compactVisibleIf` is the inverse of the shorthand: a single-condition,
+no-`equals` spec is written back as the bare name so a hand-written schema (and
+a file written before value conditions existed) round-trips unchanged.
+`dehydrateSchema` (`project.ts`) applies it on save.
+
+### Editing a gate: the VisibleIfDialog
+
+A gate with several conditions and values cannot be expressed by a single
+`<select>`, so each schema row shows only a one-line summary
+(`describeVisibleIf`: "Always visible", "If …", or "If all/any of N
+conditions") with the full gate in the button's tooltip
+(`describeVisibleIfFull`); clicking it opens `VisibleIfDialog`, where the
+editing actually happens.
+
+The dialog offers every legal gate target through `buildTargets`, in three
+ranks in reading order: **Same level** (the sibling fields), **Ancestors**
+(the direct parent chain, nearest first, with a "levels up" label), and
+**Elsewhere in the schema** (every other typed field, in document order,
+disambiguated by its full slash-joined path). Same-level and ancestor targets
+keep their bare name in `cond.field` — that is the per-instance-correct
+reference inside a repeatable group — while a cross-branch target stores its
+absolute path, like a `ResolvedDef.id`. The gated node's own subtree is
+excluded from the picker, and a group (no value) is never a target. When a
+condition's stored `field` no longer resolves to any target, the row says so
+instead of silently rewriting the file.
+
+Each condition offers two match modes: "has any answer", or "has a specific
+value". The value picker appears only for a boolean (a Yes/No dropdown) or a
+`string` field with options (checkboxes, any one of which counts) — exactly the
+closed sets `resolveEquals` preserves; on free text, `number`, or `year` the
+second radio is disabled with an explanation. Unticking the last value falls
+back to "has any answer", and switching the target field drops the old `equals`
+because the values belong to the field no longer watched.
+
+The gate's entries are structured: the root group plus any number of nested
+groups, each with its own AND/OR mode. Entries can be added, removed, and
+reordered with up/down buttons, or dragged — the drag plumbing mirrors the
+schema tree's (`draggable` only once the handle is pressed, illegal drops
+refused by not preventing `dragover`); a group is a drop target in its own
+right, so the gesture's point — moving a condition *into* another group — works
+directly. When a cross-branch target is in use, the dialog notes that it is
+read from the first entry of any repeatable group on its way there.
+
+The dialog edits a **draft**: every change goes through the path helpers
+(`mapGroupAt`/`addEntryAt`/`replaceEntryAt`/`removeEntryAt`/`moveEntryAt`/
+`moveEntryTo`) replacing the local draft wholesale, so the store's copy — and
+the undo stack — only see the single `updateNode` fired on Save. Empty groups
+are pruned on remove and on Save (`pruneEmptyGroups`) but not on drag, so
+emptying a group mid-edit does not delete it; an "Always visible" button clears
+the whole gate, and Cancel/Escape/outside-click discard.
+
+## The schema editor and its draft lifecycle
+
+`SchemaTreeEditor.tsx` edits the schema as a nested, drag-reorderable tree of
+`EditorNode`s held in the project editor's own store (`src/state/editorStore.ts`).
+An `EditorNode` carries the same attributes as an `AnnotationDef` plus stable
+`uid`s for React keys and drag-and-drop, with `visibleIf` always held in its
+expanded spec form — `toAnnotationDefs` re-compacts it (and `cleanVisibleIf`
+drops blank field names and empty nested groups) when the draft is written to
+the file. `fromAnnotationDefs` does the reverse when a project is opened for
+editing.
+
+The draft lifecycle:
+
+- **Live draft vs saved copy.** `nodes` is the draft; `savedNodes` is the tree
+  as last written, and `savedSchemaJson` is the serialized form of that saved
+  schema. `openEditorSession` (and the new-project path) seeds all of them and
+  resets `keepHidden` to `{}`.
+- **Undo.** Every edit (`addNode`, `updateNode`, `removeNode`, `moveNode`) is
+  pushed onto a session-only undo stack (`HISTORY_LIMIT` 100) via `pushPast`;
+  typing into one input coalesces into a single step keyed by
+  `node:<uid>:<patch keys>`. The snapshot covers `nodes`, `papers`, and the
+  project-level settings — not `savedNodes`/`savedSchemaJson`/`schemaVersion`/
+  `schemaHistory`/`keepHidden`, which describe what was *saved*, not the draft.
+- **Rename guard.** A rename commits on blur (`commitRename`): the row
+  remembers the name the input had on focus, and if the answers will simply
+  follow the node (`answersFollow` — a carried, not-kept move, see below) the
+  confirm is skipped; otherwise `confirmDestructive` counts the papers
+  holding answers or PDF-mark links under the old name (over every candidate
+  name, because a typed-but-uncommitted rename still leaves papers recording
+  the old one) and asks before proceeding, with the "how many commits behind
+  upstream" caveat from the git store. Declining puts the old name back.
+- **Move guard.** `confirmMove` applies the same rule to drag-and-drop, but only
+  when the *parent changes* — reordering among siblings never changes an
+  answer's path, because answers are keyed by name at each level and never by
+  position, so warning there would be the crying-wolf failure.
+- **Save.** `save()` first runs `commitFocusedEdit()` (blurring the focused
+  input so the rename guard fires even for keyboard saves), then `validateDraft`
+  (the same zod + `resolveSchema` load-time checks, plus editor-specific ones:
+  non-empty named schema, at least one screening reason, valid paper ids/titles/
+  PDFs). On success, `nextSchemaVersion` derives the schema-version stamp (see
+  below), `buildProjectJson` assembles the file, and `savedNodes`/
+  `savedSchemaJson`/`keepHidden` are re-synced from what was written.
+
+### Pending moves: what happens to answers under an edited schema
+
+`pendingSchemaMoves(savedNodes, draft, keepHidden)` diffs the saved tree against
+the draft by `uid` and returns one `PendingSchemaMove` per renamed/moved node —
+its `from`/`to` name paths (with earlier applied moves already composed in,
+parents first), whether the answers **can follow** (`carried`: only when every
+level the move passes through on both sides is a single-instance group — through
+a repeated group there is no telling which entry an answer belongs to), and
+whether the reviewer chose to leave them hidden (`kept`). A node the reviewer
+left behind, or one whose answers cannot follow, takes its descendants with it.
+
+The editor renders the consequence per row (`pendingMove`): answers under the
+old name will move to the node when the file is saved (and follow once other
+reviewers pull their work), they stay hidden because the reviewer chose so, or
+they cannot follow through a repeated group. `setKeepHidden(uid, keep)` toggles
+that choice; it is cleared on save.
+
+### Where the draft's moves become version history
+
+`model/schemaVersion.ts` is the machinery that turns a saved schema edit into
+carried-over answers:
+
+- Every schema-changing save gets a `schemaVersion` id recorded in
+  `schemaHistory` with the id(s) it replaced (`parents`) and the
+  `SchemaMove`s (`from`/`to` name paths) whose answers should follow.
+  `nextSchemaVersion` **amends** the current version instead of appending a new
+  one while that version is still private — never committed in a git
+  repository, or younger than `PRIVATE_VERSION_MS` (6 minutes) without one — so
+  the history does not grow one entry per save; the amended entry still gets a
+  fresh id and an `absorbed` record, because files already stamped with the old
+  id have seen only its first moves.
+- Each annotation/mark file carries the version it was written under
+  (`schemaVersions`); on load, `pendingMoves(history, fileVersion, current)`
+  returns the moves that file has not seen yet — `'unknown'` when the project's
+  history does not know the file's version (another branch, or hand-edited),
+  which leaves the file untouched and records its key in
+  `Paper.unknownSchemaFiles` for validation to report (see below).
+- `moveInTree` applies a move to an annotation tree: below the shared prefix of
+  `from` and `to`, answers are pulled out of and put back into the tree through
+  **single-instance levels only** — a move that would need to choose between
+  repeated entries, or would land on answers already at the destination, is
+  abandoned and the old answers stay hidden. `moveInMarks` applies the same rule
+  to PDF-mark field links (parsed via `parsePath`, index 0 through the shared
+  prefix), `moveInDefs` replays a move on a resolved schema (for merges), and
+  `mergeHistories` unions two sides' histories with ours' order first.
+
+See [`data-model.md`](data-model.md) for how the per-file version stamps ride
+the split-file load path.
+
 ## Validation: the schema walk
 
 `src/model/validate.ts` walks a resolved schema against a paper's annotation
@@ -249,8 +421,9 @@ A `ValidationIssue` carries both a human-readable `path`
 (`"Findings #2 › Evidence › Metric"`) and a canonical machine `canonicalPath`
 (`"Findings[1]/Evidence/Metric"`, the `formatPath` form from
 `src/llm/paths.ts`) so the UI can jump straight to the field, not just the
-paper. `canonicalPath` is empty for a paper-level issue that names no field
-(a caught structural error, or a screening cross-field rule).
+paper. `canonicalPath` is empty for a paper-level issue that names no field (a
+caught structural error, a screening cross-field rule, or the schema-version
+notice).
 
 The walk produces four issue kinds:
 
@@ -272,33 +445,40 @@ not excluded). A sixth, **`orphaned`**, *is* emitted by this module — but by
 `validateProject`, not the field walk. It names the answers a paper still holds
 under field names the schema no longer describes (see "Orphaned answers"
 below), so a colleague's work sitting there is not silently filed as "not
-started". Both live in the shared `IssueKind` union because `ValidationIssue`
-and everything that renders one (notably `ValidationDialog.tsx`, which labels
-`orphaned` "Hidden by a schema change") is shared.
+started". A seventh, **`schema-version`**, is likewise emitted only by
+`validateProject`: when a paper's file was written under a schema version the
+project's history does not know, its answers could not be carried across the
+renames since, so validation says so (naming which files — a reviewer's answers
+or their PDF highlights — rather than just "this paper"). All three non-walk
+kinds live in the shared `IssueKind` union because `ValidationIssue` and
+everything that renders one (notably `ValidationDialog.tsx`, which labels
+`orphaned` "Hidden by a schema change" and `schema-version` "Unknown schema
+version") is shared across annotation and screening projects.
 
 ```mermaid
 flowchart TD
     Raw["Raw project.json"] -->|projectSchema<br/>zod + superRefine| ZodErr["zod parse error"]
     ZodErr --> Load["loadProject throws ProjectLoadError"]
-    Raw -->|parsed| Resolve["resolveSchema(config.schema)<br/>or screeningSchemaDefs(screening)"]
+    Raw -->|parsed| Resolve["resolveSchema config.schema<br/>or screeningSchemaDefs screening"]
     Resolve -->|SchemaError| Load
-    Resolve --> Resolved["ResolvedDef[]"]
-    Resolved --> Normalize["normalizeTree(schema, paper.annotations)"]
+    Resolve --> Resolved["ResolvedDef array"]
+    Resolved --> Version["schemaVersions + schemaHistory<br/>pendingMoves and moveInTree per file"]
+    Version --> Normalize["normalizeTree schema, paper.annotations"]
     Normalize --> Tree["AnnotationValueTree"]
     Tree --> Validate["validateProject / validatePaper"]
     Resolved --> Validate
-    Validate --> Issues["ValidationIssue[]<br/>required / type / enum / cardinality / orphaned"]
-    Tree --> Complete["completeness(schema, tree)"]
+    Validate --> Issues["ValidationIssue array<br/>required / type / enum / cardinality / orphaned / schema-version"]
+    Tree --> Complete["completeness schema, tree"]
     Resolved --> Complete
     Complete --> Dot["paper-list dot + annotationState"]
-    Resolved --> Dup["classifyImport (duplicates)"]
-    Resolved --> Usage["countPapersUsingField (rename guard)"]
+    Resolved --> Dup["classifyImport duplicates"]
+    Resolved --> Usage["countPapersUsingField rename guard"]
 ```
 
 The diagram traces the load path from raw JSON through zod, resolution,
-tree normalization, and on to the three consumers that read a resolved
-schema and a value tree: validation, completeness, and the duplicate /
-field-usage checks.
+per-file version migration, and tree normalization, and on to the consumers
+that read a resolved schema and a value tree: validation, completeness, and
+the duplicate / field-usage checks.
 
 ### Skipping unannotated papers
 
@@ -317,6 +497,13 @@ hidden paths. If the walker itself throws on a surprise in a hand-edited file,
 the paper gets a single `type` issue (`"Could not validate this paper's
 annotations: …"`) rather than taking the app down — a validation run must
 never crash over a hand-edited file.
+
+The store layer (`runValidation` in `src/state/store.ts`) remaps every paper's
+`annotations` to the tree the current reviewer seat owns (a numbered reviewer's
+own, or the consolidated tree for Consolidation) before calling
+`validateProject`, and appends `screeningIssues` for a screening project, which
+does its own seat routing because it reads the decision and the reason at once
+rather than one active tree.
 
 `ValidationDialog.tsx` splits the result into three sections rather than one
 flat list, because the flat list made it hard to find the open paper's own
@@ -382,7 +569,7 @@ figure — so `orphanedNodePaths` (readable paths like "Findings › Notes") is 
 *only* way a reviewer can be told the data is there at all. `validateProject`
 emits one `orphaned` issue per paper that holds any, naming the hidden paths
 and capping the list; the `ValidationDialog` labels it "Hidden by a schema
-change". The schema editor's rename/remove/move guard (below) is the
+change". The schema editor's rename/remove/move guard (above) is the
 *pre-emptive* half of the same concern — it asks before the orphan is created.
 
 ## Completeness and the paper-list dot
@@ -488,8 +675,10 @@ canonical form.
 
 `SchemaTreeEditor.tsx` is the consumer: it calls `countPapersUsingField` /
 `countLinksUsingField` and warns before a rename/remove/move that would orphan
-answers or links. The screening-reasons editor has its exactly-analogous guard
-in `src/screening/reasonUsage.ts`; the two hazards are the same shape.
+answers or links (see the draft lifecycle above). The screening-reasons editor
+has its exactly-analogous guard in `src/screening/reasonUsage.ts`
+(`countPapersUsingReason`/`renameReasonInPapers`); the two hazards are the same
+shape.
 
 ## Duplicate detection at import
 
@@ -566,8 +755,10 @@ machinery. See:
 - [`../architecture.md`](../architecture.md) for the overall
   runtime and the split on-disk storage layout.
 - [`data-model.md`](data-model.md) for the
-  on-disk annotation value tree and the per-reviewer / consolidation split.
+  on-disk annotation value tree, the per-reviewer / consolidation split, and
+  where the per-file schema-version stamps ride the load path.
 - [`../workflows/screening.md`](../workflows/screening.md) for the
-  screening project workflow and the derived screening schema.
+  screening project workflow, its derived two-field schema, and its
+  reason-usage guard.
 - `docs/annotation-schema.md` for the user-facing authoring guide with
   copy-paste examples.

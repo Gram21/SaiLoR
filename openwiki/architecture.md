@@ -1,8 +1,8 @@
 ---
 type: architecture
 title: SaiLoR Architecture
-description: Deep dive into SaiLoR's architecture — why the web SPA runtime was discontinued (Electron-desktop-only now), the split project.json + annotations/ on-disk storage format, the PlatformAdapter seam, the Zustand store with undo/redo (incl. PDF marks), reading-position persistence, PDF internal-link hover previews, the component tree, PDF marks and field-linking, multi-reviewer consolidation with stored alignment, annotation state/finished flags (Consolidation included), git integration (concurrent reads), the Electron main process, and build wiring.
-tags: [architecture, platform-adapter, state-management, electron, git, electron-only, split-storage]
+description: Deep dive into SaiLoR's architecture — the Tauri shell (renderer vs Rust process split), why the web SPA runtime was discontinued (desktop-only now), the PlatformAdapter seam over the SlrBridge/Tauri transport, the split project.json + annotations/ on-disk storage format, the four Zustand stores, the Zustand store with undo/redo (incl. PDF marks), reading-position persistence, the component tree, multi-reviewer consolidation with stored alignment, git integration (the Rust shell spawns git), the src-tauri Rust module map, and build wiring.
+tags: [architecture, platform-adapter, state-management, tauri, rust-backend, git, split-storage]
 sources:
   - id: openwiki-source-54631e6ebf1d3b815c4a5eed
     resource: repo://src/App.tsx
@@ -16,12 +16,16 @@ sources:
     resource: repo://src/main.tsx
   - id: openwiki-source-24c09c3b54387889db23d752
     resource: repo://src/platform/adapter.ts
-  - id: openwiki-source-769f5f5c1e3631cf9ab273bc
-    resource: repo://src/platform/electron.ts
+  - id: openwiki-source-8ad2b0f0a4c94c31ba4f1e94d7e21f01
+    resource: repo://src/platform/bridge.ts
   - id: openwiki-source-776dd28cc442c205e0a91460
     resource: repo://src/platform/index.ts
   - id: openwiki-source-9b49ad2f97827d5ed9890232
     resource: repo://src/platform/unsupported.ts
+  - id: openwiki-source-5c1e2a34b8f04b7e8bd1e0c9d2a3f6a1
+    resource: repo://src/platform/tauri.ts
+  - id: openwiki-source-1f9d3b7c2e5a46f09cb87d34a2e6b8c4
+    resource: repo://src/platform/desktop.ts
   - id: openwiki-source-c1ab92e18d72fec6435ab66e
     resource: repo://src/state/aiStore.ts
   - id: openwiki-source-f222dc1d70cd27df6524150a
@@ -32,6 +36,10 @@ sources:
     resource: repo://src/state/settings.ts
   - id: openwiki-source-89409d7a9c0280067e058c1a
     resource: repo://src/state/store.ts
+  - id: openwiki-source-3b7e91c4d2f84a6f9e0b1c5d8a2f7e63
+    resource: repo://src-tauri/src/main.rs
+  - id: openwiki-source-4c8a2f61b9e04d738fa1b5c2e6d9a0f7
+    resource: repo://src-tauri/tauri.conf.json
   - id: openwiki-source-81cf84df6b5988f0684554d1
     resource: repo://tsconfig.app.json
   - id: openwiki-source-98d5ddb014a0fd4d678f6f2a
@@ -42,47 +50,53 @@ sources:
     resource: repo://vite.config.ts
 generated: { by: "openwiki/0.5.2", at: "2026-09-23T12:49:55.013Z" }
 verified:
-  - by: openwiki/0.5.2
-    at: 2026-09-23T12:49:55.013Z
+  - by: openwiki/0.7.3
+    at: 2026-11-02T08:58:22.323Z
 ---
 
 # Architecture
 
 ## Overview
 
-SaiLoR is a single-codebase React app. It used to run as both an Electron desktop application and a
-static web SPA; **the web runtime is now discontinued** — `src/App.tsx`'s `isElectron()` gate shows a
-"use the desktop app" notice and blocks every project-opening UI before any of it can be reached, and
-the browser-only platform code (`src/platform/browser.ts`, `src/platform/idb.ts`) and the
-`?project=<url>` server-deployment loader (`loadFromUrl` in `src/state/store.ts`) were deleted
-outright. SaiLoR is Electron-desktop-only now. See "SaiLoR is Electron-desktop-only" below for the
-reasoning, and [Operations](operations/build-release.md)/[Quickstart](quickstart.md) for what this means for running the
+SaiLoR is a single-codebase React app run as a **Tauri 2** desktop application. It used to ship both an
+Electron desktop build and a static web SPA; **the web runtime is now discontinued** — `src/App.tsx`'s
+`isTauri()` gate shows a "use the desktop app" notice (with a download link to the releases page) and
+blocks every project-opening UI before any of it can be reached, and the browser-only platform code
+(`src/platform/browser.ts`, `src/platform/idb.ts`) and the `?project=<url>` server-deployment loader
+(`loadFromUrl` in `src/state/store.ts`) were deleted outright. The Electron shell was replaced in 2.0
+by a Rust one: the desktop process is the Rust binary built from `src-tauri/` (registered commands in
+`src-tauri/src/main.rs`), and the renderer is the same React code served by Vite in dev and embedded
+from `dist` when packaged. See [The Rust shell](#the-rust-shell-src-tauri) below, and
+[Operations](operations/build-release.md)/[Quickstart](quickstart.md) for what this means for running the
 app day to day.
 
 The app also changed how a project is stored on disk: `project.json` now holds only the schema and
 paper metadata, never annotation data — every reviewer's/consolidation's actual answers live in a
 sibling `annotations/<paperId>/` folder instead, one file per reviewer plus a consolidated file. See
-"Assembling and splitting a project on disk" below and [Data Model](concepts/data-model.md)'s "On-disk layout"
+[Data Model](concepts/data-model.md)'s "On-disk layout"
 for the full shape and why (git-merge conflicts between reviewers editing the same all-in-one file).
 
 The **PlatformAdapter** interface remains the architectural seam abstracting file I/O and PDF loading
-— it is still what `ElectronAdapter` implements — but with the web runtime discontinued, the seam now
+— it is still what the desktop adapter implements — but with the web runtime discontinued, the seam now
 has one real implementation and one inert stand-in (`createUnsupportedAdapter`) rather than two competing
 ones. See "Why the seam still exists" below for why it was not simply deleted along with the browser
 adapter.
 
 ## Architecture Diagram
 
-High-level process/data flow — renderer (React + Zustand) talks to the Electron main process only
-through the `window.slr` bridge (`electron/preload.ts`); the main process is the only thing that
-touches the filesystem, spawns `git`, or calls out to an LLM provider.
+The renderer is the React app itself: components, the Zustand stores, the model layer, `src/llm`, and
+the platform seam. It owns no process of its own in Tauri — it is the webview's document, talking to
+the Rust shell only through the SlrBridge. The Rust shell owns everything else: the filesystem, the
+`slr-file://` protocol, the spawned git CLI, the LLM calls, the window/menu, the single-instance and
+updater plugins. The flowchart names the pieces and what crosses the bridge; the two C4 views place
+the app among its external actors and then zoom into its containers.
 
 ```mermaid
 flowchart TB
     subgraph Renderer["Renderer process (Chromium, React 19)"]
         direction TB
         App["App.tsx
-isElectron() discontinuation gate"]
+isTauri() discontinuation gate"]
         Components["Component tree
 Toolbar, PaperList, PdfViewer,
 AnnotationPanel, ConsolidationDialog,
@@ -96,7 +110,7 @@ duplicates.ts, references.ts"]
         Llm["src/llm
 prompt / parse / models"]
         Platform["PlatformAdapter
-ElectronAdapter / UnsupportedAdapter"]
+DesktopAdapter / UnsupportedAdapter"]
 
         App --> Components
         Components --> Store
@@ -106,21 +120,21 @@ ElectronAdapter / UnsupportedAdapter"]
         Store --> Platform
     end
 
-    Bridge["window.slr
-(preload.ts contextBridge)"]
+    Bridge["SlrBridge
+(bridge.ts → tauri.ts IPC)"]
 
     Platform -->|"project:*, pdf:*"| Bridge
     GitStore -->|"git:*"| Bridge
     Llm -->|"llm:*"| Bridge
 
-    subgraph Main["Electron main process (electron/main.ts)"]
+    subgraph Main["Rust shell (src-tauri/)"]
         direction TB
-        IPC["IPC handlers
+        IPC["Tauri commands
 project:*, pdf:*, git:*, llm:*, update:*"]
         Protocol["slr-file:// protocol
 CORS-enabled, path-traversal guarded"]
-        Window["BrowserWindow + menu
-window-state.json, quit flow"]
+        Window["Window + menu
+window-state, quit flow"]
     end
 
     Bridge --> IPC
@@ -137,7 +151,7 @@ paths relative to project.json"]
 
     subgraph GitRepo["Local git repository"]
         GitBinary["git CLI
-child_process"]
+spawned by the Rust shell"]
     end
 
     subgraph External["External services"]
@@ -149,7 +163,7 @@ OpenAI / Anthropic-compatible / etc."]
     IPC -->|"read/write"| Annotations
     Protocol -->|"serve"| Pdfs
     IPC -->|"spawn"| GitBinary
-    IPC -->|"net.fetch"| LlmProviders
+    IPC -->|"reqwest"| LlmProviders
 ```
 
 ### C4: System Context
@@ -160,16 +174,16 @@ C4Context
 
     Person(reviewer, "Reviewer/Researcher", "Annotates, screens, and consolidates papers for a systematic literature review")
 
-    System(sailor, "SaiLoR", "Electron desktop app (React + Zustand)", "Single/multi-reviewer annotation, screening, and consolidation of SLR papers")
+    System(sailor, "SaiLoR", "Tauri desktop app (React + Zustand)", "Single/multi-reviewer annotation, screening, and consolidation of SLR papers")
 
     System_Ext(llm, "LLM Provider", "OpenAI / Anthropic-compatible / etc.", "Optional AI-assisted field suggestions from a paper's PDF text")
     System_Ext(gitRemote, "Git remote", "GitHub/GitLab/etc.", "Shares a project repo across reviewers; reached only via the user's local git install")
     SystemDb_Ext(fs, "Local filesystem", "project.json + annotations/ + PDFs", "The project's on-disk storage; not a network service, just the machine's own disk")
 
     Rel(reviewer, sailor, "Opens/annotates/screens/consolidates a project")
-    Rel(sailor, llm, "Sends paper text/PDF, receives field suggestions", "HTTPS, main process only")
+    Rel(sailor, llm, "Sends paper text/PDF, receives field suggestions", "HTTPS, Rust shell only")
     Rel(sailor, gitRemote, "Clone / pull / push the project repo", "git protocol, via local git CLI")
-    Rel(sailor, fs, "Reads/writes project.json, annotations/, PDFs", "file I/O, main process only")
+    Rel(sailor, fs, "Reads/writes project.json, annotations/, PDFs", "file I/O, Rust shell only")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
 ```
@@ -182,23 +196,23 @@ C4Container
 
     Person(reviewer, "Reviewer/Researcher")
 
-    System_Boundary(sailor, "SaiLoR (Electron app)") {
+    System_Boundary(sailor, "SaiLoR (Tauri app)") {
         Container(renderer, "Renderer", "React 19 + Zustand + immer", "Component tree, state store, model layer, gitStore, src/llm — no direct filesystem/network/process access")
-        Container(main, "Main process", "Node.js (electron/main.ts)", "IPC handlers, slr-file:// protocol, window/menu, spawns git, calls LLM providers")
-        Container(preload, "Preload bridge", "electron/preload.ts", "contextBridge-exposed window.slr — the only channel between renderer and main")
+        Container(main, "Rust shell", "Tauri 2 (src-tauri/)", "Commands, slr-file:// protocol, window/menu, spawns git, calls LLM providers")
+        Container(preload, "SlrBridge", "src/platform/bridge.ts + tauri.ts", "The only channel between renderer and shell")
     }
 
     ContainerDb(disk, "Project storage", "JSON files on disk", "project.json (schema + metadata) + annotations/<paperId>/ (per-reviewer + consolidated)")
-    Container_Ext(gitcli, "git CLI", "external binary", "Invoked via child_process; SaiLoR never re-implements git")
+    Container_Ext(gitcli, "git CLI", "external binary", "Invoked as a child process by the Rust shell; SaiLoR never re-implements git")
     System_Ext(llmApi, "LLM Provider API", "HTTPS")
 
     Rel(reviewer, renderer, "Uses the UI")
-    Rel(renderer, preload, "Calls window.slr.*", "contextBridge, in-process")
-    Rel(preload, main, "IPC (project:*, pdf:*, git:*, llm:*, update:*)")
+    Rel(renderer, preload, "Calls SlrBridge methods", "in-process interface")
+    Rel(preload, main, "Tauri IPC (project:*, pdf:*, git:*, llm:*, update:*)")
     Rel(main, renderer, "Serves PDFs", "slr-file:// protocol, CORS-enabled")
     Rel(main, disk, "Read/write project + annotations")
     Rel(main, gitcli, "Spawn (clone/status/commit/push/pull/merge)")
-    Rel(main, llmApi, "net.fetch with substituted API key", "HTTPS")
+    Rel(main, llmApi, "reqwest with substituted API key", "HTTPS")
 
     UpdateLayoutConfig($c4ShapeInRow="4", $c4BoundaryInRow="1")
 ```
@@ -208,10 +222,12 @@ C4Container
 The entire file-system and PDF-loading layer is abstracted behind a single interface:
 
 ```
-src/platform/adapter.ts     →  PlatformAdapter interface
+src/platform/adapter.ts     →  PlatformAdapter interface + isTauri() detection + StaleSaveError
 src/platform/index.ts       →  getPlatform() singleton factory
-src/platform/electron.ts    →  ElectronAdapter — the only real implementation now
-src/platform/unsupported.ts →  createUnsupportedAdapter — inert Proxy stand-in outside Electron, see below
+src/platform/desktop.ts     →  DesktopAdapter — the renderer-side logic shared by the desktop build
+src/platform/tauri.ts       →  TauriAdapter (extends DesktopAdapter) + tauriBridge — the Tauri transport
+src/platform/bridge.ts      →  SlrBridge — the backend API the renderer programs against
+src/platform/unsupported.ts →  createUnsupportedAdapter — inert Proxy stand-in outside the shell, see below
 ```
 
 **`PlatformAdapter`** (`src/platform/adapter.ts`) defines these operations (the list below is a
@@ -219,16 +235,16 @@ guided tour, not an exhaustive count, which would just go stale as the interface
 - `getRecents()` — return the list of recently opened projects (`RecentEntry[]` with `id` + `name`)
 - `openRecent(id)` — re-open a project by its recent-entry id (the absolute file path)
 - `openProject()` — show an open dialog/picker, return JSON text + a `SaveHandle`
-- `saveProject(text, handle)` — write back to the handle's location; on Electron this is where the logical whole-project text gets split into `project.json` + `annotations/` files (see "Assembling and splitting a project on disk" below)
-- `rebasePdfPaths(pdfPaths, from, to)` — re-express PDF paths that were relative to `from`'s directory as relative to `to`'s. **"Save as" depends on this**: a paper's `pdf` is stored relative to the project file, so writing the old paths to a new location left every PDF pointing at nothing. `store.saveAs()` therefore picks the destination *first* (`pickProjectLocation`), rebases, and only then serializes and writes. Electron does the real path math via a `paths:rebase` IPC (`relative(dirname(to), resolve(dirname(from), rel))`).
-- `getPdfSource(pdfPath, projectHandle)` — resolve a paper's relative PDF path into a URL react-pdf can load. Re-asserts the main process's project directory from `projectHandle` first, so PDFs always resolve against the project actually being rendered (the project editor repoints that directory when picking a location).
+- `saveProject(text, handle)` — write back to the handle's location; on the desktop this is where the logical whole-project text gets split into `project.json` + `annotations/` files (see [Data Model](concepts/data-model.md)'s "On-disk layout"). Throws `StaleSaveError` — writing nothing — when a file it would overwrite changed on disk since the project was last read or written.
+- `rebasePdfPaths(pdfPaths, from, to)` — re-express PDF paths that were relative to `from`'s directory as relative to `to`'s. **"Save as" depends on this**: a paper's `pdf` is stored relative to the project file, so writing the old paths to a new location left every PDF pointing at nothing. `store.saveAs()` therefore picks the destination *first* (`pickProjectLocation`), rebases, and only then serializes and writes. The Rust shell does the real path math via a `paths:rebase` command (`relative(dirname(to), resolve(dirname(from), rel))`).
+- `getPdfSource(pdfPath, projectHandle)` — resolve a paper's relative PDF path into a URL react-pdf can load. Re-asserts the shell's project directory from `projectHandle` first, so PDFs always resolve against the project actually being rendered (the project editor repoints that directory when picking a location).
 
 Three more exist for the **project editor** (see below):
 - `pickProjectLocation(suggestedName)` — ask where the project JSON should live; writes nothing. Returns a `ProjectLocation` (`handle`, `name`, and an absolute `path`).
 - `pickPdfs()` — pick PDFs to reference; returns `PickedPdf[]` (`name`, plus an absolute `path`).
-- `pickPdfFolder()` — pick a folder and return every PDF inside it, recursively, as `PickedPdf[]`, via a `pdf:pickFolder` IPC that walks the filesystem.
+- `pickPdfFolder()` — pick a folder and return every PDF inside it, recursively, as `PickedPdf[]`, via a `pdf:pickFolder` command that walks the filesystem.
 - `pickReferenceFile()` — pick a single `.bib`/`.ris`/`.json` reference-manager export; returns `{ text, name }` or null if cancelled. Parsed by `src/model/references.ts`.
-- `relativePdfPaths(pdfs, location)` — the `pdf` values to store, **relative to the JSON's directory**, computed via IPC.
+- `relativePdfPaths(pdfs, location)` — the `pdf` values to store, **relative to the JSON's directory**, computed via the bridge.
 - `absolutePdfPaths(pdfPaths, from)` — the inverse: absolute paths for values relative to `from`'s directory. Added for `startFromScreening`/`importFromScreening` (see "Screening" below) — a paper carried in from a screening project needs a real `sourcePath`, not just the relative path the source file stored, or `changeLocation` cannot re-derive it later.
 - `siblingProjectLocation(source, fileName)` — the location `fileName` would have if it sat next to `source`'s directory; writes and prompts nothing. What makes "save the new annotation project next to the screening JSON" the *default* rather than a dialog suggestion.
 
@@ -238,70 +254,123 @@ Two generic plain-text export methods round out the adapter:
 
 One more is its own capability object rather than a flat method: `getGit(): GitPlatform | null` —
 git operations against the user's own git installation, or `null` where the runtime cannot reach one.
-`UnsupportedAdapter`/`createUnsupportedAdapter` (the non-Electron stand-in) always returns `null`
+`UnsupportedAdapter`/`createUnsupportedAdapter` (the non-desktop stand-in) always returns `null`
 here, same as the deleted `BrowserAdapter` did — the type-level shape that made git support
-unreachable outside Electron didn't need to change when the web runtime itself became unreachable.
+unreachable outside the shell didn't need to change when the web runtime itself became unreachable.
 See "Git" below.
 
 **Project title.** A project JSON may set a top-level `title`; the app shows it wherever it would otherwise show the file name (toolbar, recents list, Open menu), falling back to the file name when absent. It is a first-class key on `Project` (not swallowed into `extra`, which would duplicate it on save) and is only written when non-empty. The project editor exposes it as a *Project title* field next to the JSON location.
 
-**Recents are re-read from disk, not trusted.** The title shown for a recent is stored on the entry, but that copy goes stale the moment the project is renamed elsewhere — most obviously by changing the *Project title* in the editor, where the old name would otherwise still be sitting in the list after closing it. So `checkRecents()` **re-reads each project's current title from the file** via a `project:peek` IPC that returns `{ exists, title }` per path in one round trip (parse failures are contained per file). The refreshed list is written back (`replaceRecents`, order preserved) so the fresh titles survive a restart, and `editorStore.save()` triggers a refresh so a rename shows up as soon as the editor is closed. A title removed from a file correctly reverts the entry to showing its file name.
+**Recents are re-read from disk, not trusted.** The title shown for a recent is stored on the entry, but that copy goes stale the moment the project is renamed elsewhere — most obviously by changing the *Project title* in the editor, where the old name would otherwise still be sitting in the list after closing it. So `checkRecents()` **re-reads each project's current title from the file** via a `project:peek` command that returns `{ exists, title }` per path in one round trip (parse failures are contained per file). The refreshed list is written back (`replaceRecents`, order preserved) so the fresh titles survive a restart, and `editorStore.save()` triggers a refresh so a rename shows up as soon as the editor is closed. A title removed from a file correctly reverts the entry to showing its file name.
 
-**A recent whose file has gone is kept, not forgotten.** `checkRecents()` (run on startup via `refreshRecents()`) re-tests each entry via `fs:exists` and sets a runtime-only `available` flag (never persisted). A missing project stays in the list, faded, badged *not found*, and unselectable, because the drive may come back; the user can still dismiss it with the ×. Opening one that has since vanished marks it unavailable rather than pruning it. Note the flag is deliberately tri-state: `undefined` means *not checked yet*, and only an explicit `false` greys an entry out, so nothing flickers on first paint.
+**A recent whose file has gone is kept, not forgotten.** `checkRecents()` (run on startup via `refreshRecents()`) re-tests each entry through the same `project:peek` command and sets a runtime-only `available` flag (never persisted). A missing project stays in the list, faded, badged *not found*, and unselectable, because the drive may come back; the user can still dismiss it with the ×. Opening one that has since vanished marks it unavailable rather than pruning it. Note the flag is deliberately tri-state: `undefined` means *not checked yet*, and only an explicit `false` greys an entry out, so nothing flickers on first paint.
 
-**Closing a project** (`requestCloseProject`) returns to the start screen, and when there are unsaved changes it first asks via `ClosePrompt` — the same three choices and wording as Electron's native quit dialog (Save / Don't Save / Cancel). A *failed* save keeps the project open rather than closing and losing the work.
+**Closing a project** (`requestCloseProject`) returns to the start screen, and when there are unsaved changes it first asks via `ClosePrompt` — the same three choices and wording as the shell's native quit dialog (Save / Don't Save / Cancel). A *failed* save keeps the project open rather than closing and losing the work.
 
 **Recents entries** carry `path` and `title` beyond `id`/`name`. The path is what lets a user tell two projects called `review.json` apart: the start screen shows it under the title (truncated from the *left*, since the tail is what differs — `direction: rtl` + `unicode-bidi: plaintext`, the latter so the leading `/` isn't reordered to the end), and the Open menu shows it as a hover tooltip. On the start screen each entry also carries a **✎** pen (`useEditorStore().startEditRecent(id)`) that opens the project straight into the schema editor instead of the annotation view — the same edit path as *Edit annotation JSON…*, but for a known recent rather than a file picker. Both places offer an **×** to drop an entry (`forgetRecent`), which in the menu deliberately does *not* close it, so several can be cleared in a row. The title is only known once the JSON is parsed, so `loadFromText` re-pushes the entry via `rememberProject()` — `pushRecent` dedupes by id, so this enriches the existing entry rather than duplicating it.
 
 Recent projects are managed by `src/platform/recents.ts` — up to 5 entries in `localStorage`. The entry `id` is the absolute file path.
 
-`getPlatform()` (`src/platform/index.ts`) returns a singleton: `ElectronAdapter` if `window.slr`
-exists (preload bridge), otherwise `createUnsupportedAdapter()`. Detection uses `isElectron()` which
-checks for the preload-bridged `window.slr` object.
+`getPlatform()` (`src/platform/index.ts`) returns a singleton: `new TauriAdapter()` when `isTauri()`
+is true, otherwise `createUnsupportedAdapter()`. (Constructing `TauriAdapter` calls
+`setBridge(tauriBridge)` — see the four-layer seam below.) Detection uses `isTauri()`, which checks
+for `'__TAURI_INTERNALS__' in window` — the object Tauri's IPC layer injects into every page it
+serves.
 
-### ElectronAdapter (`src/platform/electron.ts`)
+### The seam in four layers: SlrBridge → tauriBridge → DesktopAdapter → TauriAdapter
 
-Delegates to `window.slr` (the preload bridge). File operations use IPC to the main process. PDFs are served via the custom `slr-file://project/pdf?path=<encoded-path>` protocol (the path travels as a query param, not a URL path segment, because Chromium's URL parser collapses `..` segments before the request is even made) — the main process resolves paths relative to the project directory. `setProjectDir` is called on open/save-as (and re-asserted from the current project's handle in `getPdfSource`) so the protocol knows the base directory. On open and save-as, the adapter pushes an entry to the recents list (`slr.recents.electron` localStorage key). `openRecent(id)` calls `bridge().openPath(id)` to read a file by absolute path; if the file no longer exists the store marks the entry unavailable (greyed out, kept rather than pruned — see "A recent whose file has gone is kept" below) rather than removing it.
+The renderer never touches Tauri's `invoke`/`listen` directly. The seam has four layers, each with a
+single job:
+
+- **`SlrBridge` (`src/platform/bridge.ts`)** — a plain TypeScript interface describing every backend
+  operation the renderer can ask for: project save/open/pick, PDF path grants, recents, git, LLM
+  config/calls, feedback, local models, updates, OS info. `getBridge()` returns the registered
+  implementation and throws `"No desktop bridge: SaiLoR runs in the Tauri shell only"` if none has
+  been registered — the guard that keeps any stray caller honest. Code that wants "the desktop
+  backend" programs against this interface, not against any transport.
+- **`tauriBridge` (`src/platform/tauri.ts`)** — the only file that knows about Tauri. `command()`
+  maps a `channel:action` name to a snake_case Tauri command (`project:save` → `project_save`) and
+  sends call arguments as named fields, each declared at the call site in camelCase
+  (`call('project:save', 'filePath', 'metaText', 'files')` → Tauri's
+  `{ filePath, metaText, files }`, which Rust receives as snake_case parameters). Events
+  (`update:progress`, `update:downloaded`, `update:error`) arrive via Tauri's `listen` API, with
+  `replace` used for the update progress stream so an in-flight download is never tracked twice. It
+  also owns `assembleProject`, the read-side reassembly of a split on-disk project into the logical
+  whole-project text (see [Data Model](concepts/data-model.md)'s "On-disk layout").
+- **`DesktopAdapter` (`src/platform/desktop.ts`)** — the renderer-side *logic* of the desktop
+  adapter, implemented against `SlrBridge`: baseline tracking for `saveProject` (`lastWritten`,
+  `rebaselined()`, `withBaselineDropped()`), recents, git result parsing, `StaleSaveError` mapping,
+  and PDF source resolution. It contains no Tauri code.
+- **`TauriAdapter` (`src/platform/tauri.ts`)** — `class TauriAdapter extends DesktopAdapter`, whose
+  only job is to call `setBridge(tauriBridge)` in its constructor. All behavior lives in
+  `DesktopAdapter`; `TauriAdapter` is just the wiring point.
+
+`isTauri()` is defined in `src/platform/adapter.ts`; it is both the `App.tsx` gate criterion and the
+selection criterion in `getPlatform()`.
+
+### DesktopAdapter (`src/platform/desktop.ts`)
+
+Implements the platform operations against the `SlrBridge`. File operations go through bridge calls
+that resolve to Rust command handlers in the shell. PDFs are served via the custom
+`slr-file://project/pdf?path=<encoded-path>` protocol (the path travels as a query param, not a URL
+path segment, because the webview's URL parser collapses `..` segments before the request is even
+made) — the Rust side resolves paths relative to the session's project directory, registered via
+`checkPdfPath` and widened by the `allowPdfPath` folder-grant dialog when a PDF lives outside the
+grant. `openProject`/`openRecent` push an entry to the recents list (the
+`slr.recents.electron` localStorage key name is kept as a legacy label). `openRecent(id)` reads a
+file by absolute path through the bridge; if the file no longer exists the store marks the entry
+unavailable (greyed out, kept rather than pruned — see "A recent whose file has gone is kept" below)
+rather than removing it. `needsPdfFolderGrant` is `false`: the grant flow is driven by the shell's
+dialog, not a renderer-side prompt.
 
 **`saveProject(text, handle)` is where the on-disk split happens.** `text` is the logical
 whole-project JSON `serializeProject()` produced (the same shape as before this feature — the model
-layer never learned the split shape, see [Data Model](concepts/data-model.md)'s "Assembling and splitting on
-disk"). `ElectronAdapter.saveProject` re-parses it with `loadProject`, calls `splitProjectFiles()` to
-get `{ meta, files }`, and sends both over the `project:save` IPC, which `electron/main.ts` writes as
-`project.json` plus a reconciled `annotations/` folder. The adapter does not send every file every
-time: it keeps a baseline of how the project last serialized on disk (`lastWritten`, refreshed on
-every open and save) and sends only the `files` entries that differ from it, plus `null` entries for
-paths the project used to write and no longer does (a removed paper's `annotations/<id>/` folder). The
-`metaText` argument itself is sent as `null` when `project.json` is unchanged, so the main process can
-skip rewriting it — which is what keeps one reviewer's edit from showing up as a diff across every
-other paper's file in a shared repository (a schema change that `pruneTree` materializes as an empty
-entry in every tree would otherwise do exactly that). `openProject`/`openRecent` are symmetric on
-the read side: the IPC handler (`readProjectText`) reassembles a split project back into that same
-logical text before handing it to the renderer, or passes an old single-file project through
-untouched. See "Assembling and splitting a project on disk" below for the full mechanics.
+layer never learned the split shape, see [Data Model](concepts/data-model.md)'s "On-disk layout").
+`DesktopAdapter.saveProject` re-parses it with `loadProject`, calls `splitProjectFiles()` to
+get `{ meta, files }`, and sends both over the bridge's `project:save`, which the Rust
+`project.rs` handler writes as `project.json` plus a reconciled `annotations/` folder. The adapter
+does not send every file every time: it keeps a baseline of how the project last serialized on disk
+(`lastWritten`, refreshed on every open and save) and sends only the `files` entries that differ from
+it, plus `null` entries for paths the project used to write and no longer does (a removed paper's
+`annotations/<id>/` folder — the shell deletes such a file only when the null entry arrives and the
+existing file parses as JSON, never for a reserved path like `feedback/`). The `metaText` argument
+itself is sent as `null` when `project.json` is unchanged, so the shell can skip rewriting it —
+which is what keeps one reviewer's edit from showing up as a diff across every other paper's file in
+a shared repository (a schema change that `pruneTree` materializes as an empty entry in every tree
+would otherwise do exactly that). Every git operation that rewrites the working tree (pull, merge,
+branch switch, `splitAnnotations`) runs through `withBaselineDropped()`/`rebaselined()` so the
+baseline is discarded and re-established from what git just wrote — otherwise the first save after a
+pull would "revert" the pulled files. `openProject`/`openRecent` are symmetric on the read side: the
+shell reads `project.json` plus the per-paper annotation files and the TS-side `assembleProject`
+rebuilds that same logical text before handing it to the store,
+or passes an old single-file project through untouched. When a file on disk changed since the
+baseline (another reviewer pushed, an external editor touched a file), the shell's stale-stamp check
+refuses the write and the adapter throws `StaleSaveError`, which the store turns into the
+stale-save dialog (see "Key Actions" below). See [Data Model](concepts/data-model.md)'s "On-disk layout"
+for the full mechanics.
 
 ### Why the seam still exists
 
 `PlatformAdapter` was built to abstract over two real runtimes; now it abstracts over one real
-runtime (`ElectronAdapter`) and one that refuses everything (`createUnsupportedAdapter`,
-`src/platform/unsupported.ts`). It was not collapsed away because `App.tsx`'s `isElectron()` gate
+runtime (`TauriAdapter`) and one that refuses everything (`createUnsupportedAdapter`,
+`src/platform/unsupported.ts`). It was not collapsed away because `App.tsx`'s `isTauri()` gate
 renders *after* React's hooks have already run for that pass — `useStore`, `useEditorStore`, and a
 few module-level reads (`getPlatform().getRecents()` at store creation, before `App` ever mounts) all
-still execute in a non-Electron runtime, and something has to answer those calls safely rather than
+still execute in a non-Tauri runtime, and something has to answer those calls safely rather than
 throwing during module init. The only things genuinely read before that gate ever renders are `kind`
 (`LlmSettingsDialog.tsx`) and `getRecents` (the store's initial state, at module load); everything
 else is a backstop for a call this app's own gating says can't happen. `createUnsupportedAdapter`
 answers those two reads for real and implements every other `PlatformAdapter` method as a single
 `Proxy` `get`-trap that returns a function throwing
 `"SaiLoR for the web is discontinued — use the desktop app."` — one trap rather than ~30 individual
-stub methods, since the only methods that ever actually run are the two it implements for real. In
+stub methods, since the only methods that ever actually run are the few it implements for real. In
 ordinary operation nothing reaches the trap, because the gate blocks the UI first — but the type
 system still requires a `PlatformAdapter` to exist before `App` can render at all, so something inert
 has to fill that slot.
 
 ### createUnsupportedAdapter (`src/platform/unsupported.ts`)
 
-The non-Electron `PlatformAdapter` implementation used to be `BrowserAdapter` — a substantial piece of
+The non-desktop `PlatformAdapter` implementation used to be `BrowserAdapter` — a substantial piece of
 code covering three capability tiers (Chromium's File System Access API, a `webkitdirectory`
 `<input>` fallback for other browsers, and a `?project=<url>` server-fetch mode), plus an IndexedDB
 handle store (`src/platform/idb.ts`) to keep FSAPI handles alive across reloads. **All of it was
@@ -312,9 +381,11 @@ that used to be reachable through them.
 
 What replaced it is `createUnsupportedAdapter` (see "Why the seam still exists" above): a small real
 object answering the two reads that genuinely happen before the gate (`kind: 'browser'`,
-`getRecents: () => []`), wrapped in a `Proxy` whose `get`-trap returns a throwing function for every
-other property. There is nothing else to document here — it is deliberately inert, a backstop rather
-than a feature.
+`getRecents: () => []`; plus a few harmless completions — `setWindowTitle` falls back to
+`document.title`, feedback listing returns an empty list, writing feedback returns `null`), wrapped
+in a `Proxy` whose `get`-trap returns a throwing function for every other property. It has no
+`ollama` capability and a `null` `localRuntime`. There is nothing else to document here — it is
+deliberately inert, a backstop rather than a feature.
 
 ## State Management
 
@@ -328,9 +399,17 @@ The entire app state lives in a single Zustand store with immer middleware:
 |---|---|---|
 | `project` | `Project \| null` | The loaded, normalized project (schema + papers) |
 | `currentPaperId` | `string \| null` | Currently selected paper |
-| `saveHandle` | `SaveHandle \| null` | Where to write back — the opened file's absolute path (`kind: 'electron'`); `SaveHandle`'s `'fsapi'`/`'download'` kinds are unused dead branches left over from the deleted browser adapter |
+| `saveHandle` | `SaveHandle \| null` | Where to write back — the opened file's absolute path (`kind: 'electron'`, the legacy kind name); `SaveHandle`'s `'fsapi'`/`'download'` kinds are unused dead branches left over from the deleted browser adapter |
 | `projectName` | `string` | Display name for title bar |
-| `dirty` | `boolean` | Unsaved changes flag; gates `beforeunload` guard |
+| `projectTitle` | `string` | The project's own `title` from its JSON; empty when it doesn't set one. Drives the toolbar/recents display fallback |
+| `dirty` | `boolean` | Unsaved changes flag; drives the shell's close guard |
+| `corruptFiles` | `string[]` | Annotation files that failed to parse at open (a leftover git conflict is the usual cause). They load as *absent*, so the reviewer they belong to reads as having done nothing; kept for the session (the load banner is dismissible) |
+| `lastSavedAt` | `number \| null` | `Date.now()` of the last successful save; drives the toolbar's transient "Saved" confirmation |
+| `autosaveEnabled` | `boolean` | Persisted opt-in (`slr.autosave`); the `useAutosave` consumer reads it |
+| `staleSave` | `StaleSave \| null` | A save that found its files changed on disk (a `StaleSaveError` from the adapter) and is waiting for `resolveStaleSave`'s overwrite/discard/merge decision |
+| `annotationsSplit` | `AnnotationsSplit \| null` | The proposed split of a legacy all-in-one project into the `project.json` + `annotations/` layout (`runSplit`); null otherwise |
+| `screeningMarks` / `showScreeningMarks` | `Record<string, ScreeningMark[]> \| null` / `boolean` | PDF highlights from the screening project this one was started from, by this project's paper id, and whether they're shown over the PDF |
+| `readOnly` | `boolean` | Gates every annotation mutation when set (viewer mode) |
 | `loadError` | `LoadError \| null` | Error overlay data |
 | `busy` | `boolean` | Disables toolbar buttons during async operations |
 | `sidebarCollapsed` | `boolean` | Paper list visibility. Driven by `SidebarToggle`, which renders inside the paper list's own header while it is open and in the toolbar once collapsed — otherwise the button would disappear with the pane it reopens. |
@@ -341,11 +420,12 @@ The entire app state lives in a single Zustand store with immer middleware:
 | `recents` | `RecentEntry[]` | Recently opened projects (max 5, from `platform.getRecents()`) |
 | `helpOpen` | `boolean` | Help dialog visibility |
 | `past` / `future` | `HistoryEntry[]` | Undo/redo stacks for annotation edits (session-only, capped at 100). Each entry is `{ project, paperId }`; thanks to immer's structural sharing, snapshots are cheap references |
+| `update` | `UpdateInfo \| null` | A newer GitHub release exists (set by `version.ts`'s check; the banner renders when non-null) |
 | `aiMarks` | `Record<string, true>` | Fields the AI filled and the reviewer has not looked at yet, keyed `` `${paperId}::${canonicalPath}` `` for a single-reviewer project, or `` `${paperId}::${reviewer}::${canonicalPath}` `` for a multi-reviewer one (see "AI marks" below). Session-only: it lives *beside* the project, so `serializeProject` cannot see it |
-| `updateProgress` | `number \| null` | Native self-update download progress (0–100), once started. Win/Linux only; `null` before any download and after an error. Session-only (see "In-app self-update" above) |
-| `updateReady` | `boolean` | The native self-update has finished downloading and a restart would install it. Win/Linux only; session-only |
-| `updateError` | `string \| null` | The native self-update's download/check failed; cleared on the next attempt. Win/Linux only; session-only |
-| `currentReviewer` | `string \| null` | Which reviewer's tree is shown/edited — `"1".."N"`, `"consolidation"`, or `null`. Always `null` for a single-reviewer project; also starts `null` for a multi-reviewer one until picked (see "Multiple reviewers & Consolidation" below). Persisted per project in `localStorage`; not an undo step, does not set `dirty` |
+| `updateProgress` | `number \| null` | Native self-update download progress (0–100), once started. `null` before any download and after an error. Session-only (see "In-app self-update" above) |
+| `updateReady` | `boolean` | The native self-update has finished downloading and a restart would install it. Session-only |
+| `updateError` | `string \| null` | The native self-update's download/check failed; cleared on the next attempt. Session-only |
+| `currentReviewer` | `string \| null` | Which reviewer's tree is shown/edited — `"1".."N"`, `"consolidation"`, or `null`. Always `null` for a single-reviewer project; also starts `null` for a multi-reviewer one until picked (see "Multiple reviewers & Consolidation" below). Persisted per project in `localStorage` with a remembered-per-paper map and a paper-fingerprint check (so a stale seat isn't restored against a changed paper list); not an undo step, does not set `dirty` |
 | `consolidationTarget` | `{ path, name, index } \| null` | The field the Consolidation "compare" popup (`ConsolidationDialog`) is showing, or `null` when closed. Session-only |
 | `consolidationUpdatePrompt` | `string \| null` | The paper id `ConsolidationUpdatePrompt` is asking about — the reviewers changed something since Consolidation's automatic steps last ran and the consolidated tree already holds answers, so the scheduler cannot proceed silently. Session-only |
 | `consolidationUpdateApproved` | `string \| null` | Set to a paper id when the consolidator answers that prompt with "update", letting `useConsolidationAlignment`'s effect proceed once more; cleared as soon as the run records its new `consolidationSync`. Session-only |
@@ -359,13 +439,21 @@ The entire app state lives in a single Zustand store with immer middleware:
 | `screeningFilter` | `'all' \| 'included' \| 'excluded' \| 'undecided'` | Which decisions the screening paper list shows. Screening projects only; session-only, resets on `closeProject`/`loadFromText` |
 | `screeningShowPdf` | `boolean` | Whether the middle pane shows the PDF instead of `ScreeningRecord`'s title+abstract. Session-only, see "Screening" above |
 | `screeningSummaryOpen` | `boolean` | Whether `ScreeningSummary` (the PRISMA-style counts modal) is open. Session-only |
+| `screeningAbstractReads` | `Record<string, 'reading' \| 'none'>` | Per paper id, what `extractScreeningAbstract` did this session — stops a PDF with no recognisable abstract from being re-fetched on every reselect |
+| `projectGeneration` | `number` | Bumped on every project replace so stale async results (an in-flight AI run against a since-closed project) can detect they are obsolete |
+| `closePromptOpen` / `pendingAfterPrompt` | — | The close-confirmation modal and what should happen after it resolves (`close` / `open` / `openRecent`) — see `requestOpen*`/`resolveClosePrompt` under "Key Actions" |
+| `nativeUpdate` | `boolean` | The adapter's native-update capability reports the running install can be auto-updated; drives the Download/Restart branch of the update notice (see "In-app self-update" above) |
 
 ### Key Actions
 
 - **`openProject()`** — delegates to `platform.openProject()`, then `loadFromText()`, refreshes `recents`
 - **`openRecent(id)`** — delegates to `platform.openRecent(id)`; on success → `loadFromText` + refreshes `recents`; on null → prunes recents and sets `loadError`
-- **`loadFromText(text, handle, name)`** — calls `loadProject(text)` from the model layer, sets state, selects first paper. (`loadFromUrl(url)`, the `?project=<url>` server-deployment loader, was deleted along with the browser build — see "SaiLoR is Electron-desktop-only" in the Overview.)
-- **`save()` / `saveAs()`** — `serializeProject(project)` → delegate to platform, clears `dirty`, refreshes `recents`
+- **`requestOpenProject()` / `requestOpenRecent(id)`** — the user-reachable entry points: they route through the close prompt when the project is dirty (setting `pendingAfterPrompt` to the action they're guarding) rather than discarding unsaved work silently; `openProject`/`openRecent` themselves are the raw actions
+- **`resolveClosePrompt(save)`** — what `ClosePrompt`'s buttons call: save-then-proceed, discard-then-proceed, or cancel (leaves everything open)
+- **`resyncProjectFromDisk()`** — re-reads the project from disk and replaces `project`/`saveHandle` only, leaving the rest of the store (selected paper, filters, undo *except* its cleared stacks) alone; used after a field-level commit or discard rewrote the file underneath the reviewer. Clears undo/redo (the snapshots branch off the pre-resync project) and is silent on a malformed file
+- **`loadFromText(text, handle, name)`** — calls `loadProject(text)` from the model layer, sets state, selects first paper. (`loadFromUrl(url)`, the `?project=<url>` server-deployment loader, was deleted along with the browser build — see the Overview's discontinuation note.)
+- **`save()` / `saveAs()`** — `serializeProject(project)` → delegate to platform, clears `dirty`, refreshes `recents`. A `StaleSaveError` from the adapter (the files changed on disk since they were read) opens the stale-save flow instead of writing
+- **`resolveStaleSave(choice)`** — the stale-save dialog's answer: `overwrite` (keep mine), `discard` (take disk's), or `combine` (re-read the disk project, run `mergeProjects` against the in-memory one, and open the combined result in the conflict UI before saving). A combined project that wouldn't re-open is refused with the reason
 - **`selectPaper(id)`** — switches paper, clears `pdfSelection`
 - **`setFieldValue(path, name, index, value)`** — navigates the annotation tree via `containerAt()`, sets `inst.value`, marks dirty
 - **`addInstance(path, def)` / `removeInstance(path, name, index)`** — manages repeatable annotation instances, respects `max`/`min`
@@ -402,6 +490,7 @@ App (src/App.tsx)
 │     Open ▾ dropdown (Open file… + recent projects) + Save ▾ dropdown (Save / Save as…)
 │     Font controls (A− A A+), theme toggle (☾/☀), help (?)
 │     Reviewer switch (multi-reviewer projects only), centered on the toolbar — Reviewer 1..N + Consolidation, hidden entirely for a single-reviewer project; pills at ≤5 reviewers, a dropdown above that; see "Multiple reviewers & Consolidation" below
+│     Self-update controls when an update is available: Download update / progress % / Restart to update (supported bundle types) or a "Download for {label}" link (`pickInstaller`); see "In-app self-update" below
 ├── [if project loaded: workspace — a CSS grid whose column widths come from resizable panes]
 │   ├── PaperList (src/components/PaperList.tsx)
 │   │     List of papers with search box (META / TAGS modes, see below); a dot showing the active seat's completeness — a conic-gradient partial fill, not just touched/untouched, see "Completeness dot" below (screening keeps its own tri-state marker; Consolidation now uses the same 5-state dot as any other seat); click to select
@@ -425,6 +514,14 @@ App (src/App.tsx)
 │     └── LlmSettingsDialog (src/components/LlmSettingsDialog.tsx) — manage LLM targets (stacks on top)
 ├── HelpDialog (src/components/HelpDialog.tsx)
 │     Modal overlay with app intro + keyboard shortcuts table
+├── AiScreeningDialog (src/components/AiScreeningDialog.tsx)
+│     Modal driving the AI-assisted screening flow (aiScreeningStore): pick a model target, run screening over papers, review suggested include/exclude decisions before applying — see "AI-assisted screening" in workflows
+├── StaleSaveDialog (src/components/StaleSaveDialog.tsx)
+│     Modal for a `StaleSaveError`: the file on disk changed since it was opened (another reviewer committed while you worked). Offers overwrite, discard, or merge (re-read + `mergeProjects` + conflict UI) via `resolveStaleSave` — see "Git" above
+├── SplitAnnotationsDialog (src/components/SplitAnnotationsDialog.tsx)
+│     Modal confirming the one-way migration of a legacy all-in-one project into the split `project.json` + `annotations/` layout (`runSplit`; refuses while dirty) — see [Data Model](concepts/data-model.md)'s "On-disk layout"
+├── RepoSetupPrompt / RepoSetupToast (src/components/RepoSetupPrompt.tsx)
+│     Asked when applying the repository's `.gitattributes`/`.gitignore` setup would overwrite something of the user's; the toast reports the committed setup after the fact — see `git:repoSetupStatus`/`git:applyRepoSetup` above
 ├── ValidationDialog (src/components/ValidationDialog.tsx)
 │     Modal overlay showing the results of "Validate", scoped to the active reviewer's own tree (or the consolidated one, for Consolidation) — see below
 ├── ConsolidationDialog (src/components/ConsolidationDialog.tsx)
@@ -440,7 +537,7 @@ App (src/App.tsx)
 ├── DuplicateReviewDialog (src/components/DuplicateReviewDialog.tsx)
 │     Modal: reviewing the *probable* duplicates a reference import found — one row per pair, a merge/separate choice defaulting to undecided — see "Duplicate detection at import" below
 ├── GitCloneDialog (src/components/GitCloneDialog.tsx)
-│     Import-from-git modal, driven by useGitStore's clone.phase: setup (URL + destination) → cloning (spinner + elapsed seconds) → error (git's exact text, back to setup) → done (pick the project JSON, opened inside the clone) — Electron only, see "Git" above
+│     Import-from-git modal, driven by useGitStore's clone.phase: setup (URL + destination) → cloning (spinner + elapsed seconds) → error (git's exact text, back to setup) → done (pick the project JSON, opened inside the clone) — desktop only, see "Git" above
 ├── GitDialog (src/components/GitDialog.tsx)
 │     Modal for the open project's own repository: a commit message field with an **Amend previous commit** checkbox, Commit (or Amend), Pull, Push, a branch switcher (a `<select>` in the header over the *local* rows of `useGitStore().branches`, driving `requestSwitchBranch`), and two quieter header buttons — **Merge branch…** and **History…** — deliberately kept out of the commit/pull/push row since both are occasional, deliberate actions rather than something a reviewer reaches for every session. The message field and Commit/Pull/Push row sit above the changes list (message-first layout). When the open project's own file is a tracked, field-diffable modification, its changes are reviewed field by field (Use/Ignore/Discard per row) instead of as one whole-file checkbox — see "Field-level commit review" below. Non-project changed files each get their own **↺** (whole-file discard, see "Whole-file discard" below). When every row is marked Discard, the primary button relabels to "Discard all" (danger-red) and reverts marked rows directly via `runDiscard` without committing. When a Discard row is mixed in among Use rows, `mixedDiscardConfirmMessage()` warns that the Discard field's change will be lost on commit before proceeding
 ├── BranchSwitchPrompt (src/components/BranchSwitchPrompt.tsx)
@@ -457,6 +554,8 @@ App (src/App.tsx)
 │     The "History…" button's read-only dialog: one row per commit that touched the open project's own file (scoped to `relPath` + `annotations/`, not the whole repo), newest first, capped at 250. Expanding a row fetches its field-level diff lazily (one commit at a time, cached by hash in `panel.history.diffs`), rendered with the same `formatValue` Was/Now text the commit review uses but without Use/Ignore/Discard controls — history is for looking back, not for redoing a decision. See "Commit history" below
 └── ErrorPanel (src/components/ErrorPanel.tsx)
       Modal overlay for load/save errors
+
+Plus the close-flow modal: `ClosePrompt` (Save / Don't Save / Cancel when the shell or `requestCloseProject` finds unsaved changes) and `ReviewerPrompt` (pick a seat when a multi-reviewer project loads without one), both mounted from `App.tsx`.
 ```
 
 ### Dropdown component
@@ -488,11 +587,11 @@ The **grab-from-PDF** button (⧉) reads `useStore.getState().pdfSelection` and 
 
 ### Update check
 
-The start screen shows the running version at the bottom (`SaiLoR v0.1.0`) and, when a newer release exists, a notice linking to it. `src/model/version.ts` fetches `api.github.com/repos/Gram21/SaiLoR/releases/latest` and compares the tag with `__APP_VERSION__` — injected from `package.json` by `vite.config.ts`, so package.json stays the single source of truth for the version.
+The start screen shows the running version at the bottom (`SaiLoR v2.0.0`) and, when a newer release exists, a notice linking to it. `src/model/version.ts` fetches `api.github.com/repos/Gram21/SaiLoR/releases/latest` and compares the tag with `__APP_VERSION__` — injected from `package.json` by `vite.config.ts`, so package.json stays the single source of truth for the version.
 
 **This only works while the repository is public.** GitHub answers **404** to an unauthenticated request for a private repo's releases, and the app is *distributed* — embedding a token to get around that would ship a credential to every user, so we don't. The check is therefore written to fail silently: a 404 (private), 403 (rate-limited), network error, draft release, or unparseable version all yield `null`, and the app simply shows no notice. It starts working the moment the repo is made public, with no code change.
 
-When a newer release exists, the notice's call to action depends on the runtime. On **macOS** (and in any non-Electron runtime) it offers a **direct download of the installer for this machine** rather than dumping the user on the releases page: `pickInstaller` matches the release's assets against the OS/arch reported by `getOsInfo()` (Electron exposes `process.platform`/`process.arch` through the preload bridge; the browser returns `null`, since a web deployment has no installer and updates by redeploying). Matching keys off the OS/arch we bake into the artifact names (`SaiLoR-0.2.0-macos-arm64.dmg`), so it stays correct as long as package.json's `artifactName` patterns do. When nothing matches it offers **nothing** rather than the wrong binary, and the release-notes link is always there as a fallback. macOS stays on this manual path on purpose: `electron-updater`'s Squirrel.Mac backend needs a signed-and-notarized bundle to pass Gatekeeper, and this project only ad-hoc-signs on mac (see the *macOS code signing* note in [operations](operations/build-release.md#installer-signing-and-user-side-bypass)), so an auto-installed update would show up as "damaged."
+When a newer release exists, the notice's call to action depends on the runtime. In any runtime without native self-update support (including the unsupported adapter, whose `getOsInfo()` returns `null`) it offers a **direct download of the installer for this machine** rather than dumping the user on the releases page: `pickInstaller` matches the release's assets against the OS/arch reported by `getOsInfo()` (the Rust shell injects `window.__SLR_OS__` — `{ platform, arch }`, `darwin`/`win32` and `x64`/`arm64`/`ia32` — via its `slr-os` plugin; the unsupported adapter returns `null`, since a web deployment has no installer and updates by redeploying). Matching keys off the OS/arch we bake into the artifact names (`SaiLoR_2.0.0_aarch64.dmg`, `SaiLoR_2.0.0_x64-setup.exe`, `SaiLoR_2.0.0_amd64.AppImage`), so it stays correct as long as the Tauri bundle's artifact names do. When nothing matches it offers **nothing** rather than the wrong binary, and the release-notes link is always there as a fallback. On a supported runtime (AppImage, NSIS, MSI, or the macOS App bundle) the updater (below) is reached and the direct-download fallback stays hidden behind it; on a runtime whose bundle type cannot be replaced in place — deb/rpm, the unbundled `tauri dev` binary, and (because the macOS bundle ships as a dmg, not as the `.app` itself) a dmg-installed app — the updater reports `{ supported: false, manual: true }` and this direct-download path is what users get.
 
 `isNewerVersion` compares numeric components, not strings (`0.10.0` > `0.9.0`, which a string compare gets wrong), strips a leading `v`, and sorts a pre-release below its release (`1.0.0-beta` < `1.0.0`). It never claims an update from a version it cannot parse.
 
@@ -503,23 +602,21 @@ tenth pre-release and then inverted — `"rc.10" < "rc.2"` lexicographically —
 never offered `rc.10`, and a user on `rc.10` was offered `rc.2` *as an update*, with a live download
 button. The project ships pre-release versions, so this was live rather than theoretical.
 
-The result — *including a `null`* — is cached in `localStorage` (`slr.updateCheck`) for 24 h, so a private repo or an offline launch doesn't re-request on every startup, and the 60-requests-per-hour unauthenticated rate limit is never a concern.
+The result — *including a `null`* — is cached in `localStorage` (`slr.updateCheck`) for 15 minutes (`CHECK_INTERVAL_MS` in `version.ts`), so a private repo or an offline launch doesn't re-request on every startup, and the 60-requests-per-hour unauthenticated rate limit is never a concern.
 
-### In-app self-update (Windows/Linux only)
+### In-app self-update (tauri-plugin-updater)
 
-On Windows and Linux the same notice turns into a real in-app updater: instead of the manual "Download for …" link the banner shows a **Download update** button, a live progress percentage while downloading, and finally a **Restart to update** button. macOS keeps the plain download link above and never enters this flow.
+Where the updater is supported the same notice turns into a real in-app updater: instead of the manual "Download for …" link the banner shows a **Download update** button, a live progress percentage while downloading, and finally a **Restart to update** button. On platforms where it is not, the manual download link from the previous section is used instead.
 
-The mechanics run on top of `electron-updater`, added in `electron/main.ts` and wired through the usual IPC + preload + adapter seam:
+The mechanics run on top of **`tauri-plugin-updater`**, registered in `src-tauri/src/main.rs` and wired through the bridge + adapter seam; `src-tauri/src/update.rs` owns the support decision:
 
-- **Two sources of truth stay separate.** The GitHub-API check above (`version.ts` / `checkForUpdate`) remains the *only* thing that decides "is there an update" — it sets `useStore.update`, which is what renders the banner at all. Only once it has confirmed a newer version exists does `checkForUpdate` *additionally* call `checkForNativeUpdate`, and only on non-darwin platforms. That call hands control to `electron-updater`'s own feed purely to drive the download/install mechanics, never to re-decide whether an update exists. The store unit test (`src/state/store.update.test.ts`) pins exactly this gate: `checkForNativeUpdate` must not fire when no newer version is found, and must not fire on macOS even when one is.
-- **Nothing runs automatically.** `autoUpdater.autoDownload` and `autoInstallOnAppQuit` are both `false` in `electron/main.ts`. A download only starts when the renderer calls `update:download` (the reviewer clicked "Download update"), and installing only happens on `update:install` ("Restart to update"). `checkForNativeUpdate` itself never starts a download; it only primes `electron-updater` so the later `download`/`install` calls have something to act on.
-- **macOS is short-circuited at the main-process boundary.** Every `update:*` handler returns early (`{ supported: false }` for `update:check`, a no-op otherwise) when `process.platform === 'darwin'`, and the `autoUpdater` event wiring is never even registered on mac. The non-Electron stand-in (`createUnsupportedAdapter`) never reaches `checkForNativeUpdate` at all — it lives behind the same `App.tsx` `isElectron()` gate that blocks the download/install UI before any such call, so the macOS short-circuit and the non-Electron backstop keep the UI unoffered from two different directions.
-- **State.** `useStore` carries three session-only fields for this flow — `updateProgress` (`number | null`, 0–100), `updateReady` (`boolean`, the download finished and a restart would install it), and `updateError` (`string | null`, cleared on the next attempt). `downloadUpdate` / `installUpdate` are the user-triggered actions; `noteUpdateProgress` / `noteUpdateDownloaded` / `noteUpdateError` are wired from the bridge's events by `useElectronCloseGuard` (see Hooks below) and are not meant to be called from UI code directly.
-- **UI.** `src/App.tsx` picks the branch with `isElectron() && getPlatform().getOsInfo()?.platform !== 'darwin'`: win/linux renders the download/progress/restart buttons and an `update-error` notice; everything else falls back to the manual `pickInstaller` link. On a download failure the banner keeps the release-notes link so the user can still update manually.
+- **Two sources of truth stay separate.** The GitHub-API check above (`version.ts` / `checkForUpdate`) remains the *only* thing that decides "is there an update" — it sets `useStore.update`, which is what renders the banner at all. Only once it has confirmed a newer version exists does `checkForUpdate` *additionally* call `checkForNativeUpdate` — and only when the adapter's update capability reports support. That call hands control to the updater's own feed purely to drive the download/install mechanics, never to re-decide whether an update exists. The store unit test (`src/state/store.update.test.ts`) pins the first half of this gate: `checkForNativeUpdate` must not fire when no newer version is found.
+- **Nothing runs automatically.** The updater's auto-download and auto-install-on-quit behaviors are not enabled. A download only starts when the renderer calls `update:download` (the reviewer clicked "Download update"), and installing only happens on `update:install` ("Restart to update"). `checkForNativeUpdate` itself never starts a download.
+- **Platform support is decided in the shell.** `update.rs` computes `self_update_supported` from the updater's own install-mode detection: AppImage, NSIS, MSI, and **App** (the macOS bundle) installs are supported; deb/rpm and unbundled/development runs report `{ supported: false, manual: true }` — those users always get the manual download link, and the renderer never has to guess. `install` additionally refuses while the project has unsaved changes ("Save your project before you install the update."), so an app restart can't discard work.
+- **State.** `useStore` carries three session-only fields for this flow — `updateProgress` (`number | null`, 0–100, capped), `updateReady` (`boolean`, the download finished and a restart would install it), and `updateError` (`string | null`, cleared on the next attempt). `downloadUpdate` / `installUpdate` are the user-triggered actions; `noteUpdateProgress` / `noteUpdateDownloaded` / `noteUpdateError` are wired from the bridge's events (Tauri `update:progress` / `update:downloaded` / `update:error`, subscribed with `replace` so an in-flight download is never tracked twice) by `useCloseGuard` (see Hooks below) and are not meant to be called from UI code directly.
+- **UI.** `src/App.tsx` picks the branch with the adapter's update capability: when `checkForNativeUpdate` reports support it renders the download/progress/restart buttons and an `update-error` notice; everything else falls back to the manual `pickInstaller` link. On a download failure the banner keeps the release-notes link so the user can still update manually.
 
-`electron-updater` finds its feed through the `build.publish` block in `package.json` (`{ provider: "github", owner: "Gram21", repo: "SaiLoR" }`) and the `latest.yml` / `latest-linux.yml` update metadata the release workflow now attaches alongside the Windows/Linux installers — see the `--publish never` note in [operations](operations/build-release.md#electron-build-npm-run-buildelectron) for why that publish block does not make `electron-builder` publish on build, and why those metadata files must ship with every release.
-
-**The feed itself is signature-verified before any download.** `electron-updater`'s own sha512 check on the downloaded installer only catches transport corruption — the hash it compares against comes from the same release channel as the installer, so anyone who can publish one (a leaked token, a compromised maintainer account) can publish a matching hash for the other. There is no purchased code-signing certificate for Windows/Linux, so `electron-updater`'s publisher-signature check has nothing to verify against either. `verifyUpdateFeed` (in `electron/main.ts`'s `update:download` handler, gated on `latestUpdateVersion` set by the `update-available` event) closes that gap independently: it fetches the same feed file `electron-updater` is about to use *and* its sibling `<feed>.sig` from the release, and only lets `autoUpdater.downloadUpdate()` proceed once `verifyReleaseSignature(feedBytes, signatureB64, RELEASE_PUBLIC_KEY_B64)` (in `src/model/updateSignature.ts`) confirms the feed was signed by this project's own Ed25519 release key. The public key is baked into the app at build time and never fetched from the channel being verified, so a compromised release cannot also republish a matching fake key. The chain is: our signature check covers the feed file, and `electron-updater`'s existing sha512 check then covers the installer against that now-trusted feed. A signature failure surfaces as `update:error` and leaves the manual download link available. The release workflow's "Sign update metadata" step (`scripts/sign-release.cjs`, run with the `RELEASE_SIGNING_PRIVATE_KEY` secret) writes the `.sig` next to each feed and attaches both — see [operations](operations/build-release.md#release-signing-ed25519-feed-signature).
+The updater finds its feed through `tauri.conf.json`'s `plugins.updater` block (endpoint + signing public key), and downloads are **signature-verified before install**: the updater plugin checks updates against the configured Ed25519 public key baked into `tauri.conf.json` at build time — a `requireSignedVersion` gate means an unsigned or foreign-signed manifest is refused outright, so anyone who can publish a release cannot also feed the client a fake one without the matching key. A signature failure surfaces as `update:error` and leaves the manual download link available. The key and endpoint are maintained with the release workflow — see [operations](operations/build-release.md).
 
 ### PaperList search modes
 
@@ -620,7 +717,7 @@ new issue on the repo) — sits in both the help dialog's header (next to the cl
 `.modal-head-actions` wrapper) and on the start screen (next to the version label), opening the
 GitHub new-issue page in the system browser.
 
-Two ways out of the editor: **Save JSON** writes the file and stays put (so you can keep building), while **Save JSON & Begin Annotating** writes it and hands it to the annotation view (`loadFromText`) — that split is `save()` vs `saveAndAnnotate()`. Both validate first, so an invalid draft neither writes nor closes. The editor has its own **undo/redo** history (`past`/`future` snapshots, same shape as the annotation store, with consecutive keystrokes in one input coalesced into a single step), and `useKeybindings` / `useElectronCloseGuard` route `Ctrl+S` / `Ctrl+Z` / `Ctrl+Shift+Z` / `Ctrl+Y` to it whenever it is open.
+Two ways out of the editor: **Save JSON** writes the file and stays put (so you can keep building), while **Save JSON & Begin Annotating** writes it and hands it to the annotation view (`loadFromText`) — that split is `save()` vs `saveAndAnnotate()`. Both validate first, so an invalid draft neither writes nor closes. The editor has its own **undo/redo** history (`past`/`future` snapshots, same shape as the annotation store, with consecutive keystrokes in one input coalesced into a single step), and `useKeybindings` / `useCloseGuard` route `Ctrl+S` / `Ctrl+Z` / `Ctrl+Shift+Z` / `Ctrl+Y` to it whenever it is open.
 
 - **`src/state/editorStore.ts`** — a separate Zustand+immer store holding the draft. It deliberately works on the **raw JSON shape**, not the loaded `Project`: each paper's `annotations` object is carried through **verbatim** while the schema is edited, so editing the schema never prunes existing annotation data (it is normalized against the new schema the next time the project is opened for annotating). Key pieces: `EditorNode` (a schema node with a client-side `uid`, where `kind: 'group'` means "no `type`" — a name-only sub-tree), `EditorPaper` (which also keeps the PDF's absolute `sourcePath`), `toAnnotationDefs`/`fromAnnotationDefs` (conversion to/from the compact on-disk `AnnotationDef`), `moveNodeIn` (tree move that refuses to drop a node into itself or its own subtree), `buildProjectJson`, and `validateDraft` — which runs the *real* `projectSchema` + `resolveSchema` validators, so the editor cannot produce a file the loader would reject. On save it writes the JSON and hands it straight to the main store via `loadFromText`.
 - **`SchemaTreeEditor.tsx`** — recursive tree exposing the schema's full expressiveness: name, kind (Group / Text / Number / Yes-no), `min`, `max` (with an ∞ checkbox for `max: null` = unbounded repeats), description, enum `options` (string fields only), nesting, add/remove. Native HTML5 drag-and-drop reorders rows and builds nesting: the drop position comes from the pointer's Y within the target row — top 25% → `before`, bottom 25% → `after`, middle → `inside` (nest as a child).
@@ -658,8 +755,8 @@ Two ways out of the editor: **Save JSON** writes the file and stays put (so you 
 - **`ProtocolEditor.tsx`** — a collapsible *Review protocol* section in the project editor for `Project.protocol` (research questions, search strings, databases, search date, notes). See [Data Model](concepts/data-model.md)'s "The review protocol" section for the field's shape and merge behavior.
 
 **Adding PDFs** (`addPdfs`) does two things beyond appending rows:
-- **Duplicate rejection.** A PDF already referenced is skipped rather than added twice, and the skipped names are reported in a dismissible notice. Identity is `pdfKeys()`: the absolute path when known (Electron) *and* the stored relative path — so re-picking the same file, picking it twice in one dialog, or picking one already listed in an opened project all collapse to one entry. Same-named PDFs in different folders stay distinct.
-- **Title/author auto-fill.** `src/model/pdfMeta.ts` reads each added PDF (`PickedPdf.read()` — an IPC in Electron, `File.arrayBuffer()` in the browser) and pre-fills the fields. It tries the PDF's embedded `Title`/`Author` metadata first, validating it (`isPlausibleTitle` rejects artefacts like "Microsoft Word - paper_final_v3.doc"), then falls back to a layout heuristic on page 1: the largest text near the top is the title (joined across wrapped lines), and the lines under it are the authors. A line is not a flat string but a list of **segments**, split wherever two runs on the same baseline sit more than `COLUMN_GAP_RATIO` font-sizes apart — a word space is a fraction of the font size even in justified text, a column gutter is several times it. This matters because the common two-column author block puts each author on the *same baseline* with nothing between them but the gutter: joined first, `Jan Keim` and `Angelika Kaplan` read as the single name "Jan KeimAngelika Kaplan", and no amount of later parsing can recover the boundary, since there is no punctuation at it. So authors are parsed per segment. A run whose `width` pdf.js does not report never starts a segment: without it there is no way to know where a run ends, and guessing could cut mid-phrase. `parseAuthorList` strips affiliation superscripts, footnote daggers, emails and an "Authors:" label; in `strict` mode (used only for the heuristic, which is a *guess*) it also requires each entry to look like a person's name, so a body sentence can't become an author list.
+- **Duplicate rejection.** A PDF already referenced is skipped rather than added twice, and the skipped names are reported in a dismissible notice. Identity is `pdfKeys()`: the absolute path when known (desktop shell) *and* the stored relative path — so re-picking the same file, picking it twice in one dialog, or picking one already listed in an opened project all collapse to one entry. Same-named PDFs in different folders stay distinct.
+- **Title/author auto-fill.** `src/model/pdfMeta.ts` reads each added PDF (`PickedPdf.read()` — a command call in the desktop shell, `File.arrayBuffer()` in the deleted browser build) and pre-fills the fields. It tries the PDF's embedded `Title`/`Author` metadata first, validating it (`isPlausibleTitle` rejects artefacts like "Microsoft Word - paper_final_v3.doc"), then falls back to a layout heuristic on page 1: the largest text near the top is the title (joined across wrapped lines), and the lines under it are the authors. A line is not a flat string but a list of **segments**, split wherever two runs on the same baseline sit more than `COLUMN_GAP_RATIO` font-sizes apart — a word space is a fraction of the font size even in justified text, a column gutter is several times it. This matters because the common two-column author block puts each author on the *same baseline* with nothing between them but the gutter: joined first, `Jan Keim` and `Angelika Kaplan` read as the single name "Jan KeimAngelika Kaplan", and no amount of later parsing can recover the boundary, since there is no punctuation at it. So authors are parsed per segment. A run whose `width` pdf.js does not report never starts a segment: without it there is no way to know where a run ends, and guessing could cut mid-phrase. `parseAuthorList` strips affiliation superscripts, footnote daggers, emails and an "Authors:" label; in `strict` mode (used only for the heuristic, which is a *guess*) it also requires each entry to look like a person's name, so a body sentence can't become an author list.
 
 **A long author list wraps, and the break lands inside a name** — a real seven-author paper (`samples/pdfs/A1-37.pdf`) ends one line `… Niklas Ewald, Tobias` and opens the next `Thirolf, and Anne Koziolek`. Parsing each line on its own loses two authors and cannot get them back: `Tobias` is a lone token `strict` mode correctly rejects, and `Thirolf` never recovers its first name. So `namesFromAuthorBlock` joins the lines *before* parsing — per column, matching segments by `x` (`COLUMN_X_TOLERANCE`), so a two-column block's wraps stay inside their own column instead of inventing a name across the gutter. Superscript affiliation keys, which sit on their own raised baseline and so arrive as a line of their own (`"1 1"`) *between* the halves of a wrapped list, are stepped over rather than stopped at (`SUPERSCRIPT_SIZE_RATIO`).
 
@@ -690,7 +787,7 @@ A `certain` verdict merges silently, exactly as the old exact-match tier did (fi
 
 **Highlighting newly added papers.** Every row added by `addPdfs`, `addPdfFolder`, or `importReferences` gets a light-blue border so the reviewer notices the addition and checks the (possibly guessed) metadata — the same idea, and the same `--ai-mark` CSS variable, as the AI-annotation "unconfirmed" marks below. `editorStore.ts` tracks this the same way `aiMarks` does in the main store: a session-only `justAdded: Record<uid, true>`, not part of `EditorSnapshot`/undo (an add already has its own undo step) and never written to the file. It is cleared wholesale on save, on opening a project into the editor, and on closing the editor (`openEditorSession`, `close`, `save`). `PapersEditor.tsx` clears one row's mark (`confirmAdded`) the moment the reviewer focuses any of its fields, mirroring how `Field.tsx` clears an AI mark on focus/click.
 
-**Relative PDF paths.** The JSON's location is chosen **up front** (and changeable any time via *Change…*), because a paper's `pdf` is stored **relative to the JSON file**. Each picked PDF keeps its absolute `sourcePath`, so when the location changes `changeLocation()` re-derives every `pdf` against the new directory (`/reviews/x.json` + `/reviews/pdfs/a.pdf` → `pdfs/a.pdf`; move the JSON up a level and it becomes `reviews/pdfs/a.pdf`). The platform methods `pickProjectLocation` / `pickPdfs` / `relativePdfPaths` (see below) compute it via a `paths:relative` IPC (`path.relative(dirname(json), pdf)`, POSIX-separated) — real filesystem paths, since this is Electron-only now. A row added by `importReferences` with no PDF yet (`pdf: ''`) has no path to rederive, and is left alone until the reviewer attaches one.
+**Relative PDF paths.** The JSON's location is chosen **up front** (and changeable any time via *Change…*), because a paper's `pdf` is stored **relative to the JSON file**. Each picked PDF keeps its absolute `sourcePath`, so when the location changes `changeLocation()` re-derives every `pdf` against the new directory (`/reviews/x.json` + `/reviews/pdfs/a.pdf` → `pdfs/a.pdf`; move the JSON up a level and it becomes `reviews/pdfs/a.pdf`). The platform methods `pickProjectLocation` / `pickPdfs` / `relativePdfPaths` (see below) compute it via a `paths:relative` command (`path.relative(dirname(json), pdf)`, POSIX-separated) — real filesystem paths. A row added by `importReferences` with no PDF yet (`pdf: ''`) has no path to rederive, and is left alone until the reviewer attaches one.
 
 ### Reference-file parsing (`src/model/references.ts`)
 
@@ -704,7 +801,7 @@ A `certain` verdict merges silently, exactly as the old exact-match tier did (fi
 
 Uses `react-pdf`'s `Document` + `Page` components. The pdf.js worker is loaded from the bundled dependency URL. A `ResizeObserver` tracks container width so pages scale to fit; the final render width is the fit-to-width size multiplied by the store-level `pdfZoom` factor. The PDF header shows the paper title, authors, and DOI, plus zoom controls (−, percentage, +) wired to `zoomOutPdf` / `resetPdfZoom` / `zoomInPdf`. For multi-page PDFs, the header also shows page navigation (prev/next buttons, a page-number input, and a total page count). The current page is tracked from scroll position via `onScroll` — the last page whose top has scrolled past 30% of the viewport height — and typing a page number jumps to that page. The PDF text and annotation layers are both rendered. Pages are `align-items: safe center` so horizontal scrolling remains reachable when zoomed wider than the pane. Text selection is captured via `onMouseUp`/`onKeyUp` → `window.getSelection()` → `setPdfSelection()`.
 
-**External links.** The `<Document>` is given `externalLinkTarget="_blank"` and `externalLinkRel="noopener noreferrer"`, so link annotations pointing at a website render as `target="_blank"` anchors and open in a **new browser tab** rather than navigating the SPA away. Internal (in-PDF) destinations are unaffected — pdf.js renders them without a target and its LinkService scrolls to them. In **Electron**, `main.ts` intercepts the resulting `window.open` with `webContents.setWindowOpenHandler`, hands the URL to `shell.openExternal` (the user's **default browser**), and returns `{ action: 'deny' }` so no Electron window is created. A `will-navigate` listener is a safety net that prevents anything from navigating the app window away, routing off-app URLs to the browser too. Both paths go through `openExternalUrl`, which only opens `http:`/`https:`/`mailto:` — never `file:` or other schemes, which the OS could use to launch programs.
+**External links.** The `<Document>` is given `externalLinkTarget="_blank"` and `externalLinkRel="noopener noreferrer"`, so link annotations pointing at a website render as `target="_blank"` anchors and open in a **new browser tab** rather than navigating the SPA away. Internal (in-PDF) destinations are unaffected — pdf.js renders them without a target and its LinkService scrolls to them. In the **desktop shell**, `shell.rs` intercepts the resulting `window.open`/navigation (`on_new_window` / `on_navigation`), hands the URL to the OS opener (the user's **default browser**), and denies the in-app popup/navigation so no app window is created or leaves. Both paths go through `openExternalUrl`, which only opens `http:`/`https:`/`mailto:` — never `file:` or other schemes, which the OS could use to launch programs.
 
 **Jump history (back/forward).** Clicking an internal PDF link (e.g. a reference) lets the pdf.js LinkService scroll to the destination. An `onClickCapture` on the scroll container notices clicks on `<a>` elements and, after polling briefly, records the pre-jump `scrollTop` on a back stack **only if the view actually moved** (so external links, which don't scroll, are ignored). Two header buttons (↩ / ↪, shown once history exists) then move between positions like a browser: `jumpBack` pops the back stack, pushes the live position onto the forward stack, and scrolls there instantly (`scrollTo` with default behavior — reliable under `prefers-reduced-motion`); `jumpForward` is symmetric. The stacks are refs (with `canJumpBack`/`canJumpForward` state mirroring their lengths) and are cleared when the paper changes.
 
@@ -794,8 +891,8 @@ offer entirely. The auto-linked mark appears in the picker (not the top list) fo
 current paper's PDF to an absolute path via the platform's `absolutePdfPaths`, then lets the reviewer
 choose a new file (default, via a native save dialog with `annotatedFileName` as the suggested name)
 or the original file in place (with an inline warning — see "PDF marks" in `data-model.md` for why
-overwriting is risky). The actual embedding happens in the Electron main process
-(`embedPdfAnnotations` → `pdf:embedMarks` IPC → pdf-lib), never in the renderer.
+overwriting is risky). The actual embedding happens in the Rust shell
+(`embedPdfAnnotations` → `pdf:embedMarks` → `lopdf`), never in the renderer.
 
 **In-PDF search.** A 🔍 button in the header (and `Ctrl/Cmd+F`) toggles a find bar below the header; opening it focuses the input so the user can type immediately (via a `searchOpen` effect, since the input isn't mounted on the open transition). `findMatches` walks the text nodes of each rendered text layer (`.react-pdf__Page__textContent`), concatenating them per layer so a query can span multiple spans, and returns DOM `Range`s. The query is **debounced** (`debouncedQuery`, a 150ms `setTimeout` on `query`) so a fast typist doesn't trigger one full text-layer re-scan per keystroke; the input itself still reflects `query` immediately, only the (re)search is delayed. Matches are painted with the **CSS Custom Highlight API** (`CSS.highlights` + `::highlight(slr-pdf-search)` / `::highlight(slr-pdf-search-active)`) — this tints the transparent text-layer glyphs without mutating react-pdf's DOM, and degrades gracefully where the API is unavailable. The active match is centered in the scroll container; Enter / Shift+Enter (and the ‹ › buttons) cycle matches. Crucially, the `<Page>` elements are **memoized** (`useMemo` on `[numPages, renderWidth, onTextLayerRendered]`) with a stable `onRenderTextLayerSuccess` callback, so typing in the search box reuses the same element references and React skips re-rendering the pages — otherwise every keystroke would tear down and re-render the text layers (a "TextLayer task cancelled" flood) and matches would never resolve.
 
@@ -810,7 +907,7 @@ quietly showing fewer pages. `extractPdfText` has the matching `DEFAULT_MAX_PAGE
 `maxPages` option previously defaulted to the document's own page count, which made the guard dead
 code, and there is no cancellation on that path.
 
-PDF source resolution is async: `getPlatform().getPdfSource(paper.pdf, saveHandle)` returns a `{ url, revoke? }` — on Electron always `slr-file://`, resolved synchronously enough on disk that the "which paper is this response for" race the deleted browser build's folder-grant flow used to guard against doesn't arise here. The effect cleans up (revokes blob URLs, though `slr-file://` produces none) on paper/handle change or unmount.
+PDF source resolution is async: `getPlatform().getPdfSource(paper.pdf, saveHandle)` returns a `{ url, revoke? }` — on the desktop always `slr-file://`, resolved synchronously enough on disk that the "which paper is this response for" race the deleted browser build's folder-grant flow used to guard against doesn't arise here. The effect cleans up (revokes blob URLs, though `slr-file://` produces none) on paper/handle change or unmount.
 
 **Reading position is persisted per project, including how far scrolled into the page.** Reopening a
 project lands on the same paper and the same spot within its PDF page the reviewer was last looking
@@ -1054,7 +1151,8 @@ which is otherwise unreachable behind it.
 
 Because the selection is persisted per project, "prompt shows" means "first open of this file".
 `reviewerStorageKey` deliberately persists nothing for a project with no stable path — a defensive
-case, `SaveHandle.kind !== 'electron'`, that Electron itself never produces (every open/save goes
+case, `SaveHandle.kind !== 'electron'`, that the desktop shell itself never produces (the kind name
+is a legacy label; every open/save goes
 through a real absolute path); it dates from the deleted browser build's `?project=<url>` and
 download-only save paths, which had no stable identity to key a seat on. Kept as a safety net rather
 than removed: if it were ever reached, asking on **every** load is the honest response (the app
@@ -1261,7 +1359,7 @@ opened — never silently to Reviewer 1, since an unattributed edit is worse tha
 a previous selection for *this* project was persisted. Persistence is per project, keyed by the
 save handle's path (`slr.currentReviewer.<path>` via `safeGet`/`safeSet`/`safeRemove` in
 `src/state/settings.ts`); a project with no stable path simply doesn't persist a selection — a
-defensive case Electron itself never produces, see the same note under "Picking a seat" above. It
+defensive case the desktop shell itself never produces, see the same note under "Picking a seat" above. It
 resets to `null` on `closeProject`/`loadFromText`, same as `validation`/`aiMarks`.
 
 **Toolbar** (`src/components/Toolbar.tsx`) renders a reviewer switch — buttons for Reviewer
@@ -1700,7 +1798,7 @@ If a later product decision makes AI available by default again, `aiUnlocked` an
 | `src/llm/parse.ts` | `parseAnswer(schema, raw)` — the trust boundary. Digs the JSON object out of whatever the model sent (fences, prose, stray braces), then validates **every** proposal against its `ResolvedDef`. |
 | `src/model/pdfText.ts` | `extractPdfText(bytes)` — the paper as plain text, one `[page N]` block per page, using the same reading-order heuristic as `pdfMeta.ts`. Reports `empty: true` when a document yields almost no characters (a scan). Joins adjacent text-layer items then runs `.normalize('NFC')` *after* the join (not per-item — the base character and combining mark that recompose an "é" can straddle the item boundary the join crosses), so accented letters extracted from a PDF never read back as a base glyph plus a stray combining mark. |
 
-`src/state/aiStore.ts` (a separate Zustand+immer store, kept out of the main store for the same reason the project editor is) owns the flow; `src/components/AiDialog.tsx` and `LlmSettingsDialog.tsx` are views over it.
+`src/state/aiStore.ts` (a separate Zustand+immer store, kept out of the main store for the same reason the project editor is) owns the flow; `src/components/AiDialog.tsx` and `LlmSettingsDialog.tsx` are views over it. A sibling store, `src/state/aiScreeningStore.ts`, owns the **AI-assisted screening** flow (one Include/Exclude proposal per paper, human-reviewed before anything is written; phases `setup → running → review → applied`, its own selected-model/engine/concurrency/threshold keys in `localStorage`, `runPool` concurrency over papers). It borrows only the model library (`useAiStore`, `fitForChat`/`ensureLocalModel`) from `aiStore` and writes its decisions through the same `useStore`/`currentTree` write path as a human — the main store learns nothing about it.
 
 ### The flow
 
@@ -1731,20 +1829,20 @@ The model field in `LlmSettingsDialog.tsx` is not free-typed against nothing: `a
 
 Switching provider mid-edit clears both the typed model and the cached model list for that draft (`clearModels(id)`) — the list answered "what does the *old* provider have", which is not an answer to "what does the new one have", even though the draft's `id` (and so the cache key) stays the same across the switch.
 
-### Why the call goes through the Electron main process
+### Why the call goes through the Rust shell
 
-A request to an LLM API is a `POST` with `Content-Type: application/json` and an auth header — which makes it a **preflighted cross-origin request**, sent from the renderer's origin (`file://` in a packaged app). It is the same CORS wall that forced `corsEnabled` on the `slr-file://` protocol (documented under *Electron Main Process* below): Chromium rejects the request before it ever reaches the network, and the failure surfaces as an opaque `TypeError` with no detail. So on the desktop the renderer **never sends the request itself** — `ElectronAdapter.callLlm` hands it to `llm:call`, and the main process sends it with `net.fetch`, where no origin and no CORS check apply.
+A request to an LLM API is a `POST` with `Content-Type: application/json` and an auth header — which makes it a **preflighted cross-origin request**, sent from the renderer's origin (a `tauri://` webview origin in a packaged app, the Vite dev origin in development). It is the same CORS wall that forced `corsEnabled` on the `slr-file://` protocol (documented under *The Rust shell (`src-tauri/`)* below): the webview rejects the request before it ever reaches the network, and the failure surfaces as an opaque `TypeError` with no detail. So on the desktop the renderer **never sends the request itself** — `DesktopAdapter.callLlm` hands it to the bridge's `llm:call`, and the shell sends it with Rust's HTTP client (`net.rs`), where no origin and no CORS check apply.
 
 The second reason is the one the whole layer is built around: **the API key never enters the renderer.**
 
 - `LlmConfig` has **no `apiKey` field** — only `hasKey: boolean`. A stored key can never be read back, not even by the settings dialog that wrote it (so leaving the key box blank on an edit *keeps* the stored key; that is the only way to edit a target without retyping it).
-- The renderer builds the *entire* request, but can only put `API_KEY_SENTINEL` (`{{apiKey}}`) where the key goes. `electron/main.ts` substitutes the real key into the headers immediately before sending.
-- Before it does, it **checks the origin**: `new URL(request.url).origin` must equal `new URL(config.baseUrl).origin`, or it refuses. The renderer names the URL, so a compromised renderer must not be able to post the key to a host of its choosing.
-- Keys are stored in `userData/llm-config.json`, encrypted with `safeStorage` (mode `0600`). If `safeStorage.isEncryptionAvailable()` is false the app **refuses to save** rather than silently writing the key in the clear.
+- The renderer builds the *entire* request, but can only put `API_KEY_SENTINEL` (`{{apiKey}}`) where the key goes. `llm.rs` substitutes the real key into the headers immediately before sending — and only there: the sentinel has exactly one occurrence point, and any part of the request the renderer controls (URL, headers minus the key, body) is sent verbatim.
+- Before it does, it **pins the target**: the request's scheme and origin must match the config's `baseUrl` (`llm.rs` keeps a session copy of the config, compares `scheme + host[:port]`, and refuses a mismatch), and redirects are refused rather than followed — so a compromised renderer cannot bounce the key elsewhere mid-flight.
+- Keys are stored in the **OS keychain** via the `keyring` crate (`Entry("SaiLoR", "llm:<config-id>")`). The on-disk `llm-config.json` (in the app config dir) holds the rest of the config plus a `"keyring": true` marker where a key used to be; the key itself never touches the filesystem in any form. If the keyring entry cannot be read back (a platform quirk leaves the stored blob undecryptable), the dialog asks the user to re-enter the key once rather than failing silently.
 
-`llm:call` also takes a `requestId` and keeps the `AbortController` in an `inFlight` map, because an `AbortSignal` cannot cross IPC — Cancel sends a separate `llm:abort` message that main matches against the id.
+`llm:call` also takes a `requestId` and keeps in-flight calls in a registry keyed by it (`net.rs`'s `Flight` registry), because an `AbortSignal` cannot cross the IPC boundary — Cancel sends a separate `llm:abort` command that the shell matches against the id. Requests carry a 10-minute timeout.
 
-The same channel carries the list-models requests from `models.ts`: `LlmHttpRequest.method` (`'GET'` or `'POST'`, defaulting to `'POST'`) tells `electron/main.ts` whether to send a body at all — a `GET` carries none, and passing one is a `fetch` error on some runtimes.
+The same channel carries the list-models requests from `models.ts`: `LlmHttpRequest.method` (`'GET'` or `'POST'`, defaulting to `'POST'`) tells `llm.rs` whether to send a body at all — a `GET` carries none, and passing one is a `fetch` error on some runtimes.
 
 The now-deleted browser build could not make those promises, and said so rather than pretending
 otherwise: the key lived unencrypted in `localStorage`, the request went out from the page (a
@@ -1752,7 +1850,7 @@ cross-origin call the provider had to be willing to answer — Anthropic needed 
 browser-access header, a self-hosted OpenAI-compatible endpoint usually sent no CORS headers at all
 and simply failed), and the settings dialog showed a red notice pointing at the desktop app. None of
 that exists to maintain any more — `src/platform/browser.ts` (and its `callLlm`) was deleted along
-with the rest of the browser adapter; see "SaiLoR is Electron-desktop-only" in the Overview.
+with the rest of the browser adapter; see the Overview's discontinuation note.
 
 ### Why a misbehaving model cannot corrupt a project
 
@@ -1811,13 +1909,14 @@ themself, later) can see that, and how, AI was used on a paper.
 
 ## Git
 
-### Why Electron-only
+### Why desktop-shell-only
 
-**Electron: yes.** The main process is Node, so `child_process.execFile('git', […])` spawns the
+**Desktop: yes.** The Rust shell spawns the
 user's own `git` binary, which reads their real `~/.gitconfig`, their credential helper
 (`osxkeychain`, `manager-core`, …), their `~/.ssh/config`, and their SSH agent. No npm dependency is
-needed and none was added — the runtime dependency list stays at 6 (`immer`, `react`, `react-dom`,
-`react-pdf`, `zod`, `zustand`).
+needed and none was added — the runtime dependency list stays at 8 (`@tauri-apps/api`, `immer`,
+`react`, `react-dom`, `react-pdf`, `zod`, `zustand`; the eighth, `pdf-lib`, survives in the
+dependency list but the embedding work it did now lives in the shell's Rust `lopdf`).
 
 **Browser: no, and there was nothing to fall back to even when the web build still existed.** A web
 page cannot spawn a process, cannot read `~/.gitconfig`, and cannot reach an SSH agent — this is the
@@ -1825,7 +1924,7 @@ sandbox, not a missing feature, and no flag or permission changes it. The featur
 fallback clause — "if this is not possible, it should still try to use the local git
 configurations" — has no referent in a browser: there is no local git installation reachable, so
 there is no local git configuration to try. This reasoning predates, and is unrelated to, the web
-build's later full discontinuation (see the Overview) — git support was Electron-only from the start,
+build's later full discontinuation (see the Overview) — git support was desktop-only from the start,
 independent of whatever else the browser build could or couldn't do.
 
 **Rejected: a pure-JS reimplementation (isomorphic-git or similar).** It would answer a different
@@ -1833,12 +1932,12 @@ question than the one asked. It is not "the local git installation" — it has i
 handling, does not read the user's `~/.gitconfig`, and does not use their SSH agent or credential
 helper. Shipping it and calling it "git support" would be dishonest about what actually ran.
 
-**The conclusion: git support is Electron-only.** This is expressed in the type system, not left as a
-runtime convention: `PlatformAdapter.getGit(): GitPlatform | null` returns `null` outside Electron
+**The conclusion: git support is desktop-only.** This is expressed in the type system, not left as a
+runtime convention: `PlatformAdapter.getGit(): GitPlatform | null` returns `null` outside the shell
 (`createUnsupportedAdapter`, formerly `BrowserAdapter`), so a caller cannot invoke a git operation without
 first proving the runtime has one. A flat `GitPlatform` capability object rather than fifteen
 individual methods on `PlatformAdapter` is deliberate too: fifteen flat methods would mean fifteen
-non-Electron stubs, each of which either throws at runtime or silently no-ops — "unavailable" would be
+non-desktop stubs, each of which either throws at runtime or silently no-ops — "unavailable" would be
 something a caller discovers by calling it, not something the type checker catches for them.
 `getOsInfo(): OsInfo | null` already established the pattern this follows.
 
@@ -1847,12 +1946,12 @@ build never renders the toolbar at all.** Before the full web-build discontinuat
 checked `getGit()` the same way any other caller does, and rather than hiding the **Git** button and
 the Open menu's **Import from remote git…** item when the capability was `null`, kept them in the layout —
 dimmed, with a tooltip telling a reviewer *why* it doesn't work and that the desktop app is where it
-does. That distinction no longer matters in practice: `App.tsx`'s `isElectron()` gate now blocks the
-toolbar from rendering at all outside Electron (see the Overview), so there is no longer a dimmed
+does. That distinction no longer matters in practice: `App.tsx`'s `isTauri()` gate now blocks the
+toolbar from rendering at all outside the shell (see the Overview), so there is no longer a dimmed
 button for a browser visitor to see either way. The code path (`gitButtonState()`'s browser branch)
 still exists and is harmless to leave, since nothing reaches it.
 
-**On Electron the Git button is always rendered, disabled with an honest tooltip whenever it can't be
+**In the shell the Git button is always rendered, disabled with an honest tooltip whenever it can't be
 used** — including the start screen (no project open) and when the open project's file isn't in a git
 repository. The policy is unified through `gitButtonState()` (`Toolbar.tsx`), a pure function:
 disabled-with-reason wherever the capability exists but can't currently be used, and enabled only when
@@ -1869,8 +1968,8 @@ dimmed-but-visible when the *project* turned it off (`config.ai: false`).
 
 ### The renderer never names an argv
 
-Every git operation the renderer can ask for is one of the enumerated IPC handlers in
-`electron/main.ts` (`git:probe`, `git:pickCloneDir`, `git:clone`, `git:pickProjectIn`, `git:info`,
+Every git operation the renderer can ask for is one of the enumerated command handlers in
+`src-tauri/src/git.rs` (`git:probe`, `git:pickCloneDir`, `git:clone`, `git:pickProjectIn`, `git:info`,
 `git:status`, `git:headContent`, `git:workingContent`, `git:commitPartial`,
 `git:commit`, `git:push`, `git:pullBegin`, `git:pullFinish`, `git:pullAbort`, `git:writeWorking`,
 `git:branches`, `git:branchCreate`, `git:branchDelete`, `git:checkout`, `git:branchSwitchBegin`,
@@ -1879,27 +1978,26 @@ Every git operation the renderer can ask for is one of the enumerated IPC handle
 `git:applyRepoSetup`, `git:backgroundFetch`, `git:stashList`, `git:stashPush`, `git:stashRestore`,
 `git:stashDrop`, `git:stashBranch`) — never a general `git <args>` channel. Git has `--exec-path`, aliases, and the `ext::` remote-helper
 transport; a channel that let the renderer choose the argv would be handing it arbitrary code
-execution wearing a "just run git" label. Main decides what git is actually asked to do; the
+execution wearing a "just run git" label. The shell decides what git is actually asked to do; the
 renderer only supplies data (a URL, a path, a commit message, a resolved text).
 
-Every call uses `execFile` with an **argument array**, never a shell string, and a `--` terminator
+Every call uses an **argument array**, never a shell string, and a `--` terminator
 before any user-supplied path or URL — a repository URL or a destination path is user input reaching
 a spawned process, and without both, a URL like `--upload-pack=/bin/sh` would be read as an option
-rather than an argument. `src/git/url.ts` (`validateGitUrl`/`validateClonePath`) is the actual gate,
-and **`electron/main.ts` imports it** — the first of three imports of `src/` into `electron/`
-(the others are `src/git/relpath.ts`'s `relPathProblem`/`annotationsRelDir` and
-`src/git/ref.ts`'s `refProblem`, plus `src/git/output.ts`'s `gitErrorText`/`parsePorcelain`/`parseGitLog`).
-That is deliberate and load-bearing: a security
-gate must not exist twice, the same reason `comparable()` in `src/consolidate/unanimous.ts` is one
-shared function rather than three copies that could drift. Both modules import nothing themselves,
-so they typecheck identically under `tsconfig.node.json` (`types: ["node"]`) and `tsconfig.app.json`
-— a file appearing in two TypeScript programs is fine as long as neither is `composite` and both are
-`noEmit`, which is already true here.
+rather than an argument. `src/git/url.ts` (`validateGitUrl`/`validateClonePath`) is the gate the
+renderer-side `gitStore` runs before even sending a request — but the **authoritative** copy of every
+renderer-supplied check lives in the shell itself: `git.rs` contains its own Rust implementations
+of the URL validation (`validate_git_url`), ref-name validation (`ref_problem`), and relative-path
+validation (`rel_path_problem`), re-derived from `src/git/{url,ref,relpath}.ts`. That is deliberate
+and load-bearing: the renderer is untrusted (it renders PDFs and project files that may come from
+elsewhere), so a check the renderer could skip is not a check at all. The TypeScript originals stay
+in `src/git/` where vitest's `src/**` include can unit-test them, and the Rust copies enforce the
+same rules at the trust boundary where the argv is actually assembled.
 
-`validateGitUrl` is an **allowlist of transports** (`https://`, `http://`, `ssh://`, `git://`,
+`validate_git_url` is an **allowlist of transports** (`https://`, `http://`, `ssh://`, `git://`,
 `git+ssh://`, `file://`, the `user@host:path` scp shorthand, or an absolute local path), not a
-blocklist of characters — because the dangerous case is not a stray shell metacharacter (`execFile`
-+ the argument array already close that door) but git's own `ext::` remote-helper syntax, which
+blocklist of characters — because the dangerous case is not a stray shell metacharacter (the argument
+array + no shell already close that door) but git's own `ext::` remote-helper syntax, which
 makes git run a program *named by the URL*. The `::` check requires two consecutive colons, so an
 ordinary `https://` (which has none between the scheme and its slashes) can never trip it —
 `src/git/url.test.ts` pins this explicitly, because it is exactly the kind of regex a later
@@ -1907,9 +2005,12 @@ ordinary `https://` (which has none between the scheme and its slashes) can neve
 
 ### Not weakening git, only removing what cannot work here
 
-`gitEnv()` (`electron/main.ts`) sets `GIT_TERMINAL_PROMPT=0`, `GIT_EDITOR=true`, and
-`GIT_SEQUENCE_EDITOR=true`, and strips any inherited `GIT_DIR`/`GIT_WORK_TREE`/`GIT_CONFIG`-family
-variable. None of this weakens anything a user configured:
+The shell's git environment (`git.rs`) sets `GIT_TERMINAL_PROMPT=0`, `GIT_EDITOR=true`, and
+`GIT_SEQUENCE_EDITOR=true` inline in `run_git`, passes the `NON_INTERACTIVE_ENV` block on network
+operations (`GCM_INTERACTIVE=never`, `SSH_ASKPASS_REQUIRE=never`, empty `GIT_ASKPASS`/`SSH_ASKPASS`),
+and strips any inherited
+`GIT_DIR`/`GIT_WORK_TREE`/`GIT_CONFIG`-family
+variable (the `STRIPPED_ENV` block). None of this weakens anything a user configured:
 
 - The spawned process has no terminal. A git that decided to prompt for a username, or open an
   editor for a commit message, would otherwise block forever on a tty that does not exist, and the
@@ -1924,7 +2025,7 @@ variable. None of this weakens anything a user configured:
   that happens to be sitting inside some *other* git repository; an inherited `GIT_DIR` would
   silently point every git call below at that repository instead of the project's own.
 
-### The repository's own config is not trusted (`GIT_SAFE_CONFIG`)
+### The repository's own config is not trusted (`safe_config`)
 
 The environment is only half the story. A repository's `.git/config` is read before git does
 anything, and several of its keys name **commands git runs** — and this app's documented workflow is
@@ -1936,7 +2037,7 @@ The concrete path: a `core.fsmonitor` of `printf PWNED > /tmp/proof; false` exec
 project open. `.git/hooks/pre-commit` gives the same on commit. Git's `safe.directory` guard does not
 apply, because the copied folder belongs to the reviewer who copied it.
 
-Every `runGit` call therefore prepends a fixed list of `-c` overrides. `-c` outranks every config
+Every `run_git` call therefore prepends a fixed list (`SAFE_CONFIG`) of `-c` overrides. `-c` outranks every config
 file, so this is a hard override rather than a request:
 
 `core.fsmonitor=false`, `core.hooksPath=<nonexistent>`, `core.pager=cat`, `core.editor=false`,
@@ -1949,8 +2050,9 @@ Two deliberate exclusions, and both are the interesting part:
   careful not to touch. Set in the *repository's own* config, they only run on an explicit network
   action the user asked for — never on merely opening a folder, which is the boundary that actually
   matters here. The background fetch (`git:backgroundFetch`) is the one network call nobody asked
-  for, so it is refused outright for a repository whose own config sets any of these keys (see
-  `FETCH_COMMAND_KEYS` in `src/git/fetchPolicy.ts`).
+  for, so it is refused outright for a repository whose own config names a command a fetch would run
+  or includes another config file (`FETCH_COMMAND_KEYS`/`backgroundFetchAllowed` in
+  `src/git/fetchPolicy.ts`).
 - **`diff.external` is not in the list, and this is not an oversight.** Setting it empty does not
   mean "no external diff": git tries to exec the empty string and the diff dies with `cannot run :`.
   Swapping an attacker's differ for a guaranteed failure is not a fix — it silently emptied the Git
@@ -1974,23 +2076,24 @@ folder — which is the boundary this section is about.
 dialog: the sibling `<name>-fulltext.json` that "Start full-text screening" derives from the
 project's own location. Shipping that name as a symlink to `~/.zshrc` turned one click into an
 overwrite of a shell startup file — with substantially attacker-chosen content, since
-`serializeProject` round-trips unknown keys verbatim. Every write in `electron/main.ts` calls
-`assertNotSymlink` first, which uses `lstat` (reporting the link itself rather than what it points
-at). A *parent* directory that is a symlink is fine and stays working — that is ordinary on macOS,
+`serializeProject` round-trips unknown keys verbatim. Every write in `git.rs`/`project.rs` checks
+the leaf with `assert_not_symlink` first, which stats the link itself rather than what it points
+at. A *parent* directory that is a symlink is fine and stays working — that is ordinary on macOS,
 where `/tmp` is one.
 
-**Checking the leaf is not enough.** `assertNotSymlink` inspects only the final component, which
+**Checking the leaf is not enough.** `assert_not_symlink` inspects only the final component, which
 leaves the directory case open: a repository carrying `sub -> /elsewhere` accepts a relative path of
 `sub/project.json` — no `..`, and the leaf really is an ordinary file — and the write lands outside
-the repository. `assertInsideRoot` resolves the *parent* with `realpath`, following every link in
-the chain, so containment is checked against where the write actually goes rather than where the
+the repository. `assert_inside_root` resolves the *parent* with the symlink-following canonical
+path, so containment is checked against where the write actually goes rather than where the
 path string claims it goes. `slr-file://` had the read-side version of the same hole and now
-realpaths both sides before serving: `path.resolve` collapses `..` but follows no links, so a
+realpaths both sides before serving: a plain lexical collapse of `..` follows no links, so a
 `pdfs/paper.pdf` symlinked to `/etc/passwd` used to resolve inside the project and be served.
 
-The relative-path rule itself lives in **`src/git/relpath.ts`**, not in `electron/main.ts`, for the
-same reason `validateGitUrl` does: `electron/` is outside vitest's include, and a security gate no
-test can reach is one nobody can change safely. It splits on both separators (`p.split('/')` left
+The relative-path rule itself lives in **`src/git/relpath.ts`** for the renderer-side check, with
+its authoritative Rust copy (`rel_path_problem`) in `git.rs` — the renderer is untrusted, so the
+check must exist where the argv is assembled, and the TS original stays where vitest can unit-test
+it. It splits on both separators (`p.split('/')` left
 `..\..\Users\victim\.bashrc` as a single opaque segment on POSIX while `path.win32.join` honours
 it), rejects Windows absolute forms explicitly, and rejects any `.git` segment — a valid relative
 path, but never project data, and a write-to-`hooks` primitive. That comparison strips trailing dots
@@ -2000,38 +2103,41 @@ and spaces and lowercases, because Win32 strips them from path components itself
 ### Renderer-named paths are allowlisted to what a dialog actually produced
 
 The path/ref/symlink rules above constrain the *shape* of a path a renderer may
-hand the main process. A separate class of guards constrains its *provenance*:
-every IPC handler that reads or writes an absolute path the renderer names
+hand the shell. A separate class of guards constrains its *provenance*:
+every command that reads or writes an absolute path the renderer names
 (`project:save`, `pdf:read`, `pdf:embedMarks`, `text:write`, `git:checkout`,
 `git:branchSwitchBegin`/`Abort`, …) first checks that path against a
-session-scoped `Set` that only a native dialog or an already-legitimate open
-can populate. A compromised renderer cannot reach any file on disk merely by
+session-scoped allowlist that only a native dialog or an already-legitimate open
+can populate (`authz.rs`'s `Session`). A compromised renderer cannot reach any file on disk merely by
 naming its absolute path — it can only reach a path this session's own user
 action produced.
 
-| Allowlist (`electron/main.ts`) | Populated by | Guarded handlers |
+| Allowlist (`authz.rs` `Session`) | Populated by | Guarded handlers |
 |---|---|---|
-| `knownProjectPaths` | `project:open`/`project:openPath` (a successful read), `project:pickSavePath` (a Save-As dialog), `paths:sibling` (a fresh file next to a known project — `sourceFile` must already be known and `fileName` must be a bare name, so it can only name a new file in an already-known directory) | `project:save` refuses any path not in the set |
-| `readablePdfPaths` | `pdf:pick`/`pdf:pickFolder` (native file/directory dialogs) | `pdf:read` (raw PDF bytes for title/author extraction) refuses anything not picked this session |
-| `writableExportPaths` | `pdf:pickExportPath`/`text:pickExportPath` (native save dialogs) | `pdf:embedMarks` (the `{ newPath }` target — `'original'`, the project's own referenced PDF, is unaffected) and `text:write` refuse any path not chosen via the export dialog |
-| `knownGitRoots` | `git:info` (a project the reviewer opened) and `git:clone` (a repository this app itself just cloned) | `assertRoot(root)` gates every checkout/branch-switch/branch-delete handler — a renderer cannot point git at a repository this session never opened |
+| `known_projects` | `project:open`/`project:openPath` (a successful read), `project:pickSavePath` (a Save-As dialog), `paths:sibling` (a fresh file next to a known project — `sourceFile` must already be known and `fileName` must be a bare name, so it can only name a new file in an already-known directory) | `project:save` refuses any path not in the set |
+| `readable_pdfs` | `pdf:pick`/`pdf:pickFolder` (native file/directory dialogs) | `pdf:read` (raw PDF bytes for title/author extraction) refuses anything not picked this session |
+| `writable_exports` | `pdf:pickExportPath`/`text:pickExportPath` (native save dialogs) | `pdf:embedMarks` (the `{ newPath }` target — `'original'`, the project's own referenced PDF, is unaffected) and `text:write` refuse any path not chosen via the export dialog |
+| `known_git_roots` | `git:info` (a project the reviewer opened) and `git:clone` (a repository this app itself just cloned) | `assert_root(root)` in `git.rs` gates every checkout/branch-switch/branch-delete handler — a renderer cannot point git at a repository this session never opened |
 
-**The "open a PDF outside the project folder" confirmation was moved into the
-main process for the same reason.** It used to be a `window.confirm` in the
-renderer, which a compromised renderer could skip by calling the bridge's
-`allowPdfPath` directly — self-approving its own escape. `pdf:allowPath` is now
-an async handler that shows its own native `dialog.showMessageBox` (Cancel /
+**The "open a PDF outside the project folder" confirmation lives in the
+shell for the same reason.** A `window.confirm` in the
+renderer could be skipped by a compromised renderer calling the bridge's
+`allowPdfPath` directly — self-approving its own escape. `pdf:allowPath` is a
+command that shows its own native dialog (Cancel /
 Open anyway) and only records the escape on "Open anyway", returning whether it
 was approved. The renderer's `getPdfSource` awaits that result rather than
 confirming itself.
 
-**Renderer sandbox and permissions.** The `BrowserWindow` is created with
-`sandbox: true` (alongside the existing `contextIsolation: true` /
-`nodeIntegration: false`), and `session.defaultSession` installs a
-permission-request/check handler that denies every Chromium permission
-(camera, microphone, geolocation, notifications, …) unconditionally — this app
-has no legitimate use for any of them, and the renderer is treated as
-untrusted because it renders PDFs and project files that may come from
+**Renderer sandbox and permissions.** The webview window is created by `shell.rs`
+(from the `tauri.conf.json` window config, `create: false` so the close flow
+controls when it first appears) with navigation and new-window guards: only the app's own origin (`tauri://localhost` /
+`about:blank` / the dev origin) is allowed to load internally, and any other
+navigation or `window.open` is denied and shunted to the user's browser via the OS open
+command (`http`/`https` only — a `file://` link inside a PDF is *not* opened).
+The webview's permission requests are denied unconditionally (`main.rs`'s
+`on_permission_request` → Deny; this app
+has no legitimate use for the camera, microphone, geolocation, notifications, …), and the renderer is
+treated as untrusted because it renders PDFs and project files that may come from
 elsewhere.
 
 ### The module layout
@@ -2039,11 +2145,11 @@ elsewhere.
 | Module | Purpose |
 | --- | --- |
 | `src/git/types.ts` | Shared shapes crossing the platform seam: `GitRun`, `GitProbe`, `GitFileChange`, `GitStatus`, `GitRepoInfo`, `CloneOutcome`, `PullStart` (and `MergeStart` — the merge cases shared by pull and an explicit merge-branch), `CommitRecord`/`LogBeginResult`/`LogRevisionFetch` (the commit-history panel's data), `GitBranch` (now carrying a `remote` flag), `BranchSwitchStart`, `SplitProject` (the `{ metaText, files }` shape every split write/merge carries), `AnnotationAuthors` (per-paper last-committer lookup), `RepoSetupStatus`/`StashEntry`/`StashRestoreResult`, and the `GitPlatform` interface itself. |
-| `src/git/url.ts` | Pure. `validateGitUrl`, `validateClonePath`, `repoNameFromUrl` — the security gate, imported by `electron/main.ts` (see above). |
-| `src/git/ref.ts` | Pure. `refProblem`/`isSafeRef` — the security gate for ref names the renderer hands to git (a branch to merge, a revision to diff), imported by `electron/main.ts` (`assertRef`). Same reason `url.ts`/`relpath.ts` live here: `electron/` is outside vitest's include, so a gate no test can reach is one nobody can change safely. |
-| `src/git/relpath.ts` | Pure. `relPathProblem`/`isSafeRelPath`/`annotationsRelDir` — the security gate for paths written under a project's `annotations/` folder, and the derivation of that folder's name from the project file's own directory. `annotationsRelDir` is what every git flow (stash, add, merge's conflict-elsewhere check, branch-switch's in-scope check) uses to name the folder; it says nothing about whether that folder holds only this project's files (see `ownAnnotationPath.ts` for that). |
-| `src/git/ownAnnotationPath.ts` | Pure. `ownAnnotationPathMatcher(raw)` builds a predicate answering "does this path, relative to the `annotations/` folder, belong to *this* project?" — matching `<paperId>/<name>.json` where `paperId` is one of `raw.papers[].id` and `<name>` is the consolidated/numbered-reviewer/marks file the `screening`/`reviewer` family `raw.config.screening` selects, exactly as `splitProjectFiles` writes them. Used by the merge's conflict-elsewhere check and the branch-switch in-scope check to narrow "anything under `annotations/`" to this project's own family, so a sibling project sharing the folder is treated as "other files dirty"/"conflict elsewhere" and refused rather than silently stashed, merged over, or deleted. Lives here, not in `electron/main.ts`, for the same reason `relpath.ts`/`ref.ts` do: a correctness-load-bearing check with no test coverage is one nobody can change safely. |
-| `src/git/output.ts` | Pure. `parsePorcelain` (turns `git status --porcelain=v1 -z` into `GitFileChange[]`), `parseGitLog` (turns `git log --format=%x00%H%x09%aI%x09%s` into `CommitRecord[]`, splitting on only the first two tabs so a tab inside a subject does not desync the fields), `capDiff` (caps a diff for the DOM), `diffLines` (splits a unified diff into per-line `add`/`remove`/`context` for the coloured view — see below), `gitErrorText` (what to show when a git command failed) — also imported by `electron/main.ts`, so the "what does a failed run's message say" logic exists once. |
+| `src/git/url.ts` | Pure. `validateGitUrl`, `validateClonePath`, `repoNameFromUrl` — the renderer-side security gate; enforced again in Rust (`validate_git_url`, `git.rs`) at the trust boundary (see above). |
+| `src/git/ref.ts` | Pure. `refProblem`/`isSafeRef` — the security gate for ref names the renderer hands to git (a branch to merge, a revision to diff); mirrored by `ref_problem` in `git.rs`. The TS original stays here because vitest's `src/**` include can unit-test it — a gate no test can reach is one nobody can change safely. |
+| `src/git/relpath.ts` | Pure. `relPathProblem`/`isSafeRelPath`/`annotationsRelDir` — the security gate for paths written under a project's `annotations/` folder, and the derivation of that folder's name from the project file's own directory. `annotationsRelDir` is what every git flow (stash, add, merge's conflict-elsewhere check, branch-switch's in-scope check) uses to name the folder; it says nothing about whether that folder holds only this project's files (see `ownAnnotationPath.ts` for that). Mirrored in Rust by `rel_path_problem`/`own_annotation_paths_in`/`annotations_rel_dir` in `git.rs`. |
+| `src/git/ownAnnotationPath.ts` | Pure. `ownAnnotationPathMatcher(raw)` builds a predicate answering "does this path, relative to the `annotations/` folder, belong to *this* project?" — matching `<paperId>/<name>.json` where `paperId` is one of `raw.papers[].id` and `<name>` is the consolidated/numbered-reviewer/marks file the `screening`/`reviewer` family `raw.config.screening` selects, exactly as `splitProjectFiles` writes them. Used by the merge's conflict-elsewhere check and the branch-switch in-scope check to narrow "anything under `annotations/`" to this project's own family, so a sibling project sharing the folder is treated as "other files dirty"/"conflict elsewhere" and refused rather than silently stashed, merged over, or deleted. The Rust merge/branch-switch code uses its own equivalent (`own_annotation_paths_in`, `git.rs`) rather than trusting a renderer-supplied list. |
+| `src/git/output.ts` | Pure. `parsePorcelain` (turns `git status --porcelain=v1 -z` into `GitFileChange[]`), `parseGitLog` (turns `git log --format=%x00%H%x09%aI%x09%s` into `CommitRecord[]`, splitting on only the first two tabs so a tab inside a subject does not desync the fields), `capDiff` (caps a diff for the DOM), `diffLines` (splits a unified diff into per-line `add`/`remove`/`context` for the coloured view — see below), `gitErrorText` (what to show when a git command failed) — parsing lives here (renderer-side, unit-tested), while `git.rs` has its own `parse_porcelain` equivalent for the checks it must do before answering. |
 | `src/git/merge.ts` | Pure. The field-level three-way merge — see below. Knows nothing about git or the DOM, the same shape `src/consolidate/` follows. |
 | `src/git/changes.ts` | Pure. Field-level *local* change detection and composition for the commit panel — see "Field-level commit review" below. Reuses `merge.ts`'s `conflictId`/`MergeTree` for row identity, but not its three-way `merge3` rule (only one side, the working tree, has changed here). Also drives the read-only commit-history diff (see "Commit history" below). |
 | `src/state/gitStore.ts` | The clone flow and the commit/pull/push panel (including the Amend toggle); owns the pull/merge-branch orchestration (shared `applyMergeStart`), the field-review state, the branch switcher, the merge-branch and delete-branch prompts, the commit-history panel, the whole-file discard action, the upstream-ahead count (`behind`, refreshed by `refreshUpstream` and `useUpstreamPolling`), the per-paper annotation-author lookup (`annotationAuthors`, from `src/git/seatOwner.ts`), the repository-setup prompt/notice (`.gitattributes`/`.gitignore` reconcile, `src/git/repoSetup.ts`), and the stash list/push/restore/branch/drop actions (`src/git/stash.ts`). |
@@ -2088,7 +2194,7 @@ inside a hunk is real content regardless of what *it* looks like.
 for the same reason `aiStore` and the project editor are: a self-contained flow with its own
 lifecycle that the ordinary annotation path never needs to know exists. The dependency direction is
 one-way — `gitStore` reads and drives the main store via `useStore.getState()`, but `store.ts` never
-imports `gitStore` (it does not import `aiStore` either, for the same reason). Refreshing `repo`
+imports `gitStore` (it does not import `aiStore` or `aiScreeningStore` either, for the same reason). Refreshing `repo`
 (where the open project sits git-wise) whenever the open project's `saveHandle` changes is therefore
 an effect in `App.tsx`, not a call made from inside `store.ts` — the same shape the AI store's own
 wiring already has.
@@ -2106,7 +2212,7 @@ the conflict dialog — see "Merging another branch" below).
 
 ### The pull command sequence
 
-The merge core is `beginMergeInto(root, relPath, ref)` (`electron/main.ts`), shared by pull and an
+The merge core is `begin_merge_into(root, rel_path, ref)` (`git.rs`), shared by pull and an
 explicit merge-branch (see "Merging another branch" below). It assumes the caller has already
 checked the work tree is clean, then runs in this order:
 
@@ -2114,7 +2220,7 @@ checked the work tree is clean, then runs in this order:
 2. `git merge-base --is-ancestor HEAD <ref>` succeeds → a fast-forward: `git merge --ff-only <ref>`,
    then `{ kind: 'fast-forwarded' }` or `{ kind: 'error', message }`.
 3. Otherwise the histories have diverged. The merge base and the **reassembled logical project** at
-   all three revisions (`git merge-base`, then `readProjectAtRevision` — `project.json` +
+   all three revisions (`git merge-base`, then `read_at` — `project.json` +
    `annotations/`, walked via `git show`/`git ls-tree` at that revision — for each of base/ours/theirs)
    are read **before** anything touches the work tree, so nothing that follows can change what
    actually gets merged.
@@ -2140,13 +2246,13 @@ checked the work tree is clean, then runs in this order:
 6. Otherwise: `{ kind: 'merge', ref, base, ours, theirs }` — the three texts, handed to
    `mergeProjects` (below).
 
-`git:pullBegin` wraps `beginMergeInto`: it first checks for blocking dirty paths
+`git:pullBegin` wraps `begin_merge_into`: it first checks for blocking dirty paths
 (`mergeBlockingDirtyPaths`, shared with `git:mergeBegin`), resolves the upstream (`@{u}`), fetches,
-and then calls `beginMergeInto(root, relPath, ref)`. Its own `'no-upstream'` case is the one outcome
+and then calls `begin_merge_into(root, relPath, ref)`. Its own `'no-upstream'` case is the one outcome
 only a pull can hit, which is why `PullStart = MergeStart | { kind: 'no-upstream', branch }` and
 `applyMergeStart` (renderer-side) takes the `MergeStart` subset.
 
-**Contract**: `beginMergeInto` (and therefore both `git:pullBegin` and `git:mergeBegin`) always
+**Contract**: `begin_merge_into` (and therefore both `git:pullBegin` and `git:mergeBegin`) always
 returns with the repository in exactly one of two states — not mid-merge, for every outcome except
 `'merge'`, or mid-merge with nothing unmerged except the project file, for `'merge'`. It never
 returns leaving a half-merge the renderer did not ask for.
@@ -2159,7 +2265,7 @@ with `MERGE_HEAD` set is what records both parents and tolerates an empty tree c
 the merge commit is finished this way rather than with `commit-tree` or `merge -m`; `--no-edit` takes
 git's own prepared `MERGE_MSG`, and `GIT_EDITOR=true` (above) is the backstop if it ever tried to open
 one anyway. The whole handler is wrapped in `try`/`catch`, unlike a plain sequence of awaits: a
-throw here (`assertInsideRoot`'s refusal, a symlinked annotation path, `ENOSPC`/`EACCES`) would
+throw here (`assert_inside_root`'s refusal, a symlinked annotation path, `ENOSPC`/`EACCES`) would
 otherwise reject the IPC call, and `gitStore.ts`'s `doFinish` has no catch of its own around this —
 its "leave `panel.merge` in place so Cancel merge stays reachable" recovery only runs for an
 `{ok: false}` result, not a rejection. An uncaught one would throw out of `doFinish` silently:
@@ -2169,7 +2275,7 @@ wrapped for the same reason.
 
 ### Two gates before a pull touches anything: on-disk clean, and in-memory clean
 
-`mergeBlockingDirtyPaths` (`electron/main.ts`, shared by `git:pullBegin` and `git:mergeBegin`)
+`mergeBlockingDirtyPaths` (`git.rs`, shared by `git:pullBegin` and `git:mergeBegin`)
 answers one question: is the **file on disk** clean by git's own `status`. It says nothing about
 the reviewer's **unsaved, in-memory** annotations — those exist only in the React state and are
 invisible to git entirely. `gitStore.ts`'s `guardDirtyForMerge(verb)` therefore refuses outright,
@@ -2213,11 +2319,11 @@ uncommitted file in the same folder is treated as "other files dirty" and refuse
 this app does not know how to carry — instead of being silently stashed alongside this project's
 own and left behind if the eventual `finishBranchSwitch` never writes it back. When the precondition
 holds, `git:branchSwitchBegin` does the actual mutation as one atomic step: capture `base`
-(`readProjectAtRevision` at the pre-switch HEAD), `ours` (`readProjectText` on the current,
-still-uncommitted working tree), and `theirs` (`readProjectAtRevision` at the target branch) — all
+(`read_at` at the pre-switch HEAD), `ours` (`project::read_project` on the current,
+still-uncommitted working tree), and `theirs` (`read_at` at the target branch) — all
 pure reads — then `git stash push -u -- relPath annotationsRelDir(relPath)` (project-scoped only)
 and `git checkout <branch> --`. The three texts feed the identical `mergeProjects` used for a pull;
-zero conflicts finishes immediately (`git:branchSwitchFinish`: `writeProjectFiles` the resolved split
+zero conflicts finishes immediately (`git:branchSwitchFinish`: `write_project_files` the resolved split
 onto the now-checked-out branch, then `git stash drop`), otherwise `GitMergeDialog` opens exactly as
 it does for a pull conflict.
 
@@ -2266,7 +2372,7 @@ so `openMergeBranchPrompt` can safely default to the first one.
 
 Confirming calls `runMergeBranch(ref)` (`gitStore.ts`), which is the same flow as `runPull` against
 an explicitly chosen ref: the same `guardDirtyForMerge('merging')` dirty guard, then
-`git:mergeBegin` (`electron/main.ts`). `git:mergeBegin` wraps `beginMergeInto` (above): the same
+`git:mergeBegin` (`git.rs`). `git:mergeBegin` wraps `begin_merge_into` (above): the same
 dirty-path check, an optional `git fetch` (only when `ref` is remote-tracking, verified by
 `isRemoteTrackingRef` against `refs/remotes/` rather than guessed from an "origin/" prefix — a local
 branch may legitimately be called that), a `rev-parse --verify -q <ref>^{commit}` existence check
@@ -2292,8 +2398,8 @@ while `panel.history` is set.
 
 Expanding a commit row calls `loadCommitDiff(hash)` — fetched lazily, one commit at a time, never
 the whole list up front, and once-only (a second call while the first is in flight is a no-op). It
-calls `git:logDiff(root, relPath, rev)`, which fetches the project's reassembled logical text at
-`rev` and at `rev^` via `readProjectAtRevision` — deliberately raw text, not a parsed `Project` or a
+calls `git:logDiff(root, relPath, rev)`, which fetches the project's raw pieces at
+`rev` and at `rev^` via `read_at` — deliberately raw text, not a parsed `Project` or a
 `DetectedChanges`: `loadProject`/`detectFieldChanges` are renderer-side, so this process only ever
 fetches, never parses or diffs (the same boundary `git:headContent`/`git:pullBegin` already keep).
 The renderer then runs `detectFieldChanges(parent, head)` and produces a `LogDiffResult`:
@@ -2402,9 +2508,9 @@ it as a still-uncommitted local change to revisit later (**Ignore**), or revert 
 without touching everything else in the file.
 
 **The comparison is structural, not textual.** `detectFieldChanges(head, working)` compares two
-parsed `Project`s — HEAD's own copy, read via `git:headContent` (reassembled from `project.json` +
-`annotations/` at HEAD, `readProjectAtRevision`), against the working tree's, read via the
-side-effect-free `git:workingContent` (`readProjectText`) — walking annotation
+parsed `Project`s — HEAD's own copy, read via `git:headContent` (the raw `project.json` +
+`annotations/` pieces at HEAD, `read_at`, assembled TS-side), against the working tree's, read via the
+side-effect-free `git:workingContent` (`project::read_project`) — walking annotation
 trees the same recursive way `merge.ts`'s three-way walk does and reusing its `conflictId`/`MergeTree`
 shapes for row identity. This is deliberately immune to JSON formatting/key-order noise — the same
 "compare parsed values, not text" choice the codebase already made for `needsShapeMigration`. Unlike
@@ -2439,7 +2545,7 @@ restores it from `head` into `workingOut`.
 Use), the primary button in `GitDialog` relabels from "Commit" to **"Discard all"** and turns
 danger-red. Pressing it calls `runDiscard` (`gitStore.ts`), which composes only `workingOut` (the
 reverted project state, split via `splitProjectFiles` into `{ metaText, files }`) and writes it
-directly via `git:writeWorking` — a separate IPC handler that calls `writeProjectFiles` (writing
+directly via `git:writeWorking` — a separate command that calls `write_project_files` (writing
 `project.json` and reconciling `annotations/`) without staging or committing anything. This lets a
 reviewer revert all local edits in one action without going through the commit ceremony. The per-row
 **Discard** button was also moved to the row's right edge (opposite Use/Ignore) so the three
@@ -2448,7 +2554,7 @@ dispositions read left-to-right as a single visual axis.
 **Whole-file discard for files *other* than the project's own.** Each non-project changed row (a
 PDF you added, a `.gitignore` you edited) carries its own small **↺** button alongside the plain
 whole-file checkbox. `runDiscardFile(path)` (`gitStore.ts`) calls `git:discardFile`
-(`electron/main.ts`), which re-derives the file's own `git status` (the working tree can have
+(`git.rs`), which re-derives the file's own `git status` (the working tree can have
 changed since the panel last refreshed) and either reverts a tracked modification via
 `git checkout -- <path>` (this codebase never requires a git new enough for `git restore`) or
 deletes an untracked file (`??`) from disk — there is no committed version to revert to for an
@@ -2456,7 +2562,7 @@ untracked file. A wholly-untracked directory collapses to one `git status` recor
 recursively (`rm`), not `unlink` (which throws `EISDIR`). It refuses — rather than guessing — a
 rename (`git status` reports it as the *new* path; correctly reverting one needs more than a single
 checkout) or an unresolved merge conflict (`change.unmerged`), surfacing git's own refusal text as
-`panel.error` and clearing the row from `panel.selected` on success. `assertInsideRoot` guards the
+`panel.error` and clearing the row from `panel.selected` on success. `assert_inside_root` guards the
 untracked-file deletion path, and the whole handler is wrapped in `try`/`catch` so every failure
 comes back as `{ok: false}` data rather than an uncaught IPC rejection that would leave the panel's
 `phase` stuck at `'working'`. The handler also takes the open project's own `projectRelPath` and
@@ -2467,7 +2573,7 @@ recover from, so a marks-only change (field review never diffs PDF marks, so the
 was reachable for them) must not be able to reach them.
 
 **Partial-file staging has no native git primitive, so it is a write → commit → write-back
-sequence, now over the split layout.** `git:commitPartial` (`electron/main.ts`) takes `committed` and
+sequence, now over the split layout.** `git:commitPartial` (`git.rs`) takes `committed` and
 `working`, each `{ metaText, files }` from `splitProjectFiles`: it writes `committed` via
 `writeProjectFiles` (`project.json` + reconciled `annotations/`), `git add`s `relPath` **and** the
 project's `annotationsRelDir(relPath)` folder together with whatever else is in `otherPaths` (the
@@ -2520,10 +2626,10 @@ the primary button run `git commit --amend` (scoped to the same pathspec —
 whole-file selection or the field-review `commitPartial` path — as an ordinary
 commit would use) rather than a fresh commit. Checking the box prefills an
 empty message field with HEAD's own commit message, fetched fresh via the
-`git:lastCommitMessage` IPC handler (`git log -1 --format=%B`) — but only if
+`git:lastCommitMessage` command (`git log -1 --format=%B`) — but only if
 the field is still empty, so it never overwrites anything the reviewer already
 typed. The `amend` flag is threaded through the existing `git:commit`/
-`git:commitPartial` IPC calls (and `GitPlatform.commit`/`commitPartial`) end
+`git:commitPartial` commands (and `GitPlatform.commit`/`commitPartial`) end
 to end rather than as a parallel amend-specific call, since amend is otherwise
 identical to an ordinary commit — same `add`-then-`commit` shape, just one
 extra `--amend` flag. Because amending rewrites history, `runCommit` confirms
@@ -2586,7 +2692,7 @@ links → no single target).
 
 ### Rejected: streamed clone progress and a cancel button
 
-`execFile` buffers the whole child process output; a live progress bar (git's own `--progress`
+`Command::output()` buffers the whole child process output; a live progress bar (git's own `--progress`
 percentage lines) would need a second IPC channel, a subscription lifecycle, and parsing a
 carriage-return-animated stderr stream — real work for a cosmetic improvement. Cancelling a clone
 mid-flight would also leave a partial `.git` directory that would need cleaning up. A spinner plus an
@@ -2623,94 +2729,73 @@ over, or deleted:
   dirty" and the switch is refused cleanly.
 - A **merge's conflict-elsewhere check** waived anything under the folder through as "ours to
   reconcile"; a sibling's file got merged over by git's own line-based merge (raw conflict markers
-  included) and committed. `beginMergeInto` now narrows the same way, using the union of `ours`' and
+  included) and committed. `begin_merge_into` now narrows the same way, using the union of `ours`' and
   `theirs`' own paper lists (a paper the remote side added is this project's family too).
 - **Save As** never checked the destination for an existing project sharing paper ids. The moment it
   landed in an occupied folder, an ordinary future save of either file could null-and-delete the
   other's still-live annotation file for any paper id they had in common. `saveAs()` (`store.ts`)
-  now calls `platform.checkSiblingCollision(destPath, paperIds, screening)` between
-  `pickProjectLocation` and the write, and refuses (naming the sibling and the shared ids) when a
-  *same-family* project sharing at least one paper id is already there — the only moment such a
-  sharing relationship is created, so the only moment it can be caught. A different-family sibling
-  (the legitimate screening-to-full-text case) never collides on a filename, which is exactly what
-  the check verifies before allowing it.
+  now calls `platform.annotationsDirUsers(destPath, folder, paperIds, screening)` between
+  `pickProjectLocation` and the write: if a same-kind sibling already keeps its annotations in the
+  chosen folder, the save tries a folder named after the destination file itself
+  (`defaultSplitDirName`) instead, and refuses with an error naming the sibling only when that is
+  taken too — so a sharing relationship is caught at the only moment it can be created. A
+  different-family sibling (the legitimate screening-to-full-text case) never collides on a
+  filename (`files_collide` in `annotations.rs` enforces the same kind rule on the Rust side),
+  which is exactly what the check verifies before allowing it.
 
 `ownAnnotationPathMatcher` (`src/git/ownAnnotationPath.ts`) builds the predicate "does this path,
 relative to `annotations/`, belong to the project described by this raw `project.json`?" — matching
 `splitProjectFiles`' own `<paperId>/<name>.json` naming, using the `screening`/`reviewer` name family
-`config.screening` selects. It lives in `src/git/` rather than `electron/main.ts` for the same
-reason `relpath.ts`/`ref.ts`/`url.ts` do: `electron/` is outside vitest's include, and a
-correctness-load-bearing check with no test coverage is one nobody can change safely. A malformed
+`config.screening` selects. The Rust merge/branch-switch code uses its own equivalent
+(`own_annotation_paths_in`, `git.rs`) rather than trusting a renderer-supplied list. A malformed
 `raw` (unparseable, no `papers` array) makes the matcher return `false` for everything, which makes
 every caller fail toward a clean refusal rather than guessing an unreadable blob is safe.
 
-## Electron Main Process
+## The Rust shell (`src-tauri/`)
 
-**`electron/main.ts`** is a thin main process:
+The Electron main process is gone. SaiLoR 2.0's shell is a Rust binary built from `src-tauri/`:
+Tauri 2 with the `single-instance` (refocusing the existing window), `window-state`
+(size/position/maximized restored), `dialog`, and `updater` plugins. `src-tauri/src/main.rs`
+(`run()`) builds the app: it registers every `#[tauri::command]` in the `invoke_handler`, registers
+the `slr-file://` scheme via `register_asynchronous_uri_scheme_protocol` (handling requests on a
+spawned thread), injects `window.__SLR_OS__` (`{ darwin/win32, x64/arm64/ia32 }`) via a custom
+`slr-os` plugin — the Tauri counterpart of `process.platform`/`process.arch`, consumed by
+`getOsInfo()` — and owns the close flow: `ExitRequested { code: None }` and `CloseRequested` are
+intercepted by `close.rs` so a dirty project gets the native Save / Don't Save / Cancel dialog before
+the window goes away, and `Exit` calls `localruntime::stop_all()` so no managed llama.cpp server is
+left running. A `CI_PROBE` build feature runs the shell headless for CI.
 
-- **Window**: `BrowserWindow` defaulting to **1920×1080**, context isolation enabled, node integration disabled, preload script loaded. The taskbar/dock icon is set from `build/icon.png` via `nativeImage` (and `app.dock.setIcon` on macOS so it shows in dev, not just the packaged bundle).
-- **Window-state persistence**: size, position, and maximized state are saved to `window-state.json` in `app.getPath('userData')` and restored on the next launch. Writes are debounced on `resize`/`move`/`maximize`/`unmaximize` (400 ms) and flushed synchronously on `close`; maximized/fullscreen windows store their `getNormalBounds()` so restore returns to the user's chosen size. A saved position is only reused if it still overlaps a connected display (`screen.getAllDisplays()`), so a disconnected monitor can't strand the window off-screen; otherwise only the size is applied and the window is centered. Absent/corrupt state falls back to the 1920×1080 default.
-- **Dev vs prod**: loads `VITE_DEV_SERVER_URL` in dev, `dist/index.html` in production.
-- **External links**: `setWindowOpenHandler` sends `target="_blank"` links (external links in PDFs) to the system browser via `shell.openExternal` and denies the popup; `will-navigate` prevents any off-app navigation of the window itself. Only `http:`/`https:`/`mailto:` URLs are passed to the OS.
-- **`slr-file://` protocol**: registered as privileged (secure, stream, fetch API, **CORS-enabled**). Handler resolves paths relative to `projectDir` with traversal guard (`path.resolve` + prefix check). Returns 403 for traversal attempts, 404 for missing files. `corsEnabled` is required, not cosmetic: the renderer's origin (dev server, or `file://` when packaged) differs from `slr-file://`, so loading a PDF is a cross-origin request. Without it Chromium rejects the request *before* `protocol.handle` runs, and pdf.js surfaces the opaque failure as `Unexpected server response (0)`.
-- **IPC handlers** (project ones now speak the split `project.json` + `annotations/` layout — see [Data Model](concepts/data-model.md)'s "Assembling and splitting on disk"):
-  - `project:open` — `dialog.showOpenDialog` → `readProjectText` (reassembles a split project's `annotations/` files into the logical whole-project text `loadProject` expects; passes an old single-file project through untouched)
-  - `project:openPath` — the same `readProjectText` reassembly, by absolute path (for re-opening recent projects); returns `null` if the file is missing or unreadable
-  - `project:save` — `writeProjectFiles(filePath, metaText, files)`: writes `project.json` (`metaText`, the meta-only body `splitProjectFiles` produced) and reconciles `annotations/` against `files` (writing each non-null entry, deleting each null one — except a null entry whose file on disk does not parse as JSON, e.g. one committed with git conflict markers, which is left alone rather than unlinked)
-  - `project:setDir` — sets `projectDir` from the project file's directory
-  - `project:pickSavePath` — `dialog.showSaveDialog` to choose where a project JSON should live; **writes nothing** (the project editor picks a location before there is a file; "Save as" reuses this plus `project:save`, there is no separate `project:saveAs` handler)
-  - `project:checkSiblingCollision` — would writing a project to `destPath` start sharing an `annotations/` folder with another, same-family project already in that directory? Reads every other `.json` in the destination directory, checks for a shared paper id and the same screening/non-screening kind, and returns `{ siblingName, overlappingIds }` or `null`. Called from `saveAs()` right after the destination is picked and before anything is written — the only moment a new sharing relationship can be created. Not git-specific (Save As works with no repository at all), so it lives in the `project:*` namespace like `pickSavePath`, not alongside the `git:*` handlers. Two *different* project kinds sharing paper ids (SaiLoR's own "Start full-text screening" flow) never collide on a filename, so only a same-family overlap is flagged
-  - `project:peek` — `{ exists, title }` per path, for refreshing recents' displayed titles without a full open
-  - `pdf:pick` — `dialog.showOpenDialog` with `multiSelections` to add PDFs; returns absolute paths
-  - `pdf:pickFolder` — `dialog.showOpenDialog` with `properties: ['openDirectory']`, then a recursive `readdir` walk collecting every `.pdf` (a directory that can't be read is skipped, not fatal); returns absolute paths
-  - `reference:pick` — `dialog.showOpenDialog` filtered to `.bib`/`.ris`/`.json`; returns `{ text, name }` for `src/model/references.ts` to parse, or null if cancelled
-  - `pdf:read` — raw bytes of a PDF by absolute path, so the editor can read its title/authors. Deliberately *not* confined to the project directory (unlike `slr-file://`): the user may add PDFs from anywhere and picked them through a native dialog.
-  - `paths:relative` — `path.relative(dirname(fromFile), to)` for each target, POSIX-separated. This is what makes a paper's `pdf` relative to the JSON, and what re-derives the paths when the JSON moves.
-  - `paths:absolute` — the inverse of `paths:relative`: `path.resolve(dirname(fromFile), rel)` for each target. Backs `absolutePdfPaths`, used when importing papers from a screening project.
-  - `paths:sibling` — `path.join(dirname(sourceFile), fileName)`. Backs `siblingProjectLocation`, the default save location for a new project started from screening results.
-  - `app:setDirty` — the renderer reports its unsaved-changes state (drives the quit dialog)
-  - `app:saveComplete` — the renderer reports the result of a save it was asked to run before quitting
-  - `llm:configs` / `llm:saveConfig` / `llm:deleteConfig` — the LLM targets in `userData/llm-config.json`. The renderer is handed `publicConfigs()`: everything **except** the key, plus `hasKey`.
-  - `llm:call` / `llm:abort` — send a renderer-built request with `net.fetch` after substituting the real key and checking the target origin against the config's `baseUrl` (see *AI-assisted annotation* above). `llm:abort` aborts an in-flight call by its `requestId`, since an `AbortSignal` cannot cross IPC.
-  - `git:probe` — `git --version`; `{ available, version, error }`
-  - `git:pickCloneDir` — `dialog.showOpenDialog` for the clone destination folder
-  - `git:clone` — validates the URL/destination (`src/git/url.ts`), then `git clone -- <url> <dest>`
-  - `git:pickProjectIn` — `dialog.showOpenDialog` with `defaultPath: dir`, the mechanism that opens the picker already inside a freshly cloned repository
-  - `git:info` — `rev-parse --show-toplevel` / `--show-prefix`, `--verify HEAD`, current branch, upstream. These five independent calls are run concurrently via `Promise.all`; `deriveGitInfo` (`src/git/deriveGitInfo.ts`, unit-tested) maps each result to its field — extracted out of `electron/main.ts` so a `Promise.all` destructure swap cannot silently mix two same-shaped results with no type error to catch it
-  - `git:status` — raw `status --porcelain=v1 -z` + `diff --no-color HEAD --` (run concurrently via `Promise.all`), parsed on the renderer side (`src/git/output.ts`)
-  - `git:headContent` / `git:workingContent` — the project's **reassembled logical text** at `HEAD` (`readProjectAtRevision`, walking `project.json` + `annotations/` at that revision — the per-file `git show` calls are filtered first, then run concurrently via `readAllConcurrently` in `src/git/concurrentRead.ts`) and on disk (`readProjectText`, a plain, side-effect-free read whose own per-paper `loadPaperFiles` calls are likewise concurrent); the two inputs `detectFieldChanges` compares for the commit panel's field-level review
-  - `git:commitPartial` — the write → `add` + `commit` → write-back sequence field-level commit review needs, since git has no native partial-file staging primitive; see "Field-level commit review" above
-  - `git:commit` — pathspec-limited `add` then `commit -m` (or `commit -m --amend` when the panel's Amend checkbox is set)
-  - `git:lastCommitMessage` — `git log -1 --format=%B`, to prefill the message field when the reviewer switches to amend
-  - `git:push` — plain `git push`; a missing upstream surfaces git's own message rather than inventing `--set-upstream`
-  - `git:pullBegin` / `git:pullFinish` / `git:pullAbort` — the pull classification and its two ways to conclude; see "Git" above for the full command sequence
-  - `git:writeWorking` — writes `composeContents`'s `workingOut` directly to the working file, letting a reviewer discard local edits without committing (see "Field-level commit review" above)
-  - `git:branches` — `git for-each-ref` over `refs/heads` and `refs/remotes` → `{ name, current, remote }[]`; the switcher takes the locals, the merge picker takes both (see "Merging another branch"). `refs/remotes/origin/HEAD` (a symref, not a branch) is filtered out
-  - `git:branchCreate` — a plain `git branch -- <name>` at the current commit, without switching; the renderer always follows it with the ordinary switch flow
-  - `git:branchDelete` — `git branch -d -- <branch>` (never `-D`); git itself refuses when the branch isn't fully merged into the current one, and that refusal (surfaced via the returned `GitRun`'s `ok: false` and `gitErrorText`) is the answer this app wants — no force option. Local branches only; deleting a remote one needs `git push origin --delete`, a more consequential network operation this app doesn't attempt
-  - `git:checkout` — a plain `git checkout <branch> --`, only for the no-local-changes path
-  - `git:branchSwitchBegin` / `git:branchSwitchFinish` / `git:branchSwitchAbort` — carrying uncommitted project changes across a branch switch (stash the project's own files only — narrowed by `ownAnnotationPathMatcher` so a sibling's file in the same folder is left alone — checkout, merge); see "Switching branches with uncommitted changes" above for the full sequence. `git:branchSwitchFinish` is wrapped in `try`/`catch` for the same reason `git:pullFinish` is
-  - `git:mergeBegin` — merges an arbitrary branch — local or remote-tracking — into the current one, via the shared `beginMergeInto`; finished and aborted by `git:pullFinish`/`git:pullAbort` (a merge is a merge regardless of which ref started it). Fetches first when the ref is a remote-tracking one, so the merge is against current data; validates the ref with `assertRef`/`refProblem` and verifies it resolves to a commit (`rev-parse --verify -q <ref>^{commit}`). See "Merging another branch" above for the full sequence
-  - `git:logBegin` — `git log` scoped to `relPath` and its `annotations/` dir (not the whole repo), capped at `LOG_MAX_COMMITS` (250) rather than paginated; `truncated` says so. `--date=iso-strict` and `--format=%x00%H%x09%aI%x09%s` produce NUL-terminated records parsed by `parseGitLog` (`src/git/output.ts`). For the commit-history panel
-  - `git:logDiff` — the two revisions a history row's field-level diff needs (`<rev>` and `<rev>^`), as raw text via `readProjectAtRevision`. Returns raw text rather than parsing it here, the same boundary every other IPC call keeps: this process only ever fetches; the renderer (`loadProject`/`detectFieldChanges`, called from `loadCommitDiff` in `gitStore.ts`) parses and diffs. `{kind:'initial'}` when the commit has no parent (the first commit to touch this file); `{kind:'error'}` when the revision can't be read
-  - `git:discardFile` — reverts (tracked, `git checkout -- <path>`) or deletes (untracked, `rm -r` for a directory, `unlink` for a file) a single changed file *other* than the project's own tracked file/`annotations/`; the whole-file counterpart to the project's field-level Discard. Takes the open project's own `projectRelPath` and refuses whenever `relPath` is it or falls under its `annotationsRelDir(...)`, so the renderer's own `isProjectOwnPath` withhold is not the only guard. Re-derives the file's own status here rather than trusting a cached code, and refuses a rename (`change.from`) or an unresolved merge conflict (`change.unmerged`) rather than guessing. Wrapped in `try`/`catch` so every failure comes back as `{ok: false}` data. See "Whole-file discard" above
-  - `git:annotationAuthors` — one `git log` per repository (not per paper), parsed by `parseAnnotationAuthors` (`src/git/seatOwner.ts`) into who last committed each annotation file, so the per-paper "somebody has already read this" check costs nothing at the point of use. Read once on repository detection and after every commit
-  - `git:repoSetupStatus` / `git:applyRepoSetup` — bring the project's `.gitattributes`/`.gitignore` up to what SaiLoR needs (`*.json text eol=lf -merge`, and ignoring operating-system junk files such as `.DS_Store`/`Thumbs.db` whose untracked presence in `annotations/` would block every merge; annotation files and PDFs are never ignored). The rules live in a delimited managed block; content outside it is left untouched. `planRepoSetup` (`src/git/repoSetup.ts`) computes the diff; applying is silent when there is nothing of the user's to overwrite, otherwise the store raises `repoSetupPrompt` and waits for `resolveRepoSetup`. The landed files go into a commit the reviewer did not type, surfaced as `repoSetupNotice` (`RepoSetupToast`)
-  - `git:backgroundFetch` — a fetch that never touches the working tree, used by `refreshUpstream` to recount the unpulled commits behind the upstream. Refused (`refused: true`) when the repository's own config names a command a fetch would run or includes another config file (`FETCH_COMMAND_KEYS`/`backgroundFetchAllowed` in `src/git/fetchPolicy.ts`), run non-interactively (`NON_INTERACTIVE_ENV`) with a 60 s timeout. The store never runs two at once, skips it while the reviewer's own git operation is running, and makes pull, merge-branch and push wait for one in flight, so two fetches never race
-  - `git:stashList` / `git:stashPush` / `git:stashRestore` / `git:stashDrop` / `git:stashBranch` — the stashed-changes surface in the Git panel (`src/git/stashOps.ts`). `stashPush` is project-scoped (`relPath` + `annotationsRelDir`), so it never sweeps a sibling project's file; `stashRestore` is all-or-nothing and refuses on a conflict (`StashRestoreResult`). `stashBranch` restores onto a new branch where it cannot conflict. A stash is named by commit sha across IPC, validated against a hex pattern
-  - `update:check` / `update:download` / `update:install` — the native self-update surface, Windows/Linux only (see "In-app self-update" above). All three no-op on macOS. `update:check` primes `electron-updater` against the GitHub feed configured in `package.json`'s `build.publish` block but starts no download; the `update-available` / `download-progress` / `update-downloaded` / `error` events are pushed back to the renderer via `webContents.send('update:*')` and surface through the `onNativeUpdate*` preload subscriptions.
-- **Menu**: custom template with File, Edit, View, Window menus.
-  - The **Edit** menu is hand-built: **Undo/Redo** send `app:undo` / `app:redo` to the renderer (routing to the store's history) rather than the native text-undo role, so undo works app-wide; cut/copy/paste/selectAll keep their native roles.
-  - The **View** menu is hand-built (not the default `{ role: 'viewMenu' }`) and deliberately omits zoom roles so that `Ctrl +/-/0` reach the renderer for PDF zoom (and `Ctrl+Shift +/-/0` for app font scaling) instead of triggering native browser/Electron zoom.
-- **Unsaved-changes quit flow**: a window `close` handler (`promptUnsavedChanges`) intercepts the close/quit when `isDirty` is set, and shows a native **Save / Don't Save / Cancel** dialog. "Save" asks the renderer to save (`app:requestSave`) and closes once it reports back; "Don't Save" closes discarding changes. A `before-quit` flag lets the guard resume `app.quit()` after confirmation (so Cmd+Q fully quits on macOS, where destroying the window alone would not).
+The Rust modules, one per concern:
 
-**`electron/preload.ts`** uses `contextBridge.exposeInMainWorld('slr', ...)` to expose IPC-backed methods: `openProject`, `openPath` (read file by absolute path), `saveProject`, `saveProjectAs`, `setProjectDir`, `pickSavePath`, `checkSiblingCollision`, plus the quit/menu coordination — `setDirty`, `onRequestSave`, `saveComplete`, `onUndo`, `onRedo` — the `git*` methods (`gitProbe`, `gitPickCloneDir`, `gitClone`, `gitPickProjectIn`, `gitInfo`, `gitStatus`, `gitHeadContent`, `gitWorkingContent`, `gitCommitPartial`, `gitCommit`, `gitPush`, `gitPullBegin`, `gitPullFinish`, `gitPullAbort`, `gitMergeBegin`, `gitLogBegin`, `gitLogDiff`, `gitWriteWorking`, `gitDiscardFile`, `gitBranches`, `gitBranchCreate`, `gitBranchDelete`, `gitCheckout`, `gitBranchSwitchBegin`, `gitBranchSwitchFinish`, `gitBranchSwitchAbort`, `gitLastCommitMessage`, `gitAnnotationAuthors`, `gitRepoSetupStatus`, `gitApplyRepoSetup`, `gitBackgroundFetch`, `gitStashList`, `gitStashPush`, `gitStashRestore`, `gitStashDrop`, `gitStashBranch`) mirroring the `git:*` IPC handlers one for one, and the native self-update surface — `checkForNativeUpdate`, `downloadNativeUpdate`, `installNativeUpdate`, plus the `onNativeUpdate*` event subscriptions (`onNativeUpdateAvailable`, `onNativeUpdateProgress`, `onNativeUpdateDownloaded`, `onNativeUpdateError`) mirroring the `update:*` handlers in `electron/main.ts` (win/linux only; no-ops on macOS). This `window.slr` object is the detection signal for `isElectron()`.
+| Module (`src-tauri/src/`) | Purpose |
+| --- | --- |
+| `main.rs` | Plugin wiring, command registration, the `slr-file://` scheme, the `slr-os` injection, permission-request denial, close-flow interception, CI probe. |
+| `project.rs` | Project file I/O: `read_project` (reads the split `project.json` + `annotations/` layout and hands the raw pieces to the renderer — assembly happens TS-side in `assembleProject`), `write_project_files` (the split save, reconciling the annotations folder against the files the renderer sends, with stale-checks against `authz.rs`'s file stamps), `projects_using_folder` (sibling-project lookup for the annotations-folder collision check), `peek` (recents' `{ exists, title }`), `paper_id_ok` (rejecting Windows-reserved names — `COM1-9`/`LPT1-9`/`CON`/`PRN`/`AUX`/`NUL` — and the reserved `feedback` name), `annotations_dir_for` (refusing paths outside the project or through symlinks). |
+| `annotations.rs` | The shared `annotations/` folder helpers (`paper_id_key` NFC-lowercases ids so macOS's case-insensitive HFS+ and Windows's NTFS agree on what "two papers with ids differing only by case" means). |
+| `feedback.rs` | The reviewer-feedback feature: reads/writes the per-project `feedback/` folder (1 MB cap, name regex). |
+| `git.rs` | The git engine — ~3 100 lines of git plumbing: probe, clone, info, status, head/working content, partial commit, push, pull/merge/branch-switch/stash, log and diff, repo setup, background fetch, annotation-author lookup. 30 s / 900 s / 60 s timeouts by operation class; 250-commit log cap; `MAX_OUTPUT` 32 MB; a stripped environment (7 `GIT_*` vars dropped) plus the non-interactive ones (`GIT_TERMINAL_PROMPT=0`, `GIT_EDITOR=true`, `GIT_SEQUENCE_EDITOR=true`, plus `GCM_INTERACTIVE=never`/`SSH_ASKPASS_REQUIRE=never`/blanked askpass vars); Windows `CREATE_NO_WINDOW`; and `SAFE_CONFIG` — the seven `-c` overrides (`core.fsmonitor=false`, `core.hooksPath=<nonexistent>`, `core.pager=cat`, `core.editor=false`, `core.alternateRefsCommand=`, `uploadpack.packObjectsHook=`, `protocol.ext.allow=never`). Also the **trust-boundary validators**: `validate_git_url`, `ref_problem`, `rel_path_problem` — Rust-side copies of the pure TS gates in `src/git/{url,ref,relpath}.ts` (see "The renderer never names an argv" above). |
+| `pdf.rs` | PDF serving and embedding: `resolve_project_path` + `canonicalize` re-check (the traversal/symlink guard behind `slr-file://`), raw reads for title/author extraction, and the `lopdf`-based mark embedding. |
+| `protocol.rs` | The `slr-file://` protocol handler itself: OPTIONS CORS preflight (advertising `Range`), query-param path resolution (paths travel as `?path=`, not URL segments, so `..` cannot be collapsed away mid-parse), single byte-`Range` support (206 + `Content-Range`, 416 `bytes */len` when out of range), 403 for escapes, 404 for missing files, HEAD. `corsEnabled` is still required, not cosmetic: the renderer's origin (dev server or `tauri://localhost`) differs from `slr-file://`, so loading a PDF is a cross-origin request Chromium would otherwise reject before the handler runs. |
+| `paths.rs` | The path math the renderer asks for (`relative`/`absolute`/`sibling`), with Node-compatible path semantics. |
+| `authz.rs` | The session-scoped path allowlists (see "Renderer-named paths are allowlisted" above): a `Session` holding `project_dir`, `allowed_escapes`, `known_projects`, `readable_pdfs`, `writable_exports`, `known_git_roots`, `listed_splits`, plus per-file stamps (`mtime_nanos:len`) that turn "save" into a stale-write check, and `changed()` (Some→None = not changed) and `assert_not_symlink` helpers. |
+| `llm.rs` | The LLM proxy: keys stored in the OS keyring (`keyring::Entry('SaiLoR', 'llm:<id>')`) with only a `"keyring": true` marker left in the raw JSON config at `<config>/SaiLoR/llm-config.json`; the `{{apiKey}}` sentinel substitution immediately before sending; origin + scheme pinning against the config's `baseUrl`; managed targets redirected to the local runtime's endpoint; redirects refused; 10-min timeout. |
+| `net.rs` | The shared HTTP client: rustls with the `ring` provider, a shared no-redirect client, and the `Flight` abort registry `llm.rs`/`webfetch.rs` hang their `requestId` cancellation on. |
+| `webfetch.rs` | The "fetch a web page" tool: SSRF guard (blocked IPv4/IPv6 ranges, localhost/`.localhost`/`.local`/`.internal`, no embedded credentials, per-hop re-check up to 5 redirects, `PublicOnly` DNS resolver closing the DNS-rebinding window), 20 s / 2 MB caps. |
+| `ollama.rs` | The Ollama server probe (`check_base_url` pins origin + `is_local`; never takes an API key). |
+| `localruntime.rs` | The managed llama.cpp runtime: one `llama-server` per model on `127.0.0.1` on a random port with a random per-session key, digest-verified model downloads behind a plan-consent prompt, a 5-entry catalog, an idle-stop timer, a pinned `llama.cpp` build. |
+| `hardware.rs` | The hardware probe the runtime sizing uses. |
+| `shell.rs` | Window construction and navigation guards: `is_external` (http/https only) vs `is_app_url` (`tauri://localhost`, `about:blank`, `tauri.localhost`, the dev origin); `on_navigation`/`on_new_window` deny internal deviations and send external links to the OS opener; legacy-config migration (SLR Helper → SaiLoR, skipping symlinks); the macOS Edit menu prepends `app:undo`/`app:redo`. |
+| `close.rs` | The dirty-quit guard: `Guard` atomics (dirty/asking/saving/allow), the native Save / Don't Save / Cancel dialog, and `app_save_complete` — a guard-asked save must complete before the window actually closes. |
+| `update.rs` | The Tauri updater surface: `self_update_supported` is true for bundle types that can be replaced in place (AppImage / NSIS / MSI / **App**, the macOS bundle); on deb/rpm and unbundled runs it reports `{ supported: false, manual: true }` so the renderer falls back to the download link; percent capped at 100; **install refuses while the project is dirty** ("Save your project before you install the update."). |
+
+The `slr-file://` PDF source and the `pdf:allowPath` escape dialog both live here, not in the
+renderer — see the platform seam above.
 
 ## Hooks
 
 - **`useAutosave`** (`src/hooks/useAutosave.ts`): Periodically saves unsaved annotation changes every 5 minutes when `autosaveEnabled` is on (opt-in, default off, toggled from the Save menu). Skipped while the project editor is open, since `save()` here writes the annotation `project` state, not the editor's own draft. Only fires when `dirty && !busy`.
 
-- **`useKeybindings`** (`src/hooks/useKeybindings.ts`): Global keyboard shortcuts registered on `window.keydown`. Handles open (Ctrl/Cmd+O), save (Ctrl/Cmd+S), save-as (Ctrl/Cmd+Shift+S), paper navigation (Alt+↓/↑, `[`/`]`), zoom/font (Ctrl/Cmd + `+/=/-`/`0` → PDF zoom; add Shift → app font size), and help (F1). Paper navigation skips when typing in a field (unless Alt is held). Zoom/font detection matches `e.key` and `e.code` to handle numpad and international layouts; reset is detected by the digit-0 `e.code` (Shift-independent) to avoid the German Shift+0 → `=` clash. Copy/cut/paste/undo are left to the browser/Electron Edit menu. Paper stepping (`[`/`]` and Alt+Arrow) walks the filtered/searched paper list by querying the DOM for `.paper-list [role="option"][data-paper-id]` rows, falling back to the raw project order only when the sidebar is collapsed — so keyboard stepping and the visible list never disagree about what "next" means.
+- **`useKeybindings`** (`src/hooks/useKeybindings.ts`): Global keyboard shortcuts registered on `window.keydown`. Handles open (Ctrl/Cmd+O), save (Ctrl/Cmd+S), save-as (Ctrl/Cmd+Shift+S), paper navigation (Alt+↓/↑, `[`/`]`), zoom/font (Ctrl/Cmd + `+/=/-`/`0` → PDF zoom; add Shift → app font size), help (F1), and undo/redo (Ctrl/Cmd+Z / Shift+Z / Ctrl+Y). Paper navigation skips when typing in a field (unless Alt is held). Zoom/font detection matches `e.key` and `e.code` to handle numpad and international layouts; reset is detected by the digit-0 `e.code` (Shift-independent) to avoid the German Shift+0 → `=` clash. Undo/redo are routed to the store's history directly, not left to a native Edit menu. Paper stepping (`[`/`]` and Alt+Arrow) walks the filtered/searched paper list by querying the DOM for `.paper-list [role="option"][data-paper-id]` rows, falling back to the raw project order only when the sidebar is collapsed — so keyboard stepping and the visible list never disagree about what "next" means.
 
   **Bare-key bindings are suppressed while anything blocking is on screen.** The screening decision
   keys (`I`/`E`/`U`, `1`–`9`) and paper navigation act on the paper *behind* a dialog, invisibly, so
@@ -2727,15 +2812,15 @@ every caller fail toward a clean refusal rather than guessing an unreadable blob
   focus — so without this, Save was a way to land a destructive rename without ever being asked. The
   guard now lives inside `editorStore`'s `save()`/`saveAs()` themselves (`commitFocusedEdit`, called
   before anything else), so every entry point — the Ctrl+S shortcut here, the toolbar Save/Save &
-  Annotate buttons, and the native quit dialog's Save button (which calls `save()` directly with no
+  Annotate buttons, and the shell close dialog's Save button (which calls `save()` directly with no
   chance to run its own pre-save step) — shares the one guard instead of each needing its own copy.
   Blur handlers and the zustand writes they make are synchronous, so the rest of `save`/`saveAs` sees
   the result, including a rename the reviewer just declined. Scoped to the editor: annotation fields
   have no such guard, and taking someone's cursor mid-sentence to save would be pure cost.
 
-- **`useDirtyGuard`** (`src/hooks/useDirtyGuard.ts`): **Browser only, and dead code in practice now.** Registers a `beforeunload` listener that calls `e.preventDefault()` when either the project *or* the editor's draft is dirty, triggering the browser's "unsaved changes" confirmation. It is skipped under Electron (`isElectron()`), because a `beforeunload` that returns a value there silently cancels the quit with no dialog — Electron handles unsaved changes via a native dialog in the main process instead (see `useElectronCloseGuard` and the quit flow below). Since `App.tsx`'s discontinuation gate now blocks all project-opening UI outside Electron, `dirty` can never become `true` in the one runtime where this hook is live, so it never actually fires — left in place because it is harmless and cheap to keep, not because it does anything.
+- **`useDirtyGuard`** (`src/hooks/useDirtyGuard.ts`): Registers a `beforeunload` listener that calls `e.preventDefault()` when either the project *or* the editor's draft is dirty, triggering the browser's "unsaved changes" confirmation. It is skipped under the Tauri shell (`isTauri()`), because a `beforeunload` that returns a value there silently cancels the quit with no dialog — the shell handles unsaved changes via a native dialog instead (see `useCloseGuard` and the quit flow below). **It is live code again, not dead**: the Tauri webview is a real browser context and `beforeunload` fires on reload, so the hook runs on every reload of the dev server or the packaged webview.
 
-- **`useElectronCloseGuard`** (`src/hooks/useElectronCloseGuard.ts`): **Electron only.** Wires the renderer to the main process for a clean quit and for the Edit menu: it pushes the current `dirty` state to main (`slr.setDirty`), runs a save when main asks after the user picks "Save" in the native close dialog (`slr.onRequestSave` → `save()` → `slr.saveComplete(ok)`), and routes the Edit-menu Undo/Redo (`slr.onUndo` / `slr.onRedo`) to the store's `undo()` / `redo()`. It also subscribes to the native self-update events (`onNativeUpdateProgress` / `onNativeUpdateDownloaded` / `onNativeUpdateError`) and forwards them into the store's `noteUpdate*` actions (see "In-app self-update" above); a no-op on macOS and in the browser, where the bridge callbacks are empty.
+- **`useCloseGuard`** (`src/hooks/useCloseGuard.ts`): **Tauri only** (gated on `isTauri()`). Wires the renderer to the shell for a clean quit and for the Edit menu: it pushes the current `dirty` state to the shell (`bridge().setDirty`), runs a save when the shell asks after the user picks "Save" in the native close dialog (`onRequestSave` → `save()` → `saveComplete(ok)`), and routes the Edit-menu Undo/Redo (`onUndo` / `onRedo`) to the store's `undo()` / `redo()`. It also subscribes to the self-update events (`onNativeUpdateProgress` / `onNativeUpdateDownloaded` / `onNativeUpdateError`) and forwards them into the store's `noteUpdate*` actions (see "In-app self-update" above). Its dirty-state subscription watches *both* stores: the project store's `dirty` and the editor store's own dirty flag are each pushed via `.subscribe`, so editing the schema marks the window dirty too. `editing()` routes a shell-requested save to the right store's save depending on which surface is open.
 
 - **`useUpstreamPolling`** (`src/hooks/useUpstreamPolling.ts`): keeps the toolbar's "↓ N to pull" count fresh while a project in a repository with an upstream is open, by background-fetching every two minutes (`BACKGROUND_FETCH_INTERVAL_MS`, 120 000 ms, in `src/git/fetchPolicy.ts`) via `gitStore.refreshUpstream`. Without it the count was only as fresh as the last time the project was opened, so a reviewer could work for an hour against a remote that had moved on and find out only when their pull conflicted. Keyed on the repository root and upstream (not the `repo` object, which is replaced on every reload — restarting the timer each time would also restart the two-minute wait). `refreshUpstream` also runs once when the repository is detected and whenever the Git panel opens; this hook is only the periodic refresh on top of those event-driven reads.
 
@@ -2752,39 +2837,40 @@ App appearance is controlled by a settings module that persists to `localStorage
 
 ## App Initialization (`src/App.tsx`)
 
-1. Every hook (`useKeybindings()`, `useDirtyGuard()`, `useElectronCloseGuard()`, `useConsolidationAlignment()`, `useAutosave()`, `useUpstreamPolling()`) and every store selector is called at the top level, unconditionally — React's rules of hooks require this even though most of them are meaningless outside Electron.
-2. **The discontinuation gate**: `if (!isElectron()) return <the "use the desktop app" welcome screen>` — checked *after* the hooks above but *before* any project-opening UI (`Toolbar`, the workspace, the welcome screen's "Open project…" button, drag-and-drop) is reached. See the Overview's "SaiLoR is Electron-desktop-only". There is no `?project=<url>` auto-load any more — that loader (`loadFromUrl`) was deleted along with the rest of the browser build.
-3. Past the gate (Electron only): renders `Toolbar` always. If a project is loaded, renders the three-pane workspace; otherwise shows a welcome screen with an "Open project…" button and, if there are recent projects, a clickable list of them wired to `openRecent(id)`.
-4. `ErrorPanel` is always rendered (renders null when no error).
+1. Every hook (`useKeybindings()`, `useDirtyGuard()`, `useCloseGuard()`, `useWindowTitle()`, `useConsolidationAlignment()`, `useAutosave()`, `useUpstreamPolling()`) and every store selector is called at the top level, unconditionally — React's rules of hooks require this even though most of them are meaningless outside the Tauri shell.
+2. **The discontinuation gate**: `if (!isTauri()) return <the "use the desktop app" welcome screen>` — checked *after* the hooks above but *before* any project-opening UI (`Toolbar`, the workspace, the welcome screen's "Open project…" button, drag-and-drop) is reached. See the Overview's discontinuation note. There is no `?project=<url>` auto-load any more — that loader (`loadFromUrl`) was deleted along with the rest of the browser build.
+3. Past the gate (Tauri shell only): renders `Toolbar` always. If a project is loaded, renders the three-pane workspace; otherwise shows a welcome screen with an "Open project…" button and, if there are recent projects, a clickable list of them wired to `openRecent(id)`.
+4. `ErrorPanel` is always rendered (renders null when no error). The self-update notice renders from the store's `update`/`updateProgress`/`updateReady`/`updateError` state — a native **Restart to update** flow when `nativeUpdate` is set (download percent while in flight), otherwise the manual **Download for {label}** link from `pickInstaller`.
 
 ## Build Configuration
 
-**`vite.config.ts`** uses `base: './'` so the built SPA works from both a server subpath and `file://` (for Electron), and injects `__APP_VERSION__` from `package.json` so the package file stays the single source of truth for the version. The `ELECTRON=1` environment variable conditionally adds the `vite-plugin-electron` plugin: with it, `electron/main.ts` is built as the main-process entry and `electron/preload.ts` is emitted as **CJS with a `.cjs` extension** (preload scripts load as CommonJS, and the package is `type: module` so a plain `.js`/`.mjs` would be treated as ESM). The renderer is a **plain web build** — Node is deliberately not bundled into the renderer, which talks to main only through the `window.slr` preload bridge. Without `ELECTRON=1`, `vite` still produces a static SPA bundle, but `App.tsx`'s `isElectron()` gate blocks every project-opening UI in that runtime before it can do anything (see the Overview).
+**`vite.config.ts`** uses `base: './'` so the built SPA works from a server subpath and from the packaged shell, and injects `__APP_VERSION__` from `package.json` so the package file stays the single source of truth for the version. In `tauri dev` the dev server must sit on port **5173** (`strictPort`) because `tauri.conf.json`'s `devUrl` points there. The renderer is a **plain web build** — Node is not bundled into the renderer at all; everything native goes through the `SlrBridge` → Tauri IPC seam. `tauri build` produces the renderer bundle and the Rust shell from `src-tauri/` (see [operations](operations/build-release.md)).
 
-**TypeScript is split across two project-reference files** coordinated by the bare `tsconfig.json`: `tsconfig.app.json` (the renderer — `include: ["src"]`, `types: ["vite/client"]`, JSX, DOM libs) and `tsconfig.node.json` (the main process, preload, build config, and e2e — `include: ["vite.config.ts", "electron/**/*.ts", …]`, `types: ["node"]`). Both are `noEmit: true` (Vite/esbuild emit the JS; tsc only type-checks), and neither is `composite`, which is what lets a pure module like `src/git/url.ts` or `src/git/relpath.ts` be imported into `electron/main.ts` (under the node program) *and* reached by vitest's `src/**` test include (under the app program) and typecheck identically in both — the security gates `validateGitUrl`/`relPathProblem`/`refProblem` rely on exactly that dual-membership to stay unit-tested from the renderer's program while being enforced in the main process.
+**TypeScript is split across two project-reference files** coordinated by the bare `tsconfig.json`: `tsconfig.app.json` (the renderer — `include: ["src"]`, `types: ["vite/client"]`, JSX, DOM libs) and `tsconfig.node.json` (the build and integration-test configs — `vite.config.ts`, `vite.probe.config.ts`, `vitest.integration.config.ts`, and the `samples/git-scenarios` fixtures; `types: ["node"]`). Both are `noEmit: true` (Vite/esbuild emit the JS; tsc only type-checks). Note the split no longer does the job it did under Electron: there is no `electron/` program importing `src/` any more, so the renderer's security gates (`validateGitUrl`/`relPathProblem`/`refProblem` in `src/git/`) live only under the app program — where vitest's `src/**` include can unit-test them — and the Rust shell re-implements them at the trust boundary (`validate_git_url`/`ref_problem`/`rel_path_problem` in `git.rs`), because a renderer-side check is advisory once the renderer is untrusted. The two sets are kept in sync by hand and pinned by the git-scenario integration fixtures (`vitest.integration.config.ts`).
 
 ## Change Guidance
 
-- **Adding a new platform operation**: Add it to `PlatformAdapter`, implement it in `ElectronAdapter`, then call from the store or components. No change to `createUnsupportedAdapter` is needed — its `Proxy` trap auto-throws `"SaiLoR for the web is discontinued"` for any method not on its real object (`kind`, `getRecents`), so a newly added method is a backstop by default; see "Why the seam still exists" above.
+- **Adding a new platform operation**: Add it to `PlatformAdapter`, implement it in `DesktopAdapter` (`src/platform/desktop.ts`), then call from the store or components. If it needs a new shell call, the full chain is: bridge method in `SlrBridge` (`src/platform/bridge.ts`), a `#[tauri::command]` in `src-tauri/src/` registered in `main.rs`'s `invoke_handler`, the `command()` channel mapping in `src/platform/tauri.ts` (channel names map to snake_case commands), and the adapter method. All four must stay in sync. No change to `createUnsupportedAdapter` is needed — its `Proxy` trap auto-throws `"SaiLoR for the web is discontinued"` for any method not on its real object, so a newly added method is a backstop by default; see "Why the seam still exists" above.
 - **Adding a new annotation field type**: Update `FieldType` in `schema.ts`, `emptyValue()` in `annotations.ts`, and `Field.tsx` rendering. Consider validation in the zod schema. Also teach the AI layer about it: `isUnanswered()` in `src/llm/fields.ts`, `coerce()` in `src/llm/parse.ts`, and the type rules in `src/llm/prompt.ts`.
 - **Adding a new LLM provider**: Add it to `Provider` in `src/llm/types.ts` and to `PROVIDERS` in `src/llm/providers.ts` (base URL, whether it is editable, whether it can take a PDF, `tokenParam`), then handle its request shape in `buildRequest` and its response shape in `extractText` / `extractError`. Also add a branch to `buildModelsRequest` / `parseModelsResponse` in `src/llm/models.ts` — its list-models endpoint, auth, and pagination scheme are almost never identical to another provider's chat endpoint even when the chat shape is "OpenAI-compatible" (Mistral's `/v1/models` returns a bare array, not `{data:[...]}`; OpenRouter paginates, Groq doesn't). Decide reasoning-effort support last, and only from what you can confirm — a model-ID pattern if the provider's own docs name specific models, or nothing at all (`null`) if you can't confirm the field/values, per the DeepSeek/`openai-compatible` precedent above. Nothing else needs to change — `PROVIDER_LIST` drives the settings dropdown and the "which providers can take a PDF" hint automatically, so the platform and UI layers are provider-agnostic.
 
   **Verify against the provider's own current docs before writing `buildRequest`, not against another provider's shape.** The bug that made `tokenParam` a field in the first place: this app originally sent `max_tokens` to every OpenAI-shaped provider, and OpenAI's *own* API now rejects that on current models — `"Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead."` xAI and Groq have followed the same rename (both have reasoning-model variants, which is what drove OpenAI's original change); OpenRouter, Mistral, DeepSeek and generic self-hosted OpenAI-compatible servers still document `max_tokens` and do not confirm the newer name. Four vendors that all claim "OpenAI-compatible" disagreed on one required parameter — assume the same is possible for endpoint paths, PDF support, auth header names, list-models shapes, and reasoning-effort contracts, and check each freshly. `supportsPdf` in particular is not "does the vendor support PDFs at all" but "can a **single request** carry the bytes inline the way this app's `PaperPart` does" — Mistral's PDF support needs a fetchable URL (no inline-base64 form in chat completions), and xAI's needs an upload-then-reference flow across two requests, so both are `false` here despite the vendor supporting PDFs some other way.
 - **Changing the schema format**: it is described to the model in `SCHEMA_FORMAT_DOC` (`src/llm/prompt.ts`), which mirrors `docs/annotation-schema.md` §3 by hand. Both must move together, or the model reads an unfamiliar schema against a stale description.
 - **Adding a new keyboard shortcut**: Add to `useKeybindings.ts`. Check `isEditable()` if it should be ignored inside input fields.
-- **Changing the Electron IPC surface**: Update `preload.ts` (the `SlrBridge` interface), `electron/main.ts` (IPC handler), and `src/platform/electron.ts` (adapter method). All three must stay in sync.
-- **Adding a git operation**: add the new operation as an *enumerated* handler in `electron/main.ts`
+- **Changing the platform IPC surface**: Update `SlrBridge` (`src/platform/bridge.ts`), the Rust command (`src-tauri/src/*.rs`, registered in `main.rs`), the `command()` mapping in `src/platform/tauri.ts`, and the adapter method in `src/platform/desktop.ts`. All must stay in sync.
+- **Adding a git operation**: add the new operation as an *enumerated* command in `src-tauri/src/git.rs`
   (never widen the renderer's power to name an argv — see "The renderer never names an argv" above),
-  the matching bridge method in `preload.ts`, the method on `GitPlatform` in `src/git/types.ts`, and
-  the pass-through in `ElectronAdapter`'s `git` object (`src/platform/electron.ts`) — a `private
+  the matching bridge method in `src/platform/bridge.ts`, the method on `GitPlatform` in `src/git/types.ts`, and
+  the pass-through in `DesktopAdapter`'s `git` object (`src/platform/desktop.ts`) — a `private
   readonly` field, not a fresh object literal per `getGit()` call, since `getPlatform()` is a
   singleton and a new object every call would make every `useGitStore` selector see a "different"
   platform and churn. Keep the *decision* (what the operation does, what it validates) in `src/git/`
-  where it is unit-testable; keep the *argv* in `electron/main.ts` where it is enforced. If the
+  where it is unit-testable; keep the *argv* in `git.rs` where it is enforced, and mirror any
+  renderer-side gate as a Rust re-check at the trust boundary. If the
   operation takes a ref name the renderer chooses (a branch to merge, a revision to diff), validate
-  it with `refProblem` (`src/git/ref.ts`, imported as `assertRef` in `electron/main.ts`) — the same
-  pattern as `assertRelPath` for paths, and for the same reason: it is a security gate on input that
-  reaches a spawned process, kept out of `electron/` so the test suite can reach it.
+  it with `refProblem` (`src/git/ref.ts`, mirrored as `ref_problem` in `git.rs`) — the same
+  pattern as `relPathProblem` for paths, and for the same reason: it is a security gate on input that
+  reaches a spawned process.
 - **Adding a new settings/appearance option**: Add to `src/state/settings.ts` (load/apply functions), add state + actions to the store, add UI controls to `Toolbar.tsx`, and add keybindings if needed.
 - **Touching anything that reads or writes the current paper's annotation data**: route it through `currentTree()` (`src/state/store.ts`) rather than `paper.annotations` directly, or it will silently ignore reviewer selection on a multi-reviewer project. Grep for `.annotations` across `src/` and check each hit against "should this see the active reviewer's tree or always the consolidated one". The direct reads that remain outside `src/model/` are deliberate: `currentTree()`'s own body; `ConsolidationDialog`, which reads the consolidated tree *on purpose* (it is showing you what the final answer currently is); `editorStore`, which edits the file's papers and has no reviewer concept; and null-project fallbacks.
 - **Reading a screening project's schema**: always go through `loadProject`/`Project.schema`, never the raw file. `config.screening.reasons` is the single source of truth; `config.schema` in the on-disk JSON is a *projection* of it that `loadProject` ignores and `serializeProject` rewrites on every save (see *Screening* above). A tool that reads the raw JSON's `config.schema` directly (rather than through this app) will see the derived snapshot from whenever the file was last saved, not something it can trust to reflect a hand-edited `reasons` list until the file is re-saved.

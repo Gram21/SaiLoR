@@ -53,9 +53,6 @@ sources:
   - id: openwiki-source-9b13c737ac155b0b0c8d76b9
     resource: repo://vitest.integration.config.ts
 generated: {by: "openwiki/0.5.0", at: "2026-09-01T19:42:14.192Z"}
-verified:
-  - by: openwiki/0.5.2
-    at: 2026-09-23T12:49:55.013Z
 ---
 
 # SaiLoR — Quickstart

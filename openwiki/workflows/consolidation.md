@@ -1,8 +1,8 @@
 ---
 type: workflow
 title: Multi-Reviewer Consolidation
-description: How multiple reviewers' independent annotation trees are aligned by optimal entry matching, compared field by field, and reconciled into a single consolidated tree — covering the alignment pipeline, agreement/disagreement detection, inter-rater statistics, batch unanimous adoption, and the consolidation UI.
-tags: [consolidation, alignment, agreement, disagreement, inter-rater, kappa, review]
+description: How multiple reviewers' independent annotation trees are aligned by optimal entry matching (align.ts + maxWeightAssignment, similarity metrics), compared field by field through the stored alignment, and reconciled into a single consolidated tree — covering the useConsolidationAlignment scheduler and its consolidationSync gate, growing/freezing/widening the tree, readiness checks, inter-rater statistics, batch unanimous adoption, and the disagreement/export surface.
+tags: [consolidation, alignment, agreement, disagreement, inter-rater, kappa, unanimous, readiness, review]
 sources:
   - id: openwiki-source-9c47bc2d5a88a325778add4b
     resource: repo://src/components/AgreementDialog.tsx
@@ -48,8 +48,8 @@ sources:
     resource: repo://src/state/store.ts
 generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
 verified:
-  - by: openwiki/0.4.0
-    at: 2026-09-22T07:19:01.173Z
+  - by: openwiki/0.7.3
+    at: 2026-11-02T08:58:22.323Z
 ---
 
 # Multi-Reviewer Consolidation
@@ -72,11 +72,11 @@ view.
 
 ```mermaid
 flowchart TD
-  A["Reviewers annotate independently\n(trees in their own order)"] --> B["useConsolidationAlignment\naligns one node per frame"]
-  B --> C["alignNode → alignLevel → alignList\nmaxWeightAssignment per reviewer"]
+  A["Reviewers annotate independently\n(each tree in its own order)"] --> B["useConsolidationAlignment\nconsolidationSync gate, one node per frame"]
+  B --> C["alignNode → alignLevel → alignList\nmaxWeightAssignment per fold-in"]
   C --> D["toStoredAlignment + growConsolidated\nstore mapping, grow consolidated tree"]
   D --> E["disagreements.ts verdicts\nvia alignedReviews"]
-  E --> F["ConsolidationVerdicts colors Field.tsx\nagree / disagree / oneSided"]
+  E --> F["ConsolidationVerdicts colors Field.tsx\nagree / disagree"]
   F --> G["ConsolidationDialog per-field resolution\nor adoptAllUnanimousAnnotations batch"]
   G --> H["Consolidated tree updated\nvia resolveConsolidationValue / fills"]
   E --> I["agreement.ts → metrics.ts\nCohen κ, Fleiss κ, Krippendorff α"]
@@ -84,6 +84,31 @@ flowchart TD
 
 The diagram shows the alignment → comparison → resolution → apply flow, with
 the agreement-statistics path branching from the same aligned view.
+
+## The one-way seat model
+
+The flow above only makes sense because every seat is one-directional:
+
+- A **numbered reviewer's seat** reads and writes that reviewer's own tree
+  (`paper.reviews["N"]`), routed there by `currentTree`.
+- The **Consolidation seat** reads and writes `paper.annotations` — the same
+  tree a single-reviewer project uses exclusively, and the one that ships.
+- Consolidation **never writes a reviewer's tree**. The reviewers' trees are
+  *inputs*; everything consolidation produces — the consolidated answers, the
+  stored entry mapping (`paper.alignment`), the equivalence marks
+  (`paper.equal`), and the `consolidationSync` mark — is persisted alongside
+  the consolidated annotations (written only when non-empty, so a paper
+  consolidation has never touched stays clean on disk).
+- The AI button is not rendered in this seat, and `applyAiSuggestions`
+  refuses it even if the dialog was opened as a reviewer and the seat switched
+  afterwards: a model's answer would be a fresh opinion invented after the
+  fact, written into the tree that ships and dressed as a reconciliation of
+  the others.
+
+Two consequences run through the rest of this page: every cross-reviewer read
+must project through the stored mapping (never the reviewers' raw order), and
+the automatic steps must not run twice over the same reviewer state — which is
+what `Paper.consolidationSync` exists to prevent.
 
 ## The core problem: entry matching
 
@@ -127,6 +152,13 @@ most entries first, then by numeric id — so the same input always produces the
 same alignment; an alignment that shifted between runs would reorder saved data
 for no reason.
 
+Slot scores are averaged, not summed: `simAgainstSlot` divides the combined
+`Sim`'s weight by the member count, because `combine` sums weights and the
+assignment maximises `score × weight` — without the division a slot two
+reviewers had already landed in would outbid a better-matching emptier one on
+headcount alone, pulling an exact match into the crowded slot while the
+anchor's identical entry sat alone reporting agreement 0.
+
 Two constants govern the matching, both small enough to be overruled by any
 real agreement:
 
@@ -149,8 +181,12 @@ real agreement:
   clear 0.5 on their own anyway.
 - `NEW_SLOT_WEIGHT` and `ORDER_TIE_BREAK` — an entry that matches none of the
   existing slots opens a new slot of its own rather than being forced into a
-  leftover one. A reviewer recording a finding nobody else wrote down ends up
-  as its own slot, ready for the consolidator to verify or discard.
+  leftover one, so a reviewer recording a finding nobody else wrote down ends
+  up as its own slot, ready for the consolidator to verify or discard.
+  `ORDER_TIE_BREAK` is the even smaller nudge for the zero-evidence case: when
+  two entries share no comparable content at all, there are no grounds to pair
+  them and none to separate them, so the matcher falls back to the order the
+  reviewers already used instead of shuffling arbitrarily.
 
 After slots are formed, `scoreSlot` computes each slot's `agreement` (0..1,
 averaged over every distinct pair of members) and `evidence` (how much that
@@ -180,16 +216,17 @@ averaging scores alone cannot express that.
 - **free text** uses `stringSimilarity`, which takes the more forgiving of
   Levenshtein ratio (handles typos and inflections) and token Dice coefficient
   (survives reordering and padding). Both are blind to meaning — "RCT" and
-  "randomised trial" score 0 here.
+  "randomised trial" score ~0 here.
 
 `combine` reduces per-field verdicts into a weighted mean whose total weight
 carries forward, so a parent group's verdict still knows how much it rests on.
 The `TextSimCache` memoises text comparisons on the value pair — nearly all the
 matcher's time goes here, since reviewers annotating one paper write many of the
 same short answers, and caching the value pair (with a length-prefixed
-unambiguous key) brings a deliberately punishing paper from ~2.3s to ~270ms.
+unambiguous key, so a value containing the separator cannot collide two pairs)
+brings a deliberately punishing paper from ~2.3s to ~270ms.
 
-### Stored alignment and persistence
+## Stored alignment and persistence
 
 The computed `TreeAlignment` is reduced to its persistable half by
 `toStoredAlignment` (`src/consolidate/apply.ts`): who is in each slot, and
@@ -221,7 +258,27 @@ reviewer wrote can go missing from a view built on a mapping that has fallen
 behind. The projection is read-only in spirit — callers must not write through
 it; the reviewers' stored trees are the authority.
 
-### Growing the consolidated tree
+Two things keep the stored record honest as the data moves underneath it:
+
+- **Deleting an entry maintains the mapping** (`removeInstance` in
+  `store.ts`). A reviewer deleting one of their own entries drops that
+  membership and shifts only *their* indices above it, leaving everyone else's
+  memberships exactly as they were; the consolidator deleting a consolidated
+  entry splices out the slot at that index (the consolidated array is only ever
+  grown in slot order, so the removed index *is* the slot position). Left
+  unfixed, every slot at or above the removed index would keep naming the entry
+  that used to be there, misattributing reviewer answers in every compare popup.
+- **Git merges the mapping per node** (`mergeAlignment` in
+  `src/git/merge.ts`): a three-way merge keyed by node name, so two
+  consolidators who touched different nodes do not read as having disagreed.
+  A node matched differently on both sides silently keeps *ours* — a derived
+  claim, recoverable by reopening Consolidation, with no canonical path to
+  raise a conflict on.
+
+See [Data Model](../concepts/data-model.md) for the on-disk shape and
+[Git Integration](git-integration.md) for the merge rules.
+
+## Growing the consolidated tree
 
 `growConsolidated` gives the consolidated tree one entry per slot so the
 consolidator finds the entries already laid out instead of counting the
@@ -233,30 +290,47 @@ when the data already fitted. It recurses inside each slot so a repeatable node
 nested under this one is matched within its own parent pair, with a per-entry
 slot count.
 
-### Freezing and widening
+## Freezing and widening
 
 `alignConsolidationNode` (the store action) refuses to recompute a node once
 the consolidator has committed an answer under it (`consolidatorHasAnswered` in
 `src/consolidate/readiness.ts`): slot N means a particular thing to them by
-then. But the freeze must not lock out a reviewer added to the project after
-it, or one who had not started the paper yet — their answers sat in their own
-tree forever, never placed into a slot, dropping out of unanimity checks and
-agreement stats. So a frozen node runs `widenAlignment` instead of a fresh
-`alignNode`: it only ever *adds* a reviewer absent from every slot's `members`,
-never moves one already there, and recurses into the children only of slots a
-newcomer actually landed in.
+then. It also only lets reviewers who have actually written something on the
+paper vote (`hasAnnotations`), and does nothing when fewer than two have —
+there is no second opinion to match against.
 
-### Scheduling
+But the freeze must not lock out a reviewer added to the project after it, or
+one who had not started the paper yet — their answers sat in their own tree
+forever, never placed into a slot, dropping out of unanimity checks and
+agreement stats. So a frozen node runs `widenAlignment` instead of a fresh
+`alignNode`: it operates on the stored (persisted) shape, only ever *adds* a
+reviewer absent from every slot's `members`, never moves one already there,
+and recurses into the children only of slots a newcomer actually landed in —
+so untouched slots' frozen nested matching is left as-is. The widened stored
+shape is reshaped by `storedAsTreeAlignment` into the `TreeAlignment` form
+`growConsolidated` reads (it only ever looks at `.slots.length` and
+`.slots[s].children`). The cost the trade still carries: entries a reviewer
+*adds* after the freeze are not re-matched for that node — comparing them by
+hand still works, and a stale match is visible where a silently re-pointed
+answer is not.
+
+## Scheduling
 
 Matching is not cheap (hundreds of milliseconds on a large paper), so
-`useConsolidationAlignment` runs it whenever Consolidation is the active seat,
-one schema node at a time, yielding to the browser between nodes via
-`setTimeout`. Whatever the reviewer opens the compare popup on jumps the queue
-to the front. Once the queue is drained, "reviewer 2's entry N" means the same
-entry as reviewer 1's, which is the point at which reading across at a fixed
-index is meaningful — so `adoptUnanimousValues` runs at the end of the queue.
+`useConsolidationAlignment` runs it whenever Consolidation is the active seat
+on a multi-reviewer project that is not in view-only mode, one schema node at a
+time, yielding to the browser between nodes via `setTimeout`. The queue is a
+ref, not state — a re-render per node would be pure churn — and the effect
+reads the paper off the store rather than depending on `project`, so the writes
+the run itself makes cannot tear it down and restart it. Whatever the reviewer
+opens the compare popup on jumps the queue to the front. Once the queue is
+drained, "reviewer 2's entry N" means the same entry as reviewer 1's, which is
+the point at which reading across at a fixed index is meaningful — so
+`adoptUnanimousValues` runs at the end of the queue, and `markConsolidationSynced`
+records the state last. Each paper is one undo entry: the first step that
+changes anything takes the snapshot, and the rest fold into it.
 
-#### When the automatic steps are allowed to run
+### When the automatic steps are allowed to run
 
 Both steps look repeat-safe and are not. Matching freezes once an answer hangs
 off a node, and adoption only fills fields the consolidated tree has left
@@ -314,6 +388,14 @@ and `oneSided`:
 - **`participantCount`** is how many reviewers have annotated *anything* on
   this paper — not the configured `project.reviewers`, since a reviewer who
   has not started the paper is not withholding an answer.
+
+Booleans are first-class answers here: a present `false` counts as a real
+answer (so a true/false split between two reviewers registers as a
+disagreement), gated per paper on `touchedBy` — `normalizeReviews` writes
+`false` skeletons for papers a reviewer never opened, and those must not read
+as answers. Excluding booleans entirely, as this walk once did, meant the only
+boolean units surviving the two-answer gate were guaranteed agreements and
+every real boolean disagreement was silently discarded, inflating κ.
 
 A field fewer than two reviewers answered carries no agreement information at
 all; callers computing a statistic must gate on `answeredBy.length >= 2`
@@ -377,7 +459,8 @@ flowchart TD
   "Agreement", and an Export dropdown that renders `projectDisagreementsText`.
 - **`DisagreementOverview`** — one paper's unresolved fields. Clicking a field
   calls `openConsolidation(path, name, index, true)`, which opens the compare
-  popup and drops the list.
+  popup and drops the list (`closeConsolidation` restores it, and its own
+  close restores the overview that opened it).
 - **`ConsolidationDialog`** — the per-field compare popup, only reachable from
   Consolidation mode's compare button on a field. It shows every reviewer's
   answer for that one field side by side (read from the lined-up view, since
@@ -389,9 +472,14 @@ The dialog's actions:
 - **Take a reviewer's answer** writes through `resolveConsolidationValue` —
   Consolidation *is* the active reviewer, so the write lands in the
   consolidated tree via `currentTree`'s routing; nothing dialog-specific is
-  needed on the store side.
+  needed on the store side. Taking an answer does *not* mark the field
+  equivalent — only the explicit checkbox may set `paper.equal`, or every
+  routine resolution would inflate the very agreement statistics this feature
+  reports. Taking a blank answer defers instead of writing an empty value.
 - **Enter a different value** / **Defer** calls `deferConsolidationValue`,
-  which records the field as deliberately left open without stranding it.
+  which records the field as deliberately left open (shown by `Field.tsx`'s
+  `consolidation-pending` class) without stranding it; the next ordinary write
+  to that field clears the deferral.
 - **Mark equivalent** (`toggleFieldEquality`) settles *that* the reviewers
   agreed without recording *what* they agreed on. `closingWouldStrand` catches
   the worst combination — marked equal but no value recorded — and the dialog
@@ -399,7 +487,9 @@ The dialog's actions:
   mark) until the consolidator either picks a value or un-marks. A screening
   decision can never be marked equivalent ("Include and Exclude mean the same
   thing" is not a claim anyone can make); the checkbox stays available on the
-  Reason field.
+  Reason field. The guard is not only the popup's: any Consolidation-seat write
+  that empties a field afterwards clears the equality mark too, so a field
+  cannot stay "resolved" while holding no answer.
 
 `agreementVerdict` decides the popup's agree/disagree badge in `comparable()`
 form (case/whitespace-normalised), matching `disagreements.ts` and
@@ -424,7 +514,8 @@ once ticked, so untouched checkboxes do not count as unanimous `false`.
 the entries have been lined up — so the scheduler runs it after the alignment
 queue drains, and `adoptUnanimousValues` passes the reviews through
 `alignedReviews` first. Adopted values carry the same `consolidation` AI-mark
-the AI's fills get, so they are visibly the app's doing until the consolidator
+the AI's fills get (scoped to the Consolidation seat, the only one that can
+produce them), so they are visibly the app's doing until the consolidator
 looks at them.
 
 `adoptAllUnanimousAnnotations` runs the whole project as one batch, paper by
@@ -434,8 +525,22 @@ so the entry that gets pushed holds the project as it was before the first
 write. A paper whose alignable node the consolidator has already answered is
 *skipped whole* — alignment declines to re-match an answered node, and reading
 across its unaligned entries at a fixed index would invent agreement rather
-than find it. The run reports progress (`unanimousRun`) and is stopped if the
-project is closed or replaced.
+than find it. It refuses outright on a screening project (screening has its
+own synchronous `adoptAllUnanimousScreening`, whose schema has no repeatable
+node to line up) and while another run is in flight, since two interleaved runs
+would split the batch across two undo entries. The interactive per-paper path
+has no equivalent of the paper-level guard — it adopts as soon as its queue
+drains, relying on each node's recorded mapping — so the batch is the strictly
+more conservative of the two.
+
+Progress is published to `unanimousRun` (`{ done, total, filled, skipped,
+running }`) rather than returned, driving the button's label while busy and a
+dismissible result notice once it finishes. The run is stopped by
+`stopUnanimousRun` — called from undo and redo, whose history entry would
+otherwise be inconsistent with the writes the run went on to make — and by
+closing or replacing the project, which clears `unanimousRun` and with it the
+loop's own `running` check. `AgreementDialog`'s "Line them up now" button runs
+the same action from the alignment warning banner.
 
 ### Readiness checks
 
@@ -453,7 +558,12 @@ project is closed or replaced.
 - `needsAlignment` — a paper has a repeatable node two or more reviewers
   recorded entries in but Consolidation has not reviewed yet, making the
   project-wide statistics unreliable. Reported as a count for the warning
-  banner in `AgreementDialog`.
+  banner in `AgreementDialog`. Its signal is `consolidatorHasAnswered`, i.e.
+  "has this been reviewed", not strictly "has this been aligned": a node can
+  be correctly aligned yet still count here until a value is committed under
+  it. That is the conservative side to be wrong on — a caution that outlives
+  its cause is a nuisance; a caution that clears before a human ever looked is
+  the failure this function exists to prevent.
 
 ## Inter-rater agreement statistics
 
@@ -503,6 +613,9 @@ it never decides what counts as a disagreement.
 
 ## Extension points and invariants
 
+- **The consolidated tree is the shipping answer; reviewer trees are inputs.**
+  Consolidation writes only `paper.annotations` and its own bookkeeping; the
+  AI is refused in this seat.
 - **The mapping is the authority for "same entry".** Every cross-reviewer read
   — verdicts, statistics, the compare popup, unanimous adoption — projects
   through `alignedReviews` first. New cross-reviewer consumers must do the
@@ -513,11 +626,23 @@ it never decides what counts as a disagreement.
 - **A frozen node only widens, never re-matches.** Once the consolidator has
   answered under a node, `widenAlignment` adds absent reviewers without moving
   existing members or their nested matching.
+- **The stored mapping is maintained, not just written.** Entry deletion shifts
+  or drops the affected memberships; git merges the mapping node by node.
 - **The three agreement consumers must agree.** `comparable()` is shared by
   `unanimous.ts`, `disagreements.ts`, and `ConsolidationDialog`'s
   `agreementVerdict`; a second copy drifting would mean the popup saying
   "reviewers agree" while the statistic counted a disagreement.
+- **Only the explicit mark declares equivalence.** Resolving a disagreement by
+  picking a value never sets `paper.equal`; emptying a field clears it.
 - **Statistics are unreliable until a paper is aligned.** `needsAlignment`
   warns; the fix is to record the matching for every paper rather than only
   the opened one (now a scheduling change, since the mapping is a stored
   thing), not to recompute alignment inside the verdicts.
+
+The matching itself is pinned in `src/consolidate/align.test.ts` (order
+recovery, the union case, the `MIN_MATCH_SCORE` floor, nested non-crossing
+matches), the store side in `src/state/store.align.test.ts` and
+`store.batch-unanimous.test.ts` (the reviewers-untouched guarantee, the
+freeze, the align-then-adopt ordering the batch exists to enforce), and the
+scheduler's repeat-visit behaviour in
+`src/hooks/useConsolidationAlignment.test.tsx`.

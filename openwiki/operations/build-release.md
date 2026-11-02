@@ -1,406 +1,332 @@
 ---
-type: operations
-title: Build, CI, and Release
-description: The Vite + vite-plugin-electron build pipeline, the provider-agnostic CI/electron-builder packaging scripts, GitHub Actions workflows, Ed25519 release signing, Docker Electron builds, and wiki sync mechanics.
-tags: [build, ci, release, electron-builder, docker, signing, github-actions, openwiki]
-sources:
-  - id: openwiki-source-164e2da859b5277df81c7d94
-    resource: repo://.github/workflows/ci.yml
-  - id: openwiki-source-a722bbb5eba6ff5dc663e4a4
-    resource: repo://.github/workflows/integration-tests.yml
-  - id: openwiki-source-6d3ac2bdfb0e76882a670989
-    resource: repo://.github/workflows/openwiki.yml
-  - id: openwiki-source-4d1d392666be6dfdd7a91a2e
-    resource: repo://.github/workflows/release.yml
-  - id: openwiki-source-794b8a6d2fa178d64fce49a3
-    resource: repo://.github/workflows/wiki-import.yml
-  - id: openwiki-source-a7a8965ff53d3530162adf6d
-    resource: repo://.github/workflows/wiki-publish.yml
-  - id: openwiki-source-0c106052b3286e779bed85e7
-    resource: repo://docker-compose.dev.yml
-  - id: openwiki-source-3697075a7565dd9399f2baf5
-    resource: repo://Dockerfile.electron
-  - id: openwiki-source-8d6b6eb5e58f91e157e37bde
-    resource: repo://electron/main.ts
-  - id: openwiki-source-5b54a58d1b51cd490b0e7162
-    resource: repo://package.json
-  - id: openwiki-source-e4fdc2103ccb69e4135298d8
-    resource: repo://scripts/afterPack.cjs
-  - id: openwiki-source-ebc09c37829da6e456c89f67
-    resource: repo://scripts/build-electron.sh
-  - id: openwiki-source-0744bbc5adcd6bd563690bde
-    resource: repo://scripts/ci.sh
-  - id: openwiki-source-1d3476a6e83c1e73809d1a15
-    resource: repo://scripts/sign-release.cjs
-  - id: openwiki-source-d550d6b8b447fac29ab966c2
-    resource: repo://src/model/updateSignature.ts
-  - id: openwiki-source-5e1b077422a94ae165e88e4e
-    resource: repo://vite.config.ts
-generated: {by: "openwiki/0.5.0", at: "2026-09-01T19:42:14.192Z"}
+type: "Reference"
+title: "Build, CI, and Release"
+openwiki_generated: true
 verified:
-  - by: openwiki/0.5.0
-    at: 2026-09-01T19:42:14.192Z
+  - by: openwiki/0.7.3
+    at: 2026-11-02T08:58:22.323Z
 ---
+
 
 # Build, CI, and Release
 
-SaiLoR ships as both a static web SPA and a packaged Electron desktop app. The
-build, test, packaging, and release machinery is deliberately split so that the
-real work lives in repo-local scripts that run identically on any CI provider,
-while the GitHub Actions workflows only supply runners and provider-specific
-glue (artifact upload, scheduled triggers, wiki mirroring).
+SaiLoR 2.x is a Tauri app: a Vite/React renderer in `src/` plus a Rust shell in
+`src-tauri/`. The build machinery follows the same split: the real work lives
+in repo-local scripts and `Makefile` targets that run identically locally and on
+any CI provider, while the GitHub Actions workflows only supply runners,
+matrices, and provider-specific glue (artifact upload, scheduled triggers, wiki
+mirroring). The previous Electron-era pipeline (`scripts/build-electron.sh`,
+`sign-release.cjs`, `afterPack.cjs`, `Dockerfile.electron`, and the
+electron-builder section of `package.json`) is gone; the Electron→Tauri
+migration notes live in `docs/tauri-migration.md`.
 
 ```mermaid
 flowchart TD
-  PR["push to main / pull request"] --> CI["ci.yml"]
-  CI --> CiSh["scripts/ci.sh<br/>install → typecheck → check:wiki → test → build"]
-  Rel["release published"] --> RelYml["release.yml"]
-  RelYml --> Int["integration-tests.yml<br/>(jsdom + Playwright/Electron e2e)"]
-  Int --> BuildSh["scripts/build-electron.sh<br/>build:electron → electron-builder"]
-  BuildSh --> Sign["sign-release.cjs<br/>Ed25519 over latest.yml / latest-linux.yml"]
-  Sign --> Attach["installers + .sig attached to release"]
-  Mac["macOS dmg arm64+x64"] --> AfterPack["afterPack.cjs ad-hoc sign"]
-  Win["Windows nsis"] --> Sign
-  Lin["Linux AppImage"] --> Sign
+  PR["push to main/release or pull request"] --> CI["ci.yml"]
+  CI --> CiSh["build job: scripts/ci.sh<br/>install → typecheck → check:wiki → vitest unit<br/>→ integration → vite build"]
+  CI --> Rust["rust job: cargo fmt --check<br/>+ clippy -D warnings"]
+  CI --> TBuild["tauri-build matrix<br/>5 OS: cargo test + tauri build<br/>+ probe build and run"]
+  CI --> TE2E["tauri-e2e (ubuntu, windows)<br/>tauri-driver + node --test e2e"]
+  Tag["push of a v* tag"] --> Rel["release.yml"]
+  Rel --> Draft["release job: preflight checks<br/>+ draft release"]
+  Draft --> Matrix["build matrix: 4 targets<br/>tauri-action + release config"]
+  Matrix --> Feed["latest.json updater feed<br/>signed with TAURI_SIGNING_PRIVATE_KEY"]
+  Pub["release published"] --> Zenodo["zenodo job: archive on Zenodo"]
 ```
 
-*Build, CI, and release flow. CI runs on every push/PR; release runs only on a
-published GitHub Release and is gated by the integration/e2e suite.*
+*Build, CI, and release flow. CI runs on every push/PR; a `v*` tag builds
+installers and a signed updater feed into a draft release, which is archived on
+Zenodo when published.*
 
 ## Build pipeline
 
-### Static SPA build (`npm run build`)
+### What a build produces
 
-`npm run build` is `tsc -b && vite build` — it type-checks via the TypeScript
-project references (`tsconfig.app.json` for `src`, `tsconfig.node.json` for
-`vite.config.ts`, the Electron sources, `e2e/`, and the integration/vitest
-configs) and then produces a plain static SPA in `dist/`. The Vite config
-(`vite.config.ts`) uses `base: './'` so the output works both from a server
-subpath and from `file://`, and injects `__APP_VERSION__` from `package.json`
-so the app's version stays single-sourced.
+The renderer is a plain Vite SPA. `npm run build` is `tsc -b && vite build`
+and emits `dist/` (with `base: './'` and `__APP_VERSION__` injected from
+`package.json`, which stays the single source of truth for the version —
+`src-tauri/tauri.conf.json` reads `"version": "../package.json"`). The default
+`vite.config.ts` also defines the unit-test config: jsdom environment,
+`src/**/*.test.{ts,tsx}`, excluding `*.integration.test.*` so `npm test` stays a
+fast per-PR gate; the integration suite runs separately via
+`npm run test:integration` (`vitest.integration.config.ts`).
 
-The `vite-plugin-electron` integration is **gated on `ELECTRON=1`**. Without
-it, `vite` produces the static SPA only — no Electron main/preload is built and
-no desktop shell is launched. This is the build the CI script runs; it exists
-to type-check and exercise the SPA, not to produce a desktop installer.
+The desktop build is `npx tauri build`. Tauri compiles the Rust shell
+(`src-tauri/`, crate `sailor`) with the release profile, bundles `dist/` (the
+`beforeBuildCommand: npm run build` rebuilds the renderer first), and emits
+installer bundles per host OS into `src-tauri/target/release/bundle/` (dmg,
+nsis/exe, AppImage, deb, rpm). `package.json` keeps only plain npm scripts —
+there is no electron-builder section anymore.
 
-### Electron build (`npm run build:electron`)
+### Tauri config variants
 
-`build:electron` is `cross-env ELECTRON=1 npm run build && electron-builder
---publish never`. Setting `ELECTRON=1` activates `vite-plugin-electron`:
+- **`src-tauri/tauri.conf.json`** — the base config: product name `SaiLoR`,
+  identifier `io.github.gram21.sailor`, `frontendDist: ../dist`,
+  `bundle.targets: "all"`, macOS minimum system version 15.0, and the updater
+  plugin pointing at
+  `https://github.com/Gram21/SaiLoR/releases/latest/download/latest.json` with
+  its embedded `pubkey` and `requireSignedVersion: true`. Windows main and the
+  renderer talk to the shell as described in
+  [Tauri Shell](tauri-shell.md).
+- **`src-tauri/tauri.release.conf.json`** — merged over the base for release
+  builds: restricts `bundle.targets` to `app, dmg, nsis, appimage, deb, rpm` and
+  sets `createUpdaterArtifacts: true`, which is what produces the signed
+  `latest.json` feed and `.sig` files from `TAURI_SIGNING_PRIVATE_KEY`.
+- **`src-tauri/tauri.probe.conf.json`** — the CI probe variant: swaps the
+  frontend build to `vite.probe.config.ts` (root `e2e/`, `outDir: ../dist-probe`,
+  port 5199) so the probe binary embeds the e2e page instead of the real app.
 
-- The **main** process entry is `electron/main.ts`, emitted to `dist-electron/`.
-- The **preload** (`electron/preload.ts`) is emitted as **CommonJS with a `.cjs`
-  extension**. This is required because the package is `type: module`, so a
-  `.js`/`.mjs` preload would be treated as ESM, while Electron loads preload
-  scripts as CommonJS. The `rollupOptions.output` is forced to `format: 'cjs'`
-  with `entryFileNames: '[name].cjs'`.
-- The renderer is left as a normal web build with no Node integration (the
-  `renderer` transform option is deliberately omitted).
+The `probe` cargo feature (`[features] probe = []` in `src-tauri/Cargo.toml`,
+commented "Never in a release build") adds the `probe_auto`/`probe_report`
+commands the CI probe and e2e tests drive; it is deliberately absent from
+release builds.
 
-`electron-builder` then packages the app according to the `build` section of
-`package.json` (see [electron-builder configuration](#electron-builder-configuration)).
+The release profile is size-optimized: `opt-level = "s"`, `lto = true`,
+`strip = true`, `codegen-units = 1`, `panic = "abort"`.
 
-## CI: `scripts/ci.sh` and `.github/workflows/ci.yml`
+### Makefile targets
 
-`scripts/ci.sh` is the single source of truth for "does the app build and pass
-its checks." CI providers should do nothing more than check out the code, supply
-a Node.js toolchain, and run it — so the same checks run locally with
-`./scripts/ci.sh`. It runs from the repo root under `set -euo pipefail` and
-executes, in order:
+Local repro goes through the `Makefile` (run `make` for the target list):
 
-1. **Install** — `npm ci` when `package-lock.json` is present, else `npm install`.
-   Skipped entirely when `SKIP_INSTALL=1` (deps already present).
-2. **Type checking** — `npm run typecheck` (`tsc -b --noEmit`).
-3. **Wiki link check** — `npm run check:wiki` (`scripts/check-wiki-links.js`,
-   over `openwiki/` and `user-guide/`).
-4. **Tests** — `npm test` (`vitest run`). The default vitest config excludes the
-   slow integration suite (`*.integration.test.*`), so this is the fast
-   per-PR unit-test gate.
-5. **Build** — `npm run build` (the static SPA build, which also drives the
-   `tsc -b` project-reference type-check).
+| Target | What it does |
+|---|---|
+| `make setup` | `scripts/setup.sh` (macOS/Linux) or `scripts/setup.ps1` (Windows): checks Xcode CLT / build tools, Node ≥ 22, Rust, and the Tauri system libraries (webkit2gtk, libxdo, appindicator, librsvg, …). Every install step asks first. |
+| `make install` | `npm ci` |
+| `make dev` | `npx tauri dev` (hot reload; renderer dev server on the fixed port 5173 from `devUrl`) |
+| `make web` | `npm run dev` (renderer in a browser only) |
+| `make build` | `npx tauri build` — release installer for this OS |
+| `make build-debug` | `npx tauri build --debug --no-bundle` — debug app, no installers |
+| `make probe` | `npx tauri build --no-bundle --features probe --config src-tauri/tauri.probe.conf.json` |
+| `make check` | `typecheck lint test` (TS typecheck, `cargo fmt --check` + clippy `-D warnings`, JS + Rust unit tests) |
+| `make test-integration` | `npm run test:integration` |
+| `make clean` | removes `dist/`, `dist-probe/`, `cargo clean` |
+| `make report` | `make -C technical-report` (the PDF) |
+| `make docker-linux` | Linux bundles in Docker (below) |
 
-`.github/workflows/ci.yml` runs this script on `ubuntu-latest` (Node 24) on
-**push to `main`** and on **every pull request** (whatever it targets — a PR
-onto a release branch needs the same checks as one onto main). It deliberately
-does *not* combine a push-on-every-branch trigger, since a branch with an open
-PR would then build twice per push. A `concurrency` group keyed on
-`${{ github.workflow }}-${{ github.ref }}` with `cancel-in-progress: true`
-keeps only the newest commit per ref. `workflow_dispatch` allows a manual run.
+Installers land in `src-tauri/target/release/bundle/` (`bundle/dmg`,
+`bundle/macos`, `bundle/nsis`, `bundle/appimage`, `bundle/deb`, `bundle/rpm`).
 
-### Integration and e2e tests (separately gated)
+## CI: `.github/workflows/ci.yml`
 
-The heavier test suites are pulled out of the per-PR CI into a **reusable**
-workflow, `.github/workflows/integration-tests.yml`, triggerable via
-`workflow_call` and `workflow_dispatch`. It has two jobs:
+One workflow for everything that checks code; release and report workflows
+stay separate. Triggers: push to `main` and to `release/**`, every pull
+request, and `workflow_dispatch` — all with `paths-ignore: technical-report/**`
+(report-only changes don't rebuild the app). There is deliberately no
+push-on-every-branch trigger: a branch with an open PR would build twice per
+push. A `concurrency` group on `${{ github.workflow }}-${{ github.ref }}` with
+`cancel-in-progress: true` keeps only the newest commit per ref.
 
-- **`integration-test`** — `npm run test:integration`
-  (`vitest run --config vitest.integration.config.ts`), the jsdom-based
-  integration suite in `src/test/integration/` that spins up a real scratch git
-  repo per test. It mocks the platform seam entirely.
-- **`e2e-test`** — a real Electron smoke test (`npm run test:e2e`, which is
-  `cross-env ELECTRON=1 npm run build && playwright test`) that launches the
-  actual packaged main process and drives its real `contextBridge`/IPC. It needs
-  a real display (Electron opens a native window on Linux regardless), hence
-  `xvfb-run -a`.
+Four jobs:
 
-`release.yml` gates its build job on this reusable workflow via `uses:`, so a
-broken end-to-end workflow can't reach a packaged release, while the workflow
-stays independently runnable from the Actions tab for a fast check without a
-full release run.
+- **`build`** (ubuntu-latest, Node 24) runs `scripts/ci.sh` — the
+  provider-agnostic single source of truth ("does the app build and pass its
+  checks"). It runs from the repo root under `set -euo pipefail` and executes,
+  in order: install (`npm ci`, or `npm install` on a lockfile-less fresh clone;
+  skippable with `SKIP_INSTALL=1`), typecheck (`tsc -b --noEmit`), the wiki-link
+  check (`npm run check:wiki`), `npm test` (unit), `npm run test:integration`,
+  and the SPA build (`npm run build`). Unlike the Electron era, integration
+  tests run in the main script too.
+- **`rust`** (ubuntu-latest) lints the shell: installs the Tauri system
+  libraries, then `cargo fmt --check` and `cargo clippy --all-targets
+  --all-features -- -D warnings`. Rust *tests* don't run here — they run per OS
+  in `tauri-build`.
+- **`tauri-build`** — a `fail-fast: false` matrix over
+  `macos-15, macos-26, windows-latest, ubuntu-22.04, ubuntu-24.04`. Each runner
+  installs the Linux Tauri libraries when applicable, runs
+  `cargo test --manifest-path src-tauri/Cargo.toml`, builds the real installer
+  bundle (`npx tauri build`) and reports installer sizes, then builds the probe
+  (`--no-bundle --features probe --config src-tauri/tauri.probe.conf.json`) and
+  **runs it**: with `SAILOR_PROBE_PROJECT` pointing at
+  `samples/project.example.json` and the report at
+  `SAILOR_PROBE_REPORT`, it waits up to 60 s for a `RENDER OK | PDF ERROR |
+  RENDER ERROR` line and then asserts the report contains both `RENDER OK` and
+  `-> 403` (the traversal check). On Ubuntu the headless WebView runs under
+  `xvfb-run -a`. The report is uploaded as a `probe-report-<os>` artifact even
+  on failure.
+- **`tauri-e2e`** — `fail-fast: false` over `ubuntu-24.04` and
+  `windows-latest` (tauri-driver has no macOS support). It installs
+  `tauri-driver --locked` and, on Windows, downloads a matching `msedgedriver`
+  for the installed WebView2 version by reading the EdgeUpdate registry key and
+  prepends it to `PATH`. It rebuilds the probe binary and runs
+  `node --test e2e/probe.test.mjs` — under `xvfb-run -a` on Linux; on Windows
+  via gsudo at **medium integrity** (`sudo --integrity Medium`), because
+  WebView2 ignores the driver's
+  `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` in the runner's elevated process, and
+  with `icacls` granting Everyone full access to the workspace so the
+  medium-integrity process can read it.
 
 ## Release: `.github/workflows/release.yml`
 
-Triggered on a **published GitHub Release** (`release: [published]`) and by
-`workflow_dispatch` (a manual dry run that builds artifacts but uploads nothing
-to a release). It requires `permissions: contents: write` to attach assets.
+Triggers: push of a `v*` tag, `workflow_dispatch`, and `release: [published]`.
+It has `permissions: contents: write` and a non-cancelling concurrency group.
+The jobs:
 
-1. **`integration-tests`** job — calls `integration-tests.yml` (see above) as a
-   gate.
-2. **`build`** matrix job (`needs: integration-tests`, `fail-fast: false`) —
-   one runner per OS, each running `./scripts/build-electron.sh`:
+1. **`release`** (skipped when the event itself is a release publication) — the
+   preflight and draft step. It checks that the pushed tag matches
+   `v<version>` from `package.json`, that `plugins.updater.pubkey` in
+   `tauri.conf.json` is no longer the `REPLACE_` placeholder, and that the
+   `TAURI_SIGNING_PRIVATE_KEY` secret is set. It then finds or creates a
+   **draft** GitHub release for the tag, refusing if the release is already
+   published. The draft's notes state the support contract: macOS 15 or later,
+   AppImage/Windows/macOS builds update in-app, `.deb`/`.rpm` users update
+   manually, and **users of 1.x must install this release once by hand**
+   (the 1.x Electron app cannot auto-update across the 2.0 migration).
+2. **`build`** (`needs: release`, `fail-fast: false`) — a four-target matrix:
+   `macos-15` × `aarch64-apple-darwin`, `macos-15` × `x86_64-apple-darwin`,
+   `windows-latest` × `x86_64-pc-windows-msvc`, `ubuntu-22.04` ×
+   `x86_64-unknown-linux-gnu`. Each runner optionally sets up macOS
+   signing/notarization (`APPLE_SIGNING_IDENTITY` defaults to `-` for ad-hoc
+   signing; empty `APPLE_*` secrets are deliberately not exported because an
+   empty value makes the bundler attempt and fail signing) and optional Windows
+   Authenticode signing (writing a `tauri.windows.conf.json` overlay with the
+   certificate thumbprint only when `WINDOWS_CERTIFICATE` is set). It then runs
+   `tauri-apps/tauri-action@v1` with `--target <matrix target> --config
+   src-tauri/tauri.release.conf.json`, passing
+   `TAURI_SIGNING_PRIVATE_KEY(_PASSWORD)` and the draft `releaseId`, so the
+   updater artifacts (`latest.json`, per-platform `.sig` files, installers) are
+   **signed with the Tauri updater key and attached to the draft release** —
+   not a separate Ed25519 scheme as in the Electron era.
+3. **`check-updater-json`** — downloads `latest.json` from the draft and asserts
+   it lists all four platforms (`darwin-aarch64`, `darwin-x86_64`,
+   `windows-x86_64`, `linux-x86_64`). The build jobs merge their platform into
+   the feed one after another and a race can drop one; re-running the failed
+   build job adds it back.
+4. **`zenodo`** (only on a published release) — archives the release on Zenodo
+   as a new version of the existing record (concept recid `23804729`, shared
+   concept DOI): a `git archive` source zip plus every release asset, with the
+   GitHub release notes rendered to markdown as the description, GPL-3.0-only
+   license, and an `isIdenticalTo` related identifier. New versions start from
+   the previous version's files (which are deleted and replaced), and publishing
+   on Zenodo is permanent.
 
-   | OS | Target | Artifacts uploaded | Feed signed |
-   |---|---|---|---|
-   | `macos-latest` | `dmg` (arm64 + x64) | `release/*.dmg` | — (no feed on mac) |
-   | `windows-latest` | `nsis` | `*.exe`, `*.exe.blockmap`, `latest.yml`, `latest.yml.sig` | `release/latest.yml` |
-   | `ubuntu-latest` | `AppImage` | `*.AppImage`, `latest-linux.yml`, `latest-linux.yml.sig` | `release/latest-linux.yml` |
-
-   Artifacts are always uploaded to the workflow run (`sailor-<os>`, with
-   `if-no-files-found: error`) so a `workflow_dispatch` build is still
-   downloadable; they are attached to the release (`softprops/action-gh-release@v2`)
-   only when `github.event_name == 'release'`.
-
-`scripts/build-electron.sh` mirrors `ci.sh`'s shape: run from repo root,
-optionally install deps (`SKIP_INSTALL=1` to skip), then `npm run build:electron`,
-then `ls -lh release/`. electron-builder auto-detects the host OS and emits the
-matching target into `./release/`.
-
-### Release signing (Ed25519 feed signature)
-
-Because there is no purchased Authenticode/Apple code-signing certificate
-(see [Installer signing and user-side bypass](#installer-signing-and-user-side-bypass)),
-`electron-updater`'s own publisher-signature check has nothing to verify
-against, and its built-in sha512 installer check only guards against transport
-corruption — the hash comes from the same release channel as the installer, so
-whoever can publish one can publish a matching hash for the other. SaiLoR
-closes that gap independently with an **Ed25519 signature over the feed file**:
-
-- `scripts/sign-release.cjs` reads the `RELEASE_SIGNING_PRIVATE_KEY` secret (a
-  PEM-encoded Ed25519 private key, present only in the release workflow's
-  environment — never committed), signs the raw bytes of the feed file
-  (`latest.yml` on Windows, `latest-linux.yml` on Linux), and writes
-  `<path>.sig` (base64) next to it. It runs once per feed; macOS has no feed at
-  all (see below) and is skipped (`matrix.feed` is empty).
-- The matching **public key is baked into the app** at build time
-  (`RELEASE_PUBLIC_KEY_B64` in `src/model/updateSignature.ts`), never fetched
-  from the release channel being verified.
-- At runtime, `electron/main.ts`'s `verifyUpdateFeed(version)` fetches the same
-  feed file and its `.sig` directly from the release download URL, calls
-  `verifyReleaseSignature(feedBytes, signatureB64, RELEASE_PUBLIC_KEY_B64)`, and
-  **only proceeds to `autoUpdater.downloadUpdate()` if verification passes**.
-  This chains trust: our signature covers the feed file, and electron-updater's
-  existing sha512 check then covers the installer against that now-trusted feed.
-
-The self-update path is **Windows/Linux only**. `autoUpdater.autoDownload` and
-`autoInstallOnAppQuit` are both `false`, so a download only starts when the
-renderer calls `update:download` (the reviewer clicked "Download update") after
-`verifyUpdateFeed` succeeds, and install only happens on `update:install`
-("Restart to update"). macOS is excluded entirely: electron-updater's
-Squirrel.Mac path needs the update to pass Gatekeeper, which requires a real
-Apple Developer ID signature and notarization that this project does not have;
-mac keeps a check-only banner instead.
+The updater flow at runtime is covered by
+[Tauri Shell](tauri-shell.md) and the `plugins.updater` config above: the app
+fetches `latest.json`, whose signatures were produced at release time by
+`createUpdaterArtifacts`, and the updater verifies them against the baked-in
+`pubkey` (`requireSignedVersion: true`).
 
 ```mermaid
 sequenceDiagram
-  participant R as Renderer
-  participant M as electron/main.ts
-  participant U as electron-updater
-  participant GH as GitHub Release
+  participant Dev as Maintainer
+  participant GH as GitHub Actions
+  participant Rel as Draft Release
+  participant Zen as Zenodo
 
-  R->>M: update:check
-  M->>U: checkForUpdates()
-  U->>GH: fetch latest.yml / latest-linux.yml
-  U-->>M: update-available (version)
-  M-->>R: update:available {version}
-  R->>M: update:download (version)
-  M->>GH: fetch feed + feed.sig
-  M->>M: verifyReleaseSignature (Ed25519, baked-in pubkey)
-  alt signature invalid
-    M-->>R: update:error (not downloaded)
-  else signature valid
-    M->>U: downloadUpdate()
-    U->>GH: download installer
-    U-->>M: update-downloaded
-    M-->>R: update:downloaded
-    R->>M: update:install
-    M->>U: quitAndInstall()
+  Dev->>GH: push tag v*
+  GH->>GH: preflight: tag = package.json version, pubkey set, signing secret
+  GH->>Rel: find or create draft (4-platform notes, 1.x manual-install note)
+  par 4 targets
+    GH->>GH: tauri-action build, release config, updater artifacts signed
+    GH->>Rel: attach installers, latest.json, .sig files
   end
+  GH->>Rel: check-updater-json: all 4 platforms present
+  Dev->>Rel: publish draft
+  Rel->>Zen: zenodo job: new version of concept record (source zip + assets)
 ```
 
-*Self-update control flow (Windows/Linux). The app verifies the feed signature
-before allowing electron-updater to download the installer.*
+*Release flow: a tag produces a complete, signed, verified draft; publishing it
+triggers the Zenodo archive.*
 
-### Installer signing and user-side bypass
+## Linux Docker build
 
-The installers themselves are **unsigned by Apple and Microsoft** — no
-Developer ID / Authenticode certificate is configured. Two mitigations are in
-place:
-
-- **macOS ad-hoc signature (`scripts/afterPack.cjs`)** — the `afterPack` hook
-  runs `codesign --force --deep --sign -` on the `.app` bundle when no
-  `CSC_LINK`/`CSC_NAME` certificate is configured. Without it, electron-builder
-  leaves only a linker-signed stub (`codesign --verify` fails, identifier is
-  "Electron"), and a downloaded, quarantined app reports the dead-end
-  *"SaiLoR" is damaged and can't be opened.* A free ad-hoc signature
-  downgrades that to the ordinary "unidentified developer" prompt, which the
-  user can bypass. If a real certificate *is* configured, the hook returns
-  early so it does not clobber a proper signature. Notarizing with a real
-  Developer ID is still the only way to get no prompt at all.
-- **Windows** — the NSIS installer is unsigned, so Windows SmartScreen shows an
-  "unrecognized publisher" warning. A real Authenticode certificate would remove
-  that warning and build reputation over time, but update *authenticity* is
-  already covered independently by the Ed25519 feed signature above.
-
-User-side bypass steps:
-
-- **macOS**: after downloading the `.dmg`, open it and drag SaiLoR to
-  Applications. The ad-hoc signature means the first launch shows an
-  "unidentified developer" prompt rather than "damaged" — right-click the app →
-  *Open* → *Open* in the dialog to bypass, or remove the quarantine attribute
-  with `xattr -dr com.apple.quarantine "/Applications/SaiLoR.app"`.
-- **Windows**: run the `.exe` installer; if SmartScreen blocks it, click
-  *More info* → *Run anyway*.
-
-## electron-builder configuration
-
-The `build` section of `package.json` configures packaging:
-
-- `appId: io.github.gram21.sailor`, `productName: SaiLoR`.
-- `asar: true`, `compression: maximum`, `electronLanguages: ["en-US"]`.
-- `files`: `dist/**/*`, `dist-electron/**/*`, `build/icon.png`, excluding
-  `**/*.map` and `node_modules/**/*`.
-- `directories.output: release`, `directories.buildResources: build`.
-- `afterPack: scripts/afterPack.cjs` (the macOS ad-hoc signing hook).
-- `publish`: GitHub provider, owner `Gram21`, repo `SaiLoR` — the same
-  `owner`/`repo` `electron/main.ts` uses to build its own feed URLs.
-- Platform targets:
-  - **macOS** — `dmg` for `arm64` and `x64`, icon `build/icon.icns`, with a
-    custom `dmg` window layout.
-  - **Windows** — `nsis`, icon `build/icon.png`.
-  - **Linux** — `AppImage`, icon `build/icon.png`.
-- Each target sets an `artifactName` of
-  `${productName}-${version}-<os>-${arch}.${ext}`.
-
-### npm install-script approval
-
-`package.json` declares `allowScripts: { "esbuild@0.25.12": true }`, permitting
-only esbuild's install script to run under the locked dependency set; all other
-post-install scripts are blocked. This is the `pnpm`/modern-npm-style explicit
-allowlist for native/build-tool install hooks.
-
-## Docker-based Electron builds
-
-`Dockerfile.electron` is a **build image for the Linux Electron installer**.
-electron-builder needs glibc and system libraries, so it uses a Debian base
-(`node:22-bookworm`, not Alpine), installs `ca-certificates` and `fakeroot`
-(which electron-builder uses while packaging Linux targets), runs `npm ci` from
-the lockfile (cached until it changes), and defaults to
-`npm run build:electron`. It builds **Linux installers (AppImage) into
-`/app/release`**; Windows/macOS installers must be built on their native OS
-(Windows can also be cross-built by swapping the base for
-`electronuserland/builder:wine`).
-
-`docker-compose.dev.yml` bind-mounts the source at `.:/app` (with a named
-`/app/node_modules` to keep host/container modules separate) so the image only
-carries the toolchain + dependencies. The standard invocation is:
+For building Linux bundles without installing Node or Rust locally:
 
 ```
-docker compose -f docker-compose.dev.yml run --rm electron
+make docker-linux
+# = docker compose -f docker-compose.dev.yml run --rm --build tauri-linux
 ```
 
-The compose service's `CMD` can be overridden for other tasks, e.g.
-`... run --rm electron npm run build` (renderer-only) or
-`... run --rm electron npm test` (unit tests). This is separate from the
-production `Dockerfile`; the old web-serving Docker files were removed and the
-app no longer ships a containerized web server.
+`Dockerfile.tauri-linux` is a **Ubuntu 22.04 build image — deliberately the
+same as the release runner so the AppImage runs against older glibc**. It
+installs the build tools plus the Tauri system libraries (webkit2gtk 4.1,
+libxdo, appindicator, librsvg), Node 22 from nodesource, Rust via rustup, and
+`APPIMAGE_EXTRACT_AND_RUN=1`, then defaults to
+`npm ci && npx tauri build --config src-tauri/tauri.conf.json
+--bundles appimage,deb,rpm`.
 
-## Wiki sync mechanics
+`docker-compose.dev.yml` bind-mounts the source at `.:/app` (a named volume
+shadows `/app/node_modules`, and `tauri-target` carries `src-tauri/target`), so
+the image carries only toolchain and the checkout supplies the code; the
+resulting bundles appear in `./src-tauri/target/release/bundle/` on the host.
+The container's `CMD` can be overridden for other tasks
+(`... run --rm tauri-linux <command>`).
 
-Three workflows keep `openwiki/` (developer docs), `user-guide/` (the user
-guide), and the GitHub wiki in sync. One is about *generating* docs; two are
-about *mirroring* them to/from the wiki.
+## Technical report workflow
 
-### OpenWiki generation
+`.github/workflows/technical-report.yml` builds the PDF (`technical-report/`,
+an `IEEEtran` conference-mode LaTeX report described in
+[technical-report/README.md](../../technical-report/README.md)) on pushes and
+PRs touching `technical-report/**`, `user-guide/screenshots/**`, or the
+workflow itself, plus `workflow_dispatch`. It runs `xu-cheng/latex-action@v3`
+with `latexmk`/pdflatex (`-jobname=SaiLoR-technical-report`) on `main.tex` and
+uploads `SaiLoR-technical-report.pdf` as an artifact. Because CI ignores
+`technical-report/**`, this is the only CI that reacts to report edits; `make
+report` reproduces it locally (`make -C technical-report`).
 
-- **`openwiki.yml`** — the **scheduled weekly refresh**. Runs on a Monday 06:00
-  UTC cron and `workflow_dispatch`, but does no work inline: it is a thin
-  reusable-workflow call that delegates entirely to
-  `ardoco/actions/.github/workflows/openwiki.yml@main`, passing the
-  `OPENROUTER_API_KEY` secret. The actual generation logic (installing the
-  `openwiki` CLI, running `--update --print`, opening a PR) lives in that shared
-  workflow, not in this repo — this file only supplies the trigger and the
-  secret.
+## OpenWiki workflows
 
-### Wiki mirroring (publish ↔ import)
+Two generator workflows keep the wiki fresh; two mirroring workflows keep
+`openwiki/`/`user-guide/` in sync with the GitHub wiki.
 
-- **`wiki-publish.yml`** (*Publish openwiki → Wiki*) — triggers on `push` to
+### Generation
+
+- **`openwiki.yml`** — the thin weekly refresh: a Monday 06:00 UTC cron (plus
+  `workflow_dispatch`) that delegates entirely to the shared reusable workflow
+  `ardoco/actions/.github/workflows/openwiki.yml@main`, passing only the
+  `OPENROUTER_API_KEY` secret. The generation logic lives in that shared
+  workflow, not in this repo.
+- **`openwiki-update.yml`** — a daily 08:00 UTC (plus manual) self-contained
+  update: it installs the `openwiki` npm CLI and runs
+  `openwiki code --update --print` (OpenRouter provider, model `z-ai/glm-5.2`,
+  LangSmith tracing), then opens a `docs: update OpenWiki` pull request via
+  `peter-evans/create-pull-request` scoped to `openwiki`, `AGENTS.md`,
+  `CLAUDE.md`, and the workflow file on the `openwiki/update` branch. Reviewing
+  that PR is the normal way this wiki changes.
+
+### Mirroring (publish ↔ import)
+
+- **`wiki-publish.yml`** (*Publish openwiki → Wiki*) triggers on pushes to
   `main` under `openwiki/**`, `user-guide/**`, `.github/wiki-assets/**`, or the
-  workflow file itself, and `workflow_dispatch`. It clones `SaiLoR.wiki.git`,
-  stages a combined layout: `Home.md` (always `.github/wiki-assets/Home.md`,
-  verbatim), `Development.md` (from `openwiki/Home.md`, renamed so the wiki's
-  own Home slot is free for the landing page), the rest of `openwiki/*.md` flat
-  at the wiki root, `openwiki/{concepts,operations,workflows}/*.md` flattened
-  one level deep under explicit `Section-Page` names
-  (`Operations-Build-Release`, `Workflows-LLM-Annotation`, … — hand-written to
-  keep acronym casing), flattened `user-guide/*.md` renamed to `Guide-*`,
-  `user-guide/screenshots/**` flattened alongside the pages, and a global
-  `_Sidebar.md`/`_Footer.md` assembled from `.github/wiki-assets/` plus a
-  user-guide fragment wrapped in `<!-- wiki-sync:NAME:start/end -->` marker
-  pairs. It strips OKF frontmatter, rewrites cross-links (bare `.md` filenames
-  → extensionless wiki URLs, `Home` → `Development` in the sidebar,
-  `../README.md` → absolute GitHub URLs in the user guide), and
-  `rsync --delete` replaces the wiki. It commits as `github-actions[bot]` with a
-  `[wiki-sync]` marker.
+  workflow file itself, plus `workflow_dispatch`. It clones `SaiLoR.wiki.git`
+  and stages a combined layout: `Home.md` (from `.github/wiki-assets/`,
+  verbatim), `Development.md` (from `openwiki/Home.md`, renamed to free the
+  wiki's own Home slot), the rest of `openwiki/*.md` flat at the wiki root,
+  section pages flattened under `Section-Page` names
+  (`Operations-Build-Release`, …), `user-guide/*.md` renamed to `Guide-*` with
+  `screenshots/` flattened alongside, and a global `_Sidebar.md`/`_Footer.md`
+  assembled from `.github/wiki-assets/` plus user-guide fragments wrapped in
+  `<!-- wiki-sync:NAME:start/end -->` markers. It strips OKF frontmatter,
+  rewrites cross-links (`.md` → extensionless wiki URLs, `Home` → `Development`
+  in the sidebar, `../README.md` → absolute GitHub URLs in the user guide), and
+  `rsync --delete`s the wiki, committing as `github-actions[bot]` with a
+  `[wiki-sync]` marker. `index.md` and `INSTRUCTIONS.md` are deliberately
+  excluded.
+- **`wiki-import.yml`** (*Import Wiki → openwiki*) is the reverse: `gollum`
+  events (a wiki page edit) and `workflow_dispatch`. It maps each published
+  piece back to its repo source — `Home.md` is dropped if it still carries the
+  `<!-- wiki-sync:auto-home -->` marker (the untouched published template),
+  `Development.md` → `openwiki/Home.md`, `Section-Page` → `openwiki/<section>/<page>.md`
+  (reversing name flattening and link rewrites), `Guide-*` → `user-guide/<src>.md`,
+  sidebar/footer fragments → `.github/wiki-assets/` — then `rsync --delete
+  --include '*.md' --exclude '*'` mirrors the remaining pages into `openwiki/`,
+  committing to `main` with `[wiki-sync]`.
 
-  `index.md` and `INSTRUCTIONS.md` are deliberately excluded — the former is
-  OpenWiki's own directory listing, the latter is the generator's config; both
-  are invisible-or-redundant on the wiki, so they stay in the repo only.
+### Loop prevention
 
-- **`wiki-import.yml`** (*Import Wiki → openwiki*) — the reverse direction,
-  triggering on `gollum` (a wiki page create/update) and `workflow_dispatch`.
-  It clones the wiki and maps each published piece back to its repo source:
-  `Home.md` is dropped if it still carries the `<!-- wiki-sync:auto-home -->`
-  marker (still the published template, nobody edited it), otherwise it
-  replaces `.github/wiki-assets/Home.md`; `Development.md` → `openwiki/Home.md`;
-  the `Section-Page` flattened pages → `openwiki/{section}/<page>.md` (reversing
-  both the name flattening and the cross-link rewrites, including
-  same-subsection siblings and `../` walk-ups); flattened `Guide-*` →
-  `user-guide/<src>.md` (reversing the renames, link rewrites, and the absolute
-  GitHub URLs back to `../README.md`/`../LICENSE`); `screenshots/` →
-  `user-guide/screenshots/`; the `_Sidebar`/`_Footer` user-guide fragments →
-  `.github/wiki-assets/` (lifted out of their `<!-- wiki-sync:NAME:start/end -->`
-  marker pairs) and the `Development` → `Home` link reversed; then
-  `rsync --delete --include '*.md' --exclude '*'` mirrors the remaining `*.md`
-  into `openwiki/`. It commits to `main` with a `[wiki-sync]` marker.
+Publish and import would otherwise form a loop (publish → wiki `gollum` →
+import → commit to `main` → `openwiki/**` push → publish → …). Three
+independent layers break it:
 
-### Why the two cannot trigger each other in a loop
-
-Publish and import would otherwise form a loop: publish pushes to the wiki
-(`gollum` → import → commit to main → `openwiki/**` push → publish → …). Three
-independent layers prevent it:
-
-1. **Concurrency** — both workflows share a `concurrency: group: wiki-sync`
-   with `cancel-in-progress: false`, so the two directions can never run at the
-   same time (a half-finished mirror is worse than a slow one).
+1. **Concurrency** — both mirror workflows share `concurrency: group:
+   wiki-sync` with `cancel-in-progress: false`, so the two directions never run
+   at the same time (a half-finished mirror is worse than a slow one).
 2. **Commit-message guard** — `wiki-publish.yml` skips when the triggering
-   commit message contains `[wiki-sync]` (the marker import's commits carry),
-   so it never re-publishes a commit the import workflow itself created.
-3. **Sender guard** — `wiki-import.yml` skips unless
-   `github.event_name == 'workflow_dispatch'` (a manual run) or
+   commit message contains `[wiki-sync]` (the marker import's commits carry), so
+   it never re-publishes a commit the import workflow itself created.
+3. **Sender guard** — `wiki-import.yml` runs only when
+   `github.event_name == 'workflow_dispatch'` or
    `github.event.sender.login != 'github-actions[bot]'` (the identity publish
-   commits as), so it ignores wiki writes made by the publish workflow itself
-   and only reacts to a human editing the wiki.
+   commits as), so it ignores wiki writes made by the publish workflow itself.
 
 Together these mean each direction only reacts to *human*-originated changes on
-the other side, not to the bot's own mirrored commits.
+the other side.

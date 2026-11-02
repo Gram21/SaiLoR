@@ -1,88 +1,96 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:4739daa0d7b1d1e8b3b2c9d6e0693d6fa488898a7732d1863a414b38a02baad1",
+  "pageVersion": "sha256:ec6b03a3760d32851ae108e46837a19f659f20cc7857d838d36043eb283eb922",
   "claims": [
     {
       "id": "claim_77c235236a4f499f9da38bd07202a799",
-      "statement": "SaiLoR is a single React codebase run as an Electron desktop app; the web/SPA runtime is discontinued. App.tsx's isElectron() gate checks for the preload-bridged window.slr object and, when absent, renders a 'use the desktop app' notice that blocks every project-opening UI before any of it can be reached.",
+      "statement": "SaiLoR is a single React codebase run inside the Tauri shell; the web/SPA runtime is discontinued. App.tsx's isTauri() gate checks for '__TAURI_INTERNALS__' in window and, when absent, renders a 'use the desktop app' notice that blocks every project-opening UI before any of it can be reached — the gate renders only after all seven top-level hooks (keybindings, dirty guard, close guard, window title, consolidation alignment, autosave, upstream polling) have run.",
       "evidence": [
         {
           "resource": "repo://src/App.tsx#L161-L191",
-          "version": "repo-lines-v1:sha256:04671694b84e047582848b41fd450daaec50d1874fd72121f0c296930afe3830:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRjMDQzNTM0MmFkYmM2MzJmMDIwMzQyZDQ5YWU2MDEwZjg0YzBiYzgyN2EyMDNlNWNiZGE2NDQ1Zjk0N2E5NjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjczMjQxOTJjNmVkZmUyYWQ2ZWUxNjAxMjFiYjU1ODc2NDE5NTRhM2ViYTljM2VlMTg0NWZjNDJjNmU0ZGM1OGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAwZGFlMmY0ZmExOWQyZDRhZWFkYWZhOWMxOWE0OTllZmQ5OGJiMWYxODFiMWUwMTI5ZmZlNDg2MDg4YzBjNTAifQ"
+          "version": "repo-lines-v1:sha256:47ba23076ac87de074439db38503e3f4aa9adf26967be0d5473e365662b97cc9:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc2NmE0YjgyMmRjMGExYmZiNTAyMWQ1NjYxNjczYzY0MzRkMDJjMzU2NzMzOGIxOTFmNjAxOTVmM2Q3MmI3YmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmNWI3OWFmMmZiZmFmNzUwNGFhODRhNzVlNTg1ZGJhYTdkN2U3NWQzYmZhM2QxMGI2N2VhMDQwMWU0N2E4N2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU2MWEyZjdmNTU2NTQ2ZWY2ZGUwNmE4NDQxOTNmNWQyZWQ2MGQ1NDBhYzNlZTJkZTMwNmI3ODVmMTdlMDVhYzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVlZDg5ZmYyODgzNzEwODAxYmMxZDhiMTc5MDBiZjY4MTljNzE4ZTQ3NWI4NDhjOTQ0ZjllOWQxZDljZDIzY2QifQ"
         },
         {
-          "resource": "repo://src/platform/adapter.ts#L319-L321",
-          "version": "repo-lines-v1:sha256:6870b76bc493e61fd244995396eb37495ad7cc642efdeb02551dce2a274f2e86:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMWNiYjk2ZjRhYzZlZjkyOGIwYjNhZTczOGE2ODkxZTM2YTk0NTZlODhlOTlkNTRiYzJiNGMxMWE5YWU1ODdlYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjUxYjA2NzQ3NjRhZWUyOGU2YmFiNjdlNmNiZjFiM2VjYWQ3ZmJjMjQxZTY2NTA1YWZiMTZmMmEyMGM0ZDU5ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+          "resource": "repo://src/platform/adapter.ts#L321-L325",
+          "version": "repo-lines-v1:sha256:e3ec4b34a0fe8ca710bda4103f54936111895142d575c21a3fc66ccba14c7f57:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTY1MTAwN2Q2YzcwMGVmNDJkMTQ3Zjc1YzM3NTQ1NzkyMGJiN2M3Zjg5MWZhOTRjNjFmOTczMWZiN2QzYTdlYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjE3NzFiNGU2ODY1ZmM3YTU4YjMxMzVmNmViYjNiNzc1YWU0MDYxN2UwOTIyZTA3ZDVmMjczZTIzOWYwZDIxOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2ExMTYyZTgxNGMwZmM4NTdiMWNkODI2ZGIwNWRjY2Q3NTQ2ZDNiYjkwODhhM2Y0NTVkM2JlZWY0NzUyYmVhOSJ9"
         }
       ]
     },
     {
       "id": "claim_3f404acf3a284594b2d0c12df0a649aa",
-      "statement": "The renderer (React 19 + Zustand + immer) talks to the Electron main process only through the window.slr bridge exposed by electron/preload.ts via contextBridge; the main process is the only thing that touches the filesystem, spawns git, or calls LLM providers.",
+      "statement": "The renderer (React 19 + Zustand + immer) talks to the Rust shell only through the SlrBridge interface (src/platform/bridge.ts): it cannot touch the filesystem, spawn git, or call an LLM provider itself. The only production bridge implementation is TauriAdapter, whose every call maps to a #[tauri::command] registered in src-tauri/src/main.rs, and getBridge() throws 'No desktop bridge: SaiLoR runs in the Tauri shell only' when no bridge was injected.",
       "evidence": [
         {
-          "resource": "repo://src/App.tsx#L1-L54",
-          "version": "repo-lines-v1:sha256:a022b2f82c9d3ea36583885121794fad797359314210a8034eb60cb999fc483b:eyJzZWxlY3RlZExpbmVDb3VudCI6NTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY3YzA3MDRlZjFiZDljMjM3MmJmNDk2NDkzMzM1NWE3ZTMxNGRiZGQ4YTdkM2EzOWY2ZDFlNjRiMTE3OGI1MGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhlYWMyNTg2MzA4NjA4NGUzNzIxMTk5ZDIzMzYzOWZiYzVlNzdmM2FiYmYxMDhkMDk0M2Y0MGVkZWU4ZWQxM2YifQ"
+          "resource": "repo://src-tauri/src/main.rs",
+          "version": "repo-file-v1:sha256:522cb7c65646dce93e61b2cb3265770045cefa887699997f45606a4125a09a11"
         },
         {
-          "resource": "repo://src/state/gitStore.ts#L1-L40",
-          "version": "repo-lines-v1:sha256:a5fea878138133365742581697f3d6650b8a37cee84cc1f04f8ee7d43f669c70:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkYzZlMzg3OThjYTUyZTdlMDA4NWY5ODY5MTUxYjg1M2QwOGVlY2NjZTM5OWVhZTM3NzhlZDY4NmNjYjM5NjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMzYTA1ZjQyMWYwZTg2ZTliODMzNDIwM2ZjN2ZlZDA5MTg4YTk4YWI0YWU1OTkwZTFmNzU1OTdjY2Q2ZWRmZmMifQ"
+          "resource": "repo://src/platform/bridge.ts#L179-L188",
+          "version": "repo-lines-v1:sha256:f30fa081c54c33b9bc8e14ff21b396a66bffe94567d82d93db75337af5766ece:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM2ZjI5ZTUyYzViYTc3ZDcxOWQ0OGFkN2IyMGEwYzlkZDMzNWFmNjUyYWYwNGJmNzA4MmJlYTM4MWEzNjA0NDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/state/gitStore.ts#L370-L374",
+          "version": "repo-lines-v1:sha256:f9ee8830e932be22f222fbc1fcb14d11473d6a4262b8f76af6418c5f5d972592:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODExM2FkMDQ3YjRkNDFmNWJmYTlhM2FhZDU2MGU4MzkyMGQ2Zjc1M2FjZTI1MGFhMDllOTQ3NjliMGE0YmQ2NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWQyMGRlODU1NjhiMDE2ZmQ3NTE3MjYzMDg0YWNhN2Q2NDVhNjU2MWQ0Y2I1ZTA2MmM3YTk4MGY3YWMyNDk5MSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODhiOGJiMzZkMWQxNDhjNDA5NzVmOTc4NGIyMGFhYzhkZDdkYmQwNmY5YjYyNWM3ZjYwY2EwNzhmZDFjODc4OCJ9"
         }
       ]
     },
     {
       "id": "claim_7ddeb97d49aa482bb92a0a5d566cf2cc",
-      "statement": "The PlatformAdapter interface in src/platform/adapter.ts is the architectural seam abstracting file I/O and PDF loading; getPlatform() in src/platform/index.ts is a singleton factory returning ElectronAdapter when isElectron() is true, otherwise createUnsupportedAdapter().",
+      "statement": "The PlatformAdapter interface in src/platform/adapter.ts (line 67) is the architectural seam abstracting file I/O, PDF loading and git capability; getPlatform() in src/platform/index.ts is a singleton factory returning a TauriAdapter when isTauri() is true, otherwise createUnsupportedAdapter().",
       "evidence": [
         {
-          "resource": "repo://src/platform/adapter.ts#L59-L61",
-          "version": "repo-lines-v1:sha256:032ffde2e40a6dd666c0cc4bd0e4824661e09367f0d01f9b8c500a9d18a84469:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGY5MTM5YmE5MzVjOTNjYjMwZDYyNmZkZGJkMWVhNTkxYjcwMmNiMzhhNTMyNDJjN2FhNzIxMjcxMDIzOTNhZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2Y3YTdlOGU1MjIzNTYzMzRjMmI4MzI2ODgxM2ZhN2E2ZmYyZTQ4M2Q0MWY4NzRhMDQxYmIxZDNlMzFmY2NhOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTI3Mzg4MzRiOTA2ZmFlN2RmNjBjYzc0YWU1MjU2MmZhN2MyOTZmNWY1MWM1NjVhOTRkY2I5ODA4ZDc3YjFkOCJ9"
+          "resource": "repo://src/platform/adapter.ts#L67-L70",
+          "version": "repo-lines-v1:sha256:bd11b4168ab705f664a824a747f5f9f191d9d005a4d953a65f822b5c1a707f89:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGY5MTM5YmE5MzVjOTNjYjMwZDYyNmZkZGJkMWVhNTkxYjcwMmNiMzhhNTMyNDJjN2FhNzIxMjcxMDIzOTNhZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2Y3YTdlOGU1MjIzNTYzMzRjMmI4MzI2ODgxM2ZhN2E2ZmYyZTQ4M2Q0MWY4NzRhMDQxYmIxZDNlMzFmY2NhOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzk4MjdjNjU3MjE4M2RmYTQ4NWViNDAxNDhiZmQ2YjhlNTFlNWIwNTZmZjBiYmVkYWI2MWM4ZDExZmY0ZjJiYiJ9"
         },
         {
-          "resource": "repo://src/platform/index.ts#L1-L23",
-          "version": "repo-lines-v1:sha256:1804999eb7ed16556427337db71869445dbbe9fc93a342e9422e6b0b5490af7e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNjNWU2MDQzMjdmNDA1YTA5M2Y3YTkwZjE2NDVmMmIwNDVhNTZjZDYyMDEyNmZhOTYwNmI5M2QwYmQ4ZGFlNzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY4MTdiZDM0YjE2YjY2MWU0ODM4MTYwN2ZlNDBjZmJjMmJkYTFmOGE4ZTM0ZDRmZTQ1M2NlNDRlNzJkYzFhOTQifQ"
+          "resource": "repo://src/platform/index.ts#L18-L22",
+          "version": "repo-lines-v1:sha256:f80e9d52a0bba74e272aa5a312051e5aeac31073d9f22272594cab0517809306:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYmM0MmY4YTJkYmRiZWM3YTExZmRlODIwN2VlZTNiN2NmYmExNzM1OGM3ODhlNTljODkwNzAzOWZlYjY2NzRmNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjUxYzRhNDAxMGM1ODdlMmFkOTQ2ZTcxYjI1ZTM3YzBjNTViNDQ5NzM5YmRhOGIxOWE1Y2NmZTU3MGExZjlmNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNWVlNzAxMTZiMDI3M2VkYzEyMzMwN2Q4MWIxNzAxNjY2NWVkZWNjNTJmNWM4M2JjOTkzMWUzOTljZjFjZTg4NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjUxMzIyZjMzMDBlYzZkZGUwODQ3Y2I1Y2IwY2ZiMDExMWQzZDg0YmI0NDI2OTg2Zjg4MjVlOTMzNmExN2U1OSJ9"
         }
       ]
     },
     {
       "id": "claim_7f0eba7a90644f6d86236dbac8bc6e41",
-      "statement": "The PlatformAdapter seam still exists despite the web build being discontinued because App.tsx's isElectron() gate renders after React's hooks and module-level reads (getPlatform().getRecents() at store creation) already execute in a non-Electron runtime; something inert must answer those reads safely rather than throwing during module init.",
+      "statement": "The PlatformAdapter seam still exists despite the web build being discontinued because App.tsx's isTauri() gate renders after React's hooks and module-level reads (getPlatform().getRecents() at store creation) already execute in a non-Tauri runtime; something inert must answer those reads safely rather than throwing during module init.",
       "evidence": [
         {
-          "resource": "repo://src/platform/index.ts#L8-L17",
-          "version": "repo-lines-v1:sha256:9737e2863c16e74bee2357dcb67bae0ec434deee0d69ae878c150b373800263f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRkYmJiY2NiMTU4YjhjNWIyOTk4ODkyMzc5NmJhMzJlOWFiZmU3MDk3ODA4YzU3ZDIwYWU1NmY2YjE5MzNmOGYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQyZTc0ODA2NDRjMWY4YTVmYzgxY2E3MmJmYTkwOWQzMDgzMzFiM2U1MzYwOTdjOTdmNGQwNWZlM2I4YTY0MjYifQ"
+          "resource": "repo://src/platform/index.ts#L7-L22",
+          "version": "repo-lines-v1:sha256:1a7d8ec26330f9952010a6fc504437e971f25a35d09afba04889107fe088b5b8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY1MWM0YTQwMTBjNTg3ZTJhZDk0NmU3MWIyNWUzN2MwYzU1YjQ0OTczOWJkYThiMTlhNWNjZmU1NzBhMWY5ZjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVmZTJjYWZjNDE2MDZlYWYzNTMyMDA2ZjIzNmMzZDkzYTQzNTRmYzU2YjY1NzFiNDdjYTBjNzk1MmU3Nzg3ZmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI1MTMyMmYzMzAwZWM2ZGRlMDg0N2NiNWNiMGNmYjAxMTFkM2Q4NGJiNDQyNjk4NmY4ODI1ZTkzMzZhMTdlNTkifQ"
         },
         {
           "resource": "repo://src/platform/unsupported.ts#L1-L28",
-          "version": "repo-lines-v1:sha256:f45653a3cbb5ecb8e59c8b5692354331cbd7be92ae2e01b0355afd407ca1cf42:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNjNWU2MDQzMjdmNDA1YTA5M2Y3YTkwZjE2NDVmMmIwNDVhNTZjZDYyMDEyNmZhOTYwNmI5M2QwYmQ4ZGFlNzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "version": "repo-lines-v1:sha256:bdb55a41d10c1917ad9f14e706c2a78031d0811705aeb0ea1cae7a517b6b60ba:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNjNWU2MDQzMjdmNDA1YTA5M2Y3YTkwZjE2NDVmMmIwNDVhNTZjZDYyMDEyNmZhOTYwNmI5M2QwYmQ4ZGFlNzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwNjhkNTE2NzA3OTJlY2FkYzdlNDQ3OTk5ODVjNTcyNzU3NDExNjA0ZmMzYzhiNzlkZmU1MDZmNzdhYTBmY2YiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjliNmRiYTUxMGMwNzJmMjc0NTAyMTIwMTY5ZWMwMjllMDYxMzAzODI2NzcyNTljNGIwNGI4YTg1ZTJmZTViMDkifQ"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L1228-L1228",
+          "version": "repo-lines-v1:sha256:37625c1886040c92ef9da2effadee956cad8f0a24a421990cf05969af15daa0c:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzc2MjVjMTg4NjA0MGM5MmVmOWRhMmVmZmFkZWU5NTZjYWQ4ZjBhMjRhNDIxOTkwY2YwNTk2OWFmMTVkYWEwYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzc2MjVjMTg4NjA0MGM5MmVmOWRhMmVmZmFkZWU5NTZjYWQ4ZjBhMjRhNDIxOTkwY2YwNTk2OWFmMTVkYWEwYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjY2YTA5YWQ1MzY5NGU5ZmE5ZTNkYWU4NDllMDI1YjJjNmEyMzVhNmRlOGM0ZThhOTMwNjU3MTM4NGMxZmFiOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTdmODg0MDg2OTg2MGI1MDIyZGRlZjMyNmQ2YTdjMWE3ZGFlNmZlYjA0YTA1ZDZkN2VhNzkwZDI2ODFjNGY3MyJ9"
         }
       ]
     },
     {
       "id": "claim_db8574a7362b4118b9c38a6e7d6cf57a",
-      "statement": "createUnsupportedAdapter implements a small real object answering the two reads that genuinely happen before the gate (kind: 'browser', getRecents: () => []) and wraps it in a Proxy whose get-trap returns a function throwing 'SaiLoR for the web is discontinued — use the desktop app.' for every other property — one trap rather than ~30 individual stub methods.",
+      "statement": "createUnsupportedAdapter answers the reads that genuinely happen before App.tsx's gate — kind: 'browser', getRecents: () => [], setWindowTitle → document.title, inert feedback getters, a fetchWeb refusal — and wraps the rest in a Proxy whose get-trap throws 'SaiLoR for the web is discontinued — use the desktop app.' for every other property: one trap rather than ~30 individual stub methods.",
       "evidence": [
         {
-          "resource": "repo://src/platform/unsupported.ts#L15-L28",
-          "version": "repo-lines-v1:sha256:602deec280f59188fff1087dbf10533c6e753ff5c554cc01581573b69c7c7e65:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYwYTBjZWM0YTUxNjdkMjgyMmVlMDJjYzc5Nzg4OWMxNjBiNTBlYmE4ZDc4MWFkNjhkYzhhM2FjNzAzNDA5Y2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNmM2ZmYTAwYWRjM2JjMGU3YjM4Y2Q5OWUyZDJlYmI5NWNiNjhkYTlmNTMxZTVmNWI0NTQ2YjZkZDQ4YmMyMzAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/platform/unsupported.ts#L1-L28",
+          "version": "repo-lines-v1:sha256:bdb55a41d10c1917ad9f14e706c2a78031d0811705aeb0ea1cae7a517b6b60ba:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNjNWU2MDQzMjdmNDA1YTA5M2Y3YTkwZjE2NDVmMmIwNDVhNTZjZDYyMDEyNmZhOTYwNmI5M2QwYmQ4ZGFlNzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwNjhkNTE2NzA3OTJlY2FkYzdlNDQ3OTk5ODVjNTcyNzU3NDExNjA0ZmMzYzhiNzlkZmU1MDZmNzdhYTBmY2YiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjliNmRiYTUxMGMwNzJmMjc0NTAyMTIwMTY5ZWMwMjllMDYxMzAzODI2NzcyNTljNGIwNGI4YTg1ZTJmZTViMDkifQ"
         }
       ]
     },
     {
       "id": "claim_5c22bf9f238243fba2f6a129e6eabd29",
-      "statement": "ElectronAdapter delegates file operations to window.slr IPC handlers and serves PDFs via the custom slr-file://project/pdf?path= protocol (the path as a query param, since Chromium collapses '..' path segments), resolving paths relative to a project directory set via setProjectDir on open/save-as and re-asserted from the handle in getPdfSource. The bridge() helper (src/platform/electron.ts) returns the preload-exposed window.slr object. getOsInfo() returns bridge().os ?? null — on Electron the preload always supplies {platform, arch}, so it yields a value, never null; outside Electron the unsupported adapter's Proxy throws instead, so null is the type-level nullable-capability shape rather than a value this adapter returns. saveProject re-parses the logical whole-project text via loadProject, splits it with splitProjectFiles, and sends only the changed/removed file entries (plus null metaText when project.json is unchanged) over the project:save IPC — a baseline (lastWritten) of how the project last serialized keeps one reviewer's edit from diffing across every other paper's file.",
+      "statement": "DesktopAdapter delegates file operations to the SlrBridge and serves PDFs through the Rust shell's slr-file:// scheme — the path travels as a query parameter because webview URL parsers collapse '..' path segments. saveProject re-parses the logical whole-project text via loadProject, splits it with splitProjectFiles, and sends only the changed/removed annotation files (plus null metaText when project.json is unchanged); a baseline (lastWritten) of how the project last serialized keeps one reviewer's edit from diffing across every other paper's file, and withBaselineDropped drops that baseline before conflict-prone git operations (pull begin/finish/abort, split) so the shell re-reads the repo instead of trusting a stale snapshot.",
       "evidence": [
         {
-          "resource": "repo://src/platform/electron.ts#L217-L227",
-          "version": "repo-lines-v1:sha256:053fc47b56e1501a862667adfc725f9241faf679d946c98424b16a908416c7dc:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlkODNjZGQ5OTk0ZGE1YzhhMWMyZmE0ZWUyMWE4MTI4M2EwZjlkNWI4NDhjNmRlNjAyZmM1Y2E5ZjdkZDc2NWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ2NDYwNDhiMDlkZjNjOGY1YmIxNjJiZWJlMGY1YzczMDhkM2FmZTA3OGNmOTY4M2NhMWFlZTQ0ZTZjMzVlMDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc2MTg5YjJkNTY1MjA3ODQyNWViMzhjYTJkMzAxZWFiMDI3ZmU4ZTVkNTM3YmFkMmQ0ZTRjNGFkM2I2NzFhY2EifQ"
+          "resource": "repo://src-tauri/src/protocol.rs",
+          "version": "repo-file-v1:sha256:c2e01d332be86e4e68af6e545443db92d72efbaa032559d7c2db410ca1b6858e"
         },
         {
-          "resource": "repo://src/platform/electron.ts#L294-L325",
-          "version": "repo-lines-v1:sha256:51cbb643ef2691f6b97ca4e4a17e09274fa8be1035fde227fd3dd0c4ec34a725:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0YzZmNjliZWQyNWQxYTgzNTI2NTU5YTQ0NzVjOWZlNzQzNjFkMGJjZTg3YWMyZGIyNzVkNjM0OWY1ZTkzZjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk3ZDg2MzJlNTRlOTI5OGFiYjk1ODcyN2UyZDUxNDA4YWJhZjEzNjYwMzUzNzkxMDE0MGFiZjY1YjMwYWI2MTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFjMGQ3MTcxZjY3NzFmMjA2OTY0ZTIwYjE3YjBiMTlhYzIzNmNlMTA1NGUyYTcwYWU3NTA2NmM4NWMyNjliYjIifQ"
+          "resource": "repo://src/platform/desktop.ts#L176-L208",
+          "version": "repo-lines-v1:sha256:03100305529747fda401ba90ff9f77a1ebaf10506883982edcc1ea150761f372:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0YzZmNjliZWQyNWQxYTgzNTI2NTU5YTQ0NzVjOWZlNzQzNjFkMGJjZTg3YWMyZGIyNzVkNjM0OWY1ZTkzZjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk3ZDg2MzJlNTRlOTI5OGFiYjk1ODcyN2UyZDUxNDA4YWJhZjEzNjYwMzUzNzkxMDE0MGFiZjY1YjMwYWI2MTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFjMGQ3MTcxZjY3NzFmMjA2OTY0ZTIwYjE3YjBiMTlhYzIzNmNlMTA1NGUyYTcwYWU3NTA2NmM4NWMyNjliYjIifQ"
         },
         {
-          "resource": "repo://src/platform/electron.ts#L332-L360",
-          "version": "repo-lines-v1:sha256:611da9fe5ef190d8f35424c54d5c10f52d1ee1a9a05241157f4051623725426d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwMTdiNWFiNmZiYTEwOTQ1NzMxOWNiY2UzZTk4N2Y0YWY4NjYyM2Y5ODMwM2Y2YmE2MmUzMWZmYjVkY2MzZjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ5NjkyNWE2NWJhOTMxYzFhMzkzY2FhNzI0YjM1NTU5ZjgyMDI3YTM1ZmI2N2I0NmM5Y2IwZTVkNzRhMzg1ZTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBiMDcwNDMyY2Y1OTVmODlmZmVhNmM4YWViYzVlODYyZjJkYmU5OTdhODk4ODc0MjhmYTJjNmJjYjQ3Mjk4MTgifQ"
+          "resource": "repo://src/platform/desktop.ts#L55-L66",
+          "version": "repo-lines-v1:sha256:9483088fc2147a8dd21aa09904783abd9bb6377dff93967cbfb9f7305967b9a6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVlYjVhZGI1MWI0YjYzNDkyOTJmODUwYWRkNmY2ODkwN2I4NWJkMzY1M2NjZTY1YjAyZGUyZDExMDM0MmRkYzYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUzOWVhODdjNTBmY2IxZjBlZTljZmVkZTU4OTI0NTdjMmQyYzBhMjQyNTQ2YTdlNDViMTRiMTVhNDY2MzY4MWMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjliZTNlN2RjYTc5NGE3NWU0YzEyNDc0ZWE1YTc1YjlmNWQ3MWI3ZWY3NWRmYTFiNmViOWJmNWMzMDZkNzM5YzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk3ZTU2ZDYwZDQ5NWI2YWY4MmEyZjlhZDhjOTNlMWE3MDVlMjE2ODEwZGRiNzZiYjAxMjQyZTkzYTczZGI2MGQifQ"
         }
       ]
     },
@@ -91,32 +99,40 @@
       "statement": "PlatformAdapter.getGit() returns a GitPlatform capability object on Electron (the user's own git binary via child_process) and null outside Electron (createUnsupportedAdapter), so a caller cannot invoke a git operation without first proving the runtime has one; getOsInfo(): OsInfo | null established the same nullable-capability pattern.",
       "evidence": [
         {
-          "resource": "repo://src/platform/adapter.ts#L253-L253",
+          "resource": "repo://src/platform/adapter.ts#L297-L297",
           "version": "repo-lines-v1:sha256:e40d0c7bc31c969b8cb09cc3a499dd64706c444580e03fc5774e8bbb5edddb9e:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTQwZDBjN2JjMzFjOTY5YjhjYjA5Y2MzYTQ5OWRkNjQ3MDZjNDQ0NTgwZTAzZmM1Nzc0ZThiYmI1ZWRkZGI5ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTQwZDBjN2JjMzFjOTY5YjhjYjA5Y2MzYTQ5OWRkNjQ3MDZjNDQ0NTgwZTAzZmM1Nzc0ZThiYmI1ZWRkZGI5ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDc3YWE0ODBhZGNiMDMzMWQ3NzhkZjJhMTZkNjFhMmQ3NjdhYTk3ZjRlZjkwNzBjYjY2NWRiOTBjMzg0OWZhOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTUxMjBmYWQ4ZjM5ZDhhMGQ1YzdhYzA0MWFhZjhiYmY1YjhlNGUyMTIzMjYzMThhMDU0ZTYzMTNkODI2YmVmMiJ9"
         }
       ]
     },
     {
       "id": "claim_717c46ddccb8414cb63d6eced3746dc2",
-      "statement": "The app state lives in a Zustand store with immer middleware in src/state/store.ts (useStore), holding project, currentPaperId, saveHandle, undo/redo past/future stacks, theme, fontScale, pdfZoom, recents, aiMarks, reading position, self-update state, currentReviewer, and consolidation/screening UI state — including consolidationUpdatePrompt/consolidationUpdateApproved, the paper-id pair driving the ConsolidationUpdatePrompt modal; the store reads getPlatform().getRecents() at module load for its initial recents.",
+      "statement": "The app's primary state lives in a Zustand store with immer middleware in src/state/store.ts (useStore), holding project, currentPaperId, saveHandle, undo/redo past/future stacks, theme, fontScale, pdfZoom, recents, aiMarks, reading position, self-update state, currentReviewer, and consolidation/screening UI state — including consolidationUpdatePrompt, the paper id that drives the ConsolidationUpdatePrompt modal; the store reads getPlatform().getRecents() at module scope for its initial recents.",
       "evidence": [
         {
           "resource": "repo://src/state/store.ts#L1-L66",
-          "version": "repo-lines-v1:sha256:7dba3430442fe56a614dc261ef6e58620ad413e25d26697c07666da00e8e9053:eyJzZWxlY3RlZExpbmVDb3VudCI6NjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM0NzUwODdhMzk2OWI5Yzc2ZmEwMmZmNWIwMDlkYTAwMDdlZGUzZjA3ODllYzA0YjlhNDA2MWE5YmQyOGI0Y2UifQ"
+          "version": "repo-lines-v1:sha256:e5c5a47a83789d8687a83884c70e81ddac5b6b9644c485e6908bf4cdac0165a6:eyJzZWxlY3RlZExpbmVDb3VudCI6NjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM0OGIyMjFkMjY1NmZkODg3ZDcxZWUyZmM2MjdlZDk0NDQzNTI4ZTJhNmI3ZDk4NjJhNDIzZGQ3ZWIzOWJiNDciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ0NTdlN2U0YWFlMWVhYzQwYmZlNDZlYTEzY2U2MjMwYWIzYTAzNGE3MmNmMzY2MzdmNDRiYmNjNzE0OTY4YzYifQ"
         },
         {
-          "resource": "repo://src/state/store.ts#L949-L953",
-          "version": "repo-lines-v1:sha256:a4be06bc53cfa091a99ba05dafa5bfc27e31a83b3f88c19b8b1a87547e1c964c:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjlkOTc1OWUyZTRiZDQ1NWEwYzE5YmZkOGJkMWFhY2Q3YzMzNDBjMmVlMjFlNjRmMDliMWI5YTFkNmU2ZDJiMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWE1ZDZjY2M2ZGIxZTljNzEyZTFiZjMxOTU2ZTY2NzI0MTJhNTg5YTAyZmNhYTQzZTA5MzI5MGVjOWY1YzI2OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzJlNTc0YWRhMDFiMGIyYzFjZjFmMjNkODJkYjc0NWU2YTk3ZTMwYTNmZjI2NDgwOGUxYjczMGY3NWI4MTA4OSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjk5NzRlN2Q5YTYzNzZkMThlMzFmYjA2ODgwNmViNWRiYWMyN2MxZmQyYWUyOTNlYzNjZDdhNzJjZjMzZWE2MiJ9"
+          "resource": "repo://src/state/store.ts#L1228-L1228",
+          "version": "repo-lines-v1:sha256:37625c1886040c92ef9da2effadee956cad8f0a24a421990cf05969af15daa0c:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzc2MjVjMTg4NjA0MGM5MmVmOWRhMmVmZmFkZWU5NTZjYWQ4ZjBhMjRhNDIxOTkwY2YwNTk2OWFmMTVkYWEwYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzc2MjVjMTg4NjA0MGM5MmVmOWRhMmVmZmFkZWU5NTZjYWQ4ZjBhMjRhNDIxOTkwY2YwNTk2OWFmMTVkYWEwYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjY2YTA5YWQ1MzY5NGU5ZmE5ZTNkYWU4NDllMDI1YjJjNmEyMzVhNmRlOGM0ZThhOTMwNjU3MTM4NGMxZmFiOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTdmODg0MDg2OTg2MGI1MDIyZGRlZjMyNmQ2YTdjMWE3ZGFlNmZlYjA0YTA1ZDZkN2VhNzkwZDI2ODFjNGY3MyJ9"
         }
       ]
     },
     {
       "id": "claim_e6882a72c79545a5821f9f725500912b",
-      "statement": "Undo/redo stores whole-project snapshots in past/future HistoryEntry[] (capped at 100, session-only). Each entry is {project, paperId}; consecutive edits to the same field coalesce into one undo step via a module-level lastFieldKey, while add/remove/paper-switch reset it. PDF mark mutations each push their own snapshot, and history is cleared on project load.",
+      "statement": "Undo/redo stores whole-project snapshots in past/future HistoryEntry[] capped at HISTORY_LIMIT = 100, session-only. Each entry is {project, paperId}; consecutive edits to the same field coalesce into one undo step via a module-level lastFieldKey (PDF mark comments share the coalescing through mark-comment:<id> keys), while add/remove/paper-switch reset it. History is cleared on project load and on resyncProjectFromDisk.",
       "evidence": [
         {
-          "resource": "repo://src/state/store.ts#L1700-L1820",
-          "version": "repo-lines-v1:sha256:6b6de6c16d8d3872a3faf97c7135ac3cda32575eb431b3bb1838f034871fa1ee:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiMjlmMDllNjYxMDhlZmVlZDIzMzQxN2NlOTFhMmRkYTQzNDQ3MmY4YmNmZDUzMzAwMjNiNTBlODRkNmE1NGVjIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwNWI5MjNjMDAzZDU0OWFiMjhjNjVkNjI2ODFmY2E4OWE2NjViMzNjMmQ2ODBkMDFlZTg1ZGE2NGViN2M2ZGRmIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJmMmQzZjYzYTcxMWY5MTk5Y2NjNTgxNzgxMWNlNmVjOGU1YTQzNjRiM2IyZmZlZTUyNTFkZmRmMzZmODM1YjllIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0YjFhOGJjOTEzYjM2MjIwMmY2ODFlYzBiZTBkY2VlZTgwZTgyODRkOWUxMjg1ZjEyYTZhNjJkYTIyOWM5MDIxIn0"
+          "resource": "repo://src/state/store.ts#L1609-L1638",
+          "version": "repo-lines-v1:sha256:1ca2953eedeaaa77bc577d95fa4bc7028ec30d5433c340cd3f7cbc7570970b6c:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFmMGNkYjk3MmE3YmZiN2VkMjQ2ZjlmZjY3MjM4NWU1NWY0OTY4ZmMxMTA0M2RjNWI2ODRkNTFkZmEzMWRiY2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliNjJmNjBkODU5MGE1NzljZjQ2ZjhkNjczNzhjNGM1NzJiOTYyY2VjY2RiOTBjN2E1ZjdiNDJiOTYwNzgyYTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg0NWU1MzY4ZTJiYjg4ZDFmNzcwZWEyMjBmM2VhZjM1ZGZmNzBiMDUzYTI0NjgzYmQxZWRiMjQwZmZiZmFkM2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMyMDczN2Y3ZjQ3MGI4ODRjOWU3ZWFhNGEzM2UwZDVlYTY2YmIwYTQ1NGI5ZmVkYTJmYjJiYjg5NDlkMTVhYjEifQ"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L2358-L2366",
+          "version": "repo-lines-v1:sha256:e8b4b42e421e4884d66edff733030e5621ecb89abb14588ea4ae91d4a5831b47:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDJmN2UwMTc2OWVmODE1OTg0ZjQzZWFkNzI3NWRlMzRhMDk5Y2UwYzEzOTY4NDAyOGQ2YjE4YzI5Y2Q4ZTliMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDAwMmMyMzFkNTc0ODkxMWQwMGUwMDM5Njg3MzczNGRjYWVhNjM5ZTlhNmRlYmEyMzY0OTVjNzNkNTI5ZmI4YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmZiOTRhM2ZlMGY3ZDQ4MjM3MzZlZTEzNjY4MjExMjE2MmY3MGZmNjFkZGEyODA5MzdiZmFkMzkxNGJlYzcxMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjYwMTk1Yjk0YmVhZDgzZGE0MTY3MTc4YmFiYWNjNDhhNzhjYmYzM2IxZjg3MzQ2OWYzOWVhYTRiZWE5NmQ4MSJ9"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L504-L508",
+          "version": "repo-lines-v1:sha256:2ce79846e8824d4c3992825f593d4820448789b35dd429c4583ea95b55edf6d3:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOWJiODIzZDE3NTQxMzJmNmZmOWIxODg0ODA4OGEyMjZkNWYyMmI2ZGMyYWIzMzY2YWQzNGUwZTZjMmUyNGZkMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWFlNjE3NzAyY2E2MjE3YjJhMWRlYzMzNGIyMThkNjM5ZWU2YTVkYWVmNjdhNDAyODE3YWZiNzU0ZWQwYTdkYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjZkYWE0YmI5NjlkMWVkMjJjYWFjZjI2OGJiNDI5NmI3NTAyMjczZjRlMTZmYjNmYTE3YmQyODJiZmFjMTkxZiJ9"
         }
       ]
     },
@@ -125,32 +141,48 @@
       "statement": "editorStore.ts (src/state/editorStore.ts) is a separate Zustand+immer store holding the project editor draft, working on the raw JSON shape rather than the loaded Project so editing the schema never prunes existing annotation data; on save it writes the JSON and hands it to the main store via loadFromText. It has its own undo/redo history and commits the focused edit before saving.",
       "evidence": [
         {
-          "resource": "repo://src/state/editorStore.ts#L1-L60",
-          "version": "repo-lines-v1:sha256:cf59bce5df177e3de7c618632fa77ca2d3761c97d22b2d5eeb4eaf63184173c9:eyJzZWxlY3RlZExpbmVDb3VudCI6NjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJmMmNlOTJiZDE0OTRhYzFiMzE4YjQxOWNjOTUzYmY0MzFjNzRiNzE5Y2Q3M2Y5Y2U0MDU3OTI4Yjk3ZDZlOTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRhNTM0YWQ5NzYzMTE3YTQwYjhlODM5OThjOTU2M2U4NGVkMDBiZTQ4MzExZGFjMWQ2OWFmNzcxNjJkNmU4OGYifQ"
+          "resource": "repo://src/state/editorStore.ts#L47-L47",
+          "version": "repo-lines-v1:sha256:eaf22cf0732592c247141cbe61efa11012612f5a3122b9af9bbaf52f5724d194:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2U4MGNhZTk4ODRiYmRjNmJlNWM1MTU3MjI4ZjMxYzU4OWQwZWExYWMyOGZiZmU3ZjY4NGRhODVmZTBiMDBkNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTQ0NmRkYzMxYzg2YTUyMDMwYTE1OGNiYzk2ODQxOTVlMzM1MjY3MzlhMzI2YmY5YWI4MjcyODcxZjM5MDNkNyJ9"
+        },
+        {
+          "resource": "repo://src/state/editorStore.ts#L52-L64",
+          "version": "repo-lines-v1:sha256:8f5cf70dd04b5a54364e8f95a8ed4e33278cbc8a3c19ddfe8f4c44eb7a07ca63:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3NjY3ODliMmFmZjMyYzQ3ODE0MDlhOTFiMTJmMzM4MTg2NmEwYmIxMjkyNjc2ZjZjYTM1ZWQwMWU2MDI1OGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJlNTIyYjU1MzJjNmRmMWRkZjRhNjMzYWNkNTIzYmQ5N2M3YWJlZTY3ODczY2ZjM2FjMTg1MzRhY2M4MDJiN2YiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA4N2IwNWEwOTZjOTkwZTUzOGIzYTMxNDg2MjBjYzg0MGJjZGEyOTI1NjdjOWQ2YTdhZTlkZjZkOGRlYzU1MzMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE0NzNlYjEzYTg5MjUzMzgxNjc5MmE1MTI4NTZmMDY3N2Q3YjhiMmE0MzNhNTA0NDQxMGI4YzljZDkzMDc4ZTgifQ"
         }
       ]
     },
     {
       "id": "claim_098aa39da777446490a1ed3cb5c09727",
-      "statement": "gitStore.ts (src/state/gitStore.ts) is a separate Zustand+immer store for the clone flow and commit/pull/push/merge/branch/history panel. Its dependency direction is one-way: gitStore reads and drives useStore via useStore.getState(), but store.ts never imports gitStore — so refreshing the repo when the open project changes is an effect in App.tsx, not a call from store.ts.",
+      "statement": "gitStore.ts (src/state/gitStore.ts) is a separate Zustand+immer store for the clone flow and commit/pull/push/merge/branch/history panel. Its dependency direction is one-way: gitStore reads and drives useStore via useStore.getState(), but store.ts never imports gitStore — so refreshing the repo when the open project changes is an effect in App.tsx (keyed on saveHandle.path), not a call from store.ts.",
       "evidence": [
         {
-          "resource": "repo://src/App.tsx#L110-L130",
-          "version": "repo-lines-v1:sha256:f0890b248ab50b3ec8ff5bd4a14f1c5c8700100ddb12d7cb3b9b7d412d332cc0:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE2MzI1ZDIxMDRhOGU3Yjk5NDhlMjkyYTA3YWUzZDFkZWUzMTlkZjkzNDAxYzEyYWRiZTBlYzAxMzA4YzUxMzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIyOWQ4MzQxMDA0NjVkYWZjZmUzOWUxNDVjNjc2M2M5YTZkMjU5ODAzMWI4OTMxZjQ1MTZjM2E2MjliNTZmNGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU0MDJmOTljMTJmYjM2Yzc2ODRjMWNmNDEyMzIxYWUzZDUwOTI2Nzk5MDVlMjQ5MDQzOWU4NmRjYmRlNWI0N2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM2YTllNDUyMjZjMjc1NWRkMTNkNjZjZTcwYzM2NTBlODNkZjBiZTI4NzM5MmYzMWE1ZDNmZGMzMmMzNzM2MDMifQ"
+          "resource": "repo://src/App.tsx#L139-L141",
+          "version": "repo-lines-v1:sha256:1fc7788975a803424ff32da9b67cc4d7e0c6fcfe23511920fbdf571e8d605bba:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWU5ZDVmYjUxNzZlNGYyOGM4ZmI0OWZmNjUxMzhjOTQxMzBiM2QwOWM3ZjE5MjNiNDA5Yjg1NmVmMWMyMWQ4MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjI5ZDgzNDEwMDQ2NWRhZmNmZTM5ZTE0NWM2NzYzYzlhNmQyNTk4MDMxYjg5MzFmNDUxNmMzYTYyOWI1NmY0YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTMyYWIzNmI2NjIxOWZiYWQwNGFiNWZiN2Y0OGM5OGY4Mzk3OWQyYTIxYzRmMDVhNjZhMzgzODI5NTNiNjRlNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzZhOWU0NTIyNmMyNzU1ZGQxM2Q2NmNlNzBjMzY1MGU4M2RmMGJlMjg3MzkyZjMxYTVkM2ZkYzMyYzM3MzYwMyJ9"
         },
         {
-          "resource": "repo://src/state/gitStore.ts#L1-L40",
-          "version": "repo-lines-v1:sha256:a5fea878138133365742581697f3d6650b8a37cee84cc1f04f8ee7d43f669c70:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkYzZlMzg3OThjYTUyZTdlMDA4NWY5ODY5MTUxYjg1M2QwOGVlY2NjZTM5OWVhZTM3NzhlZDY4NmNjYjM5NjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMzYTA1ZjQyMWYwZTg2ZTliODMzNDIwM2ZjN2ZlZDA5MTg4YTk4YWI0YWU1OTkwZTFmNzU1OTdjY2Q2ZWRmZmMifQ"
+          "resource": "repo://src/App.tsx#L99-L99",
+          "version": "repo-lines-v1:sha256:b524c6d47e68477dc925165c553b7cdea64934dd6f222d6b0eb1bb2670a20631:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjUyNGM2ZDQ3ZTY4NDc3ZGM5MjUxNjVjNTUzYjdjZGVhNjQ5MzRkZDZmMjIyZDZiMGViMWJiMjY3MGEyMDYzMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjUyNGM2ZDQ3ZTY4NDc3ZGM5MjUxNjVjNTUzYjdjZGVhNjQ5MzRkZDZmMjIyZDZiMGViMWJiMjY3MGEyMDYzMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOWQ3MWNhN2Y3ODJlOWQ0NDc1NGM0ZjllODRhOTg4NjcxZmQxZWZjNWVkYmUxOTA1OWJhYTE4N2U3ODk3N2NjZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMmFkMjVlZjIyYmZlMjkwOWQ0NDAwYTFiNjQ2YTBiZTBiNDFhNjQ5NDgwNmZlOTU2Y2JmYzhkOGVjZjY0ZjIwNSJ9"
+        },
+        {
+          "resource": "repo://src/state/gitStore.ts#L370-L374",
+          "version": "repo-lines-v1:sha256:f9ee8830e932be22f222fbc1fcb14d11473d6a4262b8f76af6418c5f5d972592:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODExM2FkMDQ3YjRkNDFmNWJmYTlhM2FhZDU2MGU4MzkyMGQ2Zjc1M2FjZTI1MGFhMDllOTQ3NjliMGE0YmQ2NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWQyMGRlODU1NjhiMDE2ZmQ3NTE3MjYzMDg0YWNhN2Q2NDVhNjU2MWQ0Y2I1ZTA2MmM3YTk4MGY3YWMyNDk5MSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODhiOGJiMzZkMWQxNDhjNDA5NzVmOTc4NGIyMGFhYzhkZDdkYmQwNmY5YjYyNWM3ZjYwY2EwNzhmZDFjODc4OCJ9"
         }
       ]
     },
     {
       "id": "claim_4d41af0d2a3d4403b77967daad7c174f",
-      "statement": "aiStore.ts (src/state/aiStore.ts) is a separate Zustand+immer store owning the AI-assisted annotation flow (config/call state), kept out of the main store because it is a self-contained mode with its own lifecycle; the only place it meets the main store is apply(), which hands reviewer-approved values to applyAiSuggestions.",
+      "statement": "aiStore.ts (src/state/aiStore.ts) is a separate Zustand+immer store owning the AI-assisted annotation flow (provider config, call lifecycle, per-paper marks), kept out of the main store because it is a self-contained mode with its own lifecycle. The dependency is one-way: aiStore reads the main store (useStore, currentTree) to pick eligible papers and fields, and approved values flow back only through store.ts's applyAiSuggestionsBatch — one batch write producing a single undo entry. The screening analogue aiScreeningStore.ts borrows aiStore's model library and writes through the main store the same way.",
       "evidence": [
         {
-          "resource": "repo://src/state/aiStore.ts#L1-L21",
-          "version": "repo-lines-v1:sha256:d226942a3229ee0e6e3e758abce7947c0ef0bc2f451f91d5bf30727707558fad:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMjM4YTc0ZmUxZmMwYWRjZDIxNTMxNGM4MzRkNjNhNjhhNDY2ZTk1MzgyYTY1MzE0ZDU2MmQ0YWM2M2EwYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYxNDk5MWVjZmU0NGJjNjhjOTVhN2ZjMzBlY2ZmMGQyNmRkZWY3N2IyNDczMTFjNTljYjRhMjg5YWE1MTA1NDgifQ"
+          "resource": "repo://src/state/aiScreeningStore.ts#L4-L4",
+          "version": "repo-lines-v1:sha256:0bbe4ccd4110428ff54738d3a8f0c605d77c989a37b705169c0e4b70dd70f1d3:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMGJiZTRjY2Q0MTEwNDI4ZmY1NDczOGQzYThmMGM2MDVkNzdjOTg5YTM3YjcwNTE2OWMwZTRiNzBkZDcwZjFkMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMGJiZTRjY2Q0MTEwNDI4ZmY1NDczOGQzYThmMGM2MDVkNzdjOTg5YTM3YjcwNTE2OWMwZTRiNzBkZDcwZjFkMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTYyMTA2ZmVjZmRkMmYwMmE4NTdmZjhjNGY3ZTkyZTA4OTlkMDk3YWZmNmZmYzlhZDFlMWIxYWQ1ZTM1N2I2MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGE5MTdlZWZlNWE4ZTc4MzBlYjU1YjQyOGNkY2ViNWNiYmYxOWM0ZGI5MDRlNmMxZTNmMzJmNTI2YTM5YThlYiJ9"
+        },
+        {
+          "resource": "repo://src/state/aiStore.ts#L4-L4",
+          "version": "repo-lines-v1:sha256:d567511be56d732a1e1981990e785b160fe695fe9199c8a91a6a817e6d8a2021:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDU2NzUxMWJlNTZkNzMyYTFlMTk4MTk5MGU3ODViMTYwZmU2OTVmZTkxOTljOGE5MWE2YTgxN2U2ZDhhMjAyMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDU2NzUxMWJlNTZkNzMyYTFlMTk4MTk5MGU3ODViMTYwZmU2OTVmZTkxOTljOGE5MWE2YTgxN2U2ZDhhMjAyMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTYyMTA2ZmVjZmRkMmYwMmE4NTdmZjhjNGY3ZTkyZTA4OTlkMDk3YWZmNmZmYzlhZDFlMWIxYWQ1ZTM1N2I2MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmYyNjYxMGZhYjI5Nzc1ZjM5ZjM3ZjViZmE0ZjQ5MDMwZGM1YmU4YzJhMTkwMjMxZjlhMTdmNzhkMDI2OTNiMCJ9"
+        },
+        {
+          "resource": "repo://src/state/store.ts#L920-L928",
+          "version": "repo-lines-v1:sha256:a25a89a09b75c6100a2b770e368cb0a8db27fa6cd2098b2bb6b9d0fd0bb1305c:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTQ1Y2Q0OWVhNWFmNTk3NmM0MjBlNzJjN2I5ZGY2ZDkxNjgwNzA0OTk4MDAwZGI2MTU2MGY0ZmVhZmI5NDllMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjg0MzQ3MTE0YmU3Mjk5NzJjMjc1NzdhZDI2YzM4ZWY3YzNhNThlMThiMDU4ODZkYzk1NDdhNjQyZGFmMzY3OSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjY1YWQ4MGQ2NWZmOGFmNmU1MGRjZmE3NjlkZmJmMGVhZGFiYjY4NjQ5YTc4MjBmMTQ2OTkzMjNhMjU5YzViMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjZiZTNmZTg4YzdlYmU5ZGU1MGIwMmU3MWQwZjk3YTlkMTE1YjFkY2NjMTAzNmIwOGZmYjVmN2I1MzlkYmEzZCJ9"
         }
       ]
     },
@@ -173,24 +205,28 @@
       "statement": "The component tree is a three-pane layout (papers | PDF | annotation form): App renders Toolbar, a workspace CSS grid with PaperList, two Splitter drag handles, PdfViewer (or ScreeningRecord for screening), and AnnotationPanel (or ScreeningPanel); AnnotationNode renders the annotation tree recursively, Field renders per-type inputs. Modals (ConsolidationDialog, ConsolidationUpdatePrompt, GitDialog, AiDialog, GitMergeDialog, GitHistoryDialog, etc.) render at the App level.",
       "evidence": [
         {
-          "resource": "repo://src/App.tsx#L193-L200",
+          "resource": "repo://src/App.tsx#L204-L211",
           "version": "repo-lines-v1:sha256:7f3866f394b67261699ab4b43b49908bd9ff764515cddd27e69f857cdfd1d582:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTcyMTZlOGU5YzBhMWE2OGQwNmMyZmJhYTVmZDIxMzk0ODJiOGVmZDBhMTkzMTViOTE1ZTZjY2U4NDlkODlkYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiN2QyNTFjOTIyMmY2NTNlYzA5NDJjNGYyZDMyNmRkOWEzNGM2ZmI0YWY0MDUyMDllZGU3Mzc2NDMxOGQ5NWE2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGJmMzlhODcyMzY3MGViMGExYWZiYTEzNmExOTBhMzcyNzM3NmMyYmZkMDExZjBmZWEyMTM1NzU1YjRmOGQ2MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTMwODhjYmY4N2Y4MzdiYmU2YTUwMDQ0NGE0OWQ2OWYwOTMxYjIxNzU3OWNkMGNiYWIwZWI1MmU4N2JiNjVjYyJ9"
         }
       ]
     },
     {
       "id": "claim_8f537e6b718a490da4fed02b7665c379",
-      "statement": "vite.config.ts uses base: './' (works from server subpath and file://), injects __APP_VERSION__ from package.json, and conditionally adds vite-plugin-electron when ELECTRON=1: main is electron/main.ts and preload is emitted as CJS with a .cjs extension (package is type: module). The renderer is a plain web build with no Node in the renderer.",
+      "statement": "vite.config.ts uses base: './' (so the renderer build works from any subpath), injects __APP_VERSION__ from package.json, and serves the dev renderer on the strictPort 5173 that src-tauri/tauri.conf.json's devUrl points at; a packaged build embeds ../dist as frontendDist. There is no Electron plugin and no Node main process in the build any more — the desktop shell is the Rust binary built from src-tauri/ — and the integration tests are excluded from the default vitest run.",
       "evidence": [
         {
-          "resource": "repo://vite.config.ts#L1-L46",
-          "version": "repo-lines-v1:sha256:e87add724549b664df6b2bf26d27e89a86beebb3ae2319c546ac6efeffc48086:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFiOTE0ZWZhNWRlMjhlMTAzZjE5ZWUzMDcwNGE1YWQ3ZWU0ZTg5MGUxOTQ3MGU5YTg1OGEyNzJkNTc5MGI2ODAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk2NGQ4YzA3MzQyOTg5MzEwMTU3NmQ4OGQ5OTEyN2U4OWQ2ODkxZDNiMTdlODlkZjAyZWM5YWU3MDcwNWQ4YmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRlNTY5NWZhZTI1ODI5NDYwNGQ1MmRlNjE1OGM3MTYyNDhiNTFkYmZhNTU2YWE1YzU1ZWFkZmE5MzgxMDk4ZTQifQ"
+          "resource": "repo://src-tauri/tauri.conf.json#L7-L10",
+          "version": "repo-lines-v1:sha256:21941dcafe8e7e506a7aa984c44adf1ac00e05e64da8273a36c613f5ef97ccbc:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYWRlMzdmZTY3YWY1NzE0MzRmYTAyN2IyMjA0ZTAwNTQxMjcxNjQyODQ5NzI2M2MwZTg2ODc5ZmNlNThiMmEzZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjU3NTllY2EyYTFkNjAyYWVkYzFhMWQ1M2VmOTU1NzBmOTlkYzhhNGZkNGE4MTJlNTRkZTljNjZlYTg2MDI1MCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2NiNWZmMTY1MzUwOWVjMjQzZTI1OWEyMmNkZTYxYmNlODQ4N2M4ZGZhOTUyNzdlYjU0NTQ5MDI5YmM2YzRkZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiN2I2NDE4ODE5ZTA5MTZjMTJmZjQ4ZjM5ZjhhYmJmZTU3YzA3MjFlNDc3OWM4YTNmNDUzY2M4MjY2ZmU0ZWRmZCJ9"
+        },
+        {
+          "resource": "repo://vite.config.ts#L1-L48",
+          "version": "repo-lines-v1:sha256:452e3fb6a8615f2ba1737c5863724ebfcb29a8a081717f2b52b5b44bbd72c5ce:eyJzZWxlY3RlZExpbmVDb3VudCI6NDgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFiOTE0ZWZhNWRlMjhlMTAzZjE5ZWUzMDcwNGE1YWQ3ZWU0ZTg5MGUxOTQ3MGU5YTg1OGEyNzJkNTc5MGI2ODAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
     {
       "id": "claim_565eaa338b6846008522b35d9b3b2202",
-      "statement": "TypeScript is split across two project-reference files coordinated by the bare tsconfig.json: tsconfig.app.json (renderer, include src, types vite/client, JSX, DOM libs) and tsconfig.node.json (main/preload/build/e2e, types node). Both are noEmit: true and neither is composite, which lets pure modules like src/git/url.ts and src/git/relpath.ts be imported into electron/main.ts under the node program and reached by vitest's src/** include under the app program, typechecking identically in both.",
+      "statement": "TypeScript is split across two noEmit project files coordinated by the bare tsconfig.json: tsconfig.app.json (renderer, include src, types vite/client, JSX, DOM libs) and tsconfig.node.json (build configs, the integration vitest config and the git-scenario samples, types node — there is no main/preload program any more). Neither is composite, which lets pure modules like src/git/url.ts and src/git/relpath.ts typecheck identically under both programs.",
       "evidence": [
         {
           "resource": "repo://tsconfig.app.json#L1-L25",
@@ -201,22 +237,22 @@
           "version": "repo-lines-v1:sha256:770b4140bbb581e2dfd9ea9946ffc9c75a1d86ba7d2db5f77c83e37cbdf9d808:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTZmYjA4ZmRhMWFjYjk1N2I2MTE2YmQzNzgxMWExZmU0MWEwMTYxMWMwNjMxZWRiZjc4NmQ2ODg5YTI3YTU1YyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
         },
         {
-          "resource": "repo://tsconfig.node.json#L1-L29",
-          "version": "repo-lines-v1:sha256:4ef0d82fd6f52066de3d99a775cd21a1ef5d4366ebbe1fa3529e30f247913d7c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE2ZmIwOGZkYTFhY2I5NTdiNjExNmJkMzc4MTFhMWZlNDFhMDE2MTFjMDYzMWVkYmY3ODZkNjg4OWEyN2E1NWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://tsconfig.node.json#L1-L28",
+          "version": "repo-lines-v1:sha256:d2183255dac296ee0697538cb5018f6763d332b279c6d872c55cbce324368dbd:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE2ZmIwOGZkYTFhY2I5NTdiNjExNmJkMzc4MTFhMWZlNDFhMDE2MTFjMDYzMWVkYmY3ODZkNjg4OWEyN2E1NWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
     {
       "id": "claim_922dbe3ab48e46469c8a35be949aef5a",
-      "statement": "On disk, a project stores only schema and paper metadata in project.json; every reviewer's and the consolidated annotation answers live in a sibling annotations/<paperId>/ folder, one file per reviewer plus a consolidated file. The split was introduced to avoid git-merge conflicts between reviewers editing the same all-in-one file; the model layer keeps the logical whole-project shape and ElectronAdapter.saveProject does the split (re-parsing with loadProject, splitting via splitProjectFiles, sending {metaText, files} over project:save), while the read side (openProject/openRecent via readProjectText) reassembles a split project back into that logical text before handing it to the renderer.",
+      "statement": "On disk, a project stores only schema and paper metadata in project.json; every reviewer's and the consolidated annotation answers live in a sibling annotations/<paperId>/ folder, one file per reviewer plus a consolidated file. The split was introduced to avoid git-merge conflicts between reviewers editing the same all-in-one file. The renderer keeps the logical whole-project shape: DesktopAdapter.saveProject does the send, and the Rust project.rs::write_project_files performs the split, writing each annotation file inside the project (refusing paths that escape it and the reserved feedback/ directory), while the read side reassembles a split project back into that logical text before handing it to the renderer.",
       "evidence": [
         {
-          "resource": "repo://src/platform/electron.ts#L265-L292",
-          "version": "repo-lines-v1:sha256:79849f971c8e6667b5d2df5e34d1bac1324c44cac43d6184c1ea2c7a07efed33:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4MzBhMmI3OWMzYmI2MTIxN2FkYjgwMjUzMzdjOTc4OGVkODRjNDYwNmEwMTI5NGRjOGViZDIzYjRmMzcyMzYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRhMGIwMjkwNmU0YWJiZjdjNDFlN2M1ZDY1ZTE4NGFmMWQ3ODc1ZGQ3OTlhZDI0YWZlMmIwN2Y3MzU3NmJmYjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZhMGIzZjEwY2M1MGJiYjcyZjU5MThlZWNmYzNjOGFhZjg1ODZmZTAyNzkyZjU0MmY3ZjlkZjI1N2ExMjJlYmEifQ"
+          "resource": "repo://src-tauri/src/project.rs#L306-L364",
+          "version": "repo-lines-v1:sha256:13bed1a8f6aaa75adcda9e32130b2ab6b34a078bb5bf6d4e97915b40d243c97a:eyJzZWxlY3RlZExpbmVDb3VudCI6NTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1MmY1NDE4M2ZiYzNkOTI5YTY5YjIyN2ZlOGQ3YTM2MjU3NzA0Y2M0YThmMTYyMmFkOTcyZjVkOGQ5Mjc0YzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgyZTE0MThjNmI0MzYyOTNhN2Y0MjJiYjczZTU4M2E0NWZjYjQ5ZmZmYTRkNjRkY2IyOWZjY2FiOTM4M2FmODgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY2YmE1ZTU5OTZlYTliN2RhYWNjOTA4YTgwNmM3ZTU0Yjc5NWJhNzU4NGI4NzhiOGYxZTkzNGIwYzJjYTQ3ZGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlkMjk4MGVmMjYyZDNiMjY4NGNkMzA5Mzg3MDFmNzEwOWU2N2FkN2RkNjgzNDVlMzQwNDk3MGFiZjdjOWM0M2QifQ"
         },
         {
-          "resource": "repo://src/platform/electron.ts#L294-L325",
-          "version": "repo-lines-v1:sha256:51cbb643ef2691f6b97ca4e4a17e09274fa8be1035fde227fd3dd0c4ec34a725:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0YzZmNjliZWQyNWQxYTgzNTI2NTU5YTQ0NzVjOWZlNzQzNjFkMGJjZTg3YWMyZGIyNzVkNjM0OWY1ZTkzZjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk3ZDg2MzJlNTRlOTI5OGFiYjk1ODcyN2UyZDUxNDA4YWJhZjEzNjYwMzUzNzkxMDE0MGFiZjY1YjMwYWI2MTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFjMGQ3MTcxZjY3NzFmMjA2OTY0ZTIwYjE3YjBiMTlhYzIzNmNlMTA1NGUyYTcwYWU3NTA2NmM4NWMyNjliYjIifQ"
+          "resource": "repo://src/platform/desktop.ts#L176-L208",
+          "version": "repo-lines-v1:sha256:03100305529747fda401ba90ff9f77a1ebaf10506883982edcc1ea150761f372:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0YzZmNjliZWQyNWQxYTgzNTI2NTU5YTQ0NzVjOWZlNzQzNjFkMGJjZTg3YWMyZGIyNzVkNjM0OWY1ZTkzZjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk3ZDg2MzJlNTRlOTI5OGFiYjk1ODcyN2UyZDUxNDA4YWJhZjEzNjYwMzUzNzkxMDE0MGFiZjY1YjMwYWI2MTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFjMGQ3MTcxZjY3NzFmMjA2OTY0ZTIwYjE3YjBiMTlhYzIzNmNlMTA1NGUyYTcwYWU3NTA2NmM4NWMyNjliYjIifQ"
         }
       ]
     },
@@ -225,36 +261,36 @@
       "statement": "currentTree(project, currentReviewer, paper, create?) is the single routing decision every mutating action and reader goes through: single-reviewer → paper.annotations; Consolidation → paper.annotations (the tree that ships); a numbered reviewer → paper.reviews[N]; nobody picked on a multi-reviewer project → null. Mutating actions pass create=true (safe inside immer set) while read-only computations pass nothing.",
       "evidence": [
         {
-          "resource": "repo://src/state/store.ts#L2830-L2860",
+          "resource": "repo://src/state/store.ts#L3647-L3677",
           "version": "repo-lines-v1:sha256:f63e5f5c1f923d9ee490efcac43e988c17bc7c09704d99930305590b3a73e733:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQyYWQxYTE5ZmFiYzUxNTljY2U4ZjBmZmJmZjMwNjM0NjFiMTRlMTY4ZWY1NDM1NDJmYzk4MmRjOGM2ZTM3NTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBkOTAxZTdlMDM1ZTk2NDUxNjJhMWQ4MGZiZDE0OWUzYzMxYjc5ZmE4YTVmYjg2YTQ1NGM3MzVjZGJkNDRhNGYifQ"
         }
       ]
     },
     {
       "id": "claim_7f47d88c2e12478ba46ae0030de487d5",
-      "statement": "isElectron() is defined in src/platform/adapter.ts and checks for the preload-bridged window.slr object; it is both the App.tsx discontinuation gate and the selection criterion in getPlatform().",
+      "statement": "isTauri() is defined in src/platform/adapter.ts and checks for '__TAURI_INTERNALS__' in window; it is both the App.tsx discontinuation gate and the selection criterion in getPlatform().",
       "evidence": [
         {
-          "resource": "repo://src/platform/adapter.ts#L318-L321",
-          "version": "repo-lines-v1:sha256:10ca21e3bc34bb3871d3b482246baa874ede8557b1160db79ba40b3d0dfad3b4:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiN2VmYTBkYjY2MzYxNTgxMGM5NzI3MmJhZjgxNzk1NzU4YzEzZTYxY2Y5ZGRhZWRlMWJkZmE1NDU3NDNmOTVjMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDY0NjA0OGIwOWRmM2M4ZjViYjE2MmJlYmUwZjVjNzMwOGQzYWZlMDc4Y2Y5NjgzY2ExYWVlNDRlNmMzNWUwNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+          "resource": "repo://src/platform/adapter.ts#L321-L325",
+          "version": "repo-lines-v1:sha256:e3ec4b34a0fe8ca710bda4103f54936111895142d575c21a3fc66ccba14c7f57:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTY1MTAwN2Q2YzcwMGVmNDJkMTQ3Zjc1YzM3NTQ1NzkyMGJiN2M3Zjg5MWZhOTRjNjFmOTczMWZiN2QzYTdlYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjE3NzFiNGU2ODY1ZmM3YTU4YjMxMzVmNmViYjNiNzc1YWU0MDYxN2UwOTIyZTA3ZDVmMjczZTIzOWYwZDIxOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2ExMTYyZTgxNGMwZmM4NTdiMWNkODI2ZGIwNWRjY2Q3NTQ2ZDNiYjkwODhhM2Y0NTVkM2JlZWY0NzUyYmVhOSJ9"
         },
         {
-          "resource": "repo://src/platform/index.ts#L19-L21",
-          "version": "repo-lines-v1:sha256:5134832ae2215be68c5511f657df73b3da9d9b686456873d5cd19052a6940875:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjZhMjBjZWQ4NDQ1YTMwYTUxZjgzZjhhODk0MGZhYTM3NjFiZGRjZGQyNWI0ZTQ0M2UwNWZjYjJkYjJiZTk3MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWYyYzc4MDQwYTY0YTEwY2RiMWRjN2EzYzM3MDk0Zjc5OWQ4OTk5MzkwMzk1ZjI0ZTk2NWVlOGMyMDlhMDA5OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzZhOTgxZTJlNWNkNmQ0OGE3M2Q0NzFiM2I3ZDBhZTliZjgxNDI1OGY5YjE0YWQ3MGJjMjJiOTg1NmUwN2RlZSJ9"
+          "resource": "repo://src/platform/index.ts#L18-L22",
+          "version": "repo-lines-v1:sha256:f80e9d52a0bba74e272aa5a312051e5aeac31073d9f22272594cab0517809306:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYmM0MmY4YTJkYmRiZWM3YTExZmRlODIwN2VlZTNiN2NmYmExNzM1OGM3ODhlNTljODkwNzAzOWZlYjY2NzRmNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjUxYzRhNDAxMGM1ODdlMmFkOTQ2ZTcxYjI1ZTM3YzBjNTViNDQ5NzM5YmRhOGIxOWE1Y2NmZTU3MGExZjlmNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNWVlNzAxMTZiMDI3M2VkYzEyMzMwN2Q4MWIxNzAxNjY2NWVkZWNjNTJmNWM4M2JjOTkzMWUzOTljZjFjZTg4NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjUxMzIyZjMzMDBlYzZkZGUwODQ3Y2I1Y2IwY2ZiMDExMWQzZDg0YmI0NDI2OTg2Zjg4MjVlOTMzNmExN2U1OSJ9"
         }
       ]
     },
     {
       "id": "claim_97fb650d0dc64c9b87125d511c02886e",
-      "statement": "ConsolidationUpdatePrompt (src/components/ConsolidationUpdatePrompt.tsx) renders when consolidationUpdatePrompt holds a paper id, offering 'Keep My Version' (resolveConsolidationUpdate(false)) or 'Update' (resolveConsolidationUpdate(true)) to resolve a conflict between changed reviewer answers and an already-edited consolidated tree.",
+      "statement": "ConsolidationUpdatePrompt (src/components/ConsolidationUpdatePrompt.tsx) renders when consolidationUpdatePrompt holds a paper id, offering 'Keep My Version' (resolveConsolidationUpdate(false)) or 'Update' (resolveConsolidationUpdate(true)) to resolve a conflict between changed reviewer answers and an already-edited consolidated tree; declining keeps the consolidated edits and marks the consolidation synced.",
       "evidence": [
         {
           "resource": "repo://src/components/ConsolidationUpdatePrompt.tsx",
           "version": "repo-file-v1:sha256:417525d9916a3fa8312cf3fdb539585677e66ebd6dc8ae3f0086bf2bc63e89f1"
         },
         {
-          "resource": "repo://src/state/store.ts#L2530-L2565",
-          "version": "repo-lines-v1:sha256:7bdb738cc649760aa2e509c3edd62496ea8671dbce3633b30a87c398d50a7d8d:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE4MzU1MmFiNTcxNDk0YjM5OWIxODE5OTYyMmRiZTNiMzgyNmViNjFmY2QxZjc0Y2ZiMTJhYmNmODhlNGY3MjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE4MzU1MmFiNTcxNDk0YjM5OWIxODE5OTYyMmRiZTNiMzgyNmViNjFmY2QxZjc0Y2ZiMTJhYmNmODhlNGY3MjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdkMWU2MjhhODhkNTRkYTJlYWI3MDNiZjEyNThjYmY4ODkxYjYzMDM2MjVjZGE4MmJhZWQ0YzljNjY1MWM3NzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJmZjhkZTk5MWJjYmM4YWUyNzlkMzBjOWEzMjI3ZTNiMDU0NTcxY2NhY2Q5MDUwZWEwZDhhNmJmZjQ5ZTU1ODcifQ"
+          "resource": "repo://src/state/store.ts#L3215-L3225",
+          "version": "repo-lines-v1:sha256:35ce8dbe31abf013227b8d7e3bfb8414df20bf70339b146ad2f9c85a8a1677a3:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRiNWIyODFjMmQ0NzA5ZmY0ZmI1MWM1YzJjNzM1NDQ5ZGE1ZGVhODEyNThjMTc5MGVhMzc2OTc4MmRiYTYyZjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4YTcyNzI2M2YyNzc5ZWZlODI4NTUwZGI3MGE1ZjQ5MTUzMjAyNDVmYzljZGNiMjQ1ODcxYWY0NmU5ZWNkZjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJkMjU0NGE4YzVkN2UzMTU5NmU5NDRhOWEzZDQxZWE5NzliN2Q5YmU2MmQwYjQ2NDI2NWQ1YjJjZjllYWI3NmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVhMjc3ZDRjMTJlZjA4MmM5ZWViM2ExZjczNjUxOWM3MDU3ZDkwNzZjNWZiZjM3YjEwZmM5Yjg0ODE5YTQ2MWYifQ"
         }
       ]
     },
@@ -263,8 +299,8 @@
       "statement": "useUpstreamPolling (src/hooks/useUpstreamPolling.ts) keeps the toolbar's unpulled-commit count fresh while a project in a repository with an upstream is open, by background-fetching every BACKGROUND_FETCH_INTERVAL_MS (120 000) via gitStore.refreshUpstream; it is keyed on the repository root and upstream rather than the repo object (which is replaced on every reload) so the two-minute timer is not restarted each time. App.tsx calls it at the top level alongside the other hooks.",
       "evidence": [
         {
-          "resource": "repo://src/App.tsx#L49-L65",
-          "version": "repo-lines-v1:sha256:91aee8a829d026fe311e63a32bb78fb12fb9233ca803fe6a40348e18f51cbe04:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliMTg2OTViYWQ1ZmM5YmM0Y2Q4NTg5N2NiZDRjNWFiZTdkMzU0Y2UzZDRmMTZiMjE2MmZhMjM1NDE4NDFlNTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4ZjQ5NDZhYmQzYTFhZjhiZmI2ZDUwZjM4NWE5NzU5MjJlYTZlZTczOTkxNjdkYjg4MGYzNzBhNDE4MTUxNWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjViNzZhNTE2N2U4YzRmMzQyNGQ4NTkwYWIzZjJhZDdkZDk4MzdlZTQ3NzFiNDk3M2Q5M2MxNTk5OTg0ZDIxMzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE3NWQ2NWM0NTAxNWRiZDRhN2NjMmRlNTQ5ZWEyOTNmMjk3NWU1Yjc3ZTViYmQxMDNmODBkNmFiODNmMTA1OWIifQ"
+          "resource": "repo://src/App.tsx#L70-L70",
+          "version": "repo-lines-v1:sha256:d8f4946abd3a1af8bfb6d50f385a975922ea6ee7399167db880f370a4181515e:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDhmNDk0NmFiZDNhMWFmOGJmYjZkNTBmMzg1YTk3NTkyMmVhNmVlNzM5OTE2N2RiODgwZjM3MGE0MTgxNTE1ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDhmNDk0NmFiZDNhMWFmOGJmYjZkNTBmMzg1YTk3NTkyMmVhNmVlNzM5OTE2N2RiODgwZjM3MGE0MTgxNTE1ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjdlNjA2OGM4ZTIxZjM3NzBiYzkwN2VkNzZhMzg0ZDZhM2FlOTk5NjEyMjA4MDE1MDYwZDVhMjA3ZmFmNWQ4MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTc1ZDY1YzQ1MDE1ZGJkNGE3Y2MyZGU1NDllYTI5M2YyOTc1ZTViNzdlNWJiZDEwM2Y4MGQ2YWI4M2YxMDU5YiJ9"
         },
         {
           "resource": "repo://src/git/fetchPolicy.ts#L26-L26",
@@ -292,7 +328,7 @@
     }
   ],
   "verification": {
-    "by": "openwiki/0.5.2",
-    "at": "2026-09-23T12:49:55.013Z"
+    "by": "openwiki/0.7.3",
+    "at": "2026-11-02T08:58:22.323Z"
   }
 }

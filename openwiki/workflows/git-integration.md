@@ -39,9 +39,6 @@ sources:
   - id: openwiki-source-abd876b19e1ac7ba524a3f34
     resource: repo://src/state/gitStore.ts
 generated: { by: "openwiki/0.5.2", at: "2026-09-23T12:49:55.013Z" }
-verified:
-  - by: openwiki/0.5.2
-    at: 2026-09-23T12:49:55.013Z
 ---
 
 # Git Integration

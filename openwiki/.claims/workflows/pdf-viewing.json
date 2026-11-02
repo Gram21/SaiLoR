@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:6d3ce1477cfa4530e71931c41853dbac7983a6bf10859513d18bd220c0a39492",
+  "pageVersion": "sha256:9b14e97cec184d874dcdeaf6dbdcaf03a9e048de5ee31d537990a7e14df844e8",
   "claims": [
     {
       "id": "claim_b410c03b2c5e4183ab4744569122404e",
@@ -58,11 +58,11 @@
     },
     {
       "id": "claim_877bd2f020264f16a4faad45fddefb18",
-      "statement": "Every mark mutation (addHighlight, setMarkComment, setMarkColor, removeMark, linkMarkToField, unlinkMarkFromField) pushes its own undo step in the Zustand store; setMarkComment coalesces consecutive keystrokes via lastFieldKey, and comment/color/link/unlink changes propagate to every fragment sharing a groupId so a cross-page highlight behaves as one logical mark. unlinkMarkFromField deletes linkedFields back to undefined once the last link is removed so a never-linked mark round-trips byte-identical.",
+      "statement": "Every mark mutation (addHighlight, setMarkComment, setMarkColor, removeMark, linkMarkToField, unlinkMarkFromField) pushes its own undo step in the Zustand store; setMarkComment coalesces consecutive keystrokes via the shared lastFieldKey mechanism (keyed mark-comment:<id>), and comment/color/link/unlink changes propagate to every fragment sharing a groupId so a cross-page highlight behaves as one logical mark. unlinkMarkFromField deletes linkedFields back to undefined once the last link is removed so a never-linked mark round-trips byte-identical.",
       "evidence": [
         {
-          "resource": "repo://src/state/store.ts#L2135-L2168",
-          "version": "repo-lines-v1:sha256:9e44239ee2dfb8415222945dc2b7a6ca410469ecf9fb5b38e9cfaeb8c3111152:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImExMGRmOGE4MzJiYTE2YzUxMWE3ZWQyYzkxNTU3YTZhNzYwMmIxNDc2ZTZhYzljMzNlYTU3MTE1MzAzMjU3MDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYwODdlMWFmZDE3Y2MxNzY2M2FkMWExMzEyMjJhMDZiYTg2Y2QyOGExZDdiZDdjNDQzNGM0NDY1NzlkNDg1YTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNlODdiZjMwZDIxZDQxZDM4N2VkMTIwM2JjMGI0ODEyMjIwZmQyODY4MzdkNTA5NzhmNGVhNmEzMjFkNWJlMWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ0MDE5MjAwNGY3ZTRkZjM2OGM4M2I5NDdiNzAzYWY3ZTc5MTI1NjRmZmEyZmJiMjY4NmEwNDc3YTY5MWVmYzIifQ"
+          "resource": "repo://src/state/store.ts#L2583-L2767",
+          "version": "repo-lines-v1:sha256:6c68727ac9986958ff6cbf1d7dc717565673a3e0db4964bf80791149438d55cb:eyJzZWxlY3RlZExpbmVDb3VudCI6MTg1LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlNjJiMzkyZDkzODgyYzcyMmIxMjMzMzAwNDk0ZDFiMDBkMDQ3MGNiMTA4NjBiODMyYmNlNmVhYmQ3NzBkOGE5IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJjNTdiODBiYTcxMzVjN2M1OWY0NThiOGE2YmI1NTgxMTg3ZWQwYWU0MGE1OTA2NzRhNTZiYjY1NWM5MjBlNjQ4IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIxZGQ2ZDM0ODdlMjkyZWRhOGRmNGQ2MTZhMjgxMjJiNDRkZTJkOWNmY2M2ZGRlOTI1Yzk4ZDBhN2Q1MzZjYzkyIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0MzEyNDFlYzRjMWQ5YzljM2Q1NzA2MDViOWM4ODQ3ZDdmZDRkNTcwYWI2MWY3ODNiNzliMTg0YTM2MDEyNzlkIn0"
         }
       ]
     },
@@ -91,11 +91,11 @@
       "statement": "PdfViewer mounts one react-pdf Page element per page with no virtualization, each with its own canvas/text/annotation layer and pageRefs entry. onLoadSuccess caps the mounted count at MAX_PDF_PAGES (5000) and records overflow in truncatedPages, because a hostile 2.4 KB PDF whose page tree is a DAG can claim 16 million pages and crash the renderer. Page elements are memoized and the onRenderTextLayerSuccess callback is a stable useCallback so unrelated re-renders keep pdf.js text layers intact.",
       "evidence": [
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L1333-L1333",
+          "resource": "repo://src/components/PdfViewer.tsx#L1430-L1430",
           "version": "repo-lines-v1:sha256:89fb6751d62f20ea53e0ce4473a38138cda56788cfc3ee4c9678d765cbe0121e:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODlmYjY3NTFkNjJmMjBlYTUzZTBjZTQ0NzNhMzgxMzhjZGE1Njc4OGNmYzNlZTRjOTY3OGQ3NjVjYmUwMTIxZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODlmYjY3NTFkNjJmMjBlYTUzZTBjZTQ0NzNhMzgxMzhjZGE1Njc4OGNmYzNlZTRjOTY3OGQ3NjVjYmUwMTIxZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGRkMjZlNDIxZDI3YWRmMGJiMzU0N2EyOWI4ZjRiODlmZTMyYTZkNzE2YjhkNzg0MzQ2Yjc3ZWIwYzcyZTFiMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWVhOWUxMzFiYjgzNzQ5ZTljNWYwMWNhNzUyMTg4N2ViYzRhNzdlZTRmNWFmY2FkY2VhOWE3ZTVlOTMzY2IwYSJ9"
         },
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L1712-L1720",
+          "resource": "repo://src/components/PdfViewer.tsx#L1825-L1833",
           "version": "repo-lines-v1:sha256:aa9996876574b7dafae87c049a7a990e4a39344073e13bd43207ce7aa5dfb0d0:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGUwMGIxN2QyYmFjMWY5NmUzNTZlODk0Y2JmZjE5YjE0ZWY4YzkxMWQ3OTA4NDFmOTJlZTQ3MmM5ODczNzlmMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDUwMTAwYzljYTVjZmQ5Yjg4MWVjMzE0MDg5NjQ2MGRhZTI3NmRmOGE4ODAxZmRiYTQ2ZjQ4NGFlZDhhYjNmMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjk1ZjY4ODc1Y2M3Zjg0OWRkZjE0ZTI1MjViOTg2YmUyOWRhZDg2NzE2NDQyNWQyMTFjYTM1Y2I4YjFjZDQ4NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDMwYTU0YzNlYjJjMmIyY2JkMDVmNTUyOTEzMmRjNGJjZGY0MDllODhkOTAwNzgwNjcyZWUxNDVhNDI2Yzc2NyJ9"
         }
       ]
@@ -105,7 +105,7 @@
       "statement": "PDF zoom lives in the Zustand store (pdfZoom, clamped 0.4-3) so keyboard shortcuts can drive it too; the page renders at fit-to-width base size scaled by the zoom factor. Ctrl/Cmd+wheel zooms via a native non-passive wheel listener (React's synthetic handler is passive by default and preventDefault would warn) instead of scrolling.",
       "evidence": [
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L437-L443",
+          "resource": "repo://src/components/PdfViewer.tsx#L472-L478",
           "version": "repo-lines-v1:sha256:e73258f7d6a74f329ae05d92769bdd261d4707442cb1e2f5b8068d1817cfcc0f:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODk2ZGIzYzViNDUxOWJlZTI1ZTAwMGEyOTg2ZGIxMzUzZDdkMmIwNmFkNjhiZDIyMjUzM2Q1MTUwMTJiNWQyNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTFkYWYwZWQyZWM0MjQyNGE0M2U1YjQ3MmJiMTJkZjhkY2YwMGQyOWNjYmYwM2Y2YzEyYzEzNTRmNzEzZGUwYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODlkMTBiMzg3NDk0YTVjZTlhOWY1OGI4MGZlOTM3ZmNkOWI0YzYzODI3MTg4OWQ5MmM3ZDJkNmNjZTIzMWRlNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDU2NGQyZTFhOTRkZTZkZTM3NGZlNGRjYjdlOTUyZGQ2OWIxNDRiMDcwMGYzZmYwNmNmOWRlMTY0MzhhZjJmNiJ9"
         }
       ]
@@ -115,22 +115,38 @@
       "statement": "In-PDF search opens on Ctrl/Cmd+F, walks every rendered page's text layer with a TreeWalker building a Range per match (concatenating text nodes so matches can span pdf.js spans), debounces the query 150 ms, and tints matches via the CSS Custom Highlight API (CSS.highlights + Highlight) so it never mutates react-pdf's text-layer DOM, degrading gracefully when unavailable. The active match is centered in the scroll container.",
       "evidence": [
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L88-L136",
-          "version": "repo-lines-v1:sha256:b1b772777b0f39c59e183498bb86eea148385178cebc98e198a359855a613b8e:eyJzZWxlY3RlZExpbmVDb3VudCI6NDksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIzOWYxNDczYTVkNmYyNjI0ZGFiZWU3MGMzZjI2ZGIzOTNhZDM2NjhkMGIyMjhhNzFmNDlkZDk5ZTg2NmRiNmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZkNjI4MWNhNGQxOGU4Y2E1NTU0MDQ2N2QwN2NlMTlkMDA5MjY0ZWE0Nzg3NzNkYmY0OTU3YmUzMjY1YmYzYTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhlMmNlM2ZkYzMyNTAzNjNhYmFlNzQwMGZlMTUzZWM4NTNiMmIwYTVhZTFlMDEyOTc2MTJiMGI3Y2JiNDMyN2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQxZWQ4MDAzMjlkN2MzMDQ0MzFkZDZjMmRmM2Q4MjBkMmZiZmMwODc2ZDk1NWI5Y2I4NjUzYzRmMDQxMjlmYjUifQ"
+          "resource": "repo://src/components/PdfViewer.tsx#L1400-L1407",
+          "version": "repo-lines-v1:sha256:f1ea1e0a3b16a0ff218150161ec2a62029294119d343a701cc1ded8c55585f78:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTBjNGJlZjE4ZDU4ODJlYzFjZGM4MTQ3MjU3ZjNkYWJlY2Q0YmVmMTJiMGY2MDVkMDk4YWEzZDA5YWNkYTJiNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTIxYzgxM2I3MGRmMGQ0N2RhOTY4MTc4Mzg4NWJlNWY0ZjlkYTZjY2JiNjI1NGRmOTVjYzU1NmMxYTZhNGM2OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzkwZWYzOGJlZTNjMWZhN2E1ODEwZjBkZmNmNjUxOTQ0ODViYzc5NzE4NzhhMTM1MmJlM2VlMGM1NmY4MTE0YyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGNlOTJkNjc0MTFkMjY5MmU5YTU3ZDQ2OGU2MDQ1ODQ5MWZlNmUwZmYyYmQ5NDJmZDZhYjZiNzUwODhmZDI4ZSJ9"
+        },
+        {
+          "resource": "repo://src/components/PdfViewer.tsx#L1466-L1487",
+          "version": "repo-lines-v1:sha256:37d18644fa88e422a33ac1abb50e46633b8fa65d13e6f0cbbbc901a76db9e209:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2NzdkMmYwMzFlOThiNWU5MTFjNWFkNGZiOWIyMTg2YTkzMjUyMmU4ZjQ2ZWU0MGJhYmZhZTNkYTAwZmMxMjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4ODcyMjg2Y2YxNTc1OWU5YjUxZjkyMDljNzdiNDdhMzdmNWY0Mzk4ODQ1ODU3OTYyYWFlMDQzMjMzYzgyMjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYyNGM3NjIzMjc0NWM4ODQwMjEwZDlhMDJkOTlmNTU0ZWVmNDIzMDIxN2IyNWYwYjYwNmM5NTExYWZjM2YyMTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZlOThlZGI4ZjA5MGRhZGQ3ZDYyNGEyODNlNjNiMDAwM2Q2YzVlMGViOGExZmE2MDI3MzExYjZiNWJiZGEzYWUifQ"
+        },
+        {
+          "resource": "repo://src/components/PdfViewer.tsx#L92-L133",
+          "version": "repo-lines-v1:sha256:bd67a266e534cd61b8fd1ad21b63f67c9be2646640b28b808729cdfc08835799:eyJzZWxlY3RlZExpbmVDb3VudCI6NDIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxNTZmMWZiOWI3ZmI3ODMwYWFmMWI2NzFiMTE3NzdiMWE3Y2U1MDg1NDEzZGRlMmJkZWU4YWVlNDY5OGUwMzYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNhZGYzOTk2ZTZjNGQ3ZWNmMDU1NTY1YWQ4MDA2YjczZmI2YjA0OTgxMTQzNGU4Mzk2YTZiZDk1YWVjMTAxNjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjcyYWJlYThlYWQ2MzQwNzkyYTZmMDMzODlmNTc4MTFiNzg4OWM4NTdhMGZiN2RlYThiZTJjODE0NGNiOTNlMWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjExZGQ2MDM5NmE4ODQ2ZjFiMDg4N2FlZjAzMTJlZjE1YWE2ODMyN2M5NTI4N2FhOGRhN2JmZWNlYTY3NGNhZTEifQ"
         }
       ]
     },
     {
       "id": "claim_12abba4af28a440aae9092a1ccf37170",
-      "statement": "captureSelection reads window.getSelection, NFC-normalizes the text (pdf.js's text layer can split an accented letter into adjacent spans), and stores it in pdfSelection; Field.tsx's grab-from-PDF button parses it as a number for number fields, a four-digit year for year fields, or raw text otherwise. A selection spanning a page boundary is split per page via splitRangeByPage with header/footer trimming on intermediate pages, and all fragments share a groupId.",
+      "statement": "captureSelection reads window.getSelection, NFC-normalizes the text (pdf.js's text layer can split an accented letter into adjacent spans), and stores it in pdfSelection; Field.tsx's grab-from-PDF button parses it as a number for number fields, a four-digit year for year fields, or raw text otherwise. A selection spanning a page boundary is split per page via splitRangeByPage with header/footer trimming on intermediate pages (AUTO_EXTEND_MARGIN), and all fragments share a groupId.",
       "evidence": [
         {
-          "resource": "repo://src/components/Field.tsx#L117-L133",
-          "version": "repo-lines-v1:sha256:77d7449374c33949f843a0865c2174e0296057c1920acd04c0e801343beb3aaf:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM2ZTlmYzk4MjU0MzdiZWZhYTk3YTVkNDViODkwNjBiZjA2MWIxMTkzNDA4ZGZmYTQ1ZjFlMzc4MDc3ZmNkNzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBjY2EyODczNGJjMjkyNzkwYmRmOWM4MTM0NzFmODkwMjFhYjk5ZjMwOTA3MTIzMDc4YmMzMThhNDUxYTUzOWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMzNmU4Njg2N2E1OTgxZWU2NjJjYWRlNzZmNjBkMmViNzI4ZDlhNTc1YTdjNjEyYWJlZWU4MGUyOTIyMWE2MDMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZjNTBlMjYzMzlhM2UwZWVlMDBiOWUzOTQ3NTk1ODBhMjZkOGQ1YzI0YjJiYThlYzYzNmM0MTcwZTFlN2FiNTkifQ"
+          "resource": "repo://src/components/Field.tsx#L111-L126",
+          "version": "repo-lines-v1:sha256:06853639f6433260f3e8445a99b59ed807edf0b59ee81c4a42e59c652f315f80:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5Njg4MGUyOGYxZmIwMTYwMDMwYWRmYTBlNTFjNTZiODMwNjMxODJkOGYxYmNhZWEyNzVlMzI5NzU4Mzg4ZGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM2MmJlZTFjMGQ5M2Y3MmMyNzkzODA5YzJkNmVkYWRkNjI0ZTA1ZGEzOGY0YjhmNGJjMDQwYjdhMjI0OTBiMDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZiMGYxNzM4MWFlYzJjZDZjZGQxNzAxYzQ0ZWJkNThjMGRmYzY5ODhhYmM3OGEyOWY0MDQ2ODYzMGNhNWRlMWIifQ"
         },
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L842-L978",
-          "version": "repo-lines-v1:sha256:faa0f70d5658cfd5b5de2949c4eae9ffc3d4cd1637bdf5abcdf146ac8d80a82a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTM3LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI4NjQ4ZmI2YTZjN2MzODllMWI1OTJhMzk0YzM5OTc5NDNlMTA0Mzg0NmMyMjk3ODVmMmYzMzA4NzIxNDE3OTUzIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJlNTQ4YTg2NDgyODg3OWFhOTk2MDQzNzEwZDIzYjBhODMwNTQ2NWM1YjczMjI5MDQzNDI3MDcwYzgwZDk0ZDBmIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI0Yjc1OTRhOTE2MDhlOTBkNGE3OThkMmQyNWNkZWNkNzZhNjk5NmUwZjljNDI2NTMwMDJhMzkzY2NlZmJmZDMyIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI1ODgwMzMwMDc0Njc4ZjcxOTc0Y2JmODBiOWYyN2RjNmY4OTk1YzJjODZlYjVhZTMxNjBlYzNkMjcxYTAyODFjIn0"
+          "resource": "repo://src/components/PdfViewer.tsx#L681-L688",
+          "version": "repo-lines-v1:sha256:bd46b18fc29670cc85e1e13016c31fc246663a1b6c633b5ba7fb0719383d8bc9:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWIwNDFiODNjN2QzZjQ1MTQzZGE2YjJkZDgyZWM5ZTQwYjBmMzk2NTc1YTNjYzhjNzM1ODg5M2YyODNlMzNmOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWI4MzNjMGZlNmIwYTMwMmM1YWNhYzE0NWQ0ODUzMjFkNDFiMDExMGRkNzJkM2U0NTQ5ZjExOTk1Y2JmNDViYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmZiMWI1Y2Q2Yjc3NjMxZTRlNTE1NzQ1YmEzYmFhYTU0YTgzZWQzM2IyZGQxNDgyNDY3OTcwMmE5MTY5NTFhNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWE5MjkzZmQ4MDU0YjZlNDcyNDgzNzNmMzlmNGRkNzc4MDAxMDVlYjc1ODM0ODY4NzI1NDI4NWNkMTI4MmI3OCJ9"
+        },
+        {
+          "resource": "repo://src/components/PdfViewer.tsx#L793-L861",
+          "version": "repo-lines-v1:sha256:7119f858abc2cb6ca5dfe502d45f13c82c700aa18342a138b4fc4d0d46e3aa6e:eyJzZWxlY3RlZExpbmVDb3VudCI6NjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY3ZmUxZmYyNTRkMTVlYzA2ODc4NmVhM2ZiMDk0NGJkNmVmZjgzMDBhNjVlNmMzNWZlNDRhYWNmMDY0ZjY0NDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhN2Q5OTAzNGI4YzA0MzE0OTViNGI2ZGYwZGM3YWNlYzA1Y2E4N2UxZWU3MTEwMTZhMWJjZDRlYjk4YjFhOWEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUxNmY2NDI3YTBjZGY1YjgyYWQ1MDg1ZGYwZGJhYTU0MmNjY2IyYjliMGE5ZTI5YjYwMGIzMmEyY2ZiMzg3NDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg2MmNlMDBiYTVlN2YwZDI3ODNiMDkxYTVlODYyMzRkMWZhM2M0ZjlkZTIzNmM4ZjhjODZmM2JiZGYyMWFjOWEifQ"
+        },
+        {
+          "resource": "repo://src/components/PdfViewer.tsx#L864-L926",
+          "version": "repo-lines-v1:sha256:48dd49cc216e9adf78aff062e8fd11dfac7c0741dc4f621f27e5307716c5c34a:eyJzZWxlY3RlZExpbmVDb3VudCI6NjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2NjNmNjEyNDRkYzRkOGFiNTlkNmNmM2E5ZWUzODdjYjJkYmNlYTdhOGUyZDgxYjgxYTY3OGI4NzI0OWEyNGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM3Mjc1MzFjYTZmYThkNjEzMDlkYWZjMTM2MjkxMGM2ZmMzYmQ0N2Q2OWI0OTg1ZmU4ZDAyZGY2ZTE1ZmM5ZWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI3OGRhZGQyMjc2NGMwNzQxZTViZTU1MDNjNGE3YmVlZjA2MmRhMzFmODIwODczY2UxYzhkMmU2MDc2YTVmZDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM2N2RlYzhhNWZiOGYzNzE1MTJjYTZiMTFhMGQ5ZDNiNmVhMDY2ZDQ4ODIxNWI5MzI0ZjFmNWVlMTMxOTUwYzYifQ"
         }
       ]
     },
@@ -139,7 +155,7 @@
       "statement": "dedupeOverlappingRects folds near-duplicate rects from Range.getClientRects (a cross-browser quirk that can report the same line twice) into their union when overlap exceeds 0.6, while leaving genuinely side-by-side rects on the same line (which overlap ~0) alone.",
       "evidence": [
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L70-L86",
+          "resource": "repo://src/components/PdfViewer.tsx#L72-L88",
           "version": "repo-lines-v1:sha256:c608baa90eda30999939d18f25520db65e6a25b50fdfb05dfd1fbce5aa5ef2ca:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMzZTI3OGY5ZmE1NjRlNGI1Y2U1NTVjMmY1ZGRiNjNkZTIwNGYxMjUyNWQ3NWEyZjJjZmVmNmQ4MDM3ZDFmM2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNhNTU0ODhkNzkyOGRjNzljNzMyMGYzMDMzOTRlMDA4NTliOGNmNTYyMjZkYzlmMTg1ZmQ2NzJiM2RjMzdiNGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcyYWJlYThlYWQ2MzQwNzkyYTZmMDMzODlmNTc4MTFiNzg4OWM4NTdhMGZiN2RlYThiZTJjODE0NGNiOTNlMWQifQ"
         }
       ]
@@ -149,8 +165,8 @@
       "statement": "Because mark overlays sit on top of pdf.js's text layer, handleMarkMouseDown turns pointer-events off for the whole gesture (via the .pdf-marks-dragging class), uses document.caretRangeFromPoint to find the real text under the cursor, anchors a selection, and extends it on mousemove — so dragging across a highlight selects the text instead of grabbing the empty overlay div; a bare click still opens the mark's popover.",
       "evidence": [
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L674-L707",
-          "version": "repo-lines-v1:sha256:f478cae4ae3d65d6cc400b1076415ac2133a066264d049ea23c6d229ffb0e33d:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4Nzc4ZDE3MjYzZTJiYzM0Y2MzNTFlNDZiM2MwMTU5Mzk2ZjFjYmI2N2E3OWFjYzNmYjFmZmNhMWExN2JhMzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY2ZjJmYWYyYzllMjkzOTAxMDYyZTRiMWFkMzJhZmUzOWQ5YmM4NzE5NjRkYTU0ZWVmMmMzZTc0NDhiMDE1NDQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNhOTc5MDlmNDViMmUyZDkzMGM5MTFkNzQ4NzgwN2QwZmNiMTc2NDA0ZGJmMDc0YWZkMzk2MjIxNDY3NmE1NmYifQ"
+          "resource": "repo://src/components/PdfViewer.tsx#L693-L744",
+          "version": "repo-lines-v1:sha256:7afa6cfefd59225c37c212e7cb417bbf8c25c3d984291325358e8ddcead627ae:eyJzZWxlY3RlZExpbmVDb3VudCI6NTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4ZTg0Nzg3MWFkOWQ4OWUzNjUzZjdhMTEyZDE1ZWNmZTg4NGU2MjI0NzA4M2I4OWJkN2FmMjFmOWMxZWQzNzMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE3Y2MxMTU3NmZmZjgyMjYwNWU2MWQ4YzMzNGQ0NDJhODgyMjczMDVjMjNhYjFmODIyZWM0NDJjZmFmODVjMjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEwOTJiODViZjIzYWViOWNmZWRjNzY2MTNhMTZlMDI4N2ViMGZhYzc0ZjQwNzAxODVmODEwOGVhYzM2OTc1ZTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ3MGE1YjVlN2U5Mjk0NWI1YjNiZmEyMjM1NDg5ZmY3MTMxZjc4NTg0NjVmMDVjYjU4ODk0ZWI1N2EwN2MyOGUifQ"
         }
       ]
     },
@@ -159,7 +175,7 @@
       "statement": "Hovering an internal PDF link previews its destination by copying a crop from the destination page's already-rendered canvas (no extra pdf.js render). resolveLinkPreview resolves the destination, fits a crop box to the destination's own entry via detectEntryBox (a SumatraPDF DetectEntryBox port), copies it at full backing-store resolution and scales down only at display time, and flips above the link when cramped. linkHoverTokenRef invalidates any in-flight resolution when the hover ends.",
       "evidence": [
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L1101-L1218",
+          "resource": "repo://src/components/PdfViewer.tsx#L1197-L1314",
           "version": "repo-lines-v1:sha256:02b3716a765e766f48d3baf53a0d070b74e945607f560126aefe64efdde26c8b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTE4LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI3OTRlMzgxYmFkMWRhOWExMTliMjJmYjU0ZDViMmUyZmQwNTExOWRhYWUxYjU4NjM5NDA0MDM1Yzc2ZjEyYjMwIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIyN2U1Nzg4ZDVkOWQ3M2QyNGE4MWRiYzBhNWE3NGJmYTgyYzljM2IzYWY5OWU1MmFmNzk2ZTkwYjQ2OGE4YTNkIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJhOGMxMzZhMDA4MGE5OTQ3Nzg3ZmZjYjk3MmE0ZGE5Mjg5MzY3OGY5NzU0ZmEwMjJiZTViOGViOTlkNWFmZWQxIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIwZjZkNjQ3NjY0M2E3NzIzM2I5NzRmN2UzOWQ0OWMxOTgxN2FkNzljNDgyYTBiODM0NGQ0MjFmMDI1MDlmODRmIn0"
         },
         {
@@ -173,18 +189,18 @@
       "statement": "destinationPoint decodes a pdf.js explicit destination array into x/y in PDF user space (null for an axis a FitH/FitV/Fit destination leaves unspecified), and is the pure, unit-testable piece of the preview flow.",
       "evidence": [
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L164-L182",
+          "resource": "repo://src/components/PdfViewer.tsx#L191-L209",
           "version": "repo-lines-v1:sha256:6a3c48a5f5bd6ae659e0645909164d827b7310a78fa4ee880f74d9ec6d3a061e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFjNDg3MDQyZjczNTdiZDhmMTIzMDk0YzRkZTU1YTNlMGE0NmRkNDBhYjUxY2I2ODdiMDUyZGIyODk3ODk2MTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA2NTIwZjc1ZmE3NWVjMzdmY2Y5MDUyZWNiZDdkMDFjYTNlYTVjM2EyOTEwZThiNTRhMDBiYmZkYzBhNmMwY2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE4OWE2ODg1YTU5ODQ0MjY2NDM5ZWRhZWE4MDYzNGM5YmVkYTIyZTUwOGY5YjA2ZDIwN2Q4ZDZlNTkzN2RiNDQifQ"
         }
       ]
     },
     {
       "id": "claim_5252d411a77c49fcb3165d9393aa06e6",
-      "statement": "pdfExport.ts is pure coordinate math kept separate from pdf-lib so it is trivially unit-testable. rectToPdfPoints converts a fraction-based MarkRect (top-left origin, y-down) to PDF user-space points (bottom-left origin, y-up) with the result's y being the rect's bottom edge (a /Rect lly). rectToQuadPoints produces the 8-number /QuadPoints array per PDF spec §8.4.5 (top-left, top-right, bottom-left, bottom-right — that pairing, not a clockwise walk, is what viewers expect). annotatedFileName derives paper.pdf -> paper-annotated.pdf without double-suffixing.",
+      "statement": "pdfExport.ts is pure coordinate math kept free of any PDF-library dependency (constructing the actual annotation dictionaries needs the Rust shell, which owns the filesystem) so it is trivially unit-testable. rectToPdfPoints converts a fraction-based MarkRect (top-left origin, y-down) to PDF user-space points (bottom-left origin, y-up) with the result's y being the rect's bottom edge (a /Rect lly). rectToQuadPoints produces the 8-number /QuadPoints array per PDF spec §8.4.5 (top-left, top-right, bottom-left, bottom-right — that pairing, not a clockwise walk, is what viewers expect). annotatedFileName derives paper.pdf -> paper-annotated.pdf, adds a .pdf extension when absent, and never double-suffixes.",
       "evidence": [
         {
           "resource": "repo://src/model/pdfExport.ts#L1-L61",
-          "version": "repo-lines-v1:sha256:51f91a5050aa5eb2bdd57f8f09faafa764380dac017eaa5086f82eb80a6ed63e:eyJzZWxlY3RlZExpbmVDb3VudCI6NjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "version": "repo-lines-v1:sha256:297b5cf3cece7ce6ba4a114e543466dd943e03973621e1a15a7df50ba4cb0236:eyJzZWxlY3RlZExpbmVDb3VudCI6NjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
@@ -199,21 +215,11 @@
       ]
     },
     {
-      "id": "claim_fed936ac6b0a4ba8b6337aa178f71f44",
-      "statement": "In electron/main.ts embedMarksIntoPdf builds one annotation dictionary per mark by hand via pdf-lib's low-level PDFContext API (pdf-lib has no high-level add-Highlight helper): a Highlight annotation (with /QuadPoints per line, /CA 0.4 translucency, union /Rect) for highlights and a Text sticky-note annotation for notes, each with the comment as a PDFHexString (non-ASCII survives), color as a /C array, and T:'SaiLoR' as author. Annotations are appended to each page's existing /Annots so pre-existing annotations survive; a mark whose page is beyond the PDF's page count is skipped rather than failing the whole export.",
-      "evidence": [
-        {
-          "resource": "repo://electron/main.ts#L1031-L1144",
-          "version": "repo-lines-v1:sha256:8f6f8e6b8bc9d6acfe7e758ced2c7fee363429fa98cb6eb0acab930dc53f5071:eyJzZWxlY3RlZExpbmVDb3VudCI6MTE0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIwOGExYWFmOTBkYzRjODVmZWMxZmJmZjMxNmM5Mzg5Y2QyMjdhYWE1OGVjZjkyYTY2YWFhY2UwOWMwMjI4MzJhIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI5MmY0OTYzOWM4YWJkNzBkNDM2MzI5ZDljYjFhNjQ2N2QxYTBjNTlkZjU5NmU2NDI4MDIyMzk3ODJkZWFkMTUwIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIyYTJjOWY5MTY0NGMxY2ZlZDc5ZDQyZTIxZjEwZWI1MDg0MmQ0NGMwNzFiZjY3YmYxYzFhMTc0MjEwOTdjZDdiIn0"
-        }
-      ]
-    },
-    {
       "id": "claim_1b687ddf31d1400890254d19b284d475",
       "statement": "Reading position (paper, page, scroll offset as a fraction of the page's rendered height) is stored in localStorage keyed by the project's file path (slr.readingPosition.<path>), never in the shared project JSON where it would be diff noise. noteReadingPosition is debounced 500 ms from PdfViewer and takes paperId explicitly because the reviewer may have switched papers by the time the debounced call fires; it is a no-op with no stable save location. readOffsetFraction uses the same zoom-independent fraction convention as MarkRect.",
       "evidence": [
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L589-L619",
+          "resource": "repo://src/components/PdfViewer.tsx#L624-L654",
           "version": "repo-lines-v1:sha256:acb3ef0196c6bdc69c976d0e5b46ae209dcf3984c5fed5023eb3ff95136edfe5:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE4OWVjZmQwMjcyMjcwZjNmMjY5NjRlMmEyMGVkYjM4M2YzMDEwOTRhOTI2ODY1OWQwZTNiYWM0ODZmZTM4OWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY2NjQzNDNlYzk0MGFhZTM0NmM2NTVjNWQzNTE0NWIwYzUwZmMyNmIzMjgwMzYyY2E1YzY5YjU2ZTAzZTQ5NmEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRiYjQyYzg4YTMyOTM3MDU0NGExNGM0ZjY0MWYzMTFlMDJjYjgzM2E5OWI3NTdhOTI5ZWM0ZTU3OWZmYzAxYWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk0YTg3YmM1MTEwOWM2MzFjMGZiNmJmNzgzZGU5OGUwMmY1MDI4MWNjZDQ1ZjVmZDBhYjRlNGU0OTE4OGIzMDkifQ"
         }
       ]
@@ -223,7 +229,7 @@
       "statement": "On project load loadReadingPosition is used only if the named paper still exists, else it falls back to the first unfinished paper; the result populates session-only initialPdfPosition. PdfViewer consumes it once pages mount via a single combined scrollTop delta computed from the same rects scrollToMark uses, and re-snaps on every textRenderTick (each page's text layer finishing) because pages are still at loading-placeholder height when numPages first becomes known and earlier pages growing would otherwise push the target away. The request is dropped after a short idle window and discarded if the reviewer navigated to a different paper before it ran.",
       "evidence": [
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L470-L506",
+          "resource": "repo://src/components/PdfViewer.tsx#L505-L541",
           "version": "repo-lines-v1:sha256:364a308568a3986e397df7fddd7b39221987311cfbca0304bc52df17892c91a1:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFiZDg3NzRkYjNhZGUzN2FhNGM0N2YzNmFhOTczYWY2MWZiNjMxZGQwYTgzMGM4NzUzNzQ2ZjJkNWNjZTk1MWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRiZjFlZjYwOWJkOTJiYjQxMDQyNWNkNWU3NDA5MDUzZTY0N2Q5YjBlMGJlNTY4ZjVmMjdkZTMzMTk1OGY3NDMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhhNjY5YTZhZjA2ZTNkODVkNGQyZmQwMDcwMjhlYTg1ZmZhYjZhNDAwZTAwYjQ5YmRhNDhkNjIwYTBjNWM1YTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYyODVhNWI1N2U4MDZjYzA2YjliZThlMjgzNjg2MzhmNjIzZjUxNTdlOGZjODljZDZhYmQ3ZTc5MzdkZjg2NzYifQ"
         }
       ]
@@ -248,29 +254,21 @@
     },
     {
       "id": "claim_39a1d464cee04a40b394d127a20bab06",
-      "statement": "pdfText.ts extractPdfText produces full plain text one [page N] block per page for pasting into an LLM prompt instead of uploading the PDF. linesFromItems mirrors pdfMeta's baseline-bucketing layout heuristic (duplicated, not imported, to keep the module independent) because pdf.js does not promise items in reading order. A single bad page is skipped; only a document that can't be opened throws. Extraction is capped at DEFAULT_MAX_PAGES (2000) since page count is file-controlled and an uncapped walk would freeze; the empty flag (body chars < 200, excluding page markers) marks a scanned/image-only PDF so the AI flow can fall back.",
+      "statement": "pdfText.ts extractPdfText produces full plain text one [page N] block per page for pasting into an LLM prompt instead of uploading the PDF. linesFromItems mirrors pdfMeta's baseline-bucketing layout heuristic (duplicated, not imported, to keep the module independent) because pdf.js does not promise items in reading order, and NFC-normalizes after joining so accented letters split across items recompose. A single bad page is skipped; only a document that can't be opened throws. Extraction is capped at DEFAULT_MAX_PAGES (2000) since page count is file-controlled and an uncapped walk would freeze; the empty flag (body chars < 200, counting only body text and not the [page N] markers) marks a scanned/image-only PDF so the AI flow can fall back.",
       "evidence": [
         {
-          "resource": "repo://src/model/pdfText.ts#L1-L22",
-          "version": "repo-lines-v1:sha256:744ec7e7ac1e005fbcb7c1238fe9b8c4c6dfe32ddc53a7f339150f4b8f2bda72:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU5OWM3M2Y0OGYyMjYzNTE5ZTE0ZDQyNzkwZGIyYTM5ZmE2ZDY4ZmIwOWQ5ZWIzZTZiYzNlODc4ZWNmODM3MjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc3YmQ1ZjQyYzdjMDNmNGI3YWU2NjY3NjVhZTM4MzQyMDgwOTkyZDdkZTM1ZDdiNmYzNDQzOWM3ZTcyMDA1YzYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMzYWM5NjM5NDNjOWM4NGE5MGQ2MjhjYWM3NWM0MzMwOTliOGY2M2UzYTEwMWVlMDQ2ZWEwNWY4MWJlNmI5NjMifQ"
-        },
-        {
-          "resource": "repo://src/model/pdfText.ts#L36-L80",
-          "version": "repo-lines-v1:sha256:bec072182125bb13a0f962d5ff8b75ed4096fc050bb638e6e0465d012bc8e0e6:eyJzZWxlY3RlZExpbmVDb3VudCI6NDUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFiNWJlYjMxYzIzZWIyNThjNDY1OTI5OGU3ZmYyOWVkYWVjMTYxZTViNzM2YThlMWNmODljN2VhMjZjNTc3MTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk3MzBiYzI4MGY3MDBiZmU0ZmIxZGQ1MDQxYWU5YzdjMTkxN2E1YTY2NWQwZTdkODk1ZWE5OGM1NDhlOWIwNzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4NWQwYjYyMTc3Yzk5MjZkOWMxYTQxMDViYTZjMTQxOGFmOTQxMDZlYTc5YTIyNjM5MzFlNTk3ZDQ2ODkzYTkifQ"
-        },
-        {
-          "resource": "repo://src/model/pdfText.ts#L96-L152",
-          "version": "repo-lines-v1:sha256:2282fa6c56021ac62031e7f57c082580217d6df89e04d24e0ead24359d687855:eyJzZWxlY3RlZExpbmVDb3VudCI6NTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQwOWMxYWYyMzBkYWJlNzEzMzcwYTk0ODQ5OTA3ZmU5YzFlOWEwMDZiNDE4MTdiYTYzODBkZDUxMjgxNjUyMGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY3ZWRlMzRlNDllNzNhZmMzMWVlOWNjYjlkZTlkMDFiYWE0NmJlZTc4ZWI0ZjcxYTE0MmEwYzU5MDA3YjdlZmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/model/pdfText.ts#L1-L166",
+          "version": "repo-lines-v1:sha256:4b9aa6eac86decb13c74330b4caa1c70fec1551b00fa0df2452e6a987ae26fae:eyJzZWxlY3RlZExpbmVDb3VudCI6MTY2LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlOTljNzNmNDhmMjI2MzUxOWUxNGQ0Mjc5MGRiMmEzOWZhNmQ2OGZiMDlkOWViM2U2YmMzZTg3OGVjZjgzNzI4IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
     {
       "id": "claim_eaf0d12a6cf7472f97aba0cdb91839c9",
-      "statement": "src/platform/pdfjs.ts is the single place that points pdf.js at its worker (loaded from the bundled dependency so it works offline and inside Electron); setting it twice from two modules would be a silent footgun. Both PdfViewer and the metadata extractor import it for side effect.",
+      "statement": "src/platform/pdfjs.ts is the single place that points pdf.js at its worker (loaded from the bundled dependency so it works offline and inside the desktop app); setting it twice from two modules would be a silent footgun. Both PdfViewer and the metadata/text extractors import it for side effect.",
       "evidence": [
         {
           "resource": "repo://src/platform/pdfjs.ts#L1-L15",
-          "version": "repo-lines-v1:sha256:566244806572b54df1a8b32e171e87f612e7e0e22702e47de1e0d7cc9d9a73ef:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUwODM1MmM3ODVlZDlhM2NiNzA2YWY2YjNhZTJlMjZhZDAzNjFjZjU5Njc5OTRkNjI0Nzc3MDUzMmQ1ZTNhNDYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMzMzdlMzY2M2ZmZWM4NGUxMmY0MDc2NDBlMTUyMDVhMjhkMTU5MmM2ZjQxOGQ3NjgwNTY0ZDlkZTg0MzYzOGUifQ"
+          "version": "repo-lines-v1:sha256:b2b95f9a869b982d9c8950865759e9c813c756b576eef0c671177f80facadb77:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUwODM1MmM3ODVlZDlhM2NiNzA2YWY2YjNhZTJlMjZhZDAzNjFjZjU5Njc5OTRkNjI0Nzc3MDUzMmQ1ZTNhNDYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMzMzdlMzY2M2ZmZWM4NGUxMmY0MDc2NDBlMTUyMDVhMjhkMTU5MmM2ZjQxOGQ3NjgwNTY0ZDlkZTg0MzYzOGUifQ"
         }
       ]
     },
@@ -283,10 +281,100 @@
           "version": "repo-lines-v1:sha256:85a99457ff524aead474e3e3345dc9aa3c26053bdaff4e00645da5536daf0dee:eyJzZWxlY3RlZExpbmVDb3VudCI6NTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
+    },
+    {
+      "id": "claim_39c7aa4c521440d18345a9a09dfe87e9",
+      "statement": "The slr-file:// custom scheme (registered in src-tauri/src/main.rs, served by protocol::serve) delivers the viewer's PDF bytes: the project-relative path rides as a query parameter, never the URL path, because Chromium's URL parser collapses \"..\" segments before the request is made. Satisfiable single bytes= ranges return 206 Partial Content with Accept-Ranges/Content-Range/Content-Length so pdf.js can stream; multi-range, malformed, or other-unit Range requests degrade to a 200 whole-file response; an unsatisfiable range returns 416 with \"bytes */len\"; an OPTIONS preflight returns 204 allowing the Range header. Path traversal (\"../\", absolute paths, and a symlink inside the project pointing out) is a flat 403 via the shared resolve_project_path; no-project and missing files are 404s with readable bodies.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/main.rs#L100-L103",
+          "version": "repo-lines-v1:sha256:7909d9c51118f323d6f62539ea8efce375e8d08c8829d096d9f3303dbfd6c0a4:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDI5ZGYxMzRkMjgyOWU1MmIyNWMyODBhNjlhMDVlOGNkODJmODc3YjUwNjFjYTQ2MDVmZjMzN2Q0Njk3YWM5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZGEwYzY1NTdiMmQyNjRlMGFiNmZlMGNhNDIyYWI4MWJlMDE2OWJhMjllZmE4YTFiYWZkOGU0NmIzMWY3MGQyMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODg5MzQ3MTMwZDFmZWUzMTBkYTRmZjRkN2FkYjFiMDkyMzRiZmNmNjlkY2E0MWY1ZTM5OWY2MWFlMDg5MzkxMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWZlODgxYTk3NjhiMWYxNTdlNjYzZTlmM2RhNGUxMGI3MzlhODUwN2ZlNjI0ZWVkYzRlODRjYzAzMDZlZWYzYyJ9"
+        },
+        {
+          "resource": "repo://src-tauri/src/protocol.rs#L40-L131",
+          "version": "repo-lines-v1:sha256:3896d7043e1e83f9ca40f80ae04d416dc1992e95d8bc35a4c3da824f2f3fb1ef:eyJzZWxlY3RlZExpbmVDb3VudCI6OTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZjYmFjYzg5ZGUxMzM3YWQyMTM3MDJlNmUwYWFiN2ZjODY2MzM2NDg2MDk3NzQ2MGNmNGFkZDEzNDUwZjc2OTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJhNmIzYmU0NDQwZWZlOWY2MTYyMWYwMmJlMDU1Yzk1MjhjNWQ3ZDgzYTRhMjQ4ZWNlMzRlYjk5YTRjN2VmZGYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkwYWNhMzgzMWFmMzc4MTliNWQ0ODQyNmI2ZWQxNWYxMTRjOWY2ZDkzZTU3ODdiYzdjYzA1MTg0YWRiODZlODAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUwMTRhOWI0MGQwOTY3ZjAwMDExMTU0ODI5YWZkM2UzYzM1NjdmOGYyY2ExNzMxYWYxNTdlYjgwZmE3ZmU0NGMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_dfc9e266d5594c2cbb75e5decfd8c1d2",
+      "statement": "Per-session escape approval: when a project's referenced PDF resolves outside the project folder, pdf:checkPath reports reason \"escapes\", and pdf:allowPath shows a native warning dialog in the Rust shell (deliberately not in the renderer, so a renderer cannot approve its own escape) explaining that opening means reading a file the project itself names. Approval inserts the relative path into the session's allowed_escapes set (src-tauri/src/authz.rs Session), which resolve_project_path and the export-side project_pdf both honor; nothing is persisted beyond the session. pdf_read likewise only reads paths returned by pdf:pick/pdf:pickFolder this session (readable_pdfs).",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/authz.rs#L8-L16",
+          "version": "repo-lines-v1:sha256:8d65fefc1b154b623faa07acac63ca9b55db66803f53fb6a399baeab1b91fa87:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYmM2MTVhMmNlZDMwOTYwYmEyOWIzYTRlNWJhYzA3MmI4ZmZiNWEwNjQ1YjNiZDI5ZGM5Mjc2NWViYTA5NDg4OSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjM5YTI2OWMxMjdlMzEyNGE3NjU5NmM1OTBlZmFiY2Q0MmYwMzdmZjI5NmQ4YmRkZDBmZjRiNmVlMGUyYTc5NCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWMzYWFjZmE1MmMxMGJjZjMwOWE3MGVmOWJmZWNiNmJhMTJhMzAxNGZmNTJhMGU1MzVjNjNmZTQyZjZhZmUxNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODdmODZiNjdjMzViZjk5NjEzY2RmM2IyZmIwN2Y0OWNkOGY5ODE3Y2ZlZTliMmJlM2JlZTE3ZjZlMmE4MTk2ZSJ9"
+        },
+        {
+          "resource": "repo://src-tauri/src/pdf.rs#L108-L127",
+          "version": "repo-lines-v1:sha256:d3f4dff9541970521cf25495d27e8a16460b9510e87d261715f5dd5a9f05b9dd:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmMGEzOTY2NTM2ZjU3MmEwMjRmOWJhN2MzNTQwODNjNmNjNjEwYTA4MDUyZTI3MDkxZGZlNjI1NmIzNDE1NTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVhMzRhYzQ5MDI1ZTc3MGI1MzM0MjI0ZjE2ZDIzNmY5NDMyYjkzNjUzY2FmZjMwNDFjYjcwY2NmY2ZmYWI5MGUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk5YjIzMTVlODg5NmU5YTM1MmM4ZmY0YmNjZDc5MmE4N2VlMzQxYjAwYTMxOTQyNTFkMWZiOThiYWUyNTMzMDgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBmOGRlZTJkM2E4ZTIzMDdhNmE3ZWQ3NzIyYmQ2MTRiYTM5Nzg5ZjQ3YzNkNWM4MGRiYzdhNGU0Nzc5ZTk0NDIifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/pdf.rs#L52-L64",
+          "version": "repo-lines-v1:sha256:cf56b5aa19ceddc53b2ae67e898566acd626b860e73f2130870b9f2269fb160b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlMWRjMjY1YWVmNGI1NTgxNDZkNTk2MGYwZDkwZDkyN2RmZjEyNzA3MTZmYjc2YTc1NzBiMjYyMDc2MGNiOGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjczODEwZWE0ZDBlYzE4NWMyMzI3MjdlNjRiMDEyMTY5NzQxMTgzN2Y3NzgyM2Q3ZWYwZjk0MjFmYjU0NmVkNDUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYwNjNjNGQxYWY4Y2Q4OWJiMGJkZDc2NTdmZmNiZjY4MDZhNjEwZDc5ZDZjOGQ0YzMwN2MyNDFkZjM5MDA1MjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRmOTY4YWIxMTI0YTI4Y2ExMmFkMGEyYThhYjU0MWQ2ODRiOWFiYmRiYzE1MjgyMjIyZjFjNGQ2MWU3YzJmNWQifQ"
+        },
+        {
+          "resource": "repo://src/platform/desktop.ts#L215-L253",
+          "version": "repo-lines-v1:sha256:ef4be1ad95979f342dee724f35c4570eb9489f2e9cb841e86d23e0b397feb070:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwMTdiNWFiNmZiYTEwOTQ1NzMxOWNiY2UzZTk4N2Y0YWY4NjYyM2Y5ODMwM2Y2YmE2MmUzMWZmYjVkY2MzZjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM1ZGFlZDZjNjg2ZjM3NTgzMTkyOTZmYjYxNDMyMDE4YTJmZjEzZDA0ZTI1NWRhM2E1YjU3YjNlMjg2ZTNkYWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ5NjkyNWE2NWJhOTMxYzFhMzkzY2FhNzI0YjM1NTU5ZjgyMDI3YTM1ZmI2N2I0NmM5Y2IwZTVkNzRhMzg1ZTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU3NjM2N2ZhYTYxNTBlYjllYTQ3ZGQwYzU3MTNiMmI2MGI3NTJmMmQ4ODA3YjExZjIzZjg0ZjYzNWVmMDlmOTAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_fc0ebbaa04524c5ebed8b78ec934a173",
+      "statement": "Mark export burns marks into real PDF annotation objects in the Rust shell: ExportPdfDialog resolves the paper's pdf to an absolute path, offers save-as-new (via pickPdfExportPath) or overwrite-original, and calls embedPdfAnnotations across the platform bridge to the pdf:embedMarks Tauri command, where src-tauri/src/pdf.rs's embed_marks builds one lopdf annotation dictionary per mark — a Highlight with per-rect /QuadPoints (to_points, the same flip-and-subtract math as rectToPdfPoints), union /Rect, /CA 0.4 for highlights and a Text sticky-note with a 20 pt /Rect for notes; comment as UTF-16BE hex /Contents with BOM (pdf_text), color as a 0..1 /C array (rgb01, highlighter-yellow fallback on a malformed hex), /T 'SaiLoR', and createdAt/updatedAt as PDF dates. Page size comes from the /MediaBox, walking the page tree to inherit it (US Letter fallback); annotations are appended to each page's existing /Annots (direct or referenced array) so pre-existing annotations survive; a mark on a page beyond the PDF's page count is skipped rather than failing the export; an encrypted PDF is refused.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/pdf.rs#L231-L311",
+          "version": "repo-lines-v1:sha256:2da8047e877d229e07603e4be93482a42beb3ce234f3dcd4dc4a7126905beef8:eyJzZWxlY3RlZExpbmVDb3VudCI6ODEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI0YjgxYTk2ZmI5YWVhZmI2NzMzNTllOGQ5NDBiZGM5YmQ2NGVlNmViYWQ1MjJjYzhjNDhlNGE3ZmJhNTVjZmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJiZTYyOTkxNTMyMWE5MGFjYmUxODYyZDdiODllNjhlZTdmZmM4ZWIxZjZiNzIzYTNlMDU5NjYwNmRlZjU5ZjkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA2Zjc5M2RhNWQxYzc4YWM5ZDQwNTU4MTUxOTJmYTI4NTMwYTFkM2I2ZDQ0ZmUyYjUyYmNkOTQxMDNjNTRlNjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE5NGUyYzE1N2E2ZGFjZGRhNDRkMzYyZjllODQzZGYwNDM3YmIxNGNlNjM3NmUyZTU0YjM3ODdhNTAzMWUxMTcifQ"
+        },
+        {
+          "resource": "repo://src/components/ExportPdfDialog.tsx#L70-L91",
+          "version": "repo-lines-v1:sha256:f17c8c3c3fd609559182da51fe081ba5b8ac0aac1a0a8f692919a758aa0c9d12:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1MzBhYTYzNGY5ZDBiYmZhMTJjYmMzN2JhNTE5NGRkNmE1MDE2ODk2MjBlYzVkY2JhNjQ5YzE5M2U4MDI3OWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA1YTZhMDk3ZWRjYTM1OTY1MWE4ZDFiZjQwNjY4NWI4ZmFlNjJlZGExMDJlODVmZWFhYjUxMTMxMTczZTY5OTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI3ZWU4NTcwNDNhNjE4NjBjMWVhNDJlOWI1N2JlMWM3YzUwMTk2NGZlMTgwYjRhM2NhZTIyYjFkMjhhZTZlNTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA4ZDViMzAzZjBkNjAxZjk2ZWViMDE4YWY0ZGUwMDM5MGE4YTg3MTA5NTcxYWNhOGUyMWYxMTQyYmFjMzM3NjEifQ"
+        },
+        {
+          "resource": "repo://src/platform/tauri.ts#L143-L143",
+          "version": "repo-lines-v1:sha256:2bcfcd4254e5c9cf0e3a3eae088a671c197209b4166290bc8d92ffb59291374e:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMmJjZmNkNDI1NGU1YzljZjBlM2EzZWFlMDg4YTY3MWMxOTcyMDliNDE2NjI5MGJjOGQ5MmZmYjU5MjkxMzc0ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmJjZmNkNDI1NGU1YzljZjBlM2EzZWFlMDg4YTY3MWMxOTcyMDliNDE2NjI5MGJjOGQ5MmZmYjU5MjkxMzc0ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2U0M2FlMDdkZWM3MDYyZDcxNTllNmU1NTgzZWM5Zjk1NjIxMjZkZjA1Yjc1M2RiNWJkNmVmODY2N2Q1MTE5ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNmZiZDFlMmFkOTgyNjUxNGZhMzFjODE1Y2E5MzgxY2RiMzE1MzJmYjAxOTExZWYxOTJjODc0MjVmMmNlNWI2NyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_9822daffd37e41a68bcad97f4749834e",
+      "statement": "The export write path is authorization-gated end to end: the source must be a PDF of the open project (project_pdf — inside the project directory or an allowed escape), the destination must be 'original' itself or a path the export dialog returned this session (export_target against the writable_exports set, verified by tests), and the final write refuses a symlink destination (assert_not_symlink). Outcomes cross the bridge as { ok: true, path } / { ok: false, error } rather than throwing.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/pdf.rs#L151-L229",
+          "version": "repo-lines-v1:sha256:612899c6275ce47f9093941c01737f9c9c83ad6d3a8e30a2142a36e8f9eadce3:eyJzZWxlY3RlZExpbmVDb3VudCI6NzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNjNmRiMDRiYzgyYWRiMTIxMGIzZTZlOGM1MzAzZTg5MGUwODU5Y2I5MmU4NzE3ODUxNjEzY2E4NmY5ZDIxYWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRlMzA5NjM1YjQ0YWFmYzBmYzhiYWU3NDI3MmQ1NTU1ZTU5NDVhZThlOGQzMmYxODc5ZWZlMDk4Y2Y1ODhjOTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRlNzhhY2I2MGM3YjgzZjZjNmMyNjlkNDVmNzRhNTQ2ZjcwMTc4M2QxNmE2N2MxMjAzOWY1NTUwMmIyMDhiMzMifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/pdf.rs#L568-L620",
+          "version": "repo-lines-v1:sha256:48a087a8b8c6797e55253102d802ddf296a766af4158f1940b22f930614f1671:eyJzZWxlY3RlZExpbmVDb3VudCI6NTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRiMzgxMTg4MjU4NWExMDE0YjdkZmJjYjZiZGJkMGZmZjcyMjI4MDcxZTNhM2ExOTQ4OGZlODc4MmI2ZmE2MWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNmOWMzOGI0ZjZkMjQ5M2I2MzQ1YWM3NTFkNzcxNjg4NWQ3NzE0MDViNTVkOWMwYzc4YTM1M2Q2YjEyMDg5MDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBlYmI0Y2MxNDg5YzFlNWZiM2YwZjMwNTNhZDU1M2Y0NGZjYTMwZTFmNjhkNmIyMjc2YTAwN2I2MjZiMzZhNWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI5Mzg3ZTMxMjQxMjUyZWQzYjkwMzNlMzkxYTdmYmI4NzU3YmEyNzhkOTgwNjk1YmY0MTYxOWU1YzIxZTBkMTgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a7c8b2065c2c4009a300786e389e595a",
+      "statement": "Marks persist per reviewer seat in the project's annotations folder — marks-<n>.json / marks-consolidated.json — and a screening project names its highlight files apart as screening-marks-<n>.json / screening-marks-consolidated.json (src/model/project.ts marksFileName/parseMarksFileName, with non-screening marks-* files in a screening folder parsed as legacy), so a screening project and an annotation project over the same papers can share a folder. Other seats' screening highlights render read-only in the viewer (screeningMarks + screeningSeatLabel): a drag across them still selects text, but there is nothing to open.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/PdfViewer.tsx#L118-L148",
+          "version": "repo-lines-v1:sha256:f0520b734d35617b485232d8bd19738f30fcc09bc344c12fce138c039bd389e7:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhmNGIxMjI4ZGJmZTQ1MTU4NWYyM2I5ZjBmOTdiZTgxNGQwNDVlNmY5OTU5MzZmOTQwY2I3YTRmZGMzYzNhM2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2NzkwMzM2NjQwMmYyMTY2YjA4NDM3OGNiNWU2YmFlMzU2YjRkMmFmN2ViZDFkNzc2ODE0MDc2YmQ5M2Y1NDAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRhOGY2YjIyM2U4ZGIzOTI2N2IwYWRlZWRmODA4YjdiN2M1YTc2YmRkYjIxMGNjZmIxYTgwNmFlODk5M2E3ZDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZhMDJmZjEyYTczODNkMWJkZTEwZjZkYWJkY2FmZmEyNzU3Y2MwMTY4MGNkOTk3Yjg3MmUyOTEwYTUwMDlmN2MifQ"
+        },
+        {
+          "resource": "repo://src/model/annotationSplit.ts#L44-L45",
+          "version": "repo-lines-v1:sha256:637426f199775cc592a00b83575818af10a93f7747065c2e5c6d428bd2926b6e:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWFjNDA4Y2ViZmViNTc2NjMwYmE1NjdjNGU1NjRkODdhMzUwYzg5YTFiMDViMjIxMjE3MWQyNDEyMTg1ZDUxNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWNjYjAzNjFhZmZmNTNmMmIyODE1NTNiMGQwZmQzMDJlNTQwODQ0M2E0OTlhN2ViYTRlOWJjYWZhYTc0NDk3ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMmQ1Y2U4NmI2YmY0Mjg4ZGZiNmY5NzM5ZDBjY2UzYTU4OTIzNWZhZDgyNzgzNDI2OGNkZjU4MDM1NzIyMDlmYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzdiOWRjOGIxYmI0MGM3MjU3YzBjNDhkNzUyYzM4YzE5ZTg5ZTU3ZGI3ZGI1YTg2ZTZlMTUyMGVkOGE1NDMwZSJ9"
+        },
+        {
+          "resource": "repo://src/model/pdfMarks.ts#L39-L66",
+          "version": "repo-lines-v1:sha256:325c86066e679bfb9c4ccc5c32ce05e9662efc817a76cb128e05889332150b55:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNmNTI1ZTFmYzE5NjdhZGU3M2I3YjUzYTg2ZDI3MTliZmYwNGQ2MmNkZTllZjFlOWE0YTRiNjU4ZGU1ZjIzMTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI4NzE1NGI1MDJiZmI4N2E3NzYyOGEwNjQ5ZTU0YzU2YjAyYmVlNzQ0NTExMDQ5OWEyZjU1ZmI3MzYwYzFhZTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVjMTMyOWY5Y2ZkNTU3MDBiNzg0MjJmOTY2N2FjYmM0MWU1YTdkMTQ1ZGQ4MjkxYjM3OWFhZjc1YzJlNjQ0ZTAifQ"
+        },
+        {
+          "resource": "repo://src/model/project.ts#L1101-L1120",
+          "version": "repo-lines-v1:sha256:0d19a122a470c8786a38d180eab1303ad8576e66e9e47457d7f4283aeef24bf9:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1Nzk5NTg1ZWE3ZjFkODY0ZmU3YzI2MDY5ZDIyYjhlZGM0N2U0N2IyOTNhZGE3NTE3ODY2NjFkNDc1MDY0ZjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAyM2NiYTVjMzc5OTUzYmNiYTFmZWM4N2ZmNmUzNGMyYmQ5OWRjMjNhYTJkNDEyMjE1ZGRjNzYyNTM3NDc1MjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA3ODVjMzU4Mjk1OTk2MTIwMDZjY2UyYjVmN2E0MjNlNjk4MDhkYjMwZTY3ZWQyMDI4NWQyNzUwNDAwNTgzOTgifQ"
+        }
+      ]
     }
   ],
   "verification": {
-    "by": "openwiki/0.4.0",
-    "at": "2026-09-22T07:19:01.173Z"
+    "by": "openwiki/0.7.3",
+    "at": "2026-11-02T08:58:22.323Z"
   }
 }

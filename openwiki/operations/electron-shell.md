@@ -23,9 +23,6 @@ sources:
   - id: openwiki-source-769f5f5c1e3631cf9ab273bc
     resource: repo://src/platform/electron.ts
 generated: { by: "openwiki/0.5.2", at: "2026-09-23T12:49:55.013Z" }
-verified:
-  - by: openwiki/0.5.2
-    at: 2026-09-23T12:49:55.013Z
 ---
 
 # Electron Main Process and IPC
