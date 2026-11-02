@@ -64,7 +64,7 @@ jobs:
           else
             gh release create "$TAG" --draft --target "$GITHUB_SHA" \
               --title "SaiLoR $VERSION" \
-              --notes "SaiLoR $VERSION. Requires macOS 15 or later. The AppImage, Windows and macOS builds update in-app. Update the .deb and .rpm packages manually. Users of 1.x install this release once by hand."
+              --notes "SaiLoR $VERSION. Requires macOS 15 or later. The AppImage, Windows and macOS builds update in-app. Update the .deb and .rpm packages manually. Users of 1.x install this release once by hand. API keys, UI settings and recent projects reset. Enter each API key again in the AI settings."
             json=$(gh release view "$TAG" --json databaseId,isDraft)
           fi
           echo "id=$(jq -r .databaseId <<<"$json")" >> "$GITHUB_OUTPUT"

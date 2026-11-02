@@ -49,10 +49,7 @@ packages do not. Install a new `.deb` or `.rpm` by hand, or through your package
 > the first time you open the app. The steps below are how you tell them to go ahead; you
 > only need to do it once.
 
-> **Upgrading from SaiLoR 1.x?** Version 2 replaces the Electron shell with Tauri. Install it once
-> by hand. The 1.x updater cannot install it. Your project files, AI provider settings and local
-> models stay. Enter your API keys once more. The list of recent projects and the UI settings start
-> empty.
+> **Upgrading from SaiLoR 1.x?** Read [Upgrading from 1.x](#upgrading-from-1x) before you install 2.0.
 
 #### macOS
 
@@ -100,6 +97,32 @@ chmod +x "SaiLoR_<version>_amd64.AppImage"
 
 If it fails to start, your distribution may be missing FUSE (`sudo apt install libfuse2`
 on Debian/Ubuntu), or you can extract and run it with `--appimage-extract-and-run`.
+
+### Upgrading from 1.x
+
+Use this section if you used SaiLoR 1.x. SaiLoR 2.0 uses the Tauri shell, a new app identifier and new installer names.
+
+- **Install 2.0 by hand.** Use this step on Windows, on Linux (AppImage) and on macOS.
+  The 1.x app does not update to 2.0.
+  1. Download the 2.0 installer for your system from the [releases page](https://github.com/Gram21/SaiLoR/releases).
+  2. Install 2.0.
+  3. Remove the 1.x app.
+- **Keep your project files.** Project files do not change. Open them in 2.0 as before.
+- **Keep your config folder.** The `<config dir>/SaiLoR` folder carries over. It holds your AI provider settings and local AI models.
+
+  **Warning:** Do not delete the `<config dir>/SaiLoR` folder. Deleting it removes your AI provider settings and local AI models.
+- **Enter this data again.** These items do not carry over from 1.x:
+  - **Recent projects.** The list starts empty. It fills again as you open projects.
+  - **UI settings.** The theme, font size and pane widths reset to their defaults.
+  - **API keys.** 1.x keys cannot be read by 2.0. Enter each key again in the AI settings. A provider that needs no key needs no action.
+  - **Window size.** The window opens at 1400 by 900 pixels.
+- **Check your system.**
+  - macOS 15 (Sequoia) or later is required. 2.0 does not support macOS 14 or earlier.
+  - Linux: the AppImage updates in the app. The `.deb` and `.rpm` packages do not. Update them by hand or with your package manager.
+  - Windows and macOS: 2.0 updates in the app.
+- **Allow the first launch.**
+  - macOS: **Warning:** macOS blocks the first launch of 2.0. Follow the steps in [macOS](#macos).
+  - Windows: SmartScreen shows "Windows protected your PC". Click **More info**, then **Run anyway**.
 
 ### Run the development variant with npm
 
