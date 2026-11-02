@@ -64,15 +64,6 @@ As a result, the macOS installer for arm64 had a size of 93~MB, and the main pro
 % Decision
 For version 2.0.0, we moved \SaiLoR to Tauri~2~\cite{tauri2}.
 Tauri uses the web view of the operating system and a backend in Rust.
-In a spike, a minimal Tauri shell produced installers of about 2~MB for macOS, Windows, and the Debian and RPM packages.
-The AppImage for Linux has about 81~MB, because it bundles WebKitGTK.
-The shell alone is thus about 2\% of the size of the old Electron installer.
-The installers of the real application are larger because they include the user interface and its assets.
-% TODO: Add the final installer sizes of the 2.0.0 release per platform.
-\todo{final installer sizes of 2.0.0 per platform}
-
-% Split
-Size was not the only reason.
 Tauri moves the security boundary into Rust and offers a capability system and a signed updater.
 We split the responsibilities as follows.
 Rust owns everything that needs authorization: file input and output, process spawning, downloads, and access to the keychain.
