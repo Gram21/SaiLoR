@@ -271,10 +271,10 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-310 — Application undo via menu
-- **Description:** The system shall route the Edit-menu Undo and Redo commands to the application's annotation history rather than native text undo, while keeping cut, copy, paste, and select-all native.
+- **Description:** The system shall route the Edit-menu Undo and Redo commands to the application's annotation history rather than native text undo, while keeping cut, copy, paste, and select-all native. One key press shall run one undo step.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** commit `6ce60d5` (`electron/main.ts`, removed). The renderer still listens for `app:undo` and `app:redo` in `src/hooks/useCloseGuard.ts` (`useCloseGuard`), but the Tauri shell builds no Edit menu. `src/hooks/useKeybindings.ts` (`useKeybindings`) handles Ctrl/Cmd+Z and Ctrl/Cmd+Y.
-- **Status:** Not implemented in the Tauri shell (Electron-only until 2.0.0)
+- **Evidence:** `src-tauri/src/shell.rs` (`edit_menu`) replaces the native Undo and Redo of the macOS default menu with items that emit `app:undo` and `app:redo`. `src/hooks/useCloseGuard.ts` (`useCloseGuard`) routes these events to the editor or the project history. `src/hooks/useKeybindings.ts` (`useKeybindings`) handles Ctrl/Cmd+Z and Ctrl/Cmd+Y and calls `preventDefault`, so WKWebView does not pass the key on to the menu. Commit `6ce60d5` (`electron/main.ts`, removed).
+- **Status:** Implemented on macOS. Windows and Linux have no menu bar. On these platforms the renderer key binding runs undo and redo, and the WebView handles cut, copy, paste, and select-all natively.
 
 ### REQ-PLT-320 — Build targets
 - **Description:** The system shall build the macOS app and dmg (arm64 and x64), the Windows NSIS installer (x64), and the Linux AppImage, deb and rpm packages (x64). The files shall use the Tauri default names, for example `SaiLoR_<version>_aarch64.dmg`, `SaiLoR_<version>_x64-setup.exe` and `SaiLoR_<version>_amd64.AppImage`. The macOS builds shall require macOS 15 or later. Each build shall include a signed updater artifact, and one `latest.json` feed shall list every platform. The release workflow shall attach these files to a draft release tagged `v<version>`. Only the AppImage, Windows and macOS builds shall update in-app. Users shall update the deb and rpm packages by hand.

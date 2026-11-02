@@ -60,6 +60,8 @@ pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
             NewWindowResponse::Deny
         })
         .build()?;
+    #[cfg(target_os = "macos")]
+    edit_menu(app)?;
     Ok(())
 }
 
@@ -120,6 +122,38 @@ fn copy_new(from: &Path, to: &Path) -> std::io::Result<()> {
         }
         std::fs::copy(from, to)?;
     }
+    Ok(())
+}
+
+/// Swaps the default menu's native Undo/Redo for the app history (`app:undo`, `app:redo`).
+/// The page sees Cmd+Z first; the menu item fires only when the page did not handle it.
+#[cfg(target_os = "macos")]
+fn edit_menu(app: &App) -> tauri::Result<()> {
+    use tauri::menu::{MenuItem, MenuItemKind};
+    use tauri::Emitter;
+    let Some(menu) = app.menu() else {
+        return Ok(());
+    };
+    for item in menu.items()? {
+        let MenuItemKind::Submenu(edit) = item else {
+            continue;
+        };
+        if edit.text()? != "Edit" {
+            continue;
+        }
+        edit.remove_at(0)?;
+        edit.remove_at(0)?;
+        edit.prepend_items(&[
+            &MenuItem::with_id(app, "app:undo", "Undo", true, Some("CmdOrCtrl+Z"))?,
+            &MenuItem::with_id(app, "app:redo", "Redo", true, Some("CmdOrCtrl+Shift+Z"))?,
+        ])?;
+    }
+    app.on_menu_event(|app, e| {
+        let id = e.id().as_ref();
+        if id == "app:undo" || id == "app:redo" {
+            let _ = app.emit(id, ());
+        }
+    });
     Ok(())
 }
 
