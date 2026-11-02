@@ -17,7 +17,6 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tauri::Manager;
 use url::Url;
 
 const API_KEY_SENTINEL: &str = "{{apiKey}}";
@@ -432,12 +431,7 @@ pub async fn call(
 }
 
 fn config_file(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    Ok(app
-        .path()
-        .config_dir()
-        .map_err(err)?
-        .join("SaiLoR")
-        .join("llm-config.json"))
+    Ok(crate::localruntime::data_dir(app)?.join("llm-config.json"))
 }
 
 #[tauri::command]

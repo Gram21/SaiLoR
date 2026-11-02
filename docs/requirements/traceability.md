@@ -475,6 +475,7 @@ inspection only.
 | REQ-PLT-360 | Refuse update install with unsaved changes | Functional · Functional Suitability | `src-tauri/src/update.rs` (`update_install`)<br>`src-tauri/src/close.rs` (`Guard`, `is_dirty`) | — | commit `251b64a` | `openwiki/operations/electron-shell.md` §Self-update (`update:*`)<br>`openwiki/operations/build-release.md` §Release signing (Ed25519 feed signature)<br>`openwiki/architecture.md` §In-app self-update |
 | REQ-PLT-370 | Menu bar on Windows and Linux | Functional · Functional Suitability | `src-tauri/src/shell.rs` (`menu`, `macos_menu`, `run`)<br>`src-tauri/src/close.rs` (`request_quit`)<br>`src/hooks/useCloseGuard.ts` (`useCloseGuard`) | `src-tauri/src/shell.rs` (`menu_ids_map_to_actions`)<br>`src/hooks/useCloseGuard.test.tsx` (`routes File > Close project through the store close request`) | — | `docs/tauri-migration.md` §22 |
 | REQ-PLT-380 | Run in a container with a browser view | Non-functional, design constraint · Security: Confidentiality | `Dockerfile.tauri-linux-gui`<br>`docker/gui-entrypoint.sh` (`VNC_LISTEN_ALL`, `-localhost`)<br>`docker-compose.dev.yml` (service `tauri-linux-gui`) | — | — | `docs/building.md` §Run the app in a container (Linux only) |
+| REQ-PLT-390 | Hidden data folder in the home directory | Functional · Portability: Adaptability | `src-tauri/src/localruntime.rs` (`data_dir`)<br>`src-tauri/src/llm.rs` (`config_file`)<br>`src-tauri/src/shell.rs` (`migrate_data_dir`, `hide`) | `src-tauri/src/shell.rs` (`data_dir_moves_once_and_never_overwrites`) | — | `README.md` (Upgrading from 1.x) |
 
 ## Coverage statistics
 
@@ -482,12 +483,12 @@ Counts come from `python3 technical-report/trace_stats.py` at the revision that 
 
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 393 | 100% |
-| With an implementing source link | 367 | 93% |
-| With at least one verifying test | 363 | 92% |
+| Requirements traced | 394 | 100% |
+| With an implementing source link | 368 | 93% |
+| With at least one verifying test | 364 | 92% |
 | Without an automated check (source inspection only) | 30 | 8% |
 | With an introducing/pinning commit | 118 | 30% |
-| With a documentation link | 339 | 86% |
+| With a documentation link | 340 | 86% |
 | Security-related (ISO 25010 Security) | 33 | 8% |
 | Distinct test files linked | 186 | — |
 | Distinct source files linked | 178 | — |

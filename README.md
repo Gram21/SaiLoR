@@ -108,9 +108,9 @@ Use this section if you used SaiLoR 1.x. SaiLoR 2.0 uses the Tauri shell, a new 
   2. Install 2.0.
   3. Remove the 1.x app.
 - **Keep your project files.** Project files do not change. Open them in 2.0 as before.
-- **Keep your config folder.** The `<config dir>/SaiLoR` folder carries over. It holds your AI provider settings and local AI models.
+- **Keep your data folder.** The first start of 2.0 moves `<config dir>/SaiLoR` to `~/.sailor`. The folder holds your AI provider settings and local AI models. On Windows, the new folder is hidden.
 
-  **Warning:** Do not delete the `<config dir>/SaiLoR` folder. Deleting it removes your AI provider settings and local AI models.
+  **Warning:** Do not delete the `~/.sailor` folder. Deleting it removes your AI provider settings and local AI models.
 - **Enter this data again.** These items do not carry over from 1.x:
   - **Recent projects.** The list starts empty. It fills again as you open projects.
   - **UI settings.** The theme, font size and pane widths reset to their defaults.

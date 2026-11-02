@@ -545,6 +545,8 @@ fn runtime_root(dir: &Path) -> PathBuf {
     dir.join("local-runtime").join("llama.cpp")
 }
 
+pub const DATA_DIR_NAME: &str = ".sailor";
+
 fn models_root(dir: &Path) -> PathBuf {
     dir.join("local-models")
 }
@@ -557,9 +559,14 @@ fn display(p: &Path) -> String {
     p.to_string_lossy().into_owned()
 }
 
-/// Electron's `userData`, so installs made by the Electron build are reused.
-fn data_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    Ok(app.path().config_dir().map_err(err)?.join("SaiLoR"))
+/// `~/.sailor`: AI provider settings, local runtime and local models.
+pub fn data_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let dir = app.path().home_dir().map_err(err)?.join(DATA_DIR_NAME);
+    if !dir.exists() {
+        std::fs::create_dir_all(&dir).map_err(err)?;
+        crate::shell::hide(&dir);
+    }
+    Ok(dir)
 }
 
 // ---- HTTP -----------------------------------------------------------------------------

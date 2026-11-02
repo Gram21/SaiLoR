@@ -320,3 +320,10 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Type:** Non-functional, design constraint (ISO 25010: Security: Confidentiality)
 - **Evidence:** `Dockerfile.tauri-linux-gui` (stages `build`, `runtime`), `docker/gui-entrypoint.sh` (checks for `VNC_LISTEN_ALL` and `VNC_PASSWORD`, `-localhost`), `docker-compose.dev.yml` (service `tauri-linux-gui`), `docs/building.md` (section "Run the app in a container (Linux only)")
 - **Status:** Implemented. No automated check: verified by a manual container run only.
+
+### REQ-PLT-390: Hidden data folder in the home directory
+- **Description:** The system shall store AI provider settings, the local runtime and local models in the folder `.sailor` in the user home directory, and shall hide that folder on Windows. On first start, if `.sailor` does not exist and `<config dir>/SaiLoR` exists, the system shall move that folder to `.sailor` and shall not overwrite an existing `.sailor`.
+- **Type:** Functional (ISO 25010: Portability: Adaptability)
+- **Evidence:** `src-tauri/src/localruntime.rs` (`data_dir`, `DATA_DIR_NAME`), `src-tauri/src/llm.rs` (`config_file`), `src-tauri/src/shell.rs` (`migrate_data_dir`, `hide`, `setup`), `README.md` (Upgrading from 1.x)
+- **Verified by:** `src-tauri/src/shell.rs` (`data_dir_moves_once_and_never_overwrites`)
+- **Status:** Implemented. The Windows hidden attribute was not run by hand.

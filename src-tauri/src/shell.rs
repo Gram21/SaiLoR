@@ -122,6 +122,12 @@ fn run(app: &AppHandle, action: Action) {
 /// Builds the `main` window from `tauri.conf.json` (`create: false`) with link routing.
 pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     if let Ok(dir) = app.path().config_dir() {
+        if let Ok(home) = app.path().home_dir() {
+            migrate_data_dir(
+                &dir.join("SaiLoR"),
+                &home.join(crate::localruntime::DATA_DIR_NAME),
+            );
+        }
         migrate_legacy(&dir);
     }
     let cfg = app
@@ -197,6 +203,33 @@ pub fn migrate_legacy(config_dir: &Path) {
         }
     }
 }
+
+/// Moves the 1.x data folder (`<config>/SaiLoR`) to `~/.sailor` once, only if the new
+/// folder does not exist. Falls back to a copy when a rename is not possible.
+/// Best effort: errors are logged, startup goes on.
+pub fn migrate_data_dir(old: &Path, new: &Path) {
+    if new.exists() || !old.is_dir() {
+        return;
+    }
+    if std::fs::rename(old, new).is_err() {
+        if let Err(e) = copy_new(old, new) {
+            eprintln!("Could not migrate {}: {e}", old.display());
+            return;
+        }
+    }
+    hide(new);
+}
+
+#[cfg(windows)]
+pub fn hide(dir: &Path) {
+    let _ = std::process::Command::new("attrib")
+        .arg("+h")
+        .arg(dir)
+        .status();
+}
+
+#[cfg(not(windows))]
+pub fn hide(_dir: &Path) {}
 
 /// Recursive copy that skips symlinks and never replaces an existing file.
 fn copy_new(from: &Path, to: &Path) -> std::io::Result<()> {
@@ -365,6 +398,29 @@ mod tests {
             assert!(!is_app_url(&url(bad), Some(&dev)), "{bad}");
         }
         assert!(!is_app_url(&url("http://localhost:5173/"), None));
+    }
+
+    #[test]
+    fn data_dir_moves_once_and_never_overwrites() {
+        let root = std::env::temp_dir().join(format!("sailor-data-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let (old, new) = (root.join("SaiLoR"), root.join(".sailor"));
+        std::fs::create_dir_all(&old).unwrap();
+        std::fs::write(old.join("llm-config.json"), "old").unwrap();
+        migrate_data_dir(&old, &new);
+        assert_eq!(
+            std::fs::read_to_string(new.join("llm-config.json")).unwrap(),
+            "old"
+        );
+        assert!(!old.exists());
+        std::fs::create_dir_all(&old).unwrap();
+        std::fs::write(old.join("llm-config.json"), "again").unwrap();
+        migrate_data_dir(&old, &new);
+        assert_eq!(
+            std::fs::read_to_string(new.join("llm-config.json")).unwrap(),
+            "old"
+        );
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]

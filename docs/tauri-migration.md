@@ -344,7 +344,7 @@ New dependencies:
 
 Config file compatibility:
 
-- The file is `<config dir>/SaiLoR/llm-config.json`, the same path as the packaged Electron app.
+- The file is `~/.sailor/llm-config.json`. Version 2.0 moved it from `<config dir>/SaiLoR` (REQ-PLT-390).
 - The format stays a JSON array of targets. Unknown fields are kept.
 - A key saved in Tauri goes to the keychain (service `SaiLoR`, account `llm:<id>`). The entry gets `"keyring": true`.
 - Tauri cannot decrypt the Electron `safeStorage` blob in `key`. The blob stays in the file, but Tauri reports `hasKey: false` for that target.
@@ -516,7 +516,7 @@ New dependencies:
 
 Archives are extracted with the system `tar`, the same as Electron. Windows uses `%SystemRoot%\System32\tar.exe`, which reads zip. No zip or tar crate is added.
 
-Install layout: the layout is the same as Electron. The data dir is `<config dir>/SaiLoR`.
+Install layout: the layout is the same as Electron. The data dir is `~/.sailor` since 2.0.
 
 - The runtime goes to `local-runtime/llama.cpp/<tag>/` with `manifest.json`.
 - A partial runtime download goes to `local-runtime/llama.cpp/.downloads/<asset>.partial`.
@@ -691,7 +691,7 @@ Effects of the identifier change:
 - The WebView storage is new. Recent projects and the UI settings in `localStorage` (`slr.*` keys) start empty.
 - The macOS bundle ID changes. macOS treats the app as a new app.
 - Project files do not change.
-- The LLM configuration, the local runtime and the local models stay in `<config dir>/SaiLoR`. The Rust code builds this path without the identifier.
+- The LLM configuration, the local runtime and the local models live in `~/.sailor` (REQ-PLT-390). The Rust code builds this path without the identifier.
 - API keys that Electron saved with `safeStorage` cannot be read. Users enter them once more. Tauri saves keys in the keychain (service `SaiLoR`).
 
 ### 20.3 Probe build

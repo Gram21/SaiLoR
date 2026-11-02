@@ -57,8 +57,8 @@ per category so requirements can be inserted without renumbering.
 | Consolidation (CON) | 44 |
 | Git integration (GIT) | 59 |
 | LLM annotation (LLM) | 88 |
-| Platform & shell (PLT) | 48 |
-| **Total** | **393** |
+| Platform & shell (PLT) | 49 |
+| **Total** | **394** |
 
 ## Method & evidence notes
 
