@@ -22,11 +22,11 @@
     "/openwiki/workflows/pdf-viewing.md",
     "/openwiki/workflows/screening.md"
   ],
-  "sourceFingerprint": "sha256:6e4c2ee9befc58493aea2c0b5cb311a421b7f6b48f555512e2f8553ab41a1de0",
-  "targetGitHead": "949941e706a9a90354a7c621b6ff6aab16fb2cd0",
+  "sourceFingerprint": "sha256:7585d7d13c4afc6d465f5f9c8e3787e5ba3d0eb58bc0585b430555a70c8f6dff",
+  "targetGitHead": "8497d9d6efb99b676d75b422a1d481a2452dd3b4",
   "actor": {
     "producerActor": "openwiki/0.7.3",
-    "metadataModel": "z-ai/glm-5.3"
+    "metadataModel": "z-ai/glm-5.3-flash"
   },
   "previousLastUpdate": {
     "updatedAt": "2026-09-23T13:41:50.848Z",
@@ -150,15 +150,60 @@
   "plan": {
     "pages": [
       {
-        "id": "cb7b087b-50ea-43bb-a799-7c8d577e6918",
-        "path": "/openwiki/Home.md",
-        "title": "SaiLoR Developer Documentation",
-        "purpose": "Landing page: what SaiLoR 2.0 is (a Tauri desktop tool for Systematic Literature Reviews), how the split project.json + annotations/ storage works, and a contents table routing to every page in the wiki.",
+        "id": "0eb92c44-c0b4-4350-b50a-535f8f197599",
+        "path": "/openwiki/concepts/data-model.md",
+        "title": "Project Data Model",
+        "purpose": "Targeted navigation fix only: the page's two pointers to the deleted operations/electron-shell.md (the splitProjectFiles write path and the further-reading list) must be retargeted to operations/tauri-shell.md; no content regeneration.",
         "seedPaths": [
-          "README.md",
-          "src-tauri/src/main.rs",
-          "src/App.tsx",
-          "src/model/project.ts"
+          "src-tauri/src/authz.rs",
+          "src-tauri/src/project.rs",
+          "src/model/annotationSplit.ts",
+          "src/model/annotations.ts",
+          "src/model/annotationsDir.ts",
+          "src/model/project.ts",
+          "src/platform/tauri.ts"
+        ],
+        "relatedPages": [
+          "/openwiki/concepts/annotation-schema.md",
+          "/openwiki/operations/tauri-shell.md",
+          "/openwiki/workflows/consolidation.md",
+          "/openwiki/workflows/git-integration.md",
+          "/openwiki/workflows/screening.md"
+        ],
+        "instructions": [
+          "Line ~125: the sentence about the Rust shell performing the splitProjectFiles writes/deletes links to ../operations/electron-shell.md — retarget it to ../operations/tauri-shell.md (the Rust shell page); verify the sentence's substance (Rust shell does the actual writes/deletes and shared-folder authorization) against src-tauri/src/project.rs and src-tauri/src/authz.rs and adjust wording only if wrong.",
+          "Line ~849 'Where to go next': replace the electron-shell.md bullet with one pointing at ../operations/tauri-shell.md, keeping the same description of what the shell page covers (the Rust shell that performs the split writes/deletes and the shared-folder authorization).",
+          "Sweep for any other mention of electron-shell.md or electron-era file paths (electron/main.ts, src/platform/electron.ts) in the page body and fix or re-anchor them to current paths; leave everything else, including the existing mermaid fences, untouched.",
+          "This page was verified at baseline 949941e and its content is accurate for the Tauri codebase — do NOT regenerate it; make only the minimal navigation edits required by this run's deletion of operations/electron-shell.md."
+        ],
+        "status": "complete",
+        "completedBy": "openwiki/0.7.3"
+      },
+      {
+        "id": "0c11080f-789c-4a10-872c-b46bdc5a9625",
+        "path": "/openwiki/workflows/git-integration.md",
+        "title": "Git Integration",
+        "purpose": "Regenerate the git workflow page for the Tauri 2.0 architecture: the security gates, the shell-owned git plumbing (now Rust commands in src-tauri/src/git.rs, not the deleted electron/main.ts), the field-level three-way merge, the gitStore state machine, concurrent revision reads, and the git-scenario test fixtures.",
+        "seedPaths": [
+          "samples/git-scenarios/README.md",
+          "src-tauri/src/authz.rs",
+          "src-tauri/src/git.rs",
+          "src-tauri/src/project.rs",
+          "src/git/changes.ts",
+          "src/git/merge.ts",
+          "src/git/output.ts",
+          "src/git/ownAnnotationPath.ts",
+          "src/git/ref.ts",
+          "src/git/relpath.ts",
+          "src/git/seatOwner.ts",
+          "src/git/types.ts",
+          "src/git/url.ts",
+          "src/platform/desktop.ts",
+          "src/platform/tauri.ts",
+          "src/state/gitStore.ts",
+          "src/test/integration/branchSwitch.integration.test.tsx",
+          "src/test/integration/pull.integration.test.tsx",
+          "vitest.integration.config.ts"
         ],
         "relatedPages": [
           "/openwiki/architecture.md",
@@ -167,541 +212,61 @@
           "/openwiki/operations/tauri-shell.md",
           "/openwiki/quickstart.md",
           "/openwiki/testing.md",
-          "/openwiki/workflows/ai-screening.md",
-          "/openwiki/workflows/git-integration.md",
-          "/openwiki/workflows/llm-annotation.md",
-          "/openwiki/workflows/local-models.md"
+          "/openwiki/workflows/consolidation.md"
         ],
         "instructions": [
-          "Do not include generated index pages (index.md files) in the contents table.",
-          "Keep the one-paragraph product summary accurate for 2.0.0: Tauri shell, system WebView, React renderer unchanged; desktop-only; split project storage with auto-migration from the legacy single-file shape.",
-          "Keep the wiki-maintenance paragraph (openwiki/ as source of truth, publish/import sync actions) and verify the referenced workflow files still exist.",
-          "Refresh the contents table: the desktop shell page is now operations/tauri-shell.md (Electron was removed in 2.0.0); drop links to the deleted electron-shell page.",
-          "Stale claim in this page must be re-verified against current source before regeneration."
+          "Cover the reproducible git scenarios used as tests: samples/git-scenarios/ (base.ts/builder.ts/cli.ts/scenarios.ts) and src/test/integration/*.integration.test.tsx (branchSwitch, pull, stashOps, discard, gitScenarios, consolidationAndMerge), noting they pin the TS/Rust security-gate parity.",
+          "Describe the shared-annotations-folder rules where they intersect git: ownAnnotationPathMatcher guards (branch-switch/merge/Save-As), annotationsDir authorization in src-tauri/src/{authz,project}.rs, and seat-based file ownership (src/git/seatOwner.ts, src/git/ownAnnotationPath.ts).",
+          "Do not invent Electron content; any section whose only support was electron/main.ts must be rewritten or dropped. Preserve any existing mermaid fences whose content is still accurate; if a fence depicts the Electron IPC plumbing, replace it with a fence depicting the renderer → SlrBridge → Tauri command → git.rs flow.",
+          "Document the gitStore state machine (src/state/gitStore.ts) and the DesktopAdapter git surface (src/platform/desktop.ts) as the renderer side, including how Snapshot results from git commands flow through the same RawProject assembly as project opens.",
+          "Keep and re-verify what is still true: the field-level three-way merge in src/git/merge.ts (mergeProjects/applyResolutions, the 'a side that did not change a value away from the base does not get a vote' rule), the security gates in src/git/{url,ref,relpath,ownAnnotationPath}.ts and their Rust twins (validate_git_url/ref_problem/rel_path_problem in src-tauri/src/git.rs) enforced at the trust boundary, the fetch-vs-parse split principle (now shell-fetches/renderer-parses across the Tauri boundary), and the changes parser (src/git/changes.ts, src/git/output.ts).",
+          "The page is Electron-era at its baseline: its fetch-vs-parse story says the Electron main process (electron/main.ts) is the only thing that talks to git. That file is deleted; the git plumbing now lives in the Rust shell (src-tauri/src/git.rs, ~100KB: spawn/clone/fetch/push/commit/log/branch/stash operations) reached through Tauri commands, with project/git snapshots returned as RawProject ({text, files, siblings}) and reassembled into whole-project text by assembleProject in src/platform/tauri.ts. Rewrite the plumbing layer accordingly; resolve the page's claims by re-anchoring them to src-tauri/src/git.rs, src-tauri/src/project.rs, and src/platform/tauri.ts instead of electron/main.ts.",
+          "Update the front-matter description/tags and the sources list to the current files; keep the page's four-layer narrative structure (security gates → fetch/parse → merge → state machine) if it still fits."
         ],
-        "status": "complete",
-        "completedBy": "openwiki/0.7.3"
+        "status": "pending"
       },
       {
-        "id": "25edf01a-de8d-4147-a059-c4196787671d",
-        "path": "/openwiki/architecture.md",
-        "title": "Architecture",
-        "purpose": "The system-level map: renderer (React+Zustand) vs Rust shell process split, the SlrBridge/PlatformAdapter seam with the Tauri transport, the four Zustand stores and their one-way dependency direction, the src/ module layers (model/screening/git/llm/consolidate/platform/state), and the src-tauri Rust module inventory.",
+        "id": "067d0649-8535-4da5-8eef-1450e34c76d0",
+        "path": "/openwiki/quickstart.md",
+        "title": "SaiLoR Quickstart",
+        "purpose": "Regenerate the entry-point page for the Tauri 2.0 codebase: what SaiLoR is, the split project.json + annotations/ storage format, the current tech stack (React 19, Tauri 2 + Rust shell, Vite 6, Zustand+immer, Zod, react-pdf), the commands that actually exist now, a repository layout matching the current tree, and a task-routing map that points at the surviving pages (tauri-shell.md, not the deleted electron-shell.md).",
         "seedPaths": [
+          "Makefile",
+          "README.md",
+          "docs/tauri-migration.md",
+          "e2e/probe.test.mjs",
+          "package.json",
+          "scripts/ci.sh",
+          "scripts/setup.sh",
           "src-tauri/src/main.rs",
+          "src-tauri/tauri.conf.json",
           "src/App.tsx",
-          "src/platform/adapter.ts",
+          "src/model/project.ts",
           "src/platform/bridge.ts",
           "src/platform/desktop.ts",
           "src/platform/index.ts",
           "src/platform/tauri.ts",
           "src/platform/unsupported.ts",
-          "src/state/aiStore.ts",
-          "src/state/editorStore.ts",
-          "src/state/gitStore.ts",
-          "src/state/store.ts"
-        ],
-        "relatedPages": [
-          "/openwiki/concepts/annotation-schema.md",
-          "/openwiki/concepts/data-model.md",
-          "/openwiki/operations/build-release.md",
-          "/openwiki/operations/tauri-shell.md",
-          "/openwiki/quickstart.md",
-          "/openwiki/testing.md",
-          "/openwiki/workflows/ai-screening.md",
-          "/openwiki/workflows/consolidation.md",
-          "/openwiki/workflows/git-integration.md",
-          "/openwiki/workflows/llm-annotation.md",
-          "/openwiki/workflows/local-models.md"
-        ],
-        "instructions": [
-          "Add a Rust module map: project.rs (file I/O + authorization), annotations.rs (shared folders), feedback.rs, git.rs (~100k char git plumbing incl. repo setup/branch-switch/stash), pdf.rs + protocol.rs (slr-file://), paths.rs, authz.rs (session allowlists), llm.rs (keyring key store, sentinel substitution), net.rs, webfetch.rs (SSRF guard), ollama.rs, localruntime.rs (llama.cpp managed runtime), hardware.rs, shell.rs, close.rs, update.rs.",
-          "CRITICAL: preserve the three ```mermaid fenced blocks (flowchart, C4Context, C4Container) exactly as they are — they are hand-authored and verified; do not rewrite or regenerate them. Update only their surrounding prose.",
-          "Document the four stores (store.ts, editorStore.ts, gitStore.ts, aiStore.ts + aiScreeningStore.ts) and the one-way dependency rule (gitStore/aiStore read useStore, never the reverse); settings.ts for localStorage UI prefs; hooks list from src/hooks/.",
-          "Replace the ElectronAdapter section: the seam is now PlatformAdapter (renderer-side, src/platform/adapter.ts) -> SlrBridge (src/platform/bridge.ts) -> tauriBridge transport (src/platform/tauri.ts, invoke()/listen() with channel-to-snake_case command mapping, RawProject assembly) -> DesktopAdapter (src/platform/desktop.ts, save baseline/lastWritten + rebaseline + withBaselineDropped logic, recents, git parsing) -> TauriAdapter. Keep the unsupported.ts explanation for why the seam survives outside Tauri.",
-          "Resolve every stale and unresolved claim listed against current source and re-verify the rest; cite repo:// links that match the current files.",
-          "Rewrite the process-split narrative for 2.0: renderer = React 19 app served by Vite (dev) or embedded dist (packaged); shell = the Rust binary built from src-tauri/ (commands registered in src-tauri/src/main.rs invoke_handler, slr-file:// via register_asynchronous_uri_scheme_protocol, window built in shell.rs with navigation/new-window guards, single-instance + window-state plugins)."
-        ],
-        "status": "complete",
-        "completedBy": "openwiki/0.7.3"
-      },
-      {
-        "id": "177c5d2e-786c-47ac-ada0-133f54746b6d",
-        "path": "/openwiki/concepts/annotation-schema.md",
-        "title": "Annotation Schema and Validation",
-        "purpose": "The AnnotationDef/ResolvedDef schema model: field types, cardinality/children rules, visibleIf conditions, resolveSchema, and the validate.ts rules; the schema editor surface and the ValidationDialog.",
-        "seedPaths": [
-          "src/components/SchemaTreeEditor.tsx",
-          "src/components/ValidationDialog.tsx",
-          "src/components/VisibleIfDialog.tsx",
-          "src/model/schema.ts",
-          "src/model/schemaVersion.ts",
-          "src/model/validate.ts"
-        ],
-        "relatedPages": [
-          "/openwiki/concepts/data-model.md",
-          "/openwiki/operations/build-release.md",
-          "/openwiki/state/aiStore.md",
-          "/openwiki/testing.md",
-          "/openwiki/workflows/consolidation.md",
-          "/openwiki/workflows/llm-annotation.md",
-          "/openwiki/workflows/screening.md"
-        ],
-        "instructions": [
-          "Cover visibleIf conditions (VisibleIfDialog) and the editorStore draft lifecycle for the schema tree as they exist now.",
-          "Cross-link the schema-version/moves machinery in concepts/data-model.md (schemaVersion.ts) and the screening derived schema in workflows/screening.md.",
-          "Resolve the stale and unresolved claims listed for this page against current source.",
-          "Verify the schema model against src/model/schema.ts (zod schemas, resolveSchema, ScreeningConfig) and src/model/validate.ts; refresh the ValidationDialog and SchemaTreeEditor claims against current components."
-        ],
-        "status": "complete",
-        "completedBy": "openwiki/0.7.3"
-      },
-      {
-        "id": "eb2e8a9b-96d0-4679-99fc-87c33da11130",
-        "path": "/openwiki/concepts/data-model.md",
-        "title": "Project Data Model",
-        "purpose": "The Project/Paper/annotation-tree types and the on-disk format: meta-only project.json plus annotations/<paperId>/ per-seat files (consolidated/reviewer-N/marks/feedback), the load->normalize->edit->prune->serialize lifecycle, save-as rebasing, and the schemaVersion rename/migration machinery.",
-        "seedPaths": [
-          "src/model/alignment.ts",
-          "src/model/annotationSplit.ts",
-          "src/model/annotations.ts",
-          "src/model/annotationsDir.ts",
-          "src/model/pdfMarks.ts",
-          "src/model/project.ts",
-          "src/model/schemaVersion.ts"
-        ],
-        "relatedPages": [
-          "/openwiki/architecture.md",
-          "/openwiki/concepts/annotation-schema.md",
-          "/openwiki/testing.md",
-          "/openwiki/workflows/consolidation.md",
-          "/openwiki/workflows/git-integration.md",
-          "/openwiki/workflows/llm-annotation.md",
-          "/openwiki/workflows/pdf-viewing.md",
-          "/openwiki/workflows/screening.md"
-        ],
-        "instructions": [
-          "Cover the annotationsDir (shared folder) rules and the split plan (annotationSplit.ts) with the Rust authorization counterpart (src-tauri/src/annotations.rs).",
-          "Cover the schemaVersion rename/migration machinery (pendingMoves, moveInTree, moveInMarks, schema history) and how renames interact with saves and merges.",
-          "Document the split layout precisely: project.json holds meta only; annotations/<paperId>/consolidated.json, reviewer-N.json, marks files, and the feedback/ subfolder; corrupt-file reporting (corruptFiles) on open; legacy-shape assembly via assembleProject/isLegacyProjectShape.",
-          "Include AiUsageRecord and StoredAlignment as first-class persisted structures and link them to their workflows (llm-annotation, consolidation).",
-          "This page carries many sampled claims; re-verify every one against src/model/project.ts, src/state/store.ts, src/model/schemaVersion.ts and the platform seam, and refresh line ranges to the current files."
-        ],
-        "status": "complete",
-        "completedBy": "openwiki/0.7.3"
-      },
-      {
-        "id": "c871b2ea-af5c-47b9-8198-2bb7a22d981a",
-        "path": "/openwiki/operations/build-release.md",
-        "title": "Build, CI, and Release",
-        "purpose": "How the app is built, checked, packaged and released: the Make targets, the tauri build pipeline and config variants, the CI workflow (renderer CI script, Rust lint/tests, per-OS build matrix + probe, tauri-driver e2e), the release workflow (draft release, 4-platform builds, signed updater feed, Zenodo archive), the Linux Docker build, and the technical-report workflow.",
-        "seedPaths": [
-          ".github/workflows/ci.yml",
-          ".github/workflows/release.yml",
-          ".github/workflows/technical-report.yml",
-          "Makefile",
-          "docker-compose.dev.yml",
-          "package.json",
-          "scripts/ci.sh",
-          "scripts/setup.sh",
-          "src-tauri/Cargo.toml",
-          "src-tauri/tauri.conf.json",
-          "src-tauri/tauri.probe.conf.json",
-          "src-tauri/tauri.release.conf.json",
-          "technical-report/README.md"
-        ],
-        "relatedPages": [
-          "/openwiki/Home.md",
-          "/openwiki/architecture.md",
-          "/openwiki/concepts/data-model.md",
-          "/openwiki/operations/tauri-shell.md",
-          "/openwiki/quickstart.md",
-          "/openwiki/testing.md"
-        ],
-        "instructions": [
-          "Document CI (.github/workflows/ci.yml): build job running scripts/ci.sh (npm ci -> typecheck -> check:wiki -> vitest unit -> integration -> vite build), rust job (fmt+clippy -D warnings), tauri-build matrix (macos-15/26, windows, ubuntu 22.04/24.04) with cargo test, installer build, probe build+run asserting RENDER OK and a 403 traversal result, and tauri-e2e (ubuntu+windows via tauri-driver, WebView2 msedgedriver setup, gsudo medium-integrity run on Windows).",
-          "Document the release workflow: tag/version/pubkey/secret preflight, draft release creation, 4-target build matrix (aarch64/x86_64 macOS, windows-msvc, linux), updater artifacts signed with TAURI_SIGNING_PRIVATE_KEY, latest.json feed, plus the Zenodo archiving step and the 1.x->2.0 manual-install note.",
-          "Document the supporting workflows: technical-report.yml (LaTeX PDF build, paths-ignore on code CI) and the openwiki/wiki workflows (update, import, publish) with the loop-prevention guards.",
-          "Keep an operations section for local repro: make setup, make check, make docker-linux (tauri-linux compose service), and where installers land (src-tauri/target/release/bundle/).",
-          "Major rewrite of the Electron-era pipeline (scripts/build-electron.sh, sign-release.cjs, afterPack, Dockerfile.electron, electron-builder sections are all obsolete): build is `npx tauri build` per OS with Makefile targets (build, build-debug, probe, docker-linux, report), tauri.conf.json (version from package.json, updater endpoint latest.json + pubkey, macOS 15 minimum), probe and release config variants, and the cargo release profile.",
-          "Resolve the stale and unresolved claims listed for this page against current files."
-        ],
-        "status": "complete",
-        "completedBy": "openwiki/0.7.3"
-      },
-      {
-        "id": "bee6c326-11f8-45fb-bbc7-581c81b537a4",
-        "path": "/openwiki/operations/tauri-shell.md",
-        "title": "Tauri Shell, IPC and Self-Update",
-        "purpose": "The Rust desktop shell: how the TauriAdapter transport maps bridge calls to snake_case commands, the command inventory by module, the slr-file:// protocol and its security model, the session/authorization state, API-key handling in the keychain, and the tauri-plugin-updater flow with its signed feed.",
-        "seedPaths": [
-          "src-tauri/src/authz.rs",
-          "src-tauri/src/close.rs",
-          "src-tauri/src/git.rs",
-          "src-tauri/src/llm.rs",
-          "src-tauri/src/main.rs",
-          "src-tauri/src/net.rs",
-          "src-tauri/src/pdf.rs",
-          "src-tauri/src/project.rs",
-          "src-tauri/src/protocol.rs",
-          "src-tauri/src/shell.rs",
-          "src-tauri/src/update.rs",
-          "src-tauri/src/webfetch.rs",
-          "src/platform/bridge.ts",
-          "src/platform/tauri.ts"
-        ],
-        "relatedPages": [
-          "/openwiki/architecture.md",
-          "/openwiki/concepts/data-model.md",
-          "/openwiki/operations/build-release.md",
-          "/openwiki/quickstart.md",
-          "/openwiki/testing.md",
-          "/openwiki/workflows/git-integration.md",
-          "/openwiki/workflows/llm-annotation.md",
-          "/openwiki/workflows/local-models.md",
-          "/openwiki/workflows/pdf-viewing.md"
-        ],
-        "instructions": [
-          "Cross-link to workflows/git-integration.md and workflows/llm-annotation.md for feature content; keep this page about the shell itself.",
-          "Document close.rs (unsaved-changes guard intercepting window close and exit, Save/Discard/Cancel, setDirty/saveComplete coordination) and update.rs (bundle-gated self-update support, check/download/install flow, refuse install when dirty), with the feed endpoint/pubkey from tauri.conf.json (requireSignedVersion).",
-          "Document llm.rs key handling (keyring crate, llm-config.json persistence, sentinel substitution, no read-back), net.rs (redirect-refusing client, Flight abort registry) and webfetch.rs SSRF guard (blocked IP ranges, DNS-rebinding closure, 2MB cap, redirect hop re-validation).",
-          "Document the command registry from main.rs: the full invoke_handler list grouped by module (project/annotations/feedback/pdf/paths/webfetch/llm/ollama/localserver/local/git/update/close + probe feature), and the channel->snake_case mapping (call(), send(), subscribe(), replace()) in src/platform/tauri.ts including the RawProject assembly steps.",
-          "Document the security model: authz.rs Session allowlists (project_dir, allowed_escapes, known_projects, readable_pdfs, writable_exports, projectFileStamps, known_git_roots, listed_splits), symlink refusals, the within() containment check, path canonicalization, and how protocol.rs serves PDFs with byte ranges (403 on traversal, per-session escape approval).",
-          "Include the probe feature commands (probe_auto/probe_report) and note they are compiled out of release builds.",
-          "New page replacing the deleted Electron shell page; nothing of the old electron/main.ts content survives except as migration context."
-        ],
-        "status": "complete",
-        "completedBy": "openwiki/0.7.3"
-      },
-      {
-        "id": "0af06c08-b6e0-47e0-9fdd-a1b1e0c38df7",
-        "path": "/openwiki/testing.md",
-        "title": "Testing Strategy",
-        "purpose": "The four test layers and how to run them: Vitest unit tests (src/**/*.test), the git-scenario integration suite (real scratch repos), Rust unit tests in src-tauri, and the tauri-driver e2e probe; plus the wiki-link check, the scenario builder, and what CI gates on.",
-        "seedPaths": [
-          "e2e/probe.test.mjs",
-          "samples/git-scenarios/README.md",
-          "scripts/check-wiki-links.js",
-          "scripts/ci.sh",
-          "src-tauri/Cargo.toml",
-          "src/test/integration",
           "vite.config.ts",
           "vitest.integration.config.ts"
         ],
         "relatedPages": [
           "/openwiki/architecture.md",
-          "/openwiki/operations/build-release.md",
-          "/openwiki/operations/tauri-shell.md",
-          "/openwiki/quickstart.md",
-          "/openwiki/workflows/ai-screening.md",
-          "/openwiki/workflows/consolidation.md",
-          "/openwiki/workflows/git-integration.md",
-          "/openwiki/workflows/screening.md"
-        ],
-        "instructions": [
-          "Document Rust tests: cargo test --manifest-path src-tauri/Cargo.toml (authz/update/protocol etc.), gated in CI's tauri-build job; cargo fmt/clippy -D warnings.",
-          "Document scripts/check-wiki-links.js (npm run check:wiki, wiki + user-guide link integrity) as a CI step.",
-          "Document the integration suite: src/test/integration/*.integration.test.tsx (annotationWorkflow, branchSwitch, consolidationAndMerge, discard, fetchPolicy, pull, stashOps, screeningImport, annotationSplit, pdfReadingPosition, gitScenarios) spinning up real scratch git repos; run via npm run test:integration.",
-          "Document the scenario rig: samples/git-scenarios (npm run scenario list/build/readme) with the generated README section and the integration test that keeps them in sync.",
-          "Document the unit layer: npm test runs vitest with the default config (src/**/*.test.{ts,tsx}); integration tests are excluded from it; vitest.integration.config.ts exists as a standalone config because mergeConfig concatenates include arrays.",
-          "Resolve the stale and unresolved claims listed for this page against current source.",
-          "Rewrite: Playwright and e2e/openSaveProject.spec.ts/gitPush.spec.ts are gone. The e2e layer is now the probe app (e2e/index.html + main.tsx + probe.test.mjs driven by tauri-driver; make probe builds it with the probe feature and tauri.probe.conf.json) asserting PDF render + traversal 403."
-        ],
-        "status": "complete",
-        "completedBy": "openwiki/0.7.3"
-      },
-      {
-        "id": "89b5d64c-96e1-49fe-a1b8-1b53a3cd25b9",
-        "path": "/openwiki/workflows/ai-screening.md",
-        "title": "AI-Assisted Screening",
-        "purpose": "The aiScreeningStore flow: one Include/Exclude proposal per paper from title+abstract (or a 3-page PDF excerpt), prompt vs System One engines, threshold gating, the review table where the human approves each proposal, and how approved decisions are written.",
-        "seedPaths": [
-          "src/components/AiScreeningDialog.tsx",
-          "src/components/AiUsageDisclosure.tsx",
-          "src/llm/screeningAi.ts",
-          "src/screening/schema.ts",
-          "src/state/aiScreeningStore.ts"
-        ],
-        "relatedPages": [
-          "/openwiki/architecture.md",
-          "/openwiki/concepts/data-model.md",
-          "/openwiki/testing.md",
-          "/openwiki/workflows/llm-annotation.md",
-          "/openwiki/workflows/local-models.md",
-          "/openwiki/workflows/screening.md"
-        ],
-        "instructions": [
-          "Cover the request builders' input flattening rules (oneLine to prevent forged headings from reviewer-authored reasons/protocol) and the System One screening variant (buildScreeningSystemOneRequest, parseScreeningSystemOne).",
-          "Cross-link to llm-annotation (shared model library/key rules) and local-models (running a local screening model).",
-          "Document the run shape: ScreeningRow list per paper, seat fixed at run start, phases setup/running/review/applied, engine selection (prompt vs classify), concurrency via runPool, threshold default 0.8, excerpt pages for PDF-only papers.",
-          "Explain the invariant: nothing is written until the reviewer approves; proposals include decision/reason/justification/evidence/confidence; Include may never carry a reason.",
-          "New page (the flow is entirely undocumented in the wiki): build it from src/state/aiScreeningStore.ts and src/llm/screeningAi.ts.",
-          "Note the explicit design gaps recorded in the source comment (no resume/spend-cap/agent mode) as intentional."
-        ],
-        "status": "complete",
-        "completedBy": "openwiki/0.7.3"
-      },
-      {
-        "id": "2f49dc3c-e0c9-46ec-8e33-f3a02cb06954",
-        "path": "/openwiki/workflows/consolidation.md",
-        "title": "Multi-Reviewer Consolidation",
-        "purpose": "How multiple reviewer seats' answers are aligned and consolidated: entry matching (align.ts + maxWeightAssignment), similarity metrics, the stored alignment persisted in the project, growing/freezing the consolidated tree, the useConsolidationAlignment scheduler, readiness checks, and the disagreement/export surface.",
-        "seedPaths": [
-          "src/components/ConsolidationDialog.tsx",
-          "src/consolidate/align.ts",
-          "src/consolidate/assign.ts",
-          "src/consolidate/readiness.ts",
-          "src/consolidate/similarity.ts",
-          "src/consolidate/unanimous.ts",
-          "src/hooks/useConsolidationAlignment.ts",
-          "src/model/alignment.ts"
-        ],
-        "relatedPages": [
-          "/openwiki/architecture.md",
-          "/openwiki/concepts/data-model.md",
-          "/openwiki/testing.md",
-          "/openwiki/workflows/ai-screening.md",
-          "/openwiki/workflows/git-integration.md",
-          "/openwiki/workflows/llm-annotation.md",
-          "/openwiki/workflows/screening.md"
-        ],
-        "instructions": [
-          "Explain the one-way seat model: consolidated tree is the shipping answer; per-reviewer trees are inputs; the consolidationSync mark prevents repeat adoption.",
-          "Keep the existing section structure (entry matching, stored alignment, growing/freezing, scheduling, comparison, verdicts, resolution UI, batch operations, readiness, inter-rater statistics, disagreement export) but refresh symbol names and claims to current source.",
-          "Re-verify the pipeline against the current src/consolidate/ modules (align, apply, assign, similarity, metrics, disagreements, exportDisagreements, unanimous, readiness) and src/hooks/useConsolidationAlignment.ts.",
-          "Resolve the stale and unresolved claims listed for this page against current source."
-        ],
-        "status": "complete",
-        "completedBy": "openwiki/0.7.3"
-      },
-      {
-        "id": "d0a8dbae-de3a-445d-a134-bb3f55cfc5f6",
-        "path": "/openwiki/workflows/git-integration.md",
-        "title": "Git Integration",
-        "purpose": "How SaiLoR uses the user's own git binary: the security gates, the Rust git.rs plumbing behind the GitPlatform seam, the field-level three-way merge and its schema-aware extensions, commit review (changes.ts), repoSetup managed blocks, the gitStore state machine for clone/commit/pull/push/branch/stash/history, and the reproducible scenarios in samples/git-scenarios/.",
-        "seedPaths": [
-          "src-tauri/src/git.rs",
-          "src/git/changes.ts",
-          "src/git/merge.ts",
-          "src/git/ownAnnotationPath.ts",
-          "src/git/ref.ts",
-          "src/git/relpath.ts",
-          "src/git/repoSetup.ts",
-          "src/git/seatOwner.ts",
-          "src/git/stashOps.ts",
-          "src/git/types.ts",
-          "src/git/url.ts",
-          "src/state/gitStore.ts"
-        ],
-        "relatedPages": [
-          "/openwiki/architecture.md",
-          "/openwiki/concepts/annotation-schema.md",
           "/openwiki/concepts/data-model.md",
           "/openwiki/operations/build-release.md",
           "/openwiki/operations/tauri-shell.md",
           "/openwiki/testing.md",
-          "/openwiki/workflows/consolidation.md",
-          "/openwiki/workflows/screening.md"
+          "/openwiki/workflows/git-integration.md"
         ],
         "instructions": [
-          "Cover the gitStore state machine (clone flow, commit panel, pull/merge/branch-switch merge prompts, history, discard, stash section) and its one-way dependency on store.ts.",
-          "Document repoSetup managed blocks (.gitattributes *.json eol=lf -merge, .gitignore), seatOwner annotation-author attribution, background fetch policy, and the branch-switch carry-over stash.",
-          "Keep the merge section (field-level three-way merge, merge3 rule, applyResolutions) and extend it to the schema-version-aware merge (schemaVersion renames) and project-file merges now supported.",
-          "Point to samples/git-scenarios/ as the reproducible multi-party test rig (npm run scenario).",
-          "Resolve the stale and unresolved claims listed for this page against current source and refresh all line ranges.",
-          "Rewrite the plumbing section for 2.0: git runs via src-tauri/src/git.rs (std::process::Command, 30s/900s timeouts, 32MB output cap, stripped GIT_* env, non-interactive credential env) reached through the SlrBridge git* methods; the security gates (url/ref/relpath/ownAnnotationPath) stay in src/git/ and are mirrored in Rust; explain the split."
-        ],
-        "status": "pending"
-      },
-      {
-        "id": "6c70d9f6-6189-4cbd-aa81-d34ad9e137e6",
-        "path": "/openwiki/workflows/llm-annotation.md",
-        "title": "AI-Assisted Annotation",
-        "purpose": "The AI engine: LlmConfig targets with keys in the OS keychain (never in the renderer), the provider abstraction and chat/prompt/parse pipeline, the four modes (prompt, agent+judge, classify/System One, re-check), budgeting, the aiStore run loop with review and apply, and the AI-usage disclosure records.",
-        "seedPaths": [
-          "src-tauri/src/llm.rs",
-          "src/components/AiDialog.tsx",
-          "src/components/LlmSettingsDialog.tsx",
-          "src/llm/agent.ts",
-          "src/llm/budget.ts",
-          "src/llm/feedback.ts",
-          "src/llm/judge.ts",
-          "src/llm/parse.ts",
-          "src/llm/prompt.ts",
-          "src/llm/providers.ts",
-          "src/llm/recheck.ts",
-          "src/llm/systemone.ts",
-          "src/llm/tools.ts",
-          "src/llm/types.ts",
-          "src/state/aiStore.ts"
-        ],
-        "relatedPages": [
-          "/openwiki/architecture.md",
-          "/openwiki/concepts/annotation-schema.md",
-          "/openwiki/concepts/data-model.md",
-          "/openwiki/operations/tauri-shell.md",
-          "/openwiki/testing.md",
-          "/openwiki/workflows/ai-screening.md",
-          "/openwiki/workflows/local-models.md",
-          "/openwiki/workflows/pdf-viewing.md",
-          "/openwiki/workflows/screening.md"
-        ],
-        "instructions": [
-          "Cover the four modes end to end: prompt (single pass), agent (tool loop with search_paper/read_pages/scholarly_search/fetch_url + submit, separate judge model with accept/revise/reject, maxRounds/maxToolCalls), classify (System One noul/choice closed-answer models), recheck (flags-only double-check of answered fields), plus few-shot examples, budget/input-window fitting, retry/runPool concurrency, and cost estimation.",
-          "Document aiStore as a self-contained store meeting the main store only at apply (applyAiSuggestionsBatch single undo step), with persistence of an in-flight batch across restarts and the persisted-batch size cap.",
-          "Document the disclosure chain: AiUsageRecord persisted per paper (src/model/project.ts) and the RunFeedback/FieldFeedback record written to annotations/feedback/ (src/llm/feedback.ts, project:writeFeedback), plus AiUsageDisclosure.tsx.",
-          "Document the two transports: outbound LLM calls go through src-tauri/src/net.rs + llm.rs (no document origin -> no CORS preflight, 10-minute cap, per-request abort via net.rs Flight registry), and web_search is a provider-native server tool for anthropic/openrouter only (src/llm/websearch.test.ts is the specification; no src/llm/websearch.ts exists).",
-          "Explain model discovery (src/llm/models.ts fetchModels with TTL cache) and reasoning-effort control; note the hosted 'Clef' target flavor where relevant.",
-          "Major rewrite: the Electron safeStorage section is obsolete. Keys now live in the OS keychain via the keyring crate (src-tauri/src/llm.rs, service 'SaiLoR', entries llm:<id>, config persisted in llm-config.json keeping the Electron format, 'keyring' marker per entry, no read-back path); the renderer only ever sees hasKey/noKey and places the {{apiKey}} sentinel (src/llm/types.ts API_KEY_SENTINEL), substituted at the last moment in the Rust shell.",
-          "Resolve the stale and unresolved claims listed for this page against current source."
-        ],
-        "status": "complete",
-        "completedBy": "openwiki/0.7.3"
-      },
-      {
-        "id": "82159067-8d0e-480d-b1e0-5a160d24cf69",
-        "path": "/openwiki/workflows/local-models.md",
-        "title": "Local Models and Ollama",
-        "purpose": "Running models fully offline: the managed llama.cpp runtime (llama-server download/spawn/health, /v1/systemone feature probe), the local model catalog with hash-verified downloads, the guided setup panels, hardware probing, and connecting to a user-run Ollama server.",
-        "seedPaths": [
-          "src-tauri/src/hardware.rs",
-          "src-tauri/src/localruntime.rs",
-          "src-tauri/src/ollama.rs",
-          "src/components/HostedSystemOnePanel.tsx",
-          "src/components/LlmSettingsDialog.tsx",
-          "src/components/LocalChatPanel.tsx",
-          "src/components/LocalSystemOnePanel.tsx",
-          "src/llm/localCatalog.ts",
-          "src/llm/ollama.ts",
-          "src/platform/localRuntime.ts",
-          "src/platform/ollamaApi.ts"
-        ],
-        "relatedPages": [
-          "/openwiki/architecture.md",
-          "/openwiki/operations/build-release.md",
-          "/openwiki/operations/tauri-shell.md",
-          "/openwiki/testing.md",
-          "/openwiki/workflows/ai-screening.md",
-          "/openwiki/workflows/llm-annotation.md",
-          "/openwiki/workflows/screening.md"
-        ],
-        "instructions": [
-          "Cover Ollama integration: origin-checked base URLs, list/show/ps/pull/delete with progress events, manifest size, context-window detection feeding budgeting, and the localserver:discover probe.",
-          "Cover hardware probing (GPU vendor detection via sysinfo + nvidia-smi parsing, recommended backend) and the guided setup panels (LocalChatPanel, LocalSystemOnePanel, HostedSystemOnePanel, LlmSettingsDialog local sections).",
-          "Cover runtime management: llama-server discovery (system vs managed), install plans, idle stop after 10 minutes, health timeout, per-model servers on 127.0.0.1, /v1/systemone feature probe (commit gate), cancel/resume of partial downloads, stop_all on app exit.",
-          "Cover the model catalog (5 entries incl. planned/unavailable ones with reasons) mirrored between src/llm/localCatalog.ts and the Rust catalog.",
-          "Document the trust model recorded in the source: the renderer only names a catalog id; URLs, paths and the executable are decided in Rust; every download is hash-verified against a digest the host publishes (GitHub asset digest / HF LFS oid); a download starts only after a plan was produced and consented to in the session.",
-          "Explain how local targets appear in LlmConfig (managed {catalogId}, contextTokens, noKey) and plug into annotation, recheck and screening runs.",
-          "New page (no wiki coverage exists): build from src-tauri/src/localruntime.rs (1965 lines) and the renderer modules that drive it."
-        ],
-        "status": "complete",
-        "completedBy": "openwiki/0.7.3"
-      },
-      {
-        "id": "b6bbb23c-9d19-492d-bea1-f979b18f0cf4",
-        "path": "/openwiki/workflows/pdf-viewing.md",
-        "title": "PDF Viewer and Marks",
-        "purpose": "The pdf.js-based viewer: page rendering and zoom, search, text-selection capture for field grabbing, highlights/notes (marks) with per-seat persistence and evidence linking, internal-link previews, reading-position persistence, and mark export into real PDF annotations.",
-        "seedPaths": [
-          "src-tauri/src/pdf.rs",
-          "src/components/PdfViewer.tsx",
-          "src/model/pdfExport.ts",
-          "src/model/pdfMarks.ts",
-          "src/model/pdfMeta.ts",
-          "src/model/pdfText.ts",
-          "src/model/refPreview.ts",
-          "src/platform/pdfjs.ts"
-        ],
-        "relatedPages": [
-          "/openwiki/architecture.md",
-          "/openwiki/concepts/data-model.md",
-          "/openwiki/operations/tauri-shell.md",
-          "/openwiki/testing.md",
-          "/openwiki/workflows/llm-annotation.md",
-          "/openwiki/workflows/screening.md"
-        ],
-        "instructions": [
-          "Cover the slr-file:// serving contract as experienced by the viewer: byte-range streaming, path-traversal 403, per-session escape approval (authz.rs allowed_escapes) surfaced via pdf:checkPath/pdf:allowPath.",
-          "Keep the existing structure (viewer, marks, marks persistence, export, reading position, link previews) but refresh: the pdf/ text extraction and mark persistence claims, and the export path — marks are burned into real PDF annotation objects by the Rust shell (src-tauri/src/pdf.rs pdf_embed_marks, lpdf crate) rather than pdf-lib in a main process.",
-          "Keep the marks model (fractions of page size, groupId, sortMarksForCycling) and per-seat file naming incl. screening highlights.",
-          "Resolve the stale and unresolved claims listed for this page against current source.",
-          "Verify the viewer internals (zoom, search via CSS Custom Highlight API, selection capture with caretRangeFromPoint, jump history, MAX_PDF_PAGES cap) against the current PdfViewer.tsx."
-        ],
-        "status": "complete",
-        "completedBy": "openwiki/0.7.3"
-      },
-      {
-        "id": "983f2edc-3446-459a-ad2c-7533667e22d3",
-        "path": "/openwiki/workflows/screening.md",
-        "title": "Screening Mode",
-        "purpose": "Screening projects: the derived two-node Decision/Reason schema, tri-state status, PRISMA-style counts, exclusion reasons, validation rules, the screening UI (ScreeningPanel/ScreeningRecord/ScreeningSummary), and the screening->annotation import hand-off.",
-        "seedPaths": [
-          "src/components/ScreeningImportDialog.tsx",
-          "src/components/ScreeningPanel.tsx",
-          "src/components/ScreeningSummary.tsx",
-          "src/model/screeningMarks.ts",
-          "src/screening/counts.ts",
-          "src/screening/reasonUsage.ts",
-          "src/screening/schema.ts",
-          "src/screening/status.ts",
-          "src/screening/validate.ts"
-        ],
-        "relatedPages": [
-          "/openwiki/architecture.md",
-          "/openwiki/concepts/annotation-schema.md",
-          "/openwiki/concepts/data-model.md",
-          "/openwiki/testing.md",
-          "/openwiki/workflows/ai-screening.md",
-          "/openwiki/workflows/consolidation.md",
-          "/openwiki/workflows/llm-annotation.md",
-          "/openwiki/workflows/pdf-viewing.md"
-        ],
-        "instructions": [
-          "Add a short pointer to AI-assisted screening (workflows/ai-screening.md) for the Include/Exclude proposal flow.",
-          "Cover screening PDF highlights (screeningMarks.ts) and their per-seat files.",
-          "Cover the screening UI (ScreeningPanel, ScreeningRecord, ScreeningSummary, ScreeningReasonsEditor) and the seat routing of currentTree for screening projects.",
-          "Document the import hand-off to an annotation project (ScreeningImportDialog, startFromScreening/importFromScreening) and the sibling-project-location default that keeps relative PDF paths resolving.",
-          "Resolve the unresolved claims listed for this page against current source.",
-          "Verify the derived schema and pure logic against src/screening/* (schema, status, counts, validate, reasonUsage) and the store surface (store.screening tests)."
-        ],
-        "status": "complete",
-        "completedBy": "openwiki/0.7.3"
-      },
-      {
-        "id": "ca8a1df0-e4bc-4cf8-b2b9-e9e580b79846",
-        "path": "/openwiki/quickstart.md",
-        "title": "Quickstart",
-        "purpose": "Start-here guide: what a SaiLoR project is, the split on-disk layout, the 2.0 tech stack (React 19 + Tauri v2 + Vite + Zustand + Zod), the exact dev/build/test commands (Make + npm), the repository map, and a task-routing table from change area to wiki page and entry points.",
-        "seedPaths": [
-          "Makefile",
-          "package.json",
-          "src-tauri/tauri.conf.json",
-          "src/App.tsx",
-          "src/platform/index.ts",
-          "src/state/store.ts",
-          "vite.config.ts"
-        ],
-        "relatedPages": [
-          "/openwiki/Home.md",
-          "/openwiki/architecture.md",
-          "/openwiki/concepts/annotation-schema.md",
-          "/openwiki/concepts/data-model.md",
-          "/openwiki/operations/build-release.md",
-          "/openwiki/operations/tauri-shell.md",
-          "/openwiki/testing.md",
-          "/openwiki/workflows/ai-screening.md",
-          "/openwiki/workflows/git-integration.md",
-          "/openwiki/workflows/llm-annotation.md",
-          "/openwiki/workflows/local-models.md",
-          "/openwiki/workflows/screening.md"
-        ],
-        "instructions": [
-          "Keep the on-disk layout section and route to concepts/data-model.md for the full shape.",
-          "Keep the task-routing table but point the shell/IPC row at operations/tauri-shell.md and the build row at operations/build-release.md with the new entry points (Makefile, .github/workflows/ci.yml, src-tauri/tauri.conf.json); add rows for AI screening and local models.",
-          "Preserve the 'SaiLoR is a desktop app' framing: the plain web dev server renders the app UI but the Tauri bridge is required for real use; native dialogs/fs/PDF protocol/git/LLM calls live in the Rust shell.",
-          "Rewrite the Electron-era claims: there is no electron/, no Electron 43, no vite-plugin-electron, no dev:electron, no Playwright, no Dockerfile.electron. Verify every command against package.json and the Makefile (make setup/install/dev/web/build/probe/check/test/test-rust/test-integration/lint/fmt/docker-linux/report; npm test, test:integration, typecheck, check:wiki, scenario).",
-          "Update the repository layout tree to the 2.0 tree: src-tauri/src/* modules, e2e/ probe app, scripts/ (setup.sh/setup.ps1), Makefile, docker-compose.dev.yml (tauri-linux), docs/requirements/, user-guide/, technical-report/.",
-          "Update the tech-stack table: desktop shell is Tauri v2 (Rust in src-tauri/, system WebView per OS), e2e is the tauri-driver probe app (e2e/probe.test.mjs), Rust side tested with cargo test."
+          "Keep the strengths of the current page: the what-is-SaiLoR intro, the split project.json + annotations/ on-disk layout with screening file names, the lazy per-paper/per-reviewer files and legacy auto-migration note, and the task-routing table format (wiki page → source entry points → key symbols → focused tests → minimal validation).",
+          "Rebuild the Task Routing table against current sources: shell/IPC and self-update rows must point to operations/tauri-shell.md (never operations/electron-shell.md, which is being deleted this run); platform-seam rows point at src/platform/{adapter,bridge,tauri,desktop,index,unsupported}.ts; update the self-update row to tauri-plugin-updater + src-tauri/src/update.rs + the signed latest.json feed (no src/model/updateSignature.ts Ed25519 verifier anymore).",
+          "Reflect the current test surface: Vitest unit (`npm test`), real-git integration suite (`npm run test:integration`, vitest.integration.config.ts), Rust unit tests via cargo test on the tauri-build matrix, the probe build (make probe, --features probe, SAILOR_PROBE_PROJECT/SAILOR_PROBE_REPORT) and tauri-driver e2e (node --test e2e/probe.test.mjs) — Playwright e2e specs are gone.",
+          "Rewrite the repository layout to the current tree: no electron/ and no src/platform/electron.ts/browser.ts/idb.ts; instead src/platform/tauri.ts (TauriAdapter over the SlrBridge → snake_case commands), src/platform/desktop.ts (DesktopAdapter), src/platform/bridge.ts, src/platform/unsupported.ts, plus the src-tauri/src Rust modules (main.rs command registry, project.rs, git.rs, authz.rs, protocol.rs, pdf.rs, llm.rs, localruntime.rs, ollama.rs, update.rs, close.rs, shell.rs, webfetch.rs, net.rs, hardware.rs, paths.rs, feedback.rs, annotations.rs).",
+          "Rewrite the tech-stack table and quick commands from the current package.json scripts (dev, build, test, test:integration, typecheck, check:wiki, scenario) and the Makefile targets (make setup/install/dev/web/build/build-debug/probe/check/test-integration/docker-linux); the desktop dev loop is `make dev` (npx tauri dev, renderer on port 5173), not `npm run dev:electron`.",
+          "The repo HEAD is the SaiLoR 2.0 Tauri cutover (branch release/2.0.0). The current page still documents the deleted Electron architecture (Electron 43, vite-plugin-electron, npm run dev:electron, electron/, scripts/build-electron.sh, Dockerfile.electron, electron-builder, src/platform/electron.ts, scripts/sign-release.cjs) — all of that is gone; regenerate every Electron-era section against the Tauri 2.0 reality.",
+          "The web build is discontinued: `npm run dev` renders only the isTauri() discontinuation screen; say so explicitly and route readers to architecture.md for why the PlatformAdapter seam survives as one real + one inert implementation.",
+          "Verify every file path and command mentioned against the current tree before writing it; the page is the entry point, so any stale path here misroutes every future task. Cross-check commands against Makefile, scripts/ci.sh, and scripts/setup.sh/setup.ps1."
         ],
         "status": "pending"
       }

@@ -23,11 +23,11 @@
       "completedRunId": "19cd892d-ef20-4848-a4ee-26e1ad27c134"
     },
     "/openwiki/concepts/data-model.md": {
-      "pageVersion": "sha256:2fb04dbe55c91e741952ca3dfaa4fe2e98ec7b142cae2f60725261b119441b1e",
+      "pageVersion": "sha256:3345365108613761079c8d0671f43844ba56eac287cdbc09d23789b8e603cdbf",
       "completedBy": "openwiki/0.7.3",
       "completedRunId": "19cd892d-ef20-4848-a4ee-26e1ad27c134",
-      "gitHead": "949941e706a9a90354a7c621b6ff6aab16fb2cd0",
-      "sourceFingerprint": "sha256:6e4c2ee9befc58493aea2c0b5cb311a421b7f6b48f555512e2f8553ab41a1de0"
+      "gitHead": "8497d9d6efb99b676d75b422a1d481a2452dd3b4",
+      "sourceFingerprint": "sha256:7585d7d13c4afc6d465f5f9c8e3787e5ba3d0eb58bc0585b430555a70c8f6dff"
     },
     "/openwiki/operations/build-release.md": {
       "gitHead": "949941e706a9a90354a7c621b6ff6aab16fb2cd0",

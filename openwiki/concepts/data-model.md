@@ -122,7 +122,7 @@ should not exist" — the caller (the platform adapter's `saveProject`, or the
 git layer's `toSplitProject`) deletes it if present on disk. The function is
 side-effect-free so it stays unit-testable without a filesystem; the Rust
 shell does the actual writes/deletes (see
-[`electron-shell.md`](../operations/electron-shell.md)).
+[`tauri-shell.md`](../operations/tauri-shell.md)).
 
 ## The annotations folder (shared-folder rules)
 
@@ -846,6 +846,6 @@ project cannot silently empty a screening list.
 - [`git-integration.md`](../workflows/git-integration.md) — the git-side views
   of the split files (`own_matcher`, field-level review, merges and the shared
   history).
-- [`electron-shell.md`](../operations/electron-shell.md) — the Rust shell that
+- [`tauri-shell.md`](../operations/tauri-shell.md) — the Rust shell that
   performs the actual `splitProjectFiles` writes/deletes and the shared-folder
   authorization.

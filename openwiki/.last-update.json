@@ -2,7 +2,7 @@
   "updatedAt": "2026-11-02T08:58:22.325Z",
   "command": "update",
   "gitHead": "b56a54ded9992e7e8ba570636ccc3b924bfdaa4e",
-  "model": "z-ai/glm-5.3",
+  "model": "z-ai/glm-5.3-flash",
   "status": "interrupted",
   "language": "en"
 }

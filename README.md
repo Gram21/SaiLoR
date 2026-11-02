@@ -80,7 +80,7 @@ xattr -cr "/Applications/SaiLoR.app"
 
 #### Windows
 
-1. Run `SaiLoR-<version>-windows-x64.exe`.
+1. Run `SaiLoR_<version>_x64-setup.exe`.
 2. Windows SmartScreen shows *"Windows protected your PC"*. Click **More info**, then
    **Run anyway**.
 3. Follow the installer.
