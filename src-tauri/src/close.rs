@@ -139,6 +139,13 @@ pub fn request_reload(app: &AppHandle) {
     }
 }
 
+/// Quits through the same guard as a window close.
+pub fn request_quit(app: &AppHandle) {
+    if !intercept(app) {
+        app.exit(0);
+    }
+}
+
 fn ask_user(app: &AppHandle) {
     let mut dialog = app
         .dialog()

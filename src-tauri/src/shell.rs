@@ -1,8 +1,13 @@
 //! Desktop shell behavior of the main window.
 
+use crate::close;
 use std::path::Path;
+use tauri::menu::{MenuItem, PredefinedMenuItem};
 use tauri::webview::NewWindowResponse;
-use tauri::{App, AppHandle, Manager, Url, WebviewWindowBuilder};
+use tauri::{App, AppHandle, Emitter, Manager, Url, WebviewWindowBuilder};
+use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+
+const REPO_URL: &str = "https://github.com/Gram21/SaiLoR";
 
 /// Only these schemes leave the app, in the system browser.
 pub fn is_external(url: &Url) -> bool {
@@ -27,6 +32,89 @@ fn open_external(url: &Url) {
     if is_external(url) {
         if let Err(e) = tauri_plugin_opener::open_url(url.as_str(), None::<&str>) {
             eprintln!("Could not open {url}: {e}");
+        }
+    }
+}
+
+/// Menu ids. An id that the renderer handles is also its event name.
+#[derive(Debug, PartialEq)]
+enum Action {
+    Reload,
+    Quit,
+    CloseWindow,
+    Fullscreen,
+    Minimize,
+    ToggleMaximize,
+    Github,
+    About,
+    /// Emitted to the renderer under the same name.
+    Emit(&'static str),
+}
+
+fn action(id: &str) -> Option<Action> {
+    Some(match id {
+        "app:reload" => Action::Reload,
+        "app:quit" => Action::Quit,
+        "app:closeWindow" => Action::CloseWindow,
+        "app:fullscreen" => Action::Fullscreen,
+        "app:minimize" => Action::Minimize,
+        "app:maximize" => Action::ToggleMaximize,
+        "app:github" => Action::Github,
+        "app:about" => Action::About,
+        "app:undo" => Action::Emit("app:undo"),
+        "app:redo" => Action::Emit("app:redo"),
+        "app:closeProject" => Action::Emit("app:closeProject"),
+        _ => return None,
+    })
+}
+
+fn run(app: &AppHandle, action: Action) {
+    let window = app.get_webview_window("main");
+    match action {
+        Action::Emit(event) => {
+            let _ = app.emit(event, ());
+        }
+        Action::Reload => close::request_reload(app),
+        Action::Quit => close::request_quit(app),
+        Action::Github => {
+            if let Ok(url) = Url::parse(REPO_URL) {
+                open_external(&url);
+            }
+        }
+        Action::About => {
+            let mut dialog = app
+                .dialog()
+                .message(format!("Version {}", app.package_info().version))
+                .title("About SaiLoR")
+                .kind(MessageDialogKind::Info);
+            if let Some(w) = &window {
+                dialog = dialog.parent(w);
+            }
+            dialog.show(|_| {});
+        }
+        Action::CloseWindow => {
+            if let Some(w) = &window {
+                let _ = w.close();
+            }
+        }
+        Action::Fullscreen => {
+            if let Some(w) = &window {
+                let _ = w.set_fullscreen(!w.is_fullscreen().unwrap_or(false));
+            }
+        }
+        Action::Minimize => {
+            if let Some(w) = &window {
+                let _ = w.minimize();
+            }
+        }
+        Action::ToggleMaximize => {
+            if let Some(w) = &window {
+                let _ = if w.is_maximized().unwrap_or(false) {
+                    w.unmaximize()
+                } else {
+                    w.maximize()
+                };
+            }
         }
     }
 }
@@ -61,7 +149,14 @@ pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
         })
         .build()?;
     #[cfg(target_os = "macos")]
-    edit_menu(app)?;
+    macos_menu(app)?;
+    #[cfg(not(target_os = "macos"))]
+    app.set_menu(menu(app)?)?;
+    app.on_menu_event(|app, e| {
+        if let Some(act) = action(e.id().as_ref()) {
+            run(app, act);
+        }
+    });
     Ok(())
 }
 
@@ -125,36 +220,99 @@ fn copy_new(from: &Path, to: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-/// Swaps the default menu's native Undo/Redo for the app history (`app:undo`, `app:redo`).
+/// The default macOS menu, with the app history for Undo and Redo (`app:undo`, `app:redo`).
 /// The page sees Cmd+Z first; the menu item fires only when the page did not handle it.
 #[cfg(target_os = "macos")]
-fn edit_menu(app: &App) -> tauri::Result<()> {
-    use tauri::menu::{MenuItem, MenuItemKind};
-    use tauri::Emitter;
+fn macos_menu(app: &App) -> tauri::Result<()> {
+    use tauri::menu::MenuItemKind;
     let Some(menu) = app.menu() else {
         return Ok(());
     };
     for item in menu.items()? {
-        let MenuItemKind::Submenu(edit) = item else {
+        let MenuItemKind::Submenu(sub) = item else {
             continue;
         };
-        if edit.text()? != "Edit" {
-            continue;
+        match sub.text()?.as_str() {
+            "Edit" => {
+                sub.remove_at(0)?;
+                sub.remove_at(0)?;
+                sub.prepend_items(&[
+                    &MenuItem::with_id(app, "app:undo", "Undo", true, Some("CmdOrCtrl+Z"))?,
+                    &MenuItem::with_id(app, "app:redo", "Redo", true, Some("CmdOrCtrl+Shift+Z"))?,
+                ])?;
+            }
+            "View" => {
+                sub.prepend_items(&[
+                    &MenuItem::with_id(app, "app:reload", "Reload", true, Some("CmdOrCtrl+R"))?,
+                    &PredefinedMenuItem::separator(app)?,
+                ])?;
+            }
+            _ => {}
         }
-        edit.remove_at(0)?;
-        edit.remove_at(0)?;
-        edit.prepend_items(&[
+    }
+    Ok(())
+}
+
+/// Windows and Linux have no default menu bar. This builds the Electron menus.
+#[cfg(not(target_os = "macos"))]
+fn menu(app: &App) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+    use tauri::menu::{Menu, Submenu};
+    let file = Submenu::with_items(
+        app,
+        "File",
+        true,
+        &[
+            &MenuItem::with_id(app, "app:closeProject", "Close project", true, None::<&str>)?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "app:quit", "Quit", true, Some("CmdOrCtrl+Q"))?,
+        ],
+    )?;
+    let edit = Submenu::with_items(
+        app,
+        "Edit",
+        true,
+        &[
             &MenuItem::with_id(app, "app:undo", "Undo", true, Some("CmdOrCtrl+Z"))?,
             &MenuItem::with_id(app, "app:redo", "Redo", true, Some("CmdOrCtrl+Shift+Z"))?,
-        ])?;
-    }
-    app.on_menu_event(|app, e| {
-        let id = e.id().as_ref();
-        if id == "app:undo" || id == "app:redo" {
-            let _ = app.emit(id, ());
-        }
-    });
-    Ok(())
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::cut(app, None)?,
+            &PredefinedMenuItem::copy(app, None)?,
+            &PredefinedMenuItem::paste(app, None)?,
+            &PredefinedMenuItem::select_all(app, None)?,
+        ],
+    )?;
+    let view = Submenu::with_items(
+        app,
+        "View",
+        true,
+        &[
+            &MenuItem::with_id(app, "app:reload", "Reload", true, Some("CmdOrCtrl+R"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "app:fullscreen", "Full Screen", true, Some("F11"))?,
+        ],
+    )?;
+    let window = Submenu::with_items(
+        app,
+        "Window",
+        true,
+        &[
+            &MenuItem::with_id(app, "app:minimize", "Minimize", true, None::<&str>)?,
+            &MenuItem::with_id(app, "app:maximize", "Maximize/Restore", true, None::<&str>)?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "app:closeWindow", "Close", true, None::<&str>)?,
+        ],
+    )?;
+    let help = Submenu::with_items(
+        app,
+        "Help",
+        true,
+        &[
+            &MenuItem::with_id(app, "app:github", "Project on GitHub", true, None::<&str>)?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "app:about", "About SaiLoR", true, None::<&str>)?,
+        ],
+    )?;
+    Menu::with_items(app, &[&file, &edit, &view, &window, &help])
 }
 
 #[cfg(test)]
@@ -207,6 +365,21 @@ mod tests {
             assert!(!is_app_url(&url(bad), Some(&dev)), "{bad}");
         }
         assert!(!is_app_url(&url("http://localhost:5173/"), None));
+    }
+
+    #[test]
+    fn menu_ids_map_to_actions() {
+        assert_eq!(action("app:reload"), Some(Action::Reload));
+        assert_eq!(action("app:quit"), Some(Action::Quit));
+        assert_eq!(action("app:closeWindow"), Some(Action::CloseWindow));
+        assert_eq!(action("app:fullscreen"), Some(Action::Fullscreen));
+        assert_eq!(action("app:maximize"), Some(Action::ToggleMaximize));
+        assert_eq!(action("app:github"), Some(Action::Github));
+        assert_eq!(action("app:about"), Some(Action::About));
+        for event in ["app:undo", "app:redo", "app:closeProject"] {
+            assert_eq!(action(event), Some(Action::Emit(event)));
+        }
+        assert_eq!(action("tauri:quit"), None);
     }
 
     fn tmp(name: &str) -> std::path::PathBuf {
