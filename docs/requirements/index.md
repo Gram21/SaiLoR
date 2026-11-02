@@ -57,8 +57,8 @@ per category so requirements can be inserted without renumbering.
 | Consolidation (CON) | 44 |
 | Git integration (GIT) | 59 |
 | LLM annotation (LLM) | 88 |
-| Platform & shell (PLT) | 47 |
-| **Total** | **392** |
+| Platform & shell (PLT) | 48 |
+| **Total** | **393** |
 
 ## Method & evidence notes
 
@@ -77,7 +77,7 @@ per category so requirements can be inserted without renumbering.
 - Thin-evidence areas deliberately not turned into requirements: exact visual styling,
   internal performance optimizations without a tested threshold, and the discontinued
   browser deployment (documented only as the REQ-PLT-10 refusal behavior).
-  The Linux container with a browser view is covered by REQ-PLT-370.
+  The Linux container with a browser view is covered by REQ-PLT-380.
 - One known, documented limitation is captured inside the consolidation evidence rather
   than as a requirement: project-wide agreement statistics can misread unaligned papers;
   the implemented mitigation is the REQ-CON-330 warning.

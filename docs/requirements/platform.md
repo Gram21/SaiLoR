@@ -133,10 +133,11 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-120: Guard reload shortcuts
-- **Description:** When a reload shortcut is used while unsaved changes exist, the system shall request confirmation before reloading, with Cancel as the default.
+- **Description:** When the user reloads the page with unsaved changes, by the View menu, Ctrl/Cmd+R or F5, the system shall show the three-choice dialog of REQ-PLT-100 (Save, Don't Save, Cancel) and shall reload only after a successful save or an explicit discard. When no changes are unsaved, the system shall reload at once.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/hooks/useDirtyGuard.ts` (`useDirtyGuard`), commit `6ce60d5` (removed Electron main process)
-- **Status:** Partial: the renderer registers a `beforeunload` guard while changes are unsaved. The Tauri shell has no reload confirmation dialog of its own.
+- **Evidence:** `src-tauri/src/close.rs` (`request_reload`, `app_reload`, `on_reload`, `saved`), `src-tauri/src/shell.rs` (`action`, `run`, `macos_menu`, `menu`), `src/hooks/useKeybindings.ts` (`useKeybindings`), `src/platform/tauri.ts` (`requestReload`), `src/hooks/useDirtyGuard.ts` (`useDirtyGuard`, `beforeunload`), commit `6ce60d5` (removed Electron main process)
+- **Verified by:** `src-tauri/src/close.rs` (`clean_project_reloads_at_once`, `dirty_reload_asks_once_and_cancel_keeps_the_page`, `discard_reloads_without_allowing_a_later_close`, `reload_waits_for_a_requested_save_to_succeed`, `open_close_dialog_blocks_reload`), `src/hooks/useKeybindings.test.tsx` (`reload shortcuts`), `src-tauri/src/shell.rs` (`menu_ids_map_to_actions`)
+- **Status:** Implemented. Windows and Linux were not run by hand. See `docs/tauri-migration.md` §22.3.
 
 ### REQ-PLT-130: Preserve newer changes during save
 - **Description:** When the project changes while a save is being written, the system shall keep the project marked dirty and retain the newer in-memory value.
@@ -273,8 +274,9 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-310: Application undo via menu
 - **Description:** The system shall route the Edit-menu Undo and Redo commands to the application's annotation history rather than native text undo, while keeping cut, copy, paste, and select-all native. One key press shall run one undo step.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src-tauri/src/shell.rs` (`edit_menu`) replaces the native Undo and Redo of the macOS default menu with items that emit `app:undo` and `app:redo`. `src/hooks/useCloseGuard.ts` (`useCloseGuard`) routes these events to the editor or the project history. `src/hooks/useKeybindings.ts` (`useKeybindings`) handles Ctrl/Cmd+Z and Ctrl/Cmd+Y and calls `preventDefault`, so WKWebView does not pass the key on to the menu. Commit `6ce60d5` (removed Electron main process).
-- **Status:** Implemented on macOS. Windows and Linux have no menu bar. On these platforms the renderer key binding runs undo and redo, and the WebView handles cut, copy, paste, and select-all natively.
+- **Evidence:** `src-tauri/src/shell.rs` (`macos_menu`, `menu`, `action`, `run`) replaces the native Undo and Redo of the macOS default menu, and builds the Windows and Linux menu bar, with items that emit `app:undo` and `app:redo`. `src/hooks/useCloseGuard.ts` (`useCloseGuard`) routes these events to the editor or the project history. `src/hooks/useKeybindings.ts` (`useKeybindings`) handles Ctrl/Cmd+Z and Ctrl/Cmd+Y and calls `preventDefault`, so WKWebView does not pass the key on to the menu. Commit `6ce60d5` (removed Electron main process).
+- **Verified by:** `src-tauri/src/shell.rs` (`menu_ids_map_to_actions`)
+- **Status:** Implemented on macOS, Windows, and Linux. Windows and Linux were not run by hand. The Windows and Linux menus are described in REQ-PLT-370.
 
 ### REQ-PLT-320: Build targets
 - **Description:** The system shall build the macOS app and dmg (arm64 and x64), the Windows NSIS installer (x64), and the Linux AppImage, deb and rpm packages (x64). The files shall use the Tauri default names, for example `SaiLoR_<version>_aarch64.dmg`, `SaiLoR_<version>_x64-setup.exe` and `SaiLoR_<version>_amd64.AppImage`. The macOS builds shall require macOS 15 or later. Each build shall include a signed updater artifact, and one `latest.json` feed shall list every platform. The release workflow shall attach these files to a draft release tagged `v<version>`. Only the AppImage, Windows and macOS builds shall update in-app. Users shall update the deb and rpm packages by hand.
@@ -306,7 +308,14 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Evidence:** `src-tauri/src/update.rs` (`update_install`), `src-tauri/src/close.rs` (`Guard`, `is_dirty`), commit `251b64a`
 - **Status:** Implemented. No automated check: the refusal depends on the Tauri command context.
 
-### REQ-PLT-370: Run in a container with a browser view
+### REQ-PLT-370: Menu bar on Windows and Linux
+- **Description:** On Windows and Linux, the system shall show a menu bar. The File menu shall offer Close project and Quit. Quit shall pass the unsaved-changes guard of REQ-PLT-100. The Edit menu shall offer Undo and Redo, which route to the application history, and native Cut, Copy, Paste, and Select All. The View menu shall offer Reload, which passes the guard of REQ-PLT-120, and Full Screen. The Window menu shall offer Minimize, Maximize/Restore, and Close, where Close passes the guard of REQ-PLT-100. The Help menu shall offer Project on GitHub, which opens the system browser, and About, which shows the application version. On macOS, the View menu shall also offer Reload.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src-tauri/src/shell.rs` (`menu`, `macos_menu`, `run`), `src-tauri/src/close.rs` (`request_quit`), `src/hooks/useCloseGuard.ts` (`useCloseGuard`), `docs/tauri-migration.md` §22
+- **Verified by:** `src-tauri/src/shell.rs` (`menu_ids_map_to_actions`), `src/hooks/useCloseGuard.test.tsx` (`routes File > Close project through the store close request`)
+- **Status:** Implemented. Windows and Linux were not run by hand. The macOS View menu was not run by hand.
+
+### REQ-PLT-380: Run in a container with a browser view
 - **Description:** The system shall provide a Linux container image that runs SaiLoR as a non-root user on a virtual display and serves the window through noVNC on port 6080. The compose service shall publish port 6080 on `127.0.0.1` only. The container shall accept VNC clients on port 5900 only when `VNC_LISTEN_ALL=1` is set, and shall refuse that setting without `VNC_PASSWORD`. Without `VNC_PASSWORD`, the container shall print a warning and bind the VNC listener to its loopback interface.
 - **Type:** Non-functional, design constraint (ISO 25010: Security: Confidentiality)
 - **Evidence:** `Dockerfile.tauri-linux-gui` (stages `build`, `runtime`), `docker/gui-entrypoint.sh` (checks for `VNC_LISTEN_ALL` and `VNC_PASSWORD`, `-localhost`), `docker-compose.dev.yml` (service `tauri-linux-gui`), `docs/building.md` (section "Run the app in a container (Linux only)")

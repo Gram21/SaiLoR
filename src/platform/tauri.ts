@@ -198,6 +198,8 @@ export const tauriBridge: SlrBridge = {
   saveComplete: send('app:saveComplete', 'ok'),
   onUndo: replace('app:undo'),
   onRedo: replace('app:redo'),
+  requestReload: send('app:reload'),
+  onCloseProject: replace('app:closeProject'),
 
   gitProbe: call('git:probe'),
   gitPickCloneDir: call('git:pickCloneDir'),

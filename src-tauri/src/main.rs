@@ -205,6 +205,7 @@ fn main() {
             update::update_install,
             close::app_set_dirty,
             close::app_save_complete,
+            close::app_reload,
         ])
         .build(tauri::generate_context!())
         .expect("tauri build failed")

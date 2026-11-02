@@ -32,6 +32,9 @@ export function useCloseGuard() {
     slr.onUndo(() => (editing() ? useEditorStore.getState().undo() : useStore.getState().undo()))
     slr.onRedo(() => (editing() ? useEditorStore.getState().redo() : useStore.getState().redo()))
 
+    // File > Close project. The store asks first when changes are unsaved.
+    slr.onCloseProject(() => useStore.getState().requestCloseProject())
+
     // Self-update progress (see `checkForNativeUpdate` in src/platform/bridge.ts).
     slr.onNativeUpdateProgress((p) => useStore.getState().noteUpdateProgress(p.percent))
     slr.onNativeUpdateDownloaded(() => useStore.getState().noteUpdateDownloaded())

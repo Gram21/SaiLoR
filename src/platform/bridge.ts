@@ -115,6 +115,10 @@ export interface SlrBridge {
   /** Edit-menu Undo/Redo routed to the app's annotation history. */
   onUndo(cb: () => void): void
   onRedo(cb: () => void): void
+  /** View-menu or Ctrl/Cmd+R and F5 reload, asked through the unsaved-changes guard. */
+  requestReload(): void
+  /** File > Close project from the menu bar. */
+  onCloseProject(cb: () => void): void
 
   // Git: the user's own git binary. See `PlatformAdapter.getGit`.
   gitProbe(): Promise<GitProbe>

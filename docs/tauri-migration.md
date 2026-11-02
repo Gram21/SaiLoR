@@ -730,10 +730,6 @@ Kept on purpose:
 - A final Electron release with a reinstall notice (Phase 6 step 1) is not part of this branch.
 - `openwiki/` is generated. The scheduled workflow updates it.
 
-The Electron shell had these features. The Tauri shell does not have them yet. `docs/requirements/platform.md` marks the matching requirements.
-
-- Reload guard on the menu reload (REQ-PLT-120). Only the renderer `beforeunload` handler exists.
-
 ### 20.7 Window title and Close project button
 
 - The window title shows the project, for example "My review - SaiLoR". With no project open, it shows "SaiLoR" (REQ-UI-25).
@@ -778,8 +774,8 @@ Branch: `feat/tauri-platform-gaps`. This section ports Electron shell features t
 - App URLs are `tauri://localhost`, `http(s)://tauri.localhost` (Windows) and `about:blank`. Debug builds also allow the `devUrl` origin.
 - The opener plugin is not registered. The renderer gets no opener commands, and `capabilities/default.json` does not change.
 - The migrated files are copies only. The Tauri WebView keeps `localStorage` in its own store, and the window-state plugin uses its own file. So the old window size and recent projects do not come back.
-- Windows and Linux get no menu bar. Electron showed File, Edit, View and Window menus there. The renderer key binding runs undo and redo. The WebView handles copy and paste natively.
-- The View menu has no Reload, Force Reload or Toggle DevTools item. The reload guard stays open (REQ-PLT-120).
+- Windows and Linux get no menu bar in this section. Section 22 adds one. The renderer key binding runs undo and redo. The WebView handles copy and paste natively.
+- The View menu has no Reload, Force Reload or Toggle DevTools item in this section. Section 22 adds Reload.
 - No double undo: WKWebView sends Cmd+Z to the page first. `useKeybindings` calls `preventDefault`, so the menu item does not fire. A click on the menu item runs one undo through the event.
 
 ### 21.3 Verification and gaps
@@ -799,3 +795,68 @@ Not tested:
 - No test clicks a link in the running app.
 - Cmd+Z in the running app was not tried by hand. The single undo per key press follows from the WKWebView key order.
 - Windows and Linux were not run by hand.
+
+## 22. Reload guard and menu bar
+
+This section ports the Electron reload guard (REQ-PLT-120) and the Electron menus on Windows and Linux (REQ-PLT-370). The code is in `src-tauri/src/close.rs`, `src-tauri/src/shell.rs` and `src/hooks/useKeybindings.ts`.
+
+### 22.1 Reload guard
+
+| Trigger | Behavior |
+| --- | --- |
+| View > Reload, Ctrl/Cmd+R | Calls `close::request_reload`. |
+| Ctrl/Cmd+R or F5 in the page | `useKeybindings` cancels the WebView reload and calls `app_reload`. |
+| No unsaved changes | The page reloads at once. |
+| Unsaved changes | The app shows the close dialog: "Save", "Don't Save" and "Cancel". |
+| "Save" | The app emits `app:requestSave`. The page reloads only after `app_save_complete` reports success. |
+| "Don't Save" | The page reloads. The next close still asks while changes are unsaved. |
+| "Cancel" or a failed save | The page stays open. |
+| A close or quit dialog is open | A reload request does nothing. |
+
+Differences from Electron:
+
+- Electron asked "Cancel" or "Reload anyway". The Tauri guard uses the close dialog, as REQ-PLT-120 requires.
+- Electron also had Force Reload (Ctrl/Cmd+Shift+R). It is not ported.
+- Reload and quit share one guard state in `close.rs`. A reload does not allow a later close.
+
+Warning: "Don't Save" discards unsaved changes. The user chooses this. Do not make it the default button.
+
+### 22.2 Menu bar
+
+Windows and Linux show this menu bar. Electron had File, Edit, View and Window. Help is new.
+
+| Menu | Item | Behavior |
+| --- | --- | --- |
+| File | Close project | Emits `app:closeProject`. The store asks first when changes are unsaved. |
+| File | Quit (Ctrl+Q) | Calls `close::request_quit`. The close guard runs. |
+| Edit | Undo (Ctrl+Z), Redo (Ctrl+Shift+Z) | Emits `app:undo` and `app:redo`. |
+| Edit | Cut, Copy, Paste, Select All | Native items. |
+| View | Reload (Ctrl+R) | Reload guard, section 22.1. |
+| View | Full Screen (F11) | Toggles full screen of the `main` window. |
+| Window | Minimize, Maximize/Restore | Calls the window API. |
+| Window | Close | Calls `window.close()`. The close guard runs. |
+| Help | Project on GitHub | Opens the project page in the system browser. |
+| Help | About SaiLoR | Shows the app version in a dialog. |
+
+macOS keeps the default menu. The changes are these:
+
+- The Edit menu keeps its app history Undo and Redo (section 21.1).
+- The View menu adds Reload (Cmd+R) above Full Screen.
+
+The menu has no zoom items. Electron had none either. The page changes font size and PDF zoom with keys only.
+
+### 22.3 Verification and gaps
+
+Verification:
+
+- `cargo test` tests the reload state in `close.rs` and the menu id mapping in `shell.rs`.
+- `npx vitest run` tests the reload keys, the reload request outside Tauri, and the Close project route.
+- `make lint`, `npx tsc -b --noEmit` and `npx tauri build --debug --no-bundle` pass.
+
+Not tested:
+
+- No test shows the reload dialog in a running app.
+- Windows and Linux were not run by hand. Their menu bar, Full Screen and Maximize/Restore were not tried.
+- WebView2 (Windows) and WebKitGTK (Linux) may handle Ctrl+R or F5 before the page sees the key. Not tried.
+- `beforeunload` (`useDirtyGuard`) still runs on reload. After "Don't Save", the WebView may show its own leave-page prompt. Not tried.
+- The View menu on macOS was not run by hand.
