@@ -1,10 +1,171 @@
-\section{The Tool}
-% TODO outline, one subsection per feature, user view only. Screenshots:
-% - Projects and schema: start-screen, project-editor-schema, project-editor-protocol
-% - Paper search and import: paper-search, duplicate-review-dialog
-% - Screening: screening-record, screening-summary, screening-reasons-editor
-% - Annotation and evidence: annotate-overview, grab-from-pdf-selection, completeness-dots
-% - AI assistance: reviewer-prompt
-% - Consolidation: consolidation-view, consolidation-compare-popup, disagreements-dialog, agreement-dialog
-% - Git collaboration: git-field-review, git-merge-conflicts
-% - Validation: validate-dialog
+% !TeX root = ../main.tex
+\section{SaiLoR from the Reviewer's View}\label{sec:tool}
+
+In this section, we walk through \SaiLoR along the activities of an \SLR.
+We use the running example from \autoref{sec:approach-example}.
+% TODO: All figures show the user interface before the move to Tauri (user guide, commit 1c0ec0f). Retake them on the 2.0.0 build, see figures.tex.
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.85\textwidth]{\shotAnnotate}
+    \caption{Main view of \SaiLoR with the paper list on the left, the PDF in the middle, and the extraction form of the running example for reviewer seat 1 on the right}
+    \label{fig:annotate}
+\end{figure*}
+
+\subsection{Planning: Protocol and Schema}\label{sec:tool-planning}
+
+% Project editor
+Reviewers start in the project editor.
+There, they set the project title, the number of reviewer seats, and whether the project is a screening project.
+An optional review protocol records the research questions, search strings, databases, search date, and further notes.
+The main part of the editor is the schema, as shown in \autoref{fig:schema}.
+Each row defines one node with its name, type, minimum and maximum count, options, description, and visibility condition.
+In the figure, the field \emph{Exclusion Reason} is only visible if the field \emph{Relevant} has the answer \enquote{No}.
+Reviewers can reorder and nest rows by drag and drop.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{\shotSchema}
+    \caption{Schema editor with field types, counts, options, and visibility conditions}
+    \label{fig:schema}
+\end{figure}
+
+\subsection{Conducting: Import and Screening}\label{sec:tool-screening}
+
+% Import and duplicates
+Reviewers import references from BibTeX, RIS, or CSL-JSON files, and they can import a folder of PDFs including its subfolders.
+During import, \SaiLoR sorts each record into one of three classes: new, certain duplicate, or probable duplicate.
+A certain duplicate has the same normalized DOI or title as a paper in the project.
+A probable duplicate has a fuzzy title similarity of at least $0.90$, or the same base title and an author similarity of at least $0.50$.
+The reviewer must decide on each probable duplicate.
+If the reviewer merges two records, \SaiLoR only fills fields that are empty in the existing paper.
+
+% Screening
+In a screening project, each reviewer decides per paper whether to include it, to exclude it with a reason, or to leave it undecided.
+\autoref{fig:screening} shows the screening view of the running example.
+The view shows the abstract instead of the PDF, because reviewers usually screen titles and abstracts first.
+If the abstract was extracted from the PDF and not imported, \SaiLoR shows a warning, because the extraction can be wrong.
+Reviewers can screen with the keyboard: \texttt{I} includes, \texttt{E} excludes, \texttt{U} clears the decision, and the number keys exclude with the matching reason.
+After a decision, \SaiLoR moves on to the next paper.
+A progress line shows how many papers the reviewer screened, included, and excluded.
+The screening summary lists these counts with one row per exclusion reason, which is the input for a \PRISMA flow diagram~\cite{page2021prisma}.
+Validation reports excluded papers without a reason.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{\shotScreening}
+    \caption{Screening view with the abstract, the decision buttons, and the progress line}
+    \label{fig:screening}
+\end{figure}
+
+% Carry over
+When screening is done, reviewers create the extraction project from the screening project.
+\SaiLoR carries over all included papers, never carries over excluded papers, and lets the reviewer choose whether to carry over undecided papers.
+The new project records where it came from and how many papers were included, excluded, and carried over.
+
+\subsection{Conducting: Data Extraction}\label{sec:tool-extraction}
+
+% Extraction view
+\autoref{fig:annotate} shows the main view during extraction.
+The left pane lists the papers, the middle pane shows the PDF, and the right pane shows the form that \SaiLoR generates from the schema.
+Repeatable groups such as \emph{Findings} get buttons to add and remove entries.
+A dot next to each paper shows how complete the paper is for the current seat.
+Reviewers mark a paper as finished explicitly.
+Thus, \enquote{finished} is a decision of the reviewer and not just the absence of empty fields.
+
+% Evidence
+Reviewers can copy selected text from the PDF into a field.
+They can also highlight passages in five colors and add notes.
+Each reviewer seat has its own marks.
+A reviewer can link a mark to one or more fields as evidence.
+The link popover of a field lists the linked marks, and a click on a mark jumps to the passage in the PDF.
+In this way, the project stores where in the paper an answer comes from.
+Reviewers can export their marks as standard PDF annotations into a new PDF file.
+
+\subsection{Conducting: Consolidation}\label{sec:tool-consolidation}
+
+% Seats
+In a project with several reviewers, every reviewer must pick a seat before editing.
+A reviewer only sees the answers of their own seat.
+The consolidator works in the additional consolidation seat.
+
+% Alignment
+Before \SaiLoR can compare answers, it must find out which entries of a repeatable group belong together.
+For example, two reviewers can list the findings of a paper in different orders.
+\SaiLoR matches the entries with a maximum-weight assignment over their pairwise similarity, and it keeps entries with a similarity of $0.5$ or lower apart.
+The alignment is deterministic, so that all reviewers see the same result.
+Before \SaiLoR compares two answers, it trims them, converts them to lowercase, and collapses whitespace.
+If at least two reviewers answered a field and all answers are equal, \SaiLoR fills the consolidated value automatically and marks it as auto-filled.
+
+% Compare and adopt
+For the remaining fields, the consolidator opens a comparison, as shown in \autoref{fig:compare}.
+The comparison lists the answers of all reviewers.
+The consolidator adopts one answer or marks the answers as equivalent.
+The disagreements of a paper or of the whole project can be exported as text, for example, to discuss them in a meeting.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{\shotCompare}
+    \caption{Comparison of two reviewers' answers in the consolidation seat}
+    \label{fig:compare}
+\end{figure}
+
+% Agreement
+\SaiLoR also computes the inter-rater agreement.
+For exactly two reviewers, it computes Cohen's $\kappa$~\cite{cohen1960coefficient}, and for two or more reviewers Fleiss' $\kappa$~\cite{fleiss1971measuring}.
+In both cases, it also computes Krippendorff's $\alpha$ for nominal data~\cite{krippendorff2018content}, which tolerates missing answers.
+\SaiLoR shows the agreement overall and per field.
+If a statistic is not defined, for example, because all reviewers gave the same answer to every item, \SaiLoR reports the case instead of a number.
+In a screening project, the agreement only considers the decision.
+
+\subsection{Collaboration with Git}\label{sec:tool-git}
+
+% Commit and pull
+\SaiLoR has a built-in git view that uses the git installation of the user.
+Instead of a line diff of JSON files, the view lists each changed field with its previous and current value.
+Reviewers select which field changes they commit.
+A pull fetches the upstream branch and reports whether the project is up to date, can be fast-forwarded, or needs a merge.
+\SaiLoR only pushes when the reviewer asks for it.
+It also supports branches, a project-scoped history, and stashes of the project's own files.
+
+% Merge
+For a merge, \SaiLoR does not use the line-based merge of git.
+It runs a three-way merge on the level of fields.
+If only one side changed a field, the merge keeps that change.
+The schema is merged node by node, and answers under a removed field are kept.
+Only if both sides changed the same field to different values does the reviewer have to decide.
+\autoref{fig:merge} shows the dialog for these conflicts.
+If a merge leaves conflicts in files that do not belong to the project, \SaiLoR aborts it and restores the previous state.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{\shotMerge}
+    \caption{Field-level resolution of merge conflicts after a pull}
+    \label{fig:merge}
+\end{figure}
+
+\subsection{\acs{LLM} Assistance}\label{sec:tool-llm}
+
+% Providers and opt-in
+\LLM assistance is off unless the project enables it.
+Reviewers can connect nine provider \APIs, among them Anthropic, OpenAI, Google Gemini, and any OpenAI-compatible server.
+Local models run, for example, in Ollama or a llama.cpp server~\cite{llamacpp}.
+\SaiLoR stores \API keys in the keychain of the operating system.
+Every \LLM window shows a notice that the feature is a preview and that each proposal must be checked.
+
+% Extraction proposals
+For extraction, the model reads the paper and proposes answers.
+\SaiLoR validates every proposal against the schema.
+A review table shows each proposal with the field, the value, a quote from the paper, and a confidence.
+In agent mode, the model can search and read pages of the paper, query OpenAlex and Crossref, and fetch web pages.
+\SaiLoR checks whether the quoted evidence occurs in the paper, and an optional judge model checks the proposals in a bounded loop.
+Nothing changes in the project until the reviewer applies the selected rows.
+Applying is one undo step and does not overwrite existing answers.
+\SaiLoR marks each field that the model wrote until the reviewer interacts with the field.
+For each apply, \SaiLoR records the provider, the model, and the time in the project, and the paper shows a disclosure line such as \enquote{AI-assisted (2$\times$)}.
+
+% AI seat and screening
+In a project with several reviewers, the last seat can be dedicated to the model.
+The answers of this seat go through the same consolidation as the answers of the human reviewers, so that the agreement statistics also cover the model.
+For screening, the model proposes a decision and a reason per paper.
+\SaiLoR never pre-selects an exclusion, and it pre-selects an inclusion only if the confidence is at least $0.8$.

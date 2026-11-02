@@ -1,5 +1,101 @@
-\section{Approach}
-% TODO outline
-% - Phases supported: protocol, search import, screening, data extraction, consolidation, reporting.
-% - Schema-driven annotation, evidence links to PDF passages.
-% - Reviewer seats and agreement metrics.
+% !TeX root = ../main.tex
+\section{Supporting \acsp{SLR} Systematically}\label{sec:approach}
+
+In this section, we explain which \SLR activities \SaiLoR supports and which principles guide its design.
+We then introduce the running example in more detail.
+
+\subsection{Covered Activities}\label{sec:approach-activities}
+
+% Phases
+Kitchenham and Charters~\cite{kitchenham2007guidelines} split an \SLR into three phases: planning, conducting, and reporting.
+\autoref{tab:phases} maps these phases to the support in \SaiLoR.
+The focus lies on the conducting phase, where several reviewers handle the same papers and most of the review data comes up.
+\SaiLoR does not run the database search itself.
+Reviewers search in digital libraries as before and import the exported references.
+\SaiLoR also does not synthesize the results.
+Synthesis depends on the research questions, and the extracted data is plain JSON that reviewers can analyze with their own scripts.
+
+\begin{table}[t]
+    \centering
+    \caption{\SLR phases and activities~\cite{kitchenham2007guidelines} and their support in \SaiLoR}
+    \label{tab:phases}
+    \begin{tabular}{@{}lp{0.62\columnwidth}@{}}
+        \toprule
+        Activity & Support in \SaiLoR \\
+        \midrule
+        \multicolumn{2}{@{}l}{\textit{Planning}} \\
+        Protocol & Research questions, search strings, databases, search date, and notes in the project \\
+        Extraction form & Schema of nested fields with types, options, and visibility conditions \\
+        \midrule
+        \multicolumn{2}{@{}l}{\textit{Conducting}} \\
+        Search & Not supported, import of BibTeX, RIS, CSL-JSON, and PDF folders \\
+        Duplicates & Classification into new, certain, and probable duplicates with a human decision \\
+        Screening & Include, exclude with reason, or leave undecided per reviewer \\
+        Extraction & Schema-driven form next to the PDF with highlights and evidence links \\
+        Consolidation & Comparison of reviewers with agreement statistics and adoption of answers \\
+        \midrule
+        \multicolumn{2}{@{}l}{\textit{Reporting}} \\
+        Selection counts & Screening summary with counts per exclusion reason \\
+        Exports & Disagreements as text, marks as standard PDF annotations \\
+        \LLM use & Durable record of each applied \LLM proposal per paper \\
+        Synthesis & Not supported, extracted data as plain JSON \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Design Principles}\label{sec:approach-principles}
+
+We built \SaiLoR on five principles.
+Each principle follows from the goal that other researchers should be able to trace the review data.
+
+\paragraph{Local, plain files}
+A project is a \texttt{project.json} file with the metadata, the schema, and the papers.
+A sibling \texttt{annotations} folder holds one file per paper and reviewer.
+Kleppmann et al.~\cite{kleppmann2019local} argue that users should own their data and keep working without a server.
+For an \SLR, local files have a further benefit.
+Reviewers can publish the raw review data with the paper, and readers do not need \SaiLoR to read it.
+To keep diffs small, \SaiLoR writes files in a deterministic order and does not write anything when a project is only opened.
+It also keeps keys in the files that it does not know.
+
+\paragraph{The schema drives extraction}
+Reviewers define the extraction form as a schema.
+A schema consists of nodes.
+A node is either a field of type string, number, boolean, or year, or a group of further nodes.
+A node can be required, can have a list of options, and can repeat between a minimum and maximum count.
+A visibility condition hides a node until another field has a certain answer.
+\SaiLoR validates every answer against the schema, and it keeps hidden answers instead of deleting them.
+When reviewers rename a node, \SaiLoR carries the existing answers over.
+
+\paragraph{Independent reviewers and explicit consolidation}
+Each reviewer works in their own \emph{seat}.
+A project has between one and ten reviewer seats and one additional consolidation seat.
+Reviewers do not see each other's answers while they extract.
+The \emph{consolidator} then compares the seats and decides on the final answer.
+In this way, the project keeps the individual answers and the consolidated result side by side.
+
+\paragraph{A recorded history}
+\SaiLoR uses git to record and share every change.
+Ram~\cite{ram2013git} argues that git makes scientific work more transparent and reproducible.
+We follow this argument for review data.
+A commit shows who changed which answer and when, and a merge combines the work of reviewers who worked in parallel.
+
+\paragraph{The human decides}
+\SaiLoR proposes and the reviewer decides.
+This principle applies to duplicates, to screening, and to \LLM assistance.
+For example, \SaiLoR never merges a probable duplicate on its own, and it never writes an \LLM answer into the project before the reviewer applies it.
+\LLM support is off by default, and each project must enable it.
+
+\subsection{Running Example}\label{sec:approach-example}
+
+% Running example
+The running example consists of two sample projects in the repository.
+The screening project contains eight candidate papers on code search and program repair.
+It defines eight exclusion reasons, for example, \enquote{Wrong topic}, \enquote{Not peer-reviewed}, and \enquote{Duplicate}.
+In the example, the screening result includes five papers and excludes three.
+\SaiLoR then creates the extraction project \enquote{Example SLR: Code Search and Program Repair} from the screening result.
+The extraction project carries over the five included papers, and it records that it was created from a screening project.
+Its schema asks whether a paper is relevant, which study type it reports, and in which year it appeared.
+A repeatable group \emph{Findings} holds a claim, the evidence for the claim with metric and evaluation type, and a confidence value.
+A second group \emph{Threats to Validity} repeats at most three times and records the kind of each threat and whether the authors addressed it.
+Both projects have two reviewer seats and allow \LLM assistance.
+We use this example in the walkthrough in the next section.

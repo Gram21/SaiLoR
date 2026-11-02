@@ -1,7 +1,129 @@
-\section{Architecture Decisions}
-% TODO outline, major decisions only
-% - Local-first desktop app, plain JSON files, no server.
-% - Git as sync and audit layer.
-% - Desktop shell: Electron to Tauri (see docs/tauri-migration.md).
-% - Security model: authorized paths, key storage, no renderer file access.
-% - AI use: user-supplied provider, disclosure of AI usage.
+% !TeX root = ../main.tex
+\section{Architecture Decisions}\label{sec:architecture}
+
+In this section, we describe the main architecture decisions behind \SaiLoR.
+For each decision, we state the context, the decision, and its consequences.
+
+\subsection{Overview}\label{sec:architecture-overview}
+
+% Overview
+\SaiLoR is a desktop application built with Tauri~2~\cite{tauri2}.
+The user interface is a React application in TypeScript that runs in the web view of the operating system.
+It renders PDFs with pdf.js and keeps the project state in a single store.
+A backend in Rust provides the native capabilities, such as file access, git, the keychain, and network requests.
+The user interface reaches the backend only through commands that the backend registers.
+At the time of writing, the TypeScript code base has about 50,000 lines of code without tests and about 44,000 lines of tests.
+The Rust backend has about 11,500 lines in 17 modules.
+
+\subsection{Local Files Instead of a Server}\label{sec:architecture-local}
+
+% Local-first
+Hosted tools make collaboration easy, but they keep the review data on a server (cf.~\autoref{sec:related-work-tools}).
+For a research tool, this setup has drawbacks.
+The data can be hard to export completely, the service can change or end, and reviewers might not be allowed to upload papers.
+Therefore, we decided to keep all data in local files, following the idea of local-first software~\cite{kleppmann2019local}.
+The project file and the annotation files are JSON files that people can read.
+\SaiLoR keeps unknown keys in the project file, so that an older version does not delete data of a newer version.
+Each annotation file names the schema version it was written under, and validation reports files with an unknown schema version.
+The serialization is deterministic, and opening a project writes nothing.
+As a consequence, a version control system only sees changes that a reviewer made.
+The price of this decision is that \SaiLoR needs its own collaboration mechanism.
+
+\subsection{Git as Collaboration Layer}\label{sec:architecture-git}
+
+% Git
+We decided to use git for collaboration instead of building a synchronization server.
+Git is common in \SE research, offers hosting at many institutions, and keeps a full history~\cite{ram2013git}.
+To keep merges small, \SaiLoR splits the annotations into one file per paper and seat.
+Two reviewers who work on different seats never edit the same annotation file.
+
+% Field-level merge
+However, a line-based merge does not understand JSON.
+When two people edit the same file, for example, the consolidator and a reviewer who changes the schema, git can report conflicts in lines that do not conflict in their meaning.
+Therefore, \SaiLoR runs its own three-way merge on the parsed files.
+It compares both sides to the common base field by field.
+A side that did not change a value does not influence the result.
+Repeatable entries, project settings, and schema nodes are merged separately, and answers under a removed schema field are kept.
+
+% Safety
+Using the git installation of the user brings risks.
+A cloned repository can contain a configuration that runs code, for example, hooks or a file system monitor.
+\SaiLoR runs git only in the backend and overrides these settings on every call, including the pager, the editor, and the \texttt{ext} protocol.
+It disables interactive prompts, limits the run time of each command, and validates clone URLs, paths, and branch names.
+Git operations are only allowed on repositories that the user opened or cloned in the current session.
+Before \SaiLoR commits or discards selected field changes, it checks that the file on disk still matches the reviewed state, and it refuses the write otherwise.
+
+\subsection{From Electron to Tauri}\label{sec:architecture-tauri}
+
+% Context
+Up to version 1.x, \SaiLoR was an Electron application~\cite{electron}.
+The Electron main process had about 5,600 lines of TypeScript and 98 \IPC handlers.
+Electron bundles its own Chromium and Node.js runtime.
+As a result, the macOS installer for arm64 had a size of 93~MB, and the main process could use the full Node.js \API.
+
+% Decision
+For version 2.0.0, we moved \SaiLoR to Tauri~2~\cite{tauri2}.
+Tauri uses the web view of the operating system and a backend in Rust.
+In a spike, a minimal Tauri shell produced installers of about 2~MB for macOS, Windows, and the Debian and RPM packages.
+The AppImage for Linux has about 81~MB, because it bundles WebKitGTK.
+The shell alone is thus about 2\% of the size of the old Electron installer.
+The installers of the real application are larger because they include the user interface and its assets.
+% TODO: Add the final installer sizes of the 2.0.0 release per platform.
+\todo{final installer sizes of 2.0.0 per platform}
+
+% Split
+Size was not the only reason.
+Tauri moves the security boundary into Rust and offers a capability system and a signed updater.
+We split the responsibilities as follows.
+Rust owns everything that needs authorization: file input and output, process spawning, downloads, and access to the keychain.
+TypeScript keeps the parsing of files, the merge logic, and the assembly of exported PDFs, because this code was already tested and does not need native access.
+\SaiLoR does not expose the generic file system and shell plugins of Tauri to the user interface.
+The capability file grants the web view only the default core permissions.
+
+% Consequences
+The move has consequences for users and for us.
+\SaiLoR now depends on three different web views: WKWebView on macOS, WebView2 on Windows, and WebKitGTK on Linux.
+We checked that pdf.js renders on all three.
+The minimum macOS version is 15.
+Users of version 1.x have to install version 2.0.0 manually and enter their \API keys again.
+Also, not all features of the Electron version were ported yet (cf.~\autoref{sec:discussion}).
+
+\subsection{Security Model}\label{sec:architecture-security}
+
+% Security
+A review tool opens files and repositories from other people, and it can send data to \LLM providers.
+Therefore, we treat the user interface as untrusted and enforce all checks in the backend.
+\SaiLoR only saves a project to a path that the user opened or chose in a native dialog during the current session.
+It serves a PDF only if the file lies inside the project folder.
+For a PDF outside the folder, \SaiLoR asks the user and allows only this exact path for the current session.
+Exports only write to destinations that the user picked in a save dialog, and \SaiLoR refuses symbolic links as targets.
+Updates are signed, and \SaiLoR downloads and installs them only when the user asks for it.
+
+% LLM security
+For \LLM providers, \SaiLoR stores \API keys in the keychain and sends a key only to the origin of its provider.
+It refuses redirects for requests that carry a key.
+The agent mode can fetch web pages, which opens the door to \SSRF~\cite{owasp_ssrf}.
+\SaiLoR only allows \texttt{http} and \texttt{https} URLs, resolves the host name, and refuses requests to loopback, private, and other non-public addresses.
+It checks every redirect again, follows at most five redirects, stops after 20 seconds, reads at most 2~MB, and only accepts text content.
+The fetched text is marked as untrusted data, and the system prompt tells the model to never follow instructions from it.
+
+\subsection{Controlled \acs{LLM} Assistance}\label{sec:architecture-llm}
+
+% Human in the loop
+Prior studies found that \LLMs can help with screening and extraction but still make errors~\cite{felizardo2024chatgpt,syriani2024screening,khraisha2024llm}.
+Therefore, we designed the \LLM support so that it cannot change the review data without a human decision.
+Suggestions live outside the project until the reviewer applies them.
+\SaiLoR validates them against the schema and checks quoted evidence against the text of the paper.
+The durable record of each apply makes the use of \LLMs visible in the data, so that authors can report it.
+Treating the model as an additional reviewer seat reuses the consolidation and agreement statistics, instead of adding a separate evaluation mechanism.
+
+% Local runtime
+Some reviewers cannot send papers to a hosted provider.
+For them, \SaiLoR supports local models.
+For chat models, users connect a local server such as Ollama, LM Studio, llama.cpp, or vLLM.
+For small decision models, \SaiLoR can manage a llama.cpp server itself~\cite{llamacpp}.
+It downloads the server and the models only from an allowlist of sources, verifies their SHA-256 checksums, and starts the server on \texttt{127.0.0.1} with a random key per session.
+The server uses a \GPU when one is available and the \CPU otherwise.
+We verified this runtime on macOS on arm64.
+The managed installation needs a llama.cpp release with a specific route for decision models.
+As long as no release includes this route, the setup dialog keeps the installation disabled and points users to a server that they run themselves.

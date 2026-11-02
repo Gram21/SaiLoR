@@ -1,2 +1,26 @@
-\section{Conclusion}
-% TODO outline: summary, availability (repository, release, Zenodo DOI), license.
+% !TeX root = ../main.tex
+\section{Conclusion}\label{sec:conclusion}
+\acresetall
+
+In this paper, we looked into tool support that keeps the data of a \SLR traceable.
+We presented \SaiLoR, an open-source desktop tool for screening, data extraction, and consolidation.
+A \SaiLoR project consisted of plain JSON files that a schema described and that git versioned.
+Reviewers worked independently in their own seats and linked their answers to evidence in the papers.
+A consolidator resolved disagreements with the help of agreement statistics, and \SaiLoR merged concurrent changes field by field.
+Optional \LLM assistance proposed answers with evidence, but a human reviewed every proposal before \SaiLoR applied it.
+
+We also explained the main architecture decisions.
+These were the local files instead of a server, git as collaboration layer, the security model, and the move from Electron to Tauri in version 2.0.0.
+To keep the tool itself traceable, we documented 388 requirements.
+Of these requirements, 92\% linked to implementing source code and 90\% linked to at least one automated test.
+The test suites held 2828 unit tests, 28 integration tests, and 100 Rust tests.
+We released \SaiLoR 2.0.0 under the GPL-3.0 license and archived it on Zenodo.
+
+Regarding the tool, we want to port the remaining features of the Electron shell to Tauri and retest the user interface in the web views of all three operating systems.
+We also want to verify the local model runtime on \GPUs with CUDA and Vulkan and enable the managed installation once llama.cpp provides the required route.
+
+In future research, we want to evaluate \SaiLoR in a user study with reviewers who conduct a real \SLR.
+We want to find out whether the tool reduces the effort of extraction and consolidation and whether the recorded history helps others to trace the review.
+We also want to measure how accurate the \LLM proposals are and how they influence the decisions of reviewers.
+
+Lastly, we want to have the requirements reviewed by people other than the developer and check the trace links automatically in the \CI.

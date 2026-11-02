@@ -1,7 +1,60 @@
-\section{Introduction}
-% TODO outline
-% - SLRs are manual, error-prone, and hard to coordinate across reviewers.
-% - Goal: support the whole SLR process in a systematic, reproducible way.
-% - Contributions: approach, tool, requirements with traceability, open availability.
-% - Paper structure.
-% Figure: annotate-overview
+% !TeX root = ../main.tex
+\section{Introduction}\label{sec:introduction}
+
+% Why SLRs matter
+\SLRs are an established research method in \SE.
+Kitchenham and Charters~\cite{kitchenham2007guidelines} adapted the method from medicine, and later guidelines added systematic mapping studies and snowballing~\cite{petersen2015guidelines,wohlin2014guidelines}.
+The core promise of an \SLR is that other researchers can follow each step.
+Therefore, reviewers define a protocol up front, select papers with explicit criteria, and extract data with a fixed form.
+Reporting guidelines such as \PRISMA~\cite{page2021prisma} then ask authors to disclose how many papers they found, screened, and excluded, and why.
+
+% Problem
+However, the data that an \SLR produces is hard to keep traceable.
+Reviewers often record screening decisions and extracted values in spreadsheets, shared documents, or hosted services.
+In such a setup, the link between an extracted value and the passage in the paper that supports it is often only in the reviewer's head.
+Also, two or more reviewers usually extract the same papers independently, and someone has to compare and consolidate their answers.
+With a shared spreadsheet, it is hard to see who changed which cell and why.
+Hassler et al.~\cite{hassler2014outcomes} collected barriers to the \SLR process in a community workshop, and several of these barriers concern tool support.
+Recently, \LLMs promise to take over parts of screening and extraction.
+However, studies in \SE and other fields find that their output still needs human control~\cite{felizardo2024chatgpt,khraisha2024llm}.
+
+% Gap
+Several tools support parts of the process.
+Mapping studies and surveys list many of them~\cite{marshall2013tools,marshall2014tools,harrison2020software}.
+Many of these tools are hosted web applications that keep the review data on a server, for example, Covidence~\cite{covidence}, Rayyan~\cite{ouzzani2016rayyan}, and CADIMA~\cite{kohl2018cadima}.
+Other tools focus on one activity, such as screening with active learning in ASReview~\cite{vandeschoot2021asreview}.
+To the best of our knowledge, no tool combines local, plain-file review data with a version history, schema-driven extraction with evidence links, independent reviewers with a consolidation step, and \LLM proposals that a human must accept.
+
+% Idea
+In this paper, we present \SaiLoR, an open-source desktop tool that supports \SLRs in a systematic way.
+The name contains the letters S, L, and R of \enquote{systematic literature review}.
+The main idea is to treat review data like source code.
+A review is a project of plain JSON files.
+A schema describes what reviewers extract, and the tool validates every answer against it.
+Each reviewer writes into their own files, and git records every change.
+When reviewers pull each other's work, the tool merges their files field by field.
+Optional \LLM assistance proposes answers with quotes from the paper, but the reviewer decides which proposal to apply, and the project records that an \LLM was involved.
+
+% Running example
+We use the example project that ships with \SaiLoR as a running example.
+The project is a small review on \enquote{Code Search and Program Repair}.
+A screening project holds eight candidate papers.
+Five of them are included and carried into an extraction project with a nested schema.
+\autoref{fig:annotate} shows this extraction project in the main view of \SaiLoR.
+
+% Contributions
+In summary, we make the following contributions:
+\begin{itemize}
+    \item We present \SaiLoR, a desktop tool that supports screening, data extraction, and consolidation of an \SLR with several reviewers.
+    \item We describe the main architecture decisions behind \SaiLoR and their reasons, including local-first storage, git as collaboration layer, the move from Electron to Tauri, and the control of \LLM assistance.
+    \item We report how we keep the tool traceable with 388 requirements that we linked to source code, tests, and documentation.
+    \item We release \SaiLoR 2.0.0 as open source under the GPL-3.0 license on GitHub and Zenodo~\cite{sailor2026zenodo}.
+\end{itemize}
+
+% Outline
+The remainder of the paper is structured as follows: In \autoref{sec:related-work}, we discuss related work.
+In \autoref{sec:approach}, we explain which \SLR activities \SaiLoR supports and which design principles guide it.
+\autoref{sec:tool} walks through the tool from the reviewer's view.
+\autoref{sec:architecture} describes the main architecture decisions.
+In \autoref{sec:requirements}, we present the requirements and their trace links.
+We discuss limitations in \autoref{sec:discussion} and conclude in \autoref{sec:conclusion}.
