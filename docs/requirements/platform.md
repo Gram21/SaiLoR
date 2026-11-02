@@ -305,3 +305,9 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src-tauri/src/update.rs` (`update_install`), `src-tauri/src/close.rs` (`Guard`, `is_dirty`), commit `251b64a`
 - **Status:** Implemented. No automated check: the refusal depends on the Tauri command context.
+
+### REQ-PLT-370: Run in a container with a browser view
+- **Description:** The system shall provide a Linux container image that runs SaiLoR as a non-root user on a virtual display and serves the window through noVNC on port 6080. The compose service shall publish port 6080 on `127.0.0.1` only. The container shall accept VNC clients on port 5900 only when `VNC_LISTEN_ALL=1` is set, and shall refuse that setting without `VNC_PASSWORD`. Without `VNC_PASSWORD`, the container shall print a warning and bind the VNC listener to its loopback interface.
+- **Type:** Non-functional, design constraint (ISO 25010: Security: Confidentiality)
+- **Evidence:** `Dockerfile.tauri-linux-gui` (stages `build`, `runtime`), `docker/gui-entrypoint.sh` (checks for `VNC_LISTEN_ALL` and `VNC_PASSWORD`, `-localhost`), `docker-compose.dev.yml` (service `tauri-linux-gui`), `docs/building.md` (section "Run the app in a container (Linux only)")
+- **Status:** Implemented. No automated check: verified by a manual container run only.
