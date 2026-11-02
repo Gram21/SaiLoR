@@ -213,7 +213,7 @@ the project editor. See the [index](index.md) for the glossary.
 ### REQ-DAT-250 — Derive finished when the checkbox is disabled
 - **Description:** When a project sets `finishCheckbox` to false, the system shall treat a fulfilled schema alone as finished, ignore stored ticks while preserving them in the file, and hide the with-issues filter.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/annotationState.ts:79-87,205-207`, `src/components/PaperList.finished.test.ts:207-267`
+- **Evidence:** `src/model/annotationState.ts` (`annotationState`, `annotationStateFor`), `src/components/PaperList.finished.test.ts:207-267`
 - **Status:** Implemented
 
 ## Multi-reviewer data
@@ -262,19 +262,19 @@ the project editor. See the [index](index.md) for the glossary.
 ### REQ-DAT-310 — Classify imports in three verdicts
 - **Description:** When importing reference records, the system shall classify each record as new, certain duplicate, or probable duplicate, comparing against all existing papers and all earlier records in the same batch.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/duplicates.ts:28-39,387-414`, `src/model/duplicates.test.ts:330`
+- **Evidence:** `src/model/duplicates.ts` (`classifyImport`, `classifyPair`), `src/model/duplicates.test.ts:330`
 - **Status:** Implemented
 
 ### REQ-DAT-320 — Duplicate matching rules
 - **Description:** The system shall treat an identical normalized DOI or identical normalized title as a certain duplicate, and a fuzzy whole-title similarity of at least 0.90 — or an equal subtitle-stripped base title with author-surname similarity of at least 0.50 — as a probable duplicate.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/duplicates.ts:49-67,315-363`
+- **Evidence:** `src/model/duplicates.ts` (`normalizeTitleForMatch`, `normalizeDoi`, `fuzzyScoreAtLeast`)
 - **Status:** Implemented
 
 ### REQ-DAT-330 — Demote conflicting matches
 - **Description:** The system shall demote a non-DOI title match whose years differ by two or more to new, and shall demote an exact-title match with two different DOIs or fully disjoint author sets to probable.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/duplicates.ts:118-131,320-347`, `src/model/duplicates.test.ts:73-196,531-560`
+- **Evidence:** `src/model/duplicates.ts` (`classifyPair`, `rank`), `src/model/duplicates.test.ts:73-196,531-560`
 - **Status:** Implemented
 
 ### REQ-DAT-340 — Human decision on probable duplicates
@@ -294,7 +294,7 @@ the project editor. See the [index](index.md) for the glossary.
 ### REQ-DAT-360 — Parse BibTeX, RIS, and CSL-JSON
 - **Description:** The system shall parse reference files in BibTeX, RIS, and CSL-JSON formats, choosing the format by file extension with content sniffing as fallback, skipping malformed or title-less entries individually, and returning an empty list rather than failing on unparseable input.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/references.ts:32-71,296-347,505-747`, `src/model/references.test.ts`
+- **Evidence:** `src/model/references.ts` (`parseReferences`, `parseBibtex`, `parseRis`, `parseCslJson`), `src/model/references.test.ts`
 - **Status:** Implemented
 
 ### REQ-DAT-370 — Convert LaTeX escapes
@@ -389,7 +389,7 @@ the project editor. See the [index](index.md) for the glossary.
 ### REQ-EDT-60 — Edit schema tree graphically
 - **Description:** The system shall provide a drag-and-drop schema tree editor offering group, text, number, year, and yes/no nodes, inline enum options, cardinality inputs with an unbounded toggle, descriptions, a required checkbox for eligible fields, a visibility-gate button that summarizes the node's `visibleIf` and opens a dialog for editing it (the gated node's tree path and type, conditions restricted to legal targets and labelled with each target's level and value kind, an explicit any-answer/specific-value choice per condition, values offered only for yes/no and option-list fields, arbitrarily nested AND/OR groups that can be extended after creation, targets listed same-level first then ancestors then the rest of the schema in document order, per-entry reordering and removal, and drag-and-drop of a condition or a whole group into another group), and refusal of drops into a node's own subtree.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/components/SchemaTreeEditor.tsx:20-26,211-240,285-470`, `src/components/VisibleIfDialog.tsx:150-1004`, `src/components/VisibleIfDialog.test.ts`
+- **Evidence:** `src/components/SchemaTreeEditor.tsx:20-26,211-240,285-470`, `src/components/VisibleIfDialog.tsx` (`VisibleIfDialog`, `moveEntryTo`), `src/components/VisibleIfDialog.test.ts`
 - **Status:** Implemented
 
 ### REQ-EDT-70 — Record the review protocol

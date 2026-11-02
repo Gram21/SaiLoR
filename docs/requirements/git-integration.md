@@ -59,6 +59,7 @@ See the [index](index.md) for the glossary.
 - **Description:** The system shall execute repository operations only against repository roots that were established in the current session via project open or clone.
 - **Type:** Non-functional (ISO 25010: Security)
 - **Evidence:** `src-tauri/src/git.rs` (`assert_root`)
+- **Verified by:** `src-tauri/src/git.rs` (`sha_and_root_checks`, `inside_root_follows_links`)
 - **Status:** Implemented
 
 ### REQ-GIT-100 — Clone a project repository
@@ -78,24 +79,25 @@ See the [index](index.md) for the glossary.
 - **Description:** When the Git panel is opened, the system shall display the parsed working-tree status and the diff against HEAD, truncating diff text beyond 200,000 characters with a truncation indicator.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src-tauri/src/git.rs` (`status`), `src/git/output.ts:12-74`
+- **Verified by:** `src-tauri/src/git.rs` (`porcelain_and_log_parsers`, `info_status_commit_and_detached_refusal`)
 - **Status:** Implemented
 
 ### REQ-GIT-130 — Field-level review of project changes
 - **Description:** When the project's own files have uncommitted changes and no structural difference exists, the system shall present each changed annotation field as a row with its previous and current value and a per-row disposition of Use, Ignore, or Discard, defaulting to Use.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/git/changes.ts:21-471`, `src/state/gitStore.ts:583`, `gitStore.test.ts:389-495`
+- **Evidence:** `src/git/changes.ts:21-471`, `src/state/gitStore.ts:583`, `src/state/gitStore.test.ts:389-495`
 - **Status:** Implemented
 
 ### REQ-GIT-140 — Whole-file fallback for structural changes
 - **Description:** When project changes include structural differences (schema, reviewer count, screening configuration, version, title, provenance, or protocol), the system shall replace the field-level review with a whole-file commit option.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/git/changes.ts:239`, `gitStore.test.ts:414`
+- **Evidence:** `src/git/changes.ts:239`, `src/state/gitStore.test.ts:414`
 - **Status:** Implemented
 
 ### REQ-GIT-150 — Commit a subset of field changes
 - **Description:** When a commit is made with a mix of dispositions, the system shall commit exactly the rows marked Use, keep rows marked Ignore in the working tree for later, and remove rows marked Discard from the working file, restoring the working content even when the commit fails.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src-tauri/src/git.rs` (`commit_partial`), `gitStore.test.ts:497-587,646-712`
+- **Evidence:** `src-tauri/src/git.rs` (`commit_partial`), `src/state/gitStore.test.ts:497-587,646-712`
 - **Status:** Implemented
 
 ### REQ-GIT-160 — Confirm mixed discard commits
@@ -114,7 +116,7 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-180 — Amend previous commit
 - **Description:** When the amend option is selected, the system shall amend the previous commit and prefill an empty commit message with the previous commit's message without overwriting typed text.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src-tauri/src/git.rs` (`last_commit_message`, `add_and_commit`), `gitStore.test.ts:589-636`, commit `a7b594f`
+- **Evidence:** `src-tauri/src/git.rs` (`last_commit_message`, `add_and_commit`), `src/state/gitStore.test.ts:589-636`, commit `a7b594f`
 - **Status:** Implemented
 
 ### REQ-GIT-190 — Protect project files from whole-file discard
@@ -126,13 +128,13 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-200 — Refuse writes on stale snapshots
 - **Description:** When the working file on disk no longer matches the field-review snapshot at commit or discard time, the system shall refuse the write and refresh the review.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/gitStore.ts:650-687`, `gitStore.test.ts:568,714`
+- **Evidence:** `src/state/gitStore.ts:650-687`, `src/state/gitStore.test.ts:568,714`
 - **Status:** Implemented
 
 ### REQ-GIT-210 — Block merges over unsaved changes
 - **Description:** When the in-memory project has unsaved annotation changes, the system shall refuse pull, merge, and branch-switch operations.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/gitStore.ts:439`, `gitStore.test.ts:368,815,954`, commit `909f674`
+- **Evidence:** `src/state/gitStore.ts:439`, `src/state/gitStore.test.ts:368,815,954`, commit `909f674`
 - **Status:** Implemented
 
 ### REQ-GIT-215 — Block merges over uncommitted annotation files
@@ -146,12 +148,13 @@ See the [index](index.md) for the glossary.
 - **Description:** When Pull is triggered, the system shall fetch the upstream and classify the result as up-to-date, fast-forwarded, or requiring a merge, and shall report a missing upstream as an error naming the branch.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src-tauri/src/git.rs` (`pull_begin`), `src/git/types.ts:111-136`, `src/state/gitStore.ts:1086-1112`
+- **Verified by:** `src-tauri/src/git.rs` (`pull_fast_forward_merge_and_conflict_elsewhere`)
 - **Status:** Implemented
 
 ### REQ-GIT-230 — Abort merges touching foreign files
 - **Description:** When a merge produces an unmerged path outside the project's own file family, the system shall abort the merge and restore the pre-merge state.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src-tauri/src/git.rs` (`begin_merge_into`), `src/git/ownAnnotationPath.ts:47-64`, `gitStore.test.ts:1032`
+- **Evidence:** `src-tauri/src/git.rs` (`begin_merge_into`), `src/git/ownAnnotationPath.ts:47-64`, `src/state/gitStore.test.ts:1032`
 - **Status:** Implemented
 
 ### REQ-GIT-240 — Field-level three-way merge
@@ -210,7 +213,7 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-290 — Auto-finish conflict-free merges
 - **Description:** When a merge produces zero user-facing conflicts, the system shall complete the merge commit without opening a resolution dialog.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/gitStore.ts:376,548`, `gitStore.test.ts:308,325`
+- **Evidence:** `src/state/gitStore.ts:376,548`, `src/state/gitStore.test.ts:308,325`
 - **Status:** Implemented
 
 ### REQ-GIT-300 — Interactive conflict resolution
@@ -222,7 +225,7 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-310 — Scope bulk resolution to own seat
 - **Description:** When bulk conflict resolution is applied, the system shall exclude conflicts inside other reviewers' annotation trees from the bulk action.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/components/GitMergeDialog.test.ts:5-15`, `gitStore.test.ts:730-792`
+- **Evidence:** `src/components/GitMergeDialog.test.ts:5-15`, `src/state/gitStore.test.ts:730-792`
 - **Status:** Implemented
 
 ### REQ-GIT-320 — Manual push only
@@ -234,26 +237,26 @@ See the [index](index.md) for the glossary.
 ### REQ-GIT-330 — Merge any branch
 - **Description:** When a local or remote-tracking branch is selected for merging, the system shall merge it into the current branch using the same classification, refusal, and resolution flow as Pull, fetching first only for remote-tracking refs.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src-tauri/src/git.rs` (`merge_begin`, `is_remote_tracking_ref`), `gitStore.test.ts:953-1085`, commit `fa15e8b`
+- **Evidence:** `src-tauri/src/git.rs` (`merge_begin`, `is_remote_tracking_ref`), `src/state/gitStore.test.ts:953-1085`, commit `fa15e8b`
 - **Status:** Implemented
 
 ### REQ-GIT-340 — Create and switch branches
 - **Description:** The system shall create a new branch at HEAD on request and switch between local branches, treating a switch to the current branch as a no-op.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src-tauri/src/git.rs` (`branch_create`, `branch_switch_begin`), `gitStore.test.ts:795-809,1088-1153`
+- **Evidence:** `src-tauri/src/git.rs` (`branch_create`, `branch_switch_begin`), `src/state/gitStore.test.ts:795-809,1088-1153`
 - **Status:** Implemented
 
 ### REQ-GIT-350 — Carry uncommitted changes across branch switch
 - **Description:** When switching branches with uncommitted project changes, the system shall offer carrying the changes over, committing first, or cancelling; a carry-over shall stash only the project's own files — a paper's first annotation file included — refuse when unrelated files are dirty, and resolve differences via the three-way merge flow, restoring the source branch and stash on cancel. The carry-over stash shall be located by its message rather than its position, and when it cannot be restored the system shall report that the changes are kept as a stash and where to restore them.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src-tauri/src/git.rs` (`branch_switch_begin`, `carry_over_ref`, `pop_carry_over`), `src/git/stashOps.ts:167-169,172-176,180-184`, `src/state/gitStore.ts:1766`, commits `8eb8ed8`, `52ce0b7`, `e6444c1`, `e23ab84`
-- **Verified by:** `gitStore.test.ts:829-951`, `src/state/gitStore.test.ts` (`a carry-over that cannot be put back is never silent`), `src/test/integration/stashOps.integration.test.tsx` (`the branch-switch carry-over is found by name, not by position`)
+- **Verified by:** `src/state/gitStore.test.ts:829-951`, `src/state/gitStore.test.ts` (`a carry-over that cannot be put back is never silent`), `src/test/integration/stashOps.integration.test.tsx` (`the branch-switch carry-over is found by name, not by position`)
 - **Status:** Implemented
 
 ### REQ-GIT-360 — Safe branch deletion
 - **Description:** When a local branch is deleted, the system shall use only the merged-branch deletion mode and surface git's not-fully-merged refusal as an error, and shall not delete remote branches.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src-tauri/src/git.rs` (`branch_delete`), `gitStore.test.ts:1155-1196`
+- **Evidence:** `src-tauri/src/git.rs` (`branch_delete`), `src/state/gitStore.test.ts:1155-1196`
 - **Status:** Implemented
 
 ### REQ-GIT-370 — Project-scoped history
@@ -266,6 +269,7 @@ See the [index](index.md) for the glossary.
 - **Description:** When reading a project's split files from a revision or from disk, the system shall issue the per-file reads concurrently and reassemble results by index so that completion order cannot mismatch file and content.
 - **Type:** Non-functional (ISO 25010: Performance Efficiency)
 - **Evidence:** `src/git/concurrentRead.ts:20`, commits `18d6bf9`, `63e7bc7`
+- **Verified by:** `src/git/concurrentRead.test.ts`
 - **Status:** Implemented
 
 ### REQ-GIT-390 — Report git failures as messages
@@ -278,6 +282,7 @@ See the [index](index.md) for the glossary.
 - **Description:** When a commit is requested while HEAD is not on a branch, the system shall refuse it with an explanation of how to check out a branch and shall create no commit; a repository with no commits yet shall not be treated as detached.
 - **Type:** Non-functional (ISO 25010: Reliability)
 - **Evidence:** `src-tauri/src/git.rs` (`detached_refusal`), commit `39fcad1`
+- **Verified by:** `src-tauri/src/git.rs` (`info_status_commit_and_detached_refusal`)
 - **Status:** Implemented
 
 ### REQ-GIT-410 — Git rules for annotation data

@@ -114,7 +114,7 @@ for the glossary.
 ### REQ-CON-160 — Widen frozen alignments for late reviewers
 - **Description:** When a reviewer absent from every slot of a frozen node later records entries, the system shall fold that reviewer's entries into the existing slots by the standard matching rules without moving existing slot members.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/consolidate/align.ts:427-563` (`widenAlignment`), `src/state/store.reviewers.test.ts:305`
+- **Evidence:** `src/consolidate/align.ts` (`widenAlignment`), `src/state/store.reviewers.test.ts:305`
 - **Status:** Implemented
 
 ### REQ-CON-170 — Evidence-weighted similarity
@@ -126,7 +126,7 @@ for the glossary.
 ### REQ-CON-180 — Type-aware value comparison
 - **Description:** When comparing field values, the system shall compare free text by the maximum of a Levenshtein ratio and a token Dice coefficient after normalization, enum labels by exact normalized equality, years by exact equality, numbers by relative closeness, and boolean pairs only when at least one side is true.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/consolidate/similarity.ts:63-116,230-264`
+- **Evidence:** `src/consolidate/similarity.ts` (`valueSimilarity`, `stringSimilarity`, `levenshtein`)
 - **Status:** Implemented
 
 ### REQ-CON-190 — Detect field disagreements over the alignment
@@ -138,7 +138,7 @@ for the glossary.
 ### REQ-CON-200 — Normalize answers for agreement
 - **Description:** When deciding whether reviewer answers agree, the system shall compare values after trimming, lowercasing, and collapsing whitespace, so that case and whitespace differences do not count as disagreement.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/consolidate/disagreements.ts:72-79,199-210`, commit `88b0394`
+- **Evidence:** `src/consolidate/unanimous.ts` (`comparable`), commit `88b0394`
 - **Status:** Implemented
 
 ### REQ-CON-210 — Ignore skeleton boolean answers
@@ -204,13 +204,13 @@ for the glossary.
 ### REQ-CON-290 — Compute Krippendorff's alpha
 - **Description:** When two or more reviewers and at least two pairable units exist, the system shall compute nominal Krippendorff's alpha via a coincidence matrix, tolerating missing ratings and skipping units with fewer than two ratings.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/consolidate/metrics.ts:282-388`
+- **Evidence:** `src/consolidate/metrics.ts` (`krippendorffAlpha`, `accumulateCoincidences`)
 - **Status:** Implemented
 
 ### REQ-CON-300 — Report degenerate metric cases
 - **Description:** When all ratings fall in a single category so that chance agreement equals one, the system shall report each affected coefficient as undefined with an explanatory note instead of a numeric value.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/consolidate/metrics.ts:63-83,150-153,250-252,371-373`
+- **Evidence:** `src/consolidate/metrics.ts` (`degenerateNote`, `cohenKappaApplicable`, `fleissKappaApplicable`, `krippendorffAlphaApplicable`)
 - **Status:** Implemented
 
 ### REQ-CON-310 — Per-field agreement breakdown

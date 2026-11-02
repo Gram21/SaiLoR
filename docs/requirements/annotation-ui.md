@@ -17,7 +17,7 @@ export. See the [index](index.md) for the glossary.
 ### REQ-ANN-20 — Type-specific field controls
 - **Description:** The system shall present a checkbox for boolean fields, a numeric input for number fields, a numeric input bounded to 1000–2100 for year fields, a filtering combo box restricted to the defined options for enum fields, and an auto-expanding text area limited to 500 characters for free-text fields.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/components/Field.tsx:18,135-191,471-513`
+- **Evidence:** `src/components/Field.tsx` (`Field`, `StringField`, `parseNumber`)
 - **Status:** Implemented
 
 ### REQ-ANN-30 — Conditional field visibility
@@ -133,19 +133,19 @@ export. See the [index](index.md) for the glossary.
 ### REQ-LST-30 — Five-state annotation indicator
 - **Description:** The system shall display per paper one of five annotation states — untouched, partial (with a proportional fill of filled versus counted fields), complete, finished, or flagged — each with a tooltip stating the state and the filled-field count, derived from live data at read time.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/components/PaperList.tsx:34-107,572-637`, `src/model/annotationState.ts:36-95`
+- **Evidence:** `src/components/PaperList.tsx` (`dotStateLabel`, `paperAnnotationState`), `src/model/annotationState.ts:36-95`
 - **Status:** Implemented
 
 ### REQ-LST-40 — Annotation progress filter
 - **Description:** The system shall provide an annotation filter with the buckets all, open, in-progress (open and touched), finished, and with-issues, and shall display a progress line counting the selected bucket over all papers.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/components/PaperList.tsx:335-363,496-510`, `src/model/annotationState.ts:194-258`, commit `0cb3828`
+- **Evidence:** `src/components/PaperList.tsx:335-363,496-510`, `src/model/annotationState.ts` (`annotationFiltersFor`, `matchesFilter`), commit `0cb3828`
 - **Status:** Implemented
 
 ### REQ-LST-50 — Keyboard navigation
 - **Description:** The system shall expose the paper list as a listbox with a single roving tab stop where arrow keys move selection through visible rows and Enter or Space selects, and shall additionally step to the previous/next paper in filtered order via Alt+Arrow and the bare `[`/`]` keys outside text inputs and modals.
 - **Type:** Functional (ISO 25010: Usability — Accessibility)
-- **Evidence:** `src/components/PaperList.tsx:402-440`, `src/hooks/useKeybindings.ts:8-261`, commit `8ef9279`
+- **Evidence:** `src/components/PaperList.tsx:402-440`, `src/hooks/useKeybindings.ts` (`useKeybindings`, `stepPaper`, `isEditable`), commit `8ef9279`
 - **Status:** Implemented
 
 ### REQ-LST-60 — Search and completeness performance
@@ -243,7 +243,7 @@ export. See the [index](index.md) for the glossary.
 ### REQ-PDF-130 — Mark cycling in reading order
 - **Description:** The system shall provide previous/next controls that step through the seat's marks in reading order (page, then column, then vertical position), counting a cross-page group once and flashing each visited mark.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/components/PdfViewer.tsx:1024-1034,1687-1711`, `src/model/pdfMarks.ts:182-245`, commit `61a2aa4`
+- **Evidence:** `src/components/PdfViewer.tsx:1024-1034,1687-1711`, `src/model/pdfMarks.ts` (`sortMarksForCycling`, `columnOf`), commit `61a2aa4`
 - **Status:** Implemented
 
 ### REQ-PDF-140 — Selection through marks
@@ -288,13 +288,14 @@ export. See the [index](index.md) for the glossary.
 ### REQ-UI-10 — Global keyboard shortcuts
 - **Description:** The system shall provide keyboard shortcuts for save (Ctrl/Cmd+S), save-as (Ctrl/Cmd+Shift+S), open (Ctrl/Cmd+O), undo/redo, help (F1), PDF zoom, and application font size, suppressing bare-key shortcuts while typing or while a modal is open, and shall document all shortcuts in a Help dialog with mode-specific tables.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/hooks/useKeybindings.ts:8-261`, `src/components/HelpDialog.tsx:10-62`
+- **Evidence:** `src/hooks/useKeybindings.ts` (`useKeybindings`, `stepPaper`, `isEditable`), `src/components/HelpDialog.tsx:10-62`
 - **Status:** Implemented
 
 ### REQ-UI-20 — Toolbar project controls
 - **Description:** The system shall provide a toolbar with, on the left, a Close project icon button left of the app title (always present so the title does not shift; hidden and disabled without a project; tooltip and accessible name "Close project"), an Open menu (file, remote git clone, recents with removal), a Save menu (save, save-as, autosave toggle) and a Git button disabled with a reason-specific tooltip when unavailable; on the right, a transient saved status, status badges (stashed, behind, unreadable files), a "Review tools" group holding Validate and AI, font-size controls, a theme toggle, and Help. Toolbar buttons shall use a borderless ghost style with a hover tint.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/components/Toolbar.tsx:125-563`
+- **Evidence:** `src/components/Toolbar.tsx` (`Toolbar`, `requestCloseProject`)
+- **Verified by:** `src/components/Toolbar.test.tsx` (`always renders Close project to keep the layout stable, hidden and disabled without a project`)
 - **Status:** Implemented
 
 ### REQ-UI-25 — Project in the window title

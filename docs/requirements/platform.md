@@ -15,7 +15,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-11 — Single application instance
 - **Description:** When the application is launched while another instance is running, the system shall not start a second instance and shall bring the existing window to the front.
 - **Type:** Non-functional (ISO 25010: Reliability)
-- **Evidence:** `src-tauri/src/main.rs` (`tauri_plugin_single_instance`), `src-tauri/src/shell.rs` (`focus_main`), commit `6ce60d5` (`electron/main.ts`, removed), commit `0bc6c9c`
+- **Evidence:** `src-tauri/src/main.rs` (`tauri_plugin_single_instance`), `src-tauri/src/shell.rs` (`focus_main`), commit `6ce60d5` (removed Electron main process), commit `0bc6c9c`
 - **Status:** Implemented
 
 ### REQ-PLT-20 — Open projects via native dialog
@@ -135,7 +135,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-120 — Guard reload shortcuts
 - **Description:** When a reload shortcut is used while unsaved changes exist, the system shall request confirmation before reloading, with Cancel as the default.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/hooks/useDirtyGuard.ts` (`useDirtyGuard`), commit `6ce60d5` (`electron/main.ts`, removed)
+- **Evidence:** `src/hooks/useDirtyGuard.ts` (`useDirtyGuard`), commit `6ce60d5` (removed Electron main process)
 - **Status:** Partial: the renderer registers a `beforeunload` guard while changes are unsaved. The Tauri shell has no reload confirmation dialog of its own.
 
 ### REQ-PLT-130 — Preserve newer changes during save
@@ -154,7 +154,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-136 — Resolve a save that met changed files
 - **Description:** When a save has been stopped under REQ-PLT-135, the system shall offer to overwrite the changed files with the user's version, to keep the on-disk version of those files while saving the user's other edits, or to combine both versions with the field-level three-way merge of REQ-GIT-240 against the project as last read or written, letting the user decide each field both sides changed; files the user did not edit shall keep their on-disk content in every case. When the versions cannot be combined, the system shall say why and offer the other two choices; when the user postpones the decision, the next save shall ask again rather than write.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/staleSave.ts:33-86`, `src/state/store.ts:1102-1113,1524,1568-1669`, `src/components/StaleSaveDialog.tsx:33-140`, `src/components/ConflictResolutionDialog.tsx`, commit `5e2abb4`
+- **Evidence:** `src/model/staleSave.ts` (`resolveClash`), `src/state/store.ts:1102-1113,1524,1568-1669`, `src/components/StaleSaveDialog.tsx:33-140`, `src/components/ConflictResolutionDialog.tsx`, commit `5e2abb4`
 - **Verified by:** `src/model/staleSave.test.ts`, `src/state/store.staleSave.test.ts`
 - **Status:** Implemented
 
@@ -174,7 +174,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-160 — Persist window state
 - **Description:** The system shall persist window size, position, and maximized state across runs, defaulting to 1400×900, and shall reuse a saved position only when it still overlaps a connected display.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src-tauri/src/main.rs` (`tauri_plugin_window_state`, `StateFlags::SIZE | POSITION | MAXIMIZED`), `src-tauri/tauri.conf.json` (`app.windows`), commit `6ce60d5` (`electron/main.ts`, removed)
+- **Evidence:** `src-tauri/src/main.rs` (`tauri_plugin_window_state`, `StateFlags::SIZE | POSITION | MAXIMIZED`), `src-tauri/tauri.conf.json` (`app.windows`), commit `6ce60d5` (removed Electron main process)
 - **Status:** Implemented
 
 ### REQ-PLT-170 — Persist appearance settings
@@ -186,7 +186,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-180 — Migrate legacy settings folder
 - **Description:** When the application starts with a never-used `<config dir>/SaiLoR` profile, the system shall copy window state and local storage from a pre-rename "SLR Helper" settings folder if one exists, without overwriting an existing profile and without failing startup on error.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src-tauri/src/shell.rs` (`migrate_legacy`, `copy_new`), commit `6ce60d5` (`electron/main.ts`, removed)
+- **Evidence:** `src-tauri/src/shell.rs` (`migrate_legacy`, `copy_new`), commit `6ce60d5` (removed Electron main process)
 - **Verified by:** `src-tauri/src/shell.rs` (`migrates_legacy_profile_once`, `copy_never_overwrites_and_skips_missing`, `migration_without_legacy_creates_nothing`)
 - **Status:** Implemented. Limit: the Tauri WebView and the window-state plugin do not read the copied files. The copy only keeps the old data in the SaiLoR folder.
 
@@ -226,13 +226,13 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-240 — Deny device permissions
 - **Description:** The system shall deny every permission request of the WebView (camera, microphone, geolocation, notifications, and the other kinds the platform reports).
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `src-tauri/src/main.rs` (`on_permission_request`), commit `6ce60d5` (`electron/main.ts`, removed)
+- **Evidence:** `src-tauri/src/main.rs` (`on_permission_request`), commit `6ce60d5` (removed Electron main process)
 - **Status:** Implemented. Platform limit: on macOS, WKWebView reports only camera and microphone requests to the app. macOS itself blocks geolocation and notifications, because the app has no entitlement or usage description for them.
 
 ### REQ-PLT-250 — Route external links to the system browser
 - **Description:** The system shall deny in-app window creation and shall hand navigation away from the application document to the default system browser, restricted to the http and https schemes. The system shall cancel navigation to every other scheme.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `src-tauri/src/shell.rs` (`setup`, `is_app_url`, `is_external`), `src-tauri/tauri.conf.json` (`app.windows[0].create`), commit `6ce60d5` (`electron/main.ts`, removed)
+- **Evidence:** `src-tauri/src/shell.rs` (`setup`, `is_app_url`, `is_external`), `src-tauri/tauri.conf.json` (`app.windows[0].create`), commit `6ce60d5` (removed Electron main process)
 - **Verified by:** `src-tauri/src/shell.rs` (`only_http_and_https_are_external`, `app_urls_stay_in_the_window`)
 - **Status:** Implemented
 
@@ -273,7 +273,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-310 — Application undo via menu
 - **Description:** The system shall route the Edit-menu Undo and Redo commands to the application's annotation history rather than native text undo, while keeping cut, copy, paste, and select-all native. One key press shall run one undo step.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src-tauri/src/shell.rs` (`edit_menu`) replaces the native Undo and Redo of the macOS default menu with items that emit `app:undo` and `app:redo`. `src/hooks/useCloseGuard.ts` (`useCloseGuard`) routes these events to the editor or the project history. `src/hooks/useKeybindings.ts` (`useKeybindings`) handles Ctrl/Cmd+Z and Ctrl/Cmd+Y and calls `preventDefault`, so WKWebView does not pass the key on to the menu. Commit `6ce60d5` (`electron/main.ts`, removed).
+- **Evidence:** `src-tauri/src/shell.rs` (`edit_menu`) replaces the native Undo and Redo of the macOS default menu with items that emit `app:undo` and `app:redo`. `src/hooks/useCloseGuard.ts` (`useCloseGuard`) routes these events to the editor or the project history. `src/hooks/useKeybindings.ts` (`useKeybindings`) handles Ctrl/Cmd+Z and Ctrl/Cmd+Y and calls `preventDefault`, so WKWebView does not pass the key on to the menu. Commit `6ce60d5` (removed Electron main process).
 - **Status:** Implemented on macOS. Windows and Linux have no menu bar. On these platforms the renderer key binding runs undo and redo, and the WebView handles cut, copy, paste, and select-all natively.
 
 ### REQ-PLT-320 — Build targets

@@ -28,6 +28,7 @@ See the [index](index.md) for the glossary.
 - **Description:** The system shall store API keys only in the main process, expose to the user interface layer only a flag stating whether a key is stored, and substitute the real key for a placeholder immediately before sending a request.
 - **Type:** Non-functional (ISO 25010: Security)
 - **Evidence:** `src/llm/types.ts:4-10,86`, `src-tauri/src/llm.rs` (`public_configs`, `save_config`, `build_call_headers`)
+- **Tests:** `src-tauri/src/llm.rs` (`save_sanitizes_and_keeps_keys_out_of_the_file`)
 - **Status:** Implemented
 
 ### REQ-LLM-50 — Encrypt stored API keys
@@ -52,6 +53,7 @@ See the [index](index.md) for the glossary.
 - **Description:** The system shall offer the AI feature only for a project whose configuration sets `ai` to true. When `ai` is absent or false, and when no project is open, the system shall not offer the AI feature and the toolbar AI button shall not be rendered. A new project in the editor starts with AI off, and the editor writes `ai: true` only when the author allows it.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/project.ts:683`, `src/components/Toolbar.tsx:96-112,188`, `src/state/aiStore.ts:139`
+- **Tests:** `src/components/Toolbar.test.tsx` (`is not rendered when the project does not set config.ai`, `is not rendered when the project turns AI off`)
 - **Status:** Implemented
 
 ### REQ-LLM-90 — Restrict AI to numbered reviewer seats
@@ -213,7 +215,7 @@ See the [index](index.md) for the glossary.
 ### REQ-LLM-350 — Bounded judge review loop
 - **Description:** In agent mode, the system shall submit new or changed proposed values to a separate judge call that returns an accept/revise/reject verdict with feedback per value plus any target fields the paper answers but the agent left empty, feed that feedback back to the agent for another round, and stop after the judge accepts everything and nothing is missing, after the agent's submission stops changing, or after a bounded number of rounds, whichever comes first.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/llm/agent.ts:1-360`, `src/llm/judge.ts:1-210`
+- **Evidence:** `src/llm/agent.ts:1-360`, `src/llm/judge.ts` (`parseJudgeReply`, `buildJudgeUserMessage`)
 - **Status:** Implemented
 
 ### REQ-LLM-360 — Treat fetched web content as untrusted data
