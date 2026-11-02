@@ -93,6 +93,7 @@ fn main() {
                 .build(),
         )
         .on_permission_request(|_, _| tauri::webview::PermissionResponse::Deny)
+        .setup(shell::setup)
         .manage(update::State::default())
         .manage(close::Guard::default())
         .manage(Mutex::new(Session::default()))

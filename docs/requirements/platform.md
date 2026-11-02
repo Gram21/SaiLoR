@@ -229,10 +229,11 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented. Platform limit: on macOS, WKWebView reports only camera and microphone requests to the app. macOS itself blocks geolocation and notifications, because the app has no entitlement or usage description for them.
 
 ### REQ-PLT-250 — Route external links to the system browser
-- **Description:** The system shall deny in-app window creation and shall hand navigation away from the application document to the default system browser, restricted to the http, https, and mailto schemes.
+- **Description:** The system shall deny in-app window creation and shall hand navigation away from the application document to the default system browser, restricted to the http and https schemes. The system shall cancel navigation to every other scheme.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** commit `6ce60d5` (`electron/main.ts`, removed)
-- **Status:** Not implemented in the Tauri shell (Electron-only until 2.0.0)
+- **Evidence:** `src-tauri/src/shell.rs` (`setup`, `is_app_url`, `is_external`), `src-tauri/tauri.conf.json` (`app.windows[0].create`), commit `6ce60d5` (`electron/main.ts`, removed)
+- **Verified by:** `src-tauri/src/shell.rs` (`only_http_and_https_are_external`, `app_urls_stay_in_the_window`)
+- **Status:** Implemented
 
 ### REQ-PLT-260 — Restrict export writes
 - **Description:** The system shall write text and PDF exports only to destinations picked via an export save dialog in the current session, refusing symlinked targets and reporting failures as results rather than crashes. The system shall embed marks only into a PDF of the open project (inside the project folder or an approved outside path), also when it overwrites the original PDF.

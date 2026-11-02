@@ -611,8 +611,11 @@ Verification:
 - `cargo test` tests the close-guard state, the dialog button mapping, the git cap, the PDF embed and the export authorization.
 - `npx vitest run` tests the project assembly, the bridge shapes and the `nativeUpdate` gate.
 
+- `cargo test` tests the scheme check and the app URL check.
+
 Not tested:
 
+- No test clicks a link in the running app.
 - No test runs the Tauri app. The close dialog, Cmd+Q on macOS and the `slr-os` init script were not tried by hand.
 - `beforeunload` (`useDirtyGuard`) still runs in Tauri. Its effect in the webview on reload was not tried.
 - The updater was not tried against a real feed.
@@ -734,7 +737,6 @@ The Electron shell had these features. The Tauri shell does not have them yet. `
 
 - Migration of the legacy "SLR Helper" folder (REQ-PLT-180).
 - Reload guard on the menu reload (REQ-PLT-120). Only the renderer `beforeunload` handler exists.
-- Routing of external links and navigation to the system browser (REQ-PLT-250).
 - Edit menu routing of undo and redo (REQ-PLT-310). The renderer key binding handles Ctrl/Cmd+Z.
 
 ## 21. Platform gaps
@@ -748,6 +750,7 @@ Branch: `feat/tauri-platform-gaps`. This section ports Electron shell features t
 | Single instance (REQ-PLT-11) | `tauri-plugin-single-instance`. A second start exits. The running app restores, shows and focuses the `main` window. |
 | Window state (REQ-PLT-160) | `tauri-plugin-window-state` saves size, position and the maximized state in `<app config dir>/.window-state.json`. It restores a position only if it is on a connected display. |
 | Device permissions (REQ-PLT-240) | `Builder::on_permission_request` answers every request with `Deny`. |
+| External links (REQ-PLT-250) | `tauri.conf.json` sets `create: false` on the `main` window. `shell::setup` builds the window from that config with two hooks. `on_navigation` keeps app URLs in the window and cancels all other URLs. `on_new_window` always denies. Both hooks open http and https URLs in the system browser with `tauri_plugin_opener::open_url`. |
 
 ### 21.2 Differences from Electron
 
@@ -755,6 +758,9 @@ Branch: `feat/tauri-platform-gaps`. This section ports Electron shell features t
 - The default window size is 1400x900. Electron used 1920x1080.
 - The window state file is new. The app does not read the Electron `window-state.json`, so the first start uses the default size.
 - The permission hook covers less than Electron. Windows (WebView2) and Linux (WebKitGTK) report every request kind. macOS (WKWebView) reports only camera and microphone. On macOS, geolocation and notifications fail without an entitlement, so the page cannot use them either.
+- External links open only for http and https. Electron also allowed `mailto`. The app has no `mailto` links.
+- App URLs are `tauri://localhost`, `http(s)://tauri.localhost` (Windows) and `about:blank`. Debug builds also allow the `devUrl` origin.
+- The opener plugin is not registered. The renderer gets no opener commands, and `capabilities/default.json` does not change.
 
 ### 21.3 Verification and gaps
 

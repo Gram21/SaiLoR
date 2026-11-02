@@ -448,7 +448,7 @@ inspection only.
 | REQ-PLT-220 | Recursive PDF folder import | Functional · Functional Suitability | `src-tauri/src/pdf.rs` (`collect_pdfs`, `pdf_pick_folder`) | `src-tauri/src/pdf.rs` (`folder_walk_finds_pdfs_case_insensitively`) | — | `openwiki/operations/electron-shell.md` §The `slr-file://` protocol / §`pdf:*` handlers<br>`docs/annotation-schema.md` §4 (How the `pdf` path resolves) |
 | REQ-PLT-230 | Renderer sandboxing | Non-functional, design constraint · Security | `src-tauri/src/main.rs` (`generate_handler!`)<br>`src-tauri/capabilities/default.json`<br>`src/platform/tauri.ts` (`command`, `tauriBridge`) | — | — | `openwiki/operations/electron-shell.md` §Trust boundary and the allowlist discipline |
 | REQ-PLT-240 | Deny device permissions | Non-functional · Security | `src-tauri/src/main.rs` (`on_permission_request`) | — | commit `6ce60d5` | `openwiki/operations/electron-shell.md` §Trust boundary and the allowlist discipline |
-| REQ-PLT-250 | Route external links to the system browser | Non-functional · Security | — | — | commit `6ce60d5` | `openwiki/operations/electron-shell.md` §Trust boundary and the allowlist discipline |
+| REQ-PLT-250 | Route external links to the system browser | Non-functional · Security | `src-tauri/src/shell.rs` (`setup`, `is_app_url`, `is_external`)<br>`src-tauri/tauri.conf.json` (`app.windows[0].create`) | `src-tauri/src/shell.rs` (`only_http_and_https_are_external`, `app_urls_stay_in_the_window`) | commit `6ce60d5` | `openwiki/operations/electron-shell.md` §Trust boundary and the allowlist discipline |
 | REQ-PLT-260 | Restrict export writes | Non-functional · Security | `src-tauri/src/pdf.rs` (`export_target`, `write_file`, `text_write`, `project_pdf`, `pdf_embed_marks`) | `src-tauri/src/pdf.rs` (`text_write_needs_an_export_dialog_path`, `text_write_refuses_a_symlink`, `embed_reads_only_project_pdfs`) | — | `openwiki/operations/electron-shell.md` §Trust boundary and the allowlist discipline |
 | REQ-PLT-270 | Self-update per bundle type | Functional · Functional Suitability | `src-tauri/src/update.rs` (`self_update_supported`, `update_check`)<br>`src/platform/adapter.ts` (`checkForNativeUpdate`) | `src-tauri/src/update.rs` (`only_appimage_windows_and_macos_self_update`)<br>`src/state/store.update.test.ts` | commit `9b8eb12` | `openwiki/operations/electron-shell.md` §Self-update (`update:*`)<br>`openwiki/operations/build-release.md` §Release signing (Ed25519 feed signature)<br>`openwiki/architecture.md` §In-app self-update |
 | REQ-PLT-280 | No unattended updates | Functional · Functional Suitability | `src-tauri/src/update.rs` (`update_check`, `update_download`, `update_install`)<br>`src-tauri/tauri.conf.json` (`plugins.updater.endpoints`) | `src-tauri/src/update.rs` (`feed_is_fixed_https_github_and_signed_versions_are_required`) | — | `openwiki/operations/electron-shell.md` §Self-update (`update:*`)<br>`openwiki/operations/build-release.md` §Release signing (Ed25519 feed signature)<br>`openwiki/architecture.md` §In-app self-update |
@@ -465,8 +465,8 @@ inspection only.
 | Metric | Count | Share |
 |---|---|---|
 | Requirements traced | 388 | 100% |
-| With at least one verifying test | 339 | 87% |
-| Without an automated check (source inspection only) | 49 | 13% |
+| With at least one verifying test | 340 | 88% |
+| Without an automated check (source inspection only) | 48 | 12% |
 | With an introducing/pinning commit | 111 | 29% |
 | With a documentation link | 334 | 86% |
 | REQ-LLM-740 | Trim the paper to each model's input window | Functional · Reliability / Functional Suitability | `src/state/aiStore.ts` (`fitForChat`, `describeFit`)<br>`src/state/aiScreeningStore.ts` (`promptOne`)<br>`src/components/AiDialog.tsx` (`trimHint`) | `src/state/aiStore.budget.test.ts`<br>`src/state/aiScreeningStore.test.ts` | — | — |
