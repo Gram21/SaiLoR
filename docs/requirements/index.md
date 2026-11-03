@@ -122,3 +122,6 @@ per category so requirements can be inserted without renumbering.
 - **Strict mode with persons (2026-11-03).** REQ-EDT-110 to REQ-EDT-170 added for the strict mode settings,
   their validation and the person management in the project editor. REQ-CON-450 to REQ-CON-520 added for the
   person dialog, the paper and seat limits, Finish and the consolidation gate.
+- **Languages (2026-11-03).** REQ-UI-110 to REQ-UI-130 and REQ-PLT-400 added for the language setting, the
+  translated interface, the complete language files and the translated native menus. REQ-UI-90 revised for the
+  Language section. The coverage counts above were not recounted.

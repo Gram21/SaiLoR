@@ -341,7 +341,7 @@ export. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-UI-90: Settings dialog
-- **Description:** The system shall show user settings in one Settings dialog. The dialog shall have a General section, an AI section and a Git section. The General section shall set the theme, the app font size and autosave. These values shall persist in the same local storage keys as the toolbar controls. The AI section shall open the existing AI models dialog for providers, API keys and local models. The Git section shall show the detected git version or the reason git is not available. Project settings shall stay in the project file. The dialog shall move focus into itself and keep Tab and Shift+Tab inside. Escape, the close button and a click outside the dialog shall close it. When the dialog closes, focus shall go back to the previous element. Each section and control shall have an accessible label.
+- **Description:** The system shall show user settings in one Settings dialog. The dialog shall have a General section, a Language section (REQ-UI-110), an AI section and a Git section. The General section shall set the theme, the app font size and autosave. These values shall persist in the same local storage keys as the toolbar controls. The AI section shall open the existing AI models dialog for providers, API keys and local models. The Git section shall show the detected git version or the reason git is not available. Project settings shall stay in the project file. The dialog shall move focus into itself and keep Tab and Shift+Tab inside. Escape, the close button and a click outside the dialog shall close it. When the dialog closes, focus shall go back to the previous element. Each section and control shall have an accessible label.
 - **Type:** Functional (ISO 25010: Usability)
 - **Evidence:** `src/components/SettingsDialog.tsx` (`SettingsDialog`, `SETTINGS_SECTIONS`), `src/state/store.ts` (`userSettingsOpen`, `setUserSettingsOpen`), `src/state/settings.ts`, `src/components/SettingsDialog.test.tsx`
 - **Status:** Implemented
@@ -350,4 +350,25 @@ export. See the [index](index.md) for the glossary.
 - **Description:** The system shall open the Settings dialog by a click on the SaiLoR title in the toolbar. It shall also open the dialog with Ctrl/Cmd+, unless another dialog is open. On Windows and Linux, the File menu shall have a "Settings…" item. On macOS, the app menu shall have a "Settings…" item with Cmd+,. The menu items shall send the `app:settings` event to the page.
 - **Type:** Functional (ISO 25010: Usability)
 - **Evidence:** `src/components/Toolbar.tsx`, `src/hooks/useKeybindings.ts`, `src/hooks/useCloseGuard.ts`, `src/platform/tauri.ts` (`onOpenSettings`), `src-tauri/src/shell.rs` (`action`, `menu`, `macos_menu`), `src/components/HelpDialog.tsx`
+- **Status:** Implemented
+
+### REQ-UI-110: Language setting
+- **Description:** The Settings dialog shall have a Language section with one choice per supported language. The supported languages shall be English and German. Each choice shall show the language name in that language. The system shall store the choice in the local storage key `slr.language`. When no valid choice is stored, the system shall use the language of `navigator.language` if it is supported, else English. A change shall apply at once to the open window, without a restart and without a change to the project. The system shall set the `lang` attribute of the document to the active language.
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/SettingsDialog.tsx` (`LanguageSection`, `SETTINGS_SECTIONS`), `src/state/settings.ts` (`loadLanguage`, `saveLanguage`), `src/i18n.tsx` (`setLanguage`, `useLanguage`)
+- **Verified by:** `src/state/settings.test.ts` (`language`), `src/components/SettingsDialog.test.tsx` (`switches the dialog to German and stores the choice`)
+- **Status:** Implemented
+
+### REQ-UI-120: Translated user interface
+- **Description:** The system shall take each user-visible text of the renderer from the active language. This includes labels, buttons, titles, tooltips, accessible labels, dialogs, confirmations, status messages, validation messages and the help dialog. The system shall not translate schema field names, project data, AI prompts, requirement IDs, raw output of git or file formats. If the active language has no text for a key, the system shall show the English text. Dates and numbers shall use `Intl` formats of the active language.
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/i18n.tsx` (`t`, `tp`, `rich`, `useT`), `src/locales/en.json`, `src/locales/de.json`, `src/components/`
+- **Verified by:** `src/i18n.test.ts` (`t`, `tp`, `rich`)
+- **Status:** Implemented
+
+### REQ-UI-130: Complete language files
+- **Description:** Each language file shall have exactly the keys of the English file. For each key, the text in each language shall have the same `{name}` placeholders and the same markup tags as the English text. An automated test shall fail if a language file has a missing key, an extra key or a different placeholder.
+- **Type:** Non-functional (ISO 25010: Maintainability: Testability)
+- **Evidence:** `src/locales/en.json`, `src/locales/de.json`, `src/i18n.tsx` (`MESSAGES`)
+- **Verified by:** `src/i18n.test.ts` (`language files`)
 - **Status:** Implemented

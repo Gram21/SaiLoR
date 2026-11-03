@@ -327,3 +327,10 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Evidence:** `src-tauri/src/localruntime.rs` (`data_dir`, `DATA_DIR_NAME`), `src-tauri/src/llm.rs` (`config_file`), `src-tauri/src/shell.rs` (`migrate_data_dir`, `hide`, `setup`), `README.md` (Upgrading from 1.x)
 - **Verified by:** `src-tauri/src/shell.rs` (`data_dir_moves_once_and_never_overwrites`)
 - **Status:** Implemented. The Windows hidden attribute was not run by hand.
+
+### REQ-PLT-400: Translated native menus
+- **Description:** The renderer shall send the active language to the desktop shell at start and after each change. The shell shall then build the native menu again with the labels of that language. The About dialog shall also use that language. Each label that SaiLoR gives to a native menu item shall have a German text. Labels that the operating system supplies, for example the Services submenu on macOS, can stay in the language of the operating system.
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src-tauri/src/shell.rs` (`app_set_language`, `tr`, `DE`, `menu`, `macos_menu`), `src/App.tsx`, `src/platform/tauri.ts` (`setLanguage`)
+- **Verified by:** `src-tauri/src/shell.rs` (`every_menu_label_has_a_german_entry`), `src/platform/tauri.test.ts` (`invokes exactly the commands main.rs registers`)
+- **Status:** Implemented. The translated menus were not run by hand on Windows and Linux.
