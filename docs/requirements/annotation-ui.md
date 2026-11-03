@@ -362,14 +362,14 @@ export. See the [index](index.md) for the glossary.
 ### REQ-UI-120: Translated user interface
 - **Description:** The system shall take each user-visible text of the renderer from the active language. This includes labels, buttons, titles, tooltips, accessible labels, dialogs, confirmations, status messages, validation messages and the help dialog. The system shall not translate schema field names, project data, AI prompts, requirement IDs, raw output of git or file formats. If the active language has no text for a key, the system shall show the English text. For a count, the system shall use the plural form of the active language. If the language has no text for that form, the system shall use the `_other` text. Dates and numbers shall use `Intl` formats of the active language.
 - **Type:** Functional (ISO 25010: Usability)
-- **Evidence:** `src/i18n.ts` (`t`, `tp`, `rich`, `useT`), `src/locales/*.json`, `src/components/`
+- **Evidence:** `src/i18n.ts` (`t`, `tp`, `rich`, `useT`), `src/locales/en.json`, `src/components/`
 - **Verified by:** `src/i18n.test.ts` (`t`, `tp`, `rich`)
 - **Status:** Implemented
 
 ### REQ-UI-130: Complete language files
 - **Description:** Each language file shall have exactly the keys of the English file. For each key, the text in each language shall have the same `{name}` placeholders and the same markup tags as the English text. An automated test shall fail if a language file has a missing key, an extra key or a different placeholder.
 - **Type:** Non-functional (ISO 25010: Maintainability: Testability)
-- **Evidence:** `src/locales/*.json`, `src/i18n.ts` (`MESSAGES`)
+- **Evidence:** `src/locales/en.json`, `src/i18n.ts` (`MESSAGES`)
 - **Verified by:** `src/i18n.test.ts` (`language files`)
 - **Status:** Implemented
 

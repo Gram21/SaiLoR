@@ -822,7 +822,7 @@ The system shall take each user-visible text of the renderer from the active lan
 
 Comment:
 - **Type:** Functional (ISO 25010: Usability)
-- **Evidence:** `src/i18n.ts` (`t`, `tp`, `rich`, `useT`), `src/locales/*.json`, `src/components/`
+- **Evidence:** `src/i18n.ts` (`t`, `tp`, `rich`, `useT`), `src/locales/en.json`, `src/components/`
 - **Verified by:** `src/i18n.test.ts` (`t`, `tp`, `rich`)
 - **Status:** Implemented
 
@@ -837,7 +837,7 @@ Each language file shall have exactly the keys of the English file. For each key
 
 Comment:
 - **Type:** Non-functional (ISO 25010: Maintainability: Testability)
-- **Evidence:** `src/locales/*.json`, `src/i18n.ts` (`MESSAGES`)
+- **Evidence:** `src/locales/en.json`, `src/i18n.ts` (`MESSAGES`)
 - **Verified by:** `src/i18n.test.ts` (`language files`)
 - **Status:** Implemented
 
