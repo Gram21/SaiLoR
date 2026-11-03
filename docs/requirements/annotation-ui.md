@@ -286,13 +286,13 @@ export. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-UI-10: Global keyboard shortcuts
-- **Description:** The system shall provide keyboard shortcuts for save (Ctrl/Cmd+S), save-as (Ctrl/Cmd+Shift+S), open (Ctrl/Cmd+O), undo/redo, help (F1), PDF zoom, and application font size, suppressing bare-key shortcuts while typing or while a modal is open, and shall document all shortcuts in a Help dialog with mode-specific tables.
+- **Description:** The system shall provide keyboard shortcuts for save (Ctrl/Cmd+S), save-as (Ctrl/Cmd+Shift+S), open (Ctrl/Cmd+O), undo/redo, help (F1), settings (Ctrl/Cmd+,), PDF zoom, and application font size, suppressing bare-key shortcuts while typing or while a modal is open, and shall document all shortcuts in a Help dialog with mode-specific tables.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/hooks/useKeybindings.ts` (`useKeybindings`, `stepPaper`, `isEditable`), `src/components/HelpDialog.tsx:10-62`
 - **Status:** Implemented
 
 ### REQ-UI-20: Toolbar project controls
-- **Description:** The system shall provide a toolbar with, on the left, a Close project icon button left of the app title (always present so the title does not shift; hidden and disabled without a project; tooltip and accessible name "Close project"), an Open menu (file, remote git clone, recents with removal), a Save menu (save, save-as, autosave toggle) and a Git button disabled with a reason-specific tooltip when unavailable; on the right, a transient saved status, status badges (stashed, behind, unreadable files), a "Review tools" group holding Validate and AI, font-size controls, a theme toggle, and Help. Toolbar buttons shall use a borderless ghost style with a hover tint.
+- **Description:** The system shall provide a toolbar with, on the left, a Close project icon button left of the app title (always present so the title does not shift; hidden and disabled without a project; tooltip and accessible name "Close project"), an Open menu (file, remote git clone, recents with removal), a Save menu (save, save-as, autosave toggle) and a Git button disabled with a reason-specific tooltip when unavailable; on the right, a transient saved status, status badges (stashed, behind, unreadable files), a "Review tools" group holding Validate and AI, font-size controls, a theme toggle, Settings, and Help. Toolbar buttons shall use a borderless ghost style with a hover tint.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/Toolbar.tsx` (`Toolbar`, `requestCloseProject`)
 - **Verified by:** `src/components/Toolbar.test.tsx` (`always renders Close project to keep the layout stable, hidden and disabled without a project`)
@@ -338,4 +338,16 @@ export. See the [index](index.md) for the glossary.
 - **Description:** The toolbar shall offer a "View only" checkbox for every open project, independent of the number of reviewers. While it is checked, the system shall ignore every action that changes annotations, marks, finished flags, screening decisions, consolidation results or undo history, whether it comes from the form, the PDF viewer, a keyboard shortcut or an AI run. The annotation form, the screening panel, the PDF highlight, note, recolor, comment, unlink and delete controls, the consolidation resolve dialog and the AI button shall be disabled or hidden. On the Consolidation seat the automatic reviewer comparison (matching, adoption of unanimous values, update prompt) shall not run; only the stored consolidation is shown. Navigation, reading and seat switching shall stay available. The setting applies to the session only and is off after a restart.
 - **Type:** Functional (ISO 25010: Usability / Security: Integrity)
 - **Evidence:** `src/state/store.ts` (`readOnly`, `setReadOnly`), `src/components/Toolbar.tsx`, `src/components/AnnotationPanel.tsx`, `src/components/ScreeningPanel.tsx`, `src/components/PdfViewer.tsx`, `src/hooks/useConsolidationAlignment.ts`, `src/state/store.readOnly.test.ts`
+- **Status:** Implemented
+
+### REQ-UI-90: Settings dialog
+- **Description:** The system shall show user settings in one Settings dialog. The dialog shall have a General section, an AI section and a Git section. The General section shall set the theme, the app font size and autosave. These values shall persist in the same local storage keys as the toolbar controls. The AI section shall open the existing AI models dialog for providers, API keys and local models. The Git section shall show the detected git version or the reason git is not available. Project settings shall stay in the project file. The dialog shall move focus into itself and keep Tab and Shift+Tab inside. Escape, the close button and a click outside the dialog shall close it. When the dialog closes, focus shall go back to the previous element. Each section and control shall have an accessible label.
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/SettingsDialog.tsx` (`SettingsDialog`, `SETTINGS_SECTIONS`), `src/state/store.ts` (`userSettingsOpen`, `setUserSettingsOpen`), `src/state/settings.ts`, `src/components/SettingsDialog.test.tsx`
+- **Status:** Implemented
+
+### REQ-UI-100: Open the Settings dialog
+- **Description:** The system shall open the Settings dialog from a Settings button in the toolbar. It shall also open the dialog with Ctrl/Cmd+, unless another dialog is open. On Windows and Linux, the File menu shall have a "Settings…" item. On macOS, the app menu shall have a "Settings…" item with Cmd+,. The menu items shall send the `app:settings` event to the page.
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/Toolbar.tsx`, `src/hooks/useKeybindings.ts`, `src/hooks/useCloseGuard.ts`, `src/platform/tauri.ts` (`onOpenSettings`), `src-tauri/src/shell.rs` (`action`, `menu`, `macos_menu`), `src/components/HelpDialog.tsx`
 - **Status:** Implemented

@@ -172,6 +172,8 @@ inspection only.
 | REQ-UI-60 | Surface load and save errors | Functional · Functional Suitability | `src/components/ErrorPanel.tsx:4-28` | `src/components/ErrorPanel.test.tsx:12-53` | — | `openwiki/architecture.md` §Component Tree |
 | REQ-UI-70 | Button tooltips | Non-functional · Usability | `src/components/Toolbar.tsx`, `src/App.tsx`, every dialog/prompt under `src/components/` | — | — | `openwiki/architecture.md` §Component Tree |
 | REQ-UI-80 | View-only mode | Functional · Usability / Security: Integrity | `src/state/store.ts` (`readOnly`, `setReadOnly`)<br>`src/components/Toolbar.tsx`<br>`src/components/AnnotationPanel.tsx`<br>`src/components/ScreeningPanel.tsx`<br>`src/components/PdfViewer.tsx` | `src/state/store.readOnly.test.ts` | — | — |
+| REQ-UI-90 | Settings dialog | Functional · Usability | `src/components/SettingsDialog.tsx` (`SettingsDialog`, `SETTINGS_SECTIONS`)<br>`src/state/store.ts` (`userSettingsOpen`, `setUserSettingsOpen`)<br>`src/state/settings.ts` | `src/components/SettingsDialog.test.tsx` | — | — |
+| REQ-UI-100 | Open the Settings dialog | Functional · Usability | `src/components/Toolbar.tsx`<br>`src/hooks/useKeybindings.ts`<br>`src/hooks/useCloseGuard.ts`<br>`src/platform/tauri.ts` (`onOpenSettings`)<br>`src-tauri/src/shell.rs` (`action`, `menu`, `macos_menu`) | `src/components/SettingsDialog.test.tsx`<br>`src/components/Toolbar.test.tsx` (`opens Settings from its toolbar button`)<br>`src/hooks/useCloseGuard.test.tsx` (`opens Settings from the menu bar`)<br>`src-tauri/src/shell.rs` (`menu_ids_map_to_actions`) | — | — |
 
 ## Screening ([screening.md](screening.md))
 
