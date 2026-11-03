@@ -244,6 +244,39 @@ const ZH: &[(&str, &str)] = &[
 ];
 
 // [impl->req~plt-400~1]
+/// French texts of the native menu labels and the About dialog.
+const FR: &[(&str, &str)] = &[
+    ("File", "Fichier"),
+    ("Edit", "Édition"),
+    ("View", "Présentation"),
+    ("Window", "Fenêtre"),
+    ("Help", "Aide"),
+    ("Settings…", "Paramètres…"),
+    ("Close project", "Fermer le projet"),
+    ("Quit", "Quitter"),
+    ("Quit SaiLoR", "Quitter SaiLoR"),
+    ("Undo", "Annuler"),
+    ("Redo", "Rétablir"),
+    ("Cut", "Couper"),
+    ("Copy", "Copier"),
+    ("Paste", "Coller"),
+    ("Select All", "Tout sélectionner"),
+    ("Reload", "Recharger"),
+    ("Full Screen", "Plein écran"),
+    ("Minimize", "Réduire"),
+    ("Maximize/Restore", "Agrandir/Restaurer"),
+    ("Zoom", "Zoom"),
+    ("Close", "Fermer"),
+    ("Close Window", "Fermer la fenêtre"),
+    ("Services", "Services"),
+    ("Hide SaiLoR", "Masquer SaiLoR"),
+    ("Hide Others", "Masquer les autres"),
+    ("Project on GitHub", "Projet sur GitHub"),
+    ("About SaiLoR", "À propos de SaiLoR"),
+    ("Version", "Version"),
+];
+
+// [impl->req~plt-400~1]
 /// The menu tables by UI language code. English needs no table.
 const TABLES: &[(&str, &[(&str, &str)])] = &[
     ("de", DE),
@@ -253,6 +286,7 @@ const TABLES: &[(&str, &[(&str, &str)])] = &[
     ("es", ES),
     ("fa", FA),
     ("zh", ZH),
+    ("fr", FR),
 ];
 
 // [impl->req~plt-400~1]

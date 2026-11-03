@@ -4,6 +4,7 @@ import de from './locales/de.json'
 import zh from './locales/zh.json'
 import fa from './locales/fa.json'
 import es from './locales/es.json'
+import fr from './locales/fr.json'
 import it from './locales/it.json'
 import pt from './locales/pt.json'
 import ja from './locales/ja.json'
@@ -15,7 +16,7 @@ export type Params = Record<string, string | number>
 export type TagRenderers = Record<string, (children: ReactNode) => ReactNode>
 
 // [impl->req~ui-130~1]
-export const MESSAGES: Record<Language, Record<MessageKey, string>> = { en, de, zh, fa, es, it, pt, ja }
+export const MESSAGES: Record<Language, Record<MessageKey, string>> = { en, de, zh, fa, es, fr, it, pt, ja }
 
 export const LANGUAGE_NAMES: Record<Language, string> = {
   en: 'English',
@@ -23,6 +24,7 @@ export const LANGUAGE_NAMES: Record<Language, string> = {
   zh: '中文',
   fa: 'فارسی',
   es: 'Español',
+  fr: 'Français',
   it: 'Italiano',
   pt: 'Português',
   ja: '日本語',

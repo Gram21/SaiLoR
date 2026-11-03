@@ -143,6 +143,7 @@ describe('language', () => {
     ['zh-TW', 'zh'],
     ['fa-IR', 'fa'],
     ['es-MX', 'es'],
+    ['fr-CA', 'fr'],
     ['it-CH', 'it'],
     ['pt-BR', 'pt'],
     ['pt-PT', 'pt'],
