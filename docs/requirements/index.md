@@ -125,3 +125,7 @@ per category so requirements can be inserted without renumbering.
 - **Languages (2026-11-03).** REQ-UI-110 to REQ-UI-130 and REQ-PLT-400 added for the language setting, the
   translated interface, the complete language files and the translated native menus. REQ-UI-90 revised for the
   Language section. The coverage counts above were not recounted.
+- **More languages (2026-11-03).** REQ-UI-110 revised for Chinese (Simplified), Persian, Spanish, French,
+  Italian, Portuguese and Japanese. REQ-UI-120 revised for plural forms. REQ-UI-130 and REQ-PLT-400 revised
+  for all language files and menu tables. REQ-UI-140 added for the right-to-left layout of Persian. The
+  coverage counts above were not recounted.

@@ -803,7 +803,7 @@ Tags: Functional, Usability
 ### REQ-UI-110: Language setting
 `req~ui-110~1`
 
-The Settings dialog shall have a Language section with one choice per supported language. The supported languages shall be English and German. Each choice shall show the language name in that language. The system shall store the choice in the local storage key `slr.language`. When no valid choice is stored, the system shall use the language of `navigator.language` if it is supported, else English. A change shall apply at once to the open window, without a restart and without a change to the project. The system shall set the `lang` attribute of the document to the active language.
+The Settings dialog shall have a Language section with one choice per supported language. The supported languages shall be English, German, Chinese (Simplified), Persian, Spanish, French, Italian, Portuguese and Japanese. Each choice shall show the language name in that language. The system shall store the choice in the local storage key `slr.language`. When no valid choice is stored, the system shall use the language of `navigator.language` if it is supported, else English. A change shall apply at once to the open window, without a restart and without a change to the project. The system shall set the `lang` attribute of the document to the active language. REQ-UI-140 sets the text direction.
 
 Comment:
 - **Type:** Functional (ISO 25010: Usability)
@@ -818,11 +818,11 @@ Tags: Functional, Usability
 ### REQ-UI-120: Translated user interface
 `req~ui-120~1`
 
-The system shall take each user-visible text of the renderer from the active language. This includes labels, buttons, titles, tooltips, accessible labels, dialogs, confirmations, status messages, validation messages and the help dialog. The system shall not translate schema field names, project data, AI prompts, requirement IDs, raw output of git or file formats. If the active language has no text for a key, the system shall show the English text. Dates and numbers shall use `Intl` formats of the active language.
+The system shall take each user-visible text of the renderer from the active language. This includes labels, buttons, titles, tooltips, accessible labels, dialogs, confirmations, status messages, validation messages and the help dialog. The system shall not translate schema field names, project data, AI prompts, requirement IDs, raw output of git or file formats. If the active language has no text for a key, the system shall show the English text. For a count, the system shall use the plural form of the active language. If the language has no text for that form, the system shall use the `_other` text. Dates and numbers shall use `Intl` formats of the active language.
 
 Comment:
 - **Type:** Functional (ISO 25010: Usability)
-- **Evidence:** `src/i18n.ts` (`t`, `tp`, `rich`, `useT`), `src/locales/en.json`, `src/locales/de.json`, `src/components/`
+- **Evidence:** `src/i18n.ts` (`t`, `tp`, `rich`, `useT`), `src/locales/*.json`, `src/components/`
 - **Verified by:** `src/i18n.test.ts` (`t`, `tp`, `rich`)
 - **Status:** Implemented
 
@@ -837,7 +837,7 @@ Each language file shall have exactly the keys of the English file. For each key
 
 Comment:
 - **Type:** Non-functional (ISO 25010: Maintainability: Testability)
-- **Evidence:** `src/locales/en.json`, `src/locales/de.json`, `src/i18n.ts` (`MESSAGES`)
+- **Evidence:** `src/locales/*.json`, `src/i18n.ts` (`MESSAGES`)
 - **Verified by:** `src/i18n.test.ts` (`language files`)
 - **Status:** Implemented
 

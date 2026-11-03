@@ -249,7 +249,18 @@ annotating:
 
 ## Changing the language
 
-SaiLoR is available in English and German.
+SaiLoR is available in these languages:
+
+- English
+- German (Deutsch)
+- Chinese, Simplified (中文)
+- Persian (فارسی)
+- Spanish (Español)
+- French (Français)
+- Italian (Italiano)
+- Portuguese (Português)
+- Japanese (日本語)
+
 On the first start, SaiLoR uses the language of your system if it is available.
 In all other cases, SaiLoR starts in English.
 
@@ -262,4 +273,8 @@ To change the language:
 The window and the native menus change at once. You do not have to restart SaiLoR.
 SaiLoR stores the choice for your user account, not in the project.
 The language does not change project data, schema field names or AI prompts.
+Persian is written from right to left. In Persian, SaiLoR mirrors the layout.
+Code, keyboard keys and PDF pages stay left to right.
+The Chinese, Persian, Spanish, French, Italian, Portuguese and Japanese texts are machine translations.
+These texts can contain errors.
 Some messages from git and from the operating system stay in their own language.
