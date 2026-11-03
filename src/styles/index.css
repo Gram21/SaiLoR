@@ -3279,3 +3279,16 @@ kbd {
   color: var(--muted);
   cursor: pointer;
 }
+
+.field-dup-hint {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  font-size: 0.85em;
+  color: var(--danger);
+}
+.anno-leaf:has(.field-dup-hint) {
+  flex-wrap: wrap;
+}
+.anno-leaf:has(.field-dup-hint) > .field-row {
+  flex-basis: 0;
+}

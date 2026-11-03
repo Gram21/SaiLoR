@@ -77,6 +77,7 @@ export function ConsolidationDialog() {
   // hoping the reviewer noticed. Local, not store state: it belongs to this
   // dialog's lifetime and means nothing once it closes.
   const [confirmingClose, setConfirmingClose] = useState(false)
+  const [duplicateHint, setDuplicateHint] = useState<string | null>(null)
 
   // Re-resolve against the live schema (not just trust what opened the popup) —
   // the schema could in principle have changed underneath it. Derived up here,
@@ -160,7 +161,11 @@ export function ConsolidationDialog() {
     if (isEmptyValue(def.type, taken)) {
       deferConsolidationValue(target.path, target.name, target.index)
     } else {
-      resolveConsolidationValue(target.path, target.name, target.index, taken)
+      const refused = resolveConsolidationValue(target.path, target.name, target.index, taken)
+      if (refused) {
+        setDuplicateHint(refused)
+        return
+      }
     }
     closeConsolidation()
   }
@@ -254,6 +259,12 @@ export function ConsolidationDialog() {
                   : 'Marking answers equivalent settles that the reviewers agreed. Pick one of them above as well, so the consolidated result records what they agreed on.'}
               </p>
             </>
+          )}
+
+          {duplicateHint && (
+            <p className="field-dup-hint" role="alert">
+              {duplicateHint}
+            </p>
           )}
 
           {confirmingClose && (
