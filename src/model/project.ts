@@ -19,6 +19,7 @@ import { parseYear } from './year'
 import { parseMarks, parseReviewMarks, type PdfMark } from './pdfMarks'
 import { parseAlignment, type StoredAlignment } from './alignment'
 import { annotationsDirProblem } from './annotationsDir'
+import { parseStrictConfig, strictConfigJson, type StrictConfig } from './strict'
 import {
   moveInMarks,
   moveInTree,
@@ -274,6 +275,8 @@ export interface Project {
   screening: ScreeningConfig | null
   /** Additional top-level fields preserved verbatim on save. */
   extra: Record<string, unknown>
+  /** Strict mode settings; absent when the file has none. See `model/strict.ts`. */
+  strict?: StrictConfig
 }
 
 /**
@@ -699,6 +702,11 @@ export function loadProject(input: string | unknown): Project {
     ids.add(p.id)
   }
 
+  const strict = parseStrictConfig((data as { config?: unknown }).config, ids)
+  if (strict.problems.length > 0) {
+    throw new ProjectLoadError('The strict mode settings are invalid.', strict.problems)
+  }
+
   const schemaVersion = parseSchemaVersion((data as { schemaVersion?: unknown }).schemaVersion)
   const schemaHistory = parseSchemaHistory((data as { schemaHistory?: unknown }).schemaHistory)
   const rawAnnotationsDir = (data as { annotationsDir?: unknown }).annotationsDir
@@ -789,6 +797,7 @@ export function loadProject(input: string | unknown): Project {
     papers,
     screening,
     extra: extractExtra(raw, KNOWN_ROOT_KEYS),
+    ...(strict.strict ? { strict: strict.strict } : {}),
   }
 }
 
@@ -839,6 +848,7 @@ export function serializeProject(project: Project): string {
       ...(project.reviewers > 1 ? { reviewers: project.reviewers } : {}),
       ...(project.aiSeat ? { aiSeat: true } : {}),
       ...(project.screening ? { screening: { reasons: project.screening.reasons } } : {}),
+      ...strictConfigJson(project.strict),
     },
     papers: [...project.papers].sort(comparePapers).map((p) => {
       const paper: Record<string, unknown> = {
@@ -1056,6 +1066,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
       ...(project.reviewers > 1 ? { reviewers: project.reviewers } : {}),
       ...(project.aiSeat ? { aiSeat: true } : {}),
       ...(project.screening ? { screening: { reasons: project.screening.reasons } } : {}),
+      ...strictConfigJson(project.strict),
     },
     papers: metaPapers,
     ...project.extra,
