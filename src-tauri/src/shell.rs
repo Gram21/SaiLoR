@@ -178,9 +178,48 @@ const ES: &[(&str, &str)] = &[
 ];
 
 // [impl->req~plt-400~1]
+/// Persian texts of the native menu labels and the About dialog.
+const FA: &[(&str, &str)] = &[
+    ("File", "فایل"),
+    ("Edit", "ویرایش"),
+    ("View", "نما"),
+    ("Window", "پنجره"),
+    ("Help", "راهنما"),
+    ("Settings…", "تنظیمات…"),
+    ("Close project", "بستن پروژه"),
+    ("Quit", "خروج"),
+    ("Quit SaiLoR", "خروج از SaiLoR"),
+    ("Undo", "واگرد"),
+    ("Redo", "انجام دوباره"),
+    ("Cut", "برش"),
+    ("Copy", "کپی"),
+    ("Paste", "چسباندن"),
+    ("Select All", "انتخاب همه"),
+    ("Reload", "بارگذاری دوباره"),
+    ("Full Screen", "تمام‌صفحه"),
+    ("Minimize", "کوچک کردن"),
+    ("Maximize/Restore", "بزرگ کردن/بازگرداندن"),
+    ("Zoom", "بزرگ‌نمایی"),
+    ("Close", "بستن"),
+    ("Close Window", "بستن پنجره"),
+    ("Services", "خدمات"),
+    ("Hide SaiLoR", "پنهان کردن SaiLoR"),
+    ("Hide Others", "پنهان کردن بقیه"),
+    ("Project on GitHub", "پروژه در GitHub"),
+    ("About SaiLoR", "دربارهٔ SaiLoR"),
+    ("Version", "نسخه"),
+];
+
+// [impl->req~plt-400~1]
 /// The menu tables by UI language code. English needs no table.
-const TABLES: &[(&str, &[(&str, &str)])] =
-    &[("de", DE), ("it", IT), ("pt", PT), ("ja", JA), ("es", ES)];
+const TABLES: &[(&str, &[(&str, &str)])] = &[
+    ("de", DE),
+    ("it", IT),
+    ("pt", PT),
+    ("ja", JA),
+    ("es", ES),
+    ("fa", FA),
+];
 
 // [impl->req~plt-400~1]
 /// The text of a menu label in the active language. English is the fallback.
