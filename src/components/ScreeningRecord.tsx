@@ -1,5 +1,6 @@
 // [impl->req~scr-280~1]
 import { useStore, selectCurrentPaper } from '../state/store'
+import { useT } from '../i18n'
 
 /**
  * Middle pane for a screening project, shown instead of `PdfViewer` while
@@ -11,13 +12,14 @@ import { useStore, selectCurrentPaper } from '../state/store'
  * once there is nothing here for it to compete with.
  */
 export function ScreeningRecord() {
+  const t = useT()
   const paper = useStore(selectCurrentPaper)
   const toggleScreeningPdf = useStore((s) => s.toggleScreeningPdf)
   // [impl->req~scr-300~1]
   const extracting = useStore((s) => (paper ? s.screeningAbstractReads[paper.id] === 'reading' : false))
 
   if (!paper) {
-    return <div className="panel pdf empty">No paper selected.</div>
+    return <div className="panel pdf empty">{t('screening.record.noPaper')}</div>
   }
 
   return (
@@ -33,30 +35,26 @@ export function ScreeningRecord() {
           )}
           {paper.doi && (
             <span className="pdf-doi">
-              DOI: <code>{paper.doi}</code>
+              {t('screening.record.doi')} <code>{paper.doi}</code>
             </span>
           )}
         </div>
         {paper.pdf !== '' && (
-          <button type="button" onClick={toggleScreeningPdf} title="Show the PDF for this paper">
-            Read the PDF
+          <button type="button" onClick={toggleScreeningPdf} title={t('screening.record.readPdfTitle')}>
+            {t('screening.record.readPdf')}
           </button>
         )}
       </div>
       <div className="screening-record-body">
         {paper.abstractFromPdf && (
-          <p className="screening-abstract-extracted-notice">
-            This abstract was extracted automatically from the PDF text, not recorded by the paper's
-            source — it may be incomplete or wrong. Proceed with caution, and check the PDF directly
-            if in doubt.
-          </p>
+          <p className="screening-abstract-extracted-notice">{t('screening.record.extracted')}</p>
         )}
         {paper.abstract ? (
           <p className="screening-abstract">{paper.abstract}</p>
         ) : extracting ? (
-          <p className="screening-abstract-empty">Reading the PDF for an abstract…</p>
+          <p className="screening-abstract-empty">{t('screening.record.reading')}</p>
         ) : (
-          <p className="screening-abstract-empty">No abstract recorded for this paper.</p>
+          <p className="screening-abstract-empty">{t('screening.record.noAbstract')}</p>
         )}
       </div>
     </div>

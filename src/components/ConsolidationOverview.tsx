@@ -6,6 +6,7 @@ import { paperMetadataHaystack } from './PaperList'
 import { useStore } from '../state/store'
 import { Dropdown } from './Dropdown'
 import { useExportTextMenu } from '../hooks/useExportTextMenu'
+import { tp, useT } from '../i18n'
 
 interface DisagreementPaper {
   id: string
@@ -16,6 +17,7 @@ interface DisagreementPaper {
 
 /** Project-wide entry point for Consolidation's batch actions and paper queue. */
 export function ConsolidationOverview() {
+  const t = useT()
   const open = useStore((s) => s.consolidationOverviewOpen)
   const setOpen = useStore((s) => s.setConsolidationOverviewOpen)
   const openAgreementFromOverview = useStore((s) => s.openAgreementFromOverview)
@@ -107,8 +109,8 @@ export function ConsolidationOverview() {
         aria-modal="true"
       >
         <div className="modal-head">
-          <strong>Consolidation overview</strong>
-          <button type="button" className="icon-btn" onClick={() => setOpen(false)} aria-label="Close" title="Close this dialog">
+          <strong>{t('consolidation.overview.title')}</strong>
+          <button type="button" className="icon-btn" onClick={() => setOpen(false)} aria-label={t('common.close')} title={t('consolidation.overview.closeTitle')}>
             ×
           </button>
         </div>
@@ -119,54 +121,57 @@ export function ConsolidationOverview() {
               className="primary"
               title={
                 unanimousRun?.running
-                  ? `Adopting unanimous values… ${unanimousRun.done}/${unanimousRun.total}`
-                  : 'Adopt every field where all reviewers agree, across every paper'
+                  ? t('consolidation.overview.adoptingTitle', { done: unanimousRun.done, total: unanimousRun.total })
+                  : t('consolidation.overview.adoptAllTitle')
               }
               disabled={unanimousRun?.running || readOnly}
               onClick={() => void adoptAllUnanimousAnnotations()}
             >
               {unanimousRun?.running
-                ? `Adopting… ${unanimousRun.done}/${unanimousRun.total}`
-                : 'Adopt all unanimous'}
+                ? t('consolidation.overview.adopting', { done: unanimousRun.done, total: unanimousRun.total })
+                : t('consolidation.overview.adoptAll')}
             </button>
-            <button type="button" onClick={openAgreementFromOverview} title="Open the reviewer agreement overview">
-              Agreement
+            <button type="button" onClick={openAgreementFromOverview} title={t('consolidation.overview.agreementTitle')}>
+              {t('consolidation.overview.agreement')}
             </button>
-            <Dropdown label="Export" title="Export every paper's disagreements" items={exportMenu.items} />
+            <Dropdown label={t('consolidation.export')} title={t('consolidation.overview.exportTitle')} items={exportMenu.items} />
             {exportMenu.status && <span className="export-status">{exportMenu.status}</span>}
           </div>
           {unanimousRun && !unanimousRun.running && (
             <div className="consolidation-run-notice">
               <span>
                 {unanimousRun.interrupted
-                  ? `Stopped after ${unanimousRun.done} of ${unanimousRun.total} papers. `
+                  ? t('consolidation.overview.stopped', { done: unanimousRun.done, total: unanimousRun.total })
                   : ''}
-                Adopted unanimous values on {unanimousRun.filled} paper{unanimousRun.filled === 1 ? '' : 's'}.
-                {unanimousRun.skipped > 0 && ` ${unanimousRun.skipped} left unchanged.`}
+                {tp('consolidation.overview.adopted', unanimousRun.filled)}
+                {unanimousRun.skipped > 0 && t('consolidation.overview.leftUnchanged', { skipped: unanimousRun.skipped })}
               </span>
-              <button type="button" onClick={dismissUnanimousRun} title="Dismiss this notice">
-                Dismiss
+              <button type="button" onClick={dismissUnanimousRun} title={t('consolidation.overview.dismissTitle')}>
+                {t('consolidation.overview.dismiss')}
               </button>
             </div>
           )}
           <p className="disagreement-intro">
             {total === 0
-              ? 'No unresolved disagreements remain.'
-              : `${total} disagreement${total === 1 ? '' : 's'} across ${papers.length} paper${papers.length === 1 ? '' : 's'}.`}
+              ? t('consolidation.overview.noneLeft')
+              : t('consolidation.overview.intro', {
+                  disagreements: tp('consolidation.disagreementCount', total),
+                  papers: tp('consolidation.paperCount', papers.length),
+                })}
           </p>
           <div className="paper-search consolidation-overview-search">
             <input
               className="paper-search-input"
               type="text"
-              placeholder="Search papers…"
-              aria-label="Search papers with disagreements"
+              placeholder={t('consolidation.overview.searchPlaceholder')}
+              aria-label={t('consolidation.overview.searchLabel')}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
           </div>
           {filtered.length === 0 ? (
             <p className="paper-list-empty">
-              {words.length > 0 ? 'No matching papers' : 'No papers with disagreements'}
+              {words.length > 0 ? t('consolidation.overview.noMatch') : t('consolidation.overview.noneListed')}
             </p>
           ) : (
             <ul className="consolidation-overview-papers">
@@ -175,12 +180,10 @@ export function ConsolidationOverview() {
                   <button
                     type="button"
                     onClick={() => openDisagreementsFromOverview(paper.id)}
-                    title="Open this paper's disagreements"
+                    title={t('consolidation.overview.openPaper')}
                   >
                     <span>{paper.title}</span>
-                    <span>
-                      {paper.disagreements} disagreement{paper.disagreements === 1 ? '' : 's'}
-                    </span>
+                    <span>{tp('consolidation.disagreementCount', paper.disagreements)}</span>
                   </button>
                 </li>
               ))}

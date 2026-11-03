@@ -27,7 +27,7 @@ export function paperDisagreementsText(paper: Paper, verdicts: FieldVerdict[]): 
 
   for (const v of verdicts) {
     lines.push(displayPath([...v.path, { name: v.name, index: v.index }]))
-    for (const r of v.answeredBy) lines.push(`  R${r}: ${formatValue(v.def, v.values[r])}`)
+    for (const r of v.answeredBy) lines.push(`  R${r}: ${formatValue(v.def, v.values[r], 'en')}`)
     lines.push('')
   }
   lines.pop() // no trailing blank line after the last entry

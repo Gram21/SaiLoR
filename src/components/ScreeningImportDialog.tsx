@@ -1,5 +1,6 @@
 // [impl->req~scr-320~1]
 import { useEditorStore } from '../state/editorStore'
+import { rich, tp, useT } from '../i18n'
 
 /**
  * Pre-commit summary shown after picking a screening project via
@@ -12,6 +13,7 @@ import { useEditorStore } from '../state/editorStore'
  * escape hatch.
  */
 export function ScreeningImportDialog() {
+  const t = useT()
   const draft = useEditorStore((s) => s.screeningImport)
   const resolveScreeningImport = useEditorStore((s) => s.resolveScreeningImport)
   const setScreeningImportKind = useEditorStore((s) => s.setScreeningImportKind)
@@ -31,25 +33,25 @@ export function ScreeningImportDialog() {
         aria-modal="true"
       >
         <div className="modal-head">
-          <strong>Import from {draft.sourceName}</strong>
+          <strong>{t('screening.import.title', { source: draft.sourceName })}</strong>
           <button
             type="button"
             className="icon-btn"
-            title="Cancel this import"
+            title={t('screening.import.cancelTitle')}
             onClick={() => resolveScreeningImport('cancel')}
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             ×
           </button>
         </div>
         <div className="modal-body">
-          <p>{totalScreened} papers in this screening project.</p>
+          <p>{t('screening.import.total', { count: totalScreened })}</p>
           <ul className="screening-import-counts">
             <li>
-              <strong>{draft.included.length}</strong> included — always carried over.
+              <strong>{draft.included.length}</strong> {t('screening.import.includedNote')}
             </li>
             <li>
-              <strong>{draft.excludedCount}</strong> excluded — never carried over.
+              <strong>{draft.excludedCount}</strong> {t('screening.import.excludedNote')}
               {reasonRows.length > 0 && (
                 <ul className="screening-import-reasons">
                   {reasonRows.map(([reason, n]) => (
@@ -61,21 +63,17 @@ export function ScreeningImportDialog() {
               )}
             </li>
             <li>
-              <strong>{draft.undecided.length}</strong> not screened yet — carried over by default; you
-              can leave them out below.
+              <strong>{draft.undecided.length}</strong> {t('screening.import.undecidedNote')}
             </li>
           </ul>
           {draft.reviewers > 1 && draft.pendingUnanimousCount > 0 && (
             <p className="screening-import-notice">
-              {draft.pendingUnanimousCount} of the not-yet-screened papers were decided the same way by
-              every reviewer, but Consolidation has not adopted those decisions yet — so this project has
-              no final decision for them. Open the screening project as Consolidation and use{' '}
-              <strong>Adopt all</strong> first if you want them counted as included.
+              {rich('screening.import.pendingNotice', { count: draft.pendingUnanimousCount })}
             </p>
           )}
           {draft.target === 'start' && (
             <fieldset className="screening-import-kind">
-              <legend>Create as</legend>
+              <legend>{t('screening.import.createAs')}</legend>
               <label>
                 <input
                   type="radio"
@@ -84,7 +82,7 @@ export function ScreeningImportDialog() {
                   onChange={() => setScreeningImportKind('annotation')}
                   disabled={busy}
                 />
-                <span>Annotation project — extract data from these papers</span>
+                <span>{t('screening.import.kindAnnotation')}</span>
               </label>
               <label>
                 <input
@@ -94,12 +92,11 @@ export function ScreeningImportDialog() {
                   onChange={() => setScreeningImportKind('screening')}
                   disabled={busy}
                 />
-                <span>Screening project — screen them again, e.g. on full text</span>
+                <span>{t('screening.import.kindScreening')}</span>
               </label>
               {draft.startKind === 'screening' && (
                 <p className="screening-import-kind-hint">
-                  Gets its own exclusion-reason list, seeded from {draft.sourceName}'s reasons and
-                  editable before you save.
+                  {t('screening.import.kindHint', { source: draft.sourceName })}
                 </p>
               )}
             </fieldset>
@@ -107,30 +104,28 @@ export function ScreeningImportDialog() {
           <div className="screening-import-actions">
             <button
               type="button"
-              title="Cancel this import"
+              title={t('screening.import.cancelTitle')}
               disabled={busy}
               onClick={() => resolveScreeningImport('cancel')}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="button"
-              title="Import only the included papers, leaving not-yet-screened papers out"
+              title={t('screening.import.skipTitle')}
               disabled={busy}
               onClick={() => void resolveScreeningImport('skip-undecided')}
             >
-              Leave out the {draft.undecided.length} not-screened-yet paper
-              {draft.undecided.length === 1 ? '' : 's'}
+              {tp('screening.import.skip', draft.undecided.length)}
             </button>
             <button
               type="button"
               className="primary"
-              title="Import the included papers together with the not-yet-screened ones"
+              title={t('screening.import.importTitle')}
               disabled={busy}
               onClick={() => void resolveScreeningImport('include-undecided')}
             >
-              Import {draft.included.length + draft.undecided.length} paper
-              {draft.included.length + draft.undecided.length === 1 ? '' : 's'}
+              {tp('screening.import.import', draft.included.length + draft.undecided.length)}
             </button>
           </div>
         </div>

@@ -14,6 +14,7 @@ import { formatValue, paperVerdicts } from '../consolidate/disagreements'
 import { SCREENING_DECISION } from '../screening/schema'
 import { seatLabel } from '../model/project'
 import type { ResolvedDef } from '../model/schema'
+import { rich, useT } from '../i18n'
 
 /**
  * Whether leaving now would strand the field: declared equivalent, but with no
@@ -70,6 +71,7 @@ export function agreementVerdict(
  * + `.modal-body`, Escape-to-close, backdrop click) — see `ValidationDialog.tsx`.
  */
 export function ConsolidationDialog() {
+  const t = useT()
   const target = useStore((s) => s.consolidationTarget)
   const closeConsolidation = useStore((s) => s.closeConsolidation)
   const project = useStore((s) => s.project)
@@ -225,23 +227,25 @@ export function ConsolidationDialog() {
       >
         <div className="modal-head">
           <strong>
-            Compare answers <span className="consolidation-field-path">{label}</span>
+            {t('consolidation.dialog.title')} <span className="consolidation-field-path">{label}</span>
             {agreement && (
               <span className={`help-mode ${agreement === 'agree' ? 'ok' : 'bad'}`}>
-                {agreement === 'agree' ? 'Reviewers agree' : 'Reviewers disagree'}
+                {agreement === 'agree' ? t('consolidation.dialog.agree') : t('consolidation.dialog.disagree')}
               </span>
             )}
             {onlyIn.length > 0 && (
-              <span className="help-mode">Only in {onlyIn.map((r) => seatLabel(project, r)).join(', ')}</span>
+              <span className="help-mode">
+                {t('consolidation.onlyIn', { reviewers: onlyIn.map((r) => seatLabel(project, r)).join(', ') })}
+              </span>
             )}
           </strong>
-          <button type="button" className="icon-btn" title="Close" onClick={requestClose} aria-label="Close">
+          <button type="button" className="icon-btn" title={t('common.close')} onClick={requestClose} aria-label={t('common.close')}>
             ×
           </button>
         </div>
         <div className="modal-body">
           <p className="consolidation-current">
-            Current consolidated value:{' '}
+            {t('consolidation.dialog.current')}{' '}
             <strong>{formatValue(def, consolidatedValue)}</strong>
           </p>
           <ul className="consolidation-rows">
@@ -256,10 +260,12 @@ export function ConsolidationDialog() {
                     type="button"
                     className={`consolidation-row${isCurrent ? ' is-current' : ''}`}
                     onClick={() => take(r.value)}
-                    title={`Take ${project ? seatLabel(project, r.reviewer) : `Reviewer ${r.reviewer}`}'s answer into the consolidated result`}
+                    title={t('consolidation.dialog.takeTitle', {
+                      reviewer: project ? seatLabel(project, r.reviewer) : t('consolidation.reviewerName', { id: r.reviewer }),
+                    })}
                   >
                     <span className="consolidation-reviewer">
-                      {project ? seatLabel(project, r.reviewer) : `Reviewer ${r.reviewer}`}
+                      {project ? seatLabel(project, r.reviewer) : t('consolidation.reviewerName', { id: r.reviewer })}
                     </span>
                     <span className="consolidation-value">{formatValue(def, r.value)}</span>
                   </button>
@@ -270,19 +276,19 @@ export function ConsolidationDialog() {
           <button
             type="button"
             className="consolidation-defer"
-            title="Discard the answers above and type in a value yourself"
+            title={t('consolidation.dialog.deferTitle')}
             onClick={defer}
           >
-            Enter a different value
+            {t('consolidation.dialog.defer')}
           </button>
           {entrySeg && entrySlot && (
             <div className="consolidation-mapping">
-              <p>Compared entries of {entrySeg.name}:</p>
+              <p>{t('consolidation.dialog.comparedEntries', { name: entrySeg.name })}</p>
               {reviewerIds.map((reviewer) => (
                 <label key={reviewer}>
                   {seatLabel(project, reviewer)}
                   <select
-                    aria-label={`${seatLabel(project, reviewer)} entry`}
+                    aria-label={t('consolidation.dialog.entryLabel', { reviewer: seatLabel(project, reviewer) })}
                     value={entrySlot.members[reviewer] ?? ''}
                     onChange={(e) =>
                       remapConsolidationEntry(
@@ -295,11 +301,11 @@ export function ConsolidationDialog() {
                       )
                     }
                   >
-                    <option value="">No entry</option>
+                    <option value="">{t('consolidation.dialog.noEntry')}</option>
                     {reviewerEntriesAt(paper.alignment, paper.reviews[reviewer], entryPath, entrySeg.name, reviewer).map(
                       (inst, i) => (
                         <option key={i} value={i}>
-                          {`Entry ${i + 1}${preview(inst)}`}
+                          {t('consolidation.dialog.entryOption', { n: i + 1, preview: preview(inst) })}
                         </option>
                       ),
                     )}
@@ -316,16 +322,14 @@ export function ConsolidationDialog() {
                   checked={markedEqual}
                   onChange={() => toggleFieldEquality(paper.id, canonical)}
                 />
-                These answers mean the same thing
+                {t('consolidation.dialog.equal')}
               </label>
               {/* The distinction the whole feature turns on, and the one people
                   get wrong: the tick settles *that* the reviewers agreed, not
                   *what* they agreed on. Said plainly and up front, because the
                   alternative is finding out via the warning below. */}
               <p className={`consolidation-hint${stranded ? ' needed' : ''}`}>
-                {stranded
-                  ? 'Now pick the answer above that the consolidated result should record. Marking them equivalent settles that the reviewers agreed; it does not record what they agreed on.'
-                  : 'Marking answers equivalent settles that the reviewers agreed. Pick one of them above as well, so the consolidated result records what they agreed on.'}
+                {stranded ? t('consolidation.dialog.hintNeeded') : t('consolidation.dialog.hintDefault')}
               </p>
             </>
           )}
@@ -338,27 +342,22 @@ export function ConsolidationDialog() {
 
           {confirmingClose && (
             <div className="consolidation-warning" role="alert">
-              <p>
-                <strong>This field would be left with no answer.</strong> You marked the reviewers'
-                answers as meaning the same thing, so it no longer counts as a disagreement — but
-                nothing has been recorded as the consolidated value, so it will not show up in the
-                disagreement list again either.
-              </p>
+              <p>{rich('consolidation.dialog.strandedWarning')}</p>
               <div className="consolidation-warning-actions">
                 <button
                   type="button"
                   className="primary"
-                  title="Go back and choose one of the reviewers' answers above"
+                  title={t('consolidation.dialog.pickValueTitle')}
                   onClick={() => setConfirmingClose(false)}
                 >
-                  Pick a value
+                  {t('consolidation.dialog.pickValue')}
                 </button>
                 <button
                   type="button"
-                  title="Close without recording a value, and undo marking the answers as equivalent"
+                  title={t('consolidation.dialog.closeUnmarkTitle')}
                   onClick={discardAndClose}
                 >
-                  Close and un-mark them
+                  {t('consolidation.dialog.closeUnmark')}
                 </button>
               </div>
             </div>

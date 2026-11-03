@@ -1,6 +1,7 @@
 // [impl->req~con-257~1]
 import { useEffect } from 'react'
 import { useStore } from '../state/store'
+import { useT } from '../i18n'
 
 /**
  * Asked when a reviewer has changed their answers on a paper the consolidator
@@ -14,6 +15,7 @@ import { useStore } from '../state/store'
  * conservative side: nothing already decided is touched.
  */
 export function ConsolidationUpdatePrompt() {
+  const t = useT()
   const paperId = useStore((s) => s.consolidationUpdatePrompt)
   const resolve = useStore((s) => s.resolveConsolidationUpdate)
   const title = useStore((s) => s.project?.papers.find((p) => p.id === s.consolidationUpdatePrompt)?.title)
@@ -38,12 +40,8 @@ export function ConsolidationUpdatePrompt() {
         aria-modal="true"
       >
         <div className="modal-body">
-          <h3>Reviewer answers changed on "{title}"</h3>
-          <p>
-            A reviewer has edited this paper since you last consolidated it. Updating re-matches their
-            entries and fills unanswered consolidated fields with the answers they now agree on, which
-            can undo changes you made here.
-          </p>
+          <h3>{t('consolidation.updatePrompt.title', { title: title ?? '' })}</h3>
+          <p>{t('consolidation.updatePrompt.body')}</p>
         </div>
         <div className="close-prompt-actions">
           <button
@@ -51,16 +49,16 @@ export function ConsolidationUpdatePrompt() {
             className="primary"
             onClick={() => resolve(false)}
             autoFocus
-            title="Keep your consolidated answers as they are"
+            title={t('consolidation.updatePrompt.keepTitle')}
           >
-            Keep My Version
+            {t('consolidation.updatePrompt.keep')}
           </button>
           <button
             type="button"
             onClick={() => resolve(true)}
-            title="Re-match reviewer answers and fill in unanswered fields"
+            title={t('consolidation.updatePrompt.updateTitle')}
           >
-            Update
+            {t('consolidation.updatePrompt.update')}
           </button>
         </div>
       </div>

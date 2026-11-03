@@ -7,6 +7,7 @@ import { consolidationFieldStatus } from './ConsolidationVerdicts'
 import { displayPath } from '../llm/paths'
 import { Dropdown } from './Dropdown'
 import { useExportTextMenu } from '../hooks/useExportTextMenu'
+import { useT } from '../i18n'
 
 /**
  * The current paper's unresolved fields. The project-wide overview deliberately
@@ -17,6 +18,7 @@ import { useExportTextMenu } from '../hooks/useExportTextMenu'
  * + `.modal-body`, Escape-to-close, backdrop click) — see `ValidationDialog.tsx`.
  */
 export function DisagreementOverview() {
+  const t = useT()
   const open = useStore((s) => s.disagreementsOpen)
   const closeDisagreements = useStore((s) => s.closeDisagreements)
   const setDisagreementsOpen = useStore((s) => s.setDisagreementsOpen)
@@ -98,23 +100,30 @@ export function DisagreementOverview() {
       >
         <div className="modal-head">
           <strong>
-            Disagreements for {paper?.title ?? 'this paper'}{' '}
+            {t('consolidation.disagreements.title', { title: paper?.title ?? t('consolidation.disagreements.thisPaper') })}{' '}
             <span className={verdicts.length === 0 ? 'help-mode ok' : 'help-mode bad'}>
-              {verdicts.length === 0 ? 'None' : `${verdicts.length} to resolve`}
+              {verdicts.length === 0
+                ? t('consolidation.disagreements.none')
+                : t('consolidation.disagreements.toResolve', { count: verdicts.length })}
             </span>
           </strong>
           <div className="modal-head-actions">
             {exportMenu.status && <span className="export-status">{exportMenu.status}</span>}
-            <Dropdown label="Export" title="Export these disagreements" items={exportMenu.items} align="right" />
-            <button type="button" title="Show disagreements across the whole project" onClick={openOverview}>
-              Overview
+            <Dropdown
+              label={t('consolidation.export')}
+              title={t('consolidation.disagreements.exportTitle')}
+              items={exportMenu.items}
+              align="right"
+            />
+            <button type="button" title={t('consolidation.disagreements.overviewTitle')} onClick={openOverview}>
+              {t('consolidation.disagreements.overview')}
             </button>
             <button
               type="button"
               className="icon-btn"
-              title="Close"
+              title={t('common.close')}
               onClick={closeDisagreements}
-              aria-label="Close"
+              aria-label={t('common.close')}
             >
               ×
             </button>
@@ -122,10 +131,10 @@ export function DisagreementOverview() {
         </div>
         <div className="modal-body">
           {verdicts.length === 0 ? (
-            <p>Every field two or more reviewers answered agrees — there is nothing to reconcile on this paper.</p>
+            <p>{t('consolidation.disagreements.allAgree')}</p>
           ) : (
             <>
-              <p className="disagreement-intro">Click a field to open it for consolidation.</p>
+              <p className="disagreement-intro">{t('consolidation.disagreements.intro')}</p>
               <ul className="disagreement-rows">
                 {verdicts.map((v) => (
                   <li key={v.canonical}>
@@ -133,7 +142,7 @@ export function DisagreementOverview() {
                       type="button"
                       className="disagreement-row"
                       onClick={() => jumpTo(v)}
-                      title="Open this field for consolidation"
+                      title={t('consolidation.disagreements.openField')}
                     >
                       <span className="disagreement-path">
                         {displayPath([...v.path, { name: v.name, index: v.index }])}
@@ -141,13 +150,15 @@ export function DisagreementOverview() {
                       <span className="disagreement-values">
                         {v.answeredBy.map((r) => (
                           <span key={r} className="disagreement-value">
-                            <span className="disagreement-reviewer">R{r}</span>
+                            <span className="disagreement-reviewer">{t('consolidation.disagreements.reviewer', { id: r })}</span>
                             {formatValue(v.def, v.values[r])}
                           </span>
                         ))}
                         {v.onlyIn.length > 0 && (
                           <span className="disagreement-only">
-                            Only in {v.onlyIn.map((r) => `R${r}`).join(', ')}
+                            {t('consolidation.onlyIn', {
+                              reviewers: v.onlyIn.map((r) => t('consolidation.disagreements.reviewer', { id: r })).join(', '),
+                            })}
                           </span>
                         )}
                       </span>

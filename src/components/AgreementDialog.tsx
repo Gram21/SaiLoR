@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../state/store'
 import { copyText } from '../clipboard'
+import { rich, tp, useT } from '../i18n'
 import { agreementInput, type AgreementInput, type FieldAgreement } from '../consolidate/agreement'
 import { needsAlignmentCount } from '../consolidate/readiness'
 import {
@@ -67,6 +68,7 @@ export function perFieldTsv(perField: FieldAgreement[], metrics: MetricSpec[]): 
  * + `.modal-body`, Escape-to-close, backdrop click) — see `ValidationDialog.tsx`.
  */
 export function AgreementDialog() {
+  const t = useT()
   const open = useStore((s) => s.agreementOpen)
   const closeAgreement = useStore((s) => s.closeAgreement)
   const project = useStore((s) => s.project)
@@ -139,8 +141,8 @@ export function AgreementDialog() {
         aria-modal="true"
       >
         <div className="modal-head">
-          <strong>Inter-rater agreement</strong>
-          <button type="button" className="icon-btn" onClick={closeAgreement} aria-label="Close" title="Close">
+          <strong>{t('consolidation.agreement.title')}</strong>
+          <button type="button" className="icon-btn" onClick={closeAgreement} aria-label={t('common.close')} title={t('common.close')}>
             ×
           </button>
         </div>
@@ -148,39 +150,33 @@ export function AgreementDialog() {
           {needsAlignment > 0 && (
             <div className="agreement-alignment-warning" role="alert">
               <p>
-                <strong>{needsAlignment}</strong> paper{needsAlignment === 1 ? '' : 's'}{' '}
-                {needsAlignment === 1 ? 'has' : 'have'} repeated entries (like <em>Findings</em>) that two or
-                more reviewers recorded, and Consolidation hasn&apos;t reviewed yet. Until it has, the
-                numbers below can read as near-total disagreement between reviewers who actually agreed,
-                just in a different order — running the button lines the entries up and fills in any
-                unanimous answers, but a real disagreement still needs Consolidation to look at it, the
-                same as any other unreviewed field.
+                {rich('consolidation.agreement.alignWarning', {
+                  count: needsAlignment,
+                  lead: tp('consolidation.agreement.alignLead', needsAlignment),
+                })}
               </p>
               <button
                 type="button"
                 disabled={unanimousRun?.running || readOnly}
-                title="Lines every paper's reviewer entries up and adopts any answer every reviewer agrees on — the same action as the Adopt all unanimous button in the annotation panel"
+                title={t('consolidation.agreement.alignTitle')}
                 onClick={() => void adoptAllUnanimousAnnotations()}
               >
                 {unanimousRun?.running
-                  ? `Lining up… ${unanimousRun.done}/${unanimousRun.total}`
-                  : 'Line them up now'}
+                  ? t('consolidation.agreement.liningUp', { done: unanimousRun.done, total: unanimousRun.total })
+                  : t('consolidation.agreement.lineUp')}
               </button>
             </div>
           )}
           {built.unitCount === 0 ? (
-            <p>
-              No annotation field has been answered by two or more reviewers anywhere in this
-              project yet, so there is nothing to measure agreement over.
-            </p>
+            <p>{t('consolidation.agreement.noneAnswered')}</p>
           ) : (
             <>
               <p className="agreement-basis">
-                Computed over <strong>{built.unitCount}</strong> field
-                {built.unitCount === 1 ? '' : 's'} — one annotation field on one paper counts as
-                one — each answered by at least two reviewers.{' '}
-                {built.skipped > 0 &&
-                  `${built.skipped} more ${built.skipped === 1 ? 'was' : 'were'} skipped for having fewer than two answers.`}
+                {rich('consolidation.agreement.basis', {
+                  count: built.unitCount,
+                  noun: tp('consolidation.agreement.fieldNoun', built.unitCount),
+                })}{' '}
+                {built.skipped > 0 && tp('consolidation.agreement.skipped', built.skipped)}
               </p>
               <ul className="agreement-metrics">
                 {METRICS.map((m) => {
@@ -217,6 +213,7 @@ export function AgreementDialog() {
               {built.perField.length > 1 && (
                 <PerFieldTable
                   perField={built.perField}
+                  title={t('consolidation.agreement.perField')}
                   metrics={METRICS.filter((m) => selected.has(m.key))}
                   copied={copied}
                   onCopy={() => {
@@ -234,7 +231,7 @@ export function AgreementDialog() {
               )}
               {built.perEntry.length > 0 && (
                 <PerFieldTable
-                  title="Per entry"
+                  title={t('consolidation.agreement.perEntry')}
                   perField={built.perEntry}
                   metrics={METRICS.filter((m) => selected.has(m.key))}
                   copied={copiedEntry}
@@ -268,31 +265,36 @@ export function AgreementDialog() {
  * worse than a scrollbar.
  */
 function PerFieldTable({
-  title = 'Per field',
+  title,
   perField,
   metrics,
   copied,
   onCopy,
 }: {
-  title?: string
+  title: string
   perField: FieldAgreement[]
   metrics: MetricSpec[]
   copied: boolean
   onCopy: () => void
 }) {
+  const t = useT()
   return (
     <div className="agreement-perfield">
       <div className="agreement-perfield-head">
         <h3 className="agreement-perfield-title">{title}</h3>
-        <button type="button" onClick={onCopy} title={`Copy the ${title.toLowerCase().replace(' ', '-')} table to the clipboard as TSV`}>
-          {copied ? 'Copied' : 'Copy as TSV'}
+        <button
+          type="button"
+          onClick={onCopy}
+          title={t('consolidation.agreement.copyTitle', { table: title.toLowerCase().replace(' ', '-') })}
+        >
+          {copied ? t('consolidation.agreement.copied') : t('consolidation.agreement.copyTsv')}
         </button>
       </div>
       <div className="agreement-perfield-scroll">
         <table className="agreement-perfield-table">
           <thead>
             <tr>
-              <th>Field</th>
+              <th>{t('consolidation.agreement.field')}</th>
               <th>N</th>
               {metrics.map((m) => (
                 <th key={m.key}>{m.label}</th>

@@ -2,6 +2,7 @@
 import { useEffect } from 'react'
 import { useStore } from '../state/store'
 import { screeningCounts } from '../screening/counts'
+import { useT } from '../i18n'
 
 /**
  * Progress and PRISMA-style counts for a screening project — the include /
@@ -10,6 +11,7 @@ import { screeningCounts } from '../screening/counts'
  * → `.modal` → `.modal-head` + `.modal-body`, Escape-to-close, backdrop click.
  */
 export function ScreeningSummary() {
+  const t = useT()
   const open = useStore((s) => s.screeningSummaryOpen)
   const setOpen = useStore((s) => s.setScreeningSummaryOpen)
   const project = useStore((s) => s.project)
@@ -30,12 +32,12 @@ export function ScreeningSummary() {
   const reasons = project.screening.reasons
   const seatLabel =
     project.reviewers <= 1
-      ? 'this project\'s decisions'
+      ? t('screening.summary.seatAll')
       : currentReviewer === 'consolidation'
-        ? 'the consolidated result'
+        ? t('screening.summary.seatConsolidated')
         : currentReviewer
-          ? `Reviewer ${currentReviewer}'s own decisions`
-          : 'no reviewer (pick one above)'
+          ? t('screening.summary.seatReviewer', { id: currentReviewer })
+          : t('screening.summary.seatNone')
 
   return (
     <div className="modal-overlay" onClick={() => setOpen(false)}>
@@ -46,42 +48,42 @@ export function ScreeningSummary() {
         aria-modal="true"
       >
         <div className="modal-head">
-          <strong>Screening summary</strong>
+          <strong>{t('screening.summary.title')}</strong>
           <button
             type="button"
             className="icon-btn"
             onClick={() => setOpen(false)}
-            aria-label="Close"
-            title="Close"
+            aria-label={t('common.close')}
+            title={t('common.close')}
           >
             ×
           </button>
         </div>
         <div className="modal-body">
-          <p className="screening-summary-seat">Counting {seatLabel}.</p>
+          <p className="screening-summary-seat">{t('screening.summary.counting', { seat: seatLabel })}</p>
           <div className="screening-summary-headline">
             <div>
               <strong>{counts.total}</strong>
-              <span>total</span>
+              <span>{t('screening.summary.total')}</span>
             </div>
             <div>
               <strong>{counts.included}</strong>
-              <span>included</span>
+              <span>{t('screening.summary.included')}</span>
             </div>
             <div>
               <strong>{counts.excluded}</strong>
-              <span>excluded</span>
+              <span>{t('screening.summary.excluded')}</span>
             </div>
             <div>
               <strong>{counts.undecided}</strong>
-              <span>undecided</span>
+              <span>{t('screening.summary.undecided')}</span>
             </div>
           </div>
           <table className="screening-summary-table">
             <thead>
               <tr>
-                <th>Exclusion reason</th>
-                <th>Papers</th>
+                <th>{t('screening.summary.reason')}</th>
+                <th>{t('screening.summary.papers')}</th>
               </tr>
             </thead>
             <tbody>
@@ -93,7 +95,7 @@ export function ScreeningSummary() {
               ))}
               {counts.excludedWithoutReason > 0 && (
                 <tr className="screening-summary-unknown">
-                  <td>No reason recorded / not one of the configured reasons</td>
+                  <td>{t('screening.summary.noReason')}</td>
                   <td>{counts.excludedWithoutReason}</td>
                 </tr>
               )}

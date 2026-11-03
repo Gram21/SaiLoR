@@ -9,6 +9,7 @@ import {
 import { screeningStatus } from '../screening/status'
 import { screeningCounts, pendingUnanimous } from '../screening/counts'
 import { ComboBox } from './ComboBox'
+import { tp, useT } from '../i18n'
 
 /**
  * Right-hand pane for a screening project — rendered by `App.tsx` instead of
@@ -19,6 +20,7 @@ import { ComboBox } from './ComboBox'
  * render (see `src/screening/schema.ts`).
  */
 export function ScreeningPanel() {
+  const t = useT()
   const paper = useStore(selectCurrentPaper)
   const project = useStore((s) => s.project)
   const currentReviewer = useStore((s) => s.currentReviewer)
@@ -35,7 +37,7 @@ export function ScreeningPanel() {
   const [reasonMarked, confirmReason] = useAiMark([], SCREENING_REASON, 0)
 
   if (!paper) {
-    return <div className="panel annotations empty">Select a paper to screen.</div>
+    return <div className="panel annotations empty">{t('screening.panel.selectPaper')}</div>
   }
 
   // Same withheld-form rule as AnnotationPanel: an edit made with nobody
@@ -43,10 +45,7 @@ export function ScreeningPanel() {
   const noReviewerPicked = (project?.reviewers ?? 1) > 1 && currentReviewer === null
   if (noReviewerPicked || !project) {
     return (
-      <div className="panel annotations empty">
-        Pick a reviewer above to start screening — each reviewer's decisions are
-        recorded separately until Consolidation reconciles them into the final result.
-      </div>
+      <div className="panel annotations empty">{t('screening.panel.pickReviewer')}</div>
     )
   }
 
@@ -69,13 +68,13 @@ export function ScreeningPanel() {
       <fieldset className="read-only-fieldset" disabled={readOnly}>
       <div className="annotations-head">
         <div className="annotations-head-row">
-          <h2>Screening</h2>
+          <h2>{t('screening.panel.title')}</h2>
         </div>
         <div className="annotations-paper-title">
           {paper.title}
           {(project.reviewers ?? 1) > 1 && (
             <span className="reviewer-badge">
-              {isConsolidation ? 'Consolidation' : `Reviewer ${currentReviewer}`}
+              {isConsolidation ? t('consolidation.seatName') : t('consolidation.reviewerName', { id: currentReviewer ?? '' })}
             </span>
           )}
         </div>
@@ -87,28 +86,28 @@ export function ScreeningPanel() {
           <button
             type="button"
             className="consolidation-tool-btn"
-            title="Progress and PRISMA-style include/exclude/reason counts"
+            title={t('screening.panel.summaryTitle')}
             onClick={() => setScreeningSummaryOpen(true)}
           >
-            ◧ Summary
+            {t('screening.panel.summary')}
           </button>
           {isConsolidation && (
             <>
               <button
                 type="button"
                 className="consolidation-tool-btn"
-                title="Compute inter-rater agreement on the include/exclude decision"
+                title={t('screening.panel.agreementTitle')}
                 onClick={() => setAgreementOpen(true)}
               >
-                ⚖ Agreement
+                {t('screening.panel.agreement')}
               </button>
               <button
                 type="button"
                 className="consolidation-tool-btn"
-                title="List every paper where reviewers disagree"
+                title={t('screening.panel.disagreementsTitle')}
                 onClick={() => setDisagreementsOpen(true)}
               >
-                ⚠ Disagreements
+                {t('screening.panel.disagreements')}
               </button>
             </>
           )}
@@ -118,16 +117,13 @@ export function ScreeningPanel() {
       <div className="annotations-body screening-body">
         {isConsolidation && pending > 0 && (
           <div className="screening-pending-notice">
-            <span>
-              {pending} paper{pending === 1 ? '' : 's'} every reviewer decided the same way{' '}
-              {pending === 1 ? 'has' : 'have'} not been consolidated yet.
-            </span>
+            <span>{tp('screening.panel.pending', pending)}</span>
             <button
               type="button"
               onClick={() => adoptAllUnanimousScreening()}
-              title="Adopt the decision every reviewer agreed on for these papers"
+              title={t('screening.panel.adoptAllTitle')}
             >
-              Adopt all
+              {t('screening.panel.adoptAll')}
             </button>
           </div>
         )}
@@ -136,33 +132,34 @@ export function ScreeningPanel() {
           <button
             type="button"
             className={`screening-decision-btn screening-include${status === 'included' ? ' active' : ''}${decisionMarked && status === 'included' ? ' ai-marked' : ''}`}
-            title="Include this paper (shortcut: I)"
+            title={t('screening.panel.includeTitle')}
             onClick={() => {
               confirmDecision()
               decide(DECISION_INCLUDE)
             }}
           >
-            ✓ Include
+            {t('screening.panel.include')}
           </button>
           <button
             type="button"
             className={`screening-decision-btn screening-exclude${status === 'excluded' ? ' active' : ''}${decisionMarked && status === 'excluded' ? ' ai-marked' : ''}`}
-            title="Exclude this paper (shortcut: E)"
+            title={t('screening.panel.excludeTitle')}
             onClick={() => {
               confirmDecision()
               decide(DECISION_EXCLUDE)
             }}
           >
-            ✕ Exclude
+            {t('screening.panel.exclude')}
           </button>
         </div>
         {status === 'undecided' && (
-          <p className="screening-hint">Not screened yet. Press I to include, E to exclude.</p>
+          <p className="screening-hint">{t('screening.panel.notYet')}</p>
         )}
 
         <label className="screening-reason-field">
           <span className="papers-label">
-            Reason {status !== 'excluded' && <span className="papers-note">only applies when excluded</span>}
+            {t('screening.panel.reasonLabel')}{' '}
+            {status !== 'excluded' && <span className="papers-note">{t('screening.panel.reasonOnlyWhenExcluded')}</span>}
           </span>
           <ComboBox
             value={tree?.[SCREENING_REASON]?.[0]?.value === undefined ? null : (tree[SCREENING_REASON][0].value as string | null)}
@@ -174,16 +171,17 @@ export function ScreeningPanel() {
           />
         </label>
         {status !== 'excluded' && (
-          <p className="screening-hint">
-            The exclusion reason is disabled — a reason only makes sense once this paper is excluded.
-            Shortcuts 1-{Math.min(9, reasons.length)} exclude with that reason in one press.
-          </p>
+          <p className="screening-hint">{t('screening.panel.reasonDisabled', { max: Math.min(9, reasons.length) })}</p>
         )}
 
         <p className="screening-progress">
-          {counts.included + counts.excluded} of {counts.total} screened
-          {' — '}
-          {counts.included} included, {counts.excluded} excluded, {counts.undecided} left
+          {t('screening.panel.progress', {
+            screened: counts.included + counts.excluded,
+            total: counts.total,
+            included: counts.included,
+            excluded: counts.excluded,
+            left: counts.undecided,
+          })}
         </p>
       </div>
       </fieldset>

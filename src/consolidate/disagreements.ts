@@ -6,6 +6,8 @@ import { isUnanswered } from '../llm/fields'
 import { formatPath } from '../llm/paths'
 import { comparable } from './unanimous'
 import type { PathSeg } from '../state/store'
+import { getLanguage, MESSAGES } from '../i18n'
+import type { Language } from '../state/settings'
 
 /**
  * Turns reviewers' trees into per-field verdicts for agreement stats and
@@ -203,9 +205,10 @@ function walk(
 
 /** Human-readable, type-aware rendering of one reviewer's raw value; shared by
  *  `DisagreementOverview`, `ConsolidationDialog`'s compare popup, and export. */
-export function formatValue(def: ResolvedDef, value: FieldValue | undefined): string {
-  if (value === undefined || value === null) return '— left empty —'
-  if (def.type === 'boolean') return value ? 'Yes' : 'No'
-  if (typeof value === 'string' && value.trim() === '') return '— left empty —'
+export function formatValue(def: ResolvedDef, value: FieldValue | undefined, lang: Language = getLanguage()): string {
+  const m = MESSAGES[lang]
+  if (value === undefined || value === null) return m['consolidation.value.empty']
+  if (def.type === 'boolean') return value ? m['consolidation.value.yes'] : m['consolidation.value.no']
+  if (typeof value === 'string' && value.trim() === '') return m['consolidation.value.empty']
   return String(value)
 }

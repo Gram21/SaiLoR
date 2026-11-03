@@ -6,6 +6,7 @@ import { seatLabel, type Project } from '../model/project'
 import type { FieldValue } from '../model/annotations'
 import { YEAR_MIN, YEAR_MAX } from '../model/year'
 import { ComboBox } from './ComboBox'
+import { t, tp, useT } from '../i18n'
 import '../styles/git.css'
 
 /** The wording that differs between a git merge and a save that met changes on disk. */
@@ -63,6 +64,7 @@ export function ConflictResolutionDialog({
   onCancel,
   onDismissError,
 }: Props) {
+  const t = useT()
   const reviewers = useStore((s) => s.project?.reviewers ?? 1)
   const currentReviewer = useStore((s) => s.currentReviewer)
   const project = useStore((s) => s.project)
@@ -137,7 +139,10 @@ export function ConflictResolutionDialog({
       >
         <div className="modal-head">
           <strong>
-            {labels.title} <span className="git-merge-progress">{decidedCount} of {merge.conflicts.length} decided</span>
+            {labels.title}{' '}
+            <span className="git-merge-progress">
+              {t('consolidation.conflict.decided', { decided: decidedCount, total: merge.conflicts.length })}
+            </span>
           </strong>
         </div>
 
@@ -147,14 +152,14 @@ export function ConflictResolutionDialog({
           <div className="git-merge-bulk">
             <button
               type="button"
-              title="Use your value for every undecided field below, except another reviewer's own answers"
+              title={t('consolidation.conflict.useAllMineTitle')}
               onClick={() => onTakeAll('ours', bulkEligibleIds)}
             >
-              Use all mine
+              {t('consolidation.conflict.useAllMine')}
             </button>
             <button
               type="button"
-              title={`Use ${labels.theirsValue} for every undecided field below, except another reviewer's own answers`}
+              title={t('consolidation.conflict.useAllTheirsTitle', { value: labels.theirsValue })}
               onClick={() => onTakeAll('theirs', bulkEligibleIds)}
             >
               {labels.useAllTheirs}
@@ -162,9 +167,9 @@ export function ConflictResolutionDialog({
           </div>
           {foreignIds.size > 0 && (
             <p className="git-merge-foreign-note">
-              {foreignIds.size} field{foreignIds.size === 1 ? '' : 's'} above belong to another
-              reviewer&apos;s own answers, marked <span className="git-merge-foreign-badge">another reviewer</span> —
-              the buttons above skip them. Decide those individually below.
+              {tp('consolidation.conflict.foreign', foreignIds.size)}{' '}
+              <span className="git-merge-foreign-badge">{t('consolidation.conflict.foreignBadge')}</span>{' '}
+              {t('consolidation.conflict.foreignSkip')}
             </p>
           )}
 
@@ -187,15 +192,17 @@ export function ConflictResolutionDialog({
                     type="button"
                     className="git-merge-group-head"
                     aria-expanded={!isCollapsed}
-                    title={isCollapsed ? 'Expand this paper’s conflicts' : 'Collapse this paper’s conflicts'}
+                    title={isCollapsed ? t('consolidation.conflict.expand') : t('consolidation.conflict.collapse')}
                     onClick={() => toggleGroup(g.paperId)}
                   >
                     <span className={`git-merge-group-chevron${isCollapsed ? ' is-collapsed' : ''}`} aria-hidden="true">
                       ▾
                     </span>
-                    <span className="git-merge-group-title">{g.paperTitle || 'Project'}</span>
+                    <span className="git-merge-group-title">{g.paperTitle || t('consolidation.conflict.projectGroup')}</span>
                     <span className={`git-merge-group-progress${groupDone ? ' is-done' : ''}`}>
-                      {groupDone ? '✓ Resolved' : `${groupDecided} of ${g.conflicts.length} decided`}
+                      {groupDone
+                        ? t('consolidation.conflict.resolved')
+                        : t('consolidation.conflict.decided', { decided: groupDecided, total: g.conflicts.length })}
                     </span>
                   </button>
                   {!isCollapsed && (
@@ -231,9 +238,9 @@ export function ConflictResolutionDialog({
             <button
               type="button"
               className="icon-btn"
-              title="Dismiss this error"
+              title={t('consolidation.conflict.dismissErrorTitle')}
               onClick={onDismissError}
-              aria-label="Dismiss"
+              aria-label={t('consolidation.conflict.dismiss')}
             >
               ×
             </button>
@@ -252,7 +259,7 @@ export function ConflictResolutionDialog({
             type="button"
             className="primary"
             disabled={!allDecided}
-            title={allDecided ? labels.finishTitle : 'Decide every conflict above before finishing'}
+            title={allDecided ? labels.finishTitle : t('consolidation.conflict.finishDisabled')}
             onClick={onFinish}
           >
             {labels.finish}
@@ -280,10 +287,10 @@ export function isForeignReview(tree: MergeTree, currentReviewer: string | null)
  *  diverge if the two dialogs' needs ever do, without one file quietly
  *  depending on the other's private helper). */
 function formatValue(type: FieldConflict['type'], value: FieldValue): string {
-  if (type === 'choice') return value === 'theirs' ? 'Theirs' : 'Mine'
-  if (value === undefined || value === null) return '— empty —'
-  if (type === 'boolean') return value ? 'Yes' : 'No'
-  if (typeof value === 'string' && value.trim() === '') return '— empty —'
+  if (type === 'choice') return value === 'theirs' ? t('consolidation.conflict.theirs') : t('consolidation.conflict.mine')
+  if (value === undefined || value === null) return t('consolidation.conflict.empty')
+  if (type === 'boolean') return value ? t('consolidation.value.yes') : t('consolidation.value.no')
+  if (typeof value === 'string' && value.trim() === '') return t('consolidation.conflict.empty')
   return String(value)
 }
 
@@ -304,6 +311,7 @@ interface ConflictRowProps {
 }
 
 function ConflictRow({ conflict, reviewers, project, decided, foreign, value, theirsValue, onTake, onChange }: ConflictRowProps) {
+  const t = useT()
   // The paper is the group header now (see the grouped list above) — this is
   // just which tree within it: "Reviewer 2", "Consolidation", "Paper
   // details", or nothing for a single-reviewer annotation conflict. A
@@ -323,21 +331,21 @@ function ConflictRow({ conflict, reviewers, project, decided, foreign, value, th
         {foreign && (
           <span
             className="git-merge-foreign-badge"
-            title="Belongs to another reviewer's own answers — the bulk buttons above skip it; use ◀/▶ to decide it here."
+            title={t('consolidation.conflict.foreignTitle')}
           >
-            another reviewer
+            {t('consolidation.conflict.foreignBadge')}
           </span>
         )}
-        {!decided && <span className="git-merge-undecided-badge">not decided yet</span>}
+        {!decided && <span className="git-merge-undecided-badge">{t('consolidation.conflict.undecided')}</span>}
       </div>
       <div className="git-merge-row-body">
-        <div className="git-merge-side" title="Your value">
+        <div className="git-merge-side" title={t('consolidation.conflict.yourValue')}>
           {conflict.type === 'choice' ? conflict.oursText : formatValue(conflict.type, conflict.ours)}
         </div>
         <button
           type="button"
           className="git-merge-take"
-          title="Use your value"
+          title={t('consolidation.conflict.useYours')}
           onClick={() => onTake('ours')}
         >
           ◀
@@ -348,7 +356,7 @@ function ConflictRow({ conflict, reviewers, project, decided, foreign, value, th
         <button
           type="button"
           className="git-merge-take"
-          title={`Use ${theirsValue}`}
+          title={t('consolidation.conflict.useTheirs', { value: theirsValue })}
           onClick={() => onTake('theirs')}
         >
           ▶

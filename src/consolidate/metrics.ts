@@ -1,3 +1,5 @@
+import { t } from '../i18n'
+
 /**
  * Nominal-scale inter-rater agreement coefficients: Cohen's κ, Fleiss' κ and
  * Krippendorff's α. Deliberately agnostic to papers/schemas/fields — callers
@@ -52,11 +54,7 @@ function ratingOf(unit: Ratings, rater: string): string | null {
  * floating-point sums can mask this as a near-zero denominator instead of exact.
  */
 function degenerateNote(coefficient: string): string {
-  return (
-    `Every rating was the same, single category, so agreement is total — but that also makes ` +
-    `chance agreement total, leaving ${coefficient} undefined (a 0/0), not the 0 or 1 it might ` +
-    `look like at a glance.`
-  )
+  return t('consolidation.metrics.degenerate', { coefficient })
 }
 
 // ---------------------------------------------------------------------------
@@ -72,7 +70,7 @@ export function cohenKappaApplicable(input: MetricInput): Applicability {
   if (input.raters.length !== 2) {
     return {
       usable: false,
-      reason: `Cohen's κ compares exactly two reviewers; this project has ${input.raters.length}.`,
+      reason: t('consolidation.metrics.cohenRaters', { count: input.raters.length }),
     }
   }
   return { usable: true }
@@ -101,7 +99,7 @@ export function cohenKappa(input: MetricInput): MetricResult {
   if (pairs.length < 2) {
     return {
       value: null,
-      note: `Cohen's κ needs at least two fields both reviewers rated; this project has ${pairs.length}.`,
+      note: t('consolidation.metrics.cohenFields', { count: pairs.length }),
     }
   }
 
@@ -148,7 +146,7 @@ export function fleissKappaApplicable(input: MetricInput): Applicability {
   if (input.raters.length < 2) {
     return {
       usable: false,
-      reason: `Fleiss' κ needs at least two reviewers; this project has ${input.raters.length}.`,
+      reason: t('consolidation.metrics.fleissRaters', { count: input.raters.length }),
     }
   }
 
@@ -162,9 +160,7 @@ export function fleissKappaApplicable(input: MetricInput): Applicability {
   if (incomplete > 0) {
     return {
       usable: false,
-      reason:
-        `Fleiss' κ needs every reviewer to have rated every field; ` +
-        `${incomplete} of ${input.units.length} were rated by only some.`,
+      reason: t('consolidation.metrics.fleissEvery', { incomplete, total: input.units.length }),
     }
   }
 
@@ -187,7 +183,7 @@ export function fleissKappa(input: MetricInput): MetricResult {
   if (N < 2) {
     return {
       value: null,
-      note: `Fleiss' κ needs at least two rated fields to compare; this project has ${N}.`,
+      note: t('consolidation.metrics.fleissFields', { count: N }),
     }
   }
 
@@ -241,7 +237,7 @@ export function krippendorffAlphaApplicable(input: MetricInput): Applicability {
   if (input.raters.length < 2) {
     return {
       usable: false,
-      reason: `Krippendorff's α needs at least two reviewers; this project has ${input.raters.length}.`,
+      reason: t('consolidation.metrics.krippRaters', { count: input.raters.length }),
     }
   }
   return { usable: true }
@@ -313,7 +309,7 @@ export function krippendorffAlpha(input: MetricInput): MetricResult {
   if (usableUnits < 2) {
     return {
       value: null,
-      note: `Krippendorff's α needs at least two fields rated by two or more reviewers; this project has ${usableUnits}.`,
+      note: t('consolidation.metrics.krippFields', { count: usableUnits }),
     }
   }
 
