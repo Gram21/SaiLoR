@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useT } from '../i18n'
 import type { ModelInfo } from '../llm/types'
 import { COMBO_MENU_MAX_HEIGHT } from './ComboBox'
 
@@ -36,6 +37,7 @@ export function ModelPicker({
   providerLabel,
   placeholder,
 }: ModelPickerProps) {
+  const t = useT()
   const inputRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
   const [highlight, setHighlight] = useState(0)
@@ -130,7 +132,7 @@ export function ModelPicker({
         aria-autocomplete="list"
         value={value}
         placeholder={placeholder}
-        title={invalid ? `"${value.trim()}" is not a model ${providerLabel} listed.` : undefined}
+        title={invalid ? t('llm.picker.notListed', { value: value.trim(), provider: providerLabel }) : undefined}
         autoComplete="off"
         onFocus={() => setOpen(true)}
         onChange={(e) => {
@@ -145,7 +147,7 @@ export function ModelPicker({
       />
       {loading && (
         <span className="model-picker-status" aria-live="polite">
-          Loading…
+          {t('common.loading')}
         </span>
       )}
       {open &&
@@ -163,7 +165,7 @@ export function ModelPicker({
             }}
           >
             {filtered.length === 0 ? (
-              <div className="combo-empty">No matches</div>
+              <div className="combo-empty">{t('llm.picker.noMatches')}</div>
             ) : (
               filtered.slice(0, 200).map((m, i) => (
                 <div

@@ -1,3 +1,4 @@
+import type { MessageKey } from '../i18n'
 import type { LlmConfig } from './types'
 
 /**
@@ -373,7 +374,7 @@ export interface ShortlistModel {
   contextTokens: number
   /** Rough RAM/VRAM to run it comfortably. */
   minRamGB: number
-  notes: string
+  notes: MessageKey
   verifiedAt: string
 }
 
@@ -385,21 +386,21 @@ const entry = (
   gb: number,
   contextTokens: number,
   minRamGB: number,
-  notes: string,
+  notes: MessageKey,
 ): ShortlistModel => ({ tag, label, approxBytes: Math.round(gb * GB), contextTokens, minRamGB, notes, verifiedAt: VERIFIED })
 
 // Tags checked in the Ollama library on 2026-10-02. Annotation quality (JSON
 // output) is NOT benchmarked for any of them. phi4 is excluded: 16K context.
 // [impl->req~llm-723~1]
 export const OLLAMA_SHORTLIST: ShortlistModel[] = [
-  entry('qwen3.5:4b', 'Qwen 3.5 4B', 3.4, 256_000, 8, 'Smallest option; for modest laptops.'),
-  entry('ministral-3:3b', 'Ministral 3 3B', 3.0, 256_000, 8, 'Smallest option; for modest laptops.'),
-  entry('qwen3.5:9b', 'Qwen 3.5 9B', 6.6, 256_000, 12, 'Good default for a 16 GB machine.'),
-  entry('gemma4:e4b', 'Gemma 4 E4B', 6.6, 128_000, 12, 'Compact effective-4B model.'),
-  entry('ministral-3:8b', 'Ministral 3 8B', 6.0, 256_000, 12, 'Mid-size general model.'),
-  entry('gemma4:12b', 'Gemma 4 12B', 8.0, 256_000, 16, 'Mid-size general model.'),
-  entry('ministral-3:14b', 'Ministral 3 14B', 9.1, 256_000, 16, 'Larger Ministral.'),
-  entry('gpt-oss:20b', 'gpt-oss 20B', 14, 128_000, 24, 'Reasoning model with low/medium/high levels.'),
-  entry('mistral-small3.2', 'Mistral Small 3.2', 15, 128_000, 24, 'Larger general model.'),
-  entry('qwen3.6:27b', 'Qwen 3.6 27B', 17, 256_000, 32, 'Largest on the list; needs a workstation.'),
+  entry('qwen3.5:4b', 'Qwen 3.5 4B', 3.4, 256_000, 8, 'llm.catalog.shortlist.smallest'),
+  entry('ministral-3:3b', 'Ministral 3 3B', 3.0, 256_000, 8, 'llm.catalog.shortlist.smallest'),
+  entry('qwen3.5:9b', 'Qwen 3.5 9B', 6.6, 256_000, 12, 'llm.catalog.shortlist.default16'),
+  entry('gemma4:e4b', 'Gemma 4 E4B', 6.6, 128_000, 12, 'llm.catalog.shortlist.compact'),
+  entry('ministral-3:8b', 'Ministral 3 8B', 6.0, 256_000, 12, 'llm.catalog.shortlist.midSize'),
+  entry('gemma4:12b', 'Gemma 4 12B', 8.0, 256_000, 16, 'llm.catalog.shortlist.midSize'),
+  entry('ministral-3:14b', 'Ministral 3 14B', 9.1, 256_000, 16, 'llm.catalog.shortlist.largerMinistral'),
+  entry('gpt-oss:20b', 'gpt-oss 20B', 14, 128_000, 24, 'llm.catalog.shortlist.reasoning'),
+  entry('mistral-small3.2', 'Mistral Small 3.2', 15, 128_000, 24, 'llm.catalog.shortlist.largerGeneral'),
+  entry('qwen3.6:27b', 'Qwen 3.6 27B', 17, 256_000, 32, 'llm.catalog.shortlist.largest'),
 ]

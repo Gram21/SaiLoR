@@ -14,6 +14,7 @@ import {
 import { formatBytes, gpuText, hostOf, memoryCheck, suggestContext } from '../llm/localUi'
 import type { LlmConfig } from '../llm/types'
 import type { HardwareInfo } from '../platform/localRuntime'
+import { getLanguage, useT } from '../i18n'
 import { Bar, ConsentBox, Unavailable } from './LocalBits'
 
 const SERVER_TYPES: { id: string; label: string; url: string }[] = [
@@ -56,6 +57,7 @@ export function LocalChatPanel(props: { draft: LlmConfig; patch: (c: Partial<Llm
 
 function Panel({ draft, patch }: { draft: LlmConfig; patch: (c: Partial<LlmConfig>) => void }) {
   const platform = getPlatform()
+  const t = useT()
   const [type, setType] = useState(draft.provider === 'ollama' ? 'ollama' : typeOfUrl(draft.baseUrl))
   const [checking, setChecking] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -139,7 +141,7 @@ function Panel({ draft, patch }: { draft: LlmConfig; patch: (c: Partial<LlmConfi
     setError(null)
     const r = await ollama!.manifestSize(model.tag)
     if (!r.ok) return setError(r.error)
-    if (r.bytes === null) return setError(`"${model.tag}" was not found in the Ollama registry (404) — the tag may have been renamed.`)
+    if (r.bytes === null) return setError(t('llm.chat.notInRegistry', { tag: model.tag }))
     setConsent({ model, bytes: r.bytes })
   }
 
@@ -168,24 +170,25 @@ function Panel({ draft, patch }: { draft: LlmConfig; patch: (c: Partial<LlmConfi
   const mem = picked ? memoryCheck(picked.weightsBytes, kvBytes, hw) : null
   const maxCtx = picked?.modelMax
   const fits = (m: ShortlistModel) => hw !== null && hw.totalRamBytes >= m.minRamGB * 1e9
+  const serverLabel = (s: { id: string; label: string }) => (s.id === 'other' ? t('llm.chat.serverOther') : s.label)
 
   return (
     <div className="llm-local llm-wide">
       <div className="llm-row">
         <label htmlFor="llm-chat-type" className="llm-label">
-          Server type
+          {t('llm.chat.serverType')}
         </label>
         <select id="llm-chat-type" value={type} onChange={(e) => changeType(e.target.value)}>
           {SERVER_TYPES.map((t) => (
             <option key={t.id} value={t.id}>
-              {t.label}
+              {serverLabel(t)}
             </option>
           ))}
         </select>
       </div>
       <div className="llm-row">
         <label htmlFor="llm-chat-url" className="llm-label">
-          Server URL
+          {t('llm.chat.serverUrl')}
         </label>
         <div className="llm-model-field">
           <input
@@ -199,7 +202,7 @@ function Panel({ draft, patch }: { draft: LlmConfig; patch: (c: Partial<LlmConfi
             }}
           />
           <button type="button" onClick={() => void check()} disabled={checking || !draft.baseUrl.trim()}>
-            {checking ? 'Checking…' : 'Check connection'}
+            {checking ? t('llm.common.checking') : t('llm.chat.checkConnection')}
           </button>
         </div>
       </div>
@@ -212,18 +215,20 @@ function Panel({ draft, patch }: { draft: LlmConfig; patch: (c: Partial<LlmConfi
       {checked && (
         <>
           <p role="status" className="llm-status-ok">
-            Connected to {checked.kind === 'unknown' ? 'an OpenAI-compatible server' : SERVER_TYPES.find((t) => t.id === checked.kind)?.label ?? checked.kind}
-            {checked.version ? ` ${checked.version}` : ''}.
+            {t('llm.chat.connected', {
+              server: checked.kind === 'unknown' ? t('llm.chat.anOpenAiServer') : SERVER_TYPES.find((s) => s.id === checked.kind)?.label ?? checked.kind,
+              version: checked.version ? ` ${checked.version}` : '',
+            })}
           </p>
           {!checked.isLocal && (
             <p role="alert" className="llm-warning">
-              Papers will be sent over the network to {hostOf(draft.baseUrl)}.
+              {t('llm.chat.networkWarning', { host: hostOf(draft.baseUrl) })}
             </p>
           )}
-          <h4>{isOllama ? 'Installed models' : 'Models on this server'}</h4>
+          <h4>{isOllama ? t('llm.chat.installedModels') : t('llm.chat.serverModels')}</h4>
           {isOllama && (
             <p className="llm-hint llm-wide">
-              Where a model runs (GPU or CPU) shows once it is loaded, e.g. after Verify setup — press Check connection again.
+              {t('llm.chat.gpuHint')}
             </p>
           )}
           {isOllama ? (
@@ -234,18 +239,18 @@ function Panel({ draft, patch }: { draft: LlmConfig; patch: (c: Partial<LlmConfi
                     <div className="llm-item-name">{m.name}</div>
                     <div className="llm-item-meta">
                       {[formatBytes(m.sizeBytes), m.parameterSize, m.quantization].filter(Boolean).join(' · ')}
-                      {checked.running[m.name] ? ` · loaded: ${checked.running[m.name]}` : ''}
+                      {checked.running[m.name] ? ` · ${t('llm.chat.loadedOn', { where: checked.running[m.name] })}` : ''}
                     </div>
                   </div>
                   <button type="button" onClick={() => void choose(m.name, m.sizeBytes)}>
-                    {draft.model === m.name ? 'Selected' : 'Use'}
+                    {draft.model === m.name ? t('llm.local.selected') : t('llm.local.use')}
                   </button>
                   <button type="button" className={deleting === m.name ? 'llm-danger' : undefined} onClick={() => void remove(m.name)}>
-                    {deleting === m.name ? 'Sure?' : 'Delete'}
+                    {deleting === m.name ? t('llm.settings.sure') : t('common.delete')}
                   </button>
                 </li>
               ))}
-              {checked.installed.length === 0 && <li className="llm-empty">No models installed yet — download one below.</li>}
+              {checked.installed.length === 0 && <li className="llm-empty">{t('llm.chat.noModels')}</li>}
             </ul>
           ) : (
             <ul className="llm-list">
@@ -254,12 +259,12 @@ function Panel({ draft, patch }: { draft: LlmConfig; patch: (c: Partial<LlmConfi
                   <div className="llm-item-main">
                     <div className="llm-item-name">{m.id}</div>
                     <div className="llm-item-meta">
-                      {m.contextTokens ? `context ${m.contextTokens.toLocaleString('en-US')} tokens` : 'context unknown'}
-                      {m.loaded !== undefined ? ` · ${m.loaded ? 'loaded' : 'not loaded'}` : ''}
+                      {m.contextTokens ? t('llm.chat.contextTokens', { tokens: m.contextTokens.toLocaleString(getLanguage()) }) : t('llm.chat.contextUnknown')}
+                      {m.loaded !== undefined ? ` · ${m.loaded ? t('llm.chat.loadedState') : t('llm.chat.notLoaded')}` : ''}
                     </div>
                   </div>
                   <button type="button" onClick={() => void choose(m.id, m.sizeBytes ?? 0, m.contextTokens)}>
-                    {draft.model === m.id ? 'Selected' : 'Use'}
+                    {draft.model === m.id ? t('llm.local.selected') : t('llm.local.use')}
                   </button>
                 </li>
               ))}
@@ -272,7 +277,7 @@ function Panel({ draft, patch }: { draft: LlmConfig; patch: (c: Partial<LlmConfi
         <>
           <div className="llm-row">
             <label htmlFor="llm-context" className="llm-label">
-              Context to use
+              {t('llm.chat.contextToUse')}
             </label>
             <input
               id="llm-context"
@@ -285,14 +290,16 @@ function Panel({ draft, patch }: { draft: LlmConfig; patch: (c: Partial<LlmConfi
             />
           </div>
           <p className="llm-hint">
-            Long papers need a large context; the server's default is often only 4,096 tokens, which would silently cut the
-            paper. The app sets it explicitly. Larger = more memory.
-            {maxCtx ? ` This model supports up to ${maxCtx.toLocaleString('en-US')}.` : ''}
+            {t('llm.chat.contextHint')}
+            {maxCtx ? ` ${t('llm.chat.contextMax', { max: maxCtx.toLocaleString(getLanguage()) })}` : ''}
           </p>
           {mem && mem.needBytes > 0 && (
             <p role={mem.tooBig ? 'alert' : 'status'} className={mem.tooBig ? 'llm-status-error' : 'llm-hint llm-wide'}>
-              Estimated memory: {formatBytes(mem.needBytes)} (model{kvBytes !== null ? ' + context' : ''}).
-              {mem.tooBig && ' This exceeds your free memory: part of the model will run on the CPU: slow. Lower the context or pick a smaller model.'}
+              {t('llm.chat.memoryEstimate', {
+                size: formatBytes(mem.needBytes),
+                parts: kvBytes !== null ? t('llm.chat.memoryWithContext') : t('llm.chat.memoryModel'),
+              })}
+              {mem.tooBig && t('llm.chat.memoryTooBig')}
             </p>
           )}
         </>
@@ -300,31 +307,34 @@ function Panel({ draft, patch }: { draft: LlmConfig; patch: (c: Partial<LlmConfi
 
       {isOllama && ollama && (
         <>
-          <h4>Download a model</h4>
-          <p className="llm-hint llm-wide">
-            Models are not benchmarked for annotation quality — start with a small one and check the results.
-          </p>
+          <h4>{t('llm.chat.downloadModel')}</h4>
+          <p className="llm-hint llm-wide">{t('llm.chat.benchmarkHint')}</p>
           <ul className="llm-list">
             {OLLAMA_SHORTLIST.map((m) => (
               <li key={m.tag} className="llm-item" aria-label={m.label}>
                 <div className="llm-item-main">
                   <div className="llm-item-name">
-                    {m.label} {fits(m) && <span className="llm-badge">Fits your hardware</span>}
+                    {m.label} {fits(m) && <span className="llm-badge">{t('llm.chat.fits')}</span>}
                   </div>
                   <div className="llm-item-meta">
-                    ≈{formatBytes(m.approxBytes)} · up to {m.contextTokens.toLocaleString('en-US')} tokens · about {m.minRamGB} GB RAM · {m.notes}
+                    {t('llm.chat.shortlistMeta', {
+                      size: formatBytes(m.approxBytes),
+                      tokens: m.contextTokens.toLocaleString(getLanguage()),
+                      ram: m.minRamGB,
+                      notes: t(m.notes),
+                    })}
                   </div>
                   {pull?.tag === m.tag && (
                     <div>
                       {pull.error ? (
                         <span role="alert" className="llm-status-error">
-                          Download failed: {pull.error}
+                          {t('llm.chat.downloadFailed', { error: pull.error })}
                         </span>
                       ) : (
                         <>
-                          <Bar label={`${m.label} download`} completed={pull.p?.completed ?? 0} total={pull.p?.total ?? 0} /> {pull.p?.status ?? 'starting'}{' '}
+                          <Bar label={t('llm.local.downloadLabel', { label: m.label })} completed={pull.p?.completed ?? 0} total={pull.p?.total ?? 0} /> {pull.p?.status ?? t('llm.chat.starting')}{' '}
                           <button type="button" onClick={() => { abort.current?.abort(); setPull(null) }}>
-                            Stop watching
+                            {t('llm.chat.stopWatching')}
                           </button>
                         </>
                       )}
@@ -332,21 +342,19 @@ function Panel({ draft, patch }: { draft: LlmConfig; patch: (c: Partial<LlmConfi
                   )}
                 </div>
                 <button type="button" onClick={() => void ask(m)} disabled={consent !== null || (pull !== null && !pull.error)}>
-                  Download
+                  {t('llm.local.download')}
                 </button>
               </li>
             ))}
           </ul>
           {consent && (
             <ConsentBox
-              label="Model download consent"
-              confirmLabel={`Download ${formatBytes(consent.bytes)}`}
+              label={t('llm.local.modelConsent')}
+              confirmLabel={t('llm.local.downloadSize', { size: formatBytes(consent.bytes) })}
               onConfirm={() => void download()}
               onCancel={() => setConsent(null)}
             >
-              This downloads ≈{formatBytes(consent.bytes)} into Ollama's model folder on {hostOf(draft.baseUrl)}; Ollama picks GPU
-              (CUDA/Metal/ROCm/Vulkan) automatically and falls back to CPU; you can stop watching the download but Ollama may
-              keep downloading in the background.
+              {t('llm.chat.consentBody', { size: formatBytes(consent.bytes), host: hostOf(draft.baseUrl) })}
             </ConsentBox>
           )}
         </>

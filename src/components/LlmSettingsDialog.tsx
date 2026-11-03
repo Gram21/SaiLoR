@@ -14,6 +14,7 @@ import { LocalChatPanel } from './LocalChatPanel'
 import { LocalSystemOnePanel } from './LocalSystemOnePanel'
 import { isCloudflareAccountId } from '../llm/localUi'
 import { AiPreviewNotice } from './AiPreviewNotice'
+import { rich, tp, useT, type MessageKey } from '../i18n'
 import '../styles/ai.css'
 
 const NO_MODELS: ModelInfo[] = []
@@ -42,11 +43,11 @@ const DEFAULT_MAX_STATE_TOKENS = 60_000
  * `PROVIDER_LIST` rather than hand-written — a hardcoded sentence here already
  * went stale once (Google shipped, the text didn't), so it now can't again.
  */
-const pdfCapableProviders = (() => {
+const pdfCapableProviders = (and: string) => {
   const names = PROVIDER_LIST.filter((p) => p.supportsPdf).map((p) => p.label)
   if (names.length <= 1) return names.join('')
-  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
-})()
+  return `${names.slice(0, -1).join(', ')} ${and} ${names[names.length - 1]}`
+}
 
 /**
  * What the Provider select offers: the plain providers, plus three guided
@@ -54,10 +55,10 @@ const pdfCapableProviders = (() => {
  */
 type Kind = Provider | 'local-chat' | 'local-s1' | 'hosted-s1'
 
-const GUIDED: { id: Kind; label: string }[] = [
-  { id: 'local-chat', label: 'Local model — chat (Ollama, LM Studio, llama.cpp, vLLM)' },
-  { id: 'local-s1', label: 'Local model — decision model (System 1)' },
-  { id: 'hosted-s1', label: 'Hosted decision model — Clef (Cloudflare) / Jev' },
+const GUIDED: { id: Kind; label: MessageKey }[] = [
+  { id: 'local-chat', label: 'llm.settings.guidedLocalChat' },
+  { id: 'local-s1', label: 'llm.settings.guidedLocalS1' },
+  { id: 'hosted-s1', label: 'llm.settings.guidedHostedS1' },
 ]
 
 const CLOUD_PROVIDERS = PROVIDER_LIST.filter((p) => p.id !== 'systemone' && p.id !== 'ollama')
@@ -98,6 +99,7 @@ export function LlmSettingsDialog() {
   const modelsLoadingById = useAiStore((s) => s.modelsLoading)
   // [impl->req~llm-30~1]
   const modelsErrorById = useAiStore((s) => s.modelsError)
+  const t = useT()
 
   /** The target being edited/added; null means we are showing the list. */
   const [draft, setDraft] = useState<LlmConfig | null>(null)
@@ -286,16 +288,16 @@ export function LlmSettingsDialog() {
 
   /** What is missing before this target can be saved or verified. */
   const validate = (d: LlmConfig): string | null => {
-    if (!d.name.trim()) return 'Give the model a name — it is what you pick from later.'
-    if (!d.model.trim()) return 'Enter a model name, e.g. claude-opus-4-8 or gpt-4o.'
+    if (!d.name.trim()) return t('llm.settings.validateName')
+    if (!d.model.trim()) return t('llm.settings.validateModel')
     if (d.systemOneFlavor === 'cloudflare' && !isCloudflareAccountId(d.accountId ?? '')) {
-      return 'Enter your Cloudflare account ID: 32 lowercase hex characters, shown in the Cloudflare dashboard.'
+      return t('llm.settings.validateCloudflare')
     }
     if (PROVIDERS[d.provider].editableBaseUrl && !d.baseUrl.trim()) {
-      return 'Enter the base URL of your OpenAI-compatible server, e.g. http://localhost:1234.'
+      return t('llm.settings.validateBaseUrl')
     }
     // A stored key is invisible here, so "blank" only means "missing" when none is stored.
-    if (!d.hasKey && !d.noKey && !apiKey.trim()) return 'Enter the API key for this provider.'
+    if (!d.hasKey && !d.noKey && !apiKey.trim()) return t('llm.settings.validateApiKey')
     return null
   }
 
@@ -374,14 +376,15 @@ export function LlmSettingsDialog() {
       >
         <div className="modal-head">
           <strong id="llm-settings-title">
-            AI models{draft ? (configs.some((c) => c.id === draft.id) ? ' — Edit' : ' — Add') : ''}
+            {t('llm.settings.title')}
+            {draft ? (configs.some((c) => c.id === draft.id) ? t('llm.settings.titleEdit') : t('llm.settings.titleAdd')) : ''}
           </strong>
           <button
             type="button"
             className="icon-btn"
             onClick={close}
-            title="Close"
-            aria-label="Close"
+            title={t('common.close')}
+            aria-label={t('common.close')}
           >
             ×
           </button>
@@ -393,30 +396,19 @@ export function LlmSettingsDialog() {
               differs per runtime. Never hide this behind a "learn more". */}
           {browser ? (
             <div className="llm-warning" role="note">
-              <strong>Running in the browser — your API key is not protected here.</strong>
-              <p>
-                The key is saved <strong>unencrypted in this browser's local storage</strong>, where
-                any script on this page — and anyone with access to this machine's browser profile —
-                can read it. On top of that, some providers refuse requests made directly from a web
-                page, and a self-hosted OpenAI-compatible endpoint usually will (it has no CORS
-                headers for this origin). <strong>The desktop app is the supported path</strong> for
-                AI annotation; use a throwaway or tightly scoped key if you continue here.
-              </p>
+              <strong>{t('llm.settings.browserWarnTitle')}</strong>
+              <p>{rich('llm.settings.browserKeyBody')}</p>
             </div>
           ) : (
             <div className="llm-notice" role="note">
-              The API key is stored <strong>encrypted with your operating system's keychain</strong>
-              , is held by the app's main process, and is never handed to the page that renders this
-              dialog. It is spliced into a request only as it is sent to the provider.
+              {rich('llm.settings.keyNotice')}
             </div>
           )}
 
           {!draft ? (
             <>
               {configs.length === 0 ? (
-                <p className="llm-empty">
-                  No models yet. Add one — a model is a provider, a model name, and the key to reach it.
-                </p>
+                <p className="llm-empty">{t('llm.settings.empty')}</p>
               ) : (
                 <ul className="llm-list">
                   {configs.map((config) => (
@@ -425,21 +417,19 @@ export function LlmSettingsDialog() {
                         <div className="llm-item-name">{config.name}</div>
                         <div className="llm-item-meta">
                           {PROVIDERS[config.provider].label} · {config.model} ·{' '}
-                          {config.attach === 'pdf' ? 'sends the PDF' : 'sends extracted text'}
+                          {config.attach === 'pdf' ? t('llm.settings.sendsPdf') : t('llm.settings.sendsText')}
                         </div>
                         {!config.hasKey && !config.noKey && (
-                          <div className="llm-nokey">
-                            No API key stored — this model cannot be used until you add one.
-                          </div>
+                          <div className="llm-nokey">{t('llm.settings.noKeyStored')}</div>
                         )}
                       </div>
                       <button
                         type="button"
                         onClick={() => startEdit(config)}
                         disabled={busy}
-                        title={`Edit "${config.name}"`}
+                        title={t('llm.settings.editTitle', { name: config.name })}
                       >
-                        Edit
+                        {t('common.edit')}
                       </button>
                       <button
                         type="button"
@@ -447,12 +437,12 @@ export function LlmSettingsDialog() {
                         disabled={busy}
                         title={
                           confirmId === config.id
-                            ? `Click again to delete "${config.name}"`
-                            : `Delete "${config.name}"`
+                            ? t('llm.settings.deleteConfirmTitle', { name: config.name })
+                            : t('llm.settings.deleteTitle', { name: config.name })
                         }
                         className={confirmId === config.id ? 'llm-danger' : undefined}
                       >
-                        {confirmId === config.id ? 'Sure?' : 'Delete'}
+                        {confirmId === config.id ? t('llm.settings.sure') : t('common.delete')}
                       </button>
                     </li>
                   ))}
@@ -465,9 +455,9 @@ export function LlmSettingsDialog() {
                   className="primary"
                   onClick={startAdd}
                   disabled={busy}
-                  title="Add a new AI model"
+                  title={t('llm.settings.addModelTitle')}
                 >
-                  + Add model…
+                  {t('llm.settings.addModel')}
                 </button>
               </div>
             </>
@@ -481,22 +471,22 @@ export function LlmSettingsDialog() {
             >
               <div className="llm-row">
                 <label htmlFor="llm-name" className="llm-label">
-                  Name
+                  {t('llm.settings.name')}
                 </label>
                 <input
                   id="llm-name"
                   type="text"
                   value={draft.name}
                   onChange={(e) => patch({ name: e.target.value })}
-                  placeholder="e.g. Claude (work key)"
+                  placeholder={t('llm.settings.namePlaceholder')}
                   required
                 />
               </div>
-              <p className="llm-hint">Shown in the picker when you start an AI annotation.</p>
+              <p className="llm-hint">{t('llm.settings.nameHint')}</p>
 
               <div className="llm-row">
                 <label htmlFor="llm-provider" className="llm-label">
-                  Provider
+                  {t('llm.settings.provider')}
                 </label>
                 <select
                   id="llm-provider"
@@ -510,7 +500,7 @@ export function LlmSettingsDialog() {
                   ))}
                   {GUIDED.map((g) => (
                     <option key={g.id} value={g.id}>
-                      {g.label}
+                      {t(g.label)}
                     </option>
                   ))}
                 </select>
@@ -524,7 +514,7 @@ export function LlmSettingsDialog() {
                 <>
                 <div className="llm-row">
                   <label htmlFor="llm-url" className="llm-label">
-                    Base URL
+                    {t('llm.settings.baseUrl')}
                   </label>
                   <input
                     id="llm-url"
@@ -536,20 +526,18 @@ export function LlmSettingsDialog() {
                     placeholder={urlEditable ? 'http://localhost:1234' : ''}
                     title={
                       urlEditable
-                        ? 'The root of your OpenAI-compatible server, e.g. http://localhost:1234'
-                        : `Fixed for ${info?.label ?? 'this provider'}.`
+                        ? t('llm.settings.baseUrlTitle')
+                        : t('llm.settings.fixedFor', { provider: info?.label ?? t('llm.settings.thisProvider') })
                     }
                   />
                 </div>
                 <p className="llm-hint">
-                  {urlEditable
-                    ? 'Where your server listens — e.g. LM Studio, llama.cpp or vLLM on http://localhost:1234.'
-                    : 'Fixed for this provider, so there is nothing to type.'}
+                  {urlEditable ? t('llm.settings.urlHint') : t('llm.settings.urlFixedHint')}
                 </p>
 
                 <div className="llm-row">
                   <label htmlFor="llm-model" className="llm-label">
-                    Model
+                    {t('llm.settings.model')}
                   </label>
                   <div className="llm-model-field">
                     <ModelPicker
@@ -558,8 +546,8 @@ export function LlmSettingsDialog() {
                       onChange={(v) => patch({ model: v })}
                       models={modelListingSupported ? providerModels : NO_MODELS}
                       loading={modelListingSupported && modelsLoading}
-                      providerLabel={info?.label ?? 'This provider'}
-                      placeholder="e.g. claude-opus-4-8, gpt-4o"
+                      providerLabel={info?.label ?? t('llm.settings.thisProvider')}
+                      placeholder={t('llm.settings.modelPlaceholder')}
                     />
                     {modelListingSupported && (
                       <button
@@ -568,25 +556,31 @@ export function LlmSettingsDialog() {
                         disabled={modelsLoading || (!draft.hasKey && !apiKey.trim())}
                         title={
                           !draft.hasKey && !apiKey.trim()
-                            ? 'Enter an API key first — the list has to be fetched with it.'
-                            : `Fetch the current model list from ${info?.label ?? 'the provider'}.`
+                            ? t('llm.settings.fetchNeedsKey')
+                            : t('llm.settings.fetchTitle', { provider: info?.label ?? t('llm.settings.theProvider') })
                         }
                       >
-                        {modelsLoading ? 'Loading…' : providerModels.length > 0 ? 'Refresh' : 'Load models'}
+                        {modelsLoading
+                          ? t('common.loading')
+                          : providerModels.length > 0
+                            ? t('llm.settings.refresh')
+                            : t('llm.settings.loadModels')}
                       </button>
                     )}
                   </div>
                 </div>
                 <p className="llm-hint">
                   {!modelListingSupported
-                    ? "OpenAI-compatible servers vary too much for the app to reliably list or validate models — type the model name your server expects. Nothing here is checked; that's on you to get right."
+                    ? t('llm.settings.compatibleHint')
                     : providerModels.length > 0
-                      ? `${providerModels.length} model${providerModels.length === 1 ? '' : 's'} loaded from ${info?.label ?? 'the provider'} — search the list, or type a name it doesn't have.`
-                      : "Type the model name exactly as the provider documents it, or load the current list once a key is set (a red field means the typed name isn't in a loaded list)."}
+                      ? tp('llm.settings.modelsLoaded', providerModels.length, {
+                          provider: info?.label ?? t('llm.settings.theProvider'),
+                        })
+                      : t('llm.settings.typeNameHint')}
                 </p>
                 {modelListingSupported && modelsError && (
                   <p role="alert" className="llm-problem">
-                    Couldn't load the model list: {modelsError}
+                    {t('llm.settings.modelsError', { error: modelsError })}
                   </p>
                 )}
                 </>
@@ -595,7 +589,7 @@ export function LlmSettingsDialog() {
               {selectedModel?.reasoning && (
                 <div className="llm-row">
                   <label htmlFor="llm-effort" className="llm-label">
-                    Reasoning effort
+                    {t('llm.settings.effort')}
                   </label>
                   <select
                     id="llm-effort"
@@ -612,14 +606,13 @@ export function LlmSettingsDialog() {
               )}
               {selectedModel?.reasoning && (
                 <p className="llm-hint">
-                  How hard this model thinks before answering. Higher effort tends to be slower and
-                  more expensive; "medium" is a reasonable default.
+                  {t('llm.settings.effortHint')}
                 </p>
               )}
 
               <div className="llm-row">
                 <label htmlFor="llm-input-price" className="llm-label">
-                  Price per 1M input tokens (USD)
+                  {t('llm.settings.inputPrice')}
                 </label>
                 <input
                   id="llm-input-price"
@@ -634,7 +627,7 @@ export function LlmSettingsDialog() {
               </div>
               <div className="llm-row">
                 <label htmlFor="llm-output-price" className="llm-label">
-                  Price per 1M output tokens (USD)
+                  {t('llm.settings.outputPrice')}
                 </label>
                 <input
                   id="llm-output-price"
@@ -648,8 +641,7 @@ export function LlmSettingsDialog() {
                 />
               </div>
               <p className="llm-hint">
-                Used only for this app's own rough cost estimates — check your provider's pricing
-                page for the current rate.
+                {t('llm.settings.priceHint')}
               </p>
 
               {kind !== 'local-chat' &&
@@ -662,7 +654,7 @@ export function LlmSettingsDialog() {
                 <>
                   <div className="llm-row">
                     <label htmlFor="llm-max-state-tokens" className="llm-label">
-                      Max input tokens
+                      {t('llm.settings.maxStateTokens')}
                     </label>
                     <input
                       id="llm-max-state-tokens"
@@ -678,9 +670,7 @@ export function LlmSettingsDialog() {
                     />
                   </div>
                   <p className="llm-hint">
-                    The paper state (title, abstract, extracted text) is truncated to fit this budget.
-                    Jev's own context is about 64k tokens; Laya is far smaller (English 512,
-                    multilingual up to 8192) — for those, only the title and abstract will fit.
+                    {t('llm.settings.stateBudgetHint')}
                   </p>
                 </>
               )}
@@ -688,7 +678,7 @@ export function LlmSettingsDialog() {
               {urlEditable && !draft.managed && !cloudflare && (
                 <div className="llm-row">
                   <label htmlFor="llm-nokey" className="llm-label">
-                    No API key
+                    {t('llm.settings.noKey')}
                   </label>
                   <input
                     id="llm-nokey"
@@ -699,14 +689,14 @@ export function LlmSettingsDialog() {
                 </div>
               )}
               {urlEditable && !draft.managed && !cloudflare && (
-                <p className="llm-hint">This server needs no API key.</p>
+                <p className="llm-hint">{t('llm.settings.noKeyHint')}</p>
               )}
 
               {!draft.managed && (
                 <>
                 <div className="llm-row">
                   <label htmlFor="llm-key" className="llm-label">
-                    {cloudflare ? 'API token' : 'API key'}
+                    {cloudflare ? t('llm.settings.apiToken') : t('llm.settings.apiKey')}
                   </label>
                   <input
                     id="llm-key"
@@ -716,19 +706,16 @@ export function LlmSettingsDialog() {
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder={
                       draft.hasKey
-                        ? 'Key stored — leave blank to keep it'
+                        ? t('llm.settings.keyStored')
                         : draft.noKey
-                          ? 'Not needed — this server needs no key'
-                          : 'Paste the provider key'
+                          ? t('llm.settings.keyNotNeeded')
+                          : t('llm.settings.keyPaste')
                     }
                     disabled={draft.noKey && !draft.hasKey}
                     required={!draft.hasKey && !draft.noKey}
                   />
                 </div>
-                <p className="llm-hint">
-                  A stored key is never shown again, not even here — this dialog can only ever be told{' '}
-                  <em>that</em> one exists. Type a new key to replace it.
-                </p>
+                <p className="llm-hint">{rich('llm.settings.keyHint')}</p>
                 </>
               )}
 
@@ -736,31 +723,31 @@ export function LlmSettingsDialog() {
                 <>
                   <div className="llm-row">
                     <label htmlFor="llm-attach" className="llm-label">
-                      Send the paper as
+                      {t('llm.settings.sendAs')}
                     </label>
                     <select
                       id="llm-attach"
                       value={draft.attach}
                       onChange={(e) => patch({ attach: e.target.value as Attach })}
                     >
-                      <option value="text">Extracted text (recommended)</option>
+                      <option value="text">{t('llm.settings.attachText')}</option>
                       <option
                         value="pdf"
                         disabled={!info?.supportsPdf}
                         title={
                           info?.supportsPdf
-                            ? 'The provider receives the PDF file itself.'
-                            : 'This provider cannot take a PDF.'
+                            ? t('llm.settings.attachPdfTitle')
+                            : t('llm.settings.attachPdfNoTitle')
                         }
                       >
-                        The PDF itself{info?.supportsPdf ? '' : ' — not supported by this provider'}
+                        {t('llm.settings.attachPdf')}{info?.supportsPdf ? '' : t('llm.settings.attachPdfUnsupported')}
                       </option>
                     </select>
                   </div>
                   <p className="llm-hint">
                     {info?.supportsPdf
-                      ? 'Extracted text is smaller, cheaper and works everywhere; the PDF keeps tables and figures intact but costs far more. Scanned papers yield no text, so only the PDF path can read them.'
-                      : `This provider has no way to take a PDF in a single request — either it has no file input at all, or it needs the file uploaded and referenced separately, which this app does not do. So this model must send extracted text. ${pdfCapableProviders} can take the PDF.`}
+                      ? t('llm.settings.attachHintPdf')
+                      : t('llm.settings.pdfUnsupportedHint', { providers: pdfCapableProviders(t('llm.settings.and')) })}
                   </p>
                 </>
               )}
@@ -777,23 +764,20 @@ export function LlmSettingsDialog() {
                     type="button"
                     onClick={() => void onVerify()}
                     disabled={verifying || busy}
-                    title="Save this model and send a test request to verify it works"
+                    title={t('llm.settings.verifyTitle')}
                   >
-                    {verifying ? 'Checking…' : 'Verify setup'}
+                    {verifying ? t('llm.common.checking') : t('llm.settings.verify')}
                   </button>
-                  <span className="llm-verify-hint">
-                    Sends a one-word test request. <strong>This saves the model first</strong> —
-                    the key has to be stored before anything can use it.
-                  </span>
+                  <span className="llm-verify-hint">{rich('llm.settings.verifyHint')}</span>
                 </div>
                 {verifying && (
                   <p role="status" className="llm-status">
-                    Checking… waiting for {info?.label ?? 'the provider'} to answer.
+                    {t('llm.settings.verifyWaiting', { provider: info?.label ?? t('llm.settings.theProvider') })}
                   </p>
                 )}
                 {reply !== null && !verifying && (
                   <p role="status" className="llm-status-ok">
-                    Works. {info?.label ?? 'The provider'} answered: “{reply}”
+                    {t('llm.settings.verifyOk', { provider: info?.label ?? t('llm.settings.providerDefault'), reply })}
                   </p>
                 )}
                 {verifyError && !verifying && (
@@ -808,17 +792,17 @@ export function LlmSettingsDialog() {
                   type="button"
                   onClick={backToList}
                   disabled={busy || verifying}
-                  title="Discard changes and return to the list"
+                  title={t('llm.settings.cancelTitle')}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
                   className="primary"
                   disabled={busy || verifying}
-                  title="Save this model"
+                  title={t('llm.settings.saveTitle')}
                 >
-                  {busy ? 'Saving…' : 'Save'}
+                  {busy ? t('llm.settings.saving') : t('common.save')}
                 </button>
               </div>
             </form>

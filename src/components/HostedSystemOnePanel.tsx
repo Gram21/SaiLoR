@@ -1,5 +1,6 @@
 // [impl->req~llm-733~1]
 import type { LlmConfig } from '../llm/types'
+import { useT } from '../i18n'
 import { systemOneProfileFor } from '../llm/modelProfiles'
 import { isCloudflareAccountId } from '../llm/localUi'
 
@@ -23,6 +24,7 @@ export function hostedPreset(base: LlmConfig, flavor: 'jev' | 'cloudflare', mode
 
 /** Jev (own generic URL/model rows) or Clef on Cloudflare Workers AI. The API key uses the dialog's key field. */
 export function HostedSystemOnePanel({ draft, replace }: { draft: LlmConfig; replace: (c: LlmConfig) => void }) {
+  const t = useT()
   const cf = draft.systemOneFlavor === 'cloudflare'
   const account = draft.accountId ?? ''
   const accountBad = cf && account !== '' && !isCloudflareAccountId(account)
@@ -30,7 +32,7 @@ export function HostedSystemOnePanel({ draft, replace }: { draft: LlmConfig; rep
     <>
       <div className="llm-row">
         <label htmlFor="llm-s1-flavor" className="llm-label">
-          Service
+          {t('llm.hosted.service')}
         </label>
         <select
           id="llm-s1-flavor"
@@ -45,7 +47,7 @@ export function HostedSystemOnePanel({ draft, replace }: { draft: LlmConfig; rep
         <>
           <div className="llm-row">
             <label htmlFor="llm-cf-account" className="llm-label">
-              Account ID
+              {t('llm.hosted.accountId')}
             </label>
             <input
               id="llm-cf-account"
@@ -54,31 +56,26 @@ export function HostedSystemOnePanel({ draft, replace }: { draft: LlmConfig; rep
               value={account}
               aria-invalid={accountBad}
               onChange={(e) => replace({ ...draft, accountId: e.target.value.trim() })}
-              placeholder="32 hex characters"
+              placeholder={t('llm.hosted.accountPlaceholder')}
             />
           </div>
           <p className={accountBad ? 'llm-hint llm-status-error' : 'llm-hint'}>
-            {accountBad
-              ? 'An account ID is 32 lowercase hex characters (0-9, a-f).'
-              : 'A public ID, not a secret — find it in the Cloudflare dashboard. The API token goes in the key field below.'}
+            {accountBad ? t('llm.hosted.accountInvalid') : t('llm.hosted.accountHint')}
           </p>
           <div className="llm-row">
             <label htmlFor="llm-cf-model" className="llm-label">
-              Model
+              {t('llm.settings.model')}
             </label>
             <select id="llm-cf-model" value={draft.model} onChange={(e) => replace(hostedPreset(draft, 'cloudflare', e.target.value))}>
-              <option value="clef-flash">clef-flash (9B, cheaper)</option>
+              <option value="clef-flash">{t('llm.hosted.clefFlashOption')}</option>
               <option value="clef">clef (27B)</option>
             </select>
           </div>
-          <p className="llm-hint">
-            Limits: 64k-token context, at most 64 questions per request. Roughly $0.09–0.24 per
-            million input tokens — check Cloudflare's pricing page for the current rate.
-          </p>
+          <p className="llm-hint">{t('llm.hosted.cfLimits')}</p>
         </>
       ) : (
         <p className="llm-hint llm-wide">
-          TypeSafe's hosted Jev: default URL {JEV_URL}, model jev-latest, plus your API key.
+          {t('llm.hosted.jevHint', { url: JEV_URL })}
         </p>
       )}
     </>

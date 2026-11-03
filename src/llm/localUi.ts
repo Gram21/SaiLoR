@@ -1,4 +1,5 @@
 // [impl->req~llm-730~1]
+import { getLanguage, t } from '../i18n'
 import type { Backend, HardwareInfo } from '../platform/localRuntime'
 import { computeNumCtx } from './ollama'
 
@@ -8,7 +9,7 @@ const GB = 1e9
 const MB = 1e6
 
 export function formatBytes(n: number): string {
-  if (n < 0) return 'unknown'
+  if (n < 0) return t('llm.ui.unknown')
   return n >= GB ? `${(n / GB).toFixed(1)} GB` : `${Math.max(1, Math.round(n / MB))} MB`
 }
 
@@ -17,8 +18,8 @@ export const backendName = (b: Backend): string => BACKEND_NAME[b]
 
 export function hardwareSentence(hw: HardwareInfo): string {
   return hw.recommendedBackend === 'cpu'
-    ? 'No supported GPU found — will run on CPU (fine for small models like Laya; slower).'
-    : `Will run on GPU (${backendName(hw.recommendedBackend)}).`
+    ? t('llm.ui.hwCpu')
+    : t('llm.ui.hwGpu', { backend: backendName(hw.recommendedBackend) })
 }
 
 /** Hostname of a URL, or the raw text when it is not one. */
@@ -58,12 +59,12 @@ export const isCloudflareAccountId = (s: string): boolean => /^[a-f0-9]{32}$/.te
 
 /** Plain-words input limits of a System One model. */
 export function windowSentence(contextTokens: number, optionsBudgetTokens?: number): string {
-  const opts = optionsBudgetTokens
-    ? `; up to ${optionsBudgetTokens} for questions and answer options — long questions are cut, so keep field names and options short`
-    : ''
-  return `Input window ${contextTokens.toLocaleString('en-US')} tokens${opts}.`
+  const tokens = contextTokens.toLocaleString(getLanguage())
+  return optionsBudgetTokens
+    ? t('llm.ui.windowWithOptions', { tokens, budget: optionsBudgetTokens })
+    : t('llm.ui.window', { tokens })
 }
 
 export function gpuText(kind: 'gpu' | 'split' | 'cpu', pct: number): string {
-  return kind === 'gpu' ? '100% GPU' : kind === 'split' ? `split (${pct}% GPU) — slow` : 'CPU only — slow'
+  return kind === 'gpu' ? t('llm.ui.gpuFull') : kind === 'split' ? t('llm.ui.gpuSplit', { pct }) : t('llm.ui.cpuOnly')
 }

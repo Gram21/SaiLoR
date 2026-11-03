@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react'
+import { useT } from '../i18n'
 
 /** Small pieces shared by the local-model setup panels. */
 
 export function Unavailable() {
-  return <p className="llm-hint llm-wide">Available in the desktop app.</p>
+  const t = useT()
+  return <p className="llm-hint llm-wide">{t('llm.local.desktopOnly')}</p>
 }
 
 // [impl->req~llm-730~1]
@@ -17,6 +19,7 @@ export function ConsentBox(p: {
   /** When set, confirming is impossible and this says why. */
   blockedReason?: string
 }) {
+  const t = useT()
   return (
     <div role="group" aria-label={p.label} className="llm-consent">
       <p>{p.children}</p>
@@ -30,7 +33,7 @@ export function ConsentBox(p: {
           {p.confirmLabel}
         </button>
         <button type="button" onClick={p.onCancel}>
-          Cancel
+          {t('common.cancel')}
         </button>
       </div>
     </div>
