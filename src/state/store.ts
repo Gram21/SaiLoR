@@ -26,6 +26,7 @@ import { growConsolidated, toStoredAlignment, storedAsTreeAlignment } from '../c
 import { unanimousFills } from '../consolidate/unanimous'
 import { consolidatorHasAnswered, consolidationMark } from '../consolidate/readiness'
 import { validateProject, type UnannotatedPaper, type ValidationIssue } from '../model/validate'
+import { dropDuplicateSuggestions, duplicateOnWrite } from '../model/unique'
 import { formatPath, displayPath, resolvePath, parsePath, MAX_UNBOUNDED_INDEX, type ResolvedPath } from '../llm/paths'
 import { isUnanswered } from '../llm/fields'
 import type { Suggestion } from '../llm/types'
@@ -865,7 +866,8 @@ interface AppState {
   readOnly: boolean
   setReadOnly: (readOnly: boolean) => void
 
-  setFieldValue: (path: PathSeg[], name: string, index: number, value: FieldValue) => void
+  /** Returns a hint and writes nothing when the value would repeat an entry of a `unique` node. */
+  setFieldValue: (path: PathSeg[], name: string, index: number, value: FieldValue) => string | null
   addInstance: (path: PathSeg[], def: ResolvedDef) => void
   removeInstance: (path: PathSeg[], name: string, index: number) => void
   /** Tick/untick "annotation finished" for the current paper/seat (see
@@ -956,7 +958,7 @@ interface AppState {
   openConsolidation: (path: PathSeg[], name: string, index: number, returnToDisagreements?: boolean) => void
   closeConsolidation: () => void
   /** Store a chosen reviewer value and resolve that disagreement in one undo step. */
-  resolveConsolidationValue: (path: PathSeg[], name: string, index: number, value: FieldValue) => void
+  resolveConsolidationValue: (path: PathSeg[], name: string, index: number, value: FieldValue) => string | null
   /** Mark a field for a different, manually entered Consolidation value. */
   deferConsolidationValue: (path: PathSeg[], name: string, index: number) => void
   /**
@@ -2360,11 +2362,13 @@ export const useStore = create<AppState>()(
       }),
 
     setFieldValue: (path, name, index, value) => {
-      if (get().readOnly) return
+      if (get().readOnly) return null
       const prev = get()
-      if (!prev.project) return
+      if (!prev.project) return null
       // Multi-reviewer, nobody picked yet: nothing to attribute this edit to.
-      if (prev.project.reviewers > 1 && prev.currentReviewer === null) return
+      if (prev.project.reviewers > 1 && prev.currentReviewer === null) return null
+      const hint = duplicateHint(prev, path, name, index, value)
+      if (hint) return hint
       // Collapse consecutive edits of the same field into one undo step.
       const key = `${JSON.stringify(path)}|${name}|${index}`
       const coalesce = key === lastFieldKey
@@ -2406,6 +2410,7 @@ export const useStore = create<AppState>()(
         }
         s.dirty = true
       })
+      return null
     },
 
     addInstance: (path, def) => {
@@ -2868,9 +2873,14 @@ export const useStore = create<AppState>()(
           if (!at || peekValue(readTree, at.path, at.name, at.index) !== expectedCurrent) continue
           accepted.push({ at, value: suggestion.value, replace: true })
         }
-        skipped += itemCount - accepted.length
-        if (accepted.length > 0) {
-          planned.push({ paperId: item.paperId, reviewer: item.reviewer, usage: item.usage, accepted })
+        const kept = dropDuplicateSuggestions(
+          schema,
+          readTree,
+          accepted.map((a) => ({ path: a.at.canonical, value: a.value, a })),
+        ).kept.map((k) => k.a)
+        skipped += itemCount - kept.length
+        if (kept.length > 0) {
+          planned.push({ paperId: item.paperId, reviewer: item.reviewer, usage: item.usage, accepted: kept })
         }
       }
       if (planned.length === 0) return { filled: 0, skipped, papers: 0 }
@@ -3045,10 +3055,12 @@ export const useStore = create<AppState>()(
       }),
 
     resolveConsolidationValue: (path, name, index, value) => {
-      if (get().readOnly) return
+      if (get().readOnly) return null
       const prev = get()
       const paper = currentPaper(prev)
-      if (!prev.project || !paper || prev.currentReviewer !== 'consolidation') return
+      if (!prev.project || !paper || prev.currentReviewer !== 'consolidation') return null
+      const hint = duplicateHint(prev, path, name, index, value)
+      if (hint) return hint
       const canonical = fieldPath(path, name, index)
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
       lastFieldKey = null
@@ -3066,6 +3078,7 @@ export const useStore = create<AppState>()(
         delete s.deferredConsolidations[deferredConsolidationKey(draft.id, canonical)]
         s.dirty = true
       })
+      return null
     },
 
     deferConsolidationValue: (path, name, index) => {
@@ -3169,11 +3182,15 @@ export const useStore = create<AppState>()(
 
       // Through the mapping, not raw: `unanimousFills` reads every reviewer at
       // one index, which only means "the same entry" in slot space.
-      const fills = unanimousFills(
+      const fills = dropDuplicateSuggestions(
         project.schema,
-        alignedReviews(project.schema, paper.alignment, reviews),
         paper.annotations,
-      )
+        unanimousFills(
+          project.schema,
+          alignedReviews(project.schema, paper.alignment, reviews),
+          paper.annotations,
+        ).map((f) => ({ ...f, path: f.canonical, segs: f.path })),
+      ).kept
       if (fills.length === 0) return 0
 
       const snap: HistoryEntry = { project, paperId: prev.currentPaperId }
@@ -3182,7 +3199,7 @@ export const useStore = create<AppState>()(
         if (!draft) return
         if (!coalesce) pushPast(s, snap)
         for (const fill of fills) {
-          const container = containerAt(draft.annotations, fill.path)
+          const container = containerAt(draft.annotations, fill.segs)
           const inst = container[fill.name]?.[fill.index]
           if (!inst) continue
           inst.value = fill.value
@@ -3656,6 +3673,19 @@ function noteFieldTouchForPendingMarkLink(s: AppState, canonical: string): void 
 
 /** Back to the event loop, so a progress count paints and the window stays live. */
 const yieldToBrowser = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0))
+
+function duplicateHint(
+  s: AppState,
+  path: PathSeg[],
+  name: string,
+  index: number,
+  value: FieldValue,
+): string | null {
+  const paper = currentPaper(s)
+  const tree = paper && currentTree(s.project!, s.currentReviewer, paper)
+  if (!tree) return null
+  return duplicateOnWrite(s.project!.schema, tree, [...path, { name, index }], value)
+}
 
 function currentPaper(s: AppState) {
   if (!s.project || !s.currentPaperId) return null

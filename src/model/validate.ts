@@ -11,6 +11,7 @@ import {
 import { seatLabel, type Paper, type Project } from './project'
 import { YEAR_MIN, YEAR_MAX, isPlausibleYear } from './year'
 import { formatPath, type RawSeg } from '../llm/paths'
+import { duplicateIndexes } from './unique'
 
 /**
  * Validation walks the resolved schema against a paper's annotation tree and
@@ -23,7 +24,15 @@ import { formatPath, type RawSeg } from '../llm/paths'
 // `src/screening/validate.ts` for the two cross-field rules a plain schema
 // walk cannot express. It lives in this union because `ValidationIssue` (and
 // everything that renders one, like `ValidationDialog.tsx`) is shared.
-export type IssueKind = 'required' | 'type' | 'enum' | 'cardinality' | 'screening' | 'orphaned' | 'schema-version'
+export type IssueKind =
+  | 'required'
+  | 'type'
+  | 'enum'
+  | 'cardinality'
+  | 'duplicate'
+  | 'screening'
+  | 'orphaned'
+  | 'schema-version'
 
 export interface ValidationIssue {
   paperId: string
@@ -256,6 +265,15 @@ function validateTree(
       )
     }
 
+    const repeats = new Map(
+      def.unique
+        ? duplicateIndexes(
+            def,
+            instances.map((i) => (isPlainObject(i) ? (i as InstanceNode) : {})),
+          )
+        : [],
+    )
+
     instances.forEach((rawInstance, index) => {
       // Only number the display segment when the node actually repeats, so
       // simple non-repeating fields read as "Relevant", not "Relevant #1" —
@@ -276,6 +294,14 @@ function validateTree(
       }
 
       const instance = rawInstance as InstanceNode
+      const earlier = repeats.get(index)
+      if (earlier !== undefined) {
+        emit(
+          'duplicate',
+          loc,
+          `"${def.name}" #${index + 1} repeats #${earlier + 1}. Each entry is allowed once.`,
+        )
+      }
       if (isField(def)) validateField(def, instance.value, loc, emit)
       // A node may carry both a value and a sub-tree.
       if (def.children.length > 0) {

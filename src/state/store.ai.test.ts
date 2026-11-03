@@ -633,3 +633,24 @@ describe('applyAiSuggestionsBatch: routing into the AI seat (REQ-LLM-470)', () =
     expect(paperById('p1').reviews['2']!['Summary'][0].value).toBe('from the AI')
   })
 })
+
+describe('applyAiSuggestionsBatch: unique fields', () => {
+  it('skips a suggestion that repeats an entry of a unique field', () => {
+    st().loadFromText(
+      JSON.stringify({
+        version: 1,
+        title: 'Unique',
+        config: { ai: true, schema: [{ name: 'Keywords', type: 'string', min: 0, max: null, unique: true }] },
+        papers: [{ id: 'p1', title: 'One', authors: [], pdf: 'p1.pdf', annotations: { Keywords: [{ value: 'NLP' }] } }],
+      }),
+      null,
+      'test.json',
+    )
+    st().selectPaper('p1')
+
+    const res = apply([sug('Keywords[1]', ' nlp '), sug('Keywords[2]', 'ML'), sug('Keywords[3]', 'ml')])
+
+    expect(res).toEqual({ filled: 1, skipped: 2 })
+    expect(ann()['Keywords'].map((k) => k.value)).toEqual(['NLP', null, 'ML'])
+  })
+})

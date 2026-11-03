@@ -105,3 +105,38 @@ describe('Field: link popover header', () => {
     expect(screen.queryByText('0 links')).not.toBeInTheDocument()
   })
 })
+
+describe('Field: unique repeatable field', () => {
+  it('refuses a value that repeats another entry and shows an inline hint', async () => {
+    st().loadFromText(
+      JSON.stringify({
+        version: 1,
+        title: 'My Review',
+        config: { schema: [{ name: 'Keywords', type: 'string', min: 2, max: null, unique: true }] },
+        papers: [
+          {
+            id: 'p1',
+            title: 'A Paper',
+            authors: [],
+            pdf: 'a.pdf',
+            annotations: { Keywords: [{ value: 'NLP' }, { value: null }] },
+          },
+        ],
+      }),
+      null,
+      'test.json',
+    )
+    st().selectPaper('p1')
+    render(<AnnotationPanel />)
+
+    const second = screen.getByLabelText('Keywords #2')
+    await userEvent.type(second, 'nlp')
+    expect(screen.getByRole('alert')).toHaveTextContent('"Keywords" already has this entry (#1)')
+    expect(second).toHaveValue('nlp')
+    expect(st().project!.papers[0].annotations['Keywords'][1].value).toBe('nl')
+
+    await userEvent.type(second, 'p')
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(st().project!.papers[0].annotations['Keywords'][1].value).toBe('nlpp')
+  })
+})

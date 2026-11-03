@@ -74,6 +74,10 @@ export interface EditorNode {
    *  `AnnotationDef.visibleIf`. Always the expanded spec form, even for a
    *  bare-name shorthand file; `toAnnotationDefs` compacts it back on save. */
   visibleIf: VisibleIfSpec | null
+  /** No two entries may hold the same answer; only written for a repeatable node. */
+  unique?: boolean
+  /** Child uids that decide equality for `unique`; absent or empty means every child. */
+  uniqueBy?: string[]
   children: EditorNode[]
   collapsed: boolean
 }
@@ -213,6 +217,11 @@ export function toAnnotationDefs(nodes: EditorNode[]): AnnotationDef[] {
     if (n.kind !== 'group' && n.kind !== 'boolean' && n.required) def.required = true
     const vis = cleanVisibleIf(n.visibleIf)
     if (vis) def.visibleIf = compactVisibleIf(vis)
+    if (n.unique && n.max !== 1) {
+      def.unique = true
+      const by = n.children.filter((c) => n.uniqueBy?.includes(c.uid)).map((c) => c.name.trim())
+      if (by.length > 0) def.uniqueBy = by
+    }
     if (n.children.length > 0) def.children = toAnnotationDefs(n.children)
     return def
   })
@@ -220,24 +229,30 @@ export function toAnnotationDefs(nodes: EditorNode[]): AnnotationDef[] {
 
 /** AnnotationDef[] from an existing file → editor tree (assigning uids). */
 export function fromAnnotationDefs(defs: AnnotationDef[]): EditorNode[] {
-  return defs.map((d) => ({
-    uid: nextUid(),
-    name: d.name,
-    kind: (d.type ?? 'group') as EditorNodeKind,
-    min: d.min ?? 1,
-    max: d.max === undefined ? 1 : d.max,
-    description: d.description ?? '',
-    options: d.options ? [...d.options] : [],
-    required: d.required ?? false,
-    visibleIf:
-      d.visibleIf === undefined
-        ? null
-        : typeof d.visibleIf === 'string'
-          ? gateOn(d.visibleIf)
-          : cloneSpec(d.visibleIf),
-    children: d.children ? fromAnnotationDefs(d.children) : [],
-    collapsed: false,
-  }))
+  return defs.map((d) => {
+    const children = d.children ? fromAnnotationDefs(d.children) : []
+    const uniqueBy = children.filter((c) => d.uniqueBy?.includes(c.name)).map((c) => c.uid)
+    return {
+      uid: nextUid(),
+      name: d.name,
+      kind: (d.type ?? 'group') as EditorNodeKind,
+      min: d.min ?? 1,
+      max: d.max === undefined ? 1 : d.max,
+      description: d.description ?? '',
+      options: d.options ? [...d.options] : [],
+      required: d.required ?? false,
+      visibleIf:
+        d.visibleIf === undefined
+          ? null
+          : typeof d.visibleIf === 'string'
+            ? gateOn(d.visibleIf)
+            : cloneSpec(d.visibleIf),
+      ...(d.unique ? { unique: true } : {}),
+      ...(uniqueBy.length > 0 ? { uniqueBy } : {}),
+      children,
+      collapsed: false,
+    }
+  })
 }
 
 // ---------------------------------------------------------------------------

@@ -469,6 +469,17 @@ function SchemaNodeRow({
           </label>
         )}
 
+        {node.max !== 1 && (
+          <label className="schema-required" title="Each entry may appear only once">
+            <input
+              type="checkbox"
+              checked={node.unique ?? false}
+              onChange={(e) => updateNode(node.uid, { unique: e.target.checked })}
+            />
+            <span>Unique</span>
+          </label>
+        )}
+
         <input
           className="schema-input schema-desc"
           placeholder="Description (shown on hover)"
@@ -507,6 +518,28 @@ function SchemaNodeRow({
           ×
         </button>
       </div>
+
+      {node.unique && node.max !== 1 && hasChildren && (
+        <fieldset className="schema-unique-by">
+          <legend>Compare entries by (none ticked: all fields)</legend>
+          {node.children.map((c) => (
+            <label key={c.uid}>
+              <input
+                type="checkbox"
+                checked={node.uniqueBy?.includes(c.uid) ?? false}
+                onChange={(e) =>
+                  updateNode(node.uid, {
+                    uniqueBy: e.target.checked
+                      ? [...(node.uniqueBy ?? []), c.uid]
+                      : (node.uniqueBy ?? []).filter((u) => u !== c.uid),
+                  })
+                }
+              />
+              <span>{c.name.trim() || 'Unnamed field'}</span>
+            </label>
+          ))}
+        </fieldset>
+      )}
 
       {pendingMove && (
         <p className="schema-move-note" role="status">

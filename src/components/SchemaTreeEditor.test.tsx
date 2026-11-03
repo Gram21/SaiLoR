@@ -159,3 +159,33 @@ describe('SchemaTreeEditor: known-unpulled work sharpens the warning', () => {
     }
   })
 })
+
+describe('SchemaTreeEditor: unique option', () => {
+  it('offers Unique only on a repeatable field and a uniqueBy picker for its children', async () => {
+    const { toAnnotationDefs, fromAnnotationDefs } = await import('../state/editorStore')
+    const nodes = fromAnnotationDefs([
+      {
+        name: 'Authors',
+        min: 0,
+        max: null,
+        children: [
+          { name: 'Name', type: 'string' },
+          { name: 'Role', type: 'string' },
+        ],
+      },
+      { name: 'Title', type: 'string' },
+    ])
+    useEditorStore.setState({ nodes })
+    render(<SchemaTreeEditor />)
+
+    const unique = screen.getAllByRole('checkbox', { name: 'Unique' })
+    expect(unique).toHaveLength(1)
+    await userEvent.click(unique[0])
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Name' }))
+
+    const defs = toAnnotationDefs(useEditorStore.getState().nodes)
+    expect(defs[0]).toMatchObject({ unique: true, uniqueBy: ['Name'] })
+    expect(defs[1].unique).toBeUndefined()
+    expect(toAnnotationDefs(fromAnnotationDefs(defs))).toEqual(defs)
+  })
+})
