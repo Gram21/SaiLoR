@@ -5,6 +5,7 @@ import { SchemaTreeEditor } from './SchemaTreeEditor'
 import { ScreeningReasonsEditor } from './ScreeningReasonsEditor'
 import { ProtocolEditor } from './ProtocolEditor'
 import { PapersEditor } from './PapersEditor'
+import { StrictModeEditor } from './StrictModeEditor'
 import type { ProjectProvenance } from '../model/project'
 import '../styles/editor.css'
 
@@ -425,6 +426,8 @@ export function ProjectEditor() {
             <SchemaTreeEditor />
           </section>
         )}
+
+        {multiReviewer && !screening && <StrictModeEditor />}
 
         <section className="editor-section">
           <h2>Papers</h2>

@@ -306,6 +306,42 @@
   border-color: var(--accent);
 }
 
+.strict-persons {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 720px;
+}
+.strict-person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.strict-person .protocol-input {
+  flex: 1;
+}
+.strict-bulk {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.strict-bulk input {
+  width: 4em;
+}
+.strict-assignments {
+  border-collapse: collapse;
+}
+.strict-assignments th,
+.strict-assignments td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
 .editor-field-problem {
   margin: -4px 0 8px;
   color: var(--danger);

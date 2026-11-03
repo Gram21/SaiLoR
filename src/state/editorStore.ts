@@ -22,6 +22,7 @@ import {
   parseProtocol,
   parseSchemaInfo,
   KNOWN_ROOT_KEYS,
+  aiSeatId,
   type Project,
   type ProjectProvenance,
   type ProjectProtocol,
@@ -43,6 +44,7 @@ import {
   type SchemaHistoryEntry,
 } from '../model/schemaVersion'
 import { useStore } from './store'
+import { bulkAssign, parseStrictConfig, strictConfigJson, type StrictConfig } from '../model/strict'
 
 /**
  * Draft state for the project editor: build or edit a project JSON before/
@@ -133,6 +135,7 @@ interface EditorSnapshot {
   provenance: ProjectProvenance | null
   protocol: ProjectProtocol | null
   schemaInfo: string | null
+  strict: StrictConfig | null
 }
 
 const HISTORY_LIMIT = 100
@@ -715,6 +718,8 @@ export function buildProjectJson(state: {
   schemaHistory?: SchemaHistoryEntry[]
   /** Optional for the same reason; empty/absent means the default folder. */
   annotationsDir?: string
+  /** Optional for the same reason. Assignments are keyed by paper `uid`. */
+  strict?: StrictConfig | null
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
@@ -743,6 +748,7 @@ export function buildProjectJson(state: {
       ...(state.reviewers > 1 ? { reviewers: state.reviewers } : {}),
       ...(state.aiSeat ? { aiSeat: true } : {}),
       ...(screening ? { screening: { reasons: screening.reasons } } : {}),
+      ...strictConfigJson(strictForFile(state.strict ?? null, state.papers)),
     },
     papers: state.papers.map((p) => {
       const out: Record<string, unknown> = { ...(p.extra ?? {}) }
@@ -764,6 +770,23 @@ export function buildProjectJson(state: {
   }
 }
 
+function strictForFile(strict: StrictConfig | null, papers: EditorPaper[]): StrictConfig | undefined {
+  if (!strict) return undefined
+  return {
+    enabled: strict.enabled,
+    persons: strict.persons.map((p) => ({ id: p.id, name: p.name.trim() })),
+    assignments: Object.fromEntries(
+      papers.filter((p) => strict.assignments[p.uid]).map((p) => [p.id.trim(), strict.assignments[p.uid]]),
+    ),
+  }
+}
+
+/** Whether the paper's file records the seat as finished. */
+export function editorSeatFinished(paper: EditorPaper | undefined, seat: number): boolean {
+  const finished = paper?.extra?.reviewsFinished as Record<string, unknown> | undefined
+  return finished?.[String(seat)] === true
+}
+
 /**
  * Validate a draft the same way loading does (structure + schema resolution),
  * plus editor-specific checks. Returns [] when the draft is valid.
@@ -776,6 +799,7 @@ export function validateDraft(state: {
   reviewers: number
   /** Optional for the same reason `buildProjectJson`'s is — see there. */
   screening?: ScreeningConfig | null
+  strict?: StrictConfig | null
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
@@ -831,6 +855,7 @@ export function validateDraft(state: {
     // `buildProjectJson` always writes a non-empty `config.schema`; the zod
     // type is only optional to accommodate other schema-validation failures.
     resolveSchema(raw.config.schema ?? [])
+    errors.push(...parseStrictConfig(json.config, new Set(ids)).problems)
   } catch (err) {
     if (err instanceof z.ZodError) {
       errors.push(...err.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`))
@@ -1078,6 +1103,17 @@ interface EditorState {
   /** Toggle whether the AI takes one reviewer seat — see `Project.aiSeat`.
    *  Its own undo step, same shape as `setFinishCheckbox`. */
   setAiSeat: (on: boolean) => void
+  /** Strict mode settings — see `model/strict.ts`. Assignments keyed by paper `uid`. */
+  strict: StrictConfig | null
+  setStrictEnabled: (on: boolean) => void
+  addPerson: () => void
+  renamePerson: (id: string, name: string) => void
+  /** Refused with `error` when the person has finished work on a paper. */
+  removePerson: (id: string) => void
+  /** Refused with `error` when the work on that seat, or the person's other seat, is finished. */
+  setAssignment: (paperUid: string, seat: number, personId: string | null) => void
+  bulkAssignStrict: (perPaper: number) => void
+  reopenWork: (paperUid: string, seat: number) => void
   /** Turn screening on (seeding `DEFAULT_SCREENING_REASONS`) or off. Its own undo step. */
   setScreening: (on: boolean) => void
   setScreeningReasons: (reasons: string[]) => void
@@ -1162,6 +1198,7 @@ function snapshotOf(s: EditorState): EditorSnapshot {
     provenance: s.provenance,
     protocol: s.protocol,
     schemaInfo: s.schemaInfo,
+    strict: s.strict,
   }
 }
 
@@ -1180,6 +1217,7 @@ function applySnapshot(s: EditorState, snap: EditorSnapshot): void {
   s.provenance = snap.provenance
   s.protocol = snap.protocol
   s.schemaInfo = snap.schemaInfo
+  s.strict = snap.strict
 }
 
 /** Push a pre-mutation snapshot onto the undo stack and drop the redo stack. */
@@ -1206,6 +1244,7 @@ interface OpenedEditorState {
   schemaVersion: string | null
   schemaHistory: SchemaHistoryEntry[]
   annotationsDir: string
+  strict: StrictConfig | null
   nodes: EditorNode[]
   papers: EditorPaper[]
 }
@@ -1266,6 +1305,19 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
   for (const [k, v] of Object.entries(data)) {
     if (!KNOWN_ROOT_KEYS.has(k)) rootExtra[k] = v
   }
+  const parsedStrict = parseStrictConfig(data.config, new Set(papers.map((p) => p.id)))
+  if (parsedStrict.problems.length > 0) {
+    throw new Error(`The strict mode settings are invalid: ${parsedStrict.problems.join(' ')}`)
+  }
+  const uidOf = new Map(papers.map((p) => [p.id, p.uid]))
+  const strict: StrictConfig | null = parsedStrict.strict
+    ? {
+        ...parsedStrict.strict,
+        assignments: Object.fromEntries(
+          Object.entries(parsedStrict.strict.assignments).map(([id, list]) => [uidOf.get(id)!, list]),
+        ),
+      }
+    : null
   return {
     location: { handle: opened.handle, name: opened.name, path: opened.handle.path },
     version: parsed.version ?? 1,
@@ -1286,6 +1338,7 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
     schemaVersion: parseSchemaVersion(data.schemaVersion),
     schemaHistory: parseSchemaHistory(data.schemaHistory),
     annotationsDir: typeof data.annotationsDir === 'string' ? data.annotationsDir : '',
+    strict,
     // A screening project's schema is derived, not authored, so there is
     // nothing for the schema-builder tree to hold — see `ProjectEditor.tsx`.
     nodes: screening ? [] : fromAnnotationDefs(parsed.config.schema ?? []),
@@ -1323,6 +1376,7 @@ function openEditorSession(s: EditorState, st: OpenedEditorState): void {
   s.provenance = st.provenance
   s.protocol = st.protocol
   s.schemaInfo = st.schemaInfo
+  s.strict = st.strict
   s.schemaVersion = st.schemaVersion
   s.schemaHistory = st.schemaHistory
   s.savedNodes = st.nodes
@@ -1463,6 +1517,7 @@ export const useEditorStore = create<EditorState>()(
     provenance: null,
     protocol: null,
     schemaInfo: null,
+    strict: null,
     schemaVersion: null,
     schemaHistory: [],
     savedNodes: [],
@@ -1505,6 +1560,7 @@ export const useEditorStore = create<EditorState>()(
         s.provenance = null
         s.protocol = null
         s.schemaInfo = null
+        s.strict = null
         s.schemaVersion = null
         s.schemaHistory = []
         s.savedNodes = []
@@ -1745,6 +1801,142 @@ export const useEditorStore = create<EditorState>()(
       set((s) => {
         pushPast(s, snap)
         s.aiSeat = on
+        s.dirty = true
+      })
+    },
+
+    setStrictEnabled: (on) => {
+      lastEditKey = null
+      const snap = snapshotOf(get())
+      set((s) => {
+        pushPast(s, snap)
+        s.strict = { persons: [], assignments: {}, ...s.strict, enabled: on }
+        s.dirty = true
+      })
+    },
+
+    addPerson: () => {
+      lastEditKey = null
+      const snap = snapshotOf(get())
+      set((s) => {
+        pushPast(s, snap)
+        const strict = (s.strict ??= { enabled: false, persons: [], assignments: {} })
+        const free = (taken: (n: number) => boolean) => {
+          let n = 1
+          while (taken(n)) n++
+          return n
+        }
+        const id = `p${free((n) => strict.persons.some((p) => p.id === `p${n}`))}`
+        const name = `Person ${free((n) => strict.persons.some((p) => p.name.trim().toLowerCase() === `person ${n}`))}`
+        strict.persons.push({ id, name })
+        s.dirty = true
+      })
+    },
+
+    renamePerson: (id, name) => {
+      const key = `person:${id}`
+      const coalesce = key === lastEditKey
+      lastEditKey = key
+      const snap = snapshotOf(get())
+      set((s) => {
+        const person = s.strict?.persons.find((p) => p.id === id)
+        if (!person) return
+        if (!coalesce) pushPast(s, snap)
+        person.name = name
+        s.dirty = true
+      })
+    },
+
+    removePerson: (id) => {
+      lastEditKey = null
+      const st = get()
+      const strict = st.strict
+      if (!strict) return
+      const finished = st.papers.filter((p) =>
+        (strict.assignments[p.uid] ?? []).some((a) => a.person === id && editorSeatFinished(p, a.seat)),
+      )
+      if (finished.length > 0) {
+        set((s) => {
+          s.error = {
+            message: 'This person has finished work and cannot be removed.',
+            details: [`Reopen the work first on: ${finished.map((p) => p.id).join(', ')}.`],
+          }
+        })
+        return
+      }
+      const snap = snapshotOf(st)
+      set((s) => {
+        if (!s.strict) return
+        pushPast(s, snap)
+        s.strict.persons = s.strict.persons.filter((p) => p.id !== id)
+        for (const key of Object.keys(s.strict.assignments)) {
+          s.strict.assignments[key] = s.strict.assignments[key].filter((a) => a.person !== id)
+          if (s.strict.assignments[key].length === 0) delete s.strict.assignments[key]
+        }
+        s.dirty = true
+      })
+    },
+
+    setAssignment: (paperUid, seat, personId) => {
+      lastEditKey = null
+      const st = get()
+      const paper = st.papers.find((p) => p.uid === paperUid)
+      const list = st.strict?.assignments[paperUid] ?? []
+      const replaced = list.filter((a) => a.seat === seat || (personId !== null && a.person === personId))
+      if (replaced.some((a) => editorSeatFinished(paper, a.seat))) {
+        set((s) => {
+          s.error = {
+            message: 'This assignment has finished work and cannot be changed.',
+            details: ['Reopen the work first.'],
+          }
+        })
+        return
+      }
+      const next = list.filter((a) => !replaced.includes(a))
+      if (personId !== null) next.push({ person: personId, seat })
+      next.sort((a, b) => a.seat - b.seat)
+      const snap = snapshotOf(st)
+      set((s) => {
+        pushPast(s, snap)
+        const strict = (s.strict ??= { enabled: false, persons: [], assignments: {} })
+        if (next.length > 0) strict.assignments[paperUid] = next
+        else delete strict.assignments[paperUid]
+        s.dirty = true
+      })
+    },
+
+    bulkAssignStrict: (perPaper) => {
+      lastEditKey = null
+      const st = get()
+      if (!st.strict) return
+      const ai = aiSeatId({ aiSeat: st.aiSeat, aiEnabled: st.aiEnabled, reviewers: st.reviewers, screening: st.screening })
+      const seats = Array.from({ length: st.reviewers }, (_, i) => i + 1).filter((n) => String(n) !== ai)
+      const assignments = bulkAssign(
+        st.strict.persons,
+        st.papers.map((p) => p.uid),
+        st.strict.assignments,
+        perPaper,
+        seats,
+      )
+      const snap = snapshotOf(st)
+      set((s) => {
+        if (!s.strict) return
+        pushPast(s, snap)
+        s.strict.assignments = assignments
+        s.dirty = true
+      })
+    },
+
+    reopenWork: (paperUid, seat) => {
+      lastEditKey = null
+      const snap = snapshotOf(get())
+      set((s) => {
+        const paper = s.papers.find((p) => p.uid === paperUid)
+        if (!paper?.extra || !editorSeatFinished(paper, seat)) return
+        pushPast(s, snap)
+        const finished = paper.extra.reviewsFinished as Record<string, unknown>
+        delete finished[String(seat)]
+        if (Object.keys(finished).length === 0) delete paper.extra.reviewsFinished
         s.dirty = true
       })
     },
@@ -2150,6 +2342,7 @@ export const useEditorStore = create<EditorState>()(
           // generic list would make the two un-poolable. Still editable in
           // ScreeningReasonsEditor.
           s.screening = screeningTarget ? { reasons: [...draft.screening.reasons] } : null
+          s.strict = null
           s.extra = {}
           // Derived from `screening.reasons`, not authored (see
           // `Project.screening`) — same empty-array reasoning as
