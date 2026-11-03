@@ -389,3 +389,31 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `src-tauri/src/git.rs` (`MAX_OUTPUT`, `run_git_capped`), commit `6d6fa44`
 - **Verified by:** `src-tauri/src/git.rs` (`output_over_the_cap_fails_without_data`)
 - **Status:** Implemented
+
+### REQ-GIT-540: Back up the branch before a merge and undo the last merge
+- **Description:** Before a pull or merge changes the branch, the system shall save the current HEAD as `refs/sailor/backup/<timestamp>` and keep the 10 newest backups. The "Undo last merge" action shall reset the branch to the backup of the last completed pull or merge. The system shall allow Undo only while HEAD equals that merge result and the working tree is clean. Otherwise it shall refuse and name the reason.
+- **Type:** Functional (ISO 25010: Reliability)
+- **Evidence:** `src-tauri/src/git.rs` (`save_backup`, `record_result`, `undo_merge`), `src/state/gitStore.ts` (`runUndoMerge`), `src/components/GitDialog.tsx`, commits `288897c`, `0adc32e`
+- **Verified by:** `src-tauri/src/git.rs` (`undo_restores_the_backup_only_while_head_is_the_merge_result`), `src/state/gitStore.test.ts` (`merge dry run and undo`)
+- **Status:** Implemented
+
+### REQ-GIT-550: Show a dry-run summary before a merge
+- **Description:** Before a pull or merge starts, the system shall show a summary and wait for the user to confirm. The summary shall state whether git fast-forwards or makes a merge commit. It shall name the project and annotation files that change, the papers that change, and the conflicts that git expects. If the user cancels, the system shall change nothing.
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src-tauri/src/git.rs` (`merge_preview`, `expected_conflicts`), `src/git/output.ts` (`mergePreviewText`), `src/state/gitStore.ts` (`previewApproved`), commits `288897c`, `0adc32e`
+- **Verified by:** `src-tauri/src/git.rs` (`preview_lists_incoming_papers_and_expected_conflicts`), `src/git/output.test.ts` (`mergePreviewText`), `src/state/gitStore.test.ts` (`merge dry run and undo`)
+- **Status:** Implemented
+
+### REQ-GIT-560: Refuse a merge the repository state makes unsafe
+- **Description:** The system shall refuse a pull, merge, or undo with a plain-language reason when `index.lock` is present, when a rebase, merge, cherry-pick, or revert is in progress, or when HEAD is detached. The system shall refuse a pull or merge when the working tree has uncommitted changes, and shall point the user to "Stash my changes".
+- **Type:** Functional (ISO 25010: Reliability)
+- **Evidence:** `src-tauri/src/git.rs` (`merge_preflight`, `pull_target`, `merge_target`), `src/state/gitStore.ts` (`applyMergeStart`), commits `288897c`, `0adc32e`
+- **Verified by:** `src-tauri/src/git.rs` (`preflight_refuses_locks_operations_in_progress_and_detached_head`), `src/state/gitStore.test.ts` (`merge dry run and undo`)
+- **Status:** Implemented
+
+### REQ-GIT-570: Commit only valid JSON from a merge
+- **Description:** When the system finishes a merge, it shall refuse to commit a project or annotation file that is not valid JSON, and shall name the file. A merge between two clones of a shared remote shall always leave a project that opens with valid, unique paper ids.
+- **Type:** Non-functional (ISO 25010: Reliability)
+- **Evidence:** `src-tauri/src/git.rs` (`pull_finish`), commit `288897c`
+- **Verified by:** `src-tauri/src/git.rs` (`finish_refuses_a_merge_that_is_not_valid_json`, `generated_merges_between_clones_of_a_bare_remote_stay_openable`)
+- **Status:** Implemented

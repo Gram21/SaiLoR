@@ -135,6 +135,23 @@ export type MergeStart =
 
 export type PullStart = MergeStart | { kind: 'no-upstream'; branch: string | null }
 
+/** The dry run before a pull or merge: the same refusals as `PullStart`, or what the merge would change. */
+export type MergePreview =
+  | Extract<PullStart, { kind: 'up-to-date' | 'dirty' | 'error' | 'no-upstream' }>
+  | {
+      kind: 'preview'
+      ref: string
+      fastForward: boolean
+      /** Repository-relative project and annotation files that the other side changed. */
+      files: string[]
+      /** Ids of the papers whose annotation files the other side changed. */
+      papers: string[]
+      /** Project files that git expects to conflict; the merge dialog resolves them. */
+      conflicts: string[]
+      /** Other files that git expects to conflict; the merge stops on them and changes nothing. */
+      conflictsElsewhere: string[]
+    }
+
 /** One entry from `git log`, for the history panel — see `parseGitLog` in
  *  `src/git/output.ts` for how the `date` string (ISO 8601) is produced. */
 export interface CommitRecord {
@@ -184,6 +201,10 @@ export interface GitPlatform {
    * `beginPull` minus the upstream lookup, so it shares `finishPull`/`abortPull`. Fetches first if `ref` is remote-tracking.
    */
   beginMerge(root: string, relPath: string, ref: string): Promise<MergeStart>
+  /** Fetches and previews `beginMerge(ref)`, or `beginPull` when `ref` is `null`, without changing the working tree. */
+  previewMerge(root: string, relPath: string, ref: string | null): Promise<MergePreview>
+  /** Resets the branch to the backup ref taken before the last completed pull or merge. */
+  undoMerge(root: string, relPath: string): Promise<GitRun>
   /** `git log`, scoped to `relPath` and its `annotations/` dir — for the
    *  commit-history panel. Capped, not paginated; `truncated` says so. */
   logBegin(root: string, relPath: string): Promise<LogBeginResult>

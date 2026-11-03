@@ -75,7 +75,7 @@ export function MergeBranchPrompt() {
           <button
             type="button"
             className="primary"
-            onClick={() => void confirm()}
+            onClick={() => void confirm((summary) => window.confirm(summary))}
             disabled={busy}
             title="Merge the selected branch into the current branch"
           >

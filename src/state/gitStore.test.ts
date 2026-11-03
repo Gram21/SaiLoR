@@ -6,6 +6,7 @@ import type {
   GitRun,
   PullStart,
   MergeStart,
+  MergePreview,
   GitFileChange,
   SplitProject,
   GitBranch,
@@ -84,6 +85,10 @@ let beginPullResult: PullStart = { kind: 'up-to-date' }
 let beginMergeResult: MergeStart = { kind: 'up-to-date' }
 let beginMergeCalls: string[] = []
 let finishPullResult: GitRun = ok()
+let previewResult: MergePreview = { kind: 'up-to-date' }
+let previewCalls: (string | null)[] = []
+let undoResult: GitRun = ok()
+let undoCalls = 0
 
 let infoResult: GitRepoInfo | null = null
 let statusChanges: GitFileChange[] = []
@@ -146,6 +151,14 @@ const fakeGit: GitPlatform = {
   beginMerge: async (_root, _relPath, ref) => {
     beginMergeCalls.push(ref)
     return beginMergeResult
+  },
+  previewMerge: async (_root, _relPath, ref) => {
+    previewCalls.push(ref)
+    return previewResult
+  },
+  undoMerge: async () => {
+    undoCalls++
+    return undoResult
   },
   finishPull: async (root, relPath, working) => {
     finishCalls.push({ root, relPath, working })
@@ -248,6 +261,10 @@ beforeEach(async () => {
   abortCalls = 0
   finishCalls = []
   finishPullResult = ok()
+  previewResult = { kind: 'up-to-date' }
+  previewCalls = []
+  undoResult = ok()
+  undoCalls = 0
   beginMergeResult = { kind: 'up-to-date' }
   beginMergeCalls = []
   infoResult = null
@@ -388,6 +405,72 @@ describe('runPull', () => {
     await useGitStore.getState().runPull()
     fakeGit.beginPull = originalBeginPull
     expect(called).toBe(false)
+    expect(useGitStore.getState().panel?.error).toMatch(/save the project/i)
+  })
+})
+
+describe('merge dry run and undo', () => {
+  const preview: MergePreview = {
+    kind: 'preview',
+    ref: 'origin/main',
+    fastForward: false,
+    files: ['review.json', 'annotations/a/consolidated.json'],
+    papers: ['a'],
+    conflicts: ['review.json'],
+    conflictsElsewhere: [],
+  }
+
+  it('shows the summary and pulls only after the user accepts', async () => {
+    previewResult = preview
+    beginPullResult = { kind: 'fast-forwarded' }
+    const summaries: string[] = []
+    await useGitStore.getState().runPull((s) => {
+      summaries.push(s)
+      return true
+    })
+    expect(previewCalls).toEqual([null])
+    expect(summaries[0]).toMatch(/Papers with changes: a\./)
+    expect(summaries[0]).toMatch(/Git expects conflicts in review\.json/)
+    expect(openedPaths).toEqual(['/repo/review.json'])
+  })
+
+  it('a cancelled summary starts no merge', async () => {
+    previewResult = preview
+    await useGitStore.getState().runMergeBranch('feature', () => false)
+    expect(previewCalls).toEqual(['feature'])
+    expect(beginMergeCalls).toEqual([])
+    expect(useGitStore.getState().panel?.phase).toBe('idle')
+  })
+
+  it('a refused dry run is reported without asking', async () => {
+    previewResult = { kind: 'error', message: 'HEAD is not on a branch (detached HEAD).' }
+    let asked = false
+    await useGitStore.getState().runMergeBranch('feature', () => (asked = true))
+    expect(asked).toBe(false)
+    expect(beginMergeCalls).toEqual([])
+    expect(useGitStore.getState().panel?.error).toMatch(/detached HEAD/)
+  })
+
+  it('a dirty tree points at the stash flow', async () => {
+    previewResult = { kind: 'dirty', paths: ['pdfs/a.pdf'] }
+    await useGitStore.getState().runPull(() => true)
+    expect(useGitStore.getState().panel?.error).toMatch(/Stash my changes/)
+  })
+
+  it('undo reloads the project on success and shows the reason on refusal', async () => {
+    await useGitStore.getState().runUndoMerge()
+    expect(undoCalls).toBe(1)
+    expect(useGitStore.getState().panel?.notice).toMatch(/Undid the last merge/)
+
+    undoResult = { ok: false, code: null, stdout: '', stderr: 'The branch changed after the last merge or pull.' }
+    await useGitStore.getState().runUndoMerge()
+    expect(useGitStore.getState().panel?.error).toMatch(/branch changed/)
+  })
+
+  it('undo refuses while the project has unsaved changes', async () => {
+    useStore.setState({ dirty: true })
+    await useGitStore.getState().runUndoMerge()
+    expect(undoCalls).toBe(0)
     expect(useGitStore.getState().panel?.error).toMatch(/save the project/i)
   })
 })

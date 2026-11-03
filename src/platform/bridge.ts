@@ -10,6 +10,7 @@ import type {
   GitRun,
   PullStart,
   MergeStart,
+  MergePreview,
   SplitProject,
   GitBranch,
   BranchSwitchStart,
@@ -138,6 +139,8 @@ export interface SlrBridge {
   gitPullFinish(root: string, relPath: string, working: SplitProject): Promise<GitRun>
   gitPullAbort(root: string): Promise<GitRun>
   gitMergeBegin(root: string, relPath: string, ref: string): Promise<MergeStart>
+  gitMergePreview(root: string, relPath: string, ref: string | null): Promise<MergePreview>
+  gitUndoMerge(root: string, relPath: string): Promise<GitRun>
   gitLogBegin(root: string, relPath: string): Promise<LogBeginResult>
   gitLogDiff(root: string, relPath: string, rev: string): Promise<LogRevisionFetch>
   gitHeadContent(root: string, relPath: string): Promise<string | null>

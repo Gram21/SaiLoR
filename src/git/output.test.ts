@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { parsePorcelain, capDiff, gitErrorText, diffLines, parseGitLog, MAX_DIFF_CHARS } from './output'
-import type { GitRun } from './types'
+import { parsePorcelain, capDiff, gitErrorText, diffLines, parseGitLog, MAX_DIFF_CHARS, mergePreviewText } from './output'
+import type { GitRun, MergePreview } from './types'
 
 describe('parsePorcelain', () => {
   it('parses a modified file', () => {
@@ -185,6 +185,52 @@ describe('gitErrorText', () => {
 
   it('reports "could not be started" when code is null', () => {
     expect(gitErrorText(run({ code: null }))).toBe('git could not be started.')
+  })
+})
+
+describe('mergePreviewText', () => {
+  const preview = (partial: Partial<Extract<MergePreview, { kind: 'preview' }>>) => ({
+    kind: 'preview' as const,
+    ref: 'origin/main',
+    fastForward: false,
+    files: [],
+    papers: [],
+    conflicts: [],
+    conflictsElsewhere: [],
+    ...partial,
+  })
+
+  it('names the fast-forward, the project file, and the annotation file count', () => {
+    const text = mergePreviewText(
+      preview({ fastForward: true, files: ['p/review.json', 'p/annotations/a/x.json'], papers: ['a'] }),
+      'p/review.json',
+      'Pull from origin/main',
+    )
+    expect(text).toMatch(/^Pull from origin\/main\?/)
+    expect(text).toMatch(/No merge commit is made/)
+    expect(text).toMatch(/The project file changes\./)
+    expect(text).toMatch(/1 annotation file\(s\) change\./)
+    expect(text).toMatch(/Papers with changes: a\./)
+    expect(text).toMatch(/Git expects no conflicts\./)
+    expect(text).toMatch(/Undo last merge/)
+  })
+
+  it('caps the paper list and prefers the stopping conflicts', () => {
+    const papers = Array.from({ length: 12 }, (_, i) => `p${i}`)
+    const text = mergePreviewText(
+      preview({ papers, conflicts: ['review.json'], conflictsElsewhere: ['README.md'] }),
+      'review.json',
+      'Merge x into main',
+    )
+    expect(text).toMatch(/p9 and 2 more\./)
+    expect(text).toMatch(/SaiLoR cannot merge: README\.md\. The merge will stop and change nothing\./)
+    expect(text).not.toMatch(/merge dialog/)
+  })
+
+  it('says the merge dialog resolves project conflicts', () => {
+    const text = mergePreviewText(preview({ conflicts: ['review.json'] }), 'review.json', 'Merge x into main')
+    expect(text).toMatch(/Git expects conflicts in review\.json\. You resolve them in the merge dialog/)
+    expect(text).toMatch(/No project or annotation file changes\./)
   })
 })
 

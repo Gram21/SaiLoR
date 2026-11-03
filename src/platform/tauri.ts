@@ -215,6 +215,8 @@ export const tauriBridge: SlrBridge = {
   gitPullFinish: call('git:pullFinish', 'root', 'relPath', 'working'),
   gitPullAbort: call('git:pullAbort', 'root'),
   gitMergeBegin: then(call('git:mergeBegin', 'root', 'relPath', 'ref'), merged),
+  gitMergePreview: call('git:mergePreview', 'root', 'relPath', 'ref'),
+  gitUndoMerge: call('git:undoMerge', 'root', 'relPath'),
   gitLogBegin: call('git:logBegin', 'root', 'relPath'),
   gitLogDiff: then(call('git:logDiff', 'root', 'relPath', 'rev'), (r) =>
     r?.kind === 'texts' ? { ...r, head: assembleProject(r.head), parent: assembleProject(r.parent) } : r,

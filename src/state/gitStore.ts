@@ -16,14 +16,14 @@ import {
 import { detectFieldChanges, composeContents, type DetectedChanges, type Disposition } from '../git/changes'
 import { repoNameFromUrl } from '../git/url'
 import { stashBranchName } from '../git/stash'
-import { gitErrorText } from '../git/output'
+import { gitErrorText, mergePreviewText } from '../git/output'
 import type {
   GitProbe,
   GitRepoInfo,
   GitRun,
   GitStatus,
   GitBranch,
-  MergeStart,
+  PullStart,
   CommitRecord,
   AnnotationAuthors,
   StashEntry,
@@ -283,20 +283,23 @@ interface GitState {
    *  tree — revert those rows to HEAD's value — WITHOUT making a commit. */
   runDiscard: () => Promise<void>
   runPush: () => Promise<void>
-  runPull: () => Promise<void>
+  /** With `confirm`, runs the dry run first and pulls only if `confirm` accepts its summary. */
+  runPull: (confirm?: (summary: string) => boolean) => Promise<void>
   /**
    * Merge `ref` into the current branch, same flow as `runPull` against an
    * explicit ref: fast-forward or clean merge commits and reloads right
    * away, disagreement opens `GitMergeDialog`. No-op for the checked-out branch.
    */
-  runMergeBranch: (ref: string) => Promise<void>
+  runMergeBranch: (ref: string, confirm?: (summary: string) => boolean) => Promise<void>
+  /** Resets the branch to the backup taken before the last completed pull or merge. */
+  runUndoMerge: () => Promise<void>
   /** Opens the "Merge branch…" dialog, defaulting to the first mergeable
    *  branch (always exists when the calling button is shown). */
   openMergeBranchPrompt: () => void
   setMergeBranchPromptBranch: (branch: string) => void
   closeMergeBranchPrompt: () => void
   /** Runs `runMergeBranch` against `panel.mergeBranchPrompt.branch` and closes the dialog. */
-  confirmMergeBranchPrompt: () => Promise<void>
+  confirmMergeBranchPrompt: (confirm?: (summary: string) => boolean) => Promise<void>
 
   /** Opens the "- Delete branch…" dialog, defaulting to the first local
    *  non-current branch (always exists when the sentinel is shown). */
@@ -511,12 +514,37 @@ export const useGitStore = create<GitState>()(
       return false
     }
 
+    /** Dry-runs the merge and asks `confirm` with its summary. A result that needs no
+     *  question (up to date, dirty, refused) is reported the same way the merge reports it. */
+    async function previewApproved(
+      ref: string | null,
+      source: MergeSource,
+      ffLabel: string,
+      action: string,
+      confirm?: (summary: string) => boolean,
+    ): Promise<boolean> {
+      const git = getPlatform().getGit()
+      const repo = get().repo
+      if (!confirm) return true
+      if (!git || !repo) return false
+      const preview = await git.previewMerge(repo.root, repo.relPath, ref)
+      if (preview.kind !== 'preview') {
+        await applyMergeStart(preview, source, ffLabel)
+        return false
+      }
+      if (confirm(mergePreviewText(preview, repo.relPath, action))) return true
+      set((s) => {
+        if (s.panel) s.panel.phase = 'idle'
+      })
+      return false
+    }
+
     /**
      * Everything a merge does once git has classified it — shared by `runPull`
      * and `runMergeBranch`, which differ only in how they name the other side.
      * `ffLabel` is what a fast-forward reports having moved to.
      */
-    async function applyMergeStart(start: MergeStart, source: MergeSource, ffLabel: string): Promise<void> {
+    async function applyMergeStart(start: PullStart, source: MergeSource, ffLabel: string): Promise<void> {
       const git = getPlatform().getGit()
       const repo = get().repo
       if (!git || !repo) return
@@ -549,8 +577,15 @@ export const useGitStore = create<GitState>()(
         await get().refreshStatus()
         return
       }
+      if (start.kind === 'no-upstream') {
+        fail(`The branch ${start.branch ?? '(detached HEAD)'} has no upstream branch, so there is nothing to pull from.`)
+        return
+      }
       if (start.kind === 'dirty') {
-        fail(`This repository has uncommitted changes: ${start.paths.join(', ')}. Commit them first.`)
+        fail(
+          `This repository has uncommitted changes: ${start.paths.join(', ')}. Commit them, or use ` +
+            '"Stash my changes" below to set them aside, then try again.',
+        )
         return
       }
       if (start.kind === 'conflict-elsewhere') {
@@ -1316,7 +1351,7 @@ export const useGitStore = create<GitState>()(
         })
       },
 
-      runPull: async () => {
+      runPull: async (confirm) => {
         const git = getPlatform().getGit()
         const repo = get().repo
         if (!git || !repo) return
@@ -1332,20 +1367,24 @@ export const useGitStore = create<GitState>()(
           }
         })
 
+        const label = repo.upstream ?? 'the remote'
+        if (!(await previewApproved(null, { kind: 'pull' }, label, `Pull from ${label}`, confirm))) return
         const start = await git.beginPull(repo.root, repo.relPath)
-        if (start.kind === 'no-upstream') {
-          set((s) => {
-            if (s.panel) {
-              s.panel.phase = 'idle'
-              s.panel.error = `The branch ${start.branch ?? '(detached HEAD)'} has no upstream branch, so there is nothing to pull from.`
-            }
-          })
-          return
-        }
-        await applyMergeStart(start, { kind: 'pull' }, repo.upstream ?? 'the remote')
+        await applyMergeStart(start, { kind: 'pull' }, label)
       },
 
-      runMergeBranch: async (ref) => {
+      runUndoMerge: async () => {
+        const git = getPlatform().getGit()
+        const repo = get().repo
+        if (!git || !repo) return
+        if (!guardDirtyForMerge('undoing a merge')) return
+        await runStashOperation(
+          () => git.undoMerge(repo.root, repo.relPath),
+          'Undid the last merge or pull. Your branch is back where it was before.',
+        )
+      },
+
+      runMergeBranch: async (ref, confirm) => {
         const git = getPlatform().getGit()
         const repo = get().repo
         if (!git || !repo || ref === repo.branch) return
@@ -1361,6 +1400,9 @@ export const useGitStore = create<GitState>()(
           }
         })
 
+        if (!(await previewApproved(ref, { kind: 'merge-branch' }, ref, `Merge ${ref} into ${repo.branch}`, confirm))) {
+          return
+        }
         const start = await git.beginMerge(repo.root, repo.relPath, ref)
         await applyMergeStart(start, { kind: 'merge-branch' }, ref)
       },
@@ -1388,13 +1430,13 @@ export const useGitStore = create<GitState>()(
         })
       },
 
-      confirmMergeBranchPrompt: async () => {
+      confirmMergeBranchPrompt: async (confirm) => {
         const branch = get().panel?.mergeBranchPrompt?.branch
         set((s) => {
           if (s.panel) s.panel.mergeBranchPrompt = null
         })
         if (!branch) return
-        await get().runMergeBranch(branch)
+        await get().runMergeBranch(branch, confirm)
       },
 
       openDeleteBranchPrompt: () => {
