@@ -105,7 +105,7 @@ export function saveAutosaveEnabled(enabled: boolean): void {
 }
 
 const LANGUAGE_KEY = 'slr.language'
-export const LANGUAGES = ['en', 'de', 'it'] as const
+export const LANGUAGES = ['en', 'de', 'it', 'pt'] as const
 export type Language = (typeof LANGUAGES)[number]
 
 function isLanguage(value: unknown): value is Language {

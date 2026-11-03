@@ -140,6 +140,8 @@ describe('language', () => {
   it.each([
     ['de-AT', 'de'],
     ['it-CH', 'it'],
+    ['pt-BR', 'pt'],
+    ['pt-PT', 'pt'],
     ['ko-KR', 'en'],
   ])('uses the supported browser language of %s, else English', (browser, lang) => {
     vi.stubGlobal('navigator', { language: browser })
