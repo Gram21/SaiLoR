@@ -22,6 +22,7 @@ import {
 import type { ScreeningConfig } from '../model/schema'
 import { formatPath, displayPath, resolvePath, type RawSeg } from '../llm/paths'
 import { parseYear } from '../model/year'
+import { t, tp, type MessageKey } from '../i18n'
 import { mergeMarksList, type PdfMark } from '../model/pdfMarks'
 import type { StoredAlignment } from '../model/alignment'
 import {
@@ -159,15 +160,15 @@ export function conflictId(paperId: string, tree: MergeTree, canonical: string):
 export function treeLabel(tree: MergeTree, reviewers: number): string {
   switch (tree.kind) {
     case 'project':
-      return 'Project'
+      return t('git.merge.tree.project')
     case 'schema':
-      return 'Schema'
+      return t('git.merge.tree.schema')
     case 'paper':
-      return 'Paper details'
+      return t('git.merge.tree.paper')
     case 'annotations':
-      return reviewers > 1 ? 'Consolidation' : ''
+      return reviewers > 1 ? t('git.merge.tree.consolidation') : ''
     case 'review':
-      return `Reviewer ${tree.reviewer}`
+      return t('git.merge.tree.reviewer', { reviewer: tree.reviewer })
   }
 }
 
@@ -285,8 +286,7 @@ function makeTreeMerger(
       // Bug 2: refuse rather than strand an edit on a phantom slot.
       if (repeatable && shrunkAndEdited(def, bArr, oArr, tArr)) {
         refusals.push(
-          `verbatim:${def.name} on "${paperTitle}" was shortened on one side and edited on the other; ` +
-            `SaiLoR can't tell which entry your edit belongs to. Reconcile that paper by hand.`,
+          `verbatim:${t('git.merge.verbatimRefusal', { name: def.name, paper: paperTitle })}`,
         )
         out[def.name] = oArr
         continue
@@ -352,7 +352,7 @@ function makeTreeMerger(
         instances.push(...oArr.slice(bArr.length), ...tArr.slice(bArr.length))
         notes.push({
           kind: 'repeatable-additions-kept',
-          message: `Both sides added new "${def.name}" entries for "${paperTitle}"; they were all kept and may need de-duplicating.`,
+          message: t('git.merge.repeatableAdded', { name: def.name, paper: paperTitle }),
         })
       }
 
@@ -372,9 +372,7 @@ function makeTreeMerger(
       if (name in theirOrphans && !deepEqualJson(ourOrphans[name], theirOrphans[name])) {
         notes.push({
           kind: 'orphans-kept-ours',
-          message:
-            `"${name}" on "${paperTitle}" holds answers the schema no longer describes, and both ` +
-            `sides had different ones; yours were kept. Put the field back in the schema to see them.`,
+          message: t('git.merge.orphansKeptOurs', { name, paper: paperTitle }),
         })
       }
     }
@@ -445,7 +443,7 @@ function extraChoice(
   ours: unknown,
   theirs: unknown,
 ): FieldConflict {
-  const describe = (v: unknown) => (v === undefined ? '— not set —' : JSON.stringify(v))
+  const describe = (v: unknown) => (v === undefined ? t('git.merge.notSet') : JSON.stringify(v))
   const canonical = `extra.${key}`
   return {
     id: conflictId(paperId, tree, canonical),
@@ -499,22 +497,22 @@ function mergePaper(
 
   const titleM = merge3<string>(base?.title ?? '', ours.title, theirs.title, eqStr)
   const title = titleM ? titleM.value : ours.title
-  if (!titleM) pushPaperConflict('title', 'Title', base?.title ?? '', ours.title, theirs.title)
+  if (!titleM) pushPaperConflict('title', t('git.field.title'), base?.title ?? '', ours.title, theirs.title)
 
   const pdfM = merge3<string>(base?.pdf ?? '', ours.pdf, theirs.pdf, eqStr)
   const pdf = pdfM ? pdfM.value : ours.pdf
-  if (!pdfM) pushPaperConflict('pdf', 'PDF path', base?.pdf ?? '', ours.pdf, theirs.pdf)
+  if (!pdfM) pushPaperConflict('pdf', t('git.field.pdfPath'), base?.pdf ?? '', ours.pdf, theirs.pdf)
 
   const doiM = merge3<string | undefined>(base?.doi, ours.doi, theirs.doi, eqStrU)
   const doi = doiM ? doiM.value : ours.doi
-  if (!doiM) pushPaperConflict('doi', 'DOI', sOrNull(base?.doi), sOrNull(ours.doi), sOrNull(theirs.doi))
+  if (!doiM) pushPaperConflict('doi', t('git.field.doi'), sOrNull(base?.doi), sOrNull(ours.doi), sOrNull(theirs.doi))
 
   const authorsM = merge3<string[] | undefined>(base?.authors, ours.authors, theirs.authors, deepEqualJson)
   const authors = authorsM ? (authorsM.value ?? []) : ours.authors
   if (!authorsM) {
     pushPaperConflict(
       'authors',
-      'Authors',
+      t('git.field.authors'),
       joinAuthors(base?.authors),
       joinAuthors(ours.authors),
       joinAuthors(theirs.authors),
@@ -535,7 +533,7 @@ function mergePaper(
       paperTitle: ours.title,
       tree: { kind: 'paper' },
       canonical: 'year',
-      label: 'Year',
+      label: t('git.field.year'),
       // Forces the merge dialog's MiddleControl to render a bounded numeric
       // control here rather than free text.
       type: 'year',
@@ -548,13 +546,13 @@ function mergePaper(
   const venueM = merge3<string | undefined>(base?.venue, ours.venue, theirs.venue, eqStrU)
   const venue = venueM ? venueM.value : ours.venue
   if (!venueM) {
-    pushPaperConflict('venue', 'Venue', sOrNull(base?.venue), sOrNull(ours.venue), sOrNull(theirs.venue))
+    pushPaperConflict('venue', t('git.field.venue'), sOrNull(base?.venue), sOrNull(ours.venue), sOrNull(theirs.venue))
   }
 
   const abstractM = merge3<string | undefined>(base?.abstract, ours.abstract, theirs.abstract, eqStrU)
   const abstract = abstractM ? abstractM.value : ours.abstract
   if (!abstractM) {
-    pushPaperConflict('abstract', 'Abstract', sOrNull(base?.abstract), sOrNull(ours.abstract), sOrNull(theirs.abstract))
+    pushPaperConflict('abstract', t('git.field.abstract'), sOrNull(base?.abstract), sOrNull(ours.abstract), sOrNull(theirs.abstract))
   }
 
   // Merged independently of `abstract`: a known gap is the reviewer picking
@@ -577,7 +575,7 @@ function mergePaper(
       paperTitle: ours.title,
       tree: { kind: 'paper' },
       canonical: 'abstractFromPdf',
-      label: 'Abstract extracted from PDF',
+      label: t('git.merge.abstractFromPdfRow'),
       type: 'boolean',
       base: base?.abstractFromPdf ?? false,
       ours: ours.abstractFromPdf ?? false,
@@ -803,47 +801,47 @@ function mergePapers(
   for (const id of order) {
     const b = baseById.get(id)
     const o = oursById.get(id)
-    const t = theirsById.get(id)
+    const th = theirsById.get(id)
 
-    if (o && !t) {
+    if (o && !th) {
       if (!b) {
         out.push(o)
-        notes.push({ kind: 'paper-added-local', message: `"${o.title}" was added locally.` })
+        notes.push({ kind: 'paper-added-local', message: t('git.merge.paperAddedLocal', { title: o.title }) })
       } else if (paperUnchanged(schema, b, o)) {
         notes.push({
           kind: 'paper-removed-remote',
-          message: `"${o.title}" was removed on the remote and is not in the merged project.`,
+          message: t('git.merge.paperRemovedRemote', { title: o.title }),
         })
       } else {
         out.push(o)
         notes.push({
           kind: 'paper-kept',
-          message: `"${o.title}" was removed on the remote, but you have annotated it, so it was kept.`,
+          message: t('git.merge.paperKeptLocal', { title: o.title }),
         })
       }
       continue
     }
 
-    if (t && !o) {
+    if (th && !o) {
       if (!b) {
-        out.push(t)
-        notes.push({ kind: 'paper-added-remote', message: `"${t.title}" was added on the remote.` })
-      } else if (paperUnchanged(schema, b, t)) {
+        out.push(th)
+        notes.push({ kind: 'paper-added-remote', message: t('git.merge.paperAddedRemote', { title: th.title }) })
+      } else if (paperUnchanged(schema, b, th)) {
         notes.push({
           kind: 'paper-removed-local',
-          message: `"${t.title}" was removed locally and is not in the merged project.`,
+          message: t('git.merge.paperRemovedLocal', { title: th.title }),
         })
       } else {
-        out.push(t)
+        out.push(th)
         notes.push({
           kind: 'paper-kept',
-          message: `"${t.title}" was removed locally, but the remote has annotated it, so it was kept.`,
+          message: t('git.merge.paperKeptRemote', { title: th.title }),
         })
       }
       continue
     }
 
-    if (o && t) out.push(mergePaper(schema, b, o, t, conflicts, notes, refusals))
+    if (o && th) out.push(mergePaper(schema, b, o, th, conflicts, notes, refusals))
   }
   return out
 }
@@ -866,20 +864,20 @@ function parseSchemaCanonical(canonical: string): { path: string[]; part: string
   }
 }
 
-const TYPE_WORDS: Record<string, string> = {
-  string: 'Text',
-  number: 'Number',
-  boolean: 'Yes/No',
-  year: 'Year',
+const TYPE_WORDS: Record<string, MessageKey> = {
+  string: 'git.merge.typeWord.text',
+  number: 'git.merge.typeWord.number',
+  boolean: 'git.merge.typeWord.yesNo',
+  year: 'git.merge.typeWord.year',
 }
 
-function describeType(t: FieldType | undefined): string {
-  return t ? TYPE_WORDS[t] : 'Group (no value of its own)'
+function describeType(type: FieldType | undefined): string {
+  return type ? t(TYPE_WORDS[type]) : t('git.merge.typeWord.group')
 }
 
 // [impl->req~git-255~1]
 function describeVisibleIf(v: ResolvedDef['visibleIf']): string {
-  if (!v) return 'Always shown'
+  if (!v) return t('git.merge.alwaysShown')
   return JSON.stringify(v)
 }
 
@@ -951,10 +949,10 @@ function mergeSchemaDefs(
       const present = (od ?? td)!
       if (bd && deepEqualJson(withoutIds(bd), withoutIds(present))) continue // removed on the other side
       if (bd) {
-        const word = (has: boolean) => (has ? 'Keep it (changed on this side)' : 'Remove it (removed on this side)')
+        const word = (has: boolean) => (has ? t('git.merge.keepIt') : t('git.merge.removeIt'))
         push({
           canonical: schemaCanonical([...path, name], 'presence'),
-          label: label(name, 'removed on one side, changed on the other'),
+          label: label(name, t('git.merge.schema.presence')),
           type: 'choice',
           base: null,
           ours: 'ours',
@@ -994,28 +992,28 @@ function mergeSchemaDefs(
       theirsText: describe(tv),
       payload: { ours: ov, theirs: tv },
     })
-    part('type', 'kind of answer', choice(describeType))
-    part('min', 'minimum entries', (bv, ov, tv) => ({ type: 'number', base: bv ?? null, ours: ov, theirs: tv }))
-    part('max', 'maximum entries (empty = unlimited)', (bv, ov, tv) => ({
+    part('type', t('git.merge.schema.kind'), choice(describeType))
+    part('min', t('git.merge.schema.min'), (bv, ov, tv) => ({ type: 'number', base: bv ?? null, ours: ov, theirs: tv }))
+    part('max', t('git.merge.schema.max'), (bv, ov, tv) => ({
       type: 'number',
       base: bv ?? null,
       ours: ov,
       theirs: tv,
     }))
-    part('required', 'required', (bv, ov, tv) => ({ type: 'boolean', base: bv ?? false, ours: ov, theirs: tv }))
-    part('description', 'description', (bv, ov, tv) => ({
+    part('required', t('git.merge.schema.required'), (bv, ov, tv) => ({ type: 'boolean', base: bv ?? false, ours: ov, theirs: tv }))
+    part('description', t('git.merge.schema.description'), (bv, ov, tv) => ({
       type: 'string',
       base: sOrNull(bv),
       ours: sOrNull(ov),
       theirs: sOrNull(tv),
     }))
-    part('options', 'fixed choices, one per line', (bv, ov, tv) => ({
+    part('options', t('git.merge.schema.options'), (bv, ov, tv) => ({
       type: 'string',
       base: (bv ?? []).join('\n'),
       ours: (ov ?? []).join('\n'),
       theirs: (tv ?? []).join('\n'),
     }))
-    part('visibleIf', 'when it is shown', choice(describeVisibleIf))
+    part('visibleIf', t('git.merge.schema.visibleIf'), choice(describeVisibleIf))
     node.children = mergeSchemaDefs(bd?.children, od.children, td.children, nodePath, conflicts)
     out.push(node)
   }
@@ -1101,7 +1099,7 @@ function applySchemaRow(draft: Project, conflict: FieldConflict, value: FieldVal
 function refused(refusals: string[]): MergeOutcome {
   return {
     kind: 'refused',
-    reason: 'These two versions of the project cannot be merged field by field.',
+    reason: t('git.merge.refusedReason'),
     details: refusals.map(refusalDetail),
   }
 }
@@ -1110,8 +1108,8 @@ function refusalDetail(key: string): string {
   // A stranded repeatable-node edit names specifics a generic message would
   // garble, so it pushes its finished sentence instead of a key.
   if (key.startsWith('verbatim:')) return key.slice('verbatim:'.length)
-  if (key === 'version') return 'The file format version was changed on both sides.'
-  return `"${key}" was changed on both sides and cannot be merged automatically.`
+  if (key === 'version') return t('git.merge.versionChanged')
+  return t('git.merge.keyChanged', { key })
 }
 
 /** True when `side` differs from `base` — used only to decide whether a note
@@ -1203,10 +1201,7 @@ function schemaRemovalNote(
   if (total === 0) return null
   return {
     kind: 'schema-removed-answers',
-    message:
-      `The merged schema no longer has ${names.map((n) => `"${n}"`).join(', ')}, which ` +
-      `${total === 1 ? 'holds 1 answer' : `holds ${total} answers`}. They are kept in the files, ` +
-      'hidden, and come back if the field does.',
+    message: tp('git.merge.schemaRemovedAnswers', total, { names: names.map((n) => `"${n}"`).join(', ') }),
   }
 }
 
@@ -1250,13 +1245,13 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
       paperTitle: '',
       tree: { kind: 'schema' },
       canonical,
-      label: `${c.base.join(' › ')} — renamed differently on each side`,
+      label: `${c.base.join(' › ')} — ${t('git.merge.schema.renamed')}`,
       type: 'choice',
       base: null,
       ours: 'ours',
       theirs: 'theirs',
-      oursText: `Call it “${c.ours.join(' › ')}”`,
-      theirsText: `Call it “${c.theirs.join(' › ')}”`,
+      oursText: t('git.merge.schema.callIt', { name: c.ours.join(' › ') }),
+      theirsText: t('git.merge.schema.callIt', { name: c.theirs.join(' › ') }),
       payload: { ours: null, theirs: { from: c.ours, to: c.theirs } },
     })
   }
@@ -1295,11 +1290,11 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
 
   // [impl->req~dat-285~1]
   const aiM = merge3<boolean | undefined>(base?.aiEnabled, ours.aiEnabled, theirs.aiEnabled, eqBool)
-  if (!aiM) projectRow('aiEnabled', 'AI-assisted annotation enabled', { type: 'boolean', base: base?.aiEnabled ?? null, ours: ours.aiEnabled, theirs: theirs.aiEnabled })
+  if (!aiM) projectRow('aiEnabled', t('git.merge.row.aiEnabled'), { type: 'boolean', base: base?.aiEnabled ?? null, ours: ours.aiEnabled, theirs: theirs.aiEnabled })
 
   const aiSeatM = merge3<boolean | undefined>(base?.aiSeat, ours.aiSeat, theirs.aiSeat, eqBool)
   if (!aiSeatM) {
-    projectRow('aiSeat', 'AI takes one reviewer seat', {
+    projectRow('aiSeat', t('git.merge.row.aiSeat'), {
       type: 'boolean',
       base: base?.aiSeat ?? null,
       ours: ours.aiSeat,
@@ -1309,7 +1304,7 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
 
   const finishM = merge3<boolean | undefined>(base?.finishCheckbox, ours.finishCheckbox, theirs.finishCheckbox, eqBool)
   if (!finishM) {
-    projectRow('finishCheckbox', 'Show the "finished" checkbox', {
+    projectRow('finishCheckbox', t('git.merge.row.finishCheckbox'), {
       type: 'boolean',
       base: base?.finishCheckbox ?? null,
       ours: ours.finishCheckbox,
@@ -1319,7 +1314,7 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
 
   const reviewersM = merge3<number | undefined>(base?.reviewers, ours.reviewers, theirs.reviewers, eqNum)
   if (!reviewersM) {
-    projectRow('reviewers', 'Number of reviewers', { type: 'number', base: base?.reviewers ?? null, ours: ours.reviewers, theirs: theirs.reviewers })
+    projectRow('reviewers', t('git.merge.row.reviewers'), { type: 'number', base: base?.reviewers ?? null, ours: ours.reviewers, theirs: theirs.reviewers })
   }
 
   // A screening project's schema is derived from its reasons, so the two are
@@ -1330,14 +1325,16 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
   if (screening) {
     const screeningM = merge3<ScreeningConfig | null>(base?.screening ?? null, ours.screening, theirs.screening, deepEqualJson)
     const describe = (v: { screening: ScreeningConfig | null }) =>
-      v.screening ? `Screening, reasons: ${v.screening.reasons.join(', ')}` : 'Not a screening project'
+      v.screening
+        ? t('git.merge.screeningReasons', { reasons: v.screening.reasons.join(', ') })
+        : t('git.merge.notScreening')
     if (screeningM) {
       screeningValue = screeningM.value
       schema = deepEqualJson(screeningM.value, ours.screening) ? ours.schema : theirs.schema
     } else {
       projectChoice(
         'screening',
-        'Screening setup',
+        t('git.merge.row.screening'),
         { screening: ours.screening, schema: ours.schema },
         { screening: theirs.screening, schema: theirs.schema },
         describe,
@@ -1353,13 +1350,15 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
   const annotationsDirM = merge3<string | null>(base?.annotationsDir ?? null, ours.annotationsDir, theirs.annotationsDir, (a, b) => a === b)
   const annotationsDirValue = annotationsDirM ? annotationsDirM.value : ours.annotationsDir
   if (!annotationsDirM) {
-    projectChoice('annotationsDir', 'Annotations folder', ours.annotationsDir, theirs.annotationsDir, (v) => `${v ?? 'annotations'}/`)
+    projectChoice('annotationsDir', t('git.merge.row.annotationsDir'), ours.annotationsDir, theirs.annotationsDir, (v) => `${v ?? 'annotations'}/`)
   }
 
   const provenanceM = merge3<ProjectProvenance | null>(base?.provenance ?? null, ours.provenance, theirs.provenance, deepEqualJson)
   if (!provenanceM) {
-    projectChoice('provenance', 'Where the papers were imported from', ours.provenance, theirs.provenance, (v) =>
-      v ? `${v.source.title ?? v.source.file}, imported ${v.importedAt.slice(0, 10)}` : 'Not recorded',
+    projectChoice('provenance', t('git.merge.row.provenance'), ours.provenance, theirs.provenance, (v) =>
+      v
+        ? t('git.merge.provenance', { source: v.source.title ?? v.source.file, date: v.importedAt.slice(0, 10) })
+        : t('git.merge.notRecorded'),
     )
   }
 
@@ -1373,7 +1372,7 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
     const value = m ? m.value : pick(ours.protocol)
     if (value !== undefined) (protocol as Record<string, unknown>)[key] = value
     if (!m) {
-      projectRow(`protocol.${key}`, PROTOCOL_LABELS[key], {
+      projectRow(`protocol.${key}`, t(PROTOCOL_LABELS[key]), {
         type: 'string',
         base: text(pick(base?.protocol)),
         ours: text(pick(ours.protocol)),
@@ -1398,26 +1397,26 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
   const removalNote = schemaRemovalNote(base, schema, ours, theirs)
   if (removalNote) notes.push(removalNote)
   if (!changedFromBase(base?.schema, ours.schema) && changedFromBase(base?.schema, theirs.schema)) {
-    notes.push({ kind: 'schema-remote', message: 'The other side changed the annotation schema; that schema was used.' })
+    notes.push({ kind: 'schema-remote', message: t('git.merge.schemaRemote') })
   }
   if (reviewersM && !changedFromBase(base?.reviewers, ours.reviewers) && changedFromBase(base?.reviewers, theirs.reviewers)) {
-    notes.push({ kind: 'reviewers-remote', message: 'The other side changed the number of reviewers; that value was used.' })
+    notes.push({ kind: 'reviewers-remote', message: t('git.merge.reviewersRemote') })
   }
   if (screening && !changedFromBase(base?.screening, ours.screening) && changedFromBase(base?.screening, theirs.screening)) {
-    notes.push({ kind: 'screening-remote', message: 'The other side changed the screening configuration; that value was used.' })
+    notes.push({ kind: 'screening-remote', message: t('git.merge.screeningRemote') })
   }
 
   // One string, so a conflict row expresses it fine.
   const titleM = merge3<string | undefined>(base?.title, ours.title, theirs.title, (a, b) => a === b)
   const title = titleM ? titleM.value : ours.title
   if (!titleM) {
-    projectRow('title', 'Project title', { type: 'string', base: sOrNull(base?.title), ours: sOrNull(ours.title), theirs: sOrNull(theirs.title) })
+    projectRow('title', t('git.merge.row.title'), { type: 'string', base: sOrNull(base?.title), ours: sOrNull(ours.title), theirs: sOrNull(theirs.title) })
   }
 
   const schemaInfoM = merge3<string | null>(base?.schemaInfo ?? null, ours.schemaInfo, theirs.schemaInfo, (a, b) => a === b)
   const schemaInfo = schemaInfoM ? schemaInfoM.value : ours.schemaInfo
   if (!schemaInfoM) {
-    projectRow('schemaInfo', 'Schema info', {
+    projectRow('schemaInfo', t('git.merge.row.schemaInfo'), {
       type: 'string',
       base: sOrNull(base?.schemaInfo ?? undefined),
       ours: sOrNull(ours.schemaInfo ?? undefined),
@@ -1552,12 +1551,12 @@ function mergedSchemaVersion(
 }
 
 const PROTOCOL_KEYS = ['researchQuestions', 'searchStrings', 'databases', 'searchDate', 'notes'] as const
-const PROTOCOL_LABELS: Record<(typeof PROTOCOL_KEYS)[number], string> = {
-  researchQuestions: 'Research questions, one per line',
-  searchStrings: 'Search strings, one per line',
-  databases: 'Databases, one per line',
-  searchDate: 'Search date',
-  notes: 'Protocol notes and criteria',
+const PROTOCOL_LABELS: Record<(typeof PROTOCOL_KEYS)[number], MessageKey> = {
+  researchQuestions: 'git.merge.protocol.researchQuestions',
+  searchStrings: 'git.merge.protocol.searchStrings',
+  databases: 'git.merge.protocol.databases',
+  searchDate: 'git.merge.protocol.searchDate',
+  notes: 'git.merge.protocol.notes',
 }
 
 /**

@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useT } from '../i18n'
 import { useGitStore } from '../state/gitStore'
 
 /**
@@ -11,6 +12,7 @@ import { useGitStore } from '../state/gitStore'
  * merge instead, exactly like a pull.
  */
 export function BranchSwitchPrompt() {
+  const t = useT()
   const prompt = useGitStore((s) => s.panel?.branchSwitchPrompt ?? null)
   const busy = useGitStore((s) => s.panel?.phase === 'working')
   const resolve = useGitStore((s) => s.resolveBranchSwitchPrompt)
@@ -35,38 +37,35 @@ export function BranchSwitchPrompt() {
         aria-modal="true"
       >
         <div className="modal-body">
-          <h3>Switch to "{prompt.branch}"?</h3>
-          <p>
-            You have uncommitted changes. Commit them first (this cancels the switch for now), carry
-            them into "{prompt.branch}" (merging as needed), or cancel.
-          </p>
+          <h3>{t('git.branchSwitch.title', { branch: prompt.branch })}</h3>
+          <p>{t('git.branchSwitch.body', { branch: prompt.branch })}</p>
         </div>
         <div className="close-prompt-actions">
           <button
             type="button"
-            title="Cancel — stay on the current branch"
+            title={t('git.branchSwitch.cancelTitle')}
             onClick={() => void resolve('cancel')}
             disabled={busy}
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="button"
-            title="Cancel the switch so you can commit your changes first"
+            title={t('git.branchSwitch.commitFirstTitle')}
             onClick={() => void resolve('commitFirst')}
             disabled={busy}
           >
-            Commit first
+            {t('git.branchSwitch.commitFirst')}
           </button>
           <button
             type="button"
             className="primary"
-            title={`Switch to "${prompt.branch}", merging your uncommitted changes in`}
+            title={t('git.branchSwitch.carryOverTitle', { branch: prompt.branch })}
             onClick={() => void resolve('carryOver')}
             disabled={busy}
             autoFocus
           >
-            {busy ? 'Switching…' : 'Carry changes over'}
+            {busy ? t('git.branchSwitch.switching') : t('git.branchSwitch.carryOver')}
           </button>
         </div>
       </div>

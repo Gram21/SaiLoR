@@ -28,6 +28,7 @@ import type {
   AnnotationAuthors,
   StashEntry,
 } from '../git/types'
+import { t } from '../i18n'
 import { useStore } from './store'
 
 /**
@@ -380,7 +381,7 @@ async function reloadOpenProject(): Promise<void> {
 
 function mergeParseError(rev: string, err: unknown): string {
   const message = err instanceof ProjectLoadError ? err.message : err instanceof Error ? err.message : String(err)
-  return `The project file at ${rev} is not a valid project: ${message} The merge has been aborted; nothing changed.`
+  return t('git.error.mergeParse', { rev, message })
 }
 
 /** `splitProjectFiles`, reshaped into the `{metaText, files}` the `GitPlatform`
@@ -414,7 +415,7 @@ export const useGitStore = create<GitState>()(
       if (problem) {
         set((s) => {
           if (s.panel) {
-            s.panel.error = `The merged project would not open again, so nothing was written: ${problem}`
+            s.panel.error = t('git.error.mergedNotOpenable', { problem })
             if (!s.panel.merge) s.panel.merge = { source, ref, merged, conflicts, resolutions, decided: {}, notes }
           }
         })
@@ -444,10 +445,10 @@ export const useGitStore = create<GitState>()(
       // [impl->req~git-425~1]
       const notice =
         source.kind === 'pull'
-          ? `Merged ${ref}.${noteText} Push when you are ready.`
+          ? t('git.notice.merged', { ref, notes: noteText })
           : source.kind === 'merge-branch'
-            ? `Merged ${ref} into ${repo.branch ?? 'the current branch'}.${noteText} Push when you are ready.`
-            : `Switched to ${ref}, carrying your changes over.${noteText}`
+            ? t('git.notice.mergedInto', { ref, branch: repo.branch ?? t('git.common.currentBranch'), notes: noteText })
+            : t('git.notice.switchedCarry', { ref, notes: noteText })
       set((s) => {
         if (s.panel) {
           s.panel.merge = null
@@ -510,11 +511,7 @@ export const useGitStore = create<GitState>()(
     function guardDirtyForMerge(verb: string): boolean {
       if (!useStore.getState().dirty) return true
       set((s) => {
-        if (s.panel) {
-          s.panel.error =
-            `Save the project first — ${verb} works on the file on disk, and your unsaved ` +
-            'annotations would be lost.'
-        }
+        if (s.panel) s.panel.error = t('git.error.saveFirst', { verb })
       })
       return false
     }
@@ -569,7 +566,7 @@ export const useGitStore = create<GitState>()(
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'idle'
-            s.panel.notice = 'Already up to date.'
+            s.panel.notice = t('git.notice.upToDate')
           }
         })
         return
@@ -579,29 +576,22 @@ export const useGitStore = create<GitState>()(
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'idle'
-            s.panel.notice = `Updated to ${ffLabel}.`
+            s.panel.notice = t('git.notice.updatedTo', { label: ffLabel })
           }
         })
         await get().refreshStatus()
         return
       }
       if (start.kind === 'no-upstream') {
-        fail(`The branch ${start.branch ?? '(detached HEAD)'} has no upstream branch, so there is nothing to pull from.`)
+        fail(t('git.error.noUpstream', { branch: start.branch ?? t('git.common.detachedHead') }))
         return
       }
       if (start.kind === 'dirty') {
-        fail(
-          `This repository has uncommitted changes: ${start.paths.join(', ')}. Commit them, or use ` +
-            '"Stash my changes" below to set them aside, then try again.',
-        )
+        fail(t('git.error.dirtyRepo', { paths: start.paths.join(', ') }))
         return
       }
       if (start.kind === 'conflict-elsewhere') {
-        fail(
-          `Git could not merge these files on its own: ${start.paths.join(', ')}. SaiLoR only ` +
-            'knows how to merge the project JSON — resolve these with git and try again. The ' +
-            'merge has been aborted; nothing changed.',
-        )
+        fail(t('git.error.conflictElsewhere', { paths: start.paths.join(', ') }))
         return
       }
       if (start.kind === 'error') {
@@ -616,7 +606,7 @@ export const useGitStore = create<GitState>()(
         base = start.base === null ? null : loadProject(start.base)
       } catch (err) {
         await git.abortPull(repo.root)
-        fail(mergeParseError('the merge base', err))
+        fail(mergeParseError(t('git.error.mergeBase'), err))
         return
       }
       let ours: Project
@@ -624,7 +614,7 @@ export const useGitStore = create<GitState>()(
         ours = loadProject(start.ours)
       } catch (err) {
         await git.abortPull(repo.root)
-        fail(mergeParseError('HEAD (your copy)', err))
+        fail(mergeParseError(t('git.error.headCopy'), err))
         return
       }
       let theirs: Project
@@ -769,9 +759,7 @@ export const useGitStore = create<GitState>()(
       set((s) => {
         if (s.panel) {
           s.panel.phase = 'idle'
-          s.panel.error =
-            `${repo.relPath} changed on disk since this review was loaded, so nothing was written. ` +
-            'The review below has been reloaded from the current file — check your choices again.'
+          s.panel.error = t('git.error.changedOnDisk', { path: repo.relPath })
         }
       })
       return false
@@ -860,8 +848,8 @@ export const useGitStore = create<GitState>()(
         const r = await git.applyRepoSetup(repo.root, repo.relPath)
         set((s) => {
           s.repoSetupNotice = r.ok
-            ? { kind: 'ok', text: "Added SaiLoR's git rules for this project (.gitattributes, .gitignore) and committed them." }
-            : { kind: 'error', text: `SaiLoR could not configure this repository: ${gitErrorText(r)}` }
+            ? { kind: 'ok', text: t('git.notice.repoSetupOk') }
+            : { kind: 'error', text: t('git.error.repoSetupFailed', { error: gitErrorText(r) }) }
         })
         // The commit changed HEAD and the working tree.
         await get().refreshStatus()
@@ -895,10 +883,10 @@ export const useGitStore = create<GitState>()(
         if (!git || !repo || !get().panel) return
         // The stash takes what is on disk; unsaved edits exist only in memory
         // and the reload afterwards would silently drop them.
-        if (!guardDirtyForMerge('stashing')) return
+        if (!guardDirtyForMerge(t('git.verb.stashing'))) return
         await runStashOperation(
           () => git.stashPush(repo.root, repo.relPath, message),
-          'Stashed. Your changes to this project are parked below until you restore them.',
+          t('git.notice.stashed'),
         )
       },
 
@@ -906,34 +894,21 @@ export const useGitStore = create<GitState>()(
         const git = getPlatform().getGit()
         const repo = get().repo
         if (!git || !repo || !get().panel) return
-        if (!guardDirtyForMerge('restoring a stash')) return
+        if (!guardDirtyForMerge(t('git.verb.restoringStash'))) return
         setPanelWorking()
         const r = await git.stashRestore(repo.root, repo.relPath, sha)
         if (r.kind === 'restored' || r.kind === 'restored-kept') {
           await useStore.getState().resyncProjectFromDisk()
           finishPanelWork(
-            r.kind === 'restored'
-              ? 'Restored.'
-              : `Restored, but the stash could not be removed afterwards (${r.message}). It now repeats ` +
-                  'what is already in your files, so deleting it is safe.',
+            r.kind === 'restored' ? t('git.notice.restored') : t('git.notice.restoredKept', { message: r.message }),
             null,
           )
         } else if (r.kind === 'dirty') {
-          finishPanelWork(
-            null,
-            `Commit or stash these first — restoring onto uncommitted work would mix two sets of edits: ` +
-              `${r.paths.join(', ')}. Nothing was changed.`,
-          )
+          finishPanelWork(null, t('git.error.restoreDirty', { paths: r.paths.join(', ') }))
         } else if (r.kind === 'conflict') {
-          finishPanelWork(
-            null,
-            'This stash no longer fits the current commit — the same files changed since it was made. ' +
-              'Nothing was changed and the stash is kept. Use "Restore on a new branch" to put it back ' +
-              'where it cannot conflict, then commit there and bring it over with Merge branch…, which ' +
-              'resolves any overlap field by field.',
-          )
+          finishPanelWork(null, t('git.error.restoreConflict'))
         } else if (r.kind === 'gone') {
-          finishPanelWork(null, 'That stash no longer exists.')
+          finishPanelWork(null, t('git.error.stashGone'))
         } else {
           finishPanelWork(null, r.message)
         }
@@ -944,14 +919,13 @@ export const useGitStore = create<GitState>()(
         const git = getPlatform().getGit()
         const repo = get().repo
         if (!git || !repo || !get().panel) return
-        if (!guardDirtyForMerge('restoring a stash')) return
+        if (!guardDirtyForMerge(t('git.verb.restoringStash'))) return
         const entry = get().stashes.find((e) => e.sha === sha)
         if (!entry) return
         const branch = stashBranchName(entry, get().branches.map((b) => b.name))
         await runStashOperation(
           () => git.stashBranch(repo.root, repo.relPath, sha, branch),
-          `Restored onto the new branch "${branch}", which you are now on. Commit there, switch back, ` +
-            'and use Merge branch… to bring the changes over.',
+          t('git.notice.stashBranch', { branch }),
         )
         // A new branch, and HEAD moved onto it.
         await get().refreshRepo(useStore.getState().saveHandle)
@@ -964,7 +938,7 @@ export const useGitStore = create<GitState>()(
         if (!git || !repo || !get().panel) return
         setPanelWorking()
         const r = await git.stashDrop(repo.root, sha)
-        finishPanelWork(r.ok ? 'Stash deleted.' : null, r.ok ? null : gitErrorText(r))
+        finishPanelWork(r.ok ? t('git.notice.stashDeleted') : null, r.ok ? null : gitErrorText(r))
         await get().refreshStashes()
       },
 
@@ -1285,7 +1259,7 @@ export const useGitStore = create<GitState>()(
             s.panel.phase = 'idle'
             s.panel.message = ''
             s.panel.amend = false
-            s.panel.notice = panel.amend ? 'Amended.' : 'Committed.'
+            s.panel.notice = panel.amend ? t('git.notice.amended') : t('git.notice.committed')
           }
         })
         await get().refreshStatus()
@@ -1340,7 +1314,7 @@ export const useGitStore = create<GitState>()(
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'idle'
-            s.panel.notice = 'Reverted the discarded changes. Nothing was committed.'
+            s.panel.notice = t('git.notice.discarded')
           }
         })
         await get().refreshStatus()
@@ -1362,7 +1336,7 @@ export const useGitStore = create<GitState>()(
         set((s) => {
           if (!s.panel) return
           s.panel.phase = 'idle'
-          if (r.ok) s.panel.notice = 'Pushed.'
+          if (r.ok) s.panel.notice = t('git.notice.pushed')
           else s.panel.error = gitErrorText(r)
         })
       },
@@ -1373,7 +1347,7 @@ export const useGitStore = create<GitState>()(
         if (!git || !repo) return
         await afterBackgroundFetch()
 
-        if (!guardDirtyForMerge('pulling')) return
+        if (!guardDirtyForMerge(t('git.verb.pulling'))) return
 
         set((s) => {
           if (s.panel) {
@@ -1384,7 +1358,7 @@ export const useGitStore = create<GitState>()(
         })
 
         const label = repo.upstream ?? 'the remote'
-        if (!(await previewApproved(null, { kind: 'pull' }, label, `Pull from ${label}`, confirm))) return
+        if (!(await previewApproved(null, { kind: 'pull' }, label, t('git.action.pullFrom', { label }), confirm))) return
         const start = await git.beginPull(repo.root, repo.relPath)
         await applyMergeStart(start, { kind: 'pull' }, label)
       },
@@ -1394,10 +1368,10 @@ export const useGitStore = create<GitState>()(
         const git = getPlatform().getGit()
         const repo = get().repo
         if (!git || !repo) return
-        if (!guardDirtyForMerge('undoing a merge')) return
+        if (!guardDirtyForMerge(t('git.verb.undoingMerge'))) return
         await runStashOperation(
           () => git.undoMerge(repo.root, repo.relPath),
-          'Undid the last merge or pull. Your branch is back where it was before.',
+          t('git.notice.undoneMerge'),
         )
       },
 
@@ -1407,7 +1381,7 @@ export const useGitStore = create<GitState>()(
         if (!git || !repo || ref === repo.branch) return
         await afterBackgroundFetch()
 
-        if (!guardDirtyForMerge('merging')) return
+        if (!guardDirtyForMerge(t('git.verb.merging'))) return
 
         set((s) => {
           if (s.panel) {
@@ -1417,7 +1391,8 @@ export const useGitStore = create<GitState>()(
           }
         })
 
-        if (!(await previewApproved(ref, { kind: 'merge-branch' }, ref, `Merge ${ref} into ${repo.branch}`, confirm))) {
+        const action = t('git.action.mergeInto', { ref, branch: repo.branch ?? t('git.common.detachedHead') })
+        if (!(await previewApproved(ref, { kind: 'merge-branch' }, ref, action, confirm))) {
           return
         }
         const start = await git.beginMerge(repo.root, repo.relPath, ref)
@@ -1495,7 +1470,7 @@ export const useGitStore = create<GitState>()(
         }
         await get().refreshBranches()
         set((s) => {
-          if (s.panel) s.panel.notice = `Deleted ${branch}.`
+          if (s.panel) s.panel.notice = t('git.notice.branchDeleted', { branch })
         })
       },
 
@@ -1642,7 +1617,7 @@ export const useGitStore = create<GitState>()(
         set((s) => {
           if (s.panel) {
             s.panel.merge = null
-            s.panel.notice = 'The merge was aborted. Nothing changed.'
+            s.panel.notice = t('git.notice.mergeAborted')
           }
         })
         if (merge.source.kind === 'branch-switch') {
@@ -1673,7 +1648,7 @@ export const useGitStore = create<GitState>()(
 
         // A clean checkout reloads the project from disk, so the same guard
         // applies here as to a merge.
-        if (!guardDirtyForMerge('switching branches')) return
+        if (!guardDirtyForMerge(t('git.verb.switchingBranches'))) return
         const dirty = (get().panel?.status?.changes.length ?? 0) > 0
         if (!dirty) {
           void runCleanCheckout(branch)
@@ -1721,7 +1696,7 @@ export const useGitStore = create<GitState>()(
         if (!git || !repo) return
         if (!name) {
           set((s) => {
-            if (s.panel?.newBranchPrompt) s.panel.newBranchPrompt.error = 'Enter a branch name.'
+            if (s.panel?.newBranchPrompt) s.panel.newBranchPrompt.error = t('git.error.enterBranchName')
           })
           return
         }
@@ -1767,7 +1742,7 @@ export const useGitStore = create<GitState>()(
       set((s) => {
         if (s.panel) {
           s.panel.phase = 'idle'
-          s.panel.notice = `Switched to ${branch}.`
+          s.panel.notice = t('git.notice.switchedTo', { branch })
         }
       })
       await get().refreshRepo(useStore.getState().saveHandle)
@@ -1807,10 +1782,7 @@ export const useGitStore = create<GitState>()(
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'idle'
-            s.panel.error =
-              `These files are also uncommitted and aren't part of the project: ${start.paths.join(', ')}. ` +
-              'SaiLoR only knows how to carry the project\'s own changes across a branch switch — ' +
-              'commit or discard those first.'
+            s.panel.error = t('git.error.otherFilesDirty', { paths: start.paths.join(', ') })
           }
         })
         return
@@ -1848,7 +1820,7 @@ export const useGitStore = create<GitState>()(
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'idle'
-            s.panel.error = mergeParseError(`${start.sourceBranch} (before switching)`, err) + stranded
+            s.panel.error = mergeParseError(t('git.error.beforeSwitch', { branch: start.sourceBranch }), err) + stranded
           }
         })
         return
@@ -1861,7 +1833,7 @@ export const useGitStore = create<GitState>()(
         set((s) => {
           if (s.panel) {
             s.panel.phase = 'idle'
-            s.panel.error = mergeParseError('your uncommitted changes', err) + stranded
+            s.panel.error = mergeParseError(t('git.error.yourChanges'), err) + stranded
           }
         })
         return

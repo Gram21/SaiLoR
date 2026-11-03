@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import type { GitFileChange, GitRun, MergePreview } from './types'
 
 /**
@@ -142,14 +143,14 @@ export function gitErrorText(run: GitRun): string {
   const stdout = run.stdout.trim()
   if (stderr) return stdout ? `${stderr}\n${stdout}` : stderr
   if (stdout) return stdout
-  return run.code === null ? 'git could not be started.' : `git exited with code ${run.code}.`
+  return run.code === null ? t('git.error.gitNotStarted') : t('git.error.gitExitCode', { code: run.code })
 }
 
 const PREVIEW_LIST_MAX = 10
 
 function listed(items: string[]): string {
   const shown = items.slice(0, PREVIEW_LIST_MAX).join(', ')
-  return items.length > PREVIEW_LIST_MAX ? `${shown} and ${items.length - PREVIEW_LIST_MAX} more` : shown
+  return items.length > PREVIEW_LIST_MAX ? t('git.preview.andMore', { shown, count: items.length - PREVIEW_LIST_MAX }) : shown
 }
 
 // [impl->req~git-550~1]
@@ -159,30 +160,25 @@ export function mergePreviewText(
   relPath: string,
   action: string,
 ): string {
-  const lines = [`${action}?`, '']
+  const lines = [t('git.preview.question', { action }), '']
   lines.push(
     preview.fastForward
-      ? `Your branch has no commits that ${preview.ref} lacks, so git moves it forward. No merge commit is made.`
-      : `Both sides have new commits, so SaiLoR makes a merge commit with ${preview.ref}.`,
+      ? t('git.preview.fastForward', { ref: preview.ref })
+      : t('git.preview.mergeCommit', { ref: preview.ref }),
   )
   const annotations = preview.files.filter((f) => f !== relPath)
-  if (preview.files.length === 0) lines.push('No project or annotation file changes.')
-  if (preview.files.includes(relPath)) lines.push('The project file changes.')
-  if (annotations.length > 0) lines.push(`${annotations.length} annotation file(s) change.`)
-  if (preview.papers.length > 0) lines.push(`Papers with changes: ${listed(preview.papers)}.`)
+  if (preview.files.length === 0) lines.push(t('git.preview.noFileChanges'))
+  if (preview.files.includes(relPath)) lines.push(t('git.preview.projectChanges'))
+  if (annotations.length > 0) lines.push(t('git.preview.annotationChanges', { count: annotations.length }))
+  if (preview.papers.length > 0) lines.push(t('git.preview.papers', { list: listed(preview.papers) }))
   lines.push('')
   if (preview.conflictsElsewhere.length > 0) {
-    lines.push(
-      `Git expects conflicts in files that SaiLoR cannot merge: ${listed(preview.conflictsElsewhere)}. ` +
-        'The merge will stop and change nothing.',
-    )
+    lines.push(t('git.preview.conflictsElsewhere', { list: listed(preview.conflictsElsewhere) }))
   } else if (preview.conflicts.length > 0) {
-    lines.push(
-      `Git expects conflicts in ${listed(preview.conflicts)}. You resolve them in the merge dialog before anything is committed.`,
-    )
+    lines.push(t('git.preview.conflicts', { list: listed(preview.conflicts) }))
   } else {
-    lines.push('Git expects no conflicts.')
+    lines.push(t('git.preview.noConflicts'))
   }
-  lines.push('SaiLoR saves a backup of your branch first. Use "Undo last merge" to go back.')
+  lines.push(t('git.preview.backup'))
   return lines.join('\n')
 }

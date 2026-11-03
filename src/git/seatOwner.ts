@@ -1,3 +1,5 @@
+import { t } from '../i18n'
+
 /**
  * Which human last committed a given reviewer seat **on a given paper**.
  *
@@ -109,7 +111,7 @@ export function sameIdentity(a: GitIdentity | null, b: GitIdentity | null): bool
 /** How to name somebody in a warning. The email is the fallback for a
  *  repository configured with `user.email` but no `user.name`. */
 export function ownerLabel(id: GitIdentity): string {
-  return id.name.trim() || id.email.trim() || 'someone else'
+  return id.name.trim() || id.email.trim() || t('git.seat.someoneElse')
 }
 
 /**

@@ -1,4 +1,5 @@
 // [impl->req~git-411~1]
+import { useT } from '../i18n'
 import { useGitStore } from '../state/gitStore'
 
 /**
@@ -17,6 +18,7 @@ import { useGitStore } from '../state/gitStore'
  * line-merging two reviewers' answers outside the app.
  */
 export function RepoSetupPrompt() {
+  const t = useT()
   const prompt = useGitStore((s) => s.repoSetupPrompt)
   const resolve = useGitStore((s) => s.resolveRepoSetup)
   if (!prompt) return null
@@ -25,20 +27,11 @@ export function RepoSetupPrompt() {
     <div className="modal-overlay">
       <div className="modal repo-setup-prompt" role="dialog" aria-modal="true">
         <div className="modal-head">
-          <strong>Configure this repository for SaiLoR?</strong>
+          <strong>{t('git.repoSetup.title')}</strong>
         </div>
         <div className="modal-body">
-          <p>
-            Two of git's defaults work against annotation data. On Windows, git normally rewrites
-            every line ending on checkout, which turns one reviewer's machine into a source of
-            whole-file diffs and phantom conflicts for everyone. And git's own merge will combine
-            two reviewers' answers into a file that is valid JSON but that neither of them wrote —
-            SaiLoR never uses that result, but anyone merging in a terminal gets it silently.
-          </p>
-          <p>
-            SaiLoR can add rules that fix both, plus ignore the OS junk files that otherwise block
-            a merge by sitting untracked in the annotations folder. It would update:
-          </p>
+          <p>{t('git.repoSetup.reason')}</p>
+          <p>{t('git.repoSetup.willUpdate')}</p>
           <ul className="repo-setup-paths">
             {prompt.paths.map((p) => (
               <li key={p}>
@@ -46,17 +39,13 @@ export function RepoSetupPrompt() {
               </li>
             ))}
           </ul>
-          <p className="repo-setup-note">
-            These files already have rules of their own. SaiLoR's go in a clearly marked block and
-            nothing outside it is touched, but they are yours — if anything in them is deliberate,
-            say no and add the rules by hand. The change is committed, authored as SaiLoR.
-          </p>
+          <p className="repo-setup-note">{t('git.repoSetup.note')}</p>
           <div className="modal-actions">
             <button type="button" onClick={() => void resolve(false)}>
-              No, leave them alone
+              {t('git.repoSetup.decline')}
             </button>
             <button type="button" className="primary" onClick={() => void resolve(true)}>
-              Add SaiLoR's rules
+              {t('git.repoSetup.accept')}
             </button>
           </div>
         </div>

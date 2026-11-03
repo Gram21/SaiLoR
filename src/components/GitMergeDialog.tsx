@@ -1,4 +1,5 @@
 // [impl->req~git-300~1]
+import { useT } from '../i18n'
 import { useGitStore } from '../state/gitStore'
 import { ConflictResolutionDialog } from './ConflictResolutionDialog'
 
@@ -6,6 +7,7 @@ export { isForeignReview } from './ConflictResolutionDialog'
 
 /** The pull / merge-branch / branch-switch conflict dialog. */
 export function GitMergeDialog() {
+  const t = useT()
   const merge = useGitStore((s) => s.panel?.merge ?? null)
   const resolveConflict = useGitStore((s) => s.resolveConflict)
   const takeAll = useGitStore((s) => s.takeAll)
@@ -18,16 +20,14 @@ export function GitMergeDialog() {
     <ConflictResolutionDialog
       merge={merge}
       labels={{
-        title: 'Resolve merge conflicts',
-        intro:
-          `Your changes and ${merge.ref}'s both changed these fields. Everything else has already ` +
-          "been merged: a field only one side changed kept that side's value.",
-        theirsValue: 'the remote value',
-        useAllTheirs: 'Use all remote',
-        cancel: 'Cancel merge',
-        cancelTitle: 'Abort the merge and discard all conflict resolutions',
-        finish: 'Finish merge',
-        finishTitle: 'Commit the merge with the resolutions chosen above',
+        title: t('git.mergeDialog.title'),
+        intro: t('git.mergeDialog.intro', { ref: merge.ref }),
+        theirsValue: t('git.mergeDialog.theirsValue'),
+        useAllTheirs: t('git.mergeDialog.useAllTheirs'),
+        cancel: t('git.mergeDialog.cancel'),
+        cancelTitle: t('git.mergeDialog.cancelTitle'),
+        finish: t('git.mergeDialog.finish'),
+        finishTitle: t('git.mergeDialog.finishTitle'),
       }}
       error={error}
       onResolve={resolveConflict}

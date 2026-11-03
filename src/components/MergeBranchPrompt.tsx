@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useT, rich } from '../i18n'
 import { useGitStore } from '../state/gitStore'
 import type { GitBranch } from '../git/types'
 
@@ -15,6 +16,7 @@ import type { GitBranch } from '../git/types'
  * the ordinary Git panel exactly as if Pull had produced it.
  */
 export function MergeBranchPrompt() {
+  const t = useT()
   const prompt = useGitStore((s) => s.panel?.mergeBranchPrompt ?? null)
   const repo = useGitStore((s) => s.repo)
   const branches = useGitStore((s) => s.branches)
@@ -45,12 +47,12 @@ export function MergeBranchPrompt() {
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Merge branch"
+        aria-label={t('git.mergeBranch.title')}
       >
         <div className="modal-body">
-          <h3>Merge branch</h3>
+          <h3>{t('git.mergeBranch.title')}</h3>
           <label className="git-field-label" htmlFor="merge-branch-select">
-            Branch to merge
+            {t('git.mergeBranch.branchLabel')}
           </label>
           <select
             id="merge-branch-select"
@@ -60,26 +62,25 @@ export function MergeBranchPrompt() {
             onChange={(e) => setBranch(e.target.value)}
             autoFocus
           >
-            <MergeBranchOptions branches={mergeable} remote={false} label="Local" />
-            <MergeBranchOptions branches={mergeable} remote={true} label="Remote" />
+            <MergeBranchOptions branches={mergeable} remote={false} label={t('git.mergeBranch.local')} />
+            <MergeBranchOptions branches={mergeable} remote={true} label={t('git.mergeBranch.remote')} />
           </select>
           <p>
-            Merge <strong>{prompt.branch}</strong> into the current branch <strong>{repo.branch}</strong>. Field-level
-            conflicts, if any, are shown before anything is committed.
+            {rich('git.mergeBranch.confirm', { branch: prompt.branch, current: repo.branch ?? '' })}
           </p>
         </div>
         <div className="close-prompt-actions">
-          <button type="button" onClick={close} disabled={busy} title="Cancel without merging">
-            Cancel
+          <button type="button" onClick={close} disabled={busy} title={t('git.mergeBranch.cancelTitle')}>
+            {t('common.cancel')}
           </button>
           <button
             type="button"
             className="primary"
             onClick={() => void confirm((summary) => window.confirm(summary))}
             disabled={busy}
-            title="Merge the selected branch into the current branch"
+            title={t('git.mergeBranch.okTitle')}
           >
-            {busy ? 'Merging…' : 'OK'}
+            {busy ? t('git.mergeBranch.merging') : t('common.ok')}
           </button>
         </div>
       </div>

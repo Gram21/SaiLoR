@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useT, getLanguage } from '../i18n'
 import { useGitStore, type LogDiffResult } from '../state/gitStore'
 import { formatValue } from './GitDialog'
 import '../styles/git.css'
@@ -13,6 +14,7 @@ import '../styles/git.css'
  * render `formatValue`'s Was/Now text without any Use/Ignore/Discard controls.
  */
 export function GitHistoryDialog() {
+  const t = useT()
   const history = useGitStore((s) => s.panel?.history ?? null)
   const closeHistory = useGitStore((s) => s.closeHistory)
   const loadCommitDiff = useGitStore((s) => s.loadCommitDiff)
@@ -38,11 +40,17 @@ export function GitHistoryDialog() {
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Commit history"
+        aria-label={t('git.history.label')}
       >
         <div className="modal-head">
-          <strong>History</strong>
-          <button type="button" className="icon-btn" onClick={closeHistory} aria-label="Close" title="Close">
+          <strong>{t('git.dialog.history')}</strong>
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={closeHistory}
+            aria-label={t('common.close')}
+            title={t('common.close')}
+          >
             ×
           </button>
         </div>
@@ -50,7 +58,7 @@ export function GitHistoryDialog() {
         <div className="modal-body">
           {history.error && <p className="git-message-text git-message-error">{history.error}</p>}
           {!history.error && history.commits.length === 0 && (
-            <p className="git-muted">Nothing has been committed to this file yet.</p>
+            <p className="git-muted">{t('git.history.empty')}</p>
           )}
           <ul className="git-history-rows">
             {history.commits.map((c) => (
@@ -60,7 +68,7 @@ export function GitHistoryDialog() {
                   className="git-history-row-head"
                   aria-expanded={!!expanded[c.hash]}
                   onClick={() => toggle(c.hash)}
-                  title={expanded[c.hash] ? 'Hide field-level diff for this commit' : 'Show field-level diff for this commit'}
+                  title={expanded[c.hash] ? t('git.history.hideDiff') : t('git.history.showDiff')}
                 >
                   <span className={`git-merge-group-chevron${expanded[c.hash] ? '' : ' is-collapsed'}`} aria-hidden="true">
                     ▾
@@ -73,9 +81,7 @@ export function GitHistoryDialog() {
               </li>
             ))}
           </ul>
-          {history.truncated && (
-            <p className="git-muted">Showing the latest {history.commits.length} commits — use git log for more.</p>
-          )}
+          {history.truncated && <p className="git-muted">{t('git.history.truncated', { count: history.commits.length })}</p>}
         </div>
       </div>
     </div>
@@ -88,30 +94,27 @@ export function GitHistoryDialog() {
  *  rather than showing nothing. */
 function formatCommitDate(date: string): string {
   const d = new Date(date)
-  return Number.isNaN(d.getTime()) ? date : d.toLocaleString()
+  return Number.isNaN(d.getTime()) ? date : d.toLocaleString(getLanguage())
 }
 
 function CommitDiff({ result }: { result: LogDiffResult | 'loading' | undefined }) {
+  const t = useT()
   if (result === undefined || result === 'loading') {
-    return <p className="git-muted git-history-diff">Loading…</p>
+    return <p className="git-muted git-history-diff">{t('common.loading')}</p>
   }
   if (result.kind === 'initial') {
-    return <p className="git-muted git-history-diff">Initial commit — nothing to compare.</p>
+    return <p className="git-muted git-history-diff">{t('git.history.initial')}</p>
   }
   if (result.kind === 'error') {
     return <p className="git-message-text git-message-error git-history-diff">{result.message}</p>
   }
   if (result.kind === 'structural') {
-    return (
-      <p className="git-muted git-history-diff">
-        The schema, protocol, or another structural field changed in this commit — no field-level diff available.
-      </p>
-    )
+    return <p className="git-muted git-history-diff">{t('git.history.structural')}</p>
   }
 
   const { fields, papers } = result.changes
   if (fields.length === 0 && papers.length === 0) {
-    return <p className="git-muted git-history-diff">No annotation changes in this commit.</p>
+    return <p className="git-muted git-history-diff">{t('git.history.noChanges')}</p>
   }
 
   return (
@@ -120,7 +123,7 @@ function CommitDiff({ result }: { result: LogDiffResult | 'loading' | undefined 
         <li key={pc.id} className="git-field-row">
           <div className="git-field-row-head">
             <span className="git-field-row-label">
-              {pc.kind === 'added' ? 'Paper added' : 'Paper removed'}: {pc.paperTitle}
+              {pc.kind === 'added' ? t('git.paper.added') : t('git.paper.removed')}: {pc.paperTitle}
             </span>
           </div>
         </li>
@@ -132,11 +135,11 @@ function CommitDiff({ result }: { result: LogDiffResult | 'loading' | undefined 
             <span className="git-field-row-label">{fc.label}</span>
           </div>
           <div className="git-field-row-values">
-            <span className="git-field-row-was" title="Before this commit">
-              Was: {formatValue(fc.headValue)}
+            <span className="git-field-row-was" title={t('git.history.beforeCommit')}>
+              {t('git.field.was')}: {formatValue(fc.headValue)}
             </span>
-            <span className="git-field-row-now" title="After this commit">
-              Now: {formatValue(fc.workingValue)}
+            <span className="git-field-row-now" title={t('git.history.afterCommit')}>
+              {t('git.field.now')}: {formatValue(fc.workingValue)}
             </span>
           </div>
         </li>

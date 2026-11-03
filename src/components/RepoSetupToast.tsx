@@ -1,5 +1,6 @@
 // [impl->req~git-411~1]
 import { useEffect } from 'react'
+import { useT } from '../i18n'
 import { useGitStore } from '../state/gitStore'
 
 /** How long a success stays up before it goes by itself. */
@@ -15,6 +16,7 @@ const AUTO_DISMISS_MS = 6000
  * should still see why it did not happen rather than have it vanish.
  */
 export function RepoSetupToast() {
+  const t = useT()
   const notice = useGitStore((s) => s.repoSetupNotice)
   const dismiss = useGitStore((s) => s.dismissRepoSetupNotice)
 
@@ -28,7 +30,7 @@ export function RepoSetupToast() {
   return (
     <div className={`toast${notice.kind === 'error' ? ' toast-error' : ''}`} role="status">
       <span className="toast-text">{notice.text}</span>
-      <button type="button" className="icon-btn" onClick={dismiss} title="Dismiss" aria-label="Dismiss">
+      <button type="button" className="icon-btn" onClick={dismiss} title={t('git.common.dismiss')} aria-label={t('git.common.dismiss')}>
         ×
       </button>
     </div>

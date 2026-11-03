@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useT } from '../i18n'
 import { useGitStore } from '../state/gitStore'
 
 /**
@@ -9,6 +10,7 @@ import { useGitStore } from '../state/gitStore'
  * exactly like switching to any other branch.
  */
 export function NewBranchPrompt() {
+  const t = useT()
   const prompt = useGitStore((s) => s.panel?.newBranchPrompt ?? null)
   const busy = useGitStore((s) => s.panel?.phase === 'working')
   const setName = useGitStore((s) => s.setNewBranchName)
@@ -39,11 +41,11 @@ export function NewBranchPrompt() {
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="New branch"
+        aria-label={t('git.newBranch.title')}
       >
         <div className="modal-body">
-          <h3>New branch</h3>
-          <p>Created at the current commit, and switched to right away — carrying over any uncommitted changes.</p>
+          <h3>{t('git.newBranch.title')}</h3>
+          <p>{t('git.newBranch.body')}</p>
           <input
             ref={inputRef}
             className="field-input"
@@ -58,8 +60,8 @@ export function NewBranchPrompt() {
           {prompt.error && <p className="git-message-text git-message-error">{prompt.error}</p>}
         </div>
         <div className="close-prompt-actions">
-          <button type="button" onClick={close} disabled={busy} title="Cancel without creating a branch">
-            Cancel
+          <button type="button" onClick={close} disabled={busy} title={t('git.newBranch.cancelTitle')}>
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -67,9 +69,9 @@ export function NewBranchPrompt() {
             onClick={submit}
             disabled={busy || !prompt.name.trim()}
             autoFocus
-            title="Create this branch and switch to it"
+            title={t('git.newBranch.createTitle')}
           >
-            {busy ? 'Creating…' : 'Create and switch'}
+            {busy ? t('git.newBranch.creating') : t('git.newBranch.create')}
           </button>
         </div>
       </div>

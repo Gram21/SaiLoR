@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useT, rich } from '../i18n'
 import { useGitStore } from '../state/gitStore'
 
 /**
@@ -10,6 +11,7 @@ import { useGitStore } from '../state/gitStore'
  * state here.
  */
 export function DeleteBranchPrompt() {
+  const t = useT()
   const prompt = useGitStore((s) => s.panel?.deleteBranchPrompt ?? null)
   const branches = useGitStore((s) => s.branches)
   const busy = useGitStore((s) => s.panel?.phase === 'working')
@@ -40,13 +42,13 @@ export function DeleteBranchPrompt() {
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Delete branch"
+        aria-label={t('git.deleteBranch.title')}
       >
         <div className="modal-body">
-          <h3>Delete branch</h3>
+          <h3>{t('git.deleteBranch.title')}</h3>
           <select
             className="git-merge-select"
-            aria-label="Branch to delete"
+            aria-label={t('git.deleteBranch.selectLabel')}
             value={prompt.branch}
             disabled={busy}
             onChange={(e) => setBranch(e.target.value)}
@@ -58,23 +60,20 @@ export function DeleteBranchPrompt() {
               </option>
             ))}
           </select>
-          <p>
-            Delete <strong>{prompt.branch}</strong>? Git refuses if it isn't fully merged into your
-            current branch.
-          </p>
+          <p>{rich('git.deleteBranch.confirm', { branch: prompt.branch })}</p>
         </div>
         <div className="close-prompt-actions">
-          <button type="button" onClick={close} disabled={busy} title="Cancel and keep the branch">
-            Cancel
+          <button type="button" onClick={close} disabled={busy} title={t('git.deleteBranch.cancelTitle')}>
+            {t('common.cancel')}
           </button>
           <button
             type="button"
             className="primary danger"
             onClick={() => void confirm()}
             disabled={busy}
-            title="Delete this branch"
+            title={t('git.deleteBranch.deleteTitle')}
           >
-            {busy ? 'Deleting…' : 'Delete'}
+            {busy ? t('git.deleteBranch.deleting') : t('common.delete')}
           </button>
         </div>
       </div>

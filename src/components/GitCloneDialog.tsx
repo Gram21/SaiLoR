@@ -1,5 +1,6 @@
 // [impl->req~git-100~1]
 import { useEffect, useState } from 'react'
+import { useT } from '../i18n'
 import { useGitStore } from '../state/gitStore'
 import { repoNameFromUrl } from '../git/url'
 import { Spinner } from './Spinner'
@@ -15,6 +16,7 @@ import '../styles/git.css'
  * this app's idiom for it, not a literal new window.
  */
 export function GitCloneDialog() {
+  const t = useT()
   const clone = useGitStore((s) => s.clone)
   const closeClone = useGitStore((s) => s.closeClone)
   const setCloneUrl = useGitStore((s) => s.setCloneUrl)
@@ -61,12 +63,18 @@ export function GitCloneDialog() {
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Import from remote git"
+        aria-label={t('git.clone.title')}
       >
         <div className="modal-head">
-          <strong>Import from remote git</strong>
+          <strong>{t('git.clone.title')}</strong>
           {clone.phase !== 'cloning' && (
-            <button type="button" className="icon-btn" onClick={requestClose} aria-label="Close" title="Close this dialog">
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={requestClose}
+              aria-label={t('common.close')}
+              title={t('git.clone.closeTitle')}
+            >
               ×
             </button>
           )}
@@ -76,7 +84,7 @@ export function GitCloneDialog() {
           {clone.phase === 'setup' && (
             <>
               <label className="git-field-label" htmlFor="git-clone-url">
-                Repository URL
+                {t('git.clone.url')}
               </label>
               <input
                 id="git-clone-url"
@@ -89,38 +97,38 @@ export function GitCloneDialog() {
               />
 
               <div className="git-clone-dest">
-                <button type="button" onClick={() => void pickCloneParent()} title="Choose the folder to clone the repository into">
-                  Choose folder…
+                <button type="button" onClick={() => void pickCloneParent()} title={t('git.clone.chooseFolderTitle')}>
+                  {t('git.clone.chooseFolder')}
                 </button>
                 {clone.parent ? (
                   <span className="git-clone-dest-path" title={clone.parent}>
                     {clone.parent}
                   </span>
                 ) : (
-                  <span className="git-clone-dest-path git-muted">No folder chosen yet</span>
+                  <span className="git-clone-dest-path git-muted">{t('git.clone.noFolder')}</span>
                 )}
               </div>
 
               {clone.parent && clone.url.trim() && (
                 <p className="git-clone-preview">
                   {name
-                    ? `Will clone into: ${clone.parent}/${name}`
-                    : 'That URL has no repository name in it.'}
+                    ? t('git.clone.willCloneInto', { path: `${clone.parent}/${name}` })
+                    : t('git.clone.noRepoName')}
                 </p>
               )}
 
               <div className="git-clone-actions">
-                <button type="button" onClick={closeClone} title="Cancel and close this dialog">
-                  Cancel
+                <button type="button" onClick={closeClone} title={t('git.clone.cancelTitle')}>
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="button"
                   className="primary"
                   disabled={!canClone}
                   onClick={() => void runClone()}
-                  title={canClone ? 'Clone the repository' : 'Enter a repository URL and choose a folder first'}
+                  title={canClone ? t('git.clone.cloneTitle') : t('git.clone.cloneDisabledTitle')}
                 >
-                  Clone
+                  {t('git.clone.clone')}
                 </button>
               </div>
             </>
@@ -129,19 +137,19 @@ export function GitCloneDialog() {
           {clone.phase === 'cloning' && (
             <div className="git-clone-progress">
               <p>
-                <Spinner /> Cloning {clone.url}…
+                <Spinner /> {t('git.clone.cloning', { url: clone.url })}
               </p>
-              <p className="git-muted">{elapsed}s elapsed — a repository full of PDFs can take a while.</p>
+              <p className="git-muted">{t('git.clone.elapsed', { seconds: elapsed })}</p>
             </div>
           )}
 
           {clone.phase === 'error' && (
             <>
-              <p>Git reported an error:</p>
+              <p>{t('git.clone.gitError')}</p>
               <pre className="git-error">{clone.error}</pre>
               <div className="git-clone-actions">
-                <button type="button" className="primary" onClick={backToCloneSetup} title="Go back and try again">
-                  Back
+                <button type="button" className="primary" onClick={backToCloneSetup} title={t('git.clone.backTitle')}>
+                  {t('git.clone.back')}
                 </button>
               </div>
             </>
@@ -149,14 +157,14 @@ export function GitCloneDialog() {
 
           {clone.phase === 'done' && (
             <>
-              <p>Cloned into {clone.dest}.</p>
-              <p>Now choose the project JSON to open — the file picker will start there.</p>
+              <p>{t('git.clone.cloned', { dest: clone.dest ?? '' })}</p>
+              <p>{t('git.clone.chooseProjectFile')}</p>
               <div className="git-clone-actions">
-                <button type="button" onClick={closeClone} title="Close without opening a project">
-                  Cancel
+                <button type="button" onClick={closeClone} title={t('git.clone.cancelOpenTitle')}>
+                  {t('common.cancel')}
                 </button>
-                <button type="button" className="primary" onClick={() => void openClonedProject()} title="Choose the project JSON to open from the cloned repository">
-                  OK
+                <button type="button" className="primary" onClick={() => void openClonedProject()} title={t('git.clone.openTitle')}>
+                  {t('common.ok')}
                 </button>
               </div>
             </>

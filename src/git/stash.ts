@@ -1,3 +1,5 @@
+import { t } from '../i18n'
+
 /**
  * Stashed changes, as SaiLoR shows and manages them.
  *
@@ -83,10 +85,8 @@ export function parseStashList(stdout: string): StashEntry[] {
 /** What a reviewer should be told a stash is, in words rather than a message
  *  git wrote for itself. */
 export function describeStash(entry: StashEntry): string {
-  if (entry.origin === 'branch-switch') {
-    return 'Saved by SaiLoR while switching branches, and not put back afterwards'
-  }
-  if (entry.origin === 'sailor') return entry.message.slice(MANUAL_STASH_PREFIX.length) || 'Stashed from SaiLoR'
+  if (entry.origin === 'branch-switch') return t('git.stash.branchSwitchOrigin')
+  if (entry.origin === 'sailor') return entry.message.slice(MANUAL_STASH_PREFIX.length) || t('git.stash.fromSailor')
   return entry.message
 }
 

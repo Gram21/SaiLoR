@@ -6,6 +6,7 @@ import { deepEqualJson, type Paper, type Project } from '../model/project'
 import { formatPath, displayPath, resolvePath, type RawSeg } from '../llm/paths'
 import { conflictId, type MergeTree } from './merge'
 import { parseYear } from '../model/year'
+import { t, type MessageKey } from '../i18n'
 
 /**
  * Field-level review of what changed **locally**, for the commit panel —
@@ -111,7 +112,7 @@ const PAPER_META_BUNDLES: Record<string, string[]> = {
 }
 
 function abstractFromPdfLabel(value: FieldValue): FieldValue {
-  return value ? 'Extracted from the PDF' : 'Not extracted from the PDF'
+  return value ? t('git.field.abstractExtracted') : t('git.field.abstractNotExtracted')
 }
 
 /** Paper-level fields eligible for field-level review, in display order.
@@ -121,23 +122,23 @@ function abstractFromPdfLabel(value: FieldValue): FieldValue {
  *  loop in `composeContents`. */
 const PAPER_META_FIELDS: {
   canonical: string
-  label: string
+  label: MessageKey
   type: FieldType
   get: (p: Paper) => FieldValue
 }[] = [
-  { canonical: 'title', label: 'Title', type: 'string', get: (p) => p.title },
-  { canonical: 'authors', label: 'Authors', type: 'string', get: (p) => p.authors.join(', ') },
-  { canonical: 'year', label: 'Year', type: 'year', get: (p) => p.year ?? null },
-  { canonical: 'venue', label: 'Venue', type: 'string', get: (p) => p.venue ?? null },
-  { canonical: 'doi', label: 'DOI', type: 'string', get: (p) => p.doi ?? null },
-  { canonical: 'abstract', label: 'Abstract', type: 'string', get: (p) => p.abstract ?? null },
+  { canonical: 'title', label: 'git.field.title', type: 'string', get: (p) => p.title },
+  { canonical: 'authors', label: 'git.field.authors', type: 'string', get: (p) => p.authors.join(', ') },
+  { canonical: 'year', label: 'git.field.year', type: 'year', get: (p) => p.year ?? null },
+  { canonical: 'venue', label: 'git.field.venue', type: 'string', get: (p) => p.venue ?? null },
+  { canonical: 'doi', label: 'git.field.doi', type: 'string', get: (p) => p.doi ?? null },
+  { canonical: 'abstract', label: 'git.field.abstract', type: 'string', get: (p) => p.abstract ?? null },
   {
     canonical: 'abstractFromPdf',
-    label: 'Abstract source',
+    label: 'git.field.abstractSource',
     type: 'string', // rendered as text (formatValue below), not a checkbox — this is a disclosure sentence, not a toggle a reviewer sets
     get: (p) => abstractFromPdfLabel(p.abstractFromPdf ?? false),
   },
-  { canonical: 'pdf', label: 'PDF path', type: 'string', get: (p) => p.pdf },
+  { canonical: 'pdf', label: 'git.field.pdfPath', type: 'string', get: (p) => p.pdf },
 ]
 
 /** One rendered value at one revision, `emptyValue`-normalized (same rule as
@@ -216,7 +217,7 @@ function diffPaperMeta(head: Paper, working: Paper, out: FieldChange[]): void {
       paperTitle: working.title,
       tree: { kind: 'paper' },
       canonical: f.canonical,
-      label: f.label,
+      label: t(f.label),
       type: f.type,
       headValue: hv,
       workingValue: wv,

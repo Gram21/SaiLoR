@@ -1,11 +1,12 @@
 // [impl->req~git-430~1]
 import { useState } from 'react'
+import { useT, getLanguage } from '../i18n'
 import { useGitStore } from '../state/gitStore'
 import { describeStash, type StashEntry } from '../git/stash'
 
 function formatDate(date: string): string {
   const d = new Date(date)
-  return Number.isNaN(d.getTime()) ? date : d.toLocaleString()
+  return Number.isNaN(d.getTime()) ? date : d.toLocaleString(getLanguage())
 }
 
 /**
@@ -24,6 +25,7 @@ function formatDate(date: string): string {
  * hands any overlap to SaiLoR's own field-level merge afterwards.
  */
 export function GitStashSection({ disabled }: { disabled: boolean }) {
+  const t = useT()
   const stashes = useGitStore((s) => s.stashes)
   const runStashPush = useGitStore((s) => s.runStashPush)
   const runStashRestore = useGitStore((s) => s.runStashRestore)
@@ -38,35 +40,29 @@ export function GitStashSection({ disabled }: { disabled: boolean }) {
 
   // [impl->req~git-470~1]
   const drop = (entry: StashEntry) => {
-    const ok = window.confirm(
-      `Delete the stash "${describeStash(entry)}"?\n\nThe changes in it are not in any file or commit, ` +
-        'so they will be gone for good.',
-    )
+    const ok = window.confirm(t('git.stash.deleteConfirm', { name: describeStash(entry) }))
     if (ok) void runStashDrop(entry.sha)
   }
 
   return (
     <details className="git-stashes" open={stashes.length > 0}>
       <summary>
-        Stashed changes{stashes.length > 0 ? ` (${stashes.length})` : ''}
+        {t('git.stash.heading')}
+        {stashes.length > 0 ? ` (${stashes.length})` : ''}
       </summary>
-      <p className="git-muted">
-        Stashing parks this project's uncommitted changes — new readings included — and gives you
-        back a clean copy, for example to pull or switch branches. Save first: only what is on disk
-        is stashed.
-      </p>
+      <p className="git-muted">{t('git.stash.explanation')}</p>
       <div className="git-stash-push">
         <input
           type="text"
           className="field-input"
-          placeholder="What is this? (optional)"
+          placeholder={t('git.stash.notePlaceholder')}
           value={note}
           disabled={disabled}
           onChange={(e) => setNote(e.target.value)}
-          aria-label="Note for the stash"
+          aria-label={t('git.stash.noteLabel')}
         />
-        <button type="button" disabled={disabled} onClick={() => void push()} title="Stash this project's uncommitted changes">
-          Stash my changes
+        <button type="button" disabled={disabled} onClick={() => void push()} title={t('git.stash.stashTitle')}>
+          {t('git.stash.stashButton')}
         </button>
       </div>
 
@@ -77,7 +73,7 @@ export function GitStashSection({ disabled }: { disabled: boolean }) {
               <div className="git-stash-text">
                 <span className="git-stash-desc">{describeStash(entry)}</span>
                 <span className="git-muted">
-                  {entry.branch ? `on ${entry.branch} · ` : ''}
+                  {entry.branch ? `${t('git.stash.onBranch', { branch: entry.branch })} · ` : ''}
                   {formatDate(entry.date)}
                 </span>
               </div>
@@ -86,25 +82,25 @@ export function GitStashSection({ disabled }: { disabled: boolean }) {
                   type="button"
                   disabled={disabled}
                   onClick={() => void runStashRestore(entry.sha)}
-                  title="Put these changes back into your files and remove the stash"
+                  title={t('git.stash.restoreTitle')}
                 >
-                  Restore
+                  {t('git.stash.restore')}
                 </button>
                 <button
                   type="button"
                   disabled={disabled}
                   onClick={() => void runStashBranch(entry.sha)}
-                  title="Put these changes back on a new branch made where the stash was taken — this cannot conflict"
+                  title={t('git.stash.restoreBranchTitle')}
                 >
-                  Restore on a new branch
+                  {t('git.stash.restoreBranch')}
                 </button>
                 <button
                   type="button"
                   className="icon-btn"
                   disabled={disabled}
                   onClick={() => drop(entry)}
-                  title="Delete this stash for good"
-                  aria-label={`Delete stash ${describeStash(entry)}`}
+                  title={t('git.stash.deleteTitle')}
+                  aria-label={t('git.stash.deleteLabel', { name: describeStash(entry) })}
                 >
                   ×
                 </button>

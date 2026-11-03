@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import type { GitRun } from './types'
 import { parsePorcelain, gitErrorText } from './output'
 import { ownAnnotationPathsIn } from './ownAnnotationPath'
@@ -59,7 +60,7 @@ export async function pushStash(run: RunGit, relPath: string, raw: unknown, mess
     ...changes.filter((c) => c.path === relPath).map((c) => c.path),
     ...ownAnnotationPathsIn(changes, annotationsRelDir(relPath, annotationsDirOf(raw)), raw),
   ]
-  if (paths.length === 0) return failed('There are no uncommitted changes to this project to stash.')
+  if (paths.length === 0) return failed(t('git.error.nothingToStash'))
   const note = message.trim() || 'stashed from SaiLoR'
   return run(['stash', 'push', '-u', '-m', `${MANUAL_STASH_PREFIX}${note}`, '--', ...paths])
 }
@@ -143,7 +144,7 @@ async function rollBackFailedApply(run: RunGit, ref: string): Promise<void> {
 export async function dropStash(run: RunGit, sha: string): Promise<GitRun> {
   // [impl->req~git-460~1]
   const ref = await resolveStashRef(run, sha)
-  if (!ref) return failed('That stash no longer exists.')
+  if (!ref) return failed(t('git.error.stashGone'))
   return run(['stash', 'drop', ref])
 }
 
@@ -165,13 +166,13 @@ export async function branchFromStash(
   annotationsDir: string = annotationsRelDir(relPath),
 ): Promise<GitRun> {
   const ref = await resolveStashRef(run, sha)
-  if (!ref) return failed('That stash no longer exists.')
+  if (!ref) return failed(t('git.error.stashGone'))
   const st = await run(['status', '--porcelain=v1', '-z', '-uall'])
   if (!st.ok) return st
   // [impl->req~git-350~1]
   const blocking = mergeBlockingPaths(parsePorcelain(st.stdout), annotationsDir)
   if (blocking.length > 0) {
-    return failed(`Commit or stash these first, so the switch cannot mix two sets of edits:\n${blocking.join('\n')}`)
+    return failed(t('git.error.stashBranchDirty', { paths: blocking.join('\n') }))
   }
   return run(['stash', 'branch', branch, ref])
 }
@@ -191,7 +192,7 @@ async function carryOverStashRef(run: RunGit): Promise<string | null> {
 /** Put the carry-over back — the branch-switch abort and rollback. */
 export async function popCarryOverStash(run: RunGit): Promise<GitRun> {
   const ref = await carryOverStashRef(run)
-  if (!ref) return failed('The stash holding your changes could not be found.')
+  if (!ref) return failed(t('git.error.stashNotFound'))
   return run(['stash', 'pop', ref])
 }
 
