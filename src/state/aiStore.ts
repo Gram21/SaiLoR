@@ -37,6 +37,7 @@ import {
   type SystemOneResult,
 } from '../llm/systemone'
 import { aiSeatId } from '../model/project'
+import { dropDuplicateSuggestions } from '../model/unique'
 import type { Paper, Project } from '../model/project'
 import type { AnnotationValueTree, FieldValue } from '../model/annotations'
 import { extractPdfText, countPdfPages } from '../model/pdfText'
@@ -935,6 +936,20 @@ export const useAiStore = create<AiState>()(
                 // confidence stays ticked, one below the threshold starts
                 // unticked for a closer look, same rule classify mode uses.
                 rowChecked = (sug) => sug.confidence === null || sug.confidence >= confidenceThreshold
+              }
+
+              if (tree) {
+                const { kept, dropped } = dropDuplicateSuggestions(app.project!.schema, tree, answer.fields)
+                if (dropped.length > 0) {
+                  answer = {
+                    ...answer,
+                    fields: kept,
+                    rejected: [
+                      ...answer.rejected,
+                      ...dropped.map((d) => ({ path: d.suggestion.path, raw: d.suggestion.value, reason: d.reason })),
+                    ],
+                  }
+                }
               }
 
               // Cross-check (prompt/agent only, optional role): compare each

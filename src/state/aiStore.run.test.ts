@@ -284,3 +284,38 @@ describe('run: a superseded run is discarded', () => {
     expect(ai().phase).toBe('review')
   })
 })
+
+describe('run: unique fields', () => {
+  it('drops a suggestion that repeats an entry and notes why', async () => {
+    st().loadFromText(
+      JSON.stringify({
+        version: 1,
+        title: 'AI run',
+        config: { schema: [{ name: 'Keywords', type: 'string', min: 0, max: null, unique: true }] },
+        papers: [
+          { id: 'p1', title: 'Paper One', authors: [], pdf: 'p1.pdf', annotations: { Keywords: [{ value: 'NLP' }] } },
+        ],
+      }),
+      null,
+      'test.json',
+    )
+    st().selectPaper('p1')
+    const c = cfg({ attach: 'text' })
+    useAiStore.setState({ configs: [c], selectedId: c.id })
+
+    const runPromise = ai().run()
+    await flush()
+    deferreds[0].resolve(
+      anthropicOk([
+        { path: 'Keywords[1]', value: 'nlp', evidence: 'e', confidence: 0.9 },
+        { path: 'Keywords[2]', value: 'ML', evidence: 'e', confidence: 0.9 },
+      ]),
+    )
+    await runPromise
+
+    expect(ai().rows.map((r) => r.suggestion.path)).toEqual(['Keywords[2]'])
+    expect(ai().notes[0].rejected).toEqual([
+      { path: 'Keywords[1]', raw: 'nlp', reason: expect.stringMatching(/"Keywords" already has this entry \(#1\)/) },
+    ])
+  })
+})
