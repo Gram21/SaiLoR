@@ -2,7 +2,7 @@
 
 use crate::close;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
+use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
 use tauri::menu::{AboutMetadata, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::webview::NewWindowResponse;
 use tauri::{App, AppHandle, Emitter, Manager, Url, WebviewWindowBuilder, Wry};
@@ -10,7 +10,7 @@ use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 
 const REPO_URL: &str = "https://github.com/Gram21/SaiLoR";
 
-static GERMAN: AtomicBool = AtomicBool::new(false);
+static LANGUAGE: AtomicUsize = AtomicUsize::new(usize::MAX);
 
 // [impl->req~plt-400~1]
 /// German texts of the native menu labels and the About dialog.
@@ -46,21 +46,24 @@ const DE: &[(&str, &str)] = &[
 ];
 
 // [impl->req~plt-400~1]
+/// The menu tables by UI language code. English needs no table.
+const TABLES: &[(&str, &[(&str, &str)])] = &[("de", DE)];
+
+// [impl->req~plt-400~1]
 /// The text of a menu label in the active language. English is the fallback.
 fn tr(en: &'static str) -> &'static str {
-    if GERMAN.load(Relaxed) {
-        if let Some((_, de)) = DE.iter().find(|(k, _)| *k == en) {
-            return de;
-        }
-    }
-    en
+    TABLES
+        .get(LANGUAGE.load(Relaxed))
+        .and_then(|(_, table)| table.iter().find(|(k, _)| *k == en))
+        .map_or(en, |(_, text)| text)
 }
 
 // [impl->req~plt-400~1]
 /// The renderer sends the UI language at start and after each change.
 #[tauri::command]
 pub fn app_set_language(app: AppHandle, lang: String) -> Result<(), String> {
-    GERMAN.store(lang == "de", Relaxed);
+    let index = TABLES.iter().position(|(code, _)| *code == lang);
+    LANGUAGE.store(index.unwrap_or(usize::MAX), Relaxed);
     app.set_menu(build_menu(&app).map_err(|e| e.to_string())?)
         .map(|_| ())
         .map_err(|e| e.to_string())
@@ -609,7 +612,7 @@ mod tests {
 
     // [utest->req~plt-400~1]
     #[test]
-    fn every_menu_label_has_a_german_entry() {
+    fn every_menu_label_has_an_entry_in_every_language() {
         let needle = format!("{}(\"", "tr");
         let source = include_str!("shell.rs");
         let labels: Vec<&str> = source
@@ -618,19 +621,38 @@ mod tests {
             .filter_map(|rest| rest.split('"').next())
             .collect();
         assert!(labels.len() > 20, "{labels:?}");
-        for label in &labels {
-            let de = DE.iter().find(|(en, _)| en == label);
+        let languages = include_str!("../../src/state/settings.ts")
+            .split("LANGUAGES = [")
+            .nth(1)
+            .and_then(|rest| rest.split(']').next())
+            .expect("LANGUAGES in settings.ts");
+        let codes: Vec<&str> = languages
+            .split(',')
+            .map(|code| code.trim().trim_matches('\''))
+            .filter(|code| *code != "en")
+            .collect();
+        assert!(!codes.is_empty(), "{languages}");
+        for code in &codes {
             assert!(
-                de.is_some_and(|(_, de)| !de.is_empty()),
-                "no German text for {label}"
+                TABLES.iter().any(|(c, _)| c == code),
+                "no menu table for {code}"
             );
         }
-        for (en, _) in DE {
-            assert!(labels.contains(en), "unused German entry {en}");
+        for (code, table) in TABLES {
+            for label in &labels {
+                let entry = table.iter().find(|(en, _)| en == label);
+                assert!(
+                    entry.is_some_and(|(_, text)| !text.is_empty()),
+                    "no {code} text for {label}"
+                );
+            }
+            for (en, _) in *table {
+                assert!(labels.contains(en), "unused {code} entry {en}");
+            }
         }
-        GERMAN.store(true, Relaxed);
+        LANGUAGE.store(0, Relaxed);
         assert_eq!(tr("Edit"), "Bearbeiten");
-        GERMAN.store(false, Relaxed);
+        LANGUAGE.store(usize::MAX, Relaxed);
         assert_eq!(tr("Edit"), "Edit");
     }
 
