@@ -4,68 +4,94 @@ import { useStore } from '../state/store'
 import { useEditorStore } from '../state/editorStore'
 import { getPlatform } from '../platform'
 import { NEW_ISSUE_URL } from '../model/version'
+import { getLanguage, rich, t, useT, type MessageKey } from '../i18n'
 
 const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform)
+const MAC_APP = getPlatform().kind !== 'browser' && isMac
 // [impl->req~ui-10~1]
-const MOD = getPlatform().kind !== 'browser' && isMac ? '⌘' : 'Ctrl'
+function mod(): string {
+  if (MAC_APP) return '⌘'
+  return getLanguage() === 'de' ? 'Strg' : 'Ctrl'
+}
+function shift(): string {
+  return getLanguage() === 'de' ? 'Umschalt' : 'Shift'
+}
+
+type ShortcutRows = Array<[string, MessageKey]>
 
 /** Shortcuts while annotating a project. */
-const ANNOTATE_KEYS: Array<[string, string]> = [
-  [`${MOD}+O`, 'Open a project file'],
-  [`${MOD}+S`, 'Save'],
-  [`${MOD}+Shift+S`, 'Save as…'],
-  [`${MOD}+Z`, 'Undo annotation change'],
-  [`${MOD}+Shift+Z`, 'Redo annotation change'],
-  [`${MOD}+F`, 'Search within the PDF'],
-  [`${MOD} + / ${MOD} -`, 'Zoom the PDF in / out'],
-  [`${MOD}+0`, 'Reset PDF zoom'],
-  ['Alt+↓  /  ]', 'Next paper'],
-  ['Alt+↑  /  [', 'Previous paper'],
-  [`${MOD}+Shift + / -`, 'App font size larger / smaller'],
-  [`${MOD}+Shift+0`, 'Reset app font size'],
-  [`${MOD}+C / V / X`, 'Copy / paste / cut (native)'],
-  [`${MOD}+,`, 'Open settings'],
-  ['F1', 'Open this help'],
-]
+function annotateKeys(): ShortcutRows {
+  const m = mod()
+  const s = shift()
+  return [
+    [`${m}+O`, 'help.keys.openProject'],
+    [`${m}+S`, 'common.save'],
+    [`${m}+${s}+S`, 'help.keys.saveAs'],
+    [`${m}+Z`, 'help.keys.undoAnnotation'],
+    [`${m}+${s}+Z`, 'help.keys.redoAnnotation'],
+    [`${m}+F`, 'help.keys.searchPdf'],
+    [`${m} + / ${m} -`, 'help.keys.zoomPdf'],
+    [`${m}+0`, 'help.keys.resetPdfZoom'],
+    ['Alt+↓  /  ]', 'help.keys.nextPaper'],
+    ['Alt+↑  /  [', 'help.keys.previousPaper'],
+    [`${m}+${s} + / -`, 'help.keys.appFontSize'],
+    [`${m}+${s}+0`, 'help.keys.resetAppFontSize'],
+    [`${m}+C / V / X`, 'help.keys.copyPaste'],
+    [`${m}+,`, 'help.keys.openSettings'],
+    ['F1', 'help.keys.openHelp'],
+  ]
+}
 
 /** Shortcuts on the start screen, before anything is open. */
-const START_KEYS: Array<[string, string]> = [
-  [`${MOD}+O`, 'Open a project file'],
-  [`${MOD}+Shift + / -`, 'App font size larger / smaller'],
-  [`${MOD}+Shift+0`, 'Reset app font size'],
-  [`${MOD}+,`, 'Open settings'],
-  ['F1', 'Open this help'],
-]
+function startKeys(): ShortcutRows {
+  const m = mod()
+  const s = shift()
+  return [
+    [`${m}+O`, 'help.keys.openProject'],
+    [`${m}+${s} + / -`, 'help.keys.appFontSize'],
+    [`${m}+${s}+0`, 'help.keys.resetAppFontSize'],
+    [`${m}+,`, 'help.keys.openSettings'],
+    ['F1', 'help.keys.openHelp'],
+  ]
+}
 
 /** Shortcuts while screening a project (replaces the annotation shortcuts). */
-const SCREENING_KEYS: Array<[string, string]> = [
-  [`${MOD}+O`, 'Open a project file'],
-  [`${MOD}+S`, 'Save'],
-  [`${MOD}+Z`, 'Undo a decision'],
-  ['I', 'Include the current paper'],
-  ['E', 'Exclude the current paper'],
-  ['U', 'Un-decide (back to not screened)'],
-  ['1 – 9', 'Exclude with the Nth configured reason'],
-  ['Alt+↓  /  ]', 'Next paper'],
-  ['Alt+↑  /  [', 'Previous paper'],
-  [`${MOD}+,`, 'Open settings'],
-  ['F1', 'Open this help'],
-]
+function screeningKeys(): ShortcutRows {
+  const m = mod()
+  return [
+    [`${m}+O`, 'help.keys.openProject'],
+    [`${m}+S`, 'common.save'],
+    [`${m}+Z`, 'help.keys.screenUndo'],
+    ['I', 'help.keys.screenInclude'],
+    ['E', 'help.keys.screenExclude'],
+    ['U', 'help.keys.screenUndecide'],
+    ['1 – 9', 'help.keys.screenReason'],
+    ['Alt+↓  /  ]', 'help.keys.nextPaper'],
+    ['Alt+↑  /  [', 'help.keys.previousPaper'],
+    [`${m}+,`, 'help.keys.openSettings'],
+    ['F1', 'help.keys.openHelp'],
+  ]
+}
 
 /** Shortcuts while building or editing the annotation JSON. */
-const EDITOR_KEYS: Array<[string, string]> = [
-  [`${MOD}+S`, 'Save the JSON (stay in the editor)'],
-  [`${MOD}+Shift+S`, 'Save to a new location'],
-  [`${MOD}+Z`, 'Undo a schema or paper change'],
-  [`${MOD}+Shift+Z`, 'Redo'],
-  [`${MOD}+Shift + / -`, 'App font size larger / smaller'],
-  [`${MOD}+Shift+0`, 'Reset app font size'],
-  [`${MOD}+C / V / X`, 'Copy / paste / cut (native)'],
-  [`${MOD}+,`, 'Open settings'],
-  ['F1', 'Open this help'],
-]
+function editorKeys(): ShortcutRows {
+  const m = mod()
+  const s = shift()
+  return [
+    [`${m}+S`, 'help.keys.editorSave'],
+    [`${m}+${s}+S`, 'help.keys.editorSaveAs'],
+    [`${m}+Z`, 'help.keys.editorUndo'],
+    [`${m}+${s}+Z`, 'help.keys.redo'],
+    [`${m}+${s} + / -`, 'help.keys.appFontSize'],
+    [`${m}+${s}+0`, 'help.keys.resetAppFontSize'],
+    [`${m}+C / V / X`, 'help.keys.copyPaste'],
+    [`${m}+,`, 'help.keys.openSettings'],
+    ['F1', 'help.keys.openHelp'],
+  ]
+}
 
-function ShortcutTable({ keys }: { keys: Array<[string, string]> }) {
+function ShortcutTable({ keys }: { keys: ShortcutRows }) {
+  const t = useT()
   return (
     <table className="help-keys">
       <tbody>
@@ -74,7 +100,7 @@ function ShortcutTable({ keys }: { keys: Array<[string, string]> }) {
             <td>
               <kbd>{combo}</kbd>
             </td>
-            <td>{desc}</td>
+            <td>{t(desc)}</td>
           </tr>
         ))}
       </tbody>
@@ -107,52 +133,21 @@ function Faq({ q, children }: { q: string; children: ReactNode }) {
 function commonFaqs(): ReactNode {
   return (
     <>
-      <Faq q="Where is my data? Does anything leave my computer?">
-        <p>
-          Your review is the project JSON file on your own disk, next to its PDFs — the app has no
-          account, no server, and no sync.
-        </p>
+      <Faq q={t('help.common.faq.data.q')}>
+        <p>{rich('help.common.faq.data.a')}</p>
       </Faq>
-      <Faq q="Can two people review the same project at once?">
-        <p>
-          Not on the same copy at the same time — the app has no locking. When a save finds files
-          that changed on disk since you opened the project, it stops and asks: keep your version,
-          keep theirs, or combine the two field by field. Copies passed around by email or a folder
-          that hasn't synced yet can still diverge. What it does support is{' '}
-          <strong>multiple reviewers within one file</strong>: set the reviewer count when you build
-          the schema, and each reviewer's answers are kept separately (see{' '}
-          <em>Working with several reviewers</em>). Give each person their own git clone, or take
-          turns.
-        </p>
+      <Faq q={t('help.common.faq.concurrent.q')}>
+        <p>{rich('help.common.faq.concurrent.a', { reviewers: t('help.annotate.reviewers.title') })}</p>
       </Faq>
-      <Faq q="I moved the JSON and now the PDFs don't load.">
-        <p>
-          PDFs are referenced <strong>relative to the JSON file</strong>, so the PDFs need to travel
-          with it. Moving the JSON with <em>Save as…</em> re-derives the references for you; moving it
-          in Finder/Explorer does not. In the browser you'll also be asked once per session to point
-          at the folder that holds them.
-        </p>
+      <Faq q={t('help.common.faq.moved.q')}>
+        <p>{rich('help.common.faq.moved.a')}</p>
       </Faq>
-      <Faq q="Why did my Findings get reordered — and why is my project suddenly unsaved?">
-        <p>
-          Opening a paper as <strong>Consolidation</strong> lines the reviewers up: it works out which
-          of each reviewer's repeated entries are the same entry and puts them in the same order, so
-          that everyone's <em>Finding #2</em> means one finding. Without that, comparing #2 against #2
-          would pit unrelated findings against each other and report a disagreement that was really
-          just a difference of ordering.
-        </p>
-        <p>
-          Because that changes the file, it counts as an unsaved change — and it is a single{' '}
-          <strong>Undo</strong> away if you would rather keep the original order. Your own values are
-          never altered, only their order, and a gap can appear where you recorded nothing for an
-          entry the others did. Once you have answered a group in Consolidation, it is left alone.
-        </p>
+      <Faq q={t('help.common.faq.consolidation.q')}>
+        <p>{rich('help.common.faq.consolidation.a1')}</p>
+        <p>{rich('help.common.faq.consolidation.a2')}</p>
       </Faq>
-      <Faq q="Is my work saved automatically?">
-        <p>
-          No. A dot before the project name in the window title means unsaved changes — press <strong>{MOD}+S</strong>.
-          The app asks before you close or quit with unsaved work.
-        </p>
+      <Faq q={t('help.common.faq.autosave.q')}>
+        <p>{rich('help.common.faq.autosave.a', { mod: mod() })}</p>
       </Faq>
     </>
   )
@@ -163,77 +158,47 @@ function startHelp(): { lead: ReactNode; sections: HelpSection[] } {
   return {
     lead: (
       <>
-        <p>
-          SaiLoR supports <strong>Systematic Literature Reviews</strong>. Everything for a review
-          lives in a single <strong>project JSON file</strong>, which holds two things: an{' '}
-          <strong>annotation schema</strong> — the fields you want to extract from every paper — and
-          the <strong>list of papers</strong>, each pointing at its PDF.
-        </p>
-        <p>
-          While reviewing, the app shows the paper's PDF next to a form built from your schema. You
-          fill the fields in (grabbing text straight from the PDF if you like), and the answers are
-          saved back into the same JSON file — ready to hand to a co-reviewer or analyse later.
-        </p>
+        <p>{rich('help.start.lead.1')}</p>
+        <p>{rich('help.start.lead.2')}</p>
       </>
     ),
     sections: [
       {
         id: 'options',
-        title: 'Your options from here',
+        title: t('help.start.options.title'),
         body: (
           <ul>
-            <li>
-              <strong>Open project…</strong> — open an existing project JSON and start annotating. If
-              you've opened projects before, they're listed underneath for one click, each with a{' '}
-              <em>✎</em> to jump straight into editing its schema.
-            </li>
-            <li>
-              <strong>New annotation JSON…</strong> — start a review from scratch. You choose where
-              the JSON should live, define the annotation schema (the fields, their types, whether
-              they repeat or nest), and attach the PDFs to review.
-            </li>
-            <li>
-              <strong>Edit annotation JSON…</strong> — open an existing project and change its schema
-              or its list of papers. Annotations already filled in are preserved.
-            </li>
+            <li>{rich('help.start.options.open')}</li>
+            <li>{rich('help.start.options.new')}</li>
+            <li>{rich('help.start.options.edit')}</li>
           </ul>
         ),
       },
       {
         id: 'which',
-        title: 'Which one do I want?',
-        body: (
-          <p>
-            If somebody handed you a project file, use <em>Open project…</em>. If you're setting up a
-            new review, use <em>New annotation JSON…</em> — you can always come back and adjust the
-            schema later with <em>Edit annotation JSON…</em>.
-          </p>
-        ),
+        title: t('help.start.which.title'),
+        body: <p>{rich('help.start.which.text')}</p>,
       },
       {
         id: 'faq',
-        title: 'FAQ',
+        title: t('help.common.faqTitle'),
         body: (
           <>
-            <Faq q="What exactly is a “project”?">
-              <p>
-                One JSON file. It carries the schema, the paper list, and every answer anybody has
-                filled in. There is no database and no hidden state — copy that file (and its PDFs)
-                and you have copied the whole review.
-              </p>
+            <Faq q={t('help.start.faq.project.q')}>
+              <p>{rich('help.start.faq.project.a')}</p>
             </Faq>
-            <Faq q="Do I need to write JSON by hand?">
-              <p>
-                No. <em>New annotation JSON…</em> builds it for you. The format is documented if you
-                want to hand-edit or generate it, and the app reads hand-edited files defensively —
-                but nothing here requires it.
-              </p>
+            <Faq q={t('help.start.faq.handJson.q')}>
+              <p>{rich('help.start.faq.handJson.a')}</p>
             </Faq>
             {commonFaqs()}
           </>
         ),
       },
-      { id: 'shortcuts', title: 'Keyboard shortcuts', body: <ShortcutTable keys={START_KEYS} /> },
+      {
+        id: 'shortcuts',
+        title: t('help.common.shortcutsTitle'),
+        body: <ShortcutTable keys={startKeys()} />,
+      },
     ],
   }
 }
@@ -241,210 +206,74 @@ function startHelp(): { lead: ReactNode; sections: HelpSection[] } {
 /** Help for the annotation view. */
 function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
   return {
-    lead: (
-      <p>
-        You have a project open: read each paper's PDF in the middle and fill in the annotation
-        fields on the right. Everything is saved back into the project JSON you opened.
-      </p>
-    ),
+    lead: <p>{rich('help.annotate.lead')}</p>,
     sections: [
       {
         id: 'workflow',
-        title: 'Basic workflow',
+        title: t('help.annotate.workflow.title'),
         body: (
           <ul>
-            <li>
-              <strong>Open</strong> a project via the <em>Open ▾</em> menu — pick a file or a recent
-              project. To create or change a project's schema, use <em>New annotation JSON…</em> /{' '}
-              <em>Edit annotation JSON…</em> on the start screen.
-            </li>
-            <li>
-              <strong>Pick a paper</strong> from the left list — a project opens on the first paper
-              you have not marked finished, so reopening a review lands where the work is. Each
-              paper's dot fills as its fields
-              are filled in — amber while it is still yours to finish, green once you tick{' '}
-              <em>Annotation finished</em> at the top of the annotation panel, red if you tick it
-              while fields are still empty. The dropdown under the search box filters the list by
-              that state and counts it. The button in the list's header hides the list to make room
-              for the paper;
-              once hidden, the same button in the top bar brings it back.
-            </li>
-            <li>
-              <strong>Read the PDF</strong> in the middle pane; its text is selectable. Use{' '}
-              <strong>{MOD}+F</strong> to search within it. After following an internal link (e.g. a
-              reference), the <em>↩ / ↪</em> buttons jump back to where you were and forward again.
-              Hovering an internal link or a numbered citation such as <em>[3]</em> previews its
-              target, also in PDFs whose citations are not clickable.
-            </li>
-            <li>
-              <strong>Annotate</strong> on the right. Repeatable entries show <em>+ Add</em> and a
-              remove (<em>×</em>) control. Use the <em>⧉</em> button next to a field to insert the
-              text currently selected in the PDF.
-            </li>
-            <li>
-              A field name with a <em>ⓘ</em> next to it has a description — hover for a quick look,
-              or <strong>right-click</strong> to keep it open: its text is selectable and any link in
-              it is clickable, which the hover version can't offer since it closes as soon as the
-              mouse moves toward it.
-            </li>
-            <li>
-              <strong>Validate</strong> checks your annotations against the schema: required fields
-              that are still empty, values of the wrong type, and values outside a dropdown's
-              choices. Required fields are marked with a red <em>*</em>.
-            </li>
-            <li>
-              <strong>Save</strong> via the <em>Save ▾</em> menu (or {MOD}+S). "Save as…" writes to a
-              new file, and the PDF references are re-derived so they still resolve from there.
-            </li>
+            <li>{rich('help.annotate.workflow.open')}</li>
+            <li>{rich('help.annotate.workflow.pick')}</li>
+            <li>{rich('help.annotate.workflow.read', { mod: mod() })}</li>
+            <li>{rich('help.annotate.workflow.annotate')}</li>
+            <li>{rich('help.annotate.workflow.info')}</li>
+            <li>{rich('help.annotate.workflow.validate')}</li>
+            <li>{rich('help.annotate.workflow.save', { mod: mod() })}</li>
           </ul>
         ),
       },
       {
         id: 'searching',
-        title: 'Finding a paper',
+        title: t('help.annotate.searching.title'),
         body: (
           <>
-            <p>
-              The box above the paper list searches <strong>title, authors, and DOI</strong> — the{' '}
-              <em>META</em> trigger inside its right-hand edge. Click it to switch to <em>TAGS</em>,
-              which searches the <strong>annotation content</strong> you have already recorded
-              instead — for answering "which papers did I mark as X". The trigger is highlighted
-              while annotation search is on, so you can always tell which mode you are in.
-            </p>
-            <p>
-              Annotation search looks at the answers of whoever you are currently reviewing as, so in
-              a multi-reviewer project it finds <em>your</em> work, not somebody else's.
-            </p>
+            <p>{rich('help.annotate.searching.p1')}</p>
+            <p>{rich('help.annotate.searching.p2')}</p>
           </>
         ),
       },
       {
         id: 'reviewers',
-        title: 'Working with several reviewers',
+        title: t('help.annotate.reviewers.title'),
         body: (
           <>
-            <p>
-              A project can be set up so that <strong>several reviewers annotate it independently</strong>{' '}
-              — the usual way to keep an SLR honest. If it is, the top bar lets you say who you are.
-              Each reviewer sees and fills in <strong>only their own answers</strong>; nobody is
-              influenced by what anyone else recorded.
-            </p>
-            <p>
-              Besides the numbered reviewers there is one extra role, <strong>Consolidation</strong>.
-              That is not "one more reviewer" — it is the pass where the disagreements get settled.
-              In Consolidation, each field gets a compare button that shows{' '}
-              <strong>every reviewer's answer side by side</strong>, flags whether they agree, and
-              lets you click one to adopt it. What Consolidation records is the project's{' '}
-              <strong>final result</strong> — the answers an analysis or export would use.
-            </p>
-            <p>
-              Where <strong>every reviewer gave the same answer</strong>, Consolidation fills it in
-              for you and marks it with a{' '}
-              <strong>light-blue border</strong> until you click it — there is nothing to reconcile
-              when everyone already agrees, and copying those across by hand is exactly the task
-              during which a real disagreement further down gets missed. Only case and stray spaces
-              are forgiven, never near-misses: if the wording genuinely differs, the call stays
-              yours. A field one reviewer left blank is not agreement either, however the others
-              answered.
-            </p>
-            <p>
-              For fields and groups that can be added several times — Findings, say — Consolidation
-              does two things for you as you open a paper. It adds{' '}
-              <strong>as many entries as the busiest reviewer recorded</strong>, so you are not
-              counting anyone's work by hand. And it works out{' '}
-              <strong>which of each reviewer's entries are the same entry</strong>, since two people
-              listing the same three findings rarely list them in the same order. Your Finding #2 is
-              then everyone's Finding #2, and the compare button lines up answers that are genuinely
-              about the same thing instead of reporting a disagreement that was only a difference of
-              ordering. Entries are matched on what they say, so wording need not match exactly;
-              once you have answered a group, it is left alone rather than re-ordered underneath you.
-            </p>
-            <p>
-              Two buttons above the annotation fields belong to Consolidation.{' '}
-              <strong>⚠ Disagreements</strong> lists every field the reviewers answered differently
-              across the whole project — click one to jump straight to it, rather than hunting paper
-              by paper. <strong>⚖ Agreement</strong> reports the usual inter-rater coefficients —{' '}
-              <strong>Cohen's κ</strong>, <strong>Fleiss' κ</strong> and{' '}
-              <strong>Krippendorff's α</strong> — and you can tick any combination. One that cannot
-              honestly be computed for your project is greyed out and tells you why when you hover it,
-              rather than quietly reporting a number that would not mean what it appears to.
-            </p>
-            <p>
-              Two reviewers can write <em>RCT</em> and <em>randomized controlled trial</em> and mean
-              one thing, which no amount of text comparison can know. When you see such a pair in the
-              compare popup, tick{' '}
-              <strong>"These answers mean the same thing"</strong>: from then on the app counts it as
-              agreement — in the badge, in the disagreement list, and in the statistics. It is worth
-              doing before you quote a κ anywhere, because until you do, the number understates how
-              much your reviewers actually agreed.
-            </p>
-            <p>
-              Ticking it settles <em>that</em> they agreed, not <em>what</em> they agreed on, so{' '}
-              <strong>also click one of the answers</strong> to record the value. If you try to leave
-              without doing that, the app stops and asks: the field would otherwise count as settled
-              while holding nothing, and you would never see it again. Leave anyway and the tick is
-              undone, so the field goes back on the disagreement list rather than quietly vanishing
-              from it.
-            </p>
-            <p>
-              Opening such a project asks who you are before showing you anything — an answer that
-              isn't attributable to a reviewer is worse than no answer. It asks once, and each paper
-              then remembers the seat you last read it in, so you can be Reviewer 1 on some papers
-              and Reviewer 2 on others; the toolbar switch changes it whenever you like. With git, a
-              notice warns you when someone else has already committed your seat on the paper you're
-              on.
-            </p>
-            <p>
-              You don't have to wait for everyone to finish before consolidating: the seat is always
-              open, and it is the individual <em>papers</em> that wait. One that not every reviewer
-              has annotated yet keeps its <strong>⇄</strong> buttons disabled and says so in its dot's
-              tooltip — the missing reviewer's column would otherwise look like they found nothing,
-              when the truth is they haven't looked yet. The line under <em>Papers</em> counts those,
-              as the <em>… · 3/10 ready</em> half of its text.
-            </p>
-            <p>
-              Consolidation signs papers off like any other seat: the checkbox at the top of the panel
-              reads <em>Consolidation finished</em>, the paper's dot fills as the consolidated record
-              fills and turns green once you tick it, and the filter dropdown narrows the list to what
-              you have not settled yet. That tick is yours alone — it is stored with the consolidated
-              result and claims nothing about whether the reviewers have all answered the paper.
-            </p>
+            <p>{rich('help.annotate.reviewers.p1')}</p>
+            <p>{rich('help.annotate.reviewers.p2')}</p>
+            <p>{rich('help.annotate.reviewers.p3')}</p>
+            <p>{rich('help.annotate.reviewers.p4')}</p>
+            <p>{rich('help.annotate.reviewers.p5')}</p>
+            <p>{rich('help.annotate.reviewers.p6')}</p>
+            <p>{rich('help.annotate.reviewers.p7')}</p>
+            <p>{rich('help.annotate.reviewers.p8')}</p>
+            <p>{rich('help.annotate.reviewers.p9')}</p>
+            <p>{rich('help.annotate.reviewers.p10')}</p>
           </>
         ),
       },
       {
         id: 'faq',
-        title: 'FAQ',
+        title: t('help.common.faqTitle'),
         body: (
           <>
-            <Faq q="Validate says nothing is wrong, but I know papers are empty.">
-              <p>
-                Papers with <strong>no annotations at all</strong> are skipped rather than reported —
-                an untouched paper would otherwise fail every required field at once and bury the
-                real problems. They are listed separately, under <em>Not annotated yet</em>, so you
-                can still see them.
-              </p>
+            <Faq q={t('help.annotate.faq.validate.q')}>
+              <p>{rich('help.annotate.faq.validate.a')}</p>
             </Faq>
-            <Faq q="Why isn't my required Yes/no field flagged as missing?">
-              <p>
-                A <em>Yes/no</em> field always counts as answered: an unticked box is a real answer
-                (<em>no</em>), and the file cannot tell "not answered" apart from "answered no". If
-                you need a true third state, use a <em>Text</em> field with fixed choices instead.
-              </p>
+            <Faq q={t('help.annotate.faq.yesNo.q')}>
+              <p>{rich('help.annotate.faq.yesNo.a')}</p>
             </Faq>
-            <Faq q="Can I change the schema after people have annotated?">
-              <p>
-                Yes — <em>Edit annotation JSON…</em> on the start screen. Existing answers are
-                preserved. Renaming or moving a field takes its answers along when you save, unless you
-                choose to keep them hidden; removing one hides them from every screen and export, and
-                they come back if the field does.
-              </p>
+            <Faq q={t('help.annotate.faq.schema.q')}>
+              <p>{rich('help.annotate.faq.schema.a')}</p>
             </Faq>
             {commonFaqs()}
           </>
         ),
       },
-      { id: 'shortcuts', title: 'Keyboard shortcuts', body: <ShortcutTable keys={ANNOTATE_KEYS} /> },
+      {
+        id: 'shortcuts',
+        title: t('help.common.shortcutsTitle'),
+        body: <ShortcutTable keys={annotateKeys()} />,
+      },
     ],
   }
 }
@@ -454,122 +283,50 @@ function annotateHelp(): { lead: ReactNode; sections: HelpSection[] } {
  *  `annotateHelp`. */
 function screeningHelp(): { lead: ReactNode; sections: HelpSection[] } {
   return {
-    lead: (
-      <p>
-        This project screens papers rather than annotating them: one <strong>Include / Exclude</strong>{' '}
-        decision per paper, made fast, usually from the title and abstract alone.
-      </p>
-    ),
+    lead: <p>{rich('help.screening.lead')}</p>,
     sections: [
       {
         id: 'what',
-        title: 'What screening is',
-        body: (
-          <p>
-            A screening project has no authored schema — every screening project records exactly the
-            same thing: a decision and, when excluded, a reason. It is the first pass of a systematic
-            review: hundreds of records, seconds each, deciding which survive into the annotation phase
-            that follows.
-          </p>
-        ),
+        title: t('help.screening.what.title'),
+        body: <p>{rich('help.screening.what.p')}</p>,
       },
       {
         id: 'decision',
-        title: 'Why a dropdown, not a checkbox',
-        body: (
-          <p>
-            The decision is <em>Include</em> / <em>Exclude</em>, not a single "Exclude" checkbox,
-            because the app has to be able to say <strong>"not screened yet"</strong> — a state a
-            checkbox cannot hold. Every boolean field in this app reads an unticked box as a real,
-            deliberate "no", so a checkbox could never tell "I decided to include this" apart from
-            "I haven't looked yet". Progress, the PRISMA counts, and which papers an import carries
-            forward all depend on that distinction.
-          </p>
-        ),
+        title: t('help.screening.decision.title'),
+        body: <p>{rich('help.screening.decision.p')}</p>,
       },
       {
         id: 'reasons',
-        title: 'Why the reason list is fixed',
-        body: (
-          <p>
-            The exclusion reasons are set once, before screening starts, by whoever built the project —
-            the same way a review protocol pre-registers its exclusion criteria. That is what makes the{' '}
-            <strong>◧ Summary</strong>'s per-reason counts meaningful: free text would let every
-            reviewer phrase the same reason differently, and the counts (and the PRISMA flow diagram
-            they feed) would not add up to anything.
-          </p>
-        ),
+        title: t('help.screening.reasons.title'),
+        body: <p>{rich('help.screening.reasons.p')}</p>,
       },
       {
         id: 'keys',
-        title: 'The fast keyboard flow',
-        body: (
-          <p>
-            Press <kbd>I</kbd> to include or <kbd>E</kbd> to exclude the paper on screen; <kbd>U</kbd>{' '}
-            undoes a decision back to "not screened". Deciding a paper for the first time automatically
-            moves to the next undecided one, so screening a stack is a rhythm of read-decide-read rather
-            than read-decide-click-next; going back to fix an earlier call never jumps you away again. A
-            digit <kbd>1</kbd>–<kbd>9</kbd> excludes with the corresponding configured reason (in the
-            order the project lists them) in one press.
-          </p>
-        ),
+        title: t('help.screening.keys.title'),
+        body: <p>{rich('help.screening.keys.p')}</p>,
       },
       {
         id: 'reviewers',
-        title: 'Several reviewers, and Consolidation',
-        body: (
-          <p>
-            Screening reuses the same reviewer/Consolidation machinery every other part of this app
-            does: two reviewers screen independently, and Consolidation reconciles them into the final
-            decision — the standard SLR screening protocol. Where every reviewer decided the same way,
-            Consolidation can adopt all of those decisions at once with{' '}
-            <strong>Adopt all</strong>, and <strong>⚖ Agreement</strong> reports Cohen's/Fleiss' κ over
-            the include/exclude decision specifically — the statistic a screening phase actually
-            reports, and the reason this reuses the consolidation machinery rather than building
-            something parallel to it.
-          </p>
-        ),
+        title: t('help.screening.reviewers.title'),
+        body: <p>{rich('help.screening.reviewers.p')}</p>,
       },
       {
         id: 'ai',
-        title: 'AI proposals',
-        body: (
-          <p>
-            <strong>AI</strong> can propose Include/Exclude decisions (with a reason and a quote from
-            the abstract) for the current paper or all undecided ones, judged against the project's
-            protocol. Titles and abstracts are sent to your chosen provider. Nothing is written until
-            you tick rows and press Apply; Exclude proposals never start ticked, and papers you have
-            already decided are never overwritten.
-          </p>
-        ),
+        title: t('help.screening.ai.title'),
+        body: <p>{rich('help.screening.ai.p')}</p>,
       },
       {
         id: 'summary',
-        title: 'The summary and PRISMA',
-        body: (
-          <p>
-            <strong>◧ Summary</strong> shows progress and the include / exclude / undecided totals, plus
-            how many papers were excluded for each configured reason — the numbers a PRISMA flow diagram
-            reports. It states which seat it is counting (your own decisions, or the consolidated
-            result), since the two can differ.
-          </p>
-        ),
+        title: t('help.screening.summary.title'),
+        body: <p>{rich('help.screening.summary.p')}</p>,
       },
       {
         id: 'importing',
-        title: 'Starting an annotation project from this one',
-        body: (
-          <p>
-            Once screening is done, use <strong>New from screening…</strong> (on the start screen) to
-            build the next-phase annotation project: every paper not explicitly excluded is carried
-            over — included papers always, and undecided ones by default, since dropping a paper nobody
-            actually excluded would silently shrink the review. The new project is saved next to this
-            screening JSON by default, so relative PDF paths keep resolving unchanged.
-          </p>
-        ),
+        title: t('help.screening.importing.title'),
+        body: <p>{rich('help.screening.importing.p')}</p>,
       },
-      { id: 'faq', title: 'FAQ', body: commonFaqs() },
-      { id: 'shortcuts', title: 'Keyboard shortcuts', body: <ShortcutTable keys={SCREENING_KEYS} /> },
+      { id: 'faq', title: t('help.common.faqTitle'), body: commonFaqs() },
+      { id: 'shortcuts', title: t('help.common.shortcutsTitle'), body: <ShortcutTable keys={screeningKeys()} /> },
     ],
   }
 }
@@ -577,210 +334,88 @@ function screeningHelp(): { lead: ReactNode; sections: HelpSection[] } {
 /** Help for the project editor (schema + papers). */
 function editorHelp(): { lead: ReactNode; sections: HelpSection[] } {
   return {
-    lead: (
-      <p>
-        This is where you define a project: the <strong>annotation schema</strong> (the fields
-        reviewers fill in for every paper) and the <strong>PDFs</strong> to annotate. It writes the
-        project JSON that the annotation view then opens.
-      </p>
-    ),
+    lead: <p>{rich('help.editor.lead')}</p>,
     sections: [
       {
         id: 'location',
-        title: 'Where the JSON lives',
-        body: (
-          <p>
-            The location is chosen up front and shown at the top — use <em>Change…</em> to move it.
-            PDFs are referenced <strong>relative to the JSON file</strong>, so if you move the JSON
-            the references are re-derived for you.
-          </p>
-        ),
+        title: t('help.editor.location.title'),
+        body: <p>{rich('help.editor.location.p')}</p>,
       },
       {
         id: 'schema',
-        title: 'Building the schema',
+        title: t('help.editor.schema.title'),
         body: (
           <ul>
-            <li>
-              <strong>Add a field</strong> with <em>+ Add field</em>, or nest one under another with{' '}
-              <em>+ Child</em>. Each field has a name, a type, and an optional description shown on
-              hover while annotating — right-click it there to keep it open with any link in it
-              clickable.
-            </li>
-            <li>
-              <strong>Type:</strong> <em>Text</em>, <em>Number</em>, <em>Yes/no</em>, or{' '}
-              <em>Group</em> — a group holds no value of its own and just contains nested fields.
-            </li>
-            <li>
-              <strong>Repeats:</strong> <em>min</em> and <em>max</em> control how many times a field
-              can occur. Tick <em>∞</em> for an unbounded number — the annotator then gets{' '}
-              <em>+ Add</em> to create as many entries as needed.
-            </li>
-            <li>
-              <strong>Fixed choices:</strong> on a <em>Text</em> field, add options to turn it into a
-              dropdown. With no options it stays free text.
-            </li>
-            <li>
-              <strong>Reorder and nest by dragging</strong> a row's <em>⠿</em> handle: drop near a
-              row's top or bottom edge to place it before or after, or drop in the middle of a row to
-              nest it inside that row.
-            </li>
+            <li>{rich('help.editor.schema.add')}</li>
+            <li>{rich('help.editor.schema.type')}</li>
+            <li>{rich('help.editor.schema.repeats')}</li>
+            <li>{rich('help.editor.schema.choices')}</li>
+            <li>{rich('help.editor.schema.reorder')}</li>
           </ul>
         ),
       },
       {
         id: 'reviewers',
-        title: 'Setting up several reviewers',
-        body: (
-          <p>
-            Turn on multiple reviewers and give a count to have the project annotated{' '}
-            <strong>independently</strong> by that many people — each sees only their own answers.
-            On top of the number you choose, the project always gets one extra{' '}
-            <strong>Consolidation</strong> role: whoever takes it compares everyone's answers field
-            by field and records the final, agreed result, which is what the project's output
-            actually contains. So "2 reviewers" means two independent passes plus a consolidation
-            pass.
-          </p>
-        ),
+        title: t('help.editor.reviewers.title'),
+        body: <p>{rich('help.editor.reviewers.p')}</p>,
       },
       {
         id: 'ai-assisted-annotation',
-        title: 'AI-assisted annotation',
-        body: (
-          <p>
-            The AI toolbar button sends a paper's content to a configured AI model and proposes
-            values for its still-empty fields — nothing is written until you review and press Apply.
-            Settings (the gear icon) is your <strong>model library</strong>: configure a provider,
-            model, and key once. The setup screen then just assigns library models to roles —{' '}
-            <strong>Annotator</strong> (required), <strong>Judge</strong> (agent mode) and{' '}
-            <strong>Cross-check</strong> (optional) — remembered per project.{' '}
-            <strong>Prompt</strong> mode is one request per paper; <strong>Agent</strong> mode lets the
-            model search and re-read the paper with tools and adds a second-pass judge review, at
-            considerably more cost and time; <strong>Classify</strong> mode asks a fast, very cheap
-            System One decision model (a calibrated probability, no quotes) for yes/no and
-            single-choice fields only. A System One model can also be assigned as a
-            <strong> Cross-check</strong> in Prompt/Agent mode: it answers the same eligible fields
-            independently, and a confident disagreement starts that row unticked for a closer look.
-            Turning on "annotate all papers" runs every eligible paper instead of just the current
-            one — several at once (configurable), with a spending cap, a Skip action per in-flight
-            paper, and the option to resume a run that was cancelled, skipped, or stopped partway. A
-            setup-screen toggle can also show the model your own already-finished papers as worked
-            examples of the review's conventions. In the review table, Edit lets you correct a
-            proposed value yourself before applying it — it's still recorded as AI-assisted, just with
-            your value instead of the model's. Under Options, "re-check fields I've already filled" is
-            optional (off each time) and never overwrites an answer unless you tick the proposed
-            replacement; in Agent mode the model can optionally search the web through Anthropic or
-            OpenRouter; and, in the desktop app, a summary of which fields the AI left empty, got
-            flagged or that you corrected is saved to <code>annotations/feedback/</code> in the
-            project folder (field values only, no paper text) to help improve the schema. In the
-            desktop app, Settings can also set up <strong>local models</strong>: chat models served by
-            Ollama, LM Studio, llama.cpp or vLLM, and small System One decision models the app
-            downloads and runs itself. Every download shows its size, source and license and starts
-            only after you confirm; models use the GPU when one is supported and otherwise run on the
-            CPU (slower), and the model's context size is set explicitly so long papers are not
-            silently cut. Papers stay on your machine unless the server is on another host, which
-            the dialog warns about.
-          </p>
-        ),
+        title: t('help.editor.ai.title'),
+        body: <p>{rich('help.editor.ai.p')}</p>,
       },
       {
         id: 'ai-seat',
-        title: 'Giving the AI a reviewer seat',
-        body: (
-          <p>
-            With at least 2 reviewers and AI-assisted annotation allowed, one project setting
-            dedicates the <strong>last</strong> reviewer seat to the AI. Its answers are written into
-            that seat like any human reviewer's, and compared against the others in Consolidation the
-            same way — nothing about Consolidation changes to accommodate it. A human can still open
-            that seat to look at or correct the AI's work; the annotation panel notes when you're
-            looking at it.
-          </p>
-        ),
+        title: t('help.editor.aiSeat.title'),
+        body: <p>{rich('help.editor.aiSeat.p')}</p>,
       },
       {
         id: 'papers',
-        title: 'Adding papers',
+        title: t('help.editor.papers.title'),
         body: (
           <>
-            <p>There are three ways to get papers into a project, and they mix freely:</p>
+            <p>{rich('help.editor.papers.intro')}</p>
             <ul>
-              <li>
-                <strong>+ Add PDFs…</strong> — pick one or more PDFs.
-              </li>
-              <li>
-                <strong>+ Add folder…</strong> — take every PDF in a folder at once, including
-                sub-folders.
-              </li>
-              <li>
-                <strong>Import references…</strong> — read a <strong>BibTeX</strong> (<code>.bib</code>),{' '}
-                <strong>RIS</strong> (<code>.ris</code>) or <strong>CSL-JSON</strong> export from a
-                reference manager such as Zotero, Mendeley or JabRef. This brings in titles, authors
-                and DOIs; you still attach the PDFs themselves.
-              </li>
+              <li>{rich('help.editor.papers.addPdfs')}</li>
+              <li>{rich('help.editor.papers.addFolder')}</li>
+              <li>{rich('help.editor.papers.import')}</li>
             </ul>
-            <p>
-              A paper already in the project is never added twice. Importing references matches
-              against what is already there — by DOI, otherwise by title — and fills in the gaps of a
-              matching paper instead of duplicating it.
-            </p>
-            <p>
-              Newly added papers are <strong>marked with a blue border</strong>, because their title
-              and authors are a <em>best-effort guess</em> read out of the PDF or the reference file.
-              Check them; the mark clears as soon as you click into the row. Every field stays
-              editable, and rows can be dragged to reorder.
-            </p>
+            <p>{rich('help.editor.papers.duplicates')}</p>
+            <p>{rich('help.editor.papers.guessed')}</p>
           </>
         ),
       },
       {
         id: 'saving',
-        title: 'Saving',
-        body: (
-          <p>
-            <strong>Save JSON</strong> writes the file and leaves you here to keep working.{' '}
-            <strong>Save JSON &amp; Begin Annotating</strong> writes it and opens it for review. Both
-            check the project first and tell you what to fix if something is off.
-          </p>
-        ),
+        title: t('help.editor.saving.title'),
+        body: <p>{rich('help.editor.saving.p')}</p>,
       },
       {
         id: 'faq',
-        title: 'FAQ',
+        title: t('help.common.faqTitle'),
         body: (
           <>
-            <Faq q="An imported reference has no PDF. Is that a problem?">
-              <p>
-                It is flagged, and you should fix it before annotating: a paper needs a PDF to
-                review. Importing a bibliography only brings the <em>metadata</em> — attach the file
-                with <em>+ Add PDFs…</em> or by typing the path into the row.
-              </p>
+            <Faq q={t('help.editor.faq.noPdf.q')}>
+              <p>{rich('help.editor.faq.noPdf.a')}</p>
             </Faq>
-            <Faq q="The title or authors came out wrong.">
-              <p>
-                They are extracted heuristically — from the PDF's own metadata and layout, or from
-                the reference file — and papers vary wildly. That is exactly why new rows are marked
-                for review. Just type over anything that is wrong; nothing is locked.
-              </p>
+            <Faq q={t('help.editor.faq.badTitle.q')}>
+              <p>{rich('help.editor.faq.badTitle.a')}</p>
             </Faq>
-            <Faq q="Can I reuse one schema across several reviews?">
-              <p>
-                Yes — copy the project JSON, then use <em>Edit annotation JSON…</em> to swap the
-                papers out. The schema and the paper list are independent parts of the same file.
-              </p>
+            <Faq q={t('help.editor.faq.reuse.q')}>
+              <p>{rich('help.editor.faq.reuse.a')}</p>
             </Faq>
-            <Faq q="What happens to answers if I rename a field?">
-              <p>
-                The answers move to the new name when you save — including other reviewers' once their
-                work arrives, since every file records the schema version it was written under. A note
-                under the field lets you keep them hidden instead. Answers can&apos;t follow a field out
-                of or into a repeated group; those stay hidden, and <em>Validate</em> lists them.
-              </p>
+            <Faq q={t('help.editor.faq.rename.q')}>
+              <p>{rich('help.editor.faq.rename.a')}</p>
             </Faq>
             {commonFaqs()}
           </>
         ),
       },
-      { id: 'shortcuts', title: 'Keyboard shortcuts', body: <ShortcutTable keys={EDITOR_KEYS} /> },
+      {
+        id: 'shortcuts',
+        title: t('help.common.shortcutsTitle'),
+        body: <ShortcutTable keys={editorKeys()} />,
+      },
     ],
   }
 }
@@ -790,27 +425,21 @@ function sharedSections(): HelpSection[] {
   return [
     {
       id: 'appearance',
-      title: 'Appearance',
-      body: (
-        <p>
-          Toggle light/dark with the ☾/☀ button and scale the app text with the <em>A− A A+</em>{' '}
-          buttons. These affect the app only — the PDF paper stays white and normal-sized.
-        </p>
-      ),
+      title: t('help.appearance.title'),
+      body: <p>{rich('help.appearance.p')}</p>,
     },
     {
       id: 'license',
-      title: 'License',
+      title: t('help.license.title'),
       body: (
         <p>
-          SaiLoR is free software, released under the{' '}
-          <strong>GNU General Public License v3.0</strong> (GPL-3.0). You may use, study, share, and
-          modify it under the terms of that license; it comes with no warranty. The full license text
-          is in the <code>LICENSE</code> file distributed with the app, and online at{' '}
-          <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noreferrer">
-            gnu.org/licenses/gpl-3.0
-          </a>
-          .
+          {rich('help.license.p', undefined, {
+            link: (children) => (
+              <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noreferrer">
+                {children}
+              </a>
+            ),
+          })}
         </p>
       ),
     },
@@ -828,6 +457,7 @@ export function HelpDialog() {
   const screening = useStore((s) => s.project?.screening != null)
   const mode = editing ? 'editor' : hasProject ? (screening ? 'screening' : 'annotate') : 'start'
   const bodyRef = useRef<HTMLDivElement>(null)
+  useT()
 
   useEffect(() => {
     if (!open) return
@@ -874,15 +504,15 @@ export function HelpDialog() {
       >
         <div className="modal-head">
           <strong>
-            SaiLoR — Help{' '}
+            {t('help.title')}{' '}
             <span className="help-mode">
               {mode === 'editor'
-                ? 'Editing the annotation JSON'
+                ? t('help.mode.editor')
                 : mode === 'screening'
-                  ? 'Screening'
+                  ? t('help.mode.screening')
                   : mode === 'annotate'
-                    ? 'Annotating'
-                    : 'Getting started'}
+                    ? t('help.mode.annotate')
+                    : t('help.mode.start')}
             </span>
           </strong>
           <div className="modal-head-actions">
@@ -891,16 +521,16 @@ export function HelpDialog() {
               href={NEW_ISSUE_URL}
               target="_blank"
               rel="noreferrer"
-              title="Report a bug on GitHub — opens a new issue in your browser"
+              title={t('help.reportBugTitle')}
             >
-              Report a bug
+              {t('help.reportBug')}
             </a>
             <button
               type="button"
               className="icon-btn"
-              title="Close help"
+              title={t('help.closeTitle')}
               onClick={() => setHelpOpen(false)}
-              aria-label="Close"
+              aria-label={t('common.close')}
             >
               ×
             </button>
@@ -910,15 +540,15 @@ export function HelpDialog() {
         <div className="modal-body" ref={bodyRef}>
           <div className="help-lead">{lead}</div>
 
-          <nav className="help-toc" aria-label="Help contents">
-            <span className="help-toc-title">On this page</span>
+          <nav className="help-toc" aria-label={t('help.tocLabel')}>
+            <span className="help-toc-title">{t('help.tocTitle')}</span>
             <ul>
               {sections.map((s) => (
                 <li key={s.id}>
                   <button
                     type="button"
                     className="help-toc-link"
-                    title={`Jump to “${s.title}”`}
+                    title={t('help.tocJump', { title: s.title })}
                     onClick={() => jumpTo(s.id)}
                   >
                     {s.title}
@@ -938,10 +568,10 @@ export function HelpDialog() {
                 <button
                   type="button"
                   className="help-top-link"
-                  title="Scroll back to the contents at the top"
+                  title={t('help.backToTopTitle')}
                   onClick={jumpToTop}
                 >
-                  ↑ Back to top
+                  {t('help.backToTop')}
                 </button>
               </div>
             </section>
