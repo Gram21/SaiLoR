@@ -316,6 +316,27 @@ the project editor. See the [index](index.md) for the glossary.
 - **Verified by:** `src-tauri/src/feedback.rs` (`name_and_content_rules`, `write_never_overwrites_and_lists_sorted`), `src/model/annotationsDir.test.ts` (reserved feedback folder)
 - **Status:** Implemented
 
+### REQ-DAT-400: Unique option for repeatable schema nodes
+- **Description:** The system shall accept `unique: true` on a repeatable schema node (`max` above 1 or `null`) and an optional `uniqueBy` list of direct child names on a unique node with children. The system shall compare free text trimmed, with collapsed spaces and case-insensitive, and all other values exactly. The system shall never compare empty entries. Without `uniqueBy`, all child fields decide equality. The system shall reject `unique` on a non-repeatable node, `uniqueBy` without `unique` or without children, and unknown `uniqueBy` names, with a message that names the node path.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/schema.ts` (`assertUniqueOptions`), `src/model/unique.ts` (`entryKey`, `duplicateIndexes`), `src/model/project.ts` (`dehydrateSchema`)
+- **Verified by:** `src/model/unique.test.ts` (`unique schema option`, `duplicateIndexes`)
+- **Status:** Implemented
+
+### REQ-DAT-410: Refuse duplicate entries on edit and AI suggestion
+- **Description:** When an edit in the annotation form would make an entry of a unique node equal to another entry, the system shall refuse the write and show an inline hint that names the other entry. An edit that leaves an existing repeat unchanged shall not be refused. When AI suggestions are parsed, applied in a batch, or adopted as unanimous values, the system shall drop each suggestion that repeats an entry or an earlier suggestion, and shall list the dropped suggestion with the reason in the AI notes.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/unique.ts` (`duplicateOnWrite`, `dropDuplicateSuggestions`), `src/state/store.ts` (`setFieldValue`, `applyAiSuggestionsBatch`, `adoptUnanimousValues`), `src/state/aiStore.ts` (`executeBatch`), `src/components/Field.tsx`
+- **Verified by:** `src/model/unique.test.ts` (`duplicateOnWrite`, `dropDuplicateSuggestions`), `src/components/Field.test.tsx` (`Field: unique repeatable field`), `src/state/store.ai.test.ts` (`applyAiSuggestionsBatch: unique fields`), `src/state/aiStore.run.test.ts` (`run: unique fields`)
+- **Status:** Implemented
+
+### REQ-DAT-420: Report duplicates in validation and consolidation
+- **Description:** The system shall report each entry of a unique node that repeats an earlier entry as a "Duplicate entry" validation issue, and shall not delete the entry. When a consolidation value would repeat another entry of a unique node, the system shall refuse it, keep the dialog open, and show a hint.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/validate.ts` (`validateTree`), `src/components/ValidationDialog.tsx`, `src/state/store.ts` (`resolveConsolidationValue`), `src/components/ConsolidationDialog.tsx`
+- **Verified by:** `src/model/unique.test.ts` (`validatePaper duplicate issues`)
+- **Status:** Implemented
+
 ## Project editor
 
 ### REQ-EDT-10: Validate drafts before save
@@ -408,4 +429,11 @@ the project editor. See the [index](index.md) for the glossary.
 - **Description:** The system shall let the user reorder paper rows by dragging a handle, with drop-position indicators.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/PapersEditor.tsx:43-343`
+- **Status:** Implemented
+
+### REQ-EDT-100: Unique toggle and compare-by picker
+- **Description:** The system shall show a Unique checkbox only on a repeatable schema node. When Unique is set on a node with children, the system shall show one checkbox per child to select the `uniqueBy` fields. The selection shall follow child renames. The system shall save `unique` only on a repeatable node and `uniqueBy` only with at least one selected child.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/SchemaTreeEditor.tsx`, `src/state/editorStore.ts` (`toAnnotationDefs`, `fromAnnotationDefs`)
+- **Verified by:** `src/components/SchemaTreeEditor.test.tsx` (`SchemaTreeEditor: unique option`)
 - **Status:** Implemented
