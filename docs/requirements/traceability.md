@@ -87,7 +87,7 @@ inspection only.
 | REQ-DAT-260 | Independent reviewer trees | Functional · Functional Suitability | `src/model/project.ts:347-391,776`<br>`src/model/schema.ts:222` | `src/model/model.test.ts:589-663` | — | `openwiki/concepts/data-model.md` §On-disk layout<br>`docs/annotation-schema.md` §9<br>`openwiki/architecture.md` §Multiple reviewers & Consolidation |
 | REQ-DAT-270 | Pre-create reviewer skeletons | Functional · Functional Suitability | `src/model/project.ts:357-391` | `src/model/model.test.ts:656` | — | `openwiki/concepts/data-model.md` §On-disk layout<br>`docs/annotation-schema.md` §9<br>`openwiki/architecture.md` §Multiple reviewers & Consolidation |
 | REQ-DAT-280 | Never drop higher-numbered reviewers | Functional · Functional Suitability | `src/model/project.ts:369-373,936-951` | `src/model/split.test.ts:97` | — | `openwiki/concepts/data-model.md` §On-disk layout<br>`docs/annotation-schema.md` §9<br>`openwiki/architecture.md` §Multiple reviewers & Consolidation |
-| REQ-DAT-285 | AI reviewer seat is the last configured seat | Functional · Functional Suitability | `src/model/project.ts:225-289`<br>`src/model/schema.ts`<br>`src/git/changes.ts:259`<br>`src/git/merge.ts:1287-1298,1417-1418,1597-1601` | `src/model/model.test.ts`<br>`src/git/merge.test.ts` | — | `docs/annotation-schema.md` §`config.aiSeat` |
+| REQ-DAT-285 | AI reviewer seat is the last configured seat | Functional · Functional Suitability | `src/model/project.ts:225-289`<br>`src/model/schema.ts`<br>`src/git/changes.ts:259`<br>`src/git/merge and strict mode.ts:1287-1298,1417-1418,1597-1601` | `src/model/model.test.ts`<br>`src/git/merge.test.ts` | — | `docs/annotation-schema.md` §`config.aiSeat` |
 | REQ-DAT-290 | Deterministic serialization | Functional · Functional Suitability | `src/model/project.ts:788-829,1131-1160` | `src/model/model.test.ts:1444-1458,1483-1492` | commits `c50f28a`<br>`1382386` | `openwiki/concepts/data-model.md` §Serialize / §Legacy single-file migration |
 | REQ-DAT-300 | No writes on open | Functional · Functional Suitability | `src/state/store.ts:1330` | `src/state/store.save.test.ts` (`opening a project never writes to disk by itself`) | commit `27bf461` | `openwiki/concepts/data-model.md` §Serialize / §Legacy single-file migration |
 | REQ-DAT-310 | Classify imports in three verdicts | Functional · Functional Suitability | `src/model/duplicates.ts` (`classifyImport`, `classifyPair`) | `src/model/duplicates.test.ts:330` | — | `openwiki/concepts/annotation-schema.md` §Duplicate detection at import<br>`user-guide/project-editor.md` §Duplicate detection |
@@ -512,13 +512,13 @@ Counts come from `python3 technical-report/trace_stats.py` at the revision that 
 
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 408 | 100% |
-| With an implementing source link | 382 | 94% |
-| With at least one verifying test | 378 | 93% |
+| Requirements traced | 423 | 100% |
+| With an implementing source link | 397 | 94% |
+| With at least one verifying test | 393 | 93% |
 | Without an automated check (source inspection only) | 30 | 7% |
-| With an introducing/pinning commit | 122 | 30% |
-| With a documentation link | 344 | 84% |
+| With an introducing/pinning commit | 122 | 29% |
+| With a documentation link | 359 | 85% |
 | Security-related (ISO 25010 Security) | 33 | 8% |
-| Distinct test files linked | 191 | — |
-| Distinct source files linked | 180 | — |
+| Distinct test files linked | 197 | — |
+| Distinct source files linked | 185 | — |
 | Linked files missing at this revision | 0 | — |
