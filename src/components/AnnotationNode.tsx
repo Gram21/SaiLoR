@@ -8,6 +8,7 @@ import {
   type AnnotationValueTree,
   type FieldValue,
 } from '../model/annotations'
+import { useT } from '../i18n'
 import { Field } from './Field'
 import { NodeName } from './NodeName'
 
@@ -35,6 +36,7 @@ export function AnnotationNode({
   ancestorValues = {},
   root,
 }: AnnotationNodeProps) {
+  const t = useT()
   const addInstance = useStore((s) => s.addInstance)
   const removeInstance = useStore((s) => s.removeInstance)
   // The field currently pulsing after a "jump to this field" request (from
@@ -83,9 +85,9 @@ export function AnnotationNode({
             className="add-btn"
             disabled={!canAdd(def, instances.length)}
             onClick={() => addInstance(path, def)}
-            title={`Add another ${def.name}`}
+            title={t('annotation.node.addAnother', { name: def.name })}
           >
-            + Add
+            {t('annotation.node.add')}
           </button>
         )}
       </div>
@@ -98,7 +100,7 @@ export function AnnotationNode({
               <button
                 type="button"
                 className="remove-btn"
-                title="Remove this instance"
+                title={t('annotation.node.removeInstance')}
                 disabled={!canRemove(def, instances.length)}
                 onClick={() => removeInstance(path, def.name, i)}
               >

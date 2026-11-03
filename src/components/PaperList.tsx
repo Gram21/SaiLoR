@@ -8,10 +8,8 @@ import {
   annotationState,
   annotationStateFor,
   completenessApplies,
-  finishCheckboxLabel,
   matchesFilter,
   annotationFiltersFor,
-  ANNOTATION_FILTER_LABELS,
   type AnnotationFilter,
   type AnnotationState,
 } from '../model/annotationState'
@@ -19,9 +17,39 @@ import { readyToConsolidate } from '../consolidate/readiness'
 import { screeningStatus, type ScreeningStatus } from '../screening/status'
 import { SidebarToggle } from './SidebarToggle'
 import type { Paper, Project } from '../model/project'
+import { t, useLanguage, useT, type MessageKey } from '../i18n'
 
 /** Which text a query word is matched against. */
 type SearchMode = 'metadata' | 'annotations'
+
+const FILTER_KEY: Record<AnnotationFilter, MessageKey> = {
+  all: 'paperList.filter.all',
+  open: 'paperList.filter.open',
+  'in-progress': 'paperList.filter.inProgress',
+  finished: 'paperList.filter.finished',
+  issues: 'paperList.filter.issues',
+}
+
+const PROGRESS_KEY: Record<Exclude<AnnotationFilter, 'all'>, MessageKey> = {
+  open: 'paperList.progress.open',
+  'in-progress': 'paperList.progress.inProgress',
+  finished: 'paperList.progress.finished',
+  issues: 'paperList.progress.issues',
+}
+
+const SCREENING_LABEL_KEY: Record<'all' | 'undecided' | 'included' | 'excluded', MessageKey> = {
+  all: 'paperList.screening.all',
+  undecided: 'paperList.screening.undecided',
+  included: 'paperList.screening.included',
+  excluded: 'paperList.screening.excluded',
+}
+
+const SCREENING_SHOW_KEY: Record<'all' | 'undecided' | 'included' | 'excluded', MessageKey> = {
+  all: 'paperList.screening.showAll',
+  undecided: 'paperList.screening.showUndecided',
+  included: 'paperList.screening.showIncluded',
+  excluded: 'paperList.screening.showExcluded',
+}
 
 // [impl->req~lst-30~1]
 /**
@@ -33,15 +61,15 @@ type SearchMode = 'metadata' | 'annotations'
 function dotStateLabel(state: AnnotationState, finishBox: string): string {
   switch (state) {
     case 'untouched':
-      return 'Not started'
+      return t('paperList.dot.untouched')
     case 'partial':
-      return 'In progress'
+      return t('paperList.dot.partial')
     case 'complete':
-      return `Ready to finish — tick "${finishBox}" in the panel`
+      return t('paperList.dot.complete', { finishBox })
     case 'finished':
-      return 'Marked finished'
+      return t('paperList.dot.finished')
     case 'flagged':
-      return 'Marked finished, but a required field is empty'
+      return t('paperList.dot.flagged')
   }
 }
 
@@ -212,6 +240,8 @@ const PaperRow = memo(function PaperRow({
 
 /** Left pane: the collapsible list of papers to annotate. */
 export function PaperList() {
+  const t = useT()
+  const language = useLanguage()
   const project = useStore((s) => s.project)
   const currentPaperId = useStore((s) => s.currentPaperId)
   const currentReviewer = useStore((s) => s.currentReviewer)
@@ -292,21 +322,21 @@ export function PaperList() {
       const done = project.papers.filter(
         (p) => paperScreeningStatus(project, p, currentReviewer) !== 'undecided',
       ).length
-      return { total, text: `${done} of ${total} screened` }
+      return { total, text: t('paperList.progress.screened', { done, total }) }
     }
     // Counts whichever bucket the filter dropdown is showing; with no filter
     // set it defaults to `finished`, the headline number of an annotation
     // project. Counted over every paper regardless of the search box, so it
     // can never disagree with the rows it's filtering.
-    const bucket: AnnotationFilter = annotationFilter === 'all' ? 'finished' : annotationFilter
+    const bucket: Exclude<AnnotationFilter, 'all'> = annotationFilter === 'all' ? 'finished' : annotationFilter
     const done = index.filter((e) => matchesFilter(e.state, bucket, e.touched)).length
-    const text = `${ANNOTATION_FILTER_LABELS[bucket]}: ${done}/${total}`
+    const text = t(PROGRESS_KEY[bucket], { done, total })
     if (!isConsolidationSeat) return { total, text }
     // Consolidation also gets a readiness count (`paperIsMarkedDone`) — the
     // project-wide answer to "how much can I even start on".
     const ready = project.papers.filter((p) => paperIsMarkedDone(project, p, currentReviewer)).length
-    return { total, text: `${text} · ${ready}/${total} ready` }
-  }, [project, isScreening, isConsolidationSeat, currentReviewer, index, annotationFilter])
+    return { total, text: t('paperList.progress.ready', { text, ready, total }) }
+  }, [project, isScreening, isConsolidationSeat, currentReviewer, index, annotationFilter, language])
 
   // Filter + rank by how many distinct query words match (then matched chars).
   // Case-insensitive by default (both the query and haystack are lowercased);
@@ -348,7 +378,7 @@ export function PaperList() {
   const total = index.length
   const isFiltered =
     words.length > 0 || (isScreening ? screeningFilter !== 'all' : annotationFilter !== 'all')
-  const countText = isFiltered ? `${filtered.length} of ${total}` : `${total}`
+  const countText = isFiltered ? t('paperList.count.ofTotal', { shown: filtered.length, total }) : `${total}`
 
   // The list's one roving tab stop (standard listbox keyboard pattern). The
   // open paper when still in view, else the first visible row, so a query
@@ -389,7 +419,7 @@ export function PaperList() {
       <div className="paper-list-head">
         <div className="paper-list-title">
           <span>
-            Papers <span className="count">({countText})</span>
+            {t('paperList.title')} <span className="count">({countText})</span>
           </span>
           <SidebarToggle />
         </div>
@@ -399,15 +429,15 @@ export function PaperList() {
             ref={searchInput}
             className="paper-search-input"
             type="text"
-            placeholder={mode === 'annotations' ? 'Search annotations…' : 'Search papers…'}
-            aria-label={mode === 'annotations' ? 'Search annotations' : 'Search papers'}
+            placeholder={mode === 'annotations' ? t('paperList.search.annotationsPlaceholder') : t('paperList.search.papersPlaceholder')}
+            aria-label={mode === 'annotations' ? t('paperList.search.annotationsLabel') : t('paperList.search.papersLabel')}
             // The trigger button is named by where it is, not its label: the
             // label reports the *current* mode, so "click TAGS to search
             // annotations" would read backwards while it says META.
             title={
               mode === 'annotations'
-                ? 'Filters the list to papers whose recorded annotation values match — every word must match somewhere. Use the trigger inside this field to search titles, authors and DOIs instead.'
-                : 'Filters the list to papers whose title, authors, DOI, PDF file name or id match — every word must match somewhere. Use the trigger inside this field to search your recorded annotations instead.'
+                ? t('paperList.search.annotationsTitle')
+                : t('paperList.search.papersTitle')
             }
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -416,8 +446,8 @@ export function PaperList() {
             <button
               type="button"
               className="paper-search-clear"
-              title="Clear search"
-              aria-label="Clear search"
+              title={t('paperList.search.clear')}
+              aria-label={t('paperList.search.clear')}
               onClick={() => {
                 setQuery('')
                 // The button unmounts once the query is empty, which would drop
@@ -431,12 +461,8 @@ export function PaperList() {
           <button
             type="button"
             className={`paper-search-case${caseSensitive ? ' active' : ''}`}
-            title={
-              caseSensitive
-                ? 'Matching exact case (e.g. "AI" no longer matches "contains"). Click to ignore case again.'
-                : 'Ignoring case (e.g. "AI" also matches "contains"). Click to match exact case instead.'
-            }
-            aria-label="Toggle case-sensitive search"
+            title={caseSensitive ? t('paperList.case.onTitle') : t('paperList.case.offTitle')}
+            aria-label={t('paperList.case.label')}
             aria-pressed={caseSensitive}
             onClick={() => setCaseSensitive((c) => !c)}
           >
@@ -445,12 +471,8 @@ export function PaperList() {
           <button
             type="button"
             className={`paper-search-mode${mode === 'annotations' ? ' active' : ''}`}
-            title={
-              mode === 'annotations'
-                ? 'Searching annotation content (the values filled in for each paper). Click to search title, authors, and DOI instead.'
-                : 'Searching title, authors, DOI, PDF file name, and id. Click to search annotation content (the values filled in for each paper) instead.'
-            }
-            aria-label="Toggle search mode between paper metadata and annotation content"
+            title={mode === 'annotations' ? t('paperList.mode.annotationsTitle') : t('paperList.mode.metadataTitle')}
+            aria-label={t('paperList.mode.label')}
             aria-pressed={mode === 'annotations'}
             onClick={() => setMode((m) => (m === 'metadata' ? 'annotations' : 'metadata'))}
           >
@@ -465,20 +487,20 @@ export function PaperList() {
         {!isScreening && (
           <select
             className={`annotation-filter${annotationFilter === 'all' ? '' : ' active'}`}
-            aria-label="Filter by annotation state"
-            title="Show only papers in one annotation state. The line above counts that state across the whole project."
+            aria-label={t('paperList.filter.label')}
+            title={t('paperList.filter.title')}
             value={annotationFilter}
             onChange={(e) => setAnnotationFilter(e.target.value as AnnotationFilter)}
           >
             {annotationFiltersFor(project.finishCheckbox).map((f) => (
               <option key={f} value={f}>
-                {ANNOTATION_FILTER_LABELS[f][0].toUpperCase() + ANNOTATION_FILTER_LABELS[f].slice(1)}
+                {t(FILTER_KEY[f])}
               </option>
             ))}
           </select>
         )}
         {isScreening && (
-          <div className="screening-filter" role="group" aria-label="Filter by screening status">
+          <div className="screening-filter" role="group" aria-label={t('paperList.screening.label')}>
             {(['all', 'undecided', 'included', 'excluded'] as const).map((f) => (
               <button
                 key={f}
@@ -486,22 +508,22 @@ export function PaperList() {
                 className={`screening-filter-btn${screeningFilter === f ? ' active' : ''}`}
                 aria-pressed={screeningFilter === f}
                 onClick={() => setScreeningFilter(f)}
-                title={f === 'all' ? 'Show every paper' : `Show only ${f} papers`}
+                title={t(SCREENING_SHOW_KEY[f])}
               >
-                {f === 'all' ? 'All' : f[0].toUpperCase() + f.slice(1)}
+                {t(SCREENING_LABEL_KEY[f])}
               </button>
             ))}
           </div>
         )}
       </div>
-      <ul role="listbox" aria-label="Papers" onKeyDown={onListKeyDown}>
+      <ul role="listbox" aria-label={t('paperList.title')} onKeyDown={onListKeyDown}>
         {filtered.length === 0 ? (
           <li className="paper-list-empty">
             {isFiltered
               ? mode === 'annotations'
-                ? 'No papers with matching annotations'
-                : 'No matching papers'
-              : 'No papers'}
+                ? t('paperList.empty.annotations')
+                : t('paperList.empty.matching')
+              : t('paperList.empty.none')}
           </li>
         ) : (
           filtered.map((entry) => {
@@ -515,15 +537,15 @@ export function PaperList() {
               // reports "the final decision so far" (see `paperScreeningStatus`).
               const readiness = isConsolidation
                 ? readyToConsolidate(project.schema, p, project.reviewers)
-                  ? ' — ready to consolidate'
-                  : ' — not every reviewer has screened this yet'
+                  ? t('paperList.screeningDot.readyToConsolidate')
+                  : t('paperList.screeningDot.notAllScreened')
                 : ''
               const title =
                 (status === 'included'
-                  ? 'Included'
+                  ? t('paperList.screeningDot.included')
                   : status === 'excluded'
-                    ? 'Excluded'
-                    : 'Not screened yet') + readiness
+                    ? t('paperList.screeningDot.excluded')
+                    : t('paperList.screeningDot.undecided')) + readiness
               return (
                 <PaperRow
                   key={p.id}
@@ -554,18 +576,23 @@ export function PaperList() {
             const fieldsLabel =
               pct === null
                 ? entry.touched
-                  ? 'Has annotations'
-                  : 'Not annotated yet'
-                : `${c.filled} of ${c.total} ${requiredMode ? 'required ' : ''}fields filled`
+                  ? t('paperList.dot.hasAnnotations')
+                  : t('paperList.dot.notAnnotated')
+                : requiredMode
+                  ? t('paperList.dot.requiredFilled', { filled: c.filled, total: c.total })
+                  : t('paperList.dot.filled', { filled: c.filled, total: c.total })
             // Readiness moves into the tooltip here too. Green means "I have
             // signed this off", not "everyone has answered it" — a consolidator
             // can finish a paper one reviewer never reached.
             const readiness = isConsolidation
               ? paperIsMarkedDone(project, p, currentReviewer)
-                ? ' — every reviewer has annotated this paper'
-                : ' — not every reviewer has annotated this paper yet'
+                ? t('paperList.dot.allAnnotated')
+                : t('paperList.dot.notAllAnnotated')
               : ''
-            const dotLabel = `${dotStateLabel(state, finishCheckboxLabel(isConsolidation))} — ${fieldsLabel}${readiness}`
+            const finishBox = isConsolidation
+              ? t('annotation.finished.checkboxConsolidation')
+              : t('annotation.finished.checkbox')
+            const dotLabel = `${dotStateLabel(state, finishBox)} — ${fieldsLabel}${readiness}`
             return (
               <PaperRow
                 key={p.id}

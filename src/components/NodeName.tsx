@@ -3,9 +3,10 @@ import { createPortal } from 'react-dom'
 import type { ResolvedDef } from '../model/schema'
 import { linkifyText, type LinkifySegment } from '../model/linkify'
 import { getPlatform } from '../platform'
+import { useT } from '../i18n'
 
 const isMac = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform)
-const MOD = getPlatform().kind !== 'browser' && isMac ? '⌘' : 'Ctrl'
+const USES_CMD = getPlatform().kind !== 'browser' && isMac
 
 /** The one link to jump straight to on modifier-click, or `undefined` when the
  *  description has none or more than one — a multi-link description still
@@ -45,6 +46,7 @@ export function NodeName({
   /** Clicking the label counts as reading the field — used to clear its AI mark. */
   onClick?: () => void
 }) {
+  const t = useT()
   const ref = useRef<HTMLSpanElement>(null)
   const [coords, setCoords] = useState<{ x: number; top?: number; bottom?: number } | null>(null)
 
@@ -61,7 +63,7 @@ export function NodeName({
     <>
       {def.name}
       {def.required && (
-        <abbr className="anno-required" title="Required — this field must be filled in">
+        <abbr className="anno-required" title={t('annotation.name.requiredTitle')}>
           *
         </abbr>
       )}
@@ -123,7 +125,13 @@ export function NodeName({
       onFocus={show}
       onBlur={hide}
       onContextMenu={openPopover}
-      aria-label={`${def.name}. ${def.description}${singleLink ? ` (${MOD}-click to open the link)` : ''}`}
+      aria-label={t('annotation.name.ariaLabel', {
+        name: def.name,
+        description: def.description,
+        hint: singleLink
+          ? t('annotation.name.openLink', { modifier: USES_CMD ? '⌘' : t('annotation.name.ctrlKey') })
+          : '',
+      })}
     >
       {label}
       <span className="info-dot" aria-hidden="true">
@@ -181,6 +189,7 @@ function DescriptionPopover({
   setPos: (p: { left: number; top: number }) => void
   onClose: () => void
 }) {
+  const t = useT()
   const localRef = useRef<HTMLDivElement>(null)
 
   // Two passes, both before the browser paints: the first mount is at the raw
@@ -231,14 +240,20 @@ function DescriptionPopover({
       ref={setRefs}
       className="desc-popover"
       role="dialog"
-      aria-label={`${name} description`}
+      aria-label={t('annotation.name.popoverLabel', { name })}
       // Hidden until `pos` is known, so the unclamped first-pass position (top-left
       // of the eventual box, anchored at the click point) is never visible.
       style={pos ? { left: pos.left, top: pos.top } : { left: origin.x, top: origin.y, visibility: 'hidden' }}
     >
       <div className="desc-popover-head">
         <span className="desc-popover-title">{name}</span>
-        <button type="button" className="desc-popover-close" aria-label="Close" title="Close" onClick={onClose}>
+        <button
+          type="button"
+          className="desc-popover-close"
+          aria-label={t('common.close')}
+          title={t('common.close')}
+          onClick={onClose}
+        >
           ×
         </button>
       </div>

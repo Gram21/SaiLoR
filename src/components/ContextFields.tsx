@@ -1,5 +1,6 @@
 // [impl->req~llm-732~1]
 import type { LlmConfig } from '../llm/types'
+import { useT } from '../i18n'
 
 /**
  * Editable context window (and, for System One, the question/option budget).
@@ -8,18 +9,19 @@ import type { LlmConfig } from '../llm/types'
 export function ContextFields({
   draft,
   patch,
-  label = 'Context window (tokens)',
+  label,
 }: {
   draft: LlmConfig
   patch: (c: Partial<LlmConfig>) => void
   label?: string
 }) {
+  const t = useT()
   const num = (v: string) => (v === '' ? undefined : Number(v))
   return (
     <>
       <div className="llm-row">
         <label htmlFor="llm-context" className="llm-label">
-          {label}
+          {label ?? t('field.context.window')}
         </label>
         <input
           id="llm-context"
@@ -30,15 +32,12 @@ export function ContextFields({
           onChange={(e) => patch({ contextTokens: num(e.target.value) })}
         />
       </div>
-      <p className="llm-hint">
-        How much text the model can read at once, in tokens (about ¾ of a word each). The paper is
-        trimmed to fit; leave empty if unknown.
-      </p>
+      <p className="llm-hint">{t('field.context.hint')}</p>
       {draft.provider === 'systemone' && (
         <>
           <div className="llm-row">
             <label htmlFor="llm-options-budget" className="llm-label">
-              Question &amp; options budget (tokens)
+              {t('field.context.budget')}
             </label>
             <input
               id="llm-options-budget"
@@ -49,10 +48,7 @@ export function ContextFields({
               onChange={(e) => patch({ optionsBudgetTokens: num(e.target.value) })}
             />
           </div>
-          <p className="llm-hint">
-            Share of the window for each question and its answer options. Longer ones are cut, so
-            keep field names and options short.
-          </p>
+          <p className="llm-hint">{t('field.context.budgetHint')}</p>
         </>
       )}
     </>

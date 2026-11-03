@@ -5,7 +5,7 @@
 import { useEffect, useMemo } from 'react'
 import { useStore, selectCurrentPaper, currentTree, currentFinished, consolidationGateMissing } from '../state/store'
 import { normalizeTree, isFieldVisible } from '../model/annotations'
-import { finishCheckboxLabel } from '../model/annotationState'
+import { useT } from '../i18n'
 import { aiSeatId, seatLabel } from '../model/project'
 import { paperCompleteness, paperAnnotationState } from './PaperList'
 import { paperVerdicts } from '../consolidate/disagreements'
@@ -21,6 +21,7 @@ import {
 
 /** Right-hand pane: renders the schema recursively for the current paper. */
 export function AnnotationPanel() {
+  const t = useT()
   const paper = useStore(selectCurrentPaper)
   const screeningMarkCount = useStore((s) => (paper ? (s.screeningMarks?.[paper.id]?.length ?? 0) : 0))
   const showScreeningMarks = useStore((s) => s.showScreeningMarks)
@@ -109,7 +110,7 @@ export function AnnotationPanel() {
   }, [flashFieldPath, setFlashFieldPath])
 
   if (!paper) {
-    return <div className="panel annotations empty">Select a paper to annotate.</div>
+    return <div className="panel annotations empty">{t('annotation.panel.selectPaper')}</div>
   }
 
   // Multi-reviewer, nobody has picked a seat yet: an edit made here would be
@@ -121,9 +122,7 @@ export function AnnotationPanel() {
   if (noReviewerPicked) {
     return (
       <div className="panel annotations empty">
-        Pick a reviewer above to start annotating — each reviewer's answers are
-        recorded separately until Consolidation reconciles them into the final
-        result.
+        {t('annotation.panel.pickReviewer')}
       </div>
     )
   }
@@ -190,18 +189,18 @@ export function AnnotationPanel() {
       <SeatConflictNotice />
       {isAiSeat && (
         <p className="ai-seat-notice" role="status">
-          This is the AI's seat — values here come from AI runs.
+          {t('annotation.panel.aiSeat')}
         </p>
       )}
       <div className="annotations-head">
         <div className="annotations-head-row">
-          <h2>Annotations</h2>
+          <h2>{t('annotation.panel.title')}</h2>
           {!!project?.schemaInfo && (
             <button
               type="button"
               className="schema-info-btn"
-              title="About this schema"
-              aria-label="About this schema"
+              title={t('annotation.panel.schemaInfo')}
+              aria-label={t('annotation.panel.schemaInfo')}
               onClick={() => setSchemaInfoOpen(true)}
             >
               ⓘ
@@ -215,7 +214,9 @@ export function AnnotationPanel() {
               what makes a multi-reviewer file trustworthy. */}
           {!noReviewerPicked && (project?.reviewers ?? 1) > 1 && (
             <span className="reviewer-badge">
-              {project && currentReviewer ? seatLabel(project, currentReviewer) : `Reviewer ${currentReviewer}`}
+              {project && currentReviewer
+                ? seatLabel(project, currentReviewer)
+                : t('annotation.panel.reviewerFallback', { id: String(currentReviewer) })}
             </span>
           )}
         </div>
@@ -225,14 +226,14 @@ export function AnnotationPanel() {
         {screeningMarkCount > 0 && (
           <label
             className="screening-marks-toggle"
-            title="Show, read-only, the highlights and notes the screeners made in this paper's PDF"
+            title={t('annotation.panel.screeningMarksTitle')}
           >
             <input
               type="checkbox"
               checked={showScreeningMarks}
               onChange={(e) => setShowScreeningMarks(e.target.checked)}
             />
-            Show markings from screening ({screeningMarkCount})
+            {t('annotation.panel.screeningMarks', { count: screeningMarkCount })}
           </label>
         )}
         {/* The project-wide actions live in the overview, while this row keeps
@@ -242,18 +243,18 @@ export function AnnotationPanel() {
             <button
               type="button"
               className="consolidation-tool-btn"
-              title="Open the project-wide Consolidation overview"
+              title={t('annotation.panel.overviewTitle')}
               onClick={() => setConsolidationOverviewOpen(true)}
             >
-              ☰ Overview
+              {t('annotation.panel.overview')}
             </button>
             <button
               type="button"
               className="consolidation-tool-btn"
-              title="List the annotation fields where reviewers disagree on this paper"
+              title={t('annotation.panel.disagreementsTitle')}
               onClick={() => setDisagreementsOpen(true)}
             >
-              ⚠ Disagreements
+              {t('annotation.panel.disagreements')}
             </button>
           </div>
         )}
@@ -262,10 +263,10 @@ export function AnnotationPanel() {
             className={`annotation-finished${finishedMismatch ? ' mismatch' : ''}${isFinished ? ' on' : ''}`}
             title={
               finishedMismatch
-                ? 'This paper is marked finished while a required field is empty — its dot in the paper list is red until the field is filled in or the mark is removed'
+                ? t('annotation.finished.flaggedTitle')
                 : isConsolidation
-                  ? 'Mark this paper as consolidated once you are done reconciling it — only then does its dot in the paper list turn green. This is your own sign-off, separate from whether every reviewer has answered the paper.'
-                  : 'Mark this paper as finished once you are done with it — only then does its dot in the paper list turn green'
+                  ? t('annotation.finished.consolidationTitle')
+                  : t('annotation.finished.title')
             }
           >
             <input
@@ -278,10 +279,10 @@ export function AnnotationPanel() {
               {/* Named for what it signs off, not for a different rule: the
                   consolidator's tick is stored, colored and counted exactly
                   like a reviewer's (see `completenessApplies`). The name lives
-                  in `finishCheckboxLabel` because the paper list's amber dot
+                  in the `annotation.finished.checkbox*` keys because the paper list's amber dot
                   points at this control by name. */}
-              {finishCheckboxLabel(isConsolidation)}
-              {finishedMismatch && ' — required fields are empty'}
+              {isConsolidation ? t('annotation.finished.checkboxConsolidation') : t('annotation.finished.checkbox')}
+              {finishedMismatch && t('annotation.finished.requiredEmpty')}
             </span>
           </label>
         )}

@@ -13,6 +13,7 @@ import { seatLabel, type Paper, type Project } from './project'
 import { YEAR_MIN, YEAR_MAX, isPlausibleYear } from './year'
 import { formatPath, type RawSeg } from '../llm/paths'
 import { duplicateIndexes } from './unique'
+import { t, tp, type MessageKey } from '../i18n'
 
 /**
  * Validation walks the resolved schema against a paper's annotation tree and
@@ -111,24 +112,31 @@ function preview(value: unknown): string {
   return text.length > MAX_PREVIEW_CHARS ? `${text.slice(0, MAX_PREVIEW_CHARS)}…` : text
 }
 
-/** Names what is actually stored, e.g. `a string ("2021")`, `a list`, `NaN`. */
-function describeActual(value: unknown): string {
-  if (value === null) return 'null'
-  if (value === undefined) return 'nothing'
-  if (Array.isArray(value)) return 'a list'
-  if (typeof value === 'number' && Number.isNaN(value)) return 'NaN'
-  if (typeof value === 'object') return 'an object'
-  return `a ${typeof value} (${preview(value)})`
+const TYPE_PHRASE: Partial<Record<string, MessageKey>> = {
+  string: 'validation.type.string',
+  number: 'validation.type.number',
+  boolean: 'validation.type.boolean',
 }
 
-function entries(n: number): string {
-  return n === 1 ? 'entry' : 'entries'
+function typePhrase(type: string): string {
+  const key = TYPE_PHRASE[type]
+  return key ? t(key) : t('validation.type.other', { type })
+}
+
+/** Names what is actually stored, e.g. `a string ("2021")`, `a list`, `NaN`. */
+function describeActual(value: unknown): string {
+  if (value === null) return t('validation.actual.null')
+  if (value === undefined) return t('validation.actual.nothing')
+  if (Array.isArray(value)) return t('validation.actual.list')
+  if (typeof value === 'number' && Number.isNaN(value)) return 'NaN'
+  if (typeof value === 'object') return t('validation.actual.object')
+  return t('validation.actual.value', { type: typePhrase(typeof value), value: preview(value) })
 }
 
 function listOptions(options: string[]): string {
   const shown = options.slice(0, MAX_LISTED_OPTIONS).join(', ')
   const rest = options.length - MAX_LISTED_OPTIONS
-  return rest > 0 ? `${shown}, … (+${rest} more)` : shown
+  return rest > 0 ? t('validation.options.more', { shown, rest }) : shown
 }
 
 // ---------------------------------------------------------------------------
@@ -180,8 +188,9 @@ function validateField(def: ResolvedDef, value: unknown, loc: PathAcc, emit: Emi
     // the same category of mistake as a string in a number field, not a
     // reason for a whole new kind — but "should be a year" alone gives no
     // hint of the actual bound, so the expected clause spells it out.
-    const expected = type === 'year' ? `a year between ${YEAR_MIN} and ${YEAR_MAX}` : `a ${type}`
-    emit('type', loc, `"${def.name}" should be ${expected} but holds ${actual}.`)
+    const expected =
+      type === 'year' ? t('validation.type.year', { min: YEAR_MIN, max: YEAR_MAX }) : typePhrase(type)
+    emit('type', loc, t('validation.type.mismatch', { name: def.name, expected, actual }))
     // A mistyped value tells us nothing about requiredness or enum membership.
     return
   }
@@ -189,7 +198,7 @@ function validateField(def: ResolvedDef, value: unknown, loc: PathAcc, emit: Emi
   const empty = isEmptyValue(type, value)
 
   if (def.required && empty) {
-    emit('required', loc, `"${def.name}" is required but empty.`)
+    emit('required', loc, t('validation.required', { name: def.name }))
   }
 
   if (def.options && def.options.length > 0 && !empty && typeof value === 'string') {
@@ -197,7 +206,7 @@ function validateField(def: ResolvedDef, value: unknown, loc: PathAcc, emit: Emi
       emit(
         'enum',
         loc,
-        `"${def.name}" holds ${preview(value)}, which is not one of: ${listOptions(def.options)}.`,
+        t('validation.enum', { name: def.name, value: preview(value), options: listOptions(def.options) }),
       )
     }
   }
@@ -243,11 +252,7 @@ function validateTree(
     }
 
     if (raw !== undefined && !Array.isArray(raw)) {
-      emit(
-        'type',
-        nodeLoc,
-        `"${def.name}" should hold a list of entries but holds ${describeActual(raw)}.`,
-      )
+      emit('type', nodeLoc, t('validation.type.notList', { name: def.name, actual: describeActual(raw) }))
       continue
     }
 
@@ -258,14 +263,14 @@ function validateTree(
       emit(
         'cardinality',
         nodeLoc,
-        `"${def.name}" needs at least ${def.min} ${entries(def.min)} but has ${instances.length}.`,
+        tp('validation.cardinality.min', def.min, { name: def.name, has: instances.length }),
       )
     }
     if (def.max !== null && instances.length > def.max) {
       emit(
         'cardinality',
         nodeLoc,
-        `"${def.name}" allows at most ${def.max} ${entries(def.max)} but has ${instances.length}.`,
+        tp('validation.cardinality.max', def.max, { name: def.name, has: instances.length }),
       )
     }
 
@@ -292,7 +297,7 @@ function validateTree(
         emit(
           'type',
           loc,
-          `"${def.name}" entry should be an object but is ${describeActual(rawInstance)}.`,
+          t('validation.type.entryNotObject', { name: def.name, actual: describeActual(rawInstance) }),
         )
         return
       }
@@ -304,7 +309,7 @@ function validateTree(
         emit(
           'duplicate',
           loc,
-          `"${def.name}" #${index + 1} repeats #${earlier + 1}. Each entry is allowed once.`,
+          t('validation.duplicate', { name: def.name, index: index + 1, earlier: earlier + 1 }),
         )
       }
       if (isField(def)) validateField(def, instance.value, loc, emit)
@@ -362,10 +367,10 @@ export function validatePaper(schema: ResolvedDef[], paper: Paper): ValidationIs
 function describeFileKey(key: string, project: Project): string {
   const review = /^review-(\d+)$/.exec(key)
   const marks = /^marks-(\d+)$/.exec(key)
-  if (review) return `${seatLabel(project, review[1])}'s answers`
-  if (marks) return `${seatLabel(project, marks[1])}'s PDF highlights`
-  if (key === 'marks-consolidated') return 'The PDF highlights'
-  return 'The consolidated answers'
+  if (review) return t('validation.file.reviewAnswers', { seat: seatLabel(project, review[1]) })
+  if (marks) return t('validation.file.marks', { seat: seatLabel(project, marks[1]) })
+  if (key === 'marks-consolidated') return t('validation.file.marksConsolidated')
+  return t('validation.file.consolidated')
 }
 
 export function validateProject(project: Project): ProjectValidation {
@@ -392,10 +397,10 @@ export function validateProject(project: Project): ProjectValidation {
           path: '',
           canonicalPath: '',
           kind: 'orphaned',
-          message:
-            `Holds answers under ${listed.map((p) => `"${p}"`).join(', ')}${rest > 0 ? `, and ${rest} more` : ''}, ` +
-            'which the schema no longer describes. They are kept in the file and shown nowhere; ' +
-            'put the field back in the schema to see them again.',
+          message: t('validation.orphaned.holds', {
+            names: listed.map((p) => t('validation.quoted', { name: p })).join(', '),
+            more: rest > 0 ? t('validation.orphaned.more', { count: rest }) : '',
+          }),
         })
       }
       // A file written under a schema version this project's history does not
@@ -409,10 +414,9 @@ export function validateProject(project: Project): ProjectValidation {
           path: '',
           canonicalPath: '',
           kind: 'schema-version',
-          message:
-            `${unknownFiles.map((k) => describeFileKey(k, project)).join(', ')} ${unknownFiles.length === 1 ? 'was' : 'were'} written ` +
-            "under a schema version this project doesn't know — from another branch, or edited by hand — so " +
-            'fields renamed or moved since could not be carried over. Answers under old names are hidden.',
+          message: tp('validation.schemaVersion', unknownFiles.length, {
+            files: unknownFiles.map((k) => describeFileKey(k, project)).join(', '),
+          }),
         })
       }
       if (!hasAnnotations(schema, tree)) {
@@ -429,7 +433,7 @@ export function validateProject(project: Project): ProjectValidation {
         path: '',
         canonicalPath: '',
         kind: 'type',
-        message: `Could not validate this paper's annotations: ${String(err)}`,
+        message: t('validation.internalError', { error: String(err) }),
       })
     }
   }

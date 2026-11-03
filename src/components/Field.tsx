@@ -13,6 +13,7 @@ import type { FieldValue } from '../model/annotations'
 import { dedupeMarkGroups, orderMarksForLinking } from '../model/pdfMarks'
 import { readyToConsolidate } from '../consolidate/readiness'
 import { parseYear, YEAR_MIN, YEAR_MAX } from '../model/year'
+import { useT, tp } from '../i18n'
 import { ComboBox } from './ComboBox'
 import { useConsolidationFieldStatus } from './ConsolidationVerdicts'
 
@@ -31,6 +32,7 @@ interface FieldProps {
 // [impl->req~ann-20~1]
 /** Renders the editable control for a single field instance, plus a "grab from PDF" button. */
 export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
+  const t = useT()
   const setFieldValue = useStore((s) => s.setFieldValue)
   const [hint, setHint] = useState<string | null>(null)
   const [draft, setDraft] = useState<string | null>(null)
@@ -79,11 +81,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
       type="button"
       className="compare-btn"
       disabled={!ready}
-      title={
-        ready
-          ? "Compare every reviewer's answer for this field"
-          : 'Not every reviewer has annotated this paper yet — there is nothing to compare against until they have'
-      }
+      title={ready ? t('field.compare.title') : t('field.compare.notReady')}
       onClick={() => openConsolidation(path, def.name, index)}
     >
       ⇄
@@ -101,11 +99,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
         ref={linkBtnRef}
         type="button"
         className={`link-btn${linkCount > 0 ? ' has-links' : ''}`}
-        title={
-          linkCount > 0
-            ? `Linked to ${linkCount} PDF mark${linkCount === 1 ? '' : 's'}`
-            : 'Link a PDF highlight or note as evidence'
-        }
+        title={linkCount > 0 ? tp('field.link.linked', linkCount) : t('field.link.add')}
         onClick={() => setOpenLinkPopoverField(linkPopoverOpen ? null : canonical)}
       >
         <span className="link-icon">🔗</span>
@@ -206,7 +200,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
           <button
             type="button"
             className="grab-btn"
-            title="Insert the text currently selected in the PDF"
+            title={t('field.grab.title')}
             onClick={grabFromPdf}
           >
             ⧉
@@ -233,6 +227,7 @@ interface FieldLinkPopoverProps {
 /** Shows marks already linked to this field, plus a fold-out picker to link more.
  *  The only entry point for creating a link — `PdfViewer.tsx`'s popover only shows/unlinks. */
 function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkPopoverProps) {
+  const t = useT()
   const marks = dedupeMarkGroups(useStore((s) => s.currentPdfMarks()))
   const linkMark = useStore((s) => s.linkMarkToField)
   const unlinkMark = useStore((s) => s.unlinkMarkFromField)
@@ -348,24 +343,24 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
     <button
       type="button"
       className="field-link-snippet-btn"
-      title={m.comment || m.text || `Page ${m.page}`}
+      title={m.comment || m.text || t('field.popover.page', { page: m.page })}
       onClick={() => jumpToMark(m.id)}
     >
-      {m.comment || m.text || `p.${m.page}`}
+      {m.comment || m.text || t('field.popover.pageShort', { page: m.page })}
     </button>
   )
 
   return (
     <div className="field-link-popover" style={placement} onClick={(e) => e.stopPropagation()}>
       <div className="modal-head field-link-head">
-        <strong>{linkedCount === 1 ? '1 link' : `${linkedCount} links`}</strong>
-        <button type="button" className="icon-btn" title="Close" onClick={onClose} aria-label="Close">
+        <strong>{tp('field.popover.links', linkedCount)}</strong>
+        <button type="button" className="icon-btn" title={t('common.close')} onClick={onClose} aria-label={t('common.close')}>
           ×
         </button>
       </div>
       <div className="field-link-body">
         {topList.length === 0 ? (
-          <p className="field-link-empty">No links yet.</p>
+          <p className="field-link-empty">{t('field.popover.empty')}</p>
         ) : (
           <ul className="field-link-list">
             {topList.map((m) => (
@@ -375,7 +370,7 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
                 <button
                   type="button"
                   className="field-link-action field-link-unlink"
-                  title="Unlink"
+                  title={t('field.popover.unlink')}
                   onClick={() => unlinkMark(m.id, canonical)}
                 >
                   ×
@@ -387,17 +382,17 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
         <button
           type="button"
           className="field-link-toggle"
-          title={pickerOpen ? 'Cancel linking a highlight or note' : 'Link a highlight or note as evidence'}
+          title={pickerOpen ? t('field.popover.cancelPickerTitle') : t('field.popover.linkPickerTitle')}
           onClick={() => setPickerOpen((v) => !v)}
         >
-          {pickerOpen ? 'Cancel' : '+ Link a highlight or note'}
+          {pickerOpen ? t('common.cancel') : t('field.popover.linkNew')}
         </button>
         {pickerOpen && (
           <div className="field-link-picker">
             <ul className="field-link-list field-link-picker-list">
               {filteredCandidates.length === 0 ? (
                 <li className="field-link-empty">
-                  {candidates.length === 0 ? 'No highlights or notes on this paper yet.' : 'No matches.'}
+                  {candidates.length === 0 ? t('field.popover.noMarks') : t('field.popover.noMatches')}
                 </li>
               ) : (
                 filteredCandidates.map((m, i) => {
@@ -410,7 +405,7 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
                         <button
                           type="button"
                           className="field-link-action field-link-unlink"
-                          title="Unlink"
+                          title={t('field.popover.unlink')}
                           onClick={() => unlinkMark(m.id, canonical)}
                         >
                           ×
@@ -419,10 +414,10 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
                         <button
                           type="button"
                           className="field-link-action"
-                          title="Link this highlight or note to this field"
+                          title={t('field.popover.linkTitle')}
                           onClick={() => linkMark(m.id, path, name, index)}
                         >
-                          Link
+                          {t('field.popover.link')}
                         </button>
                       )}
                     </li>
@@ -435,15 +430,15 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
               className="field-link-search"
               // The picker opens to search, so put the caret there right away.
               autoFocus
-              placeholder="Search highlights/notes…"
+              placeholder={t('field.popover.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
         )}
       </div>
-      <button type="button" className="primary" title="Close this list of links" onClick={onClose}>
-        Done
+      <button type="button" className="primary" title={t('field.popover.closeTitle')} onClick={onClose}>
+        {t('field.popover.done')}
       </button>
     </div>
   )

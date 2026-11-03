@@ -3,6 +3,7 @@ import type { Paper, Project } from '../model/project'
 import type { ValidationIssue } from '../model/validate'
 import { SCREENING_REASON } from './schema'
 import { screeningReason, screeningStatus } from './status'
+import { t } from '../i18n'
 
 /** Mirrors `currentTree`'s seat routing — see `screening/counts.ts`'s `seatTree`
  *  for why this is reimplemented rather than imported. */
@@ -43,7 +44,7 @@ export function screeningIssues(project: Project, currentReviewer: string | null
         // falls back to a paper-only jump when this is empty.
         canonicalPath: '',
         kind: 'screening',
-        message: 'Excluded, but no exclusion reason is recorded.',
+        message: t('validation.screening.noReason'),
       })
     } else if (status !== 'excluded' && reason) {
       issues.push({
@@ -55,7 +56,7 @@ export function screeningIssues(project: Project, currentReviewer: string | null
         // falls back to a paper-only jump when this is empty.
         canonicalPath: '',
         kind: 'screening',
-        message: 'An exclusion reason is recorded, but this paper is not excluded.',
+        message: t('validation.screening.reasonNotExcluded'),
       })
     }
   }

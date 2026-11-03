@@ -86,14 +86,6 @@ export function completenessApplies(project: Project): boolean {
   return project.screening == null
 }
 
-/**
- * Label for the sign-off checkbox — one definition, since the paper list's
- * `complete` tooltip names this control by label ("tick X in the panel").
- */
-export function finishCheckboxLabel(isConsolidation: boolean): string {
-  return isConsolidation ? 'Consolidation finished' : 'Annotation finished'
-}
-
 // [impl->req~dat-250~1]
 /**
  * `annotationState` from a seat's raw tree, for callers without a
@@ -137,16 +129,6 @@ export const ANNOTATION_FILTERS: AnnotationFilter[] = ['all', 'open', 'in-progre
  *  — see `annotationState`); an always-empty option would misread as "no problems". */
 export function annotationFiltersFor(requireTick: boolean): AnnotationFilter[] {
   return requireTick ? ANNOTATION_FILTERS : ANNOTATION_FILTERS.filter((f) => f !== 'issues')
-}
-
-/** Dropdown option text and the counter's word ("finished: 5/100"). Lowercase
- *  so it fits the counter sentence; the dropdown capitalizes itself. */
-export const ANNOTATION_FILTER_LABELS: Record<AnnotationFilter, string> = {
-  all: 'all papers',
-  open: 'open',
-  'in-progress': 'in progress',
-  finished: 'finished',
-  issues: 'with issues',
 }
 
 // [impl->req~lst-40~1]
